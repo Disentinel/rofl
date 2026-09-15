@@ -5,6 +5,9 @@
 // on each person's name. Escaping for MarkdownV2 is the sender's (the shim's
 // egress escapes everything it is handed, `*` included); this returns text.
 // A week is a summary — one line per day — and a full day is `show <day>`.
+// A LINE IS AT MOST 120 CHARACTERS: the owner's «!! не покрыт …» came as one
+// line of 194, so the reasons go on a second line, indented, and `fold`
+// breaks any longer line at a space — never inside a name.
 
 import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, ownerOf, pickedTrips, ru, table, whoWasBusy } from './spat.ts';
@@ -19,19 +22,39 @@ const dm = (start: string | undefined, n: number): string => {
 };
 const startOf = (r: Rofl, week: string): string | undefined => table(r, 'week_starts', 'W, D').find((x) => x.W === week)?.D.replace(/^"|"$/g, '');
 
+export const WIDTH = 120;
+/** Every line at most `max` characters: broken after a «; » where there is one, else at a space, the rest indented
+ *  two past the line's own indent; a word longer than that stays whole — a name is never cut. */
+export function fold(text: string, max = WIDTH): string {
+  return text.split('\n').flatMap((line) => {
+    const indent = `${/^\s*/.exec(line)![0]}  `;
+    const out: string[] = []; let cur = '';
+    const take = (w: string): void => {
+      const next = cur === '' ? (out.length === 0 ? indent.slice(2) : indent) + w : `${cur} ${w}`;
+      if (next.length > max && cur !== '') { out.push(cur); cur = indent + w; } else cur = next;
+    };
+    for (const unit of line.trim().split(/(?<=;) /)) {
+      if (unit.length + indent.length <= max) take(unit);
+      else for (const w of unit.split(' ')) take(w);
+    }
+    return [...out, cur];
+  }).join('\n');
+}
+
 /** THE PROBLEMS OF A DAY, one short line each, the same relations tomorrow.ts prints. */
 export function problems(r: Rofl, day: string): string[] {
   const out: string[] = [];
   for (const h of holes(r).filter((x) => x.day === day)) {
-    const who = whoWasBusy(r, day, h.from).map(({ person, why }) => `${ru(person)} — ${why.map((c) => (c === 'not_present' ? 'не в эти часы' : `${c} (${ownerOf(r, c).scope === 'external' ? 'внешнее' : 'наше'})`)).join(', ')}`);
-    out.push(`!! не покрыт ${ru(h.child)} ${hhmm(h.from)}–${hhmm(h.to)}${who.length > 0 ? `: ${who.join('; ')}` : ''}`);
+    const who = whoWasBusy(r, day, h.from).map(({ person, why }) => `${ru(person)}: ${why.map((c) => (c === 'not_present' ? 'не в эти часы' : `${c} (${ownerOf(r, c).scope === 'external' ? 'внешнее' : 'наше'})`)).join(', ')}`);
+    // the hole on its line, who was where on the next — one line of 194 was unreadable on a phone
+    out.push(`!! не покрыт ${ru(h.child)} ${hhmm(h.from)}–${hhmm(h.to)}${who.length > 0 ? `\n  — ${who.join('; ')}` : ''}`);
   }
   for (const c of chains(r).filter((x) => x.day === day && x.m <= 0)) out.push(`!! ${c.m < 0 ? 'не успевает' : 'без запаса'}: ${ru(c.who)} ${ru(c.a)} → ${ru(c.b)}, ${c.m} мин`);
   for (const l of table(r, 'too_late', 'C, Ev, D, F, By').filter((x) => x.D === day)) out.push(`!! опоздание: ${ru(l.Ev)} с ${hhmm(l.F)}, надо не позже ${hhmm(l.By)} (${l.C})`);
   const stuck = new Set(table(r, 'run_stuck', 'T').map((x) => x.T));
   for (const n of table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => stuck.has(x.T) && x.D === day)) out.push(`!! некому везти ${ru(n.Ch)} ${hhmm(n.At)}: ${ru(n.From)} → ${ru(n.To)}`);
   const hh = hhLines(r, day);
-  return [...out, ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim())];
+  return [...out, ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim())].map((x) => fold(x));
 }
 
 /** One day: its name and date, the problems, then each person's lines. */
@@ -54,7 +77,7 @@ export function tgDay(r: Rofl, day: string, week: string): string {
     for (const t of trips.filter((x) => x.who === who)) lines.push({ at: t.dep, text: `• ${hhmm(t.dep)}–${hhmm(t.ret)} везёт ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait} мин)` : ''}` });
     out.push(...lines.sort((a, b) => a.at - b.at || (a.text < b.text ? -1 : 1)).map((l) => l.text));
   }
-  return out.join('\n');
+  return fold(out.join('\n'));
 }
 
 /** The week as a summary: one line per day, the problems counted and named; the full day is `show <day>`. */
@@ -65,10 +88,10 @@ export function tgWeek(r: Rofl, week: string): string {
   const out = [`*Неделя ${week}*${start ? ` (${dm(start, 1)}–${dm(start, days.length)})` : ''}`];
   for (const d of days) {
     const hs = holes(r).filter((x) => x.day === d);
-    const rest = problems(r, d).filter((x) => !x.startsWith('!! не покрыт')).map((x) => x.replace(/^!! /, ''));
+    const rest = problems(r, d).filter((x) => !x.startsWith('!! не покрыт')).map((x) => x.split('\n')[0].replace(/^!! /, ''));
     const parts = [...(hs.length > 0 ? [`${hs.length} ${hs.length === 1 ? 'дыра' : hs.length < 5 ? 'дыры' : 'дыр'}: ${hs.map((h) => `${ru(h.child)} ${hhmm(h.from)}–${hhmm(h.to)}`).join(', ')}`] : []), ...rest];
     out.push(`${DAY[d] ?? ru(d)} — ${parts.length === 0 ? 'сходится' : `!! ${parts.join('; ')}`}`);
   }
   out.push('', 'Подробно: show <день>');
-  return out.join('\n');
+  return fold(out.join('\n'));
 }

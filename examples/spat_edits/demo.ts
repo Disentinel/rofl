@@ -15,7 +15,7 @@ import { SpatError, type Store } from '../spat/store.ts';
 import { run as verb } from '../spat/edits.ts';
 import { openVolume, render } from '../spat/volume.ts';
 import { FROM, Group, ROOT, asRobin, count, fresh, inproc, spat, sql, type Res } from '../spat/demolib.ts';
-import { tgDay, tgWeek } from '../spat/tg.ts';
+import { fold, tgDay, tgWeek } from '../spat/tg.ts';
 
 // ------------------- 12. a date is a fact of the environment
 async function datedEdits(): Promise<Group> {
@@ -226,9 +226,13 @@ async function asSeen(): Promise<Group> {
 }
 
 // ------------------- 17. the day and the week for a phone
+// THE GOLDEN MOVED 2026-09-15 (S3b): the owner's «!! не покрыт …» was one line of 194 characters. The hole is now
+// its own line and who was where is the next, indented «  — …»; no line of the text is longer than 120 (tg.ts fold).
 const TG_THU = [
-  '*Чт 03.09* — !! не покрыт kit 17:40–18:20: alex — c_acme (внешнее); няня — не в эти часы; nextdoor — не в эти часы; robin — c_swim (наше)',
-  '!! не покрыт nico 17:40–18:20: alex — c_acme (внешнее); няня — не в эти часы; nextdoor — не в эти часы; robin — c_swim (наше)',
+  '*Чт 03.09* — !! не покрыт kit 17:40–18:20',
+  '  — alex: c_acme (внешнее); няня: не в эти часы; nextdoor: не в эти часы; robin: c_swim (наше)',
+  '!! не покрыт nico 17:40–18:20',
+  '  — alex: c_acme (внешнее); няня: не в эти часы; nextdoor: не в эти часы; robin: c_swim (наше)',
   '', '*alex*', '• 07:30–08:00 отвезти в школу (с kit)', '• 08:10–08:30 отвезти в садик (с nico)', '• 09:00–13:00 работа (утро)', '• 14:00–16:00 работа (день)', '• 18:00–20:30 acme (офис)',
   '', '*kit*', '• 08:00–14:00 school_kit (школа)', '', '*nico*', '• 08:30–13:30 sadik_nico (садик)',
   '', '*robin*', '• 13:25–13:50 забор детей (садик) (с nico)', '• 14:15–14:45 обед (с kit, nico)', '• 17:00–18:00 плавание (бассейн)',
@@ -242,7 +246,16 @@ async function phone(): Promise<Group> {
   const root = fresh();
   // the golden text, held here: a renderer change is a diff a person reads, not a hash that moved
   const day = inproc(asRobin(root), (s) => { console.log(tgDay(s.r, 'thu', 'w0831')); return 0; });
-  g.check('tgDay(thu) — дословно как ожидается (20 строк, без выравнивания пробелами)', day.out === TG_THU && !/ {2,}/.test(day.out), day.out);
+  g.check('tgDay(thu) — дословно как ожидается (22 строки, без выравнивания пробелами кроме отступа причин)', day.out === TG_THU && !/[^\n ] {2,}/.test(day.out), day.out);
+  // PLANTED (D): the reasons of a hole on their own line; nothing longer than 120; a name longer than that is not cut
+  const longest = Math.max(...day.out.split('\n').map((l) => l.length));
+  g.check(`ни одной строки длиннее 120 (самая длинная ${longest}); причины дыры — второй строкой «  — alex: …», не в строке «!! не покрыт»`,
+    longest <= 120 && /^!! не покрыт nico 17:40–18:20\n  — alex: c_acme/m.test(day.out) && !/не покрыт [a-z]+ \d\d:\d\d–\d\d:\d\d:/.test(day.out), String(longest));
+  const names = Array.from({ length: 6 }, (_, i) => `person${i}: c_something_${i} (внешнее)`).join('; ');
+  const folded = fold(`!! не покрыт kit 17:40–18:20\n  — ${names}`).split('\n');
+  const token = 'x'.repeat(130);
+  g.check('fold: 6 причин по 40 знаков — три строки ≤ 120, разрыв после «;», продолжение с отступом 4; название в 130 знаков остаётся целым',
+    folded.length === 3 && folded.every((l) => l.length <= 120) && folded[1].endsWith(';') && folded[2].startsWith('    person') && fold(`!! ${token} tail`).includes(token), folded.join(' | '));
   const wk = inproc(asRobin(root), (s) => { console.log(tgWeek(s.r, 'w0831')); return 0; });
   g.check('tgWeek(w0831) — дословно: строка на день, дыры сосчитаны, «Подробно: show <день>»', wk.out === TG_WEEK, wk.out);
   const cli = await spat(root, 'robin', ['show', 'thu', '--format', 'tg']);
@@ -250,6 +263,9 @@ async function phone(): Promise<Group> {
   const tm = await spat(root, 'robin', ['tomorrow', '--format', 'tg'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
   g.check('tomorrow --format tg (вс 06.09): «*Пн 07.09*» под неделей w0907, ≤ 25 строк', /^\*Пн 07\.09\* — /.test(tm.out) && tm.out.split('\n').length <= 25, tm.out.split('\n')[0]);
   g.check('show week --format tg = tgWeek (10 строк, не 87)', (await spat(root, 'robin', ['show', 'week', '--format', 'tg'])).out === `${TG_WEEK}\n`);
+  // the broken day of an edit under --format tg goes through the same lines
+  const br = await spat(root, 'robin', ['edit', 'add errand thu 17:30-18:30 robin shop', '--format', 'tg'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
+  g.check('edit … --format tg (код 3): «!! не покрыт …» и причины второй строкой, ≤ 120', br.code === 3 && /!! не покрыт kit [\d:–]+\n  — /.test(br.out) && Math.max(...br.out.split('\n').map((l) => l.length)) <= 120, br.out.split('\n').slice(0, 4).join(' | '));
   const term = await spat(root, 'robin', ['show', 'thu']);
   g.check('без флага — терминальная сетка как была (колонки, ВЕЗЁТ/НЕ ПОКРЫТ заглавными)', /^чт \(неделя w0831\)\n  !! НЕ ПОКРЫТ чт 17:40–18:20  kit/.test(term.out) && /    07:30–08:00  отвезти в школу    школа      \+ kit/.test(term.out), term.out.split('\n').slice(0, 2).join(' | '));
   g.code('--format xx', await spat(root, 'robin', ['show', 'thu', '--format', 'xx']), 2);

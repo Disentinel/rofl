@@ -534,7 +534,7 @@ Thursday (`breaks` 1→2) — a confirmed `warn` from the bot, a `needs_cover`
 row for the Friday guest (468→469), a `busy` row the census cannot see
 (gated) and the forged `may_edit[hh]`.
 
-## Two defects of v4, from the stand
+## Two defects of v4, from the stand, and a line of 194
 
 - `skip <added block> every <day>` was code 0 «отменён каждую неделю» with no
   effect: `block()` accepted a book's one-off, `e_unusual` was written, and
@@ -548,6 +548,12 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   trial fork had none for a first rule. The trial now declares it for the
   candidate's author; a body reading another member's book is still 2 at the
   door (demo group 20).
+- The owner's «!! не покрыт …» in Telegram was one line of 194 characters. The
+  hole is its own line and who was where the next, indented «  — alex: c_acme
+  (внешнее); няня: не в эти часы; …», and `tg.ts` folds every line at 120 —
+  after a «;» where there is one, at a space otherwise, never inside a name
+  (a 130-character name stays whole on its line). Group 17's golden text moved
+  from 20 lines to 22 for that reason and no other.
 
 ## What is deliberately not decided
 
