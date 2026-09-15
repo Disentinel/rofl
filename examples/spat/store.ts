@@ -7,6 +7,8 @@
 //     world                      the household — never written here; loaded as [main]
 //     p_<user>                   that user's book, loaded as [p_<user>]
 //     p_me                       the tool's own book, [p_me]
+//     m_<id>                     a hypothesis (maybe.ts) — registered, listed, never given to the rules
+//     hh                         the household's own rules (rules.ts): facts in `facts`, clauses in `clauses`; loaded as [hh] for every call
 //
 // THE LEDGER IS THE COLUMN. A row is loaded into the book its ledger names
 // whatever it says; the writer refuses a fact tagged with another book, and
@@ -24,6 +26,7 @@ import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
 import { BOOT, SPAT, bust, setSource, table, world } from './spat.ts';
 import { books as booksOf, openVolume, readBook, volumes, write, type Volume } from './volume.ts';
+import { HH, hhRules } from './rules.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 export const ACCESS = fs.readFileSync(path.join(HERE, 'access.rofl'), 'utf8');
@@ -116,10 +119,12 @@ export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; may
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
  *  question), one `authority` line per book — its one writer, by name — and
  *  where each book was read from, for volumes.rofl to hold against. */
-const loaderFacts = (e: Env, books: Book[]): string =>
+const loaderFacts = (e: Env, books: Book[], authors: string[]): string =>
   `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
   + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nauthority(main, rules).\nbook_source(rules, repo).\n`
-  + `book_source(world, store).\nbook_source(users, store).\n`
+  + `book_source(world, store).\nbook_source(users, store).\nauthority(${HH}, ${HH}).\nbook_source(${HH}, store).\n`
+  // the household's rules may read their author's own book: declared per author of an active rule
+  + authors.map((u) => `imports(${HH}, p_${u}).`).join('\n') + '\n'
   + books.map((b) => `authority(${b.book}, ${b.user}).\nbook_source(${b.book}, store).`).join('\n');
 
 export interface Cal { ymd: string; n: number; monday: string; }
@@ -179,12 +184,14 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     return readBook(vol, ledger);
   };
   const users = read('users'); const worldRows = read('world');
-  const facts = loaderFacts(e, books);
-  const s = small([...users, ...worldRows], facts);
+  const s = small([...users, ...worldRows], loaderFacts(e, books, []));
   if (s.holds(`stranger(${e.as})`)) throw Object.assign(new SpatError(5, `${e.as}: не член семьи ${e.tenant} и не в книге users`), { opened });
   const allowed = new Set(table(s, 'may_read', 'U, L').filter((x) => x.U === e.as).map((x) => x.L));
   const open = books.filter((b) => allowed.has(b.book));
   const texts = open.map((b) => read(b.book));
+  // THE HOUSEHOLD'S RULES load for every member's call, like the world: its status facts and its active clauses
+  const hhFacts = read(HH); const hh = hhRules(vol, hhFacts);
+  const facts = loaderFacts(e, books, hh.authors);
 
   let week = '?';
   const source = (r: Rofl): void => {
@@ -193,6 +200,7 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     must(r.assert(facts), 'loader');
     must(r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}`, { who: 'rules' }), 'spat.rofl + access.rofl + volumes.rofl');
     must(r.assertClauses([...worldRows, ...users]), 'world + users');
+    must(r.assertClauses([...hhFacts, ...hh.clauses], { who: HH }), bookPath(vol, HH));
     open.forEach((b, i) => must(r.assertClauses(texts[i], { who: b.user }), b.where));
     // THE WEEK IN FORCE, decided before the first evaluation so it costs one:
     // --week-of, else the operator's latest roll, else the world's own.

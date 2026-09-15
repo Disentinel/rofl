@@ -28,6 +28,7 @@ book(example_world, program).
 --      ledger the rules admit is a book of its own
 book(world, household).
 book(users, household).
+book(hh, household).                  -- the household's own rules (rules.ts), one book, loaded for every call
 book(L, household)  :- ledger(L, _).
 
 lives_in(B, Kind, Where) :- book(B, V), volume(V, Kind, Where).

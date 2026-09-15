@@ -994,7 +994,7 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
-const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe']);
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule']);
 
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
@@ -1358,9 +1358,11 @@ if (isMain) {
   main(process.argv.slice(2)).catch((e) => {
     // A STORE REFUSAL IS AN ANSWER: its code is the contract's, its text is
     // for the person; anything else is a crash and says so on stderr.
+    // exitCode rather than exit(): the loop drains, stdout is flushed whole and
+    // the volume's handles are finalised — not cut off under a live SQLite.
     const code = (e as { code?: number }).code;
-    if (typeof code === 'number') { console.log(e.message); process.exit(code); }
+    if (typeof code === 'number') { console.log(e.message); process.exitCode = code; return; }
     console.error(e instanceof Error ? e.message : String(e));
-    process.exit(1);
+    process.exitCode = 1;
   });
 }

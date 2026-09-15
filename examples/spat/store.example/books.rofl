@@ -17,6 +17,11 @@ authority(p_uncle, uncle).
 -- books from its volume — for `misplaced[audit]` to hold against
 authority(main, rules).
 book_source(rules, repo).
+-- the household's rule book, loaded for every call and signed with its own name
+authority(hh, hh).
+book_source(hh, store).
+imports(hh, p_alex).    -- one line per author of an active rule: the book may read their own book
+imports(hh, p_robin).
 book_source(world, store).
 book_source(users, store).
 book_source(p_alex, store).

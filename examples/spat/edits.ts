@@ -13,6 +13,7 @@ import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
 import { run as maybe } from './maybe.ts';
+import { run as rule } from './rules.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -326,6 +327,7 @@ export function run(s: Store, cmd: string, rest: string[]): number {
     }
     case 'ics': { process.stdout.write(renderIcs(s, rest.indexOf('--for') >= 0 ? rest[rest.indexOf('--for') + 1] : undefined)); return 0; }
     case 'maybe': return maybe(s, rest);
+    case 'rule': return rule(s, rest);
     default: return bad(`глагол '${cmd}'`);
   }
 }

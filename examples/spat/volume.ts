@@ -6,6 +6,7 @@
 // `household`, private, in the store). volumes.rofl declares which is which.
 //
 //   facts(seq, ledger, pred, args, at, via, edit)   INSERT only: a trigger refuses UPDATE and DELETE
+//   clauses(seq, book, head, body, at, via, id)     the household's own RULES, as the kernel's AST (rules.ts); INSERT only
 //   books(ledger, user)                             which books exist and whose they are
 //   meta(key, value)                                tenant, schema, week
 //
@@ -20,10 +21,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { escapeString } from '../../src/parser.ts';
-import { mka, termFromJson, termToJson, type Clause, type Term } from '../../src/unify.ts';
+import { mka, termFromJson, termToJson, type BodyElem, type Clause, type Lit, type Term } from '../../src/unify.ts';
 import { ATOM, SpatError, bookClauses, isoNow, operator, type Env } from './store.ts';
 
-export const SCHEMA = '1';
+/** Schema 2 adds `clauses`; a volume at 1 is brought up on open — one table added, nothing rewritten. */
+export const SCHEMA = '2';
 export interface Volume { tenant: string; file: string; db: DatabaseSync; }
 export const volumeFile = (root: string, tenant: string): string => path.join(root, `${tenant}.sqlite`);
 /** Every tenant with a volume under the root, by name — a name that is not an atom is not a tenant. */
@@ -41,6 +43,12 @@ CREATE TABLE books(ledger TEXT PRIMARY KEY, user TEXT NOT NULL);
 CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TRIGGER facts_no_update BEFORE UPDATE ON facts BEGIN SELECT RAISE(ABORT, 'facts: INSERT only; a retraction is one more row'); END;
 CREATE TRIGGER facts_no_delete BEFORE DELETE ON facts BEGIN SELECT RAISE(ABORT, 'facts: INSERT only; a retraction is one more row'); END;`;
+const DDL2 = `
+CREATE TABLE clauses(seq INTEGER PRIMARY KEY, book TEXT NOT NULL, head TEXT NOT NULL, body TEXT NOT NULL,
+                     at TEXT NOT NULL, via TEXT NOT NULL, id TEXT NOT NULL);
+CREATE INDEX clauses_by_book ON clauses(book, seq);
+CREATE TRIGGER clauses_no_update BEFORE UPDATE ON clauses BEGIN SELECT RAISE(ABORT, 'clauses: INSERT only; a retraction is one more fact'); END;
+CREATE TRIGGER clauses_no_delete BEFORE DELETE ON clauses BEGIN SELECT RAISE(ABORT, 'clauses: INSERT only; a retraction is one more fact'); END;`;
 
 /** Open a tenant's volume; `create` lays the schema down and refuses an existing file. A missing
  *  volume is "no such tenant" (5) — SQLite would otherwise create an empty one on open. */
@@ -54,8 +62,10 @@ export function openVolume(root: string, tenant: string, create = false): Volume
     db = new DatabaseSync(file);
     db.exec('PRAGMA busy_timeout=5000');
     if (create) {
-      db.exec(`PRAGMA journal_mode=WAL; ${DDL}`);
+      db.exec(`PRAGMA journal_mode=WAL; ${DDL} ${DDL2}`);
       db.prepare('INSERT INTO meta(key, value) VALUES (?, ?), (?, ?)').run('tenant', tenant, 'schema', SCHEMA);
+    } else if (meta({ tenant, file, db }, 'schema') === '1') {
+      db.exec(`BEGIN IMMEDIATE; ${DDL2} UPDATE meta SET value = '2' WHERE key = 'schema'; COMMIT`);
     }
   } catch (e) { throw new SpatError(6, `${file}: ${(e as Error).message}`); }
   const v = { tenant, file, db };
@@ -133,6 +143,39 @@ export function write(v: Volume, ledger: string, clauses: Clause[], trail: Trail
   return clauses.length;
 }
 
+// THE HOUSEHOLD'S RULES ARE ROWS TOO — the kernel's own AST, terms as
+// termToJson, never text; `rules.ts` decides what may be written and read.
+const litToJson = (l: Lit): unknown => ({ rel: l.rel, persp: termToJson(l.persp), x: l.perspExplicit, args: l.args.map(termToJson) });
+const litFromJson = (j: any): Lit => ({ rel: j.rel, persp: termFromJson(j.persp), perspExplicit: !!j.x, args: j.args.map(termFromJson), temporal: 'now' });
+const bodyToJson = (b: BodyElem): unknown => (b.t === 'bi' ? { t: 'bi', op: b.op, l: termToJson(b.l), r: termToJson(b.r) } : { t: b.t, lit: litToJson(b.lit) });
+const bodyFromJson = (j: any): BodyElem => (j.t === 'bi' ? { t: 'bi', op: j.op, l: termFromJson(j.l), r: termFromJson(j.r) } : { t: j.t, lit: litFromJson(j.lit) });
+export interface Ruled { seq: number; id: string; clause: Clause; }
+export function readClauses(v: Volume, book: string): Ruled[] {
+  const rows = v.db.prepare('SELECT seq, id, head, body FROM clauses WHERE book = ? ORDER BY seq').all(book) as { seq: number; id: string; head: string; body: string }[];
+  return rows.map((r) => {
+    try { return { seq: r.seq, id: r.id, clause: { head: litFromJson(JSON.parse(r.head)), body: (JSON.parse(r.body) as unknown[]).map(bodyFromJson) } }; }
+    catch { throw new SpatError(6, `${v.file}/${book} clauses seq ${r.seq}: не клауза ядра`); }
+  });
+}
+/** One rule's clauses, one transaction, beside its facts of the same id (the trail) in `facts`. */
+export function writeClauses(v: Volume, book: string, id: string, clauses: Clause[], facts: Clause[], trail: Trail): void {
+  const ins = v.db.prepare('INSERT INTO clauses(book, head, body, at, via, id) VALUES (?, ?, ?, ?, ?, ?)');
+  try {
+    v.db.exec('BEGIN IMMEDIATE');
+    for (const c of clauses) ins.run(book, JSON.stringify(litToJson(c.head)), JSON.stringify(c.body.map(bodyToJson)), trail.at, trail.via, id);
+    const inf = v.db.prepare('INSERT INTO facts(ledger, pred, args, at, via, edit) VALUES (?, ?, ?, ?, ?, ?)');
+    for (const c of facts) inf.run(book, c.head.rel, JSON.stringify(c.head.args.map(termToJson)), trail.at, trail.via, trail.edit);
+    v.db.exec('COMMIT');
+  } catch (e) {
+    try { v.db.exec('ROLLBACK'); } catch { /* nothing to roll back */ }
+    throw new SpatError(6, `${v.file}/${book}: правило не записано: ${(e as Error).message}`);
+  }
+}
+const showT = (t: Term): string => (t.k === 'v' ? (t.name.startsWith('_') ? '_' : t.name) : t.k === 'f' ? `${t.name}(${t.args.map(showT).join(', ')})` : show(t));
+const showLit = (l: Lit): string => `${l.rel}${l.perspExplicit ? `[${showT(l.persp)}]` : ''}(${l.args.map(showT).join(', ')})`;
+export const showClause = (c: Clause): string => `${showLit(c.head)}${c.body.length === 0 ? '' : ' :- ' + c.body.map((b) =>
+  (b.t === 'bi' ? `${showT(b.l)} ${b.op} ${showT(b.r)}` : `${b.t === 'neg' ? 'not ' : ''}${showLit(b.lit)}`)).join(', ')}.`;
+
 /** A DUMP SAYS WHAT IT IS, IN ITS FIRST CLAUSE: `dump_of(Tenant, Book,
  *  private).` — the way boot.rofl claims the kernel ring on line one. A
  *  public loader (scripts/goldens.ts) refuses a file that opens so; this
@@ -180,8 +223,10 @@ export function render(v: Volume, ledger: string): string {
     const key = `-- ${r.at} ${r.via} ${user}: ${r.edit ?? ''}`;
     if (key !== last) { out.push(key); last = key; }
     const args = termsOf(v, ledger, r).map(show);
-    out.push(`${r.pred}${ledger.startsWith('p_') ? `[${ledger}]` : ''}(${args.join(', ')}).`);
+    out.push(`${r.pred}${perspOf(ledger) !== 'main' ? `[${ledger}]` : ''}(${args.join(', ')}).`);
   }
+  // the household's rules come out as text too, each under its id; `spat rule add` is the way back in
+  for (const c of readClauses(v, ledger)) { if (`-- ${c.id}` !== last) { last = `-- ${c.id}`; out.push(last); } out.push(showClause(c.clause)); }
   return out.join('\n') + '\n';
 }
 /** Every ledger the volume holds: the two main books, then the registered ones. */

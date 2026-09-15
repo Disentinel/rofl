@@ -1,0 +1,46 @@
+-- hh.rofl — WHAT THE HOUSEHOLD'S OWN RULE BOOK HOLDS in this example, as the
+-- loader asserts it (examples/spat/rules.ts): the trail of each rule as facts,
+-- then its clauses, every head [hh]. Written down so both engines can be held
+-- to the four extension points over the same book (facts/checks.rofl, worlds
+-- `spat_store` and `spat_trial`). Not read by the tool: a real book is rows
+-- in the volume — `facts` for the trail, `clauses` for the AST — put there by
+-- `spat rule add`, and `spat volume load` refuses a rule in a text book.
+--
+-- r_laptop, alex, by hand: «работа с ноутбуком — только там, где ноутбук»;
+-- acme is at the office on Thursday, so defect[hh](no_laptop, acme, thu) —
+-- one defect of the household's own kind, and in the trial world one more
+-- reason e_schoolmv breaks Thursday
+rule_by[hh](r_laptop, alex).
+rule_at[hh](r_laptop, "2026-08-30T19:00:00+03:00").
+rule_via[hh](r_laptop, cli).
+needs[hh](acme, laptop).
+laptop_at[hh](home).
+defect[hh](no_laptop, B, D) :- needs[hh](B, laptop), span(_, B, _, Pl, D, _, _), not laptop_at[hh](Pl).
+-- r_carcheck, robin, through the bot and confirmed by her: a warning line on Friday
+rule_by[hh](r_carcheck, robin).
+rule_at[hh](r_carcheck, "2026-08-31T09:00:00+03:00").
+rule_via[hh](r_carcheck, telegram).
+rule_proposed[hh](r_carcheck).
+rule_confirmed[hh](r_carcheck, "2026-08-31T09:30:00+03:00", telegram).
+warn[hh](car_check, "техосмотр", fri).
+-- r_guest, alex: the Friday guest is not left alone at ten (no awake window
+-- says so — the world only knows children), and robin is committed on Sunday
+-- morning: one needs_cover row and one busy row of the household's kind. The
+-- busy row is behind `deep(slots)` like every busy row, so this census does
+-- not see it; demo.ts asks `free` for it.
+rule_by[hh](r_guest, alex).
+rule_at[hh](r_guest, "2026-08-31T10:00:00+03:00").
+rule_via[hh](r_guest, cli).
+needs_cover[hh](guest, fri, 600).
+busy[hh](robin, sun, 600).
+-- r_forged, alex: a head that names main in the text — the loader stamps it
+-- [hh] all the same, and may_edit[main] does not move
+rule_by[hh](r_forged, alex).
+rule_at[hh](r_forged, "2026-08-31T11:00:00+03:00").
+rule_via[hh](r_forged, cli).
+may_edit[hh](nanny, c_pickup) :- person(nanny, helper).
+-- r_gone, robin, retracted: its clause is not loaded at all (rules.ts), so it is not here
+rule_by[hh](r_gone, robin).
+rule_at[hh](r_gone, "2026-08-31T12:00:00+03:00").
+rule_via[hh](r_gone, cli).
+rule_retracted[hh](r_gone, "2026-08-31T12:30:00+03:00", cli).

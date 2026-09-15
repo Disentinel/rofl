@@ -271,6 +271,10 @@ defect(D, no_way, T)           :- run_stuck(T), run(T, _, _, _, D, _, _).
 defect(D, cannot_get_there, F) :- too_slow(_, D, F, _).
 defect(D, no_way_on_foot, F)   :- walk_impossible(_, D, F, _).
 defect(D, on_foot_unknown, F)  :- walk_unknown(_, D, F, _).
+-- for: a defect of the household's own kind (spat.rofl §12): a family rule
+--      concludes `defect[hh](Kind, Block, Day)` and an edit that brings one
+--      to a day breaks it by that name
+defect(D, Kind, B)             :- defect[hh](Kind, B, D).
 
 breaks_on(E, D, R) :- trial(E), touches_day(E, D), defect(D, R, K), not before(D, R, K).
 breaks(E, R)       :- breaks_on(E, _, R).

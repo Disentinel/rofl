@@ -948,7 +948,27 @@ broken(travel_ambiguous) :- two_ways(_, _, _, _).
 holds_together(week)  :- not broken(_).
 
 -- =========================================================================
--- 12. DECLARED INPUTS — do not edit, do not delete
+-- 12. THE HOUSEHOLD'S OWN RULES — the extension points
+-- =========================================================================
+-- A household writes rules of its own into its volume (`spat rule add`,
+-- examples/spat/rules.ts): a new KIND of constraint — «нужен ноутбук»,
+-- «согласовать время» — without a release. They live in a book of their own,
+-- [hh], and the loader stamps every head of that book [hh] whatever the text
+-- said, so nothing written there can conclude into main. EXACTLY FOUR
+-- relations of the book are read — these two here, `defect[hh]` in
+-- access.rofl, and `warn[hh](Kind, Text, Day)` by the host as a «!!» line of
+-- tomorrow/show; everything else the book concludes is inert. The book reads
+-- the world; main reads the book — both declared, so the flow audit is quiet.
+imports(main, hh).
+imports(hh, main).
+-- for: a family rule says someone is committed — gated as `busy` is
+busy(P, D, S)         :- deep(slots), busy[hh](P, D, S).
+-- for: a family rule says a child needs somebody at a slot — the same
+--      `uncovered` then asks who is on duty
+needs_cover(Ch, D, S) :- needs_cover[hh](Ch, D, S).
+
+-- =========================================================================
+-- 13. DECLARED INPUTS — do not edit, do not delete
 -- =========================================================================
 -- Every relation a week file supplies, declared extensional. Without this a
 -- relation read under `not` with neither facts nor rules gets no stratum

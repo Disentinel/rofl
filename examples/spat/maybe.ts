@@ -48,6 +48,7 @@ function propose(s: Store, text: string, asOf?: string): number {
   const on = asOf === undefined ? [] : tagged(id, [`maybe_on(${id}, ${table(s.r, 'day', 'D, N').some((x) => x.D === asOf) ? asOf : (() => { throw new SpatError(2, `--as-of: день '${asOf}' мир не знает`); })()}).`]);
   addBook(s.vol, id, s.env.as);
   write(s.vol, id, [...entryClauses(id, e, id, s.env.as, at, s.env.via, week), ...on], { at, via: s.env.via, edit: `maybe ${text.trim()}` });
+  s.maybes.push({ book: id, user: s.env.as, where: `${s.vol.file}/${id}` });
   console.log(`гипотеза ${id}: ${e.summary} — книга [${id}], в силу не вступает; сравнить: spat maybe compare; применить: spat maybe apply ${id}`);
   return 0;
 }
