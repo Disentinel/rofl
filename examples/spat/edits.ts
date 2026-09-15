@@ -13,6 +13,7 @@ import { dateToken, dated, dayAtom, under, weekOf, type Dated } from './dates.ts
 import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
+import { problems, tgDay, tgWeek } from './tg.ts';
 import { run as maybe } from './maybe.ts';
 import { run as rule } from './rules.ts';
 
@@ -244,7 +245,7 @@ export function commit(s: Store, id: string, clauses: Clause[], week: string, e:
     console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует: ${e.summary}`);
     for (const d of [...new Set(on.map((x) => x.D))]) {
       console.log(`  ломает ${ru(d)}: ${on.filter((x) => x.D === d).map((x) => x.R).join(', ')}`);
-      console.log(renderDay(s.r, d, `  как будет ${ru(d)}:`, false));
+      console.log(s.fmt === 'tg' ? problems(s.r, d).join('\n') : renderDay(s.r, d, `  как будет ${ru(d)}:`, false));
     }
     console.log(`  подтвердить: spat confirm ${id}`);
     return 3;
@@ -329,21 +330,22 @@ const stale = (s: Store): string => {
 
 /** Dispatch for the store verbs; the classic verbs stay in spat.ts. */
 export function run(s: Store, cmd: string, rest: string[]): number {
+  const tg = s.fmt === 'tg';
   switch (cmd) {
     case 'whoami': return whoami(s);
     case 'edit': return edit(s, rest.join(' '));
     case 'confirm': return mark(s, 'confirmed', rest[0] ?? bad('confirm <edit-id>'));
     case 'retract': return mark(s, 'retracted', rest[0] ?? bad('retract <edit-id>'));
     case 'roll': return roll(s, rest[0] ?? bad('roll <week>'));
-    case 'tomorrow': { const d = dated(s, 'tomorrow'); console.log(renderDay(s.r, d.day, `ЗАВТРА, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
+    case 'tomorrow': { const d = dated(s, 'tomorrow'); console.log(tg ? tgDay(s.r, d.day, d.week) : renderDay(s.r, d.day, `ЗАВТРА, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
     case 'show': {
-      if (rest[0] === 'week' || rest[0] === 'неделя') { console.log(renderDay(s.r, undefined, `НЕДЕЛЯ ${s.week}${stale(s)}`)); return 0; }
+      if (rest[0] === 'week' || rest[0] === 'неделя') { console.log(tg ? tgWeek(s.r, s.week) : renderDay(s.r, undefined, `НЕДЕЛЯ ${s.week}${stale(s)}`)); return 0; }
       if (rest[0] === undefined || dateToken(s.env, rest[0])) {
         const d = dated(s, rest[0] ?? 'today');
-        console.log(renderDay(s.r, d.day, `${rest[0] === undefined ? 'СЕГОДНЯ, ' : ''}${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0;
+        console.log(tg ? tgDay(s.r, d.day, d.week) : renderDay(s.r, d.day, `${rest[0] === undefined ? 'СЕГОДНЯ, ' : ''}${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0;
       }
       const d = names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`);
-      console.log(renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
+      console.log(tg ? tgDay(s.r, d, s.week) : renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
     }
     case 'ics': { process.stdout.write(renderIcs(s, rest.indexOf('--for') >= 0 ? rest[rest.indexOf('--for') + 1] : undefined)); return 0; }
     case 'maybe': return maybe(s, rest);

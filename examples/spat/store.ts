@@ -113,7 +113,7 @@ export const bookOf = (user: string): string => `p_${user}`;
 
 /** `opened`: every book the loader read, in order — a stranger's proof; `maybes`: the
  *  hypothesis books (`m_`), registered in the volume and never given to the rules. */
-export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; }
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'

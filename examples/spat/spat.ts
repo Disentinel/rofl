@@ -1000,8 +1000,9 @@ async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
   let weekFile = DEFAULT_WEEK;
   let weekOf: string | undefined;
+  let fmt: string | undefined;   // --format tg: the day and the week for a phone (tg.ts)
   for (const [flag, set] of [['--week', (v: string) => { weekFile = path.resolve(v); }],
-    ['--week-of', (v: string) => { weekOf = v; }]] as [string, (v: string) => void][]) {
+    ['--week-of', (v: string) => { weekOf = v; }], ['--format', (v: string) => { fmt = v; }]] as [string, (v: string) => void][]) {
     const i = argv.indexOf(flag);
     if (i >= 0 && argv[i + 1] !== undefined && !(flag === '--week-of' && argv[i - 1] === 'whatif')) {
       set(argv[i + 1]); argv.splice(i, 2);
@@ -1028,6 +1029,8 @@ async function main(argv: string[]): Promise<void> {
     }
     if (cmd === 'volume') { process.exitCode = (await import('./volume.ts')).run(e, rest); return; }
     const store = st.openStore(e, { weekOf, extra });
+    if (fmt !== undefined && fmt !== 'tg') throw Object.assign(new Error(`--format: только tg (терминал — без флага), не '${fmt}'`), { code: 2 });
+    store.fmt = fmt;
     if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
     // over the store, `place` tries its best slots as hypotheses (maybe.ts)
     if (cmd === 'place') { process.exitCode = (await import('./maybe.ts')).place(store, rest); return; }
@@ -1351,7 +1354,7 @@ const USAGE = [
   '  spat rule add \'<клаузы>\' · rule list · rule confirm <id> · rule retract <id>   правила семьи (взрослый/оператор)',
   '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',
-  '  --week <file>      другой файл недели      --week-of <w>   другая неделя',
+  '  --week <file>      другой файл недели      --week-of <w>   другая неделя      --format tg   день/неделя для телефона',
 ].join('\n');
 
 const real = (p: string): string => { try { return fs.realpathSync(p); } catch { return p; } };

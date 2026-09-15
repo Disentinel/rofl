@@ -136,7 +136,7 @@ export SPAT_FROM_ID=100002        # a Telegram sender: the users book says who a
 #   or SPAT_AS=me SPAT_TENANT=example — a book by name, for the scheduler and the operator
 spat whoami                       who I am, which books I was given
 spat tomorrow                     tomorrow: holes, chains, late arrivals, then the grid
-spat show [day|week]              a day (today by default) or the week
+spat show [day|week]              a day (today by default) or the week; --format tg for a phone (tg.ts)
 spat edit 'skip walk mon'         0 applied · 3 written as proposed, breaks the day · 4 no right · 2 not parsed
 spat confirm <id> · retract <id>  my own edit, one more fact in my book
 spat edit 'add greek сегодня 16:00-17:00 kit'   a date — сегодня/завтра/15.09 — is resolved in SPAT_TZ and lands in ITS week

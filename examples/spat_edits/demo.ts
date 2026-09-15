@@ -15,6 +15,7 @@ import { SpatError, type Store } from '../spat/store.ts';
 import { run as verb } from '../spat/edits.ts';
 import { openVolume, render } from '../spat/volume.ts';
 import { FROM, Group, ROOT, asRobin, count, fresh, inproc, spat, sql, type Res } from '../spat/demolib.ts';
+import { tgDay, tgWeek } from '../spat/tg.ts';
 
 // ------------------- 12. a date is a fact of the environment
 async function datedEdits(): Promise<Group> {
@@ -224,9 +225,40 @@ async function asSeen(): Promise<Group> {
   return g;
 }
 
+// ------------------- 17. the day and the week for a phone
+const TG_THU = [
+  '*Чт 03.09* — !! не покрыт kit 17:40–18:20: alex — c_acme (внешнее); няня — не в эти часы; nextdoor — не в эти часы; robin — c_swim (наше)',
+  '!! не покрыт nico 17:40–18:20: alex — c_acme (внешнее); няня — не в эти часы; nextdoor — не в эти часы; robin — c_swim (наше)',
+  '', '*alex*', '• 07:30–08:00 отвезти в школу (с kit)', '• 08:10–08:30 отвезти в садик (с nico)', '• 09:00–13:00 работа (утро)', '• 14:00–16:00 работа (день)', '• 18:00–20:30 acme (офис)',
+  '', '*kit*', '• 08:00–14:00 school_kit (школа)', '', '*nico*', '• 08:30–13:30 sadik_nico (садик)',
+  '', '*robin*', '• 13:25–13:50 забор детей (садик) (с nico)', '• 14:15–14:45 обед (с kit, nico)', '• 17:00–18:00 плавание (бассейн)',
+].join('\n');
+const TG_WEEK = [
+  '*Неделя w0831* (31.08–06.09)', 'Пн — !! без запаса: robin физио → забор детей, 0 мин', 'Вт — сходится', 'Ср — сходится',
+  'Чт — !! 2 дыры: kit 17:40–18:20, nico 17:40–18:20', 'Пт — !! без запаса: robin физио → забор детей, 0 мин', 'Сб — сходится', 'Вс — сходится', '', 'Подробно: show <день>',
+].join('\n');
+async function phone(): Promise<Group> {
+  const g = new Group('17. the day and the week for a phone — --format tg: short lines, no padding, one line per day for the week; the terminal untouched');
+  const root = fresh();
+  // the golden text, held here: a renderer change is a diff a person reads, not a hash that moved
+  const day = inproc(asRobin(root), (s) => { console.log(tgDay(s.r, 'thu', 'w0831')); return 0; });
+  g.check('tgDay(thu) — дословно как ожидается (20 строк, без выравнивания пробелами)', day.out === TG_THU && !/ {2,}/.test(day.out), day.out);
+  const wk = inproc(asRobin(root), (s) => { console.log(tgWeek(s.r, 'w0831')); return 0; });
+  g.check('tgWeek(w0831) — дословно: строка на день, дыры сосчитаны, «Подробно: show <день>»', wk.out === TG_WEEK, wk.out);
+  const cli = await spat(root, 'robin', ['show', 'thu', '--format', 'tg']);
+  g.check('show thu --format tg = tgDay(thu)', cli.code === 0 && cli.out === `${TG_THU}\n`, cli.out);
+  const tm = await spat(root, 'robin', ['tomorrow', '--format', 'tg'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
+  g.check('tomorrow --format tg (вс 06.09): «*Пн 07.09*» под неделей w0907, ≤ 25 строк', /^\*Пн 07\.09\* — /.test(tm.out) && tm.out.split('\n').length <= 25, tm.out.split('\n')[0]);
+  g.check('show week --format tg = tgWeek (10 строк, не 87)', (await spat(root, 'robin', ['show', 'week', '--format', 'tg'])).out === `${TG_WEEK}\n`);
+  const term = await spat(root, 'robin', ['show', 'thu']);
+  g.check('без флага — терминальная сетка как была (колонки, ВЕЗЁТ/НЕ ПОКРЫТ заглавными)', /^чт \(неделя w0831\)\n  !! НЕ ПОКРЫТ чт 17:40–18:20  kit/.test(term.out) && /    07:30–08:00  отвезти в школу    школа      \+ kit/.test(term.out), term.out.split('\n').slice(0, 2).join(' | '));
+  g.code('--format xx', await spat(root, 'robin', ['show', 'thu', '--format', 'xx']), 2);
+  return g;
+}
+
 const t0 = Date.now();
 // FOUR GROUPS AT ONCE, in a fixed order of results (see examples/spat/demo.ts).
-const todo = [datedEdits, recurring, hypotheses, ruleBooks, asSeen];
+const todo = [datedEdits, recurring, hypotheses, ruleBooks, asSeen, phone];
 const groups: Group[] = new Array(todo.length);
 let next = 0;
 await Promise.all(Array.from({ length: 4 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));

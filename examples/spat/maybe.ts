@@ -20,6 +20,7 @@ import { addBook, readBook, trailOf, write } from './volume.ts';
 import { commit, entryClauses, parseEdit, tagged } from './edits.ts';
 import { under, weekOf } from './dates.ts';
 import { renderDay } from './tomorrow.ts';
+import { problems } from './tg.ts';
 
 const TTL_H = 24;
 const USAGE = 'spat maybe \'<правка>\' [--as-of <день>] · maybe list · maybe compare [<id>…] · maybe apply <id> · place <что> <минут> [кто] [где] [--week-of W]';
@@ -71,7 +72,8 @@ function underHyp(s: Store, h: Hyp): Verdict {
   const breaks = [...new Set(table(f, 'breaks_on', 'E, D, R').filter((x) => x.E === h.id).map((x) => x.R))].sort();
   const hs = holes(f).filter((x) => days.includes(x.day)).length;
   const cs = chains(f).filter((c) => days.includes(c.day)).map((c) => c.m);
-  const text = days.map((d) => renderDay(f, d, `    ${ru(d)} (неделя ${h.week}):`, false).split('\n').map((l) => `  ${l}`).join('\n'));
+  const text = days.map((d) => (s.fmt === 'tg' ? [`${ru(d)}:`, ...(problems(f, d).length > 0 ? problems(f, d) : ['сходится'])].join('\n')
+    : renderDay(f, d, `    ${ru(d)} (неделя ${h.week}):`, false).split('\n').map((l) => `  ${l}`).join('\n')));
   // the kernel's own proof of the hypothesis acting, cut at the depth that reaches its axiom in the book
   const why = f.why(`acts(${h.id})`).text.split('\n').filter((l) => /^ {0,6}\S/.test(l) && !/^\s+not /.test(l)).slice(0, 5);
   text.push(`    why: ${why.join('\n         ')}`);

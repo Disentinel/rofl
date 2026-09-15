@@ -406,6 +406,28 @@ the rules' `admissible`/`cand_bad` over `want/4`, the best start of each of
 three days tried as a hypothesis, the three best printed with breaks, holes
 and slack and the `maybe` line to write one; nothing is kept.
 
+## The day and the week for a phone
+
+The owner got the week in Telegram as a `pre` block — 87 lines of the
+terminal grid, columns fifty characters wide, unreadable on a phone. The
+terminal stays as it is (the CLI, A4 through html.ts); `--format tg` on
+`show`/`tomorrow` (and on the day an `edit` reports as broken, and on
+`maybe compare`'s days) renders the same relations for a proportional font
+(`tg.ts`, 74 lines): short lines, no padding, no table; the only markup is
+`*…*` on the day's name and on each person's name. A day is «*Чт 03.09* —
+сходится» or the problems first, one per line, then a blank line and each
+person's «• 17:00–18:00 плавание (бассейн)» lines — the place only when the
+name does not already say it and never the base, «(с kit, nico)» for who is
+with whom, «везёт kit: школа → дом» for a trip, « [правка e_…]» kept for a
+book's block. The week is a summary — «*Неделя w0831* (31.08–06.09)» and one
+line per day, «Пн — сходится» / «Чт — !! 2 дыры: kit 17:40–18:20, …» — then
+«Подробно: show <день>». The two texts for the shipped fixture are held
+verbatim in demo group 17 as the golden. Escaping for MarkdownV2 is the
+sender's: the shim's egress escapes everything it is handed, `*` included, so
+the two bold markers survive only if the shim passes those lines unescaped —
+S1e's call, not the renderer's. Russian inflection («с Ромой») is not done:
+the world carries a name's nominative (`ru_name`) and nothing else.
+
 ## The household's own rules, without a release
 
 «Когда я начну вводить новые constraints (нужен ноутбук, согласовать время)
