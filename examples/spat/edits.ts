@@ -7,8 +7,8 @@ import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
-import { dayOrder, hhmm, parseTime, ru, sayConstraint, table } from './spat.ts';
-import { SpatError, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
+import { dayOrder, hhmm, parseTime, rows, ru, sayConstraint, table } from './spat.ts';
+import { SpatError, bookOf, calDay, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Cal, type Env, type Store } from './store.ts';
 import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
@@ -20,7 +20,10 @@ const GRAMMAR = [
   '  sick   <кто> [<день>]                       болеет      (болеет kit пт)',
   '  car out <день> [<от>-<до>]                  машины нет  (машины нет пн 07:00-10:00)',
   '  report <ограничение> <день> <время>         сообщить    (сообщить c_bus пн 14:10)',
-  '  день: mon..sun / пн..вс; без дня — все дни, когда блок стоит.',
+  '  add    <что> every <дни> <от>-<до> [<кто>] [<где>]   каждую неделю (добавить greek каждый вт 16:00-17:00 kit school)',
+  '  skip   <блок> every <дни>                   каждую неделю (отменить walk каждый вт)',
+  '  день: mon..sun / пн..вс; сегодня/завтра/послезавтра, 15.09, 2026-09-15 — по календарю SPAT_TZ;',
+  '  без дня — все дни, когда блок стоит. дни при every: день, weekdays/будни, alldays/ежедневно, группа дней из мира.',
 ].join('\n');
 
 const VERB: Record<string, string> = {
@@ -45,7 +48,25 @@ const bad = (what: string): never => {
   throw new SpatError(2, `не разобрал: ${what}\n\nДопустимо:\n${GRAMMAR}`);
 };
 
-export interface Edit { kind: string; summary: string; facts: (id: string) => string[]; }
+/** A DATE IS A FACT OF THE ENVIRONMENT. `сегодня`, `завтра`, `послезавтра`, `15.09`
+ *  (this year) and `2026-09-15` are resolved by the CLI in SPAT_TZ (and SPAT_NOW),
+ *  never by the person or the model — measured 2026-09-15: the model computed
+ *  the weekday itself and wrote Monday for a Tuesday. `which` names the loader's
+ *  `date_monday` row the day can be asked under; `on` is a date of its own. */
+const DATE_WORD: Record<string, number> = { 'сегодня': 0, today: 0, 'завтра': 1, tomorrow: 1, 'послезавтра': 2 };
+export type Dated = Cal & { which: 'today' | 'tomorrow' | 'on' };
+export function dateToken(e: Env, t: string): Dated | undefined {
+  const w = DATE_WORD[t.toLowerCase()];
+  if (w !== undefined) return { ...dateIn(e, w), which: w === 0 ? 'today' : w === 1 ? 'tomorrow' : 'on' };
+  const dm = /^(\d{1,2})\.(\d{1,2})$/.exec(t);
+  const ymd = dm ? `${dateIn(e).ymd.slice(0, 4)}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : undefined;
+  if (ymd === undefined) return undefined;
+  const d = calDay(ymd);
+  return d.ymd === ymd ? { ...d, which: 'on' } : bad(`дата: '${t}' — в календаре такого дня нет`);
+}
+const dayAtom = (r: Rofl, n: number): string => table(r, 'day', 'D, N').find((x) => Number(x.N) === n)?.D ?? bad(`в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
+
+export interface Edit { kind: string; summary: string; facts: (id: string) => string[]; on?: Dated; every?: boolean; }
 
 /** TEXT -> FACTS. One line of a person's Russian or English into the fact
  *  shapes access.rofl reads. Names resolve through the world, so a block or
@@ -53,21 +74,35 @@ export interface Edit { kind: string; summary: string; facts: (id: string) => st
  *  ONE LINE, EVERY TOKEN SPOKEN FOR: a control character anywhere, or a token
  *  after the last field, is code 2 — measured on 33832b7, a second line in
  *  the text became a second fact in the book and bricked it for every adult. */
-export function parseEdit(r: Rofl, text: string): Edit {
+export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(text)) bad('в правке управляющий символ (перевод строки, табуляция, NUL); правка — одна строка');
   const w = text.trim().split(/\s+/).filter((x) => x.length > 0);
-  const done = <T,>(used: number, out: T): T => (w.length > used ? bad(`лишнее в конце: '${w.slice(used).join(' ')}'`) : out);
+  const done = (used: number, out: Edit): Edit => (w.length > used ? bad(`лишнее в конце: '${w.slice(used).join(' ')}'`) : { ...out, on });
   const N = names(r);
   const days = new Set(table(r, 'day', 'D, N').map((x) => x.D));
+  const groups = new Set(table(r, 'in_group', 'G, D').map((x) => x.G));
   const name = (t: string | undefined, what: string): string => {
     const a = t === undefined ? undefined : N.get(t.toLowerCase());
     return a ?? bad(`${what}: '${t ?? ''}' — мир такого не знает`);
   };
+  let on: Dated | undefined;
+  const dated = (t: string | undefined): Dated | undefined => (t !== undefined && e ? dateToken(e, t) : undefined);
   const day = (t: string | undefined): string => {
+    const d = dated(t);
+    if (d) { on = d; return dayAtom(r, d.n); }
     const a = name(t, 'день');
     return a === 'all' || days.has(a) ? a : bad(`день: '${t}'`);
   };
+  // the days of a recurring line: one day, weekdays, alldays, or a group the world names
+  const spec = (t: string | undefined): string => {
+    if (t !== undefined && /^(alldays|ежедневно|day|день|все|all)$/i.test(t)) return 'alldays';
+    if (t !== undefined && /^(weekdays?|будни|будням)$/i.test(t)) return 'weekdays';
+    if (t !== undefined && groups.has(t.toLowerCase())) return t.toLowerCase();
+    const a = name(t, 'дни');
+    return days.has(a) ? a : bad(`дни: '${t}' — день, weekdays/будни, alldays/ежедневно или группа дней`);
+  };
+  const EVERY = /^(every|каждый|каждую|каждое|еженедельно)$/i;
   const time = (t: string | undefined): number => {
     try { return parseTime(t ?? ''); } catch { return bad(`время: '${t ?? ''}' — пиши 13:25`); }
   };
@@ -75,7 +110,7 @@ export function parseEdit(r: Rofl, text: string): Edit {
     const p = (t ?? '').split(/[-–]/);
     return p.length === 2 ? [time(p[0]), time(p[1])] : bad(`интервал: '${t ?? ''}' — пиши 13:00-15:00`);
   };
-  const isDay = (t: string | undefined): boolean => t !== undefined && (days.has(N.get(t.toLowerCase()) ?? '') || N.get(t.toLowerCase()) === 'all');
+  const isDay = (t: string | undefined): boolean => t !== undefined && (dated(t) !== undefined || days.has(N.get(t.toLowerCase()) ?? '') || N.get(t.toLowerCase()) === 'all');
   const verb = VERB[(w[0] ?? '').toLowerCase()] ?? bad(`глагол: '${w[0] ?? ''}'`);
   const block = (t: string | undefined): string => {
     const a = name(t, 'блок');
@@ -89,17 +124,24 @@ export function parseEdit(r: Rofl, text: string): Edit {
   }
   if (verb === 'skip') {
     const ev = block(w[1]);
+    if (w[2] !== undefined && EVERY.test(w[2])) {
+      const sp = spec(w[3]);
+      return done(4, { kind: 'skip', every: true, summary: `${ru(ev)} отменён каждую неделю: ${ru(sp)}`, facts: (id) => [`e_unusual(${id}, ${ev}, ${sp}).`] });
+    }
     const d = w[2] === undefined ? 'all' : day(w[2]);
     return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, facts: (id) => [`e_skip(${id}, ${ev}, ${d}).`] });
   }
   if (verb === 'add') {
     const what = w[1] !== undefined && ATOM.test(w[1]) ? w[1] : bad(`что: '${w[1] ?? ''}' — латиницей, как в файле недели`);
-    const d = day(w[2]);
-    const [f, t] = range(w[3]);
-    const who = w[4] === undefined ? undefined : name(w[4], 'кто');
-    const where = w[5] === undefined ? table(r, 'base', 'B')[0].B : name(w[5], 'где');
-    return done(6, { kind: 'add', summary: `${what} ${ru(d)} ${hhmm(f)}–${hhmm(t)}`,
-      facts: (id) => [`e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).`] });
+    // RECURRING: one line of the typical week, `usual/7` in shape, owned by its author
+    const every = w[2] !== undefined && EVERY.test(w[2]);
+    const d = every ? spec(w[3]) : day(w[2]);
+    const at = every ? 4 : 3;
+    const [f, t] = range(w[at]);
+    const who = w[at + 1] === undefined ? undefined : name(w[at + 1], 'кто');
+    const where = w[at + 2] === undefined ? table(r, 'base', 'B')[0].B : name(w[at + 2], 'где');
+    return done(at + 3, { kind: 'add', every, summary: `${what} ${every ? 'каждую неделю: ' : ''}${ru(d)} ${hhmm(f)}–${hhmm(t)}`,
+      facts: (id) => [every ? `e_usual(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).` : `e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).`] });
   }
   if (verb === 'sick') {
     const p = name(w[1], 'кто');
@@ -125,11 +167,16 @@ const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.m
  *  transaction — or none. Codes 0, 2, 3, 4 as the contract lists them. */
 export function edit(s: Store, text: string): number {
   const book = myBook(s);
-  const e = parseEdit(s.r, text);
+  const e = parseEdit(s.r, text, s.env);
   const at = isoNow(s.env);
   const id = editId(s.env.as, at, text.trim());
+  // A DATED EDIT LANDS IN THE DATE'S OWN WEEK and is tried under it; a day
+  // named by name lands in the week in force, as before.
+  const week = e.on ? weekOf(s, e.on).week : s.week;
+  const warn = stale(s);
+  under(s, week);
   const clauses = tagged(book.book, [...e.facts(id).map((l) => l.replace('$ME', s.env.as)),
-    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${s.week}).`]);
+    `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${week}).`]);
   const v = trial(s, id, clauses);
   if (v.noRight) {
     const o = v.owner!;
@@ -151,7 +198,7 @@ export function edit(s: Store, text: string): number {
     return 3;
   }
   put(s, book, clauses, text);
-  console.log(`применено: ${e.summary} (${id}) — неделя ${s.week}${stale(s)}`);
+  console.log(`применено: ${e.summary}${e.on ? ` (${e.on.ymd})` : ''} (${id}) — ${e.every ? 'каждую неделю' : `неделя ${week}`}${warn}`);
   return 0;
 }
 
@@ -213,9 +260,12 @@ export function whoami(s: Store): number {
   console.log(`  книги мне открыты: ${s.open.map((b) => b.book).join(' ') || 'ни одной'}`);
   console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.where ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);
+  const every = new Set([...rows(s.r, 'e_usual[L](E, W, S, F, T, P, Pl)'), ...rows(s.r, 'e_unusual[L](E, Ev, S)')].map((x) => x.E));
   const st = (e: string): string => (s.r.holds(`retracted_edit(${e})`) ? 'отозвана' : s.r.holds(`pending(${e})`) ? 'ждёт confirm'
     : s.r.holds(`no_right(${e})`) ? 'без права' : 'действует');
-  for (const e of mine) console.log(`  ${e}  ${st(e)}`);
+  for (const e of mine.filter((x) => !every.has(x))) console.log(`  ${e}  ${st(e)}`);
+  if (mine.some((x) => every.has(x))) console.log('  повторяемые (каждую неделю):');
+  for (const e of mine.filter((x) => every.has(x))) console.log(`  ${e}  ${st(e)}`);
   return 0;
 }
 
@@ -224,14 +274,23 @@ export function whoami(s: Store): number {
  *  world is re-read under W, so the day carries W's own moved/added and the
  *  edits recorded for W — never the same weekday of another week. A date
  *  with no `week_starts` is refused: the world does not have that week. */
-function dated(s: Store, which: 'today' | 'tomorrow'): { day: string; ymd: string; week: string } {
-  const { ymd, n, monday } = dateIn(s.env, which === 'today' ? 0 : 1);
-  const w = table(s.r, 'week_of', 'Which, W').find((x) => x.Which === which)?.W;
-  if (!w) throw new SpatError(2, `неделя с понедельника ${monday} не заведена: в мире нет week_starts(W, "${monday}") — ${ru(which === 'today' ? 'сегодня' : 'завтра')} ${ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
-  if (w !== s.week) { s.r.retract(`current(${s.week})`); s.r.assert(`current(${w}).`); s.r.evaluate(); bust(s.r); }
-  return { day: dayAtom(s, n), ymd, week: w };
+export function weekOf(s: Store, d: Dated): { day: string; ymd: string; week: string } {
+  if (d.which === 'on') { must(s.r.assert(`date_monday(on, "${d.monday}").`), 'date'); s.r.evaluate(); bust(s.r); }
+  const w = table(s.r, 'week_of', 'Which, W').find((x) => x.Which === d.which)?.W;
+  if (!w) throw new SpatError(2, `неделя с понедельника ${d.monday} не заведена: в мире нет week_starts(W, "${d.monday}") — ${d.ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
+  return { day: dayAtom(s.r, d.n), ymd: d.ymd, week: w };
 }
-const dayAtom = (s: Store, n: number): string => table(s.r, 'day', 'D, N').find((x) => Number(x.N) === n)?.D ?? bad(`в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
+/** The world re-read under another week — the swap `--week-of` makes, made once. */
+export function under(s: Store, w: string): void {
+  const cur = table(s.r, 'current', 'W')[0]?.W;
+  if (cur === w) return;
+  s.r.retract(`current(${cur})`); must(s.r.assert(`current(${w}).`), 'current'); s.r.evaluate(); bust(s.r);
+}
+function dated(s: Store, t: string): { day: string; ymd: string; week: string } {
+  const d = weekOf(s, dateToken(s.env, t) ?? bad(`день: '${t}'`));
+  under(s, d.week);
+  return d;
+}
 /** «неделя в силе не сегодняшняя» — a rule's row, printed wherever a week is named. */
 const stale = (s: Store): string => {
   const x = table(s.r, 'stale_week', 'C, W')[0];
@@ -249,7 +308,10 @@ export function run(s: Store, cmd: string, rest: string[]): number {
     case 'tomorrow': { const d = dated(s, 'tomorrow'); console.log(renderDay(s.r, d.day, `ЗАВТРА, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
     case 'show': {
       if (rest[0] === 'week' || rest[0] === 'неделя') { console.log(renderDay(s.r, undefined, `НЕДЕЛЯ ${s.week}${stale(s)}`)); return 0; }
-      if (rest[0] === undefined) { const d = dated(s, 'today'); console.log(renderDay(s.r, d.day, `СЕГОДНЯ, ${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0; }
+      if (rest[0] === undefined || dateToken(s.env, rest[0])) {
+        const d = dated(s, rest[0] ?? 'today');
+        console.log(renderDay(s.r, d.day, `${rest[0] === undefined ? 'СЕГОДНЯ, ' : ''}${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0;
+      }
       const d = names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`);
       console.log(renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
     }

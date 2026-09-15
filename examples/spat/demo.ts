@@ -276,7 +276,7 @@ async function operator(): Promise<Group> {
     const v = openVolume(root, 'fam2');
     try {
       const n = (l: string): number => (v.db.prepare('SELECT count(*) n FROM facts WHERE ledger = ?').get(l) as { n: number }).n;
-      return n('p_alex') === 45 && n('p_robin') === 36 && n('p_nanny') === 36 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
+      return n('p_alex') === 45 && n('p_robin') === 44 && n('p_nanny') === 40 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
         && (v.db.prepare('SELECT count(DISTINCT ledger) n FROM facts').get() as { n: number }).n === 6;
     } finally { v.db.close(); }
   })(), mig.out);
@@ -424,6 +424,61 @@ async function volume(): Promise<Group> {
   return g;
 }
 
+// ------------------- 12. a date is a fact of the environment
+async function datedEdits(): Promise<Group> {
+  const g = new Group('12. a date is a fact of the environment — сегодня/завтра/15.09 resolve in SPAT_TZ and land in the DATE\'s week');
+  const root = fresh();
+  const row = (id: string): { pred: string; args: string }[] => sql(root, "SELECT pred, args FROM facts WHERE ledger = 'p_robin' AND args LIKE ? ORDER BY seq", `%"${id}"%`);
+  const idOf = (r: Res): string => /\((e_[0-9a-f]+)\)/.exec(r.out)?.[1] ?? '';
+  // PLANTED (A1): the owner said «сегодня» on a Tuesday and the model wrote Monday
+  const a = await spat(root, 'robin', ['edit', 'add greek сегодня 16:00-17:00 kit home'], { SPAT_NOW: '2026-09-01T10:00:00+03:00' });
+  g.code('вт 01.09: add greek сегодня', a, 0);
+  const ra = row(idOf(a));
+  g.check('факт: e_add … tue …, for_week w0831 — день и неделя от SPAT_NOW, не от человека', ra.some((x) => x.pred === 'e_add' && /"tue"/.test(x.args)) && ra.some((x) => x.pred === 'for_week' && /"w0831"/.test(x.args)), JSON.stringify(ra));
+  // PLANTED (A2): Sunday evening «завтра» is Monday of the NEXT week, and the edit is for_week THAT week
+  const b = await spat(root, 'robin', ['edit', 'add greek завтра 16:00-17:00 kit home'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
+  g.code('вс 06.09 21:30: add greek завтра', b, 0);
+  const rb = row(idOf(b));
+  g.check('факт: e_add … mon …, for_week w0907; ответ называет неделю w0907', rb.some((x) => x.pred === 'e_add' && /"mon"/.test(x.args)) && rb.some((x) => x.pred === 'for_week' && /"w0907"/.test(x.args)) && /неделя w0907/.test(b.out), b.out);
+  const c = await spat(root, 'robin', ['edit', 'add greek 2026-09-08 16:00-17:00 kit home'], { SPAT_NOW: '2026-09-01T10:00:00+03:00' });
+  g.check('дата 2026-09-08 (вт следующей недели): tue, for_week w0907', c.code === 0 && row(idOf(c)).some((x) => x.pred === 'e_add' && /"tue"/.test(x.args)) && row(idOf(c)).some((x) => x.pred === 'for_week' && /"w0907"/.test(x.args)), c.out);
+  const d = await spat(root, 'robin', ['edit', 'skip walk 28.09'], { SPAT_NOW: '2026-09-01T10:00:00+03:00' });
+  g.code('28.09 — недели нет', d, 2);
+  g.check('отказ называет понедельник 2026-09-28 и week_starts', /2026-09-28.*не заведена.*week_starts/.test(d.out), d.out);
+  g.code('31.02 — в календаре нет', await spat(root, 'robin', ['edit', 'skip walk 31.02']), 2);
+  const e = await spat(root, 'robin', ['show', 'завтра'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
+  g.check('show завтра (вс 06.09): пн 2026-09-07 под неделей w0907, greek в сетке; show mon (w0831) — без greek', /пн 2026-09-07 \(неделя w0907\)/.test(e.out) && /greek/.test(e.out) && !/greek/.test((await spat(root, 'robin', ['show', 'mon'])).out), e.out.split('\n')[0]);
+  return g;
+}
+
+// ------------------- 13. every week — a recurring line of the typical week
+async function recurring(): Promise<Group> {
+  const g = new Group('13. every week — add/skip every <days> is one more line of the typical week, on every week, off everywhere once retracted');
+  const root = fresh();
+  const a = await spat(root, 'robin', ['edit', 'add piano every thu 16:00-17:00 kit home']);
+  g.code('robin: add piano every thu', a, 0);
+  const id = /\((e_[0-9a-f]+)\)/.exec(a.out)?.[1] ?? '';
+  g.check('ответ говорит «каждую неделю»; в базе e_usual', /каждую неделю/.test(a.out) && sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'e_usual' AND args LIKE ?", `%"${id}"%`)[0].n === 1, a.out);
+  // PLANTED (B1): the block stands on Thursday of EVERY week that has a week_starts, not only the one in force
+  const w1 = (await spat(root, 'robin', ['show', 'thu'])).out; const w2 = (await spat(root, 'robin', ['show', 'thu', '--week-of', 'w0907'])).out;
+  g.check('чт w0831 и чт w0907: piano в обоих, с [правка id]', new RegExp(`piano.*правка ${id}`).test(w1) && new RegExp(`piano.*правка ${id}`).test(w2), `${/piano/.test(w1)} ${/piano/.test(w2)}`);
+  const tueBefore = (await spat(root, 'robin', ['show', 'tue'])).out;
+  const sk = await spat(root, 'robin', ['edit', 'skip walk every tue'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
+  g.code('robin: skip walk every tue', sk, 0);
+  const skId = /\((e_[0-9a-f]+)\)/.exec(sk.out)?.[1] ?? '';
+  g.check('вт: прогулка была — и нет', /прогулка/.test(tueBefore) && !/прогулка/.test((await spat(root, 'robin', ['show', 'tue'])).out));
+  const who = (await spat(root, 'robin', ['whoami'])).out;
+  g.check('whoami: обе под «повторяемые», не среди недельных', new RegExp(`повторяемые[^]*${id}[^]*${skId}`).test(who) && !new RegExp(`${id}[^]*повторяемые`).test(who), who);
+  g.code('nanny: add tutoring every wed … kit (ребёнок не её)', await spat(root, 'nanny', ['edit', 'add tutoring every wed 16:00-17:00 kit home']), 4);
+  g.code('robin: add x every funday', await spat(root, 'robin', ['edit', 'add x every funday 10:00-11:00']), 2);
+  // PLANTED (B2): a retraction takes the line off every week, not the one in force
+  g.code('robin retract piano', await spat(root, 'robin', ['retract', id]), 0);
+  g.check('после отзыва: piano нигде — ни в w0831, ни в w0907', !/piano/.test((await spat(root, 'robin', ['show', 'thu'])).out) && !/piano/.test((await spat(root, 'robin', ['show', 'thu', '--week-of', 'w0907'])).out));
+  const [f1, f2] = [(await spat(root, 'alex', ['show', 'week'])).out, (await spat(root, 'alex', ['show', 'week', '--week-of', 'w0907'])).out];
+  g.check('фикстура: e_greek (robin, every tue) стоит в обеих неделях; e_nannyusual (няня за ребёнка) — нигде', /greek/.test(f1) && /greek/.test(f2) && !/tutoring/.test(f1) && !/tutoring/.test(f2));
+  return g;
+}
+
 // ------------------- 8. the rules materialise; every reason has Russian
 function reasons(): Group {
   const g = new Group('8. every rule of the store materialises; every reason has Russian (from a scan, not a list)');
@@ -445,7 +500,7 @@ function reasons(): Group {
 }
 
 const t0 = Date.now();
-const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate(), volume()]);
+const groups = await Promise.all([tagWall(), rights(), stranger(), breaks(), tomorrow(), writers(), operator(), injection(), weekOfDate(), volume(), datedEdits(), recurring()]);
 groups.push(reasons());
 for (const g of groups) for (const l of g.lines) console.log(l);
 const n = groups.reduce((a, g) => a + g.n, 0);

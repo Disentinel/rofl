@@ -41,3 +41,8 @@ e_car_out[p_nanny](e_nannycar, thu, 600, 700).
 edit_at[p_nanny](e_nannycar, "2026-08-31T09:16:00+03:00").
 edit_via[p_nanny](e_nannycar, telegram).
 for_week[p_nanny](e_nannycar, w0831).
+-- a recurring line the CLI would have refused with code 4 (a child is not the helper's to speak for): never a line of the typical week
+e_usual[p_nanny](e_nannyusual, tutoring, wed, 960, 1020, kit, home).
+edit_at[p_nanny](e_nannyusual, "2026-09-01T18:10:00+03:00").
+edit_via[p_nanny](e_nannyusual, telegram).
+for_week[p_nanny](e_nannyusual, w0831).

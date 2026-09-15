@@ -121,15 +121,22 @@ const loaderFacts = (e: Env, books: Book[]): string =>
   + `book_source(world, store).\nbook_source(users, store).\n`
   + books.map((b) => `authority(${b.book}, ${b.user}).\nbook_source(${b.book}, store).`).join('\n');
 
-const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-/** The date `days` from now IN THE STORE'S ZONE: its ISO weekday 1..7 (the
- *  world's `day(D, N)` is keyed the same) and the Monday it belongs to. */
-export function dateIn(e: Env, days = 0): { ymd: string; n: number; monday: string } {
-  const f = new Intl.DateTimeFormat('en-CA', { timeZone: e.tz, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })
+export interface Cal { ymd: string; n: number; monday: string; }
+/** A calendar day by its date: its ISO weekday 1..7 (the world's `day(D, N)`
+ *  is keyed the same) and the Monday it belongs to; a date the calendar does
+ *  not have (31.02) comes back as a different day, which the caller compares. */
+export function calDay(ymd: string): Cal {
+  const t = Date.parse(`${ymd}T00:00:00Z`);
+  if (Number.isNaN(t)) return { ymd: '', n: 0, monday: '' };
+  const n = new Date(t).getUTCDay() || 7;
+  return { ymd: new Date(t).toISOString().slice(0, 10), n, monday: new Date(t - (n - 1) * 86_400_000).toISOString().slice(0, 10) };
+}
+/** The date `days` from now IN THE STORE'S ZONE. */
+export function dateIn(e: Env, days = 0): Cal {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: e.tz, year: 'numeric', month: '2-digit', day: '2-digit' })
     .formatToParts(new Date(e.now.getTime() + days * 86_400_000));
   const g = (k: string): string => f.find((x) => x.type === k)?.value ?? '';
-  const ymd = `${g('year')}-${g('month')}-${g('day')}`; const n = WD.indexOf(g('weekday').toLowerCase()) || 7;
-  return { ymd, n, monday: new Date(Date.parse(`${ymd}T00:00:00Z`) - (n - 1) * 86_400_000).toISOString().slice(0, 10) };
+  return calDay(`${g('year')}-${g('month')}-${g('day')}`);
 }
 
 /** A TEXT BOOK, LINE BY LINE — the wall for what is still text: a hand-written

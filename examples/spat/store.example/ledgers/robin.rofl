@@ -45,3 +45,13 @@ e_skip[p_robin](e_skipwalkall, walk, all).
 edit_at[p_robin](e_skipwalkall, "2026-09-06T20:00:00+03:00").
 edit_via[p_robin](e_skipwalkall, cli).
 for_week[p_robin](e_skipwalkall, w0907).
+-- 2026-09-01T18:00:00+03:00 telegram robin: add greek every tue 16:00-17:00 kit home — EVERY WEEK, one more line of the typical week
+e_usual[p_robin](e_greek, greek, tue, 960, 1020, kit, home).
+edit_at[p_robin](e_greek, "2026-09-01T18:00:00+03:00").
+edit_via[p_robin](e_greek, telegram).
+for_week[p_robin](e_greek, w0831).
+-- 2026-09-01T18:05:00+03:00 telegram robin: skip walk every fri — every week, whichever is in force
+e_unusual[p_robin](e_nowalkfri, walk, fri).
+edit_at[p_robin](e_nowalkfri, "2026-09-01T18:05:00+03:00").
+edit_via[p_robin](e_nowalkfri, telegram).
+for_week[p_robin](e_nowalkfri, w0831).

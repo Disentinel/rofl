@@ -93,6 +93,8 @@ may_report(U, C) :- account(U), external(C).
 --   e_move(E, Block, Day|all, Time)          e_skip(E, Block, Day|all)
 --   e_add(E, What, Day, From, To, Who, Where) e_sick(E, Person, Day|all)
 --   e_car_out(E, Day, From, To)               e_report(E, Constraint, Day, Time)
+--   e_usual(E, What, Days, From, To, Who, Where)   every week — one line of the typical week
+--   e_unusual(E, Block, Days)                      every week — the block is off on those days
 --   edit_at(E, Iso)  edit_via(E, telegram|cli)  for_week(E, Week)
 --   proposed(E)      confirmed(E, Iso, Via)      retracted(E, Iso, Via)
 -- Nothing is ever deleted: a retraction is one more fact in the same book,
@@ -108,6 +110,8 @@ entry(E, L)      :- e_add[L](E, _, _, _, _, _, _).
 entry(E, L)      :- e_sick[L](E, _, _).
 entry(E, L)      :- e_car_out[L](E, _, _, _).
 entry(E, L)      :- e_report[L](E, _, _, _).
+entry(E, L)      :- e_usual[L](E, _, _, _, _, _, _).
+entry(E, L)      :- e_unusual[L](E, _, _).
 edit_by(E, U)    :- entry(E, L), ledger(L, U).
 edit_week(E, W)  :- entry(E, L), for_week[L](E, W).
 is_report(E)     :- e_report[L](E, _, _, _).
@@ -137,6 +141,11 @@ touches(E, C)    :- e_skip[L](E, Ev, _), usual_on(C, Ev, _, _, _).
 touches(E, P)    :- e_add[L](E, _, _, _, _, P, _).
 touches(E, P)    :- e_sick[L](E, P, _).
 touches(E, Cr)   :- e_car_out[L](E, _, _, _), car(Cr).
+-- for: a recurring line touches what its one-off twin touches: the person,
+--      or the block's constraints (a recurring block of another edit included)
+touches(E, P)    :- e_usual[L](E, _, _, _, _, P, _).
+touches(E, C)    :- e_unusual[L](E, Ev, _), usual(C, Ev, _, _, _, _, _).
+touches(E, C)    :- e_unusual[L](E, Ev, _), usual_on(C, Ev, _, _, _).
 
 -- for: THE REFUSAL. An entry touching something its author may not edit, or
 --      a report on something that is not external. Code 4 at the door; and
@@ -195,6 +204,20 @@ car_here(Cr, D, Home, X) :- car_away(D, _, X), car(Cr), base(Home).
 -- for: a REPORT changes nothing in the world; it is first-hand and waits for
 --      the operator to carry it into world.rofl
 reported(C, D, T, U) :- e_report[L](E, C, D, T), ledger(L, U), not retracted_edit(E).
+-- for: EVERY WEEK — a recurring line is one more line of the typical week,
+--      `usual/7` in shape, owned by its author, and off every week once
+--      retracted. Its standing is the same three questions `acts` asks —
+--      within the right, not retracted, not waiting — asked here WITHOUT going
+--      through `no_right`: `touches` reads `usual` (to name a block's
+--      constraints), so `usual :- acts` would close a cycle through the
+--      negation in `acts` and the program would be refused. Measured
+--      2026-09-15: the rounds evaluator stalls with 22 relations unsettled.
+acts_recurring(E) :- e_usual[L](E, _, _, _, _, P, _), edit_by(E, U), may_edit(U, P),
+                     not retracted_edit(E), not pending(E).
+usual(E, What, Who, Where, Spec, F, T) :- e_usual[L](E, What, Spec, F, T, Who, Where), acts_recurring(E).
+-- for: a recurring skip is the block off on those days of whichever week is in force
+skipped(E, Ev, W, D) :- e_unusual[L](E, Ev, Spec), acts(E), current(W),
+                        usual(_, Ev, _, _, Sp, _, _), applies_on(Sp, D), applies_on(Spec, D).
 
 -- =========================================================================
 -- 5b. WHICH WEEK A DATE IS IN
@@ -233,6 +256,8 @@ touches_day(E, D) :- e_skip[L](E, Ev, all), usual(_, Ev, _, _, Spec, _, _), appl
 touches_day(E, D) :- e_add[L](E, _, D, _, _, _, _), day(D, _).
 touches_day(E, D) :- sick_day(E, _, D).
 touches_day(E, D) :- e_car_out[L](E, D, _, _), day(D, _).
+touches_day(E, D) :- e_usual[L](E, _, Spec, _, _, _, _), applies_on(Spec, D).
+touches_day(E, D) :- e_unusual[L](E, Ev, Spec), usual(_, Ev, _, _, Sp, _, _), applies_on(Sp, D), applies_on(Spec, D).
 
 -- for: the defects of a day, by name and by WHERE — the slot, the block,
 --      the run — so a day that already had one red block is not a licence
@@ -260,6 +285,7 @@ edb(tg_user).    edb(tenant).    edb(caller).    edb(from_id).  edb(trial).    e
 edb(date_monday).
 edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
+edb(e_usual).    edb(e_unusual).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
 
 -- for: the rules above read books by a VARIABLE name — `e_move[L]` — which
