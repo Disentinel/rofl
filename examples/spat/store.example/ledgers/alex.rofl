@@ -55,3 +55,11 @@ for_week[p_alex](e_badcar, w0831).
 for_week[p_alex](e_skipwalk, w0907).
 retracted[p_alex](e_skipwalk, "2026-08-31T23:05:00+03:00", cli).
 proposed[p_alex](e_skipwalk).
+-- TAKING BACK BY RIGHT (2026-09-15): «убери …» on a block another member added
+-- is `retracts(E, Iso, Via)` in the CALLER's book, honoured through may_edit.
+-- 2026-09-06T21:30:00+03:00 cli alex: skip cleaning sat — robin's confirmed skip, a household edit: retracted
+retracts[p_alex](e_skipclean, "2026-09-06T21:30:00+03:00", cli).
+-- the nanny's evening (hers, external): no right — an audit row, the entry still acts
+retracts[p_alex](e_nannyadd, "2026-09-06T21:31:00+03:00", cli).
+-- a retraction of nothing: no such entry, inert
+retracts[p_alex](e_nowhere, "2026-09-06T21:32:00+03:00", cli).

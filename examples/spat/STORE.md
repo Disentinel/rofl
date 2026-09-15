@@ -335,6 +335,30 @@ know is code 2 with the Monday it needs (`edits.ts`, `dateToken`, `weekOf`).
 Measured in demo group 12: `SPAT_NOW` Tuesday 01.09 + «сегодня» → `tue`,
 `w0831`; Sunday 06.09 21:30 + «завтра» → `mon`, `w0907`; `28.09` → 2.
 
+## The schedule as the human sees it
+
+Amendment 2026-09-15: «убери греческий по понедельникам» on the stand was
+code 2 «блок greek не известен миру», because `skip`/`move` knew only the
+world's `usual` and greek was a one-off `e_add` in a book. Now a name is
+resolved over the schedule AS THE HUMAN SEES IT: the typical week, a
+recurring line, and what a book added this week (`added`, so only what
+acts). `skip <name> [<day>]` on an added block is that entry taken back —
+the author writes `retracted(E, …)` into their own book, exactly as
+`retract <id>`; another member writes `retracts(E, Iso, Via)` into THEIR
+book, and access.rofl honours it by the right that lets them edit the entry
+(`may_edit(U, E)`: an adult over a household edit, nobody but the helper over
+the helper's) — the entry's book is not theirs to write, and a row without
+the right is `retract_without_right[audit]` and never acts. `move <name>
+[<day>] <time>` on an added block is the take-back plus the same block
+written again under a new id through the ordinary trial (0 or 3). The
+answer names what happened: «отозвана e_3a5414ea (chess пн)», «отозвана по
+праву семьи e_… (chess ср, правка robin)». A recurring block skipped on one
+day is that week's `skipped`; `retract <id>` takes the recurrence off. An
+unknown name is code 2 with the blocks that stand that day, added ones
+included, so the model need not ask. Fixture: alex's `retracts` of robin's
+`e_skipclean` (by right: `retracted_edit`, `skipped` 13→12), of the nanny's
+`e_nannyadd` (no right: audit, the evening stands) and of `e_nowhere` (audit).
+
 ## Every week: a recurring line is one more line of the typical week
 
 `add <what> every <days> <from>-<to> [who] [where]` writes
@@ -483,6 +507,12 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   add` of each rule's text.
 - **`busy[hh]` in the census.** Behind `deep(slots)` like every busy row;
   only the demo's `free` sees the bridge.
+- **A helper does not see an adult's added block.** `may_read` closes the
+  adults' books to a helper, so `skip <that block>` from the helper is
+  code 2 with the blocks of the day as the helper sees them — not 4; the
+  block is not in the schedule the call was given.
+- **`skip <added block>` with no day** takes back every entry of that name
+  this week; **`move`** with no day re-adds each under its own id.
 
 ## What the gate holds
 

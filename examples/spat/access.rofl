@@ -116,6 +116,14 @@ edit_by(E, U)    :- entry(E, L), ledger(L, U).
 edit_week(E, W)  :- entry(E, L), for_week[L](E, W).
 is_report(E)     :- e_report[L](E, _, _, _).
 retracted_edit(E) :- entry(E, L), retracted[L](E, _, _).
+-- for: «убери greek пн» on a block ANOTHER member added — the schedule as the
+--      human sees it includes what a book put there. The entry's book is not
+--      the caller's to write, so the caller writes `retracts(E, Iso, Via)` into
+--      THEIR book, and it counts by the right that lets them edit the entry
+--      (its constraint is the author's, household or external): a row without
+--      that right is an audit line and never acts
+retracted_edit(E) :- retracts[L](E, _, _), ledger(L, U), may_edit(U, E).
+retract_without_right[audit](E, L) :- retracts[L](E, _, _), ledger(L, U), not may_edit(U, E).
 confirmed_edit(E) :- entry(E, L), confirmed[L](E, _, _).
 proposed_edit(E)  :- entry(E, L), proposed[L](E).
 -- for: a confirm or a retract written into a book other than the edit's own
@@ -291,6 +299,7 @@ edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
 edb(e_usual).    edb(e_unusual).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
+edb(retracts).
 
 -- for: the rules above read books by a VARIABLE name — `e_move[L]` — which
 --      the flow audit sees as a crossing from a book it cannot name.

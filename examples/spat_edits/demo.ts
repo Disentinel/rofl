@@ -181,9 +181,50 @@ async function ruleBooks(): Promise<Group> {
   return g;
 }
 
+// ------------------- 16. the schedule as the human sees it
+async function asSeen(): Promise<Group> {
+  const g = new Group('16. the schedule as the human sees it — skip/move name a block a book added (its entry taken back, by the author or by right) or a recurring one; an unknown name lists the day');
+  const root = fresh();
+  const eid = (r: Res, re = /\((e_[0-9a-f]+)\)/): string => re.exec(r.out)?.[1] ?? '';
+  const last = (ledger: string): { pred: string; args: string } => sql<{ pred: string; args: string }[]>(root, 'SELECT pred, args FROM facts WHERE ledger = ? ORDER BY seq DESC LIMIT 1', ledger)[0];
+  // PLANTED (A/B amendment): add greek mon → skip greek mon — the block is gone and the entry is retracted
+  const a = await spat(root, 'robin', ['edit', 'add chess mon 16:00-17:00 kit home']);
+  const A = eid(a);
+  const sk = await spat(root, 'robin', ['edit', 'skip chess mon'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
+  g.code('robin: add chess mon, skip chess mon', sk, a.code === 0 ? 0 : 9);
+  g.check(`ответ «отозвана ${A} (chess пн)»; в книге robin — retracted(${A}); show mon без chess, evening няни на месте`,
+    new RegExp(`отозвана ${A} \\(chess пн\\)`).test(sk.out) && last('p_robin').pred === 'retracted' && last('p_robin').args.includes(`"${A}"`)
+    && (await spat(root, 'robin', ['show', 'mon']).then((r) => !/chess/.test(r.out) && /evening/.test(r.out))), `${sk.out} | ${JSON.stringify(last('p_robin'))}`);
+  const b = await spat(root, 'robin', ['edit', 'add chess wed 16:00-17:00 kit home'], { SPAT_NOW: '2026-08-31T21:32:00+03:00' });
+  const B = eid(b);
+  const unknown = inproc({ ...asRobin(root), SPAT_NOW: '2026-08-31T21:33:00+03:00' }, (s) => verb(s, 'edit', ['skip chesss wed']));
+  g.check('skip несуществующего → код 2 с блоками среды, добавленный chess в списке', unknown.code === 2 && /ср: стоят .*chess/.test(unknown.out), unknown.out.split('\n')[0]);
+  const al = await spat(root, 'alex', ['edit', 'skip chess wed'], { SPAT_NOW: '2026-08-31T21:34:00+03:00' });
+  g.code('alex: skip chess wed (правка robin, по праву семьи)', al, 0);
+  g.check(`«отозвана по праву семьи ${B} (chess ср, правка robin)»; retracts(${B}) в книге alex; show wed без chess`,
+    new RegExp(`отозвана по праву семьи ${B} \\(chess ср, правка robin\\)`).test(al.out) && last('p_alex').pred === 'retracts' && last('p_alex').args.includes(`"${B}"`)
+    && !/chess/.test((await spat(root, 'alex', ['show', 'wed'])).out), `${al.out} | ${JSON.stringify(last('p_alex'))}`);
+  const no = inproc({ SPAT_ROOT: root, SPAT_FROM_ID: FROM.alex }, (s) => verb(s, 'edit', ['skip evening mon']));
+  g.check('alex: skip evening mon (правка няни, внешняя) → 4, «может: няня»', no.code === 4 && /может: няня/.test(no.out), no.out);
+  const c = await spat(root, 'robin', ['edit', 'add chess thu 16:00-17:00 kit home'], { SPAT_NOW: '2026-08-31T21:35:00+03:00' });
+  const C = eid(c);
+  const mv = await spat(root, 'robin', ['edit', 'move chess thu 17:30'], { SPAT_NOW: '2026-08-31T21:36:00+03:00' });
+  g.code('robin: move chess thu 17:30 (добавленный блок)', mv, 0);
+  const D = eid(mv, /применено: .*\((e_[0-9a-f]+)\)/);
+  g.check(`«отозвана ${C}» и «применено: chess → чт 17:30 (${D})»; show thu: chess 17:30–18:30 [правка ${D}]`,
+    new RegExp(`отозвана ${C} \\(chess чт\\)`).test(mv.out) && D !== '' && D !== C && new RegExp(`17:30–18:30\\s+chess.*правка ${D}`).test((await spat(root, 'robin', ['show', 'thu'])).out), mv.out);
+  // a recurring block skipped on one day is that week's skip; the recurrence stands
+  g.code('robin: skip greek tue (every-блок фикстуры)', await spat(root, 'robin', ['edit', 'skip greek tue'], { SPAT_NOW: '2026-08-31T21:37:00+03:00' }), 0);
+  g.check('вт w0831 без greek, вт w0907 с greek', !/greek/.test((await spat(root, 'robin', ['show', 'tue'])).out) && /greek/.test((await spat(root, 'robin', ['show', 'tue', '--week-of', 'w0907'])).out));
+  // the fixture: alex's retracts by right, without right, of nothing
+  const fx = inproc(asRobin(root), (s) => { console.log(`${s.r.holds('retracted_edit(e_skipclean)')} ${s.r.holds('retracted_edit(e_nannyadd)')} ${s.r.query('retract_without_right[audit](E, L)').rows.map((x) => x.bindings.E).sort().join(',')}`); return 0; });
+  g.check('фикстура: retracts(e_skipclean) alex — отозвана; retracts(e_nannyadd) — нет права, действует; аудит: e_nannyadd, e_nowhere', fx.out === 'true false e_nannyadd,e_nowhere', fx.out);
+  return g;
+}
+
 const t0 = Date.now();
 // FOUR GROUPS AT ONCE, in a fixed order of results (see examples/spat/demo.ts).
-const todo = [datedEdits, recurring, hypotheses, ruleBooks];
+const todo = [datedEdits, recurring, hypotheses, ruleBooks, asSeen];
 const groups: Group[] = new Array(todo.length);
 let next = 0;
 await Promise.all(Array.from({ length: 4 }, async () => { while (next < todo.length) { const i = next++; groups[i] = await todo[i](); } }));

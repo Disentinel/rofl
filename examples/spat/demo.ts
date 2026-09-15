@@ -209,7 +209,7 @@ async function operator(): Promise<Group> {
     const v = openVolume(root, 'fam2');
     try {
       const n = (l: string): number => (v.db.prepare('SELECT count(*) n FROM facts WHERE ledger = ?').get(l) as { n: number }).n;
-      return n('p_alex') === 45 && n('p_robin') === 62 && n('p_nanny') === 40 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
+      return n('p_alex') === 48 && n('p_robin') === 62 && n('p_nanny') === 40 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
         && (v.db.prepare('SELECT count(DISTINCT ledger) n FROM facts').get() as { n: number }).n === 6;
     } finally { v.db.close(); }
   })(), mig.out);

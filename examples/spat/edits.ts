@@ -8,7 +8,8 @@ import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
 import { dayOrder, hhmm, parseTime, rows, ru, sayConstraint, table } from './spat.ts';
-import { SpatError, bookOf, calDay, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Cal, type Env, type Store } from './store.ts';
+import { SpatError, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
+import { dateToken, dated, dayAtom, under, weekOf, type Dated } from './dates.ts';
 import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
@@ -26,6 +27,7 @@ const GRAMMAR = [
   '  skip   <блок> every <дни>                   каждую неделю (отменить walk каждый вт)',
   '  день: mon..sun / пн..вс; сегодня/завтра/послезавтра, 15.09, 2026-09-15 — по календарю SPAT_TZ;',
   '  без дня — все дни, когда блок стоит. дни при every: день, weekdays/будни, alldays/ежедневно, группа дней из мира.',
+  '  блок — как в расписании: типовая неделя, повторяемые и добавленные правками; skip/move добавленного = отзыв той правки.',
 ].join('\n');
 
 const VERB: Record<string, string> = {
@@ -39,6 +41,7 @@ function names(r: Rofl): Map<string, string> {
   const put = (a: string): void => { m.set(a, a); m.set(ru(a).toLowerCase(), a); };
   for (const x of table(r, 'person', 'P, K')) put(x.P);
   for (const x of table(r, 'usual', 'C, E, W, P, Sp, F, T')) { put(x.E); put(x.P); }
+  for (const x of table(r, 'added', 'C, E, W, P, Wk, D, F, T')) put(x.E);
   for (const x of table(r, 'place', 'P')) put(x.P);
   for (const x of table(r, 'constraint', 'C, O, S')) put(x.C);
   for (const x of table(r, 'day', 'D, N')) put(x.D);
@@ -50,25 +53,11 @@ const bad = (what: string): never => {
   throw new SpatError(2, `не разобрал: ${what}\n\nДопустимо:\n${GRAMMAR}`);
 };
 
-/** A DATE IS A FACT OF THE ENVIRONMENT. `сегодня`, `завтра`, `послезавтра`, `15.09`
- *  (this year) and `2026-09-15` are resolved by the CLI in SPAT_TZ (and SPAT_NOW),
- *  never by the person or the model — measured 2026-09-15: the model computed
- *  the weekday itself and wrote Monday for a Tuesday. `which` names the loader's
- *  `date_monday` row the day can be asked under; `on` is a date of its own. */
-const DATE_WORD: Record<string, number> = { 'сегодня': 0, today: 0, 'завтра': 1, tomorrow: 1, 'послезавтра': 2 };
-export type Dated = Cal & { which: 'today' | 'tomorrow' | 'on' };
-export function dateToken(e: Env, t: string): Dated | undefined {
-  const w = DATE_WORD[t.toLowerCase()];
-  if (w !== undefined) return { ...dateIn(e, w), which: w === 0 ? 'today' : w === 1 ? 'tomorrow' : 'on' };
-  const dm = /^(\d{1,2})\.(\d{1,2})$/.exec(t);
-  const ymd = dm ? `${dateIn(e).ymd.slice(0, 4)}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : undefined;
-  if (ymd === undefined) return undefined;
-  const d = calDay(ymd);
-  return d.ymd === ymd ? { ...d, which: 'on' } : bad(`дата: '${t}' — в календаре такого дня нет`);
-}
-const dayAtom = (r: Rofl, n: number): string => table(r, 'day', 'D, N').find((x) => Number(x.N) === n)?.D ?? bad(`в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
 
-export interface Edit { kind: string; summary: string; facts: (id: string) => string[]; on?: Dated; every?: boolean; }
+/** `entries`: the book entries a skip/move of an ADDED block takes back — the schedule as the human
+ *  sees it includes what a book put there, so «убери greek пн» on a block robin added is that entry's
+ *  retraction; `facts(id)` then holds `retracts(...)` lines and, for a move, the new add under `id`. */
+export interface Edit { kind: string; summary: string; facts: (id: string) => string[]; on?: Dated; every?: boolean; entries?: { id: string; ev: string; day: string }[]; }
 
 /** TEXT -> FACTS. One line of a person's Russian or English into the fact
  *  shapes access.rofl reads. Names resolve through the world, so a block or
@@ -114,23 +103,43 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   };
   const isDay = (t: string | undefined): boolean => t !== undefined && (dated(t) !== undefined || days.has(N.get(t.toLowerCase()) ?? '') || N.get(t.toLowerCase()) === 'all');
   const verb = VERB[(w[0] ?? '').toLowerCase()] ?? bad(`глагол: '${w[0] ?? ''}'`);
-  const block = (t: string | undefined): string => {
-    const a = name(t, 'блок');
-    return table(r, 'usual', 'C, E, W, P, Sp, F, T').some((x) => x.E === a) ? a : bad(`блок: '${t}' — нет в типовой неделе`);
+  // THE BLOCKS AS THE HUMAN SEES THEM: the typical week (a recurring line included), and what a
+  // book added this week. An added block named with its day is taken back by its entry.
+  const adds = table(r, 'added', 'C, E, W, P, Wk, D, F, T');
+  const block = (t: string | undefined, d?: string): string => {
+    const a = t === undefined ? undefined : N.get(t.toLowerCase());
+    if (a !== undefined && (table(r, 'usual', 'C, E, W, P, Sp, F, T').some((x) => x.E === a) || adds.some((x) => x.E === a))) return a;
+    const seen = [...new Set(table(r, 'span', 'C, E, W, P, D, F, T').filter((x) => d === undefined || d === 'all' || x.D === d).map((x) => x.E))].sort();
+    return bad(`блок: '${t ?? ''}' — ${d && d !== 'all' ? `${ru(d)}: стоят` : 'в расписании'} ${seen.map(ru).join(', ')}`);
   };
+  const addedOn = (ev: string, d: string): { id: string; ev: string; day: string; row: (typeof adds)[number] }[] | undefined => {
+    if (!adds.some((x) => x.E === ev)) return undefined;
+    const rows = adds.filter((x) => x.E === ev && (d === 'all' || x.D === d));
+    if (rows.length === 0 && !table(r, 'usual', 'C, E, W, P, Sp, F, T').some((x) => x.E === ev)) bad(`${ev} стоит ${adds.filter((x) => x.E === ev).map((x) => ru(x.D)).join(', ')}, не ${ru(d)}`);
+    return rows.length === 0 ? undefined : rows.map((x) => ({ id: x.C, ev, day: x.D, row: x }));
+  };
+  const backs = (xs: { id: string }[]): string[] => xs.map((x) => `retracts(${x.id}, "$AT", $VIA).`);
   if (verb === 'move') {
-    const ev = block(w[1]);
     const d = isDay(w[2]) ? day(w[2]) : 'all';
+    const ev = block(w[1], d);
     const t = time(w[isDay(w[2]) ? 3 : 2]);
+    const taken = addedOn(ev, d);
+    if (taken) {
+      // an added block moved: its entry taken back, the same block written again at the new time
+      return done(isDay(w[2]) ? 4 : 3, { kind: 'move', summary: `${ru(ev)} → ${ru(d)} ${hhmm(t)}`, entries: taken,
+        facts: (id) => [...backs(taken), ...taken.map((x) => `e_add(${id}, ${ev}, ${x.day}, ${t}, ${t + Number(x.row.T) - Number(x.row.F)}, ${x.row.W}, ${x.row.P}).`)] });
+    }
     return done(isDay(w[2]) ? 4 : 3, { kind: 'move', summary: `${ru(ev)} → ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_move(${id}, ${ev}, ${d}, ${t}).`] });
   }
   if (verb === 'skip') {
-    const ev = block(w[1]);
     if (w[2] !== undefined && EVERY.test(w[2])) {
-      const sp = spec(w[3]);
+      const ev = block(w[1]); const sp = spec(w[3]);
       return done(4, { kind: 'skip', every: true, summary: `${ru(ev)} отменён каждую неделю: ${ru(sp)}`, facts: (id) => [`e_unusual(${id}, ${ev}, ${sp}).`] });
     }
     const d = w[2] === undefined ? 'all' : day(w[2]);
+    const ev = block(w[1], d);
+    const taken = addedOn(ev, d);
+    if (taken) return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, entries: taken, facts: () => backs(taken) });
     return done(3, { kind: 'skip', summary: `${ru(ev)} отменён ${ru(d)}`, facts: (id) => [`e_skip(${id}, ${ev}, ${d}).`] });
   }
   if (verb === 'add') {
@@ -166,7 +175,7 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
 export const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.map((l) => l.replace(/^([a-z_]+)\(/, `$1[${book}](`)).join('\n'));
 /** One entry's facts: the operation, its moment, its channel, its week — tagged as the book's. */
 export const entryClauses = (book: string, e: Edit, id: string, as: string, at: string, via: string, week: string): Clause[] =>
-  tagged(book, [...e.facts(id).map((l) => l.replace('$ME', as)), `edit_at(${id}, "${at}").`, `edit_via(${id}, ${via}).`, `for_week(${id}, ${week}).`]);
+  tagged(book, [...e.facts(id).map((l) => l.replace('$ME', as).replace('$AT', at).replace('$VIA', via)), `edit_at(${id}, "${at}").`, `edit_via(${id}, ${via}).`, `for_week(${id}, ${week}).`]);
 
 /** `spat edit '<text>'`: the trial in a world with the candidate, then one
  *  transaction — or none. Codes 0, 2, 3, 4 as the contract lists them. */
@@ -177,7 +186,36 @@ export function edit(s: Store, text: string): number {
   // named by name lands in the week in force, as before.
   const week = e.on ? weekOf(s, e.on).week : s.week;
   const id = editId(s.env.as, at, text.trim());
+  if (e.entries) return takeBack(s, e, id, at, week, text);
   return commit(s, id, entryClauses(myBook(s).book, e, id, s.env.as, at, s.env.via, week), week, e, text);
+}
+/** AN ADDED BLOCK TAKEN BACK. The author retracts their own entry (`retracted`, as `retract <id>`
+ *  does); another member writes `retracts(E, …)` into THEIR book and access.rofl honours it by the
+ *  right that lets them edit the entry (`may_edit`) — the entry's book is not theirs to write. A
+ *  move is the same, then the block written again under a new id through the ordinary trial. */
+function takeBack(s: Store, e: Edit, id: string, at: string, week: string, text: string): number {
+  const book = myBook(s);
+  const by = new Map(table(s.r, 'edit_by', 'E, U').map((x) => [x.E, x.U]));
+  for (const x of e.entries!) {
+    if (by.get(x.id) !== s.env.as && !s.r.holds(`may_edit(${s.env.as}, ${x.id})`)) {
+      const may = table(s.r, 'may_edit', 'U, X').filter((y) => y.X === x.id).map((y) => ru(y.U)).sort();
+      console.log(`отказано: ${ru(x.ev)} ${ru(x.day)} — правка ${ru(by.get(x.id) ?? '?')} (${x.id}), не твоя
+  может: ${may.join(', ') || 'только автор'}`);
+      return 4;
+    }
+  }
+  for (const x of e.entries!) {
+    const mine = by.get(x.id) === s.env.as;
+    const cs = tagged(book.book, [`${mine ? 'retracted' : 'retracts'}(${x.id}, "${at}", ${s.env.via}).`]);
+    must(s.r.assertClauses(cs, { who: s.env.as }), 'retract'); put(s, book, cs, text);
+    console.log(`отозвана${mine ? '' : ' по праву семьи'} ${x.id} (${ru(x.ev)} ${ru(x.day)}${mine ? '' : `, правка ${ru(by.get(x.id) ?? '?')}`})`);
+  }
+  const adds = e.facts(id).filter((l) => l.startsWith('e_add('));
+  if (adds.length === 0) { bust(s.r); s.r.evaluate(); return 0; }
+  return Math.max(...adds.map((l, i) => {
+    const nid = editId(s.env.as, at, `${text.trim()} #${i}`);
+    return commit(s, nid, entryClauses(book.book, { ...e, entries: undefined, facts: () => [l.replace(`(${id},`, `(${nid},`)] }, nid, s.env.as, at, s.env.via, week), week, e, text);
+  }));
 }
 /** THE CANDIDATE TRIED AND WRITTEN, or refused — `edit` and `maybe apply` end here. */
 export function commit(s: Store, id: string, clauses: Clause[], week: string, e: { summary: string; on?: Dated; every?: boolean }, text: string): number {
@@ -276,31 +314,6 @@ export function whoami(s: Store): number {
   return 0;
 }
 
-/** A DATED DAY IS SHOWN UNDER ITS OWN WEEK. `week_of(today|tomorrow, W)` is
- *  the rules' answer over `week_starts`; when W is not the week in force the
- *  world is re-read under W, so the day carries W's own moved/added and the
- *  edits recorded for W — never the same weekday of another week. A date
- *  with no `week_starts` is refused: the world does not have that week. */
-export function weekOf(s: Store, d: Dated): { day: string; ymd: string; week: string } {
-  // today and tomorrow are the loader's `date_monday` rows and the rules' `week_of`; any
-  // other date is the same join over `week_starts`, read here rather than asserted and
-  // re-evaluated — one evaluation less per dated edit (measured: 0.5 s each)
-  const w = d.which === 'on' ? table(s.r, 'week_starts', 'W, M').find((x) => x.M.replace(/^"|"$/g, '') === d.monday)?.W
-    : table(s.r, 'week_of', 'Which, W').find((x) => x.Which === d.which)?.W;
-  if (!w) throw new SpatError(2, `неделя с понедельника ${d.monday} не заведена: в мире нет week_starts(W, "${d.monday}") — ${d.ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
-  return { day: dayAtom(s.r, d.n), ymd: d.ymd, week: w };
-}
-/** The world re-read under another week — the swap `--week-of` makes, made once. */
-export function under(s: Store, w: string): void {
-  const cur = table(s.r, 'current', 'W')[0]?.W;
-  if (cur === w) return;
-  s.r.retract(`current(${cur})`); must(s.r.assert(`current(${w}).`), 'current'); s.r.evaluate(); bust(s.r);
-}
-function dated(s: Store, t: string): { day: string; ymd: string; week: string } {
-  const d = weekOf(s, dateToken(s.env, t) ?? bad(`день: '${t}'`));
-  under(s, d.week);
-  return d;
-}
 /** «неделя в силе не сегодняшняя» — a rule's row, printed wherever a week is named. */
 const stale = (s: Store): string => {
   const x = table(s.r, 'stale_week', 'C, W')[0];

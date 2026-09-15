@@ -17,7 +17,8 @@ import { mka, type Clause } from '../../src/unify.ts';
 import { chains, dayOrder, hhmm, holes, mins, placements, ru, table } from './spat.ts';
 import { SpatError, editId, isoNow, must, myBook, type Store } from './store.ts';
 import { addBook, readBook, trailOf, write } from './volume.ts';
-import { commit, entryClauses, parseEdit, tagged, under, weekOf } from './edits.ts';
+import { commit, entryClauses, parseEdit, tagged } from './edits.ts';
+import { under, weekOf } from './dates.ts';
 import { renderDay } from './tomorrow.ts';
 
 const TTL_H = 24;
