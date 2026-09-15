@@ -142,7 +142,8 @@ spat confirm <id> · retract <id>  my own edit, one more fact in my book
 spat edit 'add greek сегодня 16:00-17:00 kit'   a date — сегодня/завтра/15.09 — is resolved in SPAT_TZ and lands in ITS week
 spat edit 'add piano every thu 16:00-17:00 kit'  every week: one more line of the typical week; retract takes it off every week
 spat edit 'skip chess mon'        a block a book added: its entry taken back (by the author, or by another member's right)
-spat place add "American Academy" 20 от дома   a place of the world, in my book (adult): add … kit "American Academy" then resolves
+spat rule add 'travel(school, gym, 10).'  a FACT of the family's book on an edb relation is one more line of the world — added, never overriding
+spat place add "American Academy" 20 от дома   sugar: place/ru_name/travel into the family's book; add … kit "American Academy" then resolves
 spat maybe 'add greek mon 16:00-17:00' · maybe compare · maybe apply <id>   a hypothesis is a book; compare builds the world under each
 spat place <what> <minutes> [who]     the best slots, each tried as a hypothesis
 spat rule add '<clauses>' · rule list · rule confirm/retract <id>   the household's own rules (adult/operator), checked by the kernel

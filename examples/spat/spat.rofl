@@ -994,3 +994,60 @@ edb(ru_name).
 edb(must_start).
 edb(never_alone).
 edb(no_walk).        edb(ride).       edb(can_wait).   edb(hosted).
+
+-- =========================================================================
+-- 14. THE FAMILY'S BOOK EXTENDS THE WORLD — the declarations
+-- =========================================================================
+-- «Весь пойнт ROFL — грамматика расширяется на ходу под задачу, и
+-- нижележащие книги не ломают ранее определённого.» A fact of the family's
+-- book [hh] (`spat rule add 'place(academy). travel(home, academy, 15).'`)
+-- whose relation is declared `edb` above is one more line of the world:
+-- MONOTONE — added, never overriding. `examples/spat/bridge.rofl` is GENERATED
+-- from this section by examples/spat/bridge.ts (the demo refuses a stale
+-- file): per relation, `R(...) :- R[hh](...), not world_R(<key>)`, where
+-- `world_R` is read off the kernel's own trail (`asserted_by`) of what the
+-- world book asserted, and `overrides[audit](R, k(<key>))` names a family
+-- fact whose key the world already has with another value — ignored, and
+-- `rule add` says so. Every edb relation is decided here, one line each; an
+-- edb relation with neither `key_of` nor `not_extended` stops the generator.
+--
+-- key_of(R, N): the first N arguments identify a fact; N = 0 is a singleton
+-- (one base, one current week), N = arity is a set (a second row is never a
+-- conflict).
+key_of(day, 1).            key_of(in_group, 2).       key_of(place, 1).        key_of(base, 0).
+key_of(supervised, 1).     key_of(travel, 2).         key_of(on_foot, 2).
+key_of(person, 1).         key_of(driver, 1).         key_of(car, 1).          key_of(walks_alone, 1).
+key_of(constraint, 1).     key_of(give, 1).           key_of(kind, 1).         key_of(with, 2).
+key_of(week, 1).           key_of(current, 0).
+key_of(present_window, 1). key_of(absent, 1).         key_of(awake, 1).
+key_of(lift, 1).           key_of(day_wake, 0).
+key_of(work_needed, 1).
+key_of(travel_as, 3).      key_of(assume, 0).
+key_of(ru_name, 1).
+key_of(must_start, 1).
+key_of(never_alone, 1).
+key_of(no_walk, 2).        key_of(ride, 4).           key_of(can_wait, 1).     key_of(hosted, 1).
+-- not_extended(R, Why): what the book does NOT put into the world. `books`:
+-- the week's layers are the members' books through access.rofl's rights
+-- (add/skip/move, every); a family fact here would skip the school without
+-- the right to. `query`: a switch a verb asserts for one call (relax, free,
+-- place), not a fact of the household.
+not_extended(usual, books).    not_extended(usual_on, books).  not_extended(moved, books).
+not_extended(skipped, books).  not_extended(added, books).     not_extended(absent_on, books).
+not_extended(want, query).     not_extended(asking, query).    not_extended(waived, query).
+-- extends_unless(R, I, V): argument I may not be V. An adult or a helper is
+-- an ACCOUNT — who may read which book is decided over world + users before
+-- any book is opened (STORE.md, 2), and a guest made `adult` by one line of
+-- a family rule would read every book. Children, neighbours, services and
+-- visitors are the schedule's people and extend; accounts are the operator's.
+extends_unless(person, 2, adult).  extends_unless(person, 2, helper).
+-- speaks_for(R, I): argument I is a person the fact speaks for. The book is
+-- an adult's (rule add), and an adult speaks for adults and children, never
+-- for a helper (§3 of access.rofl): a helper's hours are hers to report.
+speaks_for(driver, 1).         speaks_for(walks_alone, 2).   speaks_for(with, 2).
+speaks_for(present_window, 2). speaks_for(absent, 2).        speaks_for(awake, 2).
+speaks_for(lift, 3).           speaks_for(work_needed, 1).   speaks_for(never_alone, 1).
+speaks_for(hosted, 2).
+-- key_owned(R, G): a key G already owns — an edit's id has its constraint
+-- from its book (access.rofl §4), and a family fact may not give it another
+key_owned(constraint, edit_by).

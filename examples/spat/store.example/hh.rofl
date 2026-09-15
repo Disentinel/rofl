@@ -44,3 +44,40 @@ rule_by[hh](r_gone, robin).
 rule_at[hh](r_gone, "2026-08-31T12:00:00+03:00").
 rule_via[hh](r_gone, cli).
 rule_retracted[hh](r_gone, "2026-08-31T12:30:00+03:00", cli).
+-- THE BOOK EXTENDS THE WORLD (spat.rofl §14, bridge.rofl), 2026-09-15:
+-- r_gym, robin (`spat place add gym "Gym" 20 от дома` is this): a place of
+-- the world from the book — place 10→11, ru_name 0→1, travel 11→12, tt 32→35
+rule_by[hh](r_gym, robin).
+rule_at[hh](r_gym, "2026-09-03T10:00:00+03:00").
+rule_via[hh](r_gym, telegram).
+place[hh](gym).
+ru_name[hh](gym, "Gym").
+travel[hh](home, gym, 20).
+-- r_shortcut, alex: the drive to school is not five minutes because a rule
+-- says so — the world has travel(home, school, 20), the book's line is
+-- overrides[audit](travel, k(home, school)) and never a tt; the identical
+-- travel(home, sadik, 15) is neither an override nor a second row
+rule_by[hh](r_shortcut, alex).
+rule_at[hh](r_shortcut, "2026-09-03T11:00:00+03:00").
+rule_via[hh](r_shortcut, cli).
+travel[hh](home, school, 5).
+travel[hh](home, sadik, 15).
+-- r_people, robin: a visitor is one more person of the schedule, and so are
+-- robin's own required hours and a fresh constraint of hers; an adult or a
+-- helper is an ACCOUNT and withheld (the guest would read every book); the
+-- nanny's hours are hers to say (speaks_for); an edit's constraint is its
+-- book's (key_owned); kit is the world's already (overrides), and nico as
+-- the world has him is neither an override nor a second row — four
+-- withheld[audit] rows, one overrides, one person and one constraint more
+rule_by[hh](r_people, robin).
+rule_at[hh](r_people, "2026-09-03T12:00:00+03:00").
+rule_via[hh](r_people, cli).
+person[hh](cousin, visitor).
+work_needed[hh](robin, 300).
+constraint[hh](c_cousin, robin, household).
+person[hh](uncle, adult).
+person[hh](aunt, helper).
+person[hh](kit, visitor).
+person[hh](nico, child).
+work_needed[hh](nanny, 300).
+constraint[hh](e_skipwalk, nanny, external).

@@ -31,6 +31,7 @@ import { HH, hhRules } from './rules.ts';
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 export const ACCESS = fs.readFileSync(path.join(HERE, 'access.rofl'), 'utf8');
 export const VOLUMES = fs.readFileSync(path.join(HERE, 'volumes.rofl'), 'utf8');
+export const BRIDGE = fs.readFileSync(path.join(HERE, 'bridge.rofl'), 'utf8');   // generated: the family's book extends the world (bridge.ts)
 
 /** One exit code per contract line; the message is what stdout gets;
  *  `opened` is what the loader had read when it refused. */
@@ -198,7 +199,7 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     // THE PROGRAM IS SIGNED `rules` — the public book's name — so volumes.rofl
     // can tell its facts from the household's; everything else is anonymous.
     must(r.assert(facts), 'loader');
-    must(r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}`, { who: 'rules' }), 'spat.rofl + access.rofl + volumes.rofl');
+    must(r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}\n${BRIDGE}`, { who: 'rules' }), 'spat.rofl + access.rofl + volumes.rofl + bridge.rofl');
     must(r.assertClauses([...worldRows, ...users]), 'world + users');
     must(r.assertClauses([...hhFacts, ...hh.clauses], { who: HH }), bookPath(vol, HH));
     open.forEach((b, i) => must(r.assertClauses(texts[i], { who: b.user }), b.where));

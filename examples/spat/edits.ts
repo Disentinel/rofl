@@ -16,7 +16,7 @@ import { renderDay, renderIcs } from './tomorrow.ts';
 import { problems, tgDay, tgWeek } from './tg.ts';
 import { run as maybe } from './maybe.ts';
 import { run as rule } from './rules.ts';
-import { bookPlaces, held, words } from './places.ts';
+import { bookPlaces, slug, words } from './places.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -77,8 +77,10 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   const N = names(r);
   const days = new Set(table(r, 'day', 'D, N').map((x) => x.D));
   const groups = new Set(table(r, 'in_group', 'G, D').map((x) => x.G));
+  // a name resolves through the world AS IT STANDS — the file's lines and the family's book (bridge.rofl) alike;
+  // a quoted place («"American Academy"») by its ru_name, else by its slug (american_academy)
   const name = (t: string | undefined, what: string): string => {
-    const a = t === undefined ? undefined : N.get(t.toLowerCase());
+    const a = t === undefined ? undefined : N.get(t.toLowerCase()) ?? N.get(slug(t));
     return a ?? bad(`${what}: '${t ?? ''}' — мир такого не знает`);
   };
   let on: Dated | undefined;
@@ -276,9 +278,6 @@ export function mark(s: Store, what: 'confirmed' | 'retracted', id: string): num
   }
   const already = what === 'confirmed' && !s.r.holds(`pending(${id})`);
   if (already) { console.log(`${id}: уже действует, ничего не записано`); return 0; }
-  // a place is taken back only when nothing stands there (places.ts)
-  const blocks = what === 'retracted' ? held(s, id) : [];
-  if (blocks.length > 0) throw new SpatError(2, `${id}: место держат блоки — ${blocks.join(', ')}; сначала убери их`);
   put(s, book, tagged(book.book, [`${what}(${id}, "${isoNow(s.env)}", ${s.env.via}).`]), `${what} ${id}`);
   console.log(`${id}: ${what === 'confirmed' ? 'подтверждена, действует' : 'отозвана'}`);
   return 0;
@@ -323,15 +322,15 @@ export function whoami(s: Store): number {
   console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.where ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);
   const every = new Set([...rows(s.r, 'e_usual[L](E, W, S, F, T, P, Pl)'), ...rows(s.r, 'e_unusual[L](E, Ev, S)')].map((x) => x.E));
-  const places = bookPlaces(s).filter((p) => p.by === s.env.as);
-  const apart = new Set([...every, ...places.map((p) => p.id)]);
   const st = (e: string): string => (s.r.holds(`retracted_edit(${e})`) ? 'отозвана' : s.r.holds(`pending(${e})`) ? 'ждёт confirm'
     : s.r.holds(`no_right(${e})`) ? 'без права' : 'действует');
-  for (const e of mine.filter((x) => !apart.has(x))) console.log(`  ${e}  ${st(e)}`);
+  for (const e of mine.filter((x) => !every.has(x))) console.log(`  ${e}  ${st(e)}`);
   if (mine.some((x) => every.has(x))) console.log('  повторяемые (каждую неделю):');
   for (const e of mine.filter((x) => every.has(x))) console.log(`  ${e}  ${st(e)}`);
-  if (places.length > 0) console.log('  места:');
-  for (const p of places) console.log(`  ${p.id}  ${st(p.id)}  ${p.atom} «${p.name}»${p.min === undefined ? ', дорога от дома не задана' : `, ${p.min} мин от дома`}`);
+  // the places my rules put into the world (places.ts, spat.rofl §14) — in force, since only an active rule is loaded
+  const places = bookPlaces(s).filter((p) => p.by === s.env.as);
+  if (places.length > 0) console.log('  места (правила семьи):');
+  for (const p of places) console.log(`  ${p.id}  действует  ${p.atom} «${p.name}»${p.min === undefined ? ', дорога от дома не задана' : `, ${p.min} мин от дома`}`);
   return 0;
 }
 

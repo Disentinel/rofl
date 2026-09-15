@@ -119,6 +119,7 @@ check_world("spat_store").
 check_file("spat_store", "examples/spat/spat.rofl").
 check_file("spat_store", "examples/spat/access.rofl").
 check_file("spat_store", "examples/spat/volumes.rofl").
+check_file("spat_store", "examples/spat/bridge.rofl").
 check_file("spat_store", "examples/spat/week.example.rofl").
 check_file("spat_store", "examples/spat/store.example/users.rofl").
 check_file("spat_store", "examples/spat/store.example/books.rofl").
@@ -136,6 +137,7 @@ check_world("spat_trial").
 check_file("spat_trial", "examples/spat/spat.rofl").
 check_file("spat_trial", "examples/spat/access.rofl").
 check_file("spat_trial", "examples/spat/volumes.rofl").
+check_file("spat_trial", "examples/spat/bridge.rofl").
 check_file("spat_trial", "examples/spat/week.example.rofl").
 check_file("spat_trial", "examples/spat/store.example/users.rofl").
 check_file("spat_trial", "examples/spat/store.example/books.rofl").

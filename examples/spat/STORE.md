@@ -387,58 +387,111 @@ the new rules moves the census when dropped (measured 2026-09-15, 38
 mutants: 37 killed by the census or by the demand-backed check, `busy`'s
 bridge only by the demo's `free`).
 
-## A place is a line of the world a book added
+## The family's book extends the world
 
-Measured on the stand 2026-09-15: «Каждый четверг у kit математика, в
-American Academy, это новое место, его надо добавить» — and the department
-asked for a one-word name twice, because the grammar had no verb for a place:
-`place/1`, `ru_name/2`, `travel/3` were the world's, and even
-`american_academy` in `add … <where>` was «мир такого не знает». Now `spat
-place add [<atom>] "<Название>" [<минут> от дома]` (`место добавить …`) writes
-`e_place(E, Atom, "Название")` and, with the minutes, `e_travel(E, Home, Atom,
-Min)` into the author's book — the atom given, or slugged from the name
-(«American Academy» → `american_academy`; a name that slugs to nothing asks for
-the atom, the model transliterates nothing) — and access.rofl derives
-`place(Atom)`, `ru_name(Atom, "Название")` and `travel(Home, Atom, Min)` from
-the entries that act, on every week. `add … <where>` then takes the atom, the
-Russian name or the name in quotes. `whoami` lists the author's places apart.
+«Весь пойнт ROFL — грамматика расширяется на ходу под задачу, и нижележащие
+книги не ломают ранее определённого.» Measured on the stand 2026-09-15 (v4):
+`rule add 'place(american_academy). ru_name(american_academy, "American
+Academy"). travel(home, american_academy, 15).'` was accepted into `hh` — and
+`add math every thu 15:00-16:30 kit american_academy` was still «мир такого не
+знает»: only the four extension points crossed from the book into main, and
+the grammar checked names against the world as loaded. Now a FACT of the
+family's book on a relation declared `edb` in spat.rofl is one more line of
+the world — MONOTONE: added, never overriding — and the grammar resolves a
+place, a person, a block over the world as it stands, `main` and the book
+together (`names()` reads the evaluated relations; a quoted place by its
+`ru_name` or by its slug).
 
-**Whose.** A place is the household's, as the car is. `may_edit` has no line
-for a place and is not to move, so the entry touches the ADULTS of the house:
-an adult may speak for every adult (§3), a helper only for themself — the
-nanny's `place add` is code 4 with «может: alex, robin», and a row of hers
-put into her book by hand is `no_right` and never a place (the fixture's
-`e_nannyplace`). `place :- acts` closes no cycle: nothing in `acts`'s
-dependencies reads `place` (`usual :- acts` would, through `touches`).
+**The mechanism is generated, the decisions are declared.** spat.rofl §14
+says, per edb relation, one line each: `key_of(R, N)` (the first N arguments
+identify a fact — 0 for a singleton like `base`/`current`, the arity for a
+set like `with`/`ride`), `not_extended(R, Why)`, `extends_unless(R, I, V)`,
+`speaks_for(R, I)`, `key_owned(R, G)`. `examples/spat/bridge.ts` turns the
+section into `bridge.rofl` — the arity read off the rules' own use of the
+relation (and the shipped example for `week/1`, which only the CLI reads) —
+loaded with the program and signed `rules`; an edb relation with neither
+`key_of` nor `not_extended` stops the generator, and demo group 21 refuses a
+stale file. Per relation:
 
-**What the rules do with it is said at the door**, because it was measured and
-is not what one would guess. With no minutes the pair has no `tt`: a child's
-run there has no way — `run_stuck`, «НЕКОМУ ВЕЗТИ … дом → American Academy»,
-so a block there is code 3 by `no_way` — and an adult's chain into it has no
-slack (the lint's «НЕТ ВРЕМЕНИ В ПУТИ»); NOT `on_foot_unknown`, which needs a
-`leg`, which needs `tt`. With the minutes the journey is a number in the chain
-(«обед → yoga, −5 мин» for 15:00 after a lunch ending 14:45 with 20 to go) and a
-child is driven; but the minutes are FROM HOME ONLY — between the new place
-and any other (school → academy, gym → pool) the model still knows nothing,
-so a hop from school is `no_way` and the way back from the pool after the gym
-is `on_foot_unknown` (the car was left at the gym). The fixture's Thursday
-«math 15:00–16:30 kit "American Academy"» is therefore code 3 with the place
-resolved, «ломает чт: no_way», «некому везти kit 15:00: школа → American
-Academy» — the honest answer, and the one the owner needs: the drive from
-school is a number nobody has given.
+    world_travel(A, B) :- asserted_by($fact(travel, main, $cons(A, $cons(B, _))), _, _).
+    travel(A, B, M)    :- travel[hh](A, B, M), not world_travel(A, B).
+    overrides[audit](travel, k(A, B)) :- travel[hh](A, B, M), world_travel(A, B), not travel(A, B, M).
 
-**Twice is refused.** The same atom or name again is code 2 naming the entry
-(«место american_academy уже есть — правка e_…»): a second row would give the
-pair two travel figures, `two_ways`, which the model names but cannot choose
-between; the way to change the minutes is `retract` and `place add`. A world's
-place, a person's name, a block's are refused the same way. `retract <id>` of
-a place is code 2 with the list while a block stands there — the world's, a
-recurring line's, a book's — and code 0 otherwise; a proposed block does not
-hold it. Demo group 18 (`examples/spat_places/demo.ts`); the fixture carries
-robin's `e_gym` (20 from home: `place` 10→11, `travel` 11→12, `tt` 32→35,
-`ru_name` 0→1), the nanny's `e_nannyplace` (`no_right` 10→11) and alex's
-retracted `e_lake` (`retracted_edit` 4→5); the five new rules, 13 mutants,
-13 killed by this census.
+`world_R` is what the world book ASSERTED, read off the kernel's own trail —
+so a key the world has keeps the world's value, the identical fact is neither
+a second row nor a conflict, and a different value is `overrides[audit]` and
+ignored: `travel(home, school, 5)` against the world's 20 leaves 20. No cycle:
+`world_R` reads a kernel relation, and the audit's negation is over a relation
+that depends on base facts only (measured: leak 0, undefined_premise 0,
+demand-backed 0 with the bridge loaded; the stratification check of `rule
+add` still stands at the door for a family RULE that concludes an edb
+relation through a negation).
+
+**What the book does not put into the world**, and why — `withheld[audit](R,
+k(...))` for a fact, the reason in `rule add`'s answer:
+- `not_extended(_, books)`: `usual`, `usual_on`, `moved`, `skipped`, `added`,
+  `absent_on` are the members' books through access.rofl's rights; a family
+  fact there would skip the school without the right to.
+- `not_extended(_, query)`: `want`, `asking`, `waived` are a verb's switch for
+  one call (`place`, `free`, `relax`), not a fact of the household.
+- `extends_unless(person, 2, adult|helper)`: an adult or a helper is an
+  ACCOUNT. Who may read which book is decided over `world` + `users` before
+  any book is opened (2 above), and `person(uncle, adult)` in a family rule
+  would make the guest read every book. Children, neighbours, services and
+  visitors are the schedule's people and extend; accounts stay the
+  operator's (`init`, `volume load --book world`).
+- `speaks_for(R, I)`: `driver`, `walks_alone`, `with`, `present_window`,
+  `absent`, `awake`, `lift`, `work_needed`, `never_alone`, `hosted` speak for
+  a person; the book is an adult's (`rule add`), and an adult speaks for
+  adults and children, never for a helper (§3 of access.rofl) — the nanny's
+  hours are hers to report.
+- `key_owned(constraint, edit_by)`: an edit's id has its constraint from its
+  book; `constraint(e_skipwalk, nanny, external)` would give the nanny
+  `may_edit` over robin's edit. The guard reads `edit_by`, i.e. the books the
+  caller reads: a reader who cannot see the entry sees the row enter, and
+  cannot use it either — `retract <id>` needs the entry, `skip` needs the
+  block, and every other reader's world withholds it.
+
+**`rule add` says what each fact did**: «в мир семьи: place(american_academy)»,
+«travel(home, school, 5) — НЕ ДЕЙСТВУЕТ: мир уже задаёт travel(home, school,
+20)», «person(uncle, adult) — книга семьи не заводит: adult — учётная запись»,
+«work_needed(nanny, 300) — … за помощника (няня) книга семьи не говорит»,
+«person(nico, child) — уже в мире», «needs(x, y) — факт правил семьи, миру не
+виден (needs не edb)», «want(…) — миру не передаётся: переключатель одного
+вызова»; the four points' preview follows for a rule.
+
+**A place is three of those facts.** `spat place add [<atom>] "<Название>"
+[<минут> от дома]` (`место добавить …`) is sugar over `rule add 'place(a).
+ru_name(a, "Название"). travel(home, a, M).'`: the atom given or slugged from
+the quoted name («American Academy» → `american_academy`; a name that slugs
+to nothing asks for the atom — the model transliterates nothing), the name
+refused when the world already calls something so (a place, a person, a
+block: code 2 naming it; the raw `rule add` is monotone and answers «уже в
+мире»). `whoami` lists the author's places apart; `rule retract` of a place is
+2 with the list while a block stands there. What the rules do with a place
+without travel was measured, not guessed, and the sugar says it at the door:
+no minutes → no `tt` → a child's run there is `no_way` («некому везти … дом →
+American Academy», a block there is code 3) and an adult's chain into it has
+no slack — NOT `on_foot_unknown`, which needs a `leg`, which needs `tt`. With
+the minutes the number is in the chain («обед → yoga −5 мин» for 15:00 after
+a lunch ending 14:45) and a child is driven — from home only; the owner's
+Thursday block is code 3 by `no_way` because school → academy is a number
+nobody gave, and `rule add 'travel(school, american_academy, 10).'` is that
+number: the same block is then 0. Any pair is one more line.
+
+Fixture (`store.example/hh.rofl`): robin's `r_gym` (place 10→11, ru_name
+0→1, travel 11→12, tt 32→35), alex's `r_shortcut` (`travel(home, school, 5)`:
+`overrides` 0→1; the identical `travel(home, sadik, 15)` nothing), robin's
+`r_people` (a visitor and her own hours and constraint in: person 8→9,
+work_needed 0→1, constraint 53→54; uncle adult, aunt helper, the nanny's
+hours, an edit's constraint withheld: 4; kit as visitor an override; nico as
+the world has him neither). The generated shapes, 32 mutants (whole rule and
+each premise of the travel, place, ru_name, person, work_needed and
+constraint blocks and their audits): 31 killed by this census; the one
+survivor is `world_travel` inside `overrides(travel)`, redundant by
+construction for a relation with no other guard (`not travel(...)` already
+implies it) and discriminated on `person`, where a withheld fact is not an
+override. Demo groups 18 and 21, `examples/spat_places/demo.ts`.
 
 ## A hypothesis is a book
 
@@ -507,12 +560,13 @@ laptop)` in the laptop rule reads the `needs(work_am, laptop).` written
 beside it — except the four extension points, which always mean the whole
 picture.
 
-**Four extension points, and nothing else.** `defect[hh](Kind, Block, Day)`
+**Four extension points for RULES — and every edb relation for FACTS** (see
+«The family's book extends the world» above). `defect[hh](Kind, Block, Day)`
 → `defect`/`breaks` (access.rofl §6), `busy[hh](P, D, S)` → `busy` and
 `needs_cover[hh](Ch, D, S)` → `needs_cover` (spat.rofl §12, `imports` both
 ways so the flow audit is quiet), `warn[hh](Kind, Text, Day)` → a «!!» line
 of `tomorrow`/`show`. `uncovered(kit, mon, 600).` in a family rule is
-accepted and inert.
+accepted and inert (`uncovered` is derived, not edb).
 
 **The checks are the kernel's**, on a fork of the week in force, each a code
 2 with the diagnostic verbatim: an unstratified program («program rejected:
@@ -600,10 +654,19 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
 - **SQLite on NFS.** Locking is unreliable there; see 6.
 - **`DD.MM` is this year.** `02.01` typed on 30 December means the January
   that has passed; write `2027-01-02`.
-- **Travel between two places a book added, or from a book's place to the
-  school.** `place add` takes the minutes from home only; `travel(gym, pool,
-  M)` has no verb, and a chain through such a pair is the lint's silence. The
-  honest shape is a `travel` verb over any two places; not made here.
+- **Travel between two places is a line, not a verb.** `place add` takes the
+  minutes from home only; any other pair is `rule add 'travel(gym, pool, M).'`
+  — the book extends the world — and a pair nobody wrote is the lint's
+  silence («НЕТ ВРЕМЕНИ В ПУТИ»).
+- **A person of the family's book is a person of the schedule, never an
+  account.** `extends_unless(person, 2, adult|helper)`: read rights are decided
+  over world + users before any book is opened, and a rule that could make a
+  guest read every book is not the household's to write. A new adult or
+  helper is the operator's `volume load --book world` and a users line.
+- **`key_owned` reads the caller's books.** `constraint(e_…, …)` is withheld
+  where the entry is visible; a reader without that book sees the row and
+  can do nothing with it (see above). A reader-independent guard would need
+  the loader to name every entry id; not done.
 - **A rule that reads another member's book.** `imports(hh, p_<author>)` is
   the author's own book only; a rule over everyone's edits reads `main`,
   where `acts`, `edit_by`, `moved`, `added` already are.
@@ -644,9 +707,9 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 31 scenarios in three
-  groups (18–20: places, the one-off «every», the author's own book at the
-  door) in 50 s; `examples/spat_edits/demo.ts` (groups 12–17); and
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 39 scenarios in four
+  groups (18–21: places, the one-off «every», the author's own book at the
+  door, the book extending the world) in 50–75 s; `examples/spat_edits/demo.ts` (groups 12–17); and
   `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under

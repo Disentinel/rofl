@@ -27,11 +27,12 @@
 
 import { Evaluation, StratificationError } from '../../src/engine.ts';
 import { parseProgram } from '../../src/parser.ts';
-import { mka, type Clause, type Lit } from '../../src/unify.ts';
-import { rows, ru } from './spat.ts';
+import { mka, type Clause, type Lit, type Term } from '../../src/unify.ts';
+import { rows, ru, table } from './spat.ts';
 import { SpatError, editId, isoNow, must, type Store } from './store.ts';
 import { readBook, readClauses, showClause, writeClauses, type Ruled, type Volume } from './volume.ts';
 import { tagged } from './edits.ts';
+import { held } from './places.ts';
 
 export const HH = 'hh';
 export const POINTS = ['defect', 'busy', 'needs_cover', 'warn'];
@@ -77,6 +78,38 @@ export function hhRules(v: Volume, facts: Clause[]): { clauses: Clause[]; author
   return { clauses: out, authors: [...authors].sort() };
 }
 
+/** A fact of the submission as main would hold it: `place(academy)`. */
+const lit = (c: Clause): string => showClause({ head: { ...c.head, perspExplicit: false }, body: [] }).replace(/\.$/, '');
+const term = (t: Term): string => (t.k === 'a' ? t.name : t.k === 'i' ? String(t.v) : t.k === 's' ? JSON.stringify(t.v) : t.k === 'f' ? `${t.name}(${t.args.map(term).join(', ')})` : t.name);
+/** WHAT A FACT OF THE BOOK DID TO THE WORLD (spat.rofl §14, bridge.rofl): one more line of it, already there, ignored as an
+ *  override with the world's own line named, withheld with the reason — or a fact of the family's rules alone. */
+function worldSaid(f: Store['r'], cs: Clause[], had: Set<string>): string[] {
+  const out: string[] = [];
+  for (const c of cs.filter((c) => c.body.length === 0)) {
+    const rel = c.head.rel; const l = lit(c); const args = c.head.args.map(term);
+    const key = f.query(`key_of(${rel}, N)`).rows[0]?.bindings.N;
+    const why = f.query(`not_extended(${rel}, W)`).rows[0]?.bindings.W;
+    if (key === undefined) { out.push(why === undefined ? `${l} — факт правил семьи, миру не виден (${rel} не edb)` : `${l} — миру не передаётся: ${why === 'books' ? 'блоки недели идут через add/skip/move' : 'переключатель одного вызова'}; правилам семьи видно`); continue; }
+    if (had.has(l)) { out.push(`${l} — уже в мире`); continue; }
+    if (f.holds(l)) { out.push(`в мир семьи: ${l}`); continue; }
+    const k = Number(key); const kargs = k === 0 ? args : args.slice(0, k);
+    if (f.holds(`overrides[audit](${rel}, k(${kargs.join(', ')}))`)) {
+      const rest = args.slice(k).map((_, i) => `V${i}`);
+      const theirs = f.query(`${rel}(${[...args.slice(0, k), ...rest].join(', ')})`).rows.map((x) => `${rel}(${[...args.slice(0, k), ...rest.map((v) => String(x.bindings[v]))].join(', ')})`);
+      out.push(`${l} — НЕ ДЕЙСТВУЕТ: мир уже задаёт ${theirs.join(', ')}; книга семьи добавляет, не переопределяет (overrides[audit])`); continue;
+    }
+    if (f.holds(`withheld[audit](${rel}, k(${args.join(', ')}))`)) {
+      const acct = table(f, 'extends_unless', 'R, I, V').find((x) => x.R === rel && args[Number(x.I) - 1] === x.V);
+      const helper = table(f, 'speaks_for', 'R, I').filter((x) => x.R === rel).map((x) => args[Number(x.I) - 1]).find((p) => x_helper(f, p));
+      const owned = table(f, 'key_owned', 'R, G').find((x) => x.R === rel && f.holds(`${x.G}(${args[0]}, _)`));
+      out.push(`${l} — книга семьи не заводит: ${acct ? `${acct.V} — учётная запись, её заводит оператор (users, world)` : helper ? `за помощника (${ru(helper)}) книга семьи не говорит — своё сообщает ${ru(helper)}` : owned ? `${args[0]} — правка, её ограничение из её книги` : 'withheld[audit]'}`); continue;
+    }
+    out.push(`${l} — в мир не вошло`);
+  }
+  return out;
+}
+const x_helper = (f: Store['r'], p: string | undefined): boolean => p !== undefined && f.holds(`person(${p}, helper)`);
+
 /** The rows at the four points, per point — the preview counts them, so a rule that
  *  gives 504 warnings is confirmed as 504, not as its first two lines. */
 const pointRows = (r: { query: (q: string) => { rows: { text: string }[] } }): Map<string, string[]> =>
@@ -94,7 +127,8 @@ function add(s: Store, text: string): number {
   const cs = stamp(parsed, s.env.as, refuse);
   // THE KERNEL'S CHECKS, on a fork of the week in force
   const f = s.r.fork();
-  const before = { leak: f.query('leak[audit](A, B)').rows.length, undef: f.query('undefined_premise[audit](R, Rel)').rows.length, points: pointRows(f) };
+  const before = { leak: f.query('leak[audit](A, B)').rows.length, undef: f.query('undefined_premise[audit](R, Rel)').rows.length, points: pointRows(f),
+    had: new Set(cs.filter((c) => c.body.length === 0).map(lit).filter((l) => f.holds(l))) };
   // the author's own book is the candidate's to read: the loader declares `imports(hh, p_<author>)` per author of an
   // ACTIVE rule, so a first rule by this author was refused as leak[audit] (measured on 1a78e14) — declared here for the trial
   must(f.assert(`imports(${HH}, p_${s.env.as}).`), 'imports');
@@ -112,13 +146,14 @@ function add(s: Store, text: string): number {
   const unsafe = new Evaluation(f.store, {}).rules.filter((x) => !x.safe).map((x) => x.canon);
   if (unsafe.length > 0) refuse(`правило не материализуется (demand-backed): ${unsafe.join(' | ')}`);
   const gives = preview(before.points, pointRows(f));
+  const world = worldSaid(f, cs, before.had);
   // WRITTEN: the clauses under one id, the trail as facts of the book; from the bot it waits for a person
   const at = isoNow(s.env);
   const id = 'r' + editId(s.env.as, at, text.trim()).slice(1);
   const proposed = s.env.via === 'telegram';
   const facts = tagged(HH, [`rule_by(${id}, ${s.env.as}).`, `rule_at(${id}, "${at}").`, `rule_via(${id}, ${s.env.via}).`, ...(proposed ? [`rule_proposed(${id}).`] : [])]);
   writeClauses(s.vol, HH, id, cs, facts, { at, via: s.env.via, edit: `rule add ${text.trim().replace(/\s+/g, ' ')}` });
-  const today = gives.length > 0 ? `сегодня оно даёт:\n  ${gives.join('\n  ')}` : 'сегодня в точках расширения (defect/busy/needs_cover/warn) оно не даёт ничего';
+  const today = [...world, ...(gives.length > 0 ? [`сегодня оно даёт:\n  ${gives.join('\n  ')}`] : cs.some((c) => c.body.length > 0) ? ['сегодня в точках расширения (defect/busy/needs_cover/warn) оно не даёт ничего'] : [])].join('\n  ');
   if (proposed) { console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ ${id}, не действует — правило пришло через бота; ${today}\n  подтвердить: spat rule confirm ${id}`); return 3; }
   console.log(`правило ${id} принято; ${today}`);
   return 0;
@@ -132,6 +167,10 @@ function mark(s: Store, what: 'confirmed' | 'retracted', id: string): number {
   if (by !== s.env.as && !(what === 'retracted' && operator)) { console.log(`отказано: ${id} — правило ${ru(by)}; ${what === 'confirmed' ? 'подтвердить может только' : 'отозвать может'} ${ru(by)}${what === 'retracted' ? ' или оператор' : ''}`); return 4; }
   if (st.retracted.has(id)) { if (what === 'confirmed') throw new SpatError(2, `${id}: отозвано, подтверждать нечего`); console.log(`${id}: уже отозвано`); return 0; }
   if (what === 'confirmed' && (!st.proposed.has(id) || st.confirmed.has(id))) { console.log(`${id}: уже действует`); return 0; }
+  // a place the rule put into the world is taken back only when nothing stands there (places.ts)
+  const blocks = what === 'retracted' ? readClauses(s.vol, HH).filter((c) => c.id === id && c.clause.body.length === 0 && c.clause.head.rel === 'place')
+    .flatMap((c) => held(s, c.clause.head.args[0]?.k === 'a' ? c.clause.head.args[0].name : '')) : [];
+  if (blocks.length > 0) throw new SpatError(2, `${id}: место держат блоки — ${blocks.join(', ')}; сначала убери их`);
   const at = isoNow(s.env);
   writeClauses(s.vol, HH, id, [], tagged(HH, [`rule_${what}(${id}, "${at}", ${s.env.via}).`]), { at, via: s.env.via, edit: `rule ${what} ${id}` });
   console.log(`${id}: ${what === 'confirmed' ? 'подтверждено, действует' : 'отозвано'}`);
