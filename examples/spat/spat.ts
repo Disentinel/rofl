@@ -1008,7 +1008,10 @@ async function main(argv: string[]): Promise<void> {
       set(argv[i + 1]); argv.splice(i, 2);
     }
   }
-  const [cmd, ...rest] = argv;
+  const [cmd0, ...rest] = argv;
+  const cmd = cmd0 === 'место' ? 'place' : cmd0;
+  // `place add …` is a store verb: a place of the world, in the caller's book (places.ts)
+  const placeAdd = cmd === 'place' && /^(add|добавить)$/i.test(rest[0] ?? '');
   // `place` builds its own world with the want fact in it; `free` needs the
   // free-time block switched on, which nothing else pays for.
   const extra = cmd === 'free' ? ['asking(free).']
@@ -1017,7 +1020,7 @@ async function main(argv: string[]): Promise<void> {
   // and books come from the environment (store.ts), the classic verbs below
   // then run over the same world. `init` alone needs no tenant to exist yet.
   let r: Rofl;
-  if (cmd === 'init' || cmd === 'volume' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd)) {
+  if (cmd === 'init' || cmd === 'volume' || process.env.SPAT_ROOT || STORE_VERBS.has(cmd) || placeAdd) {
     const st = await import('./store.ts');
     const ed = await import('./edits.ts');
     const e = st.env();
@@ -1032,7 +1035,8 @@ async function main(argv: string[]): Promise<void> {
     if (fmt !== undefined && fmt !== 'tg') throw Object.assign(new Error(`--format: только tg (терминал — без флага), не '${fmt}'`), { code: 2 });
     store.fmt = fmt;
     if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
-    // over the store, `place` tries its best slots as hypotheses (maybe.ts)
+    // over the store, `place` tries its best slots as hypotheses (maybe.ts); `place add` writes a place (places.ts)
+    if (placeAdd) { const pl = await import('./places.ts'); process.exitCode = pl.add(store, pl.line(rest.slice(1))); return; }
     if (cmd === 'place') { process.exitCode = (await import('./maybe.ts')).place(store, rest); return; }
     r = store.r;
   } else r = world(weekFile, { weekOf, extra });
@@ -1351,6 +1355,7 @@ const USAGE = [
   '  spat ics [--for <кто>] · roll <неделя> (оператор) · init <семья> --world <файл> --users <файл> (оператор)',
   '  spat maybe \'<правка>\' [--as-of <день>] · maybe list · maybe compare [<id>…] · maybe apply <id>   гипотеза — книга',
   '  spat place <что> <минут> [кто] [где] [--week-of W]   лучшие слоты, каждый испытан как гипотеза',
+  '  spat place add [<atom>] "<Название>" [<минут> от дома]   новое место мира в своей книге (взрослый); retract <id> снимает',
   '  spat rule add \'<клаузы>\' · rule list · rule confirm <id> · rule retract <id>   правила семьи (взрослый/оператор)',
   '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',

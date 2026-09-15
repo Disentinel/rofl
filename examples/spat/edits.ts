@@ -16,6 +16,7 @@ import { renderDay, renderIcs } from './tomorrow.ts';
 import { problems, tgDay, tgWeek } from './tg.ts';
 import { run as maybe } from './maybe.ts';
 import { run as rule } from './rules.ts';
+import { bookPlaces, held, words } from './places.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -29,6 +30,7 @@ const GRAMMAR = [
   '  день: mon..sun / пн..вс; сегодня/завтра/послезавтра, 15.09, 2026-09-15 — по календарю SPAT_TZ;',
   '  без дня — все дни, когда блок стоит. дни при every: день, weekdays/будни, alldays/ежедневно, группа дней из мира.',
   '  блок — как в расписании: типовая неделя, повторяемые и добавленные правками; skip/move добавленного = отзыв той правки.',
+  '  где — atom места или его название в кавычках ("American Academy"); новое место: spat place add … (взрослый).',
 ].join('\n');
 
 const VERB: Record<string, string> = {
@@ -37,7 +39,7 @@ const VERB: Record<string, string> = {
 };
 
 /** Every name the world knows, by its atom and by its Russian reading. */
-function names(r: Rofl): Map<string, string> {
+export function names(r: Rofl): Map<string, string> {
   const m = new Map<string, string>();
   const put = (a: string): void => { m.set(a, a); m.set(ru(a).toLowerCase(), a); };
   for (const x of table(r, 'person', 'P, K')) put(x.P);
@@ -69,7 +71,8 @@ export interface Edit { kind: string; summary: string; facts: (id: string) => st
 export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(text)) bad('в правке управляющий символ (перевод строки, табуляция, NUL); правка — одна строка');
-  const w = text.trim().split(/\s+/).filter((x) => x.length > 0);
+  // a "quoted phrase" is one word — a place by its name (places.ts)
+  const w = words(text).map((x) => x.t);
   const done = (used: number, out: Edit): Edit => (w.length > used ? bad(`лишнее в конце: '${w.slice(used).join(' ')}'`) : { ...out, on });
   const N = names(r);
   const days = new Set(table(r, 'day', 'D, N').map((x) => x.D));
@@ -270,6 +273,9 @@ export function mark(s: Store, what: 'confirmed' | 'retracted', id: string): num
   }
   const already = what === 'confirmed' && !s.r.holds(`pending(${id})`);
   if (already) { console.log(`${id}: уже действует, ничего не записано`); return 0; }
+  // a place is taken back only when nothing stands there (places.ts)
+  const blocks = what === 'retracted' ? held(s, id) : [];
+  if (blocks.length > 0) throw new SpatError(2, `${id}: место держат блоки — ${blocks.join(', ')}; сначала убери их`);
   put(s, book, tagged(book.book, [`${what}(${id}, "${isoNow(s.env)}", ${s.env.via}).`]), `${what} ${id}`);
   console.log(`${id}: ${what === 'confirmed' ? 'подтверждена, действует' : 'отозвана'}`);
   return 0;
@@ -314,11 +320,15 @@ export function whoami(s: Store): number {
   console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.where ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);
   const every = new Set([...rows(s.r, 'e_usual[L](E, W, S, F, T, P, Pl)'), ...rows(s.r, 'e_unusual[L](E, Ev, S)')].map((x) => x.E));
+  const places = bookPlaces(s).filter((p) => p.by === s.env.as);
+  const apart = new Set([...every, ...places.map((p) => p.id)]);
   const st = (e: string): string => (s.r.holds(`retracted_edit(${e})`) ? 'отозвана' : s.r.holds(`pending(${e})`) ? 'ждёт confirm'
     : s.r.holds(`no_right(${e})`) ? 'без права' : 'действует');
-  for (const e of mine.filter((x) => !every.has(x))) console.log(`  ${e}  ${st(e)}`);
+  for (const e of mine.filter((x) => !apart.has(x))) console.log(`  ${e}  ${st(e)}`);
   if (mine.some((x) => every.has(x))) console.log('  повторяемые (каждую неделю):');
   for (const e of mine.filter((x) => every.has(x))) console.log(`  ${e}  ${st(e)}`);
+  if (places.length > 0) console.log('  места:');
+  for (const p of places) console.log(`  ${p.id}  ${st(p.id)}  ${p.atom} «${p.name}»${p.min === undefined ? ', дорога от дома не задана' : `, ${p.min} мин от дома`}`);
   return 0;
 }
 

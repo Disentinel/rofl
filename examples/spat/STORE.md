@@ -147,7 +147,9 @@ comment above the entry:
 The operations, one relation each: `e_move(E, Block, Day|all, Time)`,
 `e_skip(E, Block, Day|all)`, `e_add(E, What, Day, From, To, Who, Where)`,
 `e_sick(E, Person, Day|all)`, `e_car_out(E, Day, From, To)`,
-`e_report(E, Constraint, Day, Time)`. The `edit` column is for a person
+`e_report(E, Constraint, Day, Time)`, `e_usual`/`e_unusual` (every week),
+`e_place(E, Atom, "Name")` with `e_travel(E, Home, Atom, Min)` (a place of
+the world). The `edit` column is for a person
 reading the dump; the tool reads the facts. A term is written as the kernel
 writes it in a snapshot — `{"k":"a"}` an atom, `{"k":"i"}` an integer,
 `{"k":"s"}` a string — so `robin` and `"robin"` are two rows that cannot be
@@ -385,6 +387,59 @@ the new rules moves the census when dropped (measured 2026-09-15, 38
 mutants: 37 killed by the census or by the demand-backed check, `busy`'s
 bridge only by the demo's `free`).
 
+## A place is a line of the world a book added
+
+Measured on the stand 2026-09-15: «Каждый четверг у kit математика, в
+American Academy, это новое место, его надо добавить» — and the department
+asked for a one-word name twice, because the grammar had no verb for a place:
+`place/1`, `ru_name/2`, `travel/3` were the world's, and even
+`american_academy` in `add … <where>` was «мир такого не знает». Now `spat
+place add [<atom>] "<Название>" [<минут> от дома]` (`место добавить …`) writes
+`e_place(E, Atom, "Название")` and, with the minutes, `e_travel(E, Home, Atom,
+Min)` into the author's book — the atom given, or slugged from the name
+(«American Academy» → `american_academy`; a name that slugs to nothing asks for
+the atom, the model transliterates nothing) — and access.rofl derives
+`place(Atom)`, `ru_name(Atom, "Название")` and `travel(Home, Atom, Min)` from
+the entries that act, on every week. `add … <where>` then takes the atom, the
+Russian name or the name in quotes. `whoami` lists the author's places apart.
+
+**Whose.** A place is the household's, as the car is. `may_edit` has no line
+for a place and is not to move, so the entry touches the ADULTS of the house:
+an adult may speak for every adult (§3), a helper only for themself — the
+nanny's `place add` is code 4 with «может: alex, robin», and a row of hers
+put into her book by hand is `no_right` and never a place (the fixture's
+`e_nannyplace`). `place :- acts` closes no cycle: nothing in `acts`'s
+dependencies reads `place` (`usual :- acts` would, through `touches`).
+
+**What the rules do with it is said at the door**, because it was measured and
+is not what one would guess. With no minutes the pair has no `tt`: a child's
+run there has no way — `run_stuck`, «НЕКОМУ ВЕЗТИ … дом → American Academy»,
+so a block there is code 3 by `no_way` — and an adult's chain into it has no
+slack (the lint's «НЕТ ВРЕМЕНИ В ПУТИ»); NOT `on_foot_unknown`, which needs a
+`leg`, which needs `tt`. With the minutes the journey is a number in the chain
+(«обед → yoga, −5 мин» for 15:00 after a lunch ending 14:45 with 20 to go) and a
+child is driven; but the minutes are FROM HOME ONLY — between the new place
+and any other (school → academy, gym → pool) the model still knows nothing,
+so a hop from school is `no_way` and the way back from the pool after the gym
+is `on_foot_unknown` (the car was left at the gym). The fixture's Thursday
+«math 15:00–16:30 kit "American Academy"» is therefore code 3 with the place
+resolved, «ломает чт: no_way», «некому везти kit 15:00: школа → American
+Academy» — the honest answer, and the one the owner needs: the drive from
+school is a number nobody has given.
+
+**Twice is refused.** The same atom or name again is code 2 naming the entry
+(«место american_academy уже есть — правка e_…»): a second row would give the
+pair two travel figures, `two_ways`, which the model names but cannot choose
+between; the way to change the minutes is `retract` and `place add`. A world's
+place, a person's name, a block's are refused the same way. `retract <id>` of
+a place is code 2 with the list while a block stands there — the world's, a
+recurring line's, a book's — and code 0 otherwise; a proposed block does not
+hold it. Demo group 18 (`examples/spat_places/demo.ts`); the fixture carries
+robin's `e_gym` (20 from home: `place` 10→11, `travel` 11→12, `tt` 32→35,
+`ru_name` 0→1), the nanny's `e_nannyplace` (`no_right` 10→11) and alex's
+retracted `e_lake` (`retracted_edit` 4→5); the five new rules, 13 mutants,
+13 killed by this census.
+
 ## A hypothesis is a book
 
 «Понедельник или среда», «где-нибудь на следующей неделе» are `whatif` and
@@ -425,7 +480,7 @@ line per day, «Пн — сходится» / «Чт — !! 2 дыры: kit 17:4
 verbatim in demo group 17 as the golden. Escaping for MarkdownV2 is the
 sender's: the shim's egress escapes everything it is handed, `*` included, so
 the two bold markers survive only if the shim passes those lines unescaped —
-S1e's call, not the renderer's. Russian inflection («с Ромой») is not done:
+S1e's call, not the renderer's. Russian inflection («с Китом») is not done:
 the world carries a name's nominative (`ru_name`) and nothing else.
 
 ## The household's own rules, without a release
@@ -524,6 +579,10 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
 - **SQLite on NFS.** Locking is unreliable there; see 6.
 - **`DD.MM` is this year.** `02.01` typed on 30 December means the January
   that has passed; write `2027-01-02`.
+- **Travel between two places a book added, or from a book's place to the
+  school.** `place add` takes the minutes from home only; `travel(gym, pool,
+  M)` has no verb, and a chain through such a pair is the lint's silence. The
+  honest shape is a `travel` verb over any two places; not made here.
 - **A rule that reads another member's book.** `imports(hh, p_<author>)` is
   the author's own book only; a rule over everyone's edits reads `main`,
   where `acts`, `edit_by`, `moved`, `added` already are.
@@ -564,7 +623,9 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat/demo.ts`, 108 scenarios in eleven
+- `npm run test:hosts`: `examples/spat_places/demo.ts`, 24 scenarios (group
+  18: places) in 40 s; `examples/spat_edits/demo.ts` (groups 12–17); and
+  `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under
   another ledger (the loader puts it in that book; the nanny does not see

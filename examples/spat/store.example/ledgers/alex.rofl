@@ -63,3 +63,10 @@ retracts[p_alex](e_skipclean, "2026-09-06T21:30:00+03:00", cli).
 retracts[p_alex](e_nannyadd, "2026-09-06T21:31:00+03:00", cli).
 -- a retraction of nothing: no such entry, inert
 retracts[p_alex](e_nowhere, "2026-09-06T21:32:00+03:00", cli).
+-- 2026-09-03T11:00:00+03:00 cli alex: place add lake "Lake" — then retracted: not a place any more
+e_place[p_alex](e_lake, lake, "Lake").
+edit_at[p_alex](e_lake, "2026-09-03T11:00:00+03:00").
+edit_via[p_alex](e_lake, cli).
+for_week[p_alex](e_lake, w0831).
+-- 2026-09-03T11:30:00+03:00 cli alex: retracted e_lake
+retracted[p_alex](e_lake, "2026-09-03T11:30:00+03:00", cli).

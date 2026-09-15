@@ -95,6 +95,7 @@ may_report(U, C) :- account(U), external(C).
 --   e_car_out(E, Day, From, To)               e_report(E, Constraint, Day, Time)
 --   e_usual(E, What, Days, From, To, Who, Where)   every week — one line of the typical week
 --   e_unusual(E, Block, Days)                      every week — the block is off on those days
+--   e_place(E, Atom, "Name")  e_travel(E, Home, Atom, Min)   a place of the world, added by a book
 --   edit_at(E, Iso)  edit_via(E, telegram|cli)  for_week(E, Week)
 --   proposed(E)      confirmed(E, Iso, Via)      retracted(E, Iso, Via)
 -- Nothing is ever deleted: a retraction is one more fact in the same book,
@@ -112,6 +113,7 @@ entry(E, L)      :- e_car_out[L](E, _, _, _).
 entry(E, L)      :- e_report[L](E, _, _, _).
 entry(E, L)      :- e_usual[L](E, _, _, _, _, _, _).
 entry(E, L)      :- e_unusual[L](E, _, _).
+entry(E, L)      :- e_place[L](E, _, _).
 edit_by(E, U)    :- entry(E, L), ledger(L, U).
 edit_week(E, W)  :- entry(E, L), for_week[L](E, W).
 is_report(E)     :- e_report[L](E, _, _, _).
@@ -154,6 +156,11 @@ touches(E, Cr)   :- e_car_out[L](E, _, _, _), car(Cr).
 touches(E, P)    :- e_usual[L](E, _, _, _, _, P, _).
 touches(E, C)    :- e_unusual[L](E, Ev, _), usual(C, Ev, _, _, _, _, _).
 touches(E, C)    :- e_unusual[L](E, Ev, _), usual_on(C, Ev, _, _, _).
+-- for: a place is the household's, as the car is (§3). may_edit has no line
+--      for a place and does not move, so a new place touches the adults of the
+--      house: an adult may speak for every adult, a helper only for themself —
+--      which is exactly «взрослый добавляет место, няня нет»
+touches(E, P)    :- e_place[L](E, _, _), person(P, adult).
 
 -- for: THE REFUSAL. An entry touching something its author may not edit, or
 --      a report on something that is not external. Code 4 at the door; and
@@ -226,6 +233,17 @@ usual(E, What, Who, Where, Spec, F, T) :- e_usual[L](E, What, Spec, F, T, Who, W
 -- for: a recurring skip is the block off on those days of whichever week is in force
 skipped(E, Ev, W, D) :- e_unusual[L](E, Ev, Spec), acts(E), current(W),
                         usual(_, Ev, _, _, Sp, _, _), applies_on(Sp, D), applies_on(Spec, D).
+-- for: A PLACE IS A LINE OF THE WORLD A BOOK ADDED — `place/1`, `ru_name/2`
+--      and, when the minutes were given, `travel/3` from home, on every week,
+--      through `acts` like a one-off (a place breaks no day: it touches none).
+--      Without `e_travel` the pair has no `tt`: a journey there costs no
+--      minutes, the chain into it has no slack (spat.ts lint), and a child's
+--      run there has no way (`run_stuck`) — measured 2026-09-15, the CLI says so
+--      when the place is added. Nothing here reads `place`, so `place :- acts`
+--      closes no cycle (`usual :- acts` would: `touches` reads `usual`).
+place(A)         :- e_place[L](E, A, _), acts(E).
+ru_name(A, Name) :- e_place[L](E, A, Name), acts(E).
+travel(H, A, M)  :- e_travel[L](E, H, A, M), acts(E).
 
 -- =========================================================================
 -- 5b. WHICH WEEK A DATE IS IN
@@ -297,7 +315,7 @@ edb(tg_user).    edb(tenant).    edb(caller).    edb(from_id).  edb(trial).    e
 edb(date_monday).
 edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
-edb(e_usual).    edb(e_unusual).
+edb(e_usual).    edb(e_unusual). edb(e_place).   edb(e_travel).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
 edb(retracts).
 

@@ -46,3 +46,9 @@ e_usual[p_nanny](e_nannyusual, tutoring, wed, 960, 1020, kit, home).
 edit_at[p_nanny](e_nannyusual, "2026-09-01T18:10:00+03:00").
 edit_via[p_nanny](e_nannyusual, telegram).
 for_week[p_nanny](e_nannyusual, w0831).
+-- a place the CLI would have refused with code 4 (a place is the household's, a helper does not add one): never a place
+e_place[p_nanny](e_nannyplace, spa, "Spa").
+e_travel[p_nanny](e_nannyplace, home, spa, 10).
+edit_at[p_nanny](e_nannyplace, "2026-09-03T12:00:00+03:00").
+edit_via[p_nanny](e_nannyplace, telegram).
+for_week[p_nanny](e_nannyplace, w0831).

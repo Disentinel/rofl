@@ -78,3 +78,9 @@ e_unusual[p_robin](e_noschoolfri, school_kit, fri).
 edit_at[p_robin](e_noschoolfri, "2026-09-02T20:00:00+03:00").
 edit_via[p_robin](e_noschoolfri, cli).
 for_week[p_robin](e_noschoolfri, w0831).
+-- 2026-09-03T10:00:00+03:00 telegram robin: place add gym "Gym" 20 от дома — A PLACE OF THE WORLD FROM A BOOK: place/1, ru_name/2 and travel/3 derive from it
+e_place[p_robin](e_gym, gym, "Gym").
+e_travel[p_robin](e_gym, home, gym, 20).
+edit_at[p_robin](e_gym, "2026-09-03T10:00:00+03:00").
+edit_via[p_robin](e_gym, telegram).
+for_week[p_robin](e_gym, w0831).
