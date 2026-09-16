@@ -16,7 +16,10 @@ import { renderDay, renderIcs } from './tomorrow.ts';
 import { problems, tgDay, tgWeek } from './tg.ts';
 import { run as maybe } from './maybe.ts';
 import { run as rule } from './rules.ts';
-import { bookPlaces, slug, words } from './places.ts';
+import { bookPlaces, line, slug, words } from './places.ts';
+import { GRAMMAR as SECRETARY, VERBS as SEC_VERB, carryWarns, parseSecretary } from './notes.ts';
+import { renderWarnings } from './tomorrow.ts';
+import { tgWarnings } from './tg.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -27,6 +30,7 @@ const GRAMMAR = [
   '  report <ограничение> <день> <время>         сообщить    (сообщить c_bus пн 14:10)',
   '  add    <что> every <дни> <от>-<до> [<кто>] [<где>]   каждую неделю (добавить greek каждый вт 16:00-17:00 kit school)',
   '  skip   <блок> every <дни>                   каждую неделю (отменить walk каждый вт)',
+  SECRETARY,
   '  день: mon..sun / пн..вс; сегодня/завтра/послезавтра, 15.09, 2026-09-15 — по календарю SPAT_TZ;',
   '  без дня — все дни, когда блок стоит. дни при every: день, weekdays/будни, alldays/ежедневно, группа дней из мира.',
   '  блок — как в расписании: типовая неделя, повторяемые и добавленные правками; skip/move добавленного = отзыв той правки.',
@@ -101,14 +105,24 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   };
   const EVERY = /^(every|каждый|каждую|каждое|еженедельно)$/i;
   const time = (t: string | undefined): number => {
-    try { return parseTime(t ?? ''); } catch { return bad(`время: '${t ?? ''}' — пиши 13:25`); }
+    let m: number;
+    try { m = parseTime(t ?? ''); } catch { return bad(`время: '${t ?? ''}' — пиши 13:25`); }
+    return m < 1440 ? m : bad(`время: '${t}' — в сутках 24 часа`);
   };
   const range = (t: string | undefined): [number, number] => {
     const p = (t ?? '').split(/[-–]/);
     return p.length === 2 ? [time(p[0]), time(p[1])] : bad(`интервал: '${t ?? ''}' — пиши 13:00-15:00`);
   };
   const isDay = (t: string | undefined): boolean => t !== undefined && (dated(t) !== undefined || days.has(N.get(t.toLowerCase()) ?? '') || N.get(t.toLowerCase()) === 'all');
-  const verb = VERB[(w[0] ?? '').toLowerCase()] ?? bad(`глагол: '${w[0] ?? ''}'`);
+  // THE SECRETARY'S VERBS (notes.ts): avail/carry/note by their word, or «няня ср 17:30-21:00» — a person, a day and
+  // an interval with no verb at all, which is `avail`; «kit забираю я ср 14:00» — the child first, the verb second
+  const w0 = (w[0] ?? '').toLowerCase();
+  const sec = SEC_VERB[w0] ?? (N.has(w0) && isDay(w[1]) && /[-–]/.test(w[2] ?? '') ? 'avail' : SEC_VERB[(w[1] ?? '').toLowerCase()]?.startsWith('carry1') ? 'carry1' : undefined);
+  if (sec !== undefined) {
+    const ws = SEC_VERB[w0] ? w : sec === 'avail' ? ['avail', ...w] : [w[1], w[0], ...w.slice(2)];
+    return parseSecretary(r, sec, ws, text, { N, me: e?.as, day, time, range, done, bad });
+  }
+  const verb = VERB[w0] ?? bad(`глагол: '${w[0] ?? ''}'`);
   // THE BLOCKS AS THE HUMAN SEES THEM: the typical week (a recurring line included), and what a
   // book added this week. An added block named with its day is taken back by its entry.
   const adds = table(r, 'added', 'C, E, W, P, Wk, D, F, T');
@@ -246,20 +260,28 @@ export function commit(s: Store, id: string, clauses: Clause[], week: string, e:
     console.log(`  может: ${may.length > 0 ? may.join(', ') : 'никто; внешнее ограничение только сообщают (report)'}`);
     return 4;
   }
-  if (v.breaks.length > 0) {
-    put(s, book, [...clauses, ...tagged(book.book, [`proposed(${id}).`])], text);
-    const ord = dayOrder(s.r);
-    const on = table(s.r, 'breaks_on', 'E, D, R').filter((x) => x.E === id).sort((a, b) => ord.get(a.D)! - ord.get(b.D)!);
-    console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует: ${e.summary}`);
+  // A PERSON'S FACT IS APPLIED (owner's decision 16.09): what it breaks is printed AFTER «применено», in the
+  // words the day's problems use, never as a lock. `--propose` keeps the old door — written as proposed until
+  // `confirm` — for what the model chose by itself (a place, a time), not for what a person said.
+  const ord = dayOrder(s.r);
+  const on = table(s.r, 'breaks_on', 'E, D, R').filter((x) => x.E === id).sort((a, b) => ord.get(a.D)! - ord.get(b.D)!);
+  const broken = (): void => {
     for (const d of [...new Set(on.map((x) => x.D))]) {
       console.log(`  ломает ${ru(d)}: ${on.filter((x) => x.D === d).map((x) => x.R).join(', ')}`);
       console.log(s.fmt === 'tg' ? problems(s.r, d).join('\n') : renderDay(s.r, d, `  как будет ${ru(d)}:`, false));
     }
+  };
+  if (v.breaks.length > 0 && s.propose) {
+    put(s, book, [...clauses, ...tagged(book.book, [`proposed(${id}).`])], text);
+    console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует: ${e.summary}`);
+    broken();
     console.log(`  подтвердить: spat confirm ${id}`);
     return 3;
   }
   put(s, book, clauses, text);
   console.log(`применено: ${e.summary}${e.on ? ` (${e.on.ymd})` : ''} (${id}) — ${e.every ? 'каждую неделю' : `неделя ${week}`}${warn}`);
+  broken();
+  for (const l of carryWarns(s.r, undefined, id)) console.log(s.fmt === 'tg' ? l : `  ${l}`);
   return 0;
 }
 
@@ -346,6 +368,12 @@ export function run(s: Store, cmd: string, rest: string[]): number {
   switch (cmd) {
     case 'whoami': return whoami(s);
     case 'edit': return edit(s, rest.join(' '));
+    case 'avail': case 'carry': case 'note': return edit(s, line([cmd, ...rest]));
+    case 'warnings': {
+      // every «!!» line of the week — or of one day — as one list, for the review step of the bot
+      const d = rest[0] === undefined ? undefined : dateToken(s.env, rest[0]) ? dated(s, rest[0]) : { day: names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`), week: s.week };
+      console.log(tg ? tgWarnings(s.r, d?.week ?? s.week, d?.day) : renderWarnings(s.r, d?.week ?? s.week, d?.day)); return 0;
+    }
     case 'confirm': return mark(s, 'confirmed', rest[0] ?? bad('confirm <edit-id>'));
     case 'retract': return mark(s, 'retracted', rest[0] ?? bad('retract <edit-id>'));
     case 'roll': return roll(s, rest[0] ?? bad('roll <week>'));

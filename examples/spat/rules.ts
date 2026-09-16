@@ -93,11 +93,11 @@ function worldSaid(f: Store['r'], cs: Clause[], had: Set<string>): string[] {
     if (had.has(l)) { out.push(`${l} — уже в мире`); continue; }
     if (f.holds(l)) {
       // a place by its name, and what the rules do with one that has no road from home — measured 2026-09-15: no tt, so a
-      // child's run there is no_way (a block there is code 3) and an adult's chain into it has no slack, silently
+      // child's run there is no_way (a block there warns) and an adult's chain into it has no slack, silently
       const name = rel === 'place' ? f.query(`ru_name(${args[0]}, N)`).rows[0]?.bindings.N : undefined;
       const home = table(f, 'base', 'B')[0]?.B;
       const road = rel === 'place' && home !== undefined && f.query(`tt(${home}, ${args[0]}, M)`).rows.length === 0
-        ? `\n    дороги от дома нет: ребёнка везти туда некому (no_way, блок там даст код 3), у взрослого цепочка туда без запаса; задать: rule add 'travel(${home}, ${args[0]}, <минут>).'` : '';
+        ? `\n    дороги от дома нет: ребёнка везти туда некому (no_way — блок там применится с предупреждением), у взрослого цепочка туда без запаса; задать: rule add 'travel(${home}, ${args[0]}, <минут>).'` : '';
       out.push(`в мир семьи: ${l}${name === undefined ? '' : ` ${String(name).replace(/^"(.*)"$/, '«$1»')}`}${road}`); continue;
     }
     const k = Number(key); const kargs = k === 0 ? args : args.slice(0, k);
@@ -158,11 +158,12 @@ function add(s: Store, text: string): number {
   // WRITTEN: the clauses under one id, the trail as facts of the book; from the bot it waits for a person
   const at = isoNow(s.env);
   const id = 'r' + editId(s.env.as, at, text.trim()).slice(1);
-  const proposed = s.env.via === 'telegram';
+  // a person's rule is applied wherever it came from (owner's decision 16.09); `--propose` is the door for the model's own
+  const proposed = s.propose === true;
   const facts = tagged(HH, [`rule_by(${id}, ${s.env.as}).`, `rule_at(${id}, "${at}").`, `rule_via(${id}, ${s.env.via}).`, ...(proposed ? [`rule_proposed(${id}).`] : [])]);
   writeClauses(s.vol, HH, id, cs, facts, { at, via: s.env.via, edit: `rule add ${text.trim().replace(/\s+/g, ' ')}` });
   const today = [...world, ...(gives.length > 0 ? [`сегодня оно даёт:\n  ${gives.join('\n  ')}`] : cs.some((c) => c.body.length > 0) ? ['сегодня в точках расширения (defect/busy/needs_cover/warn) оно не даёт ничего'] : [])].join('\n  ');
-  if (proposed) { console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ ${id}, не действует — правило пришло через бота; ${today}\n  подтвердить: spat rule confirm ${id}`); return 3; }
+  if (proposed) { console.log(`ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ ${id}, не действует — --propose; ${today}\n  подтвердить: spat rule confirm ${id}`); return 3; }
   console.log(`правило ${id} принято; ${today}`);
   return 0;
 }

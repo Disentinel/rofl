@@ -10,3 +10,7 @@ trial(e_schoolmv).
 before(mon, on_foot_unknown, home).
 before(mon, on_foot_unknown, sadik).
 before(mon, on_foot_unknown, school).
+-- S3c (2026-09-16): two dated exceptions tried too — alex's Thursday carry, whose clash with work_pm is a defect of the
+-- day (carrier_busy) not listed in `before`, so it breaks by that name; and the nanny's Wednesday hours, which touch wed
+trial(e_kitthu).
+trial(e_nannywed).

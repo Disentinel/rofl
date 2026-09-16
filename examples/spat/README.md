@@ -137,7 +137,8 @@ export SPAT_FROM_ID=100002        # a Telegram sender: the users book says who a
 spat whoami                       who I am, which books I was given
 spat tomorrow                     tomorrow: holes, chains, late arrivals, then the grid
 spat show [day|week]              a day (today by default) or the week; --format tg for a phone (tg.ts)
-spat edit 'skip walk mon'         0 applied · 3 written as proposed, breaks the day · 4 no right · 2 not parsed
+spat edit 'skip walk mon'         0 applied — what it breaks is printed after «применено» · 4 no right · 2 not parsed
+spat edit '…' --propose           3 written as proposed when it breaks the day, inert until confirm — for what the model chose itself
 spat confirm <id> · retract <id>  my own edit, one more fact in my book
 spat edit 'add greek сегодня 16:00-17:00 kit'   a date — сегодня/завтра/15.09 — is resolved in SPAT_TZ and lands in ITS week
 spat edit 'add piano every thu 16:00-17:00 kit'  every week: one more line of the typical week; retract takes it off every week
@@ -147,6 +148,10 @@ spat place add "American Academy" 20 от дома   sugar: place/ru_name/travel
 spat maybe 'add greek mon 16:00-17:00' · maybe compare · maybe apply <id>   a hypothesis is a book; compare builds the world under each
 spat place <what> <minutes> [who]     the best slots, each tried as a hypothesis
 spat rule add '<clauses>' · rule list · rule confirm/retract <id>   the household's own rules (adult/operator), checked by the kernel
+spat edit 'avail nanny wed 17:30-21:00'   the nanny's hours THAT day instead of the world's (няня ср 17:30-21:00 says the same)
+spat edit 'carry kit fri 13:20 alex'       the leg of kit's day that begins about 13:20 is alex's (kit забираю я пт 13:20 — «я» is the author)
+spat edit 'note "торт для гостя" fri'     a «✎» line under the day (or a person) in show/tomorrow; no rule reads it
+spat warnings [day]                       every «!!» line of the week in one list
 spat ics [--for kit]              the week as a calendar
 spat roll w0907 · init fam2 --world week.rofl --users users.rofl          operator only
 spat volume load fam2 robin.rofl · volume dump fam2 [p_robin]             operator only: a book in, a book out, as text

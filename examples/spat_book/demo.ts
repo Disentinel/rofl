@@ -24,7 +24,9 @@ async function extendsWorld(): Promise<Group> {
   const r1 = await spat(root, 'robin', ['rule', 'add', 'place(american_academy). ru_name(american_academy, "American Academy"). travel(home, american_academy, 15).'], at(0));
   g.check('rule add place/ru_name/travel → 0, «в мир семьи: …» ×3 (не «в точках расширения не даёт ничего»)', r1.code === 0 && (r1.out.match(/в мир семьи: /g) ?? []).length === 3 && !/не даёт ничего/.test(r1.out), r1.out);
   const e1 = await spat(root, 'robin', ['edit', 'add math every thu 15:00-16:30 kit american_academy'], at(1));
-  g.check('add math every thu 15:00-16:30 kit american_academy: был 2 «мир такого не знает» — теперь 3: место известно, «ломает чт: no_way» (школа → academy без дороги)', e1.code === 3 && !/мир такого не знает/.test(e1.out) && /ломает чт: no_way/.test(e1.out), e1.out.split('\n').slice(0, 2).join(' | '));
+  // since S3c the fixture's e_kitthu (alex takes kit from school at 14:00) answers the school → academy hop, and home ↔ academy has
+  // its road: nothing breaks; the no-road case stands on Saturday below (zoo)
+  g.check('add math every thu 15:00-16:30 kit american_academy: был 2 «мир такого не знает» — теперь применено (0), место известно; хоп школа → academy отвечен e_kitthu, «ломает» нет', e1.code === 0 && !/мир такого не знает/.test(e1.out) && !/ломает/.test(e1.out), e1.out.split('\n').slice(0, 2).join(' | '));
   // any pair is one more line: the drive from school, and the same block is 0
   const r2 = await spat(root, 'robin', ['rule', 'add', 'travel(school, american_academy, 10).'], at(2));
   const e2 = await spat(root, 'robin', ['edit', 'add math every thu 15:00-16:30 kit american_academy'], at(3));
@@ -36,8 +38,8 @@ async function extendsWorld(): Promise<Group> {
   const zk = await spat(root, 'robin', ['edit', 'add trip sat 10:00-12:00 kit zoo'], at(21));
   const za = await spat(root, 'robin', ['edit', 'add trip sun 10:00-12:00 alex zoo'], at(22));
   const zq = await spat(root, 'robin', ['edit', 'add trip sun 13:00-14:00 alex "Зоопарк"'], at(23));
-  g.check('add trip sat 10:00-12:00 kit zoo: был 2 «мир такого не знает» — теперь 3 «ломает сб: no_way» (дороги нет, ребёнка везти некому); add trip sun … alex zoo → 0; alex "Зоопарк" (по ru_name) → 0',
-    zk.code === 3 && !/мир такого не знает/.test(zk.out) && /ломает сб: no_way/.test(zk.out) && za.code === 0 && zq.code === 0, `${zk.out.split('\n').slice(0, 2).join(' | ')} || ${za.out} || ${zq.out}`);
+  g.check('add trip sat 10:00-12:00 kit zoo: был 2 «мир такого не знает» — теперь применено, «ломает сб: no_way» (дороги нет, ребёнка везти некому); add trip sun … alex zoo → 0; alex "Зоопарк" (по ru_name) → 0',
+    zk.code === 0 && !/мир такого не знает/.test(zk.out) && /ломает сб: no_way/.test(zk.out) && za.code === 0 && zq.code === 0, `${zk.out.split('\n').slice(0, 2).join(' | ')} || ${za.out} || ${zq.out}`);
   // PLANTED (E2): the principle — a fact of the book does not override the world's; what it may not say is withheld with the reason
   const r3 = await spat(root, 'alex', ['rule', 'add', 'travel(home, school, 5). person(uncle, adult). person(aunt, helper). person(cousin, visitor). work_needed(nanny, 300). constraint(e_skipwalk, nanny, external). needs(x, y). person(nico, child). want(x, alex, home, 60).'], at(5));
   g.check('rule add девяти фактов → 0; ответ по каждому: travel(home, school, 5) НЕ ДЕЙСТВУЕТ (мир задаёт 20); uncle/aunt — учётная запись; cousin — в мир; nanny — за помощника не говорит; constraint(e_skipwalk…) — правка; needs — не edb; nico — уже в мире; want — переключатель',

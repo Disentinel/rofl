@@ -114,7 +114,9 @@ export const bookOf = (user: string): string => `p_${user}`;
 
 /** `opened`: every book the loader read, in order — a stranger's proof; `maybes`: the
  *  hypothesis books (`m_`), registered in the volume and never given to the rules. */
-export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; }
+/** `propose`: --propose — the entry is written as proposed when it breaks a day (code 3, `confirm`); without it a person's
+ *  fact is applied and what it breaks is printed (owner's decision 16.09). */
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; propose?: boolean; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'

@@ -69,8 +69,12 @@ chats or message files — that is the bot's shim.
 3. **Writing is your own book, and only what `may_edit` allows.** `spat edit`
    turns text into facts, loads the world *with the candidate* marked
    `trial(E)`, and reads the verdict: `edit_without_right[audit](E)` → code
-   4, nothing in the base; `breaks(E, Reason)` → code 3, written as
-   `proposed(E)`, inert until `confirm`; else code 0, written. The effective
+   4, nothing in the base; else code 0, written — and when `breaks(E,
+   Reason)` holds, the day as it will be is printed after «применено» (owner's
+   decision 2026-09-16: a person's fact is applied, what it breaks is a
+   warning, never a lock). `--propose` keeps the old door for what the model
+   chose by itself: code 3, written as `proposed(E)`, inert until `confirm`.
+   The effective
    `moved`, `skipped`, `added`, `absent_on` are *derived* from the books
    through `acts(E)`, which requires the entry to be within its right, not
    retracted, and not pending. The edit id is a constraint (`constraint(E,
@@ -471,7 +475,7 @@ k(...))` for a fact, the reason in `rule add`'s answer:
 
 **`rule add` says what each fact did**: «в мир семьи: place(zoo) «Зоопарк»» —
 and, for a place with no road from home, what the rules make of it: «дороги от
-дома нет: ребёнка везти туда некому (no_way, блок там даст код 3), у взрослого
+дома нет: ребёнка везти туда некому (no_way — блок там применится с предупреждением), у взрослого
 цепочка туда без запаса; задать: rule add 'travel(home, zoo, <минут>).'» —
 «travel(home, school, 5) — НЕ ДЕЙСТВУЕТ: мир уже задаёт travel(home, school,
 20)», «person(uncle, adult) — книга семьи не заводит: adult — учётная запись»,
@@ -609,7 +613,9 @@ it derives today at the four points. A rule that came through the bot
 confirms (`spat rule confirm`); `spat rule retract` is the author's or the
 operator's; `spat rule list` renders the AST as text, and so does `volume
 dump hh` (a dump with rules is not loadable by `volume load`, which refuses
-a rule in a text book — `rule add` is the way in).
+a rule in a text book — `rule add` is the way in). Since 2026-09-16 the channel
+does not decide: a person's rule is applied wherever it came from, and
+`--propose` alone writes `rule_proposed`.
 
 The fixture `store.example/hh.rofl` holds four rules for the golden worlds
 (not read by the tool): the laptop rule with `acme` at the office —
@@ -639,8 +645,57 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   (a 130-character name stays whole on its line). Group 17's golden text moved
   from 20 lines to 22 for that reason and no other.
 
+## Dated exceptions — the secretary's lines (S3c, 2026-09-16)
+
+Three tiers of data: the programme (spat.rofl, access.rofl, in the
+repository), the family's standing facts (the world, the book `hh`), and
+**corrections of one week** — «няня сегодня с 17:30», «Кита забираю я в среду
+в 14:00», «не забыть торт». The third is neither a rule nor the world; it is an
+edit like `sick` and `car out`, in the author's book, through the same `acts`.
+
+- **`avail <кто> <день> <от>-<до>`** (`доступна няня ср 17:30-21:00`, or with no
+  verb at all: `няня ср 17:30-21:00`) → `e_avail(E, Who, Day, From, To)`. One
+  rule of access.rofl derives `present_on(E, Who, Day, From, To)`, and spat.rofl
+  §4 reads windows per day: `window(C, P, D, F, T)` is the world's line on its
+  days *unless* a `present_on` names that person and day — then it is the
+  exception alone, as `moved` stands instead of `usual`. Measured on the
+  fixture: the world's 19:00–22:00 on Wednesday does not act beside
+  `e_nannywed` 17:00–21:00 (`here(nanny, wed, 1280)` is false). Rights: the
+  constraint of the person's window — the helper's own, and by one added rule
+  an adult's too (`may_edit(U, C) :- role(U, adult), present_window(C, P, _, _, _),
+  person(P, helper)`); measured on 2eafa2f, `c_nanny` was the nanny's alone and
+  the parents got code 4. A neighbour's window is nobody's to edit (4, «может:
+  никто»); an adult has no window (2).
+- **`carry <ребёнок> <день> <время> <кто>`** (`везёт alex kit пт 13:20`, `kit
+  забираю я пт 13:20`, the accusative «Кита» resolved through `ru_name`) →
+  `e_carry(E, Child, Day, At, Who)`. The leg of the child's day that begins
+  within 15 minutes of At — an arrival (`carry_to`) or a departure
+  (`carry_from`) — feeds `carried_at`/`carried_lv`, so no `run` is derived for
+  it and the grid shows «ВЕЗЁТ» under Who instead of the solver's pick; a hop
+  is now answered at either end (spat.rofl §6). What it warns of, never
+  refuses: the carrier inside a block of their own at that moment
+  (`carry_during`, a `defect(D, carrier_busy, E)` of the day — «!! alex 14:00
+  везёт во время работа (день) (пн)»), and a line with no leg near it
+  (`carry_idle`). Who may: an adult (touches the child); Who is an adult or a
+  helper of the world.
+- **`note "<текст>" <день> [<кто>]`** (`заметка "торт для гостя" пт`) →
+  `e_note(E, Day, Who|all, "text")`, ≤ 200 characters, no control character,
+  quote or backslash (2). `note_on` is printed as «✎ текст» under the day or
+  under the person, in the terminal and in `--format tg`; it is not a
+  constraint, touches nothing and no rule of the schedule reads it.
+- **`spat warnings [<день>]`** — every «!!» line of the week (or of one day) in
+  one list, terminal or `--format tg`, for the review step of the bot.
+
 ## What is deliberately not decided
 
+- **A carry names one leg by its time; a whole day is several lines.** «Кита
+  сегодня везу я» with no time is not a sentence the grammar has; each leg is
+  its own `carry`. A carry for a child whose leg is already an adult's `with`
+  block changes nothing and says so (`carry_idle`).
+- **A neighbour's hours.** `present_window(c_nextdoor, …)` is external and its
+  owner has no account; `avail nextdoor` is code 4 for everyone. Whether the
+  parents may state the neighbours' hours for a day is a question for the
+  owner, not decided here.
 - **A helper in two households.** The users book keys a user to one tenant
   per row; a nanny with two families is two rows under one sender id, in
   two volumes, and a call from that id without `SPAT_TENANT` is code 5 («в
@@ -737,11 +792,18 @@ row for the Friday guest (468→469), a `busy` row the census cannot see
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_places/demo.ts`, 30 scenarios in three
+- `npm run test:hosts`: `examples/spat_secretary/demo.ts`, 66 scenarios in
+  four groups (22–25: avail with the holes closing and reopening and the
+  world's window NOT acting beside the exception, carry with the trip moving
+  to the named adult and the clash as a line, note under the day and the
+  person and off after retract, the door that moved and `warnings`);
+  `examples/spat_seen/demo.ts`, 22 scenarios (16–17: the schedule as the
+  human sees it, the phone renderer — split out of spat_edits for the 120 s);
+  `examples/spat_places/demo.ts`, 30 scenarios in three
   groups (18–20: places, the one-off «every», the author's own book at the
   door) and `examples/spat_book/demo.ts`, 12 scenarios (21: the book
   extending the world, the host reading the week from one book) — 60 + 70 s
-  at load 12; `examples/spat_edits/demo.ts` (groups 12–17); and
+  at load 12; `examples/spat_edits/demo.ts` (groups 12–15); and
   `examples/spat/demo.ts`, 108 scenarios in eleven
   groups run at once against volumes imported from `store.example/` in a
   temp dir — the tag wall at the import and a row planted by hand under

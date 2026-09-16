@@ -194,7 +194,7 @@ const FOLDS = new WeakMap<object, Folds>();
 // A BOOK'S ENTRY IS A SOURCE TOO: an edit in `ledgers/<u>.rofl` stands under
 // a block exactly as a `usual` line does, and `why` must reach it.
 const NAMED_SOURCE =
-  /^(usual|usual_on|moved|skipped|added|lift|present_window|absent|absent_on|awake|constraint|person|car|driver|travel|with|kind|e_move|e_skip|e_add|e_sick|e_car_out|confirmed)\[[a-z_]+\]\(/;
+  /^(usual|usual_on|moved|skipped|added|lift|present_window|absent|absent_on|awake|constraint|person|car|driver|travel|with|kind|e_move|e_skip|e_add|e_sick|e_car_out|e_avail|e_carry|confirmed)\[[a-z_]+\]\(/;
 /** Weight offset: slack may be negative and tropical's discipline is stated
  *  for non-negative weights, so every chain is charged M + OFFSET and the
  *  offset is taken back off the answer. */
@@ -994,7 +994,7 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
-const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule']);
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings']);
 
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
@@ -1008,6 +1008,9 @@ async function main(argv: string[]): Promise<void> {
       set(argv[i + 1]); argv.splice(i, 2);
     }
   }
+  // --propose: an edit that breaks a day is written as proposed (code 3) — the door for what the model chose by itself
+  const propose = argv.includes('--propose');
+  if (propose) argv.splice(argv.indexOf('--propose'), 1);
   const [cmd0, ...rest] = argv;
   const cmd = cmd0 === 'место' ? 'place' : cmd0;
   // `place add …` is a store verb: a place of the world, in the caller's book (places.ts)
@@ -1033,7 +1036,7 @@ async function main(argv: string[]): Promise<void> {
     if (cmd === 'volume') { process.exitCode = (await import('./volume.ts')).run(e, rest); return; }
     const store = st.openStore(e, { weekOf, extra });
     if (fmt !== undefined && fmt !== 'tg') throw Object.assign(new Error(`--format: только tg (терминал — без флага), не '${fmt}'`), { code: 2 });
-    store.fmt = fmt;
+    store.fmt = fmt; store.propose = propose;
     if (STORE_VERBS.has(cmd)) { process.exitCode = ed.run(store, cmd, rest); return; }
     // over the store, `place` tries its best slots as hypotheses (maybe.ts); `place add` writes a place (places.ts)
     if (placeAdd) { const pl = await import('./places.ts'); process.exitCode = pl.add(store, pl.line(rest.slice(1))); return; }
@@ -1357,6 +1360,8 @@ const USAGE = [
   '  spat place <что> <минут> [кто] [где] [--week-of W]   лучшие слоты, каждый испытан как гипотеза',
   '  spat place add [<atom>] "<Название>" [<минут> от дома]   новое место мира в своей книге (взрослый); retract <id> снимает',
   '  spat rule add \'<клаузы>\' · rule list · rule confirm <id> · rule retract <id>   правила семьи (взрослый/оператор)',
+  '  spat avail <кто> <день> <от>-<до> · carry <ребёнок> <день> <время> <кто> · note "<текст>" <день> [<кто>]   правки дня (= edit)',
+  '  spat warnings [<день>]                    все строки «!!» недели одним списком;  --propose   правка ждёт confirm, если ломает день',
   '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя      --format tg   день/неделя для телефона',

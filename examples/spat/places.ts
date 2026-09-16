@@ -19,15 +19,16 @@ const ATOM = /^[a-z][a-z0-9_]*$/;
 export const USAGE = 'place add [<atom>] "<Название>" [<минут> от дома]   (взрослый; = rule add place/ru_name/travel)   ·   rule retract <id> снимает место, пока на нём нет блоков';
 const bad = (what: string): never => { throw new SpatError(2, `не разобрал: ${what}\n\nДопустимо:\n  spat ${USAGE}`); };
 
-/** The words of a line, a "quoted phrase" (or «…») one word with `q` set. A quote left open is refused. */
+/** The words of a line, a "quoted phrase" (or «…», or '…') one word with `q` set. A quote left open is refused. */
 export function words(text: string): { t: string; q: boolean }[] {
   const out: { t: string; q: boolean }[] = [];
-  const re = /"([^"]*)"|«([^»]*)»|(\S+)/g;
+  const re = /"([^"]*)"|«([^»]*)»|'([^']*)'|(\S+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    if (m[1] !== undefined || m[2] !== undefined) out.push({ t: (m[1] ?? m[2]).trim(), q: true });
-    else if (/^["«]/.test(m[3])) throw new SpatError(2, `не разобрал: кавычка не закрыта: ${m[3]}`);
-    else out.push({ t: m[3], q: false });
+    const q = m[1] ?? m[2] ?? m[3];
+    if (q !== undefined) out.push({ t: q.trim(), q: true });
+    else if (/^["«']/.test(m[4])) throw new SpatError(2, `не разобрал: кавычка не закрыта: ${m[4]}`);
+    else out.push({ t: m[4], q: false });
   }
   return out;
 }

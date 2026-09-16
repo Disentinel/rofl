@@ -111,25 +111,34 @@ async function stranger(): Promise<Group> {
 }
 
 // ---------------------------------------------- 4. breaks, confirm, retract
+// THE DOOR MOVED 2026-09-16 (S3c): a person's fact is APPLIED and what it breaks is printed after «применено»;
+// «записано как предложение, подтверди» is the `--propose` door alone — for what the model chose by itself.
 async function breaks(): Promise<Group> {
-  const g = new Group('4. breaks the day — proposed, confirmed by its author, retracted');
+  const g = new Group('4. breaks the day — applied, the break printed after «применено»; --propose: proposed, confirmed by its author, retracted');
   const root = fresh();
   const before = count(root, 'p_robin');
   g.code('robin: sick alex tue', await spat(root, 'robin', ['edit', 'sick alex tue']), 0);
-  const r = await spat(root, 'robin', ['edit', 'add errand tue 18:30-20:00 robin office'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
-  g.code('robin: errand вт 18:30 — дети одни', r, 3);
+  const r = await spat(root, 'robin', ['edit', 'add errand tue 18:30-20:00 robin office', '--propose'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
+  g.code('robin: errand вт 18:30 --propose — дети одни', r, 3);
   const id = /confirm (e_[0-9a-f]+)/.exec(r.out)?.[1] ?? '';
   g.check('код 3 называет дыру, чьё ограничение и id', /НЕ ПОКРЫТ вт.*nico/s.test(r.out) && /robin\s+e_[0-9a-f]+\s+robin\s+наше/.test(r.out) && id !== '', r.out);
-  const proposed = sql<{ args: string }[]>(root, "SELECT args FROM facts WHERE ledger = 'p_robin' AND pred = 'proposed'").map((x) => x.args);
-  g.check('записано как proposed, в книге robin, термом', proposed.some((a) => a.includes(`"name":"${id}"`)), proposed.join(' '));
+  const proposed = (): string[] => sql<{ args: string }[]>(root, "SELECT args FROM facts WHERE ledger = 'p_robin' AND pred = 'proposed'").map((x) => x.args);
+  g.check('записано как proposed, в книге robin, термом', proposed().some((a) => a.includes(`"name":"${id}"`)), proposed().join(' '));
   g.check('show вт: правка не действует', !/errand/.test((await spat(root, 'robin', ['show', 'tue'])).out));
   g.code('alex confirm чужой правки', await spat(root, 'alex', ['confirm', id]), 4);
   g.code('robin confirm своей', await spat(root, 'robin', ['confirm', id]), 0);
   const after = (await spat(root, 'robin', ['show', 'tue'])).out;
   g.check('show вт: правка действует, дыра видна', /errand/.test(after) && /НЕ ПОКРЫТ вт/.test(after), after);
+  // PLANTED (16.09): the same kind of edit WITHOUT --propose — one more hole, 20:00–21:00 — is applied, and the break is a line
+  const a = await spat(root, 'robin', ['edit', 'add errand2 tue 20:00-21:00 robin office'], { SPAT_NOW: '2026-08-31T21:32:00+03:00' });
+  g.code('robin: errand2 вт 20:00-21:00 без --propose — ломает, но применено', a, 0);
+  const a2 = /применено: .*\((e_[0-9a-f]+)\)/.exec(a.out)?.[1] ?? '';
+  g.check('первая строка «применено: …», затем «ломает вт: uncovered» и «!! НЕ ПОКРЫТ вт 18:20–21:40 kit» (дыра errand выросла до конца сетки) с причинами; proposed для неё нет; show вт: errand2 стоит',
+    /^применено: errand2/.test(a.out) && /\n  ломает вт: .*uncovered/.test(a.out) && /!! НЕ ПОКРЫТ вт 18:20–21:40\s+kit/.test(a.out) && a2 !== '' && !proposed().some((x) => x.includes(`"name":"${a2}"`))
+    && /errand2/.test((await spat(root, 'robin', ['show', 'tue'])).out), a.out);
   g.code('robin retract', await spat(root, 'robin', ['retract', id]), 0);
   g.code('confirm отозванной', await spat(root, 'robin', ['confirm', id]), 2);
-  g.check('книга только росла: 4 + 5 + 1 + 1 строк, ни одна не пропала', count(root, 'p_robin') === before + 11, `${before} -> ${count(root, 'p_robin')}`);
+  g.check('книга только росла: 4 + 5 + 1 + 4 + 1 строк, ни одна не пропала', count(root, 'p_robin') === before + 15, `${before} -> ${count(root, 'p_robin')}`);
   const why = (await spat(root, 'robin', ['why', 'evening'])).out;
   g.check('why над многопользовательским миром доходит до книги няни', /e_add\[p_nanny\]/.test(why) && /книга \[p_nanny\].*telegram/.test(why), why);
   return g;
@@ -155,12 +164,12 @@ async function tomorrow(): Promise<Group> {
 async function writers(): Promise<Group> {
   const g = new Group('6. six writers at once into one book — every one lands, whole, with its own seq (WAL)');
   const root = fresh();
-  // 0 and 3 are both a write, and each trial sees only the fixture, so the
+  // every edit is a write (since 16.09 a breaking one too), and each trial sees only the fixture, so the
   // codes do not depend on the order the six land in
   const texts = ['skip walk tue', 'skip lunch wed', 'move lunch thu 14:30', 'skip cleaning sat', 'report c_sadik wed 13:35', 'car out wed 15:00-17:00'];
   const fixture = sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'edit_at'")[0].n;
   const codes = await Promise.all(texts.map((t, i) => spat(root, 'robin', ['edit', t], { SPAT_NOW: `2026-08-31T21:3${i}:00+03:00` })));
-  g.check('каждая записана (0 или 3), ни одна не отвергнута', codes.every((c) => c.code === 0 || c.code === 3), codes.map((c) => c.code).join(','));
+  g.check('каждая записана (0), ни одна не отвергнута и не отложена', codes.every((c) => c.code === 0), codes.map((c) => c.code).join(','));
   const rows = sql<{ seq: number; pred: string; edit: string }[]>(root, "SELECT seq, pred, edit FROM facts WHERE ledger = 'p_robin' ORDER BY seq");
   const entries = rows.filter((r) => r.pred === 'edit_at').length;
   g.check('книга цела: записи фикстуры + 6 новых', entries === fixture + 6, `edit_at rows: ${entries}, fixture ${fixture}`);
@@ -209,7 +218,7 @@ async function operator(): Promise<Group> {
     const v = openVolume(root, 'fam2');
     try {
       const n = (l: string): number => (v.db.prepare('SELECT count(*) n FROM facts WHERE ledger = ?').get(l) as { n: number }).n;
-      return n('p_alex') === 48 && n('p_robin') === 62 && n('p_nanny') === 40 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
+      return n('p_alex') === 72 && n('p_robin') === 116 && n('p_nanny') === 52 && n('p_uncle') === 0 && n('p_me') === 1 && readBook(v, 'world').length > 0
         && (v.db.prepare('SELECT count(DISTINCT ledger) n FROM facts').get() as { n: number }).n === 6;
     } finally { v.db.close(); }
   })(), mig.out);

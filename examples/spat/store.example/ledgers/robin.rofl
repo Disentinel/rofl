@@ -78,3 +78,69 @@ e_unusual[p_robin](e_noschoolfri, school_kit, fri).
 edit_at[p_robin](e_noschoolfri, "2026-09-02T20:00:00+03:00").
 edit_via[p_robin](e_noschoolfri, cli).
 for_week[p_robin](e_noschoolfri, w0831).
+-- DATED EXCEPTIONS (S3c, 2026-09-16): the secretary's lines, edits of one week like sick/car out.
+-- 2026-09-01T19:00:00+03:00 telegram robin: avail nanny wed 17:00-21:00 — the nanny's window THAT day,
+-- instead of the world's 19:00–22:00 (window/5 on wed: nanny 1020–1260, the world's 1140–1320 does not act)
+e_avail[p_robin](e_nannywed, nanny, wed, 1020, 1260).
+edit_at[p_robin](e_nannywed, "2026-09-01T19:00:00+03:00").
+edit_via[p_robin](e_nannywed, telegram).
+for_week[p_robin](e_nannywed, w0831).
+-- 2026-09-01T19:05:00+03:00 telegram robin: carry kit wed 14:00 robin — the bus leg home is hers: no run(back(school_kit, wed))
+e_carry[p_robin](e_kitwed, kit, wed, 840, robin).
+edit_at[p_robin](e_kitwed, "2026-09-01T19:05:00+03:00").
+edit_via[p_robin](e_kitwed, telegram).
+for_week[p_robin](e_kitwed, w0831).
+-- 2026-09-01T19:10:00+03:00 telegram robin: note "торт для гостя" fri — under the day, read by no rule
+e_note[p_robin](e_cake, fri, all, "торт для гостя").
+edit_at[p_robin](e_cake, "2026-09-01T19:10:00+03:00").
+edit_via[p_robin](e_cake, telegram).
+for_week[p_robin](e_cake, w0831).
+-- 2026-09-01T19:15:00+03:00 telegram robin: carry kit tue 08:20 robin — an ARRIVAL: carry_to(e_kitgo, kit, tue, school, 500). This week
+-- school is the линейка at 08:20 and alex's `with` block ends 08:00, so that arrival was a run of its own (attempt 14→12) — robin's now
+e_carry[p_robin](e_kitgo, kit, tue, 500, robin).
+edit_at[p_robin](e_kitgo, "2026-09-01T19:15:00+03:00").
+edit_via[p_robin](e_kitgo, telegram).
+for_week[p_robin](e_kitgo, w0831).
+-- 2026-09-01T19:20:00+03:00 telegram robin: carry nico thu 13:30 robin — her own pickup block has nico in it: the same errand, not a clash (carry_during is quiet)
+e_carry[p_robin](e_nicopick, nico, thu, 810, robin).
+edit_at[p_robin](e_nicopick, "2026-09-01T19:20:00+03:00").
+edit_via[p_robin](e_nicopick, telegram).
+for_week[p_robin](e_nicopick, w0831).
+-- 2026-09-01T19:25:00+03:00 telegram robin: add club wed 15:00-16:00 kit physio — a hop after school; e_kitwed (14:00 from school) answers it at its DEPARTURE
+e_add[p_robin](e_kitclub, club, wed, 900, 960, kit, physio).
+edit_at[p_robin](e_kitclub, "2026-09-01T19:25:00+03:00").
+edit_via[p_robin](e_kitclub, telegram).
+for_week[p_robin](e_kitclub, w0831).
+-- 2026-09-01T19:30:00+03:00 telegram robin: add music mon 15:00-16:00 kit physio, carry kit mon 15:00 robin — a hop answered at its ARRIVAL only
+e_add[p_robin](e_kitmusic, music, mon, 900, 960, kit, physio).
+edit_at[p_robin](e_kitmusic, "2026-09-01T19:30:00+03:00").
+edit_via[p_robin](e_kitmusic, telegram).
+for_week[p_robin](e_kitmusic, w0831).
+e_carry[p_robin](e_kitmusicc, kit, mon, 900, robin).
+edit_at[p_robin](e_kitmusicc, "2026-09-01T19:31:00+03:00").
+edit_via[p_robin](e_kitmusicc, telegram).
+for_week[p_robin](e_kitmusicc, w0831).
+-- for NEXT week, inert until roll: an avail, a carry and a note under w0907
+e_avail[p_robin](e_nannynext, nanny, thu, 1020, 1260).
+edit_at[p_robin](e_nannynext, "2026-09-06T20:10:00+03:00").
+edit_via[p_robin](e_nannynext, cli).
+for_week[p_robin](e_nannynext, w0907).
+e_carry[p_robin](e_kitnext, kit, wed, 840, robin).
+edit_at[p_robin](e_kitnext, "2026-09-06T20:11:00+03:00").
+edit_via[p_robin](e_kitnext, cli).
+for_week[p_robin](e_kitnext, w0907).
+e_note[p_robin](e_nextnote, mon, all, "следующая неделя").
+edit_at[p_robin](e_nextnote, "2026-09-06T20:12:00+03:00").
+edit_via[p_robin](e_nextnote, cli).
+for_week[p_robin](e_nextnote, w0907).
+-- an avail and a note taken back: retracted, they act nowhere
+e_avail[p_robin](e_oldavail, nanny, mon, 1080, 1320).
+edit_at[p_robin](e_oldavail, "2026-09-01T19:40:00+03:00").
+edit_via[p_robin](e_oldavail, telegram).
+for_week[p_robin](e_oldavail, w0831).
+retracted[p_robin](e_oldavail, "2026-09-01T19:45:00+03:00", telegram).
+e_note[p_robin](e_oldnote, tue, all, "старая заметка").
+edit_at[p_robin](e_oldnote, "2026-09-01T19:41:00+03:00").
+edit_via[p_robin](e_oldnote, telegram).
+for_week[p_robin](e_oldnote, w0831).
+retracted[p_robin](e_oldnote, "2026-09-01T19:46:00+03:00", telegram).

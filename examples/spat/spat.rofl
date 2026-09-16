@@ -238,9 +238,19 @@ coverer(P) :- person(P, neighbour).
 
 -- A helper or a neighbour exists only inside a declared window; everyone else
 -- is around all day unless away.
+--
+-- A WINDOW IS PER DAY. The world's line stands on its days; a dated exception
+-- a book wrote — «няня в среду с 17:30» (access.rofl §5, `present_on/5`) — is
+-- that person's window for THAT day instead of the world's, as `moved` stands
+-- instead of `usual`, never beside it: the world's 19:00–22:00 does not go on
+-- covering an evening the person said they would come at 17:30 and leave at 21:00.
 bounded(P)    :- present_window(_, P, _, _, _).
-here(P, D, S) :- needy(D, S), coverer(P), present_window(C, P, Spec, F, T),
-                 applies_on(Spec, D), S >= F, S < T, not waived(C), not off(P, D).
+window(C, P, D, F, T) :- present_window(C, P, Spec, F, T), applies_on(Spec, D),
+                         not window_changed(P, D).
+window(C, P, D, F, T) :- present_on(C, P, D, F, T).
+window_changed(P, D)  :- present_on(_, P, D, _, _).
+here(P, D, S) :- needy(D, S), coverer(P), window(C, P, D, F, T),
+                 S >= F, S < T, not waived(C), not off(P, D).
 here(P, D, S) :- needy(D, S), coverer(P), not bounded(P), not off(P, D).
 
 -- Restricted to the slots where a child actually needs somebody: an adult
@@ -392,10 +402,12 @@ run(go(Ev, D), Ch, B, Pl, D, arrive_by, Arr) :-
 run(back(Ev, D), Ch, Pl, B, D, depart_at, Lv) :-
     span(_, Ev, Ch, Pl, D, _, Lv), person(Ch, child), base(B), Pl != B,
     not has_next(Ch, D, Ev), not carried_lv(Ch, D, Pl, Lv).
+-- a hop is answered at either end: somebody meets the child where the next
+-- block starts, or somebody takes them from where the last one ended
 run(hop(E1, E2, D), Ch, P1, P2, D, arrive_by, Arr) :-
     adjacent(Ch, D, E1, E2), person(Ch, child),
-    span(_, E1, Ch, P1, D, _, _), span(_, E2, Ch, P2, D, Arr, _), P1 != P2,
-    not carried_at(Ch, D, P2, Arr).
+    span(_, E1, Ch, P1, D, _, Lv), span(_, E2, Ch, P2, D, Arr, _), P1 != P2,
+    not carried_at(Ch, D, P2, Arr), not carried_lv(Ch, D, P1, Lv).
 
 -- The ways a run could happen. `attempt` is shape only; what kills one is
 -- decided next, so the answer is a NAMED CONSTRAINT and not a missing row.
@@ -986,6 +998,7 @@ edb(week).            edb(current).
 edb(usual).           edb(usual_on).       edb(moved).        edb(skipped).
 edb(added).
 edb(present_window).  edb(absent).         edb(absent_on).    edb(awake).
+edb(present_on).
 edb(lift).            edb(day_wake).
 edb(want).            edb(waived).         edb(asking).
 edb(work_needed).
@@ -1034,6 +1047,7 @@ key_of(no_walk, 2).        key_of(ride, 4).           key_of(can_wait, 1).     k
 -- place), not a fact of the household.
 not_extended(usual, books).    not_extended(usual_on, books).  not_extended(moved, books).
 not_extended(skipped, books).  not_extended(added, books).     not_extended(absent_on, books).
+not_extended(present_on, books).
 not_extended(want, query).     not_extended(asking, query).    not_extended(waived, query).
 -- `weeks`: a week is the operator's — it comes with its Monday (`week_starts`, a
 -- book relation of access.rofl) and a `roll`; a week the book named alone

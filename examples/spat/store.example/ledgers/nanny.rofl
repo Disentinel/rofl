@@ -46,3 +46,19 @@ e_usual[p_nanny](e_nannyusual, tutoring, wed, 960, 1020, kit, home).
 edit_at[p_nanny](e_nannyusual, "2026-09-01T18:10:00+03:00").
 edit_via[p_nanny](e_nannyusual, telegram).
 for_week[p_nanny](e_nannyusual, w0831).
+-- DATED EXCEPTIONS (S3c, 2026-09-16):
+-- 2026-09-01T21:00:00+03:00 telegram nanny: avail nanny fri 18:00-22:00 — her own window, hers to state: acts
+e_avail[p_nanny](e_nannyfri, nanny, fri, 1080, 1320).
+edit_at[p_nanny](e_nannyfri, "2026-09-01T21:00:00+03:00").
+edit_via[p_nanny](e_nannyfri, telegram).
+for_week[p_nanny](e_nannyfri, w0831).
+-- a carry the CLI would have refused with code 4 (a child is not the helper's to hand over): never acts
+e_carry[p_nanny](e_nannycarry, nico, mon, 810, nanny).
+edit_at[p_nanny](e_nannycarry, "2026-09-01T21:05:00+03:00").
+edit_via[p_nanny](e_nannycarry, telegram).
+for_week[p_nanny](e_nannycarry, w0831).
+-- 2026-09-01T21:10:00+03:00 telegram nanny: note "ключ под ковриком" mon nanny — a helper's note is not a constraint of hers
+e_note[p_nanny](e_nannynote, mon, nanny, "ключ под ковриком").
+edit_at[p_nanny](e_nannynote, "2026-09-01T21:10:00+03:00").
+edit_via[p_nanny](e_nannynote, telegram).
+for_week[p_nanny](e_nannynote, w0831).

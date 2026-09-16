@@ -85,6 +85,7 @@ world_awake(X1) :- asserted_by($fact(awake, main, $cons(X1, _)), _, _).
 awake(X1, X2, X3, X4, X5) :- awake[hh](X1, X2, X3, X4, X5), not world_awake(X1), not person(X2, helper).
 overrides[audit](awake, k(X1)) :- awake[hh](X1, X2, X3, X4, X5), world_awake(X1), not awake(X1, X2, X3, X4, X5).
 withheld[audit](awake, k(X1, X2, X3, X4, X5)) :- awake[hh](X1, X2, X3, X4, X5), person(X2, helper).
+-- present_on: not extended (books)
 -- lift/8, key 1
 world_lift(X1) :- asserted_by($fact(lift, main, $cons(X1, _)), _, _).
 lift(X1, X2, X3, X4, X5, X6, X7, X8) :- lift[hh](X1, X2, X3, X4, X5, X6, X7, X8), not world_lift(X1), not person(X3, helper).

@@ -83,6 +83,13 @@ may_edit(U, P)   :- role(U, adult), person(P, child).
 may_edit(U, U)   :- role(U, helper).
 -- for: `car out` touches the car, and the car is the household's
 may_edit(U, Cr)  :- role(U, adult), car(Cr).
+-- for: a helper's HOURS are the household's arrangement — «няня сегодня с
+--      17:30» is the parents' sentence as much as the nanny's — so an adult may
+--      change the constraint of a helper's window for a day (`avail`, §5); the
+--      helper's own line is theirs already by the rule above. Measured on
+--      2eafa2f: c_nanny was editable by nanny alone, and the parents, whose
+--      nanny it is, got code 4. A neighbour's window stays nobody's to edit.
+may_edit(U, C)   :- role(U, adult), present_window(C, P, _, _, _), person(P, helper).
 -- for: an external constraint is REPORTED, never edited, by any member
 may_report(U, C) :- account(U), external(C).
 
@@ -95,6 +102,9 @@ may_report(U, C) :- account(U), external(C).
 --   e_car_out(E, Day, From, To)               e_report(E, Constraint, Day, Time)
 --   e_usual(E, What, Days, From, To, Who, Where)   every week — one line of the typical week
 --   e_unusual(E, Block, Days)                      every week — the block is off on those days
+--   e_avail(E, Who, Day, From, To)            this day the person is there From–To, and only then
+--   e_carry(E, Child, Day, At, Who)           the child's leg that begins about At is Who's to drive
+--   e_note(E, Day, Who|all, "text")           a line under the day, or under a person; no rule reads it
 --   edit_at(E, Iso)  edit_via(E, telegram|cli)  for_week(E, Week)
 --   proposed(E)      confirmed(E, Iso, Via)      retracted(E, Iso, Via)
 -- Nothing is ever deleted: a retraction is one more fact in the same book,
@@ -112,9 +122,13 @@ entry(E, L)      :- e_car_out[L](E, _, _, _).
 entry(E, L)      :- e_report[L](E, _, _, _).
 entry(E, L)      :- e_usual[L](E, _, _, _, _, _, _).
 entry(E, L)      :- e_unusual[L](E, _, _).
+entry(E, L)      :- e_avail[L](E, _, _, _, _).
+entry(E, L)      :- e_carry[L](E, _, _, _, _).
+entry(E, L)      :- e_note[L](E, _, _, _).
 edit_by(E, U)    :- entry(E, L), ledger(L, U).
 edit_week(E, W)  :- entry(E, L), for_week[L](E, W).
 is_report(E)     :- e_report[L](E, _, _, _).
+is_note(E)       :- e_note[L](E, _, _, _).
 retracted_edit(E) :- entry(E, L), retracted[L](E, _, _).
 -- for: «убери greek пн» on a block ANOTHER member added — the schedule as the
 --      human sees it includes what a book put there. The entry's book is not
@@ -135,9 +149,10 @@ stray[audit](E, L) :- for_week[L](E, _), not entry(E, L).
 
 -- for: an edit IS a constraint, owned by its author: `why` names the person,
 --      `relax` can waive it, the unowned-lint holds for edits too. A helper's
---      arrangement is external to the household exactly as `c_nanny` is.
-constraint(E, U, household) :- edit_by(E, U), role(U, adult), not is_report(E).
-constraint(E, U, external)  :- edit_by(E, U), role(U, helper), not is_report(E).
+--      arrangement is external to the household exactly as `c_nanny` is. A
+--      report and a note constrain nothing and are not constraints.
+constraint(E, U, household) :- edit_by(E, U), role(U, adult), not is_report(E), not is_note(E).
+constraint(E, U, external)  :- edit_by(E, U), role(U, helper), not is_report(E), not is_note(E).
 
 -- WHAT AN EDIT TOUCHES: the constraint of the block, the person, the car.
 -- for: a block may carry two constraints (`c_school` and `c_school_fri`) and
@@ -149,6 +164,12 @@ touches(E, C)    :- e_skip[L](E, Ev, _), usual_on(C, Ev, _, _, _).
 touches(E, P)    :- e_add[L](E, _, _, _, _, P, _).
 touches(E, P)    :- e_sick[L](E, P, _).
 touches(E, Cr)   :- e_car_out[L](E, _, _, _), car(Cr).
+-- for: a person's hours for a day touch the constraint of their window — the
+--      helper's own, editable by them and (above) by an adult of the house
+touches(E, C)    :- e_avail[L](E, P, _, _, _), present_window(C, P, _, _, _).
+-- for: handing a child's leg to somebody touches the child: an adult may, a
+--      helper may not (`may_edit(U, P)` above). A note touches nothing.
+touches(E, Ch)   :- e_carry[L](E, Ch, _, _, _).
 -- for: a recurring line touches what its one-off twin touches: the person,
 --      or the block's constraints (a recurring block of another edit included)
 touches(E, P)    :- e_usual[L](E, _, _, _, _, P, _).
@@ -228,6 +249,48 @@ skipped(E, Ev, W, D) :- e_unusual[L](E, Ev, Spec), acts(E), current(W),
                         usual(_, Ev, _, _, Sp, _, _), applies_on(Sp, D), applies_on(Spec, D).
 
 -- =========================================================================
+-- 5a. DATED EXCEPTIONS — the secretary's lines (S3c, 2026-09-16)
+-- =========================================================================
+-- «Няня сегодня с 17:30», «Кита забираю я в среду в 14:00», «не забыть торт»
+-- are not the world (they do not recur) and not a rule of the family (they
+-- are not a kind of anything): they are edits of one week, like `sick` and
+-- `car out`, and act through the same `acts` as every other entry.
+
+-- for: AVAIL — the person's window for THAT day, instead of the world's
+--      (spat.rofl §4 `window`). The edit is the constraint, so `whynot` names
+--      the person who said it; the world's line on the same day does not act.
+present_on(E, P, D, F, T) :- e_avail[L](E, P, D, F, T), acts(E), edit_week(E, W), current(W), day(D, _).
+
+-- for: CARRY — the leg of the child's day that begins within a quarter of an
+--      hour of At is Who's: no `run` is derived for it (spat.rofl §6 reads
+--      `carried_at` for an arrival — at a place or back home after a hop — and
+--      `carried_lv` for a departure from a place), so nobody else is assigned,
+--      and the grid shows Who going. The world's `with` blocks are untouched —
+--      the run they already answer for stays theirs.
+carry(E, Ch, D, At, Who) :- e_carry[L](E, Ch, D, At, Who), acts(E), edit_week(E, W), current(W), day(D, _).
+carry_to(E, Ch, D, Pl, Arr)  :- carry(E, Ch, D, At, _), span(_, _, Ch, Pl, D, Arr, _),
+                                Lo is At - 15, Arr >= Lo, Hi is At + 15, Arr <= Hi.
+carry_from(E, Ch, D, Pl, Lv) :- carry(E, Ch, D, At, _), span(_, _, Ch, Pl, D, _, Lv),
+                                Lo is At - 15, Lv >= Lo, Hi is At + 15, Lv <= Hi.
+carried_at(Ch, D, Pl, Arr) :- carry_to(_, Ch, D, Pl, Arr).
+carried_lv(Ch, D, Pl, Lv)  :- carry_from(_, Ch, D, Pl, Lv).
+-- for: WHAT A CARRY WARNS OF, never refuses: the carrier is inside a block of
+--      their own at that moment (a block that already has the child in it is
+--      the same errand, not a clash); or no leg of the child's day begins near
+--      At, so the line changes nothing. The clash is a defect of the day, by
+--      name, so an edit that brings one is a «ломает» line like any other.
+carry_during(E, Who, D, At, Ev) :- carry(E, Ch, D, At, Who), span(_, Ev, Who, _, D, F, T),
+                                   F <= At, At < T, not with(Ev, Ch).
+defect(D, carrier_busy, E)      :- carry_during(E, _, D, _, _).
+carry_leg(E)                    :- carry_to(E, _, _, _, _).
+carry_leg(E)                    :- carry_from(E, _, _, _, _).
+carry_idle(E, Ch, D, At)        :- carry(E, Ch, D, At, _), not carry_leg(E).
+
+-- for: NOTE — a line under a day, or under one person of it, printed by
+--      show/tomorrow and read by no rule of the schedule
+note_on(E, D, Who, Text) :- e_note[L](E, D, Who, Text), acts(E), edit_week(E, W), current(W), day(D, _).
+
+-- =========================================================================
 -- 5b. WHICH WEEK A DATE IS IN
 -- =========================================================================
 -- `tomorrow` and `show` are asked about a DATE, and a date is in one week:
@@ -266,6 +329,8 @@ touches_day(E, D) :- sick_day(E, _, D).
 touches_day(E, D) :- e_car_out[L](E, D, _, _), day(D, _).
 touches_day(E, D) :- e_usual[L](E, _, Spec, _, _, _, _), applies_on(Spec, D).
 touches_day(E, D) :- e_unusual[L](E, Ev, Spec), usual(_, Ev, _, _, Sp, _, _), applies_on(Sp, D), applies_on(Spec, D).
+touches_day(E, D) :- e_avail[L](E, _, D, _, _), day(D, _).
+touches_day(E, D) :- e_carry[L](E, _, D, _, _), day(D, _).
 
 -- for: the defects of a day, by name and by WHERE — the slot, the block,
 --      the run — so a day that already had one red block is not a licence
@@ -298,6 +363,7 @@ edb(date_monday).
 edb(e_move).     edb(e_skip).    edb(e_add).     edb(e_sick).   edb(e_car_out).
 edb(e_report).   edb(edit_at).   edb(edit_via).  edb(for_week).
 edb(e_usual).    edb(e_unusual).
+edb(e_avail).    edb(e_carry).   edb(e_note).
 edb(proposed).   edb(confirmed). edb(retracted). edb(rolled).   edb(week_starts).
 edb(retracts).
 

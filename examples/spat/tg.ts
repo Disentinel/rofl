@@ -12,6 +12,7 @@
 import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, ownerOf, pickedTrips, ru, table, whoWasBusy } from './spat.ts';
 import { hhLines } from './rules.ts';
+import { carries, carryWarns, noted, notes } from './notes.ts';
 
 const DAY: Record<string, string> = { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' };
 /** «16.09» for a day of the week that starts on `start` (YYYY-MM-DD); '' without a start. */
@@ -54,20 +55,28 @@ export function problems(r: Rofl, day: string): string[] {
   const stuck = new Set(table(r, 'run_stuck', 'T').map((x) => x.T));
   for (const n of table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => stuck.has(x.T) && x.D === day)) out.push(`!! некому везти ${ru(n.Ch)} ${hhmm(n.At)}: ${ru(n.From)} → ${ru(n.To)}`);
   const hh = hhLines(r, day);
-  return [...out, ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim())].map((x) => fold(x));
+  return [...out, ...carryWarns(r, day), ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim())].map((x) => fold(x));
+}
+/** `spat warnings [<day>] --format tg`: the week's «!!» lines under the day they belong to, nothing else. */
+export function tgWarnings(r: Rofl, week: string, day?: string): string {
+  const ord = dayOrder(r); const start = startOf(r, week);
+  const days = day === undefined ? [...ord.keys()].sort((a, b) => ord.get(a)! - ord.get(b)!) : [day];
+  const out = days.flatMap((d) => { const ps = problems(r, d); return ps.length === 0 ? [] : [`*${DAY[d] ?? ru(d)} ${dm(start, ord.get(d) ?? 1)}*`.trimEnd().replace(/ \*$/, '*'), ...ps]; });
+  return out.length === 0 ? `${day === undefined ? `неделя ${week}` : DAY[day] ?? ru(day)} — сходится` : out.join('\n');
 }
 
 /** One day: its name and date, the problems, then each person's lines. */
 export function tgDay(r: Rofl, day: string, week: string): string {
   const head = `*${DAY[day] ?? ru(day)} ${dm(startOf(r, week), dayOrder(r).get(day) ?? 1)}*`.trimEnd().replace(/ \*$/, '*');
   const ps = problems(r, day);
-  const out = [ps.length === 0 ? `${head} — сходится` : `${head} — ${ps[0]}`, ...ps.slice(1)];
+  const out = [ps.length === 0 ? `${head} — сходится` : `${head} — ${ps[0]}`, ...ps.slice(1), ...notes(r, day, 'all')];
   const base = table(r, 'base', 'B')[0]?.B;
   const withs = index(table(r, 'with', 'E, Ch'), (x) => x.E);
   const by = index(blocks(r).filter((b) => b.day === day), (b) => b.who);
   const trips = pickedTrips(r).filter((t) => t.day === day);
-  for (const who of [...new Set([...by.keys(), ...trips.map((t) => t.who)])].sort()) {
-    out.push('', `*${ru(who)}*`);
+  const mine = carries(r, day);
+  for (const who of [...new Set([...by.keys(), ...trips.map((t) => t.who), ...mine.map((c) => c.who), ...noted(r, day)])].sort()) {
+    out.push('', `*${ru(who)}*`, ...notes(r, day, who));
     const lines = (by.get(who) ?? []).map((b) => {
       // the place only when the name does not already say it, and never the base
       const place = b.place !== base && !ru(b.ev).toLowerCase().includes(ru(b.place).toLowerCase().slice(0, 4)) ? ` (${ru(b.place)})` : '';
@@ -75,6 +84,7 @@ export function tgDay(r: Rofl, day: string, week: string): string {
       return { at: b.from, text: `• ${hhmm(b.from)}–${hhmm(b.to)} ${ru(b.ev)}${place}${co.length > 0 ? ` (с ${co.join(', ')})` : ''}${/^[emh]_/.test(b.c) ? ` [правка ${b.c}]` : ''}` };
     });
     for (const t of trips.filter((x) => x.who === who)) lines.push({ at: t.dep, text: `• ${hhmm(t.dep)}–${hhmm(t.ret)} везёт ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait} мин)` : ''}` });
+    for (const c of mine.filter((x) => x.who === who)) lines.push({ at: c.at, text: `• ${hhmm(c.at)} везёт ${ru(c.child)}: ${ru(c.from)} → ${ru(c.to)} [правка ${c.id}]` });
     out.push(...lines.sort((a, b) => a.at - b.at || (a.text < b.text ? -1 : 1)).map((l) => l.text));
   }
   return fold(out.join('\n'));

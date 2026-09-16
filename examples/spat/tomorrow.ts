@@ -7,6 +7,7 @@ import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, pickedTrips, ru, sayConstraint, table, whoWasBusy } from './spat.ts';
 import { SpatError, type Store } from './store.ts';
 import { hhLines } from './rules.ts';
+import { carries, carryWarns, noted, notes } from './notes.ts';
 
 /** A day — or the whole week when `day` is undefined — problems first:
  *  holes, chains with no slack, late arrivals; then the grid by person. */
@@ -21,7 +22,8 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
   const stuck = new Set(table(r, 'run_stuck', 'T').map((x) => x.T));
   const noWay = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => stuck.has(x.T) && (day === undefined || x.D === day));
   const hh = hhLines(r, day);
-  if (hs.length + tight.length + late.length + noWay.length + hh.defects.length === 0) out.push('  сходится: дыр нет, запас есть, никто не опаздывает.');
+  const cw = carryWarns(r, day).map((l) => `  ${l}`);
+  if (hs.length + tight.length + late.length + noWay.length + hh.defects.length + cw.length === 0) out.push('  сходится: дыр нет, запас есть, никто не опаздывает.');
   for (const h of byDay(hs)) {
     out.push(`  !! НЕ ПОКРЫТ ${ru(h.day)} ${hhmm(h.from)}–${hhmm(h.to)}  ${ru(h.child)}`);
     for (const { person, why } of whoWasBusy(r, h.day, h.from)) {
@@ -33,7 +35,7 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
   }
   for (const l of late) out.push(`  !! ОПОЗДАНИЕ ${ru(l.D)} ${ru(l.Ev)} начинается ${hhmm(l.F)}, надо не позже ${hhmm(l.By)}  (${l.C})`);
   for (const n of noWay) out.push(`  !! НЕКОМУ ВЕЗТИ ${ru(n.D)} ${hhmm(n.At)} ${ru(n.Ch)}: ${ru(n.From)} → ${ru(n.To)}`);
-  out.push(...hh.defects, ...hh.warns);
+  out.push(...cw, ...hh.defects, ...hh.warns);
   if (!grid) return out.join('\n');
   const trips = on(pickedTrips(r));
   const withs = index(table(r, 'with', 'E, Ch'), (x) => x.E);
@@ -42,10 +44,13 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
     const bs = blocks(r).filter((b) => b.day === d);
     if (bs.length === 0 && day === undefined) continue;
     if (day === undefined) out.push(`\n${ru(d)}`);
+    // the secretary's lines (notes.ts): a note under the day, a note or a handed-over leg under the person
+    out.push(...notes(r, d, 'all').map((n) => `  ${n}`));
     const by = index(bs, (b) => b.who);
-    for (const who of [...by.keys()].sort()) {
-      out.push(`  ${ru(who)}`);
-      const lines = by.get(who)!.map((b) => ({
+    const mine = carries(r, d);
+    for (const who of [...new Set([...by.keys(), ...mine.map((c) => c.who), ...noted(r, d)])].sort()) {
+      out.push(`  ${ru(who)}`, ...notes(r, d, who).map((n) => `    ${n}`));
+      const lines = (by.get(who) ?? []).map((b) => ({
         at: b.from,
         text: `    ${hhmm(b.from)}–${hhmm(b.to)}  ${ru(b.ev).padEnd(18)} ${ru(b.place).padEnd(10)}`
           + ((withs.get(b.ev) ?? []).length > 0 ? ' + ' + withs.get(b.ev)!.map((x) => ru(x.Ch)).join(', ') : '')
@@ -54,10 +59,17 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
       for (const t of trips.filter((x) => x.day === d && x.who === who)) {
         lines.push({ at: t.dep, text: `    ${hhmm(t.dep)}–${hhmm(t.ret)}  ВЕЗЁТ ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait}м)` : ''}` });
       }
+      for (const c of mine.filter((x) => x.who === who)) lines.push({ at: c.at, text: `    ${hhmm(c.at)}        ВЕЗЁТ ${ru(c.child)}: ${ru(c.from)} → ${ru(c.to)}  [правка ${c.id}]` });
       for (const l of lines.sort((a, b) => a.at - b.at || (a.text < b.text ? -1 : 1))) out.push(l.text);
     }
   }
   return out.join('\n');
+}
+
+/** `spat warnings [<day>]`: every «!!» line of the week — or of one day — as one list, nothing else. */
+export function renderWarnings(r: Rofl, week: string, day?: string): string {
+  const lines = renderDay(r, day, '', false).split('\n').slice(1).filter((l) => l.startsWith('  !!'));
+  return [`${day === undefined ? `неделя ${week}` : `${ru(day)} (неделя ${week})`}: ${lines.length === 0 ? 'предупреждений нет' : `${lines.length} предупреждений`}`, ...lines].join('\n');
 }
 
 /** The week as VEVENTs, one per block of `span`, dated from

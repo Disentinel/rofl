@@ -30,13 +30,15 @@ async function places(): Promise<Group> {
   const who = await spat(root, 'robin', ['whoami'], at(1));
   g.check('whoami: под «места (правила семьи):» — r_… american_academy «American Academy», дорога от дома не задана', new RegExp(`места \\(правила семьи\\):\n  ${A}  действует  american_academy «American Academy», дорога от дома не задана`).test(who.out), who.out);
   // PLANTED (A2): the block at the new place by its quoted name — the where resolves through the world AS IT STANDS; what the
-  // model says is no_way, because school → academy has no travel (only home ↔ academy could, and even that was not given)
+  // model says is no_way, because the academy has no travel: the fixture's e_kitthu (alex takes kit from school at 14:00)
+  // answers the hop there, and the way back home at 16:30 is the leg nobody can make
   const m = await spat(root, 'robin', ['edit', 'add math thu 15:00-16:30 kit "American Academy"'], at(2));
-  const M = /confirm (e_[0-9a-f]+)/.exec(m.out)?.[1] ?? '';
-  g.check('add math thu 15:00-16:30 kit "American Academy": место разобрано (не «мир такого не знает»), запись с american_academy; код 3 «ломает чт: no_way», «некому везти kit 15:00: школа → American Academy»',
-    m.code === 3 && !/мир такого не знает/.test(m.out) && /ломает чт: no_way/.test(m.out) && /НЕКОМУ ВЕЗТИ чт 15:00 kit: школа → American Academy/.test(m.out)
+  const M = idOf(m);
+  g.check('add math thu 15:00-16:30 kit "American Academy": место разобрано (не «мир такого не знает»), запись с american_academy; применено (16.09), «ломает чт: no_way», «некому везти kit 16:30: American Academy → дом»',
+    m.code === 0 && !/мир такого не знает/.test(m.out) && /ломает чт: no_way/.test(m.out) && /НЕКОМУ ВЕЗТИ чт 16:30 kit: American Academy → дом/.test(m.out)
     && sql<{ args: string }[]>(root, "SELECT args FROM facts WHERE pred = 'e_add' AND args LIKE ?", `%"${M}"%`).some((x) => /"american_academy"/.test(x.args)), m.out.split('\n').slice(0, 2).join(' | '));
-  g.code('add … kit american_academy (по atom) — тоже разобрано', await spat(root, 'robin', ['edit', 'add math2 sat 10:00-11:00 kit american_academy'], at(3)), 3);
+  const m2 = await spat(root, 'robin', ['edit', 'add math2 sat 10:00-11:00 kit american_academy'], at(3));
+  g.code('add … kit american_academy (по atom) — тоже разобрано', m2, 0);
   // the same atom twice: refused at the sugar — a second travel row for one pair would be two_ways; the raw rule add is monotone and says «уже в мире»
   const twice = await spat(root, 'robin', ['place', 'add', 'academy', 'American Academy', '20'], at(4));
   g.check('тот же atom/название второй раз → 2 «место уже есть — правило r_…»: rule retract, потом place add', twice.code === 2 && new RegExp(`место american_academy уже есть — правило ${A} \\(robin, дорога не задана\\)`).test(twice.out) && /rule retract/.test(twice.out), twice.out);
@@ -55,12 +57,12 @@ async function places(): Promise<Group> {
   const G = rid(gy);
   g.check('place add gym "Gym" 20 от дома → 0, «в мир семьи: travel(home, gym, 20)», и дверь: между gym и другим местом время не задано', gy.code === 0 && /в мир семьи: travel\(home, gym, 20\)/.test(gy.out) && /между gym и другим местом/.test(gy.out), gy.out);
   const y = await spat(root, 'robin', ['edit', 'add yoga thu 15:00-16:30 robin gym'], at(12));
-  g.check('add yoga thu 15:00-16:30 robin gym: «ломает чт: … no_time», «НЕ УСПЕВАЕТ … обед → yoga -5 мин» — дорога в цепочке',
-    y.code === 3 && /no_time/.test(y.out) && /НЕ УСПЕВАЕТ чт robin: обед → yoga  -5 мин/.test(y.out), y.out.split('\n').slice(0, 3).join(' | '));
-  const y2 = await spat(root, 'robin', ['edit', 'add yoga thu 15:15-16:30 robin gym'], at(13));
-  const Y2 = /confirm (e_[0-9a-f]+)/.exec(y2.out)?.[1] ?? '';
-  g.check('15:15 — no_time нет, но on_foot_unknown: gym → бассейн без дороги (ровно то, что сказала дверь); после confirm цепочка обед → yoga с запасом 10 мин',
-    y2.code === 3 && !/no_time/.test(y2.out) && /on_foot_unknown/.test(y2.out) && (await spat(root, 'robin', ['confirm', Y2], at(14))).code === 0
+  g.check('add yoga thu 15:00-16:30 robin gym: применено, «ломает чт: … no_time», «НЕ УСПЕВАЕТ … обед → yoga -5 мин» — дорога в цепочке',
+    y.code === 0 && /no_time/.test(y.out) && /НЕ УСПЕВАЕТ чт robin: обед → yoga  -5 мин/.test(y.out), y.out.split('\n').slice(0, 3).join(' | '));
+  g.code('retract yoga 15:00', await spat(root, 'robin', ['retract', idOf(y)], at(13)), 0);
+  const y2 = await spat(root, 'robin', ['edit', 'add yoga thu 15:15-16:30 robin gym'], at(14));
+  g.check('15:15 — no_time нет, но on_foot_unknown: gym → бассейн без дороги (ровно то, что сказала дверь); цепочка обед → yoga с запасом 10 мин',
+    y2.code === 0 && !/no_time/.test(y2.out) && /on_foot_unknown/.test(y2.out)
     && inproc(asRobin(root), (s) => { console.log(JSON.stringify(chains(s.r).find((c) => c.day === 'thu' && c.b === 'yoga'))); return 0; }).out.includes('"m":10'), y2.out.split('\n').slice(0, 2).join(' | '));
   const box = await spat(root, 'robin', ['edit', 'add box sat 15:00-16:30 kit gym'], at(15));
   g.code('add box sat 15:00-16:30 kit gym — с дорогой ребёнка везут, код 0', box, 0);
@@ -68,7 +70,11 @@ async function places(): Promise<Group> {
   // PLANTED (A5): rule retract of a place that has blocks: refused with the list; of an empty one: taken back, and the name is gone
   const held = await spat(root, 'robin', ['rule', 'retract', G], at(17));
   g.check(`rule retract ${G} (на gym box и yoga) → 2 с перечнем: «box (kit, сб) [правка e_…], yoga (robin, чт) [правка e_…]»`, held.code === 2 && /место держат блоки — box \(kit, сб\) \[правка e_[0-9a-f]+\], yoga \(robin, чт\) \[правка e_[0-9a-f]+\]/.test(held.out), held.out);
-  g.code(`rule retract ${A} (american_academy; math — предложение, не держит)`, await spat(root, 'robin', ['rule', 'retract', A], at(18)), 0);
+  // math and math2 ACT since 16.09 (no proposal to wait in): the place is held until they are taken back
+  const heldA = await spat(root, 'robin', ['rule', 'retract', A], at(18));
+  g.check(`rule retract ${A} пока math/math2 стоят → 2 с перечнем`, heldA.code === 2 && /место держат блоки — math \(kit, чт\)/.test(heldA.out), heldA.out);
+  const rm = [(await spat(root, 'robin', ['retract', M], at(22))).code, (await spat(root, 'robin', ['retract', idOf(m2)], at(23))).code, (await spat(root, 'robin', ['rule', 'retract', A], at(24))).code];
+  g.check(`retract math, math2 → 0, 0; затем rule retract ${A} → 0 (место без блоков)`, rm.join(',') === '0,0,0', rm.join(','));
   const gone = inproc({ ...asRobin(root), ...at(19) }, (s) => verb(s, 'edit', ['add math3 sat 10:00-11:00 kit "American Academy"']));
   g.check('после отзыва «American Academy» — 2 «мир такого не знает»; whoami: места нет', gone.code === 2 && /мир такого не знает/.test(gone.out) && !/american_academy/.test((await spat(root, 'robin', ['whoami'], at(20))).out), gone.out.split('\n')[0]);
   g.code(`nanny rule retract ${G} (правило robin)`, await spat(root, 'nanny', ['rule', 'retract', G], at(21)), 4);

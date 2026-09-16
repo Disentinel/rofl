@@ -63,3 +63,34 @@ retracts[p_alex](e_skipclean, "2026-09-06T21:30:00+03:00", cli).
 retracts[p_alex](e_nannyadd, "2026-09-06T21:31:00+03:00", cli).
 -- a retraction of nothing: no such entry, inert
 retracts[p_alex](e_nowhere, "2026-09-06T21:32:00+03:00", cli).
+-- DATED EXCEPTIONS (S3c, 2026-09-16):
+-- 2026-09-01T20:30:00+03:00 cli alex: carry kit thu 14:00 alex — inside his own work_pm (14:00–16:00):
+-- carry_during(e_kitthu, alex, thu, 840, work_pm), defect(thu, carrier_busy, e_kitthu) — a warning, the carry acts
+e_carry[p_alex](e_kitthu, kit, thu, 840, alex).
+edit_at[p_alex](e_kitthu, "2026-09-01T20:30:00+03:00").
+edit_via[p_alex](e_kitthu, cli).
+for_week[p_alex](e_kitthu, w0831).
+-- 2026-09-01T20:35:00+03:00 cli alex: carry nico thu 17:00 alex — no leg of nico's Thursday begins near 17:00 (the садик leg
+-- ended at 13:30, outside the quarter-hour window): carry_idle
+e_carry[p_alex](e_nicothu, nico, thu, 1020, alex).
+edit_at[p_alex](e_nicothu, "2026-09-01T20:35:00+03:00").
+edit_via[p_alex](e_nicothu, cli).
+for_week[p_alex](e_nicothu, w0831).
+-- 2026-09-01T20:40:00+03:00 cli alex: note "ноутбук в офис" thu alex — under the person
+e_note[p_alex](e_laptopnote, thu, alex, "ноутбук в офис").
+edit_at[p_alex](e_laptopnote, "2026-09-01T20:40:00+03:00").
+edit_via[p_alex](e_laptopnote, cli).
+for_week[p_alex](e_laptopnote, w0831).
+-- three secretary lines naming a day the world does not know: they touch nothing and act nowhere
+e_avail[p_alex](e_badavail, nanny, funday, 1020, 1260).
+edit_at[p_alex](e_badavail, "2026-09-01T20:45:00+03:00").
+edit_via[p_alex](e_badavail, cli).
+for_week[p_alex](e_badavail, w0831).
+e_carry[p_alex](e_badcarry, kit, funday, 840, alex).
+edit_at[p_alex](e_badcarry, "2026-09-01T20:46:00+03:00").
+edit_via[p_alex](e_badcarry, cli).
+for_week[p_alex](e_badcarry, w0831).
+e_note[p_alex](e_badnote, funday, all, "x").
+edit_at[p_alex](e_badnote, "2026-09-01T20:47:00+03:00").
+edit_via[p_alex](e_badnote, cli).
+for_week[p_alex](e_badnote, w0831).
