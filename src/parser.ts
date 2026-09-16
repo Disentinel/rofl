@@ -164,7 +164,6 @@ class P {
     this.next();
     const w = this.expect('ident').v;
     if (w === 'init' || w === 'now' || w === 'next') return w;
-    if (w === 'async') this.err(`'@async' is reserved syntax, not in v0`);
     this.err(`bad temporal '@${w}'`);
   }
 

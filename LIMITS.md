@@ -3,9 +3,15 @@
 An honest list. Items marked (spec) are declared out of scope by START.md §8;
 the rest are v0 implementation boundaries.
 
-- **No `@async`** (spec). Parsed, rejected with "not in v0". There is no
-  effects executor; "intention facts" are collected by the host at tick
-  boundaries (see `examples/counter.rofl` and the `run` API's boundary hook).
+- **No `@async`** (spec), and it is not reserved for later either — decided
+  2026-09-16. START.md §3.3 asked the parser to know the word and answer "not
+  in v0", which promises the word is being kept for something; the effects
+  executor is not going to be built, so it was being kept for nothing. The
+  temporal set is closed to `@init`, `@now` and `@next`, and `@async` is now
+  refused as the unknown marker it is — `examples/checks/async-refused.rofl` is
+  that refusal, pinned. Effects still leave by the door they always had:
+  "intention facts" are collected by the host at tick boundaries (see
+  `examples/counter.rofl` and the `run` API's boundary hook).
 - **No incremental maintenance** (spec). No delta is ever propagated into a
   derived relation: a relation is recomputed entirely or not at all, so there
   is no DRed, no counting, and none of the 4–22× memory the field pays for
