@@ -58,32 +58,43 @@ async function avail(): Promise<Group> {
 async function carry(): Promise<Group> {
   const g = new Group('23. carry <ребёнок> <день> <время> <кто> — the leg that begins about that time is theirs: no run, «ВЕЗЁТ» under them; a clash with their own block is a warning, not a refusal');
   const root = fresh();
-  // PLANTED (B): Friday — the bus stops short, an adult meets it: the grid has a ВЕЗЁТ trip for kit; after the carry it is alex's line
+  // PLANTED (B, S3d): Friday — the bus stops short, an adult meets it: the grid prints «13:42–13:58 ВЕЗЁТ kit: школа → дом» for a
+  // school that ends 13:20. The person names the run by the time they SEE (13:45) — measured on the stand: the carry matched
+  // nothing and the old driver stayed — or by the block boundary (13:20); either takes the run, and the line keeps its window
   const f0 = (await spat(root, 'robin', ['show', 'fri'], at(0))).out;
   const tripOf = (out: string): string => out.split('\n').find((l) => /ВЕЗЁТ kit/.test(l)) ?? '';
-  g.check('положительный контроль: show fri — «ВЕЗЁТ kit: …» стоит (кто-то встречает автобус), run(back(school_kit, fri)) есть', /ВЕЗЁТ kit/.test(f0) && rowsOf(root, 'run(back(school_kit, fri), kit, F, T, fri, K, At)') === 1, tripOf(f0));
-  const c = await spat(root, 'robin', ['edit', 'carry kit fri 13:20 alex'], at(1));
-  g.code('robin: carry kit fri 13:20 alex', c, 0);
+  g.check('положительный контроль: show fri — «13:42–13:58  ВЕЗЁТ kit: школа → дом» у решателя, run(back(school_kit, fri)) есть', /13:42–13:58  ВЕЗЁТ kit: школа → дом$/.test(tripOf(f0)) && rowsOf(root, 'run(back(school_kit, fri), kit, F, T, fri, K, At)') === 1, tripOf(f0));
+  const c = await spat(root, 'robin', ['edit', 'carry kit fri 13:45 alex'], at(1));
+  g.code('robin: carry kit fri 13:45 alex (время из сетки, не граница блока)', c, 0);
   const C = idOf(c);
   const f1 = (await spat(root, 'robin', ['show', 'fri'], at(2))).out;
   /** the grid lines under one person: from «  who» to the next unindented name */
   const under = (out: string, who: string): string => /^ {4}.*(?:\n {4}.*)*/m.exec(out.slice(out.indexOf(`\n  ${who}\n`) + 1).split('\n').slice(1).join('\n'))?.[0] ?? '';
-  g.check(`show fri: под alex «13:20        ВЕЗЁТ kit: школа → дом  [правка ${C}]»; под robin строки ВЕЗЁТ kit нет; run(back(school_kit, fri)) нет`,
-    new RegExp(`13:20\\s+ВЕЗЁТ kit: школа → дом\\s+\\[правка ${C}\\]`).test(under(f1, 'alex')) && !/ВЕЗЁТ kit/.test(under(f1, 'robin')) && /забор детей/.test(under(f1, 'robin')) && rowsOf(root, 'run(back(school_kit, fri), kit, F, T, fri, K, At)') === 0, f1);
-  g.check(`--format tg: под *alex* «• 13:20 везёт kit: школа → дом [правка ${C}]»`, new RegExp(`\\*alex\\*[^*]*• 13:20 везёт kit: школа → дом \\[правка ${C}\\]`).test((await spat(root, 'robin', ['show', 'fri', '--format', 'tg'], at(3))).out));
+  g.check(`show fri: под alex «13:42–13:58  ВЕЗЁТ kit: школа → дом  [правка ${C}]» — то же окно; под robin строки ВЕЗЁТ kit нет; carry_run(back(school_kit, fri), ${C}, alex); перегон остался (run 1), «!! у kit … перегона нет» нет`,
+    new RegExp(`13:42–13:58  ВЕЗЁТ kit: школа → дом  \\[правка ${C}\\]`).test(under(f1, 'alex')) && !/ВЕЗЁТ kit/.test(under(f1, 'robin')) && /забор детей/.test(under(f1, 'robin'))
+    && holds(root, [`carry_run(back(school_kit, fri), ${C}, alex)`]) === '1' && rowsOf(root, 'run(back(school_kit, fri), kit, F, T, fri, K, At)') === 1 && !/у kit пт/.test(c.out), f1);
+  g.check(`--format tg: под *alex* «• 13:42–13:58 везёт kit: школа → дом [правка ${C}]»`, new RegExp(`\\*alex\\*[^*]*• 13:42–13:58 везёт kit: школа → дом \\[правка ${C}\\]`).test((await spat(root, 'robin', ['show', 'fri', '--format', 'tg'], at(3))).out));
   g.code(`robin retract ${C}`, await spat(root, 'robin', ['retract', C], at(4)), 0);
   g.check('после отзыва show fri как было: ВЕЗЁТ kit снова у решателя', tripOf((await spat(root, 'robin', ['show', 'fri'], at(5))).out) === tripOf(f0));
+  const c2 = await spat(root, 'robin', ['edit', 'carry kit fri 13:20 alex'], at(11));
+  const C2 = idOf(c2);
+  g.check(`carry kit fri 13:20 alex (граница блока) — тоже попадает: carry_run(back(school_kit, fri), ${C2}, alex), строка «13:42–13:58 … [правка ${C2}]»`, c2.code === 0 && holds(root, [`carry_run(back(school_kit, fri), ${C2}, alex)`]) === '1' && new RegExp(`13:42–13:58  ВЕЗЁТ kit: школа → дом  \\[правка ${C2}\\]`).test((await spat(root, 'robin', ['show', 'fri'], at(12))).out), c2.out);
+  g.code(`robin retract ${C2}`, await spat(root, 'robin', ['retract', C2], at(13)), 0);
   // PLANTED (B2): the carrier is in a block of their own — a WARNING after «применено», not a refusal; the carry acts
   const w = await spat(root, 'alex', ['edit', 'kit забираю я пн 14:00'], at(6));
   g.check('alex: «kit забираю я пн 14:00» → 0; первая строка «применено: alex везёт kit пн 14:00», затем «!! alex 14:00 везёт во время работа (день) (пн)»',
     w.code === 0 && /^применено: alex везёт kit пн 14:00/.test(w.out) && /\n  !! alex 14:00 везёт во время работа \(день\) \(пн\)/.test(w.out), w.out);
   const W = idOf(w);
-  g.check('show mon: та же строка «!!» среди проблем дня и ВЕЗЁТ под alex; run(back(school_kit, mon)) нет', (await spat(root, 'alex', ['show', 'mon'], at(7))).out.replace(/\n/g, ' ').match(/!! alex 14:00 везёт во время работа \(день\) \(пн\).*ВЕЗЁТ kit: школа → дом/) !== null && rowsOf(root, 'run(back(school_kit, mon), kit, F, T, mon, K, At)') === 0);
+  g.check(`show mon: та же строка «!!» среди проблем дня, «!!» ровно один раз в ответе edit; ВЕЗЁТ kit под alex [правка ${W}] (хоп школа → физио взят по границе блока 14:00; robin по 15:00 — вторая строка того же перегона)`,
+    /!! alex 14:00 везёт во время работа \(день\) \(пн\)/.test((await spat(root, 'alex', ['show', 'mon'], at(7))).out) && (w.out.match(/!! alex 14:00 везёт/g) ?? []).length === 1
+    && holds(root, [`carry_run(hop(school_kit, music, mon), ${W}, alex)`, 'carry_run(hop(school_kit, music, mon), e_kitmusicc, robin)']) === '11');
   // the fixture: alex's thu carry inside work_pm, and a carry with no leg near it
-  g.check('фикстура: carry_during(e_kitthu, alex, thu, 840, work_pm); carry_idle(e_nicothu, nico, thu, 1020) — садик кончился в 13:30, вне окна; e_nicopick (robin, nico 13:30 — её же pickup с nico): не clash; defect(thu, carrier_busy, e_kitthu); хоп ср school → club погашен e_kitwed на отправлении, хоп пн school → music — e_kitmusicc на прибытии',
-    holds(root, ['carry_during(e_kitthu, alex, thu, 840, work_pm)', 'carry_idle(e_nicothu, nico, thu, 1020)', 'carry_during(e_nicopick, robin, thu, 810, pickup)', 'defect(thu, carrier_busy, e_kitthu)', 'run(hop(school_kit, club, wed), kit, P1, P2, wed, K, At)', 'run(hop(school_kit, music, mon), kit, P1, P2, mon, K, At)', 'carry_to(e_kitmusicc, kit, mon, physio, 900)', 'carry_from(e_kitwed, kit, wed, school, 840)']) === '11010011');
-  const idle = await spat(root, 'robin', ['edit', 'везёт alex nico ср 11:00'], at(8));
-  g.check('robin: «везёт alex nico ср 11:00» — перегона около 11:00 нет: 0 и строка «!! у nico ср около 11:00 перегона нет — правка e_… ничего не меняет»', idle.code === 0 && /!! у nico ср около 11:00 перегона нет — правка e_[0-9a-f]+ ничего не меняет/.test(idle.out), idle.out);
+  g.check('фикстура: carry_during(e_kitthu, alex, thu, 840, work_pm); carry_idle(e_nicothu) — садик кончился в 13:30, вне окна; e_nicopick (robin, nico 13:30 — её же pickup с nico): не clash и без перегона (блок with уже отвечает); defect(thu, carrier_busy, e_kitthu); carry_run: back(thu)←e_kitthu по автобусному окну, go(tue)←e_kitgo по прибытию, hop(wed)←e_kitwed по границе блока, hop(mon)←e_kitmusicc по моменту; взятые хопы без дороги — run_ok, «некому везти» их нет',
+    holds(root, ['carry_during(e_kitthu, alex, thu, 840, work_pm)', 'carry_idle(e_nicothu, nico, thu, 1020)', 'carry_during(e_nicopick, robin, thu, 810, pickup)', 'carry_idle(e_nicopick, nico, thu, 810)', 'defect(thu, carrier_busy, e_kitthu)',
+      'carry_run(back(school_kit, thu), e_kitthu, alex)', 'carry_run(go(school_kit, tue), e_kitgo, robin)', 'carry_run(hop(school_kit, club, wed), e_kitwed, robin)', 'carry_run(hop(school_kit, music, mon), e_kitmusicc, robin)', 'run_ok(hop(school_kit, club, wed))', 'run_stuck(hop(school_kit, club, wed))']) === '11011111110');
+  // the top-level verb with the phrase as ONE argument (the shim's shape) — measured on the stand: the phrase was read as the child's name
+  const idle = await spat(root, 'robin', ['carry', 'везёт alex nico ср 11:00'], at(8));
+  g.check('robin: spat carry «везёт alex nico ср 11:00» одним аргументом — перегона около 11:00 нет: 0 и строка «!! у nico ср около 11:00 перегона нет — правка e_… ничего не меняет» (ровно одна)', idle.code === 0 && (idle.out.match(/!! у nico ср около 11:00 перегона нет — правка e_[0-9a-f]+ ничего не меняет/g) ?? []).length === 1, idle.out);
   // the grammar in Russian: the accusative of a name the family's book gave the child
   g.code('robin: rule add ru_name(kit, "Кит")', await spat(root, 'robin', ['rule', 'add', 'ru_name(kit, "Кит").'], at(9)), 0);
   const ru = await spat(root, 'robin', ['edit', 'Кита забираю я пт 13:20'], at(10));
@@ -94,7 +105,7 @@ async function carry(): Promise<Group> {
   g.code('carry alex fri 13:20 robin (не ребёнок)', inproc(asRobin(root), (s) => verb(s, 'edit', ['carry alex fri 13:20 robin'])), 2);
   g.code('carry kit fri 25:00 alex', inproc(asRobin(root), (s) => verb(s, 'edit', ['carry kit fri 25:00 alex'])), 2);
   g.code('carry kit fri 13:20 (без кого)', inproc(asRobin(root), (s) => verb(s, 'edit', ['carry kit fri 13:20'])), 2);
-  g.check(`книга robin: e_carry ровно 8 (фикстура ×5, ${C}, ср 11:00, Кита); alex: 4 (фикстура ×3, ${W})`, sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'e_carry'")[0].n === 8 && sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_alex' AND pred = 'e_carry'")[0].n === 4);
+  g.check(`книга robin: e_carry ровно 9 (фикстура ×5, ${C}, ${C2}, ср 11:00, Кита); alex: 4 (фикстура ×3, ${W})`, sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_robin' AND pred = 'e_carry'")[0].n === 9 && sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'p_alex' AND pred = 'e_carry'")[0].n === 4);
   return g;
 }
 
@@ -160,6 +171,9 @@ async function applied(): Promise<Group> {
   g.check('warnings --format tg: заголовки дней «*Чт 03.09*», под ними строки «!! …», ни одной длиннее 120, дней без проблем нет', wg.code === 0 && /\*Чт 03\.09\*\n!! не покрыт/.test(wg.out) && !/\*Вс/.test(wg.out) && Math.max(...wg.out.split('\n').map((l) => l.length)) <= 120, wg.out.split('\n').slice(0, 3).join(' | '));
   g.check('warnings завтра (пн 07.09 под SPAT_NOW вс 06.09, неделя w0907) → «пн (неделя w0907): …»', /^пн \(неделя w0907\): /.test((await spat(root, 'robin', ['warnings', 'завтра'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' })).out));
   g.code('warnings funday', inproc(asRobin(root), (s) => verb(s, 'warnings', ['funday'])), 2);
+  // whynot/why/relax take names, not atoms — measured on the stand: «whynot Кит ср 18:00» was code 1 «unexpected character»
+  const wn = await spat(root, 'robin', ['whynot', 'Кит', 'ср', '18:00'], at(11));
+  g.check('whynot Кит ср 18:00 (имени в мире нет) → 2 «мир такого не знает», не 1; whynot kit чт 18:00 → 0 «НЕ ПОКРЫТ»; why обед → 0; whynot kit чт 25:00 → 2', wn.code === 2 && /мир такого не знает/.test(wn.out) && (await spat(root, 'robin', ['whynot', 'kit', 'чт', '18:00'], at(12))).out.includes('НЕ ПОКРЫТ') && (await spat(root, 'robin', ['why', 'обед'], at(13))).code === 0 && (await spat(root, 'robin', ['whynot', 'kit', 'чт', '25:00'], at(14))).code === 2, wn.out);
   // maybe apply is an edit too: applied, not proposed
   const m = await spat(root, 'robin', ['maybe', 'add errand4 thu 20:30-21:00 robin shop'], at(9));
   const M = /гипотеза (m_[0-9a-f]+)/.exec(m.out)?.[1] ?? '';

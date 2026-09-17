@@ -7,7 +7,7 @@ import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, pickedTrips, ru, sayConstraint, table, whoWasBusy } from './spat.ts';
 import { SpatError, type Store } from './store.ts';
 import { hhLines } from './rules.ts';
-import { carries, carryWarns, noted, notes } from './notes.ts';
+import { carryWarns, noted, notes } from './notes.ts';
 
 /** A day — or the whole week when `day` is undefined — problems first:
  *  holes, chains with no slack, late arrivals; then the grid by person. */
@@ -47,8 +47,7 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
     // the secretary's lines (notes.ts): a note under the day, a note or a handed-over leg under the person
     out.push(...notes(r, d, 'all').map((n) => `  ${n}`));
     const by = index(bs, (b) => b.who);
-    const mine = carries(r, d);
-    for (const who of [...new Set([...by.keys(), ...mine.map((c) => c.who), ...noted(r, d)])].sort()) {
+    for (const who of [...new Set([...by.keys(), ...trips.filter((t) => t.day === d).map((t) => t.who), ...noted(r, d)])].sort()) {
       out.push(`  ${ru(who)}`, ...notes(r, d, who).map((n) => `    ${n}`));
       const lines = (by.get(who) ?? []).map((b) => ({
         at: b.from,
@@ -57,9 +56,8 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
           + (/^[emh]_/.test(b.c) ? `  [правка ${b.c}]` : ''),
       }));
       for (const t of trips.filter((x) => x.day === d && x.who === who)) {
-        lines.push({ at: t.dep, text: `    ${hhmm(t.dep)}–${hhmm(t.ret)}  ВЕЗЁТ ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait}м)` : ''}` });
+        lines.push({ at: t.dep, text: `    ${t.dep === t.ret ? `${hhmm(t.dep)}      ` : `${hhmm(t.dep)}–${hhmm(t.ret)}`}  ВЕЗЁТ ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait}м)` : ''}${t.carry ? `  [правка ${t.carry}]` : ''}` });
       }
-      for (const c of mine.filter((x) => x.who === who)) lines.push({ at: c.at, text: `    ${hhmm(c.at)}        ВЕЗЁТ ${ru(c.child)}: ${ru(c.from)} → ${ru(c.to)}  [правка ${c.id}]` });
       for (const l of lines.sort((a, b) => a.at - b.at || (a.text < b.text ? -1 : 1))) out.push(l.text);
     }
   }

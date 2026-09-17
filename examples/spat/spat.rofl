@@ -402,12 +402,10 @@ run(go(Ev, D), Ch, B, Pl, D, arrive_by, Arr) :-
 run(back(Ev, D), Ch, Pl, B, D, depart_at, Lv) :-
     span(_, Ev, Ch, Pl, D, _, Lv), person(Ch, child), base(B), Pl != B,
     not has_next(Ch, D, Ev), not carried_lv(Ch, D, Pl, Lv).
--- a hop is answered at either end: somebody meets the child where the next
--- block starts, or somebody takes them from where the last one ended
 run(hop(E1, E2, D), Ch, P1, P2, D, arrive_by, Arr) :-
     adjacent(Ch, D, E1, E2), person(Ch, child),
-    span(_, E1, Ch, P1, D, _, Lv), span(_, E2, Ch, P2, D, Arr, _), P1 != P2,
-    not carried_at(Ch, D, P2, Arr), not carried_lv(Ch, D, P1, Lv).
+    span(_, E1, Ch, P1, D, _, _), span(_, E2, Ch, P2, D, Arr, _), P1 != P2,
+    not carried_at(Ch, D, P2, Arr).
 
 -- The ways a run could happen. `attempt` is shape only; what kills one is
 -- decided next, so the answer is a NAMED CONSTRAINT and not a missing row.

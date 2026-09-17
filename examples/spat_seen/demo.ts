@@ -65,14 +65,16 @@ const TG_THU = [
   '  — alex: c_acme (внешнее); няня: не в эти часы; nextdoor: не в эти часы; robin: c_swim (наше)',
   '!! alex 14:00 везёт во время работа (день) (чт)',
   '!! у nico чт около 17:00 перегона нет — правка e_nicothu ничего не меняет',
-  '', '*alex*', '✎ ноутбук в офис', '• 07:30–08:00 отвезти в школу (с kit)', '• 08:10–08:30 отвезти в садик (с nico)', '• 09:00–13:00 работа (утро)', '• 14:00 везёт kit: школа → дом [правка e_kitthu]', '• 14:00–16:00 работа (день)', '• 18:00–20:30 acme (офис)',
+  '!! у nico чт около 13:30 перегона нет — правка e_nicopick ничего не меняет',
+  '', '*alex*', '✎ ноутбук в офис', '• 07:30–08:00 отвезти в школу (с kit)', '• 08:10–08:30 отвезти в садик (с nico)', '• 09:00–13:00 работа (утро)', '• 14:00–14:30 везёт kit: школа → дом [правка e_kitthu]', '• 14:00–16:00 работа (день)', '• 18:00–20:30 acme (офис)',
   '', '*kit*', '• 08:00–14:00 school_kit (школа)', '', '*nico*', '• 08:30–13:30 sadik_nico (садик)',
-  '', '*robin*', '• 13:25–13:50 забор детей (садик) (с nico)', '• 13:30 везёт nico: садик → дом [правка e_nicopick]', '• 14:15–14:45 обед (с kit, nico)', '• 17:00–18:00 плавание (бассейн)',
+  '', '*robin*', '• 13:25–13:50 забор детей (садик) (с nico)', '• 14:15–14:45 обед (с kit, nico)', '• 17:00–18:00 плавание (бассейн)',
 ].join('\n');
 const TG_WEEK = [
   '*Неделя w0831* (31.08–06.09)', 'Пн — !! без запаса: robin физио → забор детей, 0 мин', 'Вт — сходится', 'Ср — сходится',
   'Чт — !! 2 дыры: kit 17:40–18:20, nico 17:40–18:20; alex 14:00 везёт во время работа (день) (чт);',
-  '  у nico чт около 17:00 перегона нет — правка e_nicothu ничего не меняет', 'Пт — !! без запаса: robin физио → забор детей, 0 мин',
+  '  у nico чт около 17:00 перегона нет — правка e_nicothu ничего не меняет;',
+  '  у nico чт около 13:30 перегона нет — правка e_nicopick ничего не меняет', 'Пт — !! без запаса: robin физио → забор детей, 0 мин',
   'Сб — сходится', 'Вс — сходится', '', 'Подробно: show <день>',
 ].join('\n');
 async function phone(): Promise<Group> {
@@ -80,7 +82,7 @@ async function phone(): Promise<Group> {
   const root = fresh();
   // the golden text, held here: a renderer change is a diff a person reads, not a hash that moved
   const day = inproc(asRobin(root), (s) => { console.log(tgDay(s.r, 'thu', 'w0831')); return 0; });
-  g.check('tgDay(thu) — дословно как ожидается (27 строк, без выравнивания пробелами кроме отступа причин)', day.out === TG_THU && !/[^\n ] {2,}/.test(day.out), day.out);
+  g.check('tgDay(thu) — дословно как ожидается (27 строк — S3d: окно взятого перегона как у решателя «14:00–14:30», e_nicopick без перегона; без выравнивания пробелами кроме отступа причин)', day.out === TG_THU && !/[^\n ] {2,}/.test(day.out), day.out);
   // PLANTED (D): the reasons of a hole on their own line; nothing longer than 120; a name longer than that is not cut
   const longest = Math.max(...day.out.split('\n').map((l) => l.length));
   g.check(`ни одной строки длиннее 120 (самая длинная ${longest}); причины дыры — второй строкой «  — alex: …», не в строке «!! не покрыт»`,
@@ -96,7 +98,7 @@ async function phone(): Promise<Group> {
   g.check('show thu --format tg = tgDay(thu)', cli.code === 0 && cli.out === `${TG_THU}\n`, cli.out);
   const tm = await spat(root, 'robin', ['tomorrow', '--format', 'tg'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
   g.check('tomorrow --format tg (вс 06.09): «*Пн 07.09*» под неделей w0907, ≤ 25 строк', /^\*Пн 07\.09\* — /.test(tm.out) && tm.out.split('\n').length <= 25, tm.out.split('\n')[0]);
-  g.check('show week --format tg = tgWeek (11 строк, не 87)', (await spat(root, 'robin', ['show', 'week', '--format', 'tg'])).out === `${TG_WEEK}\n`);
+  g.check('show week --format tg = tgWeek (12 строк, не 87)', (await spat(root, 'robin', ['show', 'week', '--format', 'tg'])).out === `${TG_WEEK}\n`);
   const term = await spat(root, 'robin', ['show', 'thu']);
   g.check('без флага — терминальная сетка как была (колонки, ВЕЗЁТ/НЕ ПОКРЫТ заглавными)', /^чт \(неделя w0831\)\n  !! НЕ ПОКРЫТ чт 17:40–18:20  kit/.test(term.out) && /    07:30–08:00  отвезти в школу    школа      \+ kit/.test(term.out), term.out.split('\n').slice(0, 2).join(' | '));
   // the broken day of an edit under --format tg goes through the same lines — after «применено» (16.09), so the hole grows to 19:00

@@ -261,29 +261,36 @@ skipped(E, Ev, W, D) :- e_unusual[L](E, Ev, Spec), acts(E), current(W),
 --      the person who said it; the world's line on the same day does not act.
 present_on(E, P, D, F, T) :- e_avail[L](E, P, D, F, T), acts(E), edit_week(E, W), current(W), day(D, _).
 
--- for: CARRY — the leg of the child's day that begins within a quarter of an
---      hour of At is Who's: no `run` is derived for it (spat.rofl §6 reads
---      `carried_at` for an arrival — at a place or back home after a hop — and
---      `carried_lv` for a departure from a place), so nobody else is assigned,
---      and the grid shows Who going. The world's `with` blocks are untouched —
---      the run they already answer for stays theirs.
+-- for: CARRY — a run of the child's day is Who's. The run stays a run (its
+--      ways, its `no_way`, its backup count are the world's questions); what
+--      the line changes is WHO the grid prints, and a run taken this way is
+--      not the solver's to hand out. THE TIME IS THE ONE THE PERSON SEES —
+--      measured on the stand 2026-09-16: the grid said «13:45–14:05 ВЕЗЁТ …»
+--      for a school that ends 13:25, and `carry … 13:45` matched nothing. So a
+--      carry names a run when its time is within a quarter of an hour of the
+--      run's own moment, of the block boundary the run leaves from, or of the
+--      window of any way the grid could print (`attempt` departure–return).
 carry(E, Ch, D, At, Who) :- e_carry[L](E, Ch, D, At, Who), acts(E), edit_week(E, W), current(W), day(D, _).
-carry_to(E, Ch, D, Pl, Arr)  :- carry(E, Ch, D, At, _), span(_, _, Ch, Pl, D, Arr, _),
-                                Lo is At - 15, Arr >= Lo, Hi is At + 15, Arr <= Hi.
-carry_from(E, Ch, D, Pl, Lv) :- carry(E, Ch, D, At, _), span(_, _, Ch, Pl, D, _, Lv),
-                                Lo is At - 15, Lv >= Lo, Hi is At + 15, Lv <= Hi.
-carried_at(Ch, D, Pl, Arr) :- carry_to(_, Ch, D, Pl, Arr).
-carried_lv(Ch, D, Pl, Lv)  :- carry_from(_, Ch, D, Pl, Lv).
+near(At, X) :- carry(_, _, _, At, _), run(_, _, _, _, _, _, X), Lo is At - 15, X >= Lo, Hi is At + 15, X <= Hi.
+near(At, X) :- carry(_, _, _, At, _), span(_, _, _, _, _, _, X), Lo is At - 15, X >= Lo, Hi is At + 15, X <= Hi.
+carry_run(T, E, Who) :- carry(E, Ch, D, At, Who), run(T, Ch, _, _, D, _, X), near(At, X).
+carry_run(T, E, Who) :- carry(E, Ch, D, At, Who), run(T, Ch, From, _, D, _, _), base(B), From != B,
+                        span(_, _, Ch, From, D, _, Lv), near(At, Lv).
+carry_run(T, E, Who) :- carry(E, Ch, D, At, Who), run(T, Ch, _, _, D, _, _),
+                        attempt(T, _, _, D, Dep, Ret), Lo is Dep - 15, At >= Lo, Hi is Ret + 15, At <= Hi.
+-- for: a person who said they would is a way: a run somebody took is not
+--      «некому везти», whatever the roads the world knows (`run_stuck` reads
+--      `run_ok`, spat.rofl §6); the grid prints them at the run's moment
+run_ok(T) :- carry_run(T, _, _).
 -- for: WHAT A CARRY WARNS OF, never refuses: the carrier is inside a block of
 --      their own at that moment (a block that already has the child in it is
---      the same errand, not a clash); or no leg of the child's day begins near
---      At, so the line changes nothing. The clash is a defect of the day, by
---      name, so an edit that brings one is a «ломает» line like any other.
+--      the same errand, not a clash); or no run of the child's day is near At,
+--      so the line changes nothing. The clash is a defect of the day, by name,
+--      so an edit that brings one is a «ломает» line like any other.
 carry_during(E, Who, D, At, Ev) :- carry(E, Ch, D, At, Who), span(_, Ev, Who, _, D, F, T),
                                    F <= At, At < T, not with(Ev, Ch).
 defect(D, carrier_busy, E)      :- carry_during(E, _, D, _, _).
-carry_leg(E)                    :- carry_to(E, _, _, _, _).
-carry_leg(E)                    :- carry_from(E, _, _, _, _).
+carry_leg(E)                    :- carry_run(_, E, _).
 carry_idle(E, Ch, D, At)        :- carry(E, Ch, D, At, _), not carry_leg(E).
 
 -- for: NOTE — a line under a day, or under one person of it, printed by

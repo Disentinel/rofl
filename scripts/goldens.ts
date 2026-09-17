@@ -33,7 +33,8 @@ import { parseProgram } from '../src/parser.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execFileSync, spawnSync } from 'node:child_process';
+import * as os from 'node:os';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -439,18 +440,47 @@ export function demos(): string[] {
     .filter((p) => fs.existsSync(p));
 }
 
-export function answerDemo(file: string): { hash: string; exit: number; lines: number } {
-  let out = ''; let exit = 0;
-  try {
-    out = execFileSync(process.execPath, ['--experimental-strip-types', file],
-      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120_000 });
-  } catch (e) {
-    const err = e as { status?: number; stdout?: string; stderr?: string };
-    exit = err.status ?? -1;
-    out = (err.stdout ?? '') + (err.stderr ?? '');
-  }
-  const masked = maskTimings(out);
-  return { hash: digest(masked), exit, lines: masked.split('\n').length };
+// THE DEMOS RUN A FEW AT A TIME. One after another they took 558–619 s on a
+// four-core laptop shared with other agents, and the largest of them (spat,
+// 103 s alone) was killed by the 120 s wall under load — a demo that is KILLED
+// is a golden that moved, and once the bless recorded a killed run as the
+// expectation (2026-09-16, spat_edits: exit -1, 3 lines). So: `JOBS` demos at
+// once, at most four, and a wall of 240 s each, which a demo reaches only by
+// hanging — a demo that does is killed, its exit is -1, and the run is red.
+export type DemoAnswer = { hash: string; exit: number; lines: number; ms: number };
+export const DEMO_TIMEOUT_MS = 240_000;
+export const JOBS = Math.max(1, Math.min(4, os.availableParallelism()));
+export function answerDemo(file: string): Promise<DemoAnswer> {
+  return new Promise((resolve) => {
+    const p = spawn(process.execPath, ['--experimental-strip-types', file], { stdio: ['ignore', 'pipe', 'pipe'] });
+    // stdout whole, then stderr whole — never as the chunks arrive: the interleaving of two pipes is not a
+    // function of the tree, and the first parallel run hashed six spat demos differently from their bless
+    // on exactly that (2026-09-16), the line counts equal, the SQLite warning and the «N s» line wandering
+    let out = ''; let err = ''; let killed = false; const t0 = Date.now();
+    p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
+    const wall = setTimeout(() => { killed = true; p.kill('SIGKILL'); }, DEMO_TIMEOUT_MS);
+    p.on('close', (code) => {
+      clearTimeout(wall);
+      const masked = maskTimings(out + err + (killed ? `\n[killed: ${DEMO_TIMEOUT_MS / 1000} s wall]` : ''));
+      resolve({ hash: digest(masked), exit: killed ? -1 : code ?? -1, lines: masked.split('\n').length, ms: Date.now() - t0 });
+    });
+  });
+}
+/** A DEMO THAT SPAWNS IS ALREADY PARALLEL. The spat demos run four groups at once, each group a chain of
+ *  `spat` child processes, so one of them fills the machine by itself; four of them at once took every one
+ *  of them past the 240 s wall (measured 2026-09-16: load average 31, five demos killed, and the bless
+ *  recorded the kills). A demo's weight is the whole machine when it spawns (it imports demolib), one
+ *  slot otherwise; a demo starts when its weight fits, heavy ones first so the light ones fill in after. */
+const weight = (file: string): number => (fs.readFileSync(file, 'utf8').includes('demolib') ? JOBS : 1);
+/** Every demo answered, `JOBS` slots at a time by weight; the result keeps the order of `files`. */
+export async function answerDemos(files: string[]): Promise<Map<string, DemoAnswer>> {
+  const answers = new Map<string, DemoAnswer>();
+  const queue = files.map((f) => ({ f, w: weight(f) })).sort((a, b) => b.w - a.w);
+  let free = JOBS; const waiting: (() => void)[] = [];
+  const take = async (w: number): Promise<void> => { while (free < w) await new Promise<void>((r) => waiting.push(r)); free -= w; };
+  const give = (w: number): void => { free += w; for (const r of waiting.splice(0)) r(); };
+  await Promise.all(queue.map(async ({ f, w }) => { await take(w); try { answers.set(f, await answerDemo(f)); } finally { give(w); } }));
+  return new Map(files.map((f) => [f, answers.get(f)!]));
 }
 
 // --------------------------------------------------------------- the pack
@@ -525,7 +555,7 @@ if (isMain) {
     // take seven seconds, and a bless that always paid for both would be run
     // less often, which is the way a golden goes stale.
     hostRows = process.argv.includes('--hosts')
-      ? demos().map((f) => [path.basename(path.dirname(f)), answerDemo(f)] as [string, { hash: string; exit: number; lines: number }])
+      ? [...(await answerDemos(demos()))].map(([f, a]) => [path.basename(path.dirname(f)), a] as [string, DemoAnswer])
       : [...hostsBefore];
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
     fs.writeFileSync(GOLDEN, render(rows));
@@ -556,16 +586,18 @@ if (isMain) {
   if (process.argv.includes('--hosts')) {
     const g = parseHosts(); const t = Date.now();
     let ok = 0; const bad: string[] = [];
-    for (const f of demos()) {
+    const answered = await answerDemos(demos());
+    for (const [f, a] of answered) {
       const n = path.basename(path.dirname(f));
       const e = g.get(n);
-      const a = answerDemo(f);
-      if (!e) { bad.push(`${n}: no golden — bless with \`npm run bless -- --hosts\``); continue; }
+      if (!e) { bad.push(`${n}: no golden — bless with \`npm run bless -- --hosts\` (exit ${a.exit}, ${(a.ms / 1000).toFixed(0)} s${a.exit === -1 ? `, killed at the ${DEMO_TIMEOUT_MS / 1000} s wall` : ''})`); continue; }
       if (e.hash === a.hash) { ok++; continue; }
-      bad.push(`${n.padEnd(10)} exit ${e.exit}->${a.exit}, ${e.lines}->${a.lines} lines`);
+      bad.push(`${n.padEnd(10)} exit ${e.exit}->${a.exit}, ${e.lines}->${a.lines} lines${a.exit === -1 ? ` (killed at ${DEMO_TIMEOUT_MS / 1000} s)` : ''}`);
     }
     for (const b of bad) console.log(`FAIL ${b}`);
-    console.log(`\n${ok}/${demos().length} demos, one engine (they are TypeScript), ${((Date.now() - t) / 1000).toFixed(0)} s`);
+    // the slowest five, so a demo creeping towards the wall is seen before it is killed
+    const slow = [...answered].sort((a, b) => b[1].ms - a[1].ms).slice(0, 5).map(([f, a]) => `${path.basename(path.dirname(f))} ${(a.ms / 1000).toFixed(0)} s`);
+    console.log(`\n${ok}/${demos().length} demos, one engine (they are TypeScript), ${JOBS} slots, ${((Date.now() - t) / 1000).toFixed(0)} s; slowest: ${slow.join(', ')}`);
     process.exit(bad.length === 0 ? 0 : 1);
   }
 

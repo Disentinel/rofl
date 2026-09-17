@@ -17,7 +17,7 @@ import { problems, tgDay, tgWeek } from './tg.ts';
 import { run as maybe } from './maybe.ts';
 import { run as rule } from './rules.ts';
 import { bookPlaces, line, slug, words } from './places.ts';
-import { GRAMMAR as SECRETARY, VERBS as SEC_VERB, carryWarns, parseSecretary } from './notes.ts';
+import { GRAMMAR as SECRETARY, VERBS as SEC_VERB, carryWarns, onceEach, parseSecretary } from './notes.ts';
 import { renderWarnings } from './tomorrow.ts';
 import { tgWarnings } from './tg.ts';
 
@@ -56,9 +56,7 @@ export function names(r: Rofl): Map<string, string> {
   return m;
 }
 const ATOM = /^[a-z][a-z0-9_]*$/;
-const bad = (what: string): never => {
-  throw new SpatError(2, `не разобрал: ${what}\n\nДопустимо:\n${GRAMMAR}`);
-};
+const bad = (what: string): never => { throw new SpatError(2, `не разобрал: ${what}\n\nДопустимо:\n${GRAMMAR}`); };
 
 
 /** `entries`: the book entries a skip/move of an ADDED block takes back — the schedule as the human
@@ -265,11 +263,15 @@ export function commit(s: Store, id: string, clauses: Clause[], week: string, e:
   // `confirm` — for what the model chose by itself (a place, a time), not for what a person said.
   const ord = dayOrder(s.r);
   const on = table(s.r, 'breaks_on', 'E, D, R').filter((x) => x.E === id).sort((a, b) => ord.get(a.D)! - ord.get(b.D)!);
+  // one source, each «!!» once (notes.ts onceEach): the day's problems already carry this entry's own carry lines
   const broken = (): void => {
+    const L: string[] = [];
     for (const d of [...new Set(on.map((x) => x.D))]) {
-      console.log(`  ломает ${ru(d)}: ${on.filter((x) => x.D === d).map((x) => x.R).join(', ')}`);
-      console.log(s.fmt === 'tg' ? problems(s.r, d).join('\n') : renderDay(s.r, d, `  как будет ${ru(d)}:`, false));
+      L.push(`  ломает ${ru(d)}: ${on.filter((x) => x.D === d).map((x) => x.R).join(', ')}`);
+      L.push(...(s.fmt === 'tg' ? problems(s.r, d) : [renderDay(s.r, d, `  как будет ${ru(d)}:`, false)]).join('\n').split('\n'));
     }
+    L.push(...carryWarns(s.r, undefined, id).map((l) => (s.fmt === 'tg' ? l : `  ${l}`)));
+    for (const l of onceEach(L)) console.log(l);
   };
   if (v.breaks.length > 0 && s.propose) {
     put(s, book, [...clauses, ...tagged(book.book, [`proposed(${id}).`])], text);
@@ -281,7 +283,6 @@ export function commit(s: Store, id: string, clauses: Clause[], week: string, e:
   put(s, book, clauses, text);
   console.log(`применено: ${e.summary}${e.on ? ` (${e.on.ymd})` : ''} (${id}) — ${e.every ? 'каждую неделю' : `неделя ${week}`}${warn}`);
   broken();
-  for (const l of carryWarns(s.r, undefined, id)) console.log(s.fmt === 'tg' ? l : `  ${l}`);
   return 0;
 }
 
@@ -368,7 +369,10 @@ export function run(s: Store, cmd: string, rest: string[]): number {
   switch (cmd) {
     case 'whoami': return whoami(s);
     case 'edit': return edit(s, rest.join(' '));
-    case 'avail': case 'carry': case 'note': return edit(s, line([cmd, ...rest]));
+    case 'avail': case 'carry': case 'note': {   // the phrase may arrive whole in one argument, or already start with its verb
+      const text = rest.length === 1 && /\s/.test(rest[0]) ? rest[0] : line(rest);
+      return edit(s, SEC_VERB[(text.split(/\s+/)[0] ?? '').toLowerCase()] ? text : `${cmd} ${text}`);
+    }
     case 'warnings': {
       // every «!!» line of the week — or of one day — as one list, for the review step of the bot
       const d = rest[0] === undefined ? undefined : dateToken(s.env, rest[0]) ? dated(s, rest[0]) : { day: names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`), week: s.week };

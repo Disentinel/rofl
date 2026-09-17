@@ -75,17 +75,8 @@ export function parseSecretary(r: Rofl, verb: string, w: string[], raw: string, 
 }
 
 // ---------------------------------------------------------------------------
-// what the renderers print — the same rows for the terminal and the phone
+// what the renderers print — the same rows for the terminal and the phone; the carried run itself is a Trip (spat.ts pickedTrips)
 
-export interface Carry { id: string; who: string; child: string; day: string; at: number; from: string; to: string; }
-/** The legs a book handed to somebody: «robin везёт kit: школа → дом 14:00». */
-export function carries(r: Rofl, day?: string): Carry[] {
-  const base = table(r, 'base', 'B')[0]?.B ?? 'home';
-  const from = new Map(table(r, 'carry_from', 'E, Ch, D, Pl, T').map((x) => [x.E, x.Pl]));
-  const to = new Map(table(r, 'carry_to', 'E, Ch, D, Pl, T').map((x) => [x.E, x.Pl]));
-  return table(r, 'carry', 'E, Ch, D, At, W').filter((x) => (day === undefined || x.D === day) && (from.has(x.E) || to.has(x.E)))
-    .map((x) => ({ id: x.E, who: x.W, child: x.Ch, day: x.D, at: Number(x.At), from: from.get(x.E) ?? base, to: to.get(x.E) ?? base }));
-}
 /** The «!!» lines of a carry — the carrier in a block of their own, a carry with no leg — for one day or the week;
  *  `spat edit` prints the just-written entry's own lines after «применено». */
 export function carryWarns(r: Rofl, day?: string, id?: string): string[] {
@@ -98,3 +89,12 @@ export const noted = (r: Rofl, day: string): string[] => table(r, 'note_on', 'E,
 /** The notes of a day: under the day (`all`) or under one person. */
 export const notes = (r: Rofl, day: string, who: string): string[] =>
   table(r, 'note_on', 'E, D, W, T').filter((x) => x.D === day && x.W === who).map((x) => `✎ ${x.T.replace(/^"|"$/g, '')}`).sort();
+/** EACH «!!» ONCE: a unit is the «!!» line and the indented reason lines under it; a unit already printed is dropped —
+ *  measured on the stand 2026-09-16: every «!!» of a carry came twice after «применено» (the day's problems, then the entry's own). */
+export function onceEach(L: string[]): string[] {
+  const seen = new Set<string>(); let keep = true;
+  return L.filter((l) => {
+    if (/^\s*!!/.test(l)) { keep = !seen.has(l.trim()); seen.add(l.trim()); } else if (!/^\s+\S/.test(l) || /^\s*(ломает|как будет)/.test(l)) keep = true;
+    return keep;
+  });
+}

@@ -668,16 +668,22 @@ edit like `sick` and `car out`, in the author's book, through the same `acts`.
   никто»); an adult has no window (2).
 - **`carry <ребёнок> <день> <время> <кто>`** (`везёт alex kit пт 13:20`, `kit
   забираю я пт 13:20`, the accusative «Кита» resolved through `ru_name`) →
-  `e_carry(E, Child, Day, At, Who)`. The leg of the child's day that begins
-  within 15 minutes of At — an arrival (`carry_to`) or a departure
-  (`carry_from`) — feeds `carried_at`/`carried_lv`, so no `run` is derived for
-  it and the grid shows «ВЕЗЁТ» under Who instead of the solver's pick; a hop
-  is now answered at either end (spat.rofl §6). What it warns of, never
+  `e_carry(E, Child, Day, At, Who)`. A run of the child's day is Who's
+  (`carry_run(T, E, Who)`): the run stays a run — its ways, its backup count,
+  its `no_way` are the world's questions — but the grid prints it under Who
+  with the window it would have printed for the solver's pick, and it is not
+  the solver's to hand out; a run somebody took is `run_ok` («некому везти»
+  is answered by a person, whatever the roads). THE TIME IS THE ONE THE PERSON
+  SEES — measured on the stand 2026-09-16: the grid said «13:45–14:05 ВЕЗЁТ …»
+  for a school ending 13:25 and `carry … 13:45` matched nothing. A carry
+  names a run when its time is within 15 minutes of the run's own moment, of
+  the block boundary the run leaves from, or of the departure–return window
+  of any way the grid could print (`attempt`). What it warns of, never
   refuses: the carrier inside a block of their own at that moment
-  (`carry_during`, a `defect(D, carrier_busy, E)` of the day — «!! alex 14:00
-  везёт во время работа (день) (пн)»), and a line with no leg near it
-  (`carry_idle`). Who may: an adult (touches the child); Who is an adult or a
-  helper of the world.
+  (`carry_during`, a `defect(D, carrier_busy, E)` — «!! alex 14:00 везёт во
+  время работа (день) (пн)»), and a line no run is near (`carry_idle`,
+  including a leg an adult's `with` block already answers). Who may: an adult
+  (touches the child); Who is an adult or a helper of the world.
 - **`note "<текст>" <день> [<кто>]`** (`заметка "торт для гостя" пт`) →
   `e_note(E, Day, Who|all, "text")`, ≤ 200 characters, no control character,
   quote or backslash (2). `note_on` is printed as «✎ текст» under the day or
@@ -792,7 +798,12 @@ edit like `sick` and `car out`, in the author's book, through the same `acts`.
   by the reflection census alone in `npm test` and by the demo's
   demand-backed check (measured: `misplaced` is the one unsafe rule the
   check names when its premise is dropped).
-- `npm run test:hosts`: `examples/spat_secretary/demo.ts`, 66 scenarios in
+- `npm run test:hosts` runs the demos by weight — one that spawns (imports
+  demolib) takes the whole machine and runs alone, the rest four at a time —
+  with a 240 s wall each (a hang is killed, exit -1, the run is red; the
+  planted `while (true)` demo proved it). The spat family is CPU-bound on four
+  cores by itself, so its sequential sum is the floor of the whole run.
+  `examples/spat_secretary/demo.ts`, 66 scenarios in
   four groups (22–25: avail with the holes closing and reopening and the
   world's window NOT acting beside the exception, carry with the trip moving
   to the named adult and the clash as a line, note under the day and the

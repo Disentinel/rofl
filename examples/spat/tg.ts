@@ -12,7 +12,7 @@
 import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, ownerOf, pickedTrips, ru, table, whoWasBusy } from './spat.ts';
 import { hhLines } from './rules.ts';
-import { carries, carryWarns, noted, notes } from './notes.ts';
+import { carryWarns, noted, notes } from './notes.ts';
 
 const DAY: Record<string, string> = { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' };
 /** «16.09» for a day of the week that starts on `start` (YYYY-MM-DD); '' without a start. */
@@ -74,8 +74,7 @@ export function tgDay(r: Rofl, day: string, week: string): string {
   const withs = index(table(r, 'with', 'E, Ch'), (x) => x.E);
   const by = index(blocks(r).filter((b) => b.day === day), (b) => b.who);
   const trips = pickedTrips(r).filter((t) => t.day === day);
-  const mine = carries(r, day);
-  for (const who of [...new Set([...by.keys(), ...trips.map((t) => t.who), ...mine.map((c) => c.who), ...noted(r, day)])].sort()) {
+  for (const who of [...new Set([...by.keys(), ...trips.map((t) => t.who), ...noted(r, day)])].sort()) {
     out.push('', `*${ru(who)}*`, ...notes(r, day, who));
     const lines = (by.get(who) ?? []).map((b) => {
       // the place only when the name does not already say it, and never the base
@@ -83,8 +82,7 @@ export function tgDay(r: Rofl, day: string, week: string): string {
       const co = (withs.get(b.ev) ?? []).map((x) => ru(x.Ch));
       return { at: b.from, text: `• ${hhmm(b.from)}–${hhmm(b.to)} ${ru(b.ev)}${place}${co.length > 0 ? ` (с ${co.join(', ')})` : ''}${/^[emh]_/.test(b.c) ? ` [правка ${b.c}]` : ''}` };
     });
-    for (const t of trips.filter((x) => x.who === who)) lines.push({ at: t.dep, text: `• ${hhmm(t.dep)}–${hhmm(t.ret)} везёт ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait} мин)` : ''}` });
-    for (const c of mine.filter((x) => x.who === who)) lines.push({ at: c.at, text: `• ${hhmm(c.at)} везёт ${ru(c.child)}: ${ru(c.from)} → ${ru(c.to)} [правка ${c.id}]` });
+    for (const t of trips.filter((x) => x.who === who)) lines.push({ at: t.dep, text: `• ${t.dep === t.ret ? hhmm(t.dep) : `${hhmm(t.dep)}–${hhmm(t.ret)}`} везёт ${t.what}${t.wait > 0 ? ` (ждёт ${t.wait} мин)` : ''}${t.carry ? ` [правка ${t.carry}]` : ''}` });
     out.push(...lines.sort((a, b) => a.at - b.at || (a.text < b.text ? -1 : 1)).map((l) => l.text));
   }
   return fold(out.join('\n'));

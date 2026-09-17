@@ -596,20 +596,30 @@ const plural = (n: number, w: string): string => `${n} ${w}${n === 1 ? '' : 's'}
 // makes a plan survive a sick day.
 export interface Trip {
   day: string; dep: number; ret: number; who: string; what: string;
-  alts: string[]; wait: number;
+  alts: string[]; wait: number; carry?: string;
 }
+/** A RUN A BOOK HANDED TO SOMEBODY (access.rofl `carry_run`) is printed under that person with the
+ *  window the grid would have printed for the solver's pick — the person named it by that window —
+ *  and with no alternatives: it is not the solver's to hand out. A run with no open way keeps its
+ *  moment as the window (dep = ret), and its no_way line stands: who is not how. */
 export function pickedTrips(r: Rofl): Trip[] {
   const need = new Set(table(r, 'needs_a_driver', 'T').map((x) => x.T));
-  const runs = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => need.has(x.T));
+  const taken = index(table(r, 'carry_run', 'T, E, W'), (x) => x.T);
+  const runs = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => need.has(x.T) || taken.has(x.T));
   const openW = new Set(table(r, 'way', 'T, W').map((x) => `${x.T}|${x.W}`));
   const att = table(r, 'attempt', 'T, W, H, D, Dep, Ret');
   const cost = table(r, 'imposes_on', 'T, Dr, Host, D, Mins');
   const mine = blocks(r);
   const out: Trip[] = [];
   for (const t of runs) {
-    const ways = att.filter((a) => a.T === t.T && a.H !== 'nobody'
+    // one line per person who took it — two books naming the same run is two lines, not a choice made here
+    for (const c of taken.get(t.T) ?? [undefined]) {
+    const ways = att.filter((a) => a.T === t.T && (a.H !== 'nobody' || c !== undefined)
       && openW.has(`${a.T}|${a.W}`));
-    if (ways.length === 0) continue;
+    if (ways.length === 0) {
+      if (c) out.push({ day: t.D, dep: Number(t.At), ret: Number(t.At), who: c.W, what: `${ru(t.Ch)}: ${ru(t.From)} → ${ru(t.To)}`, alts: [], wait: 0, carry: c.E });
+      continue;
+    }
     const waitOf = (a: Record<string, string>): number =>
       (String(a.W).startsWith('wait_meet(')
         ? Number(cost.find((c) => c.T === a.T && c.Dr === a.H)?.Mins ?? 0) : 0);
@@ -631,11 +641,12 @@ export function pickedTrips(r: Rofl): Trip[] {
       || Number(x.Dep) - Number(y.Dep) || (x.H < y.H ? -1 : 1));
     const p = ways[0];
     out.push({
-      day: t.D, dep: Number(p.Dep), ret: Number(p.Ret), who: p.H,
+      day: t.D, dep: Number(p.Dep), ret: Number(p.Ret), who: c ? c.W : p.H,
       what: `${ru(t.Ch)}: ${ru(t.From)} → ${ru(t.To)}`,
-      alts: [...new Set(ways.slice(1).map((a) => a.H))].filter((h) => h !== p.H),
-      wait: waitOf(p),
+      alts: c ? [] : [...new Set(ways.slice(1).map((a) => a.H))].filter((h) => h !== p.H),
+      wait: waitOf(p), carry: c?.E,
     });
+    }
   }
   return out;
 }
@@ -1218,12 +1229,18 @@ async function main(argv: string[]): Promise<void> {
       console.log(rs ? `    ${rs.map((x) => PLACE_WHY[x] ?? x).join('; ')}`
         : '    подходит — оно есть в списке выше.');
     }
-  } else if (cmd === 'why') {
-    console.log(why(r, rest[0]));
-  } else if (cmd === 'whynot') {
-    console.log(whynot(r, rest[0], rest[1], parseTime(rest[2])));
-  } else if (cmd === 'relax') {
-    const res = relax(r, weekFile, weekOf, rest[0], rest[1], parseTime(rest[2]));
+  } else if (cmd === 'why' || cmd === 'whynot' || cmd === 'relax') {
+    // THE ARGUMENTS ARE NAMES, NOT ATOMS: «whynot Кит ср 18:00» reached the parser as text and died with
+    // «unexpected character» (code 1) — measured on the stand 2026-09-16. A name resolves through the
+    // world as `edit` resolves it; what it does not know is code 2 with the day and the person named.
+    const N = (await import('./edits.ts')).names(r);
+    const refuse = (what: string): never => { throw Object.assign(new Error(`не разобрал: ${what}\n  ${cmd} ${cmd === 'why' ? '<блок>' : '<ребёнок> <день> <время>'} — имена как в расписании, время 18:00`), { code: 2 }); };
+    const name = (t: string | undefined, what: string): string => (t === undefined ? refuse(`${what}: не задан`) : N.get(t.toLowerCase()) ?? refuse(`${what}: '${t}' — мир такого не знает`));
+    const at = (t: string | undefined): number => { try { const m = parseTime(t ?? ''); return m < 1440 ? m : refuse(`время: '${t}'`); } catch { return refuse(`время: '${t ?? ''}' — пиши 18:00`); } };
+    if (cmd === 'why') { console.log(why(r, name(rest[0], 'блок'))); return; }
+    const [child, day, time] = [name(rest[0], 'ребёнок'), name(rest[1], 'день'), at(rest[2])];
+    if (cmd === 'whynot') { console.log(whynot(r, child, day, time)); return; }
+    const res = relax(r, weekFile, weekOf, child, day, time);
     console.log(`Что придётся уступить, чтобы закрыть ${ru(rest[0])} `
       + `${ru(rest[1])} ${rest[2]}:\n`);
     if (res.note) console.log(`  ${res.note}`);
