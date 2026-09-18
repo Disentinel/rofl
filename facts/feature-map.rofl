@@ -483,4 +483,4 @@ demo_uses("wtf", "tense:now").
 demo_uses("yak", "api:run").
 
 
--- 53 features, 26 demos, 4 checks, 5 guard rows.
+-- 53 features, 26 demos, 13 checks, 20 guard rows.
