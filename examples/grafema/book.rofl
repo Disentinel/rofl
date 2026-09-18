@@ -19,8 +19,15 @@ archetype(depends_on).        q_shape(depends_on, in).         -- what breaks if
 archetype(held_by).           q_shape(held_by, out).           -- who pays when X breaks?
 archetype(equivalent_to).     q_shape(equivalent_to, out).     -- who calls X something else?
 archetype(recorded_in).       q_shape(recorded_in, out).       -- where does X leave a trace?
+kindless(recorded_in).
 
-class(grafema, product).
+-- added round 6, the owner's decision after f_the_archetypes_never_ask_what_a_thing_is
+archetype(is_a).              q_shape(is_a, out).              -- what kind of thing is X?
+kindless(is_a).
+archetype(transforms).        q_shape(transforms, out).        -- what does X make, out of what?
+pair_valued(transforms).
+
+guessed(grafema, product).
 
 -- ======================================================================
 -- round 1 — crawl(recorded_in, grafema, out). Sources put to the question:
@@ -29,18 +36,18 @@ class(grafema, product).
 -- asked and could not be reached: the egress proxy refused the domain.
 -- ======================================================================
 
-class(src_canon, source).              -- skills/grafema-enox-canon/SKILL.md, by vadim
-class(src_repo, source).               -- github.com/Disentinel/grafema
-class(src_npm, source).                -- registry.npmjs.org/grafema and @grafema/*
-class(src_site, source).               -- grafema.dev
-class(src_vscode_marketplace, source). -- VS Code Marketplace, publisher GrafemaLabs
-class(src_zenodo, source).             -- two papers, no DOI recorded anywhere reachable
-class(src_knowledge_dir, source).      -- knowledge/ inside the repo: decisions, facts, sessions
-class(src_tracker_reg, source).        -- the issue tracker behind REG-* and RFD-* ids
-class(src_ci, source).                 -- .github/workflows, nine of them
-class(src_changelog, source).          -- CHANGELOG.md
-class(src_docs, source).               -- docs/ and _ai/research
-class(src_enox, source).               -- Enox, where the repo's own gaps say they are recorded
+guessed(src_canon, source).              -- skills/grafema-enox-canon/SKILL.md, by vadim
+guessed(src_repo, source).               -- github.com/Disentinel/grafema
+guessed(src_npm, source).                -- registry.npmjs.org/grafema and @grafema/*
+guessed(src_site, source).               -- grafema.dev
+guessed(src_vscode_marketplace, source). -- VS Code Marketplace, publisher GrafemaLabs
+guessed(src_zenodo, source).             -- two papers, no DOI recorded anywhere reachable
+guessed(src_knowledge_dir, source).      -- knowledge/ inside the repo: decisions, facts, sessions
+guessed(src_tracker_reg, source).        -- the issue tracker behind REG-* and RFD-* ids
+guessed(src_ci, source).                 -- .github/workflows, nine of them
+guessed(src_changelog, source).          -- CHANGELOG.md
+guessed(src_docs, source).               -- docs/ and _ai/research
+guessed(src_enox, source).               -- Enox, where the repo's own gaps say they are recorded
 
 edge[book](e01, recorded_in, grafema, src_repo).
 evidence(e01, src_repo, "package.json repository.url = github.com/Disentinel/grafema.git; HEAD f0ae8c8 2026-08-16").
@@ -118,14 +125,14 @@ landed(c05, 1). depth(c05, 1). classified(c05, confirmed).
 -- subsystem decomposes further when its own round comes.
 -- ======================================================================
 
-class(rfdb, component).                 class(rfdb_client, component).
-class(grafema_orchestrator, component). class(cli, component).
-class(mcp_server, component).           class(vscode_extension, component).
-class(hex_atlas, component).            class(graphql_api, component).
-class(plugins, component).              class(language_analyzers, subsystem).
-class(language_resolvers, subsystem).   class(shared_libs, subsystem).
-class(effects_db, dataset).             class(registry, dataset).
-class(native_binaries, artifact).       class(autoresearch, apparatus).
+guessed(rfdb, component).                 guessed(rfdb_client, component).
+guessed(grafema_orchestrator, component). guessed(cli, component).
+guessed(mcp_server, component).           guessed(vscode_extension, component).
+guessed(hex_atlas, component).            guessed(graphql_api, component).
+guessed(plugins, component).              guessed(language_analyzers, subsystem).
+guessed(language_resolvers, subsystem).   guessed(shared_libs, subsystem).
+guessed(effects_db, dataset).             guessed(registry, dataset).
+guessed(native_binaries, artifact).       guessed(autoresearch, apparatus).
 
 edge[book](e10, decomposes_into, grafema, rfdb).
 evidence(e10, src_repo, "packages/rfdb-server/Cargo.toml name=rfdb 'RFDB (Rega Flow Database) — high-performance disk-backed graph engine'; src/{datalog,cypher,graph,embedding,http_server.rs}").
@@ -216,11 +223,11 @@ asked(decomposes_into, grafema, out, src_npm, 2).
 -- primary text (README, CLAUDE.md), src_knowledge_dir, src_canon, src_npm.
 -- ======================================================================
 
-class(thesis_query_not_read, purpose).
-class(target_legacy_codebases, purpose).
-class(moat_no_inference, purpose).
-class(sociotechnical_context_graph, vision).
-class(paper_beyond_code, paper).
+guessed(thesis_query_not_read, purpose).
+guessed(target_legacy_codebases, purpose).
+guessed(moat_no_inference, purpose).
+guessed(sociotechnical_context_graph, vision).
+guessed(paper_beyond_code, paper).
 
 edge[book](e27, requires, thesis_query_not_read, grafema).
 evidence(e27, src_repo, "CLAUDE.md 'core thesis: AI should query the graph, not read code'; README 'AI agent queries the graph instead of reading files'").
@@ -255,11 +262,11 @@ asked(requires, grafema, in, src_npm, 3).
 -- round 4 — crawl(depends_on, ?, grafema): what breaks if it is removed.
 -- ======================================================================
 
-class(ai_agents_via_mcp, consumer).
-class(ci_gate_grafema_check, consumer).
-class(glama_listing, consumer).
-class(dogfood_workflow, process).
-class(tocs_benchmark_study, study).
+guessed(ai_agents_via_mcp, consumer).
+guessed(ci_gate_grafema_check, consumer).
+guessed(glama_listing, consumer).
+guessed(dogfood_workflow, process).
+guessed(tocs_benchmark_study, study).
 
 edge[book](e32, depends_on, ai_agents_via_mcp, grafema).
 evidence(e32, src_repo, "README 'Use with AI (MCP)': .mcp.json runs grafema-mcp; Dockerfile for the MCP server").
@@ -299,9 +306,9 @@ asked(depends_on, grafema, in, src_canon, 4).
 -- round 5 — crawl(held_by, grafema, out): who pays when it breaks.
 -- ======================================================================
 
-class(vadim_reshetnikov, person).
-class(disentinel, handle).
-class(grafemalabs, handle).
+guessed(vadim_reshetnikov, person).
+guessed(disentinel, handle).
+guessed(grafemalabs, handle).
 
 edge[book](e39, held_by, grafema, vadim_reshetnikov).
 evidence(e39, src_repo, "package.json author 'Vadim Reshetnikov'; LICENSE 'Copyright 2026 Vadim Reshetnikov'; kb decision license-fsl 'no CLA needed if sole author'").
@@ -325,8 +332,69 @@ archetype(values).  q_shape(values, out).  provisional(values, person, 5).
 edge[book](e42, values, vadim_reshetnikov, graph_superior_to_reading).
 evidence(e42, src_repo, "CLAUDE.md 'If reading code gives better results than querying Grafema — that is a product gap, not a workflow choice'").
 landed(e42, 5). depth(e42, 1). classified(e42, confirmed).
-class(graph_superior_to_reading, value).
+guessed(graph_superior_to_reading, value).
 
 asked(held_by, grafema, out, src_repo, 5).
 asked(held_by, grafema, out, src_npm, 5).
 asked(held_by, grafema, out, src_canon, 5).
+
+-- @who ontocrawler_2
+
+-- ======================================================================
+-- round 6 — crawl(is_a, grafema, out): what kind of thing is it. Asked of
+-- the sources that NAME it: package manifests, the registry, the MCP
+-- directory, the getting-started text, the canon. Each source names a
+-- different kind; none is collapsed into the others.
+-- ======================================================================
+
+edge[book](e43, is_a, grafema, code_analysis_tool).
+evidence(e43, src_npm, "description 'Graph-driven code analysis tool'").
+evidence(e43, src_repo, "packages/grafema/package.json description + keywords code-analysis, static-analysis, graph, ast, mcp; root package.json 'Grafema code analysis toolkit - monorepo'").
+landed(e43, 6). depth(e43, 2). classified(e43, confirmed).
+
+edge[book](e44, is_a, grafema, mcp_server).
+evidence(e44, src_repo, "glama.json $schema glama.ai/mcp/schemas/server.json; README badge glama.ai/mcp/servers/Disentinel/grafema; Dockerfile runs the MCP server").
+landed(e44, 6). depth(e44, 1). classified(e44, confirmed).
+
+edge[book](e45, is_a, grafema, code_graph_builder).
+evidence(e45, src_repo, "docs/getting-started.md 'Grafema builds a queryable graph of your codebase, answering questions like who calls this function'; README 'turns your codebase, infrastructure, knowledge, and workflows around it into one queryable graph'").
+landed(e45, 6). depth(e45, 1). classified(e45, confirmed).
+
+asked(is_a, grafema, out, src_repo, 6).
+asked(is_a, grafema, out, src_npm, 6).
+asked(is_a, grafema, out, src_canon, 6).
+
+-- ======================================================================
+-- round 7 — crawl(transforms, grafema, out): what it makes, out of what.
+-- ======================================================================
+
+edge[book](e46, transforms, grafema, io(codebase, code_graph)).
+evidence(e46, src_repo, "README 'turns your codebase ... into one queryable graph'; docs/cli-reference.md `grafema analyze` builds the graph; packages/cli/README 'analyze # populates the graph'").
+evidence(e46, src_npm, "'Graph-driven code analysis tool'").
+landed(e46, 7). depth(e46, 3). classified(e46, confirmed).
+
+edge[book](e47, transforms, grafema, io(question_about_code, answer_from_graph)).
+evidence(e47, src_repo, "docs/getting-started.md 'answering questions like who calls this function? or where does this data flow?'; CLI tldr/who/wtf/why; 30+ MCP tools").
+landed(e47, 7). depth(e47, 1). classified(e47, confirmed).
+
+edge[book](e48, transforms, grafema, io(code_graph, generated_docs)).
+evidence(e48, src_repo, "README 'grafema export --as docs-md | openapi-3.1 | mcp-schema | json-schema'; docs/cli-reference.md is itself such an export ('33 features exported')").
+landed(e48, 7). depth(e48, 1). classified(e48, serendipitous).
+-- the CLI reference is generated by the tool from its own graph: dogfood by construction
+
+edge[book](e49, transforms, grafema, io(guarantee_rules, ci_verdict)).
+evidence(e49, src_repo, "README 'Architectural invariants as Datalog rules; grafema check — CI gate'; packages/cli/README 'check # runs every guarantee, exits non-zero on violations'").
+landed(e49, 7). depth(e49, 1). classified(e49, confirmed).
+
+asked(transforms, grafema, out, src_repo, 7).
+asked(transforms, grafema, out, src_npm, 7).
+asked(transforms, grafema, out, src_canon, 7).
+
+-- @who vadim
+edge[canon](c06, is_a, grafema, static_analysis).
+evidence(c06, src_canon, "Graph-driven static analysis that builds a queryable graph from a codebase").
+landed(c06, 6). depth(c06, 1). classified(c06, confirmed).
+
+edge[canon](c07, transforms, grafema, io(codebase, code_graph)).
+evidence(c07, src_canon, "builds a queryable graph from a codebase").
+landed(c07, 7). depth(c07, 1). classified(c07, confirmed).

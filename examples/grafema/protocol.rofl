@@ -21,7 +21,9 @@ collects(main).
 edb(seed).              -- seed(X)                       X exists
 edb(archetype).         -- archetype(R)                  the relation vocabulary
 edb(q_shape).           -- q_shape(R, out|in)            R(X, ?) or R(?, X)
-edb(class).             -- class(X, C)
+edb(guessed).           -- guessed(X, C)                a class the executor wrote with no evidence (rounds 0-5)
+edb(kindless).          -- kindless(R)                   asked of every entity before its kind is known
+edb(pair_valued).       -- pair_valued(R)                R(X, io(In, Out)): two slots, one edge
 edb(edge).              -- edge[V](Id, R, X, Y)          one confirmed edge, in volume V
 edb(evidence).          -- evidence(Id, Source, Locator)
 edb(landed).            -- landed(Id, Round)
@@ -54,11 +56,24 @@ in_volume(Id, V)          :- edge[V](Id, _, _, _).
 -- ------------------------------------------------------------- entities
 entity(X)                 :- seed(X).
 entity(X)                 :- edge_any(_, _, X, _).
-entity(Y)                 :- edge_any(_, _, _, Y).
+entity(Y)                 :- edge_any(_, R, _, Y), not pair_valued(R).
+entity(I)                 :- consumes(_, I).
+entity(O)                 :- produces(_, O).
+consumes(X, I)            :- edge_any(_, R, X, io(I, _)), pair_valued(R).
+produces(X, O)            :- edge_any(_, R, X, io(_, O)), pair_valued(R).
+transforms(X, I, O)       :- edge_any(_, R, X, io(I, O)), pair_valued(R).
+
+-- the kind of a thing is an answer, never an input: class derives from is_a.
+-- A guessed class stands only until a kind lands, and is audited while it does.
+kinded(X)                 :- edge_any(_, is_a, X, _).
+class(X, C)               :- edge_any(_, is_a, X, C).
+class(X, C)               :- guessed(X, C), not kinded(X).
 
 appears(X, 0)             :- seed(X).
 appears(X, K)             :- edge_any(Id, _, X, _), landed(Id, K).
 appears(Y, K)             :- edge_any(Id, _, _, Y), landed(Id, K).
+appears(I, K)             :- edge_any(Id, R, _, io(I, _)), pair_valued(R), landed(Id, K).
+appears(O, K)             :- edge_any(Id, R, _, io(_, O)), pair_valued(R), landed(Id, K).
 appears_later(X, K)       :- appears(X, K), appears(X, K2), K2 < K.
 entered(X, K)             :- appears(X, K), not appears_later(X, K).
 
@@ -66,7 +81,8 @@ entered(X, K)             :- appears(X, K), not appears_later(X, K).
 provisional_any(R)        :- provisional(R, _, _).
 asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R).
 asks(C, R)                :- provisional(R, C, _), not retired(C, R).
-needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D).
+needs(gen(E, R), R, E, D) :- entity(E), kindless(R), q_shape(R, D).
+needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D), not kindless(R).
 needs(Q, R, X, D)         :- needs_ext(Q, R, X, D).
 question(gen(E, R), crawler, T) :- needs(gen(E, R), R, E, _), entered(E, T).
 question(Q, A, T)         :- question_ext(Q, A, T).
@@ -122,10 +138,10 @@ suppressed(X)             :- dead(X).
 suppressed(X)             :- under(X, B), dead(B).
 suppressed(X)             :- deferred(X).
 
-crawl(recorded_in, X, out):- obligation(_, recorded_in, X, out), not suppressed(X),
-                             not sources_exhausted(recorded_in, X, out).
-crawl(R, X, D)            :- obligation(_, R, X, D), sourced(X), not suppressed(X),
+crawl(R, X, D)            :- obligation(_, R, X, D), kindless(R), not suppressed(X),
                              not sources_exhausted(R, X, D).
+crawl(R, X, D)            :- obligation(_, R, X, D), not kindless(R), sourced(X), kinded(X),
+                             not suppressed(X), not sources_exhausted(R, X, D).
 
 escalate(R, X, D, H)      :- obligation(_, R, X, D), sources_exhausted(R, X, D), edge_any(_, held_by, X, H).
 escalate(R, X, D, nobody) :- obligation(_, R, X, D), sources_exhausted(R, X, D), not held(X).
@@ -174,13 +190,13 @@ incomplete(E, R)          :- class(E, C), signature(C, R), q_shape(R, D), not fi
 
 -- ------------------------------------------------ invariants of the protocol
 no_state[audit](Q)               :- question(Q, _, _), not answer(Q, _).
-unclassed[audit](X)              :- entity(X), not class(X, _).
+class_guessed[audit](X, C)       :- guessed(X, C), not kinded(X).
 edge_without_evidence[audit](Id) :- edge_any(Id, _, _, _), not evidence(Id, _, _).
 edge_without_round[audit](Id)    :- edge_any(Id, _, _, _), not landed(Id, _).
 edge_without_depth[audit](Id)    :- edge_any(Id, _, _, _), not depth(Id, _).
 retired_but_filled[audit](C, R)  :- retired(C, R), class(X, C), filled(R, X, _).
 alarm(no_state).
-alarm(unclassed).
+alarm(class_guessed).
 alarm(edge_without_evidence).
 alarm(edge_without_round).
 alarm(edge_without_depth).

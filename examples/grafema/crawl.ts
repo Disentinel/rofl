@@ -65,7 +65,7 @@ function audits(r: Rofl): void {
   const gates = [
     'unstratified(X)', 'malformed[audit](R)', 'breach[audit](R)', 'leak[audit](A, B)',
     'undefined_premise[audit](R, Rel)', 'unmoded[audit](R)', 'forged[audit](F)',
-    'no_state[audit](Q)', 'unclassed[audit](X)', 'edge_without_evidence[audit](I)',
+    'no_state[audit](Q)', 'class_guessed[audit](X, C)', 'edge_without_evidence[audit](I)',
     'edge_without_round[audit](I)', 'edge_without_depth[audit](I)', 'retired_but_filled[audit](C, R)',
   ];
   for (const g of gates) {
