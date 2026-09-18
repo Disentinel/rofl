@@ -398,3 +398,94 @@ landed(c06, 6). depth(c06, 1). classified(c06, confirmed).
 edge[canon](c07, transforms, grafema, io(codebase, code_graph)).
 evidence(c07, src_canon, "builds a queryable graph from a codebase").
 landed(c07, 7). depth(c07, 1). classified(c07, confirmed).
+
+-- @who ontocrawler_2
+
+-- ======================================================================
+-- round 8 — crawl(equivalent_to, grafema, out): who calls it something
+-- else. Asked of the manifests (bin names, scope), the Dockerfile, the
+-- README, glama.json.
+-- ======================================================================
+
+edge[book](e50, equivalent_to, grafema, grafema_cli_binary).
+evidence(e50, src_repo, "packages/cli/package.json bin {grafema: dist/cli.js}; packages/grafema/package.json bin {grafema, grafema-mcp}; README uses `grafema analyze|tldr|who|wtf|why|check` 17 times").
+landed(e50, 8). depth(e50, 1). classified(e50, confirmed).
+
+edge[book](e51, equivalent_to, grafema, grafema_mcp_binary).
+evidence(e51, src_repo, "packages/mcp/package.json bin {grafema-mcp}; Dockerfile 'Grafema MCP server (grafema-mcp) over stdio', image name grafema-mcp").
+landed(e51, 8). depth(e51, 1). classified(e51, confirmed).
+
+edge[book](e52, equivalent_to, grafema, grafema_npm_scope).
+evidence(e52, src_repo, "18 packages under @grafema/*; RELEASING.md 'unified versioning: all @grafema/* packages share the same version'").
+evidence(e52, src_npm, "npm: grafema and @grafema/*").
+landed(e52, 8). depth(e52, 2). classified(e52, confirmed).
+
+edge[book](e53, equivalent_to, grafema, disentinel_grafema_slug).
+evidence(e53, src_repo, "glama.json + README badge glama.ai/mcp/servers/Disentinel/grafema; repository.url github.com/Disentinel/grafema").
+landed(e53, 8). depth(e53, 1). classified(e53, confirmed).
+-- the seam: one word names the monorepo (repo), the meta-package (npm), the
+-- CLI binary (users), an MCP server (glama) and a scope (releases). Five
+-- holders of the word, and the book already carries four kinds for it.
+
+asked(equivalent_to, grafema, out, src_repo, 8).
+asked(equivalent_to, grafema, out, src_npm, 8).
+asked(equivalent_to, grafema, out, src_canon, 8).
+
+-- ======================================================================
+-- round 9 — crawl(is_a, src_knowledge_dir, out): the first part to get a
+-- kind. Asked of the README and of the directory's own decisions.
+-- ======================================================================
+
+edge[book](e54, is_a, src_knowledge_dir, knowledge_base).
+evidence(e54, src_repo, "README 'Knowledge base — decisions, ADRs linked to code nodes'; `grafema why <symbol>` -> 'Knowledge base decisions'").
+evidence(e54, src_knowledge_dir, "kb:decision:knowledge-dir-at-project-root 'KB is human-readable, git-tracked content'").
+landed(e54, 9). depth(e54, 2). classified(e54, confirmed).
+
+edge[book](e55, is_a, src_knowledge_dir, file_based_store).
+evidence(e55, src_knowledge_dir, "kb:decision:kb-file-based-storage (edges.yaml PRODUCED); declared/{decisions,facts,sessions,tickets}/*.md with YAML frontmatter; edges.yaml").
+landed(e55, 9). depth(e55, 1). classified(e55, confirmed).
+
+edge[book](e56, decomposes_into, src_knowledge_dir, kb_tickets).
+evidence(e56, src_repo, "knowledge/declared/tickets/reg-1100.md — a fourth kind of declared node, absent from round-1's listing of three").
+landed(e56, 9). depth(e56, 1). classified(e56, serendipitous).
+
+-- unexpected, on the decision this directory records about its neighbour:
+-- kb:decision:knowledge-dir-at-project-root says `.grafema/` is 'runtime/
+-- cache, gitignored'; .gitignore ignores .grafema/* EXCEPT config.yaml and
+-- guarantees.yaml, and crawl-backlog.json is tracked regardless.
+edge[book](e57, recorded_in, dogfood_workflow, src_repo).
+evidence(e57, src_repo, "git ls-files .grafema -> config.yaml, crawl-backlog.json, guarantees.yaml; .gitignore:37-39 '.grafema/*', '!.grafema/config.yaml', '!.grafema/guarantees.yaml'").
+landed(e57, 9). depth(e57, 1). classified(e57, unexpected).
+
+asked(is_a, src_knowledge_dir, out, src_repo, 9).
+asked(is_a, src_knowledge_dir, out, src_knowledge_dir, 9).
+
+-- ======================================================================
+-- round 10 — crawl(is_a, autoresearch, out).
+-- ======================================================================
+
+edge[book](e58, is_a, autoresearch, experiment_harness).
+evidence(e58, src_repo, "autoresearch/harness/{run,run-task,evaluate,report,validate}.mjs; tasks.yaml with base_commit per task").
+landed(e58, 10). depth(e58, 1). classified(e58, confirmed).
+
+edge[book](e59, is_a, autoresearch, preregistered_study).
+evidence(e59, src_repo, "autoresearch/pre-registration-v2.md 'Written BEFORE running any experiments', hypotheses H-PR1..H-PR5 with falsification criteria; hypotheses.yaml with status per hypothesis").
+landed(e59, 10). depth(e59, 1). classified(e59, confirmed).
+
+edge[book](e60, held_by, autoresearch, independent_reviewer_session).
+evidence(e60, src_repo, "autoresearch/REVIEWER-NOTES.md 'maintained by an independent reviewer session monitoring the autoresearch experiments for methodological issues'").
+landed(e60, 10). depth(e60, 1). classified(e60, serendipitous).
+
+-- unexpected: the apparatus's own reviewer refutes the framing the canon
+-- carries. REVIEWER-NOTES: 'N=1 invalidates all accuracy comparisons',
+-- 'baseline 93% vs grafema-v1 87% is 2 questions, noise', 'testing on own
+-- codebase = contamination risk'. The canon's 77% vs 67% (23/30 vs 20/30)
+-- appears NOWHERE in the repository: grep over autoresearch/ finds only
+-- base_commit hashes. Its recorded_in is an open obligation.
+edge[book](e61, depends_on, claim_grafema_beats_grep, autoresearch).
+evidence(e61, src_repo, "REVIEWER-NOTES.md sections 1-4; hypotheses.yaml H001B 'MCP=0 in both conditions'").
+evidence(e61, src_canon, "AI benchmark: 77% (23/30) vs 67% (20/30), n=30, underpowered").
+landed(e61, 10). depth(e61, 2). classified(e61, unexpected).
+
+asked(is_a, autoresearch, out, src_repo, 10).
+asked(is_a, autoresearch, out, src_canon, 10).
