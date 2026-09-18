@@ -37,7 +37,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
 
-const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
+// Climbed, not counted: this file is one level down from the root in the tree
+// and two once `tsc` has put it in `dist/`, and a fixed `..` was right in the
+// tree and silently wrong in the published package.
+function packageRoot(from: string): string {
+  for (let at = from; ; at = path.dirname(at)) {
+    if (fs.existsSync(path.join(at, 'package.json'))) return at;
+    if (path.dirname(at) === at) return from;
+  }
+}
+
+const ROOT = packageRoot(path.dirname(new URL(import.meta.url).pathname));
 export const DEFAULT_BIN = path.join(ROOT, 'rust/target/release/rofl-serve');
 
 export interface Evaluated {

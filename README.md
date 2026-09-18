@@ -14,15 +14,15 @@ optional code scanner under `scanners/` is the only component with one,
 ## Using it
 
 ```bash
-npm i rofl
+npm i @grafema/rofl
 ```
 
 ```js
 import { readFileSync } from 'node:fs';
-import { Rofl } from 'rofl';
+import { Rofl } from '@grafema/rofl';
 
 const r = new Rofl();
-r.load(readFileSync('node_modules/rofl/boot.rofl', 'utf8'), 'boot.rofl');
+r.load(readFileSync('node_modules/@grafema/rofl/boot.rofl', 'utf8'), 'boot.rofl');
 r.load(`
   edge(a, b). edge(b, c).
   path(X, Y) :- edge(X, Y).

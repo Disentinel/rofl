@@ -123,14 +123,25 @@ supports[obs](self_application_46_packs, the_asker_runs_the_project_on_it).
 evidence_kind[obs](self_application_46_packs, measured).
 evidence_version[obs](self_application_46_packs, "1.0.0").
 
--- PROVEN BY DOING IT, 2026-09-11: `npm pack`, then `npm i` of the tarball into
--- an empty project, then `import { Rofl } from "rofl"` -- boot.rofl loaded,
--- a transitive closure evaluated, `why` printing its derivation tree, on plain
--- `node` with no flags. `main`, `exports`, `types` and `files` now exist and
--- the tarball is 20 files and no dependencies.
+-- PROVEN BY DOING IT, 2026-09-11 and again 2026-09-18 under the scoped name:
+-- `npm pack`, then `npm i` of the tarball into an empty project, then
+-- `import { Rofl } from "@grafema/rofl"` -- boot.rofl loaded, a transitive
+-- closure evaluated, `why` printing its derivation tree, on plain `node` with
+-- no flags. `main`, `exports`, `types` and `files` exist and the tarball is 82
+-- files, 351.8 kB, and no dependencies.
 supports[obs](tarball_installed_and_used, installable_and_importable).
 evidence_kind[obs](tarball_installed_and_used, measured).
 evidence_version[obs](tarball_installed_and_used, "1.0.0").
+
+-- AND THE HALF THE FIRST MEASUREMENT NEVER ASKED: the registry has to have the
+-- name free, and `rofl` is not. `registry.npmjs.org/rofl` answers 200 --
+-- `rofl@0.0.1`, another author, MIT -- and `crates.io/api/v1/crates/rofl`
+-- answers a meme-captioning crate published 2017. Scoped instead:
+-- `@grafema/rofl` is 404 on the registry and the scope's other package is this
+-- author's own, so the name is both free and his to take.
+supports[obs](scope_is_free_and_owned, installable_and_importable).
+evidence_kind[obs](scope_is_free_and_owned, measured).
+evidence_version[obs](scope_is_free_and_owned, "1.0.0").
 
 -- AND THE `ship the TypeScript` FORK IS CLOSED BY MEASUREMENT RATHER THAN BY
 -- TASTE. The first attempt shipped `src/*.ts` and Node refused it:
@@ -148,7 +159,7 @@ supports[obs](licence_in_tarball, licence_text_ships).
 evidence_kind[obs](licence_in_tarball, measured).
 evidence_version[obs](licence_in_tarball, "1.0.0").
 
--- README now opens with `npm i rofl` and eleven lines that load boot, evaluate
+-- README now opens with `npm i @grafema/rofl` and eleven lines that load boot, evaluate
 -- a transitive closure and print a derivation tree -- the same program run
 -- against the packed tarball in an empty project before it was written down,
 -- so the snippet is a transcript rather than an intention. A line says where

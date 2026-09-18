@@ -1,8 +1,11 @@
 {
-  "name": "rofl",
+  "name": "@grafema/rofl",
   "version": "1.0.0",
   "description": "ROFL \u2014 Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.6"
