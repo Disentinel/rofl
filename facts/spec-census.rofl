@@ -150,6 +150,7 @@ check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
+check[checks](".github/workflows/ci.yml", "kernel programs current", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "install dependencies (the scanner needs @babel/parser)", ci).
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).

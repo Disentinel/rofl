@@ -1,8 +1,20 @@
 [package]
-name = "rofl"
+name = "grafema-rofl"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
+description = "ROFL — Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics"
+license = "MIT"
+repository = "https://github.com/Disentinel/rofl"
+homepage = "https://github.com/Disentinel/rofl"
+readme = "README.md"
+keywords = ["datalog", "inference", "fixpoint", "provenance", "logic"]
+categories = ["database-implementations"]
+# The gates are the repository's, not the crate's: they read `boot.rofl`, the
+# generated conformance corpus and the release binaries, none of which exist
+# beside a packaged crate. Shipping them would ship four files that cannot
+# compile.
+exclude = ["tests/*"]
 
 [dependencies]
 serde_json = "1"

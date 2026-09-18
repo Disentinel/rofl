@@ -4,11 +4,19 @@
 // form src/dense.ts reads and writes src/kernel-dense.ts, so that the kernel
 // never parses the language it is written in just to run its own policy.
 //
-// The correspondence is a gate, not a promise: test/kernel-policy-program.test
-// re-renders from the .rofl files and compares, so a source edit that is not
-// rebuilt goes red rather than silently shipping the old program.
+// The correspondence is a gate, not a promise: `--check` re-renders from the
+// .rofl files and compares, so a source edit that is not rebuilt goes red
+// rather than silently shipping the old program. It said
+// `test/kernel-policy-program.test.ts` until 2026-09-18, and that file went
+// with `test/` on 2026-09-11 -- seven days in which the header promised a gate
+// that did not exist, which is the class this tree has recorded four times.
+//
+// The same two programs are the ROOT of the Rust crate, which cannot reach
+// this tree once it is packaged: `rust/rofl/src/kernel/*.dense` is the copy it
+// carries, written here and checked here.
 //
 //   npm run build:dense
+//   npm run build:dense -- --check
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -43,6 +51,29 @@ export const POLICY_DENSE = \`${esc(policy)}\`;
 
 export const SAFETY_DENSE = \`${esc(safety)}\`;
 `;
-  fs.writeFileSync(path.join(ROOT, 'src', 'kernel-dense.ts'), out);
-  console.error(`src/kernel-dense.ts: policy ${policy.length} bytes, safety ${safety.length} bytes`);
+  const artefacts: [string, string][] = [
+    [path.join('src', 'kernel-dense.ts'), out],
+    [path.join('rust', 'rofl', 'src', 'kernel', 'policy.dense'), policy],
+    [path.join('rust', 'rofl', 'src', 'kernel', 'safety.dense'), safety],
+  ];
+
+  if (process.argv.includes('--check')) {
+    const stale = artefacts.filter(([f, want]) => {
+      const at = path.join(ROOT, f);
+      return !fs.existsSync(at) || fs.readFileSync(at, 'utf8') !== want;
+    });
+    for (const [f] of stale) console.error(`STALE ${f}`);
+    if (stale.length) {
+      console.error('regenerate with: npm run build:dense');
+      process.exit(1);
+    }
+    console.error(`kernel programs current: policy ${policy.length} bytes, safety ${safety.length} bytes`);
+  } else {
+    for (const [f, text] of artefacts) {
+      const at = path.join(ROOT, f);
+      fs.mkdirSync(path.dirname(at), { recursive: true });
+      fs.writeFileSync(at, text);
+    }
+    console.error(`${artefacts.length} artefacts: policy ${policy.length} bytes, safety ${safety.length} bytes`);
+  }
 }

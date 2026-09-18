@@ -31,6 +31,13 @@ jobs:
         run: |
           npm ci
           npx tsc -p tsconfig.json
+      # The kernel's two programs are generated from policy.rofl and
+      # safety.rofl into the JS tree AND into the Rust crate, which carries its
+      # own copy because a packaged crate cannot reach this tree. The gate for
+      # that correspondence was `test/kernel-policy-program.test.ts` and went
+      # with `test/` on 2026-09-11; this is it, restored where it runs.
+      - name: kernel programs current
+        run: npm run build:dense -- --check
       - name: goldens (node)
         run: npm test
 

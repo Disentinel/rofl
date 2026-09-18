@@ -1,0 +1,9 @@
+r(r1, l(rule_reads, [v("A"), v("B")]), [l(concludes, [v("R"), v("A")]), l(premise_pos, [v("R"), v("B")])]).
+r(r2, l(rule_reads, [v("A"), v("B")]), [l(concludes, [v("R"), v("A")]), l(premise_neg, [v("R"), v("B")])]).
+r(r3, l(rule_relation, [v("A")]), [l(concludes, [v("R"), v("A")])]).
+r(r4, l(rule_relation, [v("B")]), [l(rule_reads, [v("A"), v("B")])]).
+r(r5, l(cone, [v("A"), v("A")]), [l(rule_relation, [v("A")])]).
+r(r6, l(cone, [v("A"), v("C")]), [l(cone, [v("A"), v("B")]), l(rule_reads, [v("B"), v("C")])]).
+edb(opaque_seed).
+r(r7, l(opaque_closed, [v("A")]), [l(opaque_seed, [v("A")])]).
+r(r8, l(opaque_closed, [v("A")]), [l(rule_reads, [v("A"), v("B")]), l(opaque_closed, [v("B")])]).
