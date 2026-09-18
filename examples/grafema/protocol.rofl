@@ -1,0 +1,187 @@
+-- examples/grafema/protocol.rofl — the question protocol as rules over facts.
+--
+-- question-protocol.md, written for this kernel. Two adaptations, both forced
+-- by what ROFL v1 is: there is no aggregation, so every `count{}` became a
+-- witness of distinct rows; and a rule cannot quantify over relation NAMES, so
+-- every edge the crawler writes is reified as edge[Volume](Id, R, X, Y), and
+-- R(X, ?) is `edge_any(_, R, X, _)`. Everything else is the protocol verbatim.
+--
+-- Volumes are perspectives: [book] is the seed's volume (the crawler writes
+-- there), [canon] is the curated canon its author wrote, and a holder gets a
+-- volume the day a holder-signed fact lands. `edge_any` is the one rule that
+-- gathers them, and `collects(main)` is its licence.
+
+authority(main, ontocrawler_2).
+authority(book, ontocrawler_2).
+authority(canon, vadim).
+authority(main, vadim).
+collects(main).
+
+-- ------------------------------------------------------ sensors (edb only)
+edb(seed).              -- seed(X)                       X exists
+edb(archetype).         -- archetype(R)                  the relation vocabulary
+edb(q_shape).           -- q_shape(R, out|in)            R(X, ?) or R(?, X)
+edb(class).             -- class(X, C)
+edb(edge).              -- edge[V](Id, R, X, Y)          one confirmed edge, in volume V
+edb(evidence).          -- evidence(Id, Source, Locator)
+edb(landed).            -- landed(Id, Round)
+edb(depth).             -- depth(Id, N)                  0 asserted, 1 one source, 2+ corroborated
+edb(classified).        -- classified(Id, confirmed|unexpected|serendipitous)
+edb(asked).             -- asked(R, X, Dir, Source, Round)  the question was put to Source
+edb(deferred).          -- deferred(X)                   peripheral, never deleted
+edb(retired).           -- retired(C, R)                 loop 2: R fills < 30% of C
+edb(signature_at).      -- signature_at(C, R, Sample, Pct, Round)  loop 2: R fills > 70% of C
+edb(saturated_at).      -- saturated_at(C, Round)        the licence to say no
+edb(provisional).       -- provisional(R, C, Round)     loop 2 spawned R for class C; promote or drop by fill rate
+edb(ttl).               -- ttl(R, Rounds)
+edb(source_changed).    -- source_changed(Source, Round)
+edb(report_every).      -- report_every(N)
+edb(priority_override). -- priority_override(C, up|down, Round)
+edb(killed).            -- killed(Branch, Reason, Round)
+edb(revived).           -- revived(Branch, Reason, Round)
+edb(tick_closed).       -- tick_closed(K)
+edb(reported).          -- reported(K)
+edb(question_ext).      -- question_ext(Q, Asker, Round)   a human's question
+edb(premise).           -- premise(Q, E)                 Q presupposes E exists
+edb(needs_ext).         -- needs_ext(Q, R, X, Dir)       Q is answered by R(X, ?)
+edb(alias).             -- alias(Asker, E, E2)
+edb(unreachable).       -- unreachable(Source, Round)   asked, and the source could not be reached
+
+-- ------------------------------------------------------------ the gather
+edge_any(Id, R, X, Y)     :- edge[V](Id, R, X, Y).
+in_volume(Id, V)          :- edge[V](Id, _, _, _).
+
+-- ------------------------------------------------------------- entities
+entity(X)                 :- seed(X).
+entity(X)                 :- edge_any(_, _, X, _).
+entity(Y)                 :- edge_any(_, _, _, Y).
+
+appears(X, 0)             :- seed(X).
+appears(X, K)             :- edge_any(Id, _, X, _), landed(Id, K).
+appears(Y, K)             :- edge_any(Id, _, _, Y), landed(Id, K).
+appears_later(X, K)       :- appears(X, K), appears(X, K2), K2 < K.
+entered(X, K)             :- appears(X, K), not appears_later(X, K).
+
+-- ------------------------------------------- questions: derived, not written
+provisional_any(R)        :- provisional(R, _, _).
+asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R).
+asks(C, R)                :- provisional(R, C, _), not retired(C, R).
+needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D).
+needs(Q, R, X, D)         :- needs_ext(Q, R, X, D).
+question(gen(E, R), crawler, T) :- needs(gen(E, R), R, E, _), entered(E, T).
+question(Q, A, T)         :- question_ext(Q, A, T).
+
+-- ------------------------------------------------ 1. resolve or rewrite
+resolved(Q, E)            :- premise(Q, E), entity(E).
+resolved(Q, E)            :- premise(Q, E), question(Q, A, _), alias(A, E, E2), entity(E2).
+unresolved(Q, E)          :- premise(Q, E), not resolved(Q, E).
+believes(A, E)            :- unresolved(Q, E), question(Q, A, _).
+
+-- ------------------------------------------------ 2. derive or obligate
+any_tick()                :- tick_closed(_).
+round(K)                  :- tick_closed(K), K1 is K + 1, not tick_closed(K1).
+round(0)                  :- seed(_), not any_tick().
+
+stale(Id)                 :- edge_any(Id, R, _, _), landed(Id, T), ttl(R, D), round(N), A is N - T, A > D.
+stale(Id)                 :- landed(Id, T), evidence(Id, S, _), source_changed(S, T2), T2 > T.
+
+filled(R, X, out)         :- edge_any(Id, R, X, _), not stale(Id).
+filled(R, X, in)          :- edge_any(Id, R, _, X), not stale(Id).
+satisfied(Q)              :- needs(Q, R, X, D), filled(R, X, D).
+obligation(Q, R, X, D)    :- needs(Q, R, X, D), not satisfied(Q).
+
+-- sources unfold first: what has been asked of which source
+source_of(X, S)           :- edge_any(_, recorded_in, X, S).
+sourced(X)                :- source_of(X, _).
+unasked(R, X, D, S)       :- obligation(_, R, X, D), source_of(X, S), not asked(R, X, D, S, _),
+                             not unreachable(S, _).
+sources_exhausted(R, X, D):- obligation(_, R, X, D), sourced(X), not unasked(R, X, D, _).
+sources_exhausted(R, X, D):- obligation(_, R, X, D), not sourced(X), asked(recorded_in, X, out, _, _).
+
+-- ------------------------------------------------ 3. answer state
+saturated(C)              :- saturated_at(C, _).
+open_q(Q)                 :- obligation(Q, _, _, _).
+hit(Q)                    :- question(Q, _, _), not open_q(Q), not unresolved(Q, _).
+answer_no(Q)              :- obligation(Q, R, X, D), class(X, C), saturated(C), sources_exhausted(R, X, D).
+answer_unknown(Q)         :- obligation(Q, R, X, D), class(X, C), not saturated(C), sources_exhausted(R, X, D).
+answer_unknown(Q)         :- unresolved(Q, _).
+answer_partial(Q)         :- obligation(Q, _, _, _), not answer_no(Q), not answer_unknown(Q).
+answer(Q, yes)            :- hit(Q).
+answer(Q, no)             :- answer_no(Q).
+answer(Q, unknown)        :- answer_unknown(Q).
+answer(Q, partial)        :- answer_partial(Q).
+held(X)                   :- edge_any(_, held_by, X, _).
+holder_for(Q, H)          :- answer_unknown(Q), obligation(Q, _, X, _), edge_any(_, held_by, X, H).
+
+-- ------------------------------------------------ 4. crawl, by priority
+revived_after(B, T)       :- killed(B, _, T), revived(B, _, T2), T2 > T.
+dead(B)                   :- killed(B, _, T), not revived_after(B, T).
+under(Y, B)               :- edge_any(_, decomposes_into, B, Y).
+under(Y, B)               :- under(Y, Z), edge_any(_, decomposes_into, B, Z).
+suppressed(X)             :- dead(X).
+suppressed(X)             :- under(X, B), dead(B).
+suppressed(X)             :- deferred(X).
+
+crawl(recorded_in, X, out):- obligation(_, recorded_in, X, out), not suppressed(X),
+                             not sources_exhausted(recorded_in, X, out).
+crawl(R, X, D)            :- obligation(_, R, X, D), sourced(X), not suppressed(X),
+                             not sources_exhausted(R, X, D).
+
+escalate(R, X, D, H)      :- obligation(_, R, X, D), sources_exhausted(R, X, D), edge_any(_, held_by, X, H).
+escalate(R, X, D, nobody) :- obligation(_, R, X, D), sources_exhausted(R, X, D), not held(X).
+
+-- value: the shrink criterion. held_by -> values, then along the structure.
+values(H, V)              :- edge_any(_, values, H, V).
+value_traced(X)           :- edge_any(_, held_by, X, H), values(H, _).
+value_traced(X)           :- under(X, B), value_traced(B).
+value_traced(X)           :- edge_any(_, depends_on, Y, X), value_traced(Y).
+value_traced(X)           :- edge_any(_, requires, Y, X), value_traced(Y).
+
+shared(R, X, D)           :- obligation(Q1, R, X, D), obligation(Q2, R, X, D), Q1 != Q2.
+boosted(X)                :- class(X, C), priority_override(C, up, _).
+damped(X)                 :- class(X, C), priority_override(C, down, _).
+hi(R, X, D)               :- crawl(R, X, D), seed(X).
+hi(R, X, D)               :- crawl(R, X, D), value_traced(X), not damped(X).
+hi(R, X, D)               :- crawl(R, X, D), shared(R, X, D), not damped(X).
+hi(R, X, D)               :- crawl(R, X, D), boosted(X).
+lo(R, X, D)               :- crawl(R, X, D), not hi(R, X, D).
+
+-- ------------------------------------------------ 7. rounds and reports
+report_due(K)             :- round(K), report_every(N), M is K mod N, M = 0, K > 0, not reported(K).
+recent(K)                 :- round(K).
+recent(K)                 :- round(N), tick_closed(K), M is N - 3, K > M.
+in_window(T)              :- round(K), report_every(N), tick_closed(T), M is K - N, T > M.
+new_fact(K, Id)           :- landed(Id, K), in_window(K).
+unexpected_now(K, Id)     :- classified(Id, unexpected), landed(Id, K), in_window(K).
+
+branch(B)                 :- edge_any(_, decomposes_into, _, B).
+under_or_self(X, X)       :- entity(X).
+under_or_self(X, B)       :- under(X, B).
+crawled_recently(B)       :- branch(B), asked(_, X, _, _, K), recent(K), under_or_self(X, B).
+landed_recently(B)        :- branch(B), landed(Id, K), recent(K), edge_any(Id, _, _, Y), under_or_self(Y, B).
+low_yield(B)              :- crawled_recently(B), not landed_recently(B), not dead(B).
+ask_kill(B)               :- report_due(_), low_yield(B).
+
+open_entity(X, C)         :- obligation(_, _, X, _), class(X, C).
+many_open(C)              :- open_entity(X1, C), open_entity(X2, C), open_entity(X3, C),
+                             X1 != X2, X2 != X3, X1 != X3.
+overridden(C)             :- priority_override(C, _, _).
+ask_priority(C)           :- report_due(_), many_open(C), not overridden(C).
+
+-- ------------------------------------------------ loop 2: schema as data
+signature(C, R)           :- signature_at(C, R, _, _, _).
+incomplete(E, R)          :- class(E, C), signature(C, R), q_shape(R, D), not filled(R, E, D).
+
+-- ------------------------------------------------ invariants of the protocol
+no_state[audit](Q)               :- question(Q, _, _), not answer(Q, _).
+unclassed[audit](X)              :- entity(X), not class(X, _).
+edge_without_evidence[audit](Id) :- edge_any(Id, _, _, _), not evidence(Id, _, _).
+edge_without_round[audit](Id)    :- edge_any(Id, _, _, _), not landed(Id, _).
+edge_without_depth[audit](Id)    :- edge_any(Id, _, _, _), not depth(Id, _).
+retired_but_filled[audit](C, R)  :- retired(C, R), class(X, C), filled(R, X, _).
+alarm(no_state).
+alarm(unclassed).
+alarm(edge_without_evidence).
+alarm(edge_without_round).
+alarm(edge_without_depth).
+alarm(retired_but_filled).
