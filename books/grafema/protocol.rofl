@@ -188,6 +188,7 @@ under_or_self(X, X)       :- entity(X).
 under_or_self(X, B)       :- under(X, B).
 crawled_recently(B)       :- branch(B), asked(_, X, _, _, K), recent(K), under_or_self(X, B).
 landed_recently(B)        :- branch(B), landed(Id, K), recent(K), edge_any(Id, _, _, Y), under_or_self(Y, B).
+landed_recently(B)        :- branch(B), landed(Id, K), recent(K), edge_any(Id, _, X, _), under_or_self(X, B).
 low_yield(B)              :- crawled_recently(B), not landed_recently(B), not dead(B).
 ask_kill(B)               :- report_due(_), low_yield(B).
 
