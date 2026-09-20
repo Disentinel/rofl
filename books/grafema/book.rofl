@@ -477,3 +477,75 @@ landed(e61, 10). depth(e61, 2). classified(e61, unexpected).
 
 asked(is_a, autoresearch, out, src_repo, 10).
 asked(is_a, autoresearch, out, src_canon, 10).
+
+-- @who ontocrawler_2
+
+-- ======================================================================
+-- round 11 — crawl(recorded_in, src_knowledge_dir, out)
+-- ======================================================================
+
+edge[book](e62, recorded_in, src_knowledge_dir, src_repo).
+evidence(e62, src_repo, "knowledge/ git-tracked; docs/mcp-reference.md add_knowledge: 'persisted as a markdown file in the knowledge/ directory and tracked by git'").
+landed(e62, 11). depth(e62, 2). classified(e62, confirmed).
+
+edge[book](e63, recorded_in, src_knowledge_dir, mcp_server).
+evidence(e63, src_repo, "packages/mcp/src/definitions/knowledge-tools.ts: add_knowledge, query_knowledge, query_decisions, supersede_fact, get_knowledge_stats; packages/util/src/knowledge/KnowledgeBase.ts").
+landed(e63, 11). depth(e63, 1). classified(e63, serendipitous).
+-- the knowledge dir is reachable through the product's own MCP surface: a
+-- part that is also a source that is also queryable through another part.
+
+edge[book](e64, recorded_in, src_knowledge_dir, src_docs).
+evidence(e64, src_docs, "docs/mcp-reference.md sections add_knowledge / get_knowledge_stats / query_knowledge; the generated File: line carries an absolute path /Users/vadimr/grafema-worker-1/... (a local machine leaked into a shipped doc)").
+landed(e64, 11). depth(e64, 1). classified(e64, confirmed).
+
+asked(recorded_in, src_knowledge_dir, out, src_repo, 11).
+asked(recorded_in, src_knowledge_dir, out, src_docs, 11).
+asked(recorded_in, src_knowledge_dir, out, src_knowledge_dir, 11).
+
+-- ======================================================================
+-- round 12 — crawl(recorded_in, autoresearch, out)
+-- ======================================================================
+
+guessed(src_agent_skills, source).
+edge[book](e65, recorded_in, autoresearch, src_repo).
+evidence(e65, src_repo, "autoresearch/{harness,prompts,hypotheses.yaml,questions*.yaml,tasks.yaml}; autoresearch/results/ is NOT tracked: every run's output lives outside the repository").
+landed(e65, 12). depth(e65, 1). classified(e65, confirmed).
+
+edge[book](e66, recorded_in, autoresearch, src_changelog).
+evidence(e66, src_changelog, "CHANGELOG.md:209 'Autoresearch benchmark — 30 questions from real VS Code GitHub issues. Grafema + Claude Sonnet = 77% vs 67% baseline (+10% accuracy)'; :233 'H012 prompt ablation — 20 prompts, 7 dimensions, 60 runs'").
+landed(e66, 12). depth(e66, 1). classified(e66, unexpected).
+-- CORRECTS round 10. e61's evidence said the canon's 77/67 'appears NOWHERE
+-- in the repository'; it appears in CHANGELOG.md, which round 10 did not
+-- grep. The claim's recorded_in is the changelog, and the questions were
+-- VS Code issues, not Grafema's own code - so the reviewer's contamination
+-- note (REVIEWER-NOTES, 2026-03-24) is about an EARLIER round than the
+-- number the canon carries. e61 stands; its evidence was incomplete.
+evidence(e61, src_changelog, "CHANGELOG.md:209 carries the 77%/67% figure; round 10's 'nowhere in the repository' searched autoresearch/ only").
+
+edge[book](e67, recorded_in, autoresearch, src_agent_skills).
+evidence(e67, src_repo, ".claude/skills/autoresearch.md 'Run autoresearch benchmark cycle', user_invocable; .claude/skills/ holds ~30 skills incl. autonomous-ontological-crawl.md").
+landed(e67, 12). depth(e67, 1). classified(e67, serendipitous).
+-- a source the seed's round 1 missed: the repository ships its own agent
+-- skills, and one of them is a crawler - the likely author of
+-- .grafema/crawl-backlog.json (e35).
+
+asked(recorded_in, autoresearch, out, src_repo, 12).
+asked(recorded_in, autoresearch, out, src_changelog, 12).
+asked(recorded_in, autoresearch, out, src_canon, 12).
+
+-- ======================================================================
+-- round 13 — crawl(is_a, cli, out)
+-- ======================================================================
+
+edge[book](e68, is_a, cli, command_line_interface).
+evidence(e68, src_repo, "packages/cli/package.json 'CLI for Grafema code analysis toolkit', bin grafema; packages/cli/src/commands/ 38 files").
+evidence(e68, src_npm, "@grafema/cli 0.4.1").
+landed(e68, 13). depth(e68, 2). classified(e68, confirmed).
+
+edge[book](e69, is_a, cli, feature_catalogue).
+evidence(e69, src_docs, "docs/cli-reference.md 'Grafema feature catalogue, 33 features exported', each command a cli:command FEATURE node - the CLI is also data in the product's own graph").
+landed(e69, 13). depth(e69, 1). classified(e69, serendipitous).
+
+asked(is_a, cli, out, src_repo, 13).
+asked(is_a, cli, out, src_npm, 13).
+asked(is_a, cli, out, src_docs, 13).
