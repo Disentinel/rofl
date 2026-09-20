@@ -715,3 +715,103 @@ asked(is_a, registry, out, src_repo, 14). asked(is_a, native_binaries, out, src_
 -- @who vadim
 edge[canon](c08, describes, grafema, "Graph-driven static analysis that builds a queryable graph from a codebase.").
 evidence(c08, src_canon, "One-line positioning"). landed(c08, 14). depth(c08, 1). classified(c08, confirmed).
+
+-- ======================================================================
+-- round 15 — the first human questions. Three arrive from the owner; the
+-- book resolves their premises, derives their needs, and answers what it
+-- can. ROFL enters the book as an entity because one premise names it.
+-- ======================================================================
+
+-- @who vadim
+question_ext(q_why_grafema, vadim, 14).
+premise(q_why_grafema, grafema).
+needs_ext(q_why_grafema, requires, grafema, in).
+
+question_ext(q_why_this_shape, vadim, 14).
+premise(q_why_this_shape, grafema).
+needs_ext(q_why_this_shape, requires, language_analyzers, in).
+needs_ext(q_why_this_shape, requires, rfdb, in).
+needs_ext(q_why_this_shape, requires, grafema_orchestrator, in).
+
+question_ext(q_rofl_supersedes, vadim, 14).
+premise(q_rofl_supersedes, rofl).
+needs_ext(q_rofl_supersedes, supersedes, grafema, in).
+
+-- @who ontocrawler_2
+guessed(src_rofl_repo, source).        -- github.com/Disentinel/rofl, this tree
+guessed(rofl_target, purpose).
+guessed(datalog_v2_engine, component).
+guessed(replacing_old_js_pipeline, purpose).
+
+-- rofl, kindless first
+edge[book](e125, is_a, rofl, datalog_engine).
+evidence(e125, src_rofl_repo, "README.md:3 'A Datalog-family language with perspectives (first-class truth contexts), explicit time, kernel-emitted provenance, structured terms, and budgets'"). landed(e125, 15). depth(e125, 1). classified(e125, confirmed).
+edge[book](e126, describes, rofl, "ROFL — Relation-Oriented Fixpoint Language. A Datalog-family language with perspectives (first-class truth contexts), explicit time, kernel-emitted provenance, structured terms, and budgets. Turing-complete by design; budgets are part of the semantics.").
+evidence(e126, src_rofl_repo, "README.md:3-6"). landed(e126, 15). depth(e126, 1). classified(e126, confirmed).
+edge[book](e127, recorded_in, rofl, src_rofl_repo).
+evidence(e127, src_rofl_repo, "package.json repository github.com/Disentinel/rofl; npm 'rofl' 1.0.0"). landed(e127, 15). depth(e127, 1). classified(e127, confirmed).
+edge[book](e128, transforms, rofl, io(js_codebase, facts)).
+evidence(e128, src_rofl_repo, "scanners/js.ts 'JS/TS source → ROFL facts'; docs/scaling-a-corpus.md: eslint, 1,426 files, 531,766 lines, 5,896,383 facts in the world at once; rules/js-{callgraph,dataflow,controlflow,modules,resolve,effects,...}.rofl"). landed(e128, 15). depth(e128, 1). classified(e128, confirmed).
+edge[book](e129, transforms, rofl, io(facts_and_rules, answers_with_proof)).
+evidence(e129, src_rofl_repo, "README: ? why whynot excise; derived_by emitted by the kernel on every firing; semantics(well_founded) for the third value"). landed(e129, 15). depth(e129, 1). classified(e129, confirmed).
+edge[book](e130, held_by, rofl, vadim_reshetnikov).
+evidence(e130, src_rofl_repo, "docs/the-target.md 'Set 2026-09-08 by the owner'; repository Disentinel/rofl"). landed(e130, 15). depth(e130, 1). classified(e130, confirmed).
+
+-- q_why_grafema gains a fifth purpose, from the other repository
+edge[book](e131, requires, rofl_target, grafema).
+evidence(e131, src_rofl_repo, "docs/the-target.md 'A Rust engine that can chew all of grafema's code — and since grafema is mostly not JavaScript, a comparable JS project stands in for it'; the ladder is at rung 0; grafema is 1212 files / ~338 000 lines across eleven languages, of which the JS model reads one"). landed(e131, 15). depth(e131, 1). classified(e131, unexpected).
+-- unexpected for the question asked: ROFL's own stated target REQUIRES
+-- grafema's code as the thing to chew. The repository that might supersede
+-- grafema defines its finish line by grafema.
+
+-- q_why_this_shape: rfdb and the orchestrator have a recorded why; the
+-- analyzers' language does not
+edge[book](e132, decomposes_into, rfdb, datalog_v2_engine).
+evidence(e132, src_docs, "_ai/research/rfdb-datalog-engine-v2-spec.md 'semiring-parameterized Datalog evaluator inside rfdb-server, deeply integrated with the LSM storage'"). landed(e132, 15). depth(e132, 1). classified(e132, confirmed).
+edge[book](e133, requires, datalog_v2_engine, rfdb).
+evidence(e133, src_docs, "rfdb-datalog-engine-v2-spec.md §1: the evaluator lives inside rfdb-server and materializes into the LSM; _bench/rfdb-vs-kuzu-ingest/report.md 2026-05-31 measured Kuzu 'no degradation' - the alternative was measured, no decision against it is recorded"). landed(e133, 15). depth(e133, 1). classified(e133, confirmed).
+edge[book](e134, describes, datalog_v2_engine, "Knowledge needs non-monotonic, temporally-ordered belief revision that code never exercises (cyclic contradiction, supersede-over-time). The engine cannot express it today.").
+evidence(e134, src_docs, "_ai/research/datalog-unified-engine-design.md 2026-06-09, 'the two places the unified story breaks', item 1"). landed(e134, 15). depth(e134, 1). classified(e134, unexpected).
+-- unexpected against q_rofl_supersedes: the seam grafema's engine design
+-- names as unexpressible is the seam ROFL is built around (perspectives,
+-- ticks, well-founded negation).
+edge[book](e135, requires, replacing_old_js_pipeline, grafema_orchestrator).
+evidence(e135, src_docs, "docs/ROADMAP.md 'Rust orchestrator (grafema-orchestrator) — replaces old JS pipeline, handles analysis + layout + BEAM'; 'Rust hex layout 10x faster than JS (503µs/1k nodes)'"). landed(e135, 15). depth(e135, 1). classified(e135, confirmed).
+
+asked(requires, language_analyzers, in, src_repo, 15).
+asked(requires, language_analyzers, in, src_docs, 15).
+asked(requires, language_analyzers, in, src_knowledge_dir, 15).
+asked(requires, language_analyzers, in, src_changelog, 15).
+asked(requires, language_analyzers, in, src_canon, 15).
+-- grep over docs/, _ai/, knowledge/, CLAUDE.md, CHANGELOG.md for a reason the
+-- analyzers are Haskell: nothing. Every reachable source is asked.
+
+asked(supersedes, grafema, in, src_repo, 15).
+asked(supersedes, grafema, in, src_rofl_repo, 15).
+asked(supersedes, grafema, in, src_canon, 15).
+asked(supersedes, grafema, in, src_docs, 15).
+-- neither repository asserts that anything supersedes grafema; ROFL's
+-- docs assert the reverse dependency (e131). Exhausted, not answered.
+
+-- @who ontocrawler_2
+-- round 15, continued: the rest of grafema's sources asked whether anything
+-- supersedes it. What they hold instead is a supersession INSIDE grafema.
+guessed(datalog_packs, component).
+edge[book](e136, supersedes, datalog_packs, plugins).
+evidence(e136, src_changelog, "CHANGELOG.md:129 'The 4 datalog-replaced .mjs plugins were removed (Wave 5): method-call-resolver, shape-verifier, axum-route-detector, semantic-bridge-detector — replaced by the method_calls, shape_verifier, axum_routes packs and graph-native bridges'"). landed(e136, 15). depth(e136, 1). classified(e136, serendipitous).
+-- grafema is already replacing its imperative plugins with Datalog rule
+-- packs: the direction the question asks about is one the product itself
+-- is moving in, one layer down.
+
+asked(supersedes, grafema, in, src_changelog, 15).   -- grep supersed|deprecat|replaced by|successor|sunset|archived: only e136 and a CI runner deprecation
+asked(supersedes, grafema, in, src_knowledge_dir, 15).
+asked(supersedes, grafema, in, src_ci, 15).
+asked(supersedes, grafema, in, src_npm, 15).         -- registry.npmjs.org/grafema/latest: no 'deprecated' field, 0.4.1
+unreachable(src_vscode_marketplace, 15).             -- egress proxy refuses marketplace.visualstudio.com
+unreachable(src_zenodo, 15).                         -- no DOI in any reachable source, nothing to fetch
+unreachable(src_tracker_reg, 15).                    -- identity unresolved (equivalent_to open), no endpoint
+asked(supersedes, grafema, in, src_enox, 15).        -- Enox semantic_search 'ROFL replaces Grafema; Grafema obsolete': five nodes, none asserts supersession; one fact of scale and one of role, below
+edge[book](e137, describes, grafema, "Grafema's architectural role has shifted qualitatively from one-time code audit tool → commit-triggered structural event emitter. Each commit = new graph snapshot = delta = observable event for downstream systems.").
+evidence(e137, src_enox, "enox://enox.dev/personal/vadim_r/grafema/fact_identified_in_cross_analysis_dialogue_with_openart_tg_54875, 2026-05-11"). landed(e137, 15). depth(e137, 1). classified(e137, serendipitous).
+edge[book](e138, describes, rfdb, "Graph state: 6,342,433 nodes, 14,792,203 edges on 9059 files; rfdb-server stuck 6.5h in JS-resolve at 3.1GB RAM, SIGKILL'd; crash-survived via RocksDB WAL, fresh analyze 0.99s.").
+evidence(e138, src_enox, "enox://enox.dev/personal/vadim_r/cs/fact_grafema_rfdb_server_pid_72286..., 2026-05-28 - the one measured scale figure in any source, and it is an incident"). landed(e138, 15). depth(e138, 1). classified(e138, serendipitous).

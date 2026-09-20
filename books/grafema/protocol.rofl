@@ -112,8 +112,8 @@ stale(Id)                 :- landed(Id, T), evidence(Id, S, _), source_changed(S
 
 filled(R, X, out)         :- edge_any(Id, R, X, _), not stale(Id).
 filled(R, X, in)          :- edge_any(Id, R, _, X), not stale(Id).
-satisfied(Q)              :- needs(Q, R, X, D), filled(R, X, D).
-obligation(Q, R, X, D)    :- needs(Q, R, X, D), not satisfied(Q).
+satisfied(Q, R, X, D)     :- needs(Q, R, X, D), filled(R, X, D).
+obligation(Q, R, X, D)    :- needs(Q, R, X, D), not satisfied(Q, R, X, D).
 
 -- sources unfold first: what has been asked of which source
 source_of(X, S)           :- edge_any(_, recorded_in, X, S).

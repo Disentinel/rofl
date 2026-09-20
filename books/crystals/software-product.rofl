@@ -39,6 +39,13 @@ archetype(describes).         q_shape(describes, out).         kindless(describe
 quote_valued(describes).
 origin(describes, "session:2026-09-20-grafema", f_a_quote_with_no_archetype_is_read_and_lost).
 
+-- Spawned by the first human question (q_rofl_supersedes, round 15): "what
+-- replaced X" - the skill's own loop-2 example (replaced_by -> supersedes).
+-- Asked of the class the question was about; nowhere else until it fills.
+archetype(supersedes).        q_shape(supersedes, in).
+provisional(supersedes, code_analysis_tool, 15).
+origin(supersedes, "session:2026-09-20-grafema", spawned_by_question_q_rofl_supersedes).
+
 -- ---------------------------------------------------- expectations
 -- What filled on the seed, by the class the sources gave it. One product,
 -- one sample: learned_on says so, and asks(C, R) narrows to these only for
