@@ -14,6 +14,7 @@
 authority(main, ontocrawler_2).
 authority(book, ontocrawler_2).
 authority(canon, vadim).
+authority(vadim, vadim).        -- the holder's own book: what he says in session, verbatim
 authority(main, vadim).
 collects(main).
 

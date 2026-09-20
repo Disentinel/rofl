@@ -44,6 +44,7 @@ origin(describes, "session:2026-09-20-grafema", f_a_quote_with_no_archetype_is_r
 -- Asked of the class the question was about; nowhere else until it fills.
 archetype(supersedes).        q_shape(supersedes, in).
 provisional(supersedes, code_analysis_tool, 15).
+provisional(supersedes, graph_database, 17).   -- the holder's verb 'abandoned' (round 17): what replaced rfdb
 origin(supersedes, "session:2026-09-20-grafema", spawned_by_question_q_rofl_supersedes).
 
 -- Spawned by the parity question (round 16): what a thing OFFERS, at the

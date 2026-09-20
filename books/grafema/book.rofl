@@ -1056,3 +1056,34 @@ guessed(rofl_inquiry, capability).
 edge[book](e209, offers, rofl, rofl_inquiry).
 evidence(e209, src_rofl_repo, "rules/inquiry/*: claims, evidence with polarity, four epistemic grades, obligations"). landed(e209, 16). depth(e209, 1). classified(e209, confirmed).
 asked(offers, grafema, out, src_repo, 16). asked(offers, rofl, out, src_rofl_repo, 16).
+
+-- ======================================================================
+-- round 17 — the holder answers two escalations in session. His words go
+-- in his own volume, verbatim, in the language he said them in; what the
+-- repository corroborates gets a second evidence row and depth 2.
+-- ======================================================================
+
+-- @who vadim
+guessed(src_holder_session, source).
+edge[vadim](v01, describes, rofl_rust_port, "Rust движок готов и работает через cooling, довольно эффективно").
+evidence(v01, src_holder_session, "vadim, 2026-09-20, answering the rung-0 reading of docs/the-target.md"). landed(v01, 17). depth(v01, 1). classified(v01, unexpected).
+edge[vadim](v02, describes, rfdb, "RFDB на масштабе тоже подыхал, и это ровно то, почему я её забросил: плохие алгоритмы были выбраны, в том числе полный скан репозитория").
+evidence(v02, src_holder_session, "vadim, 2026-09-20"). landed(v02, 17). depth(v02, 1). classified(v02, unexpected).
+-- 'забросил' is the verb: rfdb has no holder now, and what replaced it is the
+-- open supersedes(?, rfdb) the crystal spawns for graph_database.
+
+-- @who ontocrawler_2
+guessed(rofl_rust_port, component).
+guessed(rofl_cooling, capability).
+edge[book](e210, describes, rofl, "The world never grows with the corpus; it oscillates under a ceiling and the corpus goes to disk behind it. A run over ten thousand files differs from this one in how long it takes, not in how much it holds.").
+evidence(e210, src_rofl_repo, "docs/scaling-a-corpus.md, measured 2026-09-09: 1,426 files, 29,934 ms wall, 179 ticks, 1,290 volumes cooled to 200 MB on disk, largest world 1,938,540 facts against a ceiling of 2,000,000"). landed(e210, 17). depth(e210, 2). classified(e210, confirmed).
+context(e210, "corroborates v01 on cooling; the doc does not name the engine, rust/rofl/src/session.rs implements cool and rules/ingest.rofl declares coolable").
+edge[book](e211, offers, rofl, rofl_cooling).
+evidence(e211, src_rofl_repo, "rust/rofl/src/session.rs 'What cool did: facts is what left memory, bytes is what reached the disk'; docs/volumes-and-residency.md"). landed(e211, 17). depth(e211, 2). classified(e211, confirmed).
+context(e211, "no counterpart in grafema's capability list because storage is a part there (rfdb), not a capability; this is the offering that answers the scale question rfdb was built for").
+edge[book](e212, decomposes_into, rofl, rofl_rust_port).
+evidence(e212, src_rofl_repo, "rust/rofl crate; run_corpus.sh 'the binary plus a diff against the corpus dumps IS the test'; port findings 2026-09-08 'passes all 34 port-corpus cases byte for byte'"). landed(e212, 17). depth(e212, 1). classified(e212, confirmed).
+context(e131, "docs/the-target.md:29 'The engine is at rung 0' is contradicted by the holder (v01, 2026-09-20) and by docs/scaling-a-corpus.md (2026-09-09); the line is stale, the requires edge stands").
+context(e133, "historical: the holder abandoned rfdb at scale (v02); the why explains the shape, not a live choice").
+context(e138, "crash survival is not scale: the holder's v02 says rfdb died at scale, the Enox incident says it survived a kill; both true").
+asked(describes, rofl_rust_port, out, src_holder_session, 17). asked(describes, rfdb, out, src_holder_session, 17).
