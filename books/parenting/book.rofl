@@ -11,3 +11,52 @@
 
 -- @who ontocrawler_2
 seed(parenting).
+
+-- ======================================================================
+-- round 1 — the three kindless questions of the seed, batched. Sources:
+-- the holder's knowledge graph (reachable, asked, empty on this topic) and
+-- the crawler's own recall of where parenting leaves traces, written as
+-- POINTERS at depth 0 - not content - and every one of them unreachable
+-- from this sandbox. The book's honest state after this round is a seed
+-- whose every source is named and none can be opened.
+-- ======================================================================
+
+guessed(src_enox, source).
+guessed(src_agent_memory, source).
+edge[book](p01, recorded_in, parenting, src_enox).
+evidence(p01, src_enox, "recall 'воспитание детей, родительство' and semantic_search 'parenting, raising children' over enox.dev/personal/vadim_r: top similarity 0.55, every hit a CS paper or concept; nothing about children"). landed(p01, 1). depth(p01, 1). classified(p01, gap).
+context(p01, "the one reachable source holds nothing on the seed: a trace expected (the holder is a parent) and not found").
+
+-- pointers from recall: where the literature says parenting is recorded.
+-- Depth 0 each; evidence names the recall as the source so the gate stays
+-- silent and the reader is told exactly how little this is worth.
+guessed(src_baumrind, source).          guessed(src_attachment_theory, source).
+guessed(src_who_unicef_guidance, source). guessed(src_family_law, source).
+guessed(src_popular_manuals, source).   guessed(src_holder_experience, source).
+edge[book](p02, recorded_in, parenting, src_baumrind).
+evidence(p02, src_agent_memory, "Baumrind 1967/1971, the authoritative/authoritarian/permissive typology; Maccoby & Martin 1983 add neglectful"). landed(p02, 1). depth(p02, 0). classified(p02, confirmed).
+edge[book](p03, recorded_in, parenting, src_attachment_theory).
+evidence(p03, src_agent_memory, "Bowlby 1969 Attachment and Loss; Ainsworth 1978 Strange Situation"). landed(p03, 1). depth(p03, 0). classified(p03, confirmed).
+edge[book](p04, recorded_in, parenting, src_who_unicef_guidance).
+evidence(p04, src_agent_memory, "WHO/UNICEF Nurturing Care Framework 2018; UN Convention on the Rights of the Child 1989"). landed(p04, 1). depth(p04, 0). classified(p04, confirmed).
+edge[book](p05, recorded_in, parenting, src_family_law).
+evidence(p05, src_agent_memory, "Семейный кодекс РФ гл. 12 'Права и обязанности родителей'; every jurisdiction has one"). landed(p05, 1). depth(p05, 0). classified(p05, confirmed).
+edge[book](p06, recorded_in, parenting, src_popular_manuals).
+evidence(p06, src_agent_memory, "Spock 1946; Гиппенрейтер 'Общаться с ребёнком. Как?' 1994; Петрановская 'Тайная опора' 2015; Faber & Mazlish 1980"). landed(p06, 1). depth(p06, 0). classified(p06, confirmed).
+edge[book](p07, recorded_in, parenting, src_holder_experience).
+evidence(p07, src_agent_memory, "the holder's own practice as a parent: a source the protocol reaches only as an oracle"). landed(p07, 1). depth(p07, 0). classified(p07, confirmed).
+
+unreachable(src_baumrind, 1).           -- doi.org, PubMed, archive.org: 403 at the proxy
+unreachable(src_attachment_theory, 1).
+unreachable(src_who_unicef_guidance, 1). -- who.int, unicef.org: 403
+unreachable(src_family_law, 1).
+unreachable(src_popular_manuals, 1).    -- gutenberg.org, archive.org: 403
+unreachable(src_holder_experience, 1).  -- an oracle, not a source
+
+asked(recorded_in, parenting, out, src_enox, 1).
+asked(recorded_in, parenting, out, src_agent_memory, 1).
+asked(is_a, parenting, out, src_enox, 1).
+asked(describes, parenting, out, src_enox, 1).
+-- is_a and describes were NOT put to src_agent_memory: a kind and a
+-- sentence from recall would be content, not a pointer, and the crawler is
+-- not a source. They wait for a reachable text.

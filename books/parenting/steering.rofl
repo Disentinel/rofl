@@ -1,3 +1,4 @@
 -- books/parenting/steering.rofl — the human's steering, as facts with a tick.
 -- @who vadim
 report_every(5).
+tick_closed(1).
