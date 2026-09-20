@@ -1,7 +1,7 @@
 // parity.ts — the parity table, counted over books/grafema/parity.rofl.
 //   node --experimental-strip-types books/grafema/parity.ts
-import { world } from './crawl.ts';
-const r = world();
+import { world } from '../crawl.ts';
+const r = world('grafema');
 const q = (t: string) => r.query(t).rows.map((x) => x.bindings);
 const ctx = new Map(q('context(I, T)').map((x) => [x.I, x.T]));
 const idOf = new Map(q('edge_any(I, offers, X, C)').map((x) => [`${x.X}|${x.C}`, x.I]));

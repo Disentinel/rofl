@@ -1,0 +1,13 @@
+-- books/parenting/book.rofl — the book of one seed, `parenting exists`
+-- (воспитание детей), grown by ontocrawler-2 with the crystals a software
+-- product left behind. The crystal's own promise is under test here: its
+-- lines are candidates, and a domain that is not a product is what promotes
+-- or retires them.
+--
+-- The sandbox reaches github and npm and nothing else: no encyclopedia, no
+-- journal, no library, no ministry. The sources of this seed are named as
+-- entities the moment they are known and marked unreachable when they are;
+-- the one reachable source is the holder's own knowledge graph.
+
+-- @who ontocrawler_2
+seed(parenting).

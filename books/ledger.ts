@@ -8,13 +8,17 @@
 // fact_id = SHA256(source + relation + target) is derived, asserted_by is set.
 
 import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
 import { world } from './crawl.ts';
 
-const SESSION = 'session:2026-09-18-grafema';
-const WHO: Record<string, string> = { book: 'agent:ontocrawler-2', canon: 'vadim' };
+const book = process.argv[2];
+if (!book) throw new Error('usage: ledger.ts <book>');
+const cfg = JSON.parse(fs.readFileSync(`books/${book}/world.json`, 'utf8')) as { session: string; domain?: string };
+const SESSION = cfg.session;
+const WHO: Record<string, string> = { book: 'agent:ontocrawler-2', canon: 'vadim', vadim: 'vadim' };
 const CONF: Record<number, number> = { 0: 0.4, 1: 0.6, 2: 0.8, 3: 0.9 };
 
-const r = world();
+const r = world(book);
 const q = (t: string) => r.query(t).rows.map((x) => x.bindings);
 const by = <T extends Record<string, string>>(rows: T[], k: string) => {
   const m = new Map<string, T[]>();
@@ -36,6 +40,6 @@ for (const e of q('edge_any(I, R, X, Y)').sort((a, b) => a.I.localeCompare(b.I))
     perspective: v, confidence: CONF[Math.min(d, 3)], proof_depth: d,
     asserted_by: WHO[v] ?? v, fact_id,
     evidence: (ev.get(e.I) ?? []).map((x) => ({ source: x.S, locator: x.L.replace(/^"(.*)"$/s, "$1") })),
-    classified: cls.get(e.I), tick: landed.get(e.I), session: SESSION,
+    classified: cls.get(e.I), tick: landed.get(e.I), session: SESSION, domain: cfg.domain,
   }));
 }

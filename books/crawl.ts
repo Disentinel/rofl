@@ -1,9 +1,11 @@
 // crawl.ts — the executor of ontocrawler-2 over books/grafema/.
 //
-//   node --experimental-strip-types books/grafema/crawl.ts            # what is due
-//   node --experimental-strip-types books/grafema/crawl.ts --q 'crawl(R, X, D)'
-//   node --experimental-strip-types books/grafema/crawl.ts --why 'answer(gen(grafema, held_by), partial)'
-//   node --experimental-strip-types books/grafema/crawl.ts --whynot 'hit(gen(grafema, held_by))'
+//   node --experimental-strip-types books/crawl.ts grafema            # what is due
+//   node --experimental-strip-types books/crawl.ts grafema --q 'crawl(R, X, D)'
+//   node --experimental-strip-types books/crawl.ts grafema --why 'answer(gen(grafema, held_by), partial)'
+//
+// A book is a directory books/<name>/ with book.rofl, steering.rofl and a
+// world.json naming the crystals and extra packs it loads.
 //
 // It has no plan of its own: it prints what the book derives — the audits,
 // the round, what to crawl and in which order, what to escalate, what the
@@ -13,10 +15,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Rofl } from '../../src/api.ts';
+import { Rofl } from '../src/api.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
-const ROOT = path.resolve(HERE, '..', '..');
+const ROOT = path.resolve(HERE, '..');
 const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 
 interface Section { who: string; text: string; }
@@ -37,15 +39,16 @@ function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
   if (!res.ok) throw new Error(`${what} failed to load:\n${res.diagnostics.join('\n')}`);
 }
 
-export function world(): Rofl {
+export function world(book: string): Rofl {
+  const cfg = JSON.parse(read('books', book, 'world.json')) as { crystals: string[]; packs?: string[] };
   const r = new Rofl();
   must(r.load(read('boot.rofl')), 'boot.rofl');
   must(r.load(read('rules', 'self-audit.rofl')), 'rules/self-audit.rofl');
-  must(r.load(read('books', 'grafema', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
-  for (const c of ['base.rofl', 'software-product.rofl']) must(r.load(read('books', 'crystals', c), { who: 'ontocrawler_2' }), `crystals/${c}`);
-  must(r.load(read('books', 'grafema', 'parity.rofl'), { who: 'ontocrawler_2' }), 'parity.rofl');
+  must(r.load(read('books', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
+  for (const c of cfg.crystals) must(r.load(read('books', 'crystals', `${c}.rofl`), { who: 'ontocrawler_2' }), `crystals/${c}`);
+  for (const p of cfg.packs ?? []) must(r.load(read('books', book, p), { who: 'ontocrawler_2' }), p);
   for (const f of ['book.rofl', 'steering.rofl']) {
-    for (const s of sections(read('books', 'grafema', f), 'ontocrawler_2')) {
+    for (const s of sections(read('books', book, f), 'ontocrawler_2')) {
       must(r.load(s.text, { who: s.who }), `${f} [@who ${s.who}]`);
     }
   }
@@ -148,8 +151,9 @@ function fillRates(r: Rofl): void {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const args = process.argv.slice(2);
-  const r = world();
+  const [book, ...args] = process.argv.slice(2);
+  if (!book) throw new Error('usage: crawl.ts <book> [--q L | --why L | --whynot L]');
+  const r = world(book);
   const flag = (f: string) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
   if (flag('--q')) { const rs = rows(r, flag('--q')!); for (const x of rs) console.log(x.text); if (rs.length === 0) console.log('(empty)'); }
   else if (flag('--why')) console.log(r.why(flag('--why')!).text);
