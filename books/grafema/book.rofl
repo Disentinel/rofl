@@ -1087,3 +1087,11 @@ context(e131, "docs/the-target.md:29 'The engine is at rung 0' is contradicted b
 context(e133, "historical: the holder abandoned rfdb at scale (v02); the why explains the shape, not a live choice").
 context(e138, "crash survival is not scale: the holder's v02 says rfdb died at scale, the Enox incident says it survived a kill; both true").
 asked(describes, rofl_rust_port, out, src_holder_session, 17). asked(describes, rfdb, out, src_holder_session, 17).
+
+-- round 18 — the holder confirms the remaining limit.
+-- @who vadim
+edge[vadim](v03, describes, rofl, "No incremental maintenance: по-моему, не устарело").
+evidence(v03, src_holder_session, "vadim, 2026-09-20, asked whether LIMITS.md's line still holds"). landed(v03, 18). depth(v03, 2). classified(v03, confirmed).
+evidence(v03, src_rofl_repo, "LIMITS.md 'No incremental maintenance (spec). No delta is ever propagated into a derived relation: a relation is recomputed entirely or not at all'; reuse is memoisation under an exact fingerprint, not maintenance").
+context(v03, "the one execution limit left standing after round 17: a change costs a full recomputation, bounded by the scaling run at 21.0 ms per file over 1,426 files").
+asked(describes, rofl, out, src_holder_session, 18).
