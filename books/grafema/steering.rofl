@@ -1,4 +1,4 @@
--- examples/grafema/steering.rofl — the human's steering, as facts with a tick.
+-- books/grafema/steering.rofl — the human's steering, as facts with a tick.
 -- Loaded under `vadim`. Every kill carries its reason; kills cascade to
 -- obligations, never to facts.
 

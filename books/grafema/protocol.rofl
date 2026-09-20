@@ -1,4 +1,4 @@
--- examples/grafema/protocol.rofl — the question protocol as rules over facts.
+-- books/grafema/protocol.rofl — the question protocol as rules over facts.
 --
 -- question-protocol.md, written for this kernel. Two adaptations, both forced
 -- by what ROFL v1 is: there is no aggregation, so every `count{}` became a

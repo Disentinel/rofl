@@ -61,7 +61,6 @@ check[checks]("facts/goldens.rofl", "ditto", world).
 check[checks]("facts/goldens.rofl", "drip", world).
 check[checks]("facts/goldens.rofl", "flag", world).
 check[checks]("facts/goldens.rofl", "goof", world).
-check[checks]("facts/goldens.rofl", "grafema", world).
 check[checks]("facts/goldens.rofl", "heck", world).
 check[checks]("facts/goldens.rofl", "huh", world).
 check[checks]("facts/goldens.rofl", "iffy", world).

@@ -1,9 +1,9 @@
-// crawl.ts — the executor of ontocrawler-2 over examples/grafema/.
+// crawl.ts — the executor of ontocrawler-2 over books/grafema/.
 //
-//   node --experimental-strip-types examples/grafema/crawl.ts            # what is due
-//   node --experimental-strip-types examples/grafema/crawl.ts --q 'crawl(R, X, D)'
-//   node --experimental-strip-types examples/grafema/crawl.ts --why 'answer(gen(grafema, held_by), partial)'
-//   node --experimental-strip-types examples/grafema/crawl.ts --whynot 'hit(gen(grafema, held_by))'
+//   node --experimental-strip-types books/grafema/crawl.ts            # what is due
+//   node --experimental-strip-types books/grafema/crawl.ts --q 'crawl(R, X, D)'
+//   node --experimental-strip-types books/grafema/crawl.ts --why 'answer(gen(grafema, held_by), partial)'
+//   node --experimental-strip-types books/grafema/crawl.ts --whynot 'hit(gen(grafema, held_by))'
 //
 // It has no plan of its own: it prints what the book derives — the audits,
 // the round, what to crawl and in which order, what to escalate, what the
@@ -41,9 +41,9 @@ export function world(): Rofl {
   const r = new Rofl();
   must(r.load(read('boot.rofl')), 'boot.rofl');
   must(r.load(read('rules', 'self-audit.rofl')), 'rules/self-audit.rofl');
-  must(r.load(read('examples', 'grafema', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
+  must(r.load(read('books', 'grafema', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
   for (const f of ['book.rofl', 'steering.rofl']) {
-    for (const s of sections(read('examples', 'grafema', f), 'ontocrawler_2')) {
+    for (const s of sections(read('books', 'grafema', f), 'ontocrawler_2')) {
       must(r.load(s.text, { who: s.who }), `${f} [@who ${s.who}]`);
     }
   }

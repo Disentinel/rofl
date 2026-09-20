@@ -1,6 +1,6 @@
 // ledger.ts — the same edges as Enox assertions, derived from the book.
 //
-//   node --experimental-strip-types examples/grafema/ledger.ts > examples/grafema/ledger.jsonl
+//   node --experimental-strip-types books/grafema/ledger.ts > books/grafema/ledger.jsonl
 //
 // write_edge produces ledger and book in one step; no Enox endpoint is
 // reachable from this session, so the ledger half is rendered from the book

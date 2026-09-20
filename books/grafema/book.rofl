@@ -1,4 +1,4 @@
--- examples/grafema/book.rofl — the book of Grafema, grown by ontocrawler-2.
+-- books/grafema/book.rofl — the book of Grafema, grown by ontocrawler-2.
 --
 -- One seed, `grafema exists`. Every edge carries its volume in the bracket,
 -- its evidence, the round it landed and an honest proof depth. Sections
