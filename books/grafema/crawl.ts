@@ -43,6 +43,7 @@ export function world(): Rofl {
   must(r.load(read('rules', 'self-audit.rofl')), 'rules/self-audit.rofl');
   must(r.load(read('books', 'grafema', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
   for (const c of ['base.rofl', 'software-product.rofl']) must(r.load(read('books', 'crystals', c), { who: 'ontocrawler_2' }), `crystals/${c}`);
+  must(r.load(read('books', 'grafema', 'parity.rofl'), { who: 'ontocrawler_2' }), 'parity.rofl');
   for (const f of ['book.rofl', 'steering.rofl']) {
     for (const s of sections(read('books', 'grafema', f), 'ontocrawler_2')) {
       must(r.load(s.text, { who: s.who }), `${f} [@who ${s.who}]`);

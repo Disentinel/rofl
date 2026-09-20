@@ -193,8 +193,8 @@ low_yield(B)              :- crawled_recently(B), not landed_recently(B), not de
 ask_kill(B)               :- report_due(_), low_yield(B).
 
 open_entity(X, C)         :- obligation(_, _, X, _), class(X, C).
-many_open(C)              :- open_entity(X1, C), open_entity(X2, C), open_entity(X3, C),
-                             X1 != X2, X2 != X3, X1 != X3.
+two_open(C, X1, X2)       :- open_entity(X1, C), open_entity(X2, C), X1 < X2.
+many_open(C)              :- two_open(C, _, X2), open_entity(X3, C), X2 < X3.
 overridden(C)             :- priority_override(C, _, _).
 ask_priority(C)           :- report_due(_), many_open(C), not overridden(C).
 

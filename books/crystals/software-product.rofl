@@ -46,6 +46,13 @@ archetype(supersedes).        q_shape(supersedes, in).
 provisional(supersedes, code_analysis_tool, 15).
 origin(supersedes, "session:2026-09-20-grafema", spawned_by_question_q_rofl_supersedes).
 
+-- Spawned by the parity question (round 16): what a thing OFFERS, at the
+-- granularity its own capability list uses. Parity is derived over it
+-- (books/grafema/parity.rofl); a capability is an entity so that two
+-- offerings can be asserted equivalent with evidence.
+archetype(offers).            q_shape(offers, out).
+origin(offers, "session:2026-09-20-grafema", spawned_by_question_q_parity).
+
 -- ---------------------------------------------------- expectations
 -- What filled on the seed, by the class the sources gave it. One product,
 -- one sample: learned_on says so, and asks(C, R) narrows to these only for

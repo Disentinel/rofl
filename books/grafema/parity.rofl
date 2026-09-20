@@ -1,0 +1,24 @@
+-- books/grafema/parity.rofl — feature parity as a derived relation.
+--
+-- Asked by the owner on 2026-09-20 ("can you not compute parity?"). Two
+-- things are at parity on a capability when both OFFER it and the two
+-- offerings are asserted equivalent, with evidence, by someone. Nothing is
+-- scored by hand: the ratio is a count over these rows, taken by parity.ts.
+-- Rules are data with an invalidation path: retire this file when the
+-- question closes.
+
+edb(plans).           -- plans(X, C)   a capability X announces and does not ship (README ⏳)
+edb(context).         -- context(Id, "...")  what a triple does not say; the Enox context field
+
+offers(X, C)              :- edge_any(_, offers, X, C).
+same_capability(C, C)     :- offers(_, C).
+same_capability(C, C2)    :- edge_any(_, equivalent_to, C, C2).
+same_capability(C, C2)    :- edge_any(_, equivalent_to, C2, C).
+
+parity(A, B, C)           :- offers(A, C), offers(B, C2), same_capability(C, C2), A != B.
+gap(A, B, C)              :- offers(A, C), offers(B, _), not parity(A, B, C).
+
+-- an equivalence claimed between two things neither side offers is noise
+idle_equivalence[audit](C, C2) :- edge_any(_, equivalent_to, C, C2), not offers(_, C), not offers(_, C2),
+                                  capability(C).
+capability(C)             :- offers(_, C).
