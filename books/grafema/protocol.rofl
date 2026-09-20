@@ -21,6 +21,12 @@ collects(main).
 edb(seed).              -- seed(X)                       X exists
 edb(archetype).         -- archetype(R)                  the relation vocabulary
 edb(q_shape).           -- q_shape(R, out|in)            R(X, ?) or R(?, X)
+edb(crystal).           -- crystal(Name)
+edb(expects).           -- expects(Crystal, Class, R)   the domain's learned signature
+edb(origin).            -- origin(R, Session, Finding)  where an archetype came from
+edb(learned_on).        -- learned_on(Crystal, Class, N, Seed)
+edb(retired_by).        -- retired_by(Crystal, Class, R, Session)
+edb(asker).             -- asker(A)
 edb(guessed).           -- guessed(X, C)                a class the executor wrote with no evidence (rounds 0-5)
 edb(kindless).          -- kindless(R)                   asked of every entity before its kind is known
 edb(pair_valued).       -- pair_valued(R)                R(X, io(In, Out)): two slots, one edge
@@ -79,7 +85,9 @@ entered(X, K)             :- appears(X, K), not appears_later(X, K).
 
 -- ------------------------------------------- questions: derived, not written
 provisional_any(R)        :- provisional(R, _, _).
-asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R).
+narrowed(C)               :- expects(_, C, _).
+asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R), not narrowed(C).
+asks(C, R)                :- expects(_, C, R), not retired(C, R).
 asks(C, R)                :- provisional(R, C, _), not retired(C, R).
 needs(gen(E, R), R, E, D) :- entity(E), kindless(R), q_shape(R, D).
 needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D), not kindless(R).
@@ -195,9 +203,11 @@ edge_without_evidence[audit](Id) :- edge_any(Id, _, _, _), not evidence(Id, _, _
 edge_without_round[audit](Id)    :- edge_any(Id, _, _, _), not landed(Id, _).
 edge_without_depth[audit](Id)    :- edge_any(Id, _, _, _), not depth(Id, _).
 retired_but_filled[audit](C, R)  :- retired(C, R), class(X, C), filled(R, X, _).
+archetype_without_origin[audit](R) :- archetype(R), not origin(R, _, _).
 alarm(no_state).
 alarm(class_guessed).
 alarm(edge_without_evidence).
 alarm(edge_without_round).
 alarm(edge_without_depth).
 alarm(retired_but_filled).
+alarm(archetype_without_origin).

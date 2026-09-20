@@ -1,0 +1,24 @@
+-- books/crystals/base.rofl — the vocabulary every crawl starts from.
+--
+-- The six questions of the skill's table (ontocrawler-2 SKILL.md, "a question
+-- is a relation with one open slot"). Domain-free by construction: a crystal
+-- for a domain adds to this, never edits it. Every archetype carries its
+-- origin; archetype_without_origin[audit] in protocol.rofl refuses one that
+-- does not.
+
+crystal(base).
+
+archetype(decomposes_into).   q_shape(decomposes_into, out).   -- what is X made of?
+archetype(requires).          q_shape(requires, in).           -- why does X exist?
+archetype(depends_on).        q_shape(depends_on, in).         -- what breaks if X is removed?
+archetype(held_by).           q_shape(held_by, out).           -- who pays when X breaks?
+archetype(equivalent_to).     q_shape(equivalent_to, out).     -- who calls X something else?
+archetype(recorded_in).       q_shape(recorded_in, out).       -- where does X leave a trace?
+kindless(recorded_in).                                         -- sources unfold first
+
+origin(decomposes_into, "skill:ontocrawler-2", table_of_questions).
+origin(requires,        "skill:ontocrawler-2", table_of_questions).
+origin(depends_on,      "skill:ontocrawler-2", table_of_questions).
+origin(held_by,         "skill:ontocrawler-2", table_of_questions).
+origin(equivalent_to,   "skill:ontocrawler-2", table_of_questions).
+origin(recorded_in,     "skill:ontocrawler-2", table_of_questions).

@@ -5,27 +5,15 @@
 -- marked `-- @who` are loaded under that identity by crawl.ts; the golden
 -- loads the file whole and anonymous, which is also a valid world.
 --
--- Vocabulary: the six archetypes of the skill's question table. Nothing
--- domain-specific is written here; classes are named at write time and their
--- signatures are induced by crawl.ts (signature_at / retired), never declared.
+-- Vocabulary comes from books/crystals/: base.rofl (the skill's six
+-- questions) and software-product.rofl (what this crawl added). Nothing
+-- domain-specific is declared here; classes derive from is_a.
 
 -- @who ontocrawler_2
 
 seed(grafema).
 
-archetype(decomposes_into).   q_shape(decomposes_into, out).   -- what is X made of?
-archetype(requires).          q_shape(requires, in).           -- why does X exist?
-archetype(depends_on).        q_shape(depends_on, in).         -- what breaks if X is removed?
-archetype(held_by).           q_shape(held_by, out).           -- who pays when X breaks?
-archetype(equivalent_to).     q_shape(equivalent_to, out).     -- who calls X something else?
-archetype(recorded_in).       q_shape(recorded_in, out).       -- where does X leave a trace?
-kindless(recorded_in).
-
--- added round 6, the owner's decision after f_the_archetypes_never_ask_what_a_thing_is
-archetype(is_a).              q_shape(is_a, out).              -- what kind of thing is X?
-kindless(is_a).
-archetype(transforms).        q_shape(transforms, out).        -- what does X make, out of what?
-pair_valued(transforms).
+-- vocabulary: books/crystals/base.rofl + software-product.rofl, loaded before this file
 
 guessed(grafema, product).
 
@@ -328,7 +316,7 @@ landed(e41, 5). depth(e41, 2). classified(e41, confirmed).
 -- seed is one person and one handle, and whether the handle IS the person
 -- is an open equivalent_to question, not a merge on name.
 
-archetype(values).  q_shape(values, out).  provisional(values, person, 5).
+-- values: archetype spawned here, now in crystals/software-product.rofl
 edge[book](e42, values, vadim_reshetnikov, graph_superior_to_reading).
 evidence(e42, src_repo, "CLAUDE.md 'If reading code gives better results than querying Grafema — that is a product gap, not a workflow choice'").
 landed(e42, 5). depth(e42, 1). classified(e42, confirmed).

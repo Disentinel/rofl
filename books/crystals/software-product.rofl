@@ -1,0 +1,65 @@
+-- books/crystals/software-product.rofl — what one crawl over one software
+-- product left behind as vocabulary. A crystal is facts, never rules: the
+-- protocol reads it and narrows its questions to what the domain has earned.
+--
+-- Every line has an origin (session + finding) or a sample it was learned on.
+-- A line with neither is a declared schema, which is the failure mode this
+-- file exists to avoid. n=1 everywhere below: these are CANDIDATES, and the
+-- next crawl on another product is what promotes or retires them.
+--
+-- Loaded after base.rofl, before any book.
+
+crystal(software_product).
+
+-- ---------------------------------------------------------- vocabulary
+-- The kind of a thing is an answer, never an input (f_the_archetypes_never_
+-- ask_what_a_thing_is): asked of every entity before any class-dependent
+-- question, and class derives from it.
+archetype(is_a).              q_shape(is_a, out).              kindless(is_a).
+origin(is_a, "session:2026-09-18-grafema", f_the_archetypes_never_ask_what_a_thing_is).
+
+-- What a thing makes, out of what. Two slots in one edge: io(In, Out). For a
+-- tool this IS the answer to "what is it"; the skill's meme question "what it
+-- changes" is this archetype and nothing in the base table yields it.
+archetype(transforms).        q_shape(transforms, out).        pair_valued(transforms).
+origin(transforms, "session:2026-09-18-grafema", f_the_archetypes_never_ask_what_a_thing_is).
+
+-- Spawned by loop 2 from the verb in CLAUDE.md ("if reading code gives better
+-- results ... that's a product gap"): the holder's value, asked of persons.
+archetype(values).            q_shape(values, out).
+provisional(values, person, 5).
+origin(values, "session:2026-09-18-grafema", held_by_unfolds_to_values).
+
+-- ---------------------------------------------------- expectations
+-- What filled on the seed, by the class the sources gave it. One product,
+-- one sample: learned_on says so, and asks(C, R) narrows to these only for
+-- classes that have a row here.
+expects(software_product, code_analysis_tool, is_a).
+expects(software_product, code_analysis_tool, transforms).
+expects(software_product, code_analysis_tool, equivalent_to).
+expects(software_product, code_analysis_tool, requires).
+expects(software_product, code_analysis_tool, depends_on).
+expects(software_product, code_analysis_tool, held_by).
+expects(software_product, code_analysis_tool, decomposes_into).
+expects(software_product, code_analysis_tool, recorded_in).
+learned_on(software_product, code_analysis_tool, 1, "grafema").
+
+-- No expectation for parts yet: is_a atomised the classes to n=1 each
+-- (static_analysis, code_graph_builder, knowledge_base, ...), so no class
+-- below the seed has a sample. Which kinds are the SAME class is an
+-- equivalent_to question over kinds, and the merge rule forbids answering it
+-- by name. Open, deliberately.
+
+-- ---------------------------------------------------- askers
+-- Three readers a product has, with the value each traces from. Proposed
+-- 2026-09-20 from the CTO / developer / salesperson walk-through; asked of
+-- nobody yet, so no origin session and no sample: the weakest lines here.
+asker(cto).      values(cto, reliability).
+asker(dev).      values(dev, ship_without_breaking).
+asker(sales).    values(sales, promise_only_what_holds).
+
+-- ---------------------------------------------------- still missing
+-- Named in the walk-through, not yet an archetype because no round asked it:
+--   exemplified_by(X, ?)   how X looks in use — a quoted command, a scenario
+--   describes(X, ?)        the source's own sentence about X, as a quote
+-- Recorded here so the gap has an address; an archetype enters with a round.

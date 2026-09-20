@@ -42,6 +42,7 @@ export function world(): Rofl {
   must(r.load(read('boot.rofl')), 'boot.rofl');
   must(r.load(read('rules', 'self-audit.rofl')), 'rules/self-audit.rofl');
   must(r.load(read('books', 'grafema', 'protocol.rofl'), { who: 'ontocrawler_2' }), 'protocol.rofl');
+  for (const c of ['base.rofl', 'software-product.rofl']) must(r.load(read('books', 'crystals', c), { who: 'ontocrawler_2' }), `crystals/${c}`);
   for (const f of ['book.rofl', 'steering.rofl']) {
     for (const s of sections(read('books', 'grafema', f), 'ontocrawler_2')) {
       must(r.load(s.text, { who: s.who }), `${f} [@who ${s.who}]`);
@@ -67,6 +68,7 @@ function audits(r: Rofl): void {
     'undefined_premise[audit](R, Rel)', 'unmoded[audit](R)', 'forged[audit](F)',
     'no_state[audit](Q)', 'class_guessed[audit](X, C)', 'edge_without_evidence[audit](I)',
     'edge_without_round[audit](I)', 'edge_without_depth[audit](I)', 'retired_but_filled[audit](C, R)',
+    'archetype_without_origin[audit](R)',
   ];
   for (const g of gates) {
     const rs = rows(r, g);
