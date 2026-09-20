@@ -4,4 +4,4 @@
 
 -- @who vadim
 report_every(5).
-tick_closed(1). tick_closed(2). tick_closed(3). tick_closed(4). tick_closed(5). tick_closed(6). tick_closed(7). tick_closed(8). tick_closed(9). tick_closed(10). tick_closed(11). tick_closed(12). tick_closed(13).
+tick_closed(1). tick_closed(2). tick_closed(3). tick_closed(4). tick_closed(5). tick_closed(6). tick_closed(7). tick_closed(8). tick_closed(9). tick_closed(10). tick_closed(11). tick_closed(12). tick_closed(13). tick_closed(14).

@@ -30,6 +30,7 @@ edb(asker).             -- asker(A)
 edb(guessed).           -- guessed(X, C)                a class the executor wrote with no evidence (rounds 0-5)
 edb(kindless).          -- kindless(R)                   asked of every entity before its kind is known
 edb(pair_valued).       -- pair_valued(R)                R(X, io(In, Out)): two slots, one edge
+edb(quote_valued).      -- quote_valued(R)               R(X, "..."): the answer is a quote, not an entity
 edb(edge).              -- edge[V](Id, R, X, Y)          one confirmed edge, in volume V
 edb(evidence).          -- evidence(Id, Source, Locator)
 edb(landed).            -- landed(Id, Round)
@@ -62,7 +63,7 @@ in_volume(Id, V)          :- edge[V](Id, _, _, _).
 -- ------------------------------------------------------------- entities
 entity(X)                 :- seed(X).
 entity(X)                 :- edge_any(_, _, X, _).
-entity(Y)                 :- edge_any(_, R, _, Y), not pair_valued(R).
+entity(Y)                 :- edge_any(_, R, _, Y), not pair_valued(R), not quote_valued(R).
 entity(I)                 :- consumes(_, I).
 entity(O)                 :- produces(_, O).
 consumes(X, I)            :- edge_any(_, R, X, io(I, _)), pair_valued(R).
@@ -138,6 +139,10 @@ held(X)                   :- edge_any(_, held_by, X, _).
 holder_for(Q, H)          :- answer_unknown(Q), obligation(Q, _, X, _), edge_any(_, held_by, X, H).
 
 -- ------------------------------------------------ 4. crawl, by priority
+-- A round is one class-dependent question, or ANY number of kindless ones:
+-- a kind, a source and a quote each cost one look at a manifest, and a
+-- gate that opens one entity per round starves every question behind it.
+batchable(R)              :- kindless(R).
 revived_after(B, T)       :- killed(B, _, T), revived(B, _, T2), T2 > T.
 dead(B)                   :- killed(B, _, T), not revived_after(B, T).
 under(Y, B)               :- edge_any(_, decomposes_into, B, Y).

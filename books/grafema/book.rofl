@@ -549,3 +549,169 @@ landed(e69, 13). depth(e69, 1). classified(e69, serendipitous).
 asked(is_a, cli, out, src_repo, 13).
 asked(is_a, cli, out, src_npm, 13).
 asked(is_a, cli, out, src_docs, 13).
+
+-- @who ontocrawler_2
+
+-- ======================================================================
+-- round 14 — the first batched round: every open kindless question of the
+-- parts (is_a, describes, recorded_in), one look at each manifest. The
+-- quotes the earlier rounds read and dropped are written here, dated by the
+-- round that reads them, not the round that first saw them.
+-- ======================================================================
+
+-- the seed, at last in its sources' words
+edge[book](e70, describes, grafema, "Grafema turns your codebase, infrastructure, knowledge, and workflows around it — into one queryable graph. For humans and AI.").
+evidence(e70, src_repo, "README.md:3; CLAUDE.md:3 verbatim"). landed(e70, 14). depth(e70, 2). classified(e70, confirmed).
+edge[book](e71, describes, grafema, "Build a graph of your code, then query it like a database.").
+evidence(e71, src_repo, "packages/cli/README.md:3"). landed(e71, 14). depth(e71, 1). classified(e71, confirmed).
+edge[book](e72, describes, grafema, "Grafema builds a queryable graph of your codebase, answering questions like 'who calls this function?' or 'where does this data flow?' without reading thousands of lines of code.").
+evidence(e72, src_docs, "docs/getting-started.md:3"). landed(e72, 14). depth(e72, 1). classified(e72, confirmed).
+
+-- rfdb
+edge[book](e73, is_a, rfdb, graph_database).
+evidence(e73, src_repo, "packages/rfdb-server/Cargo.toml 'disk-backed graph engine for semantic code analysis'; package.json 'graph database server'"). landed(e73, 14). depth(e73, 2). classified(e73, confirmed).
+edge[book](e74, describes, rfdb, "RFDB (Rega Flow Database) — high-performance disk-backed graph engine for semantic code analysis").
+evidence(e74, src_repo, "packages/rfdb-server/Cargo.toml description"). landed(e74, 14). depth(e74, 1). classified(e74, confirmed).
+edge[book](e75, recorded_in, rfdb, src_repo).
+evidence(e75, src_repo, "packages/rfdb-server/ (Rust crate rfdb + npm @grafema/rfdb in one directory)"). landed(e75, 14). depth(e75, 1). classified(e75, confirmed).
+edge[book](e76, recorded_in, rfdb, src_npm).
+evidence(e76, src_npm, "@grafema/rfdb 0.4.1"). landed(e76, 14). depth(e76, 1). classified(e76, confirmed).
+edge[book](e77, equivalent_to, rfdb, rega_flow_database).
+evidence(e77, src_repo, "packages/rfdb-server/README.md 'Named after the author's wife Regina (Rega for short). The Hebrew word רגע (rega, moment) ... a flow of discrete moments captured in the graph'"). landed(e77, 14). depth(e77, 1). classified(e77, serendipitous).
+-- Rega -> REG-*? the ticket prefix of src_tracker_reg may share the root; not merged, a name is not evidence.
+
+-- rfdb_client
+edge[book](e78, is_a, rfdb_client, client_library).
+evidence(e78, src_repo, "packages/rfdb/package.json @grafema/rfdb-client 'TypeScript client for RFDB', exports ./client ./protocol"). landed(e78, 14). depth(e78, 1). classified(e78, confirmed).
+edge[book](e79, describes, rfdb_client, "TypeScript client for RFDB (Rega Flow Database)").
+evidence(e79, src_repo, "packages/rfdb/package.json description"). landed(e79, 14). depth(e79, 1). classified(e79, confirmed).
+edge[book](e80, recorded_in, rfdb_client, src_repo).
+evidence(e80, src_repo, "packages/rfdb/ (directory rfdb, package rfdb-client)"). landed(e80, 14). depth(e80, 1). classified(e80, confirmed).
+
+-- grafema_orchestrator
+edge[book](e81, is_a, grafema_orchestrator, pipeline_orchestrator).
+evidence(e81, src_repo, "packages/grafema-orchestrator/Cargo.toml; ROADMAP 'replaces old JS pipeline, handles analysis + layout + BEAM'"). landed(e81, 14). depth(e81, 2). classified(e81, confirmed).
+edge[book](e82, describes, grafema_orchestrator, "Orchestrator for Grafema per-file analysis pipeline").
+evidence(e82, src_repo, "packages/grafema-orchestrator/Cargo.toml description"). landed(e82, 14). depth(e82, 1). classified(e82, confirmed).
+edge[book](e83, recorded_in, grafema_orchestrator, src_repo).
+evidence(e83, src_repo, "packages/grafema-orchestrator/ (Rust, no package.json: reaches users only through native_binaries)"). landed(e83, 14). depth(e83, 1). classified(e83, confirmed).
+
+-- language_analyzers
+edge[book](e84, is_a, language_analyzers, per_file_ast_analyzer).
+evidence(e84, src_repo, "grafema-analyzer.cabal synopsis 'Per-file AST → graph analyzer for Grafema'; haskell-analyzer.cabal 'Haskell per-file AST analyzer (uses ghc-lib-parser)'"). landed(e84, 14). depth(e84, 1). classified(e84, confirmed).
+edge[book](e85, describes, language_analyzers, "Per-file AST → graph analyzer for Grafema").
+evidence(e85, src_repo, "packages/js-analyzer/grafema-analyzer.cabal synopsis; src/{AST,Analysis,Domain,Output}: the Haskell side consumes an AST, so the README's OXC is the parser FEEDING it, not a contradiction - the round-2 unexpected narrows to 'who produces the AST'"). landed(e85, 14). depth(e85, 1). classified(e85, confirmed).
+edge[book](e86, recorded_in, language_analyzers, src_repo).
+evidence(e86, src_repo, "packages/*-analyzer/*.cabal, nine packages; .github/workflows/build-haskell-binaries.yml"). landed(e86, 14). depth(e86, 1). classified(e86, confirmed).
+
+-- language_resolvers
+edge[book](e87, is_a, language_resolvers, cross_file_resolution_plugin).
+evidence(e87, src_repo, "grafema-resolve.cabal synopsis 'Cross-file resolution plugins for Grafema'; grafema-common 'Shared types for Grafema analyzer and plugins'"). landed(e87, 14). depth(e87, 1). classified(e87, confirmed).
+edge[book](e88, describes, language_resolvers, "Cross-file resolution plugins for Grafema").
+evidence(e88, src_repo, "packages/grafema-resolve/grafema-resolve.cabal synopsis"). landed(e88, 14). depth(e88, 1). classified(e88, confirmed).
+edge[book](e89, recorded_in, language_resolvers, src_repo).
+evidence(e89, src_repo, "packages/*-resolve/*.cabal, fourteen packages"). landed(e89, 14). depth(e89, 1). classified(e89, confirmed).
+
+-- cli (kind landed in round 13)
+edge[book](e90, describes, cli, "CLI for Grafema code analysis toolkit").
+evidence(e90, src_repo, "packages/cli/package.json description"). landed(e90, 14). depth(e90, 1). classified(e90, confirmed).
+edge[book](e91, recorded_in, cli, src_repo).
+evidence(e91, src_repo, "packages/cli/, packages/grafema/ (the meta-package that ships the bin)"). landed(e91, 14). depth(e91, 1). classified(e91, confirmed).
+edge[book](e92, recorded_in, cli, src_npm).
+evidence(e92, src_npm, "@grafema/cli and grafema 0.4.1"). landed(e92, 14). depth(e92, 1). classified(e92, confirmed).
+
+-- mcp_server
+edge[book](e93, is_a, mcp_server, mcp_server).
+evidence(e93, src_repo, "packages/mcp/package.json 'MCP server for Grafema code analysis toolkit', bin grafema-mcp"). landed(e93, 14). depth(e93, 1). classified(e93, confirmed).
+-- the same kind atom the seed carries (e44): the part and the whole are both
+-- 'an MCP server' to glama and to the manifest. Not a duplicate, a seam.
+edge[book](e94, describes, mcp_server, "Once wired up, your agent can ask structural questions about your codebase that grep can't answer").
+evidence(e94, src_repo, "packages/mcp/README.md"). landed(e94, 14). depth(e94, 1). classified(e94, confirmed).
+edge[book](e95, recorded_in, mcp_server, src_repo).
+evidence(e95, src_repo, "packages/mcp/; Dockerfile"). landed(e95, 14). depth(e95, 1). classified(e95, confirmed).
+edge[book](e96, recorded_in, mcp_server, src_npm).
+evidence(e96, src_npm, "@grafema/mcp 0.4.1"). landed(e96, 14). depth(e96, 1). classified(e96, confirmed).
+
+-- vscode_extension
+edge[book](e97, is_a, vscode_extension, editor_extension).
+evidence(e97, src_repo, "packages/vscode/package.json grafema-explore, displayName 'Grafema Explore', publisher GrafemaLabs"). landed(e97, 14). depth(e97, 1). classified(e97, confirmed).
+edge[book](e98, describes, vscode_extension, "Interactive graph navigation for Grafema code analysis").
+evidence(e98, src_repo, "packages/vscode/package.json description; README 'Find Node at Cursor (Cmd+Shift+G)'"). landed(e98, 14). depth(e98, 1). classified(e98, confirmed).
+edge[book](e99, recorded_in, vscode_extension, src_repo).
+evidence(e99, src_repo, "packages/vscode/; .github/workflows/vscode-release.yml"). landed(e99, 14). depth(e99, 1). classified(e99, confirmed).
+edge[book](e100, recorded_in, vscode_extension, src_vscode_marketplace).
+evidence(e100, src_repo, "README badge marketplace.visualstudio.com/items?itemName=GrafemaLabs.grafema-explore"). landed(e100, 14). depth(e100, 1). classified(e100, confirmed).
+
+-- hex_atlas
+edge[book](e101, is_a, hex_atlas, graph_visualizer).
+evidence(e101, src_repo, "packages/gui/package.json 'Grafema Hex Map — interactive code graph visualization'; README 'React + Three.js unified hex-map visualizer'"). landed(e101, 14). depth(e101, 1). classified(e101, confirmed).
+edge[book](e102, describes, hex_atlas, "Grafema Hex Map — interactive code graph visualization").
+evidence(e102, src_repo, "packages/gui/package.json description"). landed(e102, 14). depth(e102, 1). classified(e102, confirmed).
+edge[book](e103, recorded_in, hex_atlas, src_repo).
+evidence(e103, src_repo, "packages/gui/ (0.0.1, not on npm at 0.4.1: the one part outside unified versioning)"). landed(e103, 14). depth(e103, 1). classified(e103, unexpected).
+
+-- graphql_api
+edge[book](e104, is_a, graphql_api, api_server).
+evidence(e104, src_repo, "packages/api/package.json 'GraphQL API server for Grafema code analysis toolkit'"). landed(e104, 14). depth(e104, 1). classified(e104, confirmed).
+edge[book](e105, describes, graphql_api, "This package provides a GraphQL endpoint on top of Grafema's graph database. It enables external tools, IDE extensions, and AI agents to query the code graph through a standard, self-documenting protocol.").
+evidence(e105, src_repo, "packages/api/README.md"). landed(e105, 14). depth(e105, 1). classified(e105, confirmed).
+edge[book](e106, recorded_in, graphql_api, src_repo).
+evidence(e106, src_repo, "packages/api/"). landed(e106, 14). depth(e106, 1). classified(e106, confirmed).
+
+-- shared_libs
+edge[book](e107, is_a, shared_libs, library).
+evidence(e107, src_repo, "@grafema/util 'Query, config, and guarantee utilities'; @grafema/types 'Type definitions'; @grafema/lang-defs 'Declarative builtin type definitions for language-aware resolution'; @grafema/lang-spec 'Language specification generator'"). landed(e107, 14). depth(e107, 1). classified(e107, confirmed).
+edge[book](e108, describes, shared_libs, "Language specification generator for Grafema. Automates the full pipeline from a language descriptor to annotated corpus, validated vocabulary, compiled test suite, and generated analyzer plugins.").
+evidence(e108, src_repo, "packages/lang-spec/README.md - a generator of analyzers, filed under 'shared libs' by round 2's grouping; the grouping is wrong and lang-spec wants its own node"). landed(e108, 14). depth(e108, 1). classified(e108, unexpected).
+edge[book](e109, recorded_in, shared_libs, src_repo).
+evidence(e109, src_repo, "packages/{util,types,lang-defs,lang-spec}/"). landed(e109, 14). depth(e109, 1). classified(e109, confirmed).
+
+-- plugins
+edge[book](e110, is_a, plugins, batch_plugin).
+evidence(e110, src_repo, "plugins/shape-tracker.mjs 'Shape Tracker — Grafema batch plugin (Phase 3)'; CONTRIBUTING 'compaction enricher ... configured in .grafema/orchestrator.config.yaml'"). landed(e110, 14). depth(e110, 1). classified(e110, confirmed).
+edge[book](e111, describes, plugins, "Shape Tracker — Grafema batch plugin (Phase 3)").
+evidence(e111, src_repo, "plugins/shape-tracker.mjs:3"). landed(e111, 14). depth(e111, 1). classified(e111, confirmed).
+edge[book](e112, recorded_in, plugins, src_repo).
+evidence(e112, src_repo, "plugins/*.mjs, four files"). landed(e112, 14). depth(e112, 1). classified(e112, confirmed).
+
+-- effects_db
+edge[book](e113, is_a, effects_db, effects_taxonomy).
+evidence(e113, src_repo, "effects-db/taxonomy.yaml 'Grafema Effects Taxonomy v2 - Defines the vocabulary for annotating function side effects'"). landed(e113, 14). depth(e113, 1). classified(e113, confirmed).
+edge[book](e114, describes, effects_db, "Defines the vocabulary for annotating function side effects. Used in manifests and effects-db to describe what a function does beyond its return value.").
+evidence(e114, src_repo, "effects-db/taxonomy.yaml:2-4"). landed(e114, 14). depth(e114, 1). classified(e114, confirmed).
+edge[book](e115, recorded_in, effects_db, src_repo).
+evidence(e115, src_repo, "effects-db/{taxonomy.yaml,bridges.yaml,packages/,runtimes/}"). landed(e115, 14). depth(e115, 1). classified(e115, confirmed).
+
+-- registry
+edge[book](e116, is_a, registry, manifest_registry).
+evidence(e116, src_repo, "registry/index.yaml schema_version 1, entries per npm package; README 'Effects-DB & Registry'"). landed(e116, 14). depth(e116, 1). classified(e116, confirmed).
+edge[book](e117, describes, registry, "generated: 2026-03-20, analyzer_version: 0.3.20").
+evidence(e117, src_repo, "registry/index.yaml:2-3 - generated by analyzer 0.3.20 in a tree at 0.4.1; the manifests are five months and a minor version behind the analyzer"). landed(e117, 14). depth(e117, 1). classified(e117, unexpected).
+edge[book](e118, recorded_in, registry, src_repo).
+evidence(e118, src_repo, "registry/<pkg>/<version>/"). landed(e118, 14). depth(e118, 1). classified(e118, confirmed).
+
+-- native_binaries
+edge[book](e119, is_a, native_binaries, platform_binary_package).
+evidence(e119, src_repo, "packages/grafema-linux-x64/package.json os=[linux] cpu=[x64], postinstall.js, no bin: the orchestrator and rfdb arrive through here"). landed(e119, 14). depth(e119, 1). classified(e119, confirmed).
+edge[book](e120, describes, native_binaries, "Grafema native binaries for Linux x64").
+evidence(e120, src_repo, "packages/grafema-linux-x64/package.json description"). landed(e120, 14). depth(e120, 1). classified(e120, confirmed).
+edge[book](e121, recorded_in, native_binaries, src_repo).
+evidence(e121, src_repo, "packages/grafema-{darwin,linux}-{arm64,x64}/; .github/workflows/build-binaries.yml"). landed(e121, 14). depth(e121, 1). classified(e121, confirmed).
+edge[book](e122, recorded_in, native_binaries, src_npm).
+evidence(e122, src_npm, "@grafema/grafema-linux-x64 et al. 0.4.1"). landed(e122, 14). depth(e122, 1). classified(e122, confirmed).
+
+-- the two parts kinded earlier, now described
+edge[book](e123, describes, src_knowledge_dir, "KB is human-readable, git-tracked content that should be visible on GitHub, in PR reviews, in IDE file tree, and findable by grep/search.").
+evidence(e123, src_knowledge_dir, "kb:decision:knowledge-dir-at-project-root"). landed(e123, 14). depth(e123, 1). classified(e123, confirmed).
+edge[book](e124, describes, autoresearch, "Run evaluation experiments measuring whether Grafema graph tools help AI agents understand code better/faster/cheaper than file-only tools.").
+evidence(e124, src_agent_skills, ".claude/skills/autoresearch.md"). landed(e124, 14). depth(e124, 1). classified(e124, confirmed).
+
+asked(is_a, rfdb, out, src_repo, 14). asked(is_a, rfdb_client, out, src_repo, 14). asked(is_a, grafema_orchestrator, out, src_repo, 14).
+asked(is_a, language_analyzers, out, src_repo, 14). asked(is_a, language_resolvers, out, src_repo, 14). asked(is_a, mcp_server, out, src_repo, 14).
+asked(is_a, vscode_extension, out, src_repo, 14). asked(is_a, hex_atlas, out, src_repo, 14). asked(is_a, graphql_api, out, src_repo, 14).
+asked(is_a, shared_libs, out, src_repo, 14). asked(is_a, plugins, out, src_repo, 14). asked(is_a, effects_db, out, src_repo, 14).
+asked(is_a, registry, out, src_repo, 14). asked(is_a, native_binaries, out, src_repo, 14).
+
+-- @who vadim
+edge[canon](c08, describes, grafema, "Graph-driven static analysis that builds a queryable graph from a codebase.").
+evidence(c08, src_canon, "One-line positioning"). landed(c08, 14). depth(c08, 1). classified(c08, confirmed).

@@ -30,6 +30,15 @@ archetype(values).            q_shape(values, out).
 provisional(values, person, 5).
 origin(values, "session:2026-09-18-grafema", held_by_unfolds_to_values).
 
+-- The source's own sentence about a thing, kept as a quote. Three rounds
+-- read the best sentence in the corpus and had nowhere to put it
+-- (f_a_quote_with_no_archetype_is_read_and_lost). Kindless: asked with is_a,
+-- because the first sentence a source spends on a thing IS its answer to
+-- what it is, and it does not depend on the reader.
+archetype(describes).         q_shape(describes, out).         kindless(describes).
+quote_valued(describes).
+origin(describes, "session:2026-09-20-grafema", f_a_quote_with_no_archetype_is_read_and_lost).
+
 -- ---------------------------------------------------- expectations
 -- What filled on the seed, by the class the sources gave it. One product,
 -- one sample: learned_on says so, and asks(C, R) narrows to these only for
@@ -61,5 +70,4 @@ asker(sales).    values(sales, promise_only_what_holds).
 -- ---------------------------------------------------- still missing
 -- Named in the walk-through, not yet an archetype because no round asked it:
 --   exemplified_by(X, ?)   how X looks in use — a quoted command, a scenario
---   describes(X, ?)        the source's own sentence about X, as a quote
 -- Recorded here so the gap has an address; an archetype enters with a round.
