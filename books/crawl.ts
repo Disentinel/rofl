@@ -156,7 +156,7 @@ function fillRates(r: Rofl): void {
   console.log('(filled/asked; * signature, - retired, + would induce, ? would retire; only asked>=3 decides)');
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [book, ...args] = process.argv.slice(2);
   if (!book) throw new Error('usage: crawl.ts <book> [--q L | --why L | --whynot L]');
   const r = world(book);
