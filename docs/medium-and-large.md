@@ -3,6 +3,11 @@
 Decided 2026-09-08. Medium is the Rust engine now under construction; Large is
 the next work and does not start until the measurements below say it must.
 
+**Status 2026-09-21:** the Rust engine (`rust/`, `rofl-load`) is the preferred
+way to run ROFL; the TypeScript engine (`src/`) is for the place a Rust
+toolchain cannot be installed. Measured on one SPAT week: 3.6 s of CPU in
+TypeScript, 1.4–1.8 s in Rust. The reasoning below is kept as it was written.
+
 The line is **not** a size threshold picked for convenience. It falls out of a
 property this repository already derives, and that is the reason it is worth
 writing down rather than negotiating each time.

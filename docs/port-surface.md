@@ -5,6 +5,8 @@ is a measurement made on this branch, and the point of writing them down first
 is that a surface designed without them will hide exactly the things a caller
 needs to see.
 
+**Status 2026-09-21: this engine is the preferred way to run ROFL; `src/` stays for where cargo cannot be installed** (README, «The Rust engine is the preferred way»).
+
 **IMPLEMENTED 2026-09-09** in `rust/rofl/src/session.rs`, gated by
 `rust/rofl/tests/session.rs` (6 tests, green). What the gate found on its first
 run is the reason it exists: the design above says "`ask(query)`" without ever

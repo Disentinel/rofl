@@ -90,9 +90,21 @@ recommendation[main](ship_it,no_go)  <= r989a9b8b @tick 0
 The other forty rule packs in this repository are models OF this repository —
 its JavaScript, its ledger, its own layering — and do not ship.
 
-**Large worlds are the other engine's.** `src/` is built for small ones; the
-Rust engine is reached through the same JSON protocol from `rofl/port`, and the
-division is deliberate rather than a staging post — see `docs/port-surface.md`.
+**The Rust engine is the preferred way to run ROFL** (decided 2026-09-21).
+`rust/` runs the same programs as `src/` and answers the same goldens; the
+TypeScript engine stays for the one place a Rust toolchain cannot be installed.
+Build it once and call it on the files of a world, boot first:
+
+```sh
+cd rust/rofl && cargo build --release          # → rust/target/release/rofl-load
+rust/target/release/rofl-load [--ticks N] [--budget N] boot.rofl world.rofl...
+```
+
+It prints the canonical state; `npm test` runs both engines against one golden
+whenever the binary is built (and says so when it is not). Measured 2026-09-21
+on one and the same SPAT week: 3.6 s of CPU in TypeScript, 1.4–1.8 s in Rust.
+How the two came to be, and where the line between them falls, is
+`docs/medium-and-large.md` and `docs/port-surface.md`.
 
 Everything below this line is for working ON the engine rather than with it.
 
