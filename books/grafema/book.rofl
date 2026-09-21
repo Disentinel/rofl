@@ -1026,3 +1026,36 @@ edge[book](e225, held_by, inv_n_ge_3_paired_external_codebase, independent_revie
 evidence(e225, src_repo, "same"). landed(e225, 20). depth(e225, 1). classified(e225, confirmed).
 not_found(invariant_over, grafema, out, src_repo, 20).   -- for disentinel and grafemalabs: handles, no text of their own; whether they are the owner is equivalent_to, open
 asked(invariant_over, grafema, out, src_repo, 20). asked(invariant_over, autoresearch, out, src_repo, 20).
+
+-- ======================================================================
+-- round 20, continued — the silences written down (asked_without_result,
+-- protocol 2026-09-21). Twenty-four source x question pairs were asked
+-- across rounds 2-19 and neither answered nor closed. Where the round's
+-- own prose recorded the empty search, the not_found repeats it; where
+-- only the asked row survives, the row says so.
+-- ======================================================================
+-- @who ontocrawler_2
+not_found(decomposes_into, grafema, out, src_npm, 2).             -- the registry lists the meta-package's dependencies, not its parts; the parts came from the repo (e10-e26)
+not_found(depends_on, grafema, in, src_knowledge_dir, 4).         -- the knowledge dir records facts about the code, not dependants of the product
+not_found(depends_on, grafema, in, src_canon, 4).                 -- the canon names no dependant outside the monorepo
+not_found(held_by, grafema, out, src_canon, 5).                   -- the canon names no owner; the holder set came from manifests and the absence of CODEOWNERS (round 5 prose)
+not_found(equivalent_to, grafema, out, src_canon, 8).             -- the canon uses the one word for all five things and names no alias
+not_found(is_a, autoresearch, out, src_canon, 10).                -- the canon carries the number, not the apparatus; no kind for autoresearch
+not_found(recorded_in, src_knowledge_dir, out, src_knowledge_dir, 11).   -- the dir does not point at itself; its pointers are in docs (e64) and the MCP surface (e63)
+not_found(recorded_in, autoresearch, out, src_canon, 12).         -- the canon's 77/67 stands without a pointer to the apparatus (round 10 prose, corrected in round 10: the number is in CHANGELOG.md:209, not in the canon's pointer)
+not_found(requires, language_analyzers, in, src_repo, 15).        -- 'grep over docs/, _ai/, knowledge/, CLAUDE.md, CHANGELOG.md for a reason the analyzers are Haskell: nothing' (round 15 prose)
+not_found(requires, language_analyzers, in, src_docs, 15).        -- same search
+not_found(requires, language_analyzers, in, src_knowledge_dir, 15).   -- same search
+not_found(requires, language_analyzers, in, src_changelog, 15).   -- same search
+not_found(requires, language_analyzers, in, src_canon, 15).       -- same search
+not_found(supersedes, grafema, in, src_repo, 15).                 -- 'neither repository asserts that anything supersedes grafema' (round 15 prose)
+not_found(supersedes, grafema, in, src_rofl_repo, 15).            -- same; ROFL's docs assert the reverse dependency (e131)
+not_found(supersedes, grafema, in, src_canon, 15).                -- same search
+not_found(supersedes, grafema, in, src_docs, 15).                 -- same search
+not_found(supersedes, grafema, in, src_changelog, 15).            -- grep supersed|deprecat|replaced by|successor|sunset|archived: only e136 (inside grafema) and a CI runner deprecation
+not_found(supersedes, grafema, in, src_knowledge_dir, 15).        -- same grep, nothing
+not_found(supersedes, grafema, in, src_ci, 15).                   -- workflows deprecate a runner image, not the product
+not_found(supersedes, grafema, in, src_npm, 15).                  -- registry.npmjs.org/grafema/latest: no 'deprecated' field, 0.4.1
+not_found(supersedes, grafema, in, src_enox, 15).                 -- semantic_search 'ROFL replaces Grafema; Grafema obsolete': five nodes, none asserts supersession (e137, e138 are what it held instead)
+not_found(supersedes, grafema, in, src_site, 19).                 -- grafema.dev presents the product as current; no successor, no sunset
+not_found(supersedes, grafema, in, src_zenodo, 19).               -- two records, both 2026, neither marks the other or the product as superseded

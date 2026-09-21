@@ -339,7 +339,14 @@ doubt(Id, stale)          :- rests_on(_, Id), stale(Id).
 doubt(Id, concentration)  :- rests_on(_, Id), claim_of(Id, C), not second_holder(C).
 
 standing(Id, K)           :- doubt(Id, K), not accepted_doubt(Id, K, _, _).
-conditional(Dec)          :- rests_on(Dec, Id), standing(Id, _).
+-- single_source blocks a decision only while the CLAIM has one holder: an
+-- edge read from one text is the normal state of a book, and a decision
+-- that waited for every text to be read twice would never clear. Every
+-- other kind blocks until accepted by name.
+blocks(depth_zero). blocks(self_serving). blocks(concentration). blocks(self_qualified).
+blocks(rival). blocks(bent_put). blocks(stale). blocks(objected).
+conditional(Dec)          :- rests_on(Dec, Id), standing(Id, K), blocks(K).
+conditional(Dec)          :- rests_on(Dec, Id), standing(Id, single_source), claim_of(Id, C), not second_holder(C).
 clear(Dec)                :- decision(Dec), not conditional(Dec).
 idle_acceptance[audit](Id, K) :- accepted_doubt(Id, K, _, _), not doubt(Id, K).
 alarm(idle_acceptance).
@@ -377,3 +384,18 @@ alarm(retired_but_filled).
 alarm(archetype_without_origin).
 alarm(seed_without_sentence).
 alarm(holder_without_invariant).
+-- the asker was interviewed, not inferred: an asker with a task or a value
+-- and no put to the session is a crawler reading a person off a message
+asker_without_put[audit](A)      :- role(A, asker), edge_any(_, requires, _, Q), question_ext(Q, A, _), not put_to_asker(A).
+asker_without_put[audit](A)      :- role(A, asker), edge_any(_, values, A, _), not put_to_asker(A).
+put_to_asker(A)                  :- put(_, src_holder_session, _), role(A, asker).
+alarm(asker_without_put).
+-- a source that was asked and neither answered nor said not_found is a
+-- silence the executor forgot to write down (the digger's tell, round 10)
+asked_without_result[audit](R, X, D, S, K) :- asked(R, X, D, S, K), not result(R, X, D, S, K).
+result(R, X, D, S, K)            :- landed_from(R, X, D, S, K).
+result(R, X, D, S, K)            :- not_found(R, X, D, S, K).
+result(R, X, D, S, K)            :- alias(_, X, X2), result(R, X2, D, S, K).   -- a question put under the asker's word is answered under the book's
+landed_from(R, X, out, S, K)     :- edge_any(Id, R, X, _), evidence(Id, S, _), landed(Id, K).
+landed_from(R, X, in, S, K)      :- edge_any(Id, R, _, X), evidence(Id, S, _), landed(Id, K).
+alarm(asked_without_result).

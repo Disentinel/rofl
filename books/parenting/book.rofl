@@ -461,3 +461,14 @@ evidence(wp1, src_wikipedia_policy, "Wikipedia:Verifiability: 'people can check 
 edge[wiki_policy](wp2, held_by, inv_verifiability, wikipedia_editors).
 evidence(wp2, src_wikipedia_policy, "the policy is the editors' own"). landed(wp2, 13). depth(wp2, 1). classified(wp2, confirmed).
 asked(invariant_over, parenting, out, src_crc, 13). asked(invariant_over, parenting, out, src_sep, 13). asked(invariant_over, src_sep, out, src_sep_policy, 13). asked(invariant_over, src_wikipedia, out, src_wikipedia_policy, 13).
+
+-- ======================================================================
+-- round 13, continued — the silences written down (asked_without_result,
+-- protocol 2026-09-21). Five pairs asked and never closed.
+-- ======================================================================
+-- @who ontocrawler_2
+not_found(is_a, parenting, out, src_enox, 1).                -- recall returned pointers to the graph's own nodes, no kind; the kind waited for a text (round 2)
+not_found(describes, parenting, out, src_enox, 1).           -- same search, no sentence about parenting itself
+not_found(held_by, parenting, out, src_sep, 5).              -- the asked row is the only record of the search; nothing landed and no note survives. The entry's holders arrived in round 13 (e3) under an invariant, not under the practice
+not_found(invariant_over, parenting, out, src_crc, 13).      -- art. 5 re-read gave holders of an invariant already landed (c10, c11), no new invariant
+not_found(invariant_over, parenting, out, src_sep, 13).      -- the child-centred accounts gave a holder (e3); sp1 is the encyclopedia's own invariant, not parenting's

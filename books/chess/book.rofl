@@ -662,3 +662,17 @@ accepted_doubt(g6, rival, vadim, 11).
 accepted_doubt(j1, objected, vadim, 11).
 answered(a9, sense_1, 11, "the asker accepted the verdict built through the alias; the alias stands as his").
 context(a21, "his wording is stronger than the refuting side's: 'no evidence of an effect' (k1) and 'differences not statistically significant' (g9) are absences of a shown effect, not a shown absence. The decision is his and is recorded as said; the claim stays contested in the book, and the gap between the two sentences is the residual he accepted by name above").
+
+-- ======================================================================
+-- round 11, continued — the silences written down. asked_without_result
+-- (protocol, 2026-09-21) named five source x question pairs that were
+-- asked and neither answered nor recorded as not_found. Two resolve
+-- through the alias (round 3 sala_gobet and ioe_rct answered about
+-- chess_instruction, g6 and n21; round 4 europepmc is not_found under
+-- chess_instruction). The other three are silences, and a silence is a
+-- not_found only when the search happened: these did.
+-- ======================================================================
+-- @who ontocrawler_2
+not_found(describes, vadim, out, src_holder_session, 1).   -- the message that opened the domain named the domain, not the man; the sentence came from the interview, round 2 (a8-a20)
+not_found(invariant_over, chess, out, src_fide, 8).         -- the re-read yielded holders of the round-1 invariants (f7, f8) and one identity (f9); no invariant the book did not already carry
+not_found(depends_on, chess, in, src_sala_gobet, 3).       -- under the asker's word: the meta-analyses speak of instruction, not of the game; landed as g6 under chess_instruction
