@@ -256,3 +256,51 @@ edge[book](n26, held_by, src_wikipedia, wikipedia_editors).
 evidence(n26, src_wikipedia, "open editorial communities, ru and en"). landed(n26, 5). depth(n26, 1). classified(n26, confirmed).
 edge[book](n27, held_by, src_ru_school_programme, ru_ministry_and_federation).
 evidence(n27, src_wikipedia, "ru 'Шахматы в школе': Minobr order 2211 of 2004, the Coordination Council, the federation's programme"). landed(n27, 5). depth(n27, 1). classified(n27, confirmed).
+
+-- ======================================================================
+-- round 6 — discharging `concentration`: a book the meta-analysts do not
+-- hold. Europe PMC, chess in the title, all years: one quasi-experiment by
+-- another holder (Aarhus), positive; and the meta-analysts' own study with
+-- the active control their caveat asked for, null.
+-- ======================================================================
+authority(aarhus, ontocrawler_2).     -- Rosholm, Mikkelsen, Gumede 2017, TrygFonden's Centre, Aarhus
+authority(jerrim, ontocrawler_2).     -- Jerrim, Macmillan, Micklewright, Sawtell, Wiggins 2018, J Human Resources
+-- @who ontocrawler_2
+put(6, src_europepmc, "chess in the title, academic or mathematics or cognitive skills, children: any study on instruction effects by authors other than Sala and Gobet?").
+put(6, src_europepmc, "any comment, reply or rebuttal to the far-transfer-null claim?").
+not_found(depends_on, chess_instruction, in, src_europepmc, 6).   -- no rebuttal of the far-transfer verdict names chess; the working-memory literature disagrees only partially and about itself
+edge[book](n28, recorded_in, influence_of_chess_on_thinking, src_rosholm_plos).
+evidence(n28, src_europepmc, "Rosholm, Mikkelsen, Gumede 2017 PLoS One 10.1371/journal.pone.0177257"). landed(n28, 6). depth(n28, 1). classified(n28, confirmed).
+edge[book](n29, held_by, src_rosholm_plos, aarhus_trygfonden).
+evidence(n29, src_europepmc, "TrygFonden's Centre for Child Research, Aarhus; IZA Bonn"). landed(n29, 6). depth(n29, 1). classified(n29, confirmed).
+edge[aarhus](m1, describes, influence_of_chess_on_thinking, "We analyse the effect of substituting a weekly mathematics lesson in primary school grades 1-3 with a lesson in mathematics based on chess instruction ... positive effects, indicating that knowledge acquired through chess play can be transferred to the domain of mathematics; larger impacts for unhappy children and children who are bored in school").
+evidence(m1, src_rosholm_plos, "abstract, Denmark, quasi-experimental substitution of curriculum"). landed(m1, 6). depth(m1, 1). classified(m1, confirmed).
+supports(m1, influence_of_chess_on_thinking).
+context(m1, "a second holder on the supporting side, and a design the meta-analysts' 2017 verdict does not rate: substitution, not randomisation; the effect is on mathematics taught THROUGH chess, which is nearer to near transfer than to far").
+edge[sala_gobet](g9, describes, influence_of_chess_on_thinking, "233 third and fourth graders, 25 hours of chess instruction versus an active control group (checkers) and a passive control: no statistically significant difference in mathematical problem-solving or metacognitive abilities; a second experiment with Go as the active control: differences not statistically significant. The effects (if any) of chess instruction, when rigorously tested, are modest").
+evidence(g9, src_sala_gobet, "Sala & Gobet 2017 Learning & Behavior 10.3758/s13420-017-0280-3"). landed(g9, 6). depth(g9, 1). classified(g9, unexpected).
+refutes(g9, influence_of_chess_on_thinking).
+answers_caveat(g9, g1).
+answers_caveat(g9, g6).
+not_found(depends_on, chess_instruction, in, src_sala_gobet_active_control, 6).
+context(g9, "the design the caveat on g1 asked for, run by the authors of the caveat, at the 25-hour threshold they themselves set, against the placebo they said nobody had controlled: null. The caveat is answered and the answer is against the edge it qualified").
+
+-- ======================================================================
+-- round 7 — discharging `single_source` on the trial: the trial's own
+-- paper, read directly (Journal of Human Resources via uwpress and RePEc;
+-- the EEF report and UCL Discovery still 403).
+-- ======================================================================
+put(7, src_jerrim_jhr, "what did the trial find, in its own words?").
+edge[book](n30, recorded_in, influence_of_chess_on_thinking, src_jerrim_jhr).
+evidence(n30, src_jerrim_jhr, "Jerrim, Macmillan, Micklewright, Sawtell, Wiggins 2018, J Human Resources 53(4) 993-1021, 10.3368/jhr.53.4.0516.7952R; ideas.repec.org/a/uwp/jhriss/v53y2018i4p993-1021.html"). landed(n30, 7). depth(n30, 2). classified(n30, confirmed).
+edge[book](n31, held_by, src_jerrim_jhr, ucl_institute_of_education).
+evidence(n31, src_jerrim_jhr, "the authors' affiliation; the 2016 IoE trial Sala, Foley, Gobet cite"). landed(n31, 7). depth(n31, 1). classified(n31, confirmed).
+edge[jerrim](k1, describes, influence_of_chess_on_thinking, "A number of studies suggest that teaching children how to play chess may have an impact on their educational attainment. Yet the strength of this evidence is undermined by limitations with research design. ... a randomized controlled trial (RCT) involving more than 4,000 children in England. In contrast to much of the existing literature, we find no evidence of an effect of chess instruction on children's mathematics, reading, or science test scores.").
+evidence(k1, src_jerrim_jhr, "abstract, verbatim"). landed(k1, 7). depth(k1, 1). classified(k1, confirmed).
+refutes(k1, influence_of_chess_on_thinking).
+evidence(j1, src_jerrim_jhr, "the trial's own abstract: 'more than 4,000 children', 'no evidence of an effect ... on mathematics, reading, or science' - the citation in Sala, Foley, Gobet stands").
+context(j1, "second source landed in round 7: the trial read directly, by its own authors, a holder the meta-analysts do not hold").
+-- polarities the earlier edges had not declared
+neutral(g2, influence_of_chess_on_thinking).      -- a caveat, not a side
+neutral(n24, influence_of_chess_on_thinking).     -- a correlation between ability and skill, not a claim about instruction
+supports(g5, influence_of_chess_on_thinking).

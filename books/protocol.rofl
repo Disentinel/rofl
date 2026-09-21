@@ -265,6 +265,8 @@ self_serving(Id, S, H)    :- suspected_self_serving(Id, S, H), not independent_e
 edb(supports).          -- supports(Id, Claim)
 edb(refutes).           -- refutes(Id, Claim)
 edb(qualifies).         -- qualifies(Id2, Id)             the source of Id gave Id2 as a caveat about it
+edb(answers_caveat).    -- answers_caveat(Id3, Id)        Id3 is the design the caveat on Id asked for
+edb(neutral).           -- neutral(Id, Claim)             an edge about a claim that takes no side (a caveat, a correlation)
 edb(bent).              -- bent(Round, Source)            the executor bent the question to get an answer
 edb(accepted_doubt).    -- accepted_doubt(Id, Kind, Who, Round)
 edb(discharges).        -- discharges(Kind, "what settles it")
@@ -306,7 +308,7 @@ rival_value(Id)           :- edge_any(Id, R, _, X), q_shape(R, in), not_found(R,
 doubt(Id, depth_zero)     :- rests_on(_, Id), depth(Id, 0).
 doubt(Id, single_source)  :- rests_on(_, Id), depth(Id, 1), not second_source(Id).
 doubt(Id, self_serving)   :- rests_on(_, Id), suspected_self_serving(Id, _, _).
-doubt(Id, self_qualified) :- rests_on(_, Id), qualifies(_, Id).
+doubt(Id, self_qualified) :- rests_on(_, Id), qualifies(_, Id), not answers_caveat(_, Id).
 doubt(Id, rival)          :- rests_on(_, Id), rival_value(Id).
 doubt(Id, bent_put)       :- rests_on(_, Id), landed(Id, K), evidence(Id, S, _), bent(K, S).
 doubt(Id, stale)          :- rests_on(_, Id), stale(Id).
@@ -317,6 +319,11 @@ conditional(Dec)          :- rests_on(Dec, Id), standing(Id, _).
 clear(Dec)                :- decision(Dec), not conditional(Dec).
 idle_acceptance[audit](Id, K) :- accepted_doubt(Id, K, _, _), not doubt(Id, K).
 alarm(idle_acceptance).
+-- every edge that speaks about a claim takes a side or says it does not:
+-- the polarity is a sensor the executor must supply, and this is the audit
+-- that makes it mandatory rather than optional.
+polarity_missing[audit](Id, C)  :- claim(C), edge_any(Id, describes, C, _), not supports(Id, C), not refutes(Id, C), not neutral(Id, C).
+alarm(polarity_missing).
 
 -- ------------------------------------------------ loop 2: schema as data
 signature(C, R)           :- signature_at(C, R, _, _, _).
