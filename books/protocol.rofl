@@ -99,6 +99,7 @@ role(S, successor)        :- edge_any(_, supersedes, S, _).
 role(C, capability)       :- edge_any(_, offers, _, C).
 role(M, method)           :- edge_any(_, method, _, M).
 role(I, invariant)        :- edge_any(_, invariant_over, _, I).
+role(V, variant)          :- edge_any(_, variant_of, V, _).
 role(I, material)         :- consumes(_, I).
 role(O, product)          :- produces(_, O).
 role(A, asker)            :- question_ext(_, A, _).

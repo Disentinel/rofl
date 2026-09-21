@@ -393,3 +393,257 @@ answered(decision_chess_club_for_children, sense_1, 9, "the grade is symmetric b
 -- open, and said so
 context(j1, "OPEN objection (sense_1): 1,965 + 1,900 = 3,865 against 'more than 4,000' in k1. Randomised against analysed is the likely reconciliation and is not evidenced; the trial report (EEF, 403) would settle it").
 context(a9, "OPEN objection (sense_1): the alias chess -> chess_instruction was the crawler's, not the asker's, and it lets 25-30-hour curriculum studies answer a question about a club. The asker confirms it, replaces it, or the question returns to unknown").
+
+-- ======================================================================
+-- round 10 — a digger (Sonnet) took the seed's six class-dependent
+-- questions to three sources and wrote 48 edges; a checker (Sonnet)
+-- returned thirteen objections. The section is merged as written, then
+-- answered: withdrawals stand as records, refilings carry the checker's
+-- objection id as their reason.
+-- ======================================================================
+-- @who ontocrawler_2
+
+-- Q1: requires(?, chess) -- why does chess exist
+put(10, src_wikipedia, "What purposes, needs or institutions require chess to exist -- competitive play, ratings, education, culture?").
+put(10, src_fide, "What purposes, needs or institutions require chess to exist -- competitive play, ratings, education, culture?").
+
+edge[wiki_en](d1_1, requires, competitive_play, chess).
+evidence(d1_1, src_wikipedia, "en 'Organized competition': 'Contemporary chess is an organized sport with structured international and national leagues, tournaments, and congresses.'").
+evidence(d1_1, src_wikipedia, "ru 'Шахматы как вид спорта': 'Шахматы представляют собой организованный вид спорта с иерархией званий, развитой системой регулярных турниров, национальными и международными лигами, шахматными конгрессами.'"). landed(d1_1, 10). depth(d1_1, 2). classified(d1_1, confirmed).
+
+edge[fide](d1_2, requires, fide_rating, chess).
+evidence(d1_2, src_fide, "0.2 Preface: 'A necessary condition for a game to be rated by FIDE is that it shall be played according to the FIDE Laws of Chess.'").
+evidence(d1_2, src_wikipedia, "en 'Governance': 'Another important FIDE activity is administering the international FIDE rating list, calculated monthly using the Elo rating system.'"). landed(d1_2, 10). depth(d1_2, 2). classified(d1_2, confirmed).
+
+edge[wiki_en](d1_3, requires, world_championship_title, chess).
+evidence(d1_3, src_wikipedia, "en lead: 'The first universally recognized World Chess Champion, Wilhelm Steinitz, claimed his title in 1886.'").
+evidence(d1_3, src_wikipedia, "ru 'История': 'С 1886 года разыгрывается звание чемпиона мира по шахматам.'"). landed(d1_3, 10). depth(d1_3, 2). classified(d1_3, confirmed).
+
+edge[wiki_en](d1_4, requires, chess_education, chess).
+evidence(d1_4, src_wikipedia, "en 'Growth': 'Organized chess even for young children has become common. FIDE holds world championships for age levels down to 8 years old.'").
+evidence(d1_4, src_wikipedia, "ru 'История': 'В СССР существовала сильнейшая шахматная школа, получившая развитие благодаря целенаправленной политике государства в этом направлении.'"). landed(d1_4, 10). depth(d1_4, 2). classified(d1_4, unexpected).
+
+edge[wiki_ru](d1_5, requires, chess_composition, chess).
+evidence(d1_5, src_wikipedia, "ru 'Шахматная композиция': 'Вспомогательной дисциплиной для обучения шахматам ... является шахматная композиция -- составление шахматных задач и этюдов.'"). landed(d1_5, 10). depth(d1_5, 1). classified(d1_5, confirmed).
+
+edge[wiki_en](d1_6, requires, sport_governance, chess).
+evidence(d1_6, src_wikipedia, "en 'Governance': 'FIDE is recognized as a sports governing body by the International Olympic Committee, but chess has never been part of the Olympic Games.'"). landed(d1_6, 10). depth(d1_6, 1). classified(d1_6, confirmed).
+
+asked(requires, chess, in, src_wikipedia, 10).
+asked(requires, chess, in, src_fide, 10).
+
+-- Q2: depends_on(?, chess) -- what breaks if chess is removed
+put(20, src_wikipedia, "What depends on chess -- tournaments, rating lists, engines, literature, schools programmes, composition tradition?").
+put(20, src_fide, "What depends on chess -- tournaments, rating lists, engines, literature, schools programmes, composition tradition?").
+
+edge[wiki_en](d1_7, depends_on, chess_tournaments, chess).
+evidence(d1_7, src_wikipedia, "en 'Tournaments and matches': 'Thousands of chess tournaments, matches, and festivals are held around the world every year catering to players of all levels.'"). landed(d1_7, 20). depth(d1_7, 1). classified(d1_7, confirmed).
+
+edge[fide](d1_8, depends_on, fide_rating_list, chess).
+evidence(d1_8, src_fide, "0.2 Preface: 'A necessary condition for a game to be rated by FIDE is that it shall be played according to the FIDE Laws of Chess.'").
+evidence(d1_8, src_wikipedia, "en 'Governance': 'administering the international FIDE rating list, calculated monthly using the Elo rating system.'"). landed(d1_8, 20). depth(d1_8, 2). classified(d1_8, confirmed).
+
+edge[wiki_en](d1_9, depends_on, chess_engines, chess).
+evidence(d1_9, src_wikipedia, "en 'Computer chess': 'Since the advent of the digital computer in the 1950s, chess enthusiasts, computer engineers, and computer scientists have built ... chess-playing machines and computer programs.'"). landed(d1_9, 20). depth(d1_9, 1). classified(d1_9, confirmed).
+
+edge[wiki_en](d1_10, depends_on, chess_literature, chess).
+evidence(d1_10, src_wikipedia, "en 'Chess literature': 'Chess has an extensive literature.'"). landed(d1_10, 20). depth(d1_10, 1). classified(d1_10, confirmed).
+
+edge[wiki_ru](d1_11, depends_on, chess_composition, chess).
+evidence(d1_11, src_wikipedia, "ru 'Шахматная композиция': 'Композиция базируется на средствах и правилах практической игры и представляет собой независимую форму шахматного творчества.'"). landed(d1_11, 20). depth(d1_11, 1). classified(d1_11, confirmed).
+
+edge[wiki_en](d1_12, depends_on, world_chess_championship, chess).
+evidence(d1_12, src_wikipedia, "en 'Governance': 'FIDE's most visible activity is organizing the World Chess Championship, a role it assumed in 1948.'").
+evidence(d1_12, src_wikipedia, "ru 'История': 'С 1924 года существует Международная шахматная федерация -- ФИДЕ, под эгидой которой ... проводится большинство международных соревнований.'"). landed(d1_12, 20). depth(d1_12, 2). classified(d1_12, confirmed).
+
+asked(depends_on, chess, in, src_wikipedia, 20).
+asked(depends_on, chess, in, src_fide, 20).
+
+-- Q3: transforms(chess, io(In, Out)) -- inputs and outputs of a game
+put(30, src_wikipedia, "What does a game of chess take in and produce as output?").
+put(30, src_fide, "What does a game of chess take in and produce as output?").
+
+edge[fide](d1_13, transforms, chess, io(two_players_and_a_position, a_result)).
+evidence(d1_13, src_fide, "Article 1.1/1.4/5.1.1: 'The game of chess is played between two opponents who move their pieces on a square board ... The objective of each player is to place the opponent's king under attack ... The game is won by the player who has checkmated his/her opponent's king.'").
+evidence(d1_13, src_wikipedia, "en lead: 'The objective of the game is to checkmate ... the enemy king. There are also several ways a game can end in a draw.'"). landed(d1_13, 30). depth(d1_13, 2). classified(d1_13, confirmed).
+
+edge[fide](d1_14, transforms, chess, io(a_game, a_notation_record)).
+evidence(d1_14, src_fide, "Article 8.1.1.1: 'by writing in the algebraic notation (Appendix C), on the paper scoresheet prescribed for the competition.'").
+evidence(d1_14, src_wikipedia, "en 'Notation': 'Games or sequences may be recorded in Portable Game Notation (PGN), a text-based format with support for annotative symbols, commentary, and background information, such as player names.'"). landed(d1_14, 30). depth(d1_14, 2). classified(d1_14, confirmed).
+
+edge[wiki_en](d1_15, transforms, chess, io(a_rated_game, a_rating_change)).
+evidence(d1_15, src_wikipedia, "en 'Governance': 'administering the international FIDE rating list, calculated monthly using the Elo rating system.'"). landed(d1_15, 30). depth(d1_15, 1). classified(d1_15, confirmed).
+
+asked(transforms, chess, out, src_wikipedia, 30).
+asked(transforms, chess, out, src_fide, 30).
+
+-- Q4: method(chess, ?) -- how chess is done
+put(40, src_wikipedia, "How is chess done -- openings, middlegame, endgame, tactics, strategy, time controls, variants of play?").
+put(40, src_fide, "How is chess done -- openings, middlegame, endgame, tactics, strategy, time controls, variants of play?").
+
+edge[wiki_en](d1_16, method, chess, chess_opening).
+evidence(d1_16, src_wikipedia, "en 'Opening': 'Competitive players typically learn, memorize, and play well-documented sequences of opening moves.'").
+evidence(d1_16, src_wikipedia, "ru 'Этапы партии': 'Дебют -- начальная стадия, продолжающаяся первые 10-15 ходов.'"). landed(d1_16, 40). depth(d1_16, 2). classified(d1_16, confirmed).
+edge[wiki_en](d1_17, describes, chess_opening, "Competitive players typically learn, memorize, and play well-documented sequences of opening moves.").
+evidence(d1_17, src_wikipedia, "en 'Opening' section."). landed(d1_17, 40). depth(d1_17, 1). classified(d1_17, confirmed).
+
+edge[wiki_en](d1_18, method, chess, chess_middlegame).
+evidence(d1_18, src_wikipedia, "en 'Middlegame': 'The middlegame is the part of the game that starts after the opening.'").
+evidence(d1_18, src_wikipedia, "ru 'Этапы партии': 'Миттельшпиль -- середина игры, начинающаяся после дебюта.'"). landed(d1_18, 40). depth(d1_18, 2). classified(d1_18, confirmed).
+edge[wiki_en](d1_19, describes, chess_middlegame, "The middlegame is the part of the game that starts after the opening. Because the opening theory has ended, players have to form plans based on the features of the position, and at the same time take into account the tactical possibilities of the position.").
+evidence(d1_19, src_wikipedia, "en 'Middlegame' section."). landed(d1_19, 40). depth(d1_19, 1). classified(d1_19, confirmed).
+
+edge[wiki_en](d1_20, method, chess, chess_endgame).
+evidence(d1_20, src_wikipedia, "en 'Endgame': 'The endgame (also end game or ending) is the stage of the game when there are few pieces left on the board.'").
+evidence(d1_20, src_wikipedia, "ru 'Этапы партии': 'Эндшпиль -- заключительная стадия игры, отличающаяся небольшим количеством оставшихся фигур на доске.'"). landed(d1_20, 40). depth(d1_20, 2). classified(d1_20, confirmed).
+edge[wiki_en](d1_21, describes, chess_endgame, "The endgame (also end game or ending) is the stage of the game when there are few pieces left on the board.").
+evidence(d1_21, src_wikipedia, "en 'Endgame' section."). landed(d1_21, 40). depth(d1_21, 1). classified(d1_21, confirmed).
+
+edge[wiki_en](d1_22, method, chess, chess_tactics).
+evidence(d1_22, src_wikipedia, "en 'Tactics': 'In chess, tactics generally refer to short-term maneuvers -- so short-term that they can be calculated in advance by a human player.'"). landed(d1_22, 40). depth(d1_22, 1). classified(d1_22, confirmed).
+edge[wiki_en](d1_23, describes, chess_tactics, "In chess, tactics generally refer to short-term maneuvers, so short-term that they can be calculated in advance by a human player.").
+evidence(d1_23, src_wikipedia, "en 'Tactics' section."). landed(d1_23, 40). depth(d1_23, 1). classified(d1_23, confirmed).
+
+edge[wiki_en](d1_24, method, chess, chess_strategy).
+evidence(d1_24, src_wikipedia, "en 'Strategy': 'Chess strategy is concerned with the evaluation of chess positions and with setting up goals and long-term plans for future play.'"). landed(d1_24, 40). depth(d1_24, 1). classified(d1_24, confirmed).
+edge[wiki_en](d1_25, describes, chess_strategy, "Chess strategy is concerned with the evaluation of chess positions and with setting up goals and long-term plans for future play.").
+evidence(d1_25, src_wikipedia, "en 'Strategy' section."). landed(d1_25, 40). depth(d1_25, 1). classified(d1_25, confirmed).
+
+edge[fide](d1_26, method, chess, time_control).
+evidence(d1_26, src_fide, "Article 6.1: 'Chessclock means a clock with two time displays, connected to each other in such a way that only one of them can run at a time.'").
+evidence(d1_26, src_wikipedia, "en 'Time control': 'In competition, chess games are played with a time control.'"). landed(d1_26, 40). depth(d1_26, 2). classified(d1_26, confirmed).
+edge[fide](d1_27, describes, time_control, "Chessclock means a clock with two time displays, connected to each other in such a way that only one of them can run at a time.").
+evidence(d1_27, src_fide, "Article 6.1."). landed(d1_27, 40). depth(d1_27, 1). classified(d1_27, confirmed).
+
+edge[fide](d1_28, method, chess, blitz_chess).
+evidence(d1_28, src_fide, "Appendix B.1: a blitz game is one where all the moves must be completed in a fixed time of 10 minutes or less for each player.").
+evidence(d1_28, src_wikipedia, "en 'Time control': 'blitz chess (three to ten minutes).'"). landed(d1_28, 40). depth(d1_28, 2). classified(d1_28, confirmed).
+edge[fide](d1_29, describes, blitz_chess, "A blitz game is one where all the moves must be completed in a fixed time of 10 minutes or less for each player; or the allotted time plus 60 times any increment is 10 minutes or less for each player.").
+evidence(d1_29, src_fide, "Appendix B.1."). landed(d1_29, 40). depth(d1_29, 1). classified(d1_29, confirmed).
+
+edge[fide](d1_30, method, chess, rapid_chess).
+evidence(d1_30, src_fide, "Appendix A.1: a Rapid chess game is one where the moves must be completed in a fixed time of more than 10 minutes but less than 60 minutes for each player.").
+evidence(d1_30, src_wikipedia, "en 'Time control': 'rapid chess (ten to sixty minutes per player).'"). landed(d1_30, 40). depth(d1_30, 2). classified(d1_30, confirmed).
+edge[fide](d1_31, describes, rapid_chess, "A Rapid chess game is one where either all the moves must be completed in a fixed time of more than 10 minutes but less than 60 minutes for each player; or the time allotted plus 60 times any increment is of more than 10 minutes but less than 60 minutes for each player.").
+evidence(d1_31, src_fide, "Appendix A.1."). landed(d1_31, 40). depth(d1_31, 1). classified(d1_31, confirmed).
+
+edge[wiki_en](d1_32, method, chess, correspondence_chess).
+evidence(d1_32, src_wikipedia, "en 'Time control': 'Time controls are also enforced in correspondence chess competitions. A typical time control is 50 days for every 10 moves.'").
+evidence(d1_32, src_wikipedia, "ru 'Заочные шахматы': 'Состязания в абстрактных играх ... возможно проводить не видя партнёра, когда соперники находятся на значительном расстоянии друг от друга.'"). landed(d1_32, 40). depth(d1_32, 2). classified(d1_32, confirmed).
+edge[wiki_en](d1_33, describes, correspondence_chess, "Time controls are also enforced in correspondence chess competitions. A typical time control is 50 days for every 10 moves.").
+evidence(d1_33, src_wikipedia, "en 'Time control' section."). landed(d1_33, 40). depth(d1_33, 1). classified(d1_33, confirmed).
+
+edge[wiki_en](d1_34, method, chess, online_chess).
+evidence(d1_34, src_wikipedia, "en 'Online chess': 'Online chess is chess played over the internet.'"). landed(d1_34, 40). depth(d1_34, 1). classified(d1_34, confirmed).
+edge[wiki_en](d1_35, describes, online_chess, "Online chess is chess played over the internet. This is done through the use of internet chess platforms, which use Elo ratings or similar systems to pair up individual players.").
+evidence(d1_35, src_wikipedia, "en 'Online chess' section."). landed(d1_35, 40). depth(d1_35, 1). classified(d1_35, confirmed).
+
+asked(method, chess, out, src_wikipedia, 40).
+asked(method, chess, out, src_fide, 40).
+
+-- Q5: equivalent_to(chess, ?) -- other names and forms
+put(50, src_wikipedia, "What other names and forms does chess have -- Russian, Western, classical, historical names?").
+put(50, src_fide, "What other names and forms does chess have -- Russian, Western, classical, historical names?").
+
+edge[wiki_en](d1_36, equivalent_to, chess, orthodox_chess).
+evidence(d1_36, src_wikipedia, "en 'Chess variants': 'In the context of chess variants, chess is commonly referred to as orthodox chess, orthochess, and classic chess.'").
+evidence(d1_36, src_fide, "Guidelines II.3.2.6 Clarification: '... known as queen-side castling in orthodox chess ... known as king-side castling in orthodox chess.'"). landed(d1_36, 50). depth(d1_36, 2). classified(d1_36, unexpected).
+
+edge[wiki_en](d1_37, equivalent_to, chess, orthochess).
+evidence(d1_37, src_wikipedia, "en 'Chess variants': 'chess is commonly referred to as orthodox chess, orthochess, and classic chess.'"). landed(d1_37, 50). depth(d1_37, 1). classified(d1_37, confirmed).
+
+edge[wiki_en](d1_38, equivalent_to, chess, classic_chess).
+evidence(d1_38, src_wikipedia, "en 'Chess variants': 'chess is commonly referred to as orthodox chess, orthochess, and classic chess.'"). landed(d1_38, 50). depth(d1_38, 1). classified(d1_38, confirmed).
+
+edge[wiki_en](d1_39, equivalent_to, chess, shatranj).
+evidence(d1_39, src_wikipedia, "en 'Origins': 'Chatrang was taken up by the Muslim world after the Islamic conquest of Persia (633-51), where it was then named shatranj.'").
+evidence(d1_39, src_wikipedia, "ru 'История': 'Её потомком на Арабском Востоке стал шатрандж.'"). landed(d1_39, 50). depth(d1_39, 2). classified(d1_39, confirmed).
+
+edge[wiki_en](d1_40, equivalent_to, chess, chaturanga).
+evidence(d1_40, src_wikipedia, "en lead: 'The recorded history of chess dates back to the emergence of chaturanga in 7th-century India.'").
+evidence(d1_40, src_wikipedia, "ru 'История': 'первая известная игра-прародитель шахмат -- чатуранга -- появилась в Индии не позже VI века нашей эры.'"). landed(d1_40, 50). depth(d1_40, 2). classified(d1_40, confirmed).
+
+edge[wiki_en](d1_41, equivalent_to, chess, chess_960).
+evidence(d1_41, src_wikipedia, "en 'Chess variants': 'They include modern variations employing different rules (e.g. losing chess and Chess960).'").
+evidence(d1_41, src_wikipedia, "ru 'Варианты шахмат': 'приобретают всё большую популярность шахматы Фишера (или шахматы-960) -- игра по классическим правилам, но со случайной начальной расстановкой фигур.'"). landed(d1_41, 50). depth(d1_41, 2). classified(d1_41, confirmed).
+
+edge[wiki_ru](d1_42, equivalent_to, chess, shakhmaty).
+evidence(d1_42, src_wikipedia, "ru wiki page title 'Шахматы' -- the Russian name for chess."). landed(d1_42, 50). depth(d1_42, 1). classified(d1_42, confirmed).
+
+asked(equivalent_to, chess, out, src_wikipedia, 50).
+asked(equivalent_to, chess, out, src_fide, 50).
+
+-- Q6: offers(chess, ?) -- what chess provides
+put(60, src_wikipedia, "What does chess provide -- a rating, a title system, a competitive ladder, problems and studies?").
+put(60, src_fide, "What does chess provide -- a rating, a title system, a competitive ladder, problems and studies?").
+
+edge[wiki_en](d1_43, offers, chess, elo_rating_system).
+evidence(d1_43, src_wikipedia, "en 'Titles and rankings': 'In order to rank players, FIDE, ICCF, and most national chess organizations use the Elo rating system developed by Arpad Elo.'"). landed(d1_43, 60). depth(d1_43, 1). classified(d1_43, confirmed).
+
+edge[wiki_en](d1_44, offers, chess, grandmaster_title).
+evidence(d1_44, src_wikipedia, "en 'Titles and rankings': 'Grandmaster (GM) is the highest title a chess player can attain.'"). landed(d1_44, 60). depth(d1_44, 1). classified(d1_44, confirmed).
+
+edge[wiki_en](d1_45, offers, chess, competitive_ladder).
+evidence(d1_45, src_wikipedia, "en 'Tournaments and matches': 'Contemporary chess is an organized sport with structured international and national leagues, tournaments, and congresses.'").
+evidence(d1_45, src_wikipedia, "ru 'Шахматы как вид спорта': 'Шахматы представляют собой организованный вид спорта с иерархией званий, развитой системой регулярных турниров.'"). landed(d1_45, 60). depth(d1_45, 2). classified(d1_45, confirmed).
+
+edge[wiki_en](d1_46, offers, chess, chess_problems_and_studies).
+evidence(d1_46, src_wikipedia, "en 'Problems and studies': 'Chess problems (also called chess compositions) are composed positions, usually created for artistic effect rather than practical application.'").
+evidence(d1_46, src_wikipedia, "ru 'Шахматная композиция': 'Различают два основных вида шахматной композиции -- задачи и этюды.'"). landed(d1_46, 60). depth(d1_46, 2). classified(d1_46, confirmed).
+
+edge[wiki_en](d1_47, offers, chess, world_championship_title).
+evidence(d1_47, src_wikipedia, "en 'Governance': 'FIDE's most visible activity is organizing the World Chess Championship, a role it assumed in 1948.'"). landed(d1_47, 60). depth(d1_47, 1). classified(d1_47, confirmed).
+
+edge[fide](d1_48, offers, chess, fide_rating).
+evidence(d1_48, src_fide, "0.2 Preface: 'A necessary condition for a game to be rated by FIDE is that it shall be played according to the FIDE Laws of Chess.'").
+evidence(d1_48, src_wikipedia, "en 'Governance': 'administering the international FIDE rating list, calculated monthly using the Elo rating system.'"). landed(d1_48, 60). depth(d1_48, 2). classified(d1_48, confirmed).
+
+asked(offers, chess, out, src_wikipedia, 60).
+asked(offers, chess, out, src_fide, 60).
+
+-- @who ontocrawler_2
+objection(d1_39, sense_2, relation, "Shatranj is filed as equivalent_to chess but the evidence calls it a historical predecessor game that chess descended from, not another name for chess itself").
+objection(d1_40, sense_2, relation, "Chaturanga is filed as equivalent_to chess but both quotes describe it as the 7th-century ancestor from which chess's recorded history begins").
+objection(d1_41, sense_2, relation, "Chess960 is filed as equivalent_to chess even though the cited evidence itself calls it a modern variant employing different rules").
+objection(d1_4, sense_2, misread, "The evidence quoted for chess_education requiring chess is about FIDE running age-graded world championships for children, which is about organized competition, not about chess education").
+objection(d1_8, sense_2, duplicate, "depends_on(fide_rating_list, chess) rests on the same FIDE Preface quote already used to support requires(fide_rating, chess) in d1_2").
+objection(d1_48, sense_2, duplicate, "offers(chess, fide_rating) reuses the identical FIDE Preface and Wikipedia governance quotes already used in d1_2 and d1_8").
+objection(d1_11, sense_2, duplicate, "depends_on(chess_composition, chess) and requires(chess_composition, chess) in d1_5 both rest on the same section describing composition as built on the rules of practical play").
+objection(d1_36, sense_2, drift, "The only FIDE evidence offered for chess's other names is a passing use of the phrase orthodox chess inside a castling-notation clarification").
+objection(d1_28, sense_2, category, "Blitz chess is a time-control format of chess, the same kind of thing as Chess960, yet it is filed under method while Chess960 is filed under equivalent_to").
+objection(d1_16, sense_2, category, "The opening is a temporal phase of a single game, not a method or technique for how chess is done").
+objection(d1_47, sense_2, duplicate, "offers(chess, world_championship_title) reuses the same quote already used for depends_on(world_chess_championship, chess) in d1_12").
+objection(d1_17, sense_2, drift, "There is no put() question for the describes relation anywhere in the section").
+objection(d1_45, sense_2, duplicate, "offers(chess, competitive_ladder) reuses the same organized-sport sentence already used for requires(competitive_play, chess) in d1_1").
+
+-- predecessors and variants: three withdrawn, refiled under the relation the sources use
+withdrawn(d1_39, 10). withdrawn(d1_40, 10). withdrawn(d1_41, 10).
+edge[wiki_en](d1r_1, supersedes, chess, shatranj).
+evidence(d1r_1, src_wikipedia, "the predecessor the evidence of d1_39 names; refiled per objection d1_39 (sense_2)"). landed(d1r_1, 10). depth(d1r_1, 1). classified(d1r_1, confirmed).
+edge[wiki_en](d1r_2, variant_of, chess_960, chess).
+evidence(d1r_2, src_wikipedia, "'a modern variant employing different rules' - the verb the sources use, per objection d1_41; the archetype is spawned in books/crystals/game.rofl"). landed(d1r_2, 10). depth(d1r_2, 1). classified(d1r_2, unexpected).
+answered(d1_40, sense_2, 10, "chaturanga already stands as supersedes(chess, chaturanga) in n19 from round 1; the alias edge is withdrawn and nothing refiled").
+-- the same fact under three relations: the purpose reading was the stretch
+withdrawn(d1_2, 10). withdrawn(d1_5, 10). withdrawn(d1_4, 10).
+answered(d1_8, sense_2, 10, "requires(?, chess) asks why chess exists; a rating list that breaks without games is a dependant, not a purpose. d1_2 is withdrawn and the fact stands once, as depends_on in d1_8").
+answered(d1_11, sense_2, 10, "same: composition depends on chess and is not why chess exists; d1_5 withdrawn, d1_11 stands").
+answered(d1_4, sense_2, 10, "withdrawn: age-graded championships are competition; chess education is in the book already as chess_instruction with its own literature").
+withdrawn(d1_45, 10). withdrawn(d1_47, 10). withdrawn(d1_48, 10).
+answered(d1_45, sense_2, 10, "offers on a game bent again, as it did on a practice: three of its six answers were requires or depends_on facts refiled; the three withdrawn, the three that name things chess provides and nothing else asks for (the Elo system, the grandmaster title, problems and studies) stand").
+answered(d1_47, sense_2, 10, "withdrawn, see d1_45").
+answered(d1_48, sense_2, 10, "withdrawn, see d1_45").
+-- phases are not methods
+withdrawn(d1_16, 10). withdrawn(d1_18, 10). withdrawn(d1_20, 10).
+edge[wiki_en](d1r_3, decomposes_into, chess_game, opening).
+evidence(d1r_3, src_wikipedia, "en 'Gameplay': the phases of a game; refiled from method per objection d1_16"). landed(d1r_3, 10). depth(d1r_3, 1). classified(d1r_3, confirmed).
+edge[wiki_en](d1r_4, decomposes_into, chess_game, middlegame).
+evidence(d1r_4, src_wikipedia, "same"). landed(d1r_4, 10). depth(d1r_4, 1). classified(d1r_4, confirmed).
+edge[wiki_en](d1r_5, decomposes_into, chess_game, endgame).
+evidence(d1r_5, src_wikipedia, "same"). landed(d1r_5, 10). depth(d1r_5, 1). classified(d1r_5, confirmed).
+edge[wiki_en](d1r_6, transforms, chess, io(two_players_and_a_position, chess_game)).
+evidence(d1r_6, src_wikipedia, "a game is what a sitting produces; the phases decompose the game, not chess"). landed(d1r_6, 10). depth(d1r_6, 1). classified(d1r_6, confirmed).
+answered(d1_28, sense_2, 10, "the rule, now stated: a time control is a way of playing the same game (method); a rule change is another game (variant_of). Blitz stays a method, Chess960 is refiled as a variant").
+answered(d1_36, sense_2, 10, "kept with context: FIDE does not discuss names, but it uses one, and a name a rulebook uses when it needs to distinguish its game from its own variant is a name held by the rulebook's holder").
+context(d1_36, "FIDE's use of 'orthodox chess' is incidental, inside the Chess960 guideline (objection d1_36)").
+answered(d1_17, sense_2, 10, "describes is kindless and rides with any enumeration by the round-6 rule of the parenting book; the missing put is added here").
+put(10, src_wikipedia, "for each method named, the sentence the article spends on it (describes, kindless, batched with method)").

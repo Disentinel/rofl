@@ -1,0 +1,8 @@
+-- books/crystals/game.rofl — what one crawl over a game (chess) left behind.
+-- Loaded after base.rofl. One line, spawned by a verb in an answer: the
+-- encyclopedias call Chess960 'a variant', and the digger filed it as an
+-- alias; the checker objected; the relation the sources use is this one.
+crystal(game).
+archetype(variant_of).        q_shape(variant_of, in).        -- what variants does X have: variant_of(?, X)
+provisional(variant_of, board_game, 10).
+origin(variant_of, "session:2026-09-21-chess", objection_d1_41_sense_2).
