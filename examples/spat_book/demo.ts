@@ -62,7 +62,7 @@ async function extendsWorld(): Promise<Group> {
   const wr = await spat(root, 'robin', ['whoami'], at(8)); const wm = await spat(root, 'me', ['whoami'], at(9)); const ws = await spat(root, 'robin', ['show', 'mon'], at(10));
   g.check('rule add current(w0907)/rolled(w0999)/week(w0999) → 0: current НЕ ДЕЙСТВУЕТ, rolled не edb, week — неделю заводит оператор; whoami robin/me и show mon — по-прежнему w0831; --week-of w0999 и roll w0999 → 2',
     wk.code === 0 && /current\(w0907\) — НЕ ДЕЙСТВУЕТ: мир уже задаёт current\(w0831\)/.test(wk.out) && /rolled\(w0999, .*\) — факт правил семьи, миру не виден/.test(wk.out) && /week\(w0999\) — миру не передаётся: неделю заводит оператор/.test(wk.out)
-    && /неделя w0831/.test(wr.out) && /неделя w0831/.test(wm.out) && /^пн \(неделя w0831\)/.test(ws.out)
+    && /неделя w0831/.test(wr.out) && /неделя w0831/.test(wm.out) && /^пн 2026-08-31 \(неделя w0831\)/.test(ws.out)
     && (await spat(root, 'robin', ['show', 'mon', '--week-of', 'w0999'], at(11))).code === 2 && (await spat(root, 'alex', ['roll', 'w0999'], at(12))).code === 2, `${wk.out} | ${wr.out.split('\n')[0]} | ${wm.out.split('\n')[0]} | ${ws.out.split('\n')[0]}`);
   g.check('unstratified/leak/undefined_premise: мир с мостом грузится чисто (leak 0, undefined_premise 0, demand-backed 0)', inproc(asRobin(root), (s) => { console.log(`${s.r.query('leak[audit](A, B)').rows.length} ${s.r.query('undefined_premise[audit](R, Rel)').rows.length} ${new Evaluation(s.r.store, {}).rules.filter((x) => !x.safe).length}`); return 0; }).out === '0 0 0');
   return g;

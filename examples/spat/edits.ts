@@ -9,7 +9,7 @@ import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
 import { dayOrder, hhmm, parseTime, rows, ru, sayConstraint, table } from './spat.ts';
 import { SpatError, bookOf, dateIn, editId, isoNow, must, myBook, operator, put, trial, type Env, type Store } from './store.ts';
-import { dateToken, dated, dayAtom, under, weekOf, type Dated } from './dates.ts';
+import { dateToken, dated, dayAtom, under, upcoming, weekOf, type Dated } from './dates.ts';
 import { addBook, fromText, openVolume, write } from './volume.ts';
 import { BOOT, bust } from './spat.ts';
 import { renderDay, renderIcs } from './tomorrow.ts';
@@ -92,7 +92,11 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
     const d = dated(t);
     if (d) { on = d; return dayAtom(r, d.n); }
     const a = name(t, 'день');
-    return a === 'all' || days.has(a) ? a : bad(`день: '${t}'`);
+    if (a === 'all') return a;
+    if (!days.has(a)) bad(`день: '${t}'`);
+    // a weekday is the nearest one ahead, dated — so the entry is for THAT week (dates.ts `upcoming`)
+    if (e) on = upcoming(e, Number(table(r, 'day', 'D, N').find((x) => x.D === a)?.N ?? 1));
+    return a;
   };
   // the days of a recurring line: one day, weekdays, alldays, or a group the world names
   const spec = (t: string | undefined): string => {
@@ -317,6 +321,9 @@ export function mark(s: Store, what: 'confirmed' | 'retracted', id: string): num
 export function roll(s: Store, week: string): number {
   if (!s.r.holds(`role(${s.env.as}, operator)`)) { console.log(`отказано: roll — только оператор, ${s.env.as} им не является`); return 4; }
   if (!table(s.r, 'week', 'W').some((x) => x.W === week)) throw new SpatError(2, `нет такой недели в мире: ${week}; есть ${table(s.r, 'week', 'W').map((x) => x.W).join(', ')}`);
+  // the week in force follows the date; a roll is a step AHEAD of it for a hand-made case, never back
+  const monday = (w: string): string => table(s.r, 'week_starts', 'W, M').find((x) => x.W === w)?.M.replace(/^"|"$/g, '') ?? '';
+  if (monday(week) <= dateIn(s.env).monday) throw new SpatError(2, `roll только вперёд: неделя ${week} (${monday(week) || 'без даты'}) не позже сегодняшней ${dateIn(s.env).monday} — неделя в силе следует за датой сама`);
   const me = s.books.find((b) => b.user === 'me');
   if (!me) throw new SpatError(6, `${s.vol.file}: книги p_me нет`);
   put(s, me, tagged('p_me', [`rolled(${week}, "${isoNow(s.env)}").`]), `roll ${week}`, week);
@@ -365,12 +372,21 @@ export function whoami(s: Store): number {
   return 0;
 }
 
-/** «неделя в силе не сегодняшняя» — a rule's row, printed wherever a week is named. */
+/** «неделя в силе не сегодняшняя» — only an operator's roll ahead does that now; dated and weekday edits land by the date. */
 const stale = (s: Store): string => {
   const x = table(s.r, 'stale_week', 'C, W')[0];
-  return x ? `\n  !! в силе неделя ${x.C}, а сегодня неделя ${x.W}: правки ложатся в ${x.C}; оператору нужен roll ${x.W}` : '';
+  return x ? `\n  !! в силе неделя ${x.C} (roll оператора), сегодня неделя ${x.W}: недатированное (every, all, place, need list) — в ${x.C}` : '';
 };
 
+/** A weekday named to `show`/`warnings`: the nearest one ahead, under its own week (as an edit lands). */
+function nearest(s: Store, t: string): { day: string; ymd: string; week: string } {
+  const a = names(s.r).get(t.toLowerCase()) ?? bad(`день: '${t}'`);
+  const n = table(s.r, 'day', 'D, N').find((x) => x.D === a)?.N ?? bad(`день: '${t}'`);
+  if (s.weekOf !== undefined) return { day: a, ymd: '', week: s.week };   // --week-of names the week itself
+  const d = weekOf(s, upcoming(s.env, Number(n)));
+  under(s, d.week);
+  return d;
+}
 /** Dispatch for the store verbs; the classic verbs stay in spat.ts. */
 export function run(s: Store, cmd: string, rest: string[]): number {
   const tg = s.fmt === 'tg';
@@ -386,7 +402,7 @@ export function run(s: Store, cmd: string, rest: string[]): number {
     }
     case 'warnings': {
       // every «!!» line of the week — or of one day — as one list, for the review step of the bot
-      const d = rest[0] === undefined ? undefined : dateToken(s.env, rest[0]) ? dated(s, rest[0]) : { day: names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`), week: s.week };
+      const d = rest[0] === undefined ? undefined : dateToken(s.env, rest[0]) ? dated(s, rest[0]) : nearest(s, rest[0]);
       console.log(tg ? tgWarnings(s.r, d?.week ?? s.week, d?.day) : renderWarnings(s.r, d?.week ?? s.week, d?.day)); return 0;
     }
     case 'confirm': return mark(s, 'confirmed', rest[0] ?? bad('confirm <edit-id>'));
@@ -399,8 +415,8 @@ export function run(s: Store, cmd: string, rest: string[]): number {
         const d = dated(s, rest[0] ?? 'today');
         console.log(tg ? tgDay(s.r, d.day, d.week) : renderDay(s.r, d.day, `${rest[0] === undefined ? 'СЕГОДНЯ, ' : ''}${ru(d.day)} ${d.ymd} (неделя ${d.week})`)); return 0;
       }
-      const d = names(s.r).get(rest[0].toLowerCase()) ?? bad(`день: '${rest[0]}'`);
-      console.log(tg ? tgDay(s.r, d, s.week) : renderDay(s.r, d, `${ru(d)} (неделя ${s.week})${stale(s)}`)); return 0;
+      const d = nearest(s, rest[0]);
+      console.log(tg ? tgDay(s.r, d.day, d.week) : renderDay(s.r, d.day, `${ru(d.day)}${d.ymd ? ` ${d.ymd}` : ''} (неделя ${d.week})${stale(s)}`)); return 0;
     }
     case 'ics': { process.stdout.write(renderIcs(s, rest.indexOf('--for') >= 0 ? rest[rest.indexOf('--for') + 1] : undefined)); return 0; }
     case 'maybe': return maybe(s, rest);

@@ -22,6 +22,9 @@ export function dateToken(e: Env, t: string): Dated | undefined {
   const d = calDay(ymd);
   return d.ymd === ymd ? { ...d, which: 'on' } : bad(`дата: '${t}' — в календаре такого дня нет`);
 }
+/** A DAY NAMED WITHOUT A DATE IS THE NEAREST ONE AHEAD (S3e): «add … thu» on Monday is this Thursday, «… mon» on Monday
+ *  is today, «… mon» on Tuesday is next week's Monday — and the edit lands in THAT week, never in a week that is ending. */
+export const upcoming = (e: Env, n: number): Dated => ({ ...dateIn(e, (n - dateIn(e).n + 7) % 7), which: 'on' });
 export const dayAtom = (r: Rofl, n: number): string => table(r, 'day', 'D, N').find((x) => Number(x.N) === n)?.D ?? bad(`в мире нет дня с номером ${n}: day(D, ${n}) не объявлен`);
 
 /** A DATED DAY IS SHOWN UNDER ITS OWN WEEK. `week_of(today|tomorrow, W)` is

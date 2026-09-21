@@ -100,7 +100,7 @@ async function phone(): Promise<Group> {
   g.check('tomorrow --format tg (вс 06.09): «*Пн 07.09*» под неделей w0907, ≤ 25 строк', /^\*Пн 07\.09\* — /.test(tm.out) && tm.out.split('\n').length <= 25, tm.out.split('\n')[0]);
   g.check('show week --format tg = tgWeek (12 строк, не 87)', (await spat(root, 'robin', ['show', 'week', '--format', 'tg'])).out === `${TG_WEEK}\n`);
   const term = await spat(root, 'robin', ['show', 'thu']);
-  g.check('без флага — терминальная сетка как была (колонки, ВЕЗЁТ/НЕ ПОКРЫТ заглавными)', /^чт \(неделя w0831\)\n  !! НЕ ПОКРЫТ чт 17:40–18:20  kit/.test(term.out) && /    07:30–08:00  отвезти в школу    школа      \+ kit/.test(term.out), term.out.split('\n').slice(0, 2).join(' | '));
+  g.check('без флага — терминальная сетка как была (колонки, ВЕЗЁТ/НЕ ПОКРЫТ заглавными)', /^чт 2026-09-03 \(неделя w0831\)\n  !! НЕ ПОКРЫТ чт 17:40–18:20  kit/.test(term.out) && /    07:30–08:00  отвезти в школу    школа      \+ kit/.test(term.out), term.out.split('\n').slice(0, 2).join(' | '));
   // the broken day of an edit under --format tg goes through the same lines — after «применено» (16.09), so the hole grows to 19:00
   const br = await spat(root, 'robin', ['edit', 'add errand thu 17:30-18:30 robin shop', '--format', 'tg'], { SPAT_NOW: '2026-08-31T21:31:00+03:00' });
   g.check('edit … --format tg (код 0): «применено» первой строкой, «!! не покрыт …» и причины второй строкой, ≤ 120', br.code === 0 && /^применено: /.test(br.out) && /!! не покрыт kit [\d:–]+\n  — /.test(br.out) && Math.max(...br.out.split('\n').map((l) => l.length)) <= 120, br.out.split('\n').slice(0, 4).join(' | '));

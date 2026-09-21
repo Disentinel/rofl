@@ -116,7 +116,7 @@ export const bookOf = (user: string): string => `p_${user}`;
  *  hypothesis books (`m_`), registered in the volume and never given to the rules. */
 /** `propose`: --propose — the entry is written as proposed when it breaks a day (code 3, `confirm`); without it a person's
  *  fact is applied and what it breaks is printed (owner's decision 16.09). */
-export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; propose?: boolean; }
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; propose?: boolean; weekOf?: string; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
@@ -127,8 +127,7 @@ const loaderFacts = (e: Env, books: Book[], authors: string[], world: Clause[] =
   + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nauthority(main, rules).\nbook_source(rules, repo).\n`
   // ONE SCALE FOR MOMENTS (spat.rofl §15, reminders): minutes of the wall clock in SPAT_TZ — now, and each dated
   // week's Monday 00:00 — so a deadline and a reminder are integers the rules can order; the kernel orders no strings
-  + `now_min(${nowMin(e)}).\n` + world.filter((c) => c.head.rel === 'week_starts' && c.head.args[0]?.k === 'a' && c.head.args[1]?.k === 's')
-    .map((c) => `week_min(${(c.head.args[0] as { name: string }).name}, ${minuteOf((c.head.args[1] as { v: string }).v, 0)}).`).join('\n') + '\n'
+  + `now_min(${nowMin(e)}).\n` + [...weekStarts(world)].map(([w, m]) => `week_min(${w}, ${minuteOf(m, 0)}).`).join('\n') + '\n'
   + `book_source(world, store).\nbook_source(users, store).\nauthority(${HH}, ${HH}).\nbook_source(${HH}, store).\n`
   // the household's rules may read their author's own book: declared per author of an active rule
   + authors.map((u) => `imports(${HH}, p_${u}).`).join('\n') + '\n'
@@ -225,12 +224,23 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     if (opts.weekOf !== undefined && !baseArgs(r, 'week').some((w) => w[0] === atom(opts.weekOf, '--week-of', 2))) {
       throw new SpatError(2, `нет такой недели: ${opts.weekOf}; есть ${baseArgs(r, 'week').map((w) => w[0]).join(', ')}`);
     }
-    week = opts.weekOf ?? rolledWeek(r) ?? cur ?? '?';
+    // THE WEEK IN FORCE FOLLOWS THE DATE (S3e, 2026-09-21): the week whose Monday is SPAT_NOW's, by `week_starts` —
+    // measured on the stand: `current(w0914)` stood a week after nobody's `roll`, and «add … thu» landed in the past.
+    // A `roll` is an explicit step FORWARD only; a date whose week the world does not have is code 2 with the line to add.
+    const starts = weekStarts(worldRows); const monday = dateIn(e).monday;
+    const today = [...starts].find(([, m]) => m === monday)?.[0];
+    const rolled = rolledWeek(r);
+    const ahead = rolled !== undefined && (starts.get(rolled) ?? '') > monday ? rolled : undefined;
+    if (opts.weekOf === undefined && today === undefined && ahead === undefined) {
+      const w = `w${monday.slice(5, 7)}${monday.slice(8, 10)}`;
+      throw new SpatError(2, `неделя с понедельника ${monday} не заведена: в мире нет week_starts(W, "${monday}") — сегодня ${dateIn(e).ymd}, показать не из чего.\n  добавить в world.rofl (оператор, spat volume load <семья> world.rofl --book world):\n  week(${w}).  week_starts(${w}, "${monday}").`);
+    }
+    week = opts.weekOf ?? ahead ?? today ?? cur ?? '?';
     if (cur && week !== cur) { r.retract(`current(${cur})`); must(r.assert(`current(${week}).`), 'current'); }
   };
   setSource(source);
   const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
-  return { env: e, vol, books, open, maybes, week, opened, r };
+  return { env: e, vol, books, open, maybes, week, opened, r, weekOf: opts.weekOf };
 }
 
 /** Base facts of one relation IN ONE BOOK off the store's keys — no evaluation, so the week can be swapped before the
@@ -239,7 +249,10 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
 const baseArgs = (r: Rofl, rel: string, book = 'main'): string[][] =>
   r.factKeys(rel).filter((k) => k.startsWith(`${rel}[${book}](`)).map((k) => (/\((.*)\)$/.exec(k)?.[1] ?? '').split(',').map((x) => x.replace(/^"|"$/g, '')));
 
-/** The operator's latest `rolled(W, Iso)` in the tool's book — that book and no other: the week the store is read under unless --week-of says. */
+/** Every dated week of the world, `W → "YYYY-MM-DD"`, off the world book's rows. */
+export const weekStarts = (world: Clause[]): Map<string, string> =>
+  new Map(world.filter((c) => c.head.rel === 'week_starts' && c.head.args[0]?.k === 'a' && c.head.args[1]?.k === 's').map((c) => [(c.head.args[0] as { name: string }).name, (c.head.args[1] as { v: string }).v]));
+/** The operator's latest `rolled(W, Iso)` in the tool's book — an explicit step ahead of the date, never a week behind it. */
 const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled', 'p_me').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
 
 export function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {

@@ -269,10 +269,12 @@ async function weekOfDate(): Promise<Group> {
   g.check('пн 31.08: tomorrow — вт w0831 (садик закрыт)', /ЗАВТРА, вт 2026-09-01 \(неделя w0831\)/.test(b.out) && !/sadik_nico/.test(b.out), b.out.split('\n')[0]);
   const c = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-27T21:30:00+03:00' });
   g.code('вс 27.09: завтра 28.09 — недели нет', c, 2);
-  g.check('отказ называет понедельник и что нужно', /2026-09-28.*не заведена.*week_starts/.test(c.out), c.out);
+  // S3e: the store refuses at the door — the week in force is TODAY's (27.09 → Monday 21.09), and it is not in the world either
+  g.check('отказ называет понедельник сегодняшней недели (2026-09-21) и две строки для world.rofl', /2026-09-21 не заведена.*week_starts\(W, "2026-09-21"\)/.test(c.out) && /week\(w0921\)\.  week_starts\(w0921, "2026-09-21"\)\./.test(c.out), c.out);
   g.code('show (сегодня) 2026-09-28 — та же неделя, тот же отказ', await spat(root, 'robin', ['show'], { SPAT_NOW: '2026-09-28T09:00:00+03:00' }), 2);
   const w = await spat(root, 'robin', ['whoami'], { SPAT_NOW: '2026-09-07T10:00:00+03:00' });
-  g.check('пн 07.09 при w0831 в силе: предупреждение «нужен roll w0907» (правило stale_week)', /в силе неделя w0831.*сегодня неделя w0907.*roll w0907/.test(w.out), w.out);
+  // S3e: the week in force follows the date — Monday 07.09 is w0907 with nobody's roll, and no «нужен roll» line
+  g.check('пн 07.09 без roll: whoami «неделя w0907 · сегодня 2026-09-07», строки «в силе неделя …» нет (неделя в силе следует за датой)', /неделя w0907 · сегодня 2026-09-07/.test(w.out) && !/в силе неделя/.test(w.out), w.out);
   return g;
 }
 

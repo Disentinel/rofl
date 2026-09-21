@@ -149,8 +149,8 @@ async function applied(): Promise<Group> {
   // PLANTED (D): the edit that used to be code 3 — measured on 2eafa2f: «ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ, не действует»
   const a = await spat(root, 'robin', ['edit', 'add errand thu 17:30-18:30 robin shop'], at(0));
   const A = idOf(a, /применено: .*\((e_[0-9a-f]+)\)/);
-  g.check('add errand thu 17:30-18:30 robin shop → 0; строка 1 «применено: errand чт 17:30–18:30 (e_…) — неделя w0831», строка 2 «  ломает чт: …uncovered…», дальше «!! НЕ ПОКРЫТ чт …»; в книге нет proposed; show thu: errand стоит',
-    a.code === 0 && /^применено: errand чт 17:30–18:30 \(e_[0-9a-f]+\) — неделя w0831\n  ломает чт: [a-z_, ]*uncovered/.test(a.out) && /!! НЕ ПОКРЫТ чт/.test(a.out)
+  g.check('add errand thu 17:30-18:30 robin shop → 0; строка 1 «применено: errand чт 17:30–18:30 (2026-09-03) (e_…) — неделя w0831», строка 2 «  ломает чт: …uncovered…», дальше «!! НЕ ПОКРЫТ чт …»; в книге нет proposed; show thu: errand стоит',
+    a.code === 0 && /^применено: errand чт 17:30–18:30 \(2026-09-03\) \(e_[0-9a-f]+\) — неделя w0831\n  ломает чт: [a-z_, ]*uncovered/.test(a.out) && /!! НЕ ПОКРЫТ чт/.test(a.out)
     && proposedOf(A) === 0 && new RegExp(`errand.*правка ${A}`).test((await spat(root, 'robin', ['show', 'thu'], at(1))).out), a.out.split('\n').slice(0, 3).join(' | '));
   const p = await spat(root, 'robin', ['edit', 'add errand2 thu 18:30-19:30 robin shop', '--propose', '--format', 'tg'], at(2));
   g.check('тот же род правки с --propose --format tg → 3 «ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ», proposed в книге, «подтвердить: spat confirm e_…», строки ≤ 120', p.code === 3 && /^ЗАПИСАНО КАК ПРЕДЛОЖЕНИЕ/.test(p.out) && /подтвердить: spat confirm e_/.test(p.out) && Math.max(...p.out.split('\n').map((l) => l.length)) <= 120 && proposedOf(/confirm (e_[0-9a-f]+)/.exec(p.out)?.[1] ?? '?') === 1, p.out.split('\n').slice(0, 3).join(' | '));

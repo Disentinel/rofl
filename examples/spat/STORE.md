@@ -107,12 +107,17 @@ chats or message files — that is the bot's shim.
    cover is a network file system where SQLite's locking is unreliable
    (NFS); a PVC on one node is fine.
 
-7. **The week changes by `spat roll <week>`, operator only.** The roll is
-   `rolled(Week, Iso)` in `p_me`, and the same transaction sets `meta.week`;
-   the loader reads the latest `rolled` and applies it exactly as
-   `--week-of` is applied — one `current/1` fact, swapped before the first
-   evaluation. The world is not written. `--week-of` still answers for any
-   week, with that week's own edits, since every entry carries `for_week`.
+7. **The week in force follows the date** (S3e, 2026-09-21): it is the week
+   whose `week_starts` Monday is `SPAT_NOW`'s, swapped in as one `current/1`
+   fact before the first evaluation. Measured on the stand 21.09: `current
+   (w0914)` stood a week after nobody's `roll`, and «add … thu» landed in the
+   past. `spat roll <week>` (operator, `rolled(Week, Iso)` in `p_me` and
+   `meta.week`) is now a step AHEAD only, for a hand-made case; a roll at or
+   behind the date is code 2 and does nothing. A date whose week the world
+   does not have is code 2 for every verb of the store, with the two lines to
+   add — `week(w0914).  week_starts(w0914, "2026-09-14").` — the world is not
+   written by the tool. `--week-of` still answers for any week, with that
+   week's own edits, since every entry carries `for_week`.
 
 8. **`spat init <tenant> --world <file> --users <file>`, operator only.** The
    operator first writes their own admission by hand — `tg_user(alex,
@@ -196,11 +201,17 @@ the world under the date's week — the same swap `--week-of` makes — so
 Sunday evening's «завтра» is Monday of the NEXT week with that week's own
 `moved`/`added` and the edits recorded `for_week` it, never the same weekday
 of the week that is ending; a date with no `week_starts` is code 2 with the
-Monday it needs, never a day of some other week under the heading. Edits
-still land in the week in force: on Monday morning before the operator's
-`roll`, `whoami` and every applied edit print «в силе неделя w0831, а сегодня
-неделя w0907: нужен roll» from the `stale_week` row. Measured on 33832b7:
-`SPAT_NOW=2026-09-06T21:30+03:00` printed w0831's Monday under «ЗАВТРА, пн».
+Monday it needs, never a day of some other week under the heading. Measured
+on 33832b7: `SPAT_NOW=2026-09-06T21:30+03:00` printed w0831's Monday under
+«ЗАВТРА, пн». Since S3e a WEEKDAY NAMED WITHOUT A DATE is the nearest one
+ahead, dated (`dates.ts` `upcoming`): «add … thu» on Monday is this Thursday,
+«… mon» on Monday is today, «… mon» on Tuesday is NEXT week's Monday, and the
+entry lands in that day's week (`for_week`) — Sunday evening's «skip walk mon»
+is tomorrow's Monday, never the week that is ending. `show thu`/`warnings thu`
+choose the same day and show it under its own week («чт 2026-09-10 (неделя
+w0907)»); `every` is unchanged. The only «в силе неделя …» line left is the
+operator's roll ahead: «!! в силе неделя w0907 (roll оператора), сегодня
+неделя w0831: недатированное (every, all, place, need list) — в w0907».
 
 ## "Breaks the day" — what it means and how it is asked
 
@@ -830,11 +841,12 @@ reads and one opened store for everything asked after it.
   world`, today) is not a verb.
 - **Move to another day.** `move <block> [<day>] <time>` changes the time on
   a day; the grammar has no target day, as the contract wrote it.
-- **Which week an edit made on Sunday evening is for.** `for_week` is the
-  week in force, and `skip walk mon` typed on Sunday before the roll lands in
-  the ending week's Monday. The warning above is printed; the operator's
-  Sunday `roll` is the discipline. Deriving the week from the day named is
-  not possible — a weekday has no date.
+- **A week the world does not have is not made by the tool.** The rules
+  cannot mint a week (an atom `w0914` is not derivable — the kernel has no
+  constructors), and the loader could, from the date, but a week is the
+  operator's line by §14 (`not_extended(week, weeks)`). Left as code 2 with
+  the lines to add; the automatic way, if wanted, is the loader asserting
+  `week`/`week_starts` for the date's Monday when the world lacks it.
 - **Same id twice in one book.** Possible only if the same person writes the
   same text at the same millisecond twice; the set semantics make it one
   edit. Two *different* entries under one id would need a collision of
