@@ -24,7 +24,8 @@ import { createHash } from 'node:crypto';
 import { Rofl } from '../../src/api.ts';
 import { parseProgram } from '../../src/parser.ts';
 import type { Clause } from '../../src/unify.ts';
-import { BOOT, SPAT, bust, setSource, table, world } from './spat.ts';
+import { BOOT, SPAT, bust, ruNames, setSource, table, world } from './spat.ts';
+import { warmLower } from './warm.ts';
 import { books as booksOf, openVolume, readBook, volumes, write, type Volume } from './volume.ts';
 import { HH, hhRules } from './rules.ts';
 
@@ -122,16 +123,20 @@ export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; may
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
  *  question), one `authority` line per book — its one writer, by name — and
  *  where each book was read from, for volumes.rofl to hold against. */
-const loaderFacts = (e: Env, books: Book[], authors: string[], world: Clause[] = []): string =>
-  `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
-  + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nauthority(main, rules).\nbook_source(rules, repo).\n`
-  // ONE SCALE FOR MOMENTS (spat.rofl §15, reminders): minutes of the wall clock in SPAT_TZ — now, and each dated
-  // week's Monday 00:00 — so a deadline and a reminder are integers the rules can order; the kernel orders no strings
-  + `now_min(${nowMin(e)}).\n` + [...weekStarts(world)].map(([w, m]) => `week_min(${w}, ${minuteOf(m, 0)}).`).join('\n') + '\n'
-  + `book_source(world, store).\nbook_source(users, store).\nauthority(${HH}, ${HH}).\nbook_source(${HH}, store).\n`
+/** THE LOADER'S FACTS, IN TWO PARTS. `lowerFacts` change with the world and the family's book alone — they go into a
+ *  warm snapshot (warm.ts); `callFacts` are this call's — its identity, its date and clock, the members' books. */
+const lowerFacts = (authors: string[], world: Clause[]): string =>
+  `authority(main, rules).\nbook_source(rules, repo).\nbook_source(world, store).\nbook_source(users, store).\nauthority(${HH}, ${HH}).\nbook_source(${HH}, store).\n`
+  // ONE SCALE FOR MOMENTS (spat.rofl §15, reminders): minutes of the wall clock in SPAT_TZ — each dated week's Monday
+  // 00:00 here, `now_min` per call — so a deadline and a reminder are integers the rules can order; the kernel orders no strings
+  + [...weekStarts(world)].map(([w, m]) => `week_min(${w}, ${minuteOf(m, 0)}).`).join('\n') + '\n'
   // the household's rules may read their author's own book: declared per author of an active rule
-  + authors.map((u) => `imports(${HH}, p_${u}).`).join('\n') + '\n'
+  + authors.map((u) => `imports(${HH}, p_${u}).`).join('\n');
+const callFacts = (e: Env, books: Book[]): string =>
+  `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
+  + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nnow_min(${nowMin(e)}).\n`
   + books.map((b) => `authority(${b.book}, ${b.user}).\nbook_source(${b.book}, store).`).join('\n');
+const loaderFacts = (e: Env, books: Book[], authors: string[], world: Clause[] = []): string => `${callFacts(e, books)}\n${lowerFacts(authors, world)}`;
 
 export interface Cal { ymd: string; n: number; monday: string; }
 /** A calendar day by its date: its ISO weekday 1..7 (the world's `day(D, N)`
@@ -210,13 +215,18 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   const facts = loaderFacts(e, books, hh.authors, worldRows);
 
   let week = '?'; const minted: string[] = [];
-  const source = (r: Rofl): void => {
+  // THE LOWER LAYERS — the programme, the world, the users, the family's book, the loader's constant facts — are what a
+  // warm snapshot holds (warm.ts, SPAT_WARM=1); everything below is the same text on both paths, so the gate can compare
+  const lower = (r: Rofl): void => {
     // THE PROGRAM IS SIGNED `rules` — the public book's name — so volumes.rofl
     // can tell its facts from the household's; everything else is anonymous.
-    must(r.assert(facts), 'loader');
+    must(r.assert(lowerFacts(hh.authors, worldRows)), 'loader');
     must(r.assert(`${SPAT}\n${ACCESS}\n${VOLUMES}\n${BRIDGE}`, { who: 'rules' }), 'spat.rofl + access.rofl + volumes.rofl + bridge.rofl');
     must(r.assertClauses([...worldRows, ...users]), 'world + users');
     must(r.assertClauses([...hhFacts, ...hh.clauses], { who: HH }), bookPath(vol, HH));
+  };
+  const upper = (r: Rofl): void => {
+    must(r.assert(callFacts(e, books)), 'loader');
     open.forEach((b, i) => must(r.assertClauses(texts[i], { who: b.user }), b.where));
     // THE WEEK IN FORCE, decided before the first evaluation so it costs one:
     // --week-of, else the operator's latest roll, else the world's own.
@@ -236,8 +246,21 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     week = opts.weekOf ?? ahead ?? today;
     if (cur && week !== cur) { r.retract(`current(${cur})`); must(r.assert(`current(${week}).`), 'current'); }
   };
-  setSource(source);
-  const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
+  void facts;
+  let r: Rofl;
+  if (process.env.SPAT_WARM === '1') {
+    // THE WARM PATH: the lower layers restored from a snapshot beside the volume — or built, evaluated and saved — then
+    // this call's facts and books on top and a full re-derivation over the whole base (measured: the fixpoint from a
+    // restored store is the cheap part; see warm.ts). The gate examples/spat_warm holds it byte-for-byte to the cold path.
+    r = warmLower(e, vol, { program: `${SPAT}\n${ACCESS}\n${VOLUMES}\n${BRIDGE}`, facts: lowerFacts(hh.authors, worldRows), rows: [...worldRows, ...users], hh: [...hhFacts, ...hh.clauses] }, lower);
+    upper(r);
+    for (const x of opts.extra ?? []) { must(r.assert(x), x); bust(r); }
+    ruNames(r);
+    r.evaluate();
+  } else {
+    setSource((r0) => { lower(r0); upper(r0); });
+    r = world(undefined, { extra: opts.extra });   // runs `lower` + `upper`, which settle `week`
+  }
   return { env: e, vol, books, open, maybes, week, opened, r, weekOf: opts.weekOf, minted };
 }
 

@@ -100,13 +100,16 @@ export function world(weekFile: string = DEFAULT_WEEK, opts: WorldOpts = {}): Ro
     }
   }
   for (const e of opts.extra ?? []) { must(r.assert(e), e); bust(r); }
-  // the household's own names, from its own file
+  ruNames(r);
+  if (opts.weekOf || (opts.extra ?? []).length > 0) r.evaluate();
+  return r;
+}
+/** The household's own names, from its own file — read once the world stands (a warm restore reads them too). */
+export function ruNames(r: Rofl): void {
   for (const n of r.query('ru_name(A, T)').rows) {
     const a = n.bindings.A; const txt = n.bindings.T;
     if (typeof a === 'string' && typeof txt === 'string') RU[a] = txt.replace(/^"|"$/g, '');
   }
-  if (opts.weekOf || (opts.extra ?? []).length > 0) r.evaluate();
-  return r;
 }
 
 function must(res: { ok: boolean; diagnostics: string[] }, what: string): void {
@@ -1007,7 +1010,7 @@ function summary(r: Rofl): string {
 
 const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings', 'need', 'retire', 'reminders', 'done', 'remind', 'volatility']);
 
-async function main(argv: string[]): Promise<void> {
+export async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
   let weekFile = DEFAULT_WEEK;
   let weekOf: string | undefined;
@@ -1045,6 +1048,7 @@ async function main(argv: string[]): Promise<void> {
       return;
     }
     if (cmd === 'volume') { process.exitCode = (await import('./volume.ts')).run(e, rest); return; }
+    if (cmd === 'serve') { await (await import('./serve.ts')).serve(e); return; }
     const store = st.openStore(e, { weekOf, extra });
     if (fmt !== undefined && fmt !== 'tg') throw Object.assign(new Error(`--format: только tg (терминал — без флага), не '${fmt}'`), { code: 2 });
     store.fmt = fmt; store.propose = propose;

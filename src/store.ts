@@ -805,7 +805,11 @@ export class Store implements FactStore {
     });
     const evals = [...this.evalLog.keys()].sort((a, b) => a - b)
       .map((t) => ({ tick: t, ...this.evalLog.get(t)! }));
-    return JSON.stringify({ tick: this.tick, facts, wits, firings, tickLog: this.tickLog, evals });
+    // THE REUSE FINGERPRINTS TRAVEL WITH THE DERIVED LAYER (S3h, warm layers): a snapshot restored without them
+    // is a full re-derivation on the next evaluate, since `planReuse` reads `derivedKeys` as "already served".
+    // Additive — an older snapshot without the two fields restores as before, cold.
+    const derived = [...this.derivedKeys].sort();
+    return JSON.stringify({ tick: this.tick, facts, wits, firings, tickLog: this.tickLog, evals, derived, schedule: this.derivedSchedule });
   }
 
   static restore(json: string): Store {
@@ -825,6 +829,8 @@ export class Store implements FactStore {
     for (const e of d.evals ?? []) {
       s.evalLog.set(e.tick, { budget: e.budget, steps: e.steps, partial: e.partial });
     }
+    for (const [rel, key] of d.derived ?? []) s.derivedKeys.set(rel, key);
+    s.derivedSchedule = d.schedule ?? '';
     s.dirty = true;
     return s;
   }

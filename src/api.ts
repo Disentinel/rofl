@@ -80,6 +80,8 @@ interface UnknownCtx { index: Map<string, string>; hit: Set<string>; }
 export interface EvalOpts {
   naive?: boolean;
   reuse?: boolean;
+  /** Warm reuse across evaluations (S3h): see `Evaluation.warm`. */
+  warm?: boolean;
   retainTicks?: number;
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
@@ -196,6 +198,8 @@ export class Rofl {
    *  function of has moved. Off makes every evaluation rebuild the whole
    *  derived layer, which is what the engine did before reuse existed. */
   reuse: boolean;
+  /** Warm reuse across evaluations — see `Evaluation.warm`. Off by default. */
+  warm: boolean;
   /** WHICH EVALUATOR. `'rounds'` — the default — schedules the negation
    *  phases by peeling the decoded rules before a single rule fires, and
    *  refuses a program by STALLING: a round that settles nothing while work
@@ -243,6 +247,7 @@ export class Rofl {
   constructor(opts: EvalOpts = {}) {
     this.naive = opts.naive ?? false;
     this.reuse = opts.reuse ?? true;
+    this.warm = opts.warm ?? false;
     this.evaluator = opts.evaluator ?? 'rounds';
     this.retainTicks = opts.retainTicks;
     this.space = opts.space;
@@ -282,7 +287,7 @@ export class Rofl {
    *  is invisible to the other, which is what `excise` below has always needed
    *  and what a per-clause front end needs for the same reason. */
   fork(): Rofl {
-    const r = new Rofl({ naive: this.naive, reuse: this.reuse,
+    const r = new Rofl({ naive: this.naive, reuse: this.reuse, warm: this.warm,
       evaluator: this.evaluator, retainTicks: this.retainTicks, space: this.space });
     r.store = this.store.clone();
     return r;
@@ -676,7 +681,7 @@ export class Rofl {
    *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
    *  through `ensure`/`prepared` and must not be able to disagree about it. */
   private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space };
+    const opts = { budget, naive: this.naive, reuse: this.reuse, warm: this.warm, holeId, space: this.space };
     return this.evaluator === 'strata'
       ? new Evaluation(this.store, opts)
       : new RoundEvaluation(this.store, opts);

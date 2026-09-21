@@ -450,13 +450,20 @@ export class Evaluation {
    *  world is kept rather than facts about its subject. */
   private noProvenance = false;
 
-  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
+  /** WARM REUSE (S3h): keep every relation whose fingerprint held, even one a re-derived relation reads. The
+   *  cone-wide shrink below dates from the first-firing witness; since 2026-09-07 the witness is the LEAST
+   *  signature over ALL firings and the firing set is a function of the data (the order census), so a premise
+   *  complete from the first round produces the same firings as one arriving round by round. Off by default:
+   *  the cold path is the reference, and the warm=cold gate (examples/spat_warm) is what licenses this. */
+  warm: boolean;
+  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; warm?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
     this.bootstrap = opts.bootstrap ?? false;
     this.budget = opts.budget ?? 100_000;
     this.space = opts.space ?? DEFAULT_SPACE;
     this.naive = opts.naive ?? false;
     this.reuse = opts.reuse ?? true;
+    this.warm = opts.warm ?? false;
     this.holeId = opts.holeId ?? mka('$adhoc');
     this.prepare();
   }
@@ -869,6 +876,7 @@ export class Evaluation {
     // (b): a `stratum` this evaluation re-derives may not come out the table
     // the reused relations were derived under, and that is not knowable here.
     if (byHead.has(IFACE.stratum) && !hits.has(IFACE.stratum)) hits.clear();
+    if (this.warm) return { hits, keys };
     for (;;) {
       let shrank = false;
       for (const x of rels) {
