@@ -64,7 +64,7 @@ export interface Res { code: number; out: string; }
 export const FROM: Record<string, string> = { alex: '100001', robin: '100002', nanny: '100003', mallory: '100004', uncle: '100005' };
 /** The verbs that write a book: a child that died by a signal on one of these is not run again — the write may
  *  have landed — where a reading verb is (the answer is the same world). */
-const WRITES = new Set(['edit', 'confirm', 'retract', 'roll', 'init', 'volume', 'maybe', 'rule', 'avail', 'carry', 'note']);
+const WRITES = new Set(['edit', 'confirm', 'retract', 'roll', 'init', 'volume', 'maybe', 'rule', 'avail', 'carry', 'note', 'need', 'retire', 'done', 'remind']);
 export async function spat(root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> {
   const who = FROM[as] ? { SPAT_FROM_ID: FROM[as] } : { SPAT_AS: as, SPAT_TENANT: 'example' };
   const e: Record<string, string | undefined> = { ...process.env, SPAT_ROOT: root, SPAT_TZ: 'Europe/Nicosia', SPAT_NOW: NOW, ...who, ...extra };
@@ -83,7 +83,7 @@ export async function spat(root: string, as: string, args: string[], extra: Reco
     p.on('close', (code, signal) => resolve({ code: code ?? -1, out: mask(out + (signal ? ` [${signal}]` : '')), signal }));
   });
   const r = await once();
-  return r.signal !== null && !WRITES.has(args[0] ?? '') && !(args[0] === 'place' && /^(add|добавить)$/i.test(args[1] ?? '')) ? once() : r;
+  return r.signal !== null && !WRITES.has(args[0] ?? '') && !(args[0] === 'place' && /^(add|добавить)$/i.test(args[1] ?? '')) && !(args[0] === 'reminders' && args.includes('--sent')) ? once() : r;
 }
 export const withEnv = <T,>(vars: Record<string, string>, f: () => T): T => {
   const saved = { ...process.env };

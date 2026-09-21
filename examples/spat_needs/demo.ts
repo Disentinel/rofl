@@ -16,16 +16,9 @@
 
 import * as fs from 'node:fs';
 import { run as verb } from '../spat/edits.ts';
-import { FROM, Group, ROOT, fresh, inproc, spat as spawn, sql, type Res } from '../spat/demolib.ts';
+import { FROM, Group, ROOT, fresh, inproc, spat, sql, type Res } from '../spat/demolib.ts';
 import type { Store } from '../spat/store.ts';
 
-/** A spawn that died without a word — SIGSEGV, no code, nothing printed — is asked once more: a child of this tree dies so
- *  on a loaded machine (facts/findings.rofl, f_the_spat_demo_is_cpu_bound…: 1 in ~120 at load 15–40; 1 in ~15 here beside
- *  the sessions), and an answer pinned to a dead child is no golden. A second death stands. */
-const spat = async (root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> => {
-  const r = await spawn(root, as, args, extra);
-  return r.code === -1 && /^\s*\[SIG[A-Z]+\]\s*$/.test(r.out) ? spawn(root, as, args, extra) : r;
-};
 const idOf = (r: string | Res, re = /\((e_[0-9a-f]+)\)/): string => re.exec(typeof r === 'string' ? r : r.out)?.[1] ?? '';
 const at = (m: number): { SPAT_NOW: string } => ({ SPAT_NOW: `2026-08-31T21:${String(30 + Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}+03:00` });
 // in this process the zone is the environment's too: a moment («через полчаса») is read in SPAT_TZ, and a spawn sets it
