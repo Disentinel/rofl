@@ -647,3 +647,18 @@ answered(d1_36, sense_2, 10, "kept with context: FIDE does not discuss names, bu
 context(d1_36, "FIDE's use of 'orthodox chess' is incidental, inside the Chess960 guideline (objection d1_36)").
 answered(d1_17, sense_2, 10, "describes is kindless and rides with any enumeration by the round-6 rule of the parenting book; the missing put is added here").
 put(10, src_wikipedia, "for each method named, the sentence the article spends on it (describes, kindless, batched with method)").
+
+-- ======================================================================
+-- round 11 — the asker decides. His words verbatim in his volume; the
+-- standing doubts on the decision's path accepted by name; the alias he
+-- had not confirmed, confirmed by the acceptance. The claim's grade does
+-- not move: contested is what the five books say, accepted is what he says.
+-- ======================================================================
+-- @who vadim
+edge[vadim](a21, describes, decision_chess_club_for_children, "В общем шахматы мышление ребёнка НЕ развивают. Хорошо, записывем как принятое.").
+evidence(a21, src_holder_session, "vadim, 2026-09-21, after the round-10 rendering"). landed(a21, 11). depth(a21, 1). classified(a21, confirmed).
+accepted_doubt(r5, depth_zero, vadim, 11).
+accepted_doubt(g6, rival, vadim, 11).
+accepted_doubt(j1, objected, vadim, 11).
+answered(a9, sense_1, 11, "the asker accepted the verdict built through the alias; the alias stands as his").
+context(a21, "his wording is stronger than the refuting side's: 'no evidence of an effect' (k1) and 'differences not statistically significant' (g9) are absences of a shown effect, not a shown absence. The decision is his and is recorded as said; the claim stays contested in the book, and the gap between the two sentences is the residual he accepted by name above").
