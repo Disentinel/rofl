@@ -1,0 +1,16 @@
+-- books/crystals/learned.rofl — signatures measured by books/crystal.ts.
+-- Every row is a fill rate over a book: the class, the relation, the sample
+-- and where. Not written by hand; the next book promotes or retires it.
+
+crystal(learned).
+
+-- chess, 2026-09-21
+expects(learned, invariant, held_by).   learned_on(learned, invariant, 7, "chess").   -- 7/7, round 11
+expects(learned, source, held_by).   learned_on(learned, source, 6, "chess").   -- 6/6, round 11
+
+-- parenting, 2026-09-21
+expects(learned, invariant, held_by).   learned_on(learned, invariant, 10, "parenting").   -- 10/10, round 13
+expects(learned, source, held_by).   learned_on(learned, source, 4, "parenting").   -- 4/4, round 13
+
+-- grafema, 2026-09-21
+expects(learned, capability, equivalent_to).   learned_on(learned, capability, 12, "grafema").   -- 12/12, round 20

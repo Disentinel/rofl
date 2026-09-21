@@ -125,8 +125,8 @@ function due(r: Rofl): void {
   }
 }
 
-function fillRates(r: Rofl): void {
-  section('loop 2 — fill rates (class x archetype)');
+export type Fill = { c: string; rel: string; n: number; asked: number; pct: number; own: boolean; retired: boolean };
+export function fills(r: Rofl): Fill[] {
   const classes = new Map<string, string[]>();
   const ents = new Set(rows(r, 'entity(X)').map((x) => x.bindings.X));
   for (const x of rows(r, 'class(X, C)')) {
@@ -140,22 +140,43 @@ function fillRates(r: Rofl): void {
   const asked = new Set(rows(r, 'asked(R, X, D, S, K)').map((x) => `${x.bindings.R}|${x.bindings.X}|${x.bindings.D}`));
   for (const x of rows(r, 'not_found(R, X, D, S, K)')) asked.add(`${x.bindings.R}|${x.bindings.X}|${x.bindings.D}`);
   const retired = new Set(rows(r, 'retired(C, R)').map((x) => `${x.bindings.C}|${x.bindings.R}`));
-  const sig = new Set(rows(r, 'signature(C, R)').map((x) => `${x.bindings.C}|${x.bindings.R}`));
+  const own = new Set(rows(r, 'crystal_own(C, R)').map((x) => `${x.bindings.C}|${x.bindings.R}`));
   // filled / asked, over the entities of the class that were put the question;
   // an entity nobody asked counts for nothing either way.
+  const out: Fill[] = [];
   for (const [c, xs] of [...classes].sort()) {
-    const cells: string[] = [];
     for (const [rel, d] of [...shape].sort()) {
       const a = xs.filter((x) => asked.has(`${rel}|${x}|${d}`) || filled.has(`${rel}|${x}|${d}`));
       if (a.length === 0) continue;
       const n = a.filter((x) => filled.has(`${rel}|${x}|${d}`)).length;
-      const pct = Math.round((100 * n) / a.length);
-      const mark = sig.has(`${c}|${rel}`) ? '*' : retired.has(`${c}|${rel}`) ? '-' : a.length >= 3 && pct > 70 ? '+' : a.length >= 3 && pct < 30 ? '?' : ' ';
-      cells.push(`${rel}${mark}${n}/${a.length}`);
+      out.push({ c, rel, n, asked: a.length, pct: Math.round((100 * n) / a.length), own: own.has(`${c}|${rel}`), retired: retired.has(`${c}|${rel}`) });
     }
-    if (cells.length) console.log(`${c} (n=${xs.length}): ${cells.join('  ')}`);
   }
-  console.log('(filled/asked; * signature, - retired, + would induce, ? would retire; only asked>=3 decides)');
+  return out;
+}
+
+function fillRates(r: Rofl): void {
+  section('loop 2 — fill rates (class x archetype)');
+  const byClass = new Map<string, string[]>();
+  for (const f of fills(r)) {
+    const mark = f.own ? '*' : f.retired ? '-' : f.asked >= 3 && f.pct > 70 ? '+' : f.asked >= 3 && f.pct < 30 ? '?' : ' ';
+    if (!byClass.has(f.c)) byClass.set(f.c, []);
+    byClass.get(f.c)!.push(`${f.rel}${mark}${f.n}/${f.asked}`);
+  }
+  const size = new Map<string, number>();
+  for (const x of rows(r, 'class(X, C)')) size.set(x.bindings.C, (size.get(x.bindings.C) ?? 0) + 1);
+  for (const [c, cells] of byClass) console.log(`${c} (n=${size.get(c)}): ${cells.join('  ')}`);
+  console.log('(filled/asked; * in the crystal, - retired, + would induce, ? would retire; only asked>=3 decides)');
+  section('uncovered — what the crystal expects of a thing and the book has not filled');
+  const byX = new Map<string, string[]>();
+  for (const x of rows(r, 'uncovered(X, R, Via)')) {
+    if (!byX.has(x.bindings.X)) byX.set(x.bindings.X, []);
+    byX.get(x.bindings.X)!.push(`${x.bindings.R} (via ${x.bindings.Via})`);
+  }
+  const xs = [...byX].sort((a, b) => b[1].length - a[1].length);
+  for (const [x, rs] of xs.slice(0, 12)) console.log(`  ${x}: ${rs.join(', ')}`);
+  if (xs.length > 12) console.log(`  … ${xs.length - 12} more`);
+  if (!xs.length) console.log('  none');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

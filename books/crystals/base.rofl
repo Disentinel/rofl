@@ -48,6 +48,11 @@ origin(offers,          "session:2026-09-21-chess", the_verb_not_the_gloss).
 expects(base, kind, describes).
 expects(base, kind, equivalent_to).
 learned_on(base, kind, 2, "grafema,parenting").
+-- A KIND HAS A KIND. The crystal is a type and types nest (protocol, loop
+-- 2): board_game is a kind of game, and what the game crystal expects the
+-- board game inherits. Without is_a on kinds the lattice has one level and
+-- nothing is inherited. Owner's design, round 12 of chess, 2026-09-21.
+expects(base, kind, is_a).
 
 -- THE SECOND SEED. Whoever asks is an entity in the book, with the same
 -- kindless questions as the thing, and two more the thing does not get:

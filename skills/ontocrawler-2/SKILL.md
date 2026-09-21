@@ -147,15 +147,31 @@ and three domains under one sense is what universal looks like. Record the verb;
 `put` against the verb, not against the first book's phrasing of it; and when a line fills on
 a new domain under the same verb, promote it.
 
-## Crystals — vocabulary as the residue of past crawls
+## Crystals — a type is the stable set of relations around a thing
 
-A crystal is a `.rofl` pack of facts, never rules: archetypes with `origin`, `expects(Crystal,
-Class, R)` with `learned_on(Crystal, Class, N, Seeds)`, askers with values, and what is named
-but not yet asked. `base` holds the table above; a domain crystal holds what one crawl added.
-A line without an origin or a sample is a declared schema and is refused. The next crawl on
-another seed promotes or retires each line; a crystal that predicts nothing is not one. Loaded
-before the book, after the protocol; the protocol narrows `asks(C, R)` to `expects` where a
-class has rows and asks everything where it has none.
+A crystal is a TYPE: the set of relations a thing of a class stably has, isomorphic across
+domains (the owner's definition, chess round 12). It is written — `expects(Crystal, Class, R)`
+with `learned_on(Crystal, Class, N, Book)` — or measured: `npm run crystal -- <book>` turns
+every class whose entities fill a relation in more than 70% of the cases asked, over at least
+three of them, into an `expects` row in `books/crystals/learned.rofl` (`--write`), with the
+sample and the book. A line without a sample is a declared schema and is refused. Measured on
+three books the same day: `invariant → held_by` and `source → held_by` learned twice
+(chess, parenting) and `capability → equivalent_to` once (grafema) — and the grafema row
+immediately named six things in chess and five in parenting that had no second name yet.
+
+Types nest. A class that is itself a kind of another class inherits the other's crystal
+(`sub(C1, C2)` from an `is_a` edge between classes, `crystal_of(C, R, Via)` through it), so
+`scientific_theory → theory → statement ← law ← tax_law` shares one set of questions at
+`statement` and each level adds its own. For that the kind atoms must get `is_a` themselves:
+`expects(base, kind, is_a)`. The product is `uncovered(X, R, Via)`: what the crystal expects
+of a thing and the book has not filled, printed every round, with the class the expectation
+came through. A new thing under a known type shows its gaps the round it lands.
+
+`base` holds the table above; a domain crystal holds what one crawl added (archetypes with
+`origin`, provisional archetypes, askers); `learned` holds only what was measured. Loaded
+before the book, after the protocol. The protocol narrows `asks(C, R)` to the crystal where a
+class has rows and asks everything where it has none — so a thin crystal narrows too soon,
+and the fill table's `?` on a narrowed class is the signal to retire the row.
 
 ## Sources unfold first
 

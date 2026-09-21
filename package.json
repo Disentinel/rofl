@@ -61,6 +61,7 @@
     "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
     "features": "node --experimental-strip-types scanners/features.ts",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
+    "crystal": "node --experimental-strip-types books/crystal.ts",
     "flagcheck": "node --experimental-strip-types scripts/flag_census.ts",
     "floorcensus": "node --experimental-strip-types scanners/floor_census.ts",
     "keycoupling": "node --experimental-strip-types scanners/key_coupling.ts",

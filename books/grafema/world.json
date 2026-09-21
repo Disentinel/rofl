@@ -1,1 +1,1 @@
-{ "session": "session:2026-09-18-grafema", "domain": "grafema", "crystals": ["base", "software-product"], "packs": ["parity.rofl"] }
+{"session": "session:2026-09-18-grafema", "domain": "grafema", "crystals": ["base", "software-product", "learned"], "packs": ["parity.rofl"]}

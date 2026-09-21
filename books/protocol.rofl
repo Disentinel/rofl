@@ -132,7 +132,7 @@ entered(X, K)             :- appears(X, K), not appears_later(X, K).
 provisional_any(R)        :- provisional(R, _, _).
 narrowed(C)               :- expects(_, C, _).
 asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R), not narrowed(C).
-asks(C, R)                :- expects(_, C, R), not retired(C, R).
+asks(C, R)                :- crystal_of(C, R, _), not retired(C, R).
 asks(C, R)                :- provisional(R, C, _), not retired(C, R).
 needs(gen(E, R), R, E, D) :- entity(E), kindless(R), q_shape(R, D).
 needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D), not kindless(R).
@@ -398,9 +398,20 @@ alarm(idle_acceptance).
 polarity_missing[audit](Id, C)  :- claim(C), edge_any(Id, describes, C, _), not supports(Id, C), not refutes(Id, C), not neutral(Id, C).
 alarm(polarity_missing).
 
--- ------------------------------------------------ loop 2: schema as data
+-- ------------------------------------------------ loop 2: the crystal is a type
+-- A crystal is the stable set of relations a thing of a class has (owner,
+-- round 12: 'a stable structure of relations around an object, isomorphic
+-- across domains'). It is written (expects) or measured (signature_at),
+-- and it is INHERITED: a class that is itself a kind of another class has
+-- the other's relations. A new thing under a class then shows what it does
+-- not yet cover: scientific_theory -> theory -> statement <- law <- tax_law.
 signature(C, R)           :- signature_at(C, R, _, _, _).
-incomplete(E, R)          :- class(E, C), signature(C, R), q_shape(R, D), not filled(R, E, D).
+crystal_own(C, R)         :- expects(_, C, R).
+crystal_own(C, R)         :- signature(C, R).
+sub(C1, C2)               :- edge_any(_, is_a, C1, C2), class(_, C1).   -- a class that is a kind of another class
+crystal_of(C, R, C)       :- crystal_own(C, R).
+crystal_of(C, R, Via)     :- sub(C, C2), crystal_of(C2, R, Via).
+uncovered(X, R, Via)      :- class(X, C), crystal_of(C, R, Via), q_shape(R, D), not filled(R, X, D), not kindless(R).
 
 -- ------------------------------------------------ invariants of the protocol
 no_state[audit](Q)               :- question(Q, _, _), not answer(Q, _).
