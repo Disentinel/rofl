@@ -220,3 +220,20 @@ context(n24, "the encyclopedia's sentence is the one a parent will read first, a
 
 asked(depends_on, chess, in, src_wikipedia, 3). asked(depends_on, chess, in, src_sala_gobet, 3). asked(depends_on, chess, in, src_ioe_rct, 3).
 asked(transforms, chess_instruction, out, src_sala_gobet, 3).
+
+-- ======================================================================
+-- round 4 — the saturation question, asked by the asker: is there
+-- anything after 2017 that could turn the verdict, and what does the
+-- Russian programme claim. Two more puts; both answered by absence.
+-- ======================================================================
+-- @who ontocrawler_2
+put(4, src_europepmc, "chess in the title, children or pupils or school, 2018-2026: any randomised trial, meta-analysis or systematic review of chess training and cognitive or academic outcomes?").
+put(4, src_wikipedia, "ru 'Шахматы в школе': what is the programme, where, and what effects does it cite?").
+not_found(depends_on, chess_instruction, in, src_europepmc, 4).   -- 25 hits with chess in the title, 2018-2026: brain imaging (Hao 2026), a preschool preprint (Özdemir 2026), cross-sectional 5-6-year-olds in Russia (Yakushina, Chichinina, Dolgikh 2025, Front Psychol), correlation studies (Stegariu 2022), parents' perspectives (Nanu 2023); no randomised trial, no meta-analysis, no systematic review
+context(g4, "the post-2017 literature in reach adds observational and cross-sectional work only; nothing controlled after the 2016 trial. The verdict's ORDER - uncontrolled yes, controlled no, far transfer null - is unchanged by eight more years of publication").
+edge[book](n25, recorded_in, chess_instruction, src_ru_school_programme).
+evidence(n25, src_wikipedia, "ru 'Шахматы в школе': 1994 electives; 1996 Kalmykia mandatory by decree; 2004 Minobr order 2211; 2008 Pskov grades 1-2; 2015 Moscow, 2016 100 Moscow schools, 46 in Kaluga; Azerbaijan, Armenia, Hungary, Spain, Mexico, Poland, Turkey"). landed(n25, 4). depth(n25, 1). classified(n25, confirmed).
+edge[wiki_ru](r5, describes, influence_of_chess_on_thinking, "школьники, изучающие эту игру, стабильно демонстрируют улучшение успеваемости и интеллектуальных показателей").
+evidence(r5, src_wikipedia, "ru 'Шахматы в школе', no citation attached to the sentence"). landed(r5, 4). depth(r5, 0). classified(r5, unexpected).
+context(r5, "a programme's own claim about its effect, in the article about the programme, with no study behind it: depth 0 by the book's own rule. The sentence a Russian parent meets first is the least evidenced sentence in the book, and it is the one the meta-analysts' 2016 numbers would seem to support and their 2017 verdict would not").
+asked(depends_on, chess, in, src_europepmc, 4). asked(describes, influence_of_chess_on_thinking, out, src_wikipedia, 4).
