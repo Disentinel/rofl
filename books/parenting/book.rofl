@@ -326,3 +326,25 @@ evidence(p77, src_wikipedia, "en only"). landed(p77, 10). depth(p77, 1). classif
 asked(is_a, kind_by_aim, out, src_wikipedia, 10). asked(is_a, styles_baumrind, out, src_wikipedia, 10). asked(is_a, practices, out, src_wikipedia, 10). asked(is_a, life_stages, out, src_wikipedia, 10).
 asked(recorded_in, kind_by_aim, out, src_wikipedia, 10). asked(recorded_in, styles_baumrind, out, src_wikipedia, 10). asked(recorded_in, practices, out, src_wikipedia, 10). asked(recorded_in, life_stages, out, src_wikipedia, 10).
 asked(describes, kind_by_aim, out, src_wikipedia, 10). asked(describes, styles_baumrind, out, src_wikipedia, 10). asked(describes, practices, out, src_wikipedia, 10). asked(describes, life_stages, out, src_wikipedia, 10).
+
+-- ======================================================================
+-- round 11 — crawl(offers, parenting, out): the last question the product
+-- crystal asks of the seed, and the test of whether `offers` is a product
+-- notion or a universal one. Put to WHO's framework, which is the one
+-- source that lists what care PROVIDES.
+-- ======================================================================
+put(11, src_who_unicef_guidance, "what does nurturing care provide to the child? (offers(parenting, ?) read as 'what does it provide', not 'what does it ship')").
+edge[book](p78, offers, parenting, good_health).
+evidence(p78, src_who_unicef_guidance, "nurturing-care.org: 'the five inter-related and indivisible components of nurturing care: good health, adequate nutrition, safety and security, responsive caregiving and opportunities for learning'; hosted by WHO, UNICEF, World Bank"). landed(p78, 11). depth(p78, 1). classified(p78, confirmed).
+edge[book](p79, offers, parenting, adequate_nutrition).
+evidence(p79, src_who_unicef_guidance, "same"). landed(p79, 11). depth(p79, 1). classified(p79, confirmed).
+edge[book](p80, offers, parenting, safety_and_security).
+evidence(p80, src_who_unicef_guidance, "same"). landed(p80, 11). depth(p80, 1). classified(p80, confirmed).
+edge[book](p81, offers, parenting, responsive_caregiving).
+evidence(p81, src_who_unicef_guidance, "same"). landed(p81, 11). depth(p81, 1). classified(p81, confirmed).
+edge[book](p82, offers, parenting, opportunities_for_learning).
+evidence(p82, src_who_unicef_guidance, "same"). landed(p82, 11). depth(p82, 1). classified(p82, confirmed).
+context(p78, "offers filled on a practice, but only under a translated question (put/3 above): a product ships capabilities, care provides components. The relation survived; its reading changed. Whether that is one archetype or two is the crystal question this round leaves open, and the honest verdict for software-product.rofl is 'fills, with the reading recorded'").
+asked(offers, parenting, out, src_who_unicef_guidance, 11).
+not_found(offers, parenting, out, src_wikipedia, 11).   -- neither article lists what parenting provides as a set
+not_found(offers, parenting, out, src_sep, 11).
