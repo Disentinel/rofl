@@ -340,6 +340,7 @@ discharges(stale,          "the same question, asked again").
 
 claim(C)                  :- supports(_, C).
 claim(C)                  :- refutes(_, C).
+claim(C)                  :- decides_on(_, C).   -- a claim a decision names is a claim before any edge takes a side
 supported(C)              :- supports(Id, C), not stale(Id), depth(Id, D), D > 0.   -- a depth-0 sentence grades nothing (objection r5, sense_1)
 refuted(C)                :- refutes(Id, C), not stale(Id), depth(Id, D), D > 0.
 contested(C)              :- supported(C), refuted(C).
@@ -390,6 +391,11 @@ blocks(depth_zero). blocks(self_serving). blocks(concentration). blocks(self_qua
 blocks(rival). blocks(bent_put). blocks(stale). blocks(objected).
 conditional(Dec)          :- rests_on(Dec, Id), standing(Id, K), blocks(K).
 conditional(Dec)          :- rests_on(Dec, Id), standing(Id, single_source), claim_of(Id, C), not second_holder(C).
+-- a decision whose claim no edge supports or refutes is not clear, it is
+-- ungrounded: the fourth book rendered CLEAR on a claim with zero edges
+doubt(Dec, ungrounded)    :- decides_on(Dec, C), unknown_claim(C).
+discharges(ungrounded,     "one polarised edge on the claim, from anyone").
+conditional(Dec)          :- standing(Dec, ungrounded).
 clear(Dec)                :- decision(Dec), not conditional(Dec).
 idle_acceptance[audit](Id, K) :- accepted_doubt(Id, K, _, _), not doubt(Id, K).
 alarm(idle_acceptance).

@@ -45,6 +45,7 @@ for (const d of q('decision(D)').map((x) => x.D).filter((d) => !want || d === wa
     if (neutral.length) console.log(`  neutral: ${neutral.join(', ')}`);
   }
   const blocking = new Map<string, number>();
+  for (const k of q(`standing(${d}, K)`).map((x) => x.K)) blocking.set(k, 1);   // a doubt on the decision itself
   for (const id of rests) for (const k of q(`standing(${id}, K)`).map((x) => x.K)) if (has(`blocks(${k})`) || (k === 'single_source' && has(`conditional(${d})`))) blocking.set(k, (blocking.get(k) ?? 0) + 1);
   if (state === 'CONDITIONAL') console.log(`  blocking: ${[...blocking].map(([k, n]) => `${k} x${n} -> ${disch.get(k)}`).join('; ') || 'nothing standing'}`);
 }
