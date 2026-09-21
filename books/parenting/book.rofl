@@ -85,7 +85,7 @@ edge[book](p12, is_a, parenting, child_rearing).
 evidence(p12, src_wikipedia, "en: 'Parenting or child rearing promotes and supports ... development'"). landed(p12, 2). depth(p12, 1). classified(p12, confirmed).
 edge[book](p13, is_a, parenting, normative_status).
 evidence(p13, src_sep, "'someone with weighty rights and responsibilities regarding a given child' - parenthood as a status that grounds rights and duties, not an activity"). landed(p13, 2). depth(p13, 1). classified(p13, unexpected).
-context(p13, "the seed straddles three things the three sources keep apart: воспитание (a process done to a child), parenting (an activity of an adult), parenthood (a status with rights and duties). One atom, three kinds, and the atom's name is the Russian one. Entity resolution across languages is open: which of the three the holder means is an escalation, not a merge.")./
+context(p13, "the seed straddles three things the three sources keep apart: воспитание (a process done to a child), parenting (an activity of an adult), parenthood (a status with rights and duties). One atom, three kinds, and the atom's name is the Russian one. Entity resolution across languages is open: which of the three the holder means is an escalation, not a merge.").
 
 edge[book](p14, recorded_in, parenting, src_wikipedia).
 evidence(p14, src_wikipedia, "ru and en articles; en sections Styles / Practices / Across the lifespan / Rights and responsibilities / Effects; ru sections history in Europe / kinds / Russian education system / Russian law"). landed(p14, 2). depth(p14, 2). classified(p14, confirmed).
@@ -98,7 +98,7 @@ evidence(p05, src_wikipedia, "ru: section 'Воспитание в систем�
 guessed(src_pedagogy_classics, source).
 edge[book](p16, recorded_in, parenting, src_pedagogy_classics).
 evidence(p16, src_wikipedia, "ru: Джон Локк, Жан-Жак Руссо, Джон Уотсон, Б. Ф. Скиннер, Альберт Бандура; 'Наставление отца к сыну' (XV в.)"). landed(p16, 2). depth(p16, 1). classified(p16, confirmed).
-context(p16, "ru's history of the CONCEPT runs Locke -> Rousseau -> behaviorism -> Bandura; en's does not exist as a section. Two encyclopedias, two different things worth recording about the same word.")./
+context(p16, "ru's history of the CONCEPT runs Locke -> Rousseau -> behaviorism -> Bandura; en's does not exist as a section. Two encyclopedias, two different things worth recording about the same word.").
 
 asked(is_a, parenting, out, src_wikipedia, 2). asked(describes, parenting, out, src_wikipedia, 2). asked(recorded_in, parenting, out, src_wikipedia, 2).
 asked(is_a, parenting, out, src_sep, 2). asked(describes, parenting, out, src_sep, 2). asked(recorded_in, parenting, out, src_sep, 2).
