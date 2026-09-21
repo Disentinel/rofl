@@ -130,8 +130,9 @@ entered(X, K)             :- appears(X, K), not appears_later(X, K).
 
 -- ------------------------------------------- questions: derived, not written
 provisional_any(R)        :- provisional(R, _, _).
-narrowed(C)               :- expects(_, C, _).
-asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R), not narrowed(C).
+-- the crystal is a hint of what is missing, never a reason to stop asking
+-- (owner, round 12): a class with a crystal is still asked every archetype
+asks(C, R)                :- class(_, C), archetype(R), not retired(C, R), not provisional_any(R).
 asks(C, R)                :- crystal_of(C, R, _), not retired(C, R).
 asks(C, R)                :- provisional(R, C, _), not retired(C, R).
 needs(gen(E, R), R, E, D) :- entity(E), kindless(R), q_shape(R, D).

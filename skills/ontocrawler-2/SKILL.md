@@ -169,9 +169,10 @@ came through. A new thing under a known type shows its gaps the round it lands.
 
 `base` holds the table above; a domain crystal holds what one crawl added (archetypes with
 `origin`, provisional archetypes, askers); `learned` holds only what was measured. Loaded
-before the book, after the protocol. The protocol narrows `asks(C, R)` to the crystal where a
-class has rows and asks everything where it has none — so a thin crystal narrows too soon,
-and the fill table's `?` on a narrowed class is the signal to retire the row.
+before the book, after the protocol. A crystal is a hint of what is missing, never a reason
+to stop asking: a class with a crystal is still put every archetype, and the crystal only adds
+what it expects (as `uncovered`) and inherits it down the type lattice. Only a measured
+retirement (`retired(C, R)`, under 30% over three or more asked) takes a question away.
 
 ## Sources unfold first
 
