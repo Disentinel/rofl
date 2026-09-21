@@ -62,19 +62,28 @@ export interface Res { code: number; out: string; }
 /** The people call as Telegram senders — SPAT_FROM_ID, and the users book says
  *  who and which family; `me` calls by name, as the scheduler does. */
 export const FROM: Record<string, string> = { alex: '100001', robin: '100002', nanny: '100003', mallory: '100004', uncle: '100005' };
-export function spat(root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> {
+/** The verbs that write a book: a child that died by a signal on one of these is not run again — the write may
+ *  have landed — where a reading verb is (the answer is the same world). */
+const WRITES = new Set(['edit', 'confirm', 'retract', 'roll', 'init', 'volume', 'maybe', 'rule', 'avail', 'carry', 'note']);
+export async function spat(root: string, as: string, args: string[], extra: Record<string, string | undefined> = {}): Promise<Res> {
   const who = FROM[as] ? { SPAT_FROM_ID: FROM[as] } : { SPAT_AS: as, SPAT_TENANT: 'example' };
   const e: Record<string, string | undefined> = { ...process.env, SPAT_ROOT: root, SPAT_TZ: 'Europe/Nicosia', SPAT_NOW: NOW, ...who, ...extra };
   for (const k of ['SPAT_AS', 'SPAT_FROM_ID', 'SPAT_TENANT']) if (!(k in who) && !(k in extra)) delete e[k];
   for (const k of Object.keys(extra)) if (extra[k] === undefined) delete e[k];
-  return new Promise((resolve) => {
-    // node:sqlite still warns `ExperimentalWarning` on 22.x, with the pid in the line; the stand silences it the same way
-    const p = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', '--experimental-strip-types', CLI, ...args], { env: e });
+  const once = (): Promise<Res & { signal: string | null }> => new Promise((resolve) => {
+    // node:sqlite still warns `ExperimentalWarning` on 22.x, with the pid in the line; the stand silences it the same way.
+    // THE NODE OF THIS LAPTOP DIES AT RANDOM inside V8's GC (25 crash reports 15–21.09; scripts/goldens.ts has the
+    // account): a child that died with SIGSEGV was a scenario that flipped between runs — measured, `spat` gave three
+    // hashes in three runs. Background GC off and a bigger young generation take most of it away; a reading verb whose
+    // child still dies is asked once more, since the answer is the same world; a writing verb is not.
+    const p = spawn(process.execPath, ['--single-threaded-gc', '--max-semi-space-size=64', '--disable-warning=ExperimentalWarning', '--experimental-strip-types', CLI, ...args], { env: e });
     let out = '';
     p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
     p.on('error', (e) => { out += `spawn: ${e.message}`; });
-    p.on('close', (code, signal) => resolve({ code: code ?? -1, out: mask(out + (signal ? ` [${signal}]` : '')) }));
+    p.on('close', (code, signal) => resolve({ code: code ?? -1, out: mask(out + (signal ? ` [${signal}]` : '')), signal }));
   });
+  const r = await once();
+  return r.signal !== null && !WRITES.has(args[0] ?? '') && !(args[0] === 'place' && /^(add|добавить)$/i.test(args[1] ?? '')) ? once() : r;
 }
 export const withEnv = <T,>(vars: Record<string, string>, f: () => T): T => {
   const saved = { ...process.env };

@@ -447,22 +447,36 @@ export function demos(): string[] {
 // expectation (2026-09-16, spat_edits: exit -1, 3 lines). So: `JOBS` demos at
 // once, at most four, and a wall of 240 s each, which a demo reaches only by
 // hanging — a demo that does is killed, its exit is -1, and the run is red.
-export type DemoAnswer = { hash: string; exit: number; lines: number; ms: number };
+export type DemoAnswer = { hash: string; exit: number; lines: number; ms: number; crashed?: number };
 export const DEMO_TIMEOUT_MS = 240_000;
 export const JOBS = Math.max(1, Math.min(4, os.availableParallelism()));
-export function answerDemo(file: string): Promise<DemoAnswer> {
+// THE NODE OF THIS LAPTOP DIES AT RANDOM. 25 crash reports in a week, all inside V8 — background marking, the
+// scavenger, mark-compact, once the deoptimizer — on node 22.22 / macOS x64 under the load the spat demos make.
+// A demo killed by a signal is not an answer about the tree: it is run once more (a demo builds its own
+// temp dirs, so a rerun is a clean run), and the flags below take the background GC and most scavenges out
+// of the way. The wall is not a signal: a hang is killed and stays killed.
+export const NODE_FLAGS = ['--single-threaded-gc', '--max-semi-space-size=64', '--experimental-strip-types'];
+export async function answerDemo(file: string): Promise<DemoAnswer> {
+  const a = await runDemo(file);
+  if (a.signal === null || a.exit === -1) return a;
+  const b = await runDemo(file);
+  return { ...b, crashed: 1 };
+}
+function runDemo(file: string): Promise<DemoAnswer & { signal: string | null }> {
   return new Promise((resolve) => {
-    const p = spawn(process.execPath, ['--experimental-strip-types', file], { stdio: ['ignore', 'pipe', 'pipe'] });
-    // stdout whole, then stderr whole — never as the chunks arrive: the interleaving of two pipes is not a
-    // function of the tree, and the first parallel run hashed six spat demos differently from their bless
-    // on exactly that (2026-09-16), the line counts equal, the SQLite warning and the «N s» line wandering
+    const p = spawn(process.execPath, [...NODE_FLAGS, file], { stdio: ['ignore', 'pipe', 'pipe'] });
+    // STDOUT IS THE ANSWER; stderr joins it only when the demo failed, as execFileSync did. Two ways this
+    // went wrong in one week: hashing the two pipes as their chunks arrived (six spat demos moved against
+    // their own bless, line counts equal), then hashing stderr whole — node's «(node:21000)
+    // ExperimentalWarning: SQLite …» carries the PID, a different number every run (2026-09-21)
     let out = ''; let err = ''; let killed = false; const t0 = Date.now();
     p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
     const wall = setTimeout(() => { killed = true; p.kill('SIGKILL'); }, DEMO_TIMEOUT_MS);
-    p.on('close', (code) => {
+    p.on('close', (code, signal) => {
       clearTimeout(wall);
-      const masked = maskTimings(out + err + (killed ? `\n[killed: ${DEMO_TIMEOUT_MS / 1000} s wall]` : ''));
-      resolve({ hash: digest(masked), exit: killed ? -1 : code ?? -1, lines: masked.split('\n').length, ms: Date.now() - t0 });
+      const exit = killed ? -1 : code ?? -1;
+      const masked = maskTimings(out + (exit === 0 ? '' : err.replace(/\(node:\d+\)/g, '(node:#)')) + (killed ? `\n[killed: ${DEMO_TIMEOUT_MS / 1000} s wall]` : ''));
+      resolve({ hash: digest(masked), exit, lines: masked.split('\n').length, ms: Date.now() - t0, signal: killed ? null : signal });
     });
   });
 }
@@ -597,7 +611,8 @@ if (isMain) {
     for (const b of bad) console.log(`FAIL ${b}`);
     // the slowest five, so a demo creeping towards the wall is seen before it is killed
     const slow = [...answered].sort((a, b) => b[1].ms - a[1].ms).slice(0, 5).map(([f, a]) => `${path.basename(path.dirname(f))} ${(a.ms / 1000).toFixed(0)} s`);
-    console.log(`\n${ok}/${demos().length} demos, one engine (they are TypeScript), ${JOBS} slots, ${((Date.now() - t) / 1000).toFixed(0)} s; slowest: ${slow.join(', ')}`);
+    const crashed = [...answered].filter(([, a]) => a.crashed).map(([f]) => path.basename(path.dirname(f)));
+    console.log(`\n${ok}/${demos().length} demos, one engine (they are TypeScript), ${JOBS} slots, ${((Date.now() - t) / 1000).toFixed(0)} s; slowest: ${slow.join(', ')}${crashed.length ? `; rerun after node died: ${crashed.join(', ')}` : ''}`);
     process.exit(bad.length === 0 ? 0 : 1);
   }
 
