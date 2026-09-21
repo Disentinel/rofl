@@ -60,10 +60,10 @@ async function gate(): Promise<Group> {
   // PLANTED (B): a bit flipped in the live snapshot — rejected by the content hash, the call is cold, the file rewritten
   const live = path.join(dir, snapshots()[1]);
   const bytes = fs.readFileSync(live); bytes[Math.floor(bytes.length / 2)] ^= 0x01; fs.writeFileSync(live, bytes);
-  set(warm, true, { SPAT_WARM_LOG: '1' });
-  const flipped = stderrOf(() => { const s = openStore(env()); s.r.evaluate(); s.vol.db.close(); });
-  const again = call(warm, true, {});
-  g.check('бит перевёрнут: «warm: rejected <hash>.json: content hash moved — cold», снимок переписан, следующий вызов «restored»; состояние = холодному', /^warm: rejected [0-9a-f]{40}\.json: content hash moved — cold\nwarm: saved/.test(flipped) && again.canon === call(cold, false, {}).canon, flipped);
+  // in a fresh process (this one holds the lower layers in memory since C and would not read the file)
+  const flipped = await spat(warm, 'robin', ['whoami'], { SPAT_WARM: '1', SPAT_WARM_LOG: '1' });
+  const restored = await spat(warm, 'robin', ['whoami'], { SPAT_WARM: '1', SPAT_WARM_LOG: '1' });
+  g.check('бит перевёрнут: «warm: rejected <hash>.json: content hash moved — cold», снимок переписан, следующий процесс «restored»; состояние = холодному', flipped.code === 0 && /warm: rejected [0-9a-f]{40}\.json: content hash moved — cold\nwarm: saved/.test(flipped.out) && /warm: restored [0-9a-f]{40}\.json/.test(restored.out) && call(warm, true, {}).canon === call(cold, false, {}).canon, flipped.out.split('\n').slice(0, 2).join(' | '));
   // PLANTED (C): the programme changed — a different header, a third snapshot; the old ones stay (a rollback finds its own)
   const spatFile = path.join(path.dirname(new URL(import.meta.url).pathname), '../spat/spat.rofl');
   const text = fs.readFileSync(spatFile, 'utf8');
@@ -73,7 +73,7 @@ async function gate(): Promise<Group> {
     const changed = await spat(warm, 'robin', ['whoami'], { SPAT_WARM: '1', SPAT_WARM_LOG: '1' });
     g.check('программа изменена (строка в spat.rofl, дочерний процесс): «no snapshot … — cold», «saved» — третий снимок; прежние на месте', changed.code === 0 && /warm: no snapshot [0-9a-f]{12} — cold\nwarm: saved/.test(changed.out) && snapshots().length === 3, changed.out);
   } finally { fs.writeFileSync(spatFile, text); }
-  g.check('программа возвращена: снова «restored» первого… нет — второго снимка (hh с x), без пересборки', /^warm: restored [0-9a-f]{40}\.json/.test(stderrOf(() => { set(warm, true, { SPAT_WARM_LOG: '1' }); const s = openStore(env()); s.r.evaluate(); s.vol.db.close(); })));
+  g.check('программа возвращена: новый процесс — «restored» второго снимка (hh с x), без пересборки', /warm: restored [0-9a-f]{40}\.json/.test((await spat(warm, 'robin', ['whoami'], { SPAT_WARM: '1', SPAT_WARM_LOG: '1' })).out));
   // timings, as a line the golden masks (a duration)
   const tc = call(cold, false, {}), tw = call(warm, true, {});
   console.error(`whoami cold ${tc.ms} ms, warm ${tw.ms} ms`);

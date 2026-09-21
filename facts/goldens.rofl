@@ -106,7 +106,7 @@ golden_state("spat_needs", "50accbf87dbac061", 24399).
 golden_host("aka", "b270886e061521b6", 0, 341).
 golden_host("blam", "240bc0d48075cb61", 0, 251).
 golden_host("bleep", "d9403eaac329d7d6", 0, 183).
-golden_host("cram", "0326a186b93754ae", 0, 210).
+golden_host("cram", "5a59995eeba45018", 0, 210).
 golden_host("ditto", "39545e1d1a3ba273", 0, 255).
 golden_host("drip", "0c8ab8935aecfca1", 0, 332).
 golden_host("goof", "7090f0bc4b9454a6", 0, 328).
@@ -128,6 +128,8 @@ golden_host("spat_needs", "10dddacc61125a5e", 0, 62).
 golden_host("spat_places", "3001a563f3de11d1", 0, 41).
 golden_host("spat_secretary", "8a776e02329b3d6b", 0, 80).
 golden_host("spat_seen", "76b8fcbae0139f0e", 0, 29).
+golden_host("spat_serve", "5eb6d123cd4c5a5d", 0, 18).
+golden_host("spat_warm", "d721956bf88ac322", 0, 17).
 golden_host("spat_week", "e4dc16baaa4b8df3", 0, 24).
 golden_host("sus", "60f08349f9d03e6f", 0, 335).
 golden_host("wtf", "f35fe2efb1348bbe", 0, 586).
