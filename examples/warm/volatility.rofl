@@ -10,7 +10,7 @@
 -- copied from the snapshot as is; `monotone(P, L)` — reaches L positively
 -- only, semi-naive addition on top; `volatile(P, L, Why)` — a negation over
 -- something L reaches lies on the way, its stratum is recomputed. `Why` is the
--- nearest such edge: `not(Q)` in a rule of P itself, `via(P2)` for a premise
+-- nearest such edge: `neg(Q)` in a rule of P itself (`not(Q)` is no term for the Rust parser — `not` is its keyword), `via(P2)` for a premise
 -- P2 that is volatile.
 --
 -- The input is `layer_edb(L, Rel)` — which relations a layer supplies (a
@@ -30,7 +30,7 @@ dep(P, Q)       :- concludes(R, P), premise_neg(R, Q).
 touched(Q, L)   :- layer_edb(L, Q).
 touched(P, L)   :- dep(P, Q), touched(Q, L).
 
-volatile(P, L, not(Q))  :- concludes(R, P), premise_neg(R, Q), touched(Q, L).
+volatile(P, L, neg(Q))  :- concludes(R, P), premise_neg(R, Q), touched(Q, L).
 volatile(P, L, via(P2)) :- dep(P, P2), P != P2, volatile(P2, L, _).
 is_volatile(P, L)       :- volatile(P, L, _).
 monotone(P, L)  :- touched(P, L), not is_volatile(P, L).

@@ -49,7 +49,7 @@ golden_state("rules_depends", "2c958eeefcc8bc2b", 15784).
 golden_state("rules_engine-split", "d1222225f9fe93f7", 708).
 golden_state("rules_eval-cost", "472dc5657e4f237b", 5704).
 golden_state("rules_features", "4c669f63e883f0ad", 891).
-golden_state("rules_findings", "c5e9c8e5dfb03686", 13575).
+golden_state("rules_findings", "1a20dc8b1799d59a", 13605).
 golden_state("rules_floor-census", "7b93e1e6ce802232", 2005).
 golden_state("rules_ingest", "a1a342452fb584ad", 808).
 golden_state("rules_inquiry_epistemic", "a7df1d966583a8b5", 837).
@@ -98,10 +98,10 @@ golden_state("readiness_atlas", "41849b577a0670ca", 1744).
 golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spat_store", "f41badba99ad74c6", 24225).
-golden_state("spat_trial", "635e14f2b8ecdedd", 24267).
-golden_state("warm", "d39066647354472f", 1824).
-golden_state("spat_needs", "d2dcb476f2ef7838", 24399).
+golden_state("spat_store", "0bf97a14644fa5fb", 24225).
+golden_state("spat_trial", "0d5eb25040b2a239", 24267).
+golden_state("warm", "dda32e52481f2792", 1824).
+golden_state("spat_needs", "50accbf87dbac061", 24399).
 
 golden_host("aka", "b270886e061521b6", 0, 341).
 golden_host("blam", "240bc0d48075cb61", 0, 251).
@@ -2018,11 +2018,11 @@ golden_rel("rules_features", "sees[main]", 8).
 golden_rel("rules_features", "uses_builtin[$kernel]", 12).
 golden_rel("rules_features", "writes_to[$kernel]", 43).
 golden_rel("rules_findings", "@other", 1).
-golden_rel("rules_findings", "@wit", 1662).
-golden_rel("rules_findings", "addressed_by[main]", 639).
+golden_rel("rules_findings", "@wit", 1664).
+golden_rel("rules_findings", "addressed_by[main]", 644).
 golden_rel("rules_findings", "alarm[main]", 2).
 golden_rel("rules_findings", "artifact_removed[main]", 260).
-golden_rel("rules_findings", "asserted_by[$kernel]", 4747).
+golden_rel("rules_findings", "asserted_by[$kernel]", 4760).
 golden_rel("rules_findings", "authority[main]", 5).
 golden_rel("rules_findings", "blocked_by[main]", 3).
 golden_rel("rules_findings", "blocks[main]", 10).
@@ -2030,13 +2030,13 @@ golden_rel("rules_findings", "concludes[$kernel]", 47).
 golden_rel("rules_findings", "conclusion_lit[$kernel]", 47).
 golden_rel("rules_findings", "conclusion_tense[$kernel]", 47).
 golden_rel("rules_findings", "corrected[main]", 20).
-golden_rel("rules_findings", "demands[main]", 815).
-golden_rel("rules_findings", "derived_by[$kernel]", 1775).
+golden_rel("rules_findings", "demands[main]", 817).
+golden_rel("rules_findings", "derived_by[$kernel]", 1777).
 golden_rel("rules_findings", "dismissed[main]", 38).
 golden_rel("rules_findings", "edb[main]", 40).
-golden_rel("rules_findings", "finding[main]", 902).
+golden_rel("rules_findings", "finding[main]", 904).
 golden_rel("rules_findings", "finding_action[main]", 197).
-golden_rel("rules_findings", "finding_note[main]", 926).
+golden_rel("rules_findings", "finding_note[main]", 928).
 golden_rel("rules_findings", "flow[main]", 4).
 golden_rel("rules_findings", "flows_to[main]", 4).
 golden_rel("rules_findings", "guardrail[main]", 16).
@@ -2055,13 +2055,13 @@ golden_rel("rules_findings", "proven[main]", 59).
 golden_rel("rules_findings", "reads_from[$kernel]", 51).
 golden_rel("rules_findings", "ready[main]", 200).
 golden_rel("rules_findings", "ready_proven[main]", 153).
-golden_rel("rules_findings", "recorded[main]", 902).
+golden_rel("rules_findings", "recorded[main]", 904).
 golden_rel("rules_findings", "removed_in[main]", 130).
 golden_rel("rules_findings", "reserved[main]", 20).
 golden_rel("rules_findings", "rule[$kernel]", 47).
 golden_rel("rules_findings", "rule_known[main]", 47).
 golden_rel("rules_findings", "sees[main]", 6).
-golden_rel("rules_findings", "settled[main]", 700).
+golden_rel("rules_findings", "settled[main]", 702).
 golden_rel("rules_findings", "unproven[main]", 47).
 golden_rel("rules_findings", "uses_builtin[$kernel]", 4).
 golden_rel("rules_findings", "waiting[main]", 3).
@@ -3916,7 +3916,7 @@ golden_rel("sensors_t3", "sees[main]", 12).
 golden_rel("sensors_t3", "uses_builtin[$kernel]", 7).
 golden_rel("sensors_t3", "writes_to[$kernel]", 30).
 golden_rel("spat_store", "@other", 242).
-golden_rel("spat_store", "@wit", 6812).
+golden_rel("spat_store", "@wit", 6810).
 golden_rel("spat_store", "absent_on[main]", 2).
 golden_rel("spat_store", "account[main]", 5).
 golden_rel("spat_store", "acts[main]", 37).
@@ -4241,7 +4241,7 @@ golden_rel("spat_store", "world_travel_as[main]", 2).
 golden_rel("spat_store", "writes_to[$kernel]", 576).
 golden_rel("spat_store", "zero_slack[main]", 2).
 golden_rel("spat_trial", "@other", 242).
-golden_rel("spat_trial", "@wit", 6826).
+golden_rel("spat_trial", "@wit", 6824).
 golden_rel("spat_trial", "absent_on[main]", 2).
 golden_rel("spat_trial", "account[main]", 5).
 golden_rel("spat_trial", "acts[main]", 37).
@@ -4608,7 +4608,7 @@ golden_rel("warm", "volatile[audit]", 10).
 golden_rel("warm", "volatile[main]", 10).
 golden_rel("warm", "writes_to[$kernel]", 39).
 golden_rel("spat_needs", "@other", 259).
-golden_rel("spat_needs", "@wit", 6881).
+golden_rel("spat_needs", "@wit", 6879).
 golden_rel("spat_needs", "absent_on[main]", 2).
 golden_rel("spat_needs", "account[main]", 5).
 golden_rel("spat_needs", "acts[main]", 41).

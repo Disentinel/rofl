@@ -43,8 +43,8 @@ export function run(s: Store, rest: string[]): number {
   if (vs.length === 0) { console.log('слоёв нет: layer_edb в examples/warm/spat-layers.rofl'); return 2; }
   for (const v of vs) {
     console.log(`слой ${v.layer}: стабильных ${v.stable.length} (${v.facts.stable} фактов) · монотонных ${v.monotone.length} (${v.facts.monotone}) · летучих ${v.volatile.size} (${v.facts.volatile}) — из ${v.stable.length + v.monotone.length + v.volatile.size} отношений, ${v.facts.total} фактов`);
-    const why = (ws: string[]): string => { const own = ws.filter((w) => w.startsWith('not(')); return own.length > 0 ? own.sort().join(' ') : ws.sort().join(' '); };
-    const rows = [...v.volatile].map(([p, ws]) => ({ p, own: ws.some((w) => w.startsWith('not(')), why: why(ws) })).sort((a, b) => Number(b.own) - Number(a.own) || (a.p < b.p ? -1 : 1));
+    const why = (ws: string[]): string => { const own = ws.filter((w) => w.startsWith('neg(')); return own.length > 0 ? own.sort().join(' ') : ws.sort().join(' '); };
+    const rows = [...v.volatile].map(([p, ws]) => ({ p, own: ws.some((w) => w.startsWith('neg(')), why: why(ws) })).sort((a, b) => Number(b.own) - Number(a.own) || (a.p < b.p ? -1 : 1));
     for (const x of rows) console.log(`  volatile(${x.p}, ${v.layer}, ${x.why})`);
     if (v.monotone.length > 0) console.log(`  монотонные: ${v.monotone.join(' ')}`);
   }

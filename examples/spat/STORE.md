@@ -802,6 +802,58 @@ is the census's alone (`spat_needs`, facts/checks.rofl): `placed` 2, `req_met` 2
 `examples/spat_needs/demo.ts`, 51 scenarios in four groups (26–28), one spawn for each line a person
 reads and one opened store for everything asked after it.
 
+## Warm layers — the fixpoint below a call, and a tick without a restart (S3h, 2026-09-21)
+
+Every CLI call rebuilt the world from nothing: boot, the programme, the world,
+the family's book, the members' books, this call's facts — 1.1 s in-process,
+2–3 s as a process. Three things now stand, each measured before it was kept.
+
+**Volatility by the graph of the rules** (`examples/warm/volatility.rofl`,
+`spat volatility [<layer>]`): for a layer L that supplies relations E_L
+(`layer_edb`, `examples/warm/spat-layers.rofl`: `edits` — the members'
+books; `hh` — the family's; `call` — the loader's), `stable(P, L)` does not
+reach E_L, `monotone(P, L)` reaches it through positive premises only,
+`volatile(P, L, Why)` has a negation over something L reaches on the way —
+`not(Q)` in a rule of P, `via(P2)` for a volatile premise. Measured on the
+fixture (424 relations, 25 893 facts): under the members' books 211 stable
+(20 847 facts) · 30 monotone (422) · 183 volatile (4 624), every one rooted
+at `acts` — `not(no_right) not(pending) not(retracted_edit)` — and the
+biggest volatile relations are the coverage grid (`here` 521, `on_duty` 473,
+`needs_cover` 468). So a snapshot below the books keeps 80% of the facts and
+loses the expensive part of the fixpoint; DRed is not built (the owner: too
+dear), the classes are the diagnosis.
+
+**The snapshot** (`SPAT_WARM=1`, `examples/spat/warm.ts`): the lower layers —
+boot, the programme, the world, the users, the family's book, the loader's
+constant facts — evaluated and saved beside the volume as
+`$SPAT_ROOT/<tenant>.warm/<header>.json` with a `.sha`; the header hashes the
+kernel's sources, boot, the programme text, every row of the world and users
+books and every fact and clause of the family's book. A call restores it,
+asserts its own facts and books, and RE-DERIVES THE WHOLE BASE with reuse
+off: measured, the kernel's per-relation reuse plan costs more than the
+fixpoint it saves on this programme (882 ms against 215), and a full
+re-derivation is the cold path by construction — the gate
+`examples/spat_warm/demo.ts` holds `canonicalState()` equal byte for byte on
+five calls (a read, a week swap, an edit's trial and write, another member's
+books, a minted week), rejects a snapshot with a bit flipped by its content
+hash and rewrites it, and takes a changed programme to another file; every
+spat demo under `SPAT_WARM=1` hashes as its cold golden. The kernel got two
+additive lines for this and nothing else: a snapshot carries its reuse
+fingerprints, and `warm` on `Rofl` keeps every relation whose fingerprint
+held without the cone-wide shrink (byte-identical here; off by default, and
+not used by the host since it does not pay).
+
+**A tick without a restart** (`spat serve`, `examples/spat/serve.ts`): one
+process per tenant reads JSON lines on stdin — `{"verb", "args", "env"}` —
+and writes `{"code", "stdout", "stderr", "ms"}`; `env` may carry the keys of
+ONE CALL (`SPAT_AS`/`SPAT_FROM_ID`, `SPAT_NOW`, `SPAT_VIA`, `SPAT_TZ`), never
+the root or the tenant (2); `{"verb":"ping"}` answers 0; EOF ends it. The
+lower layers are held in memory base-only and forked per call (2 ms), the
+volume is re-read per call so a write lands before its answer and the next
+call reads it. Measured (`examples/spat_serve/demo.ts`, 13/13, load 4–6): 20
+calls in one session 746 ms each, 20 processes 2760 ms each; a warm
+`openStore` in-process 420–460 ms. The shim that speaks to it is S1m's.
+
 ## What is deliberately not decided
 
 - **A carry names one leg by its time; a whole day is several lines.** «Кита

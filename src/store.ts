@@ -347,8 +347,12 @@ export class Store implements FactStore {
     const key = factKey(rel, persp, args);
     const existing = this.facts.get(key);
     if (existing) {
-      // base assertion wins over an earlier derived copy
-      if (opts.base && !existing.base) existing.base = true;
+      // base assertion wins over an earlier derived copy — AND TAKES THE COPY'S FIRINGS WITH IT: they are an earlier
+      // evaluation's (a load evaluates), and the fixpoint that follows this assertion records every firing that still
+      // stands. Measured 2026-09-21 on examples/spat with the family's book loaded before the world: `person(nico,
+      // child)` stayed at support=1 from the bridge rule whose `not world_person(nico)` no longer held, while the Rust
+      // engine, which evaluates once, said 0 — the two engines disagreed on the fixture by exactly these witnesses.
+      if (opts.base && !existing.base) { existing.base = true; this.firings.delete(key); }
       return false;
     }
     this.facts.set(key, { key, rel, persp, args, scope: opts.scope, base: opts.base, frozen: opts.frozen ?? false });
