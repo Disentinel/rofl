@@ -38,3 +38,17 @@ origin(invariant_over,  "skill:ontocrawler-2", table_of_questions).
 expects(base, kind, describes).
 expects(base, kind, equivalent_to).
 learned_on(base, kind, 2, "grafema,parenting").
+
+-- THE SECOND SEED. Whoever asks is an entity in the book, with the same
+-- kindless questions as the thing, and two more the thing does not get:
+-- what the asker values, and what task the question serves. Skill 2.1,
+-- after a first run that ranked eighteen rounds of obligations against a
+-- value it had never asked for.
+provisional(values, asker, 0).
+origin(values, "skill:ontocrawler-2.1", two_seeds).
+expects(base, asker, recorded_in).
+expects(base, asker, is_a).
+expects(base, asker, describes).
+expects(base, asker, values).
+expects(base, asker, held_by).
+learned_on(base, asker, 1, "chess").

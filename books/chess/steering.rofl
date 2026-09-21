@@ -1,0 +1,4 @@
+-- books/chess/steering.rofl
+-- @who vadim
+report_every(5).
+tick_closed(1).

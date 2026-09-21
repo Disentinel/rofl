@@ -72,6 +72,7 @@ in_volume(Id, V)          :- edge[V](Id, _, _, _).
 
 -- ------------------------------------------------------------- entities
 entity(X)                 :- seed(X).
+entity(A)                 :- question_ext(_, A, _).          -- the second seed: whoever asks
 entity(X)                 :- edge_any(_, _, X, _).
 entity(Y)                 :- edge_any(_, R, _, Y), not pair_valued(R), not quote_valued(R).
 entity(I)                 :- consumes(_, I).
@@ -106,6 +107,7 @@ class(X, C)               :- role(X, C).
 class(X, C)               :- edge_any(_, is_a, X, C).
 
 appears(X, 0)             :- seed(X).
+appears(A, K)             :- question_ext(_, A, K).
 appears(X, K)             :- edge_any(Id, _, X, _), landed(Id, K).
 appears(Y, K)             :- edge_any(Id, _, _, Y), landed(Id, K).
 appears(I, K)             :- edge_any(Id, R, _, io(I, _)), pair_valued(R), landed(Id, K).
@@ -195,6 +197,10 @@ escalate(R, X, D, H)      :- obligation(_, R, X, D), sources_exhausted(R, X, D),
 escalate(R, X, D, nobody) :- obligation(_, R, X, D), sources_exhausted(R, X, D), not held(X).
 
 -- value: the shrink criterion. held_by -> values, then along the structure.
+-- AND THE ASKER'S QUESTIONS ARE THE VALUE FUNCTION: what a person asked
+-- about is value-traced by that fact alone (skill 2.1, two seeds).
+value_traced(X)           :- premise(Q, X), question_ext(Q, _, _).
+value_traced(X)           :- needs_ext(Q, _, X, _), question_ext(Q, _, _).
 values(H, V)              :- edge_any(_, values, H, V).
 value_traced(X)           :- edge_any(_, held_by, X, H), values(H, _).
 value_traced(X)           :- under(X, B), value_traced(B).

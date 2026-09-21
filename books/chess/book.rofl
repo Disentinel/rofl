@@ -1,0 +1,115 @@
+-- books/chess/book.rofl — the book of two seeds, `chess exists` and `vadim
+-- asks`, the first book grown under skill 2.1: the asker is an entity, his
+-- question is a fact, his task is what the crawl is for, and every text
+-- that answers has its own volume.
+
+authority(wiki_en, ontocrawler_2).   -- en.wikipedia 'Chess'
+authority(wiki_ru, ontocrawler_2).   -- ru.wikipedia 'Шахматы'
+authority(fide, ontocrawler_2).      -- FIDE Laws of Chess, edition 2023
+
+-- @who ontocrawler_2
+seed(chess).
+
+-- ======================================================================
+-- round 0 — the second seed. The asker's question, verbatim, as a fact.
+-- Everything else about the asker comes from asking him.
+-- ======================================================================
+-- @who vadim
+question_ext(q_chess, vadim, 0).
+premise(q_chess, chess).
+edge[vadim](a1, describes, vadim, "Давай попробуем третий домен какой нибудь равноудалённый от первых двух уже по новому флоу").
+evidence(a1, src_holder_session, "vadim, 2026-09-21, the message that opened this book"). landed(a1, 0). depth(a1, 1). classified(a1, confirmed).
+-- The task, the decision and what the answer turns into are the ASKER'S to
+-- say, not the crawler's to read off a message. Interview pending; until
+-- it lands, requires(?, q_chess), depends_on(?, answer), values(vadim, ?)
+-- stay open and escalate to him. (A draft that inferred them was written
+-- here on 2026-09-21 and withdrawn the same hour: skill 2.1 says put the
+-- archetypes to the person.)
+
+-- @who ontocrawler_2
+-- the asker's kindless questions, from the session and from his graph
+edge[book](a5, recorded_in, vadim, src_holder_session).
+evidence(a5, src_holder_session, "this session, 2026-09-18 to 2026-09-21"). landed(a5, 1). depth(a5, 1). classified(a5, confirmed).
+edge[book](a6, recorded_in, vadim, src_enox).
+evidence(a6, src_enox, "enox.dev/personal/vadim_r, the graph the crawler read in the first two books"). landed(a6, 1). depth(a6, 1). classified(a6, confirmed).
+edge[book](a7, is_a, vadim, owner).
+evidence(a7, src_holder_session, "docs/the-target.md 'set by the owner'; Disentinel/rofl and Disentinel/grafema; every steering fact in three books is his"). landed(a7, 1). depth(a7, 1). classified(a7, confirmed).
+asked(recorded_in, vadim, out, src_holder_session, 1). asked(is_a, vadim, out, src_holder_session, 1). asked(describes, vadim, out, src_holder_session, 1).
+
+-- ======================================================================
+-- round 1 — the seed's kindless questions, batched, one put to three
+-- books; each book answers in its own volume. Whatever else a book said
+-- while being asked is written too.
+-- ======================================================================
+put(1, src_wikipedia, "what is chess, in one sentence; what kind of thing; where is it recorded; what is it made of?").
+put(1, src_fide, "same put, to the Laws' preface and Article 1").
+
+edge[wiki_en](n1, describes, chess, "Chess is a board game for two players, played on a square board consisting of 64 squares arranged in an 8×8 grid.").
+evidence(n1, src_wikipedia, "en.wikipedia.org/wiki/Chess, lead, fetched 2026-09-21"). landed(n1, 1). depth(n1, 1). classified(n1, confirmed).
+edge[wiki_en](n2, is_a, chess, board_game).
+evidence(n2, src_wikipedia, "en lead"). landed(n2, 1). depth(n2, 1). classified(n2, confirmed).
+edge[wiki_ru](r1, describes, chess, "Шахматы — детерминированная игра с совершенной информацией, в которой два игрока поочерёдно перемещают фигуры на поле 8х8 клеток с целью поставить мат королю противника.").
+evidence(r1, src_wikipedia, "ru.wikipedia.org/wiki/Шахматы, first paragraph, fetched 2026-09-21"). landed(r1, 1). depth(r1, 1). classified(r1, confirmed).
+edge[wiki_ru](r2, is_a, chess, deterministic_perfect_information_game).
+evidence(r2, src_wikipedia, "ru lead"). landed(r2, 1). depth(r2, 1). classified(r2, confirmed).
+edge[wiki_ru](r3, is_a, chess, sport).
+evidence(r3, src_wikipedia, "ru 'интеллектуальный вид спорта'; section 'Шахматы как вид спорта'"). landed(r3, 1). depth(r3, 1). classified(r3, confirmed).
+edge[wiki_ru](r4, is_a, chess, art).
+evidence(r4, src_wikipedia, "ru section 'Шахматы как искусство'"). landed(r4, 1). depth(r4, 1). classified(r4, confirmed).
+context(r2, "en says 'board game', ru says 'deterministic game with perfect information' and then sport and art: the English article classifies by the object, the Russian by the theory and by the institutions around it; ru explicitly does not call it a science").
+edge[fide](f1, describes, chess, "The game of chess is played between two opponents who move their pieces on a square board").
+evidence(f1, src_fide, "FIDE Laws of Chess, Article 1.1, effective 2023-01-01"). landed(f1, 1). depth(f1, 1). classified(f1, confirmed).
+not_found(is_a, chess, out, src_fide, 1).   -- the Laws say how it is played and what wins; they never say what kind of thing it is
+context(f1, "the Laws' preface: they 'cannot address all possible situations' and assume arbiters of 'necessary competence, sound judgement and absolute objectivity' - the rulebook names its own incompleteness and its holder in one paragraph").
+
+edge[book](n3, recorded_in, chess, src_wikipedia).
+evidence(n3, src_wikipedia, "en and ru articles; en sections Rules / Notation / Gameplay / Problems and studies / Online / Computer chess / Organized competition / History / Literature"). landed(n3, 1). depth(n3, 2). classified(n3, confirmed).
+edge[book](n4, recorded_in, chess, src_fide).
+evidence(n4, src_fide, "handbook.fide.com, Laws of Chess E.01, edition 2023"). evidence(n4, src_wikipedia, "en: 'FIDE publishes the official rules in its Handbook'; ru: ФИДЕ, 1924"). landed(n4, 1). depth(n4, 2). classified(n4, confirmed).
+edge[book](n5, recorded_in, chess, src_notation_and_databases).
+evidence(n5, src_wikipedia, "en 'Notation': algebraic notation, PGN files, databases; FIDE rating lists"). landed(n5, 1). depth(n5, 1). classified(n5, confirmed).
+context(n5, "a source that is not a text about chess but a record OF chess: every game ever notated. The primary artifact in the skill's trust order, and it is not an encyclopedia").
+edge[book](n6, recorded_in, chess, src_london_protocol_1922).
+evidence(n6, src_wikipedia, "ru: Лондонский протокол 1922"). landed(n6, 1). depth(n6, 1). classified(n6, serendipitous).
+
+-- what the books said while being asked something else: the pieces (en),
+-- each with its sentence; the predecessors (en); the objective (fide 1.4)
+edge[wiki_en](n7, decomposes_into, chess, king).
+evidence(n7, src_wikipedia, "en 'Rules'"). landed(n7, 1). depth(n7, 1). classified(n7, confirmed).
+edge[wiki_en](n8, describes, king, "moves one square in any direction").
+evidence(n8, src_wikipedia, "en 'Rules'"). landed(n8, 1). depth(n8, 1). classified(n8, confirmed).
+edge[wiki_en](n9, decomposes_into, chess, rook).
+evidence(n9, src_wikipedia, "en"). landed(n9, 1). depth(n9, 1). classified(n9, confirmed).
+edge[wiki_en](n10, describes, rook, "can move any number of squares along a rank or file").
+evidence(n10, src_wikipedia, "en"). landed(n10, 1). depth(n10, 1). classified(n10, confirmed).
+edge[wiki_en](n11, decomposes_into, chess, bishop).
+evidence(n11, src_wikipedia, "en"). landed(n11, 1). depth(n11, 1). classified(n11, confirmed).
+edge[wiki_en](n12, describes, bishop, "can move any number of squares diagonally").
+evidence(n12, src_wikipedia, "en"). landed(n12, 1). depth(n12, 1). classified(n12, confirmed).
+edge[wiki_en](n13, decomposes_into, chess, queen).
+evidence(n13, src_wikipedia, "en"). landed(n13, 1). depth(n13, 1). classified(n13, confirmed).
+edge[wiki_en](n14, describes, queen, "combines the power of a rook and bishop and can move any number of squares along a rank, file, or diagonal").
+evidence(n14, src_wikipedia, "en"). landed(n14, 1). depth(n14, 1). classified(n14, confirmed).
+edge[wiki_en](n15, decomposes_into, chess, knight).
+evidence(n15, src_wikipedia, "en"). landed(n15, 1). depth(n15, 1). classified(n15, confirmed).
+edge[wiki_en](n16, describes, knight, "moves to any of the closest squares that are not on the same rank, file, or diagonal").
+evidence(n16, src_wikipedia, "en"). landed(n16, 1). depth(n16, 1). classified(n16, confirmed).
+edge[wiki_en](n17, decomposes_into, chess, pawn).
+evidence(n17, src_wikipedia, "en"). landed(n17, 1). depth(n17, 1). classified(n17, confirmed).
+edge[wiki_en](n18, describes, pawn, "can move forward to the unoccupied square immediately in front of it on the same file").
+evidence(n18, src_wikipedia, "en"). landed(n18, 1). depth(n18, 1). classified(n18, confirmed).
+edge[wiki_en](n19, supersedes, chess, chaturanga).
+evidence(n19, src_wikipedia, "en 'History': chaturanga, 7th-century India, as the recorded origin; janggi, xiangqi, shogi as related"). landed(n19, 1). depth(n19, 1). classified(n19, confirmed).
+edge[fide](f2, invariant_over, chess, inv_checkmate_ends_the_game).
+evidence(f2, src_fide, "art. 1.4, 1.4.1: the objective is to place the opponent's king under attack with no legal move; achieving this is checkmate and wins; exposing one's own king is forbidden"). landed(f2, 1). depth(f2, 1). classified(f2, confirmed).
+edge[fide](f3, invariant_over, chess, inv_white_moves_first).
+evidence(f3, src_fide, "art. 1.2"). landed(f3, 1). depth(f3, 1). classified(f3, confirmed).
+edge[fide](f4, held_by, inv_checkmate_ends_the_game, fide_arbiters).
+evidence(f4, src_fide, "preface: the Laws assume arbiters of competence, judgement and objectivity; a FIDE-rated game 'shall be played according to the FIDE Laws of Chess'"). landed(f4, 1). depth(f4, 1). classified(f4, confirmed).
+edge[fide](f5, held_by, chess, fide).
+evidence(f5, src_fide, "the Laws are FIDE's; 'a requirement for FIDE rating'"). evidence(f5, src_wikipedia, "en: FIDE publishes the official rules; ru: ФИДЕ 1924"). landed(f5, 1). depth(f5, 2). classified(f5, confirmed).
+edge[book](f6, held_by, src_fide, fide).
+evidence(f6, src_fide, "the handbook is FIDE's own"). landed(f6, 1). depth(f6, 1). classified(f6, confirmed).
+
+asked(is_a, chess, out, src_wikipedia, 1). asked(describes, chess, out, src_wikipedia, 1). asked(recorded_in, chess, out, src_wikipedia, 1).
+asked(is_a, chess, out, src_fide, 1). asked(describes, chess, out, src_fide, 1). asked(recorded_in, chess, out, src_fide, 1).
