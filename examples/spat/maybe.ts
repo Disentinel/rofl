@@ -21,6 +21,7 @@ import { commit, entryClauses, parseEdit, tagged } from './edits.ts';
 import { under, weekOf } from './dates.ts';
 import { renderDay } from './tomorrow.ts';
 import { problems } from './tg.ts';
+import { placeSpec } from './needs.ts';
 
 const TTL_H = 24;
 const USAGE = 'spat maybe \'<правка>\' [--as-of <день>] · maybe list · maybe compare [<id>…] · maybe apply <id> · place <что> <минут> [кто] [где] [--week-of W]';
@@ -124,16 +125,19 @@ function apply(s: Store, id: string): number {
  *  the host's, and the few best are each tried as a hypothesis in a fork. */
 export function place(s: Store, rest: string[]): number {
   const flat = rest.filter((x, i) => !x.startsWith('--') && rest[i - 1] !== '--week-of');
-  const [what, minutes] = flat;
+  const wk = rest.indexOf('--week-of');
+  // `place <need>`: the need lends its length, its people, its place and its week (needs.ts); a guest with no window is said
+  const spec = flat.length >= 1 && !/^\d+$/.test(flat[1] ?? '') && s.r.holds(`need(${flat[0]}, _)`) ? placeSpec(s, flat[0], wk >= 0 ? rest[wk + 1] : s.week) : undefined;
+  if (spec === undefined && flat.length >= 1 && !/^\d+$/.test(flat[1] ?? '') && s.r.holds(`need(${flat[0]}, _)`)) return 0;
+  const [what, minutes] = spec ? [spec.what, String(spec.dur)] : flat;
   if (!what || !/^\d+$/.test(minutes ?? '')) throw new SpatError(2, USAGE);
   const dur = Number(minutes);
-  const who = flat[2] ?? s.env.as; const where = flat[3] ?? table(s.r, 'base', 'B')[0].B;
-  const wk = rest.indexOf('--week-of');
-  const week = wk >= 0 ? rest[wk + 1] : s.week;
+  const who = spec?.who ?? [flat[2] ?? s.env.as]; const where = spec?.where ?? flat[3] ?? table(s.r, 'base', 'B')[0].B;
+  const week = spec?.week ?? (wk >= 0 ? rest[wk + 1] : s.week);
   under(s, week);
-  must(s.r.assert(`want(${what}, ${who}, ${where}, ${dur}).`), 'want'); s.r.evaluate();
+  must(s.r.assert(who.map((p) => `want(${what}, ${p}, ${where}, ${dur}).`).join('\n')), 'want'); s.r.evaluate();
   const { ok, why } = placements(s.r, what, dur);
-  console.log(`Куда поставить «${what}» — ${mins(dur)}, ${ru(who)}, ${ru(where)}, неделя ${week}`);
+  console.log(`Куда поставить «${ru(what)}» — ${mins(dur)}, ${who.map(ru).join(', ')}, ${ru(where)}, неделя ${week}`);
   if (ok.length === 0) {
     const tally = new Map<string, number>();
     for (const rs of why.values()) for (const x of new Set(rs)) tally.set(x, (tally.get(x) ?? 0) + 1);
@@ -145,13 +149,13 @@ export function place(s: Store, rest: string[]): number {
   const perDay = ok.filter((x, i) => ok.findIndex((y) => y.day === x.day) === i).slice(0, 3);
   const tried = perDay.map((slot, i) => {
     const id = `h_${i}`;
-    const cs = tagged(id, [`e_add(${id}, ${what}, ${slot.day}, ${slot.at}, ${slot.at + dur}, ${who}, ${where}).`, `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${week}).`]);
+    const cs = tagged(id, [...who.map((p) => `e_add(${id}, ${what}, ${slot.day}, ${slot.at}, ${slot.at + dur}, ${p}, ${where}).`), `edit_at(${id}, "${at}").`, `edit_via(${id}, ${s.env.via}).`, `for_week(${id}, ${week}).`]);
     return { slot, v: underHyp(s, { id, clauses: cs, at, text: `add ${what} ${slot.day} ${hhmm(slot.at)}-${hhmm(slot.at + dur)}`, week, stale: false }) };
   });
   tried.sort((a, b) => a.v.breaks.length - b.v.breaks.length || a.v.holes - b.v.holes || (b.v.slack ?? 0) - (a.v.slack ?? 0) || b.slot.buffer - a.slot.buffer);
   for (const [i, { slot, v }] of tried.slice(0, 3).entries()) {
     console.log(`  ${i + 1}. ${ru(slot.day)} ${hhmm(slot.at)}–${hhmm(slot.at + dur)}  ломает: ${v.breaks.join(',') || 'нет'} · дыр ${v.holes} · запас ${v.slack === null ? '—' : `${v.slack} мин`} · по краям ${slot.buffer === 999 ? 'весь день' : mins(slot.buffer)}`);
-    console.log(`     spat maybe 'add ${what} ${slot.day} ${hhmm(slot.at)}-${hhmm(slot.at + dur)} ${who} ${where}'`);
+    console.log(`     spat maybe 'add ${what} ${slot.day} ${hhmm(slot.at)}-${hhmm(slot.at + dur)} ${who.join(',')} ${where}'`);
   }
   const tally = new Map<string, number>();
   for (const rs of why.values()) for (const x of new Set(rs)) tally.set(x, (tally.get(x) ?? 0) + 1);

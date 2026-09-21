@@ -103,16 +103,21 @@ week_changed(Ev, D) :- skipped(_, Ev, W, D), current(W).
 
 -- `person(W, _)` is what makes a misspelt name lose its week rather than
 -- quietly acquiring one nobody can see. `spat` lints for exactly that.
+-- A RETIRED LINE IS OFF EVERY WEEK. `retired(Block)` — the world's, or the
+-- family's book through §14 (`spat retire <блок>`) — says the typical week
+-- was wrong about this block: «обычная физио по понедельникам» was the first
+-- week's timetable, not a rule. The three `usual` layers read it; an `added`
+-- block of the same name is this week's own and stands (S3f, 2026-09-21).
 span(C, Ev, W, P, D, F, T) :- usual(C, Ev, W, P, Spec, F, T), person(W, _),
-                              applies_on(Spec, D),
+                              applies_on(Spec, D), not retired(Ev),
                               not usual_on_day(Ev, D), not week_changed(Ev, D),
                               not waived(C).
 span(C, Ev, W, P, D, F, T) :- usual(C, Ev, W, P, Spec, _, _), person(W, _),
-                              applies_on(Spec, D),
+                              applies_on(Spec, D), not retired(Ev),
                               usual_on(C2, Ev, D, F, T), not week_changed(Ev, D),
                               not waived(C), not waived(C2).
 span(C, Ev, W, P, D2, F, T) :- moved(C2, Ev, Wk, D, D2, F, T), current(Wk),
-                               usual(C, Ev, W, P, Spec, _, _), person(W, _),
+                               usual(C, Ev, W, P, Spec, _, _), person(W, _), not retired(Ev),
                                applies_on(Spec, D), not waived(C), not waived(C2).
 span(C, Ev, W, P, D, F, T) :- added(C, Ev, W, P, Wk, D, F, T), person(W, _),
                               current(Wk), not waived(C).
@@ -693,7 +698,15 @@ cand_slot(A, D, S, S2) :- cand(A, D, S), want(A, _, _, Dur), End is S + Dur,
 cand_bad(A, D, S, owner_busy)  :- cand_slot(A, D, S, S2), want(A, P, _, _), busy(P, D, S2).
 cand_bad(A, D, S, sole_cover)  :- cand_slot(A, D, S, S2), want(A, P, _, _), sole(P, D, S2).
 cand_bad(A, D, S, owner_away)  :- cand(A, D, S), want(A, P, _, _), off(P, D).
-cand_bad(A, D, S, asleep)      :- cand_slot(A, D, S, S2), want(A, P, _, _), not waking(P, D, S2).
+-- A PARTICIPANT WHO IS NOT AN ADULT (S3f): `place <need>` asserts one `want`
+-- per participant, and every one of them has to be free. A child is awake
+-- inside their `awake` window; a guest of a need — or a helper — exists only
+-- inside a window they gave (`avail`, spat.rofl §4), so with no window this
+-- week there is no slot at all, and the host says «не знаю, когда может X».
+waking(P, D, S)  :- deep(slots), person(P, child), awake_at(P, D, S).
+in_window(P, D, S) :- window(_, P, D, F, T), slot(D, S), S >= F, S < T.
+cand_bad(A, D, S, asleep)      :- cand_slot(A, D, S, S2), want(A, P, _, _), not windowed(P), not waking(P, D, S2).
+cand_bad(A, D, S, no_window)   :- cand_slot(A, D, S, S2), want(A, P, _, _), windowed(P), not in_window(P, D, S2).
 admissible(A, D, S) :- cand(A, D, S), not cand_bad(A, D, S, _).
 
 -- =========================================================================
@@ -1005,6 +1018,9 @@ edb(ru_name).
 edb(must_start).
 edb(never_alone).
 edb(no_walk).        edb(ride).       edb(can_wait).   edb(hosted).
+edb(retired).        edb(remind_days).
+edb(need).           edb(need_for).   edb(need_len).   edb(need_every).  edb(need_by).
+edb(need_in).        edb(need_by_on). edb(need_where). edb(need_req).    edb(req).
 
 -- =========================================================================
 -- 14. THE FAMILY'S BOOK EXTENDS THE WORLD — the declarations
@@ -1038,6 +1054,13 @@ key_of(ru_name, 1).
 key_of(must_start, 1).
 key_of(never_alone, 1).
 key_of(no_walk, 2).        key_of(ride, 4).           key_of(can_wait, 1).     key_of(hosted, 1).
+-- a need and its conditions (§15): the world states them only in the shipped
+-- example; a household's come from its book (`spat need add`), so every one
+-- is a key the book may add to
+key_of(retired, 1).        key_of(remind_days, 0).
+key_of(need, 1).           key_of(need_for, 2).       key_of(need_len, 1).     key_of(need_every, 1).
+key_of(need_by, 1).        key_of(need_in, 1).        key_of(need_by_on, 1).   key_of(need_where, 1).
+key_of(need_req, 2).       key_of(req, 1).
 -- not_extended(R, Why): what the book does NOT put into the world. `books`:
 -- the week's layers are the members' books through access.rofl's rights
 -- (add/skip/move, every); a family fact here would skip the school without
@@ -1067,3 +1090,129 @@ speaks_for(hosted, 2).
 -- key_owned(R, G): a key G already owns — an edit's id has its constraint
 -- from its book (access.rofl §4), and a family fact may not give it another
 key_owned(constraint, edit_by).
+
+-- =========================================================================
+-- 15. NEEDS — a thing that has to happen, before it has a time (S3f, 2026-09-21)
+-- =========================================================================
+-- «Репетиция группы — надо убедиться, что все могут, и забронировать
+-- репточку.» A NEED is a first-class line of the family's book: what
+-- (`need(Id, Block)` — the block that will close it is the one with that
+-- name), who takes part (`need_for`, people of the world of any kind — a
+-- guest with no account included), how long (`need_len`), the rhythm —
+-- exactly one of `need_every(Id)` (each dated week), `need_by(Id, "date")`
+-- (its week and day resolved by the host into `need_by_on(Id, W, D)`),
+-- `need_in(Id, W)` — where (`need_where`), and its CONDITIONS `need_req(Id,
+-- R)` + `req(R, booked|item|confirm, "text", Owner)`: something to book,
+-- something to bring, a participant to say they can. The need and each
+-- condition are constraints of the household, owned by the author (§1).
+--
+-- NOTHING HERE IS STORED. Placing a need is an ordinary block with its name
+-- (`add`, `usual`, `moved` — any layer); a condition is done by a dated line
+-- of a book (`done`, access.rofl §5c) or, for `confirm`, by the person's
+-- window covering the block; the state is derived per week, under `current`.
+
+-- for: which weeks a need has a state on — every dated week, or its own
+need_week(N, W) :- need_every(N), week(W).
+need_week(N, W) :- need_in(N, W).
+need_week(N, W) :- need_by_on(N, W, _).
+-- for: a participant who is not an adult of the house or a child: a guest,
+--      a helper — free inside a window they gave, never otherwise
+windowed(P) :- need_for(_, P), not person(P, adult), not person(P, child).
+guest(P)    :- windowed(P), not person(P, helper).
+-- for: THE BLOCK THAT STANDS for the need this week, and who is in it
+stands(N, D, F, T) :- need(N, Ev), span(_, Ev, _, _, D, F, T).
+has_block(N)       :- stands(N, _, _, _).
+in_block(Ev, P)    :- span(_, Ev, P, _, _, _, _).
+in_block(Ev, P)    :- span(_, Ev, _, _, _, _, _), with(Ev, P).
+missing(N, P)      :- has_block(N), need(N, Ev), need_for(N, P), not in_block(Ev, P).
+-- for: a block shorter than the need blocks it; one at another place than
+--      `need_where` is only said (`need list`), the place is where `place`
+--      looks first
+short_block(N, D)  :- need(N, Ev), need_len(N, Min), span(_, Ev, _, _, D, F, T), Len is T - F, Len < Min.
+elsewhere(N, D, Pl) :- need(N, Ev), need_where(N, Want), span(_, Ev, _, Pl, D, _, _), Pl != Want.
+rhythm(N, every)   :- need_every(N).
+rhythm(N, by(Date)) :- need_by(N, Date).
+rhythm(N, in(W))   :- need_in(N, W).
+placed(N, W, Ev)   :- need(N, Ev), current(W), has_block(N), not missing(N, _).
+partial(N, W, P)   :- missing(N, P), current(W).
+-- for: A CONDITION IS MET. booked/item: a `done` line in the week (a weekly
+--      need books every week) — for a one-off need, a `done` at any time;
+--      confirm: `done` («подтвердил Иван»), or the person's window on the
+--      block's day holds the whole block — the window IS the confirmation.
+req_done(R) :- need_req(N, R), need_every(N), current(W), done_in(R, W).
+req_done(R) :- need_req(N, R), not need_every(N), done_ever(R).
+req_done(R) :- need_req(N, R), req(R, confirm, _, P), stands(N, D, F, T),
+               window(_, P, D, WF, WT), WF <= F, T <= WT.
+req_skip(R) :- need_req(N, R), need_every(N), current(W), waived_in(R, W).
+req_skip(R) :- need_req(N, R), not need_every(N), waived_ever(R).
+req_met(R, W)  :- current(W), req_done(R).
+req_open(R)    :- need_req(_, R), not req_done(R), not req_skip(R).
+no_window(P)   :- windowed(P), not window(_, P, _, _, _).
+-- for: WHAT BLOCKS the need this week, by name: a condition still open on a
+--      block that stands; a participant the block does not have; a guest who
+--      must confirm and gave no window this week
+need_block(N, req(R))       :- has_block(N), need_req(N, R), req_open(R).
+need_block(N, missing(P))   :- missing(N, P).
+need_block(N, short(D))     :- short_block(N, D).
+need_block(N, no_window(P)) :- need_req(N, R), req(R, confirm, _, P), req_open(R), no_window(P).
+-- for: the week is over, or the date is — with a block, that is «done»
+week_gone(W)  :- week_min(W, M), now_min(Now), End is M + 10080, End <= Now.
+by_at(N, T)   :- need_by_on(N, W, D), week_min(W, M), day(D, K), T is M + (K - 1) * 1440 + 1140.
+passed(N)     :- need_every(N), current(W), week_gone(W).
+passed(N)     :- need_in(N, W), week_gone(W).
+passed(N)     :- by_at(N, T), now_min(Now), T < Now.
+-- for: THE STATE, one per need and week, derived: open — no block; blocked —
+--      something named above; placed — a block, everything met, the week
+--      ahead; done — the week or the date is behind, and a block stood;
+--      missed — behind, and nothing stood
+on_week(N, W)             :- need(N, _), current(W), need_week(N, W).
+need_state(N, W, done)    :- on_week(N, W), has_block(N), passed(N).
+need_state(N, W, missed)  :- on_week(N, W), not has_block(N), passed(N).
+need_state(N, W, blocked) :- on_week(N, W), need_block(N, _), not passed(N).
+need_state(N, W, placed)  :- on_week(N, W), has_block(N), not need_block(N, _), not passed(N).
+need_state(N, W, open)    :- on_week(N, W), not has_block(N), not need_block(N, _), not passed(N).
+
+-- REMINDERS («заколебайка», the owner 2026-09-21). A condition that is open
+-- has a deadline: the block it stands before, or the need's date; the
+-- default FRAME is 09:00 and 19:00 of each day from K days before the
+-- deadline (`remind_days(K)` of the world, 3 without a line), and every
+-- reminder the scheduler sent is `e_reminded[p_me](E, R, At)` — the next due
+-- moment is the next frame slot after the last one sent. A person's «напомни
+-- … 16:30» (`e_remind`) is ONE moment that stands instead of the frame until
+-- it has been sent. Moments are minutes on one scale — the loader's
+-- `now_min(N)` and `week_min(W, N)`, the week's Monday 00:00 in SPAT_TZ.
+nat(0). nat(1). nat(2). nat(3). nat(4). nat(5). nat(6). nat(7).
+has_k()      :- remind_days(_).
+k_days(K)    :- remind_days(K).
+k_days(3)    :- not has_k().
+kday(I)      :- k_days(K), nat(I), I <= K.
+-- for: the deadline of an open condition — the block's start, else the date
+--      (19:00), else the end of the named week
+deadline(R, DL) :- req_open(R), need_req(N, R), stands(N, D, F, _), current(W), week_min(W, M),
+                   day(D, K), DL is M + (K - 1) * 1440 + F.
+deadline(R, DL) :- req_open(R), need_req(N, R), not has_block(N), by_at(N, DL).
+deadline(R, DL) :- req_open(R), need_req(N, R), not has_block(N), need_in(N, W), week_min(W, M), DL is M + 7 * 1440 - 300.
+frame_at(R, T)  :- deadline(R, DL), D0 is (DL / 1440) * 1440, kday(I), T is D0 - I * 1440 + 540, T < DL.
+frame_at(R, T)  :- deadline(R, DL), D0 is (DL / 1440) * 1440, kday(I), T is D0 - I * 1440 + 1140, T < DL.
+sent_after(R, T) :- frame_at(R, T), sent(R, T2), T2 >= T.
+sent_after(R, T) :- remind_at(R, T), sent(R, T2), T2 >= T.
+live(R, T)      :- frame_at(R, T), not sent_after(R, T).
+-- for: of the live frame slots, the LATEST one already reached — that is
+--      what is due now — else the earliest one ahead
+past_live(R, T)   :- live(R, T), now_min(Now), T <= Now.
+later_past(R, T)  :- past_live(R, T), past_live(R, T2), T2 > T.
+has_past(R)       :- past_live(R, _).
+fut_live(R, T)    :- live(R, T), now_min(Now), T > Now.
+earlier_fut(R, T) :- fut_live(R, T), fut_live(R, T2), T2 < T.
+due_frame(R, T)   :- past_live(R, T), not later_past(R, T).
+due_frame(R, T)   :- fut_live(R, T), not earlier_fut(R, T), not has_past(R).
+-- for: a person's own moment, until it is sent; it stands instead of every
+--      frame slot up to it
+--      (named apart from access.rofl's `pending/1` — a proposed edit: the
+--      kernel strata are by relation NAME, and `acts` negates that one)
+asked(R, T)        :- remind_at(R, T), req_open(R), not sent_after(R, T).
+earlier_asked(R, T):- asked(R, T), asked(R, T2), T2 < T.
+asked_first(R, T)  :- asked(R, T), not earlier_asked(R, T).
+asked_before(R, T) :- due_frame(R, T), asked_first(R, T2), T2 <= T.
+due(R, P, T) :- req_open(R), req(R, _, _, P), asked_first(R, T).
+due(R, P, T) :- req_open(R), req(R, _, _, P), due_frame(R, T), not asked_before(R, T).

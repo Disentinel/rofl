@@ -13,6 +13,7 @@ import type { Rofl } from '../../src/api.ts';
 import { blocks, chains, dayOrder, hhmm, holes, index, ownerOf, pickedTrips, ru, table, whoWasBusy } from './spat.ts';
 import { hhLines } from './rules.ts';
 import { carryWarns, noted, notes } from './notes.ts';
+import { needLines } from './needs.ts';
 
 const DAY: Record<string, string> = { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' };
 /** «16.09» for a day of the week that starts on `start` (YYYY-MM-DD); '' without a start. */
@@ -55,7 +56,7 @@ export function problems(r: Rofl, day: string): string[] {
   const stuck = new Set(table(r, 'run_stuck', 'T').map((x) => x.T));
   for (const n of table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => stuck.has(x.T) && x.D === day)) out.push(`!! некому везти ${ru(n.Ch)} ${hhmm(n.At)}: ${ru(n.From)} → ${ru(n.To)}`);
   const hh = hhLines(r, day);
-  return [...out, ...carryWarns(r, day), ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim())].map((x) => fold(x));
+  return [...out, ...carryWarns(r, day), ...hh.defects.map((x) => x.trim()), ...hh.warns.map((x) => x.trim()), ...needLines(r, day).map((x) => `!! ${x}`)].map((x) => fold(x));
 }
 /** `spat warnings [<day>] --format tg`: the week's «!!» lines under the day they belong to, nothing else. */
 export function tgWarnings(r: Rofl, week: string, day?: string): string {

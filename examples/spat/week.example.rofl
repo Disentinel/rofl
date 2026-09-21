@@ -309,6 +309,25 @@ moved(c_guest, shopping, w0907, fri, sat, 600, 690).                 -- 10:00-11
 
 
 -- =========================================================================
+-- 7a. NEEDS — what has to happen this week, before it has a time (spat.rofl §15)
+-- =========================================================================
+-- need(Id, Block): the block that closes the need is the one with that name,
+-- whichever layer puts it there. Робин's физио happens every week and is
+-- given its time anew each time; the Monday/Friday line in section 6 is the
+-- first week's timetable and `spat retire physio` takes it off. A household
+-- writes its needs into its own book (`spat need add …`); the shipped world
+-- carries one so the census can see the shape.
+need(physio, physio).
+need_for(physio, robin).
+need_len(physio, 50).
+need_every(physio).
+need_where(physio, physio).
+constraint(physio, robin, household).
+-- reminders start this many days before a condition's deadline (3 without a line)
+remind_days(3).
+
+
+-- =========================================================================
 -- 8. WHO IS AVAILABLE, AND WHEN
 -- =========================================================================
 -- present_window(Id, Who, Days, From, To) — a helper or a neighbour exists

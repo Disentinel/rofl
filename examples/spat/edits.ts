@@ -20,11 +20,12 @@ import { bookPlaces, line, slug, words } from './places.ts';
 import { GRAMMAR as SECRETARY, VERBS as SEC_VERB, carryWarns, onceEach, parseSecretary } from './notes.ts';
 import { renderWarnings } from './tomorrow.ts';
 import { tgWarnings } from './tg.ts';
+import { reminders, retire, run as need } from './needs.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
   '  skip   <блок> [<день>]                      отменить    (отменить прогулка пн)',
-  '  add    <что> <день> <от>-<до> [<кто>] [<где>]  добавить (добавить dentist ср 10:00-11:00 robin clinic)',
+  '  add    <что> <день> <от>-<до> [<кто[,кто…]>] [<где>]  добавить (добавить dentist ср 10:00-11:00 robin clinic)',
   '  sick   <кто> [<день>]                       болеет      (болеет kit пт)',
   '  car out <день> [<от>-<до>]                  машины нет  (машины нет пн 07:00-10:00)',
   '  report <ограничение> <день> <время>         сообщить    (сообщить c_bus пн 14:10)',
@@ -115,10 +116,13 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   // THE SECRETARY'S VERBS (notes.ts): avail/carry/note by their word, or «няня ср 17:30-21:00» — a person, a day and
   // an interval with no verb at all, which is `avail`; «kit забираю я ср 14:00» — the child first, the verb second
   const w0 = (w[0] ?? '').toLowerCase();
-  const sec = SEC_VERB[w0] ?? (N.has(w0) && isDay(w[1]) && /[-–]/.test(w[2] ?? '') ? 'avail' : SEC_VERB[(w[1] ?? '').toLowerCase()]?.startsWith('carry1') ? 'carry1' : undefined);
+  // «не будем <условие>» / «скип …» / `skip <условие>` — a need's condition skipped (needs.ts, access.rofl §5c)
+  const reqs = new Set(table(r, 'req', 'R, K, T, O').map((x) => x.R));
+  const waive = (w0 === 'не' && /^будем$/i.test(w[1] ?? '')) ? 2 : /^(скип|waive)$/i.test(w0) || (VERB[w0] === 'skip' && reqs.has(w[1] ?? '')) ? 1 : 0;
+  const sec = waive > 0 ? 'waive' : SEC_VERB[w0] ?? (N.has(w0) && isDay(w[1]) && /[-–]/.test(w[2] ?? '') ? 'avail' : SEC_VERB[(w[1] ?? '').toLowerCase()]?.startsWith('carry1') ? 'carry1' : undefined);
   if (sec !== undefined) {
-    const ws = SEC_VERB[w0] ? w : sec === 'avail' ? ['avail', ...w] : [w[1], w[0], ...w.slice(2)];
-    return parseSecretary(r, sec, ws, text, { N, me: e?.as, day, time, range, done, bad });
+    const ws = waive > 0 ? ['waive', ...w.slice(waive)] : SEC_VERB[w0] ? w : sec === 'avail' ? ['avail', ...w] : [w[1], w[0], ...w.slice(2)];
+    return parseSecretary(r, sec, ws, text, { N, me: e?.as, day, time, range, done, bad, week: e ? weekIn(r) : undefined });
   }
   const verb = VERB[w0] ?? bad(`глагол: '${w[0] ?? ''}'`);
   // THE BLOCKS AS THE HUMAN SEES THEM: the typical week (a recurring line included), and what a
@@ -177,10 +181,11 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
     const d = every ? spec(w[3]) : day(w[2]);
     const at = every ? 4 : 3;
     const [f, t] = range(w[at]);
-    const who = w[at + 1] === undefined ? undefined : name(w[at + 1], 'кто');
+    // «vadim,ivan» — every participant of a need's block is one e_add row of the same entry (spat.rofl §15)
+    const who = w[at + 1] === undefined ? ['$ME'] : w[at + 1].split(',').map((x) => name(x.trim(), 'кто'));
     const where = w[at + 2] === undefined ? table(r, 'base', 'B')[0].B : name(w[at + 2], 'где');
-    return done(at + 3, { kind: 'add', every, summary: `${what} ${every ? 'каждую неделю: ' : ''}${ru(d)} ${hhmm(f)}–${hhmm(t)}`,
-      facts: (id) => [every ? `e_usual(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).` : `e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${who ?? '$ME'}, ${where}).`] });
+    return done(at + 3, { kind: 'add', every, summary: `${what} ${every ? 'каждую неделю: ' : ''}${ru(d)} ${hhmm(f)}–${hhmm(t)}${who.length > 1 ? ` (${who.map(ru).join(', ')})` : ''}`,
+      facts: (id) => who.map((p) => (every ? `e_usual(${id}, ${what}, ${d}, ${f}, ${t}, ${p}, ${where}).` : `e_add(${id}, ${what}, ${d}, ${f}, ${t}, ${p}, ${where}).`)) });
   }
   if (verb === 'sick') {
     const p = name(w[1], 'кто');
@@ -199,6 +204,8 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   return done(4, { kind: 'report', summary: `${c}: ${ru(d)} ${hhmm(t)}`, facts: (id) => [`e_report(${id}, ${c}, ${d}, ${t}).`] });
 }
 
+/** The week in force as the world holds it — for a moment («напомни чт 16:30») named by a day of the week. */
+const weekIn = (r: Rofl): string => table(r, 'current', 'W')[0]?.W ?? '?';
 /** A fact of the caller's book, tagged as the book's — parsed once, tried and written as the same clauses. */
 export const tagged = (book: string, lines: string[]): Clause[] => parseProgram(lines.map((l) => l.replace(/^([a-z_]+)\(/, `$1[${book}](`)).join('\n'));
 /** One entry's facts: the operation, its moment, its channel, its week — tagged as the book's. */
@@ -369,7 +376,10 @@ export function run(s: Store, cmd: string, rest: string[]): number {
   switch (cmd) {
     case 'whoami': return whoami(s);
     case 'edit': return edit(s, rest.join(' '));
-    case 'avail': case 'carry': case 'note': {   // the phrase may arrive whole in one argument, or already start with its verb
+    case 'need': return need(s, rest);
+    case 'retire': return retire(s, rest.join(' '));
+    case 'reminders': return reminders(s, rest);
+    case 'avail': case 'carry': case 'note': case 'done': case 'remind': {   // the phrase may arrive whole in one argument, or already start with its verb
       const text = rest.length === 1 && /\s/.test(rest[0]) ? rest[0] : line(rest);
       return edit(s, SEC_VERB[(text.split(/\s+/)[0] ?? '').toLowerCase()] ? text : `${cmd} ${text}`);
     }

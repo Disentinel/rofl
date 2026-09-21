@@ -29,3 +29,7 @@ book_source(p_me, store).
 book_source(p_nanny, store).
 book_source(p_robin, store).
 book_source(p_uncle, store).
+-- one scale for moments (spat.rofl §15, reminders): now, and each dated week's Monday 00:00, as minutes in SPAT_TZ
+now_min(29803530).                -- 2026-08-31 21:30
+week_min(w0831, 29802240).
+week_min(w0907, 29812320).

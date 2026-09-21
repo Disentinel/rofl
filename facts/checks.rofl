@@ -148,3 +148,22 @@ check_file("spat_trial", "examples/spat/store.example/ledgers/robin.rofl").
 check_file("spat_trial", "examples/spat/store.example/ledgers/uncle.rofl").
 check_file("spat_trial", "examples/spat/store.example/me.rofl").
 check_file("spat_trial", "examples/spat/store.example/trial.rofl").
+
+-- ...AND THE SAME STORE WITH A NEED PLACED (spat.rofl §15, S3f): the block
+-- for two under one entry, the guest's window as his confirmation, the room
+-- booked, one reminder sent — placed, req_met ×2, due from the last sent.
+check_world("spat_needs").
+check_file("spat_needs", "examples/spat/spat.rofl").
+check_file("spat_needs", "examples/spat/access.rofl").
+check_file("spat_needs", "examples/spat/volumes.rofl").
+check_file("spat_needs", "examples/spat/bridge.rofl").
+check_file("spat_needs", "examples/spat/week.example.rofl").
+check_file("spat_needs", "examples/spat/store.example/users.rofl").
+check_file("spat_needs", "examples/spat/store.example/books.rofl").
+check_file("spat_needs", "examples/spat/store.example/hh.rofl").
+check_file("spat_needs", "examples/spat/store.example/ledgers/alex.rofl").
+check_file("spat_needs", "examples/spat/store.example/ledgers/nanny.rofl").
+check_file("spat_needs", "examples/spat/store.example/ledgers/robin.rofl").
+check_file("spat_needs", "examples/spat/store.example/ledgers/uncle.rofl").
+check_file("spat_needs", "examples/spat/store.example/me.rofl").
+check_file("spat_needs", "examples/spat/store.example/needs.rofl").

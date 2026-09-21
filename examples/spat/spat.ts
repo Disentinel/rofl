@@ -1005,7 +1005,7 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
-const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings']);
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings', 'need', 'retire', 'reminders', 'done', 'remind']);
 
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
@@ -1379,6 +1379,10 @@ const USAGE = [
   '  spat rule add \'<клаузы>\' · rule list · rule confirm <id> · rule retract <id>   правила семьи (взрослый/оператор)',
   '  spat avail <кто> <день> <от>-<до> · carry <ребёнок> <день> <время> <кто> · note "<текст>" <день> [<кто>]   правки дня (= edit)',
   '  spat warnings [<день>]                    все строки «!!» недели одним списком;  --propose   правка ждёт confirm, если ломает день',
+  '  spat need add [<atom>] "<Что>" <минут> <кто,…> (every|by <дата>|in <неделя>) [at <место>] [req booked "<текст>" <кто>] [req item "<текст>" [<кто>]] [req confirm <кто>]',
+  '  spat need list · need retract <id> · place <потребность> · retire <блок>   потребность = правило семьи; блок с тем же именем её закрывает',
+  '  spat done <условие|"текст"> [<день>] · remind <условие> <день> <время> · edit \'skip <условие>\'   условия: сделано · напомни · не будем (= edit)',
+  '  spat reminders [--due] [--sent <id>…] [--format tg]   кому · что · когда (me/оператор)',
   '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя      --format tg   день/неделя для телефона',

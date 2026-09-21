@@ -133,3 +133,43 @@ world_hosted(X1) :- asserted_by($fact(hosted, main, $cons(X1, _)), _, _).
 hosted(X1, X2) :- hosted[hh](X1, X2), not world_hosted(X1), not person(X2, helper).
 overrides[audit](hosted, k(X1)) :- hosted[hh](X1, X2), world_hosted(X1), not hosted(X1, X2).
 withheld[audit](hosted, k(X1, X2)) :- hosted[hh](X1, X2), person(X2, helper).
+-- retired/1, a set
+retired(X1) :- retired[hh](X1).
+-- remind_days/1, key 0
+world_remind_days() :- asserted_by($fact(remind_days, main, _), _, _).
+remind_days(X1) :- remind_days[hh](X1), not world_remind_days().
+overrides[audit](remind_days, k(X1)) :- remind_days[hh](X1), world_remind_days(), not remind_days(X1).
+-- need/2, key 1
+world_need(X1) :- asserted_by($fact(need, main, $cons(X1, _)), _, _).
+need(X1, X2) :- need[hh](X1, X2), not world_need(X1).
+overrides[audit](need, k(X1)) :- need[hh](X1, X2), world_need(X1), not need(X1, X2).
+-- need_for/2, a set
+need_for(X1, X2) :- need_for[hh](X1, X2).
+-- need_len/2, key 1
+world_need_len(X1) :- asserted_by($fact(need_len, main, $cons(X1, _)), _, _).
+need_len(X1, X2) :- need_len[hh](X1, X2), not world_need_len(X1).
+overrides[audit](need_len, k(X1)) :- need_len[hh](X1, X2), world_need_len(X1), not need_len(X1, X2).
+-- need_every/1, a set
+need_every(X1) :- need_every[hh](X1).
+-- need_by/2, key 1
+world_need_by(X1) :- asserted_by($fact(need_by, main, $cons(X1, _)), _, _).
+need_by(X1, X2) :- need_by[hh](X1, X2), not world_need_by(X1).
+overrides[audit](need_by, k(X1)) :- need_by[hh](X1, X2), world_need_by(X1), not need_by(X1, X2).
+-- need_in/2, key 1
+world_need_in(X1) :- asserted_by($fact(need_in, main, $cons(X1, _)), _, _).
+need_in(X1, X2) :- need_in[hh](X1, X2), not world_need_in(X1).
+overrides[audit](need_in, k(X1)) :- need_in[hh](X1, X2), world_need_in(X1), not need_in(X1, X2).
+-- need_by_on/3, key 1
+world_need_by_on(X1) :- asserted_by($fact(need_by_on, main, $cons(X1, _)), _, _).
+need_by_on(X1, X2, X3) :- need_by_on[hh](X1, X2, X3), not world_need_by_on(X1).
+overrides[audit](need_by_on, k(X1)) :- need_by_on[hh](X1, X2, X3), world_need_by_on(X1), not need_by_on(X1, X2, X3).
+-- need_where/2, key 1
+world_need_where(X1) :- asserted_by($fact(need_where, main, $cons(X1, _)), _, _).
+need_where(X1, X2) :- need_where[hh](X1, X2), not world_need_where(X1).
+overrides[audit](need_where, k(X1)) :- need_where[hh](X1, X2), world_need_where(X1), not need_where(X1, X2).
+-- need_req/2, a set
+need_req(X1, X2) :- need_req[hh](X1, X2).
+-- req/4, key 1
+world_req(X1) :- asserted_by($fact(req, main, $cons(X1, _)), _, _).
+req(X1, X2, X3, X4) :- req[hh](X1, X2, X3, X4), not world_req(X1).
+overrides[audit](req, k(X1)) :- req[hh](X1, X2, X3, X4), world_req(X1), not req(X1, X2, X3, X4).

@@ -81,3 +81,49 @@ person[hh](kit, visitor).
 person[hh](nico, child).
 work_needed[hh](nanny, 300).
 constraint[hh](e_skipwalk, nanny, external).
+-- A NEED (spat.rofl §15, S3f 2026-09-21). r_band, robin: the band rehearses
+-- every week with a guest of the world, and two conditions — the room booked
+-- (alex's), and the guest able to come (his window is the confirmation).
+-- This week alex put the block on Friday for both (e_band), robin sent the
+-- guest's hours (e_ivanfri) and booked the room (e_bookdone): placed. Next
+-- week nothing stands and the guest gave no window: blocked, no_window(ivan).
+rule_by[hh](r_band, robin).
+rule_at[hh](r_band, "2026-09-01T21:00:00+03:00").
+rule_via[hh](r_band, telegram).
+person[hh](ivan, visitor).
+ru_name[hh](ivan, "Иван").
+need[hh](rehearsal, rehearsal).
+ru_name[hh](rehearsal, "репетиция").
+need_for[hh](rehearsal, robin).
+need_for[hh](rehearsal, ivan).
+need_len[hh](rehearsal, 120).
+need_every[hh](rehearsal).
+constraint[hh](rehearsal, robin, household).
+need_req[hh](rehearsal, rehearsal_booked).
+req[hh](rehearsal_booked, booked, "репточка", alex).
+constraint[hh](rehearsal_booked, alex, household).
+need_req[hh](rehearsal, rehearsal_ivan).
+req[hh](rehearsal_ivan, confirm, "может", ivan).
+constraint[hh](rehearsal_ivan, ivan, household).
+-- r_party, robin: a one-off need by a date — the cake is robin's to bring,
+-- nothing stands yet: open, and the reminder frame runs from Wednesday
+-- (three days before Saturday 19:00): due(party_item, robin, wed 09:00)
+rule_by[hh](r_party, robin).
+rule_at[hh](r_party, "2026-09-01T21:05:00+03:00").
+rule_via[hh](r_party, cli).
+need[hh](party, party).
+need_for[hh](party, kit).
+need_len[hh](party, 120).
+need_by[hh](party, "2026-09-05").
+need_by_on[hh](party, w0831, sat).
+constraint[hh](party, robin, household).
+need_req[hh](party, party_item).
+req[hh](party_item, item, "торт", robin).
+constraint[hh](party_item, robin, household).
+-- r_noshop, robin: «закупка по пятницам» was the first week's timetable —
+-- retired, so the typical line is off every week (span 48→47; w0907's moved
+-- Saturday copy of it goes with it) while an added block of that name would stand
+rule_by[hh](r_noshop, robin).
+rule_at[hh](r_noshop, "2026-09-01T21:10:00+03:00").
+rule_via[hh](r_noshop, cli).
+retired[hh](shopping).

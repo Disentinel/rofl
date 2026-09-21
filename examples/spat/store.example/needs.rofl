@@ -1,0 +1,25 @@
+-- needs.rofl — THE NEED PLACED, for the census alone (world `spat_needs` in
+-- facts/checks.rofl; the demos import the ledgers and not this file, so their
+-- weeks stay as they were). The book's rehearsal (hh.rofl, r_band) this week:
+-- alex put the block on Friday for both — robin, an adult he may speak for,
+-- and ivan, a guest of the need (the entry touches the need, household); robin
+-- sent the guest's hours (his window is the confirmation) and booked the room;
+-- the scheduler reminded robin about the cake once, Wednesday 09:00, so the
+-- next due moment is that day's 19:00.
+e_add[p_alex](e_band, rehearsal, fri, 1140, 1260, robin, home).
+e_add[p_alex](e_band, rehearsal, fri, 1140, 1260, ivan, home).
+edit_at[p_alex](e_band, "2026-09-02T09:00:00+03:00").
+edit_via[p_alex](e_band, cli).
+for_week[p_alex](e_band, w0831).
+e_avail[p_robin](e_ivanfri, ivan, fri, 1080, 1320).
+edit_at[p_robin](e_ivanfri, "2026-09-02T09:05:00+03:00").
+edit_via[p_robin](e_ivanfri, telegram).
+for_week[p_robin](e_ivanfri, w0831).
+e_done[p_robin](e_bookdone, rehearsal_booked, wed).
+edit_at[p_robin](e_bookdone, "2026-09-02T09:10:00+03:00").
+edit_via[p_robin](e_bookdone, telegram).
+for_week[p_robin](e_bookdone, w0831).
+e_reminded[p_me](e_rem1, party_item, 29805660).       -- 2026-09-02 09:00
+edit_at[p_me](e_rem1, "2026-09-02T09:00:00+03:00").
+edit_via[p_me](e_rem1, cli).
+for_week[p_me](e_rem1, w0831).

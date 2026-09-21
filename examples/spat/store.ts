@@ -122,9 +122,13 @@ export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; may
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
  *  question), one `authority` line per book — its one writer, by name — and
  *  where each book was read from, for volumes.rofl to hold against. */
-const loaderFacts = (e: Env, books: Book[], authors: string[]): string =>
+const loaderFacts = (e: Env, books: Book[], authors: string[], world: Clause[] = []): string =>
   `tenant(${e.tenant}).\ncaller(${e.as}).\ndate_monday(today, "${dateIn(e, 0).monday}").\n`
   + `date_monday(tomorrow, "${dateIn(e, 1).monday}").\nauthority(main, rules).\nbook_source(rules, repo).\n`
+  // ONE SCALE FOR MOMENTS (spat.rofl §15, reminders): minutes of the wall clock in SPAT_TZ — now, and each dated
+  // week's Monday 00:00 — so a deadline and a reminder are integers the rules can order; the kernel orders no strings
+  + `now_min(${nowMin(e)}).\n` + world.filter((c) => c.head.rel === 'week_starts' && c.head.args[0]?.k === 'a' && c.head.args[1]?.k === 's')
+    .map((c) => `week_min(${(c.head.args[0] as { name: string }).name}, ${minuteOf((c.head.args[1] as { v: string }).v, 0)}).`).join('\n') + '\n'
   + `book_source(world, store).\nbook_source(users, store).\nauthority(${HH}, ${HH}).\nbook_source(${HH}, store).\n`
   // the household's rules may read their author's own book: declared per author of an active rule
   + authors.map((u) => `imports(${HH}, p_${u}).`).join('\n') + '\n'
@@ -140,6 +144,16 @@ export function calDay(ymd: string): Cal {
   const n = new Date(t).getUTCDay() || 7;
   return { ymd: new Date(t).toISOString().slice(0, 10), n, monday: new Date(t - (n - 1) * 86_400_000).toISOString().slice(0, 10) };
 }
+/** A moment on the loader's scale: minutes since 1970 of the wall-clock date and time, zone-free. */
+export const minuteOf = (ymd: string, min: number): number => Math.round(Date.parse(`${ymd}T00:00:00Z`) / 60_000) + min;
+export function nowMin(e: Env): number {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: e.tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(e.now);
+  const g = (k: string): number => Number(f.find((x) => x.type === k)?.value ?? '0');
+  return minuteOf(dateIn(e).ymd, g('hour') * 60 + g('minute'));
+}
+const DOW = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+/** «вт 22.09 09:00» for a moment on that scale. */
+export const sayMoment = (t: number): string => { const d = new Date(t * 60_000); return `${DOW[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')} ${String(Math.floor((t % 1440) / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 /** The date `days` from now IN THE STORE'S ZONE. */
 export function dateIn(e: Env, days = 0): Cal {
   const f = new Intl.DateTimeFormat('en-CA', { timeZone: e.tz, year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -194,7 +208,7 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   const texts = open.map((b) => read(b.book));
   // THE HOUSEHOLD'S RULES load for every member's call, like the world: its status facts and its active clauses
   const hhFacts = read(HH); const hh = hhRules(vol, hhFacts);
-  const facts = loaderFacts(e, books, hh.authors);
+  const facts = loaderFacts(e, books, hh.authors, worldRows);
 
   let week = '?';
   const source = (r: Rofl): void => {

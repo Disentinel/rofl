@@ -8,6 +8,7 @@ import { blocks, chains, dayOrder, hhmm, holes, index, pickedTrips, ru, sayConst
 import { SpatError, type Store } from './store.ts';
 import { hhLines } from './rules.ts';
 import { carryWarns, noted, notes } from './notes.ts';
+import { needLines } from './needs.ts';
 
 /** A day — or the whole week when `day` is undefined — problems first:
  *  holes, chains with no slack, late arrivals; then the grid by person. */
@@ -23,7 +24,8 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
   const noWay = table(r, 'run', 'T, Ch, From, To, D, K, At').filter((x) => stuck.has(x.T) && (day === undefined || x.D === day));
   const hh = hhLines(r, day);
   const cw = carryWarns(r, day).map((l) => `  ${l}`);
-  if (hs.length + tight.length + late.length + noWay.length + hh.defects.length + cw.length === 0) out.push('  сходится: дыр нет, запас есть, никто не опаздывает.');
+  const nl = needLines(r, day).map((l) => `  !! ${l}`);   // a need not placed, a condition not met (needs.ts)
+  if (hs.length + tight.length + late.length + noWay.length + hh.defects.length + cw.length + nl.length === 0) out.push('  сходится: дыр нет, запас есть, никто не опаздывает.');
   for (const h of byDay(hs)) {
     out.push(`  !! НЕ ПОКРЫТ ${ru(h.day)} ${hhmm(h.from)}–${hhmm(h.to)}  ${ru(h.child)}`);
     for (const { person, why } of whoWasBusy(r, h.day, h.from)) {
@@ -35,7 +37,7 @@ export function renderDay(r: Rofl, day: string | undefined, title: string, grid 
   }
   for (const l of late) out.push(`  !! ОПОЗДАНИЕ ${ru(l.D)} ${ru(l.Ev)} начинается ${hhmm(l.F)}, надо не позже ${hhmm(l.By)}  (${l.C})`);
   for (const n of noWay) out.push(`  !! НЕКОМУ ВЕЗТИ ${ru(n.D)} ${hhmm(n.At)} ${ru(n.Ch)}: ${ru(n.From)} → ${ru(n.To)}`);
-  out.push(...cw, ...hh.defects, ...hh.warns);
+  out.push(...cw, ...hh.defects, ...hh.warns, ...nl);
   if (!grid) return out.join('\n');
   const trips = on(pickedTrips(r));
   const withs = index(table(r, 'with', 'E, Ch'), (x) => x.E);
