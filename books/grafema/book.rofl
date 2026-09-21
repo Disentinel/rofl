@@ -15,27 +15,11 @@ seed(grafema).
 
 -- vocabulary: books/crystals/base.rofl + software-product.rofl, loaded before this file
 
-guessed(grafema, product).
-
--- ======================================================================
 -- round 1 — crawl(recorded_in, grafema, out). Sources put to the question:
 -- the canon (a curated file, its author named), the repository at HEAD
 -- f0ae8c8 (2026-08-16, shallow clone), the npm registry. grafema.dev was
 -- asked and could not be reached: the egress proxy refused the domain.
 -- ======================================================================
-
-guessed(src_canon, source).              -- skills/grafema-enox-canon/SKILL.md, by vadim
-guessed(src_repo, source).               -- github.com/Disentinel/grafema
-guessed(src_npm, source).                -- registry.npmjs.org/grafema and @grafema/*
-guessed(src_site, source).               -- grafema.dev
-guessed(src_vscode_marketplace, source). -- VS Code Marketplace, publisher GrafemaLabs
-guessed(src_zenodo, source).             -- two papers, no DOI recorded anywhere reachable
-guessed(src_knowledge_dir, source).      -- knowledge/ inside the repo: decisions, facts, sessions
-guessed(src_tracker_reg, source).        -- the issue tracker behind REG-* and RFD-* ids
-guessed(src_ci, source).                 -- .github/workflows, nine of them
-guessed(src_changelog, source).          -- CHANGELOG.md
-guessed(src_docs, source).               -- docs/ and _ai/research
-guessed(src_enox, source).               -- Enox, where the repo's own gaps say they are recorded
 
 edge[book](e01, recorded_in, grafema, src_repo).
 evidence(e01, src_repo, "package.json repository.url = github.com/Disentinel/grafema.git; HEAD f0ae8c8 2026-08-16").
@@ -112,15 +96,6 @@ landed(c05, 1). depth(c05, 1). classified(c05, confirmed).
 -- directories) and of src_canon. Parts are named at subsystem level; a
 -- subsystem decomposes further when its own round comes.
 -- ======================================================================
-
-guessed(rfdb, component).                 guessed(rfdb_client, component).
-guessed(grafema_orchestrator, component). guessed(cli, component).
-guessed(mcp_server, component).           guessed(vscode_extension, component).
-guessed(hex_atlas, component).            guessed(graphql_api, component).
-guessed(plugins, component).              guessed(language_analyzers, subsystem).
-guessed(language_resolvers, subsystem).   guessed(shared_libs, subsystem).
-guessed(effects_db, dataset).             guessed(registry, dataset).
-guessed(native_binaries, artifact).       guessed(autoresearch, apparatus).
 
 edge[book](e10, decomposes_into, grafema, rfdb).
 evidence(e10, src_repo, "packages/rfdb-server/Cargo.toml name=rfdb 'RFDB (Rega Flow Database) — high-performance disk-backed graph engine'; src/{datalog,cypher,graph,embedding,http_server.rs}").
@@ -211,12 +186,6 @@ asked(decomposes_into, grafema, out, src_npm, 2).
 -- primary text (README, CLAUDE.md), src_knowledge_dir, src_canon, src_npm.
 -- ======================================================================
 
-guessed(thesis_query_not_read, purpose).
-guessed(target_legacy_codebases, purpose).
-guessed(moat_no_inference, purpose).
-guessed(sociotechnical_context_graph, vision).
-guessed(paper_beyond_code, paper).
-
 edge[book](e27, requires, thesis_query_not_read, grafema).
 evidence(e27, src_repo, "CLAUDE.md 'core thesis: AI should query the graph, not read code'; README 'AI agent queries the graph instead of reading files'").
 evidence(e27, src_npm, "description 'Graph-driven code analysis tool. AI should query the graph, not read code.'").
@@ -249,12 +218,6 @@ asked(requires, grafema, in, src_npm, 3).
 -- ======================================================================
 -- round 4 — crawl(depends_on, ?, grafema): what breaks if it is removed.
 -- ======================================================================
-
-guessed(ai_agents_via_mcp, consumer).
-guessed(ci_gate_grafema_check, consumer).
-guessed(glama_listing, consumer).
-guessed(dogfood_workflow, process).
-guessed(tocs_benchmark_study, study).
 
 edge[book](e32, depends_on, ai_agents_via_mcp, grafema).
 evidence(e32, src_repo, "README 'Use with AI (MCP)': .mcp.json runs grafema-mcp; Dockerfile for the MCP server").
@@ -294,10 +257,6 @@ asked(depends_on, grafema, in, src_canon, 4).
 -- round 5 — crawl(held_by, grafema, out): who pays when it breaks.
 -- ======================================================================
 
-guessed(vadim_reshetnikov, person).
-guessed(disentinel, handle).
-guessed(grafemalabs, handle).
-
 edge[book](e39, held_by, grafema, vadim_reshetnikov).
 evidence(e39, src_repo, "package.json author 'Vadim Reshetnikov'; LICENSE 'Copyright 2026 Vadim Reshetnikov'; kb decision license-fsl 'no CLA needed if sole author'").
 evidence(e39, src_npm, "registry maintainer Vadim Reshetnikov").
@@ -320,8 +279,6 @@ landed(e41, 5). depth(e41, 2). classified(e41, confirmed).
 edge[book](e42, values, vadim_reshetnikov, graph_superior_to_reading).
 evidence(e42, src_repo, "CLAUDE.md 'If reading code gives better results than querying Grafema — that is a product gap, not a workflow choice'").
 landed(e42, 5). depth(e42, 1). classified(e42, confirmed).
-guessed(graph_superior_to_reading, value).
-
 asked(held_by, grafema, out, src_repo, 5).
 asked(held_by, grafema, out, src_npm, 5).
 asked(held_by, grafema, out, src_canon, 5).
@@ -506,7 +463,6 @@ asked(recorded_in, src_knowledge_dir, out, src_knowledge_dir, 11).
 -- round 12 — crawl(recorded_in, autoresearch, out)
 -- ======================================================================
 
-guessed(src_agent_skills, source).
 edge[book](e65, recorded_in, autoresearch, src_repo).
 evidence(e65, src_repo, "autoresearch/{harness,prompts,hypotheses.yaml,questions*.yaml,tasks.yaml}; autoresearch/results/ is NOT tracked: every run's output lives outside the repository").
 landed(e65, 12). depth(e65, 1). classified(e65, confirmed).
@@ -738,12 +694,7 @@ premise(q_rofl_supersedes, rofl).
 needs_ext(q_rofl_supersedes, supersedes, grafema, in).
 
 -- @who ontocrawler_2
-guessed(src_rofl_repo, source).        -- github.com/Disentinel/rofl, this tree
-guessed(rofl_target, purpose).
-guessed(datalog_v2_engine, component).
-guessed(replacing_old_js_pipeline, purpose).
 
--- rofl, kindless first
 edge[book](e125, is_a, rofl, datalog_engine).
 evidence(e125, src_rofl_repo, "README.md:3 'A Datalog-family language with perspectives (first-class truth contexts), explicit time, kernel-emitted provenance, structured terms, and budgets'"). landed(e125, 15). depth(e125, 1). classified(e125, confirmed).
 edge[book](e126, describes, rofl, "ROFL — Relation-Oriented Fixpoint Language. A Datalog-family language with perspectives (first-class truth contexts), explicit time, kernel-emitted provenance, structured terms, and budgets. Turing-complete by design; budgets are part of the semantics.").
@@ -796,7 +747,6 @@ asked(supersedes, grafema, in, src_docs, 15).
 -- @who ontocrawler_2
 -- round 15, continued: the rest of grafema's sources asked whether anything
 -- supersedes it. What they hold instead is a supersession INSIDE grafema.
-guessed(datalog_packs, component).
 edge[book](e136, supersedes, datalog_packs, plugins).
 evidence(e136, src_changelog, "CHANGELOG.md:129 'The 4 datalog-replaced .mjs plugins were removed (Wave 5): method-call-resolver, shape-verifier, axum-route-detector, semantic-bridge-detector — replaced by the method_calls, shape_verifier, axum_routes packs and graph-native bridges'"). landed(e136, 15). depth(e136, 1). classified(e136, serendipitous).
 -- grafema is already replacing its imperative plugins with Datalog rule
@@ -825,118 +775,80 @@ evidence(e138, src_enox, "enox://enox.dev/personal/vadim_r/cs/fact_grafema_rfdb_
 -- question is answered by both. parity.rofl counts the rest.
 -- ======================================================================
 
-guessed(cap_call_graph, capability).
 edge[book](e139, offers, grafema, cap_call_graph).
 evidence(e139, src_repo, "README.md Capabilities: ✅ Call graph — who calls what, across all files"). landed(e139, 16). depth(e139, 1). classified(e139, confirmed).
-guessed(cap_data_flow, capability).
 edge[book](e140, offers, grafema, cap_data_flow).
 evidence(e140, src_repo, "README.md Capabilities: ✅ Data flow — trace values source to sink, forward and backward"). landed(e140, 16). depth(e140, 1). classified(e140, confirmed).
-guessed(cap_control_flow, capability).
 edge[book](e141, offers, grafema, cap_control_flow).
 evidence(e141, src_repo, "README.md Capabilities: ✅ Control flow — CFG, reachability, branching paths"). landed(e141, 16). depth(e141, 1). classified(e141, confirmed).
-guessed(cap_data_shapes, capability).
 edge[book](e142, offers, grafema, cap_data_shapes).
 evidence(e142, src_repo, "README.md Capabilities: ✅ Data shapes — object structure through assignment chains"). landed(e142, 16). depth(e142, 1). classified(e142, confirmed).
-guessed(cap_effect_propagation, capability).
 edge[book](e143, offers, grafema, cap_effect_propagation).
 evidence(e143, src_repo, "README.md Capabilities: ✅ Effect propagation — transitive side-effect analysis through call graph"). landed(e143, 16). depth(e143, 1). classified(e143, confirmed).
-guessed(cap_symbolic_execution, capability).
 edge[book](e144, offers, grafema, cap_symbolic_execution).
 evidence(e144, src_repo, "README.md Capabilities: ✅ Symbolic execution"). landed(e144, 16). depth(e144, 1). classified(e144, confirmed).
-guessed(cap_cross_language, capability).
 edge[book](e145, offers, grafema, cap_cross_language).
 evidence(e145, src_repo, "README.md Capabilities: ✅ Cross-language & inter-process — service boundaries, message passing, remote calls"). landed(e145, 16). depth(e145, 1). classified(e145, confirmed).
-guessed(cap_cli_verbs, capability).
 edge[book](e146, offers, grafema, cap_cli_verbs).
 evidence(e146, src_repo, "README.md Capabilities: ✅ CLI: tldr, who, wtf, why, check, overview"). landed(e146, 16). depth(e146, 1). classified(e146, confirmed).
-guessed(cap_mcp_tools, capability).
 edge[book](e147, offers, grafema, cap_mcp_tools).
 evidence(e147, src_repo, "README.md Capabilities: ✅ 40+ MCP tools for AI agents"). landed(e147, 16). depth(e147, 1). classified(e147, confirmed).
-guessed(cap_datalog_queries, capability).
 edge[book](e148, offers, grafema, cap_datalog_queries).
 evidence(e148, src_repo, "README.md Capabilities: ✅ Datalog for custom structural queries"). landed(e148, 16). depth(e148, 1). classified(e148, confirmed).
-guessed(cap_cypher, capability).
 edge[book](e149, offers, grafema, cap_cypher).
 evidence(e149, src_repo, "README.md Capabilities: ✅ Cypher query language"). landed(e149, 16). depth(e149, 1). classified(e149, confirmed).
-guessed(cap_programmatic_api, capability).
 edge[book](e150, offers, grafema, cap_programmatic_api).
 evidence(e150, src_repo, "README.md Capabilities: ✅ Programmatic API (@grafema/util)"). landed(e150, 16). depth(e150, 1). classified(e150, confirmed).
-guessed(cap_hex_atlas, capability).
 edge[book](e151, offers, grafema, cap_hex_atlas).
 evidence(e151, src_repo, "README.md Capabilities: ✅ HexAtlas — visual code map (2D/3D)"). landed(e151, 16). depth(e151, 1). classified(e151, confirmed).
-guessed(cap_vscode, capability).
 edge[book](e152, offers, grafema, cap_vscode).
 evidence(e152, src_repo, "README.md Capabilities: ✅ VS Code extension"). landed(e152, 16). depth(e152, 1). classified(e152, confirmed).
-guessed(cap_export_docs_md, capability).
 edge[book](e153, offers, grafema, cap_export_docs_md).
 evidence(e153, src_repo, "README.md Capabilities: ✅ grafema export --as docs-md"). landed(e153, 16). depth(e153, 1). classified(e153, confirmed).
-guessed(cap_export_openapi, capability).
 edge[book](e154, offers, grafema, cap_export_openapi).
 evidence(e154, src_repo, "README.md Capabilities: ✅ grafema export --as openapi-3.1"). landed(e154, 16). depth(e154, 1). classified(e154, confirmed).
-guessed(cap_export_mcp_schema, capability).
 edge[book](e155, offers, grafema, cap_export_mcp_schema).
 evidence(e155, src_repo, "README.md Capabilities: ✅ grafema export --as mcp-schema"). landed(e155, 16). depth(e155, 1). classified(e155, confirmed).
-guessed(cap_export_json_schema, capability).
 edge[book](e156, offers, grafema, cap_export_json_schema).
 evidence(e156, src_repo, "README.md Capabilities: ✅ grafema export --as json-schema"). landed(e156, 16). depth(e156, 1). classified(e156, confirmed).
-guessed(cap_intent_sidecars, capability).
 edge[book](e157, offers, grafema, cap_intent_sidecars).
 evidence(e157, src_repo, "README.md Capabilities: ✅ Intent sidecars (_ai/intents/...)"). landed(e157, 16). depth(e157, 1). classified(e157, confirmed).
-guessed(cap_features_duplicates, capability).
 edge[book](e158, offers, grafema, cap_features_duplicates).
 evidence(e158, src_repo, "README.md Capabilities: ✅ grafema features --duplicates"). landed(e158, 16). depth(e158, 1). classified(e158, confirmed).
-guessed(cap_knowledge_base, capability).
 edge[book](e159, offers, grafema, cap_knowledge_base).
 evidence(e159, src_repo, "README.md Capabilities: ✅ Knowledge base — decisions, ADRs linked to code nodes"). landed(e159, 16). depth(e159, 1). classified(e159, confirmed).
-guessed(cap_effects_db_registry, capability).
 edge[book](e160, offers, grafema, cap_effects_db_registry).
 evidence(e160, src_repo, "README.md Capabilities: ✅ Effects-DB & Registry — curated side effects and contract mappings"). landed(e160, 16). depth(e160, 1). classified(e160, confirmed).
-guessed(cap_invariants_as_rules, capability).
 edge[book](e161, offers, grafema, cap_invariants_as_rules).
 evidence(e161, src_repo, "README.md Capabilities: ✅ Architectural invariants as Datalog rules"). landed(e161, 16). depth(e161, 1). classified(e161, confirmed).
-guessed(cap_ci_gate, capability).
 edge[book](e162, offers, grafema, cap_ci_gate).
 evidence(e162, src_repo, "README.md Capabilities: ✅ grafema check — CI gate"). landed(e162, 16). depth(e162, 1). classified(e162, confirmed).
-guessed(cap_plugins, capability).
 edge[book](e163, offers, grafema, cap_plugins).
 evidence(e163, src_repo, "README.md Capabilities: ✅ Custom node types and edges via plugins"). landed(e163, 16). depth(e163, 1). classified(e163, confirmed).
-guessed(cap_callback_enricher, capability).
 edge[book](e164, offers, grafema, cap_callback_enricher).
 evidence(e164, src_repo, "README.md Capabilities: ✅ Library callback enricher — auto-detect MCP tools, CLI commands"). landed(e164, 16). depth(e164, 1). classified(e164, confirmed).
-guessed(cap_manifest_generation, capability).
 edge[book](e165, offers, grafema, cap_manifest_generation).
 evidence(e165, src_repo, "README.md Capabilities: ✅ Manifest generation — API surface with effect annotations"). landed(e165, 16). depth(e165, 1). classified(e165, confirmed).
-guessed(lang_js_ts, capability).
 edge[book](e166, offers, grafema, lang_js_ts).
 evidence(e166, src_repo, "README.md Language Support: JavaScript/TypeScript, Production"). landed(e166, 16). depth(e166, 1). classified(e166, confirmed).
-guessed(lang_rust, capability).
 edge[book](e167, offers, grafema, lang_rust).
 evidence(e167, src_repo, "README.md Language Support: Rust, Beta"). landed(e167, 16). depth(e167, 1). classified(e167, confirmed).
-guessed(lang_haskell, capability).
 edge[book](e168, offers, grafema, lang_haskell).
 evidence(e168, src_repo, "README.md Language Support: Haskell, Beta"). landed(e168, 16). depth(e168, 1). classified(e168, confirmed).
-guessed(lang_java, capability).
 edge[book](e169, offers, grafema, lang_java).
 evidence(e169, src_repo, "README.md Language Support: Java, Beta"). landed(e169, 16). depth(e169, 1). classified(e169, confirmed).
-guessed(lang_kotlin, capability).
 edge[book](e170, offers, grafema, lang_kotlin).
 evidence(e170, src_repo, "README.md Language Support: Kotlin, Beta"). landed(e170, 16). depth(e170, 1). classified(e170, confirmed).
-guessed(lang_python, capability).
 edge[book](e171, offers, grafema, lang_python).
 evidence(e171, src_repo, "README.md Language Support: Python, Beta"). landed(e171, 16). depth(e171, 1). classified(e171, confirmed).
-guessed(lang_go, capability).
 edge[book](e172, offers, grafema, lang_go).
 evidence(e172, src_repo, "README.md Language Support: Go, Beta"). landed(e172, 16). depth(e172, 1). classified(e172, confirmed).
-guessed(lang_cpp, capability).
 edge[book](e173, offers, grafema, lang_cpp).
 evidence(e173, src_repo, "README.md Language Support: C/C++, Beta"). landed(e173, 16). depth(e173, 1). classified(e173, confirmed).
-guessed(lang_swift, capability).
 edge[book](e174, offers, grafema, lang_swift).
 evidence(e174, src_repo, "README.md Language Support: Swift, Alpha"). landed(e174, 16). depth(e174, 1). classified(e174, confirmed).
-guessed(lang_objc, capability).
 edge[book](e175, offers, grafema, lang_objc).
 evidence(e175, src_repo, "README.md Language Support: Objective-C, Alpha"). landed(e175, 16). depth(e175, 1). classified(e175, confirmed).
-guessed(lang_beam, capability).
 edge[book](e176, offers, grafema, lang_beam).
 evidence(e176, src_repo, "README.md Language Support: Elixir/Erlang, Alpha"). landed(e176, 16). depth(e176, 1). classified(e176, confirmed).
 plans(grafema, "Side effect chain analysis").
@@ -945,114 +857,93 @@ plans(grafema, "Infrastructure as Code").
 plans(grafema, "Git integration").
 plans(grafema, "Code Quality Metrics").
 
-guessed(rofl_call_graph, capability).
 edge[book](e177, offers, rofl, rofl_call_graph).
 evidence(e177, src_rofl_repo, "rules/js-callgraph.rofl 'ONE construct, the FUNCTION CALL, at the call-graph layer'; facts/js-callgraph.rofl"). landed(e177, 16). depth(e177, 1). classified(e177, confirmed).
 context(e177, "JS only; resolution asks the value layer").
 edge[book](e178, equivalent_to, rofl_call_graph, cap_call_graph).
 evidence(e178, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e178, 16). depth(e178, 1). classified(e178, confirmed).
 context(e178, "JS only; resolution asks the value layer").
-guessed(rofl_value_layer, capability).
 edge[book](e179, offers, rofl, rofl_value_layer).
 evidence(e179, src_rofl_repo, "rules/js-dataflow.rofl 'THE VALUE LAYER: what an expression may evaluate to'"). landed(e179, 16). depth(e179, 1). classified(e179, confirmed).
 context(e179, "may-evaluate-to per expression; no named source-to-sink trace verb").
 edge[book](e180, equivalent_to, rofl_value_layer, cap_data_flow).
 evidence(e180, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e180, 16). depth(e180, 1). classified(e180, confirmed).
 context(e180, "may-evaluate-to per expression; no named source-to-sink trace verb").
-guessed(rofl_control_flow, capability).
 edge[book](e181, offers, rofl, rofl_control_flow).
 evidence(e181, src_rofl_repo, "rules/js-controlflow.rofl 'THE CONTROL-FLOW LAYER'; facts/js-controlflow.rofl abrupt_kind"). landed(e181, 16). depth(e181, 1). classified(e181, confirmed).
 context(e181, "JS only").
 edge[book](e182, equivalent_to, rofl_control_flow, cap_control_flow).
 evidence(e182, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e182, 16). depth(e182, 1). classified(e182, confirmed).
 context(e182, "JS only").
-guessed(rofl_effect_layer, capability).
 edge[book](e183, offers, rofl, rofl_effect_layer).
 evidence(e183, src_rofl_repo, "rules/js-effects.rofl 'THE EFFECT LAYER', Koka taxonomy eff_row/eff_alias; f_the_effect_taxonomy_already_exists_and_it_is_a_lattice"). landed(e183, 16). depth(e183, 1). classified(e183, confirmed).
 context(e183, "per-node verdicts over a lattice; transitivity through the call graph not verified here").
 edge[book](e184, equivalent_to, rofl_effect_layer, cap_effect_propagation).
 evidence(e184, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e184, 16). depth(e184, 1). classified(e184, confirmed).
 context(e184, "per-node verdicts over a lattice; transitivity through the call graph not verified here").
-guessed(rofl_datalog, capability).
 edge[book](e185, offers, rofl, rofl_datalog).
 evidence(e185, src_rofl_repo, "README: a Datalog-family language; REPL ? why whynot excise"). landed(e185, 16). depth(e185, 1). classified(e185, confirmed).
 context(e185, "superset: provenance and the third value").
 edge[book](e186, equivalent_to, rofl_datalog, cap_datalog_queries).
 evidence(e186, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e186, 16). depth(e186, 1). classified(e186, confirmed).
 context(e186, "superset: provenance and the third value").
-guessed(rofl_api, capability).
 edge[book](e187, offers, rofl, rofl_api).
 evidence(e187, src_rofl_repo, "README 'import { Rofl } from rofl'; src/api.ts load/evaluate/query/why/whynot/excise"). landed(e187, 16). depth(e187, 1). classified(e187, confirmed).
 edge[book](e188, equivalent_to, rofl_api, cap_programmatic_api).
 evidence(e188, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e188, 16). depth(e188, 1). classified(e188, confirmed).
-guessed(rofl_audits, capability).
 edge[book](e189, offers, rofl, rofl_audits).
 evidence(e189, src_rofl_repo, "boot.rofl audits, alarm(...), rules/*.rofl [audit] heads"). landed(e189, 16). depth(e189, 1). classified(e189, confirmed).
 context(e189, "the whole repository is invariants as rules").
 edge[book](e190, equivalent_to, rofl_audits, cap_invariants_as_rules).
 evidence(e190, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e190, 16). depth(e190, 1). classified(e190, confirmed).
 context(e190, "the whole repository is invariants as rules").
-guessed(rofl_goldens, capability).
 edge[book](e191, offers, rofl, rofl_goldens).
 evidence(e191, src_rofl_repo, "npm test: 94 worlds, hash + census against facts/goldens.rofl; alarm rows"). landed(e191, 16). depth(e191, 1). classified(e191, confirmed).
 context(e191, "gates ITS OWN tree; scanners/cli.ts --query can ask a foreign tree but ships no check verb").
 edge[book](e192, equivalent_to, rofl_goldens, cap_ci_gate).
 evidence(e192, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e192, 16). depth(e192, 1). classified(e192, confirmed).
 context(e192, "gates ITS OWN tree; scanners/cli.ts --query can ask a foreign tree but ships no check verb").
-guessed(rofl_render_docs, capability).
 edge[book](e193, offers, rofl, rofl_render_docs).
 evidence(e193, src_rofl_repo, "npm run docs: regenerate every generated block, --check fails if stale; npm run features"). landed(e193, 16). depth(e193, 1). classified(e193, confirmed).
 context(e193, "own tree only").
 edge[book](e194, equivalent_to, rofl_render_docs, cap_export_docs_md).
 evidence(e194, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e194, 16). depth(e194, 1). classified(e194, confirmed).
 context(e194, "own tree only").
-guessed(rofl_findings_ledger, capability).
 edge[book](e195, offers, rofl, rofl_findings_ledger).
 evidence(e195, src_rofl_repo, "facts/findings.rofl + rules/findings.rofl; addressed_by(F, path) links a finding to an artifact"). landed(e195, 16). depth(e195, 1). classified(e195, confirmed).
 context(e195, "findings link to paths, not to graph nodes").
 edge[book](e196, equivalent_to, rofl_findings_ledger, cap_knowledge_base).
 evidence(e196, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e196, 16). depth(e196, 1). classified(e196, confirmed).
 context(e196, "findings link to paths, not to graph nodes").
-guessed(rofl_rule_packs, capability).
 edge[book](e197, offers, rofl, rofl_rule_packs).
 evidence(e197, src_rofl_repo, "rules/js-*.rofl: sixteen packs, each a layer; a pack is loaded before the packs that read it"). landed(e197, 16). depth(e197, 1). classified(e197, confirmed).
 context(e197, "a plugin IS a rule pack").
 edge[book](e198, equivalent_to, rofl_rule_packs, cap_plugins).
 evidence(e198, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e198, 16). depth(e198, 1). classified(e198, confirmed).
 context(e198, "a plugin IS a rule pack").
-guessed(rofl_js_scanner, capability).
 edge[book](e199, offers, rofl, rofl_js_scanner).
 evidence(e199, src_rofl_repo, "scanners/js.ts + @babel/parser; docs/scaling-a-corpus.md 1,426 files"). landed(e199, 16). depth(e199, 1). classified(e199, confirmed).
 context(e199, "the one language").
 edge[book](e200, equivalent_to, rofl_js_scanner, lang_js_ts).
 evidence(e200, src_rofl_repo, "same question answered on both sides; see the offering above"). landed(e200, 16). depth(e200, 1). classified(e200, confirmed).
 context(e200, "the one language").
-guessed(rofl_host_surface, capability).
 edge[book](e201, offers, rofl, rofl_host_surface).
 evidence(e201, src_rofl_repo, "facts/js-host-surface.rofl GENERATED from @types/node and lib.dom.d.ts; rules/js-host.rofl effect attribution"). landed(e201, 16). depth(e201, 1). classified(e201, confirmed).
 context(e201, "a curated host surface, not a package effects database").
-guessed(rofl_perspectives, capability).
 edge[book](e202, offers, rofl, rofl_perspectives).
 evidence(e202, src_rofl_repo, "authority/imports/collects, forged[audit], leak[audit]; docs/choosing-perspectives.md"). landed(e202, 16). depth(e202, 1). classified(e202, confirmed).
-guessed(rofl_provenance, capability).
 edge[book](e203, offers, rofl, rofl_provenance).
 evidence(e203, src_rofl_repo, "derived_by emitted per firing; why, whynot, excise as a counterfactual diff"). landed(e203, 16). depth(e203, 1). classified(e203, confirmed).
-guessed(rofl_third_value, capability).
 edge[book](e204, offers, rofl, rofl_third_value).
 evidence(e204, src_rofl_repo, "semantics(well_founded), unknown(Atom) as a row; docs/three-valued-answers.md"). landed(e204, 16). depth(e204, 1). classified(e204, confirmed).
-guessed(rofl_time, capability).
 edge[book](e205, offers, rofl, rofl_time).
 evidence(e205, src_rofl_repo, "@init/@next ticks, run, tickAdvance; docs/time-and-continuity.md"). landed(e205, 16). depth(e205, 1). classified(e205, confirmed).
-guessed(rofl_budgets, capability).
 edge[book](e206, offers, rofl, rofl_budgets).
 evidence(e206, src_rofl_repo, "hole(Q, budget_exhausted) emitted, partial results marked; budgets are semantics"). landed(e206, 16). depth(e206, 1). classified(e206, confirmed).
-guessed(rofl_rules_as_data, capability).
 edge[book](e207, offers, rofl, rofl_rules_as_data).
 evidence(e207, src_rofl_repo, "boot.rofl: rules reflected as facts, validated by rules; the kernel grep test"). landed(e207, 16). depth(e207, 1). classified(e207, confirmed).
-guessed(rofl_rust_port, capability).
 edge[book](e208, offers, rofl, rofl_rust_port).
 evidence(e208, src_rofl_repo, "rust/rofl byte-identical on the port corpus; docs/the-target.md rung 0"). landed(e208, 16). depth(e208, 1). classified(e208, confirmed).
-guessed(rofl_inquiry, capability).
 edge[book](e209, offers, rofl, rofl_inquiry).
 evidence(e209, src_rofl_repo, "rules/inquiry/*: claims, evidence with polarity, four epistemic grades, obligations"). landed(e209, 16). depth(e209, 1). classified(e209, confirmed).
 asked(offers, grafema, out, src_repo, 16). asked(offers, rofl, out, src_rofl_repo, 16).
@@ -1064,7 +955,6 @@ asked(offers, grafema, out, src_repo, 16). asked(offers, rofl, out, src_rofl_rep
 -- ======================================================================
 
 -- @who vadim
-guessed(src_holder_session, source).
 edge[vadim](v01, describes, rofl_rust_port, "Rust движок готов и работает через cooling, довольно эффективно").
 evidence(v01, src_holder_session, "vadim, 2026-09-20, answering the rung-0 reading of docs/the-target.md"). landed(v01, 17). depth(v01, 1). classified(v01, unexpected).
 edge[vadim](v02, describes, rfdb, "RFDB на масштабе тоже подыхал, и это ровно то, почему я её забросил: плохие алгоритмы были выбраны, в том числе полный скан репозитория").
@@ -1073,8 +963,6 @@ evidence(v02, src_holder_session, "vadim, 2026-09-20"). landed(v02, 17). depth(v
 -- open supersedes(?, rfdb) the crystal spawns for graph_database.
 
 -- @who ontocrawler_2
-guessed(rofl_rust_port, component).
-guessed(rofl_cooling, capability).
 edge[book](e210, describes, rofl, "The world never grows with the corpus; it oscillates under a ceiling and the corpus goes to disk behind it. A run over ten thousand files differs from this one in how long it takes, not in how much it holds.").
 evidence(e210, src_rofl_repo, "docs/scaling-a-corpus.md, measured 2026-09-09: 1,426 files, 29,934 ms wall, 179 ticks, 1,290 volumes cooled to 200 MB on disk, largest world 1,938,540 facts against a ceiling of 2,000,000"). landed(e210, 17). depth(e210, 2). classified(e210, confirmed).
 context(e210, "corroborates v01 on cooling; the doc does not name the engine, rust/rofl/src/session.rs implements cool and rules/ingest.rofl declares coolable").
@@ -1104,14 +992,12 @@ edge[book](e213, describes, grafema, "Your codebase as a queryable graph. Code, 
 evidence(e213, src_site, "grafema.dev headline and first paragraph, fetched 2026-09-21"). landed(e213, 19). depth(e213, 1). classified(e213, confirmed).
 edge[book](e214, recorded_in, grafema, src_site).
 evidence(e214, src_site, "grafema.dev: GitHub, docs at grafema.dev/docs, atlas.grafema.dev, npm install -g grafema; FSL-1.1-Apache-2.0; 'built by Vadim Reshetnikov'"). landed(e214, 19). depth(e214, 2). classified(e214, confirmed).
-guessed(src_atlas_site, source).
 edge[book](e215, recorded_in, hex_atlas, src_atlas_site).
 evidence(e215, src_site, "grafema.dev links 'Atlas (visual interface)' at atlas.grafema.dev: the hex map is hosted, not only a package"). landed(e215, 19). depth(e215, 1). classified(e215, serendipitous).
 context(e214, "the site's claims against the book: '11 first-class + 4 alpha' languages with Ruby and C first-class, where README has C/C++ Beta and KNOWN_LIMITATIONS has Ruby Alpha; '30+ MCP tools' where README also says 40+; '~25 seconds to index a 500-file repository' matches the canon's 509 files / 25 s; '+10 percentage point on architecture questions' is the canon's defensible per-category claim, stated as the headline").
 asked(recorded_in, grafema, out, src_site, 19). asked(supersedes, grafema, in, src_site, 19). asked(describes, grafema, out, src_site, 19).
 -- zenodo.org/api/records: a title search finds both papers the canon says
 -- exist without DOIs; a creators.name search does not (16 other Reshetnikovs).
-guessed(paper_gdd, paper). guessed(gdd_methodology, vision).
 edge[book](e216, recorded_in, grafema, src_zenodo).
 evidence(e216, src_zenodo, "10.5281/zenodo.18247579 'Graph-Driven Development: Reducing Cognitive Load in Large Evolving Systems Through Externalized Understanding', preprint, 2026-01-14, Vadim Reshetnikov; 10.5281/zenodo.18888273 'Beyond Code: The Sociotechnical Context Graph as Necessary Infrastructure for AI-Assisted Software Development', preprint, 2026-03-06"). landed(e216, 19). depth(e216, 2). classified(e216, confirmed).
 edge[book](e217, recorded_in, paper_beyond_code, src_zenodo).

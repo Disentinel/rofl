@@ -1,0 +1,16 @@
+-- books/crystals/practice.rofl — what one crawl over a practice (parenting)
+-- left behind as vocabulary. Loaded after base.rofl; independent of
+-- software-product.rofl, which the same book also loads to test it.
+
+crystal(practice).
+
+-- How is X done: the styles, techniques and approaches a practice is
+-- carried out by. Spawned by the owner in round 6 of parenting, when the
+-- eight practices and the Baumrind styles had been filed as PARTS of
+-- parenting (decomposes_into) and were nothing of the kind: a style is
+-- not a component, it is a way.
+archetype(method).            q_shape(method, out).
+origin(method, "session:2026-09-20-parenting", enumerations_filed_as_parts).
+
+-- Nothing learned yet: one seed, five rounds, no class at n >= 3 when this
+-- file was written. expects/learned_on rows enter with the fill rates.

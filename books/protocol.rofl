@@ -28,7 +28,9 @@ edb(origin).            -- origin(R, Session, Finding)  where an archetype came 
 edb(learned_on).        -- learned_on(Crystal, Class, N, Seed)
 edb(retired_by).        -- retired_by(Crystal, Class, R, Session)
 edb(asker).             -- asker(A)
-edb(guessed).           -- guessed(X, C)                a class the executor wrote with no evidence (rounds 0-5)
+edb(guessed).           -- guessed(X, C)                FORBIDDEN: a class with no edge behind it; guessed_forbidden[audit]
+edb(put).               -- put(Round, Source, "question")  the question as it was actually asked of the source
+edb(not_found).         -- not_found(R, X, D, Source, Round)  looked there, that round, found nothing: a fact about the search
 edb(kindless).          -- kindless(R)                   asked of every entity before its kind is known
 edb(pair_valued).       -- pair_valued(R)                R(X, io(In, Out)): two slots, one edge
 edb(quote_valued).      -- quote_valued(R)               R(X, "..."): the answer is a quote, not an entity
@@ -72,11 +74,29 @@ consumes(X, I)            :- edge_any(_, R, X, io(I, _)), pair_valued(R).
 produces(X, O)            :- edge_any(_, R, X, io(_, O)), pair_valued(R).
 transforms(X, I, O)       :- edge_any(_, R, X, io(I, O)), pair_valued(R).
 
--- the kind of a thing is an answer, never an input: class derives from is_a.
--- A guessed class stands only until a kind lands, and is audited while it does.
+-- Two classings, both with an edge behind them. The ROLE is the part an
+-- entity plays in the graph, derived from the relation that introduced it:
+-- a thing something is recorded in is a source, whatever else it is. The
+-- KIND is what a source says it is (is_a). Loop 2 counts fill rates by
+-- either; roles reach n >= 3 first. A class written by hand is forbidden.
+role(X, seed)             :- seed(X).
+role(S, source)           :- edge_any(_, recorded_in, _, S).
+role(K, kind)             :- edge_any(_, is_a, _, K).
+role(P, part)             :- edge_any(_, decomposes_into, _, P).
+role(P, purpose)          :- edge_any(_, requires, P, _).
+role(D, dependant)        :- edge_any(_, depends_on, D, _).
+role(H, holder)           :- edge_any(_, held_by, _, H).
+role(V, value)            :- edge_any(_, values, _, V).
+role(A, alias)            :- edge_any(_, equivalent_to, _, A).
+role(S, successor)        :- edge_any(_, supersedes, S, _).
+role(C, capability)       :- edge_any(_, offers, _, C).
+role(M, method)           :- edge_any(_, method, _, M).
+role(I, material)         :- consumes(_, I).
+role(O, product)          :- produces(_, O).
+role(A, asker)            :- question_ext(_, A, _).
 kinded(X)                 :- edge_any(_, is_a, X, _).
+class(X, C)               :- role(X, C).
 class(X, C)               :- edge_any(_, is_a, X, C).
-class(X, C)               :- guessed(X, C), not kinded(X).
 
 appears(X, 0)             :- seed(X).
 appears(X, K)             :- edge_any(Id, _, X, _), landed(Id, K).
@@ -146,6 +166,10 @@ holder_for(Q, H)          :- answer_unknown(Q), obligation(Q, _, X, _), edge_any
 -- A round is one class-dependent question, or ANY number of kindless ones:
 -- a kind, a source and a quote each cost one look at a manifest, and a
 -- gate that opens one entity per round starves every question behind it.
+-- THE ROUND IS THE QUESTION, NOT A FILTER ON WRITES: whatever a source
+-- answers while being asked one thing is written, under whichever R it
+-- fits. Dropping an answer because it came to the wrong question is how
+-- round 3 of parenting lost depends_on to requires.
 batchable(R)              :- kindless(R).
 revived_after(B, T)       :- killed(B, _, T), revived(B, _, T2), T2 > T.
 dead(B)                   :- killed(B, _, T), not revived_after(B, T).
@@ -202,20 +226,32 @@ many_open(C)              :- two_open(C, _, X2), open_entity(X3, C), X2 < X3.
 overridden(C)             :- priority_override(C, _, _).
 ask_priority(C)           :- report_due(_), many_open(C), not overridden(C).
 
+-- ------------------------------------------------ intents: suspected, then corroborated
+-- A source that names as holder the one who holds the source (a ministry's
+-- statute naming the school, a treaty naming the state). Conway's law over
+-- the holders. ONE coincidence is a suspicion and an obligation to ask a
+-- second source; it becomes a fact only when the holder edge stands on two
+-- sources, one of which the holder does not hold.
+held_source(S, H)         :- edge_any(_, held_by, S, H).
+suspected_self_serving(Id, S, H) :- evidence(Id, S, _), edge_any(Id, held_by, _, H), held_source(S, H).
+independent_evidence(Id)  :- evidence(Id, S2, _), edge_any(Id, held_by, _, H), not held_source(S2, H).
+self_serving(Id, S, H)    :- suspected_self_serving(Id, S, H), not independent_evidence(Id).
+corroborate(Id)           :- suspected_self_serving(Id, _, _), not independent_evidence(Id).
+
 -- ------------------------------------------------ loop 2: schema as data
 signature(C, R)           :- signature_at(C, R, _, _, _).
 incomplete(E, R)          :- class(E, C), signature(C, R), q_shape(R, D), not filled(R, E, D).
 
 -- ------------------------------------------------ invariants of the protocol
 no_state[audit](Q)               :- question(Q, _, _), not answer(Q, _).
-class_guessed[audit](X, C)       :- guessed(X, C), not kinded(X).
+guessed_forbidden[audit](X, C)   :- guessed(X, C).
 edge_without_evidence[audit](Id) :- edge_any(Id, _, _, _), not evidence(Id, _, _).
 edge_without_round[audit](Id)    :- edge_any(Id, _, _, _), not landed(Id, _).
 edge_without_depth[audit](Id)    :- edge_any(Id, _, _, _), not depth(Id, _).
 retired_but_filled[audit](C, R)  :- retired(C, R), class(X, C), filled(R, X, _).
 archetype_without_origin[audit](R) :- archetype(R), not origin(R, _, _).
 alarm(no_state).
-alarm(class_guessed).
+alarm(guessed_forbidden).
 alarm(edge_without_evidence).
 alarm(edge_without_round).
 alarm(edge_without_depth).

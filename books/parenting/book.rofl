@@ -21,8 +21,6 @@ seed(parenting).
 -- whose every source is named and none can be opened.
 -- ======================================================================
 
-guessed(src_enox, source).
-guessed(src_agent_memory, source).
 edge[book](p01, recorded_in, parenting, src_enox).
 evidence(p01, src_enox, "recall 'воспитание детей, родительство' and semantic_search 'parenting, raising children' over enox.dev/personal/vadim_r: top similarity 0.55, every hit a CS paper or concept; nothing about children"). landed(p01, 1). depth(p01, 1). classified(p01, gap).
 context(p01, "the one reachable source holds nothing on the seed: a trace expected (the holder is a parent) and not found").
@@ -30,9 +28,6 @@ context(p01, "the one reachable source holds nothing on the seed: a trace expect
 -- pointers from recall: where the literature says parenting is recorded.
 -- Depth 0 each; evidence names the recall as the source so the gate stays
 -- silent and the reader is told exactly how little this is worth.
-guessed(src_baumrind, source).          guessed(src_attachment_theory, source).
-guessed(src_who_unicef_guidance, source). guessed(src_family_law, source).
-guessed(src_popular_manuals, source).   guessed(src_holder_experience, source).
 edge[book](p02, recorded_in, parenting, src_baumrind).
 evidence(p02, src_agent_memory, "Baumrind 1967/1971, the authoritative/authoritarian/permissive typology; Maccoby & Martin 1983 add neglectful"). landed(p02, 1). depth(p02, 0). classified(p02, confirmed).
 edge[book](p03, recorded_in, parenting, src_attachment_theory).
@@ -67,9 +62,7 @@ asked(describes, parenting, out, src_enox, 1).
 -- @who ontocrawler_2
 reachable(src_baumrind, 2). reachable(src_attachment_theory, 2). reachable(src_who_unicef_guidance, 2).
 reachable(src_family_law, 2). reachable(src_popular_manuals, 2).
-guessed(src_wikipedia, source). guessed(src_sep, source).
 
--- the three kindless questions of the seed, put to the primary texts:
 -- ru.wikipedia (Воспитание), en.wikipedia (Parenting), the Stanford
 -- Encyclopedia of Philosophy (Parenthood and Procreation).
 edge[book](p08, describes, parenting, "Воспита́ние — процесс обучения, защиты и заботы о детях с целью их здорового развития во взрослой жизни").
@@ -95,7 +88,6 @@ evidence(p15, src_sep, "SEP entry 'Parenthood and Procreation': Foundations; mor
 evidence(p02, src_wikipedia, "en: Diana Baumrind proposed three styles (authoritative, authoritarian, permissive), later four (uninvolved); Alfie Kohn 2005, Peter Gray, Jay Belsky, Annette Lareau, Daniel Schechter also named").
 evidence(p04, src_wikipedia, "en: WHO cited; Universal Declaration of Human Rights art. 25.2 on motherhood and childhood").
 evidence(p05, src_wikipedia, "ru: section 'Воспитание в системе образования в России' and Законодательство РФ as a school of definition").
-guessed(src_pedagogy_classics, source).
 edge[book](p16, recorded_in, parenting, src_pedagogy_classics).
 evidence(p16, src_wikipedia, "ru: Джон Локк, Жан-Жак Руссо, Джон Уотсон, Б. Ф. Скиннер, Альберт Бандура; 'Наставление отца к сыну' (XV в.)"). landed(p16, 2). depth(p16, 1). classified(p16, confirmed).
 context(p16, "ru's history of the CONCEPT runs Locke -> Rousseau -> behaviorism -> Bandura; en's does not exist as a section. Two encyclopedias, two different things worth recording about the same word.").
@@ -116,8 +108,6 @@ asked(is_a, parenting, out, src_sep, 2). asked(describes, parenting, out, src_se
 -- legislator rather than a philosopher.
 -- ======================================================================
 -- @who ontocrawler_2
-guessed(ground_genetic, purpose). guessed(ground_labor, purpose). guessed(ground_voluntarist, purpose).
-guessed(ground_causal, purpose). guessed(ground_child_centred, purpose). guessed(ground_statutory_ru, purpose).
 edge[book](p17, requires, ground_genetic, parenting).
 evidence(p17, src_sep, "Genetic accounts: parenthood in direct genetic derivation; Hall 1999 via Lockean self-ownership"). landed(p17, 3). depth(p17, 1). classified(p17, confirmed).
 edge[book](p18, requires, ground_labor, parenting).
@@ -140,7 +130,6 @@ asked(requires, parenting, in, src_sep, 3). asked(requires, parenting, in, src_w
 -- PRACTICE (eight); the two encyclopedias cut the same thing along
 -- different axes, and both cuts are kept.
 -- ======================================================================
-guessed(kind_by_aim, subsystem). guessed(styles_baumrind, subsystem). guessed(practices, subsystem). guessed(life_stages, subsystem).
 edge[book](p23, decomposes_into, parenting, kind_by_aim).
 evidence(p23, src_wikipedia, "ru 'Виды воспитания человека': умственное, трудовое, физическое, нравственное, духовно-нравственное, эстетическое, правовое, патриотическое, половое и полоролевое, экономическое, экологическое; by institution: семейное, религиозное, социальное, дизсоциальное, коррекционное"). landed(p23, 4). depth(p23, 1). classified(p23, confirmed).
 edge[book](p24, decomposes_into, parenting, styles_baumrind).
@@ -160,10 +149,6 @@ asked(decomposes_into, parenting, out, src_wikipedia, 4). asked(decomposes_into,
 -- was spawned for persons: the class is widened here, in the book, as a
 -- candidate line for the next crystal.
 -- ======================================================================
-guessed(src_crc, source).
-guessed(parents, role). guessed(legal_guardians, role). guessed(extended_family_or_community, role).
-guessed(states_parties, role). guessed(caregivers_and_health_workers, role). guessed(schools_ru, role).
-guessed(best_interests_of_the_child, value).
 provisional(values, role, 5).
 
 edge[book](p27, recorded_in, parenting, src_crc).
@@ -189,3 +174,66 @@ evidence(p34, src_crc, "art. 18(1) 'The best interests of the child will be thei
 edge[book](p35, values, states_parties, best_interests_of_the_child).
 evidence(p35, src_crc, "art. 3(1)"). landed(p35, 5). depth(p35, 1). classified(p35, confirmed).
 asked(held_by, parenting, out, src_crc, 5). asked(held_by, parenting, out, src_who_unicef_guidance, 5). asked(held_by, parenting, out, src_wikipedia, 5). asked(held_by, parenting, out, src_sep, 5).
+
+-- ======================================================================
+-- round 6 — the protocol changed under the book (2026-09-21): roles derive
+-- from edges, guesses are gone, `method` exists, `put` and `not_found` are
+-- facts. Four things this round writes back into the earlier ones without
+-- overwriting them: the question as it was actually put (rounds 3-5), the
+-- two absences of rounds 3-4 as not_found, the styles and practices as
+-- METHODS rather than parts, and the eight practices as entities with the
+-- sentence the source spent on each.
+-- ======================================================================
+-- @who ontocrawler_2
+put(3, src_sep, "what grounds a parent's rights and duties over a child? (SEP 'Foundations', read as requires(?, parenting))").
+put(3, src_wikipedia, "what does the statute say воспитание is FOR? (ФЗ-273 purpose clause)").
+put(4, src_wikipedia, "what kinds, styles, practices and stages does the article divide parenting into?").
+put(5, src_crc, "who does the Convention make responsible for a child's upbringing, and who assists?").
+put(5, src_who_unicef_guidance, "who provides nurturing care?").
+not_found(requires, parenting, in, src_sep, 3).        -- no biological or evolutionary ground among the five accounts
+not_found(requires, parenting, in, src_wikipedia, 3).  -- none in either article either
+not_found(decomposes_into, parenting, out, src_wikipedia, 4). -- no decomposition by the CHILD's aim, on either axis
+not_found(decomposes_into, parenting, out, src_sep, 4).
+
+edge[book](p36, method, parenting, styles_baumrind).
+evidence(p36, src_wikipedia, "en 'Styles': a style is HOW a parent parents (responsiveness x demandingness), not a part of parenting"). landed(p36, 6). depth(p36, 1). classified(p36, confirmed).
+edge[book](p37, method, parenting, practices).
+evidence(p37, src_wikipedia, "en 'Practices': things parents DO"). landed(p37, 6). depth(p37, 1). classified(p37, confirmed).
+context(p24, "filed as decomposes_into in round 4; the owner's reading on 2026-09-21: a style is a way, not a component. p36 carries the same target under method; this edge stands as the record of the misfiling").
+context(p25, "same as p24: p37 carries it under method").
+
+-- the eight practices, each with the source's own sentence
+edge[book](p38, method, parenting, reading_aloud).
+evidence(p38, src_wikipedia, "en 'Practices'"). landed(p38, 6). depth(p38, 1). classified(p38, confirmed).
+edge[book](p39, describes, reading_aloud, "Reading aloud: supporting linguistic and intellectual development").
+evidence(p39, src_wikipedia, "en 'Practices'"). landed(p39, 6). depth(p39, 1). classified(p39, confirmed).
+edge[book](p40, method, parenting, storytelling).
+evidence(p40, src_wikipedia, "en 'Practices'"). landed(p40, 6). depth(p40, 1). classified(p40, confirmed).
+edge[book](p41, describes, storytelling, "Storytelling: critical practice in oral traditions for teaching values and cultural history").
+evidence(p41, src_wikipedia, "en 'Practices'"). landed(p41, 6). depth(p41, 1). classified(p41, confirmed).
+edge[book](p42, method, parenting, face_to_face_interaction).
+evidence(p42, src_wikipedia, "en 'Practices'"). landed(p42, 6). depth(p42, 1). classified(p42, confirmed).
+edge[book](p43, describes, face_to_face_interaction, "Face-to-face interaction: engaging directly with babies about themselves").
+evidence(p43, src_wikipedia, "en 'Practices'"). landed(p43, 6). depth(p43, 1). classified(p43, confirmed).
+edge[book](p44, method, parenting, consejos).
+evidence(p44, src_wikipedia, "en 'Practices'"). landed(p44, 6). depth(p44, 1). classified(p44, confirmed).
+edge[book](p45, describes, consejos, "Consejos: narrative advice-giving through stories about similar situations").
+evidence(p45, src_wikipedia, "en 'Practices'"). landed(p45, 6). depth(p45, 1). classified(p45, confirmed).
+edge[book](p46, method, parenting, teasing).
+evidence(p46, src_wikipedia, "en 'Practices'"). landed(p46, 6). depth(p46, 1). classified(p46, confirmed).
+edge[book](p47, describes, teasing, "Teasing: playful guidance using fabrications or empty threats to keep children safe").
+evidence(p47, src_wikipedia, "en 'Practices'"). landed(p47, 6). depth(p47, 1). classified(p47, confirmed).
+edge[book](p48, method, parenting, nonverbal_communication).
+evidence(p48, src_wikipedia, "en 'Practices'"). landed(p48, 6). depth(p48, 1). classified(p48, confirmed).
+edge[book](p49, describes, nonverbal_communication, "Nonverbal communication: teaching respect and values without direct instruction").
+evidence(p49, src_wikipedia, "en 'Practices'"). landed(p49, 6). depth(p49, 1). classified(p49, confirmed).
+edge[book](p50, method, parenting, lopi).
+evidence(p50, src_wikipedia, "en 'Practices'"). landed(p50, 6). depth(p50, 1). classified(p50, confirmed).
+edge[book](p51, describes, lopi, "LOPI (Learning by Observing and Pitching In): integrating children into daily activities").
+evidence(p51, src_wikipedia, "en 'Practices'"). landed(p51, 6). depth(p51, 1). classified(p51, confirmed).
+edge[book](p52, method, parenting, ethnic_racial_socialization).
+evidence(p52, src_wikipedia, "en 'Practices'"). landed(p52, 6). depth(p52, 1). classified(p52, confirmed).
+edge[book](p53, describes, ethnic_racial_socialization, "Ethnic-racial socialization: passing down cultural resources to support children of color's well-being").
+evidence(p53, src_wikipedia, "en 'Practices'"). landed(p53, 6). depth(p53, 1). classified(p53, confirmed).
+put(6, src_wikipedia, "how is parenting done, by what styles and practices? (re-read of the round-4 fetch under method)").
+asked(method, parenting, out, src_wikipedia, 6).

@@ -27,7 +27,7 @@ origin(transforms, "session:2026-09-18-grafema", f_the_archetypes_never_ask_what
 -- Spawned by loop 2 from the verb in CLAUDE.md ("if reading code gives better
 -- results ... that's a product gap"): the holder's value, asked of persons.
 archetype(values).            q_shape(values, out).
-provisional(values, person, 5).
+provisional(values, holder, 5).   -- the role, since 2026-09-21: persons and institutions alike hold
 origin(values, "session:2026-09-18-grafema", held_by_unfolds_to_values).
 
 -- The source's own sentence about a thing, kept as a quote. Three rounds
