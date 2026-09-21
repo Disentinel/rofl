@@ -113,3 +113,110 @@ evidence(f6, src_fide, "the handbook is FIDE's own"). landed(f6, 1). depth(f6, 1
 
 asked(is_a, chess, out, src_wikipedia, 1). asked(describes, chess, out, src_wikipedia, 1). asked(recorded_in, chess, out, src_wikipedia, 1).
 asked(is_a, chess, out, src_fide, 1). asked(describes, chess, out, src_fide, 1). asked(recorded_in, chess, out, src_fide, 1).
+
+-- ======================================================================
+-- round 2 — the asker's interview. Six questions derived from the table,
+-- put to him on 2026-09-21; six answers, verbatim, in his volume. The
+-- crawler's reading of each answer is a context row, never an edge.
+-- ======================================================================
+-- @who vadim
+put(2, src_holder_session, "requires(?, q_chess): what task does this crawl serve? depends_on(?, answer): what decision waits on it? transforms(task, io(answer, ?)): what will the answer become? values(vadim, ?): what is failure, what is success? is_a(vadim, ?): who is asking? premise: is chess the domain?").
+
+edge[vadim](a8, describes, task_test_method_on_self, "Проверить метод на себе ещё раз. Допустим я хочу изучить влияние шахмат на мыслительные способности, в том числе у детей.").
+evidence(a8, src_holder_session, "answer 1"). landed(a8, 2). depth(a8, 1). classified(a8, confirmed).
+edge[vadim](a9, requires, task_test_method_on_self, q_chess).
+evidence(a9, src_holder_session, "answer 1"). landed(a9, 2). depth(a9, 1). classified(a9, confirmed).
+question_ext(q_chess_cognition, vadim, 2).
+premise(q_chess_cognition, influence_of_chess_on_thinking).
+needs_ext(q_chess_cognition, depends_on, chess, in).
+needs_ext(q_chess_cognition, transforms, chess_instruction, out).
+context(a9, "answer 1 carries a second question inside the first: 'влияние шахмат на мыслительные способности, в том числе у детей'. It presupposes that such an influence exists; the book records the presupposition as a premise to RESOLVE, not as a fact, and asks the sources whether the entity exists before asking what it is").
+
+edge[vadim](a10, describes, decision_skill_defects, "Жду новых недостатков скилла.").
+evidence(a10, src_holder_session, "answer 2"). landed(a10, 2). depth(a10, 1). classified(a10, confirmed).
+edge[vadim](a11, depends_on, decision_skill_defects, q_chess).
+evidence(a11, src_holder_session, "answer 2"). landed(a11, 2). depth(a11, 1). classified(a11, confirmed).
+edge[vadim](a12, describes, decision_chess_club_for_children, "Касательно самих шахмат - решу стоит ли детей на кружок вести.").
+evidence(a12, src_holder_session, "answer 2"). landed(a12, 2). depth(a12, 1). classified(a12, confirmed).
+edge[vadim](a13, depends_on, decision_chess_club_for_children, q_chess_cognition).
+evidence(a13, src_holder_session, "answer 2"). landed(a13, 2). depth(a13, 1). classified(a13, confirmed).
+
+edge[vadim](a14, transforms, task_test_method_on_self, io(book_of_chess, knowledge_crystal_of_chess)).
+evidence(a14, src_holder_session, "answer 3: 'Кристалл знания чтобы об него спрашивать всякое и искать всякое структурно интересное про шахматы'"). landed(a14, 2). depth(a14, 1). classified(a14, unexpected).
+context(a14, "'кристалл' here is the BOOK of chess as a thing to query, not the vocabulary pack books/crystals/ calls a crystal. One word, two things, and the two are the asker's and the executor's: an alias seam inside the project's own vocabulary, recorded here rather than resolved").
+
+edge[vadim](a15, describes, vadim, "Мне сложно на это ответить. Провал прогона - ничего не вызовет мой интерес.").
+evidence(a15, src_holder_session, "answer 4"). landed(a15, 2). depth(a15, 1). classified(a15, confirmed).
+edge[vadim](a16, values, vadim, findings_that_provoke_interest).
+evidence(a16, src_holder_session, "answer 4, read in the negative: failure is a run that provokes no interest"). landed(a16, 2). depth(a16, 1). classified(a16, confirmed).
+context(a16, "the value is stated as its absence, and success is not stated at all: not_found below. It coincides with the skill's own ranking of classifications - unexpected above confirmed - so the book's priority and the asker's value point the same way, which is not something to assume and is the first time it has been checked").
+not_found(values, vadim, out, src_holder_session, 2).   -- no positive criterion of success given; 'сложно ответить'
+
+edge[vadim](a17, is_a, vadim, skill_owner).
+evidence(a17, src_holder_session, "answer 5"). landed(a17, 2). depth(a17, 1). classified(a17, confirmed).
+edge[vadim](a18, is_a, vadim, parent).
+evidence(a18, src_holder_session, "answer 5"). landed(a18, 2). depth(a18, 1). classified(a18, confirmed).
+edge[vadim](a19, is_a, vadim, researcher_of_ai_methods).
+evidence(a19, src_holder_session, "answer 5"). landed(a19, 2). depth(a19, 1). classified(a19, confirmed).
+context(a17, "three askers in one person, and the three decisions of answer 2 sort by them: the defect list is the skill owner's, the club is the parent's, the method is the researcher's. The per-asker projection the protocol provides for now has three askers to project by, all with one name").
+
+edge[vadim](a20, describes, chess, "Ну допустим подходит, раз уж я на вопросы ответил, почему нет.").
+evidence(a20, src_holder_session, "answer 6: the premise of q_chess confirmed, conditionally"). landed(a20, 2). depth(a20, 1). classified(a20, confirmed).
+asked(requires, q_chess, in, src_holder_session, 2). asked(depends_on, q_chess, in, src_holder_session, 2).
+asked(values, vadim, out, src_holder_session, 2). asked(is_a, vadim, out, src_holder_session, 2).
+
+-- ======================================================================
+-- round 3 — the asker's question: crawl(depends_on, ?, chess) and
+-- transforms(chess_instruction, ?), put as "does chess instruction change
+-- children's thinking, and by how much?" to the literature the premise
+-- lives in. Europe PMC is the index; PubMed refused (cookies), OpenAlex
+-- rate-limited, the EEF report 403, Elsevier a redirect. Each answering
+-- text gets a volume; the one RCT is read through a citation, depth 1.
+-- ======================================================================
+authority(sala_gobet, ontocrawler_2).   -- Sala & Gobet, 2016-2023: the meta-analyses
+authority(ioe, ontocrawler_2).          -- Institute of Education RCT, 2016 (Jerrim et al.), via citation
+-- @who ontocrawler_2
+put(3, src_europepmc, "chess instruction, children, cognitive or academic outcomes, meta-analysis or randomised trial").
+put(3, src_wikipedia, "what does the Psychology section say about chess and intelligence, and about instruction effects on children?").
+edge[book](n20, recorded_in, influence_of_chess_on_thinking, src_sala_gobet).
+evidence(n20, src_europepmc, "Sala, Foley, Gobet 2017 Front Psychol 10.3389/fpsyg.2017.00238; Sala & Gobet 2017 Curr Dir Psychol Sci 10.1177/0963721417712760; Gobet & Sala 2023 Perspect Psychol Sci 10.1177/17456916221091830"). landed(n20, 3). depth(n20, 1). classified(n20, confirmed).
+edge[book](n21, recorded_in, influence_of_chess_on_thinking, src_ioe_rct).
+evidence(n21, src_sala_gobet, "the 2016 Institute of Education trial as cited in Sala, Foley, Gobet 2017; not fetched directly (EEF 403, Europe PMC does not index it)"). landed(n21, 3). depth(n21, 1). classified(n21, confirmed).
+edge[book](n22, recorded_in, influence_of_chess_on_thinking, src_wikipedia).
+evidence(n22, src_wikipedia, "en 'Psychology' (section 44 via the API; the page fetch truncated before it)"). landed(n22, 3). depth(n22, 1). classified(n22, confirmed).
+edge[book](n23, held_by, src_sala_gobet, sala_and_gobet).
+evidence(n23, src_europepmc, "authors of all three"). landed(n23, 3). depth(n23, 1). classified(n23, confirmed).
+
+-- the meta-analysts' book
+edge[sala_gobet](g1, describes, influence_of_chess_on_thinking, "24 studies, 40 effect sizes: mathematics d = 0.38, cognitive ability d = 0.34, literacy d = 0.25; 25-30 h, a lesson per week during the school year, is probably the minimum threshold to obtain meaningful benefits").
+evidence(g1, src_sala_gobet, "Sala & Gobet 2016 Educ Res Rev, as reported in Sala, Foley, Gobet 2017"). landed(g1, 3). depth(g1, 1). classified(g1, confirmed).
+edge[sala_gobet](g2, describes, influence_of_chess_on_thinking, "almost none of the reviewed studies compared chess-treated groups with active control groups to rule out possible placebo effects").
+evidence(g2, src_sala_gobet, "Sala, Foley, Gobet 2017"). landed(g2, 3). depth(g2, 1). classified(g2, unexpected).
+edge[sala_gobet](g3, describes, influence_of_chess_on_thinking, "far transfer of learning rarely occurs").
+evidence(g3, src_sala_gobet, "Sala & Gobet 2017, Curr Dir Psychol Sci"). landed(g3, 3). depth(g3, 1). classified(g3, confirmed).
+edge[sala_gobet](g4, describes, influence_of_chess_on_thinking, "The overall effect of far transfer is null, and there is little to no true variability between the types of cognitive training").
+evidence(g4, src_sala_gobet, "Gobet & Sala 2023, Perspect Psychol Sci"). landed(g4, 3). depth(g4, 1). classified(g4, confirmed).
+edge[sala_gobet](g5, transforms, chess_instruction, io(pupil, pupil_with_short_term_gains)).
+evidence(g5, src_sala_gobet, "2016 meta-analysis: d 0.25-0.38 on post-tests, placebo uncontrolled"). landed(g5, 3). depth(g5, 1). classified(g5, confirmed).
+edge[sala_gobet](g6, depends_on, short_term_math_and_cognitive_scores, chess_instruction).
+evidence(g6, src_sala_gobet, "2016 meta-analysis"). landed(g6, 3). depth(g6, 1). classified(g6, confirmed).
+context(g6, "the dependence the 2016 meta-analysis reports is short-term and uncontrolled; the same authors' 2017 and 2023 papers say far transfer rarely occurs and is null overall. One book, two dates, the later retracts the reading of the earlier: with a bus factor of two, perspective collapses into time here too").
+edge[sala_gobet](g7, invariant_over, chess_instruction, inv_25_30_hours_minimum).
+evidence(g7, src_sala_gobet, "2016: '25-30 h ... probably the minimum threshold'"). landed(g7, 3). depth(g7, 1). classified(g7, confirmed).
+edge[sala_gobet](g8, held_by, inv_25_30_hours_minimum, sala_and_gobet).
+evidence(g8, src_sala_gobet, "same"). landed(g8, 3). depth(g8, 1). classified(g8, confirmed).
+
+-- the trial's book, through a citation
+edge[ioe](j1, describes, influence_of_chess_on_thinking, "1,965 Year 5 pupils receiving chess instruction versus 1,900 controls; after one year the two groups did not differ in any of the outcome measures").
+evidence(j1, src_sala_gobet, "Sala, Foley, Gobet 2017 reporting the 2016 IoE trial; two weaknesses they name: post-test a year after instruction ended, ceiling effect"). landed(j1, 3). depth(j1, 1). classified(j1, unexpected).
+not_found(depends_on, chess_instruction, in, src_ioe_rct, 3).   -- the trial found no outcome that depended on the instruction
+context(j1, "the only randomised evidence in reach, and it says no; the meta-analysts who cite it keep their 2016 effect and their 2017 verdict on the same page. Two claims in the asker's decision's path disagree on the same triple: g6 against this not_found. That is the nuance the asker's decision turns on").
+
+-- the encyclopedia's book
+edge[wiki_en](n24, describes, influence_of_chess_on_thinking, "Although one meta-analysis and most children studies find a positive correlation between general cognitive ability and chess skill, adult studies show mixed results.").
+evidence(n24, src_wikipedia, "en 'Psychology', citing Burgoyne et al. 2016, Gobet & Campitelli 2007, Campitelli & Gobet 2011"). landed(n24, 3). depth(n24, 1). classified(n24, confirmed).
+not_found(depends_on, chess, in, src_wikipedia, 3).   -- a correlation between ability and skill is not a dependence of ability on chess; the section says nothing about instruction
+context(n24, "the encyclopedia's sentence is the one a parent will read first, and it answers a different question: whether able children play well, not whether playing makes children able").
+
+asked(depends_on, chess, in, src_wikipedia, 3). asked(depends_on, chess, in, src_sala_gobet, 3). asked(depends_on, chess, in, src_ioe_rct, 3).
+asked(transforms, chess_instruction, out, src_sala_gobet, 3).
