@@ -114,10 +114,12 @@ chats or message files — that is the bot's shim.
    past. `spat roll <week>` (operator, `rolled(Week, Iso)` in `p_me` and
    `meta.week`) is now a step AHEAD only, for a hand-made case; a roll at or
    behind the date is code 2 and does nothing. A date whose week the world
-   does not have is code 2 for every verb of the store, with the two lines to
-   add — `week(w0914).  week_starts(w0914, "2026-09-14").` — the world is not
-   written by the tool. `--week-of` still answers for any week, with that
-   week's own edits, since every entry carries `for_week`.
+   does not have — today's, or a dated day's in an edit or a `show` — gets its
+   week MINTED by the loader as facts of the call, `week(w0914).
+   week_starts(w0914, "2026-09-14").` (and `week_min`), never written to the
+   world; the world's own line wins where it exists, and `whoami` says
+   «неделя w0914 (заведена по дате)». `--week-of` still answers for any week,
+   with that week's own edits, since every entry carries `for_week`.
 
 8. **`spat init <tenant> --world <file> --users <file>`, operator only.** The
    operator first writes their own admission by hand — `tg_user(alex,
@@ -841,12 +843,11 @@ reads and one opened store for everything asked after it.
   world`, today) is not a verb.
 - **Move to another day.** `move <block> [<day>] <time>` changes the time on
   a day; the grammar has no target day, as the contract wrote it.
-- **A week the world does not have is not made by the tool.** The rules
-  cannot mint a week (an atom `w0914` is not derivable — the kernel has no
-  constructors), and the loader could, from the date, but a week is the
-  operator's line by §14 (`not_extended(week, weeks)`). Left as code 2 with
-  the lines to add; the automatic way, if wanted, is the loader asserting
-  `week`/`week_starts` for the date's Monday when the world lacks it.
+- **A minted week is a fact of the call, not of the world.** The rules
+  cannot mint one (an atom `w0914` is not derivable — no constructors); the
+  loader does, from the date, and forgets it with the process — every call
+  mints the same name from the same Monday, so entries `for_week` it agree.
+  Nothing writes it into the world book.
 - **Same id twice in one book.** Possible only if the same person writes the
   same text at the same millisecond twice; the set semantics make it one
   edit. Two *different* entries under one id would need a collision of

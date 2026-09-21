@@ -6,7 +6,7 @@
 
 import type { Rofl } from '../../src/api.ts';
 import { bust, table } from './spat.ts';
-import { SpatError, calDay, dateIn, must, type Cal, type Env, type Store } from './store.ts';
+import { SpatError, calDay, dateIn, mint, must, type Cal, type Env, type Store } from './store.ts';
 
 const bad = (what: string): never => { throw new SpatError(2, `не разобрал: ${what}`); };
 
@@ -38,8 +38,9 @@ export function weekOf(s: Store, d: Dated): { day: string; ymd: string; week: st
   // re-evaluated — one evaluation less per dated edit (measured: 0.5 s each)
   const w = d.which === 'on' ? table(s.r, 'week_starts', 'W, M').find((x) => x.M.replace(/^"|"$/g, '') === d.monday)?.W
     : table(s.r, 'week_of', 'Which, W').find((x) => x.Which === d.which)?.W;
-  if (!w) throw new SpatError(2, `неделя с понедельника ${d.monday} не заведена: в мире нет week_starts(W, "${d.monday}") — ${d.ymd} показать не из чего; нужна строка week/week_starts в world.rofl и roll`);
-  return { day: dayAtom(s.r, d.n), ymd: d.ymd, week: w };
+  // a week the world lacks is minted (store.ts `mint`), and the world re-read with it before anything is asked
+  const week = w ?? (() => { const m = mint(s.r, d.monday, s.minted ?? []); bust(s.r); s.r.evaluate(); return m; })();
+  return { day: dayAtom(s.r, d.n), ymd: d.ymd, week };
 }
 /** The world re-read under another week — the swap `--week-of` makes, made once. */
 export function under(s: Store, w: string): void {

@@ -1074,9 +1074,10 @@ not_extended(usual, books).    not_extended(usual_on, books).  not_extended(move
 not_extended(skipped, books).  not_extended(added, books).     not_extended(absent_on, books).
 not_extended(present_on, books).
 not_extended(want, query).     not_extended(asking, query).    not_extended(waived, query).
--- `weeks`: a week is the operator's — it comes with its Monday (`week_starts`, a
--- book relation of access.rofl) and a `roll`; a week the book named alone
--- would be a week with no date under it
+-- `weeks`: a week comes with its Monday (`week_starts`, a book relation of
+-- access.rofl) — the world's line, or the loader's for a date the world has
+-- no week for (store.ts `mint`, S3e); a week the book named alone would be a
+-- week with no date under it
 not_extended(week, weeks).
 -- the moments are the loader's, a condition's lines are the members' books (access.rofl §5c)
 not_extended(now_min, loader).  not_extended(week_min, loader).

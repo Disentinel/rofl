@@ -91,7 +91,7 @@ async function grammar(): Promise<Group> {
     codesOf(c) === '0' && /^потребность cake \(cake\) — robin, 30м, до 2026-09-04 \(пт, w0831\), магазин \(r_[0-9a-f]+\)\n  условия: торт — robin \(cake_item\)$/m.test(c), c);
   const bad: [string, string][] = [
     ['"репетиция" без atom (кириллица не слагается)', '"репетиция" 60 robin every'], ['минуты не число', 'x "X" many robin every'], ['кто не из мира', 'x "X" 60 mallory every'],
-    ['без ритма', 'x "X" 60 robin'], ['by без заведённой недели (28.09)', 'x "X" 60 robin by 28.09'], ['in чужой недели', 'x "X" 60 robin in w1005'],
+    ['без ритма', 'x "X" 60 robin'], ['by 31.02 (в календаре нет)', 'x "X" 60 robin by 31.02'], ['in чужой недели', 'x "X" 60 robin in w1005'],
     ['booked без ответственного', 'x "X" 60 robin every req booked "зал"'], ['confirm не участника', 'x "X" 60 robin every req confirm alex'],
     ['место не из мира', 'x "X" 60 robin every at moon'], ['хвост', 'x "X" 60 robin every junk'], ['id занят человеком', 'kit "X" 60 robin every'],
     ['id занят потребностью', 'cake "X" 60 robin every'], ['перевод строки', 'x "X" 60\nrobin every'], ['условие дважды', 'x "X" 60 robin every req confirm robin req confirm robin'],

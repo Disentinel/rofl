@@ -355,7 +355,7 @@ export function init(e0: Env, tenant: string, weekFile: string, usersFile?: stri
 
 export function whoami(s: Store): number {
   const roles = table(s.r, 'role', 'U, R').filter((x) => x.U === s.env.as).map((x) => ru(x.R));
-  console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week} · сегодня ${dateIn(s.env).ymd}`);
+  console.log(`я: ${ru(s.env.as)}${s.env.fromId === undefined ? '' : ` (from_id ${s.env.fromId})`} (${roles.join(', ')}) · семья ${s.env.tenant} · неделя ${s.week}${s.minted?.includes(s.week) ? ' (заведена по дате)' : ''} · сегодня ${dateIn(s.env).ymd}`);
   console.log(`  книги мне открыты: ${s.open.map((b) => b.book).join(' ') || 'ни одной'}`);
   console.log(`  пишу только в: ${s.books.find((b) => b.user === s.env.as)?.where ?? 'никуда'}${stale(s)}`);
   const mine = table(s.r, 'edit_by', 'E, U').filter((x) => x.U === s.env.as).map((x) => x.E);

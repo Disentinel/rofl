@@ -37,9 +37,10 @@ async function datedEdits(): Promise<Group> {
   g.check('дата 2026-09-08 (вт следующей недели): tue, for_week w0907', c.code === 0 && row(idOf(c)).some((x) => x.pred === 'e_add' && /"tue"/.test(x.args)) && row(idOf(c)).some((x) => x.pred === 'for_week' && /"w0907"/.test(x.args)), c.out);
   const d = inproc({ ...asRobin(root), SPAT_NOW: '2026-09-01T10:00:00+03:00' }, (s) => { const r = verb(s, 'edit', ['skip walk 31.02']); return r; });
   g.code('31.02 — в календаре нет', d, 2);
+  // S3e: a week the world lacks is minted by the loader from the date — the edit lands in w0928 (the fact is the call's, not the world's)
   const d2 = inproc({ ...asRobin(root), SPAT_NOW: '2026-09-01T10:00:00+03:00' }, (s) => verb(s, 'edit', ['skip walk 28.09']));
-  g.code('28.09 — недели нет', d2, 2);
-  g.check('отказ называет понедельник 2026-09-28 и week_starts', /2026-09-28.*не заведена.*week_starts/.test(d2.out), d2.out);
+  g.code('28.09 — недели в мире нет: заведена по дате, 0', d2, 0);
+  g.check('«применено: прогулка отменён пн (2026-09-28) … — неделя w0928»; for_week w0928; world без week_starts(w0928)', /прогулка отменён пн \(2026-09-28\) \(e_[0-9a-f]+\) — неделя w0928/.test(d2.out) && row(idOf(d2)).some((x) => x.pred === 'for_week' && /"w0928"/.test(x.args)) && sql<{ n: number }[]>(root, "SELECT count(*) n FROM facts WHERE ledger = 'world' AND pred = 'week_starts' AND args LIKE '%w0928%'")[0].n === 0, d2.out);
   const e = await spat(root, 'robin', ['show', 'завтра'], { SPAT_NOW: '2026-09-06T21:30:00+03:00' });
   g.check('show завтра (вс 06.09): пн 2026-09-07 под неделей w0907, greek в сетке; show mon (w0831) — без greek', /пн 2026-09-07 \(неделя w0907\)/.test(e.out) && /greek/.test(e.out) && !/greek/.test((await spat(root, 'robin', ['show', 'mon'])).out), e.out.split('\n')[0]);
   return g;

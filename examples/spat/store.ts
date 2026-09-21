@@ -116,7 +116,7 @@ export const bookOf = (user: string): string => `p_${user}`;
  *  hypothesis books (`m_`), registered in the volume and never given to the rules. */
 /** `propose`: --propose — the entry is written as proposed when it breaks a day (code 3, `confirm`); without it a person's
  *  fact is applied and what it breaks is printed (owner's decision 16.09). */
-export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; propose?: boolean; weekOf?: string; }
+export interface Store { env: Env; vol: Volume; books: Book[]; open: Book[]; maybes: Book[]; week: string; opened: string[]; r: Rofl; fmt?: string; propose?: boolean; weekOf?: string; minted?: string[]; }
 
 /** What the loader asserts about a call: tenant, caller, the Monday of today
  *  and of tomorrow in the store's zone (WHICH week those are is the rules'
@@ -209,7 +209,7 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
   const hhFacts = read(HH); const hh = hhRules(vol, hhFacts);
   const facts = loaderFacts(e, books, hh.authors, worldRows);
 
-  let week = '?';
+  let week = '?'; const minted: string[] = [];
   const source = (r: Rofl): void => {
     // THE PROGRAM IS SIGNED `rules` — the public book's name — so volumes.rofl
     // can tell its facts from the household's; everything else is anonymous.
@@ -227,20 +227,18 @@ export function openStore(e0: Env, opts: { weekOf?: string; extra?: string[] } =
     // THE WEEK IN FORCE FOLLOWS THE DATE (S3e, 2026-09-21): the week whose Monday is SPAT_NOW's, by `week_starts` —
     // measured on the stand: `current(w0914)` stood a week after nobody's `roll`, and «add … thu» landed in the past.
     // A `roll` is an explicit step FORWARD only; a date whose week the world does not have is code 2 with the line to add.
+    // A WEEK THE WORLD LACKS IS MINTED BY THE LOADER (the owner, 21.09: the agent decides, the person knows nothing of
+    // weeks): `week(wMMDD). week_starts(wMMDD, "…")` as loader facts, like date_monday; the world's own line wins.
     const starts = weekStarts(worldRows); const monday = dateIn(e).monday;
-    const today = [...starts].find(([, m]) => m === monday)?.[0];
+    const today = [...starts].find(([, m]) => m === monday)?.[0] ?? mint(r, monday, minted);
     const rolled = rolledWeek(r);
     const ahead = rolled !== undefined && (starts.get(rolled) ?? '') > monday ? rolled : undefined;
-    if (opts.weekOf === undefined && today === undefined && ahead === undefined) {
-      const w = `w${monday.slice(5, 7)}${monday.slice(8, 10)}`;
-      throw new SpatError(2, `неделя с понедельника ${monday} не заведена: в мире нет week_starts(W, "${monday}") — сегодня ${dateIn(e).ymd}, показать не из чего.\n  добавить в world.rofl (оператор, spat volume load <семья> world.rofl --book world):\n  week(${w}).  week_starts(${w}, "${monday}").`);
-    }
-    week = opts.weekOf ?? ahead ?? today ?? cur ?? '?';
+    week = opts.weekOf ?? ahead ?? today;
     if (cur && week !== cur) { r.retract(`current(${cur})`); must(r.assert(`current(${week}).`), 'current'); }
   };
   setSource(source);
   const r = world(undefined, { extra: opts.extra });   // runs `source`, which settles `week`
-  return { env: e, vol, books, open, maybes, week, opened, r, weekOf: opts.weekOf };
+  return { env: e, vol, books, open, maybes, week, opened, r, weekOf: opts.weekOf, minted };
 }
 
 /** Base facts of one relation IN ONE BOOK off the store's keys — no evaluation, so the week can be swapped before the
@@ -252,6 +250,13 @@ const baseArgs = (r: Rofl, rel: string, book = 'main'): string[][] =>
 /** Every dated week of the world, `W → "YYYY-MM-DD"`, off the world book's rows. */
 export const weekStarts = (world: Clause[]): Map<string, string> =>
   new Map(world.filter((c) => c.head.rel === 'week_starts' && c.head.args[0]?.k === 'a' && c.head.args[1]?.k === 's').map((c) => [(c.head.args[0] as { name: string }).name, (c.head.args[1] as { v: string }).v]));
+/** `wMMDD` for a Monday the world has no week for — asserted with its Monday and its minute (§15) as facts of the loader. */
+export function mint(r: Rofl, monday: string, minted: string[]): string {
+  const w = `w${monday.slice(5, 7)}${monday.slice(8, 10)}`;
+  must(r.assert(`week(${w}).\nweek_starts(${w}, "${monday}").\nweek_min(${w}, ${minuteOf(monday, 0)}).`), 'week');
+  minted.push(w);
+  return w;
+}
 /** The operator's latest `rolled(W, Iso)` in the tool's book — an explicit step ahead of the date, never a week behind it. */
 const rolledWeek = (r: Rofl): string | undefined => baseArgs(r, 'rolled', 'p_me').sort((a, b) => (a[1] < b[1] ? 1 : -1))[0]?.[0];
 

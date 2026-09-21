@@ -268,10 +268,10 @@ async function weekOfDate(): Promise<Group> {
   const b = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-08-31T21:30:00+03:00' });
   g.check('пн 31.08: tomorrow — вт w0831 (садик закрыт)', /ЗАВТРА, вт 2026-09-01 \(неделя w0831\)/.test(b.out) && !/sadik_nico/.test(b.out), b.out.split('\n')[0]);
   const c = await spat(root, 'me', ['tomorrow'], { SPAT_NOW: '2026-09-27T21:30:00+03:00' });
-  g.code('вс 27.09: завтра 28.09 — недели нет', c, 2);
-  // S3e: the store refuses at the door — the week in force is TODAY's (27.09 → Monday 21.09), and it is not in the world either
-  g.check('отказ называет понедельник сегодняшней недели (2026-09-21) и две строки для world.rofl', /2026-09-21 не заведена.*week_starts\(W, "2026-09-21"\)/.test(c.out) && /week\(w0921\)\.  week_starts\(w0921, "2026-09-21"\)\./.test(c.out), c.out);
-  g.code('show (сегодня) 2026-09-28 — та же неделя, тот же отказ', await spat(root, 'robin', ['show'], { SPAT_NOW: '2026-09-28T09:00:00+03:00' }), 2);
+  // S3e: weeks the world lacks are minted by the loader from the date — today's (w0921) and tomorrow's (w0928) alike
+  g.code('вс 27.09: завтра 28.09 — недели в мире нет, заведена по дате', c, 0);
+  g.check('заголовок «ЗАВТРА, пн 2026-09-28 (неделя w0928)»; whoami вс 27.09: «неделя w0921 (заведена по дате)»', /ЗАВТРА, пн 2026-09-28 \(неделя w0928\)/.test(c.out) && /неделя w0921 \(заведена по дате\) · сегодня 2026-09-27/.test((await spat(root, 'robin', ['whoami'], { SPAT_NOW: '2026-09-27T21:30:00+03:00' })).out), c.out.split('\n')[0]);
+  g.check('show (сегодня) 2026-09-28: «СЕГОДНЯ, пн 2026-09-28 (неделя w0928)»', /СЕГОДНЯ, пн 2026-09-28 \(неделя w0928\)/.test((await spat(root, 'robin', ['show'], { SPAT_NOW: '2026-09-28T09:00:00+03:00' })).out));
   const w = await spat(root, 'robin', ['whoami'], { SPAT_NOW: '2026-09-07T10:00:00+03:00' });
   // S3e: the week in force follows the date — Monday 07.09 is w0907 with nobody's roll, and no «нужен roll» line
   g.check('пн 07.09 без roll: whoami «неделя w0907 · сегодня 2026-09-07», строки «в силе неделя …» нет (неделя в силе следует за датой)', /неделя w0907 · сегодня 2026-09-07/.test(w.out) && !/в силе неделя/.test(w.out), w.out);
