@@ -9,6 +9,17 @@
 -- entities the moment they are known and marked unreachable when they are,
 -- the one reachable source is the holder's own knowledge graph.
 
+-- A VOLUME PER HOLDER OF A SOURCE. What a text says goes in that text's
+-- book, so that two texts can hold one triple with two values and neither
+-- overwrites the other. The crawler is the scribe of every such book:
+-- asserted_by stays ontocrawler_2, the bracket says whose book it is.
+authority(crc, ontocrawler_2).        -- the Convention on the Rights of the Child
+authority(sep, ontocrawler_2).        -- the Stanford Encyclopedia entry
+authority(who, ontocrawler_2).        -- the Nurturing Care Framework
+authority(wiki_ru, ontocrawler_2).    -- ru.wikipedia 'Воспитание'
+authority(wiki_en, ontocrawler_2).    -- en.wikipedia 'Parenting'
+authority(ru_statute, ontocrawler_2). -- ФЗ-273, as quoted by wiki_ru
+
 -- @who ontocrawler_2
 seed(parenting).
 
@@ -348,3 +359,83 @@ context(p78, "offers filled on a practice, but only under a translated question 
 asked(offers, parenting, out, src_who_unicef_guidance, 11).
 not_found(offers, parenting, out, src_wikipedia, 11).   -- neither article lists what parenting provides as a set
 not_found(offers, parenting, out, src_sep, 11).
+
+-- ======================================================================
+-- round 12 — crawl(invariant_over, parenting, out), ONE put to every
+-- holder's text, and held_by(parenting, ?) put again the same way. Every
+-- answer lands in the answering text's own volume. Two things become
+-- possible that were not: a triple with two values, and a holder's role
+-- as a non-empty set.
+-- ======================================================================
+-- @who ontocrawler_2
+put(12, src_crc, "what must remain true about a child's upbringing for you to raise no objection? and who is responsible for it?").
+put(12, src_who_unicef_guidance, "same put").
+put(12, src_sep, "same put").
+put(12, src_wikipedia, "same put, to each article").
+
+-- who holds each source: the held_by of sources, so that self_serving can see
+edge[book](p83, held_by, src_crc, states_parties).
+evidence(p83, src_crc, "GA resolution 44/25; 'States Parties' throughout"). landed(p83, 12). depth(p83, 1). classified(p83, confirmed).
+edge[book](p84, held_by, src_who_unicef_guidance, caregivers_and_health_workers).
+evidence(p84, src_who_unicef_guidance, "nurturing-care.org hosted by WHO, UNICEF, World Bank; addressed to the health sector"). landed(p84, 12). depth(p84, 1). classified(p84, confirmed).
+edge[book](p85, held_by, src_wikipedia, wikipedia_editors).
+evidence(p85, src_wikipedia, "open editorial communities, ru and en, no named author"). landed(p85, 12). depth(p85, 1). classified(p85, confirmed).
+edge[book](p86, held_by, src_sep, sep_editorial_board).
+evidence(p86, src_sep, "Stanford Encyclopedia of Philosophy, refereed entries"). landed(p86, 12). depth(p86, 1). classified(p86, confirmed).
+
+-- the Convention's book
+edge[crc](c1, invariant_over, parenting, inv_best_interests_primary).
+evidence(c1, src_crc, "art. 3(1): in all actions concerning children 'the best interests of the child shall be a primary consideration'"). landed(c1, 12). depth(c1, 1). classified(c1, confirmed).
+edge[crc](c2, invariant_over, parenting, inv_both_parents_common_responsibility).
+evidence(c2, src_crc, "art. 18(1)"). landed(c2, 12). depth(c2, 1). classified(c2, confirmed).
+edge[crc](c3, invariant_over, parenting, inv_guidance_tracks_evolving_capacity).
+evidence(c3, src_crc, "art. 5: direction and guidance 'in a manner consistent with the evolving capacities of the child'"). landed(c3, 12). depth(c3, 1). classified(c3, confirmed).
+edge[crc](c4, invariant_over, parenting, inv_conditions_of_living_secured).
+evidence(c4, src_crc, "art. 27(2)"). landed(c4, 12). depth(c4, 1). classified(c4, confirmed).
+edge[crc](c5, held_by, parenting, parents).
+evidence(c5, src_crc, "art. 18(1), 27(2)"). landed(c5, 12). depth(c5, 1). classified(c5, confirmed).
+edge[crc](c6, held_by, inv_best_interests_primary, states_parties).
+evidence(c6, src_crc, "art. 3(1) binds 'public or private social welfare institutions, courts of law, administrative authorities or legislative bodies'"). landed(c6, 12). depth(c6, 1). classified(c6, confirmed).
+edge[crc](c7, held_by, inv_both_parents_common_responsibility, parents).
+evidence(c7, src_crc, "art. 18(1)"). landed(c7, 12). depth(c7, 1). classified(c7, confirmed).
+edge[crc](c8, held_by, inv_guidance_tracks_evolving_capacity, parents).
+evidence(c8, src_crc, "art. 5 names parents, extended family, guardians"). landed(c8, 12). depth(c8, 1). classified(c8, confirmed).
+edge[crc](c9, held_by, inv_conditions_of_living_secured, parents).
+evidence(c9, src_crc, "art. 27(2) 'within their abilities and financial capacities'; 27(3) the state assists"). landed(c9, 12). depth(c9, 1). classified(c9, confirmed).
+
+-- WHO's book
+edge[who](w1, invariant_over, parenting, inv_five_components_indivisible).
+evidence(w1, src_who_unicef_guidance, "'five inter-related and indivisible components': good health, adequate nutrition, safety and security, responsive caregiving, opportunities for learning"). landed(w1, 12). depth(w1, 1). classified(w1, confirmed).
+edge[who](w2, held_by, parenting, caregivers_and_health_workers).
+evidence(w2, src_who_unicef_guidance, "'caregivers, health workers, and the health sector alongside other sectors' share responsibility"). landed(w2, 12). depth(w2, 1). classified(w2, confirmed).
+edge[who](w3, held_by, inv_five_components_indivisible, caregivers_and_health_workers).
+evidence(w3, src_who_unicef_guidance, "same"). landed(w3, 12). depth(w3, 1). classified(w3, confirmed).
+
+-- the statute's book, as quoted by wiki_ru
+edge[ru_statute](s1, invariant_over, parenting, inv_development_on_spiritual_moral_values).
+evidence(s1, src_wikipedia, "ФЗ-273: 'на основе социокультурных, духовно-нравственных ценностей и принятых в обществе правил и норм поведения'"). landed(s1, 12). depth(s1, 1). classified(s1, confirmed).
+edge[ru_statute](s2, held_by, parenting, schools_ru).
+evidence(s2, src_wikipedia, "ФЗ-273 as quoted: воспитание as an activity over обучающихся"). landed(s2, 12). depth(s2, 1). classified(s2, confirmed).
+edge[ru_statute](s3, held_by, inv_development_on_spiritual_moral_values, schools_ru).
+evidence(s3, src_wikipedia, "same"). landed(s3, 12). depth(s3, 1). classified(s3, confirmed).
+
+-- SEP's book
+edge[sep](e1, invariant_over, parenting, inv_parenting_serves_the_child_interest).
+evidence(e1, src_sep, "child-centred accounts: whoever parents, the child's interest is the ground"). landed(e1, 12). depth(e1, 1). classified(e1, confirmed).
+edge[sep](e2, held_by, parenting, competent_adult).
+evidence(e2, src_sep, "Montague 2000, Gheaus 2021: 'competent adults could parent any child if it serves the child's interests'"). landed(e2, 12). depth(e2, 1). classified(e2, unexpected).
+context(e2, "the fourth answer to one put: parents (crc), caregivers and health workers (who), the school (ru_statute), any competent adult (sep). One triple slot, four books, four values - the first same-question disagreement in either book").
+
+-- en.wikipedia's book
+edge[wiki_en](n1, invariant_over, parenting, inv_home_food_security_education_provided).
+evidence(n1, src_wikipedia, "en 'Rights and responsibilities': 'provision of a home, food and security ... Educating children also features within a parent's responsibilities'"). landed(n1, 12). depth(n1, 1). classified(n1, confirmed).
+edge[wiki_en](n2, held_by, parenting, parents).
+evidence(n2, src_wikipedia, "en"). landed(n2, 12). depth(n2, 1). classified(n2, confirmed).
+edge[wiki_en](n3, held_by, inv_home_food_security_education_provided, parents).
+evidence(n3, src_wikipedia, "en"). landed(n3, 12). depth(n3, 1). classified(n3, confirmed).
+
+asked(invariant_over, parenting, out, src_crc, 12). asked(invariant_over, parenting, out, src_who_unicef_guidance, 12).
+asked(invariant_over, parenting, out, src_sep, 12). asked(invariant_over, parenting, out, src_wikipedia, 12).
+not_found(invariant_over, parenting, out, src_wikipedia, 12).   -- ru article states no invariant of its own beyond the statute it quotes
+asked(held_by, src_crc, out, src_crc, 12). asked(held_by, src_who_unicef_guidance, out, src_who_unicef_guidance, 12).
+asked(held_by, src_wikipedia, out, src_wikipedia, 12). asked(held_by, src_sep, out, src_sep, 12).

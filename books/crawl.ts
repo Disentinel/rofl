@@ -72,7 +72,7 @@ function audits(r: Rofl): void {
     'undefined_premise[audit](R, Rel)', 'unmoded[audit](R)', 'forged[audit](F)',
     'no_state[audit](Q)', 'guessed_forbidden[audit](X, C)', 'edge_without_evidence[audit](I)',
     'edge_without_round[audit](I)', 'edge_without_depth[audit](I)', 'retired_but_filled[audit](C, R)',
-    'archetype_without_origin[audit](R)',
+    'archetype_without_origin[audit](R)', 'seed_without_sentence[audit](X)', 'holder_without_invariant[audit](H)',
   ];
   for (const g of gates) {
     const rs = rows(r, g);

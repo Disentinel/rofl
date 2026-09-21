@@ -15,6 +15,7 @@ archetype(held_by).           q_shape(held_by, out).           -- who pays when 
 archetype(equivalent_to).     q_shape(equivalent_to, out).     -- who calls X something else?
 archetype(recorded_in).       q_shape(recorded_in, out).       -- where does X leave a trace?
 kindless(recorded_in).                                         -- sources unfold first
+archetype(invariant_over).    q_shape(invariant_over, out).    -- who objects if X changes: what must stay true about X
 
 origin(decomposes_into, "skill:ontocrawler-2", table_of_questions).
 origin(requires,        "skill:ontocrawler-2", table_of_questions).
@@ -22,6 +23,12 @@ origin(depends_on,      "skill:ontocrawler-2", table_of_questions).
 origin(held_by,         "skill:ontocrawler-2", table_of_questions).
 origin(equivalent_to,   "skill:ontocrawler-2", table_of_questions).
 origin(recorded_in,     "skill:ontocrawler-2", table_of_questions).
+origin(invariant_over,  "skill:ontocrawler-2", table_of_questions).
+-- invariant_over was in the table from the start and was dropped in round 0
+-- of the first book as 'not a separate question'. Restored 2026-09-21 after
+-- eleven rounds of a second book produced holders with empty invariant sets:
+-- a role is the set of invariants one holder keeps true, and every holder
+-- in both books kept none. The nuances of a perspective live here.
 
 -- A KIND IS A NAME, NOT A THING. The atoms is_a answers with (process,
 -- graph_database, normative_status) are entities so that two of them can be
