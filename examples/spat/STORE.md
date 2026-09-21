@@ -692,6 +692,103 @@ edit like `sick` and `car out`, in the author's book, through the same `acts`.
 - **`spat warnings [<день>]`** — every «!!» line of the week (or of one day) in
   one list, terminal or `--format tg`, for the review step of the bot.
 
+## A need before it has a time (S3f, 2026-09-21)
+
+The owner, 21.09: «ввести как примитив первого класса ПОТРЕБНОСТЬ сделать
+нечто. Например репетиция группы — надо убедиться, что все могут, и
+забронировать репточку.» Физио у одного из взрослых is the same thing: every week there
+is one, the time is given anew each time, and «обычная физио по
+понедельникам» in the world was the first week's timetable, not a rule.
+
+**The need is a line of the family's book** (spat.rofl §15; `need add` is
+sugar over `rule add`, so a person's need is applied and `--propose` waits):
+
+    need(Id, Block)            the block that closes it is the one with that name — any layer: add, usual, moved
+    need_for(Id, P)            the people, ≥ 1, of any kind the world has — a guest with no account included
+    need_len(Id, Min)          how long; a shorter block blocks it (`short`)
+    need_every(Id) | need_by(Id, "YYYY-MM-DD") | need_in(Id, W)    exactly one; the host resolves a date into
+                               `need_by_on(Id, W, Day)` (a date with no `week_starts` is 2)
+    need_where(Id, Place)      where `place` looks; a block elsewhere is only said in `need list`
+    need_req(Id, R)  req(R, booked|item|confirm, "text", Owner)    conditions: something to book (Owner does it),
+                               something to bring (Owner = the author unless named), a participant's yes (Owner = P)
+    constraint(Id, Author, household)  constraint(R, Owner, household)   the need and each condition are the
+                               household's (§1): `why` names the person, a helper's `done` on a parent's condition is 4
+
+`spat need add [<atom>] "<Что>" <минут> <кто[,кто…]> (every|каждую неделю | by <дата> | in <неделя>)
+[at <место>] [req booked "<текст>" <кто>] [req item "<текст>" [<кто>]] [req confirm <кто>]` — the atom
+slugged from the name (Cyrillic slugs to nothing: give the atom, as `place add`); `need list` (the state
+under each of the need's weeks); `need retract <id>` (the rule, with its conditions; a need of the world
+is not the book's to retract, 2). `retire <блок>` / `edit 'это не обычное <блок>'` writes `retired(Block)`
+— the three `usual` layers of `span` read `not retired(Ev)`, an added block of the same name stands —
+and answers «<блок> больше не обычный (<дни> <от>–<до>); если он нужен — заведи потребность или ставь
+по неделям (r_…)»; twice is «уже не обычный»; a helper is 4, an added block or an unknown name is 2.
+
+**Placing is an ordinary block.** `add physio tue 10:00-10:50 robin physio` closes `physio` this week;
+`add rehearsal fri 19:00-21:00 robin,ivan` — `<кто>` takes a comma list, one `e_add` row per person under
+one entry — closes a need for two. A GUEST of a need (`guest(P)`: a participant who is neither an adult,
+a child nor a helper) is not the adult's to touch by §3, so the entry touches the NEED instead (access.rofl
+§4): an adult schedules the band's Ivan for the rehearsal, the nanny may not (4), `sick ivan` is nobody's
+(4). The guest's hours are `avail ivan fri 18:00-22:00` — accepted for a participant with no
+`present_window` in the world, touching the need the same way — and that window IS his confirmation:
+`req_met(R, W)` for a `confirm` holds when the block lies inside the person's window that day, or when
+somebody wrote `done` («подтвердил Иван»). `booked`/`item` are met by `done` in the week (`for_week`,
+so a weekly need is booked every week) — for a one-off need, by any `done`.
+
+**The state is derived, never stored** — `need_state(N, W, S)` under `current(W)`:
+
+    open      no block this week                                   «!! не поставлено на неделю: физио (robin)»
+    blocked   a block, and a condition open (`req(R)`); a participant the block lacks (`missing(P)`); a block
+              shorter than the need (`short(D)`); or no block AND a guest who must confirm gave no window
+              this week (`no_window(P)`)                           «!! репетиция пт 19:00: не забронировано — репточка (alex)»
+                                                                    «!! репетиция пт 19:00: не подтвердил Иван»
+                                                                    «!! репетиция: не знаю, когда может Иван»
+                                                                    «!! репетиция пт 19:00: в блоке нет Иван»
+                                                                    «!! репетиция пт 19:00: блок короче нужного (120 мин)»
+    placed    a block, every condition met or skipped, the week ahead
+    done      the week (or the date) is behind, and a block stood;   missed — behind, and nothing stood
+
+The lines are `tomorrow`/`show`/`warnings` «!!» lines (terminal indented, `--format tg` ≤ 120); `need
+list` prints per week «поставлено — пт 19:00–21:00» / «не поставлено» / «стоит пт 19:00–21:00, но:
+не забронировано — репточка (alex); блок короче нужного (120 мин)» / «было — …» / «не было», and
+«; пропущено: репточка» for a condition skipped that week. A moment has to be ordered and the kernel
+orders no strings, so the loader asserts `now_min(N)` and `week_min(W, N)` — minutes of the wall clock
+in SPAT_TZ, zone-free — and `week_gone`/`passed` are arithmetic over them.
+
+**A condition's lines are a person's book** (access.rofl §5c, through `acts`): `done <R|"текст">
+[<день>]` (ru «сделано: репточка», «забронировал репточку», «подтвердил Иван» — the text found by its
+words against the condition's text, its owner, its need; a verb's kind narrows; two matches ask, none
+lists) → `e_done(E, R, Day)`; `skip <R>` / «не будем …» / «скип …» → `e_waive(E, R)` — the state goes on
+without it and `need list` says «пропущено»; `remind <R|"текст"> <день> <время>` / «напомни через
+полчаса» / «напомни завтра утром» (09:00) / «вечером» (19:00), the condition omitted when the author has
+exactly one open → `e_remind(E, R, At)`. Each touches the condition: the household's, or the responsible
+person's own.
+
+**Reminders («заколебайка»).** `due(R, P, At)` is derived: R open (not met, not skipped), P its owner,
+the deadline the block's start (or the date at 19:00, or the named week's Sunday evening); the frame is
+09:00 and 19:00 of each day from `remind_days(K)` days before (3 without a line); every reminder the
+scheduler sent is `e_reminded(E, R, At)` in `p_me`, and the next due moment is the next frame slot after
+the last one sent — the latest slot already reached when the sender was late, else the earliest ahead.
+A person's `remind … 16:30` stands instead of every frame slot up to it until it is sent. `spat
+reminders [--due] [--format tg]` (me or the operator) prints «кому · что · когда» — «alex · концерт пт
+19:00: не забронировано — зал (alex) · вт 01.09 09:00  [gig_booked]» (tg: without the header and the
+id); `spat reminders --sent <R>…` writes `e_reminded` as `me` after the send. Measured (demo group 28):
+deadline Friday 19:00, `SPAT_NOW` Tuesday 09:00 → due Tuesday 09:00; sent → Tuesday 19:00; `remind …
+16:30` → exactly 16:30 and nothing at 19:00 before it; sent at 16:31 → 19:00; `done` → nothing; `skip` →
+nothing and «пропущено: зал».
+
+**`place <need>`** lends the need's shape to `place`: one `want` per participant (all must be free), the
+length, the place, the need's week (`--week-of` for a weekly one); a child is free when awake, a guest
+or a helper inside their window (`windowed`, spat.rofl §10) — with no window this week there is no slot
+and the answer is «не знаю, когда может Иван — жду: avail ivan <день> <от>-<до>», never a silent
+nothing. The three best come as hypotheses with the `maybe` line, `ivan,robin` in it.
+
+The shipped world carries one need (`physio`, week.example.rofl §7a) and `remind_days(3)`; the fixture's
+book (hh.rofl) a weekly one with a guest and two conditions, a one-off by a date, and a retired line;
+`store.example/needs.rofl` — the block for two, the guest's window, the room booked, one reminder sent —
+is the census's alone (`spat_needs`, facts/checks.rofl): `placed` 2, `req_met` 2, `due` 1. Demo:
+`examples/spat_needs/demo.ts`, 51 scenarios in four groups (26–28), one spawn for each line a person
+reads and one opened store for everything asked after it.
+
 ## What is deliberately not decided
 
 - **A carry names one leg by its time; a whole day is several lines.** «Кита
@@ -772,6 +869,16 @@ edit like `sick` and `car out`, in the author's book, through the same `acts`.
   block is not in the schedule the call was given.
 - **`skip <added block>` with no day** takes back every entry of that name
   this week; **`move`** with no day re-adds each under its own id.
+- **A need's `done` for a weekly need counts for the week it is dated** (`for_week`); «забронировал»
+  on Friday for next week's rehearsal is `done репточка 28.09`. «В неделе или раньше» would let one
+  booking stand for every later week; a one-off need reads any `done`.
+- **A guest is a person of the world.** `need_for` takes only people the world has; `rule add
+  'person(ivan, visitor). ru_name(ivan, "Иван").'` first. A guest with a Telegram account of another
+  household — the invitation into their volume — is S3g.
+- **Which condition «напомни через полчаса» means** when the author has several open: 2, naming them.
+  The reply-to-the-last-reminder reading needs the shim's message context.
+- **`reminders --sent` is the scheduler's word.** The send itself, its channel and its throttle are the
+  bot's (S1l); the core records what it is told was sent.
 
 ## What the gate holds
 
