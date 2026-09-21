@@ -1095,3 +1095,34 @@ evidence(v03, src_holder_session, "vadim, 2026-09-20, asked whether LIMITS.md's 
 evidence(v03, src_rofl_repo, "LIMITS.md 'No incremental maintenance (spec). No delta is ever propagated into a derived relation: a relation is recomputed entirely or not at all'; reuse is memoisation under an exact fingerprint, not maintenance").
 context(v03, "the one execution limit left standing after round 17: a change costs a full recomputation, bounded by the scaling run at 21.0 ms per file over 1,426 files").
 asked(describes, rofl, out, src_holder_session, 18).
+
+-- round 19 — the network policy changed (2026-09-21): grafema.dev and
+-- zenodo.org answer. Two sources marked unreachable in rounds 1 and 15.
+-- @who ontocrawler_2
+reachable(src_site, 19). reachable(src_zenodo, 19).
+edge[book](e213, describes, grafema, "Your codebase as a queryable graph. Code, infrastructure, observability and related knowledge in a single place. Define guarantees, track dependencies, catch violations before they ship.").
+evidence(e213, src_site, "grafema.dev headline and first paragraph, fetched 2026-09-21"). landed(e213, 19). depth(e213, 1). classified(e213, confirmed).
+edge[book](e214, recorded_in, grafema, src_site).
+evidence(e214, src_site, "grafema.dev: GitHub, docs at grafema.dev/docs, atlas.grafema.dev, npm install -g grafema; FSL-1.1-Apache-2.0; 'built by Vadim Reshetnikov'"). landed(e214, 19). depth(e214, 2). classified(e214, confirmed).
+guessed(src_atlas_site, source).
+edge[book](e215, recorded_in, hex_atlas, src_atlas_site).
+evidence(e215, src_site, "grafema.dev links 'Atlas (visual interface)' at atlas.grafema.dev: the hex map is hosted, not only a package"). landed(e215, 19). depth(e215, 1). classified(e215, serendipitous).
+context(e214, "the site's claims against the book: '11 first-class + 4 alpha' languages with Ruby and C first-class, where README has C/C++ Beta and KNOWN_LIMITATIONS has Ruby Alpha; '30+ MCP tools' where README also says 40+; '~25 seconds to index a 500-file repository' matches the canon's 509 files / 25 s; '+10 percentage point on architecture questions' is the canon's defensible per-category claim, stated as the headline");
+asked(recorded_in, grafema, out, src_site, 19). asked(supersedes, grafema, in, src_site, 19). asked(describes, grafema, out, src_site, 19).
+-- zenodo.org/api/records: a title search finds both papers the canon says
+-- exist without DOIs; a creators.name search does not (16 other Reshetnikovs).
+guessed(paper_gdd, paper). guessed(gdd_methodology, vision).
+edge[book](e216, recorded_in, grafema, src_zenodo).
+evidence(e216, src_zenodo, "10.5281/zenodo.18247579 'Graph-Driven Development: Reducing Cognitive Load in Large Evolving Systems Through Externalized Understanding', preprint, 2026-01-14, Vadim Reshetnikov; 10.5281/zenodo.18888273 'Beyond Code: The Sociotechnical Context Graph as Necessary Infrastructure for AI-Assisted Software Development', preprint, 2026-03-06"). landed(e216, 19). depth(e216, 2). classified(e216, confirmed).
+edge[book](e217, recorded_in, paper_beyond_code, src_zenodo).
+evidence(e217, src_zenodo, "DOI 10.5281/zenodo.18888273, 2026-03-06"). landed(e217, 19). depth(e217, 2). classified(e217, confirmed).
+context(e217, "closes the round-3 lead: the title the knowledge dir cited (kb:fact:twelve-projection-ontology) is a Zenodo preprint")
+edge[book](e218, describes, paper_beyond_code, "a sociotechnical context graph with nodes representing people, decisions, and incidents alongside code is essential for effective AI-assisted development, extending Graph-Driven Development methodology to system-level context").
+evidence(e218, src_zenodo, "record description, 10.5281/zenodo.18888273"). landed(e218, 19). depth(e218, 1). classified(e218, confirmed).
+edge[book](e219, recorded_in, paper_gdd, src_zenodo).
+evidence(e219, src_zenodo, "DOI 10.5281/zenodo.18247579, 2026-01-14, 'Independent Researcher'"). landed(e219, 19). depth(e219, 1). classified(e219, confirmed).
+edge[book](e220, describes, paper_gdd, "externalizing developer mental models into a unified graph to reduce cognitive burden in complex systems, treating invariants as versioned, lifecycle-managed entities for both human and AI workflows").
+evidence(e220, src_zenodo, "record description, 10.5281/zenodo.18247579"). landed(e220, 19). depth(e220, 1). classified(e220, confirmed).
+edge[book](e221, requires, gdd_methodology, grafema).
+evidence(e221, src_zenodo, "the GDD preprint proposes the externalized graph; grafema is the implementation"). evidence(e221, src_canon, "Concept layer: GDD methodology"). landed(e221, 19). depth(e221, 2). classified(e221, confirmed).
+asked(recorded_in, grafema, out, src_zenodo, 19). asked(supersedes, grafema, in, src_zenodo, 19).

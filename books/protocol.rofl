@@ -56,6 +56,7 @@ edb(premise).           -- premise(Q, E)                 Q presupposes E exists
 edb(needs_ext).         -- needs_ext(Q, R, X, Dir)       Q is answered by R(X, ?)
 edb(alias).             -- alias(Asker, E, E2)
 edb(unreachable).       -- unreachable(Source, Round)   asked, and the source could not be reached
+edb(reachable).         -- reachable(Source, Round)     reached again after an unreachable row
 
 -- ------------------------------------------------------------ the gather
 edge_any(Id, R, X, Y)     :- edge[V](Id, R, X, Y).
@@ -119,8 +120,10 @@ obligation(Q, R, X, D)    :- needs(Q, R, X, D), not satisfied(Q, R, X, D).
 -- sources unfold first: what has been asked of which source
 source_of(X, S)           :- edge_any(_, recorded_in, X, S).
 sourced(X)                :- source_of(X, _).
+reachable_after(S, T)     :- unreachable(S, T), reachable(S, T2), T2 > T.
+unreachable_now(S)        :- unreachable(S, T), not reachable_after(S, T).
 unasked(R, X, D, S)       :- obligation(_, R, X, D), source_of(X, S), not asked(R, X, D, S, _),
-                             not unreachable(S, _).
+                             not unreachable_now(S).
 sources_exhausted(R, X, D):- obligation(_, R, X, D), sourced(X), not unasked(R, X, D, _).
 sources_exhausted(R, X, D):- obligation(_, R, X, D), not sourced(X), asked(recorded_in, X, out, _, _).
 
