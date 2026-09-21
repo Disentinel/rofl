@@ -113,8 +113,8 @@ export function needLines(r: Rofl, day?: string): string[] {
       const m = /^(\w+)\((\w+)\)$/.exec(b.Why)!; const [, why, arg] = m;
       if (why === 'req' && (here || r.holds(`no_window(${reqRows(r, x.N).find((q) => q.R === arg)?.owner})`))) out.push(reqLine(r, arg));
       else if (why === 'no_window') { const l = `${ru(x.N)}: не знаю, когда может ${ru(arg)}`; if (!out.includes(l)) out.push(l); }
-      else if (why === 'missing' && here) out.push(`${ru(x.N)} ${blockOf(r, x.N)}: в блоке нет ${ru(arg)}`);
-      else if (why === 'short' && (day === undefined || day === arg)) out.push(`${ru(x.N)} ${ru(arg)}: блок короче нужного (${table(r, 'need_len', 'N, M').find((y) => y.N === x.N)?.M} мин)`);
+      else if (why === 'missing' && here) out.push(`${ru(x.N)} ${blockOf(r, x.N)}: в блоке нет ${ru(arg)}`.replace(/–\d\d:\d\d(,|:)/g, '$1'));
+      else if (why === 'short' && (day === undefined || day === arg)) out.push(`${ru(x.N)} ${ru(arg)} ${hhmm(table(r, 'stands', 'N, D, F, T').find((y) => y.N === x.N && y.D === arg)?.F ?? 0)}: блок короче нужного (${table(r, 'need_len', 'N, M').find((y) => y.N === x.N)?.M} мин)`);
     }
   }
   return [...new Set(out)];
@@ -124,27 +124,32 @@ export function needLines(r: Rofl, day?: string): string[] {
 function list(s: Store): number {
   const r = s.r; const ns = table(r, 'need', 'N, E');
   if (ns.length === 0) { console.log('потребностей нет: spat need add …'); return 0; }
-  const weeks = table(r, 'week', 'W').map((x) => x.W); const cur = s.week;
+  const weeks = table(r, 'week', 'W').map((x) => x.W);
   for (const n of ns) {
     const rh = table(r, 'rhythm', 'N, R').find((x) => x.N === n.N)?.R ?? '?'; const rid = ruleOf(s, n.N);
     const who = table(r, 'need_for', 'N, P').filter((x) => x.N === n.N).map((x) => ru(x.P)).join(', ');
-    console.log(`${ru(n.N)} (${n.N}) — ${who} · ${mins(Number(table(r, 'need_len', 'N, M').find((x) => x.N === n.N)?.M ?? 0))} · ${rh === 'every' ? 'каждую неделю' : rh.replace(/^by\("?(.*?)"?\)$/, 'до $1').replace(/^in\((.*)\)$/, 'на неделе $1')}${(table(r, 'need_where', 'N, P').find((x) => x.N === n.N) ?? { P: '' }).P ? ` · ${ru(table(r, 'need_where', 'N, P').find((x) => x.N === n.N)!.P)}` : ''}${rid ? ` · правило ${rid}` : ' · мир'}`);
+    const by = table(r, 'need_by_on', 'N, W, D').find((x) => x.N === n.N); const where = table(r, 'need_where', 'N, P').find((x) => x.N === n.N)?.P;
+    console.log(`${ru(n.N)} (${n.N}) — ${who} · ${mins(Number(table(r, 'need_len', 'N, M').find((x) => x.N === n.N)?.M ?? 0))} · ${rh === 'every' ? 'каждую неделю' : by ? `до ${unq(rh.slice(3, -1))} (${ru(by.D)}, ${by.W})` : rh.replace(/^in\((.*)\)$/, 'на неделе $1')}${where ? ` · ${ru(where)}` : ''}${rid ? ` · правило ${rid}` : ' · мир'}`);
     const rq = reqRows(r, n.N); if (rq.length > 0) console.log(`  условия: ${rq.map((q) => `${q.kind === 'confirm' ? `${ru(q.owner)} подтвердит` : `${q.text} — ${ru(q.owner)}`} (${q.R})`).join(' · ')}`);
-    for (const w of table(r, 'need_week', 'N, W').filter((x) => x.N === n.N).map((x) => x.W).sort((a, b) => weeks.indexOf(a) - weeks.indexOf(b))) {
+    // the week in force is read LAST, so the world is left where it was without a re-evaluation
+    const ws = table(r, 'need_week', 'N, W').filter((x) => x.N === n.N).map((x) => x.W).sort((a, b) => weeks.indexOf(a) - weeks.indexOf(b));
+    const lines = new Map<string, string>();
+    for (const w of [...ws.filter((x) => x !== s.week), ...ws.filter((x) => x === s.week)]) {
       under(s, w);
       const st = table(r, 'need_state', 'N, W, S').find((x) => x.N === n.N)?.S ?? '?'; const at = blockOf(r, n.N);
       const skipped = reqRows(r, n.N).filter((q) => q.st === 'skipped').map((q) => q.text);
       const els = table(r, 'elsewhere', 'N, D, P').filter((x) => x.N === n.N).map((x) => `${ru(x.D)} в ${ru(x.P)}`);
-      const why = st === 'blocked' ? needLines(r).filter((l) => l.startsWith(ru(n.N))) : [];
-      console.log(`  ${w}: ${st === 'open' ? 'не поставлено' : st === 'placed' ? `поставлено — ${at}` : st === 'blocked' ? `${at ? `стоит ${at}` : 'не поставлено'}, но: ${why.map((l) => l.replace(/^[^:]*: /, '')).join('; ')}` : st === 'done' ? `было — ${at}` : st === 'missed' ? 'не было' : st}${skipped.length > 0 ? `; пропущено: ${skipped.join(', ')}` : ''}${els.length > 0 ? ` (не там: ${els.join(', ')})` : ''}`);
+      const why = st === 'blocked' ? needLines(r).filter((l) => l.startsWith(ru(n.N))).map((l) => l.replace(new RegExp(`^${ru(n.N)}(?: \\S+ \\d\\d:\\d\\d)?: `), '')) : [];
+      lines.set(w, `  ${w}: ${st === 'open' ? 'не поставлено' : st === 'placed' ? `поставлено — ${at}` : st === 'blocked' ? `${at ? `стоит ${at}` : 'не поставлено'}, но: ${why.join('; ')}` : st === 'done' ? `было — ${at}` : st === 'missed' ? 'не было' : st}${skipped.length > 0 ? `; пропущено: ${skipped.join(', ')}` : ''}${els.length > 0 ? ` (не там: ${els.join(', ')})` : ''}`);
     }
+    for (const w of ws) console.log(lines.get(w));
   }
-  under(s, cur);
   return 0;
 }
 
 /** `retire <блок>` / «это не обычное <блок>»: the typical line is the first week's mistake — `retired(Block)` into the family's book. */
 export function retire(s: Store, text: string): number {
+  if (!s.r.holds(`role(${s.env.as}, adult)`) && !s.r.holds(`role(${s.env.as}, operator)`)) { console.log(`отказано: типовую неделю правит взрослый или оператор; ${ru(s.env.as)} — нет`); return 4; }
   const t = words(text).map((x) => x.t).filter((x) => !/^(это|не|обычное|обычный|обычная|usual|not)$/i.test(x))[0] ?? bad('retire <блок>');
   const ev = names(s.r).get(t.toLowerCase()) ?? bad(`блок: '${t}' — мир такого не знает`);
   const u = table(s.r, 'usual', 'C, E, W, P, Sp, F, T').filter((x) => x.E === ev);

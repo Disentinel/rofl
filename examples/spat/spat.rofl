@@ -704,7 +704,7 @@ cand_bad(A, D, S, owner_away)  :- cand(A, D, S), want(A, P, _, _), off(P, D).
 -- inside a window they gave (`avail`, spat.rofl §4), so with no window this
 -- week there is no slot at all, and the host says «не знаю, когда может X».
 waking(P, D, S)  :- deep(slots), person(P, child), awake_at(P, D, S).
-in_window(P, D, S) :- window(_, P, D, F, T), slot(D, S), S >= F, S < T.
+in_window(P, D, S) :- deep(slots), window(_, P, D, F, T), slot(D, S), S >= F, S < T.
 cand_bad(A, D, S, asleep)      :- cand_slot(A, D, S, S2), want(A, P, _, _), not windowed(P), not waking(P, D, S2).
 cand_bad(A, D, S, no_window)   :- cand_slot(A, D, S, S2), want(A, P, _, _), windowed(P), not in_window(P, D, S2).
 admissible(A, D, S) :- cand(A, D, S), not cand_bad(A, D, S, _).

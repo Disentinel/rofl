@@ -122,7 +122,8 @@ export function parseEdit(r: Rofl, text: string, e?: Env): Edit {
   const sec = waive > 0 ? 'waive' : SEC_VERB[w0] ?? (N.has(w0) && isDay(w[1]) && /[-–]/.test(w[2] ?? '') ? 'avail' : SEC_VERB[(w[1] ?? '').toLowerCase()]?.startsWith('carry1') ? 'carry1' : undefined);
   if (sec !== undefined) {
     const ws = waive > 0 ? ['waive', ...w.slice(waive)] : SEC_VERB[w0] ? w : sec === 'avail' ? ['avail', ...w] : [w[1], w[0], ...w.slice(2)];
-    return parseSecretary(r, sec, ws, text, { N, me: e?.as, day, time, range, done, bad, week: e ? weekIn(r) : undefined });
+    // «не будем» is two words for one verb: what parseMark counts as used is one short of the line
+    return parseSecretary(r, sec, ws, text, { N, me: e?.as, day, time, range, done: (u, o) => done(u + (waive === 2 ? 1 : 0), o), bad, week: e ? weekIn(r) : undefined });
   }
   const verb = VERB[w0] ?? bad(`глагол: '${w[0] ?? ''}'`);
   // THE BLOCKS AS THE HUMAN SEES THEM: the typical week (a recurring line included), and what a
