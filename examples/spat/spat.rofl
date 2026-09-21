@@ -1019,6 +1019,10 @@ edb(must_start).
 edb(never_alone).
 edb(no_walk).        edb(ride).       edb(can_wait).   edb(hosted).
 edb(retired).        edb(remind_days).
+-- §15 reads these; the loader asserts the two moments, access.rofl derives the six from the books —
+-- declared here so spat.rofl alone (`spat check`, the yak probe) has no undefined premise
+edb(now_min).        edb(week_min).
+edb(done_in).        edb(done_ever).  edb(waived_in).  edb(waived_ever).  edb(remind_at).  edb(sent).
 edb(need).           edb(need_for).   edb(need_len).   edb(need_every).  edb(need_by).
 edb(need_in).        edb(need_by_on). edb(need_where). edb(need_req).    edb(req).
 
@@ -1074,6 +1078,10 @@ not_extended(want, query).     not_extended(asking, query).    not_extended(waiv
 -- book relation of access.rofl) and a `roll`; a week the book named alone
 -- would be a week with no date under it
 not_extended(week, weeks).
+-- the moments are the loader's, a condition's lines are the members' books (access.rofl §5c)
+not_extended(now_min, loader).  not_extended(week_min, loader).
+not_extended(done_in, books).   not_extended(done_ever, books).  not_extended(waived_in, books).
+not_extended(waived_ever, books). not_extended(remind_at, books). not_extended(sent, books).
 -- extends_unless(R, I, V): argument I may not be V. An adult or a helper is
 -- an ACCOUNT — who may read which book is decided over world + users before
 -- any book is opened (STORE.md, 2), and a guest made `adult` by one line of

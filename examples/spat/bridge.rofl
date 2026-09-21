@@ -139,6 +139,14 @@ retired(X1) :- retired[hh](X1).
 world_remind_days() :- asserted_by($fact(remind_days, main, _), _, _).
 remind_days(X1) :- remind_days[hh](X1), not world_remind_days().
 overrides[audit](remind_days, k(X1)) :- remind_days[hh](X1), world_remind_days(), not remind_days(X1).
+-- now_min: not extended (loader)
+-- week_min: not extended (loader)
+-- done_in: not extended (books)
+-- done_ever: not extended (books)
+-- waived_in: not extended (books)
+-- waived_ever: not extended (books)
+-- remind_at: not extended (books)
+-- sent: not extended (books)
 -- need/2, key 1
 world_need(X1) :- asserted_by($fact(need, main, $cons(X1, _)), _, _).
 need(X1, X2) :- need[hh](X1, X2), not world_need(X1).
