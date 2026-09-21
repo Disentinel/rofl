@@ -1012,3 +1012,17 @@ evidence(e220, src_zenodo, "record description, 10.5281/zenodo.18247579"). lande
 edge[book](e221, requires, gdd_methodology, grafema).
 evidence(e221, src_zenodo, "the GDD preprint proposes the externalized graph; grafema is the implementation"). evidence(e221, src_canon, "Concept layer: GDD methodology"). landed(e221, 19). depth(e221, 2). classified(e221, confirmed).
 asked(recorded_in, grafema, out, src_zenodo, 19). asked(supersedes, grafema, in, src_zenodo, 19).
+
+-- round 20 — closing holder_without_invariant by discipline (2026-09-21).
+-- @who ontocrawler_2
+put(20, src_repo, "what does each holder keep true? (CLAUDE.md for the owner; REVIEWER-NOTES for the reviewer)").
+edge[book](e222, invariant_over, grafema, inv_graph_beats_reading).
+evidence(e222, src_repo, "CLAUDE.md 'If reading code gives better results than querying Grafema — that's a product gap, not a workflow choice'"). landed(e222, 20). depth(e222, 1). classified(e222, confirmed).
+edge[book](e223, held_by, inv_graph_beats_reading, vadim_reshetnikov).
+evidence(e223, src_repo, "CLAUDE.md is the owner's"). landed(e223, 20). depth(e223, 1). classified(e223, confirmed).
+edge[book](e224, invariant_over, autoresearch, inv_n_ge_3_paired_external_codebase).
+evidence(e224, src_repo, "autoresearch/REVIEWER-NOTES.md: 'Run each condition at minimum N=3', 'paired sign test', 'run the same experiment on 2-3 open-source codebases'"). landed(e224, 20). depth(e224, 1). classified(e224, confirmed).
+edge[book](e225, held_by, inv_n_ge_3_paired_external_codebase, independent_reviewer_session).
+evidence(e225, src_repo, "same"). landed(e225, 20). depth(e225, 1). classified(e225, confirmed).
+not_found(invariant_over, grafema, out, src_repo, 20).   -- for disentinel and grafemalabs: handles, no text of their own; whether they are the owner is equivalent_to, open
+asked(invariant_over, grafema, out, src_repo, 20). asked(invariant_over, autoresearch, out, src_repo, 20).

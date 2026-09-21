@@ -304,3 +304,47 @@ context(j1, "second source landed in round 7: the trial read directly, by its ow
 neutral(g2, influence_of_chess_on_thinking).      -- a caveat, not a side
 neutral(n24, influence_of_chess_on_thinking).     -- a correlation between ability and skill, not a claim about instruction
 supports(g5, influence_of_chess_on_thinking).
+
+-- ======================================================================
+-- round 8 — closing the red by discipline: an invariant for every holder,
+-- from the holder's own text; and the asker's word resolved through alias
+-- so his question is answered by the literature that exists rather than
+-- escalated to the federation that governs the board.
+-- ======================================================================
+authority(wiki_policy, ontocrawler_2).   -- Wikipedia:Verifiability, the editors' own rule
+-- @who ontocrawler_2
+put(8, src_fide, "what does FIDE keep true about chess? (re-read of round 1)").
+put(8, src_wikipedia, "what does the programme keep true? what do the editors keep true? (ru 'Шахматы в школе'; Wikipedia:Verifiability)").
+put(8, src_rosholm_plos, "what does the Aarhus group keep true? (abstract, re-read)").
+put(8, src_jerrim_jhr, "what does the UCL group keep true? (abstract, re-read)").
+edge[fide](f7, held_by, inv_checkmate_ends_the_game, fide).
+evidence(f7, src_fide, "the Laws are FIDE's; art. 1.4"). landed(f7, 8). depth(f7, 1). classified(f7, confirmed).
+edge[fide](f8, held_by, inv_white_moves_first, fide).
+evidence(f8, src_fide, "art. 1.2"). landed(f8, 8). depth(f8, 1). classified(f8, confirmed).
+edge[book](f9, equivalent_to, fide_arbiters, fide).
+evidence(f9, src_fide, "preface: arbiters apply FIDE's Laws; the officer and the body are one holder at the board"). landed(f9, 8). depth(f9, 1). classified(f9, confirmed).
+edge[wiki_ru](r6, invariant_over, chess_instruction, inv_chess_in_primary_curriculum).
+evidence(r6, src_wikipedia, "ru 'Шахматы в школе': mandatory in Kalmykia 1996, Pskov grades 1-2 2008, Minobr order 2211 of 2004"). landed(r6, 8). depth(r6, 1). classified(r6, confirmed).
+edge[wiki_ru](r7, held_by, inv_chess_in_primary_curriculum, ru_ministry_and_federation).
+evidence(r7, src_wikipedia, "same"). landed(r7, 8). depth(r7, 1). classified(r7, confirmed).
+edge[aarhus](m2, invariant_over, chess_instruction, inv_chess_transfers_to_mathematics).
+evidence(m2, src_rosholm_plos, "'knowledge acquired through chess play can be transferred to the domain of mathematics'"). landed(m2, 8). depth(m2, 1). classified(m2, confirmed).
+edge[aarhus](m3, held_by, inv_chess_transfers_to_mathematics, aarhus_trygfonden).
+evidence(m3, src_rosholm_plos, "same"). landed(m3, 8). depth(m3, 1). classified(m3, confirmed).
+edge[jerrim](k2, invariant_over, influence_of_chess_on_thinking, inv_robust_design_required).
+evidence(k2, src_jerrim_jhr, "'the need for social scientists to employ robust research designs'"). landed(k2, 8). depth(k2, 1). classified(k2, confirmed).
+edge[jerrim](k3, held_by, inv_robust_design_required, ucl_institute_of_education).
+evidence(k3, src_jerrim_jhr, "same"). landed(k3, 8). depth(k3, 1). classified(k3, confirmed).
+edge[wiki_policy](w1, invariant_over, src_wikipedia, inv_verifiability).
+evidence(w1, src_wikipedia_policy, "Wikipedia:Verifiability: 'Verifiability means that people can check that facts or claims correspond to reliable sources'; 'Facts or claims without an inline citation to a reliable source that directly supports them may be removed'"). landed(w1, 8). depth(w1, 1). classified(w1, confirmed).
+edge[wiki_policy](w2, held_by, inv_verifiability, wikipedia_editors).
+evidence(w2, src_wikipedia_policy, "the policy is the editors' own"). landed(w2, 8). depth(w2, 1). classified(w2, confirmed).
+context(w1, "the editors' own invariant is the one r5 breaks: an unsourced claim 'may be removed'. The book's depth_zero on r5 and the editors' policy say the same thing about the same sentence").
+asked(invariant_over, chess, out, src_fide, 8). asked(invariant_over, chess_instruction, out, src_wikipedia, 8). asked(invariant_over, chess_instruction, out, src_rosholm_plos, 8).
+asked(invariant_over, influence_of_chess_on_thinking, out, src_jerrim_jhr, 8). asked(invariant_over, src_wikipedia, out, src_wikipedia_policy, 8).
+
+-- the asker's word: 'шахматы' in 'влияние шахмат на мыслительные способности'
+-- is what the literature calls chess instruction; the alias makes his need
+-- ask the sources that exist. His to retract.
+alias(vadim, chess, chess_instruction).
+context(a9, "alias(vadim, chess, chess_instruction) added in round 8: the asker's 'шахматы' resolves to the thing studied. Without it the question escalates to FIDE, which governs the board and says nothing about minds").

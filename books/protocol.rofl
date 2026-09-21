@@ -123,7 +123,11 @@ asks(C, R)                :- expects(_, C, R), not retired(C, R).
 asks(C, R)                :- provisional(R, C, _), not retired(C, R).
 needs(gen(E, R), R, E, D) :- entity(E), kindless(R), q_shape(R, D).
 needs(gen(E, R), R, E, D) :- entity(E), class(E, C), asks(C, R), q_shape(R, D), not kindless(R).
-needs(Q, R, X, D)         :- needs_ext(Q, R, X, D).
+-- an asker's word is resolved through alias (protocol §1) before it becomes
+-- a need: he says 'chess', the literature answers about 'chess_instruction'
+needs(Q, R, X, D)         :- needs_ext(Q, R, X, D), question(Q, A, _), not aliased(A, X).
+needs(Q, R, X2, D)        :- needs_ext(Q, R, X, D), question(Q, A, _), alias(A, X, X2).
+aliased(A, X)             :- alias(A, X, _).
 question(gen(E, R), crawler, T) :- needs(gen(E, R), R, E, _), entered(E, T).
 question(Q, A, T)         :- question_ext(Q, A, T).
 

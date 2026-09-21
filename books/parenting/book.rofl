@@ -439,3 +439,25 @@ asked(invariant_over, parenting, out, src_sep, 12). asked(invariant_over, parent
 not_found(invariant_over, parenting, out, src_wikipedia, 12).   -- ru article states no invariant of its own beyond the statute it quotes
 asked(held_by, src_crc, out, src_crc, 12). asked(held_by, src_who_unicef_guidance, out, src_who_unicef_guidance, 12).
 asked(held_by, src_wikipedia, out, src_wikipedia, 12). asked(held_by, src_sep, out, src_sep, 12).
+
+-- round 13 — closing holder_without_invariant by discipline (2026-09-21).
+authority(sep_policy, ontocrawler_2).    -- plato.stanford.edu/about.html
+authority(wiki_policy, ontocrawler_2).   -- Wikipedia:Verifiability
+-- @who ontocrawler_2
+put(13, src_crc, "what do guardians and the extended family keep true? (art. 5, re-read)").
+put(13, src_sep, "what does a competent adult keep true? (child-centred accounts, re-read); what do the editors keep true? (about page)").
+edge[crc](c10, held_by, inv_guidance_tracks_evolving_capacity, legal_guardians).
+evidence(c10, src_crc, "art. 5 names 'legal guardians or other persons legally responsible for the child'"). landed(c10, 13). depth(c10, 1). classified(c10, confirmed).
+edge[crc](c11, held_by, inv_guidance_tracks_evolving_capacity, extended_family_or_community).
+evidence(c11, src_crc, "art. 5 'the members of the extended family or community as provided for by local custom'"). landed(c11, 13). depth(c11, 1). classified(c11, confirmed).
+edge[sep](e3, held_by, inv_parenting_serves_the_child_interest, competent_adult).
+evidence(e3, src_sep, "child-centred accounts: the competent adult's claim to parent stands only while it serves the child's interest"). landed(e3, 13). depth(e3, 1). classified(e3, confirmed).
+edge[sep_policy](sp1, invariant_over, src_sep, inv_refereed_and_kept_current).
+evidence(sp1, src_sep_policy, "'each entry is maintained and kept up-to-date by an expert or group of experts in the field'; 'All entries and substantive updates are refereed by the members of a distinguished Editorial Board before they are made public'"). landed(sp1, 13). depth(sp1, 1). classified(sp1, confirmed).
+edge[sep_policy](sp2, held_by, inv_refereed_and_kept_current, sep_editorial_board).
+evidence(sp2, src_sep_policy, "same"). landed(sp2, 13). depth(sp2, 1). classified(sp2, confirmed).
+edge[wiki_policy](wp1, invariant_over, src_wikipedia, inv_verifiability).
+evidence(wp1, src_wikipedia_policy, "Wikipedia:Verifiability: 'people can check that facts or claims correspond to reliable sources'"). landed(wp1, 13). depth(wp1, 1). classified(wp1, confirmed).
+edge[wiki_policy](wp2, held_by, inv_verifiability, wikipedia_editors).
+evidence(wp2, src_wikipedia_policy, "the policy is the editors' own"). landed(wp2, 13). depth(wp2, 1). classified(wp2, confirmed).
+asked(invariant_over, parenting, out, src_crc, 13). asked(invariant_over, parenting, out, src_sep, 13). asked(invariant_over, src_sep, out, src_sep_policy, 13). asked(invariant_over, src_wikipedia, out, src_wikipedia_policy, 13).
