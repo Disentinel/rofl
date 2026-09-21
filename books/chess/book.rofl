@@ -676,3 +676,8 @@ context(a21, "his wording is stronger than the refuting side's: 'no evidence of 
 not_found(describes, vadim, out, src_holder_session, 1).   -- the message that opened the domain named the domain, not the man; the sentence came from the interview, round 2 (a8-a20)
 not_found(invariant_over, chess, out, src_fide, 8).         -- the re-read yielded holders of the round-1 invariants (f7, f8) and one identity (f9); no invariant the book did not already carry
 not_found(depends_on, chess, in, src_sala_gobet, 3).       -- under the asker's word: the meta-analyses speak of instruction, not of the game; landed as g6 under chess_instruction
+
+-- the two passes that ran, now as facts (verifier, protocol 2026-09-21):
+-- both spoke in objections; neither checked an edge, so neither echoed.
+-- @who ontocrawler_2
+verifier(sense_1, 9). verifier(sense_2, 10).

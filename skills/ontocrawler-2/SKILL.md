@@ -219,6 +219,39 @@ about the SUBJECT that the table cannot generate become archetypes with an origi
 that need the asker's values ("what is useful", "where next") are answered from `[askers]` or
 not at all.
 
+## Subagents: digger, checker, executor
+
+The crawl parallelises by SLICE, not by round: one entity's class-dependent questions to a
+named set of sources is a slice a smaller model can dig. Three parts, never merged into one:
+
+- **Digger.** Gets the questions, the sources, the archetype table and the edge shape. Writes
+  a section file — edges, evidence, `put`, `not_found`, `context` — and never the book. The
+  section is load-tested before it is read.
+- **Checker.** Gets the section, the decision rendering and the asker's task. Returns
+  objections only — `objection(Id, Who, Kind, "why")` with kinds misread, category, relation,
+  absurd, drift, scale, frame — and, where it read a source itself, `brought(Id, Who, Source,
+  "locator")`. It never writes "looks fine". The one question it answers is *does this make
+  sense?*, and an objection needs no source: it is an obligation on the executor to re-read.
+- **Executor.** Merges the section as written, then answers every objection after re-reading
+  (`answered`) or withdraws the edge (`withdrawn`; it stays as a record and fills nothing).
+  Refilings carry the objection id as their reason. The pass itself is a fact:
+  `verifier(Who, Round)`.
+
+**Echo.** Agreement is not verification. `echo[audit]`: an edge the checker marked `checked`
+with neither an objection nor a `brought` source. `mute_pass[audit]`: a pass that returned
+nothing. A checker that agrees with everything has read the writer, not the source. Measured
+on chess, round 10: a Sonnet digger wrote 48 edges, a Sonnet checker returned 13 objections,
+12 edges were withdrawn or refiled — `offers` bent on a game the way it bent on a practice,
+predecessors filed as aliases, phases as methods. The checker earned its round; an approving
+one would have cost it.
+
+**Doubt, then acceptance.** Open objections are `objected` doubts on any decision that rests
+on the edge; with `depth_zero`, `single_source`, `self_serving`, `rival`, `stale`,
+`concentration` they hold the decision `conditional`. A decision clears by discharge (the
+named evidence arrives) or by acceptance BY NAME — `accepted_doubt(Id, Kind, Who, Round)` —
+from the asker, in the asker's volume. Digging forever is not the alternative to accepting;
+put the residual to the asker and write the answer.
+
 ## Rendering
 
 A tree of everything is a tree for nobody. Render from `describes` quotes, not atoms; render

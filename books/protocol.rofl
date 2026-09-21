@@ -294,6 +294,21 @@ doubt(Id, objected)       :- rests_on(_, Id), open_objection(Id).
 discharges(objected,       "re-read the source: answer the objection, or withdraw the edge").
 unanswered_objection[audit](Id, W) :- objection(Id, W, _, _), not answered(Id, W, _, _), not withdrawn(Id, _), landed(Id, K), round(N), A is N - K, A > 2.
 alarm(unanswered_objection).
+-- A verifier's pass is a fact, and what it said is objections and sources
+-- only. An edge the verifier says stands is checked; it counts only when
+-- the verifier brought what it read (brought -> the executor writes the
+-- evidence row) or objected. A checked edge with neither is an echo: the
+-- reader agreed with the writer and read nothing. A pass that said nothing
+-- at all is mute.
+edb(verifier).          -- verifier(Who, Round)                  a pass ran: who read, which round
+edb(checked).           -- checked(Id, Who)                      the verifier says the edge stands
+edb(brought).           -- brought(Id, Who, Source, "locator")   what the verifier read that makes it stand
+echo[audit](Id, Who)      :- checked(Id, Who), not objection(Id, Who, _, _), not brought(Id, Who, _, _).
+mute_pass[audit](Who, K)  :- verifier(Who, K), not spoke(Who).
+spoke(Who)                :- objection(_, Who, _, _).
+spoke(Who)                :- brought(_, Who, _, _).
+brought_without_evidence[audit](Id, Who, S) :- brought(Id, Who, S, _), not evidence(Id, S, _).
+alarm(echo). alarm(mute_pass). alarm(brought_without_evidence).
 discharges(depth_zero,     "any source at all").
 discharges(single_source,  "a second source not held by the same holder").
 discharges(self_serving,   "a book the holder does not hold, saying the same").
