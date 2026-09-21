@@ -1005,7 +1005,7 @@ function summary(r: Rofl): string {
     + `${cs.length - ext.length} наших.`;
 }
 
-const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings', 'need', 'retire', 'reminders', 'done', 'remind']);
+const STORE_VERBS = new Set(['whoami', 'show', 'tomorrow', 'edit', 'confirm', 'retract', 'ics', 'roll', 'maybe', 'rule', 'avail', 'carry', 'note', 'warnings', 'need', 'retire', 'reminders', 'done', 'remind', 'volatility']);
 
 async function main(argv: string[]): Promise<void> {
   const t0 = Date.now();
@@ -1383,6 +1383,7 @@ const USAGE = [
   '  spat need list · need retract <id> · place <потребность> · retire <блок>   потребность = правило семьи; блок с тем же именем её закрывает',
   '  spat done <условие|"текст"> [<день>] · remind <условие> <день> <время> · edit \'skip <условие>\'   условия: сделано · напомни · не будем (= edit)',
   '  spat reminders [--due] [--sent <id>…] [--format tg]   кому · что · когда (me/оператор)',
+  '  spat volatility [<слой>]                  какие отношения слой (edits · hh · call) может отменить — статически, по графу правил',
   '  spat volume load <семья> <файл.rofl> [--book <книга>] · volume dump <семья> [<книга>]  (оператор, см. STORE.md «Тома»)',
   '',
   '  --week <file>      другой файл недели      --week-of <w>   другая неделя      --format tg   день/неделя для телефона',

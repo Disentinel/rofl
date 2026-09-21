@@ -1,0 +1,39 @@
+-- volatility.rofl — WHICH RELATIONS CAN CHANGE WHEN A LAYER CHANGES, decided
+-- statically off the kernel's own book of the rules (S3h, 2026-09-21).
+--
+-- A warm snapshot of the fixpoint is only honest for the facts a later layer
+-- cannot take back. Adding facts to a layer L (a person's edits, the family's
+-- book, the facts of one call) can only ADD to a relation that reaches L
+-- through positive premises alone; a relation whose derivation negates
+-- something L reaches can lose facts, and losing facts is DRed — which the
+-- owner will not pay for. So: `stable(P, L)` — P does not reach L at all,
+-- copied from the snapshot as is; `monotone(P, L)` — reaches L positively
+-- only, semi-naive addition on top; `volatile(P, L, Why)` — a negation over
+-- something L reaches lies on the way, its stratum is recomputed. `Why` is the
+-- nearest such edge: `not(Q)` in a rule of P itself, `via(P2)` for a premise
+-- P2 that is volatile.
+--
+-- The input is `layer_edb(L, Rel)` — which relations a layer supplies (a
+-- household names its own, examples/warm/spat-layers.rofl). The graph is the
+-- kernel's: `concludes(R, P)`, `premise_pos(R, Q)`, `premise_neg(R, Q)`,
+-- relation names without perspectives — a bridge rule `person(X) :- person
+-- [hh](X)` is an edge person → person, which is what makes a layer's own
+-- relation touched by itself.
+
+edb(layer_edb).
+layer(L)        :- layer_edb(L, _).
+relation(P)     :- concludes(_, P).
+relation(P)     :- edb(P).
+dep(P, Q)       :- concludes(R, P), premise_pos(R, Q).
+dep(P, Q)       :- concludes(R, P), premise_neg(R, Q).
+
+touched(Q, L)   :- layer_edb(L, Q).
+touched(P, L)   :- dep(P, Q), touched(Q, L).
+
+volatile(P, L, not(Q))  :- concludes(R, P), premise_neg(R, Q), touched(Q, L).
+volatile(P, L, via(P2)) :- dep(P, P2), P != P2, volatile(P2, L, _).
+is_volatile(P, L)       :- volatile(P, L, _).
+monotone(P, L)  :- touched(P, L), not is_volatile(P, L).
+stable(P, L)    :- relation(P), layer(L), not touched(P, L).
+
+volatile[audit](P, L, Why) :- volatile(P, L, Why).

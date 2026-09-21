@@ -21,6 +21,7 @@ import { GRAMMAR as SECRETARY, VERBS as SEC_VERB, carryWarns, onceEach, parseSec
 import { renderWarnings } from './tomorrow.ts';
 import { tgWarnings } from './tg.ts';
 import { reminders, retire, run as need } from './needs.ts';
+import { run as volatility } from './warm.ts';
 
 const GRAMMAR = [
   '  move   <блок> [<день>] <время>              перенести   (перенести обед вт 14:00)',
@@ -396,6 +397,7 @@ export function run(s: Store, cmd: string, rest: string[]): number {
     case 'need': return need(s, rest);
     case 'retire': return retire(s, rest.join(' '));
     case 'reminders': return reminders(s, rest);
+    case 'volatility': return volatility(s, rest);
     case 'avail': case 'carry': case 'note': case 'done': case 'remind': {   // the phrase may arrive whole in one argument, or already start with its verb
       const text = rest.length === 1 && /\s/.test(rest[0]) ? rest[0] : line(rest);
       return edit(s, SEC_VERB[(text.split(/\s+/)[0] ?? '').toLowerCase()] ? text : `${cmd} ${text}`);

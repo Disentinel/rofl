@@ -1,0 +1,34 @@
+-- spat-layers.rofl — SPAT's layers by how often they change, and what each one
+-- supplies (S3h). boot → the programme → the world → the family's book →
+-- the members' books → the hypotheses → the facts of one call. A relation of
+-- the book reaches main by its own name (bridge.rofl, spat.rofl §14), so the
+-- layer names the relation, not a perspective.
+
+-- the members' books: every entry relation of access.rofl §4/§5c and the trail
+layer_edb(edits, e_move).     layer_edb(edits, e_skip).     layer_edb(edits, e_add).      layer_edb(edits, e_sick).
+layer_edb(edits, e_car_out).  layer_edb(edits, e_report).   layer_edb(edits, e_usual).    layer_edb(edits, e_unusual).
+layer_edb(edits, e_avail).    layer_edb(edits, e_carry).    layer_edb(edits, e_note).     layer_edb(edits, e_done).
+layer_edb(edits, e_waive).    layer_edb(edits, e_remind).   layer_edb(edits, e_reminded).
+layer_edb(edits, edit_at).    layer_edb(edits, edit_via).   layer_edb(edits, for_week).
+layer_edb(edits, proposed).   layer_edb(edits, confirmed).  layer_edb(edits, retracted).  layer_edb(edits, retracts).
+layer_edb(edits, rolled).
+-- the family's book: the four points and every edb relation §14 bridges
+layer_edb(hh, defect).        layer_edb(hh, busy).          layer_edb(hh, needs_cover).   layer_edb(hh, warn).
+layer_edb(hh, day).           layer_edb(hh, in_group).      layer_edb(hh, place).         layer_edb(hh, base).
+layer_edb(hh, supervised).    layer_edb(hh, travel).        layer_edb(hh, on_foot).       layer_edb(hh, person).
+layer_edb(hh, driver).        layer_edb(hh, car).           layer_edb(hh, walks_alone).   layer_edb(hh, constraint).
+layer_edb(hh, give).          layer_edb(hh, kind).          layer_edb(hh, with).          layer_edb(hh, current).
+layer_edb(hh, present_window). layer_edb(hh, absent).       layer_edb(hh, awake).         layer_edb(hh, lift).
+layer_edb(hh, day_wake).      layer_edb(hh, work_needed).   layer_edb(hh, travel_as).     layer_edb(hh, assume).
+layer_edb(hh, ru_name).       layer_edb(hh, must_start).    layer_edb(hh, never_alone).   layer_edb(hh, no_walk).
+layer_edb(hh, ride).          layer_edb(hh, can_wait).      layer_edb(hh, hosted).        layer_edb(hh, retired).
+layer_edb(hh, remind_days).   layer_edb(hh, need).          layer_edb(hh, need_for).      layer_edb(hh, need_len).
+layer_edb(hh, need_every).    layer_edb(hh, need_by).       layer_edb(hh, need_in).       layer_edb(hh, need_by_on).
+layer_edb(hh, need_where).    layer_edb(hh, need_req).      layer_edb(hh, req).
+layer_edb(hh, rule_by).       layer_edb(hh, rule_at).       layer_edb(hh, rule_via).      layer_edb(hh, rule_proposed).
+layer_edb(hh, rule_confirmed). layer_edb(hh, rule_retracted).
+-- the facts of one call: the loader's and a trial's
+layer_edb(call, tenant).      layer_edb(call, caller).      layer_edb(call, from_id).     layer_edb(call, date_monday).
+layer_edb(call, now_min).     layer_edb(call, week_min).    layer_edb(call, week).        layer_edb(call, week_starts).
+layer_edb(call, trial).       layer_edb(call, before).      layer_edb(call, authority).   layer_edb(call, book_source).
+layer_edb(call, imports).     layer_edb(call, want).        layer_edb(call, asking).      layer_edb(call, waived).
