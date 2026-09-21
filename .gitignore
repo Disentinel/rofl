@@ -34,3 +34,6 @@ rust/*/target/
 rust/storebench/traces/
 rust/target/volumes/
 facts/rule-shape.rofl
+
+# a book over a company the owner works in: kept local, never pushed
+books/brightdata/
