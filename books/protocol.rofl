@@ -145,8 +145,8 @@ round(0)                  :- seed(_), not any_tick().
 stale(Id)                 :- edge_any(Id, R, _, _), landed(Id, T), ttl(R, D), round(N), A is N - T, A > D.
 stale(Id)                 :- landed(Id, T), evidence(Id, S, _), source_changed(S, T2), T2 > T.
 
-filled(R, X, out)         :- edge_any(Id, R, X, _), not stale(Id).
-filled(R, X, in)          :- edge_any(Id, R, _, X), not stale(Id).
+filled(R, X, out)         :- edge_any(Id, R, X, _), not stale(Id), not withdrawn(Id, _).
+filled(R, X, in)          :- edge_any(Id, R, _, X), not stale(Id), not withdrawn(Id, _).
 satisfied(Q, R, X, D)     :- needs(Q, R, X, D), filled(R, X, D).
 obligation(Q, R, X, D)    :- needs(Q, R, X, D), not satisfied(Q, R, X, D).
 
@@ -275,6 +275,24 @@ edb(bent).              -- bent(Round, Source)            the executor bent the 
 edb(accepted_doubt).    -- accepted_doubt(Id, Kind, Who, Round)
 edb(discharges).        -- discharges(Kind, "what settles it")
 
+-- SENSE. An objection is evidence-free by design: a reader says an edge
+-- does not make sense and why. Agreement without a source is worth nothing
+-- (echo); an objection without a source is worth a round, because it is an
+-- obligation on the executor to re-read and answer or withdraw. Kinds:
+-- misread (the quote does not support the edge), category (a kind that is
+-- not a kind), relation (filed under the wrong archetype), absurd (a
+-- question that cannot apply), drift (the put wandered from the archetype),
+-- scale (a number read as more or less than it is), frame (makes no sense
+-- for the asker's task).
+edb(objection).         -- objection(Id, Who, Kind, "why not")
+edb(answered).          -- answered(Id, Who, Round, "how")   the executor's reply, after re-reading
+edb(withdrawn).         -- withdrawn(Id, Round)             the edge stands as a record and counts for nothing
+objected(Id)              :- objection(Id, _, _, _).
+open_objection(Id)        :- objection(Id, W, _, _), not answered(Id, W, _, _), not withdrawn(Id, _).
+doubt(Id, objected)       :- rests_on(_, Id), open_objection(Id).
+discharges(objected,       "re-read the source: answer the objection, or withdraw the edge").
+unanswered_objection[audit](Id, W) :- objection(Id, W, _, _), not answered(Id, W, _, _), not withdrawn(Id, _), landed(Id, K), round(N), A is N - K, A > 2.
+alarm(unanswered_objection).
 discharges(depth_zero,     "any source at all").
 discharges(single_source,  "a second source not held by the same holder").
 discharges(self_serving,   "a book the holder does not hold, saying the same").
@@ -286,15 +304,16 @@ discharges(stale,          "the same question, asked again").
 
 claim(C)                  :- supports(_, C).
 claim(C)                  :- refutes(_, C).
-supported(C)              :- supports(Id, C), not stale(Id).
-refuted(C)                :- refutes(Id, C), not stale(Id).
+supported(C)              :- supports(Id, C), not stale(Id), depth(Id, D), D > 0.   -- a depth-0 sentence grades nothing (objection r5, sense_1)
+refuted(C)                :- refutes(Id, C), not stale(Id), depth(Id, D), D > 0.
 contested(C)              :- supported(C), refuted(C).
 unknown_claim(C)          :- claim(C), not supported(C), not refuted(C).
 
 decision(Dec)             :- edge_any(_, depends_on, Dec, Q), question(Q, _, _).
 rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, out), edge_any(Id, R, X, _).
 rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, in), edge_any(Id, R, _, X).
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), edge_any(Id, _, E, _).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), edge_any(Id, R, E, _), not bookkeeping(R).
+bookkeeping(recorded_in).   -- where a thing is recorded says nothing for or against it (objection n20, sense_1, round 9)
 rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), supports(Id, E).
 rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), refutes(Id, E).
 

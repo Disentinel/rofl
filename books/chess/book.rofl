@@ -348,3 +348,48 @@ asked(invariant_over, influence_of_chess_on_thinking, out, src_jerrim_jhr, 8). a
 -- ask the sources that exist. His to retract.
 alias(vadim, chess, chess_instruction).
 context(a9, "alias(vadim, chess, chess_instruction) added in round 8: the asker's 'шахматы' resolves to the thing studied. Without it the question escalates to FIDE, which governs the board and says nothing about minds").
+
+-- ======================================================================
+-- round 9 — sense. One checker (sense_1, a subagent given the decision
+-- rendering, the asker's task and the book) returned fifteen objections
+-- and no agreement. Each is a fact; each is answered after re-reading, or
+-- the edge is withdrawn, or it stays open and is said so.
+-- ======================================================================
+-- @who ontocrawler_2
+objection(g4, sense_1, misread, "the quoted sentence is a verdict on cognitive training in general and does not name chess, so it is filed as describing the influence of chess on thinking while saying nothing specific about chess").
+objection(g3, sense_1, misread, "far transfer rarely occurs is a claim about learning as such, drawn from chess, music and working-memory training together, and the edge presents it as a description of chess alone").
+objection(g2, sense_1, relation, "the quote describes the design of the reviewed studies, not the influence itself, so a statement about the evidence base is filed as a description of the phenomenon").
+objection(g5, sense_1, misread, "short term is not in the cited 2016 result, which reports post-test effect sizes with no durability measure, so the io target adds a qualifier the source did not make").
+objection(g6, sense_1, relation, "a pooled effect from mostly non-randomised studies that the book itself says lacked active controls is filed as a dependence rather than as an association").
+objection(g6, sense_1, scale, "g5 and g6 are the one 2016 meta-analytic result filed twice under two relations, and the rendering counts them as two supporting edges").
+objection(j1, sense_1, scale, "1,965 plus 1,900 is 3,865 pupils while k1 from the same trial says more than 4,000, yet the book declares the citation stands without reconciling the two counts").
+objection(k1, sense_1, drift, "the trial measured mathematics, reading and science test scores, which are attainment, but the edge is filed under influence on thinking abilities, the thing the asker actually asked about").
+objection(k2, sense_1, relation, "the need for robust research designs is advice to social scientists about method, not something that stays true about the influence of chess on thinking, so it is not an invariant over that entity").
+objection(m1, sense_1, frame, "the treatment is a mathematics lesson taught through chess replacing a regular mathematics lesson in grades 1-3, which is neither a chess club nor an effect on thinking, so its supports polarity does not bear on the parent's decision").
+objection(n24, sense_1, relation, "a correlation between cognitive ability and chess skill is filed as describing the influence of chess on thinking, although the book itself notes the sentence answers whether able children play well, not whether playing makes them able").
+objection(n20, sense_1, frame, "recorded_in rows are bookkeeping about where a source lives, not evidence for or against the claim, yet five of them appear in the decision as edges it rests on, each doubted single_source, which inflates the count of edges the decision stands on").
+objection(a9, sense_1, drift, "the alias that turns the asker's word шахматы into chess_instruction was added by the crawler and not confirmed by the asker, and it makes classroom-curriculum studies of 25-30 hours answer a question about an after-school club").
+objection(r5, sense_1, frame, "a depth-0 programme claim with no study behind it carries a supports polarity that counts the same as a meta-analysis in the rendering").
+objection(decision_chess_club_for_children, sense_1, frame, "contested is reached by counting polarities, but the supporting side is the retracted 2016 pooled effect counted twice, a depth-0 sentence and a near-transfer curriculum study, while the refuting side holds the only RCT and the active-control experiment, so the verdict weighs edges by number instead of by design").
+
+-- answers, after re-reading
+answered(g3, sense_1, 9, "the 2017 paper's title is 'Negative Evidence From Chess, Music, and Working Memory Training': chess is one of its three cases, the verdict covers it by name; the edge sits in the authors' volume as their statement about the claim, not as the crawler's").
+answered(g4, sense_1, 9, "the 2023 verdict is general and includes chess through the 2017 paper it extends; context added, the edge stays as the authors' word in their volume").
+context(g4, "general verdict on cognitive training; chess is inside it via Sala & Gobet 2017 (g3), not named in this sentence (objection g4)").
+answered(g2, sense_1, 9, "describes is quote-valued and neutral(g2) says it takes no side; a caveat about the evidence is what the claim's page holds, and qualifies(g2, g1) is where its role is recorded").
+answered(g5, sense_1, 9, "the qualifier is the source's: Sala, Foley, Gobet 2017 write that short-term evidence suggests positive effects and the evidence so far is insufficient; the io target repeats their word").
+answered(g6, sense_1, 9, "the relation is the source's claim in the source's volume: the 2016 meta-analysis asserts that scores change with instruction; the book's own g2 and g9 are what qualify and refute it, and self_qualified stood on it until g9 answered the caveat against it. On the count: g5 and g6 are one result under two archetypes, and the renderer counts edges; a result count by evidence is owed and not yet built").
+answered(n24, sense_1, 9, "neutral(n24) is the book's statement that this quote takes no side; describes carries what the encyclopedia says on the page, and the context row says what it does not say").
+answered(n20, sense_1, 9, "protocol changed: recorded_in is bookkeeping and rests_on excludes it (books/protocol.rofl, round 9)").
+answered(r5, sense_1, 9, "protocol changed: supported and refuted now require depth > 0, so a depth-0 sentence grades nothing; it stays on the page with its doubt").
+answered(m1, sense_1, 9, "the polarity is toward the claim, which the Danish study supports for mathematics through chess; the frame objection is right for the decision and is recorded as context: this is curriculum, near transfer, not a club").
+context(m1, "for the parent's decision: a weekly mathematics lesson taught through chess in grades 1-3 is not an after-school club, and mathematics taught through chess is near transfer (objection m1)").
+withdrawn(k2, 9).
+edge[jerrim](k4, invariant_over, src_jerrim_jhr, inv_robust_design_required).
+evidence(k4, src_jerrim_jhr, "'the need for social scientists to employ robust research designs' - the invariant the authors keep over their own work, not over the influence (objection k2)"). landed(k4, 9). depth(k4, 1). classified(k4, confirmed).
+answered(k1, sense_1, 9, "true and recorded: the trial measured attainment, the asker asked about thinking abilities; the edge refutes the claim as the literature poses it, and the gap between attainment and thinking is the same gap as between chess and chess_instruction - it belongs to the alias question below").
+context(k1, "attainment, not thinking: mathematics, reading, science scores (objection k1)").
+answered(decision_chess_club_for_children, sense_1, 9, "the grade is symmetric by construction, as in rules/inquiry: contested keeps both sides visible and never weighs; weighing is the doubt layer, and after round 9 it stands as: supporting side - g1 self-qualified and answered against (g9), g6 rival, m1 near transfer by frame, r5 depth 0 and now graded out; refuting side - j1 and k1 with no standing doubt but the pupil count, g9 none. A renderer that shows the two sides with their doubts is owed").
+-- open, and said so
+context(j1, "OPEN objection (sense_1): 1,965 + 1,900 = 3,865 against 'more than 4,000' in k1. Randomised against analysed is the likely reconciliation and is not evidenced; the trial report (EEF, 403) would settle it").
+context(a9, "OPEN objection (sense_1): the alias chess -> chess_instruction was the crawler's, not the asker's, and it lets 25-30-hour curriculum studies answer a question about a club. The asker confirms it, replaces it, or the question returns to unknown").
