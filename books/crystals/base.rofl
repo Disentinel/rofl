@@ -22,3 +22,12 @@ origin(depends_on,      "skill:ontocrawler-2", table_of_questions).
 origin(held_by,         "skill:ontocrawler-2", table_of_questions).
 origin(equivalent_to,   "skill:ontocrawler-2", table_of_questions).
 origin(recorded_in,     "skill:ontocrawler-2", table_of_questions).
+
+-- A KIND IS A NAME, NOT A THING. The atoms is_a answers with (process,
+-- graph_database, normative_status) are entities so that two of them can be
+-- asserted equivalent; asking where a name leaves a trace is asking nothing.
+-- Observed on two books, 2026-09-21; declared here so the queue stops
+-- filling with it.
+expects(base, kind, describes).
+expects(base, kind, equivalent_to).
+learned_on(base, kind, 2, "grafema,parenting").

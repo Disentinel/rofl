@@ -135,19 +135,25 @@ function fillRates(r: Rofl): void {
   const shape = new Map<string, string>();
   for (const x of rows(r, 'q_shape(R, D)')) shape.set(x.bindings.R, x.bindings.D);
   const filled = new Set(rows(r, 'filled(R, X, D)').map((x) => `${x.bindings.R}|${x.bindings.X}|${x.bindings.D}`));
+  const asked = new Set(rows(r, 'asked(R, X, D, S, K)').map((x) => `${x.bindings.R}|${x.bindings.X}|${x.bindings.D}`));
+  for (const x of rows(r, 'not_found(R, X, D, S, K)')) asked.add(`${x.bindings.R}|${x.bindings.X}|${x.bindings.D}`);
   const retired = new Set(rows(r, 'retired(C, R)').map((x) => `${x.bindings.C}|${x.bindings.R}`));
   const sig = new Set(rows(r, 'signature(C, R)').map((x) => `${x.bindings.C}|${x.bindings.R}`));
+  // filled / asked, over the entities of the class that were put the question;
+  // an entity nobody asked counts for nothing either way.
   for (const [c, xs] of [...classes].sort()) {
     const cells: string[] = [];
     for (const [rel, d] of [...shape].sort()) {
-      const n = xs.filter((x) => filled.has(`${rel}|${x}|${d}`)).length;
-      const pct = Math.round((100 * n) / xs.length);
-      const mark = sig.has(`${c}|${rel}`) ? '*' : retired.has(`${c}|${rel}`) ? '-' : ' ';
-      cells.push(`${rel}${mark}${n}/${xs.length}=${pct}%`);
+      const a = xs.filter((x) => asked.has(`${rel}|${x}|${d}`) || filled.has(`${rel}|${x}|${d}`));
+      if (a.length === 0) continue;
+      const n = a.filter((x) => filled.has(`${rel}|${x}|${d}`)).length;
+      const pct = Math.round((100 * n) / a.length);
+      const mark = sig.has(`${c}|${rel}`) ? '*' : retired.has(`${c}|${rel}`) ? '-' : a.length >= 3 && pct > 70 ? '+' : a.length >= 3 && pct < 30 ? '?' : ' ';
+      cells.push(`${rel}${mark}${n}/${a.length}`);
     }
-    console.log(`${c} (n=${xs.length}): ${cells.join('  ')}`);
+    if (cells.length) console.log(`${c} (n=${xs.length}): ${cells.join('  ')}`);
   }
-  console.log('(* induced signature, - retired; rule: >70% -> signature, <30% -> retire, n>=3)');
+  console.log('(filled/asked; * signature, - retired, + would induce, ? would retire; only asked>=3 decides)');
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

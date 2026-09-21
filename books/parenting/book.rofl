@@ -237,3 +237,92 @@ edge[book](p53, describes, ethnic_racial_socialization, "Ethnic-racial socializa
 evidence(p53, src_wikipedia, "en 'Practices'"). landed(p53, 6). depth(p53, 1). classified(p53, confirmed).
 put(6, src_wikipedia, "how is parenting done, by what styles and practices? (re-read of the round-4 fetch under method)").
 asked(method, parenting, out, src_wikipedia, 6).
+
+-- ======================================================================
+-- round 7 — crawl(transforms, parenting, out): what it makes, out of what.
+-- The three sentences of round 2 each carry an io pair; read again for it.
+-- ======================================================================
+put(7, src_wikipedia, "what does parenting take in and what does it produce? (re-read of the lead sentences and 'Effects of parenting')").
+put(7, src_sep, "same, of the preamble").
+edge[book](p54, transforms, parenting, io(child, adult)).
+evidence(p54, src_wikipedia, "ru 'с целью их здорового развития во взрослой жизни'; en 'development from infancy to adulthood'"). landed(p54, 7). depth(p54, 2). classified(p54, confirmed).
+edge[book](p55, transforms, parenting, io(child, child_outcomes)).
+evidence(p55, src_wikipedia, "en 'Effects of parenting': happiness, educational success, mental health, well-being, social competence, academic performance; British Household Panel Survey, German Socio-Economic Panel, Belsky's process-of-parenting model"). landed(p55, 7). depth(p55, 1). classified(p55, confirmed).
+edge[book](p56, transforms, parenting, io(learner, self_determined_socialised_person)).
+evidence(p56, src_wikipedia, "ФЗ-273: 'развитие личности, создание условий для самоопределения и социализации обучающихся'"). landed(p56, 7). depth(p56, 1). classified(p56, confirmed).
+context(p56, "the statute's input is an обучающийся, a learner in an institution, where the encyclopedias' input is a child; the io pair carries the seam of round 2 in its first slot").
+edge[book](p57, transforms, parenting, io(child, rights_holder_with_evolving_capacities)).
+evidence(p57, src_crc, "art. 5: direction and guidance 'in a manner consistent with the evolving capacities of the child, in the exercise by the child of the rights recognized in the present Convention'"). landed(p57, 7). depth(p57, 1). classified(p57, unexpected).
+context(p57, "the Convention's output is not an adult: it is a child exercising rights, now, with guidance that shrinks as capacity grows. Four sources, four outputs, and only two of them are 'an adult'").
+asked(transforms, parenting, out, src_wikipedia, 7). asked(transforms, parenting, out, src_sep, 7). asked(transforms, parenting, out, src_crc, 7).
+not_found(transforms, parenting, out, src_sep, 7).   -- SEP's preamble defines a status, not a process; no io there
+
+-- ======================================================================
+-- round 8 — crawl(depends_on, ?, parenting): what breaks if it is removed.
+-- ======================================================================
+put(8, src_wikipedia, "what does the article say depends on parenting - what changes when it is absent or poor?").
+put(8, src_crc, "what does the Convention say the child needs parents for?").
+edge[book](p58, depends_on, child_development, parenting).
+evidence(p58, src_crc, "art. 27(2) parents have 'the primary responsibility to secure ... the conditions of living necessary for the child's development'"). evidence(p58, src_wikipedia, "en 'Effects of parenting' as above"). landed(p58, 8). depth(p58, 2). classified(p58, confirmed).
+edge[book](p59, depends_on, child_outcomes, parenting).
+evidence(p59, src_wikipedia, "en: happiness, educational success, mental health, well-being, social competence; panel surveys"). landed(p59, 8). depth(p59, 1). classified(p59, confirmed).
+edge[book](p60, depends_on, child_centred_ground, parenting).
+evidence(p60, src_sep, "child-centred accounts (Montague 2000, Gheaus 2021): the child's interest is what parenting is FOR, so it is also what fails without it - the same paragraph answered round 3 and was not written then"). landed(p60, 8). depth(p60, 1). classified(p60, confirmed).
+context(p60, "written under the round-6 rule that a round is a question, not a filter on writes: this edge was read in round 3").
+asked(depends_on, parenting, in, src_wikipedia, 8). asked(depends_on, parenting, in, src_crc, 8). asked(depends_on, parenting, in, src_sep, 8).
+not_found(depends_on, parenting, in, src_wikipedia, 8).  -- nothing on what SOCIETY loses without parenting; the article stays with the child
+
+-- ======================================================================
+-- round 9 — crawl(equivalent_to, parenting, out): who calls it otherwise.
+-- ======================================================================
+put(9, src_wikipedia, "what other words name this? (article titles, lead synonyms)").
+put(9, src_crc, "what word does the Convention use?").
+put(9, src_who_unicef_guidance, "what word does WHO use?").
+edge[book](p61, equivalent_to, parenting, vospitanie).
+evidence(p61, src_wikipedia, "ru title 'Воспитание'; the seed's own name"). landed(p61, 9). depth(p61, 1). classified(p61, confirmed).
+edge[book](p62, equivalent_to, parenting, child_rearing).
+evidence(p62, src_wikipedia, "en lead: 'Parenting or child rearing'"). landed(p62, 9). depth(p62, 1). classified(p62, confirmed).
+edge[book](p63, equivalent_to, parenting, upbringing).
+evidence(p63, src_crc, "art. 18(1) 'the upbringing and development of the child'; 'child-rearing responsibilities' in 18(2)"). landed(p63, 9). depth(p63, 1). classified(p63, confirmed).
+edge[book](p64, equivalent_to, parenting, parenthood).
+evidence(p64, src_sep, "entry title 'Parenthood and Procreation'"). landed(p64, 9). depth(p64, 1). classified(p64, confirmed).
+context(p64, "an alias that is not one: parenthood is the status (round 2, p13), parenting the activity. Kept under equivalent_to because SEP treats them as one topic; the seam is recorded on p13").
+edge[book](p65, equivalent_to, parenting, nurturing_care).
+evidence(p65, src_who_unicef_guidance, "WHO's term: 'nurturing care' - adequate nutrition and good health, safety and security, opportunities for learning from birth"). landed(p65, 9). depth(p65, 1). classified(p65, unexpected).
+context(p65, "WHO renames the thing so that health workers can hold a share of it (p32): the word is the seam between two holders, exactly the vocabulary-seam the skill says a perspective boundary shows up as").
+asked(equivalent_to, parenting, out, src_wikipedia, 9). asked(equivalent_to, parenting, out, src_crc, 9). asked(equivalent_to, parenting, out, src_who_unicef_guidance, 9). asked(equivalent_to, parenting, out, src_sep, 9).
+
+-- ======================================================================
+-- round 10 — the four axes of round 4, kindless, batched: what each axis
+-- IS, in the source's words, and where it is recorded.
+-- ======================================================================
+put(10, src_wikipedia, "what is each of the four groupings - a typology, a list, a scale? (re-read of round 4)").
+edge[book](p66, is_a, kind_by_aim, typology).
+evidence(p66, src_wikipedia, "ru: 'Виды воспитания человека' - a typology by the quality aimed at"). landed(p66, 10). depth(p66, 1). classified(p66, confirmed).
+edge[book](p67, describes, kind_by_aim, "Виды воспитания: умственное, трудовое, физическое, нравственное, духовно-нравственное, эстетическое, правовое, патриотическое, половое и полоролевое, экономическое, экологическое").
+evidence(p67, src_wikipedia, "ru section"). landed(p67, 10). depth(p67, 1). classified(p67, confirmed).
+edge[book](p68, recorded_in, kind_by_aim, src_wikipedia).
+evidence(p68, src_wikipedia, "ru only; en has no such section"). landed(p68, 10). depth(p68, 1). classified(p68, confirmed).
+edge[book](p69, is_a, styles_baumrind, typology).
+evidence(p69, src_wikipedia, "en: Baumrind's styles, a typology over responsiveness and demandingness"). landed(p69, 10). depth(p69, 1). classified(p69, confirmed).
+edge[book](p70, describes, styles_baumrind, "Diana Baumrind proposed three main styles: authoritative, authoritarian, permissive; later expanded to four (uninvolved)").
+evidence(p70, src_wikipedia, "en 'Styles'"). landed(p70, 10). depth(p70, 1). classified(p70, confirmed).
+edge[book](p71, recorded_in, styles_baumrind, src_baumrind).
+evidence(p71, src_wikipedia, "en cites Baumrind; the primary papers (1967, 1971) are reachable now and unread"). landed(p71, 10). depth(p71, 1). classified(p71, confirmed).
+edge[book](p72, is_a, practices, list).
+evidence(p72, src_wikipedia, "en 'Practices': an unordered list of eight, no criterion given for membership"). landed(p72, 10). depth(p72, 1). classified(p72, unexpected).
+context(p72, "a typology has an axis; this list has none, and the article does not say why these eight and not others. The method role now has ten members and no signature to fill; not_found below records the missing criterion").
+not_found(requires, practices, in, src_wikipedia, 10).   -- no stated criterion for what makes something a parenting practice
+edge[book](p73, describes, practices, "Parenting practices are specific behaviors that parents use to socialize their children").
+evidence(p73, src_wikipedia, "en 'Practices' lead"). landed(p73, 10). depth(p73, 1). classified(p73, confirmed).
+edge[book](p74, recorded_in, practices, src_wikipedia).
+evidence(p74, src_wikipedia, "en only"). landed(p74, 10). depth(p74, 1). classified(p74, confirmed).
+edge[book](p75, is_a, life_stages, sequence).
+evidence(p75, src_wikipedia, "en 'Across the lifespan': ordered from pre-pregnancy to adult children"). landed(p75, 10). depth(p75, 1). classified(p75, confirmed).
+edge[book](p76, describes, life_stages, "Pre-pregnancy, pregnancy and prenatal parenting, newborns and infants, toddlers, child, adolescents, adults").
+evidence(p76, src_wikipedia, "en section headings"). landed(p76, 10). depth(p76, 1). classified(p76, confirmed).
+edge[book](p77, recorded_in, life_stages, src_wikipedia).
+evidence(p77, src_wikipedia, "en only"). landed(p77, 10). depth(p77, 1). classified(p77, confirmed).
+asked(is_a, kind_by_aim, out, src_wikipedia, 10). asked(is_a, styles_baumrind, out, src_wikipedia, 10). asked(is_a, practices, out, src_wikipedia, 10). asked(is_a, life_stages, out, src_wikipedia, 10).
+asked(recorded_in, kind_by_aim, out, src_wikipedia, 10). asked(recorded_in, styles_baumrind, out, src_wikipedia, 10). asked(recorded_in, practices, out, src_wikipedia, 10). asked(recorded_in, life_stages, out, src_wikipedia, 10).
+asked(describes, kind_by_aim, out, src_wikipedia, 10). asked(describes, styles_baumrind, out, src_wikipedia, 10). asked(describes, practices, out, src_wikipedia, 10). asked(describes, life_stages, out, src_wikipedia, 10).
