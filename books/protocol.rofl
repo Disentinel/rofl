@@ -1,10 +1,16 @@
--- books/protocol.rofl — the question protocol as rules over facts.
+-- books/protocol.rofl — THE question protocol, as rules over facts.
 --
--- question-protocol.md, written for this kernel. Two adaptations, both forced
--- by what ROFL v1 is: there is no aggregation, so every `count{}` became a
--- witness of distinct rows; and a rule cannot quantify over relation NAMES, so
--- every edge the crawler writes is reified as edge[Volume](Id, R, X, Y), and
--- R(X, ?) is `edge_any(_, R, X, _)`. Everything else is the protocol verbatim.
+-- This file supersedes the sketch it was translated from (question-protocol
+-- .md, 2026-09-18): the sketch is retired, not kept beside this, because two
+-- texts of one protocol drift the way a README and a manifest do. Two things
+-- the kernel forced on the translation: there is no aggregation, so every
+-- `count{}` is a witness of distinct rows; and a rule cannot quantify over
+-- relation NAMES, so every edge is reified as edge[Volume](Id, R, X, Y) and
+-- R(X, ?) is `edge_any(_, R, X, _)`. Everything the sketch did not have -
+-- roles, put, not_found, reachable, volumes per holder, intents, the owner's
+-- questions as audits - entered by a round that needed it and is dated where
+-- it stands. The discipline is skills/ontocrawler-2/SKILL.md; the vocabulary
+-- is books/crystals/; a book is books/<name>/.
 --
 -- Volumes are perspectives: [book] is the seed's volume (the crawler writes
 -- there), [canon] is the curated canon its author wrote, and a holder gets a
