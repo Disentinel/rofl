@@ -59,6 +59,7 @@ someone (`asked_on_behalf_of`) is provenance, or `held_by(task, ?)` names the co
 | what does the source SAY X is?            | `describes(X, "…")`            | kindless; the answer is a quote |
 | what is X made of?                        | `decomposes_into(X, ?)`        | |
 | what does X make, out of what?            | `transforms(X, io(In, Out))`   | two slots, one edge |
+| what does X provide to whoever uses it?   | `offers(X, ?)`                 | a verb, not a product notion |
 | why does X exist?                         | `requires(?, X)`               | |
 | what breaks if X is removed?              | `depends_on(?, X)`             | |
 | who pays when X breaks?                   | `held_by(X, ?)`                | |
@@ -138,10 +139,13 @@ sentence of the primary source ("turns your codebase into a queryable graph") wa
 round 1 and had nowhere to go for thirteen rounds. Expect the human to supply archetypes;
 record each with `origin(R, Session, Finding)`.
 
-**The test of an archetype on a new domain is not its fill rate but the distance between the
-question as written and the question as put.** `offers` (a product's capabilities) filled on
-a practice — as "what does care provide" — and the fill rate said "universal" while the
-`put` row said "bent". Read `put` before promoting a line.
+**An archetype is a verb with its slots, never a gloss.** `offers` was spawned on a product
+as "ships capabilities", filled on a practice ("care provides five components") and on a game
+("a rating, a title, a ladder"), and the executor read each fill as the archetype bending. It
+was the gloss bending; the verb — X provides Y to whoever uses X — was the same in all three,
+and three domains under one sense is what universal looks like. Record the verb; measure a
+`put` against the verb, not against the first book's phrasing of it; and when a line fills on
+a new domain under the same verb, promote it.
 
 ## Crystals — vocabulary as the residue of past crawls
 

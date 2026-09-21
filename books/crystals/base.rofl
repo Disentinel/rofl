@@ -15,6 +15,7 @@ archetype(held_by).           q_shape(held_by, out).           -- who pays when 
 archetype(equivalent_to).     q_shape(equivalent_to, out).     -- who calls X something else?
 archetype(recorded_in).       q_shape(recorded_in, out).       -- where does X leave a trace?
 kindless(recorded_in).                                         -- sources unfold first
+archetype(offers).            q_shape(offers, out).            -- what does X provide to whoever uses it?
 archetype(invariant_over).    q_shape(invariant_over, out).    -- who objects if X changes: what must stay true about X
 
 origin(decomposes_into, "skill:ontocrawler-2", table_of_questions).
@@ -24,6 +25,15 @@ origin(held_by,         "skill:ontocrawler-2", table_of_questions).
 origin(equivalent_to,   "skill:ontocrawler-2", table_of_questions).
 origin(recorded_in,     "skill:ontocrawler-2", table_of_questions).
 origin(invariant_over,  "skill:ontocrawler-2", table_of_questions).
+origin(offers,          "session:2026-09-21-chess", the_verb_not_the_gloss).
+-- offers: X provides Y to whoever uses X. Spawned in the product book with
+-- a product gloss ('ships capabilities'), then filled on a practice (care
+-- provides five components) and on a game (a rating, a title, a ladder).
+-- The executor read each of those as the archetype bending; the owner read
+-- them as the verb being a verb. Three domains, one sense: base. What was
+-- bent was the gloss, and a gloss is the executor's, never the relation's -
+-- so an archetype is recorded here as its verb and its slots, and a put is
+-- measured against the verb.
 -- invariant_over was in the table from the start and was dropped in round 0
 -- of the first book as 'not a separate question'. Restored 2026-09-21 after
 -- eleven rounds of a second book produced holders with empty invariant sets:
