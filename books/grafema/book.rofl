@@ -1107,7 +1107,7 @@ evidence(e214, src_site, "grafema.dev: GitHub, docs at grafema.dev/docs, atlas.g
 guessed(src_atlas_site, source).
 edge[book](e215, recorded_in, hex_atlas, src_atlas_site).
 evidence(e215, src_site, "grafema.dev links 'Atlas (visual interface)' at atlas.grafema.dev: the hex map is hosted, not only a package"). landed(e215, 19). depth(e215, 1). classified(e215, serendipitous).
-context(e214, "the site's claims against the book: '11 first-class + 4 alpha' languages with Ruby and C first-class, where README has C/C++ Beta and KNOWN_LIMITATIONS has Ruby Alpha; '30+ MCP tools' where README also says 40+; '~25 seconds to index a 500-file repository' matches the canon's 509 files / 25 s; '+10 percentage point on architecture questions' is the canon's defensible per-category claim, stated as the headline");
+context(e214, "the site's claims against the book: '11 first-class + 4 alpha' languages with Ruby and C first-class, where README has C/C++ Beta and KNOWN_LIMITATIONS has Ruby Alpha; '30+ MCP tools' where README also says 40+; '~25 seconds to index a 500-file repository' matches the canon's 509 files / 25 s; '+10 percentage point on architecture questions' is the canon's defensible per-category claim, stated as the headline").
 asked(recorded_in, grafema, out, src_site, 19). asked(supersedes, grafema, in, src_site, 19). asked(describes, grafema, out, src_site, 19).
 -- zenodo.org/api/records: a title search finds both papers the canon says
 -- exist without DOIs; a creators.name search does not (16 other Reshetnikovs).
@@ -1116,7 +1116,7 @@ edge[book](e216, recorded_in, grafema, src_zenodo).
 evidence(e216, src_zenodo, "10.5281/zenodo.18247579 'Graph-Driven Development: Reducing Cognitive Load in Large Evolving Systems Through Externalized Understanding', preprint, 2026-01-14, Vadim Reshetnikov; 10.5281/zenodo.18888273 'Beyond Code: The Sociotechnical Context Graph as Necessary Infrastructure for AI-Assisted Software Development', preprint, 2026-03-06"). landed(e216, 19). depth(e216, 2). classified(e216, confirmed).
 edge[book](e217, recorded_in, paper_beyond_code, src_zenodo).
 evidence(e217, src_zenodo, "DOI 10.5281/zenodo.18888273, 2026-03-06"). landed(e217, 19). depth(e217, 2). classified(e217, confirmed).
-context(e217, "closes the round-3 lead: the title the knowledge dir cited (kb:fact:twelve-projection-ontology) is a Zenodo preprint")
+context(e217, "closes the round-3 lead: the title the knowledge dir cited (kb:fact:twelve-projection-ontology) is a Zenodo preprint").
 edge[book](e218, describes, paper_beyond_code, "a sociotechnical context graph with nodes representing people, decisions, and incidents alongside code is essential for effective AI-assisted development, extending Graph-Driven Development methodology to system-level context").
 evidence(e218, src_zenodo, "record description, 10.5281/zenodo.18888273"). landed(e218, 19). depth(e218, 1). classified(e218, confirmed).
 edge[book](e219, recorded_in, paper_gdd, src_zenodo).
