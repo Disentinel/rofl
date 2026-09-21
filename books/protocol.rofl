@@ -255,6 +255,69 @@ rival_holder(Id, H2)      :- suspected_self_serving(Id, S, H), edge_any(Id, held
                              edge_any(J, held_by, X, H2), H2 != H, evidence(J, S2, _), not held_source(S2, H).
 self_serving(Id, S, H)    :- suspected_self_serving(Id, S, H), not independent_evidence(Id), rival_holder(Id, _).
 
+-- ------------------------------------------------ doubt: derived, discharged, accepted
+-- A doubt is a shape in the provenance of an edge a DECISION rests on, and
+-- each shape names what would discharge it. The claim's own grade is the
+-- inquiry kernel's four rules (rules/inquiry/epistemic.rofl), restated over
+-- the book's edges: supports/refutes are polarities an edge carries toward
+-- a claim. A doubt nobody discharged is accepted by name, in the asker's
+-- volume, or the decision stays conditional.
+edb(supports).          -- supports(Id, Claim)
+edb(refutes).           -- refutes(Id, Claim)
+edb(qualifies).         -- qualifies(Id2, Id)             the source of Id gave Id2 as a caveat about it
+edb(bent).              -- bent(Round, Source)            the executor bent the question to get an answer
+edb(accepted_doubt).    -- accepted_doubt(Id, Kind, Who, Round)
+edb(discharges).        -- discharges(Kind, "what settles it")
+
+discharges(depth_zero,     "any source at all").
+discharges(single_source,  "a second source not held by the same holder").
+discharges(self_serving,   "a book the holder does not hold, saying the same").
+discharges(concentration,  "a rebuttal, or a replication by another holder").
+discharges(self_qualified, "the design the caveat asks for").
+discharges(rival,          "a third book, put the same question").
+discharges(bent_put,       "an answer to the question as written").
+discharges(stale,          "the same question, asked again").
+
+claim(C)                  :- supports(_, C).
+claim(C)                  :- refutes(_, C).
+supported(C)              :- supports(Id, C), not stale(Id).
+refuted(C)                :- refutes(Id, C), not stale(Id).
+contested(C)              :- supported(C), refuted(C).
+unknown_claim(C)          :- claim(C), not supported(C), not refuted(C).
+
+decision(Dec)             :- edge_any(_, depends_on, Dec, Q), question(Q, _, _).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, out), edge_any(Id, R, X, _).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, in), edge_any(Id, R, _, X).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), edge_any(Id, _, E, _).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), supports(Id, E).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), refutes(Id, E).
+
+source_holder(Id, H)      :- evidence(Id, S, _), held_source(S, H).
+second_source(Id)         :- evidence(Id, S1, _), evidence(Id, S2, _), S1 != S2.
+claim_of(Id, C)           :- supports(Id, C).
+claim_of(Id, C)           :- refutes(Id, C).
+holder_on(C, H)           :- claim_of(Id, C), source_holder(Id, H), depth(Id, D), D > 0.
+second_holder(C)          :- holder_on(C, H1), holder_on(C, H2), H1 != H2.
+rival_value(Id)           :- edge_any(Id, R, X, Y), edge_any(J, R, X, Y2), Y != Y2, in_volume(Id, V1), in_volume(J, V2), V1 != V2,
+                             not quote_valued(R).   -- two sentences are not two values
+rival_value(Id)           :- edge_any(Id, R, X, _), q_shape(R, out), not_found(R, X, out, S, _), not evidence(Id, S, _).
+rival_value(Id)           :- edge_any(Id, R, _, X), q_shape(R, in), not_found(R, X, in, S, _), not evidence(Id, S, _).
+
+doubt(Id, depth_zero)     :- rests_on(_, Id), depth(Id, 0).
+doubt(Id, single_source)  :- rests_on(_, Id), depth(Id, 1), not second_source(Id).
+doubt(Id, self_serving)   :- rests_on(_, Id), suspected_self_serving(Id, _, _).
+doubt(Id, self_qualified) :- rests_on(_, Id), qualifies(_, Id).
+doubt(Id, rival)          :- rests_on(_, Id), rival_value(Id).
+doubt(Id, bent_put)       :- rests_on(_, Id), landed(Id, K), evidence(Id, S, _), bent(K, S).
+doubt(Id, stale)          :- rests_on(_, Id), stale(Id).
+doubt(Id, concentration)  :- rests_on(_, Id), claim_of(Id, C), not second_holder(C).
+
+standing(Id, K)           :- doubt(Id, K), not accepted_doubt(Id, K, _, _).
+conditional(Dec)          :- rests_on(Dec, Id), standing(Id, _).
+clear(Dec)                :- decision(Dec), not conditional(Dec).
+idle_acceptance[audit](Id, K) :- accepted_doubt(Id, K, _, _), not doubt(Id, K).
+alarm(idle_acceptance).
+
 -- ------------------------------------------------ loop 2: schema as data
 signature(C, R)           :- signature_at(C, R, _, _, _).
 incomplete(E, R)          :- class(E, C), signature(C, R), q_shape(R, D), not filled(R, E, D).
