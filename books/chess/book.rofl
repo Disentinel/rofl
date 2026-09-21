@@ -681,3 +681,21 @@ not_found(depends_on, chess, in, src_sala_gobet, 3).       -- under the asker's 
 -- both spoke in objections; neither checked an edge, so neither echoed.
 -- @who ontocrawler_2
 verifier(sense_1, 9). verifier(sense_2, 10).
+
+-- ======================================================================
+-- round 12 — the apparatus changed under the book (2026-09-21): a decision
+-- names its claim, a premise is resolved by a source, a question is asked
+-- in a role. Written back: what each decision decides on, the role each
+-- question wore, the role a value was said in. And one gloss of the
+-- crawler's withdrawn: the asker objected to it.
+-- ======================================================================
+-- @who ontocrawler_2
+decides_on(decision_chess_club_for_children, influence_of_chess_on_thinking).
+grounded_outside(decision_skill_defects, "facts/findings.rofl - the ledger of method findings; no claim in this book is its ground").
+asks_as(q_chess, skill_owner).            -- answer 1: 'проверить метод на себе ещё раз'
+asks_as(q_chess_cognition, parent).       -- answer 2: 'решу стоит ли детей на кружок вести'
+in_role(a16, skill_owner).                -- answer 4 is about the skill's run, not the child
+-- @who vadim
+objection(a14, vadim, frame, "кристалл это стабильная структура отношений вокруг объекта, которая изоморфна в различных доменах знания; не книга и не пакет словаря").
+-- @who ontocrawler_2
+answered(a14, vadim, 12, "the context row that read 'кристалл' as the book of chess was the crawler's gloss and is withdrawn as such; the edge stands as the asker's words, and what a crystal is belongs to the asker's definition above, not to a context row").

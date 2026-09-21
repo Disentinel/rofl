@@ -103,6 +103,18 @@ role(V, variant)          :- edge_any(_, variant_of, V, _).
 role(I, material)         :- consumes(_, I).
 role(O, product)          :- produces(_, O).
 role(A, asker)            :- question_ext(_, A, _).
+-- the asker is one person in several roles (owner, parent, researcher);
+-- a question is asked in one of them, and a value is held in one of them.
+-- The roles are his is_a edges; which one a question wears, he says.
+edb(asks_as).           -- asks_as(Q, Role)
+edb(in_role).           -- in_role(Id, Role)   the role in which a values edge was said
+asker_role(A, R)          :- role(A, asker), edge_any(_, is_a, A, R).
+many_roles(A)             :- asker_role(A, R1), asker_role(A, R2), R1 != R2.
+asks_as_unknown[audit](Q, R)    :- asks_as(Q, R), question_ext(Q, A, _), not asker_role(A, R).
+question_without_role[audit](Q) :- question_ext(Q, A, _), many_roles(A), not asks_as(Q, _).
+values_without_role[audit](Id)  :- edge_any(Id, values, A, _), many_roles(A), not in_role(Id, _).
+values_as(R, V)           :- edge_any(Id, values, _, V), in_role(Id, R).
+alarm(asks_as_unknown). alarm(question_without_role). alarm(values_without_role).
 kinded(X)                 :- edge_any(_, is_a, X, _).
 class(X, C)               :- role(X, C).
 class(X, C)               :- edge_any(_, is_a, X, C).
@@ -133,8 +145,15 @@ question(gen(E, R), crawler, T) :- needs(gen(E, R), R, E, _), entered(E, T).
 question(Q, A, T)         :- question_ext(Q, A, T).
 
 -- ------------------------------------------------ 1. resolve or rewrite
-resolved(Q, E)            :- premise(Q, E), entity(E).
-resolved(Q, E)            :- premise(Q, E), question(Q, A, _), alias(A, E, E2), entity(E2).
+-- a premise is resolved when a SOURCE names it, not when the question does:
+-- entity(E) held from the question itself, so no premise could ever fail
+-- (round 12). The asker's own answers do not count; the crawler's do not
+-- exist as a source.
+resolved(Q, E)            :- premise(Q, E), named_by_source(E).
+resolved(Q, E)            :- premise(Q, E), question(Q, A, _), alias(A, E, E2), named_by_source(E2).
+named_by_source(E)        :- edge_any(Id, _, E, _), evidence(Id, S, _), not asker_source(S).
+named_by_source(E)        :- edge_any(Id, R, _, E), evidence(Id, S, _), not asker_source(S), not quote_valued(R), not pair_valued(R).
+asker_source(src_holder_session).
 unresolved(Q, E)          :- premise(Q, E), not resolved(Q, E).
 believes(A, E)            :- unresolved(Q, E), question(Q, A, _).
 
@@ -326,12 +345,20 @@ contested(C)              :- supported(C), refuted(C).
 unknown_claim(C)          :- claim(C), not supported(C), not refuted(C).
 
 decision(Dec)             :- edge_any(_, depends_on, Dec, Q), question(Q, _, _).
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, out), edge_any(Id, R, X, _).
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs(Q, R, X, in), edge_any(Id, R, _, X).
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), edge_any(Id, R, E, _), not bookkeeping(R).
+-- A decision rests on the claim it names, not on the premise of the question
+-- it waits for: through the premise, a decision about skill defects rested
+-- on 48 edges about what chess transforms (round 12). What the decision is
+-- about is the asker's to say; a decision grounded outside the book says
+-- where.
+edb(decides_on).        -- decides_on(Dec, Claim)
+edb(grounded_outside).  -- grounded_outside(Dec, "where")
+rests_on(Dec, Id)         :- decides_on(Dec, C), claim_of(Id, C).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs_ext(Q, R, X, out), edge_any(Id, R, X, _), polarised(Id).
+rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), needs_ext(Q, R, X, in), edge_any(Id, R, _, X), polarised(Id).
+polarised(Id)             :- claim_of(Id, _).
 bookkeeping(recorded_in).   -- where a thing is recorded says nothing for or against it (objection n20, sense_1, round 9)
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), supports(Id, E).
-rests_on(Dec, Id)         :- decision(Dec), edge_any(_, depends_on, Dec, Q), premise(Q, E), refutes(Id, E).
+decision_without_claim[audit](Dec) :- decision(Dec), not decides_on(Dec, _), not grounded_outside(Dec, _).
+alarm(decision_without_claim).
 
 source_holder(Id, H)      :- evidence(Id, S, _), held_source(S, H).
 second_source(Id)         :- evidence(Id, S1, _), evidence(Id, S2, _), S1 != S2.

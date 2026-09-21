@@ -74,6 +74,7 @@ function audits(r: Rofl): void {
     'edge_without_round[audit](I)', 'edge_without_depth[audit](I)', 'retired_but_filled[audit](C, R)',
     'archetype_without_origin[audit](R)', 'seed_without_sentence[audit](X)', 'holder_without_invariant[audit](H)', 'asker_without_put[audit](A)', 'asked_without_result[audit](R, X, D, S, K)',
     'echo[audit](I, W)', 'mute_pass[audit](W, K)', 'brought_without_evidence[audit](I, W, S)',
+    'decision_without_claim[audit](D)', 'asks_as_unknown[audit](Q, R)', 'question_without_role[audit](Q)', 'values_without_role[audit](I)',
   ];
   for (const g of gates) {
     const rs = rows(r, g);
