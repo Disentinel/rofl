@@ -89,5 +89,16 @@ books as blocks that set where a rule writes and reads, definition before use
 as a checked rule, the lint loop that asks for a name, maps that desugar to
 tables, and a fixpoint underneath with `why` for free.
 
+A carrier for the form was tried after the rewrites: a strict CommonMark
+subset, where headings are blocks, a paragraph is a rule, `-` and `1.` are
+the two lists, a table is a map, `*hole*` is a hole and `>` is narrative,
+read by a reader that refuses every line outside the subset in place and
+paints the words by what the file declares
+(f_markdown_carries_the_sentence_form_when_the_lead_decides_the_bullet). It
+costs no new tokenizer, the file is readable unpainted, and the one thing a
+stock Markdown renderer cannot do, tell a predicate bullet from a condition
+bullet, the reader does from the lead. Whether a bullet is a condition or
+another rule of its lead is the open decision.
+
 Evidence: the rewrites of the household week, `safety.rofl`, the inquiry
 kernel and `rules/js-dataflow.rofl`, linked from the findings above.

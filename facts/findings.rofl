@@ -7,8 +7,14 @@
 -- Recorded 2026-09-22 by the sentence-form session: four ROFL files rewritten
 -- as English sentences that desugar one-to-one into rules, a census of the
 -- corpus for the repetition that form removes, and a linter for it written as
--- rules. All six are open on purpose: two demand a decision on the language,
+-- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
+
+finding(f_markdown_carries_the_sentence_form_when_the_lead_decides_the_bullet, insight).
+recorded(f_markdown_carries_the_sentence_form_when_the_lead_decides_the_bullet, "2026-09-22").
+demands(f_markdown_carries_the_sentence_form_when_the_lead_decides_the_bullet, decision).
+finding_note(f_markdown_carries_the_sentence_form_when_the_lead_decides_the_bullet,
+  "The inquiry kernel was typed as a strict CommonMark subset and rendered by a reader that still paints the words: headings are blocks (`## In the verdicts` a book, `## Where ...` a shared premise), a paragraph is a rule, `-` items are conditions or predicates, `1.` items are alternatives, a table is a map or a case table, `*hole*` is a phrase hole, a backtick is a name, `>` is narrative the machine never reads, and the front matter declares the books. STRICT MEANS NOTHING IS SKIPPED: seven lines outside the subset (`**`, `< >`, an undeclared hole, a lead ending in `:` with no table, a numbered item not starting with if or unless, a fourth heading level, a list with no lead) are shown in place with the reason, not dropped. TWO CONVENTIONS FOR THE BULLET WERE WRITTEN OUT IN FULL AND MEASURED on the rules section (previous sentence form 44 lines, 652 words): B, a bullet is another rule of the lead above it and conditions stay inline, 56 lines and 629 words; A, a bullet is a condition and every rule with two or more conditions is an `if all of:` list, 85 lines and 674 words. A doubles the vertical size for a file whose longest rule has four conditions, and it cannot keep subject blocks, so every subject is repeated. WHAT SETTLED: the meaning of a bullet is set by its lead, exactly as in prose, and the reader checks that the lead is one of three things (a heading, a bare subject, `all of:`) or refuses the list; the renderer can then draw predicates with a dash and conditions with a dot, which is the distinction a plain Markdown renderer cannot make and the reason the reader is ours and not a stock one. WHAT DEFINITION BEFORE USE CAUGHT, AGAIN: painting only what the file declares showed the previous rewrite using four terms (agent, kind, score, status) and four names (the statuses) it never declared; a hardcoded highlighter had hidden that. OPEN, for Vadim: A or B, or A above a width, which is a formatter's decision and not the writer's; and whether a subject block may hold an `either:`, which nests a numbered list under a dashed one. Page: https://claude.ai/artifact/Xq62jjySX1JxNRSSUeRezY").
 
 finding(f_count_is_a_kernel_change_and_the_witness_is_the_set, decision).
 recorded(f_count_is_a_kernel_change_and_the_witness_is_the_set, "2026-09-22").
