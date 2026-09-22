@@ -1,0 +1,157 @@
+-- js-phrases.rofl — the phrase of every JS-model relation that has one, and
+-- the noun of every node kind that has one. Read by `rofl-render`, which
+-- parses and never evaluates; loaded by nothing else. A hole is `<noun>` in
+-- argument order or `<i:noun>` for argument i; `<i=0>` and `<i=_>` pick a
+-- template by the shape of the call and render nothing.
+edb(phrase).
+edb(kind_noun).
+
+-- what the scanner seeds, in the code
+phrase(ast_node, "<node> is of kind <kind> in file <file> at line <line>").
+phrase(ast_node, "<0:node> is of kind <1:kind> <2=_> <3=_>").
+phrase(ast_node, "<0:node> is of kind <1:kind> in file <2:file> <3=_>").
+phrase(ast_child, "the <1:child> of <0:node> is <3:node> <2=0>").
+phrase(ast_child, "<3:node> is among the <1:child> of <0:node> <2=_>").
+phrase(ast_child, "<3:node> is the <2:index>-th of the <1:child> of <0:node>").
+phrase(ast_attr, "the attribute <1:attribute> of <0:node> is <2:literal>").
+phrase(ast_name, "<node> is named <name>").
+phrase(ast_value, "<node> is written as <text>").
+phrase(ast_within, "<node> is within <node>").
+phrase(ast_in, "<node> is in file <file>").
+phrase(key_name, "<node> spells <key>").
+phrase(ident_in, "<node> is an identifier that reads <name> in file <file>").
+
+-- the value layer
+phrase(may_be_node, "<node> may be the node <node>").
+phrase(may_be_lit, "<node> may be the literal <literal>").
+phrase(binder, "<declarator> binds <name> to <node> in file <file>").
+phrase(assigns, "<name> is assigned <node> in file <file>").
+phrase(sees_binder, "<node> sees <declarator>").
+phrase(decl_binds, "<declarator> binds <name>").
+phrase(decl_reads, "<declarator> reads <name>").
+phrase(lexical_decl, "<declaration> is lexical").
+phrase(plain_assign, "<assignment> is plain").
+phrase(destructures, "<declarator> destructures <name> from the key <key> in file <file>").
+phrase(destructures_at, "<declarator> destructures <name> at index <index> in file <file>").
+phrase(rest_binds, "<0:declarator> binds <2:name> through the rest <1:node> in file <3:file>").
+phrase(param_default, "<function> defaults <name> to <node>").
+phrase(param_use, "<function> uses <name> at <node>").
+phrase(member_value, "the member <1:key> of <0:node> holds <2:node>").
+phrase(class_member_static, "the static member <1:key> of <0:class> is <2:node>").
+phrase(class_member_proto, "the instance member <1:key> of <0:class> is <2:node>").
+phrase(member_plain, "the plain member <1:key> of <0:node> is <2:node>").
+phrase(obj_like, "<node> is object-like").
+phrase(own_key, "<class> owns the key <key>").
+phrase(selects, "<member access> selects <key>").
+phrase(member_node_v, "<node> is a member access").
+phrase(class_receiver, "<node> denotes a class").
+phrase(field_of, "<0:class> has the field <1:key> at <2:node> holding <3:node>").
+phrase(inherited_field, "<0:class> inherits the field <1:key> at <2:node> holding <3:node>").
+phrase(private_key, "<node> is the private name <name>").
+phrase(private_member, "<0:class> has the private member <1:name> at <2:node>").
+phrase(private_ref, "<node> reads the private name <name>").
+phrase(private_inner, "<node> is shadowed inside <class>").
+phrase(private_binds, "<node> binds to the private member <node>").
+phrase(class_method_of, "<class> has the method <method>").
+phrase(class_field_this, "<class> has the field site <node>").
+phrase(static_block_of, "<class> has the static block <node>").
+phrase(obj_method_of, "<object literal> has the method <method>").
+phrase(class_named, "<class> is named <name> in file <file>").
+phrase(super_of, "the super of <class> is <class>").
+phrase(seq_later, "<sequence> has an element after the <index>-th").
+phrase(decorated_by, "<node> is replaced by its decorator with <node>").
+phrase(decorated_member, "the decorated method <1:key> of <0:class> at <2:method> is replaced with <3:node>").
+phrase(module_source, "<node> names the module <text> in file <file>").
+phrase(imports_name, "<name> imports <name> from <text> in file <file>").
+phrase(imports_ns, "<name> imports the namespace of <text> in file <file>").
+phrase(imports_default, "<name> imports the default of <text> in file <file>").
+phrase(import_target, "the module <text> is the file <file>").
+phrase(module_object, "<node> is the module object of <file>").
+phrase(caught_value, "<node> catches <node>").
+phrase(catch_of, "the catch of <try> is <catch>").
+phrase(catch_param, "the param of <catch> is <node>").
+phrase(try_block, "the block of <try> is <node>").
+phrase(thrown_in, "<try> throws <node>").
+phrase(call_in_try, "<try> calls").
+phrase(catch_from_call, "<node> catches from a call").
+phrase(catch_from_host, "<node> catches from the host").
+phrase(catch_unsourced, "<node> catches from nowhere").
+phrase(for_of_src, "<for-of> iterates <node>").
+phrase(iter_elem, "an element of <node> is <node>").
+phrase(next_send, "<node> is sent <node> by next").
+phrase(nearest_v, "<function> is the nearest function around <node>").
+phrase(this_binder, "<node> binds this").
+phrase(returns, "<function> returns <node>").
+phrase(yields, "<function> yields <node>").
+phrase(this_host, "<node> hosts <this>").
+phrase(resolves, "<call> resolves to <function>").
+phrase(arg_at, "the <1:index>-th argument of <0:call> is <2:node>").
+phrase(decorates, "<node> is decorated by <node>").
+
+-- nouns for node kinds, and for the fact sets that name a family of kinds
+kind_noun(identifier, "identifier").
+kind_noun(variable_declarator, "declarator").
+kind_noun(variable_declaration, "declaration").
+kind_noun(template_literal, "template").
+kind_noun(object_expression, "object literal").
+kind_noun(array_expression, "array literal").
+kind_noun(class_declaration, "class").
+kind_noun(class_expression, "class").
+kind_noun(function_declaration, "function").
+kind_noun(function_expression, "function").
+kind_noun(arrow_function_expression, "function").
+kind_noun(object_method, "object method").
+kind_noun(class_method, "method").
+kind_noun(class_private_method, "private method").
+kind_noun(class_private_property, "private field").
+kind_noun(class_property, "field").
+kind_noun(class_accessor_property, "field").
+kind_noun(call_expression, "call").
+kind_noun(optional_call_expression, "call").
+kind_noun(new_expression, "new").
+kind_noun(member_expression, "member access").
+kind_noun(optional_member_expression, "member access").
+kind_noun(assignment_expression, "assignment").
+kind_noun(sequence_expression, "sequence").
+kind_noun(conditional_expression, "conditional").
+kind_noun(logical_expression, "logical").
+kind_noun(await_expression, "await").
+kind_noun(yield_expression, "yield").
+kind_noun(static_block, "static block").
+kind_noun(this_expression, "this").
+kind_noun(super, "super").
+kind_noun(try_statement, "try").
+kind_noun(catch_clause, "catch").
+kind_noun(for_of_statement, "for-of").
+kind_noun(import_declaration, "import").
+kind_noun(export_named_declaration, "named export").
+kind_noun(export_all_declaration, "export-all").
+kind_noun(program, "program").
+kind_noun(spread_element, "spread").
+kind_noun(rest_element, "rest").
+kind_noun(block_statement, "block").
+kind_noun(for_statement, "for").
+kind_noun(return_statement, "return").
+kind_noun(throw_statement, "throw").
+kind_noun(parenthesized_expression, "wrapper").
+kind_noun(tsas_expression, "wrapper").
+kind_noun(tsnon_null_expression, "wrapper").
+kind_noun(string_literal, "literal").
+kind_noun(numeric_literal, "literal").
+kind_noun(boolean_literal, "literal").
+kind_noun(big_int_literal, "literal").
+kind_noun(object_property, "property").
+kind_noun(object_pattern, "object pattern").
+kind_noun(array_pattern, "array pattern").
+kind_noun(private_name, "private name").
+kind_noun(decorator, "decorator").
+kind_noun(value_transparent, "wrapper").
+kind_noun(literal_kind, "literal").
+kind_noun(node_value_kind, "value site").
+kind_noun(member_kind_v, "member access").
+kind_noun(class_field_kind, "field").
+kind_noun(private_member_kind, "private member").
+kind_noun(this_binds_kind, "this-binder").
+kind_noun(fn_kind_v, "function").
+kind_noun(block_scope_kind, "block scope").
+kind_noun(call_like_v, "call").
