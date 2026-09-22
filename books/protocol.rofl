@@ -433,7 +433,8 @@ archetype_without_origin[audit](R) :- archetype(R), not origin(R, _, _).
 -- every book on every evaluation.
 seed_without_sentence[audit](X)  :- seed(X), not has_sentence(X).           -- "what IS it?"
 has_sentence(X)                  :- edge_any(_, describes, X, _).
-holder_without_invariant[audit](H) :- role(H, holder), not keeps(H, _).      -- "aspects, not nuances"
+holder_without_invariant[audit](H) :- role(H, holder), not keeps(H, _), not invariant_searched(H).   -- "aspects, not nuances"
+invariant_searched(H)            :- edge_any(_, held_by, S, H), not_found(invariant_over, S, out, _, _).   -- asked of the holder's own text and not there: a silence written down, not a gap
 keeps(H, I)                      :- edge_any(_, held_by, I, H), role(I, invariant).
 alarm(no_state).
 alarm(guessed_forbidden).
