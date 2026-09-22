@@ -607,6 +607,7 @@ fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mut out_dir: Option<String> = None;
     if let Some(i) = args.iter().position(|a| a == "--out") { args.remove(i); out_dir = Some(args.remove(i)); }
+    let facts_mode = if let Some(i) = args.iter().position(|a| a == "--facts") { args.remove(i); true } else { false };
     if args.is_empty() { eprintln!("usage: rofl-render [--out DIR] FILE..."); std::process::exit(2); }
 
     let mut h = Heap::default();
@@ -624,6 +625,8 @@ fn main() {
         let segs = segment(&mut h, &src, &mut trailing);
         docs.push(FileDoc { stem, segs, trailing });
     }
+
+    if facts_mode { dump_facts(&h, &docs); return; }
 
     let mut phrases: HashMap<Sym, Vec<Phrase>> = HashMap::new();
     let mut kind_nouns: HashMap<Sym, String> = HashMap::new();
@@ -680,4 +683,41 @@ fn main() {
     let _ = writeln!(index, "\n{} heads without a phrase across these files.\n", total_pos.len());
     for p in &bad_phrases { eprintln!("bad phrase: {p}"); }
     if let Some(d) = &out_dir { std::fs::write(format!("{d}/index.md"), index).expect("write"); }
+}
+
+/// `--facts`: the parsed program as facts, one clause id per clause, slot 0 the
+/// head, slots 1.. the body in order. Variables are strings, atoms atoms.
+fn dump_facts(h: &Heap, docs: &[FileDoc]) {
+    let mut out = String::from("edb(clause). edb(head). edb(lit). edb(bi). edb(argv). edb(arga). edb(args). edb(argn).\n");
+    let mut n = 0usize;
+    let term = |out: &mut String, r: usize, k: usize, i: usize, t: Term| {
+        match t.kind() {
+            TermK::Var(v) => { let _ = writeln!(out, "argv(r{r}, {k}, {i}, {:?}).", h.name(v)); }
+            TermK::Atom(a) => { let _ = writeln!(out, "arga(r{r}, {k}, {i}, {}).", h.name(a)); }
+            TermK::Str(s) => { let _ = writeln!(out, "args(r{r}, {k}, {i}, {:?}).", h.name(s)); }
+            TermK::Int(v) => { let _ = writeln!(out, "argn(r{r}, {k}, {i}, {v})."); }
+            TermK::Func(_) => { let _ = writeln!(out, "args(r{r}, {k}, {i}, {:?}).", h.canon(t)); }
+        }
+    };
+    for doc in docs {
+        for seg in &doc.segs {
+            if let Seg::Code(cs) = seg {
+                for c in cs {
+                    n += 1;
+                    let _ = writeln!(out, "clause(r{n}, {:?}).", doc.stem);
+                    let _ = writeln!(out, "head(r{n}, {}).", h.name(c.head.rel));
+                    for (i, a) in c.head.args.iter().enumerate() { term(&mut out, n, 0, i, *a); }
+                    for (k, e) in c.body.iter().enumerate() {
+                        let k = k + 1;
+                        match e {
+                            Elem::Pos(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, pos).", h.name(l.rel)); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
+                            Elem::Neg(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, neg).", h.name(l.rel)); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
+                            Elem::Builtin(op, a, b) => { let _ = writeln!(out, "bi(r{n}, {k}, {:?}).", h.name(*op)); term(&mut out, n, k, 0, *a); term(&mut out, n, k, 1, *b); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    print!("{out}");
 }
