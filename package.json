@@ -60,6 +60,7 @@
     "docs": "node --experimental-strip-types scripts/render_docs.ts",
     "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
     "features": "node --experimental-strip-types scanners/features.ts",
+    "lint": "node --experimental-strip-types scripts/lint.ts",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
     "flagcheck": "node --experimental-strip-types scripts/flag_census.ts",
     "floorcensus": "node --experimental-strip-types scanners/floor_census.ts",

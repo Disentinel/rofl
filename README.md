@@ -146,6 +146,9 @@ them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `modelling-a-language.md` (the JS model as a research programme).
 
+**The plan** — `roadmap.md` (what the next version commits to, each item naming
+the finding that holds its evidence).
+
 **The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
 reasoning systems, and why the projection is ROFL-centric by construction).
 The plan itself is the ledger.
@@ -191,6 +194,7 @@ the rest are run by hand.
 | `npm run measurecheck` | a number quoted without the run that produced it |
 | `npm run flagcheck` | an API flag that no demo in `examples/` EXERCISES (CLAUDE.md) |
 | `npm run findings` | the open findings backlog — every one demands a reaction |
+| `npm run lint` | `-- <files>`: heads with five or more bodies, relation pairs read together by five or more rules, bodies of seven or more conditions — counted by the counting semiring over the reflection, so no order on atoms is needed |
 
 And the scanners that MODEL something rather than check it — each writes facts
 that a rule pack then argues with, so every row has a `why`:
