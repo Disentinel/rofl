@@ -124,6 +124,7 @@ check[checks]("facts/goldens.rofl", "rules_profile", world).
 check[checks]("facts/goldens.rofl", "rules_rofl-lint", world).
 check[checks]("facts/goldens.rofl", "rules_rule-shape", world).
 check[checks]("facts/goldens.rofl", "rules_self-audit", world).
+check[checks]("facts/goldens.rofl", "rules_sentences", world).
 check[checks]("facts/goldens.rofl", "rules_spec-coverage", world).
 check[checks]("facts/goldens.rofl", "rules_strata", world).
 check[checks]("facts/goldens.rofl", "rules_swarm", world).
