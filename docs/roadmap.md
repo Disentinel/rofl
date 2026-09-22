@@ -75,5 +75,19 @@ alternatives under one head (`a node may be the node N either:` in the
 dataflow rewrite) is the point where the alternatives want names of their
 own, one per route a value takes, rather than a longer list.
 
+Prior art, named so that the form is measured against it and not mistaken for
+an invention: **Logical English** (Kowalski, Dávila, Sartor, Calejo; a Prolog
+front end) is the closest, with templates declared up front (`*a person* is
+liable for *an amount*`), `a`/`the` for introducing and referring, `if`/`and`/`or`
+with indentation, and `it is not the case that`; **SBVR Structured English**
+(the OMG standard) has the same three layers, terms, fact types with readings,
+rules, and its font conventions, terms underlined, verbs plain, keywords bold,
+are this form's four colours; **Inform 7** has kinds as nouns that carry their
+guard, verbs declared for relations, and `Definition:` with `it`; **Attempto
+Controlled English** fixed the anaphora convention. What is not in any of them:
+books as blocks that set where a rule writes and reads, definition before use
+as a checked rule, the lint loop that asks for a name, maps that desugar to
+tables, and a fixpoint underneath with `why` for free.
+
 Evidence: the rewrites of the household week, `safety.rofl`, the inquiry
 kernel and `rules/js-dataflow.rofl`, linked from the findings above.
