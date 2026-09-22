@@ -688,8 +688,9 @@ fn main() {
 /// `--facts`: the parsed program as facts, one clause id per clause, slot 0 the
 /// head, slots 1.. the body in order. Variables are strings, atoms atoms.
 fn dump_facts(h: &Heap, docs: &[FileDoc]) {
-    let mut out = String::from("edb(clause). edb(head). edb(lit). edb(bi). edb(argv). edb(arga). edb(args). edb(argn).\n");
+    let mut out = String::from("edb(clause). edb(head). edb(lit). edb(bi). edb(argv). edb(arga). edb(args). edb(argn). edb(arity). edb(pos). edb(name_word). edb(word_shape).\n");
     let mut n = 0usize;
+    let mut arity: BTreeMap<String, usize> = BTreeMap::new();
     let term = |out: &mut String, r: usize, k: usize, i: usize, t: Term| {
         match t.kind() {
             TermK::Var(v) => { let _ = writeln!(out, "argv(r{r}, {k}, {i}, {:?}).", h.name(v)); }
@@ -706,6 +707,8 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                     n += 1;
                     let _ = writeln!(out, "clause(r{n}, {:?}).", doc.stem);
                     let _ = writeln!(out, "head(r{n}, {}).", h.name(c.head.rel));
+                    let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
+                    *e = (*e).max(c.head.args.len());
                     for (i, a) in c.head.args.iter().enumerate() { term(&mut out, n, 0, i, *a); }
                     for (k, e) in c.body.iter().enumerate() {
                         let k = k + 1;
@@ -718,6 +721,20 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                 }
             }
         }
+    }
+    let mut shapes: BTreeSet<String> = BTreeSet::new();
+    for (rel, a) in &arity {
+        let _ = writeln!(out, "arity({rel}, {a}).");
+        for i in 0..*a { let _ = writeln!(out, "pos({rel}, {i})."); }
+        for (i, w) in rel.split('_').filter(|w| !w.is_empty()).enumerate() {
+            let _ = writeln!(out, "name_word({rel}, {i}, {w:?}).");
+            shapes.insert(w.to_string());
+        }
+    }
+    for w in &shapes {
+        if w.ends_with("ed") && w.len() > 3 { let _ = writeln!(out, "word_shape({w:?}, ed)."); }
+        if w.ends_with("ing") && w.len() > 4 { let _ = writeln!(out, "word_shape({w:?}, ing)."); }
+        if w.ends_with('s') && w.len() > 3 { let _ = writeln!(out, "word_shape({w:?}, s)."); }
     }
     print!("{out}");
 }
