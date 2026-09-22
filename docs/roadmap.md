@@ -65,6 +65,12 @@ What has to exist for it to be code rather than a description of code
 3. the two checks: use before definition, and a numbered alternative that does
    not start with `if` or `unless`;
 4. a renderer the other way, so `why` and `?` answer in the same sentences.
+   For files it exists: `rofl-render` (rust/rofl/src/bin/rofl_render.rs)
+   renders a program to Markdown from its rules, with phrases as facts, and
+   `docs/js/` is the JS model rendered
+   (f_the_renderer_from_rules_to_prose_parses_only_and_its_fallback_is_the_lint).
+   Reader and renderer share the phrase facts, so the reader is the half that
+   is left, and `collapse then expand` is the formatter.
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is
