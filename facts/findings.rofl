@@ -6582,3 +6582,9 @@ recorded(f_an_objection_names_the_edge, "2026-09-22").
 finding_note(f_an_objection_names_the_edge,
   "the marketing checker numbered its objections chk_1..chk_12 and named the edge in the text, so none of them attached to an edge: objected(Id), open_objection and the objected doubt all key on the edge id, and twelve sound objections were invisible to the doubt layer until answered by hand; the brief now says the objection's id is the edge's id; a cheap audit would say the same - objection_on_nothing[audit](Id) :- objection(Id, _, _, _), not edge_any(Id, _, _, _), not decision(Id) - and is not written because the third book's checker also objected to a decision by its name, which is legitimate").
 addressed_by(f_an_objection_names_the_edge, "books/brightdata/book.rofl").
+
+finding(f_a_checker_signs_with_its_own_name_and_the_kernel_calls_it_forged, pitfall).
+recorded(f_a_checker_signs_with_its_own_name_and_the_kernel_calls_it_forged, "2026-09-22").
+finding_note(f_a_checker_signs_with_its_own_name_and_the_kernel_calls_it_forged,
+  "the third checker of the fourth book headed its section '-- @who sense_pt' and the book loaded it under that principal, so forged[audit] went red on all fifteen objections: a checker is a name inside an objection row, never a principal of the book, and the brief said so only by example; the first two checkers copied the example and the third improved on it; the merge rule is that every section a subagent writes is loaded as the executor and the subagent's name lives in the facts - the brief now says it in words, and the audit that caught it is the kernel's own, which is the point of loading a section rather than pasting it").
+addressed_by(f_a_checker_signs_with_its_own_name_and_the_kernel_calls_it_forged, "books/brightdata/book.rofl").
