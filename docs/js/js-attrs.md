@@ -257,19 +257,19 @@ Declared as facts: attr_split_ok.
 
 ## Read from other files
 
-- [ast_node](js-model.md#ast_node)
-- [body_lit](js-vocabulary.md#body_lit)
-- [lit_arg](js-vocabulary.md#lit_arg)
-- [lit_rel](js-vocabulary.md#lit_rel)
+- [ast_node](js-model.md#ast_node), in the code
+- [body_lit](js-vocabulary.md#body_lit), in the main
+- [lit_arg](js-vocabulary.md#lit_arg), in the main
+- [lit_rel](js-vocabulary.md#lit_rel), in the main
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
-- `attr_needs`
-- `node_kind`
-- `outside_attr_needs`
-- `premise_lit`
+- `ast_attr`, in the code
+- `ast_child`, in the code
+- `attr_needs`, in the main
+- `node_kind`, in the main
+- `outside_attr_needs`, in the main
+- `premise_lit`, in the main
 
 > 6 trailing comments on rule lines are not carried over.
 

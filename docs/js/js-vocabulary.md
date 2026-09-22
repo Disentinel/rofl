@@ -66,13 +66,13 @@ L passes Args at N, in the main either:
 
 ## Read from other files
 
-- [arg_at](js-dataflow.md#arg_at)
-- [frame_deferred](js-model.md#frame_deferred)
-- [lang_of_corpus](js-model.md#lang_of_corpus)
-- [not_a_construct](js-model.md#not_a_construct)
+- [arg_at](js-dataflow.md#arg_at), in the flow
+- [frame_deferred](js-model.md#frame_deferred), in the main
+- [lang_of_corpus](js-model.md#lang_of_corpus), in the main
+- [not_a_construct](js-model.md#not_a_construct), in the main
 
 ## Not defined in these files
 
-- `node_kind`
-- `premise_lit`
+- `node_kind`, in the main
+- `premise_lit`, in the main
 

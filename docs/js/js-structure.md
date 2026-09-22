@@ -12,6 +12,20 @@ default: code
 
 Kinds without a noun: meta_property.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| a member access | member_expression, member_kind_v, optional_member_expression |
+
+## Signatures
+
+- has_the_meta_form(node N, name Form) (meta_form)
+- has_no_meta_form(node N) (meta_unformed), in the audit
+- has_conflicting_meta_forms(node N, name A, name B) (meta_form_conflict), in the audit
+
 > js-structure.rofl — the GENERIC structure over a captured AST. No domain
 > knowledge: everything here is true of any tree the scanner emits.
 >   ast_in      parent/child, forgetting field and position
@@ -51,10 +65,8 @@ Kinds without a noun: meta_property.
 2. if all of:
    - the `key` of some node is K;
    - K is a member access;
-   - the `object` of K is O;
-   - O [is named](#ast_name) "Symbol";
-   - the `property` of K is P;
-   - P [is named](#ast_name) N.
+   - the `object` of K [is named](#ast_name) "Symbol";
+   - the `property` of K [is named](#ast_name) N.
 
 <a id="ast_value"></a>N is written as V if the attribute `value` of N is V.
 
@@ -65,30 +77,22 @@ Kinds without a noun: meta_property.
 
 <a id="meta_form"></a>M has the meta form N either:
 
-1. if all of:
-   - M is a meta_property node;
-   - the `meta` of M is C;
-   - C [is named](#ast_name) "new";
-   - N is `new_target`;
-2. if all of:
-   - M is a meta_property node;
-   - the `meta` of M is C;
-   - C [is named](#ast_name) "import";
-   - N is `import_meta`.
+1. if M is a meta_property node, the `meta` of M [is named](#ast_name) "new", and N is `new_target`;
+2. if M is a meta_property node, the `meta` of M [is named](#ast_name) "import", and N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
 
-<a id="meta_unformed"></a>A meta_property node M has no meta form unless M [has the meta form](#meta_form) some name.
+<a id="meta_unformed"></a>A meta_property node has no meta form unless it [has the meta form](#meta_form) some name.
 
 <a id="meta_form_conflict"></a>M has conflicting meta forms X B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
 
 ## Read from other files
 
-- [ast_node](js-model.md#ast_node)
+- [ast_node](js-model.md#ast_node), in the code
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
+- `ast_attr`, in the code
+- `ast_child`, in the code
 

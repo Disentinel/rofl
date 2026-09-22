@@ -10,7 +10,21 @@ default: flow
 
 *assignment*, *class*, *new*, *static block*, *template*, *throw*, *try*.
 
-Kinds without a noun: binary_expression, import_expression, unary_expression, update_expression.
+Kinds without a noun: binary_expression, import_expression, update_expression.
+
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| an assignment | assignment_expression |
+| a class | class_declaration, class_expression |
+| a new | new_expression |
+| a static block | static_block |
+| a template | template_literal |
+| a throw | throw_statement |
+| a try | try_statement |
 
 > js-effects.rofl — THE EFFECT LAYER. facts/js-effects.rofl declares
 > `layer(effect)`, the Koka taxonomy (`eff_name`, `eff_row`, `eff_alias`,
@@ -162,10 +176,7 @@ Declared as facts: eff_alloc_kind.
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if all of:
-  - M [is a member access](js-dataflow.md#member_node_v);
-  - the `object` of M is O;
-  - O [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if M [is a member access](js-dataflow.md#member_node_v) and the `object` of M [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>`eff_heap_of`(M, N) either:
 
@@ -353,8 +364,7 @@ Declared as facts: eff_discharges.
 2. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
    - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of N is O;
-   - O [is named](js-structure.md#ast_name) Name;
+   - the `object` of N [is named](js-structure.md#ast_name) Name;
    - C [is of kind](js-model.md#ast_node) some kind in file File;
    - [`ambient_binding`](js-ambient.md#ambient_binding)(File, Name, P).
 
@@ -425,30 +435,19 @@ Declared as facts: eff_suspension_word.
 > in the converting complement: over-reporting a conversion, never missing a
 > call.
 
-<a id="eff_op_inspects"></a>`eff_op_inspects`(N) either:
-
-1. if the attribute `operator` of N is "===";
-2. if the attribute `operator` of N is "!==";
-3. if the attribute `operator` of N is "typeof";
-4. if the attribute `operator` of N is "void";
-5. if the attribute `operator` of N is "!".
+<a id="eff_op_inspects"></a>`eff_op_inspects`(N) if the attribute `operator` of N is "===" or "!==" or "typeof" or "void" or "!".
 
 <a id="eff_op_beyond"></a>`eff_op_beyond`(N, E) either:
 
 1. if the attribute `operator` of N is "instanceof" and E is `has_instance`;
 2. if the attribute `operator` of N is "delete" and E is `delete_own`.
 
-<a id="eff_converts"></a>`eff_converts`(N) either:
-
-1. if N is a binary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N);
-2. if N is an unary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N).
+<a id="eff_converts"></a>`eff_converts`(N) if N is a binary_expression node or an unary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N).
 
 <a id="eff_coerced"></a>`eff_coerced`(N, X) either:
 
-1. if [`eff_converts`](#eff_converts)(N) and the `left` of N is X;
-2. if [`eff_converts`](#eff_converts)(N) and the `right` of N is X;
-3. if [`eff_converts`](#eff_converts)(N) and the `argument` of N is X;
-4. if N is a template and X is among the `expressions` of N.
+1. if [`eff_converts`](#eff_converts)(N) and the `left` or `right` or `argument` of N is X;
+2. if N is a template and X is among the `expressions` of N.
 
 > `Symbol.toPrimitive` is deliberately absent: a computed key, and what
 > spelling `key_name` gives one is `w_computed_key_names`' open question.
@@ -524,13 +523,9 @@ Declared as facts: eff_conv_key.
 2. if all of:
    - N is an import_expression node;
    - N is in file F;
-   - the `source` of N is S;
-   - S [is written as](js-structure.md#ast_value) Src.
+   - the `source` of N [is written as](js-structure.md#ast_value) Src.
 
-<a id="eff_type_only"></a>`eff_type_only`(I) either:
-
-1. if the attribute `import_kind` of I is "type";
-2. if the attribute `export_kind` of I is "type".
+<a id="eff_type_only"></a>`eff_type_only`(I) if the attribute `import_kind` or `export_kind` of I is "type".
 
 <a id="eff_has_spec"></a>`eff_has_spec`(I) if [`eff_mod_src`](#eff_mod_src)(I, something, something) and some node is among the `specifiers` of I.
 
@@ -875,52 +870,52 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 ## Read from other files
 
-- [ambient_binding](js-ambient.md#ambient_binding)
-- [ambient_effect](js-ambient.md#ambient_effect)
-- [assigns](js-dataflow.md#assigns)
-- [ast_in](js-structure.md#ast_in)
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [ast_value](js-structure.md#ast_value)
-- [builtin_prototype](js-dataflow.md#builtin_prototype)
-- [callee_of](js-callgraph.md#callee_of)
-- [calls](js-callgraph.md#calls)
-- [caught_here](js-controlflow.md#caught_here)
-- [corpus_file](js-dataflow.md#corpus_file)
-- [eff_here](js-ambient.md#eff_here)
-- [eff_operation](js-ambient.md#eff_operation)
-- [eff_surface](js-ambient.md#eff_surface)
-- [fn_node](js-callgraph.md#fn_node)
-- [fn_node_v](js-dataflow.md#fn_node_v)
-- [ident_in](js-dataflow.md#ident_in)
-- [import_target](js-dataflow.md#import_target)
-- [in_try_block](js-controlflow.md#in_try_block)
-- [may_be_lit](js-dataflow.md#may_be_lit)
-- [may_be_node](js-dataflow.md#may_be_node)
-- [may_throw](js-controlflow.md#may_throw)
-- [member_node_v](js-dataflow.md#member_node_v)
-- [member_value](js-dataflow.md#member_value)
-- [module_source](js-dataflow.md#module_source)
-- [nearest_fn](js-callgraph.md#nearest_fn)
-- [nearest_v](js-dataflow.md#nearest_v)
-- [pattern_accessor](js-controlflow.md#pattern_accessor)
-- [pattern_next](js-controlflow.md#pattern_next)
-- [plain_assign](js-dataflow.md#plain_assign)
-- [prototype_of](js-dataflow.md#prototype_of)
-- [resolves](js-callgraph.md#resolves)
-- [selects](js-dataflow.md#selects)
-- [super_of](js-dataflow.md#super_of)
-- [surface_origin](js-ambient.md#surface_origin)
-- [try_catches](js-controlflow.md#try_catches)
-- [unresolved_call](js-callgraph.md#unresolved_call)
+- [ambient_binding](js-ambient.md#ambient_binding), in the main
+- [ambient_effect](js-ambient.md#ambient_effect), in the main
+- [assigns](js-dataflow.md#assigns), in the code
+- [ast_in](js-structure.md#ast_in), in the code
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_value](js-structure.md#ast_value), in the code
+- [builtin_prototype](js-dataflow.md#builtin_prototype), in the main
+- [callee_of](js-callgraph.md#callee_of), in the code
+- [calls](js-callgraph.md#calls), in the code
+- [caught_here](js-controlflow.md#caught_here), in the code
+- [corpus_file](js-dataflow.md#corpus_file), in the code
+- [eff_here](js-ambient.md#eff_here), in the flow
+- [eff_operation](js-ambient.md#eff_operation), in the flow
+- [eff_surface](js-ambient.md#eff_surface), in the flow
+- [fn_node](js-callgraph.md#fn_node), in the code
+- [fn_node_v](js-dataflow.md#fn_node_v), in the flow
+- [ident_in](js-dataflow.md#ident_in), in the code
+- [import_target](js-dataflow.md#import_target), in the code
+- [in_try_block](js-controlflow.md#in_try_block), in the code
+- [may_be_lit](js-dataflow.md#may_be_lit), in the flow
+- [may_be_node](js-dataflow.md#may_be_node), in the flow
+- [may_throw](js-controlflow.md#may_throw), in the code
+- [member_node_v](js-dataflow.md#member_node_v), in the flow
+- [member_value](js-dataflow.md#member_value), in the flow
+- [module_source](js-dataflow.md#module_source), in the code
+- [nearest_fn](js-callgraph.md#nearest_fn), in the code
+- [nearest_v](js-dataflow.md#nearest_v), in the flow
+- [pattern_accessor](js-controlflow.md#pattern_accessor), in the code
+- [pattern_next](js-controlflow.md#pattern_next), in the code
+- [plain_assign](js-dataflow.md#plain_assign), in the flow
+- [prototype_of](js-dataflow.md#prototype_of), in the flow
+- [resolves](js-callgraph.md#resolves), in the code
+- [selects](js-dataflow.md#selects), in the flow
+- [super_of](js-dataflow.md#super_of), in the flow
+- [surface_origin](js-ambient.md#surface_origin), in the main
+- [try_catches](js-controlflow.md#try_catches), in the code
+- [unresolved_call](js-callgraph.md#unresolved_call), in the code
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
-- `eff_alias`
-- `eff_heap`
-- `eff_label`
-- `eff_name`
-- `eff_origin`
+- `ast_attr`, in the code
+- `ast_child`, in the code
+- `eff_alias`, in the main
+- `eff_heap`, in the main
+- `eff_label`, in the main
+- `eff_name`, in the main
+- `eff_origin`, in the main
 

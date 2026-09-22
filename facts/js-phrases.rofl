@@ -97,7 +97,7 @@ kind_noun(call_like_v, "call").
 sig(ident, "reads(identifier N, name Name)").
 sig(ident_in, "reads(identifier E, name Name, in file File)").
 sig(decl_binds, "binds(declarator D, name Name)").
-sig(decl_reads, "reads(declarator D, name Name)").
+sig(decl_reads, "is_initialised_from(declarator D, name Name)").
 sig(var_flow, "flows_to(name From, name To)").
 sig(var_reaches, "reaches(name From, name To)").
 sig(may_be_lit, "may_be_the_literal(node E, text V)").
@@ -109,13 +109,13 @@ sig(binder_region, "the_region(of declarator D, is node R)").
 sig(binds_name, "introduces(declarator D, name Name, in file File)").
 sig(scoped_binder, "is_scoped(declarator D, in file File)").
 sig(lexical_binder, "is_lexical(declarator D)").
-sig(lexical_decl, "is_lexical(declaration V)").
+sig(lexical_decl, "is_let_or_const(declaration V)").
 sig(scope_node, "is_a_scope(node R)").
 sig(encloses_s, "encloses(scope R, declarator D)").
 sig(closer_s, "is_outranked_for(scope R, declarator D)").
 sig(nearest_s, "is_the_nearest_scope_of(scope R, declarator D)").
 sig(shadowed_by, "is_shadowed_by(declarator Outer, declarator Inner, on name Name)").
-sig(shadowed_by_param, "is_shadowed_by(declarator Outer, function F, on name Name)").
+sig(shadowed_by_param, "is_shadowed_by_the_function(declarator Outer, function F, on name Name)").
 sig(hidden_at, "is_hidden_from(node E, declarator D)").
 sig(tdz_cand, "is_a_dead_zone_candidate_of(node E, declarator D)").
 sig(tdz_deferred, "is_deferred_for(node E, declarator D)").
@@ -168,7 +168,7 @@ sig(super_of, "the_super(of class CD, is class SD)").
 sig(own_ctor, "has_its_own_constructor(class CD, method M)").
 sig(has_own_ctor, "has_its_own_constructor(class CD)").
 sig(ctor_of, "the_constructor(of class CD, is method M)").
-sig(obj_method_of, "has_the_method(object literal O, method M)").
+sig(obj_method_of, "has_the_object_method(object literal O, method M)").
 sig(decorated_by, "is_replaced_by_its_decorator_with(node Owner, node N)").
 sig(decorated_member, "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)").
 sig(corpus_file, "is_in_the_corpus(file File)").
@@ -181,8 +181,8 @@ sig(imports_ns, "imports_the_namespace(name Local, of text Src, in file File)").
 sig(imports_default, "imports_the_default(name Local, of text Src, in file File)").
 sig(module_object, "is_the_module_object_of(node P, file Target)").
 sig(reexport_decl, "re_exports(named export E)").
-sig(export_list_erased, "is_type_only(named export E)").
-sig(export_item_erased, "is_type_only(node Sp)").
+sig(export_list_erased, "exports_types_only(named export E)").
+sig(export_item_erased, "is_a_type_only_specifier(node Sp)").
 sig(export_local, "is_exported_locally_as(node L, name Ext, from file File)").
 sig(export_ns_name, "is_a_namespace_export(name Name, of text Src, from file File)").
 sig(exports_name, "is_exported_as(node F, name Name, from file File)").
@@ -198,7 +198,7 @@ sig(catch_from_host, "catches_from_the_host(node P)").
 sig(catch_unsourced, "catches_from_nowhere(node P)").
 sig(for_of_src, "iterates(for-of S, node X)").
 sig(for_of_name, "loops_over(for-of S, name Name)").
-sig(for_of_use, "uses(for-of S, name Name, at node U)").
+sig(for_of_use, "loops_with(for-of S, name Name, at node U)").
 sig(next_send, "is_sent(function G, node V)").
 sig(delegates, "delegates_to(function Outer, function Inner)").
 sig(nearest_v, "is_nearest_to(function F, node R)").

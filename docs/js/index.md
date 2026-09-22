@@ -5,18 +5,18 @@
 | [js-phrases](js-phrases.md) | 198 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
 | [js-ambient](js-ambient.md) | 69 | 42 | 0 | 39 | 0 | 91 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.md) | 49 | 37 | 0 | 37 | 0 | 101 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.md) | 212 | 91 | 2 | 80 | 25 | 241 | 20 | 4 | 4 | 0 |
-| [js-controlflow](js-controlflow.md) | 229 | 87 | 2 | 72 | 28 | 251 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.md) | 295 | 125 | 110 | 2 | 128 | 441 | 30 | 2 | 3 | 0 |
-| [js-effects](js-effects.md) | 211 | 128 | 0 | 120 | 16 | 319 | 23 | 2 | 7 | 0 |
+| [js-callgraph](js-callgraph.md) | 212 | 91 | 2 | 80 | 24 | 240 | 20 | 4 | 4 | 0 |
+| [js-controlflow](js-controlflow.md) | 229 | 87 | 2 | 72 | 26 | 248 | 15 | 5 | 2 | 0 |
+| [js-dataflow](js-dataflow.md) | 295 | 125 | 110 | 2 | 118 | 436 | 23 | 2 | 3 | 0 |
+| [js-effects](js-effects.md) | 211 | 128 | 0 | 120 | 15 | 316 | 20 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.md) | 5 | 5 | 0 | 5 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.md) | 45 | 34 | 0 | 33 | 0 | 48 | 5 | 1 | 17 | 0 |
 | [js-globals](js-globals.md) | 40 | 22 | 2 | 17 | 0 | 49 | 1 | 2 | 6 | 0 |
-| [js-host](js-host.md) | 66 | 48 | 0 | 47 | 1 | 78 | 10 | 1 | 18 | 0 |
-| [js-model](js-model.md) | 116 | 55 | 0 | 50 | 0 | 140 | 15 | 3 | 2 | 0 |
-| [js-modules](js-modules.md) | 143 | 95 | 0 | 95 | 25 | 200 | 23 | 0 | 2 | 0 |
+| [js-host](js-host.md) | 66 | 48 | 0 | 47 | 1 | 75 | 9 | 1 | 18 | 0 |
+| [js-model](js-model.md) | 116 | 55 | 0 | 50 | 0 | 138 | 13 | 3 | 2 | 0 |
+| [js-modules](js-modules.md) | 143 | 95 | 0 | 95 | 22 | 200 | 21 | 0 | 2 | 0 |
 | [js-pack-home](js-pack-home.md) | 11 | 9 | 0 | 8 | 0 | 12 | 1 | 0 | 2 | 0 |
-| [js-resolve](js-resolve.md) | 58 | 36 | 0 | 35 | 0 | 80 | 9 | 0 | 0 | 0 |
+| [js-resolve](js-resolve.md) | 58 | 36 | 0 | 35 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-structure](js-structure.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.md) | 12 | 10 | 1 | 9 | 0 | 17 | 2 | 0 | 2 | 0 |
 
@@ -53,7 +53,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `corpus_file` | `is_in_the_corpus` |
 | `ctor_of` | `the_constructor` |
 | `decl_binds` | `binds` |
-| `decl_reads` | `reads` |
+| `decl_reads` | `is_initialised_from` |
 | `decorated_by` | `is_replaced_by_its_decorator_with` |
 | `decorated_member` | `has_the_decorated_member` |
 | `decorates` | `is_decorated_by` |
@@ -61,8 +61,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `destructures_at` | `destructures` |
 | `elem_at` | `the_element` |
 | `encloses_s` | `encloses` |
-| `export_item_erased` | `is_type_only` |
-| `export_list_erased` | `is_type_only` |
+| `export_item_erased` | `is_a_type_only_specifier` |
+| `export_list_erased` | `exports_types_only` |
 | `export_local` | `is_exported_locally_as` |
 | `export_ns_name` | `is_a_namespace_export` |
 | `exports_default` | `is_the_default_export_of` |
@@ -70,7 +70,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `field_of` | `has_the_field` |
 | `for_of_name` | `loops_over` |
 | `for_of_src` | `iterates` |
-| `for_of_use` | `uses` |
+| `for_of_use` | `loops_with` |
 | `has_own_ctor` | `has_its_own_constructor` |
 | `hidden_at` | `is_hidden_from` |
 | `ident` | `reads` |
@@ -85,7 +85,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `iter_elem` | `has_an_element` |
 | `kind_prototype` | `has_prototype` |
 | `lexical_binder` | `is_lexical` |
-| `lexical_decl` | `is_lexical` |
+| `lexical_decl` | `is_let_or_const` |
 | `may_be_lit` | `may_be_the_literal` |
 | `may_be_node` | `may_be_the_node` |
 | `member_node_v` | `is_a_member_access` |
@@ -101,7 +101,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `nearest_v` | `is_nearest_to` |
 | `next_send` | `is_sent` |
 | `obj_like` | `is_object_like` |
-| `obj_method_of` | `has_the_method` |
+| `obj_method_of` | `has_the_object_method` |
 | `own_ctor` | `has_its_own_constructor` |
 | `own_key` | `owns_the_key` |
 | `param_default` | `defaults` |
@@ -125,7 +125,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `sees_binder` | `sees` |
 | `seq_later` | `has_a_later_expression_than` |
 | `shadowed_by` | `is_shadowed_by` |
-| `shadowed_by_param` | `is_shadowed_by` |
+| `shadowed_by_param` | `is_shadowed_by_the_function` |
 | `spread_arg` | `has_a_spread` |
 | `static_block_of` | `has_the_static_block` |
 | `super_of` | `the_super` |

@@ -68,8 +68,7 @@ default: audit
    - N [is of kind](js-model.md#ast_node) K;
    - `env_lang`(L);
    - `child_needs`(L, K, Field, Name, F);
-   - the Field of N is C;
-   - C [is named](js-structure.md#ast_name) Name.
+   - the Field of N [is named](js-structure.md#ast_name) Name.
 
 > Order is for cost: the two-row table binds Key and V, `ast_attr` is probed
 > by the rare `async=true`, and only then does `ast_within` walk down. The
@@ -238,27 +237,27 @@ Declared as facts: ast_parse_error.
 
 ## Read from other files
 
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [ast_within](js-structure.md#ast_within)
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_within](js-structure.md#ast_within), in the code
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
-- `ast_file`
-- `attr_needs`
-- `child_needs`
-- `env_lang`
-- `env_rank`
-- `environment`
-- `feature`
-- `feature_unscannable`
-- `includes`
-- `kind_baseline`
-- `kind_needs`
-- `node_kind`
-- `outside_attr_needs`
-- `provides`
-- `release`
+- `ast_attr`, in the code
+- `ast_child`, in the code
+- `ast_file`, in the code
+- `attr_needs`, in the main
+- `child_needs`, in the main
+- `env_lang`, in the main
+- `env_rank`, in the main
+- `environment`, in the main
+- `feature`, in the main
+- `feature_unscannable`, in the main
+- `includes`, in the main
+- `kind_baseline`, in the main
+- `kind_needs`, in the main
+- `node_kind`, in the main
+- `outside_attr_needs`, in the main
+- `provides`, in the main
+- `release`, in the main
 

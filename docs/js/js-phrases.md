@@ -30,7 +30,7 @@ Declared as facts: phrase, kind_noun, sig.
 | `ident` | "reads(identifier N, name Name)" |
 | `ident_in` | "reads(identifier E, name Name, in file File)" |
 | `decl_binds` | "binds(declarator D, name Name)" |
-| `decl_reads` | "reads(declarator D, name Name)" |
+| `decl_reads` | "is_initialised_from(declarator D, name Name)" |
 | `var_flow` | "flows_to(name From, name To)" |
 | `var_reaches` | "reaches(name From, name To)" |
 | `may_be_lit` | "may_be_the_literal(node E, text V)" |
@@ -42,13 +42,13 @@ Declared as facts: phrase, kind_noun, sig.
 | `binds_name` | "introduces(declarator D, name Name, in file File)" |
 | `scoped_binder` | "is_scoped(declarator D, in file File)" |
 | `lexical_binder` | "is_lexical(declarator D)" |
-| `lexical_decl` | "is_lexical(declaration V)" |
+| `lexical_decl` | "is_let_or_const(declaration V)" |
 | `scope_node` | "is_a_scope(node R)" |
 | `encloses_s` | "encloses(scope R, declarator D)" |
 | `closer_s` | "is_outranked_for(scope R, declarator D)" |
 | `nearest_s` | "is_the_nearest_scope_of(scope R, declarator D)" |
 | `shadowed_by` | "is_shadowed_by(declarator Outer, declarator Inner, on name Name)" |
-| `shadowed_by_param` | "is_shadowed_by(declarator Outer, function F, on name Name)" |
+| `shadowed_by_param` | "is_shadowed_by_the_function(declarator Outer, function F, on name Name)" |
 | `hidden_at` | "is_hidden_from(node E, declarator D)" |
 | `tdz_cand` | "is_a_dead_zone_candidate_of(node E, declarator D)" |
 | `tdz_deferred` | "is_deferred_for(node E, declarator D)" |
@@ -101,7 +101,7 @@ Declared as facts: phrase, kind_noun, sig.
 | `own_ctor` | "has_its_own_constructor(class CD, method M)" |
 | `has_own_ctor` | "has_its_own_constructor(class CD)" |
 | `ctor_of` | "the_constructor(of class CD, is method M)" |
-| `obj_method_of` | "has_the_method(object literal O, method M)" |
+| `obj_method_of` | "has_the_object_method(object literal O, method M)" |
 | `decorated_by` | "is_replaced_by_its_decorator_with(node Owner, node N)" |
 | `decorated_member` | "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)" |
 | `corpus_file` | "is_in_the_corpus(file File)" |
@@ -114,8 +114,8 @@ Declared as facts: phrase, kind_noun, sig.
 | `imports_default` | "imports_the_default(name Local, of text Src, in file File)" |
 | `module_object` | "is_the_module_object_of(node P, file Target)" |
 | `reexport_decl` | "re_exports(named export E)" |
-| `export_list_erased` | "is_type_only(named export E)" |
-| `export_item_erased` | "is_type_only(node Sp)" |
+| `export_list_erased` | "exports_types_only(named export E)" |
+| `export_item_erased` | "is_a_type_only_specifier(node Sp)" |
 | `export_local` | "is_exported_locally_as(node L, name Ext, from file File)" |
 | `export_ns_name` | "is_a_namespace_export(name Name, of text Src, from file File)" |
 | `exports_name` | "is_exported_as(node F, name Name, from file File)" |
@@ -131,7 +131,7 @@ Declared as facts: phrase, kind_noun, sig.
 | `catch_unsourced` | "catches_from_nowhere(node P)" |
 | `for_of_src` | "iterates(for-of S, node X)" |
 | `for_of_name` | "loops_over(for-of S, name Name)" |
-| `for_of_use` | "uses(for-of S, name Name, at node U)" |
+| `for_of_use` | "loops_with(for-of S, name Name, at node U)" |
 | `next_send` | "is_sent(function G, node V)" |
 | `delegates` | "delegates_to(function Outer, function Inner)" |
 | `nearest_v` | "is_nearest_to(function F, node R)" |

@@ -77,6 +77,11 @@ What has to exist for it to be code rather than a description of code
    classify signatures and `npm run sentences` proposes one for every relation
    that has none (f_the_eight_structures_run_and_the_name_is_not_the_sentence).
    A signature whose name differs from its relation is a proposed rename.
+   The reader exists too: `npm run read -- docs/js/X.md rules/X.rofl` reads
+   a rendered file back into rules and measures the round trip, 1135 of 1179
+   rules over the JS model, and the read-back dataflow computes the same rows
+   as the source on a fixture
+   (f_the_markdown_form_round_trips_the_js_model_and_runs_the_same).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

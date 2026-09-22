@@ -12,6 +12,173 @@ default: flow
 
 Kinds without a noun: assignment_pattern, export_default_declaration, export_namespace_specifier, export_specifier, import_default_specifier, import_namespace_specifier.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| an array literal | array_expression |
+| an array pattern | array_pattern |
+| an assignment | assignment_expression |
+| an await | await_expression |
+| a block scope | block_scope_kind |
+| a call | call_expression, call_like_v, optional_call_expression |
+| a catch | catch_clause |
+| a class | class_declaration, class_expression |
+| a conditional | conditional_expression |
+| a declaration | variable_declaration |
+| a declarator | variable_declarator |
+| an export-all | export_all_declaration |
+| a field | class_accessor_property, class_field_kind, class_property |
+| a for-of | for_of_statement |
+| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
+| an identifier | identifier |
+| an import | import_declaration |
+| a literal | big_int_literal, boolean_literal, literal_kind, numeric_literal, string_literal |
+| a logical | logical_expression |
+| a member access | member_expression, member_kind_v, optional_member_expression |
+| a method | class_method |
+| a named export | export_named_declaration |
+| a new | new_expression |
+| an object literal | object_expression |
+| an object method | object_method |
+| an object pattern | object_pattern |
+| a private field | class_private_property |
+| a private member | private_member_kind |
+| a private method | class_private_method |
+| a private name | private_name |
+| a program | program |
+| a property | object_property |
+| a rest | rest_element |
+| a return | return_statement |
+| a sequence | sequence_expression |
+| a spread | spread_element |
+| a static block | static_block |
+| a super | super |
+| a template | template_literal |
+| a this | this_expression |
+| a this-binder | this_binds_kind |
+| a throw | throw_statement |
+| a try | try_statement |
+| a value site | node_value_kind |
+| a wrapper | parenthesized_expression, tsas_expression, tsnon_null_expression, value_transparent |
+| a yield | yield_expression |
+
+## Signatures
+
+- reads(identifier N, name Name) (ident), in the code
+- reads(identifier E, name Name, in file File) (ident_in), in the code
+- binds(declarator D, name Name) (decl_binds), in the code
+- is_initialised_from(declarator D, name Name) (decl_reads), in the code
+- flows_to(name From, name To) (var_flow), in the code
+- reaches(name From, name To) (var_reaches), in the code
+- may_be_the_literal(node E, text V) (may_be_lit)
+- is_interpolated(template T) (interpolated), in the code
+- may_be_the_node(node E, node N) (may_be_node)
+- binds(declarator D, name Name, to node Init, in file File) (binder), in the code
+- is_scoped(declarator D, in file File) (scoped_binder), in the code
+- the_region(of declarator D, is node R) (binder_region), in the code
+- is_at_the_top(declarator D) (binder_at_top), in the code
+- sees(node E, declarator D) (sees_binder), in the code
+- is_a_scope(node R) (scope_node), in the code
+- is_let_or_const(declaration V) (lexical_decl), in the code
+- is_lexical(declarator D) (lexical_binder), in the code
+- encloses(scope R, declarator D) (encloses_s), in the code
+- is_outranked_for(scope R, declarator D) (closer_s), in the code
+- is_the_nearest_scope_of(scope R, declarator D) (nearest_s), in the code
+- introduces(declarator D, name Name, in file File) (binds_name), in the code
+- is_shadowed_by(declarator Outer, declarator Inner, on name Name) (shadowed_by), in the code
+- is_shadowed_by_the_function(declarator Outer, function F, on name Name) (shadowed_by_param), in the code
+- is_hidden_from(node E, declarator D) (hidden_at), in the code
+- is_a_dead_zone_candidate_of(node E, declarator D) (tdz_cand), in the code
+- is_deferred_for(node E, declarator D) (tdz_deferred), in the code
+- is_in_the_dead_zone_of(node E, declarator D) (tdz_at), in the code
+- is_assigned(name Name, node Src, in file File) (assigns), in the code
+- has_prototype(kind K, name P) (kind_prototype), in the main
+- the_prototype(of node E, is name P) (prototype_of)
+- is_a_builtin_prototype(name P) (builtin_prototype), in the main
+- destructures(declarator D, name Local, from key Key, in file File), in the code
+- destructures(declarator D, name Local, at index Index, in file File) (destructures_at), in the code
+- the_element(of node X, index I, is node E) (elem_at)
+- takes(function F, name Name:2, at index I:1) (param_of)
+- defaults(function F, name Name, to node Init) (param_default)
+- takes_the_key(object pattern P, key Key) (pattern_takes), in the code
+- holds_a_rest(declarator D, node R, in file File) (rest_in_pattern), in the code
+- binds(declarator D, name Local:2, through the rest node R:1, in file File:3) (rest_binds), in the code
+- the_member(of node O, key Key, holds node V) (member_value)
+- the_plain_member(of node O, key Key, is node V) (member_plain)
+- is_valued(node E) (valued)
+- is_nearest_to(function F, node R) (nearest_v)
+- has_a_spread(call C, at index I) (spread_arg), in the code
+- is_past_a_spread(call C, at index I) (after_spread), in the code
+- passes(call C, node A:2, at index I:1) (arg_at)
+- hides(function F, name Name, at node U) (param_hidden)
+- uses(function F, name Name, at node U) (param_use)
+- returns(function F, node E)
+- is_object_like(node O) (obj_like)
+- owns_the_key(class CD, key Key) (own_key)
+- is_a_member_access(node N) (member_node_v)
+- selects(member access N, key Key)
+- the_static_member(of class CD, key Key, is node V) (class_member_static)
+- the_instance_member(of class CD, key Key, is node V) (class_member_proto)
+- denotes_a_class(node E) (class_receiver)
+- binds_this(node F) (this_binder)
+- is_over(this-binder F, this T) (this_over)
+- is_outdone_for(this-binder F, this T) (this_nearer)
+- hosts(node H, this T) (this_host)
+- has_the_method(class CD, method M) (class_method_of)
+- has_the_field(class CD, key Key, at node P, holding node V) (field_of)
+- inherits_the_field(class CD, key Key, at node P, holding node V) (inherited_field)
+- is_the_private_key(node P, name Name) (private_key), in the code
+- has_the_private_member(class CD, name Name, at node M) (private_member), in the code
+- refers_privately_to(member access N, name Name) (private_ref), in the code
+- has_an_inner_class_inside(member access N, class CD) (private_inner), in the code
+- binds_privately_to(member access N, node M) (private_binds), in the code
+- has_the_field_site(class CD, node P) (class_field_this)
+- has_the_static_block(class CD, static block SB) (static_block_of)
+- imports(name Local, name Name, from text Src, in file File) (imports_name), in the code
+- is_in_the_corpus(file File) (corpus_file), in the code
+- sources(node N, text Src, in file File) (module_source), in the code
+- has_basename(text Src, text Base) (module_basename), in the code
+- targets(text Src, file Target) (import_target), in the code
+- is_exported_as(node F, name Name, from file File) (exports_name), in the code
+- re_exports(named export E) (reexport_decl), in the code
+- exports_types_only(named export E) (export_list_erased), in the code
+- is_a_type_only_specifier(node Sp) (export_item_erased), in the code
+- is_exported_locally_as(node L, name Ext, from file File) (export_local), in the code
+- is_a_namespace_export(name Name, of text Src, from file File) (export_ns_name), in the code
+- imports_the_namespace(name Local, of text Src, in file File) (imports_ns), in the code
+- is_the_module_object_of(node P, file Target) (module_object)
+- imports_the_default(name Local, of text Src, in file File) (imports_default), in the code
+- is_the_default_export_of(node F, file File) (exports_default), in the code
+- is_outside_the_corpus(text Src, from file File) (import_outside_corpus), in the audit
+- has_the_object_method(object literal O, method M) (obj_method_of)
+- is_named(class CD, name Name, in file File) (class_named)
+- the_super(of class CD, is class SD) (super_of)
+- has_its_own_constructor(class CD, method M) (own_ctor)
+- has_its_own_constructor(class CD) (has_own_ctor)
+- the_constructor(of class CD, is method M) (ctor_of)
+- has_a_later_expression_than(sequence E, index I) (seq_later)
+- yields(function F, node E)
+- is_sent(function G, node V) (next_send)
+- delegates_to(function Outer, function Inner) (delegates)
+- iterates(for-of S, node X) (for_of_src)
+- loops_over(for-of S, name Name) (for_of_name)
+- loops_with(for-of S, name Name, at node U) (for_of_use)
+- has_an_element(node X, node E) (iter_elem)
+- is_plain(assignment E) (plain_assign)
+- the_catch(of try T, is catch H) (catch_of)
+- the_param(of catch H, is node P) (catch_param)
+- the_block(of try T, is node B) (try_block)
+- throws(try T, node V) (thrown_in)
+- calls(try T) (call_in_try)
+- catches_from_a_call(node P) (catch_from_call)
+- catches_from_the_host(node P) (catch_from_host)
+- catches_from_nowhere(node P) (catch_unsourced), in the audit
+- is_replaced_by_its_decorator_with(node Owner, node N) (decorated_by)
+- has_the_decorated_member(class CD, key Key, at method M, replaced with node N) (decorated_member)
+
 > js-dataflow.rofl — THE VALUE LAYER: what an expression may evaluate to.
 > 
 > Two carriers and no third. `may_be_lit(E, Text)`: E may evaluate to this
@@ -33,19 +200,19 @@ Kinds without a noun: assignment_pattern, export_default_declaration, export_nam
 > store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 > identifier in the corpus — 39 % of a fixpoint.
 
-An identifier N
+An identifier
 
-- <a id="ident"></a>reads Name if N [is named](js-structure.md#ast_name) Name.
-- <a id="ident_in"></a>reads Name in File if N is in file File and N [is named](js-structure.md#ast_name) Name.
+- <a id="ident"></a>reads Name if it [is named](js-structure.md#ast_name) Name.
+- <a id="ident_in"></a>reads Name in File if it is in file File and it [is named](js-structure.md#ast_name) Name.
 
 > Name-to-name flow through a declarator initialiser: the first cell, kept.
 
-A declarator D
+A declarator
 
-- <a id="decl_binds"></a>binds Name if N is among the `id` of D and N [reads](#ident) Name.
-- <a id="decl_reads"></a>reads Name if N is among the `init` of D and N [reads](#ident) Name.
+- <a id="decl_binds"></a>binds Name if N is among the `id` of it and N [reads](#ident) Name.
+- <a id="decl_reads"></a>is initialised from Name if N is among the `init` of it and N [reads](#ident) Name.
 
-<a id="var_flow"></a>From flows to To if D [reads](#decl_reads) From and D [binds](#decl_binds) To.
+<a id="var_flow"></a>From flows to To if D [is initialised from](#decl_reads) From and D [binds](#decl_binds) To.
 
 <a id="var_reaches"></a>X reaches B if X [flows to](#var_flow) B.
 
@@ -59,7 +226,7 @@ X reaches C if X [reaches](#var_reaches) B and B [flows to](#var_flow) C.
 
 <a id="literal_kind"></a>`literal_kind`, a literal, includes `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal`.
 
-<a id="may_be_lit"></a>E may be the literal V if E [is written as](js-structure.md#ast_value) V.
+<a id="may_be_lit"></a>A literal may be the literal V if it [is written as](js-structure.md#ast_value) V.
 
 Declared as facts: literal_kind.
 
@@ -69,10 +236,10 @@ Declared as facts: literal_kind.
 
 <a id="interpolated"></a>T is interpolated if some node is among the `expressions` of T.
 
-A template T may be the literal V if all of:
-  - the `quasis` of T is Q;
+A template may be the literal V if all of:
+  - the `quasis` of it is Q;
   - the attribute `value_cooked` of Q is V;
-  - unless T [is interpolated](#interpolated).
+  - unless it [is interpolated](#interpolated).
 
 > An object, array, function, class or regexp expression is its own node.
 > `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
@@ -80,7 +247,7 @@ A template T may be the literal V if all of:
 
 <a id="node_value_kind"></a>`node_value_kind`, a value site, includes `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal`.
 
-<a id="may_be_node"></a>A value site E may be the node E.
+<a id="may_be_node"></a>A value site may be the node it.
 
 Declared as facts: node_value_kind.
 
@@ -90,11 +257,10 @@ Declared as facts: node_value_kind.
 > names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
 > not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
 
-<a id="binder"></a>A declarator D binds Name to Init in File if all of:
-  - D is in file File;
-  - the `id` of D is I;
-  - I [is named](js-structure.md#ast_name) Name;
-  - the `init` of D is Init.
+<a id="binder"></a>A declarator binds Name to Init in File if all of:
+  - it is in file File;
+  - the `id` of it [is named](js-structure.md#ast_name) Name;
+  - the `init` of it is Init.
 
 <a id="scoped_binder"></a>D is scoped in File if D [binds](#binder) some name to some node in File.
 
@@ -118,8 +284,7 @@ Declared as facts: node_value_kind.
 <a id="sees_binder"></a>E sees D either:
 
 1. if all of:
-   - [the region](#binder_region) of D is R;
-   - R [is within](js-structure.md#ast_within) E;
+   - [the region](#binder_region) of D [is within](js-structure.md#ast_within) E;
    - E [reads](#ident_in) some name in some file;
    - unless E [is hidden from](#hidden_at) D;
 2. if all of:
@@ -145,12 +310,9 @@ Declared as facts: block_scope_kind.
 
 > `let`/`const` is read off the DECLARATION, one node above the declarator.
 
-<a id="lexical_decl"></a>V is lexical either:
+<a id="lexical_decl"></a>V is let or const if V is a declaration and the attribute `kind` of V is "let" or "const".
 
-1. if V is a declaration and the attribute `kind` of V is "let";
-2. if V is a declaration and the attribute `kind` of V is "const".
-
-<a id="lexical_binder"></a>D is lexical if V [is lexical](#lexical_decl) and D is among the `declarations` of V.
+<a id="lexical_binder"></a>D is lexical if V [is let or const](#lexical_decl) and D is among the `declarations` of V.
 
 > Nearest scope, over declarators only. `ast_within(R, D)` first, with D
 > bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
@@ -202,13 +364,12 @@ Declared as facts: block_scope_kind.
 
 > A parameter shadows too, and no `binds_name` row exists for it.
 
-<a id="shadowed_by_param"></a>Outer is shadowed by F on Name either:
+<a id="shadowed_by_param"></a>Outer is shadowed by the function F on Name either:
 
 1. if all of:
    - Outer [introduces](#binds_name) Name in some file;
-   - [the region](#binder_region) of Outer is RO;
+   - [the region](#binder_region) of Outer [is within](js-structure.md#ast_within) F;
    - F [takes](#param_of) Name at some index;
-   - RO [is within](js-structure.md#ast_within) F;
 2. if all of:
    - Outer [introduces](#binds_name) Name in File;
    - Outer [is at the top](#binder_at_top);
@@ -224,11 +385,10 @@ Declared as facts: block_scope_kind.
 
 1. if all of:
    - Outer [is shadowed by](#shadowed_by) Inner on Name;
-   - [the region](#binder_region) of Inner is RI;
-   - RI [is within](js-structure.md#ast_within) E;
+   - [the region](#binder_region) of Inner [is within](js-structure.md#ast_within) E;
    - E [reads](#ident_in) Name in some file;
 2. if all of:
-   - Outer [is shadowed by](#shadowed_by_param) F on Name;
+   - Outer [is shadowed by the function](#shadowed_by_param) F on Name;
    - F [is within](js-structure.md#ast_within) E;
    - E [reads](#ident_in) Name in some file.
 
@@ -240,8 +400,7 @@ Declared as facts: block_scope_kind.
 <a id="tdz_cand"></a>E is a dead zone candidate of D if all of:
   - D [is lexical](#lexical_binder);
   - D [introduces](#binds_name) Name in some file;
-  - [the region](#binder_region) of D is R;
-  - R [is within](js-structure.md#ast_within) E;
+  - [the region](#binder_region) of D [is within](js-structure.md#ast_within) E;
   - E [reads](#ident_in) Name in some file;
   - D [is of kind](js-model.md#ast_node) some kind in file some file at line LD;
   - E [is of kind](js-model.md#ast_node) some kind in file some file at line LE;
@@ -249,9 +408,8 @@ Declared as facts: block_scope_kind.
 
 <a id="tdz_deferred"></a>E is deferred for D if all of:
   - E [is a dead zone candidate of](#tdz_cand) D;
-  - [the region](#binder_region) of D is R;
+  - [the region](#binder_region) of D [is within](js-structure.md#ast_within) G;
   - [`fn_node_v`](#fn_node_v)(G);
-  - R [is within](js-structure.md#ast_within) G;
   - G [is within](js-structure.md#ast_within) E.
 
 <a id="tdz_at"></a>E is in the dead zone of D if E [is a dead zone candidate of](#tdz_cand) D, unless E [is deferred for](#tdz_deferred) D.
@@ -276,8 +434,7 @@ E may be the node N if all of:
 
 <a id="assigns"></a>Name is assigned Src in File if all of:
   - an assignment X is in file File;
-  - the `left` of X is L;
-  - L [is named](js-structure.md#ast_name) Name;
+  - the `left` of X [is named](js-structure.md#ast_name) Name;
   - the `right` of X is Src.
 
 E may be the literal V if all of:
@@ -295,10 +452,7 @@ E may be the node N if all of:
 
 <a id="value_transparent"></a>`value_transparent`, a wrapper, includes `parenthesized_expression`, `tsas_expression`, `tsnon_null_expression`.
 
-A wrapper E
-
-- may be the literal V if the `expression` of E is X and X [may be the literal](#may_be_lit) V.
-- may be the node N if the `expression` of E is X and X [may be the node](#may_be_node) N.
+A wrapper may be the literal/node V if the `expression` of it [may be the literal/node](#may_be_lit) V.
 
 Declared as facts: value_transparent.
 
@@ -345,29 +499,26 @@ Declared as facts: kind_prototype, builtin_prototype.
 > arm for array patterns: nothing exercises it and an arm nothing exercises
 > cannot go red.
 
-<a id="destructures"></a>A declarator D destructures Local from Key in File if all of:
-  - D is in file File;
-  - the `id` of D is an object pattern P;
+<a id="destructures"></a>A declarator destructures Local from Key in File if all of:
+  - it is in file File;
+  - the `id` of it is an object pattern P;
   - Prop is among the `properties` of P;
-  - the `key` of Prop is K;
-  - K [spells](js-structure.md#key_name) Key;
-  - the `value` of Prop is L;
-  - L [is named](js-structure.md#ast_name) Local.
+  - the `key` of Prop [spells](js-structure.md#key_name) Key;
+  - the `value` of Prop [is named](js-structure.md#ast_name) Local.
 
 D is scoped in File if D [destructures](#destructures) some name from some key in File.
 
 E may be the node N if all of:
   - D [destructures](#destructures) Local from Key in File;
-  - the `init` of D is Init;
-  - Init [may be the node](#may_be_node) Obj;
+  - the `init` of D [may be the node](#may_be_node) Obj;
   - [the member](#member_value) Key of Obj holds V;
   - V [may be the node](#may_be_node) N;
   - E [reads](#ident_in) Local in File;
   - E [sees](#sees_binder) D.
 
-<a id="destructures_at"></a>A declarator D destructures Local at Index in File if all of:
-  - D is in file File;
-  - the `id` of D is an array pattern P;
+<a id="destructures_at"></a>A declarator destructures Local at Index in File if all of:
+  - it is in file File;
+  - the `id` of it is an array pattern P;
   - L is the Index-th of the `elements` of P;
   - L [is named](js-structure.md#ast_name) Local.
 
@@ -378,8 +529,7 @@ D is scoped in File if D [destructures](#destructures_at) some name at some inde
 E may be the node N if all of:
   - D [destructures](#destructures_at) Local at Index in File;
   - the `init` of D is Init;
-  - [the element](#elem_at) Index of Init is V;
-  - V [may be the node](#may_be_node) N;
+  - [the element](#elem_at) Index of Init [may be the node](#may_be_node) N;
   - E [reads](#ident_in) Local in File;
   - E [sees](#sees_binder) D.
 
@@ -389,14 +539,12 @@ E may be the node N if all of:
 <a id="param_of"></a>F takes Name at I if all of:
   - [`fn_node_v`](#fn_node_v)(F);
   - an assignment_pattern node P is the I-th of the `params` of F;
-  - the `left` of P is L;
-  - L [is named](js-structure.md#ast_name) Name.
+  - the `left` of P [is named](js-structure.md#ast_name) Name.
 
 <a id="param_default"></a>F defaults Name to Init if all of:
   - [`fn_node_v`](#fn_node_v)(F);
   - an assignment_pattern node P is among the `params` of F;
-  - the `left` of P is L;
-  - L [is named](js-structure.md#ast_name) Name;
+  - the `left` of P [is named](js-structure.md#ast_name) Name;
   - the `right` of P is Init.
 
 U may be the node N if all of:
@@ -409,25 +557,22 @@ U may be the node N if all of:
 > pattern took — the exclusion is the whole content. It is `member_plain` (no
 > `static` anywhere), as a module namespace is.
 
-<a id="pattern_takes"></a>An object pattern P takes the key Key if all of:
-  - Prop is among the `properties` of P;
-  - the `key` of Prop is K;
-  - K [spells](js-structure.md#key_name) Key.
+<a id="pattern_takes"></a>An object pattern takes the key Key if Prop is among the `properties` of it and the `key` of Prop [spells](js-structure.md#key_name) Key.
 
-<a id="rest_in_pattern"></a>A declarator D holds a rest R in File if D is in file File, the `id` of D is an object pattern P, and R is among the `properties` of P.
+<a id="rest_in_pattern"></a>A declarator holds a rest R in File if all of:
+  - it is in file File;
+  - the `id` of it is an object pattern P;
+  - R is among the `properties` of P;
+  - R is a rest.
 
-<a id="rest_binds"></a>D binds Local through the rest R in File if all of:
-  - D [holds a rest](#rest_in_pattern) R in File;
-  - the `argument` of R is L;
-  - L [is named](js-structure.md#ast_name) Local.
+<a id="rest_binds"></a>D binds Local through the rest R in File if D [holds a rest](#rest_in_pattern) R in File and the `argument` of R [is named](js-structure.md#ast_name) Local.
 
 D is scoped in File if D [binds](#rest_binds) some name through the rest some node in File.
 
 <a id="member_value"></a>The member Key of R holds V if all of:
   - D [holds a rest](#rest_in_pattern) R in some file;
   - the `id` of D is P;
-  - the `init` of D is Init;
-  - Init [may be the node](#may_be_node) Obj;
+  - the `init` of D [may be the node](#may_be_node) Obj;
   - [the member](#member_value) Key of Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
@@ -443,8 +588,7 @@ E may be the node R if all of:
 
 The member Key of an object literal O holds V if all of:
   - a spread S is among the `properties` of O;
-  - the `argument` of S is X;
-  - X [may be the node](#may_be_node) Src;
+  - the `argument` of S [may be the node](#may_be_node) Src;
   - [the member](#member_value) Key of Src holds V.
 
 <a id="valued"></a>E is valued either:
@@ -480,14 +624,14 @@ Declared as facts: fn_kind_v, call_like_v.
 > stops at the first spread; a spread of an array this layer can see
 > contributes element K at position J + K. `f(...a, ...b)` is unexercised.
 
-<a id="spread_arg"></a>A call C has a spread at I if a spread S is the I-th of the `arguments` of C.
+<a id="spread_arg"></a>A call has a spread at I if a spread S is the I-th of the `arguments` of it.
 
 <a id="after_spread"></a>C is past a spread at I if C [has a spread](#spread_arg) at J, some node is the I-th of the `arguments` of C, and J < I.
 
-<a id="arg_at"></a>A call C passes X at I if all of:
-  - X is the I-th of the `arguments` of C;
+<a id="arg_at"></a>A call passes X at I if all of:
+  - X is the I-th of the `arguments` of it;
   - unless X [is of kind](js-model.md#ast_node) `spread_element`;
-  - unless C [is past a spread](#after_spread) at I.
+  - unless it [is past a spread](#after_spread) at I.
 
 C passes E at I if all of:
   - C [has a spread](#spread_arg) at J;
@@ -550,15 +694,10 @@ U may be the node N if all of:
 
 <a id="returns"></a>F returns E if F [is nearest to](#nearest_v) a return R and the `argument` of R is E.
 
-C may be the literal V if all of:
-  - C [resolves to](js-callgraph.md#resolves) F;
-  - F [returns](#returns) E;
-  - E [may be the literal](#may_be_lit) V.
-
-C may be the node N if all of:
-  - C [resolves to](js-callgraph.md#resolves) F;
-  - F [returns](#returns) E;
-  - E [may be the node](#may_be_node) N.
+C may be the literal/node V if all of:
+ - C [resolves to](js-callgraph.md#resolves) F;
+ - F [returns](#returns) E;
+ - E [may be the literal/node](#may_be_lit) V.
 
 ## 8. Reading a property off a value
 
@@ -566,33 +705,26 @@ C may be the node N if all of:
 > `.k`". `member_value` names the node a member HOLDS and judges nothing about
 > it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 
-<a id="obj_like"></a>O is object like either:
-
-1. if O is an object literal;
-2. if O is a class;
-3. if O is a class.
+<a id="obj_like"></a>O is object like if O is an object literal or a class.
 
 The member Key of O holds V either:
 
 1. if all of:
    - O is an object literal;
    - an object method M is among the `properties` of O;
-   - the `key` of M is K;
-   - K [spells](js-structure.md#key_name) Key;
+   - the `key` of M [spells](js-structure.md#key_name) Key;
    - V is M;
 2. if all of:
    - O is an object literal;
    - a property P is among the `properties` of O;
-   - the `key` of P is K;
-   - K [spells](js-structure.md#key_name) Key;
+   - the `key` of P [spells](js-structure.md#key_name) Key;
    - the `value` of P is V;
 3. if all of:
    - O [is object like](#obj_like);
    - the `body` of O is B;
    - V is among the `body` of B;
    - V is a method;
-   - the `key` of V is K;
-   - K [spells](js-structure.md#key_name) Key.
+   - the `key` of V [spells](js-structure.md#key_name) Key.
 
 > A member written is a member read, flow-insensitively — `assigns` one step
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
@@ -601,8 +733,7 @@ The member Key of O holds V if all of:
   - X [is plain](#plain_assign);
   - the `left` of X is L;
   - L [selects](#selects) Key;
-  - the `object` of L is Obj;
-  - Obj [may be the node](#may_be_node) O;
+  - the `object` of L [may be the node](#may_be_node) O;
   - the `right` of X is V.
 
 > Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
@@ -630,20 +761,18 @@ The member Key of CD holds V if all of:
 
 <a id="member_kind_v"></a>`member_kind_v`, a member access, includes `member_expression`, `optional_member_expression`.
 
-<a id="member_node_v"></a>A member access N is a member access.
+<a id="member_node_v"></a>A member access is a member access.
 
 <a id="selects"></a>N selects Key either:
 
 1. if all of:
    - N [is a member access](#member_node_v);
    - the attribute `computed` of N is `false`;
-   - the `property` of N is P;
-   - P [is named](js-structure.md#ast_name) Key;
+   - the `property` of N [is named](js-structure.md#ast_name) Key;
 2. if all of:
    - N [is a member access](#member_node_v);
    - the attribute `computed` of N is `true`;
-   - the `property` of N is P;
-   - P [may be the literal](#may_be_lit) Key.
+   - the `property` of N [may be the literal](#may_be_lit) Key.
 
 Declared as facts: member_kind_v.
 
@@ -653,9 +782,7 @@ Declared as facts: member_kind_v.
 > literal's members carry no `static`, so they get `member_plain`; so does a
 > module namespace.
 
-<a id="class_member_static"></a>The static member Key of CD is M if [the member](#member_value) Key of CD holds M and the attribute `static` of M is `true`.
-
-<a id="class_member_proto"></a>The instance member Key of CD is M if [the member](#member_value) Key of CD holds M and the attribute `static` of M is `false`.
+<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of CD is M if [the member](#member_value) Key of CD holds M and the attribute `static` of M is `true`/`false`.
 
 The plain member Key of O is V either:
 
@@ -676,28 +803,23 @@ N may be the node V2 either:
    - O [denotes a class](#class_receiver);
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
-   - [the static member](#class_member_static) Key of Obj is V;
-   - V [may be the node](#may_be_node) V2;
+   - [the static member](#class_member_static) Key of Obj [may be the node](#may_be_node) V2;
 2. if all of:
    - N [is a member access](#member_node_v);
    - the `object` of N is O;
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
-   - [the instance member](#class_member_proto) Key of Obj is V;
-   - V [may be the node](#may_be_node) V2;
+   - [the instance member](#class_member_proto) Key of Obj [may be the node](#may_be_node) V2;
    - unless O [denotes a class](#class_receiver);
 3. if all of:
    - N [is a member access](#member_node_v);
-   - the `object` of N is O;
-   - O [may be the node](#may_be_node) Obj;
+   - the `object` of N [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
-   - [the plain member](#member_plain) Key of Obj is V;
-   - V [may be the node](#may_be_node) V2.
+   - [the plain member](#member_plain) Key of Obj [may be the node](#may_be_node) V2.
 
 N may be the literal L if all of:
   - N [is a member access](#member_node_v);
-  - the `object` of N is O;
-  - O [may be the node](#may_be_node) Obj;
+  - the `object` of N [may be the node](#may_be_node) Obj;
   - N [selects](#selects) Key;
   - [the member](#member_value) Key of Obj holds V;
   - V [may be the literal](#may_be_lit) L.
@@ -707,18 +829,15 @@ N may be the literal L if all of:
 
 M may be the node Y either:
 
-1. if M is an object method and Y is M;
-2. if M is a method and Y is M;
-3. if M is a function and Y is M;
-4. if all of:
+1. if M is an object method or a method or a function and Y is M;
+2. if all of:
    - Y is a function;
    - Y is in file File;
-   - the `id` of Y is I;
-   - I [is named](js-structure.md#ast_name) Name;
+   - the `id` of Y [is named](js-structure.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
-5. if M is a property, the `value` of M is X, and X [may be the node](#may_be_node) Y.
+3. if M is a property and the `value` of M [may be the node](#may_be_node) Y.
 
-A property P may be the literal V if the `value` of P is X and X [may be the literal](#may_be_lit) V.
+A property may be the literal V if the `value` of it [may be the literal](#may_be_lit) V.
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -728,7 +847,7 @@ A property P may be the literal V if the `value` of P is X and X [may be the lit
 
 <a id="this_binds_kind"></a>`this_binds_kind`, a this-binder, includes `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`.
 
-<a id="this_binder"></a>A this-binder F binds this.
+<a id="this_binder"></a>A this-binder binds this.
 
 <a id="this_over"></a>F is over a this T if F [is within](js-structure.md#ast_within) T and F [binds this](#this_binder).
 
@@ -740,7 +859,11 @@ A property P may be the literal V if the `value` of P is X and X [may be the lit
 
 <a id="this_host"></a>F hosts T if F [is over](#this_over) T, unless F [is outdone for](#this_nearer) T.
 
-<a id="class_method_of"></a>CD has the method M if CD [is object like](#obj_like), the `body` of CD is B, and M is among the `body` of B.
+<a id="class_method_of"></a>CD has the method M if all of:
+  - CD [is object like](#obj_like);
+  - the `body` of CD is B;
+  - M is among the `body` of B;
+  - M is a method.
 
 T may be the node CD if CD [has the method](#class_method_of) M and M [hosts](#this_host) T.
 
@@ -760,17 +883,14 @@ Declared as facts: this_binds_kind.
   - CD [is object like](#obj_like);
   - the `body` of CD is B;
   - P is among the `body` of B;
-  - the `key` of P is KN;
-  - KN [spells](js-structure.md#key_name) Key;
+  - the `key` of P [spells](js-structure.md#key_name) Key;
   - the `value` of P is V.
 
 The member Key of CD holds V if CD [has the field](#field_of) Key at some node holding V.
 
 CD owns the key Key if CD [has the field](#field_of) Key at some node holding some node.
 
-The static member Key of CD is V if CD [has the field](#field_of) Key at P holding V and the attribute `static` of P is `true`.
-
-The instance member Key of CD is V if CD [has the field](#field_of) Key at P holding V and the attribute `static` of P is `false`.
+The static/instance member Key of CD is V if CD [has the field](#field_of) Key at P holding V and the attribute `static` of P is `true`/`false`.
 
 Declared as facts: class_field_kind.
 
@@ -779,18 +899,10 @@ Declared as facts: class_field_kind.
 
 <a id="inherited_field"></a>CD inherits the field Key at P holding V either:
 
-1. if all of:
-   - [the super](#super_of) of CD is SD;
-   - SD [has the field](#field_of) Key at P holding V;
-   - unless CD [owns the key](#own_key) Key;
-2. if all of:
-   - [the super](#super_of) of CD is SD;
-   - SD [inherits the field](#inherited_field) Key at P holding V;
-   - unless CD [owns the key](#own_key) Key.
+1. if [the super](#super_of) of CD [has the field](#field_of) Key at P holding V, unless CD [owns the key](#own_key) Key;
+2. if [the super](#super_of) of CD [inherits the field](#inherited_field) Key at P holding V, unless CD [owns the key](#own_key) Key.
 
-The instance member Key of CD is V if CD [inherits the field](#inherited_field) Key at P holding V and the attribute `static` of P is `false`.
-
-The static member Key of CD is V if CD [inherits the field](#inherited_field) Key at P holding V and the attribute `static` of P is `true`.
+The instance/static member Key of CD is V if CD [inherits the field](#inherited_field) Key at P holding V and the attribute `static` of P is `false`/`true`.
 
 > A private name is LEXICAL, not a lookup: bound by the declaring class body,
 > never inherited, computed or reached from outside, so these rules never ask
@@ -799,7 +911,7 @@ The static member Key of CD is V if CD [inherits the field](#inherited_field) Ke
 > `key_name` gets no arm for `private_name` and `selects` stays empty on a
 > private read. `private_inner` is the shadowing test for nested classes.
 
-<a id="private_key"></a>A private name P is the private key Name if the `id` of P is I and I [is named](js-structure.md#ast_name) Name.
+<a id="private_key"></a>A private name is the private key Name if the `id` of it [is named](js-structure.md#ast_name) Name.
 
 <a id="private_member_kind"></a>`private_member_kind`, a private member, includes `class_private_property`, `class_private_method`.
 
@@ -807,13 +919,9 @@ The static member Key of CD is V if CD [inherits the field](#inherited_field) Ke
   - CD [is object like](#obj_like);
   - the `body` of CD is B;
   - M is among the `body` of B;
-  - the `key` of M is P;
-  - P [is the private key](#private_key) Name.
+  - the `key` of M [is the private key](#private_key) Name.
 
-<a id="private_ref"></a>N refers privately to Name if all of:
-  - N [is a member access](#member_node_v);
-  - the `property` of N is P;
-  - P [is the private key](#private_key) Name.
+<a id="private_ref"></a>N refers privately to Name if N [is a member access](#member_node_v) and the `property` of N [is the private key](#private_key) Name.
 
 <a id="private_inner"></a>N has an inner class inside CD if all of:
   - N [refers privately to](#private_ref) Name;
@@ -829,19 +937,11 @@ The static member Key of CD is V if CD [inherits the field](#inherited_field) Ke
   - CD [is within](js-structure.md#ast_within) N;
   - unless N [has an inner class inside](#private_inner) CD.
 
-A private method M may be the node M.
+A private method may be the node it.
 
 N may be the node a private method M if N [binds privately to](#private_binds) M.
 
-N may be the node V2 if all of:
-  - N [binds privately to](#private_binds) a private field M;
-  - the `value` of M is V;
-  - V [may be the node](#may_be_node) V2.
-
-N may be the literal L if all of:
-  - N [binds privately to](#private_binds) a private field M;
-  - the `value` of M is V;
-  - V [may be the literal](#may_be_lit) L.
+N may be the node/literal V2 if N [binds privately to](#private_binds) a private field M and the `value` of M [may be the node/literal](#may_be_node) V2.
 
 CD has the method a private method M if CD [is object like](#obj_like), the `body` of CD is B, and M is among the `body` of B.
 
@@ -854,7 +954,11 @@ CD has the method a private method M if CD [is object like](#obj_like), the `bod
 
 T may be the node CD if CD [has the field site](#class_field_this) P and P [hosts](#this_host) T.
 
-<a id="static_block_of"></a>CD has the static block SB if CD [is object like](#obj_like), the `body` of CD is B, and SB is among the `body` of B.
+<a id="static_block_of"></a>CD has the static block SB if all of:
+  - CD [is object like](#obj_like);
+  - the `body` of CD is B;
+  - SB is among the `body` of B;
+  - SB is a static block.
 
 T may be the node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) T.
 
@@ -874,31 +978,20 @@ T denotes a class if some class [has the static block](#static_block_of) SB and 
 
 <a id="imports_name"></a>Local imports Name from Src in File if all of:
   - an import D is in file File;
-  - the `source` of D is S;
-  - S [is written as](js-structure.md#ast_value) Src;
+  - the `source` of D [is written as](js-structure.md#ast_value) Src;
   - Sp is among the `specifiers` of D;
-  - the `local` of Sp is L;
-  - L [is named](js-structure.md#ast_name) Local;
-  - the `imported` of Sp is I;
-  - I [is named](js-structure.md#ast_name) Name.
+  - the `local` of Sp [is named](js-structure.md#ast_name) Local;
+  - the `imported` of Sp [is named](js-structure.md#ast_name) Name.
 
 > one row per file, from `program`; `ast_node(_, _, File, _)` would enumerate
 > the corpus to learn three strings
 
 <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.md#ast_node) `program` in file File.
 
-<a id="module_source"></a>N sources Src in File either:
-
-1. if all of:
-   - N is an import;
-   - N is in file File;
-   - the `source` of N is S;
-   - S [is written as](js-structure.md#ast_value) Src;
-2. if all of:
-   - N is an export-all;
-   - N is in file File;
-   - the `source` of N is S;
-   - S [is written as](js-structure.md#ast_value) Src.
+<a id="module_source"></a>N sources Src in File if all of:
+  - N is an import or an export-all;
+  - N is in file File;
+  - the `source` of N [is written as](js-structure.md#ast_value) Src.
 
 <a id="module_basename"></a>Src has basename Base if all of:
   - some node [sources](#module_source) Src in some file;
@@ -913,11 +1006,10 @@ T denotes a class if some class [has the static block](#static_block_of) SB and 
   - File [is in the corpus](#corpus_file);
   - File is Base.
 
-<a id="exports_name"></a>A function F is exported as Name from File if all of:
+<a id="exports_name"></a>A function is exported as Name from File if all of:
   - a named export E is in file File;
-  - the `declaration` of E is F;
-  - the `id` of F is I;
-  - I [is named](js-structure.md#ast_name) Name.
+  - the `declaration` of E is it;
+  - the `id` of it [is named](js-structure.md#ast_name) Name.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_source`, which holds of imports too.
@@ -933,34 +1025,32 @@ F is exported as Name from File if all of:
 > a binding of the OTHER module and must not resolve here. Erasure has two
 > markers, on the declaration and on the specifier, neither implying the other.
 
-<a id="reexport_decl"></a>A named export E re exports if the `source` of E is some node.
+<a id="reexport_decl"></a>A named export re exports if the `source` of it is some node.
 
-<a id="export_list_erased"></a>E is type only if the attribute `export_kind` of E is "type".
+<a id="export_list_erased"></a>E exports types only if the attribute `export_kind` of E is "type".
 
-<a id="export_item_erased"></a>Sp is type only if the attribute `export_kind` of Sp is "type".
+<a id="export_item_erased"></a>Sp is a type only specifier if the attribute `export_kind` of Sp is "type".
 
 <a id="export_local"></a>L is exported locally as Ext from File if all of:
   - a named export E is in file File;
   - an export_specifier node Sp is among the `specifiers` of E;
   - the `local` of Sp is L;
-  - the `exported` of Sp is X;
-  - X [is named](js-structure.md#ast_name) Ext;
+  - the `exported` of Sp [is named](js-structure.md#ast_name) Ext;
   - unless E [re exports](#reexport_decl);
-  - unless E [is type only](#export_list_erased);
-  - unless Sp [is type only](#export_item_erased).
+  - unless E [exports types only](#export_list_erased);
+  - unless Sp [is a type only specifier](#export_item_erased).
 
 F is exported as Ext from File if L [is exported locally as](#export_local) Ext from File and L [may be the node](#may_be_node) F.
 
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
 > so `ns.f()` is an ordinary member lookup.
 
-A named export N sources Src in File if N is in file File, the `source` of N is S, and S [is written as](js-structure.md#ast_value) Src.
+A named export sources Src in File if it is in file File and the `source` of it [is written as](js-structure.md#ast_value) Src.
 
 <a id="export_ns_name"></a>Name is a namespace export of Src from File if all of:
   - a named export E is in file File;
   - an export_namespace_specifier node Sp is among the `specifiers` of E;
-  - the `exported` of Sp is X;
-  - X [is named](js-structure.md#ast_name) Name;
+  - the `exported` of Sp [is named](js-structure.md#ast_name) Name;
   - E [sources](#module_source) Src in File.
 
 P is exported as Name from File if all of:
@@ -979,13 +1069,11 @@ E may be the node F if all of:
 
 <a id="imports_ns"></a>Local imports the namespace of Src in File if all of:
   - an import D is in file File;
-  - the `source` of D is S;
-  - S [is written as](js-structure.md#ast_value) Src;
+  - the `source` of D [is written as](js-structure.md#ast_value) Src;
   - an import_namespace_specifier node Sp is among the `specifiers` of D;
-  - the `local` of Sp is L;
-  - L [is named](js-structure.md#ast_name) Local.
+  - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
-<a id="module_object"></a>A program P is the module object of File if P is in file File.
+<a id="module_object"></a>A program is the module object of File if it is in file File.
 
 E may be the node P if all of:
   - Local [imports the namespace](#imports_ns) of Src in File;
@@ -997,13 +1085,11 @@ The member Name of P holds F if P [is the module object of](#module_object) Targ
 
 <a id="imports_default"></a>Local imports the default of Src in File if all of:
   - an import D is in file File;
-  - the `source` of D is S;
-  - S [is written as](js-structure.md#ast_value) Src;
+  - the `source` of D [is written as](js-structure.md#ast_value) Src;
   - an import_default_specifier node Sp is among the `specifiers` of D;
-  - the `local` of Sp is L;
-  - L [is named](js-structure.md#ast_name) Local.
+  - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
-<a id="exports_default"></a>A function F is the default export of File if an export_default_declaration node E is in file File and the `declaration` of E is F.
+<a id="exports_default"></a>A function is the default export of File if an export_default_declaration node E is in file File and the `declaration` of E is it.
 
 E may be the node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
@@ -1017,9 +1103,9 @@ E may be the node F if all of:
 
 > `this` in an object literal's own method is that object.
 
-<a id="obj_method_of"></a>An object literal O has the method an object method M if M is among the `properties` of O.
+<a id="obj_method_of"></a>An object literal has the object method M if M is among the `properties` of it and M is an object method.
 
-T may be the node O if O [has the method](#obj_method_of) M and M [hosts](#this_host) T.
+T may be the node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) T.
 
 ## 12. Construction
 
@@ -1035,15 +1121,13 @@ T may be the node O if O [has the method](#obj_method_of) M and M [hosts](#this_
 1. if all of:
    - CD [is object like](#obj_like);
    - CD [is of kind](js-model.md#ast_node) some kind in file File;
-   - the `id` of CD is I;
-   - I [is named](js-structure.md#ast_name) Name;
+   - the `id` of CD [is named](js-structure.md#ast_name) Name;
 2. if all of:
    - CD is a class;
    - CD is in file File;
    - a declarator D is in file File;
    - the `init` of D is CD;
-   - the `id` of D is I;
-   - I [is named](js-structure.md#ast_name) Name.
+   - the `id` of D [is named](js-structure.md#ast_name) Name.
 
 E may be the node CD either:
 
@@ -1051,8 +1135,7 @@ E may be the node CD either:
 2. if all of:
    - E is a new;
    - E is in file File;
-   - the `callee` of E is CE;
-   - CE [is named](js-structure.md#ast_name) Name;
+   - the `callee` of E [is named](js-structure.md#ast_name) Name;
    - CD [is named](#class_named) Name in File.
 
 > `super` denotes the class above, found by NAME in the same file, so a class
@@ -1061,8 +1144,7 @@ E may be the node CD either:
 <a id="super_of"></a>The super of CD is SD if all of:
   - CD [is object like](#obj_like);
   - CD [is of kind](js-model.md#ast_node) some kind in file File;
-  - the `super_class` of CD is SC;
-  - SC [is named](js-structure.md#ast_name) Name;
+  - the `super_class` of CD [is named](js-structure.md#ast_name) Name;
   - SD [is named](#class_named) Name in File.
 
 > A class with no constructor answers with its nearest ancestor's. Measured on
@@ -1082,9 +1164,9 @@ E may be the node CD either:
    - [the constructor](#ctor_of) of SD is M;
    - unless CD [has its own constructor](#has_own_ctor).
 
-A super S may be the node SD if all of:
+A super may be the node SD if all of:
   - CD [has the method](#class_method_of) M;
-  - M [is within](js-structure.md#ast_within) S;
+  - M [is within](js-structure.md#ast_within) it;
   - [the super](#super_of) of CD is SD.
 
 ## 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
@@ -1095,35 +1177,27 @@ A super S may be the node SD if all of:
 > promise constructed and awaited later reaches the Promise class, which no
 > corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
 
-A sequence E
+A sequence
 
 - <a id="seq_later"></a>has a later expression than I if all of:
-  - some node is the I-th of the `expressions` of E;
-  - some node is the J-th of the `expressions` of E;
+  - some node is the I-th of the `expressions` of it;
+  - some node is the J-th of the `expressions` of it;
   - I < J.
 - may be the node N if all of:
-  - X is the I-th of the `expressions` of E;
+  - X is the I-th of the `expressions` of it;
   - X [may be the node](#may_be_node) N;
-  - unless E [has a later expression than](#seq_later) I.
+  - unless it [has a later expression than](#seq_later) I.
 - may be the literal V if all of:
-  - X is the I-th of the `expressions` of E;
+  - X is the I-th of the `expressions` of it;
   - X [may be the literal](#may_be_lit) V;
-  - unless E [has a later expression than](#seq_later) I.
+  - unless it [has a later expression than](#seq_later) I.
 
-E may be the node N either:
+E may be the node/literal N if all of:
+ - E is a conditional;
+ - the `consequent` or `alternate` of E is X;
+ - X [may be the node/literal](#may_be_node) N.
 
-1. if E is a conditional, the `consequent` of E is X, and X [may be the node](#may_be_node) N;
-2. if E is a conditional, the `alternate` of E is X, and X [may be the node](#may_be_node) N.
-
-E may be the literal V either:
-
-1. if E is a conditional, the `consequent` of E is X, and X [may be the literal](#may_be_lit) V;
-2. if E is a conditional, the `alternate` of E is X, and X [may be the literal](#may_be_lit) V.
-
-An await E
-
-- may be the node N if the `argument` of E is X and X [may be the node](#may_be_node) N.
-- may be the literal V if the `argument` of E is X and X [may be the literal](#may_be_lit) V.
+An await may be the node/literal N if the `argument` of it [may be the node/literal](#may_be_node) N.
 
 ## 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
 
@@ -1149,8 +1223,7 @@ An await E
 <a id="delegates"></a>Outer delegates to Inner if all of:
   - the attribute `delegate` of a yield Y is `true`;
   - Outer [is nearest to](#nearest_v) Y;
-  - the `argument` of Y is X;
-  - X [resolves to](js-callgraph.md#resolves) Inner.
+  - the `argument` of Y [resolves to](js-callgraph.md#resolves) Inner.
 
 Inner is sent V if Outer [is sent](#next_send) V and Outer [delegates to](#delegates) Inner.
 
@@ -1165,8 +1238,7 @@ Y may be the node X either:
 2. if all of:
    - Y is a yield;
    - the attribute `delegate` of Y is `true`;
-   - the `argument` of Y is Z;
-   - Z [resolves to](js-callgraph.md#resolves) Inner;
+   - the `argument` of Y [resolves to](js-callgraph.md#resolves) Inner;
    - Inner [returns](#returns) E;
    - E [may be the node](#may_be_node) X.
 
@@ -1174,19 +1246,17 @@ Y may be the node X either:
 > `may_be_node`); a generator is a CALL, read at the site, because its returns
 > are not what for-of walks.
 
-A for-of S
+A for-of
 
-- <a id="for_of_src"></a>iterates X if the `right` of S is X.
+- <a id="for_of_src"></a>iterates X if the `right` of it is X.
 - <a id="for_of_name"></a>loops over Name if all of:
-  - the `left` of S is D;
+  - the `left` of it is D;
   - the `declarations` of D is V;
-  - the `id` of V is I;
-  - I [is named](js-structure.md#ast_name) Name.
+  - the `id` of V [is named](js-structure.md#ast_name) Name.
 
-<a id="for_of_use"></a>S uses Name at U if all of:
+<a id="for_of_use"></a>S loops with Name at U if all of:
   - S [loops over](#for_of_name) Name;
-  - the `body` of S is B;
-  - B [is within](js-structure.md#ast_within) U;
+  - the `body` of S [is within](js-structure.md#ast_within) U;
   - U [reads](#ident) Name.
 
 <a id="iter_elem"></a>X has an element E either:
@@ -1194,33 +1264,17 @@ A for-of S
 1. if X [may be the node](#may_be_node) an array literal Y and E is among the `elements` of Y;
 2. if X [resolves to](js-callgraph.md#resolves) F and F [yields](#yields) E.
 
-U may be the node N if all of:
-  - S [uses](#for_of_use) some name at U;
-  - S [iterates](#for_of_src) X;
-  - X [has an element](#iter_elem) E;
-  - E [may be the node](#may_be_node) N.
+U may be the node/literal N if all of:
+ - S [loops with](#for_of_use) some name at U;
+ - S [iterates](#for_of_src) X;
+ - X [has an element](#iter_elem) E;
+ - E [may be the node/literal](#may_be_node) N.
 
-U may be the literal V if all of:
-  - S [uses](#for_of_use) some name at U;
-  - S [iterates](#for_of_src) X;
-  - X [has an element](#iter_elem) E;
-  - E [may be the literal](#may_be_lit) V.
+E may be the node/literal N if E is a logical, the `left` or `right` of E is X, and X [may be the node/literal](#may_be_node) N.
 
-E may be the node N either:
+<a id="plain_assign"></a>An assignment is plain if the attribute `operator` of it is "=".
 
-1. if E is a logical, the `left` of E is X, and X [may be the node](#may_be_node) N;
-2. if E is a logical, the `right` of E is X, and X [may be the node](#may_be_node) N.
-
-E may be the literal V either:
-
-1. if E is a logical, the `left` of E is X, and X [may be the literal](#may_be_lit) V;
-2. if E is a logical, the `right` of E is X, and X [may be the literal](#may_be_lit) V.
-
-<a id="plain_assign"></a>An assignment E is plain if the attribute `operator` of E is "=".
-
-E may be the node N if E [is plain](#plain_assign), the `right` of E is X, and X [may be the node](#may_be_node) N.
-
-E may be the literal V if E [is plain](#plain_assign), the `right` of E is X, and X [may be the literal](#may_be_lit) V.
+E may be the node/literal N if E [is plain](#plain_assign) and the `right` of E [may be the node/literal](#may_be_node) N.
 
 > The crossings this layer performs: the scanner's tree, the unperspectived
 > kind tables, and the kernel's `edb` reflection.
@@ -1248,10 +1302,7 @@ E may be the literal V if E [is plain](#plain_assign), the `right` of E is X, an
 
 <a id="try_block"></a>The block of a try T is B if the `block` of T is B.
 
-<a id="thrown_in"></a>T throws V if all of:
-  - [the block](#try_block) of T is B;
-  - B [is within](js-structure.md#ast_within) a throw Th;
-  - the `argument` of Th is V.
+<a id="thrown_in"></a>T throws V if [the block](#try_block) of T [is within](js-structure.md#ast_within) a throw Th and the `argument` of Th is V.
 
 P catches V if all of:
   - [the catch](#catch_of) of T is H;
@@ -1260,10 +1311,7 @@ P catches V if all of:
 
 P may be the node V if P [catches](js-controlflow.md#caught_value) V.
 
-<a id="call_in_try"></a>T calls if all of:
-  - [the block](#try_block) of T is B;
-  - B [is within](js-structure.md#ast_within) C;
-  - [`call_site`](js-callgraph.md#call_site)(C, something).
+<a id="call_in_try"></a>T calls if [the block](#try_block) of T [is within](js-structure.md#ast_within) C and [`call_site`](js-callgraph.md#call_site)(C, something).
 
 <a id="catch_from_call"></a>P catches from a call if all of:
   - [the catch](#catch_of) of T is H;
@@ -1302,30 +1350,27 @@ E may be the node N if all of:
 <a id="decorated_member"></a>CD has the decorated member Key at a method M replaced with N if all of:
   - M [is replaced by its decorator with](#decorated_by) N;
   - CD [has the method](#class_method_of) M;
-  - the `key` of M is K;
-  - K [spells](js-structure.md#key_name) Key.
+  - the `key` of M [spells](js-structure.md#key_name) Key.
 
-The static member Key of CD is N if CD [has the decorated member](#decorated_member) Key at M replaced with N and the attribute `static` of M is `true`.
-
-The instance member Key of CD is N if CD [has the decorated member](#decorated_member) Key at M replaced with N and the attribute `static` of M is `false`.
+The static/instance member Key of CD is N if CD [has the decorated member](#decorated_member) Key at M replaced with N and the attribute `static` of M is `true`/`false`.
 
 ## Read from other files
 
-- [ast_in](js-structure.md#ast_in)
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [ast_value](js-structure.md#ast_value)
-- [ast_within](js-structure.md#ast_within)
-- [call_site](js-callgraph.md#call_site)
-- [callee_of](js-callgraph.md#callee_of)
-- [caught_value](js-controlflow.md#caught_value)
-- [decorates](js-callgraph.md#decorates)
-- [key_name](js-structure.md#key_name)
-- [resolves](js-callgraph.md#resolves)
+- [ast_in](js-structure.md#ast_in), in the code
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_value](js-structure.md#ast_value), in the code
+- [ast_within](js-structure.md#ast_within), in the code
+- [call_site](js-callgraph.md#call_site), in the code
+- [callee_of](js-callgraph.md#callee_of), in the code
+- [caught_value](js-controlflow.md#caught_value), in the flow
+- [decorates](js-callgraph.md#decorates), in the code
+- [key_name](js-structure.md#key_name), in the code
+- [resolves](js-callgraph.md#resolves), in the code
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
-- `ast_file`
+- `ast_attr`, in the code
+- `ast_child`, in the code
+- `ast_file`, in the code
 

@@ -12,6 +12,28 @@ default: code
 
 Kinds without a noun: if_statement, labeled_statement.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| an array pattern | array_pattern |
+| a block | block_statement |
+| a declarator | variable_declarator |
+| a for-of | for_of_statement |
+| an object literal | object_expression |
+| an object pattern | object_pattern |
+| a rest | rest_element |
+| a return | return_statement |
+| a spread | spread_element |
+| a throw | throw_statement |
+| a try | try_statement |
+
+## Signatures
+
+- catches(node P, node V) (caught_value), in the flow
+
 > js-controlflow.rofl — THE CONTROL-FLOW LAYER: not WHICH function a site
 > reaches but WHETHER the site runs at all. It writes into [code]; everything
 > here is a fact about a position in the tree.
@@ -290,8 +312,7 @@ Declared as facts: completion_deferred.
    - [`accessor_of`](#accessor_of)(Obj, Key, M);
    - N [selects](js-dataflow.md#selects) Key;
    - N [is a member access](js-dataflow.md#member_node_v);
-   - the `object` of N is O;
-   - O [may be the node](js-dataflow.md#may_be_node) Obj;
+   - the `object` of N [may be the node](js-dataflow.md#may_be_node) Obj;
 2. if all of:
    - N [binds privately to](js-dataflow.md#private_binds) M;
    - [`accessor_kind`](#accessor_kind)(K);
@@ -327,15 +348,13 @@ Declared as facts: accessor_kind.
 `pattern_accessor`(R, M) if all of:
   - D [holds a rest](js-dataflow.md#rest_in_pattern) R in some file;
   - the `id` of D is P;
-  - the `init` of D is Init;
-  - Init [may be the node](js-dataflow.md#may_be_node) Obj;
+  - the `init` of D [may be the node](js-dataflow.md#may_be_node) Obj;
   - [`accessor_of`](#accessor_of)(Obj, Key, M);
   - unless P [takes the key](js-dataflow.md#pattern_takes) Key.
 
 `pattern_accessor`(a spread S, M) if all of:
   - S is among the `properties` of an object literal O;
-  - the `argument` of S is X;
-  - X [may be the node](js-dataflow.md#may_be_node) Obj;
+  - the `argument` of S [may be the node](js-dataflow.md#may_be_node) Obj;
   - [`accessor_of`](#accessor_of)(Obj, Key, M).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
@@ -355,8 +374,7 @@ Declared as facts: accessor_kind.
    - [`fn_node`](js-callgraph.md#fn_node)(M);
 2. if all of:
    - [`spread_iterated`](#spread_iterated)(P);
-   - the `argument` of P is X;
-   - X [may be the node](js-dataflow.md#may_be_node) Obj;
+   - the `argument` of P [may be the node](js-dataflow.md#may_be_node) Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
    - [`fn_node`](js-callgraph.md#fn_node)(M).
 
@@ -411,20 +429,18 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 1. if N is an object pattern and E is `accessor_call`;
 2. if N is a rest, N is among the `properties` of an object pattern P, and E is `accessor_call`;
 3. if N is among the `properties` of an object literal O, N is a spread, and E is `accessor_call`;
-4. if N is an array pattern and E is `iterator_call`;
-5. if [`spread_iterated`](#spread_iterated)(N) and E is `iterator_call`;
-6. if N is a for-of and E is `iterator_call`.
+4. if N is an array pattern or a for-of and E is `iterator_call`;
+5. if [`spread_iterated`](#spread_iterated)(N) and E is `iterator_call`.
 
 <a id="hidden_call_src"></a>`hidden_call_src`(P, Init) either:
 
-1. if P is an object pattern and [`pattern_source`](#pattern_source)(P, Init);
-2. if P is an array pattern and [`pattern_source`](#pattern_source)(P, Init);
-3. if D [holds a rest](js-dataflow.md#rest_in_pattern) P in some file and the `init` of D is Init;
-4. if all of:
+1. if P is an object pattern or an array pattern and [`pattern_source`](#pattern_source)(P, Init);
+2. if D [holds a rest](js-dataflow.md#rest_in_pattern) P in some file and the `init` of D is Init;
+3. if all of:
    - P is a spread;
    - [`hidden_call_pos`](#hidden_call_pos)(P, something);
    - the `argument` of P is Init;
-5. if P is a for-of and the `right` of P is Init.
+4. if P is a for-of and the `right` of P is Init.
 
 <a id="hidden_call_user"></a>`hidden_call_user`(N, M) either:
 
@@ -481,7 +497,7 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 
 <a id="try_of"></a>`try_of`(a try TS, F) if F [is nearest to](js-dataflow.md#nearest_v) TS.
 
-<a id="in_try_block"></a>`in_try_block`(a try TS, N) if the `block` of TS is B and B [is within](js-structure.md#ast_within) N.
+<a id="in_try_block"></a>`in_try_block`(a try TS, N) if the `block` of TS [is within](js-structure.md#ast_within) N.
 
 > A try discharges through its `handler`; a finalizer alone catches nothing —
 > `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
@@ -536,8 +552,7 @@ Declared as facts: catches_via.
 <a id="caught_value"></a>P catches V if all of:
   - [the catch](js-dataflow.md#catch_of) of T is H;
   - [the param](js-dataflow.md#catch_param) of H is P;
-  - [the block](js-dataflow.md#try_block) of T is B;
-  - B [is within](js-structure.md#ast_within) C;
+  - [the block](js-dataflow.md#try_block) of T [is within](js-structure.md#ast_within) C;
   - C [resolves to](js-callgraph.md#resolves) G;
   - [`thrown_by`](#thrown_by)(G, V).
 
@@ -734,9 +749,7 @@ Declared as facts: mechanism_modelled, mechanism_waived, mechanism_open.
 1. if [`guard_kind`](#guard_kind)(K, something);
 2. if [`short_circuit_kind`](#short_circuit_kind)(K);
 3. if [`abrupt_kind`](#abrupt_kind)(K);
-4. if [`transfer_mechanism`](#transfer_mechanism)(K, `suspend`);
-5. if [`transfer_mechanism`](#transfer_mechanism)(K, `label_boundary`);
-6. if [`transfer_mechanism`](#transfer_mechanism)(K, `per_construction`).
+4. if [`transfer_mechanism`](#transfer_mechanism)(K, `suspend` or `label_boundary` or `per_construction`).
 
 `guard_named` includes `catch_clause`, `switch_statement`, `member_expression`, `decorator`, `object_pattern`, `rest_element`, `spread_element`.
 
@@ -782,33 +795,33 @@ Declared as facts: short_circuit_kind.
 
 ## Read from other files
 
-- [ast_node](js-model.md#ast_node)
-- [ast_within](js-structure.md#ast_within)
-- [call_site](js-callgraph.md#call_site)
-- [catch_of](js-dataflow.md#catch_of)
-- [catch_param](js-dataflow.md#catch_param)
-- [export_local](js-dataflow.md#export_local)
-- [fn_name](js-callgraph.md#fn_name)
-- [fn_node](js-callgraph.md#fn_node)
-- [fn_node_v](js-dataflow.md#fn_node_v)
-- [for_of_iterates](js-callgraph.md#for_of_iterates)
-- [may_be_lit](js-dataflow.md#may_be_lit)
-- [may_be_node](js-dataflow.md#may_be_node)
-- [member_node_v](js-dataflow.md#member_node_v)
-- [member_value](js-dataflow.md#member_value)
-- [nearest_fn](js-callgraph.md#nearest_fn)
-- [nearest_v](js-dataflow.md#nearest_v)
-- [pattern_takes](js-dataflow.md#pattern_takes)
-- [private_binds](js-dataflow.md#private_binds)
-- [resolves](js-callgraph.md#resolves)
-- [rest_in_pattern](js-dataflow.md#rest_in_pattern)
-- [returns](js-dataflow.md#returns)
-- [selects](js-dataflow.md#selects)
-- [top_call](js-callgraph.md#top_call)
-- [try_block](js-dataflow.md#try_block)
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_within](js-structure.md#ast_within), in the code
+- [call_site](js-callgraph.md#call_site), in the code
+- [catch_of](js-dataflow.md#catch_of), in the flow
+- [catch_param](js-dataflow.md#catch_param), in the flow
+- [export_local](js-dataflow.md#export_local), in the code
+- [fn_name](js-callgraph.md#fn_name), in the code
+- [fn_node](js-callgraph.md#fn_node), in the code
+- [fn_node_v](js-dataflow.md#fn_node_v), in the flow
+- [for_of_iterates](js-callgraph.md#for_of_iterates), in the code
+- [may_be_lit](js-dataflow.md#may_be_lit), in the flow
+- [may_be_node](js-dataflow.md#may_be_node), in the flow
+- [member_node_v](js-dataflow.md#member_node_v), in the flow
+- [member_value](js-dataflow.md#member_value), in the flow
+- [nearest_fn](js-callgraph.md#nearest_fn), in the code
+- [nearest_v](js-dataflow.md#nearest_v), in the flow
+- [pattern_takes](js-dataflow.md#pattern_takes), in the code
+- [private_binds](js-dataflow.md#private_binds), in the code
+- [resolves](js-callgraph.md#resolves), in the code
+- [rest_in_pattern](js-dataflow.md#rest_in_pattern), in the code
+- [returns](js-dataflow.md#returns), in the flow
+- [selects](js-dataflow.md#selects), in the flow
+- [top_call](js-callgraph.md#top_call), in the code
+- [try_block](js-dataflow.md#try_block), in the flow
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
+- `ast_attr`, in the code
+- `ast_child`, in the code
 

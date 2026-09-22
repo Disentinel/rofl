@@ -40,10 +40,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > a directory and an absent path both mean "keep looking" and are kept apart
 > because a directory is what makes an index file possible.
 
-<a id="candidate_missed"></a>`candidate_missed`(S, K) either:
-
-1. if [`resolve_try`](#resolve_try)(S, K, something, `miss`);
-2. if [`resolve_try`](#resolve_try)(S, K, something, `dir`).
+<a id="candidate_missed"></a>`candidate_missed`(S, K) if [`resolve_try`](#resolve_try)(S, K, something, `miss` or `dir`).
 
 > candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
 > every failed attempt into the why-tree of the answer
@@ -236,14 +233,14 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 ## Read from other files
 
-- [module_site](js-modules.md#module_site)
-- [resolved_builtin](js-modules.md#resolved_builtin)
-- [resolved_import](js-modules.md#resolved_import)
-- [site_file](js-modules.md#site_file)
-- [site_kind](js-modules.md#site_kind)
-- [site_line](js-modules.md#site_line)
-- [site_source](js-modules.md#site_source)
-- [site_source_computed](js-modules.md#site_source_computed)
+- [module_site](js-modules.md#module_site), in the code
+- [resolved_builtin](js-modules.md#resolved_builtin), in the code
+- [resolved_import](js-modules.md#resolved_import), in the code
+- [site_file](js-modules.md#site_file), in the code
+- [site_kind](js-modules.md#site_kind), in the code
+- [site_line](js-modules.md#site_line), in the code
+- [site_source](js-modules.md#site_source), in the code
+- [site_source_computed](js-modules.md#site_source_computed), in the code
 
 > 11 trailing comments on rule lines are not carried over.
 

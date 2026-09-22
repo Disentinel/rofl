@@ -10,6 +10,14 @@ default: audit
 
 *function*.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
+
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
 > parses; rules/js-env-api.rofl whether a PROTOTYPE METHOD exists; neither can
@@ -50,7 +58,7 @@ Declared as facts: ast_parse_error.
 
 `name_bound_in`(File, Name) either:
 
-1. if a function F is in file File, the `id` of F is I, and I [is named](js-structure.md#ast_name) Name;
+1. if a function F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
 2. if F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if [`binding`](js-modules.md#binding)(I, something, Name, something) and [`site_file`](js-modules.md#site_file)(I, File).
@@ -75,16 +83,10 @@ Declared as facts: ast_parse_error.
 > rules/js-modules.rofl's work, no new scanner contract. The NAMESPACE form
 > (`import * as fs`, `import fs`) binds a name standing for the whole module.
 
-<a id="host_module_ns"></a>`host_module_ns`(File, Local, Spec) either:
-
-1. if all of:
-   - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
-   - [`site_file`](js-modules.md#site_file)(I, File);
-   - [`binding`](js-modules.md#binding)(I, something, Local, "*");
-2. if all of:
-   - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
-   - [`site_file`](js-modules.md#site_file)(I, File);
-   - [`binding`](js-modules.md#binding)(I, something, Local, "default").
+<a id="host_module_ns"></a>`host_module_ns`(File, Local, Spec) if all of:
+  - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
+  - [`site_file`](js-modules.md#site_file)(I, File);
+  - [`binding`](js-modules.md#binding)(I, something, Local, "*" or "default").
 
 > The NAMED form binds ONE member under a local name that need not be its
 > own; reading `Imported` for the member covers the rename without a test.
@@ -123,8 +125,7 @@ Declared as facts: ast_parse_error.
 
 1. if all of:
    - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of N is O;
-   - O [reads](js-dataflow.md#ident_in) Local in File;
+   - the `object` of N [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_ns`](#host_module_ns)(File, Local, Spec);
    - N [selects](js-dataflow.md#selects) Key;
 2. if all of:
@@ -376,39 +377,39 @@ Declared as facts: ast_parse_error.
 
 ## Read from other files
 
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [binding](js-modules.md#binding)
-- [binds_name](js-dataflow.md#binds_name)
-- [callee_of](js-callgraph.md#callee_of)
-- [class_named](js-dataflow.md#class_named)
-- [ident_in](js-dataflow.md#ident_in)
-- [lib_call](js-env-api.md#lib_call)
-- [node_builtin_bare](js-modules.md#node_builtin_bare)
-- [param_of](js-dataflow.md#param_of)
-- [reaches](js-env.md#reaches)
-- [resolved_builtin](js-modules.md#resolved_builtin)
-- [selects](js-dataflow.md#selects)
-- [site_file](js-modules.md#site_file)
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [binding](js-modules.md#binding), in the code
+- [binds_name](js-dataflow.md#binds_name), in the code
+- [callee_of](js-callgraph.md#callee_of), in the code
+- [class_named](js-dataflow.md#class_named), in the flow
+- [ident_in](js-dataflow.md#ident_in), in the code
+- [lib_call](js-env-api.md#lib_call), in the code
+- [node_builtin_bare](js-modules.md#node_builtin_bare), in the main
+- [param_of](js-dataflow.md#param_of), in the flow
+- [reaches](js-env.md#reaches), in the audit
+- [resolved_builtin](js-modules.md#resolved_builtin), in the code
+- [selects](js-dataflow.md#selects), in the flow
+- [site_file](js-modules.md#site_file), in the code
 
 ## Not defined in these files
 
-- `ast_child`
-- `host`
-- `host_effect_atom`
-- `host_global`
-- `host_global_effect`
-- `host_member_deprecated`
-- `host_member_effect`
-- `host_member_replaced_by`
-- `host_member_since`
-- `host_module`
-- `host_module_effect`
-- `host_module_member`
-- `host_no_effects`
-- `provides_release`
-- `runtime`
-- `runtime_includes`
-- `runtime_undated`
-- `runtime_version`
+- `ast_child`, in the code
+- `host`, in the main
+- `host_effect_atom`, in the main
+- `host_global`, in the main
+- `host_global_effect`, in the main
+- `host_member_deprecated`, in the main
+- `host_member_effect`, in the main
+- `host_member_replaced_by`, in the main
+- `host_member_since`, in the main
+- `host_module`, in the main
+- `host_module_effect`, in the main
+- `host_module_member`, in the main
+- `host_no_effects`, in the main
+- `provides_release`, in the main
+- `runtime`, in the main
+- `runtime_includes`, in the main
+- `runtime_undated`, in the main
+- `runtime_version`, in the main
 

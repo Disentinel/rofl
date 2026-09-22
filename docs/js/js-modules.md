@@ -12,6 +12,18 @@ default: code
 
 Kinds without a noun: export_default_declaration, export_namespace_specifier, export_specifier, import_attribute, import_default_specifier, import_expression, import_namespace_specifier, import_specifier.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| an export-all | export_all_declaration |
+| an identifier | identifier |
+| an import | import_declaration |
+| a literal | big_int_literal, boolean_literal, literal_kind, numeric_literal, string_literal |
+| a named export | export_named_declaration |
+
 > js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
 > 
 > Three relations and never one `imports` edge: DEPENDS is potential (if B
@@ -70,7 +82,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="site_source_node"></a>`site_source_node`(I, Src) if [`module_site`](#module_site)(I, something) and the `source` of I is Src.
 
-<a id="site_source"></a>`site_source`(I, S) if [`site_source_node`](#site_source_node)(I, Src) and Src [is written as](js-structure.md#ast_value) S.
+<a id="site_source"></a>`site_source`(I, S) if [`site_source_node`](#site_source_node)(I, a literal Src) and Src [is written as](js-structure.md#ast_value) S.
 
 <a id="site_source_literal"></a>`site_source_literal`(I) if [`site_source`](#site_source)(I, something).
 
@@ -177,29 +189,16 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 > verdict. A default binds `"default"`, a namespace `"*"`.
 
-<a id="import_specifier_node"></a>`import_specifier_node`(Sp) either:
-
-1. if Sp is an import_specifier node;
-2. if Sp is an import_default_specifier node;
-3. if Sp is an import_namespace_specifier node.
+<a id="import_specifier_node"></a>`import_specifier_node`(Sp) if Sp is an import_specifier node or an import_default_specifier node or an import_namespace_specifier node.
 
 <a id="import_spec"></a>`import_spec`(I, Sp) if [`import_site`](#import_site)(I, `static_import`) and Sp is among the `specifiers` of I.
 
-<a id="spec_local"></a>`spec_local`(Sp, L) if all of:
-  - [`import_specifier_node`](#import_specifier_node)(Sp);
-  - the `local` of Sp is N;
-  - N [is named](js-structure.md#ast_name) L.
+<a id="spec_local"></a>`spec_local`(Sp, L) if [`import_specifier_node`](#import_specifier_node)(Sp) and the `local` of Sp [is named](js-structure.md#ast_name) L.
 
 <a id="spec_imported"></a>`spec_imported`(Sp, M) either:
 
-1. if all of:
-   - Sp is an import_specifier node;
-   - the `imported` of Sp is N;
-   - N [is named](js-structure.md#ast_name) M;
-2. if all of:
-   - Sp is an import_specifier node;
-   - the `imported` of Sp is N;
-   - N [is written as](js-structure.md#ast_value) M;
+1. if Sp is an import_specifier node and the `imported` of Sp [is named](js-structure.md#ast_name) M;
+2. if Sp is an import_specifier node and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
 3. if Sp is an import_default_specifier node and M is "default";
 4. if Sp is an import_namespace_specifier node and M is "*".
 
@@ -223,28 +222,16 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="export_spec"></a>`export_spec`(E, Sp) if [`export_site`](#export_site)(E) and Sp is among the `specifiers` of E.
 
-<a id="export_specifier_node"></a>`export_specifier_node`(Sp) either:
-
-1. if Sp is an export_specifier node;
-2. if Sp is an export_namespace_specifier node.
+<a id="export_specifier_node"></a>`export_specifier_node`(Sp) if Sp is an export_specifier node or an export_namespace_specifier node.
 
 <a id="spec_external"></a>`spec_external`(Sp, X) either:
 
-1. if all of:
-   - [`export_specifier_node`](#export_specifier_node)(Sp);
-   - the `exported` of Sp is N;
-   - N [is named](js-structure.md#ast_name) X;
-2. if all of:
-   - [`export_specifier_node`](#export_specifier_node)(Sp);
-   - the `exported` of Sp is N;
-   - N [is written as](js-structure.md#ast_value) X.
+1. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of Sp [is named](js-structure.md#ast_name) X;
+2. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of Sp [is written as](js-structure.md#ast_value) X.
 
 <a id="spec_internal"></a>`spec_internal`(Sp, L) either:
 
-1. if all of:
-   - Sp is an export_specifier node;
-   - the `local` of Sp is N;
-   - N [is named](js-structure.md#ast_name) L;
+1. if Sp is an export_specifier node and the `local` of Sp [is named](js-structure.md#ast_name) L;
 2. if Sp is an export_namespace_specifier node and L is "*".
 
 <a id="export_binding"></a>`export_binding`(E, Sp, External, Internal) if all of:
@@ -299,10 +286,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="default_internal"></a>`default_internal`(E, N) either:
 
-1. if all of:
-   - [`default_declaration`](#default_declaration)(E, D);
-   - the `id` of D is I;
-   - I [is named](js-structure.md#ast_name) N;
+1. if [`default_declaration`](#default_declaration)(E, D) and the `id` of D [is named](js-structure.md#ast_name) N;
 2. if [`default_declaration`](#default_declaration)(E, an identifier D) and D [is named](js-structure.md#ast_name) N.
 
 <a id="has_default_internal"></a>`has_default_internal`(E) if [`default_internal`](#default_internal)(E, something).
@@ -539,11 +523,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > runs, and for these it does not. Two frontiers: an attribute whose parent is
 > not a site, and one whose key or value the join could not read.
 
-<a id="import_attr"></a>`import_attr`(an import_attribute node X, Key, Value) if all of:
-  - the `key` of X is K;
-  - K [is named](js-structure.md#ast_name) Key;
-  - the `value` of X is V;
-  - V [is written as](js-structure.md#ast_value) Value.
+<a id="import_attr"></a>`import_attr`(an import_attribute node X, Key, Value) if the `key` of X [is named](js-structure.md#ast_name) Key and the `value` of X [is written as](js-structure.md#ast_value) Value.
 
 <a id="import_attr_of"></a>`import_attr_of`(D, X) if X is among the `attributes` of D.
 
@@ -559,19 +539,19 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 ## Read from other files
 
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [ast_value](js-structure.md#ast_value)
-- [has_shape](js-callgraph.md#has_shape)
-- [meta_form](js-structure.md#meta_form)
-- [resolved_site](js-callgraph.md#resolved_site)
-- [shape_verdict](js-callgraph.md#shape_verdict)
-- [unknown_because](js-model.md#unknown_because)
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_value](js-structure.md#ast_value), in the code
+- [has_shape](js-callgraph.md#has_shape), in the code
+- [meta_form](js-structure.md#meta_form), in the code
+- [resolved_site](js-callgraph.md#resolved_site), in the code
+- [shape_verdict](js-callgraph.md#shape_verdict), in the audit
+- [unknown_because](js-model.md#unknown_because), in the main
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
+- `ast_attr`, in the code
+- `ast_child`, in the code
 
 > 3 trailing comments on rule lines are not carried over.
 

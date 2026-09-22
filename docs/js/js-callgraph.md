@@ -10,6 +10,31 @@ default: code
 
 *await*, *class*, *declarator*, *decorator*, *field*, *function*, *member access*, *method*, *object literal*, *object method*, *property*, *super*, *template*.
 
+## Kinds
+
+A noun is a node of one of its kinds:
+
+| noun | kinds |
+|---|---|
+| an await | await_expression |
+| a class | class_declaration, class_expression |
+| a declarator | variable_declarator |
+| a decorator | decorator |
+| a field | class_accessor_property, class_field_kind, class_property |
+| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
+| a member access | member_expression, member_kind_v, optional_member_expression |
+| a method | class_method |
+| an object literal | object_expression |
+| an object method | object_method |
+| a property | object_property |
+| a super | super |
+| a template | template_literal |
+
+## Signatures
+
+- is_decorated_by(node Owner, node D) (decorates)
+- resolves_to(call C, function F) (resolves)
+
 > js-callgraph.rofl — ONE construct, the FUNCTION CALL, at the call-graph
 > layer. Over the scanner's four relations plus js-structure's `ast_within`,
 > `ast_name`, `ast_value` and `key_name`; resolution itself asks the value
@@ -263,9 +288,8 @@ Declared as facts: fn_kind.
 
 <a id="fn_name"></a>`fn_name`(F, N) either:
 
-1. if F is a function, the `id` of F is I, and I [is named](js-structure.md#ast_name) N;
-2. if F is a function, the `id` of F is I, and I [is named](js-structure.md#ast_name) N;
-3. if F is an object method, the `key` of F is K, and K [spells](js-structure.md#key_name) N.
+1. if F is a function and the `id` of F [is named](js-structure.md#ast_name) N;
+2. if F is an object method and the `key` of F [spells](js-structure.md#key_name) N.
 
 <a id="ctor_method"></a>`ctor_method`(a method F) if the attribute `kind` of F is "constructor".
 
@@ -273,14 +297,12 @@ Declared as facts: fn_kind.
 
 1. if all of:
    - F is a method;
-   - the `key` of F is K;
-   - K [spells](js-structure.md#key_name) N;
+   - the `key` of F [spells](js-structure.md#key_name) N;
    - unless [`ctor_method`](#ctor_method)(F);
 2. if all of:
    - the `init` of a declarator D is F;
    - [`fn_node`](#fn_node)(F);
-   - the `id` of D is I;
-   - I [is named](js-structure.md#ast_name) N;
+   - the `id` of D [is named](js-structure.md#ast_name) N;
 3. if all of:
    - K [spells](js-structure.md#key_name) N;
    - the `key` of a property P is K;
@@ -291,13 +313,11 @@ Declared as facts: fn_kind.
    - the attribute `kind` of F is "constructor";
    - the `body` of CD is B;
    - F is among the `body` of B;
-   - the `id` of CD is I;
-   - I [is named](js-structure.md#ast_name) N;
+   - the `id` of CD [is named](js-structure.md#ast_name) N;
 5. if all of:
    - [`fn_node`](#fn_node)(F);
    - the `value` of a field P is F;
-   - the `key` of P is KN;
-   - KN [spells](js-structure.md#key_name) N.
+   - the `key` of P [spells](js-structure.md#key_name) N.
 
 > A class expression with no `id` takes its binding's name — the language's own
 > inference: `const A = class {}` has `A.name === "A"`, but
@@ -314,8 +334,7 @@ Declared as facts: fn_kind.
   - F is among the `body` of B;
   - [`anon_class`](#anon_class)(CD);
   - the `init` of a declarator D is CD;
-  - the `id` of D is I;
-  - I [is named](js-structure.md#ast_name) N.
+  - the `id` of D [is named](js-structure.md#ast_name) N.
 
 > A decorator is INSIDE the thing it decorates and does not run there:
 > `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
@@ -410,13 +429,11 @@ X resolves to F either:
 
 1. if all of:
    - [`transfer_site`](#transfer_site)(X, `tagged_template_expression`);
-   - the `tag` of X is T;
-   - T [may be the node](js-dataflow.md#may_be_node) F;
+   - the `tag` of X [may be the node](js-dataflow.md#may_be_node) F;
    - [`fn_node`](#fn_node)(F);
 2. if all of:
    - [`transfer_site`](#transfer_site)(X, `decorator`);
-   - the `expression` of X is E;
-   - E [may be the node](js-dataflow.md#may_be_node) F;
+   - the `expression` of X [may be the node](js-dataflow.md#may_be_node) F;
    - [`fn_node`](#fn_node)(F).
 
 > `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -427,8 +444,7 @@ X resolves to F either:
 
 <a id="for_of_iterates"></a>`for_of_iterates`(X, M) if all of:
   - [`transfer_site`](#transfer_site)(X, `for_of_statement`);
-  - the `right` of X is R;
-  - R [may be the node](js-dataflow.md#may_be_node) Obj;
+  - the `right` of X [may be the node](js-dataflow.md#may_be_node) Obj;
   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
   - [`fn_node`](#fn_node)(M).
 
@@ -677,28 +693,28 @@ Declared as facts: shape_because.
 
 ## Read from other files
 
-- [arg_at](js-dataflow.md#arg_at)
-- [ast_name](js-structure.md#ast_name)
-- [ast_node](js-model.md#ast_node)
-- [ast_within](js-structure.md#ast_within)
-- [builtin_prototype](js-dataflow.md#builtin_prototype)
-- [class_field_kind](js-dataflow.md#class_field_kind)
-- [class_method_of](js-dataflow.md#class_method_of)
-- [ctor_of](js-dataflow.md#ctor_of)
-- [key_name](js-structure.md#key_name)
-- [may_be_node](js-dataflow.md#may_be_node)
-- [member_value](js-dataflow.md#member_value)
-- [prototype_of](js-dataflow.md#prototype_of)
-- [returns](js-dataflow.md#returns)
-- [selects](js-dataflow.md#selects)
-- [shape_of](js-model.md#shape_of)
-- [unknown_type](js-model.md#unknown_type)
-- [verdict](js-model.md#verdict)
+- [arg_at](js-dataflow.md#arg_at), in the flow
+- [ast_name](js-structure.md#ast_name), in the code
+- [ast_node](js-model.md#ast_node), in the code
+- [ast_within](js-structure.md#ast_within), in the code
+- [builtin_prototype](js-dataflow.md#builtin_prototype), in the main
+- [class_field_kind](js-dataflow.md#class_field_kind), in the main
+- [class_method_of](js-dataflow.md#class_method_of), in the flow
+- [ctor_of](js-dataflow.md#ctor_of), in the flow
+- [key_name](js-structure.md#key_name), in the code
+- [may_be_node](js-dataflow.md#may_be_node), in the flow
+- [member_value](js-dataflow.md#member_value), in the flow
+- [prototype_of](js-dataflow.md#prototype_of), in the flow
+- [returns](js-dataflow.md#returns), in the flow
+- [selects](js-dataflow.md#selects), in the flow
+- [shape_of](js-model.md#shape_of), in the main
+- [unknown_type](js-model.md#unknown_type), in the main
+- [verdict](js-model.md#verdict), in the audit
 
 ## Not defined in these files
 
-- `ast_attr`
-- `ast_child`
-- `ast_file`
-- `node_kind`
+- `ast_attr`, in the code
+- `ast_child`, in the code
+- `ast_file`, in the code
+- `node_kind`, in the main
 

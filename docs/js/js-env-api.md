@@ -50,13 +50,13 @@ default: audit
 
 ## Read from other files
 
-- [reaches](js-env.md#reaches)
-- [stdlib_member](js-callgraph.md#stdlib_member)
+- [reaches](js-env.md#reaches), in the audit
+- [stdlib_member](js-callgraph.md#stdlib_member), in the audit
 
 ## Not defined in these files
 
-- `environment`
-- `lib_deprecated`
-- `lib_member`
-- `lib_replaced_by`
+- `environment`, in the main
+- `lib_deprecated`, in the main
+- `lib_member`, in the main
+- `lib_replaced_by`, in the main
 

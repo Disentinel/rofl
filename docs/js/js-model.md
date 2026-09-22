@@ -60,10 +60,7 @@ Declared as facts: claim, claim_kind.
 
 <a id="unknown_ledger"></a>`unknown_ledger`(What) if [`claim`](#claim)(What, something, something, something, something), unless [`claim_kind`](#claim_kind)(What).
 
-<a id="orphan_claim"></a>`orphan_claim`(Lang, K, L) either:
-
-1. if [`orphan`](#orphan)(`handled`, Lang, K, L);
-2. if [`orphan`](#orphan)(`ignored`, Lang, K, L).
+<a id="orphan_claim"></a>`orphan_claim`(Lang, K, L) if [`orphan`](#orphan)(`handled` or `ignored`, Lang, K, L).
 
 <a id="cell"></a>`cell`(Lang, K, L) if `node_kind`(Lang, K) and `layer`(L).
 
@@ -275,10 +272,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 `unknown_ledger`(What) if [`claim`](#claim)(What, something, something, something, something, something), unless [`claim_kind`](#claim_kind)(What).
 
-`orphan_claim`(Lang, K, S, Lay) either:
-
-1. if [`orphan`](#orphan)(`handled`, Lang, K, S, Lay);
-2. if [`orphan`](#orphan)(`ignored`, Lang, K, S, Lay).
+`orphan_claim`(Lang, K, S, Lay) if [`orphan`](#orphan)(`handled` or `ignored`, Lang, K, S, Lay).
 
 `orphan_reason`(Lang, K, S, Lay) if [`orphan`](#orphan)(`unknown_because`, Lang, K, S, Lay).
 
@@ -388,6 +382,6 @@ Declared as facts: ast_node, lang_of_corpus, not_a_construct, frame_deferred, ki
 
 ## Not defined in these files
 
-- `layer`
-- `node_kind`
+- `layer`, in the main
+- `node_kind`, in the main
 

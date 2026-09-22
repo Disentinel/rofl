@@ -88,6 +88,6 @@ Declared as facts: base_pack.
 
 ## Not defined in these files
 
-- `asserted_by`
-- `node_kind`
+- `asserted_by`, in the main
+- `node_kind`, in the main
 
