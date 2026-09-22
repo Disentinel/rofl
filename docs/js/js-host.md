@@ -7,7 +7,7 @@ books: audit, code, flow, main
 
 ## Terms
 
-*file*, *function*, *key*, *line*, *name*, *node*.
+*file*, *function*, *identifier*, *key*, *line*, *name*, *node*.
 
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
@@ -42,7 +42,7 @@ Declared as facts: ast_parse_error.
 > reference and attribute io to a program that does none. Under-reporting a
 > shadowed global is a missed row; over-reporting is a false accusation.
 
-<a id="name_bound_in"></a>`name_bound_in`(File, Name) if [`binds_name`](js-dataflow.md#binds_name)(something, Name, File).
+<a id="name_bound_in"></a>`name_bound_in`(File, Name) if some declarator [introduces](js-dataflow.md#binds_name) Name in File.
 
 > the `id` child and not `fn_name[code]`, which also covers object and class
 > METHODS: `{ log() {} }` would have suppressed `console`
@@ -53,14 +53,14 @@ Declared as facts: ast_parse_error.
    - a function F is in file File;
    - the id of F is a node I;
    - I [is named](js-structure.md#ast_name) Name;
-2. if [`param_of`](js-dataflow.md#param_of)(a node F, something, Name) and F [is of kind](js-model.md#ast_node) some kind in file File;
-3. if some class [is named](js-dataflow.md#class_named) Name in file File;
+2. if a function F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
+3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if [`binding`](js-modules.md#binding)(I, something, Name, something) and [`site_file`](js-modules.md#site_file)(I, File).
 
 > The host stays in the row: `console` under node and under browser are two rows.
 
-<a id="host_global_ref"></a>`host_global_ref`(a node E, H, Name) if all of:
-- E [is an identifier that reads](js-dataflow.md#ident_in) Name in file File;
+<a id="host_global_ref"></a>`host_global_ref`(an identifier E, H, Name) if all of:
+- E [reads](js-dataflow.md#ident_in) Name in File;
 - `host_global`(H, Name);
 - unless [`name_bound_in`](#name_bound_in)(File, Name).
 
@@ -126,12 +126,12 @@ Declared as facts: ast_parse_error.
 1. if all of:
    - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
    - the object of N is a node O;
-   - O [is an identifier that reads](js-dataflow.md#ident_in) Local in file File;
+   - O [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_ns`](#host_module_ns)(File, Local, Spec);
    - N [selects](js-dataflow.md#selects) Key;
 2. if all of:
-   - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-   - N [is an identifier that reads](js-dataflow.md#ident_in) Local in file File;
+   - [`callee_of`](js-callgraph.md#callee_of)(C, an identifier N);
+   - N [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_named`](#host_module_named)(File, Local, Spec, Key).
 
 > The union, with the receiver in the origin column: the canonical specifier

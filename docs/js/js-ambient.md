@@ -7,7 +7,7 @@ books: audit, code, flow, main
 
 ## Terms
 
-*call*, *file*, *function*, *key*, *name*, *node*.
+*call*, *file*, *function*, *identifier*, *key*, *kind*, *name*, *node*.
 
 > js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
 > and the map into the effect lattice. Both DERIVED: this pack authors not one
@@ -53,7 +53,7 @@ books: audit, code, flow, main
 1. if `host_module`(node, Spec) and X1 is host_runtime;
 2. if `host_global`(something, Spec) and X1 is host_runtime;
 3. if `lib_global`(Spec, something, something) and X1 is es_intrinsic;
-4. if [`builtin_prototype`](js-dataflow.md#builtin_prototype)(Spec) and X1 is builtin_prototype.
+4. if Spec [is a builtin prototype](js-dataflow.md#builtin_prototype) and X1 is builtin_prototype.
 
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
 > surface with two origins would have every effect attributed twice.
@@ -186,8 +186,8 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_named_call"></a>`amb_named_call`(C, Spec, Key) if all of:
 - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-- [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-- N [is an identifier that reads](js-dataflow.md#ident_in) Local in file File;
+- [`callee_of`](js-callgraph.md#callee_of)(C, an identifier N);
+- N [reads](js-dataflow.md#ident_in) Local in File;
 - [`host_module_named`](js-host.md#host_module_named)(File, Local, Spec, Key).
 
 <a id="eff_surface"></a>`eff_surface`(C, Spec) if [`amb_named_call`](#amb_named_call)(C, Spec, something).
@@ -247,7 +247,7 @@ Declared as facts: amb_operation_word.
 > Without `lib_readonly_view(P, _)` every member of a prototype with no twin
 > would read as a mutator. Those prototypes are SILENT here, as a row.
 
-<a id="amb_proto_unsplit"></a>`amb_proto_unsplit`(P) if [`builtin_prototype`](js-dataflow.md#builtin_prototype)(P), unless `lib_readonly_view`(P, something).
+<a id="amb_proto_unsplit"></a>`amb_proto_unsplit`(P) if P [is a builtin prototype](js-dataflow.md#builtin_prototype), unless `lib_readonly_view`(P, something).
 
 > the property the subtraction rests on: the readonly view declares nothing extra
 
@@ -259,17 +259,17 @@ Declared as facts: amb_operation_word.
 > is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
 > `"ab".concat(x)` is a read of an untraced receiver.
 
-<a id="amb_proto_untraced"></a>`amb_proto_untraced`(P) if [`kind_prototype`](js-dataflow.md#kind_prototype)(K, P), unless [`node_value_kind`](js-dataflow.md#node_value_kind)(K).
+<a id="amb_proto_untraced"></a>`amb_proto_untraced`(P) if K [has prototype](js-dataflow.md#kind_prototype) P, unless [`node_value_kind`](js-dataflow.md#node_value_kind)(K).
 
-<a id="amb_proto_heap"></a>`amb_proto_heap`(P, local) if [`builtin_prototype`](js-dataflow.md#builtin_prototype)(P), unless [`amb_proto_untraced`](#amb_proto_untraced)(P).
+<a id="amb_proto_heap"></a>`amb_proto_heap`(P, local) if P [is a builtin prototype](js-dataflow.md#builtin_prototype), unless [`amb_proto_untraced`](#amb_proto_untraced)(P).
 
 > the structural argument as a row: heap-decided here, `global` in js-effects
 
 <a id="amb_proto_recv"></a>`amb_proto_recv`(a node M, P) if all of:
 - M [is a member access](js-dataflow.md#member_node_v);
 - the object of M is a node O;
-- [`prototype_of`](js-dataflow.md#prototype_of)(O, P);
-- [`builtin_prototype`](js-dataflow.md#builtin_prototype)(P).
+- [the prototype](js-dataflow.md#prototype_of) of O is P;
+- P [is a builtin prototype](js-dataflow.md#builtin_prototype).
 
 <a id="amb_proto_heap_split"></a>`amb_proto_heap_split`(P, M) if all of:
 - [`amb_proto_heap`](#amb_proto_heap)(P, local);
@@ -352,11 +352,11 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_exn_carrier"></a>`amb_exn_carrier`(a function F) either:
 
-1. if [`amb_exn_source`](#amb_exn_source)(a node C) and F [is the nearest function around](js-dataflow.md#nearest_v) C;
+1. if [`amb_exn_source`](#amb_exn_source)(a node C) and F [is nearest to](js-dataflow.md#nearest_v) C;
 2. if all of:
    - [`amb_exn_carrier`](#amb_exn_carrier)(a function G);
    - a call C [resolves to](js-callgraph.md#resolves) G;
-   - F [is the nearest function around](js-dataflow.md#nearest_v) C;
+   - F [is nearest to](js-dataflow.md#nearest_v) C;
    - unless [`eff_discharged_at`](js-effects.md#eff_discharged_at)(C, exn).
 
 <a id="eff_exn_unexplained"></a>`eff_exn_unexplained`(F) if [`eff_exn_only`](js-effects.md#eff_exn_only)(F), unless [`amb_exn_carrier`](#amb_exn_carrier)(F).

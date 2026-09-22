@@ -31,12 +31,12 @@ books: audit, main
 
 <a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(?Rel,?_$0,?_$1,?_$2).
 
-The 1-th argument of a call L is a node Args, in the main either:
+A call L passes a node Args at 1, in the main either:
 
 1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and X1 is 1;
-2. if the I[-th argument of](js-dataflow.md#arg_at) L is $cons(?_$0,?T) in the main and X1 is +(?I,1).
+2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and X1 is +(?I,1).
 
-<a id="lit_arg"></a>`lit_arg`(a call L, I, A) if the I[-th argument of](js-dataflow.md#arg_at) L is $cons(?A,?_$0) in the main.
+<a id="lit_arg"></a>`lit_arg`(a call L, I, A) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted

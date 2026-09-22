@@ -95,6 +95,7 @@ function sentence(rel: string): string {
     case 'role_of': return `${Sn} is the ${w.join(' ')} of ${On}.`;
     case 'may': return `${Sn} may be the ${w.slice(2).join(' ')} ${On}.`;
     case 'among': return `${On} is among the ${w.join(' ')} of ${Sn}.`;
+    case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key'); const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); return `the ${w.join(' ')} ${VAR[K ?? 0]} of ${Sn} is ${Ov === undefined ? '' : np(rel, Ov)}.`; }
   }
   return '?';
 }
@@ -106,6 +107,7 @@ const rels = [...arity.keys()].filter((x) => !SKIP.has(x)).sort();
 const byStructure = new Map<string, number>();
 let agree = 0, disagree = 0; const dis: string[] = [];
 const lines: string[] = ['| relation | arity | takes | sentence | also admits | hand |', '|---|---|---|---|---|---|'];
+const sigLine = (rel: string) => '';
 for (const rel of rels) {
   const s = takes.get(rel) ?? '-'; byStructure.set(s, (byStructure.get(s) ?? 0) + 1);
   const h = hand.get(rel);
@@ -119,11 +121,26 @@ for (const d of dis) console.log('  ' + d);
 console.log('\nsamples:');
 for (const rel of ['may_be_node', 'selects', 'field_of', 'class_member_static', 'member_value', 'resolves', 'plain_assign', 'catch_from_host', 'this_host', 'super_of', 'class_method_of', 'decorated_member', 'imports_name', 'eff_hidden_call', 'callee_shape', 'shape_verdict']) if (arity.has(rel)) console.log(`  ${rel.padEnd(22)} ${takes.get(rel)?.padEnd(9)} ${sentence(rel)}`);
 if (md) writeFileSync(md, `# Sentences, generated\n\n${lines.join('\n')}\n`);
-const decided: string[] = ['-- what the generator decided, as the facts a file would carry to say the same by hand'];
-for (const rel of rels) {
-  const n = arity.get(rel) ?? 0;
-  const parts = [`takes(${rel}, ${takes.get(rel) ?? 'none'}).`, `subject(${rel}, ${subject.get(rel) ?? 0}).`];
-  for (let i = 0; i < n; i++) { const p = pick.get(`${rel}/${i}`); if (p) parts.push(`role(${rel}, ${i}, ${JSON.stringify(p)}).`); const m = marker.get(`${rel}/${i}`); if (m) parts.push(`marker(${rel}, ${i}, ${m.replace(' ', '_')}).`); }
-  decided.push(parts.join(' '));
-}
-if (md) writeFileSync(md.replace(/\.md$/, '.decided.rofl'), decided.join('\n') + '\n');
+const sigOf = (rel: string): string => {
+  const st = takes.get(rel) ?? 'verb', n = arity.get(rel) ?? 0, S = subject.get(rel) ?? 0;
+  const w = (words.get(rel) ?? []).filter(Boolean);
+  const vn = (i: number) => `${pick.get(`${rel}/${i}`) ?? 'node'} ${VAR[i] ?? 'A' + i}`;
+  const rest = (skip: number[], lead: string) => { const out: string[] = []; for (let i = 0; i < n; i++) { if (skip.includes(i)) continue; const m = marker.get(`${rel}/${i}`); out.push(`${m ? m + ' ' : (out.length === 0 && lead ? lead + ' ' : '')}${vn(i)}`); } return out; };
+  const O = object.get(rel);
+  const stem = w.join('_');
+  let name = stem, args: string[] = [];
+  switch (st) {
+    case 'adjective': name = w[0] === 'is' ? stem : `is_${stem}`; args = [vn(S)]; break;
+    case 'bare_verb': args = [vn(S)]; break;
+    case 'verb': args = [vn(S), ...rest([S], '')]; break;
+    case 'passive': name = w[0] === 'is' ? stem : `is_${stem}`; args = [vn(S), ...rest([S], 'by')]; break;
+    case 'has': name = w[0] === 'has' ? stem : `has_${stem}`; args = [vn(S), ...rest([S], '')]; break;
+    case 'role_of': name = `is_the_${stem}_of`; args = [vn(S), ...rest([S], '')]; break;
+    case 'may': name = `may_be_the_${w.slice(2).join('_')}`; args = [vn(S), ...rest([S], '')]; break;
+    case 'the_of': name = `the_${w.slice(0, -1).join('_')}`; args = [`of ${vn(S)}`, ...(O === undefined ? [] : [`is ${vn(O)}`]), ...rest([S, O ?? -1], '')]; break;
+    case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key') ?? -1; const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); name = `the_${stem}`; args = [`of ${vn(S)}`, ...(K >= 0 ? [vn(K)] : []), ...(Ov === undefined ? [] : [`is ${vn(Ov)}`]), ...rest([S, K, Ov ?? -1], '')]; break; }
+    default: args = [vn(S), ...rest([S], '')];
+  }
+  return `sig(${rel}, "${name}(${args.join(', ')})").`;
+};
+if (md) writeFileSync(md.replace(/\.md$/, '.sigs.rofl'), '-- proposed signatures: every relation, the structure the eight rules chose, nouns by support\n' + rels.map(sigOf).join('\n') + '\n');

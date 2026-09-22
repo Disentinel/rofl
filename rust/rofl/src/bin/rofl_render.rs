@@ -11,6 +11,15 @@
 //! argument is that constant, a wildcard, or that atom, and render nothing.
 //! Square brackets mark the words that carry the link to the definition;
 //! without them the longest run of fixed words does.
+//!
+//! A SIGNATURE says the same in one line and is preferred where both exist:
+//! `sig(field_of, "has_the_field(class CD, key Key, at node P, holding node V)")`.
+//! The name's words are the head phrase; each argument is `[marker] noun Var`,
+//! in the relation's argument order, `Var:i` overriding the position. A name
+//! that starts with `the` reads role first: the words, the unmarked arguments,
+//! the `of` argument, then the rest; any other name reads the first argument,
+//! the words, then the rest. A signature whose name differs from the relation
+//! is also a proposed rename, listed in index.md.
 use rofl::rofl_parse::{parse, Book, Clause, Elem, Lit, Tense};
 use rofl::term::{Heap, Sym, Term, TermK};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -73,6 +82,49 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
         if let Some((i, _)) = best { if let Part::Text(s, _) = &parts[i] { let s = s.clone(); parts[i] = Part::Text(s, true); } }
     }
     Ok(Phrase { parts, fixes })
+}
+
+const MARKERS: &[&str] = &["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
+const VALUE_NOUN_LIST: &[&str] = &["key", "name", "file", "index", "text", "literal", "kind", "line", "attribute", "number", "score", "value", "child", "node", "this", "scope", "this-binder"];
+
+/// `name(arg, arg, …)` with each arg `[marker] noun Var[:i]` → the phrase it reads as, and the name.
+fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
+    let open = text.find('(').ok_or("a signature needs (")?;
+    let name = text[..open].trim().to_string();
+    let inner = text[open + 1..].trim_end().trim_end_matches(')').to_string();
+    struct Arg { marker: String, noun: String, pos: usize }
+    let mut args: Vec<Arg> = Vec::new();
+    for (k, raw) in inner.split(',').map(str::trim).filter(|a| !a.is_empty()).enumerate() {
+        let mut toks: Vec<&str> = raw.split_whitespace().collect();
+        let last = toks.pop().ok_or("an empty argument")?;
+        let (_, pos) = match last.split_once(':') { Some((v, i)) => (v, i.parse::<usize>().map_err(|_| format!("bad position in {last}"))?), None => (last, k) };
+        let mut noun_len = 1usize;
+        for n in nouns.iter().filter(|n| n.contains(' ')) {
+            let w: Vec<&str> = n.split(' ').collect();
+            if toks.len() >= w.len() && toks[toks.len() - w.len()..] == w[..] { noun_len = noun_len.max(w.len()); }
+        }
+        if toks.is_empty() { return Err(format!("no noun in `{raw}`")); }
+        let noun = toks[toks.len() - noun_len..].join(" ");
+        let marker = toks[..toks.len() - noun_len].join(" ");
+        args.push(Arg { marker, noun, pos });
+    }
+    let words = name.split('_').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+    let mut parts: Vec<Part> = Vec::new();
+    let hole = |a: &Arg| Part::Hole(a.pos, a.noun.clone());
+    let marked = |parts: &mut Vec<Part>, a: &Arg| { if !a.marker.is_empty() { parts.push(Part::Text(format!(" {} ", a.marker), false)); } else { parts.push(Part::Text(" ".into(), false)); } parts.push(hole(a)); };
+    if words.starts_with("the ") || words == "the" {
+        parts.push(Part::Text(format!("{words} "), true));
+        for a in args.iter().filter(|a| a.marker.is_empty()) { parts.push(hole(a)); parts.push(Part::Text(" ".into(), false)); }
+        for a in args.iter().filter(|a| a.marker == "of") { parts.push(Part::Text(" of ".into(), false)); parts.push(hole(a)); }
+        for a in args.iter().filter(|a| !a.marker.is_empty() && a.marker != "of") { marked(&mut parts, a); }
+    } else {
+        let first = args.first().ok_or("a signature needs a subject")?;
+        parts.push(hole(first));
+        parts.push(Part::Text(format!(" {words} "), true));
+        for a in args.iter().skip(1) { marked(&mut parts, a); }
+    }
+    let _ = MARKERS;
+    Ok((Phrase { parts, fixes: 0 }, name))
 }
 
 impl Phrase {
@@ -616,6 +668,7 @@ fn main() {
     let edb = h.intern("edb");
     let phrase_rel = h.intern("phrase");
     let kind_noun_rel = h.intern("kind_noun");
+    let sig_rel = h.intern("sig");
 
     let mut docs = Vec::new();
     for path in &args {
@@ -630,6 +683,8 @@ fn main() {
 
     let mut phrases: HashMap<Sym, Vec<Phrase>> = HashMap::new();
     let mut kind_nouns: HashMap<Sym, String> = HashMap::new();
+    let mut sigs: Vec<(Sym, String)> = Vec::new();
+    let mut renames: Vec<(String, String)> = Vec::new();
     let mut defs: HashMap<Sym, usize> = HashMap::new();
     let mut home: HashMap<Sym, Book> = HashMap::new();
     let mut bad_phrases = Vec::new();
@@ -645,6 +700,10 @@ fn main() {
                     }
                     if c.head.rel == kind_noun_rel && c.head.args.len() == 2 {
                         if let (Some(k), TermK::Str(n)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) { kind_nouns.insert(k, h.name(n).to_string()); }
+                        continue;
+                    }
+                    if c.head.rel == sig_rel && c.head.args.len() == 2 {
+                        if let (Some(rel), TermK::Str(t)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) { sigs.push((rel, h.name(t).to_string())); }
                         continue;
                     }
                     if c.head.rel == edb {
@@ -664,6 +723,13 @@ fn main() {
             }
         }
     }
+    let noun_list: Vec<String> = kind_nouns.values().cloned().chain(VALUE_NOUN_LIST.iter().map(|s| s.to_string())).collect();
+    for (rel, text) in &sigs {
+        match parse_sig(text, &noun_list) {
+            Ok((p, name)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } phrases.entry(*rel).or_default().insert(0, p); }
+            Err(e) => bad_phrases.push(format!("{}: {e}", h.name(*rel))),
+        }
+    }
     for ps in phrases.values_mut() { ps.sort_by_key(|p| std::cmp::Reverse(p.fixes)); }
 
     let r = R { h: &h, phrases, kind_nouns, defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel };
@@ -681,6 +747,12 @@ fn main() {
         }
     }
     let _ = writeln!(index, "\n{} heads without a phrase across these files.\n", total_pos.len());
+    if !renames.is_empty() {
+        let _ = writeln!(index, "## Proposed renames\n\nA signature whose name differs from the relation is a rename waiting to be applied.\n\n| relation | reads as |\n|---|---|");
+        renames.sort();
+        for (old, new) in &renames { let _ = writeln!(index, "| `{old}` | `{new}` |"); }
+        let _ = writeln!(index);
+    }
     for p in &bad_phrases { eprintln!("bad phrase: {p}"); }
     if let Some(d) = &out_dir { std::fs::write(format!("{d}/index.md"), index).expect("write"); }
 }

@@ -70,7 +70,13 @@ What has to exist for it to be code rather than a description of code
    `docs/js/` is the JS model rendered
    (f_the_renderer_from_rules_to_prose_parses_only_and_its_fallback_is_the_lint).
    Reader and renderer share the phrase facts, so the reader is the half that
-   is left, and `collapse then expand` is the formatter.
+   is left, and `collapse then expand` is the formatter. The phrase of a
+   relation is a SIGNATURE, one line: `sig(field_of, "has_the_field(class CD,
+   key Key, at node P, holding node V)")`, its name the head phrase and each
+   argument `[marker] noun Var`; the nine structures of `rules/sentences.rofl`
+   classify signatures and `npm run sentences` proposes one for every relation
+   that has none (f_the_eight_structures_run_and_the_name_is_not_the_sentence).
+   A signature whose name differs from its relation is a proposed rename.
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

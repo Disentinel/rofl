@@ -394,12 +394,12 @@ Declared as facts: fn_kind.
 
 1. if all of:
    - [`transfer_site`](#transfer_site)(X, new_expression);
-   - X [may be the node](js-dataflow.md#may_be_node) CD;
+   - X [may be the node](js-dataflow.md#may_be_node) a node CD;
    - [`class_ctor`](#class_ctor)(CD, M);
 2. if all of:
    - [`callee_of`](#callee_of)(X, a super N);
-   - N [may be the node](js-dataflow.md#may_be_node) SD;
-   - [`ctor_of`](js-dataflow.md#ctor_of)(SD, M).
+   - N [may be the node](js-dataflow.md#may_be_node) a node SD;
+   - [the constructor](js-dataflow.md#ctor_of) of SD is M.
 
 > A tag is a callee in every sense but the grammar's (the field is `tag`, not
 > `callee`); a decorator's `expression` is either the function or a factory
@@ -427,7 +427,7 @@ A call X resolves to a function F either:
 <a id="for_of_iterates"></a>`for_of_iterates`(a node X, a node M) if all of:
 - [`transfer_site`](#transfer_site)(X, for_of_statement);
 - the right of X is a node R;
-- R [may be the node](js-dataflow.md#may_be_node) Obj;
+- R [may be the node](js-dataflow.md#may_be_node) a node Obj;
 - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
 - [`fn_node`](#fn_node)(M).
 
@@ -437,7 +437,7 @@ A call X resolves to a function M if [`for_of_iterates`](#for_of_iterates)(X, M)
 - [`for_of_iterates`](#for_of_iterates)(X, a function M);
 - [`nearest_fn`](#nearest_fn)(Caller, X);
 - M [returns](js-dataflow.md#returns) a node E;
-- E [may be the node](js-dataflow.md#may_be_node) IterObj;
+- E [may be the node](js-dataflow.md#may_be_node) a node IterObj;
 - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
 - V [may be the node](js-dataflow.md#may_be_node) Next;
 - [`fn_node`](#fn_node)(Next).
@@ -479,7 +479,7 @@ A call C resolves to a function F if all of:
 2. if [`calls`](#calls)(R, Y), `ast_file`(R, File), [`fn_name`](#fn_name)(Y, B), and A is top.
 
 <a id="passes_function"></a>`passes_function`(a call C, I, a node F, Name) if all of:
-- the I[-th argument of](js-dataflow.md#arg_at) C is a node A;
+- C [passes](js-dataflow.md#arg_at) a node A at I;
 - A [is named](js-structure.md#ast_name) Name;
 - A [may be the node](js-dataflow.md#may_be_node) F;
 - [`fn_node`](#fn_node)(F).
@@ -504,8 +504,8 @@ A call C resolves to a function F if all of:
 - [`unresolved_call`](#unresolved_call)(C, something);
 - [`callee_of`](#callee_of)(C, a node N);
 - the object of N is a node O;
-- [`prototype_of`](js-dataflow.md#prototype_of)(O, P);
-- [`builtin_prototype`](js-dataflow.md#builtin_prototype)(P);
+- [the prototype](js-dataflow.md#prototype_of) of O is P;
+- P [is a builtin prototype](js-dataflow.md#builtin_prototype);
 - N [selects](js-dataflow.md#selects) Key.
 
 Declared as facts: shape_because.
@@ -630,7 +630,7 @@ Declared as facts: shape_because.
 
 <a id="awaited_then"></a>`awaited_then`(A, a node F) if all of:
 - [`await_arg`](#await_arg)(A, a node X);
-- X [may be the node](js-dataflow.md#may_be_node) O;
+- X [may be the node](js-dataflow.md#may_be_node) a node O;
 - [the member](js-dataflow.md#member_value) "then" of O holds a node V;
 - V [may be the node](js-dataflow.md#may_be_node) F;
 - [`fn_node`](#fn_node)(F).

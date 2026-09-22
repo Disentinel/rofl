@@ -98,7 +98,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 <a id="suspend_at"></a>`suspend_at`(a node B, a child F, I) if all of:
 - [`transfer_mechanism`](#transfer_mechanism)(K, suspend);
 - a node X [is of kind](js-model.md#ast_node) K;
-- a function G [is the nearest function around](js-dataflow.md#nearest_v) X;
+- a function G [is nearest to](js-dataflow.md#nearest_v) X;
 - G [is within](js-structure.md#ast_within) a node S;
 - S [is within](js-structure.md#ast_within) X;
 - [`stmt_seq_field`](#stmt_seq_field)(F);
@@ -292,7 +292,7 @@ Declared as facts: completion_deferred.
    - the object of N is a node O;
    - O [may be the node](js-dataflow.md#may_be_node) Obj;
 2. if all of:
-   - N [binds to the private member](js-dataflow.md#private_binds) M;
+   - N [binds privately to](js-dataflow.md#private_binds) M;
    - [`accessor_kind`](#accessor_kind)(K);
    - the attribute kind of M is K.
 
@@ -319,22 +319,22 @@ Declared as facts: accessor_kind.
 
 <a id="pattern_accessor"></a>`pattern_accessor`(an object pattern P, M) if all of:
 - [`pattern_source`](#pattern_source)(P, a node Init);
-- Init [may be the node](js-dataflow.md#may_be_node) Obj;
-- [`pattern_takes`](js-dataflow.md#pattern_takes)(P, Key);
+- Init [may be the node](js-dataflow.md#may_be_node) a node Obj;
+- P [takes the key](js-dataflow.md#pattern_takes) Key;
 - [`accessor_of`](#accessor_of)(Obj, Key, M).
 
-<a id="pattern_accessor"></a>`pattern_accessor`(R, M) if all of:
-- [`rest_in_pattern`](js-dataflow.md#rest_in_pattern)(a node D, R, something);
+<a id="pattern_accessor"></a>`pattern_accessor`(a node R, M) if all of:
+- a declarator D [holds a rest](js-dataflow.md#rest_in_pattern) R in some file;
 - the id of D is a node P;
 - the init of D is a node Init;
-- Init [may be the node](js-dataflow.md#may_be_node) Obj;
+- Init [may be the node](js-dataflow.md#may_be_node) a node Obj;
 - [`accessor_of`](#accessor_of)(Obj, Key, M);
-- unless [`pattern_takes`](js-dataflow.md#pattern_takes)(P, Key).
+- unless P [takes the key](js-dataflow.md#pattern_takes) Key.
 
 <a id="pattern_accessor"></a>`pattern_accessor`(a spread S, M) if all of:
 - S is among the properties of an object literal O;
 - the argument of S is a node A;
-- A [may be the node](js-dataflow.md#may_be_node) Obj;
+- A [may be the node](js-dataflow.md#may_be_node) a node Obj;
 - [`accessor_of`](#accessor_of)(Obj, Key, M).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
@@ -349,13 +349,13 @@ Declared as facts: accessor_kind.
 1. if all of:
    - P is an array pattern;
    - [`pattern_source`](#pattern_source)(P, a node Init);
-   - Init [may be the node](js-dataflow.md#may_be_node) Obj;
+   - Init [may be the node](js-dataflow.md#may_be_node) a node Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
    - [`fn_node`](js-callgraph.md#fn_node)(M);
 2. if all of:
    - [`spread_iterated`](#spread_iterated)(P);
    - the argument of P is a node A;
-   - A [may be the node](js-dataflow.md#may_be_node) Obj;
+   - A [may be the node](js-dataflow.md#may_be_node) a node Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
    - [`fn_node`](js-callgraph.md#fn_node)(M).
 
@@ -385,7 +385,7 @@ A call N resolves to a function M if [`pattern_iterates`](#pattern_iterates)(N, 
 <a id="pattern_next"></a>`pattern_next`(X, a node Next) if all of:
 - [`pattern_iterates`](#pattern_iterates)(X, a function M);
 - M [returns](js-dataflow.md#returns) a node E;
-- E [may be the node](js-dataflow.md#may_be_node) IterObj;
+- E [may be the node](js-dataflow.md#may_be_node) a node IterObj;
 - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
 - V [may be the node](js-dataflow.md#may_be_node) Next;
 - [`fn_node`](js-callgraph.md#fn_node)(Next).
@@ -418,7 +418,7 @@ A call N resolves to a function M if [`pattern_iterates`](#pattern_iterates)(N, 
 
 1. if P is an object pattern and [`pattern_source`](#pattern_source)(P, Init);
 2. if P is an array pattern and [`pattern_source`](#pattern_source)(P, Init);
-3. if [`rest_in_pattern`](js-dataflow.md#rest_in_pattern)(a node D, P, something) and the init of D is Init;
+3. if a declarator D [holds a rest](js-dataflow.md#rest_in_pattern) P in some file and the init of D is Init;
 4. if P is a spread, [`hidden_call_pos`](#hidden_call_pos)(P, something), and the argument of P is Init;
 5. if P is a for-of and the right of P is Init.
 
@@ -475,7 +475,7 @@ A call N resolves to a function M if [`pattern_iterates`](#pattern_iterates)(N, 
 > and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
 > clause: `block`, not the whole try.
 
-<a id="try_of"></a>`try_of`(a try TS, a function F) if F [is the nearest function around](js-dataflow.md#nearest_v) TS.
+<a id="try_of"></a>`try_of`(a try TS, a function F) if F [is nearest to](js-dataflow.md#nearest_v) TS.
 
 <a id="in_try_block"></a>`in_try_block`(a try TS, a node N) if the block of TS is a node B and B [is within](js-structure.md#ast_within) N.
 
@@ -498,10 +498,10 @@ A call N resolves to a function M if [`pattern_iterates`](#pattern_iterates)(N, 
 <a id="caught_here"></a>`caught_here`(a node N) if all of:
 - [`in_try_block`](#in_try_block)(TS, N);
 - [`try_of`](#try_of)(TS, a function F);
-- F [is the nearest function around](js-dataflow.md#nearest_v) N;
+- F [is nearest to](js-dataflow.md#nearest_v) N;
 - [`try_catches`](#try_catches)(TS).
 
-<a id="throws_outright"></a>`throws_outright`(a function F) if F [is the nearest function around](js-dataflow.md#nearest_v) a throw T, unless [`caught_here`](#caught_here)(T).
+<a id="throws_outright"></a>`throws_outright`(a function F) if F [is nearest to](js-dataflow.md#nearest_v) a throw T, unless [`caught_here`](#caught_here)(T).
 
 Declared as facts: catches_via.
 
@@ -514,25 +514,25 @@ Declared as facts: catches_via.
 2. if all of:
    - [`may_throw`](#may_throw)(a function G);
    - a call C [resolves to](js-callgraph.md#resolves) G;
-   - F [is the nearest function around](js-dataflow.md#nearest_v) C;
+   - F [is nearest to](js-dataflow.md#nearest_v) C;
    - unless [`caught_here`](#caught_here)(C).
 
 <a id="thrown_by"></a>`thrown_by`(a function F, a node V) either:
 
 1. if all of:
-   - F [is the nearest function around](js-dataflow.md#nearest_v) a throw T;
+   - F [is nearest to](js-dataflow.md#nearest_v) a throw T;
    - the argument of T is V;
    - unless [`caught_here`](#caught_here)(T);
 2. if all of:
    - [`thrown_by`](#thrown_by)(a function G, V);
    - a call C [resolves to](js-callgraph.md#resolves) G;
-   - F [is the nearest function around](js-dataflow.md#nearest_v) C;
+   - F [is nearest to](js-dataflow.md#nearest_v) C;
    - unless [`caught_here`](#caught_here)(C).
 
 <a id="caught_value"></a>A node P catches a node V if all of:
-- [the catch of](js-dataflow.md#catch_of) a try T is a catch H;
-- [the param of](js-dataflow.md#catch_param) H is P;
-- [the block of](js-dataflow.md#try_block) T is a node B;
+- [the catch](js-dataflow.md#catch_of) of a try T is a catch H;
+- [the param](js-dataflow.md#catch_param) of H is P;
+- [the block](js-dataflow.md#try_block) of T is a node B;
 - B [is within](js-structure.md#ast_within) a node C;
 - C [resolves to](js-callgraph.md#resolves) a function G;
 - [`thrown_by`](#thrown_by)(G, V).
@@ -549,7 +549,7 @@ Declared as facts: catches_via.
 
 `abrupt_at`(a node B, a child F, I) if all of:
 - [`throwing_call`](#throwing_call)(a node C);
-- a function G [is the nearest function around](js-dataflow.md#nearest_v) C;
+- a function G [is nearest to](js-dataflow.md#nearest_v) C;
 - G [is within](js-structure.md#ast_within) a node S;
 - S [is within](js-structure.md#ast_within) C;
 - [`stmt_seq_field`](#stmt_seq_field)(F);
@@ -591,7 +591,7 @@ Declared as facts: catches_via.
 
 `fn_node`(F) if [`fn_name`](js-callgraph.md#fn_name)(F, something).
 
-<a id="in_fn"></a>`in_fn`(a node N) if some function [is the nearest function around](js-dataflow.md#nearest_v) N.
+<a id="in_fn"></a>`in_fn`(a node N) if some function [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="exported_fn"></a>`exported_fn`(a node F) either:
 
@@ -602,7 +602,7 @@ Declared as facts: catches_via.
    - [`fn_node`](js-callgraph.md#fn_node)(F);
    - unless [`in_fn`](#in_fn)(F);
 2. if all of:
-   - [`export_local`](js-dataflow.md#export_local)(a node L, something, something);
+   - a node L [is exported locally as](js-dataflow.md#export_local) some name from some file;
    - L [may be the node](js-dataflow.md#may_be_node) F;
    - [`fn_node`](js-callgraph.md#fn_node)(F);
    - unless [`in_fn`](#in_fn)(F).
@@ -622,7 +622,7 @@ Declared as facts: export_kind.
    - unless [`in_fn`](#in_fn)(C);
 3. if all of:
    - [`reachable`](#reachable)(a function G);
-   - G [is the nearest function around](js-dataflow.md#nearest_v) a node C;
+   - G [is nearest to](js-dataflow.md#nearest_v) a node C;
    - C [resolves to](js-callgraph.md#resolves) F;
    - unless [`guarded`](#guarded)(C).
 

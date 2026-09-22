@@ -18,6 +18,8 @@
 --   role_of     S is the <role> of O           binary, no verb, no `of`
 --   may         S may be the <noun> O          the name starts with `may`
 --   among       O is among the <role> of S     only by hand: multi-valued part
+--   the_role    the <role> K of S <verb> O     three or more arguments, one a key, no other clue:
+--                                              a keyed role phrase as the subject, then a verb or `is`
 
 edb(namespace). edb(verb_word). edb(container). edb(rank). edb(marker_by_noun).
 edb(takes_by_hand). edb(subject_by_hand). edb(marker_by_hand). edb(pick).
@@ -44,8 +46,8 @@ verb_word("perform"). verb_word("stop"). verb_word("run"). verb_word("sends"). v
 container("class"). container("object literal"). container("function"). container("file"). container("try").
 container("call"). container("module"). container("program"). container("scope"). container("declarator").
 
-rank(may, 1). rank(the_of, 2). rank(has, 3). rank(passive, 4). rank(verb, 5). rank(among, 6).
-rank(role_of, 7). rank(bare_verb, 8). rank(adjective, 9).
+rank(may, 1). rank(the_of, 2). rank(the_role, 3). rank(has, 4). rank(passive, 5). rank(verb, 6).
+rank(among, 7). rank(role_of, 8). rank(bare_verb, 9). rank(adjective, 10).
 
 marker_by_noun("index", at).    marker_by_noun("line", at).      marker_by_noun("file", in).
 marker_by_noun("node", at).     marker_by_noun("name", named).   marker_by_noun("key", of).
@@ -83,6 +85,7 @@ s_has(Rel)       :- first_word(Rel, "has").
 s_passive(Rel)   :- participle_named(Rel).
 s_role_of(Rel)   :- arity(Rel, 2), not verb_named(Rel), not participle_named(Rel), not last_word(Rel, "of").
 s_may(Rel)       :- first_word(Rel, "may").
+s_the_role(Rel)  :- arity(Rel, N), N >= 3, pick(Rel, _, "key"), not verb_named(Rel), not participle_named(Rel), not last_word(Rel, "of").
 s_among(Rel)     :- takes_by_hand(Rel, among).
 
 admits(Rel, adjective) :- s_adjective(Rel).
@@ -94,6 +97,7 @@ admits(Rel, passive)   :- s_passive(Rel).
 admits(Rel, role_of)   :- s_role_of(Rel).
 admits(Rel, may)       :- s_may(Rel).
 admits(Rel, among)     :- s_among(Rel).
+admits(Rel, the_role)  :- s_the_role(Rel).
 
 -- what it takes: by hand, else the best-ranked admitted structure
 beaten(Rel, S)   :- admits(Rel, S), admits(Rel, S2), rank(S, R), rank(S2, R2), R2 < R.

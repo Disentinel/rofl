@@ -50,7 +50,7 @@ Declared as facts: global_ref_position.
 - [`global_ref_position`](#global_ref_position)(K, a child Field);
 - a node P [is of kind](js-model.md#ast_node) K;
 - the Field of P is E;
-- E [is an identifier that reads](js-dataflow.md#ident_in) Name in file File.
+- E [reads](js-dataflow.md#ident_in) Name in File.
 
 ## 2. WHAT THE FILE BINDS — deliberately over-broad. `sees_binder[code]`
 
@@ -207,8 +207,8 @@ Declared as facts: constructible_form.
 
 A node X may be the node X if [`es_instance`](#es_instance)(X, something, something).
 
-`prototype_of`(a node E, P) if all of:
-- E [may be the node](js-dataflow.md#may_be_node) X;
+The prototype of a node E is P if all of:
+- E [may be the node](js-dataflow.md#may_be_node) a node X;
 - [`es_instance`](#es_instance)(X, Name, something);
 - `lib_global_prototype`(Name, P).
 
@@ -227,7 +227,7 @@ A node X may be the node X if [`es_instance`](#es_instance)(X, something, someth
 - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
 - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
 - the object of N is a node O;
-- O [may be the node](js-dataflow.md#may_be_node) X;
+- O [may be the node](js-dataflow.md#may_be_node) a node X;
 - [`es_instance`](#es_instance)(X, Name, something);
 - N [selects](js-dataflow.md#selects) Key;
 - unless `lib_global_prototype`(Name, something).

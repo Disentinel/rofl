@@ -7,7 +7,7 @@ books: audit, code, flow, main
 
 ## Terms
 
-*assignment*, *call*, *class*, *file*, *function*, *key*, *kind*, *member access*, *name*, *new*, *node*, *static block*, *template*, *text*, *throw*, *try*.
+*assignment*, *call*, *class*, *file*, *function*, *identifier*, *key*, *kind*, *member access*, *name*, *new*, *node*, *static block*, *template*, *text*, *throw*, *try*.
 
 Kinds without a noun: binary_expression, import_expression, unary_expression, update_expression.
 
@@ -129,7 +129,7 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 
 <a id="eff_calls"></a>`eff_calls`(a function F, a function G) if all of:
 - a call C [resolves to](js-callgraph.md#resolves) G;
-- F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- F [is nearest to](js-dataflow.md#nearest_v) C;
 - [`fn_node`](js-callgraph.md#fn_node)(G).
 
 <a id="eff_reaches"></a>`eff_reaches`(F, G) if [`eff_calls`](#eff_calls)(F, G).
@@ -138,7 +138,7 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 
 `eff_here`(a call C, div, none) if all of:
 - C [resolves to](js-callgraph.md#resolves) a function G;
-- a function F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- a function F [is nearest to](js-dataflow.md#nearest_v) C;
 - [`eff_reaches`](#eff_reaches)(G, F).
 
 Declared as facts: eff_loop_kind.
@@ -229,15 +229,15 @@ Declared as facts: eff_alloc_kind.
 
 <a id="eff_mutable_name"></a>`eff_mutable_name`(Name, File) either:
 
-1. if Name [is assigned](js-dataflow.md#assigns) some node in file File;
+1. if Name [is assigned](js-dataflow.md#assigns) some node in File;
 2. if all of:
    - [`eff_update_arg`](#eff_update_arg)(a node U, a node X);
    - X [is named](js-structure.md#ast_name) Name;
    - U [is of kind](js-model.md#ast_node) some kind in file File.
 
-`eff_here`(a node N, read, local) if all of:
+`eff_here`(an identifier N, read, local) if all of:
 - [`eff_mutable_name`](#eff_mutable_name)(Name, File);
-- N [is an identifier that reads](js-dataflow.md#ident_in) Name in file File;
+- N [reads](js-dataflow.md#ident_in) Name in File;
 - unless [`eff_name_target`](#eff_name_target)(N).
 
 > Which labels the corpus exercises — POSITIVE, not an audit, because two are
@@ -257,7 +257,7 @@ Declared as facts: eff_alloc_kind.
 > `may_throw`, which carries one label — would make a try around a call
 > swallow the callee's WRITES too.
 
-<a id="eff_latent"></a>`eff_latent`(a function F, L, H) if [`eff_here`](js-ambient.md#eff_here)(a node N, L, H) and F [is the nearest function around](js-dataflow.md#nearest_v) N.
+<a id="eff_latent"></a>`eff_latent`(a function F, L, H) if [`eff_here`](js-ambient.md#eff_here)(a node N, L, H) and F [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="eff_discharges"></a>`eff_discharges` lists:
 
@@ -270,7 +270,7 @@ Declared as facts: eff_alloc_kind.
 `eff_latent`(a function F, L, H) if all of:
 - [`eff_latent`](#eff_latent)(a function G, L, H);
 - a call C [resolves to](js-callgraph.md#resolves) G;
-- F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- F [is nearest to](js-dataflow.md#nearest_v) C;
 - unless [`eff_discharged_at`](#eff_discharged_at)(C, L).
 
 <a id="eff_discharge_unknown"></a>`eff_discharge_unknown`(M, L) if [`eff_discharges`](#eff_discharges)(M, L), unless `eff_label`(L, something).
@@ -292,7 +292,7 @@ Declared as facts: eff_discharges.
 - C [resolves to](js-callgraph.md#resolves) a function G;
 - [`eff_latent`](#eff_latent)(G, L, H);
 - L differs from exn;
-- F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- F [is nearest to](js-dataflow.md#nearest_v) C;
 - unless [`eff_latent`](#eff_latent)(F, L, H).
 
 ## 4. Naming a function's effect — the least landmark above its row
@@ -320,7 +320,7 @@ Declared as facts: eff_discharges.
 
 <a id="eff_join_short"></a>`eff_join_short`(a function F, a function G, J) if all of:
 - a call C [resolves to](js-callgraph.md#resolves) G;
-- F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- F [is nearest to](js-dataflow.md#nearest_v) C;
 - [`effect_of`](#effect_of)(F, NF);
 - [`effect_of`](#effect_of)(G, NG);
 - [`eff_join`](#eff_join)(NF, NG, J);
@@ -329,7 +329,7 @@ Declared as facts: eff_discharges.
 
 <a id="eff_purer_callee"></a>`eff_purer_callee`(a call C, a function F, a function G) if all of:
 - C [resolves to](js-callgraph.md#resolves) G;
-- F [is the nearest function around](js-dataflow.md#nearest_v) C;
+- F [is nearest to](js-dataflow.md#nearest_v) C;
 - [`effect_of`](#effect_of)(F, NF);
 - [`effect_of`](#effect_of)(G, NG);
 - [`eff_lt`](#eff_lt)(NG, NF).
@@ -347,8 +347,8 @@ Declared as facts: eff_discharges.
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
    - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
    - the object of N is a node O;
-   - [`prototype_of`](js-dataflow.md#prototype_of)(O, P);
-   - [`builtin_prototype`](js-dataflow.md#builtin_prototype)(P);
+   - [the prototype](js-dataflow.md#prototype_of) of O is P;
+   - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
 2. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
    - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
@@ -458,13 +458,13 @@ Declared as facts: eff_suspension_word.
 
 <a id="eff_conv_call"></a>`eff_conv_call`(N, a node M) if all of:
 - [`eff_coerced`](#eff_coerced)(N, a node X);
-- X [may be the node](js-dataflow.md#may_be_node) O;
+- X [may be the node](js-dataflow.md#may_be_node) a node O;
 - [`eff_conv_key`](#eff_conv_key)(Key);
 - [the member](js-dataflow.md#member_value) Key of O holds M.
 
 <a id="eff_conv_overridden"></a>`eff_conv_overridden`(N, a node X) if all of:
 - [`eff_coerced`](#eff_coerced)(N, X);
-- X [may be the node](js-dataflow.md#may_be_node) O;
+- X [may be the node](js-dataflow.md#may_be_node) a node O;
 - [`eff_conv_key`](#eff_conv_key)(Key);
 - [the member](js-dataflow.md#member_value) Key of O holds some node.
 
@@ -488,7 +488,7 @@ Declared as facts: eff_conv_key.
 `eff_latent`(a function F, L, H) if all of:
 - [`eff_conv_call`](#eff_conv_call)(a node N, M);
 - [`eff_latent`](#eff_latent)(M, L, H);
-- F [is the nearest function around](js-dataflow.md#nearest_v) N.
+- F [is nearest to](js-dataflow.md#nearest_v) N.
 
 > Totality: every coerced operand is primitive, object or untraced. And the
 > operator table must not name a node that is neither binary nor unary —
@@ -519,7 +519,7 @@ Declared as facts: eff_conv_key.
 
 <a id="eff_mod_src"></a>`eff_mod_src`(a node N, Src, F) either:
 
-1. if N [names the module](js-dataflow.md#module_source) Src in file F;
+1. if N [sources](js-dataflow.md#module_source) Src in F;
 2. if all of:
    - N is an import_expression node;
    - N is in file F;
@@ -559,16 +559,16 @@ Declared as facts: eff_conv_key.
 
 <a id="eff_mod_target"></a>`eff_mod_target`(Src, T) if all of:
 - [`eff_mod_basename`](#eff_mod_basename)(Src, Base);
-- [`corpus_file`](js-dataflow.md#corpus_file)(T);
+- T [is in the corpus](js-dataflow.md#corpus_file);
 - T is Base.
 
 <a id="eff_mod_target_disagrees"></a>`eff_mod_target_disagrees`(Src, T) either:
 
-1. if the module Src [is the file](js-dataflow.md#import_target) T, unless [`eff_mod_target`](#eff_mod_target)(Src, T);
+1. if Src [targets](js-dataflow.md#import_target) T, unless [`eff_mod_target`](#eff_mod_target)(Src, T);
 2. if all of:
    - [`eff_mod_target`](#eff_mod_target)(Src, T);
-   - some node [names the module](js-dataflow.md#module_source) Src in file some file;
-   - unless the module Src [is the file](js-dataflow.md#import_target) T.
+   - some node [sources](js-dataflow.md#module_source) Src in some file;
+   - unless Src [targets](js-dataflow.md#import_target) T.
 
 <a id="eff_evaluates_at"></a>`eff_evaluates_at`(I, T) if all of:
 - [`eff_mod_src`](#eff_mod_src)(I, Src, something);
@@ -587,7 +587,7 @@ Declared as facts: eff_conv_key.
 > group's effect). No `load` label: the suspension of `import()` is CONTROL,
 > as `await` is.
 
-<a id="eff_in_fn"></a>`eff_in_fn`(a node N) if some function [is the nearest function around](js-dataflow.md#nearest_v) N.
+<a id="eff_in_fn"></a>`eff_in_fn`(a node N) if some function [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="eff_module"></a>`eff_module`(F, L, H) either:
 
@@ -610,7 +610,7 @@ Declared as facts: eff_conv_key.
 
 > The same Moore closure as section 4, over a file.
 
-<a id="eff_mod_subject"></a>`eff_mod_subject`(F) if [`corpus_file`](js-dataflow.md#corpus_file)(F).
+<a id="eff_mod_subject"></a>`eff_mod_subject`(F) if F [is in the corpus](js-dataflow.md#corpus_file).
 
 <a id="eff_mod_over"></a>`eff_mod_over`(F, N) if `eff_name`(N) and [`eff_module`](#eff_module)(F, L, H), unless [`eff_row`](#eff_row)(N, L, H).
 
@@ -659,7 +659,7 @@ Declared as facts: eff_conv_key.
 <a id="eff_edge_closed"></a>`eff_edge_closed`(F, a function G) either:
 
 1. if a call C [resolves to](js-callgraph.md#resolves) G and [`nearest_fn`](js-callgraph.md#nearest_fn)(F, C);
-2. if a call C [resolves to](js-callgraph.md#resolves) G and F [is the nearest function around](js-dataflow.md#nearest_v) C.
+2. if a call C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
 <a id="eff_edge_unclosed"></a>`eff_edge_unclosed`(F, G, L, H) if all of:
 - [`calls`](js-callgraph.md#calls)(F, G);
@@ -796,7 +796,7 @@ Declared as facts: eff_class_form, eff_field_kind.
    - C [resolves to](js-callgraph.md#resolves) a function G;
    - [`eff_latent`](#eff_latent)(G, L, H);
    - unless [`eff_discharged_at`](#eff_discharged_at)(C, L);
-3. if [the super of](js-dataflow.md#super_of) CD is a class SD and [`class_construct_eff`](#class_construct_eff)(SD, L, H).
+3. if [the super](js-dataflow.md#super_of) of CD is a class SD and [`class_construct_eff`](#class_construct_eff)(SD, L, H).
 
 > The two seeds. Evaluating a class DECLARATION allocates (a fresh mutable
 > `prototype`, where a function declaration is hoisted and performs nothing
@@ -804,7 +804,7 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 `eff_here`(CD, L, H) if [`class_define_eff`](#class_define_eff)(CD, L, H).
 
-`eff_here`(a new X, L, H) if X [may be the node](js-dataflow.md#may_be_node) CD and [`class_construct_eff`](#class_construct_eff)(CD, L, H).
+`eff_here`(a new X, L, H) if X [may be the node](js-dataflow.md#may_be_node) a node CD and [`class_construct_eff`](#class_construct_eff)(CD, L, H).
 
 `eff_alloc_kind` includes class_declaration.
 

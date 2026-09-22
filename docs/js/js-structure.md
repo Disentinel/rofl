@@ -65,7 +65,7 @@ Kinds without a noun: meta_property.
 > need the form and none owns it. Keyed on `meta`, the reserved word the
 > grammar switches on: a future `import.defer` is still (meta="import").
 
-<a id="meta_form"></a>`meta_form`(a node M, new_target) either:
+<a id="meta_form"></a>A node M has the meta form new_target either:
 
 1. if all of:
    - M is a meta_property node;
@@ -81,9 +81,9 @@ Kinds without a noun: meta_property.
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
 
-<a id="meta_unformed"></a>`meta_unformed`(a meta_property node M) unless [`meta_form`](#meta_form)(M, something).
+<a id="meta_unformed"></a>A meta_property node M has no meta form unless M [has the meta form](#meta_form) some name.
 
-<a id="meta_form_conflict"></a>`meta_form_conflict`(M, A, B) if [`meta_form`](#meta_form)(M, A), [`meta_form`](#meta_form)(M, B), and A differs from B.
+<a id="meta_form_conflict"></a>A node M has conflicting meta forms A B if M [has the meta form](#meta_form) A, M [has the meta form](#meta_form) B, and A differs from B.
 
 ## Read from other files
 

@@ -523,11 +523,11 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > and NOT modelled: wiring it into `module_site` changes the relation the test
 > compares site for site against node's own resolver.
 
-<a id="module_meta"></a>`module_meta`(F, a node M) if [`meta_form`](js-structure.md#meta_form)(M, import_meta) and M [is of kind](js-model.md#ast_node) some kind in file F.
+<a id="module_meta"></a>`module_meta`(F, a node M) if M [has the meta form](js-structure.md#meta_form) import_meta and M [is of kind](js-model.md#ast_node) some kind in file F.
 
 <a id="self_referential_module"></a>`self_referential_module`(F) if [`module_meta`](#module_meta)(F, something).
 
-<a id="not_module_meta"></a>`not_module_meta`(M) if [`meta_form`](js-structure.md#meta_form)(M, new_target).
+<a id="not_module_meta"></a>`not_module_meta`(a node M) if M [has the meta form](js-structure.md#meta_form) new_target.
 
 ## 9. IMPORT ATTRIBUTES — `with { type: "json" }` says what the module IS,
 

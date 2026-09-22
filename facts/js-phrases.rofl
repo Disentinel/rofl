@@ -5,6 +5,7 @@
 -- template by the shape of the call and render nothing.
 edb(phrase).
 edb(kind_noun).
+edb(sig).
 
 -- what the scanner seeds, in the code
 phrase(ast_node, "<node> is of kind <kind> in file <file> at line <line>").
@@ -19,74 +20,7 @@ phrase(ast_value, "<node> is written as <text>").
 phrase(ast_within, "<node> is within <node>").
 phrase(ast_in, "<node> is in file <file>").
 phrase(key_name, "<node> spells <key>").
-phrase(ident_in, "<node> is an identifier that reads <name> in file <file>").
 
--- the value layer
-phrase(may_be_node, "<node> may be the node <node>").
-phrase(may_be_lit, "<node> may be the literal <literal>").
-phrase(binder, "<declarator> binds <name> to <node> in file <file>").
-phrase(assigns, "<name> is assigned <node> in file <file>").
-phrase(sees_binder, "<node> sees <declarator>").
-phrase(decl_binds, "<declarator> binds <name>").
-phrase(decl_reads, "<declarator> reads <name>").
-phrase(lexical_decl, "<declaration> is lexical").
-phrase(plain_assign, "<assignment> is plain").
-phrase(destructures, "<declarator> destructures <name> from the key <key> in file <file>").
-phrase(destructures_at, "<declarator> destructures <name> at index <index> in file <file>").
-phrase(rest_binds, "<0:declarator> binds <2:name> through the rest <1:node> in file <3:file>").
-phrase(param_default, "<function> defaults <name> to <node>").
-phrase(param_use, "<function> uses <name> at <node>").
-phrase(member_value, "the member <1:key> of <0:node> holds <2:node>").
-phrase(class_member_static, "the static member <1:key> of <0:class> is <2:node>").
-phrase(class_member_proto, "the instance member <1:key> of <0:class> is <2:node>").
-phrase(member_plain, "the plain member <1:key> of <0:node> is <2:node>").
-phrase(obj_like, "<node> is object-like").
-phrase(own_key, "<class> owns the key <key>").
-phrase(selects, "<member access> selects <key>").
-phrase(member_node_v, "<node> is a member access").
-phrase(class_receiver, "<node> denotes a class").
-phrase(field_of, "<0:class> has the field <1:key> at <2:node> holding <3:node>").
-phrase(inherited_field, "<0:class> inherits the field <1:key> at <2:node> holding <3:node>").
-phrase(private_key, "<node> is the private name <name>").
-phrase(private_member, "<0:class> has the private member <1:name> at <2:node>").
-phrase(private_ref, "<node> reads the private name <name>").
-phrase(private_inner, "<node> is shadowed inside <class>").
-phrase(private_binds, "<node> binds to the private member <node>").
-phrase(class_method_of, "<class> has the method <method>").
-phrase(class_field_this, "<class> has the field site <node>").
-phrase(static_block_of, "<class> has the static block <node>").
-phrase(obj_method_of, "<object literal> has the method <method>").
-phrase(class_named, "<class> is named <name> in file <file>").
-phrase(super_of, "the super of <class> is <class>").
-phrase(seq_later, "<sequence> has an element after the <index>-th").
-phrase(decorated_by, "<node> is replaced by its decorator with <node>").
-phrase(decorated_member, "the decorated method <1:key> of <0:class> at <2:method> is replaced with <3:node>").
-phrase(module_source, "<node> names the module <text> in file <file>").
-phrase(imports_name, "<name> imports <name> from <text> in file <file>").
-phrase(imports_ns, "<name> imports the namespace of <text> in file <file>").
-phrase(imports_default, "<name> imports the default of <text> in file <file>").
-phrase(import_target, "the module <text> is the file <file>").
-phrase(module_object, "<node> is the module object of <file>").
-phrase(caught_value, "<node> catches <node>").
-phrase(catch_of, "the catch of <try> is <catch>").
-phrase(catch_param, "the param of <catch> is <node>").
-phrase(try_block, "the block of <try> is <node>").
-phrase(thrown_in, "<try> throws <node>").
-phrase(call_in_try, "<try> calls").
-phrase(catch_from_call, "<node> catches from a call").
-phrase(catch_from_host, "<node> catches from the host").
-phrase(catch_unsourced, "<node> catches from nowhere").
-phrase(for_of_src, "<for-of> iterates <node>").
-phrase(iter_elem, "an element of <node> is <node>").
-phrase(next_send, "<node> is sent <node> by next").
-phrase(nearest_v, "<function> is the nearest function around <node>").
-phrase(this_binder, "<node> binds this").
-phrase(returns, "<function> returns <node>").
-phrase(yields, "<function> yields <node>").
-phrase(this_host, "<node> hosts <this>").
-phrase(resolves, "<call> resolves to <function>").
-phrase(arg_at, "the <1:index>-th argument of <0:call> is <2:node>").
-phrase(decorates, "<node> is decorated by <node>").
 
 -- nouns for node kinds, and for the fact sets that name a family of kinds
 kind_noun(identifier, "identifier").
@@ -155,3 +89,125 @@ kind_noun(this_binds_kind, "this-binder").
 kind_noun(fn_kind_v, "function").
 kind_noun(block_scope_kind, "block scope").
 kind_noun(call_like_v, "call").
+
+-- signatures: the head phrase is the name, each argument is `[marker] noun Var`
+-- in the relation's own order; a name that differs from the relation is a
+-- proposed rename. Scanner relations keep their phrases above: their index
+-- variants need the fixed holes.
+sig(ident, "reads(identifier N, name Name)").
+sig(ident_in, "reads(identifier E, name Name, in file File)").
+sig(decl_binds, "binds(declarator D, name Name)").
+sig(decl_reads, "reads(declarator D, name Name)").
+sig(var_flow, "flows_to(name From, name To)").
+sig(var_reaches, "reaches(name From, name To)").
+sig(may_be_lit, "may_be_the_literal(node E, literal V)").
+sig(may_be_node, "may_be_the_node(node E, node N)").
+sig(interpolated, "is_interpolated(template T)").
+sig(binder, "binds(declarator D, name Name, to node Init, in file File)").
+sig(binder_at_top, "is_at_the_top(declarator D)").
+sig(binder_region, "the_region(of declarator D, is node R)").
+sig(binds_name, "introduces(declarator D, name Name, in file File)").
+sig(scoped_binder, "is_scoped(declarator D, in file File)").
+sig(lexical_binder, "is_lexical(declarator D)").
+sig(lexical_decl, "is_lexical(declaration V)").
+sig(scope_node, "is_a_scope(node R)").
+sig(encloses_s, "encloses(scope R, declarator D)").
+sig(closer_s, "is_outranked_for(scope R, declarator D)").
+sig(nearest_s, "is_the_nearest_scope_of(scope R, declarator D)").
+sig(shadowed_by, "is_shadowed_by(declarator Outer, declarator Inner, on name Name)").
+sig(shadowed_by_param, "is_shadowed_by(declarator Outer, function F, on name Name)").
+sig(hidden_at, "is_hidden_from(node E, declarator D)").
+sig(tdz_cand, "is_a_dead_zone_candidate_of(node E, declarator D)").
+sig(tdz_deferred, "is_deferred_for(node E, declarator D)").
+sig(tdz_at, "is_in_the_dead_zone_of(node E, declarator D)").
+sig(assigns, "is_assigned(name Name, node Src, in file File)").
+sig(spread_arg, "has_a_spread(call C, at index I)").
+sig(after_spread, "is_past_a_spread(call C, at index I)").
+sig(arg_at, "passes(call C, node A:2, at index I:1)").
+sig(destructures, "destructures(declarator D, name Local, from key Key, in file File)").
+sig(destructures_at, "destructures(declarator D, name Local, at index Index, in file File)").
+sig(pattern_takes, "takes_the_key(object pattern P, key Key)").
+sig(rest_in_pattern, "holds_a_rest(declarator D, node R, in file File)").
+sig(rest_binds, "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)").
+sig(param_of, "takes(function F, name Name:2, at index I:1)").
+sig(param_default, "defaults(function F, name Name, to node Init)").
+sig(param_hidden, "hides(function F, name Name, at node U)").
+sig(param_use, "uses(function F, name Name, at node U)").
+sig(elem_at, "the_element(of node X, index I, is node E)").
+sig(iter_elem, "has_an_element(node X, node E)").
+sig(valued, "is_valued(node E)").
+sig(prototype_of, "the_prototype(of node E, is name P)").
+sig(kind_prototype, "has_prototype(kind K, name P)").
+sig(builtin_prototype, "is_a_builtin_prototype(name P)").
+sig(plain_assign, "is_plain(assignment E)").
+sig(obj_like, "is_object_like(node O)").
+sig(member_value, "the_member(of node O, key Key, holds node V)").
+sig(own_key, "owns_the_key(class CD, key Key)").
+sig(member_node_v, "is_a_member_access(node N)").
+sig(selects, "selects(member access N, key Key)").
+sig(class_member_static, "the_static_member(of class CD, key Key, is node V)").
+sig(class_member_proto, "the_instance_member(of class CD, key Key, is node V)").
+sig(member_plain, "the_plain_member(of node O, key Key, is node V)").
+sig(class_receiver, "denotes_a_class(node E)").
+sig(class_named, "is_named(class CD, name Name, in file File)").
+sig(class_method_of, "has_the_method(class CD, method M)").
+sig(this_over, "is_over(this-binder F, this T)").
+sig(this_nearer, "is_outdone_for(this-binder F, this T)").
+sig(this_host, "hosts(node H, this T)").
+sig(this_binder, "binds_this(node F)").
+sig(field_of, "has_the_field(class CD, key Key, at node P, holding node V)").
+sig(inherited_field, "inherits_the_field(class CD, key Key, at node P, holding node V)").
+sig(private_key, "is_the_private_key(node P, name Name)").
+sig(private_member, "has_the_private_member(class CD, name Name, at node M)").
+sig(private_ref, "refers_privately_to(member access N, name Name)").
+sig(private_inner, "has_an_inner_class_inside(member access N, class CD)").
+sig(private_binds, "binds_privately_to(member access N, node M)").
+sig(class_field_this, "has_the_field_site(class CD, node P)").
+sig(static_block_of, "has_the_static_block(class CD, static block SB)").
+sig(super_of, "the_super(of class CD, is class SD)").
+sig(own_ctor, "has_its_own_constructor(class CD, method M)").
+sig(has_own_ctor, "has_its_own_constructor(class CD)").
+sig(ctor_of, "the_constructor(of class CD, is method M)").
+sig(obj_method_of, "has_the_method(object literal O, method M)").
+sig(decorated_by, "is_replaced_by_its_decorator_with(node Owner, node N)").
+sig(decorated_member, "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)").
+sig(corpus_file, "is_in_the_corpus(file File)").
+sig(module_source, "sources(node N, text Src, in file File)").
+sig(module_basename, "has_basename(text Src, text Base)").
+sig(import_target, "targets(text Src, file Target)").
+sig(import_outside_corpus, "is_outside_the_corpus(text Src, from file File)").
+sig(imports_name, "imports(name Local, name Name, from text Src, in file File)").
+sig(imports_ns, "imports_the_namespace(name Local, of text Src, in file File)").
+sig(imports_default, "imports_the_default(name Local, of text Src, in file File)").
+sig(module_object, "is_the_module_object_of(node P, file Target)").
+sig(reexport_decl, "re_exports(named export E)").
+sig(export_list_erased, "is_type_only(named export E)").
+sig(export_item_erased, "is_type_only(node Sp)").
+sig(export_local, "is_exported_locally_as(node L, name Ext, from file File)").
+sig(export_ns_name, "is_a_namespace_export(name Name, of text Src, from file File)").
+sig(exports_name, "is_exported_as(node F, name Name, from file File)").
+sig(exports_default, "is_the_default_export_of(node F, file File)").
+sig(caught_value, "catches(node P, node V)").
+sig(catch_of, "the_catch(of try T, is catch H)").
+sig(catch_param, "the_param(of catch H, is node P)").
+sig(try_block, "the_block(of try T, is node B)").
+sig(thrown_in, "throws(try T, node V)").
+sig(call_in_try, "calls(try T)").
+sig(catch_from_call, "catches_from_a_call(node P)").
+sig(catch_from_host, "catches_from_the_host(node P)").
+sig(catch_unsourced, "catches_from_nowhere(node P)").
+sig(for_of_src, "iterates(for-of S, node X)").
+sig(for_of_name, "loops_over(for-of S, name Name)").
+sig(for_of_use, "uses(for-of S, name Name, at node U)").
+sig(next_send, "is_sent(function G, node V)").
+sig(delegates, "delegates_to(function Outer, function Inner)").
+sig(nearest_v, "is_nearest_to(function F, node R)").
+sig(returns, "returns(function F, node E)").
+sig(yields, "yields(function F, node E)").
+sig(seq_later, "has_a_later_expression_than(sequence E, index I)").
+sig(resolves, "resolves_to(call C, function F)").
+sig(decorates, "is_decorated_by(node Owner, node D)").
+sig(sees_binder, "sees(node E, declarator D)").
+sig(meta_form, "has_the_meta_form(node N, name Form)").
+sig(meta_form_conflict, "has_conflicting_meta_forms(node N, name A, name B)").
+sig(meta_unformed, "has_no_meta_form(node N)").
