@@ -105,7 +105,7 @@ golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refactoring_queue", "6244dd5a8c4d04c1", 3616).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spec_coverage", "2267ec4af9a14a83", 3060).
+golden_state("spec_coverage", "b5b31f587cd65a03", 3062).
 golden_state("unstratifiable", "79fbe73fc51f0377", 504).
 
 golden_host("oops", "012d40f715163c70", 0, 214).
@@ -4088,9 +4088,9 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 13).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 517).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 518).
 golden_rel("spec_coverage", "authority[main]", 35).
-golden_rel("spec_coverage", "check[checks]", 146).
+golden_rel("spec_coverage", "check[checks]", 147).
 golden_rel("spec_coverage", "check_stands[coverage]", 13).
 golden_rel("spec_coverage", "citation_ok[checks]", 132).
 golden_rel("spec_coverage", "cited_check[map]", 13).
