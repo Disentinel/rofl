@@ -342,8 +342,11 @@ claim(C)                  :- supports(_, C).
 claim(C)                  :- refutes(_, C).
 claim(C)                  :- decides_on(_, C).   -- a claim a decision names is a claim before any edge takes a side
 claim(C)                  :- neutral(_, C).      -- and so is one an edge explicitly takes no side on
-supported(C)              :- supports(Id, C), not stale(Id), depth(Id, D), D > 0.   -- a depth-0 sentence grades nothing (objection r5, sense_1)
-refuted(C)                :- refutes(Id, C), not stale(Id), depth(Id, D), D > 0.
+-- a polarity is the executor's reading and can be objected to like an edge;
+-- it is withdrawn by repolarised, never deleted (fourth book, x6, the asker)
+edb(repolarised).       -- repolarised(Id, Claim, Round)   the side the executor put Id on is withdrawn; the edge stands
+supported(C)              :- supports(Id, C), not repolarised(Id, C, _), not stale(Id), depth(Id, D), D > 0.   -- a depth-0 sentence grades nothing (objection r5, sense_1)
+refuted(C)                :- refutes(Id, C), not repolarised(Id, C, _), not stale(Id), depth(Id, D), D > 0.
 contested(C)              :- supported(C), refuted(C).
 unknown_claim(C)          :- claim(C), not supported(C), not refuted(C).
 

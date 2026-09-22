@@ -35,8 +35,9 @@ for (const d of q('decision(D)').map((x) => x.D).filter((d) => !want || d === wa
     const grade = has(`contested(${c})`) ? 'contested' : has(`supported(${c})`) ? 'supported' : has(`refuted(${c})`) ? 'refuted' : 'unknown';
     console.log(`  claim ${c}: ${grade}`);
     const live = (id: string) => !has(`stale(${id})`) && !has(`withdrawn(${id}, _)`) && Number(depth.get(id)) > 0;
-    const sup = q(`supports(I, ${c})`).map((x) => x.I).filter((i) => rests.has(i)).sort();
-    const ref = q(`refutes(I, ${c})`).map((x) => x.I).filter((i) => rests.has(i)).sort();
+    const repol = new Set(q(`repolarised(I, ${c}, _)`).map((x) => x.I));
+    const sup = q(`supports(I, ${c})`).map((x) => x.I).filter((i) => rests.has(i) && !repol.has(i)).sort();
+    const ref = q(`refutes(I, ${c})`).map((x) => x.I).filter((i) => rests.has(i) && !repol.has(i)).sort();
     side('FOR', sup.filter(live));
     side('AGAINST', ref.filter(live));
     const out = [...sup, ...ref].filter((i) => !live(i));
