@@ -47,10 +47,10 @@ Declared as facts: global_ref_position.
 > unbound `ast_node(E, identifier, _, _)` first was once 39% of the fixpoint
 
 <a id="global_ref"></a>`global_ref`(a node E, Name, File) if all of:
-- [`global_ref_position`](#global_ref_position)(K, a child Field);
-- a node P [is of kind](js-model.md#ast_node) K;
-- the Field of P is E;
-- E [reads](js-dataflow.md#ident_in) Name in File.
+  - [`global_ref_position`](#global_ref_position)(K, a child Field);
+  - a node P [is of kind](js-model.md#ast_node) K;
+  - the Field of P is E;
+  - E [reads](js-dataflow.md#ident_in) Name in File.
 
 ## 2. WHAT THE FILE BINDS — deliberately over-broad. `sees_binder[code]`
 
@@ -74,10 +74,10 @@ Declared as facts: global_ref_position.
 | catch_clause | param |
 
 <a id="declares_name"></a>`declares_name`(Name, File) if all of:
-- [`declaring_position`](#declaring_position)(K, a child Field);
-- a node D [is of kind](js-model.md#ast_node) K in file File;
-- the Field of D is a node I;
-- I [is named](js-structure.md#ast_name) Name.
+  - [`declaring_position`](#declaring_position)(K, a child Field);
+  - a node D [is of kind](js-model.md#ast_node) K in file File;
+  - the Field of D is a node I;
+  - I [is named](js-structure.md#ast_name) Name.
 
 Declared as facts: declaring_position.
 
@@ -85,11 +85,11 @@ Declared as facts: declaring_position.
 > `declares_name` narrows the globals, the safe direction again
 
 `declares_name`(Name, File) if all of:
-- [`declaring_position`](#declaring_position)(K, a child Field);
-- a node D [is of kind](js-model.md#ast_node) K in file File;
-- the Field of D is a node I;
-- I [is within](js-structure.md#ast_within) a node X;
-- X [is named](js-structure.md#ast_name) Name.
+  - [`declaring_position`](#declaring_position)(K, a child Field);
+  - a node D [is of kind](js-model.md#ast_node) K in file File;
+  - the Field of D is a node I;
+  - I [is within](js-structure.md#ast_within) a node X;
+  - X [is named](js-structure.md#ast_name) Name.
 
 > a parameter is a position, not a declaration kind
 
@@ -125,20 +125,20 @@ Declared as facts: declaring_position.
 > `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
 
 <a id="es_static"></a>`es_static`(a node N, Name, Key, Rel) if all of:
-- [`es_global`](#es_global)(a node O, Name, something, something);
-- the object of N is O;
-- N [selects](js-dataflow.md#selects) Key;
-- `lib_static`(Name, Key, Rel).
+  - [`es_global`](#es_global)(a node O, Name, something, something);
+  - the object of N is O;
+  - N [selects](js-dataflow.md#selects) Key;
+  - `lib_static`(Name, Key, Rel).
 
 > a member off a KNOWN global that TypeScript does not carry: a newer
 > edition, a HOST extension (`Error.captureStackTrace` is V8's) or a typo;
 > non-empty on purpose, the fixture puts a site in it
 
 <a id="es_static_unattributed"></a>`es_static_unattributed`(a node N, Name, Key) if all of:
-- [`es_global`](#es_global)(a node O, Name, something, something);
-- the object of N is O;
-- N [selects](js-dataflow.md#selects) Key;
-- unless `lib_static`(Name, Key, something).
+  - [`es_global`](#es_global)(a node O, Name, something, something);
+  - the object of N is O;
+  - N [selects](js-dataflow.md#selects) Key;
+  - unless `lib_static`(Name, Key, something).
 
 > a well-known symbol or `Math.PI` is a KEY and not a call; `lib_static_shape`
 > already carries the difference from the declaration
@@ -152,9 +152,9 @@ Declared as facts: declaring_position.
 <a id="es_global_invoke"></a>`es_global_invoke`(C, Name, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and [`es_global`](#es_global)(N, Name, Rel, something).
 
 <a id="es_global_construct"></a>`es_global_construct`(a node X, Name, Rel) if all of:
-- [`transfer_site`](js-callgraph.md#transfer_site)(X, new_expression);
-- the callee of X is a node N;
-- [`es_global`](#es_global)(N, Name, Rel, something).
+  - [`transfer_site`](js-callgraph.md#transfer_site)(X, new_expression);
+  - the callee of X is a node N;
+  - [`es_global`](#es_global)(N, Name, Rel, something).
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -163,9 +163,9 @@ Declared as facts: declaring_position.
 <a id="constructible_form"></a>`constructible_form` includes constructor_binding.
 
 <a id="es_construct_not_constructor"></a>`es_construct_not_constructor`(X, Name, Form) if all of:
-- [`es_global_construct`](#es_global_construct)(X, Name, something);
-- `lib_global`(Name, something, Form);
-- unless [`constructible_form`](#constructible_form)(Form).
+  - [`es_global_construct`](#es_global_construct)(X, Name, something);
+  - `lib_global`(Name, something, Form);
+  - unless [`constructible_form`](#constructible_form)(Form).
 
 Declared as facts: constructible_form.
 
@@ -177,14 +177,14 @@ Declared as facts: constructible_form.
 > UNPOPULATABLE, which is the right thing for it to say.
 
 <a id="es_global_unsupported"></a>`es_global_unsupported`(E, X, Name) if all of:
-- [`es_global`](#es_global)(X, Name, Rel, something);
-- `environment`(E);
-- unless [`reaches`](js-env.md#reaches)(E, Rel).
+  - [`es_global`](#es_global)(X, Name, Rel, something);
+  - `environment`(E);
+  - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 <a id="es_static_unsupported"></a>`es_static_unsupported`(E, N, Name, Key) if all of:
-- [`es_static`](#es_static)(N, Name, Key, Rel);
-- `environment`(E);
-- unless [`reaches`](js-env.md#reaches)(E, Rel).
+  - [`es_static`](#es_static)(N, Name, Key, Rel);
+  - `environment`(E);
+  - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 ## 6. THE PROTOTYPE OF A CONSTRUCTED VALUE. A `new X()` whose callee is an ES
 
@@ -201,16 +201,16 @@ Declared as facts: constructible_form.
 > thirty-nine globals with no bridge row.
 
 <a id="es_instance"></a>`es_instance`(X, Name, Rel) if all of:
-- [`es_global_construct`](#es_global_construct)(X, Name, Rel);
-- `lib_global`(Name, something, Form);
-- [`constructible_form`](#constructible_form)(Form).
+  - [`es_global_construct`](#es_global_construct)(X, Name, Rel);
+  - `lib_global`(Name, something, Form);
+  - [`constructible_form`](#constructible_form)(Form).
 
 A node X may be the node X if [`es_instance`](#es_instance)(X, something, something).
 
 The prototype of a node E is P if all of:
-- E [may be the node](js-dataflow.md#may_be_node) a node X;
-- [`es_instance`](#es_instance)(X, Name, something);
-- `lib_global_prototype`(Name, P).
+  - E [may be the node](js-dataflow.md#may_be_node) X;
+  - [`es_instance`](#es_instance)(X, Name, something);
+  - `lib_global_prototype`(Name, P).
 
 > Where the bridge cannot look, as rows: `es_prototype_gap` is the LIBRARY
 > side (`Map`, `Set`, `Promise`, `Date` can be constructed and have no
@@ -219,18 +219,18 @@ The prototype of a node E is P if all of:
 > was outside both halves.
 
 <a id="es_prototype_gap"></a>`es_prototype_gap`(Name, Rel) if all of:
-- `lib_global`(Name, Rel, Form);
-- [`constructible_form`](#constructible_form)(Form);
-- unless `lib_global_prototype`(Name, something).
+  - `lib_global`(Name, Rel, Form);
+  - [`constructible_form`](#constructible_form)(Form);
+  - unless `lib_global_prototype`(Name, something).
 
 <a id="es_instance_unattributed"></a>`es_instance_unattributed`(C, Name, Key) if all of:
-- [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-- [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-- the object of N is a node O;
-- O [may be the node](js-dataflow.md#may_be_node) a node X;
-- [`es_instance`](#es_instance)(X, Name, something);
-- N [selects](js-dataflow.md#selects) Key;
-- unless `lib_global_prototype`(Name, something).
+  - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
+  - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
+  - the object of N is a node O;
+  - O [may be the node](js-dataflow.md#may_be_node) X;
+  - [`es_instance`](#es_instance)(X, Name, something);
+  - N [selects](js-dataflow.md#selects) Key;
+  - unless `lib_global_prototype`(Name, something).
 
 ## Read from other files
 

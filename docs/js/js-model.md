@@ -24,10 +24,10 @@ books: audit, code, main
 <a id="waived"></a>`waived`(Lang, K, L) if [`ignored`](#ignored)(Lang, K, L, something).
 
 <a id="unaccounted"></a>`unaccounted`(Lang, K, L) if all of:
-- `node_kind`(Lang, K);
-- `layer`(L);
-- unless [`modelled`](#modelled)(Lang, K, L);
-- unless [`waived`](#waived)(Lang, K, L).
+  - `node_kind`(Lang, K);
+  - `layer`(L);
+  - unless [`modelled`](#modelled)(Lang, K, L);
+  - unless [`waived`](#waived)(Lang, K, L).
 
 <a id="double_claimed"></a>`double_claimed`(Lang, K, L) if [`modelled`](#modelled)(Lang, K, L) and [`waived`](#waived)(Lang, K, L).
 
@@ -42,7 +42,7 @@ books: audit, code, main
 
 <a id="claim_kind"></a>`claim_kind` includes handled, ignored, unknown_because.
 
-<a id="claim"></a>`claim`(handled, Lang, K, L, R) either:
+<a id="claim"></a>`claim`(X1, Lang, K, L, R) either:
 
 1. if [`handled`](#handled)(Lang, K, L, R) and X1 is handled;
 2. if [`ignored`](#ignored)(Lang, K, L, R) and X1 is ignored;
@@ -88,10 +88,10 @@ Declared as facts: layer_authorised.
 
 <a id="verified"></a>`verified`(Lang, K, L, Rule) if [`handled`](#handled)(Lang, K, L, Rule) and [`checked`](#checked)(Lang, K, L, Rule, something, something).
 
-<a id="converges"></a>`converges`(L, Rule, A, B) if all of:
-- [`verified`](#verified)(A, something, L, Rule);
-- [`verified`](#verified)(B, something, L, Rule);
-- A differs from B.
+<a id="converges"></a>`converges`(L, Rule, X, B) if all of:
+  - [`verified`](#verified)(X, something, L, Rule);
+  - [`verified`](#verified)(B, something, L, Rule);
+  - X differs from B.
 
 <a id="unverified"></a>`unverified`(Lang, K, L, Rule) if [`handled`](#handled)(Lang, K, L, Rule), unless [`checked`](#checked)(Lang, K, L, Rule, something, something).
 
@@ -105,7 +105,7 @@ Declared as facts: checked.
 > with no cell under it and the partition stops summing — a second, independent
 > detector for what `orphan_claim` reports.
 
-<a id="verdict"></a>`verdict`(Lang, K, L, modelled) either:
+<a id="verdict"></a>`verdict`(Lang, K, L, X1) either:
 
 1. if [`handled`](#handled)(Lang, K, L, something) and X1 is modelled;
 2. if [`ignored`](#ignored)(Lang, K, L, something) and X1 is waived;
@@ -148,9 +148,9 @@ Declared as facts: checked.
 <a id="bad_reason"></a>`bad_reason`(Lang, K, L, R) if [`unknown_because`](#unknown_because)(Lang, K, L, R), unless [`unknown_type`](#unknown_type)(R, something).
 
 <a id="stale_reason"></a>`stale_reason`(Lang, K, L, R) if all of:
-- [`unknown_because`](#unknown_because)(Lang, K, L, R);
-- [`cell`](#cell)(Lang, K, L);
-- unless [`verdict`](#verdict)(Lang, K, L, not_modelled).
+  - [`unknown_because`](#unknown_because)(Lang, K, L, R);
+  - [`cell`](#cell)(Lang, K, L);
+  - unless [`verdict`](#verdict)(Lang, K, L, not_modelled).
 
 <a id="orphan_reason"></a>`orphan_reason`(Lang, K, L) if [`orphan`](#orphan)(unknown_because, Lang, K, L).
 
@@ -175,7 +175,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 <a id="shape_kind"></a>`shape_kind`(Lang, K, Lay) if [`shape_of`](#shape_of)(Lang, K, S) and [`shape_in`](#shape_in)(S, Lay).
 
-`cell`(Lang, K, none, Lay) either:
+`cell`(Lang, K, X1, Lay) either:
 
 1. if all of:
    - `node_kind`(Lang, K);
@@ -208,10 +208,10 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 <a id="orphan_shape"></a>`orphan_shape`(Lang, K, S) if [`shape_of`](#shape_of)(Lang, K, S), unless `node_kind`(Lang, K).
 
-<a id="orphan_axis"></a>`orphan_axis`(A, Lay) either:
+<a id="orphan_axis"></a>`orphan_axis`(X, Lay) either:
 
-1. if [`axis_applies`](#axis_applies)(A, Lay), unless [`axis`](#axis)(A);
-2. if [`axis_applies`](#axis_applies)(A, Lay), unless `layer`(Lay).
+1. if [`axis_applies`](#axis_applies)(X, Lay), unless [`axis`](#axis)(X);
+2. if [`axis_applies`](#axis_applies)(X, Lay), unless `layer`(Lay).
 
 ## THE CLAIM LEDGER AT SHAPE GRANULARITY. A kind-level claim answers only for an
 
@@ -250,7 +250,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
    - [`shape_kind`](#shape_kind)(Lang, K, Lay);
    - [`axis_applies`](#axis_applies)(shape, Lay).
 
-`verdict`(Lang, K, S, Lay, modelled) either:
+`verdict`(Lang, K, S, Lay, X1) either:
 
 1. if [`shaped_handled`](#shaped_handled)(Lang, K, S, Lay, something) and X1 is modelled;
 2. if [`shaped_ignored`](#shaped_ignored)(Lang, K, S, Lay, something) and X1 is waived;
@@ -262,7 +262,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 `double_claimed`(Lang, K, S, Lay) if [`verdict`](#verdict)(Lang, K, S, Lay, modelled) and [`verdict`](#verdict)(Lang, K, S, Lay, waived).
 
-`claim`(handled, Lang, K, S, Lay, R) either:
+`claim`(X1, Lang, K, S, Lay, R) either:
 
 1. if [`handled`](#handled)(Lang, K, S, Lay, R) and X1 is handled;
 2. if [`ignored`](#ignored)(Lang, K, S, Lay, R) and X1 is ignored;
@@ -308,20 +308,20 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 <a id="refined_reason"></a>`refined_reason`(Lang, K, Lay, R) if [`reason`](#reason)(Lang, K, S, Lay, R) and S differs from none.
 
-<a id="axis_earns"></a>`axis_earns`(A, Lay) either:
+<a id="axis_earns"></a>`axis_earns`(X, Lay) either:
 
 1. if all of:
-   - [`axis`](#axis)(A);
+   - [`axis`](#axis)(X);
    - [`refined_verdict`](#refined_verdict)(Lang, K, Lay, V);
    - [`refined_verdict`](#refined_verdict)(Lang, K, Lay, W);
    - V differs from W;
 2. if all of:
-   - [`axis`](#axis)(A);
+   - [`axis`](#axis)(X);
    - [`refined_reason`](#refined_reason)(Lang, K, Lay, R1);
    - [`refined_reason`](#refined_reason)(Lang, K, Lay, R2);
    - R1 differs from R2.
 
-<a id="unearned_axis"></a>`unearned_axis`(A, Lay) if [`axis_applies`](#axis_applies)(A, Lay), unless [`axis_earns`](#axis_earns)(A, Lay).
+<a id="unearned_axis"></a>`unearned_axis`(X, Lay) if [`axis_applies`](#axis_applies)(X, Lay), unless [`axis_earns`](#axis_earns)(X, Lay).
 
 > [code] reads the kind and shape tables in [main]; [audit] reads the
 > scanner's book.
@@ -344,11 +344,11 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 <a id="lang_of_corpus"></a>`lang_of_corpus` includes js.
 
 <a id="vocabulary_gap"></a>`vocabulary_gap`(Lang, K) if all of:
-- some node [is of kind](#ast_node) K;
-- [`lang_of_corpus`](#lang_of_corpus)(Lang);
-- unless `node_kind`(Lang, K);
-- unless [`not_a_construct`](#not_a_construct)(K);
-- unless [`frame_deferred`](#frame_deferred)(K, something).
+  - some node [is of kind](#ast_node) K;
+  - [`lang_of_corpus`](#lang_of_corpus)(Lang);
+  - unless `node_kind`(Lang, K);
+  - unless [`not_a_construct`](#not_a_construct)(K);
+  - unless [`frame_deferred`](#frame_deferred)(K, something).
 
 <a id="not_a_construct_unseen"></a>`not_a_construct_unseen`(K) if [`not_a_construct`](#not_a_construct)(K), unless some node [is of kind](#ast_node) K.
 
@@ -374,10 +374,10 @@ Declared as facts: ast_node, lang_of_corpus, not_a_construct, frame_deferred, ki
 <a id="scanned"></a>`scanned`(Lang) if [`lang_of_corpus`](#lang_of_corpus)(Lang) and [`corpus_scanned`](#corpus_scanned)().
 
 <a id="kind_unexercised"></a>`kind_unexercised`(Lang, K) if all of:
-- `node_kind`(Lang, K);
-- [`scanned`](#scanned)(Lang);
-- unless some node [is of kind](#ast_node) K;
-- unless [`kind_absent_ok`](#kind_absent_ok)(K, something).
+  - `node_kind`(Lang, K);
+  - [`scanned`](#scanned)(Lang);
+  - unless some node [is of kind](#ast_node) K;
+  - unless [`kind_absent_ok`](#kind_absent_ok)(K, something).
 
 <a id="kind_absent_stale"></a>`kind_absent_stale`(K) if [`kind_absent_ok`](#kind_absent_ok)(K, something) and some node [is of kind](#ast_node) K.
 

@@ -33,9 +33,9 @@ books: audit, code, main
 > `has_feature` uses.
 
 <a id="lib_unsupported"></a>`lib_unsupported`(E, C, P, Key) if all of:
-- [`lib_call`](#lib_call)(C, P, Key, Rel);
-- `environment`(E);
-- unless [`reaches`](js-env.md#reaches)(E, Rel).
+  - [`lib_call`](#lib_call)(C, P, Key, Rel);
+  - `environment`(E);
+  - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 > `@deprecated` in the JSDoc, read by the scanner. `lib_replaced_by` is
 > nearly empty and that is the answer: of forty-one deprecations two name a

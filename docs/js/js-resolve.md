@@ -47,7 +47,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
 > every failed attempt into the why-tree of the answer
 
-<a id="reached"></a>`reached`(S, 0) either:
+<a id="reached"></a>`reached`(S, X1) either:
 
 1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and X1 is 0;
 2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and X1 is +(?K,1).
@@ -62,9 +62,9 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 <a id="has_via"></a>`has_via`(S) if [`resolve_via`](#resolve_via)(S, something, something).
 
 <a id="resolves_to"></a>`resolves_to`(S, P) if all of:
-- [`arrival`](#arrival)(S, something, P);
-- [`resolve_answer`](#resolve_answer)(S, P);
-- [`has_via`](#has_via)(S).
+  - [`arrival`](#arrival)(S, something, P);
+  - [`resolve_answer`](#resolve_answer)(S, P);
+  - [`has_via`](#has_via)(S).
 
 > a builtin resolves without touching the disk (the trace of
 > `require.resolve("node:path")` is empty), so the mechanism row is the whole
@@ -131,9 +131,9 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > resolution node performs and the rule model does not.
 
 <a id="resolve_divergence"></a>`resolve_divergence`(S, ByRules, ByHost, Env) if all of:
-- [`rules_verdict`](#rules_verdict)(S, ByRules);
-- [`host_verdict`](#host_verdict)(S, ByHost) in the book Env;
-- ByRules differs from ByHost.
+  - [`rules_verdict`](#rules_verdict)(S, ByRules);
+  - [`host_verdict`](#host_verdict)(S, ByHost) in the book Env;
+  - ByRules differs from ByHost.
 
 > agreement is positive so that "compared" can be defined and a site that
 > stopped being compared is a row rather than a smaller number
@@ -146,18 +146,18 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 2. if [`resolve_divergence`](#resolve_divergence)(S, something, something, Env).
 
 <a id="uncompared"></a>`uncompared`(S, Env) if all of:
-- [`rules_verdict`](#rules_verdict)(S, something);
-- [`host_verdict`](#host_verdict)(S, something) in the book Env;
-- unless [`compared`](#compared)(S, Env).
+  - [`rules_verdict`](#rules_verdict)(S, something);
+  - [`host_verdict`](#host_verdict)(S, something) in the book Env;
+  - unless [`compared`](#compared)(S, Env).
 
 > (b) environment against environment: the two rows are two books, and their
 > disagreement answers "how will this resolve on the other machine?"
 
-<a id="env_divergence"></a>`env_divergence`(S, A, VA, B, VB) if all of:
-- [`host_verdict`](#host_verdict)(S, VA) in the book A;
-- [`host_verdict`](#host_verdict)(S, VB) in the book B;
-- A differs from B;
-- VA differs from VB.
+<a id="env_divergence"></a>`env_divergence`(S, X, VA, B, VB) if all of:
+  - [`host_verdict`](#host_verdict)(S, VA) in the book A;
+  - [`host_verdict`](#host_verdict)(S, VB) in the book B;
+  - X differs from B;
+  - VA differs from VB.
 
 <a id="env_divergent_site"></a>`env_divergent_site`(S) if [`env_divergence`](#env_divergence)(S, something, something, something, something).
 
@@ -178,16 +178,16 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > the resolver's exception, indistinguishable from the outside
 
 <a id="resolve_silent"></a>`resolve_silent`(S, Env) if all of:
-- [`resolve_place`](#resolve_place)(S);
-- [`env_ran`](#env_ran)(Env);
-- unless [`env_spoke`](#env_spoke)(S) in the book Env.
+  - [`resolve_place`](#resolve_place)(S);
+  - [`env_ran`](#env_ran)(Env);
+  - unless [`env_spoke`](#env_spoke)(S) in the book Env.
 
 > resolution is a function of (place, environment)
 
-<a id="answer_ambiguous"></a>`answer_ambiguous`(S, Env, A, B) if all of:
-- [`resolves_to`](#resolves_to)(S, A) in the book Env;
-- [`resolves_to`](#resolves_to)(S, B) in the book Env;
-- A differs from B.
+<a id="answer_ambiguous"></a>`answer_ambiguous`(S, Env, X, B) if all of:
+  - [`resolves_to`](#resolves_to)(S, X) in the book Env;
+  - [`resolves_to`](#resolves_to)(S, B) in the book Env;
+  - X differs from B.
 
 > a ledger only in the facts file is decoration; only in the run, unaccountable
 

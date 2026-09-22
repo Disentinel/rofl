@@ -39,7 +39,7 @@ books: audit, code, main
 > parts). `reaches` is reflexive on purpose: a release provides its own
 > features, and the transitive arm carries a release that includes two.
 
-<a id="reaches"></a>`reaches`(R, R) either:
+<a id="reaches"></a>`reaches`(R, X1) either:
 
 1. if `release`(R) and X1 is R;
 2. if `includes`(R, Q) and [`reaches`](#reaches)(Q, X1).
@@ -79,15 +79,15 @@ books: audit, code, main
 > negation goes last with N bound.
 
 <a id="within_attr"></a>`within_attr`(a node N, Key, V) if all of:
-- `outside_attr_needs`(something, something, Key, V, something);
-- the attribute Key of a node A is V;
-- A [is within](js-structure.md#ast_within) N.
+  - `outside_attr_needs`(something, something, Key, V, something);
+  - the attribute Key of a node X is V;
+  - X [is within](js-structure.md#ast_within) N.
 
 `uses`(a node N, F) if all of:
-- N [is of kind](js-model.md#ast_node) K;
-- `env_lang`(L);
-- `outside_attr_needs`(L, K, Key, V, F);
-- unless [`within_attr`](#within_attr)(N, Key, V).
+  - N [is of kind](js-model.md#ast_node) K;
+  - `env_lang`(L);
+  - `outside_attr_needs`(L, K, Key, V, F);
+  - unless [`within_attr`](#within_attr)(N, Key, V).
 
 <a id="used_feature"></a>`used_feature`(F) if [`uses`](#uses)(something, F).
 
@@ -125,14 +125,14 @@ books: audit, code, main
 `file_broken`(E, File) if `environment`(E) and [`ast_parse_error`](#ast_parse_error)(File, something).
 
 <a id="valid"></a>`valid`(E, File) if all of:
-- `environment`(E);
-- [`scanned_file`](#scanned_file)(File);
-- unless [`file_broken`](#file_broken)(E, File).
+  - `environment`(E);
+  - [`scanned_file`](#scanned_file)(File);
+  - unless [`file_broken`](#file_broken)(E, File).
 
 <a id="invalid"></a>`invalid`(E, File) if all of:
-- `environment`(E);
-- [`scanned_file`](#scanned_file)(File);
-- [`file_broken`](#file_broken)(E, File).
+  - `environment`(E);
+  - [`scanned_file`](#scanned_file)(File);
+  - [`file_broken`](#file_broken)(E, File).
 
 Declared as facts: ast_parse_error.
 
@@ -144,10 +144,10 @@ Declared as facts: ast_parse_error.
 > each lose things to the other.
 
 <a id="lost"></a>`lost`(From, To, N, F) if all of:
-- [`unsupported`](#unsupported)(To, N, F);
-- `environment`(From);
-- From differs from To;
-- unless [`unsupported`](#unsupported)(From, N, F).
+  - [`unsupported`](#unsupported)(To, N, F);
+  - `environment`(From);
+  - From differs from To;
+  - unless [`unsupported`](#unsupported)(From, N, F).
 
 <a id="lost_feature"></a>`lost_feature`(From, To, F) if [`lost`](#lost)(From, To, something, F).
 
@@ -179,10 +179,10 @@ Declared as facts: ast_parse_error.
 2. if `child_needs`(L, K, something, something, something).
 
 <a id="kind_unaccounted"></a>`kind_unaccounted`(L, K) if all of:
-- `env_lang`(L);
-- `node_kind`(L, K);
-- unless [`kind_gated`](#kind_gated)(L, K);
-- unless `kind_baseline`(L, K).
+  - `env_lang`(L);
+  - `node_kind`(L, K);
+  - unless [`kind_gated`](#kind_gated)(L, K);
+  - unless `kind_baseline`(L, K).
 
 > gated AND baseline: harmless to the answer, a lie about what was decided
 
@@ -214,10 +214,10 @@ Declared as facts: ast_parse_error.
 > vocabulary, where the answer must be zero.
 
 <a id="kind_ungoverned"></a>`kind_ungoverned`(K) if all of:
-- some node [is of kind](js-model.md#ast_node) K;
-- `env_lang`(L);
-- unless [`kind_gated`](#kind_gated)(L, K);
-- unless `kind_baseline`(L, K).
+  - some node [is of kind](js-model.md#ast_node) K;
+  - `env_lang`(L);
+  - unless [`kind_gated`](#kind_gated)(L, K);
+  - unless `kind_baseline`(L, K).
 
 > an environment with no place on the scale looks very old rather than broken
 
@@ -230,14 +230,14 @@ Declared as facts: ast_parse_error.
 > indistinct case — never considered at all. `lost` carries the direction;
 > both ways is the whole test.
 
-<a id="env_separates"></a>`env_separates`(A, B) if [`lost_feature`](#lost_feature)(A, B, something).
+<a id="env_separates"></a>`env_separates`(X, B) if [`lost_feature`](#lost_feature)(X, B, something).
 
-<a id="env_pair_indistinct"></a>`env_pair_indistinct`(A, B) if all of:
-- `environment`(A);
-- `environment`(B);
-- A differs from B;
-- unless [`env_separates`](#env_separates)(A, B);
-- unless [`env_separates`](#env_separates)(B, A).
+<a id="env_pair_indistinct"></a>`env_pair_indistinct`(X, B) if all of:
+  - `environment`(X);
+  - `environment`(B);
+  - X differs from B;
+  - unless [`env_separates`](#env_separates)(X, B);
+  - unless [`env_separates`](#env_separates)(B, X).
 
 ## Read from other files
 

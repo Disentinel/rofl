@@ -22,9 +22,9 @@ books: audit, code, main
 > value, where a key read with a variable value is a rule reading every value.
 
 <a id="attr_lit"></a>`attr_lit`(L, K, V) if all of:
-- [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_attr);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, K);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L, 3, V).
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_attr);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, K);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 3, V).
 
 <a id="attr_lit_kvar"></a>`attr_lit_kvar`(L, $var(?X)) if [`attr_lit`](#attr_lit)(L, $var(?X), something).
 
@@ -36,14 +36,14 @@ books: audit, code, main
 <a id="attr_key_read"></a>`attr_key_read`(K) if [`attr_lit`](#attr_lit)(L, K, something), unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K).
 
 <a id="attr_key_read_free"></a>`attr_key_read_free`(K) if all of:
-- [`attr_lit`](#attr_lit)(L, K, V);
-- [`attr_lit_vvar`](#attr_lit_vvar)(L, V);
-- unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K).
+  - [`attr_lit`](#attr_lit)(L, K, V);
+  - [`attr_lit_vvar`](#attr_lit_vvar)(L, V);
+  - unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K).
 
 <a id="attr_pair_read"></a>`attr_pair_read`(K, V) if all of:
-- [`attr_lit`](#attr_lit)(L, K, V);
-- unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
-- unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
+  - [`attr_lit`](#attr_lit)(L, K, V);
+  - unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
+  - unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
 
 > THE TWO AUDITS: a whole key nobody reads (`async`, `generator`, `prefix`),
 > and a key read only with constant values, one of which no rule names. Two
@@ -54,17 +54,17 @@ books: audit, code, main
 > the kind (`optional` is `optional_member_expression`).
 
 <a id="unconsumed_attr"></a>`unconsumed_attr`(K) if all of:
-- the attribute K of some node is some literal;
-- unless [`attr_key_read`](#attr_key_read)(K);
-- unless [`attr_unread_ok`](#attr_unread_ok)(K, something);
-- unless [`attr_deferred`](#attr_deferred)(K, something).
+  - the attribute K of some node is some literal;
+  - unless [`attr_key_read`](#attr_key_read)(K);
+  - unless [`attr_unread_ok`](#attr_unread_ok)(K, something);
+  - unless [`attr_deferred`](#attr_deferred)(K, something).
 
 <a id="unconsumed_value"></a>`unconsumed_value`(K, V) if all of:
-- the attribute K of some node is V;
-- [`attr_key_read`](#attr_key_read)(K);
-- unless [`attr_key_read_free`](#attr_key_read_free)(K);
-- unless [`attr_pair_read`](#attr_pair_read)(K, V);
-- unless [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something).
+  - the attribute K of some node is V;
+  - [`attr_key_read`](#attr_key_read)(K);
+  - unless [`attr_key_read_free`](#attr_key_read_free)(K);
+  - unless [`attr_pair_read`](#attr_pair_read)(K, V);
+  - unless [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something).
 
 Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
 
@@ -97,19 +97,19 @@ Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
 <a id="pos_prem"></a>`pos_prem`(R, L) if `premise_lit`(R, something, L) and L is $lit(?_$1,?_$2,?_$3,?_$4).
 
 <a id="attr_lit_kvvar"></a>`attr_lit_kvvar`(L) if all of:
-- [`attr_lit`](#attr_lit)(L, K, V);
-- [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
-- [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
+  - [`attr_lit`](#attr_lit)(L, K, V);
+  - [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
+  - [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
 
 <a id="attr_table_read"></a>`attr_table_read`(Rel, I, J) if all of:
-- [`pos_prem`](#pos_prem)(R, L);
-- [`attr_lit_kvvar`](#attr_lit_kvvar)(L);
-- [`attr_lit`](#attr_lit)(L, K, V);
-- [`pos_prem`](#pos_prem)(R, L2);
-- [`lit_rel`](js-vocabulary.md#lit_rel)(L2, Rel);
-- Rel differs from ast_attr;
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L2, I, K);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L2, J, V).
+  - [`pos_prem`](#pos_prem)(R, L);
+  - [`attr_lit_kvvar`](#attr_lit_kvvar)(L);
+  - [`attr_lit`](#attr_lit)(L, K, V);
+  - [`pos_prem`](#pos_prem)(R, L2);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, Rel);
+  - Rel differs from ast_attr;
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, I, K);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, J, V).
 
 <a id="attr_table_unbridged"></a>`attr_table_unbridged`(Rel, I, J) if [`attr_table_read`](#attr_table_read)(Rel, I, J), unless [`attr_table_bridged`](#attr_table_bridged)(Rel).
 
@@ -143,41 +143,41 @@ Declared as facts: attr_table_bridged.
 2. if `premise_lit`(R, something, $not(?L)).
 
 <a id="attr_test_lit"></a>`attr_test_lit`(L, S, K) if all of:
-- [`attr_lit`](#attr_lit)(L, K, V);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
-- unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
-- unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
+  - [`attr_lit`](#attr_lit)(L, K, V);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
+  - unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
+  - unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
 
 <a id="attr_test_svar"></a>`attr_test_svar`(L, $var(?X)) if [`attr_test_lit`](#attr_test_lit)(L, $var(?X), something).
 
 <a id="child_lit"></a>`child_lit`(L, S, F) if all of:
-- [`body_lit`](js-vocabulary.md#body_lit)(L);
-- [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_child);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, F).
+  - [`body_lit`](js-vocabulary.md#body_lit)(L);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_child);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, F).
 
 <a id="child_lit_svar"></a>`child_lit_svar`(L, $var(?X)) if [`child_lit`](#child_lit)(L, $var(?X), something).
 
 <a id="child_lit_fvar"></a>`child_lit_fvar`(L, $var(?X)) if [`child_lit`](#child_lit)(L, something, $var(?X)).
 
 <a id="attr_guard_slot"></a>`attr_guard_slot`(R, K, S, F) if all of:
-- [`rule_prem`](#rule_prem)(R, L);
-- [`attr_test_lit`](#attr_test_lit)(L, S, K);
-- [`attr_test_svar`](#attr_test_svar)(L, S);
-- [`rule_prem`](#rule_prem)(R, L2);
-- [`child_lit`](#child_lit)(L2, S, F);
-- [`child_lit_svar`](#child_lit_svar)(L2, S);
-- unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
+  - [`rule_prem`](#rule_prem)(R, L);
+  - [`attr_test_lit`](#attr_test_lit)(L, S, K);
+  - [`attr_test_svar`](#attr_test_svar)(L, S);
+  - [`rule_prem`](#rule_prem)(R, L2);
+  - [`child_lit`](#child_lit)(L2, S, F);
+  - [`child_lit_svar`](#child_lit_svar)(L2, S);
+  - unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
 
 <a id="attr_guard_kind"></a>`attr_guard_kind`(R, K, S, Kind) if all of:
-- [`rule_prem`](#rule_prem)(R, L);
-- [`attr_test_lit`](#attr_test_lit)(L, S, K);
-- [`attr_test_svar`](#attr_test_svar)(L, S);
-- [`rule_prem`](#rule_prem)(R, L2);
-- [`lit_rel`](js-vocabulary.md#lit_rel)(L2, ast_node);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 1, S);
-- [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 2, Kind);
-- `node_kind`(js, Kind).
+  - [`rule_prem`](#rule_prem)(R, L);
+  - [`attr_test_lit`](#attr_test_lit)(L, S, K);
+  - [`attr_test_svar`](#attr_test_svar)(L, S);
+  - [`rule_prem`](#rule_prem)(R, L2);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, ast_node);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 1, S);
+  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 2, Kind);
+  - `node_kind`(js, Kind).
 
 <a id="attr_guard_pinned"></a>`attr_guard_pinned`(R, K, S) if [`attr_guard_kind`](#attr_guard_kind)(R, K, S, something).
 
@@ -204,13 +204,13 @@ Declared as facts: attr_table_bridged.
 > moves two rows across — the survivor the finding recorded with no oracle.
 
 <a id="attr_guard_slot_pos"></a>`attr_guard_slot_pos`(R, K, S, F) if all of:
-- [`pos_prem`](#pos_prem)(R, L);
-- [`attr_test_lit`](#attr_test_lit)(L, S, K);
-- [`attr_test_svar`](#attr_test_svar)(L, S);
-- [`rule_prem`](#rule_prem)(R, L2);
-- [`child_lit`](#child_lit)(L2, S, F);
-- [`child_lit_svar`](#child_lit_svar)(L2, S);
-- unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
+  - [`pos_prem`](#pos_prem)(R, L);
+  - [`attr_test_lit`](#attr_test_lit)(L, S, K);
+  - [`attr_test_svar`](#attr_test_svar)(L, S);
+  - [`rule_prem`](#rule_prem)(R, L2);
+  - [`child_lit`](#child_lit)(L2, S, F);
+  - [`child_lit_svar`](#child_lit_svar)(L2, S);
+  - unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
 
 <a id="attr_pos_slot_gap"></a>`attr_pos_slot_gap`(K, a child F, Kind) either:
 
@@ -245,14 +245,14 @@ Declared as facts: attr_slot_gap_ok.
 <a id="attr_kind_has"></a>`attr_kind_has`(Kind, K) if a node P [is of kind](js-model.md#ast_node) Kind and the attribute K of P is some literal.
 
 <a id="attr_kind_lacks"></a>`attr_kind_lacks`(Kind, K) if all of:
-- [`attr_kind_has`](#attr_kind_has)(Kind, K);
-- a node P [is of kind](js-model.md#ast_node) Kind;
-- unless the attribute K of P is some literal.
+  - [`attr_kind_has`](#attr_kind_has)(Kind, K);
+  - a node P [is of kind](js-model.md#ast_node) Kind;
+  - unless the attribute K of P is some literal.
 
 <a id="attr_kind_split"></a>`attr_kind_split`(K, Kind) if all of:
-- [`attr_key_read`](#attr_key_read)(K);
-- [`attr_kind_lacks`](#attr_kind_lacks)(Kind, K);
-- unless [`attr_split_ok`](#attr_split_ok)(K, Kind, something).
+  - [`attr_key_read`](#attr_key_read)(K);
+  - [`attr_kind_lacks`](#attr_kind_lacks)(Kind, K);
+  - unless [`attr_split_ok`](#attr_split_ok)(K, Kind, something).
 
 <a id="attr_split_ok_unseen"></a>`attr_split_ok_unseen`(K, Kind) if [`attr_split_ok`](#attr_split_ok)(K, Kind, something), unless [`attr_kind_lacks`](#attr_kind_lacks)(Kind, K).
 

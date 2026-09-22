@@ -33,26 +33,26 @@ books: audit, main
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
 
-<a id="fwalk"></a>`fwalk`(P, Rel, 1, Args) either:
+<a id="fwalk"></a>`fwalk`(P, Rel, X1, Args) either:
 
 1. if [`pack_fact`](#pack_fact)(P, Rel, Args) and X1 is 1;
 2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(?_$0,?T)) and X1 is +(?I,1).
 
-<a id="fslot"></a>`fslot`(P, Rel, I, A) if [`fwalk`](#fwalk)(P, Rel, I, $cons(?A,?_$0)).
+<a id="fslot"></a>`fslot`(P, Rel, I, X) if [`fwalk`](#fwalk)(P, Rel, I, $cons(?A,?_$0)).
 
 > Which positions carry a kind — DISCOVERED, not declared: a position is a
 > kind position when a declared kind stands in it, so the audit configures
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [`fslot`](#fslot)(something, Rel, I, A) and `node_kind`(js, A).
+<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [`fslot`](#fslot)(something, Rel, I, X) and `node_kind`(js, X).
 
 <a id="pack_declares"></a>`pack_declares`(P, K) if [`fslot`](#fslot)(P, node_kind, 2, K) and `node_kind`(js, K).
 
 <a id="pack_speaks"></a>`pack_speaks`(P, K) if all of:
-- [`fslot`](#fslot)(P, Rel, I, K);
-- [`fkind_slot`](#fkind_slot)(Rel, I);
-- Rel differs from node_kind.
+  - [`fslot`](#fslot)(P, Rel, I, K);
+  - [`fkind_slot`](#fkind_slot)(Rel, I);
+  - Rel differs from node_kind.
 
 > one row, not a waiver list: it names no kind and cannot go quiet on one
 
@@ -69,9 +69,9 @@ Declared as facts: base_pack.
 > it is not loaded into, where `orphan_claim` stays the check.
 
 <a id="kind_home_unbacked"></a>`kind_home_unbacked`(P, K) if all of:
-- [`pack_declares`](#pack_declares)(P, K);
-- unless [`pack_speaks`](#pack_speaks)(P, K);
-- unless [`base_pack`](#base_pack)(P).
+  - [`pack_declares`](#pack_declares)(P, K);
+  - unless [`pack_speaks`](#pack_speaks)(P, K);
+  - unless [`base_pack`](#base_pack)(P).
 
 > The other direction is a REPORT, not a gate: a pack speaking about a kind
 > it does not declare borrows from one it is loaded beside, 118 times on the
@@ -81,9 +81,9 @@ Declared as facts: base_pack.
 > borrow, and separating stale from borrowed needs the LOADERS.
 
 <a id="pack_borrows"></a>`pack_borrows`(P, K) if all of:
-- [`pack_speaks`](#pack_speaks)(P, K);
-- `node_kind`(js, K);
-- unless [`pack_declares`](#pack_declares)(P, K).
+  - [`pack_speaks`](#pack_speaks)(P, K);
+  - `node_kind`(js, K);
+  - unless [`pack_declares`](#pack_declares)(P, K).
 
 ## Not defined in these files
 

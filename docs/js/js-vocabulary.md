@@ -31,21 +31,21 @@ books: audit, main
 
 <a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(?Rel,?_$0,?_$1,?_$2).
 
-A call L passes a node Args at 1, in the main either:
+A call L passes a node Args at X1, in the main either:
 
 1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and X1 is 1;
 2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and X1 is +(?I,1).
 
-<a id="lit_arg"></a>`lit_arg`(a call L, I, A) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
+<a id="lit_arg"></a>`lit_arg`(a call L, I, X) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted
 
-<a id="slot_term"></a>`slot_term`(Rel, I, A) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, A).
+<a id="slot_term"></a>`slot_term`(Rel, I, X) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, X).
 
 <a id="slot_var"></a>`slot_var`(Rel, I, $var(?V)) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, $var(?V)).
 
-<a id="slot_atom"></a>`slot_atom`(Rel, I, A) if [`slot_term`](#slot_term)(Rel, I, A), unless [`slot_var`](#slot_var)(Rel, I, A).
+<a id="slot_atom"></a>`slot_atom`(Rel, I, X) if [`slot_term`](#slot_term)(Rel, I, X), unless [`slot_var`](#slot_var)(Rel, I, X).
 
 > Which positions carry a kind — DISCOVERED, not declared, so the table
 > cannot rot: a position is a kind position when a declared kind appears in
@@ -53,7 +53,7 @@ A call L passes a node Args at 1, in the main either:
 > second). The limit: a position where EVERY constant is an undeclared kind
 > is invisible, which is the cheaper mistake.
 
-<a id="kind_slot"></a>`kind_slot`(Rel, I) if [`slot_atom`](#slot_atom)(Rel, I, A) and `node_kind`(js, A).
+<a id="kind_slot"></a>`kind_slot`(Rel, I) if [`slot_atom`](#slot_atom)(Rel, I, X) and `node_kind`(js, X).
 
 <a id="kind_named_by_rule"></a>`kind_named_by_rule`(K) if [`slot_atom`](#slot_atom)(Rel, I, K) and [`kind_slot`](#kind_slot)(Rel, I).
 
@@ -61,11 +61,11 @@ A call L passes a node Args at 1, in the main either:
 > the only name reported on an honest tree and `not_a_construct` excludes it
 
 <a id="rule_opinion_unlisted"></a>`rule_opinion_unlisted`(Lang, K) if all of:
-- [`kind_named_by_rule`](#kind_named_by_rule)(K);
-- [`lang_of_corpus`](js-model.md#lang_of_corpus)(Lang);
-- unless `node_kind`(Lang, K);
-- unless [`not_a_construct`](js-model.md#not_a_construct)(K);
-- unless [`frame_deferred`](js-model.md#frame_deferred)(K, something).
+  - [`kind_named_by_rule`](#kind_named_by_rule)(K);
+  - [`lang_of_corpus`](js-model.md#lang_of_corpus)(Lang);
+  - unless `node_kind`(Lang, K);
+  - unless [`not_a_construct`](js-model.md#not_a_construct)(K);
+  - unless [`frame_deferred`](js-model.md#frame_deferred)(K, something).
 
 ## Read from other files
 

@@ -60,17 +60,17 @@ Declared as facts: ast_parse_error.
 > The host stays in the row: `console` under node and under browser are two rows.
 
 <a id="host_global_ref"></a>`host_global_ref`(an identifier E, H, Name) if all of:
-- E [reads](js-dataflow.md#ident_in) Name in File;
-- `host_global`(H, Name);
-- unless [`name_bound_in`](#name_bound_in)(File, Name).
+  - E [reads](js-dataflow.md#ident_in) Name in File;
+  - `host_global`(H, Name);
+  - unless [`name_bound_in`](#name_bound_in)(File, Name).
 
 > `document` is a reference under `browser` and there is no `node` row for it.
 
 <a id="host_global_only_in"></a>`host_global_only_in`(E, H, Name) if all of:
-- [`host_global_ref`](#host_global_ref)(E, H, Name);
-- `host`(G);
-- G differs from H;
-- unless `host_global`(G, Name).
+  - [`host_global_ref`](#host_global_ref)(E, H, Name);
+  - `host`(G);
+  - G differs from H;
+  - unless `host_global`(G, Name).
 
 ## 2. THE MODULE DOOR — a local name bound to a node builtin. Four joins over
 
@@ -92,11 +92,11 @@ Declared as facts: ast_parse_error.
 > own; reading `Imported` for the member covers the rename without a test.
 
 <a id="host_module_named"></a>`host_module_named`(File, Local, Spec, Key) if all of:
-- [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
-- [`site_file`](js-modules.md#site_file)(I, File);
-- [`binding`](js-modules.md#binding)(I, something, Local, Key);
-- Key differs from "*";
-- Key differs from "default".
+  - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
+  - [`site_file`](js-modules.md#site_file)(I, File);
+  - [`binding`](js-modules.md#binding)(I, something, Local, Key);
+  - Key differs from "*";
+  - Key differs from "default".
 
 > An import naming something the generated surface lacks: a typo, a member
 > newer than @types/node, or one the declarations do not carry. The module
@@ -114,10 +114,10 @@ Declared as facts: ast_parse_error.
 > `selects[flow]` answers the key for the dotted and the computed form alike.
 
 <a id="host_member_call"></a>`host_member_call`(C, H, Name, Key) if all of:
-- [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-- the object of N is a node O;
-- [`host_global_ref`](#host_global_ref)(O, H, Name);
-- N [selects](js-dataflow.md#selects) Key.
+  - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
+  - the object of N is a node O;
+  - [`host_global_ref`](#host_global_ref)(O, H, Name);
+  - N [selects](js-dataflow.md#selects) Key.
 
 <a id="host_global_call"></a>`host_global_call`(C, H, Name) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and [`host_global_ref`](#host_global_ref)(N, H, Name).
 
@@ -138,7 +138,7 @@ Declared as facts: ast_parse_error.
 > for a module, the global's own name for a member call, and the atom `itself`
 > for a plain call of a global, so the two shapes stay distinguishable.
 
-<a id="host_site"></a>`host_site`(C, node, Spec, Key) either:
+<a id="host_site"></a>`host_site`(C, X1, Spec, Key) either:
 
 1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and X1 is node;
 2. if [`host_member_call`](#host_member_call)(C, X1, Spec, Key);
@@ -161,7 +161,7 @@ Declared as facts: ast_parse_error.
    - `host_module_effect`(node, Spec, E);
    - unless `host_member_effect`(node, Spec, Key, something).
 
-<a id="host_call_effect"></a>`host_call_effect`(C, E, by_member) either:
+<a id="host_call_effect"></a>`host_call_effect`(C, E, X1) either:
 
 1. if all of:
    - [`host_module_call`](#host_module_call)(C, Spec, Key);
@@ -198,7 +198,7 @@ Declared as facts: ast_parse_error.
 > walk is `reaches` over different atoms. Reflexive on purpose: a version
 > provides its own surface.
 
-<a id="runtime_reaches"></a>`runtime_reaches`(R, R) either:
+<a id="runtime_reaches"></a>`runtime_reaches`(R, X1) either:
 
 1. if `runtime_version`(R, something, something) and X1 is R;
 2. if `runtime_includes`(R, Q) and [`runtime_reaches`](#runtime_reaches)(Q, X1).
@@ -214,10 +214,10 @@ Declared as facts: ast_parse_error.
 > compared the browser against node's surface and reported 718 absences.
 
 <a id="arrived_by"></a>`arrived_by`(R, Spec, Key) if all of:
-- [`runtime_vnum`](#runtime_vnum)(R, VN);
-- `runtime_version`(R, F, something);
-- `host_member_since`(F, Spec, Key, something, Sv);
-- Sv <= VN.
+  - [`runtime_vnum`](#runtime_vnum)(R, VN);
+  - `runtime_version`(R, F, something);
+  - `host_member_since`(F, Spec, Key, something, Sv);
+  - Sv <= VN.
 
 > What a version adds of its own. `arrived_by` is a threshold, hence monotone
 > along the chain; subtracting every predecessor keeps working the day a
@@ -236,10 +236,10 @@ Declared as facts: ast_parse_error.
 > @types/node snapshot a removed member simply stops being in the file. A
 > second snapshot populates it with no other change.
 
-<a id="runtime_drops"></a>`runtime_drops`(A, B, Spec, Key) if all of:
-- `runtime_includes`(A, B);
-- [`has_api`](#has_api)(B, Spec, Key);
-- unless [`has_api`](#has_api)(A, Spec, Key).
+<a id="runtime_drops"></a>`runtime_drops`(X, B, Spec, Key) if all of:
+  - `runtime_includes`(X, B);
+  - [`has_api`](#has_api)(B, Spec, Key);
+  - unless [`has_api`](#has_api)(X, Spec, Key).
 
 > -------------------------------------------------------------------------
 > THE BRIDGE between the axes, one rule: `provides_release(node18, es2022)`
@@ -247,9 +247,9 @@ Declared as facts: ast_parse_error.
 > No `release`, `includes` or `environment` row is minted here.
 
 <a id="runtime_reaches_release"></a>`runtime_reaches_release`(R, Rel) if all of:
-- [`runtime_reaches`](#runtime_reaches)(R, P);
-- `provides_release`(P, Rel0);
-- [`reaches`](js-env.md#reaches)(Rel0, Rel).
+  - [`runtime_reaches`](#runtime_reaches)(R, P);
+  - `provides_release`(P, Rel0);
+  - [`reaches`](js-env.md#reaches)(Rel0, Rel).
 
 > `runtime_has_release` is a GUARD: a runtime with no bridge row reaches no
 > release, and without the premise every stdlib call reports unsupported
@@ -261,17 +261,17 @@ Declared as facts: ast_parse_error.
 <a id="runtime_no_release"></a>`runtime_no_release`(R) if `runtime_version`(R, something, something), unless [`runtime_has_release`](#runtime_has_release)(R).
 
 <a id="runtime_lib_unsupported"></a>`runtime_lib_unsupported`(R, C, P, Key) if all of:
-- [`lib_call`](js-env-api.md#lib_call)(C, P, Key, Rel);
-- [`runtime_has_release`](#runtime_has_release)(R);
-- unless [`runtime_reaches_release`](#runtime_reaches_release)(R, Rel).
+  - [`lib_call`](js-env-api.md#lib_call)(C, P, Key, Rel);
+  - [`runtime_has_release`](#runtime_has_release)(R);
+  - unless [`runtime_reaches_release`](#runtime_reaches_release)(R, Rel).
 
 > -------------------------------------------------------------------------
 > THE VERSION QUESTION AT A SITE: this call, this member, this line.
 
 <a id="host_member_absent"></a>`host_member_absent`(R, Spec, Key) if all of:
-- `runtime_version`(R, F, something);
-- `host_member_since`(F, Spec, Key, something, something);
-- unless [`has_api`](#has_api)(R, Spec, Key).
+  - `runtime_version`(R, F, something);
+  - `host_member_since`(F, Spec, Key, something, something);
+  - unless [`has_api`](#has_api)(R, Spec, Key).
 
 <a id="host_call_absent"></a>`host_call_absent`(R, C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and [`host_member_absent`](#host_member_absent)(R, Spec, Key).
 
@@ -281,11 +281,11 @@ Declared as facts: ast_parse_error.
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
 
 <a id="host_lost"></a>`host_lost`(From, To, C, Spec, Key) if all of:
-- [`host_call_absent`](#host_call_absent)(To, C, Spec, Key);
-- `runtime_version`(To, F, something);
-- `runtime_version`(From, F, something);
-- From differs from To;
-- unless [`host_call_absent`](#host_call_absent)(From, C, Spec, Key).
+  - [`host_call_absent`](#host_call_absent)(To, C, Spec, Key);
+  - `runtime_version`(To, F, something);
+  - `runtime_version`(From, F, something);
+  - From differs from To;
+  - unless [`host_call_absent`](#host_call_absent)(From, C, Spec, Key).
 
 > -------------------------------------------------------------------------
 > THE DEPRECATION — the visible half of a removal and the only half this
@@ -325,9 +325,9 @@ Declared as facts: ast_parse_error.
 <a id="host_module_uneffected"></a>`host_module_uneffected`(Spec) if `host_module`(node, Spec), unless `host_module_effect`(node, Spec, something).
 
 <a id="host_global_uneffected"></a>`host_global_uneffected`(H, Name) if all of:
-- `host_global`(H, Name);
-- [`effects_claimed`](#effects_claimed)(H);
-- unless `host_global_effect`(H, Name, something).
+  - `host_global`(H, Name);
+  - [`effects_claimed`](#effects_claimed)(H);
+  - unless `host_global_effect`(H, Name, something).
 
 > a runtime with no version answers NO to every version question and looks
 > new rather than broken; `runtime_undated` is the waiver for `browser`
@@ -337,14 +337,14 @@ Declared as facts: ast_parse_error.
 > two runtimes agreeing on every member are one runtime; no ordering premise,
 > for the reason `env_pair_indistinct` records
 
-<a id="runtime_separates"></a>`runtime_separates`(A, B) if [`host_member_absent`](#host_member_absent)(B, Spec, Key), unless [`host_member_absent`](#host_member_absent)(A, Spec, Key).
+<a id="runtime_separates"></a>`runtime_separates`(X, B) if [`host_member_absent`](#host_member_absent)(B, Spec, Key), unless [`host_member_absent`](#host_member_absent)(X, Spec, Key).
 
-<a id="runtime_pair_indistinct"></a>`runtime_pair_indistinct`(A, B) if all of:
-- `runtime_version`(A, F, something);
-- `runtime_version`(B, F, something);
-- A differs from B;
-- unless [`runtime_separates`](#runtime_separates)(A, B);
-- unless [`runtime_separates`](#runtime_separates)(B, A).
+<a id="runtime_pair_indistinct"></a>`runtime_pair_indistinct`(X, B) if all of:
+  - `runtime_version`(X, F, something);
+  - `runtime_version`(B, F, something);
+  - X differs from B;
+  - unless [`runtime_separates`](#runtime_separates)(X, B);
+  - unless [`runtime_separates`](#runtime_separates)(B, X).
 
 > a builtin no bare import can reach: `explicit_shape` knows the `node:`
 > scheme for all 57 and the bare spelling only through `node_builtin_bare`,
@@ -360,11 +360,11 @@ Declared as facts: ast_parse_error.
 
 <a id="runtime_family_undeclared"></a>`runtime_family_undeclared`(R, F) if `runtime_version`(R, F, something), unless `runtime`(F).
 
-<a id="runtime_cross_family"></a>`runtime_cross_family`(A, B) if all of:
-- `runtime_includes`(A, B);
-- `runtime_version`(A, FA, something);
-- `runtime_version`(B, FB, something);
-- FA differs from FB.
+<a id="runtime_cross_family"></a>`runtime_cross_family`(X, B) if all of:
+  - `runtime_includes`(X, B);
+  - `runtime_version`(X, FA, something);
+  - `runtime_version`(B, FB, something);
+  - FA differs from FB.
 
 > `host/1` is generated, `runtime/1` authored; they must name the same families
 
