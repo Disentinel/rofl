@@ -33,10 +33,10 @@ books: audit, main
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
 
-<a id="fwalk"></a>`fwalk`(P, Rel, X1, Args) either:
+<a id="fwalk"></a>`fwalk`(P, Rel, N, Args) either:
 
-1. if [`pack_fact`](#pack_fact)(P, Rel, Args) and X1 is 1;
-2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(?_$0,?T)) and X1 is +(?I,1).
+1. if [`pack_fact`](#pack_fact)(P, Rel, Args) and N is 1;
+2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(?_$0,?T)) and N is +(?I,1).
 
 <a id="fslot"></a>`fslot`(P, Rel, I, X) if [`fwalk`](#fwalk)(P, Rel, I, $cons(?A,?_$0)).
 

@@ -41,27 +41,27 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > (section 4 binds LOCAL names and a re-export introduces none); `module_site`
 > is the union every later rule reads.
 
-<a id="import_site"></a>`import_site`(a node I, X1) either:
+<a id="import_site"></a>`import_site`(a node I, N) either:
 
-1. if I is an import and X1 is static_import;
-2. if I is an import_expression node and X1 is dynamic_import.
+1. if I is an import and N is static_import;
+2. if I is an import_expression node and N is dynamic_import.
 
-<a id="reexport_site"></a>`reexport_site`(a node E, X1) either:
+<a id="reexport_site"></a>`reexport_site`(a node E, N) either:
 
-1. if E is a named export, the source of E is some node, and X1 is reexport_named;
-2. if E is an export-all, the source of E is some node, and X1 is reexport_all.
+1. if E is a named export, the source of E is some node, and N is reexport_named;
+2. if E is an export-all, the source of E is some node, and N is reexport_all.
 
 <a id="module_site"></a>`module_site`(N, K) either:
 
 1. if [`import_site`](#import_site)(N, K);
 2. if [`reexport_site`](#reexport_site)(N, K).
 
-<a id="site_kind"></a>`site_kind`(a node I, X1) either:
+<a id="site_kind"></a>`site_kind`(a node I, N) either:
 
-1. if I is an import and X1 is import_declaration;
-2. if I is an import_expression node and X1 is import_expression;
-3. if [`reexport_site`](#reexport_site)(I, reexport_named) and X1 is export_named_declaration;
-4. if [`reexport_site`](#reexport_site)(I, reexport_all) and X1 is export_all_declaration.
+1. if I is an import and N is import_declaration;
+2. if I is an import_expression node and N is import_expression;
+3. if [`reexport_site`](#reexport_site)(I, reexport_named) and N is export_named_declaration;
+4. if [`reexport_site`](#reexport_site)(I, reexport_all) and N is export_all_declaration.
 
 <a id="site_file"></a>`site_file`(a node I, F) if [`module_site`](#module_site)(I, something) and I [is of kind](js-model.md#ast_node) some kind in file F.
 
@@ -86,12 +86,12 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > specifier, so `fs/promises` falls to `bare` and the oracle reports it rather
 > than a rule guessing. `bare` is the complement: the classification has no hole.
 
-<a id="explicit_shape"></a>`explicit_shape`(S, X1) either:
+<a id="explicit_shape"></a>`explicit_shape`(S, N) either:
 
-1. if [`str_char0`](#str_char0)(S, ".") and X1 is relative;
-2. if [`str_char0`](#str_char0)(S, "#") and X1 is subpath;
-3. if [`str_scheme`](#str_scheme)(S, "node") and X1 is node_builtin;
-4. if [`node_builtin_bare`](#node_builtin_bare)(S, something) and X1 is node_builtin.
+1. if [`str_char0`](#str_char0)(S, ".") and N is relative;
+2. if [`str_char0`](#str_char0)(S, "#") and N is subpath;
+3. if [`str_scheme`](#str_scheme)(S, "node") and N is node_builtin;
+4. if [`node_builtin_bare`](#node_builtin_bare)(S, something) and N is node_builtin.
 
 <a id="has_explicit_shape"></a>`has_explicit_shape`(S) if [`explicit_shape`](#explicit_shape)(S, something).
 
@@ -151,10 +151,10 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
   - N is +(?K,1);
   - [`str_segs`](#str_segs)(S, N).
 
-<a id="builtin_canonical"></a>`builtin_canonical`(S, X1) either:
+<a id="builtin_canonical"></a>`builtin_canonical`(S, N) either:
 
-1. if [`str_scheme`](#str_scheme)(S, "node") and X1 is S;
-2. if [`node_builtin_bare`](#node_builtin_bare)(S, X1).
+1. if [`str_scheme`](#str_scheme)(S, "node") and N is S;
+2. if [`node_builtin_bare`](#node_builtin_bare)(S, N).
 
 <a id="resolved_builtin"></a>`resolved_builtin`(I, C) if all of:
   - [`site_shape`](#site_shape)(I, node_builtin);

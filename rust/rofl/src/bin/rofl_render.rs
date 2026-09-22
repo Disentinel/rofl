@@ -451,7 +451,13 @@ impl<'a> R<'a> {
         let h = self.h;
         let first = &group[0];
         let mut gvars: Vec<Sym> = Vec::new();
-        let mut fresh = self.fresh.iter();
+        let mut used: HashSet<String> = HashSet::new();
+        for c in group {
+            let mut collect = |t: Term| if let TermK::Var(v) = t.kind() { used.insert(h.name(v).to_string()); };
+            for a in &c.head.args { collect(*a); }
+            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|a| collect(*a)), Elem::Builtin(_, a, b) => { collect(*a); collect(*b); } } }
+        }
+        let mut fresh = self.fresh.iter().filter(|s| !used.contains(h.name(**s)));
         for (i, a) in first.head.args.iter().enumerate() {
             let v = match a.kind() { TermK::Var(v) if !h.name(v).starts_with("_$") && !gvars.contains(&v) => v, _ => *fresh.next()? };
             let _ = i;
@@ -539,7 +545,7 @@ impl<'a> R<'a> {
         if let Some(c0) = subject.chars().next() { if c0.is_lowercase() { subject = c0.to_uppercase().collect::<String>() + &subject[c0.len_utf8()..]; } }
         let mut rest: String = rest.split_whitespace().collect::<Vec<_>>().join(" ");
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(rest, ", in the {}", self.book_name(l.book)); }
-        if key.ends_with('|') { return (None, format!("{subject} {rest}")); }
+        if !subject.contains(' ') { return (None, format!("{subject} {rest}")); }
         (Some((key, subject)), rest)
     }
 
@@ -759,7 +765,7 @@ fn main() {
     if args.is_empty() { eprintln!("usage: rofl-render [--out DIR] FILE..."); std::process::exit(2); }
 
     let mut h = Heap::default();
-    let fresh: Vec<Sym> = ["X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8"].iter().map(|s| h.intern(s)).collect();
+    let fresh: Vec<Sym> = ["N", "E", "X", "Y", "Z", "W", "U", "V", "X1", "X2", "X3", "X4"].iter().map(|s| h.intern(s)).collect();
     let ast_node = h.intern("ast_node");
     let edb = h.intern("edb");
     let phrase_rel = h.intern("phrase");

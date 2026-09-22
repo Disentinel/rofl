@@ -48,12 +48,12 @@ books: audit, code, flow, main
 > declaration uses — the canonical specifier `"node:fs"` for a module, its
 > own name for a global — never a nickname.
 
-<a id="surface_origin"></a>`surface_origin`(Spec, X1) either:
+<a id="surface_origin"></a>`surface_origin`(Spec, N) either:
 
-1. if `host_module`(node, Spec) and X1 is host_runtime;
-2. if `host_global`(something, Spec) and X1 is host_runtime;
-3. if `lib_global`(Spec, something, something) and X1 is es_intrinsic;
-4. if Spec [is a builtin prototype](js-dataflow.md#builtin_prototype) and X1 is builtin_prototype.
+1. if `host_module`(node, Spec) and N is host_runtime;
+2. if `host_global`(something, Spec) and N is host_runtime;
+3. if `lib_global`(Spec, something, something) and N is es_intrinsic;
+4. if Spec [is a builtin prototype](js-dataflow.md#builtin_prototype) and N is builtin_prototype.
 
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
 > surface with two origins would have every effect attributed twice.
@@ -76,16 +76,16 @@ books: audit, code, flow, main
 > reference to a browser global. Attributing io to a program that does none
 > is the direction this layer must not err in.
 
-`ambient_binding`(File, Name, X1) either:
+`ambient_binding`(File, Name, N) either:
 
 1. if all of:
    - [`free_global`](js-globals.md#free_global)(something, Name, File);
    - `host_global`(something, Name);
-   - X1 is Name;
+   - N is Name;
 2. if all of:
    - [`free_global`](js-globals.md#free_global)(something, Name, File);
    - `lib_global`(Name, something, something);
-   - X1 is Name.
+   - N is Name.
 
 > empty by construction; the place a fourth door would arrive without an origin
 

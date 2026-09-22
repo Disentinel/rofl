@@ -65,18 +65,18 @@ Kinds without a noun: meta_property.
 > need the form and none owns it. Keyed on `meta`, the reserved word the
 > grammar switches on: a future `import.defer` is still (meta="import").
 
-<a id="meta_form"></a>A node M has the meta form X1 either:
+<a id="meta_form"></a>A node M has the meta form N either:
 
 1. if all of:
    - M is a meta_property node;
    - the meta of M is a node C;
    - C [is named](#ast_name) "new";
-   - X1 is new_target;
+   - N is new_target;
 2. if all of:
    - M is a meta_property node;
    - the meta of M is a node C;
    - C [is named](#ast_name) "import";
-   - X1 is import_meta.
+   - N is import_meta.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)

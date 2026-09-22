@@ -111,10 +111,10 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 > Two arms of ONE relation, so "how many try statements lack a handler" is a
 > query whose control is the same literal with one constant swapped.
 
-<a id="eff_try_arm"></a>`eff_try_arm`(a node T, X1) either:
+<a id="eff_try_arm"></a>`eff_try_arm`(a node T, N) either:
 
-1. if T is a try, the handler of T is some node, and X1 is handled;
-2. if T is a try and X1 is unhandled, unless the handler of T is some node.
+1. if T is a try, the handler of T is some node, and N is handled;
+2. if T is a try and N is unhandled, unless the handler of T is some node.
 
 `eff_here`(a throw T, exn, none) unless [`eff_catch_here`](#eff_catch_here)(T).
 
@@ -166,15 +166,15 @@ Declared as facts: eff_alloc_kind.
   - the object of M is a node O;
   - O [may be the node](js-dataflow.md#may_be_node) some node.
 
-<a id="eff_heap_of"></a>`eff_heap_of`(a node M, X1) either:
+<a id="eff_heap_of"></a>`eff_heap_of`(a node M, N) either:
 
 1. if all of:
    - M [is a member access](js-dataflow.md#member_node_v);
    - [`eff_obj_traced`](#eff_obj_traced)(M);
-   - X1 is local;
+   - N is local;
 2. if all of:
    - M [is a member access](js-dataflow.md#member_node_v);
-   - X1 is global;
+   - N is global;
    - unless [`eff_obj_traced`](#eff_obj_traced)(M).
 
 <a id="eff_assign"></a>`eff_assign`(an assignment X).
@@ -207,20 +207,20 @@ Declared as facts: eff_alloc_kind.
 
 <a id="eff_update_arg"></a>`eff_update_arg`(an update_expression node U, a node X) if the argument of U is X.
 
-`eff_here`(U, X1, X2) either:
+`eff_here`(U, N, E) either:
 
 1. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, a node X);
    - X [is named](js-structure.md#ast_name) some name;
-   - X1 is read;
-   - X2 is local;
+   - N is read;
+   - E is local;
 2. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, a node X);
    - X [is named](js-structure.md#ast_name) some name;
-   - X1 is write;
-   - X2 is local;
-3. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, X2), and X1 is read;
-4. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, X2), and X1 is write.
+   - N is write;
+   - E is local;
+3. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is read;
+4. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is write.
 
 > Reading a MUTABLE binding is `read<local>`; reading an immutable one is
 > nothing — Koka's answer: a binding nothing reassigns has no cell. Ordered for
@@ -432,10 +432,10 @@ Declared as facts: eff_suspension_word.
 4. if the attribute operator of N is "void";
 5. if the attribute operator of N is "!".
 
-<a id="eff_op_beyond"></a>`eff_op_beyond`(a node N, X1) either:
+<a id="eff_op_beyond"></a>`eff_op_beyond`(a node N, E) either:
 
-1. if the attribute operator of N is "instanceof" and X1 is has_instance;
-2. if the attribute operator of N is "delete" and X1 is delete_own.
+1. if the attribute operator of N is "instanceof" and E is has_instance;
+2. if the attribute operator of N is "delete" and E is delete_own.
 
 <a id="eff_converts"></a>`eff_converts`(a node N) either:
 
@@ -703,16 +703,16 @@ Declared as facts: eff_class_form, eff_field_kind.
 > in neither. A `static_block` carries no `static` attribute — the word is in
 > its kind — so it gets its own arm.
 
-<a id="eff_field_moment"></a>`eff_field_moment`(a node P, X1) either:
+<a id="eff_field_moment"></a>`eff_field_moment`(a node P, N) either:
 
 1. if all of:
    - [`eff_field_value`](#eff_field_value)(something, P, something);
    - the attribute static of P is true;
-   - X1 is definition;
+   - N is definition;
 2. if all of:
    - [`eff_field_value`](#eff_field_value)(something, P, something);
    - the attribute static of P is false;
-   - X1 is construction.
+   - N is construction.
 
 <a id="eff_define_part"></a>`eff_define_part`(CD, V) if [`eff_field_value`](#eff_field_value)(CD, P, V) and [`eff_field_moment`](#eff_field_moment)(P, definition).
 
@@ -751,13 +751,13 @@ Declared as facts: eff_class_form, eff_field_kind.
 > `nearest_v`) cannot see it: the second `eff_catch_here` arm is `caught_here`
 > with `eff_runs_in` where `nearest_v` stands.
 
-<a id="eff_runs_in"></a>`eff_runs_in`(P, X1) either:
+<a id="eff_runs_in"></a>`eff_runs_in`(P, N) either:
 
-1. if [`eff_define_part`](#eff_define_part)(something, P) and X1 is P;
-2. if [`eff_construct_part`](#eff_construct_part)(something, P) and X1 is P;
+1. if [`eff_define_part`](#eff_define_part)(something, P) and N is P;
+2. if [`eff_construct_part`](#eff_construct_part)(something, P) and N is P;
 3. if all of:
    - [`eff_runs_in`](#eff_runs_in)(P, a node Y);
-   - Y [is in file](js-structure.md#ast_in) X1;
+   - Y [is in file](js-structure.md#ast_in) N;
    - unless [`fn_node_v`](js-dataflow.md#fn_node_v)(Y).
 
 `eff_catch_here`(N) if all of:

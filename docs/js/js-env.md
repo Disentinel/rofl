@@ -39,10 +39,10 @@ books: audit, code, main
 > parts). `reaches` is reflexive on purpose: a release provides its own
 > features, and the transitive arm carries a release that includes two.
 
-<a id="reaches"></a>`reaches`(R, X1) either:
+<a id="reaches"></a>`reaches`(R, N) either:
 
-1. if `release`(R) and X1 is R;
-2. if `includes`(R, Q) and [`reaches`](#reaches)(Q, X1).
+1. if `release`(R) and N is R;
+2. if `includes`(R, Q) and [`reaches`](#reaches)(Q, N).
 
 <a id="has_feature"></a>`has_feature`(R, F) if [`reaches`](#reaches)(R, P) and `provides`(P, F).
 

@@ -558,14 +558,14 @@ Declared as facts: shape_because.
 
 <a id="resolved_shape"></a>`resolved_shape`(S) if a call C [resolves to](#resolves) some function and [`shape`](#shape)(C, S).
 
-<a id="shape_verdict"></a>`shape_verdict`(S, X1) either:
+<a id="shape_verdict"></a>`shape_verdict`(S, N) either:
 
-1. if [`shape_vocab`](#shape_vocab)(S) and X1 is absent, unless [`shape_seen`](#shape_seen)(S);
+1. if [`shape_vocab`](#shape_vocab)(S) and N is absent, unless [`shape_seen`](#shape_seen)(S);
 2. if all of:
    - [`shape_seen`](#shape_seen)(S);
-   - X1 is fully_resolved;
+   - N is fully_resolved;
    - unless [`unresolved_shape`](#unresolved_shape)(S);
-3. if [`unresolved_shape`](#unresolved_shape)(S) and X1 is has_residue.
+3. if [`unresolved_shape`](#unresolved_shape)(S) and N is has_residue.
 
 <a id="shape_reason"></a>`shape_reason`(S, R) if [`unresolved_shape`](#unresolved_shape)(S) and [`shape_because`](#shape_because)(js, S, callgraph, R).
 

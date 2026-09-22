@@ -47,10 +47,10 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
 > every failed attempt into the why-tree of the answer
 
-<a id="reached"></a>`reached`(S, X1) either:
+<a id="reached"></a>`reached`(S, N) either:
 
-1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and X1 is 0;
-2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and X1 is +(?K,1).
+1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and N is 0;
+2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and N is +(?K,1).
 
 <a id="arrival"></a>`arrival`(S, K, P) if [`reached`](#reached)(S, K) and [`resolve_try`](#resolve_try)(S, K, P, file).
 

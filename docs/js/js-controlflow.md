@@ -405,14 +405,14 @@ A call N resolves to a function M if [`pattern_iterates`](#pattern_iterates)(N, 
 > to `spread_element`, which carries both mechanisms — mutant d9 reads the
 > edges instead.
 
-<a id="hidden_call_pos"></a>`hidden_call_pos`(a node N, X1) either:
+<a id="hidden_call_pos"></a>`hidden_call_pos`(a node N, E) either:
 
-1. if N is an object pattern and X1 is accessor_call;
-2. if N is a rest, N is among the properties of an object pattern P, and X1 is accessor_call;
-3. if N is among the properties of an object literal O, N is a spread, and X1 is accessor_call;
-4. if N is an array pattern and X1 is iterator_call;
-5. if [`spread_iterated`](#spread_iterated)(N) and X1 is iterator_call;
-6. if N is a for-of and X1 is iterator_call.
+1. if N is an object pattern and E is accessor_call;
+2. if N is a rest, N is among the properties of an object pattern P, and E is accessor_call;
+3. if N is among the properties of an object literal O, N is a spread, and E is accessor_call;
+4. if N is an array pattern and E is iterator_call;
+5. if [`spread_iterated`](#spread_iterated)(N) and E is iterator_call;
+6. if N is a for-of and E is iterator_call.
 
 <a id="hidden_call_src"></a>`hidden_call_src`(a node P, Init) either:
 

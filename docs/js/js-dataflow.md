@@ -46,10 +46,9 @@ A declarator D
 
 <a id="var_flow"></a>From flows to To if a declarator D [reads](#decl_reads) From and D [binds](#decl_binds) To.
 
-X
+<a id="var_reaches"></a>X reaches B if X [flows to](#var_flow) B.
 
-- <a id="var_reaches"></a>reaches B if X [flows to](#var_flow) B.
-- reaches C if X [reaches](#var_reaches) B and B [flows to](#var_flow) C.
+X reaches C if X [reaches](#var_reaches) B and B [flows to](#var_flow) C.
 
 ## 2. What a value is
 
@@ -709,18 +708,18 @@ A node N may be the literal L if all of:
 > A method is a value; a declared function is reached by its name with no
 > declarator.
 
-A node M may be the node X1 either:
+A node M may be the node Y either:
 
-1. if M is an object method and X1 is M;
-2. if M is a method and X1 is M;
-3. if M is a function and X1 is M;
+1. if M is an object method and Y is M;
+2. if M is a method and Y is M;
+3. if M is a function and Y is M;
 4. if all of:
-   - X1 is a function;
-   - X1 is in file File;
-   - the id of X1 is a node I;
+   - Y is a function;
+   - Y is in file File;
+   - the id of Y is a node I;
    - I [is named](js-structure.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
-5. if M is a property, the value of M is a node X, and X [may be the node](#may_be_node) X1.
+5. if M is a property, the value of M is a node X, and X [may be the node](#may_be_node) Y.
 
 A property P may be the literal V if the value of P is a node X and X [may be the literal](#may_be_lit) V.
 
@@ -904,16 +903,15 @@ A node T denotes a class if some class [has the static block](#static_block_of) 
    - the source of N is a node S;
    - S [is written as](js-structure.md#ast_value) Src.
 
-Src
-
-- <a id="module_basename"></a>has basename Base if all of:
+<a id="module_basename"></a>Src has basename Base if all of:
   - some node [sources](#module_source) Src in some file;
   - Head is str_pre(?Src,"/");
   - Head is ".";
   - N is str_segs(?Src,"/");
   - N is 2;
   - Base is str_seg(?Src,"/",1).
-- <a id="import_target"></a>targets File if all of:
+
+<a id="import_target"></a>Src targets File if all of:
   - Src [has basename](#module_basename) Base;
   - File [is in the corpus](#corpus_file);
   - File is Base.

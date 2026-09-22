@@ -138,11 +138,11 @@ Declared as facts: ast_parse_error.
 > for a module, the global's own name for a member call, and the atom `itself`
 > for a plain call of a global, so the two shapes stay distinguishable.
 
-<a id="host_site"></a>`host_site`(C, X1, Spec, Key) either:
+<a id="host_site"></a>`host_site`(C, N, Spec, Key) either:
 
-1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and X1 is node;
-2. if [`host_member_call`](#host_member_call)(C, X1, Spec, Key);
-3. if [`host_global_call`](#host_global_call)(C, X1, Spec) and Key is itself.
+1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and N is node;
+2. if [`host_member_call`](#host_member_call)(C, N, Spec, Key);
+3. if [`host_global_call`](#host_global_call)(C, N, Spec) and Key is itself.
 
 <a id="host_site_at"></a>`host_site_at`(H, File, Line, Origin, Key) if [`host_site`](#host_site)(a node C, H, Origin, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
@@ -161,25 +161,25 @@ Declared as facts: ast_parse_error.
    - `host_module_effect`(node, Spec, E);
    - unless `host_member_effect`(node, Spec, Key, something).
 
-<a id="host_call_effect"></a>`host_call_effect`(C, E, X1) either:
+<a id="host_call_effect"></a>`host_call_effect`(C, E, N) either:
 
 1. if all of:
    - [`host_module_call`](#host_module_call)(C, Spec, Key);
    - `host_member_effect`(node, Spec, Key, E);
-   - X1 is by_member;
+   - N is by_member;
 2. if all of:
    - [`host_module_call`](#host_module_call)(C, Spec, Key);
    - `host_module_effect`(node, Spec, E);
-   - X1 is by_module;
+   - N is by_module;
    - unless `host_member_effect`(node, Spec, Key, something);
 3. if all of:
    - [`host_global_call`](#host_global_call)(C, H, Name);
    - `host_global_effect`(H, Name, E);
-   - X1 is by_global;
+   - N is by_global;
 4. if all of:
    - [`host_member_call`](#host_member_call)(C, H, Name, something);
    - `host_global_effect`(H, Name, E);
-   - X1 is by_global.
+   - N is by_global.
 
 > at a coordinate, and the set of effects the corpus exercises
 
@@ -198,10 +198,10 @@ Declared as facts: ast_parse_error.
 > walk is `reaches` over different atoms. Reflexive on purpose: a version
 > provides its own surface.
 
-<a id="runtime_reaches"></a>`runtime_reaches`(R, X1) either:
+<a id="runtime_reaches"></a>`runtime_reaches`(R, N) either:
 
-1. if `runtime_version`(R, something, something) and X1 is R;
-2. if `runtime_includes`(R, Q) and [`runtime_reaches`](#runtime_reaches)(Q, X1).
+1. if `runtime_version`(R, something, something) and N is R;
+2. if `runtime_includes`(R, Q) and [`runtime_reaches`](#runtime_reaches)(Q, N).
 
 > `provides_api` is DERIVED from a semver point (`@since v18.9.0`) with one
 > comparison; the arithmetic lives in these three rules only. The encoding

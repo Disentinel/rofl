@@ -42,11 +42,11 @@ books: audit, code, main
 
 <a id="claim_kind"></a>`claim_kind` includes handled, ignored, unknown_because.
 
-<a id="claim"></a>`claim`(X1, Lang, K, L, R) either:
+<a id="claim"></a>`claim`(N, Lang, K, L, R) either:
 
-1. if [`handled`](#handled)(Lang, K, L, R) and X1 is handled;
-2. if [`ignored`](#ignored)(Lang, K, L, R) and X1 is ignored;
-3. if [`unknown_because`](#unknown_because)(Lang, K, L, R) and X1 is unknown_because.
+1. if [`handled`](#handled)(Lang, K, L, R) and N is handled;
+2. if [`ignored`](#ignored)(Lang, K, L, R) and N is ignored;
+3. if [`unknown_because`](#unknown_because)(Lang, K, L, R) and N is unknown_because.
 
 <a id="handled"></a>`handled`(Lang, K, L, R) if [`claim`](#claim)(handled, Lang, K, L, R).
 
@@ -105,13 +105,13 @@ Declared as facts: checked.
 > with no cell under it and the partition stops summing — a second, independent
 > detector for what `orphan_claim` reports.
 
-<a id="verdict"></a>`verdict`(Lang, K, L, X1) either:
+<a id="verdict"></a>`verdict`(Lang, K, L, N) either:
 
-1. if [`handled`](#handled)(Lang, K, L, something) and X1 is modelled;
-2. if [`ignored`](#ignored)(Lang, K, L, something) and X1 is waived;
+1. if [`handled`](#handled)(Lang, K, L, something) and N is modelled;
+2. if [`ignored`](#ignored)(Lang, K, L, something) and N is waived;
 3. if all of:
    - [`cell`](#cell)(Lang, K, L);
-   - X1 is not_modelled;
+   - N is not_modelled;
    - unless [`handled`](#handled)(Lang, K, L, something);
    - unless [`ignored`](#ignored)(Lang, K, L, something).
 
@@ -175,22 +175,22 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 <a id="shape_kind"></a>`shape_kind`(Lang, K, Lay) if [`shape_of`](#shape_of)(Lang, K, S) and [`shape_in`](#shape_in)(S, Lay).
 
-`cell`(Lang, K, X1, Lay) either:
+`cell`(Lang, K, N, Lay) either:
 
 1. if all of:
    - `node_kind`(Lang, K);
    - `layer`(Lay);
-   - X1 is none;
+   - N is none;
    - unless [`axis_applies`](#axis_applies)(shape, Lay);
 2. if all of:
    - `node_kind`(Lang, K);
    - `layer`(Lay);
    - [`axis_applies`](#axis_applies)(shape, Lay);
-   - X1 is none;
+   - N is none;
    - unless [`shape_kind`](#shape_kind)(Lang, K, Lay);
 3. if all of:
-   - [`shape_of`](#shape_of)(Lang, K, X1);
-   - [`shape_in`](#shape_in)(X1, Lay);
+   - [`shape_of`](#shape_of)(Lang, K, N);
+   - [`shape_in`](#shape_in)(N, Lay);
    - [`axis_applies`](#axis_applies)(shape, Lay).
 
 > the refinement partitions the coarse matrix, checked both ways (`lost_cell`,
@@ -250,23 +250,23 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
    - [`shape_kind`](#shape_kind)(Lang, K, Lay);
    - [`axis_applies`](#axis_applies)(shape, Lay).
 
-`verdict`(Lang, K, S, Lay, X1) either:
+`verdict`(Lang, K, S, Lay, N) either:
 
-1. if [`shaped_handled`](#shaped_handled)(Lang, K, S, Lay, something) and X1 is modelled;
-2. if [`shaped_ignored`](#shaped_ignored)(Lang, K, S, Lay, something) and X1 is waived;
+1. if [`shaped_handled`](#shaped_handled)(Lang, K, S, Lay, something) and N is modelled;
+2. if [`shaped_ignored`](#shaped_ignored)(Lang, K, S, Lay, something) and N is waived;
 3. if all of:
    - [`cell`](#cell)(Lang, K, S, Lay);
-   - X1 is not_modelled;
+   - N is not_modelled;
    - unless [`shaped_handled`](#shaped_handled)(Lang, K, S, Lay, something);
    - unless [`shaped_ignored`](#shaped_ignored)(Lang, K, S, Lay, something).
 
 `double_claimed`(Lang, K, S, Lay) if [`verdict`](#verdict)(Lang, K, S, Lay, modelled) and [`verdict`](#verdict)(Lang, K, S, Lay, waived).
 
-`claim`(X1, Lang, K, S, Lay, R) either:
+`claim`(N, Lang, K, S, Lay, R) either:
 
-1. if [`handled`](#handled)(Lang, K, S, Lay, R) and X1 is handled;
-2. if [`ignored`](#ignored)(Lang, K, S, Lay, R) and X1 is ignored;
-3. if [`unknown_because`](#unknown_because)(Lang, K, S, Lay, R) and X1 is unknown_because.
+1. if [`handled`](#handled)(Lang, K, S, Lay, R) and N is handled;
+2. if [`ignored`](#ignored)(Lang, K, S, Lay, R) and N is ignored;
+3. if [`unknown_because`](#unknown_because)(Lang, K, S, Lay, R) and N is unknown_because.
 
 `handled`(Lang, K, S, Lay, R) if [`claim`](#claim)(handled, Lang, K, S, Lay, R).
 

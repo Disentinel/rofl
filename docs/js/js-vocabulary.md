@@ -31,10 +31,10 @@ books: audit, main
 
 <a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(?Rel,?_$0,?_$1,?_$2).
 
-A call L passes a node Args at X1, in the main either:
+A call L passes a node Args at N, in the main either:
 
-1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and X1 is 1;
-2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and X1 is +(?I,1).
+1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and N is 1;
+2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and N is +(?I,1).
 
 <a id="lit_arg"></a>`lit_arg`(a call L, I, X) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
 
