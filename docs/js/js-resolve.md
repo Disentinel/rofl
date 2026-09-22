@@ -1,6 +1,7 @@
 ---
 world: js-resolve
 books: audit, book A, book B, book E, book Env, code, main
+default: audit
 ---
 
 # js-resolve
@@ -41,8 +42,8 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 <a id="candidate_missed"></a>`candidate_missed`(S, K) either:
 
-1. if [`resolve_try`](#resolve_try)(S, K, something, miss);
-2. if [`resolve_try`](#resolve_try)(S, K, something, dir).
+1. if [`resolve_try`](#resolve_try)(S, K, something, `miss`);
+2. if [`resolve_try`](#resolve_try)(S, K, something, `dir`).
 
 > candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
 > every failed attempt into the why-tree of the answer
@@ -52,7 +53,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and N is 0;
 2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and N is +(?K,1).
 
-<a id="arrival"></a>`arrival`(S, K, P) if [`reached`](#reached)(S, K) and [`resolve_try`](#resolve_try)(S, K, P, file).
+<a id="arrival"></a>`arrival`(S, K, P) if [`reached`](#reached)(S, K) and [`resolve_try`](#resolve_try)(S, K, P, `file`).
 
 ## 3. THE ANSWER: the search arrived HERE, node returned THIS, and a named
 
@@ -70,7 +71,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > `require.resolve("node:path")` is empty), so the mechanism row is the whole
 > explanation and carries the canonical `node:` spelling
 
-`resolves_to`(S, C) if [`resolve_via`](#resolve_via)(S, builtin, C) and [`resolve_answer`](#resolve_answer)(S, something).
+`resolves_to`(S, C) if [`resolve_via`](#resolve_via)(S, `builtin`, C) and [`resolve_answer`](#resolve_answer)(S, something).
 
 <a id="explained"></a>`explained`(S) if [`resolves_to`](#resolves_to)(S, something).
 
@@ -90,7 +91,10 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 <a id="host_verdict"></a>`host_verdict`(S, P) either:
 
 1. if [`resolves_to`](#resolves_to)(S, P);
-2. if [`env_spoke`](#env_spoke)(S) and P is no_answer, unless [`host_has_answer`](#host_has_answer)(S).
+2. if all of:
+   - [`env_spoke`](#env_spoke)(S);
+   - P is `no_answer`;
+   - unless [`host_has_answer`](#host_has_answer)(S).
 
 ## 5. THE BRIDGE TO THE FIRST MODEL. The rule model names a site by babel node
 
@@ -122,7 +126,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 1. if [`rules_answer`](#rules_answer)(S, T);
 2. if all of:
    - [`model_site`](#model_site)(S, something);
-   - T is no_answer;
+   - T is `no_answer`;
    - unless [`rules_has_answer`](#rules_has_answer)(S).
 
 ## 6. THE TWO COMPARISONS, both joins of TOTAL relations.
@@ -228,7 +232,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > comparing one environment against another is the referee's whole point.
 > Not in boot.rofl, where it would license nothing and permit everything.
 
-<a id="collects"></a>`collects` includes audit.
+<a id="collects"></a>`collects` includes `audit`.
 
 ## Read from other files
 

@@ -1,6 +1,7 @@
 ---
 world: js-env-api
 books: audit, code, main
+default: audit
 ---
 
 # js-env-api

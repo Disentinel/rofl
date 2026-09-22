@@ -1,13 +1,14 @@
 ---
 world: js-host
 books: audit, code, flow, main
+default: audit
 ---
 
 # js-host
 
 ## Terms
 
-*file*, *function*, *identifier*, *key*, *line*, *name*, *node*.
+*function*.
 
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
@@ -29,7 +30,7 @@ books: audit, code, flow, main
 
 | arg 1 | arg 2 |
 |---|---|
-| audit | code |
+| `audit` | `code` |
 
 Declared as facts: ast_parse_error.
 
@@ -49,17 +50,14 @@ Declared as facts: ast_parse_error.
 
 `name_bound_in`(File, Name) either:
 
-1. if all of:
-   - a function F is in file File;
-   - the id of F is a node I;
-   - I [is named](js-structure.md#ast_name) Name;
-2. if a function F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
+1. if a function F is in file File, the `id` of F is I, and I [is named](js-structure.md#ast_name) Name;
+2. if F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if [`binding`](js-modules.md#binding)(I, something, Name, something) and [`site_file`](js-modules.md#site_file)(I, File).
 
 > The host stays in the row: `console` under node and under browser are two rows.
 
-<a id="host_global_ref"></a>`host_global_ref`(an identifier E, H, Name) if all of:
+<a id="host_global_ref"></a>`host_global_ref`(E, H, Name) if all of:
   - E [reads](js-dataflow.md#ident_in) Name in File;
   - `host_global`(H, Name);
   - unless [`name_bound_in`](#name_bound_in)(File, Name).
@@ -102,7 +100,7 @@ Declared as facts: ast_parse_error.
 > newer than @types/node, or one the declarations do not carry. The module
 > door's twin of `stdlib_unattributed[audit]`.
 
-<a id="host_import_unknown"></a>`host_import_unknown`(File, Spec, Key) if [`host_module_named`](#host_module_named)(File, something, Spec, Key), unless `host_module_member`(node, Spec, Key).
+<a id="host_import_unknown"></a>`host_import_unknown`(File, Spec, Key) if [`host_module_named`](#host_module_named)(File, something, Spec, Key), unless `host_module_member`(`node`, Spec, Key).
 
 ## 3. THE SITES — four shapes, because a rule covering three would report a
 
@@ -114,8 +112,8 @@ Declared as facts: ast_parse_error.
 > `selects[flow]` answers the key for the dotted and the computed form alike.
 
 <a id="host_member_call"></a>`host_member_call`(C, H, Name, Key) if all of:
-  - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-  - the object of N is a node O;
+  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
+  - the `object` of N is O;
   - [`host_global_ref`](#host_global_ref)(O, H, Name);
   - N [selects](js-dataflow.md#selects) Key.
 
@@ -124,13 +122,13 @@ Declared as facts: ast_parse_error.
 <a id="host_module_call"></a>`host_module_call`(C, Spec, Key) either:
 
 1. if all of:
-   - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-   - the object of N is a node O;
+   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
+   - the `object` of N is O;
    - O [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_ns`](#host_module_ns)(File, Local, Spec);
    - N [selects](js-dataflow.md#selects) Key;
 2. if all of:
-   - [`callee_of`](js-callgraph.md#callee_of)(C, an identifier N);
+   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
    - N [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_named`](#host_module_named)(File, Local, Spec, Key).
 
@@ -140,11 +138,11 @@ Declared as facts: ast_parse_error.
 
 <a id="host_site"></a>`host_site`(C, N, Spec, Key) either:
 
-1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and N is node;
+1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and N is `node`;
 2. if [`host_member_call`](#host_member_call)(C, N, Spec, Key);
-3. if [`host_global_call`](#host_global_call)(C, N, Spec) and Key is itself.
+3. if [`host_global_call`](#host_global_call)(C, N, Spec) and Key is `itself`.
 
-<a id="host_site_at"></a>`host_site_at`(H, File, Line, Origin, Key) if [`host_site`](#host_site)(a node C, H, Origin, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_site_at"></a>`host_site_at`(H, File, Line, Origin, Key) if [`host_site`](#host_site)(C, H, Origin, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -155,35 +153,35 @@ Declared as facts: ast_parse_error.
 
 <a id="member_effect"></a>`member_effect`(Spec, Key, E) either:
 
-1. if `host_member_effect`(node, Spec, Key, E);
+1. if `host_member_effect`(`node`, Spec, Key, E);
 2. if all of:
-   - `host_module_member`(node, Spec, Key);
-   - `host_module_effect`(node, Spec, E);
-   - unless `host_member_effect`(node, Spec, Key, something).
+   - `host_module_member`(`node`, Spec, Key);
+   - `host_module_effect`(`node`, Spec, E);
+   - unless `host_member_effect`(`node`, Spec, Key, something).
 
 <a id="host_call_effect"></a>`host_call_effect`(C, E, N) either:
 
 1. if all of:
    - [`host_module_call`](#host_module_call)(C, Spec, Key);
-   - `host_member_effect`(node, Spec, Key, E);
-   - N is by_member;
+   - `host_member_effect`(`node`, Spec, Key, E);
+   - N is `by_member`;
 2. if all of:
    - [`host_module_call`](#host_module_call)(C, Spec, Key);
-   - `host_module_effect`(node, Spec, E);
-   - N is by_module;
-   - unless `host_member_effect`(node, Spec, Key, something);
+   - `host_module_effect`(`node`, Spec, E);
+   - N is `by_module`;
+   - unless `host_member_effect`(`node`, Spec, Key, something);
 3. if all of:
    - [`host_global_call`](#host_global_call)(C, H, Name);
    - `host_global_effect`(H, Name, E);
-   - N is by_global;
+   - N is `by_global`;
 4. if all of:
    - [`host_member_call`](#host_member_call)(C, H, Name, something);
    - `host_global_effect`(H, Name, E);
-   - N is by_global.
+   - N is `by_global`.
 
 > at a coordinate, and the set of effects the corpus exercises
 
-<a id="host_effect_at"></a>`host_effect_at`(E, File, Line, Why) if [`host_call_effect`](#host_call_effect)(a node C, E, Why) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_effect_at"></a>`host_effect_at`(E, File, Line, Why) if [`host_call_effect`](#host_call_effect)(C, E, Why) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 <a id="host_effect_used"></a>`host_effect_used`(E) if [`host_call_effect`](#host_call_effect)(something, E, something).
 
@@ -275,7 +273,7 @@ Declared as facts: ast_parse_error.
 
 <a id="host_call_absent"></a>`host_call_absent`(R, C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and [`host_member_absent`](#host_member_absent)(R, Spec, Key).
 
-<a id="host_call_absent_at"></a>`host_call_absent_at`(R, File, Line, Spec, Key) if [`host_call_absent`](#host_call_absent)(R, a node C, Spec, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_call_absent_at"></a>`host_call_absent_at`(R, File, Line, Spec, Key) if [`host_call_absent`](#host_call_absent)(R, C, Spec, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
@@ -292,9 +290,9 @@ Declared as facts: ast_parse_error.
 > source records; a deprecation note naming its replacement is one join from
 > a remedy.
 
-<a id="host_call_deprecated"></a>`host_call_deprecated`(C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and `host_member_deprecated`(node, Spec, Key).
+<a id="host_call_deprecated"></a>`host_call_deprecated`(C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and `host_member_deprecated`(`node`, Spec, Key).
 
-<a id="host_call_remedy"></a>`host_call_remedy`(C, Spec, Key, Use) if [`host_call_deprecated`](#host_call_deprecated)(C, Spec, Key) and `host_member_replaced_by`(node, Spec, Key, Use).
+<a id="host_call_remedy"></a>`host_call_remedy`(C, Spec, Key, Use) if [`host_call_deprecated`](#host_call_deprecated)(C, Spec, Key) and `host_member_replaced_by`(`node`, Spec, Key, Use).
 
 ## 6. THE GATES. Each is a statement this layer makes about itself, and
 
@@ -312,8 +310,11 @@ Declared as facts: ast_parse_error.
 
 <a id="host_effect_orphan"></a>`host_effect_orphan`(Spec, Key) either:
 
-1. if `host_member_effect`(node, Spec, Key, something), unless `host_module_member`(node, Spec, Key);
-2. if `host_module_effect`(node, Spec, something) and Key is global, unless `host_module`(node, Spec).
+1. if `host_member_effect`(`node`, Spec, Key, something), unless `host_module_member`(`node`, Spec, Key);
+2. if all of:
+   - `host_module_effect`(`node`, Spec, something);
+   - Key is `global`;
+   - unless `host_module`(`node`, Spec).
 
 <a id="host_global_effect_orphan"></a>`host_global_effect_orphan`(H, Name) if `host_global_effect`(H, Name, something), unless `host_global`(H, Name).
 
@@ -322,7 +323,7 @@ Declared as facts: ast_parse_error.
 
 <a id="effects_claimed"></a>`effects_claimed`(H) if `host`(H), unless `host_no_effects`(H, something).
 
-<a id="host_module_uneffected"></a>`host_module_uneffected`(Spec) if `host_module`(node, Spec), unless `host_module_effect`(node, Spec, something).
+<a id="host_module_uneffected"></a>`host_module_uneffected`(Spec) if `host_module`(`node`, Spec), unless `host_module_effect`(`node`, Spec, something).
 
 <a id="host_global_uneffected"></a>`host_global_uneffected`(H, Name) if all of:
   - `host_global`(H, Name);
@@ -353,7 +354,7 @@ Declared as facts: ast_parse_error.
 
 <a id="bare_listed"></a>`bare_listed`(Spec) if [`node_builtin_bare`](js-modules.md#node_builtin_bare)(something, Spec).
 
-<a id="bare_builtin_unlisted"></a>`bare_builtin_unlisted`(Spec) if `host_module`(node, Spec), unless [`bare_listed`](#bare_listed)(Spec).
+<a id="bare_builtin_unlisted"></a>`bare_builtin_unlisted`(Spec) if `host_module`(`node`, Spec), unless [`bare_listed`](#bare_listed)(Spec).
 
 > an inclusion ACROSS families claims one runtime is a later edition of
 > another; the order is not total across families

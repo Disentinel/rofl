@@ -1,13 +1,14 @@
 ---
 world: js-structure
 books: audit, code
+default: code
 ---
 
 # js-structure
 
 ## Terms
 
-*file*, *key*, *member access*, *name*, *node*, *text*.
+*member access*.
 
 Kinds without a noun: meta_property.
 
@@ -19,18 +20,18 @@ Kinds without a noun: meta_property.
 >               renames that claim nothing (`name` on an Identifier and on a
 >               JSX attribute are one fact here)
 
-<a id="ast_in"></a>A node P is in file C if C is among the some child of P.
+<a id="ast_in"></a>P is in file C if C is among the some child of P.
 
 > nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
 > depth 30 is about 3M rows, the point where an ancestor query should walk
 > `ast_in` rather than materialise the closure.
 
-<a id="ast_within"></a>A node P is within a node C either:
+<a id="ast_within"></a>P is within C either:
 
 1. if P [is in file](#ast_in) C;
-2. if P [is within](#ast_within) a node X and X [is in file](#ast_in) C.
+2. if P [is within](#ast_within) X and X [is in file](#ast_in) C.
 
-<a id="ast_name"></a>A node N is named V if the attribute name of N is V.
+<a id="ast_name"></a>N is named V if the attribute `name` of N is V.
 
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
 > well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
@@ -44,46 +45,43 @@ Kinds without a noun: meta_property.
 > A NEGATION and not `computed, false`: `class_private_property` and
 > `class_private_method` carry no `computed` attribute at all.
 
-<a id="key_name"></a>A node K spells N either:
+<a id="key_name"></a>K spells N either:
 
-1. if all of:
-   - the key of a node P is K;
-   - K [is named](#ast_name) N;
-   - unless the attribute computed of P is true;
+1. if the `key` of P is K and K [is named](#ast_name) N, unless the attribute `computed` of P is `true`;
 2. if all of:
-   - the key of some node is K;
+   - the `key` of some node is K;
    - K is a member access;
-   - the object of K is a node O;
+   - the `object` of K is O;
    - O [is named](#ast_name) "Symbol";
-   - the property of K is a node P;
+   - the `property` of K is P;
    - P [is named](#ast_name) N.
 
-<a id="ast_value"></a>A node N is written as V if the attribute value of N is V.
+<a id="ast_value"></a>N is written as V if the attribute `value` of N is V.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers
 > need the form and none owns it. Keyed on `meta`, the reserved word the
 > grammar switches on: a future `import.defer` is still (meta="import").
 
-<a id="meta_form"></a>A node M has the meta form N either:
+<a id="meta_form"></a>M has the meta form N either:
 
 1. if all of:
    - M is a meta_property node;
-   - the meta of M is a node C;
+   - the `meta` of M is C;
    - C [is named](#ast_name) "new";
-   - N is new_target;
+   - N is `new_target`;
 2. if all of:
    - M is a meta_property node;
-   - the meta of M is a node C;
+   - the `meta` of M is C;
    - C [is named](#ast_name) "import";
-   - N is import_meta.
+   - N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
 
 <a id="meta_unformed"></a>A meta_property node M has no meta form unless M [has the meta form](#meta_form) some name.
 
-<a id="meta_form_conflict"></a>A node M has conflicting meta forms X B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
+<a id="meta_form_conflict"></a>M has conflicting meta forms X B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
 
 ## Read from other files
 

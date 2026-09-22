@@ -1,6 +1,7 @@
 ---
 world: js-pack-home
 books: audit, main
+default: main
 ---
 
 # js-pack-home
@@ -45,18 +46,18 @@ books: audit, main
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [`fslot`](#fslot)(something, Rel, I, X) and `node_kind`(js, X).
+<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [`fslot`](#fslot)(something, Rel, I, X) and `node_kind`(`js`, X).
 
-<a id="pack_declares"></a>`pack_declares`(P, K) if [`fslot`](#fslot)(P, node_kind, 2, K) and `node_kind`(js, K).
+<a id="pack_declares"></a>`pack_declares`(P, K) if [`fslot`](#fslot)(P, `node_kind`, 2, K) and `node_kind`(`js`, K).
 
 <a id="pack_speaks"></a>`pack_speaks`(P, K) if all of:
   - [`fslot`](#fslot)(P, Rel, I, K);
   - [`fkind_slot`](#fkind_slot)(Rel, I);
-  - Rel differs from node_kind.
+  - Rel differs from `node_kind`.
 
 > one row, not a waiver list: it names no kind and cannot go quiet on one
 
-<a id="base_pack"></a>`base_pack` includes p_js_kinds.
+<a id="base_pack"></a>`base_pack` includes `p_js_kinds`.
 
 Declared as facts: base_pack.
 
@@ -82,7 +83,7 @@ Declared as facts: base_pack.
 
 <a id="pack_borrows"></a>`pack_borrows`(P, K) if all of:
   - [`pack_speaks`](#pack_speaks)(P, K);
-  - `node_kind`(js, K);
+  - `node_kind`(`js`, K);
   - unless [`pack_declares`](#pack_declares)(P, K).
 
 ## Not defined in these files

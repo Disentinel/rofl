@@ -1,13 +1,10 @@
 ---
 world: js-ambient
 books: audit, code, flow, main
+default: main
 ---
 
 # js-ambient
-
-## Terms
-
-*call*, *file*, *function*, *identifier*, *key*, *kind*, *name*, *node*.
 
 > js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
 > and the map into the effect lattice. Both DERIVED: this pack authors not one
@@ -34,12 +31,12 @@ books: audit, code, flow, main
 
 | arg 1 | arg 2 |
 |---|---|
-| main | code |
-| flow | code |
-| flow | main |
-| audit | code |
-| audit | flow |
-| audit | main |
+| `main` | `code` |
+| `flow` | `code` |
+| `flow` | `main` |
+| `audit` | `code` |
+| `audit` | `flow` |
+| `audit` | `main` |
 
 ## 1. THE SURFACES AND WHERE EACH NAME CAME FROM. `surface_origin` keeps the
 
@@ -50,10 +47,10 @@ books: audit, code, flow, main
 
 <a id="surface_origin"></a>`surface_origin`(Spec, N) either:
 
-1. if `host_module`(node, Spec) and N is host_runtime;
-2. if `host_global`(something, Spec) and N is host_runtime;
-3. if `lib_global`(Spec, something, something) and N is es_intrinsic;
-4. if Spec [is a builtin prototype](js-dataflow.md#builtin_prototype) and N is builtin_prototype.
+1. if `host_module`(`node`, Spec) and N is `host_runtime`;
+2. if `host_global`(something, Spec) and N is `host_runtime`;
+3. if `lib_global`(Spec, something, something) and N is `es_intrinsic`;
+4. if Spec [is a builtin prototype](js-dataflow.md#builtin_prototype) and N is `builtin_prototype`.
 
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
 > surface with two origins would have every effect attributed twice.
@@ -99,7 +96,7 @@ books: audit, code, flow, main
 > value layer cannot trace `global`, and an ambient surface is by definition
 > not allocated in this program.
 
-<a id="amb_heap"></a>`amb_heap` includes none, global.
+<a id="amb_heap"></a>`amb_heap` includes `none`, `global`.
 
 <a id="amb_atom_label"></a>`amb_atom_label`(X, H) if `host_effect_atom`(X), `eff_label`(X, H), and [`amb_heap`](#amb_heap)(H).
 
@@ -146,8 +143,8 @@ Declared as facts: amb_heap.
 <a id="ambient_global_default"></a>`ambient_global_default`(Name, E) if `host_global_effect`(something, Name, X) and [`eff_of_host`](#eff_of_host)(X, E).
 
 <a id="amb_global_member"></a>`amb_global_member`(Name, Key) if all of:
-  - [`free_global`](js-globals.md#free_global)(a node O, Name, something);
-  - the object of a node M is O;
+  - [`free_global`](js-globals.md#free_global)(O, Name, something);
+  - the `object` of M is O;
   - M [selects](js-dataflow.md#selects) Key;
   - `host_global_effect`(something, Name, something).
 
@@ -157,7 +154,7 @@ Declared as facts: amb_heap.
 > selects a key, so the operation column carries a word rather than the
 > surface's own name. `itself` is js-host's word; `construct` is new here.
 
-<a id="amb_operation_word"></a>`amb_operation_word` includes itself, construct.
+<a id="amb_operation_word"></a>`amb_operation_word` includes `itself`, `construct`.
 
 `ambient_effect`(Name, W, E) if [`amb_operation_word`](#amb_operation_word)(W) and [`ambient_global_default`](#ambient_global_default)(Name, E).
 
@@ -170,7 +167,7 @@ Declared as facts: amb_operation_word.
 
 <a id="ambient_enumerated"></a>`ambient_enumerated`(S) either:
 
-1. if `host_module_member`(node, S, something);
+1. if `host_module_member`(`node`, S, something);
 2. if `lib_global`(S, something, something);
 3. if `lib_member`(S, something, something).
 
@@ -186,7 +183,7 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_named_call"></a>`amb_named_call`(C, Spec, Key) if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, an identifier N);
+  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
   - N [reads](js-dataflow.md#ident_in) Local in File;
   - [`host_module_named`](js-host.md#host_module_named)(File, Local, Spec, Key).
 
@@ -204,22 +201,22 @@ Declared as facts: amb_operation_word.
 
 `eff_surface`(C, Name) if [`amb_global_call`](#amb_global_call)(C, Name).
 
-`eff_operation`(C, itself) if [`amb_global_call`](#amb_global_call)(C, something).
+`eff_operation`(C, `itself`) if [`amb_global_call`](#amb_global_call)(C, something).
 
 > 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
 > and not a `call_site`, so the negation is on `resolved_site[code]`: a
 > `new Box()` resolved to a class in this program is not ambient.
 
-<a id="amb_construct"></a>`amb_construct`(a node X, Name) if all of:
-  - [`transfer_site`](js-callgraph.md#transfer_site)(X, new_expression);
-  - the callee of X is a node N;
+<a id="amb_construct"></a>`amb_construct`(X, Name) if all of:
+  - [`transfer_site`](js-callgraph.md#transfer_site)(X, `new_expression`);
+  - the `callee` of X is N;
   - [`free_global`](js-globals.md#free_global)(N, Name, File);
   - [`ambient_binding`](#ambient_binding)(File, Name, Name);
   - unless [`resolved_site`](js-callgraph.md#resolved_site)(X).
 
 `eff_surface`(X, Name) if [`amb_construct`](#amb_construct)(X, Name).
 
-`eff_operation`(X, construct) if [`amb_construct`](#amb_construct)(X, something).
+`eff_operation`(X, `construct`) if [`amb_construct`](#amb_construct)(X, something).
 
 ## 6. `identifier` — THE THIRD CASE. js-effects derives a reassigned name as
 
@@ -229,7 +226,7 @@ Declared as facts: amb_operation_word.
 > ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
 > (`typeof Promise`) seeds nothing.
 
-<a id="eff_here"></a>`eff_here`(E, read, global) if [`free_global`](js-globals.md#free_global)(E, something, something).
+<a id="eff_here"></a>`eff_here`(E, `read`, `global`) if [`free_global`](js-globals.md#free_global)(E, something, something).
 
 ## 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every
 
@@ -261,20 +258,20 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_proto_untraced"></a>`amb_proto_untraced`(P) if K [has prototype](js-dataflow.md#kind_prototype) P, unless [`node_value_kind`](js-dataflow.md#node_value_kind)(K).
 
-<a id="amb_proto_heap"></a>`amb_proto_heap`(P, local) if P [is a builtin prototype](js-dataflow.md#builtin_prototype), unless [`amb_proto_untraced`](#amb_proto_untraced)(P).
+<a id="amb_proto_heap"></a>`amb_proto_heap`(P, `local`) if P [is a builtin prototype](js-dataflow.md#builtin_prototype), unless [`amb_proto_untraced`](#amb_proto_untraced)(P).
 
 > the structural argument as a row: heap-decided here, `global` in js-effects
 
-<a id="amb_proto_recv"></a>`amb_proto_recv`(a node M, P) if all of:
+<a id="amb_proto_recv"></a>`amb_proto_recv`(M, P) if all of:
   - M [is a member access](js-dataflow.md#member_node_v);
-  - the object of M is a node O;
+  - the `object` of M is O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype).
 
 <a id="amb_proto_heap_split"></a>`amb_proto_heap_split`(P, M) if all of:
-  - [`amb_proto_heap`](#amb_proto_heap)(P, local);
+  - [`amb_proto_heap`](#amb_proto_heap)(P, `local`);
   - [`amb_proto_recv`](#amb_proto_recv)(M, P);
-  - [`eff_heap_of`](js-effects.md#eff_heap_of)(M, global).
+  - [`eff_heap_of`](js-effects.md#eff_heap_of)(M, `global`).
 
 > A member absent from the readonly view is a `write`; the landmark comes
 > from the section 3 closure, so `wr_local` is typed nowhere. The
@@ -283,7 +280,7 @@ Declared as facts: amb_operation_word.
 `ambient_effect`(P, Key, E) if all of:
   - [`lib_mutator`](#lib_mutator)(P, Key);
   - [`amb_proto_heap`](#amb_proto_heap)(P, H);
-  - [`eff_of_label`](#eff_of_label)(write, H, E).
+  - [`eff_of_label`](#eff_of_label)(`write`, H, E).
 
 ## 8. A FORM THAT CANNOT BE CONSTRUCTED, CONSTRUCTED. The member map of the
 
@@ -299,7 +296,7 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_not_constructible"></a>`amb_not_constructible`(Name) if `lib_global`(Name, something, Form), unless [`constructible_form`](js-globals.md#constructible_form)(Form).
 
-`ambient_effect`(Name, construct, E) if [`amb_not_constructible`](#amb_not_constructible)(Name) and [`eff_of_label`](#eff_of_label)(exn, none, E).
+`ambient_effect`(Name, `construct`, E) if [`amb_not_constructible`](#amb_not_constructible)(Name) and [`eff_of_label`](#eff_of_label)(`exn`, `none`, E).
 
 > An operation not on the surface at all is a different debt:
 > `Error.captureStackTrace` is V8's, declared in @types/node and not in
@@ -310,12 +307,12 @@ Declared as facts: amb_operation_word.
 
 1. if all of:
    - [`concrete_effect`](js-effects.md#concrete_effect)(something, S, Op);
-   - [`surface_origin`](#surface_origin)(S, es_intrinsic);
+   - [`surface_origin`](#surface_origin)(S, `es_intrinsic`);
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
    - unless `lib_static`(S, Op, something);
 2. if all of:
    - [`concrete_effect`](js-effects.md#concrete_effect)(something, S, Op);
-   - [`surface_origin`](#surface_origin)(S, builtin_prototype);
+   - [`surface_origin`](#surface_origin)(S, `builtin_prototype`);
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
    - unless `lib_member`(S, Op, something).
 
@@ -348,16 +345,16 @@ Declared as facts: amb_operation_word.
 <a id="amb_exn_source"></a>`amb_exn_source`(C) if all of:
   - [`concrete_effect`](js-effects.md#concrete_effect)(C, S, Op);
   - [`ambient_effect`](#ambient_effect)(S, Op, E);
-  - [`eff_row`](js-effects.md#eff_row)(E, exn, none).
+  - [`eff_row`](js-effects.md#eff_row)(E, `exn`, `none`).
 
-<a id="amb_exn_carrier"></a>`amb_exn_carrier`(a function F) either:
+<a id="amb_exn_carrier"></a>`amb_exn_carrier`(F) either:
 
-1. if [`amb_exn_source`](#amb_exn_source)(a node C) and F [is nearest to](js-dataflow.md#nearest_v) C;
+1. if [`amb_exn_source`](#amb_exn_source)(C) and F [is nearest to](js-dataflow.md#nearest_v) C;
 2. if all of:
-   - [`amb_exn_carrier`](#amb_exn_carrier)(a function G);
-   - a call C [resolves to](js-callgraph.md#resolves) G;
+   - [`amb_exn_carrier`](#amb_exn_carrier)(G);
+   - C [resolves to](js-callgraph.md#resolves) G;
    - F [is nearest to](js-dataflow.md#nearest_v) C;
-   - unless [`eff_discharged_at`](js-effects.md#eff_discharged_at)(C, exn).
+   - unless [`eff_discharged_at`](js-effects.md#eff_discharged_at)(C, `exn`).
 
 <a id="eff_exn_unexplained"></a>`eff_exn_unexplained`(F) if [`eff_exn_only`](js-effects.md#eff_exn_only)(F), unless [`amb_exn_carrier`](#amb_exn_carrier)(F).
 

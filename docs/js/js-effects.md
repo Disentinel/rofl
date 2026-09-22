@@ -1,13 +1,14 @@
 ---
 world: js-effects
 books: audit, code, flow, main
+default: flow
 ---
 
 # js-effects
 
 ## Terms
 
-*assignment*, *call*, *class*, *file*, *function*, *identifier*, *key*, *kind*, *member access*, *name*, *new*, *node*, *static block*, *template*, *text*, *throw*, *try*.
+*assignment*, *class*, *new*, *static block*, *template*, *throw*, *try*.
 
 Kinds without a noun: binary_expression, import_expression, unary_expression, update_expression.
 
@@ -88,7 +89,7 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 
 <a id="eff_alias_unnamed"></a>`eff_alias_unnamed`(X) if `eff_alias`(X, something), unless `eff_name`(X).
 
-<a id="eff_name_empty"></a>`eff_name_empty`(N) if `eff_name`(N) and N differs from total, unless [`eff_row`](#eff_row)(N, something, something).
+<a id="eff_name_empty"></a>`eff_name_empty`(N) if `eff_name`(N) and N differs from `total`, unless [`eff_row`](#eff_row)(N, something, something).
 
 <a id="eff_heap_unknown"></a>`eff_heap_unknown`(H) if `eff_label`(something, H), unless `eff_heap`(H).
 
@@ -111,24 +112,24 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 > Two arms of ONE relation, so "how many try statements lack a handler" is a
 > query whose control is the same literal with one constant swapped.
 
-<a id="eff_try_arm"></a>`eff_try_arm`(a node T, N) either:
+<a id="eff_try_arm"></a>`eff_try_arm`(T, N) either:
 
-1. if T is a try, the handler of T is some node, and N is handled;
-2. if T is a try and N is unhandled, unless the handler of T is some node.
+1. if T is a try, the `handler` of T is some node, and N is `handled`;
+2. if T is a try and N is `unhandled`, unless the `handler` of T is some node.
 
-`eff_here`(a throw T, exn, none) unless [`eff_catch_here`](#eff_catch_here)(T).
+`eff_here`(a throw T, `exn`, `none`) unless [`eff_catch_here`](#eff_catch_here)(T).
 
 > DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 > not terminate for the same reason `while (true)` may not, and nothing in the
 > tree shows it. `eff_calls` leads with `resolves` (binds both ends) so
 > `nearest_v` is probed, not enumerated.
 
-<a id="eff_loop_kind"></a>`eff_loop_kind` includes while_statement, do_while_statement, for_statement, for_in_statement, for_of_statement.
+<a id="eff_loop_kind"></a>`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
 
-`eff_here`(a node N, div, none) if [`eff_loop_kind`](#eff_loop_kind)(K) and N [is of kind](js-model.md#ast_node) K.
+`eff_here`(N, `div`, `none`) if [`eff_loop_kind`](#eff_loop_kind)(K) and N [is of kind](js-model.md#ast_node) K.
 
-<a id="eff_calls"></a>`eff_calls`(a function F, a function G) if all of:
-  - a call C [resolves to](js-callgraph.md#resolves) G;
+<a id="eff_calls"></a>`eff_calls`(F, G) if all of:
+  - C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`fn_node`](js-callgraph.md#fn_node)(G).
 
@@ -136,9 +137,9 @@ Kinds without a noun: binary_expression, import_expression, unary_expression, up
 
 `eff_reaches`(F, H) if [`eff_reaches`](#eff_reaches)(F, G) and [`eff_calls`](#eff_calls)(G, H).
 
-`eff_here`(a call C, div, none) if all of:
-  - C [resolves to](js-callgraph.md#resolves) a function G;
-  - a function F [is nearest to](js-dataflow.md#nearest_v) C;
+`eff_here`(C, `div`, `none`) if all of:
+  - C [resolves to](js-callgraph.md#resolves) G;
+  - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`eff_reaches`](#eff_reaches)(G, F).
 
 Declared as facts: eff_loop_kind.
@@ -147,9 +148,9 @@ Declared as facts: eff_loop_kind.
 > is open: the allocation half is complete; the constructor's effect is the
 > ambient-surface question. `class_declaration` is added in section 6.
 
-<a id="eff_alloc_kind"></a>`eff_alloc_kind` includes object_expression, array_expression, reg_exp_literal, function_expression, arrow_function_expression, class_expression, new_expression.
+<a id="eff_alloc_kind"></a>`eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
 
-`eff_here`(a node N, alloc, none) if [`eff_alloc_kind`](#eff_alloc_kind)(K) and N [is of kind](js-model.md#ast_node) K.
+`eff_here`(N, `alloc`, `none`) if [`eff_alloc_kind`](#eff_alloc_kind)(K) and N [is of kind](js-model.md#ast_node) K.
 
 Declared as facts: eff_alloc_kind.
 
@@ -161,66 +162,66 @@ Declared as facts: eff_alloc_kind.
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>`eff_obj_traced`(a node M) if all of:
+<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if all of:
   - M [is a member access](js-dataflow.md#member_node_v);
-  - the object of M is a node O;
+  - the `object` of M is O;
   - O [may be the node](js-dataflow.md#may_be_node) some node.
 
-<a id="eff_heap_of"></a>`eff_heap_of`(a node M, N) either:
+<a id="eff_heap_of"></a>`eff_heap_of`(M, N) either:
 
 1. if all of:
    - M [is a member access](js-dataflow.md#member_node_v);
    - [`eff_obj_traced`](#eff_obj_traced)(M);
-   - N is local;
+   - N is `local`;
 2. if all of:
    - M [is a member access](js-dataflow.md#member_node_v);
-   - N is global;
+   - N is `global`;
    - unless [`eff_obj_traced`](#eff_obj_traced)(M).
 
 <a id="eff_assign"></a>`eff_assign`(an assignment X).
 
-<a id="eff_assign_target"></a>`eff_assign_target`(a node X, a node L) if [`eff_assign`](#eff_assign)(X) and the left of X is L.
+<a id="eff_assign_target"></a>`eff_assign_target`(X, L) if [`eff_assign`](#eff_assign)(X) and the `left` of X is L.
 
-<a id="eff_compound"></a>`eff_compound`(an assignment X) if [`eff_assign`](#eff_assign)(X), unless X [is plain](js-dataflow.md#plain_assign).
+<a id="eff_compound"></a>`eff_compound`(X) if [`eff_assign`](#eff_assign)(X), unless X [is plain](js-dataflow.md#plain_assign).
 
-<a id="eff_member_target"></a>`eff_member_target`(a node L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is a member access](js-dataflow.md#member_node_v).
+<a id="eff_member_target"></a>`eff_member_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is a member access](js-dataflow.md#member_node_v).
 
-<a id="eff_name_target"></a>`eff_name_target`(a node L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is named](js-structure.md#ast_name) some name.
+<a id="eff_name_target"></a>`eff_name_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is named](js-structure.md#ast_name) some name.
 
-`eff_here`(L, write, H) if [`eff_member_target`](#eff_member_target)(L) and [`eff_heap_of`](#eff_heap_of)(L, H).
+`eff_here`(L, `write`, H) if [`eff_member_target`](#eff_member_target)(L) and [`eff_heap_of`](#eff_heap_of)(L, H).
 
-`eff_here`(a node L, read, H) if all of:
-  - [`eff_compound`](#eff_compound)(a node X);
-  - the left of X is L;
+`eff_here`(L, `read`, H) if all of:
+  - [`eff_compound`](#eff_compound)(X);
+  - the `left` of X is L;
   - [`eff_member_target`](#eff_member_target)(L);
   - [`eff_heap_of`](#eff_heap_of)(L, H).
 
-`eff_here`(X, write, local) if [`eff_assign_target`](#eff_assign_target)(X, a node L) and L [is named](js-structure.md#ast_name) some name.
+`eff_here`(X, `write`, `local`) if [`eff_assign_target`](#eff_assign_target)(X, L) and L [is named](js-structure.md#ast_name) some name.
 
-<a id="eff_read_site"></a>`eff_read_site`(a node M) if M [is a member access](js-dataflow.md#member_node_v), unless [`eff_member_target`](#eff_member_target)(M).
+<a id="eff_read_site"></a>`eff_read_site`(M) if M [is a member access](js-dataflow.md#member_node_v), unless [`eff_member_target`](#eff_member_target)(M).
 
-`eff_here`(M, read, H) if [`eff_read_site`](#eff_read_site)(M) and [`eff_heap_of`](#eff_heap_of)(M, H).
+`eff_here`(M, `read`, H) if [`eff_read_site`](#eff_read_site)(M) and [`eff_heap_of`](#eff_heap_of)(M, H).
 
 <a id="eff_member_both"></a>`eff_member_both`(M) if [`eff_read_site`](#eff_read_site)(M) and [`eff_member_target`](#eff_member_target)(M).
 
 > `x++` is a read and a write, on either form.
 
-<a id="eff_update_arg"></a>`eff_update_arg`(an update_expression node U, a node X) if the argument of U is X.
+<a id="eff_update_arg"></a>`eff_update_arg`(an update_expression node U, X) if the `argument` of U is X.
 
 `eff_here`(U, N, E) either:
 
 1. if all of:
-   - [`eff_update_arg`](#eff_update_arg)(U, a node X);
+   - [`eff_update_arg`](#eff_update_arg)(U, X);
    - X [is named](js-structure.md#ast_name) some name;
-   - N is read;
-   - E is local;
+   - N is `read`;
+   - E is `local`;
 2. if all of:
-   - [`eff_update_arg`](#eff_update_arg)(U, a node X);
+   - [`eff_update_arg`](#eff_update_arg)(U, X);
    - X [is named](js-structure.md#ast_name) some name;
-   - N is write;
-   - E is local;
-3. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is read;
-4. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is write.
+   - N is `write`;
+   - E is `local`;
+3. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is `read`;
+4. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is `write`.
 
 > Reading a MUTABLE binding is `read<local>`; reading an immutable one is
 > nothing — Koka's answer: a binding nothing reassigns has no cell. Ordered for
@@ -231,11 +232,11 @@ Declared as facts: eff_alloc_kind.
 
 1. if Name [is assigned](js-dataflow.md#assigns) some node in File;
 2. if all of:
-   - [`eff_update_arg`](#eff_update_arg)(a node U, a node X);
+   - [`eff_update_arg`](#eff_update_arg)(U, X);
    - X [is named](js-structure.md#ast_name) Name;
    - U [is of kind](js-model.md#ast_node) some kind in file File.
 
-`eff_here`(an identifier N, read, local) if all of:
+`eff_here`(N, `read`, `local`) if all of:
   - [`eff_mutable_name`](#eff_mutable_name)(Name, File);
   - N [reads](js-dataflow.md#ident_in) Name in File;
   - unless [`eff_name_target`](#eff_name_target)(N).
@@ -257,19 +258,19 @@ Declared as facts: eff_alloc_kind.
 > `may_throw`, which carries one label — would make a try around a call
 > swallow the callee's WRITES too.
 
-<a id="eff_latent"></a>`eff_latent`(a function F, L, H) if [`eff_here`](js-ambient.md#eff_here)(a node N, L, H) and F [is nearest to](js-dataflow.md#nearest_v) N.
+<a id="eff_latent"></a>`eff_latent`(F, L, H) if [`eff_here`](js-ambient.md#eff_here)(N, L, H) and F [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="eff_discharges"></a>`eff_discharges` lists:
 
 | arg 1 | arg 2 |
 |---|---|
-| catch_clause | exn |
+| `catch_clause` | `exn` |
 
-<a id="eff_discharged_at"></a>`eff_discharged_at`(C, L) if [`eff_catch_here`](#eff_catch_here)(C) and [`eff_discharges`](#eff_discharges)(catch_clause, L).
+<a id="eff_discharged_at"></a>`eff_discharged_at`(C, L) if [`eff_catch_here`](#eff_catch_here)(C) and [`eff_discharges`](#eff_discharges)(`catch_clause`, L).
 
-`eff_latent`(a function F, L, H) if all of:
-  - [`eff_latent`](#eff_latent)(a function G, L, H);
-  - a call C [resolves to](js-callgraph.md#resolves) G;
+`eff_latent`(F, L, H) if all of:
+  - [`eff_latent`](#eff_latent)(G, L, H);
+  - C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - unless [`eff_discharged_at`](#eff_discharged_at)(C, L).
 
@@ -283,15 +284,15 @@ Declared as facts: eff_discharges.
 > discharge agrees with it exactly, because the difference lives in the seven
 > labels it does not carry.
 
-<a id="eff_exn_only"></a>`eff_exn_only`(F) if [`eff_latent`](#eff_latent)(F, exn, none), unless [`may_throw`](js-controlflow.md#may_throw)(F).
+<a id="eff_exn_only"></a>`eff_exn_only`(F) if [`eff_latent`](#eff_latent)(F, `exn`, `none`), unless [`may_throw`](js-controlflow.md#may_throw)(F).
 
-<a id="may_throw_only"></a>`may_throw_only`(F) if [`may_throw`](js-controlflow.md#may_throw)(F), unless [`eff_latent`](#eff_latent)(F, exn, none).
+<a id="may_throw_only"></a>`may_throw_only`(F) if [`may_throw`](js-controlflow.md#may_throw)(F), unless [`eff_latent`](#eff_latent)(F, `exn`, `none`).
 
-<a id="eff_swallowed"></a>`eff_swallowed`(a function F, a call C, L, H) if all of:
+<a id="eff_swallowed"></a>`eff_swallowed`(F, C, L, H) if all of:
   - [`eff_catch_here`](#eff_catch_here)(C);
-  - C [resolves to](js-callgraph.md#resolves) a function G;
+  - C [resolves to](js-callgraph.md#resolves) G;
   - [`eff_latent`](#eff_latent)(G, L, H);
-  - L differs from exn;
+  - L differs from `exn`;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - unless [`eff_latent`](#eff_latent)(F, L, H).
 
@@ -318,8 +319,8 @@ Declared as facts: eff_discharges.
 
 <a id="eff_two_names"></a>`eff_two_names`(F, X, B) if [`effect_of`](#effect_of)(F, X), [`effect_of`](#effect_of)(F, B), and X differs from B.
 
-<a id="eff_join_short"></a>`eff_join_short`(a function F, a function G, J) if all of:
-  - a call C [resolves to](js-callgraph.md#resolves) G;
+<a id="eff_join_short"></a>`eff_join_short`(F, G, J) if all of:
+  - C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`effect_of`](#effect_of)(F, NF);
   - [`effect_of`](#effect_of)(G, NG);
@@ -327,7 +328,7 @@ Declared as facts: eff_discharges.
   - J differs from NF;
   - unless [`eff_catch_here`](#eff_catch_here)(C).
 
-<a id="eff_purer_callee"></a>`eff_purer_callee`(a call C, a function F, a function G) if all of:
+<a id="eff_purer_callee"></a>`eff_purer_callee`(C, F, G) if all of:
   - C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`effect_of`](#effect_of)(F, NF);
@@ -345,21 +346,21 @@ Declared as facts: eff_discharges.
 
 1. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-   - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-   - the object of N is a node O;
+   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
+   - the `object` of N is O;
    - [the prototype](js-dataflow.md#prototype_of) of O is P;
    - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
 2. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-   - [`callee_of`](js-callgraph.md#callee_of)(C, a node N);
-   - the object of N is a node O;
+   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
+   - the `object` of N is O;
    - O [is named](js-structure.md#ast_name) Name;
    - C [is of kind](js-model.md#ast_node) some kind in file File;
    - [`ambient_binding`](js-ambient.md#ambient_binding)(File, Name, P).
 
 `eff_operation`(C, Key) if all of:
   - [`eff_surface`](js-ambient.md#eff_surface)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, a member access N);
+  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
   - N [selects](js-dataflow.md#selects) Key.
 
 <a id="concrete_effect"></a>`concrete_effect`(C, S, Op) if [`eff_surface`](js-ambient.md#eff_surface)(C, S) and [`eff_operation`](js-ambient.md#eff_operation)(C, Op).
@@ -403,7 +404,7 @@ Declared as facts: eff_discharges.
   - [`eff_bot`](#eff_bot)(E);
   - [`eff_suspension_word`](#eff_suspension_word)(Op).
 
-<a id="eff_suspension_word"></a>`eff_suspension_word` includes then, await, next.
+<a id="eff_suspension_word"></a>`eff_suspension_word` includes `then`, `await`, `next`.
 
 Declared as facts: eff_suspension_word.
 
@@ -424,45 +425,45 @@ Declared as facts: eff_suspension_word.
 > in the converting complement: over-reporting a conversion, never missing a
 > call.
 
-<a id="eff_op_inspects"></a>`eff_op_inspects`(a node N) either:
+<a id="eff_op_inspects"></a>`eff_op_inspects`(N) either:
 
-1. if the attribute operator of N is "===";
-2. if the attribute operator of N is "!==";
-3. if the attribute operator of N is "typeof";
-4. if the attribute operator of N is "void";
-5. if the attribute operator of N is "!".
+1. if the attribute `operator` of N is "===";
+2. if the attribute `operator` of N is "!==";
+3. if the attribute `operator` of N is "typeof";
+4. if the attribute `operator` of N is "void";
+5. if the attribute `operator` of N is "!".
 
-<a id="eff_op_beyond"></a>`eff_op_beyond`(a node N, E) either:
+<a id="eff_op_beyond"></a>`eff_op_beyond`(N, E) either:
 
-1. if the attribute operator of N is "instanceof" and E is has_instance;
-2. if the attribute operator of N is "delete" and E is delete_own.
+1. if the attribute `operator` of N is "instanceof" and E is `has_instance`;
+2. if the attribute `operator` of N is "delete" and E is `delete_own`.
 
-<a id="eff_converts"></a>`eff_converts`(a node N) either:
+<a id="eff_converts"></a>`eff_converts`(N) either:
 
 1. if N is a binary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N);
 2. if N is an unary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N).
 
-<a id="eff_coerced"></a>`eff_coerced`(a node N, a node X) either:
+<a id="eff_coerced"></a>`eff_coerced`(N, X) either:
 
-1. if [`eff_converts`](#eff_converts)(N) and the left of N is X;
-2. if [`eff_converts`](#eff_converts)(N) and the right of N is X;
-3. if [`eff_converts`](#eff_converts)(N) and the argument of N is X;
-4. if N is a template and X is among the expressions of N.
+1. if [`eff_converts`](#eff_converts)(N) and the `left` of N is X;
+2. if [`eff_converts`](#eff_converts)(N) and the `right` of N is X;
+3. if [`eff_converts`](#eff_converts)(N) and the `argument` of N is X;
+4. if N is a template and X is among the `expressions` of N.
 
 > `Symbol.toPrimitive` is deliberately absent: a computed key, and what
 > spelling `key_name` gives one is `w_computed_key_names`' open question.
 
 <a id="eff_conv_key"></a>`eff_conv_key` includes "valueOf", "toString".
 
-<a id="eff_conv_object"></a>`eff_conv_object`(N, a node X) if [`eff_coerced`](#eff_coerced)(N, X) and X [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_conv_object"></a>`eff_conv_object`(N, X) if [`eff_coerced`](#eff_coerced)(N, X) and X [may be the node](js-dataflow.md#may_be_node) some node.
 
-<a id="eff_conv_call"></a>`eff_conv_call`(N, a node M) if all of:
-  - [`eff_coerced`](#eff_coerced)(N, a node X);
+<a id="eff_conv_call"></a>`eff_conv_call`(N, M) if all of:
+  - [`eff_coerced`](#eff_coerced)(N, X);
   - X [may be the node](js-dataflow.md#may_be_node) O;
   - [`eff_conv_key`](#eff_conv_key)(Key);
   - [the member](js-dataflow.md#member_value) Key of O holds M.
 
-<a id="eff_conv_overridden"></a>`eff_conv_overridden`(N, a node X) if all of:
+<a id="eff_conv_overridden"></a>`eff_conv_overridden`(N, X) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
   - X [may be the node](js-dataflow.md#may_be_node) O;
   - [`eff_conv_key`](#eff_conv_key)(Key);
@@ -470,14 +471,14 @@ Declared as facts: eff_suspension_word.
 
 <a id="eff_conv_default"></a>`eff_conv_default`(N, X) if [`eff_conv_object`](#eff_conv_object)(N, X), unless [`eff_conv_overridden`](#eff_conv_overridden)(N, X).
 
-<a id="eff_conv_primitive"></a>`eff_conv_primitive`(N, a node X) if all of:
+<a id="eff_conv_primitive"></a>`eff_conv_primitive`(N, X) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
-  - X [may be the literal](js-dataflow.md#may_be_lit) some literal;
+  - X [may be the literal](js-dataflow.md#may_be_lit) some text;
   - unless [`eff_conv_object`](#eff_conv_object)(N, X).
 
-<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, a node X) if all of:
+<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, X) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
-  - unless X [may be the literal](js-dataflow.md#may_be_lit) some literal;
+  - unless X [may be the literal](js-dataflow.md#may_be_lit) some text;
   - unless X [may be the node](js-dataflow.md#may_be_node) some node.
 
 Declared as facts: eff_conv_key.
@@ -485,8 +486,8 @@ Declared as facts: eff_conv_key.
 > A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 > oracle is V8's stack frames, which know nothing about a conversion.
 
-`eff_latent`(a function F, L, H) if all of:
-  - [`eff_conv_call`](#eff_conv_call)(a node N, M);
+`eff_latent`(F, L, H) if all of:
+  - [`eff_conv_call`](#eff_conv_call)(N, M);
   - [`eff_latent`](#eff_latent)(M, L, H);
   - F [is nearest to](js-dataflow.md#nearest_v) N.
 
@@ -502,11 +503,11 @@ Declared as facts: eff_conv_key.
 
 <a id="eff_conv_unaccounted"></a>`eff_conv_unaccounted`(N, X) if [`eff_coerced`](#eff_coerced)(N, X), unless [`eff_conv_accounted`](#eff_conv_accounted)(N, X).
 
-<a id="eff_op_off_kind"></a>`eff_op_off_kind`(a node N, K) if all of:
+<a id="eff_op_off_kind"></a>`eff_op_off_kind`(N, K) if all of:
   - [`eff_op_inspects`](#eff_op_inspects)(N);
   - N [is of kind](js-model.md#ast_node) K;
-  - K differs from binary_expression;
-  - K differs from unary_expression.
+  - K differs from `binary_expression`;
+  - K differs from `unary_expression`.
 
 ## 5c. AN IMPORT EVALUATES A MODULE
 
@@ -517,27 +518,27 @@ Declared as facts: eff_conv_key.
 > declaration ALL of whose specifiers are erased evaluates nothing and one
 > with NO specifier evaluates everything, hence `eff_has_spec`.
 
-<a id="eff_mod_src"></a>`eff_mod_src`(a node N, Src, F) either:
+<a id="eff_mod_src"></a>`eff_mod_src`(N, Src, F) either:
 
 1. if N [sources](js-dataflow.md#module_source) Src in F;
 2. if all of:
    - N is an import_expression node;
    - N is in file F;
-   - the source of N is a node S;
+   - the `source` of N is S;
    - S [is written as](js-structure.md#ast_value) Src.
 
-<a id="eff_type_only"></a>`eff_type_only`(a node I) either:
+<a id="eff_type_only"></a>`eff_type_only`(I) either:
 
-1. if the attribute import_kind of I is "type";
-2. if the attribute export_kind of I is "type".
+1. if the attribute `import_kind` of I is "type";
+2. if the attribute `export_kind` of I is "type".
 
-<a id="eff_has_spec"></a>`eff_has_spec`(a node I) if [`eff_mod_src`](#eff_mod_src)(I, something, something) and some node is among the specifiers of I.
+<a id="eff_has_spec"></a>`eff_has_spec`(I) if [`eff_mod_src`](#eff_mod_src)(I, something, something) and some node is among the `specifiers` of I.
 
-<a id="eff_value_spec"></a>`eff_value_spec`(a node I) if all of:
+<a id="eff_value_spec"></a>`eff_value_spec`(I) if all of:
   - [`eff_mod_src`](#eff_mod_src)(I, something, something);
-  - a node Sp is among the specifiers of I;
-  - unless the attribute import_kind of Sp is "type";
-  - unless the attribute export_kind of Sp is "type".
+  - Sp is among the `specifiers` of I;
+  - unless the attribute `import_kind` of Sp is "type";
+  - unless the attribute `export_kind` of Sp is "type".
 
 <a id="eff_erased"></a>`eff_erased`(I) either:
 
@@ -587,16 +588,16 @@ Declared as facts: eff_conv_key.
 > group's effect). No `load` label: the suspension of `import()` is CONTROL,
 > as `await` is.
 
-<a id="eff_in_fn"></a>`eff_in_fn`(a node N) if some function [is nearest to](js-dataflow.md#nearest_v) N.
+<a id="eff_in_fn"></a>`eff_in_fn`(N) if some function [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="eff_module"></a>`eff_module`(F, L, H) either:
 
 1. if all of:
-   - [`eff_here`](js-ambient.md#eff_here)(a node N, L, H);
+   - [`eff_here`](js-ambient.md#eff_here)(N, L, H);
    - N [is of kind](js-model.md#ast_node) some kind in file F;
    - unless [`eff_in_fn`](#eff_in_fn)(N);
 2. if all of:
-   - a call C [resolves to](js-callgraph.md#resolves) a function G;
+   - C [resolves to](js-callgraph.md#resolves) G;
    - C [is of kind](js-model.md#ast_node) some kind in file F;
    - [`eff_latent`](#eff_latent)(G, L, H);
    - unless [`eff_in_fn`](#eff_in_fn)(C).
@@ -631,7 +632,7 @@ Declared as facts: eff_conv_key.
   - X differs from B.
 
 <a id="eff_mod_join_short"></a>`eff_mod_join_short`(F, T, J) if all of:
-  - [`eff_evaluates_at`](#eff_evaluates_at)(a node I, T);
+  - [`eff_evaluates_at`](#eff_evaluates_at)(I, T);
   - I [is of kind](js-model.md#ast_node) some kind in file F;
   - [`effect_of_module`](#effect_of_module)(F, NF);
   - [`effect_of_module`](#effect_of_module)(T, NT);
@@ -656,10 +657,10 @@ Declared as facts: eff_conv_key.
 1. if [`pattern_accessor`](js-controlflow.md#pattern_accessor)(N, M);
 2. if [`pattern_next`](js-controlflow.md#pattern_next)(N, M).
 
-<a id="eff_edge_closed"></a>`eff_edge_closed`(F, a function G) either:
+<a id="eff_edge_closed"></a>`eff_edge_closed`(F, G) either:
 
-1. if a call C [resolves to](js-callgraph.md#resolves) G and [`nearest_fn`](js-callgraph.md#nearest_fn)(F, C);
-2. if a call C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
+1. if C [resolves to](js-callgraph.md#resolves) G and [`nearest_fn`](js-callgraph.md#nearest_fn)(F, C);
+2. if C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
 <a id="eff_edge_unclosed"></a>`eff_edge_unclosed`(F, G, L, H) if all of:
   - [`calls`](js-callgraph.md#calls)(F, G);
@@ -679,21 +680,21 @@ Declared as facts: eff_conv_key.
 > price, one row today. Methods are not field kinds: they are latent.
 > `class_accessor_property` adds no label beyond a plain field.
 
-<a id="eff_class_form"></a>`eff_class_form` includes class_declaration.
+<a id="eff_class_form"></a>`eff_class_form` includes `class_declaration`.
 
-<a id="eff_field_kind"></a>`eff_field_kind` includes class_property, class_private_property, class_accessor_property.
+<a id="eff_field_kind"></a>`eff_field_kind` includes `class_property`, `class_private_property`, `class_accessor_property`.
 
-<a id="eff_class_body"></a>`eff_class_body`(a node CD, a node P) if all of:
+<a id="eff_class_body"></a>`eff_class_body`(CD, P) if all of:
   - [`eff_class_form`](#eff_class_form)(K);
   - CD [is of kind](js-model.md#ast_node) K;
-  - the body of CD is a node B;
-  - P is among the body of B.
+  - the `body` of CD is B;
+  - P is among the `body` of B.
 
-<a id="eff_field_value"></a>`eff_field_value`(CD, a node P, a node V) if all of:
+<a id="eff_field_value"></a>`eff_field_value`(CD, P, V) if all of:
   - [`eff_class_body`](#eff_class_body)(CD, P);
   - [`eff_field_kind`](#eff_field_kind)(K);
   - P [is of kind](js-model.md#ast_node) K;
-  - the value of P is V.
+  - the `value` of P is V.
 
 Declared as facts: eff_class_form, eff_field_kind.
 
@@ -703,20 +704,20 @@ Declared as facts: eff_class_form, eff_field_kind.
 > in neither. A `static_block` carries no `static` attribute — the word is in
 > its kind — so it gets its own arm.
 
-<a id="eff_field_moment"></a>`eff_field_moment`(a node P, N) either:
+<a id="eff_field_moment"></a>`eff_field_moment`(P, N) either:
 
 1. if all of:
    - [`eff_field_value`](#eff_field_value)(something, P, something);
-   - the attribute static of P is true;
-   - N is definition;
+   - the attribute `static` of P is `true`;
+   - N is `definition`;
 2. if all of:
    - [`eff_field_value`](#eff_field_value)(something, P, something);
-   - the attribute static of P is false;
-   - N is construction.
+   - the attribute `static` of P is `false`;
+   - N is `construction`.
 
-<a id="eff_define_part"></a>`eff_define_part`(CD, V) if [`eff_field_value`](#eff_field_value)(CD, P, V) and [`eff_field_moment`](#eff_field_moment)(P, definition).
+<a id="eff_define_part"></a>`eff_define_part`(CD, V) if [`eff_field_value`](#eff_field_value)(CD, P, V) and [`eff_field_moment`](#eff_field_moment)(P, `definition`).
 
-<a id="eff_construct_part"></a>`eff_construct_part`(CD, V) if [`eff_field_value`](#eff_field_value)(CD, P, V) and [`eff_field_moment`](#eff_field_moment)(P, construction).
+<a id="eff_construct_part"></a>`eff_construct_part`(CD, V) if [`eff_field_value`](#eff_field_value)(CD, P, V) and [`eff_field_moment`](#eff_field_moment)(P, `construction`).
 
 `eff_define_part`(CD, a static block S) if [`eff_class_body`](#eff_class_body)(CD, S).
 
@@ -726,24 +727,24 @@ Declared as facts: eff_class_form, eff_field_kind.
 > kind that carries no such attribute (private members) —
 > `attr_blind_guard[audit]` said so in one run.
 
-`eff_define_part`(a node CD, a node S) if all of:
+`eff_define_part`(CD, S) if all of:
   - [`eff_class_form`](#eff_class_form)(K);
   - CD [is of kind](js-model.md#ast_node) K;
-  - the super_class of CD is S.
+  - the `super_class` of CD is S.
 
-<a id="eff_plain_key"></a>`eff_plain_key`(a node P) if [`eff_class_body`](#eff_class_body)(something, P), unless the attribute computed of P is true.
+<a id="eff_plain_key"></a>`eff_plain_key`(P) if [`eff_class_body`](#eff_class_body)(something, P), unless the attribute `computed` of P is `true`.
 
-`eff_define_part`(CD, a node KN) either:
+`eff_define_part`(CD, KN) either:
 
 1. if all of:
-   - [`eff_class_body`](#eff_class_body)(CD, a node P);
-   - the key of P is KN;
+   - [`eff_class_body`](#eff_class_body)(CD, P);
+   - the `key` of P is KN;
    - unless [`eff_plain_key`](#eff_plain_key)(P);
 2. if all of:
    - [`eff_class_form`](#eff_class_form)(K);
    - CD [is of kind](js-model.md#ast_node) K;
-   - KN is among the decorators of CD;
-3. if [`eff_class_body`](#eff_class_body)(CD, a node P) and KN is among the decorators of P.
+   - KN is among the `decorators` of CD;
+3. if [`eff_class_body`](#eff_class_body)(CD, P) and KN is among the `decorators` of P.
 
 > What runs when a part is reached, stopping at a function: `static forge =
 > (n) => hammered(n)` contributes `alloc`, not what `hammered` does. A try
@@ -756,7 +757,7 @@ Declared as facts: eff_class_form, eff_field_kind.
 1. if [`eff_define_part`](#eff_define_part)(something, P) and N is P;
 2. if [`eff_construct_part`](#eff_construct_part)(something, P) and N is P;
 3. if all of:
-   - [`eff_runs_in`](#eff_runs_in)(P, a node Y);
+   - [`eff_runs_in`](#eff_runs_in)(P, Y);
    - Y [is in file](js-structure.md#ast_in) N;
    - unless [`fn_node_v`](js-dataflow.md#fn_node_v)(Y).
 
@@ -779,8 +780,8 @@ Declared as facts: eff_class_form, eff_field_kind.
    - [`eff_here`](js-ambient.md#eff_here)(X, L, H);
 2. if all of:
    - [`eff_define_part`](#eff_define_part)(CD, P);
-   - [`eff_runs_in`](#eff_runs_in)(P, a call C);
-   - C [resolves to](js-callgraph.md#resolves) a function G;
+   - [`eff_runs_in`](#eff_runs_in)(P, C);
+   - C [resolves to](js-callgraph.md#resolves) G;
    - [`eff_latent`](#eff_latent)(G, L, H);
    - unless [`eff_discharged_at`](#eff_discharged_at)(C, L).
 
@@ -792,11 +793,11 @@ Declared as facts: eff_class_form, eff_field_kind.
    - [`eff_here`](js-ambient.md#eff_here)(X, L, H);
 2. if all of:
    - [`eff_construct_part`](#eff_construct_part)(CD, P);
-   - [`eff_runs_in`](#eff_runs_in)(P, a call C);
-   - C [resolves to](js-callgraph.md#resolves) a function G;
+   - [`eff_runs_in`](#eff_runs_in)(P, C);
+   - C [resolves to](js-callgraph.md#resolves) G;
    - [`eff_latent`](#eff_latent)(G, L, H);
    - unless [`eff_discharged_at`](#eff_discharged_at)(C, L);
-3. if [the super](js-dataflow.md#super_of) of CD is a class SD and [`class_construct_eff`](#class_construct_eff)(SD, L, H).
+3. if [the super](js-dataflow.md#super_of) of CD is SD and [`class_construct_eff`](#class_construct_eff)(SD, L, H).
 
 > The two seeds. Evaluating a class DECLARATION allocates (a fresh mutable
 > `prototype`, where a function declaration is hoisted and performs nothing
@@ -806,7 +807,7 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 `eff_here`(a new X, L, H) if X [may be the node](js-dataflow.md#may_be_node) CD and [`class_construct_eff`](#class_construct_eff)(CD, L, H).
 
-`eff_alloc_kind` includes class_declaration.
+`eff_alloc_kind` includes `class_declaration`.
 
 > A field initialiser runs at definition or construction, never both, never
 > neither — an identity, true of any corpus.
@@ -818,18 +819,18 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 <a id="eff_moment_unplaced"></a>`eff_moment_unplaced`(P) if [`eff_field_value`](#eff_field_value)(something, P, something), unless [`eff_field_moment`](#eff_field_moment)(P, something).
 
-<a id="eff_define_unreached"></a>`eff_define_unreached`(a node CE, a node S) either:
+<a id="eff_define_unreached"></a>`eff_define_unreached`(CE, S) either:
 
-1. if CE is a class and the super_class of CE is S;
-2. if CE is a class, the body of CE is a node B, S is among the body of B, and S is a static block;
+1. if CE is a class and the `super_class` of CE is S;
+2. if CE is a class, the `body` of CE is B, S is among the `body` of B, and S is a static block;
 3. if all of:
    - CE is a class;
-   - the body of CE is a node B;
-   - a node P is among the body of B;
+   - the `body` of CE is B;
+   - P is among the `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);
    - P [is of kind](js-model.md#ast_node) K;
-   - the attribute static of P is true;
-   - the value of P is S.
+   - the attribute `static` of P is `true`;
+   - the `value` of P is S.
 
 ## 7. Where this pack cannot look
 
@@ -865,12 +866,12 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 | arg 1 | arg 2 |
 |---|---|
-| code | main |
-| code | flow |
-| flow | code |
-| flow | main |
-| audit | code |
-| audit | flow |
+| `code` | `main` |
+| `code` | `flow` |
+| `flow` | `code` |
+| `flow` | `main` |
+| `audit` | `code` |
+| `audit` | `flow` |
 
 ## Read from other files
 

@@ -1,13 +1,10 @@
 ---
 world: js-vocabulary
 books: audit, main
+default: main
 ---
 
 # js-vocabulary
-
-## Terms
-
-*call*, *index*, *node*.
 
 > js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
 > list of kinds it claims to describe. `vocabulary_gap[audit]` in js-model
@@ -31,12 +28,12 @@ books: audit, main
 
 <a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(?Rel,?_$0,?_$1,?_$2).
 
-A call L passes a node Args at N, in the main either:
+L passes Args at N, in the main either:
 
 1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and N is 1;
 2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and N is +(?I,1).
 
-<a id="lit_arg"></a>`lit_arg`(a call L, I, X) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
+<a id="lit_arg"></a>`lit_arg`(L, I, X) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted
@@ -53,7 +50,7 @@ A call L passes a node Args at N, in the main either:
 > second). The limit: a position where EVERY constant is an undeclared kind
 > is invisible, which is the cheaper mistake.
 
-<a id="kind_slot"></a>`kind_slot`(Rel, I) if [`slot_atom`](#slot_atom)(Rel, I, X) and `node_kind`(js, X).
+<a id="kind_slot"></a>`kind_slot`(Rel, I) if [`slot_atom`](#slot_atom)(Rel, I, X) and `node_kind`(`js`, X).
 
 <a id="kind_named_by_rule"></a>`kind_named_by_rule`(K) if [`slot_atom`](#slot_atom)(Rel, I, K) and [`kind_slot`](#kind_slot)(Rel, I).
 

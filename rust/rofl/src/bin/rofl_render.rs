@@ -272,7 +272,7 @@ impl<'a> R<'a> {
                     }
                 } else { name.to_string() }
             }
-            TermK::Atom(a) => self.h.name(a).to_string(),
+            TermK::Atom(a) => format!("`{}`", self.h.name(a)),
             TermK::Str(s) => format!("\"{}\"", self.h.name(s)),
             TermK::Int(i) => i.to_string(),
             TermK::Func(_) => self.h.canon(t),
@@ -355,17 +355,6 @@ impl<'a> R<'a> {
                     absorbed.insert(i);
                     if !is_wild(h, l.args[2]) { residual.insert(i, l.args[2]); }
                     if let Some(j) = extra { absorbed.insert(j); }
-                }
-            }
-        }
-        let mut lits: Vec<&Lit> = vec![&c.head];
-        for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => lits.push(l), _ => {} } }
-        for l in lits {
-            if let Some(p) = self.phrase_for(l) {
-                for part in &p.parts {
-                    if let Part::Hole(i, n) = part {
-                        if let TermK::Var(v) = l.args[*i].kind() { if !h.name(v).starts_with("_$") { nouns.entry(v).or_insert(n.clone()); } }
-                    }
                 }
             }
         }
@@ -732,7 +721,10 @@ impl<'a> R<'a> {
             }
         }
         let mut out = String::new();
-        let _ = writeln!(out, "---\nworld: {}\nbooks: {}\n---\n", doc.stem, books.iter().cloned().collect::<Vec<_>>().join(", "));
+        let mut head_books: BTreeMap<String, usize> = BTreeMap::new();
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() { *head_books.entry(self.book_name(c.head.book)).or_insert(0) += 1; } } } }
+        let default_book = head_books.iter().max_by_key(|(_, n)| **n).map(|(b, _)| b.clone()).unwrap_or_else(|| "main".into());
+        let _ = writeln!(out, "---\nworld: {}\nbooks: {}\ndefault: {}\n---\n", doc.stem, books.iter().cloned().collect::<Vec<_>>().join(", "), default_book);
         let _ = writeln!(out, "# {}\n", doc.stem);
         let (real, bare): (Vec<&String>, Vec<&String>) = nouns_used.iter().partition(|n| !n.ends_with(" node"));
         if !real.is_empty() {

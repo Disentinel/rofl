@@ -1,13 +1,10 @@
 ---
 world: js-env
 books: audit, code, main
+default: audit
 ---
 
 # js-env
-
-## Terms
-
-*attribute*, *child*, *file*, *kind*, *line*, *literal*, *name*, *node*.
 
 > js-env.rofl — THE ENVIRONMENT LAYER: is this program valid HERE, and what
 > exactly stops being valid THERE. Reads `ast_node[code]` and facts/js-env.rofl
@@ -29,7 +26,7 @@ books: audit, code, main
 
 | arg 1 | arg 2 |
 |---|---|
-| audit | code |
+| `audit` | `code` |
 
 ## 1. WHAT AN ENVIRONMENT GIVES — COMPOSITION, NOT COMPARISON. An integer rank
 
@@ -59,7 +56,7 @@ books: audit, code, main
 > can tell ES2015 from ES2020. Top-level `await` is decided by an ancestor:
 > `ast_attr(F, async, true)` marks every function form the scanner emits.
 
-<a id="uses"></a>`uses`(a node N, F) either:
+<a id="uses"></a>`uses`(N, F) either:
 
 1. if N [is of kind](js-model.md#ast_node) K, `env_lang`(L), and `kind_needs`(L, K, F);
 2. if all of:
@@ -70,20 +67,20 @@ books: audit, code, main
 3. if all of:
    - N [is of kind](js-model.md#ast_node) K;
    - `env_lang`(L);
-   - `child_needs`(L, K, a child Field, Name, F);
-   - the Field of N is a node C;
+   - `child_needs`(L, K, Field, Name, F);
+   - the Field of N is C;
    - C [is named](js-structure.md#ast_name) Name.
 
 > Order is for cost: the two-row table binds Key and V, `ast_attr` is probed
 > by the rare `async=true`, and only then does `ast_within` walk down. The
 > negation goes last with N bound.
 
-<a id="within_attr"></a>`within_attr`(a node N, Key, V) if all of:
+<a id="within_attr"></a>`within_attr`(N, Key, V) if all of:
   - `outside_attr_needs`(something, something, Key, V, something);
-  - the attribute Key of a node X is V;
+  - the attribute Key of X is V;
   - X [is within](js-structure.md#ast_within) N.
 
-`uses`(a node N, F) if all of:
+`uses`(N, F) if all of:
   - N [is of kind](js-model.md#ast_node) K;
   - `env_lang`(L);
   - `outside_attr_needs`(L, K, Key, V, F);
@@ -98,11 +95,11 @@ books: audit, code, main
 
 <a id="unsupported"></a>`unsupported`(E, N, F) if `environment`(E) and [`uses`](#uses)(N, F), unless [`env_has`](#env_has)(E, F).
 
-<a id="unsupported_at"></a>`unsupported_at`(E, File, Line, F) if [`unsupported`](#unsupported)(E, a node N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="unsupported_at"></a>`unsupported_at`(E, File, Line, F) if [`unsupported`](#unsupported)(E, N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
-<a id="uses_at"></a>`uses_at`(File, Line, F) if [`uses`](#uses)(a node N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="uses_at"></a>`uses_at`(File, Line, F) if [`uses`](#uses)(N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
-<a id="uses_kind"></a>`uses_kind`(K, F) if [`uses`](#uses)(a node N, F) and N [is of kind](js-model.md#ast_node) K.
+<a id="uses_kind"></a>`uses_kind`(K, F) if [`uses`](#uses)(N, F) and N [is of kind](js-model.md#ast_node) K.
 
 <a id="unsupported_in"></a>`unsupported_in`(E, File, F) if [`unsupported_at`](#unsupported_at)(E, File, something, F).
 
@@ -110,7 +107,7 @@ books: audit, code, main
 > so a clean file produces a POSITIVE row: a silence cannot be told from a
 > model that did not run.
 
-<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, a node N, something) and N [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, N, something) and N [is of kind](js-model.md#ast_node) some kind in file File.
 
 > A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 > says so; the denominator is every file the scanner reported on, and a
@@ -151,7 +148,7 @@ Declared as facts: ast_parse_error.
 
 <a id="lost_feature"></a>`lost_feature`(From, To, F) if [`lost`](#lost)(From, To, something, F).
 
-<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if [`lost`](#lost)(From, To, a node N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if [`lost`](#lost)(From, To, N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## 5. THE GATES. Each is a statement this layer makes about itself, and
 

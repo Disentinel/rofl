@@ -1,13 +1,10 @@
 ---
 world: js-attrs
 books: audit, code, main
+default: main
 ---
 
 # js-attrs
-
-## Terms
-
-*attribute*, *child*, *kind*, *literal*, *node*.
 
 > js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
 > (`w_unconsumed_attribute`). Four times a design note claimed a fact was
@@ -22,7 +19,7 @@ books: audit, code, main
 > value, where a key read with a variable value is a rule reading every value.
 
 <a id="attr_lit"></a>`attr_lit`(L, K, V) if all of:
-  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_attr);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, `ast_attr`);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, K);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 3, V).
 
@@ -107,7 +104,7 @@ Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
   - [`attr_lit`](#attr_lit)(L, K, V);
   - [`pos_prem`](#pos_prem)(R, L2);
   - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, Rel);
-  - Rel differs from ast_attr;
+  - Rel differs from `ast_attr`;
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, I, K);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, J, V).
 
@@ -152,7 +149,7 @@ Declared as facts: attr_table_bridged.
 
 <a id="child_lit"></a>`child_lit`(L, S, F) if all of:
   - [`body_lit`](js-vocabulary.md#body_lit)(L);
-  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, ast_child);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L, `ast_child`);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, F).
 
@@ -174,25 +171,25 @@ Declared as facts: attr_table_bridged.
   - [`attr_test_lit`](#attr_test_lit)(L, S, K);
   - [`attr_test_svar`](#attr_test_svar)(L, S);
   - [`rule_prem`](#rule_prem)(R, L2);
-  - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, ast_node);
+  - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, `ast_node`);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 1, S);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 2, Kind);
-  - `node_kind`(js, Kind).
+  - `node_kind`(`js`, Kind).
 
 <a id="attr_guard_pinned"></a>`attr_guard_pinned`(R, K, S) if [`attr_guard_kind`](#attr_guard_kind)(R, K, S, something).
 
-<a id="attr_slot_gap"></a>`attr_slot_gap`(K, a child F, Kind) either:
+<a id="attr_slot_gap"></a>`attr_slot_gap`(K, F, Kind) either:
 
 1. if all of:
    - [`attr_guard_slot`](#attr_guard_slot)(R, K, S, F);
-   - some node is among the F of a node P;
+   - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless [`attr_guard_pinned`](#attr_guard_pinned)(R, K, S);
    - unless the attribute K of P is some literal;
 2. if all of:
    - [`attr_guard_slot`](#attr_guard_slot)(R, K, S, F);
    - [`attr_guard_kind`](#attr_guard_kind)(R, K, S, Kind);
-   - some node is among the F of a node P;
+   - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless the attribute K of P is some literal.
 
@@ -212,18 +209,18 @@ Declared as facts: attr_table_bridged.
   - [`child_lit_svar`](#child_lit_svar)(L2, S);
   - unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
 
-<a id="attr_pos_slot_gap"></a>`attr_pos_slot_gap`(K, a child F, Kind) either:
+<a id="attr_pos_slot_gap"></a>`attr_pos_slot_gap`(K, F, Kind) either:
 
 1. if all of:
    - [`attr_guard_slot_pos`](#attr_guard_slot_pos)(R, K, S, F);
-   - some node is among the F of a node P;
+   - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless [`attr_guard_pinned`](#attr_guard_pinned)(R, K, S);
    - unless the attribute K of P is some literal;
 2. if all of:
    - [`attr_guard_slot_pos`](#attr_guard_slot_pos)(R, K, S, F);
    - [`attr_guard_kind`](#attr_guard_kind)(R, K, S, Kind);
-   - some node is among the F of a node P;
+   - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless the attribute K of P is some literal.
 
@@ -242,11 +239,11 @@ Declared as facts: attr_slot_gap_ok.
 > kind is present in the slot, so `attr_slot_gap` finds nothing, and the
 > guard is blind to exactly the nodes that lack it.
 
-<a id="attr_kind_has"></a>`attr_kind_has`(Kind, K) if a node P [is of kind](js-model.md#ast_node) Kind and the attribute K of P is some literal.
+<a id="attr_kind_has"></a>`attr_kind_has`(Kind, K) if P [is of kind](js-model.md#ast_node) Kind and the attribute K of P is some literal.
 
 <a id="attr_kind_lacks"></a>`attr_kind_lacks`(Kind, K) if all of:
   - [`attr_kind_has`](#attr_kind_has)(Kind, K);
-  - a node P [is of kind](js-model.md#ast_node) Kind;
+  - P [is of kind](js-model.md#ast_node) Kind;
   - unless the attribute K of P is some literal.
 
 <a id="attr_kind_split"></a>`attr_kind_split`(K, Kind) if all of:
