@@ -6,18 +6,6 @@ default: main
 
 # js-pack-home
 
-## Signatures
-
-- asserts(pack P, relation Rel, with term Args) (pack_fact)
-- the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3) (fwalk)
-- the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3) (fslot)
-- has_a_kind_slot_in_facts(relation Rel, at index I) (fkind_slot)
-- declares_the_kind(pack P, kind K) (pack_declares)
-- speaks_of_the_kind(pack P, kind K) (pack_speaks)
-- is_the_base_pack(pack P) (base_pack)
-- declares_without_speaking_of(pack P, kind K) (kind_home_unbacked), in the audit
-- borrows_the_kind(pack P, kind K) (pack_borrows), in the audit
-
 > js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
 > a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
 > vocabulary's home: it is the deliberately tiny BASE every world loads.
@@ -81,6 +69,8 @@ Declared as facts: base_pack.
 > only MATCH on, since `premise_lit` has no file
 > (`f_a_rule_has_no_file_and_a_fact_does`); and it says nothing about a world
 > it is not loaded into, where `orphan_claim` stays the check.
+
+In the audit:
 
 <a id="kind_home_unbacked"></a>A pack declares without speaking of a kind K if it [declares the kind](#pack_declares) K and it neither [speaks of the kind](#pack_speaks) K nor [is the base pack](#base_pack).
 

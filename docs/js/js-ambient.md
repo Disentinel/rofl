@@ -6,57 +6,11 @@ default: main
 
 # js-ambient
 
-## Terms
-
-*member access*.
-
 ## Guards
 
 A noun that is a relation: the noun on a variable is the relation holding of it.
 
 - a member access: `member_node_v`
-
-## Signatures
-
-- the_origin(of surface Spec, is origin N) (surface_origin)
-- has_two_origins(surface S, origin A, origin B) (surface_two_origins), in the audit
-- names_the_surface(name Local:1, surface Spec:2, in file File:0) (ambient_binding)
-- names_an_unowned_surface(name Name:1, surface S:2, in file File:0) (ambient_binding_unowned), in the audit
-- is_a_label_on_the_heap(effect X, heap H) (amb_atom_label)
-- falls_short(effect N:2, of effect label L:0, at host H:1) (amb_short_at)
-- is_covered(effect label L, at host H, by effect N) (amb_covers_at)
-- has_a_lower_cover(effect label L, at host H, than effect N) (amb_covers_at_low)
-- the_effect(of effect label L, at host H, is effect N) (eff_of_label)
-- the_landmark(of effect X, is effect N) (eff_of_host)
-- has_no_landmark(effect X) (host_atom_unmapped), in the audit
-- has_two_host_effects(host A, effect X, effect Y) (host_atom_two_names), in the audit
-- has_the_ambient_effect(spec Spec, effect E:2, at key Key:1) (ambient_effect)
-- has_the_surface_default(name Name, effect E) (ambient_global_default)
-- is_selected_on_the_global(key Key:1, name Name:0) (amb_global_member), in the flow
-- is_enumerated(surface S) (ambient_enumerated)
-- is_unenumerated(surface S) (ambient_unenumerated), in the flow
-- calls_the_named_import(call C, key Key:2, of surface Spec:1) (amb_named_call), in the flow
-- reaches_the_surface(call C, surface Spec) (eff_surface), in the flow
-- performs_the_operation(call C, operation Key) (eff_operation), in the flow
-- calls_the_global(call C, name Name) (amb_global_call), in the flow
-- constructs_the_ambient_global(new X, name Name) (amb_construct), in the flow
-- has_the_effect(node E, effect label L, at host H) (eff_here), in the flow
-- has_the_mutator(prototype P, key Key) (lib_mutator)
-- has_no_readonly_twin(prototype P) (amb_proto_unsplit), in the flow
-- has_a_readonly_only_member(prototype P, key Key) (lib_readonly_only), in the audit
-- has_an_untraced_receiver(prototype P) (amb_proto_untraced)
-- the_heap(of prototype P, is heap H) (amb_proto_heap)
-- has_the_receiver_prototype(member access M, prototype P) (amb_proto_recv), in the flow
-- is_split_on_the_heap(prototype P, at member access M) (amb_proto_heap_split), in the audit
-- is_not_constructible(name Name) (amb_not_constructible)
-- is_off_the_surface(operation Op:1, of surface S:0) (ambient_off_surface), in the flow
-- is_attributed(surface S) (amb_surface_attributed)
-- is_unattributed(surface S) (ambient_surface_unattributed), in the flow
-- owes_the_operation(surface S, operation Op) (amb_owed_op), in the flow
-- is_owed_by(surface S:1, origin O:0) (ambient_owed), in the flow
-- is_an_exception_source(call C) (amb_exn_source), in the flow
-- carries_an_exception(function F) (amb_exn_carrier), in the flow
-- has_an_unexplained_exception(function F) (eff_exn_unexplained), in the audit
 
 > js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
 > and the map into the effect lattice. Both DERIVED: this pack authors not one
@@ -107,6 +61,8 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
 > surface with two origins would have every effect attributed twice.
 
+In the audit:
+
 <a id="surface_two_origins"></a>A surface has two origins X and B if all of:
   - [the origin](#surface_origin) of it is X;
   - [the origin](#surface_origin) of it is B;
@@ -117,6 +73,8 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > stands for a whole surface, a FREE GLOBAL stands for itself, and a NAMED
 > IMPORT binds a function rather than the module, so it gets no row here and
 > has its own site rule in section 5.
+
+In the main:
 
 <a id="ambient_binding"></a>Local names the surface Spec in File if File [imports the namespace](js-host.md#host_module_ns) Local of Spec.
 
@@ -138,6 +96,8 @@ Name names the surface N in File either:
 
 > empty by construction; the place a fourth door would arrive without an origin
 
+In the audit:
+
 <a id="ambient_binding_unowned"></a>Name names an unowned surface S in File if Name [names the surface](#ambient_binding) S in File, unless [the origin](#surface_origin) of S is some origin.
 
 ## 3. THE TRANSLATION — a host effect atom is a lattice landmark, derived.
@@ -149,6 +109,8 @@ Name names the surface N in File either:
 > not allocated in this program.
 
 <a id="amb_heap"></a>`amb_heap` includes `none`, `global`.
+
+In the main:
 
 <a id="amb_atom_label"></a>An effect is a label on the heap H if it is a host effect, it is a label at H, and [`amb_heap`](#amb_heap)(H).
 
@@ -177,6 +139,8 @@ The landmark of an effect X is X if X is a host effect but is not a label at som
 
 > an atom with no landmark disappears silently; one with two is ambiguity
 
+In the audit:
+
 <a id="host_atom_unmapped"></a>An effect has no landmark if it is a host effect, unless [the landmark](#eff_of_host) of it is some effect.
 
 <a id="host_atom_two_names"></a>A host has two host effects X and Y if all of:
@@ -189,6 +153,8 @@ The landmark of an effect X is X if X is a host effect but is not a label at som
 > 4a. The module half is corpus-independent: `member_effect[code]` ranges
 > over `host_module_member`, which the TypeScript checker enumerated.
 
+In the main:
+
 <a id="ambient_effect"></a>A spec has the ambient effect E at Key if it [has the member effect](js-host.md#member_effect) X at Key and [the landmark](#eff_of_host) of X is E.
 
 > 4b. The global half is NOT, because scanners/host_lib.ts stops at the
@@ -196,13 +162,17 @@ The landmark of an effect X is X if X is a host effect but is not a label at som
 > global's effect is its surface default, landing on the members the corpus
 > selects; `ambient_unenumerated[flow]` names the surfaces in that state.
 
-<a id="ambient_global_default"></a>Name has the surface default an effect E if some host attributes the global Name to an effect X and [the landmark](#eff_of_host) of X is E.
+<a id="ambient_global_default"></a>Name has the surface default E if some host attributes the global Name to an effect X and [the landmark](#eff_of_host) of X is E.
+
+In the flow:
 
 <a id="amb_global_member"></a>Key is selected on the global Name if all of:
   - a node O [refers to the free](js-globals.md#free_global) Name in some file;
   - the `object` of a node M is O;
   - M [selects](js-dataflow.md#selects) Key;
   - some host attributes the global Name to some effect.
+
+In the main:
 
 A spec has the ambient effect E at Key if Key [is selected on the global](#amb_global_member) it and it [has the surface default](#ambient_global_default) E.
 
@@ -226,6 +196,8 @@ Declared as facts: amb_operation_word.
 1. if `node` exposes some key of S;
 2. if S is a global since some release with some form;
 3. if S has the member some key since some release.
+
+In the flow:
 
 <a id="ambient_unenumerated"></a>A surface is unenumerated if it [has the ambient effect](#ambient_effect) some effect at some key, unless it [is enumerated](#ambient_enumerated).
 
@@ -289,6 +261,8 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > The subtraction is here rather than in the scanner so the inference is a
 > rule.
 
+In the main:
+
 <a id="lib_mutator"></a>A prototype has the mutator Key if all of:
   - it has the member Key since some release;
   - `lib_readonly_view`(it, something);
@@ -297,9 +271,13 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > Without `lib_readonly_view(P, _)` every member of a prototype with no twin
 > would read as a mutator. Those prototypes are SILENT here, as a row.
 
+In the flow:
+
 <a id="amb_proto_unsplit"></a>A prototype has no readonly twin if it [is a builtin prototype](js-dataflow.md#builtin_prototype), unless `lib_readonly_view`(it, something).
 
 > the property the subtraction rests on: the readonly view declares nothing extra
+
+In the audit:
 
 <a id="lib_readonly_only"></a>A prototype has a readonly only member Key if `lib_readonly_member`(it, Key), unless it has the member Key since some release.
 
@@ -309,16 +287,22 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
 > `"ab".concat(x)` is a read of an untraced receiver.
 
+In the main:
+
 <a id="amb_proto_untraced"></a>A prototype has an untraced receiver if a kind K [has prototype](js-dataflow.md#kind_prototype) it, unless [`node_value_kind`](js-dataflow.md#node_value_kind)(K).
 
 <a id="amb_proto_heap"></a>The heap of a prototype P is `local` if P [is a builtin prototype](js-dataflow.md#builtin_prototype), unless P [has an untraced receiver](#amb_proto_untraced).
 
 > the structural argument as a row: heap-decided here, `global` in js-effects
 
+In the flow:
+
 <a id="amb_proto_recv"></a>A member access has the receiver prototype P if all of:
   - the `object` of it is a node O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype).
+
+In the audit:
 
 <a id="amb_proto_heap_split"></a>A prototype is split on the heap at M if all of:
   - [the heap](#amb_proto_heap) of it is `local`;
@@ -328,6 +312,8 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > A member absent from the readonly view is a `write`; the landmark comes
 > from the section 3 closure, so `wr_local` is typed nowhere. The
 > non-mutating half stays owed: `join` calls each element's `toString`.
+
+In the main:
 
 A spec has the ambient effect E at Key if all of:
   - it [has the mutator](#lib_mutator) Key;
@@ -355,6 +341,8 @@ A spec has the ambient effect E at `construct` if it [is not constructible](#amb
 > lib.es*.d.ts, so no ECMAScript table will ever map it. The two operation
 > words are excluded because no declaration carries them as keys.
 
+In the flow:
+
 <a id="ambient_off_surface"></a>An operation Op is off the surface of a surface S either:
 
 1. if all of:
@@ -372,10 +360,13 @@ A spec has the ambient effect E at `construct` if it [is not constructible](#amb
 
 > attributed, and therefore whose debt it is. Non-empty by design.
 
-A surface
+In the main:
 
-- <a id="amb_surface_attributed"></a>is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
-- <a id="ambient_surface_unattributed"></a>is unattributed if some call [operates](js-effects.md#concrete_effect) on it by some operation, unless it [is attributed](#amb_surface_attributed).
+<a id="amb_surface_attributed"></a>A surface is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
+
+In the flow:
+
+<a id="ambient_surface_unattributed"></a>A surface is unattributed if some call [operates](js-effects.md#concrete_effect) on it by some operation, unless it [is attributed](#amb_surface_attributed).
 
 > `ambient_owed` ranges over the unmapped OPERATIONS a call site reaches
 > (`concrete_unmapped[flow]`), not over unattributed surfaces: one row for
@@ -409,6 +400,8 @@ A surface
    - a node C [resolves to](js-callgraph.md#resolves) G;
    - F [is nearest to](js-dataflow.md#nearest_v) C;
    - unless C [discharges here](js-effects.md#eff_discharged_at) `exn`.
+
+In the audit:
 
 <a id="eff_exn_unexplained"></a>F has an unexplained exception if F [has only a latent exception](js-effects.md#eff_exn_only), unless F [carries an exception](#amb_exn_carrier).
 

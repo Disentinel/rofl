@@ -649,7 +649,7 @@ Declared as facts: noun_guard.
 | `eff_catch_here` | "is_caught_in_place(node N)" |
 | `eff_try_arm` | "has_the_arm(try T, arm N)" |
 | `eff_calls` | "has_a_call_to(node F, function G)" |
-| `eff_reaches` | "reaches_by_calls(node F, node G)" |
+| `eff_reaches` | "reaches_by_calling(node F, node G)" |
 | `eff_obj_traced` | "has_a_traced_object(member access M)" |
 | `eff_heap_of` | "touches_the_heap(member access M, heap N)" |
 | `eff_assign` | "is_a_write(assignment X)" |
@@ -907,9 +907,9 @@ Declared as facts: noun_guard.
 | `invented_cell` | "is_an_invented_cell(kind K:1, in layer Lay:2, of language Lang:0)" |
 | `refined_cell` | "is_a_refined_cell(kind K:1, in layer Lay:2, of language Lang:0)" |
 | `orphan_axis` | "is_an_orphan_axis(axis X, in layer Lay)" |
-| `shaped_handled` | "is_handled_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
-| `shaped_ignored` | "is_ignored_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
-| `shaped_because` | "is_unknown_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, because reason R:4)" |
+| `shaped_handled` | "is_handled_for_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
+| `shaped_ignored` | "is_ignored_for_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
+| `shaped_because` | "is_unknown_for_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, because reason R:4)" |
 | `refined_verdict` | "the_refined_verdict(of kind K:1, in layer Lay:2, for language Lang:0, is verdict V:3)" |
 | `refined_reason` | "the_refined_reason(of kind K:1, in layer Lay:2, for language Lang:0, is reason R:3)" |
 | `axis_earns` | "earns_its_place(axis X, in layer Lay)" |
@@ -1088,4 +1088,28 @@ Declared as facts: noun_guard.
 | `kind_slot` | "has_a_kind_slot_in_rules(relation Rel, at index I)" |
 | `kind_named_by_rule` | "is_named_by_a_rule(kind K)" |
 | `rule_opinion_unlisted` | "is_named_by_a_rule_yet_unlisted(kind K:1, in language Lang:0)" |
+
+> model, the shaped arity: a name used with two arities carries one signature per arity,
+> and the signature with the shape column reads the same words with `with shape S`
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `claim` | "is_claimed(kind K:2, with shape S:3, in layer Lay:4, of language Lang:1, under ledger What:0, with reason R:5)" |
+| `handled` | "is_handled(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
+| `ignored` | "is_ignored(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)" |
+| `unknown_because` | "is_unknown(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0, because reason R:4)" |
+| `verdict` | "the_verdict(of kind K:1, with shape S:2, in layer Lay:3, for language Lang:0, is verdict V:4)" |
+| `reason` | "the_reason(of kind K:1, with shape S:2, in layer Lay:3, for language Lang:0, is reason R:4)" |
+| `bad_reason` | "the_bad_reason(of kind K:1, with shape S:2, in layer Lay:3, for language Lang:0, is reason R:4)" |
+| `double_claimed` | "is_double_claimed(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `orphan` | "is_orphaned(kind K:2, with shape S:3, in layer Lay:4, of language Lang:1, under ledger What:0)" |
+| `cell` | "is_a_cell(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `orphan_claim` | "is_an_orphan_claim(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `orphan_reason` | "is_an_orphan_reason(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `irreducible_unknown` | "is_irreducibly_unknown(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `our_unknown` | "is_our_unknown(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
+| `shape_of` | "has_the_shape(kind K:1, shape S:2, in language Lang:0)" |
+| `shape_in` | "is_a_shape_in(shape S, layer Lay)" |
 

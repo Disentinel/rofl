@@ -109,6 +109,11 @@ What has to exist for it to be code rather than a description of code
    all a two-arity name or a destructor's count, one nullary head stays
    positional, and the round trip is 1178 of 1178
    (f_the_543_signatures_are_written_and_the_letters_nothing_types_fell_from_648_to_13).
+   A hole after a name that ends in its own noun is named, not typed
+   (`guards the arm X`); a name used with two arities carries a signature
+   per arity; and the rendered file carries no Signatures section and no
+   Terms line: a book is a block, `In the audit:`, as the form always said
+   (f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

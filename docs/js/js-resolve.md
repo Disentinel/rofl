@@ -6,44 +6,6 @@ default: audit
 
 # js-resolve
 
-## Signatures
-
-- is_a_resolve_place(site S) (resolve_place), in the code
-- misses_the_candidate(site S, at step K) (candidate_missed), in the book E
-- reaches_the_step(site S, step N) (reached), in the book E
-- arrives(site S, at step K, in path P) (arrival), in the book E
-- has_a_mechanism(site S) (has_via), in the book E
-- resolves_by_the_host_to(site S, path P) (resolves_to), in the book E
-- is_explained(site S) (explained), in the book E
-- is_reported(site S) (env_spoke), in the book E
-- has_a_host_answer(site S) (host_has_answer), in the book E
-- the_host_verdict(of site S, is path P) (host_verdict), in the book E
-- is_modelled_as(site S, site I) (model_site)
-- the_rules_answer(of site S, is path T) (rules_answer)
-- has_a_rules_answer(site S) (rules_has_answer)
-- the_rules_verdict(of site S, is path T) (rules_verdict)
-- is_resolved_differently(site S, by rules to path ByRules, by host to path ByHost, in environment Env) (resolve_divergence)
-- is_resolved_alike(site S, to path V, in environment Env) (resolve_agreement)
-- is_compared(site S, in environment Env) (compared)
-- is_uncompared(site S, in environment Env) (uncompared)
-- diverges(site S, in environment A, with verdict VA, from environment B, with verdict VB) (env_divergence)
-- diverges_between_environments(site S) (env_divergent_site)
-- resolves_without_a_trace(site S, in environment Env, to node P) (answer_without_trace)
-- is_answered_without_a_mechanism(site S, in environment Env) (answer_without_mechanism)
-- is_unreported(site S, in environment Env) (resolve_silent)
-- has_two_answers(site S, in environment Env, node A, node B) (answer_ambiguous)
-- is_unobserved(environment Env) (env_unobserved)
-- is_an_undeclared_environment(environment Env) (env_undeclared)
-- is_known_to_the_model(site S) (model_site_known)
-- is_unseen_by_the_model(site S) (site_unseen_by_model)
-- is_seen_by_the_host(site I) (host_saw)
-- is_unseen_by_the_host(site I) (site_unseen_by_host)
-- is_checked_at(kind K, site S) (checked_site_kind)
-- has_two_model_keys(site S, key I, key J) (site_key_ambiguous)
-- is_a_seen_mechanism(mechanism M) (mechanism_seen)
-- is_an_undeclared_mechanism(mechanism M) (mechanism_undeclared)
-- is_an_unexercised_mechanism(mechanism M) (mechanism_unexercised)
-
 > js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
 > between it and the first. rules/js-modules.rofl resolves by REASONING over
 > the disk listing; this pack records node's own resolver, asked out loud with
@@ -68,6 +30,8 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 ## 1. THE PLACES, both kinds unioned, so that "every place" is a relation.
 
+In the code:
+
 <a id="resolve_place"></a>A site S is a resolve place either:
 
 1. if S [is a resolve site](#resolve_site) in some file at some line for some text;
@@ -77,6 +41,8 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 > a directory and an absent path both mean "keep looking" and are kept apart
 > because a directory is what makes an index file possible.
+
+In the book E:
 
 <a id="candidate_missed"></a>A site misses the candidate at a step K if it [tries](#resolve_try) at K some path with `miss` or `dir`.
 
@@ -137,6 +103,8 @@ A site
 
 > id; the observer by (file, line, specifier), from its own parse. The JOIN is
 > here, and section 7 reports both directions of failure.
+
+In the audit:
 
 <a id="model_site"></a>A site S is modelled as a site I either:
 

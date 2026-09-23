@@ -6,10 +6,6 @@ default: code
 
 # js-callgraph
 
-## Terms
-
-*await*, *call*, *class expression*, *declarator*, *decorator*, *field*, *function*, *function declaration*, *method*, *object literal*, *object method*, *optional member expression*, *property*, *super*, *template*.
-
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -36,92 +32,6 @@ A noun is a node of one of its kinds:
 A noun that is a relation: the noun on a variable is the relation holding of it.
 
 - a function: `fn_node`
-
-## Signatures
-
-- is_a_call_kind(kind K) (call_kind), in the main
-- is_a_call_site(call C, in file File) (call_site)
-- the_call_kind(of call C, is kind K) (call_site_kind)
-- the_line(of call C, is line Line) (call_line)
-- the_callee(of call C, is node N) (callee_of)
-- the_callee_kind(of call C, is kind K) (callee_kind)
-- is_a_transfer_site(node X, of kind K) (transfer_site)
-- is_a_site(node X) (site)
-- passes_the_argument(call C, node X:2, at index I:1) (call_arg)
-- calls_through(call C, member access N) (member_like)
-- calls_through_an_optional_member(call C) (optional_member)
-- calls_through_a_computed_member(call C, member access N) (computed_member)
-- calls_through_a_static_member(call C, member access N) (static_member)
-- the_receiver(of call C, is node O) (callee_obj)
-- the_receiver_kind(of call C, is kind K) (callee_obj_kind)
-- the_property(of call C, is node P) (callee_prop)
-- is_a_classed_kind(kind K) (obj_kind_known), in the main
-- the_receiver_class(of call C, is shape Cl) (obj_class)
-- has_a_static_computed_key(call C) (computed_key_static)
-- has_a_template_computed_key(call C) (computed_key_template)
-- has_the_known_shape(call C, shape S) (shape_known)
-- has_a_shape(call C) (has_shape)
-- has_the_shape(call C, shape S) (shape)
-- occupies_the_catch_all(kind K) (catch_all_occupied), in the audit
-- is_an_unnamed_callee_kind(kind K) (unnamed_callee), in the audit
-- is_shaped(call C) (shaped)
-- is_unshaped(call C) (unshaped), in the audit
-- has_two_shapes(call C, shape A, shape B) (multi_shape), in the audit
-- is_a_function_kind(kind K) (fn_kind), in the main
-- is_defined_in(function F, file File) (fn_file)
-- answers_to(function F, name N) (fn_name)
-- is_a_constructor(method F) (ctor_method)
-- has_an_id(class expression CD) (class_has_id)
-- is_anonymous(class expression CD) (anon_class)
-- is_decorated_by(node Owner, node D) (decorates)
-- has_its_decorator_at(function F, node C) (in_own_decorator)
-- encloses_the_site(function F, node C) (encloses)
-- is_outranked_at(function F, node C) (closer)
-- is_the_nearest_function_of(function F, node C) (nearest_fn)
-- is_enclosed(node C) (enclosed)
-- runs_at_the_top_of(node C, node R) (top_call)
-- has_the_member_function(object literal O, function M:2, at key Key:1) (obj_member_fn)
-- has_the_constructor(class CD, method M) (class_ctor)
-- resolves_to(call C, function F) (resolves)
-- iterates_through(for-of X, function M) (for_of_iterates)
-- calls(function Caller, function Callee)
-- has_two_callees(call C, function F, function G) (ambiguous_call), in the audit
-- calls_by_name(name Z, name B) (calls_named)
-- names_a_call_to(name Z:1, name B:2, in file File:0) (calls_in)
-- passes_the_function(call C, function F:2, named name Name:3, at index I:1) (passes_function)
-- is_resolved(node C) (resolved_site)
-- is_a_resolved_call(call C) (resolved_call)
-- is_unresolved(call C, with shape S) (unresolved_call)
-- has_residue(shape S) (unresolved_shape), in the audit
-- calls_the_stdlib_member(call C, key Key:2, of prototype P:1) (stdlib_member), in the audit
-- has_the_frontier(function F, shape S) (frontier_at)
-- has_the_frontier_by_name(name Name, shape Item) (frontier_named)
-- shows_the_frontier(file File, shape S:2, at line Line:1) (frontier_line)
-- is_a_shape(shape S) (shape_vocab), in the audit
-- is_seen(shape S) (shape_seen), in the audit
-- resolves_somewhere(shape S) (resolved_shape), in the audit
-- the_shape_verdict(of shape S, is verdict N) (shape_verdict), in the audit
-- the_shape_reason(of shape S, is reason R) (shape_reason), in the audit
-- is_unexplained(shape S) (shape_unexplained), in the audit
-- has_a_bad_reason(shape S, reason R) (shape_bad_reason), in the audit
-- is_a_shape_nobody_lists(shape S) (shape_orphan), in the audit
-- is_a_stale_shape(shape S) (shape_stale), in the audit
-- is_an_unexercised_shape(shape S) (shape_unexercised), in the audit
-- is_irreducible(shape S) (shape_irreducible), in the audit
-- is_covered_unrecorded(kind K, at shape S) (unrecorded_coverage), in the audit
-- is_ours(shape S) (shape_ours), in the audit
-- binds_the_function(node D, function F) (fn_binder)
-- is_touched_by_the_call_graph(kind K) (callgraph_kind), in the audit
-- is_undeclared(kind K) (kind_undeclared), in the audit
-- awaits(await Y, node X) (await_arg)
-- awaits_the_then(await Y, function F) (awaited_then)
-- performs_the_call(node X, function F) (performed_call)
-- is_called_without_a_caller(name Name) (callerless_call), in the audit
-- awaits_a_known_value(await Y) (await_value_known)
-- awaits_without_a_call(await X) (await_no_call)
-- awaits_an_unknown_value(await X) (await_value_unknown), in the audit
-- awaits_at(function Fn, node X) (awaiting_fn)
-- performs_as_an_edge(function Fn, function F) (performed_as_edge), in the audit
 
 > js-callgraph.rofl — ONE construct, the FUNCTION CALL, at the call-graph
 > layer. Over the scanner's four relations plus js-structure's `ast_within`,
@@ -168,7 +78,7 @@ Declared as facts: transfer_kind.
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
-<a id="call_arg"></a>A node passes the argument a node X at an index I if it [is a call site](#call_site) in some file and X is the I-th of the `arguments` of it.
+<a id="call_arg"></a>A node passes the argument X at an index I if it [is a call site](#call_site) in some file and X is the I-th of the `arguments` of it.
 
 ## 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 
@@ -205,7 +115,7 @@ Declared as facts: transfer_kind.
 
 <a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an optional member expression N.
 
-<a id="computed_member"></a><a id="static_member"></a>C calls through a computed/static member a node N if C [calls through](#member_like) N and the attribute `computed` of N is `true`/`false`.
+<a id="computed_member"></a><a id="static_member"></a>C calls through a computed/static member N if C [calls through](#member_like) N and the attribute `computed` of N is `true`/`false`.
 
 <a id="callee_obj"></a>The receiver of C is a node O if C [calls through](#member_like) a node N and the `object` of N is O.
 
@@ -251,7 +161,11 @@ Declared as facts: callee_shape, member_kind.
 | `tsnon_null_expression` | `o_non_null` |
 | `meta_property` | `o_meta` |
 
+In the main:
+
 <a id="obj_kind_known"></a>A kind K is a classed kind if [`obj_kind_class`](#obj_kind_class)(K, something).
+
+In the code:
 
 <a id="obj_class"></a>The receiver class of C is a shape Cl either:
 
@@ -340,12 +254,18 @@ Declared as facts: static_key_kind.
    - S is `s_unclassified`;
    - unless C [has a shape](#has_shape).
 
+In the audit:
+
 A kind K
 
 - <a id="catch_all_occupied"></a>occupies the catch all if C [has the shape](#shape) `s_member_on_other` and [the receiver kind](#callee_obj_kind) of C is K.
 - <a id="unnamed_callee"></a>is an unnamed callee kind if C [has the shape](#shape) `s_unclassified` and [the callee kind](#callee_kind) of C is K.
 
+In the code:
+
 <a id="shaped"></a>C is shaped if C [has the shape](#shape) some shape.
+
+In the audit:
 
 <a id="unshaped"></a>C is unshaped if C [is a call site](#call_site) in some file, unless C [is shaped](#shaped).
 
@@ -354,6 +274,8 @@ A kind K
 ## 3. The enclosing function
 
 <a id="fn_kind"></a>`fn_kind` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
+
+In the code:
 
 <a id="fn_node"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind).
 
@@ -439,7 +361,7 @@ A method answers to a name N if all of:
 1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.md#ast_within) D;
 2. if F [is decorated by](#decorates) C.
 
-<a id="encloses"></a>A function encloses the site a node C if all of:
+<a id="encloses"></a>A function encloses the site C if all of:
   - C [is within](js-structure.md#ast_within) it;
   - C [is a site](#site);
   - unless it [has its decorator at](#in_own_decorator) C.
@@ -494,7 +416,7 @@ A node
 > the synthesised frame); `new` deliberately does NOT, because V8 names the
 > frame after the class and makes it the caller.
 
-<a id="class_ctor"></a>A class has the constructor a node M if it [has the method](js-dataflow.md#class_method_of) M and the attribute `kind` of M is "constructor".
+<a id="class_ctor"></a>A class has the constructor M if it [has the method](js-dataflow.md#class_method_of) M and the attribute `kind` of M is "constructor".
 
 <a id="resolves"></a>A node X resolves to M either:
 
@@ -549,6 +471,8 @@ X resolves to M if X [iterates through](#for_of_iterates) M.
 
 C resolves to a function F if [the callee](#callee_of) of C [may be the node](js-dataflow.md#may_be_node) F.
 
+In the audit:
+
 <a id="ambiguous_call"></a>C has two callees F and G if C [resolves to](#resolves) F, C [resolves to](#resolves) G, and F differs from G.
 
 ## 5. THE EDGE — by node, by name (a stack frame carries a name), and by file
@@ -556,6 +480,8 @@ C resolves to a function F if [the callee](#callee_of) of C [may be the node](js
 > (an oracle can only be compared against the files it ran).
 > `passes_function` is recorded and NOT folded into `calls`: passing a
 > function is not calling it.
+
+In the code:
 
 Caller calls Callee either:
 
@@ -596,6 +522,8 @@ A node
 - <a id="resolved_call"></a>is a resolved call if it [is resolved](#resolved_site) and it [is a call site](#call_site) in some file.
 - <a id="unresolved_call"></a>is unresolved with a shape S if it [has the shape](#shape) S, unless it [is resolved](#resolved_site).
 
+In the audit:
+
 <a id="unresolved_shape"></a>A shape has residue if some call [is unresolved](#unresolved_call) with it.
 
 <a id="stdlib_member"></a>C calls the stdlib member Key of a prototype P if all of:
@@ -613,7 +541,9 @@ Declared as facts: shape_because.
 > resolves is no longer frontier. `frontier_line` is what a stack frame can be
 > matched against.
 
-<a id="frontier_at"></a>F has the frontier a shape S either:
+In the code:
+
+<a id="frontier_at"></a>F has the frontier S either:
 
 1. if F [is the nearest function of](#nearest_fn) a node C and C [is unresolved](#unresolved_call) with S;
 2. if a node C [runs at the top of](#top_call) F and C [is unresolved](#unresolved_call) with S;
@@ -626,12 +556,12 @@ Declared as facts: shape_because.
    - X [is a transfer site](#transfer_site) of S;
    - unless X [is resolved](#resolved_site).
 
-<a id="frontier_named"></a>Name has the frontier by name a shape Item either:
+<a id="frontier_named"></a>Name has the frontier by name Item either:
 
 1. if F [has the frontier](#frontier_at) Item and F [answers to](#fn_name) Name;
 2. if R [has the frontier](#frontier_at) Item, `ast_file`(R, something), and Name is `top`.
 
-<a id="frontier_line"></a>File shows the frontier a shape S at Line either:
+<a id="frontier_line"></a>File shows the frontier S at Line either:
 
 1. if a node C [is unresolved](#unresolved_call) with S and C [is of kind](js-model.md#ast_node) some kind in file File at line Line;
 2. if all of:
@@ -644,6 +574,8 @@ Declared as facts: shape_because.
 > `shape_stale` is an excuse that outlived its cause; `unrecorded_coverage` is
 > the opposite direction — rules doing the work while the cell says
 > `not_modelled`, which every other gate stays green through.
+
+In the audit:
 
 <a id="shape_vocab"></a>A shape S is a shape either:
 
@@ -679,19 +611,23 @@ A shape
 
 <a id="unrecorded_coverage"></a>A kind K is covered unrecorded at a shape S if all of:
   - S [resolves somewhere](#resolved_shape);
-  - [`shape_of`](js-model.md#shape_of)(`js`, K, S);
-  - [`verdict`](js-model.md#verdict)(`js`, K, S, `callgraph`, `not_modelled`).
+  - K [has the shape](js-model.md#shape_of) S in `js`;
+  - [the verdict](js-model.md#verdict) of K with S in `callgraph` for `js` is `not_modelled`.
 
 <a id="shape_ours"></a>A shape is ours if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.md#unknown_type)(R, `ours`).
 
 > What modelling this layer dragged in: every kind its rules touch must be a
 > declared `node_kind`, or the matrix has a cell it does not know exists.
 
+In the code:
+
 <a id="fn_binder"></a>D binds the function F either:
 
 1. if D is a declarator, the `init` of D is F, and F is a function;
 2. if D is a property, the `value` of D is F, and F is a function;
 3. if D [has the member function](#obj_member_fn) F at some key.
+
+In the audit:
 
 <a id="callgraph_kind"></a>A kind K is touched by the call graph either:
 
@@ -719,15 +655,20 @@ A shape
 > reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
 > last step the iterator protocol takes: `member_value` names the identifier.
 
+In the code:
+
 <a id="await_arg"></a>An await awaits a node X if the `argument` of it is X.
 
-<a id="awaited_then"></a>Y awaits the then a function F if all of:
+<a id="awaited_then"></a>Y awaits the then F if all of:
   - Y [awaits](#await_arg) a node X;
   - X [may be the node](js-dataflow.md#may_be_node) O;
   - [the member](js-dataflow.md#member_value) "then" of O holds a node V;
-  - V [may be the node](js-dataflow.md#may_be_node) F.
+  - V [may be the node](js-dataflow.md#may_be_node) F;
+  - F is a function.
 
 <a id="performed_call"></a>A node performs the call F if it [awaits the then](#awaited_then) F.
+
+In the audit:
 
 <a id="callerless_call"></a>Name is called without a caller if some node [performs the call](#performed_call) F and F [answers to](#fn_name) Name.
 
@@ -737,9 +678,13 @@ A shape
 > (the frontier, deliberately not wired into `frontier_at`, which is keyed by
 > a caller this call has not got).
 
+In the code:
+
 <a id="await_value_known"></a>Y awaits a known value if Y [awaits](#await_arg) a node X and X [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="await_no_call"></a>X awaits without a call if X [awaits a known value](#await_value_known), unless X [awaits the then](#awaited_then) some function.
+
+In the audit:
 
 <a id="await_value_unknown"></a>X awaits an unknown value if X [awaits](#await_arg) some node, unless X [awaits a known value](#await_value_known).
 
@@ -747,7 +692,11 @@ A shape
 > `nearest_fn`, because `encloses` demands `site(C)` and an await is not a site
 > — written that way it was permanently silent.
 
+In the code:
+
 <a id="awaiting_fn"></a>A function awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.md#ast_within) it.
+
+In the audit:
 
 <a id="performed_as_edge"></a>Fn performs as an edge F if all of:
   - a node X [performs the call](#performed_call) F;

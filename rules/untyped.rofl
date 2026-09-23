@@ -7,10 +7,10 @@
 -- position F stands in. A variable with neither is typed in the author's head
 -- and nowhere else, and the renderer shows it as the bare letter it is.
 --
--- `signed(Rel, I, Noun)` is computed by scripts/untyped.ts from the signatures
+-- `signed(Rel, Arity, I, Noun)` is computed by scripts/untyped.ts from the signatures
 -- and phrases; `noun_guard` comes from facts/js-phrases.rofl.
 
-edb(signed). edb(signed_rel). edb(two_arities). edb(noun_guard). edb(head). edb(lit). edb(argv).
+edb(signed). edb(signed_rel). edb(nargs). edb(arity). edb(noun_guard). edb(head). edb(lit). edb(argv).
 
 -- one letter, or a letter and a digit (K1)
 letter(R, V) :- argv(R, _, _, V), L is str_len(V), L = 1.
@@ -21,8 +21,8 @@ guarded(R, V) :- lit(R, K, ast_node, pos), argv(R, K, 0, V).
 guarded(R, V) :- noun_guard(Rel, _), lit(R, K, Rel, pos), argv(R, K, 0, V).
 
 -- typed by a signature: the position says what stands in it, `node` counting as the weakest word
-signed_here(R, V, N) :- lit(R, K, Rel, _), argv(R, K, I, V), signed(Rel, I, N).
-signed_here(R, V, N) :- head(R, Rel), argv(R, 0, I, V), signed(Rel, I, N).
+signed_here(R, V, N) :- lit(R, K, Rel, _), nargs(R, K, A), argv(R, K, I, V), signed(Rel, A, I, N).
+signed_here(R, V, N) :- head(R, Rel), nargs(R, 0, A), argv(R, 0, I, V), signed(Rel, A, I, N).
 signed_strongly(R, V) :- signed_here(R, V, N), N != "node".
 signed_weakly(R, V)   :- signed_here(R, V, _), not signed_strongly(R, V).
 
@@ -37,8 +37,9 @@ untyped_in(Rel, R, V) :- untyped(R, V), head(R, Rel).
 -- the vocabulary), or every one has and the variable is still untyped (the rule's own)
 guard_rel(ast_node).
 guard_rel(Rel)   :- noun_guard(Rel, _).
-unsigned_in(R)   :- head(R, Rel), not signed_rel(Rel).
-unsigned_in(R)   :- lit(R, _, Rel, _), not signed_rel(Rel), not guard_rel(Rel).
+unsigned_in(R)   :- head(R, Rel), nargs(R, 0, A), not signed_rel(Rel, A).
+unsigned_in(R)   :- lit(R, K, Rel, _), nargs(R, K, A), not signed_rel(Rel, A), not guard_rel(Rel).
+unsigned_arity(Rel, A) :- arity(Rel, A), signed_rel(Rel, _), not signed_rel(Rel, A).
 untyped_own(Rel, R, V)  :- untyped_in(Rel, R, V), not unsigned_in(R).
 untyped_debt(Rel, R, V) :- untyped_in(Rel, R, V), unsigned_in(R).
 

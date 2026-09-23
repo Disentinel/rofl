@@ -6,46 +6,6 @@ default: main
 
 # js-attrs
 
-## Signatures
-
-- reads_the_attribute(term L, key K, with term V) (attr_lit)
-- has_a_variable_key(term L, term X) (attr_lit_kvar)
-- has_a_variable_value(term L, term X) (attr_lit_vvar)
-- is_read(key K) (attr_key_read)
-- is_read_with_the_value_free(key K) (attr_key_read_free)
-- is_read_with(key K, value V) (attr_pair_read)
-- is_unconsumed(key K) (unconsumed_attr), in the audit
-- has_an_unconsumed_value(key K, value V) (unconsumed_value), in the audit
-- is_an_unseen_excuse(key K) (attr_unread_ok_unseen), in the audit
-- is_excused_yet_read(key K) (attr_unread_ok_read), in the audit
-- is_an_unseen_value_excuse(key K, with value V) (attr_value_ok_unseen), in the audit
-- is_deferred_unseen(key K) (attr_deferred_unseen), in the audit
-- is_deferred_yet_read(key K) (attr_deferred_read), in the audit
-- is_excused_twice(key K) (attr_double_excused), in the audit
-- has_the_positive_premise(rule R, term L) (pos_prem)
-- reads_attributes_freely(term L) (attr_lit_kvvar)
-- carries_attribute_pairs(relation Rel, from index I, to index J) (attr_table_read)
-- carries_attribute_pairs_unbridged(relation Rel, from index I, to index J) (attr_table_unbridged), in the audit
-- is_bridged_yet_unread(relation Rel) (attr_table_bridged_unread), in the audit
-- has_the_premise(rule R, term L) (rule_prem)
-- is_an_attribute_test(term L, of term S:1, on key K:2) (attr_test_lit)
-- tests_a_variable_subject(term L, term X) (attr_test_svar)
-- reads_the_child(term L, of term S, at field F) (child_lit)
-- reads_the_child_of_a_variable(term L, term X) (child_lit_svar)
-- reads_a_variable_field(term L, term X) (child_lit_fvar)
-- tests_the_attribute(rule R, attribute K, on term S, under field F) (attr_guard_slot)
-- guards_the_attribute(rule R, attribute K, on term S, as kind Kind) (attr_guard_kind)
-- pins_the_attribute_guard(rule R, key K, on term S) (attr_guard_pinned)
-- is_a_slot_gap(attribute K, at field F, of kind Kind) (attr_slot_gap)
-- tests_the_attribute_positively(rule R, attribute K, on term S, under field F) (attr_guard_slot_pos)
-- is_a_positive_slot_gap(attribute K, at field F, of kind Kind) (attr_pos_slot_gap)
-- is_a_blind_guard(attribute K, at field F, of kind Kind) (attr_blind_guard), in the audit
-- is_excused_unseen(attribute K, at field F, of kind Kind) (attr_slot_gap_ok_unseen), in the audit
-- carries_the_attribute(kind Kind, key K) (attr_kind_has)
-- sometimes_lacks_the_attribute(kind Kind, key K) (attr_kind_lacks)
-- splits_the_kind(key K, kind Kind) (attr_kind_split), in the audit
-- is_an_unseen_split_excuse(key K, for kind Kind) (attr_split_ok_unseen), in the audit
-
 > js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
 > (`w_unconsumed_attribute`). Four times a design note claimed a fact was
 > missing that was already on the store, because the note was written while
@@ -87,6 +47,8 @@ A key K
 > attribute carries is also carried by something the model reads, usually
 > the kind (`optional` is `optional_member_expression`).
 
+In the audit:
+
 A key K
 
 - <a id="unconsumed_attr"></a>is unconsumed if all of:
@@ -125,30 +87,37 @@ A key K
 > co-literal FILTERS the pairs (`unconsumed_value` has that shape), a
 > positive one SUPPLIES them.
 
-<a id="pos_prem"></a>A rule has the positive premise a term L if `premise_lit`(it, something, L) and L is $lit(something, something, something, something).
+In the main:
+
+<a id="pos_prem"></a>A rule has the positive premise L if `premise_lit`(it, something, L) and L is $lit(something, something, something, something).
 
 <a id="attr_lit_kvvar"></a>A term reads attributes freely if all of:
   - it [reads the attribute](#attr_lit) K with a term V;
   - it [has a variable key](#attr_lit_kvar) K;
   - it [has a variable value](#attr_lit_vvar) V.
 
-A relation
-
-- <a id="attr_table_read"></a>carries attribute pairs from an index I to an index J if all of:
-  - a rule R [has the positive premise](#pos_prem) a term L;
+<a id="attr_table_read"></a>A relation carries attribute pairs from an index I to an index J if all of:
+  - a rule R [has the positive premise](#pos_prem) L;
   - L [reads attributes freely](#attr_lit_kvvar);
   - L [reads the attribute](#attr_lit) K with a term V;
-  - R [has the positive premise](#pos_prem) a term L2;
+  - R [has the positive premise](#pos_prem) L2;
   - [the relation](js-vocabulary.md#lit_rel) of L2 is it;
   - it differs from `ast_attr`;
   - [the argument](js-vocabulary.md#lit_arg) I of L2 is K;
   - [the argument](js-vocabulary.md#lit_arg) J of L2 is V.
+
+In the audit:
+
+A relation
+
 - <a id="attr_table_unbridged"></a>carries attribute pairs unbridged from an index I to an index J if it [carries attribute pairs](#attr_table_read) from I to J, unless [`attr_table_bridged`](#attr_table_bridged)(it).
 - <a id="attr_table_bridged_unread"></a>is bridged yet unread if [`attr_table_bridged`](#attr_table_bridged)(it), unless it [carries attribute pairs](#attr_table_read) from some index to some index.
 
 Declared as facts: attr_table_bridged.
 
 > the bridge itself, feeding both audits
+
+In the main:
 
 A key K is read with V either:
 
@@ -168,7 +137,7 @@ A key K is read if K [is read with](#attr_pair_read) some value.
 > of an `ast_child` premise, is not seen: the two clauses with that shape pin
 > their kind and the kind arm covers them.
 
-<a id="rule_prem"></a>A rule R has the premise a term L either:
+<a id="rule_prem"></a>A rule R has the premise L either:
 
 1. if `premise_lit`(R, something, L) and L is $lit(something, something, something, something);
 2. if `premise_lit`(R, something, $not(L)).
@@ -191,18 +160,18 @@ A term
 A rule
 
 - <a id="attr_guard_slot"></a>tests the attribute K on a term S under a term F if all of:
-  - it [has the premise](#rule_prem) a term L;
+  - it [has the premise](#rule_prem) L;
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
-  - it [has the premise](#rule_prem) a term L2;
+  - it [has the premise](#rule_prem) L2;
   - L2 [reads the child](#child_lit) of S at F;
   - L2 [reads the child of a variable](#child_lit_svar) S;
   - unless L2 [reads a variable field](#child_lit_fvar) F.
 - <a id="attr_guard_kind"></a>guards the attribute K on a term S as Kind if all of:
-  - it [has the premise](#rule_prem) a term L;
+  - it [has the premise](#rule_prem) L;
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
-  - it [has the premise](#rule_prem) a term L2;
+  - it [has the premise](#rule_prem) L2;
   - [the relation](js-vocabulary.md#lit_rel) of L2 is `ast_node`;
   - [the argument](js-vocabulary.md#lit_arg) 1 of L2 is S;
   - [the argument](js-vocabulary.md#lit_arg) 2 of L2 is Kind;
@@ -232,10 +201,10 @@ A rule
 > moves two rows across — the survivor the finding recorded with no oracle.
 
 <a id="attr_guard_slot_pos"></a>A rule tests the attribute positively K on a term S under a term F if all of:
-  - it [has the positive premise](#pos_prem) a term L;
+  - it [has the positive premise](#pos_prem) L;
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
-  - it [has the premise](#rule_prem) a term L2;
+  - it [has the premise](#rule_prem) L2;
   - L2 [reads the child](#child_lit) of S at F;
   - L2 [reads the child of a variable](#child_lit_svar) S;
   - unless L2 [reads a variable field](#child_lit_fvar) F.
@@ -255,6 +224,8 @@ A rule
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless the attribute K of P is some value.
 
+In the audit:
+
 <a id="attr_blind_guard"></a>An attribute K is a blind guard at F of Kind if K [is a positive slot gap](#attr_pos_slot_gap) at F of Kind, unless [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something).
 
 Declared as facts: attr_slot_gap_ok.
@@ -270,12 +241,16 @@ Declared as facts: attr_slot_gap_ok.
 > kind is present in the slot, so `attr_slot_gap` finds nothing, and the
 > guard is blind to exactly the nodes that lack it.
 
+In the main:
+
 <a id="attr_kind_has"></a>Kind carries the attribute K if a node P [is of kind](js-model.md#ast_node) Kind and the attribute K of P is some value.
 
 <a id="attr_kind_lacks"></a>Kind sometimes lacks the attribute K if all of:
   - Kind [carries the attribute](#attr_kind_has) K;
   - a node P [is of kind](js-model.md#ast_node) Kind;
   - unless the attribute K of P is some value.
+
+In the audit:
 
 A key K
 

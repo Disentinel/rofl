@@ -6,10 +6,6 @@ default: code
 
 # js-structure
 
-## Terms
-
-*member expression*, *meta property*.
-
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -18,12 +14,6 @@ A noun is a node of one of its kinds:
 |---|---|
 | a member expression | member_expression |
 | a meta property | meta_property |
-
-## Signatures
-
-- has_the_meta_form(node N, name Form) (meta_form)
-- has_no_meta_form(node N) (meta_unformed), in the audit
-- has_two_forms(meta property M, form A, form B) (meta_form_conflict), in the audit
 
 > js-structure.rofl — the GENERIC structure over a captured AST. No domain
 > knowledge: everything here is true of any tree the scanner emits.
@@ -84,6 +74,8 @@ A noun is a node of one of its kinds:
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
+
+In the audit:
 
 <a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
 

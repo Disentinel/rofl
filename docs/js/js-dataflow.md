@@ -6,10 +6,6 @@ default: flow
 
 # js-dataflow
 
-## Terms
-
-*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *invocation*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *scope*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
-
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -77,120 +73,6 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 - a member access: `member_node_v`
 - a scope: `scope_node`
 
-## Signatures
-
-- reads(identifier N, name Name) (ident), in the code
-- reads(identifier E, name Name, in file File) (ident_in), in the code
-- binds(declarator D, name Name) (decl_binds), in the code
-- is_initialised_from(declarator D, name Name) (decl_reads), in the code
-- flows_to(name From, name To) (var_flow), in the code
-- reaches(name From, name To) (var_reaches), in the code
-- may_be_the_literal(node E, text V) (may_be_lit)
-- is_interpolated(template T) (interpolated), in the code
-- may_be_the_node(node E, node N) (may_be_node)
-- binds(declarator D, name Name, to node Init, in file File) (binder), in the code
-- is_scoped(declarator D, in file File) (scoped_binder), in the code
-- the_region(of declarator D, is node R) (binder_region), in the code
-- is_at_the_top(declarator D) (binder_at_top), in the code
-- sees(node E, declarator D) (sees_binder), in the code
-- is_let_or_const(declaration V) (lexical_decl), in the code
-- is_lexical(declarator D) (lexical_binder), in the code
-- encloses(scope R, declarator D) (encloses_s), in the code
-- is_outranked_for(scope R, declarator D) (closer_s), in the code
-- is_the_nearest_scope_of(scope R, declarator D) (nearest_s), in the code
-- introduces(declarator D, name Name, in file File) (binds_name), in the code
-- is_shadowed_by(declarator Outer, declarator Inner, on name Name) (shadowed_by), in the code
-- is_shadowed_by_the_function(declarator Outer, function F, on name Name) (shadowed_by_param), in the code
-- is_hidden_from(node E, declarator D) (hidden_at), in the code
-- is_a_dead_zone_candidate_of(node E, declarator D) (tdz_cand), in the code
-- is_deferred_for(node E, declarator D) (tdz_deferred), in the code
-- is_in_the_dead_zone_of(node E, declarator D) (tdz_at), in the code
-- is_assigned(name Name, node Src, in file File) (assigns), in the code
-- has_prototype(kind K, name P) (kind_prototype), in the main
-- the_prototype(of node E, is name P) (prototype_of)
-- is_a_builtin_prototype(name P) (builtin_prototype), in the main
-- destructures(declarator D, name Local, from key Key, in file File), in the code
-- destructures(declarator D, name Local, at index Index, in file File) (destructures_at), in the code
-- the_element(of node X, index I, is node E) (elem_at)
-- takes(function F, name Name:2, at index I:1) (param_of)
-- defaults(function F, name Name, to node Init) (param_default)
-- takes_the_key(object pattern P, key Key) (pattern_takes), in the code
-- holds_a_rest(declarator D, node R, in file File) (rest_in_pattern), in the code
-- binds(declarator D, name Local:2, through the rest node R:1, in file File:3) (rest_binds), in the code
-- the_member(of node O, key Key, holds node V) (member_value)
-- the_plain_member(of node O, key Key, is node V) (member_plain)
-- is_valued(node E) (valued)
-- is_nearest_to(function F, node R) (nearest_v)
-- has_a_spread(invocation C, at index I) (spread_arg), in the code
-- is_past_a_spread(invocation C, at index I) (after_spread), in the code
-- passes(invocation C, node A:2, at index I:1) (arg_at)
-- hides(function F, name Name, at node U) (param_hidden)
-- uses(function F, name Name, at node U) (param_use)
-- returns(function F, node E)
-- is_object_like(node O) (obj_like)
-- owns_the_key(class CD, key Key) (own_key)
-- is_a_member_kind(kind K) (member_kind_v), in the main
-- selects(member access N, key Key)
-- the_static_member(of class CD, key Key, is node V) (class_member_static)
-- the_instance_member(of class CD, key Key, is node V) (class_member_proto)
-- denotes_a_class(node E) (class_receiver)
-- binds_this(node F) (this_binder)
-- is_over(this-binder F, this T) (this_over)
-- is_outdone_for(this-binder F, this T) (this_nearer)
-- hosts(node H, this T) (this_host)
-- has_the_method(class CD, method M) (class_method_of)
-- has_the_field(class CD, key Key, at node P, holding node V) (field_of)
-- inherits_the_field(class CD, key Key, at node P, holding node V) (inherited_field)
-- is_the_private_key(node P, name Name) (private_key), in the code
-- has_the_private_member(class CD, name Name, at node M) (private_member), in the code
-- refers_privately_to(member access N, name Name) (private_ref), in the code
-- has_an_inner_class_inside(member access N, class CD) (private_inner), in the code
-- binds_privately_to(member access N, node M) (private_binds), in the code
-- has_the_field_site(class CD, node P) (class_field_this)
-- has_the_static_block(class CD, static block SB) (static_block_of)
-- imports(name Local, name Name, from text Src, in file File) (imports_name), in the code
-- is_in_the_corpus(file File) (corpus_file), in the code
-- sources(node N, text Src, in file File) (module_source), in the code
-- has_basename(text Src, text Base) (module_basename), in the code
-- targets(text Src, file Target) (import_target), in the code
-- is_exported_as(node F, name Name, from file File) (exports_name), in the code
-- re_exports(named export E) (reexport_decl), in the code
-- exports_types_only(named export E) (export_list_erased), in the code
-- is_a_type_only_specifier(node Sp) (export_item_erased), in the code
-- is_exported_locally_as(node L, name Ext, from file File) (export_local), in the code
-- is_a_namespace_export(name Name, of text Src, from file File) (export_ns_name), in the code
-- imports_the_namespace(name Local, of text Src, in file File) (imports_ns), in the code
-- is_the_module_object_of(node P, file Target) (module_object)
-- imports_the_default(name Local, of text Src, in file File) (imports_default), in the code
-- is_the_default_export_of(node F, file File) (exports_default), in the code
-- is_outside_the_corpus(text Src, from file File) (import_outside_corpus), in the audit
-- has_the_object_method(object literal O, method M) (obj_method_of)
-- is_named(class CD, name Name, in file File) (class_named)
-- the_super(of class CD, is class SD) (super_of)
-- has_its_own_constructor(class CD, method M) (own_ctor)
-- has_its_own_constructor(class CD) (has_own_ctor)
-- the_constructor(of class CD, is method M) (ctor_of)
-- has_a_later_expression_than(sequence E, index I) (seq_later)
-- yields(function F, node E)
-- is_bound_to_the_call(node E, call expression C) (bound_to_call)
-- is_sent(function G, node V) (next_send)
-- delegates_to(function Outer, function Inner) (delegates)
-- iterates(for-of S, node X) (for_of_src)
-- loops_over(for-of S, name Name) (for_of_name)
-- loops_with(for-of S, name Name, at node U) (for_of_use)
-- has_an_element(node X, node E) (iter_elem)
-- is_plain(assignment E) (plain_assign)
-- the_catch(of try T, is catch H) (catch_of)
-- the_param(of catch H, is node P) (catch_param)
-- the_block(of try T, is node B) (try_block)
-- throws(try T, node V) (thrown_in)
-- calls(try T) (call_in_try)
-- catches_from_a_call(node P) (catch_from_call)
-- catches_from_the_host(node P) (catch_from_host)
-- catches_from_nowhere(node P) (catch_unsourced), in the audit
-- is_replaced_by_its_decorator_with(node Owner, node N) (decorated_by)
-- has_the_decorated_member(class CD, key Key, at method M, replaced with node N) (decorated_member)
-
 > js-dataflow.rofl — THE VALUE LAYER: what an expression may evaluate to.
 > 
 > Two carriers and no third. `may_be_lit(E, Text)`: E may evaluate to this
@@ -211,6 +93,8 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > `ident_in` carries the file so a rule can lead with (Name, File), which the
 > store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 > identifier in the corpus — 39 % of a fixpoint.
+
+In the code:
 
 An identifier
 
@@ -239,6 +123,8 @@ A name X
 
 <a id="literal_kind"></a>`literal_kind`, a literal, includes `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal`.
 
+In the flow:
+
 <a id="may_be_lit"></a>A literal may be the literal V if it [is written as](js-structure.md#ast_value) V.
 
 Declared as facts: literal_kind.
@@ -247,7 +133,11 @@ Declared as facts: literal_kind.
 > evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
 > strings and a partial answer is wrong where silence is right (w_concat_value).
 
+In the code:
+
 <a id="interpolated"></a>A node is interpolated if some node is among the `expressions` of it.
+
+In the flow:
 
 A template may be the literal V if all of:
   - the `quasis` of it is a node Q;
@@ -269,6 +159,8 @@ Declared as facts: node_value_kind.
 > `binder` is a declarator whose id is a plain name. Destructuring forms bind
 > names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
 > not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
+
+In the code:
 
 <a id="binder"></a>A declarator binds Name to a node Init in File if all of:
   - it is in file File;
@@ -375,7 +267,7 @@ Declared as facts: block_scope_kind.
 
 > A parameter shadows too, and no `binds_name` row exists for it.
 
-<a id="shadowed_by_param"></a>Outer is shadowed by the function a node F on Name either:
+<a id="shadowed_by_param"></a>Outer is shadowed by the function F on Name either:
 
 1. if all of:
    - Outer [introduces](#binds_name) Name in some file;
@@ -401,7 +293,7 @@ Declared as facts: block_scope_kind.
    - E [is within](js-structure.md#ast_within) RI;
    - E [reads](#ident_in) Name in some file;
 2. if all of:
-   - Outer [is shadowed by the function](#shadowed_by_param) a node F on Name;
+   - Outer [is shadowed by the function](#shadowed_by_param) F on Name;
    - E [is within](js-structure.md#ast_within) F;
    - E [reads](#ident_in) Name in some file.
 
@@ -428,6 +320,11 @@ A node
   - it [is within](js-structure.md#ast_within) G.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
 - is hidden from D if it [is in the dead zone of](#tdz_at) D.
+
+In the flow:
+
+A node
+
 - may be the literal V if all of:
   - D [binds](#binder) Name to a node Init in File;
   - Init [may be the literal](#may_be_lit) V;
@@ -443,10 +340,14 @@ A node
 
 > x appears in the file. This layer has no before and after.
 
+In the code:
+
 <a id="assigns"></a>Name is assigned a node Src in File if all of:
   - an assignment X is in file File;
   - the `left` of X [is named](js-structure.md#ast_name) Name;
   - the `right` of X is Src.
+
+In the flow:
 
 A node
 
@@ -511,6 +412,8 @@ Declared as facts: kind_prototype, builtin_prototype.
 > arm for array patterns: nothing exercises it and an arm nothing exercises
 > cannot go red.
 
+In the code:
+
 <a id="destructures"></a>A declarator destructures Local from Key in File if all of:
   - it is in file File;
   - the `id` of it is an object pattern P;
@@ -520,6 +423,8 @@ Declared as facts: kind_prototype, builtin_prototype.
 
 D is scoped in File if D [destructures](#destructures) some name from some key in File.
 
+In the flow:
+
 A node may be the node N if all of:
   - a node D [destructures](#destructures) Local from Key in File;
   - the `init` of D [may be the node](#may_be_node) Obj;
@@ -527,6 +432,8 @@ A node may be the node N if all of:
   - V [may be the node](#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
+
+In the code:
 
 <a id="destructures_at"></a>A declarator destructures Local at Index in File if all of:
   - it is in file File;
@@ -536,7 +443,12 @@ A node may be the node N if all of:
 
 D is scoped in File if D [destructures](#destructures_at) some name at some index in File.
 
-<a id="elem_at"></a>The element I of a node X is a node E if X [may be the node](#may_be_node) an array literal Y and E is the I-th of the `elements` of Y.
+In the flow:
+
+<a id="elem_at"></a>The element I of a node X is a node E if all of:
+  - X [may be the node](#may_be_node) Y;
+  - E is the I-th of the `elements` of Y;
+  - Y is an array literal.
 
 A node may be the node N if all of:
   - a node D [destructures](#destructures_at) Local at Index in File;
@@ -566,6 +478,8 @@ A node may be the node N if all of:
 > pattern took — the exclusion is the whole content. It is `member_plain` (no
 > `static` anywhere), as a module namespace is.
 
+In the code:
+
 <a id="pattern_takes"></a>An object pattern takes the key Key if a node Prop is among the `properties` of it and the `key` of Prop [spells](js-structure.md#key_name) Key.
 
 <a id="rest_in_pattern"></a>A declarator holds a rest R in File if all of:
@@ -574,9 +488,11 @@ A node may be the node N if all of:
   - R is among the `properties` of P;
   - R is a rest.
 
-<a id="rest_binds"></a>D binds Local through the rest a node R in File if D [holds a rest](#rest_in_pattern) R in File and the `argument` of R [is named](js-structure.md#ast_name) Local.
+<a id="rest_binds"></a>D binds Local through the rest R in File if D [holds a rest](#rest_in_pattern) R in File and the `argument` of R [is named](js-structure.md#ast_name) Local.
 
 D is scoped in File if D [binds](#rest_binds) some name through the rest some node in File.
+
+In the flow:
 
 <a id="member_value"></a>The member Key of a node R holds a node V if all of:
   - a node D [holds a rest](#rest_in_pattern) R in some file;
@@ -633,12 +549,16 @@ Declared as facts: call_like_v.
 > stops at the first spread; a spread of an array this layer can see
 > contributes element K at position J + K. `f(...a, ...b)` is unexercised.
 
+In the code:
+
 <a id="spread_arg"></a>An invocation has a spread at an index I if a spread S is the I-th of the `arguments` of it.
 
 <a id="after_spread"></a>A node is past a spread at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
   - some node is the I-th of the `arguments` of it;
   - J < I.
+
+In the flow:
 
 <a id="arg_at"></a>An invocation passes a node X at an index I if X is the I-th of the `arguments` of it but is not a spread, unless it [is past a spread](#after_spread) at I.
 
@@ -869,7 +789,7 @@ A node
   - M is among the `body` of B;
   - M is a method.
 
-A node may be the node CD if CD [has the method](#class_method_of) a node M and M [hosts](#this_host) it.
+A node may be the node CD if CD [has the method](#class_method_of) M and M [hosts](#this_host) it.
 
 Declared as facts: this_binds_kind.
 
@@ -915,6 +835,8 @@ The instance/static member Key of a class CD is a node V if CD [inherits the fie
 > `key_name` gets no arm for `private_name` and `selects` stays empty on a
 > private read. `private_inner` is the shadowing test for nested classes.
 
+In the code:
+
 <a id="private_key"></a>A private name is the private key Name if the `id` of it [is named](js-structure.md#ast_name) Name.
 
 <a id="private_member_kind"></a>`private_member_kind`, a private member, includes `class_private_property`, `class_private_method`.
@@ -929,7 +851,7 @@ The instance/static member Key of a class CD is a node V if CD [inherits the fie
 
 A node
 
-- <a id="private_inner"></a>has an inner class inside a class CD if all of:
+- <a id="private_inner"></a>has an inner class inside CD if all of:
   - it [refers privately to](#private_ref) Name;
   - CD [has the private member](#private_member) Name at some node;
   - it [is within](js-structure.md#ast_within) CD;
@@ -942,33 +864,43 @@ A node
   - it [is within](js-structure.md#ast_within) CD;
   - unless it [has an inner class inside](#private_inner) CD.
 
+In the flow:
+
 A private method may be the node it.
 
 A node
 
-- may be the node a private method M if it [binds privately to](#private_binds) M.
+- may be the node M if it [binds privately to](#private_binds) M and M is a private method.
 - may be the node/literal V2 if it [binds privately to](#private_binds) a private field M and the `value` of M [may be the node/literal](#may_be_node) V2.
 
-A class has the method a private method M if it [is object like](#obj_like), the `body` of it is a node B, and M is among the `body` of B.
+A class has the method M if all of:
+  - it [is object like](#obj_like);
+  - the `body` of it is a node B;
+  - M is among the `body` of B;
+  - M is a private method.
 
 `this_binds_kind`, a this-binder, includes `class_property`, `class_private_property`, `static_block`.
 
-<a id="class_field_this"></a>A class CD has the field site a node P either:
+<a id="class_field_this"></a>A class CD has the field site P either:
 
 1. if CD [has the field](#field_of) some key at P holding some node;
 2. if CD [has the private member](#private_member) some name at P and P is a private field.
 
-A node may be the node CD if CD [has the field site](#class_field_this) a node P and P [hosts](#this_host) it.
+A node may be the node CD if CD [has the field site](#class_field_this) P and P [hosts](#this_host) it.
 
-<a id="static_block_of"></a>A class has the static block a static block SB if it [is object like](#obj_like), the `body` of it is a node B, and SB is among the `body` of B.
+<a id="static_block_of"></a>A class has the static block SB if all of:
+  - it [is object like](#obj_like);
+  - the `body` of it is a node B;
+  - SB is among the `body` of B;
+  - SB is a static block.
 
-A node may be the node CD if CD [has the static block](#static_block_of) a node SB and SB [hosts](#this_host) it.
+A node may be the node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
 
 Declared as facts: private_member_kind.
 
 > `this` in a static block is the CLASS object and must read the static half.
 
-A node denotes a class if some class [has the static block](#static_block_of) a node SB and SB [hosts](#this_host) it.
+A node denotes a class if some class [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
 
 ## 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
 
@@ -977,6 +909,8 @@ A node denotes a class if some class [has the static block](#static_block_of) a 
 > the rest is the modules layer's, which needs the disk. `str_pre(S, Sep)`
 > takes a separator, not a length: the first draft passed `2`, the kernel
 > refused it with `hole(..., str_type_error)`, and no world read the hole.
+
+In the code:
 
 <a id="imports_name"></a>Local imports Name from Src in File if all of:
   - an import D is in file File;
@@ -1053,13 +987,14 @@ A named export sources Src in File if it is in file File and the `source` of it 
   - the `exported` of Sp [is named](js-structure.md#ast_name) Name;
   - E [sources](#module_source) Src in File.
 
-A node
-
-- is exported as Name from File if all of:
+A node is exported as Name from File if all of:
   - Name [is a namespace export](#export_ns_name) of Src from File;
   - Src [targets](#import_target) Target;
   - it [is the module object of](#module_object) Target.
-- may be the node F if all of:
+
+In the flow:
+
+A node may be the node F if all of:
   - Local [imports](#imports_name) Name from Src in File;
   - Src [targets](#import_target) Target;
   - F [is exported as](#exports_name) Name from Target;
@@ -1068,11 +1003,15 @@ A node
 > A namespace import binds the module object. A default import binds the one
 > unnamed export, whose syntactic name is NOT the importer's name.
 
+In the code:
+
 <a id="imports_ns"></a>Local imports the namespace of Src in File if all of:
   - an import D is in file File;
   - the `source` of D [is written as](js-structure.md#ast_value) Src;
   - a namespace import Sp is among the `specifiers` of D;
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
+
+In the flow:
 
 <a id="module_object"></a>A program is the module object of File if it is in file File.
 
@@ -1084,6 +1023,8 @@ A node may be the node P if all of:
 
 The member Name of a node P holds a node F if P [is the module object of](#module_object) Target and F [is exported as](#exports_name) Name from Target.
 
+In the code:
+
 <a id="imports_default"></a>Local imports the default of Src in File if all of:
   - an import D is in file File;
   - the `source` of D [is written as](js-structure.md#ast_value) Src;
@@ -1091,6 +1032,8 @@ The member Name of a node P holds a node F if P [is the module object of](#modul
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
 <a id="exports_default"></a>A function is the default export of File if a default export E is in file File and the `declaration` of E is it.
+
+In the flow:
 
 A node may be the node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
@@ -1100,13 +1043,17 @@ A node may be the node F if all of:
 
 > The frontier: a module this corpus does not contain, one row per module.
 
+In the audit:
+
 <a id="import_outside_corpus"></a>Src is outside the corpus from File if some node [sources](#module_source) Src in File, unless Src [targets](#import_target) some file.
 
 > `this` in an object literal's own method is that object.
 
-<a id="obj_method_of"></a>An object literal has the object method an object method M if M is among the `properties` of it.
+In the flow:
 
-A node may be the node O if O [has the object method](#obj_method_of) a node M and M [hosts](#this_host) it.
+<a id="obj_method_of"></a>An object literal has the object method M if M is among the `properties` of it and M is an object method.
+
+A node may be the node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
 
 ## 12. Construction
 
@@ -1155,7 +1102,7 @@ A node E may be the node CD either:
 
 A class
 
-- <a id="own_ctor"></a>has its own constructor a node M if it [has the method](#class_method_of) M and the attribute `kind` of M is "constructor".
+- <a id="own_ctor"></a>has its own constructor M if it [has the method](#class_method_of) M and the attribute `kind` of M is "constructor".
 - <a id="has_own_ctor"></a>has its own constructor if it [has its own constructor](#own_ctor) some method.
 
 <a id="ctor_of"></a>The constructor of a class CD is M either:
@@ -1167,7 +1114,7 @@ A class
    - unless CD [has its own constructor](#has_own_ctor).
 
 A super may be the node SD if all of:
-  - a class CD [has the method](#class_method_of) a node M;
+  - a class CD [has the method](#class_method_of) M;
   - it [is within](js-structure.md#ast_within) M;
   - [the super](#super_of) of CD is SD.
 
@@ -1211,7 +1158,10 @@ An await may be the node/literal N if the `argument` of it [may be the node/lite
 
 <a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a yield Y and the `argument` of Y is E.
 
-<a id="bound_to_call"></a>A node is bound to the call a call expression C if it [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
+<a id="bound_to_call"></a>A node is bound to the call C if all of:
+  - it [reads](#ident_in) Name in File;
+  - some declarator [binds](#binder) Name to C in File;
+  - C is a call expression.
 
 <a id="next_send"></a>G is sent a node V if all of:
   - a node C [is a call site](js-callgraph.md#call_site) in some file;
@@ -1261,15 +1211,15 @@ A for-of
   - U [is within](js-structure.md#ast_within) B;
   - U [reads](#ident) Name.
 
-<a id="iter_elem"></a>A node X has an element a node E either:
+<a id="iter_elem"></a>A node X has an element E either:
 
-1. if X [may be the node](#may_be_node) an array literal Y and E is among the `elements` of Y;
+1. if X [may be the node](#may_be_node) Y, E is among the `elements` of Y, and Y is an array literal;
 2. if X [resolves to](js-callgraph.md#resolves) F and F [yields](#yields) E.
 
 A node may be the node/literal N if all of:
  - S [loops with](#for_of_use) some name at it;
  - S [iterates](#for_of_src) a node X;
- - X [has an element](#iter_elem) a node E;
+ - X [has an element](#iter_elem) E;
  - E [may be the node/literal](#may_be_node) N.
 
 E may be the node/literal N if E is a logical, the `left` or `right` of E is a node X, and X [may be the node/literal](#may_be_node) N.
@@ -1330,7 +1280,10 @@ A node
   - T [calls](#call_in_try);
   - unless T [throws](#thrown_in) some node.
 - <a id="catch_from_host"></a>catches from the host if it [catches from a call](#catch_from_call), unless it [catches](js-controlflow.md#caught_value) some node.
-- <a id="catch_unsourced"></a>catches from nowhere if all of:
+
+In the audit:
+
+<a id="catch_unsourced"></a>A node catches from nowhere if all of:
   - [the catch](#catch_of) of T is H;
   - [the param](#catch_param) of H is it;
   - T neither [throws](#thrown_in) some node nor [calls](#call_in_try).
@@ -1347,6 +1300,8 @@ A node
 > `{get, set, init}` triple, not the member's value. The `class_method`
 > literal is redundant today (a private key never reaches `key_name`) and kept
 > so the rule does not depend silently on another relation's blindness.
+
+In the flow:
 
 A node
 

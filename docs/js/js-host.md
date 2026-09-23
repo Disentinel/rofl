@@ -6,10 +6,6 @@ default: audit
 
 # js-host
 
-## Terms
-
-*function declaration*.
-
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -17,56 +13,6 @@ A noun is a node of one of its kinds:
 | noun | kinds |
 |---|---|
 | a function declaration | function_declaration |
-
-## Signatures
-
-- binds_the_name(file File, name Name) (name_bound_in), in the code
-- refers_to_the_global(node E, name Name:2, of host H:1) (host_global_ref), in the code
-- refers_to_a_global(node E, name Name:2, only in host H:1) (host_global_only_in), in the code
-- imports_the_namespace(file File, name Local, of spec Spec) (host_module_ns), in the code
-- imports(file File, name Local, as key Key:3, of spec Spec:2) (host_module_named), in the code
-- imports_an_unknown_member(file File, key Key:2, of spec Spec:1) (host_import_unknown)
-- calls_the_host_member(call C, key Key:3, of name Name:2, in host H:1) (host_member_call), in the code
-- calls_the_host_global(call C, name Name:2, of host H:1) (host_global_call), in the code
-- calls_the_module_member(call C, key Key:2, of spec Spec:1) (host_module_call), in the code
-- is_a_host_site(call C, of host H, from origin Origin, at key Key) (host_site), in the code
-- has_a_host_site(file File:1, at line Line:2, of host H:0, from origin Origin:3, at key Key:4) (host_site_at), in the code
-- has_the_member_effect(spec Spec, effect E:2, at key Key:1) (member_effect), in the code
-- has_the_host_effect(call C, effect E, by route N) (host_call_effect)
-- has_the_host_effect(file File:1, effect E:0, at line Line:2, by route Why:3) (host_effect_at)
-- is_used_by_a_host_call(effect E) (host_effect_used)
-- has_no_host_effect(call C, from origin Origin, at key Key) (host_call_uneffected)
-- reaches_the_runtime(runtime R, runtime N) (runtime_reaches)
-- the_version_number(of runtime R, is number VN) (runtime_vnum), in the code
-- has_received(runtime R, key Key:2, of spec Spec:1) (arrived_by), in the code
-- inherits(runtime R, key Key:2, of spec Spec:1) (inherited), in the code
-- provides(runtime R, key Key:2, of spec Spec:1) (provides_api), in the code
-- reaches_the_api(runtime R, key Key:2, of spec Spec:1) (has_api)
-- drops(runtime A, key Key:3, of spec Spec:2, from runtime B:1) (runtime_drops)
-- runs_the_release(runtime R, release Rel) (runtime_reaches_release)
-- has_a_release(runtime R) (runtime_has_release), in the main
-- has_no_release(runtime R) (runtime_no_release)
-- is_unsupported_on(call C:1, runtime R:0, at key Key:3, of prototype P:2) (runtime_lib_unsupported)
-- lacks_the_member(runtime R, key Key:2, of spec Spec:1) (host_member_absent)
-- is_absent_on(call C:1, runtime R:0, at key Key:3, of spec Spec:2) (host_call_absent)
-- has_an_absent_call(file File:1, at line Line:2, on runtime R:0, at key Key:4, of spec Spec:3) (host_call_absent_at)
-- loses_the_call(runtime To:1, call C:2, to spec Spec:3, at key Key:4, since runtime From:0) (host_lost)
-- calls_a_deprecated_member(call C, key Key:2, of spec Spec:1) (host_call_deprecated)
-- has_the_host_remedy(call C, key Use:3, for key Key:2, of spec Spec:1) (host_call_remedy)
-- is_an_undeclared_host_effect(effect E) (host_effect_undeclared)
-- has_an_orphan_effect(spec Spec, at key Key) (host_effect_orphan)
-- has_an_orphan_global_effect(host H, at name Name) (host_global_effect_orphan)
-- claims_its_effects(host H) (effects_claimed), in the main
-- has_no_module_effect(spec Spec) (host_module_uneffected)
-- has_no_global_effect(host H, at name Name) (host_global_uneffected)
-- is_unversioned(runtime R) (runtime_unversioned)
-- is_told_apart_from(runtime X, runtime B) (runtime_separates)
-- is_not_told_apart_from(runtime X, runtime B) (runtime_pair_indistinct)
-- is_listed_bare(spec Spec) (bare_listed), in the main
-- is_not_listed_bare(spec Spec) (bare_builtin_unlisted)
-- has_an_undeclared_family(runtime R, runtime F) (runtime_family_undeclared)
-- includes_across_families(runtime X, runtime B) (runtime_cross_family)
-- is_half_declared(host H) (host_family_mismatch)
 
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
@@ -100,6 +46,8 @@ Declared as facts: ast_parse_error.
 > only, so `not sees_binder` would call every parameter named `url` a global
 > reference and attribute io to a program that does none. Under-reporting a
 > shadowed global is a missed row; over-reporting is a false accusation.
+
+In the code:
 
 <a id="name_bound_in"></a>File binds the name Name if some declarator [introduces](js-dataflow.md#binds_name) Name in File.
 
@@ -152,6 +100,8 @@ File binds the name Name either:
 > newer than @types/node, or one the declarations do not carry. The module
 > door's twin of `stdlib_unattributed[audit]`.
 
+In the audit:
+
 <a id="host_import_unknown"></a>File imports an unknown member Key of a spec Spec if File [imports](#host_module_named) some name as Key of Spec, unless `node` exposes Key of Spec.
 
 ## 3. THE SITES — four shapes, because a rule covering three would report a
@@ -162,6 +112,8 @@ File binds the name Name either:
 >    fs.readFileSync(p)     3c. a member call on a module namespace
 >    readFileSync(p)        3d. a plain call of a named import
 > `selects[flow]` answers the key for the dotted and the computed form alike.
+
+In the code:
 
 <a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
   - [the callee](js-callgraph.md#callee_of) of C is a node N;
@@ -205,6 +157,8 @@ File binds the name Name either:
    - `node` exposes Key of Spec;
    - `node` attributes the module Spec to E;
    - unless `node` attributes the member Key of Spec to some effect.
+
+In the audit:
 
 <a id="host_call_effect"></a>C has the host effect E by a route N either:
 
@@ -253,6 +207,8 @@ File binds the name Name either:
 > is the surface pack's, maj*1000000 + min*1000 + patch, and a runtime
 > declares a MAJOR: `node18` is v18.0.0 and does NOT have `os.machine`.
 
+In the code:
+
 <a id="runtime_vnum"></a>The version number of a runtime R is VN if R is the version V of some runtime and VN is V * 1000000.
 
 > The family is bound once and used in both premises; hard-coding `node`
@@ -275,6 +231,8 @@ A runtime
 
 > test/js-host.test.ts asserts `has_api` equals `arrived_by` set for set:
 > the walk and the comparison must agree.
+
+In the audit:
 
 <a id="has_api"></a>A runtime reaches the api Key of a spec Spec if it [reaches the runtime](#runtime_reaches) P and P [provides](#provides_api) Key of Spec.
 
@@ -302,10 +260,13 @@ A runtime
 > against it. `runtime_lib_unsupported` is `lib_unsupported[audit]` asked of
 > a runtime over the same `lib_call[code]`.
 
-A runtime
+In the main:
 
-- <a id="runtime_has_release"></a>has a release if it [runs the release](#runtime_reaches_release) some release.
-- <a id="runtime_no_release"></a>has no release if it is the version some number of some runtime, unless it [has a release](#runtime_has_release).
+<a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
+
+In the audit:
+
+<a id="runtime_no_release"></a>A runtime has no release if it is the version some number of some runtime, unless it [has a release](#runtime_has_release).
 
 <a id="runtime_lib_unsupported"></a>C is unsupported on a runtime R at Key of a prototype P if all of:
   - C [calls the stdlib](js-env-api.md#lib_call) Key of P since a release Rel;
@@ -370,7 +331,11 @@ A runtime
 > The residue, over hosts that CLAIM attribution; `host_no_effects` is a
 > declared absence rather than a permanently red gate.
 
+In the main:
+
 <a id="effects_claimed"></a>A host claims its effects if it is a host, unless it claims no effects because some reason.
+
+In the audit:
 
 <a id="host_module_uneffected"></a>A spec has no module effect if `node` has the module it, unless `node` attributes the module it to some effect.
 
@@ -401,17 +366,20 @@ A runtime
 > so `"fs/promises"` classifies as a third-party package. A modules-layer
 > gap this pack can see and must not fix.
 
-A spec
+In the main:
 
-- <a id="bare_listed"></a>is listed bare if some text [is the bare name](js-modules.md#node_builtin_bare) of it.
-- <a id="bare_builtin_unlisted"></a>is not listed bare if `node` has the module it, unless it [is listed bare](#bare_listed).
+<a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.md#node_builtin_bare) of it.
+
+In the audit:
+
+<a id="bare_builtin_unlisted"></a>A spec is not listed bare if `node` has the module it, unless it [is listed bare](#bare_listed).
 
 > an inclusion ACROSS families claims one runtime is a later edition of
 > another; the order is not total across families
 
 A runtime
 
-- <a id="runtime_family_undeclared"></a>has an undeclared family a runtime F if it is the version some number of F, unless F is a runtime.
+- <a id="runtime_family_undeclared"></a>has an undeclared family F if it is the version some number of F, unless F is a runtime.
 - <a id="runtime_cross_family"></a>includes across families a runtime B if all of:
   - it includes the runtime B;
   - it is the version some number of a runtime FA;

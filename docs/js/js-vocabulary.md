@@ -6,18 +6,6 @@ default: main
 
 # js-vocabulary
 
-## Signatures
-
-- is_a_body_literal(term L) (body_lit)
-- the_relation(of term L, is relation Rel) (lit_rel)
-- the_argument(index I:1, of term L:0, is term A:2) (lit_arg)
-- has_the_term(relation Rel, term A:2, at index I:1) (slot_term)
-- has_the_variable(relation Rel, term V:2, at index I:1) (slot_var)
-- has_the_atom(relation Rel, term A:2, at index I:1) (slot_atom)
-- has_a_kind_slot_in_rules(relation Rel, at index I) (kind_slot)
-- is_named_by_a_rule(kind K) (kind_named_by_rule)
-- is_named_by_a_rule_yet_unlisted(kind K:1, in language Lang:0) (rule_opinion_unlisted), in the audit
-
 > js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
 > list of kinds it claims to describe. `vocabulary_gap[audit]` in js-model
 > watches the CORPUS: a kind the scanner emits that the vocabulary does not
@@ -57,7 +45,7 @@ A relation
 
 - <a id="slot_term"></a>has the term X at an index I if [the relation](#lit_rel) of a term L is it and [the argument](#lit_arg) I of L is X.
 - <a id="slot_var"></a>has the variable $var(V) at an index I if [the relation](#lit_rel) of a term L is it and [the argument](#lit_arg) I of L is $var(V).
-- <a id="slot_atom"></a>has the atom a term X at an index I if it [has the term](#slot_term) X at I, unless it [has the variable](#slot_var) X at I.
+- <a id="slot_atom"></a>has the atom X at an index I if it [has the term](#slot_term) X at I, unless it [has the variable](#slot_var) X at I.
 
 > Which positions carry a kind — DISCOVERED, not declared, so the table
 > cannot rot: a position is a kind position when a declared kind appears in
@@ -65,12 +53,14 @@ A relation
 > second). The limit: a position where EVERY constant is an undeclared kind
 > is invisible, which is the cheaper mistake.
 
-<a id="kind_slot"></a>A relation has a kind slot in rules at an index I if it [has the atom](#slot_atom) a term X at I and `js` has the node kind X.
+<a id="kind_slot"></a>A relation has a kind slot in rules at an index I if it [has the atom](#slot_atom) X at I and `js` has the node kind X.
 
 <a id="kind_named_by_rule"></a>A kind K is named by a rule if a relation Rel [has the atom](#slot_atom) K at an index I and Rel [has a kind slot in rules](#kind_slot) at I.
 
 > the verdict, with the two exclusions `vocabulary_gap` uses; `program` is
 > the only name reported on an honest tree and `not_a_construct` excludes it
+
+In the audit:
 
 <a id="rule_opinion_unlisted"></a>A kind K is named by a rule yet unlisted in a language Lang if all of:
   - K [is named by a rule](#kind_named_by_rule);

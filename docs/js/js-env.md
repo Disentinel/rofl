@@ -6,42 +6,6 @@ default: audit
 
 # js-env
 
-## Signatures
-
-- reaches_the_release(release R, release N) (reaches)
-- has_the_feature(release R, feature F) (has_feature)
-- supports(environment E, feature F) (env_has)
-- uses_the_feature(node N, feature F) (uses)
-- contains_the_attribute(node N, attribute Key, holding value V) (within_attr)
-- is_used(feature F) (used_feature)
-- fails(node N:1, in environment E:0, for feature F:2) (unsupported)
-- fails(file File:1, at line Line:2, in environment E:0, for feature F:3) (unsupported_at)
-- uses_the_feature(file File, feature F:2, at line Line:1) (uses_at)
-- is_seen_using(kind K, feature F) (uses_kind)
-- fails_somewhere(file File:1, in environment E:0, for feature F:2) (unsupported_in)
-- is_broken_in(file File:1, environment E:0) (file_broken)
-- is_scanned(file File) (scanned_file)
-- is_valid_in(file File:1, environment E:0) (valid)
-- is_invalid_in(file File:1, environment E:0) (invalid)
-- is_lost(node N:2, from environment From:0, to environment To:1, by feature F:3) (lost)
-- is_lost_between(feature F:2, environment From:0, environment To:1) (lost_feature)
-- loses_the_feature(file File:2, feature F:4, at line Line:3, from environment From:0, to environment To:1) (lost_at)
-- requires(kind K:1, feature F:2, in language L:0) (gate_feature), in the main
-- is_gated(kind K:1, in language L:0) (kind_gated), in the main
-- is_unaccounted(kind K:1, in language L:0) (kind_unaccounted)
-- is_double_booked(kind K:1, in language L:0) (kind_double_booked)
-- is_an_undeclared_feature(feature F) (feature_undeclared)
-- is_unreachable(feature F) (feature_unreachable)
-- is_supported_somewhere(feature F) (any_env_has)
-- is_unexercised(feature F) (feature_unexercised)
-- is_unscannable(feature F) (unscannable), in the main
-- is_unscannable_yet_seen(feature F) (unscannable_seen)
-- is_ungoverned(kind K) (kind_ungoverned)
-- is_unranked(environment E) (env_unranked)
-- has_a_rank(environment E) (has_rank), in the main
-- is_separated_from(environment X, environment B) (env_separates)
-- is_indistinct_from(environment X, environment B) (env_pair_indistinct)
-
 > js-env.rofl — THE ENVIRONMENT LAYER: is this program valid HERE, and what
 > exactly stops being valid THERE. Reads `ast_node[code]` and facts/js-env.rofl
 > and nothing else; the call graph has nothing to say about whether `a?.b`
@@ -194,6 +158,8 @@ Declared as facts: ast_parse_error.
 > once written against `kind_needs` alone, and a typo in `attr_needs` moved
 > `unsupported` with no audit naming it. One arm per table, here.
 
+In the main:
+
 <a id="gate_feature"></a>A kind K requires a feature F in a language L either:
 
 1. if K needs F in L;
@@ -210,6 +176,8 @@ Declared as facts: ast_parse_error.
 
 1. if K needs some feature in L;
 2. if K needs at some field holding some text some feature in L.
+
+In the audit:
 
 <a id="kind_unaccounted"></a>A kind K is unaccounted in a language L if all of:
   - L is the environment language;
@@ -236,11 +204,15 @@ A feature
 > much of the table the corpus exercises; and a waiver the corpus nevertheless
 > produces, the day the scanner's plugin list grows
 
-A feature
+<a id="feature_unexercised"></a>A feature is unexercised if `feature`(it) and it neither [is used](#used_feature) nor [is unscannable](#unscannable).
 
-- <a id="feature_unexercised"></a>is unexercised if `feature`(it) and it neither [is used](#used_feature) nor [is unscannable](#unscannable).
-- <a id="unscannable"></a>is unscannable if it is unscannable because some reason.
-- <a id="unscannable_seen"></a>is unscannable yet seen if it [is unscannable](#unscannable) and it [is used](#used_feature).
+In the main:
+
+<a id="unscannable"></a>A feature is unscannable if it is unscannable because some reason.
+
+In the audit:
+
+<a id="unscannable_seen"></a>A feature is unscannable yet seen if it [is unscannable](#unscannable) and it [is used](#used_feature).
 
 > THE FRONTIER, expected non-zero: `node_kind` is authored and babel has 252
 > concrete types. `kind_unaccounted` asks the same of the DECLARED
@@ -253,15 +225,18 @@ A feature
 
 > an environment with no place on the scale looks very old rather than broken
 
-An environment
+<a id="env_unranked"></a>An environment is unranked if it is an environment, unless it [has a rank](#has_rank).
 
-- <a id="env_unranked"></a>is unranked if it is an environment, unless it [has a rank](#has_rank).
-- <a id="has_rank"></a>has a rank if it dates from some number.
+In the main:
+
+<a id="has_rank"></a>An environment has a rank if it dates from some number.
 
 > two environments agreeing on every site are one environment. No rank
 > premise: `RA < RB` made two environments with the SAME rank — the
 > indistinct case — never considered at all. `lost` carries the direction;
 > both ways is the whole test.
+
+In the audit:
 
 An environment
 

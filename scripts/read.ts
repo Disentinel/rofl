@@ -181,7 +181,7 @@ function positional(text: string, intros: Intro[]): Lit | null {
 }
 
 // ------------------------------------------------------------- sentences
-type Rule = { head: Lit; body: Lit[]; guards: Map<string, { noun: string; nouns?: string[]; file?: Term }>; where: string };
+type Rule = { head: Lit; body: Lit[]; guards: Map<string, { noun: string; nouns?: string[]; file?: Term }>; where: string; book: string };
 let unparsed: string[] = [];
 function condition(text: string, intros: Intro[], rule: Rule): boolean {
   let neg = false;
@@ -224,7 +224,7 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
         if (atoms.length === ns.length) { for (const a of atoms) rule.body.push({ rel: 'ast_node', args: [{ v: subj }, { a }, { w: true }, { w: true }], neg: true }); return true; }
         unparsed.push(`unless ${text}`); return false;
       }
-      rule.guards.set(subj, { noun: ns[0], nouns: ns }); known.set(subj, ns[0]); return true;
+      rule.guards.set(subj, { noun: ns[0], nouns: ns, file: rule.guards.get(subj)?.file }); known.set(subj, ns[0]); return true;
     }
   }
   const lit = positional(text, intros) ?? matchLit(text, intros);
@@ -333,6 +333,7 @@ function finish(rule: Rule, intros: Intro[]) {
     }
   }
   rules.push(rule);
+  if (!homeBook.has(rule.head.rel)) homeBook.set(rule.head.rel, rule.book);
 }
 function sentence(headText: string, conds: string[], where: string) {
   known = new Map();
@@ -343,7 +344,7 @@ function sentence(headText: string, conds: string[], where: string) {
     subjectVar = null;
     const head = positional(headText, intros) ?? guardHead(headText, intros) ?? matchLit(headText, intros, true);
     if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
-    const rule: Rule = { head, body: [], guards: new Map(), where };
+    const rule: Rule = { head, body: [], guards: new Map(), where, book: curBook };
     for (const c of conds) condition(c, intros, rule);
     for (const it of intros) if (!known.has(it.v)) known.set(it.v, it.noun);
     if (pass === 0) { ambiguous.length = savedAmb; unparsed.length = savedUn; continue; }
@@ -425,13 +426,15 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
 }
 for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
 let section = '';
+let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
 for (let i = 0; i < blocks.length; i++) {
   const b = blocks[i], next = blocks[i + 1];
   if (b.type === 'h') { section = b.text!; continue; }
-  if (/^(Read from other files|Not defined in these files|Terms|Guards)/.test(section)) continue;
+  if (/^(Read from other files|Not defined in these files)/.test(section)) continue;
   if (b.type !== 'p') continue;
   const text = b.text!.trim(); let m;
-  if (/^Kinds without a noun:/.test(text) || /trailing comments/.test(text)) continue;
+  if (/^Kinds without a noun:/.test(text) || /^A noun that is a relation:/.test(text) || /^A noun is a node of one of its kinds:/.test(text) || /trailing comments/.test(text)) continue;
+  if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
   if ((m = /^Declared as facts: (.*)\.$/.exec(text))) { for (const d of m[1].split(/,\s*/)) { declared.push(d); homeBook.set(d, 'main'); } continue; }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(text))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])] }); continue; }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(text)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])) }); i++; continue; }
@@ -469,7 +472,7 @@ for (let i = 0; i < blocks.length; i++) {
 }
 
 // ---------------------------------------------------- back into clauses
-type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[] };
+type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[]; book: string };
 const tstr = (t: Term): string => 'v' in t ? t.v : 'a' in t ? t.a : 's' in t ? JSON.stringify(t.s) : 'n' in t ? String(t.n) : 'or' in t ? tstr(t.or[0]) : 'f' in t ? `${t.f}(${t.args.map(inner).join(',')})` : '_';
 // inside a functor the kernel's canonical form: variables carry `?`
 const inner = (t: Term): string => 'v' in t ? `?${t.v}` : 'w' in t ? '_' : tstr(t);
@@ -512,7 +515,7 @@ function expand(rule: Rule): Clause[] {
   let heads: string[][] = [[]];
   for (const opts of rule.head.args.map(alternatives)) heads = heads.flatMap((h) => opts.map((o) => [...h, tstr(o)]));
   const out: Clause[] = [];
-  for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body] });
+  for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body], book: rule.book });
   return out;
 }
 const parsed: Clause[] = rules.flatMap(expand);
@@ -581,7 +584,7 @@ for (const u of [...new Set(unparsed)].slice(0, 20)) console.log('  ' + u);
 if (outPath) {
   const bk = (rel: string, tail?: string) => { const b = tail ?? homeBook.get(rel) ?? headBook.get(rel) ?? defaultBook; return b === 'main' ? '' : `[${b}]`; };
   const rofl = (x: string): string => { let m; if ((m = /^([-+*\/]|mod)\((.*),(.*)\)$/.exec(x))) return `${rofl(m[2])} ${m[1]} ${rofl(m[3])}`; if ((m = /^(\w+)\((.*)\)$/.exec(x))) return `${m[1]}(${m[2].split(',').map(rofl).join(', ')})`; return x.replace(/^\?/, ''); };
-  const show = (c: Clause) => `${c.head}${bk(c.head, headBook.get(c.head) ?? defaultBook)}(${c.args.join(', ')})${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${l.args[0]} ${l.rel} ${l.args[1]}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
+  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${c.args.join(', ')})${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${l.args[0]} ${l.rel} ${l.args[1]}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
   const declaredFacts = new Set(declared);
   const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')}).`;
   writeFileSync(outPath, [...declared.map((d) => `edb(${d}).`), ...parsedFacts.map(factLine), ...parsed.map(show)].join('\n') + '\n');

@@ -6,38 +6,11 @@ default: code
 
 # js-globals
 
-## Terms
-
-*function*.
-
 ## Guards
 
 A noun that is a relation: the noun on a variable is the relation holding of it.
 
 - a function: `fn_node`
-
-## Signatures
-
-- reads_a_global_at(kind K, field Field) (global_ref_position), in the main
-- refers_to(node E, name Name, in file File) (global_ref)
-- declares_at(kind K, field Field) (declaring_position), in the main
-- is_declared(name Name, in file File) (declares_name)
-- refers_to_the_free(node E, name Name, in file File) (free_global)
-- is_the_global(node E, name Name, of release Rel, with form Form) (es_global)
-- refers_to_an_unattributed_global(node E, name Name) (global_unattributed), in the audit
-- selects_the_static(member access N, key Key:2, of name Name:1, from release Rel:3) (es_static)
-- selects_an_unattributed_static(node N, key Key:2, of name Name:1) (es_static_unattributed), in the audit
-- selects_the_static_data(member access N, key Key:2, of name Name:1) (es_static_key)
-- calls_the_static(call C, key Key:2, of name Name:1, from release Rel:3) (es_static_call)
-- invokes_the_global(call C, name Name, of release Rel) (es_global_invoke)
-- constructs_the_global(new X, name Name, of release Rel) (es_global_construct)
-- is_constructible(form Form) (constructible_form), in the main
-- constructs_a_non_constructor(new X, name Name, of form Form) (es_construct_not_constructor), in the audit
-- lacks_the_global(environment E, name Name:2, at node X:1) (es_global_unsupported), in the audit
-- lacks_the_static(environment E, key Key:3, of name Name:2, at node N:1) (es_static_unsupported), in the audit
-- is_an_instance(new X, of name Name, from release Rel) (es_instance), in the flow
-- has_no_prototype_listed(name Name, since release Rel) (es_prototype_gap), in the audit
-- calls_an_unattributed_instance_member(call C, key Key:2, of name Name:1) (es_instance_unattributed), in the audit
 
 > js-globals.rofl — THE ES GLOBALS: the half of the standard library that is
 > not a prototype. rules/js-env-api.rofl attributes `array.at` through a
@@ -145,11 +118,16 @@ A node
 
 - <a id="free_global"></a>refers to the free Name in File if it [refers to](#global_ref) Name in File, unless Name [is declared](#declares_name) in File.
 - <a id="es_global"></a>is the global Name of a release Rel with a form Form if it [refers to the free](#free_global) Name in some file and Name is a global since Rel with Form.
-- <a id="global_unattributed"></a>refers to an unattributed global Name if it [refers to the free](#free_global) Name in some file, unless Name is a global since some release with some form.
+
+In the audit:
+
+<a id="global_unattributed"></a>A node refers to an unattributed global Name if it [refers to the free](#free_global) Name in some file, unless Name is a global since some release with some form.
 
 ## 4. THE STATIC SURFACE — one join, keyed by (global, key) once
 
 > `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
+
+In the code:
 
 <a id="es_static"></a>A node selects the static Key of Name from a release Rel if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
@@ -161,6 +139,8 @@ A node
 > edition, a HOST extension (`Error.captureStackTrace` is V8's) or a typo;
 > non-empty on purpose, the fixture puts a site in it
 
+In the audit:
+
 <a id="es_static_unattributed"></a>A node selects an unattributed static Key of Name if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
   - the `object` of it is O;
@@ -169,6 +149,8 @@ A node
 
 > a well-known symbol or `Math.PI` is a KEY and not a call; `lib_static_shape`
 > already carries the difference from the declaration
+
+In the code:
 
 <a id="es_static_key"></a>N selects the static data Key of Name if N [selects the static](#es_static) Key of Name from some release and `lib_static_shape`(Name, Key, `data`).
 
@@ -185,6 +167,8 @@ A node
 > visible statically.
 
 <a id="constructible_form"></a>`constructible_form` includes `constructor_binding`.
+
+In the audit:
 
 <a id="es_construct_not_constructor"></a>X constructs a non constructor Name of a form Form if all of:
   - X [constructs the global](#es_global_construct) Name of some release;
@@ -225,6 +209,8 @@ An environment
 > constructed (the audit above says it throws); a prototype for the
 > thirty-nine globals with no bridge row.
 
+In the flow:
+
 <a id="es_instance"></a>X is an instance of Name from a release Rel if all of:
   - X [constructs the global](#es_global_construct) Name of Rel;
   - Name is a global since some release with a form Form;
@@ -242,6 +228,8 @@ The prototype of a node E is P if all of:
 > instance surface in facts/js-lib-surface.rofl), `es_instance_unattributed`
 > the CORPUS side — `holder.set` now names `Map` and `set` where before it
 > was outside both halves.
+
+In the audit:
 
 <a id="es_prototype_gap"></a>Name has no prototype listed since a release Rel if all of:
   - Name is a global since Rel with a form Form;

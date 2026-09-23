@@ -3,7 +3,7 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.md) | 960 | 3 | 0 | 0 | 0 | 0 | 0 | 29 | 0 | 0 |
+| [js-phrases](js-phrases.md) | 976 | 3 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 0 |
 | [js-ambient](js-ambient.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.md) | 212 | 91 | 82 | 0 | 43 | 221 | 20 | 4 | 4 | 0 |
@@ -114,6 +114,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `axis_applies` | `applies` |
 | `axis_earns` | `earns_its_place` |
 | `bad_reason` | `the_bad_reason` |
+| `bad_reason` | `the_bad_reason` |
 | `bare_builtin_unlisted` | `is_not_listed_bare` |
 | `bare_listed` | `is_listed_bare` |
 | `base_pack` | `is_the_base_pack` |
@@ -151,12 +152,14 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `caught_here` | `is_caught_here` |
 | `caught_value` | `catches` |
 | `cell` | `is_a_cell` |
+| `cell` | `is_a_cell` |
 | `checked` | `is_checked` |
 | `checked_site_kind` | `is_checked_at` |
 | `child_lit` | `reads_the_child` |
 | `child_lit_fvar` | `reads_a_variable_field` |
 | `child_lit_svar` | `reads_the_child_of_a_variable` |
 | `child_needs` | `needs_at` |
+| `claim` | `is_claimed` |
 | `claim` | `is_claimed` |
 | `claim_kind` | `is_a_ledger` |
 | `class_construct_eff` | `constructs_with_effect` |
@@ -222,6 +225,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `depends` | `depends_on` |
 | `destructures_at` | `destructures` |
 | `double_cell` | `is_a_double_cell` |
+| `double_claimed` | `is_double_claimed` |
 | `double_claimed` | `is_double_claimed` |
 | `double_excluded` | `is_excluded_twice` |
 | `eff_alias` | `is_an_alias_of` |
@@ -321,7 +325,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_over` | `exceeds` |
 | `eff_plain_key` | `has_a_plain_key` |
 | `eff_purer_callee` | `calls_a_purer_callee` |
-| `eff_reaches` | `reaches_by_calls` |
+| `eff_reaches` | `reaches_by_calling` |
 | `eff_read_site` | `is_a_read_member` |
 | `eff_row` | `covers` |
 | `eff_row_unknown` | `is_an_unnamed_row` |
@@ -443,6 +447,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `guarded_at` | `has_a_guarded_call_at` |
 | `guarded_call` | `is_a_guarded_call` |
 | `handled` | `is_handled` |
+| `handled` | `is_handled` |
 | `has_api` | `reaches_the_api` |
 | `has_default_internal` | `has_a_default_internal` |
 | `has_entry` | `has_an_entry_point` |
@@ -519,6 +524,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `ident` | `reads` |
 | `ident_in` | `reads` |
 | `ignored` | `is_ignored` |
+| `ignored` | `is_ignored` |
 | `import_attr` | `carries` |
 | `import_attr_of` | `has_the_import_attribute` |
 | `import_attr_unread` | `is_unread` |
@@ -539,6 +545,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `interpolated` | `is_interpolated` |
 | `invalid` | `is_invalid_in` |
 | `invented_cell` | `is_an_invented_cell` |
+| `irreducible_unknown` | `is_irreducibly_unknown` |
 | `irreducible_unknown` | `is_irreducibly_unknown` |
 | `iter_elem` | `has_an_element` |
 | `join_ambiguous` | `has_two_joins` |
@@ -640,10 +647,14 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `obj_method_of` | `has_the_object_method` |
 | `optional_member` | `calls_through_an_optional_member` |
 | `orphan` | `is_orphaned` |
+| `orphan` | `is_orphaned` |
 | `orphan_axis` | `is_an_orphan_axis` |
 | `orphan_claim` | `is_an_orphan_claim` |
+| `orphan_claim` | `is_an_orphan_claim` |
+| `orphan_reason` | `is_an_orphan_reason` |
 | `orphan_reason` | `is_an_orphan_reason` |
 | `orphan_shape` | `is_an_orphan_shape` |
+| `our_unknown` | `is_our_unknown` |
 | `our_unknown` | `is_our_unknown` |
 | `own_ctor` | `has_its_own_constructor` |
 | `own_key` | `owns_the_key` |
@@ -678,6 +689,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `reached` | `reaches_the_step` |
 | `reached_unguarded` | `is_reached_unguarded` |
 | `reaches` | `reaches_the_release` |
+| `reason` | `the_reason` |
 | `reason` | `the_reason` |
 | `reason_earned` | `earns_the_reason` |
 | `reason_missing` | `lacks_a_reason` |
@@ -746,10 +758,12 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `shape` | `has_the_shape` |
 | `shape_bad_reason` | `has_a_bad_reason` |
 | `shape_conflict` | `has_two_site_shapes` |
+| `shape_in` | `is_a_shape_in` |
 | `shape_irreducible` | `is_irreducible` |
 | `shape_kind` | `has_a_shape_axis` |
 | `shape_known` | `has_the_known_shape` |
 | `shape_missing` | `has_no_site_shape` |
+| `shape_of` | `has_the_shape` |
 | `shape_orphan` | `is_a_shape_nobody_lists` |
 | `shape_ours` | `is_ours` |
 | `shape_reason` | `the_shape_reason` |
@@ -761,9 +775,9 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `shape_vocab` | `is_a_shape` |
 | `shape_without_verdict` | `has_no_verdict` |
 | `shaped` | `is_shaped` |
-| `shaped_because` | `is_unknown_with_shape` |
-| `shaped_handled` | `is_handled_with_shape` |
-| `shaped_ignored` | `is_ignored_with_shape` |
+| `shaped_because` | `is_unknown_for_shape` |
+| `shaped_handled` | `is_handled_for_shape` |
+| `shaped_ignored` | `is_ignored_for_shape` |
 | `site` | `is_a_site` |
 | `site_file` | `sits_in` |
 | `site_key_ambiguous` | `has_two_model_keys` |
@@ -827,6 +841,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `unconsumed_value` | `has_an_unconsumed_value` |
 | `unearned_axis` | `is_unearned` |
 | `unknown_because` | `is_unknown` |
+| `unknown_because` | `is_unknown` |
 | `unknown_ledger` | `is_an_unknown_ledger` |
 | `unnamed_callee` | `is_an_unnamed_callee_kind` |
 | `unrecorded_coverage` | `is_covered_unrecorded` |
@@ -849,6 +864,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `valued` | `is_valued` |
 | `var_flow` | `flows_to` |
 | `var_reaches` | `reaches` |
+| `verdict` | `the_verdict` |
 | `verdict` | `the_verdict` |
 | `verified` | `is_verified` |
 | `vocabulary_gap` | `is_a_vocabulary_gap` |

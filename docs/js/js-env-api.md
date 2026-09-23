@@ -6,14 +6,6 @@ default: audit
 
 # js-env-api
 
-## Signatures
-
-- calls_the_stdlib(call C, key Key:2, of prototype P:1, since release Rel:3) (lib_call), in the code
-- calls_an_unattributed_stdlib_member(call C, key Key:2, of prototype P:1) (stdlib_unattributed)
-- is_unsupported_in(call C:1, environment E:0, at key Key:3, of prototype P:2) (lib_unsupported)
-- calls_a_deprecated_stdlib_member(call C, key Key:2, of prototype P:1) (lib_call_deprecated)
-- has_the_remedy(call C, term R:3, for prototype P:1, at key Key:2) (lib_call_remedy)
-
 > js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
 > `stdlib_member[audit](C, P, Key)` names a member call whose receiver has a
 > known PROTOTYPE and whose method is not a node in this program; this says
@@ -28,11 +20,15 @@ default: audit
 
 > one join: the residue is keyed by (prototype, key) and so is the library
 
+In the code:
+
 <a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P and P has the member Key since Rel.
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
 > notice `prototype_of` going wrong
+
+In the audit:
 
 <a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P, unless P has the member Key since some release.
 
@@ -54,7 +50,7 @@ default: audit
 
 <a id="lib_call_deprecated"></a>C calls a deprecated stdlib member Key of a prototype P if C [calls the stdlib](#lib_call) Key of P since some release and P has the deprecated member Key.
 
-<a id="lib_call_remedy"></a>C has the remedy a term R for a prototype P at Key if C [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and `lib_replaced_by`(P, Key, R).
+<a id="lib_call_remedy"></a>C has the remedy R for a prototype P at Key if C [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and `lib_replaced_by`(P, Key, R).
 
 ## Read from other files
 

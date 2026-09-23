@@ -229,7 +229,6 @@ struct R<'a> {
     h: &'a Heap,
     phrases: HashMap<Sym, Vec<Phrase>>,
     fun_phrases: HashMap<Sym, Phrase>,
-    sig_text: HashMap<Sym, String>,
     kind_nouns: HashMap<Sym, String>,
     noun_guards: HashMap<Sym, String>,
     file_guards: Vec<HashMap<String, Sym>>,
@@ -302,7 +301,11 @@ impl<'a> R<'a> {
                             if typed && ctx.positional { ctx.intro.remove(&v); return name.to_string(); }
                             if !typed { ctx.nouns_used.insert(n.clone()); }
                             let last = before.trim_end().rsplit(' ').next().unwrap_or("").to_string();
-                            let named_before = last == *n || last == format!("{n}s") || last == format!("{n}es") || last == "and";
+                            let words: Vec<&str> = before.split_whitespace().collect();
+                            let has_article = words.iter().any(|w| ["the", "a", "an", "two", "its", "no"].contains(w));
+                            let prep = ["of", "to", "by", "at", "in", "with", "from", "for", "on", "through", "as", "into", "under", "over", "than", "within", "among", "after", "before", "between", "since", "against", "off", "is", "are", "holds", "holding", "being", "named", "replaced"].contains(&last.as_str());
+                            // `guards the arm X`: the name ends in the noun, so the hole is named and wears no type
+                            let named_before = last == *n || last == format!("{n}s") || last == format!("{n}es") || last == "and" || (has_article && !prep);
                             let one_letter = name.len() <= 2 && name.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && name.chars().skip(1).all(|c| c.is_ascii_digit());
                             // a value noun is worn by a one-letter variable at the start of a sentence or after a preposition; a verb already says it
                             let after_marker = last.is_empty() || ["of", "at", "in", "for", "with", "under", "by", "to", "from", "than", "on", "between", "into", "through", "since", "against"].contains(&last.as_str());
@@ -1074,6 +1077,7 @@ impl<'a> R<'a> {
         let mut head_books: BTreeMap<String, usize> = BTreeMap::new();
         for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() { *head_books.entry(self.book_name(c.head.book)).or_insert(0) += 1; } } } }
         let default_book = head_books.iter().max_by_key(|(_, n)| **n).map(|(b, _)| b.clone()).unwrap_or_else(|| "main".into());
+        let mut cur_block = default_book.clone();
         let mut body = String::new();
         let mut nouns_used = BTreeSet::new();
         let mut books: BTreeSet<String> = BTreeSet::new();
@@ -1108,7 +1112,11 @@ impl<'a> R<'a> {
                         let mut j = i + 1;
                         while j < clauses.len() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() { j += 1; }
                         if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored); }
-                        else { self.rules(&clauses[i..j], file, &mut items, &mut stats, &mut nouns_used, &mut anchored); }
+                        else {
+                            let b = self.book_name(c.head.book);
+                            if b != cur_block { items.push(Item::Block(format!("In the {b}:\n\n"))); cur_block = b; }
+                            self.rules(&clauses[i..j], file, &mut items, &mut stats, &mut nouns_used, &mut anchored);
+                        }
                         i = j;
                     }
                     Self::flush(items, &mut body, &mut stats);
@@ -1120,10 +1128,7 @@ impl<'a> R<'a> {
         let _ = writeln!(out, "---\nworld: {}\nbooks: {}\ndefault: {}\n---\n", doc.stem, books.iter().cloned().collect::<Vec<_>>().join(", "), default_book);
         let guards: Vec<String> = self.file_guards.get(file).map(|m| { let mut v: Vec<(&String, &Sym)> = m.iter().collect(); v.sort(); v.into_iter().map(|(n, r)| format!("- {} {n}: `{}`", article(n), self.h.name(*r))).collect() }).unwrap_or_default();
         let _ = writeln!(out, "# {}\n", doc.stem);
-        let (real, bare): (Vec<&String>, Vec<&String>) = nouns_used.iter().partition(|n| !n.ends_with(" node"));
-        if !real.is_empty() {
-            let _ = writeln!(out, "## Terms\n\n{}.\n", real.iter().map(|n| format!("*{n}*")).collect::<Vec<_>>().join(", "));
-        }
+        let bare: Vec<&String> = nouns_used.iter().filter(|n| n.ends_with(" node")).collect();
         if !bare.is_empty() {
             let _ = writeln!(out, "Kinds without a noun: {}.\n", bare.iter().map(|n| n.trim_end_matches(" node").to_string()).collect::<Vec<_>>().join(", "));
         }
@@ -1136,19 +1141,6 @@ impl<'a> R<'a> {
             out.push('\n');
         }
         if !guards.is_empty() { let _ = writeln!(out, "## Guards\n\nA noun that is a relation: the noun on a variable is the relation holding of it.\n\n{}\n", guards.join("\n")); }
-        // the signatures of what this file defines, with the book where it is not the default
-        let mut sigs: Vec<String> = Vec::new();
-        let mut seen_sig: HashSet<Sym> = HashSet::new();
-        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs {
-            let rel = c.head.rel;
-            if !seen_sig.insert(rel) || self.defs.get(&rel) != Some(&file) { continue; }
-            if let Some(t) = self.sig_text.get(&rel) {
-                let name = t.split('(').next().unwrap_or("").trim();
-                let book = self.book_name(c.head.book);
-                let _ = sigs.push(format!("- {}{}{}", t, if name != self.h.name(rel) { format!(" ({})", self.h.name(rel)) } else { String::new() }, if book != default_book { format!(", in the {book}") } else { String::new() }));
-            }
-        } } }
-        if !sigs.is_empty() { let _ = writeln!(out, "## Signatures\n\n{}\n", sigs.join("\n")); }
         out.push_str(&body);
         if !reads.is_empty() {
             let _ = writeln!(out, "## Read from other files\n");
@@ -1199,7 +1191,6 @@ fn main() {
     let mut kind_nouns: HashMap<Sym, String> = HashMap::new();
     let mut noun_guards: HashMap<Sym, String> = HashMap::new();
     let mut sigs: Vec<(Sym, String)> = Vec::new();
-    let mut sig_text: HashMap<Sym, String> = HashMap::new();
     let mut renames: Vec<(String, String)> = Vec::new();
     let mut defs: HashMap<Sym, usize> = HashMap::new();
     let mut home: HashMap<Sym, Book> = HashMap::new();
@@ -1254,7 +1245,7 @@ fn main() {
     let noun_list: Vec<String> = kind_nouns.values().cloned().chain(noun_guards.values().cloned()).chain(VALUE_NOUN_LIST.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
     for (rel, text) in &sigs {
         match parse_sig(text, &noun_list) {
-            Ok((p, name)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } phrases.entry(*rel).or_default().insert(0, p); sig_text.insert(*rel, text.clone()); }
+            Ok((p, name)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } phrases.entry(*rel).or_default().insert(0, p); }
             Err(e) => bad_phrases.push(format!("{}: {e}", h.name(*rel))),
         }
     }
@@ -1282,7 +1273,7 @@ fn main() {
         file_guards.push(bound);
     }
 
-    let r = R { h: &h, phrases, fun_phrases, sig_text, kind_nouns, noun_guards, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, var_a };
+    let r = R { h: &h, phrases, fun_phrases, kind_nouns, noun_guards, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, var_a };
     let mut index = String::from("# Index\n\n| file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
     let mut total_pos: BTreeSet<String> = BTreeSet::new();
     for (fi, doc) in docs.iter().enumerate() {
@@ -1339,14 +1330,15 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                     n += 1;
                     let _ = writeln!(out, "clause(r{n}, {:?}).", doc.stem);
                     let _ = writeln!(out, "head(r{n}, {}).", h.name(c.head.rel));
+                    let _ = writeln!(out, "nargs(r{n}, 0, {}).", c.head.args.len());
                     let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
                     *e = (*e).max(c.head.args.len());
                     for (i, a) in c.head.args.iter().enumerate() { term(&mut out, n, 0, i, *a); }
                     for (k, e) in c.body.iter().enumerate() {
                         let k = k + 1;
                         match e {
-                            Elem::Pos(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, pos).", h.name(l.rel)); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
-                            Elem::Neg(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, neg).", h.name(l.rel)); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
+                            Elem::Pos(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, pos).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
+                            Elem::Neg(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, neg).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
                             Elem::Builtin(op, a, b) => { let _ = writeln!(out, "bi(r{n}, {k}, {:?}).", h.name(*op)); term(&mut out, n, k, 0, *a); term(&mut out, n, k, 1, *b); }
                         }
                     }
