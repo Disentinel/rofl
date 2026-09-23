@@ -6,6 +6,15 @@ default: code
 
 # js-modules
 
+Reads:
+
+- from js-callgraph, in the audit: [shape_verdict](js-callgraph.md#shape_verdict)
+- from js-callgraph: [has_shape](js-callgraph.md#has_shape), [resolved_site](js-callgraph.md#resolved_site)
+- from js-model: [ast_node](js-model.md#ast_node)
+- from js-model, in the main: [unknown_because](js-model.md#unknown_because)
+- from js-structure: [ast_name](js-structure.md#ast_name), [ast_value](js-structure.md#ast_value), [meta_form](js-structure.md#meta_form)
+- from outside these files: `ast_attr`, `ast_child`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -556,22 +565,6 @@ An import attribute
 
 - <a id="import_attr_unsited"></a>is unsited unless some node [has the import attribute](#import_attr_of) it.
 - <a id="import_attr_unread"></a>is unread unless it [carries](#import_attr) some key holding some text.
-
-## Read from other files
-
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_value](js-structure.md#ast_value), in the code
-- [has_shape](js-callgraph.md#has_shape), in the code
-- [meta_form](js-structure.md#meta_form), in the code
-- [resolved_site](js-callgraph.md#resolved_site), in the code
-- [shape_verdict](js-callgraph.md#shape_verdict), in the audit
-- [unknown_because](js-model.md#unknown_because), in the main
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
 
 > 3 trailing comments on rule lines are not carried over.
 

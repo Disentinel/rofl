@@ -6,6 +6,20 @@ default: flow
 
 # js-effects
 
+Reads:
+
+- from js-ambient: [eff_here](js-ambient.md#eff_here), [eff_operation](js-ambient.md#eff_operation), [eff_surface](js-ambient.md#eff_surface)
+- from js-ambient, in the main: [ambient_binding](js-ambient.md#ambient_binding), [ambient_effect](js-ambient.md#ambient_effect), [surface_origin](js-ambient.md#surface_origin)
+- from js-callgraph, in the code: [callee_of](js-callgraph.md#callee_of), [calls](js-callgraph.md#calls), [fn_node](js-callgraph.md#fn_node), [nearest_fn](js-callgraph.md#nearest_fn), [resolves](js-callgraph.md#resolves), [unresolved_call](js-callgraph.md#unresolved_call)
+- from js-controlflow, in the code: [caught_here](js-controlflow.md#caught_here), [in_try_block](js-controlflow.md#in_try_block), [may_throw](js-controlflow.md#may_throw), [pattern_accessor](js-controlflow.md#pattern_accessor), [pattern_next](js-controlflow.md#pattern_next), [try_catches](js-controlflow.md#try_catches)
+- from js-dataflow, in the code: [assigns](js-dataflow.md#assigns), [corpus_file](js-dataflow.md#corpus_file), [ident_in](js-dataflow.md#ident_in), [import_target](js-dataflow.md#import_target), [module_source](js-dataflow.md#module_source)
+- from js-dataflow: [may_be_lit](js-dataflow.md#may_be_lit), [may_be_node](js-dataflow.md#may_be_node), [member_node_v](js-dataflow.md#member_node_v), [member_value](js-dataflow.md#member_value), [nearest_v](js-dataflow.md#nearest_v), [plain_assign](js-dataflow.md#plain_assign), [prototype_of](js-dataflow.md#prototype_of), [selects](js-dataflow.md#selects), [super_of](js-dataflow.md#super_of)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.md#builtin_prototype)
+- from js-model, in the code: [ast_node](js-model.md#ast_node)
+- from js-structure, in the code: [ast_in](js-structure.md#ast_in), [ast_name](js-structure.md#ast_name), [ast_value](js-structure.md#ast_value)
+- from outside these files, in the code: `ast_attr`, `ast_child`
+- from outside these files, in the main: `eff_alias`, `eff_heap`, `eff_label`, `eff_name`, `eff_origin`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -958,54 +972,4 @@ In the flow:
 | `flow` | `main` |
 | `audit` | `code` |
 | `audit` | `flow` |
-
-## Read from other files
-
-- [ambient_binding](js-ambient.md#ambient_binding), in the main
-- [ambient_effect](js-ambient.md#ambient_effect), in the main
-- [assigns](js-dataflow.md#assigns), in the code
-- [ast_in](js-structure.md#ast_in), in the code
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_value](js-structure.md#ast_value), in the code
-- [builtin_prototype](js-dataflow.md#builtin_prototype), in the main
-- [callee_of](js-callgraph.md#callee_of), in the code
-- [calls](js-callgraph.md#calls), in the code
-- [caught_here](js-controlflow.md#caught_here), in the code
-- [corpus_file](js-dataflow.md#corpus_file), in the code
-- [eff_here](js-ambient.md#eff_here), in the flow
-- [eff_operation](js-ambient.md#eff_operation), in the flow
-- [eff_surface](js-ambient.md#eff_surface), in the flow
-- [fn_node](js-callgraph.md#fn_node), in the code
-- [ident_in](js-dataflow.md#ident_in), in the code
-- [import_target](js-dataflow.md#import_target), in the code
-- [in_try_block](js-controlflow.md#in_try_block), in the code
-- [may_be_lit](js-dataflow.md#may_be_lit), in the flow
-- [may_be_node](js-dataflow.md#may_be_node), in the flow
-- [may_throw](js-controlflow.md#may_throw), in the code
-- [member_node_v](js-dataflow.md#member_node_v), in the flow
-- [member_value](js-dataflow.md#member_value), in the flow
-- [module_source](js-dataflow.md#module_source), in the code
-- [nearest_fn](js-callgraph.md#nearest_fn), in the code
-- [nearest_v](js-dataflow.md#nearest_v), in the flow
-- [pattern_accessor](js-controlflow.md#pattern_accessor), in the code
-- [pattern_next](js-controlflow.md#pattern_next), in the code
-- [plain_assign](js-dataflow.md#plain_assign), in the flow
-- [prototype_of](js-dataflow.md#prototype_of), in the flow
-- [resolves](js-callgraph.md#resolves), in the code
-- [selects](js-dataflow.md#selects), in the flow
-- [super_of](js-dataflow.md#super_of), in the flow
-- [surface_origin](js-ambient.md#surface_origin), in the main
-- [try_catches](js-controlflow.md#try_catches), in the code
-- [unresolved_call](js-callgraph.md#unresolved_call), in the code
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
-- `eff_alias`, in the main
-- `eff_heap`, in the main
-- `eff_label`, in the main
-- `eff_name`, in the main
-- `eff_origin`, in the main
 

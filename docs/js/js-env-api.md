@@ -6,6 +6,12 @@ default: audit
 
 # js-env-api
 
+Reads:
+
+- from js-callgraph: [stdlib_member](js-callgraph.md#stdlib_member)
+- from js-env: [reaches](js-env.md#reaches)
+- from outside these files, in the main: `environment`, `lib_deprecated`, `lib_member`, `lib_replaced_by`
+
 > js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
 > `stdlib_member[audit](C, P, Key)` names a member call whose receiver has a
 > known PROTOTYPE and whose method is not a node in this program; this says
@@ -51,16 +57,4 @@ In the audit:
 <a id="lib_call_deprecated"></a>C calls a deprecated stdlib member Key of a prototype P if C [calls the stdlib](#lib_call) Key of P since some release and P has the deprecated member Key.
 
 <a id="lib_call_remedy"></a>C has the remedy R for a prototype P at Key if C [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and `lib_replaced_by`(P, Key, R).
-
-## Read from other files
-
-- [reaches](js-env.md#reaches), in the audit
-- [stdlib_member](js-callgraph.md#stdlib_member), in the audit
-
-## Not defined in these files
-
-- `environment`, in the main
-- `lib_deprecated`, in the main
-- `lib_member`, in the main
-- `lib_replaced_by`, in the main
 

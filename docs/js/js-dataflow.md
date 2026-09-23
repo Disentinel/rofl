@@ -6,6 +6,14 @@ default: flow
 
 # js-dataflow
 
+Reads:
+
+- from js-callgraph, in the code: [call_site](js-callgraph.md#call_site), [callee_of](js-callgraph.md#callee_of), [decorates](js-callgraph.md#decorates), [fn_node](js-callgraph.md#fn_node), [resolves](js-callgraph.md#resolves)
+- from js-controlflow: [caught_value](js-controlflow.md#caught_value)
+- from js-model, in the code: [ast_node](js-model.md#ast_node)
+- from js-structure, in the code: [ast_in](js-structure.md#ast_in), [ast_name](js-structure.md#ast_name), [ast_value](js-structure.md#ast_value), [ast_within](js-structure.md#ast_within), [key_name](js-structure.md#key_name)
+- from outside these files, in the code: `ast_attr`, `ast_child`, `ast_file`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -1317,25 +1325,4 @@ A node
   - the `key` of M [spells](js-structure.md#key_name) Key.
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at a node M replaced with N and the attribute `static` of M is `true`/`false`.
-
-## Read from other files
-
-- [ast_in](js-structure.md#ast_in), in the code
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_value](js-structure.md#ast_value), in the code
-- [ast_within](js-structure.md#ast_within), in the code
-- [call_site](js-callgraph.md#call_site), in the code
-- [callee_of](js-callgraph.md#callee_of), in the code
-- [caught_value](js-controlflow.md#caught_value), in the flow
-- [decorates](js-callgraph.md#decorates), in the code
-- [fn_node](js-callgraph.md#fn_node), in the code
-- [key_name](js-structure.md#key_name), in the code
-- [resolves](js-callgraph.md#resolves), in the code
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
-- `ast_file`, in the code
 

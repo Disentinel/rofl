@@ -6,6 +6,20 @@ default: audit
 
 # js-host
 
+Reads:
+
+- from js-callgraph, in the code: [callee_of](js-callgraph.md#callee_of)
+- from js-dataflow, in the code: [binds_name](js-dataflow.md#binds_name), [ident_in](js-dataflow.md#ident_in)
+- from js-dataflow, in the flow: [class_named](js-dataflow.md#class_named), [param_of](js-dataflow.md#param_of), [selects](js-dataflow.md#selects)
+- from js-env: [reaches](js-env.md#reaches)
+- from js-env-api, in the code: [lib_call](js-env-api.md#lib_call)
+- from js-model, in the code: [ast_node](js-model.md#ast_node)
+- from js-modules, in the code: [binding](js-modules.md#binding), [resolved_builtin](js-modules.md#resolved_builtin), [site_file](js-modules.md#site_file)
+- from js-modules, in the main: [node_builtin_bare](js-modules.md#node_builtin_bare)
+- from js-structure, in the code: [ast_name](js-structure.md#ast_name)
+- from outside these files, in the code: `ast_child`
+- from outside these files, in the main: `host`, `host_effect_atom`, `host_global`, `host_global_effect`, `host_member_deprecated`, `host_member_effect`, `host_member_replaced_by`, `host_member_since`, `host_module`, `host_module_effect`, `host_module_member`, `host_no_effects`, `provides_release`, `runtime`, `runtime_includes`, `runtime_undated`, `runtime_version`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -392,42 +406,4 @@ A runtime
 
 1. if H is a host but is not a runtime;
 2. if H is a runtime but is not a host.
-
-## Read from other files
-
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [binding](js-modules.md#binding), in the code
-- [binds_name](js-dataflow.md#binds_name), in the code
-- [callee_of](js-callgraph.md#callee_of), in the code
-- [class_named](js-dataflow.md#class_named), in the flow
-- [ident_in](js-dataflow.md#ident_in), in the code
-- [lib_call](js-env-api.md#lib_call), in the code
-- [node_builtin_bare](js-modules.md#node_builtin_bare), in the main
-- [param_of](js-dataflow.md#param_of), in the flow
-- [reaches](js-env.md#reaches), in the audit
-- [resolved_builtin](js-modules.md#resolved_builtin), in the code
-- [selects](js-dataflow.md#selects), in the flow
-- [site_file](js-modules.md#site_file), in the code
-
-## Not defined in these files
-
-- `ast_child`, in the code
-- `host`, in the main
-- `host_effect_atom`, in the main
-- `host_global`, in the main
-- `host_global_effect`, in the main
-- `host_member_deprecated`, in the main
-- `host_member_effect`, in the main
-- `host_member_replaced_by`, in the main
-- `host_member_since`, in the main
-- `host_module`, in the main
-- `host_module_effect`, in the main
-- `host_module_member`, in the main
-- `host_no_effects`, in the main
-- `provides_release`, in the main
-- `runtime`, in the main
-- `runtime_includes`, in the main
-- `runtime_undated`, in the main
-- `runtime_version`, in the main
 

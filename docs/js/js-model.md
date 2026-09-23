@@ -6,6 +6,10 @@ default: audit
 
 # js-model
 
+Reads:
+
+- from outside these files, in the main: `layer`, `node_kind`
+
 > js-model.rofl — THE COVERAGE MATRIX: node kind x layer (x shape), and
 > every cell carries a verdict. The one claim this file tests: adding a layer
 > is ONE FACT, and the audit enumerates every cell it needs with no rule edit.
@@ -384,9 +388,4 @@ A kind K
 | arg 1 | arg 2 |
 |---|---|
 | `audit` | `code` |
-
-## Not defined in these files
-
-- `layer`, in the main
-- `node_kind`, in the main
 

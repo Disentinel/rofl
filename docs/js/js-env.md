@@ -6,6 +6,13 @@ default: audit
 
 # js-env
 
+Reads:
+
+- from js-model, in the code: [ast_node](js-model.md#ast_node)
+- from js-structure, in the code: [ast_name](js-structure.md#ast_name), [ast_within](js-structure.md#ast_within)
+- from outside these files, in the code: `ast_attr`, `ast_child`, `ast_file`
+- from outside these files, in the main: `attr_needs`, `child_needs`, `env_lang`, `env_rank`, `environment`, `feature`, `feature_unscannable`, `includes`, `kind_baseline`, `kind_needs`, `node_kind`, `outside_attr_needs`, `provides`, `release`
+
 > js-env.rofl — THE ENVIRONMENT LAYER: is this program valid HERE, and what
 > exactly stops being valid THERE. Reads `ast_node[code]` and facts/js-env.rofl
 > and nothing else; the call graph has nothing to say about whether `a?.b`
@@ -246,30 +253,4 @@ An environment
   - B is an environment;
   - it differs from B;
   - unless it [is separated from](#env_separates) B or B [is separated from](#env_separates) it.
-
-## Read from other files
-
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_within](js-structure.md#ast_within), in the code
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
-- `ast_file`, in the code
-- `attr_needs`, in the main
-- `child_needs`, in the main
-- `env_lang`, in the main
-- `env_rank`, in the main
-- `environment`, in the main
-- `feature`, in the main
-- `feature_unscannable`, in the main
-- `includes`, in the main
-- `kind_baseline`, in the main
-- `kind_needs`, in the main
-- `node_kind`, in the main
-- `outside_attr_needs`, in the main
-- `provides`, in the main
-- `release`, in the main
 

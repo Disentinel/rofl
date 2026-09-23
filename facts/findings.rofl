@@ -10,6 +10,12 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top, insight).
+recorded(f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top, "2026-09-23").
+addressed_by(f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top, "rust/rofl/src/bin/rofl_render.rs").
+finding_note(f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top,
+  "VADIM ASKED what `Not defined in these files` means, said both trailing sections are de facto imports that can fold to a list, and asked why they were not at the top. THE MEANING: `Read from other files` were the relations this file reads that another rendered file defines, each a link to its definition; `Not defined in these files` were the relations no rendered file concludes, which the scanner seeds (ast_attr, ast_child, in the code) or a facts pack that is not rendered supplies (node_kind in js-pack-home). Both are what the ROFL source says at its top as `imports(book, book)` and `edb(rel)`, and the renderer had put them at the bottom only because it collects them while rendering the body. NOW: one `Reads:` list right under the title, one line per source and book (`from js-dataflow, in the flow: catch_of, catch_param, ...`; `from outside these files: ast_attr, ast_child`), the book shown only where it is not the file's default; the reader takes a relation's book from that line as it took it from the old sections. Round trip 1178 of 1178, goldens unmoved. THIS IS THE TARGET THE PREVIOUS FINDING WANTED: a use of a relation is declared if it is defined here or named in this list, so the `used before defined` check can mean `used with nowhere to link` once that decision is taken.").
+
 finding(f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity, insight).
 recorded(f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity, "2026-09-23").
 addressed_by(f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity, "rust/rofl/src/bin/rofl_render.rs").

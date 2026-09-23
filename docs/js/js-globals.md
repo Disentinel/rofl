@@ -6,6 +6,17 @@ default: code
 
 # js-globals
 
+Reads:
+
+- from js-callgraph: [callee_of](js-callgraph.md#callee_of), [fn_file](js-callgraph.md#fn_file), [fn_node](js-callgraph.md#fn_node), [transfer_site](js-callgraph.md#transfer_site), [unresolved_call](js-callgraph.md#unresolved_call)
+- from js-dataflow: [ident_in](js-dataflow.md#ident_in)
+- from js-dataflow, in the flow: [may_be_node](js-dataflow.md#may_be_node), [selects](js-dataflow.md#selects)
+- from js-env, in the audit: [reaches](js-env.md#reaches)
+- from js-model: [ast_node](js-model.md#ast_node)
+- from js-structure: [ast_name](js-structure.md#ast_name), [ast_within](js-structure.md#ast_within)
+- from outside these files: `ast_child`
+- from outside these files, in the main: `environment`, `lib_global`, `lib_global_prototype`, `lib_static`, `lib_static_shape`
+
 ## Guards
 
 A noun that is a relation: the noun on a variable is the relation holding of it.
@@ -243,30 +254,6 @@ In the audit:
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.md#selects) Key;
   - unless Name has the prototype some prototype.
-
-## Read from other files
-
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_within](js-structure.md#ast_within), in the code
-- [callee_of](js-callgraph.md#callee_of), in the code
-- [fn_file](js-callgraph.md#fn_file), in the code
-- [fn_node](js-callgraph.md#fn_node), in the code
-- [ident_in](js-dataflow.md#ident_in), in the code
-- [may_be_node](js-dataflow.md#may_be_node), in the flow
-- [reaches](js-env.md#reaches), in the audit
-- [selects](js-dataflow.md#selects), in the flow
-- [transfer_site](js-callgraph.md#transfer_site), in the code
-- [unresolved_call](js-callgraph.md#unresolved_call), in the code
-
-## Not defined in these files
-
-- `ast_child`, in the code
-- `environment`, in the main
-- `lib_global`, in the main
-- `lib_global_prototype`, in the main
-- `lib_static`, in the main
-- `lib_static_shape`, in the main
 
 > 2 trailing comments on rule lines are not carried over.
 

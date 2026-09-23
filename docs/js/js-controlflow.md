@@ -6,6 +6,15 @@ default: code
 
 # js-controlflow
 
+Reads:
+
+- from js-callgraph: [call_site](js-callgraph.md#call_site), [fn_name](js-callgraph.md#fn_name), [fn_node](js-callgraph.md#fn_node), [for_of_iterates](js-callgraph.md#for_of_iterates), [nearest_fn](js-callgraph.md#nearest_fn), [resolves](js-callgraph.md#resolves), [top_call](js-callgraph.md#top_call)
+- from js-dataflow: [export_local](js-dataflow.md#export_local), [pattern_takes](js-dataflow.md#pattern_takes), [private_binds](js-dataflow.md#private_binds), [rest_in_pattern](js-dataflow.md#rest_in_pattern)
+- from js-dataflow, in the flow: [catch_of](js-dataflow.md#catch_of), [catch_param](js-dataflow.md#catch_param), [may_be_lit](js-dataflow.md#may_be_lit), [may_be_node](js-dataflow.md#may_be_node), [member_node_v](js-dataflow.md#member_node_v), [member_value](js-dataflow.md#member_value), [nearest_v](js-dataflow.md#nearest_v), [returns](js-dataflow.md#returns), [selects](js-dataflow.md#selects), [try_block](js-dataflow.md#try_block)
+- from js-model: [ast_node](js-model.md#ast_node)
+- from js-structure: [ast_within](js-structure.md#ast_within)
+- from outside these files: `ast_attr`, `ast_child`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -829,35 +838,4 @@ In the audit:
 In the code:
 
 <a id="guarded_at"></a>File has a guarded call at Line if a node C [is a guarded call](#guarded_call) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
-
-## Read from other files
-
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_within](js-structure.md#ast_within), in the code
-- [call_site](js-callgraph.md#call_site), in the code
-- [catch_of](js-dataflow.md#catch_of), in the flow
-- [catch_param](js-dataflow.md#catch_param), in the flow
-- [export_local](js-dataflow.md#export_local), in the code
-- [fn_name](js-callgraph.md#fn_name), in the code
-- [fn_node](js-callgraph.md#fn_node), in the code
-- [for_of_iterates](js-callgraph.md#for_of_iterates), in the code
-- [may_be_lit](js-dataflow.md#may_be_lit), in the flow
-- [may_be_node](js-dataflow.md#may_be_node), in the flow
-- [member_node_v](js-dataflow.md#member_node_v), in the flow
-- [member_value](js-dataflow.md#member_value), in the flow
-- [nearest_fn](js-callgraph.md#nearest_fn), in the code
-- [nearest_v](js-dataflow.md#nearest_v), in the flow
-- [pattern_takes](js-dataflow.md#pattern_takes), in the code
-- [private_binds](js-dataflow.md#private_binds), in the code
-- [resolves](js-callgraph.md#resolves), in the code
-- [rest_in_pattern](js-dataflow.md#rest_in_pattern), in the code
-- [returns](js-dataflow.md#returns), in the flow
-- [selects](js-dataflow.md#selects), in the flow
-- [top_call](js-callgraph.md#top_call), in the code
-- [try_block](js-dataflow.md#try_block), in the flow
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
 

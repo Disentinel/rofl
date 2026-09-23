@@ -6,6 +6,13 @@ default: main
 
 # js-attrs
 
+Reads:
+
+- from js-model, in the code: [ast_node](js-model.md#ast_node)
+- from js-vocabulary: [body_lit](js-vocabulary.md#body_lit), [lit_arg](js-vocabulary.md#lit_arg), [lit_rel](js-vocabulary.md#lit_rel)
+- from outside these files, in the code: `ast_attr`, `ast_child`
+- from outside these files: `attr_needs`, `node_kind`, `outside_attr_needs`, `premise_lit`
+
 > js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
 > (`w_unconsumed_attribute`). Four times a design note claimed a fact was
 > missing that was already on the store, because the note was written while
@@ -261,22 +268,6 @@ A key K
 - <a id="attr_split_ok_unseen"></a>is an unseen split excuse for Kind if [`attr_split_ok`](#attr_split_ok)(K, Kind, something), unless Kind [sometimes lacks the attribute](#attr_kind_lacks) K.
 
 Declared as facts: attr_split_ok.
-
-## Read from other files
-
-- [ast_node](js-model.md#ast_node), in the code
-- [body_lit](js-vocabulary.md#body_lit), in the main
-- [lit_arg](js-vocabulary.md#lit_arg), in the main
-- [lit_rel](js-vocabulary.md#lit_rel), in the main
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
-- `attr_needs`, in the main
-- `node_kind`, in the main
-- `outside_attr_needs`, in the main
-- `premise_lit`, in the main
 
 > 6 trailing comments on rule lines are not carried over.
 

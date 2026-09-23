@@ -6,6 +6,11 @@ default: code
 
 # js-structure
 
+Reads:
+
+- from js-model: [ast_node](js-model.md#ast_node)
+- from outside these files: `ast_attr`, `ast_child`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -80,13 +85,4 @@ In the audit:
 <a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
 
 <a id="meta_form_conflict"></a>A node has two forms X and B if it [has the meta form](#meta_form) X, it [has the meta form](#meta_form) B, and X differs from B.
-
-## Read from other files
-
-- [ast_node](js-model.md#ast_node), in the code
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
 

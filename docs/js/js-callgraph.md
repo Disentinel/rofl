@@ -6,6 +6,17 @@ default: code
 
 # js-callgraph
 
+Reads:
+
+- from js-dataflow, in the flow: [arg_at](js-dataflow.md#arg_at), [class_method_of](js-dataflow.md#class_method_of), [ctor_of](js-dataflow.md#ctor_of), [may_be_node](js-dataflow.md#may_be_node), [member_value](js-dataflow.md#member_value), [prototype_of](js-dataflow.md#prototype_of), [returns](js-dataflow.md#returns), [selects](js-dataflow.md#selects)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.md#builtin_prototype), [class_field_kind](js-dataflow.md#class_field_kind)
+- from js-model, in the audit: [verdict](js-model.md#verdict)
+- from js-model: [ast_node](js-model.md#ast_node)
+- from js-model, in the main: [shape_of](js-model.md#shape_of), [unknown_type](js-model.md#unknown_type)
+- from js-structure: [ast_name](js-structure.md#ast_name), [ast_within](js-structure.md#ast_within), [key_name](js-structure.md#key_name)
+- from outside these files: `ast_attr`, `ast_child`, `ast_file`
+- from outside these files, in the main: `node_kind`
+
 ## Kinds
 
 A noun is a node of one of its kinds:
@@ -711,31 +722,4 @@ In the audit:
 |---|---|
 | `code` | `flow` |
 | `audit` | `flow` |
-
-## Read from other files
-
-- [arg_at](js-dataflow.md#arg_at), in the flow
-- [ast_name](js-structure.md#ast_name), in the code
-- [ast_node](js-model.md#ast_node), in the code
-- [ast_within](js-structure.md#ast_within), in the code
-- [builtin_prototype](js-dataflow.md#builtin_prototype), in the main
-- [class_field_kind](js-dataflow.md#class_field_kind), in the main
-- [class_method_of](js-dataflow.md#class_method_of), in the flow
-- [ctor_of](js-dataflow.md#ctor_of), in the flow
-- [key_name](js-structure.md#key_name), in the code
-- [may_be_node](js-dataflow.md#may_be_node), in the flow
-- [member_value](js-dataflow.md#member_value), in the flow
-- [prototype_of](js-dataflow.md#prototype_of), in the flow
-- [returns](js-dataflow.md#returns), in the flow
-- [selects](js-dataflow.md#selects), in the flow
-- [shape_of](js-model.md#shape_of), in the main
-- [unknown_type](js-model.md#unknown_type), in the main
-- [verdict](js-model.md#verdict), in the audit
-
-## Not defined in these files
-
-- `ast_attr`, in the code
-- `ast_child`, in the code
-- `ast_file`, in the code
-- `node_kind`, in the main
 

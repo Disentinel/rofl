@@ -1128,6 +1128,16 @@ impl<'a> R<'a> {
         let _ = writeln!(out, "---\nworld: {}\nbooks: {}\ndefault: {}\n---\n", doc.stem, books.iter().cloned().collect::<Vec<_>>().join(", "), default_book);
         let guards: Vec<String> = self.file_guards.get(file).map(|m| { let mut v: Vec<(&String, &Sym)> = m.iter().collect(); v.sort(); v.into_iter().map(|(n, r)| format!("- {} {n}: `{}`", article(n), self.h.name(*r))).collect() }).unwrap_or_default();
         let _ = writeln!(out, "# {}\n", doc.stem);
+        // what this file reads and does not define is its imports, one line per source, at the top
+        let mut groups: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+        let book_of = |rel: &str| self.intern_lookup_or(rel).and_then(|s| self.home.get(&s)).map(|b| self.book_name(*b)).unwrap_or_default();
+        for (rel, f) in &reads { groups.entry((self.stems[*f].clone(), book_of(rel))).or_default().push(format!("[{rel}]({}.md#{rel})", self.stems[*f])); }
+        for rel in &stats.external { groups.entry(("outside these files".to_string(), book_of(rel))).or_default().push(format!("`{rel}`")); }
+        if !groups.is_empty() {
+            let _ = writeln!(out, "Reads:\n");
+            for ((src, book), items) in &groups { let _ = writeln!(out, "- from {src}{}: {}", if book.is_empty() || *book == default_book { String::new() } else { format!(", in the {book}") }, items.join(", ")); }
+            out.push('\n');
+        }
         let bare: Vec<&String> = nouns_used.iter().filter(|n| n.ends_with(" node")).collect();
         if !bare.is_empty() {
             let _ = writeln!(out, "Kinds without a noun: {}.\n", bare.iter().map(|n| n.trim_end_matches(" node").to_string()).collect::<Vec<_>>().join(", "));
@@ -1142,16 +1152,6 @@ impl<'a> R<'a> {
         }
         if !guards.is_empty() { let _ = writeln!(out, "## Guards\n\nA noun that is a relation: the noun on a variable is the relation holding of it.\n\n{}\n", guards.join("\n")); }
         out.push_str(&body);
-        if !reads.is_empty() {
-            let _ = writeln!(out, "## Read from other files\n");
-            for (rel, f) in &reads { let sym = self.intern_lookup_or(rel); let _ = writeln!(out, "- [{rel}]({}.md#{rel}){}", self.stems[*f], sym.and_then(|s| self.home.get(&s)).map(|b| format!(", in the {}", self.book_name(*b))).unwrap_or_default()); }
-            out.push('\n');
-        }
-        if !stats.external.is_empty() {
-            let _ = writeln!(out, "## Not defined in these files\n");
-            for rel in &stats.external { let sym = self.intern_lookup_or(rel); let _ = writeln!(out, "- `{rel}`{}", sym.and_then(|s| self.home.get(&s)).map(|b| format!(", in the {}", self.book_name(*b))).unwrap_or_default()); }
-            out.push('\n');
-        }
         if doc.trailing > 0 { let _ = writeln!(out, "> {} trailing comments on rule lines are not carried over.\n", doc.trailing); }
         (out, stats)
     }

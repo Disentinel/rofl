@@ -6,6 +6,10 @@ default: main
 
 # js-pack-home
 
+Reads:
+
+- from outside these files: `asserted_by`, `node_kind`
+
 > js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
 > a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
 > vocabulary's home: it is the deliberately tiny BASE every world loads.
@@ -85,9 +89,4 @@ In the audit:
   - it [speaks of the kind](#pack_speaks) K;
   - `js` has the node kind K;
   - unless it [declares the kind](#pack_declares) K.
-
-## Not defined in these files
-
-- `asserted_by`, in the main
-- `node_kind`, in the main
 

@@ -6,6 +6,12 @@ default: main
 
 # js-vocabulary
 
+Reads:
+
+- from js-dataflow, in the flow: [arg_at](js-dataflow.md#arg_at)
+- from js-model: [frame_deferred](js-model.md#frame_deferred), [lang_of_corpus](js-model.md#lang_of_corpus), [not_a_construct](js-model.md#not_a_construct)
+- from outside these files: `node_kind`, `premise_lit`
+
 > js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
 > list of kinds it claims to describe. `vocabulary_gap[audit]` in js-model
 > watches the CORPUS: a kind the scanner emits that the vocabulary does not
@@ -67,16 +73,4 @@ In the audit:
   - Lang [is the corpus language](js-model.md#lang_of_corpus);
   - K neither [is not a construct](js-model.md#not_a_construct) nor [is deferred to the frame](js-model.md#frame_deferred) because some reason;
   - unless Lang has the node kind K.
-
-## Read from other files
-
-- [arg_at](js-dataflow.md#arg_at), in the flow
-- [frame_deferred](js-model.md#frame_deferred), in the main
-- [lang_of_corpus](js-model.md#lang_of_corpus), in the main
-- [not_a_construct](js-model.md#not_a_construct), in the main
-
-## Not defined in these files
-
-- `node_kind`, in the main
-- `premise_lit`, in the main
 

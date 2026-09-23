@@ -6,6 +6,22 @@ default: main
 
 # js-ambient
 
+Reads:
+
+- from js-callgraph, in the code: [callee_of](js-callgraph.md#callee_of), [resolved_site](js-callgraph.md#resolved_site), [resolves](js-callgraph.md#resolves), [transfer_site](js-callgraph.md#transfer_site), [unresolved_call](js-callgraph.md#unresolved_call)
+- from js-dataflow, in the code: [ident_in](js-dataflow.md#ident_in)
+- from js-dataflow, in the flow: [member_node_v](js-dataflow.md#member_node_v), [nearest_v](js-dataflow.md#nearest_v), [prototype_of](js-dataflow.md#prototype_of), [selects](js-dataflow.md#selects)
+- from js-dataflow: [builtin_prototype](js-dataflow.md#builtin_prototype), [kind_prototype](js-dataflow.md#kind_prototype), [node_value_kind](js-dataflow.md#node_value_kind)
+- from js-effects, in the audit: [eff_exn_only](js-effects.md#eff_exn_only)
+- from js-effects, in the code: [eff_discharged_at](js-effects.md#eff_discharged_at)
+- from js-effects, in the flow: [concrete_effect](js-effects.md#concrete_effect), [concrete_unmapped](js-effects.md#concrete_unmapped), [eff_heap_of](js-effects.md#eff_heap_of)
+- from js-effects: [eff_lt](js-effects.md#eff_lt), [eff_row](js-effects.md#eff_row)
+- from js-globals, in the code: [free_global](js-globals.md#free_global)
+- from js-globals: [constructible_form](js-globals.md#constructible_form)
+- from js-host, in the code: [host_module_named](js-host.md#host_module_named), [host_module_ns](js-host.md#host_module_ns), [member_effect](js-host.md#member_effect)
+- from outside these files, in the code: `ast_child`
+- from outside these files: `eff_label`, `eff_name`, `host_effect_atom`, `host_global`, `host_global_effect`, `host_module`, `host_module_member`, `lib_global`, `lib_member`, `lib_readonly_member`, `lib_readonly_view`, `lib_static`
+
 ## Guards
 
 A noun that is a relation: the noun on a variable is the relation holding of it.
@@ -404,48 +420,4 @@ A surface
 In the audit:
 
 <a id="eff_exn_unexplained"></a>F has an unexplained exception if F [has only a latent exception](js-effects.md#eff_exn_only), unless F [carries an exception](#amb_exn_carrier).
-
-## Read from other files
-
-- [builtin_prototype](js-dataflow.md#builtin_prototype), in the main
-- [callee_of](js-callgraph.md#callee_of), in the code
-- [concrete_effect](js-effects.md#concrete_effect), in the flow
-- [concrete_unmapped](js-effects.md#concrete_unmapped), in the flow
-- [constructible_form](js-globals.md#constructible_form), in the main
-- [eff_discharged_at](js-effects.md#eff_discharged_at), in the code
-- [eff_exn_only](js-effects.md#eff_exn_only), in the audit
-- [eff_heap_of](js-effects.md#eff_heap_of), in the flow
-- [eff_lt](js-effects.md#eff_lt), in the main
-- [eff_row](js-effects.md#eff_row), in the main
-- [free_global](js-globals.md#free_global), in the code
-- [host_module_named](js-host.md#host_module_named), in the code
-- [host_module_ns](js-host.md#host_module_ns), in the code
-- [ident_in](js-dataflow.md#ident_in), in the code
-- [kind_prototype](js-dataflow.md#kind_prototype), in the main
-- [member_effect](js-host.md#member_effect), in the code
-- [member_node_v](js-dataflow.md#member_node_v), in the flow
-- [nearest_v](js-dataflow.md#nearest_v), in the flow
-- [node_value_kind](js-dataflow.md#node_value_kind), in the main
-- [prototype_of](js-dataflow.md#prototype_of), in the flow
-- [resolved_site](js-callgraph.md#resolved_site), in the code
-- [resolves](js-callgraph.md#resolves), in the code
-- [selects](js-dataflow.md#selects), in the flow
-- [transfer_site](js-callgraph.md#transfer_site), in the code
-- [unresolved_call](js-callgraph.md#unresolved_call), in the code
-
-## Not defined in these files
-
-- `ast_child`, in the code
-- `eff_label`, in the main
-- `eff_name`, in the main
-- `host_effect_atom`, in the main
-- `host_global`, in the main
-- `host_global_effect`, in the main
-- `host_module`, in the main
-- `host_module_member`, in the main
-- `lib_global`, in the main
-- `lib_member`, in the main
-- `lib_readonly_member`, in the main
-- `lib_readonly_view`, in the main
-- `lib_static`, in the main
 

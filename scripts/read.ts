@@ -419,9 +419,6 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
     }
     if (sec === 'Guards' && b.type === 'ul') for (const it of b.items!) { const m = /^[Aa]n? (.+?): `(\w+)`$/.exec(it.text.trim()); if (m) nounGuards.set(m[1], m[2]); }
     if (sec === 'Kinds' && b.type === 'table') for (const r of b.rows!) { const noun = r[0].replace(/^[Aa]n? /, ''); for (const k of r[1].split(/,\s*/)) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } }
-    if (/^(Read from other files|Not defined in these files)/.test(sec) && b.type === 'ul') for (const it of b.items!) {
-      const m = /^`?([\w-]+)`?(?:, in the (\w+))?$/.exec(it.text.trim()); if (m && m[2]) homeBook.set(m[1], m[2]);
-    }
   }
 }
 for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
@@ -430,11 +427,15 @@ let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rul
 for (let i = 0; i < blocks.length; i++) {
   const b = blocks[i], next = blocks[i + 1];
   if (b.type === 'h') { section = b.text!; continue; }
-  if (/^(Read from other files|Not defined in these files)/.test(section)) continue;
   if (b.type !== 'p') continue;
   const text = b.text!.trim(); let m;
   if (/^Kinds without a noun:/.test(text) || /^A noun that is a relation:/.test(text) || /^A noun is a node of one of its kinds:/.test(text) || /trailing comments/.test(text)) continue;
   if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
+  if (text === 'Reads:' && next && next.type === 'ul') {
+    // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
+    for (const it of next.items!) { const im = /^from (\S+?)(?:, in the (\w+))?: (.*)$/.exec(it.text.trim()); if (im && im[2]) for (const r of im[3].split(/,\s*/)) homeBook.set(r.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`/g, ''), im[2]); }
+    i++; continue;
+  }
   if ((m = /^Declared as facts: (.*)\.$/.exec(text))) { for (const d of m[1].split(/,\s*/)) { declared.push(d); homeBook.set(d, 'main'); } continue; }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(text))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])] }); continue; }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(text)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])) }); i++; continue; }
