@@ -26,16 +26,17 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| an assignment | assignment_expression |
-| a binary expression | binary_expression |
-| a class expression | class_expression |
-| a dynamic import | import_expression |
-| a new | new_expression |
-| a static block | static_block |
-| a template | template_literal |
-| a throw | throw_statement |
-| a try | try_statement |
-| an update expression | update_expression |
+| <a id="noun-assignment"></a>an assignment | assignment_expression |
+| <a id="noun-binary_expression"></a>a binary expression | binary_expression |
+| <a id="noun-class_expression"></a>a class expression | class_expression |
+| <a id="noun-dynamic_import"></a>a dynamic import | import_expression |
+| <a id="noun-new"></a>a new | new_expression |
+| <a id="noun-static_block"></a>a static block | static_block |
+| <a id="noun-template"></a>a template | template_literal |
+| <a id="noun-throw"></a>a throw | throw_statement |
+| <a id="noun-try"></a>a try | try_statement |
+| <a id="noun-unary_expression"></a>an unary expression | unary_expression |
+| <a id="noun-update_expression"></a>an update expression | update_expression |
 
 ## Guards
 
@@ -168,17 +169,17 @@ In the flow:
 
 <a id="eff_try_arm"></a>T has the arm N either:
 
-1. if T is a try, the `handler` of T is some node, and N is `handled`;
-2. if T is a try and N is `unhandled`, unless the `handler` of T is some node.
+1. if T is a [try](#noun-try), the `handler` of T is some node, and N is `handled`;
+2. if T is a [try](#noun-try) and N is `unhandled`, unless the `handler` of T is some node.
 
-A throw has the effect `exn` at `none` unless it [is caught in place](#eff_catch_here).
+A [throw](#noun-throw) has the effect `exn` at `none` unless it [is caught in place](#eff_catch_here).
 
 > DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 > not terminate for the same reason `while (true)` may not, and nothing in the
 > tree shows it. `eff_calls` leads with `resolves` (binds both ends) so
 > `nearest_v` is probed, not enumerated.
 
-<a id="eff_loop_kind"></a>`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
+`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
 
 A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.md#ast_node) K.
 
@@ -186,7 +187,7 @@ In the code:
 
 A node
 
-- <a id="eff_calls"></a>has a call to a function G if a node C [resolves to](js-callgraph.md#resolves) G and it [is nearest to](js-dataflow.md#nearest_v) C.
+- <a id="eff_calls"></a>has a call to a [function](js-callgraph.md#fn_node) G if a node C [resolves to](js-callgraph.md#resolves) G and it [is nearest to](js-dataflow.md#nearest_v) C.
 - <a id="eff_reaches"></a>reaches by calling a node G if it [has a call to](#eff_calls) G.
 - reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and G [has a call to](#eff_calls) H.
 
@@ -197,17 +198,21 @@ A node has the effect `div` at `none` if all of:
   - a node F [is nearest to](js-dataflow.md#nearest_v) it;
   - G [reaches by calling](#eff_reaches) F.
 
-Declared as facts: eff_loop_kind.
+Declared as facts:
+
+- <a id="eff_loop_kind"></a>`eff_loop_kind`
 
 > ALLOC: a fresh mutable identity. `new_expression` is here although its cell
 > is open: the allocation half is complete; the constructor's effect is the
 > ambient-surface question. `class_declaration` is added in section 6.
 
-<a id="eff_alloc_kind"></a>`eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
+`eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
 
 A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and it [is of kind](js-model.md#ast_node) K.
 
-Declared as facts: eff_alloc_kind.
+Declared as facts:
+
+- <a id="eff_alloc_kind"></a>`eff_alloc_kind`
 
 > READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 > receiver to an allocation; otherwise `global`. A negation pair rather than
@@ -217,22 +222,28 @@ Declared as facts: eff_alloc_kind.
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>A member access has a traced object if the `object` of it [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>A [member access](js-dataflow.md#member_node_v) has a traced object if the `object` of it [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>M touches the heap N either:
 
-1. if M is a member access, M [has a traced object](#eff_obj_traced), and N is `local`;
-2. if M is a member access and N is `global`, unless M [has a traced object](#eff_obj_traced).
+1. if all of:
+   - M is a [member access](js-dataflow.md#member_node_v);
+   - M [has a traced object](#eff_obj_traced);
+   - N is `local`;
+2. if all of:
+   - M is a [member access](js-dataflow.md#member_node_v);
+   - N is `global`;
+   - unless M [has a traced object](#eff_obj_traced).
 
 In the code:
 
-<a id="eff_assign"></a>An assignment is a write.
+<a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
 
 <a id="eff_assign_target"></a>A node writes to a node L if it [is a write](#eff_assign) and the `left` of it is L.
 
 <a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.md#plain_assign).
 
-<a id="eff_member_target"></a>A member access is a written member if some assignment [writes to](#eff_assign_target) it.
+<a id="eff_member_target"></a>A [member access](js-dataflow.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
 
 <a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and it [is named](js-structure.md#ast_name) some name.
 
@@ -248,7 +259,7 @@ A node
   - it [touches the heap](#eff_heap_of) H.
 - has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.md#ast_name) some name.
 
-<a id="eff_read_site"></a>A member access is a read member unless it [is a written member](#eff_member_target).
+<a id="eff_read_site"></a>A [member access](js-dataflow.md#member_node_v) is a read member unless it [is a written member](#eff_member_target).
 
 A node has the effect `read` at a host H if it [is a read member](#eff_read_site) and it [touches the heap](#eff_heap_of) H.
 
@@ -260,7 +271,7 @@ In the audit:
 
 In the code:
 
-<a id="eff_update_arg"></a>An update expression updates a node X if the `argument` of it is X.
+<a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if the `argument` of it is X.
 
 In the flow:
 
@@ -321,7 +332,7 @@ An effect label
 
 <a id="eff_latent"></a>F has the latent effect L at a host H if a node N [has the effect](js-ambient.md#eff_here) L at H and F [is nearest to](js-dataflow.md#nearest_v) N.
 
-<a id="eff_discharges"></a>`eff_discharges` lists:
+`eff_discharges` lists:
 
 | kind | effect label |
 |---|---|
@@ -343,7 +354,9 @@ In the audit:
 
 <a id="eff_discharge_unknown"></a>A kind M discharges an unknown label L if M [discharges the label](#eff_discharges) L, unless L is a label at some host.
 
-Declared as facts: eff_discharges.
+Declared as facts:
+
+- <a id="eff_discharges"></a>A kind M discharges the label L
 
 > The one independent oracle: `may_throw` was built for the exception
 > question alone, and the exn projection must reproduce it row for row, in
@@ -374,7 +387,7 @@ Declared as facts: eff_discharges.
 
 In the flow:
 
-<a id="eff_subject"></a>A function is an effect subject.
+<a id="eff_subject"></a>A [function](js-callgraph.md#fn_node) is an effect subject.
 
 <a id="eff_over"></a>F exceeds an effect N if all of:
   - N is in the lattice;
@@ -478,9 +491,11 @@ A spec
   - E [is the bottom](#eff_bot);
   - Op [is a suspension word](#eff_suspension_word).
 
-<a id="eff_suspension_word"></a>`eff_suspension_word` includes `then`, `await`, `next`.
+`eff_suspension_word` includes `then`, `await`, `next`.
 
-Declared as facts: eff_suspension_word.
+Declared as facts:
+
+- <a id="eff_suspension_word"></a>An operation Op is a suspension word
 
 ## 5b. AN OPERATOR WHOSE SEMANTICS IS A CALL
 
@@ -512,19 +527,19 @@ In the flow:
 
 In the code:
 
-<a id="eff_converts"></a>N converts if N is a binary expression or an unary expression, unless N [inspects](#eff_op_inspects).
+<a id="eff_converts"></a>N converts if N is a [binary expression](#noun-binary_expression) or an [unary expression](#noun-unary_expression), unless N [inspects](#eff_op_inspects).
 
 In the flow:
 
 <a id="eff_coerced"></a>A node N coerces a node X either:
 
 1. if N [converts](#eff_converts) and the `left` or `right` or `argument` of N is X;
-2. if N is a template and X is among the `expressions` of N.
+2. if N is a [template](#noun-template) and X is among the `expressions` of N.
 
 > `Symbol.toPrimitive` is deliberately absent: a computed key, and what
 > spelling `key_name` gives one is `w_computed_key_names`' open question.
 
-<a id="eff_conv_key"></a>`eff_conv_key` includes "valueOf", "toString".
+`eff_conv_key` includes "valueOf", "toString".
 
 A node
 
@@ -546,7 +561,9 @@ A node
   - unless it [coerces the object](#eff_conv_object) X.
 - <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
 
-Declared as facts: eff_conv_key.
+Declared as facts:
+
+- <a id="eff_conv_key"></a>A key Key is a conversion key
 
 > A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 > oracle is V8's stack frames, which know nothing about a conversion.
@@ -592,7 +609,7 @@ In the code:
 
 1. if N [sources](js-dataflow.md#module_source) Src in F;
 2. if all of:
-   - N is a dynamic import;
+   - N is a [dynamic import](#noun-dynamic_import);
    - N is in file F;
    - the `source` of N [is written as](js-structure.md#ast_value) Src.
 
@@ -744,7 +761,7 @@ In the flow:
 1. if a node C [resolves to](js-callgraph.md#resolves) G and F [is the nearest function of](js-callgraph.md#nearest_fn) C;
 2. if a node C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
-<a id="eff_edge_unclosed"></a>A function leaves open the edge to G for an effect label L at a host H if all of:
+<a id="eff_edge_unclosed"></a>A [function](js-callgraph.md#fn_node) leaves open the edge to G for an effect label L at a host H if all of:
   - it [calls](js-callgraph.md#calls) G;
   - G [has the latent effect](#eff_latent) L at H;
   - it neither [closes the edge to](#eff_edge_closed) G nor [has the latent effect](#eff_latent) L at H.
@@ -760,9 +777,9 @@ In the flow:
 > price, one row today. Methods are not field kinds: they are latent.
 > `class_accessor_property` adds no label beyond a plain field.
 
-<a id="eff_class_form"></a>`eff_class_form` includes `class_declaration`.
+`eff_class_form` includes `class_declaration`.
 
-<a id="eff_field_kind"></a>`eff_field_kind` includes `class_property`, `class_private_property`, `class_accessor_property`.
+`eff_field_kind` includes `class_property`, `class_private_property`, `class_accessor_property`.
 
 In the code:
 
@@ -778,7 +795,10 @@ In the code:
   - P [is of kind](js-model.md#ast_node) K;
   - the `value` of P is V.
 
-Declared as facts: eff_class_form, eff_field_kind.
+Declared as facts:
+
+- <a id="eff_class_form"></a>A kind K is a class form
+- <a id="eff_field_kind"></a>`eff_field_kind`
 
 > Two POSITIVE arms, not `not static`: a default would silently file every
 > field the scanner stops flagging under construction time, and
@@ -802,7 +822,7 @@ In the flow:
 A class
 
 - <a id="eff_define_part"></a><a id="eff_construct_part"></a>defines/constructs by running a node V if it [initialises the field](#eff_field_value) at a node P with V and P [initialises at](#eff_field_moment) `definition`/`construction`.
-- defines by running a static block S if it [has the body member](#eff_class_body) S.
+- defines by running a [static block](#noun-static_block) S if it [has the body member](#eff_class_body) S.
 
 > Three more things run at definition: the `extends` expression, a COMPUTED
 > key, a decorator. The computed-key arm negates `eff_plain_key` instead of
@@ -846,12 +866,12 @@ A class CD defines by running a node KN either:
 3. if all of:
    - P [runs](#eff_runs_in) a node Y;
    - N [is under](js-structure.md#ast_in) Y;
-   - unless Y is a function.
+   - unless Y is a [function](js-callgraph.md#fn_node).
 
 In the code:
 
 A node is caught in place if all of:
-  - a node P [runs](#eff_runs_in) a try TS;
+  - a node P [runs](#eff_runs_in) a [try](#noun-try) TS;
   - TS [tries](js-controlflow.md#in_try_block) it;
   - P [runs](#eff_runs_in) it;
   - TS [has a handler](js-controlflow.md#try_catches).
@@ -896,7 +916,7 @@ In the flow:
 
 A node has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
 
-A new has the effect L at a host H if it [may be the node](js-dataflow.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
+A [new](#noun-new) has the effect L at a host H if it [may be the node](js-dataflow.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
 
 `eff_alloc_kind` includes `class_declaration`.
 
@@ -917,14 +937,14 @@ In the flow:
 
 <a id="eff_define_unreached"></a>CE defines without reaching a node S either:
 
-1. if CE is a class expression and the `super_class` of CE is S;
+1. if CE is a [class expression](#noun-class_expression) and the `super_class` of CE is S;
 2. if all of:
-   - CE is a class expression;
+   - CE is a [class expression](#noun-class_expression);
    - the `body` of CE is a node B;
    - S is among the `body` of B;
-   - S is a static block;
+   - S is a [static block](#noun-static_block);
 3. if all of:
-   - CE is a class expression;
+   - CE is a [class expression](#noun-class_expression);
    - the `body` of CE is a node B;
    - a node P is among the `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);

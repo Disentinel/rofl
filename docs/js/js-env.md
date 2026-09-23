@@ -77,7 +77,7 @@ Reads:
 3. if all of:
    - N [is of kind](js-model.md#ast_node) K;
    - a language L is the environment language;
-   - K needs at Field holding Name F in L;
+   - K needs at a field Field holding Name F in L;
    - the Field of N [is named](js-structure.md#ast_name) Name.
 
 > Order is for cost: the two-row table binds Key and V, `ast_attr` is probed
@@ -138,7 +138,9 @@ File is broken in an environment E if E is an environment and [`ast_parse_error`
 
 <a id="invalid"></a>File is invalid in an environment E if E is an environment, File [is scanned](#scanned_file), and File [is broken in](#file_broken) E.
 
-Declared as facts: ast_parse_error.
+Declared as facts:
+
+- <a id="ast_parse_error"></a>`ast_parse_error`
 
 ## 4. «А что именно перестанет быть валидным?» — the difference between two
 

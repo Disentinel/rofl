@@ -12,7 +12,11 @@ default: main
 > argument order or `<i:noun>` for argument i; `<i=0>` and `<i=_>` pick a
 > template by the shape of the call and render nothing.
 
-Declared as facts: phrase, kind_noun, sig.
+Declared as facts:
+
+- <a id="phrase"></a>`phrase`
+- <a id="kind_noun"></a>`kind_noun`
+- <a id="sig"></a>`sig`
 
 > what the scanner seeds, in the code
 
@@ -20,12 +24,14 @@ Declared as facts: phrase, kind_noun, sig.
 
 > a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
 
-Declared as facts: kind_set.
+Declared as facts:
+
+- <a id="kind_set"></a>`kind_set`
 
 > a noun bound to a unary relation: `a function F` is `fn_node(F)`, the relation is
 > the guard and the kind set behind it is a table (`K is a function kind`)
 
-<a id="noun_guard"></a>`noun_guard` lists:
+`noun_guard` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -33,16 +39,18 @@ Declared as facts: kind_set.
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-<a id="kind_set"></a>`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `block_scope_kind`, `call_like_v`, `call_kind`.
+`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `block_scope_kind`, `call_like_v`, `call_kind`.
 
-Declared as facts: noun_guard.
+Declared as facts:
+
+- <a id="noun_guard"></a>`noun_guard`
 
 > signatures: the head phrase is the name, each argument is `[marker] noun Var`
 > in the relation's own order; a name that differs from the relation is a
 > proposed rename. Scanner relations keep their phrases above: their index
 > variants need the fixed holes.
 
-<a id="sig"></a>`sig` lists:
+`sig` lists:
 
 | arg 1 | arg 2 |
 |---|---|

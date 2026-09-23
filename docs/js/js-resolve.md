@@ -30,7 +30,19 @@ Reads:
 > what the host supplies (scanners/js_resolve.ts), then what the ledger side
 > declares (facts/js-resolve.rofl)
 
-Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_answer, resolve_failed, resolve_unasked, resolve_via, env_ran, env_extension, env_declared, resolve_mechanism.
+Declared as facts:
+
+- <a id="resolve_site"></a>A site S is a resolve site in a file File at a line Line for a text Spec
+- <a id="resolve_site_computed"></a>A site S is a computed resolve site in a file File at a line Line
+- <a id="resolve_try"></a>A site S tries at a step K a path Path with a verdict Outcome
+- <a id="resolve_answer"></a>A site S is answered with a path P
+- <a id="resolve_failed"></a>A site S fails to resolve because a reason R
+- <a id="resolve_unasked"></a>A site S is unasked because a reason R
+- <a id="resolve_via"></a>A site S resolves via a mechanism M with a text D
+- <a id="env_ran"></a>An environment Env ran
+- <a id="env_extension"></a>`env_extension`
+- <a id="env_declared"></a>An environment Env is declared
+- <a id="resolve_mechanism"></a>A mechanism M is a resolve mechanism
 
 ## 1. THE PLACES, both kinds unioned, so that "every place" is a relation.
 

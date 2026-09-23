@@ -69,7 +69,11 @@ A key K
   - K neither [is read with the value free](#attr_key_read_free) nor [is read with](#attr_pair_read) V;
   - unless [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something).
 
-Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
+Declared as facts:
+
+- <a id="attr_unread_ok"></a>`attr_unread_ok`
+- <a id="attr_deferred"></a>`attr_deferred`
+- <a id="attr_value_unread_ok"></a>`attr_value_unread_ok`
 
 > both excuse lists guarded, as `not_a_construct_unseen` in js-model: a
 > misspelling would silently readmit the key to nothing
@@ -120,7 +124,9 @@ A relation
 - <a id="attr_table_unbridged"></a>carries attribute pairs unbridged from an index I to an index J if it [carries attribute pairs](#attr_table_read) from I to J, unless [`attr_table_bridged`](#attr_table_bridged)(it).
 - <a id="attr_table_bridged_unread"></a>is bridged yet unread if [`attr_table_bridged`](#attr_table_bridged)(it), unless it [carries attribute pairs](#attr_table_read) from some index to some index.
 
-Declared as facts: attr_table_bridged.
+Declared as facts:
+
+- <a id="attr_table_bridged"></a>`attr_table_bridged`
 
 > the bridge itself, feeding both audits
 
@@ -156,7 +162,7 @@ A term
   - [the argument](js-vocabulary.md#lit_arg) 1 of it is S;
   - it neither [has a variable key](#attr_lit_kvar) K nor [has a variable value](#attr_lit_vvar) V.
 - <a id="attr_test_svar"></a>tests a variable subject $var(X) if it [is an attribute test](#attr_test_lit) of $var(X) on some key.
-- <a id="child_lit"></a>reads the child of a term S at a term F if all of:
+- <a id="child_lit"></a>reads the child of a term S at a field F if all of:
   - it [is a body literal](js-vocabulary.md#body_lit);
   - [the relation](js-vocabulary.md#lit_rel) of it is `ast_child`;
   - [the argument](js-vocabulary.md#lit_arg) 1 of it is S;
@@ -166,7 +172,7 @@ A term
 
 A rule
 
-- <a id="attr_guard_slot"></a>tests the attribute K on a term S under a term F if all of:
+- <a id="attr_guard_slot"></a>tests the attribute K on a term S under a field F if all of:
   - it [has the premise](#rule_prem) L;
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
@@ -185,7 +191,7 @@ A rule
   - `js` has the node kind Kind.
 - <a id="attr_guard_pinned"></a>pins the attribute guard K on a term S if it [guards the attribute](#attr_guard_kind) K on S as some kind.
 
-<a id="attr_slot_gap"></a>An attribute K is a slot gap at F of Kind either:
+<a id="attr_slot_gap"></a>An attribute K is a slot gap at a field F of Kind either:
 
 1. if all of:
    - a rule R [tests the attribute](#attr_guard_slot) K on a term S under F;
@@ -207,7 +213,7 @@ A rule
 > the positive ones, and swapping `key_name`'s negation for `computed, false`
 > moves two rows across — the survivor the finding recorded with no oracle.
 
-<a id="attr_guard_slot_pos"></a>A rule tests the attribute positively K on a term S under a term F if all of:
+<a id="attr_guard_slot_pos"></a>A rule tests the attribute positively K on a term S under a field F if all of:
   - it [has the positive premise](#pos_prem) L;
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
@@ -216,7 +222,7 @@ A rule
   - L2 [reads the child of a variable](#child_lit_svar) S;
   - unless L2 [reads a variable field](#child_lit_fvar) F.
 
-<a id="attr_pos_slot_gap"></a>An attribute K is a positive slot gap at F of Kind either:
+<a id="attr_pos_slot_gap"></a>An attribute K is a positive slot gap at a field F of Kind either:
 
 1. if all of:
    - a rule R [tests the attribute positively](#attr_guard_slot_pos) K on a term S under F;
@@ -233,14 +239,16 @@ A rule
 
 In the audit:
 
-<a id="attr_blind_guard"></a>An attribute K is a blind guard at F of Kind if K [is a positive slot gap](#attr_pos_slot_gap) at F of Kind, unless [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something).
+<a id="attr_blind_guard"></a>An attribute K is a blind guard at a field F of Kind if K [is a positive slot gap](#attr_pos_slot_gap) at F of Kind, unless [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something).
 
-Declared as facts: attr_slot_gap_ok.
+Declared as facts:
+
+- <a id="attr_slot_gap_ok"></a>`attr_slot_gap_ok`
 
 > the excuse list is checked against the WHOLE report: an excuse no longer
 > needed because a guard became a negation is still a true row
 
-<a id="attr_slot_gap_ok_unseen"></a>An attribute K is excused unseen at F of Kind if [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something), unless K [is a slot gap](#attr_slot_gap) at F of Kind.
+<a id="attr_slot_gap_ok_unseen"></a>An attribute K is excused unseen at a field F of Kind if [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something), unless K [is a slot gap](#attr_slot_gap) at F of Kind.
 
 > THE HALF NO KIND-LEVEL READING CAN STATE: `class_private_method` carries
 > `computed` on its accessor forms and not on the plain one, so the presence
@@ -267,7 +275,9 @@ A key K
   - unless [`attr_split_ok`](#attr_split_ok)(K, Kind, something).
 - <a id="attr_split_ok_unseen"></a>is an unseen split excuse for Kind if [`attr_split_ok`](#attr_split_ok)(K, Kind, something), unless Kind [sometimes lacks the attribute](#attr_kind_lacks) K.
 
-Declared as facts: attr_split_ok.
+Declared as facts:
+
+- <a id="attr_split_ok"></a>`attr_split_ok`
 
 > 6 trailing comments on rule lines are not carried over.
 

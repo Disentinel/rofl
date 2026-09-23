@@ -26,7 +26,7 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| a function declaration | function_declaration |
+| <a id="noun-function_declaration"></a>a function declaration | function_declaration |
 
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
@@ -50,7 +50,9 @@ A noun is a node of one of its kinds:
 |---|---|
 | `audit` | `code` |
 
-Declared as facts: ast_parse_error.
+Declared as facts:
+
+- `ast_parse_error`
 
 ## 1. THE GLOBAL DOOR — an identifier nothing in this FILE binds. The ceiling
 
@@ -70,7 +72,7 @@ In the code:
 
 File binds the name Name either:
 
-1. if a function declaration F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
+1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
 2. if a node F [takes](js-dataflow.md#param_of) Name at some index and F [is in file](js-model.md#ast_node) File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if a site I [binds the name](js-modules.md#binding) Name to some name at some specifier and I [sits in](js-modules.md#site_file) File.

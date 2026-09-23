@@ -88,18 +88,19 @@ const MARKERS: &[&str] = &["at", "in", "to", "from", "by", "as", "for", "on", "t
 const VALUE_NOUN_LIST: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 const VALUE_NOUNS: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score"];
 const NOUN_WORDS: &[&str] = &["this", "scope", "this-binder", "effect label"];
+const PREPS: &[&str] = &["of", "to", "by", "at", "in", "with", "from", "for", "on", "through", "as", "into", "under", "over", "than", "within", "among", "after", "before", "between", "since", "against", "off", "is", "are", "holds", "holding", "being", "named", "replaced"];
 
 /// `name(arg, arg, …)` with each arg `[marker] noun Var[:i]` → the phrase it reads as, and the name.
-fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
+fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String, Vec<String>), String> {
     let open = text.find('(').ok_or("a signature needs (")?;
     let name = text[..open].trim().to_string();
     let inner = text[open + 1..].trim_end().trim_end_matches(')').to_string();
-    struct Arg { marker: String, noun: String, pos: usize }
+    struct Arg { marker: String, noun: String, pos: usize, var: String }
     let mut args: Vec<Arg> = Vec::new();
     for (k, raw) in inner.split(',').map(str::trim).filter(|a| !a.is_empty()).enumerate() {
         let mut toks: Vec<&str> = raw.split_whitespace().collect();
         let last = toks.pop().ok_or("an empty argument")?;
-        let (_, pos) = match last.split_once(':') { Some((v, i)) => (v, i.parse::<usize>().map_err(|_| format!("bad position in {last}"))?), None => (last, k) };
+        let (var, pos) = match last.split_once(':') { Some((v, i)) => (v, i.parse::<usize>().map_err(|_| format!("bad position in {last}"))?), None => (last, k) };
         let mut noun_len = 1usize;
         for n in nouns.iter().filter(|n| n.contains(' ')) {
             let w: Vec<&str> = n.split(' ').collect();
@@ -108,7 +109,7 @@ fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
         if toks.is_empty() { return Err(format!("no noun in `{raw}`")); }
         let noun = toks[toks.len() - noun_len..].join(" ");
         let marker = toks[..toks.len() - noun_len].join(" ");
-        args.push(Arg { marker, noun, pos });
+        args.push(Arg { marker, noun, pos, var: var.to_string() });
     }
     let words = name.split('_').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
     let mut parts: Vec<Part> = Vec::new();
@@ -140,7 +141,9 @@ fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
         run(&mut parts, &rest);
     }
     let _ = MARKERS;
-    Ok((Phrase { parts, fixes: 0 }, name))
+    let mut vars = vec![String::new(); args.len()];
+    for a in &args { if a.pos < vars.len() { vars[a.pos] = a.var.clone(); } }
+    Ok((Phrase { parts, fixes: 0 }, name, vars))
 }
 
 impl Phrase {
@@ -231,6 +234,7 @@ struct R<'a> {
     fun_phrases: HashMap<Sym, Phrase>,
     kind_nouns: HashMap<Sym, String>,
     noun_guards: HashMap<Sym, String>,
+    sig_forms: HashMap<Sym, Vec<(Phrase, Vec<String>)>>,
     file_guards: Vec<HashMap<String, Sym>>,
     cur_file: std::cell::Cell<usize>,
     defs: HashMap<Sym, usize>,
@@ -270,6 +274,42 @@ impl<'a> R<'a> {
     fn guard_bound(&self, rel: Sym) -> bool {
         match self.noun_guards.get(&rel) { Some(n) => self.file_guards.get(self.cur_file.get()).and_then(|m| m.get(n)) == Some(&rel), None => true }
     }
+    /// A noun links to what defines it: a kind noun to its row in the Kinds table, a guard noun to its relation.
+    fn noun_link(&self, n: &str) -> String {
+        if self.kind_nouns.values().any(|k| k == n) { return format!("[{n}](#noun-{})", n.replace(' ', "_")); }
+        if let Some((rel, _)) = self.noun_guards.iter().find(|(r, g)| g.as_str() == n && self.guard_bound(**r)) {
+            return match self.defs.get(rel) {
+                Some(&f) if f == self.cur_file.get() => format!("[{n}](#{})", self.h.name(*rel)),
+                Some(&f) => format!("[{n}]({}.md#{})", self.stems[f], self.h.name(*rel)),
+                None => n.to_string(),
+            };
+        }
+        n.to_string()
+    }
+    fn a_noun(&self, n: &str) -> String { format!("{} {}", article(n), self.noun_link(n)) }
+    /// A signature read as a sentence with every hole typed: `A kind K catches via a field Field`.
+    fn decl_sentence(&self, p: &Phrase, vars: &[String]) -> String {
+        let mut s = String::new();
+        let mut prev = String::new();
+        for part in &p.parts {
+            match part {
+                Part::Text(t, _) => { s.push(' '); s.push_str(t); prev = t.clone(); }
+                Part::Hole(i, noun) => {
+                    let v = vars.get(*i).cloned().unwrap_or_default();
+                    let words: Vec<&str> = prev.split_whitespace().collect();
+                    let last = words.last().copied().unwrap_or("");
+                    let named = words.iter().any(|w| ["the", "a", "an", "two", "its", "no"].contains(w)) && !PREPS.contains(&last);
+                    s.push(' ');
+                    if named { s.push_str(&v); } else { s.push_str(&format!("{} {v}", self.a_noun(noun))); }
+                    prev.clear();
+                }
+                Part::Fixed(..) => {}
+            }
+        }
+        let mut s: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
+        if let Some(c0) = s.chars().next() { if c0.is_lowercase() { s = c0.to_uppercase().collect::<String>() + &s[c0.len_utf8()..]; } }
+        s
+    }
     fn phrase_for(&self, l: &Lit) -> Option<&Phrase> {
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { return None; }
         if !self.guard_bound(l.rel) { return None; }
@@ -303,16 +343,16 @@ impl<'a> R<'a> {
                             let last = before.trim_end().rsplit(' ').next().unwrap_or("").to_string();
                             let words: Vec<&str> = before.split_whitespace().collect();
                             let has_article = words.iter().any(|w| ["the", "a", "an", "two", "its", "no"].contains(w));
-                            let prep = ["of", "to", "by", "at", "in", "with", "from", "for", "on", "through", "as", "into", "under", "over", "than", "within", "among", "after", "before", "between", "since", "against", "off", "is", "are", "holds", "holding", "being", "named", "replaced"].contains(&last.as_str());
+                            let prep = PREPS.contains(&last.as_str());
                             // `guards the arm X`: the name ends in the noun, so the hole is named and wears no type
                             let named_before = last == *n || last == format!("{n}s") || last == format!("{n}es") || last == "and" || (has_article && !prep);
                             let one_letter = name.len() <= 2 && name.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && name.chars().skip(1).all(|c| c.is_ascii_digit());
                             // a value noun is worn by a one-letter variable at the start of a sentence or after a preposition; a verb already says it
                             let after_marker = last.is_empty() || ["of", "at", "in", "for", "with", "under", "by", "to", "from", "than", "on", "between", "into", "through", "since", "against"].contains(&last.as_str());
-                            if VALUE_NOUNS.contains(&n.as_str()) { if one_letter && !ctx.glued && !named_before && after_marker { format!("{} {} {}", article(n), n, name) } else { name.to_string() } }
+                            if VALUE_NOUNS.contains(&n.as_str()) { if one_letter && !ctx.glued && !named_before && after_marker { format!("{} {}", self.a_noun(n), name) } else { name.to_string() } }
                             else if named_before { if !typed { ctx.deferred.push(v); } name.to_string() }
-                            else if ctx.subject == Some(v) && ctx.no_label { format!("{} {}", article(n), n) }
-                            else { format!("{} {} {}", article(n), n, name) }
+                            else if ctx.subject == Some(v) && ctx.no_label { self.a_noun(n) }
+                            else { format!("{} {}", self.a_noun(n), name) }
                         }
                         None => name.to_string(),
                     }
@@ -357,7 +397,7 @@ impl<'a> R<'a> {
         xs.join(" or ")
     }
     fn kind_phrase(&self, t: Term) -> String {
-        match t.kind() { TermK::Atom(a) => { let n = self.kind_nouns.get(&a).cloned().unwrap_or_else(|| format!("{} node", self.h.name(a))); format!("{} {}", article(&n), n) } _ => "something".into() }
+        match t.kind() { TermK::Atom(a) => { let n = self.kind_nouns.get(&a).cloned().unwrap_or_else(|| format!("{} node", self.h.name(a))); self.a_noun(&n) } _ => "something".into() }
     }
     fn parts_text(&self, l: &Lit, p: &Phrase, from: usize, to: usize, ctx: &mut Ctx, stats: &mut Stats) -> String {
         let mut s = String::new();
@@ -384,7 +424,7 @@ impl<'a> R<'a> {
         let rest2 = self.parts_text(l2, &p2, 1, p2.parts.len(), ctx, stats);
         ctx.cur_k = saved;
         let mut s = match ctx.nouns.get(&v).cloned().filter(|_| !ctx.typed.contains(&v)) {
-            Some(n) => { ctx.intro.insert(v); ctx.nouns_used.insert(n.clone()); format!("{text1} {} {n} that {rest2}", article(&n)) }
+            Some(n) => { ctx.intro.insert(v); ctx.nouns_used.insert(n.clone()); format!("{text1} {} that {rest2}", self.a_noun(&n)) }
             None => format!("{} {rest2}", text1.trim_end().strip_suffix("is").unwrap_or(&text1).trim_end()),
         };
         if self.home.get(&l2.rel).map_or(true, |b| *b != l2.book) { let _ = write!(s, " in the {}", self.book_name(l2.book)); }
@@ -538,7 +578,7 @@ impl<'a> R<'a> {
                     ctx.nouns_used.insert(noun.clone());
                     let kinds = match ctx.or_at.clone() {
                         Some((k, 1, terms)) if k == i => { let mut seen: Vec<String> = Vec::new(); for t in terms { let p = self.kind_phrase(t); if !seen.contains(&p) { seen.push(p); } } Self::or_join(&seen) }
-                        _ => format!("{} {noun}", article(&noun)),
+                        _ => self.a_noun(&noun),
                     };
                     pos.push(format!("{n} is {kinds}"));
                 }
@@ -558,7 +598,7 @@ impl<'a> R<'a> {
                 Elem::Neg(l) => {
                     // a negated guard names its variable bare: `unless Y is a function`, `unless X is a spread`
                     let kind = if l.rel == self.ast_node && l.args.len() == 4 && is_wild(self.h, l.args[2]) && is_wild(self.h, l.args[3]) { l.args[1].as_atom().map(|k| self.kind_phrase(Term::atom(k))) }
-                        else if l.args.len() == 1 && self.guard_bound(l.rel) { self.noun_guards.get(&l.rel).map(|n| format!("{} {n}", article(n))) } else { None };
+                        else if l.args.len() == 1 && self.guard_bound(l.rel) { self.noun_guards.get(&l.rel).map(|n| self.a_noun(n)) } else { None };
                     match (kind, l.args[0].kind()) {
                         (Some(k), TermK::Var(v)) if !is_wild(self.h, l.args[0]) => { let n = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()); let n = if ctx.subject == Some(v) && ctx.intro.contains(&v) { "it".to_string() } else { n }; neg.push((format!("{n} is {k}"), Some(n))); }
                         _ => { let t = self.lit(l, ctx, stats); let subj = ctx.last_subj.take(); neg.push((t, subj)); }
@@ -575,7 +615,7 @@ impl<'a> R<'a> {
         for v in std::mem::take(&mut ctx.deferred) {
             if let Some(n) = ctx.nouns.get(&v).cloned() {
                 let name = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string());
-                pos.push(format!("{name} is {} {n}", article(&n)));
+                pos.push(format!("{name} is {}", self.a_noun(&n)));
             }
         }
         let neg = Self::fold_negatives(&mut pos, neg);
@@ -1036,7 +1076,15 @@ impl<'a> R<'a> {
         stats.facts += group.len();
         if rel == self.phrase_rel || rel == self.kind_noun_rel { return; }
         if rel == self.edb {
-            for c in group { if let Some(a) = c.head.args.first().and_then(|t| t.as_atom()) { declared.push(self.h.name(a).to_string()); } }
+            for c in group {
+                if let Some(a) = c.head.args.first().and_then(|t| t.as_atom()) {
+                    let anchor = if self.defs.get(&a) == Some(&file) && anchored.insert(a) { format!("<a id=\"{}\"></a>", self.h.name(a)) } else { String::new() };
+                    match self.sig_forms.get(&a) {
+                        Some(forms) => for (n, (p, vars)) in forms.iter().enumerate() { declared.push(format!("{}{}", if n == 0 { anchor.clone() } else { String::new() }, self.decl_sentence(p, vars))); },
+                        None => declared.push(format!("{anchor}`{}`", self.h.name(a))),
+                    }
+                }
+            }
             return;
         }
         let anchor = if self.defs.get(&rel) == Some(&file) && anchored.insert(rel) { format!("<a id=\"{}\"></a>", self.h.name(rel)) } else { String::new() };
@@ -1044,7 +1092,7 @@ impl<'a> R<'a> {
         stats.heads.insert(name.clone());
         let arity = group[0].head.args.len();
         let mut ctx = Ctx { nouns: HashMap::new(), intro: HashSet::new(), absorbed: HashSet::new(), residual: HashMap::new(), kind_conds: HashMap::new(), head_book: group[0].head.book, file, nouns_used: BTreeSet::new(), display: HashMap::new(), or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed: HashSet::new(), glued: false, positional: false };
-        let noun = self.kind_nouns.get(&rel).map(|n| format!(", {} {},", article(n), n)).unwrap_or_default();
+        let noun = self.kind_nouns.get(&rel).map(|n| format!(", {},", self.a_noun(n))).unwrap_or_default();
         if arity <= 1 {
             let items_: Vec<String> = group.iter().map(|c| c.head.args.first().map_or(String::new(), |a| self.term(*a, None, &mut ctx))).collect();
             let _ = writeln!(out, "{anchor}`{name}`{noun} includes {}.\n", items_.join(", "));
@@ -1120,7 +1168,7 @@ impl<'a> R<'a> {
                         i = j;
                     }
                     Self::flush(items, &mut body, &mut stats);
-                    if !declared.is_empty() { let _ = writeln!(body, "Declared as facts: {}.\n", declared.join(", ")); }
+                    if !declared.is_empty() { let _ = writeln!(body, "Declared as facts:\n\n{}\n", declared.iter().map(|d| format!("- {d}")).collect::<Vec<_>>().join("\n")); }
                 }
             }
         }
@@ -1144,10 +1192,12 @@ impl<'a> R<'a> {
         }
         // the kinds behind the nouns this file uses: a noun is a node of one of its kinds
         let mut kinds: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        for (k, n) in &self.kind_nouns { if nouns_used.contains(n) { kinds.entry(n.clone()).or_default().push(self.h.name(*k).to_string()); } }
+        let mut linked: HashSet<String> = HashSet::new();
+        { let mut rest = body.as_str(); while let Some(i) = rest.find("](#noun-") { let after = &rest[i + 8..]; let end = after.find(')').unwrap_or(after.len()); linked.insert(after[..end].replace('_', " ")); rest = &after[end..]; } }
+        for (k, n) in &self.kind_nouns { if nouns_used.contains(n) || linked.contains(n) { kinds.entry(n.clone()).or_default().push(self.h.name(*k).to_string()); } }
         if !kinds.is_empty() {
             let _ = writeln!(out, "## Kinds\n\nA noun is a node of one of its kinds:\n\n| noun | kinds |\n|---|---|");
-            for (n, ks) in &kinds { let mut ks = ks.clone(); ks.sort(); let _ = writeln!(out, "| {} {} | {} |", article(n), n, ks.join(", ")); }
+            for (n, ks) in &kinds { let mut ks = ks.clone(); ks.sort(); let _ = writeln!(out, "| <a id=\"noun-{}\"></a>{} {} | {} |", n.replace(' ', "_"), article(n), n, ks.join(", ")); }
             out.push('\n');
         }
         if !guards.is_empty() { let _ = writeln!(out, "## Guards\n\nA noun that is a relation: the noun on a variable is the relation holding of it.\n\n{}\n", guards.join("\n")); }
@@ -1191,6 +1241,7 @@ fn main() {
     let mut kind_nouns: HashMap<Sym, String> = HashMap::new();
     let mut noun_guards: HashMap<Sym, String> = HashMap::new();
     let mut sigs: Vec<(Sym, String)> = Vec::new();
+    let mut sig_forms: HashMap<Sym, Vec<(Phrase, Vec<String>)>> = HashMap::new();
     let mut renames: Vec<(String, String)> = Vec::new();
     let mut defs: HashMap<Sym, usize> = HashMap::new();
     let mut home: HashMap<Sym, Book> = HashMap::new();
@@ -1245,7 +1296,7 @@ fn main() {
     let noun_list: Vec<String> = kind_nouns.values().cloned().chain(noun_guards.values().cloned()).chain(VALUE_NOUN_LIST.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
     for (rel, text) in &sigs {
         match parse_sig(text, &noun_list) {
-            Ok((p, name)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } phrases.entry(*rel).or_default().insert(0, p); }
+            Ok((p, name, vars)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } sig_forms.entry(*rel).or_default().push((p.clone(), vars)); phrases.entry(*rel).or_default().insert(0, p); }
             Err(e) => bad_phrases.push(format!("{}: {e}", h.name(*rel))),
         }
     }
@@ -1273,7 +1324,7 @@ fn main() {
         file_guards.push(bound);
     }
 
-    let r = R { h: &h, phrases, fun_phrases, kind_nouns, noun_guards, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, var_a };
+    let r = R { h: &h, phrases, fun_phrases, kind_nouns, noun_guards, sig_forms, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, var_a };
     let mut index = String::from("# Index\n\n| file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
     let mut total_pos: BTreeSet<String> = BTreeSet::new();
     for (fi, doc) in docs.iter().enumerate() {

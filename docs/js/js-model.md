@@ -38,11 +38,11 @@ A kind K
 > both ways: the authored facts stay bare, and a claim in the new spelling
 > still ticks.
 
-<a id="claim_kind"></a>`claim_kind` includes `handled`, `ignored`, `unknown_because`.
+`claim_kind` includes `handled`, `ignored`, `unknown_because`.
 
 In the main:
 
-<a id="claim"></a>A kind K is claimed in a layer L of a language Lang under a ledger N with a reason R either:
+A kind K is claimed in a layer L of a language Lang under a ledger N with a reason R either:
 
 1. if K [is handled](#handled) in L of Lang with R and N is `handled`;
 2. if K [is ignored](#ignored) in L of Lang with R and N is `ignored`;
@@ -53,7 +53,11 @@ A kind K
 - <a id="handled"></a><a id="ignored"></a>is handled/ignored in a layer L of a language Lang with a reason R if K [is claimed](#claim) in L of Lang under `handled`/`ignored` with R.
 - <a id="unknown_because"></a>is unknown in a layer L of a language Lang because a reason R if K [is claimed](#claim) in L of Lang under `unknown_because` with R.
 
-Declared as facts: claim, claim_kind.
+Declared as facts:
+
+- <a id="claim"></a>A kind K is claimed in a layer L of a language Lang under a ledger What with a reason R
+- A kind K is claimed with a shape S in a layer Lay of a language Lang under a ledger What with a reason R
+- <a id="claim_kind"></a>A ledger W is a ledger
 
 > `not cell` rather than `not node_kind` and `not layer` apart: the cell is
 > their conjunction.
@@ -75,11 +79,13 @@ A kind K
 > else. A promise cannot refuse; `layer_unauthorised` can. Five layers, each
 > added by his word, the fifth with the ownership of its cells in one commit.
 
-<a id="layer_authorised"></a>`layer_authorised` includes `callgraph`, `dataflow`, `modules`, `controlflow`, `effect`.
+`layer_authorised` includes `callgraph`, `dataflow`, `modules`, `controlflow`, `effect`.
 
 <a id="layer_unauthorised"></a>A layer is unauthorised if it is a layer, unless it [is authorised](#layer_authorised).
 
-Declared as facts: layer_authorised.
+Declared as facts:
+
+- <a id="layer_authorised"></a>A layer L is authorised
 
 > Convergence between languages needs EVIDENCE on both sides: `checked` is a
 > cell run against an oracle. The first version compared rule atoms and
@@ -94,7 +100,9 @@ Declared as facts: layer_authorised.
 
 <a id="unverified"></a>A kind K is unverified in a layer L of a language Lang by a rule Rule if K [is handled](#handled) in L of Lang with Rule, unless K [is checked](#checked) in L of Lang by Rule under some step holding some number.
 
-Declared as facts: checked.
+Declared as facts:
+
+- <a id="checked"></a>A kind K is checked in a layer L of a language Lang by a rule Rule under a step Op holding a number N
 
 ## THE DEFAULT VERDICT. Every cell carries one and `not_modelled` is the one it
 
@@ -121,7 +129,7 @@ Declared as facts: checked.
 > `stale_reason` is an excuse that outlived its cause, and demands the cell
 > EXIST so an unknown kind is not laundered into "fixed".
 
-<a id="unknown_type"></a>`unknown_type` lists:
+`unknown_type` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -154,7 +162,11 @@ A kind K
   - unless [the verdict](#verdict) of K in L for Lang is `not_modelled`.
 - <a id="orphan_reason"></a>is an orphan reason in a layer L of a language Lang if K [is orphaned](#orphan) in L of Lang under `unknown_because`.
 
-Declared as facts: unknown_type, unknown_because.
+Declared as facts:
+
+- <a id="unknown_type"></a>`unknown_type`
+- A kind K is unknown in a layer L of a language Lang because a reason R
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R
 
 ## THE THIRD AXIS — SHAPE. `member_expression` is one kind and six jobs, and
 
@@ -167,7 +179,12 @@ Declared as facts: unknown_type, unknown_because.
 > `shape_in` gives each layer its own value vocabulary, so a specifier shape
 > mints no phantom call-graph cell.
 
-Declared as facts: axis, axis_applies, shape_of, shape_in.
+Declared as facts:
+
+- <a id="axis"></a>An axis A is an axis
+- <a id="axis_applies"></a>An axis A applies in a layer Lay
+- <a id="shape_of"></a>A kind K has the shape S in a language Lang
+- <a id="shape_in"></a>A shape S is a shape in a layer Lay
 
 > A kind with no declared shape is ATOMIC and keeps one cell. `none` is earned
 > two ways — the axis absent from the layer, or present with a kind that does
@@ -346,7 +363,7 @@ A kind K
 > Both exclusion lists are guarded against a misspelling. `ast_node` is edb
 > here because this file loads in worlds with no corpus at all.
 
-<a id="lang_of_corpus"></a>`lang_of_corpus` includes `js`.
+`lang_of_corpus` includes `js`.
 
 A kind K
 
@@ -361,7 +378,13 @@ A kind K
 - <a id="declared_and_excluded"></a>is declared yet excluded if some language has the node kind K and K [is not a construct](#not_a_construct).
 - <a id="declared_and_deferred"></a>is declared yet deferred if some language has the node kind K and K [is deferred to the frame](#frame_deferred) because some reason.
 
-Declared as facts: ast_node, lang_of_corpus, not_a_construct, frame_deferred, kind_absent_ok.
+Declared as facts:
+
+- <a id="ast_node"></a>`ast_node`
+- <a id="lang_of_corpus"></a>A language L is the corpus language
+- <a id="not_a_construct"></a>A kind K is not a construct
+- <a id="frame_deferred"></a>A kind K is deferred to the frame because a reason R
+- <a id="kind_absent_ok"></a>A kind K is excused absent because a reason R
 
 > `kind_unexercised`: a declared kind no node in the corpus has — allowed, but
 > the reason must be written (`kind_absent_ok`), which is what exposed

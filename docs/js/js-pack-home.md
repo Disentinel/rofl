@@ -62,9 +62,11 @@ A pack
 
 > one row, not a waiver list: it names no kind and cannot go quiet on one
 
-<a id="base_pack"></a>`base_pack` includes `p_js_kinds`.
+`base_pack` includes `p_js_kinds`.
 
-Declared as facts: base_pack.
+Declared as facts:
+
+- <a id="base_pack"></a>A pack P is the base pack
 
 ## THE VERDICT. A row in a pack that does not speak about the kind opens cells
 

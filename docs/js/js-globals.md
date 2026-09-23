@@ -45,7 +45,7 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > the three surfaces need. A bare reference (`typeof Promise`) is invisible,
 > and test/js-globals.test.ts asserts that silence by name.
 
-<a id="global_ref_position"></a>`global_ref_position` lists:
+`global_ref_position` lists:
 
 | kind | field |
 |---|---|
@@ -55,13 +55,15 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 | `optional_call_expression` | `callee` |
 | `new_expression` | `callee` |
 
-Declared as facts: global_ref_position.
+Declared as facts:
+
+- <a id="global_ref_position"></a>A kind K reads a global at a field Field
 
 > the small table leads: five positions by their nodes is selective, where an
 > unbound `ast_node(E, identifier, _, _)` first was once 39% of the fixpoint
 
 <a id="global_ref"></a>A node refers to Name in File if all of:
-  - a kind K [reads a global at](#global_ref_position) Field;
+  - a kind K [reads a global at](#global_ref_position) a field Field;
   - a node P [is of kind](js-model.md#ast_node) K;
   - the Field of P is it;
   - it [reads](js-dataflow.md#ident_in) Name in File.
@@ -73,7 +75,7 @@ Declared as facts: global_ref_position.
 > FILE-scoped, so a genuine use of `Set` in a file with a local `Set` is
 > LOST and a global is never INVENTED. Under-reports, never over-reports.
 
-<a id="declaring_position"></a>`declaring_position` lists:
+`declaring_position` lists:
 
 | kind | field |
 |---|---|
@@ -88,17 +90,19 @@ Declared as facts: global_ref_position.
 | `catch_clause` | `param` |
 
 <a id="declares_name"></a>Name is declared in File if all of:
-  - a kind K [declares at](#declaring_position) Field;
+  - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.md#ast_node) K in file File;
   - the Field of D [is named](js-structure.md#ast_name) Name.
 
-Declared as facts: declaring_position.
+Declared as facts:
+
+- <a id="declaring_position"></a>A kind K declares at a field Field
 
 > the names a pattern introduces, keys and defaults included: widening
 > `declares_name` narrows the globals, the safe direction again
 
 Name is declared in File if all of:
-  - a kind K [declares at](#declaring_position) Field;
+  - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.md#ast_node) K in file File;
   - the Field of D is a node I;
   - a node X [is within](js-structure.md#ast_within) I;
@@ -109,11 +113,11 @@ Name is declared in File if all of:
 Name is declared in File either:
 
 1. if all of:
-   - a function F [is defined in](js-callgraph.md#fn_file) File;
+   - a [function](js-callgraph.md#fn_node) F [is defined in](js-callgraph.md#fn_file) File;
    - a node P is among the `params` of F;
    - P [is named](js-structure.md#ast_name) Name;
 2. if all of:
-   - a function F [is defined in](js-callgraph.md#fn_file) File;
+   - a [function](js-callgraph.md#fn_node) F [is defined in](js-callgraph.md#fn_file) File;
    - a node P is among the `params` of F;
    - a node X [is within](js-structure.md#ast_within) P;
    - X [is named](js-structure.md#ast_name) Name.
@@ -177,7 +181,7 @@ In the code:
 > `namespace_object` with no constructor declared behind it. A runtime error
 > visible statically.
 
-<a id="constructible_form"></a>`constructible_form` includes `constructor_binding`.
+`constructible_form` includes `constructor_binding`.
 
 In the audit:
 
@@ -186,7 +190,9 @@ In the audit:
   - Name is a global since some release with Form;
   - unless Form [is constructible](#constructible_form).
 
-Declared as facts: constructible_form.
+Declared as facts:
+
+- <a id="constructible_form"></a>A form Form is constructible
 
 ## 5. THE ERA QUESTION, in the same words as every other axis, through the
 

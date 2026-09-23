@@ -17,8 +17,8 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| a member expression | member_expression |
-| a meta property | meta_property |
+| <a id="noun-member_expression"></a>a member expression | member_expression |
+| <a id="noun-meta_property"></a>a meta property | meta_property |
 
 > js-structure.rofl — the GENERIC structure over a captured AST. No domain
 > knowledge: everything here is true of any tree the scanner emits.
@@ -61,7 +61,7 @@ A noun is a node of one of its kinds:
    - unless the attribute `computed` of P is `true`;
 2. if all of:
    - the `key` of some node is K;
-   - K is a member expression;
+   - K is a [member expression](#noun-member_expression);
    - the `object` of K [is named](#ast_name) "Symbol";
    - the `property` of K [is named](#ast_name) N.
 
@@ -74,15 +74,21 @@ A noun is a node of one of its kinds:
 
 <a id="meta_form"></a>M has the meta form N either:
 
-1. if M is a meta property, the `meta` of M [is named](#ast_name) "new", and N is `new_target`;
-2. if M is a meta property, the `meta` of M [is named](#ast_name) "import", and N is `import_meta`.
+1. if all of:
+   - M is a [meta property](#noun-meta_property);
+   - the `meta` of M [is named](#ast_name) "new";
+   - N is `new_target`;
+2. if all of:
+   - M is a [meta property](#noun-meta_property);
+   - the `meta` of M [is named](#ast_name) "import";
+   - N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
 
 In the audit:
 
-<a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
+<a id="meta_unformed"></a>A [meta property](#noun-meta_property) has no meta form unless it [has the meta form](#meta_form) some name.
 
 <a id="meta_form_conflict"></a>A node has two forms X and B if it [has the meta form](#meta_form) X, it [has the meta form](#meta_form) B, and X differs from B.
 

@@ -23,20 +23,21 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| an await | await_expression |
-| a call | call_kind |
-| a class expression | class_expression |
-| a declarator | variable_declarator |
-| a decorator | decorator |
-| a field | class_field_kind |
-| a function declaration | function_declaration |
-| a method | class_method |
-| an object literal | object_expression |
-| an object method | object_method |
-| an optional member expression | optional_member_expression |
-| a property | object_property |
-| a super | super |
-| a template | template_literal |
+| <a id="noun-await"></a>an await | await_expression |
+| <a id="noun-call"></a>a call | call_kind |
+| <a id="noun-class_expression"></a>a class expression | class_expression |
+| <a id="noun-class_field"></a>a class field | class_field_kind |
+| <a id="noun-declarator"></a>a declarator | variable_declarator |
+| <a id="noun-decorator"></a>a decorator | decorator |
+| <a id="noun-function_declaration"></a>a function declaration | function_declaration |
+| <a id="noun-function_expression"></a>a function expression | function_expression |
+| <a id="noun-method"></a>a method | class_method |
+| <a id="noun-object_literal"></a>an object literal | object_expression |
+| <a id="noun-object_method"></a>an object method | object_method |
+| <a id="noun-optional_member_expression"></a>an optional member expression | optional_member_expression |
+| <a id="noun-property"></a>a property | object_property |
+| <a id="noun-super"></a>a super | super |
+| <a id="noun-template"></a>a template | template_literal |
 
 ## Guards
 
@@ -58,9 +59,9 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 ## 1. Call sites
 
-<a id="call_kind"></a>`call_kind`, a call, includes `call_expression`, `optional_call_expression`.
+`call_kind`, a [call](#noun-call), includes `call_expression`, `optional_call_expression`.
 
-<a id="call_site"></a>A call is a call site in File if it is in file File.
+<a id="call_site"></a>A [call](#noun-call) is a call site in File if it is in file File.
 
 <a id="call_site_kind"></a>The call kind of a node C is K if C [is of kind](js-model.md#ast_node) K and K [is a call kind](#call_kind).
 
@@ -70,13 +71,15 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 <a id="callee_kind"></a>The callee kind of C is K if [the callee](#callee_of) of C [is of kind](js-model.md#ast_node) K.
 
-Declared as facts: call_kind.
+Declared as facts:
+
+- <a id="call_kind"></a>A kind K is a call kind
 
 > Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 > iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
 > does not resolve them; it makes a miss attributable instead of silent.
 
-<a id="transfer_kind"></a>`transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
+`transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
 
 <a id="transfer_site"></a>A node is a transfer site of a kind K if it [is of kind](js-model.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
 
@@ -85,7 +88,9 @@ Declared as facts: call_kind.
 1. if X [is a call site](#call_site) in some file;
 2. if X [is a transfer site](#transfer_site) of some kind.
 
-Declared as facts: transfer_kind.
+Declared as facts:
+
+- <a id="transfer_kind"></a>`transfer_kind`
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
@@ -98,7 +103,7 @@ Declared as facts: transfer_kind.
 > `tsnon_null_expression`, not `ts_non_null_expression`: atomise() breaks only
 > between a lower-case and an upper-case letter, so `TSN` survives whole.
 
-<a id="callee_shape"></a>`callee_shape` lists:
+`callee_shape` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -117,14 +122,14 @@ Declared as facts: transfer_kind.
 | `conditional_expression` | `s_conditional` |
 | `yield_expression` | `s_yield_result` |
 
-<a id="member_kind"></a>`member_kind` includes `member_expression`, `optional_member_expression`.
+`member_kind` includes `member_expression`, `optional_member_expression`.
 
 <a id="member_like"></a>C calls through a node N if all of:
   - [the callee](#callee_of) of C is N;
   - N [is of kind](js-model.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
 
-<a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an optional member expression N.
+<a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an [optional member expression](#noun-optional_member_expression) N.
 
 <a id="computed_member"></a><a id="static_member"></a>C calls through a computed/static member N if C [calls through](#member_like) N and the attribute `computed` of N is `true`/`false`.
 
@@ -134,7 +139,10 @@ Declared as facts: transfer_kind.
 
 <a id="callee_prop"></a>The property of C is a node P if C [calls through](#member_like) a node N and the `property` of N is P.
 
-Declared as facts: callee_shape, member_kind.
+Declared as facts:
+
+- <a id="callee_shape"></a>`callee_shape`
+- <a id="member_kind"></a>`member_kind`
 
 > A member callee needs two more bits: `computed`, and the object's kind.
 > Receivers are classed by VERDICT, not by type: a member on a string, number,
@@ -144,7 +152,7 @@ Declared as facts: callee_shape, member_kind.
 > so the era axis cannot date them and `o_literal` would promise an answer
 > that cannot arrive.
 
-<a id="obj_kind_class"></a>`obj_kind_class` lists:
+`obj_kind_class` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -186,7 +194,7 @@ In the code:
    - Cl is `o_other`;
    - unless K [is a classed kind](#obj_kind_known).
 
-<a id="member_shape"></a>`member_shape` lists:
+`member_shape` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -210,7 +218,10 @@ In the code:
 | `o_meta` | `s_member_on_meta` |
 | `o_other` | `s_member_on_other` |
 
-Declared as facts: obj_kind_class, member_shape.
+Declared as facts:
+
+- <a id="obj_kind_class"></a>`obj_kind_class`
+- <a id="member_shape"></a>`member_shape`
 
 > `o[k]()` with a non-literal k is the one honest `runtime_dependent`.
 > `o[`fixed`]()` is a third case: fixed at parse time but not derivable,
@@ -218,14 +229,14 @@ Declared as facts: obj_kind_class, member_shape.
 > `value` is `{raw, cooked}`. So `not_yet` with a named cause, not either
 > neighbour.
 
-<a id="static_key_kind"></a>`static_key_kind` includes `string_literal`, `numeric_literal`.
+`static_key_kind` includes `string_literal`, `numeric_literal`.
 
 <a id="computed_key_static"></a>C has a static computed key if all of:
   - C [calls through a computed member](#computed_member) some member access;
   - [the property](#callee_prop) of C [is of kind](js-model.md#ast_node) K;
   - [`static_key_kind`](#static_key_kind)(K).
 
-<a id="computed_key_template"></a>C has a template computed key if C [calls through a computed member](#computed_member) some member access and [the property](#callee_prop) of C is a template P.
+<a id="computed_key_template"></a>C has a template computed key if C [calls through a computed member](#computed_member) some member access and [the property](#callee_prop) of C is a [template](#noun-template) P.
 
 <a id="shape_known"></a>C has the known shape S either:
 
@@ -249,7 +260,9 @@ Declared as facts: obj_kind_class, member_shape.
    - [`member_shape`](#member_shape)(Cl, S);
    - unless C [calls through an optional member](#optional_member).
 
-Declared as facts: static_key_kind.
+Declared as facts:
+
+- <a id="static_key_kind"></a>`static_key_kind`
 
 > `shape` may negate `has_shape` because `has_shape` does not depend on `shape`.
 > A grammar form nobody anticipated lands in `s_unclassified` rather than
@@ -284,15 +297,17 @@ In the audit:
 
 ## 3. The enclosing function
 
-<a id="fn_kind"></a>`fn_kind` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
+`fn_kind` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
 
 In the code:
 
 <a id="fn_node"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind).
 
-<a id="fn_file"></a>A function is defined in File if it [is in file](js-model.md#ast_node) File.
+<a id="fn_file"></a>A [function](#fn_node) is defined in File if it [is in file](js-model.md#ast_node) File.
 
-Declared as facts: fn_kind.
+Declared as facts:
+
+- <a id="fn_kind"></a>A kind K is a function kind
 
 > A function's name is whatever binds it — several arms, and a node may hold
 > more than one name. `key_name` rather than `ast_name` on a key, so a computed
@@ -306,35 +321,35 @@ Declared as facts: fn_kind.
 
 <a id="fn_name"></a>F answers to a name N either:
 
-1. if F is a function declaration or a function expression and the `id` of F [is named](js-structure.md#ast_name) N;
-2. if F is an object method and the `key` of F [spells](js-structure.md#key_name) N.
+1. if F is a [function declaration](#noun-function_declaration) or a [function expression](#noun-function_expression) and the `id` of F [is named](js-structure.md#ast_name) N;
+2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-structure.md#key_name) N.
 
-<a id="ctor_method"></a>A method is a constructor if the attribute `kind` of it is "constructor".
+<a id="ctor_method"></a>A [method](#noun-method) is a constructor if the attribute `kind` of it is "constructor".
 
 F answers to a name N either:
 
 1. if all of:
-   - F is a method;
+   - F is a [method](#noun-method);
    - the `key` of F [spells](js-structure.md#key_name) N;
    - unless F [is a constructor](#ctor_method);
 2. if all of:
-   - the `init` of a declarator D is F;
-   - F is a function;
+   - the `init` of a [declarator](#noun-declarator) D is F;
+   - F is a [function](#fn_node);
    - the `id` of D [is named](js-structure.md#ast_name) N;
 3. if all of:
    - a node K [spells](js-structure.md#key_name) N;
-   - the `key` of a property P is K;
+   - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is F;
-   - F is a function;
+   - F is a [function](#fn_node);
 4. if all of:
-   - F is a method;
+   - F is a [method](#noun-method);
    - the attribute `kind` of F is "constructor";
    - the `body` of a node CD is a node B;
    - F is among the `body` of B;
    - the `id` of CD [is named](js-structure.md#ast_name) N;
 5. if all of:
-   - F is a function;
-   - the `value` of a field P is F;
+   - F is a [function](#fn_node);
+   - the `value` of a [class field](#noun-class_field) P is F;
    - the `key` of P [spells](js-structure.md#key_name) N.
 
 > A class expression with no `id` takes its binding's name — the language's own
@@ -342,17 +357,17 @@ F answers to a name N either:
 > `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
 > the two constructor arms never both fire.
 
-A class expression
+A [class expression](#noun-class_expression)
 
 - <a id="class_has_id"></a>has an id if the `id` of it is some node.
 - <a id="anon_class"></a>is anonymous unless it [has an id](#class_has_id).
 
-A method answers to a name N if all of:
+A [method](#noun-method) answers to a name N if all of:
   - the attribute `kind` of it is "constructor";
   - the `body` of a node CD is a node B;
   - it is among the `body` of B;
   - CD [is anonymous](#anon_class);
-  - the `init` of a declarator D is CD;
+  - the `init` of a [declarator](#noun-declarator) D is CD;
   - the `id` of D [is named](js-structure.md#ast_name) N.
 
 > A decorator is INSIDE the thing it decorates and does not run there:
@@ -365,14 +380,14 @@ A method answers to a name N if all of:
 > for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 > repair made them one rule and 2026-09-11 made them one name.)
 
-<a id="decorates"></a>A node is decorated by a decorator D if D is among the `decorators` of it.
+<a id="decorates"></a>A node is decorated by a [decorator](#noun-decorator) D if D is among the `decorators` of it.
 
 <a id="in_own_decorator"></a>A node F has its decorator at a node C either:
 
 1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.md#ast_within) D;
 2. if F [is decorated by](#decorates) C.
 
-<a id="encloses"></a>A function encloses the site C if all of:
+<a id="encloses"></a>A [function](#fn_node) encloses the site C if all of:
   - C [is within](js-structure.md#ast_within) it;
   - C [is a site](#site);
   - unless it [has its decorator at](#in_own_decorator) C.
@@ -410,16 +425,16 @@ A node
 1. if all of:
    - a node K [spells](js-structure.md#key_name) Key;
    - the `key` of M is K;
-   - M is an object method;
+   - M is an [object method](#noun-object_method);
    - M is among the `properties` of O;
-   - O is an object literal;
+   - O is an [object literal](#noun-object_literal);
 2. if all of:
    - a node K [spells](js-structure.md#key_name) Key;
-   - the `key` of a property P is K;
+   - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is M;
-   - M is a function;
+   - M is a [function](#fn_node);
    - P is among the `properties` of O;
-   - O is an object literal.
+   - O is an [object literal](#noun-object_literal).
 
 > The constructor edge is not a CallExpression at all; it needed the value
 > question "which class does this expression construct". `super()` walks
@@ -436,7 +451,7 @@ A node
    - X [may be the node](js-dataflow.md#may_be_node) CD;
    - CD [has the constructor](#class_ctor) M;
 2. if all of:
-   - [the callee](#callee_of) of X is a super N;
+   - [the callee](#callee_of) of X is a [super](#noun-super) N;
    - N [may be the node](js-dataflow.md#may_be_node) SD;
    - [the constructor](js-dataflow.md#ctor_of) of SD is M.
 
@@ -449,11 +464,11 @@ A node X resolves to F either:
 1. if all of:
    - X [is a transfer site](#transfer_site) of `tagged_template_expression`;
    - the `tag` of X [may be the node](js-dataflow.md#may_be_node) F;
-   - F is a function;
+   - F is a [function](#fn_node);
 2. if all of:
    - X [is a transfer site](#transfer_site) of `decorator`;
    - the `expression` of X [may be the node](js-dataflow.md#may_be_node) F;
-   - F is a function.
+   - F is a [function](#fn_node).
 
 > `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
 > hop is a `resolves`: `ambiguous_call[audit]` reads two answers at one site
@@ -461,14 +476,14 @@ A node X resolves to F either:
 > goes straight to `calls`. `member_value` names the node a member HOLDS — for
 > `{ next: bump }` the identifier — hence the second `may_be_node` hop.
 
-<a id="for_of_iterates"></a>A node iterates through a function M if all of:
+<a id="for_of_iterates"></a>A node iterates through a [function](#fn_node) M if all of:
   - it [is a transfer site](#transfer_site) of `for_of_statement`;
   - the `right` of it [may be the node](js-dataflow.md#may_be_node) Obj;
   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M.
 
 X resolves to M if X [iterates through](#for_of_iterates) M.
 
-<a id="calls"></a>Caller calls a function Next if all of:
+<a id="calls"></a>Caller calls a [function](#fn_node) Next if all of:
   - a node X [iterates through](#for_of_iterates) M;
   - Caller [is the nearest function of](#nearest_fn) X;
   - M [returns](js-dataflow.md#returns) a node E;
@@ -480,7 +495,7 @@ X resolves to M if X [iterates through](#for_of_iterates) M.
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to a function F if [the callee](#callee_of) of C [may be the node](js-dataflow.md#may_be_node) F.
+C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [may be the node](js-dataflow.md#may_be_node) F.
 
 In the audit:
 
@@ -517,7 +532,7 @@ Caller calls Callee either:
   - C [passes](js-dataflow.md#arg_at) a node X at I;
   - X [is named](js-structure.md#ast_name) Name;
   - X [may be the node](js-dataflow.md#may_be_node) F;
-  - F is a function.
+  - F is a [function](#fn_node).
 
 ## 6. The frontier, as a positive relation
 
@@ -545,7 +560,9 @@ In the audit:
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
   - N [selects](js-dataflow.md#selects) Key.
 
-Declared as facts: shape_because.
+Declared as facts:
+
+- <a id="shape_because"></a>`shape_because`
 
 > An unresolved site attributed to the unit that contains it; a missing edge
 > whose caller has no row here is a SILENT under-report. A transfer site that
@@ -634,8 +651,8 @@ In the code:
 
 <a id="fn_binder"></a>D binds the function F either:
 
-1. if D is a declarator, the `init` of D is F, and F is a function;
-2. if D is a property, the `value` of D is F, and F is a function;
+1. if D is a [declarator](#noun-declarator), the `init` of D is F, and F is a [function](#fn_node);
+2. if D is a [property](#noun-property), the `value` of D is F, and F is a [function](#fn_node);
 3. if D [has the member function](#obj_member_fn) F at some key.
 
 In the audit:
@@ -646,7 +663,7 @@ In the audit:
 2. if [the callee kind](#callee_kind) of some call is K;
 3. if [the receiver kind](#callee_obj_kind) of some call is K;
 4. if [the property](#callee_prop) of some call [is of kind](js-model.md#ast_node) K;
-5. if a function F [is of kind](js-model.md#ast_node) K;
+5. if a [function](#fn_node) F [is of kind](js-model.md#ast_node) K;
 6. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.md#ast_node) K.
 
 <a id="kind_undeclared"></a>A kind K is undeclared if K [is touched by the call graph](#callgraph_kind), unless `js` has the node kind K.
@@ -668,14 +685,14 @@ In the audit:
 
 In the code:
 
-<a id="await_arg"></a>An await awaits a node X if the `argument` of it is X.
+<a id="await_arg"></a>An [await](#noun-await) awaits a node X if the `argument` of it is X.
 
 <a id="awaited_then"></a>Y awaits the then F if all of:
   - Y [awaits](#await_arg) a node X;
   - X [may be the node](js-dataflow.md#may_be_node) O;
   - [the member](js-dataflow.md#member_value) "then" of O holds a node V;
   - V [may be the node](js-dataflow.md#may_be_node) F;
-  - F is a function.
+  - F is a [function](#fn_node).
 
 <a id="performed_call"></a>A node performs the call F if it [awaits the then](#awaited_then) F.
 
@@ -705,7 +722,7 @@ In the audit:
 
 In the code:
 
-<a id="awaiting_fn"></a>A function awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.md#ast_within) it.
+<a id="awaiting_fn"></a>A [function](#fn_node) awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.md#ast_within) it.
 
 In the audit:
 

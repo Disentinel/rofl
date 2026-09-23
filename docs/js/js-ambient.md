@@ -124,13 +124,15 @@ In the audit:
 > value layer cannot trace `global`, and an ambient surface is by definition
 > not allocated in this program.
 
-<a id="amb_heap"></a>`amb_heap` includes `none`, `global`.
+`amb_heap` includes `none`, `global`.
 
 In the main:
 
 <a id="amb_atom_label"></a>An effect is a label on the heap H if it is a host effect, it is a label at H, and [`amb_heap`](#amb_heap)(H).
 
-Declared as facts: amb_heap.
+Declared as facts:
+
+- <a id="amb_heap"></a>`amb_heap`
 
 > The landmark is the LEAST name containing the label — the lattice's own
 > closure, the same Moore argument `effect_of[flow]` stands on, unique because
@@ -196,11 +198,13 @@ A spec has the ambient effect E at Key if Key [is selected on the global](#amb_g
 > selects a key, so the operation column carries a word rather than the
 > surface's own name. `itself` is js-host's word; `construct` is new here.
 
-<a id="amb_operation_word"></a>`amb_operation_word` includes `itself`, `construct`.
+`amb_operation_word` includes `itself`, `construct`.
 
 A spec has the ambient effect E at a key W if [`amb_operation_word`](#amb_operation_word)(W) and it [has the surface default](#ambient_global_default) E.
 
-Declared as facts: amb_operation_word.
+Declared as facts:
+
+- <a id="amb_operation_word"></a>`amb_operation_word`
 
 > Which surfaces this model can list the members of — positive, non-empty by
 > design. `lib_global` and not `lib_static` for the ES globals: a
@@ -313,7 +317,7 @@ In the main:
 
 In the flow:
 
-<a id="amb_proto_recv"></a>A member access has the receiver prototype P if all of:
+<a id="amb_proto_recv"></a>A [member access](js-dataflow.md#member_node_v) has the receiver prototype P if all of:
   - the `object` of it is a node O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype).

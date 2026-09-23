@@ -311,7 +311,7 @@ function splitConds(rest: string): string[] {
   }
   return joined;
 }
-const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = [];
+const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = []; const imported = new Set<string>();
 function finish(rule: Rule, intros: Intro[]) {
   for (const it of intros) if (!VALUE.has(it.noun) && !rule.guards.has(it.v)) rule.guards.set(it.v, { noun: it.noun });
   for (let i = rule.body.length - 1; i >= 0; i--) {
@@ -433,10 +433,14 @@ for (let i = 0; i < blocks.length; i++) {
   if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
   if (text === 'Reads:' && next && next.type === 'ul') {
     // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
-    for (const it of next.items!) { const im = /^from (\S+?)(?:, in the (\w+))?: (.*)$/.exec(it.text.trim()); if (im && im[2]) for (const r of im[3].split(/,\s*/)) homeBook.set(r.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`/g, ''), im[2]); }
+    for (const it of next.items!) { const im = /^from (.+?)(?:, in the (\w+))?: (.*)$/.exec(it.text.trim()); if (im) for (const r of im[3].split(/,\s*/)) { const name = r.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`/g, ''); imported.add(name); if (im[2]) homeBook.set(name, im[2]); } }
     i++; continue;
   }
-  if ((m = /^Declared as facts: (.*)\.$/.exec(text))) { for (const d of m[1].split(/,\s*/)) { declared.push(d); homeBook.set(d, 'main'); } continue; }
+  if (text === 'Declared as facts:' && next && next.type === 'ul') {
+    // a declared fact reads as its signature sentence, `A kind K catches via a field Field`, or as its bare name
+    for (const it of next.items!) { const t = it.text.trim().replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}`); }
+    i++; continue;
+  }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(text))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])] }); continue; }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(text)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])) }); i++; continue; }
   if (/ either:$/.test(text) && next && next.type === 'ol') {
@@ -571,11 +575,11 @@ console.log(`\nsource rules with no exact match (${missing.length}):`);
 for (const m of missing.slice(0, 25)) console.log('  ' + m);
 console.log(`\nread-back rules the source does not have (${extra.length}):`);
 for (const e of extra.slice(0, 15)) console.log('  ' + e);
-// definition before use: a relation this file defines, read by a rule above its first definition
-const firstDef = new Map<string, number>(); const firstUse = new Map<string, number>();
-rules.forEach((r, i) => { if (!firstDef.has(r.head.rel)) firstDef.set(r.head.rel, i); for (const l of r.body) if (!firstUse.has(l.rel)) firstUse.set(l.rel, i); });
-const early = [...firstUse].filter(([rel, i]) => firstDef.has(rel) && firstDef.get(rel)! > i).map(([rel]) => rel);
-console.log(`\nused before defined in this file (${early.length}): ${early.join(', ')}`);
+// every relation a rule reads has somewhere to link: a definition or declaration in this file, or a line in its Reads list
+const BUILTIN = new Set(['=', '!=', '<', '>', '<=', '>=', 'is']);
+const linkable = new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel), ...imported]);
+const nowhere = [...new Set(rules.flatMap((r) => r.body.map((l) => l.rel)))].filter((rel) => !linkable.has(rel) && !BUILTIN.has(rel));
+console.log(`\nused with nowhere to link (${nowhere.length}): ${nowhere.join(', ')}`);
 console.log(`\nvocabulary collisions, two relations with one sentence (${collisions.length}):`);
 for (const c of collisions) console.log('  ' + c);
 console.log(`\nambiguities (${ambiguous.length}):`);

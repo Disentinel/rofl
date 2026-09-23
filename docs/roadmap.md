@@ -52,8 +52,9 @@ What it is, in the words that survived nine rewrites:
   and, by default, read; a shared subject is a block too;
 - kinds and other tables are maps, a header with two holes and one `key:
   values.` line per row, desugared to a table plus one rule;
-- nothing is used before it is declared, and a script checks it, because the
-  writer broke the rule twice without noticing.
+- every relation a rule reads has somewhere to link, a definition in the
+  file or a line in its Reads list, and a script checks it; it once checked
+  source order, which is the essay's, and the essay may say "see below".
 
 What has to exist for it to be code rather than a description of code
 (f_the_sentence_form_is_version_1_1_work):
@@ -114,6 +115,11 @@ What has to exist for it to be code rather than a description of code
    per arity; and the rendered file carries no Signatures section and no
    Terms line: a book is a block, `In the audit:`, as the form always said
    (f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity).
+   What a file reads and does not define is its imports, one Reads list
+   under the title; a declared table reads as its signature sentence; a
+   noun links to its Kinds row or its guard relation; and a use is declared
+   when it has somewhere to link
+   (f_a_use_is_declared_when_it_has_somewhere_to_link_and_a_declared_table_reads_as_its_sentence).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

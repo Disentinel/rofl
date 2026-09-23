@@ -11,7 +11,7 @@ default: main
 > split by Sep`, and the reader turns the phrase back into the term.
 > Arithmetic needs no phrase: `I is J + K` reads as written.
 
-<a id="fun_phrase"></a>`fun_phrase` lists:
+`fun_phrase` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -23,5 +23,7 @@ default: main
 | `str_sub` | "the substring of <0:text> from <1:index> of length <2:number>" |
 | `atom_of` | "the atom of <0:text>" |
 
-Declared as facts: fun_phrase.
+Declared as facts:
+
+- <a id="fun_phrase"></a>`fun_phrase`
 

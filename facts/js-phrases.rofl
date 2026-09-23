@@ -102,7 +102,7 @@ kind_noun(tagged_template_expression, "tagged template").
 kind_noun(value_transparent, "wrapper").
 kind_noun(literal_kind, "literal").
 kind_noun(node_value_kind, "value site").
-kind_noun(class_field_kind, "field").
+kind_noun(class_field_kind, "class field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
 kind_noun(block_scope_kind, "block scope").

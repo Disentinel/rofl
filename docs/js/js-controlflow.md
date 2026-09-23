@@ -21,22 +21,22 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| an abrupt statement | abrupt_kind |
-| an array pattern | array_pattern |
-| a block | block_statement |
-| a declarator | variable_declarator |
-| an export declaration | export_kind |
-| a for-of | for_of_statement |
-| an if | if_statement |
-| a label | labeled_statement |
-| an object literal | object_expression |
-| an object pattern | object_pattern |
-| a rest | rest_element |
-| a return | return_statement |
-| a short circuit | short_circuit_kind |
-| a spread | spread_element |
-| a throw | throw_statement |
-| a try | try_statement |
+| <a id="noun-abrupt_statement"></a>an abrupt statement | abrupt_kind |
+| <a id="noun-array_pattern"></a>an array pattern | array_pattern |
+| <a id="noun-block"></a>a block | block_statement |
+| <a id="noun-declarator"></a>a declarator | variable_declarator |
+| <a id="noun-export_declaration"></a>an export declaration | export_kind |
+| <a id="noun-for-of"></a>a for-of | for_of_statement |
+| <a id="noun-if"></a>an if | if_statement |
+| <a id="noun-label"></a>a label | labeled_statement |
+| <a id="noun-object_literal"></a>an object literal | object_expression |
+| <a id="noun-object_pattern"></a>an object pattern | object_pattern |
+| <a id="noun-rest"></a>a rest | rest_element |
+| <a id="noun-return"></a>a return | return_statement |
+| <a id="noun-short_circuit"></a>a short circuit | short_circuit_kind |
+| <a id="noun-spread"></a>a spread | spread_element |
+| <a id="noun-throw"></a>a throw | throw_statement |
+| <a id="noun-try"></a>a try | try_statement |
 
 ## Guards
 
@@ -63,7 +63,7 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > the `left` is a name and not conditional. Of a `try` only the HANDLER is a
 > guard: the block and the finalizer always run.
 
-<a id="guard_kind"></a>`guard_kind` lists:
+`guard_kind` lists:
 
 | kind | field |
 |---|---|
@@ -81,7 +81,9 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 | `switch_case` | `consequent` |
 | `try_statement` | `handler` |
 
-Declared as facts: guard_kind.
+Declared as facts:
+
+- <a id="guard_kind"></a>A kind K guards the field Field
 
 > ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
 
@@ -112,15 +114,21 @@ A node
 > `switch_case`'s `consequent`; the field is carried so an abrupt in one field
 > cannot reach a statement in another.
 
-<a id="abrupt_kind"></a>`abrupt_kind`, an abrupt statement, includes `return_statement`, `throw_statement`, `break_statement`, `continue_statement`.
+`abrupt_kind`, an [abrupt statement](#noun-abrupt_statement), includes `return_statement`, `throw_statement`, `break_statement`, `continue_statement`.
 
-<a id="stmt_seq_field"></a>`stmt_seq_field` includes `body`, `consequent`.
+`stmt_seq_field` includes `body`, `consequent`.
 
-Declared as facts: abrupt_kind, stmt_seq_field.
+Declared as facts:
+
+- <a id="abrupt_kind"></a>`abrupt_kind`
+- <a id="stmt_seq_field"></a>A field F is a statement sequence field
 
 > `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
 
-<a id="after_abrupt"></a>A node follows an abrupt completion if a node B [is abrupt](#abrupt_at) at F from an index I, it is the J-th of the F of B, and I < J.
+<a id="after_abrupt"></a>A node follows an abrupt completion if all of:
+  - a node B [is abrupt](#abrupt_at) at a field F from an index I;
+  - it is the J-th of the F of B;
+  - I < J.
 
 > A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 > control comes back only if the promise settles — so it lands in `guarded` as
@@ -130,7 +138,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 A node
 
-- <a id="suspend_at"></a>suspends at F from an index I if all of:
+- <a id="suspend_at"></a>suspends at a field F from an index I if all of:
   - a kind K [transfers by](#transfer_mechanism) `suspend`;
   - a node X [is of kind](js-model.md#ast_node) K;
   - a node G [is nearest to](js-dataflow.md#nearest_v) X;
@@ -138,13 +146,16 @@ A node
   - X [is within](js-structure.md#ast_within) S;
   - F [is a statement sequence field](#stmt_seq_field);
   - S is the I-th of the F of it.
-- <a id="after_suspend"></a>follows a suspension if a node B [suspends](#suspend_at) at F from an index I, it is the J-th of the F of B, and I < J.
+- <a id="after_suspend"></a>follows a suspension if all of:
+  - a node B [suspends](#suspend_at) at a field F from an index I;
+  - it is the J-th of the F of B;
+  - I < J.
 
 > a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
 
 In the audit:
 
-<a id="stmt_seq_unseen"></a>F is an unseen statement field if F [is a statement sequence field](#stmt_seq_field), unless the F of some node is some node.
+<a id="stmt_seq_unseen"></a>A field is an unseen statement field if it [is a statement sequence field](#stmt_seq_field), unless the it of some node is some node.
 
 > A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 > statements between the reference and its target, and the walk stops at the
@@ -158,9 +169,9 @@ In the audit:
 
 In the code:
 
-<a id="label_name"></a>The label name of a label LS is N if the `label` of LS is a node I and the attribute `name` of I is N.
+<a id="label_name"></a>The label name of a [label](#noun-label) LS is N if the `label` of LS is a node I and the attribute `name` of I is N.
 
-<a id="label_ref"></a>An abrupt statement refers to the label N if the `label` of it is a node I and the attribute `name` of I is N.
+<a id="label_ref"></a>An [abrupt statement](#noun-abrupt_statement) refers to the label N if the `label` of it is a node I and the attribute `name` of I is N.
 
 A node
 
@@ -168,7 +179,7 @@ A node
   - it [refers to the label](#label_ref) N;
   - [the label name](#label_name) of LS is N;
   - it [is within](js-structure.md#ast_within) LS.
-- <a id="abrupt_at"></a>is abrupt at F from an index I if all of:
+- <a id="abrupt_at"></a>is abrupt at a field F from an index I if all of:
   - a node X [targets the label](#label_target) LS;
   - a node S [is within](js-structure.md#ast_within) LS;
   - X [is within](js-structure.md#ast_within) S;
@@ -186,30 +197,32 @@ A node
 > out of it. Seeded from `completes_abruptly` and walked UP one edge; the other
 > way the first literal is every block in the corpus.
 
-<a id="completion_kind"></a>`completion_kind` includes `block_statement`, `if_statement`, `labeled_statement`.
+`completion_kind` includes `block_statement`, `if_statement`, `labeled_statement`.
 
-<a id="completes_abruptly"></a>An abrupt statement completes abruptly.
+<a id="completes_abruptly"></a>An [abrupt statement](#noun-abrupt_statement) completes abruptly.
 
-A block completes abruptly if a node S [completes abruptly](#completes_abruptly) and S is among the `body` of it.
+A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S is among the `body` of it.
 
-An if completes abruptly if all of:
+An [if](#noun-if) completes abruptly if all of:
   - a node C [completes abruptly](#completes_abruptly);
   - the `consequent` of it is C;
   - the `alternate` of it [completes abruptly](#completes_abruptly).
 
 <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
 
-A label completes abruptly if all of:
+A [label](#noun-label) completes abruptly if all of:
   - a node S [completes abruptly](#completes_abruptly);
   - the `body` of it is S;
   - unless it [is escaped](#label_escaped).
 
-Declared as facts: completion_kind.
+Declared as facts:
+
+- <a id="completion_kind"></a>A kind K is a completion kind
 
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
 
-A node is abrupt at F from an index I if all of:
+A node is abrupt at a field F from an index I if all of:
   - a node S [completes abruptly](#completes_abruptly);
   - F [is a statement sequence field](#stmt_seq_field);
   - S is the I-th of the F of it.
@@ -233,7 +246,7 @@ In the audit:
 > relation does not carry; a `try`'s handler may swallow the transfer and
 > `finally` may override it.
 
-<a id="completion_deferred"></a>`completion_deferred` lists:
+`completion_deferred` lists:
 
 | kind | reason |
 |---|---|
@@ -253,7 +266,9 @@ In the main:
 2. if K [defers its completion](#completion_deferred) because some reason;
 3. if [`abrupt_kind`](#abrupt_kind)(K).
 
-Declared as facts: completion_deferred.
+Declared as facts:
+
+- <a id="completion_deferred"></a>A kind K defers its completion because a reason R
 
 > The gate: a statement kind holding an abrupt completion inside its own
 > region, in a statement list, in neither table — silently read as "completes
@@ -269,13 +284,13 @@ A node
 - <a id="completion_outer"></a>carries the completion of a node S if all of:
   - S [completes abruptly](#completes_abruptly);
   - S [is within](js-structure.md#ast_within) it;
-  - it [is of kind](js-model.md#ast_node) K but is not a function;
-  - F [is a statement sequence field](#stmt_seq_field);
+  - it [is of kind](js-model.md#ast_node) K but is not a [function](js-callgraph.md#fn_node);
+  - a field F [is a statement sequence field](#stmt_seq_field);
   - it is among the F of some node;
   - unless K [has a known completion](#completion_known).
 - <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
   - it [carries the completion](#completion_outer) of S;
-  - a function G [is within](js-structure.md#ast_within) it;
+  - a [function](js-callgraph.md#fn_node) G [is within](js-structure.md#ast_within) it;
   - S [is within](js-structure.md#ast_within) G.
 
 In the audit:
@@ -295,10 +310,10 @@ In the audit:
 
 In the code:
 
-A function
+A [function](js-callgraph.md#fn_node)
 
-- <a id="has_return"></a>has a return if a return R [is within](js-structure.md#ast_within) it.
-- <a id="top_throw"></a>throws at the top if the `body` of it is a node B and a throw S is among the `body` of B.
+- <a id="has_return"></a>has a return if a [return](#noun-return) R [is within](js-structure.md#ast_within) it.
+- <a id="top_throw"></a>throws at the top if the `body` of it is a node B and a [throw](#noun-throw) S is among the `body` of B.
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw), unless F [has a return](#has_return).
 
@@ -317,7 +332,7 @@ A function
 > no caller — declaring `member_expression` a transfer kind would make every
 > property read in the corpus a site.
 
-<a id="accessor_kind"></a>`accessor_kind` includes "get", "set".
+`accessor_kind` includes "get", "set".
 
 In the flow:
 
@@ -333,7 +348,7 @@ In the code:
 1. if all of:
    - [the accessor](#accessor_of) of a node Obj at Key is M;
    - N [selects](js-dataflow.md#selects) Key;
-   - N is a member access;
+   - N is a [member access](js-dataflow.md#member_node_v);
    - the `object` of N [may be the node](js-dataflow.md#may_be_node) Obj;
 2. if all of:
    - N [binds privately to](js-dataflow.md#private_binds) M;
@@ -346,7 +361,9 @@ A node
 - resolves to a node M if it [reads through the accessor](#accessor_read) M.
 - is a site if it [reads through the accessor](#accessor_read) some node.
 
-Declared as facts: accessor_kind.
+Declared as facts:
+
+- <a id="accessor_kind"></a>A kind K is an accessor kind
 
 ## 4. A DESTRUCTURING FORM HIDES A CALL. Measured on V8's own stack:
 
@@ -359,9 +376,9 @@ Declared as facts: accessor_kind.
 > the declarator form: a pattern in a parameter reads the argument, a
 > call-site question, so it is silent here rather than wrong.
 
-<a id="pattern_source"></a>The pattern source of a node P is a node Init if the `id` of a declarator D is P and the `init` of D is Init.
+<a id="pattern_source"></a>The pattern source of a node P is a node Init if the `id` of a [declarator](#noun-declarator) D is P and the `init` of D is Init.
 
-<a id="pattern_accessor"></a>An object pattern destructures through the accessor M if all of:
+<a id="pattern_accessor"></a>An [object pattern](#noun-object_pattern) destructures through the accessor M if all of:
   - [the pattern source](#pattern_source) of it [may be the node](js-dataflow.md#may_be_node) Obj;
   - it [takes the key](js-dataflow.md#pattern_takes) Key;
   - [the accessor](#accessor_of) of Obj at Key is M.
@@ -373,32 +390,34 @@ A node destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.md#pattern_takes) Key.
 
-A spread destructures through the accessor M if all of:
-  - it is among the `properties` of an object literal O;
+A [spread](#noun-spread) destructures through the accessor M if all of:
+  - it is among the `properties` of an [object literal](#noun-object_literal) O;
   - the `argument` of it [may be the node](js-dataflow.md#may_be_node) Obj;
   - [the accessor](#accessor_of) of Obj at Key is M.
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
 
-<a id="spread_iterable_field"></a>`spread_iterable_field` includes `elements`, `arguments`.
+`spread_iterable_field` includes `elements`, `arguments`.
 
-<a id="spread_iterated"></a>A spread is iterated if F [holds iterated spreads](#spread_iterable_field) and it is among the F of some node.
+<a id="spread_iterated"></a>A [spread](#noun-spread) is iterated if a field F [holds iterated spreads](#spread_iterable_field) and it is among the F of some node.
 
 <a id="pattern_iterates"></a>P destructures through M either:
 
 1. if all of:
-   - P is an array pattern;
+   - P is an [array pattern](#noun-array_pattern);
    - [the pattern source](#pattern_source) of P [may be the node](js-dataflow.md#may_be_node) Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
-   - M is a function;
+   - M is a [function](js-callgraph.md#fn_node);
 2. if all of:
    - P [is iterated](#spread_iterated);
    - the `argument` of P [may be the node](js-dataflow.md#may_be_node) Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
-   - M is a function.
+   - M is a [function](js-callgraph.md#fn_node).
 
-Declared as facts: spread_iterable_field.
+Declared as facts:
+
+- <a id="spread_iterable_field"></a>A field F holds iterated spreads
 
 > The two sides reach the call graph differently. An iterable position has one
 > `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -427,7 +446,7 @@ A node
   - E [may be the node](js-dataflow.md#may_be_node) IterObj;
   - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
   - V [may be the node](js-dataflow.md#may_be_node) Next;
-  - Next is a function.
+  - Next is a [function](js-callgraph.md#fn_node).
 
 Caller calls Next if a node X [iterates with the next](#pattern_next) Next and Caller [is the nearest function of](js-callgraph.md#nearest_fn) X.
 
@@ -446,21 +465,27 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 
 <a id="hidden_call_pos"></a>N hides a call by a mechanism E either:
 
-1. if N is an object pattern and E is `accessor_call`;
-2. if N is a rest, N is among the `properties` of an object pattern P, and E is `accessor_call`;
-3. if N is among the `properties` of an object literal O, N is a spread, and E is `accessor_call`;
-4. if N is an array pattern or a for-of and E is `iterator_call`;
+1. if N is an [object pattern](#noun-object_pattern) and E is `accessor_call`;
+2. if all of:
+   - N is a [rest](#noun-rest);
+   - N is among the `properties` of an [object pattern](#noun-object_pattern) P;
+   - E is `accessor_call`;
+3. if all of:
+   - N is among the `properties` of an [object literal](#noun-object_literal) O;
+   - N is a [spread](#noun-spread);
+   - E is `accessor_call`;
+4. if N is an [array pattern](#noun-array_pattern) or a [for-of](#noun-for-of) and E is `iterator_call`;
 5. if N [is iterated](#spread_iterated) and E is `iterator_call`.
 
 <a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
 
-1. if P is an object pattern or an array pattern and [the pattern source](#pattern_source) of P is Init;
+1. if P is an [object pattern](#noun-object_pattern) or an [array pattern](#noun-array_pattern) and [the pattern source](#pattern_source) of P is Init;
 2. if a node D [holds a rest](js-dataflow.md#rest_in_pattern) P in some file and the `init` of D is Init;
 3. if all of:
-   - P is a spread;
+   - P is a [spread](#noun-spread);
    - P [hides a call by](#hidden_call_pos) some mechanism;
    - the `argument` of P is Init;
-4. if P is a for-of and the `right` of P is Init.
+4. if P is a [for-of](#noun-for-of) and the `right` of P is Init.
 
 In the flow:
 
@@ -525,7 +550,7 @@ In the audit:
 
 In the code:
 
-A try
+A [try](#noun-try)
 
 - <a id="try_of"></a>lies in F if F [is nearest to](js-dataflow.md#nearest_v) it.
 - <a id="in_try_block"></a>tries a node N if the `block` of it is a node B and N [is within](js-structure.md#ast_within) B.
@@ -535,7 +560,7 @@ A try
 > with `leaky` in alpha.mjs as the site
 > (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does).
 
-<a id="catches_via"></a>`catches_via` lists:
+`catches_via` lists:
 
 | kind | field |
 |---|---|
@@ -544,7 +569,7 @@ A try
 A node
 
 - <a id="try_catches"></a>has a handler if all of:
-  - a kind K [catches via](#catches_via) Field;
+  - a kind K [catches via](#catches_via) a field Field;
   - it [is of kind](js-model.md#ast_node) K;
   - the Field of it is some node.
 - <a id="caught_here"></a>is caught here if all of:
@@ -553,9 +578,11 @@ A node
   - F [is nearest to](js-dataflow.md#nearest_v) it;
   - TS [has a handler](#try_catches).
 
-<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.md#nearest_v) a throw T, unless T [is caught here](#caught_here).
+<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.md#nearest_v) a [throw](#noun-throw) T, unless T [is caught here](#caught_here).
 
-Declared as facts: catches_via.
+Declared as facts:
+
+- <a id="catches_via"></a>A kind K catches via a field Field
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 > callee. The value travels with the throw: `thrown_by`, `caught_value`.
@@ -574,7 +601,7 @@ In the flow:
 <a id="thrown_by"></a>F throws out a node V either:
 
 1. if all of:
-   - F [is nearest to](js-dataflow.md#nearest_v) a throw T;
+   - F [is nearest to](js-dataflow.md#nearest_v) a [throw](#noun-throw) T;
    - the `argument` of T is V;
    - unless T [is caught here](#caught_here);
 2. if all of:
@@ -599,11 +626,11 @@ In the flow:
 
 In the code:
 
-<a id="try_stops"></a>A node is stopped by a try T if it [is a throwing call](#throwing_call) and it [is within](js-structure.md#ast_within) T.
+<a id="try_stops"></a>A node is stopped by a [try](#noun-try) T if it [is a throwing call](#throwing_call) and it [is within](js-structure.md#ast_within) T.
 
 C is stopped by a node S if C [is stopped by](#try_stops) a node T and T [is within](js-structure.md#ast_within) S.
 
-A node is abrupt at F from an index I if all of:
+A node is abrupt at a field F from an index I if all of:
   - a node C [is a throwing call](#throwing_call);
   - a node G [is nearest to](js-dataflow.md#nearest_v) C;
   - a node S [is within](js-structure.md#ast_within) G;
@@ -642,7 +669,7 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-<a id="export_kind"></a>`export_kind`, an export declaration, includes `export_named_declaration`, `export_default_declaration`.
+`export_kind`, an [export declaration](#noun-export_declaration), includes `export_named_declaration`, `export_default_declaration`.
 
 A node
 
@@ -652,18 +679,20 @@ A node
 <a id="exported_fn"></a>F is exported either:
 
 1. if all of:
-   - F [is within](js-structure.md#ast_within) an export declaration E;
-   - F is a function;
+   - F [is within](js-structure.md#ast_within) an [export declaration](#noun-export_declaration) E;
+   - F is a [function](js-callgraph.md#fn_node);
    - unless F [is inside a function](#in_fn);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.md#export_local) some name from some file;
    - L [may be the node](js-dataflow.md#may_be_node) F;
-   - F is a function;
+   - F is a [function](js-callgraph.md#fn_node);
    - unless F [is inside a function](#in_fn).
 
 <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
-Declared as facts: export_kind.
+Declared as facts:
+
+- <a id="export_kind"></a>`export_kind`
 
 > ...and a top-level call runs on import, with no enclosing function.
 
@@ -695,7 +724,7 @@ In the code:
 
 In the audit:
 
-<a id="no_entry_point"></a>File has no entry point if a function F [is in file](js-model.md#ast_node) File, unless File [has an entry point](#has_entry).
+<a id="no_entry_point"></a>File has no entry point if a [function](js-callgraph.md#fn_node) F [is in file](js-model.md#ast_node) File, unless File [has an entry point](#has_entry).
 
 ## 8. THE GATES. Every kind that transfers control carries a MECHANISM, and
 
@@ -707,7 +736,7 @@ In the audit:
 > initialiser); `iterator_call`. `spread_element` and `for_of_statement` carry
 > two — one row per (kind, mechanism).
 
-<a id="transfer_mechanism"></a>`transfer_mechanism` lists:
+`transfer_mechanism` lists:
 
 | kind | mechanism |
 |---|---|
@@ -744,16 +773,18 @@ In the audit:
 | `spread_element` | `iterator_call` |
 | `for_of_statement` | `iterator_call` |
 
-Declared as facts: transfer_mechanism.
+Declared as facts:
+
+- <a id="transfer_mechanism"></a>A kind K transfers by a mechanism M
 
 > Three states, not two: modelled, waived with a reason, or open with an owner.
 > `mechanism_open` is empty since 2026-09-06 and kept: the next mechanism that
 > is neither needs somewhere honest to sit, and an audit red on an honest tree
 > gets switched off.
 
-<a id="mechanism_modelled"></a>`mechanism_modelled` includes `skip_arm`, `short_circuit`, `accessor_call`, `abrupt`, `suspend`, `label_boundary`, `definition_time_call`, `per_construction`, `iterator_call`.
+`mechanism_modelled` includes `skip_arm`, `short_circuit`, `accessor_call`, `abrupt`, `suspend`, `label_boundary`, `definition_time_call`, `per_construction`, `iterator_call`.
 
-<a id="mechanism_waived"></a>`mechanism_waived` lists:
+`mechanism_waived` lists:
 
 | mechanism | reason |
 |---|---|
@@ -771,7 +802,11 @@ In the audit:
 
 <a id="mechanism_unanswered"></a>A mechanism is an unanswered mechanism if some kind [transfers by](#transfer_mechanism) it, unless it [is a known mechanism](#mechanism_known).
 
-Declared as facts: mechanism_modelled, mechanism_waived, mechanism_open.
+Declared as facts:
+
+- <a id="mechanism_modelled"></a>A mechanism M is modelled
+- <a id="mechanism_waived"></a>A mechanism M is waived because a reason R
+- <a id="mechanism_open"></a>A mechanism M is open because a reason R
 
 > A kind carrying a modelled mechanism that no rule reaches. Derived from
 > `transfer_mechanism` where a mechanism has one door (suspend, label, field,
@@ -807,28 +842,30 @@ In the audit:
 > SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
 > further along it is conditional.
 
-<a id="short_circuit_kind"></a>`short_circuit_kind`, a short circuit, includes `optional_call_expression`, `optional_member_expression`.
+`short_circuit_kind`, a [short circuit](#noun-short_circuit), includes `optional_call_expression`, `optional_member_expression`.
 
 In the code:
 
 N is guarded either:
 
-1. if N is a short circuit;
-2. if N [is within](js-structure.md#ast_within) a short circuit P.
+1. if N is a [short circuit](#noun-short_circuit);
+2. if N [is within](js-structure.md#ast_within) a [short circuit](#noun-short_circuit) P.
 
-Declared as facts: short_circuit_kind.
+Declared as facts:
+
+- <a id="short_circuit_kind"></a>`short_circuit_kind`
 
 > an arm declared for a field the scanner never emits under that kind: a typo
 > makes the guarded set quietly smaller
 
-<a id="guard_arm_seen"></a>A kind K is seen guarding Field if all of:
+<a id="guard_arm_seen"></a>A kind K is seen guarding a field Field if all of:
   - K [guards the field](#guard_kind) Field;
   - a node P [is of kind](js-model.md#ast_node) K;
   - the Field of P is some node.
 
 In the audit:
 
-<a id="guard_arm_unseen"></a>A kind K is unseen guarding F if all of:
+<a id="guard_arm_unseen"></a>A kind K is unseen guarding a field F if all of:
   - K [guards the field](#guard_kind) F;
   - some node [is of kind](js-model.md#ast_node) K;
   - unless K [is seen guarding](#guard_arm_seen) F.

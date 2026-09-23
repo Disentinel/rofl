@@ -21,19 +21,19 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| a default export | export_default_declaration |
-| a default import | import_default_specifier |
-| a dynamic import | import_expression |
-| an export specifier | export_specifier |
-| an export-all | export_all_declaration |
-| an identifier | identifier |
-| an import | import_declaration |
-| an import attribute | import_attribute |
-| an import specifier | import_specifier |
-| a named export | export_named_declaration |
-| a namespace export | export_namespace_specifier |
-| a namespace import | import_namespace_specifier |
-| a string literal | string_literal |
+| <a id="noun-default_export"></a>a default export | export_default_declaration |
+| <a id="noun-default_import"></a>a default import | import_default_specifier |
+| <a id="noun-dynamic_import"></a>a dynamic import | import_expression |
+| <a id="noun-export_specifier"></a>an export specifier | export_specifier |
+| <a id="noun-export-all"></a>an export-all | export_all_declaration |
+| <a id="noun-identifier"></a>an identifier | identifier |
+| <a id="noun-import"></a>an import | import_declaration |
+| <a id="noun-import_attribute"></a>an import attribute | import_attribute |
+| <a id="noun-import_specifier"></a>an import specifier | import_specifier |
+| <a id="noun-named_export"></a>a named export | export_named_declaration |
+| <a id="noun-namespace_export"></a>a namespace export | export_namespace_specifier |
+| <a id="noun-namespace_import"></a>a namespace import | import_namespace_specifier |
+| <a id="noun-string_literal"></a>a string literal | string_literal |
 
 > js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
 > 
@@ -56,7 +56,22 @@ A noun is a node of one of its kinds:
 > fs_dir_in(Dir, Name, Child), fs_dir_of(File, Dir); node_builtin_bare(Bare,
 > Canonical); shape_verdict(Shape, Reason); unknown_because.
 
-Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs_parent, fs_file_in, fs_dir_in, fs_dir_of, node_builtin_bare, shape_verdict, unknown_because.
+Declared as facts:
+
+- <a id="str_seg"></a>`str_seg`
+- <a id="str_segs"></a>`str_segs`
+- <a id="str_char0"></a>A text S starts with a text C
+- <a id="str_scheme"></a>A text S has the scheme Scheme
+- <a id="fs_file"></a>`fs_file`
+- <a id="fs_dir"></a>`fs_dir`
+- <a id="fs_parent"></a>`fs_parent`
+- <a id="fs_file_in"></a>A directory D holds the file Seg being a file T
+- <a id="fs_dir_in"></a>`fs_dir_in`
+- <a id="fs_dir_of"></a>`fs_dir_of`
+- <a id="node_builtin_bare"></a>A text Bare is the bare name of a spec Spec
+- The shape verdict of a shape S is a verdict N
+- A kind K is unknown in a layer L of a language Lang because a reason R
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R
 
 ## 1. THE PLACES A MODULE SPECIFIER OCCURS — four kinds. A re-export is a site
 
@@ -67,13 +82,16 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="import_site"></a>I is an import site of a form N either:
 
-1. if I is an import and N is `static_import`;
-2. if I is a dynamic import and N is `dynamic_import`.
+1. if I is an [import](#noun-import) and N is `static_import`;
+2. if I is a [dynamic import](#noun-dynamic_import) and N is `dynamic_import`.
 
 <a id="reexport_site"></a>E is a reexport site of a form N either:
 
-1. if E is a named export, the `source` of E is some node, and N is `reexport_named`;
-2. if E is an export-all, the `source` of E is some node, and N is `reexport_all`.
+1. if all of:
+   - E is a [named export](#noun-named_export);
+   - the `source` of E is some node;
+   - N is `reexport_named`;
+2. if E is an [export-all](#noun-export-all), the `source` of E is some node, and N is `reexport_all`.
 
 <a id="module_site"></a>A node N is a module site of a form K either:
 
@@ -82,8 +100,8 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="site_kind"></a>The site kind of I is N either:
 
-1. if I is an import and N is `import_declaration`;
-2. if I is a dynamic import and N is `import_expression`;
+1. if I is an [import](#noun-import) and N is `import_declaration`;
+2. if I is a [dynamic import](#noun-dynamic_import) and N is `import_expression`;
 3. if I [is a reexport site](#reexport_site) of `reexport_named` and N is `export_named_declaration`;
 4. if I [is a reexport site](#reexport_site) of `reexport_all` and N is `export_all_declaration`.
 
@@ -94,7 +112,7 @@ A site
 
 <a id="site_source_node"></a>The source node of a site I is a node Src if I [is a module site](#module_site) of some form and the `source` of I is Src.
 
-<a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a string literal Src and Src [is written as](js-structure.md#ast_value) S.
+<a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a [string literal](#noun-string_literal) Src and Src [is written as](js-structure.md#ast_value) S.
 
 <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 
@@ -199,7 +217,7 @@ A node I is resolved either:
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 > verdict. A default binds `"default"`, a namespace `"*"`.
 
-<a id="import_specifier_node"></a>Sp names an import if Sp is an import specifier or a default import or a namespace import.
+<a id="import_specifier_node"></a>Sp names an import if Sp is an [import specifier](#noun-import_specifier) or a [default import](#noun-default_import) or a [namespace import](#noun-namespace_import).
 
 <a id="import_spec"></a>A site has the import specifier Sp if it [is an import site](#import_site) of `static_import` and Sp is among the `specifiers` of it.
 
@@ -207,10 +225,10 @@ A node I is resolved either:
 
 <a id="spec_imported"></a>Sp imports the name M either:
 
-1. if Sp is an import specifier and the `imported` of Sp [is named](js-structure.md#ast_name) M;
-2. if Sp is an import specifier and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
-3. if Sp is a default import and M is "default";
-4. if Sp is a namespace import and M is "*".
+1. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is named](js-structure.md#ast_name) M;
+2. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
+3. if Sp is a [default import](#noun-default_import) and M is "default";
+4. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
 
 A site
 
@@ -229,11 +247,11 @@ A site
 > has the same two markers as an import; a namespace specifier carries none
 > and is a value binding, correctly.
 
-<a id="export_site"></a>A named export is an export site.
+<a id="export_site"></a>A [named export](#noun-named_export) is an export site.
 
 <a id="export_spec"></a>A node has the export specifier Sp if it [is an export site](#export_site) and Sp is among the `specifiers` of it.
 
-<a id="export_specifier_node"></a>Sp names an export if Sp is an export specifier or a namespace export.
+<a id="export_specifier_node"></a>Sp names an export if Sp is an [export specifier](#noun-export_specifier) or a [namespace export](#noun-namespace_export).
 
 <a id="spec_external"></a>A node Sp exports as X either:
 
@@ -242,8 +260,8 @@ A site
 
 <a id="spec_internal"></a>Sp exports the local L either:
 
-1. if Sp is an export specifier and the `local` of Sp [is named](js-structure.md#ast_name) L;
-2. if Sp is a namespace export and L is "*".
+1. if Sp is an [export specifier](#noun-export_specifier) and the `local` of Sp [is named](js-structure.md#ast_name) L;
+2. if Sp is a [namespace export](#noun-namespace_export) and L is "*".
 
 A node
 
@@ -287,7 +305,7 @@ A node
 
 In the code:
 
-<a id="export_default_site"></a>A default export is a default export site.
+<a id="export_default_site"></a>A [default export](#noun-default_export) is a default export site.
 
 <a id="default_external"></a>A node exports by default as "default" if it [is a default export site](#export_default_site).
 
@@ -296,14 +314,14 @@ In the code:
 <a id="default_internal"></a>A node E exports by default N either:
 
 1. if [the default declaration](#default_declaration) of E is a node D and the `id` of D [is named](js-structure.md#ast_name) N;
-2. if [the default declaration](#default_declaration) of E is an identifier D and D [is named](js-structure.md#ast_name) N.
+2. if [the default declaration](#default_declaration) of E is an [identifier](#noun-identifier) D and D [is named](js-structure.md#ast_name) N.
 
 A node
 
 - <a id="has_default_internal"></a>has a default internal if it [exports by default](#default_internal) some name.
 - <a id="default_anonymous"></a>exports an anonymous default if [the default declaration](#default_declaration) of it is some node, unless it [has a default internal](#has_default_internal).
 
-<a id="default_export_file"></a>A file F has the default export E if E is in file F and E is a default export.
+<a id="default_export_file"></a>A file F has the default export E if E is in file F and E is a [default export](#noun-default_export).
 
 > totality, one internal name, one default per module (two in one File is
 > what a collision between scanned modules would look like from here)
@@ -550,7 +568,7 @@ In the audit:
 
 In the code:
 
-<a id="import_attr"></a>An import attribute carries Key holding Value if the `key` of it [is named](js-structure.md#ast_name) Key and the `value` of it [is written as](js-structure.md#ast_value) Value.
+<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.md#ast_name) Key and the `value` of it [is written as](js-structure.md#ast_value) Value.
 
 A node
 
@@ -561,7 +579,7 @@ A node
 
 In the audit:
 
-An import attribute
+An [import attribute](#noun-import_attribute)
 
 - <a id="import_attr_unsited"></a>is unsited unless some node [has the import attribute](#import_attr_of) it.
 - <a id="import_attr_unread"></a>is unread unless it [carries](#import_attr) some key holding some text.
