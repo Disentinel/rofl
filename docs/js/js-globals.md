@@ -6,6 +6,16 @@ default: code
 
 # js-globals
 
+## Terms
+
+*function*.
+
+## Guards
+
+A noun that is a relation: the noun on a variable is the relation holding of it.
+
+- a function: `fn_node`
+
 ## Signatures
 
 - is_the_global(node E, name Name, of relation Rel, with form Form) (es_global)
@@ -102,14 +112,12 @@ Declared as facts: declaring_position.
 `declares_name`(Name, File) either:
 
 1. if all of:
-   - [`fn_node`](js-callgraph.md#fn_node)(F);
-   - [`fn_file`](js-callgraph.md#fn_file)(F, File);
-   - a node P is among the `params` of a node F;
+   - [`fn_file`](js-callgraph.md#fn_file)(a function F, File);
+   - a node P is among the `params` of F;
    - P [is named](js-structure.md#ast_name) Name;
 2. if all of:
-   - [`fn_node`](js-callgraph.md#fn_node)(F);
-   - [`fn_file`](js-callgraph.md#fn_file)(F, File);
-   - a node P is among the `params` of a node F;
+   - [`fn_file`](js-callgraph.md#fn_file)(a function F, File);
+   - a node P is among the `params` of F;
    - a node X [is within](js-structure.md#ast_within) P;
    - X [is named](js-structure.md#ast_name) Name.
 
@@ -130,7 +138,7 @@ Declared as facts: declaring_position.
 
 > `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
 
-<a id="es_static"></a>A node selects the static Key of Name from a relation Rel if all of:
+<a id="es_static"></a>An access selects the static Key of Name from a relation Rel if all of:
   - a node O [is the global](#es_global) Name of some relation with some form;
   - the `object` of it is O;
   - it [selects](js-dataflow.md#selects) Key;
@@ -149,11 +157,11 @@ Declared as facts: declaring_position.
 > a well-known symbol or `Math.PI` is a KEY and not a call; `lib_static_shape`
 > already carries the difference from the declaration
 
-<a id="es_static_key"></a>N selects the static data Key of Name if N [selects the static](#es_static) Key of Name from some relation and `lib_static_shape`(Name, Key, `data`).
+<a id="es_static_key"></a>An access selects the static data Key of Name if it [selects the static](#es_static) Key of Name from some relation and `lib_static_shape`(Name, Key, `data`).
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [selects the static](#es_static) Key of Name from a relation Rel.
+<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and an access N [selects the static](#es_static) Key of Name from a relation Rel.
 
 <a id="es_global_invoke"></a>C invokes the global Name of a relation Rel if [`callee_of`](js-callgraph.md#callee_of)(C, N) and a node N [is the global](#es_global) Name of Rel with some form.
 
@@ -185,7 +193,7 @@ Declared as facts: constructible_form.
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 <a id="es_static_unsupported"></a>`es_static_unsupported`(E, N, Name, Key) if all of:
-  - N [selects the static](#es_static) Key of Name from a relation Rel;
+  - an access N [selects the static](#es_static) Key of Name from a relation Rel;
   - `environment`(E);
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 

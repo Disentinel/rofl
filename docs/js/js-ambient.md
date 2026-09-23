@@ -6,6 +6,16 @@ default: main
 
 # js-ambient
 
+## Terms
+
+*member access*.
+
+## Guards
+
+A noun that is a relation: the noun on a variable is the relation holding of it.
+
+- a member access: `member_node_v`
+
 ## Signatures
 
 - has_two_origins(surface S, origin A, origin B) (surface_two_origins), in the audit
@@ -274,8 +284,7 @@ Declared as facts: amb_operation_word.
 
 > the structural argument as a row: heap-decided here, `global` in js-effects
 
-<a id="amb_proto_recv"></a>`amb_proto_recv`(M, P) if all of:
-  - a node M [is a member access](js-dataflow.md#member_node_v);
+<a id="amb_proto_recv"></a>`amb_proto_recv`(a member access M, P) if all of:
   - the `object` of M is a node O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype).

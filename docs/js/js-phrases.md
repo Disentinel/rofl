@@ -20,9 +20,23 @@ Declared as facts: phrase, kind_noun, sig.
 
 > a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
 
+Declared as facts: kind_set.
+
+> a noun bound to a unary relation: `a function F` is `fn_node_v(F)`, the relation is
+> the guard and the kind set behind it is a table (`K is a function kind`)
+
+<a id="noun_guard"></a>`noun_guard` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `fn_node_v` | "function" |
+| `fn_node` | "function" |
+| `member_node_v` | "member access" |
+| `scope_node` | "scope" |
+
 <a id="kind_set"></a>`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `fn_kind_v`, `block_scope_kind`, `call_like_v`.
 
-Declared as facts: kind_set.
+Declared as facts: noun_guard.
 
 > signatures: the head phrase is the name, each argument is `[marker] noun Var`
 > in the relation's own order; a name that differs from the relation is a
@@ -49,7 +63,6 @@ Declared as facts: kind_set.
 | `scoped_binder` | "is_scoped(declarator D, in file File)" |
 | `lexical_binder` | "is_lexical(declarator D)" |
 | `lexical_decl` | "is_let_or_const(declaration V)" |
-| `scope_node` | "is_a_scope(node R)" |
 | `encloses_s` | "encloses(scope R, declarator D)" |
 | `closer_s` | "is_outranked_for(scope R, declarator D)" |
 | `nearest_s` | "is_the_nearest_scope_of(scope R, declarator D)" |
@@ -82,7 +95,8 @@ Declared as facts: kind_set.
 | `obj_like` | "is_object_like(node O)" |
 | `member_value` | "the_member(of node O, key Key, holds node V)" |
 | `own_key` | "owns_the_key(class CD, key Key)" |
-| `member_node_v` | "is_a_member_access(node N)" |
+| `fn_kind_v` | "is_a_function_kind(kind K)" |
+| `member_kind_v` | "is_a_member_kind(kind K)" |
 | `selects` | "selects(member access N, key Key)" |
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |
 | `class_member_proto` | "the_instance_member(of class CD, key Key, is node V)" |

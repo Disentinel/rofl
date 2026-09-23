@@ -100,16 +100,21 @@ kind_noun(tagged_template_expression, "tagged template").
 kind_noun(value_transparent, "wrapper").
 kind_noun(literal_kind, "literal").
 kind_noun(node_value_kind, "value site").
-kind_noun(member_kind_v, "member access").
 kind_noun(class_field_kind, "field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
-kind_noun(fn_kind_v, "function").
 kind_noun(block_scope_kind, "block scope").
 kind_noun(call_like_v, "call").
 
 -- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
 edb(kind_set).
+-- a noun bound to a unary relation: `a function F` is `fn_node_v(F)`, the relation is
+-- the guard and the kind set behind it is a table (`K is a function kind`)
+edb(noun_guard).
+noun_guard(fn_node_v, "function").
+noun_guard(fn_node, "function").
+noun_guard(member_node_v, "member access").
+noun_guard(scope_node, "scope").
 kind_set(value_transparent).
 kind_set(literal_kind).
 kind_set(node_value_kind).
@@ -141,7 +146,6 @@ sig(binds_name, "introduces(declarator D, name Name, in file File)").
 sig(scoped_binder, "is_scoped(declarator D, in file File)").
 sig(lexical_binder, "is_lexical(declarator D)").
 sig(lexical_decl, "is_let_or_const(declaration V)").
-sig(scope_node, "is_a_scope(node R)").
 sig(encloses_s, "encloses(scope R, declarator D)").
 sig(closer_s, "is_outranked_for(scope R, declarator D)").
 sig(nearest_s, "is_the_nearest_scope_of(scope R, declarator D)").
@@ -174,7 +178,8 @@ sig(plain_assign, "is_plain(assignment E)").
 sig(obj_like, "is_object_like(node O)").
 sig(member_value, "the_member(of node O, key Key, holds node V)").
 sig(own_key, "owns_the_key(class CD, key Key)").
-sig(member_node_v, "is_a_member_access(node N)").
+sig(fn_kind_v, "is_a_function_kind(kind K)").
+sig(member_kind_v, "is_a_member_kind(kind K)").
 sig(selects, "selects(member access N, key Key)").
 sig(class_member_static, "the_static_member(of class CD, key Key, is node V)").
 sig(class_member_proto, "the_instance_member(of class CD, key Key, is node V)").

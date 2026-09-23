@@ -8,7 +8,7 @@ default: flow
 
 ## Terms
 
-*assignment*, *binary expression*, *class expression*, *dynamic import*, *new*, *static block*, *template*, *throw*, *try*, *update expression*.
+*assignment*, *binary expression*, *class expression*, *dynamic import*, *function*, *member access*, *new*, *static block*, *template*, *throw*, *try*, *update expression*.
 
 ## Kinds
 
@@ -26,6 +26,13 @@ A noun is a node of one of its kinds:
 | a throw | throw_statement |
 | a try | try_statement |
 | an update expression | update_expression |
+
+## Guards
+
+A noun that is a relation: the noun on a variable is the relation holding of it.
+
+- a function: `fn_node`
+- a member access: `member_node_v`
 
 ## Signatures
 
@@ -180,10 +187,7 @@ A throw has the effect `exn` at `none` unless [`eff_catch_here`](#eff_catch_here
 
 A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.md#ast_node) K.
 
-<a id="eff_calls"></a>`eff_calls`(F, G) if all of:
-  - a node C [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) C;
-  - [`fn_node`](js-callgraph.md#fn_node)(G).
+<a id="eff_calls"></a>`eff_calls`(F, a function G) if a node C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
 <a id="eff_reaches"></a>`eff_reaches`(F, G) if [`eff_calls`](#eff_calls)(F, G).
 
@@ -214,18 +218,12 @@ Declared as facts: eff_alloc_kind.
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if a node M [is a member access](js-dataflow.md#member_node_v) and the `object` of M [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>`eff_obj_traced`(a member access M) if the `object` of M [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>`eff_heap_of`(M, N) either:
 
-1. if all of:
-   - a node M [is a member access](js-dataflow.md#member_node_v);
-   - [`eff_obj_traced`](#eff_obj_traced)(M);
-   - N is `local`;
-2. if all of:
-   - a node M [is a member access](js-dataflow.md#member_node_v);
-   - N is `global`;
-   - unless [`eff_obj_traced`](#eff_obj_traced)(M).
+1. if M is a member access, [`eff_obj_traced`](#eff_obj_traced)(M), and N is `local`;
+2. if M is a member access and N is `global`, unless [`eff_obj_traced`](#eff_obj_traced)(M).
 
 <a id="eff_assign"></a>`eff_assign`(an assignment X).
 
@@ -233,7 +231,7 @@ Declared as facts: eff_alloc_kind.
 
 <a id="eff_compound"></a>`eff_compound`(X) if [`eff_assign`](#eff_assign)(X), unless X [is plain](js-dataflow.md#plain_assign).
 
-<a id="eff_member_target"></a>`eff_member_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and a node L [is a member access](js-dataflow.md#member_node_v).
+<a id="eff_member_target"></a>`eff_member_target`(a member access L) if [`eff_assign_target`](#eff_assign_target)(something, L).
 
 <a id="eff_name_target"></a>`eff_name_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and a node L [is named](js-structure.md#ast_name) some name.
 
@@ -247,7 +245,7 @@ A node
   - [`eff_heap_of`](#eff_heap_of)(it, H).
 - has the effect `write` at `local` if [`eff_assign_target`](#eff_assign_target)(it, L) and a node L [is named](js-structure.md#ast_name) some name.
 
-<a id="eff_read_site"></a>`eff_read_site`(M) if a node M [is a member access](js-dataflow.md#member_node_v), unless [`eff_member_target`](#eff_member_target)(M).
+<a id="eff_read_site"></a>`eff_read_site`(a member access M) unless [`eff_member_target`](#eff_member_target)(M).
 
 A node has the effect `read` at a host H if [`eff_read_site`](#eff_read_site)(it) and [`eff_heap_of`](#eff_heap_of)(it, H).
 
@@ -354,7 +352,7 @@ Declared as facts: eff_discharges.
 > with its callee's must give the caller's own back. `eff_purer_callee`
 > compares names, not rows, so it under-reports incomparable pairs.
 
-<a id="eff_subject"></a>`eff_subject`(F) if [`fn_node`](js-callgraph.md#fn_node)(F).
+<a id="eff_subject"></a>`eff_subject`(a function F).
 
 <a id="eff_over"></a>`eff_over`(F, N) if all of:
   - `eff_name`(N);
@@ -412,7 +410,7 @@ Declared as facts: eff_discharges.
 `eff_operation`(C, Key) if all of:
   - [`eff_surface`](js-ambient.md#eff_surface)(C, something);
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - N [selects](js-dataflow.md#selects) Key.
+  - an access N [selects](js-dataflow.md#selects) Key.
 
 <a id="concrete_effect"></a>C operates on a surface S by an operation Op if [`eff_surface`](js-ambient.md#eff_surface)(C, S) and [`eff_operation`](js-ambient.md#eff_operation)(C, Op).
 
@@ -698,9 +696,8 @@ A node has the effect an effect label L at a host H if [`eff_evaluates_at`](#eff
 1. if C [resolves to](js-callgraph.md#resolves) G and [`nearest_fn`](js-callgraph.md#nearest_fn)(F, C);
 2. if a node C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
-<a id="eff_edge_unclosed"></a>`eff_edge_unclosed`(F, G, L, H) if all of:
+<a id="eff_edge_unclosed"></a>`eff_edge_unclosed`(a function F, G, L, H) if all of:
   - [`calls`](js-callgraph.md#calls)(F, G);
-  - [`fn_node`](js-callgraph.md#fn_node)(F);
   - G [has the latent effect](#eff_latent) an effect label L at a host H;
   - unless [`eff_edge_closed`](#eff_edge_closed)(F, G);
   - unless F [has the latent effect](#eff_latent) L at H.

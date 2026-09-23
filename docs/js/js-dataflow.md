@@ -8,7 +8,7 @@ default: flow
 
 ## Terms
 
-*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
+*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *scope*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
 
 ## Kinds
 
@@ -35,13 +35,11 @@ A noun is a node of one of its kinds:
 | an export-all | export_all_declaration |
 | a field | class_field_kind |
 | a for-of | for_of_statement |
-| a function | fn_kind_v |
 | a function declaration | function_declaration |
 | an identifier | identifier |
 | an import | import_declaration |
 | a literal | literal_kind |
 | a logical | logical_expression |
-| a member access | member_kind_v |
 | a method | class_method |
 | a named export | export_named_declaration |
 | a namespace export | export_namespace_specifier |
@@ -71,6 +69,14 @@ A noun is a node of one of its kinds:
 | a wrapper | value_transparent |
 | a yield | yield_expression |
 
+## Guards
+
+A noun that is a relation: the noun on a variable is the relation holding of it.
+
+- a function: `fn_node_v`
+- a member access: `member_node_v`
+- a scope: `scope_node`
+
 ## Signatures
 
 - reads(identifier N, name Name) (ident), in the code
@@ -87,7 +93,6 @@ A noun is a node of one of its kinds:
 - the_region(of declarator D, is node R) (binder_region), in the code
 - is_at_the_top(declarator D) (binder_at_top), in the code
 - sees(node E, declarator D) (sees_binder), in the code
-- is_a_scope(node R) (scope_node), in the code
 - is_let_or_const(declaration V) (lexical_decl), in the code
 - is_lexical(declarator D) (lexical_binder), in the code
 - encloses(scope R, declarator D) (encloses_s), in the code
@@ -115,6 +120,7 @@ A noun is a node of one of its kinds:
 - the_member(of node O, key Key, holds node V) (member_value)
 - the_plain_member(of node O, key Key, is node V) (member_plain)
 - is_valued(node E) (valued)
+- is_a_function_kind(kind K) (fn_kind_v), in the main
 - is_nearest_to(function F, node R) (nearest_v)
 - has_a_spread(call C, at index I) (spread_arg), in the code
 - is_past_a_spread(call C, at index I) (after_spread), in the code
@@ -124,7 +130,7 @@ A noun is a node of one of its kinds:
 - returns(function F, node E)
 - is_object_like(node O) (obj_like)
 - owns_the_key(class CD, key Key) (own_key)
-- is_a_member_access(node N) (member_node_v)
+- is_a_member_kind(kind K) (member_kind_v), in the main
 - selects(member access N, key Key)
 - the_static_member(of class CD, key Key, is node V) (class_member_static)
 - the_instance_member(of class CD, key Key, is node V) (class_member_proto)
@@ -312,7 +318,7 @@ Declared as facts: node_value_kind.
 <a id="scope_node"></a>R is a scope either:
 
 1. if R is a block scope;
-2. if [`fn_node_v`](#fn_node_v)(R).
+2. if R is a function.
 
 Declared as facts: block_scope_kind.
 
@@ -326,18 +332,15 @@ Declared as facts: block_scope_kind.
 > bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
 > product, −11.5 % of a world.
 
-A scope
+<a id="encloses_s"></a>A scope encloses a node D if D [is scoped](#scoped_binder) in some file and D [is within](js-structure.md#ast_within) it.
 
-- <a id="encloses_s"></a>encloses a node D if all of:
-  - D [is scoped](#scoped_binder) in some file;
-  - D [is within](js-structure.md#ast_within) it;
-  - it [is a scope](#scope_node).
-- <a id="closer_s"></a>is outranked for D if all of:
+<a id="closer_s"></a>A node is outranked for D if all of:
   - it [encloses](#encloses_s) D;
-  - a scope S [encloses](#encloses_s) D;
+  - a node S [encloses](#encloses_s) D;
   - S [is within](js-structure.md#ast_within) it;
   - it differs from S.
-- <a id="nearest_s"></a>is the nearest scope of D if it [encloses](#encloses_s) D, unless it [is outranked for](#closer_s) D.
+
+<a id="nearest_s"></a>R is the nearest scope of D if R [encloses](#encloses_s) D, unless R [is outranked for](#closer_s) D.
 
 > Shadowing is a question about a NAME; this is the projection that carries one.
 
@@ -421,8 +424,7 @@ A node
 - <a id="tdz_deferred"></a>is deferred for D if all of:
   - it [is a dead zone candidate of](#tdz_cand) D;
   - [the region](#binder_region) of D is a node R;
-  - [`fn_node_v`](#fn_node_v)(G);
-  - a node G [is within](js-structure.md#ast_within) R;
+  - a function G [is within](js-structure.md#ast_within) R;
   - it [is within](js-structure.md#ast_within) G.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
 - is hidden from D if it [is in the dead zone of](#tdz_at) D.
@@ -546,18 +548,15 @@ A node may be the node N if all of:
 > A defaulted parameter has an index (the `left` of its `assignment_pattern`)
 > and a default that reaches the body.
 
-A node
+A function
 
-- <a id="param_of"></a>takes Name at an index I if all of:
-  - [`fn_node_v`](#fn_node_v)(it);
-  - an assignment pattern P is the I-th of the `params` of it;
-  - the `left` of P [is named](js-structure.md#ast_name) Name.
+- <a id="param_of"></a>takes Name at an index I if an assignment pattern P is the I-th of the `params` of it and the `left` of P [is named](js-structure.md#ast_name) Name.
 - <a id="param_default"></a>defaults Name to a node Init if all of:
-  - [`fn_node_v`](#fn_node_v)(it);
   - an assignment pattern P is among the `params` of it;
   - the `left` of P [is named](js-structure.md#ast_name) Name;
   - the `right` of P is Init.
-- may be the node N if all of:
+
+A node may be the node N if all of:
   - F [defaults](#param_default) Name to a node Init;
   - Init [may be the node](#may_be_node) N;
   - F [uses](#param_use) Name at it.
@@ -608,11 +607,11 @@ The member Key of an object literal O holds a node V if all of:
 
 ## 7. Across a call
 
-<a id="fn_kind_v"></a>`fn_kind_v`, a function, includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
+<a id="fn_kind_v"></a>`fn_kind_v` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
 
 <a id="call_like_v"></a>`call_like_v`, a call, includes `call_expression`, `optional_call_expression`, `new_expression`.
 
-<a id="fn_node_v"></a>`fn_node_v`(a function F).
+<a id="fn_node_v"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind_v).
 
 Declared as facts: fn_kind_v, call_like_v.
 
@@ -621,13 +620,13 @@ Declared as facts: fn_kind_v, call_like_v.
 > fixpoint and no reorder fixes a shape. rules/js-callgraph.rofl keeps
 > `nearest_fn` over sites only; a mutant anchors on that copy.
 
-<a id="nearest_v"></a>A node F is nearest to a node X either:
+<a id="nearest_v"></a>F is nearest to a node X either:
 
-1. if [`fn_node_v`](#fn_node_v)(F) and X [is under](js-structure.md#ast_in) F;
+1. if F is a function and X [is under](js-structure.md#ast_in) F;
 2. if all of:
    - F [is nearest to](#nearest_v) a node P;
    - X [is under](js-structure.md#ast_in) P;
-   - unless [`fn_node_v`](#fn_node_v)(P).
+   - unless P [is a function](#fn_node_v).
 
 > Argument into parameter by INDEX. A spread destroys the correspondence for
 > everything after it, and a may-set may be silent but not wrong, so `arg_at`
@@ -643,19 +642,15 @@ Declared as facts: fn_kind_v, call_like_v.
 
 <a id="arg_at"></a>A call passes a node X at an index I if X is the I-th of the `arguments` of it but is not a spread, unless it [is past a spread](#after_spread) at I.
 
-A node
-
-- passes a node E at an index I if all of:
+A node passes a node E at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
   - a node S is the J-th of the `arguments` of it;
   - the `argument` of S is a node X;
   - [the element](#elem_at) K of X is E;
   - I is J + K;
   - unless it [is past a spread](#after_spread) at J.
-- takes Name at an index I if all of:
-  - [`fn_node_v`](#fn_node_v)(it);
-  - a node P is the I-th of the `params` of it;
-  - P [is named](js-structure.md#ast_name) Name.
+
+A function takes Name at an index I if a node P is the I-th of the `params` of it and P [is named](js-structure.md#ast_name) Name.
 
 > Where a parameter is read: every identifier of its name under F, minus two
 > ways of hiding it — a declarator whose region is STRICTLY inside F
@@ -675,8 +670,7 @@ A node
    - U [reads](#ident) Name;
 2. if all of:
    - F [takes](#param_of) Name at some index;
-   - a node G [is within](js-structure.md#ast_within) F;
-   - [`fn_node_v`](#fn_node_v)(G);
+   - a function G [is within](js-structure.md#ast_within) F;
    - G [takes](#param_of) Name at some index;
    - U [is within](js-structure.md#ast_within) G;
    - U [reads](#ident) Name.
@@ -770,18 +764,18 @@ The member Key of a node CD holds a node V if all of:
 > The key an expression selects. Static and computed collapse here:
 > `may_be_lit` closes the distance for `o[k]`.
 
-<a id="member_kind_v"></a>`member_kind_v`, a member access, includes `member_expression`, `optional_member_expression`.
+<a id="member_kind_v"></a>`member_kind_v` includes `member_expression`, `optional_member_expression`.
 
-<a id="member_node_v"></a>A member access is a member access.
+<a id="member_node_v"></a>A node is a member access if it [is of kind](js-model.md#ast_node) K and K [is a member kind](#member_kind_v).
 
-<a id="selects"></a>A node N selects Key either:
+<a id="selects"></a>N selects Key either:
 
 1. if all of:
-   - N [is a member access](#member_node_v);
+   - N is a member access;
    - the attribute `computed` of N is `false`;
    - the `property` of N [is named](js-structure.md#ast_name) Key;
 2. if all of:
-   - N [is a member access](#member_node_v);
+   - N is a member access;
    - the attribute `computed` of N is `true`;
    - the `property` of N [may be the literal](#may_be_lit) Key.
 
@@ -806,30 +800,29 @@ The plain member Key of O is a node V either:
 
 <a id="class_receiver"></a>A node denotes a class if some class [is named](#class_named) Name in File and it [reads](#ident_in) Name in File.
 
-A node N may be the node V2 either:
+N may be the node V2 either:
 
 1. if all of:
-   - N [is a member access](#member_node_v);
+   - N is a member access;
    - the `object` of N is a node O;
    - O [denotes a class](#class_receiver);
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the static member](#class_member_static) Key of Obj [may be the node](#may_be_node) V2;
 2. if all of:
-   - N [is a member access](#member_node_v);
+   - N is a member access;
    - the `object` of N is a node O;
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the instance member](#class_member_proto) Key of Obj [may be the node](#may_be_node) V2;
    - unless O [denotes a class](#class_receiver);
 3. if all of:
-   - N [is a member access](#member_node_v);
+   - N is a member access;
    - the `object` of N [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the plain member](#member_plain) Key of Obj [may be the node](#may_be_node) V2.
 
-A node may be the literal L if all of:
-  - it [is a member access](#member_node_v);
+A member access may be the literal L if all of:
   - the `object` of it [may be the node](#may_be_node) Obj;
   - it [selects](#selects) Key;
   - [the member](#member_value) Key of Obj holds a node V;
@@ -932,9 +925,10 @@ The instance/static member Key of a class CD is a node V if CD [inherits the fie
   - M is among the `body` of B;
   - the `key` of M [is the private key](#private_key) Name.
 
-A node
+<a id="private_ref"></a>A member access refers privately to Name if the `property` of it [is the private key](#private_key) Name.
 
-- <a id="private_ref"></a>refers privately to Name if it [is a member access](#member_node_v) and the `property` of it [is the private key](#private_key) Name.
+An access
+
 - <a id="private_inner"></a>has an inner class inside a class CD if all of:
   - it [refers privately to](#private_ref) Name;
   - CD [has the private member](#private_member) Name at some node;
@@ -1014,9 +1008,11 @@ A node denotes a class if some class [has the static block](#static_block_of) a 
   - File [is in the corpus](#corpus_file);
   - File is Base.
 
-<a id="exports_name"></a>A function is exported as Name from File if all of:
+<a id="exports_name"></a>A node is exported as Name from File if all of:
   - a named export E is in file File;
   - the `declaration` of E is it;
+  - a kind K [is a function kind](#fn_kind_v);
+  - it [is of kind](js-model.md#ast_node) K;
   - the `id` of it [is named](js-structure.md#ast_name) Name.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
@@ -1096,9 +1092,14 @@ The member Name of a node P holds a node F if P [is the module object of](#modul
   - a default import Sp is among the `specifiers` of D;
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
-<a id="exports_default"></a>A function is the default export of File if a default export E is in file File and the `declaration` of E is it.
+A node
 
-A node may be the node F if all of:
+- <a id="exports_default"></a>is the default export of File if all of:
+  - a default export E is in file File;
+  - the `declaration` of E is it;
+  - a kind K [is a function kind](#fn_kind_v);
+  - it [is of kind](js-model.md#ast_node) K.
+- may be the node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
   - Src [targets](#import_target) Target;
   - F [is the default export of](#exports_default) Target;
@@ -1222,7 +1223,7 @@ An await may be the node/literal N if the `argument` of it [may be the node/lite
 <a id="next_send"></a>G is sent a node V if all of:
   - [`call_site`](js-callgraph.md#call_site)(C, something);
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - a node N [selects](#selects) "next";
+  - an access N [selects](#selects) "next";
   - the `object` of N is a node O;
   - [`bound_to_call`](#bound_to_call)(O, GC);
   - GC [resolves to](js-callgraph.md#resolves) G;

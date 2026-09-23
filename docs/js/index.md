@@ -3,16 +3,16 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.md) | 326 | 2 | 0 | 0 | 0 | 0 | 0 | 12 | 0 | 0 |
-| [js-ambient](js-ambient.md) | 69 | 42 | 8 | 31 | 0 | 91 | 5 | 1 | 13 | 0 |
+| [js-phrases](js-phrases.md) | 329 | 3 | 0 | 0 | 0 | 0 | 0 | 13 | 0 | 0 |
+| [js-ambient](js-ambient.md) | 69 | 42 | 8 | 31 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.md) | 49 | 37 | 7 | 30 | 0 | 101 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.md) | 212 | 91 | 5 | 77 | 24 | 240 | 20 | 4 | 4 | 0 |
-| [js-controlflow](js-controlflow.md) | 229 | 87 | 4 | 70 | 26 | 248 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.md) | 295 | 125 | 110 | 2 | 118 | 435 | 23 | 2 | 3 | 0 |
-| [js-effects](js-effects.md) | 211 | 128 | 21 | 99 | 15 | 316 | 20 | 2 | 7 | 0 |
+| [js-callgraph](js-callgraph.md) | 212 | 91 | 6 | 76 | 41 | 223 | 20 | 4 | 4 | 0 |
+| [js-controlflow](js-controlflow.md) | 229 | 87 | 5 | 69 | 35 | 239 | 15 | 5 | 2 | 0 |
+| [js-dataflow](js-dataflow.md) | 295 | 125 | 111 | 1 | 125 | 428 | 23 | 2 | 3 | 0 |
+| [js-effects](js-effects.md) | 211 | 128 | 21 | 99 | 23 | 308 | 20 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.md) | 5 | 5 | 1 | 4 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.md) | 45 | 34 | 4 | 29 | 0 | 48 | 5 | 1 | 17 | 0 |
-| [js-globals](js-globals.md) | 40 | 22 | 9 | 10 | 0 | 49 | 1 | 2 | 6 | 0 |
+| [js-globals](js-globals.md) | 40 | 22 | 9 | 10 | 2 | 47 | 1 | 2 | 6 | 0 |
 | [js-host](js-host.md) | 66 | 48 | 8 | 39 | 1 | 75 | 9 | 1 | 18 | 0 |
 | [js-model](js-model.md) | 116 | 55 | 18 | 32 | 0 | 138 | 13 | 3 | 2 | 0 |
 | [js-modules](js-modules.md) | 143 | 95 | 8 | 87 | 22 | 200 | 21 | 0 | 2 | 0 |
@@ -21,7 +21,7 @@
 | [js-structure](js-structure.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.md) | 12 | 10 | 5 | 5 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-543 heads without a phrase across these files.
+541 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -124,6 +124,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
 | `field_of` | `has_the_field` |
+| `fn_kind_v` | `is_a_function_kind` |
 | `for_of_name` | `loops_over` |
 | `for_of_src` | `iterates` |
 | `for_of_use` | `loops_with` |
@@ -162,7 +163,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `may_be_node` | `may_be_the_node` |
 | `meet_ambiguous` | `has_two_meets` |
 | `member_effect` | `has_the_member_effect` |
-| `member_node_v` | `is_a_member_access` |
+| `member_kind_v` | `is_a_member_kind` |
 | `member_plain` | `the_plain_member` |
 | `member_value` | `the_member` |
 | `meta_form` | `has_the_meta_form` |
@@ -206,7 +207,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `rest_binds` | `binds` |
 | `rest_in_pattern` | `holds_a_rest` |
 | `runtime_drops` | `drops` |
-| `scope_node` | `is_a_scope` |
 | `scoped_binder` | `is_scoped` |
 | `sees_binder` | `sees` |
 | `seq_later` | `has_a_later_expression_than` |
@@ -241,6 +241,13 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `verdict` | `the_verdict` |
 | `walk` | `walks` |
 | `within_attr` | `contains_the_attribute` |
+
+## One noun, two guards
+
+A file that uses two relations bound to one noun binds the noun to the one it uses most; the other reads positionally.
+
+- `function` in js-controlflow: `fn_node` (9), `fn_node_v` (2)
+- `function` in js-effects: `fn_node` (3), `fn_node_v` (1)
 
 ## One name, two books
 

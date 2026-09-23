@@ -25,7 +25,10 @@ const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', '
 const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8');
 const kindNoun = new Map<string, string>();
 for (const m of vocab.matchAll(/^kind_noun\((\w+), "([^"]+)"\)/gm)) kindNoun.set(m[1], m[2]);
-const nouns = new Set([...kindNoun.values(), ...VALUE, 'this', 'scope', 'this-binder', 'effect label']);
+const guardOf = new Map<string, string[]>();   // noun -> the relations it may bind to, from the vocabulary
+for (const m of vocab.matchAll(/^noun_guard\((\w+), "([^"]+)"\)/gm)) guardOf.set(m[2], [...(guardOf.get(m[2]) ?? []), m[1]]);
+const nounGuards = new Map<string, string>();   // noun -> the relation this file binds it to
+const nouns = new Set([...kindNoun.values(), ...VALUE, ...guardOf.keys(), 'this', 'scope', 'this-binder', 'effect label']);
 
 function parsePhrase(rel: string, t: string): Tpl {
   const parts: Part[] = []; let k = 0; let buf = '';
@@ -164,6 +167,12 @@ function matchLit(text: string, intros: Intro[], asHead = false): Lit | null {
   }
   return { rel: h.t.rel, args, book };
 }
+function guardHead(text: string, intros: Intro[]): Lit | null {
+  const m = new RegExp(`^(${TERM}) is an? ([a-z][\\w-]*(?: [a-z][\\w-]*){0,2})$`).exec(text);
+  if (!m || !nounGuards.has(m[2])) return null;
+  const t = term(m[1], intros); subjectVar = 'v' in t ? t.v : null;
+  return { rel: nounGuards.get(m[2])!, args: [t] };
+}
 function positional(text: string, intros: Intro[]): Lit | null {
   const m = /^`(\w+)`\((.*)\)(?:,? in the (?:book )?(\w+))?$/.exec(text); if (!m) return null;
   return { rel: m[1], args: m[2] ? splitTop(m[2]).map((a) => term(a, intros)) : [], book: m[3] };
@@ -203,6 +212,7 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
   if ((m = /^([A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$/.exec(text))) {
     const ns = m[2].split(/ or /).map((x) => x.replace(/^[Aa]n? /, '')).map((n) => n.endsWith(' node') ? '`' + n.slice(0, -5) : n);
     const subj = m[1] === 'it' ? (subjectVar ?? 'It') : m[1];
+    if (ns.length === 1 && nounGuards.has(ns[0])) { rule.body.push({ rel: nounGuards.get(ns[0])!, args: [{ v: subj }], neg }); known.set(subj, ns[0]); return true; }
     if (ns.every((n) => nounAtoms.has(n) || nounSets.has(n) || n.startsWith('`'))) {
       const hit = ns.length === 1 ? matchLit(text, []) : null;
       if (hit) { ambiguous.push(`${text}  ->  a kind of ${subj} | ${hit.rel} (the relation wins)`); hit.neg = neg; rule.body.push(hit); known.set(subj, ns[0]); return true; }
@@ -325,7 +335,7 @@ function sentence(headText: string, conds: string[], where: string) {
     const intros: Intro[] = [];
     const savedAmb = ambiguous.length, savedUn = unparsed.length;
     subjectVar = null;
-    const head = positional(headText, intros) ?? matchLit(headText, intros, true);
+    const head = positional(headText, intros) ?? guardHead(headText, intros) ?? matchLit(headText, intros, true);
     if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
     const rule: Rule = { head, body: [], guards: new Map(), where };
     for (const c of conds) condition(c, intros, rule);
@@ -400,17 +410,19 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
       if (!templates.some((t) => t.rel === rel && t.src === m[1])) templates.push(parseSig(rel, m[1]));
       headBook.set(rel, m[3] ?? defaultBook); homeBook.set(rel, m[3] ?? defaultBook);
     }
+    if (sec === 'Guards' && b.type === 'ul') for (const it of b.items!) { const m = /^[Aa]n? (.+?): `(\w+)`$/.exec(it.text.trim()); if (m) nounGuards.set(m[1], m[2]); }
     if (sec === 'Kinds' && b.type === 'table') for (const r of b.rows!) { const noun = r[0].replace(/^[Aa]n? /, ''); for (const k of r[1].split(/,\s*/)) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } }
     if (/^(Read from other files|Not defined in these files)/.test(sec) && b.type === 'ul') for (const it of b.items!) {
       const m = /^`?([\w-]+)`?(?:, in the (\w+))?$/.exec(it.text.trim()); if (m && m[2]) homeBook.set(m[1], m[2]);
     }
   }
 }
+for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
 let section = '';
 for (let i = 0; i < blocks.length; i++) {
   const b = blocks[i], next = blocks[i + 1];
   if (b.type === 'h') { section = b.text!; continue; }
-  if (/^(Read from other files|Not defined in these files|Terms)/.test(section)) continue;
+  if (/^(Read from other files|Not defined in these files|Terms|Guards)/.test(section)) continue;
   if (b.type !== 'p') continue;
   const text = b.text!.trim(); let m;
   if (/^Kinds without a noun:/.test(text) || /trailing comments/.test(text)) continue;
@@ -476,6 +488,7 @@ function expand(rule: Rule): Clause[] {
     for (const file of (g.file ? alternatives(g.file).map(tstr) : ['_'])) for (const noun of (g.nouns ?? [g.noun])) {
       const sets = nounSets.get(noun), atoms = noun.startsWith('`') ? [noun.slice(1)] : nounAtoms.get(noun);
       if (noun === 'node') opts.push([{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }]);
+      else if (nounGuards.has(noun)) opts.push([{ rel: nounGuards.get(noun)!, neg: false, args: [v] }, ...(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }])]);
       else if (sets && sets.length) opts.push([{ rel: 'ast_node', neg: false, args: [v, `K_${v}`, file, '_'] }, { rel: sets[0], neg: false, args: [`K_${v}`] }]);
       else if (atoms && atoms.length) for (const a of atoms) opts.push([{ rel: 'ast_node', neg: false, args: [v, a, file, '_'] }]);
       else opts.push([]);

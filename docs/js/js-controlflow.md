@@ -8,7 +8,7 @@ default: code
 
 ## Terms
 
-*array pattern*, *block*, *declarator*, *for-of*, *if*, *label*, *object literal*, *object pattern*, *rest*, *return*, *spread*, *throw*, *try*.
+*array pattern*, *block*, *declarator*, *for-of*, *function*, *if*, *label*, *member access*, *object literal*, *object pattern*, *rest*, *return*, *spread*, *throw*, *try*.
 
 ## Kinds
 
@@ -29,6 +29,13 @@ A noun is a node of one of its kinds:
 | a spread | spread_element |
 | a throw | throw_statement |
 | a try | try_statement |
+
+## Guards
+
+A noun that is a relation: the noun on a variable is the relation holding of it.
+
+- a function: `fn_node`
+- a member access: `member_node_v`
 
 ## Signatures
 
@@ -283,12 +290,9 @@ Declared as facts: completion_deferred.
 > return against every function — 94 % of the layer's read cost, measured on
 > two corpora with two instruments.
 
-<a id="has_return"></a>`has_return`(F) if a return R [is within](js-structure.md#ast_within) a node F and [`fn_node`](js-callgraph.md#fn_node)(F).
+<a id="has_return"></a>`has_return`(a function F) if a return R [is within](js-structure.md#ast_within) F.
 
-<a id="top_throw"></a>`top_throw`(F) if all of:
-  - [`fn_node`](js-callgraph.md#fn_node)(F);
-  - the `body` of a node F is a node B;
-  - a throw S is among the `body` of B.
+<a id="top_throw"></a>`top_throw`(a function F) if the `body` of F is a node B and a throw S is among the `body` of B.
 
 <a id="always_throws"></a>`always_throws`(F) if [`top_throw`](#top_throw)(F), unless [`has_return`](#has_return)(F).
 
@@ -318,8 +322,8 @@ Declared as facts: completion_deferred.
 
 1. if all of:
    - [`accessor_of`](#accessor_of)(Obj, Key, M);
-   - a node N [selects](js-dataflow.md#selects) Key;
-   - N [is a member access](js-dataflow.md#member_node_v);
+   - N [selects](js-dataflow.md#selects) Key;
+   - N is a member access;
    - the `object` of N [may be the node](js-dataflow.md#may_be_node) Obj;
 2. if all of:
    - N [binds privately to](js-dataflow.md#private_binds) M;
@@ -378,13 +382,13 @@ Declared as facts: accessor_kind.
    - P is an array pattern;
    - [`pattern_source`](#pattern_source)(P, Init);
    - a node Init [may be the node](js-dataflow.md#may_be_node) Obj;
-   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds a node M;
-   - [`fn_node`](js-callgraph.md#fn_node)(M);
+   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
+   - M is a function;
 2. if all of:
    - [`spread_iterated`](#spread_iterated)(P);
    - the `argument` of P [may be the node](js-dataflow.md#may_be_node) Obj;
-   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds a node M;
-   - [`fn_node`](js-callgraph.md#fn_node)(M).
+   - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
+   - M is a function.
 
 Declared as facts: spread_iterable_field.
 
@@ -409,13 +413,12 @@ Declared as facts: spread_iterable_field.
 
 N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 
-<a id="pattern_next"></a>`pattern_next`(X, Next) if all of:
+<a id="pattern_next"></a>`pattern_next`(X, a function Next) if all of:
   - [`pattern_iterates`](#pattern_iterates)(X, M);
   - M [returns](js-dataflow.md#returns) a node E;
   - E [may be the node](js-dataflow.md#may_be_node) IterObj;
   - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
-  - V [may be the node](js-dataflow.md#may_be_node) Next;
-  - [`fn_node`](js-callgraph.md#fn_node)(Next).
+  - V [may be the node](js-dataflow.md#may_be_node) Next.
 
 `calls`(Caller, Next) if [`pattern_next`](#pattern_next)(X, Next) and [`nearest_fn`](js-callgraph.md#nearest_fn)(Caller, X).
 
@@ -614,7 +617,7 @@ A node is abrupt at F from an index I if all of:
 
 <a id="export_kind"></a>`export_kind` includes `export_named_declaration`, `export_default_declaration`.
 
-`fn_node`(F) if [`fn_name`](js-callgraph.md#fn_name)(F, something).
+A node is a function if [`fn_name`](js-callgraph.md#fn_name)(it, something).
 
 <a id="in_fn"></a>`in_fn`(N) if some function [is nearest to](js-dataflow.md#nearest_v) a node N.
 
@@ -623,13 +626,13 @@ A node is abrupt at F from an index I if all of:
 1. if all of:
    - [`export_kind`](#export_kind)(K);
    - a node E [is of kind](js-model.md#ast_node) K;
-   - a node F [is within](js-structure.md#ast_within) E;
-   - [`fn_node`](js-callgraph.md#fn_node)(F);
+   - F [is within](js-structure.md#ast_within) E;
+   - F is a function;
    - unless [`in_fn`](#in_fn)(F);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.md#export_local) some name from some file;
    - L [may be the node](js-dataflow.md#may_be_node) F;
-   - [`fn_node`](js-callgraph.md#fn_node)(F);
+   - F is a function;
    - unless [`in_fn`](#in_fn)(F).
 
 <a id="entry_point"></a>`entry_point`(F) if [`exported_fn`](#exported_fn)(F).
@@ -663,10 +666,7 @@ Declared as facts: export_kind.
 
 <a id="has_entry"></a>`has_entry`(File) if [`entry_point`](#entry_point)(F) and a node F [is of kind](js-model.md#ast_node) some kind in file File.
 
-<a id="no_entry_point"></a>`no_entry_point`(File) if all of:
-  - [`fn_node`](js-callgraph.md#fn_node)(F);
-  - a node F [is of kind](js-model.md#ast_node) some kind in file File;
-  - unless [`has_entry`](#has_entry)(File).
+<a id="no_entry_point"></a>`no_entry_point`(File) if a function F [is of kind](js-model.md#ast_node) some kind in file File, unless [`has_entry`](#has_entry)(File).
 
 ## 8. THE GATES. Every kind that transfers control carries a MECHANISM, and
 

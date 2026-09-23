@@ -93,7 +93,11 @@ What has to exist for it to be code rather than a description of code
    type is not a guard; a kind noun is a guard and only a guard may put it
    on a variable, so a noun whose guard in the base is a relation
    (`fn_node_v`) still leaves a letter until the base binds the noun to it
-   (f_two_structure_phrases_read_backwards_and_a_letter_is_a_variable_nobody_typed).
+   (f_two_structure_phrases_read_backwards_and_a_letter_is_a_variable_nobody_typed);
+   a noun bound to a unary relation is that relation's guard
+   (`noun_guard(fn_node_v, "function")`), and a file binds a noun to one
+   relation in its `## Guards` section
+   (f_a_noun_bound_to_a_relation_is_its_guard_and_one_noun_had_two_in_two_files).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is
