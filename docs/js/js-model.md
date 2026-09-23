@@ -60,30 +60,31 @@ default: audit
 
 <a id="claim_kind"></a>`claim_kind` includes `handled`, `ignored`, `unknown_because`.
 
-<a id="claim"></a>K is claimed in L of Lang under N with R either:
+<a id="claim"></a>A kind K is claimed in a layer L of a language Lang under a ledger N with a reason R either:
 
 1. if [`handled`](#handled)(Lang, K, L, R) and N is `handled`;
 2. if [`ignored`](#ignored)(Lang, K, L, R) and N is `ignored`;
 3. if K [is unknown](#unknown_because) in L of Lang because R and N is `unknown_because`.
 
-<a id="handled"></a>`handled`(Lang, K, L, R) if K [is claimed](#claim) in L of Lang under `handled` with R.
+<a id="handled"></a>`handled`(Lang, K, L, R) if a kind K [is claimed](#claim) in a layer L of a language Lang under `handled` with a reason R.
 
-<a id="ignored"></a>`ignored`(Lang, K, L, R) if K [is claimed](#claim) in L of Lang under `ignored` with R.
+<a id="ignored"></a>`ignored`(Lang, K, L, R) if a kind K [is claimed](#claim) in a layer L of a language Lang under `ignored` with a reason R.
 
-<a id="unknown_because"></a>K is unknown in L of Lang because R if K [is claimed](#claim) in L of Lang under `unknown_because` with R.
+<a id="unknown_because"></a>A kind K is unknown in a layer L of a language Lang because a reason R if K [is claimed](#claim) in L of Lang under `unknown_because` with R.
 
 Declared as facts: claim, claim_kind.
 
 > `not cell` rather than `not node_kind` and `not layer` apart: the cell is
 > their conjunction.
 
-<a id="orphan"></a>K is orphaned in L of Lang under What if K [is claimed](#claim) in L of Lang under What with some reason, unless K [is a cell](#cell) in L of Lang.
+<a id="orphan"></a>A kind K is orphaned in a layer L of a language Lang under a ledger What if K [is claimed](#claim) in L of Lang under What with some reason, unless K [is a cell](#cell) in L of Lang.
 
-<a id="unknown_ledger"></a>`unknown_ledger`(What) if some kind [is claimed](#claim) in some layer of some language under What with some reason, unless [`claim_kind`](#claim_kind)(What).
+<a id="unknown_ledger"></a>`unknown_ledger`(What) if some kind [is claimed](#claim) in some layer of some language under a ledger What with some reason, unless [`claim_kind`](#claim_kind)(What).
 
-<a id="orphan_claim"></a>K is an orphan claim in L of Lang if K [is orphaned](#orphan) in L of Lang under `handled` or `ignored`.
+A kind K
 
-<a id="cell"></a>K is a cell in L of Lang if `node_kind`(Lang, K) and `layer`(L).
+- <a id="orphan_claim"></a>is an orphan claim in a layer L of a language Lang if K [is orphaned](#orphan) in L of Lang under `handled` or `ignored`.
+- <a id="cell"></a>is a cell in a layer L of a language Lang if `node_kind`(Lang, K) and `layer`(L).
 
 ## THE LAYER LIST IS THE OWNER'S, as a row. `layer(L)` is one fact and opens
 
@@ -103,9 +104,9 @@ Declared as facts: layer_authorised.
 
 <a id="verified"></a>`verified`(Lang, K, L, Rule) if [`handled`](#handled)(Lang, K, L, Rule) and [`checked`](#checked)(Lang, K, L, Rule, something, something).
 
-<a id="converges"></a>Rule has two verifiers X and B in L if all of:
-  - [`verified`](#verified)(X, something, L, Rule);
-  - [`verified`](#verified)(B, something, L, Rule);
+<a id="converges"></a>A rule has two verifiers a language X and B in a layer L if all of:
+  - [`verified`](#verified)(X, something, L, it);
+  - [`verified`](#verified)(B, something, L, it);
   - X differs from B.
 
 <a id="unverified"></a>`unverified`(Lang, K, L, Rule) if [`handled`](#handled)(Lang, K, L, Rule), unless [`checked`](#checked)(Lang, K, L, Rule, something, something).
@@ -120,7 +121,7 @@ Declared as facts: checked.
 > with no cell under it and the partition stops summing — a second, independent
 > detector for what `orphan_claim` reports.
 
-<a id="verdict"></a>The verdict of K in L for Lang is N either:
+<a id="verdict"></a>The verdict of a kind K in a layer L for a language Lang is a verdict N either:
 
 1. if [`handled`](#handled)(Lang, K, L, something) and N is `modelled`;
 2. if [`ignored`](#ignored)(Lang, K, L, something) and N is `waived`;
@@ -148,7 +149,7 @@ Declared as facts: checked.
 | `budget_exhausted` | `ours` |
 | `out_of_scope` | `ours` |
 
-<a id="reason"></a>The reason of K in L for Lang is R either:
+<a id="reason"></a>The reason of a kind K in a layer L for a language Lang is a reason R either:
 
 1. if [the verdict](#verdict) of K in L for Lang is `not_modelled` and K [is unknown](#unknown_because) in L of Lang because R;
 2. if all of:
@@ -156,18 +157,20 @@ Declared as facts: checked.
    - R is `not_yet`;
    - unless K [is unknown](#unknown_because) in L of Lang because some reason.
 
-<a id="irreducible_unknown"></a>K is irreducibly unknown in L of Lang if [the reason](#reason) of K in L for Lang is R and [`unknown_type`](#unknown_type)(R, `irreducible`).
+A kind K
 
-<a id="our_unknown"></a>K is our unknown in L of Lang if [the reason](#reason) of K in L for Lang is R and [`unknown_type`](#unknown_type)(R, `ours`).
+- <a id="irreducible_unknown"></a>is irreducibly unknown in a layer L of a language Lang if [the reason](#reason) of K in L for Lang is a reason R and [`unknown_type`](#unknown_type)(R, `irreducible`).
+- <a id="our_unknown"></a>is our unknown in a layer L of a language Lang if [the reason](#reason) of K in L for Lang is a reason R and [`unknown_type`](#unknown_type)(R, `ours`).
 
-<a id="bad_reason"></a>The bad reason of K in L for Lang is R if K [is unknown](#unknown_because) in L of Lang because R, unless [`unknown_type`](#unknown_type)(R, something).
+<a id="bad_reason"></a>The bad reason of a kind K in a layer L for a language Lang is a reason R if K [is unknown](#unknown_because) in L of Lang because R, unless [`unknown_type`](#unknown_type)(R, something).
 
-<a id="stale_reason"></a>K has a stale reason R in L of Lang if all of:
+A kind K
+
+- <a id="stale_reason"></a>has a stale reason R in a layer L of a language Lang if all of:
   - K [is unknown](#unknown_because) in L of Lang because R;
   - K [is a cell](#cell) in L of Lang;
   - unless [the verdict](#verdict) of K in L for Lang is `not_modelled`.
-
-<a id="orphan_reason"></a>K is an orphan reason in L of Lang if K [is orphaned](#orphan) in L of Lang under `unknown_because`.
+- <a id="orphan_reason"></a>is an orphan reason in a layer L of a language Lang if K [is orphaned](#orphan) in L of Lang under `unknown_because`.
 
 Declared as facts: unknown_type, unknown_because.
 
@@ -188,7 +191,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 > two ways — the axis absent from the layer, or present with a kind that does
 > not split — as two rules, so the second stays removable.
 
-<a id="shape_kind"></a>K has a shape axis in Lay of Lang if [`shape_of`](#shape_of)(Lang, K, S) and [`shape_in`](#shape_in)(S, Lay).
+<a id="shape_kind"></a>A kind K has a shape axis in a layer Lay of a language Lang if [`shape_of`](#shape_of)(Lang, K, S) and [`shape_in`](#shape_in)(S, Lay).
 
 `cell`(Lang, K, N, Lay) either:
 
@@ -213,15 +216,15 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
 
 <a id="coarse_of"></a>`coarse_of`(Lang, K, Lay) if [`cell`](#cell)(Lang, K, something, Lay).
 
-<a id="lost_cell"></a>K is a lost cell in Lay of Lang if K [is a cell](#cell) in Lay of Lang, unless [`coarse_of`](#coarse_of)(Lang, K, Lay).
+<a id="lost_cell"></a>A kind K is a lost cell in a layer Lay of a language Lang if K [is a cell](#cell) in Lay of Lang, unless [`coarse_of`](#coarse_of)(Lang, K, Lay).
 
-<a id="invented_cell"></a>`invented_cell`(Lang, K, Lay) if [`coarse_of`](#coarse_of)(Lang, K, Lay), unless K [is a cell](#cell) in Lay of Lang.
+<a id="invented_cell"></a>`invented_cell`(Lang, K, Lay) if [`coarse_of`](#coarse_of)(Lang, K, Lay), unless a kind K [is a cell](#cell) in a layer Lay of a language Lang.
 
 <a id="refined_cell"></a>`refined_cell`(Lang, K, Lay) if [`cell`](#cell)(Lang, K, S, Lay) and S differs from `none`.
 
-<a id="double_cell"></a>K is a double cell in Lay of Lang if [`cell`](#cell)(Lang, K, `none`, Lay) and [`refined_cell`](#refined_cell)(Lang, K, Lay).
+<a id="double_cell"></a>A kind K is a double cell in a layer Lay of a language Lang if [`cell`](#cell)(Lang, K, `none`, Lay) and [`refined_cell`](#refined_cell)(Lang, K, Lay).
 
-<a id="orphan_shape"></a>S is an orphan shape of K in Lang if [`shape_of`](#shape_of)(Lang, K, S), unless `node_kind`(Lang, K).
+<a id="orphan_shape"></a>A shape is an orphan shape of a kind K in a language Lang if [`shape_of`](#shape_of)(Lang, K, it), unless `node_kind`(Lang, K).
 
 <a id="orphan_axis"></a>`orphan_axis`(X, Lay) either:
 
@@ -254,7 +257,7 @@ Declared as facts: axis, axis_applies, shape_of, shape_in.
    - [`cell`](#cell)(Lang, K, `none`, Lay);
    - S is `none`.
 
-<a id="coarser_claim"></a>K has a coarser claim R in Lay of Lang either:
+<a id="coarser_claim"></a>A kind K has a coarser claim a reason R in a layer Lay of a language Lang either:
 
 1. if all of:
    - [`handled`](#handled)(Lang, K, Lay, R);

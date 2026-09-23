@@ -35,29 +35,29 @@ default: main
 > into one `load()` are one pack, which is why this is its own pack with its
 > own loader.
 
-<a id="pack_fact"></a>P asserts Rel with Args if `asserted_by`($fact(Rel, `main`, Args), P, something).
+<a id="pack_fact"></a>A pack asserts a relation Rel with a term Args if `asserted_by`($fact(Rel, `main`, Args), it, something).
 
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
 
-<a id="fwalk"></a>The arguments of Rel in P from N are Args either:
+<a id="fwalk"></a>The arguments of a relation Rel in a pack P from an index N are a term Args either:
 
 1. if P [asserts](#pack_fact) Rel with Args and N is 1;
-2. if [the arguments](#fwalk) of Rel in P from I are $cons(something, Args) and N is I + 1.
+2. if [the arguments](#fwalk) of Rel in P from an index I are $cons(something, Args) and N is I + 1.
 
-<a id="fslot"></a>The slot I of Rel in P holds X if [the arguments](#fwalk) of Rel in P from I are $cons(X, something).
+<a id="fslot"></a>The slot I of a relation Rel in a pack P holds a term X if [the arguments](#fwalk) of Rel in P from I are $cons(X, something).
 
 > Which positions carry a kind — DISCOVERED, not declared: a position is a
 > kind position when a declared kind stands in it, so the audit configures
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [the slot](#fslot) I of Rel in some pack holds X and `node_kind`(`js`, X).
+<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [the slot](#fslot) I of a relation Rel in some pack holds a term X and `node_kind`(`js`, X).
 
-<a id="pack_declares"></a>`pack_declares`(P, K) if [the slot](#fslot) 2 of `node_kind` in P holds K and `node_kind`(`js`, K).
+<a id="pack_declares"></a>`pack_declares`(P, K) if [the slot](#fslot) 2 of `node_kind` in a pack P holds a term K and `node_kind`(`js`, K).
 
 <a id="pack_speaks"></a>`pack_speaks`(P, K) if all of:
-  - [the slot](#fslot) I of Rel in P holds K;
+  - [the slot](#fslot) I of a relation Rel in a pack P holds a term K;
   - [`fkind_slot`](#fkind_slot)(Rel, I);
   - Rel differs from `node_kind`.
 

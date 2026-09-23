@@ -32,13 +32,13 @@ A noun is a node of one of its kinds:
 
 ## Signatures
 
-- walks(import I, at step K, to directory D) (walk)
-- binds_the_name(import I, name Local:2, to name Imported:3, at specifier Sp:1) (binding)
+- walks(site I, at step K, to directory D) (walk)
+- binds_the_name(site I, name Local:2, to name Imported:3, at specifier Sp:1) (binding)
 - has_two_export_bindings(node Sp, name A, name B) (export_binding_conflict), in the audit
 - has_two_internal_bindings(node Sp, node A, node B) (export_internal_conflict), in the audit
 - has_two_default_internals(node E, node A, node B) (default_internal_conflict), in the audit
 - has_two_default_exports(file F, node A, node B) (default_conflict), in the audit
-- has_two_site_shapes(import I, shape A, shape B) (shape_conflict), in the audit
+- has_two_site_shapes(site I, shape A, shape B) (shape_conflict), in the audit
 - lacks_a_reason(kind K, for shape Sh, with verdict R) (reason_missing), in the audit
 
 > js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
@@ -93,11 +93,11 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 3. if [`reexport_site`](#reexport_site)(I, `reexport_named`) and N is `export_named_declaration`;
 4. if [`reexport_site`](#reexport_site)(I, `reexport_all`) and N is `export_all_declaration`.
 
-<a id="site_file"></a>`site_file`(I, F) if [`module_site`](#module_site)(I, something) and I [is of kind](js-model.md#ast_node) some kind in file F.
+<a id="site_file"></a>`site_file`(I, F) if [`module_site`](#module_site)(I, something) and a node I [is of kind](js-model.md#ast_node) some kind in file F.
 
-<a id="site_line"></a>`site_line`(I, L) if [`module_site`](#module_site)(I, something) and I [is of kind](js-model.md#ast_node) some kind in file some file at line L.
+<a id="site_line"></a>`site_line`(I, L) if [`module_site`](#module_site)(I, something) and a node I [is of kind](js-model.md#ast_node) some kind in file some file at line L.
 
-<a id="site_source_node"></a>`site_source_node`(I, Src) if [`module_site`](#module_site)(I, something) and the `source` of I is Src.
+<a id="site_source_node"></a>`site_source_node`(I, Src) if [`module_site`](#module_site)(I, something) and the `source` of a node I is a node Src.
 
 <a id="site_source"></a>`site_source`(I, S) if [`site_source_node`](#site_source_node)(I, a string literal Src) and Src [is written as](js-structure.md#ast_value) S.
 
@@ -146,27 +146,26 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > name by table, because a rule cannot prefix a string. `dangling_import` is a
 > broken import, not a missing rule.
 
-<a id="walk"></a>I walks at 0 to D if all of:
-  - [`site_shape`](#site_shape)(I, `relative`);
-  - [`site_file`](#site_file)(I, F);
-  - [`fs_dir_of`](#fs_dir_of)(F, D).
+A site
 
-I walks at K1 to D if all of:
-  - I [walks](#walk) at K to D;
-  - [`site_source`](#site_source)(I, S);
+- <a id="walk"></a>walks at 0 to a directory D if all of:
+  - [`site_shape`](#site_shape)(it, `relative`);
+  - [`site_file`](#site_file)(it, F);
+  - [`fs_dir_of`](#fs_dir_of)(F, D).
+- walks at a step K1 to a directory D if all of:
+  - it [walks](#walk) at a step K to D;
+  - [`site_source`](#site_source)(it, S);
   - [`str_seg`](#str_seg)(S, K, ".");
   - K1 is K + 1.
-
-I walks at K1 to P if all of:
-  - I [walks](#walk) at K to D;
-  - [`site_source`](#site_source)(I, S);
+- walks at a step K1 to a directory P if all of:
+  - it [walks](#walk) at a step K to a directory D;
+  - [`site_source`](#site_source)(it, S);
   - [`str_seg`](#str_seg)(S, K, "..");
   - [`fs_parent`](#fs_parent)(D, P);
   - K1 is K + 1.
-
-I walks at K1 to C if all of:
-  - I [walks](#walk) at K to D;
-  - [`site_source`](#site_source)(I, S);
+- walks at a step K1 to a directory C if all of:
+  - it [walks](#walk) at a step K to a directory D;
+  - [`site_source`](#site_source)(it, S);
   - [`str_seg`](#str_seg)(S, K, Seg);
   - Seg differs from ".";
   - Seg differs from "..";
@@ -174,7 +173,7 @@ I walks at K1 to C if all of:
   - K1 is K + 1.
 
 <a id="resolved_import"></a>`resolved_import`(I, T) if all of:
-  - I [walks](#walk) at K to D;
+  - a site I [walks](#walk) at a step K to a directory D;
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, Seg);
   - [`fs_file_in`](#fs_file_in)(D, Seg, T);
@@ -208,9 +207,9 @@ I walks at K1 to C if all of:
 
 <a id="import_specifier_node"></a>`import_specifier_node`(Sp) if Sp is an import specifier or a default import or a namespace import.
 
-<a id="import_spec"></a>`import_spec`(I, Sp) if [`import_site`](#import_site)(I, `static_import`) and Sp is among the `specifiers` of I.
+<a id="import_spec"></a>`import_spec`(I, Sp) if [`import_site`](#import_site)(I, `static_import`) and a node Sp is among the `specifiers` of a node I.
 
-<a id="spec_local"></a>`spec_local`(Sp, L) if [`import_specifier_node`](#import_specifier_node)(Sp) and the `local` of Sp [is named](js-structure.md#ast_name) L.
+<a id="spec_local"></a>`spec_local`(Sp, L) if [`import_specifier_node`](#import_specifier_node)(Sp) and the `local` of a node Sp [is named](js-structure.md#ast_name) L.
 
 <a id="spec_imported"></a>`spec_imported`(Sp, M) either:
 
@@ -219,8 +218,8 @@ I walks at K1 to C if all of:
 3. if Sp is a default import and M is "default";
 4. if Sp is a namespace import and M is "*".
 
-<a id="binding"></a>I binds the name Local to Imported at Sp if all of:
-  - [`import_spec`](#import_spec)(I, Sp);
+<a id="binding"></a>A site binds the name Local to Imported at a specifier Sp if all of:
+  - [`import_spec`](#import_spec)(it, Sp);
   - [`spec_local`](#spec_local)(Sp, Local);
   - [`spec_imported`](#spec_imported)(Sp, Imported).
 
@@ -237,14 +236,14 @@ I walks at K1 to C if all of:
 
 <a id="export_site"></a>`export_site`(a named export E).
 
-<a id="export_spec"></a>`export_spec`(E, Sp) if [`export_site`](#export_site)(E) and Sp is among the `specifiers` of E.
+<a id="export_spec"></a>`export_spec`(E, Sp) if [`export_site`](#export_site)(E) and a node Sp is among the `specifiers` of a node E.
 
 <a id="export_specifier_node"></a>`export_specifier_node`(Sp) if Sp is an export specifier or a namespace export.
 
 <a id="spec_external"></a>`spec_external`(Sp, X) either:
 
-1. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of Sp [is named](js-structure.md#ast_name) X;
-2. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of Sp [is written as](js-structure.md#ast_value) X.
+1. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of a node Sp [is named](js-structure.md#ast_name) X;
+2. if [`export_specifier_node`](#export_specifier_node)(Sp) and the `exported` of a node Sp [is written as](js-structure.md#ast_value) X.
 
 <a id="spec_internal"></a>`spec_internal`(Sp, L) either:
 
@@ -258,9 +257,9 @@ I walks at K1 to C if all of:
 
 <a id="export_renamed"></a>`export_renamed`(Sp, External, Internal) if [`export_binding`](#export_binding)(something, Sp, External, Internal) and External differs from Internal.
 
-<a id="export_decl_type_only"></a>`export_decl_type_only`(E) if the attribute `export_kind` of E is "type".
+<a id="export_decl_type_only"></a>`export_decl_type_only`(E) if the attribute `export_kind` of a node E is "type".
 
-<a id="export_spec_type_only"></a>`export_spec_type_only`(Sp) if the attribute `export_kind` of Sp is "type".
+<a id="export_spec_type_only"></a>`export_spec_type_only`(Sp) if the attribute `export_kind` of a node Sp is "type".
 
 <a id="export_value_binding"></a>`export_value_binding`(E, Sp) if all of:
   - [`export_binding`](#export_binding)(E, Sp, something, something);
@@ -274,14 +273,15 @@ I walks at K1 to C if all of:
 
 <a id="export_binding_missing"></a>`export_binding_missing`(Sp) if [`export_spec`](#export_spec)(something, Sp), unless [`export_bound`](#export_bound)(Sp).
 
-<a id="export_binding_conflict"></a>Sp has two export bindings X and B if all of:
-  - [`export_binding`](#export_binding)(something, Sp, X, something);
-  - [`export_binding`](#export_binding)(something, Sp, B, something);
-  - X differs from B.
+A node
 
-<a id="export_internal_conflict"></a>Sp has two internal bindings X and B if all of:
-  - [`export_binding`](#export_binding)(something, Sp, something, X);
-  - [`export_binding`](#export_binding)(something, Sp, something, B);
+- <a id="export_binding_conflict"></a>has two export bindings X and B if all of:
+  - [`export_binding`](#export_binding)(something, it, X, something);
+  - [`export_binding`](#export_binding)(something, it, B, something);
+  - X differs from B.
+- <a id="export_internal_conflict"></a>has two internal bindings a node X and B if all of:
+  - [`export_binding`](#export_binding)(something, it, something, X);
+  - [`export_binding`](#export_binding)(something, it, something, B);
   - X differs from B.
 
 ## 4c. THE DEFAULT EXPORT — no specifier node to hang a name on. Eight spellings
@@ -299,18 +299,18 @@ I walks at K1 to C if all of:
 
 <a id="default_external"></a>`default_external`(E, "default") if [`export_default_site`](#export_default_site)(E).
 
-<a id="default_declaration"></a>`default_declaration`(E, D) if [`export_default_site`](#export_default_site)(E) and the `declaration` of E is D.
+<a id="default_declaration"></a>`default_declaration`(E, D) if [`export_default_site`](#export_default_site)(E) and the `declaration` of a node E is a node D.
 
 <a id="default_internal"></a>`default_internal`(E, N) either:
 
-1. if [`default_declaration`](#default_declaration)(E, D) and the `id` of D [is named](js-structure.md#ast_name) N;
+1. if [`default_declaration`](#default_declaration)(E, D) and the `id` of a node D [is named](js-structure.md#ast_name) N;
 2. if [`default_declaration`](#default_declaration)(E, an identifier D) and D [is named](js-structure.md#ast_name) N.
 
 <a id="has_default_internal"></a>`has_default_internal`(E) if [`default_internal`](#default_internal)(E, something).
 
 <a id="default_anonymous"></a>`default_anonymous`(E) if [`default_declaration`](#default_declaration)(E, something), unless [`has_default_internal`](#has_default_internal)(E).
 
-<a id="default_export_file"></a>`default_export_file`(F, a default export E) if E is in file F.
+<a id="default_export_file"></a>`default_export_file`(F, a default export E) if E is in file a file F.
 
 > totality, one internal name, one default per module (two in one File is
 > what a collision between scanned modules would look like from here)
@@ -322,12 +322,12 @@ I walks at K1 to C if all of:
 
 <a id="default_unaccounted"></a>`default_unaccounted`(E) if [`export_default_site`](#export_default_site)(E), unless [`default_accounted`](#default_accounted)(E).
 
-<a id="default_internal_conflict"></a>E has two default internals X and B if all of:
-  - [`default_internal`](#default_internal)(E, X);
-  - [`default_internal`](#default_internal)(E, B);
+<a id="default_internal_conflict"></a>A node has two default internals a node X and B if all of:
+  - [`default_internal`](#default_internal)(it, X);
+  - [`default_internal`](#default_internal)(it, B);
   - X differs from B.
 
-<a id="default_conflict"></a>F has two default exports X and B if all of:
+<a id="default_conflict"></a>A file F has two default exports a node X and B if all of:
   - [`default_export_file`](#default_export_file)(F, X);
   - [`default_export_file`](#default_export_file)(F, B);
   - X differs from B.
@@ -339,12 +339,12 @@ I walks at K1 to C if all of:
 > `import './side'` executes a file and `import type {}` executes nothing,
 > and both read as "depends, nothing flows".
 
-<a id="decl_type_only"></a>`decl_type_only`(I) if the attribute `import_kind` of I is "type".
+<a id="decl_type_only"></a>`decl_type_only`(I) if the attribute `import_kind` of a node I is "type".
 
-<a id="spec_type_only"></a>`spec_type_only`(Sp) if the attribute `import_kind` of Sp is "type".
+<a id="spec_type_only"></a>`spec_type_only`(Sp) if the attribute `import_kind` of a node Sp is "type".
 
 <a id="value_binding"></a>`value_binding`(I, Sp) if all of:
-  - I [binds the name](#binding) some name to some name at Sp;
+  - a site I [binds the name](#binding) some name to some name at a specifier Sp;
   - unless [`decl_type_only`](#decl_type_only)(I);
   - unless [`spec_type_only`](#spec_type_only)(Sp).
 
@@ -381,7 +381,7 @@ I walks at K1 to C if all of:
 > './side'` is the side-effect import's twin — measured on node: the file runs
 > and nothing flows.
 
-<a id="reexport_spec"></a>`reexport_spec`(E, Sp) if [`reexport_site`](#reexport_site)(E, `reexport_named`) and Sp is among the `specifiers` of E.
+<a id="reexport_spec"></a>`reexport_spec`(E, Sp) if [`reexport_site`](#reexport_site)(E, `reexport_named`) and a node Sp is among the `specifiers` of a node E.
 
 <a id="reexport_value_spec"></a>`reexport_value_spec`(E, Sp) if all of:
   - [`reexport_spec`](#reexport_spec)(E, Sp);
@@ -438,14 +438,14 @@ I walks at K1 to C if all of:
 1. if all of:
    - [`export_spec`](#export_spec)(E, Sp);
    - [`local_export_site`](#local_export_site)(E);
-   - E [is of kind](js-model.md#ast_node) some kind in file F;
+   - a node E [is of kind](js-model.md#ast_node) some kind in file F;
 2. if [`reexport_spec`](#reexport_spec)(E, Sp) and [`resolved_import`](#resolved_import)(E, F).
 
 <a id="export_internal_unplaced"></a>`export_internal_unplaced`(Sp, Sh) if [`reexport_spec`](#reexport_spec)(E, Sp) and [`unresolved_import`](#unresolved_import)(E, Sh).
 
 <a id="export_internal_elsewhere"></a>`export_internal_elsewhere`(F, X, T) if all of:
   - [`export_binding`](#export_binding)(E, Sp, X, something);
-  - E [is of kind](js-model.md#ast_node) some kind in file F;
+  - a node E [is of kind](js-model.md#ast_node) some kind in file F;
   - [`export_internal_in`](#export_internal_in)(Sp, T);
   - T differs from F.
 
@@ -490,7 +490,7 @@ I walks at K1 to C if all of:
 
 <a id="site_without_kind"></a>`site_without_kind`(I) if [`module_site`](#module_site)(I, something), unless [`has_site_kind`](#has_site_kind)(I).
 
-<a id="shape_conflict"></a>I has two site shapes X and B if [`site_shape`](#site_shape)(I, X), [`site_shape`](#site_shape)(I, B), and X differs from B.
+<a id="shape_conflict"></a>A site has two site shapes X and B if [`site_shape`](#site_shape)(it, X), [`site_shape`](#site_shape)(it, B), and X differs from B.
 
 <a id="shape_missing"></a>`shape_missing`(I) if [`site_source_literal`](#site_source_literal)(I), unless [`has_shape`](js-callgraph.md#has_shape)(I).
 
@@ -504,7 +504,7 @@ I walks at K1 to C if all of:
    - Sh is `computed`;
    - unless [`has_verdict`](#has_verdict)(`computed`).
 
-<a id="reason_missing"></a>K lacks a reason for Sh with R if all of:
+<a id="reason_missing"></a>A kind K lacks a reason for a shape Sh with a verdict R if all of:
   - [`unresolved_import`](#unresolved_import)(I, Sh);
   - [`site_kind`](#site_kind)(I, K);
   - [`shape_verdict`](js-callgraph.md#shape_verdict)(Sh, R) in the main;
@@ -525,11 +525,11 @@ I walks at K1 to C if all of:
 > and NOT modelled: wiring it into `module_site` changes the relation the test
 > compares site for site against node's own resolver.
 
-<a id="module_meta"></a>`module_meta`(F, M) if M [has the meta form](js-structure.md#meta_form) `import_meta` and M [is of kind](js-model.md#ast_node) some kind in file F.
+<a id="module_meta"></a>`module_meta`(F, M) if a node M [has the meta form](js-structure.md#meta_form) `import_meta` and M [is of kind](js-model.md#ast_node) some kind in file F.
 
 <a id="self_referential_module"></a>`self_referential_module`(F) if [`module_meta`](#module_meta)(F, something).
 
-<a id="not_module_meta"></a>`not_module_meta`(M) if M [has the meta form](js-structure.md#meta_form) `new_target`.
+<a id="not_module_meta"></a>`not_module_meta`(M) if a node M [has the meta form](js-structure.md#meta_form) `new_target`.
 
 ## 9. IMPORT ATTRIBUTES — `with { type: "json" }` says what the module IS,
 
@@ -542,7 +542,7 @@ I walks at K1 to C if all of:
 
 <a id="import_attr"></a>`import_attr`(an import attribute X, Key, Value) if the `key` of X [is named](js-structure.md#ast_name) Key and the `value` of X [is written as](js-structure.md#ast_value) Value.
 
-<a id="import_attr_of"></a>`import_attr_of`(D, X) if X is among the `attributes` of D.
+<a id="import_attr_of"></a>`import_attr_of`(D, X) if a node X is among the `attributes` of a node D.
 
 <a id="module_attr"></a>`module_attr`(D, Key, Value) if [`import_attr_of`](#import_attr_of)(D, X) and [`import_attr`](#import_attr)(X, Key, Value).
 

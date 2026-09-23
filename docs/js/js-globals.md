@@ -55,8 +55,8 @@ Declared as facts: global_ref_position.
 
 <a id="global_ref"></a>`global_ref`(E, Name, File) if all of:
   - [`global_ref_position`](#global_ref_position)(K, Field);
-  - P [is of kind](js-model.md#ast_node) K;
-  - the Field of P is E;
+  - a node P [is of kind](js-model.md#ast_node) K;
+  - the Field of P is a node E;
   - E [reads](js-dataflow.md#ident_in) Name in File.
 
 ## 2. WHAT THE FILE BINDS — deliberately over-broad. `sees_binder[code]`
@@ -82,7 +82,7 @@ Declared as facts: global_ref_position.
 
 <a id="declares_name"></a>`declares_name`(Name, File) if all of:
   - [`declaring_position`](#declaring_position)(K, Field);
-  - D [is of kind](js-model.md#ast_node) K in file File;
+  - a node D [is of kind](js-model.md#ast_node) K in file File;
   - the Field of D [is named](js-structure.md#ast_name) Name.
 
 Declared as facts: declaring_position.
@@ -92,8 +92,9 @@ Declared as facts: declaring_position.
 
 `declares_name`(Name, File) if all of:
   - [`declaring_position`](#declaring_position)(K, Field);
-  - D [is of kind](js-model.md#ast_node) K in file File;
-  - the Field of D [is within](js-structure.md#ast_within) X;
+  - a node D [is of kind](js-model.md#ast_node) K in file File;
+  - the Field of D is a node I;
+  - a node X [is within](js-structure.md#ast_within) I;
   - X [is named](js-structure.md#ast_name) Name.
 
 > a parameter is a position, not a declaration kind
@@ -103,13 +104,13 @@ Declared as facts: declaring_position.
 1. if all of:
    - [`fn_node`](js-callgraph.md#fn_node)(F);
    - [`fn_file`](js-callgraph.md#fn_file)(F, File);
-   - P is among the `params` of F;
+   - a node P is among the `params` of a node F;
    - P [is named](js-structure.md#ast_name) Name;
 2. if all of:
    - [`fn_node`](js-callgraph.md#fn_node)(F);
    - [`fn_file`](js-callgraph.md#fn_file)(F, File);
-   - P is among the `params` of F;
-   - P [is within](js-structure.md#ast_within) X;
+   - a node P is among the `params` of a node F;
+   - a node X [is within](js-structure.md#ast_within) P;
    - X [is named](js-structure.md#ast_name) Name.
 
 ## 3. A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
@@ -121,7 +122,7 @@ Declared as facts: declaring_position.
 
 <a id="free_global"></a>`free_global`(E, Name, File) if [`global_ref`](#global_ref)(E, Name, File), unless [`declares_name`](#declares_name)(Name, File).
 
-<a id="es_global"></a>E is the global Name of Rel with Form if [`free_global`](#free_global)(E, Name, something) and `lib_global`(Name, Rel, Form).
+<a id="es_global"></a>A node is the global Name of a relation Rel with a form Form if [`free_global`](#free_global)(it, Name, something) and `lib_global`(Name, Rel, Form).
 
 <a id="global_unattributed"></a>`global_unattributed`(E, Name) if [`free_global`](#free_global)(E, Name, something), unless `lib_global`(Name, something, something).
 
@@ -129,10 +130,10 @@ Declared as facts: declaring_position.
 
 > `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
 
-<a id="es_static"></a>N selects the static Key of Name from Rel if all of:
-  - O [is the global](#es_global) Name of some relation with some form;
-  - the `object` of N is O;
-  - N [selects](js-dataflow.md#selects) Key;
+<a id="es_static"></a>A node selects the static Key of Name from a relation Rel if all of:
+  - a node O [is the global](#es_global) Name of some relation with some form;
+  - the `object` of it is O;
+  - it [selects](js-dataflow.md#selects) Key;
   - `lib_static`(Name, Key, Rel).
 
 > a member off a KNOWN global that TypeScript does not carry: a newer
@@ -140,8 +141,8 @@ Declared as facts: declaring_position.
 > non-empty on purpose, the fixture puts a site in it
 
 <a id="es_static_unattributed"></a>`es_static_unattributed`(N, Name, Key) if all of:
-  - O [is the global](#es_global) Name of some relation with some form;
-  - the `object` of N is O;
+  - a node O [is the global](#es_global) Name of some relation with some form;
+  - the `object` of a node N is O;
   - N [selects](js-dataflow.md#selects) Key;
   - unless `lib_static`(Name, Key, something).
 
@@ -152,11 +153,11 @@ Declared as facts: declaring_position.
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [selects the static](#es_static) Key of Name from Rel.
+<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [selects the static](#es_static) Key of Name from a relation Rel.
 
-<a id="es_global_invoke"></a>C invokes the global Name of Rel if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_invoke"></a>C invokes the global Name of a relation Rel if [`callee_of`](js-callgraph.md#callee_of)(C, N) and a node N [is the global](#es_global) Name of Rel with some form.
 
-<a id="es_global_construct"></a>X constructs the global Name of Rel if [`transfer_site`](js-callgraph.md#transfer_site)(X, `new_expression`) and the `callee` of X [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_construct"></a>A node constructs the global Name of a relation Rel if [`transfer_site`](js-callgraph.md#transfer_site)(it, `new_expression`) and the `callee` of it [is the global](#es_global) Name of Rel with some form.
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -164,7 +165,7 @@ Declared as facts: declaring_position.
 
 <a id="constructible_form"></a>`constructible_form` includes `constructor_binding`.
 
-<a id="es_construct_not_constructor"></a>X constructs a non constructor Name of Form if all of:
+<a id="es_construct_not_constructor"></a>X constructs a non constructor Name of a form Form if all of:
   - X [constructs the global](#es_global_construct) Name of some relation;
   - `lib_global`(Name, something, Form);
   - unless [`constructible_form`](#constructible_form)(Form).
@@ -179,12 +180,12 @@ Declared as facts: constructible_form.
 > UNPOPULATABLE, which is the right thing for it to say.
 
 <a id="es_global_unsupported"></a>`es_global_unsupported`(E, X, Name) if all of:
-  - X [is the global](#es_global) Name of Rel with some form;
+  - a node X [is the global](#es_global) Name of a relation Rel with some form;
   - `environment`(E);
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 <a id="es_static_unsupported"></a>`es_static_unsupported`(E, N, Name, Key) if all of:
-  - N [selects the static](#es_static) Key of Name from Rel;
+  - N [selects the static](#es_static) Key of Name from a relation Rel;
   - `environment`(E);
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
@@ -202,14 +203,14 @@ Declared as facts: constructible_form.
 > constructed (the audit above says it throws); a prototype for the
 > thirty-nine globals with no bridge row.
 
-<a id="es_instance"></a>X is an instance of Name from Rel if all of:
+<a id="es_instance"></a>X is an instance of Name from a relation Rel if all of:
   - X [constructs the global](#es_global_construct) Name of Rel;
   - `lib_global`(Name, something, Form);
   - [`constructible_form`](#constructible_form)(Form).
 
-X may be the node X if X [is an instance](#es_instance) of some name from some relation.
+A node may be the node it if it [is an instance](#es_instance) of some name from some relation.
 
-The prototype of E is P if all of:
+The prototype of a node E is P if all of:
   - E [may be the node](js-dataflow.md#may_be_node) X;
   - X [is an instance](#es_instance) of Name from some relation;
   - `lib_global_prototype`(Name, P).
@@ -228,7 +229,7 @@ The prototype of E is P if all of:
 <a id="es_instance_unattributed"></a>`es_instance_unattributed`(C, Name, Key) if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - the `object` of N [may be the node](js-dataflow.md#may_be_node) X;
+  - the `object` of a node N [may be the node](js-dataflow.md#may_be_node) X;
   - X [is an instance](#es_instance) of Name from some relation;
   - N [selects](js-dataflow.md#selects) Key;
   - unless `lib_global_prototype`(Name, something).

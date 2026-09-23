@@ -65,14 +65,14 @@ default: audit
 
 <a id="uses"></a>`uses`(N, F) either:
 
-1. if N [is of kind](js-model.md#ast_node) K, `env_lang`(L), and `kind_needs`(L, K, F);
+1. if a node N [is of kind](js-model.md#ast_node) K, `env_lang`(L), and `kind_needs`(L, K, F);
 2. if all of:
-   - N [is of kind](js-model.md#ast_node) K;
+   - a node N [is of kind](js-model.md#ast_node) K;
    - `env_lang`(L);
    - `attr_needs`(L, K, Key, V, F);
    - the attribute Key of N is V;
 3. if all of:
-   - N [is of kind](js-model.md#ast_node) K;
+   - a node N [is of kind](js-model.md#ast_node) K;
    - `env_lang`(L);
    - `child_needs`(L, K, Field, Name, F);
    - the Field of N [is named](js-structure.md#ast_name) Name.
@@ -81,13 +81,13 @@ default: audit
 > by the rare `async=true`, and only then does `ast_within` walk down. The
 > negation goes last with N bound.
 
-<a id="within_attr"></a>N contains the attribute Key holding V if all of:
+<a id="within_attr"></a>A node contains the attribute Key holding V if all of:
   - `outside_attr_needs`(something, something, Key, V, something);
-  - the attribute Key of X is V;
-  - X [is within](js-structure.md#ast_within) N.
+  - the attribute Key of a node X is V;
+  - it [is within](js-structure.md#ast_within) X.
 
 `uses`(N, F) if all of:
-  - N [is of kind](js-model.md#ast_node) K;
+  - a node N [is of kind](js-model.md#ast_node) K;
   - `env_lang`(L);
   - `outside_attr_needs`(L, K, Key, V, F);
   - unless N [contains the attribute](#within_attr) Key holding V.
@@ -101,11 +101,11 @@ default: audit
 
 <a id="unsupported"></a>`unsupported`(E, N, F) if `environment`(E) and [`uses`](#uses)(N, F), unless [`env_has`](#env_has)(E, F).
 
-<a id="unsupported_at"></a>`unsupported_at`(E, File, Line, F) if [`unsupported`](#unsupported)(E, N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="unsupported_at"></a>`unsupported_at`(E, File, Line, F) if [`unsupported`](#unsupported)(E, N, F) and a node N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
-<a id="uses_at"></a>`uses_at`(File, Line, F) if [`uses`](#uses)(N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="uses_at"></a>`uses_at`(File, Line, F) if [`uses`](#uses)(N, F) and a node N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
-<a id="uses_kind"></a>`uses_kind`(K, F) if [`uses`](#uses)(N, F) and N [is of kind](js-model.md#ast_node) K.
+<a id="uses_kind"></a>`uses_kind`(K, F) if [`uses`](#uses)(N, F) and a node N [is of kind](js-model.md#ast_node) K.
 
 <a id="unsupported_in"></a>`unsupported_in`(E, File, F) if [`unsupported_at`](#unsupported_at)(E, File, something, F).
 
@@ -113,7 +113,7 @@ default: audit
 > so a clean file produces a POSITIVE row: a silence cannot be told from a
 > model that did not run.
 
-<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, N, something) and N [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, N, something) and a node N [is of kind](js-model.md#ast_node) some kind in file File.
 
 > A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 > says so; the denominator is every file the scanner reported on, and a
@@ -146,15 +146,15 @@ Declared as facts: ast_parse_error.
 > not because the data says so, and an edition and a runtime, incomparable,
 > each lose things to the other.
 
-<a id="lost"></a>N is lost from From to To by F if all of:
-  - [`unsupported`](#unsupported)(To, N, F);
+<a id="lost"></a>A node is lost from an environment From to an environment To by a feature F if all of:
+  - [`unsupported`](#unsupported)(To, it, F);
   - `environment`(From);
   - From differs from To;
-  - unless [`unsupported`](#unsupported)(From, N, F).
+  - unless [`unsupported`](#unsupported)(From, it, F).
 
-<a id="lost_feature"></a>F is lost between From and To if some node [is lost](#lost) from From to To by F.
+<a id="lost_feature"></a>A feature is lost between an environment From and To if some node [is lost](#lost) from From to To by it.
 
-<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if N [is lost](#lost) from From to To by F and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if a node N [is lost](#lost) from an environment From to an environment To by a feature F and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## 5. THE GATES. Each is a statement this layer makes about itself, and
 
@@ -164,7 +164,7 @@ Declared as facts: ast_parse_error.
 > once written against `kind_needs` alone, and a typo in `attr_needs` moved
 > `unsupported` with no audit naming it. One arm per table, here.
 
-<a id="gate_feature"></a>K requires F in L either:
+<a id="gate_feature"></a>A kind K requires a feature F in a language L either:
 
 1. if `kind_needs`(L, K, F);
 2. if `attr_needs`(L, K, something, something, F);
@@ -194,7 +194,7 @@ Declared as facts: ast_parse_error.
 > a feature a gate table names and `feature` does not declare: the site
 > reports unsupported EVERYWHERE, a red that is a spelling mistake
 
-<a id="feature_undeclared"></a>`feature_undeclared`(F) if some kind [requires](#gate_feature) F in some language, unless `feature`(F).
+<a id="feature_undeclared"></a>`feature_undeclared`(F) if some kind [requires](#gate_feature) a feature F in some language, unless `feature`(F).
 
 > a declared feature no environment has: `unsupported` trivially total for it
 
@@ -233,7 +233,7 @@ Declared as facts: ast_parse_error.
 > indistinct case — never considered at all. `lost` carries the direction;
 > both ways is the whole test.
 
-<a id="env_separates"></a>`env_separates`(X, B) if some feature [is lost between](#lost_feature) X and B.
+<a id="env_separates"></a>`env_separates`(X, B) if some feature [is lost between](#lost_feature) an environment X and B.
 
 <a id="env_pair_indistinct"></a>`env_pair_indistinct`(X, B) if all of:
   - `environment`(X);

@@ -89,6 +89,11 @@ What has to exist for it to be code rather than a description of code
    under one marker share it (`the join of A and B`); and the tenth structure
    is a pair, `S has two shapes A and B`, decided by the body rather than the
    name (f_every_rule_of_the_js_model_reads_back_and_the_missing_structure_was_a_pair).
+   A variable no guard names wears the type its signature gives it, and a
+   type is not a guard; a kind noun is a guard and only a guard may put it
+   on a variable, so a noun whose guard in the base is a relation
+   (`fn_node_v`) still leaves a letter until the base binds the noun to it
+   (f_two_structure_phrases_read_backwards_and_a_letter_is_a_variable_nobody_typed).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

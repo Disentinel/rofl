@@ -25,7 +25,7 @@ const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', '
 const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8');
 const kindNoun = new Map<string, string>();
 for (const m of vocab.matchAll(/^kind_noun\((\w+), "([^"]+)"\)/gm)) kindNoun.set(m[1], m[2]);
-const nouns = new Set([...kindNoun.values(), ...VALUE, 'this', 'scope', 'this-binder']);
+const nouns = new Set([...kindNoun.values(), ...VALUE, 'this', 'scope', 'this-binder', 'effect label']);
 
 function parsePhrase(rel: string, t: string): Tpl {
   const parts: Part[] = []; let k = 0; let buf = '';
@@ -198,7 +198,7 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
     const t = term(m[1], intros) as { v: string };
     const guarded = rule.guards.has(t.v) || intros.some((x) => x.v === t.v && !VALUE.has(x.noun));
     if (guarded) { const g = rule.guards.get(t.v) ?? { noun: intros.find((x) => x.v === t.v)!.noun }; g.file = term(m[2], intros); rule.guards.set(t.v, g); return true; }
-    rule.body.push({ rel: 'ast_in', args: [t, term(m[2], intros)], neg }); return true;
+    rule.guards.set(t.v, { noun: 'node', file: term(m[2], intros) }); known.set(t.v, 'node'); return true;
   }
   if ((m = /^([A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$/.exec(text))) {
     const ns = m[2].split(/ or /).map((x) => x.replace(/^[Aa]n? /, '')).map((n) => n.endsWith(' node') ? '`' + n.slice(0, -5) : n);

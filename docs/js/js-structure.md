@@ -33,18 +33,18 @@ A noun is a node of one of its kinds:
 >               renames that claim nothing (`name` on an Identifier and on a
 >               JSX attribute are one fact here)
 
-<a id="ast_in"></a>P is in file C if C is among the some child of P.
+<a id="ast_in"></a>A node is under a node P if it is a child of P.
 
 > nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
 > depth 30 is about 3M rows, the point where an ancestor query should walk
 > `ast_in` rather than materialise the closure.
 
-<a id="ast_within"></a>P is within C either:
+<a id="ast_within"></a>A node C is within a node P either:
 
-1. if P [is in file](#ast_in) C;
-2. if P [is within](#ast_within) X and X [is in file](#ast_in) C.
+1. if C [is under](#ast_in) P;
+2. if a node X [is within](#ast_within) P and C [is under](#ast_in) X.
 
-<a id="ast_name"></a>N is named V if the attribute `name` of N is V.
+<a id="ast_name"></a>A node is named V if the attribute `name` of it is V.
 
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
 > well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
@@ -58,16 +58,19 @@ A noun is a node of one of its kinds:
 > A NEGATION and not `computed, false`: `class_private_property` and
 > `class_private_method` carry no `computed` attribute at all.
 
-<a id="key_name"></a>K spells N either:
+<a id="key_name"></a>A node K spells N either:
 
-1. if the `key` of P is K and K [is named](#ast_name) N, unless the attribute `computed` of P is `true`;
+1. if all of:
+   - the `key` of a node P is K;
+   - K [is named](#ast_name) N;
+   - unless the attribute `computed` of P is `true`;
 2. if all of:
    - the `key` of some node is K;
    - K is a member expression;
    - the `object` of K [is named](#ast_name) "Symbol";
    - the `property` of K [is named](#ast_name) N.
 
-<a id="ast_value"></a>N is written as V if the attribute `value` of N is V.
+<a id="ast_value"></a>A node is written as V if the attribute `value` of it is V.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers
@@ -84,7 +87,7 @@ A noun is a node of one of its kinds:
 
 <a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
 
-<a id="meta_form_conflict"></a>M has two forms X and B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
+<a id="meta_form_conflict"></a>A node has two forms X and B if it [has the meta form](#meta_form) X, it [has the meta form](#meta_form) B, and X differs from B.
 
 ## Read from other files
 

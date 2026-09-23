@@ -173,12 +173,12 @@ Declared as facts: kind_set.
 
 | arg 1 | arg 2 |
 |---|---|
-| `amb_short_at` | "falls_short(effect N:2, of label L:0, at host H:1)" |
-| `amb_covers_at` | "is_covered(label L, at host H, by effect N)" |
-| `amb_covers_at_low` | "has_a_lower_cover(label L, at host H, than effect N)" |
+| `amb_short_at` | "falls_short(effect N:2, of effect label L:0, at host H:1)" |
+| `amb_covers_at` | "is_covered(effect label L, at host H, by effect N)" |
+| `amb_covers_at_low` | "has_a_lower_cover(effect label L, at host H, than effect N)" |
 | `ambient_effect` | "has_the_ambient_effect(spec Spec, effect E:2, at key Key:1)" |
-| `eff_of_label` | "the_effect(of label L, at host H, is effect N)" |
-| `eff_here` | "has_the_effect(node E, label L, at host H)" |
+| `eff_of_label` | "the_effect(of effect label L, at host H, is effect N)" |
+| `eff_here` | "has_the_effect(node E, effect label L, at host H)" |
 | `host_atom_two_names` | "has_two_host_effects(host A, effect X, effect Y)" |
 | `surface_two_origins` | "has_two_origins(surface S, origin A, origin B)" |
 
@@ -239,7 +239,7 @@ Declared as facts: kind_set.
 
 | arg 1 | arg 2 |
 |---|---|
-| `eff_row` | "covers(effect A, label L, at host H)" |
+| `eff_row` | "covers(effect A, effect label L, at host H)" |
 | `eff_ub` | "is_an_upper_bound(effect C:2, of effect A:0, of effect B:1)" |
 | `eff_ub_lower` | "is_an_upper_bound_above_another(effect C:2, of effect A:0, of effect B:1)" |
 | `eff_join` | "the_join(of effect A, of effect B, is effect C)" |
@@ -248,7 +248,7 @@ Declared as facts: kind_set.
 | `eff_meet` | "the_meet(of effect A, of effect B, is effect C)" |
 | `join_ambiguous` | "has_two_joins(effect A, with effect B, effect C, effect D)" |
 | `meet_ambiguous` | "has_two_meets(effect A, with effect B, effect C, effect D)" |
-| `eff_latent` | "has_the_latent_effect(function F, label L, at host H)" |
+| `eff_latent` | "has_the_latent_effect(function F, effect label L, at host H)" |
 | `eff_two_names` | "has_two_effects(function F, effect A, effect B)" |
 | `eff_join_short` | "is_short_of_the_join(function F, effect J:2, with function G:1)" |
 | `eff_purer_callee` | "calls_a_purer_callee(call C, function G:2, from function F:1)" |
@@ -256,8 +256,8 @@ Declared as facts: kind_set.
 | `concrete_leq` | "is_purer(surface S1, at operation O1, than surface S2, at operation O2)" |
 | `eff_field_value` | "initialises_the_field(class CD, at node P, with node V)" |
 | `eff_moment_both` | "has_two_moments(node P, moment A, moment B)" |
-| `class_define_eff` | "defines_with_effect(class CD, label L, at host H)" |
-| `class_construct_eff` | "constructs_with_effect(class CD, label L, at host H)" |
+| `class_define_eff` | "defines_with_effect(class CD, effect label L, at host H)" |
+| `class_construct_eff` | "constructs_with_effect(class CD, effect label L, at host H)" |
 
 > globals and host
 
@@ -300,9 +300,9 @@ Declared as facts: kind_set.
 
 | arg 1 | arg 2 |
 |---|---|
-| `binding` | "binds_the_name(import I, name Local:2, to name Imported:3, at specifier Sp:1)" |
-| `walk` | "walks(import I, at step K, to directory D)" |
-| `shape_conflict` | "has_two_site_shapes(import I, shape A, shape B)" |
+| `binding` | "binds_the_name(site I, name Local:2, to name Imported:3, at specifier Sp:1)" |
+| `walk` | "walks(site I, at step K, to directory D)" |
+| `shape_conflict` | "has_two_site_shapes(site I, shape A, shape B)" |
 | `reason_missing` | "lacks_a_reason(kind K, for shape Sh, with verdict R)" |
 | `multi_shape` | "has_two_shapes(call C, shape A, shape B)" |
 | `meta_form_conflict` | "has_two_forms(meta property M, form A, form B)" |
@@ -316,7 +316,7 @@ Declared as facts: kind_set.
 | `pack_fact` | "asserts(pack P, relation Rel, with term Args)" |
 | `fwalk` | "the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3)" |
 | `fslot` | "the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3)" |
-| `lit_arg` | "the_argument(index I:1, of literal L:0, is term A:2)" |
+| `lit_arg` | "the_argument(index I:1, of term L:0, is term A:2)" |
 | `slot_term` | "has_the_term(relation Rel, term A:2, at index I:1)" |
 | `slot_var` | "has_the_variable(relation Rel, term V:2, at index I:1)" |
 | `slot_atom` | "has_the_atom(relation Rel, term A:2, at index I:1)" |

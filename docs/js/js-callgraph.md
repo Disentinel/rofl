@@ -54,15 +54,15 @@ A noun is a node of one of its kinds:
 
 <a id="call_kind"></a>`call_kind` includes `call_expression`, `optional_call_expression`.
 
-<a id="call_site"></a>`call_site`(C, File) if C [is of kind](js-model.md#ast_node) K in file File and [`call_kind`](#call_kind)(K).
+<a id="call_site"></a>`call_site`(C, File) if a node C [is of kind](js-model.md#ast_node) K in file File and [`call_kind`](#call_kind)(K).
 
-<a id="call_site_kind"></a>`call_site_kind`(C, K) if C [is of kind](js-model.md#ast_node) K and [`call_kind`](#call_kind)(K).
+<a id="call_site_kind"></a>`call_site_kind`(C, K) if a node C [is of kind](js-model.md#ast_node) K and [`call_kind`](#call_kind)(K).
 
-<a id="call_line"></a>`call_line`(C, Line) if [`call_site`](#call_site)(C, something) and C [is of kind](js-model.md#ast_node) some kind in file some file at line Line.
+<a id="call_line"></a>`call_line`(C, Line) if [`call_site`](#call_site)(C, something) and a node C [is of kind](js-model.md#ast_node) some kind in file some file at line Line.
 
-<a id="callee_of"></a>`callee_of`(C, N) if [`call_site`](#call_site)(C, something) and the `callee` of C is N.
+<a id="callee_of"></a>`callee_of`(C, N) if [`call_site`](#call_site)(C, something) and the `callee` of a node C is a node N.
 
-<a id="callee_kind"></a>`callee_kind`(C, K) if [`callee_of`](#callee_of)(C, N) and N [is of kind](js-model.md#ast_node) K.
+<a id="callee_kind"></a>`callee_kind`(C, K) if [`callee_of`](#callee_of)(C, N) and a node N [is of kind](js-model.md#ast_node) K.
 
 Declared as facts: call_kind.
 
@@ -72,7 +72,7 @@ Declared as facts: call_kind.
 
 <a id="transfer_kind"></a>`transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
 
-<a id="transfer_site"></a>`transfer_site`(X, K) if X [is of kind](js-model.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
+<a id="transfer_site"></a>`transfer_site`(X, K) if a node X [is of kind](js-model.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
 
 <a id="site"></a>`site`(X) either:
 
@@ -83,7 +83,7 @@ Declared as facts: transfer_kind.
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
-<a id="call_arg"></a>`call_arg`(C, I, X) if [`call_site`](#call_site)(C, something) and X is the I-th of the `arguments` of C.
+<a id="call_arg"></a>`call_arg`(C, I, X) if [`call_site`](#call_site)(C, something) and a node X is the I-th of the `arguments` of a node C.
 
 ## 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 
@@ -115,20 +115,20 @@ Declared as facts: transfer_kind.
 
 <a id="member_like"></a>`member_like`(C, N) if all of:
   - [`callee_of`](#callee_of)(C, N);
-  - N [is of kind](js-model.md#ast_node) K;
+  - a node N [is of kind](js-model.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
 
 <a id="optional_member"></a>`optional_member`(C) if [`callee_of`](#callee_of)(C, an optional member expression N).
 
-<a id="computed_member"></a>`computed_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of N is `true`.
+<a id="computed_member"></a>`computed_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of a node N is `true`.
 
-<a id="static_member"></a>`static_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of N is `false`.
+<a id="static_member"></a>`static_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of a node N is `false`.
 
-<a id="callee_obj"></a>`callee_obj`(C, O) if [`member_like`](#member_like)(C, N) and the `object` of N is O.
+<a id="callee_obj"></a>`callee_obj`(C, O) if [`member_like`](#member_like)(C, N) and the `object` of a node N is a node O.
 
-<a id="callee_obj_kind"></a>`callee_obj_kind`(C, K) if [`callee_obj`](#callee_obj)(C, O) and O [is of kind](js-model.md#ast_node) K.
+<a id="callee_obj_kind"></a>`callee_obj_kind`(C, K) if [`callee_obj`](#callee_obj)(C, O) and a node O [is of kind](js-model.md#ast_node) K.
 
-<a id="callee_prop"></a>`callee_prop`(C, P) if [`member_like`](#member_like)(C, N) and the `property` of N is P.
+<a id="callee_prop"></a>`callee_prop`(C, P) if [`member_like`](#member_like)(C, N) and the `property` of a node N is a node P.
 
 Declared as facts: callee_shape, member_kind.
 
@@ -215,7 +215,7 @@ Declared as facts: obj_kind_class, member_shape.
 <a id="computed_key_static"></a>`computed_key_static`(C) if all of:
   - [`computed_member`](#computed_member)(C, something);
   - [`callee_prop`](#callee_prop)(C, P);
-  - P [is of kind](js-model.md#ast_node) K;
+  - a node P [is of kind](js-model.md#ast_node) K;
   - [`static_key_kind`](#static_key_kind)(K).
 
 <a id="computed_key_template"></a>`computed_key_template`(C) if [`computed_member`](#computed_member)(C, something) and [`callee_prop`](#callee_prop)(C, a template P).
@@ -273,9 +273,9 @@ Declared as facts: static_key_kind.
 
 <a id="fn_kind"></a>`fn_kind` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
 
-<a id="fn_node"></a>`fn_node`(F) if F [is of kind](js-model.md#ast_node) K and [`fn_kind`](#fn_kind)(K).
+<a id="fn_node"></a>`fn_node`(F) if a node F [is of kind](js-model.md#ast_node) K and [`fn_kind`](#fn_kind)(K).
 
-<a id="fn_file"></a>`fn_file`(F, File) if [`fn_node`](#fn_node)(F) and F [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="fn_file"></a>`fn_file`(F, File) if [`fn_node`](#fn_node)(F) and a node F [is of kind](js-model.md#ast_node) some kind in file File.
 
 Declared as facts: fn_kind.
 
@@ -307,14 +307,14 @@ Declared as facts: fn_kind.
    - [`fn_node`](#fn_node)(F);
    - the `id` of D [is named](js-structure.md#ast_name) N;
 3. if all of:
-   - K [spells](js-structure.md#key_name) N;
+   - a node K [spells](js-structure.md#key_name) N;
    - the `key` of a property P is K;
    - the `value` of P is F;
    - [`fn_node`](#fn_node)(F);
 4. if all of:
    - F is a method;
    - the attribute `kind` of F is "constructor";
-   - the `body` of CD is B;
+   - the `body` of a node CD is a node B;
    - F is among the `body` of B;
    - the `id` of CD [is named](js-structure.md#ast_name) N;
 5. if all of:
@@ -333,7 +333,7 @@ Declared as facts: fn_kind.
 
 `fn_name`(a method F, N) if all of:
   - the attribute `kind` of F is "constructor";
-  - the `body` of CD is B;
+  - the `body` of a node CD is a node B;
   - F is among the `body` of B;
   - [`anon_class`](#anon_class)(CD);
   - the `init` of a declarator D is CD;
@@ -349,23 +349,23 @@ Declared as facts: fn_kind.
 > for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 > repair made them one rule and 2026-09-11 made them one name.)
 
-<a id="decorates"></a>Owner is decorated by a decorator D if D is among the `decorators` of Owner.
+<a id="decorates"></a>A node is decorated by a decorator D if D is among the `decorators` of it.
 
 <a id="in_own_decorator"></a>`in_own_decorator`(F, C) either:
 
-1. if F [is decorated by](#decorates) D and D [is within](js-structure.md#ast_within) C;
-2. if F [is decorated by](#decorates) C.
+1. if a node F [is decorated by](#decorates) a node D and a node C [is within](js-structure.md#ast_within) D;
+2. if a node F [is decorated by](#decorates) a node C.
 
 <a id="encloses"></a>`encloses`(F, C) if all of:
   - [`fn_node`](#fn_node)(F);
-  - F [is within](js-structure.md#ast_within) C;
+  - a node C [is within](js-structure.md#ast_within) a node F;
   - [`site`](#site)(C);
   - unless [`in_own_decorator`](#in_own_decorator)(F, C).
 
 <a id="closer"></a>`closer`(F, C) if all of:
   - [`encloses`](#encloses)(F, C);
   - [`encloses`](#encloses)(G, C);
-  - F [is within](js-structure.md#ast_within) G;
+  - a node G [is within](js-structure.md#ast_within) a node F;
   - F differs from G.
 
 <a id="nearest_fn"></a>`nearest_fn`(F, C) if [`encloses`](#encloses)(F, C), unless [`closer`](#closer)(F, C).
@@ -374,7 +374,7 @@ Declared as facts: fn_kind.
 
 <a id="top_call"></a>`top_call`(C, R) if all of:
   - [`site`](#site)(C);
-  - C [is of kind](js-model.md#ast_node) some kind in file File;
+  - a node C [is of kind](js-model.md#ast_node) some kind in file File;
   - `ast_file`(R, File);
   - unless [`enclosed`](#enclosed)(C).
 
@@ -392,13 +392,13 @@ Declared as facts: fn_kind.
 <a id="obj_member_fn"></a>`obj_member_fn`(O, Key, M) either:
 
 1. if all of:
-   - K [spells](js-structure.md#key_name) Key;
+   - a node K [spells](js-structure.md#key_name) Key;
    - the `key` of M is K;
    - M is an object method;
    - M is among the `properties` of O;
    - O is an object literal;
 2. if all of:
-   - K [spells](js-structure.md#key_name) Key;
+   - a node K [spells](js-structure.md#key_name) Key;
    - the `key` of a property P is K;
    - the `value` of P is M;
    - [`fn_node`](#fn_node)(M);
@@ -411,9 +411,9 @@ Declared as facts: fn_kind.
 > the synthesised frame); `new` deliberately does NOT, because V8 names the
 > frame after the class and makes it the caller.
 
-<a id="class_ctor"></a>`class_ctor`(CD, M) if CD [has the method](js-dataflow.md#class_method_of) M and the attribute `kind` of M is "constructor".
+<a id="class_ctor"></a>`class_ctor`(CD, M) if a class CD [has the method](js-dataflow.md#class_method_of) a node M and the attribute `kind` of M is "constructor".
 
-<a id="resolves"></a>X resolves to M either:
+<a id="resolves"></a>A node X resolves to M either:
 
 1. if all of:
    - [`transfer_site`](#transfer_site)(X, `new_expression`);
@@ -428,7 +428,7 @@ Declared as facts: fn_kind.
 > `callee`); a decorator's `expression` is either the function or a factory
 > call, and `may_be_node` carries what a call returns, so one arm covers both.
 
-X resolves to F either:
+A node X resolves to a node F either:
 
 1. if all of:
    - [`transfer_site`](#transfer_site)(X, `tagged_template_expression`);
@@ -447,8 +447,8 @@ X resolves to F either:
 
 <a id="for_of_iterates"></a>`for_of_iterates`(X, M) if all of:
   - [`transfer_site`](#transfer_site)(X, `for_of_statement`);
-  - the `right` of X [may be the node](js-dataflow.md#may_be_node) Obj;
-  - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
+  - the `right` of a node X [may be the node](js-dataflow.md#may_be_node) Obj;
+  - [the member](js-dataflow.md#member_value) "iterator" of Obj holds a node M;
   - [`fn_node`](#fn_node)(M).
 
 X resolves to M if [`for_of_iterates`](#for_of_iterates)(X, M).
@@ -456,9 +456,9 @@ X resolves to M if [`for_of_iterates`](#for_of_iterates)(X, M).
 <a id="calls"></a>`calls`(Caller, Next) if all of:
   - [`for_of_iterates`](#for_of_iterates)(X, M);
   - [`nearest_fn`](#nearest_fn)(Caller, X);
-  - M [returns](js-dataflow.md#returns) E;
+  - M [returns](js-dataflow.md#returns) a node E;
   - E [may be the node](js-dataflow.md#may_be_node) IterObj;
-  - [the member](js-dataflow.md#member_value) "next" of IterObj holds V;
+  - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
   - V [may be the node](js-dataflow.md#may_be_node) Next;
   - [`fn_node`](#fn_node)(Next).
 
@@ -466,9 +466,9 @@ X resolves to M if [`for_of_iterates`](#for_of_iterates)(X, M).
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to F if all of:
+C resolves to a node F if all of:
   - [`callee_of`](#callee_of)(C, N);
-  - N [may be the node](js-dataflow.md#may_be_node) F;
+  - a node N [may be the node](js-dataflow.md#may_be_node) F;
   - [`fn_node`](#fn_node)(F).
 
 <a id="ambiguous_call"></a>C has two callees F and G if C [resolves to](#resolves) F, C [resolves to](#resolves) G, and F differs from G.
@@ -493,13 +493,13 @@ C resolves to F if all of:
 
 1. if all of:
    - [`calls`](#calls)(X, Y);
-   - X [is of kind](js-model.md#ast_node) some kind in file File;
+   - a node X [is of kind](js-model.md#ast_node) some kind in file File;
    - [`fn_name`](#fn_name)(X, Z);
    - [`fn_name`](#fn_name)(Y, B);
 2. if [`calls`](#calls)(R, Y), `ast_file`(R, File), [`fn_name`](#fn_name)(Y, B), and Z is `top`.
 
 <a id="passes_function"></a>`passes_function`(C, I, F, Name) if all of:
-  - C [passes](js-dataflow.md#arg_at) X at I;
+  - C [passes](js-dataflow.md#arg_at) a node X at an index I;
   - X [is named](js-structure.md#ast_name) Name;
   - X [may be the node](js-dataflow.md#may_be_node) F;
   - [`fn_node`](#fn_node)(F).
@@ -520,10 +520,10 @@ C resolves to F if all of:
 
 <a id="unresolved_shape"></a>`unresolved_shape`(S) if [`unresolved_call`](#unresolved_call)(something, S).
 
-<a id="stdlib_member"></a>C calls the stdlib member Key of P if all of:
+<a id="stdlib_member"></a>C calls the stdlib member Key of a prototype P if all of:
   - [`unresolved_call`](#unresolved_call)(C, something);
   - [`callee_of`](#callee_of)(C, N);
-  - the `object` of N is O;
+  - the `object` of a node N is a node O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
   - N [selects](js-dataflow.md#selects) Key.
@@ -555,10 +555,10 @@ Declared as facts: shape_because.
 
 <a id="frontier_line"></a>`frontier_line`(File, Line, S) either:
 
-1. if [`unresolved_call`](#unresolved_call)(C, S) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line;
+1. if [`unresolved_call`](#unresolved_call)(C, S) and a node C [is of kind](js-model.md#ast_node) some kind in file File at line Line;
 2. if all of:
    - [`transfer_site`](#transfer_site)(X, S);
-   - X [is of kind](js-model.md#ast_node) some kind in file File at line Line;
+   - a node X [is of kind](js-model.md#ast_node) some kind in file File at line Line;
    - unless [`resolved_site`](#resolved_site)(X).
 
 > The closed vocabulary of shapes, read off the tables: the denominator is the
@@ -616,8 +616,8 @@ Declared as facts: shape_because.
 
 <a id="fn_binder"></a>`fn_binder`(D, F) either:
 
-1. if D is a declarator, the `init` of D is F, and [`fn_node`](#fn_node)(F);
-2. if D is a property, the `value` of D is F, and [`fn_node`](#fn_node)(F);
+1. if D is a declarator, the `init` of D is a node F, and [`fn_node`](#fn_node)(F);
+2. if D is a property, the `value` of D is a node F, and [`fn_node`](#fn_node)(F);
 3. if [`obj_member_fn`](#obj_member_fn)(D, something, F).
 
 <a id="callgraph_kind"></a>`callgraph_kind`(K) either:
@@ -625,9 +625,9 @@ Declared as facts: shape_because.
 1. if [`call_site_kind`](#call_site_kind)(something, K);
 2. if [`callee_kind`](#callee_kind)(something, K);
 3. if [`callee_obj_kind`](#callee_obj_kind)(something, K);
-4. if [`callee_prop`](#callee_prop)(something, P) and P [is of kind](js-model.md#ast_node) K;
-5. if [`fn_node`](#fn_node)(F) and F [is of kind](js-model.md#ast_node) K;
-6. if [`fn_binder`](#fn_binder)(B, something) and B [is of kind](js-model.md#ast_node) K.
+4. if [`callee_prop`](#callee_prop)(something, P) and a node P [is of kind](js-model.md#ast_node) K;
+5. if [`fn_node`](#fn_node)(F) and a node F [is of kind](js-model.md#ast_node) K;
+6. if [`fn_binder`](#fn_binder)(B, something) and a node B [is of kind](js-model.md#ast_node) K.
 
 <a id="kind_undeclared"></a>`kind_undeclared`(K) if [`callgraph_kind`](#callgraph_kind)(K), unless `node_kind`(`js`, K).
 
@@ -646,12 +646,12 @@ Declared as facts: shape_because.
 > reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
 > last step the iterator protocol takes: `member_value` names the identifier.
 
-<a id="await_arg"></a>`await_arg`(an await Y, X) if the `argument` of Y is X.
+<a id="await_arg"></a>`await_arg`(an await Y, X) if the `argument` of Y is a node X.
 
 <a id="awaited_then"></a>`awaited_then`(Y, F) if all of:
   - [`await_arg`](#await_arg)(Y, X);
-  - X [may be the node](js-dataflow.md#may_be_node) O;
-  - [the member](js-dataflow.md#member_value) "then" of O holds V;
+  - a node X [may be the node](js-dataflow.md#may_be_node) O;
+  - [the member](js-dataflow.md#member_value) "then" of O holds a node V;
   - V [may be the node](js-dataflow.md#may_be_node) F;
   - [`fn_node`](#fn_node)(F).
 
@@ -665,7 +665,7 @@ Declared as facts: shape_because.
 > (the frontier, deliberately not wired into `frontier_at`, which is keyed by
 > a caller this call has not got).
 
-<a id="await_value_known"></a>`await_value_known`(Y) if [`await_arg`](#await_arg)(Y, X) and X [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="await_value_known"></a>`await_value_known`(Y) if [`await_arg`](#await_arg)(Y, X) and a node X [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="await_no_call"></a>`await_no_call`(X) if [`await_value_known`](#await_value_known)(X), unless [`awaited_then`](#awaited_then)(X, something).
 
@@ -678,7 +678,7 @@ Declared as facts: shape_because.
 <a id="awaiting_fn"></a>`awaiting_fn`(Fn, X) if all of:
   - [`performed_call`](#performed_call)(X, something);
   - [`fn_node`](#fn_node)(Fn);
-  - Fn [is within](js-structure.md#ast_within) X.
+  - a node X [is within](js-structure.md#ast_within) a node Fn.
 
 <a id="performed_as_edge"></a>`performed_as_edge`(Fn, F) if all of:
   - [`performed_call`](#performed_call)(X, F);

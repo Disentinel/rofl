@@ -87,7 +87,7 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
 const MARKERS: &[&str] = &["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
 const VALUE_NOUN_LIST: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 const VALUE_NOUNS: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score"];
-const NOUN_WORDS: &[&str] = &["this", "scope", "this-binder"];
+const NOUN_WORDS: &[&str] = &["this", "scope", "this-binder", "effect label"];
 
 /// `name(arg, arg, …)` with each arg `[marker] noun Var[:i]` → the phrase it reads as, and the name.
 fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
@@ -242,7 +242,7 @@ struct R<'a> {
     var_a: Sym,
 }
 
-struct Ctx { nouns: HashMap<Sym, String>, intro: HashSet<Sym>, absorbed: HashSet<usize>, residual: HashMap<usize, Term>, kind_conds: HashMap<usize, String>, head_book: Book, file: usize, nouns_used: BTreeSet<String>, display: HashMap<Sym, String>, or_at: Option<(usize, usize, Vec<Term>)>, cur_k: usize, deferred: Vec<Sym>, subject: Option<Sym>, no_label: bool, rel_pairs: HashMap<usize, (usize, Sym)>, consumed: HashSet<usize>, last_subj: Option<String> }
+struct Ctx { nouns: HashMap<Sym, String>, intro: HashSet<Sym>, absorbed: HashSet<usize>, residual: HashMap<usize, Term>, kind_conds: HashMap<usize, String>, head_book: Book, file: usize, nouns_used: BTreeSet<String>, display: HashMap<Sym, String>, or_at: Option<(usize, usize, Vec<Term>)>, cur_k: usize, deferred: Vec<Sym>, subject: Option<Sym>, no_label: bool, rel_pairs: HashMap<usize, (usize, Sym)>, consumed: HashSet<usize>, last_subj: Option<String>, typed: HashSet<Sym>, glued: bool, positional: bool }
 
 /// Alternatives of one head that differ in a single constant fold into one, the
 /// constants joined by `or`.
@@ -291,9 +291,16 @@ impl<'a> R<'a> {
                 if ctx.intro.insert(v) {
                     match ctx.nouns.get(&v) {
                         Some(n) => {
-                            ctx.nouns_used.insert(n.clone());
-                            if VALUE_NOUNS.contains(&n.as_str()) { name.to_string() }
-                            else if before.trim_end().ends_with(n.as_str()) { ctx.deferred.push(v); name.to_string() }
+                            let typed = ctx.typed.contains(&v);
+                            if typed && ctx.positional { ctx.intro.remove(&v); return name.to_string(); }
+                            if !typed { ctx.nouns_used.insert(n.clone()); }
+                            let last = before.trim_end().rsplit(' ').next().unwrap_or("").to_string();
+                            let named_before = last == *n || last == format!("{n}s") || last == format!("{n}es") || last == "and";
+                            let one_letter = name.len() <= 2 && name.chars().next().map_or(false, |c| c.is_ascii_uppercase()) && name.chars().skip(1).all(|c| c.is_ascii_digit());
+                            // a value noun is worn by a one-letter variable at the start of a sentence or after a preposition; a verb already says it
+                            let after_marker = last.is_empty() || ["of", "at", "in", "for", "with", "under", "by", "to", "from", "than", "on", "between", "into", "through", "since", "against"].contains(&last.as_str());
+                            if VALUE_NOUNS.contains(&n.as_str()) { if one_letter && !ctx.glued && !named_before && after_marker { format!("{} {} {}", article(n), n, name) } else { name.to_string() } }
+                            else if named_before { if !typed { ctx.deferred.push(v); } name.to_string() }
                             else if ctx.subject == Some(v) && ctx.no_label { format!("{} {}", article(n), n) }
                             else { format!("{} {} {}", article(n), n, name) }
                         }
@@ -366,7 +373,7 @@ impl<'a> R<'a> {
         let saved = ctx.cur_k; ctx.cur_k = k2;
         let rest2 = self.parts_text(l2, &p2, 1, p2.parts.len(), ctx, stats);
         ctx.cur_k = saved;
-        let mut s = match ctx.nouns.get(&v).cloned() {
+        let mut s = match ctx.nouns.get(&v).cloned().filter(|_| !ctx.typed.contains(&v)) {
             Some(n) => { ctx.intro.insert(v); ctx.nouns_used.insert(n.clone()); format!("{text1} {} {n} that {rest2}", article(&n)) }
             None => format!("{} {rest2}", text1.trim_end().strip_suffix("is").unwrap_or(&text1).trim_end()),
         };
@@ -391,7 +398,7 @@ impl<'a> R<'a> {
             };
             let v = match l1.args[i1].kind() { TermK::Var(v) if !h.name(v).starts_with("_$") => v, _ => continue };
             if count.get(&v) != Some(&2) || ctx.subject == Some(v) || ctx.rel_pairs.contains_key(&k1) || ctx.consumed.contains(&k1) { continue; }
-            let has_noun = ctx.nouns.contains_key(&v);
+            let has_noun = ctx.nouns.contains_key(&v) && !ctx.typed.contains(&v);
             if !has_noun && !ends_is { continue; }
             for &(k2, l2) in &lits {
                 if k2 <= k1 || ctx.consumed.contains(&k2) || ctx.rel_pairs.contains_key(&k2) { continue; }
@@ -420,7 +427,7 @@ impl<'a> R<'a> {
                 match part {
                     Part::Text(t, true) => { let link = self.link(l.rel, t.trim(), ctx.file, stats); pad(&mut s, t, &link); if !t.trim().is_empty() { prev = t.clone(); } }
                     Part::Text(t, false) => { pad(&mut s, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                    Part::Hole(i, noun) => { let x = self.term_or(l.args[*i], *i, Some(noun), &prev, ctx); if n == 0 && l.tense == Tense::Now { ctx.last_subj = Some(x.clone()); } if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
+                    Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_or(l.args[*i], *i, Some(noun), &prev, ctx); ctx.glued = false; if n == 0 && l.tense == Tense::Now { ctx.last_subj = Some(x.clone()); } if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
                     Part::Fixed(..) => {}
                 }
             }
@@ -428,7 +435,9 @@ impl<'a> R<'a> {
             let name = format!("`{}`", self.h.name(l.rel));
             s.push_str(&self.link(l.rel, &name, ctx.file, stats));
             s.push('(');
+            ctx.positional = true;
             let args: Vec<String> = l.args.iter().enumerate().map(|(i, a)| self.term_or(*a, i, None, "", ctx)).collect();
+            ctx.positional = false;
             s.push_str(&args.join(", "));
             s.push(')');
         }
@@ -724,16 +733,18 @@ impl<'a> R<'a> {
         if let Some(p) = self.phrase_for(l) {
             let p = p.clone();
             let mut prev = String::new();
-            for part in &p.parts {
+            for (n, part) in p.parts.iter().enumerate() {
                 match part {
                     Part::Text(t, _) => { pad(&mut s, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                    Part::Hole(i, noun) => { let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
+                    Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); ctx.glued = false; if !s.ends_with(' ') { s.push(' '); } s.push_str(&x); prev.clear(); }
                     Part::Fixed(..) => {}
                 }
             }
         } else {
             let _ = write!(s, "`{}`(", self.h.name(l.rel));
+            ctx.positional = true;
             let args: Vec<String> = l.args.iter().map(|a| self.term(*a, None, ctx)).collect();
+            ctx.positional = false;
             s.push_str(&args.join(", "));
             s.push(')');
         }
@@ -762,7 +773,7 @@ impl<'a> R<'a> {
                     subject = x;
                 }
                 Part::Text(t, _) => { pad(&mut rest, t, t); if !t.trim().is_empty() { prev = t.clone(); } }
-                Part::Hole(i, noun) => { let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); if !rest.ends_with(' ') { rest.push(' '); } rest.push_str(&x); prev.clear(); }
+                Part::Hole(i, noun) => { ctx.glued = matches!(p.parts.get(n + 1), Some(Part::Text(t, _)) if t.starts_with('-')); let x = self.term_after(l.args[*i], Some(noun), &prev, ctx); ctx.glued = false; if !rest.ends_with(' ') { rest.push(' '); } rest.push_str(&x); prev.clear(); }
                 Part::Fixed(..) => {}
             }
         }
@@ -775,7 +786,27 @@ impl<'a> R<'a> {
     }
 
     fn ctx(&self, c: &Clause, file: usize, grouped: bool, taken: &HashSet<String>) -> Ctx {
-        let (nouns, absorbed, residual, kind_conds) = self.nouns(c, grouped);
+        let (mut nouns, absorbed, residual, kind_conds) = self.nouns(c, grouped);
+        let mut typed: HashSet<Sym> = HashSet::new();
+        {
+            // a variable whose kind is stated as a condition (`F is a method`) is named there, not by a type
+            let mut conditioned: HashSet<Sym> = HashSet::new();
+            for i in kind_conds.keys().chain(residual.keys()) { if let Elem::Pos(l) = &c.body[*i] { if let TermK::Var(v) = l.args[0].kind() { conditioned.insert(v); } } }
+            let mut lits: Vec<&Lit> = vec![&c.head];
+            for e in &c.body { if let Elem::Pos(l) | Elem::Neg(l) = e { lits.push(l); } }
+            for l in lits {
+                let Some(p) = self.phrase_for(l) else { continue };
+                for part in &p.parts {
+                    if let Part::Hole(i, noun) = part {
+                        // a kind noun is a guard and only a guard names it; a type that is not a kind may be worn freely
+                        if noun.is_empty() || noun == "value" || noun == "child" || self.kind_nouns.values().any(|k| k == noun) { continue; }
+                        if let TermK::Var(v) = l.args[*i].kind() {
+                            if !is_wild(self.h, l.args[*i]) && !nouns.contains_key(&v) && !conditioned.contains(&v) { nouns.insert(v, noun.clone()); typed.insert(v); }
+                        }
+                    }
+                }
+            }
+        }
         let mut display = HashMap::new();
         let a = self.var_a;
         {
@@ -788,7 +819,7 @@ impl<'a> R<'a> {
                 if let Some(free) = ["X", "Y", "Z", "W", "U", "Q"].iter().find(|c| !used.contains(**c)) { display.insert(a, free.to_string()); }
             }
         }
-        Ctx { nouns, intro: HashSet::new(), absorbed, residual, kind_conds, head_book: c.head.book, file, nouns_used: BTreeSet::new(), display, or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None }
+        Ctx { nouns, intro: HashSet::new(), absorbed, residual, kind_conds, head_book: c.head.book, file, nouns_used: BTreeSet::new(), display, or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed, glued: false, positional: false }
     }
 
     fn rules(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, nouns_used: &mut BTreeSet<String>, anchored: &mut HashSet<Sym>) {
@@ -986,7 +1017,7 @@ impl<'a> R<'a> {
         let name = self.h.name(rel).to_string();
         stats.heads.insert(name.clone());
         let arity = group[0].head.args.len();
-        let mut ctx = Ctx { nouns: HashMap::new(), intro: HashSet::new(), absorbed: HashSet::new(), residual: HashMap::new(), kind_conds: HashMap::new(), head_book: group[0].head.book, file, nouns_used: BTreeSet::new(), display: HashMap::new(), or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None };
+        let mut ctx = Ctx { nouns: HashMap::new(), intro: HashSet::new(), absorbed: HashSet::new(), residual: HashMap::new(), kind_conds: HashMap::new(), head_book: group[0].head.book, file, nouns_used: BTreeSet::new(), display: HashMap::new(), or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed: HashSet::new(), glued: false, positional: false };
         let noun = self.kind_nouns.get(&rel).map(|n| format!(", {} {},", article(n), n)).unwrap_or_default();
         if arity <= 1 {
             let items_: Vec<String> = group.iter().map(|c| c.head.args.first().map_or(String::new(), |a| self.term(*a, None, &mut ctx))).collect();

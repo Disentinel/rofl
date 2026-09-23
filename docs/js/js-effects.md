@@ -29,7 +29,7 @@ A noun is a node of one of its kinds:
 
 ## Signatures
 
-- covers(effect A, label L, at host H) (eff_row), in the main
+- covers(effect A, effect label L, at host H) (eff_row), in the main
 - is_an_upper_bound(effect C:2, of effect A:0, of effect B:1) (eff_ub), in the main
 - is_an_upper_bound_above_another(effect C:2, of effect A:0, of effect B:1) (eff_ub_lower), in the main
 - the_join(of effect A, of effect B, is effect C) (eff_join), in the main
@@ -38,7 +38,7 @@ A noun is a node of one of its kinds:
 - the_meet(of effect A, of effect B, is effect C) (eff_meet), in the main
 - has_two_joins(effect A, with effect B, effect C, effect D) (join_ambiguous), in the audit
 - has_two_meets(effect A, with effect B, effect C, effect D) (meet_ambiguous), in the audit
-- has_the_latent_effect(function F, label L, at host H) (eff_latent)
+- has_the_latent_effect(function F, effect label L, at host H) (eff_latent)
 - has_two_effects(function F, effect A, effect B) (eff_two_names), in the audit
 - is_short_of_the_join(function F, effect J:2, with function G:1) (eff_join_short), in the audit
 - calls_a_purer_callee(call C, function G:2, from function F:1) (eff_purer_callee)
@@ -46,8 +46,8 @@ A noun is a node of one of its kinds:
 - is_purer(surface S1, at operation O1, than surface S2, at operation O2) (concrete_leq)
 - has_two_module_effects(file F, effect A, effect B) (eff_mod_two_names), in the audit
 - initialises_the_field(class CD, at node P, with node V) (eff_field_value), in the code
-- defines_with_effect(class CD, label L, at host H) (class_define_eff)
-- constructs_with_effect(class CD, label L, at host H) (class_construct_eff)
+- defines_with_effect(class CD, effect label L, at host H) (class_define_eff)
+- constructs_with_effect(class CD, effect label L, at host H) (class_construct_eff)
 - has_two_moments(node P, moment A, moment B) (eff_moment_both), in the audit
 
 > js-effects.rofl — THE EFFECT LAYER. facts/js-effects.rofl declares
@@ -67,12 +67,15 @@ A noun is a node of one of its kinds:
 > Aliases are DEFINITIONS, so rows close over `eff_alias` and `join(div, exn)
 > = pure` is a derivation, not a coincidence between two typed tables.
 
-<a id="eff_row"></a>X covers L at H if `eff_alias`(X, P) and P [covers](#eff_row) L at H.
+<a id="eff_row"></a>An effect covers an effect label L at a host H if `eff_alias`(it, P) and an effect P [covers](#eff_row) L at H.
 
 > Inclusion via its own negation. `total` has no rows, lacks nothing, and is
 > the bottom by construction rather than by declaration.
 
-<a id="eff_lacks"></a>`eff_lacks`(X, B) if `eff_name`(B) and X [covers](#eff_row) L at H, unless B [covers](#eff_row) L at H.
+<a id="eff_lacks"></a>`eff_lacks`(X, B) if all of:
+  - `eff_name`(B);
+  - an effect X [covers](#eff_row) an effect label L at a host H;
+  - unless an effect B [covers](#eff_row) L at H.
 
 <a id="eff_leq"></a>`eff_leq`(X, B) if `eff_name`(X) and `eff_name`(B), unless [`eff_lacks`](#eff_lacks)(X, B).
 
@@ -84,34 +87,36 @@ A noun is a node of one of its kinds:
 > and the four `missing`/`ambiguous` audits below are that theorem checked.
 > Top and bottom are derived as SETS; the test asserts `{top}` and `{total}`.
 
-<a id="eff_ub"></a>C is an upper bound of X and B if [`eff_leq`](#eff_leq)(X, C) and [`eff_leq`](#eff_leq)(B, C).
+An effect
 
-<a id="eff_ub_lower"></a>C is an upper bound above another of X and B if D [is an upper bound](#eff_ub) of X and B, and [`eff_lt`](#eff_lt)(D, C).
+- <a id="eff_ub"></a>is an upper bound of an effect X and B if [`eff_leq`](#eff_leq)(X, it) and [`eff_leq`](#eff_leq)(B, it).
+- <a id="eff_ub_lower"></a>is an upper bound above another of an effect X and B if an effect D [is an upper bound](#eff_ub) of X and B, and [`eff_lt`](#eff_lt)(D, it).
 
-<a id="eff_join"></a>The join of X and B is C if C [is an upper bound](#eff_ub) of X and B, unless C [is an upper bound above another](#eff_ub_lower) of X and B.
+<a id="eff_join"></a>The join of an effect X and B is an effect C if C [is an upper bound](#eff_ub) of X and B, unless C [is an upper bound above another](#eff_ub_lower) of X and B.
 
-<a id="eff_has_join"></a>`eff_has_join`(X, B) if [the join](#eff_join) of X and B is some effect.
+<a id="eff_has_join"></a>`eff_has_join`(X, B) if [the join](#eff_join) of an effect X and B is some effect.
 
-<a id="eff_lb"></a>C is a lower bound of X and B if [`eff_leq`](#eff_leq)(C, X) and [`eff_leq`](#eff_leq)(C, B).
+An effect
 
-<a id="eff_lb_higher"></a>C is a lower bound below another of X and B if D [is a lower bound](#eff_lb) of X and B, and [`eff_lt`](#eff_lt)(C, D).
+- <a id="eff_lb"></a>is a lower bound of an effect X and B if [`eff_leq`](#eff_leq)(it, X) and [`eff_leq`](#eff_leq)(it, B).
+- <a id="eff_lb_higher"></a>is a lower bound below another of an effect X and B if an effect D [is a lower bound](#eff_lb) of X and B, and [`eff_lt`](#eff_lt)(it, D).
 
-<a id="eff_meet"></a>The meet of X and B is C if C [is a lower bound](#eff_lb) of X and B, unless C [is a lower bound below another](#eff_lb_higher) of X and B.
+<a id="eff_meet"></a>The meet of an effect X and B is an effect C if C [is a lower bound](#eff_lb) of X and B, unless C [is a lower bound below another](#eff_lb_higher) of X and B.
 
-<a id="eff_has_meet"></a>`eff_has_meet`(X, B) if [the meet](#eff_meet) of X and B is some effect.
+<a id="eff_has_meet"></a>`eff_has_meet`(X, B) if [the meet](#eff_meet) of an effect X and B is some effect.
 
 <a id="join_missing"></a>`join_missing`(X, B) if `eff_name`(X) and `eff_name`(B), unless [`eff_has_join`](#eff_has_join)(X, B).
 
-<a id="join_ambiguous"></a>X has two joins with B C and D if all of:
-  - [the join](#eff_join) of X and B is C;
-  - [the join](#eff_join) of X and B is D;
+<a id="join_ambiguous"></a>An effect has two joins with an effect B an effect C and D if all of:
+  - [the join](#eff_join) of it and B is C;
+  - [the join](#eff_join) of it and B is D;
   - C differs from D.
 
 <a id="meet_missing"></a>`meet_missing`(X, B) if `eff_name`(X) and `eff_name`(B), unless [`eff_has_meet`](#eff_has_meet)(X, B).
 
-<a id="meet_ambiguous"></a>X has two meets with B C and D if all of:
-  - [the meet](#eff_meet) of X and B is C;
-  - [the meet](#eff_meet) of X and B is D;
+<a id="meet_ambiguous"></a>An effect has two meets with an effect B an effect C and D if all of:
+  - [the meet](#eff_meet) of it and B is C;
+  - [the meet](#eff_meet) of it and B is D;
   - C differs from D.
 
 <a id="eff_not_top"></a>`eff_not_top`(T) if `eff_name`(T) and `eff_name`(M), unless [`eff_leq`](#eff_leq)(M, T).
@@ -125,19 +130,22 @@ A noun is a node of one of its kinds:
 > Table hygiene. The dangerous one is a misspelt alias: it silently gets the
 > empty row, becomes the bottom, and every comparison against it holds.
 
-<a id="eff_row_unknown"></a>`eff_row_unknown`(N) if N [covers](#eff_row) some label at some host, unless `eff_name`(N).
+<a id="eff_row_unknown"></a>`eff_row_unknown`(N) if an effect N [covers](#eff_row) some effect label at some host, unless `eff_name`(N).
 
-<a id="eff_label_unknown"></a>`eff_label_unknown`(L, H) if some effect [covers](#eff_row) L at H, unless `eff_label`(L, H).
+<a id="eff_label_unknown"></a>`eff_label_unknown`(L, H) if some effect [covers](#eff_row) an effect label L at a host H, unless `eff_label`(L, H).
 
 <a id="eff_alias_unknown"></a>`eff_alias_unknown`(X, P) if `eff_alias`(X, P), unless `eff_name`(P).
 
 <a id="eff_alias_unnamed"></a>`eff_alias_unnamed`(X) if `eff_alias`(X, something), unless `eff_name`(X).
 
-<a id="eff_name_empty"></a>`eff_name_empty`(N) if `eff_name`(N) and N differs from `total`, unless N [covers](#eff_row) some label at some host.
+<a id="eff_name_empty"></a>`eff_name_empty`(N) if all of:
+  - `eff_name`(N);
+  - N differs from `total`;
+  - unless an effect N [covers](#eff_row) some effect label at some host.
 
 <a id="eff_heap_unknown"></a>`eff_heap_unknown`(H) if `eff_label`(something, H), unless `eff_heap`(H).
 
-<a id="eff_label_unnamed"></a>`eff_label_unnamed`(L, H) if `eff_label`(L, H), unless some effect [covers](#eff_row) L at H.
+<a id="eff_label_unnamed"></a>`eff_label_unnamed`(L, H) if `eff_label`(L, H), unless some effect [covers](#eff_row) an effect label L at a host H.
 
 ## 2. What a node contributes — the seeds
 
@@ -170,10 +178,10 @@ A throw has the effect `exn` at `none` unless [`eff_catch_here`](#eff_catch_here
 
 <a id="eff_loop_kind"></a>`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
 
-N has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and N [is of kind](js-model.md#ast_node) K.
+A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.md#ast_node) K.
 
 <a id="eff_calls"></a>`eff_calls`(F, G) if all of:
-  - C [resolves to](js-callgraph.md#resolves) G;
+  - a node C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`fn_node`](js-callgraph.md#fn_node)(G).
 
@@ -181,9 +189,9 @@ N has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and N [
 
 `eff_reaches`(F, H) if [`eff_reaches`](#eff_reaches)(F, G) and [`eff_calls`](#eff_calls)(G, H).
 
-C has the effect `div` at `none` if all of:
-  - C [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) C;
+A node has the effect `div` at `none` if all of:
+  - it [resolves to](js-callgraph.md#resolves) G;
+  - F [is nearest to](js-dataflow.md#nearest_v) it;
   - [`eff_reaches`](#eff_reaches)(G, F).
 
 Declared as facts: eff_loop_kind.
@@ -194,7 +202,7 @@ Declared as facts: eff_loop_kind.
 
 <a id="eff_alloc_kind"></a>`eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
 
-N has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and N [is of kind](js-model.md#ast_node) K.
+A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and it [is of kind](js-model.md#ast_node) K.
 
 Declared as facts: eff_alloc_kind.
 
@@ -206,59 +214,59 @@ Declared as facts: eff_alloc_kind.
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if M [is a member access](js-dataflow.md#member_node_v) and the `object` of M [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>`eff_obj_traced`(M) if a node M [is a member access](js-dataflow.md#member_node_v) and the `object` of M [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>`eff_heap_of`(M, N) either:
 
 1. if all of:
-   - M [is a member access](js-dataflow.md#member_node_v);
+   - a node M [is a member access](js-dataflow.md#member_node_v);
    - [`eff_obj_traced`](#eff_obj_traced)(M);
    - N is `local`;
 2. if all of:
-   - M [is a member access](js-dataflow.md#member_node_v);
+   - a node M [is a member access](js-dataflow.md#member_node_v);
    - N is `global`;
    - unless [`eff_obj_traced`](#eff_obj_traced)(M).
 
 <a id="eff_assign"></a>`eff_assign`(an assignment X).
 
-<a id="eff_assign_target"></a>`eff_assign_target`(X, L) if [`eff_assign`](#eff_assign)(X) and the `left` of X is L.
+<a id="eff_assign_target"></a>`eff_assign_target`(X, L) if [`eff_assign`](#eff_assign)(X) and the `left` of a node X is a node L.
 
 <a id="eff_compound"></a>`eff_compound`(X) if [`eff_assign`](#eff_assign)(X), unless X [is plain](js-dataflow.md#plain_assign).
 
-<a id="eff_member_target"></a>`eff_member_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is a member access](js-dataflow.md#member_node_v).
+<a id="eff_member_target"></a>`eff_member_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and a node L [is a member access](js-dataflow.md#member_node_v).
 
-<a id="eff_name_target"></a>`eff_name_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and L [is named](js-structure.md#ast_name) some name.
+<a id="eff_name_target"></a>`eff_name_target`(L) if [`eff_assign_target`](#eff_assign_target)(something, L) and a node L [is named](js-structure.md#ast_name) some name.
 
-L has the effect `write` at H if [`eff_member_target`](#eff_member_target)(L) and [`eff_heap_of`](#eff_heap_of)(L, H).
+A node
 
-L has the effect `read` at H if all of:
+- has the effect `write` at a host H if [`eff_member_target`](#eff_member_target)(it) and [`eff_heap_of`](#eff_heap_of)(it, H).
+- has the effect `read` at a host H if all of:
   - [`eff_compound`](#eff_compound)(X);
-  - the `left` of X is L;
-  - [`eff_member_target`](#eff_member_target)(L);
-  - [`eff_heap_of`](#eff_heap_of)(L, H).
+  - the `left` of a node X is it;
+  - [`eff_member_target`](#eff_member_target)(it);
+  - [`eff_heap_of`](#eff_heap_of)(it, H).
+- has the effect `write` at `local` if [`eff_assign_target`](#eff_assign_target)(it, L) and a node L [is named](js-structure.md#ast_name) some name.
 
-X has the effect `write` at `local` if [`eff_assign_target`](#eff_assign_target)(X, L) and L [is named](js-structure.md#ast_name) some name.
+<a id="eff_read_site"></a>`eff_read_site`(M) if a node M [is a member access](js-dataflow.md#member_node_v), unless [`eff_member_target`](#eff_member_target)(M).
 
-<a id="eff_read_site"></a>`eff_read_site`(M) if M [is a member access](js-dataflow.md#member_node_v), unless [`eff_member_target`](#eff_member_target)(M).
-
-M has the effect `read` at H if [`eff_read_site`](#eff_read_site)(M) and [`eff_heap_of`](#eff_heap_of)(M, H).
+A node has the effect `read` at a host H if [`eff_read_site`](#eff_read_site)(it) and [`eff_heap_of`](#eff_heap_of)(it, H).
 
 <a id="eff_member_both"></a>`eff_member_both`(M) if [`eff_read_site`](#eff_read_site)(M) and [`eff_member_target`](#eff_member_target)(M).
 
 > `x++` is a read and a write, on either form.
 
-<a id="eff_update_arg"></a>`eff_update_arg`(an update expression U, X) if the `argument` of U is X.
+<a id="eff_update_arg"></a>`eff_update_arg`(an update expression U, X) if the `argument` of U is a node X.
 
-U has the effect N at E either:
+A node U has the effect an effect label N at a host E either:
 
 1. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, X);
-   - X [is named](js-structure.md#ast_name) some name;
+   - a node X [is named](js-structure.md#ast_name) some name;
    - N is `read`;
    - E is `local`;
 2. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, X);
-   - X [is named](js-structure.md#ast_name) some name;
+   - a node X [is named](js-structure.md#ast_name) some name;
    - N is `write`;
    - E is `local`;
 3. if [`eff_update_arg`](#eff_update_arg)(U, X), [`eff_heap_of`](#eff_heap_of)(X, E), and N is `read`;
@@ -274,20 +282,20 @@ U has the effect N at E either:
 1. if Name [is assigned](js-dataflow.md#assigns) some node in File;
 2. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, X);
-   - X [is named](js-structure.md#ast_name) Name;
-   - U [is of kind](js-model.md#ast_node) some kind in file File.
+   - a node X [is named](js-structure.md#ast_name) Name;
+   - a node U [is of kind](js-model.md#ast_node) some kind in file File.
 
-N has the effect `read` at `local` if all of:
+A node has the effect `read` at `local` if all of:
   - [`eff_mutable_name`](#eff_mutable_name)(Name, File);
-  - N [reads](js-dataflow.md#ident_in) Name in File;
-  - unless [`eff_name_target`](#eff_name_target)(N).
+  - it [reads](js-dataflow.md#ident_in) Name in File;
+  - unless [`eff_name_target`](#eff_name_target)(it).
 
 > Which labels the corpus exercises — POSITIVE, not an audit, because two are
 > empty on an honest checkout: `write/global` has a seed and no site; `ndet`
 > has no seed at all and cannot have one until `ambient_effect` exists, since
 > nothing in the LANGUAGE is nondeterministic.
 
-<a id="eff_label_seen"></a>`eff_label_seen`(L, H) if some node [has the effect](js-ambient.md#eff_here) L at H.
+<a id="eff_label_seen"></a>`eff_label_seen`(L, H) if some node [has the effect](js-ambient.md#eff_here) an effect label L at a host H.
 
 <a id="eff_label_unseen"></a>`eff_label_unseen`(L, H) if `eff_label`(L, H), unless [`eff_label_seen`](#eff_label_seen)(L, H).
 
@@ -299,7 +307,7 @@ N has the effect `read` at `local` if all of:
 > `may_throw`, which carries one label — would make a try around a call
 > swallow the callee's WRITES too.
 
-<a id="eff_latent"></a>F has the latent effect L at H if N [has the effect](js-ambient.md#eff_here) L at H and F [is nearest to](js-dataflow.md#nearest_v) N.
+<a id="eff_latent"></a>F has the latent effect an effect label L at a host H if a node N [has the effect](js-ambient.md#eff_here) L at H and F [is nearest to](js-dataflow.md#nearest_v) N.
 
 <a id="eff_discharges"></a>`eff_discharges` lists:
 
@@ -309,9 +317,9 @@ N has the effect `read` at `local` if all of:
 
 <a id="eff_discharged_at"></a>`eff_discharged_at`(C, L) if [`eff_catch_here`](#eff_catch_here)(C) and [`eff_discharges`](#eff_discharges)(`catch_clause`, L).
 
-F has the latent effect L at H if all of:
+F has the latent effect an effect label L at a host H if all of:
   - G [has the latent effect](#eff_latent) L at H;
-  - C [resolves to](js-callgraph.md#resolves) G;
+  - a node C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - unless [`eff_discharged_at`](#eff_discharged_at)(C, L).
 
@@ -331,8 +339,8 @@ Declared as facts: eff_discharges.
 
 <a id="eff_swallowed"></a>`eff_swallowed`(F, C, L, H) if all of:
   - [`eff_catch_here`](#eff_catch_here)(C);
-  - C [resolves to](js-callgraph.md#resolves) G;
-  - G [has the latent effect](#eff_latent) L at H;
+  - a node C [resolves to](js-callgraph.md#resolves) G;
+  - G [has the latent effect](#eff_latent) an effect label L at a host H;
   - L differs from `exn`;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - unless F [has the latent effect](#eff_latent) L at H.
@@ -350,8 +358,8 @@ Declared as facts: eff_discharges.
 
 <a id="eff_over"></a>`eff_over`(F, N) if all of:
   - `eff_name`(N);
-  - F [has the latent effect](#eff_latent) L at H;
-  - unless N [covers](#eff_row) L at H.
+  - F [has the latent effect](#eff_latent) an effect label L at a host H;
+  - unless an effect N [covers](#eff_row) L at H.
 
 <a id="eff_bounded"></a>`eff_bounded`(F, N) if [`eff_subject`](#eff_subject)(F) and `eff_name`(N), unless [`eff_over`](#eff_over)(F, N).
 
@@ -363,18 +371,18 @@ Declared as facts: eff_discharges.
 
 <a id="eff_two_names"></a>F has two effects X and B if [`effect_of`](#effect_of)(F, X), [`effect_of`](#effect_of)(F, B), and X differs from B.
 
-<a id="eff_join_short"></a>F is short of the join J with G if all of:
-  - C [resolves to](js-callgraph.md#resolves) G;
+<a id="eff_join_short"></a>F is short of the join an effect J with G if all of:
+  - a node C [resolves to](js-callgraph.md#resolves) G;
   - F [is nearest to](js-dataflow.md#nearest_v) C;
   - [`effect_of`](#effect_of)(F, NF);
   - [`effect_of`](#effect_of)(G, NG);
-  - [the join](#eff_join) of NF and NG is J;
+  - [the join](#eff_join) of an effect NF and NG is J;
   - J differs from NF;
   - unless [`eff_catch_here`](#eff_catch_here)(C).
 
-<a id="eff_purer_callee"></a>C calls a purer callee G from F if all of:
-  - C [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) C;
+<a id="eff_purer_callee"></a>A node calls a purer callee G from F if all of:
+  - it [resolves to](js-callgraph.md#resolves) G;
+  - F [is nearest to](js-dataflow.md#nearest_v) it;
   - [`effect_of`](#effect_of)(F, NF);
   - [`effect_of`](#effect_of)(G, NG);
   - [`eff_lt`](#eff_lt)(NG, NF).
@@ -391,13 +399,13 @@ Declared as facts: eff_discharges.
 1. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
    - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of N is O;
+   - the `object` of a node N is a node O;
    - [the prototype](js-dataflow.md#prototype_of) of O is P;
    - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
 2. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
    - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of N [is named](js-structure.md#ast_name) Name;
+   - the `object` of a node N [is named](js-structure.md#ast_name) Name;
    - C [is of kind](js-model.md#ast_node) some kind in file File;
    - [`ambient_binding`](js-ambient.md#ambient_binding)(File, Name, P).
 
@@ -406,7 +414,7 @@ Declared as facts: eff_discharges.
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
   - N [selects](js-dataflow.md#selects) Key.
 
-<a id="concrete_effect"></a>C operates on S by Op if [`eff_surface`](js-ambient.md#eff_surface)(C, S) and [`eff_operation`](js-ambient.md#eff_operation)(C, Op).
+<a id="concrete_effect"></a>C operates on a surface S by an operation Op if [`eff_surface`](js-ambient.md#eff_surface)(C, S) and [`eff_operation`](js-ambient.md#eff_operation)(C, Op).
 
 > `ambient_effect(S, Op, E)` is the one TABLE in this column, owned by the
 > surface pack: a `.d.ts` fixes the surface and says nothing about the effect.
@@ -414,15 +422,15 @@ Declared as facts: eff_discharges.
 > |ambient_effect|² was invisible while the table was empty and produced about
 > 330 000 rows (space_exhausted) the day 571 rows arrived.
 
-<a id="concrete_denotes"></a>`concrete_denotes`(S, Op, E) if some call [operates](#concrete_effect) on S by Op and S [has the ambient effect](js-ambient.md#ambient_effect) E at Op.
+<a id="concrete_denotes"></a>`concrete_denotes`(S, Op, E) if some call [operates](#concrete_effect) on a surface S by an operation Op and S [has the ambient effect](js-ambient.md#ambient_effect) E at Op.
 
-C has the effect L at H if all of:
-  - C [operates](#concrete_effect) on S by Op;
+A node has the effect an effect label L at a host H if all of:
+  - it [operates](#concrete_effect) on a surface S by an operation Op;
   - S [has the ambient effect](js-ambient.md#ambient_effect) E at Op;
   - E [covers](#eff_row) L at H.
 
-<a id="concrete_leq"></a>S1 is purer at O1 than S2 at O2 if all of:
-  - [`concrete_denotes`](#concrete_denotes)(S1, O1, E1);
+<a id="concrete_leq"></a>A surface is purer at an operation O1 than a surface S2 at an operation O2 if all of:
+  - [`concrete_denotes`](#concrete_denotes)(it, O1, E1);
   - [`concrete_denotes`](#concrete_denotes)(S2, O2, E2);
   - [`eff_leq`](#eff_leq)(E1, E2).
 
@@ -432,18 +440,18 @@ C has the effect L at H if all of:
 > effect on a measurement, and a concrete column is where it would come back
 > as `promise:await` denoting `total`.
 
-<a id="concrete_unmapped"></a>`concrete_unmapped`(S, Op) if some call [operates](#concrete_effect) on S by Op, unless S [has the ambient effect](js-ambient.md#ambient_effect) some effect at Op.
+<a id="concrete_unmapped"></a>`concrete_unmapped`(S, Op) if some call [operates](#concrete_effect) on a surface S by an operation Op, unless S [has the ambient effect](js-ambient.md#ambient_effect) some effect at Op.
 
 <a id="eff_call_unattributed"></a>`eff_call_unattributed`(C) if [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something), unless C [operates](#concrete_effect) on some surface by some operation.
 
-<a id="concrete_unnamed"></a>`concrete_unnamed`(S, Op, E) if S [has the ambient effect](js-ambient.md#ambient_effect) E at Op, unless `eff_name`(E).
+<a id="concrete_unnamed"></a>`concrete_unnamed`(S, Op, E) if a spec S [has the ambient effect](js-ambient.md#ambient_effect) E at Op, unless `eff_name`(E).
 
-<a id="concrete_no_origin"></a>`concrete_no_origin`(S) if S [has the ambient effect](js-ambient.md#ambient_effect) some effect at some key, unless [`surface_origin`](js-ambient.md#surface_origin)(S, something).
+<a id="concrete_no_origin"></a>`concrete_no_origin`(S) if a spec S [has the ambient effect](js-ambient.md#ambient_effect) some effect at some key, unless [`surface_origin`](js-ambient.md#surface_origin)(S, something).
 
 <a id="concrete_bad_origin"></a>`concrete_bad_origin`(S, O) if [`surface_origin`](js-ambient.md#surface_origin)(S, O), unless `eff_origin`(O).
 
 <a id="concrete_async_smuggled"></a>`concrete_async_smuggled`(S, Op) if all of:
-  - S [has the ambient effect](js-ambient.md#ambient_effect) E at Op;
+  - a spec S [has the ambient effect](js-ambient.md#ambient_effect) E at Op;
   - [`eff_bot`](#eff_bot)(E);
   - [`eff_suspension_word`](#eff_suspension_word)(Op).
 
@@ -468,36 +476,36 @@ Declared as facts: eff_suspension_word.
 > in the converting complement: over-reporting a conversion, never missing a
 > call.
 
-<a id="eff_op_inspects"></a>`eff_op_inspects`(N) if the attribute `operator` of N is "===" or "!==" or "typeof" or "void" or "!".
+<a id="eff_op_inspects"></a>`eff_op_inspects`(N) if the attribute `operator` of a node N is "===" or "!==" or "typeof" or "void" or "!".
 
 <a id="eff_op_beyond"></a>`eff_op_beyond`(N, E) either:
 
-1. if the attribute `operator` of N is "instanceof" and E is `has_instance`;
-2. if the attribute `operator` of N is "delete" and E is `delete_own`.
+1. if the attribute `operator` of a node N is "instanceof" and E is `has_instance`;
+2. if the attribute `operator` of a node N is "delete" and E is `delete_own`.
 
 <a id="eff_converts"></a>`eff_converts`(N) if N is a binary expression or an unary expression, unless [`eff_op_inspects`](#eff_op_inspects)(N).
 
 <a id="eff_coerced"></a>`eff_coerced`(N, X) either:
 
-1. if [`eff_converts`](#eff_converts)(N) and the `left` or `right` or `argument` of N is X;
-2. if N is a template and X is among the `expressions` of N.
+1. if [`eff_converts`](#eff_converts)(N) and the `left` or `right` or `argument` of a node N is a node X;
+2. if N is a template and a node X is among the `expressions` of N.
 
 > `Symbol.toPrimitive` is deliberately absent: a computed key, and what
 > spelling `key_name` gives one is `w_computed_key_names`' open question.
 
 <a id="eff_conv_key"></a>`eff_conv_key` includes "valueOf", "toString".
 
-<a id="eff_conv_object"></a>`eff_conv_object`(N, X) if [`eff_coerced`](#eff_coerced)(N, X) and X [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_conv_object"></a>`eff_conv_object`(N, X) if [`eff_coerced`](#eff_coerced)(N, X) and a node X [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="eff_conv_call"></a>`eff_conv_call`(N, M) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
-  - X [may be the node](js-dataflow.md#may_be_node) O;
+  - a node X [may be the node](js-dataflow.md#may_be_node) O;
   - [`eff_conv_key`](#eff_conv_key)(Key);
-  - [the member](js-dataflow.md#member_value) Key of O holds M.
+  - [the member](js-dataflow.md#member_value) Key of O holds a node M.
 
 <a id="eff_conv_overridden"></a>`eff_conv_overridden`(N, X) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
-  - X [may be the node](js-dataflow.md#may_be_node) O;
+  - a node X [may be the node](js-dataflow.md#may_be_node) O;
   - [`eff_conv_key`](#eff_conv_key)(Key);
   - [the member](js-dataflow.md#member_value) Key of O holds some node.
 
@@ -505,20 +513,20 @@ Declared as facts: eff_suspension_word.
 
 <a id="eff_conv_primitive"></a>`eff_conv_primitive`(N, X) if all of:
   - [`eff_coerced`](#eff_coerced)(N, X);
-  - X [may be the literal](js-dataflow.md#may_be_lit) some text;
+  - a node X [may be the literal](js-dataflow.md#may_be_lit) some text;
   - unless [`eff_conv_object`](#eff_conv_object)(N, X).
 
-<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, X) if [`eff_coerced`](#eff_coerced)(N, X) and X neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, X) if [`eff_coerced`](#eff_coerced)(N, X), unless a node X [may be the literal](js-dataflow.md#may_be_lit) some text or X [may be the node](js-dataflow.md#may_be_node) some node.
 
 Declared as facts: eff_conv_key.
 
 > A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 > oracle is V8's stack frames, which know nothing about a conversion.
 
-F has the latent effect L at H if all of:
+F has the latent effect an effect label L at a host H if all of:
   - [`eff_conv_call`](#eff_conv_call)(N, M);
   - M [has the latent effect](#eff_latent) L at H;
-  - F [is nearest to](js-dataflow.md#nearest_v) N.
+  - F [is nearest to](js-dataflow.md#nearest_v) a node N.
 
 > Totality: every coerced operand is primitive, object or untraced. And the
 > operator table must not name a node that is neither binary nor unary —
@@ -534,7 +542,7 @@ F has the latent effect L at H if all of:
 
 <a id="eff_op_off_kind"></a>`eff_op_off_kind`(N, K) if all of:
   - [`eff_op_inspects`](#eff_op_inspects)(N);
-  - N [is of kind](js-model.md#ast_node) K;
+  - a node N [is of kind](js-model.md#ast_node) K;
   - K differs from `binary_expression`;
   - K differs from `unary_expression`.
 
@@ -549,19 +557,19 @@ F has the latent effect L at H if all of:
 
 <a id="eff_mod_src"></a>`eff_mod_src`(N, Src, F) either:
 
-1. if N [sources](js-dataflow.md#module_source) Src in F;
+1. if a node N [sources](js-dataflow.md#module_source) Src in a file F;
 2. if all of:
    - N is a dynamic import;
-   - N is in file F;
+   - N is in file a file F;
    - the `source` of N [is written as](js-structure.md#ast_value) Src.
 
-<a id="eff_type_only"></a>`eff_type_only`(I) if the attribute `import_kind` or `export_kind` of I is "type".
+<a id="eff_type_only"></a>`eff_type_only`(I) if the attribute `import_kind` or `export_kind` of a node I is "type".
 
-<a id="eff_has_spec"></a>`eff_has_spec`(I) if [`eff_mod_src`](#eff_mod_src)(I, something, something) and some node is among the `specifiers` of I.
+<a id="eff_has_spec"></a>`eff_has_spec`(I) if [`eff_mod_src`](#eff_mod_src)(I, something, something) and some node is among the `specifiers` of a node I.
 
 <a id="eff_value_spec"></a>`eff_value_spec`(I) if all of:
   - [`eff_mod_src`](#eff_mod_src)(I, something, something);
-  - Sp is among the `specifiers` of I;
+  - a node Sp is among the `specifiers` of a node I;
   - unless the attribute `import_kind` of Sp is "type";
   - unless the attribute `export_kind` of Sp is "type".
 
@@ -585,7 +593,7 @@ F has the latent effect L at H if all of:
 
 <a id="eff_mod_target"></a>`eff_mod_target`(Src, T) if all of:
   - [`eff_mod_basename`](#eff_mod_basename)(Src, Base);
-  - T [is in the corpus](js-dataflow.md#corpus_file);
+  - a file T [is in the corpus](js-dataflow.md#corpus_file);
   - T is Base.
 
 <a id="eff_mod_target_disagrees"></a>`eff_mod_target_disagrees`(Src, T) either:
@@ -613,32 +621,35 @@ F has the latent effect L at H if all of:
 > group's effect). No `load` label: the suspension of `import()` is CONTROL,
 > as `await` is.
 
-<a id="eff_in_fn"></a>`eff_in_fn`(N) if some function [is nearest to](js-dataflow.md#nearest_v) N.
+<a id="eff_in_fn"></a>`eff_in_fn`(N) if some function [is nearest to](js-dataflow.md#nearest_v) a node N.
 
 <a id="eff_module"></a>`eff_module`(F, L, H) either:
 
 1. if all of:
-   - N [has the effect](js-ambient.md#eff_here) L at H;
+   - a node N [has the effect](js-ambient.md#eff_here) an effect label L at a host H;
    - N [is of kind](js-model.md#ast_node) some kind in file F;
    - unless [`eff_in_fn`](#eff_in_fn)(N);
 2. if all of:
-   - C [resolves to](js-callgraph.md#resolves) G;
+   - a node C [resolves to](js-callgraph.md#resolves) G;
    - C [is of kind](js-model.md#ast_node) some kind in file F;
-   - G [has the latent effect](#eff_latent) L at H;
+   - G [has the latent effect](#eff_latent) an effect label L at a host H;
    - unless [`eff_in_fn`](#eff_in_fn)(C).
 
-I has the effect L at H if [`eff_evaluates_at`](#eff_evaluates_at)(I, T) and [`eff_module`](#eff_module)(T, L, H).
+A node has the effect an effect label L at a host H if [`eff_evaluates_at`](#eff_evaluates_at)(it, T) and [`eff_module`](#eff_module)(T, L, H).
 
 <a id="eff_import_invented"></a>`eff_import_invented`(I, L, H) if all of:
   - [`eff_evaluates_at`](#eff_evaluates_at)(I, T);
-  - I [has the effect](js-ambient.md#eff_here) L at H;
+  - a node I [has the effect](js-ambient.md#eff_here) an effect label L at a host H;
   - unless [`eff_module`](#eff_module)(T, L, H).
 
 > The same Moore closure as section 4, over a file.
 
-<a id="eff_mod_subject"></a>`eff_mod_subject`(F) if F [is in the corpus](js-dataflow.md#corpus_file).
+<a id="eff_mod_subject"></a>`eff_mod_subject`(F) if a file F [is in the corpus](js-dataflow.md#corpus_file).
 
-<a id="eff_mod_over"></a>`eff_mod_over`(F, N) if `eff_name`(N) and [`eff_module`](#eff_module)(F, L, H), unless N [covers](#eff_row) L at H.
+<a id="eff_mod_over"></a>`eff_mod_over`(F, N) if all of:
+  - `eff_name`(N);
+  - [`eff_module`](#eff_module)(F, L, H);
+  - unless an effect N [covers](#eff_row) an effect label L at a host H.
 
 <a id="eff_mod_bounded"></a>`eff_mod_bounded`(F, N) if all of:
   - [`eff_mod_subject`](#eff_mod_subject)(F);
@@ -651,17 +662,17 @@ I has the effect L at H if [`eff_evaluates_at`](#eff_evaluates_at)(I, T) and [`e
 
 <a id="eff_mod_unnamed"></a>`eff_mod_unnamed`(F) if [`eff_mod_subject`](#eff_mod_subject)(F), unless [`effect_of_module`](#effect_of_module)(F, something).
 
-<a id="eff_mod_two_names"></a>F has two module effects X and B if all of:
+<a id="eff_mod_two_names"></a>A file F has two module effects X and B if all of:
   - [`effect_of_module`](#effect_of_module)(F, X);
   - [`effect_of_module`](#effect_of_module)(F, B);
   - X differs from B.
 
 <a id="eff_mod_join_short"></a>`eff_mod_join_short`(F, T, J) if all of:
   - [`eff_evaluates_at`](#eff_evaluates_at)(I, T);
-  - I [is of kind](js-model.md#ast_node) some kind in file F;
+  - a node I [is of kind](js-model.md#ast_node) some kind in file F;
   - [`effect_of_module`](#effect_of_module)(F, NF);
   - [`effect_of_module`](#effect_of_module)(T, NT);
-  - [the join](#eff_join) of NF and NT is J;
+  - [the join](#eff_join) of an effect NF and NT is an effect J;
   - J differs from NF.
 
 ## 5d. A HIDDEN CALL THAT REACHES `calls` AND NOT `resolves`
@@ -685,12 +696,12 @@ I has the effect L at H if [`eff_evaluates_at`](#eff_evaluates_at)(I, T) and [`e
 <a id="eff_edge_closed"></a>`eff_edge_closed`(F, G) either:
 
 1. if C [resolves to](js-callgraph.md#resolves) G and [`nearest_fn`](js-callgraph.md#nearest_fn)(F, C);
-2. if C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
+2. if a node C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
 
 <a id="eff_edge_unclosed"></a>`eff_edge_unclosed`(F, G, L, H) if all of:
   - [`calls`](js-callgraph.md#calls)(F, G);
   - [`fn_node`](js-callgraph.md#fn_node)(F);
-  - G [has the latent effect](#eff_latent) L at H;
+  - G [has the latent effect](#eff_latent) an effect label L at a host H;
   - unless [`eff_edge_closed`](#eff_edge_closed)(F, G);
   - unless F [has the latent effect](#eff_latent) L at H.
 
@@ -711,12 +722,12 @@ I has the effect L at H if [`eff_evaluates_at`](#eff_evaluates_at)(I, T) and [`e
 
 <a id="eff_class_body"></a>`eff_class_body`(CD, P) if all of:
   - [`eff_class_form`](#eff_class_form)(K);
-  - CD [is of kind](js-model.md#ast_node) K;
-  - the `body` of CD is B;
-  - P is among the `body` of B.
+  - a node CD [is of kind](js-model.md#ast_node) K;
+  - the `body` of CD is a node B;
+  - a node P is among the `body` of B.
 
-<a id="eff_field_value"></a>CD initialises the field at P with V if all of:
-  - [`eff_class_body`](#eff_class_body)(CD, P);
+<a id="eff_field_value"></a>A class initialises the field at a node P with a node V if all of:
+  - [`eff_class_body`](#eff_class_body)(it, P);
   - [`eff_field_kind`](#eff_field_kind)(K);
   - P [is of kind](js-model.md#ast_node) K;
   - the `value` of P is V.
@@ -732,17 +743,17 @@ Declared as facts: eff_class_form, eff_field_kind.
 <a id="eff_field_moment"></a>`eff_field_moment`(P, N) either:
 
 1. if all of:
-   - some class [initialises the field](#eff_field_value) at P with some node;
+   - some class [initialises the field](#eff_field_value) at a node P with some node;
    - the attribute `static` of P is `true`;
    - N is `definition`;
 2. if all of:
-   - some class [initialises the field](#eff_field_value) at P with some node;
+   - some class [initialises the field](#eff_field_value) at a node P with some node;
    - the attribute `static` of P is `false`;
    - N is `construction`.
 
-<a id="eff_define_part"></a>`eff_define_part`(CD, V) if CD [initialises the field](#eff_field_value) at P with V and [`eff_field_moment`](#eff_field_moment)(P, `definition`).
+<a id="eff_define_part"></a>`eff_define_part`(CD, V) if a class CD [initialises the field](#eff_field_value) at a node P with a node V and [`eff_field_moment`](#eff_field_moment)(P, `definition`).
 
-<a id="eff_construct_part"></a>`eff_construct_part`(CD, V) if CD [initialises the field](#eff_field_value) at P with V and [`eff_field_moment`](#eff_field_moment)(P, `construction`).
+<a id="eff_construct_part"></a>`eff_construct_part`(CD, V) if a class CD [initialises the field](#eff_field_value) at a node P with a node V and [`eff_field_moment`](#eff_field_moment)(P, `construction`).
 
 `eff_define_part`(CD, a static block S) if [`eff_class_body`](#eff_class_body)(CD, S).
 
@@ -754,22 +765,22 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 `eff_define_part`(CD, S) if all of:
   - [`eff_class_form`](#eff_class_form)(K);
-  - CD [is of kind](js-model.md#ast_node) K;
-  - the `super_class` of CD is S.
+  - a node CD [is of kind](js-model.md#ast_node) K;
+  - the `super_class` of CD is a node S.
 
-<a id="eff_plain_key"></a>`eff_plain_key`(P) if [`eff_class_body`](#eff_class_body)(something, P), unless the attribute `computed` of P is `true`.
+<a id="eff_plain_key"></a>`eff_plain_key`(P) if [`eff_class_body`](#eff_class_body)(something, P), unless the attribute `computed` of a node P is `true`.
 
 `eff_define_part`(CD, KN) either:
 
 1. if all of:
    - [`eff_class_body`](#eff_class_body)(CD, P);
-   - the `key` of P is KN;
+   - the `key` of a node P is a node KN;
    - unless [`eff_plain_key`](#eff_plain_key)(P);
 2. if all of:
    - [`eff_class_form`](#eff_class_form)(K);
    - CD [is of kind](js-model.md#ast_node) K;
-   - KN is among the `decorators` of CD;
-3. if [`eff_class_body`](#eff_class_body)(CD, P) and KN is among the `decorators` of P.
+   - a node KN is among the `decorators` of CD;
+3. if [`eff_class_body`](#eff_class_body)(CD, P) and a node KN is among the `decorators` of a node P.
 
 > What runs when a part is reached, stopping at a function: `static forge =
 > (n) => hammered(n)` contributes `alloc`, not what `hammered` does. A try
@@ -783,7 +794,7 @@ Declared as facts: eff_class_form, eff_field_kind.
 2. if [`eff_construct_part`](#eff_construct_part)(something, P) and N is P;
 3. if all of:
    - [`eff_runs_in`](#eff_runs_in)(P, Y);
-   - Y [is in file](js-structure.md#ast_in) N;
+   - N [is under](js-structure.md#ast_in) a node Y;
    - unless [`fn_node_v`](js-dataflow.md#fn_node_v)(Y).
 
 `eff_catch_here`(N) if all of:
@@ -797,12 +808,12 @@ Declared as facts: eff_class_form, eff_field_kind.
 > instance initialisers INCLUDING the shadowed ones (both run, one value
 > survives), so this walks `super_of` and not `inherited_field`.
 
-<a id="class_define_eff"></a>CD defines with effect L at H either:
+<a id="class_define_eff"></a>A class CD defines with effect an effect label L at a host H either:
 
 1. if all of:
    - [`eff_define_part`](#eff_define_part)(CD, P);
    - [`eff_runs_in`](#eff_runs_in)(P, X);
-   - X [has the effect](js-ambient.md#eff_here) L at H;
+   - a node X [has the effect](js-ambient.md#eff_here) L at H;
 2. if all of:
    - [`eff_define_part`](#eff_define_part)(CD, P);
    - [`eff_runs_in`](#eff_runs_in)(P, C);
@@ -810,12 +821,12 @@ Declared as facts: eff_class_form, eff_field_kind.
    - G [has the latent effect](#eff_latent) L at H;
    - unless [`eff_discharged_at`](#eff_discharged_at)(C, L).
 
-<a id="class_construct_eff"></a>CD constructs with effect L at H either:
+<a id="class_construct_eff"></a>A class CD constructs with effect an effect label L at a host H either:
 
 1. if all of:
    - [`eff_construct_part`](#eff_construct_part)(CD, P);
    - [`eff_runs_in`](#eff_runs_in)(P, X);
-   - X [has the effect](js-ambient.md#eff_here) L at H;
+   - a node X [has the effect](js-ambient.md#eff_here) L at H;
 2. if all of:
    - [`eff_construct_part`](#eff_construct_part)(CD, P);
    - [`eff_runs_in`](#eff_runs_in)(P, C);
@@ -828,38 +839,38 @@ Declared as facts: eff_class_form, eff_field_kind.
 > `prototype`, where a function declaration is hoisted and performs nothing
 > where it is written).
 
-CD has the effect L at H if CD [defines with effect](#class_define_eff) L at H.
+A node has the effect an effect label L at a host H if it [defines with effect](#class_define_eff) L at H.
 
-A new has the effect L at H if it [may be the node](js-dataflow.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
+A new has the effect an effect label L at a host H if it [may be the node](js-dataflow.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
 
 `eff_alloc_kind` includes `class_declaration`.
 
 > A field initialiser runs at definition or construction, never both, never
 > neither — an identity, true of any corpus.
 
-<a id="eff_moment_both"></a>P has two moments X and B if all of:
-  - [`eff_field_moment`](#eff_field_moment)(P, X);
-  - [`eff_field_moment`](#eff_field_moment)(P, B);
+<a id="eff_moment_both"></a>A node has two moments X and B if all of:
+  - [`eff_field_moment`](#eff_field_moment)(it, X);
+  - [`eff_field_moment`](#eff_field_moment)(it, B);
   - X differs from B.
 
-<a id="eff_moment_unplaced"></a>`eff_moment_unplaced`(P) if some class [initialises the field](#eff_field_value) at P with some node, unless [`eff_field_moment`](#eff_field_moment)(P, something).
+<a id="eff_moment_unplaced"></a>`eff_moment_unplaced`(P) if some class [initialises the field](#eff_field_value) at a node P with some node, unless [`eff_field_moment`](#eff_field_moment)(P, something).
 
 <a id="eff_define_unreached"></a>`eff_define_unreached`(CE, S) either:
 
-1. if CE is a class expression and the `super_class` of CE is S;
+1. if CE is a class expression and the `super_class` of CE is a node S;
 2. if all of:
    - CE is a class expression;
-   - the `body` of CE is B;
+   - the `body` of CE is a node B;
    - S is among the `body` of B;
    - S is a static block;
 3. if all of:
    - CE is a class expression;
-   - the `body` of CE is B;
-   - P is among the `body` of B;
+   - the `body` of CE is a node B;
+   - a node P is among the `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);
    - P [is of kind](js-model.md#ast_node) K;
    - the attribute `static` of P is `true`;
-   - the `value` of P is S.
+   - the `value` of P is a node S.
 
 ## 7. Where this pack cannot look
 

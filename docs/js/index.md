@@ -3,7 +3,7 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.md) | 325 | 2 | 0 | 0 | 0 | 0 | 0 | 12 | 0 | 0 |
+| [js-phrases](js-phrases.md) | 326 | 2 | 0 | 0 | 0 | 0 | 0 | 12 | 0 | 0 |
 | [js-ambient](js-ambient.md) | 69 | 42 | 8 | 31 | 0 | 91 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.md) | 49 | 37 | 7 | 30 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.md) | 212 | 91 | 5 | 77 | 24 | 240 | 20 | 4 | 4 | 0 |
