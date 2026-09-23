@@ -10,6 +10,8 @@ edb(sig).
 -- what the scanner seeds, in the code
 phrase(ast_node, "<node> is of kind <kind> in file <file> at line <line>").
 phrase(ast_node, "<0:node> is of kind <1:kind> <2=_> <3=_>").
+phrase(ast_node, "<0:node> is in file <2:file> <1=_> <3=_>").
+phrase(ast_node, "<0:node> is at line <3:line> <1=_> <2=_>").
 phrase(ast_node, "<0:node> is of kind <1:kind> in file <2:file> <3=_>").
 phrase(ast_child, "the <1:child> of <0:node> is <3:node> <2=0>").
 phrase(ast_child, "<3:node> is among the <1:child> of <0:node> <2=_>").
@@ -104,14 +106,14 @@ kind_noun(class_field_kind, "field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
 kind_noun(block_scope_kind, "block scope").
-kind_noun(call_like_v, "call").
+kind_noun(call_like_v, "invocation").
+kind_noun(call_kind, "call").
 
 -- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
 edb(kind_set).
--- a noun bound to a unary relation: `a function F` is `fn_node_v(F)`, the relation is
+-- a noun bound to a unary relation: `a function F` is `fn_node(F)`, the relation is
 -- the guard and the kind set behind it is a table (`K is a function kind`)
 edb(noun_guard).
-noun_guard(fn_node_v, "function").
 noun_guard(fn_node, "function").
 noun_guard(member_node_v, "member access").
 noun_guard(scope_node, "scope").
@@ -122,9 +124,9 @@ kind_set(member_kind_v).
 kind_set(class_field_kind).
 kind_set(private_member_kind).
 kind_set(this_binds_kind).
-kind_set(fn_kind_v).
 kind_set(block_scope_kind).
 kind_set(call_like_v).
+kind_set(call_kind).
 
 -- signatures: the head phrase is the name, each argument is `[marker] noun Var`
 -- in the relation's own order; a name that differs from the relation is a
@@ -156,9 +158,9 @@ sig(tdz_cand, "is_a_dead_zone_candidate_of(node E, declarator D)").
 sig(tdz_deferred, "is_deferred_for(node E, declarator D)").
 sig(tdz_at, "is_in_the_dead_zone_of(node E, declarator D)").
 sig(assigns, "is_assigned(name Name, node Src, in file File)").
-sig(spread_arg, "has_a_spread(call C, at index I)").
-sig(after_spread, "is_past_a_spread(call C, at index I)").
-sig(arg_at, "passes(call C, node A:2, at index I:1)").
+sig(spread_arg, "has_a_spread(invocation C, at index I)").
+sig(after_spread, "is_past_a_spread(invocation C, at index I)").
+sig(arg_at, "passes(invocation C, node A:2, at index I:1)").
 sig(destructures, "destructures(declarator D, name Local, from key Key, in file File)").
 sig(destructures_at, "destructures(declarator D, name Local, at index Index, in file File)").
 sig(pattern_takes, "takes_the_key(object pattern P, key Key)").
@@ -178,7 +180,13 @@ sig(plain_assign, "is_plain(assignment E)").
 sig(obj_like, "is_object_like(node O)").
 sig(member_value, "the_member(of node O, key Key, holds node V)").
 sig(own_key, "owns_the_key(class CD, key Key)").
-sig(fn_kind_v, "is_a_function_kind(kind K)").
+sig(fn_kind, "is_a_function_kind(kind K)").
+sig(call_kind, "is_a_call_kind(kind K)").
+sig(call_site, "is_a_call_site(call C, in file File)").
+sig(call_site_kind, "the_call_kind(of call C, is kind K)").
+sig(call_line, "the_line(of call C, is line Line)").
+sig(callee_of, "the_callee(of call C, is node N)").
+sig(callee_kind, "the_callee_kind(of call C, is kind K)").
 sig(member_kind_v, "is_a_member_kind(kind K)").
 sig(selects, "selects(member access N, key Key)").
 sig(class_member_static, "the_static_member(of class CD, key Key, is node V)").

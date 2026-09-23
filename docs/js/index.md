@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.md) | 329 | 3 | 0 | 0 | 0 | 0 | 0 | 13 | 0 | 0 |
+| [js-phrases](js-phrases.md) | 337 | 3 | 0 | 0 | 0 | 0 | 0 | 13 | 0 | 0 |
 | [js-ambient](js-ambient.md) | 69 | 42 | 8 | 31 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.md) | 49 | 37 | 7 | 30 | 0 | 101 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.md) | 212 | 91 | 6 | 76 | 41 | 223 | 20 | 4 | 4 | 0 |
-| [js-controlflow](js-controlflow.md) | 229 | 87 | 5 | 69 | 35 | 239 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.md) | 295 | 125 | 111 | 1 | 125 | 428 | 23 | 2 | 3 | 0 |
-| [js-effects](js-effects.md) | 211 | 128 | 21 | 99 | 23 | 308 | 20 | 2 | 7 | 0 |
+| [js-callgraph](js-callgraph.md) | 212 | 91 | 11 | 71 | 43 | 221 | 20 | 4 | 4 | 0 |
+| [js-controlflow](js-controlflow.md) | 229 | 87 | 5 | 69 | 36 | 237 | 15 | 5 | 2 | 0 |
+| [js-dataflow](js-dataflow.md) | 287 | 123 | 110 | 1 | 127 | 421 | 23 | 2 | 3 | 0 |
+| [js-effects](js-effects.md) | 211 | 128 | 21 | 99 | 23 | 307 | 20 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.md) | 5 | 5 | 1 | 4 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.md) | 45 | 34 | 4 | 29 | 0 | 48 | 5 | 1 | 17 | 0 |
 | [js-globals](js-globals.md) | 40 | 22 | 9 | 10 | 2 | 47 | 1 | 2 | 6 | 0 |
@@ -21,7 +21,7 @@
 | [js-structure](js-structure.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.md) | 12 | 10 | 5 | 5 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-541 heads without a phrase across these files.
+536 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -56,6 +56,12 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `binds_name` | `introduces` |
 | `builtin_prototype` | `is_a_builtin_prototype` |
 | `call_in_try` | `calls` |
+| `call_kind` | `is_a_call_kind` |
+| `call_line` | `the_line` |
+| `call_site` | `is_a_call_site` |
+| `call_site_kind` | `the_call_kind` |
+| `callee_kind` | `the_callee_kind` |
+| `callee_of` | `the_callee` |
 | `catch_from_call` | `catches_from_a_call` |
 | `catch_from_host` | `catches_from_the_host` |
 | `catch_of` | `the_catch` |
@@ -124,7 +130,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
 | `field_of` | `has_the_field` |
-| `fn_kind_v` | `is_a_function_kind` |
+| `fn_kind` | `is_a_function_kind` |
 | `for_of_name` | `loops_over` |
 | `for_of_src` | `iterates` |
 | `for_of_use` | `loops_with` |
@@ -241,13 +247,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `verdict` | `the_verdict` |
 | `walk` | `walks` |
 | `within_attr` | `contains_the_attribute` |
-
-## One noun, two guards
-
-A file that uses two relations bound to one noun binds the noun to the one it uses most; the other reads positionally.
-
-- `function` in js-controlflow: `fn_node` (9), `fn_node_v` (2)
-- `function` in js-effects: `fn_node` (3), `fn_node_v` (1)
 
 ## One name, two books
 

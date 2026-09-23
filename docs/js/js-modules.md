@@ -93,9 +93,9 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 3. if [`reexport_site`](#reexport_site)(I, `reexport_named`) and N is `export_named_declaration`;
 4. if [`reexport_site`](#reexport_site)(I, `reexport_all`) and N is `export_all_declaration`.
 
-<a id="site_file"></a>`site_file`(I, F) if [`module_site`](#module_site)(I, something) and a node I [is of kind](js-model.md#ast_node) some kind in file F.
+<a id="site_file"></a>`site_file`(I, F) if [`module_site`](#module_site)(I, something) and a node I [is in file](js-model.md#ast_node) F.
 
-<a id="site_line"></a>`site_line`(I, L) if [`module_site`](#module_site)(I, something) and a node I [is of kind](js-model.md#ast_node) some kind in file some file at line L.
+<a id="site_line"></a>`site_line`(I, L) if [`module_site`](#module_site)(I, something) and a node I [is at line](js-model.md#ast_node) L.
 
 <a id="site_source_node"></a>`site_source_node`(I, Src) if [`module_site`](#module_site)(I, something) and the `source` of a node I is a node Src.
 
@@ -438,14 +438,14 @@ A node
 1. if all of:
    - [`export_spec`](#export_spec)(E, Sp);
    - [`local_export_site`](#local_export_site)(E);
-   - a node E [is of kind](js-model.md#ast_node) some kind in file F;
+   - a node E [is in file](js-model.md#ast_node) F;
 2. if [`reexport_spec`](#reexport_spec)(E, Sp) and [`resolved_import`](#resolved_import)(E, F).
 
 <a id="export_internal_unplaced"></a>`export_internal_unplaced`(Sp, Sh) if [`reexport_spec`](#reexport_spec)(E, Sp) and [`unresolved_import`](#unresolved_import)(E, Sh).
 
 <a id="export_internal_elsewhere"></a>`export_internal_elsewhere`(F, X, T) if all of:
   - [`export_binding`](#export_binding)(E, Sp, X, something);
-  - a node E [is of kind](js-model.md#ast_node) some kind in file F;
+  - a node E [is in file](js-model.md#ast_node) F;
   - [`export_internal_in`](#export_internal_in)(Sp, T);
   - T differs from F.
 
@@ -525,7 +525,7 @@ A node
 > and NOT modelled: wiring it into `module_site` changes the relation the test
 > compares site for site against node's own resolver.
 
-<a id="module_meta"></a>`module_meta`(F, M) if a node M [has the meta form](js-structure.md#meta_form) `import_meta` and M [is of kind](js-model.md#ast_node) some kind in file F.
+<a id="module_meta"></a>`module_meta`(F, M) if a node M [has the meta form](js-structure.md#meta_form) `import_meta` and M [is in file](js-model.md#ast_node) F.
 
 <a id="self_referential_module"></a>`self_referential_module`(F) if [`module_meta`](#module_meta)(F, something).
 

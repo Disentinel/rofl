@@ -161,9 +161,9 @@ Declared as facts: declaring_position.
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and an access N [selects the static](#es_static) Key of Name from a relation Rel.
+<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [the callee](js-callgraph.md#callee_of) of C [selects the static](#es_static) Key of Name from a relation Rel.
 
-<a id="es_global_invoke"></a>C invokes the global Name of a relation Rel if [`callee_of`](js-callgraph.md#callee_of)(C, N) and a node N [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_invoke"></a>C invokes the global Name of a relation Rel if [the callee](js-callgraph.md#callee_of) of C [is the global](#es_global) Name of Rel with some form.
 
 <a id="es_global_construct"></a>A node constructs the global Name of a relation Rel if [`transfer_site`](js-callgraph.md#transfer_site)(it, `new_expression`) and the `callee` of it [is the global](#es_global) Name of Rel with some form.
 
@@ -236,8 +236,8 @@ The prototype of a node E is P if all of:
 
 <a id="es_instance_unattributed"></a>`es_instance_unattributed`(C, Name, Key) if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - the `object` of a node N [may be the node](js-dataflow.md#may_be_node) X;
+  - [the callee](js-callgraph.md#callee_of) of C is a node N;
+  - the `object` of N [may be the node](js-dataflow.md#may_be_node) X;
   - X [is an instance](#es_instance) of Name from some relation;
   - N [selects](js-dataflow.md#selects) Key;
   - unless `lib_global_prototype`(Name, something).

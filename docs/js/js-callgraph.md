@@ -8,7 +8,7 @@ default: code
 
 ## Terms
 
-*await*, *class expression*, *declarator*, *decorator*, *field*, *function*, *function declaration*, *method*, *object literal*, *object method*, *optional member expression*, *property*, *super*, *template*.
+*await*, *call*, *class expression*, *declarator*, *decorator*, *field*, *function*, *function declaration*, *method*, *object literal*, *object method*, *optional member expression*, *property*, *super*, *template*.
 
 ## Kinds
 
@@ -17,6 +17,7 @@ A noun is a node of one of its kinds:
 | noun | kinds |
 |---|---|
 | an await | await_expression |
+| a call | call_kind |
 | a class expression | class_expression |
 | a declarator | variable_declarator |
 | a decorator | decorator |
@@ -38,7 +39,14 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 ## Signatures
 
+- is_a_call_kind(kind K) (call_kind), in the main
+- is_a_call_site(call C, in file File) (call_site)
+- the_call_kind(of call C, is kind K) (call_site_kind)
+- the_line(of call C, is line Line) (call_line)
+- the_callee(of call C, is node N) (callee_of)
+- the_callee_kind(of call C, is kind K) (callee_kind)
 - has_two_shapes(call C, shape A, shape B) (multi_shape), in the audit
+- is_a_function_kind(kind K) (fn_kind), in the main
 - is_decorated_by(node Owner, node D) (decorates)
 - resolves_to(call C, function F) (resolves)
 - has_two_callees(call C, function F, function G) (ambiguous_call), in the audit
@@ -58,17 +66,17 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 ## 1. Call sites
 
-<a id="call_kind"></a>`call_kind` includes `call_expression`, `optional_call_expression`.
+<a id="call_kind"></a>`call_kind`, a call, includes `call_expression`, `optional_call_expression`.
 
-<a id="call_site"></a>`call_site`(C, File) if a node C [is of kind](js-model.md#ast_node) K in file File and [`call_kind`](#call_kind)(K).
+<a id="call_site"></a>A call is a call site in File if it is in file File.
 
-<a id="call_site_kind"></a>`call_site_kind`(C, K) if a node C [is of kind](js-model.md#ast_node) K and [`call_kind`](#call_kind)(K).
+<a id="call_site_kind"></a>The call kind of a node C is K if C [is of kind](js-model.md#ast_node) K and K [is a call kind](#call_kind).
 
-<a id="call_line"></a>`call_line`(C, Line) if [`call_site`](#call_site)(C, something) and a node C [is of kind](js-model.md#ast_node) some kind in file some file at line Line.
+<a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.md#ast_node) Line.
 
-<a id="callee_of"></a>`callee_of`(C, N) if [`call_site`](#call_site)(C, something) and the `callee` of a node C is a node N.
+<a id="callee_of"></a>The callee of a node C is a node N if C [is a call site](#call_site) in some file and the `callee` of C is N.
 
-<a id="callee_kind"></a>`callee_kind`(C, K) if [`callee_of`](#callee_of)(C, N) and a node N [is of kind](js-model.md#ast_node) K.
+<a id="callee_kind"></a>The callee kind of C is K if [the callee](#callee_of) of C [is of kind](js-model.md#ast_node) K.
 
 Declared as facts: call_kind.
 
@@ -82,14 +90,14 @@ Declared as facts: call_kind.
 
 <a id="site"></a>`site`(X) either:
 
-1. if [`call_site`](#call_site)(X, something);
+1. if X [is a call site](#call_site) in some file;
 2. if [`transfer_site`](#transfer_site)(X, something).
 
 Declared as facts: transfer_kind.
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
-<a id="call_arg"></a>`call_arg`(C, I, X) if [`call_site`](#call_site)(C, something) and a node X is the I-th of the `arguments` of a node C.
+<a id="call_arg"></a>`call_arg`(C, I, X) if a node C [is a call site](#call_site) in some file and a node X is the I-th of the `arguments` of C.
 
 ## 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 
@@ -120,11 +128,11 @@ Declared as facts: transfer_kind.
 <a id="member_kind"></a>`member_kind` includes `member_expression`, `optional_member_expression`.
 
 <a id="member_like"></a>`member_like`(C, N) if all of:
-  - [`callee_of`](#callee_of)(C, N);
-  - a node N [is of kind](js-model.md#ast_node) K;
+  - [the callee](#callee_of) of C is a node N;
+  - N [is of kind](js-model.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
 
-<a id="optional_member"></a>`optional_member`(C) if [`callee_of`](#callee_of)(C, an optional member expression N).
+<a id="optional_member"></a>`optional_member`(C) if [the callee](#callee_of) of C is an optional member expression N.
 
 <a id="computed_member"></a>`computed_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of a node N is `true`.
 
@@ -228,7 +236,7 @@ Declared as facts: obj_kind_class, member_shape.
 
 <a id="shape_known"></a>`shape_known`(C, S) either:
 
-1. if [`callee_kind`](#callee_kind)(C, K) and [`callee_shape`](#callee_shape)(K, S);
+1. if [the callee kind](#callee_kind) of C is K and [`callee_shape`](#callee_shape)(K, S);
 2. if all of:
    - [`computed_member`](#computed_member)(C, something);
    - [`computed_key_static`](#computed_key_static)(C);
@@ -261,17 +269,17 @@ Declared as facts: static_key_kind.
 
 1. if [`shape_known`](#shape_known)(C, S);
 2. if all of:
-   - [`call_site`](#call_site)(C, something);
+   - C [is a call site](#call_site) in some file;
    - S is `s_unclassified`;
    - unless [`has_shape`](#has_shape)(C).
 
 <a id="catch_all_occupied"></a>`catch_all_occupied`(K) if [`shape`](#shape)(C, `s_member_on_other`) and [`callee_obj_kind`](#callee_obj_kind)(C, K).
 
-<a id="unnamed_callee"></a>`unnamed_callee`(K) if [`shape`](#shape)(C, `s_unclassified`) and [`callee_kind`](#callee_kind)(C, K).
+<a id="unnamed_callee"></a>`unnamed_callee`(K) if [`shape`](#shape)(C, `s_unclassified`) and [the callee kind](#callee_kind) of C is K.
 
 <a id="shaped"></a>`shaped`(C) if [`shape`](#shape)(C, something).
 
-<a id="unshaped"></a>`unshaped`(C) if [`call_site`](#call_site)(C, something), unless [`shaped`](#shaped)(C).
+<a id="unshaped"></a>`unshaped`(C) if C [is a call site](#call_site) in some file, unless [`shaped`](#shaped)(C).
 
 <a id="multi_shape"></a>C has two shapes X and B if [`shape`](#shape)(C, X), [`shape`](#shape)(C, B), and X differs from B.
 
@@ -279,9 +287,9 @@ Declared as facts: static_key_kind.
 
 <a id="fn_kind"></a>`fn_kind` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
 
-<a id="fn_node"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and [`fn_kind`](#fn_kind)(K).
+<a id="fn_node"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind).
 
-<a id="fn_file"></a>`fn_file`(a function F, File) if F [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="fn_file"></a>`fn_file`(a function F, File) if F [is in file](js-model.md#ast_node) File.
 
 Declared as facts: fn_kind.
 
@@ -379,7 +387,7 @@ Declared as facts: fn_kind.
 
 <a id="top_call"></a>`top_call`(C, R) if all of:
   - [`site`](#site)(C);
-  - a node C [is of kind](js-model.md#ast_node) some kind in file File;
+  - a node C [is in file](js-model.md#ast_node) File;
   - `ast_file`(R, File);
   - unless [`enclosed`](#enclosed)(C).
 
@@ -425,7 +433,7 @@ Declared as facts: fn_kind.
    - X [may be the node](js-dataflow.md#may_be_node) CD;
    - [`class_ctor`](#class_ctor)(CD, M);
 2. if all of:
-   - [`callee_of`](#callee_of)(X, a super N);
+   - [the callee](#callee_of) of X is a super N;
    - N [may be the node](js-dataflow.md#may_be_node) SD;
    - [the constructor](js-dataflow.md#ctor_of) of SD is M.
 
@@ -469,7 +477,7 @@ X resolves to M if [`for_of_iterates`](#for_of_iterates)(X, M).
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to a function F if [`callee_of`](#callee_of)(C, N) and a node N [may be the node](js-dataflow.md#may_be_node) F.
+C resolves to a function F if [the callee](#callee_of) of C [may be the node](js-dataflow.md#may_be_node) F.
 
 <a id="ambiguous_call"></a>C has two callees F and G if C [resolves to](#resolves) F, C [resolves to](#resolves) G, and F differs from G.
 
@@ -493,7 +501,7 @@ C resolves to a function F if [`callee_of`](#callee_of)(C, N) and a node N [may 
 
 1. if all of:
    - [`calls`](#calls)(X, Y);
-   - a node X [is of kind](js-model.md#ast_node) some kind in file File;
+   - a node X [is in file](js-model.md#ast_node) File;
    - [`fn_name`](#fn_name)(X, Z);
    - [`fn_name`](#fn_name)(Y, B);
 2. if [`calls`](#calls)(R, Y), `ast_file`(R, File), [`fn_name`](#fn_name)(Y, B), and Z is `top`.
@@ -513,7 +521,7 @@ C resolves to a function F if [`callee_of`](#callee_of)(C, N) and a node N [may 
 
 <a id="resolved_site"></a>`resolved_site`(C) if C [resolves to](#resolves) some function.
 
-<a id="resolved_call"></a>`resolved_call`(C) if [`resolved_site`](#resolved_site)(C) and [`call_site`](#call_site)(C, something).
+<a id="resolved_call"></a>`resolved_call`(C) if [`resolved_site`](#resolved_site)(C) and C [is a call site](#call_site) in some file.
 
 <a id="unresolved_call"></a>`unresolved_call`(C, S) if [`shape`](#shape)(C, S), unless [`resolved_site`](#resolved_site)(C).
 
@@ -521,8 +529,8 @@ C resolves to a function F if [`callee_of`](#callee_of)(C, N) and a node N [may 
 
 <a id="stdlib_member"></a>C calls the stdlib member Key of a prototype P if all of:
   - [`unresolved_call`](#unresolved_call)(C, something);
-  - [`callee_of`](#callee_of)(C, N);
-  - the `object` of a node N is a node O;
+  - [the callee](#callee_of) of C is a node N;
+  - the `object` of N is a node O;
   - [the prototype](js-dataflow.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
   - N [selects](js-dataflow.md#selects) Key.
@@ -621,8 +629,8 @@ Declared as facts: shape_because.
 
 <a id="callgraph_kind"></a>`callgraph_kind`(K) either:
 
-1. if [`call_site_kind`](#call_site_kind)(something, K);
-2. if [`callee_kind`](#callee_kind)(something, K);
+1. if [the call kind](#call_site_kind) of some call is K;
+2. if [the callee kind](#callee_kind) of some call is K;
 3. if [`callee_obj_kind`](#callee_obj_kind)(something, K);
 4. if [`callee_prop`](#callee_prop)(something, P) and a node P [is of kind](js-model.md#ast_node) K;
 5. if a function F [is of kind](js-model.md#ast_node) K;

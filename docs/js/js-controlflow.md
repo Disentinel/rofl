@@ -265,16 +265,14 @@ Declared as facts: completion_deferred.
 <a id="completion_outer"></a>`completion_outer`(P, S) if all of:
   - [`completes_abruptly`](#completes_abruptly)(S);
   - a node S [is within](js-structure.md#ast_within) a node P;
-  - P [is of kind](js-model.md#ast_node) K;
+  - P [is of kind](js-model.md#ast_node) K but is not a function;
   - [`stmt_seq_field`](#stmt_seq_field)(F);
   - P is among the F of some node;
-  - unless [`completion_known`](#completion_known)(K);
-  - unless [`fn_node_v`](js-dataflow.md#fn_node_v)(P).
+  - unless [`completion_known`](#completion_known)(K).
 
 <a id="completion_fn_between"></a>`completion_fn_between`(P, S) if all of:
   - [`completion_outer`](#completion_outer)(P, S);
-  - a node G [is within](js-structure.md#ast_within) a node P;
-  - [`fn_node_v`](js-dataflow.md#fn_node_v)(G);
+  - a function G [is within](js-structure.md#ast_within) a node P;
   - a node S [is within](js-structure.md#ast_within) G.
 
 <a id="completion_unaccounted"></a>`completion_unaccounted`(K) if all of:
@@ -297,7 +295,7 @@ Declared as facts: completion_deferred.
 <a id="always_throws"></a>`always_throws`(F) if [`top_throw`](#top_throw)(F), unless [`has_return`](#has_return)(F).
 
 <a id="throwing_call"></a>`throwing_call`(C) if all of:
-  - [`call_site`](js-callgraph.md#call_site)(C, something);
+  - C [is a call site](js-callgraph.md#call_site) in some file;
   - C [resolves to](js-callgraph.md#resolves) F;
   - [`always_throws`](#always_throws)(F).
 
@@ -598,7 +596,7 @@ A node is abrupt at F from an index I if all of:
 > A function every one of whose sites is guarded may never be entered.
 > `may_not_run` is LOCAL, one level; the transitive question is reachability.
 
-<a id="guarded_call"></a>`guarded_call`(C) if [`call_site`](js-callgraph.md#call_site)(C, something) and [`guarded`](#guarded)(C).
+<a id="guarded_call"></a>`guarded_call`(C) if C [is a call site](js-callgraph.md#call_site) in some file and [`guarded`](#guarded)(C).
 
 <a id="reached_unguarded"></a>`reached_unguarded`(F) if C [resolves to](js-callgraph.md#resolves) F, unless [`guarded`](#guarded)(C).
 
@@ -664,9 +662,9 @@ Declared as facts: export_kind.
 > A file with functions and no entry point reports every function dead — an
 > artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
 
-<a id="has_entry"></a>`has_entry`(File) if [`entry_point`](#entry_point)(F) and a node F [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="has_entry"></a>`has_entry`(File) if [`entry_point`](#entry_point)(F) and a node F [is in file](js-model.md#ast_node) File.
 
-<a id="no_entry_point"></a>`no_entry_point`(File) if a function F [is of kind](js-model.md#ast_node) some kind in file File, unless [`has_entry`](#has_entry)(File).
+<a id="no_entry_point"></a>`no_entry_point`(File) if a function F [is in file](js-model.md#ast_node) File, unless [`has_entry`](#has_entry)(File).
 
 ## 8. THE GATES. Every kind that transfers control carries a MECHANISM, and
 
@@ -809,7 +807,6 @@ Declared as facts: short_circuit_kind.
 - [export_local](js-dataflow.md#export_local), in the code
 - [fn_name](js-callgraph.md#fn_name), in the code
 - [fn_node](js-callgraph.md#fn_node), in the code
-- [fn_node_v](js-dataflow.md#fn_node_v), in the flow
 - [for_of_iterates](js-callgraph.md#for_of_iterates), in the code
 - [may_be_lit](js-dataflow.md#may_be_lit), in the flow
 - [may_be_node](js-dataflow.md#may_be_node), in the flow

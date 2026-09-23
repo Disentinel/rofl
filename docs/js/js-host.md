@@ -70,7 +70,7 @@ Declared as facts: ast_parse_error.
 `name_bound_in`(File, Name) either:
 
 1. if a function declaration F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
-2. if a node F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
+2. if a node F [takes](js-dataflow.md#param_of) Name at some index and F [is in file](js-model.md#ast_node) File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if a site I [binds the name](js-modules.md#binding) Name to some name at some specifier and [`site_file`](js-modules.md#site_file)(I, File).
 
@@ -125,23 +125,20 @@ Declared as facts: ast_parse_error.
 > `selects[flow]` answers the key for the dotted and the computed form alike.
 
 <a id="host_member_call"></a>`host_member_call`(C, H, Name, Key) if all of:
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - the `object` of a node N [refers to the global](#host_global_ref) Name of a host H;
+  - [the callee](js-callgraph.md#callee_of) of C is a node N;
+  - the `object` of N [refers to the global](#host_global_ref) Name of a host H;
   - N [selects](js-dataflow.md#selects) Key.
 
-<a id="host_global_call"></a>`host_global_call`(C, H, Name) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and a node N [refers to the global](#host_global_ref) Name of a host H.
+<a id="host_global_call"></a>`host_global_call`(C, H, Name) if [the callee](js-callgraph.md#callee_of) of C [refers to the global](#host_global_ref) Name of a host H.
 
 <a id="host_module_call"></a>`host_module_call`(C, Spec, Key) either:
 
 1. if all of:
-   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of a node N [reads](js-dataflow.md#ident_in) Local in File;
+   - [the callee](js-callgraph.md#callee_of) of C is a node N;
+   - the `object` of N [reads](js-dataflow.md#ident_in) Local in File;
    - [`host_module_ns`](#host_module_ns)(File, Local, Spec);
    - N [selects](js-dataflow.md#selects) Key;
-2. if all of:
-   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - N [reads](js-dataflow.md#ident_in) Local in File;
-   - [`host_module_named`](#host_module_named)(File, Local, Spec, Key).
+2. if [the callee](js-callgraph.md#callee_of) of C [reads](js-dataflow.md#ident_in) Local in File and [`host_module_named`](#host_module_named)(File, Local, Spec, Key).
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`

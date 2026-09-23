@@ -113,7 +113,7 @@ default: audit
 > so a clean file produces a POSITIVE row: a silence cannot be told from a
 > model that did not run.
 
-<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, N, something) and a node N [is of kind](js-model.md#ast_node) some kind in file File.
+<a id="file_broken"></a>`file_broken`(E, File) if [`unsupported`](#unsupported)(E, N, something) and a node N [is in file](js-model.md#ast_node) File.
 
 > A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 > says so; the denominator is every file the scanner reported on, and a

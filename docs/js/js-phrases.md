@@ -22,19 +22,18 @@ Declared as facts: phrase, kind_noun, sig.
 
 Declared as facts: kind_set.
 
-> a noun bound to a unary relation: `a function F` is `fn_node_v(F)`, the relation is
+> a noun bound to a unary relation: `a function F` is `fn_node(F)`, the relation is
 > the guard and the kind set behind it is a table (`K is a function kind`)
 
 <a id="noun_guard"></a>`noun_guard` lists:
 
 | arg 1 | arg 2 |
 |---|---|
-| `fn_node_v` | "function" |
 | `fn_node` | "function" |
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-<a id="kind_set"></a>`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `fn_kind_v`, `block_scope_kind`, `call_like_v`.
+<a id="kind_set"></a>`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `block_scope_kind`, `call_like_v`, `call_kind`.
 
 Declared as facts: noun_guard.
 
@@ -73,9 +72,9 @@ Declared as facts: noun_guard.
 | `tdz_deferred` | "is_deferred_for(node E, declarator D)" |
 | `tdz_at` | "is_in_the_dead_zone_of(node E, declarator D)" |
 | `assigns` | "is_assigned(name Name, node Src, in file File)" |
-| `spread_arg` | "has_a_spread(call C, at index I)" |
-| `after_spread` | "is_past_a_spread(call C, at index I)" |
-| `arg_at` | "passes(call C, node A:2, at index I:1)" |
+| `spread_arg` | "has_a_spread(invocation C, at index I)" |
+| `after_spread` | "is_past_a_spread(invocation C, at index I)" |
+| `arg_at` | "passes(invocation C, node A:2, at index I:1)" |
 | `destructures` | "destructures(declarator D, name Local, from key Key, in file File)" |
 | `destructures_at` | "destructures(declarator D, name Local, at index Index, in file File)" |
 | `pattern_takes` | "takes_the_key(object pattern P, key Key)" |
@@ -95,7 +94,13 @@ Declared as facts: noun_guard.
 | `obj_like` | "is_object_like(node O)" |
 | `member_value` | "the_member(of node O, key Key, holds node V)" |
 | `own_key` | "owns_the_key(class CD, key Key)" |
-| `fn_kind_v` | "is_a_function_kind(kind K)" |
+| `fn_kind` | "is_a_function_kind(kind K)" |
+| `call_kind` | "is_a_call_kind(kind K)" |
+| `call_site` | "is_a_call_site(call C, in file File)" |
+| `call_site_kind` | "the_call_kind(of call C, is kind K)" |
+| `call_line` | "the_line(of call C, is line Line)" |
+| `callee_of` | "the_callee(of call C, is node N)" |
+| `callee_kind` | "the_callee_kind(of call C, is kind K)" |
 | `member_kind_v` | "is_a_member_kind(kind K)" |
 | `selects` | "selects(member access N, key Key)" |
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |

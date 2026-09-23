@@ -8,7 +8,7 @@ default: flow
 
 ## Terms
 
-*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *scope*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
+*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *invocation*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *scope*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
 
 ## Kinds
 
@@ -22,7 +22,6 @@ A noun is a node of one of its kinds:
 | an assignment pattern | assignment_pattern |
 | an await | await_expression |
 | a block scope | block_scope_kind |
-| a call | call_like_v |
 | a call expression | call_expression |
 | a catch | catch_clause |
 | a class expression | class_expression |
@@ -38,6 +37,7 @@ A noun is a node of one of its kinds:
 | a function declaration | function_declaration |
 | an identifier | identifier |
 | an import | import_declaration |
+| an invocation | call_like_v |
 | a literal | literal_kind |
 | a logical | logical_expression |
 | a method | class_method |
@@ -73,7 +73,7 @@ A noun is a node of one of its kinds:
 
 A noun that is a relation: the noun on a variable is the relation holding of it.
 
-- a function: `fn_node_v`
+- a function: `fn_node`
 - a member access: `member_node_v`
 - a scope: `scope_node`
 
@@ -120,11 +120,10 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 - the_member(of node O, key Key, holds node V) (member_value)
 - the_plain_member(of node O, key Key, is node V) (member_plain)
 - is_valued(node E) (valued)
-- is_a_function_kind(kind K) (fn_kind_v), in the main
 - is_nearest_to(function F, node R) (nearest_v)
-- has_a_spread(call C, at index I) (spread_arg), in the code
-- is_past_a_spread(call C, at index I) (after_spread), in the code
-- passes(call C, node A:2, at index I:1) (arg_at)
+- has_a_spread(invocation C, at index I) (spread_arg), in the code
+- is_past_a_spread(invocation C, at index I) (after_spread), in the code
+- passes(invocation C, node A:2, at index I:1) (arg_at)
 - hides(function F, name Name, at node U) (param_hidden)
 - uses(function F, name Name, at node U) (param_use)
 - returns(function F, node E)
@@ -418,8 +417,8 @@ A node
   - [the region](#binder_region) of D is a node R;
   - it [is within](js-structure.md#ast_within) R;
   - it [reads](#ident_in) Name in some file;
-  - D [is of kind](js-model.md#ast_node) some kind in file some file at line LD;
-  - it [is of kind](js-model.md#ast_node) some kind in file some file at line LE;
+  - D [is at line](js-model.md#ast_node) LD;
+  - it [is at line](js-model.md#ast_node) LE;
   - LE < LD.
 - <a id="tdz_deferred"></a>is deferred for D if all of:
   - it [is a dead zone candidate of](#tdz_cand) D;
@@ -607,13 +606,13 @@ The member Key of an object literal O holds a node V if all of:
 
 ## 7. Across a call
 
-<a id="fn_kind_v"></a>`fn_kind_v` includes `function_declaration`, `function_expression`, `arrow_function_expression`, `object_method`, `class_method`, `class_private_method`.
+<a id="call_like_v"></a>`call_like_v`, an invocation, includes `call_expression`, `optional_call_expression`, `new_expression`.
 
-<a id="call_like_v"></a>`call_like_v`, a call, includes `call_expression`, `optional_call_expression`, `new_expression`.
+Declared as facts: call_like_v.
 
-<a id="fn_node_v"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind_v).
-
-Declared as facts: fn_kind_v, call_like_v.
+> ONE function relation for every book: `fn_node[code]` from rules/js-callgraph.rofl
+> (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
+> `fn_kind_v`, was the same six kinds defined twice, and js-controlflow read both.
 
 > Nearest enclosing function over ANY node, walked DOWN from the function in
 > two linear rules. The argmin-as-negation-over-a-quadratic form was 35 % of a
@@ -626,21 +625,21 @@ Declared as facts: fn_kind_v, call_like_v.
 2. if all of:
    - F [is nearest to](#nearest_v) a node P;
    - X [is under](js-structure.md#ast_in) P;
-   - unless P [is a function](#fn_node_v).
+   - unless P is a function.
 
 > Argument into parameter by INDEX. A spread destroys the correspondence for
 > everything after it, and a may-set may be silent but not wrong, so `arg_at`
 > stops at the first spread; a spread of an array this layer can see
 > contributes element K at position J + K. `f(...a, ...b)` is unexercised.
 
-<a id="spread_arg"></a>A call has a spread at an index I if a spread S is the I-th of the `arguments` of it.
+<a id="spread_arg"></a>An invocation has a spread at an index I if a spread S is the I-th of the `arguments` of it.
 
 <a id="after_spread"></a>A node is past a spread at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
   - some node is the I-th of the `arguments` of it;
   - J < I.
 
-<a id="arg_at"></a>A call passes a node X at an index I if X is the I-th of the `arguments` of it but is not a spread, unless it [is past a spread](#after_spread) at I.
+<a id="arg_at"></a>An invocation passes a node X at an index I if X is the I-th of the `arguments` of it but is not a spread, unless it [is past a spread](#after_spread) at I.
 
 A node passes a node E at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
@@ -656,7 +655,7 @@ A function takes Name at an index I if a node P is the I-th of the `params` of i
 > ways of hiding it — a declarator whose region is STRICTLY inside F
 > (`function f(x) { var x }` is the same binding: region F itself, not hidden)
 > and a nested function with its own parameter of the name. `ast_within(F, G)`
-> before `fn_node_v(G)`: the other order read all of `fn_node_v` once per
+> before `fn_node(G)`: the other order read all of `fn_node` once per
 > parameter, 58.7 % of a world.
 
 <a id="param_hidden"></a>A node F hides Name at a node U either:
@@ -1008,11 +1007,9 @@ A node denotes a class if some class [has the static block](#static_block_of) a 
   - File [is in the corpus](#corpus_file);
   - File is Base.
 
-<a id="exports_name"></a>A node is exported as Name from File if all of:
+<a id="exports_name"></a>A function is exported as Name from File if all of:
   - a named export E is in file File;
   - the `declaration` of E is it;
-  - a kind K [is a function kind](#fn_kind_v);
-  - it [is of kind](js-model.md#ast_node) K;
   - the `id` of it [is named](js-structure.md#ast_name) Name.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
@@ -1092,14 +1089,9 @@ The member Name of a node P holds a node F if P [is the module object of](#modul
   - a default import Sp is among the `specifiers` of D;
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
-A node
+<a id="exports_default"></a>A function is the default export of File if a default export E is in file File and the `declaration` of E is it.
 
-- <a id="exports_default"></a>is the default export of File if all of:
-  - a default export E is in file File;
-  - the `declaration` of E is it;
-  - a kind K [is a function kind](#fn_kind_v);
-  - it [is of kind](js-model.md#ast_node) K.
-- may be the node F if all of:
+A node may be the node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
   - Src [targets](#import_target) Target;
   - F [is the default export of](#exports_default) Target;
@@ -1128,7 +1120,7 @@ A node may be the node O if O [has the object method](#obj_method_of) a node M a
 
 1. if all of:
    - CD [is object like](#obj_like);
-   - CD [is of kind](js-model.md#ast_node) some kind in file File;
+   - CD [is in file](js-model.md#ast_node) File;
    - the `id` of CD [is named](js-structure.md#ast_name) Name;
 2. if all of:
    - CD is a class expression;
@@ -1151,7 +1143,7 @@ A node E may be the node CD either:
 
 <a id="super_of"></a>The super of a class CD is a class SD if all of:
   - CD [is object like](#obj_like);
-  - CD [is of kind](js-model.md#ast_node) some kind in file File;
+  - CD [is in file](js-model.md#ast_node) File;
   - the `super_class` of CD [is named](js-structure.md#ast_name) Name;
   - SD [is named](#class_named) Name in File.
 
@@ -1221,13 +1213,13 @@ An await may be the node/literal N if the `argument` of it [may be the node/lite
 <a id="bound_to_call"></a>`bound_to_call`(E, a call expression C) if E [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
 
 <a id="next_send"></a>G is sent a node V if all of:
-  - [`call_site`](js-callgraph.md#call_site)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - an access N [selects](#selects) "next";
+  - a node C [is a call site](js-callgraph.md#call_site) in some file;
+  - [the callee](js-callgraph.md#callee_of) of C is a node N;
+  - N [selects](#selects) "next";
   - the `object` of N is a node O;
   - [`bound_to_call`](#bound_to_call)(O, GC);
   - GC [resolves to](js-callgraph.md#resolves) G;
-  - the `arguments` of a node C is V.
+  - the `arguments` of C is V.
 
 <a id="delegates"></a>Outer delegates to Inner if all of:
   - the attribute `delegate` of a yield Y is `true`;
@@ -1328,7 +1320,7 @@ A node
 <a id="call_in_try"></a>T calls if all of:
   - [the block](#try_block) of T is a node B;
   - a node C [is within](js-structure.md#ast_within) B;
-  - [`call_site`](js-callgraph.md#call_site)(C, something).
+  - C [is a call site](js-callgraph.md#call_site) in some file.
 
 A node
 
@@ -1382,6 +1374,7 @@ The static/instance member Key of a class CD is a node N if CD [has the decorate
 - [callee_of](js-callgraph.md#callee_of), in the code
 - [caught_value](js-controlflow.md#caught_value), in the flow
 - [decorates](js-callgraph.md#decorates), in the code
+- [fn_node](js-callgraph.md#fn_node), in the code
 - [key_name](js-structure.md#key_name), in the code
 - [resolves](js-callgraph.md#resolves), in the code
 

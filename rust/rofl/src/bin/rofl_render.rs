@@ -470,6 +470,10 @@ impl<'a> R<'a> {
         let mut residual = HashMap::new();
         let mut kind_conds = HashMap::new();
         let head_vars: Vec<Sym> = c.head.args.iter().filter_map(|a| match a.kind() { TermK::Var(v) => Some(v), _ => None }).collect();
+        let kind_used_elsewhere = |k: Sym, i: usize, j: usize| -> bool {
+            let mut hit = |t: Term| matches!(t.kind(), TermK::Var(v) if v == k);
+            c.head.args.iter().any(|a| hit(*a)) || c.body.iter().enumerate().any(|(n, e)| n != i && n != j && match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().any(|a| hit(*a)), Elem::Builtin(_, a, b) => hit(*a) || hit(*b) })
+        };
         let set_noun = |k: Sym| -> Option<(String, usize)> {
             for (j, e) in c.body.iter().enumerate() {
                 if let Elem::Pos(l) = e {
@@ -495,7 +499,8 @@ impl<'a> R<'a> {
                 let v = match l.args[0].kind() { TermK::Var(v) if !h.name(v).starts_with("_$") => v, _ => continue };
                 let (noun, extra) = match l.args[1].kind() {
                     TermK::Atom(a) => (self.kind_nouns.get(&a).cloned().unwrap_or_else(|| format!("{} node", h.name(a))), None),
-                    TermK::Var(k) => match set_noun(k) { Some((n, j)) => (n, Some(j)), None => continue },
+                    // a set guard absorbs only when the kind variable lives in these two literals alone
+                    TermK::Var(k) => match set_noun(k) { Some((n, j)) if !kind_used_elsewhere(k, i, j) => (n, Some(j)), _ => continue },
                     _ => continue,
                 };
                 if grouped && head_vars.contains(&v) {
@@ -548,10 +553,12 @@ impl<'a> R<'a> {
                     None => pos.push(self.lit(l, ctx, stats)),
                 },
                 Elem::Neg(l) => {
-                    let kind = if l.rel == self.ast_node && l.args.len() == 4 && is_wild(self.h, l.args[2]) && is_wild(self.h, l.args[3]) { l.args[1].as_atom() } else { None };
-                    match kind {
-                        Some(k) => { let n = self.term(l.args[0], None, ctx); let subj = Some(n.clone()); neg.push((format!("{n} is {}", self.kind_phrase(Term::atom(k))), subj)); }
-                        None => { let t = self.lit(l, ctx, stats); let subj = ctx.last_subj.take(); neg.push((t, subj)); }
+                    // a negated guard names its variable bare: `unless Y is a function`, `unless X is a spread`
+                    let kind = if l.rel == self.ast_node && l.args.len() == 4 && is_wild(self.h, l.args[2]) && is_wild(self.h, l.args[3]) { l.args[1].as_atom().map(|k| self.kind_phrase(Term::atom(k))) }
+                        else if l.args.len() == 1 && self.guard_bound(l.rel) { self.noun_guards.get(&l.rel).map(|n| format!("{} {n}", article(n))) } else { None };
+                    match (kind, l.args[0].kind()) {
+                        (Some(k), TermK::Var(v)) if !is_wild(self.h, l.args[0]) => { let n = ctx.display.get(&v).cloned().unwrap_or_else(|| self.h.name(v).to_string()); let n = if ctx.subject == Some(v) && ctx.intro.contains(&v) { "it".to_string() } else { n }; neg.push((format!("{n} is {k}"), Some(n))); }
+                        _ => { let t = self.lit(l, ctx, stats); let subj = ctx.last_subj.take(); neg.push((t, subj)); }
                     }
                 }
                 Elem::Builtin(op, a, b) => pos.push(self.builtin(*op, *a, *b, ctx)),

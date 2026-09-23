@@ -205,8 +205,7 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_named_call"></a>`amb_named_call`(C, Spec, Key) if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - N [reads](js-dataflow.md#ident_in) Local in File;
+  - [the callee](js-callgraph.md#callee_of) of C [reads](js-dataflow.md#ident_in) Local in File;
   - [`host_module_named`](js-host.md#host_module_named)(File, Local, Spec, Key).
 
 <a id="eff_surface"></a>`eff_surface`(C, Spec) if [`amb_named_call`](#amb_named_call)(C, Spec, something).
@@ -217,7 +216,7 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_global_call"></a>`amb_global_call`(C, Name) if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
+  - [the callee](js-callgraph.md#callee_of) of C is a node N;
   - [`free_global`](js-globals.md#free_global)(N, Name, File);
   - [`ambient_binding`](#ambient_binding)(File, Name, Name).
 

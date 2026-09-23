@@ -165,10 +165,10 @@ completion_known(K) :- abrupt_kind(K).
 -- function with every abrupt completion, 8.8 s to 21.7 s for one rule.
 completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
                                      ast_node[code](P, K, _, _), not completion_known(K),
-                                     not fn_node_v[flow](P),
+                                     not fn_node[code](P),
                                      stmt_seq_field(F), ast_child[code](_, F, _, P).
 completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](P, G),
-                                     fn_node_v[flow](G), ast_within[code](G, S).
+                                     fn_node[code](G), ast_within[code](G, S).
 completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _, _),
                                      not completion_fn_between[code](P, S).
 

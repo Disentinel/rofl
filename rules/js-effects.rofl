@@ -515,7 +515,7 @@ eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P),
 -- with `eff_runs_in` where `nearest_v` stands.
 eff_runs_in[flow](P, P) :- eff_define_part[flow](_, P).
 eff_runs_in[flow](P, P) :- eff_construct_part[flow](_, P).
-eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node_v[flow](Y),
+eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node[code](Y),
                            ast_in[code](Y, X).
 
 eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),

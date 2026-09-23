@@ -281,7 +281,7 @@ A node U has the effect an effect label N at a host E either:
 2. if all of:
    - [`eff_update_arg`](#eff_update_arg)(U, X);
    - a node X [is named](js-structure.md#ast_name) Name;
-   - a node U [is of kind](js-model.md#ast_node) some kind in file File.
+   - a node U [is in file](js-model.md#ast_node) File.
 
 A node has the effect `read` at `local` if all of:
   - [`eff_mutable_name`](#eff_mutable_name)(Name, File);
@@ -396,21 +396,18 @@ Declared as facts: eff_discharges.
 
 1. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of a node N is a node O;
+   - [the callee](js-callgraph.md#callee_of) of C is a node N;
+   - the `object` of N is a node O;
    - [the prototype](js-dataflow.md#prototype_of) of O is P;
    - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
 2. if all of:
    - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
-   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-   - the `object` of a node N [is named](js-structure.md#ast_name) Name;
-   - C [is of kind](js-model.md#ast_node) some kind in file File;
+   - [the callee](js-callgraph.md#callee_of) of C is a node N;
+   - the `object` of N [is named](js-structure.md#ast_name) Name;
+   - C [is in file](js-model.md#ast_node) File;
    - [`ambient_binding`](js-ambient.md#ambient_binding)(File, Name, P).
 
-`eff_operation`(C, Key) if all of:
-  - [`eff_surface`](js-ambient.md#eff_surface)(C, something);
-  - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - an access N [selects](js-dataflow.md#selects) Key.
+`eff_operation`(C, Key) if [`eff_surface`](js-ambient.md#eff_surface)(C, something) and [the callee](js-callgraph.md#callee_of) of C [selects](js-dataflow.md#selects) Key.
 
 <a id="concrete_effect"></a>C operates on a surface S by an operation Op if [`eff_surface`](js-ambient.md#eff_surface)(C, S) and [`eff_operation`](js-ambient.md#eff_operation)(C, Op).
 
@@ -625,11 +622,11 @@ F has the latent effect an effect label L at a host H if all of:
 
 1. if all of:
    - a node N [has the effect](js-ambient.md#eff_here) an effect label L at a host H;
-   - N [is of kind](js-model.md#ast_node) some kind in file F;
+   - N [is in file](js-model.md#ast_node) F;
    - unless [`eff_in_fn`](#eff_in_fn)(N);
 2. if all of:
    - a node C [resolves to](js-callgraph.md#resolves) G;
-   - C [is of kind](js-model.md#ast_node) some kind in file F;
+   - C [is in file](js-model.md#ast_node) F;
    - G [has the latent effect](#eff_latent) an effect label L at a host H;
    - unless [`eff_in_fn`](#eff_in_fn)(C).
 
@@ -667,7 +664,7 @@ A node has the effect an effect label L at a host H if [`eff_evaluates_at`](#eff
 
 <a id="eff_mod_join_short"></a>`eff_mod_join_short`(F, T, J) if all of:
   - [`eff_evaluates_at`](#eff_evaluates_at)(I, T);
-  - a node I [is of kind](js-model.md#ast_node) some kind in file F;
+  - a node I [is in file](js-model.md#ast_node) F;
   - [`effect_of_module`](#effect_of_module)(F, NF);
   - [`effect_of_module`](#effect_of_module)(T, NT);
   - [the join](#eff_join) of an effect NF and NT is an effect J;
@@ -792,7 +789,7 @@ Declared as facts: eff_class_form, eff_field_kind.
 3. if all of:
    - [`eff_runs_in`](#eff_runs_in)(P, Y);
    - N [is under](js-structure.md#ast_in) a node Y;
-   - unless [`fn_node_v`](js-dataflow.md#fn_node_v)(Y).
+   - unless Y is a function.
 
 `eff_catch_here`(N) if all of:
   - [`eff_runs_in`](#eff_runs_in)(P, a try TS);
@@ -928,7 +925,6 @@ A new has the effect an effect label L at a host H if it [may be the node](js-da
 - [eff_operation](js-ambient.md#eff_operation), in the flow
 - [eff_surface](js-ambient.md#eff_surface), in the flow
 - [fn_node](js-callgraph.md#fn_node), in the code
-- [fn_node_v](js-dataflow.md#fn_node_v), in the flow
 - [ident_in](js-dataflow.md#ident_in), in the code
 - [import_target](js-dataflow.md#import_target), in the code
 - [in_try_block](js-controlflow.md#in_try_block), in the code

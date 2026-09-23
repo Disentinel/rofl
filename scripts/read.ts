@@ -209,9 +209,9 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
     if (guarded) { const g = rule.guards.get(t.v) ?? { noun: intros.find((x) => x.v === t.v)!.noun }; g.file = term(m[2], intros); rule.guards.set(t.v, g); return true; }
     rule.guards.set(t.v, { noun: 'node', file: term(m[2], intros) }); known.set(t.v, 'node'); return true;
   }
-  if ((m = /^([A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$/.exec(text))) {
+  if ((m = /^((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?[A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$/.exec(text))) {
     const ns = m[2].split(/ or /).map((x) => x.replace(/^[Aa]n? /, '')).map((n) => n.endsWith(' node') ? '`' + n.slice(0, -5) : n);
-    const subj = m[1] === 'it' ? (subjectVar ?? 'It') : m[1];
+    const subj = m[1] === 'it' ? (subjectVar ?? 'It') : (term(m[1], intros) as { v: string }).v;
     if (ns.length === 1 && nounGuards.has(ns[0])) { rule.body.push({ rel: nounGuards.get(ns[0])!, args: [{ v: subj }], neg }); known.set(subj, ns[0]); return true; }
     if (ns.every((n) => nounAtoms.has(n) || nounSets.has(n) || n.startsWith('`'))) {
       const hit = ns.length === 1 ? matchLit(text, []) : null;
@@ -491,7 +491,7 @@ function expand(rule: Rule): Clause[] {
       else if (nounGuards.has(noun)) opts.push([{ rel: nounGuards.get(noun)!, neg: false, args: [v] }, ...(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }])]);
       else if (sets && sets.length) opts.push([{ rel: 'ast_node', neg: false, args: [v, `K_${v}`, file, '_'] }, { rel: sets[0], neg: false, args: [`K_${v}`] }]);
       else if (atoms && atoms.length) for (const a of atoms) opts.push([{ rel: 'ast_node', neg: false, args: [v, a, file, '_'] }]);
-      else opts.push([]);
+      else opts.push(file === '_' ? [] : [{ rel: 'ast_node', neg: false, args: [v, '_', file, '_'] }]);   // a type with a file: the file alone is the guard
     }
     variants = variants.flatMap((vs) => opts.map((o) => [...vs, ...o]));
   }
