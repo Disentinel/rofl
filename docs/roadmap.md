@@ -72,6 +72,11 @@ What has to exist for it to be code rather than a description of code
    what "use before definition" became), and a numbered alternative that does
    not start with `if` or `unless`;
 4. a renderer the other way, so `why` and `?` answer in the same sentences.
+   They do: `src/say.ts` reads a ground literal as the sentence its phrase
+   gives it, from the same phrase facts, and the REPL answers `?`, `why` and
+   `whynot` through it, a derivation reading as the fact, the rule and its
+   axioms in the words of the document
+   (f_why_and_the_query_answer_in_the_sentences_of_the_document).
    For files it exists: `rofl-render` (rust/rofl/src/bin/rofl_render.rs)
    renders a program to Markdown from its rules, with phrases as facts, and
    `docs/js/` is the JS model rendered

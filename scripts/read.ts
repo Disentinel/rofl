@@ -13,6 +13,7 @@
 // absorbed. A rule's book is the block it sits in.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { parsePhrase, parseSig as parseSigWith, type Part, type Tpl } from '../src/say.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -24,8 +25,6 @@ const [mdPath, ...srcPaths] = argv;
 if (!mdPath) { console.error('usage: npm run read -- <file.md> [source.rofl...] [--out FILE.rofl] [--vocab FILE.rofl]'); process.exit(2); }
 
 // ---------------------------------------------------------------- vocabulary
-type Part = { t: 'text'; s: string } | { t: 'hole'; i: number; noun: string } | { t: 'fix'; i: number; kind: 'zero' | 'wild' | 'atom'; val?: string };
-type Tpl = { rel: string; parts: Part[]; arity: number; src: string };
 const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child', 'node']);
 // the JS model's vocabulary comes with a file rendered from it (docs/js); any other file brings its own
 if (/(^|\/)docs\/js\//.test(mdPath)) vocabPaths.unshift('facts/js-phrases.rofl');
@@ -37,50 +36,7 @@ for (const m of vocab.matchAll(/^noun_guard\((\w+), "([^"]+)"\)/gm)) guardOf.set
 const nounGuards = new Map<string, string>();   // noun -> the relation this file binds it to
 const nouns = new Set([...kindNoun.values(), ...VALUE, ...guardOf.keys(), 'this', 'scope', 'this-binder', 'effect label']);
 
-function parsePhrase(rel: string, t: string): Tpl {
-  const parts: Part[] = []; let k = 0; let buf = '';
-  const flush = () => { if (buf.trim()) parts.push({ t: 'text', s: buf.trim() }); buf = ''; };
-  for (let i = 0; i < t.length; i++) {
-    if (t[i] === '<') { flush(); const j = t.indexOf('>', i); const inner = t.slice(i + 1, j); i = j;
-      if (inner.includes('=')) { const [a, v] = inner.split('='); parts.push({ t: 'fix', i: Number(a), kind: v === '0' ? 'zero' : v === '_' ? 'wild' : 'atom', val: v }); }
-      else if (inner.includes(':')) { const [a, n] = inner.split(':'); parts.push({ t: 'hole', i: Number(a), noun: n.trim() }); }
-      else parts.push({ t: 'hole', i: k++, noun: inner.trim() });
-    } else if (t[i] === '[' || t[i] === ']') { /* link span */ } else buf += t[i];
-  }
-  flush();
-  return { rel, parts, arity: parts.filter((p) => p.t !== 'text').length, src: t };
-}
-function parseSig(rel: string, text: string): Tpl {
-  const open = text.indexOf('(');
-  const name = text.slice(0, open).trim(), inner = text.slice(open + 1).replace(/\)\s*$/, '');
-  const args = inner.split(',').map((a) => a.trim()).filter(Boolean).map((raw, k) => {
-    const toks = raw.split(/\s+/); const last = toks.pop()!;
-    const [, posS] = last.split(':'); const pos = posS !== undefined ? Number(posS) : k;
-    let nounLen = 1;
-    for (const n of nouns) if (n.includes(' ')) { const w = n.split(' '); if (toks.length >= w.length && toks.slice(-w.length).join(' ') === n) nounLen = Math.max(nounLen, w.length); }
-    return { marker: toks.slice(0, -nounLen).join(' '), noun: toks.slice(-nounLen).join(' '), pos };
-  });
-  const words = name.split('_').filter(Boolean).join(' ');
-  const parts: Part[] = [];
-  const hole = (a: typeof args[0]): Part => ({ t: 'hole', i: a.pos, noun: a.noun });
-  // consecutive arguments under one marker share it: `of A and B`, `two shapes A and B`
-  const run = (group: typeof args) => group.forEach((a, n) => {
-    if (n > 0 && group[n - 1].marker === a.marker) parts.push({ t: 'text', s: 'and' });
-    else if (a.marker) parts.push({ t: 'text', s: a.marker });
-    parts.push(hole(a));
-  });
-  if (words === 'the' || words.startsWith('the ')) {
-    parts.push({ t: 'text', s: words });
-    run(args.filter((a) => !a.marker));
-    run(args.filter((a) => a.marker === 'of'));
-    run(args.filter((a) => a.marker && a.marker !== 'of'));
-  } else {
-    parts.push(hole(args[0]));
-    parts.push({ t: 'text', s: words });
-    run(args.slice(1));
-  }
-  return { rel, parts, arity: args.length, src: text };
-}
+const parseSig = (rel: string, text: string): Tpl => parseSigWith(rel, text, nouns);
 const templates: Tpl[] = [];
 for (const m of vocab.matchAll(/^sig\((\w+), "([^"]+)"\)/gm)) templates.push(parseSig(m[1], m[2]));
 for (const m of vocab.matchAll(/^phrase\((\w+), "([^"]+)"\)/gm)) templates.push(parsePhrase(m[1], m[2]));

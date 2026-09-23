@@ -139,6 +139,24 @@ So the form is now a proven source for one world, and every further world
 is the same three moves: anchor the heads, declare the tables, quote the
 prose. The size of that world is the limit of the claim.
 
+## The answers, in the same sentences
+
+The fourth condition of the roadmap, that `why` and `?` answer in the
+sentences of the document, holds from 2026-09-23. `src/say.ts` reads one
+ground literal as the sentence its phrase gives it, from the same `sig`,
+`phrase` and `fun_phrase` facts the renderer and the reader use, and the
+REPL answers `?`, `why` and `whynot` through it. A derivation reads as the
+fact, the rule and its axioms:
+
+    `call_expression` is a cell in `dataflow` of `js`, in the audit  <= r545613b4 @tick 0
+      `js` has the node kind `call_expression` [axiom]
+      `dataflow` is a layer [axiom]
+
+A relation with no phrase keeps its positional form, and `sentences off`
+turns the words off. A `.md` world loads in the REPL through the reader
+and answers in the sentences it declared. What a derivation still shows
+by id is the rule: `r545613b4` is the rule's hash, not its head sentence.
+
 ## Open decisions
 
 1. **Renames.** `docs/js/index.md` lists 842 "proposed renames" because 842

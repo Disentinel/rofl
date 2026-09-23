@@ -14,7 +14,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run textcheck   no unreadable byte reached a source file
     npm run findings    the ledger, rendered
     npm run features    what the system can do, which demo shows it, what promises it
-    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`
+    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, loads a `.md` world
     npm run scan        -- <dir>   turn TypeScript into facts under facts/generated
     npm run report      -- <files>   the epistemic report over a set of packs
     npm run depends     · cleanliness · layering · nullary — the models over the tree itself

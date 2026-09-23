@@ -1,16 +1,39 @@
 // repl.ts — interactive shell over the api. Not part of the evaluator.
 // Commands:  ? L | why L | whynot L | excise F | budget N { CMD } |
 //            load FILE | who NAME | retract F | tick | run [N] |
-//            save FILE | restore FILE | facts [REL] | quit
+//            save FILE | restore FILE | facts [REL] | sentences on|off | quit
 // Any other line ending in '.' is asserted as program text.
+//
+// `?`, `why` and `whynot` answer in the sentences of the document where a
+// phrase exists (facts/phrases.rofl, facts/js-phrases.rofl, the `sig` and
+// `phrase` facts of every loaded file and its `X.phrases.rofl` beside it),
+// positionally where none does. A `.md` file loads through the reader.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { Rofl } from './api.ts';
+import { Vocabulary } from './say.ts';
+import { roflFromMd } from '../scripts/md_world.ts';
 
 let rofl = new Rofl();
 let who: string | undefined;
+const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..') + '/';
+const vocab = Vocabulary.fromFiles(ROOT, []);
+let sentences = true;
+
+function loadFile(f: string, budget?: number): { ok: boolean; diagnostics: string[] } {
+  const p = f.endsWith('.md') ? roflFromMd(f) : f;
+  const text = fs.readFileSync(p, 'utf8');
+  vocab.addText(text);
+  const beside = p.replace(/\.rofl$/, '') + '.phrases.rofl';
+  if (fs.existsSync(beside)) vocab.addText(fs.readFileSync(beside, 'utf8'));
+  return rofl.load(text, { who, budget });
+}
+/** The query with its answer's bindings put in, so the row can be said as the fact it is. */
+function instance(query: string, bindings: Record<string, string>): string {
+  return query.replace(/"[^"]*"|\b[A-Z][A-Za-z0-9_]*\b/g, (t) => (t.startsWith('"') ? t : bindings[t] ?? t));
+}
 
 const bootPath = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'boot.rofl');
 if (fs.existsSync(bootPath)) {
@@ -37,10 +60,11 @@ function exec(line: string, budget?: number): void {
   }
   if (line.startsWith('load ')) {
     const f = line.slice(5).trim();
-    const r = rofl.load(fs.readFileSync(f, 'utf8'), { who, budget });
+    const r = loadFile(f, budget);
     console.log(r.ok ? 'ok' : 'REJECTED:\n' + r.diagnostics.join('\n'));
     return;
   }
+  if (line === 'sentences on' || line === 'sentences off') { sentences = line.endsWith('on'); return; }
   if (line.startsWith('who ')) { who = line.slice(4).trim() || undefined; return; }
   if (line.startsWith('save ')) { fs.writeFileSync(line.slice(5).trim(), rofl.save()); console.log('saved'); return; }
   if (line.startsWith('restore ')) { rofl = Rofl.fromSnapshot(fs.readFileSync(line.slice(8).trim(), 'utf8')); console.log('restored'); return; }
@@ -53,12 +77,16 @@ function exec(line: string, budget?: number): void {
     const q = rofl.query(line.slice(1).trim(), { budget });
     if (q.error) { console.log('error: ' + q.error); return; }
     if (q.rows.length === 0) console.log('(empty)');
-    for (const r of q.rows) console.log(r.text);
+    for (const r of q.rows) {
+      const s = sentences ? vocab.say(instance(line.slice(1).trim(), r.bindings)) : null;
+      console.log(s ? (r.text ? `${s}  [${r.text}]` : s) : r.text);
+    }
     if (q.partial) console.log('[partial: budget exhausted, hole emitted]');
     return;
   }
-  if (line.startsWith('why ')) { console.log(rofl.why(line.slice(4).trim(), { budget }).text); return; }
-  if (line.startsWith('whynot ')) { console.log(rofl.whynot(line.slice(7).trim(), { budget }).text); return; }
+  const said = (t: string) => (sentences ? vocab.sayAll(t) : t);
+  if (line.startsWith('why ')) { const w = rofl.why(line.slice(4).trim(), { budget }); console.log(w.ok ? said(w.text) : w.text); return; }
+  if (line.startsWith('whynot ')) { console.log(said(rofl.whynot(line.slice(7).trim(), { budget }).text)); return; }
   if (line.startsWith('excise ')) {
     const r = rofl.excise(line.slice(7).trim(), { budget });
     if (!r.ok) { console.log('error: ' + r.error); return; }
@@ -78,7 +106,7 @@ function exec(line: string, budget?: number): void {
 
 const files = process.argv.slice(2);
 for (const f of files) {
-  const r = rofl.load(fs.readFileSync(f, 'utf8'), { who });
+  const r = loadFile(f);
   console.log(r.ok ? `loaded ${f}` : `${f} REJECTED:\n` + r.diagnostics.join('\n'));
 }
 
