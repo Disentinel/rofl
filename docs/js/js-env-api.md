@@ -8,6 +8,10 @@ default: audit
 
 ## Signatures
 
+- calls_the_stdlib(call C, key Key:2, of prototype P:1, since release Rel:3) (lib_call), in the code
+- calls_an_unattributed_stdlib_member(call C, key Key:2, of prototype P:1) (stdlib_unattributed)
+- is_unsupported_in(call C:1, environment E:0, at key Key:3, of prototype P:2) (lib_unsupported)
+- calls_a_deprecated_stdlib_member(call C, key Key:2, of prototype P:1) (lib_call_deprecated)
 - has_the_remedy(call C, term R:3, for prototype P:1, at key Key:2) (lib_call_remedy)
 
 > js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
@@ -24,23 +28,23 @@ default: audit
 
 > one join: the residue is keyed by (prototype, key) and so is the library
 
-<a id="lib_call"></a>`lib_call`(C, P, Key, Rel) if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of a prototype P and `lib_member`(P, Key, Rel).
+<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P and P has the member Key since Rel.
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
 > notice `prototype_of` going wrong
 
-<a id="stdlib_unattributed"></a>`stdlib_unattributed`(C, P, Key) if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of a prototype P, unless `lib_member`(P, Key, something).
+<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P, unless P has the member Key since some release.
 
 > THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
 > composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so
 > the question is whether the environment REACHES it, in the same words
 > `has_feature` uses.
 
-<a id="lib_unsupported"></a>`lib_unsupported`(E, C, P, Key) if all of:
-  - [`lib_call`](#lib_call)(C, P, Key, Rel);
-  - `environment`(E);
-  - unless [`reaches`](js-env.md#reaches)(E, Rel).
+<a id="lib_unsupported"></a>C is unsupported in an environment E at Key of a prototype P if all of:
+  - C [calls the stdlib](#lib_call) Key of P since a release Rel;
+  - E is an environment;
+  - unless E [reaches the release](js-env.md#reaches) Rel.
 
 > `@deprecated` in the JSDoc, read by the scanner. `lib_replaced_by` is
 > nearly empty and that is the answer: of forty-one deprecations two name a
@@ -48,9 +52,9 @@ default: audit
 > replacement table earns its keep on a runtime's API:
 > `host_member_replaced_by` in rules/js-host.rofl.
 
-<a id="lib_call_deprecated"></a>`lib_call_deprecated`(C, P, Key) if [`lib_call`](#lib_call)(C, P, Key, something) and `lib_deprecated`(P, Key).
+<a id="lib_call_deprecated"></a>C calls a deprecated stdlib member Key of a prototype P if C [calls the stdlib](#lib_call) Key of P since some release and P has the deprecated member Key.
 
-<a id="lib_call_remedy"></a>C has the remedy a term R for a prototype P at Key if [`lib_call_deprecated`](#lib_call_deprecated)(C, P, Key) and `lib_replaced_by`(P, Key, R).
+<a id="lib_call_remedy"></a>C has the remedy a term R for a prototype P at Key if C [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and `lib_replaced_by`(P, Key, R).
 
 ## Read from other files
 

@@ -8,7 +8,7 @@ default: code
 
 ## Terms
 
-*array pattern*, *block*, *declarator*, *for-of*, *function*, *if*, *label*, *member access*, *object literal*, *object pattern*, *rest*, *return*, *spread*, *throw*, *try*.
+*abrupt statement*, *array pattern*, *block*, *declarator*, *export declaration*, *for-of*, *function*, *if*, *label*, *member access*, *object literal*, *object pattern*, *rest*, *return*, *short circuit*, *spread*, *throw*, *try*.
 
 ## Kinds
 
@@ -16,9 +16,11 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
+| an abrupt statement | abrupt_kind |
 | an array pattern | array_pattern |
 | a block | block_statement |
 | a declarator | variable_declarator |
+| an export declaration | export_kind |
 | a for-of | for_of_statement |
 | an if | if_statement |
 | a label | labeled_statement |
@@ -26,6 +28,7 @@ A noun is a node of one of its kinds:
 | an object pattern | object_pattern |
 | a rest | rest_element |
 | a return | return_statement |
+| a short circuit | short_circuit_kind |
 | a spread | spread_element |
 | a throw | throw_statement |
 | a try | try_statement |
@@ -39,9 +42,86 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 ## Signatures
 
+- guards_the_field(kind K, field Field) (guard_kind), in the main
+- guards_the_arm(node P, node X) (guard_arm)
+- has_the_field_initialiser(node P, node V) (field_init)
+- is_guarded(node X) (guarded)
+- is_a_statement_sequence_field(field F) (stmt_seq_field), in the main
+- follows_an_abrupt_completion(node S) (after_abrupt)
 - suspends(node B, at field F, from index I) (suspend_at)
+- follows_a_suspension(node S) (after_suspend)
+- is_an_unseen_statement_field(field F) (stmt_seq_unseen), in the audit
+- the_label_name(of label LS, is name N) (label_name)
+- refers_to_the_label(node X, name N) (label_ref)
+- targets_the_label(node X, label LS) (label_target)
 - is_abrupt(node B, at field F, from index I) (abrupt_at)
+- is_a_completion_kind(kind K) (completion_kind), in the main
+- completes_abruptly(node S)
+- is_escaped(label LS) (label_escaped)
+- has_a_decided_completion(kind K) (completion_decided)
+- has_an_unreached_completion(kind K) (completion_unreached), in the audit
+- defers_its_completion(kind K, because reason R) (completion_deferred), in the main
+- has_a_known_completion(kind K) (completion_known), in the main
+- carries_the_completion(node P, of node S) (completion_outer)
+- is_cut_by_a_function_from(node P, node S) (completion_fn_between)
+- has_an_unaccounted_completion(kind K) (completion_unaccounted), in the audit
+- has_a_return(function F) (has_return)
+- throws_at_the_top(function F) (top_throw)
+- always_throws(function F)
+- is_a_throwing_call(call C) (throwing_call)
+- is_an_accessor_kind(kind K) (accessor_kind), in the main
+- the_accessor(of node Obj, at key Key, is node M) (accessor_of), in the flow
+- reads_through_the_accessor(node N, node M) (accessor_read)
+- the_pattern_source(of node P, is node Init) (pattern_source)
+- destructures_through_the_accessor(object pattern P, node M) (pattern_accessor)
+- holds_iterated_spreads(field F) (spread_iterable_field), in the main
+- is_iterated(spread S) (spread_iterated)
+- destructures_through(node P, node M) (pattern_iterates)
+- iterates_with_the_next(node X, function Next) (pattern_next)
+- hides_a_call_by(node N, mechanism M) (hidden_call_pos)
+- the_hidden_call_source(of node P, is node Init) (hidden_call_src)
+- fires_the_hidden_call(node N, node M) (hidden_call_user), in the flow
+- fires_a_hidden_call(node N) (hidden_call_fires)
+- hides_a_builtin_call_on(node N, node O) (hidden_call_builtin), in the flow
+- hides_a_call_on_the_primitive(node N, value V) (hidden_call_primitive), in the flow
+- has_a_traced_hidden_call(node N) (hidden_call_traced)
+- has_an_untraced_hidden_call_from(node N, node Src) (hidden_call_untraced), in the flow
+- has_a_sourced_hidden_call(node N) (hidden_call_sourced)
+- has_an_unsourced_hidden_call(node N, of kind K) (hidden_call_unsourced), in the flow
+- has_an_accounted_hidden_call(node N) (hidden_call_accounted), in the audit
+- has_an_unaccounted_hidden_call(node N) (hidden_call_unaccounted), in the audit
+- hides_a_call_off_the_table(kind K, by mechanism M) (hidden_call_off_table), in the audit
+- lies_in(try TS, function F) (try_of)
+- tries(try TS, node N) (in_try_block)
+- catches_via(kind K, field Field), in the main
+- has_a_handler(node TS) (try_catches)
+- is_caught_here(node N) (caught_here)
+- throws_outright(function F)
+- may_throw(function F)
+- throws_out(function F, node V) (thrown_by), in the flow
 - catches(node P, node V) (caught_value), in the flow
+- is_stopped_by(call C, try T) (try_stops)
+- is_a_guarded_call(call C) (guarded_call)
+- is_reached_unguarded(function F) (reached_unguarded)
+- may_not_run(function F)
+- is_inside_a_function(node N) (in_fn)
+- is_exported(function F) (exported_fn)
+- is_an_entry_point(function F) (entry_point)
+- is_reachable(function F) (reachable)
+- may_not_be_reached(function F)
+- is_an_unseen_export_kind(kind K) (export_kind_unseen), in the audit
+- has_an_entry_point(file File) (has_entry)
+- has_no_entry_point(file File) (no_entry_point), in the audit
+- transfers_by(kind K, mechanism M) (transfer_mechanism), in the main
+- is_modelled(mechanism M) (mechanism_modelled), in the main
+- is_waived(mechanism M, because reason R) (mechanism_waived), in the main
+- is_a_known_mechanism(mechanism M) (mechanism_known), in the main
+- is_an_unanswered_mechanism(mechanism M) (mechanism_unanswered), in the audit
+- is_a_named_guard_kind(kind K) (guard_named)
+- is_an_unmodelled_guard_kind(kind K) (guard_unmodelled), in the audit
+- is_seen_guarding(kind K, field Field) (guard_arm_seen)
+- is_unseen_guarding(kind K, field F) (guard_arm_unseen), in the audit
+- has_a_guarded_call_at(file File, line Line) (guarded_at)
 
 > js-controlflow.rofl — THE CONTROL-FLOW LAYER: not WHICH function a site
 > reaches but WHETHER the site runs at all. It writes into [code]; everything
@@ -63,7 +143,7 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 <a id="guard_kind"></a>`guard_kind` lists:
 
-| arg 1 | arg 2 |
+| kind | field |
 |---|---|
 | `if_statement` | `consequent` |
 | `if_statement` | `alternate` |
@@ -83,26 +163,25 @@ Declared as facts: guard_kind.
 
 > ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
 
-<a id="guard_arm"></a>`guard_arm`(P, X) if all of:
-  - [`guard_kind`](#guard_kind)(K, Field);
-  - a node P [is of kind](js-model.md#ast_node) K;
-  - a node X is among the Field of P.
+<a id="guard_arm"></a>A node guards the arm a node X if all of:
+  - a kind K [guards the field](#guard_kind) Field;
+  - it [is of kind](js-model.md#ast_node) K;
+  - X is among the Field of it.
 
 > A non-static field initialiser runs once per construction and never if the
 > class is never constructed; a static one runs with the definition. Derived
 > from `transfer_mechanism(K, per_construction)`, not a second list.
 
-<a id="field_init"></a>`field_init`(P, V) if all of:
-  - [`transfer_mechanism`](#transfer_mechanism)(K, `per_construction`);
-  - a node P [is of kind](js-model.md#ast_node) K;
-  - the attribute `static` of P is `false`;
-  - the `value` of P is a node V.
+A node
 
-`guard_arm`(P, V) if [`field_init`](#field_init)(P, V).
-
-<a id="guarded"></a>`guarded`(X) if [`guard_arm`](#guard_arm)(something, X).
-
-`guarded`(N) if [`guard_arm`](#guard_arm)(something, X) and a node N [is within](js-structure.md#ast_within) a node X.
+- <a id="field_init"></a>has the field initialiser a node V if all of:
+  - a kind K [transfers by](#transfer_mechanism) `per_construction`;
+  - it [is of kind](js-model.md#ast_node) K;
+  - the attribute `static` of it is `false`;
+  - the `value` of it is V.
+- guards the arm a node V if it [has the field initialiser](#field_init) V.
+- <a id="guarded"></a>is guarded if some node [guards the arm](#guard_arm) it.
+- is guarded if some node [guards the arm](#guard_arm) a node X and it [is within](js-structure.md#ast_within) X.
 
 ## 2. STATEMENT ORDER. After a return/throw/break/continue the rest of the list
 
@@ -111,7 +190,7 @@ Declared as facts: guard_kind.
 > `switch_case`'s `consequent`; the field is carried so an abrupt in one field
 > cannot reach a statement in another.
 
-<a id="abrupt_kind"></a>`abrupt_kind` includes `return_statement`, `throw_statement`, `break_statement`, `continue_statement`.
+<a id="abrupt_kind"></a>`abrupt_kind`, an abrupt statement, includes `return_statement`, `throw_statement`, `break_statement`, `continue_statement`.
 
 <a id="stmt_seq_field"></a>`stmt_seq_field` includes `body`, `consequent`.
 
@@ -119,10 +198,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 > `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
 
-<a id="after_abrupt"></a>`after_abrupt`(S) if all of:
-  - a node B [is abrupt](#abrupt_at) at F from an index I;
-  - a node S is the J-th of the F of B;
-  - I < J.
+<a id="after_abrupt"></a>A node follows an abrupt completion if a node B [is abrupt](#abrupt_at) at F from an index I, it is the J-th of the F of B, and I < J.
 
 > A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 > control comes back only if the promise settles — so it lands in `guarded` as
@@ -130,23 +206,21 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 > function: without `nearest_v` an `await` inside a function would guard
 > everything after that function's declaration at module level.
 
-<a id="suspend_at"></a>A node suspends at F from an index I if all of:
-  - [`transfer_mechanism`](#transfer_mechanism)(K, `suspend`);
+A node
+
+- <a id="suspend_at"></a>suspends at F from an index I if all of:
+  - a kind K [transfers by](#transfer_mechanism) `suspend`;
   - a node X [is of kind](js-model.md#ast_node) K;
   - a node G [is nearest to](js-dataflow.md#nearest_v) X;
   - a node S [is within](js-structure.md#ast_within) G;
   - X [is within](js-structure.md#ast_within) S;
-  - [`stmt_seq_field`](#stmt_seq_field)(F);
+  - F [is a statement sequence field](#stmt_seq_field);
   - S is the I-th of the F of it.
-
-<a id="after_suspend"></a>`after_suspend`(S) if all of:
-  - a node B [suspends](#suspend_at) at F from an index I;
-  - a node S is the J-th of the F of B;
-  - I < J.
+- <a id="after_suspend"></a>follows a suspension if a node B [suspends](#suspend_at) at F from an index I, it is the J-th of the F of B, and I < J.
 
 > a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
 
-<a id="stmt_seq_unseen"></a>`stmt_seq_unseen`(F) if [`stmt_seq_field`](#stmt_seq_field)(F), unless the F of some node is some node.
+<a id="stmt_seq_unseen"></a>F is an unseen statement field if F [is a statement sequence field](#stmt_seq_field), unless the F of some node is some node.
 
 > A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 > statements between the reference and its target, and the walk stops at the
@@ -158,24 +232,21 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 > honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 > harmless, because both consumers read through `guarded`.
 
-<a id="label_name"></a>`label_name`(a label LS, N) if the `label` of LS is a node I and the attribute `name` of I is N.
+<a id="label_name"></a>The label name of a label LS is N if the `label` of LS is a node I and the attribute `name` of I is N.
 
-<a id="label_ref"></a>`label_ref`(X, N) if all of:
-  - [`abrupt_kind`](#abrupt_kind)(K);
-  - a node X [is of kind](js-model.md#ast_node) K;
-  - the `label` of X is a node I;
-  - the attribute `name` of I is N.
+<a id="label_ref"></a>An abrupt statement refers to the label N if the `label` of it is a node I and the attribute `name` of I is N.
 
-<a id="label_target"></a>`label_target`(X, LS) if all of:
-  - [`label_ref`](#label_ref)(X, N);
-  - [`label_name`](#label_name)(LS, N);
-  - a node X [is within](js-structure.md#ast_within) a node LS.
+A node
 
-<a id="abrupt_at"></a>A node is abrupt at F from an index I if all of:
-  - [`label_target`](#label_target)(X, LS);
-  - a node S [is within](js-structure.md#ast_within) a node LS;
-  - a node X [is within](js-structure.md#ast_within) S;
-  - [`stmt_seq_field`](#stmt_seq_field)(F);
+- <a id="label_target"></a>targets the label a node LS if all of:
+  - it [refers to the label](#label_ref) N;
+  - [the label name](#label_name) of LS is N;
+  - it [is within](js-structure.md#ast_within) LS.
+- <a id="abrupt_at"></a>is abrupt at F from an index I if all of:
+  - a node X [targets the label](#label_target) a node LS;
+  - a node S [is within](js-structure.md#ast_within) LS;
+  - X [is within](js-structure.md#ast_within) S;
+  - F [is a statement sequence field](#stmt_seq_field);
   - S is the I-th of the F of it.
 
 ## COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
@@ -191,22 +262,21 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 <a id="completion_kind"></a>`completion_kind` includes `block_statement`, `if_statement`, `labeled_statement`.
 
-<a id="completes_abruptly"></a>`completes_abruptly`(S) if [`abrupt_kind`](#abrupt_kind)(K) and a node S [is of kind](js-model.md#ast_node) K.
+<a id="completes_abruptly"></a>An abrupt statement completes abruptly.
 
-`completes_abruptly`(a block B) if [`completes_abruptly`](#completes_abruptly)(S) and a node S is among the `body` of B.
+A block completes abruptly if a node S [completes abruptly](#completes_abruptly) and S is among the `body` of it.
 
-`completes_abruptly`(an if S) if all of:
-  - [`completes_abruptly`](#completes_abruptly)(C);
-  - the `consequent` of S is a node C;
-  - the `alternate` of S is a node X;
-  - [`completes_abruptly`](#completes_abruptly)(X).
+An if completes abruptly if all of:
+  - a node C [completes abruptly](#completes_abruptly);
+  - the `consequent` of it is C;
+  - the `alternate` of it [completes abruptly](#completes_abruptly).
 
-<a id="label_escaped"></a>`label_escaped`(LS) if [`label_target`](#label_target)(something, LS).
+<a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
 
-`completes_abruptly`(a label LS) if all of:
-  - [`completes_abruptly`](#completes_abruptly)(S);
-  - the `body` of LS is a node S;
-  - unless [`label_escaped`](#label_escaped)(LS).
+A label completes abruptly if all of:
+  - a node S [completes abruptly](#completes_abruptly);
+  - the `body` of it is S;
+  - unless it [is escaped](#label_escaped).
 
 Declared as facts: completion_kind.
 
@@ -214,19 +284,20 @@ Declared as facts: completion_kind.
 > it, since the base case IS that arm
 
 A node is abrupt at F from an index I if all of:
-  - [`completes_abruptly`](#completes_abruptly)(S);
-  - [`stmt_seq_field`](#stmt_seq_field)(F);
-  - a node S is the I-th of the F of it.
+  - a node S [completes abruptly](#completes_abruptly);
+  - F [is a statement sequence field](#stmt_seq_field);
+  - S is the I-th of the F of it.
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
 
-<a id="completion_decided"></a>`completion_decided`(K) if [`completes_abruptly`](#completes_abruptly)(S) and a node S [is of kind](js-model.md#ast_node) K.
+A kind K
 
-<a id="completion_unreached"></a>`completion_unreached`(K) if all of:
-  - [`completion_kind`](#completion_kind)(K);
+- <a id="completion_decided"></a>has a decided completion if a node S [completes abruptly](#completes_abruptly) and S [is of kind](js-model.md#ast_node) K.
+- <a id="completion_unreached"></a>has an unreached completion if all of:
+  - K [is a completion kind](#completion_kind);
   - some node [is of kind](js-model.md#ast_node) K;
-  - unless [`completion_decided`](#completion_decided)(K).
+  - unless K [has a decided completion](#completion_decided).
 
 > Seven kinds can hold a `return` and still complete normally, declared rather
 > than left to fall through the block arm: a loop body may run zero times (its
@@ -237,7 +308,7 @@ A node is abrupt at F from an index I if all of:
 
 <a id="completion_deferred"></a>`completion_deferred` lists:
 
-| arg 1 | arg 2 |
+| kind | reason |
 |---|---|
 | `while_statement` | `a_condition_this_layer_cannot_decide` |
 | `for_statement` | `a_condition_this_layer_cannot_decide` |
@@ -247,10 +318,10 @@ A node is abrupt at F from an index I if all of:
 | `switch_statement` | `a_completion_reason_this_relation_does_not_carry` |
 | `try_statement` | `a_handler_that_may_swallow_the_transfer` |
 
-<a id="completion_known"></a>`completion_known`(K) either:
+<a id="completion_known"></a>A kind K has a known completion either:
 
-1. if [`completion_kind`](#completion_kind)(K);
-2. if [`completion_deferred`](#completion_deferred)(K, something);
+1. if K [is a completion kind](#completion_kind);
+2. if K [defers its completion](#completion_deferred) because some reason;
 3. if [`abrupt_kind`](#abrupt_kind)(K).
 
 Declared as facts: completion_deferred.
@@ -262,23 +333,24 @@ Declared as facts: completion_deferred.
 > the candidate and the boundary asked of it; the other order crossed every
 > function with every abrupt completion, 8.8 s to 21.7 s for one rule.
 
-<a id="completion_outer"></a>`completion_outer`(P, S) if all of:
-  - [`completes_abruptly`](#completes_abruptly)(S);
-  - a node S [is within](js-structure.md#ast_within) a node P;
-  - P [is of kind](js-model.md#ast_node) K but is not a function;
-  - [`stmt_seq_field`](#stmt_seq_field)(F);
-  - P is among the F of some node;
-  - unless [`completion_known`](#completion_known)(K).
+A node
 
-<a id="completion_fn_between"></a>`completion_fn_between`(P, S) if all of:
-  - [`completion_outer`](#completion_outer)(P, S);
-  - a function G [is within](js-structure.md#ast_within) a node P;
-  - a node S [is within](js-structure.md#ast_within) G.
+- <a id="completion_outer"></a>carries the completion of a node S if all of:
+  - S [completes abruptly](#completes_abruptly);
+  - S [is within](js-structure.md#ast_within) it;
+  - it [is of kind](js-model.md#ast_node) K but is not a function;
+  - F [is a statement sequence field](#stmt_seq_field);
+  - it is among the F of some node;
+  - unless K [has a known completion](#completion_known).
+- <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
+  - it [carries the completion](#completion_outer) of S;
+  - a function G [is within](js-structure.md#ast_within) it;
+  - S [is within](js-structure.md#ast_within) G.
 
-<a id="completion_unaccounted"></a>`completion_unaccounted`(K) if all of:
-  - [`completion_outer`](#completion_outer)(P, S);
-  - a node P [is of kind](js-model.md#ast_node) K;
-  - unless [`completion_fn_between`](#completion_fn_between)(P, S).
+<a id="completion_unaccounted"></a>A kind K has an unaccounted completion if all of:
+  - a node P [carries the completion](#completion_outer) of a node S;
+  - P [is of kind](js-model.md#ast_node) K;
+  - unless P [is cut by a function from](#completion_fn_between) S.
 
 ## 3. A CALL IS AN EXIT. Decidable from syntax alone: no `return` anywhere in
 
@@ -288,16 +360,17 @@ Declared as facts: completion_deferred.
 > return against every function — 94 % of the layer's read cost, measured on
 > two corpora with two instruments.
 
-<a id="has_return"></a>`has_return`(a function F) if a return R [is within](js-structure.md#ast_within) F.
+A function
 
-<a id="top_throw"></a>`top_throw`(a function F) if the `body` of F is a node B and a throw S is among the `body` of B.
+- <a id="has_return"></a>has a return if a return R [is within](js-structure.md#ast_within) it.
+- <a id="top_throw"></a>throws at the top if the `body` of it is a node B and a throw S is among the `body` of B.
 
-<a id="always_throws"></a>`always_throws`(F) if [`top_throw`](#top_throw)(F), unless [`has_return`](#has_return)(F).
+<a id="always_throws"></a>F always throws if F [throws at the top](#top_throw), unless F [has a return](#has_return).
 
-<a id="throwing_call"></a>`throwing_call`(C) if all of:
+<a id="throwing_call"></a>C is a throwing call if all of:
   - C [is a call site](js-callgraph.md#call_site) in some file;
   - C [resolves to](js-callgraph.md#resolves) F;
-  - [`always_throws`](#always_throws)(F).
+  - F [always throws](#always_throws).
 
 > AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 > control; what the getter returns is a different question, not answered here.
@@ -311,28 +384,28 @@ Declared as facts: completion_deferred.
 
 <a id="accessor_kind"></a>`accessor_kind` includes "get", "set".
 
-<a id="accessor_of"></a>`accessor_of`(Obj, Key, M) if all of:
-  - [the member](js-dataflow.md#member_value) Key of a node Obj holds a node M;
-  - [`accessor_kind`](#accessor_kind)(K);
+<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if all of:
+  - [the member](js-dataflow.md#member_value) Key of Obj holds M;
+  - a kind K [is an accessor kind](#accessor_kind);
   - the attribute `kind` of M is K.
 
-<a id="accessor_read"></a>`accessor_read`(N, M) either:
+<a id="accessor_read"></a>N reads through the accessor a node M either:
 
 1. if all of:
-   - [`accessor_of`](#accessor_of)(Obj, Key, M);
+   - [the accessor](#accessor_of) of a node Obj at Key is M;
    - N [selects](js-dataflow.md#selects) Key;
    - N is a member access;
    - the `object` of N [may be the node](js-dataflow.md#may_be_node) Obj;
 2. if all of:
    - N [binds privately to](js-dataflow.md#private_binds) M;
-   - [`accessor_kind`](#accessor_kind)(K);
+   - a kind K [is an accessor kind](#accessor_kind);
    - the attribute `kind` of M is K.
 
-`throwing_call`(N) if [`accessor_read`](#accessor_read)(N, M) and [`always_throws`](#always_throws)(M).
+A node
 
-N resolves to M if [`accessor_read`](#accessor_read)(N, M).
-
-`site`(N) if [`accessor_read`](#accessor_read)(N, something).
+- is a throwing call if it [reads through the accessor](#accessor_read) a node M and M [always throws](#always_throws).
+- resolves to a node M if it [reads through the accessor](#accessor_read) M.
+- is a site if it [reads through the accessor](#accessor_read) some node.
 
 Declared as facts: accessor_kind.
 
@@ -347,43 +420,41 @@ Declared as facts: accessor_kind.
 > the declarator form: a pattern in a parameter reads the argument, a
 > call-site question, so it is silent here rather than wrong.
 
-<a id="pattern_source"></a>`pattern_source`(P, Init) if the `id` of a declarator D is a node P and the `init` of D is a node Init.
+<a id="pattern_source"></a>The pattern source of a node P is a node Init if the `id` of a declarator D is P and the `init` of D is Init.
 
-<a id="pattern_accessor"></a>`pattern_accessor`(an object pattern P, M) if all of:
-  - [`pattern_source`](#pattern_source)(P, Init);
-  - a node Init [may be the node](js-dataflow.md#may_be_node) Obj;
-  - P [takes the key](js-dataflow.md#pattern_takes) Key;
-  - [`accessor_of`](#accessor_of)(Obj, Key, M).
+<a id="pattern_accessor"></a>An object pattern destructures through the accessor a node M if all of:
+  - [the pattern source](#pattern_source) of it [may be the node](js-dataflow.md#may_be_node) Obj;
+  - it [takes the key](js-dataflow.md#pattern_takes) Key;
+  - [the accessor](#accessor_of) of Obj at Key is M.
 
-`pattern_accessor`(R, M) if all of:
-  - a node D [holds a rest](js-dataflow.md#rest_in_pattern) a node R in some file;
+A node destructures through the accessor a node M if all of:
+  - a node D [holds a rest](js-dataflow.md#rest_in_pattern) it in some file;
   - the `id` of D is a node P;
   - the `init` of D [may be the node](js-dataflow.md#may_be_node) Obj;
-  - [`accessor_of`](#accessor_of)(Obj, Key, M);
+  - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.md#pattern_takes) Key.
 
-`pattern_accessor`(a spread S, M) if all of:
-  - S is among the `properties` of an object literal O;
-  - the `argument` of S [may be the node](js-dataflow.md#may_be_node) Obj;
-  - [`accessor_of`](#accessor_of)(Obj, Key, M).
+A spread destructures through the accessor a node M if all of:
+  - it is among the `properties` of an object literal O;
+  - the `argument` of it [may be the node](js-dataflow.md#may_be_node) Obj;
+  - [the accessor](#accessor_of) of Obj at Key is M.
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
 
 <a id="spread_iterable_field"></a>`spread_iterable_field` includes `elements`, `arguments`.
 
-<a id="spread_iterated"></a>`spread_iterated`(a spread S) if [`spread_iterable_field`](#spread_iterable_field)(F) and S is among the F of some node.
+<a id="spread_iterated"></a>A spread is iterated if F [holds iterated spreads](#spread_iterable_field) and it is among the F of some node.
 
-<a id="pattern_iterates"></a>`pattern_iterates`(P, M) either:
+<a id="pattern_iterates"></a>P destructures through M either:
 
 1. if all of:
    - P is an array pattern;
-   - [`pattern_source`](#pattern_source)(P, Init);
-   - a node Init [may be the node](js-dataflow.md#may_be_node) Obj;
+   - [the pattern source](#pattern_source) of P [may be the node](js-dataflow.md#may_be_node) Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
    - M is a function;
 2. if all of:
-   - [`spread_iterated`](#spread_iterated)(P);
+   - P [is iterated](#spread_iterated);
    - the `argument` of P [may be the node](js-dataflow.md#may_be_node) Obj;
    - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M;
    - M is a function.
@@ -400,25 +471,25 @@ Declared as facts: spread_iterable_field.
 > relation so the effect layer can name the callee it drops
 > (`w_effect_reads_only_what_resolves`).
 
-`site`(N) if [`pattern_accessor`](#pattern_accessor)(N, something).
+A node is a site if it [destructures through the accessor](#pattern_accessor) some node.
 
-`calls`(Caller, M) either:
+Caller calls a node M either:
 
-1. if [`pattern_accessor`](#pattern_accessor)(N, M) and [`nearest_fn`](js-callgraph.md#nearest_fn)(Caller, N);
-2. if [`pattern_accessor`](#pattern_accessor)(N, M) and [`top_call`](js-callgraph.md#top_call)(N, Caller).
+1. if a node N [destructures through the accessor](#pattern_accessor) M and Caller [is the nearest function of](js-callgraph.md#nearest_fn) N;
+2. if a node N [destructures through the accessor](#pattern_accessor) M and N [runs at the top of](js-callgraph.md#top_call) Caller.
 
-`site`(N) if [`pattern_iterates`](#pattern_iterates)(N, something).
+A node
 
-N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
-
-<a id="pattern_next"></a>`pattern_next`(X, a function Next) if all of:
-  - [`pattern_iterates`](#pattern_iterates)(X, M);
+- is a site if it [destructures through](#pattern_iterates) some node.
+- resolves to a node M if it [destructures through](#pattern_iterates) M.
+- <a id="pattern_next"></a>iterates with the next a function Next if all of:
+  - it [destructures through](#pattern_iterates) a node M;
   - M [returns](js-dataflow.md#returns) a node E;
   - E [may be the node](js-dataflow.md#may_be_node) IterObj;
   - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
   - V [may be the node](js-dataflow.md#may_be_node) Next.
 
-`calls`(Caller, Next) if [`pattern_next`](#pattern_next)(X, Next) and [`nearest_fn`](js-callgraph.md#nearest_fn)(Caller, X).
+Caller calls Next if a node X [iterates with the next](#pattern_next) Next and Caller [is the nearest function of](js-callgraph.md#nearest_fn) X.
 
 ## 5. THE SOURCE DECIDES, SO COUNT THE SOURCES. Every position that runs a
 
@@ -433,67 +504,57 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 > to `spread_element`, which carries both mechanisms — mutant d9 reads the
 > edges instead.
 
-<a id="hidden_call_pos"></a>`hidden_call_pos`(N, E) either:
+<a id="hidden_call_pos"></a>N hides a call by a mechanism E either:
 
 1. if N is an object pattern and E is `accessor_call`;
 2. if N is a rest, N is among the `properties` of an object pattern P, and E is `accessor_call`;
 3. if N is among the `properties` of an object literal O, N is a spread, and E is `accessor_call`;
 4. if N is an array pattern or a for-of and E is `iterator_call`;
-5. if [`spread_iterated`](#spread_iterated)(N) and E is `iterator_call`.
+5. if N [is iterated](#spread_iterated) and E is `iterator_call`.
 
-<a id="hidden_call_src"></a>`hidden_call_src`(P, Init) either:
+<a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
 
-1. if P is an object pattern or an array pattern and [`pattern_source`](#pattern_source)(P, Init);
+1. if P is an object pattern or an array pattern and [the pattern source](#pattern_source) of P is Init;
 2. if a node D [holds a rest](js-dataflow.md#rest_in_pattern) P in some file and the `init` of D is Init;
 3. if all of:
    - P is a spread;
-   - [`hidden_call_pos`](#hidden_call_pos)(P, something);
+   - P [hides a call by](#hidden_call_pos) some mechanism;
    - the `argument` of P is Init;
 4. if P is a for-of and the `right` of P is Init.
 
-<a id="hidden_call_user"></a>`hidden_call_user`(N, M) either:
+<a id="hidden_call_user"></a>A node N fires the hidden call a node M either:
 
-1. if [`pattern_accessor`](#pattern_accessor)(N, M);
-2. if [`pattern_iterates`](#pattern_iterates)(N, M);
-3. if [`for_of_iterates`](js-callgraph.md#for_of_iterates)(N, M).
+1. if N [destructures through the accessor](#pattern_accessor) M;
+2. if N [destructures through](#pattern_iterates) M;
+3. if N [iterates through](js-callgraph.md#for_of_iterates) M.
 
-<a id="hidden_call_fires"></a>`hidden_call_fires`(N) if [`hidden_call_user`](#hidden_call_user)(N, something).
+A node
 
-<a id="hidden_call_builtin"></a>`hidden_call_builtin`(N, O) if all of:
-  - [`hidden_call_src`](#hidden_call_src)(N, Src);
-  - a node Src [may be the node](js-dataflow.md#may_be_node) O;
-  - unless [`hidden_call_fires`](#hidden_call_fires)(N).
+- <a id="hidden_call_fires"></a>fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
+- <a id="hidden_call_builtin"></a>hides a builtin call on a node O if [the hidden call source](#hidden_call_src) of it [may be the node](js-dataflow.md#may_be_node) O, unless it [fires a hidden call](#hidden_call_fires).
+- <a id="hidden_call_primitive"></a>hides a call on the primitive V if [the hidden call source](#hidden_call_src) of it [may be the literal](js-dataflow.md#may_be_lit) V, unless it [has a traced hidden call](#hidden_call_traced).
+- <a id="hidden_call_traced"></a>has a traced hidden call if [the hidden call source](#hidden_call_src) of it [may be the node](js-dataflow.md#may_be_node) some node.
+- <a id="hidden_call_untraced"></a>has an untraced hidden call from a node Src if [the hidden call source](#hidden_call_src) of it is Src and Src neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
+- <a id="hidden_call_sourced"></a>has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
+- <a id="hidden_call_unsourced"></a>has an unsourced hidden call of a kind K if all of:
+  - it [hides a call by](#hidden_call_pos) some mechanism;
+  - it [is of kind](js-model.md#ast_node) K;
+  - unless it [has a sourced hidden call](#hidden_call_sourced).
 
-<a id="hidden_call_primitive"></a>`hidden_call_primitive`(N, V) if all of:
-  - [`hidden_call_src`](#hidden_call_src)(N, Src);
-  - a node Src [may be the literal](js-dataflow.md#may_be_lit) V;
-  - unless [`hidden_call_traced`](#hidden_call_traced)(N).
+<a id="hidden_call_accounted"></a>A node N has an accounted hidden call either:
 
-<a id="hidden_call_traced"></a>`hidden_call_traced`(N) if [`hidden_call_src`](#hidden_call_src)(N, Src) and a node Src [may be the node](js-dataflow.md#may_be_node) some node.
+1. if N [fires a hidden call](#hidden_call_fires);
+2. if N [hides a builtin call on](#hidden_call_builtin) some node;
+3. if N [hides a call on the primitive](#hidden_call_primitive) some value;
+4. if N [has an untraced hidden call from](#hidden_call_untraced) some node;
+5. if N [has an unsourced hidden call](#hidden_call_unsourced) of some kind.
 
-<a id="hidden_call_untraced"></a>`hidden_call_untraced`(N, Src) if [`hidden_call_src`](#hidden_call_src)(N, Src), unless a node Src [may be the literal](js-dataflow.md#may_be_lit) some text or Src [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="hidden_call_unaccounted"></a>A node has an unaccounted hidden call if it [hides a call by](#hidden_call_pos) some mechanism, unless it [has an accounted hidden call](#hidden_call_accounted).
 
-<a id="hidden_call_sourced"></a>`hidden_call_sourced`(N) if [`hidden_call_src`](#hidden_call_src)(N, something).
-
-<a id="hidden_call_unsourced"></a>`hidden_call_unsourced`(N, K) if all of:
-  - [`hidden_call_pos`](#hidden_call_pos)(N, something);
-  - a node N [is of kind](js-model.md#ast_node) K;
-  - unless [`hidden_call_sourced`](#hidden_call_sourced)(N).
-
-<a id="hidden_call_accounted"></a>`hidden_call_accounted`(N) either:
-
-1. if [`hidden_call_fires`](#hidden_call_fires)(N);
-2. if [`hidden_call_builtin`](#hidden_call_builtin)(N, something);
-3. if [`hidden_call_primitive`](#hidden_call_primitive)(N, something);
-4. if [`hidden_call_untraced`](#hidden_call_untraced)(N, something);
-5. if [`hidden_call_unsourced`](#hidden_call_unsourced)(N, something).
-
-<a id="hidden_call_unaccounted"></a>`hidden_call_unaccounted`(N) if [`hidden_call_pos`](#hidden_call_pos)(N, something), unless [`hidden_call_accounted`](#hidden_call_accounted)(N).
-
-<a id="hidden_call_off_table"></a>`hidden_call_off_table`(K, M) if all of:
-  - [`hidden_call_pos`](#hidden_call_pos)(N, M);
-  - a node N [is of kind](js-model.md#ast_node) K;
-  - unless [`transfer_mechanism`](#transfer_mechanism)(K, M).
+<a id="hidden_call_off_table"></a>A kind K hides a call off the table by a mechanism M if all of:
+  - a node N [hides a call by](#hidden_call_pos) M;
+  - N [is of kind](js-model.md#ast_node) K;
+  - unless K [transfers by](#transfer_mechanism) M.
 
 ## 6. WHAT PROPAGATES. A try catches what runs in ITS OWN function:
 
@@ -501,9 +562,10 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 > and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
 > clause: `block`, not the whole try.
 
-<a id="try_of"></a>`try_of`(a try TS, F) if F [is nearest to](js-dataflow.md#nearest_v) TS.
+A try
 
-<a id="in_try_block"></a>`in_try_block`(a try TS, N) if the `block` of TS is a node B and a node N [is within](js-structure.md#ast_within) B.
+- <a id="try_of"></a>lies in F if F [is nearest to](js-dataflow.md#nearest_v) it.
+- <a id="in_try_block"></a>tries a node N if the `block` of it is a node B and N [is within](js-structure.md#ast_within) B.
 
 > A try discharges through its `handler`; a finalizer alone catches nothing —
 > `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
@@ -512,48 +574,49 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 
 <a id="catches_via"></a>`catches_via` lists:
 
-| arg 1 | arg 2 |
+| kind | field |
 |---|---|
 | `try_statement` | `handler` |
 
-<a id="try_catches"></a>`try_catches`(TS) if all of:
-  - [`catches_via`](#catches_via)(K, Field);
-  - a node TS [is of kind](js-model.md#ast_node) K;
-  - the Field of TS is some node.
+A node
 
-<a id="caught_here"></a>`caught_here`(N) if all of:
-  - [`in_try_block`](#in_try_block)(TS, N);
-  - [`try_of`](#try_of)(TS, F);
-  - F [is nearest to](js-dataflow.md#nearest_v) a node N;
-  - [`try_catches`](#try_catches)(TS).
+- <a id="try_catches"></a>has a handler if all of:
+  - a kind K [catches via](#catches_via) Field;
+  - it [is of kind](js-model.md#ast_node) K;
+  - the Field of it is some node.
+- <a id="caught_here"></a>is caught here if all of:
+  - a node TS [tries](#in_try_block) it;
+  - TS [lies in](#try_of) F;
+  - F [is nearest to](js-dataflow.md#nearest_v) it;
+  - TS [has a handler](#try_catches).
 
-<a id="throws_outright"></a>`throws_outright`(F) if F [is nearest to](js-dataflow.md#nearest_v) a throw T, unless [`caught_here`](#caught_here)(T).
+<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.md#nearest_v) a throw T, unless T [is caught here](#caught_here).
 
 Declared as facts: catches_via.
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 > callee. The value travels with the throw: `thrown_by`, `caught_value`.
 
-<a id="may_throw"></a>`may_throw`(F) either:
+<a id="may_throw"></a>F may throw either:
 
-1. if [`throws_outright`](#throws_outright)(F);
+1. if F [throws outright](#throws_outright);
 2. if all of:
-   - [`may_throw`](#may_throw)(G);
+   - G [may throw](#may_throw);
    - a node C [resolves to](js-callgraph.md#resolves) G;
    - F [is nearest to](js-dataflow.md#nearest_v) C;
-   - unless [`caught_here`](#caught_here)(C).
+   - unless C [is caught here](#caught_here).
 
-<a id="thrown_by"></a>`thrown_by`(F, V) either:
+<a id="thrown_by"></a>F throws out a node V either:
 
 1. if all of:
    - F [is nearest to](js-dataflow.md#nearest_v) a throw T;
-   - the `argument` of T is a node V;
-   - unless [`caught_here`](#caught_here)(T);
+   - the `argument` of T is V;
+   - unless T [is caught here](#caught_here);
 2. if all of:
-   - [`thrown_by`](#thrown_by)(G, V);
+   - G [throws out](#thrown_by) V;
    - a node C [resolves to](js-callgraph.md#resolves) G;
    - F [is nearest to](js-dataflow.md#nearest_v) C;
-   - unless [`caught_here`](#caught_here)(C).
+   - unless C [is caught here](#caught_here).
 
 <a id="caught_value"></a>A node catches a node V if all of:
   - [the catch](js-dataflow.md#catch_of) of T is H;
@@ -561,7 +624,7 @@ Declared as facts: catches_via.
   - [the block](js-dataflow.md#try_block) of T is a node B;
   - a node C [is within](js-structure.md#ast_within) B;
   - C [resolves to](js-callgraph.md#resolves) G;
-  - [`thrown_by`](#thrown_by)(G, V).
+  - G [throws out](#thrown_by) V.
 
 > A throwing call is an abrupt transfer for every list out to the `try` that
 > catches it — code after the try runs precisely because the handler caught —
@@ -569,38 +632,37 @@ Declared as facts: catches_via.
 > reached the module's own list and everything after `class Lit` was
 > unreachable (`after_abrupt` 3 -> 37).
 
-<a id="try_stops"></a>`try_stops`(C, a try T) if [`throwing_call`](#throwing_call)(C) and a node C [is within](js-structure.md#ast_within) T.
+<a id="try_stops"></a>A node is stopped by a try T if it [is a throwing call](#throwing_call) and it [is within](js-structure.md#ast_within) T.
 
-`try_stops`(C, S) if [`try_stops`](#try_stops)(C, T) and a node T [is within](js-structure.md#ast_within) a node S.
+C is stopped by a node S if C [is stopped by](#try_stops) a node T and T [is within](js-structure.md#ast_within) S.
 
 A node is abrupt at F from an index I if all of:
-  - [`throwing_call`](#throwing_call)(C);
-  - a node G [is nearest to](js-dataflow.md#nearest_v) a node C;
+  - a node C [is a throwing call](#throwing_call);
+  - a node G [is nearest to](js-dataflow.md#nearest_v) C;
   - a node S [is within](js-structure.md#ast_within) G;
   - C [is within](js-structure.md#ast_within) S;
-  - [`stmt_seq_field`](#stmt_seq_field)(F);
+  - F [is a statement sequence field](#stmt_seq_field);
   - S is the I-th of the F of it;
-  - unless [`try_stops`](#try_stops)(C, S).
+  - unless C [is stopped by](#try_stops) S.
 
 > After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
 > A suspension is a may and belongs here more exactly.
 
-`guarded`(S) if [`after_abrupt`](#after_abrupt)(S).
+A node
 
-`guarded`(N) if [`after_abrupt`](#after_abrupt)(S) and a node N [is within](js-structure.md#ast_within) a node S.
-
-`guarded`(S) if [`after_suspend`](#after_suspend)(S).
-
-`guarded`(N) if [`after_suspend`](#after_suspend)(S) and a node N [is within](js-structure.md#ast_within) a node S.
+- is guarded if it [follows an abrupt completion](#after_abrupt).
+- is guarded if a node S [follows an abrupt completion](#after_abrupt) and it [is within](js-structure.md#ast_within) S.
+- is guarded if it [follows a suspension](#after_suspend).
+- is guarded if a node S [follows a suspension](#after_suspend) and it [is within](js-structure.md#ast_within) S.
 
 > A function every one of whose sites is guarded may never be entered.
 > `may_not_run` is LOCAL, one level; the transitive question is reachability.
 
-<a id="guarded_call"></a>`guarded_call`(C) if C [is a call site](js-callgraph.md#call_site) in some file and [`guarded`](#guarded)(C).
+<a id="guarded_call"></a>A node is a guarded call if it [is a call site](js-callgraph.md#call_site) in some file and it [is guarded](#guarded).
 
-<a id="reached_unguarded"></a>`reached_unguarded`(F) if C [resolves to](js-callgraph.md#resolves) F, unless [`guarded`](#guarded)(C).
+<a id="reached_unguarded"></a>F is reached unguarded if a node C [resolves to](js-callgraph.md#resolves) F, unless C [is guarded](#guarded).
 
-<a id="may_not_run"></a>`may_not_run`(F) if some call [resolves to](js-callgraph.md#resolves) F, unless [`reached_unguarded`](#reached_unguarded)(F).
+<a id="may_not_run"></a>F may not run if some call [resolves to](js-callgraph.md#resolves) F, unless F [is reached unguarded](#reached_unguarded).
 
 ## 7. TRANSITIVE REACHABILITY needs an ENTRY POINT: without one the question is
 
@@ -613,58 +675,54 @@ A node is abrupt at F from an index I if all of:
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-<a id="export_kind"></a>`export_kind` includes `export_named_declaration`, `export_default_declaration`.
+<a id="export_kind"></a>`export_kind`, an export declaration, includes `export_named_declaration`, `export_default_declaration`.
 
-A node is a function if [`fn_name`](js-callgraph.md#fn_name)(it, something).
+A node
 
-<a id="in_fn"></a>`in_fn`(N) if some function [is nearest to](js-dataflow.md#nearest_v) a node N.
+- is a function if it [answers to](js-callgraph.md#fn_name) some name.
+- <a id="in_fn"></a>is inside a function if some function [is nearest to](js-dataflow.md#nearest_v) it.
 
-<a id="exported_fn"></a>`exported_fn`(F) either:
+<a id="exported_fn"></a>F is exported either:
 
 1. if all of:
-   - [`export_kind`](#export_kind)(K);
-   - a node E [is of kind](js-model.md#ast_node) K;
-   - F [is within](js-structure.md#ast_within) E;
+   - F [is within](js-structure.md#ast_within) an export declaration E;
    - F is a function;
-   - unless [`in_fn`](#in_fn)(F);
+   - unless F [is inside a function](#in_fn);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.md#export_local) some name from some file;
    - L [may be the node](js-dataflow.md#may_be_node) F;
    - F is a function;
-   - unless [`in_fn`](#in_fn)(F).
+   - unless F [is inside a function](#in_fn).
 
-<a id="entry_point"></a>`entry_point`(F) if [`exported_fn`](#exported_fn)(F).
+<a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
 Declared as facts: export_kind.
 
 > ...and a top-level call runs on import, with no enclosing function.
 
-<a id="reachable"></a>`reachable`(F) either:
+<a id="reachable"></a>F is reachable either:
 
-1. if [`entry_point`](#entry_point)(F);
-2. if all of:
-   - C [resolves to](js-callgraph.md#resolves) F;
-   - unless [`guarded`](#guarded)(C);
-   - unless [`in_fn`](#in_fn)(C);
+1. if F [is an entry point](#entry_point);
+2. if a node C [resolves to](js-callgraph.md#resolves) F and C neither [is guarded](#guarded) nor [is inside a function](#in_fn);
 3. if all of:
-   - [`reachable`](#reachable)(G);
+   - G [is reachable](#reachable);
    - G [is nearest to](js-dataflow.md#nearest_v) a node C;
    - C [resolves to](js-callgraph.md#resolves) F;
-   - unless [`guarded`](#guarded)(C).
+   - unless C [is guarded](#guarded).
 
-<a id="may_not_be_reached"></a>`may_not_be_reached`(F) if some call [resolves to](js-callgraph.md#resolves) F, unless [`reachable`](#reachable)(F).
+<a id="may_not_be_reached"></a>F may not be reached if some call [resolves to](js-callgraph.md#resolves) F, unless F [is reachable](#reachable).
 
 > the typo hole again: a misspelling shrinks the entry surface and reports
 > live functions as maybe-dead, the dangerous direction
 
-<a id="export_kind_unseen"></a>`export_kind_unseen`(K) if [`export_kind`](#export_kind)(K), unless some node [is of kind](js-model.md#ast_node) K.
+<a id="export_kind_unseen"></a>A kind K is an unseen export kind if [`export_kind`](#export_kind)(K), unless some node [is of kind](js-model.md#ast_node) K.
 
 > A file with functions and no entry point reports every function dead — an
 > artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
 
-<a id="has_entry"></a>`has_entry`(File) if [`entry_point`](#entry_point)(F) and a node F [is in file](js-model.md#ast_node) File.
+<a id="has_entry"></a>File has an entry point if a node F [is an entry point](#entry_point) and F [is in file](js-model.md#ast_node) File.
 
-<a id="no_entry_point"></a>`no_entry_point`(File) if a function F [is in file](js-model.md#ast_node) File, unless [`has_entry`](#has_entry)(File).
+<a id="no_entry_point"></a>File has no entry point if a function F [is in file](js-model.md#ast_node) File, unless File [has an entry point](#has_entry).
 
 ## 8. THE GATES. Every kind that transfers control carries a MECHANISM, and
 
@@ -678,7 +736,7 @@ Declared as facts: export_kind.
 
 <a id="transfer_mechanism"></a>`transfer_mechanism` lists:
 
-| arg 1 | arg 2 |
+| kind | mechanism |
 |---|---|
 | `if_statement` | `skip_arm` |
 | `conditional_expression` | `skip_arm` |
@@ -724,17 +782,17 @@ Declared as facts: transfer_mechanism.
 
 <a id="mechanism_waived"></a>`mechanism_waived` lists:
 
-| arg 1 | arg 2 |
+| mechanism | reason |
 |---|---|
 | `loop_at_least_once` | `a_body_that_always_runs_guards_nothing` |
 
-<a id="mechanism_known"></a>`mechanism_known`(M) either:
+<a id="mechanism_known"></a>A mechanism M is a known mechanism either:
 
-1. if [`mechanism_modelled`](#mechanism_modelled)(M);
-2. if [`mechanism_waived`](#mechanism_waived)(M, something);
-3. if [`mechanism_open`](#mechanism_open)(M, something).
+1. if M [is modelled](#mechanism_modelled);
+2. if M [is waived](#mechanism_waived) because some reason;
+3. if M [is open](#mechanism_open) because some reason.
 
-<a id="mechanism_unanswered"></a>`mechanism_unanswered`(M) if [`transfer_mechanism`](#transfer_mechanism)(something, M), unless [`mechanism_known`](#mechanism_known)(M).
+<a id="mechanism_unanswered"></a>A mechanism is an unanswered mechanism if some kind [transfers by](#transfer_mechanism) it, unless it [is a known mechanism](#mechanism_known).
 
 Declared as facts: mechanism_modelled, mechanism_waived, mechanism_open.
 
@@ -748,54 +806,53 @@ Declared as facts: mechanism_modelled, mechanism_waived, mechanism_open.
 > derived, or the derived line would cover `member_expression` and silence
 > its mutant.
 
-<a id="guard_named"></a>`guard_named`(K) either:
+<a id="guard_named"></a>A kind K is a named guard kind either:
 
-1. if [`guard_kind`](#guard_kind)(K, something);
+1. if K [guards the field](#guard_kind) some field;
 2. if [`short_circuit_kind`](#short_circuit_kind)(K);
 3. if [`abrupt_kind`](#abrupt_kind)(K);
-4. if [`transfer_mechanism`](#transfer_mechanism)(K, `suspend` or `label_boundary` or `per_construction`).
+4. if K [transfers by](#transfer_mechanism) `suspend` or `label_boundary` or `per_construction`.
 
 `guard_named` includes `catch_clause`, `switch_statement`, `member_expression`, `decorator`, `object_pattern`, `rest_element`, `spread_element`.
 
-`guard_named`(K) if [`transfer_mechanism`](#transfer_mechanism)(K, `iterator_call`).
+A kind K
 
-<a id="guard_unmodelled"></a>`guard_unmodelled`(K) if all of:
-  - [`transfer_mechanism`](#transfer_mechanism)(K, M);
-  - [`mechanism_modelled`](#mechanism_modelled)(M);
+- is a named guard kind if K [transfers by](#transfer_mechanism) `iterator_call`.
+- <a id="guard_unmodelled"></a>is an unmodelled guard kind if all of:
+  - K [transfers by](#transfer_mechanism) a mechanism M;
+  - M [is modelled](#mechanism_modelled);
   - some node [is of kind](js-model.md#ast_node) K;
-  - unless [`guard_named`](#guard_named)(K).
+  - unless K [is a named guard kind](#guard_named).
 
 > SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
 > further along it is conditional.
 
-<a id="short_circuit_kind"></a>`short_circuit_kind` includes `optional_call_expression`, `optional_member_expression`.
+<a id="short_circuit_kind"></a>`short_circuit_kind`, a short circuit, includes `optional_call_expression`, `optional_member_expression`.
 
-`guarded`(N) either:
+N is guarded either:
 
-1. if [`short_circuit_kind`](#short_circuit_kind)(K) and a node N [is of kind](js-model.md#ast_node) K;
-2. if all of:
-   - [`short_circuit_kind`](#short_circuit_kind)(K);
-   - a node P [is of kind](js-model.md#ast_node) K;
-   - a node N [is within](js-structure.md#ast_within) P.
+1. if N is a short circuit;
+2. if N [is within](js-structure.md#ast_within) a short circuit P.
 
 Declared as facts: short_circuit_kind.
 
 > an arm declared for a field the scanner never emits under that kind: a typo
 > makes the guarded set quietly smaller
 
-<a id="guard_arm_seen"></a>`guard_arm_seen`(K, Field) if all of:
-  - [`guard_kind`](#guard_kind)(K, Field);
+A kind K
+
+- <a id="guard_arm_seen"></a>is seen guarding Field if all of:
+  - K [guards the field](#guard_kind) Field;
   - a node P [is of kind](js-model.md#ast_node) K;
   - the Field of P is some node.
-
-<a id="guard_arm_unseen"></a>`guard_arm_unseen`(K, F) if all of:
-  - [`guard_kind`](#guard_kind)(K, F);
+- <a id="guard_arm_unseen"></a>is unseen guarding F if all of:
+  - K [guards the field](#guard_kind) F;
   - some node [is of kind](js-model.md#ast_node) K;
-  - unless [`guard_arm_seen`](#guard_arm_seen)(K, F).
+  - unless K [is seen guarding](#guard_arm_seen) F.
 
 > a guarded site at a coordinate, for the report and the runtime comparison
 
-<a id="guarded_at"></a>`guarded_at`(File, Line) if [`guarded_call`](#guarded_call)(C) and a node C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="guarded_at"></a>File has a guarded call at Line if a node C [is a guarded call](#guarded_call) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## Read from other files
 

@@ -335,12 +335,12 @@ sig(class_define_eff, "defines_with_effect(class CD, effect label L, at host H)"
 sig(class_construct_eff, "constructs_with_effect(class CD, effect label L, at host H)").
 
 -- globals and host
-sig(es_global, "is_the_global(node E, name Name, of relation Rel, with form Form)").
-sig(es_global_invoke, "invokes_the_global(call C, name Name, of relation Rel)").
-sig(es_global_construct, "constructs_the_global(new X, name Name, of relation Rel)").
+sig(es_global, "is_the_global(node E, name Name, of release Rel, with form Form)").
+sig(es_global_invoke, "invokes_the_global(call C, name Name, of release Rel)").
+sig(es_global_construct, "constructs_the_global(new X, name Name, of release Rel)").
 sig(es_construct_not_constructor, "constructs_a_non_constructor(new X, name Name, of form Form)").
-sig(es_instance, "is_an_instance(new X, of name Name, from relation Rel)").
-sig(es_static, "selects_the_static(member access N, key Key:2, of name Name:1, from relation Rel:3)").
+sig(es_instance, "is_an_instance(new X, of name Name, from release Rel)").
+sig(es_static, "selects_the_static(member access N, key Key:2, of name Name:1, from release Rel:3)").
 sig(es_static_key, "selects_the_static_data(member access N, key Key:2, of name Name:1)").
 sig(host_global_ref, "refers_to_the_global(node E, name Name:2, of host H:1)").
 sig(host_global_only_in, "refers_to_a_global(node E, name Name:2, only in host H:1)").
@@ -383,3 +383,661 @@ sig(default_internal_conflict, "has_two_default_internals(node E, node A, node B
 sig(eff_mod_two_names, "has_two_module_effects(file F, effect A, effect B)").
 sig(export_binding_conflict, "has_two_export_bindings(node Sp, name A, name B)").
 sig(export_internal_conflict, "has_two_internal_bindings(node Sp, node A, node B)").
+
+-- =========================================================================
+-- THE REST OF THE MODEL, SIGNED BY HAND (Vadim: sign the remaining 543).
+-- One line per relation; a name that differs from the relation is a rename
+-- waiting to be applied, and a noun is worn only where a guard gives it.
+
+-- ambient: surfaces, landmarks and the map
+sig(surface_origin, "the_origin(of surface Spec, is origin N)").
+sig(ambient_binding, "names_the_surface(name Local:1, surface Spec:2, in file File:0)").
+sig(ambient_binding_unowned, "names_an_unowned_surface(name Name:1, surface S:2, in file File:0)").
+sig(amb_atom_label, "is_a_label_on_the_heap(effect X, heap H)").
+sig(eff_of_host, "the_landmark(of effect X, is effect N)").
+sig(host_atom_unmapped, "has_no_landmark(effect X)").
+sig(ambient_global_default, "has_the_surface_default(name Name, effect E)").
+sig(amb_global_member, "is_selected_on_the_global(key Key:1, name Name:0)").
+sig(ambient_enumerated, "is_enumerated(surface S)").
+sig(ambient_unenumerated, "is_unenumerated(surface S)").
+sig(amb_named_call, "calls_the_named_import(call C, key Key:2, of surface Spec:1)").
+sig(eff_surface, "reaches_the_surface(call C, surface Spec)").
+sig(eff_operation, "performs_the_operation(call C, operation Key)").
+sig(amb_global_call, "calls_the_global(call C, name Name)").
+sig(amb_construct, "constructs_the_ambient_global(new X, name Name)").
+sig(lib_mutator, "has_the_mutator(prototype P, key Key)").
+sig(amb_proto_unsplit, "has_no_readonly_twin(prototype P)").
+sig(lib_readonly_only, "has_a_readonly_only_member(prototype P, key Key)").
+sig(amb_proto_untraced, "has_an_untraced_receiver(prototype P)").
+sig(amb_proto_heap, "the_heap(of prototype P, is heap H)").
+sig(amb_proto_recv, "has_the_receiver_prototype(member access M, prototype P)").
+sig(amb_proto_heap_split, "is_split_on_the_heap(prototype P, at member access M)").
+sig(amb_not_constructible, "is_not_constructible(name Name)").
+sig(ambient_off_surface, "is_off_the_surface(operation Op:1, of surface S:0)").
+sig(amb_surface_attributed, "is_attributed(surface S)").
+sig(ambient_surface_unattributed, "is_unattributed(surface S)").
+sig(amb_owed_op, "owes_the_operation(surface S, operation Op)").
+sig(ambient_owed, "is_owed_by(surface S:1, origin O:0)").
+sig(amb_exn_source, "is_an_exception_source(call C)").
+sig(amb_exn_carrier, "carries_an_exception(function F)").
+sig(eff_exn_unexplained, "has_an_unexplained_exception(function F)").
+
+-- attrs: what the rules read of the attributes, over the reflection
+sig(attr_lit, "reads_the_attribute(term L, key K, with term V)").
+sig(attr_lit_kvar, "has_a_variable_key(term L, term X)").
+sig(attr_lit_vvar, "has_a_variable_value(term L, term X)").
+sig(attr_key_read, "is_read(key K)").
+sig(attr_key_read_free, "is_read_with_the_value_free(key K)").
+sig(attr_pair_read, "is_read_with(key K, value V)").
+sig(unconsumed_attr, "is_unconsumed(key K)").
+sig(unconsumed_value, "has_an_unconsumed_value(key K, value V)").
+sig(attr_unread_ok_unseen, "is_an_unseen_excuse(key K)").
+sig(attr_unread_ok_read, "is_excused_yet_read(key K)").
+sig(attr_value_ok_unseen, "is_an_unseen_value_excuse(key K, with value V)").
+sig(attr_deferred_unseen, "is_deferred_unseen(key K)").
+sig(attr_deferred_read, "is_deferred_yet_read(key K)").
+sig(attr_double_excused, "is_excused_twice(key K)").
+sig(pos_prem, "has_the_positive_premise(rule R, term L)").
+sig(attr_lit_kvvar, "reads_attributes_freely(term L)").
+sig(attr_table_read, "carries_attribute_pairs(relation Rel, from index I, to index J)").
+sig(attr_table_unbridged, "carries_attribute_pairs_unbridged(relation Rel, from index I, to index J)").
+sig(attr_table_bridged_unread, "is_bridged_yet_unread(relation Rel)").
+sig(rule_prem, "has_the_premise(rule R, term L)").
+sig(attr_test_lit, "is_an_attribute_test(term L, of term S:1, on key K:2)").
+sig(attr_test_svar, "tests_a_variable_subject(term L, term X)").
+sig(child_lit, "reads_the_child(term L, of term S, at field F)").
+sig(child_lit_svar, "reads_the_child_of_a_variable(term L, term X)").
+sig(child_lit_fvar, "reads_a_variable_field(term L, term X)").
+sig(attr_guard_pinned, "pins_the_attribute_guard(rule R, key K, on term S)").
+sig(attr_kind_has, "carries_the_attribute(kind Kind, key K)").
+sig(attr_kind_lacks, "sometimes_lacks_the_attribute(kind Kind, key K)").
+sig(attr_kind_split, "splits_the_kind(key K, kind Kind)").
+sig(attr_split_ok_unseen, "is_an_unseen_split_excuse(key K, for kind Kind)").
+
+-- callgraph: sites, shapes, the enclosing function, the edge, the frontier, await
+sig(transfer_site, "is_a_transfer_site(node X, of kind K)").
+sig(site, "is_a_site(node X)").
+sig(call_arg, "passes_the_argument(call C, node X:2, at index I:1)").
+sig(member_like, "calls_through(call C, member access N)").
+sig(optional_member, "calls_through_an_optional_member(call C)").
+sig(computed_member, "calls_through_a_computed_member(call C, member access N)").
+sig(static_member, "calls_through_a_static_member(call C, member access N)").
+sig(callee_obj, "the_receiver(of call C, is node O)").
+sig(callee_obj_kind, "the_receiver_kind(of call C, is kind K)").
+sig(callee_prop, "the_property(of call C, is node P)").
+sig(obj_kind_known, "is_a_classed_kind(kind K)").
+sig(obj_class, "the_receiver_class(of call C, is shape Cl)").
+sig(computed_key_static, "has_a_static_computed_key(call C)").
+sig(computed_key_template, "has_a_template_computed_key(call C)").
+sig(shape_known, "has_the_known_shape(call C, shape S)").
+sig(has_shape, "has_a_shape(call C)").
+sig(shape, "has_the_shape(call C, shape S)").
+sig(catch_all_occupied, "occupies_the_catch_all(kind K)").
+sig(unnamed_callee, "is_an_unnamed_callee_kind(kind K)").
+sig(shaped, "is_shaped(call C)").
+sig(unshaped, "is_unshaped(call C)").
+sig(fn_file, "is_defined_in(function F, file File)").
+sig(fn_name, "answers_to(function F, name N)").
+sig(ctor_method, "is_a_constructor(method F)").
+sig(class_has_id, "has_an_id(class expression CD)").
+sig(anon_class, "is_anonymous(class expression CD)").
+sig(in_own_decorator, "has_its_decorator_at(function F, node C)").
+sig(encloses, "encloses_the_site(function F, node C)").
+sig(closer, "is_outranked_at(function F, node C)").
+sig(nearest_fn, "is_the_nearest_function_of(function F, node C)").
+sig(enclosed, "is_enclosed(node C)").
+sig(top_call, "runs_at_the_top_of(node C, node R)").
+sig(obj_member_fn, "has_the_member_function(object literal O, function M:2, at key Key:1)").
+sig(class_ctor, "has_the_constructor(class CD, method M)").
+sig(for_of_iterates, "iterates_through(for-of X, function M)").
+sig(calls, "calls(function Caller, function Callee)").
+sig(calls_named, "calls_by_name(name Z, name B)").
+sig(calls_in, "names_a_call_to(name Z:1, name B:2, in file File:0)").
+sig(passes_function, "passes_the_function(call C, function F:2, named name Name:3, at index I:1)").
+sig(resolved_site, "is_resolved(node C)").
+sig(resolved_call, "is_a_resolved_call(call C)").
+sig(unresolved_call, "is_unresolved(call C, with shape S)").
+sig(unresolved_shape, "has_residue(shape S)").
+sig(frontier_at, "has_the_frontier(function F, shape S)").
+sig(frontier_named, "has_the_frontier_by_name(name Name, shape Item)").
+sig(frontier_line, "shows_the_frontier(file File, shape S:2, at line Line:1)").
+sig(shape_vocab, "is_a_shape(shape S)").
+sig(shape_seen, "is_seen(shape S)").
+sig(resolved_shape, "resolves_somewhere(shape S)").
+sig(shape_verdict, "the_shape_verdict(of shape S, is verdict N)").
+sig(shape_reason, "the_shape_reason(of shape S, is reason R)").
+sig(shape_unexplained, "is_unexplained(shape S)").
+sig(shape_bad_reason, "has_a_bad_reason(shape S, reason R)").
+sig(shape_orphan, "is_a_shape_nobody_lists(shape S)").
+sig(shape_stale, "is_a_stale_shape(shape S)").
+sig(shape_unexercised, "is_an_unexercised_shape(shape S)").
+sig(shape_irreducible, "is_irreducible(shape S)").
+sig(unrecorded_coverage, "is_covered_unrecorded(kind K, at shape S)").
+sig(shape_ours, "is_ours(shape S)").
+sig(fn_binder, "binds_the_function(node D, function F)").
+sig(callgraph_kind, "is_touched_by_the_call_graph(kind K)").
+sig(kind_undeclared, "is_undeclared(kind K)").
+sig(await_arg, "awaits(await Y, node X)").
+sig(awaited_then, "awaits_the_then(await Y, function F)").
+sig(performed_call, "performs_the_call(node X, function F)").
+sig(callerless_call, "is_called_without_a_caller(name Name)").
+sig(await_value_known, "awaits_a_known_value(await Y)").
+sig(await_no_call, "awaits_without_a_call(await X)").
+sig(await_value_unknown, "awaits_an_unknown_value(await X)").
+sig(awaiting_fn, "awaits_at(function Fn, node X)").
+sig(performed_as_edge, "performs_as_an_edge(function Fn, function F)").
+
+-- controlflow: guards, completion, labels, hidden calls, try, reachability
+sig(guard_kind, "guards_the_field(kind K, field Field)").
+sig(transfer_mechanism, "transfers_by(kind K, mechanism M)").
+sig(completion_kind, "is_a_completion_kind(kind K)").
+sig(completion_deferred, "defers_its_completion(kind K, because reason R)").
+sig(stmt_seq_field, "is_a_statement_sequence_field(field F)").
+sig(accessor_kind, "is_an_accessor_kind(kind K)").
+sig(spread_iterable_field, "holds_iterated_spreads(field F)").
+sig(catches_via, "catches_via(kind K, field Field)").
+sig(mechanism_modelled, "is_modelled(mechanism M)").
+sig(mechanism_waived, "is_waived(mechanism M, because reason R)").
+sig(mechanism_open, "is_open(mechanism M, because reason R)").
+kind_set(abrupt_kind).
+kind_noun(abrupt_kind, "abrupt statement").
+kind_set(export_kind).
+kind_noun(export_kind, "export declaration").
+kind_set(short_circuit_kind).
+kind_noun(short_circuit_kind, "short circuit").
+sig(guard_arm, "guards_the_arm(node P, node X)").
+sig(field_init, "has_the_field_initialiser(node P, node V)").
+sig(guarded, "is_guarded(node X)").
+sig(after_abrupt, "follows_an_abrupt_completion(node S)").
+sig(after_suspend, "follows_a_suspension(node S)").
+sig(stmt_seq_unseen, "is_an_unseen_statement_field(field F)").
+sig(label_name, "the_label_name(of label LS, is name N)").
+sig(label_ref, "refers_to_the_label(node X, name N)").
+sig(label_target, "targets_the_label(node X, label LS)").
+sig(completes_abruptly, "completes_abruptly(node S)").
+sig(label_escaped, "is_escaped(label LS)").
+sig(completion_decided, "has_a_decided_completion(kind K)").
+sig(completion_unreached, "has_an_unreached_completion(kind K)").
+sig(completion_known, "has_a_known_completion(kind K)").
+sig(completion_outer, "carries_the_completion(node P, of node S)").
+sig(completion_fn_between, "is_cut_by_a_function_from(node P, node S)").
+sig(completion_unaccounted, "has_an_unaccounted_completion(kind K)").
+sig(has_return, "has_a_return(function F)").
+sig(top_throw, "throws_at_the_top(function F)").
+sig(always_throws, "always_throws(function F)").
+sig(throwing_call, "is_a_throwing_call(call C)").
+sig(accessor_of, "the_accessor(of node Obj, at key Key, is node M)").
+sig(accessor_read, "reads_through_the_accessor(node N, node M)").
+sig(pattern_source, "the_pattern_source(of node P, is node Init)").
+sig(pattern_accessor, "destructures_through_the_accessor(object pattern P, node M)").
+sig(spread_iterated, "is_iterated(spread S)").
+sig(pattern_iterates, "destructures_through(node P, node M)").
+sig(pattern_next, "iterates_with_the_next(node X, function Next)").
+sig(hidden_call_pos, "hides_a_call_by(node N, mechanism M)").
+sig(hidden_call_src, "the_hidden_call_source(of node P, is node Init)").
+sig(hidden_call_user, "fires_the_hidden_call(node N, node M)").
+sig(hidden_call_fires, "fires_a_hidden_call(node N)").
+sig(hidden_call_builtin, "hides_a_builtin_call_on(node N, node O)").
+sig(hidden_call_primitive, "hides_a_call_on_the_primitive(node N, value V)").
+sig(hidden_call_traced, "has_a_traced_hidden_call(node N)").
+sig(hidden_call_untraced, "has_an_untraced_hidden_call_from(node N, node Src)").
+sig(hidden_call_sourced, "has_a_sourced_hidden_call(node N)").
+sig(hidden_call_unsourced, "has_an_unsourced_hidden_call(node N, of kind K)").
+sig(hidden_call_accounted, "has_an_accounted_hidden_call(node N)").
+sig(hidden_call_unaccounted, "has_an_unaccounted_hidden_call(node N)").
+sig(hidden_call_off_table, "hides_a_call_off_the_table(kind K, by mechanism M)").
+sig(try_of, "lies_in(try TS, function F)").
+sig(in_try_block, "tries(try TS, node N)").
+sig(try_catches, "has_a_handler(node TS)").
+sig(caught_here, "is_caught_here(node N)").
+sig(throws_outright, "throws_outright(function F)").
+sig(may_throw, "may_throw(function F)").
+sig(thrown_by, "throws_out(function F, node V)").
+sig(try_stops, "is_stopped_by(call C, try T)").
+sig(guarded_call, "is_a_guarded_call(call C)").
+sig(reached_unguarded, "is_reached_unguarded(function F)").
+sig(may_not_run, "may_not_run(function F)").
+sig(in_fn, "is_inside_a_function(node N)").
+sig(exported_fn, "is_exported(function F)").
+sig(entry_point, "is_an_entry_point(function F)").
+sig(reachable, "is_reachable(function F)").
+sig(may_not_be_reached, "may_not_be_reached(function F)").
+sig(export_kind_unseen, "is_an_unseen_export_kind(kind K)").
+sig(has_entry, "has_an_entry_point(file File)").
+sig(no_entry_point, "has_no_entry_point(file File)").
+sig(mechanism_known, "is_a_known_mechanism(mechanism M)").
+sig(mechanism_unanswered, "is_an_unanswered_mechanism(mechanism M)").
+sig(guard_named, "is_a_named_guard_kind(kind K)").
+sig(guard_unmodelled, "is_an_unmodelled_guard_kind(kind K)").
+sig(guard_arm_seen, "is_seen_guarding(kind K, field Field)").
+sig(guard_arm_unseen, "is_unseen_guarding(kind K, field F)").
+sig(guarded_at, "has_a_guarded_call_at(file File, line Line)").
+
+-- dataflow: the one left
+sig(bound_to_call, "is_bound_to_the_call(node E, call expression C)").
+
+-- effects: the lattice tables, the order, writes, coercion, modules, classes
+sig(eff_name, "is_in_the_lattice(effect N)").
+sig(eff_label, "is_a_label(effect label L, at host H)").
+sig(eff_heap, "is_a_heap(heap H)").
+sig(eff_alias, "is_an_alias_of(effect X, effect P)").
+sig(eff_origin, "is_an_origin(origin O)").
+sig(eff_suspension_word, "is_a_suspension_word(operation Op)").
+sig(eff_conv_key, "is_a_conversion_key(key Key)").
+sig(eff_class_form, "is_a_class_form(kind K)").
+sig(eff_discharges, "discharges_the_label(kind M, effect label L)").
+sig(eff_lacks, "lacks_a_label_of(effect X, effect B)").
+sig(eff_leq, "is_at_or_below(effect X, effect B)").
+sig(eff_lt, "is_strictly_below(effect X, effect B)").
+sig(eff_has_join, "has_a_join_with(effect X, effect B)").
+sig(eff_has_meet, "has_a_meet_with(effect X, effect B)").
+sig(join_missing, "has_no_join_with(effect X, effect B)").
+sig(meet_missing, "has_no_meet_with(effect X, effect B)").
+sig(eff_not_top, "is_not_the_top(effect T)").
+sig(eff_not_bot, "is_not_the_bottom(effect B)").
+sig(eff_top, "is_the_top(effect T)").
+sig(eff_bot, "is_the_bottom(effect B)").
+sig(eff_row_unknown, "is_an_unnamed_row(effect N)").
+sig(eff_label_unknown, "is_an_unknown_label(effect label L, at host H)").
+sig(eff_alias_unknown, "is_an_alias_of_an_unknown(effect X, effect P)").
+sig(eff_alias_unnamed, "is_an_unnamed_alias(effect X)").
+sig(eff_name_empty, "is_an_empty_effect(effect N)").
+sig(eff_heap_unknown, "is_an_unknown_heap(heap H)").
+sig(eff_label_unnamed, "is_an_uncovered_label(effect label L, at host H)").
+sig(eff_catch_here, "is_caught_in_place(node N)").
+sig(eff_try_arm, "has_the_arm(try T, arm N)").
+sig(eff_calls, "has_a_call_to(node F, function G)").
+sig(eff_reaches, "reaches_by_calls(node F, node G)").
+sig(eff_obj_traced, "has_a_traced_object(member access M)").
+sig(eff_heap_of, "touches_the_heap(member access M, heap N)").
+sig(eff_assign, "is_a_write(assignment X)").
+sig(eff_assign_target, "writes_to(assignment X, node L)").
+sig(eff_compound, "is_a_compound_write(assignment X)").
+sig(eff_member_target, "is_a_written_member(member access L)").
+sig(eff_name_target, "is_a_written_name(node L)").
+sig(eff_read_site, "is_a_read_member(member access M)").
+sig(eff_member_both, "is_read_and_written(member access M)").
+sig(eff_update_arg, "updates(update expression U, node X)").
+sig(eff_mutable_name, "is_mutable(name Name, in file File)").
+sig(eff_label_seen, "is_seen(effect label L, at host H)").
+sig(eff_label_unseen, "is_unseen(effect label L, at host H)").
+sig(eff_discharged_at, "discharges_here(node C, effect label L)").
+sig(eff_discharge_unknown, "discharges_an_unknown_label(kind M, effect label L)").
+sig(eff_exn_only, "has_only_a_latent_exception(function F)").
+sig(may_throw_only, "may_throw_without_a_latent_exception(function F)").
+sig(eff_swallowed, "swallows(node F, effect label L:2, at host H:3, in call C:1)").
+sig(eff_subject, "is_an_effect_subject(function F)").
+sig(eff_over, "exceeds(function F, effect N)").
+sig(eff_bounded, "is_bounded_by(function F, effect N)").
+sig(eff_bounded_low, "is_bounded_below(function F, effect N)").
+sig(effect_of, "the_effect(of function F, is effect N)").
+sig(eff_unnamed, "has_no_named_effect(function F)").
+sig(concrete_denotes, "denotes(surface S, effect E:2, at operation Op:1)").
+sig(concrete_unmapped, "is_unmapped(surface S, at operation Op)").
+sig(eff_call_unattributed, "has_no_surface(call C)").
+sig(concrete_unnamed, "denotes_an_unnamed_effect(spec S, effect E:2, at operation Op:1)").
+sig(concrete_no_origin, "has_no_origin(spec S)").
+sig(concrete_bad_origin, "has_a_bad_origin(surface S, origin O)").
+sig(concrete_async_smuggled, "smuggles_a_suspension(spec S, at operation Op)").
+sig(eff_op_inspects, "inspects(node N)").
+sig(eff_op_beyond, "runs_the_hook(node N, hook E)").
+sig(eff_converts, "converts(node N)").
+sig(eff_coerced, "coerces(node N, node X)").
+sig(eff_conv_object, "coerces_the_object(node N, node X)").
+sig(eff_conv_call, "coerces_through(node N, node M)").
+sig(eff_conv_overridden, "coerces_with_an_override(node N, node X)").
+sig(eff_conv_default, "coerces_by_default(node N, node X)").
+sig(eff_conv_primitive, "coerces_the_primitive(node N, node X)").
+sig(eff_conv_untraced, "coerces_the_untraced(node N, node X)").
+sig(eff_conv_accounted, "accounts_for_coercing(node N, node X)").
+sig(eff_conv_unaccounted, "coerces_without_an_account(node N, node X)").
+sig(eff_op_off_kind, "inspects_off_its_kind(node N, kind K)").
+sig(eff_mod_src, "imports_the_source(node N, text Src, in file F)").
+sig(eff_type_only, "is_type_only(node I)").
+sig(eff_has_spec, "has_specifiers(node I)").
+sig(eff_value_spec, "has_a_value_specifier(node I)").
+sig(eff_erased, "is_erased(node I)").
+sig(eff_mod_basename, "the_basename(of text Src, is text Base)").
+sig(eff_mod_target, "the_module_target(of text Src, is file T)").
+sig(eff_mod_target_disagrees, "has_a_disputed_target(text Src, file T)").
+sig(eff_evaluates_at, "evaluates(node I, file T)").
+sig(eff_import_outside, "imports_outside_the_corpus(node I, text Src)").
+sig(eff_in_fn, "lies_inside_a_function(node N)").
+sig(eff_module, "has_the_module_effect(file F, effect label L, at host H)").
+sig(eff_import_invented, "invents_the_effect(node I, effect label L, at host H)").
+sig(eff_mod_subject, "is_a_module_subject(file F)").
+sig(eff_mod_over, "exceeds_as_a_module(file F, effect N)").
+sig(eff_mod_bounded, "is_bounded_as_a_module_by(file F, effect N)").
+sig(eff_mod_bounded_low, "is_bounded_as_a_module_below(file F, effect N)").
+sig(effect_of_module, "the_module_effect(of file F, is effect N)").
+sig(eff_mod_unnamed, "has_no_named_module_effect(file F)").
+sig(eff_mod_join_short, "is_short_of_the_module_join(file F, effect J:2, with file T:1)").
+sig(eff_hidden_call, "hides_the_call(node N, node M)").
+sig(eff_edge_closed, "closes_the_edge_to(node F, function G)").
+sig(eff_edge_unclosed, "leaves_open_the_edge(function F, to function G, for effect label L, at host H)").
+sig(eff_class_body, "has_the_body_member(node CD, node P)").
+sig(eff_field_moment, "initialises_at(node P, moment N)").
+sig(eff_define_part, "defines_by_running(class CD, node V)").
+sig(eff_construct_part, "constructs_by_running(class CD, node V)").
+sig(eff_plain_key, "has_a_plain_key(node P)").
+sig(eff_runs_in, "runs(node P, node N)").
+sig(eff_moment_unplaced, "has_no_moment(node P)").
+sig(eff_define_unreached, "defines_without_reaching(class expression CE, node S)").
+
+-- env-api: the stdlib call and what an environment lacks of it
+sig(lib_member, "has_the_member(prototype P, key Key, since release Rel)").
+sig(lib_deprecated, "has_the_deprecated_member(prototype P, key Key)").
+sig(lib_call, "calls_the_stdlib(call C, key Key:2, of prototype P:1, since release Rel:3)").
+sig(stdlib_unattributed, "calls_an_unattributed_stdlib_member(call C, key Key:2, of prototype P:1)").
+sig(lib_unsupported, "is_unsupported_in(call C:1, environment E:0, at key Key:3, of prototype P:2)").
+sig(lib_call_deprecated, "calls_a_deprecated_stdlib_member(call C, key Key:2, of prototype P:1)").
+
+-- env: releases, features, what a file needs and where it breaks
+sig(environment, "is_an_environment(environment E)").
+sig(release, "is_a_release(release R)").
+sig(includes, "includes(release R, release Q)").
+sig(provides, "provides_the_feature(release P, feature F)").
+sig(env_lang, "is_the_environment_language(language L)").
+sig(env_rank, "dates_from(environment E, number Year)").
+sig(node_kind, "has_the_node_kind(language L, kind K)").
+sig(kind_baseline, "is_baseline(kind K:1, in language L:0)").
+sig(kind_needs, "needs(kind K:1, feature F:2, in language L:0)").
+sig(child_needs, "needs_at(kind K:1, field Field:2, holding text V:3, feature F:4, in language L:0)").
+sig(feature, "is_a_feature(feature F, of form Form)").
+sig(feature_unscannable, "is_unscannable(feature F, because reason R)").
+sig(reaches, "reaches_the_release(release R, release N)").
+sig(has_feature, "has_the_feature(release R, feature F)").
+sig(env_has, "supports(environment E, feature F)").
+sig(uses, "uses_the_feature(node N, feature F)").
+sig(used_feature, "is_used(feature F)").
+sig(unsupported, "fails(node N:1, in environment E:0, for feature F:2)").
+sig(unsupported_at, "fails(file File:1, at line Line:2, in environment E:0, for feature F:3)").
+sig(uses_at, "uses_the_feature(file File, feature F:2, at line Line:1)").
+sig(uses_kind, "is_seen_using(kind K, feature F)").
+sig(unsupported_in, "fails_somewhere(file File:1, in environment E:0, for feature F:2)").
+sig(file_broken, "is_broken_in(file File:1, environment E:0)").
+sig(scanned_file, "is_scanned(file File)").
+sig(valid, "is_valid_in(file File:1, environment E:0)").
+sig(invalid, "is_invalid_in(file File:1, environment E:0)").
+sig(lost_at, "loses_the_feature(file File:2, feature F:4, at line Line:3, from environment From:0, to environment To:1)").
+sig(kind_gated, "is_gated(kind K:1, in language L:0)").
+sig(kind_unaccounted, "is_unaccounted(kind K:1, in language L:0)").
+sig(kind_double_booked, "is_double_booked(kind K:1, in language L:0)").
+sig(feature_undeclared, "is_an_undeclared_feature(feature F)").
+sig(feature_unreachable, "is_unreachable(feature F)").
+sig(any_env_has, "is_supported_somewhere(feature F)").
+sig(feature_unexercised, "is_unexercised(feature F)").
+sig(unscannable, "is_unscannable(feature F)").
+sig(unscannable_seen, "is_unscannable_yet_seen(feature F)").
+sig(kind_ungoverned, "is_ungoverned(kind K)").
+sig(env_unranked, "is_unranked(environment E)").
+sig(has_rank, "has_a_rank(environment E)").
+sig(env_separates, "is_separated_from(environment X, environment B)").
+sig(env_pair_indistinct, "is_indistinct_from(environment X, environment B)").
+
+-- globals: the free name, the ES global and its statics
+sig(global_ref_position, "reads_a_global_at(kind K, field Field)").
+sig(declaring_position, "declares_at(kind K, field Field)").
+sig(lib_global, "is_a_global(name Name, since release Rel, with form Form)").
+sig(lib_static, "has_the_static(name Name, key Key, since release Rel)").
+sig(constructible_form, "is_constructible(form Form)").
+sig(lib_global_prototype, "has_the_prototype(name Name, prototype P)").
+sig(global_ref, "refers_to(node E, name Name, in file File)").
+sig(declares_name, "is_declared(name Name, in file File)").
+sig(free_global, "refers_to_the_free(node E, name Name, in file File)").
+sig(global_unattributed, "refers_to_an_unattributed_global(node E, name Name)").
+sig(es_static_unattributed, "selects_an_unattributed_static(node N, key Key:2, of name Name:1)").
+sig(es_static_call, "calls_the_static(call C, key Key:2, of name Name:1, from release Rel:3)").
+sig(es_global_unsupported, "lacks_the_global(environment E, name Name:2, at node X:1)").
+sig(es_static_unsupported, "lacks_the_static(environment E, key Key:3, of name Name:2, at node N:1)").
+sig(es_prototype_gap, "has_no_prototype_listed(name Name, since release Rel)").
+sig(es_instance_unattributed, "calls_an_unattributed_instance_member(call C, key Key:2, of name Name:1)").
+
+-- host: the host's modules and globals, the runtime's versions, the effects it claims
+sig(host, "is_a_host(host H)").
+sig(runtime, "is_a_runtime(runtime F)").
+sig(host_module, "has_the_module(host H, spec Spec)").
+sig(host_global, "has_the_global(host H, name Name)").
+sig(host_module_member, "exposes(host H, key Key:2, of spec Spec:1)").
+sig(host_member_since, "adds(runtime F, key Key:2, of spec Spec:1, since text Since:3, being number Sv:4)").
+sig(host_member_deprecated, "deprecates(host H, key Key:2, of spec Spec:1)").
+sig(host_member_replaced_by, "replaces(host H, key Key:2, of spec Spec:1, with key Use:3)").
+sig(host_module_effect, "attributes_the_module(host H, spec Spec, to effect E)").
+sig(host_member_effect, "attributes_the_member(host H, key Key:2, of spec Spec:1, to effect E:3)").
+sig(host_global_effect, "attributes_the_global(host H, name Name, to effect E)").
+sig(host_effect_atom, "is_a_host_effect(effect E)").
+sig(host_no_effects, "claims_no_effects(host H, because reason R)").
+sig(runtime_version, "is_the_version(runtime R, number V:2, of runtime F:1)").
+sig(runtime_includes, "includes_the_runtime(runtime R, runtime P)").
+sig(provides_release, "ships_the_release(runtime P, release Rel)").
+sig(runtime_undated, "is_undated(runtime R, because reason Reason)").
+sig(node_builtin_bare, "is_the_bare_name(text Bare, of spec Spec)").
+sig(resolved_builtin, "resolves_to_the_builtin(site I, spec Spec)").
+sig(site_file, "sits_in(site I, file F)").
+sig(name_bound_in, "binds_the_name(file File, name Name)").
+sig(host_module_ns, "imports_the_namespace(file File, name Local, of spec Spec)").
+sig(host_module_named, "imports(file File, name Local, as key Key:3, of spec Spec:2)").
+sig(host_import_unknown, "imports_an_unknown_member(file File, key Key:2, of spec Spec:1)").
+sig(host_member_call, "calls_the_host_member(call C, key Key:3, of name Name:2, in host H:1)").
+sig(host_global_call, "calls_the_host_global(call C, name Name:2, of host H:1)").
+sig(host_module_call, "calls_the_module_member(call C, key Key:2, of spec Spec:1)").
+sig(host_site_at, "has_a_host_site(file File:1, at line Line:2, of host H:0, from origin Origin:3, at key Key:4)").
+sig(host_call_effect, "has_the_host_effect(call C, effect E, by route N)").
+sig(host_effect_at, "has_the_host_effect(file File:1, effect E:0, at line Line:2, by route Why:3)").
+sig(host_effect_used, "is_used_by_a_host_call(effect E)").
+sig(host_call_uneffected, "has_no_host_effect(call C, from origin Origin, at key Key)").
+sig(runtime_reaches, "reaches_the_runtime(runtime R, runtime N)").
+sig(runtime_vnum, "the_version_number(of runtime R, is number VN)").
+sig(arrived_by, "has_received(runtime R, key Key:2, of spec Spec:1)").
+sig(inherited, "inherits(runtime R, key Key:2, of spec Spec:1)").
+sig(has_api, "reaches_the_api(runtime R, key Key:2, of spec Spec:1)").
+sig(runtime_reaches_release, "runs_the_release(runtime R, release Rel)").
+sig(runtime_has_release, "has_a_release(runtime R)").
+sig(runtime_no_release, "has_no_release(runtime R)").
+sig(runtime_lib_unsupported, "is_unsupported_on(call C:1, runtime R:0, at key Key:3, of prototype P:2)").
+sig(host_call_absent, "is_absent_on(call C:1, runtime R:0, at key Key:3, of spec Spec:2)").
+sig(host_call_absent_at, "has_an_absent_call(file File:1, at line Line:2, on runtime R:0, at key Key:4, of spec Spec:3)").
+sig(host_call_deprecated, "calls_a_deprecated_member(call C, key Key:2, of spec Spec:1)").
+sig(host_call_remedy, "has_the_host_remedy(call C, key Use:3, for key Key:2, of spec Spec:1)").
+sig(host_effect_undeclared, "is_an_undeclared_host_effect(effect E)").
+sig(host_effect_orphan, "has_an_orphan_effect(spec Spec, at key Key)").
+sig(host_global_effect_orphan, "has_an_orphan_global_effect(host H, at name Name)").
+sig(effects_claimed, "claims_its_effects(host H)").
+sig(host_module_uneffected, "has_no_module_effect(spec Spec)").
+sig(host_global_uneffected, "has_no_global_effect(host H, at name Name)").
+sig(runtime_unversioned, "is_unversioned(runtime R)").
+sig(runtime_separates, "is_told_apart_from(runtime X, runtime B)").
+sig(runtime_pair_indistinct, "is_not_told_apart_from(runtime X, runtime B)").
+sig(bare_listed, "is_listed_bare(spec Spec)").
+sig(bare_builtin_unlisted, "is_not_listed_bare(spec Spec)").
+sig(runtime_family_undeclared, "has_an_undeclared_family(runtime R, runtime F)").
+sig(runtime_cross_family, "includes_across_families(runtime X, runtime B)").
+sig(host_family_mismatch, "is_half_declared(host H)").
+
+-- model: the ledger over the cells, the axes, what the corpus exercises
+sig(claim_kind, "is_a_ledger(ledger W)").
+sig(layer, "is_a_layer(layer L)").
+sig(layer_authorised, "is_authorised(layer L)").
+sig(checked, "is_checked(kind K:1, in layer L:2, of language Lang:0, by rule Rule:3, under step Op:4, holding number N:5)").
+sig(axis, "is_an_axis(axis A)").
+sig(axis_applies, "applies(axis A, in layer Lay)").
+sig(lang_of_corpus, "is_the_corpus_language(language L)").
+sig(not_a_construct, "is_not_a_construct(kind K)").
+sig(frame_deferred, "is_deferred_to_the_frame(kind K, because reason R)").
+sig(kind_absent_ok, "is_excused_absent(kind K, because reason R)").
+sig(base_pack, "is_the_base_pack(pack P)").
+sig(modelled, "is_modelled(kind K:1, in layer L:2, of language Lang:0)").
+sig(waived, "is_waived(kind K:1, in layer L:2, of language Lang:0)").
+sig(unaccounted, "is_unaccounted(kind K:1, in layer L:2, of language Lang:0)").
+sig(double_claimed, "is_double_claimed(kind K:1, in layer L:2, of language Lang:0)").
+sig(handled, "is_handled(kind K:1, in layer L:2, of language Lang:0, with reason R:3)").
+sig(ignored, "is_ignored(kind K:1, in layer L:2, of language Lang:0, with reason R:3)").
+sig(unknown_ledger, "is_an_unknown_ledger(ledger What)").
+sig(layer_unauthorised, "is_unauthorised(layer L)").
+sig(verified, "is_verified(kind K:1, in layer L:2, of language Lang:0, by rule Rule:3)").
+sig(unverified, "is_unverified(kind K:1, in layer L:2, of language Lang:0, by rule Rule:3)").
+sig(coarse_of, "has_a_shaped_cell(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(invented_cell, "is_an_invented_cell(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(refined_cell, "is_a_refined_cell(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(orphan_axis, "is_an_orphan_axis(axis X, in layer Lay)").
+sig(shaped_handled, "is_handled_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)").
+sig(shaped_ignored, "is_ignored_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, with reason R:4)").
+sig(shaped_because, "is_unknown_with_shape(kind K:1, shape S:2, in layer Lay:3, of language Lang:0, because reason R:4)").
+sig(refined_verdict, "the_refined_verdict(of kind K:1, in layer Lay:2, for language Lang:0, is verdict V:3)").
+sig(refined_reason, "the_refined_reason(of kind K:1, in layer Lay:2, for language Lang:0, is reason R:3)").
+sig(axis_earns, "earns_its_place(axis X, in layer Lay)").
+sig(unearned_axis, "is_unearned(axis X, in layer Lay)").
+sig(vocabulary_gap, "is_a_vocabulary_gap(kind K:1, in language Lang:0)").
+sig(not_a_construct_unseen, "is_excluded_yet_unseen(kind K)").
+sig(frame_deferred_unseen, "is_deferred_yet_unseen(kind K)").
+sig(double_excluded, "is_excluded_twice(kind K)").
+sig(declared_and_excluded, "is_declared_yet_excluded(kind K)").
+sig(declared_and_deferred, "is_declared_yet_deferred(kind K)").
+sig(scanned, "has_a_scanned_corpus(language Lang)").
+sig(kind_unexercised, "is_unexercised(kind K:1, in language Lang:0)").
+sig(kind_absent_stale, "is_excused_yet_present(kind K)").
+sig(kind_absent_undeclared, "is_excused_yet_undeclared(kind K)").
+
+-- modules: the site, its source and shape, specifiers, defaults, what flows between files
+sig(fs_file_in, "holds_the_file(directory D, text Seg, being file T)").
+sig(str_char0, "starts_with(text S, text C)").
+sig(str_scheme, "has_the_scheme(text S, text Scheme)").
+sig(import_site, "is_an_import_site(node I, of form N)").
+sig(reexport_site, "is_a_reexport_site(node E, of form N)").
+sig(module_site, "is_a_module_site(node N, of form K)").
+sig(site_kind, "the_site_kind(of node I, is kind N)").
+sig(site_line, "sits_at_line(site I, line L)").
+sig(site_source_node, "the_source_node(of site I, is node Src)").
+sig(site_source, "the_source_text(of site I, is text S)").
+sig(site_source_literal, "has_a_literal_source(site I)").
+sig(site_source_computed, "has_a_computed_source(site I)").
+sig(explicit_shape, "has_the_explicit_shape(text S, shape N)").
+sig(has_explicit_shape, "has_an_explicit_shape(text S)").
+sig(src_shape, "the_shape(of text S, is shape Sh)").
+sig(site_shape, "the_site_shape(of site I, is shape Sh)").
+sig(resolved_import, "resolves_to_the_file(site I, file T)").
+sig(builtin_canonical, "the_canonical_builtin(of text S, is spec N)").
+sig(dangling_import, "is_a_dangling_import(site I, of text S)").
+sig(import_specifier_node, "names_an_import(node Sp)").
+sig(import_spec, "has_the_import_specifier(site I, node Sp)").
+sig(spec_local, "binds_locally(node Sp, name L)").
+sig(spec_imported, "imports_the_name(node Sp, name M)").
+sig(has_specifier, "has_a_specifier(site I)").
+sig(export_site, "is_an_export_site(named export E)").
+sig(export_spec, "has_the_export_specifier(node E, node Sp)").
+sig(export_specifier_node, "names_an_export(node Sp)").
+sig(spec_external, "exports_as(node Sp, name X)").
+sig(spec_internal, "exports_the_local(node Sp, name L)").
+sig(export_binding, "exports(node E, name Internal:3, as name External:2, at node Sp:1)").
+sig(export_renamed, "renames_on_export(node Sp, name Internal:2, to name External:1)").
+sig(export_decl_type_only, "is_a_type_only_export(node E)").
+sig(export_spec_type_only, "is_a_type_only_export_specifier(node Sp)").
+sig(export_value_binding, "binds_a_value_export(node E, at node Sp)").
+sig(export_bound, "has_an_export_binding(node Sp)").
+sig(export_binding_missing, "has_no_export_binding(node Sp)").
+sig(export_default_site, "is_a_default_export_site(default export E)").
+sig(default_external, "exports_by_default_as(node E, name N)").
+sig(default_declaration, "the_default_declaration(of node E, is node D)").
+sig(default_internal, "exports_by_default(node E, name N)").
+sig(has_default_internal, "has_a_default_internal(node E)").
+sig(default_anonymous, "exports_an_anonymous_default(node E)").
+sig(default_export_file, "has_the_default_export(file F, default export E)").
+sig(default_accounted, "is_an_accounted_default(node E)").
+sig(default_unaccounted, "is_an_unaccounted_default(node E)").
+sig(decl_type_only, "is_a_type_only_import(node I)").
+sig(spec_type_only, "is_a_type_only_import_specifier(node Sp)").
+sig(value_binding, "binds_a_value(site I, at node Sp)").
+sig(has_value_binding, "binds_a_value(site I)").
+sig(no_specifiers, "has_no_specifiers(site I)").
+sig(depends, "depends_on(file F, file T)").
+sig(flows, "takes_values_from(file F, file T)").
+sig(evaluates, "evaluates_the_module(file F, file T)").
+sig(reexport_spec, "has_the_reexport_specifier(node E, node Sp)").
+sig(reexport_value_spec, "reexports_a_value_at(node E, node Sp)").
+sig(reexport_value, "reexports_a_value(node E)").
+sig(has_reexport_spec, "has_a_reexport_specifier(node E)").
+sig(no_reexport_specifiers, "has_no_reexport_specifiers(node E)").
+sig(reexport_offers, "reexports(file F, name Internal:3, of file T:2, as name External:1)").
+sig(local_export_site, "is_a_local_export_site(node E)").
+sig(export_internal_in, "has_its_internal_in(node Sp, file F)").
+sig(export_internal_unplaced, "has_an_unplaced_internal(node Sp, of shape Sh)").
+sig(export_internal_elsewhere, "exports(file F, name X, from file T)").
+sig(has_internal_home, "has_an_internal_home(node Sp)").
+sig(export_internal_homeless, "has_no_internal_home(node Sp)").
+sig(unresolved_import, "is_unresolved_with_shape(site I, shape Sh)").
+sig(accounted, "is_an_accounted_site(site I)").
+sig(unaccounted_site, "is_an_unaccounted_site(site I)").
+sig(resolve_gap, "is_a_resolve_gap(site I, of shape Sh)").
+sig(has_site_kind, "has_a_site_kind(site I)").
+sig(site_without_kind, "has_no_site_kind(site I)").
+sig(shape_missing, "has_no_site_shape(site I)").
+sig(has_verdict, "has_a_verdict(shape Sh)").
+sig(shape_without_verdict, "has_no_verdict(shape Sh)").
+sig(reason_unexercised, "has_an_unexercised_reason(kind K, reason R)").
+sig(reason_earned, "earns_the_reason(kind K, reason R)").
+sig(module_meta, "has_the_module_meta(file F, node M)").
+sig(self_referential_module, "is_self_referential(file F)").
+sig(not_module_meta, "is_not_module_meta(node M)").
+sig(import_attr, "carries(import attribute X, key Key, holding text Value)").
+sig(import_attr_of, "has_the_import_attribute(node D, import attribute X)").
+sig(module_attr, "imports_with_the_attribute(node D, key Key, holding text Value)").
+sig(module_type, "imports_the_module_type(node D, text T)").
+sig(module_is_data, "imports_a_data_module(node D, of text T)").
+sig(import_attr_unsited, "is_unsited(import attribute X)").
+sig(import_attr_unread, "is_unread(import attribute X)").
+
+-- pack-home: which pack declares a kind, which speaks of it
+sig(fkind_slot, "has_a_kind_slot_in_facts(relation Rel, at index I)").
+sig(pack_declares, "declares_the_kind(pack P, kind K)").
+sig(pack_speaks, "speaks_of_the_kind(pack P, kind K)").
+sig(kind_home_unbacked, "declares_without_speaking_of(pack P, kind K)").
+sig(pack_borrows, "borrows_the_kind(pack P, kind K)").
+
+-- resolve: the host's trace against the rules' answer
+sig(resolve_site, "is_a_resolve_site(site S, in file File, at line Line, for text Spec)").
+sig(resolve_site_computed, "is_a_computed_resolve_site(site S, in file File, at line Line)").
+sig(resolve_try, "tries(site S, at step K, path Path, with verdict Outcome)").
+sig(resolve_answer, "is_answered_with(site S, path P)").
+sig(resolve_failed, "fails_to_resolve(site S, because reason R)").
+sig(resolve_unasked, "is_unasked(site S, because reason R)").
+sig(resolve_via, "resolves_via(site S, mechanism M, with text D)").
+sig(env_ran, "ran(environment Env)").
+sig(env_declared, "is_declared(environment Env)").
+sig(resolve_mechanism, "is_a_resolve_mechanism(mechanism M)").
+sig(resolve_place, "is_a_resolve_place(site S)").
+sig(candidate_missed, "misses_the_candidate(site S, at step K)").
+sig(reached, "reaches_the_step(site S, step N)").
+sig(has_via, "has_a_mechanism(site S)").
+sig(resolves_to, "resolves_by_the_host_to(site S, path P)").
+sig(explained, "is_explained(site S)").
+sig(env_spoke, "is_reported(site S)").
+sig(host_has_answer, "has_a_host_answer(site S)").
+sig(host_verdict, "the_host_verdict(of site S, is path P)").
+sig(model_site, "is_modelled_as(site S, site I)").
+sig(rules_answer, "the_rules_answer(of site S, is path T)").
+sig(rules_has_answer, "has_a_rules_answer(site S)").
+sig(rules_verdict, "the_rules_verdict(of site S, is path T)").
+sig(resolve_divergence, "is_resolved_differently(site S, by rules to path ByRules, by host to path ByHost, in environment Env)").
+sig(resolve_agreement, "is_resolved_alike(site S, to path V, in environment Env)").
+sig(compared, "is_compared(site S, in environment Env)").
+sig(uncompared, "is_uncompared(site S, in environment Env)").
+sig(env_divergent_site, "diverges_between_environments(site S)").
+sig(answer_without_mechanism, "is_answered_without_a_mechanism(site S, in environment Env)").
+sig(resolve_silent, "is_unreported(site S, in environment Env)").
+sig(env_unobserved, "is_unobserved(environment Env)").
+sig(env_undeclared, "is_an_undeclared_environment(environment Env)").
+sig(model_site_known, "is_known_to_the_model(site S)").
+sig(site_unseen_by_model, "is_unseen_by_the_model(site S)").
+sig(host_saw, "is_seen_by_the_host(site I)").
+sig(site_unseen_by_host, "is_unseen_by_the_host(site I)").
+sig(checked_site_kind, "is_checked_at(kind K, site S)").
+sig(mechanism_seen, "is_a_seen_mechanism(mechanism M)").
+sig(mechanism_undeclared, "is_an_undeclared_mechanism(mechanism M)").
+sig(mechanism_unexercised, "is_an_unexercised_mechanism(mechanism M)").
+
+-- vocabulary: what the rules themselves name
+sig(body_lit, "is_a_body_literal(term L)").
+sig(lit_rel, "the_relation(of term L, is relation Rel)").
+sig(kind_slot, "has_a_kind_slot_in_rules(relation Rel, at index I)").
+sig(kind_named_by_rule, "is_named_by_a_rule(kind K)").
+sig(rule_opinion_unlisted, "is_named_by_a_rule_yet_unlisted(kind K:1, in language Lang:0)").

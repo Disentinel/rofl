@@ -104,6 +104,11 @@ What has to exist for it to be code rather than a description of code
    `rules/untyped.rofl` lists the one-letter variables nothing in their rule
    types: 648 of 2335, all but three where the vocabulary has no signature
    (f_a_letter_is_not_the_smell_a_variable_nothing_types_is_and_one_letter_means_fifteen_things).
+   Every relation of the JS model now has a signature, the last 543 written
+   by hand with the fact tables they lean on; the untyped letters fell to 13,
+   all a two-arity name or a destructor's count, one nullary head stays
+   positional, and the round trip is 1178 of 1178
+   (f_the_543_signatures_are_written_and_the_letters_nothing_types_fell_from_648_to_13).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

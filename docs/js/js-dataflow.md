@@ -172,6 +172,7 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 - the_constructor(of class CD, is method M) (ctor_of)
 - has_a_later_expression_than(sequence E, index I) (seq_later)
 - yields(function F, node E)
+- is_bound_to_the_call(node E, call expression C) (bound_to_call)
 - is_sent(function G, node V) (next_send)
 - delegates_to(function Outer, function Inner) (delegates)
 - iterates(for-of S, node X) (for_of_src)
@@ -926,7 +927,7 @@ The instance/static member Key of a class CD is a node V if CD [inherits the fie
 
 <a id="private_ref"></a>A member access refers privately to Name if the `property` of it [is the private key](#private_key) Name.
 
-An access
+A node
 
 - <a id="private_inner"></a>has an inner class inside a class CD if all of:
   - it [refers privately to](#private_ref) Name;
@@ -1210,14 +1211,13 @@ An await may be the node/literal N if the `argument` of it [may be the node/lite
 
 <a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a yield Y and the `argument` of Y is E.
 
-<a id="bound_to_call"></a>`bound_to_call`(E, a call expression C) if E [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
+<a id="bound_to_call"></a>A node is bound to the call a call expression C if it [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
 
 <a id="next_send"></a>G is sent a node V if all of:
   - a node C [is a call site](js-callgraph.md#call_site) in some file;
   - [the callee](js-callgraph.md#callee_of) of C is a node N;
   - N [selects](#selects) "next";
-  - the `object` of N is a node O;
-  - [`bound_to_call`](#bound_to_call)(O, GC);
+  - the `object` of N [is bound to the call](#bound_to_call) GC;
   - GC [resolves to](js-callgraph.md#resolves) G;
   - the `arguments` of C is V.
 

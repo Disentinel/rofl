@@ -77,6 +77,7 @@ function parseSig(rel: string, text: string): Tpl {
 const templates: Tpl[] = [];
 for (const m of vocab.matchAll(/^sig\((\w+), "([^"]+)"\)/gm)) templates.push(parseSig(m[1], m[2]));
 for (const m of vocab.matchAll(/^phrase\((\w+), "([^"]+)"\)/gm)) templates.push(parsePhrase(m[1], m[2]));
+for (const t of templates) for (const p of t.parts) if (p.t === 'hole') nouns.add(p.noun);
 const funTemplates: Tpl[] = [];
 for (const m of vocab.matchAll(/^fun_phrase\((\w+), "([^"]+)"\)/gm)) funTemplates.push(parsePhrase(m[1], m[2]));
 // two relations that read with the same words and the same holes are one sentence: a collision
@@ -149,7 +150,8 @@ function matchLit(text: string, intros: Intro[], asHead = false): Lit | null {
     for (const p of t.parts) if (p.t === 'hole') {
       const cap = g[++gi]; const im = /^[Aa]n? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: [A-Z]\w*)?$/.exec(cap);
       const noun = im ? im[1] : cap === 'it' ? (subjectVar ? known.get(subjectVar) : undefined) : /^[A-Z]/.test(cap) ? known.get(cap) : undefined;
-      if (noun !== undefined) score += noun === p.noun ? 2 : (p.noun === 'node' || noun === 'node') ? 1 : (VALUE.has(noun) !== VALUE.has(p.noun)) ? -2 : -1;
+      if (im && !nouns.has(im[1])) score -= 3;   // `a known value`: no noun anyone signed, so not a term
+      else if (noun !== undefined) score += noun === p.noun ? 2 : (p.noun === 'node' || noun === 'node') ? 1 : (VALUE.has(noun) !== VALUE.has(p.noun)) ? -2 : -1;
     }
     hits.push({ t, g: g.slice(1), score }); break;
   }
@@ -236,6 +238,8 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
     const l2 = l1 && matchLit(`${fresh} ${m[3]}`, intros);
     if (l1 && l2) { l1.neg = neg; rule.body.push(l1, l2); return true; }
   }
+  // `the property of some call is of kind K`, `the key of F spells N`: a phrase standing where a term
+  // would; every split point is tried, since a greedy term swallows `some call is of`
   for (const t of templates) {
     let last = -1; for (let j = t.parts.length - 1; j >= 0; j--) if (t.parts[j].t === 'hole') { last = j; break; }
     if (last < 1 || t.parts.slice(last + 1).some((p) => p.t !== 'fix')) continue;
@@ -244,13 +248,15 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
     const pieces = t.parts.slice(0, last - 1).map((p) => p.t === 'text' ? esc(p.s).replace(/ /g, '\\s+') : p.t === 'hole' ? `(${TERM})` : '').filter(Boolean);
     const stemText = before.s.replace(/\s*is$/, '').trim();
     if (stemText) pieces.push(esc(stemText).replace(/ /g, '\\s+'));
-    const g = new RegExp('^' + pieces.join('\\s+') + '\\s+(.+)$').exec(text);
-    if (!g) continue;
-    const fresh = `Rel${freshN++}`;
-    const stem = text.slice(0, text.length - g[g.length - 1].length).trim();
-    const l1 = matchLit(`${stem} is ${fresh}`, intros);
-    const l2 = l1 && matchLit(`${fresh} ${g[g.length - 1]}`, intros);
-    if (l1 && l2) { l1.neg = neg; rule.body.push(l1, l2); return true; }
+    const prefix = new RegExp('^' + pieces.join('\\s+') + '$');
+    for (let i = text.indexOf(' '); i > 0; i = text.indexOf(' ', i + 1)) {
+      const stem = text.slice(0, i);
+      if (!prefix.test(stem)) continue;
+      const fresh = `Rel${freshN}`;
+      const l1 = matchLit(`${stem} is ${fresh}`, intros);
+      const l2 = l1 && matchLit(`${fresh} ${text.slice(i + 1)}`, intros);
+      if (l1 && l2) { freshN++; l1.neg = neg; rule.body.push(l1, l2); return true; }
+    }
   }
   unparsed.push(text); return false;
 }

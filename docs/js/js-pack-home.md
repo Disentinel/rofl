@@ -11,6 +11,12 @@ default: main
 - asserts(pack P, relation Rel, with term Args) (pack_fact)
 - the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3) (fwalk)
 - the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3) (fslot)
+- has_a_kind_slot_in_facts(relation Rel, at index I) (fkind_slot)
+- declares_the_kind(pack P, kind K) (pack_declares)
+- speaks_of_the_kind(pack P, kind K) (pack_speaks)
+- is_the_base_pack(pack P) (base_pack)
+- declares_without_speaking_of(pack P, kind K) (kind_home_unbacked), in the audit
+- borrows_the_kind(pack P, kind K) (pack_borrows), in the audit
 
 > js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
 > a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
@@ -52,13 +58,14 @@ default: main
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [the slot](#fslot) I of a relation Rel in some pack holds a term X and `node_kind`(`js`, X).
+<a id="fkind_slot"></a>A relation has a kind slot in facts at an index I if [the slot](#fslot) I of it in some pack holds a term X and `js` has the node kind X.
 
-<a id="pack_declares"></a>`pack_declares`(P, K) if [the slot](#fslot) 2 of `node_kind` in a pack P holds a term K and `node_kind`(`js`, K).
+A pack
 
-<a id="pack_speaks"></a>`pack_speaks`(P, K) if all of:
-  - [the slot](#fslot) I of a relation Rel in a pack P holds a term K;
-  - [`fkind_slot`](#fkind_slot)(Rel, I);
+- <a id="pack_declares"></a>declares the kind K if [the slot](#fslot) 2 of `node_kind` in it holds K and `js` has the node kind K.
+- <a id="pack_speaks"></a>speaks of the kind K if all of:
+  - [the slot](#fslot) I of a relation Rel in it holds K;
+  - Rel [has a kind slot in facts](#fkind_slot) at I;
   - Rel differs from `node_kind`.
 
 > one row, not a waiver list: it names no kind and cannot go quiet on one
@@ -75,10 +82,7 @@ Declared as facts: base_pack.
 > (`f_a_rule_has_no_file_and_a_fact_does`); and it says nothing about a world
 > it is not loaded into, where `orphan_claim` stays the check.
 
-<a id="kind_home_unbacked"></a>`kind_home_unbacked`(P, K) if all of:
-  - [`pack_declares`](#pack_declares)(P, K);
-  - unless [`pack_speaks`](#pack_speaks)(P, K);
-  - unless [`base_pack`](#base_pack)(P).
+<a id="kind_home_unbacked"></a>A pack declares without speaking of a kind K if it [declares the kind](#pack_declares) K and it neither [speaks of the kind](#pack_speaks) K nor [is the base pack](#base_pack).
 
 > The other direction is a REPORT, not a gate: a pack speaking about a kind
 > it does not declare borrows from one it is loaded beside, 118 times on the
@@ -87,10 +91,10 @@ Declared as facts: base_pack.
 > should have moved — was written, run and deleted: every row is a legitimate
 > borrow, and separating stale from borrowed needs the LOADERS.
 
-<a id="pack_borrows"></a>`pack_borrows`(P, K) if all of:
-  - [`pack_speaks`](#pack_speaks)(P, K);
-  - `node_kind`(`js`, K);
-  - unless [`pack_declares`](#pack_declares)(P, K).
+<a id="pack_borrows"></a>A pack borrows the kind K if all of:
+  - it [speaks of the kind](#pack_speaks) K;
+  - `js` has the node kind K;
+  - unless it [declares the kind](#pack_declares) K.
 
 ## Not defined in these files
 

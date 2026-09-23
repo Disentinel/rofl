@@ -8,11 +8,41 @@ default: audit
 
 ## Signatures
 
+- is_a_resolve_place(site S) (resolve_place), in the code
+- misses_the_candidate(site S, at step K) (candidate_missed), in the book E
+- reaches_the_step(site S, step N) (reached), in the book E
 - arrives(site S, at step K, in path P) (arrival), in the book E
+- has_a_mechanism(site S) (has_via), in the book E
+- resolves_by_the_host_to(site S, path P) (resolves_to), in the book E
+- is_explained(site S) (explained), in the book E
+- is_reported(site S) (env_spoke), in the book E
+- has_a_host_answer(site S) (host_has_answer), in the book E
+- the_host_verdict(of site S, is path P) (host_verdict), in the book E
+- is_modelled_as(site S, site I) (model_site)
+- the_rules_answer(of site S, is path T) (rules_answer)
+- has_a_rules_answer(site S) (rules_has_answer)
+- the_rules_verdict(of site S, is path T) (rules_verdict)
+- is_resolved_differently(site S, by rules to path ByRules, by host to path ByHost, in environment Env) (resolve_divergence)
+- is_resolved_alike(site S, to path V, in environment Env) (resolve_agreement)
+- is_compared(site S, in environment Env) (compared)
+- is_uncompared(site S, in environment Env) (uncompared)
 - diverges(site S, in environment A, with verdict VA, from environment B, with verdict VB) (env_divergence)
+- diverges_between_environments(site S) (env_divergent_site)
 - resolves_without_a_trace(site S, in environment Env, to node P) (answer_without_trace)
+- is_answered_without_a_mechanism(site S, in environment Env) (answer_without_mechanism)
+- is_unreported(site S, in environment Env) (resolve_silent)
 - has_two_answers(site S, in environment Env, node A, node B) (answer_ambiguous)
+- is_unobserved(environment Env) (env_unobserved)
+- is_an_undeclared_environment(environment Env) (env_undeclared)
+- is_known_to_the_model(site S) (model_site_known)
+- is_unseen_by_the_model(site S) (site_unseen_by_model)
+- is_seen_by_the_host(site I) (host_saw)
+- is_unseen_by_the_host(site I) (site_unseen_by_host)
+- is_checked_at(kind K, site S) (checked_site_kind)
 - has_two_model_keys(site S, key I, key J) (site_key_ambiguous)
+- is_a_seen_mechanism(mechanism M) (mechanism_seen)
+- is_an_undeclared_mechanism(mechanism M) (mechanism_undeclared)
+- is_an_unexercised_mechanism(mechanism M) (mechanism_unexercised)
 
 > js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
 > between it and the first. rules/js-modules.rofl resolves by REASONING over
@@ -38,137 +68,140 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 ## 1. THE PLACES, both kinds unioned, so that "every place" is a relation.
 
-<a id="resolve_place"></a>`resolve_place`(S) either:
+<a id="resolve_place"></a>A site S is a resolve place either:
 
-1. if [`resolve_site`](#resolve_site)(S, something, something, something);
-2. if [`resolve_site_computed`](#resolve_site_computed)(S, something, something).
+1. if S [is a resolve site](#resolve_site) in some file at some line for some text;
+2. if S [is a computed resolve site](#resolve_site_computed) in some file at some line.
 
 ## 2. THE SEARCH, REPLAYED. node stops at the first candidate that IS a file;
 
 > a directory and an absent path both mean "keep looking" and are kept apart
 > because a directory is what makes an index file possible.
 
-<a id="candidate_missed"></a>`candidate_missed`(S, K) if [`resolve_try`](#resolve_try)(S, K, something, `miss` or `dir`).
+<a id="candidate_missed"></a>A site misses the candidate at a step K if it [tries](#resolve_try) at K some path with `miss` or `dir`.
 
 > candidate 0 is reached by starting; K+1 only BECAUSE K missed, which puts
 > every failed attempt into the why-tree of the answer
 
-<a id="reached"></a>`reached`(S, N) either:
+<a id="reached"></a>A site S reaches the step N either:
 
-1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and N is 0;
-2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and N is K + 1.
+1. if S [tries](#resolve_try) at 0 some path with some verdict and N is 0;
+2. if all of:
+   - S [reaches the step](#reached) K;
+   - S [misses the candidate](#candidate_missed) at K;
+   - N is K + 1.
 
-<a id="arrival"></a>A site arrives at a step K in a path P if [`reached`](#reached)(it, K) and [`resolve_try`](#resolve_try)(it, K, P, `file`).
+<a id="arrival"></a>A site arrives at a step K in a path P if it [reaches the step](#reached) K and it [tries](#resolve_try) at K P with `file`.
 
 ## 3. THE ANSWER: the search arrived HERE, node returned THIS, and a named
 
 > mechanism accounts for it. An answer failing any premise is reported by
 > section 7 rather than published.
 
-<a id="has_via"></a>`has_via`(S) if [`resolve_via`](#resolve_via)(S, something, something).
+A site
 
-<a id="resolves_to"></a>`resolves_to`(S, P) if all of:
-  - a site S [arrives](#arrival) at some step in a path P;
-  - [`resolve_answer`](#resolve_answer)(S, P);
-  - [`has_via`](#has_via)(S).
+- <a id="has_via"></a>has a mechanism if it [resolves via](#resolve_via) some mechanism with some text.
+- <a id="resolves_to"></a>resolves by the host to a path P if all of:
+  - it [arrives](#arrival) at some step in P;
+  - it [is answered with](#resolve_answer) P;
+  - it [has a mechanism](#has_via).
 
 > a builtin resolves without touching the disk (the trace of
 > `require.resolve("node:path")` is empty), so the mechanism row is the whole
 > explanation and carries the canonical `node:` spelling
 
-`resolves_to`(S, C) if [`resolve_via`](#resolve_via)(S, `builtin`, C) and [`resolve_answer`](#resolve_answer)(S, something).
+A site
 
-<a id="explained"></a>`explained`(S) if [`resolves_to`](#resolves_to)(S, something).
+- resolves by the host to a path C if it [resolves via](#resolve_via) `builtin` with C and it [is answered with](#resolve_answer) some path.
+- <a id="explained"></a>is explained if it [resolves by the host to](#resolves_to) some path.
 
 ## 4. WHAT THE ENVIRONMENT SAID — three ways to speak; silence is section 7's.
 
-<a id="env_spoke"></a>`env_spoke`(S) either:
+<a id="env_spoke"></a>A site S is reported either:
 
-1. if [`resolve_answer`](#resolve_answer)(S, something);
-2. if [`resolve_failed`](#resolve_failed)(S, something);
-3. if [`resolve_unasked`](#resolve_unasked)(S, something).
+1. if S [is answered with](#resolve_answer) some path;
+2. if S [fails to resolve](#resolve_failed) because some reason;
+3. if S [is unasked](#resolve_unasked) because some reason.
 
 > TOTAL over the places the environment spoke about: `no_answer` is an atom
 > rather than a missing row, so the comparison in section 6 cannot lose a site
 
-<a id="host_has_answer"></a>`host_has_answer`(S) if [`resolves_to`](#resolves_to)(S, something).
+<a id="host_has_answer"></a>A site has a host answer if it [resolves by the host to](#resolves_to) some path.
 
-<a id="host_verdict"></a>`host_verdict`(S, P) either:
+<a id="host_verdict"></a>The host verdict of a site S is a path P either:
 
-1. if [`resolves_to`](#resolves_to)(S, P);
-2. if all of:
-   - [`env_spoke`](#env_spoke)(S);
-   - P is `no_answer`;
-   - unless [`host_has_answer`](#host_has_answer)(S).
+1. if S [resolves by the host to](#resolves_to) P;
+2. if S [is reported](#env_spoke) and P is `no_answer`, unless S [has a host answer](#host_has_answer).
 
 ## 5. THE BRIDGE TO THE FIRST MODEL. The rule model names a site by babel node
 
 > id; the observer by (file, line, specifier), from its own parse. The JOIN is
 > here, and section 7 reports both directions of failure.
 
-<a id="model_site"></a>`model_site`(S, I) either:
+<a id="model_site"></a>A site S is modelled as a site I either:
 
 1. if all of:
-   - [`resolve_site`](#resolve_site)(S, F, L, Sp);
-   - [`site_file`](js-modules.md#site_file)(I, F);
-   - [`site_line`](js-modules.md#site_line)(I, L);
-   - [`site_source`](js-modules.md#site_source)(I, Sp);
+   - S [is a resolve site](#resolve_site) in a file F at a line L for Sp;
+   - I [sits in](js-modules.md#site_file) F;
+   - I [sits at line](js-modules.md#site_line) L;
+   - [the source text](js-modules.md#site_source) of I is Sp;
 2. if all of:
-   - [`resolve_site_computed`](#resolve_site_computed)(S, F, L);
-   - [`site_file`](js-modules.md#site_file)(I, F);
-   - [`site_line`](js-modules.md#site_line)(I, L);
-   - [`site_source_computed`](js-modules.md#site_source_computed)(I).
+   - S [is a computed resolve site](#resolve_site_computed) in a file F at a line L;
+   - I [sits in](js-modules.md#site_file) F;
+   - I [sits at line](js-modules.md#site_line) L;
+   - I [has a computed source](js-modules.md#site_source_computed).
 
-<a id="rules_answer"></a>`rules_answer`(S, T) either:
+<a id="rules_answer"></a>The rules answer of a site S is a path T either:
 
-1. if [`model_site`](#model_site)(S, I) and [`resolved_import`](js-modules.md#resolved_import)(I, T);
-2. if [`model_site`](#model_site)(S, I) and [`resolved_builtin`](js-modules.md#resolved_builtin)(I, T).
+1. if S [is modelled as](#model_site) a site I and I [resolves to the file](js-modules.md#resolved_import) T;
+2. if S [is modelled as](#model_site) a site I and I [resolves to the builtin](js-modules.md#resolved_builtin) T.
 
-<a id="rules_has_answer"></a>`rules_has_answer`(S) if [`rules_answer`](#rules_answer)(S, something).
+<a id="rules_has_answer"></a>A site has a rules answer if [the rules answer](#rules_answer) of it is some path.
 
-<a id="rules_verdict"></a>`rules_verdict`(S, T) either:
+<a id="rules_verdict"></a>The rules verdict of a site S is a path T either:
 
-1. if [`rules_answer`](#rules_answer)(S, T);
+1. if [the rules answer](#rules_answer) of S is T;
 2. if all of:
-   - [`model_site`](#model_site)(S, something);
+   - S [is modelled as](#model_site) some site;
    - T is `no_answer`;
-   - unless [`rules_has_answer`](#rules_has_answer)(S).
+   - unless S [has a rules answer](#rules_has_answer).
 
 ## 6. THE TWO COMPARISONS, both joins of TOTAL relations.
 
 > (a) rules against host, per environment — THE WORK QUEUE: every row is a
 > resolution node performs and the rule model does not.
 
-<a id="resolve_divergence"></a>`resolve_divergence`(S, ByRules, ByHost, Env) if all of:
-  - [`rules_verdict`](#rules_verdict)(S, ByRules);
-  - [`host_verdict`](#host_verdict)(S, ByHost) in the book Env;
+<a id="resolve_divergence"></a>A site is resolved differently by rules to a path ByRules by host to a path ByHost in an environment Env if all of:
+  - [the rules verdict](#rules_verdict) of it is ByRules;
+  - [`host_verdict`](#host_verdict)(it, ByHost) in the book Env;
   - ByRules differs from ByHost.
 
 > agreement is positive so that "compared" can be defined and a site that
 > stopped being compared is a row rather than a smaller number
 
-<a id="resolve_agreement"></a>`resolve_agreement`(S, V, Env) if [`rules_verdict`](#rules_verdict)(S, V) and [`host_verdict`](#host_verdict)(S, V) in the book Env.
+<a id="resolve_agreement"></a>A site is resolved alike to a path V in an environment Env if [the rules verdict](#rules_verdict) of it is V and [`host_verdict`](#host_verdict)(it, V) in the book Env.
 
-<a id="compared"></a>`compared`(S, Env) either:
+<a id="compared"></a>A site S is compared in an environment Env either:
 
-1. if [`resolve_agreement`](#resolve_agreement)(S, something, Env);
-2. if [`resolve_divergence`](#resolve_divergence)(S, something, something, Env).
+1. if S [is resolved alike](#resolve_agreement) to some path in Env;
+2. if S [is resolved differently](#resolve_divergence) by rules to some path by host to some path in Env.
 
-<a id="uncompared"></a>`uncompared`(S, Env) if all of:
-  - [`rules_verdict`](#rules_verdict)(S, something);
-  - [`host_verdict`](#host_verdict)(S, something) in the book Env;
-  - unless [`compared`](#compared)(S, Env).
+<a id="uncompared"></a>A site is uncompared in an environment Env if all of:
+  - [the rules verdict](#rules_verdict) of it is some path;
+  - [`host_verdict`](#host_verdict)(it, something) in the book Env;
+  - unless it [is compared](#compared) in Env.
 
 > (b) environment against environment: the two rows are two books, and their
 > disagreement answers "how will this resolve on the other machine?"
 
-<a id="env_divergence"></a>A site diverges in an environment X with a verdict VA from an environment B with a verdict VB if all of:
+A site
+
+- <a id="env_divergence"></a>diverges in an environment X with a verdict VA from an environment B with a verdict VB if all of:
   - [`host_verdict`](#host_verdict)(it, VA) in the book A;
   - [`host_verdict`](#host_verdict)(it, VB) in the book B;
   - X differs from B;
   - VA differs from VB.
-
-<a id="env_divergent_site"></a>`env_divergent_site`(S) if a site S [diverges](#env_divergence) in some environment with some verdict from some environment with some verdict.
+- <a id="env_divergent_site"></a>diverges between environments if it [diverges](#env_divergence) in some environment with some verdict from some environment with some verdict.
 
 ## 7. THE GATES. Each must be able to say no; test/js-resolve.test.ts plants a
 
@@ -181,15 +214,15 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 > the observer emits no `resolve_via` rather than inventing a label
 
-<a id="answer_without_mechanism"></a>`answer_without_mechanism`(S, Env) if [`resolve_answer`](#resolve_answer)(S, something) in the book Env, unless [`has_via`](#has_via)(S) in the book Env.
+<a id="answer_without_mechanism"></a>A site is answered without a mechanism in an environment Env if [`resolve_answer`](#resolve_answer)(it, something) in the book Env, unless [`has_via`](#has_via)(it) in the book Env.
 
 > no answer, no failure, not even "nothing to ask": an observer that swallows
 > the resolver's exception, indistinguishable from the outside
 
-<a id="resolve_silent"></a>`resolve_silent`(S, Env) if all of:
-  - [`resolve_place`](#resolve_place)(S);
-  - [`env_ran`](#env_ran)(Env);
-  - unless [`env_spoke`](#env_spoke)(S) in the book Env.
+<a id="resolve_silent"></a>A site is unreported in an environment Env if all of:
+  - it [is a resolve place](#resolve_place);
+  - Env [ran](#env_ran);
+  - unless [`env_spoke`](#env_spoke)(it) in the book Env.
 
 > resolution is a function of (place, environment)
 
@@ -200,37 +233,37 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 > a ledger only in the facts file is decoration; only in the run, unaccountable
 
-<a id="env_unobserved"></a>`env_unobserved`(Env) if [`env_declared`](#env_declared)(Env), unless [`env_ran`](#env_ran)(Env).
+An environment
 
-<a id="env_undeclared"></a>`env_undeclared`(Env) if [`env_ran`](#env_ran)(Env), unless [`env_declared`](#env_declared)(Env).
+- <a id="env_unobserved"></a>is unobserved if it [is declared](#env_declared), unless it [ran](#env_ran).
+- <a id="env_undeclared"></a>is an undeclared environment if it [ran](#env_ran), unless it [is declared](#env_declared).
 
 > the two enumerations, both directions; `module_site` and not `import_site`,
 > because a re-export names a module and node resolves it by the same rules
 
-<a id="model_site_known"></a>`model_site_known`(S) if [`model_site`](#model_site)(S, something).
+A site
 
-<a id="site_unseen_by_model"></a>`site_unseen_by_model`(S) if [`resolve_place`](#resolve_place)(S), unless [`model_site_known`](#model_site_known)(S).
-
-<a id="host_saw"></a>`host_saw`(I) if [`model_site`](#model_site)(something, I).
-
-<a id="site_unseen_by_host"></a>`site_unseen_by_host`(I) if [`module_site`](js-modules.md#module_site)(I, something), unless [`host_saw`](#host_saw)(I).
+- <a id="model_site_known"></a>is known to the model if it [is modelled as](#model_site) some site.
+- <a id="site_unseen_by_model"></a>is unseen by the model if it [is a resolve place](#resolve_place), unless it [is known to the model](#model_site_known).
+- <a id="host_saw"></a>is seen by the host if some site [is modelled as](#model_site) it.
+- <a id="site_unseen_by_host"></a>is unseen by the host if it [is a module site](js-modules.md#module_site) of some form, unless it [is seen by the host](#host_saw).
 
 > which kind of place the referee compared, so the `checked` ledger's per-kind
 > counts are re-derived rather than checked against a total
 
-<a id="checked_site_kind"></a>`checked_site_kind`(K, S) if [`model_site`](#model_site)(S, I) and [`site_kind`](js-modules.md#site_kind)(I, K).
+<a id="checked_site_kind"></a>A kind K is checked at a site S if S [is modelled as](#model_site) a site I and [the site kind](js-modules.md#site_kind) of I is K.
 
 > (file, line, specifier) is a key only while no two sites share all three
 
-<a id="site_key_ambiguous"></a>A site has two model keys I and J if [`model_site`](#model_site)(it, I), [`model_site`](#model_site)(it, J), and I differs from J.
+<a id="site_key_ambiguous"></a>A site has two model keys I and J if it [is modelled as](#model_site) I, it [is modelled as](#model_site) J, and I differs from J.
 
 > the mechanism vocabulary, both directions, as the frontier reasons in js-modules
 
-<a id="mechanism_seen"></a>`mechanism_seen`(M) if [`env_ran`](#env_ran)(E) and [`resolve_via`](#resolve_via)(something, M, something).
+A mechanism
 
-<a id="mechanism_undeclared"></a>`mechanism_undeclared`(M) if [`mechanism_seen`](#mechanism_seen)(M), unless [`resolve_mechanism`](#resolve_mechanism)(M).
-
-<a id="mechanism_unexercised"></a>`mechanism_unexercised`(M) if [`resolve_mechanism`](#resolve_mechanism)(M), unless [`mechanism_seen`](#mechanism_seen)(M).
+- <a id="mechanism_seen"></a>is a seen mechanism if an environment E [ran](#env_ran) and some site [resolves via](#resolve_via) it with some text.
+- <a id="mechanism_undeclared"></a>is an undeclared mechanism if it [is a seen mechanism](#mechanism_seen), unless it [is a resolve mechanism](#resolve_mechanism).
+- <a id="mechanism_unexercised"></a>is an unexercised mechanism if it [is a resolve mechanism](#resolve_mechanism), unless it [is a seen mechanism](#mechanism_seen).
 
 > The environment ledger is a VARIABLE here (`resolve_answer[Env](S, P)`),
 > which is the case `collects` exists for (docs/books-and-permission.md 2.1):

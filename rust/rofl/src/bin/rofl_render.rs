@@ -591,7 +591,7 @@ impl<'a> R<'a> {
             let v = match &subj { Some(s) => var_of(s), None => { rest.push((t, String::new())); continue; } };
             let pre = format!("{v} is ");
             if t.starts_with(&pre) && !t.contains(" or ") {
-                if let Some(p) = pos.iter_mut().find(|p| (p.starts_with(&format!("{v} ")) || p.contains(&format!(" {v} "))) && !p.contains(" but ") && !p.contains(" or ")) {
+                if let Some(p) = pos.iter_mut().find(|p| p.starts_with(&format!("{v} ")) && !p.contains(" but ") && !p.contains(" or ")) {
                     p.push_str(" but is not ");
                     p.push_str(&t[pre.len()..]);
                     continue;
@@ -1251,7 +1251,7 @@ fn main() {
             }
         }
     }
-    let noun_list: Vec<String> = kind_nouns.values().cloned().chain(VALUE_NOUN_LIST.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
+    let noun_list: Vec<String> = kind_nouns.values().cloned().chain(noun_guards.values().cloned()).chain(VALUE_NOUN_LIST.iter().chain(NOUN_WORDS.iter()).map(|s| s.to_string())).collect();
     for (rel, text) in &sigs {
         match parse_sig(text, &noun_list) {
             Ok((p, name)) => { if name != h.name(*rel) { renames.push((h.name(*rel).to_string(), name)); } phrases.entry(*rel).or_default().insert(0, p); sig_text.insert(*rel, text.clone()); }
