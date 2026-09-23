@@ -101,6 +101,9 @@ What has to exist for it to be code rather than a description of code
    the value layer's copy of the function relation is gone and every book
    reads `fn_node[code]`
    (f_one_function_relation_through_the_books_and_a_projection_reads_as_what_it_is).
+   `rules/untyped.rofl` lists the one-letter variables nothing in their rule
+   types: 648 of 2335, all but three where the vocabulary has no signature
+   (f_a_letter_is_not_the_smell_a_variable_nothing_types_is_and_one_letter_means_fifteen_things).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

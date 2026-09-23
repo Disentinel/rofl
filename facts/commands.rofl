@@ -50,3 +50,6 @@ command_note("depends", "· cleanliness · layering · nullary — the models ov
 command_shown("speccheck", 11).
 command_note("speccheck", "every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book").
 
+command_shown("untyped", 12).
+command_note("untyped", "-- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model").
+
