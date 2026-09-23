@@ -147,7 +147,7 @@ expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `modelling-a-language.md` (the JS model as a research programme).
 
 **The plan** — `roadmap.md` (what the next version commits to, each item naming
-- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run read` reads a rendered file back into rules; `npm run untyped` (rules/untyped.rofl) lists the one-letter variables nothing in their rule types.
+- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run read` reads a rendered file back into rules; `npm run untyped` (rules/untyped.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
 the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
 Markdown sentence form as a source after 1.1, what the round trip established,
 what the form is now, and what is open.

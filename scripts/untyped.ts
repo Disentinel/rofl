@@ -4,6 +4,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
+import { roflFromMd } from './md_world.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -41,7 +42,7 @@ const signedRels = [...sigArity.entries()].flatMap(([r, as]) => [...new Set(as)]
 const guards = [...vocab.matchAll(/^noun_guard\(\w+, "[^"]+"\)\./gm)].map((m) => m[0]).join('\n');
 const boot = readFileSync(`${ROOT}boot.rofl`, 'utf8');
 const r = new Rofl();
-const res: any = r.load([boot, readFileSync(`${ROOT}rules/untyped.rofl`, 'utf8'), 'edb(noun_guard).\n' + guards, [...new Set(signed)].join('\n'), signedRels.join('\n'), facts].join('\n'), { budget: 200_000_000 });
+const res: any = r.load([boot, readFileSync(roflFromMd('rules/untyped.md'), 'utf8'), 'edb(noun_guard).\n' + guards, [...new Set(signed)].join('\n'), signedRels.join('\n'), facts].join('\n'), { budget: 200_000_000 });
 if (!res.ok) { console.error(res.diagnostics.slice(0, 3).join('\n')); process.exit(1); }
 const rows = (q: string) => (r.query(q).rows as any[]).map((x) => x.bindings);
 const clean = (x: any) => String(x).replace(/^"|"$/g, '');

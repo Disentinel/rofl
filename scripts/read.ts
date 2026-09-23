@@ -2,12 +2,15 @@
 // against the source it was rendered from.
 //
 //   npm run read -- docs/js/js-dataflow.md rules/js-dataflow.rofl [--out FILE.rofl]
+//   npm run read -- rules/untyped.md --out FILE.rofl           a file authored as Markdown, no source
 //
-// The vocabulary is the same as the renderer's (facts/js-phrases.rofl):
-// every signature and phrase becomes a pattern, a sentence is matched against
-// all of them, and a fragment that matches more than one is an ambiguity and
-// is counted. Kind nouns become the guards they absorbed. Books are not read
-// back yet: a tail names a book only where it differs from the home book.
+// The vocabulary is the renderer's (facts/phrases.rofl, facts/js-phrases.rofl,
+// and any `--vocab FILE` given), and the file's own: an anchored head sentence
+// declares the sentence of the relation its anchor names, its typed holes
+// the arguments in order. Every signature and phrase becomes a pattern, a
+// sentence is matched against all of them, and a fragment that matches more
+// than one is an ambiguity and is counted. Kind nouns become the guards they
+// absorbed. A rule's book is the block it sits in.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
@@ -15,14 +18,18 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
 let outPath: string | null = null;
 const oi = argv.indexOf('--out'); if (oi >= 0) { outPath = argv[oi + 1]; argv.splice(oi, 2); }
+const vocabPaths: string[] = [];
+for (let vi = argv.indexOf('--vocab'); vi >= 0; vi = argv.indexOf('--vocab')) { vocabPaths.push(argv[vi + 1]); argv.splice(vi, 2); }
 const [mdPath, ...srcPaths] = argv;
-if (!mdPath || !srcPaths.length) { console.error('usage: npm run read -- <rendered.md> <source.rofl...> [--out FILE.rofl]'); process.exit(2); }
+if (!mdPath) { console.error('usage: npm run read -- <file.md> [source.rofl...] [--out FILE.rofl] [--vocab FILE.rofl]'); process.exit(2); }
 
 // ---------------------------------------------------------------- vocabulary
 type Part = { t: 'text'; s: string } | { t: 'hole'; i: number; noun: string } | { t: 'fix'; i: number; kind: 'zero' | 'wild' | 'atom'; val?: string };
 type Tpl = { rel: string; parts: Part[]; arity: number; src: string };
 const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child', 'node']);
-const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8');
+// the JS model's vocabulary comes with a file rendered from it (docs/js); any other file brings its own
+if (/(^|\/)docs\/js\//.test(mdPath)) vocabPaths.unshift('facts/js-phrases.rofl');
+const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + vocabPaths.map((v) => readFileSync(v.startsWith('/') ? v : `${ROOT}${v}`, 'utf8')).join('\n');
 const kindNoun = new Map<string, string>();
 for (const m of vocab.matchAll(/^kind_noun\((\w+), "([^"]+)"\)/gm)) kindNoun.set(m[1], m[2]);
 const guardOf = new Map<string, string[]>();   // noun -> the relations it may bind to, from the vocabulary
@@ -86,7 +93,7 @@ for (const t of templates) { const k = t.parts.map((p) => p.t === 'text' ? p.s :
 const collisions = [...skeletons.entries()].filter(([, rs]) => new Set(rs).size > 1).map(([k, rs]) => `${k}  <-  ${[...new Set(rs)].join(', ')}`);
 
 // the source, as facts: the same dump the renderer reads
-const facts = execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...srcPaths.map((p) => p.startsWith('/') ? p : `${ROOT}${p}`)], { maxBuffer: 1 << 28 }).toString();
+const facts = srcPaths.length ? execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...srcPaths.map((p) => p.startsWith('/') ? p : `${ROOT}${p}`)], { maxBuffer: 1 << 28 }).toString() : '';
 const setRels = new Set<string>();
 for (const m of vocab.matchAll(/^kind_set\((\w+)\)/gm)) setRels.add(m[1]);
 const usedHere = new Set<string>();
@@ -422,6 +429,40 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
   }
 }
 for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
+// THE FILE'S OWN VOCABULARY. An anchored head sentence (`<a id="letter"></a>A rule R
+// has the letter V either:`) declares the sentence of the relation the anchor names:
+// its typed holes (`a rule R`) are the arguments in order, a bare capital is a hole
+// too, and `A`, `An`, `The` on their own are articles, so a variable A is written typed.
+function learn(rel: string, head: string) {
+  if (templates.some((t) => t.rel === rel)) return;
+  head = head.charAt(0).toLowerCase() + head.slice(1);
+  const parts: Part[] = []; let buf = ''; let n = 0; let last = 0; let m;
+  const flush = () => { const t = buf.trim(); if (t) parts.push({ t: 'text', s: t }); buf = ''; };
+  const re = /(?:\b([Aa]n?) ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) )?\b([A-Z][A-Za-z0-9]*)\b/g;
+  while ((m = re.exec(head))) {
+    if (!m[2] && ['A', 'An', 'The'].includes(m[3])) continue;
+    buf += head.slice(last, m.index); flush();
+    parts.push({ t: 'hole', i: n++, noun: m[2] ?? (VALUE.has(m[3].toLowerCase()) ? m[3].toLowerCase() : 'node') });
+    last = m.index + m[0].length;
+  }
+  buf += head.slice(last); flush();
+  if (n === 0) return;
+  templates.push({ rel, parts, arity: n, src: head });
+  for (const p of parts) if (p.t === 'hole') nouns.add(p.noun);
+}
+{
+  const headOf = (t: string) => t.replace(/ either:$/, '').replace(/ if all of:$/, '').split(/ if | unless |, unless /)[0].replace(/[.;:]$/, '').trim();
+  let subject = '';
+  for (const raw of rawMd.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('>') || line.startsWith('#') || line.startsWith('|') || /^\d+\. /.test(line)) continue;
+    const a = /^(- )?<a id="([\w-]+)"><\/a>(.*)$/.exec(line);
+    if (!a) { if (!line.startsWith('- ') && !/[.:]$/.test(line)) subject = clean(line); else if (!line.startsWith('- ')) subject = ''; continue; }
+    const text = clean(a[3]).trim();
+    const head = a[1] && subject && /^[a-z]/.test(text) ? `${subject} ${text}` : text;
+    learn(a[2], headOf(head));
+  }
+}
 let section = '';
 let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
 for (let i = 0; i < blocks.length; i++) {

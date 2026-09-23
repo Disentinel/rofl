@@ -87,16 +87,45 @@ the check.
    Each was settled in the base, not in the phrase
    (f_one_function_relation_through_the_books_and_a_projection_reads_as_what_it_is).
 
-## The test not yet run
+## The test, run
 
-Everything measured is render, then read. Nobody has written a rule in
-Markdown first and run it. The reader is `scripts/read.ts`, wired to the
-two phrase files of the JS model, not the ring-1 reader the roadmap names;
-the desugaring exists as data (`facts/js-phrases.rofl`, `facts/phrases.rofl`)
-but not as a ROFL program; `collapse then expand`, the formatter, does not
-exist. The next step for 1.1 is one file authored as `.md` with no `.rofl`
-twin, loaded through the reader into the same golden. Until then the form
-is a proven rendering and an unproven source.
+Everything measured above was render, then read. The test the form still
+owed was a file written as Markdown first, with no `.rofl` twin, loaded
+through the reader into the same golden. It was run on 2026-09-23 on
+`rules/untyped.rofl`, fourteen rules and eight declared tables whose
+vocabulary no phrase file knew: the file was written again as
+`rules/untyped.md`, the `.rofl` removed, and `npm test` answered 96 of 96
+against the unchanged golden, `rules_untyped` included. The read-back rules
+are the old ones clause for clause, variables and literal order included.
+
+What it took:
+
+- **A file declares its own vocabulary.** An anchored head sentence
+  (`<a id="letter"></a>A rule R has the letter V either:`) declares the
+  sentence of the relation the anchor names; its typed holes (`a rule R`)
+  are the arguments in order, a bare capital is a hole too, and the
+  declared tables declare the same way under `Declared as facts:`. The
+  reader learns these before it parses anything, so a sentence may be used
+  above its definition. The JS vocabulary now comes only with a file
+  rendered from the JS model (`docs/js/`); any other file brings its own,
+  plus `--vocab` for a shared one.
+- **A world authored as Markdown is a world.** `scripts/md_world.ts` reads
+  it into rules under the temp directory; the goldens and the lint load it
+  from there, so `rules/*.md` and `rules/*.rofl` are found alike.
+- **The discipline the author learned in one round:** a sentence is said
+  the same way everywhere. The head declared `guards the variable V` and a
+  body said `guards V`, and thirteen fragments went unparsed until the body
+  used the head's words. A variable named `A` is written typed (`an arity
+  A`), since a bare `A` at the start of a sentence is an article.
+- **Prose is a quote.** The reader takes every paragraph ending in a full
+  stop for a sentence of the language, so the essay around the rules is
+  written as `>` blocks, as the renderer writes comments. An authored file
+  that wants plain paragraphs of prose needs a decision the form has not
+  made.
+
+So the form is now a proven source for one world, and every further world
+is the same three moves: anchor the heads, declare the tables, quote the
+prose. The size of that world is the limit of the claim.
 
 ## Open decisions
 

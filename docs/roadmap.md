@@ -81,9 +81,11 @@ What has to exist for it to be code rather than a description of code
    The reader exists too, `npm run read -- docs/js/X.md rules/X.rofl`, and
    the round trip over the JS model is 1178 of 1178 with every relation
    signed. What two days of that established, what the form is now, what
-   the round trip cannot see, and what is open, including the test not yet
-   run (a file authored as `.md` with no `.rofl` twin), is
-   `docs/sentence-form.md`
+   the round trip cannot see, and what is open, is `docs/sentence-form.md`;
+   the test it still owed, a file authored as `.md` with no `.rofl` twin
+   loaded into the same golden, is run: `rules/untyped.md` replaces
+   `rules/untyped.rofl` and the goldens are 96 of 96 unchanged
+   (f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary)
    (f_the_sentence_form_after_the_round_trip_what_stands_what_is_open_and_the_test_not_yet_run).
 
 What is not settled and is measured rather than guessed: fourteen

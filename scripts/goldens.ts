@@ -33,6 +33,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { roflFromMd } from './md_world.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -81,10 +82,13 @@ export function worlds(): World[] {
     for (const e of fs.readdirSync(dir).sort()) {
       const p = path.join(dir, e);
       if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`); continue; }
-      if (!e.endsWith('.rofl')) continue;
-      const facts = path.join(ROOT, 'facts', e);
-      out.push({ name: `rules_${prefix}${e.replace(/\.rofl$/, '')}`,
-        files: fs.existsSync(facts) ? [facts, p] : [p] });
+      // a world authored as Markdown is read into rules first (scripts/read.ts) and loaded from there
+      if (!e.endsWith('.rofl') && !e.endsWith('.md')) continue;
+      const stem = e.replace(/\.(rofl|md)$/, '');
+      const facts = path.join(ROOT, 'facts', `${stem}.rofl`);
+      const file = e.endsWith('.md') ? roflFromMd(p) : p;
+      out.push({ name: `rules_${prefix}${stem}`,
+        files: fs.existsSync(facts) ? [facts, file] : [file] });
     }
   };
   pack(rl, '');
