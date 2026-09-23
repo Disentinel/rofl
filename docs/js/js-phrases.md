@@ -18,6 +18,12 @@ Declared as facts: phrase, kind_noun, sig.
 
 > nouns for node kinds, and for the fact sets that name a family of kinds
 
+> a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
+
+<a id="kind_set"></a>`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `fn_kind_v`, `block_scope_kind`, `call_like_v`.
+
+Declared as facts: kind_set.
+
 > signatures: the head phrase is the name, each argument is `[marker] noun Var`
 > in the relation's own order; a name that differs from the relation is a
 > proposed rename. Scanner relations keep their phrases above: their index

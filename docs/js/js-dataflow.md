@@ -8,9 +8,7 @@ default: flow
 
 ## Terms
 
-*array literal*, *array pattern*, *assignment*, *await*, *block scope*, *call*, *catch*, *class*, *conditional*, *declaration*, *declarator*, *export-all*, *field*, *for-of*, *function*, *identifier*, *import*, *literal*, *logical*, *member access*, *method*, *named export*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
-
-Kinds without a noun: assignment_pattern, export_default_declaration, export_namespace_specifier, export_specifier, import_default_specifier, import_namespace_specifier.
+*array literal*, *array pattern*, *assignment*, *assignment pattern*, *await*, *block scope*, *call*, *call expression*, *catch*, *class expression*, *conditional*, *declaration*, *declarator*, *default export*, *default import*, *export specifier*, *export-all*, *field*, *for-of*, *function*, *function declaration*, *identifier*, *import*, *literal*, *logical*, *member access*, *method*, *named export*, *namespace export*, *namespace import*, *new*, *object literal*, *object method*, *object pattern*, *private field*, *private member*, *private method*, *private name*, *program*, *property*, *rest*, *return*, *sequence*, *spread*, *static block*, *super*, *template*, *this*, *this-binder*, *throw*, *try*, *value site*, *wrapper*, *yield*.
 
 ## Kinds
 
@@ -21,25 +19,33 @@ A noun is a node of one of its kinds:
 | an array literal | array_expression |
 | an array pattern | array_pattern |
 | an assignment | assignment_expression |
+| an assignment pattern | assignment_pattern |
 | an await | await_expression |
 | a block scope | block_scope_kind |
-| a call | call_expression, call_like_v, optional_call_expression |
+| a call | call_like_v |
+| a call expression | call_expression |
 | a catch | catch_clause |
-| a class | class_declaration, class_expression |
+| a class expression | class_expression |
 | a conditional | conditional_expression |
 | a declaration | variable_declaration |
 | a declarator | variable_declarator |
+| a default export | export_default_declaration |
+| a default import | import_default_specifier |
+| an export specifier | export_specifier |
 | an export-all | export_all_declaration |
-| a field | class_accessor_property, class_field_kind, class_property |
+| a field | class_field_kind |
 | a for-of | for_of_statement |
-| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
+| a function | fn_kind_v |
+| a function declaration | function_declaration |
 | an identifier | identifier |
 | an import | import_declaration |
-| a literal | big_int_literal, boolean_literal, literal_kind, numeric_literal, string_literal |
+| a literal | literal_kind |
 | a logical | logical_expression |
-| a member access | member_expression, member_kind_v, optional_member_expression |
+| a member access | member_kind_v |
 | a method | class_method |
 | a named export | export_named_declaration |
+| a namespace export | export_namespace_specifier |
+| a namespace import | import_namespace_specifier |
 | a new | new_expression |
 | an object literal | object_expression |
 | an object method | object_method |
@@ -62,7 +68,7 @@ A noun is a node of one of its kinds:
 | a throw | throw_statement |
 | a try | try_statement |
 | a value site | node_value_kind |
-| a wrapper | parenthesized_expression, tsas_expression, tsnon_null_expression, value_transparent |
+| a wrapper | value_transparent |
 | a yield | yield_expression |
 
 ## Signatures
@@ -538,12 +544,12 @@ E may be the node N if all of:
 
 <a id="param_of"></a>F takes Name at I if all of:
   - [`fn_node_v`](#fn_node_v)(F);
-  - an assignment_pattern node P is the I-th of the `params` of F;
+  - an assignment pattern P is the I-th of the `params` of F;
   - the `left` of P [is named](js-structure.md#ast_name) Name.
 
 <a id="param_default"></a>F defaults Name to Init if all of:
   - [`fn_node_v`](#fn_node_v)(F);
-  - an assignment_pattern node P is among the `params` of F;
+  - an assignment pattern P is among the `params` of F;
   - the `left` of P [is named](js-structure.md#ast_name) Name;
   - the `right` of P is Init.
 
@@ -628,17 +634,14 @@ Declared as facts: fn_kind_v, call_like_v.
 
 <a id="after_spread"></a>C is past a spread at I if C [has a spread](#spread_arg) at J, some node is the I-th of the `arguments` of C, and J < I.
 
-<a id="arg_at"></a>A call passes X at I if all of:
-  - X is the I-th of the `arguments` of it;
-  - unless X [is of kind](js-model.md#ast_node) `spread_element`;
-  - unless it [is past a spread](#after_spread) at I.
+<a id="arg_at"></a>A call passes X at I if X is the I-th of the `arguments` of it but is not a spread, unless it [is past a spread](#after_spread) at I.
 
 C passes E at I if all of:
   - C [has a spread](#spread_arg) at J;
   - S is the J-th of the `arguments` of C;
   - the `argument` of S is X;
   - [the element](#elem_at) K of X is E;
-  - I is +(?J,?K);
+  - I is J + K;
   - unless C [is past a spread](#after_spread) at J.
 
 F takes Name at I if all of:
@@ -705,7 +708,7 @@ C may be the literal/node V if all of:
 > `.k`". `member_value` names the node a member HOLDS and judges nothing about
 > it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 
-<a id="obj_like"></a>O is object like if O is an object literal or a class.
+<a id="obj_like"></a>O is object like if O is an object literal or a class declaration or a class expression.
 
 The member Key of O holds V either:
 
@@ -829,9 +832,9 @@ N may be the literal L if all of:
 
 M may be the node Y either:
 
-1. if M is an object method or a method or a function and Y is M;
+1. if M is an object method or a method or a function declaration and Y is M;
 2. if all of:
-   - Y is a function;
+   - Y is a function declaration;
    - Y is in file File;
    - the `id` of Y [is named](js-structure.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
@@ -995,11 +998,11 @@ T denotes a class if some class [has the static block](#static_block_of) SB and 
 
 <a id="module_basename"></a>Src has basename Base if all of:
   - some node [sources](#module_source) Src in some file;
-  - Head is str_pre(?Src,"/");
+  - Head is the prefix of Src before "/";
   - Head is ".";
-  - N is str_segs(?Src,"/");
+  - N is the number of segments of Src split by "/";
   - N is 2;
-  - Base is str_seg(?Src,"/",1).
+  - Base is the segment 1 of Src split by "/".
 
 <a id="import_target"></a>Src targets File if all of:
   - Src [has basename](#module_basename) Base;
@@ -1033,11 +1036,10 @@ F is exported as Name from File if all of:
 
 <a id="export_local"></a>L is exported locally as Ext from File if all of:
   - a named export E is in file File;
-  - an export_specifier node Sp is among the `specifiers` of E;
+  - an export specifier Sp is among the `specifiers` of E;
   - the `local` of Sp is L;
   - the `exported` of Sp [is named](js-structure.md#ast_name) Ext;
-  - unless E [re exports](#reexport_decl);
-  - unless E [exports types only](#export_list_erased);
+  - E neither [re exports](#reexport_decl) nor [exports types only](#export_list_erased);
   - unless Sp [is a type only specifier](#export_item_erased).
 
 F is exported as Ext from File if L [is exported locally as](#export_local) Ext from File and L [may be the node](#may_be_node) F.
@@ -1049,7 +1051,7 @@ A named export sources Src in File if it is in file File and the `source` of it 
 
 <a id="export_ns_name"></a>Name is a namespace export of Src from File if all of:
   - a named export E is in file File;
-  - an export_namespace_specifier node Sp is among the `specifiers` of E;
+  - a namespace export Sp is among the `specifiers` of E;
   - the `exported` of Sp [is named](js-structure.md#ast_name) Name;
   - E [sources](#module_source) Src in File.
 
@@ -1070,7 +1072,7 @@ E may be the node F if all of:
 <a id="imports_ns"></a>Local imports the namespace of Src in File if all of:
   - an import D is in file File;
   - the `source` of D [is written as](js-structure.md#ast_value) Src;
-  - an import_namespace_specifier node Sp is among the `specifiers` of D;
+  - a namespace import Sp is among the `specifiers` of D;
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
 <a id="module_object"></a>A program is the module object of File if it is in file File.
@@ -1086,10 +1088,10 @@ The member Name of P holds F if P [is the module object of](#module_object) Targ
 <a id="imports_default"></a>Local imports the default of Src in File if all of:
   - an import D is in file File;
   - the `source` of D [is written as](js-structure.md#ast_value) Src;
-  - an import_default_specifier node Sp is among the `specifiers` of D;
+  - a default import Sp is among the `specifiers` of D;
   - the `local` of Sp [is named](js-structure.md#ast_name) Local.
 
-<a id="exports_default"></a>A function is the default export of File if an export_default_declaration node E is in file File and the `declaration` of E is it.
+<a id="exports_default"></a>A function is the default export of File if a default export E is in file File and the `declaration` of E is it.
 
 E may be the node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
@@ -1123,7 +1125,7 @@ T may be the node O if O [has the object method](#obj_method_of) M and M [hosts]
    - CD [is of kind](js-model.md#ast_node) some kind in file File;
    - the `id` of CD [is named](js-structure.md#ast_name) Name;
 2. if all of:
-   - CD is a class;
+   - CD is a class expression;
    - CD is in file File;
    - a declarator D is in file File;
    - the `init` of D is CD;
@@ -1209,7 +1211,7 @@ An await may be the node/literal N if the `argument` of it [may be the node/lite
 
 <a id="yields"></a>F yields E if F [is nearest to](#nearest_v) a yield Y and the `argument` of Y is E.
 
-<a id="bound_to_call"></a>`bound_to_call`(E, a call C) if E [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
+<a id="bound_to_call"></a>`bound_to_call`(E, a call expression C) if E [reads](#ident_in) Name in File and some declarator [binds](#binder) Name to C in File.
 
 <a id="next_send"></a>G is sent V if all of:
   - [`call_site`](js-callgraph.md#call_site)(C, something);
@@ -1324,8 +1326,7 @@ P may be the node V if P [catches](js-controlflow.md#caught_value) V.
 <a id="catch_unsourced"></a>P catches from nowhere if all of:
   - [the catch](#catch_of) of T is H;
   - [the param](#catch_param) of H is P;
-  - unless T [throws](#thrown_in) some node;
-  - unless T [calls](#call_in_try).
+  - T neither [throws](#thrown_in) some node nor [calls](#call_in_try).
 
 ## 16. A DECORATOR REPLACES ITS TARGET. The class name evaluates to what the
 

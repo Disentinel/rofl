@@ -8,9 +8,7 @@ default: code
 
 ## Terms
 
-*member access*.
-
-Kinds without a noun: meta_property.
+*member expression*, *meta property*.
 
 ## Kinds
 
@@ -18,7 +16,8 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| a member access | member_expression, member_kind_v, optional_member_expression |
+| a member expression | member_expression |
+| a meta property | meta_property |
 
 ## Signatures
 
@@ -64,7 +63,7 @@ A noun is a node of one of its kinds:
 1. if the `key` of P is K and K [is named](#ast_name) N, unless the attribute `computed` of P is `true`;
 2. if all of:
    - the `key` of some node is K;
-   - K is a member access;
+   - K is a member expression;
    - the `object` of K [is named](#ast_name) "Symbol";
    - the `property` of K [is named](#ast_name) N.
 
@@ -77,13 +76,13 @@ A noun is a node of one of its kinds:
 
 <a id="meta_form"></a>M has the meta form N either:
 
-1. if M is a meta_property node, the `meta` of M [is named](#ast_name) "new", and N is `new_target`;
-2. if M is a meta_property node, the `meta` of M [is named](#ast_name) "import", and N is `import_meta`.
+1. if M is a meta property, the `meta` of M [is named](#ast_name) "new", and N is `new_target`;
+2. if M is a meta property, the `meta` of M [is named](#ast_name) "import", and N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)
 
-<a id="meta_unformed"></a>A meta_property node has no meta form unless it [has the meta form](#meta_form) some name.
+<a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
 
 <a id="meta_form_conflict"></a>M has conflicting meta forms X B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
 

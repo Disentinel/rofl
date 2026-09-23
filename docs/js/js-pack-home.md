@@ -29,7 +29,7 @@ default: main
 > into one `load()` are one pack, which is why this is its own pack with its
 > own loader.
 
-<a id="pack_fact"></a>`pack_fact`(P, Rel, Args) if `asserted_by`($fact(?Rel,main,?Args), P, something).
+<a id="pack_fact"></a>`pack_fact`(P, Rel, Args) if `asserted_by`($fact(Rel, `main`, Args), P, something).
 
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
@@ -37,9 +37,9 @@ default: main
 <a id="fwalk"></a>`fwalk`(P, Rel, N, Args) either:
 
 1. if [`pack_fact`](#pack_fact)(P, Rel, Args) and N is 1;
-2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(?_$0,?T)) and N is +(?I,1).
+2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(something, Args)) and N is I + 1.
 
-<a id="fslot"></a>`fslot`(P, Rel, I, X) if [`fwalk`](#fwalk)(P, Rel, I, $cons(?A,?_$0)).
+<a id="fslot"></a>`fslot`(P, Rel, I, X) if [`fwalk`](#fwalk)(P, Rel, I, $cons(X, something)).
 
 > Which positions carry a kind — DISCOVERED, not declared: a position is a
 > kind position when a declared kind stands in it, so the audit configures

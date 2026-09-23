@@ -23,24 +23,24 @@ default: main
 
 <a id="body_lit"></a>`body_lit`(L) either:
 
-1. if `premise_lit`(something, something, L) and L is $lit(?_$2,?_$3,?_$4,?_$5);
-2. if `premise_lit`(something, something, $not(?L)).
+1. if `premise_lit`(something, something, L) and L is $lit(something, something, something, something);
+2. if `premise_lit`(something, something, $not(L)).
 
-<a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(?Rel,?_$0,?_$1,?_$2).
+<a id="lit_rel"></a>`lit_rel`(L, Rel) if [`body_lit`](#body_lit)(L) and L is $lit(Rel, something, something, something).
 
-L passes Args at N, in the main either:
+`arg_at`(L, N, Args), in the main either:
 
-1. if [`body_lit`](#body_lit)(L), L is $lit(?_$0,?_$1,?Args,?_$2), and N is 1;
-2. if L [passes](js-dataflow.md#arg_at) $cons(?_$0,?T) at I in the main and N is +(?I,1).
+1. if [`body_lit`](#body_lit)(L), L is $lit(something, something, Args, something), and N is 1;
+2. if [`arg_at`](js-dataflow.md#arg_at)(L, I, $cons(something, Args)) in the main and N is I + 1.
 
-<a id="lit_arg"></a>`lit_arg`(L, I, X) if L [passes](js-dataflow.md#arg_at) $cons(?A,?_$0) at I in the main.
+<a id="lit_arg"></a>`lit_arg`(L, I, X) if [`arg_at`](js-dataflow.md#arg_at)(L, I, $cons(X, something)) in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted
 
 <a id="slot_term"></a>`slot_term`(Rel, I, X) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, X).
 
-<a id="slot_var"></a>`slot_var`(Rel, I, $var(?V)) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, $var(?V)).
+<a id="slot_var"></a>`slot_var`(Rel, I, $var(V)) if [`lit_rel`](#lit_rel)(L, Rel) and [`lit_arg`](#lit_arg)(L, I, $var(V)).
 
 <a id="slot_atom"></a>`slot_atom`(Rel, I, X) if [`slot_term`](#slot_term)(Rel, I, X), unless [`slot_var`](#slot_var)(Rel, I, X).
 

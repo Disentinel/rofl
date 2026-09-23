@@ -8,9 +8,7 @@ default: code
 
 ## Terms
 
-*array pattern*, *block*, *declarator*, *for-of*, *object literal*, *object pattern*, *rest*, *return*, *spread*, *throw*, *try*.
-
-Kinds without a noun: if_statement, labeled_statement.
+*array pattern*, *block*, *declarator*, *for-of*, *if*, *label*, *object literal*, *object pattern*, *rest*, *return*, *spread*, *throw*, *try*.
 
 ## Kinds
 
@@ -22,6 +20,8 @@ A noun is a node of one of its kinds:
 | a block | block_statement |
 | a declarator | variable_declarator |
 | a for-of | for_of_statement |
+| an if | if_statement |
+| a label | labeled_statement |
 | an object literal | object_expression |
 | an object pattern | object_pattern |
 | a rest | rest_element |
@@ -143,7 +143,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 > honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 > harmless, because both consumers read through `guarded`.
 
-<a id="label_name"></a>`label_name`(a labeled_statement node LS, N) if the `label` of LS is I and the attribute `name` of I is N.
+<a id="label_name"></a>`label_name`(a label LS, N) if the `label` of LS is I and the attribute `name` of I is N.
 
 <a id="label_ref"></a>`label_ref`(X, N) if all of:
   - [`abrupt_kind`](#abrupt_kind)(K);
@@ -180,7 +180,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 `completes_abruptly`(a block B) if [`completes_abruptly`](#completes_abruptly)(S) and S is among the `body` of B.
 
-`completes_abruptly`(an if_statement node S) if all of:
+`completes_abruptly`(an if S) if all of:
   - [`completes_abruptly`](#completes_abruptly)(C);
   - the `consequent` of S is C;
   - the `alternate` of S is X;
@@ -188,7 +188,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 <a id="label_escaped"></a>`label_escaped`(LS) if [`label_target`](#label_target)(something, LS).
 
-`completes_abruptly`(a labeled_statement node LS) if all of:
+`completes_abruptly`(a label LS) if all of:
   - [`completes_abruptly`](#completes_abruptly)(S);
   - the `body` of LS is S;
   - unless [`label_escaped`](#label_escaped)(LS).
@@ -462,10 +462,7 @@ N resolves to M if [`pattern_iterates`](#pattern_iterates)(N, M).
 
 <a id="hidden_call_traced"></a>`hidden_call_traced`(N) if [`hidden_call_src`](#hidden_call_src)(N, Src) and Src [may be the node](js-dataflow.md#may_be_node) some node.
 
-<a id="hidden_call_untraced"></a>`hidden_call_untraced`(N, Src) if all of:
-  - [`hidden_call_src`](#hidden_call_src)(N, Src);
-  - unless Src [may be the literal](js-dataflow.md#may_be_lit) some text;
-  - unless Src [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="hidden_call_untraced"></a>`hidden_call_untraced`(N, Src) if [`hidden_call_src`](#hidden_call_src)(N, Src) and Src neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
 
 <a id="hidden_call_sourced"></a>`hidden_call_sourced`(N) if [`hidden_call_src`](#hidden_call_src)(N, something).
 

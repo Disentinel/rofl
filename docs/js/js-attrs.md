@@ -23,9 +23,9 @@ default: main
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, K);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 3, V).
 
-<a id="attr_lit_kvar"></a>`attr_lit_kvar`(L, $var(?X)) if [`attr_lit`](#attr_lit)(L, $var(?X), something).
+<a id="attr_lit_kvar"></a>`attr_lit_kvar`(L, $var(X)) if [`attr_lit`](#attr_lit)(L, $var(X), something).
 
-<a id="attr_lit_vvar"></a>`attr_lit_vvar`(L, $var(?X)) if [`attr_lit`](#attr_lit)(L, something, $var(?X)).
+<a id="attr_lit_vvar"></a>`attr_lit_vvar`(L, $var(X)) if [`attr_lit`](#attr_lit)(L, something, $var(X)).
 
 > a key some rule names; a key read with the value free, for which
 > `unconsumed_value` must not fire; a (key, value) pair named outright
@@ -91,7 +91,7 @@ Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
 > co-literal FILTERS the pairs (`unconsumed_value` has that shape), a
 > positive one SUPPLIES them.
 
-<a id="pos_prem"></a>`pos_prem`(R, L) if `premise_lit`(R, something, L) and L is $lit(?_$1,?_$2,?_$3,?_$4).
+<a id="pos_prem"></a>`pos_prem`(R, L) if `premise_lit`(R, something, L) and L is $lit(something, something, something, something).
 
 <a id="attr_lit_kvvar"></a>`attr_lit_kvvar`(L) if all of:
   - [`attr_lit`](#attr_lit)(L, K, V);
@@ -136,8 +136,8 @@ Declared as facts: attr_table_bridged.
 
 <a id="rule_prem"></a>`rule_prem`(R, L) either:
 
-1. if `premise_lit`(R, something, L) and L is $lit(?_$1,?_$2,?_$3,?_$4);
-2. if `premise_lit`(R, something, $not(?L)).
+1. if `premise_lit`(R, something, L) and L is $lit(something, something, something, something);
+2. if `premise_lit`(R, something, $not(L)).
 
 <a id="attr_test_lit"></a>`attr_test_lit`(L, S, K) if all of:
   - [`attr_lit`](#attr_lit)(L, K, V);
@@ -145,7 +145,7 @@ Declared as facts: attr_table_bridged.
   - unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
   - unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
 
-<a id="attr_test_svar"></a>`attr_test_svar`(L, $var(?X)) if [`attr_test_lit`](#attr_test_lit)(L, $var(?X), something).
+<a id="attr_test_svar"></a>`attr_test_svar`(L, $var(X)) if [`attr_test_lit`](#attr_test_lit)(L, $var(X), something).
 
 <a id="child_lit"></a>`child_lit`(L, S, F) if all of:
   - [`body_lit`](js-vocabulary.md#body_lit)(L);
@@ -153,9 +153,9 @@ Declared as facts: attr_table_bridged.
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
   - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, F).
 
-<a id="child_lit_svar"></a>`child_lit_svar`(L, $var(?X)) if [`child_lit`](#child_lit)(L, $var(?X), something).
+<a id="child_lit_svar"></a>`child_lit_svar`(L, $var(X)) if [`child_lit`](#child_lit)(L, $var(X), something).
 
-<a id="child_lit_fvar"></a>`child_lit_fvar`(L, $var(?X)) if [`child_lit`](#child_lit)(L, something, $var(?X)).
+<a id="child_lit_fvar"></a>`child_lit_fvar`(L, $var(X)) if [`child_lit`](#child_lit)(L, something, $var(X)).
 
 <a id="attr_guard_slot"></a>`attr_guard_slot`(R, K, S, F) if all of:
   - [`rule_prem`](#rule_prem)(R, L);

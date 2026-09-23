@@ -8,7 +8,7 @@ default: code
 
 ## Terms
 
-*await*, *class*, *declarator*, *decorator*, *field*, *function*, *member access*, *method*, *object literal*, *object method*, *property*, *super*, *template*.
+*await*, *class expression*, *declarator*, *decorator*, *field*, *function declaration*, *method*, *object literal*, *object method*, *optional member expression*, *property*, *super*, *template*.
 
 ## Kinds
 
@@ -17,15 +17,15 @@ A noun is a node of one of its kinds:
 | noun | kinds |
 |---|---|
 | an await | await_expression |
-| a class | class_declaration, class_expression |
+| a class expression | class_expression |
 | a declarator | variable_declarator |
 | a decorator | decorator |
-| a field | class_accessor_property, class_field_kind, class_property |
-| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
-| a member access | member_expression, member_kind_v, optional_member_expression |
+| a field | class_field_kind |
+| a function declaration | function_declaration |
 | a method | class_method |
 | an object literal | object_expression |
 | an object method | object_method |
+| an optional member expression | optional_member_expression |
 | a property | object_property |
 | a super | super |
 | a template | template_literal |
@@ -115,7 +115,7 @@ Declared as facts: transfer_kind.
   - N [is of kind](js-model.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
 
-<a id="optional_member"></a>`optional_member`(C) if [`callee_of`](#callee_of)(C, a member access N).
+<a id="optional_member"></a>`optional_member`(C) if [`callee_of`](#callee_of)(C, an optional member expression N).
 
 <a id="computed_member"></a>`computed_member`(C, N) if [`member_like`](#member_like)(C, N) and the attribute `computed` of N is `true`.
 
@@ -288,7 +288,7 @@ Declared as facts: fn_kind.
 
 <a id="fn_name"></a>`fn_name`(F, N) either:
 
-1. if F is a function and the `id` of F [is named](js-structure.md#ast_name) N;
+1. if F is a function declaration or a function expression and the `id` of F [is named](js-structure.md#ast_name) N;
 2. if F is an object method and the `key` of F [spells](js-structure.md#key_name) N.
 
 <a id="ctor_method"></a>`ctor_method`(a method F) if the attribute `kind` of F is "constructor".
@@ -324,9 +324,9 @@ Declared as facts: fn_kind.
 > `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
 > the two constructor arms never both fire.
 
-<a id="class_has_id"></a>`class_has_id`(a class CD) if the `id` of CD is some node.
+<a id="class_has_id"></a>`class_has_id`(a class expression CD) if the `id` of CD is some node.
 
-<a id="anon_class"></a>`anon_class`(a class CD) unless [`class_has_id`](#class_has_id)(CD).
+<a id="anon_class"></a>`anon_class`(a class expression CD) unless [`class_has_id`](#class_has_id)(CD).
 
 `fn_name`(a method F, N) if all of:
   - the attribute `kind` of F is "constructor";

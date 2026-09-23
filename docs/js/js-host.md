@@ -8,7 +8,7 @@ default: audit
 
 ## Terms
 
-*function*.
+*function declaration*.
 
 ## Kinds
 
@@ -16,7 +16,7 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
-| a function | arrow_function_expression, fn_kind_v, function_declaration, function_expression |
+| a function declaration | function_declaration |
 
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
@@ -58,7 +58,7 @@ Declared as facts: ast_parse_error.
 
 `name_bound_in`(File, Name) either:
 
-1. if a function F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
+1. if a function declaration F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
 2. if F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
 4. if [`binding`](js-modules.md#binding)(I, something, Name, something) and [`site_file`](js-modules.md#site_file)(I, File).
@@ -207,7 +207,7 @@ Declared as facts: ast_parse_error.
 > is the surface pack's, maj*1000000 + min*1000 + patch, and a runtime
 > declares a MAJOR: `node18` is v18.0.0 and does NOT have `os.machine`.
 
-<a id="runtime_vnum"></a>`runtime_vnum`(R, VN) if `runtime_version`(R, something, V) and VN is *(?V,1000000).
+<a id="runtime_vnum"></a>`runtime_vnum`(R, VN) if `runtime_version`(R, something, V) and VN is V * 1000000.
 
 > The family is bound once and used in both premises; hard-coding `node`
 > compared the browser against node's surface and reported 718 absences.

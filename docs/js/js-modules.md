@@ -8,9 +8,7 @@ default: code
 
 ## Terms
 
-*export-all*, *identifier*, *import*, *literal*, *named export*.
-
-Kinds without a noun: export_default_declaration, export_namespace_specifier, export_specifier, import_attribute, import_default_specifier, import_expression, import_namespace_specifier, import_specifier.
+*default export*, *default import*, *dynamic import*, *export specifier*, *export-all*, *identifier*, *import*, *import attribute*, *import specifier*, *named export*, *namespace export*, *namespace import*, *string literal*.
 
 ## Kinds
 
@@ -18,11 +16,19 @@ A noun is a node of one of its kinds:
 
 | noun | kinds |
 |---|---|
+| a default export | export_default_declaration |
+| a default import | import_default_specifier |
+| a dynamic import | import_expression |
+| an export specifier | export_specifier |
 | an export-all | export_all_declaration |
 | an identifier | identifier |
 | an import | import_declaration |
-| a literal | big_int_literal, boolean_literal, literal_kind, numeric_literal, string_literal |
+| an import attribute | import_attribute |
+| an import specifier | import_specifier |
 | a named export | export_named_declaration |
+| a namespace export | export_namespace_specifier |
+| a namespace import | import_namespace_specifier |
+| a string literal | string_literal |
 
 > js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
 > 
@@ -57,7 +63,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 <a id="import_site"></a>`import_site`(I, N) either:
 
 1. if I is an import and N is `static_import`;
-2. if I is an import_expression node and N is `dynamic_import`.
+2. if I is a dynamic import and N is `dynamic_import`.
 
 <a id="reexport_site"></a>`reexport_site`(E, N) either:
 
@@ -72,7 +78,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 <a id="site_kind"></a>`site_kind`(I, N) either:
 
 1. if I is an import and N is `import_declaration`;
-2. if I is an import_expression node and N is `import_expression`;
+2. if I is a dynamic import and N is `import_expression`;
 3. if [`reexport_site`](#reexport_site)(I, `reexport_named`) and N is `export_named_declaration`;
 4. if [`reexport_site`](#reexport_site)(I, `reexport_all`) and N is `export_all_declaration`.
 
@@ -82,7 +88,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="site_source_node"></a>`site_source_node`(I, Src) if [`module_site`](#module_site)(I, something) and the `source` of I is Src.
 
-<a id="site_source"></a>`site_source`(I, S) if [`site_source_node`](#site_source_node)(I, a literal Src) and Src [is written as](js-structure.md#ast_value) S.
+<a id="site_source"></a>`site_source`(I, S) if [`site_source_node`](#site_source_node)(I, a string literal Src) and Src [is written as](js-structure.md#ast_value) S.
 
 <a id="site_source_literal"></a>`site_source_literal`(I) if [`site_source`](#site_source)(I, something).
 
@@ -138,14 +144,14 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
   - [`walk`](#walk)(I, K, D);
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, ".");
-  - K1 is +(?K,1).
+  - K1 is K + 1.
 
 `walk`(I, K1, P) if all of:
   - [`walk`](#walk)(I, K, D);
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, "..");
   - [`fs_parent`](#fs_parent)(D, P);
-  - K1 is +(?K,1).
+  - K1 is K + 1.
 
 `walk`(I, K1, C) if all of:
   - [`walk`](#walk)(I, K, D);
@@ -154,14 +160,14 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
   - Seg differs from ".";
   - Seg differs from "..";
   - [`fs_dir_in`](#fs_dir_in)(D, Seg, C);
-  - K1 is +(?K,1).
+  - K1 is K + 1.
 
 <a id="resolved_import"></a>`resolved_import`(I, T) if all of:
   - [`walk`](#walk)(I, K, D);
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, Seg);
   - [`fs_file_in`](#fs_file_in)(D, Seg, T);
-  - N is +(?K,1);
+  - N is K + 1;
   - [`str_segs`](#str_segs)(S, N).
 
 <a id="builtin_canonical"></a>`builtin_canonical`(S, N) either:
@@ -189,7 +195,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 > verdict. A default binds `"default"`, a namespace `"*"`.
 
-<a id="import_specifier_node"></a>`import_specifier_node`(Sp) if Sp is an import_specifier node or an import_default_specifier node or an import_namespace_specifier node.
+<a id="import_specifier_node"></a>`import_specifier_node`(Sp) if Sp is an import specifier or a default import or a namespace import.
 
 <a id="import_spec"></a>`import_spec`(I, Sp) if [`import_site`](#import_site)(I, `static_import`) and Sp is among the `specifiers` of I.
 
@@ -197,10 +203,10 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="spec_imported"></a>`spec_imported`(Sp, M) either:
 
-1. if Sp is an import_specifier node and the `imported` of Sp [is named](js-structure.md#ast_name) M;
-2. if Sp is an import_specifier node and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
-3. if Sp is an import_default_specifier node and M is "default";
-4. if Sp is an import_namespace_specifier node and M is "*".
+1. if Sp is an import specifier and the `imported` of Sp [is named](js-structure.md#ast_name) M;
+2. if Sp is an import specifier and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
+3. if Sp is a default import and M is "default";
+4. if Sp is a namespace import and M is "*".
 
 <a id="binding"></a>`binding`(I, Sp, Local, Imported) if all of:
   - [`import_spec`](#import_spec)(I, Sp);
@@ -222,7 +228,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="export_spec"></a>`export_spec`(E, Sp) if [`export_site`](#export_site)(E) and Sp is among the `specifiers` of E.
 
-<a id="export_specifier_node"></a>`export_specifier_node`(Sp) if Sp is an export_specifier node or an export_namespace_specifier node.
+<a id="export_specifier_node"></a>`export_specifier_node`(Sp) if Sp is an export specifier or a namespace export.
 
 <a id="spec_external"></a>`spec_external`(Sp, X) either:
 
@@ -231,8 +237,8 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="spec_internal"></a>`spec_internal`(Sp, L) either:
 
-1. if Sp is an export_specifier node and the `local` of Sp [is named](js-structure.md#ast_name) L;
-2. if Sp is an export_namespace_specifier node and L is "*".
+1. if Sp is an export specifier and the `local` of Sp [is named](js-structure.md#ast_name) L;
+2. if Sp is a namespace export and L is "*".
 
 <a id="export_binding"></a>`export_binding`(E, Sp, External, Internal) if all of:
   - [`export_spec`](#export_spec)(E, Sp);
@@ -278,7 +284,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
 > says so the day it arrives.
 
-<a id="export_default_site"></a>`export_default_site`(an export_default_declaration node E).
+<a id="export_default_site"></a>`export_default_site`(a default export E).
 
 <a id="default_external"></a>`default_external`(E, "default") if [`export_default_site`](#export_default_site)(E).
 
@@ -293,7 +299,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="default_anonymous"></a>`default_anonymous`(E) if [`default_declaration`](#default_declaration)(E, something), unless [`has_default_internal`](#has_default_internal)(E).
 
-<a id="default_export_file"></a>`default_export_file`(F, an export_default_declaration node E) if E is in file F.
+<a id="default_export_file"></a>`default_export_file`(F, a default export E) if E is in file F.
 
 > totality, one internal name, one default per module (two in one File is
 > what a collision between scanned modules would look like from here)
@@ -523,7 +529,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > runs, and for these it does not. Two frontiers: an attribute whose parent is
 > not a site, and one whose key or value the join could not read.
 
-<a id="import_attr"></a>`import_attr`(an import_attribute node X, Key, Value) if the `key` of X [is named](js-structure.md#ast_name) Key and the `value` of X [is written as](js-structure.md#ast_value) Value.
+<a id="import_attr"></a>`import_attr`(an import attribute X, Key, Value) if the `key` of X [is named](js-structure.md#ast_name) Key and the `value` of X [is written as](js-structure.md#ast_value) Value.
 
 <a id="import_attr_of"></a>`import_attr_of`(D, X) if X is among the `attributes` of D.
 
@@ -533,9 +539,9 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="module_is_data"></a>`module_is_data`(D, T) if [`module_type`](#module_type)(D, T) and T differs from "javascript".
 
-<a id="import_attr_unsited"></a>`import_attr_unsited`(an import_attribute node X) unless [`import_attr_of`](#import_attr_of)(something, X).
+<a id="import_attr_unsited"></a>`import_attr_unsited`(an import attribute X) unless [`import_attr_of`](#import_attr_of)(something, X).
 
-<a id="import_attr_unread"></a>`import_attr_unread`(an import_attribute node X) unless [`import_attr`](#import_attr)(X, something, something).
+<a id="import_attr_unread"></a>`import_attr_unread`(an import attribute X) unless [`import_attr`](#import_attr)(X, something, something).
 
 ## Read from other files
 

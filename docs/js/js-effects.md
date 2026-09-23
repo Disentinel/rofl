@@ -8,9 +8,7 @@ default: flow
 
 ## Terms
 
-*assignment*, *class*, *new*, *static block*, *template*, *throw*, *try*.
-
-Kinds without a noun: binary_expression, import_expression, update_expression.
+*assignment*, *binary expression*, *class expression*, *dynamic import*, *new*, *static block*, *template*, *throw*, *try*, *update expression*.
 
 ## Kinds
 
@@ -19,12 +17,15 @@ A noun is a node of one of its kinds:
 | noun | kinds |
 |---|---|
 | an assignment | assignment_expression |
-| a class | class_declaration, class_expression |
+| a binary expression | binary_expression |
+| a class expression | class_expression |
+| a dynamic import | import_expression |
 | a new | new_expression |
 | a static block | static_block |
 | a template | template_literal |
 | a throw | throw_statement |
 | a try | try_statement |
+| an update expression | update_expression |
 
 > js-effects.rofl — THE EFFECT LAYER. facts/js-effects.rofl declares
 > `layer(effect)`, the Koka taxonomy (`eff_name`, `eff_row`, `eff_alias`,
@@ -217,7 +218,7 @@ Declared as facts: eff_alloc_kind.
 
 > `x++` is a read and a write, on either form.
 
-<a id="eff_update_arg"></a>`eff_update_arg`(an update_expression node U, X) if the `argument` of U is X.
+<a id="eff_update_arg"></a>`eff_update_arg`(an update expression U, X) if the `argument` of U is X.
 
 `eff_here`(U, N, E) either:
 
@@ -442,7 +443,7 @@ Declared as facts: eff_suspension_word.
 1. if the attribute `operator` of N is "instanceof" and E is `has_instance`;
 2. if the attribute `operator` of N is "delete" and E is `delete_own`.
 
-<a id="eff_converts"></a>`eff_converts`(N) if N is a binary_expression node or an unary_expression node, unless [`eff_op_inspects`](#eff_op_inspects)(N).
+<a id="eff_converts"></a>`eff_converts`(N) if N is a binary expression or an unary expression, unless [`eff_op_inspects`](#eff_op_inspects)(N).
 
 <a id="eff_coerced"></a>`eff_coerced`(N, X) either:
 
@@ -475,10 +476,7 @@ Declared as facts: eff_suspension_word.
   - X [may be the literal](js-dataflow.md#may_be_lit) some text;
   - unless [`eff_conv_object`](#eff_conv_object)(N, X).
 
-<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, X) if all of:
-  - [`eff_coerced`](#eff_coerced)(N, X);
-  - unless X [may be the literal](js-dataflow.md#may_be_lit) some text;
-  - unless X [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_conv_untraced"></a>`eff_conv_untraced`(N, X) if [`eff_coerced`](#eff_coerced)(N, X) and X neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
 
 Declared as facts: eff_conv_key.
 
@@ -521,7 +519,7 @@ Declared as facts: eff_conv_key.
 
 1. if N [sources](js-dataflow.md#module_source) Src in F;
 2. if all of:
-   - N is an import_expression node;
+   - N is a dynamic import;
    - N is in file F;
    - the `source` of N [is written as](js-structure.md#ast_value) Src.
 
@@ -547,11 +545,11 @@ Declared as facts: eff_conv_key.
 
 <a id="eff_mod_basename"></a>`eff_mod_basename`(Src, Base) if all of:
   - [`eff_mod_src`](#eff_mod_src)(something, Src, something);
-  - Head is str_pre(?Src,"/");
+  - Head is the prefix of Src before "/";
   - Head is ".";
-  - N is str_segs(?Src,"/");
+  - N is the number of segments of Src split by "/";
   - N is 2;
-  - Base is str_seg(?Src,"/",1).
+  - Base is the segment 1 of Src split by "/".
 
 <a id="eff_mod_target"></a>`eff_mod_target`(Src, T) if all of:
   - [`eff_mod_basename`](#eff_mod_basename)(Src, Base);
@@ -816,10 +814,14 @@ Declared as facts: eff_class_form, eff_field_kind.
 
 <a id="eff_define_unreached"></a>`eff_define_unreached`(CE, S) either:
 
-1. if CE is a class and the `super_class` of CE is S;
-2. if CE is a class, the `body` of CE is B, S is among the `body` of B, and S is a static block;
+1. if CE is a class expression and the `super_class` of CE is S;
+2. if all of:
+   - CE is a class expression;
+   - the `body` of CE is B;
+   - S is among the `body` of B;
+   - S is a static block;
 3. if all of:
-   - CE is a class;
+   - CE is a class expression;
    - the `body` of CE is B;
    - P is among the `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);

@@ -29,22 +29,22 @@ kind_noun(variable_declaration, "declaration").
 kind_noun(template_literal, "template").
 kind_noun(object_expression, "object literal").
 kind_noun(array_expression, "array literal").
-kind_noun(class_declaration, "class").
-kind_noun(class_expression, "class").
-kind_noun(function_declaration, "function").
-kind_noun(function_expression, "function").
-kind_noun(arrow_function_expression, "function").
+kind_noun(class_declaration, "class declaration").
+kind_noun(class_expression, "class expression").
+kind_noun(function_declaration, "function declaration").
+kind_noun(function_expression, "function expression").
+kind_noun(arrow_function_expression, "arrow function").
 kind_noun(object_method, "object method").
 kind_noun(class_method, "method").
 kind_noun(class_private_method, "private method").
 kind_noun(class_private_property, "private field").
-kind_noun(class_property, "field").
-kind_noun(class_accessor_property, "field").
-kind_noun(call_expression, "call").
-kind_noun(optional_call_expression, "call").
+kind_noun(class_property, "class property").
+kind_noun(class_accessor_property, "accessor property").
+kind_noun(call_expression, "call expression").
+kind_noun(optional_call_expression, "optional call expression").
 kind_noun(new_expression, "new").
-kind_noun(member_expression, "member access").
-kind_noun(optional_member_expression, "member access").
+kind_noun(member_expression, "member expression").
+kind_noun(optional_member_expression, "optional member expression").
 kind_noun(assignment_expression, "assignment").
 kind_noun(sequence_expression, "sequence").
 kind_noun(conditional_expression, "conditional").
@@ -67,18 +67,35 @@ kind_noun(block_statement, "block").
 kind_noun(for_statement, "for").
 kind_noun(return_statement, "return").
 kind_noun(throw_statement, "throw").
-kind_noun(parenthesized_expression, "wrapper").
-kind_noun(tsas_expression, "wrapper").
-kind_noun(tsnon_null_expression, "wrapper").
-kind_noun(string_literal, "literal").
-kind_noun(numeric_literal, "literal").
-kind_noun(boolean_literal, "literal").
-kind_noun(big_int_literal, "literal").
+kind_noun(parenthesized_expression, "parenthesized expression").
+kind_noun(tsas_expression, "as expression").
+kind_noun(tsnon_null_expression, "non-null expression").
+kind_noun(string_literal, "string literal").
+kind_noun(numeric_literal, "numeric literal").
+kind_noun(boolean_literal, "boolean literal").
+kind_noun(big_int_literal, "bigint literal").
 kind_noun(object_property, "property").
 kind_noun(object_pattern, "object pattern").
 kind_noun(array_pattern, "array pattern").
 kind_noun(private_name, "private name").
 kind_noun(decorator, "decorator").
+kind_noun(assignment_pattern, "assignment pattern").
+kind_noun(binary_expression, "binary expression").
+kind_noun(export_default_declaration, "default export").
+kind_noun(export_namespace_specifier, "namespace export").
+kind_noun(export_specifier, "export specifier").
+kind_noun(if_statement, "if").
+kind_noun(import_attribute, "import attribute").
+kind_noun(import_default_specifier, "default import").
+kind_noun(import_expression, "dynamic import").
+kind_noun(import_namespace_specifier, "namespace import").
+kind_noun(import_specifier, "import specifier").
+kind_noun(labeled_statement, "label").
+kind_noun(meta_property, "meta property").
+kind_noun(unary_expression, "unary expression").
+kind_noun(update_expression, "update expression").
+kind_noun(reg_exp_literal, "regex literal").
+kind_noun(tagged_template_expression, "tagged template").
 kind_noun(value_transparent, "wrapper").
 kind_noun(literal_kind, "literal").
 kind_noun(node_value_kind, "value site").
@@ -89,6 +106,19 @@ kind_noun(this_binds_kind, "this-binder").
 kind_noun(fn_kind_v, "function").
 kind_noun(block_scope_kind, "block scope").
 kind_noun(call_like_v, "call").
+
+-- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _, _), set(K)`
+edb(kind_set).
+kind_set(value_transparent).
+kind_set(literal_kind).
+kind_set(node_value_kind).
+kind_set(member_kind_v).
+kind_set(class_field_kind).
+kind_set(private_member_kind).
+kind_set(this_binds_kind).
+kind_set(fn_kind_v).
+kind_set(block_scope_kind).
+kind_set(call_like_v).
 
 -- signatures: the head phrase is the name, each argument is `[marker] noun Var`
 -- in the relation's own order; a name that differs from the relation is a
