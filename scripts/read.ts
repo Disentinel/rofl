@@ -319,6 +319,7 @@ function splitConds(rest: string): string[] {
   return joined;
 }
 const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = []; const imported = new Set<string>();
+const badAlternatives: string[] = [];   // a numbered alternative that does not start with `if` or `unless`
 function finish(rule: Rule, intros: Intro[]) {
   for (const it of intros) if (!VALUE.has(it.noun) && !rule.guards.has(it.v)) rule.guards.set(it.v, { noun: it.noun });
   for (let i = rule.body.length - 1; i >= 0; i--) {
@@ -433,6 +434,7 @@ for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.
 // has the letter V either:`) declares the sentence of the relation the anchor names:
 // its typed holes (`a rule R`) are the arguments in order, a bare capital is a hole
 // too, and `A`, `An`, `The` on their own are articles, so a variable A is written typed.
+const learned: Tpl[] = [];   // the file's own vocabulary, written beside the rules as phrase facts
 function learn(rel: string, head: string) {
   if (templates.some((t) => t.rel === rel)) return;
   head = head.charAt(0).toLowerCase() + head.slice(1);
@@ -447,7 +449,8 @@ function learn(rel: string, head: string) {
   }
   buf += head.slice(last); flush();
   if (n === 0) return;
-  templates.push({ rel, parts, arity: n, src: head });
+  const t = { rel, parts, arity: n, src: head };
+  templates.push(t); learned.push(t);
   for (const p of parts) if (p.t === 'hole') nouns.add(p.noun);
 }
 {
@@ -500,6 +503,7 @@ for (let i = 0; i < blocks.length; i++) {
     const head = text.replace(/ either:$/, '');
     for (const it of next.items!) {
       const t = it.text.replace(/[;.]$/, '');
+      if (!/^(if |unless |always$)/.test(t)) badAlternatives.push(`${head} … ${t}`);
       if (/^if all of:$/.test(t)) sentence(head, it.sub, section);
       else if (t === 'always') sentence(head, [], section);
       else ruleText(`${head} ${t}.`, section, null);
@@ -621,6 +625,8 @@ const BUILTIN = new Set(['=', '!=', '<', '>', '<=', '>=', 'is']);
 const linkable = new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel), ...imported]);
 const nowhere = [...new Set(rules.flatMap((r) => r.body.map((l) => l.rel)))].filter((rel) => !linkable.has(rel) && !BUILTIN.has(rel));
 console.log(`\nused with nowhere to link (${nowhere.length}): ${nowhere.join(', ')}`);
+console.log(`alternatives not starting with if or unless (${badAlternatives.length}):${badAlternatives.length ? '\n  ' + badAlternatives.join('\n  ') : ''}`);
+if (learned.length) console.log(`vocabulary the file declares: ${learned.length} sentences`);
 console.log(`\nvocabulary collisions, two relations with one sentence (${collisions.length}):`);
 for (const c of collisions) console.log('  ' + c);
 console.log(`\nambiguities (${ambiguous.length}):`);
@@ -634,4 +640,10 @@ if (outPath) {
   const declaredFacts = new Set(declared);
   const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')}).`;
   writeFileSync(outPath, [...declared.map((d) => `edb(${d}).`), ...parsedFacts.map(factLine), ...parsed.map(show)].join('\n') + '\n');
+  // the vocabulary the file declared, as the phrase facts the renderer reads: `rofl-render --out DIR X.phrases.rofl X.rofl`
+  if (learned.length) {
+    const phrasePath = outPath.replace(/\.rofl$/, '') + '.phrases.rofl';
+    const line = (t: Tpl) => `phrase(${t.rel}, "${t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? `<${p.i}:${p.noun}>` : '').filter(Boolean).join(' ')}").`;
+    writeFileSync(phrasePath, [`-- the sentences ${mdPath.replace(ROOT, '')} declares, read by scripts/read.ts; a phrase is what the renderer reads`, 'edb(phrase).', ...learned.map(line)].join('\n') + '\n');
+  }
 }

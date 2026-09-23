@@ -112,6 +112,17 @@ What it took:
 - **A world authored as Markdown is a world.** `scripts/md_world.ts` reads
   it into rules under the temp directory; the goldens and the lint load it
   from there, so `rules/*.md` and `rules/*.rofl` are found alike.
+- **The vocabulary it declares is data.** The reader writes the sentences
+  it learned beside the rules, `X.phrases.rofl`, as the `phrase` facts the
+  renderer reads; `rofl-render --out DIR X.phrases.rofl X.rofl` renders
+  the world back in its own words (15 of 15 heads phrased for `untyped`),
+  and reading that rendering back against the rules is exact. So the
+  formatter of the design, `collapse then expand`, exists by composition,
+  with one loss: the prose. A quote block is a comment, the rules carry no
+  comments, and the expansion has no essay to put back.
+- **The second check exists**: a numbered alternative that does not start
+  with `if` or `unless` is reported; zero over the sixteen rendered files
+  and the authored one.
 - **The discipline the author learned in one round:** a sentence is said
   the same way everywhere. The head declared `guards the variable V` and a
   body said `guards V`, and thirteen fragments went unparsed until the body

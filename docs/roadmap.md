@@ -65,8 +65,11 @@ What has to exist for it to be code rather than a description of code
 1. a reader for the form, in ring 1 where the grammar already travels as ROFL,
    with the host parser as its optional cache;
 2. the desugaring as data in the tree: phrase to relation, noun to kind guard,
-   book block to perspective, map to table;
-3. the two checks: use before definition, and a numbered alternative that does
+   book block to perspective, map to table. Phrase to relation is data for
+   every world now: the JS model's in `facts/js-phrases.rofl`, an authored
+   world's written beside its rules by the reader as `phrase` facts;
+3. the two checks, both in the reader: a use with nowhere to link (which is
+   what "use before definition" became), and a numbered alternative that does
    not start with `if` or `unless`;
 4. a renderer the other way, so `why` and `?` answer in the same sentences.
    For files it exists: `rofl-render` (rust/rofl/src/bin/rofl_render.rs)
