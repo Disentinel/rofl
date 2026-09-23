@@ -6,6 +6,14 @@ default: audit
 
 # js-resolve
 
+## Signatures
+
+- arrives(site S, at step K, in path P) (arrival), in the book E
+- diverges(site S, in environment A, with verdict VA, from environment B, with verdict VB) (env_divergence)
+- resolves_without_a_trace(site S, in environment Env, to node P) (answer_without_trace)
+- has_two_answers(site S, in environment Env, node A, node B) (answer_ambiguous)
+- has_two_model_keys(site S, key I, key J) (site_key_ambiguous)
+
 > js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
 > between it and the first. rules/js-modules.rofl resolves by REASONING over
 > the disk listing; this pack records node's own resolver, asked out loud with
@@ -50,7 +58,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 1. if [`resolve_try`](#resolve_try)(S, 0, something, something) and N is 0;
 2. if [`reached`](#reached)(S, K), [`candidate_missed`](#candidate_missed)(S, K), and N is K + 1.
 
-<a id="arrival"></a>`arrival`(S, K, P) if [`reached`](#reached)(S, K) and [`resolve_try`](#resolve_try)(S, K, P, `file`).
+<a id="arrival"></a>S arrives at K in P if [`reached`](#reached)(S, K) and [`resolve_try`](#resolve_try)(S, K, P, `file`).
 
 ## 3. THE ANSWER: the search arrived HERE, node returned THIS, and a named
 
@@ -60,7 +68,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 <a id="has_via"></a>`has_via`(S) if [`resolve_via`](#resolve_via)(S, something, something).
 
 <a id="resolves_to"></a>`resolves_to`(S, P) if all of:
-  - [`arrival`](#arrival)(S, something, P);
+  - S [arrives](#arrival) at some step in P;
   - [`resolve_answer`](#resolve_answer)(S, P);
   - [`has_via`](#has_via)(S).
 
@@ -154,13 +162,13 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > (b) environment against environment: the two rows are two books, and their
 > disagreement answers "how will this resolve on the other machine?"
 
-<a id="env_divergence"></a>`env_divergence`(S, X, VA, B, VB) if all of:
+<a id="env_divergence"></a>S diverges in X with VA from B with VB if all of:
   - [`host_verdict`](#host_verdict)(S, VA) in the book A;
   - [`host_verdict`](#host_verdict)(S, VB) in the book B;
   - X differs from B;
   - VA differs from VB.
 
-<a id="env_divergent_site"></a>`env_divergent_site`(S) if [`env_divergence`](#env_divergence)(S, something, something, something, something).
+<a id="env_divergent_site"></a>`env_divergent_site`(S) if S [diverges](#env_divergence) in some environment with some verdict from some environment with some verdict.
 
 ## 7. THE GATES. Each must be able to say no; test/js-resolve.test.ts plants a
 
@@ -169,7 +177,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 > an answer the trace cannot account for: the gate that makes the trace
 > load-bearing
 
-<a id="answer_without_trace"></a>`answer_without_trace`(S, Env, P) if [`resolve_answer`](#resolve_answer)(S, P) in the book Env, unless [`explained`](#explained)(S) in the book Env.
+<a id="answer_without_trace"></a>S resolves without a trace in Env to P if [`resolve_answer`](#resolve_answer)(S, P) in the book Env, unless [`explained`](#explained)(S) in the book Env.
 
 > the observer emits no `resolve_via` rather than inventing a label
 
@@ -185,7 +193,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 > resolution is a function of (place, environment)
 
-<a id="answer_ambiguous"></a>`answer_ambiguous`(S, Env, X, B) if all of:
+<a id="answer_ambiguous"></a>S has two answers in Env X and B if all of:
   - [`resolves_to`](#resolves_to)(S, X) in the book Env;
   - [`resolves_to`](#resolves_to)(S, B) in the book Env;
   - X differs from B.
@@ -214,7 +222,7 @@ Declared as facts: resolve_site, resolve_site_computed, resolve_try, resolve_ans
 
 > (file, line, specifier) is a key only while no two sites share all three
 
-<a id="site_key_ambiguous"></a>`site_key_ambiguous`(S, I, J) if [`model_site`](#model_site)(S, I), [`model_site`](#model_site)(S, J), and I differs from J.
+<a id="site_key_ambiguous"></a>S has two model keys I and J if [`model_site`](#model_site)(S, I), [`model_site`](#model_site)(S, J), and I differs from J.
 
 > the mechanism vocabulary, both directions, as the frontier reasons in js-modules
 

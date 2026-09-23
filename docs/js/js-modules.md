@@ -30,6 +30,17 @@ A noun is a node of one of its kinds:
 | a namespace import | import_namespace_specifier |
 | a string literal | string_literal |
 
+## Signatures
+
+- walks(import I, at step K, to directory D) (walk)
+- binds_the_name(import I, name Local:2, to name Imported:3, at specifier Sp:1) (binding)
+- has_two_export_bindings(node Sp, name A, name B) (export_binding_conflict), in the audit
+- has_two_internal_bindings(node Sp, node A, node B) (export_internal_conflict), in the audit
+- has_two_default_internals(node E, node A, node B) (default_internal_conflict), in the audit
+- has_two_default_exports(file F, node A, node B) (default_conflict), in the audit
+- has_two_site_shapes(import I, shape A, shape B) (shape_conflict), in the audit
+- lacks_a_reason(kind K, for shape Sh, with verdict R) (reason_missing), in the audit
+
 > js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
 > 
 > Three relations and never one `imports` edge: DEPENDS is potential (if B
@@ -135,26 +146,26 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 > name by table, because a rule cannot prefix a string. `dangling_import` is a
 > broken import, not a missing rule.
 
-<a id="walk"></a>`walk`(I, 0, D) if all of:
+<a id="walk"></a>I walks at 0 to D if all of:
   - [`site_shape`](#site_shape)(I, `relative`);
   - [`site_file`](#site_file)(I, F);
   - [`fs_dir_of`](#fs_dir_of)(F, D).
 
-`walk`(I, K1, D) if all of:
-  - [`walk`](#walk)(I, K, D);
+I walks at K1 to D if all of:
+  - I [walks](#walk) at K to D;
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, ".");
   - K1 is K + 1.
 
-`walk`(I, K1, P) if all of:
-  - [`walk`](#walk)(I, K, D);
+I walks at K1 to P if all of:
+  - I [walks](#walk) at K to D;
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, "..");
   - [`fs_parent`](#fs_parent)(D, P);
   - K1 is K + 1.
 
-`walk`(I, K1, C) if all of:
-  - [`walk`](#walk)(I, K, D);
+I walks at K1 to C if all of:
+  - I [walks](#walk) at K to D;
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, Seg);
   - Seg differs from ".";
@@ -163,7 +174,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
   - K1 is K + 1.
 
 <a id="resolved_import"></a>`resolved_import`(I, T) if all of:
-  - [`walk`](#walk)(I, K, D);
+  - I [walks](#walk) at K to D;
   - [`site_source`](#site_source)(I, S);
   - [`str_seg`](#str_seg)(S, K, Seg);
   - [`fs_file_in`](#fs_file_in)(D, Seg, T);
@@ -208,7 +219,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 3. if Sp is a default import and M is "default";
 4. if Sp is a namespace import and M is "*".
 
-<a id="binding"></a>`binding`(I, Sp, Local, Imported) if all of:
+<a id="binding"></a>I binds the name Local to Imported at Sp if all of:
   - [`import_spec`](#import_spec)(I, Sp);
   - [`spec_local`](#spec_local)(Sp, Local);
   - [`spec_imported`](#spec_imported)(Sp, Imported).
@@ -263,12 +274,12 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="export_binding_missing"></a>`export_binding_missing`(Sp) if [`export_spec`](#export_spec)(something, Sp), unless [`export_bound`](#export_bound)(Sp).
 
-<a id="export_binding_conflict"></a>`export_binding_conflict`(Sp, X, B) if all of:
+<a id="export_binding_conflict"></a>Sp has two export bindings X and B if all of:
   - [`export_binding`](#export_binding)(something, Sp, X, something);
   - [`export_binding`](#export_binding)(something, Sp, B, something);
   - X differs from B.
 
-<a id="export_internal_conflict"></a>`export_internal_conflict`(Sp, X, B) if all of:
+<a id="export_internal_conflict"></a>Sp has two internal bindings X and B if all of:
   - [`export_binding`](#export_binding)(something, Sp, something, X);
   - [`export_binding`](#export_binding)(something, Sp, something, B);
   - X differs from B.
@@ -311,12 +322,12 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="default_unaccounted"></a>`default_unaccounted`(E) if [`export_default_site`](#export_default_site)(E), unless [`default_accounted`](#default_accounted)(E).
 
-<a id="default_internal_conflict"></a>`default_internal_conflict`(E, X, B) if all of:
+<a id="default_internal_conflict"></a>E has two default internals X and B if all of:
   - [`default_internal`](#default_internal)(E, X);
   - [`default_internal`](#default_internal)(E, B);
   - X differs from B.
 
-<a id="default_conflict"></a>`default_conflict`(F, X, B) if all of:
+<a id="default_conflict"></a>F has two default exports X and B if all of:
   - [`default_export_file`](#default_export_file)(F, X);
   - [`default_export_file`](#default_export_file)(F, B);
   - X differs from B.
@@ -333,7 +344,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 <a id="spec_type_only"></a>`spec_type_only`(Sp) if the attribute `import_kind` of Sp is "type".
 
 <a id="value_binding"></a>`value_binding`(I, Sp) if all of:
-  - [`binding`](#binding)(I, Sp, something, something);
+  - I [binds the name](#binding) some name to some name at Sp;
   - unless [`decl_type_only`](#decl_type_only)(I);
   - unless [`spec_type_only`](#spec_type_only)(Sp).
 
@@ -479,7 +490,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
 
 <a id="site_without_kind"></a>`site_without_kind`(I) if [`module_site`](#module_site)(I, something), unless [`has_site_kind`](#has_site_kind)(I).
 
-<a id="shape_conflict"></a>`shape_conflict`(I, X, B) if [`site_shape`](#site_shape)(I, X), [`site_shape`](#site_shape)(I, B), and X differs from B.
+<a id="shape_conflict"></a>I has two site shapes X and B if [`site_shape`](#site_shape)(I, X), [`site_shape`](#site_shape)(I, B), and X differs from B.
 
 <a id="shape_missing"></a>`shape_missing`(I) if [`site_source_literal`](#site_source_literal)(I), unless [`has_shape`](js-callgraph.md#has_shape)(I).
 
@@ -493,7 +504,7 @@ Declared as facts: str_seg, str_segs, str_char0, str_scheme, fs_file, fs_dir, fs
    - Sh is `computed`;
    - unless [`has_verdict`](#has_verdict)(`computed`).
 
-<a id="reason_missing"></a>`reason_missing`(K, Sh, R) if all of:
+<a id="reason_missing"></a>K lacks a reason for Sh with R if all of:
   - [`unresolved_import`](#unresolved_import)(I, Sh);
   - [`site_kind`](#site_kind)(I, K);
   - [`shape_verdict`](js-callgraph.md#shape_verdict)(Sh, R) in the main;

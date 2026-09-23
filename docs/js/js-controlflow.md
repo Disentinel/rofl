@@ -32,6 +32,8 @@ A noun is a node of one of its kinds:
 
 ## Signatures
 
+- suspends(node B, at field F, from index I) (suspend_at)
+- is_abrupt(node B, at field F, from index I) (abrupt_at)
 - catches(node P, node V) (caught_value), in the flow
 
 > js-controlflow.rofl — THE CONTROL-FLOW LAYER: not WHICH function a site
@@ -110,7 +112,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 
 > `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
 
-<a id="after_abrupt"></a>`after_abrupt`(S) if [`abrupt_at`](#abrupt_at)(B, F, I), S is the J-th of the F of B, and I < J.
+<a id="after_abrupt"></a>`after_abrupt`(S) if B [is abrupt](#abrupt_at) at F from I, S is the J-th of the F of B, and I < J.
 
 > A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 > control comes back only if the promise settles — so it lands in `guarded` as
@@ -118,7 +120,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
 > function: without `nearest_v` an `await` inside a function would guard
 > everything after that function's declaration at module level.
 
-<a id="suspend_at"></a>`suspend_at`(B, F, I) if all of:
+<a id="suspend_at"></a>B suspends at F from I if all of:
   - [`transfer_mechanism`](#transfer_mechanism)(K, `suspend`);
   - X [is of kind](js-model.md#ast_node) K;
   - G [is nearest to](js-dataflow.md#nearest_v) X;
@@ -127,7 +129,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
   - [`stmt_seq_field`](#stmt_seq_field)(F);
   - S is the I-th of the F of B.
 
-<a id="after_suspend"></a>`after_suspend`(S) if [`suspend_at`](#suspend_at)(B, F, I), S is the J-th of the F of B, and I < J.
+<a id="after_suspend"></a>`after_suspend`(S) if B [suspends](#suspend_at) at F from I, S is the J-th of the F of B, and I < J.
 
 > a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
 
@@ -156,7 +158,7 @@ Declared as facts: abrupt_kind, stmt_seq_field.
   - [`label_name`](#label_name)(LS, N);
   - LS [is within](js-structure.md#ast_within) X.
 
-<a id="abrupt_at"></a>`abrupt_at`(B, F, I) if all of:
+<a id="abrupt_at"></a>B is abrupt at F from I if all of:
   - [`label_target`](#label_target)(X, LS);
   - LS [is within](js-structure.md#ast_within) S;
   - S [is within](js-structure.md#ast_within) X;
@@ -198,7 +200,7 @@ Declared as facts: completion_kind.
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
 
-`abrupt_at`(B, F, I) if all of:
+B is abrupt at F from I if all of:
   - [`completes_abruptly`](#completes_abruptly)(S);
   - [`stmt_seq_field`](#stmt_seq_field)(F);
   - S is the I-th of the F of B.
@@ -563,7 +565,7 @@ Declared as facts: catches_via.
 
 `try_stops`(C, S) if [`try_stops`](#try_stops)(C, T) and S [is within](js-structure.md#ast_within) T.
 
-`abrupt_at`(B, F, I) if all of:
+B is abrupt at F from I if all of:
   - [`throwing_call`](#throwing_call)(C);
   - G [is nearest to](js-dataflow.md#nearest_v) C;
   - G [is within](js-structure.md#ast_within) S;

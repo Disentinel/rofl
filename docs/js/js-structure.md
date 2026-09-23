@@ -23,7 +23,7 @@ A noun is a node of one of its kinds:
 
 - has_the_meta_form(node N, name Form) (meta_form)
 - has_no_meta_form(node N) (meta_unformed), in the audit
-- has_conflicting_meta_forms(node N, name A, name B) (meta_form_conflict), in the audit
+- has_two_forms(meta property M, form A, form B) (meta_form_conflict), in the audit
 
 > js-structure.rofl — the GENERIC structure over a captured AST. No domain
 > knowledge: everything here is true of any tree the scanner emits.
@@ -84,7 +84,7 @@ A noun is a node of one of its kinds:
 
 <a id="meta_unformed"></a>A meta property has no meta form unless it [has the meta form](#meta_form) some name.
 
-<a id="meta_form_conflict"></a>M has conflicting meta forms X B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
+<a id="meta_form_conflict"></a>M has two forms X and B if M [has the meta form](#meta_form) X, M [has the meta form](#meta_form) B, and X differs from B.
 
 ## Read from other files
 

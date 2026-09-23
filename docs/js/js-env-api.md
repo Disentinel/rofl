@@ -6,6 +6,10 @@ default: audit
 
 # js-env-api
 
+## Signatures
+
+- has_the_remedy(call C, term R:3, for prototype P:1, at key Key:2) (lib_call_remedy)
+
 > js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
 > `stdlib_member[audit](C, P, Key)` names a member call whose receiver has a
 > known PROTOTYPE and whose method is not a node in this program; this says
@@ -20,13 +24,13 @@ default: audit
 
 > one join: the residue is keyed by (prototype, key) and so is the library
 
-<a id="lib_call"></a>`lib_call`(C, P, Key, Rel) if [`stdlib_member`](js-callgraph.md#stdlib_member)(C, P, Key) and `lib_member`(P, Key, Rel).
+<a id="lib_call"></a>`lib_call`(C, P, Key, Rel) if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P and `lib_member`(P, Key, Rel).
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
 > notice `prototype_of` going wrong
 
-<a id="stdlib_unattributed"></a>`stdlib_unattributed`(C, P, Key) if [`stdlib_member`](js-callgraph.md#stdlib_member)(C, P, Key), unless `lib_member`(P, Key, something).
+<a id="stdlib_unattributed"></a>`stdlib_unattributed`(C, P, Key) if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P, unless `lib_member`(P, Key, something).
 
 > THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
 > composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so
@@ -46,7 +50,7 @@ default: audit
 
 <a id="lib_call_deprecated"></a>`lib_call_deprecated`(C, P, Key) if [`lib_call`](#lib_call)(C, P, Key, something) and `lib_deprecated`(P, Key).
 
-<a id="lib_call_remedy"></a>`lib_call_remedy`(C, P, Key, R) if [`lib_call_deprecated`](#lib_call_deprecated)(C, P, Key) and `lib_replaced_by`(P, Key, R).
+<a id="lib_call_remedy"></a>C has the remedy R for P at Key if [`lib_call_deprecated`](#lib_call_deprecated)(C, P, Key) and `lib_replaced_by`(P, Key, R).
 
 ## Read from other files
 

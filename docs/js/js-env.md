@@ -6,6 +6,13 @@ default: audit
 
 # js-env
 
+## Signatures
+
+- contains_the_attribute(node N, attribute Key, holding value V) (within_attr)
+- is_lost(node N:2, from environment From:0, to environment To:1, by feature F:3) (lost)
+- is_lost_between(feature F:2, environment From:0, environment To:1) (lost_feature)
+- requires(kind K:1, feature F:2, in language L:0) (gate_feature), in the main
+
 > js-env.rofl — THE ENVIRONMENT LAYER: is this program valid HERE, and what
 > exactly stops being valid THERE. Reads `ast_node[code]` and facts/js-env.rofl
 > and nothing else; the call graph has nothing to say about whether `a?.b`
@@ -74,7 +81,7 @@ default: audit
 > by the rare `async=true`, and only then does `ast_within` walk down. The
 > negation goes last with N bound.
 
-<a id="within_attr"></a>`within_attr`(N, Key, V) if all of:
+<a id="within_attr"></a>N contains the attribute Key holding V if all of:
   - `outside_attr_needs`(something, something, Key, V, something);
   - the attribute Key of X is V;
   - X [is within](js-structure.md#ast_within) N.
@@ -83,7 +90,7 @@ default: audit
   - N [is of kind](js-model.md#ast_node) K;
   - `env_lang`(L);
   - `outside_attr_needs`(L, K, Key, V, F);
-  - unless [`within_attr`](#within_attr)(N, Key, V).
+  - unless N [contains the attribute](#within_attr) Key holding V.
 
 <a id="used_feature"></a>`used_feature`(F) if [`uses`](#uses)(something, F).
 
@@ -139,15 +146,15 @@ Declared as facts: ast_parse_error.
 > not because the data says so, and an edition and a runtime, incomparable,
 > each lose things to the other.
 
-<a id="lost"></a>`lost`(From, To, N, F) if all of:
+<a id="lost"></a>N is lost from From to To by F if all of:
   - [`unsupported`](#unsupported)(To, N, F);
   - `environment`(From);
   - From differs from To;
   - unless [`unsupported`](#unsupported)(From, N, F).
 
-<a id="lost_feature"></a>`lost_feature`(From, To, F) if [`lost`](#lost)(From, To, something, F).
+<a id="lost_feature"></a>F is lost between From and To if some node [is lost](#lost) from From to To by F.
 
-<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if [`lost`](#lost)(From, To, N, F) and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="lost_at"></a>`lost_at`(From, To, File, Line, F) if N [is lost](#lost) from From to To by F and N [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## 5. THE GATES. Each is a statement this layer makes about itself, and
 
@@ -157,7 +164,7 @@ Declared as facts: ast_parse_error.
 > once written against `kind_needs` alone, and a typo in `attr_needs` moved
 > `unsupported` with no audit naming it. One arm per table, here.
 
-<a id="gate_feature"></a>`gate_feature`(L, K, F) either:
+<a id="gate_feature"></a>K requires F in L either:
 
 1. if `kind_needs`(L, K, F);
 2. if `attr_needs`(L, K, something, something, F);
@@ -187,7 +194,7 @@ Declared as facts: ast_parse_error.
 > a feature a gate table names and `feature` does not declare: the site
 > reports unsupported EVERYWHERE, a red that is a spelling mistake
 
-<a id="feature_undeclared"></a>`feature_undeclared`(F) if [`gate_feature`](#gate_feature)(something, something, F), unless `feature`(F).
+<a id="feature_undeclared"></a>`feature_undeclared`(F) if some kind [requires](#gate_feature) F in some language, unless `feature`(F).
 
 > a declared feature no environment has: `unsupported` trivially total for it
 
@@ -226,7 +233,7 @@ Declared as facts: ast_parse_error.
 > indistinct case — never considered at all. `lost` carries the direction;
 > both ways is the whole test.
 
-<a id="env_separates"></a>`env_separates`(X, B) if [`lost_feature`](#lost_feature)(X, B, something).
+<a id="env_separates"></a>`env_separates`(X, B) if some feature [is lost between](#lost_feature) X and B.
 
 <a id="env_pair_indistinct"></a>`env_pair_indistinct`(X, B) if all of:
   - `environment`(X);

@@ -113,17 +113,31 @@ fn parse_sig(text: &str, nouns: &[String]) -> Result<(Phrase, String), String> {
     let words = name.split('_').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
     let mut parts: Vec<Part> = Vec::new();
     let hole = |a: &Arg| Part::Hole(a.pos, a.noun.clone());
-    let marked = |parts: &mut Vec<Part>, a: &Arg| { if !a.marker.is_empty() { parts.push(Part::Text(format!(" {} ", a.marker), false)); } parts.push(hole(a)); };
+    // consecutive arguments under one marker share it: `of A and B`, `two shapes A and B`
+    let run = |parts: &mut Vec<Part>, group: &[&Arg]| {
+        for (n, a) in group.iter().enumerate() {
+            let same = n > 0 && group[n - 1].marker == a.marker;
+            if same { parts.push(Part::Text(" and ".into(), false)); }
+            else if !a.marker.is_empty() { parts.push(Part::Text(format!(" {} ", a.marker), false)); }
+            else if n > 0 { parts.push(Part::Text(" ".into(), false)); }
+            parts.push(hole(a));
+        }
+    };
     if words.starts_with("the ") || words == "the" {
         parts.push(Part::Text(format!("{words} "), true));
-        for a in args.iter().filter(|a| a.marker.is_empty()) { parts.push(hole(a)); parts.push(Part::Text(" ".into(), false)); }
-        for a in args.iter().filter(|a| a.marker == "of") { parts.push(Part::Text(" of ".into(), false)); parts.push(hole(a)); }
-        for a in args.iter().filter(|a| !a.marker.is_empty() && a.marker != "of") { marked(&mut parts, a); }
+        let unmarked: Vec<&Arg> = args.iter().filter(|a| a.marker.is_empty()).collect();
+        run(&mut parts, &unmarked);
+        if !unmarked.is_empty() { parts.push(Part::Text(" ".into(), false)); }
+        let ofs: Vec<&Arg> = args.iter().filter(|a| a.marker == "of").collect();
+        run(&mut parts, &ofs);
+        let others: Vec<&Arg> = args.iter().filter(|a| !a.marker.is_empty() && a.marker != "of").collect();
+        run(&mut parts, &others);
     } else {
         let first = args.first().ok_or("a signature needs a subject")?;
         parts.push(hole(first));
         parts.push(Part::Text(format!(" {words} "), true));
-        for a in args.iter().skip(1) { marked(&mut parts, a); }
+        let rest: Vec<&Arg> = args.iter().skip(1).collect();
+        run(&mut parts, &rest);
     }
     let _ = MARKERS;
     Ok((Phrase { parts, fixes: 0 }, name))
@@ -577,9 +591,10 @@ impl<'a> R<'a> {
             let mut s = String::new();
             if !pos.is_empty() {
                 s.push_str("if ");
+                let inner_and = pos.iter().any(|p| p.contains(" and "));
                 match pos.len() {
                     1 => s.push_str(&pos[0]),
-                    2 => { s.push_str(&pos[0]); s.push_str(" and "); s.push_str(&pos[1]); }
+                    2 if !inner_and => { s.push_str(&pos[0]); s.push_str(" and "); s.push_str(&pos[1]); }
                     _ => { s.push_str(&pos[..pos.len() - 1].join(", ")); s.push_str(", and "); s.push_str(&pos[pos.len() - 1]); }
                 }
             }

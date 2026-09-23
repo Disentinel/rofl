@@ -6,6 +6,12 @@ default: main
 
 # js-pack-home
 
+## Signatures
+
+- asserts(pack P, relation Rel, with term Args) (pack_fact)
+- the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3) (fwalk)
+- the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3) (fslot)
+
 > js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
 > a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
 > vocabulary's home: it is the deliberately tiny BASE every world loads.
@@ -29,29 +35,29 @@ default: main
 > into one `load()` are one pack, which is why this is its own pack with its
 > own loader.
 
-<a id="pack_fact"></a>`pack_fact`(P, Rel, Args) if `asserted_by`($fact(Rel, `main`, Args), P, something).
+<a id="pack_fact"></a>P asserts Rel with Args if `asserted_by`($fact(Rel, `main`, Args), P, something).
 
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
 
-<a id="fwalk"></a>`fwalk`(P, Rel, N, Args) either:
+<a id="fwalk"></a>The arguments of Rel in P from N are Args either:
 
-1. if [`pack_fact`](#pack_fact)(P, Rel, Args) and N is 1;
-2. if [`fwalk`](#fwalk)(P, Rel, I, $cons(something, Args)) and N is I + 1.
+1. if P [asserts](#pack_fact) Rel with Args and N is 1;
+2. if [the arguments](#fwalk) of Rel in P from I are $cons(something, Args) and N is I + 1.
 
-<a id="fslot"></a>`fslot`(P, Rel, I, X) if [`fwalk`](#fwalk)(P, Rel, I, $cons(X, something)).
+<a id="fslot"></a>The slot I of Rel in P holds X if [the arguments](#fwalk) of Rel in P from I are $cons(X, something).
 
 > Which positions carry a kind — DISCOVERED, not declared: a position is a
 > kind position when a declared kind stands in it, so the audit configures
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [`fslot`](#fslot)(something, Rel, I, X) and `node_kind`(`js`, X).
+<a id="fkind_slot"></a>`fkind_slot`(Rel, I) if [the slot](#fslot) I of Rel in some pack holds X and `node_kind`(`js`, X).
 
-<a id="pack_declares"></a>`pack_declares`(P, K) if [`fslot`](#fslot)(P, `node_kind`, 2, K) and `node_kind`(`js`, K).
+<a id="pack_declares"></a>`pack_declares`(P, K) if [the slot](#fslot) 2 of `node_kind` in P holds K and `node_kind`(`js`, K).
 
 <a id="pack_speaks"></a>`pack_speaks`(P, K) if all of:
-  - [`fslot`](#fslot)(P, Rel, I, K);
+  - [the slot](#fslot) I of Rel in P holds K;
   - [`fkind_slot`](#fkind_slot)(Rel, I);
   - Rel differs from `node_kind`.
 

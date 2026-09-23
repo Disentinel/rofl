@@ -151,3 +151,186 @@ Declared as facts: kind_set.
 | `meta_form_conflict` | "has_conflicting_meta_forms(node N, name A, name B)" |
 | `meta_unformed` | "has_no_meta_form(node N)" |
 
+> The 93 relations the nine structures could not place, written by hand.
+> What they needed was nouns the propagation cannot reach (kind, layer,
+> language, effect, runtime, shape, verdict, reason), two arguments under
+> one marker (`the join of A and B`, `lost between From and To`), and one
+> structure the name never says: a pair, `S has two Xs A and B`, which the
+> body says instead (the same relation twice, and A != B).
+
+> controlflow
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `abrupt_at` | "is_abrupt(node B, at field F, from index I)" |
+| `suspend_at` | "suspends(node B, at field F, from index I)" |
+
+> ambient
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `amb_short_at` | "falls_short(effect N:2, of label L:0, at host H:1)" |
+| `amb_covers_at` | "is_covered(label L, at host H, by effect N)" |
+| `amb_covers_at_low` | "has_a_lower_cover(label L, at host H, than effect N)" |
+| `ambient_effect` | "has_the_ambient_effect(spec Spec, effect E:2, at key Key:1)" |
+| `eff_of_label` | "the_effect(of label L, at host H, is effect N)" |
+| `eff_here` | "has_the_effect(node E, label L, at host H)" |
+| `host_atom_two_names` | "has_two_host_effects(host A, effect X, effect Y)" |
+| `surface_two_origins` | "has_two_origins(surface S, origin A, origin B)" |
+
+> resolve
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `arrival` | "arrives(site S, at step K, in path P)" |
+| `answer_ambiguous` | "has_two_answers(site S, in environment Env, node A, node B)" |
+| `answer_without_trace` | "resolves_without_a_trace(site S, in environment Env, to node P)" |
+| `env_divergence` | "diverges(site S, in environment A, with verdict VA, from environment B, with verdict VB)" |
+| `site_key_ambiguous` | "has_two_model_keys(site S, key I, key J)" |
+
+> attrs
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `attr_blind_guard` | "is_a_blind_guard(attribute K, at field F, of kind Kind)" |
+| `attr_guard_kind` | "guards_the_attribute(rule R, attribute K, on term S, as kind Kind)" |
+| `attr_guard_slot` | "tests_the_attribute(rule R, attribute K, on term S, under field F)" |
+| `attr_guard_slot_pos` | "tests_the_attribute_positively(rule R, attribute K, on term S, under field F)" |
+| `attr_pos_slot_gap` | "is_a_positive_slot_gap(attribute K, at field F, of kind Kind)" |
+| `attr_slot_gap` | "is_a_slot_gap(attribute K, at field F, of kind Kind)" |
+| `attr_slot_gap_ok_unseen` | "is_excused_unseen(attribute K, at field F, of kind Kind)" |
+
+> model: the cell (kind, layer, language) and what is claimed of it
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `cell` | "is_a_cell(kind K:1, in layer L:2, of language Lang:0)" |
+| `double_cell` | "is_a_double_cell(kind K:1, in layer Lay:2, of language Lang:0)" |
+| `lost_cell` | "is_a_lost_cell(kind K:1, in layer Lay:2, of language Lang:0)" |
+| `claim` | "is_claimed(kind K:2, in layer L:3, of language Lang:1, under ledger What:0, with reason R:4)" |
+| `coarser_claim` | "has_a_coarser_claim(kind K:1, reason R:3, in layer Lay:2, of language Lang:0)" |
+| `orphan` | "is_orphaned(kind K:2, in layer L:3, of language Lang:1, under ledger What:0)" |
+| `orphan_claim` | "is_an_orphan_claim(kind K:1, in layer L:2, of language Lang:0)" |
+| `orphan_reason` | "is_an_orphan_reason(kind K:1, in layer L:2, of language Lang:0)" |
+| `orphan_shape` | "is_an_orphan_shape(shape S:2, of kind K:1, in language Lang:0)" |
+| `verdict` | "the_verdict(of kind K:1, in layer L:2, for language Lang:0, is verdict V:3)" |
+| `reason` | "the_reason(of kind K:1, in layer L:2, for language Lang:0, is reason R:3)" |
+| `bad_reason` | "the_bad_reason(of kind K:1, in layer L:2, for language Lang:0, is reason R:3)" |
+| `stale_reason` | "has_a_stale_reason(kind K:1, reason R:3, in layer L:2, of language Lang:0)" |
+| `unknown_because` | "is_unknown(kind K:1, in layer L:2, of language Lang:0, because reason R:3)" |
+| `irreducible_unknown` | "is_irreducibly_unknown(kind K:1, in layer L:2, of language Lang:0)" |
+| `our_unknown` | "is_our_unknown(kind K:1, in layer L:2, of language Lang:0)" |
+| `shape_kind` | "has_a_shape_axis(kind K:1, in layer Lay:2, of language Lang:0)" |
+| `converges` | "has_two_verifiers(rule Rule:1, language A:2, language B:3, in layer L:0)" |
+
+> effects: the lattice, then what runs where
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `eff_row` | "covers(effect A, label L, at host H)" |
+| `eff_ub` | "is_an_upper_bound(effect C:2, of effect A:0, of effect B:1)" |
+| `eff_ub_lower` | "is_an_upper_bound_above_another(effect C:2, of effect A:0, of effect B:1)" |
+| `eff_join` | "the_join(of effect A, of effect B, is effect C)" |
+| `eff_lb` | "is_a_lower_bound(effect C:2, of effect A:0, of effect B:1)" |
+| `eff_lb_higher` | "is_a_lower_bound_below_another(effect C:2, of effect A:0, of effect B:1)" |
+| `eff_meet` | "the_meet(of effect A, of effect B, is effect C)" |
+| `join_ambiguous` | "has_two_joins(effect A, with effect B, effect C, effect D)" |
+| `meet_ambiguous` | "has_two_meets(effect A, with effect B, effect C, effect D)" |
+| `eff_latent` | "has_the_latent_effect(function F, label L, at host H)" |
+| `eff_two_names` | "has_two_effects(function F, effect A, effect B)" |
+| `eff_join_short` | "is_short_of_the_join(function F, effect J:2, with function G:1)" |
+| `eff_purer_callee` | "calls_a_purer_callee(call C, function G:2, from function F:1)" |
+| `concrete_effect` | "operates(call C, on surface S, by operation Op)" |
+| `concrete_leq` | "is_purer(surface S1, at operation O1, than surface S2, at operation O2)" |
+| `eff_field_value` | "initialises_the_field(class CD, at node P, with node V)" |
+| `eff_moment_both` | "has_two_moments(node P, moment A, moment B)" |
+| `class_define_eff` | "defines_with_effect(class CD, label L, at host H)" |
+| `class_construct_eff` | "constructs_with_effect(class CD, label L, at host H)" |
+
+> globals and host
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `es_global` | "is_the_global(node E, name Name, of relation Rel, with form Form)" |
+| `es_global_invoke` | "invokes_the_global(call C, name Name, of relation Rel)" |
+| `es_global_construct` | "constructs_the_global(new X, name Name, of relation Rel)" |
+| `es_construct_not_constructor` | "constructs_a_non_constructor(new X, name Name, of form Form)" |
+| `es_instance` | "is_an_instance(new X, of name Name, from relation Rel)" |
+| `es_static` | "selects_the_static(member access N, key Key:2, of name Name:1, from relation Rel:3)" |
+| `es_static_key` | "selects_the_static_data(member access N, key Key:2, of name Name:1)" |
+| `host_global_ref` | "refers_to_the_global(node E, name Name:2, of host H:1)" |
+| `host_global_only_in` | "refers_to_a_global(node E, name Name:2, only in host H:1)" |
+| `host_site` | "is_a_host_site(call C, of host H, from origin Origin, at key Key)" |
+| `member_effect` | "has_the_member_effect(spec Spec, effect E:2, at key Key:1)" |
+| `provides_api` | "provides(runtime R, key Key:2, of spec Spec:1)" |
+| `host_member_absent` | "lacks_the_member(runtime R, key Key:2, of spec Spec:1)" |
+| `host_lost` | "loses_the_call(runtime To:1, call C:2, to spec Spec:3, at key Key:4, since runtime From:0)" |
+| `runtime_drops` | "drops(runtime A, key Key:3, of spec Spec:2, from runtime B:1)" |
+| `lib_call_remedy` | "has_the_remedy(call C, term R:3, for prototype P:1, at key Key:2)" |
+| `stdlib_member` | "calls_the_stdlib_member(call C, key Key:2, of prototype P:1)" |
+
+> env
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `gate_feature` | "requires(kind K:1, feature F:2, in language L:0)" |
+| `lost` | "is_lost(node N:2, from environment From:0, to environment To:1, by feature F:3)" |
+| `lost_feature` | "is_lost_between(feature F:2, environment From:0, environment To:1)" |
+| `within_attr` | "contains_the_attribute(node N, attribute Key, holding value V)" |
+
+> modules and callgraph
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `binding` | "binds_the_name(import I, name Local:2, to name Imported:3, at specifier Sp:1)" |
+| `walk` | "walks(import I, at step K, to directory D)" |
+| `shape_conflict` | "has_two_site_shapes(import I, shape A, shape B)" |
+| `reason_missing` | "lacks_a_reason(kind K, for shape Sh, with verdict R)" |
+| `multi_shape` | "has_two_shapes(call C, shape A, shape B)" |
+| `meta_form_conflict` | "has_two_forms(meta property M, form A, form B)" |
+
+> the reflection walkers
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `pack_fact` | "asserts(pack P, relation Rel, with term Args)" |
+| `fwalk` | "the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3)" |
+| `fslot` | "the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3)" |
+| `lit_arg` | "the_argument(index I:1, of literal L:0, is term A:2)" |
+| `slot_term` | "has_the_term(relation Rel, term A:2, at index I:1)" |
+| `slot_var` | "has_the_variable(relation Rel, term V:2, at index I:1)" |
+| `slot_atom` | "has_the_atom(relation Rel, term A:2, at index I:1)" |
+
+> six more pairs the body rule found that the hand had not signed
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `ambiguous_call` | "has_two_callees(call C, function F, function G)" |
+| `default_conflict` | "has_two_default_exports(file F, node A, node B)" |
+| `default_internal_conflict` | "has_two_default_internals(node E, node A, node B)" |
+| `eff_mod_two_names` | "has_two_module_effects(file F, effect A, effect B)" |
+| `export_binding_conflict` | "has_two_export_bindings(node Sp, name A, name B)" |
+| `export_internal_conflict` | "has_two_internal_bindings(node Sp, node A, node B)" |
+

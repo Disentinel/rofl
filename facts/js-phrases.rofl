@@ -241,3 +241,131 @@ sig(sees_binder, "sees(node E, declarator D)").
 sig(meta_form, "has_the_meta_form(node N, name Form)").
 sig(meta_form_conflict, "has_conflicting_meta_forms(node N, name A, name B)").
 sig(meta_unformed, "has_no_meta_form(node N)").
+
+-- The 93 relations the nine structures could not place, written by hand.
+-- What they needed was nouns the propagation cannot reach (kind, layer,
+-- language, effect, runtime, shape, verdict, reason), two arguments under
+-- one marker (`the join of A and B`, `lost between From and To`), and one
+-- structure the name never says: a pair, `S has two Xs A and B`, which the
+-- body says instead (the same relation twice, and A != B).
+
+-- controlflow
+sig(abrupt_at, "is_abrupt(node B, at field F, from index I)").
+sig(suspend_at, "suspends(node B, at field F, from index I)").
+
+-- ambient
+sig(amb_short_at, "falls_short(effect N:2, of label L:0, at host H:1)").
+sig(amb_covers_at, "is_covered(label L, at host H, by effect N)").
+sig(amb_covers_at_low, "has_a_lower_cover(label L, at host H, than effect N)").
+sig(ambient_effect, "has_the_ambient_effect(spec Spec, effect E:2, at key Key:1)").
+sig(eff_of_label, "the_effect(of label L, at host H, is effect N)").
+sig(eff_here, "has_the_effect(node E, label L, at host H)").
+sig(host_atom_two_names, "has_two_host_effects(host A, effect X, effect Y)").
+sig(surface_two_origins, "has_two_origins(surface S, origin A, origin B)").
+
+-- resolve
+sig(arrival, "arrives(site S, at step K, in path P)").
+sig(answer_ambiguous, "has_two_answers(site S, in environment Env, node A, node B)").
+sig(answer_without_trace, "resolves_without_a_trace(site S, in environment Env, to node P)").
+sig(env_divergence, "diverges(site S, in environment A, with verdict VA, from environment B, with verdict VB)").
+sig(site_key_ambiguous, "has_two_model_keys(site S, key I, key J)").
+
+-- attrs
+sig(attr_blind_guard, "is_a_blind_guard(attribute K, at field F, of kind Kind)").
+sig(attr_guard_kind, "guards_the_attribute(rule R, attribute K, on term S, as kind Kind)").
+sig(attr_guard_slot, "tests_the_attribute(rule R, attribute K, on term S, under field F)").
+sig(attr_guard_slot_pos, "tests_the_attribute_positively(rule R, attribute K, on term S, under field F)").
+sig(attr_pos_slot_gap, "is_a_positive_slot_gap(attribute K, at field F, of kind Kind)").
+sig(attr_slot_gap, "is_a_slot_gap(attribute K, at field F, of kind Kind)").
+sig(attr_slot_gap_ok_unseen, "is_excused_unseen(attribute K, at field F, of kind Kind)").
+
+-- model: the cell (kind, layer, language) and what is claimed of it
+sig(cell, "is_a_cell(kind K:1, in layer L:2, of language Lang:0)").
+sig(double_cell, "is_a_double_cell(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(lost_cell, "is_a_lost_cell(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(claim, "is_claimed(kind K:2, in layer L:3, of language Lang:1, under ledger What:0, with reason R:4)").
+sig(coarser_claim, "has_a_coarser_claim(kind K:1, reason R:3, in layer Lay:2, of language Lang:0)").
+sig(orphan, "is_orphaned(kind K:2, in layer L:3, of language Lang:1, under ledger What:0)").
+sig(orphan_claim, "is_an_orphan_claim(kind K:1, in layer L:2, of language Lang:0)").
+sig(orphan_reason, "is_an_orphan_reason(kind K:1, in layer L:2, of language Lang:0)").
+sig(orphan_shape, "is_an_orphan_shape(shape S:2, of kind K:1, in language Lang:0)").
+sig(verdict, "the_verdict(of kind K:1, in layer L:2, for language Lang:0, is verdict V:3)").
+sig(reason, "the_reason(of kind K:1, in layer L:2, for language Lang:0, is reason R:3)").
+sig(bad_reason, "the_bad_reason(of kind K:1, in layer L:2, for language Lang:0, is reason R:3)").
+sig(stale_reason, "has_a_stale_reason(kind K:1, reason R:3, in layer L:2, of language Lang:0)").
+sig(unknown_because, "is_unknown(kind K:1, in layer L:2, of language Lang:0, because reason R:3)").
+sig(irreducible_unknown, "is_irreducibly_unknown(kind K:1, in layer L:2, of language Lang:0)").
+sig(our_unknown, "is_our_unknown(kind K:1, in layer L:2, of language Lang:0)").
+sig(shape_kind, "has_a_shape_axis(kind K:1, in layer Lay:2, of language Lang:0)").
+sig(converges, "has_two_verifiers(rule Rule:1, language A:2, language B:3, in layer L:0)").
+
+-- effects: the lattice, then what runs where
+sig(eff_row, "covers(effect A, label L, at host H)").
+sig(eff_ub, "is_an_upper_bound(effect C:2, of effect A:0, of effect B:1)").
+sig(eff_ub_lower, "is_an_upper_bound_above_another(effect C:2, of effect A:0, of effect B:1)").
+sig(eff_join, "the_join(of effect A, of effect B, is effect C)").
+sig(eff_lb, "is_a_lower_bound(effect C:2, of effect A:0, of effect B:1)").
+sig(eff_lb_higher, "is_a_lower_bound_below_another(effect C:2, of effect A:0, of effect B:1)").
+sig(eff_meet, "the_meet(of effect A, of effect B, is effect C)").
+sig(join_ambiguous, "has_two_joins(effect A, with effect B, effect C, effect D)").
+sig(meet_ambiguous, "has_two_meets(effect A, with effect B, effect C, effect D)").
+sig(eff_latent, "has_the_latent_effect(function F, label L, at host H)").
+sig(eff_two_names, "has_two_effects(function F, effect A, effect B)").
+sig(eff_join_short, "is_short_of_the_join(function F, effect J:2, with function G:1)").
+sig(eff_purer_callee, "calls_a_purer_callee(call C, function G:2, from function F:1)").
+sig(concrete_effect, "operates(call C, on surface S, by operation Op)").
+sig(concrete_leq, "is_purer(surface S1, at operation O1, than surface S2, at operation O2)").
+sig(eff_field_value, "initialises_the_field(class CD, at node P, with node V)").
+sig(eff_moment_both, "has_two_moments(node P, moment A, moment B)").
+sig(class_define_eff, "defines_with_effect(class CD, label L, at host H)").
+sig(class_construct_eff, "constructs_with_effect(class CD, label L, at host H)").
+
+-- globals and host
+sig(es_global, "is_the_global(node E, name Name, of relation Rel, with form Form)").
+sig(es_global_invoke, "invokes_the_global(call C, name Name, of relation Rel)").
+sig(es_global_construct, "constructs_the_global(new X, name Name, of relation Rel)").
+sig(es_construct_not_constructor, "constructs_a_non_constructor(new X, name Name, of form Form)").
+sig(es_instance, "is_an_instance(new X, of name Name, from relation Rel)").
+sig(es_static, "selects_the_static(member access N, key Key:2, of name Name:1, from relation Rel:3)").
+sig(es_static_key, "selects_the_static_data(member access N, key Key:2, of name Name:1)").
+sig(host_global_ref, "refers_to_the_global(node E, name Name:2, of host H:1)").
+sig(host_global_only_in, "refers_to_a_global(node E, name Name:2, only in host H:1)").
+sig(host_site, "is_a_host_site(call C, of host H, from origin Origin, at key Key)").
+sig(member_effect, "has_the_member_effect(spec Spec, effect E:2, at key Key:1)").
+sig(provides_api, "provides(runtime R, key Key:2, of spec Spec:1)").
+sig(host_member_absent, "lacks_the_member(runtime R, key Key:2, of spec Spec:1)").
+sig(host_lost, "loses_the_call(runtime To:1, call C:2, to spec Spec:3, at key Key:4, since runtime From:0)").
+sig(runtime_drops, "drops(runtime A, key Key:3, of spec Spec:2, from runtime B:1)").
+sig(lib_call_remedy, "has_the_remedy(call C, term R:3, for prototype P:1, at key Key:2)").
+sig(stdlib_member, "calls_the_stdlib_member(call C, key Key:2, of prototype P:1)").
+
+-- env
+sig(gate_feature, "requires(kind K:1, feature F:2, in language L:0)").
+sig(lost, "is_lost(node N:2, from environment From:0, to environment To:1, by feature F:3)").
+sig(lost_feature, "is_lost_between(feature F:2, environment From:0, environment To:1)").
+sig(within_attr, "contains_the_attribute(node N, attribute Key, holding value V)").
+
+-- modules and callgraph
+sig(binding, "binds_the_name(import I, name Local:2, to name Imported:3, at specifier Sp:1)").
+sig(walk, "walks(import I, at step K, to directory D)").
+sig(shape_conflict, "has_two_site_shapes(import I, shape A, shape B)").
+sig(reason_missing, "lacks_a_reason(kind K, for shape Sh, with verdict R)").
+sig(multi_shape, "has_two_shapes(call C, shape A, shape B)").
+sig(meta_form_conflict, "has_two_forms(meta property M, form A, form B)").
+
+-- the reflection walkers
+sig(pack_fact, "asserts(pack P, relation Rel, with term Args)").
+sig(fwalk, "the_arguments(of relation Rel:1, in pack P:0, from index I:2, are term T:3)").
+sig(fslot, "the_slot(index I:2, of relation Rel:1, in pack P:0, holds term A:3)").
+sig(lit_arg, "the_argument(index I:1, of literal L:0, is term A:2)").
+sig(slot_term, "has_the_term(relation Rel, term A:2, at index I:1)").
+sig(slot_var, "has_the_variable(relation Rel, term V:2, at index I:1)").
+sig(slot_atom, "has_the_atom(relation Rel, term A:2, at index I:1)").
+
+-- six more pairs the body rule found that the hand had not signed
+sig(ambiguous_call, "has_two_callees(call C, function F, function G)").
+sig(default_conflict, "has_two_default_exports(file F, node A, node B)").
+sig(default_internal_conflict, "has_two_default_internals(node E, node A, node B)").
+sig(eff_mod_two_names, "has_two_module_effects(file F, effect A, effect B)").
+sig(export_binding_conflict, "has_two_export_bindings(node Sp, name A, name B)").
+sig(export_internal_conflict, "has_two_internal_bindings(node Sp, node A, node B)").

@@ -6,6 +6,16 @@ default: main
 
 # js-attrs
 
+## Signatures
+
+- tests_the_attribute(rule R, attribute K, on term S, under field F) (attr_guard_slot)
+- guards_the_attribute(rule R, attribute K, on term S, as kind Kind) (attr_guard_kind)
+- is_a_slot_gap(attribute K, at field F, of kind Kind) (attr_slot_gap)
+- tests_the_attribute_positively(rule R, attribute K, on term S, under field F) (attr_guard_slot_pos)
+- is_a_positive_slot_gap(attribute K, at field F, of kind Kind) (attr_pos_slot_gap)
+- is_a_blind_guard(attribute K, at field F, of kind Kind) (attr_blind_guard), in the audit
+- is_excused_unseen(attribute K, at field F, of kind Kind) (attr_slot_gap_ok_unseen), in the audit
+
 > js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
 > (`w_unconsumed_attribute`). Four times a design note claimed a fact was
 > missing that was already on the store, because the note was written while
@@ -20,8 +30,8 @@ default: main
 
 <a id="attr_lit"></a>`attr_lit`(L, K, V) if all of:
   - [`lit_rel`](js-vocabulary.md#lit_rel)(L, `ast_attr`);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, K);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 3, V).
+  - [the argument](js-vocabulary.md#lit_arg) 2 of L is K;
+  - [the argument](js-vocabulary.md#lit_arg) 3 of L is V.
 
 <a id="attr_lit_kvar"></a>`attr_lit_kvar`(L, $var(X)) if [`attr_lit`](#attr_lit)(L, $var(X), something).
 
@@ -105,8 +115,8 @@ Declared as facts: attr_unread_ok, attr_deferred, attr_value_unread_ok.
   - [`pos_prem`](#pos_prem)(R, L2);
   - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, Rel);
   - Rel differs from `ast_attr`;
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, I, K);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, J, V).
+  - [the argument](js-vocabulary.md#lit_arg) I of L2 is K;
+  - [the argument](js-vocabulary.md#lit_arg) J of L2 is V.
 
 <a id="attr_table_unbridged"></a>`attr_table_unbridged`(Rel, I, J) if [`attr_table_read`](#attr_table_read)(Rel, I, J), unless [`attr_table_bridged`](#attr_table_bridged)(Rel).
 
@@ -141,7 +151,7 @@ Declared as facts: attr_table_bridged.
 
 <a id="attr_test_lit"></a>`attr_test_lit`(L, S, K) if all of:
   - [`attr_lit`](#attr_lit)(L, K, V);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
+  - [the argument](js-vocabulary.md#lit_arg) 1 of L is S;
   - unless [`attr_lit_kvar`](#attr_lit_kvar)(L, K);
   - unless [`attr_lit_vvar`](#attr_lit_vvar)(L, V).
 
@@ -150,14 +160,14 @@ Declared as facts: attr_table_bridged.
 <a id="child_lit"></a>`child_lit`(L, S, F) if all of:
   - [`body_lit`](js-vocabulary.md#body_lit)(L);
   - [`lit_rel`](js-vocabulary.md#lit_rel)(L, `ast_child`);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 1, S);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L, 2, F).
+  - [the argument](js-vocabulary.md#lit_arg) 1 of L is S;
+  - [the argument](js-vocabulary.md#lit_arg) 2 of L is F.
 
 <a id="child_lit_svar"></a>`child_lit_svar`(L, $var(X)) if [`child_lit`](#child_lit)(L, $var(X), something).
 
 <a id="child_lit_fvar"></a>`child_lit_fvar`(L, $var(X)) if [`child_lit`](#child_lit)(L, something, $var(X)).
 
-<a id="attr_guard_slot"></a>`attr_guard_slot`(R, K, S, F) if all of:
+<a id="attr_guard_slot"></a>R tests the attribute K on S under F if all of:
   - [`rule_prem`](#rule_prem)(R, L);
   - [`attr_test_lit`](#attr_test_lit)(L, S, K);
   - [`attr_test_svar`](#attr_test_svar)(L, S);
@@ -166,29 +176,29 @@ Declared as facts: attr_table_bridged.
   - [`child_lit_svar`](#child_lit_svar)(L2, S);
   - unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
 
-<a id="attr_guard_kind"></a>`attr_guard_kind`(R, K, S, Kind) if all of:
+<a id="attr_guard_kind"></a>R guards the attribute K on S as Kind if all of:
   - [`rule_prem`](#rule_prem)(R, L);
   - [`attr_test_lit`](#attr_test_lit)(L, S, K);
   - [`attr_test_svar`](#attr_test_svar)(L, S);
   - [`rule_prem`](#rule_prem)(R, L2);
   - [`lit_rel`](js-vocabulary.md#lit_rel)(L2, `ast_node`);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 1, S);
-  - [`lit_arg`](js-vocabulary.md#lit_arg)(L2, 2, Kind);
+  - [the argument](js-vocabulary.md#lit_arg) 1 of L2 is S;
+  - [the argument](js-vocabulary.md#lit_arg) 2 of L2 is Kind;
   - `node_kind`(`js`, Kind).
 
-<a id="attr_guard_pinned"></a>`attr_guard_pinned`(R, K, S) if [`attr_guard_kind`](#attr_guard_kind)(R, K, S, something).
+<a id="attr_guard_pinned"></a>`attr_guard_pinned`(R, K, S) if R [guards the attribute](#attr_guard_kind) K on S as some kind.
 
-<a id="attr_slot_gap"></a>`attr_slot_gap`(K, F, Kind) either:
+<a id="attr_slot_gap"></a>K is a slot gap at F of Kind either:
 
 1. if all of:
-   - [`attr_guard_slot`](#attr_guard_slot)(R, K, S, F);
+   - R [tests the attribute](#attr_guard_slot) K on S under F;
    - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless [`attr_guard_pinned`](#attr_guard_pinned)(R, K, S);
    - unless the attribute K of P is some literal;
 2. if all of:
-   - [`attr_guard_slot`](#attr_guard_slot)(R, K, S, F);
-   - [`attr_guard_kind`](#attr_guard_kind)(R, K, S, Kind);
+   - R [tests the attribute](#attr_guard_slot) K on S under F;
+   - R [guards the attribute](#attr_guard_kind) K on S as Kind;
    - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless the attribute K of P is some literal.
@@ -200,7 +210,7 @@ Declared as facts: attr_table_bridged.
 > the positive ones, and swapping `key_name`'s negation for `computed, false`
 > moves two rows across — the survivor the finding recorded with no oracle.
 
-<a id="attr_guard_slot_pos"></a>`attr_guard_slot_pos`(R, K, S, F) if all of:
+<a id="attr_guard_slot_pos"></a>R tests the attribute positively K on S under F if all of:
   - [`pos_prem`](#pos_prem)(R, L);
   - [`attr_test_lit`](#attr_test_lit)(L, S, K);
   - [`attr_test_svar`](#attr_test_svar)(L, S);
@@ -209,29 +219,29 @@ Declared as facts: attr_table_bridged.
   - [`child_lit_svar`](#child_lit_svar)(L2, S);
   - unless [`child_lit_fvar`](#child_lit_fvar)(L2, F).
 
-<a id="attr_pos_slot_gap"></a>`attr_pos_slot_gap`(K, F, Kind) either:
+<a id="attr_pos_slot_gap"></a>K is a positive slot gap at F of Kind either:
 
 1. if all of:
-   - [`attr_guard_slot_pos`](#attr_guard_slot_pos)(R, K, S, F);
+   - R [tests the attribute positively](#attr_guard_slot_pos) K on S under F;
    - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless [`attr_guard_pinned`](#attr_guard_pinned)(R, K, S);
    - unless the attribute K of P is some literal;
 2. if all of:
-   - [`attr_guard_slot_pos`](#attr_guard_slot_pos)(R, K, S, F);
-   - [`attr_guard_kind`](#attr_guard_kind)(R, K, S, Kind);
+   - R [tests the attribute positively](#attr_guard_slot_pos) K on S under F;
+   - R [guards the attribute](#attr_guard_kind) K on S as Kind;
    - some node is among the F of P;
    - P [is of kind](js-model.md#ast_node) Kind;
    - unless the attribute K of P is some literal.
 
-<a id="attr_blind_guard"></a>`attr_blind_guard`(K, F, Kind) if [`attr_pos_slot_gap`](#attr_pos_slot_gap)(K, F, Kind), unless [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something).
+<a id="attr_blind_guard"></a>K is a blind guard at F of Kind if K [is a positive slot gap](#attr_pos_slot_gap) at F of Kind, unless [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something).
 
 Declared as facts: attr_slot_gap_ok.
 
 > the excuse list is checked against the WHOLE report: an excuse no longer
 > needed because a guard became a negation is still a true row
 
-<a id="attr_slot_gap_ok_unseen"></a>`attr_slot_gap_ok_unseen`(K, F, Kind) if [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something), unless [`attr_slot_gap`](#attr_slot_gap)(K, F, Kind).
+<a id="attr_slot_gap_ok_unseen"></a>K is excused unseen at F of Kind if [`attr_slot_gap_ok`](#attr_slot_gap_ok)(K, F, Kind, something), unless K [is a slot gap](#attr_slot_gap) at F of Kind.
 
 > THE HALF NO KIND-LEVEL READING CAN STATE: `class_private_method` carries
 > `computed` on its accessor forms and not on the plain one, so the presence

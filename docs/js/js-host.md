@@ -18,6 +18,17 @@ A noun is a node of one of its kinds:
 |---|---|
 | a function declaration | function_declaration |
 
+## Signatures
+
+- refers_to_the_global(node E, name Name:2, of host H:1) (host_global_ref), in the code
+- refers_to_a_global(node E, name Name:2, only in host H:1) (host_global_only_in), in the code
+- is_a_host_site(call C, of host H, from origin Origin, at key Key) (host_site), in the code
+- has_the_member_effect(spec Spec, effect E:2, at key Key:1) (member_effect), in the code
+- provides(runtime R, key Key:2, of spec Spec:1) (provides_api), in the code
+- drops(runtime A, key Key:3, of spec Spec:2, from runtime B:1) (runtime_drops)
+- lacks_the_member(runtime R, key Key:2, of spec Spec:1) (host_member_absent)
+- loses_the_call(runtime To:1, call C:2, to spec Spec:3, at key Key:4, since runtime From:0) (host_lost)
+
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
 > parses; rules/js-env-api.rofl whether a PROTOTYPE METHOD exists; neither can
@@ -61,19 +72,19 @@ Declared as facts: ast_parse_error.
 1. if a function declaration F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
 2. if F [takes](js-dataflow.md#param_of) Name at some index and F [is of kind](js-model.md#ast_node) some kind in file File;
 3. if some class [is named](js-dataflow.md#class_named) Name in File;
-4. if [`binding`](js-modules.md#binding)(I, something, Name, something) and [`site_file`](js-modules.md#site_file)(I, File).
+4. if I [binds the name](js-modules.md#binding) Name to some name at some specifier and [`site_file`](js-modules.md#site_file)(I, File).
 
 > The host stays in the row: `console` under node and under browser are two rows.
 
-<a id="host_global_ref"></a>`host_global_ref`(E, H, Name) if all of:
+<a id="host_global_ref"></a>E refers to the global Name of H if all of:
   - E [reads](js-dataflow.md#ident_in) Name in File;
   - `host_global`(H, Name);
   - unless [`name_bound_in`](#name_bound_in)(File, Name).
 
 > `document` is a reference under `browser` and there is no `node` row for it.
 
-<a id="host_global_only_in"></a>`host_global_only_in`(E, H, Name) if all of:
-  - [`host_global_ref`](#host_global_ref)(E, H, Name);
+<a id="host_global_only_in"></a>E refers to a global Name only in H if all of:
+  - E [refers to the global](#host_global_ref) Name of H;
   - `host`(G);
   - G differs from H;
   - unless `host_global`(G, Name).
@@ -86,7 +97,7 @@ Declared as facts: ast_parse_error.
 <a id="host_module_ns"></a>`host_module_ns`(File, Local, Spec) if all of:
   - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
   - [`site_file`](js-modules.md#site_file)(I, File);
-  - [`binding`](js-modules.md#binding)(I, something, Local, "*" or "default").
+  - I [binds the name](js-modules.md#binding) Local to "*" or "default" at some specifier.
 
 > The NAMED form binds ONE member under a local name that need not be its
 > own; reading `Imported` for the member covers the rename without a test.
@@ -94,7 +105,7 @@ Declared as facts: ast_parse_error.
 <a id="host_module_named"></a>`host_module_named`(File, Local, Spec, Key) if all of:
   - [`resolved_builtin`](js-modules.md#resolved_builtin)(I, Spec);
   - [`site_file`](js-modules.md#site_file)(I, File);
-  - [`binding`](js-modules.md#binding)(I, something, Local, Key);
+  - I [binds the name](js-modules.md#binding) Local to Key at some specifier;
   - Key differs from "*";
   - Key differs from "default".
 
@@ -115,11 +126,10 @@ Declared as facts: ast_parse_error.
 
 <a id="host_member_call"></a>`host_member_call`(C, H, Name, Key) if all of:
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
-  - the `object` of N is O;
-  - [`host_global_ref`](#host_global_ref)(O, H, Name);
+  - the `object` of N [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.md#selects) Key.
 
-<a id="host_global_call"></a>`host_global_call`(C, H, Name) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and [`host_global_ref`](#host_global_ref)(N, H, Name).
+<a id="host_global_call"></a>`host_global_call`(C, H, Name) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [refers to the global](#host_global_ref) Name of H.
 
 <a id="host_module_call"></a>`host_module_call`(C, Spec, Key) either:
 
@@ -137,13 +147,13 @@ Declared as facts: ast_parse_error.
 > for a module, the global's own name for a member call, and the atom `itself`
 > for a plain call of a global, so the two shapes stay distinguishable.
 
-<a id="host_site"></a>`host_site`(C, N, Spec, Key) either:
+<a id="host_site"></a>C is a host site of N from Spec at Key either:
 
 1. if [`host_module_call`](#host_module_call)(C, Spec, Key) and N is `node`;
 2. if [`host_member_call`](#host_member_call)(C, N, Spec, Key);
 3. if [`host_global_call`](#host_global_call)(C, N, Spec) and Key is `itself`.
 
-<a id="host_site_at"></a>`host_site_at`(H, File, Line, Origin, Key) if [`host_site`](#host_site)(C, H, Origin, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_site_at"></a>`host_site_at`(H, File, Line, Origin, Key) if C [is a host site](#host_site) of H from Origin at Key and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -152,7 +162,7 @@ Declared as facts: ast_parse_error.
 > default; the negation is what makes it a default rather than a second
 > opinion (`path.resolve` would otherwise be both total and io).
 
-<a id="member_effect"></a>`member_effect`(Spec, Key, E) either:
+<a id="member_effect"></a>Spec has the member effect E at Key either:
 
 1. if `host_member_effect`(`node`, Spec, Key, E);
 2. if all of:
@@ -189,7 +199,7 @@ Declared as facts: ast_parse_error.
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
 
-<a id="host_call_uneffected"></a>`host_call_uneffected`(C, Origin, Key) if [`host_site`](#host_site)(C, something, Origin, Key), unless [`host_call_effect`](#host_call_effect)(C, something, something).
+<a id="host_call_uneffected"></a>`host_call_uneffected`(C, Origin, Key) if C [is a host site](#host_site) of some host from Origin at Key, unless [`host_call_effect`](#host_call_effect)(C, something, something).
 
 ## 5. THE RUNTIME AXIS — a composition in the ES scale's shape: a runtime
 
@@ -224,18 +234,18 @@ Declared as facts: ast_parse_error.
 
 <a id="inherited"></a>`inherited`(R, Spec, Key) if `runtime_includes`(R, P) and [`arrived_by`](#arrived_by)(P, Spec, Key).
 
-<a id="provides_api"></a>`provides_api`(R, Spec, Key) if [`arrived_by`](#arrived_by)(R, Spec, Key), unless [`inherited`](#inherited)(R, Spec, Key).
+<a id="provides_api"></a>R provides Key of Spec if [`arrived_by`](#arrived_by)(R, Spec, Key), unless [`inherited`](#inherited)(R, Spec, Key).
 
 > test/js-host.test.ts asserts `has_api` equals `arrived_by` set for set:
 > the walk and the comparison must agree.
 
-<a id="has_api"></a>`has_api`(R, Spec, Key) if [`runtime_reaches`](#runtime_reaches)(R, P) and [`provides_api`](#provides_api)(P, Spec, Key).
+<a id="has_api"></a>`has_api`(R, Spec, Key) if [`runtime_reaches`](#runtime_reaches)(R, P) and P [provides](#provides_api) Key of Spec.
 
 > The counterexample to monotone inclusion, empty by construction: with ONE
 > @types/node snapshot a removed member simply stops being in the file. A
 > second snapshot populates it with no other change.
 
-<a id="runtime_drops"></a>`runtime_drops`(X, B, Spec, Key) if all of:
+<a id="runtime_drops"></a>X drops Key of Spec from B if all of:
   - `runtime_includes`(X, B);
   - [`has_api`](#has_api)(B, Spec, Key);
   - unless [`has_api`](#has_api)(X, Spec, Key).
@@ -267,19 +277,19 @@ Declared as facts: ast_parse_error.
 > -------------------------------------------------------------------------
 > THE VERSION QUESTION AT A SITE: this call, this member, this line.
 
-<a id="host_member_absent"></a>`host_member_absent`(R, Spec, Key) if all of:
+<a id="host_member_absent"></a>R lacks the member Key of Spec if all of:
   - `runtime_version`(R, F, something);
   - `host_member_since`(F, Spec, Key, something, something);
   - unless [`has_api`](#has_api)(R, Spec, Key).
 
-<a id="host_call_absent"></a>`host_call_absent`(R, C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and [`host_member_absent`](#host_member_absent)(R, Spec, Key).
+<a id="host_call_absent"></a>`host_call_absent`(R, C, Spec, Key) if [`host_module_call`](#host_module_call)(C, Spec, Key) and R [lacks the member](#host_member_absent) Key of Spec.
 
 <a id="host_call_absent_at"></a>`host_call_absent_at`(R, File, Line, Spec, Key) if [`host_call_absent`](#host_call_absent)(R, C, Spec, Key) and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
 
-<a id="host_lost"></a>`host_lost`(From, To, C, Spec, Key) if all of:
+<a id="host_lost"></a>To loses the call C to Spec at Key since From if all of:
   - [`host_call_absent`](#host_call_absent)(To, C, Spec, Key);
   - `runtime_version`(To, F, something);
   - `runtime_version`(From, F, something);
@@ -339,7 +349,7 @@ Declared as facts: ast_parse_error.
 > two runtimes agreeing on every member are one runtime; no ordering premise,
 > for the reason `env_pair_indistinct` records
 
-<a id="runtime_separates"></a>`runtime_separates`(X, B) if [`host_member_absent`](#host_member_absent)(B, Spec, Key), unless [`host_member_absent`](#host_member_absent)(X, Spec, Key).
+<a id="runtime_separates"></a>`runtime_separates`(X, B) if B [lacks the member](#host_member_absent) Key of Spec, unless X [lacks the member](#host_member_absent) Key of Spec.
 
 <a id="runtime_pair_indistinct"></a>`runtime_pair_indistinct`(X, B) if all of:
   - `runtime_version`(X, F, something);

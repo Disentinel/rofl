@@ -53,15 +53,21 @@ function parseSig(rel: string, text: string): Tpl {
   const words = name.split('_').filter(Boolean).join(' ');
   const parts: Part[] = [];
   const hole = (a: typeof args[0]): Part => ({ t: 'hole', i: a.pos, noun: a.noun });
+  // consecutive arguments under one marker share it: `of A and B`, `two shapes A and B`
+  const run = (group: typeof args) => group.forEach((a, n) => {
+    if (n > 0 && group[n - 1].marker === a.marker) parts.push({ t: 'text', s: 'and' });
+    else if (a.marker) parts.push({ t: 'text', s: a.marker });
+    parts.push(hole(a));
+  });
   if (words === 'the' || words.startsWith('the ')) {
     parts.push({ t: 'text', s: words });
-    for (const a of args) if (!a.marker) parts.push(hole(a));
-    for (const a of args) if (a.marker === 'of') { parts.push({ t: 'text', s: 'of' }); parts.push(hole(a)); }
-    for (const a of args) if (a.marker && a.marker !== 'of') { parts.push({ t: 'text', s: a.marker }); parts.push(hole(a)); }
+    run(args.filter((a) => !a.marker));
+    run(args.filter((a) => a.marker === 'of'));
+    run(args.filter((a) => a.marker && a.marker !== 'of'));
   } else {
     parts.push(hole(args[0]));
     parts.push({ t: 'text', s: words });
-    for (const a of args.slice(1)) { if (a.marker) parts.push({ t: 'text', s: a.marker }); parts.push(hole(a)); }
+    run(args.slice(1));
   }
   return { rel, parts, arity: args.length, src: text };
 }
@@ -276,7 +282,18 @@ function splitConds(rest: string): string[] {
     cur += c;
   }
   out.push(cur);
-  return out.map((x) => x.trim()).filter(Boolean);
+  const pieces = out.map((x) => x.trim()).filter(Boolean);
+  // `the join of A and B is C, and D is X`: a bare term after `and` belongs to the literal before it,
+  // and so does a piece that completes a sentence some template knows with `and` inside
+  const joined: string[] = [];
+  const stripped = (t: string) => t.replace(/^unless /, '');
+  const known = (t: string) => templates.some((x) => x.parts.some((q) => q.t === 'text' && /\band\b/.test(q.s)) && regexOf(x).test(stripped(t)));
+  for (const p of pieces) {
+    const last = joined[joined.length - 1];
+    if (last !== undefined && (new RegExp(`^${TERM}$`).test(p) || (!known(last) && known(`${last} and ${p}`)))) joined[joined.length - 1] = `${last} and ${p}`;
+    else joined.push(p);
+  }
+  return joined;
 }
 const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = [];
 function finish(rule: Rule, intros: Intro[]) {

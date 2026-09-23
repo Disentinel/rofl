@@ -6,6 +6,17 @@ default: main
 
 # js-ambient
 
+## Signatures
+
+- has_two_origins(surface S, origin A, origin B) (surface_two_origins), in the audit
+- falls_short(effect N:2, of label L:0, at host H:1) (amb_short_at)
+- is_covered(label L, at host H, by effect N) (amb_covers_at)
+- has_a_lower_cover(label L, at host H, than effect N) (amb_covers_at_low)
+- the_effect(of label L, at host H, is effect N) (eff_of_label)
+- has_two_host_effects(host A, effect X, effect Y) (host_atom_two_names), in the audit
+- has_the_ambient_effect(spec Spec, effect E:2, at key Key:1) (ambient_effect)
+- has_the_effect(node E, label L, at host H) (eff_here), in the flow
+
 > js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
 > and the map into the effect lattice. Both DERIVED: this pack authors not one
 > effect row. Every `ambient_effect` is a JOIN over a table another layer
@@ -55,7 +66,7 @@ default: main
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
 > surface with two origins would have every effect attributed twice.
 
-<a id="surface_two_origins"></a>`surface_two_origins`(S, X, B) if all of:
+<a id="surface_two_origins"></a>S has two origins X and B if all of:
   - [`surface_origin`](#surface_origin)(S, X);
   - [`surface_origin`](#surface_origin)(S, B);
   - X differs from B.
@@ -108,15 +119,15 @@ Declared as facts: amb_heap.
 > rather than (Atom) because sections 7 and 8 need the same closure on a heap
 > this section refuses.
 
-<a id="amb_short_at"></a>`amb_short_at`(L, H, N) if `eff_label`(L, H) and `eff_name`(N), unless [`eff_row`](js-effects.md#eff_row)(N, L, H).
+<a id="amb_short_at"></a>N falls short of L at H if `eff_label`(L, H) and `eff_name`(N), unless N [covers](js-effects.md#eff_row) L at H.
 
-<a id="amb_covers_at"></a>`amb_covers_at`(L, H, N) if `eff_label`(L, H) and `eff_name`(N), unless [`amb_short_at`](#amb_short_at)(L, H, N).
+<a id="amb_covers_at"></a>L is covered at H by N if `eff_label`(L, H) and `eff_name`(N), unless N [falls short](#amb_short_at) of L at H.
 
-<a id="amb_covers_at_low"></a>`amb_covers_at_low`(L, H, N) if [`amb_covers_at`](#amb_covers_at)(L, H, M) and [`eff_lt`](js-effects.md#eff_lt)(M, N).
+<a id="amb_covers_at_low"></a>L has a lower cover at H than N if L [is covered](#amb_covers_at) at H by M and [`eff_lt`](js-effects.md#eff_lt)(M, N).
 
-<a id="eff_of_label"></a>`eff_of_label`(L, H, N) if [`amb_covers_at`](#amb_covers_at)(L, H, N), unless [`amb_covers_at_low`](#amb_covers_at_low)(L, H, N).
+<a id="eff_of_label"></a>The effect of L at H is N if L [is covered](#amb_covers_at) at H by N, unless L [has a lower cover](#amb_covers_at_low) at H than N.
 
-<a id="eff_of_host"></a>`eff_of_host`(X, N) if [`amb_atom_label`](#amb_atom_label)(X, H) and [`eff_of_label`](#eff_of_label)(X, H, N).
+<a id="eff_of_host"></a>`eff_of_host`(X, N) if [`amb_atom_label`](#amb_atom_label)(X, H) and [the effect](#eff_of_label) of X at H is N.
 
 > an atom that is a landmark and not a label (`total`, `io`) denotes itself
 
@@ -126,14 +137,14 @@ Declared as facts: amb_heap.
 
 <a id="host_atom_unmapped"></a>`host_atom_unmapped`(X) if `host_effect_atom`(X), unless [`eff_of_host`](#eff_of_host)(X, something).
 
-<a id="host_atom_two_names"></a>`host_atom_two_names`(Z, X, Y) if [`eff_of_host`](#eff_of_host)(Z, X), [`eff_of_host`](#eff_of_host)(Z, Y), and X differs from Y.
+<a id="host_atom_two_names"></a>Z has two host effects X and Y if [`eff_of_host`](#eff_of_host)(Z, X), [`eff_of_host`](#eff_of_host)(Z, Y), and X differs from Y.
 
 ## 4. `ambient_effect` — THE MAP, ONE ROW PER MEMBER.
 
 > 4a. The module half is corpus-independent: `member_effect[code]` ranges
 > over `host_module_member`, which the TypeScript checker enumerated.
 
-<a id="ambient_effect"></a>`ambient_effect`(Spec, Key, E) if [`member_effect`](js-host.md#member_effect)(Spec, Key, X) and [`eff_of_host`](#eff_of_host)(X, E).
+<a id="ambient_effect"></a>Spec has the ambient effect E at Key if Spec [has the member effect](js-host.md#member_effect) X at Key and [`eff_of_host`](#eff_of_host)(X, E).
 
 > 4b. The global half is NOT, because scanners/host_lib.ts stops at the
 > NAMES of the properties of globalThis (`w_ambient_global_members`). So a
@@ -148,7 +159,7 @@ Declared as facts: amb_heap.
   - M [selects](js-dataflow.md#selects) Key;
   - `host_global_effect`(something, Name, something).
 
-`ambient_effect`(Name, Key, E) if [`amb_global_member`](#amb_global_member)(Name, Key) and [`ambient_global_default`](#ambient_global_default)(Name, E).
+Name has the ambient effect E at Key if [`amb_global_member`](#amb_global_member)(Name, Key) and [`ambient_global_default`](#ambient_global_default)(Name, E).
 
 > `fetch(u)` calls the surface itself and `new URL(s)` constructs it; neither
 > selects a key, so the operation column carries a word rather than the
@@ -156,7 +167,7 @@ Declared as facts: amb_heap.
 
 <a id="amb_operation_word"></a>`amb_operation_word` includes `itself`, `construct`.
 
-`ambient_effect`(Name, W, E) if [`amb_operation_word`](#amb_operation_word)(W) and [`ambient_global_default`](#ambient_global_default)(Name, E).
+Name has the ambient effect E at W if [`amb_operation_word`](#amb_operation_word)(W) and [`ambient_global_default`](#ambient_global_default)(Name, E).
 
 Declared as facts: amb_operation_word.
 
@@ -171,7 +182,7 @@ Declared as facts: amb_operation_word.
 2. if `lib_global`(S, something, something);
 3. if `lib_member`(S, something, something).
 
-<a id="ambient_unenumerated"></a>`ambient_unenumerated`(S) if [`ambient_effect`](#ambient_effect)(S, something, something), unless [`ambient_enumerated`](#ambient_enumerated)(S).
+<a id="ambient_unenumerated"></a>`ambient_unenumerated`(S) if S [has the ambient effect](#ambient_effect) some effect at some key, unless [`ambient_enumerated`](#ambient_enumerated)(S).
 
 ## 5. THE THREE SITE SHAPES `eff_surface[flow]` DOES NOT COVER. Both its arms
 
@@ -226,7 +237,7 @@ Declared as facts: amb_operation_word.
 > ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
 > (`typeof Promise`) seeds nothing.
 
-<a id="eff_here"></a>`eff_here`(E, `read`, `global`) if [`free_global`](js-globals.md#free_global)(E, something, something).
+<a id="eff_here"></a>E has the effect `read` at `global` if [`free_global`](js-globals.md#free_global)(E, something, something).
 
 ## 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every
 
@@ -277,10 +288,10 @@ Declared as facts: amb_operation_word.
 > from the section 3 closure, so `wr_local` is typed nowhere. The
 > non-mutating half stays owed: `join` calls each element's `toString`.
 
-`ambient_effect`(P, Key, E) if all of:
+P has the ambient effect E at Key if all of:
   - [`lib_mutator`](#lib_mutator)(P, Key);
   - [`amb_proto_heap`](#amb_proto_heap)(P, H);
-  - [`eff_of_label`](#eff_of_label)(`write`, H, E).
+  - [the effect](#eff_of_label) of `write` at H is E.
 
 ## 8. A FORM THAT CANNOT BE CONSTRUCTED, CONSTRUCTED. The member map of the
 
@@ -296,7 +307,7 @@ Declared as facts: amb_operation_word.
 
 <a id="amb_not_constructible"></a>`amb_not_constructible`(Name) if `lib_global`(Name, something, Form), unless [`constructible_form`](js-globals.md#constructible_form)(Form).
 
-`ambient_effect`(Name, `construct`, E) if [`amb_not_constructible`](#amb_not_constructible)(Name) and [`eff_of_label`](#eff_of_label)(`exn`, `none`, E).
+Name has the ambient effect E at `construct` if [`amb_not_constructible`](#amb_not_constructible)(Name) and [the effect](#eff_of_label) of `exn` at `none` is E.
 
 > An operation not on the surface at all is a different debt:
 > `Error.captureStackTrace` is V8's, declared in @types/node and not in
@@ -306,12 +317,12 @@ Declared as facts: amb_operation_word.
 <a id="ambient_off_surface"></a>`ambient_off_surface`(S, Op) either:
 
 1. if all of:
-   - [`concrete_effect`](js-effects.md#concrete_effect)(something, S, Op);
+   - some call [operates](js-effects.md#concrete_effect) on S by Op;
    - [`surface_origin`](#surface_origin)(S, `es_intrinsic`);
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
    - unless `lib_static`(S, Op, something);
 2. if all of:
-   - [`concrete_effect`](js-effects.md#concrete_effect)(something, S, Op);
+   - some call [operates](js-effects.md#concrete_effect) on S by Op;
    - [`surface_origin`](#surface_origin)(S, `builtin_prototype`);
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
    - unless `lib_member`(S, Op, something).
@@ -320,9 +331,9 @@ Declared as facts: amb_operation_word.
 
 > attributed, and therefore whose debt it is. Non-empty by design.
 
-<a id="amb_surface_attributed"></a>`amb_surface_attributed`(S) if [`ambient_effect`](#ambient_effect)(S, something, something).
+<a id="amb_surface_attributed"></a>`amb_surface_attributed`(S) if S [has the ambient effect](#ambient_effect) some effect at some key.
 
-<a id="ambient_surface_unattributed"></a>`ambient_surface_unattributed`(S) if [`concrete_effect`](js-effects.md#concrete_effect)(something, S, something), unless [`amb_surface_attributed`](#amb_surface_attributed)(S).
+<a id="ambient_surface_unattributed"></a>`ambient_surface_unattributed`(S) if some call [operates](js-effects.md#concrete_effect) on S by some operation, unless [`amb_surface_attributed`](#amb_surface_attributed)(S).
 
 > `ambient_owed` ranges over the unmapped OPERATIONS a call site reaches
 > (`concrete_unmapped[flow]`), not over unattributed surfaces: one row for
@@ -343,9 +354,9 @@ Declared as facts: amb_operation_word.
 > hop per `resolves` edge, minus what a handler discharges.
 
 <a id="amb_exn_source"></a>`amb_exn_source`(C) if all of:
-  - [`concrete_effect`](js-effects.md#concrete_effect)(C, S, Op);
-  - [`ambient_effect`](#ambient_effect)(S, Op, E);
-  - [`eff_row`](js-effects.md#eff_row)(E, `exn`, `none`).
+  - C [operates](js-effects.md#concrete_effect) on S by Op;
+  - S [has the ambient effect](#ambient_effect) E at Op;
+  - E [covers](js-effects.md#eff_row) `exn` at `none`.
 
 <a id="amb_exn_carrier"></a>`amb_exn_carrier`(F) either:
 

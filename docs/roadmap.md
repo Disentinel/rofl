@@ -78,10 +78,17 @@ What has to exist for it to be code rather than a description of code
    that has none (f_the_eight_structures_run_and_the_name_is_not_the_sentence).
    A signature whose name differs from its relation is a proposed rename.
    The reader exists too: `npm run read -- docs/js/X.md rules/X.rofl` reads
-   a rendered file back into rules and measures the round trip, 1135 of 1179
+   a rendered file back into rules and measures the round trip, 1179 of 1179
    rules over the JS model, and the read-back dataflow computes the same rows
    as the source on a fixture
-   (f_the_markdown_form_round_trips_the_js_model_and_runs_the_same).
+   (f_the_markdown_form_round_trips_the_js_model_and_runs_the_same). A
+   destructor reads by a phrase in `facts/phrases.rofl`, arithmetic as
+   written, a reflection term in source syntax; a concrete kind reads as its
+   spec name in words and a set of kinds as the short noun; negatives fold
+   (`P but is not N`, `S neither A nor B`, `unless A or B`); two arguments
+   under one marker share it (`the join of A and B`); and the tenth structure
+   is a pair, `S has two shapes A and B`, decided by the body rather than the
+   name (f_every_rule_of_the_js_model_reads_back_and_the_missing_structure_was_a_pair).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is

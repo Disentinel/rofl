@@ -32,8 +32,11 @@ A noun is a node of one of its kinds:
 
 ## Signatures
 
+- has_two_shapes(call C, shape A, shape B) (multi_shape), in the audit
 - is_decorated_by(node Owner, node D) (decorates)
 - resolves_to(call C, function F) (resolves)
+- has_two_callees(call C, function F, function G) (ambiguous_call), in the audit
+- calls_the_stdlib_member(call C, key Key:2, of prototype P:1) (stdlib_member), in the audit
 
 > js-callgraph.rofl — ONE construct, the FUNCTION CALL, at the call-graph
 > layer. Over the scanner's four relations plus js-structure's `ast_within`,
@@ -264,7 +267,7 @@ Declared as facts: static_key_kind.
 
 <a id="unshaped"></a>`unshaped`(C) if [`call_site`](#call_site)(C, something), unless [`shaped`](#shaped)(C).
 
-<a id="multi_shape"></a>`multi_shape`(C, X, B) if [`shape`](#shape)(C, X), [`shape`](#shape)(C, B), and X differs from B.
+<a id="multi_shape"></a>C has two shapes X and B if [`shape`](#shape)(C, X), [`shape`](#shape)(C, B), and X differs from B.
 
 ## 3. The enclosing function
 
@@ -468,7 +471,7 @@ C resolves to F if all of:
   - N [may be the node](js-dataflow.md#may_be_node) F;
   - [`fn_node`](#fn_node)(F).
 
-<a id="ambiguous_call"></a>`ambiguous_call`(C, F, G) if C [resolves to](#resolves) F, C [resolves to](#resolves) G, and F differs from G.
+<a id="ambiguous_call"></a>C has two callees F and G if C [resolves to](#resolves) F, C [resolves to](#resolves) G, and F differs from G.
 
 ## 5. THE EDGE — by node, by name (a stack frame carries a name), and by file
 
@@ -517,7 +520,7 @@ C resolves to F if all of:
 
 <a id="unresolved_shape"></a>`unresolved_shape`(S) if [`unresolved_call`](#unresolved_call)(something, S).
 
-<a id="stdlib_member"></a>`stdlib_member`(C, P, Key) if all of:
+<a id="stdlib_member"></a>C calls the stdlib member Key of P if all of:
   - [`unresolved_call`](#unresolved_call)(C, something);
   - [`callee_of`](#callee_of)(C, N);
   - the `object` of N is O;

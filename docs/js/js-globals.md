@@ -6,6 +6,16 @@ default: code
 
 # js-globals
 
+## Signatures
+
+- is_the_global(node E, name Name, of relation Rel, with form Form) (es_global)
+- selects_the_static(member access N, key Key:2, of name Name:1, from relation Rel:3) (es_static)
+- selects_the_static_data(member access N, key Key:2, of name Name:1) (es_static_key)
+- invokes_the_global(call C, name Name, of relation Rel) (es_global_invoke)
+- constructs_the_global(new X, name Name, of relation Rel) (es_global_construct)
+- constructs_a_non_constructor(new X, name Name, of form Form) (es_construct_not_constructor), in the audit
+- is_an_instance(new X, of name Name, from relation Rel) (es_instance), in the flow
+
 > js-globals.rofl — THE ES GLOBALS: the half of the standard library that is
 > not a prototype. rules/js-env-api.rofl attributes `array.at` through a
 > receiver's prototype; `JSON.parse`, `Promise.all` and `Math.max` hang off a
@@ -111,7 +121,7 @@ Declared as facts: declaring_position.
 
 <a id="free_global"></a>`free_global`(E, Name, File) if [`global_ref`](#global_ref)(E, Name, File), unless [`declares_name`](#declares_name)(Name, File).
 
-<a id="es_global"></a>`es_global`(E, Name, Rel, Form) if [`free_global`](#free_global)(E, Name, something) and `lib_global`(Name, Rel, Form).
+<a id="es_global"></a>E is the global Name of Rel with Form if [`free_global`](#free_global)(E, Name, something) and `lib_global`(Name, Rel, Form).
 
 <a id="global_unattributed"></a>`global_unattributed`(E, Name) if [`free_global`](#free_global)(E, Name, something), unless `lib_global`(Name, something, something).
 
@@ -119,8 +129,8 @@ Declared as facts: declaring_position.
 
 > `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
 
-<a id="es_static"></a>`es_static`(N, Name, Key, Rel) if all of:
-  - [`es_global`](#es_global)(O, Name, something, something);
+<a id="es_static"></a>N selects the static Key of Name from Rel if all of:
+  - O [is the global](#es_global) Name of some relation with some form;
   - the `object` of N is O;
   - N [selects](js-dataflow.md#selects) Key;
   - `lib_static`(Name, Key, Rel).
@@ -130,7 +140,7 @@ Declared as facts: declaring_position.
 > non-empty on purpose, the fixture puts a site in it
 
 <a id="es_static_unattributed"></a>`es_static_unattributed`(N, Name, Key) if all of:
-  - [`es_global`](#es_global)(O, Name, something, something);
+  - O [is the global](#es_global) Name of some relation with some form;
   - the `object` of N is O;
   - N [selects](js-dataflow.md#selects) Key;
   - unless `lib_static`(Name, Key, something).
@@ -138,18 +148,15 @@ Declared as facts: declaring_position.
 > a well-known symbol or `Math.PI` is a KEY and not a call; `lib_static_shape`
 > already carries the difference from the declaration
 
-<a id="es_static_key"></a>`es_static_key`(N, Name, Key) if [`es_static`](#es_static)(N, Name, Key, something) and `lib_static_shape`(Name, Key, `data`).
+<a id="es_static_key"></a>N selects the static data Key of Name if N [selects the static](#es_static) Key of Name from some relation and `lib_static_shape`(Name, Key, `data`).
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and [`es_static`](#es_static)(N, Name, Key, Rel).
+<a id="es_static_call"></a>`es_static_call`(C, Name, Key, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [selects the static](#es_static) Key of Name from Rel.
 
-<a id="es_global_invoke"></a>`es_global_invoke`(C, Name, Rel) if [`callee_of`](js-callgraph.md#callee_of)(C, N) and [`es_global`](#es_global)(N, Name, Rel, something).
+<a id="es_global_invoke"></a>C invokes the global Name of Rel if [`callee_of`](js-callgraph.md#callee_of)(C, N) and N [is the global](#es_global) Name of Rel with some form.
 
-<a id="es_global_construct"></a>`es_global_construct`(X, Name, Rel) if all of:
-  - [`transfer_site`](js-callgraph.md#transfer_site)(X, `new_expression`);
-  - the `callee` of X is N;
-  - [`es_global`](#es_global)(N, Name, Rel, something).
+<a id="es_global_construct"></a>X constructs the global Name of Rel if [`transfer_site`](js-callgraph.md#transfer_site)(X, `new_expression`) and the `callee` of X [is the global](#es_global) Name of Rel with some form.
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -157,8 +164,8 @@ Declared as facts: declaring_position.
 
 <a id="constructible_form"></a>`constructible_form` includes `constructor_binding`.
 
-<a id="es_construct_not_constructor"></a>`es_construct_not_constructor`(X, Name, Form) if all of:
-  - [`es_global_construct`](#es_global_construct)(X, Name, something);
+<a id="es_construct_not_constructor"></a>X constructs a non constructor Name of Form if all of:
+  - X [constructs the global](#es_global_construct) Name of some relation;
   - `lib_global`(Name, something, Form);
   - unless [`constructible_form`](#constructible_form)(Form).
 
@@ -172,12 +179,12 @@ Declared as facts: constructible_form.
 > UNPOPULATABLE, which is the right thing for it to say.
 
 <a id="es_global_unsupported"></a>`es_global_unsupported`(E, X, Name) if all of:
-  - [`es_global`](#es_global)(X, Name, Rel, something);
+  - X [is the global](#es_global) Name of Rel with some form;
   - `environment`(E);
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
 <a id="es_static_unsupported"></a>`es_static_unsupported`(E, N, Name, Key) if all of:
-  - [`es_static`](#es_static)(N, Name, Key, Rel);
+  - N [selects the static](#es_static) Key of Name from Rel;
   - `environment`(E);
   - unless [`reaches`](js-env.md#reaches)(E, Rel).
 
@@ -195,16 +202,16 @@ Declared as facts: constructible_form.
 > constructed (the audit above says it throws); a prototype for the
 > thirty-nine globals with no bridge row.
 
-<a id="es_instance"></a>`es_instance`(X, Name, Rel) if all of:
-  - [`es_global_construct`](#es_global_construct)(X, Name, Rel);
+<a id="es_instance"></a>X is an instance of Name from Rel if all of:
+  - X [constructs the global](#es_global_construct) Name of Rel;
   - `lib_global`(Name, something, Form);
   - [`constructible_form`](#constructible_form)(Form).
 
-X may be the node X if [`es_instance`](#es_instance)(X, something, something).
+X may be the node X if X [is an instance](#es_instance) of some name from some relation.
 
 The prototype of E is P if all of:
   - E [may be the node](js-dataflow.md#may_be_node) X;
-  - [`es_instance`](#es_instance)(X, Name, something);
+  - X [is an instance](#es_instance) of Name from some relation;
   - `lib_global_prototype`(Name, P).
 
 > Where the bridge cannot look, as rows: `es_prototype_gap` is the LIBRARY
@@ -222,7 +229,7 @@ The prototype of E is P if all of:
   - [`unresolved_call`](js-callgraph.md#unresolved_call)(C, something);
   - [`callee_of`](js-callgraph.md#callee_of)(C, N);
   - the `object` of N [may be the node](js-dataflow.md#may_be_node) X;
-  - [`es_instance`](#es_instance)(X, Name, something);
+  - X [is an instance](#es_instance) of Name from some relation;
   - N [selects](js-dataflow.md#selects) Key;
   - unless `lib_global_prototype`(Name, something).
 

@@ -75,6 +75,8 @@ const admits = new Map<string, string[]>(); for (const b of rows('admits(Rel, S)
 const subject = new Map<string, number>(); for (const b of rows('subject(Rel, I)')) subject.set(String(b.Rel), Number(b.I));
 const object = new Map<string, number>(); for (const b of rows('object(Rel, I)')) object.set(String(b.Rel), Number(b.I));
 const marker = new Map<string, string>(); for (const b of rows('marker(Rel, I, M)')) marker.set(`${b.Rel}/${b.I}`, String(b.M).replace('_', ' '));
+const pair = new Map<string, { q: string; s: number; i: number; j: number }>(); for (const b of rows('pair(Rel, Q, S, I, J)')) if (!pair.has(String(b.Rel))) pair.set(String(b.Rel), { q: String(b.Q), s: Number(b.S), i: Number(b.I), j: Number(b.J) });
+const plural = (q: string) => { const w = (words.get(q) ?? q.split('_')).filter((x) => x && x !== 'of' && x !== 'to'); const last = w[w.length - 1] ?? q; return [...w.slice(0, -1), last.endsWith('s') ? last : last + 's'].join(' '); };
 const SKIP = new Set(['phrase', 'kind_noun', 'edb', 'seed', 'pick']);
 const VAR = ['X', 'Y', 'Z', 'W', 'U', 'V'];
 const art = (n: string) => (/^[aeiou]/.test(n) ? 'an' : 'a');
@@ -96,11 +98,15 @@ function sentence(rel: string): string {
     case 'may': return `${Sn} may be the ${w.slice(2).join(' ')} ${On}.`;
     case 'among': return `${On} is among the ${w.join(' ')} of ${Sn}.`;
     case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key'); const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); return `the ${w.join(' ')} ${VAR[K ?? 0]} of ${Sn} is ${Ov === undefined ? '' : np(rel, Ov)}.`; }
+    case 'pair': { const p = pair.get(rel)!; const others: string[] = []; for (let i = 0; i < n; i++) if (![p.s, p.i, p.j].includes(i)) others.push(`${marker.get(`${rel}/${i}`) ?? '?'} ${np(rel, i)}`); return `${np(rel, p.s)} has two ${plural(p.q)} ${VAR[p.i]} and ${VAR[p.j]}${others.length ? ' ' + others.join(' ') : ''}.`; }
   }
   return '?';
 }
 const hand = new Map<string, string>();
 for (const m of readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8').matchAll(/^phrase\((\w+), "([^"]+)"\)/gm)) if (!hand.has(m[1])) hand.set(m[1], m[2]);
+const handSig = new Map<string, string>();
+for (const m of readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8').matchAll(/^sig\((\w+), "([^"]+)"\)/gm)) handSig.set(m[1], m[2]);
+const sigStructure = (t: string) => { const name = t.slice(0, t.indexOf('(')); const n = (t.match(/,/g) ?? []).length + 1; return /^has_two_/.test(name) ? 'pair' : /^the_/.test(name) ? 'the_of' : /^has_/.test(name) ? 'has' : /^may_/.test(name) ? 'may' : /^is_the_.*_of$/.test(name) || /^is_(a|an|the)_/.test(name) ? 'role_of' : /^is_.*(ed|en)$/.test(name) ? 'passive' : /^is_/.test(name) ? (n === 1 ? 'adjective' : 'role_of') : n === 1 ? 'bare_verb' : 'verb'; };
 const handStructure = (t: string) => /^the .* of /.test(t) ? 'the_of' : / has /.test(t) ? 'has' : / may be /.test(t) ? 'may' : / is among /.test(t) ? 'among' : /^<[^>]+> is \w+ed\b/.test(t) ? 'passive' : /^<[^>]+> is (a|an|the) /.test(t) ? 'role_of' : /^<[^>]+> is \w+$/.test(t) ? 'adjective' : 'verb';
 
 const rels = [...arity.keys()].filter((x) => !SKIP.has(x)).sort();
@@ -110,8 +116,8 @@ const lines: string[] = ['| relation | arity | takes | sentence | also admits | 
 const sigLine = (rel: string) => '';
 for (const rel of rels) {
   const s = takes.get(rel) ?? '-'; byStructure.set(s, (byStructure.get(s) ?? 0) + 1);
-  const h = hand.get(rel);
-  if (h) { const hs = handStructure(h); if (hs === s) agree++; else { disagree++; dis.push(`${rel}: took ${s}, hand ${hs}: ${h}`); } }
+  const h = hand.get(rel) ?? handSig.get(rel);
+  if (h) { const hs = hand.has(rel) ? handStructure(h) : sigStructure(h); if (hs === s) agree++; else { disagree++; dis.push(`${rel}: took ${s}, hand ${hs}: ${h}`); } }
   lines.push(`| ${rel} | ${arity.get(rel)} | ${s} | ${sentence(rel)} | ${(admits.get(rel) ?? []).filter((x) => x !== s).join(', ')} | ${h ? h.replace(/\|/g, '\\|') : ''} |`);
 }
 console.log(`${rels.length} relations; structures: ${[...byStructure].sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s} ${n}`).join(', ')}`);
@@ -139,6 +145,7 @@ const sigOf = (rel: string): string => {
     case 'may': name = `may_be_the_${w.slice(2).join('_')}`; args = [vn(S), ...rest([S], '')]; break;
     case 'the_of': name = `the_${w.slice(0, -1).join('_')}`; args = [`of ${vn(S)}`, ...(O === undefined ? [] : [`is ${vn(O)}`]), ...rest([S, O ?? -1], '')]; break;
     case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key') ?? -1; const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); name = `the_${stem}`; args = [`of ${vn(S)}`, ...(K >= 0 ? [vn(K)] : []), ...(Ov === undefined ? [] : [`is ${vn(Ov)}`]), ...rest([S, K, Ov ?? -1], '')]; break; }
+    case 'pair': { const p = pair.get(rel)!; name = `has_two_${plural(p.q).replace(/ /g, '_')}`; args = [vn(p.s), vn(p.i), vn(p.j), ...rest([p.s, p.i, p.j], '')]; break; }
     default: args = [vn(S), ...rest([S], '')];
   }
   return `sig(${rel}, "${name}(${args.join(', ')})").`;
