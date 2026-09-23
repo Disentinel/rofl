@@ -78,48 +78,13 @@ What has to exist for it to be code rather than a description of code
    classify signatures and `npm run sentences` proposes one for every relation
    that has none (f_the_eight_structures_run_and_the_name_is_not_the_sentence).
    A signature whose name differs from its relation is a proposed rename.
-   The reader exists too: `npm run read -- docs/js/X.md rules/X.rofl` reads
-   a rendered file back into rules and measures the round trip, 1179 of 1179
-   rules over the JS model, and the read-back dataflow computes the same rows
-   as the source on a fixture
-   (f_the_markdown_form_round_trips_the_js_model_and_runs_the_same). A
-   destructor reads by a phrase in `facts/phrases.rofl`, arithmetic as
-   written, a reflection term in source syntax; a concrete kind reads as its
-   spec name in words and a set of kinds as the short noun; negatives fold
-   (`P but is not N`, `S neither A nor B`, `unless A or B`); two arguments
-   under one marker share it (`the join of A and B`); and the tenth structure
-   is a pair, `S has two shapes A and B`, decided by the body rather than the
-   name (f_every_rule_of_the_js_model_reads_back_and_the_missing_structure_was_a_pair).
-   A variable no guard names wears the type its signature gives it, and a
-   type is not a guard; a kind noun is a guard and only a guard may put it
-   on a variable, so a noun whose guard in the base is a relation
-   (`fn_node`) still leaves a letter until the base binds the noun to it
-   (f_two_structure_phrases_read_backwards_and_a_letter_is_a_variable_nobody_typed);
-   a noun bound to a unary relation is that relation's guard
-   (`noun_guard(fn_node, "function")`), and a file binds a noun to one
-   relation in its `## Guards` section
-   (f_a_noun_bound_to_a_relation_is_its_guard_and_one_noun_had_two_in_two_files);
-   the value layer's copy of the function relation is gone and every book
-   reads `fn_node[code]`
-   (f_one_function_relation_through_the_books_and_a_projection_reads_as_what_it_is).
-   `rules/untyped.rofl` lists the one-letter variables nothing in their rule
-   types: 648 of 2335, all but three where the vocabulary has no signature
-   (f_a_letter_is_not_the_smell_a_variable_nothing_types_is_and_one_letter_means_fifteen_things).
-   Every relation of the JS model now has a signature, the last 543 written
-   by hand with the fact tables they lean on; the untyped letters fell to 13,
-   all a two-arity name or a destructor's count, one nullary head stays
-   positional, and the round trip is 1178 of 1178
-   (f_the_543_signatures_are_written_and_the_letters_nothing_types_fell_from_648_to_13).
-   A hole after a name that ends in its own noun is named, not typed
-   (`guards the arm X`); a name used with two arities carries a signature
-   per arity; and the rendered file carries no Signatures section and no
-   Terms line: a book is a block, `In the audit:`, as the form always said
-   (f_a_hole_after_the_name_noun_is_named_not_typed_a_book_is_a_block_and_a_signature_is_per_arity).
-   What a file reads and does not define is its imports, one Reads list
-   under the title; a declared table reads as its signature sentence; a
-   noun links to its Kinds row or its guard relation; and a use is declared
-   when it has somewhere to link
-   (f_a_use_is_declared_when_it_has_somewhere_to_link_and_a_declared_table_reads_as_its_sentence).
+   The reader exists too, `npm run read -- docs/js/X.md rules/X.rofl`, and
+   the round trip over the JS model is 1178 of 1178 with every relation
+   signed. What two days of that established, what the form is now, what
+   the round trip cannot see, and what is open, including the test not yet
+   run (a file authored as `.md` with no `.rofl` twin), is
+   `docs/sentence-form.md`
+   (f_the_sentence_form_after_the_round_trip_what_stands_what_is_open_and_the_test_not_yet_run).
 
 What is not settled and is measured rather than guessed: fourteen
 constructions is a language and the reader's limit without a legend is
