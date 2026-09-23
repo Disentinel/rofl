@@ -10,6 +10,12 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_no_plain_paragraphs_of_prose_in_a_source_file_a_paragraph_is_a_sentence_or_it_is_quoted, decision).
+recorded(f_no_plain_paragraphs_of_prose_in_a_source_file_a_paragraph_is_a_sentence_or_it_is_quoted, "2026-09-23").
+addressed_by(f_no_plain_paragraphs_of_prose_in_a_source_file_a_paragraph_is_a_sentence_or_it_is_quoted, "docs/sentence-form.md").
+finding_note(f_no_plain_paragraphs_of_prose_in_a_source_file_a_paragraph_is_a_sentence_or_it_is_quoted,
+  "VADIM DECIDED, on the one decision the Markdown-authored world left open: we do not want plain paragraphs of prose. So the form is: a paragraph that ends in a full stop is a sentence of the language, and the essay around the rules is a quote block, as the renderer already writes comments. Nothing changes in the reader or the renderer; rules/untyped.md is already written that way, and docs/sentence-form.md and the roadmap's bullets say it. What the decision buys: a source file has exactly two kinds of paragraph, and a reader, human or script, never has to guess which one it is looking at.").
+
 finding(f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary, insight).
 recorded(f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary, "2026-09-23").
 addressed_by(f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary, "rules/untyped.md").

@@ -55,6 +55,9 @@ What it is, in the words that survived nine rewrites:
 - every relation a rule reads has somewhere to link, a definition in the
   file or a line in its Reads list, and a script checks it; it once checked
   source order, which is the essay's, and the essay may say "see below".
+- prose is a quote block: a paragraph that ends in a full stop is a sentence
+  of the language, and there are no plain paragraphs of prose in a source
+  file (decided 2026-09-23).
 
 What has to exist for it to be code rather than a description of code
 (f_the_sentence_form_is_version_1_1_work):

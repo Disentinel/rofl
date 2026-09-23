@@ -117,11 +117,12 @@ What it took:
   body said `guards V`, and thirteen fragments went unparsed until the body
   used the head's words. A variable named `A` is written typed (`an arity
   A`), since a bare `A` at the start of a sentence is an article.
-- **Prose is a quote.** The reader takes every paragraph ending in a full
-  stop for a sentence of the language, so the essay around the rules is
-  written as `>` blocks, as the renderer writes comments. An authored file
-  that wants plain paragraphs of prose needs a decision the form has not
-  made.
+- **Prose is a quote, by decision.** The reader takes every paragraph
+  ending in a full stop for a sentence of the language, so the essay around
+  the rules is written as `>` blocks, as the renderer writes comments.
+  Vadim decided, 2026-09-23, that this is the form: there are no plain
+  paragraphs of prose in a source file. A paragraph is a sentence or it is
+  quoted.
 
 So the form is now a proven source for one world, and every further world
 is the same three moves: anchor the heads, declare the tables, quote the
