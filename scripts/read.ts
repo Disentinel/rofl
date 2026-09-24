@@ -23,7 +23,7 @@ const abs = (p: string) => (p.startsWith('/') ? p : `${ROOT}${p}`);
 
 // a rendered model's vocabulary comes with a file rendered from it (docs/js, docs/rings); any other file brings its own
 if (/(^|\/)docs\/js\//.test(mdPath)) vocabPaths.unshift('facts/js-phrases.rofl');
-if (/(^|\/)docs\/rings\//.test(mdPath)) vocabPaths.unshift('facts/kernel-phrases.rofl');
+if (/(^|\/)docs\/rings\//.test(mdPath)) vocabPaths.unshift('facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl');
 const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + vocabPaths.map((v) => readFileSync(abs(v), 'utf8')).join('\n');
 // the source, as facts: the same dump the renderer reads
 const facts = srcPaths.length ? execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...srcPaths.map(abs)], { maxBuffer: 1 << 28 }).toString() : '';

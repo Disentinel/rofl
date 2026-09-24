@@ -271,6 +271,8 @@ fn pad(s: &mut String, raw: &str, text: &str) {
 }
 fn is_wild(h: &Heap, t: Term) -> bool { matches!(t.kind(), TermK::Var(v) if h.name(v).starts_with("_$")) }
 fn capitalize(s: &str) -> String { let mut c = s.chars(); match c.next() { Some(f) => f.to_uppercase().collect::<String>() + c.as_str(), None => String::new() } }
+// a string as ROFL source writes it, C-style: a line feed in a table cell would end the row
+fn escape(s: &str) -> String { s.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n").replace('\t', "\\t").replace('\r', "\\r") }
 // a conclusion's tense: after a rule's head, and before a group of facts
 fn when(t: Tense) -> &'static str { match t { Tense::Next => " in the next tick", Tense::Init => " initially", Tense::Now => "" } }
 fn lead(t: Tense) -> &'static str { match t { Tense::Next => "In the next tick, ", Tense::Init => "Initially, ", Tense::Now => "" } }
@@ -400,7 +402,7 @@ impl<'a> R<'a> {
                 } else { name.to_string() }
             }
             TermK::Atom(a) => format!("`{}`", self.h.name(a)),
-            TermK::Str(s) => format!("\"{}\"", self.h.name(s)),
+            TermK::Str(s) => format!("\"{}\"", escape(self.h.name(s))),
             TermK::Int(i) => i.to_string(),
             TermK::Func(i) => {
                 let f = self.h.fname(i);
@@ -819,7 +821,8 @@ impl<'a> R<'a> {
             for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|a| collect(*a)), Elem::Builtin(_, a, b) => { collect(*a); collect(*b); } } }
             for v in &all {
                 let target = map.get(v).copied().unwrap_or(*v);
-                if map.get(v).is_none() && taken.contains(v) { return None; }
+                // a variable of this clause that is not in its head, spelled like a head variable of the group, would be captured by it
+                if map.get(v).is_none() && (taken.contains(v) || gvars.contains(v)) { return None; }
                 let _ = target;
             }
             let mut renamed = self.rename(c, &map);

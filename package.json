@@ -67,7 +67,7 @@
     "playground": "node --experimental-strip-types scripts/playground.ts",
     "sentences": "node --experimental-strip-types scripts/sentences.ts",
     "render:js": "rust/target/release/rofl-render --out docs/js facts/phrases.rofl facts/js-phrases.rofl rules/js-*.rofl --tables facts/js-*.rofl",
-    "render:rings": "rust/target/release/rofl-render --out docs/rings facts/phrases.rofl facts/kernel-phrases.rofl boot.rofl safety.rofl policy.rofl rules/strata.rofl",
+    "render:rings": "rust/target/release/rofl-render --out docs/rings facts/phrases.rofl facts/kernel-phrases.rofl facts/ring1-phrases.rofl boot.rofl safety.rofl policy.rofl rules/strata.rofl examples/ring1/charclass.rofl examples/ring1/ring1.rofl",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
     "flagcheck": "node --experimental-strip-types scripts/flag_census.ts",
     "floorcensus": "node --experimental-strip-types scanners/floor_census.ts",

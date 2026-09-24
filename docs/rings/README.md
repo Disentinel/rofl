@@ -1,10 +1,12 @@
-# Ring 0, in its own words
+# The rings, in their own words
 
 Ring 0 is what the kernel does to every program before and while it runs it.
-Four parts of it are already rules, and this directory is those four programs
-rendered as sentences: one sentence per relation, declared in
-`facts/kernel-phrases.rofl`, and the comments of each program as the prose
-around its rules.
+Ring 1 is the front end, the parser of ROFL written in ROFL. The parts of both
+that are rules are rendered here as sentences: one sentence per relation,
+declared in `facts/kernel-phrases.rofl` and `facts/ring1-phrases.rofl`, and
+the comments of each program as the prose around its rules.
+
+## Ring 0
 
 | document | what it decides | source | rules |
 |---|---|---|---|
@@ -15,6 +17,19 @@ around its rules.
 
 A sentence of it: *A rule is monotone if it may run and it neither has a
 negation nor is unsafe.*
+
+## Ring 1
+
+| document | what it decides | source | rules |
+|---|---|---|---|
+| [ring1](ring1.rofl.md) | the characters, one scanner walk carrying a state, tokens as pairs of positions, terms, literals, clauses, and what no clause covered | `examples/ring1/ring1.rofl` | 140 |
+| [charclass](charclass.rofl.md) | the class of every character the grammar knows | `examples/ring1/charclass.rofl` | 86 rows |
+
+A sentence of it: *A position starts a word if it is a word character and it
+neither follows a word character nor follows a dollar sign.* A token is a pair
+of positions and never text, so most sentences are about positions: *The
+token after a position J starts at a position K if the scan after the token
+ending at J has reached K and K starts a token.*
 
 ## It is the same program
 
@@ -27,6 +42,8 @@ Every document reads back into its source, clause for clause, with the reader
 | safety | 33 of 33 | 23 of 23 |
 | strata | 10 of 10 | none |
 | policy | 8 of 8 | none |
+| ring1 | 140 of 140 | 6 of 6 |
+| charclass | none | 86 of 86, the line feed among them |
 
 Getting there found a defect in the sentence form itself: a conclusion's tense
 did not survive it. `imports(P, Q) @next :- imports(P, Q)`, the rule that
@@ -36,23 +53,38 @@ no tense. A head in another tense now says so (*A book imports a book Q in the
 next tick if it imports Q*), a group of facts says it first (*Initially,
 `width` includes 9.*), and the measurement compares it.
 
+Ring 1 found seven more, all in the renderer or the reader and none in the
+grammar. Two alternatives of `belem` merged under one head let the head's `L`
+capture the body's own `L`, so the page said *L is $not(L)*. A term moved out
+of a head into a condition (*N is int(S)*) was not moved back. A stray `` `[` ``
+in prose opened a link that ended at the next real one and swallowed a
+condition. `J - I + 1` had two operators and the reader took one. A head the
+renderer capitalised (*There is a K at…*) matched nothing. *it is J* was not
+read as equality. And the line feed of the character table was written raw
+into a table cell, which ended the row.
+
 ## What is not here
 
 - The evaluator. `src/engine.ts` and the Rust engine are the part of ring 0
   that is code, not rules.
-- Ring 1, the front end written in ROFL (`examples/ring1`): 126 rules over
-  character positions. It is the next thing to render.
+- `examples/ring1/l1.rofl`, the smaller grammar ring 1's own source is
+  written in, and the host side (`demo.ts`), which reads a range back as text.
 - A kernel term inside a sentence stays a term: `$builtin("is", something)`,
   `$not($lit(it, P, something, something))`. `$` cannot be written in ROFL
-  source, so no phrase can be declared for one.
+  source, so no phrase can be declared for one. Ring 1 builds these terms (it
+  is a parser, and they are its output), so its heads show them: *The body
+  from a position I to a position C is $cons(a condition B, a list R)*. The
+  grammar's own constructors that sit in a condition read as words (*N is the
+  integer written S*); the two in heads, `comp` and `op`, stay terms, because
+  a phrase inside a head read worse and did not read back.
 - The documents are not their own dictionary. A sentence like *A rule is
   known* has no variable letter for the reader to learn it from, so the reader
-  takes the vocabulary from `facts/kernel-phrases.rofl`, as it does for
+  takes the vocabulary from the two phrase files, as it does for
   `docs/js`.
 - No gate in CI: `rofl-render` is not built there, as for `docs/js`. After
-  changing one of the four programs, render again.
+  changing one of these programs, render again.
 
 ## Regenerating
 
     npm run render:rings        needs rust/target/release/rofl-render
-    npm run view -- docs/rings/README.md docs/rings/boot.rofl.md docs/rings/safety.rofl.md docs/rings/strata.rofl.md docs/rings/policy.rofl.md
+    npm run view -- docs/rings/README.md docs/rings/boot.rofl.md docs/rings/safety.rofl.md docs/rings/strata.rofl.md docs/rings/policy.rofl.md docs/rings/ring1.rofl.md docs/rings/charclass.rofl.md

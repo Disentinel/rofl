@@ -89,7 +89,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (text === 'it') return { v: subjectVar ?? 'It' };
     if (/^some |^something$/.test(text)) return { w: true };
     if (/^[A-Z]/.test(text)) return { v: text };
-    if (/^"/.test(text)) return { s: text.slice(1, -1) };
+    if (/^"/.test(text)) return { s: text.slice(1, -1).replace(/\\(.)/g, (_, c) => ({ n: '\n', t: '\t', r: '\r' } as Record<string, string>)[c] ?? c) };
     if (/^-?\d+$/.test(text)) return { n: Number(text) };
     if (/^\`/.test(text)) return { a: text.slice(1, -1) };
     if ((m = /^(\$?[a-z_]\w*)\((.*)\)$/.exec(text))) return { f: m[1], args: splitTop(m[2]).map((a) => term(a, intros)) };
@@ -122,6 +122,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (m && !templates.some((t) => regexOf(t).test(text))) { text = m[1]; book = m[2]; }
     text = text.replace(/^next, /, '');
     const variants = [text, text[0] === text[0].toUpperCase() && /^(A|An|The) /.test(text) ? text[0].toLowerCase() + text.slice(1) : null].filter((x): x is string => !!x);
+    // a sentence the renderer capitalised (`There is…`, `Reading…`) is tried in lower case, but only when nothing matches as written: `Rel is…` starts with a variable
+    if (/^[A-Z][a-z]/.test(text) && !templates.some((t) => variants.some((v) => regexOf(t).test(v)))) variants.push(text[0].toLowerCase() + text.slice(1));
     const hits: { t: Tpl; g: string[]; score: number }[] = [];
     for (const t of templates) for (const v of variants) {
       const g = regexOf(t).exec(v); if (!g) continue;
@@ -209,7 +211,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const lit = positional(text, intros) ?? matchLit(text, intros);
     if (lit) { if (!positional(text, [])) trace(text, lit); lit.neg = neg; rule.body.push(lit); return true; }
     // `X is Y` between two terms is equality; a bare word is not a term, so `T is huge` is unparsed rather than `T = huge`
-    if ((m = /^(.+?) is (.+)$/.exec(text)) && [m[1], m[2]].every((x) => /^([A-Z][A-Za-z0-9]*|`[^`]+`|"[^"]*"|-?\d+)$/.test(x))) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
+    if ((m = /^(.+?) is (.+)$/.exec(text)) && [m[1], m[2]].every((x) => /^(it|[A-Z][A-Za-z0-9]*|`[^`]+`|"[^"]*"|-?\d+)$/.test(x))) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
     if ((m = /^(.+?) differs from (.+)$/.exec(text))) { rule.body.push({ rel: '!=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
     if ((m = /^(\S+) ([<>]=?) (\S+)$/.exec(text))) { rule.body.push({ rel: m[2], args: [term(m[1], intros), term(m[3], intros)], neg }); return true; }
     if ((m = /^(.*?) ([Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}) that (.+)$/.exec(text))) {
@@ -257,6 +259,20 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     let m;
     if (/^\$?[a-z_]\w*\(.*\)$/.test(text)) { const t = term(text, intros); return 'f' in t ? t : null; }
     if ((m = new RegExp(`^(${TERM}) ([-+*/]|mod) (${TERM})$`).exec(text))) return { f: m[2], args: [term(m[1], intros), term(m[3], intros)] };
+    // `J - I + 1`: a chain, left to right, `*`, `/` and `mod` binding tighter than `+` and `-`
+    const parts = text.split(/ ([-+*/]|mod) /);
+    if (parts.length > 3 && parts.every((x, i) => (i % 2 ? true : new RegExp(`^${TERM}$`).test(x)))) {
+      const fold = (xs: (string | Term)[], ops: string[]): (string | Term)[] => {
+        const out: (string | Term)[] = [xs[0]];
+        for (let i = 1; i < xs.length; i += 2) {
+          if (ops.includes(xs[i] as string)) { const l = out.pop()!; out.push({ f: xs[i] as string, args: [typeof l === 'string' ? term(l, intros) : l, typeof xs[i + 1] === 'string' ? term(xs[i + 1] as string, intros) : xs[i + 1] as Term] }); }
+          else out.push(xs[i], xs[i + 1]);
+        }
+        return out;
+      };
+      const [e] = fold(fold(parts, ['*', '/', 'mod']), ['+', '-']);
+      if (typeof e !== 'string' && 'f' in e) return e;
+    }
     for (const t of funTemplates) {
       const g = regexOf(t).exec(text); if (!g) continue;
       const args: Term[] = new Array(t.arity).fill(null).map(() => ({ w: true } as Term));
@@ -291,12 +307,24 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     }
     return joined;
   }
+  // what `is` evaluates rather than builds: arithmetic and the seven destructors
+  const EVALUABLE = new Set(['+', '-', '*', '/', 'mod', 'str_len', 'str_char', 'str_sub', 'str_pre', 'str_seg', 'str_segs', 'atom_of']);
+  const varsOf = (t: Term): string[] => ('v' in t ? [t.v] : 'f' in t ? t.args.flatMap(varsOf) : 'or' in t ? t.or.flatMap(varsOf) : []);
   const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = []; const imported = new Set<string>();
   const badAlternatives: string[] = [];   // a numbered alternative that does not start with `if` or `unless`
   function finish(rule: Rule, intros: Intro[]) {
     for (const it of intros) if (!VALUE.has(it.noun) && !rule.guards.has(it.v)) rule.guards.set(it.v, { noun: it.noun });
     for (let i = rule.body.length - 1; i >= 0; i--) {
       const l = rule.body[i];
+      // `N is int(S)` with N a head variable: a term the renderer moved out of the head of one alternative goes back into it
+      if ((l.rel === '=' || l.rel === 'is') && !l.neg && 'v' in l.args[0] && 'f' in l.args[1] && !EVALUABLE.has(l.args[1].f)) {
+        const v = (l.args[0] as { v: string }).v, k = l.args[1];
+        const elsewhere = rule.body.some((b, j) => j !== i && b.args.some((a) => varsOf(a).includes(v))) || varsOf(k).includes(v);
+        if (!elsewhere && rule.head.args.some((a) => 'v' in a && a.v === v)) {
+          rule.head.args = rule.head.args.map((a) => ('v' in a && a.v === v ? k : a));
+          rule.body.splice(i, 1); continue;
+        }
+      }
       if (l.rel === '=' && !l.neg && 'v' in l.args[0] && !('v' in l.args[1]) && !('or' in l.args[1]) && !('f' in l.args[1]) && rule.head.args.some((a) => 'v' in a && a.v === (l.args[0] as { v: string }).v)) {
         const v = (l.args[0] as { v: string }).v, k = l.args[1];
         const sub = (t: Term) => mapT(t, (x) => (x === v ? k : { v: x }));
@@ -369,7 +397,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
 
   // --------------------------------------------------------------- markdown
-  const clean = (s: string) => s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/<a id="[^"]+"><\/a>/g, '');
+  // a link is on one line and holds no bracket: a stray `[` in prose must not open one that ends at the next real link
+  const clean = (s: string) => s.replace(/\[([^\][\n]+)\]\([^)\n]*\)/g, '$1').replace(/<a id="[^"]+"><\/a>/g, '');
   type Block = { type: string; text?: string; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][] };
   const md = clean(rawMd);
   const blocks = parseMd(md).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code') as Block[];
