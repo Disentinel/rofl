@@ -10,6 +10,11 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_vague_check_is_asked_about_and_the_cell_stays_out_of_the_book_until_it_is_answered, decision).
+recorded(f_a_vague_check_is_asked_about_and_the_cell_stays_out_of_the_book_until_it_is_answered, "2026-09-24").
+addressed_by(f_a_vague_check_is_asked_about_and_the_cell_stays_out_of_the_book_until_it_is_answered, "playground/page.html").
+finding_note(f_a_vague_check_is_asked_about_and_the_cell_stays_out_of_the_book_until_it_is_answered, "DECIDED 2026-09-24 by Vadim, after `Код идеальный` came back as `never C is unawaited`: the translator had picked one meaning of `ideal` and said nothing. A translator must show the person that a request is under-specified: write the rule asked for over numbered conditions still to be named (`A file F is ideal if all of:` with `?? ...` lines), leave the cell red and not valid, and let the person fill it in plain language and iterate. BUILT: the answer carries `questions`; a cell with questions is marked, its state says it needs an answer, it is left out of the book (the other cells run as if it were absent), and under the questions is a box for an answer in plain language. The answer goes back with the whole exchange (the rules with the original words, each cell written, each answer), the cell is written again and may still ask; every answer stays above the cell under the original, and a finished translated cell offers the same box to refine it. Editing the cell by hand makes it the person's own formal cell, as the rofl-tooling book says of a translation, and Revert returns the original words. The same form carries a check the language cannot say yet: its `??` line names what is missing and the question says so. Checked with a stub in place of Claude: the open cell ran nowhere, the answer arrived as the third turn, and the finished cell ran two invariants.").
+
 finding(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, pitfall).
 recorded(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "2026-09-24").
 addressed_by(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "playground/page.html").
