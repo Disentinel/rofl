@@ -1,0 +1,79 @@
+-- kernel-phrases.rofl — the sentence of every relation ring 0 is written in:
+-- the reflection the kernel keeps about each clause it loads, and what the
+-- kernel's own programs (boot.rofl, safety.rofl, policy.rofl,
+-- rules/strata.rofl) derive from it. Read by `rofl-render`, which renders
+-- those programs as docs/rings; loaded by nothing else. The format is
+-- facts/js-phrases.rofl's.
+edb(phrase).
+-- the reflection: what the kernel records about every clause it loads
+phrase(has_conclusion, "<0:rule> has the conclusion <1:literal>").
+phrase(has_premise, "<0:rule> has a premise at <1:position>").
+phrase(premise_lit, "the premise at <1:position> of <0:rule> is <2:literal>").
+phrase(concludes, "<0:rule> concludes <1:relation>").
+phrase(conclusion_tense, "<0:rule> concludes at <1:tense>").
+phrase(premise_pos, "<0:rule> reads <1:relation>").
+phrase(premise_neg, "<0:rule> negates <1:relation>").
+phrase(uses_builtin, "<0:rule> uses the builtin <1:builtin>").
+phrase(reads_from, "<0:rule> reads the book <1:book>").
+phrase(writes_to, "<0:rule> writes the book <1:book>").
+phrase(reserved, "<0:relation> is reserved").
+phrase(mode, "<0:builtin> has the mode <1:mode>").
+phrase(edb, "<0:relation> is given from outside").
+phrase(authority, "<1:writer> has authority over <0:book>").
+phrase(imports, "<0:book> imports <1:book>").
+phrase(collects, "<0:book> collects").
+phrase(exports, "<0:book> exports to <1:reader>").
+phrase(premise_var, "<4:variable> stands at <3:index> in the <2:slot> at <1:position> of <0:rule>").
+phrase(slot_arity, "<3:number> is the variable count of the <2:slot> at <1:position> of <0:rule>").
+phrase(opaque_seed, "<0:relation> is opaque to begin with").
+-- boot.rofl
+phrase(rule_known, "<0:rule> is known").
+phrase(perspective, "<0:book> has a writer").
+phrase(sees, "<0:book> sees <1:book>").
+phrase(malformed, "<0:rule> is malformed").
+phrase(breach, "<0:rule> breaches a reserved relation").
+phrase(flow, "<0:book> feeds <1:book>").
+phrase(flows_to, "<0:book> flows to <1:book>").
+phrase(crossing, "the flow from <0:book> to <1:book> crosses a wall").
+phrase(collects_from, "<0:book> collects from <1:book>").
+phrase(collected, "<0:book> gathers from books it cannot name").
+phrase(gathered, "the flow from <0:book> to <1:book> is gathered").
+phrase(leak, "<0:book> leaks into <1:book>").
+phrase(unmoded, "<0:rule> uses a builtin with no mode").
+phrase(undefined_premise, "<0:rule> reads <1:relation> though nothing defines it").
+phrase(negated_under, "<0:relation> is negated in <1:book>").
+phrase(exported_to, "<0:book> is exported to <1:book>").
+phrase(exported, "<0:book> is exported").
+-- safety.rofl
+phrase(slot, "<0:rule> asks about the <2:slot> at <1:position>").
+phrase(binds_at, "the premise at <1:position> of <0:rule> binds <2:variable>").
+phrase(bound_before, "<2:variable> is bound before <1:position> in <0:rule>").
+phrase(ground_upto, "the <2:slot> at <1:position> of <0:rule> is bound up to <3:index>").
+phrase(ground, "the <2:slot> at <1:position> of <0:rule> is ground").
+phrase(analysed, "<0:rule> is analysed").
+phrase(binds, "<0:rule> binds <1:variable>").
+phrase(eq_or_is, "<0:operator> binds").
+phrase(op_used, "<0:operator> is used").
+phrase(cmp_op, "<0:operator> compares").
+phrase(unsafe_rule, "<0:rule> is unsafe").
+phrase(blocked_head, "<0:rule> has a blocked head").
+phrase(executable, "<0:rule> may run").
+phrase(has_neg_rule, "<0:rule> has a negation").
+phrase(mono_rule, "<0:rule> is monotone").
+phrase(stratum_cone, "<0:relation> is in the stratum cone").
+phrase(late_rule, "<0:rule> runs late").
+phrase(demand_rel, "<0:relation> is answered on demand").
+phrase(trigger_of, "<0:relation> can trigger <1:relation>").
+phrase(neg_relation, "<0:relation> is negated somewhere").
+phrase(provenance_reader, "<0:rule> reads provenance").
+phrase(stratum, "<0:relation> is in the stratum <1:number>").
+-- policy.rofl
+phrase(rule_reads, "the rules of <0:relation> read <1:relation>").
+phrase(rule_relation, "<0:relation> is mentioned by a rule").
+phrase(cone, "<1:relation> is in the cone of <0:relation>").
+phrase(opaque_closed, "<0:relation> is opaque").
+-- rules/strata.rofl
+phrase(dep, "<0:relation> depends on <1:relation>").
+phrase(dep_neg, "<0:relation> depends negatively on <1:relation>").
+phrase(reach, "<0:relation> reaches <1:relation>").
+phrase(unstratified, "<0:relation> is unstratified").

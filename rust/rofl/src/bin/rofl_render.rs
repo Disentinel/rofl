@@ -271,6 +271,9 @@ fn pad(s: &mut String, raw: &str, text: &str) {
 }
 fn is_wild(h: &Heap, t: Term) -> bool { matches!(t.kind(), TermK::Var(v) if h.name(v).starts_with("_$")) }
 fn capitalize(s: &str) -> String { let mut c = s.chars(); match c.next() { Some(f) => f.to_uppercase().collect::<String>() + c.as_str(), None => String::new() } }
+// a conclusion's tense: after a rule's head, and before a group of facts
+fn when(t: Tense) -> &'static str { match t { Tense::Next => " in the next tick", Tense::Init => " initially", Tense::Now => "" } }
+fn lead(t: Tense) -> &'static str { match t { Tense::Next => "In the next tick, ", Tense::Init => "Initially, ", Tense::Now => "" } }
 fn article(n: &str) -> &'static str { if n.starts_with(['a', 'e', 'i', 'o', 'u']) { "an" } else { "a" } }
 
 impl<'a> R<'a> {
@@ -856,6 +859,7 @@ impl<'a> R<'a> {
         let mut s: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
         if let Some(c0) = s.chars().next() { if c0.is_lowercase() { s = c0.to_uppercase().collect::<String>() + &s[c0.len_utf8()..]; } }
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(s, ", in the {}", self.book_name(l.book)); }
+        s.push_str(when(l.tense));
         s
     }
 
@@ -886,6 +890,7 @@ impl<'a> R<'a> {
         if let Some(c0) = subject.chars().next() { if c0.is_lowercase() { subject = c0.to_uppercase().collect::<String>() + &subject[c0.len_utf8()..]; } }
         let mut rest: String = rest.split_whitespace().collect::<Vec<_>>().join(" ");
         if self.home.get(&l.rel).map_or(false, |b| *b != l.book) { let _ = write!(rest, ", in the {}", self.book_name(l.book)); }
+        rest.push_str(when(l.tense));
         if !subject.contains(' ') { return (None, format!("{subject} {rest}")); }
         (Some((key, subject)), rest)
     }
@@ -1166,7 +1171,7 @@ impl<'a> R<'a> {
                 if !anchor.is_empty() { anchored.remove(&rel); }  // un-claim only what this line claimed
                 return;
             }
-            let _ = writeln!(out, "{anchor}`{name}`{noun} includes {}.\n", items_.join(", "));
+            let _ = writeln!(out, "{anchor}{}`{name}`{noun} includes {}.\n", lead(group[0].head.tense), items_.join(", "));
             items.push(Item::Block(out));
             return;
         }
@@ -1179,7 +1184,7 @@ impl<'a> R<'a> {
             }
             None => (1..=arity).map(|i| format!("arg {i}")).collect(),
         };
-        let _ = writeln!(out, "{anchor}`{name}`{noun} lists:\n");
+        let _ = writeln!(out, "{anchor}{}`{name}`{noun} lists:\n", lead(group[0].head.tense));
         let _ = writeln!(out, "| {} |", header.join(" | "));
         let _ = writeln!(out, "|{}", "---|".repeat(arity));
         for c in group {
@@ -1243,7 +1248,7 @@ impl<'a> R<'a> {
                         let c = &clauses[i];
                         let fact = c.body.is_empty();
                         let mut j = i + 1;
-                        while j < clauses.len() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() { j += 1; }
+                        while j < clauses.len() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() && clauses[j].head.tense == c.head.tense { j += 1; }
                         if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored, &mut set_members); }
                         else {
                             let b = self.book_name(c.head.book);
@@ -1540,6 +1545,7 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                     n += 1;
                     let _ = writeln!(out, "clause(r{n}, {:?}).", doc.stem);
                     let _ = writeln!(out, "head(r{n}, {}).", h.name(c.head.rel));
+                    match c.head.tense { Tense::Next => { let _ = writeln!(out, "tense(r{n}, next)."); } Tense::Init => { let _ = writeln!(out, "tense(r{n}, init)."); } Tense::Now => {} }
                     let _ = writeln!(out, "nargs(r{n}, 0, {}).", c.head.args.len());
                     let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
                     *e = (*e).max(c.head.args.len());

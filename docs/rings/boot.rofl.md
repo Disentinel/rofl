@@ -1,0 +1,618 @@
+---
+world: boot
+books: audit, main
+default: main
+---
+
+# boot
+
+Reads:
+
+- from outside these files:
+  - <a id="authority"></a>A writer has authority over a book (`authority`)
+  - <a id="concludes"></a>A rule concludes a relation (`concludes`)
+  - <a id="edb"></a>A relation is given from outside (`edb`)
+  - <a id="has_conclusion"></a>A rule has the conclusion (`has_conclusion`)
+  - <a id="has_premise"></a>A rule has a premise at a position (`has_premise`)
+  - <a id="mode"></a>A builtin has the mode (`mode`)
+  - <a id="premise_lit"></a>The premise at a position of a rule is a literal (`premise_lit`)
+  - <a id="premise_pos"></a>A rule reads a relation (`premise_pos`)
+  - <a id="reads_from"></a>A rule reads the book (`reads_from`)
+  - <a id="reserved"></a>A relation is reserved (`reserved`)
+  - <a id="uses_builtin"></a>A rule uses the builtin (`uses_builtin`)
+  - <a id="writes_to"></a>A rule writes the book (`writes_to`)
+
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="rule_known"></a>A rule is known if it [has the conclusion](#has_conclusion) some literal.
+- <a id="perspective"></a>A book has a writer if some writer [has authority over](#authority) it.
+- <a id="collected"></a>A book gathers from books it cannot name if it [collects from](#collects_from) some book.
+- <a id="negated_under"></a>A relation is negated in a book P if [the premise at](#premise_lit) some position of a rule R is $not($lit(it, P, something, something)).
+- A book imports a book Q in the next tick if it [imports](#imports) Q.
+- A book collects in the next tick if it [collects](#collects).
+- <a id="exports"></a>A book exports to a reader W in the next tick if it [exports to](#exports) W.
+- <a id="exported"></a>A book is exported if it [is exported to](#exported_to) some book.
+
+<a id="$kernel_authority"></a>`$kernel_authority` includes `boot`.
+
+> ^ THE KERNEL'S OWN CLAIM, and it must be the first clause of the first load.
+> Everything below is signed `$kernel` rather than `user`, which is what makes
+> `forged[audit]` able to mean anything: a fact signed by a principal with no
+> standing in the book it landed in. A second claim, in this file or any other,
+> is REFUSED — the ring is entered once, before there is anyone to stop it.
+
+> boot.rofl — the meta-kernel as data (Appendix A of START.md).
+> STRATUM 0: monotone meta-kernel. No `not` above the marked line.
+
+<a id="sees"></a>A book P sees a book N either:
+
+1. if P [has a writer](#perspective) and N is P;
+2. if P [imports](#imports) N;
+3. if P [imports](#imports) a book X and X [sees](#sees) N.
+
+> The import graph is host data, so `imports` has no rule and may hold no
+> facts. Declared extensional, or `undefined_premise` below reads that
+> emptiness as a misspelling. Declaring an input is the remedy, not a waiver.
+
+Declared as facts:
+
+- <a id="imports"></a>`imports` — rows in this file
+
+> WHERE THE DEPENDENCY GRAPH WENT, and why nothing replaced it here.
+> 
+> Ten rules stood at this point — `dep/2` twice, `dep_neg/2`, `reach/2` twice,
+> `unstratified/1`, `stratum/2` four times. They computed, as data, the
+> schedule the evaluator then read back out of the store. The evaluator now
+> peels that schedule off the DECODED RULES before a single rule fires
+> (`src/rounds.ts`, `peelRounds`), so the program no longer has to derive a
+> description of itself in order to be run.
+> 
+> Unstratifiability stopped being a property that has to be DETECTED. It is a
+> round that settles nothing while work remains, and the relations still
+> standing are the refusal. That refusal reaches further than `unstratified`
+> did: it names every relation that cannot ever settle, not only the ones
+> sitting on the cycle. What it no longer carries is the `reach` trace that
+> showed WHY, and that is the price.
+> 
+> THE ONE DECISION THOSE RULES HELD THAT IS KEPT. `conclusion_tense` still
+> decides it, now in `peelRounds` instead of in `dep`: a rule whose head is
+> written '@next' contributes no edge and settles no relation, because its
+> conclusion is not derived in this tick at all. It is staged and installed at
+> the tick boundary, and the tick that reads it reads a base fact. A sense ->
+> decide -> act -> world -> sense loop is acyclic in time; without this it
+> read as a negative cycle and the program was refused (examples/npc measured
+> exactly that). The old `stratum(Rel, 0) :- conclusion_tense(R, next)` floor
+> said the same thing from the other side and is kept the same way: such a
+> relation is base for the tick that sees it, which is round 0.
+> 
+> `edb/1` survives the deletion because `undefined_premise` below still reads
+> it. It no longer feeds a stratum.
+
+> ============ negation below this line only ============
+
+In the audit:
+
+<a id="malformed"></a>A rule R is malformed either:
+
+1. if R [is known](#rule_known), unless R [has a premise at](#has_premise) some position;
+2. if R [has a premise at](#has_premise) some position, unless R [has the conclusion](#has_conclusion) some literal.
+
+<a id="breach"></a>A rule breaches a reserved relation if it [concludes](#concludes) a relation Rel and Rel [is reserved](#reserved).
+
+In the main:
+
+<a id="flow"></a>A book feeds a book B if a rule R [reads the book](#reads_from) it and R [writes the book](#writes_to) B.
+
+> Content does not stop at the first hop. `flow` is one rule's signature:
+> this rule reads that ledger and writes this one. The property the leak
+> audit guards is TRANSITIVE — content that reached `case` from `red` and
+> then `report` from `case` is in `report`, and by then the attribution is
+> gone (the collected `claim[case](red, a)` becomes `digest[report](a)`;
+> the ledger name survives collection as an ordinary argument and is then
+> projected away). Every step separately licensed does not license the
+> walk. `sees` was already the reflexive-transitive closure of `imports`;
+> `flow` was the half that was not closed, so the audit compared a
+> transitive right against a single-hop crossing.
+
+<a id="flows_to"></a>A book Y flows to a book B either:
+
+1. if Y [feeds](#flow) B;
+2. if Y [flows to](#flows_to) a book X and X [feeds](#flow) B.
+
+> A crossing is a walk between two DIFFERENT ledgers that nothing licensed.
+> The two ends being the same perspective term is no crossing at all: a rule
+> polymorphic in the ledger reads and writes one variable, and both ends
+> instantiate together. A named ledger gets that from `sees(P, P)`; a
+> variable perspective has no `authority` fact and never will, so `A != B`
+> states the identity here instead. `not bridge_decl` STOOD HERE; see the end.
+
+<a id="crossing"></a>The flow from a book X to a book B crosses a wall if X [flows to](#flows_to) B and X differs from B, unless B [sees](#sees) X.
+
+> The collection graph, host data like `imports` and declared the same way.
+> `collects(X)` says: X is a ledger that deliberately gathers from ledgers it
+> does not name. It is the sentence an author had no way to write before —
+> `imports(To, From)` relates two REGISTERED perspectives, and a rule
+> polymorphic in the ledger reads `$var("P")`, which has no `authority` fact
+> and can never be the From of an import. So a gathering rule was a permanent
+> finding whose only remedy was a paragraph in a README, and a paragraph is
+> not auditable, does not go stale loudly, and no check reads it.
+
+Declared as facts:
+
+- <a id="collects"></a>`collects` — rows from the rules in this file
+
+> The collection EVENT: X collected from A, where A is not a registered
+> ledger. `not perspective(A)` is the test, because `perspective(P) :-
+> authority(P, _)` and the kernel registers an `authority` fact for every
+> named ledger on first use — so the premise holds for exactly the terms that
+> have no `imports` fact available. (It also admits `$any`, the term kept for
+> a perspective that is neither a name nor a variable; that term occurs 0
+> times against 56 `$var` occurrences across the corpus as this was written.)
+> 
+> It is keyed on the ledger that GATHERS, not on where the content ends up,
+> and that was measured rather than assumed. Keyed on the destination, a
+> store where `[case]` gathers and feeds both `[worlds]` and `[ledger_x]`
+> demands `collects` on BOTH downstream ledgers — two statements that are
+> false about them, since neither gathers anything — and demands a third the
+> day a third reader is added. Keyed here, the author writes one true
+> sentence about `[case]` and the onward hops stay subject to the ordinary
+> audit. Control for that measurement: with the declaration removed, both
+> shapes report the walk, so the silence is the declaration's doing.
+
+<a id="collects_from"></a>A book collects from a book Y if all of:
+  - it [collects](#collects);
+  - Y [feeds](#flow) it;
+  - Y differs from it;
+  - unless Y [has a writer](#perspective).
+
+> The declaration EXERCISED, as a positive row that can be ASKED about.
+> `why` needs a ground literal and `$` is unwritable in surface syntax, so
+> `why gathered($var("P"), worlds)` cannot be typed at all; `why
+> collected[audit](case)` can, and its tree names `collects(case)` as an
+> axiom and `not perspective($var("P"))` as the reason the escape applied.
+> A licence nobody can ask about is the invisible absence this replaced.
+
+In the audit:
+
+> Once X has gathered A, content that travels on from X travels as X's, under
+> X's own licences: an undeclared hop out of X is still `crossing(X, ...)`
+> and still a leak. So the walk is covered from the collection point onward,
+> and no further.
+
+In the main:
+
+<a id="gathered"></a>The flow from a book Y to a book B is gathered either:
+
+1. if a book X [collects from](#collects_from) Y and X [flows to](#flows_to) B;
+2. if B [collects from](#collects_from) Y.
+
+> Narrow on purpose. The escape applies only where the SOURCE is not a
+> registered perspective — exactly the case `imports` cannot express. A
+> crossing FROM a named ledger still needs `imports`, so declaring
+> `collects(X)` never stops the audit saying no about X. Measured, because
+> the wide form was the obvious one and it is an off switch: with
+> `not collects(B)` as a bare premise on `leak`, a store carrying a walk from
+> `[secret]` through `[mid]` into a collecting `[case]` — each hop bracketed,
+> the walk declared nowhere — reports NOTHING. This form reports it.
+
+In the audit:
+
+<a id="leak"></a>A book leaks into a book B if [the flow from](#crossing) it to B crosses a wall, unless [the flow from](#gathered) it to B is gathered.
+
+> `forged[audit]`, `unattributed[audit]` and `widened[audit]` USED TO STAND
+> HERE and now live in `rules/self-audit.rofl`, which a world loads when it
+> wants them. See that file for the measurement that moved them; the short
+> version is that they were 100 per cent of the evaluation of an AST index and
+> have never fired on any world in this repository.
+
+<a id="unmoded"></a>A rule uses a builtin with no mode if it [uses the builtin](#uses_builtin) B, unless B [has the mode](#mode) some mode.
+
+> A positive premise on a relation nothing concludes and no fact populates.
+> The rule is not wrong, it is unpopulatable: it fails silently and forever.
+> Positive only — an unpopulatable NEGATED premise always succeeds, so it
+> hides nothing; and `not exception(X)` over a table the host may leave empty
+> is the ordinary idiom, not a defect.
+
+<a id="undefined_premise"></a>A rule reads a relation Rel though nothing defines it if it [reads](#premise_pos) Rel, unless some rule [concludes](#concludes) Rel or Rel [is given from outside](#edb).
+
+> Required results on load:
+>   ? malformed[audit](R)  -> empty      ? breach[audit](R)    -> empty
+>   ? leak[audit](A,B)     -> empty      ? forged[audit](F)    -> empty
+>   ? unmoded[audit](R)    -> empty
+>   ? collected[audit](X)  -> declared collections only, each with a `why`
+>   ? undefined_premise[audit](R, Rel) -> empty
+>   whynot flows_to(red, blue) -> finite demonstration via flow
+> 
+> The two results this list used to open with are gone with the rules that
+> answered them. `? unstratified(X) -> empty` asked whether this file is
+> stratifiable; that question is now answered by the file LOADING AT ALL,
+> since a program whose peel stalls is refused and never reaches a query.
+> `whynot unstratified(reach)` demanded a finite demonstration through a
+> recursive relation; `flows_to` is the recursive relation that is left —
+> the transitive closure of `flow`, the same shape `reach` was — so the
+> property is still asked, of the closure that still exists.
+
+> ============ authorship, appended below the cited region ============
+> 
+> THIS BLOCK IS AT THE END OF THE FILE ON PURPOSE. `facts/spec.rofl` cites
+> boot.rofl by LINE NUMBER — nine duties anchored between 147 and 156 — so a
+> comment inserted higher up silently unfounds every one of them. Measured:
+> the same rules written above `undefined_premise` broke all nine citations
+> and `spec-coverage` reported them as unfounded duties. Appending is what
+> costs nothing.
+> 
+> ANONYMITY. Every asserted fact now carries `asserted_by`; a call that named
+> no author is signed `user` (`ANON_WHO`, src/reflect.ts -- it was `$anon`
+> when this paragraph was written). That closes the hole where an
+> unsigned fact had no row at all and so lay outside every audit that reads
+> one — measured: a forgery signed `mallory` gave `forged[audit]` = 1, the
+> same forgery unsigned gave 0, with no diagnostic anywhere. Anonymity was
+> the cheaper attack than impersonation, which inverts what a trail is for.
+> 
+> The obvious next step is NOT taken, and the reason is a measurement rather
+> than a preference. Withholding `authority(P, user)` would make anonymity a
+> forgery outright and needs no rule at all; it is refused because the honest
+> corpus is anonymous end to end — a bare boot+sensors world holds 9 asserted
+> facts and, before the change, 0 authors — so `forged[audit]` would be red
+> on the first load of every program in this repository and green on nothing.
+> A gate in that state is switched off within a week, and what is left is the
+> appearance of one.
+> 
+> So the kernel RECORDS anonymity and a LEDGER judges it. `demands_authorship`
+> is host data, declared like `imports` and `collects`: a ledger that says
+> nothing keeps exactly what it had, and a ledger that asks gets every
+> unsigned fact in it named. Same shape as `collects`, for the same reason —
+> the alternative was a sentence in a README, and a README is not auditable.
+
+> Required result, appended to the list above:
+>   ? unattributed[audit](F, P) -> empty UNLESS a ledger declared
+>     `demands_authorship(P)`, in which case its unsigned facts, each with a
+>     `why`. Deliberately NOT on the required-empty list: it is a report about
+>     ledgers that asked to be reported on, and a gate that no program can
+>     satisfy is a gate that gets deleted.
+
+> ============ the bridge that granted itself, and its replacement ============
+> 
+> ALSO AT THE END OF THE FILE ON PURPOSE, for the reason the block above
+> gives: `facts/spec.rofl` anchors nine duties at lines 147-156, so the edit
+> at `crossing` was kept line-for-line and the argument lives down here.
+> 
+> `crossing` used to carry a fourth premise, `not bridge_decl(R, A, B)`, and
+> the kernel emitted that row for EVERY rule whose head named a perspective
+> and whose body read a different one (`src/reflect.ts`, `encodeRule`:
+> `if (c.head.perspExplicit && pk !== canonTerm(headP))`). The licence was
+> therefore granted by the very act that needed one — a rule crossing two
+> ledgers wrote its own exemption, and typing the bracket was the whole of
+> the authorisation.
+> 
+> MEASURED against this file with nothing else loaded, three probes:
+> 
+>   digest[report](X) :- datum[secret](X).            leak 0, crossing 0
+>   ... the same, through an intermediate ledger      leak 1, crossing 1
+>   ... the one hop WITH `imports(report, secret)`    leak 0, crossing 0
+> 
+> The first and the third are the finding: the declared crossing and the
+> undeclared one were INDISTINGUISHABLE, so `imports` was documentation over
+> single hops and the audit could only ever fire on a walk of two or more.
+> That contradicts the argument written above `flows_to`, which is that the
+> property is transitive and every step separately licensed does not license
+> the walk. Nine such rows existed in a bare boot.rofl, one per audit rule,
+> so the audit exempted itself before any program was loaded; the tree of
+> this file plus `rules/js-*.rofl` and `rules/findings.rofl` held 122, and
+> reported `crossing` 0 and `leak` 0 for all of them.
+> 
+> NOTHING REPLACES IT AT RULE LEVEL, because there was nothing there to
+> replace. `bridge_decl(R, A, B)` was the conjunction of `reads_from(R, A)`
+> and `writes_to(R, B)` — both still emitted — plus one bit recording whether
+> the author had typed a bracket. And R was joined against nothing: it
+> appeared in no other literal of `crossing`, so the "per rule" licence was
+> per PAIR all along, which is the sentence `imports` already says. The
+> difference was never granularity, it was WHO WRITES IT: a rule says what it
+> DOES, a ledger says what it PERMITS, and those two must not be the same
+> statement. The name stays reserved in `src/reflect.ts` so that no program
+> can conclude into it and spell the self-licence by hand; `breach[audit]`
+> is what refuses that.
+> 
+> A REAL DECLARATION, then, for the crossings this file makes. There are two
+> of them now, and separating them is the whole point of the ledger split
+> above: [$kernel] is what the kernel WRITES about a program (the structure of
+> its rules, the trail of its assertions), and [main] is what the PROGRAM
+> writes and did not file anywhere else. One sentence used to cover both,
+> which meant it said neither.
+> 
+> The audits read the kernel's book: `concludes`, `has_premise`, `reads_from`,
+> `writes_to`, `uses_builtin`, `asserted_by`, `in_perspective`. That is the
+> sentence below, and it is now REVOCABLE on its own — delete it and the six
+> audit rules that need it go red by name, while the ones that only read the
+> program's declarations stay green.
+
+`imports` lists:
+
+| book | book |
+|---|---|
+| `audit` | `$kernel` |
+
+> The audits also read the program's DECLARATION tables, which stayed in
+> [main] because programs write them by hand: `authority` (forged), `mode`
+> (unmoded), `edb` (undefined_premise), `reserved` (breach),
+> `demands_authorship` (unattributed), plus this file's own derived
+> `rule_known`, `crossing`, `gathered` and `collects_from`. That is a
+> different sentence about a different book and it keeps its own line.
+
+`imports` lists:
+
+| book | book |
+|---|---|
+| `audit` | `main` |
+
+> AND THE ONE THAT IS NOT AN AUDIT. `rule_known`, `flow` and `perspective`
+> above are derived into [main] — the default ledger — and two of them read
+> the kernel's book. So the default ledger reads it too, and saying so is
+> honest rather than convenient.
+> 
+> It is also the widest sentence in this file, and the price is written down
+> rather than discovered later: it licenses EVERY rule anywhere that reads
+> reflection and writes no ledger of its own, which is 19 of the 30 such rules
+> in the tree (`rules/kernel-policy.rofl` 8, `rules/strata.rofl` 7, this file
+> 2, `examples/rip` 1, `examples/loot` 1). A rule that writes a NAMED ledger
+> gets nothing from it and must declare its own, which is what keeps
+> requirement one alive: `uninvited[audit]` in examples/loot reads `writes_to`
+> and is covered by the audit's line above, not by this one.
+> 
+> The alternative was measured and refused: moving `rule_known` and `flow`
+> into [audit] removes the need for this line and breaks 21 host-side reads of
+> `flow`, `flows_to`, `crossing`, `collects_from` and `gathered` in test files
+> this change does not own. The line stays, the number is on the record, and
+> the move is a separate piece of work.
+
+`imports` lists:
+
+| book | book |
+|---|---|
+| `main` | `$kernel` |
+
+> AND THE CROSSING THIS FILE DELIBERATELY DOES NOT DECLARE. An audit rule
+> that quantifies over the ledger — `answer_without_trace[audit](S, Env, P)
+> :- resolve_answer[Env](S, P), not explained[Env](S).` in
+> `rules/js-resolve.rofl` is the shape — reads `$var("Env")`, which has no
+> `authority` fact and so can never be the From of an `imports`. That is the
+> case `collects` exists for, and `collects(audit).` would license all four
+> such crossings in that layer at a stroke.
+> 
+> It is NOT written here, and the reason is this file's own test: a
+> declaration that licenses nothing derives no `collected[audit]` row and is
+> a decoration. Bare boot.rofl has no polymorphic audit rule — its nine rules
+> all read [main], which has a name — so the sentence would license nothing
+> HERE while standing as a blanket, permanent licence for every polymorphic
+> read into [audit] in every program that ever loads this file, including
+> audits nobody has written yet. Measured, too: with it here, every store in
+> the repository carries a `collects` fact signed `user`, which is a row in
+> somebody else's provenance query that nobody put there.
+> 
+> So it belongs to the LAYER that writes such a rule, next to the rule, where
+> it is true and where it derives a row. `collects` is narrow enough for that
+> to be safe: `collects_from` requires `not perspective(A)`, so a layer
+> declaring it never stops the audit saying no about a ledger that HAS a
+> name — `rules/js-*.rofl` crosses `code -> audit`, and that one still needs
+> `imports(audit, code)` written out.
+
+> ============ the widened negation, appended below the cited region ========
+> 
+> TWO FILES LOADED INTO ONE STORE BOTH WRITE `[main]`, AND MEAN DIFFERENT
+> THINGS BY IT (finding `f_two_files_writing_one_book_is_scoping_not_naming`).
+> Datalog accumulates, so the union is not corruption and is usually what was
+> wanted. What it silently changes is a NEGATION: file A's `not p(X)` now
+> ranges over file B's `p` facts, and nothing anywhere says so. The damage is
+> a property of the WHOLE program and is invisible in either file alone, and
+> the union has legitimate exceptions — so by this file's own criterion
+> (forbid where there is no legitimate exception, report where there is) it is
+> an audit ROW and not a refusal and not a scope.
+> 
+> `negated_under` is the book-aware half. `safety.rofl` already derives
+> `neg_relation(A)` — what is negated ANYWHERE — and that is book-blind, which
+> is exactly the distinction being drawn here: a relation negated in [red] and
+> co-written in [blue] is two unrelated facts. The perspective is carried in
+> the reified premise and nowhere else, so the literal is destructured, the
+> way `safety.rofl` already destructures `$builtin`.
+
+In the main:
+
+> WHAT "MORE THAN ONE LOADER" MEANS IN TERMS THE KERNEL ALREADY RECORDS, and
+> the answer is `asserted_by`'s second argument and nothing else. There is no
+> load identity in the store — `src/api.ts` counts loads (`$load(N)` appears
+> only as a `hole` id) and the count reaches no fact — so the finest grain
+> available is the PRINCIPAL a load named. That grain is stated as a limit
+> rather than hidden: two files loaded with no `who` are both `user`, which
+> `src/reflect.ts` defines as "whoever loaded a file and did not say who they
+> are", and by that definition they are ONE writer. The audit is therefore
+> exactly as sharp as the host's discipline about `who`, and it says nothing
+> at all about the 22 (rel, book) pairs in this repository's demos that take
+> facts from more than one load under a single name (measured 2026-09-07 over
+> 19 example worlds).
+> 
+> THE RING IS NOT ONE OF THE FILES, and subtracting it is not an exemption
+> list. boot.rofl is loaded once per store, as the first load, and claims the
+> kernel ring in its first clause; a second claim is refused and `src/api.ts`
+> refuses a caller-supplied `$` principal, so no program can join `$kernel`
+> to widen its own writer set. What the subtraction protects is the decision
+> already recorded in `src/reflect.ts` (KERNEL_BOOK): `edb`, `authority`,
+> `mode` and `reserved` are CO-WRITTEN ON PURPOSE — the kernel writes some
+> rows and the program writes the rest, `undefined_premise` reads `not edb`
+> once and must see both — and forcing that apart was already measured to
+> turn every honest program red. Measured here too: without the subtraction
+> the audit reports 13 rows over those same 19 worlds, ALL of them `edb` or
+> `imports` in [main] and every one of them `$kernel` plus exactly one
+> program. With it, 0. Subtracting the principal rather than exempting the
+> relation is deliberate: `$kernel` plus alice plus bob is still two files,
+> and an exemption keyed on the relation would have gone quiet on it.
+
+> Required result, appended to the list above:
+>   ? widened[audit](Rel, P) -> empty in this repository (measured over 19
+>     example worlds). Deliberately NOT phrased as a guarantee: it is a
+>     REPORT, like `unattributed` and `collected`, because a co-written table
+>     under two named authors is a thing an author may legitimately want. No
+>     waiver table is shipped, and that is this file's own test applied to
+>     itself — a declaration that licenses nothing in the corpus derives no
+>     row and is a decoration. If one is ever needed it is `collects`-shaped:
+>     `edb(co_written).` plus `not co_written(Rel)` on the rule.
+> 
+> WHAT THIS CANNOT SEE, stated because the gate is otherwise wrong in the safe
+> direction. Only ASSERTED base facts carry `asserted_by`, so a relation two
+> files DERIVE into is outside it (`retracted[recon]` in examples/aka is that
+> shape). And a negation reached through a rule chain — `not q(X)` where `q`
+> is derived from a co-written `p` — is a widening this rule does not report,
+> because the premise names `q` and the writers are `p`'s. Both are the same
+> boundary: this audit is about the ONE relation the negation names.
+
+> ============ the ledger declarations outlive the tick, appended ===========
+> 
+> BARE boot.rofl, NOTHING ELSE LOADED, ONE TICK: `leak[audit]` reports THREE
+> ROWS, and all three are this file's own crossings — `$kernel -> audit`,
+> `$kernel -> main`, `main -> audit` — the very walks the three `imports`
+> facts above declare. The declarations are gone by then. `src/api.ts` gives
+> an asserted fact `scope: 'tick'` unless its relation is RESERVED or is
+> `semantics` or `sealed`; `imports` and `collects` are neither, because they
+> are host data and not kernel vocabulary, so they are dropped at the boundary
+> with everything else the tick held. The audit then reports every crossing
+> the program ever declared, on a program nobody changed.
+> 
+> MEASURED OVER THE CORPUS, 55 programs (every `examples/*` world, every
+> `rules/*.rofl` and `facts/*.rofl` layer, `safety.rofl`, `policy.rofl`), each
+> loaded on this file and evaluated, then advanced one tick and evaluated
+> again: `leak[audit]` 17 rows at load and 237 after the tick. Forty-three of
+> the 55 have no leak at load and a leak after it. The floor is 3 — this
+> file's own — and it is charged to every program in the tree.
+> 
+> THE FIX IS THE LANGUAGE'S OWN AND NOT THE HOST'S. `src/api.ts` could add two
+> names to the timeless list beside `semantics` and `sealed`, and the comment
+> there gives the right reason for that class ("a declaration about HOW the
+> world is kept must not be droppable at a tick boundary, or the world quietly
+> starts keeping again"). It is refused here: `imports` and `collects` are
+> boot.rofl's vocabulary, the kernel is closed against domain names on
+> purpose, and a program can already say this in one line. So it is said here,
+> once, for every program that loads this file.
+> 
+> examples/npc PAID FOR THIS BY HAND and wrote the reason down: "a plain
+> `collects(mind).` is tick-scoped and would vanish here, taking the licence
+> with it and putting the leak back at tick 1 with nothing in the file
+> changed." Two identical clauses are one rule — the id is a content hash —
+> so npc's copies now coincide with these and cost nothing; examples/sus did
+> NOT write them, and its `imports` table was empty from tick 1 onward.
+> 
+> WHAT THIS IS NOT. It does not make a declaration permanent against the
+> author: a retraction inside a tick still takes effect, and what is carried
+> is whatever holds when the boundary is reached. It carries a licence and
+> never a crossing, so it cannot silence a walk that was not declared — the
+> control is `crossing` itself, which is derived fresh each tick from `flow`.
+
+> And `exports` is the third of the same kind, carried for the same reason and
+> found the same way: without this line npc reports 20 infinite counts at tick
+> 0 and 21 at tick 3, because the declaration expired at the boundary and the
+> leak it discharges came back. `f_a_ledger_declaration_expires_at_the_tick_boundary`.
+
+> ============ the nameless reader, appended below the cited region =========
+> 
+> THE MIRROR OF `collects`, AND THE HOLE IT CLOSES IS THE ONE `collects` LEFT.
+> `imports(To, From)` relates two REGISTERED perspectives. `collects(X)` exists
+> because a rule polymorphic in its SOURCE reads a `$var` that can never be the
+> From of an import. The same hole stands on the other side and had no
+> instrument: a NAMELESS READER of a NAMED book -- a rule polymorphic in its
+> HEAD book reads `main`, and `$var("G")` can never be the To of an import.
+> 
+> Measured before this was written: three rows, in two programs, and both
+> programs say in their own comments why the available workaround is wrong.
+> goof leaks `$kernel -> $var("G")` and `main -> $var("G")`; npc leaks
+> `world -> $var("A")`. The line that silences each -- `imports($var("G"),
+> main).` -- is writable and LICENSES THE SPELLING OF A VARIABLE: rename the
+> variable and the licence withdraws in silence. A licence that is an accident
+> wearing the clothes of a decision is worse than no licence.
+> 
+> WHO DECLARES IT, AND WHY IT IS `exports` AND NOT A NEW WORD. `collects(X)` is
+> declared by the gatherer, because the gatherer is the only named party. Here
+> the reader is the nameless one, so the declaration belongs to the SOURCE.
+> That is EXPORT: `imports(To, From)` is the reader's declared intent and
+> `exports(From, To)` is the permission from the side being taken from, which
+> `f_export_precedes_import_so_the_check_belongs_at_load` already names and
+> which is authenticated where a reader's declaration is not -- only a holder
+> of `authority` over A can write a fact into A's book.
+> 
+> `exports(A, anyone)` is the NAMELESS-READER case of that one relation, not a
+> second mechanism: when the reader has a name the second argument carries it,
+> and when it cannot have one the reader is `anyone`. THE NAMED HALF IS NOT
+> BUILT HERE and stays the owner's open decision, together with whether the
+> check becomes a load-time REFUSAL rather than an audit row.
+> 
+> AND `anyone` IS NOT A BLANKET, deliberately: `not perspective(B)` below keeps
+> it to readers that have no name to be granted, so a crossing into a
+> REGISTERED book still needs `imports`. Widening it to cover named readers
+> would turn one declaration into an off switch for a book's outgoing
+> crossings, and that is a decision rather than a generalisation.
+> 
+> TRANSITIVE ON THE SOURCE SIDE, AND ONLY OVER WALKS THAT WERE LICENSED.
+> `collects` carries `gathered(A, B) :- collects_from(X, A), flows_to(X, B)`
+> because content gathered INTO a named X travels on as X's. Mirrored: content
+> that reached a publisher travels on to that publisher's nameless readers,
+> because publishing is a statement about what the book HOLDS and a book holds
+> what it imported. The clause is needed and measured: goof leaks
+> `$kernel -> $var("G")` as a TWO-HOP walk through main, and `exports(main, anyone)`
+> alone left it standing.
+> 
+> THE PREMISE IS `sees(X, A)` AND NOT `flows_to(A, X)`, AND THE DIFFERENCE IS
+> WHETHER A PUBLICATION CAN LAUNDER. `flows_to` would discharge the onward hop
+> of a walk that was ITSELF a violation: goof's positive control plants
+> `sneak(P) :- axiom[euclid](P)`, an undeclared euclid -> main crossing, and
+> under `flows_to` the consequence `euclid -> $var("G")` went silent while only
+> the root stayed named. `sees(X, A)` requires the walk INTO the publisher to
+> have been licensed, so the control keeps all three of its rows. Measured
+> both ways before choosing.
+> 
+> What is NOT here is the reader-side mirror, and it must not be: a nameless
+> reader has no licences to travel under and no name to travel as, so nothing
+> can be carried onward from it. A clause for that would license a hop whose
+> far end this rule cannot see.
+
+<a id="exported_to"></a>A book is exported to a book B if all of:
+  - it [exports to](#exports) `anyone`;
+  - it [feeds](#flow) B;
+  - it differs from B;
+  - unless B [has a writer](#perspective).
+
+In the audit:
+
+Declared as facts:
+
+- `exports` — rows from the rules in this file
+
+> ONE CLAUSE, NOT TWO. `gathered(A, B) :- published_to(A, B).` was written
+> first and is DEAD: `sees(P, P) :- perspective(P)` is reflexive, so the clause
+> below already gives it with X = A. Measured by removing it -- goof and npc
+> stay at leak 0 -- rather than reasoned about, and removed rather than kept
+> for symmetry.
+
+In the main:
+
+The flow from a book Y to a book B is gathered if a book X [sees](#sees) Y and X [is exported to](#exported_to) B.
+
+> ============ where the whole model is written down, appended =============
+> 
+> APPENDED, NOT PUT AT THE TOP, and the reason is this file's own rule:
+> `facts/spec.rofl` anchors nine duties at lines 154-163 by LINE NUMBER, so a
+> comment inserted higher up silently unfounds every one of them. Ten lines at
+> the head of this file was the first draft of this pointer and it moved all
+> nine. Appending costs nothing.
+> 
+> THE BOOK-AND-PERMISSION MODEL IN ONE PLACE: docs/books-and-permission.md.
+> What a book is; every relation of the family with WHO MAY WRITE IT and WHAT
+> IT PERMITS; what each audit catches and what it STRUCTURALLY CANNOT SEE; the
+> standing model; and the open decisions as ONE list. It is DERIVED from this
+> file -- scanners/permission_inventory.ts emits the structure,
+> rules/permission-model.rofl derives the family from a single anchor
+> (`perspective`), and test/permission-doc.test.ts re-derives both sides live
+> and goes red if a relation is added here without a row there.
+> 
+> The comments above stay where they are. Each says why THIS rule has THIS
+> shape and what was measured before it was written, which is the half a
+> general document cannot carry and the half that rots slowest.
+

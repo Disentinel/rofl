@@ -113,7 +113,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     src += '$';
     r = new RegExp(src); cache.set(t, r); return r;
   }
-  type Lit = { rel: string; args: Term[]; neg?: boolean; book?: string };
+  type Lit = { rel: string; args: Term[]; neg?: boolean; book?: string; tense?: string };
   let ambiguous: string[] = [];
   let known = new Map<string, string>();   // variable -> noun, from intros and typed positions in this rule
   function matchLit(text: string, intros: Intro[], asHead = false): Lit | null {
@@ -317,6 +317,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (!homeBook.has(rule.head.rel)) homeBook.set(rule.head.rel, rule.book);
   }
   function sentence(headText: string, conds: string[], where: string) {
+    // a conclusion in another tense says so after the head: `in the next tick`, `initially`
+    const tm = / (in the next tick|initially)$/.exec(headText);
+    if (tm) headText = headText.slice(0, tm.index);
     known = new Map();
     badTerm = null;
     for (let pass = 0; pass < 2; pass++) {
@@ -328,6 +331,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       const head = early ?? matchLit(headText, intros, true);
       if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
       if (!early) trace(headText, head);
+      if (tm) head.tense = tm[1] === 'initially' ? 'init' : 'next';
       // a head that is a relation defined outside the text writes where that relation lives, unless a block says otherwise
       const rule: Rule = { head, body: [], guards: new Map(), where, book: blockSet ? curBook : opts.homeBooks?.[head.rel] ?? curBook };
       let whole = true;
@@ -469,8 +473,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}`); }
       i++; continue;
     }
-    if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(text))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])] }); continue; }
-    if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(text)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])) }); i++; continue; }
+    const lead = /^(Initially|In the next tick), /.exec(text), tense = lead ? (lead[1] === 'Initially' ? 'init' : 'next') : undefined;
+    const fact = lead ? text.slice(lead[0].length) : text;
+    if ((m = /^`(\$?\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(fact))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])], tense }); continue; }
+    if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$/.exec(fact)) && next && next.type === 'table') { homeBook.set(m[1], 'main'); for (const r of next.rows!) parsedFacts.push({ rel: m[1], args: r.map((c) => term(c, [])), tense }); i++; continue; }
     if (/ either:$/.test(text) && next && next.type === 'ol') {
       if (twin(text) || next.items!.some((it) => twin(it.text) || it.sub.some(twin))) {
         for (const side of [0, 1] as const) {
@@ -521,7 +527,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
 
   // ---------------------------------------------------- back into clauses
-  type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[]; book: string };
+  type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[]; book: string; tense?: string };
   function tstr(t: Term): string { return 'v' in t ? t.v : 'a' in t ? t.a : 's' in t ? JSON.stringify(t.s) : 'n' in t ? String(t.n) : 'or' in t ? tstr(t.or[0]) : 'f' in t ? `${t.f}(${t.args.map(inner).join(',')})` : '_'; }
   // inside a functor the kernel's canonical form: variables carry `?`
   function inner(t: Term): string { return 'v' in t ? `?${t.v}` : 'w' in t ? '_' : tstr(t); }
@@ -564,7 +570,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     let heads: string[][] = [[]];
     for (const opts of rule.head.args.map(alternatives)) heads = heads.flatMap((h) => opts.map((o) => [...h, tstr(o)]));
     const out: Clause[] = [];
-    for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body], book: rule.book });
+    for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body], book: rule.book, tense: rule.head.tense });
     return out;
   }
   const parsed: Clause[] = rules.flatMap(expand);
@@ -574,7 +580,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   const argAt = new Map<string, string>();
   for (const m of facts.matchAll(/^arg([vasnf])\((r\d+), (\d+), (\d+), (.*)\)\.$/gm)) argAt.set(`${m[2]}/${m[3]}/${m[4]}`, m[1] === 'v' ? (m[5].startsWith('"_$') ? '_' : m[5].slice(1, -1)) : m[1] === 'f' ? JSON.parse(m[5]).replace(/\?_\$\d+/g, '_') : m[5]);
   const argsOf = (r: string, k: number) => { const out: string[] = []; for (let i = 0; ; i++) { const a = argAt.get(`${r}/${k}/${i}`); if (a === undefined) break; out.push(a); } return out; };
-  for (const m of facts.matchAll(/^head\((r\d+), (\w+)\)\.$/gm)) srcClauses.set(m[1], { head: m[2], args: argsOf(m[1], 0), body: [], book: 'main' });
+  for (const m of facts.matchAll(/^head\((r\d+), (\$?\w+)\)\.$/gm)) srcClauses.set(m[1], { head: m[2], args: argsOf(m[1], 0), body: [], book: 'main' });
+  for (const m of facts.matchAll(/^tense\((r\d+), (next|init)\)\.$/gm)) srcClauses.get(m[1])!.tense = m[2];
   for (const m of facts.matchAll(/^lit\((r\d+), (\d+), (\w+), (pos|neg)\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: m[4] === 'neg', args: argsOf(m[1], Number(m[2])) });
   for (const m of facts.matchAll(/^bi\((r\d+), (\d+), "([^"]+)"\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) });
   const OWN = new Set(['phrase', 'kind_noun', 'sig', 'edb']);
@@ -595,7 +602,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const names = new Map<string, string>(); let n = 0;
     const one = (x: string) => { if ((count.get(x) ?? 0) <= 1) return '_'; if (!names.has(x)) names.set(x, `V${n++}`); return names.get(x)!; };
     const nm = (x: string) => isVar(x) ? one(x) : x.includes('?') ? x.replace(/\?([A-Z]\w*)/g, (_, v) => '?' + one(v)) : x;
-    const head = `${c.head}(${c.args.map(nm).join(',')})`;
+    const head = `${c.head}(${c.args.map(nm).join(',')})${c.tense ? '@' + c.tense : ''}`;
     const key = (l: Clause['body'][0]) => `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map((x) => isVar(x) ? (names.has(x) ? names.get(x) : (count.get(x) ?? 0) <= 1 ? '_' : '?') : x).join(',')})`;
     const body = [...c.body].sort((a, b) => key(a).localeCompare(key(b)));
     const lits = body.map((l) => `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map(nm).join(',')})`).sort();
@@ -606,8 +613,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   let matched = 0; const missing: string[] = [];
   for (const c of srcRules) { const k = canon(c); const n = parsedSet.get(k) ?? 0; if (n > 0) { matched++; parsedSet.set(k, n - 1); } else missing.push(k); }
   const extra = [...parsedSet.entries()].filter(([, n]) => n > 0).map(([k, n]) => `${k}${n > 1 ? ` x${n}` : ''}`);
-  const factKey = (c: Clause) => `${c.head}(${c.args.join(',')})`;
-  const pf = new Set(parsedFacts.map((l) => `${l.rel}(${l.args.map(tstr).join(',')})`));
+  const factKey = (c: Clause) => `${c.head}(${c.args.join(',')})${c.tense ? '@' + c.tense : ''}`;
+  const pf = new Set(parsedFacts.map((l) => `${l.rel}(${l.args.map(tstr).join(',')})${l.tense ? '@' + l.tense : ''}`));
   let factsMatched = 0; const factsMissing: string[] = [];
   for (const c of srcFacts) { if (pf.has(factKey(c))) factsMatched++; else factsMissing.push(factKey(c)); }
 
@@ -634,9 +641,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const u of [...new Set(unparsed)].slice(0, 20)) report.push('  ' + u);
   const bk = (rel: string, tail?: string) => { const b = tail ?? homeBook.get(rel) ?? headBook.get(rel) ?? defaultBook; return b === 'main' ? '' : `[${b}]`; };
   const rofl = (x: string): string => { let m; if ((m = /^([-+*\/]|mod)\((.*),(.*)\)$/.exec(x))) return `${rofl(m[2])} ${m[1]} ${rofl(m[3])}`; if ((m = /^(\w+)\((.*)\)$/.exec(x))) return `${m[1]}(${m[2].split(',').map(rofl).join(', ')})`; return x.replace(/^\?/, ''); };
-  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${c.args.join(', ')})${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
+  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${c.args.join(', ')})${c.tense ? ' @' + c.tense : ''}${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
   const declaredFacts = new Set(declared);
-  const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')}).`;
+  const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')})${l.tense ? ' @' + l.tense : ''}.`;
   // one sentence as the literal it names, read against this file's vocabulary: how a question in the file's words is asked
   const literal = (text: string): string | null => {
     known = new Map(); subjectVar = null;
