@@ -165,6 +165,10 @@
         <h2 id="mindhead">An agent</h2>
         <div class="body" id="mind"></div>
       </section>
+      <section class="panel rule" aria-label="The yard as a whole" id="notebox" hidden>
+        <h2 id="notehead"></h2>
+        <div class="body" id="note"></div>
+      </section>
       <section class="panel rule" aria-label="Rules the agents wrote" id="rulebox" hidden>
         <h2>A rule the agents propose</h2>
         <div class="body" id="rule"></div>
@@ -330,8 +334,33 @@ async function takeRule() {
     + (pastRes.error ? `<p class="dim">${esc(pastRes.error)}</p>` : `<p style="margin:0">Tick ${first.tick} again, re-derived with the rule: the holes it had, <b>${pastRes.before.length}</b>; with the rule, <b>${pastRes.after.length}</b>.</p><ul class="dim" style="margin:0;padding-left:18px">${pastRes.before.map((x) => `<li>${words(esc(x))}</li>`).join('')}</ul><p class="dim" style="margin:0">A rule is a fact about every tick, not an instruction for the next one. Press Next tick and watch ${words('npc_3')} walk.</p>`);
 }
 
+// ------------------------------------------------------------ the yard as a whole: a loop, and the end of the night
+let unlooped = null;
+function notice(head, html) { $('notebox').hidden = false; $('notehead').textContent = head; $('note').innerHTML = html; }
+function drawLoop(t) {
+  const { period: p, since, movers } = t.loop;
+  const tied = movers.filter((m) => m.tied);
+  const span = (a, b) => a === b ? `tick ${a}` : b === a + 1 ? `ticks ${a} and ${b}` : `ticks ${a} to ${b}`;
+  let h = `<p style="margin:0">${span(t.tick - p + 1, t.tick).replace(/^t/, 'T')} ${p === 1 ? 'is' : 'are'} ${span(since, since + p - 1)} again: every agent stands where it stood ${p === 1 ? 'a tick' : `${p} ticks`} ago and chooses what it chose then. Left alone, the yard goes round like this for ever.</p>`;
+  h += `<ul style="margin:0;padding-left:18px">${movers.map((m) => `<li>${words(m.agent)} ${m.acts.map(act).join(', then ')}${m.tied ? ' <span class="dim">&middot; every step a tie</span>' : ''}</li>`).join('')}</ul>`;
+  if (unlooped) { notice('Going round in circles', h + `<p class="dim" style="margin:0">With the rules below taken, too. They reorder ties; this loop is made of something else.</p><pre>${esc(unlooped)}</pre>`); return; }
+  if (tied.length) h += `<p style="margin:0">${tied.length === movers.length ? 'Every one of them is' : `${tied.length} of them are`} going back and forth on ties. The arbiter scored the steps the same, the declared order of acts settled it (east, then west, then north, then south), and the order knows nothing of where an agent just came from. Each of those decisions is a <code>tie[audit]</code> row.</p>`;
+  h += `<p style="margin:0">Three rules add what is missing. They conclude <code>demoted</code>, the one place in npc.rofl &sect;8 a rule may reorder a tie: a demoted act only goes to the back of the order, so whatever is demoted, somebody still acts.</p><pre>${esc(unloopText)}</pre><div class="row"><button type="button" class="primary" id="unloop">Take the rules</button><span class="dim">From the next tick; the step back needs one tick to remember where it stood.</span></div>`;
+  notice('Going round in circles', h);
+}
+async function takeUnloop() {
+  const res = await host.call('learn', unloopText, 'learned: out of the loop');
+  if (!res.ok) { $('note').insertAdjacentHTML('beforeend', `<p class="bad">${esc(res.diagnostics.join(' '))}</p>`); return; }
+  unlooped = unloopText;
+  notice('Out of the loop', `<pre>${esc(unloopText)}</pre><p class="ok" style="margin:0">Taken: ${res.diff.added.length} rules added, ${res.diff.kept} kept, ${res.diff.removed.length} removed.</p><p class="dim" style="margin:0">Press Play. Ask <em>why</em> of a step two ticks from now and the proof says what went to the back of the order.</p>`);
+}
+function drawEnd(t) {
+  notice('The night is over', `<p style="margin:0">npc.rofl stops its clock at tick ${t.tick}: <code>horizon[world](${t.tick})</code>. Past it every sighting would be stamped ${t.tick}, and memory could no longer tell an old one from a new one, so the yard stops here. Look back at any tick, or start over${unlooped ? ' (the rules taken stay in the head)' : ''}.</p>`);
+}
+
 // ------------------------------------------------------------ driving
-let running = false, playing = false;
+let running = false, playing = false, unloopText = '';
+const stopPlay = () => { playing = false; $('play').textContent = 'Play'; };
 async function next() {
   if (running) return; running = true; $('step').disabled = true;
   try {
@@ -340,8 +369,12 @@ async function next() {
     ticks.push(t); viewing = ticks.length - 1; proofHtml = '';
     setStatus(t);
     drawAll(); await checkRule();
-  } catch (e) { $('status').innerHTML = `<span class="bad">${esc(e.message)}</span>`; playing = false; }
-  running = false; $('step').disabled = false;
+    if (t.over) { stopPlay(); drawEnd(t); }
+    else if (t.loop) { if (playing) stopPlay(); drawLoop(t); }
+  } catch (e) { $('status').innerHTML = `<span class="bad">${esc(e.message)}</span>`; stopPlay(); }
+  running = false;
+  const over = ticks.at(-1)?.over;
+  $('step').disabled = $('play').disabled = !!over;
   if (playing) setTimeout(next, 450);
 }
 function setStatus(t) { $('status').innerHTML = `<span>tick <b>${t.tick}</b></span><span><b>${t.ms}</b> ms to think</span><span><b>${t.facts}</b> facts</span>`; }
@@ -356,13 +389,15 @@ document.addEventListener('click', (e) => {
   else if (q.dataset.toggle !== undefined) { const more = q.closest('.step').querySelector(':scope > .step-more'); if (more) more.hidden = !more.hidden; }
   else if (q.dataset.tick !== undefined) { viewing = Number(q.dataset.tick); proofHtml = ''; drawAll(); }
   else if (q.id === 'take') takeRule();
+  else if (q.id === 'unloop') takeUnloop();
 });
 $('yard').addEventListener('keydown', (e) => { const g = e.target.closest('[data-agent]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); chosenAgent = g.dataset.agent; proofHtml = ''; drawAll(); } });
-$('step').addEventListener('click', () => { playing = false; $('play').textContent = 'Play'; next(); });
+$('step').addEventListener('click', () => { stopPlay(); next(); });
 $('play').addEventListener('click', () => { playing = !playing; $('play').textContent = playing ? 'Pause' : 'Play'; if (playing) next(); });
 $('reset').addEventListener('click', async () => {
-  playing = false; $('play').textContent = 'Play';
+  stopPlay();
   const w = await host.call('reset'); world = w; ticks = []; viewing = -1; proofHtml = '';
+  $('notebox').hidden = true;
   $('rulebox').hidden = !learnedRule;
   if (learnedRule) $('rule').innerHTML = `<pre>${esc(learnedRule.text)}</pre><p class="dim" style="margin:0">Starting over with the rule the agents wrote: it is part of the head now.</p>`;
   await next();
@@ -372,6 +407,7 @@ $('reset').addEventListener('click', async () => {
   try {
     const t0 = performance.now();
     world = await start();
+    unloopText = await host.call('unloop');
     for (const e of world.ents) kindOf[e.id] = e.kind;
     for (const p of world.props) kindOf[p.id] = undefined;
     $('step').disabled = $('play').disabled = $('reset').disabled = false;

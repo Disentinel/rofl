@@ -17,7 +17,19 @@ export type Mind = {
   seen: Seen[];
   ties: string[];
 };
-export type Tick = { tick: number; ents: Ent[]; acts: Act[]; minds: Record<string, Mind>; events: string[]; holes: number; ms: number; facts: number; partial: boolean };
+export type Loop = { period: number; since: number; movers: { agent: string; acts: string[]; tied: boolean }[] };
+export type Tick = { tick: number; ents: Ent[]; acts: Act[]; minds: Record<string, Mind>; events: string[]; holes: number; ms: number; facts: number; partial: boolean; loop?: Loop; over: boolean };
+
+/** The way out of the loop the declared order walks the yard into: two demotions, npc.rofl §8 says why that is the only safe shape. */
+export const unloop = () => `-- where it stood a tick ago, carried the way memory is
+was_at[mind](A, X, Y) @next :- self[mind](A, X, Y).
+
+-- on a tie, a step back there goes to the back of the order
+demoted[mind](A, move(D)) :- was_at[mind](A, X, Y), step_to[mind](A, D, X, Y).
+
+-- and so does a step into somebody it can see standing there
+demoted[mind](A, move(D)) :- step_to[mind](A, D, X, Y),
+                             recalls[mind](A, E, _, X, Y, _, _), in_sight[mind](A, E).`;
 
 let boot = '', npc = '';
 let vocab = new Vocabulary();
@@ -26,6 +38,7 @@ let r: Rofl;
 let ents: Ent[] = [];
 let learned = '';
 let ticks: Tick[] = [];
+let fresh = 0;   // the first tick thought with the rules as they are now
 const snaps = new Map<number, string>();
 const holes: { agent: string; reason: string; subject: string }[] = [];
 
@@ -37,7 +50,7 @@ export function init(bootText: string, npcText: string, phraseText: string, conc
 
 export function reset() {
   const t = performance.now();
-  r = head(boot, npc, learned); ents = clone(START); ticks = []; snaps.clear(); holes.length = 0;
+  r = head(boot, npc, learned); ents = clone(START); ticks = []; fresh = 0; snaps.clear(); holes.length = 0;
   return { width: WIDTH, height: HEIGHT, props: PROPS, ents, learned, ms: Math.round(performance.now() - t) };
 }
 
@@ -67,12 +80,29 @@ export function step(): Tick {
   const tick = r.store.tick;
   snaps.set(tick, r.save()); snaps.delete(tick - KEEP);
   const out = physics(ents, acts);
-  const rec: Tick = { tick, ents: clone(ents), acts, minds, events: out.events, holes: holeCount, ms: 0, facts: r.store.facts.size, partial };
+  const [now] = rows(r, 'now[world](T)'), [end] = rows(r, 'horizon[world](H)');
+  const rec: Tick = { tick, ents: clone(ents), acts, minds, events: out.events, holes: holeCount, ms: 0, facts: r.store.facts.size, partial, over: Number(now?.T) >= Number(end?.H) };
+  rec.loop = loopOf([...ticks.slice(fresh), rec]);
   ents = out.ents;
   r.tickAdvance({ budget: BUDGET });
   rec.ms = Math.round(performance.now() - t);
   ticks.push(rec);
   return rec;
+}
+
+const yard = (t: Tick) => t.ents.map((e) => `${e.id}@${e.x},${e.y}:${e.hp}`).join(' ');
+
+/** The yard going round: the last `period` ticks are the `period` before them again, so every mind sees what it saw and chooses what it chose. */
+function loopOf(ts: Tick[]): Loop | undefined {
+  for (let p = 1; 2 * p <= Math.min(ts.length, 24); p++) {
+    const cycle = ts.slice(-p);
+    if (!cycle.every((t, i) => yard(t) === yard(ts[ts.length - 2 * p + i]))) continue;
+    const movers = cycle[0].ents.filter((e) => cycle.some((t) => t.ents.some((f) => f.id === e.id && (f.x !== e.x || f.y !== e.y)))).map((e) => {
+      const acts = cycle.map((t) => t.acts.find((a) => a.agent === e.id)?.act ?? 'nothing');
+      return { agent: e.id, acts, tied: cycle.every((t, i) => t.minds[e.id]?.ties.some((x) => x.startsWith(acts[i] + ' / '))) };
+    });
+    return { period: p, since: ts[ts.length - 2 * p].tick, movers };
+  }
 }
 
 function at(tick: number, extra = ''): Rofl {
@@ -104,12 +134,12 @@ export function whynot(tick: number, literal: string): string {
 export function propose() { return proposeRule(holes); }
 
 /** Take a rule into the head from the next tick on; the rule-set diff says what changed. */
-export function learn(text: string) {
+export function learn(text: string, concern = 'learned: the rule the agents wrote') {
   const before = ruleIds(r);
   const l = r.load(text, { who: 'sim', budget: BUDGET });
   if (!l.ok) return { ok: false, diagnostics: l.diagnostics };
-  learned += '\n' + text;
-  for (const c of parseProgram(text)) if (c.body.length) concerns[ruleIdOf(c)] = 'learned: the rule the agents wrote';
+  learned += '\n' + text; fresh = ticks.length;
+  for (const c of parseProgram(text)) if (c.body.length) concerns[ruleIdOf(c)] = concern;
   return { ok: true, diff: ruleSetDiff(before, ruleIds(r)) };
 }
 

@@ -15,10 +15,13 @@ phrase(tie, "<0:agent> scores <1:act> and <2:act> the same").
 phrase(does, "<0:agent> does <1:act>").
 phrase(uncovered, "<0:agent> has no rule for <2:thing>, <1:reason>").
 phrase(act_ord, "<0:act> ranks <1:number>").
+phrase(rank, "<1:act> ranks <2:number> for <0:agent>").
+phrase(demoted, "<1:act> goes to the back of the order for <0:agent>").
 
 phrase(alive, "<0:agent> is alive").
 phrase(self_hurt, "<0:agent> knows it is hurt").
 phrase(self, "<0:agent> believes it is at <1:number>, <2:number>").
+phrase(was_at, "<0:agent> stood at <1:number>, <2:number> a tick ago").
 phrase(foe, "<0:agent> takes <1:agent> for a foe").
 phrase(ally, "<0:agent> takes <1:agent> for an ally").
 phrase(near, "<0:agent> is near <1:agent>").
