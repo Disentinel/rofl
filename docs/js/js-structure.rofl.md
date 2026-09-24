@@ -17,7 +17,7 @@ default: code
 Reads:
 
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from outside these files:
+- from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 

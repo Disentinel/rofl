@@ -34,7 +34,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
-- from outside these files:
+- from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -85,20 +85,20 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- <a id="str_seg"></a>`str_seg`
-- <a id="str_segs"></a>`str_segs`
-- <a id="str_char0"></a>A text S starts with a text C
-- <a id="str_scheme"></a>A text S has the scheme Scheme
-- <a id="fs_file"></a>`fs_file`
-- <a id="fs_dir"></a>`fs_dir`
-- <a id="fs_parent"></a>`fs_parent`
-- <a id="fs_file_in"></a>A directory D holds the file Seg being a file T
-- <a id="fs_dir_in"></a>`fs_dir_in`
-- <a id="fs_dir_of"></a>`fs_dir_of`
-- <a id="node_builtin_bare"></a>A text Bare is the bare name of a spec Spec
-- The shape verdict of a shape S is a verdict N
-- A kind K is unknown in a layer L of a language Lang because a reason R
-- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R
+- <a id="str_seg"></a>`str_seg` — rows from the host, which cuts the specifier
+- <a id="str_segs"></a>`str_segs` — rows from the host, which cuts the specifier
+- <a id="str_char0"></a>A text S starts with a text C — rows from the host, which cuts the specifier
+- <a id="str_scheme"></a>A text S has the scheme Scheme — rows from the host, which cuts the specifier
+- <a id="fs_file"></a>`fs_file` — rows from the host, which lists the files
+- <a id="fs_dir"></a>`fs_dir` — rows from the host, which lists the files
+- <a id="fs_parent"></a>`fs_parent` — rows from the host, which lists the files
+- <a id="fs_file_in"></a>A directory D holds the file Seg being a file T — rows from the host, which lists the files
+- <a id="fs_dir_in"></a>`fs_dir_in` — rows from the host, which lists the files
+- <a id="fs_dir_of"></a>`fs_dir_of` — rows from the host, which lists the files
+- <a id="node_builtin_bare"></a>A text Bare is the bare name of a spec Spec — rows from facts/js-modules.rofl
+- The shape verdict of a shape S is a verdict N — rows from facts/js-modules.rofl
+- A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-callgraph.rofl
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-callgraph.rofl
 
 ## 1. THE PLACES A MODULE SPECIFIER OCCURS — four kinds. A re-export is a site
 

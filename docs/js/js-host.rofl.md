@@ -24,6 +24,25 @@ default: audit
 
 Reads:
 
+- from facts/js-host-surface.rofl, in the main:
+  - <a id="host"></a>A host H is a host (`host`)
+  - <a id="host_global"></a>A host H has the global Name (`host_global`)
+  - <a id="host_member_deprecated"></a>A host H deprecates a key Key of a spec Spec (`host_member_deprecated`)
+  - <a id="host_member_replaced_by"></a>A host H replaces a key Key of a spec Spec with a key Use (`host_member_replaced_by`)
+  - <a id="host_member_since"></a>A runtime F adds a key Key of a spec Spec since a text Since being a number Sv (`host_member_since`)
+  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
+  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
+- from facts/js-host.rofl, in the main:
+  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
+  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
+  - <a id="host_member_effect"></a>A host H attributes the member Key of a spec Spec to an effect E (`host_member_effect`)
+  - <a id="host_module_effect"></a>A host H attributes the module Spec to an effect E (`host_module_effect`)
+  - <a id="host_no_effects"></a>A host H claims no effects because a reason R (`host_no_effects`)
+  - <a id="provides_release"></a>A runtime P ships the release Rel (`provides_release`)
+  - <a id="runtime"></a>A runtime F is a runtime (`runtime`)
+  - <a id="runtime_includes"></a>A runtime R includes the runtime P (`runtime_includes`)
+  - <a id="runtime_undated"></a>A runtime R is undated because a reason Reason (`runtime_undated`)
+  - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
 - from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [ident_in](js-dataflow.rofl.md#ident_in)
 - from js-dataflow, in the flow: [class_named](js-dataflow.rofl.md#class_named), [param_of](js-dataflow.rofl.md#param_of), [selects](js-dataflow.rofl.md#selects)
@@ -33,26 +52,8 @@ Reads:
 - from js-modules, in the code: [binding](js-modules.rofl.md#binding), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [site_file](js-modules.rofl.md#site_file)
 - from js-modules, in the main: [node_builtin_bare](js-modules.rofl.md#node_builtin_bare)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
-- from outside these files, in the code:
+- from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-- from outside these files, in the main:
-  - <a id="host"></a>A host H is a host (`host`)
-  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
-  - <a id="host_global"></a>A host H has the global Name (`host_global`)
-  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
-  - <a id="host_member_deprecated"></a>A host H deprecates a key Key of a spec Spec (`host_member_deprecated`)
-  - <a id="host_member_effect"></a>A host H attributes the member Key of a spec Spec to an effect E (`host_member_effect`)
-  - <a id="host_member_replaced_by"></a>A host H replaces a key Key of a spec Spec with a key Use (`host_member_replaced_by`)
-  - <a id="host_member_since"></a>A runtime F adds a key Key of a spec Spec since a text Since being a number Sv (`host_member_since`)
-  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
-  - <a id="host_module_effect"></a>A host H attributes the module Spec to an effect E (`host_module_effect`)
-  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
-  - <a id="host_no_effects"></a>A host H claims no effects because a reason R (`host_no_effects`)
-  - <a id="provides_release"></a>A runtime P ships the release Rel (`provides_release`)
-  - <a id="runtime"></a>A runtime F is a runtime (`runtime`)
-  - <a id="runtime_includes"></a>A runtime R includes the runtime P (`runtime_includes`)
-  - <a id="runtime_undated"></a>A runtime R is undated because a reason Reason (`runtime_undated`)
-  - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 
 ## Words
 
@@ -76,7 +77,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- `ast_parse_error`
+- `ast_parse_error` — rows from the scanner
 
 ## 1. THE GLOBAL DOOR — an identifier nothing in this FILE binds. The ceiling
 

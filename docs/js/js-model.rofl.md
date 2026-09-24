@@ -18,9 +18,10 @@ default: audit
 
 Reads:
 
-- from outside these files, in the main:
-  - <a id="layer"></a>A layer L is a layer (`layer`)
+- from facts/js-callgraph.rofl, in the main:
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+- from facts/js-controlflow.rofl, in the main:
+  - <a id="layer"></a>A layer L is a layer (`layer`)
 
 ## Words
 
@@ -64,9 +65,9 @@ A kind K
 
 Declared as facts:
 
-- <a id="claim"></a>A kind K is claimed in a layer L of a language Lang under a ledger What with a reason R
-- A kind K is claimed with a shape S in a layer Lay of a language Lang under a ledger What with a reason R
-- <a id="claim_kind"></a>A ledger W is a ledger
+- <a id="claim"></a>A kind K is claimed in a layer L of a language Lang under a ledger What with a reason R — rows from the rules in this file
+- A kind K is claimed with a shape S in a layer Lay of a language Lang under a ledger What with a reason R — rows from the rules in this file
+- <a id="claim_kind"></a>A ledger W is a ledger — rows in this file
 
 > `not cell` rather than `not node_kind` and `not layer` apart: the cell is
 > their conjunction.
@@ -94,7 +95,7 @@ A kind K
 
 Declared as facts:
 
-- <a id="layer_authorised"></a>A layer L is authorised
+- <a id="layer_authorised"></a>A layer L is authorised — rows in this file
 
 > Convergence between languages needs EVIDENCE on both sides: `checked` is a
 > cell run against an oracle. The first version compared rule atoms and
@@ -111,7 +112,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="checked"></a>A kind K is checked in a layer L of a language Lang by a rule Rule under a step Op holding a number N
+- <a id="checked"></a>A kind K is checked in a layer L of a language Lang by a rule Rule under a step Op holding a number N — rows from facts/js-callgraph.rofl
 
 ## THE DEFAULT VERDICT. Every cell carries one and `not_modelled` is the one it
 
@@ -173,9 +174,9 @@ A kind K
 
 Declared as facts:
 
-- <a id="unknown_type"></a>`unknown_type`
-- A kind K is unknown in a layer L of a language Lang because a reason R
-- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R
+- <a id="unknown_type"></a>`unknown_type` — rows in this file
+- A kind K is unknown in a layer L of a language Lang because a reason R — rows from the rules in this file
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from the rules in this file
 
 ## THE THIRD AXIS — SHAPE. `member_expression` is one kind and six jobs, and
 
@@ -190,10 +191,10 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="axis"></a>An axis A is an axis
-- <a id="axis_applies"></a>An axis A applies in a layer Lay
-- <a id="shape_of"></a>A kind K has the shape S in a language Lang
-- <a id="shape_in"></a>A shape S is a shape in a layer Lay
+- <a id="axis"></a>An axis A is an axis — rows from facts/js-shapes.rofl
+- <a id="axis_applies"></a>An axis A applies in a layer Lay — rows from facts/js-dataflow.rofl
+- <a id="shape_of"></a>A kind K has the shape S in a language Lang — rows from facts/js-dataflow.rofl
+- <a id="shape_in"></a>A shape S is a shape in a layer Lay — rows from facts/js-dataflow.rofl
 
 > A kind with no declared shape is ATOMIC and keeps one cell. `none` is earned
 > two ways — the axis absent from the layer, or present with a kind that does
@@ -388,11 +389,11 @@ A kind K
 
 Declared as facts:
 
-- <a id="ast_node"></a>`ast_node`
-- <a id="lang_of_corpus"></a>A language L is the corpus language
-- <a id="not_a_construct"></a>A kind K is not a construct
-- <a id="frame_deferred"></a>A kind K is deferred to the frame because a reason R
-- <a id="kind_absent_ok"></a>A kind K is excused absent because a reason R
+- <a id="ast_node"></a>`ast_node` — rows from the scanner
+- <a id="lang_of_corpus"></a>A language L is the corpus language — rows in this file
+- <a id="not_a_construct"></a>A kind K is not a construct — rows from facts/js-kinds.rofl
+- <a id="frame_deferred"></a>A kind K is deferred to the frame because a reason R — no rows: declared so a rule may read it
+- <a id="kind_absent_ok"></a>A kind K is excused absent because a reason R — rows from facts/js-callgraph.rofl
 
 > `kind_unexercised`: a declared kind no node in the corpus has — allowed, but
 > the reason must be written (`kind_absent_ok`), which is what exposed

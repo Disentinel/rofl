@@ -29,6 +29,21 @@ default: main
 
 Reads:
 
+- from facts/js-effects.rofl:
+  - <a id="eff_label"></a>An effect label L is a label at a host H (`eff_label`)
+  - <a id="eff_name"></a>An effect N is in the lattice (`eff_name`)
+- from facts/js-globals.rofl:
+  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
+  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
+- from facts/js-host-surface.rofl:
+  - <a id="host_global"></a>A host H has the global Name (`host_global`)
+  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
+  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
+- from facts/js-host.rofl:
+  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
+  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
+- from facts/js-lib-surface.rofl:
+  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-dataflow, in the code: [ident_in](js-dataflow.rofl.md#ident_in)
 - from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
@@ -40,21 +55,11 @@ Reads:
 - from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
 - from js-globals: [constructible_form](js-globals.rofl.md#constructible_form)
 - from js-host, in the code: [host_module_named](js-host.rofl.md#host_module_named), [host_module_ns](js-host.rofl.md#host_module_ns), [member_effect](js-host.rofl.md#member_effect)
-- from outside these files, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 - from outside these files:
-  - <a id="eff_label"></a>An effect label L is a label at a host H (`eff_label`)
-  - <a id="eff_name"></a>An effect N is in the lattice (`eff_name`)
-  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
-  - <a id="host_global"></a>A host H has the global Name (`host_global`)
-  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
-  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
-  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
-  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
-  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
   - <a id="lib_readonly_member"></a>`lib_readonly_member`
   - <a id="lib_readonly_view"></a>`lib_readonly_view`
-  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
+- from the scanner, in the code:
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -155,7 +160,7 @@ In the main:
 
 Declared as facts:
 
-- <a id="amb_heap"></a>`amb_heap`
+- <a id="amb_heap"></a>`amb_heap` — rows in this file
 
 > The landmark is the LEAST name containing the label — the lattice's own
 > closure, the same Moore argument `effect_of[flow]` stands on, unique because
@@ -236,7 +241,7 @@ A spec has the ambient effect E at a key W if [`amb_operation_word`](#amb_operat
 
 Declared as facts:
 
-- <a id="amb_operation_word"></a>`amb_operation_word`
+- <a id="amb_operation_word"></a>`amb_operation_word` — rows in this file
 
 > Which surfaces this model can list the members of — positive, non-empty by
 > design. `lib_global` and not `lib_static` for the ES globals: a

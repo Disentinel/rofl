@@ -3,7 +3,7 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 976 | 3 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1003 | 3 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 212 | 91 | 82 | 0 | 43 | 221 | 20 | 4 | 4 | 0 |

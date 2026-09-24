@@ -20,16 +20,17 @@ default: main
 
 Reads:
 
+- from facts/js-callgraph.rofl:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-vocabulary: [body_lit](js-vocabulary.rofl.md#body_lit), [lit_arg](js-vocabulary.rofl.md#lit_arg), [lit_rel](js-vocabulary.rofl.md#lit_rel)
-- from outside these files, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 - from outside these files:
   - <a id="attr_needs"></a>`attr_needs`
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
   - <a id="outside_attr_needs"></a>`outside_attr_needs`
   - <a id="premise_lit"></a>`premise_lit`
+- from the scanner, in the code:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -84,9 +85,9 @@ A key K
 
 Declared as facts:
 
-- <a id="attr_unread_ok"></a>`attr_unread_ok`
-- <a id="attr_deferred"></a>`attr_deferred`
-- <a id="attr_value_unread_ok"></a>`attr_value_unread_ok`
+- <a id="attr_unread_ok"></a>`attr_unread_ok` — rows from facts/js-attrs.rofl
+- <a id="attr_deferred"></a>`attr_deferred` — rows from facts/js-attrs.rofl
+- <a id="attr_value_unread_ok"></a>`attr_value_unread_ok` — rows from facts/js-attrs.rofl
 
 > both excuse lists guarded, as `not_a_construct_unseen` in js-model: a
 > misspelling would silently readmit the key to nothing
@@ -139,7 +140,7 @@ A relation
 
 Declared as facts:
 
-- <a id="attr_table_bridged"></a>`attr_table_bridged`
+- <a id="attr_table_bridged"></a>`attr_table_bridged` — rows from facts/js-attrs.rofl
 
 > the bridge itself, feeding both audits
 
@@ -252,7 +253,7 @@ In the audit:
 
 Declared as facts:
 
-- <a id="attr_slot_gap_ok"></a>`attr_slot_gap_ok`
+- <a id="attr_slot_gap_ok"></a>`attr_slot_gap_ok` — rows from facts/js-attrs.rofl
 
 > the excuse list is checked against the WHOLE report: an excuse no longer
 > needed because a guard became a negation is still a true row
@@ -286,7 +287,7 @@ A key K
 
 Declared as facts:
 
-- <a id="attr_split_ok"></a>`attr_split_ok`
+- <a id="attr_split_ok"></a>`attr_split_ok` — rows from facts/js-attrs.rofl
 
 > 6 trailing comments on rule lines are not carried over.
 

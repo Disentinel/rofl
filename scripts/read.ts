@@ -479,7 +479,8 @@ for (let i = 0; i < blocks.length; i++) {
   }
   if (text === 'Declared as facts:' && next && next.type === 'ul') {
     // a declared fact reads as its signature sentence, `A kind K catches via a field Field`, or as its bare name
-    for (const it of next.items!) { const t = it.text.trim().replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}`); }
+    // a declared table may say where its rows are after a dash: `A kind K is a call kind — rows in Words`
+    for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}`); }
     i++; continue;
   }
   if ((m = /^`(\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$/.exec(text))) { homeBook.set(m[1], 'main'); for (const a of m[2].split(/,\s*/)) parsedFacts.push({ rel: m[1], args: [term(a, [])] }); continue; }

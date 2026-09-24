@@ -28,9 +28,10 @@ Reads:
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
 - from outside these files, in the code:
+  - <a id="ast_file"></a>`ast_file`
+- from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-  - <a id="ast_file"></a>`ast_file`
 
 ## Words
 
@@ -149,7 +150,7 @@ In the flow:
 
 Declared as facts:
 
-- <a id="literal_kind"></a>`literal_kind`
+- <a id="literal_kind"></a>`literal_kind` — rows in Words
 
 > A template with no interpolation is a string — `cooked`, which is what it
 > evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
@@ -172,7 +173,7 @@ A [template](#noun-template) may be the literal V if all of:
 
 Declared as facts:
 
-- <a id="node_value_kind"></a>`node_value_kind`
+- <a id="node_value_kind"></a>`node_value_kind` — rows in Words
 
 ## 3. A name is what its binder's initialiser is, where the binder is in scope
 
@@ -232,7 +233,7 @@ In the code:
 
 Declared as facts:
 
-- <a id="block_scope_kind"></a>`block_scope_kind`
+- <a id="block_scope_kind"></a>`block_scope_kind` — rows in Words
 
 > `let`/`const` is read off the DECLARATION, one node above the declarator.
 
@@ -387,7 +388,7 @@ A [wrapper](#noun-wrapper) may be the literal/node V if the `expression` of it [
 
 Declared as facts:
 
-- <a id="value_transparent"></a>`value_transparent`
+- <a id="value_transparent"></a>`value_transparent` — rows in Words
 
 ## 5. WHICH PROTOTYPE A VALUE HAS — from the KIND of a receiver written in
 
@@ -424,8 +425,8 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="kind_prototype"></a>A kind K has prototype a name P
-- <a id="builtin_prototype"></a>A name P is a builtin prototype
+- <a id="kind_prototype"></a>A kind K has prototype a name P — rows in this file
+- <a id="builtin_prototype"></a>A name P is a builtin prototype — rows in this file
 
 ## 6. DESTRUCTURING — a name bound from a PATTERN. `{ pulled: taken }` binds
 
@@ -548,7 +549,7 @@ The member Key of an [object literal](#noun-object_literal) O holds a node V if 
 
 Declared as facts:
 
-- <a id="call_like_v"></a>`call_like_v`
+- <a id="call_like_v"></a>`call_like_v` — rows in Words
 
 > ONE function relation for every book: `fn_node[code]` from rules/js-callgraph.rofl
 > (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
@@ -724,7 +725,7 @@ The member Key of a node CD holds a node V if all of:
 
 Declared as facts:
 
-- A kind K is a member kind
+- A kind K is a member kind — rows in this file
 
 > The receiver decides which half of a class it sees: `Vat.poured()` and
 > `new Vat().tapped()` are both TypeErrors and both resolved until the `static`
@@ -814,7 +815,7 @@ A node may be the node CD if CD [has the method](#class_method_of) M and M [host
 
 Declared as facts:
 
-- <a id="this_binds_kind"></a>`this_binds_kind`
+- <a id="this_binds_kind"></a>`this_binds_kind` — rows in Words
 
 ## 10. Es2022 class syntax
 
@@ -839,7 +840,7 @@ The static/instance member Key of a class CD is a node V if CD [has the field](#
 
 Declared as facts:
 
-- <a id="class_field_kind"></a>`class_field_kind`
+- <a id="class_field_kind"></a>`class_field_kind` — rows in Words
 
 > Walks FIELDS and not members: written over `class_member_proto` it inherited
 > methods a second way and silently disarmed the mutant guarding the method arm.
@@ -917,7 +918,7 @@ A node may be the node CD if CD [has the static block](#static_block_of) SB and 
 
 Declared as facts:
 
-- <a id="private_member_kind"></a>`private_member_kind`
+- <a id="private_member_kind"></a>`private_member_kind` — rows in Words
 
 > `this` in a static block is the CLASS object and must read the static half.
 

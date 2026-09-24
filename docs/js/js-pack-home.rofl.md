@@ -23,9 +23,10 @@ default: main
 
 Reads:
 
+- from facts/js-callgraph.rofl:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from outside these files:
   - <a id="asserted_by"></a>`asserted_by`
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 
 ## Words
 
@@ -71,7 +72,7 @@ A pack
 
 Declared as facts:
 
-- <a id="base_pack"></a>A pack P is the base pack
+- <a id="base_pack"></a>A pack P is the base pack — rows in this file
 
 ## THE VERDICT. A row in a pack that does not speak about the kind opens cells
 

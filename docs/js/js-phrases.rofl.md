@@ -14,9 +14,9 @@ default: main
 
 Declared as facts:
 
-- <a id="phrase"></a>`phrase`
-- <a id="kind_noun"></a>`kind_noun`
-- <a id="sig"></a>`sig`
+- <a id="phrase"></a>`phrase` — rows in this file
+- <a id="kind_noun"></a>`kind_noun` — rows in this file
+- <a id="sig"></a>`sig` — rows in this file
 
 > what the scanner seeds, in the code
 
@@ -26,7 +26,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="kind_set"></a>`kind_set`
+- <a id="kind_set"></a>`kind_set` — rows in this file
 
 > a noun bound to a unary relation: `a function F` is `fn_node(F)`, the relation is
 > the guard and the kind set behind it is a table (`K is a function kind`)
@@ -43,7 +43,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="noun_guard"></a>`noun_guard`
+- <a id="noun_guard"></a>`noun_guard` — rows in this file
 
 > signatures: the head phrase is the name, each argument is `[marker] noun Var`
 > in the relation's own order; a name that differs from the relation is a
@@ -1120,4 +1120,12 @@ Declared as facts:
 | `our_unknown` | "is_our_unknown(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)" |
 | `shape_of` | "has_the_shape(kind K:1, shape S:2, in language Lang:0)" |
 | `shape_in` | "is_a_shape_in(shape S, layer Lay)" |
+
+> Where a table's rows come from when no .rofl file holds them. The renderer
+> says it beside the table (`Declared as facts`) and in the Reads list; a
+> table with rows in a fact pack names the pack by itself.
+
+Declared as facts:
+
+- <a id="rows_from"></a>`rows_from` — rows in this file
 

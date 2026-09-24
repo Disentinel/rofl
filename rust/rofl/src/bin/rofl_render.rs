@@ -245,6 +245,11 @@ struct R<'a> {
     edb: Sym,
     phrase_rel: Sym,
     kind_noun_rel: Sym,
+    rows_from_rel: Sym,
+    /// `rows_from(rel, "the scanner")`: a source no .rofl file holds, declared in the vocabulary
+    rows_from: HashMap<Sym, String>,
+    /// a fact pack given with `--tables` that holds rows of the relation
+    rows_in: HashMap<Sym, String>,
     var_a: Sym,
 }
 
@@ -288,6 +293,13 @@ impl<'a> R<'a> {
         n.to_string()
     }
     fn a_noun(&self, n: &str) -> String { format!("{} {}", article(n), self.noun_link(n)) }
+    fn sym_named(&self, name: &str) -> Option<Sym> {
+        self.rows_from.keys().chain(self.rows_in.keys()).chain(self.defs.keys()).chain(self.phrases.keys()).chain(self.sig_forms.keys()).find(|s| self.h.name(**s) == name).copied()
+    }
+    /// Where a table's rows come from: the vocabulary's word for it, else the fact pack that holds them; None when no rows anywhere.
+    fn rows_source(&self, rel: Sym) -> Option<String> {
+        self.rows_from.get(&rel).cloned().or_else(|| self.rows_in.get(&rel).cloned())
+    }
     /// A signature read as a sentence with every hole typed: `A kind K catches via a field Field`.
     /// A phrase with every hole read as its noun and no variable, a named hole left out:
     /// `a node is a child of a node`, `the attribute of a node is a value`.
@@ -1123,18 +1135,18 @@ impl<'a> R<'a> {
         }
     }
 
-    fn facts(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, declared: &mut Vec<String>, anchored: &mut HashSet<Sym>, set_members: &mut BTreeMap<Sym, Vec<String>>) {
+    fn facts(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, declared: &mut Vec<(String, Sym)>, anchored: &mut HashSet<Sym>, set_members: &mut BTreeMap<Sym, Vec<String>>) {
         let mut out = String::new();
         let rel = group[0].head.rel;
         stats.facts += group.len();
-        if rel == self.phrase_rel || rel == self.kind_noun_rel { return; }
+        if rel == self.phrase_rel || rel == self.kind_noun_rel || rel == self.rows_from_rel { return; }
         if rel == self.edb {
             for c in group {
                 if let Some(a) = c.head.args.first().and_then(|t| t.as_atom()) {
                     let anchor = if self.defs.get(&a) == Some(&file) && anchored.insert(a) { format!("<a id=\"{}\"></a>", self.h.name(a)) } else { String::new() };
                     match self.sig_forms.get(&a) {
-                        Some(forms) => for (n, (p, vars)) in forms.iter().enumerate() { declared.push(format!("{}{}", if n == 0 { anchor.clone() } else { String::new() }, self.decl_sentence(p, vars))); },
-                        None => declared.push(format!("{anchor}`{}`", self.h.name(a))),
+                        Some(forms) => for (n, (p, vars)) in forms.iter().enumerate() { declared.push((format!("{}{}", if n == 0 { anchor.clone() } else { String::new() }, self.decl_sentence(p, vars)), a)); },
+                        None => declared.push((format!("{anchor}`{}`", self.h.name(a)), a)),
                     }
                 }
             }
@@ -1194,6 +1206,8 @@ impl<'a> R<'a> {
         let mut rule_count: HashMap<Sym, usize> = HashMap::new();
         for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() { *rule_count.entry(c.head.rel).or_default() += 1; } } } }
         let single: HashSet<Sym> = rule_count.iter().filter(|(_, n)| **n == 1).map(|(r, _)| *r).collect();
+        let mut own_rows: HashSet<Sym> = HashSet::new();
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.head.rel != self.edb { own_rows.insert(c.head.rel); } } } }
         let mut glossary: Vec<String> = Vec::new();
         let mut set_members: BTreeMap<Sym, Vec<String>> = BTreeMap::new();
         // the file's own opening comment, before any heading or clause, is its lead and comes first
@@ -1222,7 +1236,7 @@ impl<'a> R<'a> {
                             if let Some(&f) = self.defs.get(&l.rel) { if f != file { reads.insert(self.h.name(l.rel).to_string(), f); } }
                         } _ => {} } }
                     }
-                    let mut declared = Vec::new();
+                    let mut declared: Vec<(String, Sym)> = Vec::new();
                     let mut items: Vec<Item> = Vec::new();
                     let mut i = 0;
                     while i < clauses.len() {
@@ -1239,7 +1253,18 @@ impl<'a> R<'a> {
                         i = j;
                     }
                     Self::flush(items, &mut body, &mut stats);
-                    if !declared.is_empty() { let _ = writeln!(body, "Declared as facts:\n\n{}\n", declared.iter().map(|d| format!("- {d}")).collect::<Vec<_>>().join("\n")); }
+                    if !declared.is_empty() {
+                        // each table says where its rows are: here, in Words, in a fact pack, from the vocabulary's word for it, or nowhere
+                        let lines: Vec<String> = declared.iter().map(|(d, rel)| {
+                            let src = if self.kind_nouns.contains_key(rel) && own_rows.contains(rel) { "rows in Words".to_string() }
+                                else if own_rows.contains(rel) { "rows in this file".to_string() }
+                                else if rule_count.contains_key(rel) { "rows from the rules in this file".to_string() }
+                                else if let Some(s) = self.rows_source(*rel) { format!("rows from {s}") }
+                                else { "no rows: declared so a rule may read it".to_string() };
+                            format!("- {d} — {src}")
+                        }).collect();
+                        let _ = writeln!(body, "Declared as facts:\n\n{}\n", lines.join("\n"));
+                    }
                 }
             }
         }
@@ -1258,14 +1283,15 @@ impl<'a> R<'a> {
             let gloss = sym.and_then(|s| self.sig_forms.get(&s).and_then(|f| f.first()).map(|(p, vars)| self.decl_sentence(p, vars))
                 .or_else(|| self.phrases.get(&s).and_then(|ps| ps.iter().min_by_key(|p| p.holes())).map(|p| self.phrase_gloss(p))));
             let item = match gloss { Some(g) => format!("<a id=\"{rel}\"></a>{} (`{rel}`)", capitalize(g.trim())), None => format!("<a id=\"{rel}\"></a>`{rel}`") };
-            groups.entry(("outside these files".to_string(), book_of(rel))).or_default().push(item);
+            let src = sym.and_then(|s| self.rows_source(s)).unwrap_or_else(|| "outside these files".to_string());
+            groups.entry((src, book_of(rel))).or_default().push(item);
         }
         if !groups.is_empty() {
             let _ = writeln!(out, "Reads:\n");
             for ((src, book), items) in &groups {
                 let tail = if book.is_empty() || *book == default_book { String::new() } else { format!(", in the {book}") };
-                if src == "outside these files" { let _ = writeln!(out, "- from {src}{tail}:\n{}", items.iter().map(|i| format!("  - {i}")).collect::<Vec<_>>().join("\n")); }
-                else { let _ = writeln!(out, "- from {src}{tail}: {}", items.join(", ")); }
+                if reads.values().any(|f| self.stems[*f] == *src) { let _ = writeln!(out, "- from {src}{tail}: {}", items.join(", ")); }
+                else { let _ = writeln!(out, "- from {src}{tail}:\n{}", items.iter().map(|i| format!("  - {i}")).collect::<Vec<_>>().join("\n")); }
             }
             out.push('\n');
         }
@@ -1328,7 +1354,8 @@ fn main() {
     let mut out_dir: Option<String> = None;
     if let Some(i) = args.iter().position(|a| a == "--out") { args.remove(i); out_dir = Some(args.remove(i)); }
     let facts_mode = if let Some(i) = args.iter().position(|a| a == "--facts") { args.remove(i); true } else { false };
-    if args.is_empty() { eprintln!("usage: rofl-render [--out DIR] FILE..."); std::process::exit(2); }
+    let tables: Vec<String> = if let Some(i) = args.iter().position(|a| a == "--tables") { args.split_off(i)[1..].to_vec() } else { Vec::new() };
+    if args.is_empty() { eprintln!("usage: rofl-render [--out DIR] FILE... [--tables PACK...]"); std::process::exit(2); }
 
     let mut h = Heap::default();
     let fresh: Vec<Sym> = ["N", "E", "X", "Y", "Z", "W", "U", "V", "X1", "X2", "X3", "X4"].iter().map(|s| h.intern(s)).collect();
@@ -1339,7 +1366,18 @@ fn main() {
     let sig_rel = h.intern("sig");
     let noun_guard_rel = h.intern("noun_guard");
     let fun_phrase_rel = h.intern("fun_phrase");
+    let rows_from_rel = h.intern("rows_from");
     let var_a = h.intern("A");
+    // the fact packs: which relation has rows where, nothing rendered
+    let mut rows_in: HashMap<Sym, String> = HashMap::new();
+    for path in &tables {
+        let src = match std::fs::read_to_string(path) { Ok(s) => s, Err(e) => { eprintln!("{path}: {e}"); std::process::exit(1); } };
+        let mut t = 0;
+        for seg in segment(&mut h, &src, &mut t) {
+            if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.head.rel != edb { rows_in.entry(c.head.rel).or_insert_with(|| path.clone()); } } }
+        }
+    }
+    let mut rows_from: HashMap<Sym, String> = HashMap::new();
 
     let mut docs = Vec::new();
     for path in &args {
@@ -1391,6 +1429,10 @@ fn main() {
                         if let (Some(rel), TermK::Str(t)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) { sigs.push((rel, h.name(t).to_string())); }
                         continue;
                     }
+                    if c.head.rel == rows_from_rel && c.head.args.len() == 2 {
+                        if let (Some(rel), TermK::Str(t)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) { rows_from.insert(rel, h.name(t).to_string()); }
+                        continue;
+                    }
                     if c.head.rel == edb {
                         if let Some(a) = c.head.args.first().and_then(|t| t.as_atom()) { defs.entry(a).or_insert(fi); }
                         continue;
@@ -1440,7 +1482,7 @@ fn main() {
         file_guards.push(bound);
     }
 
-    let r = R { h: &h, phrases, fun_phrases, kind_nouns, noun_guards, sig_forms, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, var_a };
+    let r = R { h: &h, phrases, fun_phrases, kind_nouns, noun_guards, sig_forms, file_guards, cur_file: std::cell::Cell::new(0), defs, home, stems: docs.iter().map(|d| d.stem.clone()).collect(), fresh, ast_node, edb, phrase_rel, kind_noun_rel, rows_from_rel, rows_from, rows_in, var_a };
     let mut index = String::from("# Index\n\n| file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |\n|---|---|---|---|---|---|---|---|---|---|---|\n");
     let mut total_pos: BTreeSet<String> = BTreeSet::new();
     for (fi, doc) in docs.iter().enumerate() {

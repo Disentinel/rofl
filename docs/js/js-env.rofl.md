@@ -24,27 +24,30 @@ default: audit
 
 Reads:
 
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
-- from outside these files, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-  - <a id="ast_file"></a>`ast_file`
-- from outside these files, in the main:
-  - <a id="attr_needs"></a>`attr_needs`
+- from facts/js-callgraph.rofl, in the main:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+- from facts/js-env.rofl, in the main:
   - <a id="child_needs"></a>A kind K needs at a field Field holding a text V a feature F in a language L (`child_needs`)
   - <a id="env_lang"></a>A language L is the environment language (`env_lang`)
   - <a id="env_rank"></a>An environment E dates from a number Year (`env_rank`)
   - <a id="environment"></a>An environment E is an environment (`environment`)
   - <a id="feature"></a>A feature F is a feature of a form Form (`feature`)
-  - <a id="feature_unscannable"></a>A feature F is unscannable because a reason R (`feature_unscannable`)
   - <a id="includes"></a>A release R includes a release Q (`includes`)
   - <a id="kind_baseline"></a>A kind K is baseline in a language L (`kind_baseline`)
   - <a id="kind_needs"></a>A kind K needs a feature F in a language L (`kind_needs`)
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
-  - <a id="outside_attr_needs"></a>`outside_attr_needs`
   - <a id="provides"></a>A release P provides the feature F (`provides`)
   - <a id="release"></a>A release R is a release (`release`)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
+- from outside these files, in the code:
+  - <a id="ast_file"></a>`ast_file`
+- from outside these files, in the main:
+  - <a id="attr_needs"></a>`attr_needs`
+  - <a id="feature_unscannable"></a>A feature F is unscannable because a reason R (`feature_unscannable`)
+  - <a id="outside_attr_needs"></a>`outside_attr_needs`
+- from the scanner, in the code:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -171,7 +174,7 @@ File is broken in an environment E if E [is an environment](#environment) and [`
 
 Declared as facts:
 
-- <a id="ast_parse_error"></a>`ast_parse_error`
+- <a id="ast_parse_error"></a>`ast_parse_error` — rows from the scanner
 
 ## 4. «А что именно перестанет быть валидным?» — the difference between two
 

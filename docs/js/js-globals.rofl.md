@@ -23,20 +23,22 @@ default: code
 
 Reads:
 
+- from facts/js-env.rofl, in the main:
+  - <a id="environment"></a>An environment E is an environment (`environment`)
+- from facts/js-globals.rofl, in the main:
+  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
+  - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
+  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
 - from js-callgraph: [callee_of](js-callgraph.rofl.md#callee_of), [fn_file](js-callgraph.rofl.md#fn_file), [fn_node](js-callgraph.rofl.md#fn_node), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-dataflow: [ident_in](js-dataflow.rofl.md#ident_in)
 - from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
 - from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
-- from outside these files:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 - from outside these files, in the main:
-  - <a id="environment"></a>An environment E is an environment (`environment`)
-  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
-  - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
   - <a id="lib_static_shape"></a>`lib_static_shape`
+- from the scanner:
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -69,7 +71,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- <a id="global_ref_position"></a>A kind K reads a global at a field Field
+- <a id="global_ref_position"></a>A kind K reads a global at a field Field — rows in this file
 
 > the small table leads: five positions by their nodes is selective, where an
 > unbound `ast_node(E, identifier, _, _)` first was once 39% of the fixpoint
@@ -108,7 +110,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="declaring_position"></a>A kind K declares at a field Field
+- <a id="declaring_position"></a>A kind K declares at a field Field — rows in this file
 
 > the names a pattern introduces, keys and defaults included: widening
 > `declares_name` narrows the globals, the safe direction again
@@ -204,7 +206,7 @@ In the audit:
 
 Declared as facts:
 
-- <a id="constructible_form"></a>A form Form is constructible
+- <a id="constructible_form"></a>A form Form is constructible — rows in this file
 
 ## 5. THE ERA QUESTION, in the same words as every other axis, through the
 

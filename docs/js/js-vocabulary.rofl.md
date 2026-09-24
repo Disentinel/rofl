@@ -23,10 +23,11 @@ default: main
 
 Reads:
 
+- from facts/js-callgraph.rofl:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at)
 - from js-model: [frame_deferred](js-model.rofl.md#frame_deferred), [lang_of_corpus](js-model.rofl.md#lang_of_corpus), [not_a_construct](js-model.rofl.md#not_a_construct)
 - from outside these files:
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
   - <a id="premise_lit"></a>`premise_lit`
 
 ## Words

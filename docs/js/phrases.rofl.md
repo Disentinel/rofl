@@ -25,5 +25,5 @@ default: main
 
 Declared as facts:
 
-- <a id="fun_phrase"></a>`fun_phrase`
+- <a id="fun_phrase"></a>`fun_phrase` — rows in this file
 

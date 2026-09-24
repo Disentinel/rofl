@@ -20,6 +20,12 @@ default: flow
 
 Reads:
 
+- from facts/js-effects.rofl, in the main:
+  - <a id="eff_alias"></a>An effect X is an alias of an effect P (`eff_alias`)
+  - <a id="eff_heap"></a>A heap H is a heap (`eff_heap`)
+  - <a id="eff_label"></a>An effect label L is a label at a host H (`eff_label`)
+  - <a id="eff_name"></a>An effect N is in the lattice (`eff_name`)
+  - <a id="eff_origin"></a>An origin O is an origin (`eff_origin`)
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_binding](js-ambient.rofl.md#ambient_binding), [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
@@ -29,15 +35,9 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
-- from outside these files, in the code:
+- from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-- from outside these files, in the main:
-  - <a id="eff_alias"></a>An effect X is an alias of an effect P (`eff_alias`)
-  - <a id="eff_heap"></a>A heap H is a heap (`eff_heap`)
-  - <a id="eff_label"></a>An effect label L is a label at a host H (`eff_label`)
-  - <a id="eff_name"></a>An effect N is in the lattice (`eff_name`)
-  - <a id="eff_origin"></a>An origin O is an origin (`eff_origin`)
 
 ## Words
 
@@ -226,7 +226,7 @@ A node has the effect `div` at `none` if all of:
 
 Declared as facts:
 
-- <a id="eff_loop_kind"></a>`eff_loop_kind`
+- <a id="eff_loop_kind"></a>`eff_loop_kind` — rows in this file
 
 > ALLOC: a fresh mutable identity. `new_expression` is here although its cell
 > is open: the allocation half is complete; the constructor's effect is the
@@ -238,7 +238,7 @@ A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K
 
 Declared as facts:
 
-- <a id="eff_alloc_kind"></a>`eff_alloc_kind`
+- <a id="eff_alloc_kind"></a>`eff_alloc_kind` — rows in this file
 
 > READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 > receiver to an allocation; otherwise `global`. A negation pair rather than
@@ -373,7 +373,7 @@ In the audit:
 
 Declared as facts:
 
-- <a id="eff_discharges"></a>A kind M discharges the label L
+- <a id="eff_discharges"></a>A kind M discharges the label L — rows in this file
 
 > The one independent oracle: `may_throw` was built for the exception
 > question alone, and the exn projection must reproduce it row for row, in
@@ -513,7 +513,7 @@ A spec
 
 Declared as facts:
 
-- <a id="eff_suspension_word"></a>An operation Op is a suspension word
+- <a id="eff_suspension_word"></a>An operation Op is a suspension word — rows in this file
 
 ## 5b. AN OPERATOR WHOSE SEMANTICS IS A CALL
 
@@ -581,7 +581,7 @@ A node
 
 Declared as facts:
 
-- <a id="eff_conv_key"></a>A key Key is a conversion key
+- <a id="eff_conv_key"></a>A key Key is a conversion key — rows in this file
 
 > A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 > oracle is V8's stack frames, which know nothing about a conversion.
@@ -812,8 +812,8 @@ In the code:
 
 Declared as facts:
 
-- <a id="eff_class_form"></a>A kind K is a class form
-- <a id="eff_field_kind"></a>`eff_field_kind`
+- <a id="eff_class_form"></a>A kind K is a class form — rows in this file
+- <a id="eff_field_kind"></a>`eff_field_kind` — rows in this file
 
 > Two POSITIVE arms, not `not static`: a default would silently file every
 > field the scanner stops flagging under construction time, and

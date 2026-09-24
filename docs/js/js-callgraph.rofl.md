@@ -20,6 +20,8 @@ default: code
 
 Reads:
 
+- from facts/js-callgraph.rofl, in the main:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
@@ -27,11 +29,10 @@ Reads:
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
 - from outside these files:
+  - <a id="ast_file"></a>`ast_file`
+- from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-  - <a id="ast_file"></a>`ast_file`
-- from outside these files, in the main:
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 
 ## Words
 
@@ -85,7 +86,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- <a id="call_kind"></a>A kind K is a call kind
+- <a id="call_kind"></a>A kind K is a call kind — rows in Words
 
 > Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 > iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
@@ -102,7 +103,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="transfer_kind"></a>`transfer_kind`
+- <a id="transfer_kind"></a>`transfer_kind` — rows in this file
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
@@ -151,8 +152,8 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="callee_shape"></a>`callee_shape`
-- <a id="member_kind"></a>`member_kind`
+- <a id="callee_shape"></a>`callee_shape` — rows in this file
+- <a id="member_kind"></a>`member_kind` — rows in this file
 
 > A member callee needs two more bits: `computed`, and the object's kind.
 > Receivers are classed by VERDICT, not by type: a member on a string, number,
@@ -228,8 +229,8 @@ In the code:
 
 Declared as facts:
 
-- <a id="obj_kind_class"></a>`obj_kind_class`
-- <a id="member_shape"></a>`member_shape`
+- <a id="obj_kind_class"></a>`obj_kind_class` — rows in this file
+- <a id="member_shape"></a>`member_shape` — rows in this file
 
 > `o[k]()` with a non-literal k is the one honest `runtime_dependent`.
 > `o[`fixed`]()` is a third case: fixed at parse time but not derivable,
@@ -270,7 +271,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="static_key_kind"></a>`static_key_kind`
+- <a id="static_key_kind"></a>`static_key_kind` — rows in this file
 
 > `shape` may negate `has_shape` because `has_shape` does not depend on `shape`.
 > A grammar form nobody anticipated lands in `s_unclassified` rather than
@@ -309,7 +310,7 @@ In the code:
 
 Declared as facts:
 
-- <a id="fn_kind"></a>A kind K is a function kind
+- <a id="fn_kind"></a>A kind K is a function kind — rows in this file
 
 > A function's name is whatever binds it — several arms, and a node may hold
 > more than one name. `key_name` rather than `ast_name` on a key, so a computed
@@ -555,7 +556,7 @@ In the audit:
 
 Declared as facts:
 
-- <a id="shape_because"></a>`shape_because`
+- <a id="shape_because"></a>`shape_because` — rows from facts/js-callgraph.rofl
 
 > An unresolved site attributed to the unit that contains it; a missing edge
 > whose caller has no row here is a SILENT under-report. A transfer site that

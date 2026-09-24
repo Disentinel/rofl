@@ -1060,3 +1060,34 @@ sig(irreducible_unknown, "is_irreducibly_unknown(kind K:1, with shape S:2, in la
 sig(our_unknown, "is_our_unknown(kind K:1, with shape S:2, in layer Lay:3, of language Lang:0)").
 sig(shape_of, "has_the_shape(kind K:1, shape S:2, in language Lang:0)").
 sig(shape_in, "is_a_shape_in(shape S, layer Lay)").
+
+-- Where a table's rows come from when no .rofl file holds them. The renderer
+-- says it beside the table (`Declared as facts`) and in the Reads list; a
+-- table with rows in a fact pack names the pack by itself.
+edb(rows_from).
+rows_from(ast_node, "the scanner").
+rows_from(ast_attr, "the scanner").
+rows_from(ast_child, "the scanner").
+rows_from(ast_file, "the scanner").
+rows_from(ast_parse_error, "the scanner").
+rows_from(resolve_site, "the resolve observer").
+rows_from(resolve_site_computed, "the resolve observer").
+rows_from(resolve_try, "the resolve observer").
+rows_from(resolve_answer, "the resolve observer").
+rows_from(resolve_failed, "the resolve observer").
+rows_from(resolve_unasked, "the resolve observer").
+rows_from(resolve_via, "the resolve observer").
+rows_from(env_ran, "the resolve observer").
+rows_from(premise_lit, "the kernel's reflection").
+rows_from(asserted_by, "the kernel's reflection").
+rows_from(env_extension, "the resolve observer").
+rows_from(str_seg, "the host, which cuts the specifier").
+rows_from(str_segs, "the host, which cuts the specifier").
+rows_from(str_char0, "the host, which cuts the specifier").
+rows_from(str_scheme, "the host, which cuts the specifier").
+rows_from(fs_file, "the host, which lists the files").
+rows_from(fs_dir, "the host, which lists the files").
+rows_from(fs_parent, "the host, which lists the files").
+rows_from(fs_file_in, "the host, which lists the files").
+rows_from(fs_dir_in, "the host, which lists the files").
+rows_from(fs_dir_of, "the host, which lists the files").

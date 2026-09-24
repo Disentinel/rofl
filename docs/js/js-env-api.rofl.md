@@ -22,12 +22,14 @@ default: audit
 
 Reads:
 
+- from facts/js-env.rofl, in the main:
+  - <a id="environment"></a>An environment E is an environment (`environment`)
+- from facts/js-lib-surface.rofl, in the main:
+  - <a id="lib_deprecated"></a>A prototype P has the deprecated member Key (`lib_deprecated`)
+  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-callgraph: [stdlib_member](js-callgraph.rofl.md#stdlib_member)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from outside these files, in the main:
-  - <a id="environment"></a>An environment E is an environment (`environment`)
-  - <a id="lib_deprecated"></a>A prototype P has the deprecated member Key (`lib_deprecated`)
-  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
   - <a id="lib_replaced_by"></a>`lib_replaced_by`
 
 In the code:

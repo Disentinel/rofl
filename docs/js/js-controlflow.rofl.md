@@ -21,7 +21,7 @@ Reads:
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [try_block](js-dataflow.rofl.md#try_block)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure: [ast_within](js-structure.rofl.md#ast_within)
-- from outside these files:
+- from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -91,7 +91,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- <a id="guard_kind"></a>A kind K guards the field Field
+- <a id="guard_kind"></a>A kind K guards the field Field — rows in this file
 
 > ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
 
@@ -126,8 +126,8 @@ A node
 
 Declared as facts:
 
-- <a id="abrupt_kind"></a>`abrupt_kind`
-- <a id="stmt_seq_field"></a>A field F is a statement sequence field
+- <a id="abrupt_kind"></a>`abrupt_kind` — rows in Words
+- <a id="stmt_seq_field"></a>A field F is a statement sequence field — rows in this file
 
 > `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
 
@@ -221,7 +221,7 @@ A [label](#noun-label) completes abruptly if all of:
 
 Declared as facts:
 
-- <a id="completion_kind"></a>A kind K is a completion kind
+- <a id="completion_kind"></a>A kind K is a completion kind — rows in this file
 
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
@@ -272,7 +272,7 @@ In the main:
 
 Declared as facts:
 
-- <a id="completion_deferred"></a>A kind K defers its completion because a reason R
+- <a id="completion_deferred"></a>A kind K defers its completion because a reason R — rows in this file
 
 > The gate: a statement kind holding an abrupt completion inside its own
 > region, in a statement list, in neither table — silently read as "completes
@@ -364,7 +364,7 @@ A node
 
 Declared as facts:
 
-- <a id="accessor_kind"></a>A kind K is an accessor kind
+- <a id="accessor_kind"></a>A kind K is an accessor kind — rows in this file
 
 ## 4. A DESTRUCTURING FORM HIDES A CALL. Measured on V8's own stack:
 
@@ -418,7 +418,7 @@ A [spread](#noun-spread) destructures through the accessor M if all of:
 
 Declared as facts:
 
-- <a id="spread_iterable_field"></a>A field F holds iterated spreads
+- <a id="spread_iterable_field"></a>A field F holds iterated spreads — rows in this file
 
 > The two sides reach the call graph differently. An iterable position has one
 > `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -576,7 +576,7 @@ A node
 
 Declared as facts:
 
-- <a id="catches_via"></a>A kind K catches via a field Field
+- <a id="catches_via"></a>A kind K catches via a field Field — rows in this file
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 > callee. The value travels with the throw: `thrown_by`, `caught_value`.
@@ -677,7 +677,7 @@ A node
 
 Declared as facts:
 
-- <a id="export_kind"></a>`export_kind`
+- <a id="export_kind"></a>`export_kind` — rows in Words
 
 > ...and a top-level call runs on import, with no enclosing function.
 
@@ -760,7 +760,7 @@ In the audit:
 
 Declared as facts:
 
-- <a id="transfer_mechanism"></a>A kind K transfers by a mechanism M
+- <a id="transfer_mechanism"></a>A kind K transfers by a mechanism M — rows in this file
 
 > Three states, not two: modelled, waived with a reason, or open with an owner.
 > `mechanism_open` is empty since 2026-09-06 and kept: the next mechanism that
@@ -789,9 +789,9 @@ In the audit:
 
 Declared as facts:
 
-- <a id="mechanism_modelled"></a>A mechanism M is modelled
-- <a id="mechanism_waived"></a>A mechanism M is waived because a reason R
-- <a id="mechanism_open"></a>A mechanism M is open because a reason R
+- <a id="mechanism_modelled"></a>A mechanism M is modelled — rows in this file
+- <a id="mechanism_waived"></a>A mechanism M is waived because a reason R — rows in this file
+- <a id="mechanism_open"></a>A mechanism M is open because a reason R — no rows: declared so a rule may read it
 
 > A kind carrying a modelled mechanism that no rule reaches. Derived from
 > `transfer_mechanism` where a mechanism has one door (suspend, label, field,
@@ -836,7 +836,7 @@ N is guarded either:
 
 Declared as facts:
 
-- <a id="short_circuit_kind"></a>`short_circuit_kind`
+- <a id="short_circuit_kind"></a>`short_circuit_kind` — rows in Words
 
 > an arm declared for a field the scanner never emits under that kind: a typo
 > makes the guarded set quietly smaller

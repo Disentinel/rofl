@@ -52,9 +52,16 @@ one of them, and the round trip is the proof that they agree.
 - **The file** carries its own context and nothing else: front matter, its
   lead (the comment before the first heading or clause, so the file opens
   with its reason), a `Reads` list (its imports, one line per source and
-  book; a relation defined outside these files reads as its sentence and
-  carries the anchor every use links to), a `Words` glossary, then the
-  essay. Words holds what the file calls a node and what each word stands
+  book; a relation defined outside these files reads as its sentence,
+  carries the anchor every use links to, and is grouped by where its rows
+  come from: `from the scanner:`, `from facts/js-env.rofl:`), a `Words`
+  glossary, then the essay. A declared table says the same beside itself:
+  `rows in Words`, `rows in this file`, `rows from facts/js-callgraph.rofl`,
+  `rows from the scanner`, or `no rows: declared so a rule may read it`.
+  The renderer finds what a .rofl file holds (the fact packs are given with
+  `--tables`); what no file holds is declared beside the phrases,
+  `rows_from(ast_node, "the scanner")`
+  (f_a_table_says_where_its_rows_come_from_and_the_word_for_it_lives_with_the_phrases). Words holds what the file calls a node and what each word stands
   for (a kind, a set of kinds with its members, or the relation that holds
   of it), and the phrases the file defines in one step: a relation with one
   rule whose body is a single literal and kind guards is vocabulary, not a
