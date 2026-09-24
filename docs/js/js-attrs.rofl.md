@@ -31,14 +31,21 @@ Reads:
   - <a id="outside_attr_needs"></a>`outside_attr_needs`
   - <a id="premise_lit"></a>`premise_lit`
 
-A term
+## Words
 
-- <a id="attr_lit"></a>reads the attribute K with a term V if all of:
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="attr_lit_kvar"></a>A term has a variable key $var(X) if it [reads the attribute](#attr_lit) $var(X) with some term.
+- <a id="attr_lit_vvar"></a>A term has a variable value $var(X) if it [reads the attribute](#attr_lit) some key with $var(X).
+- <a id="attr_test_svar"></a>A term tests a variable subject $var(X) if it [is an attribute test](#attr_test_lit) of $var(X) on some key.
+- <a id="child_lit_svar"></a>A term reads the child of a variable $var(X) if it [reads the child](#child_lit) of $var(X) at some field.
+- <a id="child_lit_fvar"></a>A term reads a variable field $var(X) if it [reads the child](#child_lit) of some term at $var(X).
+- <a id="attr_guard_pinned"></a>A rule pins the attribute guard K on a term S if it [guards the attribute](#attr_guard_kind) K on S as some kind.
+
+<a id="attr_lit"></a>A term reads the attribute K with a term V if all of:
   - [the relation](js-vocabulary.rofl.md#lit_rel) of it is `ast_attr`;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of it is K;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 3 of it is V.
-- <a id="attr_lit_kvar"></a>has a variable key $var(X) if it [reads the attribute](#attr_lit) $var(X) with some term.
-- <a id="attr_lit_vvar"></a>has a variable value $var(X) if it [reads the attribute](#attr_lit) some key with $var(X).
 
 > a key some rule names; a key read with the value free, for which
 > `unconsumed_value` must not fire; a (key, value) pair named outright
@@ -167,14 +174,11 @@ A term
   - it [reads the attribute](#attr_lit) K with a term V;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of it is S;
   - it neither [has a variable key](#attr_lit_kvar) K nor [has a variable value](#attr_lit_vvar) V.
-- <a id="attr_test_svar"></a>tests a variable subject $var(X) if it [is an attribute test](#attr_test_lit) of $var(X) on some key.
 - <a id="child_lit"></a>reads the child of a term S at a field F if all of:
   - it [is a body literal](js-vocabulary.rofl.md#body_lit);
   - [the relation](js-vocabulary.rofl.md#lit_rel) of it is `ast_child`;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of it is S;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of it is F.
-- <a id="child_lit_svar"></a>reads the child of a variable $var(X) if it [reads the child](#child_lit) of $var(X) at some field.
-- <a id="child_lit_fvar"></a>reads a variable field $var(X) if it [reads the child](#child_lit) of some term at $var(X).
 
 A rule
 
@@ -195,7 +199,6 @@ A rule
   - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of L2 is S;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of L2 is Kind;
   - `js` [has the node kind](#node_kind) Kind.
-- <a id="attr_guard_pinned"></a>pins the attribute guard K on a term S if it [guards the attribute](#attr_guard_kind) K on S as some kind.
 
 <a id="attr_slot_gap"></a>An attribute K is a slot gap at a field F of Kind either:
 

@@ -340,6 +340,11 @@ impl<'a> R<'a> {
         match b { Book::Bare => "main".into(), Book::Named(s) => self.h.name(s).into(), Book::Var(v) => format!("book {}", self.h.name(v)) }
     }
     fn link(&self, rel: Sym, text: &str, file: usize, stats: &mut Stats) -> String {
+        let bare = text.trim();
+        if bare.starts_with('-') || ["the", "a", "an", "is", "of", "in", "at"].contains(&bare) {
+            if self.defs.get(&rel).is_none() { stats.external.insert(self.h.name(rel).to_string()); }
+            return text.to_string();
+        }
         match self.defs.get(&rel) {
             Some(&f) if f == file => { stats.links += 1; format!("[{}](#{})", text, self.h.name(rel)) }
             Some(&f) => { stats.links += 1; format!("[{}]({}.rofl.md#{})", text, self.stems[f], self.h.name(rel)) }
@@ -681,7 +686,8 @@ impl<'a> R<'a> {
         if remaining.len() >= 2 && remaining.iter().all(|t| full(t) && !t.contains(" or ")) { vec![remaining.join(" or ")] } else { remaining }
     }
 
-    fn join(pos: &[String], neg: &[String], indent: &str) -> String {
+    fn join(pos: &[String], neg: &[String], indent: &str) -> String { Self::join_with(pos, neg, indent, false) }
+    fn join_with(pos: &[String], neg: &[String], indent: &str, force_inline: bool) -> String {
         let n = pos.len() + neg.len();
         let inline = {
             let mut s = String::new();
@@ -701,7 +707,7 @@ impl<'a> R<'a> {
             }
             s
         };
-        if inline.len() <= WIDTH || n < 3 { return inline; }
+        if force_inline || inline.len() <= WIDTH || n < 3 { return inline; }
         let mut s = String::from("if all of:");
         let items: Vec<String> = pos.iter().cloned().chain(neg.iter().map(|x| format!("unless {x}"))).collect();
         for (i, x) in items.iter().enumerate() {
@@ -909,7 +915,25 @@ impl<'a> R<'a> {
         Ctx { nouns, intro: HashSet::new(), absorbed, residual, kind_conds, head_book: c.head.book, file, nouns_used: BTreeSet::new(), display, or_at: None, cur_k: usize::MAX, deferred: Vec::new(), subject: None, no_label: false, rel_pairs: HashMap::new(), consumed: HashSet::new(), last_subj: None, typed, glued: false, positional: false }
     }
 
-    fn rules(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, nouns_used: &mut BTreeSet<String>, anchored: &mut HashSet<Sym>) {
+    /// A rule whose body is one positive literal and kind guards defines a phrase by another
+    /// (`the call kind of C is K if C is of kind K and K is a call kind`): vocabulary, not a claim.
+    fn is_projection(&self, c: &Clause) -> bool {
+        if c.body.is_empty() { return false; }
+        let mut real = 0;
+        for e in &c.body {
+            match e {
+                Elem::Pos(l) => {
+                    let guard = (self.h.name(l.rel) == "ast_node" && l.args.len() == 4 && l.args[1].as_atom().is_some())
+                        || (l.args.len() == 1 && (self.kind_nouns.contains_key(&l.rel) || self.noun_guards.contains_key(&l.rel)));
+                    if !guard { real += 1; }
+                }
+                _ => return false,
+            }
+        }
+        real <= 1
+    }
+
+    fn rules(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, nouns_used: &mut BTreeSet<String>, anchored: &mut HashSet<Sym>, glossary: &mut Vec<String>, single: &HashSet<Sym>) {
         let mut out = String::new();
         let taken: HashSet<String> = group.iter().flat_map(|c| {
             let mut vs: Vec<String> = Vec::new();
@@ -969,6 +993,7 @@ impl<'a> R<'a> {
                 items.push(Item::Block(out));
             }
             None => {
+                let to_glossary = group.len() == 1 && single.contains(&rel) && self.phrases.get(&rel).is_some() && self.is_projection(&group[0]);
                 for (k, c) in group.iter().enumerate() {
                     stats.rules += 1;
                     let mut ctx = self.ctx(c, file, false, &taken);
@@ -976,9 +1001,16 @@ impl<'a> R<'a> {
                     self.plan_relatives(c, &mut ctx);
                     let (subj, rest) = self.head_split(c, &mut ctx, stats);
                     let (pos, neg) = self.conditions(c, &[], &mut ctx, stats);
-                    let body = Self::join(&pos, &neg, "  ");
+                    let body = Self::join_with(&pos, &neg, "  ", to_glossary);
                     let predicate = if body.is_empty() { format!("{rest}.") } else { format!("{rest} {body}.") };
                     let a = if k == 0 { anchor.clone() } else { String::new() };
+                    if to_glossary {
+                        // the same sentence, in the glossary rather than the flow: a phrase defined in one step
+                        let sentence = match &subj { Some((_, subject)) => format!("{a}{subject} {predicate}"), None => format!("{a}{predicate}") };
+                        glossary.push(sentence);
+                        nouns_used.extend(ctx.nouns_used);
+                        continue;
+                    }
                     match subj {
                         Some((key, subject)) => items.push(Item::Rule { key: Some(key), subject, predicate, anchor: a }),
                         None => items.push(Item::Rule { key: None, subject: String::new(), predicate, anchor: a }),
@@ -1091,7 +1123,7 @@ impl<'a> R<'a> {
         }
     }
 
-    fn facts(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, declared: &mut Vec<String>, anchored: &mut HashSet<Sym>) {
+    fn facts(&self, group: &[Clause], file: usize, items: &mut Vec<Item>, stats: &mut Stats, declared: &mut Vec<String>, anchored: &mut HashSet<Sym>, set_members: &mut BTreeMap<Sym, Vec<String>>) {
         let mut out = String::new();
         let rel = group[0].head.rel;
         stats.facts += group.len();
@@ -1116,6 +1148,12 @@ impl<'a> R<'a> {
         let noun = self.kind_nouns.get(&rel).map(|n| format!(", {},", self.a_noun(n))).unwrap_or_default();
         if arity <= 1 {
             let items_: Vec<String> = group.iter().map(|c| c.head.args.first().map_or(String::new(), |a| self.term(*a, None, &mut ctx))).collect();
+            // a set that names a word is the word's definition: it reads in Words, with its members
+            if self.kind_nouns.contains_key(&rel) && self.defs.get(&rel) == Some(&file) {
+                set_members.entry(rel).or_default().extend(items_);
+                if !anchor.is_empty() { anchored.remove(&rel); }  // un-claim only what this line claimed
+                return;
+            }
             let _ = writeln!(out, "{anchor}`{name}`{noun} includes {}.\n", items_.join(", "));
             items.push(Item::Block(out));
             return;
@@ -1152,6 +1190,12 @@ impl<'a> R<'a> {
         let mut books: BTreeSet<String> = BTreeSet::new();
         let mut anchored: HashSet<Sym> = HashSet::new();
         let mut reads: BTreeMap<String, usize> = BTreeMap::new();
+        // a relation with exactly one rule in this file may read as a phrase defined in one step
+        let mut rule_count: HashMap<Sym, usize> = HashMap::new();
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() { *rule_count.entry(c.head.rel).or_default() += 1; } } } }
+        let single: HashSet<Sym> = rule_count.iter().filter(|(_, n)| **n == 1).map(|(r, _)| *r).collect();
+        let mut glossary: Vec<String> = Vec::new();
+        let mut set_members: BTreeMap<Sym, Vec<String>> = BTreeMap::new();
         // the file's own opening comment, before any heading or clause, is its lead and comes first
         let mut lead = String::new();
         let mut lead_open = true;
@@ -1186,11 +1230,11 @@ impl<'a> R<'a> {
                         let fact = c.body.is_empty();
                         let mut j = i + 1;
                         while j < clauses.len() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() { j += 1; }
-                        if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored); }
+                        if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored, &mut set_members); }
                         else {
                             let b = self.book_name(c.head.book);
                             if b != cur_block { items.push(Item::Block(format!("In the {b}:\n\n"))); cur_block = b; }
-                            self.rules(&clauses[i..j], file, &mut items, &mut stats, &mut nouns_used, &mut anchored);
+                            self.rules(&clauses[i..j], file, &mut items, &mut stats, &mut nouns_used, &mut anchored, &mut glossary, &single);
                         }
                         i = j;
                     }
@@ -1230,24 +1274,48 @@ impl<'a> R<'a> {
             let _ = writeln!(out, "Kinds without a noun: {}.\n", bare.iter().map(|n| n.trim_end_matches(" node").to_string()).collect::<Vec<_>>().join(", "));
         }
         // the kinds behind the nouns this file uses: a noun is a node of one of its kinds
-        let mut kinds: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        let mut kinds: BTreeMap<String, Vec<Sym>> = BTreeMap::new();
         let mut linked: HashSet<String> = HashSet::new();
-        { let mut rest = body.as_str(); while let Some(i) = rest.find("](#noun-") { let after = &rest[i + 8..]; let end = after.find(')').unwrap_or(after.len()); linked.insert(after[..end].replace('_', " ")); rest = &after[end..]; } }
-        for (k, n) in &self.kind_nouns { if nouns_used.contains(n) || linked.contains(n) { kinds.entry(n.clone()).or_default().push(self.h.name(*k).to_string()); } }
+        let scan = format!("{body}\n{}", glossary.join("\n"));
+        { let mut rest = scan.as_str(); while let Some(i) = rest.find("](#noun-") { let after = &rest[i + 8..]; let end = after.find(')').unwrap_or(after.len()); linked.insert(after[..end].replace('_', " ")); rest = &after[end..]; } }
+        for (k, n) in &self.kind_nouns { if nouns_used.contains(n) || linked.contains(n) || set_members.contains_key(k) { kinds.entry(n.clone()).or_default().push(*k); } }
         // one glossary: what this file calls a node, by kind or by the relation that holds of it
-        if !kinds.is_empty() || !guards.is_empty() {
-            let _ = writeln!(out, "## Words\n\nWhat this file calls a node, and what each word stands for:\n\n| word | stands for |\n|---|---|");
+        if !kinds.is_empty() || !guards.is_empty() || !glossary.is_empty() {
+            let _ = writeln!(out, "## Words\n");
+            if !kinds.is_empty() || !guards.is_empty() { let _ = writeln!(out, "What this file calls a node, and what each word stands for:\n\n| word | stands for |\n|---|---|"); }
             for (n, ks) in &kinds {
-                let mut ks = ks.clone(); ks.sort();
-                let of = if ks.len() == 1 { format!("a node of kind `{}`", ks[0]) } else { format!("a node of one of the kinds {}", ks.iter().map(|k| format!("`{k}`")).collect::<Vec<_>>().join(", ")) };
-                let _ = writeln!(out, "| <a id=\"noun-{}\"></a>{} {} | {of} |", n.replace(' ', "_"), article(n), n);
+                let mut ks: Vec<Sym> = ks.clone(); ks.sort_by_key(|k| self.h.name(*k).to_string());
+                let mut anchors = String::new();
+                let mut parts: Vec<String> = Vec::new();
+                for k in &ks {
+                    let name = self.h.name(*k);
+                    if let Some(members) = set_members.get(k) {
+                        // a set defined here: the word's definition, with the set's anchor so `is a call kind` can link
+                        // by name: the atom in `edb(call_kind)` and the relation `call_kind` may be two symbols
+                        if !anchored.iter().any(|a| self.h.name(*a) == name) { anchored.insert(*k); anchors.push_str(&format!("<a id=\"{name}\"></a>")); }
+                        let ms: Vec<String> = members.clone();
+                        parts.push(if ms.len() == 1 { format!("a node of kind {} (`{name}`)", ms[0]) } else { format!("a node of one of the kinds {} (`{name}`)", ms.join(", ")) });
+                    } else {
+                        match self.defs.get(k) {
+                            Some(&f) if f != file => parts.push(format!("a node of a kind in [`{name}`]({}.rofl.md#{name})", self.stems[f])),
+                            Some(_) => parts.push(format!("a node of a kind in `{name}`")),
+                            None => parts.push(format!("a node of kind `{name}`")),
+                        }
+                    }
+                }
+                let _ = writeln!(out, "| <a id=\"noun-{}\"></a>{anchors}{} {} | {} |", n.replace(' ', "_"), article(n), n, parts.join(", or "));
             }
             for (n, r) in &guards {
                 let name = self.h.name(*r);
                 let rel = match self.defs.get(r) { Some(&f) if f == file => format!("[`{name}`](#{name})"), Some(&f) => format!("[`{name}`]({}.rofl.md#{name})", self.stems[f]), None => format!("`{name}`") };
                 let _ = writeln!(out, "| {} {n} | a node {rel} holds of |", article(n));
             }
-            out.push('\n');
+            if !kinds.is_empty() || !guards.is_empty() { out.push('\n'); }
+            if !glossary.is_empty() {
+                let _ = writeln!(out, "Phrases this file defines in one step, each by the sentence it stands for:\n");
+                for g in &glossary { let _ = writeln!(out, "- {g}"); }
+                out.push('\n');
+            }
         }
         out.push_str(&body);
         if doc.trailing > 0 { let _ = writeln!(out, "> {} trailing comments on rule lines are not carried over.\n", doc.trailing); }

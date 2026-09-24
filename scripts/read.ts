@@ -57,9 +57,13 @@ for (const m of vocab.matchAll(/^kind_set\((\w+)\)/gm)) setRels.add(m[1]);
 const usedHere = new Set<string>();
 for (const m of facts.matchAll(/^arity\((\w+), 1\)/gm)) usedHere.add(m[1]);
 const nounAtoms = new Map<string, string[]>(); const nounSets = new Map<string, string[]>();
-for (const [k, n] of kindNoun) { const into = setRels.has(k) ? nounSets : nounAtoms; into.set(n, [...(into.get(n) ?? []), k]); }
-// two sets with one noun: the one this file uses reads first
-for (const [n, ks] of nounSets) nounSets.set(n, [...ks.filter((k) => usedHere.has(k)), ...ks.filter((k) => !usedHere.has(k))]);
+function indexNouns() {
+  nounAtoms.clear(); nounSets.clear();
+  for (const [k, n] of kindNoun) { const into = setRels.has(k) ? nounSets : nounAtoms; into.set(n, [...(into.get(n) ?? []), k]); }
+  // two sets with one noun: the one this file uses reads first
+  for (const [n, ks] of nounSets) nounSets.set(n, [...ks.filter((k) => usedHere.has(k)), ...ks.filter((k) => !usedHere.has(k))]);
+}
+indexNouns();
 
 // ------------------------------------------------------------------ terms
 type Term = { v: string } | { a: string } | { s: string } | { n: number } | { w: true } | { or: Term[] } | { f: string; args: Term[] };
@@ -398,8 +402,16 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
     // the Words glossary: `a member expression | a node of kind \`member_expression\``, `a function | a node [\`fn_node\`](#fn_node) holds of`
     if (sec === 'Words' && b.type === 'table') for (const r of b.rows!) {
       const noun = r[0].replace(/^<a id="[^"]+"><\/a>/, '').replace(/^[Aa]n? /, '').trim();
-      const kinds = /^a node of (?:kind|one of the kinds) (.+)$/.exec(r[1]);
-      if (kinds) { for (const k of kinds[1].split(/,\s*/).map((x) => x.replace(/`/g, ''))) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } continue; }
+      let matched = false;
+      for (const part of r[1].split(/, or /)) {
+        const set = /^a node of (?:kind|one of the kinds) (.+) \(`(\w+)`\)$/.exec(part);
+        if (set) { const rel = set[2]; setRels.add(rel); if (!kindNoun.has(rel)) { kindNoun.set(rel, noun); nouns.add(noun); } for (const k of set[1].split(/,\s*/).map((x) => x.replace(/`/g, ''))) parsedFacts.push({ rel, args: [{ a: k }] }); homeBook.set(rel, 'main'); matched = true; continue; }
+        const from = /^a node of a kind in \[?`(\w+)`/.exec(part);
+        if (from) { setRels.add(from[1]); if (!kindNoun.has(from[1])) { kindNoun.set(from[1], noun); nouns.add(noun); } matched = true; continue; }
+        const kinds = /^a node of (?:kind|one of the kinds) (.+)$/.exec(part);
+        if (kinds) { for (const k of kinds[1].split(/,\s*/).map((x) => x.replace(/`/g, ''))) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } matched = true; }
+      }
+      if (matched) continue;
       const guard = /`(\w+)`.* holds of$/.exec(r[1]);
       if (guard) nounGuards.set(noun, guard[1]);
     }
@@ -496,6 +508,11 @@ for (let i = 0; i < blocks.length; i++) {
     i++; continue;
   }
   if (/ if all of:$/.test(text) && next && next.type === 'ul') { ruleText(text, section, next.items!.map((x) => x.text)); i++; continue; }
+  if (/^Phrases this file defines/.test(text) && next && next.type === 'ul') {
+    // the glossary of phrases defined in one step: each item is a rule sentence, read as one
+    for (const it of next.items!) ruleText(it.text, section, it.sub.length ? it.sub : null);
+    i++; continue;
+  }
   if (/:$/.test(text) && next && next.type === 'ul') {
     // data: a list of ground sentences under any paragraph ending in a colon, `platform owns auth.`
     for (const it of next.items!) {

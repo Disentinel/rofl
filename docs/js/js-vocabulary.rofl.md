@@ -29,6 +29,12 @@ Reads:
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
   - <a id="premise_lit"></a>`premise_lit`
 
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="lit_arg"></a>The argument I of a term L is a term X if [`arg_at`](js-dataflow.rofl.md#arg_at)(L, I, $cons(X, something)) in the main.
+
 <a id="body_lit"></a>A term L is a body literal either:
 
 1. if [`premise_lit`](#premise_lit)(something, something, L) and L is $lit(something, something, something, something);
@@ -43,8 +49,6 @@ Reads:
    - L is $lit(something, something, Args, something);
    - N is 1;
 2. if [`arg_at`](js-dataflow.rofl.md#arg_at)(L, I, $cons(something, Args)) in the main and N is I + 1.
-
-<a id="lit_arg"></a>The argument I of a term L is a term X if [`arg_at`](js-dataflow.rofl.md#arg_at)(L, I, $cons(X, something)) in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted

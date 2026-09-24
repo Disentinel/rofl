@@ -58,6 +58,31 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-namespace_import"></a>a namespace import | a node of kind `import_namespace_specifier` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
+- <a id="has_explicit_shape"></a>A text S has an explicit shape if S [has the explicit shape](#explicit_shape) some shape.
+- A site has a shape if [the site shape](#site_shape) of it is some shape.
+- <a id="has_specifier"></a>A site has a specifier if it [has the import specifier](#import_spec) some node.
+- <a id="export_site"></a>A [named export](#noun-named_export) is an export site.
+- <a id="export_decl_type_only"></a>A node is a type only export if [the attribute](#ast_attr) `export_kind` of it is "type".
+- <a id="export_spec_type_only"></a>A node is a type only export specifier if [the attribute](#ast_attr) `export_kind` of it is "type".
+- <a id="export_bound"></a>A node has an export binding if some node [exports](#export_binding) some name as some name at it.
+- <a id="export_default_site"></a>A [default export](#noun-default_export) is a default export site.
+- <a id="default_external"></a>A node exports by default as "default" if it [is a default export site](#export_default_site).
+- <a id="has_default_internal"></a>A node has a default internal if it [exports by default](#default_internal) some name.
+- <a id="default_export_file"></a>A file F has the default export E if E is in file F and E is a [default export](#noun-default_export).
+- <a id="decl_type_only"></a>A node is a type only import if [the attribute](#ast_attr) `import_kind` of it is "type".
+- <a id="spec_type_only"></a>A node is a type only import specifier if [the attribute](#ast_attr) `import_kind` of it is "type".
+- <a id="has_value_binding"></a>A site binds a value if it [binds a value](#value_binding) at some node.
+- <a id="has_reexport_spec"></a>A node has a reexport specifier if it [has the reexport specifier](#reexport_spec) some node.
+- <a id="has_site_kind"></a>A site has a site kind if [the site kind](#site_kind) of it is some kind.
+- <a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(it, something) in the main.
+- <a id="self_referential_module"></a>A file F is self referential if F [has the module meta](#module_meta) some node.
+- <a id="not_module_meta"></a>A node is not module meta if it [has the meta form](js-structure.rofl.md#meta_form) `new_target`.
+- <a id="import_attr_of"></a>A node has the import attribute X if X [is among the](#ast_child) `attributes` of it.
+- <a id="module_type"></a>A node imports the module type T if it [imports with the attribute](#module_attr) "type" holding T.
+
 Declared as facts:
 
 - <a id="str_seg"></a>`str_seg`
@@ -91,12 +116,9 @@ Declared as facts:
 
 1. if all of:
    - E is a [named export](#noun-named_export);
-   - [the](#ast_child) `source` of E is some node;
+   - the `source` of E is some node;
    - N is `reexport_named`;
-2. if all of:
-   - E is an [export-all](#noun-export-all);
-   - [the](#ast_child) `source` of E is some node;
-   - N is `reexport_all`.
+2. if E is an [export-all](#noun-export-all), the `source` of E is some node, and N is `reexport_all`.
 
 <a id="module_site"></a>A node N is a module site of a form K either:
 
@@ -115,11 +137,9 @@ A site
 - <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.rofl.md#ast_node) F.
 - <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_node) L.
 
-<a id="site_source_node"></a>The source node of a site I is a node Src if I [is a module site](#module_site) of some form and [the](#ast_child) `source` of I is Src.
+<a id="site_source_node"></a>The source node of a site I is a node Src if I [is a module site](#module_site) of some form and the `source` of I is Src.
 
 <a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a [string literal](#noun-string_literal) Src and Src [is written as](js-structure.rofl.md#ast_value) S.
-
-<a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 
 > the one irreducible cell: `import(pathVar)` names a module that does not
 > exist until the expression is evaluated
@@ -141,8 +161,6 @@ A site
 3. if S [has the scheme](#str_scheme) "node" and N is `node_builtin`;
 4. if S [is the bare name](#node_builtin_bare) of some spec and N is `node_builtin`.
 
-<a id="has_explicit_shape"></a>A text S has an explicit shape if S [has the explicit shape](#explicit_shape) some shape.
-
 <a id="src_shape"></a>The shape of a text S is a shape Sh either:
 
 1. if S [has the explicit shape](#explicit_shape) Sh;
@@ -152,8 +170,6 @@ A site
    - unless S [has an explicit shape](#has_explicit_shape).
 
 <a id="site_shape"></a>The site shape of a site I is a shape Sh if [the source text](#site_source) of I is S and [the shape](#src_shape) of S is Sh.
-
-A site has a shape if [the site shape](#site_shape) of it is some shape.
 
 ## 3. RESOLUTION — a walk over the directory tree one segment at a time,
 
@@ -226,22 +242,19 @@ A node I is resolved either:
 
 <a id="import_spec"></a>A site has the import specifier Sp if it [is an import site](#import_site) of `static_import` and Sp [is among the](#ast_child) `specifiers` of it.
 
-<a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and [the](#ast_child) `local` of it [is named](js-structure.rofl.md#ast_name) L.
+<a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and the `local` of it [is named](js-structure.rofl.md#ast_name) L.
 
 <a id="spec_imported"></a>Sp imports the name M either:
 
-1. if Sp is an [import specifier](#noun-import_specifier) and [the](#ast_child) `imported` of Sp [is named](js-structure.rofl.md#ast_name) M;
-2. if Sp is an [import specifier](#noun-import_specifier) and [the](#ast_child) `imported` of Sp [is written as](js-structure.rofl.md#ast_value) M;
+1. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is named](js-structure.rofl.md#ast_name) M;
+2. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is written as](js-structure.rofl.md#ast_value) M;
 3. if Sp is a [default import](#noun-default_import) and M is "default";
 4. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
 
-A site
-
-- <a id="binding"></a>binds the name Local to Imported at a specifier Sp if all of:
+<a id="binding"></a>A site binds the name Local to Imported at a specifier Sp if all of:
   - it [has the import specifier](#import_spec) Sp;
   - Sp [binds locally](#spec_local) Local;
   - Sp [imports the name](#spec_imported) Imported.
-- <a id="has_specifier"></a>has a specifier if it [has the import specifier](#import_spec) some node.
 
 ## 4b. EXPORT BINDINGS mirror section 4 and read OPPOSITE children: an export
 
@@ -252,20 +265,18 @@ A site
 > has the same two markers as an import; a namespace specifier carries none
 > and is a value binding, correctly.
 
-<a id="export_site"></a>A [named export](#noun-named_export) is an export site.
-
 <a id="export_spec"></a>A node has the export specifier Sp if it [is an export site](#export_site) and Sp [is among the](#ast_child) `specifiers` of it.
 
 <a id="export_specifier_node"></a>Sp names an export if Sp is an [export specifier](#noun-export_specifier) or a [namespace export](#noun-namespace_export).
 
 <a id="spec_external"></a>A node Sp exports as X either:
 
-1. if Sp [names an export](#export_specifier_node) and [the](#ast_child) `exported` of Sp [is named](js-structure.rofl.md#ast_name) X;
-2. if Sp [names an export](#export_specifier_node) and [the](#ast_child) `exported` of Sp [is written as](js-structure.rofl.md#ast_value) X.
+1. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is named](js-structure.rofl.md#ast_name) X;
+2. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is written as](js-structure.rofl.md#ast_value) X.
 
 <a id="spec_internal"></a>Sp exports the local L either:
 
-1. if Sp is an [export specifier](#noun-export_specifier) and [the](#ast_child) `local` of Sp [is named](js-structure.rofl.md#ast_name) L;
+1. if Sp is an [export specifier](#noun-export_specifier) and the `local` of Sp [is named](js-structure.rofl.md#ast_name) L;
 2. if Sp is a [namespace export](#noun-namespace_export) and L is "*".
 
 A node
@@ -275,8 +286,6 @@ A node
   - Sp [exports as](#spec_external) External;
   - Sp [exports the local](#spec_internal) Internal.
 - <a id="export_renamed"></a>renames on export Internal to External if some node [exports](#export_binding) Internal as External at it and External differs from Internal.
-- <a id="export_decl_type_only"></a>is a type only export if [the attribute](#ast_attr) `export_kind` of it is "type".
-- <a id="export_spec_type_only"></a>is a type only export specifier if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="export_value_binding"></a>binds a value export at a node Sp if it [exports](#export_binding) some name as some name at Sp, unless it [is a type only export](#export_decl_type_only) or Sp [is a type only export specifier](#export_spec_type_only).
 
 > the gates: every specifier yields exactly one external and one internal name
@@ -286,7 +295,6 @@ In the audit:
 
 A node
 
-- <a id="export_bound"></a>has an export binding if some node [exports](#export_binding) some name as some name at it.
 - <a id="export_binding_missing"></a>has no export binding if some node [has the export specifier](#export_spec) it, unless it [has an export binding](#export_bound).
 - <a id="export_binding_conflict"></a>has two export bindings X and B if all of:
   - some node [exports](#export_binding) some name as X at it;
@@ -310,23 +318,14 @@ A node
 
 In the code:
 
-<a id="export_default_site"></a>A [default export](#noun-default_export) is a default export site.
-
-<a id="default_external"></a>A node exports by default as "default" if it [is a default export site](#export_default_site).
-
-<a id="default_declaration"></a>The default declaration of a node E is a node D if E [is a default export site](#export_default_site) and [the](#ast_child) `declaration` of E is D.
+<a id="default_declaration"></a>The default declaration of a node E is a node D if E [is a default export site](#export_default_site) and the `declaration` of E is D.
 
 <a id="default_internal"></a>A node E exports by default N either:
 
-1. if [the default declaration](#default_declaration) of E is a node D and [the](#ast_child) `id` of D [is named](js-structure.rofl.md#ast_name) N;
+1. if [the default declaration](#default_declaration) of E is a node D and the `id` of D [is named](js-structure.rofl.md#ast_name) N;
 2. if [the default declaration](#default_declaration) of E is an [identifier](#noun-identifier) D and D [is named](js-structure.rofl.md#ast_name) N.
 
-A node
-
-- <a id="has_default_internal"></a>has a default internal if it [exports by default](#default_internal) some name.
-- <a id="default_anonymous"></a>exports an anonymous default if [the default declaration](#default_declaration) of it is some node, unless it [has a default internal](#has_default_internal).
-
-<a id="default_export_file"></a>A file F has the default export E if E is in file F and E is a [default export](#noun-default_export).
+<a id="default_anonymous"></a>A node exports an anonymous default if [the default declaration](#default_declaration) of it is some node, unless it [has a default internal](#has_default_internal).
 
 > totality, one internal name, one default per module (two in one File is
 > what a collision between scanned modules would look like from here)
@@ -360,15 +359,9 @@ A node
 
 In the code:
 
-A node
-
-- <a id="decl_type_only"></a>is a type only import if [the attribute](#ast_attr) `import_kind` of it is "type".
-- <a id="spec_type_only"></a>is a type only import specifier if [the attribute](#ast_attr) `import_kind` of it is "type".
-
 A site
 
 - <a id="value_binding"></a>binds a value at a node Sp if it [binds the name](#binding) some name to some name at Sp, unless it [is a type only import](#decl_type_only) or Sp [is a type only import specifier](#spec_type_only).
-- <a id="has_value_binding"></a>binds a value if it [binds a value](#value_binding) at some node.
 - <a id="no_specifiers"></a>has no specifiers if it [is an import site](#import_site) of `static_import`, unless it [has a specifier](#has_specifier).
 
 <a id="depends"></a>A file F depends on a file T if a site I [resolves to the file](#resolved_import) T and I [sits in](#site_file) F.
@@ -410,10 +403,7 @@ A node
 1. if E [reexports a value at](#reexport_value_spec) some node;
 2. if E [is a reexport site](#reexport_site) of `reexport_all`, unless E [is a type only export](#export_decl_type_only).
 
-A node
-
-- <a id="has_reexport_spec"></a>has a reexport specifier if it [has the reexport specifier](#reexport_spec) some node.
-- <a id="no_reexport_specifiers"></a>has no reexport specifiers if it [is a reexport site](#reexport_site) of `reexport_named`, unless it [has a reexport specifier](#has_reexport_spec).
+<a id="no_reexport_specifiers"></a>A node has no reexport specifiers if it [is a reexport site](#reexport_site) of `reexport_named`, unless it [has a reexport specifier](#has_reexport_spec).
 
 A file F
 
@@ -512,15 +502,12 @@ A site
   - it [is unresolved with shape](#unresolved_import) Sh;
   - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, `resolves`) in the main;
   - unless it [is a dangling import](#dangling_import) of some text.
-- <a id="has_site_kind"></a>has a site kind if [the site kind](#site_kind) of it is some kind.
 - <a id="site_without_kind"></a>has no site kind if it [is a module site](#module_site) of some form, unless it [has a site kind](#has_site_kind).
 - <a id="shape_conflict"></a>has two site shapes X and B if all of:
   - [the site shape](#site_shape) of it is X;
   - [the site shape](#site_shape) of it is B;
   - X differs from B.
 - <a id="shape_missing"></a>has no site shape if it [has a literal source](#site_source_literal), unless it [has a shape](js-callgraph.rofl.md#has_shape).
-
-<a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(it, something) in the main.
 
 <a id="shape_without_verdict"></a>A shape Sh has no verdict either:
 
@@ -553,14 +540,9 @@ A kind K
 
 In the code:
 
-A file F
-
-- <a id="module_meta"></a>has the module meta M if M [has the meta form](js-structure.rofl.md#meta_form) `import_meta` and M [is in file](js-model.rofl.md#ast_node) F.
-- <a id="self_referential_module"></a>is self referential if F [has the module meta](#module_meta) some node.
+<a id="module_meta"></a>A file F has the module meta M if M [has the meta form](js-structure.rofl.md#meta_form) `import_meta` and M [is in file](js-model.rofl.md#ast_node) F.
 
 In the audit:
-
-<a id="not_module_meta"></a>A node is not module meta if it [has the meta form](js-structure.rofl.md#meta_form) `new_target`.
 
 ## 9. IMPORT ATTRIBUTES — `with { type: "json" }` says what the module IS,
 
@@ -573,13 +555,11 @@ In the audit:
 
 In the code:
 
-<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if [the](#ast_child) `key` of it [is named](js-structure.rofl.md#ast_name) Key and [the](#ast_child) `value` of it [is written as](js-structure.rofl.md#ast_value) Value.
+<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.rofl.md#ast_name) Key and the `value` of it [is written as](js-structure.rofl.md#ast_value) Value.
 
 A node
 
-- <a id="import_attr_of"></a>has the import attribute X if X [is among the](#ast_child) `attributes` of it.
 - <a id="module_attr"></a>imports with the attribute Key holding Value if it [has the import attribute](#import_attr_of) X and X [carries](#import_attr) Key holding Value.
-- <a id="module_type"></a>imports the module type T if it [imports with the attribute](#module_attr) "type" holding T.
 - <a id="module_is_data"></a>imports a data module of a text T if it [imports the module type](#module_type) T and T differs from "javascript".
 
 In the audit:

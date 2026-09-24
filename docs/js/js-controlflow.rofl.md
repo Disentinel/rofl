@@ -31,11 +31,11 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-abrupt_statement"></a>an abrupt statement | a node of kind `abrupt_kind` |
+| <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
-| <a id="noun-export_declaration"></a>an export declaration | a node of kind `export_kind` |
+| <a id="noun-export_declaration"></a>an export declaration | a node of one of the kinds `export_named_declaration`, `export_default_declaration` (`export_kind`) |
 | <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
@@ -43,12 +43,23 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-return"></a>a return | a node of kind `return_statement` |
-| <a id="noun-short_circuit"></a>a short circuit | a node of kind `short_circuit_kind` |
+| <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
 | <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
+- <a id="has_return"></a>A [function](js-callgraph.rofl.md#fn_node) has a return if a [return](#noun-return) R [is within](js-structure.rofl.md#ast_within) it.
+- <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
+- <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
+- <a id="try_of"></a>A [try](#noun-try) lies in F if F [is nearest to](js-dataflow.rofl.md#nearest_v) it.
+- A node is a function if it [answers to](js-callgraph.rofl.md#fn_name) some name.
+- <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
+- <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
 ## 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), and
 
@@ -99,7 +110,7 @@ A node
   - a kind K [transfers by](#transfer_mechanism) `per_construction`;
   - it [is of kind](js-model.rofl.md#ast_node) K;
   - [the attribute](#ast_attr) `static` of it is `false`;
-  - [the](#ast_child) `value` of it is V.
+  - the `value` of it is V.
 - guards the arm V if it [has the field initialiser](#field_init) V.
 - <a id="guarded"></a>is guarded if some node [guards the arm](#guard_arm) it.
 - is guarded if some node [guards the arm](#guard_arm) X and it [is within](js-structure.rofl.md#ast_within) X.
@@ -110,8 +121,6 @@ A node
 > vocabulary, one reader. Statement lists sit under `body` and under
 > `switch_case`'s `consequent`; the field is carried so an abrupt in one field
 > cannot reach a statement in another.
-
-`abrupt_kind`, an [abrupt statement](#noun-abrupt_statement), includes `return_statement`, `throw_statement`, `break_statement`, `continue_statement`.
 
 `stmt_seq_field` includes `body`, `consequent`.
 
@@ -124,7 +133,7 @@ Declared as facts:
 
 <a id="after_abrupt"></a>A node follows an abrupt completion if all of:
   - a node B [is abrupt](#abrupt_at) at a field F from an index I;
-  - it is the J[-th of the](#ast_child) F of B;
+  - it is the J-th of the F of B;
   - I < J.
 
 > A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
@@ -142,17 +151,17 @@ A node
   - a node S [is within](js-structure.rofl.md#ast_within) G;
   - X [is within](js-structure.rofl.md#ast_within) S;
   - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I[-th of the](#ast_child) F of it.
+  - S is the I-th of the F of it.
 - <a id="after_suspend"></a>follows a suspension if all of:
   - a node B [suspends](#suspend_at) at a field F from an index I;
-  - it is the J[-th of the](#ast_child) F of B;
+  - it is the J-th of the F of B;
   - I < J.
 
 > a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
 
 In the audit:
 
-<a id="stmt_seq_unseen"></a>A field is an unseen statement field if it [is a statement sequence field](#stmt_seq_field), unless [the](#ast_child) it of some node is some node.
+<a id="stmt_seq_unseen"></a>A field is an unseen statement field if it [is a statement sequence field](#stmt_seq_field), unless the it of some node is some node.
 
 > A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 > statements between the reference and its target, and the walk stops at the
@@ -166,9 +175,9 @@ In the audit:
 
 In the code:
 
-<a id="label_name"></a>The label name of a [label](#noun-label) LS is N if [the](#ast_child) `label` of LS is a node I and [the attribute](#ast_attr) `name` of I is N.
+<a id="label_name"></a>The label name of a [label](#noun-label) LS is N if the `label` of LS is a node I and [the attribute](#ast_attr) `name` of I is N.
 
-<a id="label_ref"></a>An [abrupt statement](#noun-abrupt_statement) refers to the label N if [the](#ast_child) `label` of it is a node I and [the attribute](#ast_attr) `name` of I is N.
+<a id="label_ref"></a>An [abrupt statement](#noun-abrupt_statement) refers to the label N if the `label` of it is a node I and [the attribute](#ast_attr) `name` of I is N.
 
 A node
 
@@ -181,7 +190,7 @@ A node
   - a node S [is within](js-structure.rofl.md#ast_within) LS;
   - X [is within](js-structure.rofl.md#ast_within) S;
   - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I[-th of the](#ast_child) F of it.
+  - S is the I-th of the F of it.
 
 ## COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
 
@@ -202,14 +211,12 @@ A [block](#noun-block) completes abruptly if a node S [completes abruptly](#comp
 
 An [if](#noun-if) completes abruptly if all of:
   - a node C [completes abruptly](#completes_abruptly);
-  - [the](#ast_child) `consequent` of it is C;
-  - [the](#ast_child) `alternate` of it [completes abruptly](#completes_abruptly).
-
-<a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
+  - the `consequent` of it is C;
+  - the `alternate` of it [completes abruptly](#completes_abruptly).
 
 A [label](#noun-label) completes abruptly if all of:
   - a node S [completes abruptly](#completes_abruptly);
-  - [the](#ast_child) `body` of it is S;
+  - the `body` of it is S;
   - unless it [is escaped](#label_escaped).
 
 Declared as facts:
@@ -222,7 +229,7 @@ Declared as facts:
 A node is abrupt at a field F from an index I if all of:
   - a node S [completes abruptly](#completes_abruptly);
   - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I[-th of the](#ast_child) F of it.
+  - S is the I-th of the F of it.
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
@@ -307,10 +314,7 @@ In the audit:
 
 In the code:
 
-A [function](js-callgraph.rofl.md#fn_node)
-
-- <a id="has_return"></a>has a return if a [return](#noun-return) R [is within](js-structure.rofl.md#ast_within) it.
-- <a id="top_throw"></a>throws at the top if [the](#ast_child) `body` of it is a node B and a [throw](#noun-throw) S [is among the](#ast_child) `body` of B.
+<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if the `body` of it is a node B and a [throw](#noun-throw) S [is among the](#ast_child) `body` of B.
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw), unless F [has a return](#has_return).
 
@@ -346,7 +350,7 @@ In the code:
    - [the accessor](#accessor_of) of a node Obj at Key is M;
    - N [selects](js-dataflow.rofl.md#selects) Key;
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
-   - [the](#ast_child) `object` of N [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+   - the `object` of N [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
 2. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
    - a kind K [is an accessor kind](#accessor_kind);
@@ -373,7 +377,7 @@ Declared as facts:
 > the declarator form: a pattern in a parameter reads the argument, a
 > call-site question, so it is silent here rather than wrong.
 
-<a id="pattern_source"></a>The pattern source of a node P is a node Init if [the](#ast_child) `id` of a [declarator](#noun-declarator) D is P and [the](#ast_child) `init` of D is Init.
+<a id="pattern_source"></a>The pattern source of a node P is a node Init if the `id` of a [declarator](#noun-declarator) D is P and the `init` of D is Init.
 
 <a id="pattern_accessor"></a>An [object pattern](#noun-object_pattern) destructures through the accessor M if all of:
   - [the pattern source](#pattern_source) of it [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
@@ -382,14 +386,14 @@ Declared as facts:
 
 A node destructures through the accessor M if all of:
   - a node D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) it in some file;
-  - [the](#ast_child) `id` of D is a node P;
-  - [the](#ast_child) `init` of D [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+  - the `id` of D is a node P;
+  - the `init` of D [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 
 A [spread](#noun-spread) destructures through the accessor M if all of:
   - it [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O;
-  - [the](#ast_child) `argument` of it [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+  - the `argument` of it [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
   - [the accessor](#accessor_of) of Obj at Key is M.
 
 > `spread_element` is one kind doing two things: in `properties` it copies
@@ -408,7 +412,7 @@ A [spread](#noun-spread) destructures through the accessor M if all of:
    - M is a [function](js-callgraph.rofl.md#fn_node);
 2. if all of:
    - P [is iterated](#spread_iterated);
-   - [the](#ast_child) `argument` of P [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+   - the `argument` of P [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
    - [the member](js-dataflow.rofl.md#member_value) "iterator" of Obj holds M;
    - M is a [function](js-callgraph.rofl.md#fn_node).
 
@@ -477,12 +481,12 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 <a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
 
 1. if P is an [object pattern](#noun-object_pattern) or an [array pattern](#noun-array_pattern) and [the pattern source](#pattern_source) of P is Init;
-2. if a node D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and [the](#ast_child) `init` of D is Init;
+2. if a node D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and the `init` of D is Init;
 3. if all of:
    - P is a [spread](#noun-spread);
    - P [hides a call by](#hidden_call_pos) some mechanism;
-   - [the](#ast_child) `argument` of P is Init;
-4. if P is a [for-of](#noun-for-of) and [the](#ast_child) `right` of P is Init.
+   - the `argument` of P is Init;
+4. if P is a [for-of](#noun-for-of) and the `right` of P is Init.
 
 In the flow:
 
@@ -493,8 +497,6 @@ In the flow:
 3. if N [iterates through](js-callgraph.rofl.md#for_of_iterates) M.
 
 In the code:
-
-<a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 
 In the flow:
 
@@ -512,8 +514,6 @@ In the flow:
 <a id="hidden_call_untraced"></a>A node has an untraced hidden call from a node Src if [the hidden call source](#hidden_call_src) of it is Src and Src neither [may be the literal](js-dataflow.rofl.md#may_be_lit) some text nor [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 
 In the code:
-
-<a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
 
 In the flow:
 
@@ -547,10 +547,7 @@ In the audit:
 
 In the code:
 
-A [try](#noun-try)
-
-- <a id="try_of"></a>lies in F if F [is nearest to](js-dataflow.rofl.md#nearest_v) it.
-- <a id="in_try_block"></a>tries a node N if [the](#ast_child) `block` of it is a node B and N [is within](js-structure.rofl.md#ast_within) B.
+<a id="in_try_block"></a>A [try](#noun-try) tries a node N if the `block` of it is a node B and N [is within](js-structure.rofl.md#ast_within) B.
 
 > A try discharges through its `handler`; a finalizer alone catches nothing —
 > `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
@@ -568,7 +565,7 @@ A node
 - <a id="try_catches"></a>has a handler if all of:
   - a kind K [catches via](#catches_via) a field Field;
   - it [is of kind](js-model.rofl.md#ast_node) K;
-  - [the](#ast_child) Field of it is some node.
+  - the Field of it is some node.
 - <a id="caught_here"></a>is caught here if all of:
   - a node TS [tries](#in_try_block) it;
   - TS [lies in](#try_of) F;
@@ -599,7 +596,7 @@ In the flow:
 
 1. if all of:
    - F [is nearest to](js-dataflow.rofl.md#nearest_v) a [throw](#noun-throw) T;
-   - [the](#ast_child) `argument` of T is V;
+   - the `argument` of T is V;
    - unless T [is caught here](#caught_here);
 2. if all of:
    - G [throws out](#thrown_by) V;
@@ -633,7 +630,7 @@ A node is abrupt at a field F from an index I if all of:
   - a node S [is within](js-structure.rofl.md#ast_within) G;
   - C [is within](js-structure.rofl.md#ast_within) S;
   - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I[-th of the](#ast_child) F of it;
+  - S is the I-th of the F of it;
   - unless C [is stopped by](#try_stops) S.
 
 > After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
@@ -666,13 +663,6 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-`export_kind`, an [export declaration](#noun-export_declaration), includes `export_named_declaration`, `export_default_declaration`.
-
-A node
-
-- is a function if it [answers to](js-callgraph.rofl.md#fn_name) some name.
-- <a id="in_fn"></a>is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
-
 <a id="exported_fn"></a>F is exported either:
 
 1. if all of:
@@ -684,8 +674,6 @@ A node
    - L [may be the node](js-dataflow.rofl.md#may_be_node) F;
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - unless F [is inside a function](#in_fn).
-
-<a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
 Declared as facts:
 
@@ -839,8 +827,6 @@ In the audit:
 > SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
 > further along it is conditional.
 
-`short_circuit_kind`, a [short circuit](#noun-short_circuit), includes `optional_call_expression`, `optional_member_expression`.
-
 In the code:
 
 N is guarded either:
@@ -858,7 +844,7 @@ Declared as facts:
 <a id="guard_arm_seen"></a>A kind K is seen guarding a field Field if all of:
   - K [guards the field](#guard_kind) Field;
   - a node P [is of kind](js-model.rofl.md#ast_node) K;
-  - [the](#ast_child) Field of P is some node.
+  - the Field of P is some node.
 
 In the audit:
 

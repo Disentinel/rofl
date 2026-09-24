@@ -30,7 +30,11 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
 
-<a id="ast_in"></a>A node is under a node P if it [is a child of](#ast_child) P.
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="ast_in"></a>A node is under a node P if it [is a child of](#ast_child) P.
+- <a id="ast_name"></a>A node is named V if [the attribute](#ast_attr) `name` of it is V.
+- <a id="ast_value"></a>A node is written as V if [the attribute](#ast_attr) `value` of it is V.
 
 > nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
 > depth 30 is about 3M rows, the point where an ancestor query should walk
@@ -40,8 +44,6 @@ What this file calls a node, and what each word stands for:
 
 1. if C [is under](#ast_in) P;
 2. if a node X [is within](#ast_within) P and C [is under](#ast_in) X.
-
-<a id="ast_name"></a>A node is named V if [the attribute](#ast_attr) `name` of it is V.
 
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
 > well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
@@ -58,16 +60,14 @@ What this file calls a node, and what each word stands for:
 <a id="key_name"></a>A node K spells N either:
 
 1. if all of:
-   - [the](#ast_child) `key` of a node P is K;
+   - the `key` of a node P is K;
    - K [is named](#ast_name) N;
    - unless [the attribute](#ast_attr) `computed` of P is `true`;
 2. if all of:
-   - [the](#ast_child) `key` of some node is K;
+   - the `key` of some node is K;
    - K is a [member expression](#noun-member_expression);
-   - [the](#ast_child) `object` of K [is named](#ast_name) "Symbol";
-   - [the](#ast_child) `property` of K [is named](#ast_name) N.
-
-<a id="ast_value"></a>A node is written as V if [the attribute](#ast_attr) `value` of it is V.
+   - the `object` of K [is named](#ast_name) "Symbol";
+   - the `property` of K [is named](#ast_name) N.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers
@@ -78,11 +78,11 @@ What this file calls a node, and what each word stands for:
 
 1. if all of:
    - M is a [meta property](#noun-meta_property);
-   - [the](#ast_child) `meta` of M [is named](#ast_name) "new";
+   - the `meta` of M [is named](#ast_name) "new";
    - N is `new_target`;
 2. if all of:
    - M is a [meta property](#noun-meta_property);
-   - [the](#ast_child) `meta` of M [is named](#ast_name) "import";
+   - the `meta` of M [is named](#ast_name) "import";
    - N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant

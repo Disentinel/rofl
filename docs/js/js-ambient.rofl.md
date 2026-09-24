@@ -64,6 +64,11 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="eff_here"></a>A node has the effect `read` at `global` if it [refers to the free](js-globals.rofl.md#free_global) some name in some file.
+- <a id="amb_surface_attributed"></a>A surface is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
+
 <a id="imports"></a>`imports` lists:
 
 | arg 1 | arg 2 |
@@ -213,7 +218,7 @@ In the flow:
 
 <a id="amb_global_member"></a>Key is selected on the global Name if all of:
   - a node O [refers to the free](js-globals.rofl.md#free_global) Name in some file;
-  - [the](#ast_child) `object` of a node M is O;
+  - the `object` of a node M is O;
   - M [selects](js-dataflow.rofl.md#selects) Key;
   - some host [attributes the global](#host_global_effect) Name to some effect.
 
@@ -282,7 +287,7 @@ C performs the operation `itself` if C [calls the global](#amb_global_call) some
 
 <a id="amb_construct"></a>A node constructs the ambient global Name if all of:
   - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
-  - [the](#ast_child) `callee` of it [refers to the free](js-globals.rofl.md#free_global) Name in File;
+  - the `callee` of it [refers to the free](js-globals.rofl.md#free_global) Name in File;
   - Name [names the surface](#ambient_binding) Name in File;
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
@@ -297,8 +302,6 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 > allocate: `global` by the test `eff_heap_of` applies to a receiver. The
 > ceiling is `global_ref_position` in rules/js-globals.rofl: a bare mention
 > (`typeof Promise`) seeds nothing.
-
-<a id="eff_here"></a>A node has the effect `read` at `global` if it [refers to the free](js-globals.rofl.md#free_global) some name in some file.
 
 ## 7. THE BUILTIN PROTOTYPES — the mutating half, read and not typed. Every
 
@@ -345,7 +348,7 @@ In the main:
 In the flow:
 
 <a id="amb_proto_recv"></a>A [member access](js-dataflow.rofl.md#member_node_v) has the receiver prototype P if all of:
-  - [the](#ast_child) `object` of it is a node O;
+  - the `object` of it is a node O;
   - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype).
 
@@ -408,8 +411,6 @@ In the flow:
 > attributed, and therefore whose debt it is. Non-empty by design.
 
 In the main:
-
-<a id="amb_surface_attributed"></a>A surface is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
 
 In the flow:
 

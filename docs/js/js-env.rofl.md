@@ -46,6 +46,18 @@ Reads:
   - <a id="provides"></a>A release P provides the feature F (`provides`)
   - <a id="release"></a>A release R is a release (`release`)
 
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="used_feature"></a>A feature is used if some node [uses the feature](#uses) it.
+- <a id="unsupported_in"></a>File fails somewhere in an environment E for a feature F if File [fails](#unsupported_at) at some line in E for F.
+- <a id="lost_feature"></a>A feature is lost between an environment From and To if some node [is lost](#lost) from From to To by it.
+- <a id="any_env_has"></a>A feature is supported somewhere if some environment [supports](#env_has) it.
+- <a id="unscannable"></a>A feature is unscannable if it [is unscannable](#feature_unscannable) because some reason.
+- <a id="has_rank"></a>An environment has a rank if it [dates from](#env_rank) some number.
+- <a id="env_separates"></a>An environment is separated from an environment B if some feature [is lost between](#lost_feature) it and B.
+
 `imports` lists:
 
 | arg 1 | arg 2 |
@@ -95,7 +107,7 @@ Reads:
    - N [is of kind](js-model.rofl.md#ast_node) K;
    - a language L [is the environment language](#env_lang);
    - K [needs at](#child_needs) a field Field holding Name F in L;
-   - [the](#ast_child) Field of N [is named](js-structure.rofl.md#ast_name) Name.
+   - the Field of N [is named](js-structure.rofl.md#ast_name) Name.
 
 > Order is for cost: the two-row table binds Key and V, `ast_attr` is probed
 > by the rare `async=true`, and only then does `ast_within` walk down. The
@@ -113,8 +125,6 @@ A node
   - [`outside_attr_needs`](#outside_attr_needs)(L, K, Key, V, F);
   - unless it [contains the attribute](#within_attr) Key holding V.
 
-<a id="used_feature"></a>A feature is used if some node [uses the feature](#uses) it.
-
 ## 3. THE VERDICT. `unsupported` is the whole answer; everything below is a
 
 > projection of it to a coordinate a human can find, because `query` takes
@@ -130,8 +140,6 @@ A node
 <a id="uses_at"></a>File uses the feature F at Line if a node N [uses the feature](#uses) F and N [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
 
 <a id="uses_kind"></a>A kind K is seen using a feature F if a node N [uses the feature](#uses) F and N [is of kind](js-model.rofl.md#ast_node) K.
-
-<a id="unsupported_in"></a>File fails somewhere in an environment E for a feature F if File [fails](#unsupported_at) at some line in E for F.
 
 > «Валидна ли эта программа в окружении X?» — total over the files scanned,
 > so a clean file produces a POSITIVE row: a silence cannot be told from a
@@ -177,8 +185,6 @@ Declared as facts:
   - From [is an environment](#environment);
   - From differs from To;
   - unless it [fails](#unsupported) in From for F.
-
-<a id="lost_feature"></a>A feature is lost between an environment From and To if some node [is lost](#lost) from From to To by it.
 
 <a id="lost_at"></a>File loses the feature F at Line from an environment From to an environment To if a node N [is lost](#lost) from From to To by F and N [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
 
@@ -227,10 +233,7 @@ In the audit:
 
 > a declared feature no environment has: `unsupported` trivially total for it
 
-A feature
-
-- <a id="feature_unreachable"></a>is unreachable if [`feature`](#feature)(it), unless it [is supported somewhere](#any_env_has).
-- <a id="any_env_has"></a>is supported somewhere if some environment [supports](#env_has) it.
+<a id="feature_unreachable"></a>A feature is unreachable if [`feature`](#feature)(it), unless it [is supported somewhere](#any_env_has).
 
 > a declared feature no site uses — not an error, the number that says how
 > much of the table the corpus exercises; and a waiver the corpus nevertheless
@@ -239,8 +242,6 @@ A feature
 <a id="feature_unexercised"></a>A feature is unexercised if [`feature`](#feature)(it) and it neither [is used](#used_feature) nor [is unscannable](#unscannable).
 
 In the main:
-
-<a id="unscannable"></a>A feature is unscannable if it [is unscannable](#feature_unscannable) because some reason.
 
 In the audit:
 
@@ -261,8 +262,6 @@ In the audit:
 
 In the main:
 
-<a id="has_rank"></a>An environment has a rank if it [dates from](#env_rank) some number.
-
 > two environments agreeing on every site are one environment. No rank
 > premise: `RA < RB` made two environments with the SAME rank — the
 > indistinct case — never considered at all. `lost` carries the direction;
@@ -270,10 +269,7 @@ In the main:
 
 In the audit:
 
-An environment
-
-- <a id="env_separates"></a>is separated from an environment B if some feature [is lost between](#lost_feature) it and B.
-- <a id="env_pair_indistinct"></a>is indistinct from an environment B if all of:
+<a id="env_pair_indistinct"></a>An environment is indistinct from an environment B if all of:
   - it [is an environment](#environment);
   - B [is an environment](#environment);
   - it differs from B;

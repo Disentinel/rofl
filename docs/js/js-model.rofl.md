@@ -22,9 +22,16 @@ Reads:
   - <a id="layer"></a>A layer L is a layer (`layer`)
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="modelled"></a>A kind K is modelled in a layer L of a language Lang if K [is handled](#handled) in L of Lang with some reason.
+- <a id="waived"></a>A kind K is waived in a layer L of a language Lang if K [is ignored](#ignored) in L of Lang with some reason.
+- <a id="coarse_of"></a>A kind K has a shaped cell in a layer Lay of a language Lang if K [is a cell](#cell) with some shape in Lay of Lang.
+
 A kind K
 
-- <a id="modelled"></a><a id="waived"></a>is modelled/waived in a layer L of a language Lang if K [is handled/ignored](#handled) in L of Lang with some reason.
 - <a id="unaccounted"></a>is unaccounted in a layer L of a language Lang if all of:
   - Lang [has the node kind](#node_kind) K;
   - L [is a layer](#layer);
@@ -217,7 +224,6 @@ A kind K is a cell with a shape N in a layer Lay of a language Lang either:
 
 A kind K
 
-- <a id="coarse_of"></a>has a shaped cell in a layer Lay of a language Lang if K [is a cell](#cell) with some shape in Lay of Lang.
 - <a id="lost_cell"></a>is a lost cell in a layer Lay of a language Lang if K [is a cell](#cell) in Lay of Lang, unless K [has a shaped cell](#coarse_of) in Lay of Lang.
 - <a id="invented_cell"></a>is an invented cell in a layer Lay of a language Lang if K [has a shaped cell](#coarse_of) in Lay of Lang, unless K [is a cell](#cell) in Lay of Lang.
 - <a id="refined_cell"></a>is a refined cell in a layer Lay of a language Lang if K [is a cell](#cell) with a shape S in Lay of Lang and S differs from `none`.

@@ -27,6 +27,13 @@ Reads:
   - <a id="asserted_by"></a>`asserted_by`
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="pack_fact"></a>A pack asserts a relation Rel with a term Args if [`asserted_by`](#asserted_by)($fact(Rel, `main`, Args), it, something).
+- <a id="fslot"></a>The slot I of a relation Rel in a pack P holds a term X if [the arguments](#fwalk) of Rel in P from I are $cons(X, something).
+
 ## WHICH PACK A ROW CAME FROM. The finest grain the store records is the
 
 > PRINCIPAL a load named, so the loader (test/js-pack-home.test.ts) gives
@@ -35,8 +42,6 @@ Reads:
 > into one `load()` are one pack, which is why this is its own pack with its
 > own loader.
 
-<a id="pack_fact"></a>A pack asserts a relation Rel with a term Args if [`asserted_by`](#asserted_by)($fact(Rel, `main`, Args), it, something).
-
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
 
@@ -44,8 +49,6 @@ Reads:
 
 1. if P [asserts](#pack_fact) Rel with Args and N is 1;
 2. if [the arguments](#fwalk) of Rel in P from an index I are $cons(something, Args) and N is I + 1.
-
-<a id="fslot"></a>The slot I of a relation Rel in a pack P holds a term X if [the arguments](#fwalk) of Rel in P from I are $cons(X, something).
 
 > Which positions carry a kind — DISCOVERED, not declared: a position is a
 > kind position when a declared kind stands in it, so the audit configures

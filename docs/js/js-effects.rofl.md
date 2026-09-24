@@ -59,6 +59,18 @@ What this file calls a node, and what each word stands for:
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="eff_has_join"></a>An effect has a join with an effect B if [the join](#eff_join) of it and B is some effect.
+- <a id="eff_has_meet"></a>An effect has a meet with an effect B if [the meet](#eff_meet) of it and B is some effect.
+- <a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
+- <a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
+- <a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if the `argument` of it is X.
+- <a id="eff_label_seen"></a>An effect label is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
+- <a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
+- <a id="eff_in_fn"></a>A node lies inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
+- <a id="eff_mod_subject"></a>A file F is a module subject if F [is in the corpus](js-dataflow.rofl.md#corpus_file).
+
 ## 1. The order, derived from the rows
 
 > Aliases are DEFINITIONS, so rows close over `eff_alias` and `join(div, exn)
@@ -98,13 +110,10 @@ An effect
 
 An effect
 
-- <a id="eff_has_join"></a>has a join with an effect B if [the join](#eff_join) of it and B is some effect.
 - <a id="eff_lb"></a>is a lower bound of an effect X and B if it [is at or below](#eff_leq) X and it [is at or below](#eff_leq) B.
 - <a id="eff_lb_higher"></a>is a lower bound below another of an effect X and B if an effect D [is a lower bound](#eff_lb) of X and B, and it [is strictly below](#eff_lt) D.
 
 <a id="eff_meet"></a>The meet of an effect X and B is an effect C if C [is a lower bound](#eff_lb) of X and B, unless C [is a lower bound below another](#eff_lb_higher) of X and B.
-
-<a id="eff_has_meet"></a>An effect has a meet with an effect B if [the meet](#eff_meet) of it and B is some effect.
 
 In the audit:
 
@@ -186,11 +195,8 @@ In the flow:
 
 <a id="eff_try_arm"></a>T has the arm N either:
 
-1. if T is a [try](#noun-try), [the](#ast_child) `handler` of T is some node, and N is `handled`;
-2. if all of:
-   - T is a [try](#noun-try);
-   - N is `unhandled`;
-   - unless [the](#ast_child) `handler` of T is some node.
+1. if T is a [try](#noun-try), the `handler` of T is some node, and N is `handled`;
+2. if T is a [try](#noun-try) and N is `unhandled`, unless the `handler` of T is some node.
 
 A [throw](#noun-throw) has the effect `exn` at `none` unless it [is caught in place](#eff_catch_here).
 
@@ -242,7 +248,7 @@ Declared as facts:
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if [the](#ast_child) `object` of it [may be the node](js-dataflow.rofl.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if the `object` of it [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>M touches the heap N either:
 
@@ -257,13 +263,9 @@ Declared as facts:
 
 In the code:
 
-<a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
-
-<a id="eff_assign_target"></a>A node writes to a node L if it [is a write](#eff_assign) and [the](#ast_child) `left` of it is L.
+<a id="eff_assign_target"></a>A node writes to a node L if it [is a write](#eff_assign) and the `left` of it is L.
 
 <a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.rofl.md#plain_assign).
-
-<a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
 
 <a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and it [is named](js-structure.rofl.md#ast_name) some name.
 
@@ -274,7 +276,7 @@ A node
 - has the effect `write` at a host H if it [is a written member](#eff_member_target) and it [touches the heap](#eff_heap_of) H.
 - has the effect `read` at a host H if all of:
   - a node X [is a compound write](#eff_compound);
-  - [the](#ast_child) `left` of X is it;
+  - the `left` of X is it;
   - it [is a written member](#eff_member_target);
   - it [touches the heap](#eff_heap_of) H.
 - has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.rofl.md#ast_name) some name.
@@ -290,8 +292,6 @@ In the audit:
 > `x++` is a read and a write, on either form.
 
 In the code:
-
-<a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if [the](#ast_child) `argument` of it is X.
 
 In the flow:
 
@@ -337,10 +337,7 @@ A node has the effect `read` at `local` if all of:
 > has no seed at all and cannot have one until `ambient_effect` exists, since
 > nothing in the LANGUAGE is nondeterministic.
 
-An effect label
-
-- <a id="eff_label_seen"></a>is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
-- <a id="eff_label_unseen"></a>is unseen at a host H if it [is a label](#eff_label) at H, unless it [is seen](#eff_label_seen) at H.
+<a id="eff_label_unseen"></a>An effect label is unseen at a host H if it [is a label](#eff_label) at H, unless it [is seen](#eff_label_seen) at H.
 
 ## 3. The join over a body, and the closure over the call graph
 
@@ -407,8 +404,6 @@ Declared as facts:
 
 In the flow:
 
-<a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
-
 <a id="eff_over"></a>F exceeds an effect N if all of:
   - N [is in the lattice](#eff_name);
   - F [has the latent effect](#eff_latent) L at a host H;
@@ -458,13 +453,13 @@ C reaches the surface P either:
 1. if all of:
    - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
    - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-   - [the](#ast_child) `object` of N is a node O;
+   - the `object` of N is a node O;
    - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
    - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
 2. if all of:
    - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
    - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-   - [the](#ast_child) `object` of N [is named](js-structure.rofl.md#ast_name) Name;
+   - the `object` of N [is named](js-structure.rofl.md#ast_name) Name;
    - C [is in file](js-model.rofl.md#ast_node) File;
    - Name [names the surface](js-ambient.rofl.md#ambient_binding) P in File.
 
@@ -556,7 +551,7 @@ In the flow:
 
 <a id="eff_coerced"></a>A node N coerces a node X either:
 
-1. if N [converts](#eff_converts) and [the](#ast_child) `left` or `right` or `argument` of N is X;
+1. if N [converts](#eff_converts) and the `left` or `right` or `argument` of N is X;
 2. if N is a [template](#noun-template) and X [is among the](#ast_child) `expressions` of N.
 
 > `Symbol.toPrimitive` is deliberately absent: a computed key, and what
@@ -634,7 +629,7 @@ In the code:
 2. if all of:
    - N is a [dynamic import](#noun-dynamic_import);
    - N is in file F;
-   - [the](#ast_child) `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
+   - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
 
 A node
 
@@ -700,8 +695,6 @@ In the flow:
 > group's effect). No `load` label: the suspension of `import()` is CONTROL,
 > as `await` is.
 
-<a id="eff_in_fn"></a>A node lies inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
-
 <a id="eff_module"></a>A file F has the module effect L at a host H either:
 
 1. if all of:
@@ -729,7 +722,6 @@ In the flow:
 
 A file F
 
-- <a id="eff_mod_subject"></a>is a module subject if F [is in the corpus](js-dataflow.rofl.md#corpus_file).
 - <a id="eff_mod_over"></a>exceeds as a module N if all of:
   - N [is in the lattice](#eff_name);
   - F [has the module effect](#eff_module) L at a host H;
@@ -809,14 +801,14 @@ In the code:
 <a id="eff_class_body"></a>A node has the body member P if all of:
   - a kind K [is a class form](#eff_class_form);
   - it [is of kind](js-model.rofl.md#ast_node) K;
-  - [the](#ast_child) `body` of it is a node B;
+  - the `body` of it is a node B;
   - P [is among the](#ast_child) `body` of B.
 
 <a id="eff_field_value"></a>A class initialises the field at a node P with a node V if all of:
   - it [has the body member](#eff_class_body) P;
   - [`eff_field_kind`](#eff_field_kind)(K);
   - P [is of kind](js-model.rofl.md#ast_node) K;
-  - [the](#ast_child) `value` of P is V.
+  - the `value` of P is V.
 
 Declared as facts:
 
@@ -856,7 +848,7 @@ A class
 A class defines by running a node S if all of:
   - a kind K [is a class form](#eff_class_form);
   - it [is of kind](js-model.rofl.md#ast_node) K;
-  - [the](#ast_child) `super_class` of it is S.
+  - the `super_class` of it is S.
 
 In the code:
 
@@ -868,7 +860,7 @@ A class CD defines by running a node KN either:
 
 1. if all of:
    - CD [has the body member](#eff_class_body) P;
-   - [the](#ast_child) `key` of P is KN;
+   - the `key` of P is KN;
    - unless P [has a plain key](#eff_plain_key);
 2. if all of:
    - a kind K [is a class form](#eff_class_form);
@@ -960,20 +952,20 @@ In the flow:
 
 <a id="eff_define_unreached"></a>CE defines without reaching a node S either:
 
-1. if CE is a [class expression](#noun-class_expression) and [the](#ast_child) `super_class` of CE is S;
+1. if CE is a [class expression](#noun-class_expression) and the `super_class` of CE is S;
 2. if all of:
    - CE is a [class expression](#noun-class_expression);
-   - [the](#ast_child) `body` of CE is a node B;
+   - the `body` of CE is a node B;
    - S [is among the](#ast_child) `body` of B;
    - S is a [static block](#noun-static_block);
 3. if all of:
    - CE is a [class expression](#noun-class_expression);
-   - [the](#ast_child) `body` of CE is a node B;
+   - the `body` of CE is a node B;
    - a node P [is among the](#ast_child) `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);
    - P [is of kind](js-model.rofl.md#ast_node) K;
    - [the attribute](#ast_attr) `static` of P is `true`;
-   - [the](#ast_child) `value` of P is S.
+   - the `value` of P is S.
 
 ## 7. Where this pack cannot look
 

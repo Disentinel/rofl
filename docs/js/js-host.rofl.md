@@ -62,6 +62,12 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
+- <a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
+- <a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.rofl.md#node_builtin_bare) of it.
+
 `imports` lists:
 
 | arg 1 | arg 2 |
@@ -90,7 +96,7 @@ In the code:
 
 File binds the name Name either:
 
-1. if a [function declaration](#noun-function_declaration) F is in file File and [the](#ast_child) `id` of F [is named](js-structure.rofl.md#ast_name) Name;
+1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
 2. if a node F [takes](js-dataflow.rofl.md#param_of) Name at some index and F [is in file](js-model.rofl.md#ast_node) File;
 3. if some class [is named](js-dataflow.rofl.md#class_named) Name in File;
 4. if a site I [binds the name](js-modules.rofl.md#binding) Name to some name at some specifier and I [sits in](js-modules.rofl.md#site_file) File.
@@ -151,7 +157,7 @@ In the code:
 
 <a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - [the](#ast_child) `object` of N [refers to the global](#host_global_ref) Name of H;
+  - the `object` of N [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
 
 <a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
@@ -160,7 +166,7 @@ In the code:
 
 1. if all of:
    - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-   - [the](#ast_child) `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
+   - the `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
    - File [imports the namespace](#host_module_ns) Local of Spec;
    - N [selects](js-dataflow.rofl.md#selects) Key;
 2. if [the callee](js-callgraph.rofl.md#callee_of) of C [reads](js-dataflow.rofl.md#ident_in) Local in File and File [imports](#host_module_named) Local as Key of Spec.
@@ -217,8 +223,6 @@ In the audit:
 > at a coordinate, and the set of effects the corpus exercises
 
 <a id="host_effect_at"></a>File has the host effect E at Line by a route Why if a node C [has the host effect](#host_call_effect) E by Why and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
-
-<a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
 
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
@@ -295,8 +299,6 @@ In the audit:
 > a runtime over the same `lib_call[code]`.
 
 In the main:
-
-<a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
 
 In the audit:
 
@@ -401,8 +403,6 @@ A runtime
 > gap this pack can see and must not fix.
 
 In the main:
-
-<a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.rofl.md#node_builtin_bare) of it.
 
 In the audit:
 

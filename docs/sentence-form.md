@@ -53,9 +53,16 @@ one of them, and the round trip is the proof that they agree.
   lead (the comment before the first heading or clause, so the file opens
   with its reason), a `Reads` list (its imports, one line per source and
   book; a relation defined outside these files reads as its sentence and
-  carries the anchor every use links to), a `Words` glossary (what the file
-  calls a node, and what each word stands for: a kind, or the relation that
-  holds of it), then the essay. A book is a block, `In the audit:`. A
+  carries the anchor every use links to), a `Words` glossary, then the
+  essay. Words holds what the file calls a node and what each word stands
+  for (a kind, a set of kinds with its members, or the relation that holds
+  of it), and the phrases the file defines in one step: a relation with one
+  rule whose body is a single literal and kind guards is vocabulary, not a
+  claim, and reads in the glossary as the same sentence it would read as in
+  the flow. Measured on the JS model: 353 of 1178 rules are such
+  projections, 170 of them single-rule relations that now sit in Words,
+  and the round trip is unchanged
+  (f_a_projection_is_a_phrase_and_reads_in_the_glossary_not_the_flow). A book is a block, `In the audit:`. A
   declared table reads as its signature sentence. A noun links to its Words
   row; a use of a relation links to its definition or to its Reads entry.
   No Signatures section, no Terms line

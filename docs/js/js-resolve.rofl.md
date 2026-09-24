@@ -30,6 +30,18 @@ Reads:
 
 - from js-modules, in the code: [module_site](js-modules.rofl.md#module_site), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [resolved_import](js-modules.rofl.md#resolved_import), [site_file](js-modules.rofl.md#site_file), [site_kind](js-modules.rofl.md#site_kind), [site_line](js-modules.rofl.md#site_line), [site_source](js-modules.rofl.md#site_source), [site_source_computed](js-modules.rofl.md#site_source_computed)
 
+## Words
+
+Phrases this file defines in one step, each by the sentence it stands for:
+
+- <a id="has_via"></a>A site has a mechanism if it [resolves via](#resolve_via) some mechanism with some text.
+- <a id="explained"></a>A site is explained if it [resolves by the host to](#resolves_to) some path.
+- <a id="host_has_answer"></a>A site has a host answer if it [resolves by the host to](#resolves_to) some path.
+- <a id="rules_has_answer"></a>A site has a rules answer if [the rules answer](#rules_answer) of it is some path.
+- <a id="env_divergent_site"></a>A site diverges between environments if it [diverges](#env_divergence) in some environment with some verdict from some environment with some verdict.
+- <a id="model_site_known"></a>A site is known to the model if it [is modelled as](#model_site) some site.
+- <a id="host_saw"></a>A site is seen by the host if some site [is modelled as](#model_site) it.
+
 Declared as facts:
 
 - <a id="resolve_site"></a>A site S is a resolve site in a file File at a line Line for a text Spec
@@ -80,10 +92,7 @@ In the book E:
 > mechanism accounts for it. An answer failing any premise is reported by
 > section 7 rather than published.
 
-A site
-
-- <a id="has_via"></a>has a mechanism if it [resolves via](#resolve_via) some mechanism with some text.
-- <a id="resolves_to"></a>resolves by the host to a path P if all of:
+<a id="resolves_to"></a>A site resolves by the host to a path P if all of:
   - it [arrives](#arrival) at some step in P;
   - it [is answered with](#resolve_answer) P;
   - it [has a mechanism](#has_via).
@@ -92,10 +101,7 @@ A site
 > `require.resolve("node:path")` is empty), so the mechanism row is the whole
 > explanation and carries the canonical `node:` spelling
 
-A site
-
-- resolves by the host to a path C if it [resolves via](#resolve_via) `builtin` with C and it [is answered with](#resolve_answer) some path.
-- <a id="explained"></a>is explained if it [resolves by the host to](#resolves_to) some path.
+A site resolves by the host to a path C if it [resolves via](#resolve_via) `builtin` with C and it [is answered with](#resolve_answer) some path.
 
 ## 4. WHAT THE ENVIRONMENT SAID — three ways to speak; silence is section 7's.
 
@@ -107,8 +113,6 @@ A site
 
 > TOTAL over the places the environment spoke about: `no_answer` is an atom
 > rather than a missing row, so the comparison in section 6 cannot lose a site
-
-<a id="host_has_answer"></a>A site has a host answer if it [resolves by the host to](#resolves_to) some path.
 
 <a id="host_verdict"></a>The host verdict of a site S is a path P either:
 
@@ -139,8 +143,6 @@ In the audit:
 
 1. if S [is modelled as](#model_site) a site I and I [resolves to the file](js-modules.rofl.md#resolved_import) T;
 2. if S [is modelled as](#model_site) a site I and I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) T.
-
-<a id="rules_has_answer"></a>A site has a rules answer if [the rules answer](#rules_answer) of it is some path.
 
 <a id="rules_verdict"></a>The rules verdict of a site S is a path T either:
 
@@ -178,14 +180,11 @@ In the audit:
 > (b) environment against environment: the two rows are two books, and their
 > disagreement answers "how will this resolve on the other machine?"
 
-A site
-
-- <a id="env_divergence"></a>diverges in an environment X with a verdict VA from an environment B with a verdict VB if all of:
+<a id="env_divergence"></a>A site diverges in an environment X with a verdict VA from an environment B with a verdict VB if all of:
   - [`host_verdict`](#host_verdict)(it, VA) in the book A;
   - [`host_verdict`](#host_verdict)(it, VB) in the book B;
   - X differs from B;
   - VA differs from VB.
-- <a id="env_divergent_site"></a>diverges between environments if it [diverges](#env_divergence) in some environment with some verdict from some environment with some verdict.
 
 ## 7. THE GATES. Each must be able to say no; test/js-resolve.test.ts plants a
 
@@ -227,9 +226,7 @@ An environment
 
 A site
 
-- <a id="model_site_known"></a>is known to the model if it [is modelled as](#model_site) some site.
 - <a id="site_unseen_by_model"></a>is unseen by the model if it [is a resolve place](#resolve_place), unless it [is known to the model](#model_site_known).
-- <a id="host_saw"></a>is seen by the host if some site [is modelled as](#model_site) it.
 - <a id="site_unseen_by_host"></a>is unseen by the host if it [is a module site](js-modules.rofl.md#module_site) of some form, unless it [is seen by the host](#host_saw).
 
 > which kind of place the referee compared, so the `checked` ledger's per-kind
