@@ -62,6 +62,14 @@ for (const rel of [...rels].sort()) {
   }
 }
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
+// The functions a condition may compute with, as the reader reads them: `L is the length of T`.
+const NAME: Record<string, string> = { text: 'T', index: 'I', number: 'N' };
+const functions = v.funs.map((t) => {
+  const used: string[] = [];
+  const name = (noun: string) => { let n = NAME[noun] ?? noun[0].toUpperCase(); while (used.includes(n)) n += '2'; used.push(n); return n; };
+  return 'R is ' + t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? name(p.noun) : '').filter(Boolean).join(' ') + `   (${t.rel})`;
+});
+writeFileSync(`${OUT}/functions.txt`, functions.join('\n') + '\n');
 
 // What each rule is about, for folding a proof into steps: the numbered section of the model file it sits in, `dataflow: construction`.
 // A rule is known by the id the kernel gives it, so a proof's witness names its section; a relation falls back to the first section concluding it.

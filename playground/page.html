@@ -370,15 +370,17 @@ async function runBook() {
 
 // ------------------------------------------------------------ translation
 let sample;   // undefined: not asked yet; null: not available
-let vocabText = '';
-const RULES = (vocab, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
+let vocabText = '', functionsText = '';
+const RULES = (vocab, functions, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
 
 The sentence form in one screen:
 - A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless": "<head> if <condition>, unless <condition>." or "<head> unless <condition>."
 - A long rule: "<head> if all of:" and then a list, one condition per item, each item ending in ";" and the last in ".".
 - Alternatives: "<head> either:" and then a numbered list, each item "if <condition>, <condition>;".
 - Variables are capitalised words: C, F, Callee. "a call C" introduces C and says what it is; "something" or "some await" is anything, unnamed. An atom is in backticks, \`true\`, \`class_method\`; a string is in double quotes.
-- A condition is a sentence from the list below with your own terms in its holes, or a sentence a rule in the notebook defines.
+- A condition is a sentence from the list below with your own terms in its holes, or a sentence a rule in the notebook defines, or one of the built-in conditions.
+- Built in: a comparison of two numbers, "L > 6", "L >= N", "A < B"; equality and difference, "X is Y", "X differs from Y"; arithmetic, "N is A + B" (also -, *, /, mod); and these functions, each written "R is <phrase>" or compared directly by its name, "str_len(Name) > 6":
+${functions}- A check says what must hold of any code, not of this file. Never list the names, lines or values this file happens to contain to make a check pass; if the check needs something neither the sentences nor the built-ins can say, answer with a cell holding only a line that starts with "> " and says what is missing.
 - A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short.
 - Asking lines, each on its own line, with no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "why <sentence>" explains one answer.
 
@@ -420,7 +422,7 @@ async function translate(c) {
     },
   }] : undefined;
   try {
-    const ans = await sample.json(RULES(vocabText, state.code, definedSentences(), c.text), { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
+    const ans = await sample.json(RULES(vocabText, functionsText, state.code, definedSentences(), c.text), { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
     if (!ans || typeof ans.cell !== 'string' || !ans.cell.trim()) throw { code: 'invalid_json', message: 'the answer had no cell field' };
     c.was = c.text; c.text = ans.cell.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null;
     busy.delete(c.id); save(); renderCells(); runBook();
@@ -496,8 +498,8 @@ code.value = state.code; paintEditor(); renderCells();
 (async () => {
   try {
     const t0 = performance.now();
-    const [init, vocab] = await Promise.all([startHost(), fetch('vocab.txt').then((r) => r.ok ? r.text() : '')]);
-    vocabText = vocab;
+    const [init, vocab, fns] = await Promise.all([startHost(), ...['vocab.txt', 'functions.txt'].map((f) => fetch(f).then((r) => r.ok ? r.text() : ''))]);
+    vocabText = vocab; functionsText = fns;
     if (!init.ok) throw new Error(init.diagnostics.join('; '));
     setStatus(`<span>JS model loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`);
     $('runall').disabled = false;

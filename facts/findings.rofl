@@ -10,6 +10,12 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, pitfall).
+recorded(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "2026-09-24").
+addressed_by(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "playground/page.html").
+addressed_by(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "scripts/read_md.ts").
+finding_note(f_a_translator_that_does_not_know_a_builtin_lists_the_file_and_the_check_holds_by_construction, "THE OWNER ASKED FOR `no function name longer than six characters` AND GOT A GREEN CHECK THAT CHECKED NOTHING. The translator's prompt listed the model's relations and no built-in, so it did not know `str_len`, which the kernel has had all along with the phrase `the length of`. It wrote `a function has a short name either: if it answers to \"load\"; ... \"Store\"` over every name in the file and `never F has a long name`: green because every name present was on the list, five-letter ones included, and wrong for the next function anyone writes. A check that holds by enumerating the file is the worst failure a translator has, because it looks right. The prompt now lists the comparisons, the arithmetic and the string functions (from the fun_phrase facts, so it cannot drift from the vocabulary), and says a check is about any code, never a list of what this file contains, and that a check the language cannot say is answered with a line saying what is missing. AND THE READER HAD A HOLE ON THE SAME PATH: `str_len(Name) > 6` inside a sentence was written back as `str_len(?Name) > 6`, the kernel's inner form, which the parser refuses; the operands of a comparison now go through the same rewrite as the right side of `is`. The eighteen files read back byte for byte as before. Still not read, and reported as unread: arithmetic inside a comparison, `str_len(Name) mod 2 = 1`.").
+
 finding(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, insight).
 recorded(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "2026-09-24").
 addressed_by(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "facts/js-phrases.rofl").
