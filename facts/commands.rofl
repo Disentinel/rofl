@@ -56,3 +56,6 @@ command_note("untyped", "-- rules/js-*.rofl   the one-letter variables nothing i
 
 command_shown("view", 13).
 command_note("view", "-- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install").
+
+command_shown("playground", 14).
+command_note("playground", "the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server").

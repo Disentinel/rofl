@@ -1,0 +1,463 @@
+<title>ROFL Playground</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #F7F8F5; --panel: #FFFFFF; --fg: #1C2120; --mute: #66706B; --line: #D9DDD6; --soft: #EEF0EB;
+    --code-bg: #FCFCFA; --gutter: #9AA39D;
+    --accent: #1D4ED8; --accent-bg: #1D4ED814;
+    --pass: #047857; --pass-bg: #0478571A; --fail: #B91C1C; --fail-bg: #B91C1C14; --warn: #A15C07; --warn-bg: #A15C0714;
+    --kw: #6D28D9; --was: #7A6F5B;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
+      --code-bg: #161A18; --gutter: #69726D;
+      --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+      --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
+      --kw: #C7A9FF; --was: #B5A98F;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
+    --code-bg: #161A18; --gutter: #69726D;
+    --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+    --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
+    --kw: #C7A9FF; --was: #B5A98F;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
+  .wrap { padding-inline: 16px; padding-block: 14px 24px; max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+  h1 { font: 600 19px/1.2 var(--sans); margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--mute); font-weight: 400; }
+  .status { font: 12.5px/1.4 var(--mono); color: var(--mute); display: flex; gap: 6px 14px; flex-wrap: wrap; }
+  .status b { font-weight: 600; color: var(--fg); }
+  .status .busy::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: .25; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .status .busy::before { animation: none; } }
+  .spacer { flex: 1; }
+  button { font: 500 13px/1 var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; cursor: pointer; }
+  button:hover { border-color: var(--mute); }
+  button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  button:disabled { opacity: .5; cursor: default; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
+  @media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  /* the code pane */
+  .code { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  @media (max-width: 960px) { .code { position: static; } }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); font: 12.5px/1.4 var(--mono); color: var(--mute); }
+  .bar b { color: var(--fg); font-weight: 600; }
+  .editor { position: relative; height: min(72vh, 760px); background: var(--code-bg); display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+  @media (max-width: 960px) { .editor { height: 52vh; } }
+  .gutter, .clip { position: relative; overflow: hidden; }
+  .gutter { border-right: 1px solid var(--line); }
+  .nums, .marks { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
+  .nums div { height: 20px; font: 12px/20px var(--mono); color: var(--gutter); text-align: right; padding-right: 8px; font-variant-numeric: tabular-nums; }
+  .nums div.bad { color: var(--fail); font-weight: 600; }
+  .nums div.focus { color: var(--accent); font-weight: 600; }
+  .marks div { position: absolute; left: 0; right: 0; height: 20px; }
+  .marks div.bad { background: var(--fail-bg); }
+  .marks div.focus { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
+  #code { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; border: 0; margin: 0; padding: 10px 12px; background: transparent; color: var(--fg); font: 13px/20px var(--mono); white-space: pre; overflow: auto; tab-size: 2; }
+  .foot { padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--mute); min-height: 20px; }
+  .foot.bad { color: var(--fail); background: var(--fail-bg); }
+
+  /* the notebook */
+  .book { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .cell { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; min-width: 0; }
+  .cell.prose { background: transparent; border-color: transparent; }
+  .cell.prose:focus-within { border-color: var(--line); }
+  .head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 0; flex-wrap: wrap; }
+  .head select { font: 12px/1 var(--mono); color: var(--mute); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 2px; }
+  .head select:hover { border-color: var(--line); }
+  .head .state { font: 12px/1.3 var(--mono); color: var(--mute); }
+  .head button { padding: 5px 8px; font-size: 12px; }
+  .head .x { border-color: transparent; color: var(--mute); }
+  .cell textarea { display: block; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--fg); resize: none; overflow: hidden; padding: 6px 12px 10px; margin: 0; }
+  .cell.formal textarea { font: 13px/1.6 var(--mono); white-space: pre-wrap; }
+  .cell.natural textarea { font: 15px/1.55 var(--sans); }
+  .cell.prose textarea { font: 14.5px/1.55 var(--sans); color: var(--mute); padding-top: 2px; }
+  .was { margin: 4px 12px 0; padding: 4px 10px; border-left: 2px solid var(--was); color: var(--was); font-size: 13.5px; }
+  .was::before { content: 'was: '; font: 12px var(--mono); }
+  .out { border-top: 1px solid var(--line); padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .out:empty { display: none; }
+  .ask { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ask .q { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 12.5px/1.4 var(--mono); color: var(--mute); }
+  .pill { font: 600 11.5px/1 var(--mono); padding: 4px 7px; border-radius: 99px; letter-spacing: .02em; }
+  .pill.pass { color: var(--pass); background: var(--pass-bg); }
+  .pill.fail { color: var(--fail); background: var(--fail-bg); }
+  .pill.info { color: var(--mute); background: var(--soft); }
+  .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rows li { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; }
+  .rows li:hover { background: var(--soft); }
+  .rows li .s { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .rows li button.why { padding: 2px 6px; font: 11.5px var(--mono); color: var(--mute); border-color: var(--line); }
+  .rows code, .why-tree code { font: 12.5px var(--mono); color: var(--pass); }
+  .node { font: 500 12px/1.2 var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--soft); color: var(--fg); cursor: pointer; }
+  .node:hover { border-color: var(--accent); color: var(--accent); }
+  .why-tree { margin: 2px 0 4px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-x: auto; }
+  .err { color: var(--fail); background: var(--fail-bg); padding: 6px 10px; border-radius: 5px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .note { color: var(--warn); background: var(--warn-bg); padding: 5px 10px; border-radius: 5px; font-size: 13px; }
+  .more { color: var(--mute); font-size: 12.5px; padding-left: 6px; }
+  .thinking { color: var(--mute); font-size: 13px; white-space: pre-wrap; max-height: 140px; overflow: auto; }
+  .adds { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .adds span { color: var(--mute); font-size: 12.5px; }
+  .help { color: var(--mute); font-size: 13px; max-width: 78ch; margin: 0; }
+  .help code { font: 12.5px var(--mono); color: var(--fg); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>ROFL Playground <span>&middot; JavaScript</span></h1>
+    <div class="status" id="status" aria-live="polite"><span class="busy">loading the JS model</span></div>
+    <div class="spacer"></div>
+    <button type="button" id="reset">Load the example</button>
+    <button type="button" class="primary" id="runall" disabled>Run the book</button>
+  </header>
+  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it: <code>? L</code> lists answers, <code>never L</code> is an invariant that holds when nothing answers, <code>why L</code> explains an answer. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
+  <div class="grid">
+    <section class="code" aria-label="JavaScript">
+      <div class="bar"><b>play.js</b><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
+      <div class="editor">
+        <div class="gutter" aria-hidden="true"><div class="nums" id="nums"></div></div>
+        <div class="clip">
+          <div class="marks" id="marks" aria-hidden="true"></div>
+          <textarea id="code" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" aria-label="JavaScript source"></textarea>
+        </div>
+      </div>
+      <div class="foot" id="foot">The book runs a second after you stop typing.</div>
+    </section>
+    <section class="book" aria-label="Notebook">
+      <div id="cells" class="book"></div>
+      <div class="adds"><span>Add a cell:</span>
+        <button type="button" data-add="natural">Natural</button>
+        <button type="button" data-add="formal">Formal</button>
+        <button type="button" data-add="prose">Prose</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+const EXAMPLE_CODE = `const fs = require('fs');
+
+async function load(path) {
+  const text = await fs.promises.readFile(path, 'utf8');
+  return JSON.parse(text);
+}
+
+function save(path, data) {
+  fs.writeFileSync(path, JSON.stringify(data));
+}
+
+class Store {
+  constructor(path) { this.path = path; this.cache = null; }
+  async get() {
+    if (!this.cache) this.cache = load(this.path);
+    return this.cache;
+  }
+  put(data) { save(this.path, data); this.cache = data; }
+  clear() { this.cache = null; }
+}
+
+function main() {
+  const s = new Store('db.json');
+  s.get();
+  s.put({ ok: true });
+}
+main();
+`;
+const EXAMPLE_CELLS = [
+  { kind: 'prose', text: 'An invariant: an async function called without await drops its promise. Try adding await in front of load(...) or s.get(), and watch it turn green.' },
+  { kind: 'formal', text: `phrase(unawaited, "<0:call> is called without await").
+unawaited(C) :- resolves[code](C, F), ast_attr[code](F, async, true), not awaited(C).
+awaited(C) :- await_arg[code](_, C).
+never unawaited(C)` },
+  { kind: 'prose', text: 'Questions the JS model already answers: who calls whom, and what each function does to the world.' },
+  { kind: 'formal', text: `? calls[code](Caller, Callee)
+? effect_of[flow](F, E)` },
+  { kind: 'prose', text: 'A natural cell: run it and Claude writes the formal cell, trying it against the code first. The original stays above it; Revert brings it back.' },
+  { kind: 'natural', text: 'Every method of a class is called somewhere in this file.' },
+];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const KEY = 'rofl-playground-v1';
+let uid = 0;
+const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null });
+let state = { code: EXAMPLE_CODE, cells: EXAMPLE_CELLS.map(cell) };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s.code === 'string' && Array.isArray(s.cells)) state = { code: s.code, cells: s.cells.map(cell) }; } catch (e) {}
+let saveT = 0;
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ code: state.code, cells: state.cells.map(({ kind, text, was, note }) => ({ kind, text, was, note })) })); } catch (e) {} }, 400); };
+
+// ------------------------------------------------------------ the engine
+let host = null;          // { call(op, ...args): Promise }
+async function startHost() {
+  const [model, phrases] = await Promise.all(['model.txt', 'phrases.txt'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
+  const viaWorker = await new Promise((resolve) => {
+    let w;
+    try { w = new Worker('lib/worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
+    const t = setTimeout(() => { w.terminate(); resolve(null); }, 8000);
+    w.onerror = () => { clearTimeout(t); w.terminate(); resolve(null); };
+    w.onmessage = (e) => { if (e.data.id === 0) { clearTimeout(t); resolve(w); } };
+  });
+  if (viaWorker) {
+    let n = 0; const waiting = new Map();
+    viaWorker.onmessage = (e) => { const p = waiting.get(e.data.id); if (!p) return; waiting.delete(e.data.id); e.data.ok ? p.resolve(e.data.value) : p.reject(new Error(e.data.error)); };
+    host = { where: 'a worker', call: (op, ...args) => new Promise((resolve, reject) => { const id = ++n; waiting.set(id, { resolve, reject }); viaWorker.postMessage({ id, op, args }); }) };
+  } else {
+    const m = await import('./lib/host.js');
+    host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
+  }
+  return host.call('init', model, phrases);
+}
+
+// ------------------------------------------------------------ the editor
+const code = $('code'), nums = $('nums'), marks = $('marks');
+let focusLine = 0, badLines = new Set(), nodes = {};
+function paintEditor() {
+  const n = code.value.split('\n').length;
+  $('lines').textContent = `${n} lines`;
+  let h = '', m = '';
+  for (let i = 1; i <= n; i++) {
+    const cls = i === focusLine ? 'focus' : badLines.has(i) ? 'bad' : '';
+    h += `<div class="${cls}">${i}</div>`;
+    if (cls) m += `<div class="${cls}" style="top:${10 + (i - 1) * 20}px"></div>`;
+  }
+  nums.innerHTML = h; nums.style.paddingTop = '10px'; marks.innerHTML = m;
+  syncScroll();
+}
+function syncScroll() { nums.style.transform = `translateY(${-code.scrollTop}px)`; marks.style.transform = `translate(${-code.scrollLeft}px, ${-code.scrollTop}px)`; }
+code.addEventListener('scroll', syncScroll);
+function showLine(line) {
+  focusLine = line; paintEditor();
+  const lines = code.value.split('\n'); let at = 0; for (let i = 0; i < line - 1 && i < lines.length; i++) at += lines[i].length + 1;
+  code.scrollTop = Math.max(0, (line - 1) * 20 - code.clientHeight / 2);
+  code.focus({ preventScroll: true }); code.setSelectionRange(at, at + (lines[line - 1] ?? '').length);
+  syncScroll();
+}
+let codeT = 0;
+code.addEventListener('input', () => { state.code = code.value; save(); focusLine = 0; paintEditor(); clearTimeout(codeT); codeT = setTimeout(() => runBook(), 1000); });
+code.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const s = code.selectionStart; code.setRangeText('  ', s, code.selectionEnd, 'end'); code.dispatchEvent(new Event('input')); }
+  if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); clearTimeout(codeT); runBook(); }
+});
+
+// ------------------------------------------------------------ rendering answers
+const kindWord = (k) => k.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
+function chip(id) { const n = nodes[id]; return n ? `<button type="button" class="node" data-line="${n.line}" title="${esc(n.kind)}">${esc(kindWord(n.kind))} &middot; line ${n.line}</button>` : `<code>${esc(id)}</code>`; }
+function rich(text) {
+  return esc(text).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
+}
+const idsIn = (s) => [...s.matchAll(/\bn[0-9a-f]{8}_\d+\b/g)].map((m) => m[0]);
+
+// ------------------------------------------------------------ the notebook
+const cellsEl = $('cells');
+let results = new Map();      // cell id -> CellOut
+let edited = new Set();       // formal cells changed since the last run
+let busy = new Map();         // cell id -> { ctl, text }
+function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function renderCells() {
+  cellsEl.innerHTML = state.cells.map((c, i) => {
+    const r = results.get(c.id), b = busy.get(c.id);
+    const run = c.kind === 'natural' ? (b ? `<button type="button" data-stop="${c.id}">Stop</button>` : `<button type="button" data-run="${c.id}">Translate and run</button>`) : c.kind === 'formal' ? `<button type="button" data-run="${c.id}">Run</button>` : '';
+    const st = c.kind === 'formal' ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
+    return `<article class="cell ${c.kind}" data-id="${c.id}">
+      <div class="head">
+        <select data-kind="${c.id}" aria-label="Cell kind">${['formal', 'natural', 'prose'].map((k) => `<option value="${k}"${k === c.kind ? ' selected' : ''}>${k}</option>`).join('')}</select>
+        <span class="state">${esc(st)}</span><div class="spacer"></div>
+        ${c.was ? `<button type="button" data-revert="${c.id}">Revert</button>` : ''}${run}
+        <button type="button" class="x" data-del="${c.id}" aria-label="Delete cell">&#x2715;</button>
+      </div>
+      ${c.was ? `<div class="was">${esc(c.was)}</div>` : ''}
+      <textarea data-text="${c.id}" rows="1" spellcheck="${c.kind !== 'formal'}" aria-label="Cell ${i + 1}">${esc(c.text)}</textarea>
+      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && c.kind === 'formal' ? `<div class="more">${esc(c.note)}</div>` : ''}${r && c.kind === 'formal' && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}</div>
+    </article>`;
+  }).join('');
+  for (const t of cellsEl.querySelectorAll('textarea')) grow(t);
+}
+function summary(r) {
+  const nev = r.lines.filter((l) => l.kind === 'never');
+  if (r.errors.length) return 'has errors';
+  if (!nev.length) return '';
+  const bad = nev.filter((l) => !l.ok).length;
+  return bad ? `${bad} of ${nev.length} invariants fail` : nev.length === 1 ? 'the invariant holds' : `all ${nev.length} invariants hold`;
+}
+function outputs(r) {
+  let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('');
+  for (const l of r.lines) {
+    const pill = l.kind === 'never' ? (l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
+    h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span></div>`;
+    if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
+    if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
+    if (l.rows.length) h += `<ul class="rows">${l.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
+    if (l.total > l.rows.length) h += `<div class="more">and ${l.total - l.rows.length} more</div>`;
+    h += '</div>';
+  }
+  return h;
+}
+function markBad() {
+  badLines = new Set();
+  for (const r of results.values()) for (const l of r.lines) if (l.kind === 'never' && !l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) if (nodes[id]) badLines.add(nodes[id].line);
+  paintEditor();
+}
+
+// ------------------------------------------------------------ running
+let running = false, again = false, lastMs = 0;
+const setStatus = (html) => { $('status').innerHTML = html; };
+const formal = () => state.cells.filter((c) => c.kind === 'formal').map((c) => ({ id: c.id, text: c.text }));
+async function runBook() {
+  if (!host) return;
+  if (running) { again = true; return; }
+  running = true; again = false;
+  $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
+  try {
+    const out = await host.call('run', state.code, formal());
+    nodes = out.nodes; results = new Map(out.cells.map((c) => [c.id, c])); edited.clear();
+    const foot = $('foot');
+    if (out.parseError) { foot.className = 'foot bad'; foot.textContent = `Babel could not parse the code: ${out.parseError}`; }
+    else if (out.error) { foot.className = 'foot bad'; foot.textContent = `The book did not run: ${out.error}`; }
+    else { foot.className = 'foot'; foot.textContent = `${out.facts} facts from the scanner. The book runs a second after you stop typing.`; }
+    lastMs = out.ms; $('runinfo').textContent = `ran in ${(out.ms / 1000).toFixed(1)} s`;
+    markBad(); renderCells();
+  } catch (e) {
+    $('runinfo').textContent = ''; $('foot').className = 'foot bad'; $('foot').textContent = `The run failed: ${e.message}`;
+  } finally { running = false; if (again) runBook(); }
+}
+
+// ------------------------------------------------------------ translation
+let sample;   // undefined: not asked yet; null: not available
+let vocabText = '';
+const RULES = (vocab, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a cell of ROFL, a Datalog, for a notebook. The notebook runs every cell over facts a scanner took from the file and over a model of JavaScript written in ROFL.
+
+ROFL in one screen:
+- A rule: head(X, Y) :- a(X, Z), b[code](Z, Y), not c(Y).   Variables start with a capital letter, _ is a wildcard, atoms are lower case, strings are in double quotes, numbers are plain.
+- A relation may live in a book, written rel[book](...). A relation written without a book is in main. Relations you define go in main.
+- A negated literal needs each of its variables bound earlier in the same body, except _.
+- A fact ends with a period: rel(a, "b").   A comment line starts with --.
+- Lines that ask, one per line, no final period: "? L" lists every answer of L; "never L" is an invariant that holds when L has no answer; "why L" explains one ground answer.
+- phrase(rel, "<0:call> is called without await"). makes answers of rel read as sentences; <i:noun> stands for argument i.
+
+The scanner's facts, all in the book code:
+- ast_node[code](Id, Kind, File, Line): one per Babel node; Kind is the Babel type in snake_case (call_expression, class_method, class_declaration, function_declaration, await_expression, member_expression, identifier, ...).
+- ast_child[code](Parent, Field, Index, Child): the tree; Field is Babel's field name in snake_case (callee, arguments, body, key, object, property, ...).
+- ast_attr[code](Id, Key, Value): scalar properties, e.g. ast_attr[code](F, async, true), ast_attr[code](I, name, "load"), ast_attr[code](M, kind, "method").
+
+Relations the JS model derives, each as name[book] and a signature naming its arguments:
+${vocab}
+The file:
+\`\`\`js
+${codeText}
+\`\`\`
+${defined.length ? `Relations the other cells already define, which you may use: ${defined.join(', ')}.\n` : ''}
+The check to write: ${ask}
+
+${toolsOk ? 'Run your cell with the try_rofl tool before you answer, and fix it until it runs without errors and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question. Give the relation you define a phrase.
+Reply with only a JSON object: {"rofl": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the check, saying what the cell checks>"}`;
+let toolsOk = false;
+const definedRels = () => [...new Set(formal().flatMap((c) => [...c.text.matchAll(/^([a-z_]\w*)\([^\n]*:-/gm)].map((m) => m[1])))];
+async function translate(c) {
+  if (!sample) { c.error = 'Translation needs Claude, and this view does not offer it. Switch the cell to formal and write ROFL.'; renderCells(); return; }
+  const ctl = new AbortController();
+  busy.set(c.id, { ctl, text: '' }); c.error = null; renderCells();
+  const tries = [];
+  const tools = toolsOk ? [{
+    name: 'try_rofl',
+    description: 'Runs a candidate notebook cell over the file together with the other formal cells and returns its errors and, for each asking line, the number of answers and the first few as sentences.',
+    inputSchema: { type: 'object', properties: { rofl: { type: 'string', description: 'the cell text' } }, required: ['rofl'] },
+    async execute(input) {
+      const b = busy.get(c.id); if (b) { b.text = `Trying a translation (${tries.length + 1})\u2026`; renderCells(); }
+      const cells = [...formal(), { id: 'try', text: String(input.rofl ?? '') }];
+      const out = await host.call('run', state.code, cells);
+      const r = out.cells.find((x) => x.id === 'try');
+      tries.push(1);
+      if (out.error) throw new Error(out.error);
+      return { errors: r.errors, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].kind} at line ${out.nodes[id].line}]` : id)) })) };
+    },
+  }] : undefined;
+  try {
+    const ans = await sample.json(RULES(vocabText, state.code, definedRels(), c.text), { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
+    if (!ans || typeof ans.rofl !== 'string' || !ans.rofl.trim()) throw { code: 'invalid_json', message: 'the answer had no rofl field' };
+    c.was = c.text; c.text = ans.rofl.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null;
+    busy.delete(c.id); save(); renderCells(); runBook();
+  } catch (e) {
+    busy.delete(c.id);
+    const code = e && e.code;
+    if (code === 'not_granted' || code === 'sampling_disabled' || code === 'capability_disabled' || code === 'not_declared') { sample = null; c.error = 'Claude is not allowed for this page, so a natural cell cannot be translated here. Write it as a formal cell instead.'; }
+    else if (code === 'cancelled') c.error = null;
+    else if (code === 'rate_limited') c.error = 'Too many requests to Claude just now. Try again in a minute.';
+    else if (code === 'invalid_json') c.error = 'Claude answered, but not with a cell. Run it again, or say the check more precisely.';
+    else c.error = `The translation did not finish (${code || 'error'}). Run it again.`;
+    renderCells();
+  }
+}
+
+// ------------------------------------------------------------ events
+cellsEl.addEventListener('input', (e) => {
+  const id = e.target.dataset.text; if (!id) return;
+  const c = state.cells.find((x) => x.id === id); c.text = e.target.value; grow(e.target);
+  if (c.kind === 'formal') { if (c.was) { c.was = null; c.note = null; const w = e.target.closest('.cell').querySelector('.was'); if (w) w.remove(); const rv = e.target.closest('.cell').querySelector('[data-revert]'); if (rv) rv.remove(); } edited.add(id); const st = e.target.closest('.cell').querySelector('.state'); st.textContent = 'edited, not run yet'; const o = e.target.closest('.cell').querySelector('.out'); if (o) o.innerHTML = ''; }
+  save();
+});
+cellsEl.addEventListener('keydown', (e) => {
+  const id = e.target.dataset.text; if (!id || e.key !== 'Enter' || !e.shiftKey) return;
+  e.preventDefault(); const c = state.cells.find((x) => x.id === id);
+  if (c.kind === 'natural') translate(c); else if (c.kind === 'formal') runBook();
+});
+cellsEl.addEventListener('change', (e) => {
+  const id = e.target.dataset.kind; if (!id) return;
+  const c = state.cells.find((x) => x.id === id); c.kind = e.target.value; c.error = null; if (c.kind !== 'formal') results.delete(id); else edited.add(id);
+  save(); renderCells();
+});
+cellsEl.addEventListener('click', async (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  const find = (id) => state.cells.find((x) => x.id === id);
+  if (t.dataset.line) { showLine(Number(t.dataset.line)); return; }
+  if (t.dataset.run) { const c = find(t.dataset.run); if (c.kind === 'natural') translate(c); else runBook(); return; }
+  if (t.dataset.stop) { busy.get(t.dataset.stop)?.ctl.abort(); return; }
+  if (t.dataset.revert) { const c = find(t.dataset.revert); c.text = c.was; c.was = null; c.note = null; c.kind = 'natural'; results.delete(c.id); save(); renderCells(); runBook(); return; }
+  if (t.dataset.del) { state.cells = state.cells.filter((x) => x.id !== t.dataset.del); results.delete(t.dataset.del); save(); renderCells(); runBook(); return; }
+  if (t.dataset.why !== undefined) {
+    const li = t.closest('li'); const open = li.nextElementSibling;
+    if (open && open.classList.contains('why-tree')) { open.remove(); return; }
+    const tree = document.createElement('div'); tree.className = 'why-tree'; tree.textContent = 'Asking why\u2026'; li.after(tree);
+    try { tree.innerHTML = rich(await host.call('why', t.dataset.why)); } catch (err) { tree.textContent = err.message; }
+  }
+});
+document.querySelector('.adds').addEventListener('click', (e) => {
+  const k = e.target.dataset && e.target.dataset.add; if (!k) return;
+  const c = cell({ kind: k, text: '' }); state.cells.push(c); save(); renderCells();
+  const t = cellsEl.querySelector(`[data-text="${c.id}"]`); t.focus(); t.scrollIntoView({ block: 'center' });
+});
+$('reset').addEventListener('click', () => {
+  state = { code: EXAMPLE_CODE, cells: EXAMPLE_CELLS.map(cell) }; code.value = state.code; results = new Map(); edited.clear(); focusLine = 0; save(); paintEditor(); renderCells(); runBook();
+});
+$('runall').addEventListener('click', () => runBook());
+
+// ------------------------------------------------------------ start
+code.value = state.code; paintEditor(); renderCells();
+(async () => {
+  try {
+    sample = window.claude && window.claude.use ? await window.claude.use('sample') : null;
+    if (sample) { const lim = await sample.limits().catch(() => null); toolsOk = !!(lim && lim.tools); }
+  } catch (e) { sample = null; }
+  renderCells();
+})();
+(async () => {
+  try {
+    const t0 = performance.now();
+    const [init, vocab] = await Promise.all([startHost(), fetch('vocab.txt').then((r) => r.ok ? r.text() : '')]);
+    vocabText = vocab;
+    if (!init.ok) throw new Error(init.diagnostics.join('; '));
+    setStatus(`<span>JS model loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`);
+    $('runall').disabled = false;
+    await runBook();
+  } catch (e) { setStatus(`<span style="color:var(--fail)">The JS model did not load: ${esc(e.message)}</span>`); }
+})();
+</script>

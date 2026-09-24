@@ -64,6 +64,7 @@
     "untyped": "node --experimental-strip-types scripts/untyped.ts",
     "read": "node --experimental-strip-types scripts/read.ts",
     "view": "node --experimental-strip-types scripts/view.ts",
+    "playground": "node --experimental-strip-types scripts/playground.ts",
     "sentences": "node --experimental-strip-types scripts/sentences.ts",
     "render:js": "rust/target/release/rofl-render --out docs/js facts/phrases.rofl facts/js-phrases.rofl rules/js-*.rofl --tables facts/js-*.rofl",
     "findings": "node --experimental-strip-types runtime/report.ts facts/findings.rofl",
