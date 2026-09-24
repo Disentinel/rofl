@@ -1,8 +1,10 @@
 // read.ts — the reader: a rendered Markdown file back into rules, measured
 // against the source it was rendered from.
 //
-//   npm run read -- docs/js/js-dataflow.md rules/js-dataflow.rofl [--out FILE.rofl]
-//   npm run read -- rules/untyped.md --out FILE.rofl           a file authored as Markdown, no source
+//   npm run read -- docs/js/js-dataflow.rofl.md rules/js-dataflow.rofl [--out FILE.rofl]
+//   npm run read -- rules/untyped.rofl.md --out FILE.rofl      a file authored as Markdown, no source
+//
+// Executable Markdown ends in `.rofl.md`; a plain `.md` is a document and no world.
 //
 // The vocabulary is the renderer's (facts/phrases.rofl, facts/js-phrases.rofl,
 // and any `--vocab FILE` given), and the file's own: an anchored head sentence
@@ -22,7 +24,7 @@ const oi = argv.indexOf('--out'); if (oi >= 0) { outPath = argv[oi + 1]; argv.sp
 const vocabPaths: string[] = [];
 for (let vi = argv.indexOf('--vocab'); vi >= 0; vi = argv.indexOf('--vocab')) { vocabPaths.push(argv[vi + 1]); argv.splice(vi, 2); }
 const [mdPath, ...srcPaths] = argv;
-if (!mdPath) { console.error('usage: npm run read -- <file.md> [source.rofl...] [--out FILE.rofl] [--vocab FILE.rofl]'); process.exit(2); }
+if (!mdPath) { console.error('usage: npm run read -- <file.rofl.md> [source.rofl...] [--out FILE.rofl] [--vocab FILE.rofl]'); process.exit(2); }
 
 // ---------------------------------------------------------------- vocabulary
 const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child', 'node']);

@@ -94,7 +94,7 @@ owed was a file written as Markdown first, with no `.rofl` twin, loaded
 through the reader into the same golden. It was run on 2026-09-23 on
 the untyped lint, fourteen rules and eight declared tables whose
 vocabulary no phrase file knew: the file was written again as
-`rules/untyped.md`, the `.rofl` removed, and `npm test` answered 96 of 96
+`rules/untyped.rofl.md`, the `.rofl` removed, and `npm test` answered 96 of 96
 against the unchanged golden, `rules_untyped` included. The read-back rules
 are the old ones clause for clause, variables and literal order included.
 
@@ -170,9 +170,9 @@ Measured against the host reader's own matches, sentence for sentence:
 
 | file | sentences | identical |
 |---|---|---|
-| `rules/untyped.md` | 43 | 43 |
-| `docs/js/js-structure.md` | 21 | 21 |
-| `docs/js/js-dataflow.md` | 461 | 461 |
+| `rules/untyped.rofl.md` | 43 | 43 |
+| `docs/js/js-structure.rofl.md` | 21 | 21 |
+| `docs/js/js-dataflow.rofl.md` | 461 | 461 |
 
 None ambiguous, none divergent, none refused, at 186 ms a sentence over
 870 templates. Three shapes were refused on the way and are in the grammar

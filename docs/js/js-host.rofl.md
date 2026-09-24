@@ -8,15 +8,15 @@ default: audit
 
 Reads:
 
-- from js-callgraph, in the code: [callee_of](js-callgraph.md#callee_of)
-- from js-dataflow, in the code: [binds_name](js-dataflow.md#binds_name), [ident_in](js-dataflow.md#ident_in)
-- from js-dataflow, in the flow: [class_named](js-dataflow.md#class_named), [param_of](js-dataflow.md#param_of), [selects](js-dataflow.md#selects)
-- from js-env: [reaches](js-env.md#reaches)
-- from js-env-api, in the code: [lib_call](js-env-api.md#lib_call)
-- from js-model, in the code: [ast_node](js-model.md#ast_node)
-- from js-modules, in the code: [binding](js-modules.md#binding), [resolved_builtin](js-modules.md#resolved_builtin), [site_file](js-modules.md#site_file)
-- from js-modules, in the main: [node_builtin_bare](js-modules.md#node_builtin_bare)
-- from js-structure, in the code: [ast_name](js-structure.md#ast_name)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
+- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [ident_in](js-dataflow.rofl.md#ident_in)
+- from js-dataflow, in the flow: [class_named](js-dataflow.rofl.md#class_named), [param_of](js-dataflow.rofl.md#param_of), [selects](js-dataflow.rofl.md#selects)
+- from js-env: [reaches](js-env.rofl.md#reaches)
+- from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [site_file](js-modules.rofl.md#site_file)
+- from js-modules, in the main: [node_builtin_bare](js-modules.rofl.md#node_builtin_bare)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
 - from outside these files, in the code: `ast_child`
 - from outside these files, in the main: `host`, `host_effect_atom`, `host_global`, `host_global_effect`, `host_member_deprecated`, `host_member_effect`, `host_member_replaced_by`, `host_member_since`, `host_module`, `host_module_effect`, `host_module_member`, `host_no_effects`, `provides_release`, `runtime`, `runtime_includes`, `runtime_undated`, `runtime_version`
 
@@ -65,22 +65,22 @@ Declared as facts:
 
 In the code:
 
-<a id="name_bound_in"></a>File binds the name Name if some declarator [introduces](js-dataflow.md#binds_name) Name in File.
+<a id="name_bound_in"></a>File binds the name Name if some declarator [introduces](js-dataflow.rofl.md#binds_name) Name in File.
 
 > the `id` child and not `fn_name[code]`, which also covers object and class
 > METHODS: `{ log() {} }` would have suppressed `console`
 
 File binds the name Name either:
 
-1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.md#ast_name) Name;
-2. if a node F [takes](js-dataflow.md#param_of) Name at some index and F [is in file](js-model.md#ast_node) File;
-3. if some class [is named](js-dataflow.md#class_named) Name in File;
-4. if a site I [binds the name](js-modules.md#binding) Name to some name at some specifier and I [sits in](js-modules.md#site_file) File.
+1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
+2. if a node F [takes](js-dataflow.rofl.md#param_of) Name at some index and F [is in file](js-model.rofl.md#ast_node) File;
+3. if some class [is named](js-dataflow.rofl.md#class_named) Name in File;
+4. if a site I [binds the name](js-modules.rofl.md#binding) Name to some name at some specifier and I [sits in](js-modules.rofl.md#site_file) File.
 
 > The host stays in the row: `console` under node and under browser are two rows.
 
 <a id="host_global_ref"></a>A node refers to the global Name of a host H if all of:
-  - it [reads](js-dataflow.md#ident_in) Name in File;
+  - it [reads](js-dataflow.rofl.md#ident_in) Name in File;
   - H has the global Name;
   - unless File [binds the name](#name_bound_in) Name.
 
@@ -98,17 +98,17 @@ File binds the name Name either:
 > (`import * as fs`, `import fs`) binds a name standing for the whole module.
 
 <a id="host_module_ns"></a>File imports the namespace Local of a spec Spec if all of:
-  - a site I [resolves to the builtin](js-modules.md#resolved_builtin) Spec;
-  - I [sits in](js-modules.md#site_file) File;
-  - I [binds the name](js-modules.md#binding) Local to "*" or "default" at some specifier.
+  - a site I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) Spec;
+  - I [sits in](js-modules.rofl.md#site_file) File;
+  - I [binds the name](js-modules.rofl.md#binding) Local to "*" or "default" at some specifier.
 
 > The NAMED form binds ONE member under a local name that need not be its
 > own; reading `Imported` for the member covers the rename without a test.
 
 <a id="host_module_named"></a>File imports Local as Key of a spec Spec if all of:
-  - a site I [resolves to the builtin](js-modules.md#resolved_builtin) Spec;
-  - I [sits in](js-modules.md#site_file) File;
-  - I [binds the name](js-modules.md#binding) Local to Key at some specifier;
+  - a site I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) Spec;
+  - I [sits in](js-modules.rofl.md#site_file) File;
+  - I [binds the name](js-modules.rofl.md#binding) Local to Key at some specifier;
   - Key differs from "*";
   - Key differs from "default".
 
@@ -132,20 +132,20 @@ In the audit:
 In the code:
 
 <a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
-  - [the callee](js-callgraph.md#callee_of) of C is a node N;
+  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
   - the `object` of N [refers to the global](#host_global_ref) Name of H;
-  - N [selects](js-dataflow.md#selects) Key.
+  - N [selects](js-dataflow.rofl.md#selects) Key.
 
-<a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
+<a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
 
 <a id="host_module_call"></a>C calls the module member Key of a spec Spec either:
 
 1. if all of:
-   - [the callee](js-callgraph.md#callee_of) of C is a node N;
-   - the `object` of N [reads](js-dataflow.md#ident_in) Local in File;
+   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+   - the `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
    - File [imports the namespace](#host_module_ns) Local of Spec;
-   - N [selects](js-dataflow.md#selects) Key;
-2. if [the callee](js-callgraph.md#callee_of) of C [reads](js-dataflow.md#ident_in) Local in File and File [imports](#host_module_named) Local as Key of Spec.
+   - N [selects](js-dataflow.rofl.md#selects) Key;
+2. if [the callee](js-callgraph.rofl.md#callee_of) of C [reads](js-dataflow.rofl.md#ident_in) Local in File and File [imports](#host_module_named) Local as Key of Spec.
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`
@@ -157,7 +157,7 @@ In the code:
 2. if C [calls the host member](#host_member_call) Key of Spec in N;
 3. if C [calls the host global](#host_global_call) Spec of N and Key is `itself`.
 
-<a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if a node C [is a host site](#host_site) of H from Origin at Key and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if a node C [is a host site](#host_site) of H from Origin at Key and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -198,7 +198,7 @@ In the audit:
 
 > at a coordinate, and the set of effects the corpus exercises
 
-<a id="host_effect_at"></a>File has the host effect E at Line by a route Why if a node C [has the host effect](#host_call_effect) E by Why and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_effect_at"></a>File has the host effect E at Line by a route Why if a node C [has the host effect](#host_call_effect) E by Why and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
 
 <a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
 
@@ -269,7 +269,7 @@ In the audit:
 <a id="runtime_reaches_release"></a>A runtime runs the release Rel if all of:
   - it [reaches the runtime](#runtime_reaches) P;
   - P ships the release Rel0;
-  - Rel0 [reaches the release](js-env.md#reaches) Rel.
+  - Rel0 [reaches the release](js-env.rofl.md#reaches) Rel.
 
 > `runtime_has_release` is a GUARD: a runtime with no bridge row reaches no
 > release, and without the premise every stdlib call reports unsupported
@@ -285,7 +285,7 @@ In the audit:
 <a id="runtime_no_release"></a>A runtime has no release if it is the version some number of some runtime, unless it [has a release](#runtime_has_release).
 
 <a id="runtime_lib_unsupported"></a>C is unsupported on a runtime R at Key of a prototype P if all of:
-  - C [calls the stdlib](js-env-api.md#lib_call) Key of P since a release Rel;
+  - C [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
   - R [has a release](#runtime_has_release);
   - unless R [runs the release](#runtime_reaches_release) Rel.
 
@@ -299,7 +299,7 @@ In the audit:
 
 <a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
 
-<a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if a node C [is absent on](#host_call_absent) R at Key of Spec and C [is of kind](js-model.md#ast_node) some kind in file File at line Line.
+<a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if a node C [is absent on](#host_call_absent) R at Key of Spec and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line.
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
@@ -384,7 +384,7 @@ A runtime
 
 In the main:
 
-<a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.md#node_builtin_bare) of it.
+<a id="bare_listed"></a>A spec is listed bare if some text [is the bare name](js-modules.rofl.md#node_builtin_bare) of it.
 
 In the audit:
 

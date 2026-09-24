@@ -8,7 +8,7 @@
 // reads the same sentences in ring 1 and says, sentence for sentence, whether
 // the two agree.
 //
-//   READ_TRACE=t.json npm run read -- rules/untyped.md --out /tmp/u.rofl
+//   READ_TRACE=t.json npm run read -- rules/untyped.rofl.md --out /tmp/u.rofl
 //   node --experimental-strip-types examples/sentence/sentence.ts t.json /tmp/u.phrases.rofl
 //
 // The vocabulary files are `phrase`/`sig` facts (the tree's own are

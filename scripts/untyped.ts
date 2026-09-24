@@ -42,7 +42,7 @@ const signedRels = [...sigArity.entries()].flatMap(([r, as]) => [...new Set(as)]
 const guards = [...vocab.matchAll(/^noun_guard\(\w+, "[^"]+"\)\./gm)].map((m) => m[0]).join('\n');
 const boot = readFileSync(`${ROOT}boot.rofl`, 'utf8');
 const r = new Rofl();
-const res: any = r.load([boot, readFileSync(roflFromMd('rules/untyped.md'), 'utf8'), 'edb(noun_guard).\n' + guards, [...new Set(signed)].join('\n'), signedRels.join('\n'), facts].join('\n'), { budget: 200_000_000 });
+const res: any = r.load([boot, readFileSync(roflFromMd('rules/untyped.rofl.md'), 'utf8'), 'edb(noun_guard).\n' + guards, [...new Set(signed)].join('\n'), signedRels.join('\n'), facts].join('\n'), { budget: 200_000_000 });
 if (!res.ok) { console.error(res.diagnostics.slice(0, 3).join('\n')); process.exit(1); }
 const rows = (q: string) => (r.query(q).rows as any[]).map((x) => x.bindings);
 const clean = (x: any) => String(x).replace(/^"|"$/g, '');
@@ -58,7 +58,7 @@ const unsignedArity = rows('unsigned_arity(Rel, A)');
 if (unsignedArity.length) console.log('a signed name used with an arity no signature covers: ' + unsignedArity.map((x) => `${x.Rel}/${x.A}`).join(', '));
 const bySigned = new Map<string, Set<string>>(); for (const b of [...inSigned, ...inUnsigned]) { const s = bySigned.get(String(b.Rel)) ?? new Set(); s.add(clean(b.V)); bySigned.set(String(b.Rel), s); }
 const debtRels = new Set(inUnsigned.map((b) => String(b.Rel)));
-const docs = readdirSync(`${ROOT}docs/js`).filter((f: string) => f.endsWith('.md')).map((f: string) => readFileSync(`${ROOT}docs/js/${f}`, 'utf8')).join('\n');
+const docs = readdirSync(`${ROOT}docs/js`).filter((f: string) => f.endsWith('.rofl.md')).map((f: string) => readFileSync(`${ROOT}docs/js/${f}`, 'utf8')).join('\n');
 for (const [rel, vs] of [...bySigned].sort((a, b) => b[1].size - a[1].size).slice(0, 25)) {
   const line = new RegExp(`^<a id="${rel}"></a>(.*)$`, 'm').exec(docs);
   console.log(`  ${rel.padEnd(24)} ${[...vs].sort().join(' ').padEnd(6)} ${(debtRels.has(rel) ? 'debt' : 'own').padEnd(5)} ${line ? line[1].replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').slice(0, 110) : ''}`);

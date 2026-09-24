@@ -8,7 +8,7 @@ default: audit
 
 Reads:
 
-- from js-modules, in the code: [module_site](js-modules.md#module_site), [resolved_builtin](js-modules.md#resolved_builtin), [resolved_import](js-modules.md#resolved_import), [site_file](js-modules.md#site_file), [site_kind](js-modules.md#site_kind), [site_line](js-modules.md#site_line), [site_source](js-modules.md#site_source), [site_source_computed](js-modules.md#site_source_computed)
+- from js-modules, in the code: [module_site](js-modules.rofl.md#module_site), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [resolved_import](js-modules.rofl.md#resolved_import), [site_file](js-modules.rofl.md#site_file), [site_kind](js-modules.rofl.md#site_kind), [site_line](js-modules.rofl.md#site_line), [site_source](js-modules.rofl.md#site_source), [site_source_computed](js-modules.rofl.md#site_source_computed)
 
 > js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
 > between it and the first. rules/js-modules.rofl resolves by REASONING over
@@ -126,19 +126,19 @@ In the audit:
 
 1. if all of:
    - S [is a resolve site](#resolve_site) in a file F at a line L for Sp;
-   - I [sits in](js-modules.md#site_file) F;
-   - I [sits at line](js-modules.md#site_line) L;
-   - [the source text](js-modules.md#site_source) of I is Sp;
+   - I [sits in](js-modules.rofl.md#site_file) F;
+   - I [sits at line](js-modules.rofl.md#site_line) L;
+   - [the source text](js-modules.rofl.md#site_source) of I is Sp;
 2. if all of:
    - S [is a computed resolve site](#resolve_site_computed) in a file F at a line L;
-   - I [sits in](js-modules.md#site_file) F;
-   - I [sits at line](js-modules.md#site_line) L;
-   - I [has a computed source](js-modules.md#site_source_computed).
+   - I [sits in](js-modules.rofl.md#site_file) F;
+   - I [sits at line](js-modules.rofl.md#site_line) L;
+   - I [has a computed source](js-modules.rofl.md#site_source_computed).
 
 <a id="rules_answer"></a>The rules answer of a site S is a path T either:
 
-1. if S [is modelled as](#model_site) a site I and I [resolves to the file](js-modules.md#resolved_import) T;
-2. if S [is modelled as](#model_site) a site I and I [resolves to the builtin](js-modules.md#resolved_builtin) T.
+1. if S [is modelled as](#model_site) a site I and I [resolves to the file](js-modules.rofl.md#resolved_import) T;
+2. if S [is modelled as](#model_site) a site I and I [resolves to the builtin](js-modules.rofl.md#resolved_builtin) T.
 
 <a id="rules_has_answer"></a>A site has a rules answer if [the rules answer](#rules_answer) of it is some path.
 
@@ -230,12 +230,12 @@ A site
 - <a id="model_site_known"></a>is known to the model if it [is modelled as](#model_site) some site.
 - <a id="site_unseen_by_model"></a>is unseen by the model if it [is a resolve place](#resolve_place), unless it [is known to the model](#model_site_known).
 - <a id="host_saw"></a>is seen by the host if some site [is modelled as](#model_site) it.
-- <a id="site_unseen_by_host"></a>is unseen by the host if it [is a module site](js-modules.md#module_site) of some form, unless it [is seen by the host](#host_saw).
+- <a id="site_unseen_by_host"></a>is unseen by the host if it [is a module site](js-modules.rofl.md#module_site) of some form, unless it [is seen by the host](#host_saw).
 
 > which kind of place the referee compared, so the `checked` ledger's per-kind
 > counts are re-derived rather than checked against a total
 
-<a id="checked_site_kind"></a>A kind K is checked at a site S if S [is modelled as](#model_site) a site I and [the site kind](js-modules.md#site_kind) of I is K.
+<a id="checked_site_kind"></a>A kind K is checked at a site S if S [is modelled as](#model_site) a site I and [the site kind](js-modules.rofl.md#site_kind) of I is K.
 
 > (file, line, specifier) is a key only while no two sites share all three
 

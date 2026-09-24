@@ -36,7 +36,7 @@ command_shown("features", 6).
 command_note("features", "what the system can do, which demo shows it, what promises it").
 
 command_shown("repl", 7).
-command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, loads a `.md` world").
+command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world").
 
 command_shown("scan", 8).
 command_note("scan", "-- <dir>   turn TypeScript into facts under facts/generated").

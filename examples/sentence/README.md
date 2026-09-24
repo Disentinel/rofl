@@ -14,16 +14,16 @@ The oracle is the host reader, `scripts/read.ts`: run with `READ_TRACE=file`
 it writes every literal a template matched, and `sentence.ts` reads the same
 sentences in ring 1 and compares, sentence for sentence.
 
-    READ_TRACE=u.trace npm run read -- rules/untyped.md --out /tmp/u.rofl
+    READ_TRACE=u.trace npm run read -- rules/untyped.rofl.md --out /tmp/u.rofl
     node --experimental-strip-types examples/sentence/sentence.ts u.trace /tmp/u.phrases.rofl
-    READ_TRACE=d.trace npm run read -- docs/js/js-dataflow.md rules/js-dataflow.rofl
+    READ_TRACE=d.trace npm run read -- docs/js/js-dataflow.rofl.md rules/js-dataflow.rofl
     node --experimental-strip-types examples/sentence/sentence.ts d.trace facts/phrases.rofl facts/js-phrases.rofl
 
 | file | sentences | templates | identical | ambiguous | divergent | refused |
 |---|---|---|---|---|---|---|
-| `rules/untyped.md` | 43 | 23 | **43** | 0 | 0 | 0 |
-| `docs/js/js-structure.md` | 21 | 870 | **21** | 0 | 0 | 0 |
-| `docs/js/js-dataflow.md` | 461 | 870 | **461** | 0 | 0 | 0 |
+| `rules/untyped.rofl.md` | 43 | 23 | **43** | 0 | 0 | 0 |
+| `docs/js/js-structure.rofl.md` | 21 | 870 | **21** | 0 | 0 | 0 |
+| `docs/js/js-dataflow.rofl.md` | 461 | 870 | **461** | 0 | 0 | 0 |
 
 Measured 2026-09-24, 186 ms a sentence against the JS vocabulary. *Identical*
 is one reading and it is the host's; *ambiguous* is several with the host's

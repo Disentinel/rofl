@@ -8,11 +8,11 @@ default: code
 
 Reads:
 
-- from js-callgraph, in the audit: [shape_verdict](js-callgraph.md#shape_verdict)
-- from js-callgraph: [has_shape](js-callgraph.md#has_shape), [resolved_site](js-callgraph.md#resolved_site)
-- from js-model: [ast_node](js-model.md#ast_node)
-- from js-model, in the main: [unknown_because](js-model.md#unknown_because)
-- from js-structure: [ast_name](js-structure.md#ast_name), [ast_value](js-structure.md#ast_value), [meta_form](js-structure.md#meta_form)
+- from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
+- from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
 - from outside these files: `ast_attr`, `ast_child`
 
 ## Kinds
@@ -107,12 +107,12 @@ Declared as facts:
 
 A site
 
-- <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.md#ast_node) F.
-- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.md#ast_node) L.
+- <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.rofl.md#ast_node) F.
+- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_node) L.
 
 <a id="site_source_node"></a>The source node of a site I is a node Src if I [is a module site](#module_site) of some form and the `source` of I is Src.
 
-<a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a [string literal](#noun-string_literal) Src and Src [is written as](js-structure.md#ast_value) S.
+<a id="site_source"></a>The source text of a site I is S if [the source node](#site_source_node) of I is a [string literal](#noun-string_literal) Src and Src [is written as](js-structure.rofl.md#ast_value) S.
 
 <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 
@@ -210,7 +210,7 @@ A node I is resolved either:
 <a id="dangling_import"></a>A site is a dangling import of a text S if all of:
   - [the site shape](#site_shape) of it is `relative`;
   - [the source text](#site_source) of it is S;
-  - unless it [is resolved](js-callgraph.md#resolved_site).
+  - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
 ## 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
 
@@ -221,12 +221,12 @@ A node I is resolved either:
 
 <a id="import_spec"></a>A site has the import specifier Sp if it [is an import site](#import_site) of `static_import` and Sp is among the `specifiers` of it.
 
-<a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and the `local` of it [is named](js-structure.md#ast_name) L.
+<a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and the `local` of it [is named](js-structure.rofl.md#ast_name) L.
 
 <a id="spec_imported"></a>Sp imports the name M either:
 
-1. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is named](js-structure.md#ast_name) M;
-2. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is written as](js-structure.md#ast_value) M;
+1. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is named](js-structure.rofl.md#ast_name) M;
+2. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is written as](js-structure.rofl.md#ast_value) M;
 3. if Sp is a [default import](#noun-default_import) and M is "default";
 4. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
 
@@ -255,12 +255,12 @@ A site
 
 <a id="spec_external"></a>A node Sp exports as X either:
 
-1. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is named](js-structure.md#ast_name) X;
-2. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is written as](js-structure.md#ast_value) X.
+1. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is named](js-structure.rofl.md#ast_name) X;
+2. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is written as](js-structure.rofl.md#ast_value) X.
 
 <a id="spec_internal"></a>Sp exports the local L either:
 
-1. if Sp is an [export specifier](#noun-export_specifier) and the `local` of Sp [is named](js-structure.md#ast_name) L;
+1. if Sp is an [export specifier](#noun-export_specifier) and the `local` of Sp [is named](js-structure.rofl.md#ast_name) L;
 2. if Sp is a [namespace export](#noun-namespace_export) and L is "*".
 
 A node
@@ -313,8 +313,8 @@ In the code:
 
 <a id="default_internal"></a>A node E exports by default N either:
 
-1. if [the default declaration](#default_declaration) of E is a node D and the `id` of D [is named](js-structure.md#ast_name) N;
-2. if [the default declaration](#default_declaration) of E is an [identifier](#noun-identifier) D and D [is named](js-structure.md#ast_name) N.
+1. if [the default declaration](#default_declaration) of E is a node D and the `id` of D [is named](js-structure.rofl.md#ast_name) N;
+2. if [the default declaration](#default_declaration) of E is an [identifier](#noun-identifier) D and D [is named](js-structure.rofl.md#ast_name) N.
 
 A node
 
@@ -452,14 +452,14 @@ A file F
 1. if all of:
    - a node E [has the export specifier](#export_spec) Sp;
    - E [is a local export site](#local_export_site);
-   - E [is in file](js-model.md#ast_node) F;
+   - E [is in file](js-model.rofl.md#ast_node) F;
 2. if a node E [has the reexport specifier](#reexport_spec) Sp and E [resolves to the file](#resolved_import) F.
 
 <a id="export_internal_unplaced"></a>A node has an unplaced internal of a shape Sh if a node E [has the reexport specifier](#reexport_spec) it and E [is unresolved with shape](#unresolved_import) Sh.
 
 <a id="export_internal_elsewhere"></a>A file F exports X from a file T if all of:
   - a node E [exports](#export_binding) some name as X at a node Sp;
-  - E [is in file](js-model.md#ast_node) F;
+  - E [is in file](js-model.rofl.md#ast_node) F;
   - Sp [has its internal in](#export_internal_in) T;
   - T differs from F.
 
@@ -480,14 +480,14 @@ In the code:
 
 <a id="unresolved_import"></a>A site I is unresolved with shape Sh either:
 
-1. if [the site shape](#site_shape) of I is Sh, unless I [is resolved](js-callgraph.md#resolved_site);
+1. if [the site shape](#site_shape) of I is Sh, unless I [is resolved](js-callgraph.rofl.md#resolved_site);
 2. if I [has a computed source](#site_source_computed) and Sh is `computed`.
 
 In the audit:
 
 <a id="accounted"></a>A site I is an accounted site either:
 
-1. if I [is resolved](js-callgraph.md#resolved_site);
+1. if I [is resolved](js-callgraph.rofl.md#resolved_site);
 2. if I [is unresolved with shape](#unresolved_import) some shape.
 
 <a id="unaccounted_site"></a>A site is an unaccounted site if it [is a module site](#module_site) of some form, unless it [is an accounted site](#accounted).
@@ -505,7 +505,7 @@ A site
 
 - <a id="resolve_gap"></a>is a resolve gap of a shape Sh if all of:
   - it [is unresolved with shape](#unresolved_import) Sh;
-  - [`shape_verdict`](js-callgraph.md#shape_verdict)(Sh, `resolves`) in the main;
+  - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, `resolves`) in the main;
   - unless it [is a dangling import](#dangling_import) of some text.
 - <a id="has_site_kind"></a>has a site kind if [the site kind](#site_kind) of it is some kind.
 - <a id="site_without_kind"></a>has no site kind if it [is a module site](#module_site) of some form, unless it [has a site kind](#has_site_kind).
@@ -513,9 +513,9 @@ A site
   - [the site shape](#site_shape) of it is X;
   - [the site shape](#site_shape) of it is B;
   - X differs from B.
-- <a id="shape_missing"></a>has no site shape if it [has a literal source](#site_source_literal), unless it [has a shape](js-callgraph.md#has_shape).
+- <a id="shape_missing"></a>has no site shape if it [has a literal source](#site_source_literal), unless it [has a shape](js-callgraph.rofl.md#has_shape).
 
-<a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.md#shape_verdict)(it, something) in the main.
+<a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(it, something) in the main.
 
 <a id="shape_without_verdict"></a>A shape Sh has no verdict either:
 
@@ -530,14 +530,14 @@ A kind K
 - <a id="reason_missing"></a>lacks a reason for a shape Sh with a verdict R if all of:
   - a site I [is unresolved with shape](#unresolved_import) Sh;
   - [the site kind](#site_kind) of I is K;
-  - [`shape_verdict`](js-callgraph.md#shape_verdict)(Sh, R) in the main;
+  - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, R) in the main;
   - R differs from `resolves`;
-  - unless K [is unknown](js-model.md#unknown_because) with Sh in `modules` of `js` because R.
-- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](js-model.md#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
+  - unless K [is unknown](js-model.rofl.md#unknown_because) with Sh in `modules` of `js` because R.
+- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](js-model.rofl.md#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
 - <a id="reason_earned"></a>earns the reason R if all of:
   - a site I [is unresolved with shape](#unresolved_import) Sh;
   - [the site kind](#site_kind) of I is K;
-  - [`shape_verdict`](js-callgraph.md#shape_verdict)(Sh, R) in the main.
+  - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, R) in the main.
 
 ## 8. THE MODULE'S OWN METADATA. `import.meta` points a module at itself;
 
@@ -550,12 +550,12 @@ In the code:
 
 A file F
 
-- <a id="module_meta"></a>has the module meta M if M [has the meta form](js-structure.md#meta_form) `import_meta` and M [is in file](js-model.md#ast_node) F.
+- <a id="module_meta"></a>has the module meta M if M [has the meta form](js-structure.rofl.md#meta_form) `import_meta` and M [is in file](js-model.rofl.md#ast_node) F.
 - <a id="self_referential_module"></a>is self referential if F [has the module meta](#module_meta) some node.
 
 In the audit:
 
-<a id="not_module_meta"></a>A node is not module meta if it [has the meta form](js-structure.md#meta_form) `new_target`.
+<a id="not_module_meta"></a>A node is not module meta if it [has the meta form](js-structure.rofl.md#meta_form) `new_target`.
 
 ## 9. IMPORT ATTRIBUTES — `with { type: "json" }` says what the module IS,
 
@@ -568,7 +568,7 @@ In the audit:
 
 In the code:
 
-<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.md#ast_name) Key and the `value` of it [is written as](js-structure.md#ast_value) Value.
+<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.rofl.md#ast_name) Key and the `value` of it [is written as](js-structure.rofl.md#ast_value) Value.
 
 A node
 

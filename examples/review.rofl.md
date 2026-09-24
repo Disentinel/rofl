@@ -8,7 +8,7 @@ default: main
 
 > Who has to approve a change before it merges: every team that owns a
 > module the change touches, unless someone on that team wrote it or has
-> approved it. A world written as Markdown: `npm run repl -- examples/review.md`
+> approved it. A world written as Markdown: `npm run repl -- examples/review.rofl.md`
 > loads it and answers `? C is blocked by T`, `why`, `whynot` in these
 > sentences.
 

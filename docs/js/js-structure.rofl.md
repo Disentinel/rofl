@@ -8,7 +8,7 @@ default: code
 
 Reads:
 
-- from js-model: [ast_node](js-model.md#ast_node)
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files: `ast_attr`, `ast_child`
 
 ## Kinds

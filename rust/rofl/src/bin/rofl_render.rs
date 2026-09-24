@@ -280,7 +280,7 @@ impl<'a> R<'a> {
         if let Some((rel, _)) = self.noun_guards.iter().find(|(r, g)| g.as_str() == n && self.guard_bound(**r)) {
             return match self.defs.get(rel) {
                 Some(&f) if f == self.cur_file.get() => format!("[{n}](#{})", self.h.name(*rel)),
-                Some(&f) => format!("[{n}]({}.md#{})", self.stems[f], self.h.name(*rel)),
+                Some(&f) => format!("[{n}]({}.rofl.md#{})", self.stems[f], self.h.name(*rel)),
                 None => n.to_string(),
             };
         }
@@ -321,7 +321,7 @@ impl<'a> R<'a> {
     fn link(&self, rel: Sym, text: &str, file: usize, stats: &mut Stats) -> String {
         match self.defs.get(&rel) {
             Some(&f) if f == file => { stats.links += 1; format!("[{}](#{})", text, self.h.name(rel)) }
-            Some(&f) => { stats.links += 1; format!("[{}]({}.md#{})", text, self.stems[f], self.h.name(rel)) }
+            Some(&f) => { stats.links += 1; format!("[{}]({}.rofl.md#{})", text, self.stems[f], self.h.name(rel)) }
             None => { stats.external.insert(self.h.name(rel).to_string()); text.to_string() }
         }
     }
@@ -1179,7 +1179,7 @@ impl<'a> R<'a> {
         // what this file reads and does not define is its imports, one line per source, at the top
         let mut groups: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
         let book_of = |rel: &str| self.intern_lookup_or(rel).and_then(|s| self.home.get(&s)).map(|b| self.book_name(*b)).unwrap_or_default();
-        for (rel, f) in &reads { groups.entry((self.stems[*f].clone(), book_of(rel))).or_default().push(format!("[{rel}]({}.md#{rel})", self.stems[*f])); }
+        for (rel, f) in &reads { groups.entry((self.stems[*f].clone(), book_of(rel))).or_default().push(format!("[{rel}]({}.rofl.md#{rel})", self.stems[*f])); }
         for rel in &stats.external { groups.entry(("outside these files".to_string(), book_of(rel))).or_default().push(format!("`{rel}`")); }
         if !groups.is_empty() {
             let _ = writeln!(out, "Reads:\n");
@@ -1331,10 +1331,11 @@ fn main() {
         let (text, st) = r.file(doc, fi);
         if st.heads.is_empty() && st.rules == 0 { continue; }
         total_pos.extend(st.positional.iter().cloned());
-        let _ = writeln!(index, "| [{s}]({s}.md) | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |", st.clauses, st.heads.len(), st.phrased.len(), st.positional.len(), st.absorbed, st.links, st.eithers, st.tables, st.external.len(), st.refused, s = doc.stem);
+        let _ = writeln!(index, "| [{s}]({s}.rofl.md) | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |", st.clauses, st.heads.len(), st.phrased.len(), st.positional.len(), st.absorbed, st.links, st.eithers, st.tables, st.external.len(), st.refused, s = doc.stem);
         eprintln!("{}: {} clauses, {} heads ({} phrased, {} positional), {} guards absorbed, {} links, {} either, {} folded by or, {} twins, {} subject blocks, {} tables, {} not defined here, {} refused", doc.stem, st.clauses, st.heads.len(), st.phrased.len(), st.positional.len(), st.absorbed, st.links, st.eithers, st.folded, st.twins, st.blocks, st.tables, st.external.len(), st.refused);
         match &out_dir {
-            Some(d) => { std::fs::create_dir_all(d).expect("out dir"); std::fs::write(format!("{d}/{}.md", doc.stem), text).expect("write"); }
+            Some(d) => { std::fs::create_dir_all(d).expect("out dir"); // `.rofl.md`: executable Markdown, a world the reader loads; a plain `.md` is a document
+            std::fs::write(format!("{d}/{}.rofl.md", doc.stem), text).expect("write"); }
             None => print!("{text}"),
         }
     }

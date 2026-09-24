@@ -8,8 +8,8 @@ default: audit
 
 Reads:
 
-- from js-callgraph: [stdlib_member](js-callgraph.md#stdlib_member)
-- from js-env: [reaches](js-env.md#reaches)
+- from js-callgraph: [stdlib_member](js-callgraph.rofl.md#stdlib_member)
+- from js-env: [reaches](js-env.rofl.md#reaches)
 - from outside these files, in the main: `environment`, `lib_deprecated`, `lib_member`, `lib_replaced_by`
 
 > js-env-api.rofl — ATTRIBUTING THE RESIDUE THE CALL GRAPH CANNOT RESOLVE.
@@ -28,7 +28,7 @@ Reads:
 
 In the code:
 
-<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P and P has the member Key since Rel.
+<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P and P has the member Key since Rel.
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
@@ -36,7 +36,7 @@ In the code:
 
 In the audit:
 
-<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.md#stdlib_member) Key of P, unless P has the member Key since some release.
+<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P, unless P has the member Key since some release.
 
 > THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
 > composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so
@@ -46,7 +46,7 @@ In the audit:
 <a id="lib_unsupported"></a>C is unsupported in an environment E at Key of a prototype P if all of:
   - C [calls the stdlib](#lib_call) Key of P since a release Rel;
   - E is an environment;
-  - unless E [reaches the release](js-env.md#reaches) Rel.
+  - unless E [reaches the release](js-env.rofl.md#reaches) Rel.
 
 > `@deprecated` in the JSDoc, read by the scanner. `lib_replaced_by` is
 > nearly empty and that is the answer: of forty-one deprecations two name a

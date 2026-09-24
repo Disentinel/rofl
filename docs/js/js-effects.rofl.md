@@ -8,15 +8,15 @@ default: flow
 
 Reads:
 
-- from js-ambient: [eff_here](js-ambient.md#eff_here), [eff_operation](js-ambient.md#eff_operation), [eff_surface](js-ambient.md#eff_surface)
-- from js-ambient, in the main: [ambient_binding](js-ambient.md#ambient_binding), [ambient_effect](js-ambient.md#ambient_effect), [surface_origin](js-ambient.md#surface_origin)
-- from js-callgraph, in the code: [callee_of](js-callgraph.md#callee_of), [calls](js-callgraph.md#calls), [fn_node](js-callgraph.md#fn_node), [nearest_fn](js-callgraph.md#nearest_fn), [resolves](js-callgraph.md#resolves), [unresolved_call](js-callgraph.md#unresolved_call)
-- from js-controlflow, in the code: [caught_here](js-controlflow.md#caught_here), [in_try_block](js-controlflow.md#in_try_block), [may_throw](js-controlflow.md#may_throw), [pattern_accessor](js-controlflow.md#pattern_accessor), [pattern_next](js-controlflow.md#pattern_next), [try_catches](js-controlflow.md#try_catches)
-- from js-dataflow, in the code: [assigns](js-dataflow.md#assigns), [corpus_file](js-dataflow.md#corpus_file), [ident_in](js-dataflow.md#ident_in), [import_target](js-dataflow.md#import_target), [module_source](js-dataflow.md#module_source)
-- from js-dataflow: [may_be_lit](js-dataflow.md#may_be_lit), [may_be_node](js-dataflow.md#may_be_node), [member_node_v](js-dataflow.md#member_node_v), [member_value](js-dataflow.md#member_value), [nearest_v](js-dataflow.md#nearest_v), [plain_assign](js-dataflow.md#plain_assign), [prototype_of](js-dataflow.md#prototype_of), [selects](js-dataflow.md#selects), [super_of](js-dataflow.md#super_of)
-- from js-dataflow, in the main: [builtin_prototype](js-dataflow.md#builtin_prototype)
-- from js-model, in the code: [ast_node](js-model.md#ast_node)
-- from js-structure, in the code: [ast_in](js-structure.md#ast_in), [ast_name](js-structure.md#ast_name), [ast_value](js-structure.md#ast_value)
+- from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
+- from js-ambient, in the main: [ambient_binding](js-ambient.rofl.md#ambient_binding), [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
+- from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [import_target](js-dataflow.rofl.md#import_target), [module_source](js-dataflow.rofl.md#module_source)
+- from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from outside these files, in the code: `ast_attr`, `ast_child`
 - from outside these files, in the main: `eff_alias`, `eff_heap`, `eff_label`, `eff_name`, `eff_origin`
 
@@ -160,7 +160,7 @@ An effect
 
 In the code:
 
-<a id="eff_catch_here"></a>A node is caught in place if it [is caught here](js-controlflow.md#caught_here).
+<a id="eff_catch_here"></a>A node is caught in place if it [is caught here](js-controlflow.rofl.md#caught_here).
 
 > Two arms of ONE relation, so "how many try statements lack a handler" is a
 > query whose control is the same literal with one constant swapped.
@@ -181,21 +181,21 @@ A [throw](#noun-throw) has the effect `exn` at `none` unless it [is caught in pl
 
 `eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_in_statement`, `for_of_statement`.
 
-A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.md#ast_node) K.
+A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
 
 In the code:
 
 A node
 
-- <a id="eff_calls"></a>has a call to a [function](js-callgraph.md#fn_node) G if a node C [resolves to](js-callgraph.md#resolves) G and it [is nearest to](js-dataflow.md#nearest_v) C.
+- <a id="eff_calls"></a>has a call to a [function](js-callgraph.rofl.md#fn_node) G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is nearest to](js-dataflow.rofl.md#nearest_v) C.
 - <a id="eff_reaches"></a>reaches by calling a node G if it [has a call to](#eff_calls) G.
 - reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and G [has a call to](#eff_calls) H.
 
 In the flow:
 
 A node has the effect `div` at `none` if all of:
-  - it [resolves to](js-callgraph.md#resolves) a node G;
-  - a node F [is nearest to](js-dataflow.md#nearest_v) it;
+  - it [resolves to](js-callgraph.rofl.md#resolves) a node G;
+  - a node F [is nearest to](js-dataflow.rofl.md#nearest_v) it;
   - G [reaches by calling](#eff_reaches) F.
 
 Declared as facts:
@@ -208,7 +208,7 @@ Declared as facts:
 
 `eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
 
-A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and it [is of kind](js-model.md#ast_node) K.
+A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
 
 Declared as facts:
 
@@ -222,16 +222,16 @@ Declared as facts:
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>A [member access](js-dataflow.md#member_node_v) has a traced object if the `object` of it [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if the `object` of it [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>M touches the heap N either:
 
 1. if all of:
-   - M is a [member access](js-dataflow.md#member_node_v);
+   - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - M [has a traced object](#eff_obj_traced);
    - N is `local`;
 2. if all of:
-   - M is a [member access](js-dataflow.md#member_node_v);
+   - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - N is `global`;
    - unless M [has a traced object](#eff_obj_traced).
 
@@ -241,11 +241,11 @@ In the code:
 
 <a id="eff_assign_target"></a>A node writes to a node L if it [is a write](#eff_assign) and the `left` of it is L.
 
-<a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.md#plain_assign).
+<a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.rofl.md#plain_assign).
 
-<a id="eff_member_target"></a>A [member access](js-dataflow.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
+<a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
 
-<a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and it [is named](js-structure.md#ast_name) some name.
+<a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and it [is named](js-structure.rofl.md#ast_name) some name.
 
 In the flow:
 
@@ -257,9 +257,9 @@ A node
   - the `left` of X is it;
   - it [is a written member](#eff_member_target);
   - it [touches the heap](#eff_heap_of) H.
-- has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.md#ast_name) some name.
+- has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.rofl.md#ast_name) some name.
 
-<a id="eff_read_site"></a>A [member access](js-dataflow.md#member_node_v) is a read member unless it [is a written member](#eff_member_target).
+<a id="eff_read_site"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a read member unless it [is a written member](#eff_member_target).
 
 A node has the effect `read` at a host H if it [is a read member](#eff_read_site) and it [touches the heap](#eff_heap_of) H.
 
@@ -279,12 +279,12 @@ A node U has the effect N at a host E either:
 
 1. if all of:
    - U [updates](#eff_update_arg) a node X;
-   - X [is named](js-structure.md#ast_name) some name;
+   - X [is named](js-structure.rofl.md#ast_name) some name;
    - N is `read`;
    - E is `local`;
 2. if all of:
    - U [updates](#eff_update_arg) a node X;
-   - X [is named](js-structure.md#ast_name) some name;
+   - X [is named](js-structure.rofl.md#ast_name) some name;
    - N is `write`;
    - E is `local`;
 3. if U [updates](#eff_update_arg) a node X, X [touches the heap](#eff_heap_of) E, and N is `read`;
@@ -299,17 +299,17 @@ In the code:
 
 <a id="eff_mutable_name"></a>Name is mutable in File either:
 
-1. if Name [is assigned](js-dataflow.md#assigns) some node in File;
+1. if Name [is assigned](js-dataflow.rofl.md#assigns) some node in File;
 2. if all of:
    - a node U [updates](#eff_update_arg) a node X;
-   - X [is named](js-structure.md#ast_name) Name;
-   - U [is in file](js-model.md#ast_node) File.
+   - X [is named](js-structure.rofl.md#ast_name) Name;
+   - U [is in file](js-model.rofl.md#ast_node) File.
 
 In the flow:
 
 A node has the effect `read` at `local` if all of:
   - Name [is mutable](#eff_mutable_name) in File;
-  - it [reads](js-dataflow.md#ident_in) Name in File;
+  - it [reads](js-dataflow.rofl.md#ident_in) Name in File;
   - unless it [is a written name](#eff_name_target).
 
 > Which labels the corpus exercises — POSITIVE, not an audit, because two are
@@ -319,7 +319,7 @@ A node has the effect `read` at `local` if all of:
 
 An effect label
 
-- <a id="eff_label_seen"></a>is seen at a host H if some node [has the effect](js-ambient.md#eff_here) it at H.
+- <a id="eff_label_seen"></a>is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
 - <a id="eff_label_unseen"></a>is unseen at a host H if it is a label at H, unless it [is seen](#eff_label_seen) at H.
 
 ## 3. The join over a body, and the closure over the call graph
@@ -330,7 +330,7 @@ An effect label
 > `may_throw`, which carries one label — would make a try around a call
 > swallow the callee's WRITES too.
 
-<a id="eff_latent"></a>F has the latent effect L at a host H if a node N [has the effect](js-ambient.md#eff_here) L at H and F [is nearest to](js-dataflow.md#nearest_v) N.
+<a id="eff_latent"></a>F has the latent effect L at a host H if a node N [has the effect](js-ambient.rofl.md#eff_here) L at H and F [is nearest to](js-dataflow.rofl.md#nearest_v) N.
 
 `eff_discharges` lists:
 
@@ -346,8 +346,8 @@ In the flow:
 
 F has the latent effect L at a host H if all of:
   - G [has the latent effect](#eff_latent) L at H;
-  - a node C [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) C;
+  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
   - unless C [discharges here](#eff_discharged_at) L.
 
 In the audit:
@@ -364,16 +364,16 @@ Declared as facts:
 > discharge agrees with it exactly, because the difference lives in the seven
 > labels it does not carry.
 
-<a id="eff_exn_only"></a>F has only a latent exception if F [has the latent effect](#eff_latent) `exn` at `none`, unless F [may throw](js-controlflow.md#may_throw).
+<a id="eff_exn_only"></a>F has only a latent exception if F [has the latent effect](#eff_latent) `exn` at `none`, unless F [may throw](js-controlflow.rofl.md#may_throw).
 
-<a id="may_throw_only"></a>F may throw without a latent exception if F [may throw](js-controlflow.md#may_throw), unless F [has the latent effect](#eff_latent) `exn` at `none`.
+<a id="may_throw_only"></a>F may throw without a latent exception if F [may throw](js-controlflow.rofl.md#may_throw), unless F [has the latent effect](#eff_latent) `exn` at `none`.
 
 <a id="eff_swallowed"></a>A node swallows an effect label L at a host H in a node C if all of:
   - C [is caught in place](#eff_catch_here);
-  - C [resolves to](js-callgraph.md#resolves) G;
+  - C [resolves to](js-callgraph.rofl.md#resolves) G;
   - G [has the latent effect](#eff_latent) L at H;
   - L differs from `exn`;
-  - it [is nearest to](js-dataflow.md#nearest_v) C;
+  - it [is nearest to](js-dataflow.rofl.md#nearest_v) C;
   - unless it [has the latent effect](#eff_latent) L at H.
 
 ## 4. Naming a function's effect — the least landmark above its row
@@ -387,7 +387,7 @@ Declared as facts:
 
 In the flow:
 
-<a id="eff_subject"></a>A [function](js-callgraph.md#fn_node) is an effect subject.
+<a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
 
 <a id="eff_over"></a>F exceeds an effect N if all of:
   - N is in the lattice;
@@ -407,8 +407,8 @@ In the audit:
 <a id="eff_two_names"></a>F has two effects X and B if [the effect](#effect_of) of F is X, [the effect](#effect_of) of F is B, and X differs from B.
 
 <a id="eff_join_short"></a>F is short of the join J with G if all of:
-  - a node C [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) C;
+  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
   - [the effect](#effect_of) of F is an effect NF;
   - [the effect](#effect_of) of G is an effect NG;
   - [the join](#eff_join) of NF and NG is J;
@@ -418,8 +418,8 @@ In the audit:
 In the flow:
 
 <a id="eff_purer_callee"></a>A node calls a purer callee G from F if all of:
-  - it [resolves to](js-callgraph.md#resolves) G;
-  - F [is nearest to](js-dataflow.md#nearest_v) it;
+  - it [resolves to](js-callgraph.rofl.md#resolves) G;
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) it;
   - [the effect](#effect_of) of F is an effect NF;
   - [the effect](#effect_of) of G [is strictly below](#eff_lt) NF.
 
@@ -433,21 +433,21 @@ In the flow:
 C reaches the surface P either:
 
 1. if all of:
-   - C [is unresolved](js-callgraph.md#unresolved_call) with some shape;
-   - [the callee](js-callgraph.md#callee_of) of C is a node N;
+   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
    - the `object` of N is a node O;
-   - [the prototype](js-dataflow.md#prototype_of) of O is P;
-   - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
+   - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
+   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
 2. if all of:
-   - C [is unresolved](js-callgraph.md#unresolved_call) with some shape;
-   - [the callee](js-callgraph.md#callee_of) of C is a node N;
-   - the `object` of N [is named](js-structure.md#ast_name) Name;
-   - C [is in file](js-model.md#ast_node) File;
-   - Name [names the surface](js-ambient.md#ambient_binding) P in File.
+   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+   - the `object` of N [is named](js-structure.rofl.md#ast_name) Name;
+   - C [is in file](js-model.rofl.md#ast_node) File;
+   - Name [names the surface](js-ambient.rofl.md#ambient_binding) P in File.
 
-C performs the operation Key if C [reaches the surface](js-ambient.md#eff_surface) some surface and [the callee](js-callgraph.md#callee_of) of C [selects](js-dataflow.md#selects) Key.
+C performs the operation Key if C [reaches the surface](js-ambient.rofl.md#eff_surface) some surface and [the callee](js-callgraph.rofl.md#callee_of) of C [selects](js-dataflow.rofl.md#selects) Key.
 
-<a id="concrete_effect"></a>C operates on a surface S by an operation Op if C [reaches the surface](js-ambient.md#eff_surface) S and C [performs the operation](js-ambient.md#eff_operation) Op.
+<a id="concrete_effect"></a>C operates on a surface S by an operation Op if C [reaches the surface](js-ambient.rofl.md#eff_surface) S and C [performs the operation](js-ambient.rofl.md#eff_operation) Op.
 
 > `ambient_effect(S, Op, E)` is the one TABLE in this column, owned by the
 > surface pack: a `.d.ts` fixes the surface and says nothing about the effect.
@@ -455,11 +455,11 @@ C performs the operation Key if C [reaches the surface](js-ambient.md#eff_surfac
 > |ambient_effect|² was invisible while the table was empty and produced about
 > 330 000 rows (space_exhausted) the day 571 rows arrived.
 
-<a id="concrete_denotes"></a>A surface denotes an effect E at an operation Op if some call [operates](#concrete_effect) on it by Op and it [has the ambient effect](js-ambient.md#ambient_effect) E at Op.
+<a id="concrete_denotes"></a>A surface denotes an effect E at an operation Op if some call [operates](#concrete_effect) on it by Op and it [has the ambient effect](js-ambient.rofl.md#ambient_effect) E at Op.
 
 A node has the effect L at a host H if all of:
   - it [operates](#concrete_effect) on a surface S by an operation Op;
-  - S [has the ambient effect](js-ambient.md#ambient_effect) E at Op;
+  - S [has the ambient effect](js-ambient.rofl.md#ambient_effect) E at Op;
   - E [covers](#eff_row) L at H.
 
 <a id="concrete_leq"></a>A surface is purer at an operation O1 than a surface S2 at an operation O2 if all of:
@@ -473,21 +473,21 @@ A node has the effect L at a host H if all of:
 > effect on a measurement, and a concrete column is where it would come back
 > as `promise:await` denoting `total`.
 
-<a id="concrete_unmapped"></a>A surface is unmapped at an operation Op if some call [operates](#concrete_effect) on it by Op, unless it [has the ambient effect](js-ambient.md#ambient_effect) some effect at Op.
+<a id="concrete_unmapped"></a>A surface is unmapped at an operation Op if some call [operates](#concrete_effect) on it by Op, unless it [has the ambient effect](js-ambient.rofl.md#ambient_effect) some effect at Op.
 
-<a id="eff_call_unattributed"></a>C has no surface if C [is unresolved](js-callgraph.md#unresolved_call) with some shape, unless C [operates](#concrete_effect) on some surface by some operation.
+<a id="eff_call_unattributed"></a>C has no surface if C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape, unless C [operates](#concrete_effect) on some surface by some operation.
 
 In the audit:
 
 A spec
 
-- <a id="concrete_unnamed"></a>denotes an unnamed effect E at an operation Op if it [has the ambient effect](js-ambient.md#ambient_effect) E at Op, unless E is in the lattice.
-- <a id="concrete_no_origin"></a>has no origin if it [has the ambient effect](js-ambient.md#ambient_effect) some effect at some key, unless [the origin](js-ambient.md#surface_origin) of it is some origin.
+- <a id="concrete_unnamed"></a>denotes an unnamed effect E at an operation Op if it [has the ambient effect](js-ambient.rofl.md#ambient_effect) E at Op, unless E is in the lattice.
+- <a id="concrete_no_origin"></a>has no origin if it [has the ambient effect](js-ambient.rofl.md#ambient_effect) some effect at some key, unless [the origin](js-ambient.rofl.md#surface_origin) of it is some origin.
 
-<a id="concrete_bad_origin"></a>A surface has a bad origin O if [the origin](js-ambient.md#surface_origin) of it is O, unless O is an origin.
+<a id="concrete_bad_origin"></a>A surface has a bad origin O if [the origin](js-ambient.rofl.md#surface_origin) of it is O, unless O is an origin.
 
 <a id="concrete_async_smuggled"></a>A spec smuggles a suspension at an operation Op if all of:
-  - it [has the ambient effect](js-ambient.md#ambient_effect) E at Op;
+  - it [has the ambient effect](js-ambient.rofl.md#ambient_effect) E at Op;
   - E [is the bottom](#eff_bot);
   - Op [is a suspension word](#eff_suspension_word).
 
@@ -543,23 +543,23 @@ In the flow:
 
 A node
 
-- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [may be the node](js-dataflow.md#may_be_node) some node.
+- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 - <a id="eff_conv_call"></a>coerces through a node M if all of:
   - it [coerces](#eff_coerced) a node X;
-  - X [may be the node](js-dataflow.md#may_be_node) O;
+  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
   - Key [is a conversion key](#eff_conv_key);
-  - [the member](js-dataflow.md#member_value) Key of O holds M.
+  - [the member](js-dataflow.rofl.md#member_value) Key of O holds M.
 - <a id="eff_conv_overridden"></a>coerces with an override X if all of:
   - it [coerces](#eff_coerced) X;
-  - X [may be the node](js-dataflow.md#may_be_node) O;
+  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
   - Key [is a conversion key](#eff_conv_key);
-  - [the member](js-dataflow.md#member_value) Key of O holds some node.
+  - [the member](js-dataflow.rofl.md#member_value) Key of O holds some node.
 - <a id="eff_conv_default"></a>coerces by default a node X if it [coerces the object](#eff_conv_object) X, unless it [coerces with an override](#eff_conv_overridden) X.
 - <a id="eff_conv_primitive"></a>coerces the primitive X if all of:
   - it [coerces](#eff_coerced) X;
-  - X [may be the literal](js-dataflow.md#may_be_lit) some text;
+  - X [may be the literal](js-dataflow.rofl.md#may_be_lit) some text;
   - unless it [coerces the object](#eff_conv_object) X.
-- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-dataflow.md#may_be_lit) some text nor [may be the node](js-dataflow.md#may_be_node) some node.
+- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-dataflow.rofl.md#may_be_lit) some text nor [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 
 Declared as facts:
 
@@ -571,7 +571,7 @@ Declared as facts:
 F has the latent effect L at a host H if all of:
   - a node N [coerces through](#eff_conv_call) a node M;
   - M [has the latent effect](#eff_latent) L at H;
-  - F [is nearest to](js-dataflow.md#nearest_v) N.
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) N.
 
 > Totality: every coerced operand is primitive, object or untraced. And the
 > operator table must not name a node that is neither binary nor unary —
@@ -590,7 +590,7 @@ A node
 - <a id="eff_conv_unaccounted"></a>coerces without an account X if it [coerces](#eff_coerced) X, unless it [accounts for coercing](#eff_conv_accounted) X.
 - <a id="eff_op_off_kind"></a>inspects off its kind K if all of:
   - it [inspects](#eff_op_inspects);
-  - it [is of kind](js-model.md#ast_node) K;
+  - it [is of kind](js-model.rofl.md#ast_node) K;
   - K differs from `binary_expression`;
   - K differs from `unary_expression`.
 
@@ -607,11 +607,11 @@ In the code:
 
 <a id="eff_mod_src"></a>A node N imports the source Src in a file F either:
 
-1. if N [sources](js-dataflow.md#module_source) Src in F;
+1. if N [sources](js-dataflow.rofl.md#module_source) Src in F;
 2. if all of:
    - N is a [dynamic import](#noun-dynamic_import);
    - N is in file F;
-   - the `source` of N [is written as](js-structure.md#ast_value) Src.
+   - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
 
 A node
 
@@ -643,18 +643,18 @@ A node
 
 <a id="eff_mod_target"></a>The module target of Src is T if all of:
   - [the basename](#eff_mod_basename) of Src is Base;
-  - T [is in the corpus](js-dataflow.md#corpus_file);
+  - T [is in the corpus](js-dataflow.rofl.md#corpus_file);
   - T is Base.
 
 In the audit:
 
 <a id="eff_mod_target_disagrees"></a>Src has a disputed target T either:
 
-1. if Src [targets](js-dataflow.md#import_target) T, unless [the module target](#eff_mod_target) of Src is T;
+1. if Src [targets](js-dataflow.rofl.md#import_target) T, unless [the module target](#eff_mod_target) of Src is T;
 2. if all of:
    - [the module target](#eff_mod_target) of Src is T;
-   - some node [sources](js-dataflow.md#module_source) Src in some file;
-   - unless Src [targets](js-dataflow.md#import_target) T.
+   - some node [sources](js-dataflow.rofl.md#module_source) Src in some file;
+   - unless Src [targets](js-dataflow.rofl.md#import_target) T.
 
 In the code:
 
@@ -677,17 +677,17 @@ In the flow:
 > group's effect). No `load` label: the suspension of `import()` is CONTROL,
 > as `await` is.
 
-<a id="eff_in_fn"></a>A node lies inside a function if some function [is nearest to](js-dataflow.md#nearest_v) it.
+<a id="eff_in_fn"></a>A node lies inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
 
 <a id="eff_module"></a>A file F has the module effect L at a host H either:
 
 1. if all of:
-   - a node N [has the effect](js-ambient.md#eff_here) L at H;
-   - N [is in file](js-model.md#ast_node) F;
+   - a node N [has the effect](js-ambient.rofl.md#eff_here) L at H;
+   - N [is in file](js-model.rofl.md#ast_node) F;
    - unless N [lies inside a function](#eff_in_fn);
 2. if all of:
-   - a node C [resolves to](js-callgraph.md#resolves) G;
-   - C [is in file](js-model.md#ast_node) F;
+   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - C [is in file](js-model.rofl.md#ast_node) F;
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [lies inside a function](#eff_in_fn).
 
@@ -697,7 +697,7 @@ In the audit:
 
 <a id="eff_import_invented"></a>A node invents the effect L at a host H if all of:
   - it [evaluates](#eff_evaluates_at) T;
-  - it [has the effect](js-ambient.md#eff_here) L at H;
+  - it [has the effect](js-ambient.rofl.md#eff_here) L at H;
   - unless T [has the module effect](#eff_module) L at H.
 
 > The same Moore closure as section 4, over a file.
@@ -706,7 +706,7 @@ In the flow:
 
 A file F
 
-- <a id="eff_mod_subject"></a>is a module subject if F [is in the corpus](js-dataflow.md#corpus_file).
+- <a id="eff_mod_subject"></a>is a module subject if F [is in the corpus](js-dataflow.rofl.md#corpus_file).
 - <a id="eff_mod_over"></a>exceeds as a module N if all of:
   - N is in the lattice;
   - F [has the module effect](#eff_module) L at a host H;
@@ -730,7 +730,7 @@ A file F
   - X differs from B.
 - <a id="eff_mod_join_short"></a>is short of the module join J with a file T if all of:
   - a node I [evaluates](#eff_evaluates_at) T;
-  - I [is in file](js-model.md#ast_node) F;
+  - I [is in file](js-model.rofl.md#ast_node) F;
   - [the module effect](#effect_of_module) of F is an effect NF;
   - [the module effect](#effect_of_module) of T is an effect NT;
   - [the join](#eff_join) of NF and NT is J;
@@ -753,16 +753,16 @@ In the flow:
 
 <a id="eff_hidden_call"></a>A node N hides the call M either:
 
-1. if N [destructures through the accessor](js-controlflow.md#pattern_accessor) M;
-2. if N [iterates with the next](js-controlflow.md#pattern_next) M.
+1. if N [destructures through the accessor](js-controlflow.rofl.md#pattern_accessor) M;
+2. if N [iterates with the next](js-controlflow.rofl.md#pattern_next) M.
 
 <a id="eff_edge_closed"></a>A node F closes the edge to G either:
 
-1. if a node C [resolves to](js-callgraph.md#resolves) G and F [is the nearest function of](js-callgraph.md#nearest_fn) C;
-2. if a node C [resolves to](js-callgraph.md#resolves) G and F [is nearest to](js-dataflow.md#nearest_v) C.
+1. if a node C [resolves to](js-callgraph.rofl.md#resolves) G and F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
+2. if a node C [resolves to](js-callgraph.rofl.md#resolves) G and F [is nearest to](js-dataflow.rofl.md#nearest_v) C.
 
-<a id="eff_edge_unclosed"></a>A [function](js-callgraph.md#fn_node) leaves open the edge to G for an effect label L at a host H if all of:
-  - it [calls](js-callgraph.md#calls) G;
+<a id="eff_edge_unclosed"></a>A [function](js-callgraph.rofl.md#fn_node) leaves open the edge to G for an effect label L at a host H if all of:
+  - it [calls](js-callgraph.rofl.md#calls) G;
   - G [has the latent effect](#eff_latent) L at H;
   - it neither [closes the edge to](#eff_edge_closed) G nor [has the latent effect](#eff_latent) L at H.
 
@@ -785,14 +785,14 @@ In the code:
 
 <a id="eff_class_body"></a>A node has the body member P if all of:
   - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.md#ast_node) K;
+  - it [is of kind](js-model.rofl.md#ast_node) K;
   - the `body` of it is a node B;
   - P is among the `body` of B.
 
 <a id="eff_field_value"></a>A class initialises the field at a node P with a node V if all of:
   - it [has the body member](#eff_class_body) P;
   - [`eff_field_kind`](#eff_field_kind)(K);
-  - P [is of kind](js-model.md#ast_node) K;
+  - P [is of kind](js-model.rofl.md#ast_node) K;
   - the `value` of P is V.
 
 Declared as facts:
@@ -832,7 +832,7 @@ A class
 
 A class defines by running a node S if all of:
   - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.md#ast_node) K;
+  - it [is of kind](js-model.rofl.md#ast_node) K;
   - the `super_class` of it is S.
 
 In the code:
@@ -849,7 +849,7 @@ A class CD defines by running a node KN either:
    - unless P [has a plain key](#eff_plain_key);
 2. if all of:
    - a kind K [is a class form](#eff_class_form);
-   - CD [is of kind](js-model.md#ast_node) K;
+   - CD [is of kind](js-model.rofl.md#ast_node) K;
    - KN is among the `decorators` of CD;
 3. if CD [has the body member](#eff_class_body) P and KN is among the `decorators` of P.
 
@@ -865,16 +865,16 @@ A class CD defines by running a node KN either:
 2. if some class [constructs by running](#eff_construct_part) P and N is P;
 3. if all of:
    - P [runs](#eff_runs_in) a node Y;
-   - N [is under](js-structure.md#ast_in) Y;
-   - unless Y is a [function](js-callgraph.md#fn_node).
+   - N [is under](js-structure.rofl.md#ast_in) Y;
+   - unless Y is a [function](js-callgraph.rofl.md#fn_node).
 
 In the code:
 
 A node is caught in place if all of:
   - a node P [runs](#eff_runs_in) a [try](#noun-try) TS;
-  - TS [tries](js-controlflow.md#in_try_block) it;
+  - TS [tries](js-controlflow.rofl.md#in_try_block) it;
   - P [runs](#eff_runs_in) it;
-  - TS [has a handler](js-controlflow.md#try_catches).
+  - TS [has a handler](js-controlflow.rofl.md#try_catches).
 
 > The two carriers: the join over parts, closed over the call graph, with
 > `eff_runs_in` in place of `nearest_v`. A subclass runs its ancestors'
@@ -888,11 +888,11 @@ In the flow:
 1. if all of:
    - CD [defines by running](#eff_define_part) a node P;
    - P [runs](#eff_runs_in) a node X;
-   - X [has the effect](js-ambient.md#eff_here) L at H;
+   - X [has the effect](js-ambient.rofl.md#eff_here) L at H;
 2. if all of:
    - CD [defines by running](#eff_define_part) a node P;
    - P [runs](#eff_runs_in) a node C;
-   - C [resolves to](js-callgraph.md#resolves) G;
+   - C [resolves to](js-callgraph.rofl.md#resolves) G;
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [discharges here](#eff_discharged_at) L.
 
@@ -901,14 +901,14 @@ In the flow:
 1. if all of:
    - CD [constructs by running](#eff_construct_part) a node P;
    - P [runs](#eff_runs_in) a node X;
-   - X [has the effect](js-ambient.md#eff_here) L at H;
+   - X [has the effect](js-ambient.rofl.md#eff_here) L at H;
 2. if all of:
    - CD [constructs by running](#eff_construct_part) a node P;
    - P [runs](#eff_runs_in) a node C;
-   - C [resolves to](js-callgraph.md#resolves) G;
+   - C [resolves to](js-callgraph.rofl.md#resolves) G;
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [discharges here](#eff_discharged_at) L;
-3. if [the super](js-dataflow.md#super_of) of CD [constructs with effect](#class_construct_eff) L at H.
+3. if [the super](js-dataflow.rofl.md#super_of) of CD [constructs with effect](#class_construct_eff) L at H.
 
 > The two seeds. Evaluating a class DECLARATION allocates (a fresh mutable
 > `prototype`, where a function declaration is hoisted and performs nothing
@@ -916,7 +916,7 @@ In the flow:
 
 A node has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
 
-A [new](#noun-new) has the effect L at a host H if it [may be the node](js-dataflow.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
+A [new](#noun-new) has the effect L at a host H if it [may be the node](js-dataflow.rofl.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
 
 `eff_alloc_kind` includes `class_declaration`.
 
@@ -948,7 +948,7 @@ In the flow:
    - the `body` of CE is a node B;
    - a node P is among the `body` of B;
    - [`eff_field_kind`](#eff_field_kind)(K);
-   - P [is of kind](js-model.md#ast_node) K;
+   - P [is of kind](js-model.rofl.md#ast_node) K;
    - the attribute `static` of P is `true`;
    - the `value` of P is S.
 

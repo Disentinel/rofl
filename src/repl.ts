@@ -7,7 +7,8 @@
 // `?`, `why` and `whynot` answer in the sentences of the document where a
 // phrase exists (facts/phrases.rofl, facts/js-phrases.rofl, the `sig` and
 // `phrase` facts of every loaded file and its `X.phrases.rofl` beside it),
-// positionally where none does. A `.md` file loads through the reader.
+// positionally where none does. A `.rofl.md` file, executable Markdown, loads
+// through the reader; a plain `.md` is a document and is refused.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -25,7 +26,8 @@ let sentences = true;
 class NoSentence extends Error { constructor(q: string) { super(`no sentence in the vocabulary reads: ${q}`); } }
 
 function loadFile(f: string, budget?: number): { ok: boolean; diagnostics: string[] } {
-  const p = f.endsWith('.md') ? roflFromMd(f) : f;
+  if (f.endsWith('.md') && !f.endsWith('.rofl.md')) return { ok: false, diagnostics: [`${f} is a document, not a world: executable Markdown ends in .rofl.md`] };
+  const p = f.endsWith('.rofl.md') ? roflFromMd(f) : f;
   const text = fs.readFileSync(p, 'utf8');
   vocab.addText(text);
   const beside = p.replace(/\.rofl$/, '') + '.phrases.rofl';

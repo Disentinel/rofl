@@ -11,8 +11,9 @@ Decided 2026-09-24 by Vadim: the sentence form is a source of ROFL now,
 through the host reader, and 1.05 is the version that ships it so it can be
 tried on real work. What it is:
 
-- a world is written as Markdown (`docs/md-world.md` says how, and
-  `examples/review.md` and `rules/untyped.md` are two written that way) and
+- a world is written as Markdown, `X.rofl.md`, executable Markdown as against a
+  plain `.md` document (`docs/md-world.md` says how, and
+  `examples/review.rofl.md` and `rules/untyped.rofl.md` are two written that way) and
   loads wherever a `.rofl` loads: the REPL (`npm run repl -- X.md`), the
   goldens, the lints;
 - the REPL asks and answers in the document's sentences: `? C is blocked by
@@ -128,7 +129,7 @@ What has to exist for it to be code rather than a description of code
    signed. What two days of that established, what the form is now, what
    the round trip cannot see, and what is open, is `docs/sentence-form.md`;
    the test it still owed, a file authored as `.md` with no `.rofl` twin
-   loaded into the same golden, is run: `rules/untyped.md` replaces the
+   loaded into the same golden, is run: `rules/untyped.rofl.md` replaces the
    `.rofl` it was written from and the goldens are 96 of 96 unchanged
    (f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary)
    (f_the_sentence_form_after_the_round_trip_what_stands_what_is_open_and_the_test_not_yet_run).

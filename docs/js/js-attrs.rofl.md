@@ -8,8 +8,8 @@ default: main
 
 Reads:
 
-- from js-model, in the code: [ast_node](js-model.md#ast_node)
-- from js-vocabulary: [body_lit](js-vocabulary.md#body_lit), [lit_arg](js-vocabulary.md#lit_arg), [lit_rel](js-vocabulary.md#lit_rel)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-vocabulary: [body_lit](js-vocabulary.rofl.md#body_lit), [lit_arg](js-vocabulary.rofl.md#lit_arg), [lit_rel](js-vocabulary.rofl.md#lit_rel)
 - from outside these files, in the code: `ast_attr`, `ast_child`
 - from outside these files: `attr_needs`, `node_kind`, `outside_attr_needs`, `premise_lit`
 
@@ -28,9 +28,9 @@ Reads:
 A term
 
 - <a id="attr_lit"></a>reads the attribute K with a term V if all of:
-  - [the relation](js-vocabulary.md#lit_rel) of it is `ast_attr`;
-  - [the argument](js-vocabulary.md#lit_arg) 2 of it is K;
-  - [the argument](js-vocabulary.md#lit_arg) 3 of it is V.
+  - [the relation](js-vocabulary.rofl.md#lit_rel) of it is `ast_attr`;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of it is K;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 3 of it is V.
 - <a id="attr_lit_kvar"></a>has a variable key $var(X) if it [reads the attribute](#attr_lit) $var(X) with some term.
 - <a id="attr_lit_vvar"></a>has a variable value $var(X) if it [reads the attribute](#attr_lit) some key with $var(X).
 
@@ -112,10 +112,10 @@ In the main:
   - L [reads attributes freely](#attr_lit_kvvar);
   - L [reads the attribute](#attr_lit) K with a term V;
   - R [has the positive premise](#pos_prem) L2;
-  - [the relation](js-vocabulary.md#lit_rel) of L2 is it;
+  - [the relation](js-vocabulary.rofl.md#lit_rel) of L2 is it;
   - it differs from `ast_attr`;
-  - [the argument](js-vocabulary.md#lit_arg) I of L2 is K;
-  - [the argument](js-vocabulary.md#lit_arg) J of L2 is V.
+  - [the argument](js-vocabulary.rofl.md#lit_arg) I of L2 is K;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) J of L2 is V.
 
 In the audit:
 
@@ -159,14 +159,14 @@ A term
 
 - <a id="attr_test_lit"></a>is an attribute test of a term S on a key K if all of:
   - it [reads the attribute](#attr_lit) K with a term V;
-  - [the argument](js-vocabulary.md#lit_arg) 1 of it is S;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of it is S;
   - it neither [has a variable key](#attr_lit_kvar) K nor [has a variable value](#attr_lit_vvar) V.
 - <a id="attr_test_svar"></a>tests a variable subject $var(X) if it [is an attribute test](#attr_test_lit) of $var(X) on some key.
 - <a id="child_lit"></a>reads the child of a term S at a field F if all of:
-  - it [is a body literal](js-vocabulary.md#body_lit);
-  - [the relation](js-vocabulary.md#lit_rel) of it is `ast_child`;
-  - [the argument](js-vocabulary.md#lit_arg) 1 of it is S;
-  - [the argument](js-vocabulary.md#lit_arg) 2 of it is F.
+  - it [is a body literal](js-vocabulary.rofl.md#body_lit);
+  - [the relation](js-vocabulary.rofl.md#lit_rel) of it is `ast_child`;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of it is S;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of it is F.
 - <a id="child_lit_svar"></a>reads the child of a variable $var(X) if it [reads the child](#child_lit) of $var(X) at some field.
 - <a id="child_lit_fvar"></a>reads a variable field $var(X) if it [reads the child](#child_lit) of some term at $var(X).
 
@@ -185,9 +185,9 @@ A rule
   - L [is an attribute test](#attr_test_lit) of S on K;
   - L [tests a variable subject](#attr_test_svar) S;
   - it [has the premise](#rule_prem) L2;
-  - [the relation](js-vocabulary.md#lit_rel) of L2 is `ast_node`;
-  - [the argument](js-vocabulary.md#lit_arg) 1 of L2 is S;
-  - [the argument](js-vocabulary.md#lit_arg) 2 of L2 is Kind;
+  - [the relation](js-vocabulary.rofl.md#lit_rel) of L2 is `ast_node`;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of L2 is S;
+  - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of L2 is Kind;
   - `js` has the node kind Kind.
 - <a id="attr_guard_pinned"></a>pins the attribute guard K on a term S if it [guards the attribute](#attr_guard_kind) K on S as some kind.
 
@@ -196,14 +196,14 @@ A rule
 1. if all of:
    - a rule R [tests the attribute](#attr_guard_slot) K on a term S under F;
    - some node is among the F of a node P;
-   - P [is of kind](js-model.md#ast_node) Kind;
+   - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless R [pins the attribute guard](#attr_guard_pinned) K on S;
    - unless the attribute K of P is some value;
 2. if all of:
    - a rule R [tests the attribute](#attr_guard_slot) K on a term S under F;
    - R [guards the attribute](#attr_guard_kind) K on S as Kind;
    - some node is among the F of a node P;
-   - P [is of kind](js-model.md#ast_node) Kind;
+   - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless the attribute K of P is some value.
 
 > THE POLARITY IS THE GATE. A gap under a NEGATED test is harmless:
@@ -227,14 +227,14 @@ A rule
 1. if all of:
    - a rule R [tests the attribute positively](#attr_guard_slot_pos) K on a term S under F;
    - some node is among the F of a node P;
-   - P [is of kind](js-model.md#ast_node) Kind;
+   - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless R [pins the attribute guard](#attr_guard_pinned) K on S;
    - unless the attribute K of P is some value;
 2. if all of:
    - a rule R [tests the attribute positively](#attr_guard_slot_pos) K on a term S under F;
    - R [guards the attribute](#attr_guard_kind) K on S as Kind;
    - some node is among the F of a node P;
-   - P [is of kind](js-model.md#ast_node) Kind;
+   - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless the attribute K of P is some value.
 
 In the audit:
@@ -258,11 +258,11 @@ Declared as facts:
 
 In the main:
 
-<a id="attr_kind_has"></a>Kind carries the attribute K if a node P [is of kind](js-model.md#ast_node) Kind and the attribute K of P is some value.
+<a id="attr_kind_has"></a>Kind carries the attribute K if a node P [is of kind](js-model.rofl.md#ast_node) Kind and the attribute K of P is some value.
 
 <a id="attr_kind_lacks"></a>Kind sometimes lacks the attribute K if all of:
   - Kind [carries the attribute](#attr_kind_has) K;
-  - a node P [is of kind](js-model.md#ast_node) Kind;
+  - a node P [is of kind](js-model.rofl.md#ast_node) Kind;
   - unless the attribute K of P is some value.
 
 In the audit:

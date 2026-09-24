@@ -1,7 +1,9 @@
 # Writing a world as Markdown
 
-ROFL 1.05: a world is a Markdown file of sentences, and it loads wherever a
-`.rofl` file loads. This page is the writer's side; `sentence-form.md` is
+ROFL 1.05: a world is a Markdown file of sentences, named `X.rofl.md`, and it
+loads wherever a `.rofl` file loads. The extension is the distinction: a
+`.rofl.md` is executable Markdown, a plain `.md` is a document and no world.
+The JS model rendered under `docs/js/` is `.rofl.md` for the same reason. This page is the writer's side; `sentence-form.md` is
 where the form was measured and `roadmap.md` is what 1.05 ships and defers.
 
 ## The whole of the form
@@ -29,7 +31,7 @@ where the form was measured and `roadmap.md` is what 1.05 ships and defers.
 
 ## A world, whole
 
-`examples/review.md`, which the goldens load:
+`examples/review.rofl.md`, which the goldens load like any world:
 
 ```markdown
 ---
@@ -92,7 +94,7 @@ What the reader makes of it, one rule per sentence:
 
 ## Asking it
 
-    npm run repl -- examples/review.md
+    npm run repl -- examples/review.rofl.md
 
 A question is a sentence of the document with a variable where the answer
 goes; `why` and `whynot` take a ground one.
@@ -128,7 +130,7 @@ Loading a `.md` world prints, on stderr, everything it could not read,
 because a sentence that vanishes silently is the one failure a writer
 cannot debug:
 
-    examples/x.md: not everything was read
+    examples/x.rofl.md: not everything was read
       unparsed (3)
       FACT `a` is near `b`
       T is huge

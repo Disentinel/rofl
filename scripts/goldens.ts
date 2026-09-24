@@ -76,18 +76,18 @@ export function worlds(): World[] {
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push({ name: e, files });
     } else if (e.endsWith('.rofl')) out.push({ name: e.replace(/\.rofl$/, ''), files: [p] });
-    else if (e.endsWith('.md')) out.push({ name: e.replace(/\.md$/, ''), files: [roflFromMd(p)] });  // a world authored as Markdown
+    else if (e.endsWith('.rofl.md')) out.push({ name: e.replace(/\.rofl\.md$/, ''), files: [roflFromMd(p)] });  // executable Markdown; a plain .md is a document
   }
   const rl = path.join(ROOT, 'rules');
   const pack = (dir: string, prefix: string): void => {
     for (const e of fs.readdirSync(dir).sort()) {
       const p = path.join(dir, e);
       if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`); continue; }
-      // a world authored as Markdown is read into rules first (scripts/read.ts) and loaded from there
-      if (!e.endsWith('.rofl') && !e.endsWith('.md')) continue;
-      const stem = e.replace(/\.(rofl|md)$/, '');
+      // a world authored as Markdown (`.rofl.md`) is read into rules first (scripts/read.ts) and loaded from there
+      if (!e.endsWith('.rofl') && !e.endsWith('.rofl.md')) continue;
+      const stem = e.replace(/\.rofl(\.md)?$/, '');
       const facts = path.join(ROOT, 'facts', `${stem}.rofl`);
-      const file = e.endsWith('.md') ? roflFromMd(p) : p;
+      const file = e.endsWith('.rofl.md') ? roflFromMd(p) : p;
       out.push({ name: `rules_${prefix}${stem}`,
         files: fs.existsSync(facts) ? [facts, file] : [file] });
     }

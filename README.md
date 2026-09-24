@@ -147,8 +147,8 @@ expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `modelling-a-language.md` (the JS model as a research programme).
 
 **The plan** — `roadmap.md` (what the next version commits to, each item naming
-- **Writing a world as Markdown** — `md-world.md` (ROFL 1.05): the sentence form as a source, how to write one, what the reader reports; `examples/review.md` is one, and `npm run repl -- examples/review.md` asks it in its own sentences.
-- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run read` reads a rendered file back into rules; `npm run untyped` (rules/untyped.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
+- **Writing a world as Markdown** — `md-world.md` (ROFL 1.05): the sentence form as a source, `X.rofl.md` (executable Markdown; a plain `.md` is a document), how to write one, what the reader reports; `examples/review.rofl.md` is one, and `npm run repl -- examples/review.rofl.md` asks it in its own sentences.
+- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run read` reads a rendered file back into rules; `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
 the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
 Markdown sentence form as a source after 1.1, what the round trip established,
 what the form is now, and what is open.

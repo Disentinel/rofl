@@ -8,8 +8,8 @@ default: main
 
 Reads:
 
-- from js-dataflow, in the flow: [arg_at](js-dataflow.md#arg_at)
-- from js-model: [frame_deferred](js-model.md#frame_deferred), [lang_of_corpus](js-model.md#lang_of_corpus), [not_a_construct](js-model.md#not_a_construct)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at)
+- from js-model: [frame_deferred](js-model.rofl.md#frame_deferred), [lang_of_corpus](js-model.rofl.md#lang_of_corpus), [not_a_construct](js-model.rofl.md#not_a_construct)
 - from outside these files: `node_kind`, `premise_lit`
 
 > js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
@@ -40,9 +40,9 @@ Reads:
    - a term L [is a body literal](#body_lit);
    - L is $lit(something, something, Args, something);
    - N is 1;
-2. if [`arg_at`](js-dataflow.md#arg_at)(L, I, $cons(something, Args)) in the main and N is I + 1.
+2. if [`arg_at`](js-dataflow.rofl.md#arg_at)(L, I, $cons(something, Args)) in the main and N is I + 1.
 
-<a id="lit_arg"></a>The argument I of a term L is a term X if [`arg_at`](js-dataflow.md#arg_at)(L, I, $cons(X, something)) in the main.
+<a id="lit_arg"></a>The argument I of a term L is a term X if [`arg_at`](js-dataflow.rofl.md#arg_at)(L, I, $cons(X, something)) in the main.
 
 > a constant is everything that is not a variable; no type test among the
 > builtins, so the variable case is derived and subtracted
@@ -70,7 +70,7 @@ In the audit:
 
 <a id="rule_opinion_unlisted"></a>A kind K is named by a rule yet unlisted in a language Lang if all of:
   - K [is named by a rule](#kind_named_by_rule);
-  - Lang [is the corpus language](js-model.md#lang_of_corpus);
-  - K neither [is not a construct](js-model.md#not_a_construct) nor [is deferred to the frame](js-model.md#frame_deferred) because some reason;
+  - Lang [is the corpus language](js-model.rofl.md#lang_of_corpus);
+  - K neither [is not a construct](js-model.rofl.md#not_a_construct) nor [is deferred to the frame](js-model.rofl.md#frame_deferred) because some reason;
   - unless Lang has the node kind K.
 

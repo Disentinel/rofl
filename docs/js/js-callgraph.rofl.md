@@ -8,12 +8,12 @@ default: code
 
 Reads:
 
-- from js-dataflow, in the flow: [arg_at](js-dataflow.md#arg_at), [class_method_of](js-dataflow.md#class_method_of), [ctor_of](js-dataflow.md#ctor_of), [may_be_node](js-dataflow.md#may_be_node), [member_value](js-dataflow.md#member_value), [prototype_of](js-dataflow.md#prototype_of), [returns](js-dataflow.md#returns), [selects](js-dataflow.md#selects)
-- from js-dataflow, in the main: [builtin_prototype](js-dataflow.md#builtin_prototype), [class_field_kind](js-dataflow.md#class_field_kind)
-- from js-model, in the audit: [verdict](js-model.md#verdict)
-- from js-model: [ast_node](js-model.md#ast_node)
-- from js-model, in the main: [shape_of](js-model.md#shape_of), [unknown_type](js-model.md#unknown_type)
-- from js-structure: [ast_name](js-structure.md#ast_name), [ast_within](js-structure.md#ast_within), [key_name](js-structure.md#key_name)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind)
+- from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
 - from outside these files: `ast_attr`, `ast_child`, `ast_file`
 - from outside these files, in the main: `node_kind`
 
@@ -63,13 +63,13 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 <a id="call_site"></a>A [call](#noun-call) is a call site in File if it is in file File.
 
-<a id="call_site_kind"></a>The call kind of a node C is K if C [is of kind](js-model.md#ast_node) K and K [is a call kind](#call_kind).
+<a id="call_site_kind"></a>The call kind of a node C is K if C [is of kind](js-model.rofl.md#ast_node) K and K [is a call kind](#call_kind).
 
-<a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.md#ast_node) Line.
+<a id="call_line"></a>The line of a node C is Line if C [is a call site](#call_site) in some file and C [is at line](js-model.rofl.md#ast_node) Line.
 
 <a id="callee_of"></a>The callee of a node C is a node N if C [is a call site](#call_site) in some file and the `callee` of C is N.
 
-<a id="callee_kind"></a>The callee kind of C is K if [the callee](#callee_of) of C [is of kind](js-model.md#ast_node) K.
+<a id="callee_kind"></a>The callee kind of C is K if [the callee](#callee_of) of C [is of kind](js-model.rofl.md#ast_node) K.
 
 Declared as facts:
 
@@ -81,7 +81,7 @@ Declared as facts:
 
 `transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
 
-<a id="transfer_site"></a>A node is a transfer site of a kind K if it [is of kind](js-model.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
+<a id="transfer_site"></a>A node is a transfer site of a kind K if it [is of kind](js-model.rofl.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
 
 <a id="site"></a>A node X is a site either:
 
@@ -126,7 +126,7 @@ Declared as facts:
 
 <a id="member_like"></a>C calls through a node N if all of:
   - [the callee](#callee_of) of C is N;
-  - N [is of kind](js-model.md#ast_node) K;
+  - N [is of kind](js-model.rofl.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
 
 <a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an [optional member expression](#noun-optional_member_expression) N.
@@ -135,7 +135,7 @@ Declared as facts:
 
 <a id="callee_obj"></a>The receiver of C is a node O if C [calls through](#member_like) a node N and the `object` of N is O.
 
-<a id="callee_obj_kind"></a>The receiver kind of C is K if [the receiver](#callee_obj) of C [is of kind](js-model.md#ast_node) K.
+<a id="callee_obj_kind"></a>The receiver kind of C is K if [the receiver](#callee_obj) of C [is of kind](js-model.rofl.md#ast_node) K.
 
 <a id="callee_prop"></a>The property of C is a node P if C [calls through](#member_like) a node N and the `property` of N is P.
 
@@ -233,7 +233,7 @@ Declared as facts:
 
 <a id="computed_key_static"></a>C has a static computed key if all of:
   - C [calls through a computed member](#computed_member) some member access;
-  - [the property](#callee_prop) of C [is of kind](js-model.md#ast_node) K;
+  - [the property](#callee_prop) of C [is of kind](js-model.rofl.md#ast_node) K;
   - [`static_key_kind`](#static_key_kind)(K).
 
 <a id="computed_key_template"></a>C has a template computed key if C [calls through a computed member](#computed_member) some member access and [the property](#callee_prop) of C is a [template](#noun-template) P.
@@ -301,9 +301,9 @@ In the audit:
 
 In the code:
 
-<a id="fn_node"></a>A node is a function if it [is of kind](js-model.md#ast_node) K and K [is a function kind](#fn_kind).
+<a id="fn_node"></a>A node is a function if it [is of kind](js-model.rofl.md#ast_node) K and K [is a function kind](#fn_kind).
 
-<a id="fn_file"></a>A [function](#fn_node) is defined in File if it [is in file](js-model.md#ast_node) File.
+<a id="fn_file"></a>A [function](#fn_node) is defined in File if it [is in file](js-model.rofl.md#ast_node) File.
 
 Declared as facts:
 
@@ -321,8 +321,8 @@ Declared as facts:
 
 <a id="fn_name"></a>F answers to a name N either:
 
-1. if F is a [function declaration](#noun-function_declaration) or a [function expression](#noun-function_expression) and the `id` of F [is named](js-structure.md#ast_name) N;
-2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-structure.md#key_name) N.
+1. if F is a [function declaration](#noun-function_declaration) or a [function expression](#noun-function_expression) and the `id` of F [is named](js-structure.rofl.md#ast_name) N;
+2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-structure.rofl.md#key_name) N.
 
 <a id="ctor_method"></a>A [method](#noun-method) is a constructor if the attribute `kind` of it is "constructor".
 
@@ -330,14 +330,14 @@ F answers to a name N either:
 
 1. if all of:
    - F is a [method](#noun-method);
-   - the `key` of F [spells](js-structure.md#key_name) N;
+   - the `key` of F [spells](js-structure.rofl.md#key_name) N;
    - unless F [is a constructor](#ctor_method);
 2. if all of:
    - the `init` of a [declarator](#noun-declarator) D is F;
    - F is a [function](#fn_node);
-   - the `id` of D [is named](js-structure.md#ast_name) N;
+   - the `id` of D [is named](js-structure.rofl.md#ast_name) N;
 3. if all of:
-   - a node K [spells](js-structure.md#key_name) N;
+   - a node K [spells](js-structure.rofl.md#key_name) N;
    - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is F;
    - F is a [function](#fn_node);
@@ -346,11 +346,11 @@ F answers to a name N either:
    - the attribute `kind` of F is "constructor";
    - the `body` of a node CD is a node B;
    - F is among the `body` of B;
-   - the `id` of CD [is named](js-structure.md#ast_name) N;
+   - the `id` of CD [is named](js-structure.rofl.md#ast_name) N;
 5. if all of:
    - F is a [function](#fn_node);
    - the `value` of a [class field](#noun-class_field) P is F;
-   - the `key` of P [spells](js-structure.md#key_name) N.
+   - the `key` of P [spells](js-structure.rofl.md#key_name) N.
 
 > A class expression with no `id` takes its binding's name — the language's own
 > inference: `const A = class {}` has `A.name === "A"`, but
@@ -368,7 +368,7 @@ A [method](#noun-method) answers to a name N if all of:
   - it is among the `body` of B;
   - CD [is anonymous](#anon_class);
   - the `init` of a [declarator](#noun-declarator) D is CD;
-  - the `id` of D [is named](js-structure.md#ast_name) N.
+  - the `id` of D [is named](js-structure.rofl.md#ast_name) N.
 
 > A decorator is INSIDE the thing it decorates and does not run there:
 > `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
@@ -384,18 +384,18 @@ A [method](#noun-method) answers to a name N if all of:
 
 <a id="in_own_decorator"></a>A node F has its decorator at a node C either:
 
-1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.md#ast_within) D;
+1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.rofl.md#ast_within) D;
 2. if F [is decorated by](#decorates) C.
 
 <a id="encloses"></a>A [function](#fn_node) encloses the site C if all of:
-  - C [is within](js-structure.md#ast_within) it;
+  - C [is within](js-structure.rofl.md#ast_within) it;
   - C [is a site](#site);
   - unless it [has its decorator at](#in_own_decorator) C.
 
 <a id="closer"></a>A node is outranked at a node C if all of:
   - it [encloses the site](#encloses) C;
   - a node G [encloses the site](#encloses) C;
-  - G [is within](js-structure.md#ast_within) it;
+  - G [is within](js-structure.rofl.md#ast_within) it;
   - it differs from G.
 
 <a id="nearest_fn"></a>F is the nearest function of a node C if F [encloses the site](#encloses) C, unless F [is outranked at](#closer) C.
@@ -405,7 +405,7 @@ A node
 - <a id="enclosed"></a>is enclosed if some function [encloses the site](#encloses) it.
 - <a id="top_call"></a>runs at the top of a node R if all of:
   - it [is a site](#site);
-  - it [is in file](js-model.md#ast_node) File;
+  - it [is in file](js-model.rofl.md#ast_node) File;
   - `ast_file`(R, File);
   - unless it [is enclosed](#enclosed).
 
@@ -423,13 +423,13 @@ A node
 <a id="obj_member_fn"></a>O has the member function M at Key either:
 
 1. if all of:
-   - a node K [spells](js-structure.md#key_name) Key;
+   - a node K [spells](js-structure.rofl.md#key_name) Key;
    - the `key` of M is K;
    - M is an [object method](#noun-object_method);
    - M is among the `properties` of O;
    - O is an [object literal](#noun-object_literal);
 2. if all of:
-   - a node K [spells](js-structure.md#key_name) Key;
+   - a node K [spells](js-structure.rofl.md#key_name) Key;
    - the `key` of a [property](#noun-property) P is K;
    - the `value` of P is M;
    - M is a [function](#fn_node);
@@ -442,18 +442,18 @@ A node
 > the synthesised frame); `new` deliberately does NOT, because V8 names the
 > frame after the class and makes it the caller.
 
-<a id="class_ctor"></a>A class has the constructor M if it [has the method](js-dataflow.md#class_method_of) M and the attribute `kind` of M is "constructor".
+<a id="class_ctor"></a>A class has the constructor M if it [has the method](js-dataflow.rofl.md#class_method_of) M and the attribute `kind` of M is "constructor".
 
 <a id="resolves"></a>A node X resolves to M either:
 
 1. if all of:
    - X [is a transfer site](#transfer_site) of `new_expression`;
-   - X [may be the node](js-dataflow.md#may_be_node) CD;
+   - X [may be the node](js-dataflow.rofl.md#may_be_node) CD;
    - CD [has the constructor](#class_ctor) M;
 2. if all of:
    - [the callee](#callee_of) of X is a [super](#noun-super) N;
-   - N [may be the node](js-dataflow.md#may_be_node) SD;
-   - [the constructor](js-dataflow.md#ctor_of) of SD is M.
+   - N [may be the node](js-dataflow.rofl.md#may_be_node) SD;
+   - [the constructor](js-dataflow.rofl.md#ctor_of) of SD is M.
 
 > A tag is a callee in every sense but the grammar's (the field is `tag`, not
 > `callee`); a decorator's `expression` is either the function or a factory
@@ -463,11 +463,11 @@ A node X resolves to F either:
 
 1. if all of:
    - X [is a transfer site](#transfer_site) of `tagged_template_expression`;
-   - the `tag` of X [may be the node](js-dataflow.md#may_be_node) F;
+   - the `tag` of X [may be the node](js-dataflow.rofl.md#may_be_node) F;
    - F is a [function](#fn_node);
 2. if all of:
    - X [is a transfer site](#transfer_site) of `decorator`;
-   - the `expression` of X [may be the node](js-dataflow.md#may_be_node) F;
+   - the `expression` of X [may be the node](js-dataflow.rofl.md#may_be_node) F;
    - F is a [function](#fn_node).
 
 > `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -478,24 +478,24 @@ A node X resolves to F either:
 
 <a id="for_of_iterates"></a>A node iterates through a [function](#fn_node) M if all of:
   - it [is a transfer site](#transfer_site) of `for_of_statement`;
-  - the `right` of it [may be the node](js-dataflow.md#may_be_node) Obj;
-  - [the member](js-dataflow.md#member_value) "iterator" of Obj holds M.
+  - the `right` of it [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+  - [the member](js-dataflow.rofl.md#member_value) "iterator" of Obj holds M.
 
 X resolves to M if X [iterates through](#for_of_iterates) M.
 
 <a id="calls"></a>Caller calls a [function](#fn_node) Next if all of:
   - a node X [iterates through](#for_of_iterates) M;
   - Caller [is the nearest function of](#nearest_fn) X;
-  - M [returns](js-dataflow.md#returns) a node E;
-  - E [may be the node](js-dataflow.md#may_be_node) IterObj;
-  - [the member](js-dataflow.md#member_value) "next" of IterObj holds a node V;
-  - V [may be the node](js-dataflow.md#may_be_node) Next.
+  - M [returns](js-dataflow.rofl.md#returns) a node E;
+  - E [may be the node](js-dataflow.rofl.md#may_be_node) IterObj;
+  - [the member](js-dataflow.rofl.md#member_value) "next" of IterObj holds a node V;
+  - V [may be the node](js-dataflow.rofl.md#may_be_node) Next.
 
 > THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [may be the node](js-dataflow.md#may_be_node) F.
+C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [may be the node](js-dataflow.rofl.md#may_be_node) F.
 
 In the audit:
 
@@ -523,15 +523,15 @@ Caller calls Callee either:
 
 1. if all of:
    - a node X [calls](#calls) Y;
-   - X [is in file](js-model.md#ast_node) File;
+   - X [is in file](js-model.rofl.md#ast_node) File;
    - X [answers to](#fn_name) Z;
    - Y [answers to](#fn_name) B;
 2. if R [calls](#calls) Y, `ast_file`(R, File), Y [answers to](#fn_name) B, and Z is `top`.
 
 <a id="passes_function"></a>C passes the function F named Name at an index I if all of:
-  - C [passes](js-dataflow.md#arg_at) a node X at I;
-  - X [is named](js-structure.md#ast_name) Name;
-  - X [may be the node](js-dataflow.md#may_be_node) F;
+  - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
+  - X [is named](js-structure.rofl.md#ast_name) Name;
+  - X [may be the node](js-dataflow.rofl.md#may_be_node) F;
   - F is a [function](#fn_node).
 
 ## 6. The frontier, as a positive relation
@@ -556,9 +556,9 @@ In the audit:
   - C [is unresolved](#unresolved_call) with some shape;
   - [the callee](#callee_of) of C is a node N;
   - the `object` of N is a node O;
-  - [the prototype](js-dataflow.md#prototype_of) of O is P;
-  - P [is a builtin prototype](js-dataflow.md#builtin_prototype);
-  - N [selects](js-dataflow.md#selects) Key.
+  - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
+  - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
+  - N [selects](js-dataflow.rofl.md#selects) Key.
 
 Declared as facts:
 
@@ -591,10 +591,10 @@ In the code:
 
 <a id="frontier_line"></a>File shows the frontier S at Line either:
 
-1. if a node C [is unresolved](#unresolved_call) with S and C [is of kind](js-model.md#ast_node) some kind in file File at line Line;
+1. if a node C [is unresolved](#unresolved_call) with S and C [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line;
 2. if all of:
    - a node X [is a transfer site](#transfer_site) of S;
-   - X [is of kind](js-model.md#ast_node) some kind in file File at line Line;
+   - X [is of kind](js-model.rofl.md#ast_node) some kind in file File at line Line;
    - unless X [is resolved](#resolved_site).
 
 > The closed vocabulary of shapes, read off the tables: the denominator is the
@@ -628,21 +628,21 @@ A shape
 A shape
 
 - <a id="shape_unexplained"></a>is unexplained if it [has residue](#unresolved_shape), unless [`shape_because`](#shape_because)(`js`, it, `callgraph`, something).
-- <a id="shape_bad_reason"></a>has a bad reason R if [`shape_because`](#shape_because)(`js`, it, `callgraph`, R), unless [`unknown_type`](js-model.md#unknown_type)(R, something).
+- <a id="shape_bad_reason"></a>has a bad reason R if [`shape_because`](#shape_because)(`js`, it, `callgraph`, R), unless [`unknown_type`](js-model.rofl.md#unknown_type)(R, something).
 - <a id="shape_orphan"></a>is a shape nobody lists if [`shape_because`](#shape_because)(`js`, it, `callgraph`, something), unless it [is a shape](#shape_vocab).
 - <a id="shape_stale"></a>is a stale shape if all of:
   - [`shape_because`](#shape_because)(`js`, it, `callgraph`, something);
   - it [is seen](#shape_seen);
   - unless it [has residue](#unresolved_shape).
 - <a id="shape_unexercised"></a>is an unexercised shape if [`shape_because`](#shape_because)(`js`, it, `callgraph`, something), unless it [is seen](#shape_seen).
-- <a id="shape_irreducible"></a>is irreducible if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.md#unknown_type)(R, `irreducible`).
+- <a id="shape_irreducible"></a>is irreducible if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.rofl.md#unknown_type)(R, `irreducible`).
 
 <a id="unrecorded_coverage"></a>A kind K is covered unrecorded at a shape S if all of:
   - S [resolves somewhere](#resolved_shape);
-  - K [has the shape](js-model.md#shape_of) S in `js`;
-  - [the verdict](js-model.md#verdict) of K with S in `callgraph` for `js` is `not_modelled`.
+  - K [has the shape](js-model.rofl.md#shape_of) S in `js`;
+  - [the verdict](js-model.rofl.md#verdict) of K with S in `callgraph` for `js` is `not_modelled`.
 
-<a id="shape_ours"></a>A shape is ours if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.md#unknown_type)(R, `ours`).
+<a id="shape_ours"></a>A shape is ours if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.rofl.md#unknown_type)(R, `ours`).
 
 > What modelling this layer dragged in: every kind its rules touch must be a
 > declared `node_kind`, or the matrix has a cell it does not know exists.
@@ -662,9 +662,9 @@ In the audit:
 1. if [the call kind](#call_site_kind) of some call is K;
 2. if [the callee kind](#callee_kind) of some call is K;
 3. if [the receiver kind](#callee_obj_kind) of some call is K;
-4. if [the property](#callee_prop) of some call [is of kind](js-model.md#ast_node) K;
-5. if a [function](#fn_node) F [is of kind](js-model.md#ast_node) K;
-6. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.md#ast_node) K.
+4. if [the property](#callee_prop) of some call [is of kind](js-model.rofl.md#ast_node) K;
+5. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
+6. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
 
 <a id="kind_undeclared"></a>A kind K is undeclared if K [is touched by the call graph](#callgraph_kind), unless `js` has the node kind K.
 
@@ -689,9 +689,9 @@ In the code:
 
 <a id="awaited_then"></a>Y awaits the then F if all of:
   - Y [awaits](#await_arg) a node X;
-  - X [may be the node](js-dataflow.md#may_be_node) O;
-  - [the member](js-dataflow.md#member_value) "then" of O holds a node V;
-  - V [may be the node](js-dataflow.md#may_be_node) F;
+  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
+  - [the member](js-dataflow.rofl.md#member_value) "then" of O holds a node V;
+  - V [may be the node](js-dataflow.rofl.md#may_be_node) F;
   - F is a [function](#fn_node).
 
 <a id="performed_call"></a>A node performs the call F if it [awaits the then](#awaited_then) F.
@@ -708,7 +708,7 @@ In the audit:
 
 In the code:
 
-<a id="await_value_known"></a>Y awaits a known value if Y [awaits](#await_arg) a node X and X [may be the node](js-dataflow.md#may_be_node) some node.
+<a id="await_value_known"></a>Y awaits a known value if Y [awaits](#await_arg) a node X and X [may be the node](js-dataflow.rofl.md#may_be_node) some node.
 
 <a id="await_no_call"></a>X awaits without a call if X [awaits a known value](#await_value_known), unless X [awaits the then](#awaited_then) some function.
 
@@ -722,7 +722,7 @@ In the audit:
 
 In the code:
 
-<a id="awaiting_fn"></a>A [function](#fn_node) awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.md#ast_within) it.
+<a id="awaiting_fn"></a>A [function](#fn_node) awaits at a node X if X [performs the call](#performed_call) some function and X [is within](js-structure.rofl.md#ast_within) it.
 
 In the audit:
 

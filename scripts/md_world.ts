@@ -1,4 +1,5 @@
-// md_world.ts — a world authored as Markdown, read into rules for whoever
+// md_world.ts — a world authored as Markdown (`X.rofl.md`: executable Markdown,
+// as against a document), read into rules for whoever
 // loads worlds by path (the goldens, the lints). The reader writes the rules
 // to a file under the temp directory and this returns its path.
 import { execFileSync } from 'node:child_process';
@@ -9,7 +10,7 @@ import * as path from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname;
 
 export function roflFromMd(mdPath: string): string {
-  const stem = path.basename(mdPath).replace(/\.md$/, '');
+  const stem = path.basename(mdPath).replace(/\.rofl\.md$|\.md$/, '');
   const dir = path.join(os.tmpdir(), 'rofl-md');
   mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `${stem}.rofl`);
