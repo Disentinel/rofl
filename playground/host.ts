@@ -3,7 +3,7 @@
 import { Rofl } from '../src/api.ts';
 import { parseProgram, parseLiteral } from '../src/parser.ts';
 import { factKey } from '../src/store.ts';
-import { resolveBook } from '../src/reflect.ts';
+import { resolveBook, ruleIdOf } from '../src/reflect.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
@@ -11,24 +11,27 @@ import { readMd, type ReadResult } from '../scripts/read_md.ts';
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
 
-/** The part of the JS model the playground loads: structure, dataflow, calls, control flow, effects, globals and the host. The rest (modules, resolution, env) needs more than one file. */
+/** The part of the JS model the playground loads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
 export const MODEL_FILES = ['boot.rofl',
   'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-statements.rofl',
   'facts/js-controlflow.rofl', 'facts/js-effects.rofl', 'facts/js-globals.rofl', 'facts/js-host.rofl', 'facts/js-host-surface.rofl', 'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl',
   'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl', 'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl',
-  'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl'];
+  'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl'];
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
 export type Cell = { id: string; text: string; form?: 'md' | 'rofl' };
 export type Row = { sentence: string; literal: string };
-export type Line = { kind: 'answers' | 'never' | 'why'; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string };
+export type Line = { kind: 'answers' | 'never' | 'why' | 'unsure'; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
+  /** what the invariant above could not see: its `unsure` line's answers */
+  unsure?: { text: string; lit: string; rows: Row[]; total: number } };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
-export type Node = { kind: string; line: number; label: string };
-export type RunOut = { parseError?: string; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
+export type Node = { kind: string; file: string; line: number; label: string };
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
 
 let core: Rofl | null = null;
 let last: Rofl | null = null;
+let notebook = new Map<string, string>();   // a rule id of the notebook's -> the cell it came from
 let phrases = '';
 let vocab = new Vocabulary();
 let home: Record<string, string> = {};
@@ -52,9 +55,9 @@ export function init(model: string, phraseText: string, concernMap?: typeof conc
   return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
 }
 
-const DIRECTIVE = /^(\?|never|why)\s+(.+?)\.?\s*$/;
+const DIRECTIVE = /^(\?|never|why|unsure)\s+(.+?)\.?\s*$/;
 
-/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `why L` explains. */
+/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains. */
 function split(text: string): { clauses: string; asks: { kind: Line['kind']; lit: string; text: string }[] } {
   const clauses: string[] = []; const asks: { kind: Line['kind']; lit: string; text: string }[] = [];
   for (const raw of text.split('\n')) {
@@ -110,16 +113,37 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
       case 'class_property': case 'object_property': return lab(k(id, 'key'), d + 1);
       case 'variable_declarator': return lab(k(id, 'id'), d + 1) + (k(id, 'init') ? ' = ' + lab(k(id, 'init'), d + 1) : '');
       case 'assignment_expression': return lab(k(id, 'left'), d + 1) + ' = ' + lab(k(id, 'right'), d + 1);
-      case 'file': case 'program': return FILE;
+      case 'file': case 'program': return n.file;
       default: return n.kind.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
     }
   };
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
+/** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
+function hostFacts(paths: string[], strings: Set<string>): string[] {
+  const q = (x: string) => JSON.stringify(x), out: string[] = [], dirs = new Set(['.']);
+  const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
+  for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
+  for (const d of dirs) {
+    out.push(`fs_dir[code](${q(d)}).`);
+    if (d !== '.') out.push(`fs_parent[code](${q(d)}, ${q(dirOf(d))}).`, `fs_dir_in[code](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}, ${q(d)}).`);
+  }
+  for (const p of paths) out.push(`fs_file[code](${q(p)}).`, `fs_dir_of[code](${q(p)}, ${q(dirOf(p))}).`, `fs_file_in[code](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}, ${q(p)}).`);
+  for (const s of strings) {
+    if (!s || s.includes('\n')) continue;
+    const segs = s.split('/');
+    out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(s[0])}).`);
+    segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
+    if (s.indexOf(':') > 0) out.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`);
+  }
+  return out;
+}
+
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
 
-export function run(code: string, cells: Cell[]): RunOut {
+export function run(code: string | Record<string, string>, cells: Cell[]): RunOut {
+  const files = typeof code === 'string' ? { [FILE]: code } : code;
   if (!core) throw new Error('the model is not loaded');
   const t = performance.now();
   const phases: Record<string, number> = {};
@@ -127,17 +151,22 @@ export function run(code: string, cells: Cell[]): RunOut {
   const lap = (name: string) => { const now = performance.now(); phases[name] = Math.round(now - mark); mark = now; };
   const f = core.fork();
   lap('fork');
-  const s = scan(code, { file: FILE });
   const nodes: Record<string, Node> = {};
-  let parseError: string | undefined;
-  for (const fact of s.facts) {
-    const m = /^ast_node\[code\]\((\w+), (\w+), "[^"]*", (\d+)\)/.exec(fact);
-    if (m) nodes[m[1]] = { kind: m[2], line: Number(m[3]), label: '' };
-    const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-    if (e) parseError = e[1];
+  const parseErrors: Record<string, string> = {};
+  const facts: string[] = [], strings = new Set<string>();
+  for (const [path, src] of Object.entries(files)) {
+    for (const fact of scan(src, { file: path }).facts) {
+      facts.push(fact);
+      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)", (\d+)\)/.exec(fact);
+      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: Number(m[4]), label: '' };
+      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
+      if (e) parseErrors[path] = e[1];
+      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
+      if (v) strings.add(JSON.parse(v[1]));
+    }
   }
-  labelNodes(s.facts, nodes);
-  f.assert(s.facts.join('\n'));
+  labelNodes(facts, nodes);
+  f.assert([...facts, ...hostFacts(Object.keys(files), strings)].join('\n'));
   lap('scan');
   const parts = cells.map((c) => ({ c, ...split(c.text) }));
   // Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once
@@ -154,6 +183,7 @@ export function run(code: string, cells: Cell[]): RunOut {
   vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
   const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
   const texts: string[] = [];
+  notebook = new Map();
   const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
     const errors: string[] = [], notes: string[] = [];
     const r = read[i];
@@ -165,7 +195,7 @@ export function run(code: string, cells: Cell[]): RunOut {
       if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
       for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
     }
-    try { parseProgram(text); texts[i] = text; } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
+    try { for (const cl of parseProgram(text)) if (cl.body.length) notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`); texts[i] = text; } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
     return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
   });
   // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
@@ -174,7 +204,7 @@ export function run(code: string, cells: Cell[]): RunOut {
     texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
   }
   lap('load');
-  try { f.evaluate(BUDGET); } catch (e) { return { parseError, facts: s.facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
+  try { f.evaluate(BUDGET); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
   lap('evaluate');
   last = f;
   parts.forEach(({ asks }, i) => {
@@ -190,11 +220,13 @@ export function run(code: string, cells: Cell[]): RunOut {
       if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
       const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
       const note = q.unpopulatable ? 'nothing in the model can put a row here: check the name, the book and the number of arguments' : q.partial ? 'the budget ran out before every answer was found' : undefined;
-      outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note });
+      const above = outs[i].lines[outs[i].lines.length - 1];
+      if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
+      outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
     }
   });
   lap('ask');
-  return { parseError, facts: s.facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
+  return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
 }
 
 /** One step of an explanation: the facts of a proof that one section of the model concluded, folded into the first of them. */
@@ -211,7 +243,7 @@ export function explain(literal: string): Step | string {
   try { const l = resolveBook(parseLiteral(literal)); top = factKey(l.rel, (l.persp as { name: string }).name, l.args); } catch (e) { return (e as Error).message; }
   if (!store.witnessOf(top)) return store.has(top) ? `${literal} is given, not derived` : `${literal} does not hold`;
   const say = (key: string) => vocab.say(key) ?? key;
-  const concernOf = (key: string) => { const w = store.witnessOf(key); return w ? concerns.rules[w.ruleId] ?? concerns.rels[relOf(key)] ?? '' : ''; };
+  const concernOf = (key: string) => { const w = store.witnessOf(key); return w ? concerns.rules[w.ruleId] ?? notebook.get(w.ruleId) ?? concerns.rels[relOf(key)] ?? '' : ''; };
   const shown = new Set<string>();
   const step = (key: string, path: Set<string>): Step => {
     const concern = concernOf(key);
@@ -229,7 +261,7 @@ export function explain(literal: string): Step | string {
         const c = concernOf(p.key);
         if (!c) { st.evidence++; continue; }
         // a fact about one node (`put() is a function`, `s reads "s"`) is a property of that node, not a step: it and its proof are details
-        const one = (p.key.match(NODE) ?? []).length <= 1;
+        const one = (p.key.match(NODE) ?? []).length <= 1 && !c.startsWith('notebook');
         if (c === concern || one || absorbing) { if (!shown.has(p.key)) { shown.add(p.key); st.details.push(say(p.key)); keys.push(p.key); const was = absorbing; absorbing = one || was; walk(p.key); absorbing = was; } }
         else st.steps.push(step(p.key, path));
       }

@@ -53,6 +53,14 @@
   @media (max-width: 960px) { .code { position: static; } }
   .bar { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); font: 12.5px/1.4 var(--mono); color: var(--mute); }
   .bar b { color: var(--fg); font-weight: 600; }
+  .files { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+  .files button { font: 12.5px/1 var(--mono); padding: 5px 8px; border-color: transparent; background: transparent; color: var(--mute); }
+  .files button[aria-pressed="true"] { color: var(--fg); border-color: var(--line); background: var(--soft); font-weight: 600; }
+  .files button.bad { color: var(--fail); }
+  .files input { font: 12.5px/1 var(--mono); padding: 4px 6px; width: 12ch; border: 1px solid var(--accent); border-radius: 4px; background: var(--panel); color: var(--fg); }
+  .files .del { padding: 5px 6px; }
+  .ex { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mute); }
+  .ex select { font: 13px var(--sans); padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--fg); }
   .editor { position: relative; height: min(72vh, 760px); background: var(--code-bg); display: grid; grid-template-columns: 44px minmax(0, 1fr); }
   @media (max-width: 960px) { .editor { height: 52vh; } }
   .gutter, .clip { position: relative; overflow: hidden; }
@@ -61,8 +69,10 @@
   .nums div { height: 20px; font: 12px/20px var(--mono); color: var(--gutter); text-align: right; padding-right: 8px; font-variant-numeric: tabular-nums; }
   .nums div.bad { color: var(--fail); font-weight: 600; }
   .nums div.focus { color: var(--accent); font-weight: 600; }
+  .nums div.warn { color: var(--warn); font-weight: 600; }
   .marks div { position: absolute; left: 0; right: 0; height: 20px; }
   .marks div.bad { background: var(--fail-bg); }
+  .marks div.warn { background: var(--warn-bg); }
   .marks div.focus { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
   #code { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; border: 0; margin: 0; padding: 10px 12px; background: transparent; color: var(--fg); font: 13px/20px var(--mono); white-space: pre; overflow: auto; tab-size: 2; }
   .foot { padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--mute); min-height: 20px; }
@@ -102,6 +112,8 @@
   .pill.pass { color: var(--pass); background: var(--pass-bg); }
   .pill.fail { color: var(--fail); background: var(--fail-bg); }
   .pill.info { color: var(--mute); background: var(--soft); }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); }
+  .unsure-head { font-size: 12.5px; color: var(--warn); padding-left: 6px; }
   .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .rows li { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; }
   .rows li:hover { background: var(--soft); }
@@ -141,13 +153,13 @@
     <h1>ROFL Playground <span>&middot; JavaScript</span></h1>
     <div class="status" id="status" aria-live="polite"><span class="busy">loading the JS model</span></div>
     <div class="spacer"></div>
-    <button type="button" id="reset">Load the example</button>
+    <label class="ex" for="example">Example <select id="example"><option value="await">Unawaited calls, one file</option><option value="sight">What the model cannot see, three files</option></select></label>
     <button type="button" class="primary" id="runall" disabled>Run the book</button>
   </header>
-  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>why S</code> explains one. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
+  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>unsure S</code> under it says what the invariant could not see, <code>why S</code> explains one. Files import each other with <code>import ... from './x.js'</code>. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
   <div class="grid">
     <section class="code" aria-label="JavaScript">
-      <div class="bar"><b>play.js</b><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
+      <div class="bar"><div class="files" id="files" role="tablist" aria-label="Files"></div><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
       <div class="editor">
         <div class="gutter" aria-hidden="true"><div class="nums" id="nums"></div></div>
         <div class="clip">
@@ -169,7 +181,9 @@
 </div>
 
 <script type="module">
-const EXAMPLE_CODE = `const fs = require('fs');
+const EXAMPLES = {
+  await: {
+    files: { 'play.js': `const fs = require('fs');
 
 async function load(path) {
   const text = await fs.promises.readFile(path, 'utf8');
@@ -196,8 +210,8 @@ function main() {
   s.put({ ok: true });
 }
 main();
-`;
-const EXAMPLE_CELLS = [
+` },
+    cells: [
   { kind: 'prose', text: 'An invariant, in sentences: an async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
   { kind: 'formal', text: `A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
 
@@ -207,18 +221,91 @@ never C is unawaited` },
 ? the effect of F is E` },
   { kind: 'prose', text: 'A natural cell: run it and Claude writes the formal cell, trying it against the code first. The original stays above it; Revert brings it back.' },
   { kind: 'natural', text: 'Every method of a class is called somewhere in this file.' },
-];
+],
+  },
+  sight: {
+    files: {
+      "main.js": `import { EventEmitter } from 'node:events';
+import { load } from './store.js';
+import { audit } from './audit.js';
+
+const bus = new EventEmitter();
+bus.on('loaded', audit);
+
+export function main() {
+  const data = load('db.json');
+  bus.emit('loaded', data);
+  return data;
+}
+
+main();
+`,
+      "store.js": `import { readFileSync } from 'node:fs';
+
+export function load(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+`,
+      "audit.js": `import { appendFileSync } from 'node:fs';
+
+export function audit(data) {
+  appendFileSync('audit.log', JSON.stringify(data) + '\\n');
+}
+`,
+    },
+    cells: [
+      { kind: 'prose', text: `Three files. Does anything main starts write to disk? The model follows calls across the files and into node:fs. Where it cannot follow a call it says so, and the invariant says how far it saw: green, red, or green as far as it can see.` },
+      { kind: 'formal', text: `\`disk_write\` lists:
+
+| key |
+|---|
+| "writeFileSync" |
+| "appendFileSync" |
+| "writeFile" |
+| "appendFile" |
+
+A call C writes to disk if C is a host site of \`node\` from "node:fs" at K and \`disk_write\`(K).
+
+A function F writes to disk if F is the nearest function of a call C and C writes to disk.
+
+A function F writes to disk if F calls a function G and G writes to disk.
+
+A function F is blind at a call C if F is the nearest function of C and C has no surface.
+
+A function F is blind at a call C if F calls a function G and G is blind at C.
+
+A function F is a writing main if F answers to "main" and F writes to disk.
+
+A call C is out of sight of main if a function F answers to "main" and F is blind at C.
+
+never F is a writing main
+unsure C is out of sight of main` },
+      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
+      { kind: 'prose', text: `A call C emits E if the callee of C is M, M selects "emit", C passes the argument X at 0 and X may be the literal E.
+
+A function F handles E if the callee of a call R is M, M selects "on", R passes the argument X at 0, X may be the literal E, R passes the argument Y at 1 and Y points to F.
+
+A call C resolves to a function F if C emits E and F handles E.` },
+    ],
+  },
+};
+const fresh = (name) => { const ex = EXAMPLES[name]; return { example: name, files: { ...ex.files }, active: Object.keys(ex.files)[0], cells: ex.cells.map(cell) }; };
 
 const $ = (id) => document.getElementById(id);
 const runs = (c) => c.kind === 'formal' || c.kind === 'rofl';
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const KEY = 'rofl-playground-v2';
+const KEY = 'rofl-playground-v3';
 let uid = 0;
 const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null, open: c.open ?? null, thread: c.thread ?? null, answers: c.answers ?? [] });
-let state = { code: EXAMPLE_CODE, cells: EXAMPLE_CELLS.map(cell) };
-try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s.code === 'string' && Array.isArray(s.cells)) state = { code: s.code, cells: s.cells.map(cell) }; } catch (e) {}
+let state;
+try {
+  const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (s && s.files && typeof s.files === 'object' && Array.isArray(s.cells)) state = { example: s.example, files: s.files, active: s.files[s.active] !== undefined ? s.active : Object.keys(s.files)[0], cells: s.cells.map(cell) };
+  else { const v2 = JSON.parse(localStorage.getItem('rofl-playground-v2') || 'null'); if (v2 && typeof v2.code === 'string' && Array.isArray(v2.cells)) state = { example: 'await', files: { 'play.js': v2.code }, active: 'play.js', cells: v2.cells.map(cell) }; }
+} catch (e) {}
+state ??= fresh('await');
 let saveT = 0;
-const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ code: state.code, cells: state.cells.map(({ kind, text, was, note, open, thread, answers }) => ({ kind, text, was, note, open, thread, answers })) })); } catch (e) {} }, 400); };
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ example: state.example, files: state.files, active: state.active, cells: state.cells.map(({ kind, text, was, note, open, thread, answers }) => ({ kind, text, was, note, open, thread, answers })) })); } catch (e) {} }, 400); };
 
 // ------------------------------------------------------------ the engine
 let host = null;          // { call(op, ...args): Promise }
@@ -244,30 +331,62 @@ async function startHost() {
 
 // ------------------------------------------------------------ the editor
 const code = $('code'), nums = $('nums'), marks = $('marks');
-let focusLine = 0, badLines = new Set(), nodes = {};
+let focus = null, marked = { bad: new Map(), warn: new Map() }, nodes = {};   // marked lines by file
 function paintEditor() {
   const n = code.value.split('\n').length;
   $('lines').textContent = `${n} lines`;
   let h = '', m = '';
   for (let i = 1; i <= n; i++) {
-    const cls = i === focusLine ? 'focus' : badLines.has(i) ? 'bad' : '';
+    const cls = focus && focus.file === state.active && i === focus.line ? 'focus' : marked.bad.get(state.active)?.has(i) ? 'bad' : marked.warn.get(state.active)?.has(i) ? 'warn' : '';
     h += `<div class="${cls}">${i}</div>`;
     if (cls) m += `<div class="${cls}" style="top:${10 + (i - 1) * 20}px"></div>`;
   }
   nums.innerHTML = h; nums.style.paddingTop = '10px'; marks.innerHTML = m;
   syncScroll();
 }
+// the files, as tabs: click to open, double-click to rename, + to add one
+const filesEl = $('files');
+let renaming = null;
+function renderFiles() {
+  const names = Object.keys(state.files);
+  filesEl.innerHTML = names.map((f) => renaming === f
+    ? `<input id="rename" value="${esc(f)}" aria-label="File name" spellcheck="false">`
+    : `<button type="button" role="tab" data-file="${esc(f)}" aria-pressed="${f === state.active}"${marked.bad.has(f) ? ' class="bad"' : ''} title="double-click to rename">${esc(f)}</button>`
+      + (f === state.active && names.length > 1 ? `<button type="button" class="del" data-delfile="${esc(f)}" title="delete ${esc(f)}" aria-label="Delete ${esc(f)}">&#x2715;</button>` : '')).join('')
+    + '<button type="button" data-newfile title="add a file" aria-label="Add a file">+</button>';
+  const r = $('rename'); if (r) { r.focus(); r.select(); }
+}
+function setActive(f) { state.active = f; code.value = state.files[f]; code.scrollTop = 0; renderFiles(); paintEditor(); save(); }
+function rename(from, to) {
+  renaming = null; to = to.trim();
+  if (to && to !== from && state.files[to] === undefined && /^[\w./-]+$/.test(to)) {
+    state.files = Object.fromEntries(Object.entries(state.files).map(([k, v]) => [k === from ? to : k, v]));
+    if (state.active === from) state.active = to;
+    save(); runBook();
+  }
+  renderFiles();
+}
+filesEl.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.file) { setActive(t.dataset.file); return; }
+  if (t.dataset.delfile) { const f = t.dataset.delfile; delete state.files[f]; setActive(Object.keys(state.files)[0]); runBook(); return; }
+  if (t.dataset.newfile !== undefined) { let n = 1; while (state.files[`file${n}.js`] !== undefined) n++; const f = `file${n}.js`; state.files[f] = ''; setActive(f); renaming = f; renderFiles(); }
+});
+filesEl.addEventListener('dblclick', (e) => { const t = e.target.closest('button[data-file]'); if (t) { renaming = t.dataset.file; renderFiles(); } });
+filesEl.addEventListener('keydown', (e) => { if (e.target.id === 'rename' && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.key === 'Enter' ? rename(renaming, e.target.value) : (renaming = null, renderFiles()); } });
+filesEl.addEventListener('focusout', (e) => { if (e.target.id === 'rename' && renaming) rename(renaming, e.target.value); });
 function syncScroll() { nums.style.transform = `translateY(${-code.scrollTop}px)`; marks.style.transform = `translate(${-code.scrollLeft}px, ${-code.scrollTop}px)`; }
 code.addEventListener('scroll', syncScroll);
-function showLine(line) {
-  focusLine = line; paintEditor();
+function showLine(file, line) {
+  if (file && file !== state.active && state.files[file] !== undefined) setActive(file);
+  focus = { file: state.active, line }; paintEditor();
   const lines = code.value.split('\n'); let at = 0; for (let i = 0; i < line - 1 && i < lines.length; i++) at += lines[i].length + 1;
   code.scrollTop = Math.max(0, (line - 1) * 20 - code.clientHeight / 2);
   code.focus({ preventScroll: true }); code.setSelectionRange(at, at + (lines[line - 1] ?? '').length);
   syncScroll();
 }
 let codeT = 0;
-code.addEventListener('input', () => { state.code = code.value; save(); focusLine = 0; paintEditor(); clearTimeout(codeT); codeT = setTimeout(() => runBook(), 1000); });
+code.addEventListener('input', () => { state.files[state.active] = code.value; save(); focus = null; paintEditor(); clearTimeout(codeT); codeT = setTimeout(() => runBook(), 1000); });
 code.addEventListener('keydown', (e) => {
   if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const s = code.selectionStart; code.setRangeText('  ', s, code.selectionEnd, 'end'); code.dispatchEvent(new Event('input')); }
   if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); clearTimeout(codeT); runBook(); }
@@ -275,7 +394,7 @@ code.addEventListener('keydown', (e) => {
 
 // ------------------------------------------------------------ rendering answers
 const kindWord = (k) => k.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
-function chip(id) { const n = nodes[id]; return n ? `<button type="button" class="node" data-line="${n.line}" title="${esc(kindWord(n.kind))} on line ${n.line}">${esc(n.label || kindWord(n.kind))}<em>${n.line}</em></button>` : `<code>${esc(id)}</code>`; }
+function chip(id) { const n = nodes[id]; const many = Object.keys(state.files).length > 1; return n ? `<button type="button" class="node" data-file="${esc(n.file)}" data-line="${n.line}" title="${esc(kindWord(n.kind))} in ${esc(n.file)} on line ${n.line}">${esc(n.label || kindWord(n.kind))}<em>${many ? esc(n.file) + ':' : ''}${n.line}</em></button>` : `<code>${esc(id)}</code>`; }
 function rich(text) {
   return esc(text.replace(/, in the \w+$/gm, '')).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
 }
@@ -333,27 +452,34 @@ function summary(r) {
   const nev = r.lines.filter((l) => l.kind === 'never');
   if (r.errors.length) return 'has errors';
   if (!nev.length) return '';
-  const bad = nev.filter((l) => !l.ok).length;
+  const bad = nev.filter((l) => !l.ok).length, blind = nev.filter((l) => l.ok && l.unsure && l.unsure.total).length;
+  if (!bad && blind) return blind === nev.length ? 'holds as far as it sees' : `${nev.length - blind} hold, ${blind} as far as it sees`;
   return bad ? `${bad} of ${nev.length} invariants fail` : nev.length === 1 ? 'the invariant holds' : `all ${nev.length} invariants hold`;
 }
 function outputs(r) {
   let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('') + (r.notes || []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
   for (const l of r.lines) {
-    const pill = l.kind === 'never' ? (l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
+    const blind = l.kind === 'never' && l.ok && l.unsure && l.unsure.total > 0;
+    const pill = l.kind === 'never' ? (blind ? `<span class="pill warn">holds as far as it sees &middot; ${l.unsure.total} out of sight</span>` : l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
     h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
     if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
     if (l.proof) h += renderProof(l.proof, l.lit); else if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
     if (l.rows.length) h += `<ul class="rows">${l.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
     if (l.total > l.rows.length) h += `<div class="more">and ${l.total - l.rows.length} more</div>`;
+    if (blind) h += `<div class="unsure-head" title="${esc(l.unsure.text)}">what it could not see:</div><ul class="rows">${l.unsure.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
     h += '</div>';
   }
   if (r.rofl && r.rofl.trim()) h += `<details class="as"><summary>as ROFL</summary><pre>${esc(r.rofl.trim())}</pre></details>`;
   return h;
 }
 function markBad() {
-  badLines = new Set();
-  for (const r of results.values()) for (const l of r.lines) if (l.kind === 'never' && !l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) if (nodes[id]) badLines.add(nodes[id].line);
-  paintEditor();
+  marked = { bad: new Map(), warn: new Map() };
+  const put = (m, id) => { const n = nodes[id]; if (n) (m.get(n.file) ?? m.set(n.file, new Set()).get(n.file)).add(n.line); };
+  for (const r of results.values()) for (const l of r.lines) if (l.kind === 'never') {
+    if (!l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) put(marked.bad, id);
+    else if (l.unsure) for (const row of l.unsure.rows) for (const id of idsIn(row.literal)) put(marked.warn, id);
+  }
+  renderFiles(); paintEditor();
 }
 
 // ------------------------------------------------------------ running
@@ -367,10 +493,11 @@ async function runBook() {
   running = true; again = false;
   $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
   try {
-    const out = await host.call('run', state.code, formal());
+    const out = await host.call('run', state.files, formal());
     nodes = out.nodes; results = new Map(out.cells.map((c) => [c.id, c])); edited.clear(); learned = out.learned || [];
     const foot = $('foot');
-    if (out.parseError) { foot.className = 'foot bad'; foot.textContent = `Babel could not parse the code: ${out.parseError}`; }
+    const broken = Object.entries(out.parseErrors || {});
+    if (broken.length) { foot.className = 'foot bad'; foot.textContent = broken.map(([f, m]) => `Babel could not parse ${f}: ${m}`).join(' '); }
     else if (out.error) { foot.className = 'foot bad'; foot.textContent = `The book did not run: ${out.error}`; }
     else { foot.className = 'foot'; foot.textContent = `${out.facts} facts from the scanner. The book runs a second after you stop typing.`; }
     lastMs = out.ms; $('runinfo').textContent = `ran in ${(out.ms / 1000).toFixed(1)} s`; $('runinfo').title = Object.entries(out.phases || {}).map(([k, v]) => `${k} ${v} ms`).join(', ');
@@ -408,15 +535,14 @@ never C is unawaited
 
 The sentences the scanner's facts and the JS model are read in; a noun before a variable says what it stands for:
 ${vocab}
-The file:
-\`\`\`js
+The files:
 ${codeText}
-\`\`\`
 ${defined.length ? `Sentences the other cells already define, which you may use: ${defined.join('; ')}.\n` : ''}
 The check to write: ${ask}
 
 ${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
 Reply with only a JSON object: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the check, saying what the cell checks>", "questions": ["<what the person must still answer>"]}`;
+const filesText = () => Object.entries(state.files).map(([f, t]) => `### ${f}\n\`\`\`js\n${t}\n\`\`\``).join('\n');
 const REFINE = (current, answer) => `The cell as it stands:
 ${current}
 
@@ -437,16 +563,16 @@ async function translate(c, answer = null) {
     async execute(input) {
       const b = busy.get(c.id); if (b) { b.text = `Trying a translation (${tries.length + 1})\u2026`; renderCells(); }
       const cells = [...formal(), { id: 'try', text: String(input.cell ?? ''), form: 'md' }];
-      const out = await host.call('run', state.code, cells);
+      const out = await host.call('run', state.files, cells);
       const r = out.cells.find((x) => x.id === 'try');
       tries.push(1);
       if (out.error) throw new Error(out.error);
-      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].kind} at line ${out.nodes[id].line}]` : id)) })) };
+      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].label} in ${out.nodes[id].file} at line ${out.nodes[id].line}]` : id)) })) };
     },
   }] : undefined;
   try {
     // the conversation so far: the rules with the original words, then each cell written and each answer given
-    const first = { role: 'user', content: RULES(vocabText, functionsText, state.code, definedSentences(), answer === null ? c.text : c.was) };
+    const first = { role: 'user', content: RULES(vocabText, functionsText, filesText(), definedSentences(), answer === null ? c.text : c.was) };
     const asked = answer === null ? [] : [...(c.thread || []), { role: 'user', content: REFINE(c.text, answer) }];
     const ans = await sample.json([first, ...asked], { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
     if (!ans || typeof ans.cell !== 'string' || !ans.cell.trim()) throw { code: 'invalid_json', message: 'the answer had no cell field' };
@@ -495,7 +621,7 @@ cellsEl.addEventListener('change', (e) => {
 cellsEl.addEventListener('click', async (e) => {
   const t = e.target.closest('button'); if (!t) return;
   const find = (id) => state.cells.find((x) => x.id === id);
-  if (t.dataset.line) { showLine(Number(t.dataset.line)); return; }
+  if (t.dataset.line) { showLine(t.dataset.file, Number(t.dataset.line)); return; }
   if (t.dataset.run) { const c = find(t.dataset.run); if (c.kind === 'natural') translate(c); else runBook(); return; }
   if (t.dataset.stop) { busy.get(t.dataset.stop)?.ctl.abort(); return; }
   if (t.dataset.refineOpen) { drafts.set(t.dataset.refineOpen, ''); renderCells(); cellsEl.querySelector(`[data-refine="${t.dataset.refineOpen}"]`)?.focus(); return; }
@@ -520,13 +646,13 @@ document.querySelector('.adds').addEventListener('click', (e) => {
   const c = cell({ kind: k, text: '' }); state.cells.push(c); save(); renderCells();
   const t = cellsEl.querySelector(`[data-text="${c.id}"]`); t.focus(); t.scrollIntoView({ block: 'center' });
 });
-$('reset').addEventListener('click', () => {
-  state = { code: EXAMPLE_CODE, cells: EXAMPLE_CELLS.map(cell) }; code.value = state.code; results = new Map(); edited.clear(); focusLine = 0; save(); paintEditor(); renderCells(); runBook();
+$('example').addEventListener('change', (e) => {
+  state = fresh(e.target.value); code.value = state.files[state.active]; results = new Map(); edited.clear(); focus = null; marked = { bad: new Map(), warn: new Map() }; save(); renderFiles(); paintEditor(); renderCells(); runBook();
 });
 $('runall').addEventListener('click', () => runBook());
 
 // ------------------------------------------------------------ start
-code.value = state.code; paintEditor(); renderCells();
+code.value = state.files[state.active]; $('example').value = state.example ?? 'await'; renderFiles(); paintEditor(); renderCells();
 (async () => {
   try {
     sample = window.claude && window.claude.use ? await window.claude.use('sample') : null;

@@ -328,7 +328,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       const head = early ?? matchLit(headText, intros, true);
       if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
       if (!early) trace(headText, head);
-      const rule: Rule = { head, body: [], guards: new Map(), where, book: curBook };
+      // a head that is a relation defined outside the text writes where that relation lives, unless a block says otherwise
+      const rule: Rule = { head, body: [], guards: new Map(), where, book: blockSet ? curBook : opts.homeBooks?.[head.rel] ?? curBook };
       let whole = true;
       for (const c of conds) whole = condition(c, intros, rule) && whole;
       for (const it of intros) if (!known.has(it.v)) known.set(it.v, it.noun);
@@ -440,6 +441,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
   let section = '';
   let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
+  let blockSet = false;
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i], next = blocks[i + 1];
     if (b.type === 'h') { section = b.text!; continue; }
@@ -449,7 +451,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (b.type !== 'p') continue;
     const text = b.text!.trim(); let m;
     if (/^Kinds without a noun:/.test(text) || /^What this file calls a node/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
-    if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
+    if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; blockSet = true; continue; }
     if (text === 'Reads:' && next && next.type === 'ul') {
       // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
       for (const it of next.items!) {
