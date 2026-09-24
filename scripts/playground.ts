@@ -2,6 +2,7 @@
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import ts from 'typescript';
 import { MODEL_FILES, PHRASE_FILES, booksOf } from '../playground/host.ts';
+import { NPC_FILES } from '../playground/npc_host.ts';
 import { Vocabulary } from '../src/say.ts';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
@@ -27,7 +28,8 @@ const emit = (src: string) => {
   writeFileSync(`${OUT}/lib/${src.replace(/^.*\//, '').replace(/\.ts$/, '.js')}`, js);
 };
 for (const f of readdirSync(`${ROOT}src`)) if (f.endsWith('.ts') && f !== 'repl.ts') emit(`src/${f}`);
-for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/host.ts', 'playground/worker.ts']) emit(f);
+for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'playground/host.ts', 'playground/worker.ts',
+  'runtime/semirings.ts', 'examples/npc/sim.ts', 'playground/npc_host.ts', 'playground/npc_worker.ts']) emit(f);
 for (const [m, text] of Object.entries(SHIMS)) writeFileSync(`${OUT}/lib/shim-${m.slice(5)}.js`, text);
 copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);
 const modules = new Set(readdirSync(`${OUT}/lib`));
@@ -87,6 +89,20 @@ for (const f of MODEL_FILES.filter((x) => x.startsWith('rules/'))) {
   }
 }
 writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
+
+// The NPC yard: the kernel's boot, the yard's rules and phrases, and the section of npc.rofl each rule sits in.
+writeFileSync(`${OUT}/npc-boot.txt`, NPC_FILES.boot.map(read).join('\n'));
+const npcText = read(NPC_FILES.npc);
+writeFileSync(`${OUT}/npc.txt`, npcText);
+writeFileSync(`${OUT}/npc-phrases.txt`, read(NPC_FILES.phrases));
+const npcConcerns: Record<string, string> = {};
+for (const part of npcText.split(/^-- (?=\d+\. )/m).slice(1)) {
+  const t = part.slice(0, part.indexOf('\n')).replace(/^\d+\. /, '').split(/ — |: |, /)[0].trim();
+  for (const c of parseProgram(part.slice(part.indexOf('\n') + 1))) if (c.body.length) npcConcerns[ruleIdOf(c)] ??= `yard: ${t}`;
+}
+writeFileSync(`${OUT}/npc-concerns.json`, JSON.stringify(npcConcerns));
+const npcPage = read('playground/npc.html');
+writeFileSync(`${OUT}/npc.html`, standalone ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${npcPage}` : npcPage);
 
 const page = read('playground/page.html');
 writeFileSync(`${OUT}/index.html`, standalone ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${page}` : page);

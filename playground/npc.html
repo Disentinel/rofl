@@ -1,0 +1,382 @@
+<title>NPC Yard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #F7F8F5; --panel: #FFFFFF; --fg: #1C2120; --mute: #66706B; --line: #D9DDD6; --soft: #EEF0EB; --code-bg: #FCFCFA;
+    --ground: #F1EEE6; --grid: #DDD8CC; --prop: #B9AE98;
+    --warden: #1F6F6B; --wolf: #A8641C; --wisp: #6D4FB0;
+    --accent: #1D4ED8; --accent-bg: #1D4ED814;
+    --pass: #047857; --pass-bg: #0478571A; --fail: #B91C1C; --fail-bg: #B91C1C14; --warn: #A15C07; --warn-bg: #A15C0714; --kw: #6D28D9;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725; --code-bg: #161A18;
+      --ground: #1E2220; --grid: #2E3431; --prop: #6E6553;
+      --warden: #5FC9C1; --wolf: #E8A45C; --wisp: #B39BEF;
+      --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+      --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A; --kw: #C7A9FF;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725; --code-bg: #161A18;
+    --ground: #1E2220; --grid: #2E3431; --prop: #6E6553;
+    --warden: #5FC9C1; --wolf: #E8A45C; --wisp: #B39BEF;
+    --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+    --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A; --kw: #C7A9FF;
+  }
+  body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
+  .wrap { padding-inline: 16px; padding-block: 14px 28px; max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  h1 { font: 600 19px/1.2 var(--sans); margin: 0; }
+  h1 span { color: var(--mute); font-weight: 400; }
+  .spacer { flex: 1; }
+  .status { font: 12.5px/1.4 var(--mono); color: var(--mute); display: flex; gap: 12px; flex-wrap: wrap; }
+  .status b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .busy::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: .25; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .busy::before { animation: none; } }
+  button { font: 500 13px/1 var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 7px 11px; cursor: pointer; }
+  button:hover { border-color: var(--mute); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .lede { margin: 0; color: var(--mute); font-size: 13.5px; max-width: 86ch; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 980px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; min-width: 0; }
+  .panel h2 { font: 600 13px/1.3 var(--sans); margin: 0; padding: 9px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .panel h2 small { font: 12px var(--mono); color: var(--mute); font-weight: 400; }
+  .body { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* the yard */
+  #yard { display: block; width: 100%; height: auto; }
+  #yard .cell { fill: var(--ground); stroke: var(--grid); stroke-width: 1; }
+  #yard .prop rect { fill: var(--prop); }
+  #yard .prop text { fill: var(--bg); font: 600 10px var(--mono); }
+  #yard .coord { fill: var(--mute); font: 10px var(--mono); }
+  #yard .agent { cursor: pointer; }
+  #yard .agent circle.body { stroke: var(--panel); stroke-width: 2; }
+  #yard .agent text { fill: #fff; font: 600 12px var(--mono); pointer-events: none; }
+  #yard .agent .hpbg { fill: var(--soft); }
+  #yard .agent .hp { fill: var(--pass); }
+  #yard .agent .hp.low { fill: var(--fail); }
+  #yard .sel { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+  #yard .ghost { fill: none; stroke-width: 1.5; stroke-dasharray: 3 3; }
+  #yard .ghost-t { font: 600 10px var(--mono); }
+  #yard .act-move { stroke: var(--fg); stroke-width: 2; fill: none; marker-end: url(#arrow); opacity: .7; }
+  #yard .act-strike { stroke: var(--fail); stroke-width: 2.5; }
+  #yard .act-tend { stroke: var(--pass); stroke-width: 2.5; stroke-dasharray: 5 3; }
+  #yard marker path { fill: var(--fg); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--mute); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .legend .line { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid; margin-right: 5px; vertical-align: 3px; }
+
+  /* the roster */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font: 600 11.5px var(--mono); color: var(--mute); padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--soft); vertical-align: top; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--soft); }
+  tr.row.on td { background: var(--accent-bg); }
+  td.num { font-variant-numeric: tabular-nums; font: 12.5px var(--mono); }
+  .roster-wrap { overflow-x: auto; }
+
+  /* entities and acts in text */
+  .ent { font: 600 12px/1.2 var(--mono); padding: 1px 6px; border-radius: 99px; color: #fff; cursor: pointer; border: 0; white-space: nowrap; }
+  .ent.warden { background: var(--warden); } .ent.wolf { background: var(--wolf); } .ent.wisp { background: var(--wisp); } .ent.thing { background: var(--prop); }
+  :root .ent.warden, :root .ent.wolf, :root .ent.wisp { color: #fff; }
+  code { font: 12.5px var(--mono); }
+
+  /* the mind */
+  .mind h3 { font: 600 11.5px var(--mono); color: var(--mute); margin: 2px 0 4px; letter-spacing: .03em; text-transform: uppercase; }
+  .mind ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .mind li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 3px 6px; border-radius: 4px; }
+  .mind li.sub { padding-left: 22px; }
+  .mind li.chosen { background: var(--pass-bg); }
+  .mind li .grow { flex: 1 1 14em; min-width: 0; overflow-wrap: anywhere; }
+  .pri { font: 600 12px var(--mono); color: var(--kw); min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); vertical-align: 1px; }
+  .p { font: 12px var(--mono); color: var(--mute); min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font: 600 11px var(--mono); padding: 2px 6px; border-radius: 99px; }
+  .tag.do { color: var(--pass); background: var(--pass-bg); }
+  .tag.hole { color: var(--warn); background: var(--warn-bg); }
+  .q { padding: 2px 7px; font: 11.5px var(--mono); color: var(--mute); }
+  .dim { color: var(--mute); }
+  .empty { color: var(--mute); font-size: 13px; }
+
+  /* proofs */
+  .proof { padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
+  .proof .title { font: 600 12px var(--mono); color: var(--mute); margin-bottom: 4px; }
+  .step-line { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 2px 0; }
+  .step-line .s { flex: 1 1 18em; min-width: 0; overflow-wrap: anywhere; }
+  .concern { font: 11.5px/1.4 var(--mono); color: var(--mute); }
+  .concern b { font-weight: 600; color: var(--kw); }
+  .step-kids { margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+  .step-more { padding: 2px 0 6px 12px; color: var(--mute); font-size: 13px; }
+  .step-more ul { margin: 0; padding-left: 16px; }
+  .toggle { padding: 2px 6px; font: 11.5px var(--mono); color: var(--mute); }
+  .whynot { white-space: pre-wrap; font: 12px/1.6 var(--mono); overflow-x: auto; }
+
+  /* the log and the rule */
+  .log { max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+  .log .t { border: 1px solid var(--line); border-radius: 5px; padding: 6px 9px; cursor: pointer; background: var(--panel); text-align: left; display: block; width: 100%; font: 13px/1.5 var(--sans); }
+  .log .t.on { border-color: var(--accent); background: var(--accent-bg); }
+  .log .t b { font: 600 12px var(--mono); }
+  .log .t .ev { color: var(--mute); }
+  .rule pre { margin: 0; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-x: auto; }
+  .rule .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ok { color: var(--pass); } .bad { color: var(--fail); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>NPC Yard <span>&middot; ROFL deciding</span></h1>
+    <div class="status" id="status"><span class="busy">loading the rules</span></div>
+    <div class="spacer"></div>
+    <button type="button" id="step" disabled>Next tick</button>
+    <button type="button" id="play" disabled>Play</button>
+    <button type="button" id="reset" disabled>Start over</button>
+  </header>
+  <p class="lede">Ten agents in a walled yard at night: six wardens, three wolves, a wisp. Nobody scripted them. Every tick the rules of <code>examples/npc/npc.rofl</code> derive what each agent knows, what it intends, which acts it could take, and a semiring picks one. Pick an agent to see its mind, ask why it did what it did or why it did not do something else, and watch what happens when an agent meets a situation no rule covers.</p>
+  <div class="grid">
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <section class="panel" aria-label="The yard">
+        <h2>The yard <small id="yardtick"></small></h2>
+        <div class="body">
+          <svg id="yard" viewBox="0 0 640 380" role="img" aria-label="The yard"></svg>
+          <div class="legend">
+            <span><i style="background:var(--warden)"></i>warden</span><span><i style="background:var(--wolf)"></i>wolf</span><span><i style="background:var(--wisp)"></i>wisp</span>
+            <span><span class="line" style="border-color:var(--fail)"></span>strikes</span><span><span class="line" style="border-color:var(--pass);border-top-style:dashed"></span>tends</span>
+            <span>dashed ring: where the chosen agent remembers someone it cannot see now</span>
+          </div>
+        </div>
+      </section>
+      <section class="panel" aria-label="Every agent this tick">
+        <h2>Every agent this tick <small>the strongest intent and the act chosen</small></h2>
+        <div class="roster-wrap"><table id="roster"></table></div>
+      </section>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <section class="panel mind" aria-label="The chosen agent">
+        <h2 id="mindhead">An agent</h2>
+        <div class="body" id="mind"></div>
+      </section>
+      <section class="panel rule" aria-label="Rules the agents wrote" id="rulebox" hidden>
+        <h2>A rule the agents propose</h2>
+        <div class="body" id="rule"></div>
+      </section>
+      <section class="panel" aria-label="Ticks">
+        <h2>Ticks <small>newest first; pick one to look at it again</small></h2>
+        <div class="body"><div class="log" id="log"></div></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// ------------------------------------------------------------ the engine, in a worker when the page may have one
+let host = null;
+async function start() {
+  const files = await Promise.all(['npc-boot.txt', 'npc.txt', 'npc-phrases.txt', 'npc-concerns.json'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
+  const w = await new Promise((resolve) => {
+    let wk; try { wk = new Worker('lib/npc_worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
+    const t = setTimeout(() => { wk.terminate(); resolve(null); }, 8000);
+    wk.onerror = () => { clearTimeout(t); wk.terminate(); resolve(null); };
+    wk.onmessage = (e) => { if (e.data.id === 0) { clearTimeout(t); resolve(wk); } };
+  });
+  if (w) {
+    let n = 0; const waiting = new Map();
+    w.onmessage = (e) => { const p = waiting.get(e.data.id); if (!p) return; waiting.delete(e.data.id); e.data.ok ? p.resolve(e.data.value) : p.reject(new Error(e.data.error)); };
+    host = { call: (op, ...args) => new Promise((resolve, reject) => { const id = ++n; waiting.set(id, { resolve, reject }); w.postMessage({ id, op, args }); }) };
+  } else {
+    const m = await import('./lib/npc_host.js');
+    host = { call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 20)); return m[op](...args); } };
+  }
+  return host.call('init', files[0], files[1], files[2], JSON.parse(files[3]));
+}
+
+// ------------------------------------------------------------ state
+let world = null;            // { width, height, props }
+let ticks = [];              // every tick record, oldest first
+let viewing = -1;            // index into ticks
+let chosenAgent = 'npc_3';
+let learnedRule = null;
+let proofHtml = '';
+const kindOf = {};
+const cur = () => ticks[viewing];
+
+// ------------------------------------------------------------ text: entities as chips, acts and goals as words
+const words = (t) => String(t)
+  .replace(/`/g, '')
+  .replace(/\b(npc_\d+|crate_\d+|cart_\d+)\b/g, (m) => `<button type="button" class="ent ${kindOf[m] ?? 'thing'}" data-agent="${m}">${m.replace('npc_', '')}</button>`);
+const act = (a) => words(String(a).replace(/^move\((\w+)\)$/, 'step $1').replace(/^strike\((\w+)\)$/, 'strike $1').replace(/^tend\((\w+)\)$/, 'tend $1').replace(/^hold$/, 'hold still'));
+const goal = (g) => words(String(g).replace(/^flee_from\((\w+)\)$/, 'flee $1').replace(/^drive_off\((\w+)\)$/, 'drive off $1').replace(/^stalk\((\w+)\)$/, 'stalk $1').replace(/^tend\((\w+)\)$/, 'tend $1').replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (w) => w.replace(/_/g, ' ')));
+
+// ------------------------------------------------------------ the yard
+const CELL = 64, PAD = 28;
+function drawYard() {
+  const t = cur(); if (!t || !world) return;
+  const W = world.width, H = world.height;
+  const cx = (x) => PAD + (x - 1) * CELL + CELL / 2, cy = (y) => PAD + (H - y) * CELL + CELL / 2;
+  let s = `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>`;
+  for (let x = 1; x <= W; x++) for (let y = 1; y <= H; y++) s += `<rect class="cell" x="${PAD + (x - 1) * CELL}" y="${PAD + (H - y) * CELL}" width="${CELL}" height="${CELL}"/>`;
+  for (let x = 1; x <= W; x++) s += `<text class="coord" x="${cx(x)}" y="${PAD - 9}" text-anchor="middle">${x}</text>`;
+  for (let y = 1; y <= H; y++) s += `<text class="coord" x="${PAD - 12}" y="${cy(y) + 4}" text-anchor="middle">${y}</text>`;
+  for (const p of world.props) s += `<g class="prop"><rect x="${cx(p.x) - 20}" y="${cy(p.y) - 14}" width="40" height="28" rx="3"/><text x="${cx(p.x)}" y="${cy(p.y) + 4}" text-anchor="middle">${p.id.replace(/_\d+$/, '')}</text></g>`;
+  const pos = Object.fromEntries(t.ents.map((e) => [e.id, e]));
+  // what the chosen agent remembers of those it cannot see now: the fog, drawn
+  const m = t.minds[chosenAgent];
+  if (m) for (const r of m.seen) if (!r.now) {
+    const col = `var(--${kindOf[r.entity] ?? 'mute'})`;
+    s += `<circle class="ghost" cx="${cx(r.x)}" cy="${cy(r.y)}" r="${CELL * 0.3}" style="stroke:${col}"/><text class="ghost-t" x="${cx(r.x)}" y="${cy(r.y) + 4}" text-anchor="middle" style="fill:${col}">${r.entity.replace('npc_', '')}?</text>`;
+  }
+  // the acts
+  const dirs = { north: [0, 1], south: [0, -1], east: [1, 0], west: [-1, 0] };
+  for (const a of t.acts) {
+    const e = pos[a.agent]; if (!e) continue;
+    let mm;
+    if ((mm = /^move\((\w+)\)$/.exec(a.act)) && dirs[mm[1]]) { const [dx, dy] = dirs[mm[1]]; s += `<line class="act-move" x1="${cx(e.x) + dx * 22}" y1="${cy(e.y) - dy * 22}" x2="${cx(e.x) + dx * 50}" y2="${cy(e.y) - dy * 50}"/>`; }
+    else if ((mm = /^(strike|tend)\((\w+)\)$/.exec(a.act)) && pos[mm[2]]) { const o = pos[mm[2]]; s += `<line class="act-${mm[1]}" x1="${cx(e.x)}" y1="${cy(e.y)}" x2="${cx(o.x)}" y2="${cy(o.y)}"/>`; }
+  }
+  for (const e of t.ents) {
+    const x = cx(e.x), y = cy(e.y);
+    s += `<g class="agent" data-agent="${e.id}" tabindex="0" role="button" aria-label="${e.id}, ${e.kind}, ${e.hp} hp">`
+      + (e.id === chosenAgent ? `<circle class="sel" cx="${x}" cy="${y}" r="${CELL * 0.4}"/>` : '')
+      + `<circle class="body" cx="${x}" cy="${y}" r="${CELL * 0.3}" style="fill:var(--${e.kind})"/>`
+      + `<text x="${x}" y="${y + 4}" text-anchor="middle">${e.id.replace('npc_', '')}</text>`
+      + `<rect class="hpbg" x="${x - 18}" y="${y + 22}" width="36" height="4" rx="2"/><rect class="hp${e.hp < 60 ? ' low' : ''}" x="${x - 18}" y="${y + 22}" width="${36 * e.hp / 100}" height="4" rx="2"/></g>`;
+  }
+  $('yard').setAttribute('viewBox', `0 0 ${PAD * 2 + W * CELL} ${PAD + H * CELL + 10}`);
+  $('yard').innerHTML = s;
+  $('yardtick').textContent = `tick ${t.tick}${viewing < ticks.length - 1 ? ' (looking back)' : ''}`;
+}
+
+// ------------------------------------------------------------ every agent
+function drawRoster() {
+  const t = cur(); if (!t) return;
+  const actOf = Object.fromEntries(t.acts.map((a) => [a.agent, a.act]));
+  $('roster').innerHTML = `<tr><th>agent</th><th>hp</th><th>strongest intent</th><th>act</th><th></th></tr>` + t.ents.map((e) => {
+    const m = t.minds[e.id]; const top = m?.intents[0];
+    return `<tr class="row${e.id === chosenAgent ? ' on' : ''}" data-agent="${e.id}"><td>${words(e.id)} <span class="dim">${e.kind}</span></td><td class="num">${e.hp}</td><td>${top ? `${goal(top.goal)} <span class="pri">${top.priority}</span>` : '<span class="dim">none</span>'}</td><td>${actOf[e.id] ? act(actOf[e.id]) : '<span class="dim">nothing</span>'}</td><td>${m?.holes.some((h) => h.reason === 'no_action') ? '<span class="tag hole">stuck</span>' : ''}</td></tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------ one agent's mind
+function drawMind() {
+  const t = cur(); if (!t) return;
+  const e = t.ents.find((x) => x.id === chosenAgent);
+  const m = t.minds[chosenAgent];
+  if (!e || !m) { $('mindhead').innerHTML = `${esc(chosenAgent)} <small>not in the yard at tick ${t.tick}</small>`; $('mind').innerHTML = '<p class="empty">It fell. Pick another agent.</p>'; return; }
+  $('mindhead').innerHTML = `${words(e.id)} ${esc(e.kind)} <small>hp ${e.hp} &middot; at ${e.x}, ${e.y} &middot; tick ${t.tick}</small>`;
+  const sub = new Set(m.intents.filter((i) => i.parent).map((i) => i.goal));
+  const intents = m.intents.filter((i) => !i.parent).flatMap((i) => [i, ...m.intents.filter((c) => c.parent === i.goal)]);
+  const best = Math.max(0.0001, ...m.options.map((o) => o.p ?? 0));
+  let h = `<div><h3>What it knows</h3><ul>${m.seen.length ? m.seen.map((r) => `<li><span class="grow">${words(r.entity)} ${esc(r.kind)} at ${r.x}, ${r.y}, ${esc(r.band)}</span><span class="dim">${r.now ? 'sees it now' : `last seen at tick ${r.since}`}</span></li>`).join('') : '<li class="empty">nobody in sight or in memory</li>'}</ul></div>`;
+  h += `<div><h3>What it intends</h3><ul>${intents.map((i) => `<li class="${sub.has(i.goal) ? 'sub' : ''}"><span class="pri">${i.priority}</span><span class="grow">${sub.has(i.goal) ? 'by ' : ''}${goal(i.goal)}</span></li>`).join('') || '<li class="empty">nothing</li>'}</ul></div>`;
+  h += `<div><h3>What it could do</h3><ul>${m.options.map((o) => `<li class="${o.chosen ? 'chosen' : ''}"><span class="p">${o.p === null ? '' : Math.round(o.p * 100) + '%'}</span><span class="bar" style="width:${o.p === null ? 0 : Math.round(60 * o.p / best)}px"></span><span class="grow">${act(o.act)} <span class="dim">for</span> ${goal(o.goal)}</span>${o.chosen ? '<span class="tag do">does</span>' : ''}<button type="button" class="q" data-why="${esc(`option[mind](${chosenAgent}, ${o.act}, ${o.goal})`)}" title="where this act comes from">why</button>${o.chosen ? '' : `<button type="button" class="q" data-whynot="${esc(`does[mind](${chosenAgent}, ${o.act})`)}" title="why it did not do this">why not</button>`}</li>`).join('') || '<li class="empty">no act at all</li>'}</ul></div>`;
+  const stuck = m.holes.filter((x) => x.reason === 'no_action');
+  if (stuck.length) h += `<div><h3>Where it is stuck</h3><ul>${stuck.map((x) => `<li><span class="tag hole">no rule</span><span class="grow">it means to ${goal(x.subject)} and no rule gives it a way</span><button type="button" class="q" data-whynot="${esc(`any_option[mind](${chosenAgent}, ${x.subject})`)}">why not</button></li>`).join('')}</ul></div>`;
+  if (m.ties.length) h += `<div class="dim" style="font-size:12.5px">The arbiter scored ${m.ties.length === 1 ? 'two acts' : 'several acts'} the same; the declared order of acts broke the tie, and that is recorded rather than hidden.</div>`;
+  h += `<div id="proof">${proofHtml}</div>`;
+  $('mind').innerHTML = h;
+}
+
+// ------------------------------------------------------------ proofs
+function renderStep(st) {
+  const n = st.details.length + st.missing.length;
+  const [file, section] = st.concern ? st.concern.split(': ') : ['', ''];
+  const more = n || st.evidence ? `<button type="button" class="toggle" data-toggle>${n ? '+' + n : ''}${st.evidence ? `${n ? ' &middot; ' : ''}${st.evidence} given` : ''}</button>` : '';
+  const body = !st.again && (n || st.evidence) ? `<div class="step-more" hidden>${st.details.length ? `<ul>${st.details.map((d) => `<li>${words(d)}</li>`).join('')}</ul>` : ''}${st.missing.length ? `<ul>${st.missing.map((d) => `<li><span class="dim">not:</span> ${words(d)}</li>`).join('')}</ul>` : ''}${st.evidence ? `<div>and ${st.evidence} ${st.evidence === 1 ? 'fact' : 'facts'} the yard gave it</div>` : ''}</div>` : '';
+  return `<div class="step"><div class="step-line">${file ? `<span class="concern"><b>${esc(file)}</b> ${esc(section)}</span>` : ''}<span class="s">${words(st.sentence)}</span>${st.again ? '' : more}</div>${body}${!st.again && st.steps.length ? `<div class="step-kids">${st.steps.map(renderStep).join('')}</div>` : ''}</div>`;
+}
+async function ask(kind, literal) {
+  const t = cur(); if (!t) return;
+  proofHtml = `<div class="proof"><div class="title">asking ${kind === 'why' ? 'why' : 'why not'}&hellip;</div></div>`; drawMind();
+  try {
+    const r = await host.call(kind, t.tick, literal);
+    proofHtml = kind === 'why'
+      ? (typeof r === 'string' ? `<div class="proof">${esc(r)}</div>` : `<div class="proof"><div class="title">why, at tick ${t.tick}</div>${renderStep(r)}</div>`)
+      : `<div class="proof"><div class="title">why not, at tick ${t.tick}: the premise that failed</div><div class="whynot">${words(esc(r))}</div></div>`;
+  } catch (e) { proofHtml = `<div class="proof bad">${esc(e.message)}</div>`; }
+  drawMind(); $('proof').scrollIntoView({ block: 'nearest' });
+}
+
+// ------------------------------------------------------------ the log and the rule
+function drawLog() {
+  $('log').innerHTML = ticks.map((t, i) => [t, i]).reverse().map(([t, i]) => `<button type="button" class="t${i === viewing ? ' on' : ''}" data-tick="${i}"><b>tick ${t.tick}</b> <span class="dim">${t.ms} ms${t.partial ? ', ran out of budget' : ''}</span><br><span class="ev">${t.events.length ? t.events.map((x) => words(esc(x))).join('; ') : 'nobody struck, tended or bumped into anything'}</span>${t.holes ? ` <span class="tag hole">${t.holes} ${t.holes === 1 ? 'hole' : 'holes'}</span>` : ''}</button>`).join('');
+}
+let proposal = null, ruleState = '';
+async function checkRule() {
+  if (learnedRule) return;
+  proposal = await host.call('propose');
+  if (!proposal) return;
+  $('rulebox').hidden = false;
+  $('rule').innerHTML = `<p style="margin:0">Three times now an agent meant to tend an ally it could not reach, and no rule gave it a way: ${proposal.from.map((f) => words(esc(f))).join(', ')}. The agents turn that into a rule. The template is a human's; which holes it generalises, and what it then changes, is not.</p><pre>${esc(proposal.text)}</pre><div class="row"><button type="button" class="primary" id="take">Take the rule</button><span class="dim">It applies from the next tick, and to every tick before it.</span></div>${ruleState}`;
+}
+async function takeRule() {
+  const res = await host.call('learn', proposal.text);
+  if (!res.ok) { ruleState = `<p class="bad">${esc(res.diagnostics.join(' '))}</p>`; checkRule(); return; }
+  learnedRule = proposal;
+  const first = ticks[0];
+  const pastRes = await host.call('past', first.tick).catch((e) => ({ error: e.message }));
+  $('rule').innerHTML = `<pre>${esc(proposal.text)}</pre><p class="ok" style="margin:0">Taken: ${res.diff.added.length} rule added, ${res.diff.kept} kept, ${res.diff.removed.length} removed.</p>`
+    + (pastRes.error ? `<p class="dim">${esc(pastRes.error)}</p>` : `<p style="margin:0">Tick ${first.tick} again, re-derived with the rule: the holes it had, <b>${pastRes.before.length}</b>; with the rule, <b>${pastRes.after.length}</b>.</p><ul class="dim" style="margin:0;padding-left:18px">${pastRes.before.map((x) => `<li>${words(esc(x))}</li>`).join('')}</ul><p class="dim" style="margin:0">A rule is a fact about every tick, not an instruction for the next one. Press Next tick and watch ${words('npc_3')} walk.</p>`);
+}
+
+// ------------------------------------------------------------ driving
+let running = false, playing = false;
+async function next() {
+  if (running) return; running = true; $('step').disabled = true;
+  try {
+    const t = await host.call('step');
+    for (const e of t.ents) kindOf[e.id] = e.kind;
+    ticks.push(t); viewing = ticks.length - 1; proofHtml = '';
+    setStatus(t);
+    drawAll(); await checkRule();
+  } catch (e) { $('status').innerHTML = `<span class="bad">${esc(e.message)}</span>`; playing = false; }
+  running = false; $('step').disabled = false;
+  if (playing) setTimeout(next, 450);
+}
+function setStatus(t) { $('status').innerHTML = `<span>tick <b>${t.tick}</b></span><span><b>${t.ms}</b> ms to think</span><span><b>${t.facts}</b> facts</span>`; }
+function drawAll() { drawYard(); drawRoster(); drawMind(); drawLog(); }
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-agent]');
+  if (b) { chosenAgent = b.dataset.agent; proofHtml = ''; drawAll(); return; }
+  const q = e.target.closest('button'); if (!q) return;
+  if (q.dataset.why) ask('why', q.dataset.why);
+  else if (q.dataset.whynot) ask('whynot', q.dataset.whynot);
+  else if (q.dataset.toggle !== undefined) { const more = q.closest('.step').querySelector(':scope > .step-more'); if (more) more.hidden = !more.hidden; }
+  else if (q.dataset.tick !== undefined) { viewing = Number(q.dataset.tick); proofHtml = ''; drawAll(); }
+  else if (q.id === 'take') takeRule();
+});
+$('yard').addEventListener('keydown', (e) => { const g = e.target.closest('[data-agent]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); chosenAgent = g.dataset.agent; proofHtml = ''; drawAll(); } });
+$('step').addEventListener('click', () => { playing = false; $('play').textContent = 'Play'; next(); });
+$('play').addEventListener('click', () => { playing = !playing; $('play').textContent = playing ? 'Pause' : 'Play'; if (playing) next(); });
+$('reset').addEventListener('click', async () => {
+  playing = false; $('play').textContent = 'Play';
+  const w = await host.call('reset'); world = w; ticks = []; viewing = -1; proofHtml = '';
+  $('rulebox').hidden = !learnedRule;
+  if (learnedRule) $('rule').innerHTML = `<pre>${esc(learnedRule.text)}</pre><p class="dim" style="margin:0">Starting over with the rule the agents wrote: it is part of the head now.</p>`;
+  await next();
+});
+
+(async () => {
+  try {
+    const t0 = performance.now();
+    world = await start();
+    for (const e of world.ents) kindOf[e.id] = e.kind;
+    for (const p of world.props) kindOf[p.id] = undefined;
+    $('step').disabled = $('play').disabled = $('reset').disabled = false;
+    await next();
+    $('status').insertAdjacentHTML('beforeend', `<span>rules loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b></span>`);
+  } catch (e) { $('status').innerHTML = `<span class="bad">The rules did not load: ${esc(e.message)}</span>`; }
+})();
+</script>

@@ -1,9 +1,9 @@
 // The notebook's engine side: the JS model loaded once, then every run forks it, scans the code, adds the book's cells and answers their lines.
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
-import { parseProgram, parseLiteral } from '../src/parser.ts';
-import { factKey } from '../src/store.ts';
-import { resolveBook, ruleIdOf } from '../src/reflect.ts';
+import { parseProgram } from '../src/parser.ts';
+import { ruleIdOf } from '../src/reflect.ts';
+import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
@@ -229,56 +229,17 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
   return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
 }
 
-/** One step of an explanation: the facts of a proof that one section of the model concluded, folded into the first of them. */
-export type Step = { concern: string; sentence: string; literal: string; details: string[]; missing: string[]; evidence: number; steps: Step[]; again?: boolean };
-
 const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
 const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
-/** A proof as steps. A fact concluded by a rule of the same section as the fact above it is part of that step; one from another section starts
- *  a step of its own; a fact nothing concluded (the scanner's, a table's) is evidence, counted rather than shown. */
+/** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */
 export function explain(literal: string): Step | string {
   if (!last) return 'run the book first';
-  const store = last.store;
-  let top: string;
-  try { const l = resolveBook(parseLiteral(literal)); top = factKey(l.rel, (l.persp as { name: string }).name, l.args); } catch (e) { return (e as Error).message; }
-  if (!store.witnessOf(top)) return store.has(top) ? `${literal} is given, not derived` : `${literal} does not hold`;
-  const say = (key: string) => vocab.say(key) ?? key;
-  const concernOf = (key: string) => { const w = store.witnessOf(key); return w ? concerns.rules[w.ruleId] ?? notebook.get(w.ruleId) ?? concerns.rels[relOf(key)] ?? '' : ''; };
-  const shown = new Set<string>();
-  const step = (key: string, path: Set<string>): Step => {
-    const concern = concernOf(key);
-    const st: Step = { concern, sentence: say(key), literal: key, details: [], missing: [], evidence: 0, steps: [] };
-    if (shown.has(key)) { st.again = true; return st; }
-    shown.add(key);
-    let absorbing = false;
-    const keys: string[] = [];
-    const walk = (k: string) => {
-      const w = store.witnessOf(k); if (!w || path.has(k)) return;
-      path.add(k);
-      for (const p of w.prems) {
-        if (p.t === 'neg') { st.missing.push(say(p.key)); continue; }
-        if (p.t === 'bi') { st.details.push(p.desc); continue; }
-        const c = concernOf(p.key);
-        if (!c) { st.evidence++; continue; }
-        // a fact about one node (`put() is a function`, `s reads "s"`) is a property of that node, not a step: it and its proof are details
-        const one = (p.key.match(NODE) ?? []).length <= 1 && !c.startsWith('notebook');
-        if (c === concern || one || absorbing) { if (!shown.has(p.key)) { shown.add(p.key); st.details.push(say(p.key)); keys.push(p.key); const was = absorbing; absorbing = one || was; walk(p.key); absorbing = was; } }
-        else st.steps.push(step(p.key, path));
-      }
-      path.delete(k);
-    };
-    walk(key);
-    // a value passed along reads as where it came from: `s points to class Store` rests on `new Store() points to class Store`, so the step says
-    // `s points to new Store()`, and the model's own fact is its first detail
-    const m = /^(\w+\[\w+\])\(([^,()]+),([^,()]+)\)$/.exec(key);
-    if (m) {
-      const from = [...st.steps.map((x) => x.literal), ...keys].map((k) => /^(\w+\[\w+\])\(([^,()]+),([^,()]+)\)$/.exec(k))
-        .find((x) => x && x[1] === m[1] && x[3] === m[3] && x[2] !== m[2] && x[2] !== m[3]);
-      if (from) { st.details.unshift(st.sentence); st.sentence = say(`${m[1]}(${m[2]},${from[2]})`); }
-    }
-    return st;
-  };
-  return step(top, new Set());
+  return fold(last.store, literal, {
+    concernOf: (rid, key) => concerns.rules[rid] ?? notebook.get(rid) ?? concerns.rels[relOf(key)] ?? '',
+    say: (key) => vocab.say(key) ?? key,
+    entities: NODE,
+    own: (c) => c.startsWith('notebook'),
+  });
 }
 
 /** `why` over the last run, without running again. */

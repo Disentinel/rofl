@@ -1,0 +1,50 @@
+-- phrases.rofl — how the yard's relations read as sentences, for the playground's NPC page and anything else that says them.
+edb(phrase).
+edb(fun_phrase).
+
+phrase(intent, "<0:agent> intends <1:goal> with priority <2:number>").
+phrase(subgoal, "<0:agent> pursues <1:goal> by <2:goal>").
+phrase(decomposed, "<0:agent> breaks <1:goal> down further").
+phrase(option, "<0:agent> could take <1:act> for <2:goal>").
+phrase(any_option, "<0:agent> has some act for <1:goal>").
+phrase(score, "<0:agent> scores <1:act> at <2:number>").
+phrase(beaten, "a score of <1:number> for <0:agent> is beaten").
+phrase(contender, "<1:act> is one of the best acts for <0:agent>").
+phrase(preempted, "<1:act> gives way for <0:agent>").
+phrase(tie, "<0:agent> scores <1:act> and <2:act> the same").
+phrase(does, "<0:agent> does <1:act>").
+phrase(uncovered, "<0:agent> has no rule for <2:thing>, <1:reason>").
+phrase(act_ord, "<0:act> ranks <1:number>").
+
+phrase(alive, "<0:agent> is alive").
+phrase(self_hurt, "<0:agent> knows it is hurt").
+phrase(self, "<0:agent> believes it is at <1:number>, <2:number>").
+phrase(foe, "<0:agent> takes <1:agent> for a foe").
+phrase(ally, "<0:agent> takes <1:agent> for an ally").
+phrase(near, "<0:agent> is near <1:agent>").
+phrase(adjacent, "<0:agent> stands next to <1:agent>").
+phrase(in_sight, "<0:agent> sees <1:agent> now").
+phrase(gap, "the gap from <0:agent> to <1:agent> is <2:number>").
+phrase(step_to, "<0:agent> can step <1:direction> to <2:number>, <3:number>").
+phrase(prop_at, "<0:agent> remembers something in the way at <1:number>, <2:number>").
+phrase(recalls, "<0:agent> recalls <1:agent>, a <2:kind>, at <3:number>, <4:number>, <5:band>, from tick <6:number>").
+phrase(outdated, "what <0:agent> recalls of <1:agent> dates from tick <2:number>").
+phrase(stale, "what <0:agent> recalls of <1:agent> is <2:number> ticks old").
+
+phrase(at, "<0:agent> is at <1:number>, <2:number>").
+phrase(hp, "<0:agent> has <1:number> hp").
+phrase(kind, "<0:agent> is a <1:kind>").
+phrase(drive, "a <0:kind> is driven to <1:goal> at <2:number>").
+phrase(hostile, "a <0:kind> is hostile to a <1:kind>").
+phrase(kin, "a <0:kind> is kin to a <1:kind>").
+phrase(band, "<0:agent> is <1:band>").
+phrase(spots, "<0:agent> spots <1:agent> at <2:number>, <3:number>").
+phrase(in_range, "<1:agent> at <2:number>, <3:number> is in range of <0:agent>").
+phrase(screened, "<2:thing> screens <1:agent> from <0:agent>").
+
+fun_phrase(move, "a step <0:direction>").
+fun_phrase(strike, "a strike at <0:agent>").
+fun_phrase(tend, "tending <0:agent>").
+fun_phrase(flee_from, "fleeing <0:agent>").
+fun_phrase(drive_off, "driving off <0:agent>").
+fun_phrase(stalk, "stalking <0:agent>").
