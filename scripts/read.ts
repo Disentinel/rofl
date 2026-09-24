@@ -197,7 +197,8 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
   }
   const lit = positional(text, intros) ?? matchLit(text, intros);
   if (lit) { if (!positional(text, [])) trace(text, lit); lit.neg = neg; rule.body.push(lit); return true; }
-  if ((m = /^(.+?) is (.+)$/.exec(text)) && !/ /.test(m[1]) && !/ /.test(m[2])) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
+  // `X is Y` between two terms is equality; a bare word is not a term, so `T is huge` is unparsed rather than `T = huge`
+  if ((m = /^(.+?) is (.+)$/.exec(text)) && [m[1], m[2]].every((x) => /^([A-Z][A-Za-z0-9]*|`[^`]+`|"[^"]*"|-?\d+)$/.test(x))) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
   if ((m = /^(.+?) differs from (.+)$/.exec(text))) { rule.body.push({ rel: '!=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
   if ((m = /^(\S+) ([<>]=?) (\S+)$/.exec(text))) { rule.body.push({ rel: m[2], args: [term(m[1], intros), term(m[3], intros)], neg }); return true; }
   if ((m = /^(.*?) ([Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}) that (.+)$/.exec(text))) {
@@ -317,10 +318,13 @@ function sentence(headText: string, conds: string[], where: string) {
     if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
     if (!early) trace(headText, head);
     const rule: Rule = { head, body: [], guards: new Map(), where, book: curBook };
-    for (const c of conds) condition(c, intros, rule);
+    let whole = true;
+    for (const c of conds) whole = condition(c, intros, rule) && whole;
     for (const it of intros) if (!known.has(it.v)) known.set(it.v, it.noun);
     if (pass === 0) { ambiguous.length = savedAmb; unparsed.length = savedUn; continue; }
     if (badTerm) { dropped.push(`${headText}: a term the sentence form cannot carry, ${badTerm}`); continue; }
+    // a rule missing a condition it could not read would answer more than the sentence says: it is not loaded, and the condition is reported
+    if (!whole) { dropped.push(`${headText}: a condition was not read`); continue; }
     finish(rule, intros);
   }
 }
@@ -435,9 +439,12 @@ let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rul
 for (let i = 0; i < blocks.length; i++) {
   const b = blocks[i], next = blocks[i + 1];
   if (b.type === 'h') { section = b.text!; continue; }
+  // a list or a table nothing above it claimed is not read, and says so rather than vanishing
+  if (b.type === 'ul' || b.type === 'ol') { for (const it of b.items!) unparsed.push(`LIST ${it.text.trim()}`); continue; }
+  if (b.type === 'table') { unparsed.push(`TABLE ${b.head!.join(' | ')}`); continue; }
   if (b.type !== 'p') continue;
   const text = b.text!.trim(); let m;
-  if (/^Kinds without a noun:/.test(text) || /^A noun that is a relation:/.test(text) || /^A noun is a node of one of its kinds:/.test(text) || /trailing comments/.test(text)) continue;
+  if (/^Kinds without a noun:/.test(text) || /^A noun that is a relation:/.test(text) || /^A noun is a node of one of its kinds:/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
   if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
   if (text === 'Reads:' && next && next.type === 'ul') {
     // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
@@ -475,6 +482,16 @@ for (let i = 0; i < blocks.length; i++) {
     i++; continue;
   }
   if (/ if all of:$/.test(text) && next && next.type === 'ul') { ruleText(text, section, next.items!.map((x) => x.text)); i++; continue; }
+  if (/:$/.test(text) && next && next.type === 'ul') {
+    // data: a list of ground sentences under any paragraph ending in a colon, `platform owns auth.`
+    for (const it of next.items!) {
+      const t = it.text.trim().replace(/\.$/, '');
+      const lit = matchLit(t, []);
+      if (lit && lit.args.every((a) => !('v' in a))) { parsedFacts.push(lit); if (!homeBook.has(lit.rel)) homeBook.set(lit.rel, 'main'); }
+      else unparsed.push(`FACT ${t}`);
+    }
+    i++; continue;
+  }
   if (!/[.:]$/.test(text) && next && next.type === 'ul') {
     for (const it of next.items!) {
       const t = `${text} ${it.text}`;
@@ -578,7 +595,7 @@ for (const c of srcFacts) { if (pf.has(factKey(c))) factsMatched++; else factsMi
 
 console.log(`source: ${srcRules.length} rules, ${srcFacts.length} facts; read back: ${rules.length} sentences -> ${parsed.length} rules, ${parsedFacts.length} facts`);
 console.log(`rules round-tripped exactly: ${matched} of ${srcRules.length}; facts: ${factsMatched} of ${srcFacts.length}`);
-console.log(`ambiguous fragments: ${ambiguous.length}; unparsed fragments: ${unparsed.length}; sentences dropped for a term that cannot be carried: ${dropped.length}`);
+console.log(`ambiguous fragments: ${ambiguous.length}; unparsed fragments: ${unparsed.length}; sentences dropped: ${dropped.length}`);
 for (const d of dropped) console.log('  dropped: ' + d);
 console.log(`\nsource rules with no exact match (${missing.length}):`);
 for (const m of missing.slice(0, 25)) console.log('  ' + m);

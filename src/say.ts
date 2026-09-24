@@ -130,6 +130,27 @@ export class Vocabulary {
     return null;
   }
 
+  /** A sentence as the literal it names, `blocked(c1, T)`, so a question can be asked in the document's words; null where no template fits. */
+  literal(text: string): string | null {
+    const t0 = text.trim().replace(/[.?]$/, '');
+    const variants = [t0, /^(A|An|The) /.test(t0) ? t0[0].toLowerCase() + t0.slice(1) : null].filter((x): x is string => !!x);
+    const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const tpl of this.templates) {
+      const re = new RegExp('^' + tpl.parts.map((p) => p.t === 'text' ? esc(p.s) : p.t === 'hole' ? `(${ASK_TERM})` : '').filter(Boolean).join('\\s+') + '$');
+      for (const v of variants) {
+        const m = re.exec(v); if (!m) continue;
+        const args = Array.from({ length: tpl.arity }, () => '_');
+        let k = 1;
+        for (const p of tpl.parts) {
+          if (p.t === 'hole') args[p.i] = askTerm(m[k++]);
+          else if (p.t === 'fix') args[p.i] = p.kind === 'zero' ? '0' : p.kind === 'wild' ? '_' : p.val!;
+        }
+        return `${tpl.rel}(${args.join(', ')})`;
+      }
+    }
+    return null;
+  }
+
   /** A term as the document writes it: an atom in backticks, a string as is, a wildcard as `something`, a destructor by its phrase. */
   term(a: string): string {
     a = a.trim();
@@ -182,3 +203,13 @@ function closing(text: string, open: number): number {
   }
   return -1;
 }
+
+/** What may stand in a hole of a question: `a change C`, `some team`, `something`, `it`, a variable, a string, a number, an atom in backticks. */
+const ASK_TERM = String.raw`(?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}(?: [A-Z][A-Za-z0-9]*)?|some [a-z][\w-]*(?: [a-z][\w-]*){0,2}|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|\`[^\`]+\`)`;
+const askTerm = (w: string): string => {
+  if (w === 'something' || w === 'it' || w.startsWith('some ')) return '_';
+  if (w.startsWith('`')) return w.slice(1, -1);
+  const m = /^[Aa]n? .*?(?: ([A-Z][A-Za-z0-9]*))?$/.exec(w);
+  if (m) return m[1] ?? '_';
+  return w;
+};

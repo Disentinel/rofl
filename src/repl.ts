@@ -22,6 +22,8 @@ const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..') + 
 const vocab = Vocabulary.fromFiles(ROOT, []);
 let sentences = true;
 
+class NoSentence extends Error { constructor(q: string) { super(`no sentence in the vocabulary reads: ${q}`); } }
+
 function loadFile(f: string, budget?: number): { ok: boolean; diagnostics: string[] } {
   const p = f.endsWith('.md') ? roflFromMd(f) : f;
   const text = fs.readFileSync(p, 'utf8');
@@ -73,20 +75,23 @@ function exec(line: string, budget?: number): void {
     for (const k of rofl.factKeys(rel)) console.log(k);
     return;
   }
+  // a question in the document's words, `? C is blocked by T`, is the literal its sentence names
+  const ask = (q: string): string | null => (/^[a-z_$][\w$]*(\[[\w$]+\])?\(/.test(q) || !/ /.test(q)) ? q : vocab.literal(q);
+  const asked = (q: string): string => { const a = ask(q); if (a === null) throw new NoSentence(q); return a; };
   if (line.startsWith('?')) {
-    const q = rofl.query(line.slice(1).trim(), { budget });
+    const q = rofl.query(asked(line.slice(1).trim()), { budget });
     if (q.error) { console.log('error: ' + q.error); return; }
     if (q.rows.length === 0) console.log('(empty)');
     for (const r of q.rows) {
-      const s = sentences ? vocab.say(instance(line.slice(1).trim(), r.bindings)) : null;
+      const s = sentences ? vocab.say(instance(asked(line.slice(1).trim()), r.bindings)) : null;
       console.log(s ? (r.text ? `${s}  [${r.text}]` : s) : r.text);
     }
     if (q.partial) console.log('[partial: budget exhausted, hole emitted]');
     return;
   }
   const said = (t: string) => (sentences ? vocab.sayAll(t) : t);
-  if (line.startsWith('why ')) { const w = rofl.why(line.slice(4).trim(), { budget }); console.log(w.ok ? said(w.text) : w.text); return; }
-  if (line.startsWith('whynot ')) { console.log(said(rofl.whynot(line.slice(7).trim(), { budget }).text)); return; }
+  if (line.startsWith('why ')) { const w = rofl.why(asked(line.slice(4).trim()), { budget }); console.log(w.ok ? said(w.text) : w.text); return; }
+  if (line.startsWith('whynot ')) { console.log(said(rofl.whynot(asked(line.slice(7).trim()), { budget }).text)); return; }
   if (line.startsWith('excise ')) {
     const r = rofl.excise(line.slice(7).trim(), { budget });
     if (!r.ok) { console.log('error: ' + r.error); return; }

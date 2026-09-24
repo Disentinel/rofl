@@ -1,6 +1,6 @@
 {
   "name": "rofl",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "ROFL \u2014 Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics",
   "license": "MIT",
   "type": "module",

@@ -76,6 +76,7 @@ export function worlds(): World[] {
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push({ name: e, files });
     } else if (e.endsWith('.rofl')) out.push({ name: e.replace(/\.rofl$/, ''), files: [p] });
+    else if (e.endsWith('.md')) out.push({ name: e.replace(/\.md$/, ''), files: [roflFromMd(p)] });  // a world authored as Markdown
   }
   const rl = path.join(ROOT, 'rules');
   const pack = (dir: string, prefix: string): void => {

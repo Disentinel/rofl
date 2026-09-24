@@ -71,6 +71,7 @@ check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "npc", world).
 check[checks]("facts/goldens.rofl", "oops", world).
 check[checks]("facts/goldens.rofl", "reach", world).
+check[checks]("facts/goldens.rofl", "review", world).
 check[checks]("facts/goldens.rofl", "ring1", world).
 check[checks]("facts/goldens.rofl", "rip", world).
 check[checks]("facts/goldens.rofl", "rofl-release", world).

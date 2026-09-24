@@ -5,6 +5,34 @@ The plan is the ledger: `npm run findings` prints every open finding and
 does not: it says which findings a VERSION commits to. A version is decided
 here; the evidence for each item stays in the finding it names.
 
+## 1.05
+
+Decided 2026-09-24 by Vadim: the sentence form is a source of ROFL now,
+through the host reader, and 1.05 is the version that ships it so it can be
+tried on real work. What it is:
+
+- a world is written as Markdown (`docs/md-world.md` says how, and
+  `examples/review.md` and `rules/untyped.md` are two written that way) and
+  loads wherever a `.rofl` loads: the REPL (`npm run repl -- X.md`), the
+  goldens, the lints;
+- the REPL asks and answers in the document's sentences: `? C is blocked by
+  T`, `why \`c2\` is blocked by \`platform\``, `whynot`;
+- what the reader could not read is said where the world is loaded: an
+  unparsed sentence, a list or a table nothing claimed, a use with nowhere
+  to link, an alternative that does not start with `if` or `unless`; a rule
+  with a condition it could not read is not loaded, so a world never answers
+  more than its sentences say;
+- the renderer the other way, `rofl-render`, for a world with phrases.
+
+What 1.05 defers, on purpose:
+
+- the reader in ring 1 is background refactoring: the sentence is read there
+  (`examples/sentence/`, measured identical to the host reader on 525
+  sentences), the file stays with the host reader, and nothing in 1.05 waits
+  for it (f_1_05_is_the_form_as_a_source_and_the_ring_1_reader_is_background_refactoring);
+- the six open decisions of `docs/sentence-form.md` stay open; none blocks
+  writing a world.
+
 ## 1.1
 
 ### Stratified `count`
@@ -67,7 +95,9 @@ What has to exist for it to be code rather than a description of code
    from 2026-09-24 (`examples/sentence/`), identical to the host reader on
    525 of 525 sentences over three files; the file (blocks, conditions read
    by shape, folds, guards) is the host's still
-   (f_the_sentence_is_read_in_ring_1_and_the_file_is_not_yet);
+   (f_the_sentence_is_read_in_ring_1_and_the_file_is_not_yet). Deferred to
+   background refactoring on 2026-09-24: 1.05 ships the form on the host
+   reader and does not wait for this;
 2. the desugaring as data in the tree: phrase to relation, noun to kind guard,
    book block to perspective, map to table. Phrase to relation is data for
    every world now: the JS model's in `facts/js-phrases.rofl`, an authored
