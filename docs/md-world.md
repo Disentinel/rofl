@@ -92,6 +92,15 @@ What the reader makes of it, one rule per sentence:
     blocked(C, T) :- needs(C, T), not covered(C, T).
     mergeable(C) :- author(C, _), not blocked(C, _).
 
+## Showing it
+
+    npm run view -- examples/review.rofl.md
+
+writes `examples/view.html`, one page with the sentences colored and every
+link live; a directory gives one tab per `.rofl.md` in it. The page parses the
+file with the reader's own Markdown parser, so what it shows as a list or a
+table is what the reader reads as one.
+
 ## Asking it
 
     npm run repl -- examples/review.rofl.md

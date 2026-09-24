@@ -20,6 +20,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run depends     · cleanliness · layering · nullary — the models over the tree itself
     npm run speccheck   every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
     npm run untyped     -- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model
+    npm run view        -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
 
 <!-- END commands -->
 

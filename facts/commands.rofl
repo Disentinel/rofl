@@ -53,3 +53,6 @@ command_note("speccheck", "every duty in facts/spec.rofl, and which check stands
 command_shown("untyped", 12).
 command_note("untyped", "-- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model").
 
+
+command_shown("view", 13).
+command_note("view", "-- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install").

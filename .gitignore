@@ -34,3 +34,6 @@ rust/*/target/
 rust/storebench/traces/
 rust/target/volumes/
 facts/rule-shape.rofl
+
+# a page npm run view writes beside the files it shows
+view.html

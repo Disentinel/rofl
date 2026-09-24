@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { parsePhrase, parseSig as parseSigWith, phraseOf, type Part, type Tpl } from '../src/say.ts';
+import { parseMd } from './md_blocks.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -361,29 +362,9 @@ function ruleText(text: string, where: string, listItems: string[] | null) {
 // --------------------------------------------------------------- markdown
 const clean = (s: string) => s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/<a id="[^"]+"><\/a>/g, '');
 type Block = { type: string; text?: string; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][] };
-function parseMd(md: string): Block[] {
-  const lines = md.split('\n'); const blocks: Block[] = []; let i = 0, para: string[] = [];
-  const flush = () => { if (para.length) { blocks.push({ type: 'p', text: para.join(' ') }); para = []; } };
-  if (lines[0] === '---') { i = 1; while (i < lines.length && lines[i] !== '---') i++; i++; }
-  for (; i < lines.length; i++) {
-    const l = lines[i]; let m;
-    if (!l.trim()) { flush(); continue; }
-    if ((m = /^(#+) (.*)$/.exec(l))) { flush(); blocks.push({ type: 'h', text: m[2] }); continue; }
-    if (/^>/.test(l)) { flush(); while (i < lines.length && /^>/.test(lines[i])) i++; i--; continue; }
-    if (/^```/.test(l)) { flush(); i++; while (i < lines.length && !/^```/.test(lines[i])) i++; continue; }
-    if (/^\|/.test(l)) { flush(); const rows: string[][] = []; while (i < lines.length && /^\|/.test(lines[i])) { const c = lines[i].replace(/^\||\|$/g, '').split('|').map((s) => s.trim()); if (!c.every((x) => /^:?-+:?$/.test(x))) rows.push(c); i++; } i--; blocks.push({ type: 'table', head: rows[0], rows: rows.slice(1) }); continue; }
-    if ((m = /^( {0,3})(-|\d+\.) (.*)$/.exec(l))) {
-      flush(); const base = m[1].length, type = m[2] === '-' ? 'ul' : 'ol', items: { text: string; sub: string[] }[] = [];
-      while (i < lines.length) { const mm = /^( *)(-|\d+\.) (.*)$/.exec(lines[i]); if (!mm) break; if (mm[1].length <= base) { if ((mm[2] === '-') !== (type === 'ul')) break; items.push({ text: mm[3], sub: [] }); } else if (items.length) items[items.length - 1].sub.push(mm[3]); else break; i++; }
-      i--; blocks.push({ type, items }); continue;
-    }
-    para.push(l.trim());
-  }
-  flush(); return blocks;
-}
 const rawMd = readFileSync(mdPath.startsWith('/') ? mdPath : `${ROOT}${mdPath}`, 'utf8');
 const md = clean(rawMd);
-const blocks = parseMd(md);
+const blocks = parseMd(md).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code') as Block[];
 let defaultBook = 'main';
 { const fm = /^---\n([\s\S]*?)\n---/.exec(rawMd); if (fm) { const d = /^default: (\w+)$/m.exec(fm[1]); if (d) defaultBook = d[1]; } }
 const headBook = new Map<string, string>();   // relation -> the book its rules write

@@ -1,0 +1,233 @@
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #FBFAF6; --fg: #1E2126; --mute: #6B7079; --line: #D9D5CB; --panel: #FFFFFF; --thbg: #F3F1EA;
+    --kw: #6D28D9; --art: #9B7BD6; --var: #B45309; --con: #047857; --book: #0E7490; --bookbg: #0E749012; --def: #6D28D9; --bad: #B91C1C; --badbg: #B91C1C0D; --link: #1D4ED8;
+    --btn: #F1EFE8; --btnon: #1E2126; --btnfg: #FBFAF6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #141618; --fg: #E7E4DD; --mute: #9AA0A8; --line: #363B42; --panel: #1B1E22; --thbg: #22262B;
+      --kw: #C7A9FF; --art: #9C86CC; --var: #F2B34F; --con: #63D3A3; --book: #67D4EA; --bookbg: #67D4EA14; --def: #C7A9FF; --bad: #F87171; --badbg: #F8717114; --link: #8AB4FF;
+      --btn: #23272C; --btnon: #E7E4DD; --btnfg: #141618;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141618; --fg: #E7E4DD; --mute: #9AA0A8; --line: #363B42; --panel: #1B1E22; --thbg: #22262B;
+    --kw: #C7A9FF; --art: #9C86CC; --var: #F2B34F; --con: #63D3A3; --book: #67D4EA; --bookbg: #67D4EA14; --def: #C7A9FF; --bad: #F87171; --badbg: #F8717114; --link: #8AB4FF;
+    --btn: #23272C; --btnon: #E7E4DD; --btnfg: #141618;
+  }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 'IBM Plex Sans', system-ui, sans-serif; }
+  main { max-width: 104ch; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; }
+  h1 { font: 600 22px/1.2 'IBM Plex Sans', system-ui, sans-serif; margin: 0 0 6px; text-wrap: balance; }
+  .sub { color: var(--mute); margin: 0 0 14px; max-width: 76ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 14px; font: 13px/1.4 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+  .legend span { color: var(--mute); }
+  .legend a { color: inherit; text-decoration: underline; text-decoration-color: var(--link); text-underline-offset: 3px; }
+  .legend b { font-weight: 400; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding: 6px 0; z-index: 2; }
+  .tabs button { font: 12.5px/1 'JetBrains Mono', ui-monospace, Menlo, monospace; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--btn); color: var(--fg); cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: var(--btnon); color: var(--btnfg); border-color: var(--btnon); }
+  .tabs button:focus-visible { outline: 2px solid var(--kw); outline-offset: 2px; }
+
+  .doc { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 22px; overflow-x: auto; }
+  .doc .front { font: 12px/1.6 'JetBrains Mono', ui-monospace, Menlo, monospace; color: var(--mute); margin: 0 0 14px; }
+  .doc h1 { font-size: 19px; margin: 0 0 8px; }
+  .doc h2 { font: 600 15px/1.3 'IBM Plex Sans', system-ui, sans-serif; margin: 26px 0 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .doc p { margin: 8px 0; }
+  .doc p:target, .doc p.hit { background: var(--bookbg); box-shadow: 0 0 0 6px var(--bookbg); border-radius: 3px; }
+  .doc blockquote { color: var(--mute); border-left: 2px solid var(--line); margin: 8px 0 12px; padding-left: 12px; max-width: 78ch; font-size: 14px; white-space: pre-wrap; }
+  .doc ul, .doc ol { margin: 2px 0 10px; padding-left: 28px; }
+  .doc p.subject { margin-bottom: 2px; }
+  .doc ul.preds { list-style: none; padding-left: 22px; }
+  .doc ul.preds > li > ul { list-style: disc; margin: 2px 0 6px; }
+  .doc li:target, .doc li.hit { background: var(--bookbg); box-shadow: 0 0 0 6px var(--bookbg); border-radius: 3px; }
+  .doc li { margin: 2px 0; }
+  .doc ol > li > ul { margin: 2px 0 4px; }
+  .doc table { border-collapse: collapse; margin: 8px 0 14px; }
+  .doc th, .doc td { border: 1px solid var(--line); padding: 5px 12px; text-align: left; vertical-align: top; }
+  .doc th { background: var(--thbg); font-weight: 600; font-size: 13px; color: var(--mute); }
+  .doc pre { margin: 6px 0 12px; font: 13px/1.6 'JetBrains Mono', ui-monospace, Menlo, monospace; white-space: pre; }
+  .doc .refused { border-left: 3px solid var(--bad); background: var(--badbg); padding: 4px 10px; margin: 8px 0; }
+  .doc .refused .why { color: var(--bad); font-size: 12.5px; margin: 2px 0 0; }
+  .doc a { color: inherit; text-decoration: underline; text-decoration-color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .doc a:hover { color: var(--link); }
+  .doc code { font: 13px 'JetBrains Mono', ui-monospace, Menlo, monospace; color: var(--con); }
+
+  .k   { color: var(--kw); font-weight: 600; }
+  .a   { color: var(--art); }
+  .v   { color: var(--var); }
+  .c   { color: var(--con); }
+  .b   { color: var(--book); font-weight: 600; }
+  .def { text-decoration: underline dotted var(--def); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .raw { color: var(--bad); }
+</style>
+
+<main>
+  <h1>{{TITLE}}</h1>
+  {{LEAD}}
+
+  <div class="legend">
+    <span><b class="k">if</b> syntax</span>
+    <span><b class="a">some / something</b> a wildcard</span>
+    <span><b class="v">X</b> a variable</span>
+    <span><b class="c">"text"</b> a constant: an atom, a string, a number</span>
+    <span><b class="b">observed</b> a book</span>
+    <span><b class="def">works with</b> where a sentence is defined</span>
+    <span><a href="#" onclick="return false">is installable</a> a link to its definition, or to Words</span>
+    <span><code>`rel`</code>(…) no phrase yet</span>
+  </div>
+
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="doc" id="doc"></div>
+</main>
+
+{{FILES}}
+<script>
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const FILES = [...document.querySelectorAll('script[type="text/plain"]')].map(el => ({ stem: el.id.slice(2), text: el.textContent }));
+
+  {{PARSER}}
+
+  const KW = /^(if|unless|and|or|neither|nor|but|not|by|either|all of|means|always|includes|lists)$/;
+  const ART = /^(a|an|the|it|its|itself|some|another|anything|something|whose)$/i;
+  const STOP = /^(In|Declared|Kinds|Words|Read|Reads|Not|Terms|TypeError|TypeErrors)$/;
+  let BOOKS = new Set(), NOUNS = new Set(), tok = null, nounRe = /$^/;
+  function declare(blocks) {
+    BOOKS = new Set(); NOUNS = new Set();
+    let section = '';
+    for (const b of blocks) {
+      if (b.type === 'front' && b.kv.books) b.kv.books.split(',').forEach(x => BOOKS.add(x.trim().toLowerCase()));
+      if (b.type === 'h') section = b.text;
+      if (b.type === 'p' && section === 'Terms') b.text.replace(/\*([^*]+)\*/g, (_, n) => NOUNS.add(n.toLowerCase()));
+    }
+    const multi = [...NOUNS].filter(n => n.includes(' ') || n.includes('-')).sort((a, b) => b.length - a.length).map(n => n.replace(/[-\s]+/g, m => m === '-' ? '-' : '\\s+'));
+    nounRe = multi.length ? new RegExp('^(?:' + multi.join('|') + ')(?:s|es|\'s)?$') : /$^/;
+    tok = new RegExp('(`[^`]+`|\\*[^*]+\\*|"[^"]*"' + (multi.length ? '|\\b(?:' + multi.join('|') + ')(?:s|es|\'s)?\\b' : '') + '|all of\\b|\\b[A-Z][A-Za-z]*\\d*-th\\b|[A-Za-z_][A-Za-z_\'-]*|\\d+|\\s+|.)', 'g');
+  }
+  const nounOf = w => {
+    w = w.toLowerCase().replace(/'s$/, '');
+    return NOUNS.has(w) || (w.endsWith('ies') && NOUNS.has(w.slice(0, -3) + 'y')) || (w.endsWith('es') && NOUNS.has(w.slice(0, -2))) || (w.endsWith('s') && NOUNS.has(w.slice(0, -1)));
+  };
+  function paintPlain(text, mode) {
+    let out = '', pos = 0;
+    text.replace(tok, t => {
+      let cls = '', s = t;
+      if (t[0] === '`') { out += `<code>${esc(t.slice(1, -1))}</code>`; pos++; return t; }
+      else if (t[0] === '*' && t.length > 2) { cls = 'v'; s = t.slice(1, -1); }
+      else if (t[0] === '"') cls = 'c';
+      else if (/^\d+$/.test(t)) cls = 'c';
+      else if (/-th$/.test(t)) { out += `<span class="v">${esc(t.slice(0, -3))}</span>-th`; pos++; return t; }
+      else if (KW.test(t)) cls = 'k';
+      else if (t === 'A' && pos > 0) cls = 'v';
+      else if (ART.test(t)) cls = 'a';
+      else if (BOOKS.has(t.toLowerCase())) cls = 'b';
+      else if (nounRe.test(t) || nounOf(t)) cls = 'v';
+      else if (/^[A-Z][A-Za-z]*\d*$/.test(t) && !STOP.test(t)) cls = 'v';
+      else if (/^[A-Za-z]/.test(t) && mode === 'head') cls = 'def';
+      else if (/^[<>=]$/.test(t)) cls = 'k';
+      if (/\S/.test(t)) pos++;
+      out += cls ? `<span class="${cls}">${esc(s)}</span>` : esc(s);
+      return t;
+    });
+    return out;
+  }
+  function paint(text, mode) {
+    // links are constructions: the text inside is painted, the target is kept
+    const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(text))) {
+      out += paintPlain(text.slice(last, m.index), mode);
+      out += `<a href="#" data-target="${esc(m[2])}">${paintPlain(m[1], mode)}</a>`;
+      last = re.lastIndex;
+    }
+    out += paintPlain(text.slice(last), mode);
+    return out;
+  }
+  const rule = text => {
+    if (/^(Declared as facts|Kinds without a noun|\d+ trailing)/.test(text)) return paint(text, 'body');
+    const m = /\b(if|unless|either|means|includes|lists)\b|, by |:$/.exec(text);
+    return m ? paint(text.slice(0, m.index), 'head') + paint(text.slice(m.index), 'body') : paint(text, 'head');
+  };
+
+  // every anchor a line opens with: the first names the element, the rest are marks inside it, so each link lands
+  function anchors(text, stem) {
+    const ids = [];
+    text = text.replace(/^(?:<a id="[^"]+"><\/a>)+/, m => { for (const x of m.matchAll(/id="([^"]+)"/g)) ids.push(x[1]); return ''; });
+    return { text, id: ids.length ? ` id="${stem}--${esc(ids[0])}"` : '', extra: ids.slice(1).map(x => `<span id="${stem}--${esc(x)}"></span>`).join('') };
+  }
+  function render(blocks, stem) {
+    const out = []; let section = '';
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      if (b.type === 'front') { out.push(`<p class="front">${Object.entries(b.kv).map(([k, v]) => esc(k) + ': ' + esc(v)).join('   ·   ')}</p>`); continue; }
+      if (b.type === 'h') { if (b.level === 2) section = b.text; out.push(`<h${Math.min(b.level, 4)}>${esc(b.text)}</h${Math.min(b.level, 4)}>`); continue; }
+      if (b.type === 'q') { out.push(`<blockquote>${esc(b.text.replace(/([^\n])\n(?=[^\n])/g, '$1 '))}</blockquote>`); continue; }
+      if (b.type === 'code') { out.push(`<pre>${esc(b.text)}</pre>`); continue; }
+      if (b.type === 'p') {
+        const a = anchors(b.text, stem), text = a.text;
+        const mode = section === 'Terms' ? 'body' : 'rule';
+        const subject = !/[.:]$/.test(text) && blocks[i + 1] && blocks[i + 1].type === 'ul';
+        out.push(`<p${a.id}${subject ? ' class="subject"' : ''}>${a.extra}${mode === 'rule' ? rule(text) : paint(text, mode)}</p>`);
+        continue;
+      }
+      const sub = it => it.sub.length ? `<ul>${it.sub.map(s => { const a = anchors(s, stem); return `<li${a.id}>${a.extra}${paint(a.text, 'body')}</li>`; }).join('')}</ul>` : '';
+      if (b.type === 'ul') {
+        const prev = blocks[i - 1];
+        const preds = prev && prev.type === 'p' && (!/[.:]$/.test(anchors(prev.text, stem).text) || /^Phrases this file defines/.test(prev.text));
+        const li = b.items.map(it => { const a = anchors(it.text, stem); return `<li${a.id}>${a.extra}${preds ? rule(a.text) : paint(a.text, 'body')}${sub(it)}</li>`; }).join('');
+        out.push(`<ul${preds ? ' class="preds"' : ''}>${li}</ul>`);
+        continue;
+      }
+      if (b.type === 'ol') {
+        out.push(`<ol>${b.items.map(it => { const a = anchors(it.text, stem); return `<li${a.id}>${a.extra}${paint(a.text, 'body')}${sub(it)}</li>`; }).join('')}</ol>`);
+        continue;
+      }
+      if (b.type === 'table') {
+        const cell = c => { const a = anchors(c, stem); return `<td${a.id}>${a.extra}${paint(a.text, 'body')}</td>`; };
+        out.push(`<table><tr>${b.head.map(c => `<th>${paint(c, 'body')}</th>`).join('')}</tr>${b.rows.map(r => `<tr>${r.map(cell).join('')}</tr>`).join('')}</table>`);
+      }
+    }
+    return out.join('\n');
+  }
+
+  const tabs = document.getElementById('tabs'), doc = document.getElementById('doc');
+  const cache = {};
+  let current = null;
+  function show(stem, anchor) {
+    if (current !== stem) {
+      current = stem;
+      for (const btn of tabs.children) btn.setAttribute('aria-pressed', String(btn.dataset.stem === stem));
+      if (!cache[stem]) { const blocks = parseMd(FILES.find(f => f.stem === stem).text); declare(blocks); cache[stem] = render(blocks, stem); }
+      doc.innerHTML = cache[stem];
+      try { localStorage.setItem(KEY, stem); } catch (e) {}
+      if (!anchor) window.scrollTo(0, 0);
+    }
+    if (anchor) {
+      const mark = document.getElementById(`${stem}--${anchor}`), el = mark && mark.tagName === 'SPAN' ? mark.parentElement : mark;
+      for (const h of doc.querySelectorAll('.hit')) h.classList.remove('hit');
+      if (el) { el.classList.add('hit'); el.scrollIntoView({ block: 'center' }); }
+    }
+  }
+  for (const f of FILES) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.role = 'tab'; btn.textContent = f.stem; btn.dataset.stem = f.stem; btn.setAttribute('aria-pressed', 'false');
+    btn.onclick = () => show(f.stem);
+    tabs.appendChild(btn);
+  }
+  doc.addEventListener('click', e => {
+    const a = e.target.closest('a[data-target]');
+    if (!a) return;
+    e.preventDefault();
+    const t = a.dataset.target;
+    const m = /^(?:([\w-]+?)(?:\.rofl)?\.md)?#?([\w-]+)?$/.exec(t);
+    if (!m) return;
+    show(m[1] || current, m[2]);
+  });
+  const KEY = 'rofl-view:' + document.title;
+  let start = FILES[0].stem; try { start = localStorage.getItem(KEY) || start; } catch (e) {}
+  show(FILES.some(f => f.stem === start) ? start : FILES[0].stem);
+</script>
