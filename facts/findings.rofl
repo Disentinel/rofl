@@ -10,6 +10,12 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, insight).
+recorded(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "2026-09-24").
+addressed_by(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "facts/js-phrases.rofl").
+addressed_by(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "playground/host.ts").
+finding_note(f_a_value_reads_as_what_it_points_to_and_an_explanation_names_where_it_came_from, "ASKED FOR `s points to new Store()` WHERE THE FOLDED PROOF SAID `s may be the node class Store`. Two changes, one in each place the words come from. THE PHRASE: `may_be_node` is signed `points_to(node E, node N)` instead of `may_be_the_node`; docs/js was rendered again and read back 1178 of 1178, npm test moved nothing. It cost the one fold the old words allowed: `may be the literal` and `may be the node` differed by one word, so the renderer wrote their rules once as `may be the literal/node`; with `points to` they are two sentences each, and js-dataflow grew by about seventy lines. THE EXPLANATION: the model has no fact `s points to new Store()`; it has `s points to class Store`, derived from `new Store() points to class Store` through s's binder. So a step whose fact is R(A, V) and whose proof holds R(B, V) for another node B is headed R(A, B), where the value came from, and the model's own fact is the first line of its details, so nothing it says is hidden and nothing it does not say is shown as its. The chain now reads s.put points to put(), s points to new Store(), new Store() points to class Store.").
+
 finding(f_a_proof_folds_into_steps_by_the_section_of_the_model_each_rule_sits_in, insight).
 recorded(f_a_proof_folds_into_steps_by_the_section_of_the_model_each_rule_sits_in, "2026-09-24").
 addressed_by(f_a_proof_folds_into_steps_by_the_section_of_the_model_each_rule_sits_in, "playground/host.ts").

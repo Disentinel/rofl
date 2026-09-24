@@ -169,7 +169,7 @@ A [template](#noun-template) may be the literal V if all of:
 > `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
 > each time round.
 
-<a id="may_be_node"></a>A [value site](#noun-value_site) may be the node it.
+<a id="may_be_node"></a>A [value site](#noun-value_site) points to it.
 
 Declared as facts:
 
@@ -351,9 +351,9 @@ A node
   - Init [may be the literal](#may_be_lit) V;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
-- may be the node N if all of:
+- points to a node N if all of:
   - D [binds](#binder) Name to a node Init in File;
-  - Init [may be the node](#may_be_node) N;
+  - Init [points to](#may_be_node) N;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 
@@ -376,15 +376,18 @@ A node
   - Name [is assigned](#assigns) a node Src in File;
   - Src [may be the literal](#may_be_lit) V;
   - it [reads](#ident_in) Name in File.
-- may be the node N if all of:
+- points to a node N if all of:
   - Name [is assigned](#assigns) a node Src in File;
-  - Src [may be the node](#may_be_node) N;
+  - Src [points to](#may_be_node) N;
   - it [reads](#ident_in) Name in File.
 
 > A parenthesis, a TS cast and a non-null assertion change nothing about the
 > value; the call graph lists them as shapes and this layer does not.
 
-A [wrapper](#noun-wrapper) may be the literal/node V if the `expression` of it [may be the literal/node](#may_be_lit) V.
+A [wrapper](#noun-wrapper)
+
+- may be the literal V if the `expression` of it [may be the literal](#may_be_lit) V.
+- points to a node N if the `expression` of it [points to](#may_be_node) N.
 
 Declared as facts:
 
@@ -417,7 +420,7 @@ Declared as facts:
 
 1. if a kind K [has prototype](#kind_prototype) P and E [is of kind](js-model.rofl.md#ast_node) K;
 2. if all of:
-   - E [may be the node](#may_be_node) N;
+   - E [points to](#may_be_node) a node N;
    - a kind K [has prototype](#kind_prototype) P;
    - N [is of kind](js-model.rofl.md#ast_node) K.
 
@@ -449,11 +452,11 @@ D is scoped in File if D [destructures](#destructures) some name from some key i
 
 In the flow:
 
-A node may be the node N if all of:
+A node points to a node N if all of:
   - a node D [destructures](#destructures) Local from Key in File;
-  - the `init` of D [may be the node](#may_be_node) Obj;
+  - the `init` of D [points to](#may_be_node) a node Obj;
   - [the member](#member_value) Key of Obj holds a node V;
-  - V [may be the node](#may_be_node) N;
+  - V [points to](#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 
@@ -469,15 +472,12 @@ D is scoped in File if D [destructures](#destructures_at) some name at some inde
 
 In the flow:
 
-<a id="elem_at"></a>The element I of a node X is a node E if all of:
-  - X [may be the node](#may_be_node) Y;
-  - E is the I-th of the `elements` of Y;
-  - Y is an [array literal](#noun-array_literal).
+<a id="elem_at"></a>The element I of a node X is a node E if X [points to](#may_be_node) an [array literal](#noun-array_literal) Y and E is the I-th of the `elements` of Y.
 
-A node may be the node N if all of:
+A node points to a node N if all of:
   - a node D [destructures](#destructures_at) Local at Index in File;
   - the `init` of D is a node Init;
-  - [the element](#elem_at) Index of Init [may be the node](#may_be_node) N;
+  - [the element](#elem_at) Index of Init [points to](#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
 
@@ -492,9 +492,9 @@ A [function](js-callgraph.rofl.md#fn_node)
   - the `left` of P [is named](js-structure.rofl.md#ast_name) Name;
   - the `right` of P is Init.
 
-A node may be the node N if all of:
+A node points to a node N if all of:
   - F [defaults](#param_default) Name to a node Init;
-  - Init [may be the node](#may_be_node) N;
+  - Init [points to](#may_be_node) N;
   - F [uses](#param_use) Name at it.
 
 > An object rest binds a FRESH object with no node of its own, so the
@@ -521,13 +521,13 @@ In the flow:
 <a id="member_value"></a>The member Key of a node R holds a node V if all of:
   - a node D [holds a rest](#rest_in_pattern) R in some file;
   - the `id` of D is a node P;
-  - the `init` of D [may be the node](#may_be_node) Obj;
+  - the `init` of D [points to](#may_be_node) a node Obj;
   - [the member](#member_value) Key of Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
 <a id="member_plain"></a>The plain member Key of a node R is a node V if some declarator [holds a rest](#rest_in_pattern) R in some file and [the member](#member_value) Key of R holds V.
 
-A node may be the node R if all of:
+A node points to a node R if all of:
   - D [binds](#rest_binds) Local through the rest R in File;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
@@ -537,13 +537,13 @@ A node may be the node R if all of:
 
 The member Key of an [object literal](#noun-object_literal) O holds a node V if all of:
   - a [spread](#noun-spread) S [is among the](#ast_child) `properties` of O;
-  - the `argument` of S [may be the node](#may_be_node) Src;
+  - the `argument` of S [points to](#may_be_node) a node Src;
   - [the member](#member_value) Key of Src holds V.
 
 <a id="valued"></a>A node E is valued either:
 
 1. if E [may be the literal](#may_be_lit) some text;
-2. if E [may be the node](#may_be_node) some node.
+2. if E [points to](#may_be_node) some node.
 
 ## 7. Across a call
 
@@ -632,10 +632,10 @@ A node
   - X [may be the literal](#may_be_lit) V;
   - F [takes](#param_of) Name at I;
   - F [uses](#param_use) Name at it.
-- may be the node N if all of:
+- points to a node N if all of:
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](#arg_at) a node X at an index I;
-  - X [may be the node](#may_be_node) N;
+  - X [points to](#may_be_node) N;
   - F [takes](#param_of) Name at I;
   - F [uses](#param_use) Name at it.
 
@@ -643,10 +643,16 @@ A node
 
 <a id="returns"></a>F returns a node E if F [is nearest to](#nearest_v) a [return](#noun-return) R and the `argument` of R is E.
 
-A node may be the literal/node V if all of:
- - it [resolves to](js-callgraph.rofl.md#resolves) F;
- - F [returns](#returns) a node E;
- - E [may be the literal/node](#may_be_lit) V.
+A node
+
+- may be the literal V if all of:
+  - it [resolves to](js-callgraph.rofl.md#resolves) F;
+  - F [returns](#returns) a node E;
+  - E [may be the literal](#may_be_lit) V.
+- points to a node N if all of:
+  - it [resolves to](js-callgraph.rofl.md#resolves) F;
+  - F [returns](#returns) a node E;
+  - E [points to](#may_be_node) N.
 
 ## 8. Reading a property off a value
 
@@ -682,7 +688,7 @@ The member Key of a node O holds a node V if all of:
   - a node X [is plain](#plain_assign);
   - the `left` of X is a node L;
   - L [selects](#selects) Key;
-  - the `object` of L [may be the node](#may_be_node) O;
+  - the `object` of L [points to](#may_be_node) O;
   - the `right` of X is V.
 
 > Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
@@ -746,30 +752,30 @@ The plain member Key of O is a node V either:
 
 <a id="class_receiver"></a>A node denotes a class if some class [is named](#class_named) Name in File and it [reads](#ident_in) Name in File.
 
-N may be the node V2 either:
+N points to a node V2 either:
 
 1. if all of:
    - N is a [member access](#member_node_v);
    - the `object` of N is a node O;
    - O [denotes a class](#class_receiver);
-   - O [may be the node](#may_be_node) Obj;
+   - O [points to](#may_be_node) a node Obj;
    - N [selects](#selects) Key;
-   - [the static member](#class_member_static) Key of Obj [may be the node](#may_be_node) V2;
+   - [the static member](#class_member_static) Key of Obj [points to](#may_be_node) V2;
 2. if all of:
    - N is a [member access](#member_node_v);
    - the `object` of N is a node O;
-   - O [may be the node](#may_be_node) Obj;
+   - O [points to](#may_be_node) a node Obj;
    - N [selects](#selects) Key;
-   - [the instance member](#class_member_proto) Key of Obj [may be the node](#may_be_node) V2;
+   - [the instance member](#class_member_proto) Key of Obj [points to](#may_be_node) V2;
    - unless O [denotes a class](#class_receiver);
 3. if all of:
    - N is a [member access](#member_node_v);
-   - the `object` of N [may be the node](#may_be_node) Obj;
+   - the `object` of N [points to](#may_be_node) a node Obj;
    - N [selects](#selects) Key;
-   - [the plain member](#member_plain) Key of Obj [may be the node](#may_be_node) V2.
+   - [the plain member](#member_plain) Key of Obj [points to](#may_be_node) V2.
 
 A [member access](#member_node_v) may be the literal L if all of:
-  - the `object` of it [may be the node](#may_be_node) Obj;
+  - the `object` of it [points to](#may_be_node) a node Obj;
   - it [selects](#selects) Key;
   - [the member](#member_value) Key of Obj holds a node V;
   - V [may be the literal](#may_be_lit) L.
@@ -777,7 +783,7 @@ A [member access](#member_node_v) may be the literal L if all of:
 > A method is a value; a declared function is reached by its name with no
 > declarator.
 
-M may be the node Y either:
+M points to a node Y either:
 
 1. if M is an [object method](#noun-object_method) or a [method](#noun-method) or a [function declaration](#noun-function_declaration) and Y is M;
 2. if all of:
@@ -785,7 +791,7 @@ M may be the node Y either:
    - Y is in file File;
    - the `id` of Y [is named](js-structure.rofl.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
-3. if M is a [property](#noun-property) and the `value` of M [may be the node](#may_be_node) Y.
+3. if M is a [property](#noun-property) and the `value` of M [points to](#may_be_node) Y.
 
 A [property](#noun-property) may be the literal V if the `value` of it [may be the literal](#may_be_lit) V.
 
@@ -811,7 +817,7 @@ A node
   - M [is among the](#ast_child) `body` of B;
   - M is a [method](#noun-method).
 
-A node may be the node CD if CD [has the method](#class_method_of) M and M [hosts](#this_host) it.
+A node points to a node CD if CD [has the method](#class_method_of) M and M [hosts](#this_host) it.
 
 Declared as facts:
 
@@ -888,12 +894,13 @@ A node
 
 In the flow:
 
-A [private method](#noun-private_method) may be the node it.
+A [private method](#noun-private_method) points to it.
 
 A node
 
-- may be the node M if it [binds privately to](#private_binds) M and M is a [private method](#noun-private_method).
-- may be the node/literal V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the node/literal](#may_be_node) V2.
+- points to a [private method](#noun-private_method) M if it [binds privately to](#private_binds) M.
+- points to a node V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [points to](#may_be_node) V2.
+- may be the literal L if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the literal](#may_be_lit) L.
 
 A class has the method M if all of:
   - it [is object like](#obj_like);
@@ -906,7 +913,7 @@ A class has the method M if all of:
 1. if CD [has the field](#field_of) some key at P holding some node;
 2. if CD [has the private member](#private_member) some name at P and P is a [private field](#noun-private_field).
 
-A node may be the node CD if CD [has the field site](#class_field_this) P and P [hosts](#this_host) it.
+A node points to a node CD if CD [has the field site](#class_field_this) P and P [hosts](#this_host) it.
 
 <a id="static_block_of"></a>A class has the static block SB if all of:
   - it [is object like](#obj_like);
@@ -914,7 +921,7 @@ A node may be the node CD if CD [has the field site](#class_field_this) P and P 
   - SB [is among the](#ast_child) `body` of B;
   - SB is a [static block](#noun-static_block).
 
-A node may be the node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
+A node points to a node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
 
 Declared as facts:
 
@@ -990,7 +997,7 @@ A node
   - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Ext;
   - E neither [re exports](#reexport_decl) nor [exports types only](#export_list_erased);
   - unless Sp [is a type only specifier](#export_item_erased).
-- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [may be the node](#may_be_node) it.
+- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [points to](#may_be_node) it.
 
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
 > so `ns.f()` is an ordinary member lookup.
@@ -1010,7 +1017,7 @@ A node is exported as Name from File if all of:
 
 In the flow:
 
-A node may be the node F if all of:
+A node points to a node F if all of:
   - Local [imports](#imports_name) Name from Src in File;
   - Src [targets](#import_target) Target;
   - F [is exported as](#exports_name) Name from Target;
@@ -1029,7 +1036,7 @@ In the code:
 
 In the flow:
 
-A node may be the node P if all of:
+A node points to a node P if all of:
   - Local [imports the namespace](#imports_ns) of Src in File;
   - Src [targets](#import_target) Target;
   - P [is the module object of](#module_object) Target;
@@ -1047,7 +1054,7 @@ In the code:
 
 In the flow:
 
-A node may be the node F if all of:
+A node points to a node F if all of:
   - Local [imports the default](#imports_default) of Src in File;
   - Src [targets](#import_target) Target;
   - F [is the default export of](#exports_default) Target;
@@ -1063,7 +1070,7 @@ In the audit:
 
 In the flow:
 
-A node may be the node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
+A node points to a node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
 
 ## 12. Construction
 
@@ -1087,7 +1094,7 @@ A node may be the node O if O [has the object method](#obj_method_of) M and M [h
    - the `init` of D is CD;
    - the `id` of D [is named](js-structure.rofl.md#ast_name) Name.
 
-A node E may be the node CD either:
+A node E points to a node CD either:
 
 1. if CD [is named](#class_named) Name in File and E [reads](#ident_in) Name in File;
 2. if all of:
@@ -1120,7 +1127,7 @@ A node E may be the node CD either:
    - [the constructor](#ctor_of) of SD is M;
    - unless CD [has its own constructor](#has_own_ctor).
 
-A [super](#noun-super) may be the node SD if all of:
+A [super](#noun-super) points to a node SD if all of:
   - a class CD [has the method](#class_method_of) M;
   - it [is within](js-structure.rofl.md#ast_within) M;
   - [the super](#super_of) of CD is SD.
@@ -1139,21 +1146,29 @@ A [sequence](#noun-sequence)
   - some node is the I-th of the `expressions` of it;
   - some node is the J-th of the `expressions` of it;
   - I < J.
-- may be the node N if all of:
+- points to a node N if all of:
   - a node X is the I-th of the `expressions` of it;
-  - X [may be the node](#may_be_node) N;
+  - X [points to](#may_be_node) N;
   - unless it [has a later expression than](#seq_later) I.
 - may be the literal V if all of:
   - a node X is the I-th of the `expressions` of it;
   - X [may be the literal](#may_be_lit) V;
   - unless it [has a later expression than](#seq_later) I.
 
-E may be the node/literal N if all of:
- - E is a [conditional](#noun-conditional);
- - the `consequent` or `alternate` of E is a node X;
- - X [may be the node/literal](#may_be_node) N.
+E points to a node N if all of:
+  - E is a [conditional](#noun-conditional);
+  - the `consequent` or `alternate` of E is a node X;
+  - X [points to](#may_be_node) N.
 
-An [await](#noun-await) may be the node/literal N if the `argument` of it [may be the node/literal](#may_be_node) N.
+E may be the literal V if all of:
+  - E is a [conditional](#noun-conditional);
+  - the `consequent` or `alternate` of E is a node X;
+  - X [may be the literal](#may_be_lit) V.
+
+An [await](#noun-await)
+
+- points to a node N if the `argument` of it [points to](#may_be_node) N.
+- may be the literal V if the `argument` of it [may be the literal](#may_be_lit) V.
 
 ## 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
 
@@ -1185,20 +1200,20 @@ An [await](#noun-await) may be the node/literal N if the `argument` of it [may b
 
 Inner is sent a node V if Outer [is sent](#next_send) V and Outer [delegates to](#delegates) Inner.
 
-Y may be the node X either:
+Y points to a node X either:
 
 1. if all of:
    - G [is sent](#next_send) a node V;
    - G [is nearest to](#nearest_v) Y;
    - Y is a [yield](#noun-yield);
    - [the attribute](#ast_attr) `delegate` of Y is `false`;
-   - V [may be the node](#may_be_node) X;
+   - V [points to](#may_be_node) X;
 2. if all of:
    - Y is a [yield](#noun-yield);
    - [the attribute](#ast_attr) `delegate` of Y is `true`;
    - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner;
    - Inner [returns](#returns) a node E;
-   - E [may be the node](#may_be_node) X.
+   - E [points to](#may_be_node) X.
 
 > FOR-OF: the loop variable takes the elements. An array is a VALUE (through
 > `may_be_node`); a generator is a CALL, read at the site, because its returns
@@ -1217,24 +1232,36 @@ Y may be the node X either:
 
 <a id="iter_elem"></a>A node X has an element E either:
 
-1. if all of:
-   - X [may be the node](#may_be_node) Y;
-   - E [is among the](#ast_child) `elements` of Y;
-   - Y is an [array literal](#noun-array_literal);
+1. if X [points to](#may_be_node) an [array literal](#noun-array_literal) Y and E [is among the](#ast_child) `elements` of Y;
 2. if X [resolves to](js-callgraph.rofl.md#resolves) F and F [yields](#yields) E.
 
-A node may be the node/literal N if all of:
- - S [loops with](#for_of_use) some name at it;
- - S [iterates](#for_of_src) a node X;
- - X [has an element](#iter_elem) E;
- - E [may be the node/literal](#may_be_node) N.
+A node
 
-E may be the node/literal N if all of:
- - E is a [logical](#noun-logical);
- - the `left` or `right` of E is a node X;
- - X [may be the node/literal](#may_be_node) N.
+- points to a node N if all of:
+  - S [loops with](#for_of_use) some name at it;
+  - S [iterates](#for_of_src) a node X;
+  - X [has an element](#iter_elem) E;
+  - E [points to](#may_be_node) N.
+- may be the literal V if all of:
+  - S [loops with](#for_of_use) some name at it;
+  - S [iterates](#for_of_src) a node X;
+  - X [has an element](#iter_elem) E;
+  - E [may be the literal](#may_be_lit) V.
 
-A node may be the node/literal N if it [is plain](#plain_assign) and the `right` of it [may be the node/literal](#may_be_node) N.
+E points to a node N if all of:
+  - E is a [logical](#noun-logical);
+  - the `left` or `right` of E is a node X;
+  - X [points to](#may_be_node) N.
+
+E may be the literal V if all of:
+  - E is a [logical](#noun-logical);
+  - the `left` or `right` of E is a node X;
+  - X [may be the literal](#may_be_lit) V.
+
+A node
+
+- points to a node N if it [is plain](#plain_assign) and the `right` of it [points to](#may_be_node) N.
+- may be the literal V if it [is plain](#plain_assign) and the `right` of it [may be the literal](#may_be_lit) V.
 
 > The crossings this layer performs: the scanner's tree, the unperspectived
 > kind tables, and the kernel's `edb` reflection.
@@ -1267,7 +1294,7 @@ A node
   - [the catch](#catch_of) of T is H;
   - [the param](#catch_param) of H is it;
   - T [throws](#thrown_in) V.
-- may be the node V if it [catches](js-controlflow.rofl.md#caught_value) V.
+- points to a node V if it [catches](js-controlflow.rofl.md#caught_value) V.
 
 <a id="call_in_try"></a>T calls if all of:
   - [the block](#try_block) of T is a node B;
@@ -1307,8 +1334,8 @@ In the flow:
 
 A node
 
-- <a id="decorated_by"></a>is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and D [may be the node](#may_be_node) N.
-- may be the node N if all of:
+- <a id="decorated_by"></a>is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and D [points to](#may_be_node) N.
+- points to a node N if all of:
   - a node CD [is replaced by its decorator with](#decorated_by) N;
   - CD [is named](#class_named) Name in File;
   - it [reads](#ident_in) Name in File.

@@ -50,7 +50,7 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- A node may be the node it if it [is an instance](#es_instance) of some name from some release.
+- A node points to it if it [is an instance](#es_instance) of some name from some release.
 
 ## 1. WHERE A GLOBAL CAN BE SEEN, and the ceiling is this table. Every
 
@@ -248,7 +248,7 @@ In the flow:
   - Form [is constructible](#constructible_form).
 
 The prototype of a node E is P if all of:
-  - E [may be the node](js-dataflow.rofl.md#may_be_node) X;
+  - E [points to](js-dataflow.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P.
 
@@ -268,7 +268,7 @@ In the audit:
 <a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [may be the node](js-dataflow.rofl.md#may_be_node) X;
+  - the `object` of N [points to](js-dataflow.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.

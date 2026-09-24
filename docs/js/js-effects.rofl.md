@@ -248,7 +248,7 @@ Declared as facts:
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
-<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if the `object` of it [may be the node](js-dataflow.rofl.md#may_be_node) some node.
+<a id="eff_obj_traced"></a>A [member access](js-dataflow.rofl.md#member_node_v) has a traced object if the `object` of it [points to](js-dataflow.rofl.md#may_be_node) some node.
 
 <a id="eff_heap_of"></a>M touches the heap N either:
 
@@ -561,15 +561,15 @@ In the flow:
 
 A node
 
-- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [may be the node](js-dataflow.rofl.md#may_be_node) some node.
+- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [points to](js-dataflow.rofl.md#may_be_node) some node.
 - <a id="eff_conv_call"></a>coerces through a node M if all of:
   - it [coerces](#eff_coerced) a node X;
-  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
+  - X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of O holds M.
 - <a id="eff_conv_overridden"></a>coerces with an override X if all of:
   - it [coerces](#eff_coerced) X;
-  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
+  - X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of O holds some node.
 - <a id="eff_conv_default"></a>coerces by default a node X if it [coerces the object](#eff_conv_object) X, unless it [coerces with an override](#eff_conv_overridden) X.
@@ -577,7 +577,7 @@ A node
   - it [coerces](#eff_coerced) X;
   - X [may be the literal](js-dataflow.rofl.md#may_be_lit) some text;
   - unless it [coerces the object](#eff_conv_object) X.
-- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-dataflow.rofl.md#may_be_lit) some text nor [may be the node](js-dataflow.rofl.md#may_be_node) some node.
+- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-dataflow.rofl.md#may_be_lit) some text nor [points to](js-dataflow.rofl.md#may_be_node) some node.
 
 Declared as facts:
 
@@ -931,7 +931,7 @@ In the flow:
 
 A node has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
 
-A [new](#noun-new) has the effect L at a host H if it [may be the node](js-dataflow.rofl.md#may_be_node) CD and CD [constructs with effect](#class_construct_eff) L at H.
+A [new](#noun-new) has the effect L at a host H if it [points to](js-dataflow.rofl.md#may_be_node) a node CD and CD [constructs with effect](#class_construct_eff) L at H.
 
 `eff_alloc_kind` includes `class_declaration`.
 

@@ -219,6 +219,7 @@ export function explain(literal: string): Step | string {
     if (shown.has(key)) { st.again = true; return st; }
     shown.add(key);
     let absorbing = false;
+    const keys: string[] = [];
     const walk = (k: string) => {
       const w = store.witnessOf(k); if (!w || path.has(k)) return;
       path.add(k);
@@ -229,12 +230,20 @@ export function explain(literal: string): Step | string {
         if (!c) { st.evidence++; continue; }
         // a fact about one node (`put() is a function`, `s reads "s"`) is a property of that node, not a step: it and its proof are details
         const one = (p.key.match(NODE) ?? []).length <= 1;
-        if (c === concern || one || absorbing) { if (!shown.has(p.key)) { shown.add(p.key); st.details.push(say(p.key)); const was = absorbing; absorbing = one || was; walk(p.key); absorbing = was; } }
+        if (c === concern || one || absorbing) { if (!shown.has(p.key)) { shown.add(p.key); st.details.push(say(p.key)); keys.push(p.key); const was = absorbing; absorbing = one || was; walk(p.key); absorbing = was; } }
         else st.steps.push(step(p.key, path));
       }
       path.delete(k);
     };
     walk(key);
+    // a value passed along reads as where it came from: `s points to class Store` rests on `new Store() points to class Store`, so the step says
+    // `s points to new Store()`, and the model's own fact is its first detail
+    const m = /^(\w+\[\w+\])\(([^,()]+),([^,()]+)\)$/.exec(key);
+    if (m) {
+      const from = [...st.steps.map((x) => x.literal), ...keys].map((k) => /^(\w+\[\w+\])\(([^,()]+),([^,()]+)\)$/.exec(k))
+        .find((x) => x && x[1] === m[1] && x[3] === m[3] && x[2] !== m[2] && x[2] !== m[3]);
+      if (from) { st.details.unshift(st.sentence); st.sentence = say(`${m[1]}(${m[2]},${from[2]})`); }
+    }
     return st;
   };
   return step(top, new Set());

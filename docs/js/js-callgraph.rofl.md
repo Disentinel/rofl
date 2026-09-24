@@ -441,11 +441,11 @@ A [method](#noun-method) answers to a name N if all of:
 
 1. if all of:
    - X [is a transfer site](#transfer_site) of `new_expression`;
-   - X [may be the node](js-dataflow.rofl.md#may_be_node) CD;
+   - X [points to](js-dataflow.rofl.md#may_be_node) a node CD;
    - CD [has the constructor](#class_ctor) M;
 2. if all of:
    - [the callee](#callee_of) of X is a [super](#noun-super) N;
-   - N [may be the node](js-dataflow.rofl.md#may_be_node) SD;
+   - N [points to](js-dataflow.rofl.md#may_be_node) a node SD;
    - [the constructor](js-dataflow.rofl.md#ctor_of) of SD is M.
 
 > A tag is a callee in every sense but the grammar's (the field is `tag`, not
@@ -456,11 +456,11 @@ A node X resolves to F either:
 
 1. if all of:
    - X [is a transfer site](#transfer_site) of `tagged_template_expression`;
-   - the `tag` of X [may be the node](js-dataflow.rofl.md#may_be_node) F;
+   - the `tag` of X [points to](js-dataflow.rofl.md#may_be_node) F;
    - F is a [function](#fn_node);
 2. if all of:
    - X [is a transfer site](#transfer_site) of `decorator`;
-   - the `expression` of X [may be the node](js-dataflow.rofl.md#may_be_node) F;
+   - the `expression` of X [points to](js-dataflow.rofl.md#may_be_node) F;
    - F is a [function](#fn_node).
 
 > `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -471,7 +471,7 @@ A node X resolves to F either:
 
 <a id="for_of_iterates"></a>A node iterates through a [function](#fn_node) M if all of:
   - it [is a transfer site](#transfer_site) of `for_of_statement`;
-  - the `right` of it [may be the node](js-dataflow.rofl.md#may_be_node) Obj;
+  - the `right` of it [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
   - [the member](js-dataflow.rofl.md#member_value) "iterator" of Obj holds M.
 
 X resolves to M if X [iterates through](#for_of_iterates) M.
@@ -480,15 +480,15 @@ X resolves to M if X [iterates through](#for_of_iterates) M.
   - a node X [iterates through](#for_of_iterates) M;
   - Caller [is the nearest function of](#nearest_fn) X;
   - M [returns](js-dataflow.rofl.md#returns) a node E;
-  - E [may be the node](js-dataflow.rofl.md#may_be_node) IterObj;
+  - E [points to](js-dataflow.rofl.md#may_be_node) a node IterObj;
   - [the member](js-dataflow.rofl.md#member_value) "next" of IterObj holds a node V;
-  - V [may be the node](js-dataflow.rofl.md#may_be_node) Next.
+  - V [points to](js-dataflow.rofl.md#may_be_node) Next.
 
 > THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [may be the node](js-dataflow.rofl.md#may_be_node) F.
+C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [points to](js-dataflow.rofl.md#may_be_node) F.
 
 In the audit:
 
@@ -528,7 +528,7 @@ Caller calls Callee either:
 <a id="passes_function"></a>C passes the function F named Name at an index I if all of:
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
   - X [is named](js-structure.rofl.md#ast_name) Name;
-  - X [may be the node](js-dataflow.rofl.md#may_be_node) F;
+  - X [points to](js-dataflow.rofl.md#may_be_node) F;
   - F is a [function](#fn_node).
 
 ## 6. The frontier, as a positive relation
@@ -678,9 +678,9 @@ In the code:
 
 <a id="awaited_then"></a>Y awaits the then F if all of:
   - Y [awaits](#await_arg) a node X;
-  - X [may be the node](js-dataflow.rofl.md#may_be_node) O;
+  - X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - [the member](js-dataflow.rofl.md#member_value) "then" of O holds a node V;
-  - V [may be the node](js-dataflow.rofl.md#may_be_node) F;
+  - V [points to](js-dataflow.rofl.md#may_be_node) F;
   - F is a [function](#fn_node).
 
 In the audit:
@@ -695,7 +695,7 @@ In the audit:
 
 In the code:
 
-<a id="await_value_known"></a>Y awaits a known value if Y [awaits](#await_arg) a node X and X [may be the node](js-dataflow.rofl.md#may_be_node) some node.
+<a id="await_value_known"></a>Y awaits a known value if Y [awaits](#await_arg) a node X and X [points to](js-dataflow.rofl.md#may_be_node) some node.
 
 <a id="await_no_call"></a>X awaits without a call if X [awaits a known value](#await_value_known), unless X [awaits the then](#awaited_then) some function.
 

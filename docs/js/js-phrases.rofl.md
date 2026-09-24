@@ -61,7 +61,7 @@ Declared as facts:
 | `var_flow` | "flows_to(name From, name To)" |
 | `var_reaches` | "reaches(name From, name To)" |
 | `may_be_lit` | "may_be_the_literal(node E, text V)" |
-| `may_be_node` | "may_be_the_node(node E, node N)" |
+| `may_be_node` | "points_to(node E, node N)" |
 | `interpolated` | "is_interpolated(template T)" |
 | `binder` | "binds(declarator D, name Name, to node Init, in file File)" |
 | `binder_at_top` | "is_at_the_top(declarator D)" |

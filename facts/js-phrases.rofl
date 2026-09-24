@@ -139,7 +139,7 @@ sig(decl_reads, "is_initialised_from(declarator D, name Name)").
 sig(var_flow, "flows_to(name From, name To)").
 sig(var_reaches, "reaches(name From, name To)").
 sig(may_be_lit, "may_be_the_literal(node E, text V)").
-sig(may_be_node, "may_be_the_node(node E, node N)").
+sig(may_be_node, "points_to(node E, node N)").
 sig(interpolated, "is_interpolated(template T)").
 sig(binder, "binds(declarator D, name Name, to node Init, in file File)").
 sig(binder_at_top, "is_at_the_top(declarator D)").

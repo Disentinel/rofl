@@ -594,7 +594,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `lost_cell` | `is_a_lost_cell` |
 | `lost_feature` | `is_lost_between` |
 | `may_be_lit` | `may_be_the_literal` |
-| `may_be_node` | `may_be_the_node` |
+| `may_be_node` | `points_to` |
 | `may_throw_only` | `may_throw_without_a_latent_exception` |
 | `mechanism_known` | `is_a_known_mechanism` |
 | `mechanism_modelled` | `is_modelled` |
