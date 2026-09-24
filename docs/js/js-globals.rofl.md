@@ -6,23 +6,6 @@ default: code
 
 # js-globals
 
-Reads:
-
-- from js-callgraph: [callee_of](js-callgraph.rofl.md#callee_of), [fn_file](js-callgraph.rofl.md#fn_file), [fn_node](js-callgraph.rofl.md#fn_node), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-dataflow: [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
-- from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
-- from outside these files: `ast_child`
-- from outside these files, in the main: `environment`, `lib_global`, `lib_global_prototype`, `lib_static`, `lib_static_shape`
-
-## Guards
-
-A noun that is a relation: the noun on a variable is the relation holding of it.
-
-- a function: `fn_node`
-
 > js-globals.rofl — THE ES GLOBALS: the half of the standard library that is
 > not a prototype. rules/js-env-api.rofl attributes `array.at` through a
 > receiver's prototype; `JSON.parse`, `Promise.all` and `Math.max` hang off a
@@ -37,6 +20,31 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > TypeScript's declarations have four shapes (`Math` is a namespace object
 > with no constructor, `Reflect` a namespace block with no variable, `NaN` a
 > value with no members), and `es_construct_not_constructor[audit]` uses it.
+
+Reads:
+
+- from js-callgraph: [callee_of](js-callgraph.rofl.md#callee_of), [fn_file](js-callgraph.rofl.md#fn_file), [fn_node](js-callgraph.rofl.md#fn_node), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-dataflow: [ident_in](js-dataflow.rofl.md#ident_in)
+- from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
+- from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
+- from outside these files:
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the main:
+  - <a id="environment"></a>An environment E is an environment (`environment`)
+  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
+  - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
+  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
+  - <a id="lib_static_shape"></a>`lib_static_shape`
+
+## Words
+
+What this file calls a node, and what each word stands for:
+
+| word | stands for |
+|---|---|
+| a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 
 ## 1. WHERE A GLOBAL CAN BE SEEN, and the ceiling is this table. Every
 
@@ -65,7 +73,7 @@ Declared as facts:
 <a id="global_ref"></a>A node refers to Name in File if all of:
   - a kind K [reads a global at](#global_ref_position) a field Field;
   - a node P [is of kind](js-model.rofl.md#ast_node) K;
-  - the Field of P is it;
+  - [the](#ast_child) Field of P is it;
   - it [reads](js-dataflow.rofl.md#ident_in) Name in File.
 
 ## 2. WHAT THE FILE BINDS — deliberately over-broad. `sees_binder[code]`
@@ -92,7 +100,7 @@ Declared as facts:
 <a id="declares_name"></a>Name is declared in File if all of:
   - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.rofl.md#ast_node) K in file File;
-  - the Field of D [is named](js-structure.rofl.md#ast_name) Name.
+  - [the](#ast_child) Field of D [is named](js-structure.rofl.md#ast_name) Name.
 
 Declared as facts:
 
@@ -104,7 +112,7 @@ Declared as facts:
 Name is declared in File if all of:
   - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.rofl.md#ast_node) K in file File;
-  - the Field of D is a node I;
+  - [the](#ast_child) Field of D is a node I;
   - a node X [is within](js-structure.rofl.md#ast_within) I;
   - X [is named](js-structure.rofl.md#ast_name) Name.
 
@@ -114,11 +122,11 @@ Name is declared in File either:
 
 1. if all of:
    - a [function](js-callgraph.rofl.md#fn_node) F [is defined in](js-callgraph.rofl.md#fn_file) File;
-   - a node P is among the `params` of F;
+   - a node P [is among the](#ast_child) `params` of F;
    - P [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
    - a [function](js-callgraph.rofl.md#fn_node) F [is defined in](js-callgraph.rofl.md#fn_file) File;
-   - a node P is among the `params` of F;
+   - a node P [is among the](#ast_child) `params` of F;
    - a node X [is within](js-structure.rofl.md#ast_within) P;
    - X [is named](js-structure.rofl.md#ast_name) Name.
 
@@ -132,11 +140,11 @@ Name is declared in File either:
 A node
 
 - <a id="free_global"></a>refers to the free Name in File if it [refers to](#global_ref) Name in File, unless Name [is declared](#declares_name) in File.
-- <a id="es_global"></a>is the global Name of a release Rel with a form Form if it [refers to the free](#free_global) Name in some file and Name is a global since Rel with Form.
+- <a id="es_global"></a>is the global Name of a release Rel with a form Form if it [refers to the free](#free_global) Name in some file and Name [is a global](#lib_global) since Rel with Form.
 
 In the audit:
 
-<a id="global_unattributed"></a>A node refers to an unattributed global Name if it [refers to the free](#free_global) Name in some file, unless Name is a global since some release with some form.
+<a id="global_unattributed"></a>A node refers to an unattributed global Name if it [refers to the free](#free_global) Name in some file, unless Name [is a global](#lib_global) since some release with some form.
 
 ## 4. THE STATIC SURFACE — one join, keyed by (global, key) once
 
@@ -146,9 +154,9 @@ In the code:
 
 <a id="es_static"></a>A node selects the static Key of Name from a release Rel if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
+  - [the](#ast_child) `object` of it is O;
   - it [selects](js-dataflow.rofl.md#selects) Key;
-  - Name has the static Key since Rel.
+  - Name [has the static](#lib_static) Key since Rel.
 
 > a member off a KNOWN global that TypeScript does not carry: a newer
 > edition, a HOST extension (`Error.captureStackTrace` is V8's) or a typo;
@@ -158,16 +166,16 @@ In the audit:
 
 <a id="es_static_unattributed"></a>A node selects an unattributed static Key of Name if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
+  - [the](#ast_child) `object` of it is O;
   - it [selects](js-dataflow.rofl.md#selects) Key;
-  - unless Name has the static Key since some release.
+  - unless Name [has the static](#lib_static) Key since some release.
 
 > a well-known symbol or `Math.PI` is a KEY and not a call; `lib_static_shape`
 > already carries the difference from the declaration
 
 In the code:
 
-<a id="es_static_key"></a>N selects the static data Key of Name if N [selects the static](#es_static) Key of Name from some release and `lib_static_shape`(Name, Key, `data`).
+<a id="es_static_key"></a>N selects the static data Key of Name if N [selects the static](#es_static) Key of Name from some release and [`lib_static_shape`](#lib_static_shape)(Name, Key, `data`).
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
@@ -175,7 +183,7 @@ In the code:
 
 <a id="es_global_invoke"></a>C invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [is the global](#es_global) Name of Rel with some form.
 
-<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression` and the `callee` of it [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression` and [the](#ast_child) `callee` of it [is the global](#es_global) Name of Rel with some form.
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -187,7 +195,7 @@ In the audit:
 
 <a id="es_construct_not_constructor"></a>X constructs a non constructor Name of a form Form if all of:
   - X [constructs the global](#es_global_construct) Name of some release;
-  - Name is a global since some release with Form;
+  - Name [is a global](#lib_global) since some release with Form;
   - unless Form [is constructible](#constructible_form).
 
 Declared as facts:
@@ -205,11 +213,11 @@ An environment
 
 - <a id="es_global_unsupported"></a>lacks the global Name at a node X if all of:
   - X [is the global](#es_global) Name of a release Rel with some form;
-  - it is an environment;
+  - it [is an environment](#environment);
   - unless it [reaches the release](js-env.rofl.md#reaches) Rel.
 - <a id="es_static_unsupported"></a>lacks the static Key of Name at a node N if all of:
   - N [selects the static](#es_static) Key of Name from a release Rel;
-  - it is an environment;
+  - it [is an environment](#environment);
   - unless it [reaches the release](js-env.rofl.md#reaches) Rel.
 
 ## 6. THE PROTOTYPE OF A CONSTRUCTED VALUE. A `new X()` whose callee is an ES
@@ -230,7 +238,7 @@ In the flow:
 
 <a id="es_instance"></a>X is an instance of Name from a release Rel if all of:
   - X [constructs the global](#es_global_construct) Name of Rel;
-  - Name is a global since some release with a form Form;
+  - Name [is a global](#lib_global) since some release with a form Form;
   - Form [is constructible](#constructible_form).
 
 A node may be the node it if it [is an instance](#es_instance) of some name from some release.
@@ -238,7 +246,7 @@ A node may be the node it if it [is an instance](#es_instance) of some name from
 The prototype of a node E is P if all of:
   - E [may be the node](js-dataflow.rofl.md#may_be_node) X;
   - X [is an instance](#es_instance) of Name from some release;
-  - Name has the prototype P.
+  - Name [has the prototype](#lib_global_prototype) P.
 
 > Where the bridge cannot look, as rows: `es_prototype_gap` is the LIBRARY
 > side (`Map`, `Set`, `Promise`, `Date` can be constructed and have no
@@ -249,17 +257,17 @@ The prototype of a node E is P if all of:
 In the audit:
 
 <a id="es_prototype_gap"></a>Name has no prototype listed since a release Rel if all of:
-  - Name is a global since Rel with a form Form;
+  - Name [is a global](#lib_global) since Rel with a form Form;
   - Form [is constructible](#constructible_form);
-  - unless Name has the prototype some prototype.
+  - unless Name [has the prototype](#lib_global_prototype) some prototype.
 
 <a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [may be the node](js-dataflow.rofl.md#may_be_node) X;
+  - [the](#ast_child) `object` of N [may be the node](js-dataflow.rofl.md#may_be_node) X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
-  - unless Name has the prototype some prototype.
+  - unless Name [has the prototype](#lib_global_prototype) some prototype.
 
 > 2 trailing comments on rule lines are not carried over.
 

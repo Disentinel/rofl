@@ -6,28 +6,6 @@ default: audit
 
 # js-host
 
-Reads:
-
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [class_named](js-dataflow.rofl.md#class_named), [param_of](js-dataflow.rofl.md#param_of), [selects](js-dataflow.rofl.md#selects)
-- from js-env: [reaches](js-env.rofl.md#reaches)
-- from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [site_file](js-modules.rofl.md#site_file)
-- from js-modules, in the main: [node_builtin_bare](js-modules.rofl.md#node_builtin_bare)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
-- from outside these files, in the code: `ast_child`
-- from outside these files, in the main: `host`, `host_effect_atom`, `host_global`, `host_global_effect`, `host_member_deprecated`, `host_member_effect`, `host_member_replaced_by`, `host_member_since`, `host_module`, `host_module_effect`, `host_module_member`, `host_no_effects`, `provides_release`, `runtime`, `runtime_includes`, `runtime_undated`, `runtime_version`
-
-## Kinds
-
-A noun is a node of one of its kinds:
-
-| noun | kinds |
-|---|---|
-| <a id="noun-function_declaration"></a>a function declaration | function_declaration |
-
 > js-host.rofl — THE RUNTIME LAYER: what a program reaches for that is in
 > neither the program nor the language. rules/js-env.rofl asks whether SYNTAX
 > parses; rules/js-env-api.rofl whether a PROTOTYPE METHOD exists; neither can
@@ -43,6 +21,46 @@ A noun is a node of one of its kinds:
 
 > the audits read the scanner's book; `ast_parse_error` is `edb` because
 > corpus-free worlds load this pack with no AST at all
+
+Reads:
+
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
+- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [ident_in](js-dataflow.rofl.md#ident_in)
+- from js-dataflow, in the flow: [class_named](js-dataflow.rofl.md#class_named), [param_of](js-dataflow.rofl.md#param_of), [selects](js-dataflow.rofl.md#selects)
+- from js-env: [reaches](js-env.rofl.md#reaches)
+- from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [site_file](js-modules.rofl.md#site_file)
+- from js-modules, in the main: [node_builtin_bare](js-modules.rofl.md#node_builtin_bare)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from outside these files, in the code:
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the main:
+  - <a id="host"></a>A host H is a host (`host`)
+  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
+  - <a id="host_global"></a>A host H has the global Name (`host_global`)
+  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
+  - <a id="host_member_deprecated"></a>A host H deprecates a key Key of a spec Spec (`host_member_deprecated`)
+  - <a id="host_member_effect"></a>A host H attributes the member Key of a spec Spec to an effect E (`host_member_effect`)
+  - <a id="host_member_replaced_by"></a>A host H replaces a key Key of a spec Spec with a key Use (`host_member_replaced_by`)
+  - <a id="host_member_since"></a>A runtime F adds a key Key of a spec Spec since a text Since being a number Sv (`host_member_since`)
+  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
+  - <a id="host_module_effect"></a>A host H attributes the module Spec to an effect E (`host_module_effect`)
+  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
+  - <a id="host_no_effects"></a>A host H claims no effects because a reason R (`host_no_effects`)
+  - <a id="provides_release"></a>A runtime P ships the release Rel (`provides_release`)
+  - <a id="runtime"></a>A runtime F is a runtime (`runtime`)
+  - <a id="runtime_includes"></a>A runtime R includes the runtime P (`runtime_includes`)
+  - <a id="runtime_undated"></a>A runtime R is undated because a reason Reason (`runtime_undated`)
+  - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
+
+## Words
+
+What this file calls a node, and what each word stands for:
+
+| word | stands for |
+|---|---|
+| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 
 `imports` lists:
 
@@ -72,7 +90,7 @@ In the code:
 
 File binds the name Name either:
 
-1. if a [function declaration](#noun-function_declaration) F is in file File and the `id` of F [is named](js-structure.rofl.md#ast_name) Name;
+1. if a [function declaration](#noun-function_declaration) F is in file File and [the](#ast_child) `id` of F [is named](js-structure.rofl.md#ast_name) Name;
 2. if a node F [takes](js-dataflow.rofl.md#param_of) Name at some index and F [is in file](js-model.rofl.md#ast_node) File;
 3. if some class [is named](js-dataflow.rofl.md#class_named) Name in File;
 4. if a site I [binds the name](js-modules.rofl.md#binding) Name to some name at some specifier and I [sits in](js-modules.rofl.md#site_file) File.
@@ -81,16 +99,16 @@ File binds the name Name either:
 
 <a id="host_global_ref"></a>A node refers to the global Name of a host H if all of:
   - it [reads](js-dataflow.rofl.md#ident_in) Name in File;
-  - H has the global Name;
+  - H [has the global](#host_global) Name;
   - unless File [binds the name](#name_bound_in) Name.
 
 > `document` is a reference under `browser` and there is no `node` row for it.
 
 <a id="host_global_only_in"></a>A node refers to a global Name only in a host H if all of:
   - it [refers to the global](#host_global_ref) Name of H;
-  - a host G is a host;
+  - a host G [is a host](#host);
   - G differs from H;
-  - unless G has the global Name.
+  - unless G [has the global](#host_global) Name.
 
 ## 2. THE MODULE DOOR — a local name bound to a node builtin. Four joins over
 
@@ -118,7 +136,7 @@ File binds the name Name either:
 
 In the audit:
 
-<a id="host_import_unknown"></a>File imports an unknown member Key of a spec Spec if File [imports](#host_module_named) some name as Key of Spec, unless `node` exposes Key of Spec.
+<a id="host_import_unknown"></a>File imports an unknown member Key of a spec Spec if File [imports](#host_module_named) some name as Key of Spec, unless `node` [exposes](#host_module_member) Key of Spec.
 
 ## 3. THE SITES — four shapes, because a rule covering three would report a
 
@@ -133,7 +151,7 @@ In the code:
 
 <a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [refers to the global](#host_global_ref) Name of H;
+  - [the](#ast_child) `object` of N [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
 
 <a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
@@ -142,7 +160,7 @@ In the code:
 
 1. if all of:
    - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-   - the `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
+   - [the](#ast_child) `object` of N [reads](js-dataflow.rofl.md#ident_in) Local in File;
    - File [imports the namespace](#host_module_ns) Local of Spec;
    - N [selects](js-dataflow.rofl.md#selects) Key;
 2. if [the callee](js-callgraph.rofl.md#callee_of) of C [reads](js-dataflow.rofl.md#ident_in) Local in File and File [imports](#host_module_named) Local as Key of Spec.
@@ -168,11 +186,11 @@ In the code:
 
 <a id="member_effect"></a>A spec Spec has the member effect E at Key either:
 
-1. if `node` attributes the member Key of Spec to E;
+1. if `node` [attributes the member](#host_member_effect) Key of Spec to E;
 2. if all of:
-   - `node` exposes Key of Spec;
-   - `node` attributes the module Spec to E;
-   - unless `node` attributes the member Key of Spec to some effect.
+   - `node` [exposes](#host_module_member) Key of Spec;
+   - `node` [attributes the module](#host_module_effect) Spec to E;
+   - unless `node` [attributes the member](#host_member_effect) Key of Spec to some effect.
 
 In the audit:
 
@@ -180,20 +198,20 @@ In the audit:
 
 1. if all of:
    - C [calls the module member](#host_module_call) Key of a spec Spec;
-   - `node` attributes the member Key of Spec to E;
+   - `node` [attributes the member](#host_member_effect) Key of Spec to E;
    - N is `by_member`;
 2. if all of:
    - C [calls the module member](#host_module_call) Key of a spec Spec;
-   - `node` attributes the module Spec to E;
+   - `node` [attributes the module](#host_module_effect) Spec to E;
    - N is `by_module`;
-   - unless `node` attributes the member Key of Spec to some effect;
+   - unless `node` [attributes the member](#host_member_effect) Key of Spec to some effect;
 3. if all of:
    - C [calls the host global](#host_global_call) Name of a host H;
-   - H attributes the global Name to E;
+   - H [attributes the global](#host_global_effect) Name to E;
    - N is `by_global`;
 4. if all of:
    - C [calls the host member](#host_member_call) some key of Name in a host H;
-   - H attributes the global Name to E;
+   - H [attributes the global](#host_global_effect) Name to E;
    - N is `by_global`.
 
 > at a coordinate, and the set of effects the corpus exercises
@@ -215,8 +233,8 @@ In the audit:
 
 <a id="runtime_reaches"></a>A runtime R reaches the runtime N either:
 
-1. if R is the version some number of some runtime and N is R;
-2. if R includes the runtime Q and Q [reaches the runtime](#runtime_reaches) N.
+1. if R [is the version](#runtime_version) some number of some runtime and N is R;
+2. if R [includes the runtime](#runtime_includes) Q and Q [reaches the runtime](#runtime_reaches) N.
 
 > `provides_api` is DERIVED from a semver point (`@since v18.9.0`) with one
 > comparison; the arithmetic lives in these three rules only. The encoding
@@ -225,15 +243,15 @@ In the audit:
 
 In the code:
 
-<a id="runtime_vnum"></a>The version number of a runtime R is VN if R is the version V of some runtime and VN is V * 1000000.
+<a id="runtime_vnum"></a>The version number of a runtime R is VN if R [is the version](#runtime_version) V of some runtime and VN is V * 1000000.
 
 > The family is bound once and used in both premises; hard-coding `node`
 > compared the browser against node's surface and reported 718 absences.
 
 <a id="arrived_by"></a>A runtime has received Key of a spec Spec if all of:
   - [the version number](#runtime_vnum) of it is VN;
-  - it is the version some number of a runtime F;
-  - F adds Key of Spec since some text being Sv;
+  - it [is the version](#runtime_version) some number of a runtime F;
+  - F [adds](#host_member_since) Key of Spec since some text being Sv;
   - Sv <= VN.
 
 > What a version adds of its own. `arrived_by` is a threshold, hence monotone
@@ -242,7 +260,7 @@ In the code:
 
 A runtime
 
-- <a id="inherited"></a>inherits Key of a spec Spec if it includes the runtime P and P [has received](#arrived_by) Key of Spec.
+- <a id="inherited"></a>inherits Key of a spec Spec if it [includes the runtime](#runtime_includes) P and P [has received](#arrived_by) Key of Spec.
 - <a id="provides_api"></a>provides Key of a spec Spec if it [has received](#arrived_by) Key of Spec, unless it [inherits](#inherited) Key of Spec.
 
 > test/js-host.test.ts asserts `has_api` equals `arrived_by` set for set:
@@ -257,7 +275,7 @@ In the audit:
 > second snapshot populates it with no other change.
 
 <a id="runtime_drops"></a>A runtime drops Key of a spec Spec from a runtime B if all of:
-  - it includes the runtime B;
+  - it [includes the runtime](#runtime_includes) B;
   - B [reaches the api](#has_api) Key of Spec;
   - unless it [reaches the api](#has_api) Key of Spec.
 
@@ -268,7 +286,7 @@ In the audit:
 
 <a id="runtime_reaches_release"></a>A runtime runs the release Rel if all of:
   - it [reaches the runtime](#runtime_reaches) P;
-  - P ships the release Rel0;
+  - P [ships the release](#provides_release) Rel0;
   - Rel0 [reaches the release](js-env.rofl.md#reaches) Rel.
 
 > `runtime_has_release` is a GUARD: a runtime with no bridge row reaches no
@@ -282,7 +300,7 @@ In the main:
 
 In the audit:
 
-<a id="runtime_no_release"></a>A runtime has no release if it is the version some number of some runtime, unless it [has a release](#runtime_has_release).
+<a id="runtime_no_release"></a>A runtime has no release if it [is the version](#runtime_version) some number of some runtime, unless it [has a release](#runtime_has_release).
 
 <a id="runtime_lib_unsupported"></a>C is unsupported on a runtime R at Key of a prototype P if all of:
   - C [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
@@ -293,8 +311,8 @@ In the audit:
 > THE VERSION QUESTION AT A SITE: this call, this member, this line.
 
 <a id="host_member_absent"></a>A runtime lacks the member Key of a spec Spec if all of:
-  - it is the version some number of a runtime F;
-  - F adds Key of Spec since some text being some number;
+  - it [is the version](#runtime_version) some number of a runtime F;
+  - F [adds](#host_member_since) Key of Spec since some text being some number;
   - unless it [reaches the api](#has_api) Key of Spec.
 
 <a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
@@ -306,8 +324,8 @@ In the audit:
 
 <a id="host_lost"></a>A runtime loses the call C to a spec Spec at Key since a runtime From if all of:
   - C [is absent on](#host_call_absent) it at Key of Spec;
-  - it is the version some number of a runtime F;
-  - From is the version some number of F;
+  - it [is the version](#runtime_version) some number of a runtime F;
+  - From [is the version](#runtime_version) some number of F;
   - From differs from it;
   - unless C [is absent on](#host_call_absent) From at Key of Spec.
 
@@ -316,9 +334,9 @@ In the audit:
 > source records; a deprecation note naming its replacement is one join from
 > a remedy.
 
-<a id="host_call_deprecated"></a>C calls a deprecated member Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and `node` deprecates Key of Spec.
+<a id="host_call_deprecated"></a>C calls a deprecated member Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and `node` [deprecates](#host_member_deprecated) Key of Spec.
 
-<a id="host_call_remedy"></a>C has the host remedy Use for Key of a spec Spec if C [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` replaces Key of Spec with Use.
+<a id="host_call_remedy"></a>C has the host remedy Use for Key of a spec Spec if C [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` [replaces](#host_member_replaced_by) Key of Spec with Use.
 
 ## 6. THE GATES. Each is a statement this layer makes about itself, and
 
@@ -328,42 +346,42 @@ In the audit:
 
 <a id="host_effect_undeclared"></a>An effect E is an undeclared host effect either:
 
-1. if some host attributes the module some spec to E, unless E is a host effect;
-2. if some host attributes the member some key of some spec to E, unless E is a host effect;
-3. if some host attributes the global some name to E, unless E is a host effect.
+1. if some host [attributes the module](#host_module_effect) some spec to E, unless E [is a host effect](#host_effect_atom);
+2. if some host [attributes the member](#host_member_effect) some key of some spec to E, unless E [is a host effect](#host_effect_atom);
+3. if some host [attributes the global](#host_global_effect) some name to E, unless E [is a host effect](#host_effect_atom).
 
 > the authored effect table accountable to the generated surface
 
 <a id="host_effect_orphan"></a>A spec Spec has an orphan effect at Key either:
 
-1. if `node` attributes the member Key of Spec to some effect, unless `node` exposes Key of Spec;
+1. if `node` [attributes the member](#host_member_effect) Key of Spec to some effect, unless `node` [exposes](#host_module_member) Key of Spec;
 2. if all of:
-   - `node` attributes the module Spec to some effect;
+   - `node` [attributes the module](#host_module_effect) Spec to some effect;
    - Key is `global`;
-   - unless `node` has the module Spec.
+   - unless `node` [has the module](#host_module) Spec.
 
-<a id="host_global_effect_orphan"></a>A host has an orphan global effect at Name if it attributes the global Name to some effect, unless it has the global Name.
+<a id="host_global_effect_orphan"></a>A host has an orphan global effect at Name if it [attributes the global](#host_global_effect) Name to some effect, unless it [has the global](#host_global) Name.
 
 > The residue, over hosts that CLAIM attribution; `host_no_effects` is a
 > declared absence rather than a permanently red gate.
 
 In the main:
 
-<a id="effects_claimed"></a>A host claims its effects if it is a host, unless it claims no effects because some reason.
+<a id="effects_claimed"></a>A host claims its effects if it [is a host](#host), unless it [claims no effects](#host_no_effects) because some reason.
 
 In the audit:
 
-<a id="host_module_uneffected"></a>A spec has no module effect if `node` has the module it, unless `node` attributes the module it to some effect.
+<a id="host_module_uneffected"></a>A spec has no module effect if `node` [has the module](#host_module) it, unless `node` [attributes the module](#host_module_effect) it to some effect.
 
 <a id="host_global_uneffected"></a>A host has no global effect at Name if all of:
-  - it has the global Name;
+  - it [has the global](#host_global) Name;
   - it [claims its effects](#effects_claimed);
-  - unless it attributes the global Name to some effect.
+  - unless it [attributes the global](#host_global_effect) Name to some effect.
 
 > a runtime with no version answers NO to every version question and looks
 > new rather than broken; `runtime_undated` is the waiver for `browser`
 
-<a id="runtime_unversioned"></a>A runtime is unversioned if it is the version 0 of some runtime but is not undated because some reason.
+<a id="runtime_unversioned"></a>A runtime is unversioned if it [is the version](#runtime_version) 0 of some runtime, unless it [is undated](#runtime_undated) because some reason.
 
 > two runtimes agreeing on every member are one runtime; no ordering premise,
 > for the reason `env_pair_indistinct` records
@@ -372,8 +390,8 @@ A runtime
 
 - <a id="runtime_separates"></a>is told apart from a runtime B if B [lacks the member](#host_member_absent) Key of a spec Spec, unless it [lacks the member](#host_member_absent) Key of Spec.
 - <a id="runtime_pair_indistinct"></a>is not told apart from a runtime B if all of:
-  - it is the version some number of a runtime F;
-  - B is the version some number of F;
+  - it [is the version](#runtime_version) some number of a runtime F;
+  - B [is the version](#runtime_version) some number of F;
   - it differs from B;
   - unless it [is told apart from](#runtime_separates) B or B [is told apart from](#runtime_separates) it.
 
@@ -388,24 +406,24 @@ In the main:
 
 In the audit:
 
-<a id="bare_builtin_unlisted"></a>A spec is not listed bare if `node` has the module it, unless it [is listed bare](#bare_listed).
+<a id="bare_builtin_unlisted"></a>A spec is not listed bare if `node` [has the module](#host_module) it, unless it [is listed bare](#bare_listed).
 
 > an inclusion ACROSS families claims one runtime is a later edition of
 > another; the order is not total across families
 
 A runtime
 
-- <a id="runtime_family_undeclared"></a>has an undeclared family F if it is the version some number of F, unless F is a runtime.
+- <a id="runtime_family_undeclared"></a>has an undeclared family F if it [is the version](#runtime_version) some number of F, unless F [is a runtime](#runtime).
 - <a id="runtime_cross_family"></a>includes across families a runtime B if all of:
-  - it includes the runtime B;
-  - it is the version some number of a runtime FA;
-  - B is the version some number of a runtime FB;
+  - it [includes the runtime](#runtime_includes) B;
+  - it [is the version](#runtime_version) some number of a runtime FA;
+  - B [is the version](#runtime_version) some number of a runtime FB;
   - FA differs from FB.
 
 > `host/1` is generated, `runtime/1` authored; they must name the same families
 
 <a id="host_family_mismatch"></a>A host H is half declared either:
 
-1. if H is a host but is not a runtime;
-2. if H is a runtime but is not a host.
+1. if H [is a host](#host), unless H [is a runtime](#runtime);
+2. if H [is a runtime](#runtime), unless H [is a host](#host).
 

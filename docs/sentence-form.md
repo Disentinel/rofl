@@ -49,14 +49,19 @@ one of them, and the round trip is the proof that they agree.
   De Morgan on the way back. **Functors read** by a phrase (`the segment 1 of
   Src split by "/"`), as written (`I is J + K`), or in source syntax
   (`$lit(_, _, _, _)`).
-- **The file** carries its own context and nothing else: front matter, a
-  `Reads` list (its imports, one line per source and book), a Kinds table
-  whose rows are anchors, a Guards section, then the essay. A book is a
-  block, `In the audit:`. A declared table reads as its signature sentence.
-  A noun links to its Kinds row or its guard relation; a use of a relation
-  links to its definition or is imported. No Signatures section, no Terms
-  line (f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top,
-  f_a_use_is_declared_when_it_has_somewhere_to_link_and_a_declared_table_reads_as_its_sentence).
+- **The file** carries its own context and nothing else: front matter, its
+  lead (the comment before the first heading or clause, so the file opens
+  with its reason), a `Reads` list (its imports, one line per source and
+  book; a relation defined outside these files reads as its sentence and
+  carries the anchor every use links to), a `Words` glossary (what the file
+  calls a node, and what each word stands for: a kind, or the relation that
+  holds of it), then the essay. A book is a block, `In the audit:`. A
+  declared table reads as its signature sentence. A noun links to its Words
+  row; a use of a relation links to its definition or to its Reads entry.
+  No Signatures section, no Terms line
+  (f_what_a_file_reads_and_does_not_define_is_its_imports_and_they_read_at_the_top,
+  f_a_use_is_declared_when_it_has_somewhere_to_link_and_a_declared_table_reads_as_its_sentence,
+  f_a_file_opens_with_its_reason_and_every_word_has_somewhere_to_link).
 - **The check**: a relation a rule reads is declared when it has somewhere to
   link. Source order is the essay's, and the essay may say "see below".
 - **The lint**, `npm run untyped`: the one-letter variables nothing in their

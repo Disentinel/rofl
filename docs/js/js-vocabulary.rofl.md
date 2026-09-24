@@ -6,12 +6,6 @@ default: main
 
 # js-vocabulary
 
-Reads:
-
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at)
-- from js-model: [frame_deferred](js-model.rofl.md#frame_deferred), [lang_of_corpus](js-model.rofl.md#lang_of_corpus), [not_a_construct](js-model.rofl.md#not_a_construct)
-- from outside these files: `node_kind`, `premise_lit`
-
 > js-vocabulary.rofl — THE MODEL'S OPINIONS ABOUT KINDS, checked against the
 > list of kinds it claims to describe. `vocabulary_gap[audit]` in js-model
 > watches the CORPUS: a kind the scanner emits that the vocabulary does not
@@ -27,10 +21,18 @@ Reads:
 > gets its own arm because `not ast_node(X, with_statement, _, _)` is an
 > opinion about `with_statement`.
 
+Reads:
+
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at)
+- from js-model: [frame_deferred](js-model.rofl.md#frame_deferred), [lang_of_corpus](js-model.rofl.md#lang_of_corpus), [not_a_construct](js-model.rofl.md#not_a_construct)
+- from outside these files:
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+  - <a id="premise_lit"></a>`premise_lit`
+
 <a id="body_lit"></a>A term L is a body literal either:
 
-1. if `premise_lit`(something, something, L) and L is $lit(something, something, something, something);
-2. if `premise_lit`(something, something, $not(L)).
+1. if [`premise_lit`](#premise_lit)(something, something, L) and L is $lit(something, something, something, something);
+2. if [`premise_lit`](#premise_lit)(something, something, $not(L)).
 
 <a id="lit_rel"></a>The relation of a term L is a relation Rel if L [is a body literal](#body_lit) and L is $lit(Rel, something, something, something).
 
@@ -59,7 +61,7 @@ A relation
 > second). The limit: a position where EVERY constant is an undeclared kind
 > is invisible, which is the cheaper mistake.
 
-<a id="kind_slot"></a>A relation has a kind slot in rules at an index I if it [has the atom](#slot_atom) X at I and `js` has the node kind X.
+<a id="kind_slot"></a>A relation has a kind slot in rules at an index I if it [has the atom](#slot_atom) X at I and `js` [has the node kind](#node_kind) X.
 
 <a id="kind_named_by_rule"></a>A kind K is named by a rule if a relation Rel [has the atom](#slot_atom) K at an index I and Rel [has a kind slot in rules](#kind_slot) at I.
 
@@ -72,5 +74,5 @@ In the audit:
   - K [is named by a rule](#kind_named_by_rule);
   - Lang [is the corpus language](js-model.rofl.md#lang_of_corpus);
   - K neither [is not a construct](js-model.rofl.md#not_a_construct) nor [is deferred to the frame](js-model.rofl.md#frame_deferred) because some reason;
-  - unless Lang has the node kind K.
+  - unless Lang [has the node kind](#node_kind) K.
 

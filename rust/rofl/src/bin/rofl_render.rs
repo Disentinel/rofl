@@ -265,6 +265,7 @@ fn pad(s: &mut String, raw: &str, text: &str) {
     if !raw.ends_with('-') { s.push(' '); }
 }
 fn is_wild(h: &Heap, t: Term) -> bool { matches!(t.kind(), TermK::Var(v) if h.name(v).starts_with("_$")) }
+fn capitalize(s: &str) -> String { let mut c = s.chars(); match c.next() { Some(f) => f.to_uppercase().collect::<String>() + c.as_str(), None => String::new() } }
 fn article(n: &str) -> &'static str { if n.starts_with(['a', 'e', 'i', 'o', 'u']) { "an" } else { "a" } }
 
 impl<'a> R<'a> {
@@ -288,6 +289,26 @@ impl<'a> R<'a> {
     }
     fn a_noun(&self, n: &str) -> String { format!("{} {}", article(n), self.noun_link(n)) }
     /// A signature read as a sentence with every hole typed: `A kind K catches via a field Field`.
+    /// A phrase with every hole read as its noun and no variable, a named hole left out:
+    /// `a node is a child of a node`, `the attribute of a node is a value`.
+    fn phrase_gloss(&self, p: &Phrase) -> String {
+        let mut s = String::new();
+        let mut prev = String::new();
+        for part in &p.parts {
+            match part {
+                Part::Text(t, _) => { s.push(' '); s.push_str(t); prev = t.clone(); }
+                Part::Hole(_, noun) => {
+                    let words: Vec<&str> = prev.split_whitespace().collect();
+                    let last = words.last().copied().unwrap_or("");
+                    let named = words.iter().any(|w| ["the", "a", "an", "two", "its", "no"].contains(w)) && !PREPS.contains(&last);
+                    if !named { s.push(' '); s.push_str(&format!("{} {noun}", article(noun))); }
+                    prev.clear();
+                }
+                Part::Fixed(..) => {}
+            }
+        }
+        s.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
     fn decl_sentence(&self, p: &Phrase, vars: &[String]) -> String {
         let mut s = String::new();
         let mut prev = String::new();
@@ -322,7 +343,7 @@ impl<'a> R<'a> {
         match self.defs.get(&rel) {
             Some(&f) if f == file => { stats.links += 1; format!("[{}](#{})", text, self.h.name(rel)) }
             Some(&f) => { stats.links += 1; format!("[{}]({}.rofl.md#{})", text, self.stems[f], self.h.name(rel)) }
-            None => { stats.external.insert(self.h.name(rel).to_string()); text.to_string() }
+            None => { let name = self.h.name(rel).to_string(); let l = format!("[{text}](#{name})"); stats.external.insert(name); l }
         }
     }
     fn term(&self, t: Term, hole: Option<&str>, ctx: &mut Ctx) -> String { self.term_after(t, hole, "", ctx) }
@@ -1131,18 +1152,24 @@ impl<'a> R<'a> {
         let mut books: BTreeSet<String> = BTreeSet::new();
         let mut anchored: HashSet<Sym> = HashSet::new();
         let mut reads: BTreeMap<String, usize> = BTreeMap::new();
+        // the file's own opening comment, before any heading or clause, is its lead and comes first
+        let mut lead = String::new();
+        let mut lead_open = true;
         for seg in &doc.segs {
             match seg {
-                Seg::Heading(t) => { let _ = writeln!(body, "## {t}\n"); }
+                Seg::Heading(t) => { lead_open = false; let _ = writeln!(body, "## {t}\n"); }
                 Seg::Quote(lines) => {
-                    for l in lines { let _ = writeln!(body, "> {}", l.trim_end()); }
-                    body.push('\n');
+                    let dst: &mut String = if lead_open { &mut lead } else { &mut body };
+                    for l in lines { let _ = writeln!(dst, "> {}", l.trim_end()); }
+                    dst.push('\n');
                 }
                 Seg::Refused(chunk, err) => {
+                    lead_open = false;
                     stats.refused += 1;
                     let _ = writeln!(body, "```rofl\n{chunk}\n```\n\n> refused: {err}\n");
                 }
                 Seg::Code(clauses) => {
+                    lead_open = false;
                     stats.clauses += clauses.len();
                     for c in clauses {
                         books.insert(self.book_name(c.head.book));
@@ -1174,16 +1201,28 @@ impl<'a> R<'a> {
         }
         let mut out = String::new();
         let _ = writeln!(out, "---\nworld: {}\nbooks: {}\ndefault: {}\n---\n", doc.stem, books.iter().cloned().collect::<Vec<_>>().join(", "), default_book);
-        let guards: Vec<String> = self.file_guards.get(file).map(|m| { let mut v: Vec<(&String, &Sym)> = m.iter().collect(); v.sort(); v.into_iter().map(|(n, r)| format!("- {} {n}: `{}`", article(n), self.h.name(*r))).collect() }).unwrap_or_default();
+        let guards: Vec<(String, Sym)> = self.file_guards.get(file).map(|m| { let mut v: Vec<(String, Sym)> = m.iter().map(|(n, r)| (n.clone(), *r)).collect(); v.sort(); v }).unwrap_or_default();
         let _ = writeln!(out, "# {}\n", doc.stem);
+        out.push_str(&lead);
         // what this file reads and does not define is its imports, one line per source, at the top
         let mut groups: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
         let book_of = |rel: &str| self.intern_lookup_or(rel).and_then(|s| self.home.get(&s)).map(|b| self.book_name(*b)).unwrap_or_default();
         for (rel, f) in &reads { groups.entry((self.stems[*f].clone(), book_of(rel))).or_default().push(format!("[{rel}]({}.rofl.md#{rel})", self.stems[*f])); }
-        for rel in &stats.external { groups.entry(("outside these files".to_string(), book_of(rel))).or_default().push(format!("`{rel}`")); }
+        // a relation defined outside these files reads as its sentence and carries the anchor every use links to
+        for rel in &stats.external {
+            let sym = self.sig_forms.keys().chain(self.phrases.keys()).find(|s| self.h.name(**s) == rel).copied();
+            let gloss = sym.and_then(|s| self.sig_forms.get(&s).and_then(|f| f.first()).map(|(p, vars)| self.decl_sentence(p, vars))
+                .or_else(|| self.phrases.get(&s).and_then(|ps| ps.iter().min_by_key(|p| p.holes())).map(|p| self.phrase_gloss(p))));
+            let item = match gloss { Some(g) => format!("<a id=\"{rel}\"></a>{} (`{rel}`)", capitalize(g.trim())), None => format!("<a id=\"{rel}\"></a>`{rel}`") };
+            groups.entry(("outside these files".to_string(), book_of(rel))).or_default().push(item);
+        }
         if !groups.is_empty() {
             let _ = writeln!(out, "Reads:\n");
-            for ((src, book), items) in &groups { let _ = writeln!(out, "- from {src}{}: {}", if book.is_empty() || *book == default_book { String::new() } else { format!(", in the {book}") }, items.join(", ")); }
+            for ((src, book), items) in &groups {
+                let tail = if book.is_empty() || *book == default_book { String::new() } else { format!(", in the {book}") };
+                if src == "outside these files" { let _ = writeln!(out, "- from {src}{tail}:\n{}", items.iter().map(|i| format!("  - {i}")).collect::<Vec<_>>().join("\n")); }
+                else { let _ = writeln!(out, "- from {src}{tail}: {}", items.join(", ")); }
+            }
             out.push('\n');
         }
         let bare: Vec<&String> = nouns_used.iter().filter(|n| n.ends_with(" node")).collect();
@@ -1195,12 +1234,21 @@ impl<'a> R<'a> {
         let mut linked: HashSet<String> = HashSet::new();
         { let mut rest = body.as_str(); while let Some(i) = rest.find("](#noun-") { let after = &rest[i + 8..]; let end = after.find(')').unwrap_or(after.len()); linked.insert(after[..end].replace('_', " ")); rest = &after[end..]; } }
         for (k, n) in &self.kind_nouns { if nouns_used.contains(n) || linked.contains(n) { kinds.entry(n.clone()).or_default().push(self.h.name(*k).to_string()); } }
-        if !kinds.is_empty() {
-            let _ = writeln!(out, "## Kinds\n\nA noun is a node of one of its kinds:\n\n| noun | kinds |\n|---|---|");
-            for (n, ks) in &kinds { let mut ks = ks.clone(); ks.sort(); let _ = writeln!(out, "| <a id=\"noun-{}\"></a>{} {} | {} |", n.replace(' ', "_"), article(n), n, ks.join(", ")); }
+        // one glossary: what this file calls a node, by kind or by the relation that holds of it
+        if !kinds.is_empty() || !guards.is_empty() {
+            let _ = writeln!(out, "## Words\n\nWhat this file calls a node, and what each word stands for:\n\n| word | stands for |\n|---|---|");
+            for (n, ks) in &kinds {
+                let mut ks = ks.clone(); ks.sort();
+                let of = if ks.len() == 1 { format!("a node of kind `{}`", ks[0]) } else { format!("a node of one of the kinds {}", ks.iter().map(|k| format!("`{k}`")).collect::<Vec<_>>().join(", ")) };
+                let _ = writeln!(out, "| <a id=\"noun-{}\"></a>{} {} | {of} |", n.replace(' ', "_"), article(n), n);
+            }
+            for (n, r) in &guards {
+                let name = self.h.name(*r);
+                let rel = match self.defs.get(r) { Some(&f) if f == file => format!("[`{name}`](#{name})"), Some(&f) => format!("[`{name}`]({}.rofl.md#{name})", self.stems[f]), None => format!("`{name}`") };
+                let _ = writeln!(out, "| {} {n} | a node {rel} holds of |", article(n));
+            }
             out.push('\n');
         }
-        if !guards.is_empty() { let _ = writeln!(out, "## Guards\n\nA noun that is a relation: the noun on a variable is the relation holding of it.\n\n{}\n", guards.join("\n")); }
         out.push_str(&body);
         if doc.trailing > 0 { let _ = writeln!(out, "> {} trailing comments on rule lines are not carried over.\n", doc.trailing); }
         (out, stats)

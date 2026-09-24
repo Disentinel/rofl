@@ -6,10 +6,6 @@ default: audit
 
 # js-model
 
-Reads:
-
-- from outside these files, in the main: `layer`, `node_kind`
-
 > js-model.rofl — THE COVERAGE MATRIX: node kind x layer (x shape), and
 > every cell carries a verdict. The one claim this file tests: adding a layer
 > is ONE FACT, and the audit enumerates every cell it needs with no rule edit.
@@ -20,12 +16,18 @@ Reads:
 > rather than out of sight: the first version let `ignored` count as covered,
 > and declaring the whole matrix ignored drove the audit to zero.
 
+Reads:
+
+- from outside these files, in the main:
+  - <a id="layer"></a>A layer L is a layer (`layer`)
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+
 A kind K
 
 - <a id="modelled"></a><a id="waived"></a>is modelled/waived in a layer L of a language Lang if K [is handled/ignored](#handled) in L of Lang with some reason.
 - <a id="unaccounted"></a>is unaccounted in a layer L of a language Lang if all of:
-  - Lang has the node kind K;
-  - L is a layer;
+  - Lang [has the node kind](#node_kind) K;
+  - L [is a layer](#layer);
   - K neither [is modelled](#modelled) in L of Lang nor [is waived](#waived) in L of Lang.
 - <a id="double_claimed"></a>is double claimed in a layer L of a language Lang if K [is modelled](#modelled) in L of Lang and K [is waived](#waived) in L of Lang.
 
@@ -71,7 +73,7 @@ In the audit:
 A kind K
 
 - <a id="orphan_claim"></a>is an orphan claim in a layer L of a language Lang if K [is orphaned](#orphan) in L of Lang under `handled` or `ignored`.
-- <a id="cell"></a>is a cell in a layer L of a language Lang if Lang has the node kind K and L is a layer.
+- <a id="cell"></a>is a cell in a layer L of a language Lang if Lang [has the node kind](#node_kind) K and L [is a layer](#layer).
 
 ## THE LAYER LIST IS THE OWNER'S, as a row. `layer(L)` is one fact and opens
 
@@ -81,7 +83,7 @@ A kind K
 
 `layer_authorised` includes `callgraph`, `dataflow`, `modules`, `controlflow`, `effect`.
 
-<a id="layer_unauthorised"></a>A layer is unauthorised if it is a layer, unless it [is authorised](#layer_authorised).
+<a id="layer_unauthorised"></a>A layer is unauthorised if it [is a layer](#layer), unless it [is authorised](#layer_authorised).
 
 Declared as facts:
 
@@ -195,13 +197,13 @@ Declared as facts:
 A kind K is a cell with a shape N in a layer Lay of a language Lang either:
 
 1. if all of:
-   - Lang has the node kind K;
-   - Lay is a layer;
+   - Lang [has the node kind](#node_kind) K;
+   - Lay [is a layer](#layer);
    - N is `none`;
    - unless `shape` [applies](#axis_applies) in Lay;
 2. if all of:
-   - Lang has the node kind K;
-   - Lay is a layer;
+   - Lang [has the node kind](#node_kind) K;
+   - Lay [is a layer](#layer);
    - `shape` [applies](#axis_applies) in Lay;
    - N is `none`;
    - unless K [has a shape axis](#shape_kind) in Lay of Lang;
@@ -221,12 +223,12 @@ A kind K
 - <a id="refined_cell"></a>is a refined cell in a layer Lay of a language Lang if K [is a cell](#cell) with a shape S in Lay of Lang and S differs from `none`.
 - <a id="double_cell"></a>is a double cell in a layer Lay of a language Lang if K [is a cell](#cell) with `none` in Lay of Lang and K [is a refined cell](#refined_cell) in Lay of Lang.
 
-<a id="orphan_shape"></a>A shape is an orphan shape of a kind K in a language Lang if K [has the shape](#shape_of) it in Lang, unless Lang has the node kind K.
+<a id="orphan_shape"></a>A shape is an orphan shape of a kind K in a language Lang if K [has the shape](#shape_of) it in Lang, unless Lang [has the node kind](#node_kind) K.
 
 <a id="orphan_axis"></a>An axis X is an orphan axis in a layer Lay either:
 
 1. if X [applies](#axis_applies) in Lay, unless X [is an axis](#axis);
-2. if X [applies](#axis_applies) in Lay, unless Lay is a layer.
+2. if X [applies](#axis_applies) in Lay, unless Lay [is a layer](#layer).
 
 ## THE CLAIM LEDGER AT SHAPE GRANULARITY. A kind-level claim answers only for an
 
@@ -371,12 +373,12 @@ A kind K
   - some node [is of kind](#ast_node) K;
   - Lang [is the corpus language](#lang_of_corpus);
   - K neither [is not a construct](#not_a_construct) nor [is deferred to the frame](#frame_deferred) because some reason;
-  - unless Lang has the node kind K.
+  - unless Lang [has the node kind](#node_kind) K.
 - <a id="not_a_construct_unseen"></a>is excluded yet unseen if K [is not a construct](#not_a_construct), unless some node [is of kind](#ast_node) K.
 - <a id="frame_deferred_unseen"></a>is deferred yet unseen if K [is deferred to the frame](#frame_deferred) because some reason, unless some node [is of kind](#ast_node) K.
 - <a id="double_excluded"></a>is excluded twice if K [is not a construct](#not_a_construct) and K [is deferred to the frame](#frame_deferred) because some reason.
-- <a id="declared_and_excluded"></a>is declared yet excluded if some language has the node kind K and K [is not a construct](#not_a_construct).
-- <a id="declared_and_deferred"></a>is declared yet deferred if some language has the node kind K and K [is deferred to the frame](#frame_deferred) because some reason.
+- <a id="declared_and_excluded"></a>is declared yet excluded if some language [has the node kind](#node_kind) K and K [is not a construct](#not_a_construct).
+- <a id="declared_and_deferred"></a>is declared yet deferred if some language [has the node kind](#node_kind) K and K [is deferred to the frame](#frame_deferred) because some reason.
 
 Declared as facts:
 
@@ -400,11 +402,11 @@ Declared as facts:
 A kind K
 
 - <a id="kind_unexercised"></a>is unexercised in a language Lang if all of:
-  - Lang has the node kind K;
+  - Lang [has the node kind](#node_kind) K;
   - Lang [has a scanned corpus](#scanned);
   - unless some node [is of kind](#ast_node) K or K [is excused absent](#kind_absent_ok) because some reason.
 - <a id="kind_absent_stale"></a>is excused yet present if K [is excused absent](#kind_absent_ok) because some reason and some node [is of kind](#ast_node) K.
-- <a id="kind_absent_undeclared"></a>is excused yet undeclared if K [is excused absent](#kind_absent_ok) because some reason, unless some language has the node kind K.
+- <a id="kind_absent_undeclared"></a>is excused yet undeclared if K [is excused absent](#kind_absent_ok) because some reason, unless some language [has the node kind](#node_kind) K.
 
 `imports` lists:
 

@@ -6,82 +6,6 @@ default: flow
 
 # js-dataflow
 
-Reads:
-
-- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
-- from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
-- from outside these files, in the code: `ast_attr`, `ast_child`, `ast_file`
-
-## Kinds
-
-A noun is a node of one of its kinds:
-
-| noun | kinds |
-|---|---|
-| <a id="noun-array_literal"></a>an array literal | array_expression |
-| <a id="noun-array_pattern"></a>an array pattern | array_pattern |
-| <a id="noun-assignment"></a>an assignment | assignment_expression |
-| <a id="noun-assignment_pattern"></a>an assignment pattern | assignment_pattern |
-| <a id="noun-await"></a>an await | await_expression |
-| <a id="noun-block_scope"></a>a block scope | block_scope_kind |
-| <a id="noun-call_expression"></a>a call expression | call_expression |
-| <a id="noun-catch"></a>a catch | catch_clause |
-| <a id="noun-class_declaration"></a>a class declaration | class_declaration |
-| <a id="noun-class_expression"></a>a class expression | class_expression |
-| <a id="noun-class_field"></a>a class field | class_field_kind |
-| <a id="noun-conditional"></a>a conditional | conditional_expression |
-| <a id="noun-declaration"></a>a declaration | variable_declaration |
-| <a id="noun-declarator"></a>a declarator | variable_declarator |
-| <a id="noun-default_export"></a>a default export | export_default_declaration |
-| <a id="noun-default_import"></a>a default import | import_default_specifier |
-| <a id="noun-export_specifier"></a>an export specifier | export_specifier |
-| <a id="noun-export-all"></a>an export-all | export_all_declaration |
-| <a id="noun-for-of"></a>a for-of | for_of_statement |
-| <a id="noun-function_declaration"></a>a function declaration | function_declaration |
-| <a id="noun-identifier"></a>an identifier | identifier |
-| <a id="noun-import"></a>an import | import_declaration |
-| <a id="noun-invocation"></a>an invocation | call_like_v |
-| <a id="noun-literal"></a>a literal | literal_kind |
-| <a id="noun-logical"></a>a logical | logical_expression |
-| <a id="noun-method"></a>a method | class_method |
-| <a id="noun-named_export"></a>a named export | export_named_declaration |
-| <a id="noun-namespace_export"></a>a namespace export | export_namespace_specifier |
-| <a id="noun-namespace_import"></a>a namespace import | import_namespace_specifier |
-| <a id="noun-new"></a>a new | new_expression |
-| <a id="noun-object_literal"></a>an object literal | object_expression |
-| <a id="noun-object_method"></a>an object method | object_method |
-| <a id="noun-object_pattern"></a>an object pattern | object_pattern |
-| <a id="noun-private_field"></a>a private field | class_private_property |
-| <a id="noun-private_member"></a>a private member | private_member_kind |
-| <a id="noun-private_method"></a>a private method | class_private_method |
-| <a id="noun-private_name"></a>a private name | private_name |
-| <a id="noun-program"></a>a program | program |
-| <a id="noun-property"></a>a property | object_property |
-| <a id="noun-rest"></a>a rest | rest_element |
-| <a id="noun-return"></a>a return | return_statement |
-| <a id="noun-sequence"></a>a sequence | sequence_expression |
-| <a id="noun-spread"></a>a spread | spread_element |
-| <a id="noun-static_block"></a>a static block | static_block |
-| <a id="noun-super"></a>a super | super |
-| <a id="noun-template"></a>a template | template_literal |
-| <a id="noun-this"></a>a this | this_expression |
-| <a id="noun-this-binder"></a>a this-binder | this_binds_kind |
-| <a id="noun-throw"></a>a throw | throw_statement |
-| <a id="noun-try"></a>a try | try_statement |
-| <a id="noun-value_site"></a>a value site | node_value_kind |
-| <a id="noun-wrapper"></a>a wrapper | value_transparent |
-| <a id="noun-yield"></a>a yield | yield_expression |
-
-## Guards
-
-A noun that is a relation: the noun on a variable is the relation holding of it.
-
-- a function: `fn_node`
-- a member access: `member_node_v`
-- a scope: `scope_node`
-
 > js-dataflow.rofl — THE VALUE LAYER: what an expression may evaluate to.
 > 
 > Two carriers and no third. `may_be_lit(E, Text)`: E may evaluate to this
@@ -96,6 +20,80 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > This layer and the call graph are ONE fixpoint: rules here read
 > `resolves[code]` and rules/js-callgraph.rofl reads `may_be_node`; the
 > recursion is positive. Loaded alone, this half is silent rather than wrong.
+
+Reads:
+
+- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
+- from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
+- from outside these files, in the code:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+  - <a id="ast_file"></a>`ast_file`
+
+## Words
+
+What this file calls a node, and what each word stands for:
+
+| word | stands for |
+|---|---|
+| <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
+| <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
+| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
+| <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
+| <a id="noun-await"></a>an await | a node of kind `await_expression` |
+| <a id="noun-block_scope"></a>a block scope | a node of kind `block_scope_kind` |
+| <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
+| <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
+| <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
+| <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
+| <a id="noun-class_field"></a>a class field | a node of kind `class_field_kind` |
+| <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
+| <a id="noun-declaration"></a>a declaration | a node of kind `variable_declaration` |
+| <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
+| <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
+| <a id="noun-default_import"></a>a default import | a node of kind `import_default_specifier` |
+| <a id="noun-export_specifier"></a>an export specifier | a node of kind `export_specifier` |
+| <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
+| <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
+| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
+| <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
+| <a id="noun-import"></a>an import | a node of kind `import_declaration` |
+| <a id="noun-invocation"></a>an invocation | a node of kind `call_like_v` |
+| <a id="noun-literal"></a>a literal | a node of kind `literal_kind` |
+| <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
+| <a id="noun-method"></a>a method | a node of kind `class_method` |
+| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
+| <a id="noun-namespace_export"></a>a namespace export | a node of kind `export_namespace_specifier` |
+| <a id="noun-namespace_import"></a>a namespace import | a node of kind `import_namespace_specifier` |
+| <a id="noun-new"></a>a new | a node of kind `new_expression` |
+| <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
+| <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
+| <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
+| <a id="noun-private_field"></a>a private field | a node of kind `class_private_property` |
+| <a id="noun-private_member"></a>a private member | a node of kind `private_member_kind` |
+| <a id="noun-private_method"></a>a private method | a node of kind `class_private_method` |
+| <a id="noun-private_name"></a>a private name | a node of kind `private_name` |
+| <a id="noun-program"></a>a program | a node of kind `program` |
+| <a id="noun-property"></a>a property | a node of kind `object_property` |
+| <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
+| <a id="noun-return"></a>a return | a node of kind `return_statement` |
+| <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
+| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
+| <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
+| <a id="noun-super"></a>a super | a node of kind `super` |
+| <a id="noun-template"></a>a template | a node of kind `template_literal` |
+| <a id="noun-this"></a>a this | a node of kind `this_expression` |
+| <a id="noun-this-binder"></a>a this-binder | a node of kind `this_binds_kind` |
+| <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
+| <a id="noun-try"></a>a try | a node of kind `try_statement` |
+| <a id="noun-value_site"></a>a value site | a node of kind `node_value_kind` |
+| <a id="noun-wrapper"></a>a wrapper | a node of kind `value_transparent` |
+| <a id="noun-yield"></a>a yield | a node of kind `yield_expression` |
+| a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
+| a member access | a node [`member_node_v`](#member_node_v) holds of |
+| a scope | a node [`scope_node`](#scope_node) holds of |
 
 ## 1. Names
 
@@ -114,8 +112,8 @@ An [identifier](#noun-identifier)
 
 A [declarator](#noun-declarator)
 
-- <a id="decl_binds"></a>binds Name if a node N is among the `id` of it and N [reads](#ident) Name.
-- <a id="decl_reads"></a>is initialised from Name if a node N is among the `init` of it and N [reads](#ident) Name.
+- <a id="decl_binds"></a>binds Name if a node N [is among the](#ast_child) `id` of it and N [reads](#ident) Name.
+- <a id="decl_reads"></a>is initialised from Name if a node N [is among the](#ast_child) `init` of it and N [reads](#ident) Name.
 
 <a id="var_flow"></a>From flows to To if D [is initialised from](#decl_reads) From and D [binds](#decl_binds) To.
 
@@ -146,13 +144,13 @@ Declared as facts:
 
 In the code:
 
-<a id="interpolated"></a>A node is interpolated if some node is among the `expressions` of it.
+<a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 
 In the flow:
 
 A [template](#noun-template) may be the literal V if all of:
-  - the `quasis` of it is a node Q;
-  - the attribute `value_cooked` of Q is V;
+  - [the](#ast_child) `quasis` of it is a node Q;
+  - [the attribute](#ast_attr) `value_cooked` of Q is V;
   - unless it [is interpolated](#interpolated).
 
 > An object, array, function, class or regexp expression is its own node.
@@ -177,8 +175,8 @@ In the code:
 
 <a id="binder"></a>A [declarator](#noun-declarator) binds Name to a node Init in File if all of:
   - it is in file File;
-  - the `id` of it [is named](js-structure.rofl.md#ast_name) Name;
-  - the `init` of it is Init.
+  - [the](#ast_child) `id` of it [is named](js-structure.rofl.md#ast_name) Name;
+  - [the](#ast_child) `init` of it is Init.
 
 <a id="scoped_binder"></a>D is scoped in File if D [binds](#binder) some name to some node in File.
 
@@ -231,9 +229,9 @@ Declared as facts:
 
 > `let`/`const` is read off the DECLARATION, one node above the declarator.
 
-<a id="lexical_decl"></a>V is let or const if V is a [declaration](#noun-declaration) and the attribute `kind` of V is "let" or "const".
+<a id="lexical_decl"></a>V is let or const if V is a [declaration](#noun-declaration) and [the attribute](#ast_attr) `kind` of V is "let" or "const".
 
-<a id="lexical_binder"></a>A node is lexical if a node V [is let or const](#lexical_decl) and it is among the `declarations` of V.
+<a id="lexical_binder"></a>A node is lexical if a node V [is let or const](#lexical_decl) and it [is among the](#ast_child) `declarations` of V.
 
 > Nearest scope, over declarators only. `ast_within(R, D)` first, with D
 > bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
@@ -293,7 +291,7 @@ Declared as facts:
    - Outer [introduces](#binds_name) Name in File;
    - Outer [is at the top](#binder_at_top);
    - F [takes](#param_of) Name at some index;
-   - `ast_file`(Root, File);
+   - [`ast_file`](#ast_file)(Root, File);
    - F [is within](js-structure.rofl.md#ast_within) a node Root.
 
 > The inner binder's whole REGION is the extent of the hiding, including the
@@ -359,8 +357,8 @@ In the code:
 
 <a id="assigns"></a>Name is assigned a node Src in File if all of:
   - an [assignment](#noun-assignment) X is in file File;
-  - the `left` of X [is named](js-structure.rofl.md#ast_name) Name;
-  - the `right` of X is Src.
+  - [the](#ast_child) `left` of X [is named](js-structure.rofl.md#ast_name) Name;
+  - [the](#ast_child) `right` of X is Src.
 
 In the flow:
 
@@ -380,7 +378,7 @@ A node
 
 `value_transparent`, a [wrapper](#noun-wrapper), includes `parenthesized_expression`, `tsas_expression`, `tsnon_null_expression`.
 
-A [wrapper](#noun-wrapper) may be the literal/node V if the `expression` of it [may be the literal/node](#may_be_lit) V.
+A [wrapper](#noun-wrapper) may be the literal/node V if [the](#ast_child) `expression` of it [may be the literal/node](#may_be_lit) V.
 
 Declared as facts:
 
@@ -436,10 +434,10 @@ In the code:
 
 <a id="destructures"></a>A [declarator](#noun-declarator) destructures Local from Key in File if all of:
   - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
-  - a node Prop is among the `properties` of P;
-  - the `key` of Prop [spells](js-structure.rofl.md#key_name) Key;
-  - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+  - [the](#ast_child) `id` of it is an [object pattern](#noun-object_pattern) P;
+  - a node Prop [is among the](#ast_child) `properties` of P;
+  - [the](#ast_child) `key` of Prop [spells](js-structure.rofl.md#key_name) Key;
+  - [the](#ast_child) `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
 
 D is scoped in File if D [destructures](#destructures) some name from some key in File.
 
@@ -447,7 +445,7 @@ In the flow:
 
 A node may be the node N if all of:
   - a node D [destructures](#destructures) Local from Key in File;
-  - the `init` of D [may be the node](#may_be_node) Obj;
+  - [the](#ast_child) `init` of D [may be the node](#may_be_node) Obj;
   - [the member](#member_value) Key of Obj holds a node V;
   - V [may be the node](#may_be_node) N;
   - it [reads](#ident_in) Local in File;
@@ -457,8 +455,8 @@ In the code:
 
 <a id="destructures_at"></a>A [declarator](#noun-declarator) destructures Local at Index in File if all of:
   - it is in file File;
-  - the `id` of it is an [array pattern](#noun-array_pattern) P;
-  - a node L is the Index-th of the `elements` of P;
+  - [the](#ast_child) `id` of it is an [array pattern](#noun-array_pattern) P;
+  - a node L is the Index[-th of the](#ast_child) `elements` of P;
   - L [is named](js-structure.rofl.md#ast_name) Local.
 
 D is scoped in File if D [destructures](#destructures_at) some name at some index in File.
@@ -467,12 +465,12 @@ In the flow:
 
 <a id="elem_at"></a>The element I of a node X is a node E if all of:
   - X [may be the node](#may_be_node) Y;
-  - E is the I-th of the `elements` of Y;
+  - E is the I[-th of the](#ast_child) `elements` of Y;
   - Y is an [array literal](#noun-array_literal).
 
 A node may be the node N if all of:
   - a node D [destructures](#destructures_at) Local at Index in File;
-  - the `init` of D is a node Init;
+  - [the](#ast_child) `init` of D is a node Init;
   - [the element](#elem_at) Index of Init [may be the node](#may_be_node) N;
   - it [reads](#ident_in) Local in File;
   - it [sees](#sees_binder) D.
@@ -482,11 +480,11 @@ A node may be the node N if all of:
 
 A [function](js-callgraph.rofl.md#fn_node)
 
-- <a id="param_of"></a>takes Name at an index I if an [assignment pattern](#noun-assignment_pattern) P is the I-th of the `params` of it and the `left` of P [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="param_of"></a>takes Name at an index I if an [assignment pattern](#noun-assignment_pattern) P is the I[-th of the](#ast_child) `params` of it and [the](#ast_child) `left` of P [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="param_default"></a>defaults Name to a node Init if all of:
-  - an [assignment pattern](#noun-assignment_pattern) P is among the `params` of it;
-  - the `left` of P [is named](js-structure.rofl.md#ast_name) Name;
-  - the `right` of P is Init.
+  - an [assignment pattern](#noun-assignment_pattern) P [is among the](#ast_child) `params` of it;
+  - [the](#ast_child) `left` of P [is named](js-structure.rofl.md#ast_name) Name;
+  - [the](#ast_child) `right` of P is Init.
 
 A node may be the node N if all of:
   - F [defaults](#param_default) Name to a node Init;
@@ -500,15 +498,15 @@ A node may be the node N if all of:
 
 In the code:
 
-<a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop is among the `properties` of it and the `key` of Prop [spells](js-structure.rofl.md#key_name) Key.
+<a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop [is among the](#ast_child) `properties` of it and [the](#ast_child) `key` of Prop [spells](js-structure.rofl.md#key_name) Key.
 
 <a id="rest_in_pattern"></a>A [declarator](#noun-declarator) holds a rest R in File if all of:
   - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
-  - R is among the `properties` of P;
+  - [the](#ast_child) `id` of it is an [object pattern](#noun-object_pattern) P;
+  - R [is among the](#ast_child) `properties` of P;
   - R is a [rest](#noun-rest).
 
-<a id="rest_binds"></a>D binds Local through the rest R in File if D [holds a rest](#rest_in_pattern) R in File and the `argument` of R [is named](js-structure.rofl.md#ast_name) Local.
+<a id="rest_binds"></a>D binds Local through the rest R in File if D [holds a rest](#rest_in_pattern) R in File and [the](#ast_child) `argument` of R [is named](js-structure.rofl.md#ast_name) Local.
 
 D is scoped in File if D [binds](#rest_binds) some name through the rest some node in File.
 
@@ -516,8 +514,8 @@ In the flow:
 
 <a id="member_value"></a>The member Key of a node R holds a node V if all of:
   - a node D [holds a rest](#rest_in_pattern) R in some file;
-  - the `id` of D is a node P;
-  - the `init` of D [may be the node](#may_be_node) Obj;
+  - [the](#ast_child) `id` of D is a node P;
+  - [the](#ast_child) `init` of D [may be the node](#may_be_node) Obj;
   - [the member](#member_value) Key of Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
@@ -532,8 +530,8 @@ A node may be the node R if all of:
 > direction; narrowing needs an order this layer has not got.
 
 The member Key of an [object literal](#noun-object_literal) O holds a node V if all of:
-  - a [spread](#noun-spread) S is among the `properties` of O;
-  - the `argument` of S [may be the node](#may_be_node) Src;
+  - a [spread](#noun-spread) S [is among the](#ast_child) `properties` of O;
+  - [the](#ast_child) `argument` of S [may be the node](#may_be_node) Src;
   - [the member](#member_value) Key of Src holds V.
 
 <a id="valued"></a>A node E is valued either:
@@ -573,26 +571,26 @@ Declared as facts:
 
 In the code:
 
-<a id="spread_arg"></a>An [invocation](#noun-invocation) has a spread at an index I if a [spread](#noun-spread) S is the I-th of the `arguments` of it.
+<a id="spread_arg"></a>An [invocation](#noun-invocation) has a spread at an index I if a [spread](#noun-spread) S is the I[-th of the](#ast_child) `arguments` of it.
 
 <a id="after_spread"></a>A node is past a spread at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
-  - some node is the I-th of the `arguments` of it;
+  - some node is the I[-th of the](#ast_child) `arguments` of it;
   - J < I.
 
 In the flow:
 
-<a id="arg_at"></a>An [invocation](#noun-invocation) passes a node X at an index I if X is the I-th of the `arguments` of it but is not a [spread](#noun-spread), unless it [is past a spread](#after_spread) at I.
+<a id="arg_at"></a>An [invocation](#noun-invocation) passes a node X at an index I if X is the I[-th of the](#ast_child) `arguments` of it but is not a [spread](#noun-spread), unless it [is past a spread](#after_spread) at I.
 
 A node passes a node E at an index I if all of:
   - it [has a spread](#spread_arg) at an index J;
-  - a node S is the J-th of the `arguments` of it;
-  - the `argument` of S is a node X;
+  - a node S is the J[-th of the](#ast_child) `arguments` of it;
+  - [the](#ast_child) `argument` of S is a node X;
   - [the element](#elem_at) K of X is E;
   - I is J + K;
   - unless it [is past a spread](#after_spread) at J.
 
-A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P is the I-th of the `params` of it and P [is named](js-structure.rofl.md#ast_name) Name.
+A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P is the I[-th of the](#ast_child) `params` of it and P [is named](js-structure.rofl.md#ast_name) Name.
 
 > Where a parameter is read: every identifier of its name under F, minus two
 > ways of hiding it — a declarator whose region is STRICTLY inside F
@@ -639,7 +637,7 @@ A node
 
 > A call may be whatever the function it resolves to returns.
 
-<a id="returns"></a>F returns a node E if F [is nearest to](#nearest_v) a [return](#noun-return) R and the `argument` of R is E.
+<a id="returns"></a>F returns a node E if F [is nearest to](#nearest_v) a [return](#noun-return) R and [the](#ast_child) `argument` of R is E.
 
 A node may be the literal/node V if all of:
  - it [resolves to](js-callgraph.rofl.md#resolves) F;
@@ -658,30 +656,30 @@ The member Key of O holds a node V either:
 
 1. if all of:
    - O is an [object literal](#noun-object_literal);
-   - an [object method](#noun-object_method) M is among the `properties` of O;
-   - the `key` of M [spells](js-structure.rofl.md#key_name) Key;
+   - an [object method](#noun-object_method) M [is among the](#ast_child) `properties` of O;
+   - [the](#ast_child) `key` of M [spells](js-structure.rofl.md#key_name) Key;
    - V is M;
 2. if all of:
    - O is an [object literal](#noun-object_literal);
-   - a [property](#noun-property) P is among the `properties` of O;
-   - the `key` of P [spells](js-structure.rofl.md#key_name) Key;
-   - the `value` of P is V;
+   - a [property](#noun-property) P [is among the](#ast_child) `properties` of O;
+   - [the](#ast_child) `key` of P [spells](js-structure.rofl.md#key_name) Key;
+   - [the](#ast_child) `value` of P is V;
 3. if all of:
    - O [is object like](#obj_like);
-   - the `body` of O is a node B;
-   - V is among the `body` of B;
+   - [the](#ast_child) `body` of O is a node B;
+   - V [is among the](#ast_child) `body` of B;
    - V is a [method](#noun-method);
-   - the `key` of V [spells](js-structure.rofl.md#key_name) Key.
+   - [the](#ast_child) `key` of V [spells](js-structure.rofl.md#key_name) Key.
 
 > A member written is a member read, flow-insensitively — `assigns` one step
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
 
 The member Key of a node O holds a node V if all of:
   - a node X [is plain](#plain_assign);
-  - the `left` of X is a node L;
+  - [the](#ast_child) `left` of X is a node L;
   - L [selects](#selects) Key;
-  - the `object` of L [may be the node](#may_be_node) O;
-  - the `right` of X is V.
+  - [the](#ast_child) `object` of L [may be the node](#may_be_node) O;
+  - [the](#ast_child) `right` of X is V.
 
 > Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
 > than a union: a subclass declaring `hold` answers with its own. `own_key`
@@ -693,9 +691,9 @@ The member Key of a node O holds a node V if all of:
 
 <a id="own_key"></a>A class owns the key Key if all of:
   - a node K [spells](js-structure.rofl.md#key_name) Key;
-  - the `key` of a [method](#noun-method) M is K;
-  - M is among the `body` of a node B;
-  - the `body` of it is B;
+  - [the](#ast_child) `key` of a [method](#noun-method) M is K;
+  - M [is among the](#ast_child) `body` of a node B;
+  - [the](#ast_child) `body` of it is B;
   - it [is object like](#obj_like).
 
 The member Key of a node CD holds a node V if all of:
@@ -714,12 +712,12 @@ The member Key of a node CD holds a node V if all of:
 
 1. if all of:
    - N is a [member access](#member_node_v);
-   - the attribute `computed` of N is `false`;
-   - the `property` of N [is named](js-structure.rofl.md#ast_name) Key;
+   - [the attribute](#ast_attr) `computed` of N is `false`;
+   - [the](#ast_child) `property` of N [is named](js-structure.rofl.md#ast_name) Key;
 2. if all of:
    - N is a [member access](#member_node_v);
-   - the attribute `computed` of N is `true`;
-   - the `property` of N [may be the literal](#may_be_lit) Key.
+   - [the attribute](#ast_attr) `computed` of N is `true`;
+   - [the](#ast_child) `property` of N [may be the literal](#may_be_lit) Key.
 
 Declared as facts:
 
@@ -731,7 +729,7 @@ Declared as facts:
 > literal's members carry no `static`, so they get `member_plain`; so does a
 > module namespace.
 
-<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of a class CD is a node M if [the member](#member_value) Key of CD holds M and the attribute `static` of M is `true`/`false`.
+<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of a class CD is a node M if [the member](#member_value) Key of CD holds M and [the attribute](#ast_attr) `static` of M is `true`/`false`.
 
 The plain member Key of O is a node V either:
 
@@ -748,26 +746,26 @@ N may be the node V2 either:
 
 1. if all of:
    - N is a [member access](#member_node_v);
-   - the `object` of N is a node O;
+   - [the](#ast_child) `object` of N is a node O;
    - O [denotes a class](#class_receiver);
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the static member](#class_member_static) Key of Obj [may be the node](#may_be_node) V2;
 2. if all of:
    - N is a [member access](#member_node_v);
-   - the `object` of N is a node O;
+   - [the](#ast_child) `object` of N is a node O;
    - O [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the instance member](#class_member_proto) Key of Obj [may be the node](#may_be_node) V2;
    - unless O [denotes a class](#class_receiver);
 3. if all of:
    - N is a [member access](#member_node_v);
-   - the `object` of N [may be the node](#may_be_node) Obj;
+   - [the](#ast_child) `object` of N [may be the node](#may_be_node) Obj;
    - N [selects](#selects) Key;
    - [the plain member](#member_plain) Key of Obj [may be the node](#may_be_node) V2.
 
 A [member access](#member_node_v) may be the literal L if all of:
-  - the `object` of it [may be the node](#may_be_node) Obj;
+  - [the](#ast_child) `object` of it [may be the node](#may_be_node) Obj;
   - it [selects](#selects) Key;
   - [the member](#member_value) Key of Obj holds a node V;
   - V [may be the literal](#may_be_lit) L.
@@ -781,11 +779,11 @@ M may be the node Y either:
 2. if all of:
    - Y is a [function declaration](#noun-function_declaration);
    - Y is in file File;
-   - the `id` of Y [is named](js-structure.rofl.md#ast_name) Name;
+   - [the](#ast_child) `id` of Y [is named](js-structure.rofl.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
-3. if M is a [property](#noun-property) and the `value` of M [may be the node](#may_be_node) Y.
+3. if M is a [property](#noun-property) and [the](#ast_child) `value` of M [may be the node](#may_be_node) Y.
 
-A [property](#noun-property) may be the literal V if the `value` of it [may be the literal](#may_be_lit) V.
+A [property](#noun-property) may be the literal V if [the](#ast_child) `value` of it [may be the literal](#may_be_lit) V.
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -809,8 +807,8 @@ A node
 
 <a id="class_method_of"></a>A class has the method M if all of:
   - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - M is among the `body` of B;
+  - [the](#ast_child) `body` of it is a node B;
+  - M [is among the](#ast_child) `body` of B;
   - M is a [method](#noun-method).
 
 A node may be the node CD if CD [has the method](#class_method_of) M and M [hosts](#this_host) it.
@@ -831,16 +829,16 @@ Declared as facts:
 
 <a id="field_of"></a>A class has the field Key at a [class field](#noun-class_field) P holding a node V if all of:
   - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - P is among the `body` of B;
-  - the `key` of P [spells](js-structure.rofl.md#key_name) Key;
-  - the `value` of P is V.
+  - [the](#ast_child) `body` of it is a node B;
+  - P [is among the](#ast_child) `body` of B;
+  - [the](#ast_child) `key` of P [spells](js-structure.rofl.md#key_name) Key;
+  - [the](#ast_child) `value` of P is V.
 
 The member Key of a node CD holds a node V if CD [has the field](#field_of) Key at some node holding V.
 
 A class owns the key Key if it [has the field](#field_of) Key at some node holding some node.
 
-The static/instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and the attribute `static` of P is `true`/`false`.
+The static/instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `true`/`false`.
 
 Declared as facts:
 
@@ -854,7 +852,7 @@ Declared as facts:
 1. if [the super](#super_of) of CD [has the field](#field_of) Key at P holding V, unless CD [owns the key](#own_key) Key;
 2. if [the super](#super_of) of CD [inherits the field](#inherited_field) Key at P holding V, unless CD [owns the key](#own_key) Key.
 
-The instance/static member Key of a class CD is a node V if CD [inherits the field](#inherited_field) Key at a node P holding V and the attribute `static` of P is `false`/`true`.
+The instance/static member Key of a class CD is a node V if CD [inherits the field](#inherited_field) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `false`/`true`.
 
 > A private name is LEXICAL, not a lookup: bound by the declaring class body,
 > never inherited, computed or reached from outside, so these rules never ask
@@ -865,17 +863,17 @@ The instance/static member Key of a class CD is a node V if CD [inherits the fie
 
 In the code:
 
-<a id="private_key"></a>A [private name](#noun-private_name) is the private key Name if the `id` of it [is named](js-structure.rofl.md#ast_name) Name.
+<a id="private_key"></a>A [private name](#noun-private_name) is the private key Name if [the](#ast_child) `id` of it [is named](js-structure.rofl.md#ast_name) Name.
 
 `private_member_kind`, a [private member](#noun-private_member), includes `class_private_property`, `class_private_method`.
 
 <a id="private_member"></a>A class has the private member Name at a [private member](#noun-private_member) M if all of:
   - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - M is among the `body` of B;
-  - the `key` of M [is the private key](#private_key) Name.
+  - [the](#ast_child) `body` of it is a node B;
+  - M [is among the](#ast_child) `body` of B;
+  - [the](#ast_child) `key` of M [is the private key](#private_key) Name.
 
-<a id="private_ref"></a>A [member access](#member_node_v) refers privately to Name if the `property` of it [is the private key](#private_key) Name.
+<a id="private_ref"></a>A [member access](#member_node_v) refers privately to Name if [the](#ast_child) `property` of it [is the private key](#private_key) Name.
 
 A node
 
@@ -899,12 +897,12 @@ A [private method](#noun-private_method) may be the node it.
 A node
 
 - may be the node M if it [binds privately to](#private_binds) M and M is a [private method](#noun-private_method).
-- may be the node/literal V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the node/literal](#may_be_node) V2.
+- may be the node/literal V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and [the](#ast_child) `value` of M [may be the node/literal](#may_be_node) V2.
 
 A class has the method M if all of:
   - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - M is among the `body` of B;
+  - [the](#ast_child) `body` of it is a node B;
+  - M [is among the](#ast_child) `body` of B;
   - M is a [private method](#noun-private_method).
 
 `this_binds_kind`, a [this-binder](#noun-this-binder), includes `class_property`, `class_private_property`, `static_block`.
@@ -918,8 +916,8 @@ A node may be the node CD if CD [has the field site](#class_field_this) P and P 
 
 <a id="static_block_of"></a>A class has the static block SB if all of:
   - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - SB is among the `body` of B;
+  - [the](#ast_child) `body` of it is a node B;
+  - SB [is among the](#ast_child) `body` of B;
   - SB is a [static block](#noun-static_block).
 
 A node may be the node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
@@ -944,10 +942,10 @@ In the code:
 
 <a id="imports_name"></a>Local imports Name from Src in File if all of:
   - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
-  - a node Sp is among the `specifiers` of D;
-  - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local;
-  - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
+  - [the](#ast_child) `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+  - a node Sp [is among the](#ast_child) `specifiers` of D;
+  - [the](#ast_child) `local` of Sp [is named](js-structure.rofl.md#ast_name) Local;
+  - [the](#ast_child) `imported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
 
 > one row per file, from `program`; `ast_node(_, _, File, _)` would enumerate
 > the corpus to learn three strings
@@ -957,7 +955,7 @@ In the code:
 <a id="module_source"></a>N sources Src in File if all of:
   - N is an [import](#noun-import) or an [export-all](#noun-export-all);
   - N is in file File;
-  - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
+  - [the](#ast_child) `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
 
 <a id="module_basename"></a>Src has basename Base if all of:
   - some node [sources](#module_source) Src in some file;
@@ -974,8 +972,8 @@ In the code:
 
 <a id="exports_name"></a>A [function](js-callgraph.rofl.md#fn_node) is exported as Name from File if all of:
   - a [named export](#noun-named_export) E is in file File;
-  - the `declaration` of E is it;
-  - the `id` of it [is named](js-structure.rofl.md#ast_name) Name.
+  - [the](#ast_child) `declaration` of E is it;
+  - [the](#ast_child) `id` of it [is named](js-structure.rofl.md#ast_name) Name.
 
 > `export * from` re-exports every NAME (not the default), recursively. The
 > kind guard is not redundant with `module_source`, which holds of imports too.
@@ -991,17 +989,17 @@ A node is exported as Name from File if all of:
 > a binding of the OTHER module and must not resolve here. Erasure has two
 > markers, on the declaration and on the specifier, neither implying the other.
 
-<a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
+<a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if [the](#ast_child) `source` of it is some node.
 
 A node
 
-- <a id="export_list_erased"></a>exports types only if the attribute `export_kind` of it is "type".
-- <a id="export_item_erased"></a>is a type only specifier if the attribute `export_kind` of it is "type".
+- <a id="export_list_erased"></a>exports types only if [the attribute](#ast_attr) `export_kind` of it is "type".
+- <a id="export_item_erased"></a>is a type only specifier if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="export_local"></a>is exported locally as Ext from File if all of:
   - a [named export](#noun-named_export) E is in file File;
-  - an [export specifier](#noun-export_specifier) Sp is among the `specifiers` of E;
-  - the `local` of Sp is it;
-  - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Ext;
+  - an [export specifier](#noun-export_specifier) Sp [is among the](#ast_child) `specifiers` of E;
+  - [the](#ast_child) `local` of Sp is it;
+  - [the](#ast_child) `exported` of Sp [is named](js-structure.rofl.md#ast_name) Ext;
   - E neither [re exports](#reexport_decl) nor [exports types only](#export_list_erased);
   - unless Sp [is a type only specifier](#export_item_erased).
 - is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [may be the node](#may_be_node) it.
@@ -1009,12 +1007,12 @@ A node
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
 > so `ns.f()` is an ordinary member lookup.
 
-A [named export](#noun-named_export) sources Src in File if it is in file File and the `source` of it [is written as](js-structure.rofl.md#ast_value) Src.
+A [named export](#noun-named_export) sources Src in File if it is in file File and [the](#ast_child) `source` of it [is written as](js-structure.rofl.md#ast_value) Src.
 
 <a id="export_ns_name"></a>Name is a namespace export of Src from File if all of:
   - a [named export](#noun-named_export) E is in file File;
-  - a [namespace export](#noun-namespace_export) Sp is among the `specifiers` of E;
-  - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Name;
+  - a [namespace export](#noun-namespace_export) Sp [is among the](#ast_child) `specifiers` of E;
+  - [the](#ast_child) `exported` of Sp [is named](js-structure.rofl.md#ast_name) Name;
   - E [sources](#module_source) Src in File.
 
 A node is exported as Name from File if all of:
@@ -1037,9 +1035,9 @@ In the code:
 
 <a id="imports_ns"></a>Local imports the namespace of Src in File if all of:
   - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
-  - a [namespace import](#noun-namespace_import) Sp is among the `specifiers` of D;
-  - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
+  - [the](#ast_child) `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+  - a [namespace import](#noun-namespace_import) Sp [is among the](#ast_child) `specifiers` of D;
+  - [the](#ast_child) `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
 
 In the flow:
 
@@ -1057,11 +1055,11 @@ In the code:
 
 <a id="imports_default"></a>Local imports the default of Src in File if all of:
   - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
-  - a [default import](#noun-default_import) Sp is among the `specifiers` of D;
-  - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
+  - [the](#ast_child) `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+  - a [default import](#noun-default_import) Sp [is among the](#ast_child) `specifiers` of D;
+  - [the](#ast_child) `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
 
-<a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if a [default export](#noun-default_export) E is in file File and the `declaration` of E is it.
+<a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if a [default export](#noun-default_export) E is in file File and [the](#ast_child) `declaration` of E is it.
 
 In the flow:
 
@@ -1081,7 +1079,7 @@ In the audit:
 
 In the flow:
 
-<a id="obj_method_of"></a>An [object literal](#noun-object_literal) has the object method M if M is among the `properties` of it and M is an [object method](#noun-object_method).
+<a id="obj_method_of"></a>An [object literal](#noun-object_literal) has the object method M if M [is among the](#ast_child) `properties` of it and M is an [object method](#noun-object_method).
 
 A node may be the node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
 
@@ -1099,13 +1097,13 @@ A node may be the node O if O [has the object method](#obj_method_of) M and M [h
 1. if all of:
    - CD [is object like](#obj_like);
    - CD [is in file](js-model.rofl.md#ast_node) File;
-   - the `id` of CD [is named](js-structure.rofl.md#ast_name) Name;
+   - [the](#ast_child) `id` of CD [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
    - CD is a [class expression](#noun-class_expression);
    - CD is in file File;
    - a [declarator](#noun-declarator) D is in file File;
-   - the `init` of D is CD;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name.
+   - [the](#ast_child) `init` of D is CD;
+   - [the](#ast_child) `id` of D [is named](js-structure.rofl.md#ast_name) Name.
 
 A node E may be the node CD either:
 
@@ -1113,7 +1111,7 @@ A node E may be the node CD either:
 2. if all of:
    - E is a [new](#noun-new);
    - E is in file File;
-   - the `callee` of E [is named](js-structure.rofl.md#ast_name) Name;
+   - [the](#ast_child) `callee` of E [is named](js-structure.rofl.md#ast_name) Name;
    - CD [is named](#class_named) Name in File.
 
 > `super` denotes the class above, found by NAME in the same file, so a class
@@ -1122,7 +1120,7 @@ A node E may be the node CD either:
 <a id="super_of"></a>The super of a class CD is a class SD if all of:
   - CD [is object like](#obj_like);
   - CD [is in file](js-model.rofl.md#ast_node) File;
-  - the `super_class` of CD [is named](js-structure.rofl.md#ast_name) Name;
+  - [the](#ast_child) `super_class` of CD [is named](js-structure.rofl.md#ast_name) Name;
   - SD [is named](#class_named) Name in File.
 
 > A class with no constructor answers with its nearest ancestor's. Measured on
@@ -1132,7 +1130,7 @@ A node E may be the node CD either:
 
 A class
 
-- <a id="own_ctor"></a>has its own constructor M if it [has the method](#class_method_of) M and the attribute `kind` of M is "constructor".
+- <a id="own_ctor"></a>has its own constructor M if it [has the method](#class_method_of) M and [the attribute](#ast_attr) `kind` of M is "constructor".
 - <a id="has_own_ctor"></a>has its own constructor if it [has its own constructor](#own_ctor) some method.
 
 <a id="ctor_of"></a>The constructor of a class CD is M either:
@@ -1159,24 +1157,24 @@ A [super](#noun-super) may be the node SD if all of:
 A [sequence](#noun-sequence)
 
 - <a id="seq_later"></a>has a later expression than an index I if all of:
-  - some node is the I-th of the `expressions` of it;
-  - some node is the J-th of the `expressions` of it;
+  - some node is the I[-th of the](#ast_child) `expressions` of it;
+  - some node is the J[-th of the](#ast_child) `expressions` of it;
   - I < J.
 - may be the node N if all of:
-  - a node X is the I-th of the `expressions` of it;
+  - a node X is the I[-th of the](#ast_child) `expressions` of it;
   - X [may be the node](#may_be_node) N;
   - unless it [has a later expression than](#seq_later) I.
 - may be the literal V if all of:
-  - a node X is the I-th of the `expressions` of it;
+  - a node X is the I[-th of the](#ast_child) `expressions` of it;
   - X [may be the literal](#may_be_lit) V;
   - unless it [has a later expression than](#seq_later) I.
 
 E may be the node/literal N if all of:
  - E is a [conditional](#noun-conditional);
- - the `consequent` or `alternate` of E is a node X;
+ - [the](#ast_child) `consequent` or `alternate` of E is a node X;
  - X [may be the node/literal](#may_be_node) N.
 
-An [await](#noun-await) may be the node/literal N if the `argument` of it [may be the node/literal](#may_be_node) N.
+An [await](#noun-await) may be the node/literal N if [the](#ast_child) `argument` of it [may be the node/literal](#may_be_node) N.
 
 ## 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
 
@@ -1186,7 +1184,7 @@ An [await](#noun-await) may be the node/literal N if the `argument` of it [may b
 > passes through `yield*`; the delegating expression itself is the inner
 > generator's return. `selects(N, "next")`: the key is a string.
 
-<a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a [yield](#noun-yield) Y and the `argument` of Y is E.
+<a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a [yield](#noun-yield) Y and [the](#ast_child) `argument` of Y is E.
 
 <a id="bound_to_call"></a>A node is bound to the call C if all of:
   - it [reads](#ident_in) Name in File;
@@ -1197,14 +1195,14 @@ An [await](#noun-await) may be the node/literal N if the `argument` of it [may b
   - a node C [is a call site](js-callgraph.rofl.md#call_site) in some file;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
   - N [selects](#selects) "next";
-  - the `object` of N [is bound to the call](#bound_to_call) GC;
+  - [the](#ast_child) `object` of N [is bound to the call](#bound_to_call) GC;
   - GC [resolves to](js-callgraph.rofl.md#resolves) G;
-  - the `arguments` of C is V.
+  - [the](#ast_child) `arguments` of C is V.
 
 <a id="delegates"></a>Outer delegates to Inner if all of:
-  - the attribute `delegate` of a [yield](#noun-yield) Y is `true`;
+  - [the attribute](#ast_attr) `delegate` of a [yield](#noun-yield) Y is `true`;
   - Outer [is nearest to](#nearest_v) Y;
-  - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner.
+  - [the](#ast_child) `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner.
 
 Inner is sent a node V if Outer [is sent](#next_send) V and Outer [delegates to](#delegates) Inner.
 
@@ -1214,12 +1212,12 @@ Y may be the node X either:
    - G [is sent](#next_send) a node V;
    - G [is nearest to](#nearest_v) Y;
    - Y is a [yield](#noun-yield);
-   - the attribute `delegate` of Y is `false`;
+   - [the attribute](#ast_attr) `delegate` of Y is `false`;
    - V [may be the node](#may_be_node) X;
 2. if all of:
    - Y is a [yield](#noun-yield);
-   - the attribute `delegate` of Y is `true`;
-   - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner;
+   - [the attribute](#ast_attr) `delegate` of Y is `true`;
+   - [the](#ast_child) `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner;
    - Inner [returns](#returns) a node E;
    - E [may be the node](#may_be_node) X.
 
@@ -1229,15 +1227,15 @@ Y may be the node X either:
 
 A [for-of](#noun-for-of)
 
-- <a id="for_of_src"></a>iterates a node X if the `right` of it is X.
+- <a id="for_of_src"></a>iterates a node X if [the](#ast_child) `right` of it is X.
 - <a id="for_of_name"></a>loops over Name if all of:
-  - the `left` of it is a node D;
-  - the `declarations` of D is a node V;
-  - the `id` of V [is named](js-structure.rofl.md#ast_name) Name.
+  - [the](#ast_child) `left` of it is a node D;
+  - [the](#ast_child) `declarations` of D is a node V;
+  - [the](#ast_child) `id` of V [is named](js-structure.rofl.md#ast_name) Name.
 
 <a id="for_of_use"></a>A node loops with Name at a node U if all of:
   - it [loops over](#for_of_name) Name;
-  - the `body` of it is a node B;
+  - [the](#ast_child) `body` of it is a node B;
   - U [is within](js-structure.rofl.md#ast_within) B;
   - U [reads](#ident) Name.
 
@@ -1245,7 +1243,7 @@ A [for-of](#noun-for-of)
 
 1. if all of:
    - X [may be the node](#may_be_node) Y;
-   - E is among the `elements` of Y;
+   - E [is among the](#ast_child) `elements` of Y;
    - Y is an [array literal](#noun-array_literal);
 2. if X [resolves to](js-callgraph.rofl.md#resolves) F and F [yields](#yields) E.
 
@@ -1257,12 +1255,12 @@ A node may be the node/literal N if all of:
 
 E may be the node/literal N if all of:
  - E is a [logical](#noun-logical);
- - the `left` or `right` of E is a node X;
+ - [the](#ast_child) `left` or `right` of E is a node X;
  - X [may be the node/literal](#may_be_node) N.
 
-<a id="plain_assign"></a>An [assignment](#noun-assignment) is plain if the attribute `operator` of it is "=".
+<a id="plain_assign"></a>An [assignment](#noun-assignment) is plain if [the attribute](#ast_attr) `operator` of it is "=".
 
-A node may be the node/literal N if it [is plain](#plain_assign) and the `right` of it [may be the node/literal](#may_be_node) N.
+A node may be the node/literal N if it [is plain](#plain_assign) and [the](#ast_child) `right` of it [may be the node/literal](#may_be_node) N.
 
 > The crossings this layer performs: the scanner's tree, the unperspectived
 > kind tables, and the kernel's `edb` reflection.
@@ -1284,16 +1282,16 @@ A node may be the node/literal N if it [is plain](#plain_assign) and the `right`
 > `w_env_api_surface`'s question — or a dead handler with no call at all, the
 > one row that is an audit.
 
-<a id="catch_of"></a>The catch of a [try](#noun-try) T is a node H if the `handler` of T is H.
+<a id="catch_of"></a>The catch of a [try](#noun-try) T is a node H if [the](#ast_child) `handler` of T is H.
 
-<a id="catch_param"></a>The param of a [catch](#noun-catch) H is a node P if the `param` of H is P.
+<a id="catch_param"></a>The param of a [catch](#noun-catch) H is a node P if [the](#ast_child) `param` of H is P.
 
-<a id="try_block"></a>The block of a [try](#noun-try) T is a node B if the `block` of T is B.
+<a id="try_block"></a>The block of a [try](#noun-try) T is a node B if [the](#ast_child) `block` of T is B.
 
 <a id="thrown_in"></a>T throws a node V if all of:
   - [the block](#try_block) of T is a node B;
   - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) B;
-  - the `argument` of Th is V.
+  - [the](#ast_child) `argument` of Th is V.
 
 A node
 
@@ -1350,7 +1348,7 @@ A node
 <a id="decorated_member"></a>A class has the decorated member Key at a [method](#noun-method) M replaced with a node N if all of:
   - M [is replaced by its decorator with](#decorated_by) N;
   - it [has the method](#class_method_of) M;
-  - the `key` of M [spells](js-structure.rofl.md#key_name) Key.
+  - [the](#ast_child) `key` of M [spells](js-structure.rofl.md#key_name) Key.
 
-The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at a node M replaced with N and the attribute `static` of M is `true`/`false`.
+The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at a node M replaced with N and [the attribute](#ast_attr) `static` of M is `true`/`false`.
 

@@ -6,28 +6,6 @@ default: main
 
 # js-ambient
 
-Reads:
-
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-dataflow, in the code: [ident_in](js-dataflow.rofl.md#ident_in)
-- from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
-- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [kind_prototype](js-dataflow.rofl.md#kind_prototype), [node_value_kind](js-dataflow.rofl.md#node_value_kind)
-- from js-effects, in the audit: [eff_exn_only](js-effects.rofl.md#eff_exn_only)
-- from js-effects, in the code: [eff_discharged_at](js-effects.rofl.md#eff_discharged_at)
-- from js-effects, in the flow: [concrete_effect](js-effects.rofl.md#concrete_effect), [concrete_unmapped](js-effects.rofl.md#concrete_unmapped), [eff_heap_of](js-effects.rofl.md#eff_heap_of)
-- from js-effects: [eff_lt](js-effects.rofl.md#eff_lt), [eff_row](js-effects.rofl.md#eff_row)
-- from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
-- from js-globals: [constructible_form](js-globals.rofl.md#constructible_form)
-- from js-host, in the code: [host_module_named](js-host.rofl.md#host_module_named), [host_module_ns](js-host.rofl.md#host_module_ns), [member_effect](js-host.rofl.md#member_effect)
-- from outside these files, in the code: `ast_child`
-- from outside these files: `eff_label`, `eff_name`, `host_effect_atom`, `host_global`, `host_global_effect`, `host_module`, `host_module_member`, `lib_global`, `lib_member`, `lib_readonly_member`, `lib_readonly_view`, `lib_static`
-
-## Guards
-
-A noun that is a relation: the noun on a variable is the relation holding of it.
-
-- a member access: `member_node_v`
-
 > js-ambient.rofl — THE AMBIENT SURFACE: which free name is which surface,
 > and the map into the effect lattice. Both DERIVED: this pack authors not one
 > effect row. Every `ambient_effect` is a JOIN over a table another layer
@@ -49,6 +27,43 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 > The contract relations are [main], where js-effects reads them unbracketed;
 > their premises are the scanner's book.
 
+Reads:
+
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-dataflow, in the code: [ident_in](js-dataflow.rofl.md#ident_in)
+- from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [kind_prototype](js-dataflow.rofl.md#kind_prototype), [node_value_kind](js-dataflow.rofl.md#node_value_kind)
+- from js-effects, in the audit: [eff_exn_only](js-effects.rofl.md#eff_exn_only)
+- from js-effects, in the code: [eff_discharged_at](js-effects.rofl.md#eff_discharged_at)
+- from js-effects, in the flow: [concrete_effect](js-effects.rofl.md#concrete_effect), [concrete_unmapped](js-effects.rofl.md#concrete_unmapped), [eff_heap_of](js-effects.rofl.md#eff_heap_of)
+- from js-effects: [eff_lt](js-effects.rofl.md#eff_lt), [eff_row](js-effects.rofl.md#eff_row)
+- from js-globals, in the code: [free_global](js-globals.rofl.md#free_global)
+- from js-globals: [constructible_form](js-globals.rofl.md#constructible_form)
+- from js-host, in the code: [host_module_named](js-host.rofl.md#host_module_named), [host_module_ns](js-host.rofl.md#host_module_ns), [member_effect](js-host.rofl.md#member_effect)
+- from outside these files, in the code:
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files:
+  - <a id="eff_label"></a>An effect label L is a label at a host H (`eff_label`)
+  - <a id="eff_name"></a>An effect N is in the lattice (`eff_name`)
+  - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
+  - <a id="host_global"></a>A host H has the global Name (`host_global`)
+  - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
+  - <a id="host_module"></a>A host H has the module Spec (`host_module`)
+  - <a id="host_module_member"></a>A host H exposes a key Key of a spec Spec (`host_module_member`)
+  - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
+  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
+  - <a id="lib_readonly_member"></a>`lib_readonly_member`
+  - <a id="lib_readonly_view"></a>`lib_readonly_view`
+  - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
+
+## Words
+
+What this file calls a node, and what each word stands for:
+
+| word | stands for |
+|---|---|
+| a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
+
 <a id="imports"></a>`imports` lists:
 
 | arg 1 | arg 2 |
@@ -69,9 +84,9 @@ A noun that is a relation: the noun on a variable is the relation holding of it.
 
 <a id="surface_origin"></a>The origin of a surface Spec is an origin N either:
 
-1. if `node` has the module Spec and N is `host_runtime`;
-2. if some host has the global Spec and N is `host_runtime`;
-3. if Spec is a global since some release with some form and N is `es_intrinsic`;
+1. if `node` [has the module](#host_module) Spec and N is `host_runtime`;
+2. if some host [has the global](#host_global) Spec and N is `host_runtime`;
+3. if Spec [is a global](#lib_global) since some release with some form and N is `es_intrinsic`;
 4. if Spec [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype) and N is `builtin_prototype`.
 
 > scanners/host_lib.ts subtracts the ECMAScript baseline from both hosts; a
@@ -103,11 +118,11 @@ Name names the surface N in File either:
 
 1. if all of:
    - some node [refers to the free](js-globals.rofl.md#free_global) Name in File;
-   - some host has the global Name;
+   - some host [has the global](#host_global) Name;
    - N is Name;
 2. if all of:
    - some node [refers to the free](js-globals.rofl.md#free_global) Name in File;
-   - Name is a global since some release with some form;
+   - Name [is a global](#lib_global) since some release with some form;
    - N is Name.
 
 > empty by construction; the place a fourth door would arrive without an origin
@@ -128,7 +143,10 @@ In the audit:
 
 In the main:
 
-<a id="amb_atom_label"></a>An effect is a label on the heap H if it is a host effect, it is a label at H, and [`amb_heap`](#amb_heap)(H).
+<a id="amb_atom_label"></a>An effect is a label on the heap H if all of:
+  - it [is a host effect](#host_effect_atom);
+  - it [is a label](#eff_label) at H;
+  - [`amb_heap`](#amb_heap)(H).
 
 Declared as facts:
 
@@ -140,11 +158,17 @@ Declared as facts:
 > rather than (Atom) because sections 7 and 8 need the same closure on a heap
 > this section refuses.
 
-<a id="amb_short_at"></a>An effect falls short of an effect label L at a host H if L is a label at H and it is in the lattice, unless it [covers](js-effects.rofl.md#eff_row) L at H.
+<a id="amb_short_at"></a>An effect falls short of an effect label L at a host H if all of:
+  - L [is a label](#eff_label) at H;
+  - it [is in the lattice](#eff_name);
+  - unless it [covers](js-effects.rofl.md#eff_row) L at H.
 
 An effect label
 
-- <a id="amb_covers_at"></a>is covered at a host H by an effect N if it is a label at H and N is in the lattice, unless N [falls short](#amb_short_at) of it at H.
+- <a id="amb_covers_at"></a>is covered at a host H by an effect N if all of:
+  - it [is a label](#eff_label) at H;
+  - N [is in the lattice](#eff_name);
+  - unless N [falls short](#amb_short_at) of it at H.
 - <a id="amb_covers_at_low"></a>has a lower cover at a host H than an effect N if it [is covered](#amb_covers_at) at H by an effect M and M [is strictly below](js-effects.rofl.md#eff_lt) N.
 
 <a id="eff_of_label"></a>The effect of an effect label L at a host H is an effect N if L [is covered](#amb_covers_at) at H by N, unless L [has a lower cover](#amb_covers_at_low) at H than N.
@@ -153,13 +177,16 @@ An effect label
 
 > an atom that is a landmark and not a label (`total`, `io`) denotes itself
 
-The landmark of an effect X is X if X is a host effect but is not a label at some host and X is in the lattice.
+The landmark of an effect X is X if all of:
+  - X [is a host effect](#host_effect_atom);
+  - X [is in the lattice](#eff_name);
+  - unless X [is a label](#eff_label) at some host.
 
 > an atom with no landmark disappears silently; one with two is ambiguity
 
 In the audit:
 
-<a id="host_atom_unmapped"></a>An effect has no landmark if it is a host effect, unless [the landmark](#eff_of_host) of it is some effect.
+<a id="host_atom_unmapped"></a>An effect has no landmark if it [is a host effect](#host_effect_atom), unless [the landmark](#eff_of_host) of it is some effect.
 
 <a id="host_atom_two_names"></a>A host has two host effects X and Y if all of:
   - [the landmark](#eff_of_host) of it is X;
@@ -180,15 +207,15 @@ In the main:
 > global's effect is its surface default, landing on the members the corpus
 > selects; `ambient_unenumerated[flow]` names the surfaces in that state.
 
-<a id="ambient_global_default"></a>Name has the surface default E if some host attributes the global Name to an effect X and [the landmark](#eff_of_host) of X is E.
+<a id="ambient_global_default"></a>Name has the surface default E if some host [attributes the global](#host_global_effect) Name to an effect X and [the landmark](#eff_of_host) of X is E.
 
 In the flow:
 
 <a id="amb_global_member"></a>Key is selected on the global Name if all of:
   - a node O [refers to the free](js-globals.rofl.md#free_global) Name in some file;
-  - the `object` of a node M is O;
+  - [the](#ast_child) `object` of a node M is O;
   - M [selects](js-dataflow.rofl.md#selects) Key;
-  - some host attributes the global Name to some effect.
+  - some host [attributes the global](#host_global_effect) Name to some effect.
 
 In the main:
 
@@ -213,9 +240,9 @@ Declared as facts:
 
 <a id="ambient_enumerated"></a>A surface S is enumerated either:
 
-1. if `node` exposes some key of S;
-2. if S is a global since some release with some form;
-3. if S has the member some key since some release.
+1. if `node` [exposes](#host_module_member) some key of S;
+2. if S [is a global](#lib_global) since some release with some form;
+3. if S [has the member](#lib_member) some key since some release.
 
 In the flow:
 
@@ -255,7 +282,7 @@ C performs the operation `itself` if C [calls the global](#amb_global_call) some
 
 <a id="amb_construct"></a>A node constructs the ambient global Name if all of:
   - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
-  - the `callee` of it [refers to the free](js-globals.rofl.md#free_global) Name in File;
+  - [the](#ast_child) `callee` of it [refers to the free](js-globals.rofl.md#free_global) Name in File;
   - Name [names the surface](#ambient_binding) Name in File;
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
@@ -284,22 +311,22 @@ X performs the operation `construct` if X [constructs the ambient global](#amb_c
 In the main:
 
 <a id="lib_mutator"></a>A prototype has the mutator Key if all of:
-  - it has the member Key since some release;
-  - `lib_readonly_view`(it, something);
-  - unless `lib_readonly_member`(it, Key).
+  - it [has the member](#lib_member) Key since some release;
+  - [`lib_readonly_view`](#lib_readonly_view)(it, something);
+  - unless [`lib_readonly_member`](#lib_readonly_member)(it, Key).
 
 > Without `lib_readonly_view(P, _)` every member of a prototype with no twin
 > would read as a mutator. Those prototypes are SILENT here, as a row.
 
 In the flow:
 
-<a id="amb_proto_unsplit"></a>A prototype has no readonly twin if it [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype), unless `lib_readonly_view`(it, something).
+<a id="amb_proto_unsplit"></a>A prototype has no readonly twin if it [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype), unless [`lib_readonly_view`](#lib_readonly_view)(it, something).
 
 > the property the subtraction rests on: the readonly view declares nothing extra
 
 In the audit:
 
-<a id="lib_readonly_only"></a>A prototype has a readonly only member Key if `lib_readonly_member`(it, Key), unless it has the member Key since some release.
+<a id="lib_readonly_only"></a>A prototype has a readonly only member Key if [`lib_readonly_member`](#lib_readonly_member)(it, Key), unless it [has the member](#lib_member) Key since some release.
 
 > `ambient_effect` has no heap column, and a prototype's receiver is a value
 > in THIS program, so a row can only be written where the receiver's heap is
@@ -318,7 +345,7 @@ In the main:
 In the flow:
 
 <a id="amb_proto_recv"></a>A [member access](js-dataflow.rofl.md#member_node_v) has the receiver prototype P if all of:
-  - the `object` of it is a node O;
+  - [the](#ast_child) `object` of it is a node O;
   - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype).
 
@@ -352,7 +379,7 @@ A spec has the ambient effect E at Key if all of:
 > landmark between `alloc` and `io` is the effect layer's move. Those rows
 > stay in `ambient_owed`.
 
-<a id="amb_not_constructible"></a>Name is not constructible if Name is a global since some release with a form Form, unless Form [is constructible](js-globals.rofl.md#constructible_form).
+<a id="amb_not_constructible"></a>Name is not constructible if Name [is a global](#lib_global) since some release with a form Form, unless Form [is constructible](js-globals.rofl.md#constructible_form).
 
 A spec has the ambient effect E at `construct` if it [is not constructible](#amb_not_constructible) and [the effect](#eff_of_label) of `exn` at `none` is E.
 
@@ -369,12 +396,12 @@ In the flow:
    - some call [operates](js-effects.rofl.md#concrete_effect) on S by Op;
    - [the origin](#surface_origin) of S is `es_intrinsic`;
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
-   - unless S has the static Op since some release;
+   - unless S [has the static](#lib_static) Op since some release;
 2. if all of:
    - some call [operates](js-effects.rofl.md#concrete_effect) on S by Op;
    - [the origin](#surface_origin) of S is `builtin_prototype`;
    - unless [`amb_operation_word`](#amb_operation_word)(Op);
-   - unless S has the member Op since some release.
+   - unless S [has the member](#lib_member) Op since some release.
 
 ## 9. THE FRONTIER, AS POSITIVE RELATIONS — which SURFACE nobody has
 

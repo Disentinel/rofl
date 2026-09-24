@@ -6,10 +6,6 @@ default: audit
 
 # js-resolve
 
-Reads:
-
-- from js-modules, in the code: [module_site](js-modules.rofl.md#module_site), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [resolved_import](js-modules.rofl.md#resolved_import), [site_file](js-modules.rofl.md#site_file), [site_kind](js-modules.rofl.md#site_kind), [site_line](js-modules.rofl.md#site_line), [site_source](js-modules.rofl.md#site_source), [site_source_computed](js-modules.rofl.md#site_source_computed)
-
 > js-resolve.rofl — THE SECOND MODEL OF IMPORT RESOLUTION, and the referee
 > between it and the first. rules/js-modules.rofl resolves by REASONING over
 > the disk listing; this pack records node's own resolver, asked out loud with
@@ -29,6 +25,10 @@ Reads:
 
 > what the host supplies (scanners/js_resolve.ts), then what the ledger side
 > declares (facts/js-resolve.rofl)
+
+Reads:
+
+- from js-modules, in the code: [module_site](js-modules.rofl.md#module_site), [resolved_builtin](js-modules.rofl.md#resolved_builtin), [resolved_import](js-modules.rofl.md#resolved_import), [site_file](js-modules.rofl.md#site_file), [site_kind](js-modules.rofl.md#site_kind), [site_line](js-modules.rofl.md#site_line), [site_source](js-modules.rofl.md#site_source), [site_source_computed](js-modules.rofl.md#site_source_computed)
 
 Declared as facts:
 

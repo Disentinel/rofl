@@ -6,20 +6,6 @@ default: code
 
 # js-structure
 
-Reads:
-
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from outside these files: `ast_attr`, `ast_child`
-
-## Kinds
-
-A noun is a node of one of its kinds:
-
-| noun | kinds |
-|---|---|
-| <a id="noun-member_expression"></a>a member expression | member_expression |
-| <a id="noun-meta_property"></a>a meta property | meta_property |
-
 > js-structure.rofl — the GENERIC structure over a captured AST. No domain
 > knowledge: everything here is true of any tree the scanner emits.
 >   ast_in      parent/child, forgetting field and position
@@ -28,7 +14,23 @@ A noun is a node of one of its kinds:
 >               renames that claim nothing (`name` on an Identifier and on a
 >               JSX attribute are one fact here)
 
-<a id="ast_in"></a>A node is under a node P if it is a child of P.
+Reads:
+
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from outside these files:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+
+## Words
+
+What this file calls a node, and what each word stands for:
+
+| word | stands for |
+|---|---|
+| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
+| <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
+
+<a id="ast_in"></a>A node is under a node P if it [is a child of](#ast_child) P.
 
 > nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
 > depth 30 is about 3M rows, the point where an ancestor query should walk
@@ -39,7 +41,7 @@ A noun is a node of one of its kinds:
 1. if C [is under](#ast_in) P;
 2. if a node X [is within](#ast_within) P and C [is under](#ast_in) X.
 
-<a id="ast_name"></a>A node is named V if the attribute `name` of it is V.
+<a id="ast_name"></a>A node is named V if [the attribute](#ast_attr) `name` of it is V.
 
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
 > well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
@@ -56,16 +58,16 @@ A noun is a node of one of its kinds:
 <a id="key_name"></a>A node K spells N either:
 
 1. if all of:
-   - the `key` of a node P is K;
+   - [the](#ast_child) `key` of a node P is K;
    - K [is named](#ast_name) N;
-   - unless the attribute `computed` of P is `true`;
+   - unless [the attribute](#ast_attr) `computed` of P is `true`;
 2. if all of:
-   - the `key` of some node is K;
+   - [the](#ast_child) `key` of some node is K;
    - K is a [member expression](#noun-member_expression);
-   - the `object` of K [is named](#ast_name) "Symbol";
-   - the `property` of K [is named](#ast_name) N.
+   - [the](#ast_child) `object` of K [is named](#ast_name) "Symbol";
+   - [the](#ast_child) `property` of K [is named](#ast_name) N.
 
-<a id="ast_value"></a>A node is written as V if the attribute `value` of it is V.
+<a id="ast_value"></a>A node is written as V if [the attribute](#ast_attr) `value` of it is V.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers
@@ -76,11 +78,11 @@ A noun is a node of one of its kinds:
 
 1. if all of:
    - M is a [meta property](#noun-meta_property);
-   - the `meta` of M [is named](#ast_name) "new";
+   - [the](#ast_child) `meta` of M [is named](#ast_name) "new";
    - N is `new_target`;
 2. if all of:
    - M is a [meta property](#noun-meta_property);
-   - the `meta` of M [is named](#ast_name) "import";
+   - [the](#ast_child) `meta` of M [is named](#ast_name) "import";
    - N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant

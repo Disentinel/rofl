@@ -6,13 +6,6 @@ default: main
 
 # js-attrs
 
-Reads:
-
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-vocabulary: [body_lit](js-vocabulary.rofl.md#body_lit), [lit_arg](js-vocabulary.rofl.md#lit_arg), [lit_rel](js-vocabulary.rofl.md#lit_rel)
-- from outside these files, in the code: `ast_attr`, `ast_child`
-- from outside these files: `attr_needs`, `node_kind`, `outside_attr_needs`, `premise_lit`
-
 > js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
 > (`w_unconsumed_attribute`). Four times a design note claimed a fact was
 > missing that was already on the store, because the note was written while
@@ -24,6 +17,19 @@ Reads:
 
 > What a rule names, literal by literal: one literal naming a key AND a
 > value, where a key read with a variable value is a rule reading every value.
+
+Reads:
+
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-vocabulary: [body_lit](js-vocabulary.rofl.md#body_lit), [lit_arg](js-vocabulary.rofl.md#lit_arg), [lit_rel](js-vocabulary.rofl.md#lit_rel)
+- from outside these files, in the code:
+  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
+  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files:
+  - <a id="attr_needs"></a>`attr_needs`
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+  - <a id="outside_attr_needs"></a>`outside_attr_needs`
+  - <a id="premise_lit"></a>`premise_lit`
 
 A term
 
@@ -59,12 +65,12 @@ In the audit:
 A key K
 
 - <a id="unconsumed_attr"></a>is unconsumed if all of:
-  - the attribute K of some node is some value;
+  - [the attribute](#ast_attr) K of some node is some value;
   - unless K [is read](#attr_key_read);
   - unless [`attr_unread_ok`](#attr_unread_ok)(K, something);
   - unless [`attr_deferred`](#attr_deferred)(K, something).
 - <a id="unconsumed_value"></a>has an unconsumed value V if all of:
-  - the attribute K of some node is V;
+  - [the attribute](#ast_attr) K of some node is V;
   - K [is read](#attr_key_read);
   - K neither [is read with the value free](#attr_key_read_free) nor [is read with](#attr_pair_read) V;
   - unless [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something).
@@ -80,10 +86,10 @@ Declared as facts:
 
 A key K
 
-- <a id="attr_unread_ok_unseen"></a>is an unseen excuse if [`attr_unread_ok`](#attr_unread_ok)(K, something), unless the attribute K of some node is some value.
+- <a id="attr_unread_ok_unseen"></a>is an unseen excuse if [`attr_unread_ok`](#attr_unread_ok)(K, something), unless [the attribute](#ast_attr) K of some node is some value.
 - <a id="attr_unread_ok_read"></a>is excused yet read if [`attr_unread_ok`](#attr_unread_ok)(K, something) and K [is read](#attr_key_read).
-- <a id="attr_value_ok_unseen"></a>is an unseen value excuse with V if [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something), unless the attribute K of some node is V.
-- <a id="attr_deferred_unseen"></a>is deferred unseen if [`attr_deferred`](#attr_deferred)(K, something), unless the attribute K of some node is some value.
+- <a id="attr_value_ok_unseen"></a>is an unseen value excuse with V if [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something), unless [the attribute](#ast_attr) K of some node is V.
+- <a id="attr_deferred_unseen"></a>is deferred unseen if [`attr_deferred`](#attr_deferred)(K, something), unless [the attribute](#ast_attr) K of some node is some value.
 - <a id="attr_deferred_read"></a>is deferred yet read if [`attr_deferred`](#attr_deferred)(K, something) and K [is read](#attr_key_read).
 - <a id="attr_double_excused"></a>is excused twice if [`attr_unread_ok`](#attr_unread_ok)(K, something) and [`attr_deferred`](#attr_deferred)(K, something).
 
@@ -100,7 +106,7 @@ A key K
 
 In the main:
 
-<a id="pos_prem"></a>A rule has the positive premise L if `premise_lit`(it, something, L) and L is $lit(something, something, something, something).
+<a id="pos_prem"></a>A rule has the positive premise L if [`premise_lit`](#premise_lit)(it, something, L) and L is $lit(something, something, something, something).
 
 <a id="attr_lit_kvvar"></a>A term reads attributes freely if all of:
   - it [reads the attribute](#attr_lit) K with a term V;
@@ -134,8 +140,8 @@ In the main:
 
 A key K is read with V either:
 
-1. if `attr_needs`(something, something, K, V, something);
-2. if `outside_attr_needs`(something, something, K, V, something).
+1. if [`attr_needs`](#attr_needs)(something, something, K, V, something);
+2. if [`outside_attr_needs`](#outside_attr_needs)(something, something, K, V, something).
 
 A key K is read if K [is read with](#attr_pair_read) some value.
 
@@ -152,8 +158,8 @@ A key K is read if K [is read with](#attr_pair_read) some value.
 
 <a id="rule_prem"></a>A rule R has the premise L either:
 
-1. if `premise_lit`(R, something, L) and L is $lit(something, something, something, something);
-2. if `premise_lit`(R, something, $not(L)).
+1. if [`premise_lit`](#premise_lit)(R, something, L) and L is $lit(something, something, something, something);
+2. if [`premise_lit`](#premise_lit)(R, something, $not(L)).
 
 A term
 
@@ -188,23 +194,23 @@ A rule
   - [the relation](js-vocabulary.rofl.md#lit_rel) of L2 is `ast_node`;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of L2 is S;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of L2 is Kind;
-  - `js` has the node kind Kind.
+  - `js` [has the node kind](#node_kind) Kind.
 - <a id="attr_guard_pinned"></a>pins the attribute guard K on a term S if it [guards the attribute](#attr_guard_kind) K on S as some kind.
 
 <a id="attr_slot_gap"></a>An attribute K is a slot gap at a field F of Kind either:
 
 1. if all of:
    - a rule R [tests the attribute](#attr_guard_slot) K on a term S under F;
-   - some node is among the F of a node P;
+   - some node [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless R [pins the attribute guard](#attr_guard_pinned) K on S;
-   - unless the attribute K of P is some value;
+   - unless [the attribute](#ast_attr) K of P is some value;
 2. if all of:
    - a rule R [tests the attribute](#attr_guard_slot) K on a term S under F;
    - R [guards the attribute](#attr_guard_kind) K on S as Kind;
-   - some node is among the F of a node P;
+   - some node [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) Kind;
-   - unless the attribute K of P is some value.
+   - unless [the attribute](#ast_attr) K of P is some value.
 
 > THE POLARITY IS THE GATE. A gap under a NEGATED test is harmless:
 > `not ast_attr(P, computed, true)` keeps a node with no `computed` at all,
@@ -226,16 +232,16 @@ A rule
 
 1. if all of:
    - a rule R [tests the attribute positively](#attr_guard_slot_pos) K on a term S under F;
-   - some node is among the F of a node P;
+   - some node [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) Kind;
    - unless R [pins the attribute guard](#attr_guard_pinned) K on S;
-   - unless the attribute K of P is some value;
+   - unless [the attribute](#ast_attr) K of P is some value;
 2. if all of:
    - a rule R [tests the attribute positively](#attr_guard_slot_pos) K on a term S under F;
    - R [guards the attribute](#attr_guard_kind) K on S as Kind;
-   - some node is among the F of a node P;
+   - some node [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) Kind;
-   - unless the attribute K of P is some value.
+   - unless [the attribute](#ast_attr) K of P is some value.
 
 In the audit:
 
@@ -258,12 +264,12 @@ Declared as facts:
 
 In the main:
 
-<a id="attr_kind_has"></a>Kind carries the attribute K if a node P [is of kind](js-model.rofl.md#ast_node) Kind and the attribute K of P is some value.
+<a id="attr_kind_has"></a>Kind carries the attribute K if a node P [is of kind](js-model.rofl.md#ast_node) Kind and [the attribute](#ast_attr) K of P is some value.
 
 <a id="attr_kind_lacks"></a>Kind sometimes lacks the attribute K if all of:
   - Kind [carries the attribute](#attr_kind_has) K;
   - a node P [is of kind](js-model.rofl.md#ast_node) Kind;
-  - unless the attribute K of P is some value.
+  - unless [the attribute](#ast_attr) K of P is some value.
 
 In the audit:
 

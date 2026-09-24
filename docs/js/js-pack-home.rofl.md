@@ -6,10 +6,6 @@ default: main
 
 # js-pack-home
 
-Reads:
-
-- from outside these files: `asserted_by`, `node_kind`
-
 > js-pack-home.rofl — WHERE A `node_kind` ROW BELONGS, as a rule rather than
 > a convention (`w_vocabulary_home`). facts/js-kinds.rofl is not the
 > vocabulary's home: it is the deliberately tiny BASE every world loads.
@@ -25,6 +21,12 @@ Reads:
 > and put 68 rows in a pack that speaks about none of them;
 > test/js-pack-home.test.ts measures that counterfactual.
 
+Reads:
+
+- from outside these files:
+  - <a id="asserted_by"></a>`asserted_by`
+  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+
 ## WHICH PACK A ROW CAME FROM. The finest grain the store records is the
 
 > PRINCIPAL a load named, so the loader (test/js-pack-home.test.ts) gives
@@ -33,7 +35,7 @@ Reads:
 > into one `load()` are one pack, which is why this is its own pack with its
 > own loader.
 
-<a id="pack_fact"></a>A pack asserts a relation Rel with a term Args if `asserted_by`($fact(Rel, `main`, Args), it, something).
+<a id="pack_fact"></a>A pack asserts a relation Rel with a term Args if [`asserted_by`](#asserted_by)($fact(Rel, `main`, Args), it, something).
 
 > the argument walk, as rules/js-vocabulary.rofl runs it over `premise_lit`:
 > that file walks what the RULES MATCH, this one what the FACTS SAY
@@ -50,11 +52,11 @@ Reads:
 > itself. `node_kind` itself is excluded, or every declaration would back
 > itself.
 
-<a id="fkind_slot"></a>A relation has a kind slot in facts at an index I if [the slot](#fslot) I of it in some pack holds a term X and `js` has the node kind X.
+<a id="fkind_slot"></a>A relation has a kind slot in facts at an index I if [the slot](#fslot) I of it in some pack holds a term X and `js` [has the node kind](#node_kind) X.
 
 A pack
 
-- <a id="pack_declares"></a>declares the kind K if [the slot](#fslot) 2 of `node_kind` in it holds K and `js` has the node kind K.
+- <a id="pack_declares"></a>declares the kind K if [the slot](#fslot) 2 of `node_kind` in it holds K and `js` [has the node kind](#node_kind) K.
 - <a id="pack_speaks"></a>speaks of the kind K if all of:
   - [the slot](#fslot) I of a relation Rel in it holds K;
   - Rel [has a kind slot in facts](#fkind_slot) at I;
@@ -89,6 +91,6 @@ In the audit:
 
 <a id="pack_borrows"></a>A pack borrows the kind K if all of:
   - it [speaks of the kind](#pack_speaks) K;
-  - `js` has the node kind K;
+  - `js` [has the node kind](#node_kind) K;
   - unless it [declares the kind](#pack_declares) K.
 

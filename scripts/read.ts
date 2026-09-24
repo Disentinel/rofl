@@ -395,8 +395,14 @@ const homeBook = new Map<string, string>();   // relation -> the book it is read
       if (!templates.some((t) => t.rel === rel && t.src === m[1])) templates.push(parseSig(rel, m[1]));
       headBook.set(rel, m[3] ?? defaultBook); homeBook.set(rel, m[3] ?? defaultBook);
     }
-    if (sec === 'Guards' && b.type === 'ul') for (const it of b.items!) { const m = /^[Aa]n? (.+?): `(\w+)`$/.exec(it.text.trim()); if (m) nounGuards.set(m[1], m[2]); }
-    if (sec === 'Kinds' && b.type === 'table') for (const r of b.rows!) { const noun = r[0].replace(/^[Aa]n? /, ''); for (const k of r[1].split(/,\s*/)) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } }
+    // the Words glossary: `a member expression | a node of kind \`member_expression\``, `a function | a node [\`fn_node\`](#fn_node) holds of`
+    if (sec === 'Words' && b.type === 'table') for (const r of b.rows!) {
+      const noun = r[0].replace(/^<a id="[^"]+"><\/a>/, '').replace(/^[Aa]n? /, '').trim();
+      const kinds = /^a node of (?:kind|one of the kinds) (.+)$/.exec(r[1]);
+      if (kinds) { for (const k of kinds[1].split(/,\s*/).map((x) => x.replace(/`/g, ''))) if (!kindNoun.has(k)) { kindNoun.set(k, noun); nouns.add(noun); } continue; }
+      const guard = /`(\w+)`.* holds of$/.exec(r[1]);
+      if (guard) nounGuards.set(noun, guard[1]);
+    }
   }
 }
 for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
@@ -446,11 +452,17 @@ for (let i = 0; i < blocks.length; i++) {
   if (b.type === 'table') { unparsed.push(`TABLE ${b.head!.join(' | ')}`); continue; }
   if (b.type !== 'p') continue;
   const text = b.text!.trim(); let m;
-  if (/^Kinds without a noun:/.test(text) || /^A noun that is a relation:/.test(text) || /^A noun is a node of one of its kinds:/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
+  if (/^Kinds without a noun:/.test(text) || /^What this file calls a node/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
   if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; continue; }
   if (text === 'Reads:' && next && next.type === 'ul') {
     // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
-    for (const it of next.items!) { const im = /^from (.+?)(?:, in the (\w+))?: (.*)$/.exec(it.text.trim()); if (im) for (const r of im[3].split(/,\s*/)) { const name = r.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`/g, ''); imported.add(name); if (im[2]) homeBook.set(name, im[2]); } }
+    for (const it of next.items!) {
+      const im = /^from (.+?)(?:, in the (\w+))?:\s*(.*)$/.exec(it.text.trim()); if (!im) continue;
+      const names = im[3] ? im[3].split(/,\s*/).map((r) => r.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/`/g, '').trim()).filter(Boolean) : [];
+      // a relation from outside these files is one sub-item, its sentence and its name: `<a id="ast_child"></a>A node is a child of a node (\`ast_child\`)`
+      for (const sub of it.sub ?? []) { const m = /<a id="(\w+)"><\/a>|`(\w+)`\)?$/.exec(sub.trim()); if (m) names.push(m[1] ?? m[2]); }
+      for (const name of names) { imported.add(name); if (im[2]) homeBook.set(name, im[2]); }
+    }
     i++; continue;
   }
   if (text === 'Declared as facts:' && next && next.type === 'ul') {
