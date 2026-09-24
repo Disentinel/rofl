@@ -10,6 +10,11 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_page_checked_here_never_loads_its_web_font_so_a_reflow_on_font_load_is_invisible, pitfall).
+recorded(f_a_page_checked_here_never_loads_its_web_font_so_a_reflow_on_font_load_is_invisible, "2026-09-24").
+addressed_by(f_a_page_checked_here_never_loads_its_web_font_so_a_reflow_on_font_load_is_invisible, "playground/page.html").
+finding_note(f_a_page_checked_here_never_loads_its_web_font_so_a_reflow_on_font_load_is_invisible, "THE OWNER SAW THE PLAYGROUND'S CELLS CUT OFF AT THE BOTTOM AND EVERY CHECK HERE HAD PASSED. A cell's textarea was measured once, when it was drawn, and the page draws before IBM Plex arrives; the font then widens the text, the lines wrap again, and the height stays what the fallback font needed. The headless Chromium in this container never loads Google Fonts (the proxy's certificate is refused, the console says ERR_CERT_AUTHORITY_INVALID and it was read as noise), so every screenshot was taken in the fallback font and no reflow could happen. Reproduced instead by narrowing the window and by changing the font size, which clip the same way. Fixed by `field-sizing: content` where the browser has it and, where it has not, measuring again when the fonts finish loading and when the width changes; both paths were checked, the second with the property switched off. THE GENERAL POINT: a layout that depends on a web font cannot be judged from here; change width and font size on purpose instead.").
+
 finding(f_the_reader_is_a_function_and_a_notebook_cell_is_written_in_sentences, insight).
 recorded(f_the_reader_is_a_function_and_a_notebook_cell_is_written_in_sentences, "2026-09-24").
 addressed_by(f_the_reader_is_a_function_and_a_notebook_cell_is_written_in_sentences, "scripts/read_md.ts").
