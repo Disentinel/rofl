@@ -75,6 +75,7 @@ check[checks]("facts/goldens.rofl", "ring1", world).
 check[checks]("facts/goldens.rofl", "rip", world).
 check[checks]("facts/goldens.rofl", "rofl-release", world).
 check[checks]("facts/goldens.rofl", "sensors", world).
+check[checks]("facts/goldens.rofl", "sentence", world).
 check[checks]("facts/goldens.rofl", "slop", world).
 check[checks]("facts/goldens.rofl", "spat", world).
 check[checks]("facts/goldens.rofl", "sus", world).

@@ -13,7 +13,7 @@
 // absorbed. A rule's book is the block it sits in.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { parsePhrase, parseSig as parseSigWith, type Part, type Tpl } from '../src/say.ts';
+import { parsePhrase, parseSig as parseSigWith, phraseOf, type Part, type Tpl } from '../src/say.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -65,6 +65,11 @@ const mapT = (t: Term, fn: (v: string) => Term): Term => 'v' in t ? fn(t.v) : 'o
 type Intro = { v: string; noun: string };
 const TERM = String.raw`(?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}(?: [A-Z][A-Za-z0-9]*)?|some [a-z][\w-]*(?: [a-z][\w-]*){0,2}|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|\`[^\`]+\`|\$?[a-z_]\w*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))`;
 let subjectVar: string | null = null;
+// READ_TRACE=file: every literal matched by a template on the deciding pass, one JSON line each; the
+// oracle examples/sentence/sentence.ts measures the ring 1 sentence grammar against
+let tracing = false;
+const traced: string[] = [];
+function trace(text: string, lit: Lit) { if (tracing) traced.push(JSON.stringify({ text, rel: lit.rel, args: lit.args.map(tstr) })); }
 let freshN = 0;
 function term(text: string, intros: Intro[]): Term {
   let m;
@@ -191,7 +196,7 @@ function condition(text: string, intros: Intro[], rule: Rule): boolean {
     }
   }
   const lit = positional(text, intros) ?? matchLit(text, intros);
-  if (lit) { lit.neg = neg; rule.body.push(lit); return true; }
+  if (lit) { if (!positional(text, [])) trace(text, lit); lit.neg = neg; rule.body.push(lit); return true; }
   if ((m = /^(.+?) is (.+)$/.exec(text)) && !/ /.test(m[1]) && !/ /.test(m[2])) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
   if ((m = /^(.+?) differs from (.+)$/.exec(text))) { rule.body.push({ rel: '!=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
   if ((m = /^(\S+) ([<>]=?) (\S+)$/.exec(text))) { rule.body.push({ rel: m[2], args: [term(m[1], intros), term(m[3], intros)], neg }); return true; }
@@ -306,8 +311,11 @@ function sentence(headText: string, conds: string[], where: string) {
     const intros: Intro[] = [];
     const savedAmb = ambiguous.length, savedUn = unparsed.length;
     subjectVar = null;
-    const head = positional(headText, intros) ?? guardHead(headText, intros) ?? matchLit(headText, intros, true);
+    tracing = pass === 1;
+    const early = positional(headText, intros) ?? guardHead(headText, intros);
+    const head = early ?? matchLit(headText, intros, true);
     if (!head) { if (pass === 1) unparsed.push(`HEAD ${headText}`); continue; }
+    if (!early) trace(headText, head);
     const rule: Rule = { head, body: [], guards: new Map(), where, book: curBook };
     for (const c of conds) condition(c, intros, rule);
     for (const it of intros) if (!known.has(it.v)) known.set(it.v, it.noun);
@@ -479,9 +487,9 @@ for (let i = 0; i < blocks.length; i++) {
 
 // ---------------------------------------------------- back into clauses
 type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[]; book: string };
-const tstr = (t: Term): string => 'v' in t ? t.v : 'a' in t ? t.a : 's' in t ? JSON.stringify(t.s) : 'n' in t ? String(t.n) : 'or' in t ? tstr(t.or[0]) : 'f' in t ? `${t.f}(${t.args.map(inner).join(',')})` : '_';
+function tstr(t: Term): string { return 'v' in t ? t.v : 'a' in t ? t.a : 's' in t ? JSON.stringify(t.s) : 'n' in t ? String(t.n) : 'or' in t ? tstr(t.or[0]) : 'f' in t ? `${t.f}(${t.args.map(inner).join(',')})` : '_'; }
 // inside a functor the kernel's canonical form: variables carry `?`
-const inner = (t: Term): string => 'v' in t ? `?${t.v}` : 'w' in t ? '_' : tstr(t);
+function inner(t: Term): string { return 'v' in t ? `?${t.v}` : 'w' in t ? '_' : tstr(t); }
 function splitTop(text: string): string[] {
   const out: string[] = []; let depth = 0, q: string | null = null, cur = '';
   for (const c of text) {
@@ -589,6 +597,7 @@ console.log(`\nambiguities (${ambiguous.length}):`);
 for (const a of [...new Set(ambiguous)].slice(0, 15)) console.log('  ' + a);
 console.log(`\nunparsed (${unparsed.length}):`);
 for (const u of [...new Set(unparsed)].slice(0, 20)) console.log('  ' + u);
+if (process.env.READ_TRACE) writeFileSync(process.env.READ_TRACE, traced.join('\n') + '\n');
 if (outPath) {
   const bk = (rel: string, tail?: string) => { const b = tail ?? homeBook.get(rel) ?? headBook.get(rel) ?? defaultBook; return b === 'main' ? '' : `[${b}]`; };
   const rofl = (x: string): string => { let m; if ((m = /^([-+*\/]|mod)\((.*),(.*)\)$/.exec(x))) return `${rofl(m[2])} ${m[1]} ${rofl(m[3])}`; if ((m = /^(\w+)\((.*)\)$/.exec(x))) return `${m[1]}(${m[2].split(',').map(rofl).join(', ')})`; return x.replace(/^\?/, ''); };
@@ -599,7 +608,7 @@ if (outPath) {
   // the vocabulary the file declared, as the phrase facts the renderer reads: `rofl-render --out DIR X.phrases.rofl X.rofl`
   if (learned.length) {
     const phrasePath = outPath.replace(/\.rofl$/, '') + '.phrases.rofl';
-    const line = (t: Tpl) => `phrase(${t.rel}, "${t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? `<${p.i}:${p.noun}>` : '').filter(Boolean).join(' ')}").`;
+    const line = (t: Tpl) => `phrase(${t.rel}, "${phraseOf(t)}").`;
     writeFileSync(phrasePath, [`-- the sentences ${mdPath.replace(ROOT, '')} declares, read by scripts/read.ts; a phrase is what the renderer reads`, 'edb(phrase).', ...learned.map(line)].join('\n') + '\n');
   }
 }

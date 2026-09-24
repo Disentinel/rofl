@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 96 worlds.
+-- 97 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -36,6 +36,7 @@ golden_state("ring1", "946b1f7dee3d15c3", 3188).
 golden_state("rip", "85988e10f83b48d2", 5571).
 golden_state("rofl-release", "c22794092b6d24d2", 796).
 golden_state("sensors", "999bc4d6044ae06f", 719).
+golden_state("sentence", "9ab39554b1bae0ca", 1499).
 golden_state("slop", "34d951182437c39b", 3412).
 golden_state("spat", "2b347220989d34af", 11336).
 golden_state("sus", "9bccfcd180e1c17f", 4540).
@@ -49,7 +50,7 @@ golden_state("rules_depends", "f5383aaf35c88116", 8689).
 golden_state("rules_engine-split", "d1222225f9fe93f7", 708).
 golden_state("rules_eval-cost", "472dc5657e4f237b", 5704).
 golden_state("rules_features", "4c669f63e883f0ad", 891).
-golden_state("rules_findings", "65df4b27b5b81a8e", 13762).
+golden_state("rules_findings", "f6146e4ce4909066", 13774).
 golden_state("rules_floor-census", "7b93e1e6ce802232", 2005).
 golden_state("rules_ingest", "a1a342452fb584ad", 808).
 golden_state("rules_inquiry_epistemic", "a7df1d966583a8b5", 837).
@@ -106,7 +107,7 @@ golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refactoring_queue", "6244dd5a8c4d04c1", 3616).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spec_coverage", "f9330606cbdaa072", 3064).
+golden_state("spec_coverage", "62822e4e47337f5a", 3066).
 golden_state("unstratifiable", "79fbe73fc51f0377", 504).
 
 golden_host("oops", "012d40f715163c70", 0, 214).
@@ -1293,6 +1294,33 @@ golden_rel("sensors", "sees[main]", 12).
 golden_rel("sensors", "temp[verified]", 2).
 golden_rel("sensors", "uses_builtin[$kernel]", 7).
 golden_rel("sensors", "writes_to[$kernel]", 30).
+golden_rel("sentence", "@other", 1).
+golden_rel("sentence", "@wit", 106).
+golden_rel("sentence", "asserted_by[$kernel]", 14).
+golden_rel("sentence", "authority[main]", 5).
+golden_rel("sentence", "concludes[$kernel]", 80).
+golden_rel("sentence", "conclusion_lit[$kernel]", 80).
+golden_rel("sentence", "conclusion_tense[$kernel]", 80).
+golden_rel("sentence", "derived_by[$kernel]", 113).
+golden_rel("sentence", "edb[main]", 31).
+golden_rel("sentence", "flow[main]", 4).
+golden_rel("sentence", "flows_to[main]", 4).
+golden_rel("sentence", "has_conclusion[$kernel]", 80).
+golden_rel("sentence", "has_premise[$kernel]", 210).
+golden_rel("sentence", "imports[main]", 3).
+golden_rel("sentence", "mode[main]", 14).
+golden_rel("sentence", "negated_under[main]", 9).
+golden_rel("sentence", "perspective[main]", 3).
+golden_rel("sentence", "premise_lit[$kernel]", 210).
+golden_rel("sentence", "premise_neg[$kernel]", 11).
+golden_rel("sentence", "premise_pos[$kernel]", 128).
+golden_rel("sentence", "reads_from[$kernel]", 84).
+golden_rel("sentence", "reserved[main]", 20).
+golden_rel("sentence", "rule[$kernel]", 80).
+golden_rel("sentence", "rule_known[main]", 80).
+golden_rel("sentence", "sees[main]", 6).
+golden_rel("sentence", "uses_builtin[$kernel]", 70).
+golden_rel("sentence", "writes_to[$kernel]", 80).
 golden_rel("slop", "@other", 1).
 golden_rel("slop", "@wit", 213).
 golden_rel("slop", "asserted_by[$kernel]", 32).
@@ -1903,11 +1931,11 @@ golden_rel("rules_features", "sees[main]", 8).
 golden_rel("rules_features", "uses_builtin[$kernel]", 12).
 golden_rel("rules_features", "writes_to[$kernel]", 43).
 golden_rel("rules_findings", "@other", 1).
-golden_rel("rules_findings", "@wit", 1709).
+golden_rel("rules_findings", "@wit", 1712).
 golden_rel("rules_findings", "addressed_by[main]", 637).
 golden_rel("rules_findings", "alarm[main]", 2).
 golden_rel("rules_findings", "artifact_removed[main]", 259).
-golden_rel("rules_findings", "asserted_by[$kernel]", 4794).
+golden_rel("rules_findings", "asserted_by[$kernel]", 4797).
 golden_rel("rules_findings", "authority[main]", 5).
 golden_rel("rules_findings", "blocked_by[main]", 3).
 golden_rel("rules_findings", "blocks[main]", 10).
@@ -1916,12 +1944,12 @@ golden_rel("rules_findings", "conclusion_lit[$kernel]", 47).
 golden_rel("rules_findings", "conclusion_tense[$kernel]", 47).
 golden_rel("rules_findings", "corrected[main]", 23).
 golden_rel("rules_findings", "demands[main]", 815).
-golden_rel("rules_findings", "derived_by[$kernel]", 1821).
+golden_rel("rules_findings", "derived_by[$kernel]", 1824).
 golden_rel("rules_findings", "dismissed[main]", 38).
 golden_rel("rules_findings", "edb[main]", 40).
-golden_rel("rules_findings", "finding[main]", 918).
+golden_rel("rules_findings", "finding[main]", 919).
 golden_rel("rules_findings", "finding_action[main]", 205).
-golden_rel("rules_findings", "finding_note[main]", 945).
+golden_rel("rules_findings", "finding_note[main]", 946).
 golden_rel("rules_findings", "flow[main]", 4).
 golden_rel("rules_findings", "flows_to[main]", 4).
 golden_rel("rules_findings", "guardrail[main]", 16).
@@ -1931,16 +1959,16 @@ golden_rel("rules_findings", "has_premise[$kernel]", 82).
 golden_rel("rules_findings", "imports[main]", 3).
 golden_rel("rules_findings", "mode[main]", 14).
 golden_rel("rules_findings", "negated_under[main]", 14).
-golden_rel("rules_findings", "open_finding[main]", 212).
+golden_rel("rules_findings", "open_finding[main]", 213).
 golden_rel("rules_findings", "perspective[main]", 3).
 golden_rel("rules_findings", "premise_lit[$kernel]", 82).
 golden_rel("rules_findings", "premise_neg[$kernel]", 19).
 golden_rel("rules_findings", "premise_pos[$kernel]", 57).
 golden_rel("rules_findings", "proven[main]", 59).
 golden_rel("rules_findings", "reads_from[$kernel]", 51).
-golden_rel("rules_findings", "ready[main]", 210).
-golden_rel("rules_findings", "ready_proven[main]", 163).
-golden_rel("rules_findings", "recorded[main]", 918).
+golden_rel("rules_findings", "ready[main]", 211).
+golden_rel("rules_findings", "ready_proven[main]", 164).
+golden_rel("rules_findings", "recorded[main]", 919).
 golden_rel("rules_findings", "removed_in[main]", 129).
 golden_rel("rules_findings", "reserved[main]", 20).
 golden_rel("rules_findings", "rule[$kernel]", 47).
@@ -4116,9 +4144,9 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 13).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 519).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 520).
 golden_rel("spec_coverage", "authority[main]", 35).
-golden_rel("spec_coverage", "check[checks]", 148).
+golden_rel("spec_coverage", "check[checks]", 149).
 golden_rel("spec_coverage", "check_stands[coverage]", 13).
 golden_rel("spec_coverage", "citation_ok[checks]", 132).
 golden_rel("spec_coverage", "cited_check[map]", 13).

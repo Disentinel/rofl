@@ -63,7 +63,11 @@ What has to exist for it to be code rather than a description of code
 (f_the_sentence_form_is_version_1_1_work):
 
 1. a reader for the form, in ring 1 where the grammar already travels as ROFL,
-   with the host parser as its optional cache;
+   with the host parser as its optional cache. The sentence is read in ring 1
+   from 2026-09-24 (`examples/sentence/`), identical to the host reader on
+   525 of 525 sentences over three files; the file (blocks, conditions read
+   by shape, folds, guards) is the host's still
+   (f_the_sentence_is_read_in_ring_1_and_the_file_is_not_yet);
 2. the desugaring as data in the tree: phrase to relation, noun to kind guard,
    book block to perspective, map to table. Phrase to relation is data for
    every world now: the JS model's in `facts/js-phrases.rofl`, an authored
@@ -94,8 +98,8 @@ What has to exist for it to be code rather than a description of code
    signed. What two days of that established, what the form is now, what
    the round trip cannot see, and what is open, is `docs/sentence-form.md`;
    the test it still owed, a file authored as `.md` with no `.rofl` twin
-   loaded into the same golden, is run: `rules/untyped.md` replaces
-   `rules/untyped.rofl` and the goldens are 96 of 96 unchanged
+   loaded into the same golden, is run: `rules/untyped.md` replaces the
+   `.rofl` it was written from and the goldens are 96 of 96 unchanged
    (f_a_world_authored_as_markdown_loads_into_the_same_golden_and_declares_its_own_vocabulary)
    (f_the_sentence_form_after_the_round_trip_what_stands_what_is_open_and_the_test_not_yet_run).
 

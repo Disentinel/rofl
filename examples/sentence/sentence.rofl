@@ -1,0 +1,85 @@
+-- sentence.rofl — THE SENTENCE FORM'S LITERAL, READ IN RING 1. One sentence
+-- arrives as `src`, the vocabulary as the token facts vocabulary.rofl
+-- compiled (`ntok`, `text`, `slot`, `suffix`, `fix`), and a chart says which template
+-- the sentence is and which words fill which hole. The host resolves a span
+-- of words to a term, as it resolves a range to a name for ring1.rofl.
+-- Blocks, conditions, negation folds and guards stay with the host reader
+-- for now; this is the sentence, not the file.
+--
+-- Coverage is MEASURED by examples/sentence/sentence.ts against the host
+-- reader's own matches, sentence for sentence, and reported there.
+
+edb(src).
+edb(cls).
+edb(ntok).
+edb(text).
+edb(slot).
+edb(fix).
+edb(suffix).
+
+-- ------------------------------------------------------------------ words
+-- A sentence is its words split on the space; a word is a string, which the
+-- range destructor `str_sub` made possible where ring1.rofl still carries
+-- index pairs.
+nwords(N)  :- src(S), N is str_segs(S, " ").
+wi(0)      :- nwords(N), 0 < N.
+wi(I2)     :- wi(I), nwords(N), I2 is I + 1, I2 < N.
+word(I, X) :- wi(I), src(S), X is str_seg(S, " ", I).
+wlen(I, L) :- word(I, X), L is str_len(X).
+first(I, C) :- word(I, X), wlen(I, L), 0 < L, C is str_char(X, 0).
+last(I, C)  :- word(I, X), wlen(I, L), 0 < L, L1 is L - 1, C is str_char(X, L1).
+
+-- ------------------------------------------------------------------ terms
+-- What may stand in a hole: a variable, a wildcard, an atom, a string, a
+-- number, `it`, `some noun` (one to three lowercase words), a typed
+-- introduction `a noun Var` (one to three lowercase words, then a variable)
+-- and `a noun` alone, which the host reads as a fresh variable.
+var_at(I)   :- first(I, C), cls(C, upper).
+var_at(I)   :- first(I, "?").
+atom_at(I)  :- first(I, "`").
+str_at(I)   :- first(I, "\""), last(I, "\"").
+num_at(I)   :- first(I, C), cls(C, digit).
+num_at(I)   :- first(I, "-"), word(I, X), wlen(I, L), 1 < L, C is str_char(X, 1), cls(C, digit).
+one_at(I)   :- var_at(I).
+one_at(I)   :- atom_at(I).
+one_at(I)   :- str_at(I).
+one_at(I)   :- num_at(I).
+one_at(I)   :- word(I, "something").
+one_at(I)   :- word(I, "it").
+lower_at(I) :- first(I, C), cls(C, lower).
+article(I)  :- word(I, "a").
+article(I)  :- word(I, "an").
+article(I)  :- word(I, "A").
+article(I)  :- word(I, "An").
+-- run(I, J): words I..J-1 are lowercase, one to three of them
+run(I, J) :- lower_at(I), J is I + 1.
+run(I, J) :- run(I, K), lower_at(K), J is K + 1, N is J - I, N <= 3.
+-- term(I, J): words I..J-1 are one term
+term(I, J) :- one_at(I), J is I + 1.
+term(I, J) :- word(I, "some"), I1 is I + 1, run(I1, J).
+term(I, J) :- article(I), I1 is I + 1, run(I1, K), var_at(K), J is K + 1.
+term(I, J) :- article(I), I1 is I + 1, run(I1, J).
+-- `X or Y`: alternatives in one hole; the host keeps the first as the trace does
+term(I, J) :- term(I, K), word(K, "or"), K1 is K + 1, term(K1, J).
+-- `I-th`: one word that ends in a suffix a template asks for, and what is before it
+cut(W, S, V) :- word(W, X), suffix(_, _, S), L is str_len(X), LS is str_len(S), LS < L, K is L - LS, S2 is str_sub(X, K, LS), S2 = S, V is str_sub(X, 0, K).
+
+-- ------------------------------------------------------------------ chart
+-- m(T, P, W): the first P tokens of template T match the first W words.
+-- A step: a word matched, a fixed hole passed, a term in a hole, a cut word in
+-- a suffixed hole; `The` opens a sentence whose template opens with `the`.
+step(T, P, W, P1, W1) :- m(T, P, W), text(T, P, X), word(W, X), P1 is P + 1, W1 is W + 1.
+step(T, 0, 0, 1, 1)   :- m(T, 0, 0), text(T, 0, "the"), word(0, "The").
+step(T, P, W, P1, W)  :- m(T, P, W), fix(T, P, _, _), P1 is P + 1.
+step(T, P, W, P1, W2) :- m(T, P, W), slot(T, P, _, _), not suffix(T, P, _), term(W, W2), P1 is P + 1.
+step(T, P, W, P1, W1) :- m(T, P, W), slot(T, P, _, _), suffix(T, P, S), cut(W, S, _), P1 is P + 1, W1 is W + 1.
+m(T, 0, 0)    :- ntok(T, _).
+m(T, P1, W1)  :- step(T, _, _, P1, W1).
+match(T)      :- m(T, NP, NW), ntok(T, NP), nwords(NW).
+
+-- the path back from a full match, so that a hole knows its words
+on(T, NP, NW) :- match(T), ntok(T, NP), nwords(NW).
+on(T, P, W)   :- on(T, P1, W1), step(T, P, W, P1, W1).
+fill(T, Idx, W, W2) :- on(T, P, W), slot(T, P, Idx, _), not suffix(T, P, _), term(W, W2), P1 is P + 1, on(T, P1, W2).
+fillcut(T, Idx, V)  :- on(T, P, W), slot(T, P, Idx, _), suffix(T, P, S), cut(W, S, V), P1 is P + 1, W1 is W + 1, on(T, P1, W1).
+fixval(T, Idx, Val) :- match(T), fix(T, _, Idx, Val).

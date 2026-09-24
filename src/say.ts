@@ -55,6 +55,9 @@ export function parseSig(rel: string, text: string, nouns: Iterable<string>): Tp
   return { rel, parts, arity: args.length, src: text };
 }
 
+/** A template written back as the phrase fact it came from, every hole indexed: `<0:rule> has the letter <1:node>`. */
+export const phraseOf = (t: Tpl): string => t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? `<${p.i}:${p.noun}>` : `<${p.i}=${p.kind === 'zero' ? '0' : p.kind === 'wild' ? '_' : p.val}>`).join(' ');
+
 const VALUE_NOUNS = ['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child', 'node'];
 const NOUN_WORDS = ['this', 'scope', 'this-binder', 'effect label'];
 

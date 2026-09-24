@@ -92,7 +92,7 @@ the check.
 Everything measured above was render, then read. The test the form still
 owed was a file written as Markdown first, with no `.rofl` twin, loaded
 through the reader into the same golden. It was run on 2026-09-23 on
-`rules/untyped.rofl`, fourteen rules and eight declared tables whose
+the untyped lint, fourteen rules and eight declared tables whose
 vocabulary no phrase file knew: the file was written again as
 `rules/untyped.md`, the `.rofl` removed, and `npm test` answered 96 of 96
 against the unchanged golden, `rules_untyped` included. The read-back rules
@@ -156,6 +156,35 @@ A relation with no phrase keeps its positional form, and `sentences off`
 turns the words off. A `.md` world loads in the REPL through the reader
 and answers in the sentences it declared. What a derivation still shows
 by id is the rule: `r545613b4` is the rule's hash, not its head sentence.
+
+## The reader, in ring 1
+
+The first condition of the roadmap, a reader for the form in ring 1, has
+its first slice from 2026-09-24: the sentence. `examples/sentence/sentence.rofl`
+reads one sentence against the vocabulary as `phrase` facts, compiled once
+to token facts by `examples/sentence/vocabulary.rofl`, and a chart says
+which template it is and which words fill which hole; the host,
+`examples/sentence/sentence.ts`, hands the sentence in and resolves a span
+of words to a term, the loan the parser in `examples/ring1` declares.
+Measured against the host reader's own matches, sentence for sentence:
+
+| file | sentences | identical |
+|---|---|---|
+| `rules/untyped.md` | 43 | 43 |
+| `docs/js/js-structure.md` | 21 | 21 |
+| `docs/js/js-dataflow.md` | 461 | 461 |
+
+None ambiguous, none divergent, none refused, at 186 ms a sentence over
+870 templates. Three shapes were refused on the way and are in the grammar
+now: a capital `The` opening a sentence, the ordinal `I-th` glued to a
+hole, and `X or Y` in one hole.
+
+What stays with the host reader, and is the rest of the condition: the
+block structure of a file, the conditions read by shape rather than by
+template (arithmetic, `differs from`, `is in file`, a kind guard),
+negation and its folds, and guards. The host reader is the cache the
+roadmap names; ring 1 is measured against it and does not replace it yet
+(f_the_sentence_is_read_in_ring_1_and_the_file_is_not_yet).
 
 ## Open decisions
 
