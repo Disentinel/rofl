@@ -1,7 +1,9 @@
 // The notebook's engine side: the JS model loaded once, then every run forks it, scans the code, adds the book's cells and answers their lines.
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
-import { parseProgram } from '../src/parser.ts';
+import { parseProgram, parseLiteral } from '../src/parser.ts';
+import { factKey } from '../src/store.ts';
+import { resolveBook } from '../src/reflect.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
@@ -20,16 +22,17 @@ export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
 export type Cell = { id: string; text: string; form?: 'md' | 'rofl' };
 export type Row = { sentence: string; literal: string };
-export type Line = { kind: 'answers' | 'never' | 'why'; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string };
+export type Line = { kind: 'answers' | 'never' | 'why'; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
-export type Node = { kind: string; line: number };
+export type Node = { kind: string; line: number; label: string };
 export type RunOut = { parseError?: string; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
 
 let core: Rofl | null = null;
 let last: Rofl | null = null;
 let phrases = '';
 let vocab = new Vocabulary();
-let home: Record<string, string> = {};   // a model relation -> the one book its rules write
+let home: Record<string, string> = {};
+let concerns: { rules: Record<string, string>; rels: Record<string, string> } = { rules: {}, rels: {} };   // a model relation -> the one book its rules write
 
 /** Every relation the model's rules conclude, and the books they write it in. */
 export function booksOf(model: string): Map<string, Set<string>> {
@@ -38,11 +41,12 @@ export function booksOf(model: string): Map<string, Set<string>> {
   return books;
 }
 
-export function init(model: string, phraseText: string): { ok: boolean; diagnostics: string[]; ms: number } {
+export function init(model: string, phraseText: string, concernMap?: typeof concerns): { ok: boolean; diagnostics: string[]; ms: number } {
   const t = performance.now();
   core = new Rofl({ space: 40_000_000 });
   const l = core.load(model, { budget: BUDGET });
   phrases = phraseText;
+  if (concernMap) concerns = concernMap;
   home = { ast_node: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
   for (const [rel, bs] of booksOf(model)) if (bs.size === 1) home[rel] = [...bs][0];
   return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
@@ -76,6 +80,43 @@ function anchored(md: string, heads: string[]): string {
 }
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
+/** A node as the code writes it, `s.put()`, `new Store()`, `class Store`, from the scanner's own facts. */
+function labelNodes(facts: string[], nodes: Record<string, Node>): void {
+  const kid = new Map<string, string>(), attr = new Map<string, string>();
+  for (const f of facts) {
+    let m = /^ast_child\[code\]\((\w+), (\w+), (\d+), (\w+)\)/.exec(f);
+    if (m) { kid.set(`${m[1]} ${m[2]} ${m[3]}`, m[4]); continue; }
+    m = /^ast_attr\[code\]\((\w+), (\w+), (.*)\)\.$/.exec(f);
+    if (m) attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? JSON.parse(m[3]) : m[3]);
+  }
+  const k = (id: string, field: string) => kid.get(`${id} ${field} 0`);
+  const lab = (id: string | undefined, d = 0): string => {
+    const n = id && nodes[id];
+    if (!n || d > 4) return '…';
+    const at = (key: string) => attr.get(`${id} ${key}`);
+    switch (n.kind) {
+      case 'identifier': case 'private_name': return at('name') ?? 'name';
+      case 'this_expression': return 'this';
+      case 'string_literal': return JSON.stringify(at('value') ?? '');
+      case 'numeric_literal': case 'boolean_literal': return String(at('value'));
+      case 'member_expression': case 'optional_member_expression': return lab(k(id, 'object'), d + 1) + (at('computed') === 'true' ? '[…]' : '.' + lab(k(id, 'property'), d + 1));
+      case 'call_expression': case 'optional_call_expression': return lab(k(id, 'callee'), d + 1) + '()';
+      case 'new_expression': return 'new ' + lab(k(id, 'callee'), d + 1) + '()';
+      case 'await_expression': return 'await ' + lab(k(id, 'argument'), d + 1);
+      case 'class_declaration': case 'class_expression': return 'class ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '');
+      case 'function_declaration': case 'function_expression': return 'function ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '') + '()';
+      case 'arrow_function_expression': return '() =>';
+      case 'class_method': case 'object_method': case 'class_private_method': return lab(k(id, 'key'), d + 1) + '()';
+      case 'class_property': case 'object_property': return lab(k(id, 'key'), d + 1);
+      case 'variable_declarator': return lab(k(id, 'id'), d + 1) + (k(id, 'init') ? ' = ' + lab(k(id, 'init'), d + 1) : '');
+      case 'assignment_expression': return lab(k(id, 'left'), d + 1) + ' = ' + lab(k(id, 'right'), d + 1);
+      case 'file': case 'program': return FILE;
+      default: return n.kind.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
+    }
+  };
+  for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
+}
+
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
 
 export function run(code: string, cells: Cell[]): RunOut {
@@ -91,10 +132,11 @@ export function run(code: string, cells: Cell[]): RunOut {
   let parseError: string | undefined;
   for (const fact of s.facts) {
     const m = /^ast_node\[code\]\((\w+), (\w+), "[^"]*", (\d+)\)/.exec(fact);
-    if (m) nodes[m[1]] = { kind: m[2], line: Number(m[3]) };
+    if (m) nodes[m[1]] = { kind: m[2], line: Number(m[3]), label: '' };
     const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
     if (e) parseError = e[1];
   }
+  labelNodes(s.facts, nodes);
   f.assert(s.facts.join('\n'));
   lap('scan');
   const parts = cells.map((c) => ({ c, ...split(c.text) }));
@@ -143,7 +185,7 @@ export function run(code: string, cells: Cell[]): RunOut {
         if (!lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
         a = { ...a, lit };
       }
-      if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text) }); continue; }
+      if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? explain(a.lit) : undefined }); continue; }
       const q = f.query(a.lit);
       if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
       const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
@@ -153,6 +195,49 @@ export function run(code: string, cells: Cell[]): RunOut {
   });
   lap('ask');
   return { parseError, facts: s.facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
+}
+
+/** One step of an explanation: the facts of a proof that one section of the model concluded, folded into the first of them. */
+export type Step = { concern: string; sentence: string; literal: string; details: string[]; missing: string[]; evidence: number; steps: Step[]; again?: boolean };
+
+const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
+const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
+/** A proof as steps. A fact concluded by a rule of the same section as the fact above it is part of that step; one from another section starts
+ *  a step of its own; a fact nothing concluded (the scanner's, a table's) is evidence, counted rather than shown. */
+export function explain(literal: string): Step | string {
+  if (!last) return 'run the book first';
+  const store = last.store;
+  let top: string;
+  try { const l = resolveBook(parseLiteral(literal)); top = factKey(l.rel, (l.persp as { name: string }).name, l.args); } catch (e) { return (e as Error).message; }
+  if (!store.witnessOf(top)) return store.has(top) ? `${literal} is given, not derived` : `${literal} does not hold`;
+  const say = (key: string) => vocab.say(key) ?? key;
+  const concernOf = (key: string) => { const w = store.witnessOf(key); return w ? concerns.rules[w.ruleId] ?? concerns.rels[relOf(key)] ?? '' : ''; };
+  const shown = new Set<string>();
+  const step = (key: string, path: Set<string>): Step => {
+    const concern = concernOf(key);
+    const st: Step = { concern, sentence: say(key), literal: key, details: [], missing: [], evidence: 0, steps: [] };
+    if (shown.has(key)) { st.again = true; return st; }
+    shown.add(key);
+    let absorbing = false;
+    const walk = (k: string) => {
+      const w = store.witnessOf(k); if (!w || path.has(k)) return;
+      path.add(k);
+      for (const p of w.prems) {
+        if (p.t === 'neg') { st.missing.push(say(p.key)); continue; }
+        if (p.t === 'bi') { st.details.push(p.desc); continue; }
+        const c = concernOf(p.key);
+        if (!c) { st.evidence++; continue; }
+        // a fact about one node (`put() is a function`, `s reads "s"`) is a property of that node, not a step: it and its proof are details
+        const one = (p.key.match(NODE) ?? []).length <= 1;
+        if (c === concern || one || absorbing) { if (!shown.has(p.key)) { shown.add(p.key); st.details.push(say(p.key)); const was = absorbing; absorbing = one || was; walk(p.key); absorbing = was; } }
+        else st.steps.push(step(p.key, path));
+      }
+      path.delete(k);
+    };
+    walk(key);
+    return st;
+  };
+  return step(top, new Set());
 }
 
 /** `why` over the last run, without running again. */

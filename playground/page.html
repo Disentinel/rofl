@@ -104,6 +104,18 @@
   .node { font: 500 12px/1.2 var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--soft); color: var(--fg); cursor: pointer; }
   .node:hover { border-color: var(--accent); color: var(--accent); }
   .why-tree { margin: 2px 0 4px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-x: auto; }
+  .proof { margin: 2px 0 6px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
+  .step-line { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 2px 0; }
+  .step-line .s { flex: 1 1 18em; min-width: 0; overflow-wrap: anywhere; }
+  .concern { font: 11.5px/1.4 var(--mono); color: var(--mute); flex: 0 0 auto; }
+  .concern b { font-weight: 600; color: var(--kw); }
+  .step-kids { margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+  .step-more { margin: 0 0 6px; padding: 4px 0 4px 12px; color: var(--mute); font-size: 13px; }
+  .step-more ul { margin: 0; padding-left: 16px; }
+  .step-more .not { font: 11.5px var(--mono); }
+  .toggle { padding: 2px 6px; font: 11.5px var(--mono); color: var(--mute); }
+  .proof .whole { align-self: flex-start; margin-top: 6px; padding: 3px 8px; font-size: 12px; color: var(--mute); }
+  .node em { font-style: normal; color: var(--mute); margin-left: 6px; font-weight: 400; }
   .err { color: var(--fail); background: var(--fail-bg); padding: 6px 10px; border-radius: 5px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
   .note { color: var(--warn); background: var(--warn-bg); padding: 5px 10px; border-radius: 5px; font-size: 13px; }
   details.as { font-size: 12.5px; color: var(--mute); }
@@ -204,7 +216,7 @@ const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { local
 // ------------------------------------------------------------ the engine
 let host = null;          // { call(op, ...args): Promise }
 async function startHost() {
-  const [model, phrases] = await Promise.all(['model.txt', 'phrases.txt'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
+  const [model, phrases, concerns] = await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
   const viaWorker = await new Promise((resolve) => {
     let w;
     try { w = new Worker('lib/worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
@@ -220,7 +232,7 @@ async function startHost() {
     const m = await import('./lib/host.js');
     host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
   }
-  return host.call('init', model, phrases);
+  return host.call('init', model, phrases, JSON.parse(concerns));
 }
 
 // ------------------------------------------------------------ the editor
@@ -256,10 +268,19 @@ code.addEventListener('keydown', (e) => {
 
 // ------------------------------------------------------------ rendering answers
 const kindWord = (k) => k.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
-function chip(id) { const n = nodes[id]; return n ? `<button type="button" class="node" data-line="${n.line}" title="${esc(n.kind)}">${esc(kindWord(n.kind))} &middot; line ${n.line}</button>` : `<code>${esc(id)}</code>`; }
+function chip(id) { const n = nodes[id]; return n ? `<button type="button" class="node" data-line="${n.line}" title="${esc(kindWord(n.kind))} on line ${n.line}">${esc(n.label || kindWord(n.kind))}<em>${n.line}</em></button>` : `<code>${esc(id)}</code>`; }
 function rich(text) {
-  return esc(text).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
+  return esc(text.replace(/, in the \w+$/gm, '')).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
 }
+// an explanation, one step per section of the model it passed through; a step opens on its details, the whole proof is one click further
+function renderStep(st) {
+  const n = st.details.length + st.missing.length;
+  const [file, section] = st.concern ? st.concern.split(': ') : ['', ''];
+  const more = n || st.evidence ? `<button type="button" class="toggle" data-toggle aria-expanded="false" title="what else this step rests on">${n ? '+' + n : ''}${st.evidence ? `${n ? ' &middot; ' : ''}${st.evidence} from the code` : ''}</button>` : '';
+  const body = !st.again && (n || st.evidence) ? `<div class="step-more" hidden>${st.details.length ? `<ul>${st.details.map((d) => `<li>${rich(d)}</li>`).join('')}</ul>` : ''}${st.missing.length ? `<ul>${st.missing.map((d) => `<li><span class="not">not:</span> ${rich(d)}</li>`).join('')}</ul>` : ''}${st.evidence ? `<div>and ${st.evidence} ${st.evidence === 1 ? 'fact' : 'facts'} the scanner read from the code</div>` : ''}</div>` : '';
+  return `<div class="step"><div class="step-line">${file ? `<span class="concern" title="the section of the JS model that concluded this"><b>${esc(file)}</b> ${esc(section)}</span>` : ''}<span class="s">${rich(st.sentence)}${st.again ? ' <span class="more">(shown above)</span>' : ''}</span>${st.again ? '' : more}</div>${body}${!st.again && st.steps.length ? `<div class="step-kids">${st.steps.map(renderStep).join('')}</div>` : ''}</div>`;
+}
+const renderProof = (p, literal) => typeof p === 'string' ? `<div class="why-tree">${esc(p)}</div>` : `<div class="proof">${renderStep(p)}<button type="button" class="whole" data-whole="${esc(literal)}">the whole proof</button></div>`;
 const idsIn = (s) => [...s.matchAll(/\bn[0-9a-f]{8}_\d+\b/g)].map((m) => m[0]);
 
 // ------------------------------------------------------------ the notebook
@@ -309,7 +330,7 @@ function outputs(r) {
     const pill = l.kind === 'never' ? (l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
     h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
     if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
-    if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
+    if (l.proof) h += renderProof(l.proof, l.lit); else if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
     if (l.rows.length) h += `<ul class="rows">${l.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
     if (l.total > l.rows.length) h += `<div class="more">and ${l.total - l.rows.length} more</div>`;
     h += '</div>';
@@ -440,11 +461,17 @@ cellsEl.addEventListener('click', async (e) => {
   if (t.dataset.stop) { busy.get(t.dataset.stop)?.ctl.abort(); return; }
   if (t.dataset.revert) { const c = find(t.dataset.revert); c.text = c.was; c.was = null; c.note = null; c.kind = 'natural'; results.delete(c.id); save(); renderCells(); runBook(); return; }
   if (t.dataset.del) { state.cells = state.cells.filter((x) => x.id !== t.dataset.del); results.delete(t.dataset.del); save(); renderCells(); runBook(); return; }
+  if (t.dataset.toggle !== undefined) { const more = t.closest('.step').querySelector(':scope > .step-more'); if (more) { more.hidden = !more.hidden; t.setAttribute('aria-expanded', String(!more.hidden)); } return; }
+  if (t.dataset.whole !== undefined) {
+    const pre = document.createElement('div'); pre.className = 'why-tree'; pre.textContent = 'Asking why\u2026'; t.replaceWith(pre);
+    try { pre.innerHTML = rich(await host.call('why', t.dataset.whole)); } catch (err) { pre.textContent = err.message; }
+    return;
+  }
   if (t.dataset.why !== undefined) {
     const li = t.closest('li'); const open = li.nextElementSibling;
-    if (open && open.classList.contains('why-tree')) { open.remove(); return; }
-    const tree = document.createElement('div'); tree.className = 'why-tree'; tree.textContent = 'Asking why\u2026'; li.after(tree);
-    try { tree.innerHTML = rich(await host.call('why', t.dataset.why)); } catch (err) { tree.textContent = err.message; }
+    if (open && open.classList.contains('proof')) { open.remove(); return; }
+    const box = document.createElement('div'); box.className = 'proof'; box.textContent = 'Asking why\u2026'; li.after(box);
+    try { box.outerHTML = renderProof(await host.call('explain', t.dataset.why), t.dataset.why); } catch (err) { box.textContent = err.message; }
   }
 });
 document.querySelector('.adds').addEventListener('click', (e) => {

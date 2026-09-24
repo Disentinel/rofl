@@ -1,7 +1,7 @@
 // The worker: the host behind messages, so a run never freezes the page.
-import { init, run, why } from './host.ts';
+import { init, run, why, explain } from './host.ts';
 
-const ops: Record<string, (...a: never[]) => unknown> = { init, run, why };
+const ops: Record<string, (...a: never[]) => unknown> = { init, run, why, explain };
 self.onmessage = (e: MessageEvent) => {
   const { id, op, args } = e.data;
   try { postMessage({ id, ok: true, value: ops[op](...(args as never[])) }); } catch (err) { postMessage({ id, ok: false, error: (err as Error).message }); }

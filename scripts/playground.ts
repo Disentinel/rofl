@@ -3,6 +3,8 @@ import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } fro
 import ts from 'typescript';
 import { MODEL_FILES, PHRASE_FILES, booksOf } from '../playground/host.ts';
 import { Vocabulary } from '../src/say.ts';
+import { parseProgram } from '../src/parser.ts';
+import { ruleIdOf } from '../src/reflect.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -60,6 +62,23 @@ for (const rel of [...rels].sort()) {
   }
 }
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
+
+// What each rule is about, for folding a proof into steps: the numbered section of the model file it sits in, `dataflow: construction`.
+// A rule is known by the id the kernel gives it, so a proof's witness names its section; a relation falls back to the first section concluding it.
+const concerns = { rules: {} as Record<string, string>, rels: {} as Record<string, string> };
+for (const f of MODEL_FILES.filter((x) => x.startsWith('rules/'))) {
+  const parts = read(f).split(/^-- (?=\d+\. )/m);
+  for (const part of parts.slice(1)) {
+    const t = part.slice(0, part.indexOf('\n')).replace(/^\d+\. /, '').split(/ — |: |, |\. /)[0].replace(/[.`]/g, '').trim();
+    const label = `${f.slice(9, -5)}: ${t.split(' ').map((w, i) => (/[A-Z]/.test(w) && w === w.toUpperCase()) || i === 0 ? w.toLowerCase() : w).join(' ')}`;
+    for (const c of parseProgram(part.slice(part.indexOf('\n') + 1))) {
+      if (!c.body.length) continue;
+      concerns.rules[ruleIdOf(c)] ??= label;
+      concerns.rels[c.head.rel] ??= label;
+    }
+  }
+}
+writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
 
 const page = read('playground/page.html');
 writeFileSync(`${OUT}/index.html`, standalone ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${page}` : page);
