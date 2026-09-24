@@ -80,7 +80,8 @@
   .head button { padding: 5px 8px; font-size: 12px; }
   .head .x { border-color: transparent; color: var(--mute); }
   .cell textarea { display: block; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--fg); resize: none; overflow: hidden; padding: 6px 12px 10px; margin: 0; }
-  .cell.formal textarea { font: 13px/1.6 var(--mono); white-space: pre-wrap; }
+  .cell.formal textarea { font: 14.5px/1.6 var(--sans); }
+  .cell.rofl textarea { font: 13px/1.6 var(--mono); white-space: pre-wrap; }
   .cell.natural textarea { font: 15px/1.55 var(--sans); }
   .cell.prose textarea { font: 14.5px/1.55 var(--sans); color: var(--mute); padding-top: 2px; }
   .was { margin: 4px 12px 0; padding: 4px 10px; border-left: 2px solid var(--was); color: var(--was); font-size: 13.5px; }
@@ -88,6 +89,7 @@
   .out { border-top: 1px solid var(--line); padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px; }
   .out:empty { display: none; }
   .ask { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ask .lit { font: 12px/1.4 var(--mono); color: var(--mute); }
   .ask .q { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 12.5px/1.4 var(--mono); color: var(--mute); }
   .pill { font: 600 11.5px/1 var(--mono); padding: 4px 7px; border-radius: 99px; letter-spacing: .02em; }
   .pill.pass { color: var(--pass); background: var(--pass-bg); }
@@ -104,6 +106,9 @@
   .why-tree { margin: 2px 0 4px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-x: auto; }
   .err { color: var(--fail); background: var(--fail-bg); padding: 6px 10px; border-radius: 5px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
   .note { color: var(--warn); background: var(--warn-bg); padding: 5px 10px; border-radius: 5px; font-size: 13px; }
+  details.as { font-size: 12.5px; color: var(--mute); }
+  details.as pre { margin: 6px 0 0; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); color: var(--fg); white-space: pre-wrap; overflow-x: auto; }
+  details.as summary { cursor: pointer; }
   .more { color: var(--mute); font-size: 12.5px; padding-left: 6px; }
   .thinking { color: var(--mute); font-size: 13px; white-space: pre-wrap; max-height: 140px; overflow: auto; }
   .adds { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -120,7 +125,7 @@
     <button type="button" id="reset">Load the example</button>
     <button type="button" class="primary" id="runall" disabled>Run the book</button>
   </header>
-  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it: <code>? L</code> lists answers, <code>never L</code> is an invariant that holds when nothing answers, <code>why L</code> explains an answer. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
+  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>why S</code> explains one. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
   <div class="grid">
     <section class="code" aria-label="JavaScript">
       <div class="bar"><b>play.js</b><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
@@ -174,21 +179,21 @@ function main() {
 main();
 `;
 const EXAMPLE_CELLS = [
-  { kind: 'prose', text: 'An invariant: an async function called without await drops its promise. Try adding await in front of load(...) or s.get(), and watch it turn green.' },
-  { kind: 'formal', text: `phrase(unawaited, "<0:call> is called without await").
-unawaited(C) :- resolves[code](C, F), ast_attr[code](F, async, true), not awaited(C).
-awaited(C) :- await_arg[code](_, C).
-never unawaited(C)` },
-  { kind: 'prose', text: 'Questions the JS model already answers: who calls whom, and what each function does to the world.' },
-  { kind: 'formal', text: `? calls[code](Caller, Callee)
-? effect_of[flow](F, E)` },
+  { kind: 'prose', text: 'An invariant, in sentences: an async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
+  { kind: 'formal', text: `A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
+
+never C is unawaited` },
+  { kind: 'prose', text: 'Questions the JS model already answers in its own sentences: who calls whom, and what each function does to the world.' },
+  { kind: 'formal', text: `? F calls G
+? the effect of F is E` },
   { kind: 'prose', text: 'A natural cell: run it and Claude writes the formal cell, trying it against the code first. The original stays above it; Revert brings it back.' },
   { kind: 'natural', text: 'Every method of a class is called somewhere in this file.' },
 ];
 
 const $ = (id) => document.getElementById(id);
+const runs = (c) => c.kind === 'formal' || c.kind === 'rofl';
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const KEY = 'rofl-playground-v1';
+const KEY = 'rofl-playground-v2';
 let uid = 0;
 const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null });
 let state = { code: EXAMPLE_CODE, cells: EXAMPLE_CELLS.map(cell) };
@@ -266,18 +271,18 @@ function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'p
 function renderCells() {
   cellsEl.innerHTML = state.cells.map((c, i) => {
     const r = results.get(c.id), b = busy.get(c.id);
-    const run = c.kind === 'natural' ? (b ? `<button type="button" data-stop="${c.id}">Stop</button>` : `<button type="button" data-run="${c.id}">Translate and run</button>`) : c.kind === 'formal' ? `<button type="button" data-run="${c.id}">Run</button>` : '';
-    const st = c.kind === 'formal' ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
+    const run = c.kind === 'natural' ? (b ? `<button type="button" data-stop="${c.id}">Stop</button>` : `<button type="button" data-run="${c.id}">Translate and run</button>`) : runs(c) ? `<button type="button" data-run="${c.id}">Run</button>` : '';
+    const st = runs(c) ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
     return `<article class="cell ${c.kind}" data-id="${c.id}">
       <div class="head">
-        <select data-kind="${c.id}" aria-label="Cell kind">${['formal', 'natural', 'prose'].map((k) => `<option value="${k}"${k === c.kind ? ' selected' : ''}>${k}</option>`).join('')}</select>
+        <select data-kind="${c.id}" aria-label="Cell kind">${['natural', 'formal', 'rofl', 'prose'].map((k) => `<option value="${k}"${k === c.kind ? ' selected' : ''}>${k}</option>`).join('')}</select>
         <span class="state">${esc(st)}</span><div class="spacer"></div>
         ${c.was ? `<button type="button" data-revert="${c.id}">Revert</button>` : ''}${run}
         <button type="button" class="x" data-del="${c.id}" aria-label="Delete cell">&#x2715;</button>
       </div>
       ${c.was ? `<div class="was">${esc(c.was)}</div>` : ''}
-      <textarea data-text="${c.id}" rows="1" spellcheck="${c.kind !== 'formal'}" aria-label="Cell ${i + 1}">${esc(c.text)}</textarea>
-      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && c.kind === 'formal' ? `<div class="more">${esc(c.note)}</div>` : ''}${r && c.kind === 'formal' && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}</div>
+      <textarea data-text="${c.id}" rows="1" spellcheck="${c.kind === 'natural' || c.kind === 'prose'}" aria-label="Cell ${i + 1}">${esc(c.text)}</textarea>
+      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && runs(c) ? `<div class="more">${esc(c.note)}</div>` : ''}${r && runs(c) && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}</div>
     </article>`;
   }).join('');
   for (const t of cellsEl.querySelectorAll('textarea')) grow(t);
@@ -290,16 +295,17 @@ function summary(r) {
   return bad ? `${bad} of ${nev.length} invariants fail` : nev.length === 1 ? 'the invariant holds' : `all ${nev.length} invariants hold`;
 }
 function outputs(r) {
-  let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('');
+  let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('') + (r.notes || []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
   for (const l of r.lines) {
     const pill = l.kind === 'never' ? (l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
-    h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span></div>`;
+    h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
     if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
     if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
     if (l.rows.length) h += `<ul class="rows">${l.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
     if (l.total > l.rows.length) h += `<div class="more">and ${l.total - l.rows.length} more</div>`;
     h += '</div>';
   }
+  if (r.rofl && r.rofl.trim()) h += `<details class="as"><summary>as ROFL</summary><pre>${esc(r.rofl.trim())}</pre></details>`;
   return h;
 }
 function markBad() {
@@ -311,7 +317,8 @@ function markBad() {
 // ------------------------------------------------------------ running
 let running = false, again = false, lastMs = 0;
 const setStatus = (html) => { $('status').innerHTML = html; };
-const formal = () => state.cells.filter((c) => c.kind === 'formal').map((c) => ({ id: c.id, text: c.text }));
+const formal = () => state.cells.filter(runs).map((c) => ({ id: c.id, text: c.text, form: c.kind === 'rofl' ? 'rofl' : 'md' }));
+let learned = [];   // the sentences the formal cells define, from the last run
 async function runBook() {
   if (!host) return;
   if (running) { again = true; return; }
@@ -319,12 +326,12 @@ async function runBook() {
   $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
   try {
     const out = await host.call('run', state.code, formal());
-    nodes = out.nodes; results = new Map(out.cells.map((c) => [c.id, c])); edited.clear();
+    nodes = out.nodes; results = new Map(out.cells.map((c) => [c.id, c])); edited.clear(); learned = out.learned || [];
     const foot = $('foot');
     if (out.parseError) { foot.className = 'foot bad'; foot.textContent = `Babel could not parse the code: ${out.parseError}`; }
     else if (out.error) { foot.className = 'foot bad'; foot.textContent = `The book did not run: ${out.error}`; }
     else { foot.className = 'foot'; foot.textContent = `${out.facts} facts from the scanner. The book runs a second after you stop typing.`; }
-    lastMs = out.ms; $('runinfo').textContent = `ran in ${(out.ms / 1000).toFixed(1)} s`;
+    lastMs = out.ms; $('runinfo').textContent = `ran in ${(out.ms / 1000).toFixed(1)} s`; $('runinfo').title = Object.entries(out.phases || {}).map(([k, v]) => `${k} ${v} ms`).join(', ');
     markBad(); renderCells();
   } catch (e) {
     $('runinfo').textContent = ''; $('foot').className = 'foot bad'; $('foot').textContent = `The run failed: ${e.message}`;
@@ -334,57 +341,58 @@ async function runBook() {
 // ------------------------------------------------------------ translation
 let sample;   // undefined: not asked yet; null: not available
 let vocabText = '';
-const RULES = (vocab, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a cell of ROFL, a Datalog, for a notebook. The notebook runs every cell over facts a scanner took from the file and over a model of JavaScript written in ROFL.
+const RULES = (vocab, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
 
-ROFL in one screen:
-- A rule: head(X, Y) :- a(X, Z), b[code](Z, Y), not c(Y).   Variables start with a capital letter, _ is a wildcard, atoms are lower case, strings are in double quotes, numbers are plain.
-- A relation may live in a book, written rel[book](...). A relation written without a book is in main. Relations you define go in main.
-- A negated literal needs each of its variables bound earlier in the same body, except _.
-- A fact ends with a period: rel(a, "b").   A comment line starts with --.
-- Lines that ask, one per line, no final period: "? L" lists every answer of L; "never L" is an invariant that holds when L has no answer; "why L" explains one ground answer.
-- phrase(rel, "<0:call> is called without await"). makes answers of rel read as sentences; <i:noun> stands for argument i.
+The sentence form in one screen:
+- A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless": "<head> if <condition>, unless <condition>." or "<head> unless <condition>."
+- A long rule: "<head> if all of:" and then a list, one condition per item, each item ending in ";" and the last in ".".
+- Alternatives: "<head> either:" and then a numbered list, each item "if <condition>, <condition>;".
+- Variables are capitalised words: C, F, Callee. "a call C" introduces C and says what it is; "something" or "some await" is anything, unnamed. An atom is in backticks, \`true\`, \`class_method\`; a string is in double quotes.
+- A condition is a sentence from the list below with your own terms in its holes, or a sentence a rule in the notebook defines.
+- A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short.
+- Asking lines, each on its own line, with no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "why <sentence>" explains one answer.
 
-The scanner's facts, all in the book code:
-- ast_node[code](Id, Kind, File, Line): one per Babel node; Kind is the Babel type in snake_case (call_expression, class_method, class_declaration, function_declaration, await_expression, member_expression, identifier, ...).
-- ast_child[code](Parent, Field, Index, Child): the tree; Field is Babel's field name in snake_case (callee, arguments, body, key, object, property, ...).
-- ast_attr[code](Id, Key, Value): scalar properties, e.g. ast_attr[code](F, async, true), ast_attr[code](I, name, "load"), ast_attr[code](M, kind, "method").
+An example cell:
+A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
 
-Relations the JS model derives, each as name[book] and a signature naming its arguments:
+never C is unawaited
+
+The sentences the scanner's facts and the JS model are read in; a noun before a variable says what it stands for:
 ${vocab}
 The file:
 \`\`\`js
 ${codeText}
 \`\`\`
-${defined.length ? `Relations the other cells already define, which you may use: ${defined.join(', ')}.\n` : ''}
+${defined.length ? `Sentences the other cells already define, which you may use: ${defined.join('; ')}.\n` : ''}
 The check to write: ${ask}
 
-${toolsOk ? 'Run your cell with the try_rofl tool before you answer, and fix it until it runs without errors and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question. Give the relation you define a phrase.
-Reply with only a JSON object: {"rofl": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the check, saying what the cell checks>"}`;
+${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
+Reply with only a JSON object: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the check, saying what the cell checks>"}`;
 let toolsOk = false;
-const definedRels = () => [...new Set(formal().flatMap((c) => [...c.text.matchAll(/^([a-z_]\w*)\([^\n]*:-/gm)].map((m) => m[1])))];
+const definedSentences = () => learned.map((l) => l.replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1'));
 async function translate(c) {
   if (!sample) { c.error = 'Translation needs Claude, and this view does not offer it. Switch the cell to formal and write ROFL.'; renderCells(); return; }
   const ctl = new AbortController();
   busy.set(c.id, { ctl, text: '' }); c.error = null; renderCells();
   const tries = [];
   const tools = toolsOk ? [{
-    name: 'try_rofl',
-    description: 'Runs a candidate notebook cell over the file together with the other formal cells and returns its errors and, for each asking line, the number of answers and the first few as sentences.',
-    inputSchema: { type: 'object', properties: { rofl: { type: 'string', description: 'the cell text' } }, required: ['rofl'] },
+    name: 'try_cell',
+    description: 'Reads a candidate cell in the sentence form and runs it over the file with the other cells. Returns what was not read, other errors, and for each asking line the number of answers and the first few as sentences.',
+    inputSchema: { type: 'object', properties: { cell: { type: 'string', description: 'the cell text' } }, required: ['cell'] },
     async execute(input) {
       const b = busy.get(c.id); if (b) { b.text = `Trying a translation (${tries.length + 1})\u2026`; renderCells(); }
-      const cells = [...formal(), { id: 'try', text: String(input.rofl ?? '') }];
+      const cells = [...formal(), { id: 'try', text: String(input.cell ?? ''), form: 'md' }];
       const out = await host.call('run', state.code, cells);
       const r = out.cells.find((x) => x.id === 'try');
       tries.push(1);
       if (out.error) throw new Error(out.error);
-      return { errors: r.errors, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].kind} at line ${out.nodes[id].line}]` : id)) })) };
+      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].kind} at line ${out.nodes[id].line}]` : id)) })) };
     },
   }] : undefined;
   try {
-    const ans = await sample.json(RULES(vocabText, state.code, definedRels(), c.text), { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
-    if (!ans || typeof ans.rofl !== 'string' || !ans.rofl.trim()) throw { code: 'invalid_json', message: 'the answer had no rofl field' };
-    c.was = c.text; c.text = ans.rofl.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null;
+    const ans = await sample.json(RULES(vocabText, state.code, definedSentences(), c.text), { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
+    if (!ans || typeof ans.cell !== 'string' || !ans.cell.trim()) throw { code: 'invalid_json', message: 'the answer had no cell field' };
+    c.was = c.text; c.text = ans.cell.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null;
     busy.delete(c.id); save(); renderCells(); runBook();
   } catch (e) {
     busy.delete(c.id);
@@ -402,17 +410,17 @@ async function translate(c) {
 cellsEl.addEventListener('input', (e) => {
   const id = e.target.dataset.text; if (!id) return;
   const c = state.cells.find((x) => x.id === id); c.text = e.target.value; grow(e.target);
-  if (c.kind === 'formal') { if (c.was) { c.was = null; c.note = null; const w = e.target.closest('.cell').querySelector('.was'); if (w) w.remove(); const rv = e.target.closest('.cell').querySelector('[data-revert]'); if (rv) rv.remove(); } edited.add(id); const st = e.target.closest('.cell').querySelector('.state'); st.textContent = 'edited, not run yet'; const o = e.target.closest('.cell').querySelector('.out'); if (o) o.innerHTML = ''; }
+  if (runs(c)) { if (c.was) { c.was = null; c.note = null; const w = e.target.closest('.cell').querySelector('.was'); if (w) w.remove(); const rv = e.target.closest('.cell').querySelector('[data-revert]'); if (rv) rv.remove(); } edited.add(id); const st = e.target.closest('.cell').querySelector('.state'); st.textContent = 'edited, not run yet'; const o = e.target.closest('.cell').querySelector('.out'); if (o) o.innerHTML = ''; }
   save();
 });
 cellsEl.addEventListener('keydown', (e) => {
   const id = e.target.dataset.text; if (!id || e.key !== 'Enter' || !e.shiftKey) return;
   e.preventDefault(); const c = state.cells.find((x) => x.id === id);
-  if (c.kind === 'natural') translate(c); else if (c.kind === 'formal') runBook();
+  if (c.kind === 'natural') translate(c); else if (runs(c)) runBook();
 });
 cellsEl.addEventListener('change', (e) => {
   const id = e.target.dataset.kind; if (!id) return;
-  const c = state.cells.find((x) => x.id === id); c.kind = e.target.value; c.error = null; if (c.kind !== 'formal') results.delete(id); else edited.add(id);
+  const c = state.cells.find((x) => x.id === id); c.kind = e.target.value; c.error = null; if (!runs(c)) results.delete(id); else edited.add(id);
   save(); renderCells();
 });
 cellsEl.addEventListener('click', async (e) => {

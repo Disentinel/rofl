@@ -101,6 +101,16 @@ link live; a directory gives one tab per `.rofl.md` in it. The page parses the
 file with the reader's own Markdown parser, so what it shows as a list or a
 table is what the reader reads as one.
 
+## Trying it on code
+
+`npm run playground` builds a page where the cells of a notebook are written in
+this form and run over a JavaScript file with the JS model. A head no sentence
+reads yet gets its anchor from its own words, so a cell needs none:
+
+    A call C is unawaited if C resolves to a function F and the attribute `async` of F is `true`, unless some await awaits C.
+
+    never C is unawaited
+
 ## Asking it
 
     npm run repl -- examples/review.rofl.md
