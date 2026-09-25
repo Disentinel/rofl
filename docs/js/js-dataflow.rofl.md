@@ -131,12 +131,12 @@ A [declarator](#noun-declarator)
 - <a id="decl_binds"></a>binds Name if a node N [is among the](#ast_child) `id` of it and N [reads](#ident) Name.
 - <a id="decl_reads"></a>is initialised from Name if a node N [is among the](#ast_child) `init` of it and N [reads](#ident) Name.
 
-<a id="var_flow"></a>From flows to To if D [is initialised from](#decl_reads) From and D [binds](#decl_binds) To.
+<a id="var_flow"></a>From is copied by a declaration into To if D [is initialised from](#decl_reads) From and D [binds](#decl_binds) To.
 
 A name X
 
-- <a id="var_reaches"></a>reaches B if X [flows to](#var_flow) B.
-- reaches C if X [reaches](#var_reaches) B and B [flows to](#var_flow) C.
+- <a id="var_reaches"></a>is copied by declarations into a name B if X [is copied by a declaration into](#var_flow) B.
+- is copied by declarations into a name C if X [is copied by declarations into](#var_reaches) a name B and B [is copied by a declaration into](#var_flow) C.
 
 ## 2. What a value is
 

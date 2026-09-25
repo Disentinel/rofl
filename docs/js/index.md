@@ -3,7 +3,7 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1003 | 3 | 0 | 0 | 0 | 0 | 0 | 30 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1003 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 212 | 91 | 82 | 0 | 43 | 221 | 20 | 4 | 4 | 0 |
@@ -862,8 +862,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `valid` | `is_valid_in` |
 | `value_binding` | `binds_a_value` |
 | `valued` | `is_valued` |
-| `var_flow` | `flows_to` |
-| `var_reaches` | `reaches` |
+| `var_flow` | `is_copied_by_a_declaration_into` |
+| `var_reaches` | `is_copied_by_declarations_into` |
 | `verdict` | `the_verdict` |
 | `verdict` | `the_verdict` |
 | `verified` | `is_verified` |

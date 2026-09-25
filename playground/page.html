@@ -528,6 +528,8 @@ A file F is ideal if all of:
   - ?? the first condition;
   - ?? the second condition.
 with the question "What makes the code ideal? List the conditions, for example: no async function is called without await; no function name is longer than N characters." A cell with questions does not run; the person answers in plain language and you are asked again with the answer. Ask only what the check cannot be written without; when the words fix the meaning, leave "questions" empty. When an answer settles part of it, write that part and keep a "??" line and a question for the rest.
+- WHERE A VALUE GOES. The model says what an expression may evaluate to; it keeps no def-use edges. "E points to N": E may be the object, array, function, class or literal written at node N. "E may be the literal V": E may be that literal. "M selects Key": M is a member access reading Key; "the member Key of O holds V": an object literal or a class O has V at Key. So where the value of M goes is every X with "M points to V and X points to V", and where it comes from is V. "From is copied by a declaration into To" relates two names through \`const To = From\` only and is empty for most code.
+- Only variables are capitalised. Write the other words of a sentence in lower case, and a name from the code in double quotes, as in: O is named "User" (never: carries User).
 - A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short.
 - Asking lines, each on its own line, with no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "why <sentence>" explains one answer.
 
@@ -543,7 +545,7 @@ ${codeText}
 ${defined.length ? `Sentences the other cells already define, which you may use: ${defined.join('; ')}.\n` : ''}
 The check to write: ${ask}
 
-${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
+${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. A sentence with no answers anywhere in this file does not apply to it: try another rather than narrowing that one. Try at most four times; then answer with the best cell you have, or with an empty cell and a "reply" saying what you found. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
 When you cannot write a cell at all, because the sentences cannot say it or the request is neither a check nor a question about the code, leave "cell" empty and say in "reply", briefly and in the language of the request, what stands in the way and a nearby cell you could write instead; put what the person must decide in "questions".
 Always answer with the JSON object, never with words alone: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the request, saying what the cell checks or asks>", "questions": ["<what the person must still answer>"], "reply": "<only when there is no cell>"}`;
 const filesText = () => Object.entries(state.files).map(([f, t]) => `### ${f}\n\`\`\`js\n${t}\n\`\`\``).join('\n');

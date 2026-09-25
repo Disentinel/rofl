@@ -58,8 +58,16 @@ Declared as facts:
 | `ident_in` | "reads(identifier E, name Name, in file File)" |
 | `decl_binds` | "binds(declarator D, name Name)" |
 | `decl_reads` | "is_initialised_from(declarator D, name Name)" |
-| `var_flow` | "flows_to(name From, name To)" |
-| `var_reaches` | "reaches(name From, name To)" |
+
+> name to name through `const To = From` only, the first cell of the value layer: most code has none,
+> and a value's path is `points_to` and `may_be_the_literal`; the words say so, so nobody asks these for a dataflow
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `var_flow` | "is_copied_by_a_declaration_into(name From, name To)" |
+| `var_reaches` | "is_copied_by_declarations_into(name From, name To)" |
 | `may_be_lit` | "may_be_the_literal(node E, text V)" |
 | `may_be_node` | "points_to(node E, node N)" |
 | `interpolated` | "is_interpolated(template T)" |
