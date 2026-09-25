@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>ROFL Playground</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -74,6 +75,11 @@
   .marks div.bad { background: var(--fail-bg); }
   .marks div.warn { background: var(--warn-bg); }
   .marks div.focus { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
+  .marks .ghost { position: absolute; top: 0; font: 13px/20px var(--mono); white-space: nowrap; }
+  .marks .ghost span { font: 12px/20px var(--sans); color: var(--fail); }
+  .marks .ghost.warn span { color: var(--warn); }
+  .nums div[title] { cursor: pointer; }
+  .cell.flash { box-shadow: 0 0 0 2px var(--fail); }
   #code { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; border: 0; margin: 0; padding: 10px 12px; background: transparent; color: var(--fg); font: 13px/20px var(--mono); white-space: pre; overflow: auto; tab-size: 2; }
   .foot { padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--mute); min-height: 20px; }
   .foot.bad { color: var(--fail); background: var(--fail-bg); }
@@ -432,15 +438,19 @@ async function startHost() {
 
 // ------------------------------------------------------------ the editor
 const code = $('code'), nums = $('nums'), marks = $('marks');
-let focus = null, marked = { bad: new Map(), warn: new Map() }, nodes = {};   // marked lines by file
+let focus = null, marked = { bad: new Map(), warn: new Map(), notes: new Map() }, nodes = {};   // marked lines by file; notes by "file:line": what failed there and in which cell
 function paintEditor() {
   const n = code.value.split('\n').length;
   $('lines').textContent = `${n} lines`;
   let h = '', m = '';
+  const src = code.value.split('\n');
   for (let i = 1; i <= n; i++) {
     const cls = focus && focus.file === state.active && i === focus.line ? 'focus' : marked.bad.get(state.active)?.has(i) ? 'bad' : marked.warn.get(state.active)?.has(i) ? 'warn' : '';
-    h += `<div class="${cls}">${i}</div>`;
-    if (cls) m += `<div class="${cls}" style="top:${10 + (i - 1) * 20}px"></div>`;
+    const note = marked.notes.get(`${state.active}:${i}`);
+    const says = note ? [...note.bad, ...note.warn].join(' \u00b7 ') : '';
+    h += `<div class="${cls}"${note ? ` title="${esc(says)}"` : ''}>${i}</div>`;
+    const ghost = note ? `<span class="ghost${note.bad.size ? '' : ' warn'}" style="left:calc(12px + ${src[i - 1].replace(/\t/g, '  ').length + 3}ch)"><span>${note.bad.size ? '\u2715' : '?'} ${esc(says)}</span></span>` : '';
+    if (cls || note) m += `<div class="${cls}" style="top:${10 + (i - 1) * 20}px">${ghost}</div>`;
   }
   nums.innerHTML = h; nums.style.paddingTop = '10px'; marks.innerHTML = m;
   syncScroll();
@@ -478,6 +488,12 @@ filesEl.addEventListener('keydown', (e) => { if (e.target.id === 'rename' && (e.
 filesEl.addEventListener('focusout', (e) => { if (e.target.id === 'rename' && renaming) rename(renaming, e.target.value); });
 function syncScroll() { nums.style.transform = `translateY(${-code.scrollTop}px)`; marks.style.transform = `translate(${-code.scrollLeft}px, ${-code.scrollTop}px)`; }
 code.addEventListener('scroll', syncScroll);
+// a marked line number opens the cell whose invariant marked it
+nums.addEventListener('click', (e) => {
+  const note = marked.notes.get(`${state.active}:${e.target.textContent}`);
+  const el = note && cellsEl.querySelector(`article[data-id="${note.cell}"]`); if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
+});
 function showLine(file, line) {
   if (file && file !== state.active && state.files[file] !== undefined) setActive(file);
   focus = { file: state.active, line }; paintEditor();
@@ -573,12 +589,19 @@ function outputs(r) {
   if (r.rofl && r.rofl.trim()) h += `<details class="as"><summary>as ROFL</summary><pre>${esc(r.rofl.trim())}</pre></details>`;
   return h;
 }
+// a sentence as plain text, each node by its label: `User.emal asks for a missing field`
+const plain = (s) => s.replace(/, in the \w+$/gm, '').replace(/`?\b(n[0-9a-f]{8}_\d+)\b`?/g, (all, id) => nodes[id]?.label ?? id).replace(/`/g, '');
 function markBad() {
-  marked = { bad: new Map(), warn: new Map() };
-  const put = (m, id) => { const n = nodes[id]; if (n) (m.get(n.file) ?? m.set(n.file, new Set()).get(n.file)).add(n.line); };
-  for (const r of results.values()) for (const l of r.lines) if (l.kind === 'never') {
-    if (!l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) put(marked.bad, id);
-    else if (l.unsure) for (const row of l.unsure.rows) for (const id of idsIn(row.literal)) put(marked.warn, id);
+  marked = { bad: new Map(), warn: new Map(), notes: new Map() };
+  const put = (kind, id, row, cell) => {
+    const n = nodes[id]; if (!n) return;
+    (marked[kind].get(n.file) ?? marked[kind].set(n.file, new Set()).get(n.file)).add(n.line);
+    const k = `${n.file}:${n.line}`, note = marked.notes.get(k) ?? marked.notes.set(k, { bad: new Set(), warn: new Set(), cell }).get(k);
+    note[kind].add(kind === 'warn' ? `out of sight: ${plain(row.sentence)}` : plain(row.sentence));
+  };
+  for (const [cell, r] of results) for (const l of r.lines) if (l.kind === 'never') {
+    if (!l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) put('bad', id, row, cell);
+    else if (l.unsure) for (const row of l.unsure.rows) for (const id of idsIn(row.literal)) put('warn', id, row, cell);
   }
   renderFiles(); paintEditor();
 }
@@ -784,7 +807,7 @@ document.querySelector('.adds').addEventListener('click', (e) => {
   const t = cellsEl.querySelector(`[data-text="${c.id}"]`); t.focus(); t.scrollIntoView({ block: 'center' });
 });
 $('example').addEventListener('change', (e) => {
-  state = fresh(e.target.value); code.value = state.files[state.active]; results = new Map(); edited.clear(); focus = null; marked = { bad: new Map(), warn: new Map() }; save(); renderFiles(); paintEditor(); renderCells(); runBook();
+  state = fresh(e.target.value); code.value = state.files[state.active]; results = new Map(); edited.clear(); focus = null; marked = { bad: new Map(), warn: new Map(), notes: new Map() }; save(); renderFiles(); paintEditor(); renderCells(); runBook();
 });
 $('runall').addEventListener('click', () => runBook());
 
