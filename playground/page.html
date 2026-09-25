@@ -142,6 +142,8 @@
   details.as summary { cursor: pointer; }
   .more { color: var(--mute); font-size: 12.5px; padding-left: 6px; }
   .thinking { color: var(--mute); font-size: 13px; white-space: pre-wrap; max-height: 140px; overflow: auto; }
+  .reply { font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; border-left: 3px solid var(--line); padding: 2px 10px; max-height: 260px; overflow: auto; }
+  .reply b { font-weight: 600; }
   .adds { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .adds span { color: var(--mute); font-size: 12.5px; }
   .help { color: var(--mute); font-size: 13px; max-width: 78ch; margin: 0; }
@@ -296,7 +298,7 @@ const runs = (c) => c.kind === 'formal' || c.kind === 'rofl';
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const KEY = 'rofl-playground-v3';
 let uid = 0;
-const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null, open: c.open ?? null, thread: c.thread ?? null, answers: c.answers ?? [] });
+const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null, open: c.open ?? null, thread: c.thread ?? null, answers: c.answers ?? [], reply: c.reply ?? null });
 let state;
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null');
@@ -305,7 +307,7 @@ try {
 } catch (e) {}
 state ??= fresh('await');
 let saveT = 0;
-const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ example: state.example, files: state.files, active: state.active, cells: state.cells.map(({ kind, text, was, note, open, thread, answers }) => ({ kind, text, was, note, open, thread, answers })) })); } catch (e) {} }, 400); };
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ example: state.example, files: state.files, active: state.active, cells: state.cells.map(({ kind, text, was, note, open, thread, answers, reply }) => ({ kind, text, was, note, open, thread, answers, reply })) })); } catch (e) {} }, 400); };
 
 // ------------------------------------------------------------ the engine
 let host = null;          // { call(op, ...args): Promise }
@@ -428,7 +430,7 @@ function renderCells() {
   cellsEl.innerHTML = state.cells.map((c, i) => {
     const r = results.get(c.id), b = busy.get(c.id);
     const run = b ? `<button type="button" data-stop="${c.id}">Stop</button>` : c.kind === 'natural' ? `<button type="button" data-run="${c.id}">Translate and run</button>` : runs(c) && !c.open ? `<button type="button" data-run="${c.id}">Run</button>` : '';
-    const st = c.open ? `needs ${c.open.length === 1 ? 'an answer' : c.open.length + ' answers'} before it runs` : runs(c) ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
+    const st = c.open ? `needs ${c.open.length === 1 ? 'an answer' : c.open.length + ' answers'} before it runs` : c.reply && c.kind === 'natural' && !b ? 'Claude answered in words, not with a cell' : runs(c) ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
     return `<article class="cell ${c.kind}${c.open ? ' open' : ''}" data-id="${c.id}">
       <div class="head">
         <select data-kind="${c.id}" aria-label="Cell kind">${['natural', 'formal', 'rofl', 'prose'].map((k) => `<option value="${k}"${k === c.kind ? ' selected' : ''}>${k}</option>`).join('')}</select>
@@ -438,15 +440,15 @@ function renderCells() {
       </div>
       ${c.was ? `<div class="was">${esc(c.was)}</div>` : ''}${(c.answers || []).map((a) => `<div class="was then">${esc(a)}</div>`).join('')}
       <textarea data-text="${c.id}" rows="1" spellcheck="${c.kind === 'natural' || c.kind === 'prose'}" aria-label="Cell ${i + 1}">${esc(c.text)}</textarea>
-      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && runs(c) ? `<div class="more">${esc(c.note)}</div>` : ''}${c.open ? `<ol class="questions">${c.open.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>` : ''}${r && runs(c) && !c.open && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}${c.was && runs(c) && !b ? refineBox(c) : ''}</div>
+      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && runs(c) ? `<div class="more">${esc(c.note)}</div>` : ''}${c.reply && !b ? `<div class="reply"><b>Claude:</b> ${esc(c.reply)}</div>` : ''}${c.open ? `<ol class="questions">${c.open.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>` : ''}${r && runs(c) && !c.open && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}${(c.was && runs(c) || c.kind === 'natural' && (c.reply || c.open)) && !b ? refineBox(c) : ''}</div>
     </article>`;
   }).join('');
   for (const t of cellsEl.querySelectorAll('textarea')) grow(t);
 }
 // a translated cell takes more plain language: an open one asks for it, a finished one offers it
 const drafts = new Map();
-const refineBox = (c) => c.open || drafts.has(c.id)
-  ? `<div class="refine"><textarea data-refine="${c.id}" rows="1" placeholder="${c.open ? 'Answer in plain language' : 'Say what to change, in plain language'}" aria-label="Answer for cell">${esc(drafts.get(c.id) ?? '')}</textarea><button type="button" data-refine-go="${c.id}">${c.open ? 'Answer' : 'Refine'}</button></div>`
+const refineBox = (c) => c.open || c.reply || drafts.has(c.id)
+  ? `<div class="refine"><textarea data-refine="${c.id}" rows="1" placeholder="${c.open || c.reply ? 'Answer in plain language' : 'Say what to change, in plain language'}" aria-label="Answer for cell">${esc(drafts.get(c.id) ?? '')}</textarea><button type="button" data-refine-go="${c.id}">${c.open || c.reply ? 'Answer' : 'Refine'}</button></div>`
   : `<button type="button" class="refine-open" data-refine-open="${c.id}">Refine in plain language</button>`;
 function summary(r) {
   const nev = r.lines.filter((l) => l.kind === 'never');
@@ -510,7 +512,7 @@ async function runBook() {
 // ------------------------------------------------------------ translation
 let sample;   // undefined: not asked yet; null: not available
 let vocabText = '', functionsText = '';
-const RULES = (vocab, functions, codeText, defined, ask) => `You translate one plain-language check about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
+const RULES = (vocab, functions, codeText, defined, ask) => `You turn one plain-language request about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The request is either a CHECK, something any code must obey, or a QUESTION about this file: where a value flows, what calls what, what stands at a line. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
 
 The sentence form in one screen:
 - A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless": "<head> if <condition>, unless <condition>." or "<head> unless <condition>."
@@ -519,7 +521,8 @@ The sentence form in one screen:
 - Variables are capitalised words: C, F, Callee. "a call C" introduces C and says what it is; "something" or "some await" is anything, unnamed. An atom is in backticks, \`true\`, \`class_method\`; a string is in double quotes.
 - A condition is a sentence from the list below with your own terms in its holes, or a sentence a rule in the notebook defines, or one of the built-in conditions.
 - Built in: a comparison of two numbers, "L > 6", "L >= N", "A < B"; equality and difference, "X is Y", "X differs from Y"; arithmetic, "N is A + B" (also -, *, /, mod); and these functions, each written "R is <phrase>" or compared directly by its name, "str_len(Name) > 6":
-${functions}- A check says what must hold of any code, not of this file. Never list the names, lines or values this file happens to contain to make a check pass; if the check needs something neither the sentences nor the built-ins can say, write the line that would need it as a "??" line (below) naming what is missing, and say so in "questions".
+${functions}- A question about this file is written with "?" and "why" lines, and it may name this file's own things: a line ("N is at line 31"), a name ("N is named \"User\""), a literal.
+- A check says what must hold of any code, not of this file. Never list the names, lines or values this file happens to contain to make a check pass; if the check needs something neither the sentences nor the built-ins can say, write the line that would need it as a "??" line (below) naming what is missing, and say so in "questions".
 - A VAGUE CHECK IS ASKED ABOUT, NOT GUESSED. When the check names a quality or a goal without saying what it consists of (ideal, clean, safe, good, well written, correct), do not choose a meaning. Write the rule the person asked for over the conditions still to be named, each on its own line starting with "??", and put in "questions" what the person must answer: short, in the language of the check, each with an example or two of what the sentences and built-ins can check. For "the code is ideal":
 A file F is ideal if all of:
   - ?? the first condition;
@@ -541,7 +544,8 @@ ${defined.length ? `Sentences the other cells already define, which you may use:
 The check to write: ${ask}
 
 ${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
-Reply with only a JSON object: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the check, saying what the cell checks>", "questions": ["<what the person must still answer>"]}`;
+When you cannot write a cell at all, because the sentences cannot say it or the request is neither a check nor a question about the code, leave "cell" empty and say in "reply", briefly and in the language of the request, what stands in the way and a nearby cell you could write instead; put what the person must decide in "questions".
+Always answer with the JSON object, never with words alone: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the request, saying what the cell checks or asks>", "questions": ["<what the person must still answer>"], "reply": "<only when there is no cell>"}`;
 const filesText = () => Object.entries(state.files).map(([f, t]) => `### ${f}\n\`\`\`js\n${t}\n\`\`\``).join('\n');
 const REFINE = (current, answer) => `The cell as it stands:
 ${current}
@@ -549,12 +553,30 @@ ${current}
 The person says: ${answer}
 
 Write the cell again with this taken in, under the same rules, and reply with the same JSON. Keep in "questions" only what is still open.`;
+const ANSWER = (answer) => `The person answers: ${answer}
+
+Write the cell now if you can, under the same rules, and reply with the same JSON.`;
+// the JSON inside a reply that also held words: the first balanced object with a "cell" or a "reply"
+function salvage(text) {
+  for (let s = text.indexOf('{'); s >= 0; s = text.indexOf('{', s + 1)) {
+    let depth = 0, str = false, escaped = false;
+    for (let i = s; i < text.length; i++) {
+      const ch = text[i];
+      if (str) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === '"') str = false; continue; }
+      if (ch === '"') str = true; else if (ch === '{') depth++; else if (ch === '}' && --depth === 0) {
+        try { const v = JSON.parse(text.slice(s, i + 1)); if (v && typeof v === 'object' && ('cell' in v || 'reply' in v)) return v; } catch (e) {}
+        break;
+      }
+    }
+  }
+  return null;
+}
 let toolsOk = false;
 const definedSentences = () => learned.map((l) => l.replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1'));
 async function translate(c, answer = null) {
   if (!sample) { c.error = 'Translation needs Claude, and this view does not offer it. Switch the cell to formal and write ROFL.'; renderCells(); return; }
   const ctl = new AbortController();
-  busy.set(c.id, { ctl, text: '' }); c.error = null; renderCells();
+  busy.set(c.id, { ctl, text: '' }); c.error = null; c.reply = null; renderCells();
   const tries = [];
   const tools = toolsOk ? [{
     name: 'try_cell',
@@ -572,12 +594,26 @@ async function translate(c, answer = null) {
   }] : undefined;
   try {
     // the conversation so far: the rules with the original words, then each cell written and each answer given
-    const first = { role: 'user', content: RULES(vocabText, functionsText, filesText(), definedSentences(), answer === null ? c.text : c.was) };
-    const asked = answer === null ? [] : [...(c.thread || []), { role: 'user', content: REFINE(c.text, answer) }];
-    const ans = await sample.json([first, ...asked], { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } });
-    if (!ans || typeof ans.cell !== 'string' || !ans.cell.trim()) throw { code: 'invalid_json', message: 'the answer had no cell field' };
+    // a cell still in plain language is its own request; a translated one keeps the words it came from in `was`
+    const natural = c.kind === 'natural';
+    const first = { role: 'user', content: RULES(vocabText, functionsText, filesText(), definedSentences(), natural ? c.text : c.was) };
+    const asked = answer === null ? [] : [...(c.thread || []), { role: 'user', content: natural ? ANSWER(answer) : REFINE(c.text, answer) }];
+    // Claude's words are never dropped: an answer that is not the JSON asked for is read for the JSON inside it, and failing that shown as it is
+    let ans;
+    try { ans = await sample.json([first, ...asked], { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } }); }
+    catch (e) { if (e && e.code === 'invalid_json' && e.text && e.text.trim()) ans = salvage(e.text) ?? { cell: '', reply: e.text.trim() }; else throw e; }
+    if (!ans || typeof ans !== 'object') throw { code: 'invalid_json' };
     const questions = Array.isArray(ans.questions) ? ans.questions.filter((q) => typeof q === 'string' && q.trim()) : [];
-    if (answer === null) c.was = c.text; else { c.answers = [...(c.answers || []), answer]; drafts.delete(c.id); }
+    const said = typeof ans.reply === 'string' ? ans.reply.trim() : '';
+    if (answer !== null) { c.answers = [...(c.answers || []), answer]; drafts.delete(c.id); }
+    if (typeof ans.cell !== 'string' || !ans.cell.trim()) {
+      if (!said && !questions.length) throw { code: 'invalid_json' };
+      // no cell: the cell stays in plain language, with what Claude said and a box to answer it
+      c.reply = said || null; c.open = questions.length ? questions : null;
+      c.thread = [...asked, { role: 'assistant', content: JSON.stringify(ans) }];
+      busy.delete(c.id); save(); renderCells(); return;
+    }
+    if (natural) c.was = c.text;
     c.thread = [...asked, { role: 'assistant', content: JSON.stringify(ans) }];
     c.text = ans.cell.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null; c.open = questions.length ? questions : null;
     busy.delete(c.id); results.delete(c.id); save(); renderCells(); runBook();
@@ -587,7 +623,7 @@ async function translate(c, answer = null) {
     if (code === 'not_granted' || code === 'sampling_disabled' || code === 'capability_disabled' || code === 'not_declared') { sample = null; c.error = 'Claude is not allowed for this page, so a natural cell cannot be translated here. Write it as a formal cell instead.'; }
     else if (code === 'cancelled') c.error = null;
     else if (code === 'rate_limited') c.error = 'Too many requests to Claude just now. Try again in a minute.';
-    else if (code === 'invalid_json') c.error = 'Claude answered, but not with a cell. Run it again, or say the check more precisely.';
+    else if (code === 'invalid_json') c.error = 'Claude sent back nothing that could be read. Run it again; if it repeats, say what you want to check or to see in one sentence.';
     else c.error = `The translation did not finish (${code || 'error'}). Run it again.`;
     renderCells();
   }

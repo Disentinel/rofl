@@ -10,6 +10,11 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_the_translator_threw_away_claudes_words_when_they_were_not_a_cell, defect).
+recorded(f_the_translator_threw_away_claudes_words_when_they_were_not_a_cell, "2026-09-25").
+addressed_by(f_the_translator_threw_away_claudes_words_when_they_were_not_a_cell, "playground/page.html").
+finding_note(f_the_translator_threw_away_claudes_words_when_they_were_not_a_cell, "REPORTED WITH A SCREENSHOT: a natural cell asking where the dataflow at line 31 goes for the fields of a User object came back as `Claude answered, but not with a cell`, and what Claude had streamed vanished. TWO CAUSES. The prompt knew only CHECKS and forbade naming this file's lines and names, so a QUESTION about line 31 had no legal cell, and nothing in the requested JSON let Claude say so: it said it in prose. And the page threw prose away: `sample.json` rejects `invalid_json` with the whole reply on `e.text`, and the handler replaced it with a fixed message. NOW: the prompt takes a check or a question about this file (a question may name a line or a name), and when no cell can be written Claude leaves `cell` empty and says why in `reply`, with what it could write instead. The page never drops the words: an unparsable reply is searched for a balanced JSON object with `cell` or `reply` (a brace inside a string does not fool it), and failing that shown as it is, `Claude: ...`, with an answer box; the answer goes back in the same conversation (`The person answers: ...`) until a cell comes, and the cell keeps the request and every answer above it. Measured in Chromium with a stand-in for `sample`: prose, then a reply with a question, then a cell, which ran; and prose wrapped around the JSON, salvaged into a cell. Not measured: the real Claude on the reported request.").
+
 finding(f_the_host_of_ring_1_is_checked_by_rules_it_could_not_be_written_in, insight).
 recorded(f_the_host_of_ring_1_is_checked_by_rules_it_could_not_be_written_in, "2026-09-25").
 addressed_by(f_the_host_of_ring_1_is_checked_by_rules_it_could_not_be_written_in, "examples/ring1/host.rofl").
