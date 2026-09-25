@@ -53,6 +53,7 @@ export function init(model: string, phraseText: string, concernMap?: typeof conc
   if (concernMap) concerns = concernMap;
   home = { ast_node: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
   for (const [rel, bs] of booksOf(model)) if (bs.size === 1) home[rel] = [...bs][0];
+  for (const m of model.matchAll(/^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*\)\.[ \t]*$/gm)) if (!m[0].includes(':-')) home[m[1]] ??= m[2] ?? 'main';   // a relation the model gives by facts alone
   return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
 }
 

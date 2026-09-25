@@ -235,10 +235,18 @@ function audit() {
   User.seen = true;
 }
 audit();
+
+[1].forEach(() => console.log(User.tag));
+setTimeout(() => console.log(User.tag), 0);
+User.tag = 'x';
+
+function score() { return User.score; }
+Promise.resolve().then(() => { User.score = 1; });
+score();
 ` },
     cells: [
   { kind: 'prose', text: 'This notebook reads play.js in sentences. The first cells define words, and every cell below may use them: a word is defined before it is used.' },
-  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A write comes too late for a read when it comes after the read in one list, or when every call that runs it comes after one that runs the read.' },
+  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A callback runs where facts/js-host.rofl says: forEach and map call it at once, inside the call; setTimeout and then call it later, after the whole synchronous run. Of two later callbacks no order is claimed, since that is when timers fire and promises settle. A write comes too late for a read when it comes after the read in one list, when every call that runs it comes after one that runs the read, or when it only runs later.' },
   { kind: 'formal', text: `A node N runs apart from B if G is nearest to N and G is within B.
 
 A node Q comes after P if all of:
@@ -253,25 +261,32 @@ A node Q comes after P if all of:
 A node N runs at P either:
 
 1. if N is within B and P is N;
-2. if G is nearest to N, a call C resolves to G, and C runs at P.
+2. if G is nearest to N, a call C resolves to G, and C runs at P;
+3. if G is nearest to N, C calls back G \`at_once\`, and C runs at P.
 
 A node N runs from the top at P if N runs at P and unless P is inside a function.
+
+A node N runs later if N runs at P, G is nearest to P, and C calls back G \`later\`.
 
 An assignment A may run before P if N runs from the top at P, A runs from the top at Q, and unless Q comes after P.
 
 A node V comes too late for M either:
 
 1. if M runs at P, A comes after P, and the \`right\` of A is V;
-2. if M runs from the top at P, A runs from the top at Q, the \`right\` of A is V, and unless A may run before P.
+2. if M runs from the top at P, A runs from the top at Q, the \`right\` of A is V, and unless A may run before P;
+3. if M runs from the top at P, A runs later, the \`right\` of A is V, and unless A may run before P.
 
 A node O has Key by the time of M if M selects Key, the member Key of O holds V, and unless V comes too late for M.` },
-  { kind: 'prose', text: 'What a read of a field can find. A field is missing when the object has no such member anywhere in the code, and asked for too early when every write of it comes too late. greet() reads User.nick before rename() sets it, and audit() reads User.seen a line before it writes it; setup() runs before paint(), so User.theme is fine. Fix the typo and drop role, and the first invariant goes green; call rename() before the first greet() and swap the two lines of audit(), and so does the second.' },
-  { kind: 'formal', text: `A member access M asks for a missing field if all of:
+  { kind: 'prose', text: 'What a read of a field can find. A field is missing when the object has no such member anywhere in the code, and asked for too early when every write of it comes too late. greet() reads User.nick before rename() sets it, and audit() reads User.seen a line before it writes it; setup() runs before paint(), so User.theme is fine. forEach reads User.tag at once, before the write below it, and setTimeout reads it later, after; score() reads User.score before the then callback writes it, though the then stands above it. Fix the typo and drop role, and the first invariant goes green; the second names four reads, one for each way to be early.' },
+  { kind: 'formal', text: `A node O has Key built in if the prototype of O is P and P has the member Key since Rel.
+
+A member access M asks for a missing field if all of:
   - M selects Key;
   - the \`object\` of M is X;
   - X points to O;
   - unless the member Key of O holds some node;
-  - unless the instance member Key of O is some node.
+  - unless the instance member Key of O is some node;
+  - unless O has Key built in.
 
 never M asks for a missing field` },
   { kind: 'formal', text: `A member access M asks for a field too early if all of:

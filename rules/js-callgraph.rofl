@@ -350,6 +350,24 @@ calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), ast_name[code](A, Name),
                                         may_be_node[flow](A, F), fn_node[code](F).
 
+-- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
+-- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
+-- arguments to the callee's parameters and its return to the call's value, and
+-- a callback gets neither (`map` passes elements and returns an array).
+callback_site[code](C, P, Key)        :- callee_of[code](C, N), ast_child[code](N, object, 0, O),
+                                         prototype_of[flow](O, P), builtin_prototype(P), selects[flow](N, Key).
+callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
+callback_site[code](C, thenable, Key) :- unresolved_call[code](C, _), callee_of[code](C, N), selects[flow](N, Key).
+calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
+                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F).
+calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
+                                arg_at[flow](C, I, A), J is I + 1, not arg_at[flow](C, J, _),
+                                may_be_node[flow](A, F), fn_node[code](F).
+
+-- a row for a prototype member the library does not have is a misspelling
+callback_key_unknown[audit](P, Key) :- host_calls_back(P, Key, _, _), builtin_prototype(P),
+                                       not lib_member(P, Key, _).
+
 -- =========================================================================
 -- 6. THE FRONTIER, AS A POSITIVE RELATION
 --

@@ -494,6 +494,14 @@ Declared as facts:
 | `calls_named` | "calls_by_name(name Z, name B)" |
 | `calls_in` | "names_a_call_to(name Z:1, name B:2, in file File:0)" |
 | `passes_function` | "passes_the_function(call C, function F:2, named name Name:3, at index I:1)" |
+
+`sig` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `callback_site` | "is_a_callback_site(call C, of origin Origin, at key Key)" |
+| `host_calls_back` | "calls_back_its_argument(origin Origin, key Key:1, argument Arg:2, when When:3)" |
+| `callback_key_unknown` | "names_an_unknown_callback_member(prototype P, key Key)" |
 | `resolved_site` | "is_resolved(node C)" |
 | `resolved_call` | "is_a_resolved_call(call C)" |
 | `unresolved_call` | "is_unresolved(call C, with shape S)" |

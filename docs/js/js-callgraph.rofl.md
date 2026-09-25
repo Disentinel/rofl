@@ -22,8 +22,13 @@ Reads:
 
 - from facts/js-callgraph.rofl, in the main:
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
+- from facts/js-host.rofl, in the main:
+  - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
+- from facts/js-lib-surface.rofl, in the main:
+  - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind)
+- from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
@@ -531,6 +536,51 @@ Caller calls Callee either:
   - X [points to](js-dataflow.rofl.md#may_be_node) F;
   - F is a [function](#fn_node).
 
+> A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
+> Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
+> arguments to the callee's parameters and its return to the call's value, and
+> a callback gets neither (`map` passes elements and returns an array).
+
+<a id="callback_site"></a>C is a callback site of an origin P at Key either:
+
+1. if all of:
+   - [the callee](#callee_of) of C is a node N;
+   - the `object` of N is a node O;
+   - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
+   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
+   - N [selects](js-dataflow.rofl.md#selects) Key;
+2. if C [is a host site](js-host.rofl.md#host_site) of some host from P at Key;
+3. if all of:
+   - C [is unresolved](#unresolved_call) with some shape;
+   - [the callee](#callee_of) of C [selects](js-dataflow.rofl.md#selects) Key;
+   - P is `thenable`.
+
+<a id="calls_back"></a>C calls back F a when When either:
+
+1. if all of:
+   - C [is a callback site](#callback_site) of an origin O at Key;
+   - O [calls back its argument](#host_calls_back) Key and I and When;
+   - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
+   - X [points to](js-dataflow.rofl.md#may_be_node) F;
+   - F is a [function](#fn_node);
+2. if all of:
+   - C [is a callback site](#callback_site) of an origin O at Key;
+   - O [calls back its argument](#host_calls_back) Key and `last` and When;
+   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
+   - an index J is I + 1;
+   - X [points to](js-dataflow.rofl.md#may_be_node) F;
+   - F is a [function](#fn_node);
+   - unless C [passes](js-dataflow.rofl.md#arg_at) some node at J.
+
+> a row for a prototype member the library does not have is a misspelling
+
+In the audit:
+
+<a id="callback_key_unknown"></a>A prototype names an unknown callback member Key if all of:
+  - it [calls back its argument](#host_calls_back) Key and some argument and some when;
+  - it [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
+  - unless it [has the member](#lib_member) Key since some release.
+
 ## 6. The frontier, as a positive relation
 
 > `stdlib_member` resolves nothing: it moves "the receiver is a builtin
@@ -538,6 +588,8 @@ Caller calls Callee either:
 > row `w_env_api_surface` reads. `shape_because(Lang, Shape, Layer, Reason)`
 > is the verdict ledger for SHAPES, separate from js-model's kind-level
 > `unknown_because`, because a kind cannot express partial coverage.
+
+In the code:
 
 A node
 

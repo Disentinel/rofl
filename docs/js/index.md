@@ -3,10 +3,10 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1003 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1007 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 212 | 91 | 82 | 0 | 43 | 221 | 20 | 4 | 4 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 218 | 94 | 85 | 0 | 45 | 237 | 22 | 4 | 6 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 229 | 87 | 74 | 0 | 46 | 227 | 15 | 5 | 2 | 0 |
 | [js-dataflow](js-dataflow.rofl.md) | 287 | 123 | 111 | 0 | 127 | 421 | 23 | 2 | 3 | 0 |
 | [js-effects](js-effects.rofl.md) | 211 | 128 | 120 | 0 | 23 | 307 | 20 | 2 | 7 | 0 |
@@ -133,6 +133,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `call_line` | `the_line` |
 | `call_site` | `is_a_call_site` |
 | `call_site_kind` | `the_call_kind` |
+| `callback_key_unknown` | `names_an_unknown_callback_member` |
+| `callback_site` | `is_a_callback_site` |
 | `callee_kind` | `the_callee_kind` |
 | `callee_obj` | `the_receiver` |
 | `callee_obj_kind` | `the_receiver_kind` |
@@ -487,6 +489,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `host_call_effect` | `has_the_host_effect` |
 | `host_call_remedy` | `has_the_host_remedy` |
 | `host_call_uneffected` | `has_no_host_effect` |
+| `host_calls_back` | `calls_back_its_argument` |
 | `host_effect_at` | `has_the_host_effect` |
 | `host_effect_atom` | `is_a_host_effect` |
 | `host_effect_orphan` | `has_an_orphan_effect` |
