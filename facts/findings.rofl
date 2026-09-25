@@ -10,6 +10,11 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, pitfall).
+recorded(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, "2026-09-25").
+addressed_by(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, "playground/page.html").
+finding_note(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, "POINTED OUT BY VADIM ON THE NEW DEFAULT: `? V gives its value to M at line 31` listed two of the four reads on the line, and the two it left out, `User.emal` and `User.role`, are exactly the ones worth seeing. A `?` line lists what its rule derives, so a read the rule cannot follow is not a wrong answer but NO ROW, and an absent row reads as nothing to say. The cell now closes the question over every read by two more alternatives with a constant in the head: `undefined` when the object is seen and has no such member (through the invariant's `M asks for a missing field`), `unknown` when the model sees no object at all (`unless X points to some node`). Measured: four answers on the user's code, two of them `undefined`; a mutant reading `opts.extra` of a parameter nothing passes answers `unknown` for it. The translator's prompt says a where-from question gets both alternatives. The general form is a question whose rows must cover a set (here, the reads on a line) and should say so for every member; nothing checks that a question is total.").
+
 finding(f_a_cell_head_that_reads_as_a_model_sentence_rewrote_the_model, defect).
 recorded(f_a_cell_head_that_reads_as_a_model_sentence_rewrote_the_model, "2026-09-25").
 addressed_by(f_a_cell_head_that_reads_as_a_model_sentence_rewrote_the_model, "playground/host.ts").
