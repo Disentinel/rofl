@@ -7,6 +7,7 @@ import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
+import { varsOf, canonTerm, type Clause } from '../src/unify.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -140,6 +141,13 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   return out;
 }
 
+/** The head's variables that nothing in the body gives a value. */
+function loose(cl: Clause): string[] {
+  const bound = new Set<string>();
+  for (const b of cl.body) if (b.t === 'bi') { varsOf(b.l, bound); varsOf(b.r, bound); } else if (b.t === 'pos') b.lit.args.forEach((a) => varsOf(a, bound));
+  return [...cl.head.args.reduce((s, a) => varsOf(a, s), new Set<string>())].filter((v) => !v.startsWith('_') && !bound.has(v));
+}
+
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
 
 export function run(code: string | Record<string, string>, cells: Cell[]): RunOut {
@@ -182,7 +190,7 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
   const read: (ReadResult | null)[] = parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab: allVocab, homeBooks: home }) : null);
   vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
   const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
-  const texts: string[] = [];
+  const texts: string[] = [], refused = new Set<number>();
   notebook = new Map();
   const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
     const errors: string[] = [], notes: string[] = [];
@@ -195,7 +203,19 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
       if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
       for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
     }
-    try { for (const cl of parseProgram(text)) if (cl.body.length) notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`); texts[i] = text; } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
+    try {
+      texts[i] = text;
+      for (const cl of parseProgram(text)) {
+        if (!cl.body.length) continue;
+        notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
+        const free = loose(cl);
+        if (!free.length || !(cl.head.rel in home)) continue;
+        // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
+        const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
+        errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
+        texts[i] = ''; refused.add(i);
+      }
+    } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
     return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
   });
   // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
@@ -208,6 +228,7 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
   lap('evaluate');
   last = f;
   parts.forEach(({ asks }, i) => {
+    if (refused.has(i)) return;
     for (const a0 of asks) {
       let a = a0;
       if (read[i] && !LITERAL.test(a.lit)) {

@@ -155,7 +155,7 @@
     <h1>ROFL Playground <span>&middot; JavaScript</span></h1>
     <div class="status" id="status" aria-live="polite"><span class="busy">loading the JS model</span></div>
     <div class="spacer"></div>
-    <label class="ex" for="example">Example <select id="example"><option value="await">Unawaited calls, one file</option><option value="sight">What the model cannot see, three files</option></select></label>
+    <label class="ex" for="example">Example <select id="example"><option value="await">Fields, functions and awaits, one file</option><option value="sight">What the model cannot see, three files</option></select></label>
     <button type="button" class="primary" id="runall" disabled>Run the book</button>
   </header>
   <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>unsure S</code> under it says what the invariant could not see, <code>why S</code> explains one. Files import each other with <code>import ... from './x.js'</code>. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
@@ -196,6 +196,12 @@ function save(path, data) {
   fs.writeFileSync(path, JSON.stringify(data));
 }
 
+const User = {
+  email: 'user@example.com',
+  password: 'password',
+  kind: 'admin',
+}
+
 class Store {
   constructor(path) { this.path = path; this.cache = null; }
   async get() {
@@ -209,18 +215,36 @@ class Store {
 function main() {
   const s = new Store('db.json');
   s.get();
-  s.put({ ok: true });
+  s.put({ email: User.emal, role: User.role, password: User.password });
 }
 main();
 ` },
     cells: [
-  { kind: 'prose', text: 'An invariant, in sentences: an async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
+  { kind: 'prose', text: 'Where does each value read on line 31 come from? A member access reads the member of the object its left side points to; the answer is the node that member holds.' },
+  { kind: 'formal', text: `A member access M reads a field at line 31 if M is at line 31 and M selects Key.
+
+A node V gives its value to M at line 31 if M reads a field at line 31, M selects Key, the \`object\` of M is X, X points to O, and the member Key of O holds V.
+
+? V gives its value to M at line 31` },
+  { kind: 'prose', text: 'Only two of the four reads on line 31 got an answer. The invariants say why: User has no member emal and no member role. Fix the typo, drop role, and both go green.' },
+  { kind: 'formal', text: `A member access M asks for a missing field if all of:
+  - M selects Key;
+  - the \`object\` of M is X;
+  - X points to O;
+  - unless the member Key of O holds some node;
+  - unless the instance member Key of O is some node.
+
+never M asks for a missing field` },
+  { kind: 'formal', text: `A call C asks for a missing function either:
+
+1. if the callee of C is E, E refers to the free Name in F, unless E is the global Name of some release with some form, unless E refers to the global Name of some host;
+2. if the callee of C is M and M asks for a missing field.
+
+never C asks for a missing function` },
+  { kind: 'prose', text: 'One more: an async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
   { kind: 'formal', text: `A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
 
 never C is unawaited` },
-  { kind: 'prose', text: 'Questions the JS model already answers in its own sentences: who calls whom, and what each function does to the world.' },
-  { kind: 'formal', text: `? F calls G
-? the effect of F is E` },
   { kind: 'prose', text: 'A natural cell: run it and Claude writes the formal cell, trying it against the code first. The original stays above it; Revert brings it back.' },
   { kind: 'natural', text: 'Every method of a class is called somewhere in this file.' },
 ],
@@ -530,7 +554,7 @@ A file F is ideal if all of:
 with the question "What makes the code ideal? List the conditions, for example: no async function is called without await; no function name is longer than N characters." A cell with questions does not run; the person answers in plain language and you are asked again with the answer. Ask only what the check cannot be written without; when the words fix the meaning, leave "questions" empty. When an answer settles part of it, write that part and keep a "??" line and a question for the rest.
 - WHERE A VALUE GOES. The model says what an expression may evaluate to; it keeps no def-use edges. "E points to N": E may be the object, array, function or class written at node N. A string, number or boolean is never pointed to: "E may be the literal V" says E may be that literal. "M selects Key": M is a member access reading Key; "the member Key of O holds V": an object literal or a class O has V at Key. So where the value of M goes takes both routes, as two alternatives: "M points to V and X points to V", and "M may be the literal L and X may be the literal L". A member access M (a.b) needs no walk through the object's members: the model already says what M reads, "M points to V" or "M may be the literal L". Its parts are "the \`object\` of M is X" and "M selects Key", and a name belongs to the identifier X, never to the object literal it stands for: "the \`object\` of M is X and X is named "User"". "The accessor of ..." and "reads through the accessor" are about getters and setters, not a.b. "From is copied by a declaration into To" relates two names through \`const To = From\` only and is empty for most code.
 - Only variables are capitalised. Write the other words of a sentence in lower case, and a name from the code in double quotes, as in: O is named "User" (never: carries User).
-- A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short.
+- A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short, and in words no sentence of the model already starts with: "M reads an undefined field" is read as the model's "M reads N" with the rest as a variable, and the cell is refused; "M asks for a missing field" is new.
 - Asking lines, each on its own line, with no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "why <sentence>" explains one answer.
 
 An example cell:
