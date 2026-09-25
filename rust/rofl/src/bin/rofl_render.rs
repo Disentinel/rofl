@@ -787,16 +787,21 @@ impl<'a> R<'a> {
 
     /// One head for a group: every clause renamed onto the first clause's head
     /// variables, or `None` where the renaming would fold two variables into one.
+    fn all_vars(h: &Heap, c: &Clause) -> Vec<Sym> {
+        let mut all: Vec<Sym> = Vec::new();
+        let mut terms: Vec<Term> = c.head.args.clone();
+        for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => terms.extend(l.args.iter().copied()), Elem::Builtin(_, a, b) => { terms.push(*a); terms.push(*b); } } }
+        for t in terms { let mut vs = Vec::new(); h.vars_of(t, &mut vs); for v in vs { if !all.contains(&v) { all.push(v); } } }
+        all
+    }
+
     fn canon(&self, group: &[Clause]) -> Option<Vec<(Clause, Vec<(Sym, Term)>, HashMap<Sym, Sym>)>> {
         let h = self.h;
         let first = &group[0];
         let mut gvars: Vec<Sym> = Vec::new();
         let mut used: HashSet<String> = HashSet::new();
-        for c in group {
-            let mut collect = |t: Term| if let TermK::Var(v) = t.kind() { used.insert(h.name(v).to_string()); };
-            for a in &c.head.args { collect(*a); }
-            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|a| collect(*a)), Elem::Builtin(_, a, b) => { collect(*a); collect(*b); } } }
-        }
+        // every variable, nested in a term or not: a name taken inside `f(R, B, A)` is as taken as one standing alone
+        for c in group { for v in Self::all_vars(h, c) { used.insert(h.name(v).to_string()); } }
         let mut fresh = self.fresh.iter().filter(|s| !used.contains(h.name(**s)));
         for (i, a) in first.head.args.iter().enumerate() {
             let v = match a.kind() { TermK::Var(v) if !h.name(v).starts_with("_$") && !gvars.contains(&v) => v, _ => *fresh.next()? };
@@ -815,10 +820,7 @@ impl<'a> R<'a> {
                     _ => extra.push((g, *a)),
                 }
             }
-            let mut all: Vec<Sym> = Vec::new();
-            let mut collect = |t: Term| if let TermK::Var(v) = t.kind() { if !all.contains(&v) { all.push(v); } };
-            for a in &c.head.args { collect(*a); }
-            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|a| collect(*a)), Elem::Builtin(_, a, b) => { collect(*a); collect(*b); } } }
+            let all = Self::all_vars(h, c);
             for v in &all {
                 let target = map.get(v).copied().unwrap_or(*v);
                 // a variable of this clause that is not in its head, spelled like a head variable of the group, would be captured by it

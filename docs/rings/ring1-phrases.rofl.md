@@ -51,3 +51,5 @@ Declared as facts:
 
 - `fun_phrase` — rows in this file
 
+> the host's contract (examples/ring1/host.rofl): the grammar's tree and the host's, walked in step
+

@@ -530,11 +530,8 @@ The term from a position I to a position J is a term N either:
    - [the text from](#tok_text) I to J is S;
    - N is $var(S);
    - unless I [holds a wildcard](#wildtok);
-2. if I [holds a wildcard](#wildtok), J is I, and N is the wildcard at I;
-3. if all of:
-   - [a numeral runs from](#inttok) I to J;
-   - [the text from](#tok_text) I to J is S;
-   - N is the integer written S.
+2. if I [holds a wildcard](#wildtok), J is I, and N is wild(I);
+3. if [a numeral runs from](#inttok) I to J, [the text from](#tok_text) I to J is S, and N is int(S).
 
 > A NEGATIVE INTEGER LITERAL, read exactly where src/parser.ts reads one: in
 > PRIMARY position, a dash whose next token is an integer. `expr` takes a dash
@@ -553,11 +550,11 @@ The term from a position I to a position K is a term N either:
    - [the token after](#nexttok) I starts at a position J;
    - [a numeral runs from](#inttok) J to K;
    - [the text from](#tok_text) J to K is S;
-   - N is the negative integer written S;
+   - N is negint(S);
 2. if all of:
    - [a string token runs from](#strtok) I to K;
    - [the text from](#tok_text) I to K is S;
-   - N is the string written S.
+   - N is str(S).
 
 > compound: f(args)
 

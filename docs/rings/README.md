@@ -24,12 +24,24 @@ negation nor is unsafe.*
 |---|---|---|---|
 | [ring1](ring1.rofl.md) | the characters, one scanner walk carrying a state, tokens as pairs of positions, terms, literals, clauses, and what no clause covered | `examples/ring1/ring1.rofl` | 140 |
 | [charclass](charclass.rofl.md) | the class of every character the grammar knows | `examples/ring1/charclass.rofl` | 86 rows |
+| [host](host.rofl.md) | what the host must do with the grammar's answer: cut a file into clauses, refuse a parse that did not cover its input, and promote the six leaves the grammar cannot finish | `examples/ring1/host.rofl` | 55 |
 
 A sentence of it: *A position starts a word if it is a word character and it
 neither follows a word character nor follows a dollar sign.* A token is a pair
 of positions and never text, so most sentences are about positions: *The
 token after a position J starts at a position K if the scan after the token
 ending at J has reached K and K starts a token.*
+
+The host (`examples/ring1/demo.ts`) does what a rule may not: it BUILDS terms,
+a number from digits, a string from an escaped one, a functor from a name. A
+rule may not build, but it may check what was built, so `host.rofl` is the
+host's contract written as rules over the grammar's own facts and the host's
+answer: *The host's hfun(F, A2) is what the grammar's comp(N, A) promises if
+the grammar's comp(N, A) stands where the host's hfun(F, A2) stands and N is
+the atom of F.* `npm run conform` runs the host clause by clause with the
+contract loaded beside the grammar: 0 violations over 292 clauses, and each of
+five spoiled hosts (a lost sign, an escape left undone, wildcards numbered one
+too high, a book said to be written, a refusal swallowed) is caught.
 
 ## It is the same program
 
@@ -44,6 +56,7 @@ Every document reads back into its source, clause for clause, with the reader
 | policy | 8 of 8 | none |
 | ring1 | 140 of 140 | 6 of 6 |
 | charclass | none | 86 of 86, the line feed among them |
+| host | 55 of 55 | 18 of 18 |
 
 Getting there found a defect in the sentence form itself: a conclusion's tense
 did not survive it. `imports(P, Q) @next :- imports(P, Q)`, the rule that
@@ -67,16 +80,15 @@ into a table cell, which ended the row.
 
 - The evaluator. `src/engine.ts` and the Rust engine are the part of ring 0
   that is code, not rules.
-- `examples/ring1/l1.rofl`, the smaller grammar ring 1's own source is
-  written in, and the host side (`demo.ts`), which reads a range back as text.
-- A kernel term inside a sentence stays a term: `$builtin("is", something)`,
-  `$not($lit(it, P, something, something))`. `$` cannot be written in ROFL
-  source, so no phrase can be declared for one. Ring 1 builds these terms (it
-  is a parser, and they are its output), so its heads show them: *The body
-  from a position I to a position C is $cons(a condition B, a list R)*. The
-  grammar's own constructors that sit in a condition read as words (*N is the
-  integer written S*); the two in heads, `comp` and `op`, stay terms, because
-  a phrase inside a head read worse and did not read back.
+- `examples/ring1/l1.rofl` and `l1.dense.rofl`: the first is `ring1.rofl`
+  less five features its own source does not use, the second the same rules
+  as facts for the tower's bottom host. Rendered, they would say again what
+  ring1 says.
+- A term inside a sentence stays a term: `$builtin("is", something)`,
+  `int(S)`, `hlit(R, main, A2, T2, no)`. Ring 1 is a parser and these are its
+  output, and the host's contract is about exactly these shapes, so showing
+  them is the precise reading. A phrase for a term does not yet read back
+  when it stands inside another sentence, which is why none is declared.
 - The documents are not their own dictionary. A sentence like *A rule is
   known* has no variable letter for the reader to learn it from, so the reader
   takes the vocabulary from the two phrase files, as it does for
