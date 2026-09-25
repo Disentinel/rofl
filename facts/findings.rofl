@@ -10,6 +10,11 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_host_callback_is_handed_over_and_never_called, defect).
+recorded(f_a_host_callback_is_handed_over_and_never_called, "2026-09-25").
+demands(f_a_host_callback_is_handed_over_and_never_called, decision).
+finding_note(f_a_host_callback_is_handed_over_and_never_called, "ASKED BY VADIM why the model does not resolve a callback. MEASURED on one file: `passes_function[code]` sees all five hand-offs of `init` (to a user's `twice`, `forEach`, `setTimeout`, `then`, `bus.on`), and `resolves` reaches init only from `f()` inside `twice`, because that call is a node in the code and its callee flows from the parameter. The other four call init from inside the host, where there is no node to resolve. The host's facts cannot say otherwise: they are generated from type declarations (`host_module_member`, `host_global`, `host_member_since`, the `_effect` families, deprecations), and a type says an argument is a function, not whether or when it is called. WHEN matters as much as whether: `forEach`, `map`, `emit` call at once, in place of the call, which `runs at` already models; `setTimeout`, `then`, an fs callback call after the whole top-level run, which is a new rule (a write there comes after every top-level read, a read there after every top-level write). The `sight` example already teaches `emit`/`on` in three sentences. Proposed: a table of host members with the argument they call and `at once` or `later`, in facts/, read by resolution and by order. Open, waiting on the owner.").
+
 finding(f_a_function_body_runs_where_it_is_called_and_every_run_starts_at_the_top, insight).
 recorded(f_a_function_body_runs_where_it_is_called_and_every_run_starts_at_the_top, "2026-09-25").
 addressed_by(f_a_function_body_runs_where_it_is_called_and_every_run_starts_at_the_top, "playground/page.html").
