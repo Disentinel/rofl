@@ -300,9 +300,11 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const joined: string[] = [];
     const stripped = (t: string) => t.replace(/^unless /, '');
     const known = (t: string) => templates.some((x) => x.parts.some((q) => q.t === 'text' && /\band\b/.test(q.s)) && regexOf(x).test(stripped(t)));
+    // mid-sentence an article is lower case, so a piece opening `A comes after P` is the variable A, not `a comes after P`
+    const bare = (p: string) => new RegExp(`^${TERM}$`).test(p) && !/^An? [a-z]/.test(p);
     for (const p of pieces) {
       const last = joined[joined.length - 1];
-      if (last !== undefined && (new RegExp(`^${TERM}$`).test(p) || (!known(last) && known(`${last} and ${p}`)))) joined[joined.length - 1] = `${last} and ${p}`;
+      if (last !== undefined && (bare(p) || (!known(last) && known(`${last} and ${p}`)))) joined[joined.length - 1] = `${last} and ${p}`;
       else joined.push(p);
     }
     return joined;

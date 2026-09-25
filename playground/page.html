@@ -218,49 +218,90 @@ function main() {
   s.put({ email: User.emal, role: User.role, password: User.password });
 }
 main();
+
+function greet() { return 'hi ' + User.nick; }
+function rename() { User.nick = 'admin'; }
+greet();
+rename();
+greet();
+
+function setup() { User.theme = 'dark'; }
+function paint() { return User.theme; }
+setup();
+paint();
+
+function audit() {
+  console.log(User.seen);
+  User.seen = true;
+}
+audit();
 ` },
     cells: [
-  { kind: 'prose', text: 'Where does each value read on line 31 come from? A member access reads the member of the object its left side points to; the answer is the node that member holds. When the object has no such member the answer is undefined, and when the model cannot see the object at all it is unknown, so no read goes unanswered.' },
+  { kind: 'prose', text: 'This notebook reads play.js in sentences. The first cells define words, and every cell below may use them: a word is defined before it is used.' },
+  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A write comes too late for a read when it comes after the read in one list, or when every call that runs it comes after one that runs the read.' },
+  { kind: 'formal', text: `A node N runs apart from B if G is nearest to N and G is within B.
+
+A node Q comes after P if all of:
+  - S is the I-th of the F of B;
+  - T is the J-th of the F of B;
+  - J < I;
+  - Q is within S;
+  - P is within T;
+  - unless Q runs apart from B;
+  - unless P runs apart from B.
+
+A node N runs at P either:
+
+1. if N is within B and P is N;
+2. if G is nearest to N, a call C resolves to G, and C runs at P.
+
+A node N runs from the top at P if N runs at P and unless P is inside a function.
+
+An assignment A may run before P if N runs from the top at P, A runs from the top at Q, and unless Q comes after P.
+
+A node V comes too late for M either:
+
+1. if M runs at P, A comes after P, and the \`right\` of A is V;
+2. if M runs from the top at P, A runs from the top at Q, the \`right\` of A is V, and unless A may run before P.
+
+A node O has Key by the time of M if M selects Key, the member Key of O holds V, and unless V comes too late for M.` },
+  { kind: 'prose', text: 'What a read of a field can find. A field is missing when the object has no such member anywhere in the code, and asked for too early when every write of it comes too late. greet() reads User.nick before rename() sets it, and audit() reads User.seen a line before it writes it; setup() runs before paint(), so User.theme is fine. Fix the typo and drop role, and the first invariant goes green; call rename() before the first greet() and swap the two lines of audit(), and so does the second.' },
+  { kind: 'formal', text: `A member access M asks for a missing field if all of:
+  - M selects Key;
+  - the \`object\` of M is X;
+  - X points to O;
+  - unless the member Key of O holds some node;
+  - unless the instance member Key of O is some node.
+
+never M asks for a missing field` },
+  { kind: 'formal', text: `A member access M asks for a field too early if all of:
+  - M selects Key;
+  - the \`object\` of M is X;
+  - X points to O;
+  - the member Key of O holds some node;
+  - unless O has Key by the time of M.
+
+never M asks for a field too early` },
+  { kind: 'prose', text: 'Where does each value read on line 31 come from? The node the member holds; undefined when the field is missing or not yet set; unknown when the model cannot see the object at all. No read goes unanswered.' },
   { kind: 'formal', text: `A member access M reads a field at line 31 if M is at line 31 and M selects Key.
 
 A node V gives its value to M at line 31 if M reads a field at line 31, M selects Key, the \`object\` of M is X, X points to O, the member Key of O holds V, and unless V comes too late for M.
 
 \`undefined\` gives its value to M at line 31 if M reads a field at line 31 and M asks for a missing field.
 
+\`undefined\` gives its value to M at line 31 if M reads a field at line 31 and M asks for a field too early.
+
 \`unknown\` gives its value to M at line 31 if M reads a field at line 31, the \`object\` of M is X, and unless X points to some node.
 
 ? V gives its value to M at line 31` },
-  { kind: 'prose', text: 'The same two undefined reads, as invariants over the whole file: nobody asks an object for a member it does not have, and nobody calls what nothing defines. A member assigned later in the same run of a function does not count for a read before it, because siblings in a list run in order: add console.log(User.nick); before main(); and User.nick = "n"; after it, and the invariant names the read. Fix the typo and drop role, and it goes green.' },
-  { kind: 'formal', text: `A member access M asks for a missing field if all of:
-  - M selects Key;
-  - the \`object\` of M is X;
-  - X points to O;
-  - unless O has Key by the time of M;
-  - unless the instance member Key of O is some node.
-
-A node O has Key by the time of M if M selects Key, the member Key of O holds V, and unless V comes too late for M.
-
-A node V comes too late for M if A comes after M and the \`right\` of A is V.
-
-An assignment A comes after M if all of:
-  - S is the I-th of the F of B;
-  - T is the J-th of the F of B;
-  - J < I;
-  - A is within S;
-  - M is within T;
-  - unless A runs apart from B;
-  - unless M runs apart from B.
-
-A node N runs apart from B if G is nearest to N and G is within B.
-
-never M asks for a missing field` },
+  { kind: 'prose', text: 'Nobody calls what nothing defines: a free name that no release of the language and no host defines, or a method that is a missing field.' },
   { kind: 'formal', text: `A call C asks for a missing function either:
 
 1. if the callee of C is E, E refers to the free Name in F, unless E is the global Name of some release with some form, unless E refers to the global Name of some host;
 2. if the callee of C is M and M asks for a missing field.
 
 never C asks for a missing function` },
-  { kind: 'prose', text: 'One more: an async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
+  { kind: 'prose', text: 'An async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
   { kind: 'formal', text: `A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
 
 never C is unawaited` },

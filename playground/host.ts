@@ -190,6 +190,8 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
   const read: (ReadResult | null)[] = parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab: allVocab, homeBooks: home }) : null);
   vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
   const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
+  const firstDef = new Map<string, number>();
+  read.forEach((r, i) => { for (const rel of r?.defined ?? []) if (!firstDef.has(rel)) firstDef.set(rel, i); });
   const texts: string[] = [], refused = new Set<number>();
   notebook = new Map();
   const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
@@ -202,6 +204,7 @@ export function run(code: string | Record<string, string>, cells: Cell[]): RunOu
       const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
       if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
       for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
+      for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
     }
     try {
       texts[i] = text;
