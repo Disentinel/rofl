@@ -223,20 +223,35 @@ main();
   { kind: 'prose', text: 'Where does each value read on line 31 come from? A member access reads the member of the object its left side points to; the answer is the node that member holds. When the object has no such member the answer is undefined, and when the model cannot see the object at all it is unknown, so no read goes unanswered.' },
   { kind: 'formal', text: `A member access M reads a field at line 31 if M is at line 31 and M selects Key.
 
-A node V gives its value to M at line 31 if M reads a field at line 31, M selects Key, the \`object\` of M is X, X points to O, and the member Key of O holds V.
+A node V gives its value to M at line 31 if M reads a field at line 31, M selects Key, the \`object\` of M is X, X points to O, the member Key of O holds V, and unless V comes too late for M.
 
 \`undefined\` gives its value to M at line 31 if M reads a field at line 31 and M asks for a missing field.
 
 \`unknown\` gives its value to M at line 31 if M reads a field at line 31, the \`object\` of M is X, and unless X points to some node.
 
 ? V gives its value to M at line 31` },
-  { kind: 'prose', text: 'The same two undefined reads, as invariants over the whole file: nobody asks an object for a member it does not have, and nobody calls what nothing defines. Fix the typo, drop role, and the first goes green.' },
+  { kind: 'prose', text: 'The same two undefined reads, as invariants over the whole file: nobody asks an object for a member it does not have, and nobody calls what nothing defines. A member assigned later in the same run of a function does not count for a read before it, because siblings in a list run in order: add console.log(User.nick); before main(); and User.nick = "n"; after it, and the invariant names the read. Fix the typo and drop role, and it goes green.' },
   { kind: 'formal', text: `A member access M asks for a missing field if all of:
   - M selects Key;
   - the \`object\` of M is X;
   - X points to O;
-  - unless the member Key of O holds some node;
+  - unless O has Key by the time of M;
   - unless the instance member Key of O is some node.
+
+A node O has Key by the time of M if M selects Key, the member Key of O holds V, and unless V comes too late for M.
+
+A node V comes too late for M if A comes after M and the \`right\` of A is V.
+
+An assignment A comes after M if all of:
+  - S is the I-th of the F of B;
+  - T is the J-th of the F of B;
+  - J < I;
+  - A is within S;
+  - M is within T;
+  - unless A runs apart from B;
+  - unless M runs apart from B.
+
+A node N runs apart from B if G is nearest to N and G is within B.
 
 never M asks for a missing field` },
   { kind: 'formal', text: `A call C asks for a missing function either:
@@ -490,7 +505,7 @@ function outputs(r) {
   let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('') + (r.notes || []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
   for (const l of r.lines) {
     const blind = l.kind === 'never' && l.ok && l.unsure && l.unsure.total > 0;
-    const pill = l.kind === 'never' ? (blind ? `<span class="pill warn">holds as far as it sees &middot; ${l.unsure.total} out of sight</span>` : l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
+    const pill = l.kind === 'never' ? (l.ok && r.errors.length ? '<span class="pill warn">unproven &middot; part of the cell was left out</span>' : blind ? `<span class="pill warn">holds as far as it sees &middot; ${l.unsure.total} out of sight</span>` : l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
     h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
     if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
     if (l.proof) h += renderProof(l.proof, l.lit); else if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;

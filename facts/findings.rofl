@@ -10,6 +10,28 @@
 -- rules. All are open on purpose: three demand a decision on the language,
 -- three name checks that do not exist yet, one is a stale comment.
 
+finding(f_a_member_assigned_after_the_read_counted_as_there, defect).
+recorded(f_a_member_assigned_after_the_read_counted_as_there, "2026-09-25").
+addressed_by(f_a_member_assigned_after_the_read_counted_as_there, "playground/page.html").
+finding_note(f_a_member_assigned_after_the_read_counted_as_there, "ASKED BY VADIM after a probe of the missing-field invariant: `console.log(User.later); User.later = 1;` passed, because `member_value` is flow-insensitive by design (`A member written is a member read, flow-insensitively`, rules/js-dataflow.rofl), so a write anywhere in the file defines the member for every read. The control-flow layer has no happens-before relation; it answers whether a position may not run. What it does have is ORDER IN A LIST: siblings under one parent at indices I < J run in that order (statements, and also arguments, elements, properties, all left to right). The default notebook now says it in sentences: an assignment A comes after a read M when both sit under different children of one list B, A's later, and neither is inside a function nested under B (`G is nearest to N and G is within B`); a holder of the member that is the `right` of such an A comes too late for M, and the member counts only through a holder in time. Measured: flagged `console.log(User.later)` above `User.later = 1`, and `Cfg.x` read before written in one function body; not flagged a read in a function called after the write, a write in an earlier `if`, and `User.same = User.same || 1`; on the user's code the answers did not move; with `console.log(User.nick)` before `main()` and `User.nick = 'n'` after it, `User.nick` at line 33 is named. The line-31 question uses the same test, so a late holder is not given as the source. SEMANTICS: may read undefined on the first run. A read before the write in a loop body or in a function called twice is flagged, because its first execution reads nothing. NOT ORDERED, so counted as there: a read in a function whose call comes after the write, and a read or write that is itself an element of the list (`f(o.k, o.k = 1)`), since `within` is strict. Across calls the order is a call-graph question the model does not ask.").
+
+finding(f_the_missing_field_invariant_takes_a_builtin_member_for_a_missing_one, defect).
+recorded(f_the_missing_field_invariant_takes_a_builtin_member_for_a_missing_one, "2026-09-25").
+finding_note(f_the_missing_field_invariant_takes_a_builtin_member_for_a_missing_one, "PROBED on a small file: the default notebook's `M asks for a missing field` names `list.map` on an array literal, `User.toString()`, `f.call` on a declared function and `Store.name` on a class, because it reads only members written in the code. The model knows the rest: `lib_member(Prototype, Key, Release)` from TypeScript's lib files and `prototype_of`; one more sentence, `A node O has Key built in if the prototype of O is P and P has the member Key since Rel`, and `unless O has Key built in` removes `map` and `toString`. `f.call` and `Store.name` stay, because `kind_prototype` (rules/js-dataflow.rofl) gives `function` to function expressions and arrows and to no function declaration, class declaration or class expression. Left open by the owner's choice on 2026-09-25; the user's code has no such read.").
+
+finding(f_the_playground_calls_a_relation_that_only_facts_define_defined_nowhere, defect).
+recorded(f_the_playground_calls_a_relation_that_only_facts_define_defined_nowhere, "2026-09-25").
+finding_note(f_the_playground_calls_a_relation_that_only_facts_define_defined_nowhere, "A cell reading `P has the member Key since Rel` (`lib_member`) ran correctly and still said `used but defined nowhere: lib_member`. playground/host.ts builds the set of relations the model defines from its RULES (`booksOf` matches `:-`), so a relation given by facts alone, as the whole of facts/js-lib-surface.rofl is, reads as undefined. Open.").
+
+finding(f_a_condition_after_is_v_and_is_not_read, defect).
+recorded(f_a_condition_after_is_v_and_is_not_read, "2026-09-25").
+finding_note(f_a_condition_after_is_v_and_is_not_read, "`A node V comes too late for M if the `right` of A is V and A comes after M.` was not read (the rule was left out and named), while `... if A comes after M and the `right` of A is V.` reads. Seen once in the playground, not diagnosed; likely the last slot of `the <child> of <node> is <node>` taking the rest of the line. Open.").
+
+finding(f_an_invariant_showed_holds_in_a_cell_that_lost_a_rule, defect).
+recorded(f_an_invariant_showed_holds_in_a_cell_that_lost_a_rule, "2026-09-25").
+addressed_by(f_an_invariant_showed_holds_in_a_cell_that_lost_a_rule, "playground/page.html").
+finding_note(f_an_invariant_showed_holds_in_a_cell_that_lost_a_rule, "When the reader left a rule of a cell out (f_a_condition_after_is_v_and_is_not_read), the cell's header said `has errors` and its `never` line still showed a green `holds`: the invariant held only because the rule that would have made it fail was missing. A `never` line that holds in a cell with errors now shows `unproven: part of the cell was left out`.").
+
 finding(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, pitfall).
 recorded(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, "2026-09-25").
 addressed_by(f_a_question_answers_only_where_it_finds_something_and_is_silent_about_the_rest, "playground/page.html").
