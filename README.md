@@ -291,8 +291,11 @@ atom/rel   := /[a-z][A-Za-z0-9_]*/
 comment    := "--" to end of line
 ```
 
-`@async` parses and is rejected with *"not in v0"*. `@next` is not allowed in
-bodies; `@init` is not allowed on rule heads.
+The temporal set is exactly the three above. `@async` was reserved syntax
+until 2026-09-16 and is not reserved now — the effects executor is not going
+to be built, so the word was holding a place for nothing, and it is refused as
+the unknown marker it is (LIMITS.md). `@next` is not allowed in bodies;
+`@init` is not allowed on rule heads.
 
 **A relation may take ZERO arguments, spelled `p()`** — added 2026-09-10, and
 the grammar above says so (`terms` may be empty). A relation of arity *n* is a

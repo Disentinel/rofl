@@ -1,0 +1,20 @@
+-- examples/checks/async-refused.rofl — A PROGRAM THAT MUST BE REFUSED.
+--
+-- `@async` WAS RESERVED SYNTAX AND IS NOT RESERVED NOW. START.md §3.3 asked
+-- the parser to know the word and answer `not in v0`, which is a promise that
+-- the word is being kept for something; the effects executor is not going to
+-- be built, so it is being kept for nothing. The temporal set is the grammar's
+-- three -- `@init`, `@now`, `@next` -- and `@async` is an unknown marker like
+-- any other, refused by the one branch that refuses all of them.
+--
+-- WHAT IS STILL OWED IS THE REFUSAL, which is what LIMITS.md's `No @async`
+-- bullet means and what this world holds. Both spellings were probed and both
+-- are refused -- the marker on a PREMISE and on a HEAD -- and the head form is
+-- the one kept here, because it is the one a person reaching for async would
+-- write.
+--
+-- The golden holds THAT the file is refused and not the wording (two engines
+-- word a syntax error differently and always will), so a kernel that quietly
+-- starts ACCEPTING this is a red.
+
+p(X) @async :- q(X).

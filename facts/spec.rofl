@@ -298,7 +298,9 @@ cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 -- Eleven `prohibited` duties read `open_shortcut` on 2026-09-12, the day the
 -- coverage model was first wired into a world and first ran since `test/` was
 -- removed. A prohibition has ONE mechanical form -- write the forbidden thing
--- down and require a refusal -- and two of these now have it. The rest are
+-- down and require a refusal -- and two of these had it until 2026-09-16,
+-- when `@async` stopped being reserved syntax and that world went to stand
+-- behind a LIMIT instead (see `amends[map](l_no_async, ...)` below). The rest are
 -- cited against checks that already existed and were never written down: the
 -- census holds 139 checks against 4 citations, so the gap the report measures
 -- is mostly a MISSING BIBLIOGRAPHY rather than missing instruments.
@@ -309,14 +311,18 @@ cited_check[map](c_ci_typecheck, ".github/workflows/ci.yml", "typecheck").
 -- supports of a two-support fact, separately, because which witness the store
 -- records is not fixed by the semantics -- and carries a single-support control
 -- so it cannot pass by removing nothing.
-cited_check[map](c_w_async_reserved, "facts/goldens.rofl", "async_reserved").
+cited_check[map](c_w_async_refused, "facts/goldens.rofl", "async_refused").
 cited_check[map](c_w_unstratifiable, "facts/goldens.rofl", "unstratifiable").
 cited_check[map](c_w_budget_wall, "facts/goldens.rofl", "budget_wall").
 cited_check[map](c_port_partial, "rust/rofl/tests/explain.rs", "run_reports_partial_rather_than_pretending_to_have_finished").
 cited_check[map](c_port_canonical, "rust/rofl/tests/explain.rs", "fact_keys_narrows_by_relation_and_comes_back_in_canonical_order").
 cited_check[map](c_port_excise, "rust/rofl/tests/explain.rs", "excise_recomputes_rather_than_reading_the_witness").
 
-guards[map](c_w_async_reserved, s_async_reserved_rejected).
+-- `No @async` IS A LIMIT AND NOT A RESERVATION since 2026-09-16, so this
+-- world guards the LIMITS.md bullet and not the START.md sentence it retired.
+-- The refusal it pins is unchanged; what changed is which sentence it answers
+-- for.
+guards[map](c_w_async_refused, l_no_async).
 guards[map](c_w_unstratifiable, s_reject_unstratified).
 -- TWO SHAPES OF NOT HANGING, because the duty is about both. A negation cycle
 -- is the loop that never settles and the loader refuses it by noticing that a
@@ -455,7 +461,8 @@ qualifies[map](r_moded_relations, l_demand_premise_order).
 -- still owes. That is the test `qualifies` exists for and this one passes it:
 --
 --   incremental maintenance -> l_no_incremental_maintenance
---   @async executor         -> l_no_async
+--   @async executor         -> l_no_async, which since 2026-09-16 retires the
+--                              reservation as well as the executor
 --   multi-fact abduction    -> l_no_multi_fact_abduction
 --   persistence layers      -> l_no_persistence, narrowed to
 --                              `beyond store serialization` -- and `save`/`open`
@@ -465,6 +472,21 @@ qualifies[map](r_moded_relations, l_demand_premise_order).
 --   optimization, sugar     -> l_no_aggregation
 amends[map](l_no_incremental_maintenance, s8_out_of_scope).
 amends[map](l_no_async, s8_out_of_scope).
+
+-- ---- `@async` WAS RESERVED FOR SOMETHING AND THE SOMETHING WAS DROPPED -----
+-- Decided 2026-09-16 by the owner: the effects executor is not going to be
+-- built. Two START.md sentences were about the WAITING rather than about the
+-- absence -- §3.3 `@async` is reserved syntax -- parse it, reject it with "not
+-- in v0", and §7's shortcut of shipping it `as implemented instead of
+-- explicitly rejected` -- and a word reserved for nothing is a promise the
+-- tree cannot keep. Both are retired by the LIMITS.md bullet, which says the
+-- stronger thing: not reserved, not a marker, refused like any other unknown
+-- one. That is an AMENDMENT and not a qualification, because the duty they
+-- state -- know this word and answer with its own diagnostic -- is no longer
+-- owed at all; the parser branch that carried it is gone and
+-- `examples/checks/async-refused.rofl` holds the refusal that remains.
+amends[map](l_no_async, s_async_reserved_rejected).
+amends[map](l_no_async, s7_no_pretend_async).
 amends[map](l_no_multi_fact_abduction, s8_out_of_scope).
 amends[map](l_no_persistence, s8_out_of_scope).
 amends[map](l_no_aggregation, s8_out_of_scope).
