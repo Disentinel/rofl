@@ -59,16 +59,16 @@ if (files.length === 0) { console.error('usage: npm run lint -- <file.rofl> ...'
 
 // what boot.rofl concludes on its own is reported only when a target file adds to it
 const bootOnly = new Rofl();
-bootOnly.load(readFileSync(BOOT, 'utf8'), 'boot.rofl');
+bootOnly.load(readFileSync(BOOT, 'utf8'), { who: 'boot.rofl' });
 bootOnly.evaluate();
 const bootHeads = new Set((bootOnly.query('concludes(R, Rel)').rows as any[]).map((r) => String(r.bindings.Rel)));
 const OWN = new Set(['has_body', 'pair_read', 'long_body', 'base', 'body_rel', 'carrier', 'no_carrier', 'shares', 'split', 'several_routes', 'same_head', 'differs', 'twin', 'has_twins', 'mirror_cand', 'differs_off_heads', 'mirror_head', 'mirror']);
 const foreign = (rel: string) => bootHeads.has(rel) || OWN.has(rel);
 
 const r = new Rofl();
-r.load(readFileSync(BOOT, 'utf8'), 'boot.rofl');
-for (const f of files) r.load(readFileSync(f, 'utf8'), f);
-r.load(PROJECTIONS, 'lint.rofl');
+r.load(readFileSync(BOOT, 'utf8'), { who: 'boot.rofl' });
+for (const f of files) r.load(readFileSync(f, 'utf8'), { who: f });
+r.load(PROJECTIONS, { who: 'lint.rofl' });
 const ev = r.evaluate(8_000_000) as { partial?: boolean };
 const fold = evaluateSemiring(r.store, countingSemiring, { maxRounds: 200 });
 
