@@ -3830,8 +3830,8 @@ block_mentions("rules/self-audit.rofl:93", edb, bare).
 block_mentions("rules/self-audit.rofl:93", imports, bare).
 block_mentions("rules/self-audit.rofl:93", unattributed, bare).
 block_mentions("rules/self-audit.rofl:93", collected, bare).
-lint_file("rules/spec-coverage.rofl", 36, 104, 21).
-file_clauses("rules/spec-coverage.rofl", 16, 14).
+lint_file("rules/spec-coverage.rofl", 44, 148, 25).
+file_clauses("rules/spec-coverage.rofl", 20, 16).
 block("rules/spec-coverage.rofl:1", "rules/spec-coverage.rofl", 1, 40).
 block_next("rules/spec-coverage.rofl:1", clause).
 block_mentions("rules/spec-coverage.rofl:1", examples, bare).
@@ -3875,44 +3875,81 @@ block_before("rules/spec-coverage.rofl:95", "rules/spec-coverage.rofl:97").
 block("rules/spec-coverage.rofl:101", "rules/spec-coverage.rofl", 101, 2).
 block_next("rules/spec-coverage.rofl:101", clause).
 block_before("rules/spec-coverage.rofl:101", "rules/spec-coverage.rofl:103").
-block("rules/spec-coverage.rofl:105", "rules/spec-coverage.rofl", 105, 3).
+block("rules/spec-coverage.rofl:105", "rules/spec-coverage.rofl", 105, 18).
 block_next("rules/spec-coverage.rofl:105", clause).
-block_before("rules/spec-coverage.rofl:105", "rules/spec-coverage.rofl:108").
-block_mentions("rules/spec-coverage.rofl:105", document, bare).
-block("rules/spec-coverage.rofl:112", "rules/spec-coverage.rofl", 112, 2).
-block_next("rules/spec-coverage.rofl:112", clause).
-block_before("rules/spec-coverage.rofl:112", "rules/spec-coverage.rofl:114").
-block("rules/spec-coverage.rofl:117", "rules/spec-coverage.rofl", 117, 1).
-block_next("rules/spec-coverage.rofl:117", comment).
-block_banner("rules/spec-coverage.rofl:117").
-block("rules/spec-coverage.rofl:119", "rules/spec-coverage.rofl", 119, 3).
-block_next("rules/spec-coverage.rofl:119", clause).
-block_before("rules/spec-coverage.rofl:119", "rules/spec-coverage.rofl:122").
-block("rules/spec-coverage.rofl:125", "rules/spec-coverage.rofl", 125, 1).
-block_next("rules/spec-coverage.rofl:125", comment).
-block_banner("rules/spec-coverage.rofl:125").
-block("rules/spec-coverage.rofl:127", "rules/spec-coverage.rofl", 127, 4).
-block_next("rules/spec-coverage.rofl:127", clause).
-block_before("rules/spec-coverage.rofl:127", "rules/spec-coverage.rofl:131").
-block("rules/spec-coverage.rofl:134", "rules/spec-coverage.rofl", 134, 11).
-block_next("rules/spec-coverage.rofl:134", clause).
-block_banner("rules/spec-coverage.rofl:134").
-block_mentions("rules/spec-coverage.rofl:134", crossing, bare).
-block_mentions("rules/spec-coverage.rofl:134", not, bare).
-block_mentions("rules/spec-coverage.rofl:134", leak, called).
-block_mentions("rules/spec-coverage.rofl:134", guards, bare).
-block_mentions("rules/spec-coverage.rofl:134", cited_check, bare).
-block_mentions("rules/spec-coverage.rofl:134", amends, bare).
-block_mentions("rules/spec-coverage.rofl:134", qualifies, bare).
-block("rules/spec-coverage.rofl:147", "rules/spec-coverage.rofl", 147, 3).
-block_next("rules/spec-coverage.rofl:147", clause).
-block_mentions("rules/spec-coverage.rofl:147", check_stands, bare).
+block_before("rules/spec-coverage.rofl:105", "rules/spec-coverage.rofl:123").
+block_mentions("rules/spec-coverage.rofl:105", restates, called).
+block_mentions("rules/spec-coverage.rofl:105", s7_no_log_provenance, bare).
+mention_snake(s7_no_log_provenance).
+block_mentions("rules/spec-coverage.rofl:105", s_provenance_per_firing, bare).
+mention_snake(s_provenance_per_firing).
+block_mentions("rules/spec-coverage.rofl:105", s7_no_silent_overrun, bare).
+mention_snake(s7_no_silent_overrun).
+block_mentions("rules/spec-coverage.rofl:105", s_budget_emits_hole, bare).
+mention_snake(s_budget_emits_hole).
+block_mentions("rules/spec-coverage.rofl:105", edb, bare).
+block_mentions("rules/spec-coverage.rofl:105", open_shortcut, bare).
+mention_snake(open_shortcut).
+block_mentions("rules/spec-coverage.rofl:105", covered, bare).
+block_mentions("rules/spec-coverage.rofl:105", guarded_by, bare).
+block("rules/spec-coverage.rofl:126", "rules/spec-coverage.rofl", 126, 3).
+block_next("rules/spec-coverage.rofl:126", clause).
+block_before("rules/spec-coverage.rofl:126", "rules/spec-coverage.rofl:129").
+block_mentions("rules/spec-coverage.rofl:126", document, bare).
+block("rules/spec-coverage.rofl:133", "rules/spec-coverage.rofl", 133, 20).
+block_next("rules/spec-coverage.rofl:133", clause).
+block_dated("rules/spec-coverage.rofl:133", 1).
+block_mentions("rules/spec-coverage.rofl:133", open_shortcut, bare).
+block_mentions("rules/spec-coverage.rofl:133", uncovered, bare).
+block_mentions("rules/spec-coverage.rofl:133", discharged_by, bare).
+mention_snake(discharged_by).
+block_mentions("rules/spec-coverage.rofl:133", prose_discharged, bare).
+mention_snake(prose_discharged).
+block_mentions("rules/spec-coverage.rofl:133", unattended, bare).
+block_mentions("rules/spec-coverage.rofl:133", rules, bare).
+block_mentions("rules/spec-coverage.rofl:133", gap_accepted, called).
+mention_snake(gap_accepted).
+block_mentions("rules/spec-coverage.rofl:133", accepted_residual, bare).
+mention_snake(accepted_residual).
+block_mentions("rules/spec-coverage.rofl:133", idle_acceptance, called).
+mention_snake(idle_acceptance).
+block("rules/spec-coverage.rofl:158", "rules/spec-coverage.rofl", 158, 2).
+block_next("rules/spec-coverage.rofl:158", clause).
+block_before("rules/spec-coverage.rofl:158", "rules/spec-coverage.rofl:160").
+block("rules/spec-coverage.rofl:164", "rules/spec-coverage.rofl", 164, 6).
+block_next("rules/spec-coverage.rofl:164", clause).
+block_before("rules/spec-coverage.rofl:164", "rules/spec-coverage.rofl:170").
+block("rules/spec-coverage.rofl:173", "rules/spec-coverage.rofl", 173, 1).
+block_next("rules/spec-coverage.rofl:173", comment).
+block_banner("rules/spec-coverage.rofl:173").
+block("rules/spec-coverage.rofl:175", "rules/spec-coverage.rofl", 175, 3).
+block_next("rules/spec-coverage.rofl:175", clause).
+block_before("rules/spec-coverage.rofl:175", "rules/spec-coverage.rofl:178").
+block("rules/spec-coverage.rofl:181", "rules/spec-coverage.rofl", 181, 1).
+block_next("rules/spec-coverage.rofl:181", comment).
+block_banner("rules/spec-coverage.rofl:181").
+block("rules/spec-coverage.rofl:183", "rules/spec-coverage.rofl", 183, 4).
+block_next("rules/spec-coverage.rofl:183", clause).
+block_before("rules/spec-coverage.rofl:183", "rules/spec-coverage.rofl:187").
+block("rules/spec-coverage.rofl:190", "rules/spec-coverage.rofl", 190, 11).
+block_next("rules/spec-coverage.rofl:190", clause).
+block_banner("rules/spec-coverage.rofl:190").
+block_mentions("rules/spec-coverage.rofl:190", crossing, bare).
+block_mentions("rules/spec-coverage.rofl:190", not, bare).
+block_mentions("rules/spec-coverage.rofl:190", leak, called).
+block_mentions("rules/spec-coverage.rofl:190", guards, bare).
+block_mentions("rules/spec-coverage.rofl:190", cited_check, bare).
+block_mentions("rules/spec-coverage.rofl:190", amends, bare).
+block_mentions("rules/spec-coverage.rofl:190", qualifies, bare).
+block("rules/spec-coverage.rofl:203", "rules/spec-coverage.rofl", 203, 3).
+block_next("rules/spec-coverage.rofl:203", clause).
+block_mentions("rules/spec-coverage.rofl:203", check_stands, bare).
 mention_snake(check_stands).
-block_mentions("rules/spec-coverage.rofl:147", unwritten, bare).
-block("rules/spec-coverage.rofl:152", "rules/spec-coverage.rofl", 152, 8).
-block_next("rules/spec-coverage.rofl:152", clause).
-block_mentions("rules/spec-coverage.rofl:152", imports, bare).
-block_mentions("rules/spec-coverage.rofl:152", collects, bare).
+block_mentions("rules/spec-coverage.rofl:203", unwritten, bare).
+block("rules/spec-coverage.rofl:208", "rules/spec-coverage.rofl", 208, 8).
+block_next("rules/spec-coverage.rofl:208", clause).
+block_mentions("rules/spec-coverage.rofl:208", imports, bare).
+block_mentions("rules/spec-coverage.rofl:208", collects, bare).
 lint_file("rules/strata.rofl", 10, 26, 4).
 file_clauses("rules/strata.rofl", 10, 0).
 block("rules/strata.rofl:1", "rules/strata.rofl", 1, 26).
@@ -4077,8 +4114,8 @@ mention_snake(world_omits).
 list_item("rules/worlds.rofl:98", 100, 1).
 list_item("rules/worlds.rofl:98", 105, 2).
 list_item("rules/worlds.rofl:98", 112, 3).
-lint_file("facts/checks.rofl", 54, 49, 13).
-file_clauses("facts/checks.rofl", 0, 54).
+lint_file("facts/checks.rofl", 66, 70, 18).
+file_clauses("facts/checks.rofl", 0, 66).
 block("facts/checks.rofl:1", "facts/checks.rofl", 1, 9).
 block_next("facts/checks.rofl:1", clause).
 block_mentions("facts/checks.rofl:1", scripts, bare).
@@ -4122,6 +4159,26 @@ block("facts/checks.rofl:107", "facts/checks.rofl", 107, 4).
 block_next("facts/checks.rofl:107", clause).
 block_dated("facts/checks.rofl:107", 1).
 block_mentions("facts/checks.rofl:107", not, bare).
+block("facts/checks.rofl:117", "facts/checks.rofl", 117, 8).
+block_next("facts/checks.rofl:117", clause).
+block_mentions("facts/checks.rofl:117", rules_spec, bare).
+mention_snake(rules_spec).
+block_mentions("facts/checks.rofl:117", rules, bare).
+block_mentions("facts/checks.rofl:117", facts, bare).
+block_mentions("facts/checks.rofl:117", scanners, bare).
+block("facts/checks.rofl:130", "facts/checks.rofl", 130, 7).
+block_next("facts/checks.rofl:130", clause).
+block_dated("facts/checks.rofl:130", 2).
+block_mentions("facts/checks.rofl:130", prohibited, bare).
+block_mentions("facts/checks.rofl:130", async_refused, bare).
+mention_snake(async_refused).
+block("facts/checks.rofl:143", "facts/checks.rofl", 143, 3).
+block_next("facts/checks.rofl:143", clause).
+block("facts/checks.rofl:149", "facts/checks.rofl", 149, 3).
+block_next("facts/checks.rofl:149", clause).
+block_dated("facts/checks.rofl:149", 1).
+block_mentions("facts/checks.rofl:149", derived_by, bare).
+mention_snake(derived_by).
 lint_file("facts/cleanliness.rofl", 23, 144, 13).
 file_clauses("facts/cleanliness.rofl", 0, 23).
 block("facts/cleanliness.rofl:1", "facts/cleanliness.rofl", 1, 16).
@@ -4218,8 +4275,8 @@ file_clauses("facts/depends.rofl", 0, 2027).
 block("facts/depends.rofl:1", "facts/depends.rofl", 1, 8).
 block_next("facts/depends.rofl:1", clause).
 block_mentions("facts/depends.rofl:1", npm, bare).
-lint_file("facts/deviations.rofl", 21, 15, 3).
-file_clauses("facts/deviations.rofl", 0, 21).
+lint_file("facts/deviations.rofl", 22, 15, 3).
+file_clauses("facts/deviations.rofl", 0, 22).
 block("facts/deviations.rofl:1", "facts/deviations.rofl", 1, 15).
 block_next("facts/deviations.rofl:1", clause).
 block_dated("facts/deviations.rofl:1", 1).
@@ -4239,8 +4296,8 @@ block_next("facts/feature-map.rofl:1", clause).
 block_mentions("facts/feature-map.rofl:1", feature, bare).
 block("facts/feature-map.rofl:486", "facts/feature-map.rofl", 486, 1).
 block_next("facts/feature-map.rofl:486", eof).
-lint_file("facts/findings.rofl", 5014, 552, 871).
-file_clauses("facts/findings.rofl", 0, 4616).
+lint_file("facts/findings.rofl", 5061, 552, 880).
+file_clauses("facts/findings.rofl", 0, 4663).
 block("facts/findings.rofl:1", "facts/findings.rofl", 1, 3).
 block_next("facts/findings.rofl:1", comment).
 block("facts/findings.rofl:5", "facts/findings.rofl", 5, 1).
@@ -4701,60 +4758,8 @@ block_next("facts/floor-census.rofl:194", clause).
 block("facts/floor-census.rofl:216", "facts/floor-census.rofl", 216, 2).
 block_next("facts/floor-census.rofl:216", clause).
 block_mentions("facts/floor-census.rofl:216", nothing, bare).
-lint_file("facts/generated/_authority.rofl", 1, 2, 1).
-file_clauses("facts/generated/_authority.rofl", 0, 1).
-block("facts/generated/_authority.rofl:1", "facts/generated/_authority.rofl", 1, 2).
-block_next("facts/generated/_authority.rofl:1", clause).
-lint_file("facts/generated/api.ts.216c63c6.rofl", 301, 2, 1).
-file_clauses("facts/generated/api.ts.216c63c6.rofl", 0, 301).
-block("facts/generated/api.ts.216c63c6.rofl:1", "facts/generated/api.ts.216c63c6.rofl", 1, 2).
-block_next("facts/generated/api.ts.216c63c6.rofl:1", clause).
-lint_file("facts/generated/dense.ts.f66e7915.rofl", 70, 2, 1).
-file_clauses("facts/generated/dense.ts.f66e7915.rofl", 0, 70).
-block("facts/generated/dense.ts.f66e7915.rofl:1", "facts/generated/dense.ts.f66e7915.rofl", 1, 2).
-block_next("facts/generated/dense.ts.f66e7915.rofl:1", clause).
-lint_file("facts/generated/engine.ts.efacb48b.rofl", 518, 2, 1).
-file_clauses("facts/generated/engine.ts.efacb48b.rofl", 0, 518).
-block("facts/generated/engine.ts.efacb48b.rofl:1", "facts/generated/engine.ts.efacb48b.rofl", 1, 2).
-block_next("facts/generated/engine.ts.efacb48b.rofl:1", clause).
-lint_file("facts/generated/kernel-dense.ts.7b5dca34.rofl", 3, 2, 1).
-file_clauses("facts/generated/kernel-dense.ts.7b5dca34.rofl", 0, 3).
-block("facts/generated/kernel-dense.ts.7b5dca34.rofl:1", "facts/generated/kernel-dense.ts.7b5dca34.rofl", 1, 2).
-block_next("facts/generated/kernel-dense.ts.7b5dca34.rofl:1", clause).
-lint_file("facts/generated/parser.ts.8c9ca66f.rofl", 100, 2, 1).
-file_clauses("facts/generated/parser.ts.8c9ca66f.rofl", 0, 100).
-block("facts/generated/parser.ts.8c9ca66f.rofl:1", "facts/generated/parser.ts.8c9ca66f.rofl", 1, 2).
-block_next("facts/generated/parser.ts.8c9ca66f.rofl:1", clause).
-lint_file("facts/generated/reflect.ts.dc10401e.rofl", 224, 2, 1).
-file_clauses("facts/generated/reflect.ts.dc10401e.rofl", 0, 224).
-block("facts/generated/reflect.ts.dc10401e.rofl:1", "facts/generated/reflect.ts.dc10401e.rofl", 1, 2).
-block_next("facts/generated/reflect.ts.dc10401e.rofl:1", clause).
-lint_file("facts/generated/repl.ts.4920e173.rofl", 45, 2, 1).
-file_clauses("facts/generated/repl.ts.4920e173.rofl", 0, 45).
-block("facts/generated/repl.ts.4920e173.rofl:1", "facts/generated/repl.ts.4920e173.rofl", 1, 2).
-block_next("facts/generated/repl.ts.4920e173.rofl:1", clause).
-lint_file("facts/generated/rounds.ts.a4a96a42.rofl", 85, 2, 1).
-file_clauses("facts/generated/rounds.ts.a4a96a42.rofl", 0, 85).
-block("facts/generated/rounds.ts.a4a96a42.rofl:1", "facts/generated/rounds.ts.a4a96a42.rofl", 1, 2).
-block_next("facts/generated/rounds.ts.a4a96a42.rofl:1", clause).
-lint_file("facts/generated/semiring.ts.c8425fc1.rofl", 61, 2, 1).
-file_clauses("facts/generated/semiring.ts.c8425fc1.rofl", 0, 61).
-block("facts/generated/semiring.ts.c8425fc1.rofl:1", "facts/generated/semiring.ts.c8425fc1.rofl", 1, 2).
-block_next("facts/generated/semiring.ts.c8425fc1.rofl:1", clause).
-lint_file("facts/generated/store.ts.b3bcfa1b.rofl", 203, 2, 1).
-file_clauses("facts/generated/store.ts.b3bcfa1b.rofl", 0, 203).
-block("facts/generated/store.ts.b3bcfa1b.rofl:1", "facts/generated/store.ts.b3bcfa1b.rofl", 1, 2).
-block_next("facts/generated/store.ts.b3bcfa1b.rofl:1", clause).
-lint_file("facts/generated/tokens.ts.9ce847f4.rofl", 22, 2, 1).
-file_clauses("facts/generated/tokens.ts.9ce847f4.rofl", 0, 22).
-block("facts/generated/tokens.ts.9ce847f4.rofl:1", "facts/generated/tokens.ts.9ce847f4.rofl", 1, 2).
-block_next("facts/generated/tokens.ts.9ce847f4.rofl:1", clause).
-lint_file("facts/generated/unify.ts.a8038017.rofl", 91, 2, 1).
-file_clauses("facts/generated/unify.ts.a8038017.rofl", 0, 91).
-block("facts/generated/unify.ts.a8038017.rofl:1", "facts/generated/unify.ts.a8038017.rofl", 1, 2).
-block_next("facts/generated/unify.ts.a8038017.rofl:1", clause).
-lint_file("facts/goldens.rofl", 3942, 9, 5).
-file_clauses("facts/goldens.rofl", 0, 3942).
+lint_file("facts/goldens.rofl", 4129, 9, 5).
+file_clauses("facts/goldens.rofl", 0, 4129).
 block("facts/goldens.rofl:1", "facts/goldens.rofl", 1, 9).
 block_next("facts/goldens.rofl:1", clause).
 block_mentions("facts/goldens.rofl:1", npm, bare).
@@ -7691,8 +7696,13 @@ block("facts/refactoring.rofl:1", "facts/refactoring.rofl", 1, 6).
 block_next("facts/refactoring.rofl:1", clause).
 block_dated("facts/refactoring.rofl:1", 1).
 block_mentions("facts/refactoring.rofl:1", npm, bare).
-lint_file("facts/spec.rofl", 178, 130, 66).
-file_clauses("facts/spec.rofl", 0, 178).
+lint_file("facts/spec-census.rofl", 285, 8, 2).
+file_clauses("facts/spec-census.rofl", 0, 285).
+block("facts/spec-census.rofl:1", "facts/spec-census.rofl", 1, 8).
+block_next("facts/spec-census.rofl:1", clause).
+block_mentions("facts/spec-census.rofl:1", npm, bare).
+lint_file("facts/spec.rofl", 212, 236, 76).
+file_clauses("facts/spec.rofl", 0, 212).
 block("facts/spec.rofl:1", "facts/spec.rofl", 1, 16).
 block_next("facts/spec.rofl:1", clause).
 block_mentions("facts/spec.rofl:1", duty, called).
@@ -7726,74 +7736,137 @@ block("facts/spec.rofl:160", "facts/spec.rofl", 160, 5).
 block_next("facts/spec.rofl:160", clause).
 block_banner("facts/spec.rofl:160").
 block_mentions("facts/spec.rofl:160", superseded, bare).
-block("facts/spec.rofl:180", "facts/spec.rofl", 180, 4).
-block_next("facts/spec.rofl:180", clause).
-block_banner("facts/spec.rofl:180").
-block("facts/spec.rofl:195", "facts/spec.rofl", 195, 17).
-block_next("facts/spec.rofl:195", comment).
-block_mentions("facts/spec.rofl:195", whynot, bare).
-block_mentions("facts/spec.rofl:195", unfounded, bare).
-block_mentions("facts/spec.rofl:195", b_stratifiable_by_loading, bare).
+block("facts/spec.rofl:181", "facts/spec.rofl", 181, 4).
+block_next("facts/spec.rofl:181", clause).
+block_banner("facts/spec.rofl:181").
+block("facts/spec.rofl:196", "facts/spec.rofl", 196, 17).
+block_next("facts/spec.rofl:196", comment).
+block_mentions("facts/spec.rofl:196", whynot, bare).
+block_mentions("facts/spec.rofl:196", unfounded, bare).
+block_mentions("facts/spec.rofl:196", b_stratifiable_by_loading, bare).
 mention_snake(b_stratifiable_by_loading).
-block_mentions("facts/spec.rofl:195", b_whynot_finite, bare).
+block_mentions("facts/spec.rofl:196", b_whynot_finite, bare).
 mention_snake(b_whynot_finite).
-block_mentions("facts/spec.rofl:195", flows_to, bare).
-block_mentions("facts/spec.rofl:195", b_forged_empty, bare).
+block_mentions("facts/spec.rofl:196", flows_to, bare).
+block_mentions("facts/spec.rofl:196", b_forged_empty, bare).
 mention_snake(b_forged_empty).
-block_mentions("facts/spec.rofl:195", b_unmoded_empty, bare).
+block_mentions("facts/spec.rofl:196", b_unmoded_empty, bare).
 mention_snake(b_unmoded_empty).
-block("facts/spec.rofl:213", "facts/spec.rofl", 213, 3).
-block_next("facts/spec.rofl:213", comment).
-block_banner("facts/spec.rofl:213").
-block_mentions("facts/spec.rofl:213", amends, bare).
-block("facts/spec.rofl:217", "facts/spec.rofl", 217, 4).
-block_next("facts/spec.rofl:217", clause).
-block_banner("facts/spec.rofl:217").
-block("facts/spec.rofl:235", "facts/spec.rofl", 235, 4).
-block_next("facts/spec.rofl:235", clause).
-block_banner("facts/spec.rofl:235").
-block("facts/spec.rofl:245", "facts/spec.rofl", 245, 1).
-block_next("facts/spec.rofl:245", clause).
-block_banner("facts/spec.rofl:245").
-block("facts/spec.rofl:251", "facts/spec.rofl", 251, 1).
-block_next("facts/spec.rofl:251", comment).
-block("facts/spec.rofl:253", "facts/spec.rofl", 253, 5).
-block_next("facts/spec.rofl:253", comment).
-block_banner("facts/spec.rofl:253").
-block_mentions("facts/spec.rofl:253", scanners, bare).
-block_mentions("facts/spec.rofl:253", dangling, called).
-block("facts/spec.rofl:259", "facts/spec.rofl", 259, 1).
-block_next("facts/spec.rofl:259", comment).
-block("facts/spec.rofl:261", "facts/spec.rofl", 261, 12).
-block_next("facts/spec.rofl:261", clause).
-block_dated("facts/spec.rofl:261", 1).
-block_mentions("facts/spec.rofl:261", in_perspective, bare).
-block_mentions("facts/spec.rofl:261", canonical, bare).
-block_mentions("facts/spec.rofl:261", test, bare).
-block("facts/spec.rofl:289", "facts/spec.rofl", 289, 1).
-block_next("facts/spec.rofl:289", clause).
-block("facts/spec.rofl:303", "facts/spec.rofl", 303, 5).
-block_next("facts/spec.rofl:303", clause).
-block_mentions("facts/spec.rofl:303", retain, bare).
-block("facts/spec.rofl:311", "facts/spec.rofl", 311, 17).
-block_next("facts/spec.rofl:311", clause).
-block_mentions("facts/spec.rofl:311", src, bare).
-block_mentions("facts/spec.rofl:311", s_no_stratification_checker, bare).
+block("facts/spec.rofl:214", "facts/spec.rofl", 214, 3).
+block_next("facts/spec.rofl:214", comment).
+block_banner("facts/spec.rofl:214").
+block_mentions("facts/spec.rofl:214", amends, bare).
+block("facts/spec.rofl:218", "facts/spec.rofl", 218, 4).
+block_next("facts/spec.rofl:218", clause).
+block_banner("facts/spec.rofl:218").
+block("facts/spec.rofl:236", "facts/spec.rofl", 236, 4).
+block_next("facts/spec.rofl:236", clause).
+block_banner("facts/spec.rofl:236").
+block("facts/spec.rofl:246", "facts/spec.rofl", 246, 1).
+block_next("facts/spec.rofl:246", clause).
+block_banner("facts/spec.rofl:246").
+block("facts/spec.rofl:252", "facts/spec.rofl", 252, 1).
+block_next("facts/spec.rofl:252", comment).
+block("facts/spec.rofl:254", "facts/spec.rofl", 254, 5).
+block_next("facts/spec.rofl:254", comment).
+block_banner("facts/spec.rofl:254").
+block_mentions("facts/spec.rofl:254", scanners, bare).
+block_mentions("facts/spec.rofl:254", dangling, called).
+block("facts/spec.rofl:260", "facts/spec.rofl", 260, 1).
+block_next("facts/spec.rofl:260", comment).
+block("facts/spec.rofl:262", "facts/spec.rofl", 262, 12).
+block_next("facts/spec.rofl:262", comment).
+block_dated("facts/spec.rofl:262", 1).
+block_mentions("facts/spec.rofl:262", in_perspective, bare).
+block_mentions("facts/spec.rofl:262", canonical, bare).
+block_mentions("facts/spec.rofl:262", test, bare).
+block("facts/spec.rofl:286", "facts/spec.rofl", 286, 7).
+block_next("facts/spec.rofl:286", clause).
+block_mentions("facts/spec.rofl:286", node, bare).
+block_mentions("facts/spec.rofl:286", bun, bare).
+block_mentions("facts/spec.rofl:286", c_ci_bun, bare).
+mention_snake(c_ci_bun).
+block_mentions("facts/spec.rofl:286", s_two_runtimes, bare).
+mention_snake(s_two_runtimes).
+block_mentions("facts/spec.rofl:286", s_done_ci_green, bare).
+mention_snake(s_done_ci_green).
+block_mentions("facts/spec.rofl:286", npm, bare).
+block("facts/spec.rofl:297", "facts/spec.rofl", 297, 17).
+block_next("facts/spec.rofl:297", clause).
+block_dated("facts/spec.rofl:297", 2).
+block_mentions("facts/spec.rofl:297", prohibited, bare).
+block_mentions("facts/spec.rofl:297", open_shortcut, bare).
+block_mentions("facts/spec.rofl:297", test, bare).
+block_mentions("facts/spec.rofl:297", amends, called).
+block_mentions("facts/spec.rofl:297", run_reports_partial, bare).
+mention_snake(run_reports_partial).
+block_mentions("facts/spec.rofl:297", partial, bare).
+block_mentions("facts/spec.rofl:297", hole, bare).
+block_mentions("facts/spec.rofl:297", excise_recomputes_rather_than_reading_the_witness, bare).
+mention_snake(excise_recomputes_rather_than_reading_the_witness).
+block("facts/spec.rofl:321", "facts/spec.rofl", 321, 4).
+block_next("facts/spec.rofl:321", clause).
+block_dated("facts/spec.rofl:321", 1).
+block("facts/spec.rofl:327", "facts/spec.rofl", 327, 5).
+block_next("facts/spec.rofl:327", clause).
+block("facts/spec.rofl:339", "facts/spec.rofl", 339, 7).
+block_next("facts/spec.rofl:339", clause).
+block_mentions("facts/spec.rofl:339", regardless, bare).
+block("facts/spec.rofl:355", "facts/spec.rofl", 355, 8).
+block_next("facts/spec.rofl:355", clause).
+block_mentions("facts/spec.rofl:355", rule, bare).
+block_mentions("facts/spec.rofl:355", concludes, bare).
+block("facts/spec.rofl:368", "facts/spec.rofl", 368, 17).
+block_next("facts/spec.rofl:368", clause).
+block_mentions("facts/spec.rofl:368", src, bare).
+block_mentions("facts/spec.rofl:368", this, bare).
+block_mentions("facts/spec.rofl:368", decode, bare).
+block_mentions("facts/spec.rofl:368", decode_rules, bare).
+mention_snake(decode_rules).
+block_mentions("facts/spec.rofl:368", engine, bare).
+block_mentions("facts/spec.rofl:368", accepted, bare).
+block_mentions("facts/spec.rofl:368", guards, bare).
+block("facts/spec.rofl:387", "facts/spec.rofl", 387, 1).
+block_next("facts/spec.rofl:387", clause).
+block("facts/spec.rofl:401", "facts/spec.rofl", 401, 5).
+block_next("facts/spec.rofl:401", clause).
+block_mentions("facts/spec.rofl:401", retain, bare).
+block("facts/spec.rofl:409", "facts/spec.rofl", 409, 17).
+block_next("facts/spec.rofl:409", clause).
+block_mentions("facts/spec.rofl:409", src, bare).
+block_mentions("facts/spec.rofl:409", s_no_stratification_checker, bare).
 mention_snake(s_no_stratification_checker).
-block_mentions("facts/spec.rofl:311", s_reject_unstratified, bare).
+block_mentions("facts/spec.rofl:409", s_reject_unstratified, bare).
 mention_snake(s_reject_unstratified).
-block_mentions("facts/spec.rofl:311", r_unstratifiable_is_budgeted, bare).
+block_mentions("facts/spec.rofl:409", r_unstratifiable_is_budgeted, bare).
 mention_snake(r_unstratifiable_is_budgeted).
-block_mentions("facts/spec.rofl:311", stratum, bare).
-block_mentions("facts/spec.rofl:311", test, bare).
-block("facts/spec.rofl:341", "facts/spec.rofl", 341, 6).
-block_next("facts/spec.rofl:341", clause).
-block_mentions("facts/spec.rofl:341", amends, bare).
-block("facts/spec.rofl:353", "facts/spec.rofl", 353, 5).
-block_next("facts/spec.rofl:353", clause).
-block("facts/spec.rofl:367", "facts/spec.rofl", 367, 3).
-block_next("facts/spec.rofl:367", clause).
-block_mentions("facts/spec.rofl:367", document, bare).
+block_mentions("facts/spec.rofl:409", stratum, bare).
+block_mentions("facts/spec.rofl:409", test, bare).
+block("facts/spec.rofl:439", "facts/spec.rofl", 439, 6).
+block_next("facts/spec.rofl:439", clause).
+block_mentions("facts/spec.rofl:439", amends, bare).
+block("facts/spec.rofl:451", "facts/spec.rofl", 451, 22).
+block_next("facts/spec.rofl:451", clause).
+block_dated("facts/spec.rofl:451", 1).
+block_mentions("facts/spec.rofl:451", s8_out_of_scope, bare).
+mention_snake(s8_out_of_scope).
+block_mentions("facts/spec.rofl:451", qualifies, bare).
+block_mentions("facts/spec.rofl:451", beyond, bare).
+block_mentions("facts/spec.rofl:451", save, bare).
+block_mentions("facts/spec.rofl:451", open, bare).
+block("facts/spec.rofl:476", "facts/spec.rofl", 476, 12).
+block_next("facts/spec.rofl:476", clause).
+block_dated("facts/spec.rofl:476", 1).
+block_mentions("facts/spec.rofl:476", examples, bare).
+block("facts/spec.rofl:494", "facts/spec.rofl", 494, 7).
+block_next("facts/spec.rofl:494", clause).
+block_mentions("facts/spec.rofl:494", l_no_aggregation, bare).
+mention_snake(l_no_aggregation).
+block("facts/spec.rofl:503", "facts/spec.rofl", 503, 5).
+block_next("facts/spec.rofl:503", clause).
+block("facts/spec.rofl:517", "facts/spec.rofl", 517, 3).
+block_next("facts/spec.rofl:517", clause).
+block_mentions("facts/spec.rofl:517", document, bare).
 lint_file("facts/worklist.rofl", 530, 2808, 115).
 file_clauses("facts/worklist.rofl", 0, 508).
 block("facts/worklist.rofl:1", "facts/worklist.rofl", 1, 13).
@@ -8420,7 +8493,6 @@ block_mentions("facts/worklist.rofl:1588", fn_name, bare).
 block_mentions("facts/worklist.rofl:1588", own_key, bare).
 block_mentions("facts/worklist.rofl:1588", member_value, bare).
 block_mentions("facts/worklist.rofl:1588", derived_by, bare).
-mention_snake(derived_by).
 block_mentions("facts/worklist.rofl:1588", binder, bare).
 block_mentions("facts/worklist.rofl:1588", decl_binds, bare).
 mention_snake(decl_binds).
@@ -25414,60 +25486,96 @@ clause_nneg("rules/spec-coverage.rofl:103", 1).
 clause_nbi("rules/spec-coverage.rofl:103", 0).
 body_sig("rules/spec-coverage.rofl:103", "live_duty[coverage](V0), not covered[coverage](V0)").
 shape_sig("rules/spec-coverage.rofl:103", "R0[coverage](V0), not R1[coverage](V0)").
-clause("rules/spec-coverage.rofl:108", "rules/spec-coverage.rofl", 108, prose_discharged, coverage, 1).
-head_pat("rules/spec-coverage.rofl:108", "O").
-premise("rules/spec-coverage.rofl:108", 0, uncovered, coverage, pos, "O").
-premise("rules/spec-coverage.rofl:108", 1, artifact_present, checks, pos, "O").
-clause_npos("rules/spec-coverage.rofl:108", 2).
-clause_nneg("rules/spec-coverage.rofl:108", 0).
-clause_nbi("rules/spec-coverage.rofl:108", 0).
-body_sig("rules/spec-coverage.rofl:108", "uncovered[coverage](V0), artifact_present[checks](V0)").
-shape_sig("rules/spec-coverage.rofl:108", "R0[coverage](V0), R1[checks](V0)").
-clause("rules/spec-coverage.rofl:109", "rules/spec-coverage.rofl", 109, unattended, coverage, 1).
-head_pat("rules/spec-coverage.rofl:109", "O").
-premise("rules/spec-coverage.rofl:109", 0, uncovered, coverage, pos, "O").
-premise("rules/spec-coverage.rofl:109", 1, prose_discharged, coverage, neg, "O").
-clause_npos("rules/spec-coverage.rofl:109", 1).
-clause_nneg("rules/spec-coverage.rofl:109", 1).
-clause_nbi("rules/spec-coverage.rofl:109", 0).
-body_sig("rules/spec-coverage.rofl:109", "uncovered[coverage](V0), not prose_discharged[coverage](V0)").
-shape_sig("rules/spec-coverage.rofl:109", "R0[coverage](V0), not R1[coverage](V0)").
-clause("rules/spec-coverage.rofl:114", "rules/spec-coverage.rofl", 114, open_shortcut, coverage, 1).
-head_pat("rules/spec-coverage.rofl:114", "O").
-premise("rules/spec-coverage.rofl:114", 0, uncovered, coverage, pos, "O").
-premise("rules/spec-coverage.rofl:114", 1, duty_of, coverage, pos, "O,prohibited,_,_,_").
-clause_npos("rules/spec-coverage.rofl:114", 2).
-clause_nneg("rules/spec-coverage.rofl:114", 0).
-clause_nbi("rules/spec-coverage.rofl:114", 0).
-body_sig("rules/spec-coverage.rofl:114", "uncovered[coverage](V0), duty_of[coverage](V0,prohibited,_,_,_)").
-shape_sig("rules/spec-coverage.rofl:114", "R0[coverage](V0), R1[coverage](V0,prohibited,_,_,_)").
-clause("rules/spec-coverage.rofl:122", "rules/spec-coverage.rofl", 122, unfounded, coverage, 1).
-head_pat("rules/spec-coverage.rofl:122", "O").
-premise("rules/spec-coverage.rofl:122", 0, duty_of, coverage, pos, "O,_,_,_,_").
-premise("rules/spec-coverage.rofl:122", 1, citation_ok, checks, neg, "O").
-clause_npos("rules/spec-coverage.rofl:122", 1).
-clause_nneg("rules/spec-coverage.rofl:122", 1).
-clause_nbi("rules/spec-coverage.rofl:122", 0).
-body_sig("rules/spec-coverage.rofl:122", "duty_of[coverage](V0,_,_,_,_), not citation_ok[checks](V0)").
-shape_sig("rules/spec-coverage.rofl:122", "R0[coverage](V0,_,_,_,_), not R1[checks](V0)").
-clause("rules/spec-coverage.rofl:131", "rules/spec-coverage.rofl", 131, named_file, coverage, 1).
-head_pat("rules/spec-coverage.rofl:131", "F").
-premise("rules/spec-coverage.rofl:131", 0, guards, map, pos, "C,_").
-premise("rules/spec-coverage.rofl:131", 1, cited_check, map, pos, "C,F,_").
-clause_npos("rules/spec-coverage.rofl:131", 2).
-clause_nneg("rules/spec-coverage.rofl:131", 0).
-clause_nbi("rules/spec-coverage.rofl:131", 0).
-body_sig("rules/spec-coverage.rofl:131", "guards[map](V0,_), cited_check[map](V0,V1,_)").
-shape_sig("rules/spec-coverage.rofl:131", "R0[map](V0,_), R1[map](V0,V1,_)").
-clause("rules/spec-coverage.rofl:132", "rules/spec-coverage.rofl", 132, unwritten, coverage, 1).
-head_pat("rules/spec-coverage.rofl:132", "F").
-premise("rules/spec-coverage.rofl:132", 0, test_file, checks, pos, "F").
-premise("rules/spec-coverage.rofl:132", 1, named_file, coverage, neg, "F").
-clause_npos("rules/spec-coverage.rofl:132", 1).
-clause_nneg("rules/spec-coverage.rofl:132", 1).
-clause_nbi("rules/spec-coverage.rofl:132", 0).
-body_sig("rules/spec-coverage.rofl:132", "test_file[checks](V0), not named_file[coverage](V0)").
-shape_sig("rules/spec-coverage.rofl:132", "R0[checks](V0), not R1[coverage](V0)").
+clause("rules/spec-coverage.rofl:123", "rules/spec-coverage.rofl", 123, inherits_cover, coverage, 2).
+head_pat("rules/spec-coverage.rofl:123", "O,Twin").
+premise("rules/spec-coverage.rofl:123", 0, restates, map, pos, "O,Twin").
+premise("rules/spec-coverage.rofl:123", 1, covered, coverage, pos, "Twin").
+clause_npos("rules/spec-coverage.rofl:123", 2).
+clause_nneg("rules/spec-coverage.rofl:123", 0).
+clause_nbi("rules/spec-coverage.rofl:123", 0).
+body_sig("rules/spec-coverage.rofl:123", "restates[map](V0,V1), covered[coverage](V1)").
+shape_sig("rules/spec-coverage.rofl:123", "R0[map](V0,V1), R1[coverage](V1)").
+clause("rules/spec-coverage.rofl:124", "rules/spec-coverage.rofl", 124, covered, coverage, 1).
+head_pat("rules/spec-coverage.rofl:124", "O").
+premise("rules/spec-coverage.rofl:124", 0, inherits_cover, coverage, pos, "O,_").
+clause_npos("rules/spec-coverage.rofl:124", 1).
+clause_nneg("rules/spec-coverage.rofl:124", 0).
+clause_nbi("rules/spec-coverage.rofl:124", 0).
+body_sig("rules/spec-coverage.rofl:124", "inherits_cover[coverage](V0,_)").
+shape_sig("rules/spec-coverage.rofl:124", "R0[coverage](V0,_)").
+clause("rules/spec-coverage.rofl:129", "rules/spec-coverage.rofl", 129, prose_discharged, coverage, 1).
+head_pat("rules/spec-coverage.rofl:129", "O").
+premise("rules/spec-coverage.rofl:129", 0, uncovered, coverage, pos, "O").
+premise("rules/spec-coverage.rofl:129", 1, artifact_present, checks, pos, "O").
+clause_npos("rules/spec-coverage.rofl:129", 2).
+clause_nneg("rules/spec-coverage.rofl:129", 0).
+clause_nbi("rules/spec-coverage.rofl:129", 0).
+body_sig("rules/spec-coverage.rofl:129", "uncovered[coverage](V0), artifact_present[checks](V0)").
+shape_sig("rules/spec-coverage.rofl:129", "R0[coverage](V0), R1[checks](V0)").
+clause("rules/spec-coverage.rofl:130", "rules/spec-coverage.rofl", 130, unattended, coverage, 1).
+head_pat("rules/spec-coverage.rofl:130", "O").
+premise("rules/spec-coverage.rofl:130", 0, uncovered, coverage, pos, "O").
+premise("rules/spec-coverage.rofl:130", 1, prose_discharged, coverage, neg, "O").
+clause_npos("rules/spec-coverage.rofl:130", 1).
+clause_nneg("rules/spec-coverage.rofl:130", 1).
+clause_nbi("rules/spec-coverage.rofl:130", 0).
+body_sig("rules/spec-coverage.rofl:130", "uncovered[coverage](V0), not prose_discharged[coverage](V0)").
+shape_sig("rules/spec-coverage.rofl:130", "R0[coverage](V0), not R1[coverage](V0)").
+clause("rules/spec-coverage.rofl:155", "rules/spec-coverage.rofl", 155, accepted_shortcut, coverage, 2).
+head_pat("rules/spec-coverage.rofl:155", "O,Why").
+premise("rules/spec-coverage.rofl:155", 0, accepted, map, pos, "O,Why").
+premise("rules/spec-coverage.rofl:155", 1, duty_of, coverage, pos, "O,prohibited,_,_,_").
+clause_npos("rules/spec-coverage.rofl:155", 2).
+clause_nneg("rules/spec-coverage.rofl:155", 0).
+clause_nbi("rules/spec-coverage.rofl:155", 0).
+body_sig("rules/spec-coverage.rofl:155", "accepted[map](V0,V1), duty_of[coverage](V0,prohibited,_,_,_)").
+shape_sig("rules/spec-coverage.rofl:155", "R0[map](V0,V1), R1[coverage](V0,prohibited,_,_,_)").
+clause("rules/spec-coverage.rofl:160", "rules/spec-coverage.rofl", 160, open_shortcut, coverage, 1).
+head_pat("rules/spec-coverage.rofl:160", "O").
+premise("rules/spec-coverage.rofl:160", 0, uncovered, coverage, pos, "O").
+premise("rules/spec-coverage.rofl:160", 1, duty_of, coverage, pos, "O,prohibited,_,_,_").
+premise("rules/spec-coverage.rofl:160", 2, accepted, map, neg, "O,_").
+clause_npos("rules/spec-coverage.rofl:160", 2).
+clause_nneg("rules/spec-coverage.rofl:160", 1).
+clause_nbi("rules/spec-coverage.rofl:160", 0).
+body_sig("rules/spec-coverage.rofl:160", "uncovered[coverage](V0), duty_of[coverage](V0,prohibited,_,_,_), not accepted[map](V0,_)").
+shape_sig("rules/spec-coverage.rofl:160", "R0[coverage](V0), R1[coverage](V0,prohibited,_,_,_), not R2[map](V0,_)").
+clause("rules/spec-coverage.rofl:170", "rules/spec-coverage.rofl", 170, idle_shortcut, audit, 1).
+head_pat("rules/spec-coverage.rofl:170", "O").
+premise("rules/spec-coverage.rofl:170", 0, accepted, map, pos, "O,_").
+premise("rules/spec-coverage.rofl:170", 1, covered, coverage, pos, "O").
+clause_npos("rules/spec-coverage.rofl:170", 2).
+clause_nneg("rules/spec-coverage.rofl:170", 0).
+clause_nbi("rules/spec-coverage.rofl:170", 0).
+body_sig("rules/spec-coverage.rofl:170", "accepted[map](V0,_), covered[coverage](V0)").
+shape_sig("rules/spec-coverage.rofl:170", "R0[map](V0,_), R1[coverage](V0)").
+clause("rules/spec-coverage.rofl:178", "rules/spec-coverage.rofl", 178, unfounded, coverage, 1).
+head_pat("rules/spec-coverage.rofl:178", "O").
+premise("rules/spec-coverage.rofl:178", 0, duty_of, coverage, pos, "O,_,_,_,_").
+premise("rules/spec-coverage.rofl:178", 1, citation_ok, checks, neg, "O").
+clause_npos("rules/spec-coverage.rofl:178", 1).
+clause_nneg("rules/spec-coverage.rofl:178", 1).
+clause_nbi("rules/spec-coverage.rofl:178", 0).
+body_sig("rules/spec-coverage.rofl:178", "duty_of[coverage](V0,_,_,_,_), not citation_ok[checks](V0)").
+shape_sig("rules/spec-coverage.rofl:178", "R0[coverage](V0,_,_,_,_), not R1[checks](V0)").
+clause("rules/spec-coverage.rofl:187", "rules/spec-coverage.rofl", 187, named_file, coverage, 1).
+head_pat("rules/spec-coverage.rofl:187", "F").
+premise("rules/spec-coverage.rofl:187", 0, guards, map, pos, "C,_").
+premise("rules/spec-coverage.rofl:187", 1, cited_check, map, pos, "C,F,_").
+clause_npos("rules/spec-coverage.rofl:187", 2).
+clause_nneg("rules/spec-coverage.rofl:187", 0).
+clause_nbi("rules/spec-coverage.rofl:187", 0).
+body_sig("rules/spec-coverage.rofl:187", "guards[map](V0,_), cited_check[map](V0,V1,_)").
+shape_sig("rules/spec-coverage.rofl:187", "R0[map](V0,_), R1[map](V0,V1,_)").
+clause("rules/spec-coverage.rofl:188", "rules/spec-coverage.rofl", 188, unwritten, coverage, 1).
+head_pat("rules/spec-coverage.rofl:188", "F").
+premise("rules/spec-coverage.rofl:188", 0, test_file, checks, pos, "F").
+premise("rules/spec-coverage.rofl:188", 1, named_file, coverage, neg, "F").
+clause_npos("rules/spec-coverage.rofl:188", 1).
+clause_nneg("rules/spec-coverage.rofl:188", 1).
+clause_nbi("rules/spec-coverage.rofl:188", 0).
+body_sig("rules/spec-coverage.rofl:188", "test_file[checks](V0), not named_file[coverage](V0)").
+shape_sig("rules/spec-coverage.rofl:188", "R0[checks](V0), not R1[coverage](V0)").
 clause("rules/strata.rofl:28", "rules/strata.rofl", 28, dep, main, 2).
 head_pat("rules/strata.rofl:28", "A,B").
 premise("rules/strata.rofl:28", 0, concludes, main, pos, "R,A").
@@ -27344,11 +27452,14 @@ head_arms(check_stands, 1, 1).
 head_arms(dangling, 2, 1).
 head_arms(undefined_citation, 2, 1).
 head_arms(guarded_by, 2, 1).
-head_arms(covered, 1, 1).
+head_arms(covered, 1, 2).
 head_arms(uncovered, 1, 1).
+head_arms(inherits_cover, 2, 1).
 head_arms(prose_discharged, 1, 1).
 head_arms(unattended, 1, 1).
+head_arms(accepted_shortcut, 2, 1).
 head_arms(open_shortcut, 1, 1).
+head_arms(idle_shortcut, 1, 1).
 head_arms(unfounded, 1, 1).
 head_arms(named_file, 1, 1).
 head_arms(unwritten, 1, 1).
@@ -27579,6 +27690,7 @@ defined(unrun_gate, "rules/depends.rofl").
 defined(generated, "rules/depends.rofl").
 defined(regenerated_by_test, "rules/depends.rofl").
 defined(test_file, "rules/depends.rofl").
+defined(test_file, "facts/spec-census.rofl").
 defined(ungated_pack, "rules/depends.rofl").
 defined(block, "rules/engine-split.rofl").
 defined(policy, "rules/engine-split.rofl").
@@ -27635,6 +27747,7 @@ defined(settled, "rules/findings.rofl").
 defined(note_lost, "rules/findings.rofl").
 defined(alarm, "rules/findings.rofl").
 defined(alarm, "rules/inquiry/obligations.rofl").
+defined(alarm, "rules/spec-coverage.rofl").
 defined(two_minds, "rules/findings.rofl").
 defined(open_finding, "rules/findings.rofl").
 defined(corrected, "rules/findings.rofl").
@@ -27703,7 +27816,6 @@ defined(not_applicable, "rules/inquiry/obligations.rofl").
 defined(coverage_gap, "rules/inquiry/obligations.rofl").
 defined(both_minds, "rules/inquiry/obligations.rofl").
 defined(authority, "rules/inquiry/ontology.rofl").
-defined(authority, "facts/generated/_authority.rofl").
 defined(authority, "facts/js-resolve.rofl").
 defined(authority, "facts/spec.rofl").
 defined(agent_disputed, "rules/inquiry/perspectives.rofl").
@@ -28746,9 +28858,12 @@ defined(undefined_citation, "rules/spec-coverage.rofl").
 defined(guarded_by, "rules/spec-coverage.rofl").
 defined(covered, "rules/spec-coverage.rofl").
 defined(uncovered, "rules/spec-coverage.rofl").
+defined(inherits_cover, "rules/spec-coverage.rofl").
 defined(prose_discharged, "rules/spec-coverage.rofl").
 defined(unattended, "rules/spec-coverage.rofl").
+defined(accepted_shortcut, "rules/spec-coverage.rofl").
 defined(open_shortcut, "rules/spec-coverage.rofl").
+defined(idle_shortcut, "rules/spec-coverage.rofl").
 defined(unfounded, "rules/spec-coverage.rofl").
 defined(named_file, "rules/spec-coverage.rofl").
 defined(unwritten, "rules/spec-coverage.rofl").
@@ -28887,72 +29002,6 @@ defined(corpus_files, "facts/permission-inventory.rofl").
 defined(corpus_unparsed, "facts/floor-census.rofl").
 defined(corpus_unparsed, "facts/permission-inventory.rofl").
 defined(refl_reader, "facts/floor-census.rofl").
-defined(src_call, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_call, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_call, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_call, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_call, "facts/generated/reflect.ts.dc10401e.rofl").
-defined(src_call, "facts/generated/repl.ts.4920e173.rofl").
-defined(src_call, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_call, "facts/generated/semiring.ts.c8425fc1.rofl").
-defined(src_call, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_call, "facts/generated/tokens.ts.9ce847f4.rofl").
-defined(src_call, "facts/generated/unify.ts.a8038017.rofl").
-defined(src_class, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_class, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_class, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_class, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_class, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_class, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_class, "facts/generated/tokens.ts.9ce847f4.rofl").
-defined(src_export, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_export, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_export, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_export, "facts/generated/kernel-dense.ts.7b5dca34.rofl").
-defined(src_export, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_export, "facts/generated/reflect.ts.dc10401e.rofl").
-defined(src_export, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_export, "facts/generated/semiring.ts.c8425fc1.rofl").
-defined(src_export, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_export, "facts/generated/tokens.ts.9ce847f4.rofl").
-defined(src_export, "facts/generated/unify.ts.a8038017.rofl").
-defined(src_file, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_file, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_file, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_file, "facts/generated/kernel-dense.ts.7b5dca34.rofl").
-defined(src_file, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_file, "facts/generated/reflect.ts.dc10401e.rofl").
-defined(src_file, "facts/generated/repl.ts.4920e173.rofl").
-defined(src_file, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_file, "facts/generated/semiring.ts.c8425fc1.rofl").
-defined(src_file, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_file, "facts/generated/tokens.ts.9ce847f4.rofl").
-defined(src_file, "facts/generated/unify.ts.a8038017.rofl").
-defined(src_func, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_func, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_func, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_func, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_func, "facts/generated/reflect.ts.dc10401e.rofl").
-defined(src_func, "facts/generated/repl.ts.4920e173.rofl").
-defined(src_func, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_func, "facts/generated/semiring.ts.c8425fc1.rofl").
-defined(src_func, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_func, "facts/generated/tokens.ts.9ce847f4.rofl").
-defined(src_func, "facts/generated/unify.ts.a8038017.rofl").
-defined(src_import, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_import, "facts/generated/dense.ts.f66e7915.rofl").
-defined(src_import, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_import, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_import, "facts/generated/reflect.ts.dc10401e.rofl").
-defined(src_import, "facts/generated/repl.ts.4920e173.rofl").
-defined(src_import, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_import, "facts/generated/semiring.ts.c8425fc1.rofl").
-defined(src_import, "facts/generated/store.ts.b3bcfa1b.rofl").
-defined(src_method, "facts/generated/api.ts.216c63c6.rofl").
-defined(src_method, "facts/generated/engine.ts.efacb48b.rofl").
-defined(src_method, "facts/generated/parser.ts.8c9ca66f.rofl").
-defined(src_method, "facts/generated/rounds.ts.a4a96a42.rofl").
-defined(src_method, "facts/generated/store.ts.b3bcfa1b.rofl").
 defined(golden_state, "facts/goldens.rofl").
 defined(golden_host, "facts/goldens.rofl").
 defined(golden_rel, "facts/goldens.rofl").
@@ -29070,7 +29119,11 @@ defined(work_state, "facts/refactoring.rofl").
 defined(work_state, "facts/worklist.rofl").
 defined(work_spawned, "facts/refactoring.rofl").
 defined(work_spawned, "facts/worklist.rofl").
+defined(check, "facts/spec-census.rofl").
+defined(citation_ok, "facts/spec-census.rofl").
+defined(artifact_present, "facts/spec-census.rofl").
 defined(cited_check, "facts/spec.rofl").
+defined(accepted, "facts/spec.rofl").
 defined(amends, "facts/spec.rofl").
 defined(qualifies, "facts/spec.rofl").
 defined(restates, "facts/spec.rofl").
@@ -29267,6 +29320,7 @@ declared_edb(check).
 declared_edb(test_file).
 declared_edb(citation_ok).
 declared_edb(artifact_present).
+declared_edb(accepted).
 declared_edb(work).
 declared_edb(work_state).
 declared_edb(work_sweeps).
@@ -30419,9 +30473,12 @@ read_by_rule(check).
 read_by_rule(guarded_by).
 read_by_rule(live_duty).
 read_by_rule(covered).
+read_by_rule(restates).
+read_by_rule(inherits_cover).
 read_by_rule(uncovered).
 read_by_rule(artifact_present).
 read_by_rule(prose_discharged).
+read_by_rule(accepted).
 read_by_rule(citation_ok).
 read_by_rule(named_file).
 read_by_rule(dep).
@@ -30628,6 +30685,7 @@ named_in_ts(covered).
 named_in_ts(uncovered).
 named_in_ts(prose_discharged).
 named_in_ts(unattended).
+named_in_ts(accepted_shortcut).
 named_in_ts(open_shortcut).
 named_in_ts(unfounded).
 named_in_ts(unwritten).
@@ -30679,13 +30737,6 @@ named_in_ts(ablation).
 named_in_ts(corpus_files).
 named_in_ts(corpus_unparsed).
 named_in_ts(refl_reader).
-named_in_ts(src_call).
-named_in_ts(src_class).
-named_in_ts(src_export).
-named_in_ts(src_file).
-named_in_ts(src_func).
-named_in_ts(src_import).
-named_in_ts(src_method).
 named_in_ts(golden_state).
 named_in_ts(golden_host).
 named_in_ts(golden_rel).
@@ -30730,6 +30781,9 @@ named_in_ts(corpus_read).
 named_in_ts(doc_lists).
 named_in_ts(host_call).
 named_in_ts(world_rows).
+named_in_ts(check).
+named_in_ts(citation_ok).
+named_in_ts(artifact_present).
 named_in_ts(cited_check).
 named_in_ts(amends).
 named_in_ts(restates).
@@ -30785,10 +30839,10 @@ named_in_ts(target).
 named_in_ts(code_line).
 named_in_ts(cat_of).
 named_in_ts(dirty).
-named_in_ts(check).
 named_in_ts(match).
 named_in_ts(punct).
 named_in_ts(str_len).
+named_in_ts(src_call).
 named_in_ts(add).
 named_in_ts(activate).
 named_in_ts(str_seg).
@@ -30852,6 +30906,7 @@ named_in_ts(excise).
 named_in_ts(retract).
 named_in_ts(from).
 named_in_ts(tick).
+named_in_ts(derived_by).
 named_in_ts(does).
 named_in_ts(kind).
 named_in_ts(key).
@@ -30882,6 +30937,9 @@ named_in_ts(env_extension).
 named_in_ts(concat).
 named_in_ts(candidates).
 named_in_ts(index).
+named_in_ts(rule).
+named_in_ts(decode).
+named_in_ts(save).
 named_in_ts(open).
 named_in_ts(only).
 named_in_ts(rel).
@@ -30896,7 +30954,6 @@ named_in_ts(twin).
 named_in_ts(classify).
 named_in_ts(safe).
 named_in_ts(some).
-named_in_ts(derived_by).
 named_in_ts(one).
 named_in_ts(label).
 named_in_ts(nodes).
@@ -31511,7 +31568,9 @@ atom_seen(check).
 atom_seen(test_file).
 atom_seen(citation_ok).
 atom_seen(artifact_present).
+atom_seen(accepted).
 atom_seen(prohibited).
+atom_seen(idle_shortcut).
 atom_seen(coverage).
 atom_seen(map).
 atom_seen(checks).
@@ -31592,6 +31651,7 @@ atom_seen(r_whynot_terminates).
 atom_seen(r_file_layout_over_target).
 atom_seen(r_tm_uses_next_and_moded).
 atom_seen(r_node_22_6).
+atom_seen(r_optimizations_exist).
 atom_seen(st).
 atom_seen(step).
 atom_seen(at).
@@ -32613,6 +32673,15 @@ atom_seen(f_sixty_runs_on_this_branch_and_not_one_green).
 atom_seen(f_the_two_hosts_disagreed_about_the_word_not_in_three_places).
 atom_seen(f_a_golden_over_a_generated_census_pins_the_photograph_against_itself).
 atom_seen(f_the_comment_cut_had_no_rule_for_an_edb_and_the_lint_cannot_see_an_unread_input).
+atom_seen(f_three_generated_packs_were_stale_and_one_of_them_was_a_green_golden).
+atom_seen(f_the_spec_coverage_world_is_green_because_it_has_no_spec_in_it).
+atom_seen(f_i_called_a_masked_demo_unhashable_without_running_the_mask).
+atom_seen(f_eleven_prohibitions_had_no_guard_and_seven_were_the_same_obligation_twice).
+atom_seen(f_a_wrong_arity_on_a_closed_vocabulary_relation_answers_empty_and_says_nothing).
+atom_seen(f_a_duty_inherits_the_granularity_of_the_sentence_it_cites).
+atom_seen(f_a_closed_vocabulary_fixes_the_width_of_a_column_and_not_its_meaning).
+atom_seen(f_the_model_could_not_say_a_prohibition_is_kept_by_construction).
+atom_seen(f_a_word_reserved_for_nothing_is_a_promise_the_tree_cannot_keep).
 atom_seen(kernel_table).
 atom_seen(asserted_by).
 atom_seen(concludes).
@@ -33243,6 +33312,125 @@ atom_seen(w_implied_premises_priced).
 atom_seen(w_two_closures_of_work_needs).
 atom_seen(w_ingest_declares_half_its_host_relations).
 atom_seen(w_twins_in_depends_and_ingest).
+atom_seen(ci).
+atom_seen(d_veto_belongs_inside).
+atom_seen(l_budget_counts_firings).
+atom_seen(s7_no_clause_objects).
+atom_seen(l_no_multi_fact_abduction).
+atom_seen(s7_no_witness_excise).
+atom_seen(l_frozen_never_collected).
+atom_seen(s7_no_hardcoded_boot).
+atom_seen(p_i1_insertion_order_is_the_cost).
+atom_seen(l_whynot_recurses).
+atom_seen(d_retention_off_by_default).
+atom_seen(t_stratum_table_survives).
+atom_seen(l_no_async).
+atom_seen(l_no_aggregation).
+atom_seen(l_no_incremental_maintenance).
+atom_seen(l_no_floats_no_bignums).
+atom_seen(l_no_occurs_check).
+atom_seen(l_no_persistence).
+atom_seen(l_no_residency_in_js).
+atom_seen(s7_no_nondeterministic_iteration).
+atom_seen(s_provenance_per_firing).
+atom_seen(s_persistence_is_a_rule).
+atom_seen(s7_no_log_provenance).
+atom_seen(p_p1_one_witness_per_derivation).
+atom_seen(l_queries_are_god_view).
+atom_seen(l_demand_depth_512).
+atom_seen(l_reflection_in_main).
+atom_seen(d_retention_conditional).
+atom_seen(l_reuse_switchable).
+atom_seen(l_demand_premise_order).
+atom_seen(l_reuse_b_stratum_gate).
+atom_seen(p_i2_self_audit_tracks_program_size).
+atom_seen(s7_no_silent_overrun).
+atom_seen(s7_no_skipping_reject_path).
+atom_seen(l_partial_strata).
+atom_seen(l_reuse_fingerprint).
+atom_seen(s_no_stratification_checker).
+atom_seen(s_vocabulary_closed).
+atom_seen(d_port_owes_why).
+atom_seen(l_undefined_is_a_dictionary).
+atom_seen(s_a_diverging_hole).
+atom_seen(s_never_hang).
+atom_seen(s_done_readme).
+atom_seen(l_retraction_leaves_no_trail).
+atom_seen(s_a_perspective_isolation).
+atom_seen(d_tick_records_budget).
+atom_seen(l_init_after_zero_inert).
+atom_seen(s8_out_of_scope).
+atom_seen(s_a_boot_audits_empty).
+atom_seen(b_stratifiable_by_loading).
+atom_seen(l_next_not_assertable).
+atom_seen(s_structured_terms).
+atom_seen(s7_no_pretend_async).
+atom_seen(l_asserted_by_needs_who).
+atom_seen(s_a_replay_shuffled).
+atom_seen(b_breach_empty).
+atom_seen(s_budgets_are_semantics).
+atom_seen(l_comparisons_need_ground_ints).
+atom_seen(b_collected_declared_only).
+atom_seen(s_sees_computed_by_boot).
+atom_seen(s_a_counter).
+atom_seen(s_done_ci_green).
+atom_seen(s_appendix_dep_edges).
+atom_seen(s_a_naive_eq_seminaive).
+atom_seen(l_zero_divisor_fails).
+atom_seen(s_document_no_occurs_check).
+atom_seen(l_reuse_c_tick_boundary).
+atom_seen(s_rules_are_subgraphs).
+atom_seen(s_a_busy_beaver).
+atom_seen(s_init_at_tick_zero).
+atom_seen(s_witness_is_first_canonical).
+atom_seen(b_forged_empty).
+atom_seen(s_a_sensors_scenario).
+atom_seen(s_done_limits).
+atom_seen(s_a_malformed_sibling).
+atom_seen(d_not_p_is_this_tick).
+atom_seen(s_reserved_rejected_at_load).
+atom_seen(d_next_in_body_rejected).
+atom_seen(s_whynot_is_abduction).
+atom_seen(d_retain_ticks).
+atom_seen(s_appendix_leak).
+atom_seen(b_leak_empty).
+atom_seen(s_canonical_order).
+atom_seen(s_semantics_as_data).
+atom_seen(b_malformed_empty).
+atom_seen(l_reuse_a_no_read_reused).
+atom_seen(s_reads_only_what_it_sees).
+atom_seen(s_excise_not_from_witness).
+atom_seen(s_a_stratum_order).
+atom_seen(l_unchecked_without_boot).
+atom_seen(s_a_kernel_grep).
+atom_seen(s_no_silent_crossing).
+atom_seen(l_undefined_silent_on_negation).
+atom_seen(l_undefined_silenced_by_one_fact).
+atom_seen(s_strata_read_from_facts).
+atom_seen(s_determinism).
+atom_seen(s_reject_unstratified).
+atom_seen(s_report_loc_overrun).
+atom_seen(s_async_reserved_rejected).
+atom_seen(s_a_why_tree).
+atom_seen(s_budget_emits_hole).
+atom_seen(s_a_round_trip).
+atom_seen(t_budget_emits_no_unknown).
+atom_seen(t_alternating_fixpoint).
+atom_seen(s_two_runtimes).
+atom_seen(s_a_runtime_rule).
+atom_seen(s_a_structured_term_test).
+atom_seen(s_grammar_temporal).
+atom_seen(d_dep_graph_is_one_tick).
+atom_seen(s_evaluator_reads_store).
+atom_seen(p_p2_provenance_is_not_the_cost).
+atom_seen(d_semiring_is_one_tick).
+atom_seen(s_a_transitive_closure).
+atom_seen(b_undefined_premise_empty).
+atom_seen(b_unmoded_empty).
+atom_seen(s_main_is_named).
+atom_seen(b_whynot_finite).
+atom_seen(l_demand_no_enumeration).
+atom_seen(s_zero_deps).
 atom_seen(librarian).
 atom_seen(spec).
 atom_seen(limits).
@@ -33250,131 +33438,22 @@ atom_seen(readme).
 atom_seen(decided).
 atom_seen(perf).
 atom_seen(wfs).
-atom_seen(s_semantics_as_data).
 atom_seen(guaranteed).
-atom_seen(s_zero_deps).
-atom_seen(s_two_runtimes).
-atom_seen(s_budgets_are_semantics).
-atom_seen(s_structured_terms).
-atom_seen(s_document_no_occurs_check).
-atom_seen(s_whynot_is_abduction).
-atom_seen(s_grammar_temporal).
-atom_seen(s_appendix_dep_edges).
-atom_seen(s_appendix_leak).
-atom_seen(s_vocabulary_closed).
-atom_seen(s_reserved_rejected_at_load).
-atom_seen(s_main_is_named).
-atom_seen(s_reads_only_what_it_sees).
-atom_seen(s_no_silent_crossing).
-atom_seen(s_sees_computed_by_boot).
-atom_seen(s_no_stratification_checker).
-atom_seen(s_strata_read_from_facts).
-atom_seen(s_reject_unstratified).
-atom_seen(s_init_at_tick_zero).
-atom_seen(s_persistence_is_a_rule).
-atom_seen(s_async_reserved_rejected).
-atom_seen(s_determinism).
-atom_seen(s_canonical_order).
-atom_seen(s_provenance_per_firing).
-atom_seen(s_witness_is_first_canonical).
-atom_seen(s_excise_not_from_witness).
-atom_seen(s_budget_emits_hole).
-atom_seen(s_never_hang).
-atom_seen(s_report_loc_overrun).
-atom_seen(s_rules_are_subgraphs).
-atom_seen(s_evaluator_reads_store).
-atom_seen(s_a_transitive_closure).
 atom_seen(acceptance).
-atom_seen(s_a_structured_term_test).
-atom_seen(s_a_naive_eq_seminaive).
-atom_seen(s_a_why_tree).
-atom_seen(s_a_perspective_isolation).
-atom_seen(s_a_stratum_order).
-atom_seen(s_a_kernel_grep).
-atom_seen(s_a_runtime_rule).
-atom_seen(s_a_malformed_sibling).
-atom_seen(s_a_round_trip).
-atom_seen(s_a_counter).
-atom_seen(s_a_replay_shuffled).
-atom_seen(s_a_busy_beaver).
-atom_seen(s_a_diverging_hole).
-atom_seen(s_a_boot_audits_empty).
-atom_seen(s_a_sensors_scenario).
-atom_seen(s_done_ci_green).
-atom_seen(s_done_readme).
-atom_seen(s_done_limits).
-atom_seen(s7_no_hardcoded_boot).
-atom_seen(s7_no_clause_objects).
-atom_seen(s7_no_log_provenance).
-atom_seen(s7_no_witness_excise).
-atom_seen(s7_no_nondeterministic_iteration).
-atom_seen(s7_no_silent_overrun).
-atom_seen(s7_no_skipping_reject_path).
-atom_seen(s7_no_pretend_async).
-atom_seen(s8_out_of_scope).
-atom_seen(l_no_async).
 atom_seen(limit).
-atom_seen(l_no_incremental_maintenance).
-atom_seen(l_reuse_fingerprint).
-atom_seen(l_reuse_a_no_read_reused).
-atom_seen(l_reuse_b_stratum_gate).
-atom_seen(l_reuse_c_tick_boundary).
-atom_seen(l_reuse_switchable).
-atom_seen(l_no_multi_fact_abduction).
-atom_seen(l_whynot_recurses).
-atom_seen(l_no_occurs_check).
-atom_seen(l_no_persistence).
-atom_seen(l_partial_strata).
-atom_seen(l_unchecked_without_boot).
-atom_seen(l_demand_premise_order).
-atom_seen(l_demand_depth_512).
-atom_seen(l_demand_no_enumeration).
-atom_seen(l_queries_are_god_view).
-atom_seen(l_budget_counts_firings).
-atom_seen(l_no_floats_no_bignums).
-atom_seen(l_zero_divisor_fails).
-atom_seen(l_comparisons_need_ground_ints).
-atom_seen(l_reflection_in_main).
-atom_seen(l_asserted_by_needs_who).
-atom_seen(l_retraction_leaves_no_trail).
-atom_seen(l_init_after_zero_inert).
-atom_seen(l_next_not_assertable).
-atom_seen(l_frozen_never_collected).
-atom_seen(l_undefined_is_a_dictionary).
-atom_seen(l_undefined_silent_on_negation).
-atom_seen(l_undefined_silenced_by_one_fact).
-atom_seen(l_no_aggregation).
-atom_seen(l_no_residency_in_js).
-atom_seen(b_malformed_empty).
-atom_seen(b_breach_empty).
-atom_seen(b_leak_empty).
-atom_seen(b_forged_empty).
-atom_seen(b_unmoded_empty).
-atom_seen(b_collected_declared_only).
-atom_seen(b_undefined_premise_empty).
-atom_seen(b_whynot_finite).
-atom_seen(b_stratifiable_by_loading).
-atom_seen(d_port_owes_why).
 atom_seen(c_port_explains).
-atom_seen(d_not_p_is_this_tick).
-atom_seen(d_dep_graph_is_one_tick).
-atom_seen(d_semiring_is_one_tick).
-atom_seen(d_next_in_body_rejected).
-atom_seen(d_veto_belongs_inside).
-atom_seen(d_retain_ticks).
-atom_seen(d_retention_off_by_default).
-atom_seen(d_retention_conditional).
-atom_seen(d_tick_records_budget).
-atom_seen(p_p1_one_witness_per_derivation).
-atom_seen(p_p2_provenance_is_not_the_cost).
-atom_seen(p_i1_insertion_order_is_the_cost).
-atom_seen(p_i2_self_audit_tracks_program_size).
-atom_seen(t_alternating_fixpoint).
-atom_seen(t_budget_emits_no_unknown).
-atom_seen(t_stratum_table_survives).
 atom_seen(c_ci_node).
 atom_seen(c_ci_bun).
 atom_seen(c_ci_typecheck).
+atom_seen(c_w_async_refused).
+atom_seen(c_w_unstratifiable).
+atom_seen(c_w_budget_wall).
+atom_seen(c_port_partial).
+atom_seen(c_port_canonical).
+atom_seen(c_port_excise).
+atom_seen(c_port_shuffle).
+atom_seen(c_port_pack).
+atom_seen(c_w_provenance).
 atom_seen(w_mod_partial_cell).
 atom_seen(w_cg_member_family).
 atom_seen(w_df_value_core).

@@ -134,7 +134,7 @@ check[checks]("facts/goldens.rofl", "rules_untyped", world).
 check[checks]("facts/goldens.rofl", "rules_worklist", world).
 check[checks]("facts/goldens.rofl", "rules_worlds", world).
 check[checks]("facts/goldens.rofl", "boot_only", world).
-check[checks]("facts/goldens.rofl", "async_reserved", world).
+check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
