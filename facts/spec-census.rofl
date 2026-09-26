@@ -71,10 +71,12 @@ check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "npc", world).
 check[checks]("facts/goldens.rofl", "oops", world).
 check[checks]("facts/goldens.rofl", "reach", world).
+check[checks]("facts/goldens.rofl", "review", world).
 check[checks]("facts/goldens.rofl", "ring1", world).
 check[checks]("facts/goldens.rofl", "rip", world).
 check[checks]("facts/goldens.rofl", "rofl-release", world).
 check[checks]("facts/goldens.rofl", "sensors", world).
+check[checks]("facts/goldens.rofl", "sentence", world).
 check[checks]("facts/goldens.rofl", "slop", world).
 check[checks]("facts/goldens.rofl", "spat", world).
 check[checks]("facts/goldens.rofl", "sus", world).
@@ -124,9 +126,11 @@ check[checks]("facts/goldens.rofl", "rules_profile", world).
 check[checks]("facts/goldens.rofl", "rules_rofl-lint", world).
 check[checks]("facts/goldens.rofl", "rules_rule-shape", world).
 check[checks]("facts/goldens.rofl", "rules_self-audit", world).
+check[checks]("facts/goldens.rofl", "rules_sentences", world).
 check[checks]("facts/goldens.rofl", "rules_spec-coverage", world).
 check[checks]("facts/goldens.rofl", "rules_strata", world).
 check[checks]("facts/goldens.rofl", "rules_swarm", world).
+check[checks]("facts/goldens.rofl", "rules_untyped", world).
 check[checks]("facts/goldens.rofl", "rules_worklist", world).
 check[checks]("facts/goldens.rofl", "rules_worlds", world).
 check[checks]("facts/goldens.rofl", "boot_only", world).

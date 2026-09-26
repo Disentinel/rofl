@@ -1,0 +1,123 @@
+-- sentences.rofl — the eight structures of the sentence form, as rules.
+--
+-- Over the reflection of a program (`rofl-render --facts`: head, arity, pos,
+-- name_word, word_shape) and the noun of each argument position (pick/3,
+-- chosen by support from the propagation in scripts/sentences.ts), these
+-- rules say which structures a relation ADMITS, which one it TAKES, which
+-- argument is its SUBJECT and which MARKER carries each further argument.
+-- Every default yields to a fact written by hand: takes_by_hand/2,
+-- subject_by_hand/2, marker_by_hand/3.
+--
+-- The eight structures, in the words of the inventory:
+--   adjective   S is <word>                    unary, no verb
+--   bare_verb   S <verb>                       unary, a verb
+--   verb        S <verb> O [marker Z]*         a verb word leads the name
+--   the_of      the <role> of S is O           the name ends in `of`: functional
+--   has         S has <role> O [marker Z]*     the subject is a container
+--   passive     S is <participle> [by O]       the head word ends in `ed`
+--   role_of     S is the <role> of O           binary, no verb, no `of`
+--   may         S may be the <noun> O          the name starts with `may`
+--   among       O is among the <role> of S     only by hand: multi-valued part
+--   the_role    the <role> K of S <verb> O     three or more arguments, one a key, no other clue:
+--                                              a keyed role phrase as the subject, then a verb or `is`
+--   pair        S has two <Q>s A and B         the BODY says it, not the name: the same relation Q
+--                                              twice over S, once with A and once with B, and A != B
+
+edb(namespace). edb(verb_word). edb(container). edb(rank). edb(marker_by_noun).
+edb(takes_by_hand). edb(subject_by_hand). edb(marker_by_hand). edb(pick).
+
+namespace("eff"). namespace("host"). namespace("attr"). namespace("amb"). namespace("es").
+namespace("runtime"). namespace("cg"). namespace("cf"). namespace("kind").
+
+verb_word("resolves"). verb_word("calls"). verb_word("reads"). verb_word("binds"). verb_word("imports").
+verb_word("exports"). verb_word("throws"). verb_word("catches"). verb_word("returns"). verb_word("yields").
+verb_word("sees"). verb_word("selects"). verb_word("spells"). verb_word("hosts"). verb_word("denotes").
+verb_word("uses"). verb_word("takes"). verb_word("hides"). verb_word("passes"). verb_word("flows").
+verb_word("reaches"). verb_word("delegates"). verb_word("encloses"). verb_word("replaces"). verb_word("inherits").
+verb_word("owns"). verb_word("targets"). verb_word("sources"). verb_word("destructures"). verb_word("introduces").
+verb_word("holds"). verb_word("defaults"). verb_word("shadows"). verb_word("decorates"). verb_word("awaits").
+verb_word("assigns"). verb_word("declares"). verb_word("performs"). verb_word("stops"). verb_word("runs").
+verb_word("caught"). verb_word("catch"). verb_word("resolve"). verb_word("call"). verb_word("read"). verb_word("bind").
+verb_word("import"). verb_word("export"). verb_word("throw"). verb_word("return"). verb_word("yield"). verb_word("see").
+verb_word("select"). verb_word("host"). verb_word("use"). verb_word("take"). verb_word("hide"). verb_word("pass").
+verb_word("flow"). verb_word("reach"). verb_word("delegate"). verb_word("enclose"). verb_word("replace"). verb_word("inherit").
+verb_word("own"). verb_word("target"). verb_word("source"). verb_word("destructure"). verb_word("introduce"). verb_word("hold").
+verb_word("default"). verb_word("shadow"). verb_word("decorate"). verb_word("await"). verb_word("assign"). verb_word("declare").
+verb_word("perform"). verb_word("stop"). verb_word("run"). verb_word("sends"). verb_word("send"). verb_word("nested").
+
+container("class"). container("object literal"). container("function"). container("file"). container("try").
+container("call"). container("module"). container("program"). container("scope"). container("declarator").
+
+rank(pair, 0). rank(may, 1). rank(the_of, 2). rank(the_role, 3). rank(has, 4). rank(passive, 5). rank(verb, 6).
+rank(among, 7). rank(role_of, 8). rank(bare_verb, 9). rank(adjective, 10).
+
+marker_by_noun("index", at).    marker_by_noun("line", at).      marker_by_noun("file", in).
+marker_by_noun("node", at).     marker_by_noun("name", named).   marker_by_noun("key", of).
+marker_by_noun("text", as).     marker_by_noun("kind", of_kind). marker_by_noun("attribute", with).
+marker_by_noun("value", being). marker_by_noun("literal", as).   marker_by_noun("child", under).
+
+-- the words of a name, minus a leading namespace
+word(Rel, I, W)        :- name_word(Rel, I, W), not namespace_at(Rel, I).
+namespace_at(Rel, 0)   :- name_word(Rel, 0, W), namespace(W).
+earlier_word(Rel, I)   :- word(Rel, I, _), word(Rel, J, _), J < I.
+later_word(Rel, I)     :- word(Rel, I, _), word(Rel, J, _), I < J.
+first_word(Rel, W)     :- word(Rel, I, W), not earlier_word(Rel, I).
+last_word(Rel, W)      :- word(Rel, I, W), not later_word(Rel, I).
+verb_named(Rel)        :- first_word(Rel, W), verb_word(W).
+verb_named(Rel)        :- last_word(Rel, W), verb_word(W).
+participle_named(Rel)  :- last_word(Rel, W), word_shape(W, ed).
+participle_named(Rel)  :- first_word(Rel, W), word_shape(W, ed).
+
+-- the subject: by hand, else the first container position, else position 0
+owner_pos(Rel, I)      :- pick(Rel, I, C), container(C), not earlier_owner(Rel, I).
+earlier_owner(Rel, I)  :- pick(Rel, I, C), container(C), pick(Rel, J, C2), container(C2), J < I.
+subject(Rel, I)        :- subject_by_hand(Rel, I).
+subject(Rel, I)        :- owner_pos(Rel, I), not subject_by_hand(Rel, _).
+subject(Rel, 0)        :- arity(Rel, _), not owner_pos(Rel, _), not subject_by_hand(Rel, _).
+object(Rel, I)         :- pos(Rel, I), not subject(Rel, I), not earlier_free(Rel, I).
+earlier_free(Rel, I)   :- pos(Rel, I), pos(Rel, J), J < I, not subject(Rel, J).
+
+-- what a relation admits
+s_adjective(Rel) :- arity(Rel, 1), not verb_named(Rel), not participle_named(Rel).
+s_bare_verb(Rel) :- arity(Rel, 1), verb_named(Rel).
+s_verb(Rel)      :- arity(Rel, N), N >= 2, verb_named(Rel).
+s_the_of(Rel)    :- arity(Rel, N), N >= 2, last_word(Rel, "of").
+s_has(Rel)       :- arity(Rel, N), N >= 2, subject(Rel, I), pick(Rel, I, C), container(C), not verb_named(Rel), not last_word(Rel, "of").
+s_has(Rel)       :- first_word(Rel, "has").
+s_passive(Rel)   :- participle_named(Rel).
+s_role_of(Rel)   :- arity(Rel, 2), not verb_named(Rel), not participle_named(Rel), not last_word(Rel, "of").
+s_may(Rel)       :- first_word(Rel, "may").
+s_the_role(Rel)  :- arity(Rel, N), N >= 3, pick(Rel, _, "key"), not verb_named(Rel), not participle_named(Rel), not last_word(Rel, "of").
+s_among(Rel)     :- takes_by_hand(Rel, among).
+-- a pair: head positions I < J bound to A and B, both at one position P of the relation Q, and A != B
+pair(Rel, Q, S, I, J) :- head(R, Rel), argv(R, 0, I, A), argv(R, 0, J, B), I < J,
+                         lit(R, K1, Q, pos), lit(R, K2, Q, pos), K1 != K2,
+                         argv(R, K1, P, A), argv(R, K2, P, B),
+                         differ(R, A, B), argv(R, 0, S, C), S != I, S != J,
+                         argv(R, K1, P2, C), argv(R, K2, P2, C), P2 != P.
+differ(R, A, B) :- bi(R, K, "!="), argv(R, K, 0, A), argv(R, K, 1, B).
+differ(R, A, B) :- bi(R, K, "!="), argv(R, K, 0, B), argv(R, K, 1, A).
+s_pair(Rel)      :- pair(Rel, _, _, _, _).
+
+admits(Rel, adjective) :- s_adjective(Rel).
+admits(Rel, bare_verb) :- s_bare_verb(Rel).
+admits(Rel, verb)      :- s_verb(Rel).
+admits(Rel, the_of)    :- s_the_of(Rel).
+admits(Rel, has)       :- s_has(Rel).
+admits(Rel, passive)   :- s_passive(Rel).
+admits(Rel, role_of)   :- s_role_of(Rel).
+admits(Rel, may)       :- s_may(Rel).
+admits(Rel, among)     :- s_among(Rel).
+admits(Rel, the_role)  :- s_the_role(Rel).
+admits(Rel, pair)      :- s_pair(Rel).
+
+-- what it takes: by hand, else the best-ranked admitted structure
+beaten(Rel, S)   :- admits(Rel, S), admits(Rel, S2), rank(S, R), rank(S2, R2), R2 < R.
+takes(Rel, S)    :- takes_by_hand(Rel, S).
+takes(Rel, S)    :- admits(Rel, S), not beaten(Rel, S), not takes_by_hand(Rel, _).
+untaken(Rel)     :- arity(Rel, _), not takes(Rel, _).
+
+-- markers for the arguments beyond subject and object
+marker(Rel, I, M) :- marker_by_hand(Rel, I, M).
+marker(Rel, I, M) :- pick(Rel, I, N), marker_by_noun(N, M), not subject(Rel, I), not object(Rel, I), not marker_by_hand(Rel, I, _).
+unmarked(Rel, I)  :- pos(Rel, I), not subject(Rel, I), not object(Rel, I), not marker(Rel, I, _).

@@ -107,7 +107,7 @@ block_scope_kind(block_statement).
 block_scope_kind(for_statement).
 
 scope_node[code](R) :- ast_node[code](R, K, _, _), block_scope_kind(K).
-scope_node[code](R) :- fn_node_v[flow](R).
+scope_node[code](R) :- fn_node[code](R).
 
 -- `let`/`const` is read off the DECLARATION, one node above the declarator.
 lexical_decl[code](V)   :- ast_node[code](V, variable_declaration, _, _),
@@ -174,7 +174,7 @@ tdz_cand[code](E, D)     :- lexical_binder[code](D), binds_name[code](D, Name, _
                             ast_node[code](D, _, _, LD), ast_node[code](E, _, _, LE),
                             LE < LD.
 tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
-                            fn_node_v[flow](G), ast_within[code](R, G), ast_within[code](G, E).
+                            fn_node[code](G), ast_within[code](R, G), ast_within[code](G, E).
 tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
 hidden_at[code](E, D)    :- tdz_at[code](E, D).
 
@@ -275,11 +275,11 @@ may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
 
 -- A defaulted parameter has an index (the `left` of its `assignment_pattern`)
 -- and a default that reaches the body.
-param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
+param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_node[code](P, assignment_pattern, _, _),
                               ast_child[code](P, left, 0, L), ast_name[code](L, Name).
 
-param_default[flow](F, Name, Init) :- fn_node_v[flow](F), ast_child[code](F, params, _, P),
+param_default[flow](F, Name, Init) :- fn_node[code](F), ast_child[code](F, params, _, P),
                                       ast_node[code](P, assignment_pattern, _, _),
                                       ast_child[code](P, left, 0, L), ast_name[code](L, Name),
                                       ast_child[code](P, right, 0, Init).
@@ -327,27 +327,21 @@ valued[flow](E) :- may_be_node[flow](E, _).
 
 -- =========================================================================
 -- 7. ACROSS A CALL
-edb(fn_kind_v).
-fn_kind_v(function_declaration).
-fn_kind_v(function_expression).
-fn_kind_v(arrow_function_expression).
-fn_kind_v(object_method).
-fn_kind_v(class_method).
-fn_kind_v(class_private_method).
-
 edb(call_like_v).
 call_like_v(call_expression).
 call_like_v(optional_call_expression).
 call_like_v(new_expression).
 
-fn_node_v[flow](F) :- ast_node[code](F, K, _, _), fn_kind_v(K).
+-- ONE function relation for every book: `fn_node[code]` from rules/js-callgraph.rofl
+-- (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
+-- `fn_kind_v`, was the same six kinds defined twice, and js-controlflow read both.
 
 -- Nearest enclosing function over ANY node, walked DOWN from the function in
 -- two linear rules. The argmin-as-negation-over-a-quadratic form was 35 % of a
 -- fixpoint and no reorder fixes a shape. rules/js-callgraph.rofl keeps
 -- `nearest_fn` over sites only; a mutant anchors on that copy.
-nearest_v[flow](F, X)  :- fn_node_v[flow](F), ast_in[code](F, X).
-nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node_v[flow](P),
+nearest_v[flow](F, X)  :- fn_node[code](F), ast_in[code](F, X).
+nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node[code](P),
                           ast_in[code](P, X).
 
 -- Argument into parameter by INDEX. A spread destroys the correspondence for
@@ -368,14 +362,14 @@ arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, 
                               ast_child[code](C, arguments, J, S),
                               ast_child[code](S, argument, 0, A), elem_at[flow](A, K, E),
                               I is J + K.
-param_of[flow](F, I, Name) :- fn_node_v[flow](F), ast_child[code](F, params, I, P),
+param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 
 -- Where a parameter is read: every identifier of its name under F, minus two
 -- ways of hiding it — a declarator whose region is STRICTLY inside F
 -- (`function f(x) { var x }` is the same binding: region F itself, not hidden)
 -- and a nested function with its own parameter of the name. `ast_within(F, G)`
--- before `fn_node_v(G)`: the other order read all of `fn_node_v` once per
+-- before `fn_node(G)`: the other order read all of `fn_node` once per
 -- parameter, 58.7 % of a world.
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   binds_name[code](D, Name, _),
@@ -383,7 +377,7 @@ param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   ast_within[code](F, R), ast_within[code](R, U),
                                   ident[code](U, Name).
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
-                                  ast_within[code](F, G), fn_node_v[flow](G),
+                                  ast_within[code](F, G), fn_node[code](G),
                                   param_of[flow](G, _, Name),
                                   ast_within[code](G, U), ident[code](U, Name).
 param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
@@ -663,7 +657,7 @@ import_target[code](Src, File) :- module_basename[code](Src, Base),
 
 exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File, _),
                                      ast_child[code](E, declaration, 0, F),
-                                     fn_kind_v(K), ast_node[code](F, K, _, _),
+                                     fn_node[code](F),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
@@ -740,7 +734,7 @@ imports_default[code](Local, Src, File) :-
 
 exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, File, _),
                                   ast_child[code](E, declaration, 0, F),
-                                  fn_kind_v(K), ast_node[code](F, K, _, _).
+                                  fn_node[code](F).
 
 may_be_node[flow](E, F) :- imports_default[code](Local, Src, File),
                            import_target[code](Src, Target),

@@ -146,6 +146,16 @@ them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
 costs), `modelling-a-language.md` (the JS model as a research programme).
 
+**The plan** — `roadmap.md` (what the next version commits to, each item naming
+- **Writing a world as Markdown** — `md-world.md` (ROFL 1.05): the sentence form as a source, `X.rofl.md` (executable Markdown; a plain `.md` is a document), how to write one, what the reader reports; `examples/review.rofl.md` is one, and `npm run repl -- examples/review.rofl.md` asks it in its own sentences.
+- **The JS playground** — `playground/`, built by `npm run playground` into `playground/dist`: JavaScript on one side, a notebook over it on the other, the engine, the scanner, the reader and part of the JS model running in the browser. The code may be several files importing each other. A formal cell is written in sentences, as a `.rofl.md` is, and a rofl cell in plain Datalog; `? S` lists, `never S` is an invariant, `unsure S` under it says what it could not see, `why S` explains; a natural cell is translated by Claude when the page runs as an artifact.
+- **The NPC yard, live** — `playground/npc.html`, built with the playground: `examples/npc` run one tick at a time in the browser, each agent's knowledge, intents, options and chosen act on the page, `why` and `whynot` on any of them at any kept tick, the rule the agents propose from their holes, taken and applied to the past, and the loop the declared tie order walks the yard into, noticed, explained from `tie[audit]` and broken by three rules taken at run time; the night ends at the model's own horizon. The yard's core is `examples/npc/sim.ts`, which `demo.ts` also runs; its sentences are `examples/npc/phrases.rofl`.
+- **The JS model, rendered** — `docs/js/`, sixteen rule files as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run view -- docs/js` makes one HTML page of them to open in a browser, with the reader's own Markdown parser (`scripts/md_blocks.ts`). `npm run read` reads a rendered file back into rules (the reading itself is `readMd` in `scripts/read_md.ts`, a function with no file access, which the playground runs in a browser); `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
+- **The rings, in their own words** — `docs/rings/`: the kernel's four programs of rules (`boot.rofl`, `safety.rofl`, `policy.rofl`, `rules/strata.rofl`) and the front end written in ROFL (`examples/ring1/ring1.rofl`, `charclass.rofl`) and its host's contract (`examples/ring1/host.rofl`, checked by `npm run conform`) rendered as sentences by `npm run render:rings`, phrases in `facts/kernel-phrases.rofl` and `facts/ring1-phrases.rofl`; each reads back into its source clause for clause. `docs/rings/README.md` says what is there and what is not.
+the finding that holds its evidence). `sentence-form.md` closes one question of the plan: the
+Markdown sentence form as a source after 1.1, what the round trip established,
+what the form is now, and what is open.
+
 **The programme** — `formal-reasoning-landscape.md` (ROFL among the formal
 reasoning systems, and why the projection is ROFL-centric by construction).
 The plan itself is the ledger.
@@ -191,6 +201,7 @@ the rest are run by hand.
 | `npm run measurecheck` | a number quoted without the run that produced it |
 | `npm run flagcheck` | an API flag that no demo in `examples/` EXERCISES (CLAUDE.md) |
 | `npm run findings` | the open findings backlog — every one demands a reaction |
+| `npm run lint` | `-- <files>`: heads with five or more bodies, relation pairs read together by five or more rules, bodies of seven or more conditions — counted by the counting semiring over the reflection, so no order on atoms is needed |
 
 And the scanners that MODEL something rather than check it — each writes facts
 that a rule pack then argues with, so every row has a `why`:
@@ -451,8 +462,10 @@ relation comes from outside the program, which is why boot.rofl declares
 `$`-prefixed atoms/functors (`$lit`, `$not`, `$builtin`, `$var`, `$fact`,
 `$cons`, `$nil`, `$any`, `$kernel`, `$q`, `$tick`, `$load`, `$rule`, `$sealed`,
 `$init`, `$now`, `$next`, plus `$adhoc` for an evaluation nobody named and
-`$t` for a query's own term) are kernel-internal reification markers; `$` is
-not writable in ROFL source syntax, so they can never collide with user terms.
+`$t` for a query's own term) are the kernel's reification markers. A program
+can write them too: `examples/ring1/ring1.rofl` builds `$lit`, `$cons` and
+`$var` in its heads, and `examples/ring1/demo.ts` says how a source term
+written `$var("X")` stays apart from the kernel's own.
 `$kernel_authority` is the one a FILE may carry: as the FIRST clause of the
 FIRST load it says the text being read is the kernel's own, so everything in
 it is signed `$kernel` rather than `user`. Both conditions are load-bearing —

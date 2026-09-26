@@ -1,0 +1,834 @@
+<meta charset="utf-8">
+<title>ROFL Playground</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #F7F8F5; --panel: #FFFFFF; --fg: #1C2120; --mute: #66706B; --line: #D9DDD6; --soft: #EEF0EB;
+    --code-bg: #FCFCFA; --gutter: #9AA39D;
+    --accent: #1D4ED8; --accent-bg: #1D4ED814;
+    --pass: #047857; --pass-bg: #0478571A; --fail: #B91C1C; --fail-bg: #B91C1C14; --warn: #A15C07; --warn-bg: #A15C0714;
+    --kw: #6D28D9; --was: #7A6F5B;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
+      --code-bg: #161A18; --gutter: #69726D;
+      --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+      --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
+      --kw: #C7A9FF; --was: #B5A98F;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
+    --code-bg: #161A18; --gutter: #69726D;
+    --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
+    --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
+    --kw: #C7A9FF; --was: #B5A98F;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
+  .wrap { padding-inline: 16px; padding-block: 14px 24px; max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+  h1 { font: 600 19px/1.2 var(--sans); margin: 0; letter-spacing: -0.01em; }
+  h1 span { color: var(--mute); font-weight: 400; }
+  .status { font: 12.5px/1.4 var(--mono); color: var(--mute); display: flex; gap: 6px 14px; flex-wrap: wrap; }
+  .status b { font-weight: 600; color: var(--fg); }
+  .status .busy::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: .25; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .status .busy::before { animation: none; } }
+  .spacer { flex: 1; }
+  button { font: 500 13px/1 var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; cursor: pointer; }
+  button:hover { border-color: var(--mute); }
+  button:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  button:disabled { opacity: .5; cursor: default; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
+  @media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  /* the code pane */
+  .code { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  @media (max-width: 960px) { .code { position: static; } }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--line); font: 12.5px/1.4 var(--mono); color: var(--mute); }
+  .bar b { color: var(--fg); font-weight: 600; }
+  .files { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+  .files button { font: 12.5px/1 var(--mono); padding: 5px 8px; border-color: transparent; background: transparent; color: var(--mute); }
+  .files button[aria-pressed="true"] { color: var(--fg); border-color: var(--line); background: var(--soft); font-weight: 600; }
+  .files button.bad { color: var(--fail); }
+  .files input { font: 12.5px/1 var(--mono); padding: 4px 6px; width: 12ch; border: 1px solid var(--accent); border-radius: 4px; background: var(--panel); color: var(--fg); }
+  .files .del { padding: 5px 6px; }
+  .ex { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mute); }
+  .ex select { font: 13px var(--sans); padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--fg); }
+  .editor { position: relative; height: min(72vh, 760px); background: var(--code-bg); display: grid; grid-template-columns: 44px minmax(0, 1fr); }
+  @media (max-width: 960px) { .editor { height: 52vh; } }
+  .gutter, .clip { position: relative; overflow: hidden; }
+  .gutter { border-right: 1px solid var(--line); }
+  .nums, .marks { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
+  .nums div { height: 20px; font: 12px/20px var(--mono); color: var(--gutter); text-align: right; padding-right: 8px; font-variant-numeric: tabular-nums; }
+  .nums div.bad { color: var(--fail); font-weight: 600; }
+  .nums div.focus { color: var(--accent); font-weight: 600; }
+  .nums div.warn { color: var(--warn); font-weight: 600; }
+  .marks div { position: absolute; left: 0; right: 0; height: 20px; }
+  .marks div.bad { background: var(--fail-bg); }
+  .marks div.warn { background: var(--warn-bg); }
+  .marks div.focus { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
+  .marks .ghost { position: absolute; top: 0; font: 13px/20px var(--mono); white-space: nowrap; }
+  .marks .ghost span { font: 12px/20px var(--sans); color: var(--fail); }
+  .marks .ghost.warn span { color: var(--warn); }
+  .nums div[title] { cursor: pointer; }
+  .cell.flash { box-shadow: 0 0 0 2px var(--fail); }
+  #code { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; border: 0; margin: 0; padding: 10px 12px; background: transparent; color: var(--fg); font: 13px/20px var(--mono); white-space: pre; overflow: auto; tab-size: 2; }
+  .foot { padding: 7px 10px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--mute); min-height: 20px; }
+  .foot.bad { color: var(--fail); background: var(--fail-bg); }
+
+  /* the notebook */
+  .book { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .cell { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; min-width: 0; }
+  .cell.prose { background: transparent; border-color: transparent; }
+  .cell.prose:focus-within { border-color: var(--line); }
+  .head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 0; flex-wrap: wrap; }
+  .head select { font: 12px/1 var(--mono); color: var(--mute); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 2px; }
+  .head select:hover { border-color: var(--line); }
+  .head .state { font: 12px/1.3 var(--mono); color: var(--mute); }
+  .head button { padding: 5px 8px; font-size: 12px; }
+  .head .x { border-color: transparent; color: var(--mute); }
+  .cell textarea { display: block; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--fg); resize: none; overflow: hidden; padding: 6px 12px 10px; margin: 0; field-sizing: content; min-height: 2.2em; }
+  .cell.formal textarea { font: 14.5px/1.6 var(--sans); }
+  .cell.rofl textarea { font: 13px/1.6 var(--mono); white-space: pre-wrap; }
+  .cell.natural textarea { font: 15px/1.55 var(--sans); }
+  .cell.prose textarea { font: 14.5px/1.55 var(--sans); color: var(--mute); padding-top: 2px; }
+  .was { margin: 4px 12px 0; padding: 4px 10px; border-left: 2px solid var(--was); color: var(--was); font-size: 13.5px; }
+  .was::before { content: 'was: '; font: 12px var(--mono); }
+  .was.then::before { content: 'then: '; }
+  .cell.open { border-color: var(--fail); }
+  .cell.open .head .state { color: var(--fail); }
+  .questions { margin: 0; padding-left: 20px; color: var(--fg); display: flex; flex-direction: column; gap: 4px; }
+  .refine { display: flex; gap: 8px; align-items: flex-end; }
+  .cell .refine textarea { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 5px; padding: 6px 10px; background: var(--panel); font: 14px/1.5 var(--sans); }
+  .refine-open { align-self: flex-start; padding: 3px 8px; font-size: 12px; color: var(--mute); }
+  .out { border-top: 1px solid var(--line); padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .out:empty { display: none; }
+  .ask { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ask .lit { font: 12px/1.4 var(--mono); color: var(--mute); }
+  .ask .q { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 12.5px/1.4 var(--mono); color: var(--mute); }
+  .pill { font: 600 11.5px/1 var(--mono); padding: 4px 7px; border-radius: 99px; letter-spacing: .02em; }
+  .pill.pass { color: var(--pass); background: var(--pass-bg); }
+  .pill.fail { color: var(--fail); background: var(--fail-bg); }
+  .pill.info { color: var(--mute); background: var(--soft); }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); }
+  .unsure-head { font-size: 12.5px; color: var(--warn); padding-left: 6px; }
+  .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rows li { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; }
+  .rows li:hover { background: var(--soft); }
+  .rows li .s { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .rows li button.why { padding: 2px 6px; font: 11.5px var(--mono); color: var(--mute); border-color: var(--line); }
+  .rows code, .why-tree code { font: 12.5px var(--mono); color: var(--pass); }
+  .node { font: 500 12px/1.2 var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--soft); color: var(--fg); cursor: pointer; }
+  .node:hover { border-color: var(--accent); color: var(--accent); }
+  .why-tree { margin: 2px 0 4px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-x: auto; }
+  .proof { margin: 2px 0 6px 6px; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
+  .step-line { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 2px 0; }
+  .step-line .s { flex: 1 1 18em; min-width: 0; overflow-wrap: anywhere; }
+  .concern { font: 11.5px/1.4 var(--mono); color: var(--mute); flex: 0 0 auto; }
+  .concern b { font-weight: 600; color: var(--kw); }
+  .step-kids { margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+  .step-more { margin: 0 0 6px; padding: 4px 0 4px 12px; color: var(--mute); font-size: 13px; }
+  .step-more ul { margin: 0; padding-left: 16px; }
+  .step-more .not { font: 11.5px var(--mono); }
+  .toggle { padding: 2px 6px; font: 11.5px var(--mono); color: var(--mute); }
+  .proof .whole { align-self: flex-start; margin-top: 6px; padding: 3px 8px; font-size: 12px; color: var(--mute); }
+  .node em { font-style: normal; color: var(--mute); margin-left: 6px; font-weight: 400; }
+  .err { color: var(--fail); background: var(--fail-bg); padding: 6px 10px; border-radius: 5px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .note { color: var(--warn); background: var(--warn-bg); padding: 5px 10px; border-radius: 5px; font-size: 13px; }
+  details.as { font-size: 12.5px; color: var(--mute); }
+  details.as pre { margin: 6px 0 0; padding: 8px 10px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; font: 12px/1.6 var(--mono); color: var(--fg); white-space: pre-wrap; overflow-x: auto; }
+  details.as summary { cursor: pointer; }
+  .more { color: var(--mute); font-size: 12.5px; padding-left: 6px; }
+  .thinking { color: var(--mute); font-size: 13px; white-space: pre-wrap; max-height: 140px; overflow: auto; }
+  .reply { font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; border-left: 3px solid var(--line); padding: 2px 10px; max-height: 260px; overflow: auto; }
+  .reply b { font-weight: 600; }
+  .adds { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .adds span { color: var(--mute); font-size: 12.5px; }
+  .help { color: var(--mute); font-size: 13px; max-width: 78ch; margin: 0; }
+  .help code { font: 12.5px var(--mono); color: var(--fg); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>ROFL Playground <span>&middot; JavaScript</span></h1>
+    <div class="status" id="status" aria-live="polite"><span class="busy">loading the JS model</span></div>
+    <div class="spacer"></div>
+    <label class="ex" for="example">Example <select id="example"><option value="await">Fields, functions and awaits, one file</option><option value="sight">What the model cannot see, three files</option></select></label>
+    <button type="button" class="primary" id="runall" disabled>Run the book</button>
+  </header>
+  <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>unsure S</code> under it says what the invariant could not see, <code>why S</code> explains one. Files import each other with <code>import ... from './x.js'</code>. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
+  <div class="grid">
+    <section class="code" aria-label="JavaScript">
+      <div class="bar"><div class="files" id="files" role="tablist" aria-label="Files"></div><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
+      <div class="editor">
+        <div class="gutter" aria-hidden="true"><div class="nums" id="nums"></div></div>
+        <div class="clip">
+          <div class="marks" id="marks" aria-hidden="true"></div>
+          <textarea id="code" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" aria-label="JavaScript source"></textarea>
+        </div>
+      </div>
+      <div class="foot" id="foot">The book runs a second after you stop typing.</div>
+    </section>
+    <section class="book" aria-label="Notebook">
+      <div id="cells" class="book"></div>
+      <div class="adds"><span>Add a cell:</span>
+        <button type="button" data-add="natural">Natural</button>
+        <button type="button" data-add="formal">Formal</button>
+        <button type="button" data-add="prose">Prose</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+const EXAMPLES = {
+  await: {
+    files: { 'play.js': `const fs = require('fs');
+
+async function load(path) {
+  const text = await fs.promises.readFile(path, 'utf8');
+  return JSON.parse(text);
+}
+
+function save(path, data) {
+  fs.writeFileSync(path, JSON.stringify(data));
+}
+
+const User = {
+  email: 'user@example.com',
+  password: 'password',
+  kind: 'admin',
+}
+
+class Store {
+  constructor(path) { this.path = path; this.cache = null; }
+  async get() {
+    if (!this.cache) this.cache = load(this.path);
+    return this.cache;
+  }
+  put(data) { save(this.path, data); this.cache = data; }
+  clear() { this.cache = null; }
+}
+
+function main() {
+  const s = new Store('db.json');
+  s.get();
+  s.put({ email: User.emal, role: User.role, password: User.password });
+}
+main();
+
+function greet() { return 'hi ' + User.nick; }
+function rename() { User.nick = 'admin'; }
+greet();
+rename();
+greet();
+
+function setup() { User.theme = 'dark'; }
+function paint() { return User.theme; }
+setup();
+paint();
+
+function audit() {
+  console.log(User.seen);
+  User.seen = true;
+}
+audit();
+
+[1].forEach(() => console.log(User.tag));
+setTimeout(() => console.log(User.tag), 0);
+User.tag = 'x';
+
+function score() { return User.score; }
+Promise.resolve().then(() => { User.score = 1; });
+score();
+` },
+    cells: [
+  { kind: 'prose', text: 'This notebook reads play.js in sentences. The first cells define words, and every cell below may use them: a word is defined before it is used.' },
+  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A callback runs where facts/js-host.rofl says: forEach and map call it at once, inside the call; setTimeout and then call it later, after the whole synchronous run. Of two later callbacks no order is claimed, since that is when timers fire and promises settle. A write comes too late for a read when it comes after the read in one list, when every call that runs it comes after one that runs the read, or when it only runs later.' },
+  { kind: 'formal', text: `A node N runs apart from B if G is nearest to N and G is within B.
+
+A node Q comes after P if all of:
+  - S is the I-th of the F of B;
+  - T is the J-th of the F of B;
+  - J < I;
+  - Q is within S;
+  - P is within T;
+  - unless Q runs apart from B;
+  - unless P runs apart from B.
+
+A node N runs at P either:
+
+1. if N is within B and P is N;
+2. if G is nearest to N, a call C resolves to G, and C runs at P;
+3. if G is nearest to N, C calls back G \`at_once\`, and C runs at P.
+
+A node N runs from the top at P if N runs at P and unless P is inside a function.
+
+A node N runs later if N runs at P, G is nearest to P, and C calls back G \`later\`.
+
+An assignment A may run before P if N runs from the top at P, A runs from the top at Q, and unless Q comes after P.
+
+A node V comes too late for M either:
+
+1. if M runs at P, A comes after P, and the \`right\` of A is V;
+2. if M runs from the top at P, A runs from the top at Q, the \`right\` of A is V, and unless A may run before P;
+3. if M runs from the top at P, A runs later, the \`right\` of A is V, and unless A may run before P.
+
+A node O has Key by the time of M if M selects Key, the member Key of O holds V, and unless V comes too late for M.` },
+  { kind: 'prose', text: 'What a read of a field can find. A field is missing when the object has no such member anywhere in the code, and asked for too early when every write of it comes too late. greet() reads User.nick before rename() sets it, and audit() reads User.seen a line before it writes it; setup() runs before paint(), so User.theme is fine. forEach reads User.tag at once, before the write below it, and setTimeout reads it later, after; score() reads User.score before the then callback writes it, though the then stands above it. Fix the typo and drop role, and the first invariant goes green; the second names four reads, one for each way to be early.' },
+  { kind: 'formal', text: `A node O has Key built in if the prototype of O is P and P has the member Key since Rel.
+
+A member access M asks for a missing field if all of:
+  - M selects Key;
+  - the \`object\` of M is X;
+  - X points to O;
+  - unless the member Key of O holds some node;
+  - unless the instance member Key of O is some node;
+  - unless O has Key built in.
+
+never M asks for a missing field` },
+  { kind: 'formal', text: `A member access M asks for a field too early if all of:
+  - M selects Key;
+  - the \`object\` of M is X;
+  - X points to O;
+  - the member Key of O holds some node;
+  - unless O has Key by the time of M.
+
+never M asks for a field too early` },
+  { kind: 'prose', text: 'Where does each value read on line 31 come from? The node the member holds; undefined when the field is missing or not yet set; unknown when the model cannot see the object at all. No read goes unanswered.' },
+  { kind: 'formal', text: `A member access M reads a field at line 31 if M is at line 31 and M selects Key.
+
+A node V gives its value to M at line 31 if M reads a field at line 31, M selects Key, the \`object\` of M is X, X points to O, the member Key of O holds V, and unless V comes too late for M.
+
+\`undefined\` gives its value to M at line 31 if M reads a field at line 31 and M asks for a missing field.
+
+\`undefined\` gives its value to M at line 31 if M reads a field at line 31 and M asks for a field too early.
+
+\`unknown\` gives its value to M at line 31 if M reads a field at line 31, the \`object\` of M is X, and unless X points to some node.
+
+? V gives its value to M at line 31` },
+  { kind: 'prose', text: 'Nobody calls what nothing defines: a free name that no release of the language and no host defines, or a method that is a missing field.' },
+  { kind: 'formal', text: `A call C asks for a missing function either:
+
+1. if the callee of C is E, E refers to the free Name in F, unless E is the global Name of some release with some form, unless E refers to the global Name of some host;
+2. if the callee of C is M and M asks for a missing field.
+
+never C asks for a missing function` },
+  { kind: 'prose', text: 'An async function called without await drops its promise. Add await in front of load(...) or s.get() and watch it change.' },
+  { kind: 'formal', text: `A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
+
+never C is unawaited` },
+  { kind: 'prose', text: 'A natural cell: run it and Claude writes the formal cell, trying it against the code first. The original stays above it; Revert brings it back.' },
+  { kind: 'natural', text: 'Every method of a class is called somewhere in this file.' },
+],
+  },
+  sight: {
+    files: {
+      "main.js": `import { EventEmitter } from 'node:events';
+import { load } from './store.js';
+import { audit } from './audit.js';
+
+const bus = new EventEmitter();
+bus.on('loaded', audit);
+
+export function main() {
+  const data = load('db.json');
+  bus.emit('loaded', data);
+  return data;
+}
+
+main();
+`,
+      "store.js": `import { readFileSync } from 'node:fs';
+
+export function load(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+`,
+      "audit.js": `import { appendFileSync } from 'node:fs';
+
+export function audit(data) {
+  appendFileSync('audit.log', JSON.stringify(data) + '\\n');
+}
+`,
+    },
+    cells: [
+      { kind: 'prose', text: `Three files. Does anything main starts write to disk? The model follows calls across the files and into node:fs. Where it cannot follow a call it says so, and the invariant says how far it saw: green, red, or green as far as it can see.` },
+      { kind: 'formal', text: `\`disk_write\` lists:
+
+| key |
+|---|
+| "writeFileSync" |
+| "appendFileSync" |
+| "writeFile" |
+| "appendFile" |
+
+A call C writes to disk if C is a host site of \`node\` from "node:fs" at K and \`disk_write\`(K).
+
+A function F writes to disk if F is the nearest function of a call C and C writes to disk.
+
+A function F writes to disk if F calls a function G and G writes to disk.
+
+A function F is blind at a call C if F is the nearest function of C and C has no surface.
+
+A function F is blind at a call C if F calls a function G and G is blind at C.
+
+A function F is a writing main if F answers to "main" and F writes to disk.
+
+A call C is out of sight of main if a function F answers to "main" and F is blind at C.
+
+never F is a writing main
+unsure C is out of sight of main` },
+      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
+      { kind: 'prose', text: `A call C emits E if the callee of C is M, M selects "emit", C passes the argument X at 0 and X may be the literal E.
+
+A function F handles E if the callee of a call R is M, M selects "on", R passes the argument X at 0, X may be the literal E, R passes the argument Y at 1 and Y points to F.
+
+A call C resolves to a function F if C emits E and F handles E.` },
+    ],
+  },
+};
+const fresh = (name) => { const ex = EXAMPLES[name]; return { example: name, files: { ...ex.files }, active: Object.keys(ex.files)[0], cells: ex.cells.map(cell) }; };
+
+const $ = (id) => document.getElementById(id);
+const runs = (c) => c.kind === 'formal' || c.kind === 'rofl';
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const KEY = 'rofl-playground-v3';
+let uid = 0;
+const cell = (c) => ({ id: 'c' + (++uid), kind: c.kind, text: c.text, was: c.was ?? null, note: c.note ?? null, open: c.open ?? null, thread: c.thread ?? null, answers: c.answers ?? [], reply: c.reply ?? null });
+let state;
+try {
+  const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (s && s.files && typeof s.files === 'object' && Array.isArray(s.cells)) state = { example: s.example, files: s.files, active: s.files[s.active] !== undefined ? s.active : Object.keys(s.files)[0], cells: s.cells.map(cell) };
+  else { const v2 = JSON.parse(localStorage.getItem('rofl-playground-v2') || 'null'); if (v2 && typeof v2.code === 'string' && Array.isArray(v2.cells)) state = { example: 'await', files: { 'play.js': v2.code }, active: 'play.js', cells: v2.cells.map(cell) }; }
+} catch (e) {}
+state ??= fresh('await');
+let saveT = 0;
+const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify({ example: state.example, files: state.files, active: state.active, cells: state.cells.map(({ kind, text, was, note, open, thread, answers, reply }) => ({ kind, text, was, note, open, thread, answers, reply })) })); } catch (e) {} }, 400); };
+
+// ------------------------------------------------------------ the engine
+let host = null;          // { call(op, ...args): Promise }
+async function startHost() {
+  const [model, phrases, concerns] = await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
+  const viaWorker = await new Promise((resolve) => {
+    let w;
+    try { w = new Worker('lib/worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
+    const t = setTimeout(() => { w.terminate(); resolve(null); }, 8000);
+    w.onerror = () => { clearTimeout(t); w.terminate(); resolve(null); };
+    w.onmessage = (e) => { if (e.data.id === 0) { clearTimeout(t); resolve(w); } };
+  });
+  if (viaWorker) {
+    let n = 0; const waiting = new Map();
+    viaWorker.onmessage = (e) => { const p = waiting.get(e.data.id); if (!p) return; waiting.delete(e.data.id); e.data.ok ? p.resolve(e.data.value) : p.reject(new Error(e.data.error)); };
+    host = { where: 'a worker', call: (op, ...args) => new Promise((resolve, reject) => { const id = ++n; waiting.set(id, { resolve, reject }); viaWorker.postMessage({ id, op, args }); }) };
+  } else {
+    const m = await import('./lib/host.js');
+    host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
+  }
+  return host.call('init', model, phrases, JSON.parse(concerns));
+}
+
+// ------------------------------------------------------------ the editor
+const code = $('code'), nums = $('nums'), marks = $('marks');
+let focus = null, marked = { bad: new Map(), warn: new Map(), notes: new Map() }, nodes = {};   // marked lines by file; notes by "file:line": what failed there and in which cell
+function paintEditor() {
+  const n = code.value.split('\n').length;
+  $('lines').textContent = `${n} lines`;
+  let h = '', m = '';
+  const src = code.value.split('\n');
+  for (let i = 1; i <= n; i++) {
+    const cls = focus && focus.file === state.active && i === focus.line ? 'focus' : marked.bad.get(state.active)?.has(i) ? 'bad' : marked.warn.get(state.active)?.has(i) ? 'warn' : '';
+    const note = marked.notes.get(`${state.active}:${i}`);
+    const says = note ? [...note.bad, ...note.warn].join(' \u00b7 ') : '';
+    h += `<div class="${cls}"${note ? ` title="${esc(says)}"` : ''}>${i}</div>`;
+    const ghost = note ? `<span class="ghost${note.bad.size ? '' : ' warn'}" style="left:calc(12px + ${src[i - 1].replace(/\t/g, '  ').length + 3}ch)"><span>${note.bad.size ? '\u2715' : '?'} ${esc(says)}</span></span>` : '';
+    if (cls || note) m += `<div class="${cls}" style="top:${10 + (i - 1) * 20}px">${ghost}</div>`;
+  }
+  nums.innerHTML = h; nums.style.paddingTop = '10px'; marks.innerHTML = m;
+  syncScroll();
+}
+// the files, as tabs: click to open, double-click to rename, + to add one
+const filesEl = $('files');
+let renaming = null;
+function renderFiles() {
+  const names = Object.keys(state.files);
+  filesEl.innerHTML = names.map((f) => renaming === f
+    ? `<input id="rename" value="${esc(f)}" aria-label="File name" spellcheck="false">`
+    : `<button type="button" role="tab" data-file="${esc(f)}" aria-pressed="${f === state.active}"${marked.bad.has(f) ? ' class="bad"' : ''} title="double-click to rename">${esc(f)}</button>`
+      + (f === state.active && names.length > 1 ? `<button type="button" class="del" data-delfile="${esc(f)}" title="delete ${esc(f)}" aria-label="Delete ${esc(f)}">&#x2715;</button>` : '')).join('')
+    + '<button type="button" data-newfile title="add a file" aria-label="Add a file">+</button>';
+  const r = $('rename'); if (r) { r.focus(); r.select(); }
+}
+function setActive(f) { state.active = f; code.value = state.files[f]; code.scrollTop = 0; renderFiles(); paintEditor(); save(); }
+function rename(from, to) {
+  renaming = null; to = to.trim();
+  if (to && to !== from && state.files[to] === undefined && /^[\w./-]+$/.test(to)) {
+    state.files = Object.fromEntries(Object.entries(state.files).map(([k, v]) => [k === from ? to : k, v]));
+    if (state.active === from) state.active = to;
+    save(); runBook();
+  }
+  renderFiles();
+}
+filesEl.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.file) { setActive(t.dataset.file); return; }
+  if (t.dataset.delfile) { const f = t.dataset.delfile; delete state.files[f]; setActive(Object.keys(state.files)[0]); runBook(); return; }
+  if (t.dataset.newfile !== undefined) { let n = 1; while (state.files[`file${n}.js`] !== undefined) n++; const f = `file${n}.js`; state.files[f] = ''; setActive(f); renaming = f; renderFiles(); }
+});
+filesEl.addEventListener('dblclick', (e) => { const t = e.target.closest('button[data-file]'); if (t) { renaming = t.dataset.file; renderFiles(); } });
+filesEl.addEventListener('keydown', (e) => { if (e.target.id === 'rename' && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.key === 'Enter' ? rename(renaming, e.target.value) : (renaming = null, renderFiles()); } });
+filesEl.addEventListener('focusout', (e) => { if (e.target.id === 'rename' && renaming) rename(renaming, e.target.value); });
+function syncScroll() { nums.style.transform = `translateY(${-code.scrollTop}px)`; marks.style.transform = `translate(${-code.scrollLeft}px, ${-code.scrollTop}px)`; }
+code.addEventListener('scroll', syncScroll);
+// a marked line number opens the cell whose invariant marked it
+nums.addEventListener('click', (e) => {
+  const note = marked.notes.get(`${state.active}:${e.target.textContent}`);
+  const el = note && cellsEl.querySelector(`article[data-id="${note.cell}"]`); if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500);
+});
+function showLine(file, line) {
+  if (file && file !== state.active && state.files[file] !== undefined) setActive(file);
+  focus = { file: state.active, line }; paintEditor();
+  const lines = code.value.split('\n'); let at = 0; for (let i = 0; i < line - 1 && i < lines.length; i++) at += lines[i].length + 1;
+  code.scrollTop = Math.max(0, (line - 1) * 20 - code.clientHeight / 2);
+  code.focus({ preventScroll: true }); code.setSelectionRange(at, at + (lines[line - 1] ?? '').length);
+  syncScroll();
+}
+let codeT = 0;
+code.addEventListener('input', () => { state.files[state.active] = code.value; save(); focus = null; paintEditor(); clearTimeout(codeT); codeT = setTimeout(() => runBook(), 1000); });
+code.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); const s = code.selectionStart; code.setRangeText('  ', s, code.selectionEnd, 'end'); code.dispatchEvent(new Event('input')); }
+  if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); clearTimeout(codeT); runBook(); }
+});
+
+// ------------------------------------------------------------ rendering answers
+const kindWord = (k) => k.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
+function chip(id) { const n = nodes[id]; const many = Object.keys(state.files).length > 1; return n ? `<button type="button" class="node" data-file="${esc(n.file)}" data-line="${n.line}" title="${esc(kindWord(n.kind))} in ${esc(n.file)} on line ${n.line}">${esc(n.label || kindWord(n.kind))}<em>${many ? esc(n.file) + ':' : ''}${n.line}</em></button>` : `<code>${esc(id)}</code>`; }
+function rich(text) {
+  return esc(text.replace(/, in the \w+$/gm, '')).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
+}
+// an explanation, one step per section of the model it passed through; a step opens on its details, the whole proof is one click further
+function renderStep(st) {
+  const n = st.details.length + st.missing.length;
+  const [file, section] = st.concern ? st.concern.split(': ') : ['', ''];
+  const more = n || st.evidence ? `<button type="button" class="toggle" data-toggle aria-expanded="false" title="what else this step rests on">${n ? '+' + n : ''}${st.evidence ? `${n ? ' &middot; ' : ''}${st.evidence} from the code` : ''}</button>` : '';
+  const body = !st.again && (n || st.evidence) ? `<div class="step-more" hidden>${st.details.length ? `<ul>${st.details.map((d) => `<li>${rich(d)}</li>`).join('')}</ul>` : ''}${st.missing.length ? `<ul>${st.missing.map((d) => `<li><span class="not">not:</span> ${rich(d)}</li>`).join('')}</ul>` : ''}${st.evidence ? `<div>and ${st.evidence} ${st.evidence === 1 ? 'fact' : 'facts'} the scanner read from the code</div>` : ''}</div>` : '';
+  return `<div class="step"><div class="step-line">${file ? `<span class="concern" title="the section of the JS model that concluded this"><b>${esc(file)}</b> ${esc(section)}</span>` : ''}<span class="s">${rich(st.sentence)}${st.again ? ' <span class="more">(shown above)</span>' : ''}</span>${st.again ? '' : more}</div>${body}${!st.again && st.steps.length ? `<div class="step-kids">${st.steps.map(renderStep).join('')}</div>` : ''}</div>`;
+}
+const renderProof = (p, literal) => typeof p === 'string' ? `<div class="why-tree">${esc(p)}</div>` : `<div class="proof">${renderStep(p)}<button type="button" class="whole" data-whole="${esc(literal)}">the whole proof</button></div>`;
+const idsIn = (s) => [...s.matchAll(/\bn[0-9a-f]{8}_\d+\b/g)].map((m) => m[0]);
+
+// ------------------------------------------------------------ the notebook
+const cellsEl = $('cells');
+let results = new Map();      // cell id -> CellOut
+let edited = new Set();       // formal cells changed since the last run
+let busy = new Map();         // cell id -> { ctl, text }
+// a cell is as tall as its text: the browser does it where it can, and elsewhere the height is measured again whenever the text can reflow
+const sizesItself = typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content');
+function grow(t) { if (sizesItself) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+const growAll = () => { for (const t of document.querySelectorAll('#cells textarea')) grow(t); };
+if (!sizesItself) {
+  document.fonts?.ready.then(growAll);
+  document.fonts?.addEventListener?.('loadingdone', growAll);
+  let lastWidth = 0;
+  new ResizeObserver(([e]) => { const w = Math.round(e.contentRect.width); if (w !== lastWidth) { lastWidth = w; growAll(); } }).observe(document.getElementById('cells'));
+}
+function renderCells() {
+  cellsEl.innerHTML = state.cells.map((c, i) => {
+    const r = results.get(c.id), b = busy.get(c.id);
+    const run = b ? `<button type="button" data-stop="${c.id}">Stop</button>` : c.kind === 'natural' ? `<button type="button" data-run="${c.id}">Translate and run</button>` : runs(c) && !c.open ? `<button type="button" data-run="${c.id}">Run</button>` : '';
+    const st = c.open ? `needs ${c.open.length === 1 ? 'an answer' : c.open.length + ' answers'} before it runs` : c.reply && c.kind === 'natural' && !b ? 'Claude answered in words, not with a cell' : runs(c) ? (edited.has(c.id) ? 'edited, not run yet' : r ? summary(r) : '') : c.kind === 'natural' && sample === null ? 'Claude is not available in this view' : '';
+    return `<article class="cell ${c.kind}${c.open ? ' open' : ''}" data-id="${c.id}">
+      <div class="head">
+        <select data-kind="${c.id}" aria-label="Cell kind">${['natural', 'formal', 'rofl', 'prose'].map((k) => `<option value="${k}"${k === c.kind ? ' selected' : ''}>${k}</option>`).join('')}</select>
+        <span class="state">${esc(st)}</span><div class="spacer"></div>
+        ${c.was ? `<button type="button" data-revert="${c.id}">Revert</button>` : ''}${run}
+        <button type="button" class="x" data-del="${c.id}" aria-label="Delete cell">&#x2715;</button>
+      </div>
+      ${c.was ? `<div class="was">${esc(c.was)}</div>` : ''}${(c.answers || []).map((a) => `<div class="was then">${esc(a)}</div>`).join('')}
+      <textarea data-text="${c.id}" rows="1" spellcheck="${c.kind === 'natural' || c.kind === 'prose'}" aria-label="Cell ${i + 1}">${esc(c.text)}</textarea>
+      <div class="out">${b ? `<div class="thinking">${esc(b.text || 'Thinking\u2026')}</div>` : ''}${c.note && runs(c) ? `<div class="more">${esc(c.note)}</div>` : ''}${c.reply && !b ? `<div class="reply"><b>Claude:</b> ${esc(c.reply)}</div>` : ''}${c.open ? `<ol class="questions">${c.open.map((q) => `<li>${esc(q)}</li>`).join('')}</ol>` : ''}${r && runs(c) && !c.open && !edited.has(c.id) ? outputs(r) : ''}${c.error ? `<div class="err">${esc(c.error)}</div>` : ''}${(c.was && runs(c) || c.kind === 'natural' && (c.reply || c.open)) && !b ? refineBox(c) : ''}</div>
+    </article>`;
+  }).join('');
+  for (const t of cellsEl.querySelectorAll('textarea')) grow(t);
+}
+// a translated cell takes more plain language: an open one asks for it, a finished one offers it
+const drafts = new Map();
+const refineBox = (c) => c.open || c.reply || drafts.has(c.id)
+  ? `<div class="refine"><textarea data-refine="${c.id}" rows="1" placeholder="${c.open || c.reply ? 'Answer in plain language' : 'Say what to change, in plain language'}" aria-label="Answer for cell">${esc(drafts.get(c.id) ?? '')}</textarea><button type="button" data-refine-go="${c.id}">${c.open || c.reply ? 'Answer' : 'Refine'}</button></div>`
+  : `<button type="button" class="refine-open" data-refine-open="${c.id}">Refine in plain language</button>`;
+function summary(r) {
+  const nev = r.lines.filter((l) => l.kind === 'never');
+  if (r.errors.length) return 'has errors';
+  if (!nev.length) return '';
+  const bad = nev.filter((l) => !l.ok).length, blind = nev.filter((l) => l.ok && l.unsure && l.unsure.total).length;
+  if (!bad && blind) return blind === nev.length ? 'holds as far as it sees' : `${nev.length - blind} hold, ${blind} as far as it sees`;
+  return bad ? `${bad} of ${nev.length} invariants fail` : nev.length === 1 ? 'the invariant holds' : `all ${nev.length} invariants hold`;
+}
+function outputs(r) {
+  let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('') + (r.notes || []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
+  for (const l of r.lines) {
+    const blind = l.kind === 'never' && l.ok && l.unsure && l.unsure.total > 0;
+    const pill = l.kind === 'never' ? (l.ok && r.errors.length ? '<span class="pill warn">unproven &middot; part of the cell was left out</span>' : blind ? `<span class="pill warn">holds as far as it sees &middot; ${l.unsure.total} out of sight</span>` : l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
+    h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
+    if (l.note) h += `<div class="note">${esc(l.note)}</div>`;
+    if (l.proof) h += renderProof(l.proof, l.lit); else if (l.why) h += `<div class="why-tree">${rich(l.why)}</div>`;
+    if (l.rows.length) h += `<ul class="rows">${l.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
+    if (l.total > l.rows.length) h += `<div class="more">and ${l.total - l.rows.length} more</div>`;
+    if (blind) h += `<div class="unsure-head" title="${esc(l.unsure.text)}">what it could not see:</div><ul class="rows">${l.unsure.rows.map((row) => `<li><span class="s">${rich(row.sentence)}</span><button type="button" class="why" data-why="${esc(row.literal)}">why</button></li>`).join('')}</ul>`;
+    h += '</div>';
+  }
+  if (r.rofl && r.rofl.trim()) h += `<details class="as"><summary>as ROFL</summary><pre>${esc(r.rofl.trim())}</pre></details>`;
+  return h;
+}
+// a sentence as plain text, each node by its label: `User.emal asks for a missing field`
+const plain = (s) => s.replace(/, in the \w+$/gm, '').replace(/`?\b(n[0-9a-f]{8}_\d+)\b`?/g, (all, id) => nodes[id]?.label ?? id).replace(/`/g, '');
+function markBad() {
+  marked = { bad: new Map(), warn: new Map(), notes: new Map() };
+  const put = (kind, id, row, cell) => {
+    const n = nodes[id]; if (!n) return;
+    (marked[kind].get(n.file) ?? marked[kind].set(n.file, new Set()).get(n.file)).add(n.line);
+    const k = `${n.file}:${n.line}`, note = marked.notes.get(k) ?? marked.notes.set(k, { bad: new Set(), warn: new Set(), cell }).get(k);
+    note[kind].add(kind === 'warn' ? `out of sight: ${plain(row.sentence)}` : plain(row.sentence));
+  };
+  for (const [cell, r] of results) for (const l of r.lines) if (l.kind === 'never') {
+    if (!l.ok) for (const row of l.rows) for (const id of idsIn(row.literal)) put('bad', id, row, cell);
+    else if (l.unsure) for (const row of l.unsure.rows) for (const id of idsIn(row.literal)) put('warn', id, row, cell);
+  }
+  renderFiles(); paintEditor();
+}
+
+// ------------------------------------------------------------ running
+let running = false, again = false, lastMs = 0;
+const setStatus = (html) => { $('status').innerHTML = html; };
+const formal = () => state.cells.filter((c) => runs(c) && !c.open).map((c) => ({ id: c.id, text: c.text, form: c.kind === 'rofl' ? 'rofl' : 'md' }));
+let learned = [];   // the sentences the formal cells define, from the last run
+async function runBook() {
+  if (!host) return;
+  if (running) { again = true; return; }
+  running = true; again = false;
+  $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
+  try {
+    const out = await host.call('run', state.files, formal());
+    nodes = out.nodes; results = new Map(out.cells.map((c) => [c.id, c])); edited.clear(); learned = out.learned || [];
+    const foot = $('foot');
+    const broken = Object.entries(out.parseErrors || {});
+    if (broken.length) { foot.className = 'foot bad'; foot.textContent = broken.map(([f, m]) => `Babel could not parse ${f}: ${m}`).join(' '); }
+    else if (out.error) { foot.className = 'foot bad'; foot.textContent = `The book did not run: ${out.error}`; }
+    else { foot.className = 'foot'; foot.textContent = `${out.facts} facts from the scanner. The book runs a second after you stop typing.`; }
+    lastMs = out.ms; $('runinfo').textContent = `ran in ${(out.ms / 1000).toFixed(1)} s`; $('runinfo').title = Object.entries(out.phases || {}).map(([k, v]) => `${k} ${v} ms`).join(', ');
+    markBad(); renderCells();
+  } catch (e) {
+    $('runinfo').textContent = ''; $('foot').className = 'foot bad'; $('foot').textContent = `The run failed: ${e.message}`;
+  } finally { running = false; if (again) runBook(); }
+}
+
+// ------------------------------------------------------------ translation
+let sample;   // undefined: not asked yet; null: not available
+let vocabText = '', functionsText = '';
+const RULES = (vocab, functions, codeText, defined, ask) => `You turn one plain-language request about a JavaScript file into a notebook cell written in ROFL's Markdown sentence form. The request is either a CHECK, something any code must obey, or a QUESTION about this file: where a value flows, what calls what, what stands at a line. The notebook reads every cell into Datalog rules and runs them over facts a scanner took from the file and over a model of JavaScript.
+
+The sentence form in one screen:
+- A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless": "<head> if <condition>, unless <condition>." or "<head> unless <condition>."
+- A long rule: "<head> if all of:" and then a list, one condition per item, each item ending in ";" and the last in ".".
+- Alternatives: "<head> either:" and then a numbered list, each item "if <condition>, <condition>;".
+- Variables are capitalised words: C, F, Callee. "a call C" introduces C and says what it is; "something" or "some await" is anything, unnamed. An atom is in backticks, \`true\`, \`class_method\`; a string is in double quotes.
+- A condition is a sentence from the list below with your own terms in its holes, or a sentence a rule in the notebook defines, or one of the built-in conditions.
+- Built in: a comparison of two numbers, "L > 6", "L >= N", "A < B"; equality and difference, "X is Y", "X differs from Y"; arithmetic, "N is A + B" (also -, *, /, mod); and these functions, each written "R is <phrase>" or compared directly by its name, "str_len(Name) > 6":
+${functions}- A question about this file is written with "?" and "why" lines, and it may name this file's own things: a line ("N is at line 31"), a name ("N is named \"User\""), a literal.
+- A check says what must hold of any code, not of this file. Never list the names, lines or values this file happens to contain to make a check pass; if the check needs something neither the sentences nor the built-ins can say, write the line that would need it as a "??" line (below) naming what is missing, and say so in "questions".
+- A VAGUE CHECK IS ASKED ABOUT, NOT GUESSED. When the check names a quality or a goal without saying what it consists of (ideal, clean, safe, good, well written, correct), do not choose a meaning. Write the rule the person asked for over the conditions still to be named, each on its own line starting with "??", and put in "questions" what the person must answer: short, in the language of the check, each with an example or two of what the sentences and built-ins can check. For "the code is ideal":
+A file F is ideal if all of:
+  - ?? the first condition;
+  - ?? the second condition.
+with the question "What makes the code ideal? List the conditions, for example: no async function is called without await; no function name is longer than N characters." A cell with questions does not run; the person answers in plain language and you are asked again with the answer. Ask only what the check cannot be written without; when the words fix the meaning, leave "questions" empty. When an answer settles part of it, write that part and keep a "??" line and a question for the rest.
+- WHERE A VALUE GOES. The model says what an expression may evaluate to; it keeps no def-use edges. "E points to N": E may be the object, array, function or class written at node N. A string, number or boolean is never pointed to: "E may be the literal V" says E may be that literal. "M selects Key": M is a member access reading Key; "the member Key of O holds V": an object literal or a class O has V at Key. So where the value of M goes takes both routes, as two alternatives: "M points to V and X points to V", and "M may be the literal L and X may be the literal L". A member access M (a.b) needs no walk through the object's members: the model already says what M reads, "M points to V" or "M may be the literal L". Its parts are "the \`object\` of M is X" and "M selects Key", and a name belongs to the identifier X, never to the object literal it stands for: "the \`object\` of M is X and X is named "User"". "The accessor of ..." and "reads through the accessor" are about getters and setters, not a.b. "From is copied by a declaration into To" relates two names through \`const To = From\` only and is empty for most code. A question about where values come from answers for every read, so none is silently missing: add the alternatives "\`undefined\` gives its value to M if ... X points to O, unless the member Key of O holds some node, unless the instance member Key of O is some node" and "\`unknown\` gives its value to M if ... the \`object\` of M is X, unless X points to some node".
+- Only variables are capitalised. Write the other words of a sentence in lower case, and a name from the code in double quotes, as in: O is named "User" (never: carries User).
+- A rule whose head no sentence reads yet defines a new relation, and its words become its sentence: "A call C is unawaited if ..." makes "C is unawaited" a sentence. Keep a new head short, and in words no sentence of the model already starts with: "M reads an undefined field" is read as the model's "M reads N" with the rest as a variable, and the cell is refused; "M asks for a missing field" is new.
+- Asking lines, each on its own line, with no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "why <sentence>" explains one answer.
+
+An example cell:
+A call C is unawaited if C resolves to a function F and the attribute \`async\` of F is \`true\`, unless some await awaits C.
+
+never C is unawaited
+
+The sentences the scanner's facts and the JS model are read in; a noun before a variable says what it stands for:
+${vocab}
+The files:
+${codeText}
+${defined.length ? `Sentences the other cells already define, which you may use: ${defined.join('; ')}.\n` : ''}
+The check to write: ${ask}
+
+${toolsOk ? 'Run your cell with the try_cell tool before you answer, and fix it until nothing is left unread and its answers make sense for this file. A sentence with no answers anywhere in this file does not apply to it: try another rather than narrowing that one. Try at most four times; then answer with the best cell you have, or with an empty cell and a "reply" saying what you found. ' : ''}Prefer "never" for a rule the code must obey and "?" for a question.
+When you cannot write a cell at all, because the sentences cannot say it or the request is neither a check nor a question about the code, leave "cell" empty and say in "reply", briefly and in the language of the request, what stands in the way and a nearby cell you could write instead; put what the person must decide in "questions".
+Always answer with the JSON object, never with words alone: {"cell": "<the cell, lines separated by \\n>", "note": "<one short sentence, in the language of the request, saying what the cell checks or asks>", "questions": ["<what the person must still answer>"], "reply": "<only when there is no cell>"}`;
+const filesText = () => Object.entries(state.files).map(([f, t]) => `### ${f}\n\`\`\`js\n${t}\n\`\`\``).join('\n');
+const REFINE = (current, answer) => `The cell as it stands:
+${current}
+
+The person says: ${answer}
+
+Write the cell again with this taken in, under the same rules, and reply with the same JSON. Keep in "questions" only what is still open.`;
+const ANSWER = (answer) => `The person answers: ${answer}
+
+Write the cell now if you can, under the same rules, and reply with the same JSON.`;
+// the JSON inside a reply that also held words: the first balanced object with a "cell" or a "reply"
+function salvage(text) {
+  for (let s = text.indexOf('{'); s >= 0; s = text.indexOf('{', s + 1)) {
+    let depth = 0, str = false, escaped = false;
+    for (let i = s; i < text.length; i++) {
+      const ch = text[i];
+      if (str) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === '"') str = false; continue; }
+      if (ch === '"') str = true; else if (ch === '{') depth++; else if (ch === '}' && --depth === 0) {
+        try { const v = JSON.parse(text.slice(s, i + 1)); if (v && typeof v === 'object' && ('cell' in v || 'reply' in v)) return v; } catch (e) {}
+        break;
+      }
+    }
+  }
+  return null;
+}
+let toolsOk = false;
+const definedSentences = () => learned.map((l) => l.replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1'));
+async function translate(c, answer = null) {
+  if (!sample) { c.error = 'Translation needs Claude, and this view does not offer it. Switch the cell to formal and write ROFL.'; renderCells(); return; }
+  const ctl = new AbortController();
+  busy.set(c.id, { ctl, text: '' }); c.error = null; c.reply = null; renderCells();
+  const tries = [];
+  const tools = toolsOk ? [{
+    name: 'try_cell',
+    description: 'Reads a candidate cell in the sentence form and runs it over the file with the other cells. Returns what was not read, other errors, and for each asking line the number of answers and the first few as sentences.',
+    inputSchema: { type: 'object', properties: { cell: { type: 'string', description: 'the cell text' } }, required: ['cell'] },
+    async execute(input) {
+      const b = busy.get(c.id); if (b) { b.text = `Trying a translation (${tries.length + 1})\u2026`; renderCells(); }
+      const cells = [...formal(), { id: 'try', text: String(input.cell ?? ''), form: 'md' }];
+      const out = await host.call('run', state.files, cells);
+      const r = out.cells.find((x) => x.id === 'try');
+      tries.push(1);
+      if (out.error) throw new Error(out.error);
+      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].label} in ${out.nodes[id].file} at line ${out.nodes[id].line}]` : id)) })) };
+    },
+  }] : undefined;
+  try {
+    // the conversation so far: the rules with the original words, then each cell written and each answer given
+    // a cell still in plain language is its own request; a translated one keeps the words it came from in `was`
+    const natural = c.kind === 'natural';
+    const first = { role: 'user', content: RULES(vocabText, functionsText, filesText(), definedSentences(), natural ? c.text : c.was) };
+    const asked = answer === null ? [] : [...(c.thread || []), { role: 'user', content: natural ? ANSWER(answer) : REFINE(c.text, answer) }];
+    // Claude's words are never dropped: an answer that is not the JSON asked for is read for the JSON inside it, and failing that shown as it is
+    let ans;
+    try { ans = await sample.json([first, ...asked], { signal: ctl.signal, tools, onText: ({ text }) => { const b = busy.get(c.id); if (b) { b.text = text.slice(-600); renderCells(); } } }); }
+    catch (e) { if (e && e.code === 'invalid_json' && e.text && e.text.trim()) ans = salvage(e.text) ?? { cell: '', reply: e.text.trim() }; else throw e; }
+    if (!ans || typeof ans !== 'object') throw { code: 'invalid_json' };
+    const questions = Array.isArray(ans.questions) ? ans.questions.filter((q) => typeof q === 'string' && q.trim()) : [];
+    const said = typeof ans.reply === 'string' ? ans.reply.trim() : '';
+    if (answer !== null) { c.answers = [...(c.answers || []), answer]; drafts.delete(c.id); }
+    if (typeof ans.cell !== 'string' || !ans.cell.trim()) {
+      if (!said && !questions.length) throw { code: 'invalid_json' };
+      // no cell: the cell stays in plain language, with what Claude said and a box to answer it
+      c.reply = said || null; c.open = questions.length ? questions : null;
+      c.thread = [...asked, { role: 'assistant', content: JSON.stringify(ans) }];
+      busy.delete(c.id); save(); renderCells(); return;
+    }
+    if (natural) c.was = c.text;
+    c.thread = [...asked, { role: 'assistant', content: JSON.stringify(ans) }];
+    c.text = ans.cell.trim(); c.kind = 'formal'; c.note = typeof ans.note === 'string' ? ans.note : null; c.open = questions.length ? questions : null;
+    busy.delete(c.id); results.delete(c.id); save(); renderCells(); runBook();
+  } catch (e) {
+    busy.delete(c.id);
+    const code = e && e.code;
+    if (code === 'not_granted' || code === 'sampling_disabled' || code === 'capability_disabled' || code === 'not_declared') { sample = null; c.error = 'Claude is not allowed for this page, so a natural cell cannot be translated here. Write it as a formal cell instead.'; }
+    else if (code === 'cancelled') c.error = null;
+    else if (code === 'rate_limited') c.error = 'Too many requests to Claude just now. Try again in a minute.';
+    else if (code === 'invalid_json') c.error = 'Claude sent back nothing that could be read. Run it again; if it repeats, say what you want to check or to see in one sentence.';
+    else c.error = `The translation did not finish (${code || 'error'}). Run it again.`;
+    renderCells();
+  }
+}
+
+function refine(id) {
+  const c = state.cells.find((x) => x.id === id); const text = (drafts.get(id) ?? '').trim();
+  if (!c || !text || busy.has(id)) return;
+  translate(c, text);
+}
+
+// ------------------------------------------------------------ events
+cellsEl.addEventListener('input', (e) => {
+  if (e.target.dataset.refine) { drafts.set(e.target.dataset.refine, e.target.value); grow(e.target); return; }
+  const id = e.target.dataset.text; if (!id) return;
+  const c = state.cells.find((x) => x.id === id); c.text = e.target.value; grow(e.target);
+  if (runs(c)) { if (c.was) { const wasOpen = !!c.open; c.was = null; c.note = null; c.open = null; c.thread = null; c.answers = []; drafts.delete(id); if (wasOpen) { save(); renderCells(); const t = cellsEl.querySelector(`[data-text="${id}"]`); t.focus(); t.setSelectionRange(t.value.length, t.value.length); return; } for (const x of e.target.closest('.cell').querySelectorAll('.was, [data-revert], .refine, .refine-open')) x.remove(); } edited.add(id); const st = e.target.closest('.cell').querySelector('.state'); st.textContent = 'edited, not run yet'; const o = e.target.closest('.cell').querySelector('.out'); if (o) o.innerHTML = ''; }
+  save();
+});
+cellsEl.addEventListener('keydown', (e) => {
+  if (e.target.dataset.refine && e.key === 'Enter' && e.shiftKey) { e.preventDefault(); refine(e.target.dataset.refine); return; }
+  const id = e.target.dataset.text; if (!id || e.key !== 'Enter' || !e.shiftKey) return;
+  e.preventDefault(); const c = state.cells.find((x) => x.id === id);
+  if (c.kind === 'natural') translate(c); else if (runs(c)) runBook();
+});
+cellsEl.addEventListener('change', (e) => {
+  const id = e.target.dataset.kind; if (!id) return;
+  const c = state.cells.find((x) => x.id === id); c.kind = e.target.value; c.error = null; if (!runs(c)) results.delete(id); else edited.add(id);
+  save(); renderCells();
+});
+cellsEl.addEventListener('click', async (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  const find = (id) => state.cells.find((x) => x.id === id);
+  if (t.dataset.line) { showLine(t.dataset.file, Number(t.dataset.line)); return; }
+  if (t.dataset.run) { const c = find(t.dataset.run); if (c.kind === 'natural') translate(c); else runBook(); return; }
+  if (t.dataset.stop) { busy.get(t.dataset.stop)?.ctl.abort(); return; }
+  if (t.dataset.refineOpen) { drafts.set(t.dataset.refineOpen, ''); renderCells(); cellsEl.querySelector(`[data-refine="${t.dataset.refineOpen}"]`)?.focus(); return; }
+  if (t.dataset.refineGo) { refine(t.dataset.refineGo); return; }
+  if (t.dataset.revert) { const c = find(t.dataset.revert); c.text = c.was; c.was = null; c.note = null; c.open = null; c.thread = null; c.answers = []; drafts.delete(c.id); c.kind = 'natural'; results.delete(c.id); save(); renderCells(); runBook(); return; }
+  if (t.dataset.del) { state.cells = state.cells.filter((x) => x.id !== t.dataset.del); results.delete(t.dataset.del); save(); renderCells(); runBook(); return; }
+  if (t.dataset.toggle !== undefined) { const more = t.closest('.step').querySelector(':scope > .step-more'); if (more) { more.hidden = !more.hidden; t.setAttribute('aria-expanded', String(!more.hidden)); } return; }
+  if (t.dataset.whole !== undefined) {
+    const pre = document.createElement('div'); pre.className = 'why-tree'; pre.textContent = 'Asking why\u2026'; t.replaceWith(pre);
+    try { pre.innerHTML = rich(await host.call('why', t.dataset.whole)); } catch (err) { pre.textContent = err.message; }
+    return;
+  }
+  if (t.dataset.why !== undefined) {
+    const li = t.closest('li'); const open = li.nextElementSibling;
+    if (open && open.classList.contains('proof')) { open.remove(); return; }
+    const box = document.createElement('div'); box.className = 'proof'; box.textContent = 'Asking why\u2026'; li.after(box);
+    try { box.outerHTML = renderProof(await host.call('explain', t.dataset.why), t.dataset.why); } catch (err) { box.textContent = err.message; }
+  }
+});
+document.querySelector('.adds').addEventListener('click', (e) => {
+  const k = e.target.dataset && e.target.dataset.add; if (!k) return;
+  const c = cell({ kind: k, text: '' }); state.cells.push(c); save(); renderCells();
+  const t = cellsEl.querySelector(`[data-text="${c.id}"]`); t.focus(); t.scrollIntoView({ block: 'center' });
+});
+$('example').addEventListener('change', (e) => {
+  state = fresh(e.target.value); code.value = state.files[state.active]; results = new Map(); edited.clear(); focus = null; marked = { bad: new Map(), warn: new Map(), notes: new Map() }; save(); renderFiles(); paintEditor(); renderCells(); runBook();
+});
+$('runall').addEventListener('click', () => runBook());
+
+// ------------------------------------------------------------ start
+code.value = state.files[state.active]; $('example').value = state.example ?? 'await'; renderFiles(); paintEditor(); renderCells();
+(async () => {
+  try {
+    sample = window.claude && window.claude.use ? await window.claude.use('sample') : null;
+    if (sample) { const lim = await sample.limits().catch(() => null); toolsOk = !!(lim && lim.tools); }
+  } catch (e) { sample = null; }
+  renderCells();
+})();
+(async () => {
+  try {
+    const t0 = performance.now();
+    const [init, vocab, fns] = await Promise.all([startHost(), ...['vocab.txt', 'functions.txt'].map((f) => fetch(f).then((r) => r.ok ? r.text() : ''))]);
+    vocabText = vocab; functionsText = fns;
+    if (!init.ok) throw new Error(init.diagnostics.join('; '));
+    setStatus(`<span>JS model loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`);
+    $('runall').disabled = false;
+    await runBook();
+  } catch (e) { setStatus(`<span style="color:var(--fail)">The JS model did not load: ${esc(e.message)}</span>`); }
+})();
+</script>

@@ -1,0 +1,26 @@
+-- vocabulary.rofl — THE VOCABULARY, COMPILED BY RING 1. A `phrase` fact is a
+-- template (`<0:rule> has the letter <1:node>`: every hole indexed, a hole
+-- noun with no space in it), and this file splits it into the tokens
+-- sentence.rofl matches: a word, a hole that takes a term, a hole with a
+-- suffix glued to it, a fixed hole that takes no word and supplies an argument.
+--
+-- Run ONCE per vocabulary and kept as facts, the way examples/ring1/demo.ts
+-- keeps the compiled parser as an image. Measured 2026-09-24 with the JS
+-- vocabulary (870 templates): every evaluation that re-derives the chart
+-- re-derives what the chart reads, so a sentence cost 840 ms with these
+-- rules in its world and 30 ms with their answers as facts.
+
+edb(phrase).
+
+-- A template is its phrase text (one relation can carry several, one per
+-- arity; `phrase(R, T)` says whose it is), split on the space.
+ntok(T, N)   :- phrase(_, T), N is str_segs(T, " ").
+ti(T, 0)     :- ntok(T, N), 0 < N.
+ti(T, I2)    :- ti(T, I), ntok(T, N), I2 is I + 1, I2 < N.
+tok(T, I, X) :- ti(T, I), X is str_seg(T, " ", I).
+inner(T, I, In) :- tok(T, I, X), C is str_char(X, 0), C = "<", L is str_len(X), L1 is L - 1, In is str_pre(str_sub(X, 1, L1), ">").
+-- `<2:index>-th`: a hole with a suffix glued to its word; the sentence writes `I-th`
+suffix(T, I, S) :- tok(T, I, X), C is str_char(X, 0), C = "<", N is str_segs(X, ">"), N = 2, S is str_seg(X, ">", 1), S != "".
+slot(T, I, Idx, Noun) :- inner(T, I, In), N is str_segs(In, ":"), N = 2, Idx is str_seg(In, ":", 0), Noun is str_seg(In, ":", 1).
+fix(T, I, Idx, Val)   :- inner(T, I, In), N is str_segs(In, "="), N = 2, Idx is str_seg(In, "=", 0), Val is str_seg(In, "=", 1).
+text(T, I, X) :- tok(T, I, X), C is str_char(X, 0), C != "<".

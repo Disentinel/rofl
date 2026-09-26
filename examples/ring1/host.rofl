@@ -1,0 +1,151 @@
+-- host.rofl — WHAT THE HOST OF RING 1 MUST DO, as rules that check it.
+--
+-- demo.ts cuts a file into clauses, hands each one in as `src`, refuses a
+-- parse that did not cover its input, and PROMOTES the six leaves the grammar
+-- cannot finish: `wild`, `int`, `negint`, `str`, `comp`, `op`. Promoting
+-- builds a term (a number from digits, a string from an escaped one, a functor
+-- from a name), and building is exactly what the finiteness proof forbids a
+-- rule. CHECKING what was built is not: a rule can read the digits back, walk
+-- the escapes, and compare character by character. So the host constructs and
+-- these rules verify, in the grammar's own world, reading its `parsed`, `wild`,
+-- `uncovered`, `stray` and `hole` directly.
+--
+-- THE HOST'S ANSWER arrives as facts, written by examples/ring1/conform.ts:
+--
+--   host_clause(H, B)       a clause the host built from this part, in a
+--                           first-order shape: `hlit(Rel, Book, Args, Tense,
+--                           Explicit)`, `hnot(L)`, `hbi(Op, Args)`,
+--                           `hfun(Name, Args)`, `hvar(Name)`, and numbers,
+--                           strings and atoms as themselves
+--   host_refused(yes)       the host refused the part
+--   host_unsupported(yes)   the host dropped a clause it could not read
+--   part_seen(yes)          this world held a part the host was given
+--   dropped_tail(yes)       this part is the tail the host dropped as no clause
+--
+-- WHAT IS TRUSTED, not checked: that conform.ts writes the host's clause
+-- faithfully (it is ten lines of shape-for-shape encoding), and that the parts
+-- concatenate back to the file.
+
+edb(host_clause).
+edb(host_refused).
+edb(host_unsupported).
+edb(part_seen).
+edb(dropped_tail).
+
+-- ------------------------------------------------------- the two trees, paired
+-- The grammar's tree and the host's, walked in step from the root. A pair the
+-- rules below cannot explain is a place where the host did something else.
+pairs(GH, HH) :- parsed(I, D, GH, GB), host_clause(HH, HB).
+pairs(GB, HB) :- parsed(I, D, GH, GB), host_clause(HH, HB).
+
+nonconformant(G, H) :- pairs(G, H), not fits(G, H).
+
+-- the same thing on both sides: an atom, `$nil`, a name
+fits(G, G) :- pairs(G, G).
+
+pairs(X, Y)   :- pairs($cons(X, Xs), $cons(Y, Ys)).
+pairs(Xs, Ys) :- pairs($cons(X, Xs), $cons(Y, Ys)).
+fits($cons(X, Xs), $cons(Y, Ys)) :- pairs($cons(X, Xs), $cons(Y, Ys)).
+
+-- A LITERAL. No book written means `main`, and the host must remember that
+-- none was written; a book written is carried as it is.
+tense_of($now, now).
+tense_of($next, next).
+tense_of($init, init).
+pairs(A, A2) :- pairs($lit(R, B, A, T), hlit(R, P, A2, T2, E)).
+pairs(B, P)  :- pairs($lit(R, B, A, T), hlit(R, P, A2, T2, yes)).
+fits($lit(R, $bare, A, T), hlit(R, main, A2, T2, no)) :-
+  pairs($lit(R, $bare, A, T), hlit(R, main, A2, T2, no)), tense_of(T, T2).
+fits($lit(R, B, A, T), hlit(R, P, A2, T2, yes)) :-
+  pairs($lit(R, B, A, T), hlit(R, P, A2, T2, yes)), B != $bare, tense_of(T, T2).
+
+pairs(L, L2) :- pairs($not(L), hnot(L2)).
+fits($not(L), hnot(L2)) :- pairs($not(L), hnot(L2)).
+pairs(A, A2) :- pairs($builtin(Op, A), hbi(Op, A2)).
+fits($builtin(Op, A), hbi(Op, A2)) :- pairs($builtin(Op, A), hbi(Op, A2)).
+fits($var(S), hvar(S)) :- pairs($var(S), hvar(S)).
+
+-- ------------------------------------------------------------- the six leaves
+-- A COMPOUND: a functor named by the atom the grammar read.
+pairs(A, A2) :- pairs(comp(N, A), hfun(F, A2)).
+fits(comp(N, A), hfun(F, A2)) :- pairs(comp(N, A), hfun(F, A2)), N is atom_of(F).
+
+-- AN OPERATION: a functor named by the operator's own text, on two operands.
+pairs(L, L2) :- pairs(op(O, L, R), hfun(O, $cons(L2, $cons(R2, $nil)))).
+pairs(R, R2) :- pairs(op(O, L, R), hfun(O, $cons(L2, $cons(R2, $nil)))).
+fits(op(O, L, R), hfun(O, $cons(L2, $cons(R2, $nil)))) :-
+  pairs(op(O, L, R), hfun(O, $cons(L2, $cons(R2, $nil)))).
+
+-- A NUMBER, read back from its digits: the value of the text from a position
+-- on, left to right. Arithmetic over characters needs no constructor.
+digit_of("0", 0). digit_of("1", 1). digit_of("2", 2). digit_of("3", 3). digit_of("4", 4).
+digit_of("5", 5). digit_of("6", 6). digit_of("7", 7). digit_of("8", 8). digit_of("9", 9).
+digits_wanted(S, 0) :- pairs(int(S), N).
+digits_wanted(S, 0) :- pairs(negint(S), N).
+digits_wanted(S, 2) :- pairs(wild(I), hvar(S)), L is str_len(S), L > 2.
+digits_upto(S, F, F, 0) :- digits_wanted(S, F).
+digits_upto(S, F, I2, V2) :- digits_upto(S, F, I, V), L is str_len(S), I < L,
+                             C is str_char(S, I), digit_of(C, D),
+                             V2 is V * 10 + D, I2 is I + 1.
+digits_value(S, F, V) :- digits_upto(S, F, I, V), L is str_len(S), I = L, I > F.
+
+fits(int(S), N) :- pairs(int(S), N), digits_value(S, 0, N).
+fits(negint(S), N) :- pairs(negint(S), N), digits_value(S, 0, V), N is 0 - V.
+
+-- A WILDCARD: a fresh variable named `_$` and the rank the grammar gave it.
+fits(wild(I), hvar(S)) :- pairs(wild(I), hvar(S)), wild(I, N),
+                          L is str_len(S), L > 2, C0 is str_char(S, 0), C0 = "_", C1 is str_char(S, 1), C1 = "$",
+                          digits_value(S, 2, N).
+
+-- A STRING, compared character by character with its literal, escapes undone.
+-- The walk goes over the literal between its quotes; K counts the characters
+-- the string must have.
+unescape("n", "\n"). unescape("t", "\t"). unescape("r", "\r").
+unescape("\\", "\\"). unescape("\"", "\"").
+raw_str(Raw) :- term(I, J, str(Raw)).
+walk(Raw, 1, 0) :- raw_str(Raw).
+walk(Raw, I2, K2) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I < E,
+                     C is str_char(Raw, I), C != "\\", I2 is I + 1, K2 is K + 1.
+walk(Raw, I2, K2) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I < E,
+                     C is str_char(Raw, I), C = "\\", I2 is I + 2, K2 is K + 1.
+means(Raw, K, C) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I < E,
+                    C is str_char(Raw, I), C != "\\".
+means(Raw, K, C) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I < E,
+                    B is str_char(Raw, I), B = "\\", J is I + 1, X is str_char(Raw, J),
+                    unescape(X, C).
+walk_len(Raw, K) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I = E.
+str_differs(Raw, S) :- pairs(str(Raw), S), walk_len(Raw, N), M is str_len(S), N != M.
+str_differs(Raw, S) :- pairs(str(Raw), S), means(Raw, K, C), M is str_len(S), K < M,
+                       C2 is str_char(S, K), C != C2.
+fits(str(Raw), S) :- pairs(str(Raw), S), walk_len(Raw, N), not str_differs(Raw, S).
+
+-- An escape the host has no meaning for: the clause must be dropped and said.
+unknown_escape(Raw) :- walk(Raw, I, K), L is str_len(Raw), E is L - 1, I < E,
+                       B is str_char(Raw, I), B = "\\", J is I + 1, X is str_char(Raw, J),
+                       not known_escape(X).
+known_escape(X) :- unescape(X, C).
+nonconformant(escape, unreported) :- unknown_escape(Raw), not host_unsupported(yes).
+nonconformant(escape, spurious) :- host_unsupported(yes), not some_unknown_escape(yes).
+some_unknown_escape(yes) :- unknown_escape(Raw).
+
+-- ------------------------------------------------------------------ refusals
+-- A PARSE THAT DID NOT COVER ITS INPUT IS NOT A PARSE, and the host must say
+-- so rather than return what it found. The sealed reflection is a refusal the
+-- grammar declared, not a failure, so it is the one hole that does not count.
+must_refuse(uncovered) :- uncovered(K).
+must_refuse(stray) :- stray(K).
+must_refuse(hole) :- hole(Id, R), R != reflection_sealed.
+some_refusal_due(yes) :- must_refuse(Why).
+nonconformant(refusal, missing) :- must_refuse(Why), not host_refused(yes).
+nonconformant(refusal, spurious) :- host_refused(yes), not some_refusal_due(yes).
+
+-- ---------------------------------------------------------- one part, one clause
+-- The host cuts a file at the periods that end a clause, so every part is one
+-- clause: never two, and never none unless it was refused or dropped.
+nonconformant(split, two_clauses) :- parsed(I, D, H, B), parsed(I2, D2, H2, B2), I < I2.
+some_host_clause(yes) :- host_clause(H, B).
+nonconformant(split, no_clause) :- part_seen(yes), not some_host_clause(yes),
+                                   not host_refused(yes), not host_unsupported(yes),
+                                   not dropped_tail(yes).
+-- and what it dropped after the last period held no token
+nonconformant(split, dropped_a_token) :- dropped_tail(yes), tok(I, J).

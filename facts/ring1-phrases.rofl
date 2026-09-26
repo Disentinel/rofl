@@ -1,0 +1,124 @@
+-- ring1-phrases.rofl — the sentence of every relation of ring 1, the ROFL front
+-- end written in ROFL (examples/ring1/ring1.rofl, charclass.rofl). A position
+-- is an index into the source, and a token is a pair of positions, never text.
+-- Read by `rofl-render`, which renders the grammar as docs/rings; loaded by
+-- nothing else. The format is facts/js-phrases.rofl's.
+edb(phrase).
+-- the input
+phrase(src, "the source is <0:text>").
+phrase(cls, "<0:character> is a <1:class>").
+-- characters
+phrase(len, "the source is <0:number> characters long").
+phrase(at, "<0:position> is in the source").
+phrase(ch, "<1:character> stands at <0:position>").
+phrase(kind, "the character at <0:position> is a <1:class>").
+-- the scanner, one left-to-right walk carrying a state
+phrase(st, "the scanner is in <1:state> before <0:position>").
+phrase(step, "reading <0:position> in <1:state> leaves the scanner in <2:state>").
+phrase(opens_str, "<0:position> opens a string").
+phrase(opens_cmt, "<0:position> opens a comment").
+phrase(code_at, "<0:position> is code").
+phrase(str_open, "<0:position> starts a string literal").
+phrase(str_close, "<0:position> ends a string literal").
+phrase(close_between, "a string literal ends between <0:position> and <1:position>").
+phrase(strtok, "a string token runs from <0:position> to <1:position>").
+-- words and punctuation
+phrase(wordch, "<0:position> is a word character").
+phrase(prevword, "<0:position> follows a word character").
+phrase(word_start, "<0:position> starts a word").
+phrase(dollar_before, "<0:position> follows a dollar sign").
+phrase(wext, "a word starting at <0:position> reaches <1:position>").
+phrase(word, "a word runs from <0:position> to <1:position>").
+phrase(punct, "the punctuation at <0:position> is a <1:mark>").
+phrase(neck, "the neck runs from <0:position> to <1:position>").
+phrase(tok, "a token runs from <0:position> to <1:position>").
+phrase(tokstart, "<0:position> starts a token").
+phrase(scan, "the scan after the token ending at <0:position> has reached <1:position>").
+phrase(nexttok, "the token after <0:position> starts at <1:position>").
+phrase(first_tok, "the first token starts at <0:position>").
+phrase(preceded, "<0:position> follows a token").
+phrase(identtok, "a name runs from <0:position> to <1:position>").
+phrase(vartok, "a variable runs from <0:position> to <1:position>").
+phrase(inttok, "a numeral runs from <0:position> to <1:position>").
+phrase(p, "there is a <1:mark> at <0:position>").
+-- keywords, spelled character by character
+phrase(kw_not, "<0:position> spells the keyword for negation").
+phrase(kw_is, "<0:position> spells the keyword for evaluation").
+phrase(kw_mod, "<0:position> spells the keyword for the remainder").
+phrase(kw_init, "<0:position> spells the keyword for the first tick").
+phrase(kw_now, "<0:position> spells the keyword for this tick").
+phrase(kw_next, "<0:position> spells the keyword for the next tick").
+phrase(keyword, "<0:position> starts a keyword").
+-- operators
+phrase(op2, "the two-character operator <2:operator> runs from <0:position> to <1:position>").
+phrase(consumed, "<0:position> ends a two-character operator").
+phrase(starts_op2, "<0:position> starts a two-character operator").
+phrase(optok, "the comparison <2:operator> runs from <0:position> to <1:position>").
+phrase(arithtok, "the arithmetic operator <2:operator> runs from <0:position> to <1:position>").
+phrase(addop, "the additive operator <2:operator> runs from <0:position> to <1:position>").
+phrase(mulop, "the multiplicative operator <2:operator> runs from <0:position> to <1:position>").
+phrase(plusminus, "<0:operator> adds").
+phrase(timesdiv, "<0:operator> multiplies").
+-- what a token says, and the terms
+phrase(tok_text, "the text from <0:position> to <1:position> is <2:text>").
+phrase(tok_name, "the name from <0:position> to <1:position> is <2:atom>").
+phrase(term, "the term from <0:position> to <1:position> is <2:term>").
+phrase(args, "the arguments from <0:position> to <1:position> are <2:list>").
+phrase(prim, "the operand from <0:position> to <1:position> is <2:expression>").
+phrase(mul, "the product from <0:position> to <1:position> is <2:expression>").
+phrase(expr, "the expression from <0:position> to <1:position> is <2:expression>").
+-- literals, bodies, clauses
+phrase(relbook, "the relation from <0:position> to <1:position> is <2:atom> in the book <3:book>").
+phrase(lit0, "the call from <0:position> to <1:position> names <2:atom> in the book <3:book> with the arguments <4:list>").
+phrase(tmark, "the tense mark from <0:position> to <1:position> says <2:tense>").
+phrase(tensed, "<0:position> is followed by a tense mark").
+phrase(lit, "the literal from <0:position> to <1:position> is <2:literal>").
+phrase(belem, "the condition from <0:position> to <1:position> is <2:condition>").
+phrase(body, "the body from <0:position> to <1:position> is <2:list>").
+phrase(clause_at, "the clause from <0:position> to <1:position> has the head <2:literal> and the body <3:list>").
+-- the file, and what it did not cover
+phrase(top, "<0:position> starts a clause of the file").
+phrase(parsed, "the file has the clause from <0:position> to <1:position> with the head <2:literal> and the body <3:list>").
+phrase(subparse, "the clause from <0:position> to <1:position> lies inside another").
+phrase(parses_at, "<0:position> starts a clause that parses").
+phrase(stuck_at, "the parse is stuck at <0:position>").
+phrase(covered, "<0:position> is covered by a clause").
+phrase(uncovered, "no clause covers the token at <0:position>").
+phrase(spanto, "the token at <0:position> spans <1:position>").
+phrase(in_tok, "<0:position> is inside a token").
+phrase(white, "<0:position> is white space").
+phrase(stray, "<0:position> holds a stray character").
+-- wildcards, numbered per clause
+phrase(wildtok, "<0:position> holds a wildcard").
+phrase(wild_in, "the clause at <0:position> has a wildcard at <1:position>").
+phrase(wild_between, "in the clause at <0:position> a wildcard lies between <1:position> and <2:position>").
+phrase(prev_wild, "in the clause at <0:position> the wildcard before <1:position> is at <2:position>").
+phrase(has_prev_wild, "in the clause at <0:position> some wildcard comes before <1:position>").
+phrase(wild_rank, "in the clause at <0:position> the wildcard at <1:position> is number <2:number>").
+phrase(wild, "the wildcard at <0:position> is number <1:number>").
+-- the host's contract (examples/ring1/host.rofl): the grammar's tree and the host's, walked in step
+phrase(host_clause, "the host built a clause with the head <0:literal> and the body <1:list>").
+phrase(host_refused, "the host refused the part: <0:answer>").
+phrase(host_unsupported, "the host dropped a clause it could not read: <0:answer>").
+phrase(part_seen, "the host was given a part: <0:answer>").
+phrase(dropped_tail, "the part is the tail the host dropped: <0:answer>").
+phrase(pairs, "the grammar's <0:term> stands where the host's <1:term> stands").
+phrase(fits, "the host's <1:term> is what the grammar's <0:term> promises").
+phrase(nonconformant, "the host breaks its contract at <0:term> against <1:term>").
+phrase(tense_of, "the grammar's tense <0:tense> is the host's <1:tense>").
+phrase(digit_of, "the digit <0:character> is worth <1:number>").
+phrase(digits_wanted, "the digits of <0:text> are read from <1:position>").
+phrase(digits_upto, "the digits of <0:text> from <1:position> up to <2:position> are worth <3:number>").
+phrase(digits_value, "the digits of <0:text> from <1:position> are worth <2:number>").
+phrase(unescape, "an escaped <0:character> means <1:character>").
+phrase(known_escape, "<0:character> has a meaning after a backslash").
+phrase(raw_str, "<0:text> is a string literal of the part").
+phrase(walk, "reading <0:text> at <1:position> has produced <2:number> characters").
+phrase(means, "character <1:number> of <0:text> means <2:character>").
+phrase(walk_len, "<0:text> means <1:number> characters").
+phrase(str_differs, "the string <1:text> differs from the literal <0:text>").
+phrase(unknown_escape, "<0:text> holds an escape with no meaning").
+phrase(some_unknown_escape, "some literal of the part holds an escape with no meaning: <0:answer>").
+phrase(must_refuse, "the host must refuse the part because of <0:reason>").
+phrase(some_refusal_due, "some refusal is due: <0:answer>").
+phrase(some_host_clause, "the host built some clause: <0:answer>").

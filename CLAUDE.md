@@ -14,11 +14,15 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run textcheck   no unreadable byte reached a source file
     npm run findings    the ledger, rendered
     npm run features    what the system can do, which demo shows it, what promises it
-    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`
+    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world
     npm run scan        -- <dir>   turn TypeScript into facts under facts/generated
     npm run report      -- <files>   the epistemic report over a set of packs
     npm run depends     · cleanliness · layering · nullary — the models over the tree itself
     npm run speccheck   every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
+    npm run untyped     -- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model
+    npm run view        -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
+    npm run playground  the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
+    npm run conform     `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
 
 <!-- END commands -->
 

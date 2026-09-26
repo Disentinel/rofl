@@ -265,8 +265,11 @@ decides — help, else hit, else move, else stand — and every occasion it deci
 anything is recorded:
 
 ```prolog
-tie[audit](A, Act, Other) :- contender[mind](A, Act), contender[mind](A, Other),
-                             act_ord[mind](Act, N), act_ord[mind](Other, M), N < M.
+rank[mind](A, Act, N) :- contender[mind](A, Act), act_ord[mind](Act, N), not demoted[mind](A, Act).
+rank[mind](A, Act, N) :- contender[mind](A, Act), demoted[mind](A, Act),
+                         act_ord[mind](Act, M), N is M + 1000.
+
+tie[audit](A, Act, Other) :- rank[mind](A, Act, N), rank[mind](A, Other, M), N < M.
 ```
 
 The order is a real commitment and not a formality. An agent standing beside the
@@ -274,6 +277,19 @@ ally it means to tend scores `tend(B)` and `move(D) towards B` identically, both
 being one step off the same intent, and without "help before travel" it would
 walk past the wound for ever. That is not hypothetical; it is what the first
 version of this example did.
+
+It is also a function of the act and nothing else, and that has a price the
+eight ticks here do not show. A wolf at the east wall with every step equally
+good steps west; one cell in, east wins the tie again, and back. By tick 6 the
+whole yard is a two-tick loop, and left alone it stays one: every agent sees
+what it saw two ticks ago and chooses what it chose. No rule in this file
+concludes `demoted`. It is the one place a rule taken at run time can refine
+the order, because rules only add and `preempted` keeps exactly one contender:
+anything a new rule preempted would leave an agent with no act at all, while a
+demoted act still has a rank. The live yard (`playground/npc.html`) notices the
+loop and offers three rules to take: where the agent stood a tick ago, carried
+across the tick; a step back there, demoted; a step into somebody it can see,
+demoted. The yard then runs to the horizon without repeating.
 
 ## whynot
 

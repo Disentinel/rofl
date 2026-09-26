@@ -302,3 +302,60 @@ host_global_effect(node, "AbortController", alloc).
 -- hosts that CLAIM to be classified, and the browser's absence is a fact with
 -- a reason attached that anyone can query.
 host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
+
+-- ===========================================================================
+-- 4. WHAT CALLS A FUNCTION IT IS HANDED. A type says an argument is a
+-- function and never whether or when it is called, so this is authored too.
+-- `host_calls_back(Origin, Key, Arg, When)`: the member Key of Origin calls
+-- its argument Arg (an index, or `last`) `at_once`, inside the call, or
+-- `later`, after the synchronous run that handed it over has finished.
+-- Origin is a builtin prototype (`array`, `string`), a host site's origin (a
+-- module's specifier, a global's name, with `itself` for a plain call of the
+-- global), or `thenable`: a promise has no instance surface
+-- (`es_prototype_gap`), so `then` is known by its key on a call nothing
+-- resolves. `later` says nothing about the order of two later callbacks,
+-- which is when timers fire and promises settle; a microtask and a macrotask
+-- are both after the run, and that is all this table claims.
+edb(host_calls_back).
+
+host_calls_back(array,  "forEach",       0, at_once).
+host_calls_back(array,  "map",           0, at_once).
+host_calls_back(array,  "filter",        0, at_once).
+host_calls_back(array,  "some",          0, at_once).
+host_calls_back(array,  "every",         0, at_once).
+host_calls_back(array,  "find",          0, at_once).
+host_calls_back(array,  "findIndex",     0, at_once).
+host_calls_back(array,  "findLast",      0, at_once).
+host_calls_back(array,  "findLastIndex", 0, at_once).
+host_calls_back(array,  "flatMap",       0, at_once).
+host_calls_back(array,  "reduce",        0, at_once).
+host_calls_back(array,  "reduceRight",   0, at_once).
+host_calls_back(array,  "sort",          0, at_once).
+host_calls_back(array,  "toSorted",      0, at_once).
+host_calls_back(string, "replace",       1, at_once).
+host_calls_back(string, "replaceAll",    1, at_once).
+
+host_calls_back(thenable, "then",    0, later).
+host_calls_back(thenable, "then",    1, later).
+host_calls_back(thenable, "catch",   0, later).
+host_calls_back(thenable, "finally", 0, later).
+
+host_calls_back("setTimeout",     itself,     0, later).
+host_calls_back("setInterval",    itself,     0, later).
+host_calls_back("setImmediate",   itself,     0, later).
+host_calls_back("queueMicrotask", itself,     0, later).
+host_calls_back("process",        "nextTick", 0, later).
+
+-- node's callback style: the last argument, called when the operation completes
+host_calls_back("node:fs", "readFile",   last, later).
+host_calls_back("node:fs", "writeFile",  last, later).
+host_calls_back("node:fs", "appendFile", last, later).
+host_calls_back("node:fs", "readdir",    last, later).
+host_calls_back("node:fs", "stat",       last, later).
+host_calls_back("node:fs", "access",     last, later).
+host_calls_back("node:fs", "mkdir",      last, later).
+host_calls_back("node:fs", "unlink",     last, later).
+host_calls_back("node:fs", "rm",         last, later).
+host_calls_back("node:fs", "rename",     last, later).
+host_calls_back("node:child_process", "exec",     last, later).
+host_calls_back("node:child_process", "execFile", last, later).

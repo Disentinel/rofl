@@ -93,17 +93,30 @@ character-class table carries exactly one literal control character — the line
 feed — and everything unclassified is simply not a token character, which is
 what spaces, tabs and carriage returns need.
 
-## Running it
+## Running it, and the host's contract
 
-    node --test --test-reporter=spec test/example-ring1.test.ts \
-                                   test/example-ring1-self.test.ts
+    npm run conform                          the host checked against host.rofl
+    npm run conform -- --break escape        the same, with one duty spoiled
 
-Two files, and the split is a scheduling fact rather than a taste.
-`node --test` parallelises BY FILE, so the self-application sweep — 14.1 s
-of the 18.9 s the one file cost, measured 2026-09-07 — was a pole no idle
-core could shorten, and it finished last in every instrumented run of the
-suite. It is `test/example-ring1-self.test.ts` now, character for
-character; everything else stayed put.
+The tests this section used to name went with `test/`, and with them the only
+check that ring 1 and `src/parser.ts` agree. What stands now checks the other
+half of the arrangement, the host. `demo.ts` builds terms, which a rule may
+not: a number from digits, a string from an escaped one, a functor from a
+name. A rule may CHECK what was built, so `host.rofl` states the host's duties
+as rules that read the grammar's own facts (`parsed`, `wild`, `uncovered`,
+`stray`, `hole`) and the host's answer, which `conform.ts` writes back into
+the same world as facts: the two trees are walked in step, and every place
+where the host's term is not what the grammar's promises is `nonconformant`.
+It reads digits back by arithmetic over characters, undoes escapes by walking
+the literal, and compares character by character.
+
+Measured 2026-09-25: 0 violations over 292 clauses (a sample with signs,
+escapes, wildcards, books and two bad clauses; `boot.rofl`, `charclass.rofl`,
+`rules/strata.rofl`, `examples/npc/npc.rofl`), 59 s. Each `--break` is caught,
+over the sample and `rules/strata.rofl`: `sign` 1, `escape` 1, `rank` 2,
+`book` 53, `refusal` 2. Trusted rather than
+checked: that `conform.ts` writes the host's clause faithfully, and that the
+parts put back together are the file.
 
 ## Two more defects found by building the grammar out
 

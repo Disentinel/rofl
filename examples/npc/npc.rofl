@@ -523,12 +523,26 @@ act_ord[mind](hold, 300)    :- width[world](_).
 beaten[mind](A, V) :- score[choice](A, _, V), score[choice](A, _, W), W > V.
 contender[mind](A, Act) :- score[choice](A, Act, V), not beaten[mind](A, V).
 
--- the arbiter was indifferent between two acts. Recorded, not hidden.
-tie[audit](A, Act, Other) :- contender[mind](A, Act), contender[mind](A, Other),
-                             act_ord[mind](Act, N), act_ord[mind](Other, M), N < M.
+-- A contender's place in the declared order, unless something DEMOTED it to
+-- the back. No rule here concludes `demoted`: it is where a rule learned at
+-- run time refines the tie-break, and it is the only safe place. Rules only
+-- add, `preempted` below keeps exactly one contender, so a learned rule that
+-- preempted anything more would leave an agent with no act at all; a demoted
+-- act still has a rank, so whatever is demoted, somebody wins.
+--
+-- Why it is needed at all: the declared order is a function of the act and
+-- not of the agent's past, so an agent that fled east on a tie at the wall
+-- flees west on the next, and back. By tick 6 the whole yard is a two-tick
+-- loop. The page (playground/npc.html) notices and offers the demotion.
+edb(demoted).
+rank[mind](A, Act, N) :- contender[mind](A, Act), act_ord[mind](Act, N), not demoted[mind](A, Act).
+rank[mind](A, Act, N) :- contender[mind](A, Act), demoted[mind](A, Act),
+                         act_ord[mind](Act, M), N is M + 1000.
 
-preempted[mind](A, Act) :- contender[mind](A, Act), contender[mind](A, Other),
-                           act_ord[mind](Act, N), act_ord[mind](Other, M), M < N.
+-- the arbiter was indifferent between two acts. Recorded, not hidden.
+tie[audit](A, Act, Other) :- rank[mind](A, Act, N), rank[mind](A, Other, M), N < M.
+
+preempted[mind](A, Act) :- rank[mind](A, Act, N), rank[mind](A, Other, M), M < N.
 
 does[mind](A, Act) :- contender[mind](A, Act), not preempted[mind](A, Act).
 
