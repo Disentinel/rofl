@@ -1,6 +1,7 @@
 // npm run nb -- <file.rofl.md> [--json] [--cell N]      run a notebook, print what every cell said
 // npm run nb -- translate <file.rofl.md>                 write a rofl cell under every natural cell that has none
-// Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read.
+// Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
+// 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -9,7 +10,7 @@ import { Kernel, cellsOf, codeNames, libFiles, parseFront, translated, worldOf, 
 import { homeOf, translatorVocab } from '../playground/host.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const EXIT = { ok: 0, fails: 1, unread: 2 } as const;
+const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. */
@@ -39,7 +40,7 @@ export function runFile(file: string, kernel = new Kernel()): NbResult {
   return r;
 }
 
-const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}` : l.verdict === 'holds' ? 'holds'
+const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
 
@@ -60,7 +61,7 @@ export function print(file: string, r: NbResult, only?: number): string {
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
     }
   }
-  out.push(`${file}: ${r.status === 'ok' ? 'every never holds, every cell read' : r.status === 'fails' ? 'a never fails' : 'not everything was read'}`);
+  out.push(`${file}: ${r.status === 'ok' ? 'every never holds, every cell read' : r.status === 'fails' ? 'a never fails' : r.status === 'blind' ? 'every never holds, some only as far as the model sees' : 'not everything was read'}`);
   return out.join('\n');
 }
 

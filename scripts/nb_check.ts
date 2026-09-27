@@ -16,7 +16,7 @@ const cli = (args: string[], env: Record<string, string> = {}): Promise<Out> => 
   const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), ...args], { env: { ...process.env, ...env } });
   let out = '';
   p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
-  const kill = setTimeout(() => p.kill(), 110_000);
+  const kill = setTimeout(() => p.kill(), 280_000);
   p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out }); });
 });
 
@@ -41,18 +41,21 @@ const REVIEW = path.join(NB, 'review.rofl.md');
 const withCell = (cell: string) => (t: string) => `${t}\n\`\`\`rofl\n${cell}\n\`\`\`\n`;
 
 // the planted defects' trees
-copyTree('io', SELF_CODE.filter((f) => f !== 'notebook/world.ts'));
-const ioFile = planted('io', 'self.rofl.md', (t) => t, [['notebook/world.ts', mutate('notebook/world.ts', /^  const b = readBook\(/m, (m) => `  console.log('read');\n${m}`)]]);
-const readFile = planted('read', 'self.rofl.md', (t) => t, [['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)]]);
-copyTree('read', SELF_CODE.filter((f) => f !== 'notebook/kernel.ts'));
-const writes = planted('writes', 'self.rofl.md', (t) => t, [['notebook/cli.ts', mutate('notebook/cli.ts', /^  const r = kernel\.run\(path\.relative\(ROOT, path\.resolve\(file\)\), text, input\);/m, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));`)]]);
-copyTree('writes', SELF_CODE.filter((f) => f !== 'notebook/cli.ts'));
-const spawns = planted('spawns', 'self.rofl.md', (t) => t, [['notebook/cli.ts', mutate('notebook/cli.ts', /^  const r = kernel\.run\(path\.relative\(ROOT, path\.resolve\(file\)\), text, input\);/m, (m) => `${m}\n  spawnSync('claude', ['-p', 'check this']);`)]]);
-copyTree('spawns', SELF_CODE.filter((f) => f !== 'notebook/cli.ts'));
-const exitFile = planted('exit', 'self.rofl.md', (t) => t, []);
-copyTree('exit', SELF_CODE.filter((f) => f !== 'notebook/front.ts'));
-mkdirSync(path.join(tmp, 'exit/notebook'), { recursive: true });
-writeFileSync(path.join(tmp, 'exit/notebook/front.ts'), mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`));
+// every defect a run of this file must turn red goes into one copy of the code, each on its own line, so one run names them all
+const runLine = /^  const r = kernel\.run\(path\.relative\(ROOT, path\.resolve\(file\)\), text, input\);/m;
+const redFile = planted('red', 'self.rofl.md', (t) => t, [
+  ['notebook/world.ts', mutate('notebook/world.ts', /^  const b = readBook\(/m, (m) => `  console.log('read');\n${m}`)],
+  ['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)],
+  ['notebook/front.ts', mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`)],
+  ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawnSync('claude', ['-p', 'check this']);`)],
+]);
+copyTree('red', ['notebook/book.ts', 'playground/host.ts']);
+// and every one it cannot see into another: the run must name each as out of sight, outside the boundary
+const cellsLine = /^    const cells = cellsOf\(text\);/m;
+const blindFile = planted('blind', 'self.rofl.md', (t) => t, [['notebook/kernel.ts', mutate('notebook/kernel.ts', cellsLine, (m) => `${m}\n    void import("node:fs").then((fs) => fs.readFileSync(path));\n    globalThis["process"].stdout.write("x");`)]]);
+copyTree('blind', SELF_CODE.filter((f) => f !== 'notebook/kernel.ts'));
+const unpopulated = planted('unpopulated', 'review.rofl.md', (t) => t.replace('never waits_on(C, payments)', 'never waits_onn(C, payments)'));
+copyTree('unpopulated', ['examples/review.rofl.md']);
 copyTree('review', ['examples/review.rofl.md']);
 const failing = planted('review', 'review.rofl.md', withCell('never C is blocked by T'));
 const unread = planted('unread', 'review.rofl.md', withCell('A change C is frobbed if C wibbles the moon.'));
@@ -78,9 +81,9 @@ const spy = fake('spy.sh', 'x');
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, io, read, wrote, spawned, exit, nat, trOk, trBad, trGone] = await Promise.all([
-  cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md')], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
-  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([ioFile]), cli([readFile]), cli([writes]), cli([spawns]), cli([exitFile]), cli([natural]),
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, nat, trOk, trBad, trGone] = await Promise.all([
+  cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
+  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }),
 ]);
 
@@ -91,17 +94,25 @@ const has = (o: Out, s: string) => o.out.includes(s);
 check('review: exit 0 and its answers', review.code === 0 && has(review, '`c2` is blocked by `platform`') && has(review, 'never C is blocked by `payments`  ->  holds'), review);
 check('review: whynot answers', has(review, 'failed premise: not `c2` is blocked by'), review);
 check('small: exit 0, an answer at its file:line', small.code === 0 && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), small);
-check('self: exit 0 (the gate)', self.code === 0, self);
+/** The rows a run could not see, and those outside the boundary I6 step 4 names: imports into the unscanned engine, reader, scanner and proof folder, and calls on keys pinned here. */
+const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
+const unseen = (o: Out) => { const r = JSON.parse(o.out.slice(o.out.indexOf('{'))); return r.cells.flatMap((c: { lines: { unsure?: { answers: { literal: string; sentence: string }[] } }[] }) => c.lines.flatMap((l) => l.unsure?.answers ?? [])) as { literal: string; sentence: string }[]; };
+const outside = (o: Out) => { try { return unseen(o).filter((a) => !BOUNDARY.some((b) => b.test(a.literal))); } catch { return [{ literal: 'no JSON', sentence: o.out.slice(-300) }]; } };
+check('self: exit 3 (the gate): every never holds, some as far as it sees', self.code === 3 && unseen(self).length > 0, self);
+check('I3 every row self cannot see is of a kind I6 names', outside(self).length === 0, { code: self.code, out: JSON.stringify(outside(self)) });
+check('I6 a print planted in the kernel turns self red', red.code === 1 && has(red, 'console.log() at notebook/world.ts'), red);
+check('I6 a node:fs import and read planted in the kernel turns self red', red.code === 1 && has(red, 'readFileSync() at notebook/kernel.ts'), red);
+check('I6 an exit planted in the kernel turns self red', red.code === 1 && has(red, 'process.exit() at notebook/front.ts'), red);
+check('I4 a write planted in a run turns self red', red.code === 1 && has(red, 'never C writes outside translation  ->  FAILS'), red);
+check('I5 a process started in a run turns self red', red.code === 1 && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
+check('I3 a dynamic import of node:fs in the kernel is named out of sight, outside the boundary', blind.code === 3 && outside(blind).some((a) => /import\(\)/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)) && outside(blind).some((a) => /"readFileSync"/.test(a.literal)), { code: blind.code, out: JSON.stringify(outside(blind)) });
+check('I3 a computed globalThis["process"] write in the kernel is named out of sight, outside the boundary', blind.code === 3 && outside(blind).some((a) => /"write"/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)), { code: blind.code, out: JSON.stringify(outside(blind)) });
+check('I1 a never over a relation nothing can populate fails with the reason', unpop.code === 1 && has(unpop, 'FAILS · 0 · nothing in the model can put a row here'), unpop);
 check('I2 a failing never is exit 1 and names its row', fails.code === 1 && has(fails, 'FAILS · 1') && has(fails, '`c2` is blocked by `platform`'), fails);
 check('I2 an unread cell is exit 2 and named', notRead.code === 2 && has(notRead, 'not read: C wibbles the moon'), notRead);
 check('I2 a failing never over code is exit 1', recurse.code === 1 && has(recurse, 'never C recurses  ->  FAILS · 1') && has(recurse, 'small.js:12'), recurse);
-check('I6 a print planted in the kernel turns self red', io.code === 1 && has(io, 'console.log() at notebook/world.ts'), io);
-check('I6 a node:fs import and read planted in the kernel turns self red', read.code === 1 && has(read, 'readFileSync() at notebook/kernel.ts'), read);
-check('I4 a write planted in a run turns self red', wrote.code === 1 && has(wrote, 'never C writes outside translation  ->  FAILS'), wrote);
-check('I5 a process started in a run turns self red', spawned.code === 1 && has(spawned, 'never C starts a process outside the model call  ->  FAILS'), spawned);
-check('I6 an exit planted in the kernel turns self red', exit.code === 1 && has(exit, 'process.exit() at notebook/front.ts'), exit);
 check('I7 a cell concluding a model sentence with a loose variable is refused, exit 2', rewrite.code === 2 && has(rewrite, 'would rewrite the model'), rewrite);
-check('I7 as stated does not hold: a bound conclusion extends a model relation', extended.code === 1 && has(extended, '`c1` is blocked by `payments`'), extended);
+check('I7 a bound conclusion is allowed and labelled as extending the model', extended.code === 1 && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
 check('I1 an untranslated natural cell is named, not dropped', nat.code === 0 && has(nat, 'not translated yet'), nat);
 check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.out.slice(reviewJson.out.indexOf('{'))); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
 check('I4 a run writes nothing into the file', before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);

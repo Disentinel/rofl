@@ -12,8 +12,8 @@ export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string };
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
-/** `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
-export type Status = 'ok' | 'fails' | 'unread';
+/** `blind`: every never holds, some only as far as the model sees; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
+export type Status = 'ok' | 'blind' | 'fails' | 'unread';
 export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; ms: { load: number; run: number; phases?: Record<string, number> } };
 
 export class Kernel {
@@ -50,7 +50,7 @@ export class Kernel {
         return line;
       }) };
     });
-    const status: Status = errors.length || result.some((c) => c.errors.length) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : 'ok';
+    const status: Status = errors.length || result.some((c) => c.errors.length) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, cells: result, errors, ms: { load, run: out.ms, phases: out.phases } };
   }
 }

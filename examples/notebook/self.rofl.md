@@ -65,17 +65,18 @@ I2 A gate can say no: a failing never is red / exit 1; an unread cell is exit 2;
 I3 Silence is not green: when the model could not see something (unresolved calls, budget ran out, a relation nothing can populate) an invariant holds only "as far as it sees", never plain green.
 ```
 
-> Behavioural, and this file is the demonstration: the I6 invariant below
-> holds only as far as it sees, because the engine under `src/` is not
-> scanned, and it prints `holds as far as it sees · N out of sight` with the
-> modules it could not follow. A relation nothing can populate is a failure,
-> not a hold (`nothing in the model can put a row here`).
+> Behavioural, and this file is the demonstration: the I6 invariants below
+> hold only as far as they see, because the engine under `src/` is not
+> scanned and the model cannot attribute some calls, and each prints
+> `holds as far as it sees · N out of sight` with what it could not follow.
+> A relation nothing can populate is a failure with its reason, not a hold
+> (`FAILS · 0 · nothing in the model can put a row here`).
 >
-> WHERE IT IS WEAKER THAN STATED: the distinction lives in the output and in
-> the JSON (`verdict: blind`), not in the exit code. A never that holds as far
-> as it sees exits 0 like one that holds. Giving it its own exit would make
-> this very gate red for as long as `src/` is out of sight, which is the
-> question for the owner, not one to settle here.
+> DECIDED BY THE TOP LEVEL (2026-09-28): a never that holds only as far as
+> it sees makes the run exit 3, apart from 0, 1 and 2. So this file exits 3
+> while `src/` is out of sight, and `npm run test:nb` asserts exactly that and
+> that every row out of sight is of a kind named in I6 step 4, so a new blind
+> spot changes the gate.
 
 ## I4 · The file is the truth
 
@@ -204,9 +205,41 @@ unsure I is out of the kernel's sight at S
 ? C exits in the command line
 ```
 
-> Behavioural, for the planted defects: `I6 a print planted in the kernel
-> turns self red` and `I6 an exit planted in the kernel turns self red` run
-> this file over a copy of the kernel with one line added and expect exit 1.
+> Step 4. Steps 2 and 3 were green over two planted lines that do I/O, a
+> dynamic `import("node:fs")` and `globalThis["process"].stdout.write`: the
+> first is no static import, the second a computed member on a global, and
+> the model gives neither the effect `io`. What it does give is its own
+> frontier, a call it could not attribute (`C has no surface`). All of those
+> in the kernel's files are about two hundred: `text.split()` on a parameter
+> the model has no type for. So the frontier here is narrowed by what could
+> be I/O at all: a call the model could not attribute and could not resolve,
+> whose key is the key of some member the host tables give the effect `io`
+> (`write`, `readFileSync`, `get`), or with no key at all; and any dynamic
+> import. The known rows are Map and engine calls named like I/O
+> (`kid.get()`, `f.assert()`, `this.core.fork()`); `npm run test:nb` pins
+> their keys, and a new key or a dynamic import changes the gate. Written in
+> Datalog: the sentence form has no words for "a member with the effect io
+> at some key" that read back unambiguously, and a head over two model
+> relations read as one of them.
+
+```datalog
+io_key(K) :- member_effect[code](_, K, io).
+imported_callee(C) :- callee_of[code](C, N), ident_in[code](N, Local, File), imports_name[code](Local, _, _, File).
+member_call(C) :- callee_of[code](C, N), ast_child[code](N, object, 0, _).
+unseen(C, K) :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), callee_of[code](C, N), selects[flow](N, K), io_key(K).
+unseen(C, "()") :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), not imported_callee(C), not member_call(C).
+unseen(I, "import()") :- ast_node[code](I, import_expression, F, _), kernel_file(F).
+kernel_io(C) :- host_call_effect[audit](C, io, _), ast_node[code](C, _, F, _), kernel_file(F).
+
+never kernel_io(C)
+unsure unseen(C, K)
+```
+
+> Behavioural, for the planted defects: `npm run test:nb` runs this file over
+> copies of the kernel with one line added: a print, a `node:fs` import and
+> read, an exit (each exit 1, named), a dynamic import of `node:fs` and a
+> computed `globalThis["process"]` write (each named among the rows out of
+> sight, which the boundary check then refuses).
 
 ## I7 · A cell cannot rewrite the model
 
@@ -229,21 +262,21 @@ the kernel writes to a node L in File either:
 ? the kernel writes to a node L in File
 ```
 
-> THIS INVARIANT IS FALSE AS STATED, and the file says so rather than
-> narrowing it quietly. What the host refuses (`Host.run`, the `loose`
-> branch) is narrower: a cell whose conclusion the reader took for one of the
-> model's own sentences with a word of it standing as a variable nothing
-> binds. A well-formed cell that concludes a model relation is loaded and
-> extends the model, and the page teaches this on purpose: its second
-> example adds `A call C resolves to a function F if C emits E and F handles
-> E.` so the call graph follows an event bus. So "cannot rewrite" holds for a
-> malformed conclusion and not for a deliberate one. Which one the owner
-> means is open (`f_a_cell_can_extend_the_model_and_the_page_teaches_it`).
+> AS STATED IT DID NOT HOLD: a well-formed cell that concludes a model
+> relation loads and extends the model, and the page teaches that on
+> purpose (`A call C resolves to a function F if C emits E and F handles E.`
+> makes the call graph follow an event bus).
 >
-> Behavioural: `I7 a cell concluding a model sentence with a loose variable
-> is refused, exit 2`, and `I7 as stated does not hold: a bound conclusion
-> extends a model relation`, which passes today and would go red the day
-> the invariant is made true.
+> RESTATED BY THE TOP LEVEL (2026-09-28): a cell cannot rewrite the model BY
+> ACCIDENT. A conclusion into a model relation with a variable the body never
+> binds is refused; a deliberate extension with every variable bound is
+> allowed, and the output says `extends the model's <relation>`.
+>
+> Not expressible over the code with this model: it is a property of every
+> path by which a cell's text reaches `load`. Behavioural:
+> `I7 a cell concluding a model sentence with a loose variable is refused,
+> exit 2` and `I7 a bound conclusion is allowed and labelled as extending
+> the model`.
 
 ## I8 · Every answer points at its evidence
 

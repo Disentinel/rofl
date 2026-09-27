@@ -174,7 +174,8 @@ export class Host {
           if (!cl.body.length) continue;
           notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
           const free = loose(cl);
-          if (!free.length || !(cl.head.rel in home)) continue;
+          if (!(cl.head.rel in home)) continue;
+          if (!free.length) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
           // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
           const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
           errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
