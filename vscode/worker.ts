@@ -6,7 +6,8 @@ import { render } from './render.ts';
 
 const kernel = new Kernel();
 const run = (file: string, text: string) => { const r = runFile(file, kernel, text); return { ...r, shown: render(r) }; };
+function translate(file: string, text: string) { return translateText(file, text, claude, kernel); }
 parentPort!.on('message', ({ id, op, file, text }: { id: number; op: 'run' | 'translate'; file: string; text: string }) => {
-  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text) : translateText(file, text, claude, kernel) }); }
+  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text) : translate(file, text) }); }
   catch (e) { parentPort!.postMessage({ id, error: (e as Error).stack ?? String(e) }); }
 });

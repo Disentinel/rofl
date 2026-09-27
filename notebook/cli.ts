@@ -41,6 +41,8 @@ export function runFile(file: string, kernel = new Kernel(), text = readFileSync
   return { ...r, paths };
 }
 
+export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
+
 export const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
@@ -62,7 +64,7 @@ export function print(file: string, r: NbResult, only?: number): string {
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
     }
   }
-  out.push(`${file}: ${r.status === 'ok' ? 'every never holds, every cell read' : r.status === 'fails' ? 'a never fails' : r.status === 'blind' ? 'every never holds, some only as far as the model sees' : 'not everything was read'}`);
+  out.push(`${file}: ${SAID[r.status]}`);
   return out.join('\n');
 }
 

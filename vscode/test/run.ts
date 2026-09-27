@@ -1,8 +1,8 @@
-// npm run vscode:test — the extension in the installed VS Code, once as it is and once per planted defect, each of which must turn it red.
-// `-- --only` runs it as it is and nothing else; `-- --break NAME` one planted defect.
+// npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
+// `-- --mutants` the other planted defects but `wrap`, which is a setting and runs only by name; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn } from 'node:child_process';
-import { cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -18,6 +18,10 @@ put(path.join(tmp, 'nb/examples/review.rofl.md'), src('examples/review.rofl.md')
 const review = put(path.join(tmp, 'nb/examples/notebook/review.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`rofl\nnever C is blocked by T\n\`\`\`\n`);
 const small = put(path.join(tmp, 'nb/examples/notebook/small.rofl.md'), src('examples/notebook/small.rofl.md'));
 const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('examples/notebook/small.js')}\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n`);
+
+const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
+const fake = put(path.join(tmp, 'claude.sh'), "#!/bin/sh\ncat > /dev/null\nprintf '%s\\n' 'Here it is.' '```rofl' 'A module M is unowned if some change touches M, unless some team owns M.' '' 'never M is unowned' '```'\n");
+chmodSync(fake, 0o755);
 
 const cli = (file: string, out: string) => new Promise<string>((done) => {
   const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json']);
@@ -38,10 +42,13 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   codeline: ['extension.ts', /Number\(at\.slice\(i \+ 1\)\) - 1/, 'Number(at.slice(i + 1))', cases.slice(2)],
   marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, ''],
   cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]'],
+  translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, ''],
+  wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
+// `prose` proves one kernel and runs with the smoke test; the other three are `-- --mutants`, which stays under two minutes on its own.
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : ['as it is', ...Object.keys(BREAKS)];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'translate'] : ['as it is', 'prose'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
@@ -62,7 +69,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [path.join(tmp, 'nb'), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: JSON.stringify(BREAKS[v]?.[3] ?? cases), ROFL_NB_REPORT: report },
+      extensionTestsEnv: { ROFL_NB_CASES: JSON.stringify(BREAKS[v]?.[3] ?? cases), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: natural, ROFL_NB_CLAUDE: fake },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); }

@@ -24,6 +24,11 @@
       { "id": "datalog", "aliases": ["Datalog"] },
       { "id": "natural", "aliases": ["Natural language"] }
     ],
+    "configurationDefaults": {
+      "[rofl]": { "editor.wordWrap": "on" },
+      "[datalog]": { "editor.wordWrap": "on" },
+      "[natural]": { "editor.wordWrap": "on" }
+    },
     "commands": [
       { "command": "rofl-notebook.translate", "title": "Translate natural cells", "category": "ROFL" }
     ],

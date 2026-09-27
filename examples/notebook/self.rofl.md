@@ -10,6 +10,10 @@ code:
   - ../../notebook/front.ts
   - ../../notebook/cli.ts
   - ../../playground/host.ts
+  - ../../vscode/extension.ts
+  - ../../vscode/worker.ts
+  - ../../vscode/serial.ts
+  - ../../vscode/render.ts
 ---
 
 # The notebook, checked by a notebook
@@ -127,6 +131,30 @@ A call C starts a process outside the model call if C starts a process, a functi
 never C starts a process outside the model call
 ```
 
+> Step 2. The editor's host runs the kernel in a worker, which hands the
+> model call to the translator only on the translate command's path: in the
+> extension's files `claude` is passed to a call only inside a function that
+> answers to "translate". The question beside it is the control: the name is
+> there to be seen. A `claude` stored in a variable and passed on under
+> another name would escape this; the call graph does not follow a value
+> across this tree's directories yet.
+
+```rofl
+`editor_file` lists:
+
+| file |
+|---|
+| "vscode/extension.ts" |
+| "vscode/worker.ts" |
+
+A call C is in translation if a function F is the nearest function of C and F answers to "translate".
+
+A call C hands the model over outside translation if C passes the argument a node X at some index, X is named "claude", C is in file F, `editor_file`(F), and unless C is in translation.
+
+never C hands the model over outside translation
+? X is named "claude"
+```
+
 > Behavioural for the rest: `I5 a run never calls a model` (a run with the
 > model command pointed at a spy leaves no trace),
 > `I5 a translation that reads is inserted under its natural cell, which
@@ -169,8 +197,9 @@ the kernel reaches Spec from File either:
 ? the kernel reaches Spec from File
 ```
 
-> Step 2. What "the kernel" is, as data: the four notebook modules and the
-> page's host they run on. What "I/O" is: a call the JS model gives the host
+> Step 2. What "the kernel" is, as data: the four notebook modules, the
+> page's host they run on, and the editor's two pure modules (the cells of a
+> file and back, a result as Markdown). What "I/O" is: a call the JS model gives the host
 > effect `io`, whether by a global (`console`, `process`), a module
 > (`node:fs`, `node:child_process`) or a member of one. Every call site in
 > those files, reachable or not: stricter than "what a run reaches", and it
@@ -189,6 +218,8 @@ the kernel reaches Spec from File either:
 | "notebook/book.ts" |
 | "notebook/front.ts" |
 | "playground/host.ts" |
+| "vscode/serial.ts" |
+| "vscode/render.ts" |
 
 A call C does io in the kernel if C has the host effect `io` by some route, C is in file F, and `kernel_file`(F).
 

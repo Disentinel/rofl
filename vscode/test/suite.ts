@@ -15,6 +15,7 @@ const until = async <T>(get: () => T | undefined, ms: number, what: string): Pro
 export async function run() {
   const api = await vscode.extensions.getExtension('rofl.rofl-notebook')!.activate() as { result: (u: vscode.Uri) => Run | undefined };
   const bad: string[] = [];
+  for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
   await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(cases[0].file));
   const opened = await until(() => vscode.window.activeNotebookEditor?.notebook.notebookType, 10_000, 'a notebook editor').catch(() => vscode.window.activeTextEditor?.document.languageId);
   if (opened !== 'rofl-notebook') bad.push(`${cases[0].file}: opening it the way a click does gives ${opened}, not a notebook`);
@@ -49,6 +50,22 @@ export async function run() {
     console.log(`${c.file}: ${Date.now() - t0} ms`);
     if (bad.length) break;
   }
+  if (!bad.length) await translate(process.env.ROFL_NB_TRANSLATE!, bad);
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** The command, with the model pointed at a script: a rofl cell appears under the natural cell, which stays; the file on disk does not change. */
+async function translate(file: string, bad: string[]) {
+  const before = readFileSync(file, 'utf8');
+  const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
+  await vscode.window.showNotebookDocument(nb);
+  const natural = nb.getCells().findIndex((c) => c.document.languageId === 'natural');
+  const text = nb.cellAt(natural).document.getText();
+  await vscode.commands.executeCommand('rofl-notebook.translate');
+  const after = nb.cellAt(natural), next = nb.cellAt(natural + 1);
+  if (after.document.getText() !== text || after.document.languageId !== 'natural') bad.push(`${file}: the natural cell did not stay`);
+  if (next?.document.languageId !== 'rofl' || !next.document.getText().includes('never M is unowned')) bad.push(`${file}: no rofl cell under the natural cell after Translate`);
+  if (readFileSync(file, 'utf8') !== before) bad.push(`${file}: Translate wrote the file`);
+  await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
 }

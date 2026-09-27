@@ -36,7 +36,7 @@ function mutate(file: string, at: RegExp, plant: (m: string) => string): string 
 }
 const copyTree = (name: string, files: string[]) => { for (const f of files) { const to = path.join(tmp, name, f); mkdirSync(path.dirname(to), { recursive: true }); copyFileSync(path.join(ROOT, f), to); } };
 
-const SELF_CODE = ['notebook/kernel.ts', 'notebook/world.ts', 'notebook/book.ts', 'notebook/front.ts', 'notebook/cli.ts', 'playground/host.ts'];
+const SELF_CODE = ['notebook/kernel.ts', 'notebook/world.ts', 'notebook/book.ts', 'notebook/front.ts', 'notebook/cli.ts', 'playground/host.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'vscode/serial.ts', 'vscode/render.ts'];
 const REVIEW = path.join(NB, 'review.rofl.md');
 const withCell = (cell: string) => (t: string) => `${t}\n\`\`\`rofl\n${cell}\n\`\`\`\n`;
 
@@ -48,8 +48,9 @@ const redFile = planted('red', 'self.rofl.md', (t) => t, [
   ['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)],
   ['notebook/front.ts', mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`)],
   ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawnSync('claude', ['-p', 'check this']);`)],
+  ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text\);/, (m) => `${m} translateText(file, text, claude, kernel);`)],
 ]);
-copyTree('red', ['notebook/book.ts', 'playground/host.ts']);
+copyTree('red', SELF_CODE.filter((f) => !['notebook/world.ts', 'notebook/kernel.ts', 'notebook/front.ts', 'notebook/cli.ts', 'vscode/worker.ts'].includes(f)));
 // and every one it cannot see into another: the run must name each as out of sight, outside the boundary
 const cellsLine = /^    const cells = cellsOf\(text\);/m;
 const blindFile = planted('blind', 'self.rofl.md', (t) => t, [['notebook/kernel.ts', mutate('notebook/kernel.ts', cellsLine, (m) => `${m}\n    void import("node:fs").then((fs) => fs.readFileSync(path));\n    globalThis["process"].stdout.write("x");`)]]);
@@ -159,6 +160,7 @@ check('I6 a node:fs import and read planted in the kernel turns self red', is(re
 check('I6 an exit planted in the kernel turns self red', is(red, 1) && has(red, 'process.exit() at notebook/front.ts'), red);
 check('I4 a write planted in a run turns self red', is(red, 1) && has(red, 'never C writes outside translation  ->  FAILS'), red);
 check('I5 a process started in a run turns self red', is(red, 1) && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
+check('I5 the model handed over on the editor\'s run path turns self red', is(red, 1) && has(red, '[translateText() at vscode/worker.ts:8] hands the model over outside translation'), red);
 check('I3 a dynamic import of node:fs in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /import\(\)/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)) && outside(blind).some((a) => /"readFileSync"/.test(a.literal)), { code: blind.code, out: JSON.stringify(outside(blind)) });
 check('I3 a computed globalThis["process"] write in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /"write"/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)), { code: blind.code, out: JSON.stringify(outside(blind)) });
 check('I2 a kernel that exits early is not green', early.code === 0 && verdict(early) === null && !is(early, 0), early);
