@@ -1,0 +1,6 @@
+-- what-if for examples/notebook/spat.rofl.md R1/R6: robin's Thursday swim
+-- (c_swim, household, cost 40) gives instead of alex's Thursday Acme
+-- commitment (c_acme, external, cost 200) staying put. Loaded by
+-- spat_whatif.rofl.md alongside the unmodified examples/spat files; neither
+-- of those is touched.
+waived(c_swim).

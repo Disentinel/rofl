@@ -1,0 +1,29 @@
+-- spat_inferred_travel.rofl — which travel/3 pairs in examples/spat/week.example.rofl
+-- are marked `-- INFERRED` (a guess standing in for a minute that was never
+-- actually timed) rather than taken from the source schedule.
+--
+-- Hand-transcribed, once, from the comments on the travel/3 lines in
+-- examples/spat/week.example.rofl section 2 ("WHERE"). Comments are stripped
+-- before a .rofl file is parsed (docs/md-world.md's whole vocabulary has no
+-- notion of "this number is a guess"), so this is not derivable from inside
+-- the model — it is read off the source file's own prose by a person, the
+-- same way examples/notebook/gen_ledger_facts.ts reads a string length
+-- outside the model and hands the result back in as a fact. If the comments
+-- in week.example.rofl change, this file goes stale silently; nothing checks
+-- the two against each other.
+--
+-- The one pair NOT listed here: travel(home, school, 20) — "the one journey
+-- the source gives exactly."
+
+inferred_travel(home,   sadik).
+inferred_travel(home,   physio).
+inferred_travel(home,   pool).
+inferred_travel(home,   office).
+inferred_travel(home,   shop).
+inferred_travel(home,   park).
+inferred_travel(home,   clinic).
+inferred_travel(school, sadik).
+inferred_travel(physio, sadik).
+
+guessed(A, B) :- inferred_travel(A, B).
+guessed(B, A) :- inferred_travel(A, B).
