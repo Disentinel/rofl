@@ -50,6 +50,7 @@ export async function run() {
       const code = c.fails.code;
       if (code && !runs.some((x) => said(x).includes(`](<${code[0]}:${code[1]}>)`))) bad.push(`${c.file}: no output links to ${code[0]}:${code[1]}`);
       if (code && !errors.some(({ u, d }) => u.fsPath === code[0] && d.range.start.line === code[1] - 1 && d.message === c.fails!.text)) bad.push(`${c.file}: no error "${c.fails.text}" at ${code[0]}:${code[1]}`);
+      if (code && !bad.length) await stale(nb, api, c.fails.text, code, bad);
     }
     console.log(`${c.file}: ${Date.now() - t0} ms`);
     if (bad.length) break;
@@ -71,5 +72,30 @@ async function translate(file: string, bad: string[]) {
   if (after.document.getText() !== text || after.document.languageId !== 'natural') bad.push(`${file}: the natural cell did not stay`);
   if (next?.document.languageId !== 'rofl' || !next.document.getText().includes('never M is unowned')) bad.push(`${file}: no rofl cell under the natural cell after Translate`);
   if (readFileSync(file, 'utf8') !== before) bad.push(`${file}: Translate wrote the file`);
+  await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+}
+
+/** The code under a run changes, on disk and then in an unsaved editor; the same window runs again and the answer follows it. */
+async function stale(nb: vscode.NotebookDocument, api: { result: (u: vscode.Uri) => Run | undefined }, never: string, [file, line]: [string, number], bad: string[]) {
+  const verdict = (r: Run) => r.cells.flatMap((c) => c.lines).find((l) => l.text === never)?.verdict;
+  const marked = () => vscode.languages.getDiagnostics(vscode.Uri.file(file)).some((d) => d.range.start.line === line - 1 && d.message === never);
+  const again = async (what: string) => {
+    const before = api.result(nb.uri), t0 = Date.now();
+    await vscode.window.showNotebookDocument(nb);
+    await vscode.commands.executeCommand('notebook.execute');
+    const r = await until(() => api.result(nb.uri) !== before ? api.result(nb.uri) : undefined, 110_000, `a run after ${what}`);
+    console.log(`${nb.uri.fsPath}: run after ${what}: ${Date.now() - t0} ms`);
+    return r;
+  };
+  const js = readFileSync(file, 'utf8'), spin = js.indexOf('\nexport function spin');
+  writeFileSync(file, js.slice(0, spin + 1));
+  let r = await again('the recursion was deleted on disk');
+  if (verdict(r) !== 'holds' || marked()) bad.push(`${file}: deleted on disk, the recursion still fails the never (${verdict(r)}) or marks line ${line}`);
+  const doc = await vscode.workspace.openTextDocument(file), edit = new vscode.WorkspaceEdit();
+  edit.insert(doc.uri, doc.positionAt(doc.getText().length), js.slice(spin + 1));
+  await vscode.workspace.applyEdit(edit);
+  r = await again('the recursion was typed back, unsaved');
+  if (verdict(r) !== 'fails' || !marked()) bad.push(`${file}: typed back unsaved, the never ${verdict(r)} and line ${line} is ${marked() ? '' : 'not '}marked`);
+  await vscode.window.showTextDocument(doc);
   await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
 }

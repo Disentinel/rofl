@@ -13,10 +13,10 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty
 
-/** Every file the notebook names, read; what could not be read is said, not skipped. */
-export function inputs(file: string, text: string): { input: Inputs; errors: string[]; paths: Record<string, string> } {
+/** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk. */
+export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string> } {
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
-  const read = (p: string) => { try { return readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
+  const read = (p: string) => { try { return unsaved[path.resolve(p)] ?? readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
   const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
   const want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   for (const f of [...want.model, ...want.phrases]) { const t = read(path.join(ROOT, f)); if (t !== undefined) lib[f] = t; }
@@ -34,8 +34,8 @@ export function inputs(file: string, text: string): { input: Inputs; errors: str
 }
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
-export function runFile(file: string, kernel = new Kernel(), text = readFileSync(file, 'utf8')): NbResult & { paths: Record<string, string> } {
-  const { input, errors, paths } = inputs(file, text);
+export function runFile(file: string, kernel = new Kernel(), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string> } {
+  const { input, errors, paths } = inputs(file, text, unsaved);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
   return { ...r, paths };

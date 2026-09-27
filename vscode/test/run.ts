@@ -63,17 +63,21 @@ const one = async (v: string) => {
     if (!at.test(text)) throw new Error(`${v}: the planted defect did not apply`);
     writeFileSync(path.join(dir, file), text.replace(at, plant));
   }
+  // each window its own copy of the notebooks, since the suite edits a code file under them
+  const nb = path.join(tmp, `nb-${v.replace(/ /g, '-')}`), mine = (s: string) => s.split(path.join(tmp, 'nb') + '/').join(nb + '/');
+  cpSync(path.join(tmp, 'nb'), nb, { recursive: true });
   let red = '';
   const report = path.join(tmp, `report-${v.replace(/ /g, '-')}`), log = createWriteStream(path.join(tmp, `${v.replace(/ /g, '-')}.log`));
   try {
     await runTests({
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
-      launchArgs: [path.join(tmp, 'nb'), review, '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: JSON.stringify(BREAKS[v]?.[3] ?? cases), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: natural, ROFL_NB_STARTUP: review, ROFL_NB_CLAUDE: fake },
+      launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_CLAUDE: fake },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
-  finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); }
+  finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); }
+  if (v === 'as it is') for (const l of readFileSync(path.join(tmp, 'as-it-is.log'), 'utf8').split('\n')) if (/: (run after .*: )?\d+ ms$/.test(l)) console.log(`     ${l.replace(tmp, '')}`);
   return { v, red, s: ((performance.now() - t) / 1000).toFixed(1) };
 };
 // Two at a time: each window loads the JS model, and more of them at once only share the same cores.

@@ -8,14 +8,14 @@ const TYPE = 'rofl-notebook';
 
 let worker: Worker | undefined, seq = 0;
 const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void }>();
-function ask<T>(op: 'run' | 'translate', file: string, text: string): Promise<T> {
+function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}): Promise<T> {
   if (!worker) {
     const w = worker = new Worker(new URL('./worker.ts', import.meta.url));
     w.on('message', ({ id, r, error }) => { const p = waiting.get(id)!; waiting.delete(id); error ? p.fail(new Error(error)) : p.ok(r); });
     w.on('error', (e) => { worker = undefined; for (const p of waiting.values()) p.fail(e); waiting.clear(); });
   }
   const id = ++seq;
-  return new Promise((ok, fail) => { waiting.set(id, { ok, fail }); worker!.postMessage({ id, op, file, text }); });
+  return new Promise((ok, fail) => { waiting.set(id, { ok, fail }); worker!.postMessage({ id, op, file, text, unsaved }); });
 }
 
 const docOf = (nb: vscode.NotebookDocument): Doc => ({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
@@ -41,7 +41,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     let r: Run & { shown: { head: Shown; cells: Shown[] } };
     try {
       r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `ROFL: running ${vscode.workspace.asRelativePath(nb.uri)}` },
-        () => ask('run', nb.uri.fsPath, serialize(docOf(nb))));
+        () => ask('run', nb.uri.fsPath, serialize(docOf(nb)), Object.fromEntries(vscode.workspace.textDocuments.filter((d) => d.isDirty && d.uri.scheme === 'file').map((d) => [d.uri.fsPath, d.getText()]))));
     } catch (e) {
       for (const [c, x] of execs) { if (c === (front ?? runs[0])) x.replaceOutput(out([{ md: '', err: (e as Error).message, ok: false }])); x.end(false, Date.now()); }
       return;
