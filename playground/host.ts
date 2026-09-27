@@ -302,6 +302,22 @@ export class Host {
       for (const d of deps.get(rel) ?? []) { const why = restsOn(d, seen); if (why) return why; }
     };
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
+    // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
+    const holed = new Map<string, string>();
+    const rules = new Map<string, { rel: string; cell: number }>();
+    texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i }); } catch { /* said by the load */ } });
+    for (const r of f.query('hole[$kernel](H, R)').rows) {
+      const at = rules.get(/\$rule\((\w+)\)/.exec(r.bindings.H)?.[1] ?? '');
+      if (!at || holed.has(at.rel)) continue;
+      holed.set(at.rel, r.bindings.R);
+      outs[at.cell].notes.push(`the rule for ${at.rel.replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
+    }
+    const holedUnder = (rel: string, seen = new Set<string>()): string | undefined => {
+      if (holed.has(rel)) return `it rests on ${rel.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(rel)})`;
+      if (seen.has(rel)) return undefined;
+      seen.add(rel);
+      for (const d of deps.get(rel) ?? []) { const why = holedUnder(d, seen); if (why) return why; }
+    };
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
@@ -315,7 +331,7 @@ export class Host {
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
-        const note = q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined;
+        const note = !q.unpopulatable && holedUnder(relOf(a.lit)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
