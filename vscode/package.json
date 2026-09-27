@@ -9,7 +9,7 @@
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.132.0"
   },
   "contributes": {
     "notebooks": [

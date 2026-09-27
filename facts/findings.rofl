@@ -56,6 +56,34 @@ recorded(f_notebook_questions_said_empty_where_they_meant_elsewhere, "2026-09-28
 addressed_by(f_notebook_questions_said_empty_where_they_meant_elsewhere, "playground/host.ts").
 finding_note(f_notebook_questions_said_empty_where_they_meant_elsewhere, "From the ledger audit. `unproven_misaimed(F)` asked bare, where the rules write `unproven_misaimed[audit](F)`, answered as a relation nothing can populate with no hint of the other book; it now says `unproven_misaimed is written in [audit], not in [main]`. `? a(X), not b(X)` failed as a parse error (`expected 'eof', got ','`); it is now refused as `a question is one literal; write a rule that joins these`. A read file's parse error pointed at a line of the assembled model (7895 for a 300-line file); it now points at the file's own line, and a datalog cell's at the notebook's. A datalog cell under a natural cell now answers it. `never rel(Args)` in a rofl cell already worked at d12f307 and is now pinned (the user's `not read` could not be reproduced). Each has a check in npm run test:nb.").
 
+-- Recorded 2026-09-28 by the notebook M2 session: the VS Code extension in
+-- vscode/, launched by `npm run vscode`, tested by `npm run test:vscode`.
+
+finding(f_vscode_runs_the_kernels_typescript_unbuilt, decision).
+recorded(f_vscode_runs_the_kernels_typescript_unbuilt, "2026-09-28").
+addressed_by(f_vscode_runs_the_kernels_typescript_unbuilt, "vscode/extension.ts").
+finding_note(f_vscode_runs_the_kernels_typescript_unbuilt, "MEASURED: VS Code 1.132 runs its extension host on Electron 42.7 / Node 24.18, where `process.features.typescript` is `strip`. Its host loads an ESM extension whose main is `extension.ts`, `import * as vscode from 'vscode'` works in it, and a worker_threads Worker loads `worker.ts`, which imports notebook/cli.ts and through it src/*.ts as they are. So the extension has NO BUILD: no transpile step like scripts/playground.ts, no esbuild, nothing to go stale. The price: it needs a VS Code whose Node strips types, so the manifest asks for ^1.132.0, the one version seen to work; older ones are not tried. The kernel runs in the worker, one Kernel per window, so the JS model loads once and the editor does not freeze during the 10 to 20 s a model-js run takes; progress is a notification plus the cells' own spinners.").
+
+finding(f_a_notebook_output_drops_file_links, pitfall).
+recorded(f_a_notebook_output_drops_file_links, "2026-09-28").
+addressed_by(f_a_notebook_output_drops_file_links, "vscode/render.ts").
+finding_note(f_a_notebook_output_drops_file_links, "SEEN IN THE WINDOW, not in any test: a code node rendered as `[load() at small.js:7](file:///...#L7)` showed as raw text, because the Markdown renderer of notebook outputs refuses the file: scheme. Read in VS Code's workbench bundle: a clicked link with no scheme goes to `_handleResourceOpening`, which opens an absolute path and reads a trailing `:line`. So a chip is `[label at small.js:7](</abs/path/small.js:7>)`; clicked in the real window it opened small.js with the cursor on line 7. The smoke test now demands that link text for small.js:12, which pins the form and not the click. No custom renderer was needed.").
+
+finding(f_a_rofl_md_named_on_the_code_command_line_opened_as_text, pitfall).
+recorded(f_a_rofl_md_named_on_the_code_command_line_opened_as_text, "2026-09-28").
+demands(f_a_rofl_md_named_on_the_code_command_line_opened_as_text, test).
+finding_note(f_a_rofl_md_named_on_the_code_command_line_opened_as_text, "SEEN ONCE, as a human launching it: `Code --extensionDevelopmentPath=vscode <dir> <dir>/examples/notebook/small.rofl.md` opened the file in the TEXT editor and the extension never activated. Opening it the way a click does (`vscode.open`) gives the notebook, and the smoke test demands that. Not established: whether the file on the command line is resolved before the development extension's contribution is read, or something else. Workaround: open it from the explorer. A second trap on the same path: a `--user-data-dir` longer than about 60 characters makes the IPC socket path pass 103 bytes, VS Code dies at startup, and the `code` shell command still exits 0.").
+
+finding(f_the_vscode_gate_is_longer_than_two_minutes, pitfall).
+recorded(f_the_vscode_gate_is_longer_than_two_minutes, "2026-09-28").
+demands(f_the_vscode_gate_is_longer_than_two_minutes, decision).
+finding_note(f_the_vscode_gate_is_longer_than_two_minutes, "MEASURED on this 4-core machine under other agents' load (load average 35 to 50): `npm run test:vscode` is 135 s, the round trip under 1 s, then five VS Code windows two at a time: as it is 76 s, and four planted defects, each a copy of the extension with one line changed, each red for its own reason: `codeline` (a code diagnostic one line low) 72 s, `marks` (no diagnostics set) 33 s, `cells` (outputs one cell off) 30 s, `prose` (markdown cells left out of the text the kernel runs) 20 s. Five windows at once did not finish in 120 s. Inside the 300 s the brief allows, over the two minutes CLAUDE.md allows for one run; `-- --only` (about 45 to 90 s) and `-- --break NAME` (20 to 45 s each) are the pieces that fit. What costs: a window's start, about 12 s, and one model-js run each in `as it is` and `codeline`.").
+
+finding(f_what_the_vscode_extension_does_not_check, pitfall).
+recorded(f_what_the_vscode_extension_does_not_check, "2026-09-28").
+demands(f_what_the_vscode_extension_does_not_check, test).
+finding_note(f_what_the_vscode_extension_does_not_check, "Open, what no test of vscode/ reaches: the Translate natural cells command (it calls translateText in the worker and replaces the notebook's cells with the result, unsaved; never run against Claude or a fake); unsure rows as warnings (neither example notebook has a blind never); a run of a notebook with unsaved edits; CRLF files inside VS Code (the pure round trip covers the bytes, not what a cell's text model does to line ends); the proof in a `<details>` fold (rendered, never looked at). And examples/notebook/self.rofl.md scans notebook/ and playground/host.ts, not vscode/, so the invariants that a run writes no file and starts no process do not cover the extension's own code.").
+
 -- Recorded 2026-09-28 by the notebook M1 session: a notebook is a `.rofl.md`
 -- world with fenced cells, run by `npm run nb`, accepted by its own notebook
 -- (examples/notebook/self.rofl.md) and by `npm run test:nb`.
