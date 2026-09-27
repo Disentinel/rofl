@@ -18,6 +18,29 @@ addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "p
 addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "scripts/nb_check.ts").
 finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error and `why` returns it as its explanation; `whynot` threw. REPAIRED: the host catches what `why` and `whynot` throw and puts it on that cell as `<line>: <error>`, so the cell is unread (exit 2) and every other cell answers; `npm run test:nb` plants both lines in a copy of the review notebook and requires the whynot error, the why line's parse message, a review answer and exit 2. Before the repair the same file printed one line and nothing else.").
 
+-- Recorded 2026-09-28 from the second user's audit, of grafema's MCP server
+-- (examples/notebook/mcp.rofl.md, mcp.FRICTION.md).
+
+finding(f_a_new_sentence_landed_in_the_models_own_and_answered_twelve_thousand_rows, defect).
+recorded(f_a_new_sentence_landed_in_the_models_own_and_answered_twelve_thousand_rows, "2026-09-28").
+addressed_by(f_a_new_sentence_landed_in_the_models_own_and_answered_twelve_thousand_rows, "playground/host.ts").
+finding_note(f_a_new_sentence_landed_in_the_models_own_and_answered_twelve_thousand_rows, "FRICTION 1 AND 2 of mcp.FRICTION.md. The user wrote `A tool entry O is named T if ...` meaning a new sentence; the reader took the head for the JS model's `ast_name` (\"O is named T\"), every variable bound, so the host let it through as a deliberate extension, and `? O is named T` answered 12366 rows, every named node of forty files, with no warning; the user caught it only against a grep count. Renamed, two differently worded heads (`has the tool name`, `has the dispatch label`) again answered the same 110 rows. REPAIRED: a rule whose conclusion lands in a relation the model already has is refused, naming the model's sentence and relation, unless the cell carries the line `extends <relation>`; the page's event-bus cell carries `extends resolves`. test:nb: `I7 the same conclusion without the marker is refused`. The second collision's exact mechanism was not reproduced here; under the repair it is refused the same way whenever it lands in a model relation.").
+
+finding(f_the_noun_in_a_head_is_not_a_condition, pitfall).
+recorded(f_the_noun_in_a_head_is_not_a_condition, "2026-09-28").
+demands(f_the_noun_in_a_head_is_not_a_condition, decision).
+finding_note(f_the_noun_in_a_head_is_not_a_condition, "FRICTION 3 of mcp.FRICTION.md. `A tool entry O is named T if [conditions never saying O is a tool entry]` reads as `for a tool entry O`, and the noun is a label for the reader, not a filter: the relation is as wide as the body makes it. docs/md-world.md's own example `A team T owns a module M` introduces T and M the same way, as variables only. Either the form guards a head noun the way it guards a body noun (the reader already turns kind nouns into guards in bodies), or the docs say plainly that it does not. Open.").
+
+finding(f_a_never_over_a_left_out_rule_said_fails_or_holds, defect).
+recorded(f_a_never_over_a_left_out_rule_said_fails_or_holds, "2026-09-28").
+addressed_by(f_a_never_over_a_left_out_rule_said_fails_or_holds, "notebook/kernel.ts").
+finding_note(f_a_never_over_a_left_out_rule_said_fails_or_holds, "FRICTION 4 of mcp.FRICTION.md. Two alternatives of one head written as two sentences in one paragraph fused into one unreadable line and the rule was left out; `never C starts via a shell` then printed FAILS · 0, and in another cell a never whose relation rested on a relation left out the same way printed holds. Neither was a measurement of the code; the only tell was the error lines above. NOW: a line in a cell with reading errors, and a line whose relation rests (through the cells' rules) on a relation nothing defines, prints `not asked` with the reason and the run exits 2. test:nb: the two `B` checks.").
+
+finding(f_the_call_graph_across_directories_gave_false_holds_on_a_second_codebase, defect).
+recorded(f_the_call_graph_across_directories_gave_false_holds_on_a_second_codebase, "2026-09-28").
+demands(f_the_call_graph_across_directories_gave_false_holds_on_a_second_codebase, rule_and_test).
+finding_note(f_the_call_graph_across_directories_gave_false_holds_on_a_second_codebase, "f_a_call_across_directories_is_not_resolved REPRODUCED on an unrelated 40-file codebase (grafema/packages/mcp/src): `handlers/graph-handlers.ts` calling `ensureAnalyzed()` from `../analysis.js` gives no `resolves` row, so every interprocedural rule (may_throw's call clause, who calls X) is silent across files, and two of the user's seven invariants could be checked single-hop only. The silence reads as holds: the user caught it against grep. Another agent owns the repair; this records that it is general and that it produces false greens, not only missing answers.").
+
 -- Recorded 2026-09-28 from the first user's audit of this ledger with a
 -- notebook (examples/notebook/ledger.rofl.md, ledger.FRICTION.md).
 
