@@ -48,7 +48,7 @@ const redFile = planted('red', 'self.rofl.md', (t) => t, [
   ['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)],
   ['notebook/front.ts', mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`)],
   ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawnSync('claude', ['-p', 'check this']);`)],
-  ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text\);/, (m) => `${m} translateText(file, text, claude, kernel);`)],
+  ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text, unsaved\);/, (m) => `${m} translateText(file, text, claude, kernel);`)],
 ]);
 copyTree('red', SELF_CODE.filter((f) => !['notebook/world.ts', 'notebook/kernel.ts', 'notebook/front.ts', 'notebook/cli.ts', 'vscode/worker.ts'].includes(f)));
 // and every one it cannot see into another: the run must name each as out of sight, outside the boundary
