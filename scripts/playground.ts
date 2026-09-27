@@ -1,9 +1,8 @@
 // The playground as static files: the engine, the JS scanner and part of the JS model, run in a browser. Publish the directory as an artifact or serve it as is.
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import ts from 'typescript';
-import { MODEL_FILES, PHRASE_FILES, booksOf } from '../playground/host.ts';
+import { MODEL_FILES, PHRASE_FILES, translatorVocab, concernsOf } from '../playground/host.ts';
 import { NPC_FILES } from '../playground/npc_host.ts';
-import { Vocabulary } from '../src/say.ts';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
 
@@ -41,53 +40,11 @@ const phrases = PHRASE_FILES.map(read).join('\n');
 writeFileSync(`${OUT}/model.txt`, model);
 writeFileSync(`${OUT}/phrases.txt`, phrases);
 
-// What the translator of a plain-language cell may say: each relation the scanner gives or the model's rules conclude, as the sentence the reader reads it in,
-// with a noun before each variable, `a call C resolves to a function F`. The sentence of a signature first, where one is written.
-const v = new Vocabulary(); v.addText(phrases);
-const rels = new Set(['ast_node', 'ast_child', 'ast_attr', ...booksOf(model).keys()]);
-const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child']);
-const vocab: string[] = [];
-for (const rel of [...rels].sort()) {
-  const ts = v.templates.filter((t) => t.rel === rel);
-  for (const t of rel.startsWith('ast_') ? ts.slice(1) : ts.slice(0, 1)) {
-    const sig = /\((.*)\)$/.exec(t.src)?.[1].split(/,\s*/) ?? [];
-    const holes = t.parts.filter((p) => p.t === 'hole') as { i: number; noun: string }[];
-    const names = new Map<number, string>();
-    for (const h of holes) {
-      let n = /([A-Z]\w*)(?::\d+)?$/.exec(sig.find((x) => x.endsWith(`:${h.i}`)) ?? sig[h.i] ?? '')?.[1] ?? h.noun[0].toUpperCase();
-      while ([...names.values()].includes(n)) n += String(h.i);
-      names.set(h.i, n);
-    }
-    // a value (a name, a kind, a line) is written as its variable; anything else with the noun that says what it is
-    const term = (h: { i: number; noun: string }) => VALUE.has(h.noun) ? names.get(h.i)! : `${/^[aeiou]/.test(h.noun) ? 'an' : 'a'} ${h.noun} ${names.get(h.i)}`;
-    vocab.push(t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? term(p) : '').filter(Boolean).join(' '));
-  }
-}
+const { vocab, functions } = translatorVocab(model, phrases);
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
-// The functions a condition may compute with, as the reader reads them: `L is the length of T`.
-const NAME: Record<string, string> = { text: 'T', index: 'I', number: 'N' };
-const functions = v.funs.map((t) => {
-  const used: string[] = [];
-  const name = (noun: string) => { let n = NAME[noun] ?? noun[0].toUpperCase(); while (used.includes(n)) n += '2'; used.push(n); return n; };
-  return 'R is ' + t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? name(p.noun) : '').filter(Boolean).join(' ') + `   (${t.rel})`;
-});
 writeFileSync(`${OUT}/functions.txt`, functions.join('\n') + '\n');
 
-// What each rule is about, for folding a proof into steps: the numbered section of the model file it sits in, `dataflow: construction`.
-// A rule is known by the id the kernel gives it, so a proof's witness names its section; a relation falls back to the first section concluding it.
-const concerns = { rules: {} as Record<string, string>, rels: {} as Record<string, string> };
-for (const f of MODEL_FILES.filter((x) => x.startsWith('rules/'))) {
-  const parts = read(f).split(/^-- (?=\d+\. )/m);
-  for (const part of parts.slice(1)) {
-    const t = part.slice(0, part.indexOf('\n')).replace(/^\d+\. /, '').split(/ — |: |, |\. /)[0].replace(/[.`]/g, '').trim();
-    const label = `${f.slice(9, -5)}: ${t.split(' ').map((w, i) => (/[A-Z]/.test(w) && w === w.toUpperCase()) || i === 0 ? w.toLowerCase() : w).join(' ')}`;
-    for (const c of parseProgram(part.slice(part.indexOf('\n') + 1))) {
-      if (!c.body.length) continue;
-      concerns.rules[ruleIdOf(c)] ??= label;
-      concerns.rels[c.head.rel] ??= label;
-    }
-  }
-}
+const concerns = concernsOf(MODEL_FILES.filter((x) => x.startsWith('rules/')).map((f) => [f, read(f)]));
 writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
 
 // The NPC yard: the kernel's boot, the yard's rules and phrases, and the section of npc.rofl each rule sits in.

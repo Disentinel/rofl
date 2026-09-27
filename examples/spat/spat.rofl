@@ -272,7 +272,7 @@ adjacent(P, D, E1, E2) :- pair_next(P, D, E1, E2, _, _), not crowded(P, D, E1, E
 
 -- A TIME IS NOT ALWAYS A TIME. Some blocks must begin exactly when they say;
 -- others have a WINDOW - "Рому можно сдать с 7:45 до 8:15" - and some have
--- only a far edge - "Родион должен быть у остановки не позднее 7:45". Inside a
+-- only a far edge - "Ребёнок должен быть у остановки не позднее 7:45". Inside a
 -- window there is room to manoeuvre, and a model that reads the observed
 -- arrival as the requirement CANNOT SEE THAT ROOM. It reported zero slack on a
 -- morning that had twenty minutes in hand, because the drop-off was recorded
