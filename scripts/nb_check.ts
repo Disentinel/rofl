@@ -1,6 +1,6 @@
 // npm run test:nb — the notebook's behavioural gate: the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -14,7 +14,7 @@ const t0 = performance.now();
 
 type Out = { code: number; out: string; stdout?: string };
 const cli = (args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, 'notebook/cli.ts'), ...args], { env: { ...process.env, ...env } });
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, 'notebook/cli.ts'), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
   let out = '', stdout = '';
   p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);
@@ -37,7 +37,7 @@ function mutate(file: string, at: RegExp, plant: (m: string) => string): string 
 }
 const copyTree = (name: string, files: string[]) => { for (const f of files) { const to = path.join(tmp, name, f); mkdirSync(path.dirname(to), { recursive: true }); copyFileSync(path.join(ROOT, f), to); } };
 
-const SELF_CODE = ['notebook/kernel.ts', 'notebook/world.ts', 'notebook/book.ts', 'notebook/front.ts', 'notebook/cli.ts', 'playground/host.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'vscode/serial.ts', 'vscode/render.ts'];
+const SELF_CODE = ['notebook/kernel.ts', 'notebook/world.ts', 'notebook/book.ts', 'notebook/front.ts', 'notebook/cli.ts', 'notebook/serve.ts', 'playground/host.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'vscode/serial.ts', 'vscode/render.ts'];
 const REVIEW = path.join(NB, 'review.rofl.md');
 const withCell = (cell: string) => (t: string) => `${t}\n\`\`\`rofl\n${cell}\n\`\`\`\n`;
 
@@ -142,6 +142,27 @@ copyTree('xdir-red', XDIR.filter((f) => !f.endsWith('/index.ts')));
 const translateSlow = planted('tr-slow', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
 copyTree('tr-slow', ['examples/review.rofl.md']);
 
+// the kept kernel (notebook/serve.ts) answers what a fresh process answers, after a cell edit, a code edit and a kill -9; and a daemon
+// that keys its answer on the notebook's text alone, blind to the code, is caught by the same comparison
+const staleRoot = path.join(tmp, 'stale');
+mkdirSync(path.join(staleRoot, 'notebook'), { recursive: true });
+for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(staleRoot, e));
+for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(staleRoot, 'notebook', f));
+writeFileSync(path.join(staleRoot, 'notebook/serve.ts'), mutate('notebook/serve.ts', /runFile\(file, k\)/, () => `(memo[file + readFileSync(file, 'utf8')] ??= runFile(file, k))`).replace(/^const ROOT/m, 'const memo: Record<string, ReturnType<typeof runFile>> = {};\nconst ROOT'));
+const kept = async (name: string, root: string) => {
+  const file = planted(name, 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8')]]);
+  const sock = path.join(tmp, `${name}.sock`), env = { ROFL_NB_DAEMON: '1', ROFL_NB_SOCKET: sock, ROFL_NB_IDLE: '60', ROFL_NB_CLAUDE: spy };
+  const strip = (o: Out) => { try { const r = JSON.parse(o.stdout ?? ''); const load = r.ms.load; delete r.ms; return { r: `${o.code} ${JSON.stringify(r)}`, load }; } catch { return { r: o.out, load: -1 }; } };
+  const step = async () => { const [d, p] = await Promise.all([cli([file, '--json'], env, root), cli([file, '--json'], {}, root)]); return { daemon: strip(d), fresh: strip(p) }; };
+  const steps = [await step()];
+  writeFileSync(file, withCell('never C is unawaited')(readFileSync(file, 'utf8'))); steps.push(await step());
+  writeFileSync(path.join(path.dirname(file), 'small.js'), readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n'); steps.push(await step());
+  spawnSync('pkill', ['-9', '-f', sock]); steps.push(await step());
+  spawnSync('pkill', ['-f', sock]);
+  return steps;
+};
+const keptRuns = Promise.all([kept('kept', ROOT), kept('kept-stale', staleRoot)]);
+
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
@@ -160,6 +181,7 @@ const [review, small, self, reviewJson, fails, notRead, rewrite, extended, colli
   cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]),
 ]);
 const layered = await layering;
+const [keptOk, keptStale] = await keptRuns;
 
 const results: [string, boolean, string][] = [];
 const check = (name: string, ok: boolean, o?: Out) => results.push([name, ok, ok || !o ? '' : `exit ${o.code}\n${o.out.slice(-1500)}`]);
@@ -237,6 +259,8 @@ check('F6 a model that does not answer is stopped in bounded time and said', trS
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
 for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);
+check('the kept kernel answers what a fresh process answers: first run, a cell edit, a code edit, after kill -9', keptOk.every((s) => s.daemon.r === s.fresh.r) && keptOk[1].daemon.load === 0 && keptOk[0].fresh.r !== keptOk[1].fresh.r && keptOk[1].fresh.r !== keptOk[2].fresh.r, { code: 0, out: JSON.stringify(keptOk.map((s) => [s.daemon.load, s.daemon.r === s.fresh.r, s.daemon.r.slice(0, 300), s.fresh.r.slice(0, 300)])) });
+check('  and a kept kernel blind to the code files, it does not', keptStale[2].daemon.r !== keptStale[2].fresh.r && keptStale[1].daemon.r === keptStale[1].fresh.r, { code: 0, out: JSON.stringify(keptStale.map((s) => s.daemon.r === s.fresh.r)) });
 check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir'].every((n) => worlds().some((w) => w.name === n)));
 
 for (const [name, ok, why] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${why ? `\n${why.replace(/^/gm, '     ')}` : ''}`);

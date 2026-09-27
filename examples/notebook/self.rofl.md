@@ -9,6 +9,7 @@ code:
   - ../../notebook/book.ts
   - ../../notebook/front.ts
   - ../../notebook/cli.ts
+  - ../../notebook/serve.ts
   - ../../playground/host.ts
   - ../../vscode/extension.ts
   - ../../vscode/worker.ts
@@ -121,12 +122,17 @@ I5 The LLM proposes, the book decides: a translation enters the file only after 
 ```
 
 > Step 1. A model is called by starting a process; only the function that
-> calls Claude may start one.
+> calls Claude may start one, and the one that starts the kept kernel
+> (`notebook/serve.ts`), whose command is node itself.
 
 ```rofl
 A call C starts a process if C is a host site of `node` from "node:child_process" at some key.
 
-A call C starts a process outside the model call if C starts a process, a function F is the nearest function of C, and unless F answers to "claude".
+A function F may start a process either:
+1. if F answers to "claude";
+2. if F answers to "viaDaemon".
+
+A call C starts a process outside the model call if C starts a process, a function F is the nearest function of C, and unless F may start a process.
 
 never C starts a process outside the model call
 ```

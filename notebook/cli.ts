@@ -3,11 +3,13 @@
 // Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
 // 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
+// A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import * as path from 'node:path';
 import { Kernel, cellsOf, codeNames, libFiles, parseFront, translated, worldOf, type Inputs, type NbLine, type NbResult } from './kernel.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
+import { viaDaemon } from './serve.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -182,7 +184,8 @@ if (isMain) {
   if (!file) { console.error('usage: npm run nb -- <file.rofl.md> [--json] [--cell N]'); process.exit(2); }
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: NbResult;
-  try { r = runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
+  const d = await viaDaemon(file);
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   console.log(argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only));
   process.exit(EXIT[r.status]);
