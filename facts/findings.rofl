@@ -18,6 +18,44 @@ addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "p
 addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "scripts/nb_check.ts").
 finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error and `why` returns it as its explanation; `whynot` threw. REPAIRED: the host catches what `why` and `whynot` throw and puts it on that cell as `<line>: <error>`, so the cell is unread (exit 2) and every other cell answers; `npm run test:nb` plants both lines in a copy of the review notebook and requires the whynot error, the why line's parse message, a review answer and exit 2. Before the repair the same file printed one line and nothing else.").
 
+-- Recorded 2026-09-28 from the first user's audit of this ledger with a
+-- notebook (examples/notebook/ledger.rofl.md, ledger.FRICTION.md).
+
+finding(f_host_facts_need_a_generator, question).
+recorded(f_host_facts_need_a_generator, "2026-09-28").
+demands(f_host_facts_need_a_generator, decision).
+finding_note(f_host_facts_need_a_generator, "A notebook over a world whose questions need host facts (does a cited file exist, how long is a string, which shape is an argument) has no way to get them: the user wrote examples/notebook/gen_ledger_facts.ts, a script that reads facts/findings.rofl and the disk and writes examples/notebook/ledger_facts.rofl, which the notebook then `reads:`. It is kept as the example of bridging host facts. The generated file is a photograph: nothing regenerates it when the ledger moves, the same shape f_a_generated_pack_with_no_regeneration_gate_has_already_rotted names. A provider the kernel could ask (declared in front matter, run by the host, never by the kernel, I6) is the open design; not built.").
+
+finding(f_fifteen_open_findings_demand_nothing, defect).
+recorded(f_fifteen_open_findings_demand_nothing, "2026-09-28").
+demands(f_fifteen_open_findings_demand_nothing, decision).
+finding_note(f_fifteen_open_findings_demand_nothing, "MEASURED by examples/notebook/ledger.rofl.md, `? open_undecided(F)`: 15 open findings carry no `demands` row, so `finding_action` has nothing for them and the queue cannot say what closing them takes. The user's first probe said 0, from a Rofl.query('open_finding(F), not demands(F, _)') whose comma made it a parse error returned in `.error` with `rows: []`; the notebook's rule-then-never form found the 15. Each needs its kind of work named or a dismissal.").
+
+finding(f_the_queue_accepts_a_cycle_silently, defect).
+recorded(f_the_queue_accepts_a_cycle_silently, "2026-09-28").
+addressed_by(f_the_queue_accepts_a_cycle_silently, "rules/findings.rofl").
+finding_note(f_the_queue_accepts_a_cycle_silently, "rules/findings.rofl said a circular queue `would be refused by the same machinery that refuses a circular program`. It is not: `blocks` is edb and waiting/ready/blocked_by read only the direct blocker, so no rule is recursive over it and nothing can see a cycle. MEASURED by examples/notebook/ledger.rofl.md N6: two real open findings made to block each other load with no diagnostic and are both `waiting` for ever; `never deadlocked(A, B)` fails with 2 rows. The real graph is 10 edges and acyclic. The COMMENT was false and is corrected; the machinery is unchanged (a transitive `blocks` closure with a `deadlocked[audit]` alarm is the repair if one is wanted).").
+
+finding(f_the_ledger_header_drifted_from_its_vocabulary, defect).
+recorded(f_the_ledger_header_drifted_from_its_vocabulary, "2026-09-28").
+addressed_by(f_the_ledger_header_drifted_from_its_vocabulary, "rules/findings.rofl").
+finding_note(f_the_ledger_header_drifted_from_its_vocabulary, "The schema at the head of rules/findings.rofl listed Kind as insight | pitfall | question | idea and What as rule_and_test | kernel_test | doc | decision. In use: Kind also defect (238) and decision (55); demands also code, demo, kernel_change, none, requeue, test, test_repair (seven values, 47 rows per the ledger notebook's `undocumented_demand`). The header now lists what is in use; nothing checks that it stays so, and whether the seven should collapse into the four is open.").
+
+finding(f_dismissed_is_written_two_ways, defect).
+recorded(f_dismissed_is_written_two_ways, "2026-09-28").
+demands(f_dismissed_is_written_two_ways, decision).
+finding_note(f_dismissed_is_written_two_ways, "`dismissed(F, Reason)` has its reason as a bare atom in 31 rows and as a quoted string in 7 (counted in facts/findings.rofl), and one row wraps its reason onto a second line; a generator reading the ledger had to accept both (examples/notebook/gen_ledger_facts.ts). A rule that joins on the reason, or renders it, sees two types for one field. Pick one and rewrite the minority.").
+
+finding(f_the_translator_hung_in_a_subagent_and_not_here, question).
+recorded(f_the_translator_hung_in_a_subagent_and_not_here, "2026-09-28").
+addressed_by(f_the_translator_hung_in_a_subagent_and_not_here, "notebook/cli.ts").
+finding_note(f_the_translator_hung_in_a_subagent_and_not_here, "The ledger's user saw `npm run nb -- translate` hang 110 s, then 280 s with 11 s of CPU, and a bare `claude -p --model sonnet --tools ''` on a 14-line prompt with a ``` fence hang too, from inside a subagent. NOT REPRODUCED from this session, also a subagent: the same kind of fenced prompt answered in 18 s, a one-word prompt in 7 s, and a real translate of a natural cell under the review notebook in 46 s end to end. So the cause is not the fence alone and not nesting alone; unknown. What changed: the call is stopped after ROFL_NB_CLAUDE_TIMEOUT seconds (default 180) and says so, with the prompt's size and whatever the model printed, instead of spawnSync's bare ETIMEDOUT after five minutes. test:nb pins it with a model that never answers.").
+
+finding(f_notebook_questions_said_empty_where_they_meant_elsewhere, defect).
+recorded(f_notebook_questions_said_empty_where_they_meant_elsewhere, "2026-09-28").
+addressed_by(f_notebook_questions_said_empty_where_they_meant_elsewhere, "playground/host.ts").
+finding_note(f_notebook_questions_said_empty_where_they_meant_elsewhere, "From the ledger audit. `unproven_misaimed(F)` asked bare, where the rules write `unproven_misaimed[audit](F)`, answered as a relation nothing can populate with no hint of the other book; it now says `unproven_misaimed is written in [audit], not in [main]`. `? a(X), not b(X)` failed as a parse error (`expected 'eof', got ','`); it is now refused as `a question is one literal; write a rule that joins these`. A read file's parse error pointed at a line of the assembled model (7895 for a 300-line file); it now points at the file's own line, and a datalog cell's at the notebook's. A datalog cell under a natural cell now answers it. `never rel(Args)` in a rofl cell already worked at d12f307 and is now pinned (the user's `not read` could not be reproduced). Each has a check in npm run test:nb.").
+
 -- Recorded 2026-09-28 by the notebook M1 session: a notebook is a `.rofl.md`
 -- world with fenced cells, run by `npm run nb`, accepted by its own notebook
 -- (examples/notebook/self.rofl.md) and by `npm run test:nb`.
