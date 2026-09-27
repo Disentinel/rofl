@@ -1,0 +1,40 @@
+{
+  "name": "rofl-notebook",
+  "displayName": "ROFL notebook",
+  "description": "A .rofl.md opens as a notebook and runs through the ROFL notebook kernel of this tree",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "rofl",
+  "license": "MIT",
+  "type": "module",
+  "main": "./extension.ts",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "contributes": {
+    "notebooks": [
+      {
+        "type": "rofl-notebook",
+        "displayName": "ROFL notebook",
+        "selector": [{ "filenamePattern": "*.rofl.md" }]
+      }
+    ],
+    "languages": [
+      { "id": "rofl", "aliases": ["ROFL"] },
+      { "id": "datalog", "aliases": ["Datalog"] },
+      { "id": "natural", "aliases": ["Natural language"] }
+    ],
+    "commands": [
+      { "command": "rofl-notebook.translate", "title": "Translate natural cells", "category": "ROFL" }
+    ],
+    "menus": {
+      "notebook/toolbar": [
+        { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@types/vscode": "1.90",
+    "@vscode/test-electron": "^3.1.0"
+  }
+}
