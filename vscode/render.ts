@@ -1,19 +1,31 @@
 // What a run says, per cell, as the Markdown a notebook output shows: answers as sentences, every code node a link to its line.
 // The link is a bare path: VS Code's Markdown refuses `file:` links, and a notebook output opens `/path:line` at that line.
-import { SAID, VERDICT } from '../notebook/cli.ts';
+// A code file is named from the directory all of them share; a failing never is named `rofl-cell:K`, which the editor turns into its cell.
+import { said, VERDICT } from '../notebook/cli.ts';
 import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
+
+const FOLD = 10;   // answers shown under a line; the rest fold
 
 export type Shown = { md: string; err: string; ok: boolean };
 export type Run = NbResult & { paths: Record<string, string> };
 
 /** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1. */
 export function render(r: Run): { head: Shown; cells: Shown[] } {
-  const link = (s: string) => s.replace(/</g, '&lt;').replace(/\[([^\]]*?) at ([^\]\s]+):(\d+)\]/g, (m, label, f, n) =>
-    r.paths[f] ? `[${label} at ${f}:${n}](<${r.paths[f]}:${n}>)` : m);
+  const dirs = Object.keys(r.paths).map((f) => f.split('/').slice(0, -1));
+  let n = 0;
+  while (dirs.length && dirs.every((d) => n < d.length && d[n] === dirs[0][n])) n++;
+  const short = (f: string) => f.split('/').slice(n).join('/');
+  const link = (s: string) => s.replace(/</g, '&lt;').replace(/\[([^\]]*?) at ([^\]\s]+):(\d+)\]/g, (m, label, f, k) =>
+    r.paths[f] ? `[${label} at ${short(f)}:${k}](<${r.paths[f]}:${k}>)` : m);
+  const list = (rows: { sentence: string }[], total: number) => {
+    const items = rows.map((a) => `- ${link(a.sentence)}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
+    return items.length + more.length <= FOLD ? [...items, ...more].join('\n')
+      : `${items.slice(0, FOLD).join('\n')}\n\n<details><summary>${total - FOLD} more</summary>\n\n${[...items.slice(FOLD), ...more].join('\n')}\n\n</details>`;
+  };
   const line = (l: NbLine) => {
     const out = [`**${link(l.text)}**${VERDICT(l) ? ` — ${l.verdict === 'fails' ? `**${VERDICT(l)}**` : VERDICT(l)}` : ''}`];
-    if (l.answers.length) out.push(l.answers.map((a) => `- ${link(a.sentence)}`).join('\n') + (l.total > l.answers.length ? `\n- … ${l.total - l.answers.length} more` : ''));
-    if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n` + l.unsure.answers.map((a) => `- ${link(a.sentence)}`).join('\n'));
+    if (l.answers.length) out.push(list(l.answers, l.total));
+    if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total));
     if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);
     return out.join('\n\n');
   };
@@ -24,7 +36,7 @@ export function render(r: Run): { head: Shown; cells: Shown[] } {
   });
   const prose = r.cells[0] ? cell(r.cells[0]) : { md: '', err: '', ok: true };
   return {
-    head: { md: [`*${SAID[r.status]}* · load ${r.ms.load} ms, run ${r.ms.run} ms`, prose.md].filter(Boolean).join('\n\n'), err: [...r.errors, prose.err].filter(Boolean).join('\n'), ok: r.status === 'ok' },
+    head: { md: [`*${said(r, (cell, line) => `[cell ${cell}, line ${line}](<rofl-cell:${cell}>)`)}* · load ${r.ms.load} ms, run ${r.ms.run} ms`, prose.md].filter(Boolean).join('\n\n'), err: [...r.errors, prose.err].filter(Boolean).join('\n'), ok: r.status === 'ok' },
     cells: r.cells.slice(1).map(cell),
   };
 }

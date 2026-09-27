@@ -42,6 +42,11 @@ export function runFile(file: string, kernel = new Kernel(), text = readFileSync
 }
 
 export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
+/** The run's status in a sentence, naming where each failing never is; `at` writes a place, a link in an editor. The command line's last line stays the bare verdict. */
+export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${cell} (line ${line})`): string => {
+  const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => at(c.index, l.line)));
+  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '');
+};
 
 export const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
@@ -64,7 +69,7 @@ export function print(file: string, r: NbResult, only?: number): string {
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
     }
   }
-  out.push(`${file}: ${SAID[r.status]}`);
+  out.push(`${file}: ${SAID[r.status]}`);   // the verdict line, read by npm run test:nb as it is
   return out.join('\n');
 }
 

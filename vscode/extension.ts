@@ -48,7 +48,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     }
     results.set(nb.uri.toString(), r);
     for (const [c, x] of execs) {
-      const shown = [...(c === (front ?? runs[0]) ? [r.shown.head] : []), ...(c === front ? [] : [r.shown.cells[runs.indexOf(c)] ?? { md: '', err: '', ok: r.status !== 'unread' }])];
+      const head = { ...r.shown.head, md: r.shown.head.md.replace(/rofl-cell:(\d+)/g, (m, k) => runs[Number(k) - 1]?.document.uri.toString() ?? m) };
+      const shown = [...(c === (front ?? runs[0]) ? [head] : []), ...(c === front ? [] : [r.shown.cells[runs.indexOf(c)] ?? { md: '', err: '', ok: r.status !== 'unread' }])];
       x.replaceOutput(out(shown));
       x.end(shown.every((s) => s.ok), Date.now());
     }
