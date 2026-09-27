@@ -27,7 +27,7 @@ export class Kernel {
     const key = model + '\u0000' + phrases;
     if (key !== this.loaded) {
       const rules = libFiles(path, front).model.filter((f) => f.startsWith('rules/'));
-      const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined);
+      const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, input.lib['boot.rofl']);
       load = l.ms;
       if (!l.ok) { errors.push(...l.diagnostics); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
       this.loaded = key;

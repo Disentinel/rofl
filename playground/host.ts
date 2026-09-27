@@ -7,7 +7,8 @@ import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
-import { varsOf, canonTerm, type Clause } from '../src/unify.ts';
+import { varsOf, canonTerm, mka, type Clause } from '../src/unify.ts';
+import type { FactRec } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -99,6 +100,16 @@ const ground = (lit: string, b: Record<string, string>): string => lit.replace(/
 const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
 const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
+type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
+
+/** Every relation the clauses conclude or read. */
+function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
+  for (const cl of program) { into.add(cl.head.rel); for (const b of cl.body) if (b.t !== 'bi') into.add(b.lit.rel); }
+  return into;
+}
+
+/** A fact of an evaluated world, to be asserted in another. */
+const asFact = (f: FactRec): Clause => ({ head: { rel: f.rel, persp: mka(f.persp), perspExplicit: true, args: f.args, temporal: 'now' }, body: [] });
 
 /** One loaded model and the book last run over it: the page keeps one, an editor one per notebook. */
 export class Host {
@@ -109,14 +120,30 @@ export class Host {
   private vocab = new Vocabulary();
   private home: Record<string, string> = {};
   private concerns: Concerns = { rules: {}, rels: {} };   // a model relation -> the one book its rules write
+  private shell: Rofl | null = null;   // the kernel alone, which the cells are evaluated in when they stand on the model without touching it
+  private kernelRels = new Set<string>();
+  private modelRels = new Set<string>();
+  private scanned: Scanned | null = null;
+  private base: Rofl | null = null;
+  private full: (() => Rofl) | null = null;   // the last run as one world, built when a proof is asked of a run that was not
 
-  init(model: string, phraseText: string, concernMap?: Concerns): { ok: boolean; diagnostics: string[]; ms: number } {
+  init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string): { ok: boolean; diagnostics: string[]; ms: number } {
     const t = performance.now();
-    this.core = new Rofl({ space: 40_000_000 });
+    // reuse is off: every run adds the cells' rules, which re-derives the stratum table and throws away all a reuse plan would keep, after paying seconds to plan it
+    this.core = new Rofl({ space: 40_000_000, reuse: false });
     const l = this.core.load(model, { budget: BUDGET });
     this.phrases = phraseText;
     if (concernMap) this.concerns = concernMap;
     this.home = homeOf(model);
+    this.scanned = this.base = null;
+    this.shell = null;
+    if (kernel !== undefined && l.ok) {
+      this.shell = new Rofl({ space: 40_000_000, reuse: false });
+      this.shell.load(kernel, { budget: BUDGET });
+      this.shell.evaluate(BUDGET);
+      this.kernelRels = new Set([...relsOf(parseProgram(kernel)), ...this.shell.store.allFacts().map((f) => f.rel)]);
+      this.modelRels = new Set([...relsOf(parseProgram(model)), ...this.kernelRels]);
+    }
     return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
   }
 
@@ -128,8 +155,97 @@ export class Host {
     const phases: Record<string, number> = {};
     let mark = performance.now();
     const lap = (name: string) => { const now = performance.now(); phases[name] = Math.round(now - mark); mark = now; };
-    const f = this.core.fork();
+    const sc = this.code(files);
+    const { facts, nodes, parseErrors } = sc;
+    lap('scan');
+    const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
+    lap('read');
+    const vocab = this.vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
+    const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
+    const firstDef = new Map<string, number>();
+    read.forEach((r, i) => { for (const rel of r?.defined ?? []) if (!firstDef.has(rel)) firstDef.set(rel, i); });
+    const texts: string[] = [], refused = new Set<number>();
+    const notebook = this.notebook = new Map();
+    const heads = new Set<string>(), reads = new Set<string>();
+    const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
+      const errors: string[] = [], notes: string[] = [];
+      const r = read[i];
+      const text = r ? r.rofl : clauses;
+      if (r) {
+        for (const u of r.problems.unparsed) errors.push(`not read: ${u.replace(/^HEAD /, '')}`);
+        for (const d of r.problems.dropped) errors.push(`left out: ${d}`);
+        const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
+        if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
+        for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
+        for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
+      }
+      try {
+        texts[i] = text;
+        const program = parseProgram(text);
+        for (const cl of program) {
+          if (!cl.body.length) continue;
+          notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
+          const free = loose(cl);
+          if (!(cl.head.rel in home)) continue;
+          if (!free.length) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
+          // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
+          const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
+          errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
+          texts[i] = ''; refused.add(i);
+        }
+        if (!refused.has(i)) { for (const cl of program) heads.add(cl.head.rel); relsOf(program, reads); }
+      } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
+      return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
+    });
+    const asks = parts.map(({ asks }, i) => asks.map((a) => read[i] && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
+    // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
+    const over = [...reads].filter((r) => !heads.has(r));
+    const layered = !!this.shell && Object.keys(files).length > 0
+      && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
+      && !over.some((r) => this.kernelRels.has(r))
+      && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'why' && a.kind !== 'whynot' && !this.kernelRels.has(relOf(a.lit))));
+    let base: Rofl | null = null;
+    if (layered) {
+      try { base = this.evaluated(files, sc); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
+    }
+    lap('model');
+    const f = base ? this.shell!.fork() : this.core.fork();
+    const given = base ? f.assertClauses(over.flatMap((rel) => base!.store.relAll(rel).map(asFact))) : Object.keys(files).length ? f.assert(sc.text) : { ok: true, diagnostics: [] };
+    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
     lap('fork');
+    // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
+    const all = texts.filter((x) => x.trim()).join('\n');
+    if (all.trim() && !f.load(all, { budget: BUDGET }).ok) {
+      texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
+    }
+    lap('load');
+    try { f.evaluate(BUDGET); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
+    lap('evaluate');
+    this.last = base ? null : f;
+    this.full = base ? () => { const w = base!.fork(); if (all.trim() && !w.load(all, { budget: BUDGET }).ok) texts.forEach((x) => { if (x.trim()) w.load(x, { budget: BUDGET }); }); w.evaluate(BUDGET); return w; } : null;
+    parts.forEach((_, i) => {
+      if (refused.has(i)) return;
+      for (const a of asks[i]) {
+        if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
+        if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
+        if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
+        const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
+        if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
+        const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
+        const note = q.unpopulatable ? 'nothing in the model can put a row here: check the name, the book and the number of arguments' : q.partial ? 'the budget ran out before every answer was found' : undefined;
+        const above = outs[i].lines[outs[i].lines.length - 1];
+        if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
+        outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
+      }
+    });
+    lap('ask');
+    return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
+  }
+
+  /** The code's facts, scanned once per text of the files. */
+  private code(files: Record<string, string>): Scanned {
+    const key = JSON.stringify(files);
+    if (this.scanned?.key === key) return this.scanned;
     const nodes: Record<string, Node> = {};
     const parseErrors: Record<string, string> = {};
     const facts: string[] = [], strings = new Set<string>();
@@ -145,82 +261,25 @@ export class Host {
       }
     }
     labelNodes(facts, nodes);
-    const given = Object.keys(files).length ? f.assert([...facts, ...hostFacts(Object.keys(files), strings)].join('\n')) : { ok: true, diagnostics: [] };
-    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
-    lap('scan');
-    const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
-    lap('read');
-    const vocab = this.vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
-    const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
-    const firstDef = new Map<string, number>();
-    read.forEach((r, i) => { for (const rel of r?.defined ?? []) if (!firstDef.has(rel)) firstDef.set(rel, i); });
-    const texts: string[] = [], refused = new Set<number>();
-    const notebook = this.notebook = new Map();
-    const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
-      const errors: string[] = [], notes: string[] = [];
-      const r = read[i];
-      const text = r ? r.rofl : clauses;
-      if (r) {
-        for (const u of r.problems.unparsed) errors.push(`not read: ${u.replace(/^HEAD /, '')}`);
-        for (const d of r.problems.dropped) errors.push(`left out: ${d}`);
-        const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
-        if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
-        for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
-        for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
-      }
-      try {
-        texts[i] = text;
-        for (const cl of parseProgram(text)) {
-          if (!cl.body.length) continue;
-          notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
-          const free = loose(cl);
-          if (!(cl.head.rel in home)) continue;
-          if (!free.length) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
-          // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
-          const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
-          errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
-          texts[i] = ''; refused.add(i);
-        }
-      } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
-      return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
-    });
-    // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
-    const all = texts.filter((x) => x.trim()).join('\n');
-    if (all.trim() && !f.load(all, { budget: BUDGET }).ok) {
-      texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
-    }
-    lap('load');
-    try { f.evaluate(BUDGET); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
-    lap('evaluate');
-    this.last = f;
-    parts.forEach(({ asks }, i) => {
-      if (refused.has(i)) return;
-      for (const a0 of asks) {
-        let a = a0;
-        if (read[i] && !LITERAL.test(a.lit)) {
-          const lit = read[i]!.literal(a.lit);
-          if (!lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
-          a = { ...a, lit };
-        }
-        if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
-        if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
-        const q = f.query(a.lit);
-        if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
-        const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
-        const note = q.unpopulatable ? 'nothing in the model can put a row here: check the name, the book and the number of arguments' : q.partial ? 'the budget ran out before every answer was found' : undefined;
-        const above = outs[i].lines[outs[i].lines.length - 1];
-        if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
-        outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
-      }
-    });
-    lap('ask');
-    return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
+    const all = [...facts, ...hostFacts(Object.keys(files), strings)];
+    this.base = null;
+    return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map((x) => x.slice(0, x.search(/[[(]/)))) };
+  }
+
+  /** The model evaluated over the code, once per text of the files. */
+  private evaluated(files: Record<string, string>, sc: Scanned): Rofl {
+    if (this.base) return this.base;
+    const b = this.core!.fork();
+    const given = b.assert(sc.text);
+    if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
+    b.evaluate(BUDGET);
+    return this.base = b;
   }
 
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */
   explain(literal: string): Step | string {
-    if (!this.last) return 'run the book first';
-    return fold(this.last.store, literal, {
+    if (!this.world()) return 'run the book first';
+    return fold(this.last!.store, literal, {
       concernOf: (rid, key) => this.concerns.rules[rid] ?? this.notebook.get(rid) ?? this.concerns.rels[relOf(key)] ?? '',
       say: (key) => this.vocab.say(key) ?? key,
       entities: NODE,
@@ -230,8 +289,14 @@ export class Host {
 
   /** `why` over the last run, without running again. */
   why(literal: string): string {
-    if (!this.last) return 'run the book first';
-    return this.vocab.sayAll(this.last.why(literal).text);
+    const w = this.world();
+    if (!w) return 'run the book first';
+    return this.vocab.sayAll(w.why(literal).text);
+  }
+
+  private world(): Rofl | null {
+    if (!this.last && this.full) { this.last = this.full(); this.full = null; }
+    return this.last;
   }
 }
 
