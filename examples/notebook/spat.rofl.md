@@ -21,9 +21,18 @@ reads:
 > This file only reads `examples/spat/spat.rofl` and
 > `examples/spat/week.example.rofl` — neither is edited here. The one added
 > fact file, `spat_inferred_travel.rofl`, is explained under R2, where it is
-> needed. The what-if (R1) lives in two sibling files,
-> `spat_whatif.rofl.md` and `whatif_waive_swim.rofl`, for a reason explained
-> there: one notebook's cells cannot show a before and an after.
+> needed. The what-if (R1) is an `excise` cell in this file.
+>
+> The sentences below give words to relations `spat.rofl` derives, so a
+> `rofl` cell can ask them and answers read as sentences
+> (`docs/md-world.md`, *Sentences for what a notebook reads*):
+
+Reads:
+
+- from spat:
+  - <a id="uncovered"></a>A child Ch is alone on a day D at a minute S
+  - <a id="out_why"></a>A person P is out on a day D at a minute S for a constraint C
+  - <a id="on_duty"></a>A person P is on duty on a day D at a minute S
 >
 > First, the wide question, the one `spat check` answers in one word:
 
@@ -48,9 +57,10 @@ R1 No child is ever alone while awake: whenever a child is not asleep and not so
 > First attempt, the way the sentence form wants it — `uncovered/3` is
 > already exactly this predicate, so name it as a sentence and ask a
 > `never` of it, the way `docs/md-world.md`'s own worked example does for a
-> fact declared elsewhere:
+> fact declared elsewhere (kept as text: it does not load, for the reason
+> below):
 
-```rofl
+```text
 <a id="alone"></a>A child Ch is left alone at day D slot S if uncovered(Ch, D, S).
 
 never Ch is left alone at day D slot S
@@ -72,6 +82,14 @@ never Ch is left alone at day D slot S
 alone(Ch, D, S) :- uncovered(Ch, D, S).
 
 never alone(Ch, D, S)
+```
+
+> Since then the notebook can give `uncovered` a sentence of its own (the
+> `Reads:` list at the top), and the same question reads as a parent would
+> ask it:
+
+```rofl
+never Ch is alone on D at S
 ```
 
 > **FAILS · 4.** Two children, one evening:
@@ -127,25 +145,25 @@ why uncovered(nico, thu, 1080)
 > cheapest of the three costed constraints in the whole week). The hole has
 > two named causes, and only one of them is the household's own to move.
 
-> **The what-if.** A notebook's cells share one flat, pre-assembled model —
-> `notebook/kernel.ts`'s `run()` calls `assemble()` once over the whole file
-> before any directive line runs — so a fact added in a later cell already
-> applies to an earlier one; there is no "before" inside one file (the same
-> wall `examples/notebook/ledger.rofl.md` hit writing its own N6). The
-> before is the four rows above, from this file, unmodified. The after is a
-> second, sibling notebook, `spat_whatif.rofl.md`, reading the same two
-> `examples/spat` files plus one added fact, `whatif_waive_swim.rofl`:
-> `waived(c_swim).` — the cheap, household lever, given.
->
-> Run separately (`npm run nb -- examples/notebook/spat_whatif.rofl.md`):
-> `holds_together(week)` now holds, `uncovered(Ch, D, S)` is **0 answers**,
-> `out_why(P, thu, 1080, C)` still names `alex`/`c_acme` (Alex never stopped
-> being at Acme), and `on_duty(P, thu, 1080)` now names `robin`. Giving the
-> cheaper of the two constraints was enough on its own — the model needed
-> only one adult on duty, not both back — which is exactly the answer a
-> parent asking "what would it take" wants, and it is not the answer either
-> `out_why` row suggests by itself (each looks equally load-bearing until
-> one is actually tried).
+> **The what-if**, in this file: `excise` takes a fact out of the world
+> every line above was asked over, and says which lines answer differently,
+> without changing any of their own answers. Waiving `c_swim`
+> (`waived(c_swim)`, what `spat relax` does) adds a fact, which excise
+> cannot; what it can take out is the fact that puts the swim on the week,
+> robin's usual Wednesday swim (moved to Thursday by the dentist):
+
+```datalog
+excise usual(c_swim, swim, robin, pool, wed, 1020, 1080)
+```
+
+> Four rows of `uncovered` go, both children at 17:40 and 18:00, and only
+> robin's `out_why` row goes: Alex never stopped being at Acme, and one
+> adult on duty was enough. Giving the cheaper of the two constraints was
+> enough on its own, which is the answer a parent asking "what would it
+> take" wants, and not one either `out_why` row suggests by itself. Taking
+> out `constraint(c_swim, robin, household)` instead moves nothing: the
+> constraint's id is not what schedules the swim, its `usual` row is, so
+> the unit a what-if takes out is the fact that puts an event on the week.
 
 ## R2 · No handover depends on a drive whose time is a guess
 
@@ -197,9 +215,8 @@ never rests_on_a_guess(P, D, E1, E2)
 > from was never actually timed. `spat.rofl` was built with a mechanism for
 > exactly this question — `assume(cautious). travel_as(cautious, physio,
 > sadik, 8).` would ask "and if it's really eight minutes, not five?" — but
-> trying it is a second what-if, in a third file, and this notebook stops at
-> naming the risk rather than running it: said here rather than done, to
-> keep this file to one what-if (R1's), not a family of them.
+> that asks to ADD a fact, which `excise` cannot, so this notebook stops at
+> naming the risk rather than running it.
 
 ## R3 · No one is asked to be in two places at once
 
@@ -286,7 +303,7 @@ R6 A constraint the household does not own is not the household's to fix: the ch
 > `c_acme` — external, owned by `acme`, costed at the unadjusted default of
 > `200` — is not a lever this household holds at all; `c_swim` — household,
 > owned by `robin`, explicitly costed at `40` — is. R1's what-if is the
-> proof, not a repeat of the query: waiving the `40` constraint alone
+> proof, not a repeat of the query: taking out the `40` constraint's swim alone
 > closed the hole; the `200` one was never touched and did not need to be.
 > A parent reading only `out_why`'s two rows, with no `owner`/`give_cost`
 > beside them, would have no way to tell which of the two names is worth
@@ -342,7 +359,7 @@ never on_call(P, D, S)
 > constraints stacking — Alex's Thursday Acme evening (external, not the
 > household's to move) and Robin's swim, moved onto the same evening by an
 > unrelated dentist appointment earlier in the week (household, and cheap
-> to move: R6). The what-if in `spat_whatif.rofl.md` confirms giving the
+> to move: R6). R1's `excise` confirms giving the
 > cheap one alone is sufficient. A second, structural risk (R2): the
 > household's tightest handover, physio straight into pickup twice a week,
 > has exactly zero minutes of slack and rests on a travel figure the week

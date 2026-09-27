@@ -47,9 +47,10 @@ N1 Every recorded finding has been given a disposition to work toward: it states
 > is one nobody has yet decided how to close.
 
 > First step, written the way a `rofl` sentence-form cell reads a condition
-> (a declared sentence, not a bare `predicate(Args)`), and it does not load:
+> (a declared sentence, not a bare `predicate(Args)`), and it does not load
+> (kept as text, so the trail stays and the file runs):
 
-```rofl
+```text
 A finding F is undecided if F demands nothing.
 
 never F is undecided

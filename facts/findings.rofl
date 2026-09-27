@@ -18,6 +18,29 @@ addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "p
 addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "scripts/nb_check.ts").
 finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error and `why` returns it as its explanation; `whynot` threw. REPAIRED: the host catches what `why` and `whynot` throw and puts it on that cell as `<line>: <error>`, so the cell is unread (exit 2) and every other cell answers; `npm run test:nb` plants both lines in a copy of the review notebook and requires the whynot error, the why line's parse message, a review answer and exit 2. Before the repair the same file printed one line and nothing else.").
 
+-- Recorded 2026-09-28 from the third user's review, a household week in SPAT
+-- (examples/notebook/spat.rofl.md, spat.FRICTION.md).
+
+finding(f_why_read_as_an_engine_dump_to_the_person_it_answers, defect).
+recorded(f_why_read_as_an_engine_dump_to_the_person_it_answers, "2026-09-28").
+addressed_by(f_why_read_as_an_engine_dump_to_the_person_it_answers, "notebook/kernel.ts").
+finding_note(f_why_read_as_an_engine_dump_to_the_person_it_answers, "FRICTION 1 of spat.FRICTION.md: `why uncovered(nico, thu, 1080)` was correct and complete and addressed to the rules' author: `<= r4890a8bb @tick 0`, `[main]`, `?_$0#2`, `[finite failure]`. The notebook now prints the same tree line for line without them: `, because` for a derivation, `(given)`, `(nothing says so)`, `(arithmetic)`, `by the rule: H if B`, `it stops at:`, a fresh variable as `anything`, the default book unnamed; `--json` keeps the engine's text as `whyRaw`. test:nb `E1` checks the two have the same lines and every given fact. STILL NOT SAID: minutes since midnight print as 1080, prefix arithmetic as `+(*(18,60),0)`, and a relation with no sentence as a term; the parent's actual answer lives in the model's own `out_why`, which the notebook can now name (next finding) but `why` does not reach for.").
+
+finding(f_a_notebook_can_word_what_a_read_world_derives, insight).
+recorded(f_a_notebook_can_word_what_a_read_world_derives, "2026-09-28").
+addressed_by(f_a_notebook_can_word_what_a_read_world_derives, "docs/md-world.md").
+finding_note(f_a_notebook_can_word_what_a_read_world_derives, "FRICTION 3 of spat.FRICTION.md said a rofl cell cannot use any of the ~90 relations spat.rofl derives. It could, with a form the reader already had: a `Reads:` list whose sub-items are anchored sentences, the anchor naming the relation (`<a id=\"uncovered\"></a>A child Ch is alone on a day D at a minute S`). Cells then ask in it and answers print in it; nothing was built, the paragraph in docs/md-world.md is new. ON THE WAY: the reader learned anchors inside code fences, so a first attempt the user kept as a ```text fence still taught `alone` its sentence; read_md.ts now skips fences when it learns.").
+
+finding(f_a_what_if_is_an_excise_line_in_the_notebook, insight).
+recorded(f_a_what_if_is_an_excise_line_in_the_notebook, "2026-09-28").
+addressed_by(f_a_what_if_is_an_excise_line_in_the_notebook, "playground/host.ts").
+finding_note(f_a_what_if_is_an_excise_line_in_the_notebook, "FRICTION 4 of spat.FRICTION.md (and ledger.FRICTION.md 5): a what-if needed a sibling notebook and a fact file. Now `excise F` in a cell takes F out of a fork of the evaluated world and lists every line of the notebook whose answers move, before -> after, with the rows gone and come; no other line's answer changes. spat.rofl.md's R1 is one cell: excising robin's `usual(c_swim, ...)` row moves holds_together 0 -> 1 and the four `uncovered` rows to none. THE UNIT: excise removes a base fact, so a what-if that ADDS one (`waived(c_swim)`, `assume(cautious)`) is not expressible, and removing the constraint's id (`constraint(c_swim, ...)`) moves nothing, since the fact that schedules the event is what the rules read. test:nb `E3` checks the diff equals the notebook run over a world without the fact. A notebook with an excise line runs whole, not over the kept model.").
+
+finding(f_two_checkouts_read_worlds_into_one_temp_file, defect).
+recorded(f_two_checkouts_read_worlds_into_one_temp_file, "2026-09-28").
+addressed_by(f_two_checkouts_read_worlds_into_one_temp_file, "scripts/md_world.ts").
+finding_note(f_two_checkouts_read_worlds_into_one_temp_file, "SEEN ON grafema-dev, where several agents keep checkouts: bless moved notebook_self by four premises and the very next npm test moved it back. roflFromMd wrote every world to os.tmpdir()/rofl-md/<path>.rofl, the same file for every checkout of the tree, so two trees read at once loaded each other's notebook. The directory is now keyed by a hash of the checkout's root; two runs in a row agree.").
+
 -- Recorded 2026-09-28 from the second user's audit, of grafema's MCP server
 -- (examples/notebook/mcp.rofl.md, mcp.FRICTION.md).
 
