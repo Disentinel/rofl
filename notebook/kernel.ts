@@ -26,14 +26,14 @@ export class Kernel {
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
-    const { model, phrases, errors } = assemble(path, text, input);
+    const world = assemble(path, text, input), { model, phrases, errors } = world;
     let load = 0;
     const key = model + '\u0000' + phrases;
     if (key !== this.loaded) {
       const rules = libFiles(path, front).model.filter((f) => f.startsWith('rules/'));
       const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, this.whole ? undefined : input.lib['boot.rofl']);
       load = l.ms;
-      if (!l.ok) { errors.push(...l.diagnostics); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
+      if (!l.ok) { errors.push(...l.diagnostics.map((d) => d.replace(/^line (\d+)/, (_, n) => world.source(Number(n))))); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
       this.loaded = key;
     }
     const cells = cellsOf(text);
@@ -44,11 +44,11 @@ export class Kernel {
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: said(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const result: NbCellOut[] = cells.map((c) => {
-      if (c.kind === 'natural') return { index: c.index, kind: c.kind, line: c.line, errors: [], notes: translated(cells, c) ? ['answered by the rofl cell below it'] : ['not translated yet: `npm run nb -- translate` writes the rofl cell below it'], lines: [] };
+      if (c.kind === 'natural') return { index: c.index, kind: c.kind, line: c.line, errors: [], notes: translated(cells, c) ? ['answered by the cell below it'] : ['not translated yet: `npm run nb -- translate` writes the rofl cell below it'], lines: [] };
       const o = out.cells[runs.indexOf(c)];
       const seen = new Set<number>();
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
-      return { index: c.index, kind: c.kind, line: c.line, errors: o.errors, notes: o.notes, lines: o.lines.map((l) => {
+      return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors, notes: o.notes, lines: o.lines.map((l) => {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why };
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;

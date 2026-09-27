@@ -14,17 +14,23 @@ export function worldOf(text: string, phrases: string, home: Record<string, stri
 }
 
 /** The model a notebook runs over and the words it is read in: the tree's files its front matter names, then the worlds it reads. */
-export function assemble(path: string, text: string, input: Inputs): { model: string; phrases: string; home: Record<string, string>; errors: string[] } {
+export function assemble(path: string, text: string, input: Inputs): { model: string; phrases: string; home: Record<string, string>; errors: string[]; source(line: number): string } {
   const front = parseFront(text), files = libFiles(path, front), errors: string[] = [];
   const lib = (f: string) => { const t = input.lib[f]; if (t === undefined) errors.push(`${f}: not given`); return t ?? ''; };
-  let model = files.model.map(lib).join('\n');
+  const parts: [string, string][] = files.model.map((f) => [f, lib(f)]);
   let phrases = files.phrases.map(lib).join('\n');
-  const home = homeOf(model);
+  const home = homeOf(parts.map((p) => p[1]).join('\n'));
   for (const r of front.reads) {
     const t = input.reads[r];
     if (t === undefined) { errors.push(`${r}: not given`); continue; }
-    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); model += '\n' + w.rofl; phrases += '\n' + w.phrases.join('\n'); }
-    else { model += '\n' + t; phrases += '\n' + t; }
+    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); parts.push([`the rules read from ${r}`, w.rofl]); phrases += '\n' + w.phrases.join('\n'); }
+    else { parts.push([r, t]); phrases += '\n' + t; }
   }
-  return { model, phrases, home: homeOf(model), errors };
+  const model = parts.map((p) => p[1]).join('\n');
+  /** A line of the model as the file it came from and its line there. */
+  const source = (line: number): string => {
+    for (const [name, t] of parts) { const n = t.split('\n').length; if (line <= n) return `${name}:${line}`; line -= n; }
+    return `line ${line}`;
+  };
+  return { model, phrases, home: homeOf(model), errors, source };
 }

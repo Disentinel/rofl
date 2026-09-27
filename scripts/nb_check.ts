@@ -85,6 +85,34 @@ copyTree('tr-bad', ['examples/review.rofl.md']);
 const translateGone = planted('tr-gone', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
 copyTree('tr-gone', ['examples/review.rofl.md']);
 const spy = fake('spy.sh', 'x');
+// what the first user of the notebook hit auditing the ledger (examples/notebook/ledger.FRICTION.md), each where it could mislead
+const friction = planted('friction', 'review.rofl.md', (t) => `${t}
+\`\`\`datalog
+flagged[audit](C) :- blocked(C, _).
+
+? flagged(C)
+? blocked(C, T), touches(C, M)
+\`\`\`
+
+\`\`\`rofl
+never blocked(C, payments)
+\`\`\`
+
+\`\`\`natural
+Payments blocks nothing.
+\`\`\`
+
+\`\`\`datalog
+never blocked(C, payments)
+\`\`\`
+`);
+copyTree('friction', ['examples/review.rofl.md']);
+mkdirSync(path.join(tmp, 'badread/examples/notebook'), { recursive: true });
+writeFileSync(path.join(tmp, 'badread/examples/notebook/bad.rofl'), 'p(1).\np(2).\nq(`x`).\n');
+writeFileSync(path.join(tmp, 'badread/examples/notebook/badread.rofl.md'), '---\nreads:\n  - bad.rofl\n---\n\n```datalog\n? p(X)\n```\n');
+const slow = path.join(tmp, 'slow.sh'); writeFileSync(slow, '#!/bin/sh\ncat > /dev/null\nexec sleep 30\n'); chmodSync(slow, 0o755);
+const translateSlow = planted('tr-slow', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
+copyTree('tr-slow', ['examples/review.rofl.md']);
 
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
@@ -95,10 +123,11 @@ const layering = new Promise<Out>((done) => {
   p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
   p.on('close', (code) => done({ code: code ?? -1, out }));
 });
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
+  cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
 ]);
 const layered = await layering;
 
@@ -147,6 +176,12 @@ check('I5 a run never calls a model', !(() => { try { return readFileSync(path.j
 const ok = before(translateOk);
 check('I5 a translation that reads is inserted under its natural cell, which stays', trOk.code === 0 && ok.includes('No change touches a module nobody owns.\n```\n\n```rofl\nA module M is unowned') && ok.startsWith(reviewText.slice(0, 200)), trOk);
 check('I5 a translation that does not read after a retry is not written, exit 2', trBad.code === 2 && before(translateBad) === badText && has(trBad, 'nothing written') && readFileSync(path.join(tmp, 'called'), 'utf8').split('\n').filter((l) => l.endsWith('bad.sh')).length === 2, trBad);
+check('F1 an empty relation asked in one book the program writes in another says which', has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), fr);
+check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
+check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);
+check('F5 a conjunctive question is refused with what to write instead', is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), fr);
+check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
+check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
 for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);

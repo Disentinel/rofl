@@ -72,8 +72,12 @@ export type Ask = (prompt: string) => { ok: true; text: string } | { ok: false; 
 /** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script. */
 export const claude: Ask = (prompt) => {
   const cmd = process.env.ROFL_NB_CLAUDE ?? 'claude';
-  const r = spawnSync(cmd, ['-p', '--model', 'sonnet', '--tools', ''], { input: prompt, encoding: 'utf8', maxBuffer: 1 << 26, timeout: 300_000 });
-  if (r.error) return { ok: false, error: (r.error as NodeJS.ErrnoException).code === 'ENOENT' ? `${cmd} is not installed or not on the PATH` : r.error.message };
+  const limit = Number(process.env.ROFL_NB_CLAUDE_TIMEOUT ?? 180) * 1000;
+  const r = spawnSync(cmd, ['-p', '--model', 'sonnet', '--tools', ''], { input: prompt, encoding: 'utf8', maxBuffer: 1 << 26, timeout: limit });
+  const code = (r.error as NodeJS.ErrnoException | undefined)?.code;
+  if (code === 'ENOENT') return { ok: false, error: `${cmd} is not installed or not on the PATH` };
+  if (code === 'ETIMEDOUT') return { ok: false, error: `${cmd} -p gave no answer in ${limit / 1000} s to a prompt of ${prompt.length} characters and was stopped; it printed ${(r.stdout ?? '').length} characters${r.stderr ? `, and on stderr: ${r.stderr.trim().slice(-300)}` : ''}. ROFL_NB_CLAUDE_TIMEOUT sets the limit in seconds` };
+  if (r.error) return { ok: false, error: r.error.message };
   if (r.status !== 0) return { ok: false, error: `${cmd} exited with ${r.status}: ${(r.stderr || r.stdout).trim().slice(0, 300)}` };
   return { ok: true, text: r.stdout };
 };

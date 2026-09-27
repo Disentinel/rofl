@@ -93,6 +93,22 @@ function loose(cl: Clause): string[] {
   return [...cl.head.args.reduce((s, a) => varsOf(a, s), new Set<string>())].filter((v) => !v.startsWith('_') && !bound.has(v));
 }
 
+/** `a(X), not b(X)`: a comma outside every bracket and quote. */
+const conjunction = (lit: string): boolean => {
+  let depth = 0;
+  for (const m of lit.replace(/"(?:[^"\\]|\\.)*"|`[^`]*`/g, '""').matchAll(/[()[\],]/g)) { if (m[0] === '(' || m[0] === '[') depth++; else if (m[0] === ')' || m[0] === ']') depth--; else if (!depth) return true; }
+  return false;
+};
+
+/** An empty relation asked in one book that the program writes in another: `unproven(F)` where the rules conclude `unproven[audit](F)`. */
+function elsewhere(lit: string, program: string): string | null {
+  const m = /^([a-z_]\w*)(?:\[(\w+)\])?\(/.exec(lit); if (!m) return null;
+  const asked = m[2] ?? 'main', books = new Set<string>();
+  for (const x of program.matchAll(new RegExp(`^${m[1]}(?:\\[(\\w+)\\])?\\(`, 'gm'))) books.add(x[1] ?? 'main');
+  books.delete(asked);
+  return books.size ? `${m[1]} is written in ${[...books].map((b) => `[${b}]`).join(', ')}, not in [${asked}]: ask ${m[1]}[${[...books][0]}](...)` : null;
+}
+
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
 
 
@@ -130,6 +146,7 @@ export class Host {
   private phrases = '';
   private vocab = new Vocabulary();
   private home: Record<string, string> = {};
+  private model = '';
   private concerns: Concerns = { rules: {}, rels: {} };   // a model relation -> the one book its rules write
   private shell: Rofl | null = null;   // the kernel alone, which the cells are evaluated in when they stand on the model without touching it
   private kernelRels = new Set<string>();
@@ -146,6 +163,7 @@ export class Host {
     this.phrases = phraseText;
     if (concernMap) this.concerns = concernMap;
     this.home = homeOf(model);
+    this.model = model;
     this.scanned = this.base = null;
     this.shell = null;
     if (kernel !== undefined && l.ok) {
@@ -242,10 +260,11 @@ export class Host {
           if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
           if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
+        if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
-        const note = q.unpopulatable ? 'nothing in the model can put a row here: check the name, the book and the number of arguments' : q.partial ? 'the budget ran out before every answer was found' : undefined;
+        const note = q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined;
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
