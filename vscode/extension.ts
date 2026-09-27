@@ -108,6 +108,12 @@ export function activate(ctx: vscode.ExtensionContext) {
     }, { transientOutputs: true }),
     vscode.workspace.onDidCloseNotebookDocument((nb) => { results.delete(nb.uri.toString()); diagnostics.get(nb.uri.toString())?.clear(); }),
     vscode.commands.registerCommand('rofl-notebook.translate', translate));
+  // A .rofl.md named on the `code` command line opens as text before this extension's notebook is known; reopen it as the notebook.
+  for (const tab of vscode.window.tabGroups.all.flatMap((g) => g.tabs)) {
+    if (!(tab.input instanceof vscode.TabInputText) || !tab.input.uri.path.endsWith('.rofl.md') || tab.isDirty) continue;
+    const uri = tab.input.uri;
+    void vscode.window.tabGroups.close(tab).then(() => vscode.commands.executeCommand('vscode.openWith', uri, TYPE));
+  }
   return { result: (uri: vscode.Uri) => results.get(uri.toString()) };
 }
 

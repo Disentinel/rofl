@@ -8,6 +8,7 @@
   "license": "MIT",
   "type": "module",
   "main": "./extension.ts",
+  "activationEvents": ["onStartupFinished"],
   "engines": {
     "vscode": "^1.132.0"
   },

@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` the other planted defects but `wrap`, which is a setting and runs only by name; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
+// `-- --mutants` the other planted defects but `wrap` and `startup`, which run only by name; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -43,6 +43,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, ''],
   cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]'],
   translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, ''],
+  startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, ''],
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
@@ -68,8 +69,8 @@ const one = async (v: string) => {
     await runTests({
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
-      launchArgs: [path.join(tmp, 'nb'), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: JSON.stringify(BREAKS[v]?.[3] ?? cases), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: natural, ROFL_NB_CLAUDE: fake },
+      launchArgs: [path.join(tmp, 'nb'), review, '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
+      extensionTestsEnv: { ROFL_NB_CASES: JSON.stringify(BREAKS[v]?.[3] ?? cases), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: natural, ROFL_NB_STARTUP: review, ROFL_NB_CLAUDE: fake },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); }
