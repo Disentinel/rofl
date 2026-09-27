@@ -3,14 +3,24 @@
 // loads worlds by path (the goldens, the lints). The reader writes the rules
 // to a file under the temp directory and this returns its path.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
+import { parseFront } from '../notebook/front.ts';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
+/** A world written as Markdown with the worlds it reads before it. Not the model its front matter names: that is read in the model's words
+ *  but not loaded, since each model file is a world of its own already and loading the JS model file by file costs about a minute. */
+export function worldFiles(mdPath: string): string[] {
+  const out: string[] = [];
+  for (const r of parseFront(readFileSync(mdPath, 'utf8')).reads) { const p = path.resolve(path.dirname(mdPath), r); out.push(...(r.endsWith('.rofl.md') ? worldFiles(p) : [p])); }
+  return [...new Set([...out, roflFromMd(mdPath)])];
+}
+
 export function roflFromMd(mdPath: string): string {
-  const stem = path.basename(mdPath).replace(/\.rofl\.md$|\.md$/, '');
+  // named by its path, so two worlds with one file name do not write one file
+  const stem = path.relative(ROOT, path.resolve(ROOT, mdPath)).replace(/\.rofl\.md$|\.md$/, '').replace(/[/\\.]+/g, '_');
   const dir = path.join(os.tmpdir(), 'rofl-md');
   mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `${stem}.rofl`);

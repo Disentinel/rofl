@@ -657,9 +657,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const m of missing.slice(0, 25)) report.push('  ' + m);
   report.push(`\nread-back rules the source does not have (${extra.length}):`);
   for (const e of extra.slice(0, 15)) report.push('  ' + e);
-  // every relation a rule reads has somewhere to link: a definition or declaration in this file, or a line in its Reads list
+  // every relation a rule reads has somewhere to link: a definition or declaration in this file, a line in its Reads list, or the caller's model
   const BUILTIN = new Set(['=', '!=', '<', '>', '<=', '>=', 'is']);
-  const linkable = new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel), ...imported]);
+  const linkable = new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel), ...imported, ...Object.keys(opts.homeBooks ?? {})]);
   const nowhere = [...new Set(rules.flatMap((r) => r.body.map((l) => l.rel)))].filter((rel) => !linkable.has(rel) && !BUILTIN.has(rel));
   report.push(`\nused with nowhere to link (${nowhere.length}): ${nowhere.join(', ')}`);
   report.push(`alternatives not starting with if or unless (${badAlternatives.length}):${badAlternatives.length ? '\n  ' + badAlternatives.join('\n  ') : ''}`);
