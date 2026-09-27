@@ -5,6 +5,7 @@ import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileS
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { worlds } from './goldens.ts';
+import type { NbLine } from '../notebook/kernel.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const NB = path.join(ROOT, 'examples/notebook');
@@ -122,6 +123,12 @@ never blocked(C, payments)
 \`\`\`
 `);
 copyTree('friction', ['examples/review.rofl.md']);
+// a what-if in the notebook against the same notebook over a world without the fact
+const excised = planted('excise', 'review.rofl.md', withCell('excise `c1` is approved by `ben`'));
+copyTree('excise', ['examples/review.rofl.md']);
+const without = planted('without', 'review.rofl.md', (t) => t);
+mkdirSync(path.join(tmp, 'without/examples'), { recursive: true });
+writeFileSync(path.join(tmp, 'without/examples/review.rofl.md'), readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8').replace('- `c1` is approved by `ben`.\n', ''));
 mkdirSync(path.join(tmp, 'badread/examples/notebook'), { recursive: true });
 writeFileSync(path.join(tmp, 'badread/examples/notebook/bad.rofl'), 'p(1).\np(2).\nq(`x`).\n');
 writeFileSync(path.join(tmp, 'badread/examples/notebook/badread.rofl.md'), '---\nreads:\n  - bad.rofl\n---\n\n```datalog\n? p(X)\n```\n');
@@ -138,11 +145,12 @@ const layering = new Promise<Out>((done) => {
   p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
   p.on('close', (code) => done({ code: code ?? -1, out }));
 });
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
   cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
+  cli([path.join(NB, 'spat.rofl.md')]), cli([excised, '--json']), cli([without, '--json']),
 ]);
 const layered = await layering;
 
@@ -161,7 +169,7 @@ const STATUS = ['ok', 'fails', 'unread', 'blind'];
 const is = (o: Out, code: number) => o.code === code && verdict(o) === STATUS[code];
 
 check('review: exit 0 and its answers', is(review, 0) && has(review, '`c2` is blocked by `platform`') && has(review, 'never C is blocked by `payments`  ->  holds'), review);
-check('review: whynot answers', has(review, 'failed premise: not `c2` is blocked by'), review);
+check('review: whynot answers', has(review, 'it stops at: not `c2` is blocked by something, and `c2` is blocked by `platform` does'), review);
 check('small: exit 0, an answer at its file:line', is(small, 0) && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), small);
 /** The rows a run could not see, and those outside the boundary I6 step 4 names: imports into the unscanned engine, reader, scanner and proof folder, and calls on keys pinned here. */
 const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
@@ -195,6 +203,21 @@ check('I5 a run never calls a model', !(() => { try { return readFileSync(path.j
 const ok = before(translateOk);
 check('I5 a translation that reads is inserted under its natural cell, which stays', trOk.code === 0 && ok.includes('No change touches a module nobody owns.\n```\n\n```rofl\nA module M is unowned') && ok.startsWith(reviewText.slice(0, 200)), trOk);
 check('I5 a translation that does not read after a retry is not written, exit 2', trBad.code === 2 && before(translateBad) === badText && has(trBad, 'nothing written') && readFileSync(path.join(tmp, 'called'), 'utf8').split('\n').filter((l) => l.endsWith('bad.sh')).length === 2, trBad);
+check('E1 a legible proof keeps every line and every fact of the engine\'s', (() => {
+  const r = JSON.parse(reviewJson.stdout ?? ''); const l = r.cells.flatMap((c: { lines: NbLine[] }) => c.lines).find((x: NbLine) => x.kind === 'why');
+  const raw = (l?.whyRaw ?? '').split('\n'), nice = (l?.why ?? '').split('\n');
+  return raw.length > 3 && raw.length === nice.length && raw.every((x: string, k: number) => !/\[axiom\]$/.test(x) || nice[k].endsWith('(given)') && nice[k].includes(x.replace(/ \[axiom\]$/, '').trim()))
+    && !/@tick|\?_\$|#\d|\[main\]/.test(l?.why ?? '');
+})(), reviewJson);
+check('E2 a relation a read world derives answers in the sentence the notebook gives it', is(spat, 1) && has(spat, 'never Ch is alone on D at S  ->  FAILS · 4') && has(spat, '- `kit` is alone on `thu` at 1060'), spat);
+check('E3 an excise in the notebook moves the lines the same as the notebook over a world without the fact', (() => {
+  const lines = (o: Out) => JSON.parse(o.stdout ?? '').cells.flatMap((c: { lines: NbLine[] }) => c.lines) as NbLine[];
+  const moved = lines(ex).find((l) => l.kind === 'excise')?.answers.filter((a) => !a.sentence.startsWith(' ')) ?? [];
+  const after = new Map(lines(wo).filter((l) => l.kind !== 'excise').map((l) => [l.text, l.total]));
+  const before = new Map(lines(ex).filter((l) => l.kind !== 'excise').map((l) => [l.text, l.total]));
+  const said = new Map(moved.map((a) => { const m = /^(.*): (\d+) -> (\d+)$/.exec(a.sentence)!; return [m[1], [Number(m[2]), Number(m[3])]]; }));
+  return moved.length > 0 && [...before].every(([t, n]) => (said.get(t)?.[0] ?? n) === n && (said.get(t)?.[1] ?? n) === after.get(t));
+})(), { code: ex.code, out: (ex.stdout ?? '') + (wo.stdout ?? '') });
 check('F1 an empty relation asked in one book the program writes in another says which', has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), fr);
 check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
 check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);

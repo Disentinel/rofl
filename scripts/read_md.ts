@@ -463,10 +463,11 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
   {
     const headOf = (t: string) => t.replace(/ either:$/, '').replace(/ if all of:$/, '').split(/ if | unless |, unless /)[0].replace(/[.;:]$/, '').trim();
-    let subject = '';
+    let subject = '', fenced = false;
     for (const raw of rawMd.split('\n')) {
       const line = raw.trim();
-      if (!line || line.startsWith('>') || line.startsWith('#') || line.startsWith('|') || /^\d+\. /.test(line)) continue;
+      if (/^```/.test(raw)) { fenced = !fenced; continue; }   // a fence is not read, and neither is an anchor inside one
+      if (fenced || !line || line.startsWith('>') || line.startsWith('#') || line.startsWith('|') || /^\d+\. /.test(line)) continue;
       const a = /^(- )?<a id="([\w-]+)"><\/a>(.*)$/.exec(line);
       if (!a) { if (!line.startsWith('- ') && !/[.:]$/.test(line)) subject = clean(line); else if (!line.startsWith('- ')) subject = ''; continue; }
       const text = clean(a[3]).trim();

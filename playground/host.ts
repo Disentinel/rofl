@@ -270,7 +270,7 @@ export class Host {
     const layered = !!this.shell && Object.keys(files).length > 0
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
-      && asks.every((as, i) => refused.has(i) || as.every((a) => !this.kernelRels.has(relOf(a.lit))));
+      && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
     let base: Rofl | null = null;
     if (layered) {
       try { base = this.evaluated(files, sc); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
@@ -306,6 +306,7 @@ export class Host {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
+        if (a.kind === 'excise') continue;
         try {
           if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined }); continue; }
           if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text) }); continue; }
@@ -319,6 +320,31 @@ export class Host {
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
       }
+    });
+    // what if: a cell's `excise F` lines take those facts out of the world every line was asked over, and say which lines' answers move
+    parts.forEach((_, i) => {
+      const cut = asks[i].filter((a) => a.kind === 'excise' && a.lit);
+      if (!cut.length || refused.has(i)) return;
+      const g = f.fork();
+      for (const a of cut) { const r = g.retract(a.lit); if (!r.ok) outs[i].errors.push(`${a.text}: ${r.diagnostics[0]}`); }
+      try { g.evaluate(BUDGET); } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
+      const rows: Row[] = [];
+      const said = (lit: string) => vocab.say(lit) ?? lit;
+      parts.forEach((_, j) => {
+        if (refused.has(j)) return;
+        for (const a of asks[j]) {
+          if (!['answers', 'never', 'unsure'].includes(a.kind) || !a.lit || conjunction(a.lit)) continue;
+          const set = (w: Rofl) => new Set(w.query(a.lit).rows.map((r) => ground(a.lit, r.bindings)));
+          const was = set(f), now = set(g);
+          const gone = [...was].filter((x) => !now.has(x)), come = [...now].filter((x) => !was.has(x));
+          if (!gone.length && !come.length) continue;
+          rows.push({ literal: a.lit, sentence: `${a.text}: ${was.size} -> ${now.size}` });
+          for (const x of gone.slice(0, 10)) rows.push({ literal: x, sentence: `  no longer: ${said(x)}` });
+          for (const x of come.slice(0, 10)) rows.push({ literal: x, sentence: `  now also: ${said(x)}` });
+        }
+      });
+      const text = cut.map((a) => a.text).join('; ');
+      outs[i].lines.push({ unasked: unread[i], kind: 'excise', text, lit: cut.map((a) => a.lit).join(', '), rows, total: rows.filter((r) => !r.sentence.startsWith('  ')).length, ok: true, note: rows.length ? undefined : 'no line of this notebook answers differently' });
     });
     lap('ask');
     return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };

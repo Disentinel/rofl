@@ -143,6 +143,23 @@ A question no sentence of the document reads is refused by name:
 `error: no sentence in the vocabulary reads: C is owned by T`. The
 positional form still works everywhere: `? blocked(C, T)`.
 
+**Sentences for what a notebook reads.** A plain `.rofl` world a notebook
+`reads:` brings relations with no sentence. A `Reads:` list gives them one,
+an anchored sentence per relation, the anchor its name; cells then ask in it
+and answers print in it (`examples/notebook/spat.rofl.md`):
+
+    Reads:
+
+    - from spat:
+      - <a id="uncovered"></a>A child Ch is alone on a day D at a minute S
+
+In a notebook (`npm run nb`), `why` and `whynot` print without the engine's
+bookkeeping (`--json` keeps it as `whyRaw`), and `excise F` in a cell takes
+the fact F out of the world every line was asked over and lists the lines
+whose answers move, before and after, leaving their own answers as they are.
+A cell whose rule concludes one of the model's own sentences must say
+`extends <relation>`.
+
 ## What the reader reports
 
 Loading a `.md` world prints, on stderr, everything it could not read,

@@ -3,6 +3,7 @@
 // loads worlds by path (the goldens, the lints). The reader writes the rules
 // to a file under the temp directory and this returns its path.
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { parseFront } from '../notebook/front.ts';
 import * as os from 'node:os';
@@ -21,7 +22,7 @@ export function worldFiles(mdPath: string): string[] {
 export function roflFromMd(mdPath: string): string {
   // named by its path, so two worlds with one file name do not write one file
   const stem = path.relative(ROOT, path.resolve(ROOT, mdPath)).replace(/\.rofl\.md$|\.md$/, '').replace(/[/\\.]+/g, '_');
-  const dir = path.join(os.tmpdir(), 'rofl-md');
+  const dir = path.join(os.tmpdir(), 'rofl-md', createHash('sha256').update(ROOT).digest('hex').slice(0, 8));   // one per checkout: two trees read at once must not share a file
   mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `${stem}.rofl`);
   const report = execFileSync('node', ['--experimental-strip-types', path.join(ROOT, 'scripts/read.ts'), mdPath.startsWith('/') ? mdPath : path.join(ROOT, mdPath), '--out', out], { stdio: ['ignore', 'pipe', 'inherit'] }).toString();
