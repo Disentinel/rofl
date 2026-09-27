@@ -12,13 +12,13 @@ const PROBES: Record<string, string> = {
   model: 'completion_deferred(foo_statement, a_reason).\nknown_here(K) :- completion_known(K).\n? known_here(foo_statement)',
   asked: 'mine(N) :- fn_node[code](N).\n? mine(N)\n? has_return[code](F)',
   kernel: 'mine(N) :- fn_node[code](N).\nflat(R) :- edb(R).\n? flat(fn_node)',
-  why: 'why unawaited(ndb0114bc_25)',
+  why: 'why unawaited(ndb0114bc_25)\nwhynot recurses(ndb0114bc_25)',
 };
 const BREAK: Record<string, [string, string]> = {
   model: ['&& ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))', ''],
   asked: ['(base && !heads.has(relOf(a.lit)) ? base : f).query', 'f.query'],
   kernel: ['&& !over.some((r) => this.kernelRels.has(r))', ''],
-  why: ["a.kind !== 'why' && a.kind !== 'whynot' && ", ''],
+  why: ['const one = (rel: string) => heads.has(rel) ? cells : model;', 'const one = (rel: string) => cells;'],
 };
 
 /** The kernel, or a copy of it over a host with one guard spoilt. */

@@ -8,6 +8,7 @@ import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
 import { varsOf, canonTerm, mka, type Clause } from '../src/unify.ts';
+import type { FactRec, FactStore, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -123,6 +124,37 @@ function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
   return into;
 }
 
+/** The kept model and the cells' world read as one, for why, whynot and a proof: a relation the cells conclude from their world, the kernel's own
+ *  from both, every other from the model, of which the cells' world holds only copies (and marks them extensional, which the model does not). */
+function proofs(model: FactStore, cells: FactStore, heads: Set<string>, kernel: Set<string>, copied: Set<string>): Rofl {
+  const one = (rel: string) => heads.has(rel) ? cells : model;
+  const both = (rel: string, read: (s: FactStore) => FactRec[] | null): FactRec[] | null => {
+    const a = read(model), b = read(cells);
+    if (!a || !b) return null;
+    const seen = new Set(a.map((f) => f.key));
+    return [...a, ...b.filter((f) => !seen.has(f.key) && !(f.rel === 'edb' && f.args[0].k === 'a' && copied.has(f.args[0].name)))];
+  };
+  const rows = (rel: string, read: (s: FactStore) => FactRec[] | null) => kernel.has(rel) ? both(rel, read) : read(one(rel));
+  const byKey = <T>(key: string, read: (s: FactStore) => T): T => { const rel = relOf(key); return kernel.has(rel) ? (read(cells) ?? read(model)) : read(one(rel)); };
+  const store = {
+    tick: cells.tick, dirty: false, partialEval: model.partialEval || cells.partialEval,
+    has: (key: string) => byKey(key, (s) => s.has(key) || undefined) ?? false,
+    get: (key: string) => byKey(key, (s) => s.get(key)),
+    witnessOf: (key: string) => byKey(key, (s) => s.witnessOf(key)),
+    witnessesOf: (key: string) => byKey(key, (s) => s.witnessesOf(key)),
+    supportCount: (key: string) => byKey(key, (s) => s.supportCount(key)),
+    relAll: (rel: string) => rows(rel, (s) => s.relAll(rel))!,
+    relPersp: (rel: string, persp: string) => rows(rel, (s) => s.relPersp(rel, persp))!,
+    relCount: (rel: string) => rows(rel, (s) => s.relAll(rel))!.length,
+    argMatches: (rel: string, persp: string | null, arity: number, pos: number[], vals: string[]) => rows(rel, (s) => s.argMatches(rel, persp, arity, pos, vals)),
+    indexed: (rel: string, persp: string | null) => kernel.has(rel) ? model.indexed(rel, persp) && cells.indexed(rel, persp) : one(rel).indexed(rel, persp),
+    perspectivesOf: (rel: string) => kernel.has(rel) ? [...new Set([...model.perspectivesOf(rel), ...cells.perspectivesOf(rel)])] : one(rel).perspectivesOf(rel),
+  };
+  const r = new Rofl({ reuse: false, space: 40_000_000 });
+  r.store = store as unknown as Store;
+  return r;
+}
+
 /** These relations' facts, asserted in another world: the first of each book the way any fact is, which opens the book and marks the relation
  *  extensional; the rest straight into the store, without the trail of who asserted them, which is the kernel's and nothing the cells read. */
 function copyFacts(from: Rofl, to: Rofl, rels: string[]): { ok: boolean; diagnostics: string[] } {
@@ -153,7 +185,6 @@ export class Host {
   private modelRels = new Set<string>();
   private scanned: Scanned | null = null;
   private base: Rofl | null = null;
-  private full: (() => Rofl) | null = null;   // the last run as one world, built when a proof is asked of a run that was not
 
   init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string): { ok: boolean; diagnostics: string[]; ms: number } {
     const t = performance.now();
@@ -232,7 +263,7 @@ export class Host {
     const layered = !!this.shell && Object.keys(files).length > 0
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
-      && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'why' && a.kind !== 'whynot' && !this.kernelRels.has(relOf(a.lit))));
+      && asks.every((as, i) => refused.has(i) || as.every((a) => !this.kernelRels.has(relOf(a.lit))));
     let base: Rofl | null = null;
     if (layered) {
       try { base = this.evaluated(files, sc); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
@@ -250,15 +281,16 @@ export class Host {
     lap('load');
     try { f.evaluate(BUDGET); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
     lap('evaluate');
-    this.last = base ? null : f;
-    this.full = base ? () => { const w = base!.fork(); if (all.trim() && !w.load(all, { budget: BUDGET }).ok) texts.forEach((x) => { if (x.trim()) w.load(x, { budget: BUDGET }); }); w.evaluate(BUDGET); return w; } : null;
+    // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
+    const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
+    this.last = w;
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
         try {
-          if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
-          if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
+          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined }); continue; }
+          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
@@ -310,8 +342,8 @@ export class Host {
 
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */
   explain(literal: string): Step | string {
-    if (!this.world()) return 'run the book first';
-    return fold(this.last!.store, literal, {
+    if (!this.last) return 'run the book first';
+    return fold(this.last.store, literal, {
       concernOf: (rid, key) => this.concerns.rules[rid] ?? this.notebook.get(rid) ?? this.concerns.rels[relOf(key)] ?? '',
       say: (key) => this.vocab.say(key) ?? key,
       entities: NODE,
@@ -321,14 +353,8 @@ export class Host {
 
   /** `why` over the last run, without running again. */
   why(literal: string): string {
-    const w = this.world();
-    if (!w) return 'run the book first';
-    return this.vocab.sayAll(w.why(literal).text);
-  }
-
-  private world(): Rofl | null {
-    if (!this.last && this.full) { this.last = this.full(); this.full = null; }
-    return this.last;
+    if (!this.last) return 'run the book first';
+    return this.vocab.sayAll(this.last.why(literal).text);
   }
 }
 
