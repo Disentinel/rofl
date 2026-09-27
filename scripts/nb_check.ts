@@ -1,7 +1,7 @@
 // npm run test:nb — the notebook's behavioural gate: the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
 import { spawn } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { worlds } from './goldens.ts';
@@ -11,13 +11,13 @@ const NB = path.join(ROOT, 'examples/notebook');
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'nb-check-'));
 const t0 = performance.now();
 
-type Out = { code: number; out: string };
-const cli = (args: string[], env: Record<string, string> = {}): Promise<Out> => new Promise((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), ...args], { env: { ...process.env, ...env } });
-  let out = '';
-  p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
+type Out = { code: number; out: string; stdout?: string };
+const cli = (args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, 'notebook/cli.ts'), ...args], { env: { ...process.env, ...env } });
+  let out = '', stdout = '';
+  p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);
-  p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out }); });
+  p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out, stdout }); });
 });
 
 /** A copy of a notebook, with its text changed, next to what it names. */
@@ -67,6 +67,12 @@ copyTree('extend', ['examples/review.rofl.md']);
 const recursion = planted('recursion', 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n']]);
 const natural = planted('natural', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
 copyTree('natural', ['examples/review.rofl.md']);
+// the command line run from a tree whose kernel exits 0 before it answers: a gate executed by the code it checks
+const exec = path.join(tmp, 'exec');
+mkdirSync(path.join(exec, 'notebook'), { recursive: true });
+for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(exec, e));
+for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(exec, 'notebook', f));
+writeFileSync(path.join(exec, 'notebook/kernel.ts'), mutate('notebook/kernel.ts', /^  run\(path: string, text: string, input: Inputs\): NbResult \{/m, (m) => `${m}\n    new Function('return process')().exit(0);`));
 const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
 const good = fake('good.sh', 'Here it is.\n```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n```');
 const bad = fake('bad.sh', '```rofl\nA module M is gloriously unowned whenever nobody.\n```');
@@ -81,40 +87,51 @@ const spy = fake('spy.sh', 'x');
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, nat, trOk, trBad, trGone] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
-  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([natural]),
+  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }),
 ]);
 
 const results: [string, boolean, string][] = [];
 const check = (name: string, ok: boolean, o?: Out) => results.push([name, ok, ok || !o ? '' : `exit ${o.code}\n${o.out.slice(-1500)}`]);
 const has = (o: Out, s: string) => o.out.includes(s);
+/** The verdict the run printed last, or in --json its status: an exit code alone is no verdict, since the code under check can exit early. */
+const VERDICTS: Record<string, string> = { 'every never holds, every cell read': 'ok', 'a never fails': 'fails', 'not everything was read': 'unread', 'every never holds, some only as far as the model sees': 'blind' };
+const verdict = (o: Out): string | null => {
+  const text = o.stdout ?? '';
+  if (text.startsWith('{')) { try { return JSON.parse(text).status ?? null; } catch { return null; } }
+  const m = [...text.matchAll(/: ([a-z ,]+)$/gm)].map((x) => VERDICTS[x[1]]).filter(Boolean);
+  return m.length ? m[m.length - 1] : null;
+};
+const STATUS = ['ok', 'fails', 'unread', 'blind'];
+const is = (o: Out, code: number) => o.code === code && verdict(o) === STATUS[code];
 
-check('review: exit 0 and its answers', review.code === 0 && has(review, '`c2` is blocked by `platform`') && has(review, 'never C is blocked by `payments`  ->  holds'), review);
+check('review: exit 0 and its answers', is(review, 0) && has(review, '`c2` is blocked by `platform`') && has(review, 'never C is blocked by `payments`  ->  holds'), review);
 check('review: whynot answers', has(review, 'failed premise: not `c2` is blocked by'), review);
-check('small: exit 0, an answer at its file:line', small.code === 0 && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), small);
+check('small: exit 0, an answer at its file:line', is(small, 0) && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), small);
 /** The rows a run could not see, and those outside the boundary I6 step 4 names: imports into the unscanned engine, reader, scanner and proof folder, and calls on keys pinned here. */
 const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
-const unseen = (o: Out) => { const r = JSON.parse(o.out.slice(o.out.indexOf('{'))); return r.cells.flatMap((c: { lines: { unsure?: { answers: { literal: string; sentence: string }[] } }[] }) => c.lines.flatMap((l) => l.unsure?.answers ?? [])) as { literal: string; sentence: string }[]; };
+const unseen = (o: Out) => { const r = JSON.parse(o.stdout ?? ''); return r.cells.flatMap((c: { lines: { unsure?: { answers: { literal: string; sentence: string }[] } }[] }) => c.lines.flatMap((l) => l.unsure?.answers ?? [])) as { literal: string; sentence: string }[]; };
 const outside = (o: Out) => { try { return unseen(o).filter((a) => !BOUNDARY.some((b) => b.test(a.literal))); } catch { return [{ literal: 'no JSON', sentence: o.out.slice(-300) }]; } };
-check('self: exit 3 (the gate): every never holds, some as far as it sees', self.code === 3 && unseen(self).length > 0, self);
+check('self: exit 3 (the gate): every never holds, some as far as it sees', is(self, 3) && unseen(self).length > 0, self);
 check('I3 every row self cannot see is of a kind I6 names', outside(self).length === 0, { code: self.code, out: JSON.stringify(outside(self)) });
-check('I6 a print planted in the kernel turns self red', red.code === 1 && has(red, 'console.log() at notebook/world.ts'), red);
-check('I6 a node:fs import and read planted in the kernel turns self red', red.code === 1 && has(red, 'readFileSync() at notebook/kernel.ts'), red);
-check('I6 an exit planted in the kernel turns self red', red.code === 1 && has(red, 'process.exit() at notebook/front.ts'), red);
-check('I4 a write planted in a run turns self red', red.code === 1 && has(red, 'never C writes outside translation  ->  FAILS'), red);
-check('I5 a process started in a run turns self red', red.code === 1 && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
-check('I3 a dynamic import of node:fs in the kernel is named out of sight, outside the boundary', blind.code === 3 && outside(blind).some((a) => /import\(\)/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)) && outside(blind).some((a) => /"readFileSync"/.test(a.literal)), { code: blind.code, out: JSON.stringify(outside(blind)) });
-check('I3 a computed globalThis["process"] write in the kernel is named out of sight, outside the boundary', blind.code === 3 && outside(blind).some((a) => /"write"/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)), { code: blind.code, out: JSON.stringify(outside(blind)) });
-check('I1 a never over a relation nothing can populate fails with the reason', unpop.code === 1 && has(unpop, 'FAILS · 0 · nothing in the model can put a row here'), unpop);
-check('I2 a failing never is exit 1 and names its row', fails.code === 1 && has(fails, 'FAILS · 1') && has(fails, '`c2` is blocked by `platform`'), fails);
-check('I2 an unread cell is exit 2 and named', notRead.code === 2 && has(notRead, 'not read: C wibbles the moon'), notRead);
-check('I2 a failing never over code is exit 1', recurse.code === 1 && has(recurse, 'never C recurses  ->  FAILS · 1') && has(recurse, 'small.js:12'), recurse);
-check('I7 a cell concluding a model sentence with a loose variable is refused, exit 2', rewrite.code === 2 && has(rewrite, 'would rewrite the model'), rewrite);
-check('I7 a bound conclusion is allowed and labelled as extending the model', extended.code === 1 && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
-check('I1 an untranslated natural cell is named, not dropped', nat.code === 0 && has(nat, 'not translated yet'), nat);
-check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.out.slice(reviewJson.out.indexOf('{'))); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
+check('I6 a print planted in the kernel turns self red', is(red, 1) && has(red, 'console.log() at notebook/world.ts'), red);
+check('I6 a node:fs import and read planted in the kernel turns self red', is(red, 1) && has(red, 'readFileSync() at notebook/kernel.ts'), red);
+check('I6 an exit planted in the kernel turns self red', is(red, 1) && has(red, 'process.exit() at notebook/front.ts'), red);
+check('I4 a write planted in a run turns self red', is(red, 1) && has(red, 'never C writes outside translation  ->  FAILS'), red);
+check('I5 a process started in a run turns self red', is(red, 1) && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
+check('I3 a dynamic import of node:fs in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /import\(\)/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)) && outside(blind).some((a) => /"readFileSync"/.test(a.literal)), { code: blind.code, out: JSON.stringify(outside(blind)) });
+check('I3 a computed globalThis["process"] write in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /"write"/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)), { code: blind.code, out: JSON.stringify(outside(blind)) });
+check('I2 a kernel that exits early is not green', early.code === 0 && verdict(early) === null && !is(early, 0), early);
+check('I1 a never over a relation nothing can populate fails with the reason', is(unpop, 1) && has(unpop, 'FAILS · 0 · nothing in the model can put a row here'), unpop);
+check('I2 a failing never is exit 1 and names its row', is(fails, 1) && has(fails, 'FAILS · 1') && has(fails, '`c2` is blocked by `platform`'), fails);
+check('I2 an unread cell is exit 2 and named', is(notRead, 2) && has(notRead, 'not read: C wibbles the moon'), notRead);
+check('I2 a failing never over code is exit 1', is(recurse, 1) && has(recurse, 'never C recurses  ->  FAILS · 1') && has(recurse, 'small.js:12'), recurse);
+check('I7 a cell concluding a model sentence with a loose variable is refused, exit 2', is(rewrite, 2) && has(rewrite, 'would rewrite the model'), rewrite);
+check('I7 a bound conclusion is allowed and labelled as extending the model', is(extended, 1) && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
+check('I1 an untranslated natural cell is named, not dropped', is(nat, 0) && has(nat, 'not translated yet'), nat);
+check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
 check('I4 a run writes nothing into the file', before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);
 check('I5 a run never calls a model', !(() => { try { return readFileSync(path.join(tmp, 'called'), 'utf8').includes('spy.sh'); } catch { return false; } })());
 const ok = before(translateOk);

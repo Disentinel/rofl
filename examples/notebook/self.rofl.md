@@ -58,6 +58,14 @@ I2 A gate can say no: a failing never is red / exit 1; an unread cell is exit 2;
 > exit 1`. Over the code the one thing to say is that the command line has
 > three exits and maps each status to its own, which is a table and not a
 > question for a model.
+>
+> A GATE RUN BY THE CODE IT CHECKS TRUSTS ONLY A VERDICT THE CODE COULD NOT
+> HAVE FORGED BY EXITING EARLY. Found at acceptance: `new Function("return
+> process")().exit(0)` as the first line of `Kernel.run` made this file print
+> nothing and exit 0. So green is exit 0 AND the last line
+> `every never holds, every cell read` (in `--json`, a `status` field), and
+> `npm run test:nb` reads the verdict of every run, never its exit code
+> alone: `I2 a kernel that exits early is not green`.
 
 ## I3 · Silence is not green
 
@@ -229,6 +237,7 @@ member_call(C) :- callee_of[code](C, N), ast_child[code](N, object, 0, _).
 unseen(C, K) :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), callee_of[code](C, N), selects[flow](N, K), io_key(K).
 unseen(C, "()") :- ast_node[code](C, _, F, _), kernel_file(F), eff_call_unattributed[flow](C), not resolves[code](C, _), not imported_callee(C), not member_call(C).
 unseen(I, "import()") :- ast_node[code](I, import_expression, F, _), kernel_file(F).
+phrase(unseen, "<0:node> is out of the kernel's sight, a call of <1:key>").
 kernel_io(C) :- host_call_effect[audit](C, io, _), ast_node[code](C, _, F, _), kernel_file(F).
 
 never kernel_io(C)

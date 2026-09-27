@@ -165,7 +165,7 @@ if (isMain) {
   if (!file) { console.error('usage: npm run nb -- <file.rofl.md> [--json] [--cell N]'); process.exit(2); }
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: NbResult;
-  try { r = runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); process.exit(2); }
+  try { r = runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   console.log(argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only));
   process.exit(EXIT[r.status]);
