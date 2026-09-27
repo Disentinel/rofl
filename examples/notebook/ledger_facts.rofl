@@ -52,6 +52,7 @@ path_exists("examples/jopa/").
 path_exists("examples/loot/").
 path_exists("examples/loot/demo.ts").
 path_exists("examples/moot/moot.rofl").
+path_exists("examples/notebook/self.rofl.md").
 path_exists("examples/npc/").
 path_exists("examples/npc/demo.ts").
 path_exists("examples/npc/npc.rofl").
@@ -100,6 +101,7 @@ path_exists("facts/spec.rofl").
 path_exists("facts/worklist.rofl").
 path_exists("facts/worlds.rofl").
 path_exists("notebook/cli.ts").
+path_exists("notebook/kernel.ts").
 path_exists("package.json").
 path_exists("playground/host.ts").
 path_exists("playground/npc.html").
@@ -201,6 +203,8 @@ path_exists("scripts/lint.ts").
 path_exists("scripts/md_blocks.ts").
 path_exists("scripts/md_world.ts").
 path_exists("scripts/measurement_check.ts").
+path_exists("scripts/nb_check.ts").
+path_exists("scripts/nb_layers.ts").
 path_exists("scripts/parser_optional.ts").
 path_exists("scripts/playground.ts").
 path_exists("scripts/port_corpus.ts").
@@ -224,6 +228,10 @@ path_exists("src/store.ts").
 path_exists("src/tokens.ts").
 path_exists("src/unify.ts").
 path_exists("tsconfig.build.json").
+path_exists("vscode/extension.ts").
+path_exists("vscode/render.ts").
+path_exists("vscode/test/run.ts").
+path_exists("vscode/worker.ts").
 
 reason_len(f_bun_runner_over_budget, 14).
 reason_len(f_the_check_budget_is_nearly_spent, 28).
