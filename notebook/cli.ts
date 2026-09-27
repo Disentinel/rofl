@@ -14,7 +14,7 @@ const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. */
-export function inputs(file: string, text: string): { input: Inputs; errors: string[] } {
+export function inputs(file: string, text: string): { input: Inputs; errors: string[]; paths: Record<string, string> } {
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
   const read = (p: string) => { try { return readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
   const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
@@ -28,19 +28,20 @@ export function inputs(file: string, text: string): { input: Inputs; errors: str
     found.push(...hits);
   }
   const names = codeNames(path.resolve(file), found.map((p) => path.resolve(p)));
-  for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; }
-  return { input: { lib, reads, code }, errors };
+  const paths: Record<string, string> = {};
+  for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; paths[names[path.resolve(p)]] = path.resolve(p); }
+  return { input: { lib, reads, code }, errors, paths };
 }
 
-export function runFile(file: string, kernel = new Kernel()): NbResult {
-  const text = readFileSync(file, 'utf8');
-  const { input, errors } = inputs(file, text);
+/** `paths`: where each code file the answers name is, for a host that opens it. */
+export function runFile(file: string, kernel = new Kernel(), text = readFileSync(file, 'utf8')): NbResult & { paths: Record<string, string> } {
+  const { input, errors, paths } = inputs(file, text);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
-  return r;
+  return { ...r, paths };
 }
 
-const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
+export const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
 
@@ -116,17 +117,22 @@ const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].repla
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong. */
 export function translate(file: string, ask: Ask): { code: number; said: string[] } {
-  let text = readFileSync(file, 'utf8');
-  const kernel = new Kernel(), said: string[] = [];
+  const start = readFileSync(file, 'utf8'), r = translateText(file, start, ask);
+  if (r.text !== start) writeFileSync(file, r.text);
+  return r;
+}
+
+/** What translate writes, for a host that shows it before it is saved. */
+export function translateText(file: string, text: string, ask: Ask, kernel = new Kernel()): { code: number; said: string[]; text: string } {
+  const said: string[] = [], start = text;
   const { input, errors } = inputs(file, text);
-  if (errors.length) return { code: 2, said: errors };
+  if (errors.length) return { code: 2, said: errors, text };
   const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   const model = want.model.map((f) => input.lib[f]).join('\n'), phrases = want.phrases.map((f) => input.lib[f]).join('\n');
   const { vocab, functions } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
   let code = 0;
-  const start = text;
   for (let done = 0; ;) {
     const cells = cellsOf(text), c = cells.find((x) => x.kind === 'natural' && !translated(cells, x) && x.index > done);
     if (!c) break;
@@ -140,20 +146,19 @@ export function translate(file: string, ask: Ask): { code: number; said: string[
     };
     const base = prompt(c.text.trim(), vocab, own, functions, text, Object.keys(input.code));
     let a = ask(base);
-    if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`] };
+    if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text: start };
     let t = tryCell(fenced(a.text));
     if (t.errors.length) {
       said.push(`${file}:${c.line}: the first try did not read:`, ...fenced(a.text).split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
       a = ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${fenced(a.text)}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
-      if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`] };
+      if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text: start };
       t = tryCell(fenced(a.text));
     }
     if (t.errors.length) { said.push(`${file}:${c.line}: no cell read after two tries, nothing written:`, ...fenced(a.text).split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)); code = 2; continue; }
     text = t.next;
     said.push(`${file}:${c.line}: translated`, ...fenced(a.text).split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`));
   }
-  if (text !== start) writeFileSync(file, text);
-  return { code, said };
+  return { code, said, text };
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
