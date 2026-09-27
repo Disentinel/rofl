@@ -67,6 +67,8 @@ copyTree('extend', ['examples/review.rofl.md']);
 const recursion = planted('recursion', 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n']]);
 const natural = planted('natural', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
 copyTree('natural', ['examples/review.rofl.md']);
+const unparsed = planted('unparsed', 'review.rofl.md', (t) => `${t}\n\`\`\`datalog\nwhynot calls itself(c2)\nwhy calls itself(c2)\n\`\`\`\n`);
+copyTree('unparsed', ['examples/review.rofl.md']);
 // the command line run from a tree whose kernel exits 0 before it answers: a gate executed by the code it checks
 const exec = path.join(tmp, 'exec');
 mkdirSync(path.join(exec, 'notebook'), { recursive: true });
@@ -93,10 +95,10 @@ const layering = new Promise<Out>((done) => {
   p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
   p.on('close', (code) => done({ code: code ?? -1, out }));
 });
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
-  cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }),
+  cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
 ]);
 const layered = await layering;
 
@@ -137,6 +139,7 @@ check('I2 an unread cell is exit 2 and named', is(notRead, 2) && has(notRead, 'n
 check('I2 a failing never over code is exit 1', is(recurse, 1) && has(recurse, 'never C recurses  ->  FAILS · 1') && has(recurse, 'small.js:12'), recurse);
 check('I7 a cell concluding a model sentence with a loose variable is refused, exit 2', is(rewrite, 2) && has(rewrite, 'would rewrite the model'), rewrite);
 check('I7 a bound conclusion is allowed and labelled as extending the model', is(extended, 1) && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
+check('I1 a whynot that does not parse is an error of its cell, a why says so on its line, the other cells still answer, exit 2', is(unparsedOut, 2) && has(unparsedOut, 'error: whynot calls itself(c2): ') && /why calls itself\(c2\)\n +line 1: expected/.test(unparsedOut.out) && has(unparsedOut, '`c2` is blocked by `platform`'), unparsedOut);
 check('I1 an untranslated natural cell is named, not dropped', is(nat, 0) && has(nat, 'not translated yet'), nat);
 check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
 check('I4 a run writes nothing into the file', before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);

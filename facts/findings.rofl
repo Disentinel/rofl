@@ -14,7 +14,9 @@ finding_note(f_a_cell_edit_costs_the_cells_when_the_code_s_model_is_kept, "MEASU
 
 finding(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, defect).
 recorded(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "2026-09-28").
-finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error; `why` and `whynot` throw. Seen while benchmarking; not repaired here.").
+addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "playground/host.ts").
+addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "scripts/nb_check.ts").
+finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error and `why` returns it as its explanation; `whynot` threw. REPAIRED: the host catches what `why` and `whynot` throw and puts it on that cell as `<line>: <error>`, so the cell is unread (exit 2) and every other cell answers; `npm run test:nb` plants both lines in a copy of the review notebook and requires the whynot error, the why line's parse message, a review answer and exit 2. Before the repair the same file printed one line and nothing else.").
 
 -- Recorded 2026-09-28 by the notebook M1 session: a notebook is a `.rofl.md`
 -- world with fenced cells, run by `npm run nb`, accepted by its own notebook

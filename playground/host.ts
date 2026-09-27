@@ -238,8 +238,10 @@ export class Host {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
-        if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
-        if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
+        try {
+          if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
+          if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
+        } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, 50).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
