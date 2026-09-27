@@ -387,12 +387,14 @@ A call C is out of sight of main if a function F answers to "main" and F is blin
 
 never F is a writing main
 unsure C is out of sight of main` },
-      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
+      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences; its last line, extends resolves, says the third one adds to the model's own call graph on purpose. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
       { kind: 'prose', text: `A call C emits E if the callee of C is M, M selects "emit", C passes the argument X at 0 and X may be the literal E.
 
 A function F handles E if the callee of a call R is M, M selects "on", R passes the argument X at 0, X may be the literal E, R passes the argument Y at 1 and Y points to F.
 
-A call C resolves to a function F if C emits E and F handles E.` },
+A call C resolves to a function F if C emits E and F handles E.
+
+extends resolves` },
     ],
   },
 };

@@ -18,7 +18,9 @@ export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 export type Row = { sentence: string; literal: string };
 export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
   /** what the invariant above could not see: its `unsure` line's answers */
-  unsure?: { text: string; lit: string; rows: Row[]; total: number } };
+  unsure?: { text: string; lit: string; rows: Row[]; total: number };
+  /** why the line's answer means nothing: it rests on a relation whose rules a cell meant to write and the reader left out */
+  unasked?: string };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
@@ -216,9 +218,14 @@ export class Host {
           notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
           const free = loose(cl);
           if (!(cl.head.rel in home)) continue;
-          if (!free.length) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
-          // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
           const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
+          if (!free.length && parts[i].asks.some((a) => a.kind === 'extends' && a.lit === cl.head.rel)) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
+          if (!free.length) {
+            // a new sentence whose words the model already speaks lands in the model's relation, and every program then answers it: an accident unless the cell says so
+            errors.push(`the conclusion lands in the model's own sentence "${vocab.say(lit) ?? lit}" (${cl.head.rel}), so this cell would change what the model says of every program. It is left out: say it in words no sentence of the model uses, or add the line \`extends ${cl.head.rel}\` to the cell to extend the model on purpose.`);
+            texts[i] = ''; refused.add(i); continue;
+          }
+          // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
           errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
           texts[i] = ''; refused.add(i);
         }
@@ -226,7 +233,7 @@ export class Host {
       } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
     });
-    const asks = parts.map(({ asks }, i) => asks.map((a) => read[i] && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
+    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => read[i] && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
     const over = [...reads].filter((r) => !heads.has(r));
     const layered = !!this.shell && Object.keys(files).length > 0
@@ -252,13 +259,24 @@ export class Host {
     lap('evaluate');
     this.last = base ? null : f;
     this.full = base ? () => { const w = base!.fork(); if (all.trim() && !w.load(all, { budget: BUDGET }).ok) texts.forEach((x) => { if (x.trim()) w.load(x, { budget: BUDGET }); }); w.evaluate(BUDGET); return w; } : null;
+    // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
+    const deps = new Map<string, Set<string>>();
+    for (const x of texts) if (x.trim()) try { for (const cl of parseProgram(x)) { const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel); } } catch { /* said by the load */ }
+    const undefinedRel = (rel: string) => !deps.has(rel) && !(rel in home) && !this.modelRels.has(rel);
+    const restsOn = (rel: string, seen = new Set<string>()): string | undefined => {
+      if (seen.size && undefinedRel(rel)) return `it rests on ${rel.replace(/_/g, ' ')}, which nothing defines`;
+      if (seen.has(rel)) return undefined;
+      seen.add(rel);
+      for (const d of deps.get(rel) ?? []) { const why = restsOn(d, seen); if (why) return why; }
+    };
+    const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
         try {
-          if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
-          if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
+          if (a.kind === 'why') { const w = f.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: w.ok, why: vocab.sayAll(w.text), proof: w.ok ? this.explain(a.lit) : undefined }); continue; }
+          if (a.kind === 'whynot') { const w = f.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !w.holds, why: vocab.sayAll(w.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
@@ -267,7 +285,7 @@ export class Host {
         const note = q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined;
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
-        outs[i].lines.push({ kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
+        outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
       }
     });
     lap('ask');

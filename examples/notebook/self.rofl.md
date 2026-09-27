@@ -312,11 +312,25 @@ the kernel writes to a node L in File either:
 > binds is refused; a deliberate extension with every variable bound is
 > allowed, and the output says `extends the model's <relation>`.
 >
+> THAT WAS NOT ENOUGH, and a user paid for it: auditing another codebase,
+> `A tool entry O is named T if ...` meant a new sentence and landed in the
+> model's own `ast_name` ("O is named T"), every variable bound, so it was
+> allowed as a deliberate extension and `? O is named T` answered 12366
+> plausible rows, every named node of forty files. A deliberate extension and
+> an accidental one look the same to the reader; only the writer knows. So
+> now the writer says it: a rule whose conclusion lands in a relation the
+> model already has is refused, naming the model's sentence and the
+> relation, unless its cell carries the line `extends <relation>`. The page's
+> event-bus cell carries `extends resolves`.
+>
 > Not expressible over the code with this model: it is a property of every
 > path by which a cell's text reaches `load`. Behavioural:
 > `I7 a cell concluding a model sentence with a loose variable is refused,
-> exit 2` and `I7 a bound conclusion is allowed and labelled as extending
-> the model`.
+> exit 2`, `I7 a bound conclusion into a model relation, marked extends, is
+> allowed and labelled` and `I7 the same conclusion without the marker is
+> refused, naming the sentence it collided with`. Facts a cell writes into
+> a model relation (the ledger notebook injects two `blocks` rows on purpose)
+> are not covered: a ground fact names its relation outright.
 
 ## I8 · Every answer points at its evidence
 

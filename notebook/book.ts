@@ -2,7 +2,7 @@
 // Pure: the page, the notebook kernel and the reader of worlds share it.
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
 
-export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure';
+export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
 export type Cell = { id: string; text: string; form?: 'md' | 'rofl'; /** prose: read for its sentences, no line of it asks */ prose?: boolean };
 
@@ -13,7 +13,7 @@ export function booksOf(model: string): Map<string, Set<string>> {
   return books;
 }
 
-const DIRECTIVE = /^(\?|never|whynot|why|unsure)\s+(.+?)\.?\s*$/;
+const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends)\s+(.+?)\.?\s*$/;
 
 /** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing. */
 function split(text: string): { clauses: string; asks: Ask[] } {

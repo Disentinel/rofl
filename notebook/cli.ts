@@ -48,7 +48,7 @@ export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${c
   return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '');
 };
 
-export const VERDICT = (l: NbLine) => l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
+export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
 
@@ -63,6 +63,7 @@ export function print(file: string, r: NbResult, only?: number): string {
     for (const n of c.notes) out.push(`  note: ${n}`);
     for (const l of c.lines) {
       out.push(`  ${file}:${l.line}: ${l.text}${VERDICT(l) ? `  ->  ${VERDICT(l)}` : ''}`);
+      if (l.verdict === 'unasked') continue;
       for (const a of l.answers.slice(0, SHOWN)) out.push(`    - ${a.sentence}`);
       if (l.total > SHOWN) out.push(`    ... ${l.total - SHOWN} more`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }

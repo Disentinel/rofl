@@ -7,10 +7,10 @@ import { asCell, assemble, type Inputs } from './world.ts';
 export { cellsOf, parseFront, libFiles, codeNames, normal, translated } from './front.ts';
 export { worldOf, assemble, type Inputs } from './world.ts';
 
-export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained';
+export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked';
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
-  unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string };
+  unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; unasked?: string };
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
 /** `blind`: every never holds, some only as far as the model sees; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
@@ -49,12 +49,12 @@ export class Kernel {
       const seen = new Set<number>();
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
       return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors, notes: o.notes, lines: o.lines.map((l) => {
-        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why };
+        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why, unasked: l.unasked };
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
       }) };
     });
-    const status: Status = errors.length || result.some((c) => c.errors.length) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
+    const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, cells: result, errors, ms: { load, run: out.ms, phases: out.phases } };
   }
 }

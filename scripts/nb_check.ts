@@ -63,7 +63,9 @@ const unread = planted('unread', 'review.rofl.md', withCell('A change C is frobb
 copyTree('unread', ['examples/review.rofl.md']);
 const loose = planted('loose', 'review.rofl.md', withCell('A change C touches a module M if C is written by some person.'));
 copyTree('loose', ['examples/review.rofl.md']);
-const extend = planted('extend', 'review.rofl.md', withCell('A change C is blocked by a team T if C is written by some person and T owns some module.\n\n? C is blocked by `payments`'));
+const extend = planted('extend', 'review.rofl.md', withCell('A change C is blocked by a team T if C is written by some person and T owns some module.\n\nextends blocked\n\n? C is blocked by `payments`'));
+const collide = planted('collide', 'review.rofl.md', withCell('A change C is blocked by a team T if C is written by some person and T owns some module.\n\n? C is blocked by `payments`'));
+copyTree('collide', ['examples/review.rofl.md']);
 copyTree('extend', ['examples/review.rofl.md']);
 const recursion = planted('recursion', 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n']]);
 const natural = planted('natural', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
@@ -99,6 +101,18 @@ flagged[audit](C) :- blocked(C, _).
 never blocked(C, payments)
 \`\`\`
 
+\`\`\`rofl
+A change C is stalled if C wibbles.
+
+never C is stalled
+\`\`\`
+
+\`\`\`datalog
+held_up(C) :- stalled(C).
+
+never held_up(C)
+\`\`\`
+
 \`\`\`natural
 Payments blocks nothing.
 \`\`\`
@@ -124,9 +138,9 @@ const layering = new Promise<Out>((done) => {
   p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
   p.on('close', (code) => done({ code: code ?? -1, out }));
 });
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
-  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
+  cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
   cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
 ]);
@@ -169,7 +183,10 @@ check('I2 a failing never is exit 1 and names its row', is(fails, 1) && has(fail
 check('I2 an unread cell is exit 2 and named', is(notRead, 2) && has(notRead, 'not read: C wibbles the moon'), notRead);
 check('I2 a failing never over code is exit 1', is(recurse, 1) && has(recurse, 'never C recurses  ->  FAILS · 1') && has(recurse, 'small.js:12'), recurse);
 check('I7 a cell concluding a model sentence with a loose variable is refused, exit 2', is(rewrite, 2) && has(rewrite, 'would rewrite the model'), rewrite);
-check('I7 a bound conclusion is allowed and labelled as extending the model', is(extended, 1) && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
+check('I7 a bound conclusion into a model relation, marked `extends`, is allowed and labelled', is(extended, 1) && has(extended, '`c1` is blocked by `payments`') && has(extended, "note: extends the model's blocked"), extended);
+check('I7 the same conclusion without the marker is refused, naming the sentence it collided with', is(collided, 2) && has(collided, 'lands in the model\'s own sentence "C is blocked by T" (blocked)') && has(collided, 'extends blocked') && !has(collided, '`c1` is blocked by `payments`'), collided);
+check('B a never in a cell whose rule was left out is not asked, not FAILS or holds', is(fr, 2) && has(fr, 'never C is stalled  ->  not asked') && !has(fr, 'never C is stalled  ->  FAILS') && !has(fr, 'never C is stalled  ->  holds'), fr);
+check('B a never resting on a relation nothing defines is not asked and says which', has(fr, 'never held_up(C)  ->  not asked: it rests on stalled, which nothing defines'), fr);
 check('I1 a whynot that does not parse is an error of its cell, a why says so on its line, the other cells still answer, exit 2', is(unparsedOut, 2) && has(unparsedOut, 'error: whynot calls itself(c2): ') && /why calls itself\(c2\)\n +line 1: expected/.test(unparsedOut.out) && has(unparsedOut, '`c2` is blocked by `platform`'), unparsedOut);
 check('I1 an untranslated natural cell is named, not dropped', is(nat, 0) && has(nat, 'not translated yet'), nat);
 check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
