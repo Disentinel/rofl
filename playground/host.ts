@@ -213,6 +213,7 @@ export class Host {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
     const home = this.home;
+    this.last = null;   // the last world held while the next is built doubles the heap: 70 s runs took 100-115 s in a kept kernel
     const t = performance.now();
     const phases: Record<string, number> = {};
     let mark = performance.now();
