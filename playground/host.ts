@@ -8,7 +8,6 @@ import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
 import { varsOf, canonTerm, mka, type Clause } from '../src/unify.ts';
-import type { FactRec } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -108,8 +107,20 @@ function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
   return into;
 }
 
-/** A fact of an evaluated world, to be asserted in another. */
-const asFact = (f: FactRec): Clause => ({ head: { rel: f.rel, persp: mka(f.persp), perspExplicit: true, args: f.args, temporal: 'now' }, body: [] });
+/** These relations' facts, asserted in another world: the first of each book the way any fact is, which opens the book and marks the relation
+ *  extensional; the rest straight into the store, without the trail of who asserted them, which is the kernel's and nothing the cells read. */
+function copyFacts(from: Rofl, to: Rofl, rels: string[]): { ok: boolean; diagnostics: string[] } {
+  for (const rel of rels) {
+    const books = new Set<string>();
+    for (const f of from.store.relAll(rel)) {
+      if (books.has(f.persp)) { to.store.add(f.rel, f.persp, f.args, { scope: 'tick', base: true }); continue; }
+      books.add(f.persp);
+      const l = to.assertClauses([{ head: { rel: f.rel, persp: mka(f.persp), perspExplicit: true, args: f.args, temporal: 'now' }, body: [] }]);
+      if (!l.ok) return l;
+    }
+  }
+  return { ok: true, diagnostics: [] };
+}
 
 /** One loaded model and the book last run over it: the page keeps one, an editor one per notebook. */
 export class Host {
@@ -210,7 +221,7 @@ export class Host {
     }
     lap('model');
     const f = base ? this.shell!.fork() : this.core.fork();
-    const given = base ? f.assertClauses(over.flatMap((rel) => base!.store.relAll(rel).map(asFact))) : Object.keys(files).length ? f.assert(sc.text) : { ok: true, diagnostics: [] };
+    const given = base ? copyFacts(base, f, over) : Object.keys(files).length ? f.assert(sc.text) : { ok: true, diagnostics: [] };
     if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
     lap('fork');
     // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which

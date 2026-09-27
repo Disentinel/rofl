@@ -87,11 +87,18 @@ const spy = fake('spy.sh', 'x');
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
+const layering = new Promise<Out>((done) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/nb_layers.ts')]);
+  let out = '';
+  p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
+  p.on('close', (code) => done({ code: code ?? -1, out }));
+});
 const [review, small, self, reviewJson, fails, notRead, rewrite, extended, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }),
 ]);
+const layered = await layering;
 
 const results: [string, boolean, string][] = [];
 const check = (name: string, ok: boolean, o?: Out) => results.push([name, ok, ok || !o ? '' : `exit ${o.code}\n${o.out.slice(-1500)}`]);
@@ -138,6 +145,8 @@ const ok = before(translateOk);
 check('I5 a translation that reads is inserted under its natural cell, which stays', trOk.code === 0 && ok.includes('No change touches a module nobody owns.\n```\n\n```rofl\nA module M is unowned') && ok.startsWith(reviewText.slice(0, 200)), trOk);
 check('I5 a translation that does not read after a retry is not written, exit 2', trBad.code === 2 && before(translateBad) === badText && has(trBad, 'nothing written') && readFileSync(path.join(tmp, 'called'), 'utf8').split('\n').filter((l) => l.endsWith('bad.sh')).length === 2, trBad);
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
+check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
+for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);
 check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self'].every((n) => worlds().some((w) => w.name === n)));
 
 for (const [name, ok, why] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${why ? `\n${why.replace(/^/gm, '     ')}` : ''}`);

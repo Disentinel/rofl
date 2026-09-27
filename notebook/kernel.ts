@@ -19,6 +19,10 @@ export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; error
 export class Kernel {
   private host = new Host();
   private loaded = '';
+  private whole: boolean;
+
+  /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. */
+  constructor(opts: { whole?: boolean } = {}) { this.whole = !!opts.whole; }
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
@@ -27,7 +31,7 @@ export class Kernel {
     const key = model + '\u0000' + phrases;
     if (key !== this.loaded) {
       const rules = libFiles(path, front).model.filter((f) => f.startsWith('rules/'));
-      const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, input.lib['boot.rofl']);
+      const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, this.whole ? undefined : input.lib['boot.rofl']);
       load = l.ms;
       if (!l.ok) { errors.push(...l.diagnostics); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
       this.loaded = key;
