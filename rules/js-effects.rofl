@@ -369,28 +369,11 @@ eff_value_spec[code](I) :- eff_mod_src[code](I, _, _), ast_child[code](I, specif
 eff_erased[code](I)     :- eff_type_only[code](I).
 eff_erased[code](I)     :- eff_has_spec[code](I), not eff_value_spec[code](I).
 
--- A COPY OF `import_target` WITH A GATE: that relation is closed over
--- `module_source`, which has no arm for `import('./m.mjs')`, so reading it
--- here answered three kinds of four and was silent about the fourth.
--- `eff_mod_target_disagrees` asserts the two agree wherever both can answer.
-eff_mod_basename[code](Src, Base) :- eff_mod_src[code](_, Src, _),
-                                     Head is str_pre(Src, "/"), Head = ".",
-                                     N is str_segs(Src, "/"), N = 2,
-                                     Base is str_seg(Src, "/", 1).
-eff_mod_target[code](Src, T) :- eff_mod_basename[code](Src, Base),
-                                corpus_file[code](T), T = Base.
-
-eff_mod_target_disagrees[audit](Src, T) :- import_target[code](Src, T),
-                                           not eff_mod_target[code](Src, T).
-eff_mod_target_disagrees[audit](Src, T) :- eff_mod_target[code](Src, T),
-                                           module_source[code](_, Src, _),
-                                           not import_target[code](Src, T).
-
-eff_evaluates_at[code](I, T) :- eff_mod_src[code](I, Src, _), not eff_erased[code](I),
-                                eff_mod_target[code](Src, T).
+eff_evaluates_at[code](I, T) :- eff_mod_src[code](I, _, _), not eff_erased[code](I),
+                                module_target[code](I, T).
 
 eff_import_outside[flow](I, Src) :- eff_mod_src[code](I, Src, _), not eff_erased[code](I),
-                                    not eff_mod_target[code](Src, _).
+                                    not module_target[code](I, _).
 
 -- A module's own top level: the join over nodes no function encloses, plus
 -- top-level calls. `eff_here -> eff_module -> eff_here` is a POSITIVE cycle,

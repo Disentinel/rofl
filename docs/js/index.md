@@ -3,19 +3,19 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1007 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1009 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 218 | 94 | 85 | 0 | 45 | 237 | 22 | 4 | 6 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 229 | 87 | 74 | 0 | 46 | 227 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 287 | 123 | 111 | 0 | 127 | 421 | 23 | 2 | 3 | 0 |
-| [js-effects](js-effects.rofl.md) | 211 | 128 | 120 | 0 | 23 | 307 | 20 | 2 | 7 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 287 | 121 | 109 | 0 | 127 | 417 | 24 | 2 | 3 | 0 |
+| [js-effects](js-effects.rofl.md) | 207 | 125 | 117 | 0 | 23 | 299 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 48 | 5 | 1 | 17 | 0 |
 | [js-globals](js-globals.rofl.md) | 40 | 22 | 19 | 0 | 2 | 47 | 1 | 2 | 6 | 0 |
 | [js-host](js-host.rofl.md) | 66 | 48 | 47 | 0 | 1 | 75 | 9 | 1 | 18 | 0 |
 | [js-model](js-model.rofl.md) | 116 | 55 | 49 | 1 | 0 | 138 | 13 | 3 | 2 | 0 |
-| [js-modules](js-modules.rofl.md) | 143 | 95 | 95 | 0 | 22 | 200 | 21 | 0 | 2 | 0 |
+| [js-modules](js-modules.rofl.md) | 165 | 102 | 99 | 0 | 22 | 221 | 23 | 1 | 2 | 0 |
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-structure](js-structure.rofl.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
@@ -296,15 +296,12 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_meet` | `the_meet` |
 | `eff_member_both` | `is_read_and_written` |
 | `eff_member_target` | `is_a_written_member` |
-| `eff_mod_basename` | `the_basename` |
 | `eff_mod_bounded` | `is_bounded_as_a_module_by` |
 | `eff_mod_bounded_low` | `is_bounded_as_a_module_below` |
 | `eff_mod_join_short` | `is_short_of_the_module_join` |
 | `eff_mod_over` | `exceeds_as_a_module` |
 | `eff_mod_src` | `imports_the_source` |
 | `eff_mod_subject` | `is_a_module_subject` |
-| `eff_mod_target` | `the_module_target` |
-| `eff_mod_target_disagrees` | `has_a_disputed_target` |
 | `eff_mod_two_names` | `has_two_module_effects` |
 | `eff_mod_unnamed` | `has_no_named_module_effect` |
 | `eff_module` | `has_the_module_effect` |
@@ -536,13 +533,13 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `import_site` | `is_an_import_site` |
 | `import_spec` | `has_the_import_specifier` |
 | `import_specifier_node` | `names_an_import` |
-| `import_target` | `targets` |
 | `imports_default` | `imports_the_default` |
 | `imports_name` | `imports` |
 | `imports_ns` | `imports_the_namespace` |
 | `in_fn` | `is_inside_a_function` |
 | `in_own_decorator` | `has_its_decorator_at` |
 | `in_try_block` | `tries` |
+| `index_file` | `is_an_index_file` |
 | `inherited` | `inherits` |
 | `inherited_field` | `inherits_the_field` |
 | `interpolated` | `is_interpolated` |
@@ -573,6 +570,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `label_ref` | `refers_to_the_label` |
 | `label_target` | `targets_the_label` |
 | `lang_of_corpus` | `is_the_corpus_language` |
+| `last_ext` | `the_extension` |
 | `layer` | `is_a_layer` |
 | `layer_authorised` | `is_authorised` |
 | `layer_unauthorised` | `is_unauthorised` |
@@ -622,12 +620,12 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `model_site_known` | `is_known_to_the_model` |
 | `modelled` | `is_modelled` |
 | `module_attr` | `imports_with_the_attribute` |
-| `module_basename` | `has_basename` |
 | `module_is_data` | `imports_a_data_module` |
 | `module_meta` | `has_the_module_meta` |
 | `module_object` | `is_the_module_object_of` |
 | `module_site` | `is_a_module_site` |
 | `module_source` | `sources` |
+| `module_target` | `means_the_file` |
 | `module_type` | `imports_the_module_type` |
 | `multi_shape` | `has_two_shapes` |
 | `name_bound_in` | `binds_the_name` |
@@ -684,6 +682,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `private_key` | `is_the_private_key` |
 | `private_member` | `has_the_private_member` |
 | `private_ref` | `refers_privately_to` |
+| `probe_ext` | `is_probed` |
 | `prototype_of` | `the_prototype` |
 | `provides` | `provides_the_feature` |
 | `provides_api` | `provides` |
@@ -785,6 +784,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `site_file` | `sits_in` |
 | `site_key_ambiguous` | `has_two_model_keys` |
 | `site_kind` | `the_site_kind` |
+| `site_last_seg` | `reaches` |
 | `site_line` | `sits_at_line` |
 | `site_shape` | `the_site_shape` |
 | `site_source` | `the_source_text` |
@@ -837,6 +837,8 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `try_catches` | `has_a_handler` |
 | `try_of` | `lies_in` |
 | `try_stops` | `is_stopped_by` |
+| `ts_ext` | `is_written_for` |
+| `ts_resolved` | `names_under_typescript` |
 | `unaccounted` | `is_unaccounted` |
 | `unaccounted_site` | `is_an_unaccounted_site` |
 | `uncompared` | `is_uncompared` |

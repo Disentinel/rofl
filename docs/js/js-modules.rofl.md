@@ -233,6 +233,84 @@ A node I is resolved either:
   - [the source text](#site_source) of it is S;
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
+## 3b. WHICH FILE THE CODE MEANS, for section 5 and the call graph: node's answer, else
+
+> TypeScript's. `./config.js` written in TypeScript names `config.ts`,
+> `./config` names `config.ts` or `config.js`, `./handlers` names
+> `handlers/index.ts`. `resolved_import` stays node's alone, because
+> rules/js-resolve.rofl holds it to node's own resolver.
+
+<a id="ts_ext"></a>`ts_ext` lists:
+
+| text | text |
+|---|---|
+| "js" | "ts" |
+| "js" | "tsx" |
+| "jsx" | "tsx" |
+| "mjs" | "mts" |
+| "cjs" | "cts" |
+
+<a id="probe_ext"></a>`probe_ext` includes "ts", "tsx", "js", "jsx", "mjs", "cjs".
+
+<a id="index_file"></a>`index_file` includes "index.ts", "index.tsx", "index.js", "index.jsx".
+
+<a id="last_ext"></a>The extension of Name and L is E if all of:
+  - some directory [holds the file](#fs_file_in) Name being some file;
+  - N is the number of segments of Name split by ".";
+  - N > 1;
+  - K is N - 1;
+  - E is the segment K of Name split by ".";
+  - L is the length of E.
+
+<a id="site_last_seg"></a>A site reaches a directory D before a segment Seg if all of:
+  - it [walks](#walk) at a step K to D;
+  - [the source text](#site_source) of it is S;
+  - [`str_seg`](#str_seg)(S, K, Seg);
+  - N is K + 1;
+  - [`str_segs`](#str_segs)(S, N).
+
+<a id="ts_resolved"></a>A site I names under typescript T either:
+
+1. if all of:
+   - I [reaches](#site_last_seg) a directory D before a segment Seg;
+   - D [holds the file](#fs_file_in) Name being T;
+   - [the extension](#last_ext) of Name and Ln is En;
+   - N is the number of segments of Seg split by ".";
+   - N > 1;
+   - K is N - 1;
+   - Es is the segment K of Seg split by ".";
+   - Es [is written for](#ts_ext) En;
+   - Ls is the length of Seg;
+   - Les is the length of Es;
+   - Stem is Ls - Les - 1;
+   - Lname is the length of Name;
+   - Stem2 is Lname - Ln - 1;
+   - Stem is Stem2;
+   - P is the substring of Seg from 0 of length Stem;
+   - P2 is the substring of Name from 0 of length Stem;
+   - P is P2;
+2. if all of:
+   - I [reaches](#site_last_seg) a directory D before a segment Seg;
+   - D [holds the file](#fs_file_in) Name being T;
+   - [the extension](#last_ext) of Name and L [is probed](#probe_ext);
+   - Ls is the length of Seg;
+   - Want is Ls + L + 1;
+   - Have is the length of Name;
+   - Want is Have;
+   - P is the substring of Name from 0 of length Ls;
+   - P is Seg;
+3. if all of:
+   - I [walks](#walk) at a step N to a directory D;
+   - [the source text](#site_source) of I is S;
+   - [`str_segs`](#str_segs)(S, N);
+   - Name [is an index file](#index_file);
+   - D [holds the file](#fs_file_in) Name being T.
+
+<a id="module_target"></a>A site I means the file T either:
+
+1. if I [resolves to the file](#resolved_import) T;
+2. if I [names under typescript](#ts_resolved) T, unless I [resolves to the file](#resolved_import) some file.
+
 ## 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
 
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
@@ -364,17 +442,17 @@ A site
 - <a id="value_binding"></a>binds a value at a node Sp if it [binds the name](#binding) some name to some name at Sp, unless it [is a type only import](#decl_type_only) or Sp [is a type only import specifier](#spec_type_only).
 - <a id="no_specifiers"></a>has no specifiers if it [is an import site](#import_site) of `static_import`, unless it [has a specifier](#has_specifier).
 
-<a id="depends"></a>A file F depends on a file T if a site I [resolves to the file](#resolved_import) T and I [sits in](#site_file) F.
+<a id="depends"></a>A file F depends on a file T if a site I [means the file](#module_target) T and I [sits in](#site_file) F.
 
 <a id="flows"></a>A file F takes values from a file T either:
 
 1. if all of:
    - a site I [binds a value](#has_value_binding);
-   - I [resolves to the file](#resolved_import) T;
+   - I [means the file](#module_target) T;
    - I [sits in](#site_file) F;
 2. if all of:
    - a node I [is an import site](#import_site) of `dynamic_import`;
-   - I [resolves to the file](#resolved_import) T;
+   - I [means the file](#module_target) T;
    - I [sits in](#site_file) F.
 
 <a id="evaluates"></a>A file F evaluates the module T either:
@@ -382,7 +460,7 @@ A site
 1. if F [takes values from](#flows) T;
 2. if all of:
    - a site I [has no specifiers](#no_specifiers);
-   - I [resolves to the file](#resolved_import) T;
+   - I [means the file](#module_target) T;
    - I [sits in](#site_file) F;
    - unless I [is a type only import](#decl_type_only).
 
@@ -409,11 +487,11 @@ A file F
 
 - takes values from a file T if all of:
   - a node E [reexports a value](#reexport_value);
-  - E [resolves to the file](#resolved_import) T;
+  - E [means the file](#module_target) T;
   - E [sits in](#site_file) F.
 - evaluates the module T if all of:
   - a node E [has no reexport specifiers](#no_reexport_specifiers);
-  - E [resolves to the file](#resolved_import) T;
+  - E [means the file](#module_target) T;
   - E [sits in](#site_file) F;
   - unless E [is a type only export](#export_decl_type_only).
 
@@ -427,7 +505,7 @@ A file F
   - a node E [reexports a value at](#reexport_value_spec) a node Sp;
   - Sp [exports as](#spec_external) External;
   - Sp [exports the local](#spec_internal) Internal;
-  - E [resolves to the file](#resolved_import) T;
+  - E [means the file](#module_target) T;
   - E [sits in](#site_file) F.
 
 ## 5c. WHICH MODULE AN INTERNAL NAME LIVES IN. `export { helper as reHelper }

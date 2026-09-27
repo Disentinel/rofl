@@ -546,8 +546,8 @@ handled(js, array_pattern,              effect, r_effect_transfer).
 -- MODULE EVALUATION. Four kinds whose evaluation runs ANOTHER FILE'S TOP LEVEL,
 -- so their effect is that module's top-level effect. This is a MISSING EDGE and
 -- not a missing surface, which is what separates this group from the ambient
--- calls still open below: the module is in the corpus, `module_source[code]`
--- and `import_target[code]` in rules/js-dataflow.rofl already name it, and
+-- calls still open below: the module is in the corpus, `module_target[code]`
+-- in rules/js-modules.rofl already names it, and
 -- crossing the boundary for a top-level EFFECT is the same join
 -- `w_cg_module_boundary` already made for a NAME.
 --

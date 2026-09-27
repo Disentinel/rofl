@@ -73,6 +73,7 @@ check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_review", world).
 check[checks]("facts/goldens.rofl", "notebook_self", world).
 check[checks]("facts/goldens.rofl", "notebook_small", world).
+check[checks]("facts/goldens.rofl", "notebook_xdir", world).
 check[checks]("facts/goldens.rofl", "npc", world).
 check[checks]("facts/goldens.rofl", "oops", world).
 check[checks]("facts/goldens.rofl", "reach", world).
