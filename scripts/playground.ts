@@ -27,7 +27,7 @@ const emit = (src: string) => {
   writeFileSync(`${OUT}/lib/${src.replace(/^.*\//, '').replace(/\.ts$/, '.js')}`, js);
 };
 for (const f of readdirSync(`${ROOT}src`)) if (f.endsWith('.ts') && f !== 'repl.ts') emit(`src/${f}`);
-for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'playground/host.ts', 'playground/worker.ts',
+for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'notebook/front.ts', 'notebook/book.ts', 'playground/host.ts', 'playground/worker.ts',
   'runtime/semirings.ts', 'examples/npc/sim.ts', 'playground/npc_host.ts', 'playground/npc_worker.ts']) emit(f);
 for (const [m, text] of Object.entries(SHIMS)) writeFileSync(`${OUT}/lib/shim-${m.slice(5)}.js`, text);
 copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);

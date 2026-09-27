@@ -6,64 +6,27 @@ import { ruleIdOf } from '../src/reflect.ts';
 import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
-import { readMd, type ReadResult } from '../scripts/read_md.ts';
+import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
 import { varsOf, canonTerm, type Clause } from '../src/unify.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
 
-/** The part of the JS model the playground loads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
-export const MODEL_FILES = ['boot.rofl',
-  'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-statements.rofl',
-  'facts/js-controlflow.rofl', 'facts/js-effects.rofl', 'facts/js-globals.rofl', 'facts/js-host.rofl', 'facts/js-host-surface.rofl', 'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl',
-  'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl', 'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl',
-  'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl'];
-export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
+export { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
-/** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
-export type Cell = { id: string; text: string; form?: 'md' | 'rofl'; /** prose: read for its sentences, no line of it asks */ prose?: boolean };
 export type Row = { sentence: string; literal: string };
-export type Line = { kind: 'answers' | 'never' | 'why' | 'whynot' | 'unsure'; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
+export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: number; ok: boolean; note?: string; why?: string; proof?: Step | string;
   /** what the invariant above could not see: its `unsure` line's answers */
   unsure?: { text: string; lit: string; rows: Row[]; total: number } };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
 
-/** Every relation the model's rules conclude, and the books they write it in. */
-export function booksOf(model: string): Map<string, Set<string>> {
-  const books = new Map<string, Set<string>>();
-  for (const m of model.matchAll(/^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*?:-/gm)) (books.get(m[1]) ?? books.set(m[1], new Set()).get(m[1])!).add(m[2] ?? 'main');
-  return books;
-}
-
-const DIRECTIVE = /^(\?|never|whynot|why|unsure)\s+(.+?)\.?\s*$/;
-
-/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing. */
-function split(text: string): { clauses: string; asks: Ask[] } {
-  const clauses: string[] = []; const asks: Ask[] = [];
-  for (const raw of text.split('\n')) {
-    const l = raw.trim();
-    const m = DIRECTIVE.exec(l);
-    if (m) asks.push({ kind: m[1] === '?' ? 'answers' : m[1] as Line['kind'], lit: m[2], text: l });
-    clauses.push(m || l.startsWith('>') ? '' : raw);   // blank, so an error's line number is the cell's
-  }
-  return { clauses: clauses.join('\n'), asks };
-}
-
-/** A head the reader knew no sentence for gets an anchor named from its words, `A call C is unawaited` -> `unawaited`, so the sentence declares a relation. */
-const slug = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
-  .toLowerCase().replace(/\b(a|an|the|is|are)\b/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-function anchored(md: string, heads: string[]): string {
-  const lines = md.split('\n');
-  for (const h of heads) {
-    const name = slug(h); if (!name) continue;
-    const i = lines.findIndex((l) => l.replace(/^\s*- /, '').startsWith(h));
-    if (i >= 0 && !/<a id=/.test(lines[i])) lines[i] = lines[i].replace(/^(\s*- )?/, (m) => `${m}<a id="${name}"></a>`);
-  }
-  return lines.join('\n');
-}
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
+
+/** A string as the scanner quotes it; a control character in it is left as it is, where JSON would refuse the whole run. */
+const unquote = (q: string): string => { try { return JSON.parse(q); } catch { return q.slice(1, -1); } };
 
 /** A node as the code writes it, `s.put()`, `new Store()`, `class Store`, from the scanner's own facts. */
 function labelNodes(facts: string[], nodes: Record<string, Node>): void {
@@ -72,7 +35,7 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
     let m = /^ast_child\[code\]\((\w+), (\w+), (\d+), (\w+)\)/.exec(f);
     if (m) { kid.set(`${m[1]} ${m[2]} ${m[3]}`, m[4]); continue; }
     m = /^ast_attr\[code\]\((\w+), (\w+), (.*)\)\.$/.exec(f);
-    if (m) attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? JSON.parse(m[3]) : m[3]);
+    if (m) attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]);
   }
   const k = (id: string, field: string) => kid.get(`${id} ${field} 0`);
   const lab = (id: string | undefined, d = 0): string => {
@@ -104,7 +67,8 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
 
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
 function hostFacts(paths: string[], strings: Set<string>): string[] {
-  const q = (x: string) => JSON.stringify(x), out: string[] = [], dirs = new Set(['.']);
+  // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
+  const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
   for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
   for (const d of dirs) {
@@ -131,30 +95,6 @@ function loose(cl: Clause): string[] {
 
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
 
-/** The books a model's relations live in: `ast_node` in code, a relation one book's rules conclude in that book, one given by facts alone where its facts are. */
-export function homeOf(model: string): Record<string, string> {
-  const home: Record<string, string> = { ast_node: 'code', ast_child: 'code', ast_attr: 'code', ast_file: 'code' };
-  for (const [rel, bs] of booksOf(model)) if (bs.size === 1) home[rel] = [...bs][0];
-  for (const m of model.matchAll(/^([a-z_]\w*)(?:\[(\w+)\])?\([^\n]*\)\.[ \t]*$/gm)) if (!m[0].includes(':-')) home[m[1]] ??= m[2] ?? 'main';
-  return home;
-}
-
-export type Ask = { kind: Line['kind']; lit: string; text: string };
-export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string };
-
-/** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
-export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
-  const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
-  const md = parts.map(({ c, clauses }) => {
-    if (c.form !== 'md') return null;
-    const first = readMd(clauses, { vocab: phrases, homeBooks: home });
-    const text = anchored(clauses, first.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5)));
-    return { text, learned: readMd(text, { vocab: phrases, homeBooks: home }).phrases };
-  });
-  const learned = md.flatMap((m) => m?.learned ?? []);
-  const vocab = phrases + '\n' + learned.join('\n');
-  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab };
-}
 
 const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
 const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
@@ -201,11 +141,12 @@ export class Host {
         const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
         if (e) parseErrors[path] = e[1];
         const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-        if (v) strings.add(JSON.parse(v[1]));
+        if (v) strings.add(unquote(v[1]));
       }
     }
     labelNodes(facts, nodes);
-    if (Object.keys(files).length) f.assert([...facts, ...hostFacts(Object.keys(files), strings)].join('\n'));
+    const given = Object.keys(files).length ? f.assert([...facts, ...hostFacts(Object.keys(files), strings)].join('\n')) : { ok: true, diagnostics: [] };
+    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
     lap('scan');
     const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
     lap('read');
