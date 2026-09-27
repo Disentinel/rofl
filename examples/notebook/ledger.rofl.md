@@ -71,21 +71,22 @@ never undecided(F)
 > **FAILS · 148 — I was wrong, not the ledger.** I had assumed (and first
 > wrote here) that this holds, because CLAUDE.md's ledger convention reads
 > as if every finding gets a disposition; I had even "confirmed" 0 with an
-> ad-hoc query. It doesn't hold, and the 0 was the lie: `Rofl.query('finding(F,
-> _), not demands(F, _)')` called directly (`src/api.ts`) answers **0** on
-> this exact tree, while asking the *same clause* as a named rule's body, the
-> way this cell now does, answers **148** — verified a third way with plain
-> `comm` over two `grep` extractions on `facts/findings.rofl`, no engine
-> involved: 148. A minimal, ledger-free repro: `p(1). p(2). p(3). q(1).` —
-> `query('p(X), not q(X)')` answers 0 (wants 2); `r(X) :- p(X), not q(X).`
-> then `query('r(X)')` answers 2. **An ad-hoc conjunctive query with `not` in
-> it silently drops the negated rows through `Rofl.query()`; the same clause
-> compiled as a rule head evaluates correctly.** This is a correctness defect
-> in `src/api.ts`'s query path, not in this notebook — `npm run findings`
-> itself never asks an ad-hoc negated conjunction (`runtime/report.ts`'s
-> `col()` always queries a single already-named relation), so the rendered
-> ledger report is not affected by it, but every one of my own exploratory
-> probes that used a bare `X, not Y` string was.
+> ad-hoc query: `Rofl.query('finding(F, _), not demands(F, _)')` called
+> directly (`src/api.ts`) answers `{ rows: [], error: "line 1: expected
+> 'eof', got ','" }` on this exact tree — `query()` takes one literal, a
+> conjunction is refused, and I read only `.rows.length`, never `.error`,
+> so a refusal looked exactly like a legitimate zero. Asking the *same
+> clause* as a named rule's body, the way this cell now does, is not a
+> workaround for a bug — it is simply the one form `query()` accepts — and
+> it answers **148**, verified a third way with plain `comm` over two
+> `grep` extractions on `facts/findings.rofl`, no engine involved: 148.
+> **The friction is real even though the engine is not wrong**: a refused
+> ad-hoc conjunction and a genuine empty answer share the same `rows: []`
+> shape, and nothing prompts a caller to check `.error` before trusting it.
+> `npm run findings` never asks an ad-hoc negated conjunction
+> (`runtime/report.ts`'s `col()` always queries a single already-named
+> relation), so the rendered ledger report was never at risk — only my own
+> exploratory probes, which read `.rows.length` alone, were.
 >
 > `whynot` on one of the 148, asked of the *notebook's own* relation:
 
@@ -421,8 +422,10 @@ never undocumented_demand(F, W)
 > `demands` rows, invisible to `npm run findings` because the report reads
 > data, never the comment beside it.
 >
-> Found along the way, not about the ledger: `Rofl.query()` silently drops
-> rows on an ad-hoc conjunctive query containing `not` (repro under N1);
+> Found along the way, not about the ledger: `Rofl.query()` refuses an
+> ad-hoc conjunctive query and reports it in an `error` field a caller has
+> to know to check — indistinguishable from a real zero if they don't
+> (repro under N1);
 > `never` does not accept positional form outside a `datalog` cell, unlike
 > `?`/`why`/`whynot` (repro under N4); a perspective-qualified relation
 > (`rel[book]`) asked by its bare name answers "empty" instead of an error

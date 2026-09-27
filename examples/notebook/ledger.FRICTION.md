@@ -48,33 +48,43 @@ was the same for a user of this tool: the translator could not be exercised,
 so the notebook records the attempt and its evidence rather than the "what
 it got right/wrong" the task asked for.
 
-## 2. `Rofl.query()` silently drops rows on an ad-hoc conjunctive query with `not` (cost: ~20 min, a real correctness bug)
+## 2. `Rofl.query()` refuses a conjunction, but the refusal is a field a caller has to know to check (cost: ~20 min, an API ergonomics gap, not a correctness bug)
 
 Minimal repro, no ledger involved:
 
 ```
 $ node --experimental-strip-types probe.ts   # p(1). p(2). p(3). q(1).
-ad-hoc  p(X), not q(X)      => 0 (want 2: X=2,3)
-as rule r(X)                => 2 (want 2)
-ad-hoc  not q(X), p(X)      => 0 (reordered)
+{"rows":[],"partial":false,"error":"line 1: expected 'eof', got ','"}
+{"rows":[{"text":"X = 2","bindings":{"X":"2"}},{"text":"X = 3","bindings":{"X":"3"}}],"partial":false,"unpopulatable":false}
 ```
 
-Calling `Rofl.query('p(X), not q(X)')` directly answers **0** (silently
-wrong: the two correct rows just never appear); loading the identical clause
-as a named rule (`r(X) :- p(X), not q(X).`) and querying `r(X)` answers **2**
-(correct). No error, no warning, no diagnostic either way — just a wrong
-number where the count is later checked against ground truth. On the real
-ledger this cost real time: I first "confirmed" `finding(F,_), not
-demands(F,_)` was empty (0) with an ad-hoc query, wrote the notebook's N1
-around that belief, and only caught it because the *notebook itself*
-(which forces the rule-then-`never` pattern, see #3) answered 148 for the
-same clause. Re-checked every other "0" I had gathered the same way; two
-more turned out wrong too (`open_finding(F), not demands(F,_)` — really 15,
-not 0; and I had never even tried the multi-artifact case, which is 116, not
-0). This is not about the notebook — it lives in `src/api.ts`'s ad-hoc query
-path — but anyone exploring a `.rofl` world with a throwaway script (which
-`npm run repl` and any custom probe both invite) will hit it, and it will
-look like a legitimate, if surprising, negative result.
+**Corrected** (caught by the top level, not by me): `query()` takes one
+literal; `query('p(X), not q(X)')` is refused — the comma is a parse error
+— and the refusal *is* reported, in the `error` field of the `QueryResult`
+(`src/api.ts`: `catch (e) { return { rows: [], partial: false, error:
+(e as Error).message }; }`). My probe scripts only ever read
+`.rows.length`, never `.error`, so a refused query and a genuine empty
+answer were indistinguishable to me — that is the real friction: **the
+shape of a refusal and the shape of a legitimate zero are the same unless
+the caller inspects a field nothing prompts them to look at.** Loading the
+same clause as a named rule (`r(X) :- p(X), not q(X).`) and querying `r(X)`
+is not "the fix for a bug", it is simply the one form `query()` accepts.
+
+This still cost real time on the real ledger, and the notebook itself did
+print the refusal correctly the one time I ran the equivalent line inside a
+cell (`error: never finding(F, K), not demands(F, W): line 1: expected
+'eof', got ','`, exit 2) — I just didn't yet know to trust "empty" from a
+bare API call the same way. I had "confirmed" `finding(F,_), not
+demands(F,_)` was empty (0) with an ad-hoc `query()` call and wrote the
+notebook's N1 around that belief; only the notebook's own rule-then-`never`
+form (which never accepts the refused shape at all) caught that the real
+answer is 148. Re-checked every other "0" gathered the same way against
+`.error`: two more had silently been refusals, not answers
+(`open_finding(F), not demands(F,_)` — really 15; the multi-artifact case,
+never even tried before, is 116). Anyone exploring a `.rofl` world with
+`Rofl.query()` in a throwaway script will hit the same trap unless they
+check `.error` on every call, which nothing about the return type's shape
+(`rows: []` either way) prompts them to do.
 
 ## 3. `never <bare predicate>` parses in a `datalog` cell, not in a `rofl` cell or the REPL (cost: ~10 min)
 
