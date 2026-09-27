@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` the other planted defects but `wrap` and `startup`, which run only by name; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
+// `-- --mutants` codeline, marks and cells; `translate`, `wrap` and `startup` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -49,7 +49,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
 };
 // `prose` proves one kernel and runs with the smoke test; the other three are `-- --mutants`, which stays under two minutes on its own.
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'translate'] : ['as it is', 'prose'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells'] : ['as it is', 'prose'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
