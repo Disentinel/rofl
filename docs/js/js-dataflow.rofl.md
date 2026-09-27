@@ -26,6 +26,7 @@ Reads:
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules, in the code: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
 - from outside these files, in the code:
   - <a id="ast_file"></a>`ast_file`
@@ -933,17 +934,14 @@ A node denotes a class if some class [has the static block](#static_block_of) SB
 
 ## 11. THE MODULE BOUNDARY, AS VALUE FACTS: an imported name may be what the
 
-> other module exports under it. Specifier resolution here is what SYNTAX can
-> do — a single-segment relative specifier against the corpus's basenames;
-> the rest is the modules layer's, which needs the disk. `str_pre(S, Sep)`
-> takes a separator, not a length: the first draft passed `2`, the kernel
-> refused it with `hole(..., str_type_error)`, and no world read the hole.
+> other module exports under it. Which file a site names is the modules
+> layer's `module_target` (rules/js-modules.rofl), keyed by the SITE: one
+> specifier names different files from different directories.
 
 In the code:
 
-<a id="imports_name"></a>Local imports Name from Src in File if all of:
-  - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+<a id="imports_name"></a>Local imports Name at an [import](#noun-import) D in File if all of:
+  - D is in file File;
   - a node Sp [is among the](#ast_child) `specifiers` of D;
   - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local;
   - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
@@ -956,19 +954,6 @@ In the code:
   - N is in file File;
   - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
 
-<a id="module_basename"></a>Src has basename Base if all of:
-  - some node [sources](#module_source) Src in some file;
-  - Head is the prefix of Src before "/";
-  - Head is ".";
-  - N is the number of segments of Src split by "/";
-  - N is 2;
-  - Base is the segment 1 of Src split by "/".
-
-<a id="import_target"></a>Src targets File if all of:
-  - Src [has basename](#module_basename) Base;
-  - File [is in the corpus](#corpus_file);
-  - File is Base.
-
 <a id="exports_name"></a>A [function](js-callgraph.rofl.md#fn_node) is exported as Name from File if all of:
   - a [named export](#noun-named_export) E is in file File;
   - the `declaration` of E is it;
@@ -979,9 +964,15 @@ In the code:
 
 A node is exported as Name from File if all of:
   - an [export-all](#noun-export-all) E is in file File;
-  - E [sources](#module_source) Src in File;
-  - Src [targets](#import_target) Target;
+  - E [means the file](js-modules.rofl.md#module_target) Target;
   - it [is exported as](#exports_name) Name from Target.
+
+> `export { a as b } from './m'` offers m's `a`, or m's default when `a` is `default`.
+
+A node F is exported as Ext from File either:
+
+1. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Ext and F [is exported as](#exports_name) Int from T;
+2. if File [reexports](js-modules.rofl.md#reexport_offers) "default" of a file T as Ext and F [is the default export of](#exports_default) T.
 
 > `export { a as b }`: the `local` child is an identifier of this file and
 > resolves through `may_be_node`; under a declaration WITH a `source` it names
@@ -1004,22 +995,21 @@ A node
 
 A [named export](#noun-named_export) sources Src in File if it is in file File and the `source` of it [is written as](js-structure.rofl.md#ast_value) Src.
 
-<a id="export_ns_name"></a>Name is a namespace export of Src from File if all of:
-  - a [named export](#noun-named_export) E is in file File;
+<a id="export_ns_name"></a>Name is a namespace export at a [named export](#noun-named_export) E from File if all of:
+  - E is in file File;
   - a [namespace export](#noun-namespace_export) Sp [is among the](#ast_child) `specifiers` of E;
-  - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Name;
-  - E [sources](#module_source) Src in File.
+  - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
 
 A node is exported as Name from File if all of:
-  - Name [is a namespace export](#export_ns_name) of Src from File;
-  - Src [targets](#import_target) Target;
+  - Name [is a namespace export](#export_ns_name) at a site E from File;
+  - E [means the file](js-modules.rofl.md#module_target) Target;
   - it [is the module object of](#module_object) Target.
 
 In the flow:
 
 A node points to a node F if all of:
-  - Local [imports](#imports_name) Name from Src in File;
-  - Src [targets](#import_target) Target;
+  - Local [imports](#imports_name) Name at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
   - F [is exported as](#exports_name) Name from Target;
   - it [reads](#ident_in) Local in File.
 
@@ -1028,17 +1018,16 @@ A node points to a node F if all of:
 
 In the code:
 
-<a id="imports_ns"></a>Local imports the namespace of Src in File if all of:
-  - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+<a id="imports_ns"></a>Local imports the namespace at an [import](#noun-import) D in File if all of:
+  - D is in file File;
   - a [namespace import](#noun-namespace_import) Sp [is among the](#ast_child) `specifiers` of D;
   - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
 
 In the flow:
 
 A node points to a node P if all of:
-  - Local [imports the namespace](#imports_ns) of Src in File;
-  - Src [targets](#import_target) Target;
+  - Local [imports the namespace](#imports_ns) at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
   - P [is the module object of](#module_object) Target;
   - it [reads](#ident_in) Local in File.
 
@@ -1046,17 +1035,16 @@ The member Name of a node P holds a node F if P [is the module object of](#modul
 
 In the code:
 
-<a id="imports_default"></a>Local imports the default of Src in File if all of:
-  - an [import](#noun-import) D is in file File;
-  - the `source` of D [is written as](js-structure.rofl.md#ast_value) Src;
+<a id="imports_default"></a>Local imports the default at an [import](#noun-import) D in File if all of:
+  - D is in file File;
   - a [default import](#noun-default_import) Sp [is among the](#ast_child) `specifiers` of D;
   - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
 
 In the flow:
 
 A node points to a node F if all of:
-  - Local [imports the default](#imports_default) of Src in File;
-  - Src [targets](#import_target) Target;
+  - Local [imports the default](#imports_default) at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
   - F [is the default export of](#exports_default) Target;
   - it [reads](#ident_in) Local in File.
 
@@ -1064,7 +1052,7 @@ A node points to a node F if all of:
 
 In the audit:
 
-<a id="import_outside_corpus"></a>Src is outside the corpus from File if some node [sources](#module_source) Src in File, unless Src [targets](#import_target) some file.
+<a id="import_outside_corpus"></a>Src is outside the corpus from File if a node N [sources](#module_source) Src in File, unless N [means the file](js-modules.rofl.md#module_target) some file.
 
 > `this` in an object literal's own method is that object.
 

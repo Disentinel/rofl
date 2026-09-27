@@ -131,6 +131,44 @@ dangling_import[code](I, S) :- site_shape[code](I, relative), site_source[code](
                                not resolved_site[code](I).
 
 -- =========================================================================
+-- 3b. WHICH FILE THE CODE MEANS, for section 5 and the call graph: node's answer, else
+-- TypeScript's. `./config.js` written in TypeScript names `config.ts`,
+-- `./config` names `config.ts` or `config.js`, `./handlers` names
+-- `handlers/index.ts`. `resolved_import` stays node's alone, because
+-- rules/js-resolve.rofl holds it to node's own resolver.
+ts_ext("js", "ts").  ts_ext("js", "tsx").  ts_ext("jsx", "tsx").  ts_ext("mjs", "mts").  ts_ext("cjs", "cts").
+
+probe_ext("ts").  probe_ext("tsx").  probe_ext("js").  probe_ext("jsx").  probe_ext("mjs").  probe_ext("cjs").
+
+index_file("index.ts").  index_file("index.tsx").  index_file("index.js").  index_file("index.jsx").
+
+last_ext[code](Name, E, L) :- fs_file_in[code](_, Name, _),
+                              N is str_segs(Name, "."), N > 1, K is N - 1,
+                              E is str_seg(Name, ".", K), L is str_len(E).
+
+site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
+                                  str_seg[code](S, K, Seg), N is K + 1, str_segs[code](S, N).
+
+ts_resolved[code](I, T) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
+                           last_ext[code](Name, En, Ln),
+                           N is str_segs(Seg, "."), N > 1, K is N - 1,
+                           Es is str_seg(Seg, ".", K), ts_ext(Es, En),
+                           Ls is str_len(Seg), Les is str_len(Es), Stem is Ls - Les - 1,
+                           Lname is str_len(Name), Stem2 is Lname - Ln - 1, Stem = Stem2,
+                           P is str_sub(Seg, 0, Stem), P2 is str_sub(Name, 0, Stem), P = P2.
+
+ts_resolved[code](I, T) :- site_last_seg[code](I, D, Seg), fs_file_in[code](D, Name, T),
+                           last_ext[code](Name, E, L), probe_ext(E),
+                           Ls is str_len(Seg), Want is Ls + L + 1, Have is str_len(Name), Want = Have,
+                           P is str_sub(Name, 0, Ls), P = Seg.
+
+ts_resolved[code](I, T) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
+                           index_file(Name), fs_file_in[code](D, Name, T).
+
+module_target[code](I, T) :- resolved_import[code](I, T).
+module_target[code](I, T) :- ts_resolved[code](I, T), not resolved_import[code](I, _).
+
+-- =========================================================================
 -- 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
 -- StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 -- verdict. A default binds `"default"`, a namespace `"*"`.
@@ -265,16 +303,16 @@ has_value_binding[code](I) :- value_binding[code](I, _).
 
 no_specifiers[code](I) :- import_site[code](I, static_import), not has_specifier[code](I).
 
-depends[code](F, T) :- resolved_import[code](I, T), site_file[code](I, F).
+depends[code](F, T) :- module_target[code](I, T), site_file[code](I, F).
 
 flows[code](F, T) :- has_value_binding[code](I),
-                     resolved_import[code](I, T), site_file[code](I, F).
+                     module_target[code](I, T), site_file[code](I, F).
 flows[code](F, T) :- import_site[code](I, dynamic_import),
-                     resolved_import[code](I, T), site_file[code](I, F).
+                     module_target[code](I, T), site_file[code](I, F).
 
 evaluates[code](F, T) :- flows[code](F, T).
 evaluates[code](F, T) :- no_specifiers[code](I), not decl_type_only[code](I),
-                         resolved_import[code](I, T), site_file[code](I, F).
+                         module_target[code](I, T), site_file[code](I, F).
 
 -- =========================================================================
 -- 5b. THE RE-EXPORT EDGE, through a different set of markers: the export-all
@@ -298,10 +336,10 @@ no_reexport_specifiers[code](E) :- reexport_site[code](E, reexport_named),
                                    not has_reexport_spec[code](E).
 
 flows[code](F, T) :- reexport_value[code](E),
-                     resolved_import[code](E, T), site_file[code](E, F).
+                     module_target[code](E, T), site_file[code](E, F).
 
 evaluates[code](F, T) :- no_reexport_specifiers[code](E), not export_decl_type_only[code](E),
-                         resolved_import[code](E, T), site_file[code](E, F).
+                         module_target[code](E, T), site_file[code](E, F).
 
 -- the join: the resolver says which FILE, the specifier which name in it.
 -- What `export * from` offers is the other file's export list —
@@ -311,7 +349,7 @@ evaluates[code](F, T) :- no_reexport_specifiers[code](E), not export_decl_type_o
 reexport_offers[code](F, External, T, Internal) :-
     reexport_value_spec[code](E, Sp),
     spec_external[code](Sp, External), spec_internal[code](Sp, Internal),
-    resolved_import[code](E, T), site_file[code](E, F).
+    module_target[code](E, T), site_file[code](E, F).
 
 -- =========================================================================
 -- 5c. WHICH MODULE AN INTERNAL NAME LIVES IN. `export { helper as reHelper }

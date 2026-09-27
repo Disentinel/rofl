@@ -161,8 +161,9 @@ never C hands the model over outside translation
 > stays`, `I5 a translation that does not read after a retry is not written`,
 > `I5 no model to call is exit 2 and said plainly`. That the only caller of
 > `claude` is the translate branch is a question about where a value flows,
-> and the model's call graph does not cross this tree's directories yet (see
-> the ledger: `f_a_call_across_directories_is_not_resolved`).
+> and it stays behavioural: when this was written the model's call graph did
+> not cross this tree's directories (`f_a_call_across_directories_is_not_resolved`);
+> since notebook-xdir it does, and the refinement is still to be written.
 
 ## I6 · The kernel does no I/O and never exits
 
@@ -202,9 +203,10 @@ the kernel reaches Spec from File either:
 > file and back, a result as Markdown). What "I/O" is: a call the JS model gives the host
 > effect `io`, whether by a global (`console`, `process`), a module
 > (`node:fs`, `node:child_process`) or a member of one. Every call site in
-> those files, reachable or not: stricter than "what a run reaches", and it
-> has to be, because the model does not yet follow a call from one of this
-> tree's directories into another (`f_a_call_across_directories_is_not_resolved`).
+> those files, reachable or not: stricter than "what a run reaches". It had
+> to be when written, because the model did not follow a call from one of
+> this tree's directories into another (`f_a_call_across_directories_is_not_resolved`,
+> repaired by notebook-xdir); it is kept because it is the stronger claim.
 > What it cannot see is every module the kernel imports and nobody scanned:
 > the engine, the reader, the scanner, the proof folder.
 

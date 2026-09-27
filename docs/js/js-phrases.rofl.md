@@ -147,18 +147,16 @@ Declared as facts:
 | `decorated_member` | "has_the_decorated_member(class CD, key Key, at method M, replaced with node N)" |
 | `corpus_file` | "is_in_the_corpus(file File)" |
 | `module_source` | "sources(node N, text Src, in file File)" |
-| `module_basename` | "has_basename(text Src, text Base)" |
-| `import_target` | "targets(text Src, file Target)" |
 | `import_outside_corpus` | "is_outside_the_corpus(text Src, from file File)" |
-| `imports_name` | "imports(name Local, name Name, from text Src, in file File)" |
-| `imports_ns` | "imports_the_namespace(name Local, of text Src, in file File)" |
-| `imports_default` | "imports_the_default(name Local, of text Src, in file File)" |
+| `imports_name` | "imports(name Local, name Name, at site D, in file File)" |
+| `imports_ns` | "imports_the_namespace(name Local, at site D, in file File)" |
+| `imports_default` | "imports_the_default(name Local, at site D, in file File)" |
 | `module_object` | "is_the_module_object_of(node P, file Target)" |
 | `reexport_decl` | "re_exports(named export E)" |
 | `export_list_erased` | "exports_types_only(named export E)" |
 | `export_item_erased` | "is_a_type_only_specifier(node Sp)" |
 | `export_local` | "is_exported_locally_as(node L, name Ext, from file File)" |
-| `export_ns_name` | "is_a_namespace_export(name Name, of text Src, from file File)" |
+| `export_ns_name` | "is_a_namespace_export(name Name, at site E, from file File)" |
 | `exports_name` | "is_exported_as(node F, name Name, from file File)" |
 | `exports_default` | "is_the_default_export_of(node F, file File)" |
 | `caught_value` | "catches(node P, node V)" |
@@ -723,9 +721,6 @@ Declared as facts:
 | `eff_has_spec` | "has_specifiers(node I)" |
 | `eff_value_spec` | "has_a_value_specifier(node I)" |
 | `eff_erased` | "is_erased(node I)" |
-| `eff_mod_basename` | "the_basename(of text Src, is text Base)" |
-| `eff_mod_target` | "the_module_target(of text Src, is file T)" |
-| `eff_mod_target_disagrees` | "has_a_disputed_target(text Src, file T)" |
 | `eff_evaluates_at` | "evaluates(node I, file T)" |
 | `eff_import_outside` | "imports_outside_the_corpus(node I, text Src)" |
 | `eff_in_fn` | "lies_inside_a_function(node N)" |
@@ -974,6 +969,13 @@ Declared as facts:
 | `resolved_import` | "resolves_to_the_file(site I, file T)" |
 | `builtin_canonical` | "the_canonical_builtin(of text S, is spec N)" |
 | `dangling_import` | "is_a_dangling_import(site I, of text S)" |
+| `module_target` | "means_the_file(site I, file T)" |
+| `ts_resolved` | "names_under_typescript(site I, file T)" |
+| `site_last_seg` | "reaches(site I, directory D, before segment Seg)" |
+| `last_ext` | "the_extension(of name Name, is text E, of length L)" |
+| `ts_ext` | "is_written_for(text Js, text Ts)" |
+| `probe_ext` | "is_probed(text E)" |
+| `index_file` | "is_an_index_file(name Name)" |
 | `import_specifier_node` | "names_an_import(node Sp)" |
 | `import_spec` | "has_the_import_specifier(site I, node Sp)" |
 | `spec_local` | "binds_locally(node Sp, name L)" |

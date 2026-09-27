@@ -30,10 +30,11 @@ Reads:
 - from js-ambient, in the main: [ambient_binding](js-ambient.rofl.md#ambient_binding), [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
-- from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [import_target](js-dataflow.rofl.md#import_target), [module_source](js-dataflow.rofl.md#module_source)
+- from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [module_source](js-dataflow.rofl.md#module_source)
 - from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules, in the code: [module_target](js-modules.rofl.md#module_target)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -646,47 +647,14 @@ A node
 1. if I [is type only](#eff_type_only);
 2. if I [has specifiers](#eff_has_spec), unless I [has a value specifier](#eff_value_spec).
 
-> A COPY OF `import_target` WITH A GATE: that relation is closed over
-> `module_source`, which has no arm for `import('./m.mjs')`, so reading it
-> here answered three kinds of four and was silent about the fourth.
-> `eff_mod_target_disagrees` asserts the two agree wherever both can answer.
-
-<a id="eff_mod_basename"></a>The basename of Src is Base if all of:
-  - some node [imports the source](#eff_mod_src) Src in some file;
-  - Head is the prefix of Src before "/";
-  - Head is ".";
-  - N is the number of segments of Src split by "/";
-  - N is 2;
-  - Base is the segment 1 of Src split by "/".
-
-<a id="eff_mod_target"></a>The module target of Src is T if all of:
-  - [the basename](#eff_mod_basename) of Src is Base;
-  - T [is in the corpus](js-dataflow.rofl.md#corpus_file);
-  - T is Base.
-
-In the audit:
-
-<a id="eff_mod_target_disagrees"></a>Src has a disputed target T either:
-
-1. if Src [targets](js-dataflow.rofl.md#import_target) T, unless [the module target](#eff_mod_target) of Src is T;
-2. if all of:
-   - [the module target](#eff_mod_target) of Src is T;
-   - some node [sources](js-dataflow.rofl.md#module_source) Src in some file;
-   - unless Src [targets](js-dataflow.rofl.md#import_target) T.
-
-In the code:
-
 <a id="eff_evaluates_at"></a>A node evaluates T if all of:
-  - it [imports the source](#eff_mod_src) Src in some file;
-  - [the module target](#eff_mod_target) of Src is T;
+  - it [imports the source](#eff_mod_src) some text in some file;
+  - it [means the file](js-modules.rofl.md#module_target) T;
   - unless it [is erased](#eff_erased).
 
 In the flow:
 
-<a id="eff_import_outside"></a>A node imports outside the corpus Src if all of:
-  - it [imports the source](#eff_mod_src) Src in some file;
-  - unless it [is erased](#eff_erased);
-  - unless [the module target](#eff_mod_target) of Src is some file.
+<a id="eff_import_outside"></a>A node imports outside the corpus Src if it [imports the source](#eff_mod_src) Src in some file and it neither [is erased](#eff_erased) nor [means the file](js-modules.rofl.md#module_target) some file.
 
 > A module's own top level: the join over nodes no function encloses, plus
 > top-level calls. `eff_here -> eff_module -> eff_here` is a POSITIVE cycle,
