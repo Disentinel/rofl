@@ -106,6 +106,7 @@ check[checks]("facts/goldens.rofl", "visual", world).
 check[checks]("facts/goldens.rofl", "visual_checkout-sequence", world).
 check[checks]("facts/goldens.rofl", "visual_coverage", world).
 check[checks]("facts/goldens.rofl", "visual_deploy-argument", world).
+check[checks]("facts/goldens.rofl", "visual_family-tree", world).
 check[checks]("facts/goldens.rofl", "visual_office-plan", world).
 check[checks]("facts/goldens.rofl", "visual_paint-shop", world).
 check[checks]("facts/goldens.rofl", "visual_rail-map", world).

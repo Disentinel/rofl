@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 128 worlds.
+-- 129 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -35,7 +35,7 @@ golden_state("notebook_cli_exits", "dc917789bffdc462", 749).
 golden_state("notebook_ledger", "640ba7e8f49c8bc7", 17196).
 golden_state("notebook_mcp", "576059aaecfb0dc9", 1091).
 golden_state("notebook_review", "910a464c5fe1c938", 662).
-golden_state("notebook_self", "439104104df5e622", 1549).
+golden_state("notebook_self", "032cfd50f3754370", 1549).
 golden_state("notebook_small", "a5ffe70ed0582c0d", 602).
 golden_state("notebook_spat", "1d26a83e4852c1a1", 17500).
 golden_state("notebook_xdir", "2e942eab9cb32113", 592).
@@ -67,6 +67,7 @@ golden_state("visual", "29bada61d4edb28f", 531).
 golden_state("visual_checkout-sequence", "8b1fd4a48f66b7a3", 729).
 golden_state("visual_coverage", "b6921c02cc6d4095", 800).
 golden_state("visual_deploy-argument", "8dd3f7023dd5d46f", 1221).
+golden_state("visual_family-tree", "f9a887d78ec4532f", 665).
 golden_state("visual_office-plan", "e5d8222e98fe894e", 838).
 golden_state("visual_paint-shop", "ddd260a3b245f820", 788).
 golden_state("visual_rail-map", "61944837ab34d31f", 813).
@@ -138,7 +139,7 @@ golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refactoring_queue", "6244dd5a8c4d04c1", 3616).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spec_coverage", "687add87994138ef", 3124).
+golden_state("spec_coverage", "0d7519cd61e2e3b3", 3126).
 golden_state("unstratifiable", "79fbe73fc51f0377", 504).
 
 golden_host("oops", "012d40f715163c70", 0, 214).
@@ -2609,6 +2610,40 @@ golden_rel("visual_deploy-argument", "undefined_premise[audit]", 7).
 golden_rel("visual_deploy-argument", "unknown[epistemic]", 1).
 golden_rel("visual_deploy-argument", "uses_builtin[$kernel]", 4).
 golden_rel("visual_deploy-argument", "writes_to[$kernel]", 55).
+golden_rel("visual_family-tree", "@other", 1).
+golden_rel("visual_family-tree", "@wit", 75).
+golden_rel("visual_family-tree", "asserted_by[$kernel]", 19).
+golden_rel("visual_family-tree", "authority[main]", 5).
+golden_rel("visual_family-tree", "born[main]", 5).
+golden_rel("visual_family-tree", "child[main]", 2).
+golden_rel("visual_family-tree", "concludes[$kernel]", 33).
+golden_rel("visual_family-tree", "conclusion_lit[$kernel]", 33).
+golden_rel("visual_family-tree", "conclusion_tense[$kernel]", 33).
+golden_rel("visual_family-tree", "derived_by[$kernel]", 83).
+golden_rel("visual_family-tree", "edb[main]", 29).
+golden_rel("visual_family-tree", "flow[main]", 4).
+golden_rel("visual_family-tree", "flows_to[main]", 4).
+golden_rel("visual_family-tree", "has_conclusion[$kernel]", 33).
+golden_rel("visual_family-tree", "has_premise[$kernel]", 59).
+golden_rel("visual_family-tree", "imports[main]", 3).
+golden_rel("visual_family-tree", "mode[main]", 14).
+golden_rel("visual_family-tree", "named[main]", 5).
+golden_rel("visual_family-tree", "negated_under[main]", 8).
+golden_rel("visual_family-tree", "parents[main]", 2).
+golden_rel("visual_family-tree", "partner[main]", 4).
+golden_rel("visual_family-tree", "person[main]", 5).
+golden_rel("visual_family-tree", "perspective[main]", 3).
+golden_rel("visual_family-tree", "premise_lit[$kernel]", 59).
+golden_rel("visual_family-tree", "premise_neg[$kernel]", 9).
+golden_rel("visual_family-tree", "premise_pos[$kernel]", 43).
+golden_rel("visual_family-tree", "reads_from[$kernel]", 37).
+golden_rel("visual_family-tree", "reserved[main]", 20).
+golden_rel("visual_family-tree", "rule[$kernel]", 33).
+golden_rel("visual_family-tree", "rule_known[main]", 33).
+golden_rel("visual_family-tree", "sees[main]", 6).
+golden_rel("visual_family-tree", "too_early[main]", 1).
+golden_rel("visual_family-tree", "uses_builtin[$kernel]", 5).
+golden_rel("visual_family-tree", "writes_to[$kernel]", 33).
 golden_rel("visual_office-plan", "@other", 1).
 golden_rel("visual_office-plan", "@wit", 102).
 golden_rel("visual_office-plan", "asserted_by[$kernel]", 36).
@@ -5549,9 +5584,9 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 15).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 553).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 554).
 golden_rel("spec_coverage", "authority[main]", 35).
-golden_rel("spec_coverage", "check[checks]", 180).
+golden_rel("spec_coverage", "check[checks]", 181).
 golden_rel("spec_coverage", "check_stands[coverage]", 13).
 golden_rel("spec_coverage", "citation_ok[checks]", 132).
 golden_rel("spec_coverage", "cited_check[map]", 13).
