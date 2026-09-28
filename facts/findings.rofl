@@ -4,6 +4,15 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-28 by the notebook-docs session: the user's guide shows the tool's own output.
+
+finding(f_the_users_guide_shows_only_output_the_tool_printed, decision).
+recorded(f_the_users_guide_shows_only_output_the_tool_printed, "2026-09-28").
+demands(f_the_users_guide_shows_only_output_the_tool_printed, code).
+addressed_by(f_the_users_guide_shows_only_output_the_tool_printed, "scripts/guide.ts").
+addressed_by(f_the_users_guide_shows_only_output_the_tool_printed, "guide/QUICKSTART.md").
+finding_note(f_the_users_guide_shows_only_output_the_tool_printed, "The only user doc was INSTALL.md (469 words, shipped verbatim as the npm and the Marketplace readme), its first command failed outside the checkout, and it showed no output. NOW guide/ holds QUICKSTART, CONCEPTS (with a glossary), WRITING (the user edition of docs/md-world.md), AGENTS, CHEATSHEET and INSTALL, plus the two readmes; npm run dist ships them in the tgz and the VSIX and FAILS if a block is stale. Every output block is written by `npm run guide` from a run of the command line in the named folder (stdout only; the timing line is on stderr and varies), every example file is included from the tree, and the examples are real files (examples/start, guide/examples/typo.rofl.md), so a change in the CLI's words shows up as a stale guide, not as a doc that lies. A FRESH READER (a Sonnet agent given only the dist folder) followed QUICKSTART from the installed tgz: every command worked first time and every transcript matched; it tripped on three things the docs did not say, now said: the stderr timing line, the note for a `reads:` file outside the folder, and that the type words of a hole (`a module`) may be dropped where the sentence is used. WRITING THE 5-LINE NOTEBOOK FOUND two newcomer traps: a declaration without its `<a id>` anchor is `not read`, and a facts list with no paragraph ending in a colon above it is `not read: LIST` (both reported, neither explained by the error itself). world/books/default came out of every shipped example with no golden moving.").
+
 -- Recorded 2026-09-28 by the notebook-dist session: the notebook installs without a checkout.
 
 finding(f_the_notebook_ships_without_a_checkout, decision).
