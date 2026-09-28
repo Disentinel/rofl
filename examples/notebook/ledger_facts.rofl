@@ -199,6 +199,7 @@ path_exists("scanners/store_boundary.ts").
 path_exists("scanners/store_trace.ts").
 path_exists("scanners/ts_lib.ts").
 path_exists("scripts/derivations.ts").
+path_exists("scripts/dist.ts").
 path_exists("scripts/flag_census.ts").
 path_exists("scripts/goldens.ts").
 path_exists("scripts/lint.ts").
@@ -232,6 +233,7 @@ path_exists("src/unify.ts").
 path_exists("tsconfig.build.json").
 path_exists("vscode/extension.ts").
 path_exists("vscode/render.ts").
+path_exists("vscode/test/dist.ts").
 path_exists("vscode/test/run.ts").
 path_exists("vscode/worker.ts").
 
