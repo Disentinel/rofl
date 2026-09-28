@@ -70,8 +70,11 @@ export function readTracked(repo: Repo, asked: string): { file: string; lines: s
 /** Whether a path may be read, without reading it: for a line git grep found. */
 export const readable = (repo: Repo, asked: string) => !('refused' in resolve(repo, asked));
 
-/** The lines of an answer that are requests; none when the answer is a cell or words. */
-export const requestsOf = (answer: string) => /```/.test(answer) ? [] : answer.split('\n').map((l) => l.trim()).filter((l) => /^(list|grep|show) \S|^\? \S/.test(l));
+/** The lines of an answer when every one is a request; none when the answer is a cell or holds any words to the person. */
+export const requestsOf = (answer: string) => {
+  const lines = answer.split('\n').map((l) => l.trim()).filter(Boolean);
+  return lines.every((l) => /^(list|grep|show) \S|^\? \S/.test(l)) ? lines : [];
+};
 
 /** One request answered, at most `room` bytes of it, and the line that says what was read. `ask` puts a question to the notebook's kernel. */
 export function answer(repo: Repo, req: string, room: number, ask: (question: string) => string): { text: string; read: string } {

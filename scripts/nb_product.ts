@@ -347,13 +347,14 @@ const fs = require('fs'); let i = '';
 process.stdin.on('data', (d) => { i += d; }).on('end', () => {
   const n = fs.readdirSync(${JSON.stringify(dir)}).length + 1; fs.writeFileSync(${JSON.stringify(dir)} + '/prompt.' + n, i);
   const reads = process.env.ROFL_FAKE_MANY ? ['show src/a.ts:16-20', ...${JSON.stringify(READS)}, ...Array(30).fill('list src/**')] : ${JSON.stringify(READS)};
-  if (n === 1 || (${forever} && n < 12)) console.log(reads.join('\\n'));
+  if (process.env.ROFL_FAKE_WORDS) console.log('Which modules count as owned? I would look at this first:\\nshow src/a.ts:1-3');
+  else if (n === 1 || (${forever} && n < 12)) console.log(reads.join('\\n'));
   else console.log('\`\`\`rofl\\nA module M is unowned if some change touches M, unless some team owns M.\\n\\nnever M is unowned\\n\`\`\`');
 });
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
 const protoRun = (name: string, env: Record<string, string> = {}, root = ROOT, forever = false, untracked = false) => { const nb = proto(name, untracked), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root).then((o) => ({ o, prompts: m.prompts(), nb })); };
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
-const RUNS = ['plain', 'small', 'forever', 'untracked', 'home', 'gitenv'];
+const RUNS = ['plain', 'small', 'forever', 'untracked', 'home', 'gitenv', 'words'];
 /** Each planted defect, and the runs that can see it: the rest are not run for it. */
 const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, ''],
@@ -368,6 +369,7 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
   ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, ''],
   ['git environment', 'notebook/reader.ts', /, env: gitEnv\(\) \}\);/g, ' });', ['gitenv']],
+  ['requests among words', 'notebook/reader.ts', /return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);", ['words']],
   ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
   ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
   ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever']],
@@ -384,15 +386,18 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     // a notebook git does not track, and a repository that is the home directory: nothing is read
     untracked: [{}, false, true], home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, false],
     // git's own variables pointing at another repository, which tracks untracked.ts
+    // an answer of words with one request line in it is words to the person, and nothing is read
+    words: [{ ROFL_FAKE_WORDS: '1' }, false, false],
     gitenv: [{ GIT_DIR: path.join(tmp, `proto-${tag}-gitenv-other/.git`), GIT_WORK_TREE: path.join(tmp, `proto-${tag}-gitenv`) }, false, false],
   };
   const got = Object.fromEntries(await Promise.all(runs.map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2])] as const)));
-  const { plain, small, forever } = got, all = Object.values(got).flatMap((r) => r.prompts).join('\n');
+  const { plain, small, forever, words } = got, all = Object.values(got).flatMap((r) => r.prompts).join('\n');
   for (const token of ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'UNTRACKED_TOKEN', 'NPMRC_TOKEN']) if (all.includes(`${token}_9f2`)) bad.push(`${token} reached a prompt`);
   for (const [k, why] of [['untracked', 'git does not track this notebook'], ['home', 'the repository is the home directory']] as const) {
     const r = got[k];
     if (r && (!(r.prompts[1] ?? '').includes(`refused: src/a.ts: ${why}`) || (r.prompts[1] ?? '').includes('1  export function alpha') || (r.prompts[0] ?? '').includes('export function alpha'))) bad.push(`a repository that must not be read (${why}) was read: ${(r.prompts[1] ?? '').slice((r.prompts[1] ?? '').indexOf('> show src/a.ts:1-3'), (r.prompts[1] ?? '').indexOf('> show src/a.ts:1-3') + 200)}`);
   }
+  if (words && (words.o.code !== 2 || !words.o.out.includes('answered in words, not with a cell') || words.prompts.length !== 1 || /read: [^\n]*src\/a\.ts:1-3(?!\d)/.test(words.o.out))) bad.push(`words with a request line in them were taken as requests: exit ${words.o.code}, ${words.prompts.length} calls`);
   if (plain) {
     const second = plain.prompts[1] ?? '';
     if (!(plain.prompts[0] ?? '').includes('The files the request names:\nsrc/a.ts:\n1  export function alpha')) bad.push(`a file the request names by its last part was not read into the first prompt`);
