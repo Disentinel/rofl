@@ -13,8 +13,11 @@ export type Run = NbResult & { paths: Record<string, string>; outside?: string[]
 /** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1. */
 export function render(r: Run): { head: Shown; cells: Shown[] } {
   const files = Object.keys(r.paths), short = codeNames(files[0] ?? '', files);
-  const link = (s: string) => s.replace(/</g, '&lt;').replace(/\[([^\]]*?) at ([^\]\s]+):(\d+)\]/g, (m, label, f, k) =>
-    r.paths[f] ? `[${label} at ${short[f]}:${k}](<${r.paths[f]}:${k}>)` : m);
+  // a sentence is text, a string from the code in it too: every bracket is escaped, then the kernel's `[label at file:line]` becomes the one link
+  const link = (s: string) => s.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;').replace(/\\\[((?:[^\\]|\\[^\]])*?) at ((?:[^\s\\]|\\.)+):(\d+)\\\]/g, (m, label, esc, k) => {
+    const f = esc.replace(/\\(.)/g, '$1');
+    return r.paths[f] ? `[${label} at ${short[f]}:${k}](<${r.paths[f]}:${k}>)` : m;
+  });
   const list = (rows: { sentence: string }[], total: number) => {
     const items = rows.map((a) => `- ${link(a.sentence)}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
     return items.length + more.length <= FOLD ? [...items, ...more].join('\n')

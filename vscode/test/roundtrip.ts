@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
 import { cellsOf } from '../../notebook/front.ts';
 import { CODE, KINDS, deserialize, serialize } from '../serial.ts';
+import { render, type Run } from '../render.ts';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const files = execFileSync('git', ['ls-files', '*.rofl.md'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -20,6 +21,10 @@ for (const [name, text] of [...files.map((f): [string, string] => [f, readFileSy
   const kernel = cellsOf(text).slice(1).map((c) => c.text);
   if (JSON.stringify(runs) !== JSON.stringify(kernel)) bad.push(`${name}: runnable cells ${JSON.stringify(runs).slice(0, 200)} are not the kernel's ${JSON.stringify(kernel).slice(0, 200)}`);
 }
+// a string from the code that reads as a Markdown link is shown as text; the node beside it is still the one link
+const line = { line: 2, kind: 'answers', text: '? S', verdict: 'answers', total: 1, answers: [{ sentence: '[f() at a.js:3] says "[login](https://evil) [go](command:x)"', literal: '', at: [] }] };
+const md = render({ status: 'ok', errors: [], ms: { load: 0, run: 0 }, paths: { 'a.js': '/w/a.js' }, cells: [{ index: 0, kind: 'prose', line: 1, errors: [], notes: [], lines: [] }, { index: 1, kind: 'rofl', line: 1, errors: [], notes: [], lines: [line] }] } as unknown as Run).cells[0].md;
+if (!md.includes('[f\\(\\) at a.js:3](</w/a.js:3>) says "\\[login\\]\\(https://evil\\) \\[go\\]\\(command:x\\)"')) bad.push(`a Markdown link in a code string is rendered as a link: ${md}`);
 console.log(bad.length ? bad.join('\n') : `ok   ${files.length} notebooks from the tree and ${odd.length} odd texts round-trip byte for byte, cut as the kernel cuts`);
 if (!files.length) { console.log('FAIL git listed no .rofl.md'); process.exit(1); }
 process.exit(bad.length ? 1 : 0);

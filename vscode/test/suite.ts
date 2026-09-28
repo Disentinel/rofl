@@ -40,7 +40,7 @@ export async function run() {
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the extension's result is not the command line's --json`);
     r.cells.slice(1).forEach((k, i) => {
       if (!runs[i] || !said(runs[i])) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);
-      for (const l of k.lines) if (!said(runs[i]).includes(l.text.replace(/</g, '&lt;'))) bad.push(`${c.file}: "${l.text}" is not in the output of the cell it was asked in`);
+      for (const l of k.lines) if (!said(runs[i]).includes(l.text.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;'))) bad.push(`${c.file}: "${l.text}" is not in the output of the cell it was asked in`);
     });
     const errors = vscode.languages.getDiagnostics().flatMap(([u, ds]) => ds.filter((d) => d.severity === vscode.DiagnosticSeverity.Error).map((d) => ({ u, d })));
     const ours = errors.filter(({ u }) => runs.some((x) => x.document.uri.toString() === u.toString()));
