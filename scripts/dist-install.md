@@ -27,6 +27,13 @@ Exit 0: every `never` holds; 1: a `never` fails; 2: something was not read; 3: h
 as far as the model sees. The first run starts a kept kernel (a model loads once, 10-20 s);
 later runs take seconds. `ROFL_NB_DAEMON=0` runs in the calling process instead.
 
+Claude Code does not know `rofl-nb` exists; paste this into the project's CLAUDE.md:
+
+    This project keeps checked invariants as ROFL notebooks (*.rofl.md). Run `rofl-nb --help` once.
+    After editing a notebook or the code it names, run `rofl-nb <file.rofl.md>` (`--json` to parse).
+    Exit 1: a `never` fails, fix the code or the rule. Exit 2: something was not read, see the errors.
+    Exit 3: it holds only as far as the model sees; read the rows listed as out of sight.
+
 ## Uninstall
 
     npm uninstall -g rofl-nb
