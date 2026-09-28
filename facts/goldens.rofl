@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 123 worlds.
+-- 124 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -64,6 +64,7 @@ golden_state("tutorial_4-late-delivery", "9b7bb3b2ce3b6da2", 760).
 golden_state("tutorial_5-quality-gate", "9a37765e5d2a9fe8", 602).
 golden_state("tutorial_6-in-your-words", "7a2116aafe720e25", 576).
 golden_state("visual", "29bada61d4edb28f", 531).
+golden_state("visual_checkout-sequence", "1ef6e3b2f3af93de", 723).
 golden_state("visual_coverage", "7ec6970be3440ab5", 798).
 golden_state("visual_deploy-argument", "472ab28effa30041", 1217).
 golden_state("visual_paint-shop", "69df219ea70312f0", 784).
@@ -2485,6 +2486,39 @@ golden_rel("visual", "sees[main]", 7).
 golden_rel("visual", "supports[obs]", 4).
 golden_rel("visual", "uses_builtin[$kernel]", 3).
 golden_rel("visual", "writes_to[$kernel]", 26).
+golden_rel("visual_checkout-sequence", "@other", 1).
+golden_rel("visual_checkout-sequence", "@wit", 77).
+golden_rel("visual_checkout-sequence", "answered[main]", 2).
+golden_rel("visual_checkout-sequence", "asserted_by[$kernel]", 26).
+golden_rel("visual_checkout-sequence", "authority[main]", 5).
+golden_rel("visual_checkout-sequence", "concludes[$kernel]", 37).
+golden_rel("visual_checkout-sequence", "conclusion_lit[$kernel]", 37).
+golden_rel("visual_checkout-sequence", "conclusion_tense[$kernel]", 37).
+golden_rel("visual_checkout-sequence", "derived_by[$kernel]", 84).
+golden_rel("visual_checkout-sequence", "edb[main]", 31).
+golden_rel("visual_checkout-sequence", "flow[main]", 4).
+golden_rel("visual_checkout-sequence", "flows_to[main]", 4).
+golden_rel("visual_checkout-sequence", "has_conclusion[$kernel]", 37).
+golden_rel("visual_checkout-sequence", "has_premise[$kernel]", 63).
+golden_rel("visual_checkout-sequence", "imports[main]", 3).
+golden_rel("visual_checkout-sequence", "message[main]", 5).
+golden_rel("visual_checkout-sequence", "mode[main]", 14).
+golden_rel("visual_checkout-sequence", "negated_under[main]", 11).
+golden_rel("visual_checkout-sequence", "on_the_axis[main]", 5).
+golden_rel("visual_checkout-sequence", "perspective[main]", 3).
+golden_rel("visual_checkout-sequence", "premise_lit[$kernel]", 63).
+golden_rel("visual_checkout-sequence", "premise_neg[$kernel]", 12).
+golden_rel("visual_checkout-sequence", "premise_pos[$kernel]", 47).
+golden_rel("visual_checkout-sequence", "reads_from[$kernel]", 41).
+golden_rel("visual_checkout-sequence", "reserved[main]", 26).
+golden_rel("visual_checkout-sequence", "rule[$kernel]", 37).
+golden_rel("visual_checkout-sequence", "rule_known[main]", 37).
+golden_rel("visual_checkout-sequence", "sees[main]", 6).
+golden_rel("visual_checkout-sequence", "sent[main]", 3).
+golden_rel("visual_checkout-sequence", "tagged[main]", 1).
+golden_rel("visual_checkout-sequence", "unanswered[main]", 1).
+golden_rel("visual_checkout-sequence", "uses_builtin[$kernel]", 4).
+golden_rel("visual_checkout-sequence", "writes_to[$kernel]", 37).
 golden_rel("visual_coverage", "@other", 1).
 golden_rel("visual_coverage", "@wit", 89).
 golden_rel("visual_coverage", "asserted_by[$kernel]", 31).
