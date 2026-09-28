@@ -6,6 +6,7 @@
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { Kernel, type NbLine, type NbResult } from './kernel.ts';
 import { cellsOf, codeNames, libFiles, parseFront, translated } from './front.ts';
@@ -20,14 +21,15 @@ const SHOWN = 12;   // answers printed per line; --json has the first fifty
 /** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk. */
 export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string> } {
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
+  const at = (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));   // relative to the notebook, or absolute, or from home
   const read = (p: string) => { try { return unsaved[path.resolve(p)] ?? readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
   const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
   const want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   for (const f of [...want.model, ...want.phrases]) { const t = read(path.join(ROOT, f)); if (t !== undefined) lib[f] = t; }
-  for (const r of front.reads) { const t = read(path.join(dir, r)); if (t !== undefined) reads[r] = t; }
+  for (const r of front.reads) { const t = read(at(r)); if (t !== undefined) reads[r] = t; }
   const found: string[] = [];
   for (const g of front.code) {
-    const hits = globSync(g, { cwd: dir }).map((p) => path.join(dir, p)).sort();
+    const hits = globSync(at(g)).sort();
     if (!hits.length) errors.push(`code: ${g} names no file`);
     found.push(...hits);
   }
@@ -189,6 +191,6 @@ if (isMain) {
   const d = await viaDaemon(file);
   try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
-  console.log(argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only));
-  process.exit(EXIT[r.status]);
+  // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
+  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only)) + '\n', () => process.exit(EXIT[r.status]));
 }

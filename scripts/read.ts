@@ -36,7 +36,7 @@ if (srcPaths.length) {
   // a world is read the way a notebook is: its prose and its cells, in the words its front matter names, after the worlds it reads
   const rel = path.relative(ROOT, abs(mdPath)), front = parseFront(text), want = libFiles(rel, front);
   const lib = Object.fromEntries([...want.model, ...want.phrases].map((f) => [f, readFileSync(abs(f), 'utf8')]));
-  const reads = Object.fromEntries(front.reads.map((f) => [f, readFileSync(path.join(path.dirname(abs(mdPath)), f), 'utf8')]));
+  const reads = Object.fromEntries(front.reads.map((f) => [f, readFileSync(path.resolve(path.dirname(abs(mdPath)), f), 'utf8')]));
   const a = assemble(rel, text, { lib, reads, code: {} });
   const w = worldOf(text, a.phrases + extra, a.home);
   r = { report: w.reports.join('\n'), traced: w.traced, rofl: w.rofl, phrases: w.phrases };

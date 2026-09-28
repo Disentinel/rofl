@@ -1,6 +1,6 @@
 // The notebook kept alive for the command line: `npm run nb` asks this process over a unix socket, so a run pays the model's
 // load and the code's evaluation only when their texts changed, as in the editor. Every request re-reads every file.
-// One per tree and engine source; started by the first run, gone after ROFL_NB_IDLE seconds (600) with no request.
+// One per tree and engine source; started by the first run, gone after ROFL_NB_IDLE seconds (3600) with no request.
 import { createServer, connect } from 'node:net';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -49,7 +49,7 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
 }
 
 function serve(sock: string) {
-  const kernels = new Map<string, Kernel>(), idle = Number(process.env.ROFL_NB_IDLE ?? 600) * 1000;
+  const kernels = new Map<string, Kernel>(), idle = Number(process.env.ROFL_NB_IDLE ?? 3600) * 1000;
   let timer: NodeJS.Timeout | undefined;
   const rest = () => { clearTimeout(timer); timer = setTimeout(() => server.close(() => process.exit(0)), idle); };
   const server = createServer((c) => {

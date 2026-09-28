@@ -224,7 +224,8 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
     // and no environment on the scale claims that Babel proposal either. Both
     // would sit in `feature_unreachable[audit]` for ever. See
     // `w_plugin_gated_kinds` in facts/worklist.rofl.
-    ast = parse(src, { sourceType: 'module', plugins: [...PARSER_PLUGINS] });
+    // JSX only where the file says so: in a .ts file `<T>x` is a type assertion, and jsx would read it as an element
+    ast = parse(src, { sourceType: 'module', plugins: /\.[jt]sx$/.test(file) ? [...PARSER_PLUGINS, 'jsx'] : [...PARSER_PLUGINS] });
   } catch (e) {
     const msg = (e as Error).message.slice(0, 120);
     return {

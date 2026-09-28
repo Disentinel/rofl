@@ -158,7 +158,10 @@ bookkeeping (`--json` keeps it as `whyRaw`), and `excise F` in a cell takes
 the fact F out of the world every line was asked over and lists the lines
 whose answers move, before and after, leaving their own answers as they are.
 A cell whose rule concludes one of the model's own sentences must say
-`extends <relation>`.
+`extends <relation>`. `code:` and `reads:` paths are relative to the
+notebook, absolute, or from `~`. A code file the scanner could not parse is
+a row of `ast_parse_error[code](File, Message)`, which has no sentence: ask
+`? ast_parse_error[code](F, M)`.
 
 ## What the reader reports
 
