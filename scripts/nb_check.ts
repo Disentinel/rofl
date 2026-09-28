@@ -143,6 +143,7 @@ check('I5 a run never calls a model', !(() => { try { return readFileSync(path.j
 const ok = before(translateOk);
 check('I5 a translation that reads is inserted under its natural cell, which stays', trOk.code === 0 && ok.includes('No change touches a module nobody owns.\n```\n\n```rofl\nA module M is unowned') && ok.startsWith(reviewText.slice(0, 200)), trOk);
 check('I5 a translation that does not read after a retry is not written, exit 2', trBad.code === 2 && before(translateBad) === badText && has(trBad, 'nothing written') && readFileSync(path.join(tmp, 'called'), 'utf8').split('\n').filter((l) => l.endsWith('bad.sh')).length === 2, trBad);
+check('I5 translate says when the notebook reads files outside its folder, whose sentences go to the model with the request', has(trOk, "review.rofl.md: note: reads files outside this notebook's folder: ../review.rofl.md, and what they say goes to the model with the request"), trOk);
 check('I5 translate says on stderr before the model answers, and it is not on stdout', trOk.out.includes('Claude is writing the cell (usually 30–120 s)…') && trOk.out.indexOf('usually 30–120 s') < trOk.out.indexOf('translated') && !trOk.stdout!.includes('usually 30–120 s') && trBad.out.includes('the first try did not read (') && trBad.out.includes('); asking again…') && !trBad.stdout!.includes('asking again'), trOk);
 check('E1 a legible proof keeps every line and every fact of the engine\'s', (() => {
   const r = JSON.parse(reviewJson.stdout ?? ''); const l = r.cells.flatMap((c: { lines: NbLine[] }) => c.lines).find((x: NbLine) => x.kind === 'why');
@@ -175,7 +176,7 @@ check('M1 a notebook that reads a file outside its folder says so; one reading o
 check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
 check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
 const argv = (() => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } })();
-check('H1 the model is called with no MCP server and no settings, from a directory of its own outside the notebook\'s project, gone after', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][] ') && l.includes(` ${realpathSync(os.tmpdir())}/rofl-nb-model-`) && !existsSync(l.split(' ').pop()!)), { code: 0, out: argv.join('\n') });
+check('H1 the model is called with no MCP server and no settings, from a directory of its own outside the notebook\'s project, gone after', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][][--no-session-persistence] ') && l.includes(` ${realpathSync(os.tmpdir())}/rofl-nb-model-`) && !existsSync(l.split(' ').pop()!)), { code: 0, out: argv.join('\n') });
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 
 

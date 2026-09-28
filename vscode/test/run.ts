@@ -91,6 +91,8 @@ const one = async (v: string) => {
   // each window its own copy of the notebooks, since the suite edits a code file under them
   const nb = path.join(tmp, `nb-${v.replace(/ /g, '-')}`), mine = (s: string) => s.split(path.join(tmp, 'nb') + '/').join(nb + '/');
   cpSync(path.join(tmp, 'nb'), nb, { recursive: true });
+  // a workspace that names a model: only the person's own settings may, so this one must be ignored and VS Code's model asked
+  if (v === 'vscode lm') put(path.join(nb, '.vscode/settings.json'), JSON.stringify({ 'rofl.model': 'claude' }));
   let red = '';
   const report = path.join(tmp, `report-${v.replace(/ /g, '-')}`), log = createWriteStream(path.join(tmp, `${v.replace(/ /g, '-')}.log`));
   try {

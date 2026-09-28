@@ -1,6 +1,7 @@
 // npm run test:dist — what `npm run dist` built, away from the tree: the packaged command line answers what `npm run nb` answers, on a copy of the starter
 // notebooks outside the tree too, and the VSIX, installed into an empty profile, runs them in VS Code with the same result.
-// `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
+// Two halves, each under two minutes: `-- --cli` stops after the command line, `-- --editor` leaves out the installed language server and version
+// (npm run test:dist and test:dist:vscode). `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
 import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
@@ -58,6 +59,7 @@ const guide = spawnSync(process.execPath, ['--experimental-strip-types', path.jo
 if (guide.status !== 0) bad.push(`the guide, run by the package: ${guide.stdout}${guide.stderr}`.trim());
 else console.log('guide/: every output block is what the package prints');
 // the language server as installed from the package: `rofl-lsp --stdio` answers initialize and marks a broken rule on its line
+if (!process.argv.includes('--editor')) {
 const prefix = path.join(tmp, 'prefix'), installedTgz = spawnSync('npm', ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--offline', path.join(DIST, tgz)], { encoding: 'utf8', timeout: 60_000 });
 if (installedTgz.status !== 0) bad.push(`npm install ${tgz}: ${installedTgz.stdout}${installedTgz.stderr}`);
 const rpc = (m: object) => { const b = JSON.stringify({ jsonrpc: '2.0', ...m }); return `Content-Length: ${Buffer.byteLength(b)}\r\n\r\n${b}`; };
@@ -71,7 +73,9 @@ if (!init?.capabilities?.hoverProvider || marked.length !== 1 || marked[0].range
 else console.log(`rofl-lsp from ${tgz}: initialize answered, the broken rule marked on line ${marked[0].range.start.line + 1}`);
 const ver = spawnSync(path.join(prefix, 'node_modules/.bin/rofl-nb'), ['--version'], { encoding: 'utf8', timeout: 20_000 });
 if (ver.status !== 0 || ver.stdout !== `rofl-nb ${tgz.replace(/^rofl-nb-(.*)\.tgz$/, '$1')}\n`) bad.push(`rofl-nb --version from ${tgz}: exit ${ver.status}, ${JSON.stringify(ver.stdout + ver.stderr)}`);
+}
 console.log(`command line: ${bad.length ? 'FAIL' : 'ok'}, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+if (process.argv.includes('--cli')) process.exit(bad.length ? 1 : 0);
 
 // the editor: the VSIX installed into an empty extensions directory, and a harness extension that installs nothing of its own
 const version = arg('--vscode'), shot = arg('--shot');

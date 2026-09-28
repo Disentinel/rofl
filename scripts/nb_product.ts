@@ -109,38 +109,61 @@ check('an engine edit leaves one daemon per tree: the new one retires the old, w
 // H3 each harness (notebook/model.ts) against a fake of its binary that records how it was started: the flags that leave it no tools, a directory of
 // its own, removed after, the answer read; one that keeps tools refused unless allowed, one that fails said in a line. Each isolation, spoilt, turns it red.
 const ISOLATION: Record<string, string[]> = {
-  claude: ['[--tools][]', '[--strict-mcp-config]', '[--setting-sources][]'],
+  claude: ['[--tools][]', '[--strict-mcp-config]', '[--setting-sources][]', '[--no-session-persistence]'],
   codex: ['[--disable][shell_tool]', '[--disable][unified_exec]', '[--ignore-user-config]', '[--ignore-rules]', '[-s][read-only]', '[-c][web_search="disabled"]', '[--disable][apps]', '[--disable][plugins]'],
-  opencode: ['OPENCODE_CONFIG_CONTENT={"permission":{"*":"deny"}}', 'OPENCODE_DISABLE_PROJECT_CONFIG=1', 'OPENCODE_DISABLE_CLAUDE_CODE=1', 'XDG_CONFIG_HOME=$CWD', '[--pure]'],
+  opencode: ['OPENCODE_CONFIG_CONTENT={"permission":{"*":"deny"}}', 'OPENCODE_DISABLE_PROJECT_CONFIG=1', 'OPENCODE_DISABLE_CLAUDE_CODE=1', 'XDG_CONFIG_HOME=$CWD', 'XDG_DATA_HOME=$CWD/data', '[--pure]'],
   pi: ['[--no-tools]', '[--no-extensions]', '[--no-skills]', '[--no-context-files]'],
   copilot: ['[--no-custom-instructions]', '[--disable-builtin-mcps]', '--excluded-tools=bash,', ',view,', ',web_fetch'],
   hermes: ['[--safe-mode]', '[--ignore-user-config]', '[--ignore-rules]', '[--toolsets][safe]'],
 };
 const KEEPS = ['codex', 'copilot', 'hermes'];
-const recorder = (name: string, tail = 'printf \'```rofl\\nnever M is unowned\\n```\\n\'') => { const f = path.join(tmp, 'h3', name); put(f, `#!/bin/sh\nin=$(cat)\n{ pwd -P; printf '[%s]' "$@"; echo; env | grep -E '^(OPENCODE_|XDG_CONFIG_HOME)' | sort | tr '\\n' ' '; echo; printf '%s' "$in" | wc -c; } > ${f}.rec\n${tail}\n`); chmodSync(f, 0o755); return f; };
+/** A fake harness in node, which leaves PWD as it was given (a shell would correct it): it records cwd, argv, the variables that isolate, stdin's length. */
+const recorder = (tag: string, name: string, tail = "process.stdout.write('```rofl\\nnever M is unowned\\n```\\n')") => {
+  const f = path.join(tmp, 'h3', tag, name);
+  put(f, `#!/usr/bin/env node\nconst fs = require('fs'); let i = '';\nprocess.on('SIGTERM', () => process.exit(143));\nprocess.stdin.on('data', (d) => { i += d; }).on('end', () => {\n  const project = require('path').join(process.env.CLAUDE_CONFIG_DIR, 'projects', fs.realpathSync('.').replace(/[^a-zA-Z0-9]/g, '-'));\n  if (${JSON.stringify(name)} === 'claude') fs.mkdirSync(require('path').join(project, 'memory'), { recursive: true });\n  const env = Object.entries(process.env).filter(([k]) => /^(OPENCODE_|XDG_CONFIG_HOME|XDG_DATA_HOME|PWD$)/.test(k)).sort().map(([k, v]) => k + '=' + v).join(' ');\n  fs.writeFileSync(${JSON.stringify(f + '.rec')}, [fs.realpathSync('.'), process.argv.slice(2).map((a) => '[' + a + ']').join(''), env, i.length, fs.existsSync('data/opencode'), project].join('\\n'));\n  ${tail};\n});\n`);
+  chmodSync(f, 0o755); return f;
+};
+// what claude leaves in its config folder: the fakes make it where claude does, and a call must leave nothing there
+process.env.CLAUDE_CONFIG_DIR = path.join(tmp, 'claude-config');
+mkdirSync(path.join(tmp, 'claude-config/projects'), { recursive: true });
 async function harnesses(src: string, tag: string): Promise<string[]> {
   const f = path.join(tmp, 'h3', `model-${tag}.ts`);
   put(f, src);
   const m = await import(f), bad: string[] = [];
   for (const name of Object.keys(ISOLATION)) {
-    const bin = recorder(name), env = { ...process.env, [`ROFL_NB_${name.toUpperCase()}`]: bin, ROFL_NB_ALLOW_TOOLS: '' }, rec = `${bin}.rec`;
+    const bin = recorder(tag, name), env = { ...process.env, [`ROFL_NB_${name.toUpperCase()}`]: bin, ROFL_NB_ALLOW_TOOLS: '' }, rec = `${bin}.rec`;
     rmSync(rec, { force: true });
     const refused = await m.llm(m.choose(name, env))('the prompt');
     if (KEEPS.includes(name) !== (!refused.ok && /cannot be run without tools.*ROFL_NB_ALLOW_TOOLS=1/.test(refused.error)) || KEEPS.includes(name) && existsSync(rec)) { bad.push(`${name}: ${KEEPS.includes(name) ? 'not refused' : 'refused'} without ROFL_NB_ALLOW_TOOLS: ${JSON.stringify(refused)}`); continue; }
+    const allowed = { ...env, ROFL_NB_ALLOW_TOOLS: '1' };
+    // a model name is one word: one that reads as a flag (a workspace could set it) is refused before anything starts
+    for (const evil of ['--attach=http://127.0.0.1:1', '-f /etc/hosts', 'x --file=/etc/hosts']) {
+      rmSync(rec, { force: true });
+      const r = await m.llm(m.choose(`${name}:${evil}`, allowed))('the prompt');
+      if (r.ok || !/is not a model name/.test(r.error) || existsSync(rec)) bad.push(`${name}: the model name ${JSON.stringify(evil)} was ${existsSync(rec) ? 'passed on' : 'not refused as a name'}: ${JSON.stringify(r)}`);
+    }
     rmSync(rec, { force: true });
-    const r = await m.llm(m.choose(name, { ...env, ROFL_NB_ALLOW_TOOLS: '1' }))('the prompt');
-    const [cwd = '', argv = '', vars = '', bytes = ''] = existsSync(rec) ? readFileSync(rec, 'utf8').split('\n') : [];
+    const r = await m.llm(m.choose(`${name}:gpt-5.5`, allowed))('the prompt');
+    const [cwd = '', argv = '', vars = '', bytes = '', data = '', project = ''] = existsSync(rec) ? readFileSync(rec, 'utf8').split('\n') : [];
     const seen = `${argv} ${vars.replaceAll(cwd.replace(/^\/private(?=\/var\/)/, ''), '$CWD').replaceAll(cwd, '$CWD')}`;
-    const lacks = ISOLATION[name].filter((x) => !seen.includes(x));
+    const lacks = [...ISOLATION[name], 'PWD=$CWD '].filter((x) => !`${seen} `.includes(x));
     if (!r.ok || !r.text.includes('never M is unowned')) bad.push(`${name}: the answer was not read: ${JSON.stringify(r)}`);
     if (lacks.length) bad.push(`${name}: started without ${lacks.join(' ')}: ${argv} ${vars}`);
+    if (!/\[(--model=|--model\]\[)gpt-5\.5\]/.test(argv)) bad.push(`${name}: the model name is not passed as the model: ${argv}`);
+    if (name === 'claude' && existsSync(project)) bad.push(`claude: the empty project folder it makes in its config folder is left: ${project}`);
+    if (name === 'opencode' && data !== 'true') bad.push('opencode: its data directory was not made in the call\'s directory');
     if (!cwd.startsWith(`${realpathSync(os.tmpdir())}/rofl-nb-model-`) || existsSync(cwd)) bad.push(`${name}: run in ${cwd}, ${existsSync(cwd) ? 'which is still there' : 'not a directory of its own'}`);
     if (Number(bytes) + Number(argv.includes('[the prompt]')) * 10 !== 10) bad.push(`${name}: the prompt went neither on stdin nor in argv once: ${bytes} bytes on stdin, ${argv}`);
   }
-  const fail = recorder('fails', 'printf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2; exit 1'), quiet = recorder('quiet', 'echo "Error: the free tier cannot be used here" >&2');
+  const odd = ['constructor', '__proto__', 'toString'].map((n) => { try { return m.choose(n, process.env).error ?? 'chosen'; } catch (e) { return `threw ${(e as Error).message}`; } });
+  if (!odd.every((e: string) => e.includes('is not a harness'))) bad.push(`a name an object has is not refused as a harness: ${odd.join(' | ')}`);
+  const fail = recorder(tag, 'fails', "process.stderr.write('\\x1b[91mError:\\x1b[0m Incorrect API key provided\\n'); process.exit(1)"), quiet = recorder(tag, 'quiet', "process.stderr.write('Error: the free tier cannot be used here\\n')");
+  const hang = recorder(tag, 'hang', 'setTimeout(() => {}, 60_000)');
   const [f1, f2] = await Promise.all([fail, quiet].map((b) => m.llm(m.choose('opencode', { ...process.env, ROFL_NB_OPENCODE: b }))('p')));
+  const f3 = await m.llm(m.choose('opencode', { ...process.env, ROFL_NB_OPENCODE: hang, ROFL_NB_MODEL_TIMEOUT: '1' }))('p');
   if (f1.ok || f1.error !== 'opencode exited with 1: Error: Incorrect API key provided') bad.push(`a harness that fails is not said in one line: ${JSON.stringify(f1)}`);
   if (f2.ok || f2.error !== 'opencode printed nothing; on stderr: Error: the free tier cannot be used here') bad.push(`a harness that prints nothing and exits 0 is taken as an answer: ${JSON.stringify(f2)}`);
+  if (f3.ok || !f3.error.startsWith('opencode gave no answer in 1 s')) bad.push(`a harness stopped at the limit, which exits 143 on its TERM, is not said as stopped: ${JSON.stringify(f3)}`);
   return bad;
 }
 const MODEL_SRC = readFileSync(path.join(ROOT, 'notebook/model.ts'), 'utf8');
@@ -148,14 +171,17 @@ const H3_BREAKS: [string, RegExp, string][] = [
   ['claude', /'--tools', '', /, ''], ['codex', /'shell_tool', /, ''], ['opencode', /\{"permission":\{"\*":"deny"\}\}/, '{}'], ['pi', /'--no-tools', /, ''],
   ['copilot', /'--no-custom-instructions', /, ''], ['hermes', /'--safe-mode', /, ''], ['refusal', /!allow && HARNESSES\[name\]\.keeps/, 'false'],
   ['cwd', /cwd: dir,/, 'cwd: os.tmpdir(),'], ['empty', /^ *if \(!out\.trim\(\)\).*$/m, ''],
+  ['model name', /^ *if \(model && !\/.*$/m, ''], ['PWD', /PWD: dir, /, ''], ['opencode data', /, XDG_DATA_HOME: path\.join\(dir, 'data'\)/, ''],
+  ['session', /, '--no-session-persistence'/, ''], ['claude leaves', /for \(const d of \[path\.join\(project, 'memory'\), project\]\)/, 'for (const d of [])'], ['timeout', /if \(p\.killed\)/, 'if (false)'], ['own names', /Object\.hasOwn\(HARNESSES, name\)/, 'HARNESSES[name]'],
 ];
 const h3 = await harnesses(MODEL_SRC, 'as-is');
 check('H3 every harness is started with the flags that leave it no tools, in a directory of its own, and its answer read; one that keeps tools is refused', !h3.length, { code: 0, out: h3.join('\n') });
-for (const [name, at, plant] of H3_BREAKS) {
-  const spoilt = MODEL_SRC.replace(at, plant);
-  if (spoilt === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
-  check(`  and with ${name} spoilt, it is red`, (await harnesses(spoilt, name)).length > 0);
-}
+const spoilt = await Promise.all(H3_BREAKS.map(([name, at, plant]) => {
+  const src = MODEL_SRC.replace(at, plant);
+  if (src === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
+  return harnesses(src, name.replace(/ /g, '-'));
+}));
+H3_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, spoilt[k].length > 0));
 const [refusedCli, failedCli] = await h3cli;
 check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
 check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);

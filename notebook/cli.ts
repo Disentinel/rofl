@@ -229,16 +229,16 @@ export async function translateCell(file: string, text: string, index: number, a
   return { code: r.failed ? 2 : r.code, said: r.said, text: r.failed ? text : r.text, ...(r.reply && { reply: r.reply }) };
 }
 
-type Context = { input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
+type Context = { outside: string[]; input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
 function context(file: string, text: string): Context | { errors: string[] } {
-  const { input, errors } = inputs(file, text);
+  const { input, errors, outside } = inputs(file, text);
   if (errors.length) return { errors };
   const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   const model = want.model.map((f) => input.lib[f]).join('\n'), phrases = want.phrases.map((f) => input.lib[f]).join('\n');
   const { vocab, functions, rels } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
-  return { input, vocab, functions, own, rels, phrases };
+  return { outside, input, vocab, functions, own, rels, phrases };
 }
 
 /** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,
@@ -276,7 +276,7 @@ const START = ['a function F may throw', 'a function F throws outright', 'a func
 
 /** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
 async function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = '', step = (_: string) => {}): Promise<{ code: number; said: string[]; text: string; failed?: boolean; reply?: string }> {
-  const said: string[] = [], lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
+  const said = cx.outside.length ? [`${file}: note: ${OUTSIDE(cx.outside)}, and what they say goes to the model with the request`] : [], lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
   const cells = cellsOf(text), under = translated(cells, c) ? cells[c.index + 1] : undefined;
   const shut = under ? lines.findIndex((l, i) => i >= under.line - 1 && /^```\s*$/.test(l)) : -1;
   const from = under ? under.line - 2 : close + 1, to = !under ? close + 1 : shut < 0 ? lines.length : shut + 1;
@@ -290,7 +290,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code)) + follow;
   step(`${ask.who ?? 'the model'} is writing the cell`);
   let a = await ask(base);
-  if (!a.ok) return { code: 2, said: [`translation failed: ${a.error}`], text, failed: true };
+  if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
   let cell = fenced(a.text);
   if (cell === undefined) return words(a.text);
   let t = tryCell(cell);

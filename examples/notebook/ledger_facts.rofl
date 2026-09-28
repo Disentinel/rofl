@@ -104,11 +104,13 @@ path_exists("facts/spec-census.rofl").
 path_exists("facts/spec.rofl").
 path_exists("facts/worklist.rofl").
 path_exists("facts/worlds.rofl").
+path_exists("guide/QUICKSTART.md").
 path_exists("lsp/know.ts").
 path_exists("lsp/test.ts").
 path_exists("notebook/cli.ts").
 path_exists("notebook/front.ts").
 path_exists("notebook/kernel.ts").
+path_exists("notebook/model.ts").
 path_exists("notebook/serve.ts").
 path_exists("package.json").
 path_exists("playground/host.ts").
@@ -208,12 +210,14 @@ path_exists("scripts/derivations.ts").
 path_exists("scripts/dist.ts").
 path_exists("scripts/flag_census.ts").
 path_exists("scripts/goldens.ts").
+path_exists("scripts/guide.ts").
 path_exists("scripts/lint.ts").
 path_exists("scripts/md_blocks.ts").
 path_exists("scripts/md_world.ts").
 path_exists("scripts/measurement_check.ts").
 path_exists("scripts/nb_check.ts").
 path_exists("scripts/nb_layers.ts").
+path_exists("scripts/nb_product.ts").
 path_exists("scripts/parser_optional.ts").
 path_exists("scripts/playground.ts").
 path_exists("scripts/port_corpus.ts").
@@ -238,9 +242,11 @@ path_exists("src/tokens.ts").
 path_exists("src/unify.ts").
 path_exists("tsconfig.build.json").
 path_exists("vscode/extension.ts").
+path_exists("vscode/package.json").
 path_exists("vscode/render.ts").
 path_exists("vscode/test/dist.ts").
 path_exists("vscode/test/run.ts").
+path_exists("vscode/test/suite.ts").
 path_exists("vscode/worker.ts").
 
 reason_len(f_bun_runner_over_budget, 14).

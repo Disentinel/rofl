@@ -56,6 +56,7 @@
       "properties": {
         "rofl.model": {
           "type": "string",
+          "scope": "application",
           "default": "auto",
           "markdownDescription": "The model Translate asks. `auto`: VS Code's language model (GitHub Copilot's, for one) if there is one, else the first installed command-line harness that runs with no tools. `vscode:<id>`: that language model. Or a harness: `claude`, `codex`, `opencode`, `pi`, `copilot`, `hermes`, `command`, with `:<model>` to pick its model. **ROFL: Choose model** sets it."
         }
