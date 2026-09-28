@@ -277,4 +277,33 @@ levels.forEach((f, k) => {
   check(`  and its solution solves it`, is(solved, 0), solved);
 });
 
+// pictures: each example of examples/visual through its backend, and a defect planted in each backend's module that its check must see
+const VIS = (root: string, f: string) => path.join(root, 'examples/visual', f);
+const drawMutant = (name: string, file: string, at: RegExp, plant: (m: string) => string) => linked(name, file, mutate(file, at, plant));
+const PICTURE: [string, string[], (o: Out) => boolean][] = [
+  ['graph: mermaid draws the failing never\'s cars red and the dangling link dashed', ['paint-shop.rofl.md'], (g) => is(g, 1) && has(g, 'draw graph  ->  8 marks, 3 links, 3 failing, 1 dangling') && has(g, 'm3 -.-> m5') && has(g, 'class m3 failing') && has(g, 'subgraph g0["shop"]')],
+  ['graph: DOT carries the tags as colour and style, and the provenance as a tooltip', ['paint-shop.rofl.md', '--format', 'dot'], (d) => has(d, '"c3" -> "pink" [color="#b91c1c", style=dashed];') && has(d, 'tooltip="`c3` is on the line')],
+  ['time: a Gantt chart, a lane per person, the alone slots crit', ['spat-thursday.rofl.md'], (t) => is(t, 1) && has(t, '  section kit') && has(t, '$alone(kit,1060) [alone, failing] :crit, ') && has(t, 'acme :t13, 1080, 1230')],
+  ['table: a Markdown table, the cells the audits name marked', ['coverage.rofl.md'], (m) => is(m, 1) && has(m, '| k_a [failing] | done | open [failing] |') && has(m, '| k_b | claimed | waived |')],
+  ['argument: Argdown, a refutation as -, the grade and the unknown as hashtags', ['deploy-argument.rofl.md'], (a) => is(a, 0) && has(a, '[safe_to_ship] #contested\n      + <canary_clean>\n      - <incident_4711>') && has(a, '[cheap_to_run] #unknown')],
+];
+const picMutants: [string, string][] = [
+  ['draw-flow', drawMutant('draw-flow', 'notebook/draw-graph.ts', /ts\.includes\('dangling'\) \|\| ts\.includes\('gone'\) \? '-\.->' : '-->'/, () => `'-->'`)],
+  ['draw-dot', drawMutant('draw-dot', 'notebook/draw-graph.ts', /tip\.length && `tooltip=\$\{q\(tip\.join\('\\n'\)\)\}`/, () => `''`)],
+  ['draw-gantt', drawMutant('draw-gantt', 'notebook/draw-time.ts', /m\?\.tags\.some\(\(t\) => t === 'failing' \|\| t === 'dangling'\) && 'crit'/, () => `false`)],
+  ['draw-table', drawMutant('draw-table', 'notebook/draw-table.ts', /\(tags\(r, c\)\.length \? ` \[\$\{tags\(r, c\)\.join\(', '\)\}\]` : ''\)/, () => `''`)],
+  ['draw-argdown', drawMutant('draw-argdown', 'notebook/draw-argument.ts', /\$\{attack \? '-' : '\+'\}/, () => '+')],
+];
+const picture = ([, [f, ...rest]]: typeof PICTURE[number], root: string) => cli([VIS(root, f), ...rest], {}, root);
+// a what-if drawn: a retraction adds marks as well as removing them; a head close to a declared sentence is said
+const visNb = (name: string, cells: string) => { const f = path.join(tmp, name, 'n.rofl.md'); put(f, readFileSync(VIS(ROOT, 'paint-shop.rofl.md'), 'utf8').replace('../../visual/graph.rofl.md', path.join(ROOT, 'visual/graph.rofl.md')) + cells); return f; };
+const [pics, mutantPics, [whatIf, near]] = await Promise.all([Promise.all(PICTURE.map((p) => picture(p, ROOT))), Promise.all(PICTURE.map((p, k) => picture(p, picMutants[k][1]))),
+  Promise.all([cli([visNb('draw-excise', '\n```rofl\nexcise `blue` is in the paint shop\ndraw graph\n```\n')]), cli([visNb('draw-near', '\n<a id="car_node"></a>A car X is a node if X is on the line.\n\nA mark X is tagged a colour `red` if X is on the line.\n')])])]);
+PICTURE.forEach(([name, , ok], k) => {
+  check(`draw ${name}`, ok(pics[k]), pics[k]);
+  check(`  and a defect planted in its backend (${picMutants[k][0]}) turns it red`, !ok(mutantPics[k]), mutantPics[k]);
+});
+check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
+check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
+
 report('checks around the kernel and what a user meets first', t0);

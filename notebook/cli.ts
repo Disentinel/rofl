@@ -332,7 +332,7 @@ Asking lines, in a rofl cell:
   why S         a proof of one answer               why \`c3\` leaves unpainted
   whynot S      why S does not hold                 whynot \`c3\` comes out \`pink\`
   excise F      which lines move without fact F     excise \`c1\` is approved by \`ben\`
-  draw K        graph, time, table, argument        draw graph
+  draw K        graph, time, table                  draw graph
   extends R     this cell adds to the model's R     extends blocked
 Capitalised: a blank. A name goes in backticks.
 
