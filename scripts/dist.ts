@@ -51,8 +51,12 @@ await import('./cli.js');
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
 for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js']) {
-  cpSync(path.join(ROOT, f), path.join(PKG, f));
-  cpSync(path.join(ROOT, f), path.join(OUT, f));
+  // a shipped .rofl.md still tells the reader to run it from the checkout; point it at the installed command instead
+  const text = f.endsWith('.rofl.md') ? readFileSync(path.join(ROOT, f), 'utf8').replace(/npm run nb -- examples\/notebook\//g, 'rofl-nb ') : null;
+  for (const dst of [path.join(PKG, f), path.join(OUT, f)]) {
+    if (text !== null) { mkdirSync(path.dirname(dst), { recursive: true }); writeFileSync(dst, text); }
+    else cpSync(path.join(ROOT, f), dst);
+  }
 }
 const install = readFileSync(path.join(ROOT, 'scripts/dist-install.md'), 'utf8').replaceAll('<v>', version).replaceAll('<node>', NODE).replaceAll('<vscode>', VSCODE);
 writeFileSync(path.join(PKG, 'README.md'), install);
