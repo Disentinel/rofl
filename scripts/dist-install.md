@@ -15,12 +15,15 @@ and the `claude` CLI only to translate natural-language cells. No checkout of th
 
 In VS Code: open the folder, open `review.rofl.md`, Run All. A `.rofl.md` anywhere on disk opens
 as a notebook. To ask about your own code, name it in the front matter: `model: js` and
-`code:` with paths or globs relative to the notebook (`- ../src/**/*.ts`).
+`code:` with paths or globs relative to the notebook (`- ../src/**/*.ts`). What a cell can say about
+code (`a function F may throw`, `a call C resolves to a function F`, ...) is listed by `rofl-nb vocab`;
+`rofl-nb vocab throw` lists those with the word.
 
 ## For an agent
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   what every cell says; --json for a program
     rofl-nb translate <file.rofl.md>             Claude writes a rofl cell under each natural cell
+    rofl-nb vocab [<file.rofl.md>] [word]        the sentences a cell can say over code, those with the word
     rofl-nb --help                               the cell language and the exit codes
 
 Exit 0: every `never` holds; 1: a `never` fails; 2: something was not read; 3: holds, some only

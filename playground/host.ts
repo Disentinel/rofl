@@ -420,12 +420,12 @@ export class Host {
 
 /** What the translator of a plain-language cell may say: each relation the scanner gives or the model's rules conclude, as the sentence the reader reads it in,
  *  with a noun before each variable, `a call C resolves to a function F`, the sentence of a signature first where one is written;
- *  and the functions a condition may compute with, `L is the length of T`. */
-export function translatorVocab(model: string, phrases: string): { vocab: string[]; functions: string[] } {
+ *  and the functions a condition may compute with, `L is the length of T`. `rels`: the relation of each sentence. */
+export function translatorVocab(model: string, phrases: string): { vocab: string[]; functions: string[]; rels: string[] } {
   const v = new Vocabulary(); v.addText(phrases);
   const rels = new Set(['ast_node', 'ast_child', 'ast_attr', ...booksOf(model).keys()]);
   const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child']);
-  const vocab: string[] = [];
+  const vocab: string[] = [], of: string[] = [];
   for (const rel of [...rels].sort()) {
     const ts = v.templates.filter((t) => t.rel === rel);
     for (const t of rel.startsWith('ast_') ? ts.slice(1) : ts.slice(0, 1)) {
@@ -439,7 +439,7 @@ export function translatorVocab(model: string, phrases: string): { vocab: string
       }
       // a value (a name, a kind, a line) is written as its variable; anything else with the noun that says what it is
       const term = (h: { i: number; noun: string }) => VALUE.has(h.noun) ? names.get(h.i)! : `${/^[aeiou]/.test(h.noun) ? 'an' : 'a'} ${h.noun} ${names.get(h.i)}`;
-      vocab.push(t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? term(p) : '').filter(Boolean).join(' '));
+      vocab.push(t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? term(p) : '').filter(Boolean).join(' ')); of.push(rel);
     }
   }
   const NAME: Record<string, string> = { text: 'T', index: 'I', number: 'N' };
@@ -448,7 +448,7 @@ export function translatorVocab(model: string, phrases: string): { vocab: string
     const name = (noun: string) => { let n = NAME[noun] ?? noun[0].toUpperCase(); while (used.includes(n)) n += '2'; used.push(n); return n; };
     return 'R is ' + t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? name(p.noun) : '').filter(Boolean).join(' ') + `   (${t.rel})`;
   });
-  return { vocab, functions };
+  return { vocab, functions, rels: of };
 }
 
 /** What each rule is about, for folding a proof into steps: the numbered section of the model file it sits in, `dataflow: construction`.

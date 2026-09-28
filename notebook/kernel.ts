@@ -1,6 +1,6 @@
 // The notebook kernel: a `.rofl.md` notebook's text and the texts of the files it names in, what every cell said out.
 // No I/O, no printing, no exit: the command line (notebook/cli.ts) and an editor read the files and show the result.
-import { Host, concernsOf, type Line, type Node, type Row } from '../playground/host.ts';
+import { Host, concernsOf, translatorVocab, type Line, type Node, type Row } from '../playground/host.ts';
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 
@@ -16,6 +16,7 @@ export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; error
 export class Kernel {
   private host = new Host();
   private loaded = '';
+  private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. */
@@ -40,12 +41,19 @@ export class Kernel {
     if (out.error) errors.push(out.error);
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: said(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
+    const hint = (e: string) => {
+      const m = /^not read: (?!LIST |TABLE |DECLARED )(.*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
+      if (!m) return e;
+      if (this.vocab?.key !== key) this.vocab = { key, sentences: translatorVocab(model, phrases).vocab };
+      const near = nearest(m[1] ?? m[2], this.vocab.sentences);
+      return near.length ? `${e}; the nearest sentences: ${near.map((x) => `"${x}"`).join(' · ')} (npm run nb -- vocab lists them)` : e;
+    };
     const result: NbCellOut[] = cells.map((c) => {
       if (c.kind === 'natural') return { index: c.index, kind: c.kind, line: c.line, errors: [], notes: translated(cells, c) ? ['answered by the cell below it'] : ['not translated yet: `npm run nb -- translate` writes the rofl cell below it'], lines: [] };
       const o = out.cells[runs.indexOf(c)];
       const seen = new Set<number>();
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
-      return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors, notes: o.notes, lines: o.lines.map((l) => {
+      return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked };
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
@@ -54,6 +62,18 @@ export class Kernel {
     const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, cells: result, errors, ms: { load, run: out.ms, phases: out.phases } };
   }
+}
+
+const STOP = new Set(['a', 'an', 'the', 'is', 'are', 'of', 'in', 'to', 'by', 'if', 'and', 'at', 'some', 'it', 'its', 'on', 'as', 'with', 'from', 'unless', 'something']);
+const stem = (w: string) => w.length > 4 ? w.replace(/(?:ing|ed|(?<!s)s)$/, '') : w;
+const words = (s: string) => new Set(s.replace(/`[^`]*`|"[^"]*"/g, ' ').split(/[^A-Za-z]+/).filter((w) => w && !/^[A-Z]/.test(w) && !STOP.has(w)).map(stem));
+
+/** The `n` sentences of `vocab` that share the most words with `s`, a word fewer sentences use counting for more. */
+export function nearest(s: string, vocab: string[], n = 3): string[] {
+  const sets = vocab.map(words), uses = new Map<string, number>(), want = words(s);
+  for (const ws of sets) for (const w of ws) uses.set(w, (uses.get(w) ?? 0) + 1);
+  return sets.map((ws, i) => ({ i, score: [...want].reduce((a, w) => a + (ws.has(w) ? 1 / uses.get(w)! : 0), 0) }))
+    .filter((x) => x.score > 0).sort((a, b) => b.score - a.score || vocab[a.i].length - vocab[b.i].length).slice(0, n).map((x) => vocab[x.i]);
 }
 
 /** A never holds, fails, or holds only as far as the model sees: something is out of its sight, or the budget ran out. */

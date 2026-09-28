@@ -183,16 +183,36 @@ export async function translateCell(file: string, text: string, index: number, a
   return { code: r.failed ? 2 : r.code, said: r.said, text: r.failed ? text : r.text, ...(r.reply && { reply: r.reply }) };
 }
 
-type Context = { input: Inputs; vocab: string[]; functions: string[]; own: string[] };
+type Context = { input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
 function context(file: string, text: string): Context | { errors: string[] } {
   const { input, errors } = inputs(file, text);
   if (errors.length) return { errors };
   const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   const model = want.model.map((f) => input.lib[f]).join('\n'), phrases = want.phrases.map((f) => input.lib[f]).join('\n');
-  const { vocab, functions } = translatorVocab(model, phrases);
+  const { vocab, functions, rels } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
-  return { input, vocab, functions, own };
+  return { input, vocab, functions, own, rels, phrases };
+}
+
+/** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,
+ *  a meaning under it where the phrase file writes one, the notebook's own sentences, then the functions; only those that mention `word`. */
+export function vocabulary(file: string | undefined, word = ''): { lines: string[]; errors: string[] } {
+  const cx = file ? context(file, readFileSync(file, 'utf8')) : context(path.resolve('vocab.rofl.md'), '---\nmodel: js\n---\n');
+  if ('errors' in cx) return { lines: [], errors: cx.errors };
+  const meant = new Map<string, string>(), ls = cx.phrases.split('\n');
+  ls.forEach((l, i) => {   // a comment between two lines of phrases says what the relation under it means
+    const rel = /^(?:sig|phrase)\((\w+),/.exec(l)?.[1]; let j = i;
+    while (rel && j > 0 && ls[j - 1].startsWith('--')) j--;
+    if (rel && j < i && /^(?:sig|phrase)\(/.test(ls[j - 1] ?? '')) meant.set(rel, ls.slice(j, i).map((x) => x.replace(/^--\s*/, '')).join(' '));
+  });
+  const w = word.toLowerCase().replace(/(?:ing|ed|s)$/, ''), has = (t: string) => t.toLowerCase().includes(w);
+  const lines = [
+    ...cx.vocab.flatMap((v, i) => has(v + ' ' + cx.rels[i]) ? [`${v}   (${cx.rels[i]})`, ...(meant.has(cx.rels[i]) ? [`    ${meant.get(cx.rels[i])}`] : [])] : []),
+    ...cx.own.filter(has).map((v) => `${v}   (this notebook)`),
+    ...cx.functions.filter(has),
+  ];
+  return { lines, errors: [] };
 }
 
 /** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
@@ -230,6 +250,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
 
 const HELP = `npm run nb -- <file.rofl.md> [--json] [--cell N]   run a notebook: what every cell says
 npm run nb -- translate <file.rofl.md>             Claude writes a rofl cell under every natural cell without one
+npm run nb -- vocab [<file.rofl.md>] [word]         the sentences a cell can use over code (or over that notebook's model), those with the word
 
 A notebook is Markdown. Its cells are fenced blocks:
   \`\`\`rofl      rules in sentences, and asking lines        \`\`\`datalog   the same in Datalog
@@ -249,6 +270,14 @@ const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPat
 if (isMain) {
   const argv = process.argv.slice(2);
   if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
+  if (argv[0] === 'vocab') {
+    const file = argv[1]?.endsWith('.rofl.md') ? argv[1] : undefined, word = argv.slice(file ? 2 : 1).join(' ');
+    if (file && !existsSync(file)) { console.error(`${file}: no such file`); process.exit(2); }
+    const v = vocabulary(file, word), n = v.lines.filter((l) => !l.startsWith(' ')).length;
+    for (const e of v.errors) console.error(`${file}: error: ${e}`);
+    console.log([...v.lines, `${n} ${n === 1 ? 'sentence' : 'sentences'}${word ? ` with "${word}"` : ''}`].join('\n'));
+    process.exit(v.errors.length ? 2 : 0);
+  }
   const named = argv[0] === 'translate' ? argv[1] : argv.find((a) => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--cell');
   if (!named) { console.error(`usage: npm run nb -- ${argv[0] === 'translate' ? 'translate ' : ''}<file.rofl.md> (see --help)`); process.exit(2); }
   if (!named.endsWith('.rofl.md')) { console.error(`${named}: not a notebook: a notebook is a .rofl.md file (see --help)`); process.exit(2); }
