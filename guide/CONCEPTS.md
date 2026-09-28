@@ -103,7 +103,9 @@ folder gets a `note:` on stderr; the examples' world is one folder up.
 A **model** turns code into facts. `model: js` reads the JavaScript and
 TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences
 (with a notebook, its own too). In code, a function is a node, not a name:
-`` `f` calls `f` `` matches nothing, so write `never F calls F`.
+`` `f` calls `f` `` matches nothing, so write `never F calls F`, or name it
+with `F answers to "f"`. A name no fact holds is noted on its line, and a
+`never` over it holds only as far as it sees (exit 3).
 
 ## Could not see: exit 3
 

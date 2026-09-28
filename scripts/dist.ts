@@ -83,6 +83,11 @@ cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
 for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json', 'language-configuration.json', 'icon.png', 'file-light.png', 'file-dark.png', 'CHANGELOG.md']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
 for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES']) cpSync(path.join(PKG, f), path.join(VSIX, f));
 writeFileSync(path.join(VSIX, 'README.md'), guide('README-marketplace.md'));
+// a Marketplace or npm page shows its images from GitHub: each names a file on the pushed branch it points at
+for (const f of [path.join(VSIX, 'README.md'), path.join(PKG, 'README.md')]) for (const [, url] of readFileSync(f, 'utf8').matchAll(/!\[[^\]]*\]\(([^)\s]+)/g)) {
+  const [, ref, file] = /^https:\/\/raw\.githubusercontent\.com\/Disentinel\/rofl\/([^/]+)\/(.+)$/.exec(url) ?? [];
+  try { execFileSync('git', ['cat-file', '-e', `origin/${ref}:${file}`], { cwd: ROOT, stdio: 'ignore' }); } catch { throw new Error(`${path.relative(OUT, f)}: the image ${url} is no file of the repository's pushed branches`); }
+}
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
 writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,

@@ -4,6 +4,13 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-28 by the notebook-name session: the Marketplace page's images are on the notebook branch until it merges.
+
+finding(f_the_marketplace_images_point_at_the_notebook_branch, pitfall).
+recorded(f_the_marketplace_images_point_at_the_notebook_branch, "2026-09-28").
+demands(f_the_marketplace_images_point_at_the_notebook_branch, doc).
+finding_note(f_the_marketplace_images_point_at_the_notebook_branch, "OPEN UNTIL THE MERGE. guide/README-marketplace.md showed its two screenshots from raw.githubusercontent.com/Disentinel/rofl/main/vscode/media/, which does not exist on main: the Marketplace page would have shown two broken images. They now point at the pushed branch, .../rofl/notebook/vscode/media/, and npm run dist FAILS if an image in a built readme is not a raw.githubusercontent.com/Disentinel/rofl URL naming a file on origin/<its branch> (git cat-file -e). After notebook merges into main, point them at main (the check then passes on origin/main) and address this; the notebook branch may be deleted after the merge, and the page with it.").
+
 -- Recorded 2026-09-28 by the notebook-docs session: the user's guide shows the tool's own output.
 
 finding(f_a_backticked_name_over_code_matches_nothing_and_its_never_holds, defect).
