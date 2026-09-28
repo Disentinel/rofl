@@ -47,7 +47,6 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
-// `prose` proves one kernel and runs with the smoke test; the other three are `-- --mutants`, which stays under two minutes on its own.
 const bi = process.argv.indexOf('--break');
 const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells'] : ['as it is', 'prose'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
