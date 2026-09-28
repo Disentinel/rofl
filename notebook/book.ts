@@ -70,10 +70,14 @@ export function closeTo(learned: string[], vocab: string): string[] {
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
 export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
   const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
-  const md = parts.map(({ c, clauses }) => {
-    if (c.form !== 'md') return null;
-    const first = readMd(clauses, { vocab: phrases, homeBooks: home });
-    const text = anchored(clauses, first.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5)));
+  const first = parts.map(({ c, clauses }) => c.form === 'md' ? readMd(clauses, { vocab: phrases, homeBooks: home }) : null);
+  const md = parts.map(({ clauses }, i) => {
+    if (!first[i]) return null;
+    // a head another cell declares the sentence of is that cell's relation, not a new one named from its words
+    const heads = (r: ReadResult) => r.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5));
+    const others = first.flatMap((f, j) => j !== i && f ? f.phrases : []);
+    const unread = heads(first[i]!).length && others.length ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
+    const text = anchored(clauses, unread);
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
     return { text, learned, close: closeTo(learned, phrases) };
   });

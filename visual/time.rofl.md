@@ -16,7 +16,7 @@ Declared as facts:
 - <a id="during"></a>A mark M runs from T1 to T2
 - <a id="happens"></a>A mark M happens at T
 - <a id="message"></a>A mark M goes from a lane P to a lane Q at T
-- <a id="tagged"></a>A mark M is tagged K
+- <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="labelled"></a>A mark M reads S
 - <a id="reserved"></a>A tag K is reserved
 

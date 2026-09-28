@@ -16,8 +16,8 @@ Declared as facts:
 - <a id="node"></a>A mark M is a node
 - <a id="link"></a>A mark M links to a mark N
 - <a id="inside"></a>A mark M is inside a mark G
-- <a id="tagged"></a>A mark M is tagged K
-- <a id="link_tagged"></a>The link from a mark M to a mark N is tagged K
+- <a id="tagged"></a>A mark M is tagged a tag K
+- <a id="link_tagged"></a>The link from a mark M to a mark N is tagged a tag K
 - <a id="labelled"></a>A mark M reads S
 - <a id="level"></a>A mark M is at the level I
 - <a id="placed"></a>A mark M is placed at X Y

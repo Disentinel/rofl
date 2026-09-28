@@ -80,14 +80,15 @@ export function diff(before: View, after: View): View {
   const now = new Set(after.facts.map((f) => f.literal)), was = new Set(before.facts.map((f) => f.literal));
   const facts: Fact[] = [...before.facts.map((f) => now.has(f.literal) ? f : { ...f, change: 'gone' as const }), ...after.facts.filter((f) => !was.has(f.literal)).map((f) => ({ ...f, change: 'new' as const }))];
   const marks: Record<string, Mark> = {};
-  for (const [id, m] of Object.entries(before.marks)) marks[id] = after.marks[id] ?? { ...m, tags: [...m.tags, 'gone'] };
-  for (const [id, m] of Object.entries(after.marks)) marks[id] ??= { ...m, tags: [...m.tags, 'new'] };
+  for (const [id, m] of [...Object.entries(before.marks), ...Object.entries(after.marks)]) marks[id] = { ...(after.marks[id] ?? m), tags: [...(after.marks[id] ?? m).tags] };
+  // a mark changes with the facts about it: one only before is gone, one only after is new, and a mark in both can be either or both
+  for (const f of facts) if (f.change && marks[f.args[0]]) tag(marks[f.args[0]], f.change);
   const n = (c: string) => facts.filter((f) => f.change === c).length;
   return { kind: after.kind, facts, marks, notes: [...after.notes, `what-if: ${n('gone')} view facts gone, ${n('new')} new`] };
 }
 
 /** A link's own tags: its link_tagged rows, a dangling end, and a change a what-if made. */
-const linkTags = (v: View, f: Fact) => [...v.facts.filter((x) => x.rel === 'link_tagged' && x.args[0] === f.args[0] && x.args[1] === f.args[1]).map((x) => unquote(x.args[2])),
+export const linkTags = (v: View, f: Fact) => [...v.facts.filter((x) => x.rel === 'link_tagged' && x.args[0] === f.args[0] && x.args[1] === f.args[1]).map((x) => unquote(x.args[2])),
   ...(v.marks[f.args[1]]?.tags.includes('dangling') || v.marks[f.args[0]]?.tags.includes('dangling') ? ['dangling'] : []), ...(f.change ? [f.change] : [])];
 
 // ------------------------------------------------------------ text backends
@@ -215,7 +216,7 @@ function sequence(v: View): string {
 }
 
 const order = (xs: string[]) => [...new Set(xs)].sort((a, b) => (/^-?\d+$/.test(a) && /^-?\d+$/.test(b) ? Number(a) - Number(b) : 0) || unquote(a).localeCompare(unquote(b)));
-function grid(v: View) {
+export function grid(v: View) {
   const vals = v.facts.filter((f) => f.rel === 'value');
   return { vals, rows: order(vals.map((f) => f.args[0])), cols: order(vals.map((f) => f.args[1])) };
 }

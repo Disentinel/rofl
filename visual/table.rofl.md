@@ -14,7 +14,7 @@ Declared as facts:
 - <a id="value"></a>A row R in a column C has the value V
 - <a id="draws"></a>The chart draws a mark K
 - <a id="shows"></a>The channel Ch shows the column C as a type Ty
-- <a id="tagged"></a>A mark M is tagged K
+- <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="reserved"></a>A tag K is reserved
 
 > `draws` takes `bar`, `rect`, `point`, `line` or `text`; `shows` a channel
