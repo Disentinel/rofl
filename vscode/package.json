@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@types/vscode": "1.90",
-    "@vscode/test-electron": "^3.1.0"
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0"
   }
 }
