@@ -52,8 +52,12 @@ export function cellsOf(text: string): NbCell[] {
   return cells;
 }
 
-/** A natural cell that is answered: the next cell is a rofl or a datalog one. */
-export const translated = (cells: NbCell[], c: NbCell): boolean => cells[c.index + 1]?.kind === 'rofl' || cells[c.index + 1]?.kind === 'datalog';
+/** A natural cell that is answered: a rofl or a datalog cell follows it in the same section, no heading between. */
+export const translated = (cells: NbCell[], c: NbCell): boolean => {
+  const n = cells[c.index + 1];
+  if (n?.kind !== 'rofl' && n?.kind !== 'datalog') return false;
+  return cells[0].text.split('\n').slice(c.line + c.text.split('\n').length, n.line - 2).every((l) => !/^#/.test(l));
+};
 
 /** The files, from the root of the tree, whose text the kernel needs: the model and the vocabulary it is read in. A rendered model's file is read in that model's words. */
 export function libFiles(path: string, front: Front): { model: string[]; phrases: string[] } {
