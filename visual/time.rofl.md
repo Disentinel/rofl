@@ -18,6 +18,8 @@ Declared as facts:
 - <a id="message"></a>A mark M goes from a lane P to a lane Q at T
 - <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="frame"></a>A mark M is in the frame F
+- <a id="collapsed"></a>A mark G is collapsed
+- <a id="lane_group"></a>A lane L is in the group G
 - <a id="labelled"></a>A mark M reads S
 - <a id="reserved"></a>A tag K is reserved
 

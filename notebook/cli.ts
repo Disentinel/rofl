@@ -15,7 +15,7 @@ import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
-import { counted, framesOf, type View } from './draw.ts';
+import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -116,8 +116,8 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
       if (l.view) {
         for (const n of l.view.notes) out.push(`    note: ${n}`);
         const block = (v: View) => { const b = backendOf(v, format), t = b.write(v); return b.fence ? ['```' + b.fence, t, '```'] : [t]; };
-        const frames = framesOf(l.view);
-        out.push(...(frames ? frames.flatMap((f) => [`frame ${f.key}:`, ...block(f.view)]) : block(l.view)).join('\n').split('\n').map((x) => `    ${x}`));
+        const z = zoom(l.view), frames = framesOf(z);
+        out.push(...(frames ? frames.flatMap((f) => [`frame ${f.key}:`, ...block(f.view)]) : block(z)).join('\n').split('\n').map((x) => `    ${x}`));
       }
     }
   }

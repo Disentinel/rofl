@@ -16,9 +16,9 @@ export type Mark = { label: string; tags: string[]; from: string[]; on: string[]
 export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[] };
 
 const RELS: Record<DrawKind, [string, number][]> = {
-  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2]],
-  argument: [['node', 1], ['link', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2]],
-  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2]],
+  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1]],
+  argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
+  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
 };
 const VARS = ['A', 'B', 'C', 'D'];
@@ -52,7 +52,7 @@ export function collect(kind: DrawKind, w: World): View {
     for (const f of is('node')) mark(f.args[0], f);
     for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');
   }
-  if (kind === 'time') for (const f of facts) if (f.rel !== 'tagged' && f.rel !== 'labelled') mark(f.args[0], f);
+  if (kind === 'time') for (const f of facts) if (['lane', 'during', 'happens', 'message'].includes(f.rel)) mark(f.args[0], f);
   if (kind === 'table') for (const f of is('value')) mark(f.args[0], f);
   for (const f of is('labelled')) if (marks[f.args[0]]) marks[f.args[0]].label = unquote(f.args[1]);
   for (const f of is('tagged')) { mark(f.args[0], f); tag(marks[f.args[0]], unquote(f.args[1])); }
@@ -128,6 +128,45 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
     }
     return { key, view: now };
   });
+}
+
+/** The groups a view starts with shut: `A mark G is collapsed`. */
+export const shutOf = (v: View) => new Set(v.facts.filter((f) => f.rel === 'collapsed').map((f) => f.args[0]));
+
+/** Zoom: every group in `shut` drawn as one mark labelled with how many it holds, its members' tags on it; a link or a message inside it goes,
+ *  one across its edge ends at it. A graph's group is what marks are `inside`; a timeline's is what lanes are in (`A lane L is in the group G`).
+ *  The count is the picture's, from membership, not the engine's. */
+export function zoom(v: View, shut = shutOf(v)): View {
+  if (!shut.size) return v;
+  const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]]));
+  const top = (m: string) => { let out = m; for (let g = m, seen = new Set<string>(); parent.has(g) && !seen.has(g); ) { seen.add(g); g = parent.get(g)!; if (shut.has(g)) out = g; } return out; };
+  const group = new Map(v.facts.filter((f) => f.rel === 'lane_group' && shut.has(f.args[1])).map((f) => [f.args[0], f.args[1]]));
+  const held = new Map<string, Set<string>>(), hold = (g: string, m: string) => (held.get(g) ?? held.set(g, new Set()).get(g)!).add(m);
+  for (const id of Object.keys(v.marks)) if (top(id) !== id) hold(top(id), id);
+  for (const [l, g] of group) hold(g, l);
+  const name = (g: string) => `${v.marks[g]?.label ?? unquote(g)} (${held.get(g)?.size ?? 0})`;
+  const lane = (l: string) => group.has(l) ? JSON.stringify(name(group.get(l)!)) : l;
+  const facts: Fact[] = [], seen = new Set<string>();
+  const put = (f: Fact) => { const literal = `${f.rel}(${f.args.join(', ')})`; if (!seen.has(literal)) { seen.add(literal); facts.push({ ...f, literal }); } };
+  for (const f of v.facts) {
+    if (f.rel === 'collapsed' || f.rel === 'lane_group' && shut.has(f.args[1])) continue;
+    if (f.rel === 'inside' && top(f.args[0]) !== f.args[0]) continue;
+    if (f.rel === 'placed' && top(f.args[0]) !== f.args[0]) continue;
+    if (f.rel === 'link' || f.rel === 'link_tagged') { const [a, b] = [top(f.args[0]), top(f.args[1])]; if (a !== b) put({ ...f, args: [a, b, ...f.args.slice(2)] }); continue; }
+    if (f.rel === 'lane') { put({ ...f, args: [f.args[0], lane(f.args[1])] }); continue; }
+    if (f.rel === 'message') { const [a, b] = [lane(f.args[1]), lane(f.args[2])]; if (a !== b || !group.has(f.args[1])) put({ ...f, args: [f.args[0], a, b, f.args[3]] }); continue; }
+    put({ ...f, args: [top(f.args[0]), ...f.args.slice(1)] });
+  }
+  const marks: Record<string, Mark> = {};
+  for (const [id, m] of Object.entries(v.marks)) { const t = top(id); if (t === id) marks[id] = { ...m, tags: [...m.tags] }; }
+  for (const g of new Set(group.values())) put({ rel: 'lane_group', args: [JSON.stringify(name(g)), g], literal: '', from: [] });   // a shut lane group still names its group
+  for (const [g, ms] of held) if ([...ms].some((m) => v.marks[m])) {   // a graph's group becomes a mark; a timeline's is a lane
+    const had = [...ms].flatMap((m) => v.marks[m]?.tags ?? []);
+    marks[g] = { label: name(g), tags: [...new Set([...(v.marks[g]?.tags ?? []), ...had, 'collapsed'])], from: v.marks[g]?.from ?? [], on: [] };
+    put({ rel: 'node', args: [g], literal: '', from: [] });
+  }
+  const named = new Set(facts.flatMap((f) => f.args));   // a mark whose every fact went inside a shut group goes with them
+  return { ...v, facts, marks: Object.fromEntries(Object.entries(marks).filter(([id]) => named.has(id))) };
 }
 
 /** What the picture holds, counted: the verdict of a draw line. */

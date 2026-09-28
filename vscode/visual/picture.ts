@@ -11,12 +11,12 @@ export type Hooks = {
   /** where a graph's marks were laid, as placed(M, X, Y) facts, each time it is drawn: what a test reads back */
   laid?(facts: string[]): void;
   /** what was drawn, once it is: the frames, each by its key, so a test can read the picture back */
-  drawn?(what: { frames: string[] }): void;
+  drawn?(what: { frames: string[]; labels: string[] }): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
   libs(): Promise<boolean>;
 };
-/** A kind's module: `mount` draws the view into `el`, and calls `detail` when a mark is picked. */
-export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void): Promise<void> | void };
+/** A kind's module: `mount` draws the view into `el`, calls `detail` when a mark is picked and `toggle` when a group is (zoom). */
+export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void, toggle: (group: string) => void): Promise<void> | void };
 
 export const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const tagsOf = (v: View, id: string) => v.marks[id]?.tags ?? [];
@@ -70,7 +70,8 @@ export function style(doc: Document): void {
 .rofl-pic .tag { font: 11px var(--p-mono); padding: 1px 6px; border-radius: 3px; background: var(--p-soft); color: var(--p-mute); }
 .rofl-pic table.view { border-collapse: collapse; margin: 8px; font: 12.5px var(--p-mono); }
 .rofl-pic table.view th, .rofl-pic table.view td { border: 1px solid var(--p-line); padding: 4px 9px; text-align: left; }
-.rofl-pic [data-mark] { cursor: pointer; }
+.rofl-pic [data-mark], .rofl-pic [data-group] { cursor: pointer; }
+.rofl-pic svg text[data-group] { text-decoration: underline dotted; }
 .rofl-pic svg { display: block; }
 .rofl-pic svg text { font: 11px var(--p-mono); fill: var(--p-fg); }
 .rofl-pic svg .axis text { fill: var(--p-mute); }

@@ -18,6 +18,7 @@ Declared as facts:
 - <a id="inside"></a>A mark M is inside a mark G
 - <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="frame"></a>A mark M is in the frame F
+- <a id="collapsed"></a>A mark G is collapsed
 - <a id="link_tagged"></a>The link from a mark M to a mark N is tagged a tag K
 - <a id="labelled"></a>A mark M reads S
 - <a id="level"></a>A mark M is at the level I

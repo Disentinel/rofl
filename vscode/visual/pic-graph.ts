@@ -6,7 +6,7 @@ declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; on
   nodes(): { filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
 declare const ELK: new () => { layout(g: object): Promise<{ children: { id: string; x: number; y: number; width: number; height: number }[] }> };
 
-async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void): Promise<void> {
+async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void, toggle: (group: string) => void): Promise<void> {
   el.innerHTML = '<div class="cy"></div>';
   const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
   const placed = new Map(v.facts.filter((f) => f.rel === 'placed').map((f) => [f.args[0], { x: Number(f.args[1]), y: Number(f.args[2]) }]));
@@ -39,11 +39,12 @@ async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fa
       { selector: '.gone', style: { opacity: 0.4, 'border-style': 'dashed', 'line-style': 'dashed' } },
       { selector: '.new', style: { 'border-color': c('--p-pass'), 'border-width': 3, 'line-color': c('--p-pass'), 'target-arrow-color': c('--p-pass') } },
       { selector: 'edge.attack', style: { 'line-color': c('--p-fail'), 'target-arrow-color': c('--p-fail'), 'target-arrow-shape': 'tee', 'line-style': 'dashed' } },
+      { selector: '.collapsed', style: { 'border-style': 'double', 'border-width': 4, 'font-weight': 'bold' } },
       { selector: ':selected', style: { 'overlay-color': c('--p-accent'), 'overlay-opacity': 0.15 } },
     ],
   });
   cy.fit(undefined, 16);
-  cy.on('tap', 'node', (e) => detail(e.target.id()));
+  cy.on('tap', 'node', (e) => groups.has(e.target.id()) || tagsOf(v, e.target.id()).includes('collapsed') ? toggle(e.target.id()) : detail(e.target.id()));
   cy.on('tap', 'edge', (e) => detail(e.target.data('source'), e.target.data('fact')));
   layouts.set(el, () => cy.nodes().filter((n) => !n.hasClass('group')).map((n) => `placed(${n.id()}, ${Math.round(n.position('x'))}, ${Math.round(n.position('y'))}).`).sort());
 }
