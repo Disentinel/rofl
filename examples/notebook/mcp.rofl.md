@@ -4,7 +4,7 @@ books: main
 default: main
 model: js
 code:
-  - ../../../grafema/packages/mcp/src/**/*.ts
+  - ~/grafema/packages/mcp/src/**/*.ts
 ---
 
 # A reviewer's audit of the Grafema MCP server
