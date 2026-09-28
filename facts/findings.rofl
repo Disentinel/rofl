@@ -4,6 +4,15 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-28 by the notebook-dist session: the notebook installs without a checkout.
+
+finding(f_the_notebook_ships_without_a_checkout, decision).
+recorded(f_the_notebook_ships_without_a_checkout, "2026-09-28").
+demands(f_the_notebook_ships_without_a_checkout, code).
+addressed_by(f_the_notebook_ships_without_a_checkout, "scripts/dist.ts").
+addressed_by(f_the_notebook_ships_without_a_checkout, "vscode/test/dist.ts").
+finding_note(f_the_notebook_ships_without_a_checkout, "npm run dist writes dist/rofl-nb-<v>.tgz (461 KB, `npm install -g` gives `rofl-nb`) and dist/rofl-notebook-<v>.vsix (498 KB): one tree of the 24 modules the command line, the kept kernel and the extension import, transpiled in place by typescript's transpileModule, the model's .rofl files beside them, @babel/parser vendored; the VSIX holds it under rofl-nb/ behind a CommonJS main that imports it, and resolves `vscode` with createRequire. FLOORS, MEASURED: Node 22, because fs.globSync (notebook/cli.ts, serve.ts) is absent in Node 20 (20.13.1: SyntaxError at import); VS Code 1.101, the first on Node 22 (ELECTRON_RUN_AS_NODE: 1.100.3 is Node 20.19.0 without globSync, 1.101.0 is 22.15.1 with it), and 1.100.3 refuses to install the VSIX. Below 22.17 globSync prints an ExperimentalWarning on stderr. TWO BUGS A CHECKOUT HID: the entry test compared argv[1] with the module's URL, so through npm's bin symlink cli.js did nothing and exited 0; and ROOT was a URL pathname, %20 for a space. Both now go through realpath and fileURLToPath; the daemon is spawned with the command line's own execArgv rather than a hard --experimental-strip-types. test:dist (30 s): the package's --json on review equals the tree's, both starters run outside the tree, and the VSIX installed into an empty extensions dir runs them in VS Code with the package's --json; three planted defects each turned it red (a model file left out, the extension installed elsewhere, a package verdict changed). ALSO MEASURED on grafema-dev from the tarball alone (node 22.22.3): review 0.4 s, small 4.9 s, a notebook over the package's own JS 15.7 s (5 async functions found), daemon cold 4.9 s then warm 0.7 s; VS Code 1.139.1 and 1.101.0 green. NOT VERIFIED: Windows (the daemon's unix socket; a failed connect falls back to in-process, untried), Linux VS Code, translate from the installed package.").
+
 -- Recorded 2026-09-28 by the notebook-serve session: the command line keeps its kernel, and what a kept kernel does not buy.
 
 finding(f_the_command_line_keeps_its_kernel_in_a_daemon, decision).
