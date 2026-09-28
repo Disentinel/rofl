@@ -341,7 +341,8 @@ const reader = (name: string, forever = false) => { const f = path.join(tmp, `${
 const fs = require('fs'); let i = '';
 process.stdin.on('data', (d) => { i += d; }).on('end', () => {
   const n = fs.readdirSync(${JSON.stringify(dir)}).length + 1; fs.writeFileSync(${JSON.stringify(dir)} + '/prompt.' + n, i);
-  if (n === 1 || (${forever} && n < 12)) console.log(${JSON.stringify(READS.join('\n'))});
+  const reads = process.env.ROFL_FAKE_MANY ? ['show src/a.ts:16-20', ...${JSON.stringify(READS)}, ...Array(30).fill('list src/**')] : ${JSON.stringify(READS)};
+  if (n === 1 || (${forever} && n < 12)) console.log(reads.join('\\n'));
   else console.log('\`\`\`rofl\\nA module M is unowned if some change touches M, unless some team owns M.\\n\\nnever M is unowned\\n\`\`\`');
 });
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
@@ -360,6 +361,9 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['grep time limit', 'notebook/reader.ts', /timeout: GREP_MS, /, '', ['small']],
   ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
   ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
+  ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
+  ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
+  ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever']],
   ['budget', 'notebook/reader.ts', /if \(used \+ l\.length \+ 1 > room\) break; /, '', ['small']],
   ['rounds', 'notebook/cli.ts', /round <= ROUNDS; round\+\+/, 'round <= 99; round++', ['forever']],
   ['logging', 'notebook/cli.ts', /reads\.push\(x\.read\); /, ''],
@@ -369,7 +373,7 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
 async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]> {
   const bad: string[] = [];
   const env: Record<string, [Record<string, string>, boolean, boolean]> = {
-    plain: [{}, false, false], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, false], forever: [{ ROFL_NB_READ_ROUNDS: '3' }, true, false],
+    plain: [{}, false, false], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, false], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, false],
     // a notebook git does not track, and a repository that is the home directory: nothing is read
     untracked: [{}, false, true], home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, false],
   };
@@ -394,7 +398,16 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   if (small) {
     // a grep stopped at its limit is a refusal, not no match
     if (!small.prompts[1]?.includes('refused: grep TOKEN_9f2: timed out after 0.001 s')) bad.push(`a grep stopped at its time limit does not say so: ${(small.prompts[1] ?? '').slice((small.prompts[1] ?? '').indexOf('> grep TOKEN'), (small.prompts[1] ?? '').indexOf('> grep TOKEN') + 200)}`);
+    // none is answered once the budget is spent: the kernel is not asked
+    const s2 = small.prompts[1] ?? '';
+    if (!s2.includes('> ? C is blocked by T\nrefused: the read budget is spent')) bad.push(`a request after the budget was spent was still answered: ${s2.slice(s2.indexOf('> ? C'), s2.indexOf('> ? C') + 200)}`);
     if (!small.prompts[1]?.includes('the read budget is spent') || (small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length > 600 + 1500) bad.push(`600 bytes of reading were not held to: the second prompt grew by ${(small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length}`);
+  }
+  if (forever) {
+    // a request past the 20th is not answered, and a file is read only to its cap
+    const f2 = forever.prompts[1] ?? '';
+    if (!f2.includes('> list src/**\n(not answered: at most 20 requests a round)')) bad.push('a round of 44 requests was answered past the 20th');
+    if (!f2.includes('only its first 1000 are read')) bad.push(`a file was read past its cap: ${f2.slice(f2.indexOf('> show src/a.ts:16-20'), f2.indexOf('> show src/a.ts:16-20') + 300)}`);
   }
   if (forever && (forever.o.code !== 2 || !forever.o.out.includes('still asked to read after 3 rounds') || forever.prompts.length !== 4)) bad.push(`a model that only reads was not stopped after 3 rounds: exit ${forever.o.code}, ${forever.prompts.length} calls`);
   return bad;

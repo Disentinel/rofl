@@ -17,7 +17,7 @@ import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
-import { answer, BUDGET, gitFiles, PROTOCOL, readTracked, requestsOf, ROUNDS, type Repo } from './reader.ts';
+import { answer, BUDGET, gitFiles, PER_ROUND, PROTOCOL, readTracked, requestsOf, ROUNDS, type Repo } from './reader.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -328,7 +328,12 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   const converse = async (p: string) => {
     let a = await ask(p + convo);
     for (let round = 1; a.ok && requestsOf(a.text).length && round <= ROUNDS; round++) {
-      const reqs = requestsOf(a.text), got = reqs.map((r) => { const x = answer(cx.repo, r, Math.max(0, left), question); left -= x.text.length; reads.push(x.read); return `> ${r}\n${x.text}`; });
+      // at most PER_ROUND requests are answered, and none once the budget is spent: an answer costs work before it costs bytes
+      const reqs = requestsOf(a.text), got = reqs.map((r, i) => {
+        if (i >= PER_ROUND) return `> ${r}\n(not answered: at most ${PER_ROUND} requests a round)`;
+        if (left <= 0) return `> ${r}\nrefused: the read budget is spent`;
+        const x = answer(cx.repo, r, left, question); left -= x.text.length; reads.push(x.read); return `> ${r}\n${x.text}`;
+      });
       step(`${who} read: ${reads.slice(-3).join(' · ')}`);
       convo += `\n\nYou asked:\n${reqs.join('\n')}\nThe answers:\n${got.join('\n')}${round === ROUNDS || left <= 0 ? '\nThat was the last of the reading: write the cell now.' : ''}`;
       a = await ask(p + convo);

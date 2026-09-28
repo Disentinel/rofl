@@ -2,12 +2,15 @@
 // secrets, nothing outside it and no link out of it. A model asks in lines (`list`, `grep`, `show`, `?`), this answers them, within a number
 // of rounds and a number of bytes, and says each read. The model's own tools stay off (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
-import { readFileSync, realpathSync } from 'node:fs';
+import { closeSync, openSync, readSync, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 export const ROUNDS = Number(process.env.ROFL_NB_READ_ROUNDS ?? 6);
 export const BUDGET = Number(process.env.ROFL_NB_READ_BUDGET ?? 200_000);
+export const PER_ROUND = 20;
+/** The most of one file read: a request for line 1 of a huge file does not read the whole of it. */
+const FILE_BYTES = Number(process.env.ROFL_NB_READ_FILE_BYTES ?? 1_000_000);
 /** Left out even when tracked: a file whose name looks like a secret. */
 export const SECRET = new RegExp(String.raw`(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx|kdbx|jks|asc|tfstate|tfstate\.backup)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*`
   + String.raw`|\.npmrc|\.netrc|\.pgpass|\.pypirc|\.vault-token|kubeconfig|auth\.json|service-account[^/]*\.json|\.[^/]*_history|\.kube/config|\.docker/config\.json)$|(^|/)\.gnupg/`, 'i');
@@ -54,7 +57,11 @@ function resolve(repo: Repo, asked: string): { file: string } | { refused: strin
 /** The one way to read a file of the repository: the path resolved and checked, then read; its lines, or why not. */
 export function readTracked(repo: Repo, asked: string): { file: string; lines: string[] } | { refused: string } {
   const r = resolve(repo, asked);
-  return 'refused' in r ? r : { file: r.file, lines: readFileSync(path.join(repo.root, r.file), 'utf8').split('\n') };
+  if ('refused' in r) return r;
+  const at = path.join(repo.root, r.file), size = statSync(at).size, buf = Buffer.alloc(Math.min(size, FILE_BYTES)), fd = openSync(at, 'r');
+  try { readSync(fd, buf, 0, buf.length, 0); } finally { closeSync(fd); }
+  const lines = buf.toString('utf8').split('\n');
+  return { file: r.file, lines: size > FILE_BYTES ? [...lines.slice(0, -1), `(the file is ${size} bytes; only its first ${FILE_BYTES} are read)`] : lines };
 }
 /** Whether a path may be read, without reading it: for a line git grep found. */
 export const readable = (repo: Repo, asked: string) => !('refused' in resolve(repo, asked));
