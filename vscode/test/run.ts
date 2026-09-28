@@ -5,6 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { vscodeLock } from './lock.ts';
 
 const ROOT = new URL('../..', import.meta.url).pathname, EXT = path.join(ROOT, 'vscode');
 const CODE = process.env.ROFL_VSCODE ?? '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
@@ -13,6 +14,7 @@ const made = new Set([tmp]);
 process.on('exit', () => made.forEach((d) => rmSync(d, { recursive: true, force: true })));
 // a VS Code left running would write its user dir back after the removal
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
+vscodeLock();
 const t0 = performance.now();
 spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/renderer.ts')], { stdio: 'inherit' });   // the notebook renderer the extension declares
 

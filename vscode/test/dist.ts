@@ -8,9 +8,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
+import { vscodeLock } from './lock.ts';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url)), DIST = path.join(ROOT, 'dist');
 const arg = (k: string) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : undefined; };
+if (!process.argv.includes("--cli")) vscodeLock();
 const t0 = performance.now(), tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-dist-'));
 process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
