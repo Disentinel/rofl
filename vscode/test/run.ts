@@ -9,7 +9,8 @@ import * as path from 'node:path';
 const ROOT = new URL('../..', import.meta.url).pathname, EXT = path.join(ROOT, 'vscode');
 const CODE = process.env.ROFL_VSCODE ?? '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-vscode-'));
-process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));
+const made = new Set([tmp]);
+process.on('exit', () => made.forEach((d) => rmSync(d, { recursive: true, force: true })));
 // a VS Code left running would write its user dir back after the removal
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
 const t0 = performance.now();
@@ -72,6 +73,7 @@ const one = async (v: string) => {
   if (BREAKS[v]) {
     const [file, at, plant] = BREAKS[v];
     dir = path.join(ROOT, `vscode-break-${v}`);
+    made.add(dir);
     cpSync(EXT, dir, { recursive: true, filter: (s) => !s.includes('node_modules') });
     const text = readFileSync(path.join(EXT, file), 'utf8');
     if (!at.test(text)) throw new Error(`${v}: the planted defect did not apply`);
