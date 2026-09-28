@@ -62,8 +62,30 @@ export async function run() {
     if (bad.length) break;
   }
   if (!bad.length) await translate(process.env.ROFL_NB_TRANSLATE!, bad);
+  if (!bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** A rule that climbs for ever, stopped: every cell ends at once, and the next run, in a new worker, answers what the command line does. */
+async function interrupt(file: string, again: Case, api: Api, bad: string[]) {
+  const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
+  await vscode.window.showNotebookDocument(nb);
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+  const cell = nb.getCells().find((c) => c.document.languageId === 'datalog')!;
+  void vscode.commands.executeCommand('notebook.execute');
+  await new Promise((f) => setTimeout(f, 3_000));
+  const t0 = Date.now();
+  await vscode.commands.executeCommand('notebook.cancelExecution');
+  await until(() => cell.executionSummary?.success !== undefined || undefined, 5_000, 'Stop to end the runaway').catch(() => bad.push(`${file}: Stop did not end the run in 5 s`));
+  const stopped = Date.now() - t0;
+  if (bad.length) return;
+  const other = await vscode.workspace.openNotebookDocument(vscode.Uri.file(again.file)), before = api.result(other.uri);
+  await vscode.window.showNotebookDocument(other);
+  await vscode.commands.executeCommand('notebook.execute');
+  const r = await until(() => api.result(other.uri) !== before ? api.result(other.uri) : undefined, 60_000, 'a run after Stop').catch(() => undefined);
+  if (!r || strip(r) !== strip(JSON.parse(readFileSync(again.cli, 'utf8')))) bad.push(`${again.file}: the run after Stop is not the command line's --json`);
+  console.log(`${file}: run after Stop, ${r ? 'answered' : 'no answer'}: ${stopped} ms`);
 }
 
 /** The command, with the model pointed at a script: a rofl cell appears under the natural cell, which stays; the file on disk does not change. */

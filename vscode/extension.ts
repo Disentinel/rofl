@@ -26,6 +26,13 @@ function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Re
   stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
   return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step }); worker!.postMessage({ id, op, file, text, unsaved, cell }); });
 }
+/** The worker ended, mid-run or not: what waits on it fails, and the next run starts another, which loads the model again. */
+function restart() {
+  void worker?.terminate();
+  worker = undefined;
+  for (const p of waiting.values()) p.fail(new Error('stopped: the kernel was restarted'));
+  waiting.clear();
+}
 
 const docOf = (nb: vscode.NotebookDocument): Doc => ({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
 const cellsOf = (d: Doc) => d.cells.map((c) => Object.assign(new vscode.NotebookCellData(c.kind, c.value, c.languageId), { metadata: c.metadata }));
@@ -54,7 +61,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     const execs = new Map<vscode.NotebookCell, vscode.NotebookCellExecution>();
     try { for (const c of front ? [front, ...runs] : runs) execs.set(c, controller.createNotebookCellExecution(c)); }
     catch { for (const e of execs.values()) { e.start(); e.end(undefined); } return; }   // a run of this notebook is already going
-    for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); }
+    // Stop: a run cannot be told anything while it computes, so its worker goes
+    for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); e.token.onCancellationRequested(restart); }
     const out = (shown: Shown[]) => shown.flatMap((s) => [
       ...(s.md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(s.md, 'text/markdown')])] : []),
       ...(s.err ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.stderr(s.err)])] : [])]);
@@ -256,7 +264,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('rofl-notebook.translateCell', (c?: vscode.NotebookCell) => translateOne(cellArg(c))),
     vscode.commands.registerCommand('rofl-notebook.refine', (c?: vscode.NotebookCell, words?: string) => refine(cellArg(c), words)),
     vscode.commands.registerCommand('rofl-notebook.revert', (c?: vscode.NotebookCell) => revert(cellArg(c))),
-    vscode.commands.registerCommand('rofl-notebook.reveal', reveal));
+    vscode.commands.registerCommand('rofl-notebook.reveal', reveal),
+    vscode.commands.registerCommand('rofl-notebook.restart', restart));
   translations();
   // A .rofl.md named on the `code` command line opens as text before this extension's notebook is known; reopen it as the notebook.
   for (const tab of vscode.window.tabGroups.all.flatMap((g) => g.tabs)) {
