@@ -2,7 +2,7 @@
 // secrets, nothing outside it and no link out of it. A model asks in lines (`list`, `grep`, `show`, `?`), this answers them, within a number
 // of rounds and a number of bytes, and says each read. The model's own tools stay off (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
-import { closeSync, openSync, readSync, realpathSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readSync, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -30,6 +30,7 @@ export type Repo = { root: string; files: Set<string>; git: boolean; refused?: s
 /** The repository a notebook is in: git's top level and the files it tracks. None to read outside git, when the top level is the home
  *  directory (a dotfiles repository), or when git does not track the notebook itself. */
 export function gitFiles(notebook: string): Repo {
+  if (!existsSync(notebook)) return { root: path.dirname(notebook), files: new Set(), git: false, refused: 'the notebook is not a file on disk' };
   const dir = path.dirname(realpathSync(notebook)), top = runGit(dir, ['rev-parse', '--show-toplevel']);
   if (top.status !== 0) return { root: dir, files: new Set(), git: false, refused: 'the notebook is not in a git repository' };
   const root = realpathSync(top.stdout.trim()), ls = runGit(root, ['ls-files', '-z']);
