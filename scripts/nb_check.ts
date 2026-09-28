@@ -183,7 +183,7 @@ const VERDICTS: Record<string, string> = { 'every never holds, every cell read':
 const verdict = (o: Out): string | null => {
   const text = o.stdout ?? '';
   if (text.startsWith('{')) { try { return JSON.parse(text).status ?? null; } catch { return null; } }
-  const m = [...text.matchAll(/: ([a-z ,]+)$/gm)].map((x) => VERDICTS[x[1]]).filter(Boolean);
+  const m = [...text.matchAll(/: ([a-z ,]+)(?: — not parsed: .*)?$/gm)].map((x) => VERDICTS[x[1]]).filter(Boolean);
   return m.length ? m[m.length - 1] : null;
 };
 const STATUS = ['ok', 'fails', 'unread', 'blind'];

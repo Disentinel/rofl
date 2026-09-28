@@ -1,4 +1,4 @@
-// npm run nb -- <file.rofl.md> [--json] [--cell N]      run a notebook, print what every cell said
+// npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook, print what every cell said
 // npm run nb -- translate <file.rofl.md>                 write a rofl cell under every natural cell that has none
 // Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
 // 3: every never holds, some only as far as the model sees.
@@ -17,7 +17,7 @@ import { viaDaemon } from './serve.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
-const SHOWN = 12;   // answers printed per line; --json has the first fifty
+const SHOWN = 12;   // answers printed per line; --json has the first fifty, --all every one
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk. */
 export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string> } {
@@ -59,7 +59,7 @@ export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
 
-export function print(file: string, r: NbResult, only?: number): string {
+export function print(file: string, r: NbResult, only?: number, shown = SHOWN): string {
   const out: string[] = [];
   for (const e of r.errors) out.push(`${file}: error: ${e}`);
   for (const c of r.cells) {
@@ -71,13 +71,14 @@ export function print(file: string, r: NbResult, only?: number): string {
     for (const l of c.lines) {
       out.push(`  ${file}:${l.line}: ${l.text}${VERDICT(l) ? `  ->  ${VERDICT(l)}` : ''}`);
       if (l.verdict === 'unasked') continue;
-      for (const a of l.answers.slice(0, SHOWN)) out.push(`    - ${a.sentence}`);
-      if (l.total > SHOWN) out.push(`    ... ${l.total - SHOWN} more`);
+      for (const a of l.answers.slice(0, shown)) out.push(`    - ${a.sentence}`);
+      if (l.total > shown) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
     }
   }
-  out.push(`${file}: ${SAID[r.status]}`);   // the verdict line, read by npm run test:nb as it is
+  const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
+  out.push(`${file}: ${SAID[r.status]}${unparsed.length ? ` — not parsed: ${unparsed.join(', ')}` : ''}`);   // the verdict line, read by npm run test:nb
   return out.join('\n');
 }
 
@@ -262,7 +263,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 
-const HELP = `npm run nb -- <file.rofl.md> [--json] [--cell N]   run a notebook: what every cell says
+const HELP = `npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook: what every cell says
 npm run nb -- translate <file.rofl.md>             Claude writes a rofl cell under every natural cell without one
 npm run nb -- vocab [<file.rofl.md>] [word]         the sentences a cell can use over code (or over that notebook's model), those with the word
 
@@ -276,6 +277,7 @@ Asking lines, one per line, in a rofl or datalog cell:
   extends R    this cell adds rules to R on purpose
 Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees.
 --json      the whole result as JSON (the first fifty answers per line)       --cell N   only cell N
+--all       every answer of every line, in the text and in the JSON; runs in this process, not the kept kernel
 The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
 ROFL_NB_DAEMON=0 runs in this process instead.
 Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).`;
@@ -304,9 +306,9 @@ if (isMain) {
   const file = named;
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: NbResult;
-  const d = await viaDaemon(file);
-  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
+  const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
-  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only)) + '\n', () => process.exit(EXIT[r.status]));
+  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN)) + '\n', () => process.exit(EXIT[r.status]));
 }

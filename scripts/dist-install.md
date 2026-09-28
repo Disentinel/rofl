@@ -22,6 +22,7 @@ code (`a function F may throw`, `a call C resolves to a function F`, ...) is lis
 ## For an agent
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   what every cell says; --json for a program
+    rofl-nb <file.rofl.md> --all                 every answer: the text shows 12 a line, the JSON 50
     rofl-nb translate <file.rofl.md>             Claude writes a rofl cell under each natural cell
     rofl-nb vocab [<file.rofl.md>] [word]        the sentences a cell can say over code, those with the word
     rofl-nb --help                               the cell language and the exit codes

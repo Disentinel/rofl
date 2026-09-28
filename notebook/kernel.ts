@@ -19,8 +19,8 @@ export class Kernel {
   private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
 
-  /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. */
-  constructor(opts: { whole?: boolean } = {}) { this.whole = !!opts.whole; }
+  /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty. */
+  constructor(opts: { whole?: boolean; all?: boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; }
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
