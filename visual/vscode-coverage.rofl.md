@@ -45,7 +45,6 @@ done(tb_table, v_render, "vscode/test/suite.ts").   done(tb_table, v_status, "vs
 done(K, v_compare, "vscode/test/suite.ts") :- first_wave(K).
 -- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl, and a notebook reading it carries the
 -- placed facts the renderer lays the marks at (vscode/test/suite.ts, pin; planted: --break pin). The renderer's use of them was seen, not tested.
-done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, "vscode/test/suite.ts").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 
@@ -53,6 +52,13 @@ done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
 waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
 waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL marks") :- lens(L), L != v_render, L != v_example, L != v_docs, L != v_test.
+waived(K, v_zoom, "a table's grouping is the query; group-by counts come with engine aggregates (another session)") :- family(K, table).
+
+-- what a lens means where it is not plain: v_frames is small multiples, one picture per value of a view fact's frame key in order, each
+-- mark new or gone against the frame before it (compare, reused); an animation or a slider is not asked for, since small multiples show
+-- the same thing at once and can be tested. v_zoom collapses a group into one mark labelled with its member count, expanded on click; the
+-- count is the renderer's, from membership, never an engine aggregate. v_geometry is done only when a test reads back where the renderer put
+-- a placed mark.
 
 -- the plan, by family: a work item owns rows, across every lens but the shared three (frames, zoom, docs), so two agents never share a file
 -- (each family writes its own vscode/visual/pic-*.ts, notebook/draw-*.ts and examples/visual/*; a family agent adds done/waived facts for its rows only)
@@ -68,8 +74,10 @@ work(wN, "notation: the emitted standard file, opened in a VS Code preview").
 work(wF, "frames: one view per tick, small multiples or animation, every kind (the shared frame)").
 work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
-state(w1, done). state(w2a, done). state(w3a, done). state(w11a, done).
+state(w1, done). state(w2a, done). state(w3a, open). state(w11a, done).
 state(wG, open). state(wT, open). state(wB, open). state(wS, open). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
+-- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
+owner(w3a, nb_draw). owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wS, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 core(v_render). core(v_why). core(v_status).
@@ -102,6 +110,8 @@ false_done(W, K, L) :- claims(W, K, L), state(W, done), open_cell(K, L).
 double_owned(K, L, A, B) :- claims(A, K, L), claims(B, K, L), not state(A, done), not state(B, done), A != B.
 stateless(W) :- work(W, _), not has_state(W).
 unknown_axis(K) :- claims(_, K, _), not kind(K).
+owned(W) :- owner(W, _).
+ownerless(W) :- state(W, open), not owned(W).
 
 ? open_cell(K, L)
 never unqueued(K, L)
@@ -110,6 +120,7 @@ never false_done(W, K, L)
 never double_owned(K, L, A, B)
 never stateless(W)
 never unknown_axis(K)
+never ownerless(W)
 ```
 
 > What has no cell: an n-ary relation drawn as a reified node (a dialect of
