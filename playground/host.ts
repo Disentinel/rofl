@@ -24,7 +24,8 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
   unasked?: string };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
-export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; error?: string };
+/** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
@@ -274,7 +275,8 @@ export class Host {
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
-    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error });
+    let unresolved: string[] = [];
+    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error });
     let base: Rofl | null = null;
     if (layered) {
       try { base = this.evaluated(files, sc); } catch (e) { return done((e as Error).message); }
@@ -282,7 +284,7 @@ export class Host {
     lap('model');
     const f = base ? this.shell!.fork() : this.core.fork();
     const given = base ? copyFacts(base, f, over) : Object.keys(files).length ? f.assert(sc.text) : { ok: true, diagnostics: [] };
-    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
+    if (!given.ok) return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned: [], cells: cells.map((c) => ({ id: c.id, errors: [], notes: [], lines: [] })), nodes, unresolved, error: `the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}` };
     lap('fork');
     // one load evaluates the whole model again, so the cells go in together; only when that is refused does each go in alone, to say which
     const all = texts.filter((x) => x.trim()).join('\n');
@@ -294,6 +296,7 @@ export class Host {
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
     const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
+    unresolved = (base ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
     const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>();

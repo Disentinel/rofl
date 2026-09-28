@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Kernel, type NbLine, type NbResult } from './kernel.ts';
+import { Kernel, unresolvedSaid, type NbLine, type NbResult } from './kernel.ts';
 import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
@@ -52,7 +52,7 @@ export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds
 /** The run's status in a sentence, naming where each failing never is; `at` writes a place, a link in an editor. The command line's last line stays the bare verdict. */
 export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${cell} (line ${line})`): string => {
   const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => at(c.index, l.line)));
-  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '');
+  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
 };
 
 export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
@@ -62,6 +62,7 @@ export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.
 export function print(file: string, r: NbResult, only?: number, shown = SHOWN): string {
   const out: string[] = [];
   for (const e of r.errors) out.push(`${file}: error: ${e}`);
+  if (r.unresolved) out.push(`${file}: note: ${unresolvedSaid(r.unresolved)}, so a never holds only as far as the model sees:`, ...r.unresolved.map((u) => `  ${u}`));
   for (const c of r.cells) {
     if (only !== undefined && c.index !== only) continue;
     if (c.kind === 'prose' && !c.errors.length && !c.notes.length && !c.lines.length && only === undefined) continue;

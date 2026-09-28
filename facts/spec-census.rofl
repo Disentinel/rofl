@@ -69,6 +69,7 @@ check[checks]("facts/goldens.rofl", "loot", world).
 check[checks]("facts/goldens.rofl", "moot", world).
 check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "notebook", world).
+check[checks]("facts/goldens.rofl", "notebook_cjs", world).
 check[checks]("facts/goldens.rofl", "notebook_cli_exits", world).
 check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_mcp", world).

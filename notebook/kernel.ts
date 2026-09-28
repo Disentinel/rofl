@@ -11,7 +11,8 @@ export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: 
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
 /** `blind`: every never holds, some only as far as the model sees; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
-export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; ms: { load: number; run: number; phases?: Record<string, number> } };
+/** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
+export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number> } };
 
 export class Kernel {
   private host = new Host();
@@ -39,6 +40,7 @@ export class Kernel {
     const out = this.host.run(input.code, runs.map(asCell));
     for (const [f, e] of Object.entries(out.parseErrors)) errors.push(`${f}: not parsed: ${e}`);
     if (out.error) errors.push(out.error);
+    const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: said(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
@@ -55,12 +57,13 @@ export class Kernel {
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
       return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked };
+        if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
       }) };
     });
     const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
-    return { status, front, cells: result, errors, ms: { load, run: out.ms, phases: out.phases } };
+    return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases } };
   }
 }
 
@@ -75,6 +78,8 @@ export function nearest(s: string, vocab: string[], n = 3): string[] {
   return sets.map((ws, i) => ({ i, score: [...want].reduce((a, w) => a + (ws.has(w) ? 1 / uses.get(w)! : 0), 0) }))
     .filter((x) => x.score > 0).sort((a, b) => b.score - a.score || vocab[a.i].length - vocab[b.i].length).slice(0, n).map((x) => vocab[x.i]);
 }
+
+export const unresolvedSaid = (u: string[]) => `${u.length} relative ${u.length === 1 ? 'import or require was' : 'imports or requires were'} not resolved`;
 
 /** A never holds, fails, or holds only as far as the model sees: something is out of its sight, or the budget ran out. */
 function verdict(l: Line): Verdict {
