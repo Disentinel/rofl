@@ -69,6 +69,8 @@ const said = [...(talk.stdout ?? '').matchAll(/Content-Length: \d+\r\n\r\n(\{.*?
 const init = said.find((m) => m.id === 1)?.result, marked = said.find((m) => m.method === 'textDocument/publishDiagnostics')?.params.diagnostics ?? [];
 if (!init?.capabilities?.hoverProvider || marked.length !== 1 || marked[0].range.start.line !== 2) bad.push(`rofl-lsp --stdio from ${tgz}: initialize ${JSON.stringify(init)?.slice(0, 120)}, diagnostics ${JSON.stringify(marked)}, stderr ${talk.stderr}`);
 else console.log(`rofl-lsp from ${tgz}: initialize answered, the broken rule marked on line ${marked[0].range.start.line + 1}`);
+const ver = spawnSync(path.join(prefix, 'node_modules/.bin/rofl-nb'), ['--version'], { encoding: 'utf8', timeout: 20_000 });
+if (ver.status !== 0 || ver.stdout !== `rofl-nb ${tgz.replace(/^rofl-nb-(.*)\.tgz$/, '$1')}\n`) bad.push(`rofl-nb --version from ${tgz}: exit ${ver.status}, ${JSON.stringify(ver.stdout + ver.stderr)}`);
 console.log(`command line: ${bad.length ? 'FAIL' : 'ok'}, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 
 // the editor: the VSIX installed into an empty extensions directory, and a harness extension that installs nothing of its own

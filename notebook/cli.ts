@@ -371,6 +371,7 @@ ROFL_NB_CLAUDE=claude    the command translate asks; ROFL_NB_CLAUDE_TIMEOUT=180 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const argv = process.argv.slice(2);
+  if (argv.includes('--version') || argv.includes('-v')) { console.log(`rofl-nb ${JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version}`); process.exit(0); }
   if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(argv[argv.indexOf('--help') + 1] === 'env' ? HELP_ENV : HELP); process.exit(argv.length ? 0 : 2); }
   if (argv[0] === 'vocab') {
     const file = argv[1]?.endsWith('.rofl.md') ? argv[1] : undefined, word = argv.slice(file ? 2 : 1).join(' ');
