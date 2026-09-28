@@ -33,6 +33,19 @@ addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "p
 addressed_by(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "scripts/nb_check.ts").
 finding_note(f_whynot_on_a_literal_that_does_not_parse_throws_out_of_the_run, "A datalog cell with `whynot calls itself(n1)` (a rename made the literal two words) makes `npm run nb` die with an uncaught ParseError from `Rofl.whynot` inside `Host.run`, before and after the kept-model change, so the whole notebook reports nothing instead of the one line being an error. `query` returns its parse error and `why` returns it as its explanation; `whynot` threw. REPAIRED: the host catches what `why` and `whynot` throw and puts it on that cell as `<line>: <error>`, so the cell is unread (exit 2) and every other cell answers; `npm run test:nb` plants both lines in a copy of the review notebook and requires the whynot error, the why line's parse message, a review answer and exit 2. Before the repair the same file printed one line and nothing else.").
 
+-- Recorded 2026-09-28 from the blind user's audit of the Grafema CLI
+-- (examples/notebook/cli_exits.rofl.md, cli_exits.NOTES.md).
+
+finding(f_no_relation_for_a_trys_finalizer, question).
+recorded(f_no_relation_for_a_trys_finalizer, "2026-09-28").
+demands(f_no_relation_for_a_trys_finalizer, rule_and_test).
+finding_note(f_no_relation_for_a_trys_finalizer, "The blind user asked whether grafema's `exitWithError` (a process.exit) skips a caller's pending `finally`, and could not: the JS model has no relation for `a try's finalizer` or `a call inside a try with a finalizer`, so that half of the invariant stayed UNVERIFIED in cli_exits.rofl.md. The scanner's facts have it (`ast_child[code](T, finalizer, 0, B)`), and rules/js-controlflow.rofl names the finalizer in its prose and guard_kind, but no sentence or derived relation says `C runs inside the try of a finally`. Open.").
+
+finding(f_code_paths_were_joined_onto_the_notebook_even_when_absolute, defect).
+recorded(f_code_paths_were_joined_onto_the_notebook_even_when_absolute, "2026-09-28").
+addressed_by(f_code_paths_were_joined_onto_the_notebook_even_when_absolute, "notebook/cli.ts").
+finding_note(f_code_paths_were_joined_onto_the_notebook_even_when_absolute, "The blind user's first front matter listed 51 absolute paths under `code:`; each was joined onto the notebook's directory, 51 ENOENT. `code:` and `reads:` now resolve against the notebook: relative, absolute or `~/`. ON THE WAY, found measuring the fixes: `npm run nb -- F --json | ...` cut the JSON at 64 KB, because the command line exited before a pipe drained (the ledger notebook's JSON came out empty to a parser); it now exits once stdout is written. Also for this user: .tsx and .jsx files parse (the scanner adds babel's jsx plugin for those two extensions only; every example notebook's JSON over unchanged code is byte-identical before and after), the kept daemon waits 60 idle minutes instead of 10, and docs/md-world.md names `ast_parse_error[code](File, Message)` for a file that did not parse.").
+
 -- Recorded 2026-09-28 from the third user's review, a household week in SPAT
 -- (examples/notebook/spat.rofl.md, spat.FRICTION.md).
 
