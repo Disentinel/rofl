@@ -46,7 +46,8 @@ function labelNodes(facts: string[], nodes: Record<string, Node>): void {
     if (!n || d > 4) return '…';
     const at = (key: string) => attr.get(`${id} ${key}`);
     switch (n.kind) {
-      case 'identifier': case 'private_name': return at('name') ?? 'name';
+      case 'identifier': return at('name') ?? 'name';
+      case 'private_name': return '#' + lab(k(id, 'id'), d + 1);
       case 'this_expression': return 'this';
       case 'string_literal': return JSON.stringify(at('value') ?? '');
       case 'numeric_literal': case 'boolean_literal': return String(at('value'));
