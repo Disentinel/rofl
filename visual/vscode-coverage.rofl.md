@@ -30,6 +30,16 @@ done(g_plain, v_example, "examples/visual/paint-shop.rofl.md").
 done(t_gantt, v_example, "examples/visual/spat-thursday.rofl.md").
 done(tb_table, v_example, "examples/visual/coverage.rofl.md").
 done(g_argument, v_example, "examples/visual/deploy-argument.rofl.md").
+done(t_sequence, v_example, "examples/visual/checkout-sequence.rofl.md").
+
+-- w1: vscode/visual (the notebook renderer) draws each first-wave kind in VS Code; vscode/test/suite.ts, the picture cases, holds each
+-- to the kinds it draws, a mark's status and a why (planted: `--break picture` and `--break why` turn it red). The why is asked by the
+-- command the renderer's button sends to (rofl-notebook.why); the button's message itself is not driven by a test.
+done(g_plain, v_render, "vscode/test/suite.ts").   done(g_plain, v_status, "vscode/test/suite.ts").   done(g_plain, v_why, "vscode/test/suite.ts").
+done(g_argument, v_render, "vscode/test/suite.ts"). done(g_argument, v_status, "vscode/test/suite.ts"). done(g_argument, v_why, "vscode/test/suite.ts").
+done(t_gantt, v_render, "vscode/test/suite.ts").    done(t_gantt, v_status, "vscode/test/suite.ts").    done(t_gantt, v_why, "vscode/test/suite.ts").
+done(t_sequence, v_render, "vscode/test/suite.ts"). done(t_sequence, v_status, "vscode/test/suite.ts"). done(t_sequence, v_why, "vscode/test/suite.ts").
+done(tb_table, v_render, "vscode/test/suite.ts").   done(tb_table, v_status, "vscode/test/suite.ts").   done(tb_table, v_why, "vscode/test/suite.ts").
 
 -- waived, with reasons that can go stale
 waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
@@ -50,7 +60,7 @@ work(w10, "zoom: collapse inside groups and aggregate them").
 work(w11, "a test:vscode check per kind").
 work(w12, "an example notebook per kind").
 work(w13, "a guide page on drawing, with generated pictures").
-state(w1, open). state(w2, open). state(w3, open). state(w4, open). state(w5, open). state(w6, open). state(w7, open).
+state(w1, done). state(w2, open). state(w3, open). state(w4, open). state(w5, open). state(w6, open). state(w7, open).
 state(w8, open). state(w9, open). state(w10, open). state(w11, open). state(w12, open). state(w13, open).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
