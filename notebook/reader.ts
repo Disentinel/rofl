@@ -51,6 +51,7 @@ function resolve(repo: Repo, asked: string): { file: string } | { refused: strin
   if (rel.startsWith('..') || path.isAbsolute(rel)) return { refused: `${asked}: outside the repository` };
   if (SECRET.test(rel)) return { refused: `${asked}: looks like a secret, not read` };
   if (!repo.files.has(rel)) return { refused: `${asked}: not a file git tracks here` };
+  if (!statSync(real).isFile()) return { refused: `${asked}: not a regular file` };
   return { file: rel };
 }
 

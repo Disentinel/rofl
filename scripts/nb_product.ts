@@ -333,9 +333,11 @@ const proto = (name: string, untracked = false) => {
   put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
   symlinkSync('../../outside.txt', path.join(repo, 'src/link.ts')); symlinkSync('../.env', path.join(repo, 'src/cfg.ts'));
   git('init', '-q'); git('add', '-f', ...(untracked ? [] : ['examples']), 'src', '.env', 'keys', 'conf');
+  // a submodule's gitlink: tracked, and a directory
+  mkdirSync(path.join(repo, 'vendor/sub'), { recursive: true }); git('update-index', '--add', '--cacheinfo', `160000,${'1'.repeat(40)},vendor/sub`);
   return nbFile;
 };
-const READS = ['list src/**', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', '? C is blocked by T'];
+const READS = ['list src/**', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
 /** The fake: each prompt kept as prompt.N; the first answer is the requests, later ones the cell, or requests for ever with `forever`. */
 const reader = (name: string, forever = false) => { const f = path.join(tmp, `${name}-model`), dir = path.join(tmp, `${name}-prompts`); mkdirSync(dir, { recursive: true }); put(f, `#!/usr/bin/env node
 const fs = require('fs'); let i = '';
@@ -361,6 +363,7 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['grep time limit', 'notebook/reader.ts', /timeout: GREP_MS, /, '', ['small']],
   ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
   ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
+  ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, ''],
   ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
   ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
   ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever']],
@@ -389,7 +392,7 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     if (!(plain.prompts[0] ?? '').includes('The files the request names:\nsrc/a.ts:\n1  export function alpha')) bad.push(`a file the request names by its last part was not read into the first prompt`);
     if (plain.o.code !== 0 || !readFileSync(plain.nb, 'utf8').includes('never M is unowned')) bad.push(`the cell after reading was not written: exit ${plain.o.code}\n${plain.o.out.slice(-600)}`);
     if (!second.includes('1  export function alpha() {') || !second.includes('src/a.ts') || !second.includes('`c2` is blocked by `platform`')) bad.push(`list, show or ? did not answer: ${second.slice(second.indexOf('You asked:'), second.indexOf('You asked:') + 1500)}`);
-    for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret'], ['conf/.npmrc', 'looks like a secret']])
+    for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret'], ['conf/.npmrc', 'looks like a secret'], ['vendor/sub', 'not a regular file']])
       if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`show ${asked} was not refused as ${why}`);
     // a pattern that backtracks for ever in JavaScript (2^40 steps on that line) is answered at once
     if (!second.includes('> grep (a+)+$ src/*.txt\n(no tracked line matches)')) bad.push(`a catastrophic pattern was not answered as no match: ${second.slice(second.indexOf('> grep (a+)'), second.indexOf('> grep (a+)') + 200)}`);
