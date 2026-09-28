@@ -1,8 +1,7 @@
 # Quickstart
 
-A ROFL notebook is a Markdown file ending in `.rofl.md`. It holds sentences
-and rules, and lines that ask questions about them. `rofl-nb` runs it and
-prints the answers.
+A ROFL notebook is a Markdown file ending in `.rofl.md` that answers
+questions about what it says. `rofl-nb` runs one.
 
 ## 1. Copy the examples
 
@@ -35,7 +34,8 @@ $ echo $?
 A line starting with `?` is a question. Its answers are listed under it.
 A line starting with `never` must have no answers. Here two have one, so the
 run ends with exit 1. Open the file, do what *Your move* says, and run it
-again until the last line says **every never holds**. Levels 2 to 6 each add
+again until the last line says **every never holds**. (Before the answers,
+on stderr, a line like `load 57 ms, run 67 ms` says how long it took.) Levels 2 to 6 each add
 one word. In VS Code, open the file and press **Run All**.
 
 ## 3. Write a notebook of your own

@@ -4,8 +4,8 @@
 
 A notebook is Markdown. `rofl-nb` reads it in cells:
 
-- **prose**: everything outside a code fence. Its sentences, lists and rules
-  are read. A quote (`>`) is only for people.
+- **prose**: everything outside a code fence, read for its sentences. A
+  quote (`>`) is only for people.
 - **`rofl`** fence: rules and asking lines, in sentences.
 - **`datalog`** fence: the same in Datalog, `blocked(C, T) :- needs(C, T).`
 - **`natural`** fence: a request in plain words. `rofl-nb translate` asks
@@ -95,7 +95,8 @@ whatif.rofl.md: every never holds, every cell read
 ## Reads
 
 `reads:` in the front matter loads another file's sentences first, as
-`whatif.rofl.md` reads `../review.rofl.md`.
+`whatif.rofl.md` reads `../review.rofl.md`. A file outside the notebook's
+folder is named on stderr.
 
 ## Model and code
 
@@ -105,9 +106,8 @@ TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences.
 ## Could not see: exit 3
 
 The model can miss things: an import of a file you did not list, code it
-cannot parse. Then a `never` holds only as far as it sees
-(`~/rofl-examples/start`, where `shop.js` imports a `tax.js` that is not
-there):
+cannot parse. Then a `never` holds only as far as it sees. In
+`~/rofl-examples/start`, `shop.js` imports a missing `tax.js`:
 
 <!-- BEGIN run+exit examples/start: rofl-nb shop.rofl.md -->
 ```

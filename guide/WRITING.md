@@ -8,7 +8,8 @@ A notebook's prose is read as a small language. This page is all of it.
   `<a id="owns"></a>A team T owns a module M`. The typed holes (`a team T`,
   `a module M`) are its arguments, in order. The anchor's id is its name.
   After that, write it with the holes filled: `T owns M`,
-  `` `platform` owns `auth` ``.
+  `` `platform` owns `auth` ``. The type words may stay or go:
+  `C touches a module M` and `C touches M` are the same sentence.
 - **Facts are a list** of filled sentences, each ending in a full stop,
   under a paragraph that ends in a colon (`The repository today:`). A
   sentence that only ever holds listed facts is declared in a list under
@@ -16,8 +17,8 @@ A notebook's prose is read as a small language. This page is all of it.
 - **A rule is `HEAD if CONDITION, CONDITION, unless CONDITION.`** Several
   ways to one conclusion are a numbered list under `either:`, each item
   starting with `if` or `unless`. That is the only nesting there is.
-- **Say a sentence the same way everywhere.** `guards the variable V` and
-  `guards V` are two different sentences.
+- **Say a sentence the same way everywhere.** Only `a` and `an` type words
+  may be dropped: `guards the variable V` and `guards V` are two sentences.
 - **Prose for people goes in a quote** (`>`). A plain paragraph that ends
   in a full stop is read as a sentence of the language. Headings are free.
 - **Rules one to a line need no blank line between.** A long sentence may
