@@ -1,10 +1,3 @@
----
-world: tutorial-5
-books: main
-default: main
-model: none
----
-
 # Level 5 · The quality gate
 
 > Five cars came off the line today. Before a car goes to its customer it

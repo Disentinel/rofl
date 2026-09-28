@@ -1,10 +1,3 @@
----
-world: tutorial-4
-books: main
-default: main
-model: none
----
-
 # Level 4 · The door lorry is late
 
 > The Tin Can Works now builds cars, trucks and bikes. A phone call: the

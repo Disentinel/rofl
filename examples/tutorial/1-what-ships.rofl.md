@@ -1,10 +1,3 @@
----
-world: tutorial-1
-books: main
-default: main
-model: none
----
-
 # Level 1 · What leaves the line today
 
 > Welcome to the Tin Can Works. Parts arrive at one end of the conveyor,

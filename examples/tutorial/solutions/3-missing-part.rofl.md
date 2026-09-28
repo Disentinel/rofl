@@ -1,10 +1,3 @@
----
-world: tutorial-3
-books: main
-default: main
-model: none
----
-
 # Level 3 · The truck that never comes
 
 > Ana ordered a truck three weeks ago. The line builds cars every day, and

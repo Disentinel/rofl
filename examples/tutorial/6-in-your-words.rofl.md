@@ -1,10 +1,3 @@
----
-world: tutorial-6
-books: main
-default: main
-model: none
----
-
 # Level 6 · In your own words (optional)
 
 > Customers are sending cars back: `bo` ordered red and got green. From now

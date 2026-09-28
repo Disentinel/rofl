@@ -1,10 +1,3 @@
----
-world: tutorial-2
-books: main
-default: main
-model: none
----
-
 # Level 2 · Nothing leaves unpainted
 
 > Four cars came off the line and went through the paint shop. The boss has
