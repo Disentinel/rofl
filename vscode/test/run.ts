@@ -68,16 +68,20 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')"],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
+// VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
+const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"languageModelChatProviders": [{ "vendor": "rofl-test", "displayName": "ROFL test" }],\n    "configuration": {'];
+const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
+chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp'] : ['as it is', 'prose'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
   const t = performance.now();
   let dir = EXT;
-  if (BREAKS[v]) {
-    const [file, at, plant] = BREAKS[v];
-    dir = path.join(ROOT, `vscode-break-${v}`);
+  if (BREAKS[v] || v === 'vscode lm') {
+    const [file, at, plant] = BREAKS[v] ?? LM;
+    dir = path.join(ROOT, `vscode-break-${v.replace(/ /g, '-')}`);
     made.add(dir);
     cpSync(EXT, dir, { recursive: true, filter: (s) => !s.includes('node_modules') });
     const text = readFileSync(path.join(EXT, file), 'utf8');
@@ -94,7 +98,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: fake, ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); }
@@ -108,9 +112,9 @@ await Promise.all([0, 1].map(async () => { for (let v; (v = queue.shift()); ) re
 results.sort((x, y) => variants.indexOf(x.v) - variants.indexOf(y.v));
 let failed = 0;
 for (const { v, red, s } of results) {
-  const ok = v === 'as it is' ? !red : !!red;
+  const ok = BREAKS[v] ? !!red : !red;
   if (!ok) failed++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${v === 'as it is' ? 'as it is: green' : `planted "${v}": red`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${!BREAKS[v] ? `${v}: green` : `planted "${v}": red`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
 }
 console.log(`\n${results.length - failed}/${results.length} VS Code runs as expected, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(failed ? 1 : 0);

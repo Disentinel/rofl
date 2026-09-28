@@ -18,6 +18,12 @@ const until = async <T>(get: () => T | undefined, ms: number, what: string): Pro
 export async function run() {
   const api = await vscode.extensions.getExtension(ID)!.activate() as Api;
   const bad: string[] = [];
+  if (process.env.ROFL_NB_FAKE_LM) {
+    await viaLm(process.env.ROFL_NB_TRANSLATE!, bad);
+    writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
+    if (bad.length) throw new Error(bad.join('\n'));
+    return;
+  }
   for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
   const startup = process.env.ROFL_NB_STARTUP!;
   const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs).filter((t) => (t.input as { uri?: vscode.Uri })?.uri?.fsPath === startup);
@@ -67,6 +73,39 @@ export async function run() {
   if (!bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** VS Code's language model, one the extension declares only in this copy: Translate asks it and not the command line, offers it no tool,
+ *  and Stop cancels its request. The API is newer than @types/vscode 1.90, hence `any`. */
+async function viaLm(file: string, bad: string[]) {
+  const lm = vscode.lm as any, Text = (vscode as any).LanguageModelTextPart, asked: { tools: number; text: string; cancelled: boolean }[] = [];
+  lm.registerLanguageModelChatProvider('rofl-test', {
+    provideLanguageModelChatInformation: () => [{ id: 'rofl-test-model', name: 'Test model', family: 'test', version: '1', maxInputTokens: 200_000, maxOutputTokens: 10_000, capabilities: {} }],
+    async provideLanguageModelChatResponse(_m: unknown, messages: { content: { value?: string }[] }[], options: { tools?: unknown[] }, progress: { report: (p: unknown) => void }, token: vscode.CancellationToken) {
+      const a = { tools: options.tools?.length ?? 0, text: messages.flatMap((m) => m.content.map((p) => p.value ?? '')).join('\n'), cancelled: false };
+      asked.push(a);
+      if (a.text.includes('The person says: wait')) return new Promise<void>((f) => token.onCancellationRequested(() => { a.cancelled = true; f(); }));
+      progress.report(new Text('```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\n? M is unowned\n```'));
+    },
+    provideTokenCount: async () => 1,
+  });
+  const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
+  await vscode.window.showNotebookDocument(nb);
+  const natural = nb.getCells().findIndex((c) => c.document.languageId === 'natural'), t0 = Date.now();
+  await vscode.commands.executeCommand('rofl-notebook.translate');
+  const under = nb.cellAt(natural + 1)?.document.getText() ?? '';
+  if (!under.includes('? M is unowned')) bad.push(`${file}: Translate did not write VS Code's model's cell: ${JSON.stringify(under)} (asked ${asked.length} times)`);
+  if (asked.some((a) => a.tools) || !asked[0]?.text.includes('The request: No change touches a module nobody owns.')) bad.push(`${file}: VS Code's model was offered tools or not the request: ${JSON.stringify(asked.map((a) => [a.tools, a.text.slice(-300)]))}`);
+  console.log(`VS Code's language model: Translate ${Date.now() - t0} ms`);
+  const said = (c: vscode.NotebookCell) => c.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
+  const stopping = vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'wait');
+  await until(() => asked.some((a) => a.text.includes('The person says: wait')) || undefined, 20_000, 'the model to be asked').catch(() => {});
+  await until(() => said(nb.cellAt(natural)).includes('Test model is writing the cell') || undefined, 5_000, 'the progress').catch(() => bad.push(`${file}: while VS Code's model works the natural cell does not say so: ${said(nb.cellAt(natural))}`));
+  await vscode.commands.executeCommand('notebook.cancelExecution');
+  await Promise.race([stopping, new Promise((f) => setTimeout(f, 10_000))]);
+  if (!asked.at(-1)?.cancelled || !said(nb.cellAt(natural)).includes('Stopped')) bad.push(`${file}: Stop did not cancel VS Code's model's request (${asked.at(-1)?.cancelled}) or is not said: ${said(nb.cellAt(natural))}`);
+  await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
 }
 
 /** The language server: a `.rofl` with a broken rule on line 3 has its error there and a hover on a relation says what it is; a `.rofl.md` opened as text has its sentence not read marked. */

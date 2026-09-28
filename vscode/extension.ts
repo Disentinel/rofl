@@ -58,6 +58,7 @@ async function chooseModel() {
     { label: 'auto', description: "VS Code's language model if there is one, else the first installed harness", value: 'auto' },
     ...lms.map((m) => ({ label: m.name, description: `VS Code · ${m.vendor} · ${m.family}`, value: `vscode:${m.id}` })),
     ...Object.keys(HARNESSES).map((n) => ({ label: n, description: `command line · ${standing(n)}`, value: n })),
+    { label: 'command', description: `command line · ${process.env.ROFL_NB_MODEL_CMD ? `sh -c ${process.env.ROFL_NB_MODEL_CMD}` : 'ROFL_NB_MODEL_CMD is not set'}`, value: 'command' },
   ].map((i) => ({ ...i, picked: i.value === now, label: i.value === now ? `$(check) ${i.label}` : i.label }));
   const pick = await vscode.window.showQuickPick(items, { title: 'ROFL: the model Translate asks', placeHolder: `now: ${now}` });
   if (pick) await vscode.workspace.getConfiguration('rofl').update('model', pick.value, vscode.ConfigurationTarget.Global);
