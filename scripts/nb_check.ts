@@ -13,20 +13,23 @@ const tmp = mkdtempSync(path.join(os.tmpdir(), 'nb-check-'));
 const t0 = performance.now();
 
 type Out = { code: number; out: string; stdout?: string };
-const cli = (args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, 'notebook/cli.ts'), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
+const node = (script: string, args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, script), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
   let out = '', stdout = '';
   p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);
   p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out, stdout }); });
 });
+const cli = (args: string[], env: Record<string, string> = {}, root = ROOT) => node('notebook/cli.ts', args, env, root);
 
-/** A copy of a notebook, with its text changed, next to what it names. */
+const put = (to: string, text: string) => { mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, text); };
+/** A copy of a notebook, with its text changed, next to a copy of every file its front matter names; `also` replaces some of them. */
 function planted(name: string, from: string, change: (t: string) => string, also: [string, string][] = []): string {
-  const dir = path.join(tmp, name, 'examples/notebook'); mkdirSync(dir, { recursive: true });
-  for (const [src, edit] of also) { const to = path.join(tmp, name, src); mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, edit); }
-  const file = path.join(dir, path.basename(from));
-  writeFileSync(file, change(readFileSync(path.join(NB, from), 'utf8')));
+  const text = readFileSync(path.join(NB, from), 'utf8');
+  for (const f of [...(text.split(/^---$/m)[1] ?? '').matchAll(/^\s+- (.+)$/gm)].map((m) => path.join('examples/notebook', m[1]))) put(path.join(tmp, name, f), readFileSync(path.join(ROOT, f), 'utf8'));
+  for (const [f, edit] of also) put(path.join(tmp, name, f), edit);
+  const file = path.join(tmp, name, 'examples/notebook', from);
+  put(file, change(text));
   return file;
 }
 /** A source with one planted line; a pattern that no longer matches is a check that plants nothing, so it throws. */
@@ -35,11 +38,20 @@ function mutate(file: string, at: RegExp, plant: (m: string) => string): string 
   if (out === src) throw new Error(`${file}: the planted defect did not apply`);
   return out;
 }
-const copyTree = (name: string, files: string[]) => { for (const f of files) { const to = path.join(tmp, name, f); mkdirSync(path.dirname(to), { recursive: true }); copyFileSync(path.join(ROOT, f), to); } };
+/** The tree, linked, with its own copy of notebook/ in which one file is replaced. */
+function linked(name: string, file: string, text: string): string {
+  const root = path.join(tmp, name);
+  mkdirSync(path.join(root, 'notebook'), { recursive: true });
+  for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(root, e));
+  for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(root, 'notebook', f));
+  writeFileSync(path.join(root, file), text);
+  return root;
+}
 
-const SELF_CODE = ['notebook/kernel.ts', 'notebook/world.ts', 'notebook/book.ts', 'notebook/front.ts', 'notebook/cli.ts', 'notebook/serve.ts', 'playground/host.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'vscode/serial.ts', 'vscode/render.ts'];
 const REVIEW = path.join(NB, 'review.rofl.md');
-const withCell = (cell: string) => (t: string) => `${t}\n\`\`\`rofl\n${cell}\n\`\`\`\n`;
+const withCell = (cell: string, kind = 'rofl') => (t: string) => `${t}\n\`\`\`${kind}\n${cell}\n\`\`\`\n`;
+const withNatural = withCell('No change touches a module nobody owns.', 'natural');
+const smallJs = readFileSync(path.join(NB, 'small.js'), 'utf8'), spinning = smallJs + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n';
 
 // the planted defects' trees
 // every defect a run of this file must turn red goes into one copy of the code, each on its own line, so one run names them all
@@ -51,43 +63,26 @@ const redFile = planted('red', 'self.rofl.md', (t) => t, [
   ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawnSync('claude', ['-p', 'check this']);`)],
   ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text, unsaved\);/, (m) => `${m} translateText(file, text, claude, kernel);`)],
 ]);
-copyTree('red', SELF_CODE.filter((f) => !['notebook/world.ts', 'notebook/kernel.ts', 'notebook/front.ts', 'notebook/cli.ts', 'vscode/worker.ts'].includes(f)));
 // and every one it cannot see into another: the run must name each as out of sight, outside the boundary
 const cellsLine = /^    const cells = cellsOf\(text\);/m;
 const blindFile = planted('blind', 'self.rofl.md', (t) => t, [['notebook/kernel.ts', mutate('notebook/kernel.ts', cellsLine, (m) => `${m}\n    void import("node:fs").then((fs) => fs.readFileSync(path));\n    globalThis["process"].stdout.write("x");`)]]);
-copyTree('blind', SELF_CODE.filter((f) => f !== 'notebook/kernel.ts'));
 const unpopulated = planted('unpopulated', 'review.rofl.md', (t) => t.replace('never waits_on(C, payments)', 'never waits_onn(C, payments)'));
-copyTree('unpopulated', ['examples/review.rofl.md']);
-copyTree('review', ['examples/review.rofl.md']);
 const failing = planted('review', 'review.rofl.md', withCell('never C is blocked by T'));
 const unread = planted('unread', 'review.rofl.md', withCell('A change C is frobbed if C wibbles the moon.'));
-copyTree('unread', ['examples/review.rofl.md']);
 const loose = planted('loose', 'review.rofl.md', withCell('A change C touches a module M if C is written by some person.'));
-copyTree('loose', ['examples/review.rofl.md']);
 const extend = planted('extend', 'review.rofl.md', withCell('A change C is blocked by a team T if C is written by some person and T owns some module.\n\nextends blocked\n\n? C is blocked by `payments`'));
 const collide = planted('collide', 'review.rofl.md', withCell('A change C is blocked by a team T if C is written by some person and T owns some module.\n\n? C is blocked by `payments`'));
-copyTree('collide', ['examples/review.rofl.md']);
-copyTree('extend', ['examples/review.rofl.md']);
-const recursion = planted('recursion', 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n']]);
-const natural = planted('natural', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-copyTree('natural', ['examples/review.rofl.md']);
-const unparsed = planted('unparsed', 'review.rofl.md', (t) => `${t}\n\`\`\`datalog\nwhynot calls itself(c2)\nwhy calls itself(c2)\n\`\`\`\n`);
-copyTree('unparsed', ['examples/review.rofl.md']);
+const recursion = planted('recursion', 'small.rofl.md', (t) => t, [['examples/notebook/small.js', spinning]]);
+const natural = planted('natural', 'review.rofl.md', withNatural);
+const unparsed = planted('unparsed', 'review.rofl.md', withCell('whynot calls itself(c2)\nwhy calls itself(c2)', 'datalog'));
 // the command line run from a tree whose kernel exits 0 before it answers: a gate executed by the code it checks
-const exec = path.join(tmp, 'exec');
-mkdirSync(path.join(exec, 'notebook'), { recursive: true });
-for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(exec, e));
-for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(exec, 'notebook', f));
-writeFileSync(path.join(exec, 'notebook/kernel.ts'), mutate('notebook/kernel.ts', /^  run\(path: string, text: string, input: Inputs\): NbResult \{/m, (m) => `${m}\n    new Function('return process')().exit(0);`));
+const exec = linked('exec', 'notebook/kernel.ts', mutate('notebook/kernel.ts', /^  run\(path: string, text: string, input: Inputs\): NbResult \{/m, (m) => `${m}\n    new Function('return process')().exit(0);`));
 const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
 const good = fake('good.sh', 'Here it is.\n```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n```');
 const bad = fake('bad.sh', '```rofl\nA module M is gloriously unowned whenever nobody.\n```');
-const translateOk = planted('tr-ok', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-copyTree('tr-ok', ['examples/review.rofl.md']);
-const translateBad = planted('tr-bad', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-copyTree('tr-bad', ['examples/review.rofl.md']);
-const translateGone = planted('tr-gone', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-copyTree('tr-gone', ['examples/review.rofl.md']);
+const translateOk = planted('tr-ok', 'review.rofl.md', withNatural);
+const translateBad = planted('tr-bad', 'review.rofl.md', withNatural);
+const translateGone = planted('tr-gone', 'review.rofl.md', withNatural);
 const spy = fake('spy.sh', 'x');
 // what the first user of the notebook hit auditing the ledger (examples/notebook/ledger.FRICTION.md), each where it could mislead
 const friction = planted('friction', 'review.rofl.md', (t) => `${t}
@@ -122,41 +117,28 @@ Payments blocks nothing.
 never blocked(C, payments)
 \`\`\`
 `);
-copyTree('friction', ['examples/review.rofl.md']);
-const holey = planted('holey', 'review.rofl.md', (t) => `${t}\n\`\`\`datalog\nshort_name(C, L) :- blocked(C, _), L is str_len(C) - 1.\n\nnever short_name(C, L)\n\`\`\`\n`);
-copyTree('holey', ['examples/review.rofl.md']);
+const holey = planted('holey', 'review.rofl.md', withCell('short_name(C, L) :- blocked(C, _), L is str_len(C) - 1.\n\nnever short_name(C, L)', 'datalog'));
 // a what-if in the notebook against the same notebook over a world without the fact
 const excised = planted('excise', 'review.rofl.md', withCell('excise `c1` is approved by `ben`'));
-copyTree('excise', ['examples/review.rofl.md']);
-const without = planted('without', 'review.rofl.md', (t) => t);
-mkdirSync(path.join(tmp, 'without/examples'), { recursive: true });
-writeFileSync(path.join(tmp, 'without/examples/review.rofl.md'), readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8').replace('- `c1` is approved by `ben`.\n', ''));
-mkdirSync(path.join(tmp, 'badread/examples/notebook'), { recursive: true });
-writeFileSync(path.join(tmp, 'badread/examples/notebook/bad.rofl'), 'p(1).\np(2).\nq(`x`).\n');
-writeFileSync(path.join(tmp, 'badread/examples/notebook/badread.rofl.md'), '---\nreads:\n  - bad.rofl\n---\n\n```datalog\n? p(X)\n```\n');
+const without = planted('without', 'review.rofl.md', (t) => t, [['examples/review.rofl.md', readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8').replace('- `c1` is approved by `ben`.\n', '')]]);
+put(path.join(tmp, 'badread/examples/notebook/bad.rofl'), 'p(1).\np(2).\nq(`x`).\n');
+put(path.join(tmp, 'badread/examples/notebook/badread.rofl.md'), '---\nreads:\n  - bad.rofl\n---\n\n```datalog\n? p(X)\n```\n');
 const slow = path.join(tmp, 'slow.sh'); writeFileSync(slow, '#!/bin/sh\ncat > /dev/null\nexec sleep 30\n'); chmodSync(slow, 0o755);
-const XDIR = ['server.ts', 'handlers/index.ts', 'handlers/store-handlers.ts', 'handlers/list-handlers.ts', 'lib/store.ts'].map((f) => `examples/notebook/xdir/${f}`);
 // the barrel stops re-exporting one handler file: the never must name what the dispatcher no longer reaches
 const xdirRed = planted('xdir-red', 'xdir.rofl.md', (t) => t, [['examples/notebook/xdir/handlers/index.ts', "export { handleGet, handlePut } from './store-handlers.js';\n"]]);
-copyTree('xdir-red', XDIR.filter((f) => !f.endsWith('/index.ts')));
-const translateSlow = planted('tr-slow', 'review.rofl.md', (t) => `${t}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-copyTree('tr-slow', ['examples/review.rofl.md']);
+const translateSlow = planted('tr-slow', 'review.rofl.md', withNatural);
 
 // the kept kernel (notebook/serve.ts) answers what a fresh process answers, after a cell edit, a code edit and a kill -9; and a daemon
 // that keys its answer on the notebook's text alone, blind to the code, is caught by the same comparison
-const staleRoot = path.join(tmp, 'stale');
-mkdirSync(path.join(staleRoot, 'notebook'), { recursive: true });
-for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(staleRoot, e));
-for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(staleRoot, 'notebook', f));
-writeFileSync(path.join(staleRoot, 'notebook/serve.ts'), mutate('notebook/serve.ts', /runFile\(file, k\)/, () => `(memo[file + readFileSync(file, 'utf8')] ??= runFile(file, k))`).replace(/^const ROOT/m, 'const memo: Record<string, ReturnType<typeof runFile>> = {};\nconst ROOT'));
+const staleRoot = linked('stale', 'notebook/serve.ts', mutate('notebook/serve.ts', /runFile\(file, k\)/, () => `(memo[file + readFileSync(file, 'utf8')] ??= runFile(file, k))`).replace(/^const ROOT/m, 'const memo: Record<string, ReturnType<typeof runFile>> = {};\nconst ROOT'));
 const kept = async (name: string, root: string) => {
-  const file = planted(name, 'small.rofl.md', (t) => t, [['examples/notebook/small.js', readFileSync(path.join(NB, 'small.js'), 'utf8')]]);
+  const file = planted(name, 'small.rofl.md', (t) => t);
   const sock = path.join(tmp, `${name}.sock`), env = { ROFL_NB_DAEMON: '1', ROFL_NB_SOCKET: sock, ROFL_NB_IDLE: '60', ROFL_NB_CLAUDE: spy };
   const strip = (o: Out) => { try { const r = JSON.parse(o.stdout ?? ''); const load = r.ms.load; delete r.ms; return { r: `${o.code} ${JSON.stringify(r)}`, load }; } catch { return { r: o.out, load: -1 }; } };
   const step = async () => { const [d, p] = await Promise.all([cli([file, '--json'], env, root), cli([file, '--json'], {}, root)]); return { daemon: strip(d), fresh: strip(p) }; };
   const steps = [await step()];
   writeFileSync(file, withCell('never C is unawaited')(readFileSync(file, 'utf8'))); steps.push(await step());
-  writeFileSync(path.join(path.dirname(file), 'small.js'), readFileSync(path.join(NB, 'small.js'), 'utf8') + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n'); steps.push(await step());
+  writeFileSync(path.join(path.dirname(file), 'small.js'), spinning); steps.push(await step());
   spawnSync('pkill', ['-9', '-f', sock]); steps.push(await step());
   spawnSync('pkill', ['-f', sock]);
   return steps;
@@ -166,12 +148,7 @@ const keptRuns = Promise.all([kept('kept', ROOT), kept('kept-stale', staleRoot)]
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
-const layering = new Promise<Out>((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/nb_layers.ts')]);
-  let out = '';
-  p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { out += d; });
-  p.on('close', (code) => done({ code: code ?? -1, out }));
-});
+const layering = node('scripts/nb_layers.ts', []);
 const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
