@@ -144,6 +144,21 @@ const kept = async (name: string, root: string) => {
   return steps;
 };
 const keptRuns = Promise.all([kept('kept', ROOT), kept('kept-stale', staleRoot)]);
+// one daemon per tree: a run after an engine edit starts a new daemon, and the new one retires the old
+const retired = (async () => {
+  const root = linked('retire', 'notebook/front.ts', readFileSync(path.join(ROOT, 'notebook/front.ts'), 'utf8')), dir = path.join(tmp, 'retire-tmp');
+  mkdirSync(dir);
+  const env = { ROFL_NB_DAEMON: '1', TMPDIR: dir, ROFL_NB_IDLE: '60' }, serve = path.join(root, 'notebook/serve.ts');
+  const live = () => `${spawnSync('pgrep', ['-f', serve], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean).length} daemons, sockets ${readdirSync(dir).filter((f) => f.endsWith('.sock')).length}`;
+  await cli([REVIEW], env, root);
+  const before = live();
+  writeFileSync(path.join(root, 'notebook/front.ts'), readFileSync(path.join(ROOT, 'notebook/front.ts'), 'utf8') + '// edited\n');
+  const second = await cli([REVIEW], env, root);
+  await new Promise((r) => setTimeout(r, 1000));
+  const after = live();
+  spawnSync('pkill', ['-f', serve]);
+  return { code: second.code, out: `before the edit: ${before}; after: ${after}`, stdout: second.stdout };
+})();
 
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
@@ -243,6 +258,8 @@ check('a cell edit over kept code answers what the whole world answers (scripts/
 for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);
 check('the kept kernel answers what a fresh process answers: first run, a cell edit, a code edit, after kill -9', keptOk.every((s) => s.daemon.r === s.fresh.r) && keptOk[1].daemon.load === 0 && keptOk[0].fresh.r !== keptOk[1].fresh.r && keptOk[1].fresh.r !== keptOk[2].fresh.r, { code: 0, out: JSON.stringify(keptOk.map((s) => [s.daemon.load, s.daemon.r === s.fresh.r, s.daemon.r.slice(0, 300), s.fresh.r.slice(0, 300)])) });
 check('  and a kept kernel blind to the code files, it does not', keptStale[2].daemon.r !== keptStale[2].fresh.r && keptStale[1].daemon.r === keptStale[1].fresh.r, { code: 0, out: JSON.stringify(keptStale.map((s) => s.daemon.r === s.fresh.r)) });
+const retire = await retired;
+check('an engine edit leaves one daemon per tree: the new one retires the old', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1', retire);
 check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir'].every((n) => worlds().some((w) => w.name === n)));
 
 for (const [name, ok, why] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${why ? `\n${why.replace(/^/gm, '     ')}` : ''}`);

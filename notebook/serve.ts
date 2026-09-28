@@ -1,10 +1,10 @@
 // The notebook kept alive for the command line: `npm run nb` asks this process over a unix socket, so a run pays the model's
 // load and the code's evaluation only when their texts changed, as in the editor. Every request re-reads every file.
-// One per tree and engine source; started by the first run, gone after ROFL_NB_IDLE seconds (3600) with no request.
+// One per tree: started by the first run, it retires the daemon of the tree's previous engine source, and is gone after ROFL_NB_IDLE seconds (3600) with no request.
 import { createServer, connect } from 'node:net';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { globSync, readFileSync, unlinkSync } from 'node:fs';
+import { globSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Kernel } from './kernel.ts';
@@ -13,11 +13,21 @@ import { runFile } from './cli.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 type Reply = { result: ReturnType<typeof runFile> } | { error: string };
 
-/** The engine's source is in the name, so an edited engine is a new daemon and never an old one answering. */
+/** `rofl-nb-<tree>-<engine source>.sock`: an edited engine is a new daemon and never an old one answering, and the tree lets the new one find the old. */
 export function socketPath(): string {
   const h = createHash('sha1').update(ROOT + process.version);
   for (const f of globSync('{notebook,playground,scanners,src,scripts}/**/*.ts', { cwd: ROOT }).sort()) h.update(f).update(readFileSync(path.join(ROOT, f)));
-  return path.join(os.tmpdir(), `rofl-nb-${h.digest('hex').slice(0, 16)}.sock`);
+  return path.join(os.tmpdir(), `rofl-nb-${createHash('sha1').update(ROOT).digest('hex').slice(0, 8)}-${h.digest('hex').slice(0, 16)}.sock`);
+}
+
+/** Every other daemon of this tree is told to quit; a socket nobody listens on is removed. */
+function retire(sock: string) {
+  const dir = path.dirname(sock), tree = /^rofl-nb-[0-9a-f]{8}-/.exec(path.basename(sock))?.[0];
+  if (tree) for (const f of readdirSync(dir)) if (f.startsWith(tree) && f.endsWith('.sock') && f !== path.basename(sock)) {
+    const c = connect(path.join(dir, f));
+    c.on('connect', () => c.end(JSON.stringify({ quit: true }) + '\n'));
+    c.on('error', () => { try { unlinkSync(path.join(dir, f)); } catch { /* gone already */ } });
+  }
 }
 
 function ask(sock: string, file: string): Promise<Reply> {
@@ -57,7 +67,8 @@ function serve(sock: string) {
     c.on('data', (d) => {
       text += d;
       if (!text.includes('\n')) return;
-      const { file } = JSON.parse(text) as { file: string };
+      const { file, quit } = JSON.parse(text) as { file: string; quit?: boolean };
+      if (quit) { c.end(); try { unlinkSync(sock); } catch { /* gone already */ } process.exit(0); }
       const k = kernels.get(file) ?? new Kernel();
       let reply: Reply;
       try { reply = { result: runFile(file, k) }; kernels.set(file, k); } catch (e) { reply = { error: (e as Error).message }; kernels.delete(file); }
@@ -67,7 +78,7 @@ function serve(sock: string) {
     c.on('error', () => {});
   });
   server.on('error', () => process.exit(0));   // another daemon took the socket first
-  server.listen(sock, rest);
+  server.listen(sock, () => { rest(); retire(sock); });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) serve(process.argv[2]);
