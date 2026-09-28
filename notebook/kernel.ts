@@ -12,7 +12,7 @@ export type NbCellOut = { index: number; kind: CellKind; line: number; errors: s
 /** `blind`: every never holds, some only as far as the model sees or its wall let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
-export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number> } };
+export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
 export class Kernel {
   private host = new Host();
@@ -28,14 +28,14 @@ export class Kernel {
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
     const world = assemble(path, text, input), { model, phrases, errors } = world;
-    let load = 0;
+    let load = 0, loaded = false;
     const key = model + '\u0000' + phrases;
     if (key !== this.loaded) {
       const rules = libFiles(path, front).model.filter((f) => f.startsWith('rules/'));
       const l = this.host.init(model, phrases, front.model === 'js' ? concernsOf(rules.map((f) => [f, input.lib[f] ?? ''])) : undefined, this.whole ? undefined : input.lib['boot.rofl']);
       load = l.ms;
       if (!l.ok) { errors.push(...l.diagnostics.map((d) => d.replace(/^line (\d+)/, (_, n) => world.source(Number(n))))); this.loaded = ''; return { status: 'unread', front, cells: [], errors, ms: { load, run: 0 } }; }
-      this.loaded = key;
+      this.loaded = key; loaded = true;
     }
     const cells = cellsOf(text);
     const runs = cells.filter((c) => c.kind !== 'natural');
@@ -65,7 +65,7 @@ export class Kernel {
       }) };
     });
     const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
-    return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases } };
+    return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
 }
 

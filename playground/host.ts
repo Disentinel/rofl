@@ -25,7 +25,7 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
-export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean };
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
@@ -287,11 +287,11 @@ export class Host {
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
-    let unresolved: string[] = [], partial = false;
-    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial });
+    let unresolved: string[] = [], partial = false, model: RunOut['model'];
+    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, model });
     let base: Rofl | null = null;
     if (layered) {
-      try { base = this.evaluated(files, sc); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
+      try { model = this.base ? 'kept' : 'evaluated'; base = this.evaluated(files, sc); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
     }
     lap('model');
     const f = base ? this.shell!.fork() : this.core.fork();
