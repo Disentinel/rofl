@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Kernel, type NbLine, type NbResult } from './kernel.ts';
-import { cellsOf, codeNames, libFiles, parseFront, translated } from './front.ts';
+import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
@@ -123,10 +123,10 @@ ${notebook}
 
 The request: ${request}
 
-Answer with the cell alone inside one \`\`\`rofl fence, nothing else.`;
+Answer with the cell alone inside one \`\`\`rofl fence, nothing else. When you cannot write it without guessing what the person means, answer instead with your questions to them, briefly, in the language of the request, and no fence.`;
 }
 
-const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.[1].trim() ?? text.trim();
+const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.[1].trim();
 const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n} ${n[0].toUpperCase()}`) ?? p;
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong. */
@@ -138,41 +138,79 @@ export function translate(file: string, ask: Ask): { code: number; said: string[
 
 /** What translate writes, for a host that shows it before it is saved. */
 export function translateText(file: string, text: string, ask: Ask, kernel = new Kernel()): { code: number; said: string[]; text: string } {
-  const said: string[] = [], start = text;
-  const { input, errors } = inputs(file, text);
-  if (errors.length) return { code: 2, said: errors, text };
-  const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
-  const model = want.model.map((f) => input.lib[f]).join('\n'), phrases = want.phrases.map((f) => input.lib[f]).join('\n');
-  const { vocab, functions } = translatorVocab(model, phrases);
-  const home = homeOf(model);
-  const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
+  const said: string[] = [], start = text, cx = context(file, text);
+  if ('errors' in cx) return { code: 2, said: cx.errors, text };
   let code = 0;
   for (let done = 0; ;) {
     const cells = cellsOf(text), c = cells.find((x) => x.kind === 'natural' && !translated(cells, x) && x.index > done);
     if (!c) break;
     done = c.index;
-    const lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
-    const tryCell = (cell: string) => {
-      const next = [...lines.slice(0, close + 1), '', '```rofl', cell, '```', ...lines.slice(close + 1)].join('\n');
-      const r = kernel.run(path.relative(ROOT, path.resolve(file)), next, input);
-      const out = r.cells.find((x) => x.index === c.index + 1)!;
-      return { next, errors: [...r.errors, ...out.errors], lines: out.lines };
-    };
-    const base = prompt(c.text.trim(), vocab, own, functions, text, Object.keys(input.code));
-    let a = ask(base);
-    if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text: start };
-    let t = tryCell(fenced(a.text));
-    if (t.errors.length) {
-      said.push(`${file}:${c.line}: the first try did not read:`, ...fenced(a.text).split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
-      a = ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${fenced(a.text)}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
-      if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text: start };
-      t = tryCell(fenced(a.text));
-    }
-    if (t.errors.length) { said.push(`${file}:${c.line}: no cell read after two tries, nothing written:`, ...fenced(a.text).split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)); code = 2; continue; }
-    text = t.next;
-    said.push(`${file}:${c.line}: translated`, ...fenced(a.text).split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`));
+    const r = translateOne(file, text, c, ask, kernel, cx);
+    said.push(...r.said);
+    if (r.failed) return { code: 2, said, text: start };
+    if (r.code) code = r.code;
+    text = r.text;
   }
   return { code, said, text };
+}
+
+/** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what Claude said last instead of a cell. */
+export function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), words = '', asked = ''): { code: number; said: string[]; text: string; reply?: string } {
+  const cx = context(file, text), cells = cellsOf(text), c = cells[index];
+  if ('errors' in cx) return { code: 2, said: cx.errors, text };
+  if (c?.kind !== 'natural') return { code: 2, said: [`cell ${index} is not a natural cell`], text };
+  const under = translated(cells, c) ? cells[index + 1] : undefined;
+  let follow = asked ? `\n\nYou said, instead of a cell:\n${asked}` : '';
+  if (under) {
+    const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, cx.input), out = r.cells.find((x) => x.index === index + 1)!;
+    follow += `\n\nYou answered:\n\`\`\`rofl\n${under.text}\n\`\`\`\nThe notebook said:\n${[...r.errors, ...out.errors, ...out.lines.map((l) => `${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)].join('\n') || '(nothing)'}`;
+  }
+  if (words) follow += `\n\nThe person says: ${words}\nWrite the cell again with this taken in.`;
+  const r = translateOne(file, text, c, ask, kernel, cx, follow);
+  return { code: r.failed ? 2 : r.code, said: r.said, text: r.failed ? text : r.text, ...(r.reply && { reply: r.reply }) };
+}
+
+type Context = { input: Inputs; vocab: string[]; functions: string[]; own: string[] };
+function context(file: string, text: string): Context | { errors: string[] } {
+  const { input, errors } = inputs(file, text);
+  if (errors.length) return { errors };
+  const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
+  const model = want.model.map((f) => input.lib[f]).join('\n'), phrases = want.phrases.map((f) => input.lib[f]).join('\n');
+  const { vocab, functions } = translatorVocab(model, phrases);
+  const home = homeOf(model);
+  const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
+  return { input, vocab, functions, own };
+}
+
+/** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
+function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = ''): { code: number; said: string[]; text: string; failed?: boolean; reply?: string } {
+  const said: string[] = [], lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
+  const cells = cellsOf(text), under = translated(cells, c) ? cells[c.index + 1] : undefined;
+  const shut = under ? lines.findIndex((l, i) => i >= under.line - 1 && /^```\s*$/.test(l)) : -1;
+  const from = under ? under.line - 2 : close + 1, to = !under ? close + 1 : shut < 0 ? lines.length : shut + 1;
+  const tryCell = (cell: string) => {
+    const next = [...lines.slice(0, from), ...(under ? [] : ['']), '```rofl', cell, '```', ...lines.slice(to)].join('\n');
+    const r = kernel.run(path.relative(ROOT, path.resolve(file)), next, cx.input);
+    const out = r.cells.find((x) => x.index === c.index + 1)!;
+    return { next, errors: [...r.errors, ...out.errors], lines: out.lines };
+  };
+  const words = (a: string) => ({ code: 2, said: [...said, `${file}:${c.line}: Claude answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
+  const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code)) + follow;
+  let a = ask(base);
+  if (!a.ok) return { code: 2, said: [`translation failed: ${a.error}`], text, failed: true };
+  let cell = fenced(a.text);
+  if (cell === undefined) return words(a.text);
+  let t = tryCell(cell);
+  if (t.errors.length) {
+    said.push(`${file}:${c.line}: the first try did not read:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
+    a = ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
+    if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
+    cell = fenced(a.text);
+    if (cell === undefined) return words(a.text);
+    t = tryCell(cell);
+  }
+  if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: no cell read after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
+  return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;

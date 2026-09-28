@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks and cells; `translate`, `wrap` and `startup` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
+// `-- --mutants` codeline, marks and cells; `translate`, `revert`, `wrap` and `startup` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -19,8 +19,17 @@ const review = put(path.join(tmp, 'nb/examples/notebook/review.rofl.md'), `${src
 const small = put(path.join(tmp, 'nb/examples/notebook/small.rofl.md'), src('examples/notebook/small.rofl.md'));
 const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('examples/notebook/small.js')}\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n`);
 
-const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n`);
-const fake = put(path.join(tmp, 'claude.sh'), "#!/bin/sh\ncat > /dev/null\nprintf '%s\\n' 'Here it is.' '```rofl' 'A module M is unowned if some change touches M, unless some team owns M.' '' 'never M is unowned' '```'\n");
+const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n\nA cell after it, which no edit of the cell above may take.\n`);
+// the model: a question when asked to, the cell as a question once told something, and else the cell as an invariant
+const fake = put(path.join(tmp, 'claude.sh'), `#!/bin/sh
+p=$(cat)
+rule='A module M is unowned if some change touches M, unless some team owns M.'
+case "$p" in
+  *"The person says: ask me"*) echo 'Which modules count as owned?' ;;
+  *"The person says"*) printf '%s\\n' '\`\`\`rofl' "$rule" '' '? M is unowned' '\`\`\`' ;;
+  *) printf '%s\\n' 'Here it is.' '\`\`\`rofl' "$rule" '' 'never M is unowned' '\`\`\`' ;;
+esac
+`);
 chmodSync(fake, 0o755);
 
 const cli = (file: string, out: string) => new Promise<string>((done) => {
@@ -43,6 +52,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, ''],
   cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]'],
   translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, ''],
+  revert: ['extension.ts', /NotebookRange\(arg\.index, arg\.index \+ 1\)/, 'NotebookRange(natural.index, natural.index + 1)'],
   startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, ''],
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],

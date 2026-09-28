@@ -2,7 +2,9 @@
 import * as vscode from 'vscode';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Run } from '../render.ts';
+import { serialize } from '../serial.ts';
 
+type Api = { result: (u: vscode.Uri) => Run | undefined; notes: (file: string) => { line: number; text: string }[] };
 type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] } };
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 
@@ -13,7 +15,7 @@ const until = async <T>(get: () => T | undefined, ms: number, what: string): Pro
 };
 
 export async function run() {
-  const api = await vscode.extensions.getExtension('rofl.rofl-notebook')!.activate() as { result: (u: vscode.Uri) => Run | undefined };
+  const api = await vscode.extensions.getExtension('rofl.rofl-notebook')!.activate() as Api;
   const bad: string[] = [];
   for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
   const startup = process.env.ROFL_NB_STARTUP!;
@@ -50,6 +52,7 @@ export async function run() {
       const code = c.fails.code;
       if (code && !runs.some((x) => said(x).includes(`](<${code[0]}:${code[1]}>)`))) bad.push(`${c.file}: no output links to ${code[0]}:${code[1]}`);
       if (code && !errors.some(({ u, d }) => u.fsPath === code[0] && d.range.start.line === code[1] - 1 && d.message === c.fails!.text)) bad.push(`${c.file}: no error "${c.fails.text}" at ${code[0]}:${code[1]}`);
+      if (code && !api.notes(code[0]).some((n) => n.line === code[1] - 1 && n.text.includes(c.fails!.text))) bad.push(`${c.file}: line ${code[1]} of ${code[0]} does not say after it that "${c.fails.text}" marked it: ${JSON.stringify(api.notes(code[0]))}`);
       if (code && !bad.length) await stale(nb, api, c.fails.text, code, bad);
     }
     console.log(`${c.file}: ${Date.now() - t0} ms`);
@@ -72,11 +75,12 @@ async function translate(file: string, bad: string[]) {
   if (after.document.getText() !== text || after.document.languageId !== 'natural') bad.push(`${file}: the natural cell did not stay`);
   if (next?.document.languageId !== 'rofl' || !next.document.getText().includes('never M is unowned')) bad.push(`${file}: no rofl cell under the natural cell after Translate`);
   if (readFileSync(file, 'utf8') !== before) bad.push(`${file}: Translate wrote the file`);
+  await cellControls(nb, natural, before, bad);
   await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
 }
 
 /** The code under a run changes, on disk and then in an unsaved editor; the same window runs again and the answer follows it. */
-async function stale(nb: vscode.NotebookDocument, api: { result: (u: vscode.Uri) => Run | undefined }, never: string, [file, line]: [string, number], bad: string[]) {
+async function stale(nb: vscode.NotebookDocument, api: Api, never: string, [file, line]: [string, number], bad: string[]) {
   const verdict = (r: Run) => r.cells.flatMap((c) => c.lines).find((l) => l.text === never)?.verdict;
   const marked = () => vscode.languages.getDiagnostics(vscode.Uri.file(file)).some((d) => d.range.start.line === line - 1 && d.message === never);
   const again = async (what: string) => {
@@ -98,4 +102,24 @@ async function stale(nb: vscode.NotebookDocument, api: { result: (u: vscode.Uri)
   if (verdict(r) !== 'fails' || !marked()) bad.push(`${file}: typed back unsaved, the never ${verdict(r)} and line ${line} is ${marked() ? '' : 'not '}marked`);
   await vscode.window.showTextDocument(doc);
   await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+}
+
+/** The buttons on a cell, as the script answers: Revert gives back the file's text, Translate one cell puts its translation back,
+ *  Refine with "ask me" gets a question shown under the natural cell and nothing changed, and the answer replaces the translation. */
+async function cellControls(nb: vscode.NotebookDocument, natural: number, before: string, bad: string[]) {
+  const text = () => serialize({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
+  const said = (c: vscode.NotebookCell) => c.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
+  const under = () => nb.cellAt(natural + 1).document.getText();
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+  await vscode.commands.executeCommand('rofl-notebook.revert', nb.cellAt(natural + 1));
+  if (text() !== before) bad.push(`${nb.uri.fsPath}: after Revert the notebook is not the file it was: ${nb.cellAt(natural)?.document.languageId} cell ${natural} holds ${JSON.stringify(nb.cellAt(natural)?.document.getText())}`);
+  await vscode.commands.executeCommand('rofl-notebook.translateCell', nb.cellAt(natural));
+  if (!under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: Translate on the natural cell put no translation under it`);
+  const n = nb.cellCount;
+  await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'ask me');
+  await until(() => said(nb.cellAt(natural)).includes('Which modules count as owned?') || undefined, 5_000, 'the question').catch(() => {});
+  if (!said(nb.cellAt(natural)).includes('Which modules count as owned?') || nb.cellCount !== n || !under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: Claude's question is not under the natural cell, or the notebook changed: ${said(nb.cellAt(natural))}`);
+  await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural), 'a team owns it');
+  await until(() => !said(nb.cellAt(natural)).includes('Which modules') || undefined, 5_000, 'the question to go').catch(() => {});
+  if (nb.cellCount !== n || !under().includes('? M is unowned') || said(nb.cellAt(natural)).includes('Which modules')) bad.push(`${nb.uri.fsPath}: the answer did not replace the translation, or the question stayed: ${JSON.stringify(under())}`);
 }

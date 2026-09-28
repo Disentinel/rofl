@@ -25,17 +25,29 @@
       { "id": "datalog", "aliases": ["Datalog"] },
       { "id": "natural", "aliases": ["Natural language"] }
     ],
+    "grammars": [
+      { "language": "rofl", "scopeName": "source.rofl", "path": "./rofl.tmLanguage.json" },
+      { "language": "datalog", "scopeName": "source.datalog", "path": "./datalog.tmLanguage.json" }
+    ],
     "configurationDefaults": {
       "[rofl]": { "editor.wordWrap": "on" },
       "[datalog]": { "editor.wordWrap": "on" },
       "[natural]": { "editor.wordWrap": "on" }
     },
     "commands": [
-      { "command": "rofl-notebook.translate", "title": "Translate natural cells", "category": "ROFL" }
+      { "command": "rofl-notebook.translate", "title": "Translate natural cells", "category": "ROFL" },
+      { "command": "rofl-notebook.translateCell", "title": "Translate", "category": "ROFL", "icon": "$(sparkle)" },
+      { "command": "rofl-notebook.refine", "title": "Refine in plain language", "category": "ROFL", "icon": "$(comment-discussion)" },
+      { "command": "rofl-notebook.revert", "title": "Revert to the natural cell", "category": "ROFL", "icon": "$(discard)" }
     ],
     "menus": {
       "notebook/toolbar": [
         { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" }
+      ],
+      "notebook/cell/title": [
+        { "command": "rofl-notebook.translateCell", "group": "inline", "when": "notebookType == rofl-notebook && cellLangId == natural" },
+        { "command": "rofl-notebook.refine", "group": "inline", "when": "notebookType == rofl-notebook && (cellLangId == natural || notebookCellResource in rofl-notebook.translations)" },
+        { "command": "rofl-notebook.revert", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.translations" }
       ]
     }
   },

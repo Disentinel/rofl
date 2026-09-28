@@ -1,0 +1,12 @@
+{
+  "scopeName": "source.rofl",
+  "patterns": [
+    { "name": "comment.line.double-dash.rofl", "match": "--.*$" },
+    { "name": "keyword.control.rofl", "match": "^\\s*(\\?\\??|never|unsure|whynot|why|excise|extends|budget)(?=\\s|$)" },
+    { "name": "keyword.other.rofl", "match": "\\b(if|unless|either|all of)\\b|:-" },
+    { "name": "string.quoted.double.rofl", "match": "\"(?:[^\"\\\\]|\\\\.)*\"" },
+    { "name": "constant.other.symbol.rofl", "match": "`[^`\\n]*`" },
+    { "name": "constant.numeric.rofl", "match": "\\b\\d+\\b" },
+    { "name": "variable.other.rofl", "match": "\\b[A-Z][A-Za-z0-9_]*\\b" }
+  ]
+}
