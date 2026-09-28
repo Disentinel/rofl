@@ -64,12 +64,12 @@ golden_state("tutorial_4-late-delivery", "9b7bb3b2ce3b6da2", 760).
 golden_state("tutorial_5-quality-gate", "9a37765e5d2a9fe8", 602).
 golden_state("tutorial_6-in-your-words", "7a2116aafe720e25", 576).
 golden_state("visual", "29bada61d4edb28f", 531).
-golden_state("visual_checkout-sequence", "64b3b83eef2eb5bc", 725).
+golden_state("visual_checkout-sequence", "8b1fd4a48f66b7a3", 729).
 golden_state("visual_coverage", "b6921c02cc6d4095", 800).
-golden_state("visual_deploy-argument", "8e2301600cd56051", 1219).
-golden_state("visual_paint-shop", "9dda381f6fda1185", 786).
-golden_state("visual_spat-thursday", "5c50a9624b40674e", 11618).
-golden_state("visual_spat-week", "80113c25e2d0a939", 12088).
+golden_state("visual_deploy-argument", "8dd3f7023dd5d46f", 1221).
+golden_state("visual_paint-shop", "ddd260a3b245f820", 788).
+golden_state("visual_spat-thursday", "80919c2122c64821", 11622).
+golden_state("visual_spat-week", "6849cc05e9dd8ed5", 12092).
 golden_state("wtf", "eb000c20289a05a3", 7399).
 golden_state("rules_cleanliness", "1603a8774d3f71f4", 1439).
 golden_state("rules_decisions_production-readiness", "f02639d3bade7544", 605).
@@ -2490,13 +2490,13 @@ golden_rel("visual", "writes_to[$kernel]", 26).
 golden_rel("visual_checkout-sequence", "@other", 1).
 golden_rel("visual_checkout-sequence", "@wit", 77).
 golden_rel("visual_checkout-sequence", "answered[main]", 2).
-golden_rel("visual_checkout-sequence", "asserted_by[$kernel]", 27).
+golden_rel("visual_checkout-sequence", "asserted_by[$kernel]", 29).
 golden_rel("visual_checkout-sequence", "authority[main]", 5).
 golden_rel("visual_checkout-sequence", "concludes[$kernel]", 37).
 golden_rel("visual_checkout-sequence", "conclusion_lit[$kernel]", 37).
 golden_rel("visual_checkout-sequence", "conclusion_tense[$kernel]", 37).
 golden_rel("visual_checkout-sequence", "derived_by[$kernel]", 84).
-golden_rel("visual_checkout-sequence", "edb[main]", 32).
+golden_rel("visual_checkout-sequence", "edb[main]", 34).
 golden_rel("visual_checkout-sequence", "flow[main]", 4).
 golden_rel("visual_checkout-sequence", "flows_to[main]", 4).
 golden_rel("visual_checkout-sequence", "has_conclusion[$kernel]", 37).
@@ -2563,7 +2563,7 @@ golden_rel("visual_coverage", "work[main]", 2).
 golden_rel("visual_coverage", "writes_to[$kernel]", 39).
 golden_rel("visual_deploy-argument", "@other", 1).
 golden_rel("visual_deploy-argument", "@wit", 168).
-golden_rel("visual_deploy-argument", "asserted_by[$kernel]", 31).
+golden_rel("visual_deploy-argument", "asserted_by[$kernel]", 32).
 golden_rel("visual_deploy-argument", "authority[main]", 9).
 golden_rel("visual_deploy-argument", "breach[audit]", 1).
 golden_rel("visual_deploy-argument", "canonical[main]", 4).
@@ -2574,7 +2574,7 @@ golden_rel("visual_deploy-argument", "conclusion_tense[$kernel]", 55).
 golden_rel("visual_deploy-argument", "contested[epistemic]", 1).
 golden_rel("visual_deploy-argument", "crossing[main]", 10).
 golden_rel("visual_deploy-argument", "derived_by[$kernel]", 182).
-golden_rel("visual_deploy-argument", "edb[main]", 35).
+golden_rel("visual_deploy-argument", "edb[main]", 36).
 golden_rel("visual_deploy-argument", "flow[main]", 10).
 golden_rel("visual_deploy-argument", "flows_to[main]", 15).
 golden_rel("visual_deploy-argument", "has_conclusion[$kernel]", 55).
@@ -2608,7 +2608,7 @@ golden_rel("visual_deploy-argument", "uses_builtin[$kernel]", 4).
 golden_rel("visual_deploy-argument", "writes_to[$kernel]", 55).
 golden_rel("visual_paint-shop", "@other", 1).
 golden_rel("visual_paint-shop", "@wit", 88).
-golden_rel("visual_paint-shop", "asserted_by[$kernel]", 35).
+golden_rel("visual_paint-shop", "asserted_by[$kernel]", 36).
 golden_rel("visual_paint-shop", "authority[main]", 5).
 golden_rel("visual_paint-shop", "comes_out[main]", 2).
 golden_rel("visual_paint-shop", "concludes[$kernel]", 39).
@@ -2616,7 +2616,7 @@ golden_rel("visual_paint-shop", "conclusion_lit[$kernel]", 39).
 golden_rel("visual_paint-shop", "conclusion_tense[$kernel]", 39).
 golden_rel("visual_paint-shop", "dangles[main]", 1).
 golden_rel("visual_paint-shop", "derived_by[$kernel]", 95).
-golden_rel("visual_paint-shop", "edb[main]", 35).
+golden_rel("visual_paint-shop", "edb[main]", 36).
 golden_rel("visual_paint-shop", "flow[main]", 4).
 golden_rel("visual_paint-shop", "flows_to[main]", 4).
 golden_rel("visual_paint-shop", "has_conclusion[$kernel]", 39).
@@ -2650,7 +2650,7 @@ golden_rel("visual_spat-thursday", "added[main]", 1).
 golden_rel("visual_spat-thursday", "adjacent[main]", 29).
 golden_rel("visual_spat-thursday", "any_duty[main]", 210).
 golden_rel("visual_spat-thursday", "applies_on[main]", 31).
-golden_rel("visual_spat-thursday", "asserted_by[$kernel]", 194).
+golden_rel("visual_spat-thursday", "asserted_by[$kernel]", 196).
 golden_rel("visual_spat-thursday", "at_sup[main]", 137).
 golden_rel("visual_spat-thursday", "attempt[main]", 17).
 golden_rel("visual_spat-thursday", "authority[main]", 5).
@@ -2678,7 +2678,7 @@ golden_rel("visual_spat-thursday", "day_work[main]", 5).
 golden_rel("visual_spat-thursday", "derived_by[$kernel]", 4326).
 golden_rel("visual_spat-thursday", "driver[main]", 2).
 golden_rel("visual_spat-thursday", "during[main]", 14).
-golden_rel("visual_spat-thursday", "edb[main]", 70).
+golden_rel("visual_spat-thursday", "edb[main]", 72).
 golden_rel("visual_spat-thursday", "external[main]", 12).
 golden_rel("visual_spat-thursday", "flow[main]", 4).
 golden_rel("visual_spat-thursday", "flows_to[main]", 4).
@@ -2771,7 +2771,7 @@ golden_rel("visual_spat-week", "added[main]", 1).
 golden_rel("visual_spat-week", "adjacent[main]", 29).
 golden_rel("visual_spat-week", "any_duty[main]", 210).
 golden_rel("visual_spat-week", "applies_on[main]", 31).
-golden_rel("visual_spat-week", "asserted_by[$kernel]", 194).
+golden_rel("visual_spat-week", "asserted_by[$kernel]", 196).
 golden_rel("visual_spat-week", "at_sup[main]", 137).
 golden_rel("visual_spat-week", "attempt[main]", 17).
 golden_rel("visual_spat-week", "authority[main]", 5).
@@ -2799,7 +2799,7 @@ golden_rel("visual_spat-week", "day_work[main]", 5).
 golden_rel("visual_spat-week", "derived_by[$kernel]", 4543).
 golden_rel("visual_spat-week", "driver[main]", 2).
 golden_rel("visual_spat-week", "during[main]", 52).
-golden_rel("visual_spat-week", "edb[main]", 70).
+golden_rel("visual_spat-week", "edb[main]", 72).
 golden_rel("visual_spat-week", "external[main]", 12).
 golden_rel("visual_spat-week", "flow[main]", 4).
 golden_rel("visual_spat-week", "flows_to[main]", 4).
