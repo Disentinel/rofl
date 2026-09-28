@@ -3,7 +3,8 @@
 import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
-import { fold, type Step } from './fold.ts';
+import { fold, keyOf, type Step } from './fold.ts';
+import { collect, diff, status, KINDS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
@@ -21,7 +22,9 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
   /** what the invariant above could not see: its `unsure` line's answers */
   unsure?: { text: string; lit: string; rows: Row[]; total: number };
   /** why the line's answer means nothing: it rests on a relation whose rules a cell meant to write and the reader left out */
-  unasked?: string };
+  unasked?: string;
+  /** a `draw` line's picture */
+  view?: View };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
@@ -234,7 +237,7 @@ export class Host {
     const sc = this.code(files, data);
     const { facts, nodes, parseErrors } = sc;
     lap('scan');
-    const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
+    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, home);
     lap('read');
     const vocab = this.vocab = new Vocabulary(); vocab.blanks = true; vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
     const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
@@ -255,6 +258,7 @@ export class Host {
         const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
         if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
         for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
+        notes.push(...close[i]);
         if (!c.prose) for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
       }
       try {
@@ -280,7 +284,7 @@ export class Host {
       } catch (e) { errors.push((e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m)); texts[i] = ''; }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
     });
-    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => read[i] && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
+    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => read[i] && a.kind !== 'draw' && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
     const over = [...reads].filter((r) => !heads.has(r));
     const layered = !!this.shell && Object.keys(files).length > 0
@@ -325,6 +329,7 @@ export class Host {
     };
     const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, which nothing defines` : undefined, false);
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
+    const seen = { failing: new Set<string>(), blind: new Set<string>(), unknown: new Set<string>() };   // the terms a never's rows, an unsure's rows and unknown name
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
     const holed = new Map<string, string>();
     for (const r of f.query('hole[$kernel](H, R)').rows) {
@@ -364,7 +369,7 @@ export class Host {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { const w = bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${w ? BARE(w) : 'no sentence reads this question'}`); continue; }
-        if (a.kind === 'excise') continue;
+        if (a.kind === 'excise' || a.kind === 'draw') continue;
         try {
           if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text) }); continue; }
           if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text), note: nameless(a.lit, a.text) }); continue; }
@@ -373,12 +378,14 @@ export class Host {
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
+        if (a.kind === 'never' || a.kind === 'unsure') for (const r of q.rows) for (const t of Object.values(r.bindings)) (a.kind === 'never' ? seen.failing : seen.blind).add(t);
         const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
       }
     });
+    const excised = new Map<number, { world: Rofl; failing: Set<string> }>();
     // what if: a cell's `excise F` lines take those facts out of the world every line was asked over, and say which lines' answers move
     parts.forEach((_, i) => {
       const cut = asks[i].filter((a) => a.kind === 'excise' && a.lit);
@@ -386,7 +393,8 @@ export class Host {
       const g = f.fork();
       for (const a of cut) { const r = g.retract(a.lit); if (!r.ok) outs[i].errors.push(`${a.text}: ${r.diagnostics[0]}`); }
       try { partial ||= g.evaluate(BUDGET).partial; } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
-      const rows: Row[] = [];
+      const rows: Row[] = [], failing = new Set<string>();
+      excised.set(i, { world: g, failing });
       const said = (lit: string) => vocab.say(lit) ?? lit;
       parts.forEach((_, j) => {
         if (refused.has(j)) return;
@@ -394,6 +402,7 @@ export class Host {
           if (!['answers', 'never', 'unsure'].includes(a.kind) || !a.lit || conjunction(a.lit)) continue;
           const set = (w: Rofl) => new Set(w.query(a.lit).rows.map((r) => ground(a.lit, r.bindings)));
           const was = set(f), now = set(g);
+          if (a.kind === 'never') for (const r of g.query(a.lit).rows) for (const t of Object.values(r.bindings)) failing.add(t);
           const gone = [...was].filter((x) => !now.has(x)), come = [...now].filter((x) => !was.has(x));
           if (!gone.length && !come.length) continue;
           rows.push({ literal: a.lit, sentence: `${a.text}: ${was.size} -> ${now.size}` });
@@ -403,6 +412,31 @@ export class Host {
       });
       const text = cut.map((a) => a.text).join('; ');
       outs[i].lines.push({ unasked: unread[i], kind: 'excise', text, lit: cut.map((a) => a.lit).join(', '), rows, total: rows.filter((r) => !r.sentence.startsWith('  ')).length, ok: true, note: rows.length ? undefined : 'no line of this notebook answers differently' });
+    });
+    // a picture: the view facts the cells concluded, tagged with what the run knows of them
+    const lostFiles = new Set(unresolved.map((u) => u.slice(0, u.search(/:\d+ /))));
+    for (const [id, n] of Object.entries(nodes)) if (lostFiles.has(n.file)) seen.blind.add(id);
+    for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) for (const r of q.rows) seen.unknown.add(r.bindings.X); }
+    const world = (r: Rofl, proofsOf: Rofl): World => ({
+      rows: (lit) => { const q = (base && r === f && !heads.has(relOf(lit)) ? base : r).query(lit); return q.error || q.unpopulatable ? null : q.rows.map((x) => x.bindings); },
+      from: (lit) => {
+        const wit = proofsOf.store.witnessOf(keyOf(lit)); if (!wit) return null;
+        const keys = wit.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []);
+        return { said: keys.map((k) => vocab.say(k) ?? k), terms: keys.flatMap((k) => parseLiteral(k).args.map(canonTerm)) };
+      },
+      label: (t) => nodes[t] ? { label: nodes[t].label, at: [`${nodes[t].file}:${nodes[t].line}`] } : { label: termText(t) },
+    });
+    parts.forEach((_, i) => {
+      if (refused.has(i)) return;
+      for (const a of asks[i].filter((x) => x.kind === 'draw')) {
+        if (!KINDS.includes(a.lit as DrawKind)) { outs[i].errors.push(`${a.text}: draw takes ${KINDS.join(', ')}`); continue; }
+        const kind = a.lit as DrawKind, cut = excised.get(i);
+        let view = collect(kind, world(f, w));
+        status(view, seen);
+        if (cut) { const after = collect(kind, world(cut.world, cut.world)); status(after, { ...seen, failing: cut.failing }); view = diff(view, after); }
+        if (partial) view.notes.push('the run stopped at its limit, so marks may be missing');
+        outs[i].lines.push({ unasked: unread[i], kind: 'draw', text: a.text, lit: a.lit, rows: [], total: Object.keys(view.marks).length, ok: true, view });
+      }
     });
     lap('ask');
     return done();

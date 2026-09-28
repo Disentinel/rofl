@@ -2,7 +2,7 @@
 // Pure: the page, the notebook kernel and the reader of worlds share it.
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
 
-export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise';
+export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
 export type Cell = { id: string; text: string; form?: 'md' | 'rofl'; /** prose: read for its sentences, no line of it asks */ prose?: boolean };
 
@@ -13,9 +13,9 @@ export function booksOf(model: string): Map<string, Set<string>> {
   return books;
 }
 
-const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends|excise)\s+(.+?)\.?\s*$/;
+const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends|excise|draw)\s+(.+?)\.?\s*$/;
 
-/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing. */
+/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing, `draw K` shows the view facts of the kind K. */
 function split(text: string): { clauses: string; asks: Ask[] } {
   const clauses: string[] = []; const asks: Ask[] = [];
   for (const raw of text.split('\n')) {
@@ -49,7 +49,23 @@ export function homeOf(model: string): Record<string, string> {
 }
 
 export type Ask = { kind: Kind; lit: string; text: string };
-export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string };
+/** `close`: by part, what each new sentence it declares is close to (closeTo). */
+export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][] };
+
+/** The words of a sentence with every hole, every name and every `a noun` before one as `_`: `<0:car> is inside a mark \`shop\`` -> `_ is inside _`. */
+const skeleton = (p: string) => p.replace(/<\d+:[\w ]+>|`[^`]*`|"[^"]*"|\b\d+\b/g, '_').replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? _/g, '_').replace(/\s+/g, ' ').trim();
+const said = (p: string) => p.replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n}`);
+
+/** A sentence a cell declares that reads as one already declared, its holes and names aside: an anchor on a head (`<a id="car_node">A car X is a node`),
+ *  or a name beside a hole's noun (``is inside a mark `shop` ``), makes a new relation where the writer meant a row of the declared one. */
+export function closeTo(learned: string[], vocab: string): string[] {
+  const known = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].map((m) => ({ rel: m[1], text: m[2], k: skeleton(m[2]) }));
+  return learned.flatMap((l) => {
+    const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); if (!m) return [];
+    const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2]));
+    return near ? [`"${said(m[2])}" makes a new relation, ${m[1]}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
+  });
+}
 
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
 export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
@@ -58,9 +74,10 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     if (c.form !== 'md') return null;
     const first = readMd(clauses, { vocab: phrases, homeBooks: home });
     const text = anchored(clauses, first.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5)));
-    return { text, learned: readMd(text, { vocab: phrases, homeBooks: home }).phrases };
+    const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
+    return { text, learned, close: closeTo(learned, phrases) };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');
-  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab };
+  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab, close: md.map((m) => m?.close ?? []) };
 }

@@ -15,6 +15,7 @@ import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
+import { counted, text as drawn } from './draw.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -89,10 +90,12 @@ export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${c
 
 export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
+  : l.kind === 'draw' && l.view ? counted(l.view)
   : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
 
-export function print(file: string, r: NbResult, only?: number, shown = SHOWN): string {
+/** `format`: the backend a picture is written in, `dot` for a graph or `vega-lite` for a table; the kind's first (notebook/draw.ts FORMATS) otherwise. */
+export function print(file: string, r: NbResult, only?: number, shown = SHOWN, format?: string): string {
   const out: string[] = [];
   for (const e of r.errors) out.push(`${file}: error: ${e}`);
   if (r.unresolved) out.push(`${file}: note: ${unresolvedSaid(r.unresolved)}, so a never holds only as far as the model sees:`, ...r.unresolved.map((u) => `  ${u}`));
@@ -109,6 +112,11 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN): 
       if (l.total > shown) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
+      if (l.view) {
+        for (const n of l.view.notes) out.push(`    note: ${n}`);
+        const t = drawn(l.view, format), fence = t.startsWith('|') ? '' : t.startsWith('{') ? 'json' : t.startsWith('digraph') ? 'dot' : l.view.kind === 'argument' ? 'argdown' : 'mermaid';
+        out.push(...(fence ? ['```' + fence, t, '```'] : [t]).join('\n').split('\n').map((x) => `    ${x}`));
+      }
     }
   }
   out.push(`${file}: ${tally(r)}`);   // the verdict line, read by npm run test:nb
@@ -121,13 +129,14 @@ const plural = (k: number, one: string, many: string) => `${k} ${k === 1 ? one :
 export function tally(r: NbResult): string {
   const ls = r.cells.flatMap((c) => c.lines), count = (f: (l: NbLine) => boolean) => ls.filter(f).length;
   const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind');
-  const fails = count((l) => l.verdict === 'fails'), told = count((l) => l.verdict === 'explained'), moved = count((l) => l.kind === 'excise' && l.verdict !== 'unasked'), unasked = count((l) => l.verdict === 'unasked');
+  const fails = count((l) => l.verdict === 'fails'), told = count((l) => l.verdict === 'explained'), pictures = count((l) => l.kind === 'draw' && l.verdict !== 'unasked'), moved = count((l) => l.kind === 'excise' && l.verdict !== 'unasked'), unasked = count((l) => l.verdict === 'unasked');
   const said = [
     asked && plural(asked, 'question answered', 'questions answered'),
     holds && plural(holds, 'invariant holds', 'invariants hold'),
     blind && `${plural(blind, holds ? 'holds' : 'invariant holds', holds ? 'hold' : 'invariants hold')} as far as the model sees`,
     (holds || blind || fails) && (!fails ? 'none fails' : holds || blind ? plural(fails, 'fails', 'fail') : plural(fails, 'invariant fails', 'invariants fail')),
     told && plural(told, 'explained', 'explained'),
+    pictures && plural(pictures, 'picture', 'pictures'),
     moved && plural(moved, 'what-if', 'what-ifs'),
     unasked && plural(unasked, 'line not asked', 'lines not asked'),
   ].filter(Boolean).join(', ') || (r.cells.length > 1 ? 'nothing asked' : `0 cells: this is a world (facts and rules), not a notebook; a notebook asks in fenced \`\`\`rofl cells`);
@@ -307,9 +316,9 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 
-const HELP = `New here? Play examples/tutorial (6 short levels), from examples/tutorial/1-what-ships.rofl.md.
+const HELP = `New here? Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.
 
-npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--timing]   run a notebook
+npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--format dot|vega-lite]   run a notebook
 npm run nb -- translate <file.rofl.md>        a model answers each natural cell in rofl
 npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
 npm run nb -- --help env                      the environment variables
@@ -322,6 +331,7 @@ Asking lines, in a rofl cell:
   why S         a proof of one answer               why \`c3\` leaves unpainted
   whynot S      why S does not hold                 whynot \`c3\` comes out \`pink\`
   excise F      which lines move without fact F     excise \`c1\` is approved by \`ben\`
+  draw K        graph, time, table, argument        draw graph
   extends R     this cell adds to the model's R     extends blocked
 Capitalised: a blank. A name goes in backticks.
 
@@ -332,7 +342,7 @@ Exit  0  every never holds, every cell read
 
 --json  JSON, fifty answers a line    --cell N  only cell N
 --all   every answer                 --timing  times on stderr
-Then: examples/notebook/review.rofl.md (no code), examples/notebook/self.rofl.md (over this tree's code).`;
+Then: examples/notebook/review.rofl.md, examples/notebook/self.rofl.md.`;
 
 const HELP_ENV = `ROFL_NB_LIMIT=120        seconds a run evaluates before it stops and answers what it found (exit 3)
 ROFL_NB_MEMORY=<GB>      gigabytes of heap likewise; by default most of what Node allows
@@ -361,7 +371,7 @@ if (isMain) {
     console.log(v.lines.join('\n'));
     process.exit(v.errors.length ? 2 : 0);
   }
-  const named = argv[0] === 'translate' ? argv[1] : argv.find((a) => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--cell');
+  const named = argv[0] === 'translate' ? argv[1] : argv.find((a, i) => !a.startsWith('--') && !['--cell', '--format'].includes(argv[i - 1]));
   if (!named) { console.error(`usage: npm run nb -- ${argv[0] === 'translate' ? 'translate ' : ''}<file.rofl.md> (see --help)`); process.exit(2); }
   if (!named.endsWith('.rofl.md')) { console.error(`${named}: not a notebook: a notebook is a .rofl.md file (see --help)`); process.exit(2); }
   if (!existsSync(named)) { console.error(`${named}: no such file`); process.exit(2); }
@@ -380,5 +390,5 @@ if (isMain) {
   if (r.outside?.length) console.error(`${file}: note: ${OUTSIDE(r.outside)}`);
   if (argv.includes('--timing')) console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
-  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN)) + '\n', () => process.exit(EXIT[r.status]));
+  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN, argv.includes('--format') ? argv[argv.indexOf('--format') + 1] : undefined)) + '\n', () => process.exit(EXIT[r.status]));
 }
