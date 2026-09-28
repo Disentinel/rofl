@@ -4,12 +4,12 @@
 
 A notebook is Markdown. `rofl-nb` reads it in cells:
 
-- **prose**: everything outside a code fence, read for its sentences. A
-  quote (`>`) is only for people.
+- **prose**: outside the fences, read for its sentences; a quote (`>`)
+  is for people.
 - **`rofl`** fence: rules and asking lines, in sentences.
 - **`datalog`** fence: the same in Datalog.
-- **`natural`** fence: a request in plain words. `rofl-nb translate` asks
-  Claude to write a `rofl` cell under it.
+- **`natural`** fence: a request in words; `rofl-nb translate` has Claude
+  write the `rofl` cell.
 
 ## Sentences
 
@@ -27,8 +27,8 @@ A **fact** is a filled sentence in a list under a line ending in a colon:
 
     A change C needs a team T if C touches a module M and T owns M.
 
-`unless` adds a condition that must not hold. `either:` gives several ways
-to the same conclusion, as a numbered list of `if` or `unless` lines.
+`unless` adds a condition that must not hold. `either:` and a numbered list
+of `if` lines give several ways to one conclusion.
 
 ## Asking lines
 
@@ -102,7 +102,8 @@ folder gets a `note:` on stderr; the examples' world is one folder up.
 
 A **model** turns code into facts. `model: js` reads the JavaScript and
 TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences
-(with a notebook, its own too).
+(with a notebook, its own too). In code, a function is a node, not a name:
+`` `f` calls `f` `` matches nothing, so write `never F calls F`.
 
 ## Could not see: exit 3
 
@@ -128,8 +129,7 @@ List the missing file under `code:`, or accept the gap. Exit 0: every
 ## Glossary
 
 - **notebook**: a `.rofl.md` file with cells.
-- **world**: a `.rofl.md` or `.rofl` file of facts and rules that asks
-  nothing; a notebook `reads:` it.
+- **world**: a file of facts and rules that asks nothing.
 - **cell**: one fenced block, or the prose around it.
 - **sentence**: a relation written in words, declared once with an anchor.
 - **anchor**: `<a id="name"></a>`, the sentence's name in Datalog.

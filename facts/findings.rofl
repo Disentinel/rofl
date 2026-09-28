@@ -6,6 +6,11 @@
 
 -- Recorded 2026-09-28 by the notebook-docs session: the user's guide shows the tool's own output.
 
+finding(f_a_backticked_name_over_code_matches_nothing_and_its_never_holds, defect).
+recorded(f_a_backticked_name_over_code_matches_nothing_and_its_never_holds, "2026-09-28").
+demands(f_a_backticked_name_over_code_matches_nothing_and_its_never_holds, code).
+finding_note(f_a_backticked_name_over_code_matches_nothing_and_its_never_holds, "FOUND BY THE SECOND FRESH READER of guide/QUICKSTART. Over a model: js notebook of a recursive `factorial`, `? Caller calls Callee` answers `[function factorial() at mylib.js:1] calls [function factorial() at mylib.js:1]`, but `` ? `factorial` calls `factorial` `` answers 0 and `` never `factorial` calls `factorial` `` HOLDS, exit 0. So does `` never `nosuchfunction` calls some function ``: a code relation's arguments are node ids, a backticked name is an atom, the two never meet, and nothing says so. `never F calls F` fails as it should. A never that can only hold is the gate that cannot say no. guide/CONCEPTS.md now says to use a variable; the fix belongs in the command line: a name in a code relation's node position that matches no row could be a note (as a bare word already is), or name the sentence to use for a function's name.").
+
 finding(f_the_users_guide_shows_only_output_the_tool_printed, decision).
 recorded(f_the_users_guide_shows_only_output_the_tool_printed, "2026-09-28").
 demands(f_the_users_guide_shows_only_output_the_tool_printed, code).

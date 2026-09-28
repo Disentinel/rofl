@@ -98,7 +98,7 @@ The repository today:
 
 A rule whose head no sentence declares yet declares it, named after its own
 words, so a cell needs no anchor. `~/rofl-examples/notebook/small.rofl.md`
-does this twice:
+does this twice; `vocab` does not list `C recurses`, the cell defines it:
 
 <!-- BEGIN file examples/notebook/small.rofl.md -->
 ````markdown
