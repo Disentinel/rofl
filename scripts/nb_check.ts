@@ -207,6 +207,9 @@ const sockDirs = (async () => {
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
+// H3 on the command line: a harness that keeps tools refused, one whose login fails said; started now, read with the rest of H3
+const noLogin = path.join(tmp, 'no-login.sh'); writeFileSync(noLogin, '#!/bin/sh\ncat > /dev/null\nprintf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2\nexit 1\n'); chmodSync(noLogin, 0o755);
+const h3cli = Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: noLogin })]);
 const layering = node('scripts/nb_layers.ts', []);
 const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy, nmWorld] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
@@ -359,7 +362,7 @@ for (const [name, at, plant] of H3_BREAKS) {
   if (spoilt === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
   check(`  and with ${name} spoilt, it is red`, (await harnesses(spoilt, name)).length > 0);
 }
-const [refusedCli, failedCli] = await Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: path.join(tmp, 'h3', 'fails') })]);
+const [refusedCli, failedCli] = await h3cli;
 check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
 check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
