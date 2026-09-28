@@ -22,14 +22,15 @@ const uriOf = (file: string) => pathToFileURL(file).href;
 const ours = (f: string) => f.endsWith('.rofl') || f.endsWith('.rofl.md');
 const inside = (f: string) => roots.some((r) => f === r || f.startsWith(r + path.sep));
 
-/** An open text, else a regular file of at most 16 MB on disk. */
-function text(file: string): string | undefined {
+/** An open text, else a regular file of at most 16 MB on disk; null for something there that is not one. */
+function text(file: string): string | undefined | null {
   const t = open.get(file); if (t !== undefined) return t;
-  try { const s = statSync(file); return s.isFile() && s.size <= LARGEST ? readFileSync(file, 'utf8') : undefined; } catch { return undefined; }
+  try { const s = statSync(file); return s.isFile() && s.size <= LARGEST ? readFileSync(file, 'utf8') : null; } catch { return undefined; }
 }
 const lib = (f: string) => LIB.has(f) ? text(path.join(ROOT, f)) : undefined;
 /** What a front matter's `reads:` names, from the file's directory as the kernel resolves it; only a `.rofl` or `.rofl.md`. */
-const readsOf = (file: string) => (name: string) => { const p = named(file, name); return ours(p) ? text(p) : undefined; };
+const readsOf = (file: string) => (name: string) => { const p = named(file, name); return ours(p) ? text(p) : exists(p) ? null : undefined; };
+const exists = (p: string) => { try { statSync(p); return true; } catch { return false; } };
 const named = (file: string, name: string) => path.resolve(path.dirname(file), name.replace(/^~(?=\/|$)/, os.homedir()));
 
 function analyse(uri: string): Known | undefined {
@@ -54,7 +55,7 @@ function around(uri: string, k: Known): [string, Known][] {
     if (inside(dir)) try { out.push(...readdirSync(dir).filter((f) => f.endsWith('.rofl')).map((f) => path.join(dir, f))); } catch {}
   }
   return [[file, k] as [string, Known], ...[...new Set(out)].filter((f) => f !== file).flatMap((f): [string, Known][] => {
-    const t = text(f); if (t === undefined) return [];
+    const t = text(f); if (typeof t !== 'string') return [];
     const stamp = `${t.length}:${open.has(f) ? t : statSync(f).mtimeMs}`;
     let c = kept.get(f);
     if (c?.stamp !== stamp) kept.set(f, c = { stamp, k: know(f, t, lib, readsOf(f), false) });

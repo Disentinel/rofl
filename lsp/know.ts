@@ -16,7 +16,8 @@ export type Diag = Span & { severity: 1 | 2 | 3; message: string };
 /** `def`: a clause concludes the relation here (a head, a fact, a sentence's anchor); else a premise uses it. */
 export type Site = Span & { rel: string; def: boolean; arity?: number; book?: string };
 export type Known = { diags: Diag[]; sites: Site[]; vocab: Vocabulary; sentences: string[]; front?: Front };
-export type Get = (f: string) => string | undefined;
+/** undefined: there is no such file; null: there is, and it is not read (lsp/server.ts says which it reads). */
+export type Get = (f: string) => string | undefined | null;
 
 const ERROR = 1, WARNING = 2, INFO = 3;
 const BUDGET = 1000;
@@ -45,12 +46,13 @@ function knowMd(file: string, text: string, lib: Get, reads: Get, load: boolean)
   const lines = text.split('\n'), diags: Diag[] = [], sites: Site[] = [];
   const front = parseFront(text), want = libFiles(file, front);
   const input = { lib: {} as Record<string, string>, reads: {} as Record<string, string>, code: {} };
-  for (const f of [...want.model, ...want.phrases]) { const t = lib(f); if (t !== undefined) input.lib[f] = t; }
-  for (const r of front.reads) { const t = reads(r); if (t !== undefined) input.reads[r] = t; }
+  for (const f of [...want.model, ...want.phrases]) { const t = lib(f); if (typeof t === 'string') input.lib[f] = t; }
+  const kept = new Set<string>();
+  for (const r of front.reads) { const t = reads(r); if (typeof t === 'string') input.reads[r] = t; else if (t === null) kept.add(r); }
   const world = assemble(file, text, input);
   for (const e of world.errors) {
     const name = e.replace(/: not given$/, ''), at = lines.findIndex((l, i) => i < 40 && l.includes(name));
-    diags.push({ ...whole(lines, Math.max(at, 0)), severity: ERROR, message: `${name}: not read` });
+    diags.push({ ...whole(lines, Math.max(at, 0)), ...(kept.has(name) ? { severity: WARNING, message: `${name}: not read here; the language server reads only the .rofl and .rofl.md files a front matter names` } : { severity: ERROR, message: `${name}: not read` }) });
   }
   const cells = cellsOf(text).filter((c) => c.kind !== 'natural');
   const book = readBook(cells.map(asCell), world.phrases, world.home);
@@ -219,8 +221,10 @@ const safe = (literal: (s: string) => string | null, s: string) => { try { retur
 
 /** A parse error where it points: its line, and the token it names on that line. */
 function parseDiag(msg: string, lines: string[], at: number): Diag {
-  const m = /^line (\d+): (.*)$/s.exec(msg), line = Math.min((m ? Number(m[1]) - 1 : 0) + at, Math.max(lines.length - 1, 0));
-  const got = /(?:got|character) '(.+?)'/.exec(msg)?.[1], l = lines[line] ?? '';
+  const m = /^line (\d+): (.*)$/s.exec(msg), got = /(?:got|character) '(.+?)'/.exec(msg)?.[1];
+  let line = Math.min((m ? Number(m[1]) - 1 : 0) + at, Math.max(lines.length - 1, 0));
+  while (got === 'eof' && line > at && !(lines[line] ?? '').replace(/--.*$/, '').trim()) line--;   // the text ended: after its last word, not on the blank line after it
+  const l = lines[line] ?? '';
   const code = l.replace(/--.*$/, '');
   if (got === 'eof') return { line, col: code.trimEnd().length, end: code.trimEnd().length + 1, severity: ERROR, message: m ? m[2] : msg };
   const c = got ? code.indexOf(got) : -1;

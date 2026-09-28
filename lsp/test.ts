@@ -78,6 +78,10 @@ const lineOf = (s: string) => lines.findIndex((l) => l.includes(s));
   expect(m.every((x) => x.line === lines.length), `a sentence not read marks only its line: ${JSON.stringify(m)}`);
   const f = know(path.join(ROOT, 'examples/front.rofl.md'), '---\nreads: [nowhere.rofl.md]\n---\n\nA thing X is odd if X is odd.\n', lib, () => undefined).diags;
   expect(f.some((x) => x.line === 1 && x.message === 'nowhere.rofl.md: not read'), `a world it reads that is not there: ${JSON.stringify(f)}`);
+  const kept = know(path.join(ROOT, 'examples/front.rofl.md'), '---\nreads: [/etc/hosts]\n---\n', lib, () => null).diags;
+  expect(kept.length === 1 && kept[0].severity === 2 && /^\/etc\/hosts: not read here/.test(kept[0].message), `a file it will not read: ${JSON.stringify(kept)}`);
+  const eof = know('/x/eof.rofl', 'a(1).\nb(X) :- a(X\n\n', lib, () => undefined).diags;
+  expect(eof.length === 1 && eof[0].line === 1 && eof[0].col === 11, `a text that ends inside a rule is marked after its last word: ${JSON.stringify(eof)}`);
 }
 
 const sites = (k: Known, rel: string, def: boolean) => k.sites.filter((s) => s.rel === rel && s.def === def).map((s) => s.line);
