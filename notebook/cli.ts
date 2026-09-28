@@ -4,7 +4,7 @@
 // 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
-import { existsSync, globSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -37,8 +37,27 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const names = codeNames(path.resolve(file), found.map((p) => path.resolve(p)));
   const paths: Record<string, string> = {};
   for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; paths[names[path.resolve(p)]] = path.resolve(p); }
-  return { input: { lib, reads, code }, errors, paths };
+  return { input: { lib, reads, code, data: dataFiles(paths, code) }, errors, paths };
 }
+
+/** The files a relative specifier in the code names that exist and are not code, by their name in the notebook; one outside the notebook's root, or code nobody listed, stays out of sight. */
+function dataFiles(paths: Record<string, string>, code: Record<string, string>): string[] {
+  const out = new Set<string>();
+  for (const [name, text] of Object.entries(code)) {
+    const root = paths[name].slice(0, paths[name].length - name.length);
+    for (const m of text.matchAll(/(?:\brequire\s*\(\s*|\bimport\s*\(\s*|\bfrom\s+|\bimport\s+)(['"])(\.\.?(?:\/[^'"]*)?)\1/g)) {
+      const p = path.resolve(path.dirname(paths[name]), m[2]);
+      for (const f of [p, `${p}.json`]) {
+        const rel = path.relative(root, f);
+        if (/^\.\.(\/|$)/.test(rel) || CODE.test(f) || !isFile(f)) continue;
+        out.add(rel.split(path.sep).join('/'));
+      }
+    }
+  }
+  return [...out].sort();
+}
+const CODE = /\.[cm]?[jt]sx?$/;
+const isFile = (p: string) => { try { return statSync(p).isFile(); } catch { return false; } };
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
 export function runFile(file: string, kernel = new Kernel(), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string> } {

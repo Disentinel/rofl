@@ -31,8 +31,9 @@ unreached(N) :- needed(N), not from_receipt(N).
 never unreached(N)
 ```
 
-> Which files the entry depends on. A relative `require` the model could not
-> resolve would turn every never above into "holds as far as the model sees".
+> Which files the entry depends on. `./package.json` is data, not code, and
+> is reached; a relative `require` that names no file at all would turn every
+> never above into "holds as far as the model sees".
 
 ```rofl
 ? "cjs/index.js" depends on T

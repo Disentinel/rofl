@@ -212,7 +212,8 @@ export class Host {
     return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
   }
 
-  run(code: string | Record<string, string>, cells: Cell[]): RunOut {
+  /** `data`: files that exist beside the code and are not code, which a specifier may name. */
+  run(code: string | Record<string, string>, cells: Cell[], data: string[] = []): RunOut {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
     const home = this.home;
@@ -221,7 +222,7 @@ export class Host {
     const phases: Record<string, number> = {};
     let mark = performance.now();
     const lap = (name: string) => { const now = performance.now(); phases[name] = Math.round(now - mark); mark = now; };
-    const sc = this.code(files);
+    const sc = this.code(files, data);
     const { facts, nodes, parseErrors } = sc;
     lap('scan');
     const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
@@ -371,8 +372,8 @@ export class Host {
   }
 
   /** The code's facts, scanned once per text of the files. */
-  private code(files: Record<string, string>): Scanned {
-    const key = JSON.stringify(files);
+  private code(files: Record<string, string>, data: string[]): Scanned {
+    const key = JSON.stringify([files, data]);
     if (this.scanned?.key === key) return this.scanned;
     const nodes: Record<string, Node> = {};
     const parseErrors: Record<string, string> = {};
@@ -389,7 +390,7 @@ export class Host {
       }
     }
     labelNodes(facts, nodes);
-    const all = [...facts, ...hostFacts(Object.keys(files), strings)];
+    const all = [...facts, ...hostFacts([...Object.keys(files), ...data], strings)];
     this.base = null;
     return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
   }

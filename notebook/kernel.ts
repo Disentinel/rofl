@@ -37,7 +37,7 @@ export class Kernel {
     }
     const cells = cellsOf(text);
     const runs = cells.filter((c) => c.kind !== 'natural');
-    const out = this.host.run(input.code, runs.map(asCell));
+    const out = this.host.run(input.code, runs.map(asCell), input.data);
     for (const [f, e] of Object.entries(out.parseErrors)) errors.push(`${f}: not parsed: ${e}`);
     if (out.error) errors.push(out.error);
     const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;

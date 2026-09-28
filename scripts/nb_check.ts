@@ -128,7 +128,7 @@ const slow = path.join(tmp, 'slow.sh'); writeFileSync(slow, '#!/bin/sh\ncat > /d
 const xdirRed = planted('xdir-red', 'xdir.rofl.md', (t) => t, [['examples/notebook/xdir/handlers/index.ts', "export { handleGet, handlePut } from './store-handlers.js';\n"]]);
 const translateSlow = planted('tr-slow', 'review.rofl.md', withNatural);
 // a relative require the model cannot resolve: the never over the rest holds only as far as the model sees
-const cjsLost = planted('cjs-lost', 'cjs.rofl.md', (t) => t, [['examples/notebook/cjs/cart.js', `${readFileSync(path.join(NB, 'cjs/cart.js'), 'utf8')}\nexports.tax = require('./missing');\n`]]);
+const cjsLost = planted('cjs-lost', 'cjs.rofl.md', (t) => t, [['examples/notebook/cjs/cart.js', `${readFileSync(path.join(NB, 'cjs/cart.js'), 'utf8')}\nexports.tax = require('./missing');\n`], ['examples/notebook/cjs/package.json', readFileSync(path.join(NB, 'cjs/package.json'), 'utf8')]]);
 
 // the kept kernel (notebook/serve.ts) answers what a fresh process answers, after a cell edit, a code edit and a kill -9; and a daemon
 // that keys its answer on the notebook's text alone, blind to the code, is caught by the same comparison
@@ -222,7 +222,7 @@ check('I1 a whynot that does not parse is an error of its cell, a why says so on
 check('I1 an untranslated natural cell is named, not dropped', is(nat, 0) && has(nat, 'not translated yet'), nat);
 check('xdir: a call reaches across directories, through a barrel and a TypeScript `.js` specifier', is(xdir, 0) && has(xdir, '? handler(F, N)  ->  3 answers') && has(xdir, 'never undispatched(N)  ->  holds') && has(xdir, 'calls [function keys() at xdir/lib/store.ts:3]'), xdir);
 check('  and a handler the barrel stops re-exporting is named', is(xdirFails, 1) && has(xdirFails, 'never undispatched(N)  ->  FAILS · 1') && has(xdirFails, 'undispatched("handleList")'), xdirFails);
-check('cjs: calls and depends cross files through require, module.exports and exports.a', is(cjs, 0) && has(cjs, 'never unreached(N)  ->  holds') && has(cjs, '"cjs/index.js" depends on "cjs/format.js"'), cjs);
+check('cjs: calls and depends cross files through require, module.exports and exports.a', is(cjs, 0) && has(cjs, 'never unreached(N)  ->  holds') && has(cjs, '"cjs/index.js" depends on "cjs/format.js"') && has(cjs, '"cjs/index.js" depends on "cjs/package.json"') && !has(cjs, 'not resolved'), cjs);
 check('I3 a relative require that resolves to no file makes a holding never blind, exit 3, and the head names it', is(cjsBlind, 3) && has(cjsBlind, 'note: 1 relative import or require was not resolved') && /cjs\/cart\.js:\d+ "\.\/missing"/.test(cjsBlind.out) && has(cjsBlind, 'never unreached(N)  ->  holds as far as it sees · 1 relative import or require was not resolved'), cjsBlind);
 check('I1 every directive line of review is answered', (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), reviewJson);
 check('I4 a run writes nothing into the file', before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);

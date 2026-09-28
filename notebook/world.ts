@@ -2,8 +2,9 @@
 import { readBook, homeOf, type Cell } from './book.ts';
 import { cellsOf, libFiles, parseFront, type NbCell } from './front.ts';
 
-/** The texts a run needs: `lib` by their path from the root of the tree (libFiles), `reads` and `code` by their name in the notebook. */
-export type Inputs = { lib: Record<string, string>; reads: Record<string, string>; code: Record<string, string> };
+/** The texts a run needs: `lib` by their path from the root of the tree (libFiles), `reads` and `code` by their name in the notebook; `data`, the files a
+ *  relative specifier in the code names that exist and are not code (`../package.json`), which it reaches rather than loses sight of. */
+export type Inputs = { lib: Record<string, string>; reads: Record<string, string>; code: Record<string, string>; data?: string[] };
 
 export const asCell = (c: NbCell): Cell => ({ id: `c${c.index}`, text: c.text, form: c.kind === 'datalog' ? 'rofl' : 'md', prose: c.kind === 'prose' });
 

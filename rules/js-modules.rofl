@@ -153,7 +153,7 @@ dangling_import[code](I, S) :- site_shape[code](I, relative), site_source[code](
 -- rules/js-resolve.rofl holds it to node's own resolver.
 ts_ext("js", "ts").  ts_ext("js", "tsx").  ts_ext("jsx", "tsx").  ts_ext("mjs", "mts").  ts_ext("cjs", "cts").
 
-probe_ext("ts").  probe_ext("tsx").  probe_ext("js").  probe_ext("jsx").  probe_ext("mjs").  probe_ext("cjs").
+probe_ext("ts").  probe_ext("tsx").  probe_ext("js").  probe_ext("jsx").  probe_ext("mjs").  probe_ext("cjs").  probe_ext("json").
 
 index_file("index.ts").  index_file("index.tsx").  index_file("index.js").  index_file("index.jsx").
 
