@@ -328,7 +328,7 @@ const proto = (name: string, untracked = false) => {
   // the request names files by their last part: a.ts to be read, and two tracked links, one out of the repository and one onto the .env
   const nbFile = planted(name, 'review.rofl.md', withCell('No change touches a module nobody owns; see a.ts, link.ts and cfg.ts.', 'natural')), repo = path.join(tmp, name), git = (...a: string[]) => spawnSync('git', a, { cwd: repo });
   put(path.join(repo, 'src/a.ts'), 'export function alpha() {\n  return 1;\n}\n' + Array.from({ length: 400 }, (_, i) => `// filler line ${i} of a long file, to spend a small budget`).join('\n') + '\n');
-  put(path.join(repo, 'src/long.txt'), `${'a'.repeat(40)}!\n`);
+  put(path.join(repo, 'src/long.txt'), `${'a'.repeat(40)}!\n`); put(path.join(repo, 'src/.github/ci.yml'), 'on: push\n');
   put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'conf/.npmrc'), 'NPMRC_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'untracked.ts'), 'UNTRACKED_TOKEN_9f2\n');
   put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
   symlinkSync('../../outside.txt', path.join(repo, 'src/link.ts')); symlinkSync('../.env', path.join(repo, 'src/cfg.ts'));
@@ -340,7 +340,7 @@ const proto = (name: string, untracked = false) => {
   spawnSync('git', ['add', '-f', 'examples', 'untracked.ts'], { cwd: repo, env: { ...process.env, GIT_DIR: path.join(other, '.git'), GIT_WORK_TREE: repo } });
   return nbFile;
 };
-const READS = ['list src/**', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
+const READS = ['list src/**', 'list **/*.yml', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
 /** The fake: each prompt kept as prompt.N; the first answer is the requests, later ones the cell, or requests for ever with `forever`. */
 const reader = (name: string, forever = false) => { const f = path.join(tmp, `${name}-model`), dir = path.join(tmp, `${name}-prompts`); mkdirSync(dir, { recursive: true }); put(f, `#!/usr/bin/env node
 const fs = require('fs'); let i = '';
@@ -364,11 +364,12 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['untracked notebook', 'notebook/reader.ts', /  if \(!files\.has\(path\.relative\(root, realpathSync\(notebook\)\)\)\) return .*\n/, '', ['untracked']],
   ['tracked', 'notebook/reader.ts', /  if \(!repo\.files\.has\(rel\)\) return .*\n/, ''],
   ['grep path check', 'notebook/reader.ts', /const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;'],
-  ['grep time limit', 'notebook/reader.ts', /timeout: GREP_MS, /, '', ['small']],
+  ['grep time limit', 'notebook/reader.ts', /\], GREP_MS, 16 \* 2 \*\* 20\)/, '], undefined, 16 * 2 ** 20)', ['small']],
   ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
   ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
   ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, ''],
-  ['git environment', 'notebook/reader.ts', /, env: gitEnv\(\) \}\);/g, ' });', ['gitenv']],
+  ['git environment', 'notebook/reader.ts', /, env: Object\.fromEntries\(.*$/m, ' });', ['gitenv']],
+  ['list skips dotfiles', 'notebook/reader.ts', /runGit\(repo\.root, \['ls-files', '-z', '--', `:\(glob\)\$\{arg\}`\], GREP_MS\)\.stdout\.split\('\\0'\)/, '[...repo.files].filter((f) => path.matchesGlob(f, arg))'],
   ['requests among words', 'notebook/reader.ts', /return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);", ['words']],
   ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
   ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
@@ -402,6 +403,7 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     const second = plain.prompts[1] ?? '';
     if (!(plain.prompts[0] ?? '').includes('The files the request names:\nsrc/a.ts:\n1  export function alpha')) bad.push(`a file the request names by its last part was not read into the first prompt`);
     if (plain.o.code !== 0 || !readFileSync(plain.nb, 'utf8').includes('never M is unowned')) bad.push(`the cell after reading was not written: exit ${plain.o.code}\n${plain.o.out.slice(-600)}`);
+    if (!second.includes('> list **/*.yml\nsrc/.github/ci.yml')) bad.push(`list ** left out a dotfile: ${second.slice(second.indexOf('> list **/*.yml'), second.indexOf('> list **/*.yml') + 100)}`);
     if (!second.includes('1  export function alpha() {') || !second.includes('src/a.ts') || !second.includes('`c2` is blocked by `platform`')) bad.push(`list, show or ? did not answer: ${second.slice(second.indexOf('You asked:'), second.indexOf('You asked:') + 1500)}`);
     for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret'], ['conf/.npmrc', 'looks like a secret'], ['vendor/sub', 'not a regular file']])
       if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`show ${asked} was not refused as ${why}`);

@@ -19,17 +19,20 @@ const SHOWN = { list: 200, grep: 100, show: 400 };
 const GREP_MS = Number(process.env.ROFL_NB_GREP_MS ?? 5000);
 
 /** `refused`: why nothing of it is read. */
-/** git's environment without GIT_*: GIT_DIR, GIT_WORK_TREE or GIT_INDEX_FILE set around translate would point it at another repository. */
-const gitEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
+/** The one way this starts a process: git, in `cwd`, without GIT_* in its environment (GIT_DIR, GIT_WORK_TREE or GIT_INDEX_FILE set around
+ *  translate would point it at another repository), stopped at `timeout` ms. */
+function runGit(cwd: string, args: string[], timeout?: number, maxBuffer = 64 * 2 ** 20) {
+  return spawnSync('git', args, { cwd, encoding: 'utf8', timeout, maxBuffer, env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))) });
+}
 
 export type Repo = { root: string; files: Set<string>; git: boolean; refused?: string };
 
 /** The repository a notebook is in: git's top level and the files it tracks. None to read outside git, when the top level is the home
  *  directory (a dotfiles repository), or when git does not track the notebook itself. */
 export function gitFiles(notebook: string): Repo {
-  const dir = path.dirname(realpathSync(notebook)), top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8', env: gitEnv() });
+  const dir = path.dirname(realpathSync(notebook)), top = runGit(dir, ['rev-parse', '--show-toplevel']);
   if (top.status !== 0) return { root: dir, files: new Set(), git: false, refused: 'the notebook is not in a git repository' };
-  const root = realpathSync(top.stdout.trim()), ls = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 2 ** 20, env: gitEnv() });
+  const root = realpathSync(top.stdout.trim()), ls = runGit(root, ['ls-files', '-z']);
   const files = new Set((ls.stdout ?? '').split('\0').filter((f) => f && !SECRET.test(f)));
   if (root === realpathSync(os.homedir())) return { root, files: new Set(), git: true, refused: 'the repository is the home directory' };
   if (!files.has(path.relative(root, realpathSync(notebook)))) return { root, files: new Set(), git: true, refused: 'git does not track this notebook: `git add` it to let the model read its repository' };
@@ -38,7 +41,7 @@ export function gitFiles(notebook: string): Repo {
 
 /** git grep over the tracked files: its regex engine does not backtrack, and it is stopped at GREP_MS; lines as `path:line: text`, or why none. */
 function gitGrep(repo: Repo, pattern: string, glob?: string): { lines: string[] } | { refused: string } {
-  const g = spawnSync('git', ['grep', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : [])], { cwd: repo.root, encoding: 'utf8', timeout: GREP_MS, maxBuffer: 16 * 2 ** 20, env: gitEnv() });
+  const g = runGit(repo.root, ['grep', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : [])], GREP_MS, 16 * 2 ** 20);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS') return { refused: 'more than 16 MB of matching lines: narrow the pattern or the glob' };
   if (g.error || g.signal) return { refused: `timed out after ${GREP_MS / 1000} s` };
   if (g.status !== 0 && g.status !== 1) return { refused: g.stderr.trim().split('\n').pop() ?? `git grep exited with ${g.status}` };
@@ -85,9 +88,9 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
     for (const l of lines.slice(0, cap)) { if (used + l.length + 1 > room) break; out.push(l); used += l.length + 1; }
     return [...out, ...(out.length < lines.length ? [`(${lines.length - out.length} more ${more}${out.length < Math.min(lines.length, cap) ? ': the read budget is spent' : ''})`] : [])].join('\n');
   };
-  const matches = (glob: string) => [...repo.files].filter((f) => path.matchesGlob(f, glob)).sort();
   if (verb === 'list') {
-    const found = matches(arg);
+    // git's glob, as grep's: a dotfile matches ** like any other; what is not readable (a secret name) stays out
+    const found = repo.refused ? [] : runGit(repo.root, ['ls-files', '-z', '--', `:(glob)${arg}`], GREP_MS).stdout.split('\0').filter((f) => repo.files.has(f)).sort();
     return { text: found.length ? fit(found, SHOWN.list, 'files') : '(no tracked file matches)', read: `list ${arg} (${found.length})` };
   }
   if (verb === 'grep') {
