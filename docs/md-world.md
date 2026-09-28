@@ -23,6 +23,9 @@ where the form was measured and `roadmap.md` is what 1.05 ships and defers.
   not matter, and `it` for the subject of the sentence before.
 - **Prose is a quote block** (`>`). A paragraph that ends in a full stop is a
   sentence of the language, so an essay goes in quotes. Headings are free.
+- **A line that ends in a full stop ends its sentence** when the next line
+  starts one (a capital or a backtick), so rules one to a line need no blank
+  line between them. A sentence wrapped over lines breaks anywhere else.
 - **A book is a block**: `In the audit:` opens the rules that write there.
 - **Say a sentence the same way everywhere.** The head declares `guards the
   variable V`; a body that says `guards V` is a different sentence and is

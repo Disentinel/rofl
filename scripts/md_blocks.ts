@@ -3,13 +3,13 @@ export type Item = { text: string; sub: string[] };
 export type Block =
   | { type: 'front'; kv: Record<string, string> }
   | { type: 'h'; level: number; text: string }
-  | { type: 'p' | 'q' | 'code'; text: string }
+  | { type: 'p' | 'q' | 'code'; text: string; lines?: string[] }
   | { type: 'ul' | 'ol'; items: Item[] }
   | { type: 'table'; head: string[]; rows: string[][] };
 
 export function parseMd(md: string): Block[] {
   const lines = md.replace(/^\n+/, '').split('\n'); const blocks: Block[] = []; let i = 0, para: string[] = [];
-  const flush = () => { if (para.length) { blocks.push({ type: 'p', text: para.join(' ') }); para = []; } };
+  const flush = () => { if (para.length) { blocks.push({ type: 'p', text: para.join(' '), lines: para }); para = []; } };
   if (lines[0] === '---') {
     const kv: Record<string, string> = {}; i = 1;
     while (i < lines.length && lines[i] !== '---') { const m = /^(\w+):\s*(.*)$/.exec(lines[i]); if (m) kv[m[1]] = m[2]; i++; }
