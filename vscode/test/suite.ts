@@ -163,6 +163,7 @@ async function viaLm(file: string, bad: string[]) {
       const a = { tools: options.tools?.length ?? 0, text: messages.flatMap((m) => m.content.map((p) => p.value ?? '')).join('\n'), cancelled: false };
       asked.push(a);
       if (a.text.includes('The person says: wait')) return new Promise<void>((f) => token.onCancellationRequested(() => { a.cancelled = true; f(); }));
+      if (!a.text.includes('The answers:')) return progress.report(new Text('? C is blocked by T'));
       progress.report(new Text('```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\n? M is unowned\n```'));
     },
     provideTokenCount: async () => 1,
@@ -173,6 +174,7 @@ async function viaLm(file: string, bad: string[]) {
   await vscode.commands.executeCommand('rofl-notebook.translate');
   const under = nb.cellAt(natural + 1)?.document.getText() ?? '';
   if (!under.includes('? M is unowned')) bad.push(`${file}: Translate did not write VS Code's model's cell: ${JSON.stringify(under)} (asked ${asked.length} times)`);
+  if (!asked[1]?.text.includes('> ? C is blocked by T\nholds') && !asked[1]?.text.match(/> \? C is blocked by T\n[^\n]*\n- `c2` is blocked by `platform`/)) bad.push(`${file}: VS Code's model asked the notebook a question through the read protocol and was not answered: ${JSON.stringify(asked[1]?.text.slice(-400))}`);
   if (asked.some((a) => a.tools) || !asked[0]?.text.includes('The request: No change touches a module nobody owns.')) bad.push(`${file}: VS Code's model was offered tools or not the request: ${JSON.stringify(asked.map((a) => [a.tools, a.text.slice(-300)]))}`);
   console.log(`VS Code's language model: Translate ${Date.now() - t0} ms`);
   const said = (c: vscode.NotebookCell) => c.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');

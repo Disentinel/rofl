@@ -111,6 +111,7 @@ path_exists("notebook/cli.ts").
 path_exists("notebook/front.ts").
 path_exists("notebook/kernel.ts").
 path_exists("notebook/model.ts").
+path_exists("notebook/reader.ts").
 path_exists("notebook/serve.ts").
 path_exists("package.json").
 path_exists("playground/host.ts").

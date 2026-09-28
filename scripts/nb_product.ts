@@ -321,5 +321,61 @@ PICTURE.forEach(([name, , ok], k) => {
 });
 check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
 check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
+// R the read protocol (notebook/reader.ts), driven by a fake model through the command line: it lists, greps, shows and asks the kernel,
+// and what it may not read (a file outside the repository, a link out of it, an untracked file, a secret-looking one) is refused in a line
+// and never reaches a prompt; the rounds and the bytes are bounded, and every read is said. Each guard, spoilt, turns it red.
+const proto = (name: string) => {
+  const nbFile = planted(name, 'review.rofl.md', withNatural), repo = path.join(tmp, name), git = (...a: string[]) => spawnSync('git', a, { cwd: repo });
+  put(path.join(repo, 'src/a.ts'), 'export function alpha() {\n  return 1;\n}\n' + Array.from({ length: 400 }, (_, i) => `// filler line ${i} of a long file, to spend a small budget`).join('\n') + '\n');
+  put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'untracked.ts'), 'UNTRACKED_TOKEN_9f2\n');
+  put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
+  symlinkSync('../../outside.txt', path.join(repo, 'src/link.ts'));
+  git('init', '-q'); git('add', '-f', 'examples', 'src', '.env', 'keys');
+  return nbFile;
+};
+const READS = ['list src/**', 'grep TOKEN_9f2', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', '? C is blocked by T'];
+/** The fake: each prompt kept as prompt.N; the first answer is the requests, later ones the cell, or requests for ever with `forever`. */
+const reader = (name: string, forever = false) => { const f = path.join(tmp, `${name}-model`), dir = path.join(tmp, `${name}-prompts`); mkdirSync(dir, { recursive: true }); put(f, `#!/usr/bin/env node
+const fs = require('fs'); let i = '';
+process.stdin.on('data', (d) => { i += d; }).on('end', () => {
+  const n = fs.readdirSync(${JSON.stringify(dir)}).length + 1; fs.writeFileSync(${JSON.stringify(dir)} + '/prompt.' + n, i);
+  if (n === 1 || (${forever} && n < 12)) console.log(${JSON.stringify(READS.join('\n'))});
+  else console.log('\`\`\`rofl\\nA module M is unowned if some change touches M, unless some team owns M.\\n\\nnever M is unowned\\n\`\`\`');
+});
+`); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
+const protoRun = (name: string, env: Record<string, string> = {}, root = ROOT, forever = false) => { const nb = proto(name), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root).then((o) => ({ o, prompts: m.prompts(), nb })); };
+const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
+const R_BREAKS: [string, string, RegExp, string][] = [
+  ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, ''],
+  ['secret', 'notebook/reader.ts', /export const SECRET = .*;/, 'export const SECRET = /$^/;'],
+  ['tracked', 'notebook/reader.ts', /  if \(!repo\.files\.has\(rel\)\) return .*\n/, ''],
+  ['grep through a link', 'notebook/reader.ts', /if \('refused' in resolve\(repo, f\)\) return \[\]; /, ''],
+  ['budget', 'notebook/reader.ts', /if \(used \+ l\.length \+ 1 > room\) break; /, ''],
+  ['rounds', 'notebook/cli.ts', /round <= ROUNDS; round\+\+/, 'round <= 99; round++'],
+  ['logging', 'notebook/cli.ts', /reads\.push\(x\.read\); /, ''],
+];
+/** What is wrong with a run of the protocol: empty when every guard held. */
+async function protocol(tag: string, root = ROOT): Promise<string[]> {
+  const bad: string[] = [];
+  const [plain, small, forever] = await Promise.all([protoRun(`proto-${tag}`, {}, root), protoRun(`proto-${tag}-small`, { ROFL_NB_READ_BUDGET: '600' }, root), protoRun(`proto-${tag}-ever`, { ROFL_NB_READ_ROUNDS: '3' }, root, true)]);
+  const second = plain.prompts[1] ?? '', all = [plain, small, forever].flatMap((r) => r.prompts).join('\n');
+  if (plain.o.code !== 0 || !readFileSync(plain.nb, 'utf8').includes('never M is unowned')) bad.push(`the cell after reading was not written: exit ${plain.o.code}\n${plain.o.out.slice(-600)}`);
+  if (!second.includes('1  export function alpha() {') || !second.includes('src/a.ts') || !second.includes('`c2` is blocked by `platform`')) bad.push(`list, show or ? did not answer: ${second.slice(second.indexOf('You asked:'), second.indexOf('You asked:') + 1500)}`);
+  for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret']])
+    if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`show ${asked} was not refused as ${why}`);
+  for (const token of ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'UNTRACKED_TOKEN']) if (all.includes(`${token}_9f2`)) bad.push(`${token} reached a prompt`);
+  if (!/read: .*src\/a\.ts:1-3/.test(plain.o.out) || !plain.o.out.includes('list src/** (')) bad.push(`the reads were not said: ${plain.o.out.slice(-800)}`);
+  if (!small.prompts[1]?.includes('the read budget is spent') || (small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length > 600 + 1500) bad.push(`600 bytes of reading were not held to: the second prompt grew by ${(small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length}`);
+  if (forever.o.code !== 2 || !forever.o.out.includes('still asked to read after 3 rounds') || forever.prompts.length !== 4) bad.push(`a model that only reads was not stopped after 3 rounds: exit ${forever.o.code}, ${forever.prompts.length} calls`);
+  return bad;
+}
+const r0 = await protocol('as-is');
+check('R the translator reads the repository by list, grep, show and ?; outside, a link out, untracked and secret-looking files are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
+const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, at, plant]) => {
+  const src = file.endsWith('reader.ts') ? readerSrc : cliSrc, spoilt = src.replace(at, plant);
+  if (spoilt === src) throw new Error(`R ${name}: the planted defect did not apply`);
+  return protocol(name.replace(/ /g, '-'), linked(`reader-${name.replace(/ /g, '-')}`, file, spoilt));
+}));
+R_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, rSpoilt[k].length > 0, { code: 0, out: 'green' }));
 
 report('checks around the kernel and what a user meets first', t0);

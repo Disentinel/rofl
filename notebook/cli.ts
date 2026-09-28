@@ -17,6 +17,7 @@ import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
+import { answer, BUDGET, gitFiles, PROTOCOL, requestsOf, resolve, ROUNDS, type Repo } from './reader.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -159,9 +160,12 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
 - A condition is a sentence from the lists below with your own terms in its holes, or a sentence a rule in the cell defines. Built in: "L > 6", "X is Y", "X differs from Y", "N is A + B".
 - A rule whose head no sentence reads yet defines a new relation, and its words become its sentence. Keep a new head short and in words no listed sentence starts with.
 - Asking lines, each on its own line, no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "unsure <sentence>" right under a never lists what the invariant could not see; "why <sentence>" explains one answer; "whynot <sentence>" says why a sentence does not hold.
+- A new head names what it is about with a noun and a variable: "A call C is a stray write if ...", "A file F is a handler file if ...". Never start a head with a variable and "is" ("Key is a disk write"): that reads as the built-in "X is Y". Every rule's conditions include at least one sentence of the model.
+- An asking line holds one sentence. To ask about several conditions together, write a rule and ask its head.
+- A call into a Node module's function, like fs's writeFileSync, however it was imported: "C is a host site of \`node\` from "node:fs" at "writeFileSync"".
 Prefer "never" for something that must always hold and "?" for a question. Say what must hold of any data, not of the rows there happen to be.`;
 
-function prompt(request: string, vocab: string[], own: string[], functions: string[], notebook: string, code: string[]): string {
+function prompt(request: string, vocab: string[], own: string[], functions: string[], notebook: string, code: string[], slice = ''): string {
   return `You turn one plain-language request into one notebook cell.
 
 ${FORM}
@@ -175,13 +179,25 @@ ${own.join('\n') || '(none)'}
 ${code.length ? `The code files, by the names the book gives them (a file in a sentence is one of these strings, not the path in the front matter): ${code.map((c) => JSON.stringify(c)).join(', ')}\n\n` : ''}The notebook as it stands:
 ${notebook}
 
-The request: ${request}
+${slice}The request: ${request}
+
+${PROTOCOL(ROUNDS, BUDGET)}
 
 Answer with the cell alone inside one \`\`\`rofl fence, nothing else. When you cannot write it without guessing what the person means, answer instead with your questions to them, briefly, in the language of the request, and no fence.`;
 }
 
 const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.[1].trim();
 const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n} ${n[0].toUpperCase()}`) ?? p;
+
+const OUTLINE = /^\s*(export\s+)?(default\s+)?(async\s+)?(function\*?\s+\w+|class\s+\w+|(const|let)\s+\w+\s*=\s*(async\s*)?(\(|function|\w+\s*=>))|^\s+(async\s+)?(static\s+)?#?\w+\s*\([^)]*\)\s*\{/;
+/** What the first prompt reads of the code without asking: an outline of each code file, and the files the request names, within a part of the budget. */
+function slice(cx: Context, request: string): { text: string; read: string[] } {
+  const outlines = Object.entries(cx.input.code).map(([name, t]) => [`${name}:`, ...t.split('\n').flatMap((l, i) => OUTLINE.test(l) ? [`  ${i + 1}  ${l.trim().slice(0, 160)}`] : []).slice(0, 60)].join('\n'));
+  const named = [...new Set(request.match(/[\w./-]+\.\w+/g) ?? [])].flatMap((w) => { const r = resolve(cx.repo, w); return 'file' in r ? [r.file] : [...cx.repo.files].filter((f) => f.endsWith(`/${w}`)).slice(0, 1); });
+  const shown = named.map((f) => `${f}:\n${readFileSync(path.join(cx.repo.root, f), 'utf8').split('\n').slice(0, 300).map((l, i) => `${i + 1}  ${l}`).join('\n')}`);
+  const text = [...outlines.length ? [`An outline of the code files (line, then the line):\n${outlines.join('\n')}`] : [], ...shown.length ? [`The files the request names:\n${shown.join('\n\n')}`] : []].join('\n\n').slice(0, BUDGET / 4);
+  return { text: text ? `${text}\n\n` : '', read: named.map((f) => `${f}:1-300`) };
+}
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong.
  *  Each is written into the file as it lands, whole or not at all, so a failure or a kill later keeps the cells before it. */
@@ -240,7 +256,7 @@ export async function translateCell(file: string, text: string, index: number, a
   return { code: r.failed ? 2 : r.code, said: r.said, text: r.failed ? text : r.text, ...(r.reply && { reply: r.reply }) };
 }
 
-type Context = { outside: string[]; input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
+type Context = { repo: Repo; outside: string[]; input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
 function context(file: string, text: string): Context | { errors: string[] } {
   const { input, errors, outside } = inputs(file, text);
   if (errors.length) return { errors };
@@ -249,7 +265,7 @@ function context(file: string, text: string): Context | { errors: string[] } {
   const { vocab, functions, rels } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
-  return { outside, input, vocab, functions, own, rels, phrases };
+  return { repo: gitFiles(path.dirname(path.resolve(file))), outside, input, vocab, functions, own, rels, phrases };
 }
 
 /** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,
@@ -295,12 +311,33 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
     const next = [...lines.slice(0, from), ...(under ? [] : ['']), '```rofl', cell, '```', ...lines.slice(to)].join('\n');
     const r = kernel.run(path.relative(ROOT, path.resolve(file)), next, cx.input);
     const out = r.cells.find((x) => x.index === c.index + 1)!;
-    return { next, errors: [...r.errors, ...out.errors], lines: out.lines };
+    const silent = out.lines.length ? [] : ['the cell asks nothing: a request for something that must hold ends in a never line, a question in a ? line'];
+    return { next, errors: [...r.errors, ...out.errors, ...silent], lines: out.lines };
   };
-  const words = (a: string) => ({ code: 2, said: [...said, `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
-  const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code)) + follow;
-  step(`${ask.who ?? 'the model'} is writing the cell`);
-  let a = await ask(base);
+  const words = (a: string) => ({ code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
+  const who = ask.who ?? 'the model', first = slice(cx, c.text.trim()), reads = [...first.read];
+  const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code), first.text) + follow;
+  /** A question the model puts to the notebook, answered by the kernel over the notebook with one more cell. */
+  const question = (q: string) => {
+    const r = kernel.run(path.relative(ROOT, path.resolve(file)), `${text}\n\n\`\`\`rofl\n? ${q}\n\`\`\`\n`, cx.input), out = r.cells.at(-1), l = out?.lines[0];
+    return l ? [`${l.verdict}${l.total ? ` · ${l.total}` : ''}`, ...l.answers.slice(0, 30).map((x) => `- ${x.sentence}`)].join('\n') : `not asked: ${[...r.errors, ...out?.errors ?? []].join('; ') || 'no line'}`;
+  };
+  let left = BUDGET, convo = '';
+  /** The model asked, and asked again with what it read, while it answers with requests: at most ROUNDS rounds and BUDGET bytes of answers. */
+  const converse = async (p: string) => {
+    let a = await ask(p + convo);
+    for (let round = 1; a.ok && requestsOf(a.text).length && round <= ROUNDS; round++) {
+      const reqs = requestsOf(a.text), got = reqs.map((r) => { const x = answer(cx.repo, r, Math.max(0, left), question); left -= x.text.length; reads.push(x.read); return `> ${r}\n${x.text}`; });
+      step(`${who} read: ${reads.slice(-3).join(' · ')}`);
+      convo += `\n\nYou asked:\n${reqs.join('\n')}\nThe answers:\n${got.join('\n')}${round === ROUNDS || left <= 0 ? '\nThat was the last of the reading: write the cell now.' : ''}`;
+      a = await ask(p + convo);
+    }
+    return a;
+  };
+  const readLine = () => reads.length ? [`${file}:${c.line}: ${who} read: ${reads.join(' · ')}`] : [];
+  step(`${who} is writing the cell`);
+  let a = await converse(base);
+  if (a.ok && requestsOf(a.text).length) return { code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${who} still asked to read after ${ROUNDS} rounds, and wrote no cell`], text, failed: true };
   if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
   let cell = fenced(a.text);
   if (cell === undefined) return words(a.text);
@@ -308,12 +345,14 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   if (t.errors.length) {
     said.push(`${file}:${c.line}: the first try did not read:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
     step(`the first try did not read (${t.errors[0]}); asking again`);
-    a = await ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
+    convo += `\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nCheck with \`?\` lines the sentences you are unsure of, then write the cell again.`;
+    a = await converse(base);
     if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
     cell = fenced(a.text);
     if (cell === undefined) return words(a.text);
     t = tryCell(cell);
   }
+  said.push(...readLine());
   if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: no cell read after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
@@ -357,7 +396,8 @@ ROFL_NB_HARNESS=<name>   the model translate asks (npm run nb -- models lists th
 ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the answer (the harness named command)
 ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
 ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
-ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model`;
+ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
+ROFL_NB_READ_ROUNDS=6    rounds the model may read the repository's tracked files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {

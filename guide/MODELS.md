@@ -1,6 +1,6 @@
 # Models
 
-`translate` sends a natural cell, as text, to a model, and offers it no tools.
+`translate` sends a natural cell to a model and offers it none of its own tools.
 
 In VS Code, **ROFL: Choose model** sets `rofl.model`. By default Translate uses a
 language model VS Code already has (GitHub Copilot's, for example), else a
@@ -16,3 +16,15 @@ pick its model:
 `hermes` cannot turn every tool off, so they are refused unless you set
 `ROFL_NB_ALLOW_TOOLS=1`. `ROFL_NB_MODEL_CMD` runs any command that reads the
 prompt on stdin.
+
+## What the model reads
+
+Before it writes the cell, the model may read the notebook's repository (git's
+top level; outside git, nothing). It asks in lines, and translate answers them:
+`list <glob>`, `grep <regex> [<glob>]`, `show <path>:<from>-<to>`, and
+`? <sentence>`, which the notebook answers. Only files git tracks are read,
+never one outside the repository or a link out of it. Also left out are files
+whose names look like secrets: `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
+`id_*`, `*credential*`, `*secret*`. At most 6 rounds and 200 KB
+(`ROFL_NB_READ_ROUNDS`, `ROFL_NB_READ_BUDGET`). Every read is said:
+`Claude read: src/server.ts:240-280 · …`.
