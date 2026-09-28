@@ -9,8 +9,9 @@ reads:
 
 # Who blocks a change
 
-> A notebook over the review world (`examples/review.rofl.md`): its sentences
-> are loaded first, then the cells below ask about them. Run it with
+> A notebook over the review world, the file of the same name one directory
+> up (`../review.rofl.md`), which holds the facts and rules and asks nothing:
+> its sentences are loaded first, then the cells below ask about them. Run it with
 > `npm run nb -- examples/notebook/review.rofl.md`.
 
 ## The questions

@@ -8,9 +8,9 @@ default: main
 
 > Who has to approve a change before it merges: every team that owns a
 > module the change touches, unless someone on that team wrote it or has
-> approved it. A world written as Markdown: `npm run repl -- examples/review.rofl.md`
-> loads it and answers `? C is blocked by T`, `why`, `whynot` in these
-> sentences.
+> approved it. A world written as Markdown. This file is the world; the
+> notebook of the same name in `notebook/` (`notebook/review.rofl.md`) reads
+> it and asks `? C is blocked by T`, `why` and `whynot` in these sentences.
 
 ## What the repository knows
 
