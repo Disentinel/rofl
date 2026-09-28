@@ -117,6 +117,7 @@ points; the whole list is in `package.json`.
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
 | `rust/` | **the Rust engine** — the port this branch is instrumental to (`docs/the-target.md`), plus its benchmark crates | `cargo test` under `rust/` |
 | `examples/` `facts/` `docs/` | runnable demos, the ledgers and goldens, the design decisions | `test` |
+| `visual/` | the view vocabularies a notebook draws with (graph, time, table); a cell's `draw K` shows them, `notebook/draw.ts` writes them as mermaid, DOT, Argdown, Markdown, Vega-Lite (docs/renderers.md, examples in `examples/visual/`) | `nb` `playground` |
 
 ### Documents
 

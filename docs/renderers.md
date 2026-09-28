@@ -1,7 +1,9 @@
 # Renderers: from facts to a picture
 
-A research note, 2026-09-28. It is a design, not an implementation, and
-nothing in `src/` depends on it. The per-case table, the adapters for every
+A research note, 2026-09-28. It is a design; its first step, the graph,
+time and table vocabularies in `visual/` and a cell's `draw K`, is built
+(`notebook/draw.ts`, `examples/visual/`; what it leaves is
+f_what_the_first_renderer_leaves). Nothing in `src/` depends on it. The per-case table, the adapters for every
 case and the sources are in
 [`renderers-appendix.md`](renderers-appendix.md).
 
