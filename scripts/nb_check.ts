@@ -263,6 +263,25 @@ const retire = await retired;
 check('an engine edit leaves one daemon per tree: the new one retires the old', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1', retire);
 check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir'].every((n) => worlds().some((w) => w.name === n)));
 
+// what an outside user met on unfamiliar code
+const kept2 = smallJs + "\nexport async function keep() {\n  const p = load('c');\n  return p;\n}\n\nclass Cache {\n  async #fetch(k) { return k; }\n  get(k) { this.#fetch(k); }\n}\n";
+const outsider = planted('outsider', 'small.rofl.md', (t) => withCell('A function F is risky if F contains a throw T.\n\n? F is risky')(t.replace('  - small.js', '  - small.js\n  - broken.js')),
+  [['examples/notebook/small.js', kept2], ['examples/notebook/broken.js', 'export function (\n']]);
+const lines3 = planted('lines3', 'review.rofl.md', withCell('A change C is lonely if C is written by some person.\nA team T is busy if some change is blocked by T.\nA change C is idle if C is written by some person, unless C is blocked by some team.\n\n? C is lonely\n? T is busy\n? C is idle'));
+const partial = planted('tr-part', 'review.rofl.md', (t) => `${withNatural(t)}\n\`\`\`natural\n  \n\`\`\`\n\n\`\`\`natural\nEvery change is approved.\n\`\`\`\n`);
+const none = planted('tr-none', 'review.rofl.md', (t) => t);
+const once = path.join(tmp, 'once.sh'), count = path.join(tmp, 'once.count');
+writeFileSync(once, `#!/bin/sh\ncat > /dev/null\necho x >> ${count}\n[ $(wc -l < ${count}) -gt 1 ] && exec sleep 30\ncat <<'EOF'\n\`\`\`rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n\`\`\`\nEOF\n`); chmodSync(once, 0o755);
+const [out, three, part, nothing] = await Promise.all([cli([outsider]), cli([lines3]), cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_CLAUDE_TIMEOUT: '3' }), cli(['translate', none])]);
+const at = (s: string) => `small.js:${kept2.split('\n').findIndex((l) => l.includes(s)) + 1}]`;
+check('U1 a sentence not read names the nearest the vocabulary has', /not read: F contains a throw T; the nearest sentences: [^\n]*throw/.test(out.out), out);
+check('U2 three rules one to a line are read as three', is(three, 0) && has(three, '? C is lonely  ->  2 answers') && has(three, '? T is busy  ->  1 answer') && has(three, '? C is idle  ->  1 answer'), three);
+check('U3 translate keeps the cell that landed when a later one hangs, and sends no empty cell', part.code === 2 && before(partial).includes('nobody owns.\n```\n\n```rofl\nA module M is unowned') && has(part, 'an empty natural cell, skipped') && readFileSync(count, 'utf8').split('\n').length === 3, part);
+check('U3 translate over no natural cell says so, exit 0', nothing.code === 0 && has(nothing, 'no natural cells to translate') && before(none) === reviewText, nothing);
+check('U4 a promise kept and returned is not unawaited; one standing as a statement is', has(out, `[load() at ${at("load('b')")} is unawaited`) && !has(out, at('const p')), out);
+check('U5 a private method call is labelled as written', has(out, `[this.#fetch() at ${at('this.#fetch(k);')} is unawaited`), out);
+check('U6 a code file that did not parse is named on the verdict line', /: not everything was read — not parsed: broken\.js$/.test(out.stdout!.trim()), out);
+
 for (const [name, ok, why] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${why ? `\n${why.replace(/^/gm, '     ')}` : ''}`);
 const bad2 = results.filter((r) => !r[1]).length;
 console.log(`\n${results.length - bad2}/${results.length} notebook checks, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
