@@ -30,7 +30,9 @@ const check = process.argv.includes('--check');
 let stale = 0;
 for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
   const p = path.join(GUIDE, f), doc = readFileSync(p, 'utf8');
-  const out = doc.replace(BLOCK, (_, begin, kind, where, cmd, end) => begin + render(kind, where.trim(), cmd) + '\n' + end);
+  let n = 0;
+  const out = doc.replace(BLOCK, (_, begin, kind, where, cmd, end) => (n++, begin + render(kind, where.trim(), cmd) + '\n' + end));
+  if (n !== (doc.match(/<!-- BEGIN /g) ?? []).length) { console.error(`guide/${f}: a BEGIN marker without its END, or not run, file or run+exit`); stale++; continue; }
   if (out === doc) continue;
   if (check) { console.error(`STALE guide/${f}: run \`npm run guide\``); stale++; }
   else { writeFileSync(p, out); console.log(`wrote guide/${f}`); }
