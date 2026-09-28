@@ -4,7 +4,7 @@ ROFL checks what you say about your code. A notebook (`.rofl.md`) is
 Markdown with sentences, rules and questions; it answers the questions and
 marks every `never` that fails, on the line in your code where it fails.
 
-![A notebook over a JavaScript file: answers under each question, and a failing never marked in the code](media/notebook.png)
+![A notebook over a JavaScript file: answers under each question, and a failing never marked in the code](https://raw.githubusercontent.com/Disentinel/rofl/main/vscode/media/notebook.png)
 
 ## Use it
 
@@ -13,7 +13,7 @@ marks every `never` that fails, on the line in your code where it fails.
   Get it with the `rofl-nb` command, or from
   [GitHub](https://github.com/Disentinel/rofl/tree/main/examples/tutorial).
 
-![Level 1 of the tutorial, run](media/tutorial.png)
+![Level 1 of the tutorial, run](https://raw.githubusercontent.com/Disentinel/rofl/main/vscode/media/tutorial.png)
 
 - A `.rofl` file gets errors on their lines, hover, go to definition and
   completion.
