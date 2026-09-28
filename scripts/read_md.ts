@@ -401,7 +401,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // --------------------------------------------------------------- markdown
   // a link is on one line and holds no bracket: a stray `[` in prose must not open one that ends at the next real link
   const clean = (s: string) => s.replace(/\[([^\][\n]+)\]\([^)\n]*\)/g, '$1').replace(/<a id="[^"]+"><\/a>/g, '');
-  type Block = { type: string; text?: string; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][] };
+  type Block = { type: string; text?: string; lines?: string[]; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][] };
   const md = clean(rawMd);
   // a line ending in a full stop, followed by one that starts a sentence, ends a paragraph: rules one to a line are read one by one
   const sentences = (lines: string[]): Block[] => {
@@ -409,7 +409,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     lines.forEach((l, i) => { if (!i || (/\.$/.test(lines[i - 1]) && /^[A-Z`]/.test(l))) ps.push([]); ps[ps.length - 1].push(l); });
     return ps.map((p) => ({ type: 'p', text: p.join(' ') }));
   };
-  const blocks = parseMd(md).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code').flatMap((b) => b.type === 'p' && b.lines ? sentences(b.lines) : [b]) as Block[];
+  const blocks = (parseMd(md) as Block[]).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code').flatMap((b) => b.type === 'p' && b.lines ? sentences(b.lines) : [b]);
   let defaultBook = 'main';
   { const fm = /^---\n([\s\S]*?)\n---/.exec(rawMd); if (fm) { const d = /^default: (\w+)$/m.exec(fm[1]); if (d) defaultBook = d[1]; } }
   const headBook = new Map<string, string>();   // relation -> the book its rules write
