@@ -284,6 +284,7 @@ const PICTURE: [string, string[], (o: Out) => boolean][] = [
   ['graph: mermaid draws the failing never\'s cars red and the dangling link dashed', ['paint-shop.rofl.md'], (g) => is(g, 1) && has(g, 'draw graph  ->  8 marks, 3 links, 3 failing, 1 dangling') && has(g, 'm3 -.-> m5') && has(g, 'class m3 failing') && has(g, 'subgraph g0["shop"]')],
   ['graph: DOT carries the tags as colour and style, and the provenance as a tooltip', ['paint-shop.rofl.md', '--format', 'dot'], (d) => has(d, '"c3" -> "pink" [color="#b91c1c", style=dashed];') && has(d, 'tooltip="`c3` is on the line')],
   ['time: a Gantt chart, a lane per person, the alone slots crit', ['spat-thursday.rofl.md'], (t) => is(t, 1) && has(t, '  section kit') && has(t, '$alone(kit,1060) [alone, failing] :crit, ') && has(t, 'acme :t13, 1080, 1230')],
+  ['time: messages draw as a sequence diagram, the unanswered call crossed', ['checkout-sequence.rofl.md'], (q) => is(q, 1) && has(q, 'sequenceDiagram') && has(q, 'p1-xp3: c3 [unanswered, failing] at 4') && has(q, 'p2->>p1: $reply(c2) at 3')],
   ['table: a Markdown table, the cells the audits name marked', ['coverage.rofl.md'], (m) => is(m, 1) && has(m, '| k_a [failing] | done | open [failing] |') && has(m, '| k_b | claimed | waived |')],
   ['argument: Argdown, a refutation as -, the grade and the unknown as hashtags', ['deploy-argument.rofl.md'], (a) => is(a, 0) && has(a, '[safe_to_ship] #contested\n      + <canary_clean>\n      - <incident_4711>') && has(a, '[cheap_to_run] #unknown')],
 ];
@@ -291,6 +292,7 @@ const picMutants: [string, string][] = [
   ['draw-flow', drawMutant('draw-flow', 'notebook/draw-graph.ts', /ts\.includes\('dangling'\) \|\| ts\.includes\('gone'\) \? '-\.->' : '-->'/, () => `'-->'`)],
   ['draw-dot', drawMutant('draw-dot', 'notebook/draw-graph.ts', /tip\.length && `tooltip=\$\{q\(tip\.join\('\\n'\)\)\}`/, () => `''`)],
   ['draw-gantt', drawMutant('draw-gantt', 'notebook/draw-time.ts', /m\?\.tags\.some\(\(t\) => t === 'failing' \|\| t === 'dangling'\) && 'crit'/, () => `false`)],
+  ['draw-sequence', drawMutant('draw-sequence', 'notebook/draw-time.ts', /\(ts\.includes\('gone'\) \? '--x' : '-x'\)/, () => `'->>'`)],
   ['draw-table', drawMutant('draw-table', 'notebook/draw-table.ts', /\(tags\(r, c\)\.length \? ` \[\$\{tags\(r, c\)\.join\(', '\)\}\]` : ''\)/, () => `''`)],
   ['draw-argdown', drawMutant('draw-argdown', 'notebook/draw-argument.ts', /\$\{attack \? '-' : '\+'\}/, () => '+')],
 ];

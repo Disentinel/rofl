@@ -4,6 +4,8 @@
 export type DrawKind = 'graph' | 'time' | 'table' | 'argument';
 export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument'];
 /** The tags only the renderer writes: from what the model could not see, from a what-if, from a failing never, from a link to no node. */
+/** The MIME type of a draw line's output, which VS Code's notebook renderer (vscode/visual/renderer.ts) draws. */
+export const VIEW_MIME = 'application/vnd.rofl.view+json';
 export const RESERVED = ['unknown', 'blind', 'gone', 'new', 'failing', 'dangling'];
 
 /** One row of a view relation: `from`, the sentences its proof rests on one step down; none when it was given, not derived. */

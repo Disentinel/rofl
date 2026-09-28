@@ -4,10 +4,12 @@
 import { OUTSIDE, said, VERDICT } from '../notebook/cli.ts';
 import { codeNames } from '../notebook/front.ts';
 import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
+import type { View } from '../notebook/draw.ts';
 
 const FOLD = 10;   // answers shown under a line; the rest fold
 
-export type Shown = { md: string; err: string; ok: boolean };
+/** `views`: the cell's pictures, each an output of its own that the notebook renderer draws (vscode/visual/renderer.ts). */
+export type Shown = { md: string; err: string; ok: boolean; views?: View[] };
 export type Run = NbResult & { paths: Record<string, string>; outside?: string[] };
 
 /** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1. */
@@ -34,6 +36,7 @@ export function render(r: Run): { head: Shown; cells: Shown[] } {
     md: [...c.notes.map((n) => `*${link(n)}*`), ...c.lines.map(line)].join('\n\n'),
     err: c.errors.join('\n'),
     ok: !c.errors.length && !c.lines.some((l) => l.verdict === 'fails'),
+    views: c.lines.flatMap((l) => l.view ? [l.view] : []),
   });
   const prose = r.cells[0] ? cell(r.cells[0]) : { md: '', err: '', ok: true };
   return {

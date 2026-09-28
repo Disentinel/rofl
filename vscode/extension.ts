@@ -7,6 +7,9 @@ import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
 import { lsp } from './lsp.ts';
 import { HARNESSES, standing } from '../notebook/model.ts';
+import { VIEW_MIME } from '../notebook/draw.ts';
+import { backendOf } from '../notebook/draw-text.ts';
+import { writeFileSync } from 'node:fs';
 
 const TYPE = 'rofl-notebook';
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
@@ -15,7 +18,7 @@ let worker: Worker | undefined, seq = 0;
 type Via = { model?: string; lm?: vscode.LanguageModelChat };
 const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void; lm?: vscode.LanguageModelChat; stop?: vscode.CancellationToken }>();
 /** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process, or cancels VS Code's model's request. */
-function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
+function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
   if (!worker) {
     const w = worker = new Worker(new URL('./worker.ts', import.meta.url));
     w.on('message', ({ id, r, error, step, lm, k }) => {
@@ -91,6 +94,19 @@ export function activate(ctx: vscode.ExtensionContext) {
   const controller = vscode.notebooks.createNotebookController('rofl-kernel', TYPE, 'ROFL');
   controller.supportedLanguages = [...KINDS, 'yaml'];
   controller.executeHandler = (_cells, nb) => run(nb);
+  // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
+  const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
+  ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
+    const nb = vscode.Uri.parse(String(m.notebook));
+    if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
+    if (m.pin !== undefined) {
+      const file = nb.fsPath.replace(/\.rofl\.md$/, '.layout.rofl');
+      writeFileSync(file, String(m.pin));
+      const name = file.slice(file.lastIndexOf('/') + 1);
+      void vscode.window.showInformationMessage(`ROFL: the layout is in ${name}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
+    }
+  }));
 
   async function run(nb: vscode.NotebookDocument) {
     const runs = runsOf(nb);
@@ -102,7 +118,10 @@ export function activate(ctx: vscode.ExtensionContext) {
     for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); e.token.onCancellationRequested(restart); }
     const out = (shown: Shown[]) => shown.flatMap((s) => [
       ...(s.md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(s.md, 'text/markdown')])] : []),
-      ...(s.err ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.stderr(s.err)])] : [])]);
+      ...(s.err ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.stderr(s.err)])] : []),
+      // a picture: the renderer draws the view; an editor without it shows the view as text
+      ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString() }, VIEW_MIME),
+        vscode.NotebookCellOutputItem.text(b.fence ? `\`\`\`${b.fence}\n${b.write(view)}\n\`\`\`` : b.write(view), 'text/markdown')]); })]);
     let r: Run & { shown: { head: Shown; cells: Shown[] } };
     try {
       r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `ROFL: running ${vscode.workspace.asRelativePath(nb.uri)}` },

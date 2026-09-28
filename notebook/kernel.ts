@@ -26,6 +26,9 @@ export class Kernel {
    *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `blind`. */
   constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
 
+  /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. */
+  why(literal: string): string { return legible(this.host.why(literal)); }
+
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
     const world = assemble(path, text, input), { model, phrases, errors } = world;

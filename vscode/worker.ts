@@ -20,9 +20,9 @@ function translate(id: number, file: string, text: string, { at, words, asked }:
   stops.set(id, stop);
   return (at ? translateCell(file, text, at, ask, kernel, { words, asked, step: (step) => parentPort!.postMessage({ id, step }) }) : translateText(file, text, ask, kernel)).then((r) => ({ ...r, who: ask.who })).finally(() => stops.delete(id));
 }
-parentPort!.on('message', async ({ id, op, file, text, unsaved, cell, model, k, answer }: { id: number; op: 'run' | 'translate' | 'stop' | 'answer'; file: string; text: string; unsaved: Record<string, string>; cell: Cell; model?: string; k: number; answer: Awaited<ReturnType<Ask>> }) => {
+parentPort!.on('message', async ({ id, op, file, text, unsaved, cell, model, k, answer }: { id: number; op: 'run' | 'translate' | 'why' | 'stop' | 'answer'; file: string; text: string; unsaved: Record<string, string>; cell: Cell; model?: string; k: number; answer: Awaited<ReturnType<Ask>> }) => {
   if (op === 'stop') return void stops.get(id)?.abort();
   if (op === 'answer') { answers.get(k)?.(answer); return void answers.delete(k); }
-  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text, unsaved) : await translate(id, file, text, cell, model) }); }
+  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text, unsaved) : op === 'why' ? kernel.why(text) : await translate(id, file, text, cell, model) }); }
   catch (e) { parentPort!.postMessage({ id, error: (e as Error).stack ?? String(e) }); }
 });

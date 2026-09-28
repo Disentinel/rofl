@@ -5,7 +5,8 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] } };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string] };
+const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
 
@@ -47,7 +48,7 @@ export async function run() {
     const said = (x: vscode.NotebookCell) => x.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the extension's result is not the command line's --json`);
     r.cells.slice(1).forEach((k, i) => {
-      if (!runs[i] || !said(runs[i])) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);
+      if (!runs[i] || !said(runs[i]) && (k.lines.length || k.notes.length || k.errors.length)) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);
       for (const l of k.lines) if (!said(runs[i]).includes(l.text.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;'))) bad.push(`${c.file}: "${l.text}" is not in the output of the cell it was asked in`);
     });
     const errors = vscode.languages.getDiagnostics().flatMap(([u, ds]) => ds.filter((d) => d.severity === vscode.DiagnosticSeverity.Error).map((d) => ({ u, d })));
@@ -65,6 +66,24 @@ export async function run() {
       if (code && !errors.some(({ u, d }) => u.fsPath === code[0] && d.range.start.line === code[1] - 1 && d.message === c.fails!.text)) bad.push(`${c.file}: no error "${c.fails.text}" at ${code[0]}:${code[1]}`);
       if (code && !api.notes(code[0]).some((n) => n.line === code[1] - 1 && n.text.includes(c.fails!.text))) bad.push(`${c.file}: line ${code[1]} of ${code[0]} does not say after it that "${c.fails.text}" marked it: ${JSON.stringify(api.notes(code[0]))}`);
       if (code && !bad.length) await stale(nb, api, c.fails.text, code, bad);
+    }
+    // a picture: an output the notebook renderer draws, the view in it, and the view as text for an editor without the renderer
+    if (c.pictures) {
+      const views = runs.flatMap((x) => x.outputs.filter((o) => o.items.some((i) => i.mime === VIEW_MIME)));
+      const drawn = views.map((o) => JSON.parse(new TextDecoder().decode(o.items.find((i) => i.mime === VIEW_MIME)!.data)).view), kinds = drawn.map((v) => v.kind);
+      if (kinds.join() !== c.pictures.join()) bad.push(`${c.file}: the pictures drawn are [${kinds}], not [${c.pictures}]`);
+      const [mark, tag] = c.status!, tags = drawn[0]?.marks[mark]?.tags ?? [];
+      if (!tags.includes(tag)) bad.push(`${c.file}: the mark ${mark} is drawn with the tags [${tags}], not ${tag}`);
+      const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
+      if (!why?.includes(says)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
+      if (views.some((o) => !o.items.some((i) => i.mime === 'text/markdown' && new TextDecoder().decode(i.data).length > 20))) bad.push(`${c.file}: a picture has no text for an editor without its renderer`);
+      const shot = process.env.ROFL_NB_SHOT;   // the runner screenshots the window while the picture is on it
+      if (shot && !bad.length) {
+        await vscode.commands.executeCommand('notebook.cell.collapseAllCellInputs').then(() => {}, () => {});
+        await new Promise((f) => setTimeout(f, 6000));
+        const k = cases.indexOf(c); writeFileSync(`${shot}-${k}.ready`, '');
+        await until(() => existsSync(`${shot}-${k}.done`), 30_000, 'the screenshot').catch(() => {});
+      }
     }
     console.log(`${c.file}: ${Date.now() - t0} ms`);
     if (bad.length) break;

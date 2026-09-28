@@ -8,6 +8,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+import { buildRenderer } from './renderer.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), OUT = path.join(ROOT, 'dist');
 const root = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')), version: string = root.version;
@@ -88,8 +89,11 @@ for (const f of [path.join(VSIX, 'README.md'), path.join(PKG, 'README.md')]) for
   const [, ref, file] = /^https:\/\/raw\.githubusercontent\.com\/Disentinel\/rofl\/([^/]+)\/(.+)$/.exec(url) ?? [];
   try { execFileSync('git', ['cat-file', '-e', `origin/${ref}:${file}`], { cwd: ROOT, stdio: 'ignore' }); } catch { throw new Error(`${path.relative(OUT, f)}: the image ${url} is no file of the repository's pushed branches`); }
 }
+// the notebook renderer, browser JS the extension's pictures are drawn with
+buildRenderer(path.join(VSIX, 'rofl-nb/vscode/visual/out'));
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
+manifest.contributes.notebookRenderer = manifest.contributes.notebookRenderer.map((r: { entrypoint: string }) => ({ ...r, entrypoint: r.entrypoint.replace(/^\.\//, './rofl-nb/vscode/') }));
 writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,
   main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', '*.png', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
 execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });

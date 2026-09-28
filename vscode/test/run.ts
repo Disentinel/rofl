@@ -2,7 +2,7 @@
 // `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -14,6 +14,7 @@ process.on('exit', () => made.forEach((d) => rmSync(d, { recursive: true, force:
 // a VS Code left running would write its user dir back after the removal
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
 const t0 = performance.now();
+spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/renderer.ts')], { stdio: 'inherit' });   // the notebook renderer the extension declares
 
 // The notebooks: review with a never planted to fail, review as it is, small with a function that calls itself.
 const put = (to: string, text: string) => { mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, text); return to; };
@@ -46,12 +47,28 @@ const cli = (file: string, out: string) => new Promise<string>((done) => {
   let s = ''; p.stdout.on('data', (d) => { s += d; });
   p.on('close', () => done(put(out, s)));
 });
+// the pictures: each example of examples/visual beside the vocabularies it reads, and the kinds its cells draw
+// each with a mark's status its picture must carry, and a fact of it whose why must say a sentence
+type Visual = { f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string] };
+const VISUAL: Visual[] = [
+  { f: 'paint-shop', kinds: ['graph'], fails: 'never M is tagged `unpainted`', status: ['pink', 'dangling'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'] },
+  { f: 'spat-thursday', kinds: ['time'], fails: 'never M is tagged `alone`', status: ['$alone(kit,1060)', 'failing'], why: ['during($alone(kit, 1060), 1060, 1080)', '`kit` is alone on `thu` at 1060'] },
+  { f: 'checkout-sequence', kinds: ['time'], fails: 'never C is unanswered', status: ['c3', 'failing'], why: ['message(c3, api, payments, 4)', '`c3` is sent by `api` to `payments` at 4'] },
+  { f: 'coverage', kinds: ['table'], fails: 'never unqueued(K, L)', status: ['k_a', 'failing'], why: ['value(k_a, l_y, open)', 'open_cell'] },
+  { f: 'deploy-argument', kinds: ['argument', 'graph'], status: ['cheap_to_run', 'unknown'], why: ['link_tagged(incident_4711, safe_to_ship, attack)', 'refutes'] },
+];
+cpSync(path.join(ROOT, 'visual'), path.join(tmp, 'nb/visual'), { recursive: true });
+for (const f of ['spat/spat.rofl', 'spat/week.example.rofl', 'visual/deploy-case.rofl']) put(path.join(tmp, 'nb/examples', f), src(`examples/${f}`));
+for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl']) put(path.join(tmp, 'nb', f), src(f));
+const pictures = VISUAL.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
-const [a, b, c] = await Promise.all([cli(review, path.join(tmp, 'review.json')), cli(clean, path.join(tmp, 'clean.json')), cli(small, path.join(tmp, 'small.json'))]);
+const [a, b, c, ...pics] = await Promise.all([cli(review, path.join(tmp, 'review.json')), cli(clean, path.join(tmp, 'clean.json')), cli(small, path.join(tmp, 'small.json')),
+  ...pictures.map((f, k) => cli(f, path.join(tmp, `picture-${k}.json`)))]);
 const cases = [
   { file: review, cli: a, fails: { text: 'never C is blocked by T' } },
   { file: clean, cli: b },
   { file: small, cli: c, fails: { text: 'never C recurses', code: [smallJs, 12] } },
+  ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: VISUAL[k].kinds, status: VISUAL[k].status, why: VISUAL[k].why, ...(VISUAL[k].fails && { fails: { text: VISUAL[k].fails } }) })),
 ];
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
@@ -66,6 +83,8 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, ''],
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
   lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')"],
+  picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', cases.slice(3)],
+  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", cases.slice(3)],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -73,7 +92,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
@@ -94,16 +113,20 @@ const one = async (v: string) => {
   // a workspace that names a model: only the person's own settings may, so this one must be ignored and VS Code's model asked
   if (v === 'vscode lm') put(path.join(nb, '.vscode/settings.json'), JSON.stringify({ 'rofl.model': 'claude' }));
   let red = '';
+  // `--shot F`: the window screenshotted as each picture is drawn, F-<case>.png
+  const shot = v === 'as it is' ? process.argv[process.argv.indexOf('--shot') + 1] : undefined, shooting = process.argv.includes('--shot') && shot ? setInterval(() => {
+    for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) { spawnSync('screencapture', ['-x', `${shot}-${k}.png`]); writeFileSync(`${shot}-${k}.done`, ''); }
+  }, 300) : undefined;
   const report = path.join(tmp, `report-${v.replace(/ /g, '-')}`), log = createWriteStream(path.join(tmp, `${v.replace(/ /g, '-')}.log`));
   try {
     await runTests({
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
-  finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); }
+  finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }
   if (v === 'as it is') for (const l of readFileSync(path.join(tmp, 'as-it-is.log'), 'utf8').split('\n')) if (/: (run after .*: )?\d+ ms$/.test(l)) console.log(`     ${l.replace(tmp, '')}`);
   return { v, red, s: ((performance.now() - t) / 1000).toFixed(1) };
 };
