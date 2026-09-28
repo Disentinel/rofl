@@ -92,6 +92,12 @@ check[checks]("facts/goldens.rofl", "spat", world).
 check[checks]("facts/goldens.rofl", "sus", world).
 check[checks]("facts/goldens.rofl", "tm", world).
 check[checks]("facts/goldens.rofl", "tm_diverge", world).
+check[checks]("facts/goldens.rofl", "tutorial_1-what-ships", world).
+check[checks]("facts/goldens.rofl", "tutorial_2-paint-shop", world).
+check[checks]("facts/goldens.rofl", "tutorial_3-missing-part", world).
+check[checks]("facts/goldens.rofl", "tutorial_4-late-delivery", world).
+check[checks]("facts/goldens.rofl", "tutorial_5-quality-gate", world).
+check[checks]("facts/goldens.rofl", "tutorial_6-in-your-words", world).
 check[checks]("facts/goldens.rofl", "wtf", world).
 check[checks]("facts/goldens.rofl", "rules_cleanliness", world).
 check[checks]("facts/goldens.rofl", "rules_decisions_production-readiness", world).
