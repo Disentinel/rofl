@@ -3,24 +3,31 @@
 // of rounds and a number of bytes, and says each read. The model's own tools stay off (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 export const ROUNDS = Number(process.env.ROFL_NB_READ_ROUNDS ?? 6);
 export const BUDGET = Number(process.env.ROFL_NB_READ_BUDGET ?? 200_000);
 /** Left out even when tracked: a file whose name looks like a secret. */
-export const SECRET = /(^|\/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*)$/i;
+export const SECRET = new RegExp(String.raw`(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx|kdbx|jks|asc|tfstate|tfstate\.backup)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*`
+  + String.raw`|\.npmrc|\.netrc|\.pgpass|\.pypirc|\.vault-token|kubeconfig|auth\.json|service-account[^/]*\.json|\.[^/]*_history|\.kube/config|\.docker/config\.json)$|(^|/)\.gnupg/`, 'i');
 const SHOWN = { list: 200, grep: 100, show: 400 };
 /** How long one grep may run: its pattern is the model's, steered by the text it has just read. */
 const GREP_MS = Number(process.env.ROFL_NB_GREP_MS ?? 5000);
 
-export type Repo = { root: string; files: Set<string>; git: boolean };
+/** `refused`: why nothing of it is read. */
+export type Repo = { root: string; files: Set<string>; git: boolean; refused?: string };
 
-/** The repository a notebook is in: git's top level and the files it tracks; outside git, the notebook's own directory and nothing in it. */
-export function gitFiles(dir: string): Repo {
-  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8' });
-  if (top.status !== 0) return { root: realpathSync(dir), files: new Set(), git: false };
+/** The repository a notebook is in: git's top level and the files it tracks. None to read outside git, when the top level is the home
+ *  directory (a dotfiles repository), or when git does not track the notebook itself. */
+export function gitFiles(notebook: string): Repo {
+  const dir = path.dirname(realpathSync(notebook)), top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir, encoding: 'utf8' });
+  if (top.status !== 0) return { root: dir, files: new Set(), git: false, refused: 'the notebook is not in a git repository' };
   const root = realpathSync(top.stdout.trim()), ls = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 2 ** 20 });
-  return { root, files: new Set((ls.stdout ?? '').split('\0').filter((f) => f && !SECRET.test(f))), git: true };
+  const files = new Set((ls.stdout ?? '').split('\0').filter((f) => f && !SECRET.test(f)));
+  if (root === realpathSync(os.homedir())) return { root, files: new Set(), git: true, refused: 'the repository is the home directory' };
+  if (!files.has(path.relative(root, realpathSync(notebook)))) return { root, files: new Set(), git: true, refused: 'git does not track this notebook: `git add` it to let the model read its repository' };
+  return { root, files, git: true };
 }
 
 /** git grep over the tracked files: its regex engine does not backtrack, and it is stopped at GREP_MS; lines as `path:line: text`, or why none. */
@@ -34,6 +41,7 @@ function gitGrep(repo: Repo, pattern: string, glob?: string): { lines: string[] 
 
 /** A path the model named, as the tracked file it is, or why it may not be read. */
 function resolve(repo: Repo, asked: string): { file: string } | { refused: string } {
+  if (repo.refused) return { refused: `${asked}: ${repo.refused}` };
   let real: string;
   try { real = realpathSync(path.resolve(repo.root, asked)); } catch { return { refused: `${asked}: no such file` }; }
   const rel = path.relative(repo.root, real);
@@ -70,7 +78,7 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
   }
   if (verb === 'grep') {
     const globbed = rest.length > 1 && /[*/]/.test(rest.at(-1)!), glob = globbed ? rest.at(-1)! : '**', pattern = globbed ? rest.slice(0, -1).join(' ') : arg;
-    const g = repo.git ? gitGrep(repo, pattern, globbed ? glob : undefined) : { refused: 'not in a git repository' };
+    const g = repo.refused ? { refused: repo.refused } : gitGrep(repo, pattern, globbed ? glob : undefined);
     if ('refused' in g) return { text: `refused: grep ${pattern}: ${g.refused}`, read: `grep ${pattern} refused` };
     const hits = g.lines.filter((l) => readable(repo, l.slice(0, l.search(/:\d+: /))));
     return { text: hits.length ? fit(hits, SHOWN.grep, 'lines') : '(no tracked line matches)', read: `grep ${pattern} in ${glob} (${hits.length})` };

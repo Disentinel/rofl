@@ -266,7 +266,7 @@ function context(file: string, text: string): Context | { errors: string[] } {
   const { vocab, functions, rels } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
-  return { repo: gitFiles(path.dirname(path.resolve(file))), outside, input, vocab, functions, own, rels, phrases };
+  return { repo: gitFiles(path.resolve(file)), outside, input, vocab, functions, own, rels, phrases };
 }
 
 /** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,

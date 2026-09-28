@@ -19,12 +19,16 @@ prompt on stdin.
 
 ## What the model reads
 
-Before it writes the cell, the model may read the notebook's repository (git's
-top level; outside git, nothing). It asks in lines, and translate answers them:
-`list <glob>`, `grep <regex> [<glob>]`, `show <path>:<from>-<to>`, and
-`? <sentence>`, which the notebook answers. Only files git tracks are read,
-never one outside the repository or a link out of it. Also left out are files
-whose names look like secrets: `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
-`id_*`, `*credential*`, `*secret*`. At most 6 rounds and 200 KB
-(`ROFL_NB_READ_ROUNDS`, `ROFL_NB_READ_BUDGET`). Every read is said:
-`Claude read: src/server.ts:240-280 · …`.
+Before it writes the cell, the model may read the notebook's repository. It asks
+in lines, and translate answers them: `list <glob>`, `grep <regex> [<glob>]`,
+`show <path>:<from>-<to>`, and `? <sentence>`, which the notebook answers.
+Only files git tracks are read, never one outside the repository or a link out
+of it. Nothing is read outside git, when the repository is the home directory,
+or when git does not track the notebook itself (`git add` it first). Files whose
+names look like secrets are left out: `.env*`, keys and certificates (`*.pem`,
+`*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.asc`, `id_*`), `*credential*`,
+`*secret*`, `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.vault-token`,
+`kubeconfig`, `.kube/config`, `.docker/config.json`, `auth.json`,
+`service-account*.json`, `*.tfstate*`, `*.kdbx`, `.gnupg/`, and shell histories.
+At most 6 rounds and 200 KB (`ROFL_NB_READ_ROUNDS`, `ROFL_NB_READ_BUDGET`).
+Every read is said: `Claude read: src/server.ts:240-280 · …`.
