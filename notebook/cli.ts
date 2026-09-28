@@ -142,13 +142,13 @@ const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].repla
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong. */
 export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
-  const start = readFileSync(file, 'utf8'), r = await translateText(file, start, ask);
+  const start = readFileSync(file, 'utf8'), r = await translateText(file, start, ask, new Kernel(), (line) => process.stderr.write(line + '\n'));
   if (r.text !== start) writeFileSync(file, r.text);
   return r;
 }
 
-/** What translate writes, for a host that shows it before it is saved. */
-export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel()): Promise<{ code: number; said: string[]; text: string }> {
+/** What translate writes, for a host that shows it before it is saved. `note`: one line per model call, before it is made — a call can run 30-120 s with nothing on stdout until it returns. */
+export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel(), note: (line: string) => void = () => {}): Promise<{ code: number; said: string[]; text: string }> {
   const said: string[] = [], start = text, cx = context(file, text);
   if ('errors' in cx) return { code: 2, said: cx.errors, text };
   let code = 0;
@@ -156,7 +156,9 @@ export async function translateText(file: string, text: string, ask: Ask, kernel
     const cells = cellsOf(text), c = cells.find((x) => x.kind === 'natural' && !translated(cells, x) && x.index > done);
     if (!c) break;
     done = c.index;
-    const r = await translateOne(file, text, c, ask, kernel, cx);
+    let tries = 0;
+    const step = (s: string) => note(`${file}:${c.line}: ${s}${tries++ ? '' : ' (usually 30–120 s)'}…`);
+    const r = await translateOne(file, text, c, ask, kernel, cx, '', step);
     said.push(...r.said);
     if (r.failed) return { code: 2, said, text: start };
     if (r.code) code = r.code;
