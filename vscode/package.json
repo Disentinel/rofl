@@ -15,7 +15,7 @@
   "main": "./extension.ts",
   "activationEvents": ["onStartupFinished"],
   "capabilities": {
-    "untrustedWorkspaces": { "supported": false, "description": "A notebook reads the code files its front matter names, anywhere on disk, and its Translate command runs Claude on its text." },
+    "untrustedWorkspaces": { "supported": false, "description": "A notebook reads the code files its front matter names, anywhere on disk, and its Translate command sends its text to a language model." },
     "virtualWorkspaces": false
   },
   "engines": {
@@ -48,8 +48,19 @@
       { "command": "rofl-notebook.translateCell", "title": "Translate", "category": "ROFL", "icon": "$(sparkle)" },
       { "command": "rofl-notebook.refine", "title": "Refine in plain language", "category": "ROFL", "icon": "$(comment-discussion)" },
       { "command": "rofl-notebook.revert", "title": "Revert to the natural cell", "category": "ROFL", "icon": "$(discard)" },
-      { "command": "rofl-notebook.restart", "title": "Restart kernel", "category": "ROFL", "icon": "$(debug-restart)" }
+      { "command": "rofl-notebook.restart", "title": "Restart kernel", "category": "ROFL", "icon": "$(debug-restart)" },
+      { "command": "rofl-notebook.chooseModel", "title": "Choose model", "category": "ROFL" }
     ],
+    "configuration": {
+      "title": "ROFL",
+      "properties": {
+        "rofl.model": {
+          "type": "string",
+          "default": "auto",
+          "markdownDescription": "The model Translate asks. `auto`: VS Code's language model (GitHub Copilot's, for one) if there is one, else the first installed command-line harness that runs with no tools. `vscode:<id>`: that language model. Or a harness: `claude`, `codex`, `opencode`, `pi`, `copilot`, `hermes`, `command`, with `:<model>` to pick its model. **ROFL: Choose model** sets it."
+        }
+      }
+    },
     "menus": {
       "notebook/toolbar": [
         { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" },

@@ -35,7 +35,7 @@ golden_state("notebook_cli_exits", "dc917789bffdc462", 749).
 golden_state("notebook_ledger", "1fc0bf275eb44750", 17016).
 golden_state("notebook_mcp", "576059aaecfb0dc9", 1091).
 golden_state("notebook_review", "910a464c5fe1c938", 662).
-golden_state("notebook_self", "2af49f669e1ad80b", 1530).
+golden_state("notebook_self", "1047081cd9324fa8", 1530).
 golden_state("notebook_small", "a5ffe70ed0582c0d", 602).
 golden_state("notebook_spat", "1d26a83e4852c1a1", 17500).
 golden_state("notebook_xdir", "2e942eab9cb32113", 592).

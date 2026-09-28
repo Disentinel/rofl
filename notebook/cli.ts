@@ -5,7 +5,6 @@
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
 import { getHeapStatistics } from 'node:v8';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -15,6 +14,7 @@ import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } fro
 import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
+import { choose, llm, models, type Ask } from './model.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -140,32 +140,6 @@ export function tally(r: NbResult): string {
 
 // ------------------------------------------------------------ translation
 
-export type Ask = (prompt: string, signal?: AbortSignal) => Promise<{ ok: true; text: string } | { ok: false; error: string }>;
-
-/** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script; `signal` stops it.
- *  No tools, no MCP servers, no settings, hooks or CLAUDE.md of the user's or of the notebook's project: a natural cell is text from whoever wrote the file. */
-export const claude: Ask = (prompt, signal) => {
-  const cmd = process.env.ROFL_NB_CLAUDE ?? 'claude';
-  const limit = Number(process.env.ROFL_NB_CLAUDE_TIMEOUT ?? 180) * 1000;
-  const p = spawn(cmd, ['-p', '--model', 'sonnet', '--tools', '', '--strict-mcp-config', '--setting-sources', ''], { timeout: limit, signal, cwd: os.tmpdir() });
-  let out = '', err = '', error: NodeJS.ErrnoException | undefined;
-  p.stdout.on('data', (d) => { out += d; });
-  p.stderr.on('data', (d) => { err += d; });
-  p.stdin.on('error', () => {});
-  p.stdin.end(prompt);
-  return new Promise((done) => {
-    p.on('error', (e) => { error = e; });
-    p.on('close', (status, killed) => {
-      if (error?.code === 'ENOENT') return done({ ok: false, error: `${cmd} is not installed or not on the PATH` });
-      if (signal?.aborted) return done({ ok: false, error: 'stopped' });
-      if (killed) return done({ ok: false, error: `${cmd} -p gave no answer in ${limit / 1000} s to a prompt of ${prompt.length} characters and was stopped; it printed ${out.length} characters${err ? `, and on stderr: ${err.trim().slice(-300)}` : ''}. ROFL_NB_CLAUDE_TIMEOUT sets the limit in seconds` });
-      if (error) return done({ ok: false, error: error.message });
-      if (status !== 0) return done({ ok: false, error: `${cmd} exited with ${status}: ${(err || out).trim().slice(0, 300)}` });
-      done({ ok: true, text: out });
-    });
-  });
-};
-
 const FORM = `A cell is written in ROFL's Markdown sentence form:
 - A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless", after a comma: "<head> if <condition>, unless <condition>."
 - A long rule: "<head> if all of:" and then a list, one condition per item "  - <condition>;", the last ending in ".".
@@ -239,7 +213,7 @@ async function* translating(file: string, text: string, ask: Ask, kernel: Kernel
   }
 }
 
-/** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what Claude said last instead of a cell, `step` hears each step as it starts. */
+/** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what the model said last instead of a cell, `step` hears each step as it starts. */
 export async function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), { words = '', asked = '', step = (_: string) => {} } = {}): Promise<{ code: number; said: string[]; text: string; reply?: string }> {
   const cx = context(file, text), cells = cellsOf(text), c = cells[index];
   if ('errors' in cx) return { code: 2, said: cx.errors, text };
@@ -312,9 +286,9 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
     const out = r.cells.find((x) => x.index === c.index + 1)!;
     return { next, errors: [...r.errors, ...out.errors], lines: out.lines };
   };
-  const words = (a: string) => ({ code: 2, said: [...said, `${file}:${c.line}: Claude answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
+  const words = (a: string) => ({ code: 2, said: [...said, `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
   const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code)) + follow;
-  step('Claude is writing the cell');
+  step(`${ask.who ?? 'the model'} is writing the cell`);
   let a = await ask(base);
   if (!a.ok) return { code: 2, said: [`translation failed: ${a.error}`], text, failed: true };
   let cell = fenced(a.text);
@@ -336,7 +310,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
 const HELP = `New here? Play examples/tutorial (6 short levels), from examples/tutorial/1-what-ships.rofl.md.
 
 npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--timing]   run a notebook
-npm run nb -- translate <file.rofl.md>        Claude answers each natural cell in rofl
+npm run nb -- translate <file.rofl.md>        a model answers each natural cell in rofl
 npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
 npm run nb -- --help env                      the environment variables
 
@@ -366,13 +340,19 @@ ROFL_NB_DAEMON=0         run in this process; by default runs go to a kept kerne
                          (the model loads once, 10 to 20 s; later runs take seconds)
 ROFL_NB_TIMEOUT=<s>      how long to wait for the kept kernel; by default ROFL_NB_LIMIT + 180
 ROFL_NB_IDLE=900         seconds the kept kernel waits for a run before it exits
-ROFL_NB_CLAUDE=claude    the command translate asks; ROFL_NB_CLAUDE_TIMEOUT=180 its limit in seconds`;
+ROFL_NB_HARNESS=<name>   the model translate asks (npm run nb -- models lists them), as --model does: claude, codex, opencode, pi, copilot, hermes, command
+                         (NAME:MODEL picks the harness's model); by default the first installed that runs with no tools
+ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the answer (the harness named command)
+ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
+ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
+ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const argv = process.argv.slice(2);
   if (argv.includes('--version') || argv.includes('-v')) { console.log(`rofl-nb ${JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version}`); process.exit(0); }
   if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(argv[argv.indexOf('--help') + 1] === 'env' ? HELP_ENV : HELP); process.exit(argv.length ? 0 : 2); }
+  if (argv[0] === 'models') { console.log(models().join('\n')); process.exit(0); }
   if (argv[0] === 'vocab') {
     const file = argv[1]?.endsWith('.rofl.md') ? argv[1] : undefined, word = argv.slice(file ? 2 : 1).join(' ');
     if (file && !existsSync(file)) { console.error(`${file}: no such file`); process.exit(2); }
@@ -386,7 +366,9 @@ if (isMain) {
   if (!named.endsWith('.rofl.md')) { console.error(`${named}: not a notebook: a notebook is a .rofl.md file (see --help)`); process.exit(2); }
   if (!existsSync(named)) { console.error(`${named}: no such file`); process.exit(2); }
   if (argv[0] === 'translate') {
-    const r = await translate(named, claude);
+    const m = argv.indexOf('--model'), c = choose(m > 0 ? argv[m + 1] : undefined);
+    if (c.error || c.refused) { console.error(`${named}: ${c.error ?? c.refused}`); process.exit(2); }
+    const r = await translate(named, llm(c));
     console.log(r.said.join('\n'));
     process.exit(r.code);
   }

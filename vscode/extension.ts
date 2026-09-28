@@ -6,26 +6,61 @@ import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
 import { lsp } from './lsp.ts';
+import { HARNESSES, standing } from '../notebook/model.ts';
 
 const TYPE = 'rofl-notebook';
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
 let worker: Worker | undefined, seq = 0;
-const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void }>();
-/** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process. */
-function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken): Promise<T> {
+type Via = { model?: string; lm?: vscode.LanguageModelChat };
+const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void; lm?: vscode.LanguageModelChat; stop?: vscode.CancellationToken }>();
+/** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process, or cancels VS Code's model's request. */
+function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
   if (!worker) {
     const w = worker = new Worker(new URL('./worker.ts', import.meta.url));
-    w.on('message', ({ id, r, error, step }) => {
+    w.on('message', ({ id, r, error, step, lm, k }) => {
       const p = waiting.get(id)!;
       if (step !== undefined) return p.step?.(step);
+      if (lm !== undefined) return void viaLm(p.lm!, lm, p.stop).then((answer) => worker?.postMessage({ id, op: 'answer', k, answer }));
       waiting.delete(id); error ? p.fail(new Error(error)) : p.ok(r);
     });
     w.on('error', (e) => { worker = undefined; for (const p of waiting.values()) p.fail(e); waiting.clear(); });
   }
   const id = ++seq;
   stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
-  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step }); worker!.postMessage({ id, op, file, text, unsaved, cell }); });
+  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model }); });
+}
+/** One prompt to VS Code's language model (GitHub Copilot's, or any other the editor has), as text alone: no tool is offered, so none can be called. */
+async function viaLm(model: vscode.LanguageModelChat, prompt: string, stop?: vscode.CancellationToken): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const cancel = new vscode.CancellationTokenSource(), limit = Number(process.env.ROFL_NB_MODEL_TIMEOUT ?? 180);
+  const off = stop?.onCancellationRequested(() => cancel.cancel()), late = setTimeout(() => cancel.cancel(), limit * 1000);
+  try {
+    const r = await model.sendRequest([vscode.LanguageModelChatMessage.User(prompt)], { justification: 'ROFL translates a natural cell of the notebook into a rofl cell.' }, cancel.token);
+    let text = '';
+    for await (const t of r.text) text += t;
+    if (!cancel.token.isCancellationRequested) return { ok: true, text };
+  } catch (e) { if (!cancel.token.isCancellationRequested) return { ok: false, error: `${model.name}: ${(e as Error).message}` }; }
+  finally { clearTimeout(late); off?.dispose(); cancel.dispose(); }
+  return { ok: false, error: stop?.isCancellationRequested ? 'stopped' : `${model.name} gave no answer in ${limit} s and was stopped. ROFL_NB_MODEL_TIMEOUT sets the limit in seconds` };
+}
+/** The model Translate asks, by the setting `rofl.model`: `auto` VS Code's first language model and else the first installed harness,
+ *  `vscode:<id>` that language model, or a harness as `npm run nb -- --model` takes it. */
+async function via(): Promise<Via | { error: string }> {
+  const set = vscode.workspace.getConfiguration('rofl').get<string>('model') || 'auto';
+  if (set !== 'auto' && !set.startsWith('vscode:')) return { model: set };
+  const [lm] = await vscode.lm.selectChatModels(set === 'auto' ? undefined : { id: set.slice(7) });
+  return lm ? { lm, model: `vscode:${lm.name}` } : set === 'auto' ? {} : { error: `VS Code has no language model ${set.slice(7)} now; ROFL: Choose model picks another` };
+}
+/** A quick pick of VS Code's language models and the command-line harnesses, into the setting `rofl.model`. */
+async function chooseModel() {
+  const now = vscode.workspace.getConfiguration('rofl').get<string>('model') || 'auto', lms = await vscode.lm.selectChatModels();
+  const items = [
+    { label: 'auto', description: "VS Code's language model if there is one, else the first installed harness", value: 'auto' },
+    ...lms.map((m) => ({ label: m.name, description: `VS Code · ${m.vendor} · ${m.family}`, value: `vscode:${m.id}` })),
+    ...Object.keys(HARNESSES).map((n) => ({ label: n, description: `command line · ${standing(n)}`, value: n })),
+  ].map((i) => ({ ...i, picked: i.value === now, label: i.value === now ? `$(check) ${i.label}` : i.label }));
+  const pick = await vscode.window.showQuickPick(items, { title: 'ROFL: the model Translate asks', placeHolder: `now: ${now}` });
+  if (pick) await vscode.workspace.getConfiguration('rofl').update('model', pick.value, vscode.ConfigurationTarget.Global);
 }
 /** The worker ended, mid-run or not: what waits on it fails, and the next run starts another, which loads the model again. */
 function restart() {
@@ -188,36 +223,39 @@ export function activate(ctx: vscode.ExtensionContext) {
   async function translate() {
     const nb = vscode.window.activeNotebookEditor?.notebook;
     if (nb?.notebookType !== TYPE) return void vscode.window.showWarningMessage('Open a .rofl.md notebook first.');
-    const text = serialize(docOf(nb));
-    const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: Claude translates the natural cells' },
-      () => ask<{ code: number; said: string[]; text: string }>('translate', nb.uri.fsPath, text));
+    const text = serialize(docOf(nb)), v = await via();
+    if ('error' in v) return void vscode.window.showErrorMessage(`ROFL: ${v.error}`);
+    const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: translating the natural cells' },
+      () => ask<{ code: number; said: string[]; text: string }>('translate', nb.uri.fsPath, text, {}, undefined, undefined, undefined, v));
     channel.appendLine(r.said.join('\n'));
     if (r.text !== text) await apply(nb, r.text);
     if (r.code) { vscode.window.showErrorMessage('ROFL: not every natural cell was translated', 'Show').then((a) => a && channel.show()); }
     else if (r.text === text) vscode.window.showInformationMessage('ROFL: every natural cell already has its rofl cell');
   }
 
-  /** One natural cell, or the natural cell a translation answers, translated again; with `words`, what the person says to Claude. Claude's words instead of a cell are the natural cell's output. */
-  /** While Claude works the natural cell says what it is doing and for how long, and its Stop kills the model; then it says what came back:
-   *  nothing when a cell was written (the notebook runs, so the new cell answers), Claude's words, or why nothing was written. */
+  /** One natural cell, or the natural cell a translation answers, translated again; with `words`, what the person says to the model. The model's words instead of a cell are the natural cell's output. */
+  /** While the model works the natural cell says what it is doing and for how long, and its Stop kills the model; then it says what came back:
+   *  nothing when a cell was written (the notebook runs, so the new cell answers), the model's words, or why nothing was written. */
   async function translateOne(arg?: vscode.NotebookCell, words = '') {
     const natural = arg && naturalOf(arg);
     if (!natural) return void vscode.window.showWarningMessage('ROFL: select a natural cell or the rofl cell under one.');
     const nb = natural.notebook, text = serialize(docOf(nb)), at = runsOf(nb).indexOf(natural) + 1;
+    const v = await via();
+    if ('error' in v) return void vscode.window.showErrorMessage(`ROFL: ${v.error}`);
     const x = await execution(natural);
     if (!x) return void vscode.window.showWarningMessage('ROFL: the notebook is running; translate when it is done.');
     const t0 = Date.now(), show = (md: string) => x.replaceOutput(md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(md, 'text/markdown')])] : []);
-    let step = 'Claude is writing the cell';
+    let step = 'Asking the model';
     const tick = () => show(`*${step.replace(/\*/g, '\\*')} \u00b7 ${Math.round((Date.now() - t0) / 1000)} s*`), timer = setInterval(tick, 1000);
     x.start(t0); tick();
-    let r: { code: number; said: string[]; text: string; reply?: string };
-    try { r = await ask('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural) }, (s) => { step = s; tick(); }, x.token); }
+    let r: { code: number; said: string[]; text: string; reply?: string; who?: string };
+    try { r = await ask('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural) }, (s) => { step = s; tick(); }, x.token, v); }
     catch (e) { r = { code: 2, said: [(e as Error).message], text }; }
     finally { clearInterval(timer); }
     channel.appendLine(r.said.join('\n'));
     if (r.reply) asked.set(natural, r.reply); else asked.delete(natural);
     const stopped = r.said.includes('translation failed: stopped');
-    await show(r.reply ? `**Claude:** ${r.reply}\n\n*Answer with Refine.*` : r.text !== text ? '' : stopped ? '*Stopped; nothing written.*'
+    await show(r.reply ? `**${r.who}:** ${r.reply}\n\n*Answer with Refine.*` : r.text !== text ? '' : stopped ? '*Stopped; nothing written.*'
       : `**Not translated:** \`${why(r.said).replace(/`/g, "'")}\`\n\n\`\`\`\n${r.said.join('\n')}\n\`\`\`\n\n*Refine to say more, or change the words and Translate again.*`);
     x.end(r.text !== text || !!r.reply, Date.now());
     if (r.text !== text) { await apply(nb, r.text); await run(nb); }
@@ -230,12 +268,12 @@ export function activate(ctx: vscode.ExtensionContext) {
     await vscode.commands.executeCommand('notebook.selectKernel', { notebookEditor: vscode.window.visibleNotebookEditors.find((e) => e.notebook === cell.notebook), id: 'rofl-kernel', extension: ctx.extension.id });
     try { return controller.createNotebookCellExecution(cell); } catch { return undefined; }
   }
-  /** `words` asked for in an input box, where Claude's question, if it asked one, is the prompt. */
+  /** `words` asked for in an input box, where the model's question, if it asked one, is the prompt. */
   async function refine(arg?: vscode.NotebookCell, words?: string) {
     const natural = arg && naturalOf(arg);
     if (!natural) return void vscode.window.showWarningMessage('ROFL: select a natural cell or the rofl cell under one.');
     const q = asked.get(natural);
-    words ??= await vscode.window.showInputBox({ title: q ? 'Answer Claude' : 'Refine in plain language', prompt: q ?? 'Say what to change, in plain language', ignoreFocusOut: true });
+    words ??= await vscode.window.showInputBox({ title: q ? 'Answer the model' : 'Refine in plain language', prompt: q ?? 'Say what to change, in plain language', ignoreFocusOut: true });
     if (words?.trim()) await translateOne(natural, words.trim());
   }
   /** A translation deleted: the natural cell above it, which kept the words, is what is left. */
@@ -266,7 +304,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('rofl-notebook.refine', (c?: vscode.NotebookCell, words?: string) => refine(cellArg(c), words)),
     vscode.commands.registerCommand('rofl-notebook.revert', (c?: vscode.NotebookCell) => revert(cellArg(c))),
     vscode.commands.registerCommand('rofl-notebook.reveal', reveal),
-    vscode.commands.registerCommand('rofl-notebook.restart', restart));
+    vscode.commands.registerCommand('rofl-notebook.restart', restart),
+    vscode.commands.registerCommand('rofl-notebook.chooseModel', chooseModel));
   translations();
   // A .rofl.md named on the `code` command line opens as text before this extension's notebook is known; reopen it as the notebook.
   for (const tab of vscode.window.tabGroups.all.flatMap((g) => g.tabs)) {

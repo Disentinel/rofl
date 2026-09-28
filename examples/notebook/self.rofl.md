@@ -9,6 +9,7 @@ code:
   - ../../notebook/book.ts
   - ../../notebook/front.ts
   - ../../notebook/cli.ts
+  - ../../notebook/model.ts
   - ../../notebook/serve.ts
   - ../../playground/host.ts
   - ../../vscode/extension.ts
@@ -131,14 +132,14 @@ I5 The LLM proposes, the book decides: a translation enters the file only after 
 ```
 
 > Step 1. A model is called by starting a process; only the function that
-> calls Claude may start one, and the one that starts the kept kernel
+> starts the harness (`notebook/model.ts`) may start one, and the one that starts the kept kernel
 > (`notebook/serve.ts`), whose command is node itself.
 
 ```rofl
 A call C starts a process if C is a host site of `node` from "node:child_process" at some key.
 
 A function F may start a process either:
-1. if F answers to "claude";
+1. if F answers to "runHarness";
 2. if F answers to "viaDaemon".
 
 A call C starts a process outside the model call if C starts a process, a function F is the nearest function of C, and unless F may start a process.
@@ -148,9 +149,9 @@ never C starts a process outside the model call
 
 > Step 2. The editor's host runs the kernel in a worker, which hands the
 > model call to the translator only on the translate command's path: in the
-> extension's files `claude` is passed to a call only inside a function that
+> extension's files `llm` is passed to a call only inside a function that
 > answers to "translate". The question beside it is the control: the name is
-> there to be seen. A `claude` stored in a variable and passed on under
+> there to be seen. A `llm` stored in a variable and passed on under
 > another name would escape this; the call graph does not follow a value
 > across this tree's directories yet.
 
@@ -164,10 +165,10 @@ never C starts a process outside the model call
 
 A call C is in translation if a function F is the nearest function of C and F answers to "translate".
 
-A call C hands the model over outside translation if C passes the argument a node X at some index, X is named "claude", C is in file F, `editor_file`(F), and unless C is in translation.
+A call C hands the model over outside translation if C passes the argument a node X at some index, X is named "llm", C is in file F, `editor_file`(F), and unless C is in translation.
 
 never C hands the model over outside translation
-? X is named "claude"
+? X is named "llm"
 ```
 
 > Behavioural for the rest: `I5 a run never calls a model` (a run with the
@@ -175,7 +176,7 @@ never C hands the model over outside translation
 > `I5 a translation that reads is inserted under its natural cell, which
 > stays`, `I5 a translation that does not read after a retry is not written`,
 > `I5 no model to call is exit 2 and said plainly`. That the only caller of
-> `claude` is the translate branch is a question about where a value flows,
+> `llm` is the translate branch is a question about where a value flows,
 > and it stays behavioural: when this was written the model's call graph did
 > not cross this tree's directories (`f_a_call_across_directories_is_not_resolved`);
 > since notebook-xdir it does, and the refinement is still to be written.

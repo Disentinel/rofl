@@ -2,7 +2,7 @@
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
 import { spawn, spawnSync } from 'node:child_process';
 import { connect } from 'node:net';
-import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { worlds } from './goldens.ts';
@@ -62,7 +62,8 @@ const redFile = planted('red', 'self.rofl.md', (t) => t, [
   ['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)],
   ['notebook/front.ts', mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`)],
   ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawn('claude', ['-p', 'check this']);`)],
-  ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text, unsaved\);/, (m) => `${m} translateText(file, text, claude, kernel);`)],
+  ['notebook/model.ts', mutate('notebook/model.ts', /^  const runnable = /m, (m) => `  spawn('which', [bin]);\n${m}`)],
+  ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text, unsaved\);/, (m) => `${m} translateText(file, text, llm, kernel);`)],
 ]);
 // and every one it cannot see into another: the run must name each as out of sight, outside the boundary
 const cellsLine = /^    const cells = cellsOf\(text\);/m;
@@ -211,7 +212,7 @@ const [review, small, self, reviewJson, fails, notRead, rewrite, extended, colli
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
-  cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
+  cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_MODEL_TIMEOUT: '2' }),
   cli([path.join(NB, 'spat.rofl.md')]), cli([excised, '--json']), cli([without, '--json']), cli([holey]),
   cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]), cli([runaway], { ROFL_NB_LIMIT: '3' }), cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
   cli([misspelt]),
@@ -247,7 +248,8 @@ check('I6 a node:fs import and read planted in the kernel turns self red', is(re
 check('I6 an exit planted in the kernel turns self red', is(red, 1) && has(red, 'process.exit() at notebook/front.ts'), red);
 check('I4 a write planted in a run turns self red', is(red, 1) && has(red, 'never C writes outside translation  ->  FAILS'), red);
 check('I5 a process started in a run turns self red', is(red, 1) && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
-check('I5 the model handed over on the editor\'s run path turns self red', is(red, 1) && has(red, '[translateText() at vscode/worker.ts:8] hands the model over outside translation'), red);
+check('I5 a process started beside the harness call, in notebook/model.ts, turns self red', is(red, 1) && /\[spawn\(\) at notebook\/model\.ts:\d+\] starts a process outside the model call/.test(red.out), red);
+check('I5 the model handed over on the editor\'s run path turns self red', is(red, 1) && has(red, '[translateText() at vscode/worker.ts:9] hands the model over outside translation'), red);
 check('I3 a dynamic import of node:fs in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /import\(\)/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)) && outside(blind).some((a) => /"readFileSync"/.test(a.literal)), { code: blind.code, out: JSON.stringify(outside(blind)) });
 check('I3 a computed globalThis["process"] write in the kernel is named out of sight, outside the boundary', is(blind, 3) && outside(blind).some((a) => /"write"/.test(a.literal) && /notebook\/kernel\.ts:\d+/.test(a.sentence)), { code: blind.code, out: JSON.stringify(outside(blind)) });
 check('I2 a kernel that exits early is not green', early.code === 0 && verdict(early) === null && !is(early, 0), early);
@@ -304,8 +306,62 @@ check('M1 a notebook that reads a file outside its folder says so; one reading o
 check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
 check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
 const argv = (() => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } })();
-check('H1 the model is called with no MCP server and no settings, from outside the notebook\'s project', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][] ') && l.endsWith(` ${realpathSync(os.tmpdir())}`)), { code: 0, out: argv.join('\n') });
+check('H1 the model is called with no MCP server and no settings, from a directory of its own outside the notebook\'s project, gone after', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][] ') && l.includes(` ${realpathSync(os.tmpdir())}/rofl-nb-model-`) && !existsSync(l.split(' ').pop()!)), { code: 0, out: argv.join('\n') });
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
+
+// H3 each harness (notebook/model.ts) against a fake of its binary that records how it was started: the flags that leave it no tools, a directory of
+// its own, removed after, the answer read; one that keeps tools refused unless allowed, one that fails said in a line. Each isolation, spoilt, turns it red.
+const ISOLATION: Record<string, string[]> = {
+  claude: ['[--tools][]', '[--strict-mcp-config]', '[--setting-sources][]'],
+  codex: ['[--disable][shell_tool]', '[--disable][unified_exec]', '[--ignore-user-config]', '[--ignore-rules]', '[-s][read-only]', '[-c][web_search="disabled"]', '[--disable][apps]', '[--disable][plugins]'],
+  opencode: ['OPENCODE_CONFIG_CONTENT={"permission":{"*":"deny"}}', 'OPENCODE_DISABLE_PROJECT_CONFIG=1', 'OPENCODE_DISABLE_CLAUDE_CODE=1', 'XDG_CONFIG_HOME=$CWD', '[--pure]'],
+  pi: ['[--no-tools]', '[--no-extensions]', '[--no-skills]', '[--no-context-files]'],
+  copilot: ['[--no-custom-instructions]', '[--disable-builtin-mcps]', '--excluded-tools=bash,', ',view,', ',web_fetch'],
+  hermes: ['[--safe-mode]', '[--ignore-user-config]', '[--ignore-rules]', '[--toolsets][safe]'],
+};
+const KEEPS = ['codex', 'copilot', 'hermes'];
+const recorder = (name: string, tail = 'printf \'```rofl\\nnever M is unowned\\n```\\n\'') => { const f = path.join(tmp, 'h3', name); put(f, `#!/bin/sh\nin=$(cat)\n{ pwd -P; printf '[%s]' "$@"; echo; env | grep -E '^(OPENCODE_|XDG_CONFIG_HOME)' | sort | tr '\\n' ' '; echo; printf '%s' "$in" | wc -c; } > ${f}.rec\n${tail}\n`); chmodSync(f, 0o755); return f; };
+async function harnesses(src: string, tag: string): Promise<string[]> {
+  const f = path.join(tmp, 'h3', `model-${tag}.ts`);
+  put(f, src);
+  const m = await import(f), bad: string[] = [];
+  for (const name of Object.keys(ISOLATION)) {
+    const bin = recorder(name), env = { ...process.env, [`ROFL_NB_${name.toUpperCase()}`]: bin, ROFL_NB_ALLOW_TOOLS: '' }, rec = `${bin}.rec`;
+    rmSync(rec, { force: true });
+    const refused = await m.llm(m.choose(name, env))('the prompt');
+    if (KEEPS.includes(name) !== (!refused.ok && /cannot be run without tools.*ROFL_NB_ALLOW_TOOLS=1/.test(refused.error)) || KEEPS.includes(name) && existsSync(rec)) { bad.push(`${name}: ${KEEPS.includes(name) ? 'not refused' : 'refused'} without ROFL_NB_ALLOW_TOOLS: ${JSON.stringify(refused)}`); continue; }
+    rmSync(rec, { force: true });
+    const r = await m.llm(m.choose(name, { ...env, ROFL_NB_ALLOW_TOOLS: '1' }))('the prompt');
+    const [cwd = '', argv = '', vars = '', bytes = ''] = existsSync(rec) ? readFileSync(rec, 'utf8').split('\n') : [];
+    const seen = `${argv} ${vars.replaceAll(cwd.replace(/^\/private(?=\/var\/)/, ''), '$CWD').replaceAll(cwd, '$CWD')}`;
+    const lacks = ISOLATION[name].filter((x) => !seen.includes(x));
+    if (!r.ok || !r.text.includes('never M is unowned')) bad.push(`${name}: the answer was not read: ${JSON.stringify(r)}`);
+    if (lacks.length) bad.push(`${name}: started without ${lacks.join(' ')}: ${argv} ${vars}`);
+    if (!cwd.startsWith(`${realpathSync(os.tmpdir())}/rofl-nb-model-`) || existsSync(cwd)) bad.push(`${name}: run in ${cwd}, ${existsSync(cwd) ? 'which is still there' : 'not a directory of its own'}`);
+    if (Number(bytes) + Number(argv.includes('[the prompt]')) * 10 !== 10) bad.push(`${name}: the prompt went neither on stdin nor in argv once: ${bytes} bytes on stdin, ${argv}`);
+  }
+  const fail = recorder('fails', 'printf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2; exit 1'), quiet = recorder('quiet', 'echo "Error: the free tier cannot be used here" >&2');
+  const [f1, f2] = await Promise.all([fail, quiet].map((b) => m.llm(m.choose('opencode', { ...process.env, ROFL_NB_OPENCODE: b }))('p')));
+  if (f1.ok || f1.error !== 'opencode exited with 1: Error: Incorrect API key provided') bad.push(`a harness that fails is not said in one line: ${JSON.stringify(f1)}`);
+  if (f2.ok || f2.error !== 'opencode printed nothing; on stderr: Error: the free tier cannot be used here') bad.push(`a harness that prints nothing and exits 0 is taken as an answer: ${JSON.stringify(f2)}`);
+  return bad;
+}
+const MODEL_SRC = readFileSync(path.join(ROOT, 'notebook/model.ts'), 'utf8');
+const H3_BREAKS: [string, RegExp, string][] = [
+  ['claude', /'--tools', '', /, ''], ['codex', /'shell_tool', /, ''], ['opencode', /\{"permission":\{"\*":"deny"\}\}/, '{}'], ['pi', /'--no-tools', /, ''],
+  ['copilot', /'--no-custom-instructions', /, ''], ['hermes', /'--safe-mode', /, ''], ['refusal', /!allow && HARNESSES\[name\]\.keeps/, 'false'],
+  ['cwd', /cwd: dir,/, 'cwd: os.tmpdir(),'], ['empty', /^ *if \(!out\.trim\(\)\).*$/m, ''],
+];
+const h3 = await harnesses(MODEL_SRC, 'as-is');
+check('H3 every harness is started with the flags that leave it no tools, in a directory of its own, and its answer read; one that keeps tools is refused', !h3.length, { code: 0, out: h3.join('\n') });
+for (const [name, at, plant] of H3_BREAKS) {
+  const spoilt = MODEL_SRC.replace(at, plant);
+  if (spoilt === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
+  check(`  and with ${name} spoilt, it is red`, (await harnesses(spoilt, name)).length > 0);
+}
+const [refusedCli, failedCli] = await Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: path.join(tmp, 'h3', 'fails') })]);
+check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
+check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
 const [help, bare, nope, prose, helpEnv, ver, v] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md']), cli(['--help', 'env']), cli(['--version']), cli(['-v'])]);
 const pkgVersion = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
@@ -343,7 +399,7 @@ const partial = planted('tr-part', 'review.rofl.md', (t) => `${withNatural(t)}\n
 const none = planted('tr-none', 'review.rofl.md', (t) => t);
 const once = path.join(tmp, 'once.sh'), count = path.join(tmp, 'once.count');
 writeFileSync(once, `#!/bin/sh\ncat > /dev/null\necho x >> ${count}\n[ $(wc -l < ${count}) -gt 1 ] && exec sleep 30\ncat <<'EOF'\n\`\`\`rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n\`\`\`\nEOF\n`); chmodSync(once, 0o755);
-const [out, three, part, nothing] = await Promise.all([cli([outsider]), cli([lines3]), cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_CLAUDE_TIMEOUT: '3' }), cli(['translate', none])]);
+const [out, three, part, nothing] = await Promise.all([cli([outsider]), cli([lines3]), cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_MODEL_TIMEOUT: '3' }), cli(['translate', none])]);
 const at = (s: string) => `small.js:${kept2.split('\n').findIndex((l) => l.includes(s)) + 1}]`;
 check('U1 a sentence not read names the nearest the vocabulary has', /not read: F contains a throw T; the nearest sentences: [^\n]*throw/.test(out.out), out);
 check('U2 three rules one to a line are read as three', is(three, 0) && has(three, '? C is lonely  ->  2 answers') && has(three, '? T is busy  ->  1 answer') && has(three, '? C is idle  ->  1 answer'), three);
