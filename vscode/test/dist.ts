@@ -53,6 +53,10 @@ const cases = ['review', 'small'].map((n, i) => {
   writeFileSync(cli, copies[i].stdout);
   return { file: path.join(nb, 'notebook', `${n}.rofl.md`), cli };
 });
+// the guide's output blocks, printed again by the packaged command line rather than the tree's
+const guide = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_GUIDE_CLI: pkg } });
+if (guide.status !== 0) bad.push(`the guide, run by the package: ${guide.stdout}${guide.stderr}`.trim());
+else console.log('guide/: every output block is what the package prints');
 // the language server as installed from the package: `rofl-lsp --stdio` answers initialize and marks a broken rule on its line
 const prefix = path.join(tmp, 'prefix'), installedTgz = spawnSync('npm', ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--offline', path.join(DIST, tgz)], { encoding: 'utf8', timeout: 60_000 });
 if (installedTgz.status !== 0) bad.push(`npm install ${tgz}: ${installedTgz.stdout}${installedTgz.stderr}`);
