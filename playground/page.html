@@ -48,6 +48,10 @@
   button:disabled { opacity: .5; cursor: default; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
   @media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .grid.nocode { grid-template-columns: minmax(0, 1fr); max-width: 1000px; }
+  .grid.nocode .code { display: none; }
+  .nocode-note { display: none; font-size: 13px; color: var(--mute); margin: 0; }
+  .grid.nocode .nocode-note { display: block; }
 
   /* the code pane */
   .code { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
@@ -194,7 +198,8 @@
     <button type="button" class="primary" id="runall" disabled>Run the book</button>
   </header>
   <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>unsure S</code> under it says what the invariant could not see, <code>why S</code> explains one. Files import each other with <code>import ... from './x.js'</code>. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
-  <div class="grid">
+  <div class="grid" id="grid">
+    <p class="nocode-note">No code: this notebook draws its own facts.</p>
     <section class="code" aria-label="JavaScript">
       <div class="bar"><div class="files" id="files" role="tablist" aria-label="Files"></div><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
       <div class="editor">
@@ -429,7 +434,7 @@ extends resolves` },
 };
 // the pictures (pictures.json): examples/visual, a notebook with no code, whose cells draw
 let pictures = [];
-const picture = (name) => { const p = pictures.find((x) => `pic:${x.name}` === name); return p && { files: { 'notes.js': `// ${p.title}: no code here; the picture is drawn from the notebook's own facts.\n` }, cells: p.cells }; };
+const picture = (name) => { const p = pictures.find((x) => `pic:${x.name}` === name); return p && { files: { 'notes.js': '' }, cells: p.cells }; };
 const fresh = (name) => { const ex = EXAMPLES[name] ?? picture(name) ?? EXAMPLES.await; return { example: name, files: { ...ex.files }, active: Object.keys(ex.files)[0], cells: ex.cells.map(cell) }; };
 
 const $ = (id) => document.getElementById(id);
@@ -505,6 +510,7 @@ function paintEditor() {
 const filesEl = $('files');
 let renaming = null;
 function renderFiles() {
+  $('grid').classList.toggle('nocode', String(state.example ?? '').startsWith('pic:'));
   const names = Object.keys(state.files);
   filesEl.innerHTML = names.map((f) => renaming === f
     ? `<input id="rename" value="${esc(f)}" aria-label="File name" spellcheck="false">`
