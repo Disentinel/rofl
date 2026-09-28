@@ -23,6 +23,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run view        -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
     npm run playground  the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
     npm run conform     `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
+    npm run nb          -- <file.rofl.md> [--json] [--cell N]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process
 
 <!-- END commands -->
 
