@@ -92,6 +92,16 @@ put(runaway, '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
 const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
+// what an outside user met on unfamiliar code
+const kept2 = smallJs + "\nexport async function keep() {\n  const p = load('c');\n  return p;\n}\n\nclass Cache {\n  async #fetch(k) { return k; }\n  get(k) { this.#fetch(k); }\n}\n";
+const outsider = planted('outsider', 'small.rofl.md', (t) => withCell('A function F is risky if F contains a throw T.\n\n? F is risky')(t.replace('  - small.js', '  - small.js\n  - broken.js')),
+  [['examples/notebook/small.js', kept2], ['examples/notebook/broken.js', 'export function (\n']]);
+const lines3 = planted('lines3', 'review.rofl.md', withCell('A change C is lonely if C is written by some person.\nA team T is busy if some change is blocked by T.\nA change C is idle if C is written by some person, unless C is blocked by some team.\n\n? C is lonely\n? T is busy\n? C is idle'));
+const partial = planted('tr-part', 'review.rofl.md', (t) => `${withNatural(t)}\n\`\`\`natural\n  \n\`\`\`\n\n\`\`\`natural\nEvery change is approved.\n\`\`\`\n`);
+const none = planted('tr-none', 'review.rofl.md', (t) => t);
+const once = path.join(tmp, 'once.sh'), count = path.join(tmp, 'once.count');
+writeFileSync(once, `#!/bin/sh\ncat > /dev/null\necho x >> ${count}\n[ $(wc -l < ${count}) -gt 1 ] && exec sleep 30\ncat <<'EOF'\n\`\`\`rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n\`\`\`\nEOF\n`); chmodSync(once, 0o755);
+const outsiderRuns = Promise.all([cli([outsider]), cli([lines3]), cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_MODEL_TIMEOUT: '3' }), cli(['translate', none])]);
 const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy, nmWorld] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
@@ -180,16 +190,7 @@ check('H1 the model is called with no MCP server and no settings, from a directo
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 
 
-// what an outside user met on unfamiliar code
-const kept2 = smallJs + "\nexport async function keep() {\n  const p = load('c');\n  return p;\n}\n\nclass Cache {\n  async #fetch(k) { return k; }\n  get(k) { this.#fetch(k); }\n}\n";
-const outsider = planted('outsider', 'small.rofl.md', (t) => withCell('A function F is risky if F contains a throw T.\n\n? F is risky')(t.replace('  - small.js', '  - small.js\n  - broken.js')),
-  [['examples/notebook/small.js', kept2], ['examples/notebook/broken.js', 'export function (\n']]);
-const lines3 = planted('lines3', 'review.rofl.md', withCell('A change C is lonely if C is written by some person.\nA team T is busy if some change is blocked by T.\nA change C is idle if C is written by some person, unless C is blocked by some team.\n\n? C is lonely\n? T is busy\n? C is idle'));
-const partial = planted('tr-part', 'review.rofl.md', (t) => `${withNatural(t)}\n\`\`\`natural\n  \n\`\`\`\n\n\`\`\`natural\nEvery change is approved.\n\`\`\`\n`);
-const none = planted('tr-none', 'review.rofl.md', (t) => t);
-const once = path.join(tmp, 'once.sh'), count = path.join(tmp, 'once.count');
-writeFileSync(once, `#!/bin/sh\ncat > /dev/null\necho x >> ${count}\n[ $(wc -l < ${count}) -gt 1 ] && exec sleep 30\ncat <<'EOF'\n\`\`\`rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n\`\`\`\nEOF\n`); chmodSync(once, 0o755);
-const [out, three, part, nothing] = await Promise.all([cli([outsider]), cli([lines3]), cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_MODEL_TIMEOUT: '3' }), cli(['translate', none])]);
+const [out, three, part, nothing] = await outsiderRuns;
 const at = (s: string) => `small.js:${kept2.split('\n').findIndex((l) => l.includes(s)) + 1}]`;
 check('U1 a sentence not read names the nearest the vocabulary has', /not read: F contains a throw T; the nearest sentences: [^\n]*throw/.test(out.out), out);
 check('U2 three rules one to a line are read as three', is(three, 0) && has(three, '? C is lonely  ->  2 answers') && has(three, '? T is busy  ->  1 answer') && has(three, '? C is idle  ->  1 answer'), three);
@@ -198,68 +199,5 @@ check('U3 translate over no natural cell says so, exit 0', nothing.code === 0 &&
 check('U4 a promise kept and returned is not unawaited; one standing as a statement is', has(out, `[load() at ${at("load('b')")} is unawaited`) && !has(out, at('const p')), out);
 check('U5 a private method call is labelled as written', has(out, `[this.#fetch() at ${at('this.#fetch(k);')} is unawaited`), out);
 check('U6 a code file that did not parse is named on the verdict line', / — not everything was read: not parsed: broken\.js \(exit 2; see npm run nb -- --help\)$/.test(out.stdout!.trim()), out);
-
-// what a newcomer meets, each where the output could mislead: a bare word where a name goes, the engine's words in a proof, a list the reader does not claim,
-// a what-if counted as answers, a natural cell answered by a cell in another section, a note that calls a cell above "further down", a world with no cells
-const newcomer = path.join(tmp, 'newcomer/newcomer.rofl.md'), world = path.join(tmp, 'newcomer/world.rofl.md');
-put(newcomer, `---
-model: none
----
-
-Declared as facts:
-
-- <a id="on_the_line"></a>A car X is on the line
-- <a id="short_of"></a>A car X is short of a part P
-- <a id="in_stock"></a>A part P is in stock
-- <a id="to_be_painted"></a>A car X is to be painted a colour C
-
-The cars:
-
-- \`car\` is on the line.
-- \`van\` is on the line.
-- \`van\` is short of \`door\`.
-- \`car\` is to be painted \`pink\`.
-- bike is on the line.
-- \`level 1\` is on the line.
-
-> The quoted cars:
-
-- \`bus\` is on the line.
-
-<a id="comes_out"></a>A car X comes out a colour C if X is to be painted C and C is in stock.
-
-A car X passes the gate if X leaves the line.
-
-\`\`\`rofl
-A car X leaves the line if X is on the line, unless X is short of some part.
-? X leaves the line
-never X comes out white
-why \`car\` leaves the line
-whynot \`cab\` is in stock
-excise \`van\` is short of \`door\`
-\`\`\`
-
-\`\`\`natural
-list the cars
-\`\`\`
-
-## Later
-
-\`\`\`rofl
-? X passes the gate
-\`\`\`
-`);
-put(world, readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8'));
-const [nc, ncTimed, wd, vocab, vocab0] = await Promise.all([cli([newcomer]), cli([newcomer, '--timing']), cli([world]), cli(['vocab']), cli(['vocab', 'unawaited'])]);
-check('N1 a bare word where a name goes says to put it in backticks, in a question and in a list', has(nc, 'never X comes out white: white is not a sentence word here: names go in backticks: `white`') && has(nc, 'bike is on the line: bike is not a sentence word here'), nc);
-check('N2 a proof has no engine variable: a blank is some <noun>, a relation is its sentence', has(nc, 'not `car` is short of some part (nothing says so)') && has(nc, 'nothing says `cab` is in stock, and no rule concludes it') && !/\?\d|no rule concludes '/.test(nc.out), nc);
-check('N3 a list the reader does not claim, and a name with a space, are said in the writer\'s words', has(nc, 'a list of facts goes under a plain line of its own ending in a colon') && has(nc, '`level 1` is not a name') && !/LIST|FACT|line \d+: expected/.test(nc.out), nc);
-check('N4 an excise counts the lines that move, and they are not answers', has(nc, 'excise `van` is short of `door`  ->  2 lines move') && has(nc, '\n    ? X leaves the line: 1 -> 2\n      now also: `van` leaves the line'), nc);
-check('N5 a natural cell is not answered by a cell in another section; a prose rule over a cell above it is not "further down"', has(nc, 'note: not translated yet') && !has(nc, 'further down'), nc);
-check('N6 the last line counts what was asked and, off exit 0, says why and the code; timings only with --timing', is(nc, 2) && /: 2 questions answered, 2 explained, 1 what-if — not everything was read \(exit 2; see npm run nb -- --help\)$/.test(nc.stdout!.trim())
-  && !/^load \d+ ms/m.test(nc.out) && /^load \d+ ms/m.test(ncTimed.out) && has(fails, '— FAILS at line '), nc);
-check('N7 a world with no cells says so, exit 0', is(wd, 0) && has(wd, '0 cells: this is a world (facts and rules), not a notebook'), wd);
-check('N8 vocab starts with a few sentences to start from, then by area; a word it lacks names the nearest', vocab.code === 0 && vocab.stdout!.startsWith('Start here') && has(vocab, 'are not listed here') && has(vocab, '\ncallgraph: resolution\n') && has(vocab, '\n  a call C resolves to a function F   (resolves)\n')
-  && vocab0.code === 0 && has(vocab0, '0 sentences with "unawaited"') && /The nearest: [^\n]*await/.test(vocab0.out), vocab0);
 
 report('notebook checks', t0);

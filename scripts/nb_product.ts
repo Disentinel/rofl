@@ -85,6 +85,58 @@ const sockDirs = (async () => {
 // H3 on the command line: a harness that keeps tools refused, one whose login fails said; started now, read with the rest of H3
 const noLogin = path.join(tmp, 'no-login.sh'); writeFileSync(noLogin, '#!/bin/sh\ncat > /dev/null\nprintf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2\nexit 1\n'); chmodSync(noLogin, 0o755);
 const h3cli = Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: noLogin })]);
+// what a newcomer meets, each where the output could mislead: a bare word where a name goes, the engine's words in a proof, a list the reader does not claim,
+// a what-if counted as answers, a natural cell answered by a cell in another section, a note that calls a cell above "further down", a world with no cells
+const newcomer = path.join(tmp, 'newcomer/newcomer.rofl.md'), world = path.join(tmp, 'newcomer/world.rofl.md');
+put(newcomer, `---
+model: none
+---
+
+Declared as facts:
+
+- <a id="on_the_line"></a>A car X is on the line
+- <a id="short_of"></a>A car X is short of a part P
+- <a id="in_stock"></a>A part P is in stock
+- <a id="to_be_painted"></a>A car X is to be painted a colour C
+
+The cars:
+
+- \`car\` is on the line.
+- \`van\` is on the line.
+- \`van\` is short of \`door\`.
+- \`car\` is to be painted \`pink\`.
+- bike is on the line.
+- \`level 1\` is on the line.
+
+> The quoted cars:
+
+- \`bus\` is on the line.
+
+<a id="comes_out"></a>A car X comes out a colour C if X is to be painted C and C is in stock.
+
+A car X passes the gate if X leaves the line.
+
+\`\`\`rofl
+A car X leaves the line if X is on the line, unless X is short of some part.
+? X leaves the line
+never X comes out white
+why \`car\` leaves the line
+whynot \`cab\` is in stock
+excise \`van\` is short of \`door\`
+\`\`\`
+
+\`\`\`natural
+list the cars
+\`\`\`
+
+## Later
+
+\`\`\`rofl
+? X passes the gate
+\`\`\`
+`);
+put(world, readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8'));
+const newcomerRuns = Promise.all([cli([newcomer]), cli([newcomer, '--timing']), cli([world]), cli(['vocab']), cli(['vocab', 'unawaited']), cli([planted('review-fails', 'review.rofl.md', withCell('never C is blocked by T'))])]);
 const layering = node('scripts/nb_layers.ts', []);
 const layered = await layering;
 const [keptOk, keptStale] = await keptRuns;
@@ -185,6 +237,18 @@ H3_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, s
 const [refusedCli, failedCli] = await h3cli;
 check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
 check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);
+
+const [nc, ncTimed, wd, vocab, vocab0, fails] = await newcomerRuns;
+check('N1 a bare word where a name goes says to put it in backticks, in a question and in a list', has(nc, 'never X comes out white: white is not a sentence word here: names go in backticks: `white`') && has(nc, 'bike is on the line: bike is not a sentence word here'), nc);
+check('N2 a proof has no engine variable: a blank is some <noun>, a relation is its sentence', has(nc, 'not `car` is short of some part (nothing says so)') && has(nc, 'nothing says `cab` is in stock, and no rule concludes it') && !/\?\d|no rule concludes '/.test(nc.out), nc);
+check('N3 a list the reader does not claim, and a name with a space, are said in the writer\'s words', has(nc, 'a list of facts goes under a plain line of its own ending in a colon') && has(nc, '`level 1` is not a name') && !/LIST|FACT|line \d+: expected/.test(nc.out), nc);
+check('N4 an excise counts the lines that move, and they are not answers', has(nc, 'excise `van` is short of `door`  ->  2 lines move') && has(nc, '\n    ? X leaves the line: 1 -> 2\n      now also: `van` leaves the line'), nc);
+check('N5 a natural cell is not answered by a cell in another section; a prose rule over a cell above it is not "further down"', has(nc, 'note: not translated yet') && !has(nc, 'further down'), nc);
+check('N6 the last line counts what was asked and, off exit 0, says why and the code; timings only with --timing', is(nc, 2) && /: 2 questions answered, 2 explained, 1 what-if — not everything was read \(exit 2; see npm run nb -- --help\)$/.test(nc.stdout!.trim())
+  && !/^load \d+ ms/m.test(nc.out) && /^load \d+ ms/m.test(ncTimed.out) && has(fails, '— FAILS at line '), nc);
+check('N7 a world with no cells says so, exit 0', is(wd, 0) && has(wd, '0 cells: this is a world (facts and rules), not a notebook'), wd);
+check('N8 vocab starts with a few sentences to start from, then by area; a word it lacks names the nearest', vocab.code === 0 && vocab.stdout!.startsWith('Start here') && has(vocab, 'are not listed here') && has(vocab, '\ncallgraph: resolution\n') && has(vocab, '\n  a call C resolves to a function F   (resolves)\n')
+  && vocab0.code === 0 && has(vocab0, '0 sentences with "unawaited"') && /The nearest: [^\n]*await/.test(vocab0.out), vocab0);
 
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
 const [help, bare, nope, prose, helpEnv, ver, v] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md']), cli(['--help', 'env']), cli(['--version']), cli(['-v'])]);
