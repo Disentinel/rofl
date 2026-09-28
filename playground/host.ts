@@ -228,7 +228,8 @@ export class Host {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
     for (const w of [this.core, this.shell]) if (w) w.stop = stop;
-    const home = this.home;
+    // a relation a datalog cell holds facts of in a book is read in that book by the sentence cells too
+    const home = this.home, readHome = { ...homeOf(cells.filter((c) => c.form === 'rofl').map((c) => c.text).join('\n')), ...home };
     this.last = null;   // the last world held while the next is built doubles the heap: 70 s runs took 100-115 s in a kept kernel
     const t = performance.now();
     const phases: Record<string, number> = {};
@@ -237,7 +238,7 @@ export class Host {
     const sc = this.code(files, data);
     const { facts, nodes, parseErrors } = sc;
     lap('scan');
-    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, home);
+    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, readHome);
     lap('read');
     const vocab = this.vocab = new Vocabulary(); vocab.blanks = true; vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
     const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
@@ -414,9 +415,11 @@ export class Host {
       outs[i].lines.push({ unasked: unread[i], kind: 'excise', text, lit: cut.map((a) => a.lit).join(', '), rows, total: rows.filter((r) => !r.sentence.startsWith('  ')).length, ok: true, note: rows.length ? undefined : 'no line of this notebook answers differently' });
     });
     // a picture: the view facts the cells concluded, tagged with what the run knows of them
-    const lostFiles = new Set(unresolved.map((u) => u.slice(0, u.search(/:\d+ /))));
-    seen.blind.push(Object.keys(nodes).filter((id) => lostFiles.has(nodes[id].file)));
-    for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) seen.unknown.push(...q.rows.map((r) => [r.bindings.X])); }
+    if (asks.some((as, i) => !refused.has(i) && as.some((a) => a.kind === 'draw'))) {
+      const lostFiles = new Set(unresolved.map((u) => u.slice(0, u.search(/:\d+ /))));
+      seen.blind.push(Object.keys(nodes).filter((id) => lostFiles.has(nodes[id].file)));
+      for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) seen.unknown.push(...q.rows.map((r) => [r.bindings.X])); }
+    }
     const world = (r: Rofl, proofsOf: Rofl): World => ({
       rows: (lit) => { const q = (base && r === f && !heads.has(relOf(lit)) ? base : r).query(lit); return q.error || q.unpopulatable ? null : q.rows.map((x) => x.bindings); },
       from: (lit) => {

@@ -22,10 +22,10 @@ waived(k_b, l_y, "k_b has no runtime state").
 work(w1, "cover k_b under l_x"). state(w1, open). claims(w1, k_b, l_x).
 work(w2, "cover k_c under l_x"). state(w2, done). claims(w2, k_c, l_x).
 
-cell(K, L) :- kind(K), lens(L).
+matrix_cell(K, L) :- kind(K), lens(L).
 closed(K, L) :- done(K, L, _).
 closed(K, L) :- waived(K, L, _).
-open_cell(K, L) :- cell(K, L), not closed(K, L).
+open_cell(K, L) :- matrix_cell(K, L), not closed(K, L).
 claimed(K, L) :- claims(W, K, L), not state(W, done).
 
 unqueued(K, L) :- open_cell(K, L), not claimed(K, L).

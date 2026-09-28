@@ -40,6 +40,9 @@ const model = MODEL_FILES.map(read).join('\n');
 const phrases = PHRASE_FILES.map(read).join('\n');
 writeFileSync(`${OUT}/model.txt`, model);
 writeFileSync(`${OUT}/phrases.txt`, phrases);
+// a notebook with no code, a picture's, runs over the kernel alone, as `model: none` does on the command line
+writeFileSync(`${OUT}/boot.txt`, read('boot.rofl'));
+writeFileSync(`${OUT}/phrases-none.txt`, read('facts/phrases.rofl'));
 
 const { vocab, functions } = translatorVocab(model, phrases);
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');

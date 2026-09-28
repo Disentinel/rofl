@@ -64,7 +64,7 @@ golden_state("tutorial_4-late-delivery", "9b7bb3b2ce3b6da2", 760).
 golden_state("tutorial_5-quality-gate", "9a37765e5d2a9fe8", 602).
 golden_state("tutorial_6-in-your-words", "7a2116aafe720e25", 576).
 golden_state("visual", "29bada61d4edb28f", 531).
-golden_state("visual_coverage", "ed76f76c2aceceb8", 798).
+golden_state("visual_coverage", "7ec6970be3440ab5", 798).
 golden_state("visual_deploy-argument", "472ab28effa30041", 1217).
 golden_state("visual_paint-shop", "69df219ea70312f0", 784).
 golden_state("visual_spat-thursday", "d22a349b84a9c965", 11616).
@@ -2488,7 +2488,6 @@ golden_rel("visual_coverage", "@other", 1).
 golden_rel("visual_coverage", "@wit", 89).
 golden_rel("visual_coverage", "asserted_by[$kernel]", 31).
 golden_rel("visual_coverage", "authority[main]", 5).
-golden_rel("visual_coverage", "cell[main]", 6).
 golden_rel("visual_coverage", "claimed[main]", 1).
 golden_rel("visual_coverage", "claims[main]", 2).
 golden_rel("visual_coverage", "closed[main]", 3).
@@ -2506,6 +2505,7 @@ golden_rel("visual_coverage", "has_premise[$kernel]", 70).
 golden_rel("visual_coverage", "imports[main]", 3).
 golden_rel("visual_coverage", "kind[main]", 3).
 golden_rel("visual_coverage", "lens[main]", 2).
+golden_rel("visual_coverage", "matrix_cell[main]", 6).
 golden_rel("visual_coverage", "mode[main]", 14).
 golden_rel("visual_coverage", "negated_under[main]", 11).
 golden_rel("visual_coverage", "open_cell[main]", 3).

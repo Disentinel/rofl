@@ -11,6 +11,7 @@ code:
   - ../../notebook/cli.ts
   - ../../notebook/model.ts
   - ../../notebook/serve.ts
+  - ../../notebook/draw.ts
   - ../../playground/host.ts
   - ../../vscode/extension.ts
   - ../../vscode/worker.ts

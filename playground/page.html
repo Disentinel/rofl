@@ -450,8 +450,20 @@ const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { local
 
 // ------------------------------------------------------------ the engine
 let host = null;          // { call(op, ...args): Promise }
+const text = (f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); });
+// a picture's notebook has no code and runs over the kernel alone, as `model: none` does on the command line; the JS examples over the JS model
+let loadedModel = null;
+async function useModel(which) {
+  if (loadedModel === which) return { ok: true };
+  const t0 = performance.now();
+  setStatus(`<span class="busy">loading ${which === 'js' ? 'the JS model' : 'the kernel'}</span>`);
+  const r = which === 'js' ? await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map(text)).then(([m, p, c]) => host.call('init', m, p, JSON.parse(c)))
+    : await Promise.all(['boot.txt', 'phrases-none.txt'].map(text)).then(([m, p]) => host.call('init', m, p));
+  if (r.ok) { loadedModel = which; setStatus(`<span>${which === 'js' ? 'JS model' : 'Kernel (no code model)'} loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`); }
+  return r;
+}
+const modelFor = () => String(state.example ?? '').startsWith('pic:') ? 'none' : 'js';
 async function startHost() {
-  const [model, phrases, concerns] = await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
   const viaWorker = await new Promise((resolve) => {
     let w;
     try { w = new Worker('lib/worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
@@ -467,7 +479,7 @@ async function startHost() {
     const m = await import('./lib/host.js');
     host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
   }
-  return host.call('init', model, phrases, JSON.parse(concerns));
+  return useModel(modelFor());
 }
 
 // ------------------------------------------------------------ the editor
@@ -773,6 +785,8 @@ async function runBook() {
   if (!host) return;
   if (running) { again = true; return; }
   running = true; again = false;
+  const m = await useModel(modelFor());
+  if (!m.ok) { running = false; setStatus(`<span style="color:var(--fail)">The model did not load: ${esc(m.diagnostics.join('; '))}</span>`); return; }
   $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
   try {
     const out = await host.call('run', state.files, formal());
@@ -976,8 +990,8 @@ fetch('pictures.json').then((r) => r.ok ? r.json() : []).then((ps) => {
   if (!ps.length) return;
   $('example').insertAdjacentHTML('beforeend', `<optgroup label="Pictures">${ps.map((p) => `<option value="pic:${esc(p.name)}">${esc(p.title)}</option>`).join('')}</optgroup>`);
   $('example').value = state.example ?? 'await';
-  const want = new URLSearchParams(location.search).get('example');   // ?example=pic:paint-shop opens one
-  if (want && want !== state.example && (EXAMPLES[want] || picture(want))) { $('example').value = want; $('example').dispatchEvent(new Event('change')); }
+  const want = new URLSearchParams(location.search).get('example');   // ?example=pic:paint-shop opens one as shipped
+  if (want && (EXAMPLES[want] || picture(want))) { $('example').value = want; $('example').dispatchEvent(new Event('change')); }
 }).catch(() => {});
 (async () => {
   try {
@@ -992,7 +1006,6 @@ fetch('pictures.json').then((r) => r.ok ? r.json() : []).then((ps) => {
     const [init, vocab, fns] = await Promise.all([startHost(), ...['vocab.txt', 'functions.txt'].map((f) => fetch(f).then((r) => r.ok ? r.text() : ''))]);
     vocabText = vocab; functionsText = fns;
     if (!init.ok) throw new Error(init.diagnostics.join('; '));
-    setStatus(`<span>JS model loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`);
     $('runall').disabled = false;
     await runBook();
   } catch (e) { setStatus(`<span style="color:var(--fail)">The JS model did not load: ${esc(e.message)}</span>`); }
