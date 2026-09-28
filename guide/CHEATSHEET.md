@@ -4,6 +4,7 @@
 
     rofl-nb file.rofl.md           run it; --json, --cell N, --all
     rofl-nb vocab [word]           what you can say about code
+    rofl-nb vocab file.rofl.md     ... plus that notebook's own sentences
     rofl-nb translate file.rofl.md Claude turns natural cells into rofl
     rofl-nb --help
 

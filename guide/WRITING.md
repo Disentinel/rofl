@@ -111,7 +111,7 @@ code:
 # Promises nobody waits for
 
 > A notebook over `small.js` with the JS model. Run it with
-> `npm run nb -- examples/notebook/small.rofl.md`.
+> `rofl-nb small.rofl.md`.
 
 > An async function called as a statement of its own drops its promise:
 > nothing awaits it, returns it or keeps it. This is a question, not an
@@ -151,8 +151,8 @@ A `.rofl` file a notebook `reads:` brings relations with no sentence. A
 
 ## What the reader reports
 
-Nothing is dropped in silence. Everything the reader could not read is an
-error, and the run ends with exit 2:
+Nothing is dropped in silence. What the reader could not read is an error
+that says what to do, and the run ends with exit 2:
 
 <!-- BEGIN file guide/examples/typo.rofl.md -->
 ````markdown
@@ -177,27 +177,22 @@ A person P is happy if P likes some pet and P is rich.
 ```
 $ rofl-nb typo.rofl.md
 typo.rofl.md:1: cell 0 · prose
-  error: not read: FACT ben likes `snake`
+  error: not read (list item): ben likes `snake`: ben is not a sentence word here: names go in backticks: `ben`
   error: not read: P is rich
   error: left out: A person P is happy: a condition was not read
 typo.rofl.md:13: cell 1 · rofl
   typo.rofl.md:13: ? P is happy  ->  0 answers · nothing in the model can put a row here: check the name, the book and the number of arguments
-typo.rofl.md: not everything was read
+typo.rofl.md: 1 question answered — not everything was read (exit 2; see rofl-nb --help)
 $ echo $?
 2
 ```
 <!-- END run+exit -->
 
-- **not read: FACT, LIST, TABLE**: a list item or a table that no sentence
-  or paragraph above it claimed. Here `ben` has no backticks.
+- **not read (list item)**: a fact that matches no sentence. The error says
+  why; here `ben` has no backticks.
 - **not read** with a sentence: no declared sentence matches it.
   `P is rich` was never declared.
 - **left out**: a rule with a condition that was not read is not loaded.
 - **no sentence reads this question**: an asking line in words nothing
   declares.
 - **ambiguities**: a sentence that matches two declared ones. Reword one.
-
-## Where it stops today
-
-Each file declares every sentence it uses, or lists under `Reads:` what it
-takes from another. The model's sentences come with `model: js`.

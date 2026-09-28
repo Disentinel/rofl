@@ -8,20 +8,23 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), GUIDE = path.join(ROOT, 'guide');
+// ROFL_GUIDE_CLI: the command line to run, the built package's rofl-nb.js for one (vscode/test/dist.ts); the tree's prints `npm run nb -- ` where it prints `rofl-nb `
+const CLI = process.env.ROFL_GUIDE_CLI ?? path.join(ROOT, 'notebook/cli.ts');
 const BLOCK = /(<!-- BEGIN (run\+exit|run|file) ([^:>]+?)(?:: (.+?))? -->\n)[\s\S]*?(<!-- END \2 -->)/g;
 
 function render(kind: string, where: string, cmd?: string): string {
   if (kind === 'file') {
-    const text = readFileSync(path.join(ROOT, where), 'utf8').trimEnd();
+    // as npm run dist ships it
+    const text = readFileSync(path.join(ROOT, where), 'utf8').replace(/npm run nb -- (translate )?examples\/(notebook|tutorial)\//g, 'rofl-nb $1').trimEnd();
     const fence = text.includes('```') ? '````' : '```';
     return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : ''}\n${text}\n${fence}`;
   }
   const [line, head] = cmd!.split(' | head -');
   const args = line.split(' ').slice(1);
-  const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), ...args],
+  const r = spawnSync(process.execPath, ['--experimental-strip-types', CLI, ...args],
     { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
   if (r.error || r.status === null) throw new Error(`${where}: ${line}: ${r.error?.message ?? 'killed'}`);
-  let out = r.stdout.trimEnd().split('\n');
+  let out = r.stdout.replace(/npm run nb -- /g, 'rofl-nb ').trimEnd().split('\n');
   if (head) out = out.slice(0, Number(head));
   return ['```', `$ ${cmd}`, ...out, ...(kind === 'run+exit' ? ['$ echo $?', String(r.status)] : []), '```'].join('\n');
 }

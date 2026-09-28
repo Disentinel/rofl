@@ -13,7 +13,8 @@ Claude Code does not know `rofl-nb` exists. Paste this into the project's
     rofl-nb <file.rofl.md> [--json] [--cell N]   what every cell says
     rofl-nb <file.rofl.md> --all                 every answer, not the first 12 (JSON: 50)
     rofl-nb translate <file.rofl.md>             Claude writes a rofl cell under each natural cell
-    rofl-nb vocab [<file.rofl.md>] [word]        the sentences a cell can say over code
+    rofl-nb vocab [<file.rofl.md>] [word]        the sentences a cell can use; with a file, its own too
+    rofl-nb --help env                           the environment variables (time and memory limits, the kept kernel)
 
 ## Exit codes
 

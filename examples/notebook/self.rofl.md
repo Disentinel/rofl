@@ -68,7 +68,7 @@ I2 A gate can say no: a failing never is red / exit 1; an unread cell is exit 2;
 > HAVE FORGED BY EXITING EARLY. Found at acceptance: `new Function("return
 > process")().exit(0)` as the first line of `Kernel.run` made this file print
 > nothing and exit 0. So green is exit 0 AND the last line
-> `every never holds, every cell read` (in `--json`, a `status` field), and
+> says `none fails` (in `--json`, a `status` field), and
 > `npm run test:nb` reads the verdict of every run, never its exit code
 > alone: `I2 a kernel that exits early is not green`.
 

@@ -7,7 +7,7 @@ A notebook is Markdown. `rofl-nb` reads it in cells:
 - **prose**: everything outside a code fence, read for its sentences. A
   quote (`>`) is only for people.
 - **`rofl`** fence: rules and asking lines, in sentences.
-- **`datalog`** fence: the same in Datalog, `blocked(C, T) :- needs(C, T).`
+- **`datalog`** fence: the same in Datalog.
 - **`natural`** fence: a request in plain words. `rofl-nb translate` asks
   Claude to write a `rofl` cell under it.
 
@@ -59,7 +59,7 @@ review.rofl.md:18: cell 1 · rofl
       not `c2` is covered for `platform` (nothing says so)
         why not `c2` is covered for `platform`:
           by the rule: C is covered for T if C is approved by P, P is on T
-            it stops at: `c2` is approved by anything
+            it stops at: `c2` is approved by some person
           by the rule: C is covered for T if C is written by P, P is on T
             it stops at: `ben` is on `platform`
 review.rofl.md:26: cell 2 · rofl
@@ -67,13 +67,13 @@ review.rofl.md:26: cell 2 · rofl
     - `c2` is stuck
   review.rofl.md:29: whynot `c2` is mergeable
     why not `c2` is mergeable:
-      by the rule: C is mergeable if C is written by something, not C is blocked by something
-        it stops at: not `c2` is blocked by something, and `c2` is blocked by `platform` does
+      by the rule: C is mergeable if C is written by some person, not C is blocked by some team
+        it stops at: not `c2` is blocked by some team, and `c2` is blocked by `platform` does
 review.rofl.md:37: cell 3 · rofl
   review.rofl.md:37: never C is blocked by `payments`  ->  holds
 review.rofl.md:43: cell 4 · datalog
   review.rofl.md:45: never waits_on(C, payments)  ->  holds
-review.rofl.md: every never holds, every cell read
+review.rofl.md: 2 questions answered, 2 invariants hold, none fails, 2 explained
 ```
 <!-- END run -->
 
@@ -85,10 +85,10 @@ $ rofl-nb whatif.rofl.md
 whatif.rofl.md:7: cell 1 · rofl
   whatif.rofl.md:7: ? C is blocked by T  ->  1 answer
     - `c2` is blocked by `platform`
-  whatif.rofl.md:8: excise `c1` is approved by `ben`  ->  1 answer
-    - ? C is blocked by T: 1 -> 2
-    -   now also: `c1` is blocked by `payments`
-whatif.rofl.md: every never holds, every cell read
+  whatif.rofl.md:8: excise `c1` is approved by `ben`  ->  1 line moves
+    ? C is blocked by T: 1 -> 2
+      now also: `c1` is blocked by `payments`
+whatif.rofl.md: 1 question answered, 1 what-if
 ```
 <!-- END run -->
 
@@ -96,18 +96,18 @@ whatif.rofl.md: every never holds, every cell read
 
 `reads:` in the front matter loads another file's sentences first, as
 `whatif.rofl.md` reads `../review.rofl.md`. A file outside the notebook's
-folder is named on stderr.
+folder gets a `note:` on stderr; the examples' world is one folder up.
 
 ## Model and code
 
 A **model** turns code into facts. `model: js` reads the JavaScript and
-TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences.
+TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences
+(with a notebook, its own too).
 
 ## Could not see: exit 3
 
-The model can miss things: an import of a file you did not list, code it
-cannot parse. Then a `never` holds only as far as it sees. In
-`~/rofl-examples/start`, `shop.js` imports a missing `tax.js`:
+When the model misses code (an unlisted import, a file it cannot parse), a
+`never` holds only as far as it sees. `shop.js` imports a missing `tax.js`:
 
 <!-- BEGIN run+exit examples/start: rofl-nb shop.rofl.md -->
 ```
@@ -116,15 +116,14 @@ shop.rofl.md: note: 1 relative import or require was not resolved, so a never ho
   shop.js:1 "./tax.js"
 shop.rofl.md:8: cell 1 · rofl
   shop.rofl.md:8: never F always throws  ->  holds as far as it sees · 1 relative import or require was not resolved: shop.js:1 "./tax.js"
-shop.rofl.md: every never holds, some only as far as the model sees
+shop.rofl.md: 1 invariant holds as far as the model sees, none fails — some invariant holds only as far as the model sees, or the run stopped at its limit (exit 3; see rofl-nb --help)
 $ echo $?
 3
 ```
 <!-- END run+exit -->
 
-List the missing file under `code:`, or accept the gap on purpose.
-The other exit codes: 0 every `never` holds, 1 a `never` fails, 2
-something was not read.
+List the missing file under `code:`, or accept the gap. Exit 0: every
+`never` holds; 1: one fails; 2: something was not read.
 
 ## Glossary
 

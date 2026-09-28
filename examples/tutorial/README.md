@@ -7,7 +7,7 @@ needed. Run a level:
     npm run nb -- examples/tutorial/1-what-ships.rofl.md
 
 or open the file in VS Code and Run All. A level is solved when the last line
-says **every never holds, every cell read** (exit 0, green in the editor).
+says **none fails** (exit 0, green in the editor).
 Edit only where a level says *Your move*. Stuck? Each level ends with a hint.
 
 | Level | File | New word | Goal |
