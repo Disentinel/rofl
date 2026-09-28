@@ -91,7 +91,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (/^[A-Z]/.test(text)) return { v: text };
     if (/^"/.test(text)) return { s: text.slice(1, -1).replace(/\\(.)/g, (_, c) => ({ n: '\n', t: '\t', r: '\r' } as Record<string, string>)[c] ?? c) };
     if (/^-?\d+$/.test(text)) return { n: Number(text) };
-    if (/^\`/.test(text)) return { a: text.slice(1, -1) };
+    if (/^\`/.test(text)) { if (!/^(?:\$?[A-Za-z_]\w*|-?\d+)$/.test(text.slice(1, -1))) badTerm = text; return { a: text.slice(1, -1) }; }
     if ((m = /^(\$?[a-z_]\w*)\((.*)\)$/.exec(text))) return { f: m[1], args: splitTop(m[2]).map((a) => term(a, intros)) };
     if (/[()?]/.test(text)) badTerm = text;
     return { a: text };
@@ -548,8 +548,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       // data: a list of ground sentences under any paragraph ending in a colon, `platform owns auth.`
       for (const it of next.items!) {
         const t = it.text.trim().replace(/\.$/, '');
+        badTerm = null;
         const lit = matchLit(t, []);
-        if (lit && lit.args.every((a) => !('v' in a))) { parsedFacts.push(lit); if (!homeBook.has(lit.rel)) homeBook.set(lit.rel, 'main'); }
+        if (lit && !badTerm && lit.args.every((a) => !('v' in a))) { parsedFacts.push(lit); if (!homeBook.has(lit.rel)) homeBook.set(lit.rel, 'main'); }
         else unparsed.push(`FACT ${t}`);
       }
       i++; continue;

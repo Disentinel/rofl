@@ -229,7 +229,7 @@ export class Host {
     lap('scan');
     const { parts, read, learned, vocab: allVocab } = readBook(cells, this.phrases, home);
     lap('read');
-    const vocab = this.vocab = new Vocabulary(); vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
+    const vocab = this.vocab = new Vocabulary(); vocab.blanks = true; vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
     const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
     const firstDef = new Map<string, number>();
     read.forEach((r, i) => { for (const rel of r?.defined ?? []) if (!firstDef.has(rel)) firstDef.set(rel, i); });
@@ -241,12 +241,14 @@ export class Host {
       const r = read[i];
       const text = r ? r.rofl : clauses;
       if (r) {
-        for (const u of r.problems.unparsed) errors.push(`not read: ${u.replace(/^HEAD /, '')}`);
+        const items = r.problems.unparsed.flatMap((u) => u.startsWith('LIST ') ? [u.slice(5)] : []);
+        if (items.length) errors.push(`not read: ${items.length === 1 ? 'a list item' : `${items.length} list items`} no line above introduces (${items.map((x) => `- ${x}`).join(' ')}): a list of facts goes under a plain line of its own ending in a colon, like "The cars:"`);
+        for (const u of r.problems.unparsed) if (!u.startsWith('LIST ')) errors.push(unreadSaid(u, vocab));
         for (const d of r.problems.dropped) errors.push(`left out: ${d}`);
         const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
         if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
         for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
-        for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
+        if (!c.prose) for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
       }
       try {
         texts[i] = text;
@@ -268,7 +270,7 @@ export class Host {
           texts[i] = ''; refused.add(i);
         }
         if (!refused.has(i)) { for (const cl of program) heads.add(cl.head.rel); relsOf(program, reads); }
-      } catch (e) { errors.push((e as Error).message); texts[i] = ''; }
+      } catch (e) { errors.push((e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m)); texts[i] = ''; }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
     });
     const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => read[i] && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
@@ -328,7 +330,7 @@ export class Host {
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
-        if (!a.lit) { outs[i].errors.push(`${a.text}: no sentence reads this question`); continue; }
+        if (!a.lit) { const w = bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${w ? BARE(w) : 'no sentence reads this question'}`); continue; }
         if (a.kind === 'excise') continue;
         try {
           if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined }); continue; }
@@ -422,6 +424,25 @@ export class Host {
     if (!this.last) return 'run the book first';
     return this.vocab.sayAll(this.last.why(literal).text);
   }
+}
+
+/** A lowercase word where a name is wanted: the sentence reads once that one word is in backticks. */
+function bare(s: string, vocab: Vocabulary): string | undefined {
+  for (const m of s.matchAll(/(?<![`\w"])[a-z][\w-]*(?![`\w"])/g)) if (vocab.literal(s.slice(0, m.index) + '`' + m[0] + '`' + s.slice(m.index + m[0].length))) return m[0];
+}
+const BARE = (w: string) => `${w} is not a sentence word here: names go in backticks: \`${w}\``;
+
+/** What the reader could not read, in the writer's words, not its own (FACT, TABLE, DECLARED). */
+function unreadSaid(u: string, vocab: Vocabulary): string {
+  const [kind, ...rest] = u.split(' '), t = rest.join(' ');
+  if (kind === 'FACT') {
+    const odd = /`([^`]*[^\w`$][^`]*)`/.exec(t), w = bare(t, vocab);
+    return odd ? `not read (list item): ${t}: \`${odd[1]}\` is not a name; a name in backticks is one word, like \`${odd[1].replace(/\W+/g, '_')}\``
+      : w ? `not read (list item): ${t}: ${BARE(w)}` : `not read (list item): ${t}`;
+  }
+  if (kind === 'TABLE') return `not read: the table ${t}: a table of facts goes under a line like "\`rel\` lists:"`;
+  if (kind === 'DECLARED') return `not read: under "Declared as facts:": ${t}`;
+  return `not read: ${kind === 'HEAD' ? t : u}`;
 }
 
 /** What the translator of a plain-language cell may say: each relation the scanner gives or the model's rules conclude, as the sentence the reader reads it in,

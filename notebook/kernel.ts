@@ -46,7 +46,7 @@ export class Kernel {
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
     const answers = (rows: Row[]) => rows.map((r) => ({ sentence: said(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
-      const m = /^not read: (?!LIST |TABLE |DECLARED )(.*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
+      const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
       if (!m) return e;
       if (this.vocab?.key !== key) this.vocab = { key, sentences: translatorVocab(model, phrases).vocab };
       const near = nearest(m[1] ?? m[2], this.vocab.sentences);
@@ -91,7 +91,7 @@ function verdict(l: Line): Verdict {
 
 /** A proof as a person reads it: the same lines, one for one, without the engine's bookkeeping. `whyRaw` keeps what the engine said. */
 export function legible(text: string): string {
-  return text.split('\n').map((l) => l
+  const out = text.split('\n').map((l) => l
     .replace(/\s+<= r[0-9a-f]+(?: @tick \d+)?$/, ', because')
     .replace(/ ?@(?:tick \d+|now)\b/g, '')
     .replace(/(\w)\[main\]\(/g, '$1(')
@@ -106,7 +106,13 @@ export function legible(text: string): string {
     .replace(/ \[axiom\]$/, ' (given)')
     .replace(/ \[finite failure\]$/, ' (nothing says so)')
     .replace(/ \[builtin fails\]$/, ' (false)')
-    .replace(/ \[builtin\]$/, ' (arithmetic)')).join('\n');
+    .replace(/ \[builtin\]$/, ' (arithmetic)')
+    .replace(/^why needs a ground literal$/, 'why explains one answer: put a name in every blank, or ask `?` first for the answers'));
+  // a relation by the sentence above it, not by its anchor
+  return out.map((l, k) => l.replace(/^(\s*)no rule concludes '\w+' and no matching base fact exists$/, (_, pad) => {
+    const above = /(?:^\s*why not |it stops at: )(.*?):?$/.exec(out[k - 1] ?? '')?.[1];
+    return `${pad}nothing says ${above ?? 'so'}, and no rule concludes it`;
+  })).join('\n');
 }
 
 /** A node in a sentence as the code writes it, with where it is. */
