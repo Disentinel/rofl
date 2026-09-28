@@ -218,19 +218,19 @@ const [keptOk, keptStale] = await keptRuns;
 const results: [string, boolean, string][] = [];
 const check = (name: string, ok: boolean, o?: Out) => results.push([name, ok, ok || !o ? '' : `exit ${o.code}\n${o.out.slice(-1500)}`]);
 const has = (o: Out, s: string) => o.out.includes(s);
-/** The verdict the run printed last, or in --json its status: an exit code alone is no verdict, since the code under check can exit early. */
-const VERDICTS: Record<string, string> = { 'every never holds, every cell read': 'ok', 'a never fails': 'fails', 'not everything was read': 'unread', 'every never holds, some only as far as the model sees': 'blind' };
+/** The verdict the run printed last, or in --json its status: an exit code alone is no verdict, since the code under check can exit early.
+ *  The last line counts what was asked, and on an exit other than 0 names the code: `2 questions answered, none fails` or `... (exit 1; see npm run nb -- --help)`. */
+const STATUS = ['ok', 'fails', 'unread', 'blind'];
 const verdict = (o: Out): string | null => {
   const text = o.stdout ?? '';
   if (text.startsWith('{')) { try { return JSON.parse(text).status ?? null; } catch { return null; } }
-  const m = [...text.matchAll(/: ([a-z ,]+)(?: — not parsed: .*)?$/gm)].map((x) => VERDICTS[x[1]]).filter(Boolean);
-  return m.length ? m[m.length - 1] : null;
+  const last = text.trim().split('\n').pop() ?? '', m = /\(exit ([123]); see npm run nb -- --help\)$/.exec(last);
+  return m ? STATUS[Number(m[1])] : /^\S+: (?:\d+ [a-z]|nothing asked|0 cells)[^—]*$/.test(last) ? 'ok' : null;
 };
-const STATUS = ['ok', 'fails', 'unread', 'blind'];
 const is = (o: Out, code: number) => o.code === code && verdict(o) === STATUS[code];
 
 check('review: exit 0 and its answers', is(review, 0) && has(review, '`c2` is blocked by `platform`') && has(review, 'never C is blocked by `payments`  ->  holds'), review);
-check('review: whynot answers', has(review, 'it stops at: not `c2` is blocked by something, and `c2` is blocked by `platform` does'), review);
+check('review: whynot answers', has(review, 'it stops at: not `c2` is blocked by some team, and `c2` is blocked by `platform` does'), review);
 check('small: exit 0, an answer at its file:line', is(small, 0) && has(small, '[load() at small.js:7] is unawaited') && has(small, 'never C recurses  ->  holds'), small);
 /** The rows a run could not see, and those outside the boundary I6 step 4 names: imports into the unscanned engine, reader, scanner and proof folder, and calls on keys pinned here. */
 const BOUNDARY = [/"(\.\.\/src\/|\.\.\/scripts\/|\.\.\/scanners\/|\.\/fold\.ts)/, /^unseen\(\w+, "(get|fork|assert)"\)$/];
@@ -273,7 +273,7 @@ check('E1 a legible proof keeps every line and every fact of the engine\'s', (()
   const r = JSON.parse(reviewJson.stdout ?? ''); const l = r.cells.flatMap((c: { lines: NbLine[] }) => c.lines).find((x: NbLine) => x.kind === 'why');
   const raw = (l?.whyRaw ?? '').split('\n'), nice = (l?.why ?? '').split('\n');
   return raw.length > 3 && raw.length === nice.length && raw.every((x: string, k: number) => !/\[axiom\]$/.test(x) || nice[k].endsWith('(given)') && nice[k].includes(x.replace(/ \[axiom\]$/, '').trim()))
-    && !/@tick|\?_\$|#\d|\[main\]/.test(l?.why ?? '');
+    && !/@tick|\?_\$|\?\d|#\d|\[main\]/.test(l?.why ?? '');
 })(), reviewJson);
 check('E2 a relation a read world derives answers in the sentence the notebook gives it', is(spat, 1) && has(spat, 'never Ch is alone on D at S  ->  FAILS · 4') && has(spat, '- `kit` is alone on `thu` at 1060'), spat);
 check('E3 an excise in the notebook moves the lines the same as the notebook over a world without the fact', (() => {
@@ -291,15 +291,17 @@ check('F1 an empty relation asked in one book the program writes in another says
 check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
 check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);
 check('F5 a conjunctive question is refused with what to write instead', is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), fr);
-check('M1 a notebook that reads a file outside its folder says so; one reading only inside does not', has(review, "review.rofl.md: reads files outside this notebook's folder: ../review.rofl.md") && !has(small, 'outside this notebook') && !has(badRead, 'outside this notebook'), review);
+check('M1 a notebook that reads a file outside its folder says so; one reading only inside does not', has(review, "review.rofl.md: note: reads files outside this notebook's folder: ../review.rofl.md") && !has(small, 'outside this notebook') && !has(badRead, 'outside this notebook'), review);
 check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
 check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
 const argv = (() => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } })();
 check('H1 the model is called with no MCP server and no settings, from outside the notebook\'s project', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][] ') && l.endsWith(` ${realpathSync(os.tmpdir())}`)), { code: 0, out: argv.join('\n') });
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
-const [help, bare, nope, prose] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md'])]);
-check('C1 --help is the cheat sheet, exit 0; no arguments, the same and exit 2', help.code === 0 && ['```natural', 'whynot', 'excise', 'Exit: 0', 'ROFL_NB_DAEMON=0', 'review.rofl.md'].every((w) => has(help, w)) && bare.code === 2 && has(bare, 'whynot'), help);
+const [help, bare, nope, prose, helpEnv] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md']), cli(['--help', 'env'])]);
+check('C1 --help is the cheat sheet in 230 words, the tutorial first, exit 0; no arguments, the same and exit 2; the environment in --help env', help.code === 0 && help.out.startsWith('New here? Play examples/tutorial') && help.out.split(/\s+/).filter(Boolean).length <= 230
+  && ['```natural', 'whynot `c3` comes out `pink`', 'never X leaves unpainted', 'excise', 'Exit  0', '--help env', 'review.rofl.md'].every((w) => has(help, w)) && !has(help, 'ROFL_NB_') && bare.code === 2 && has(bare, 'whynot')
+  && helpEnv.code === 0 && ['ROFL_NB_LIMIT', 'ROFL_NB_MEMORY', 'ROFL_NB_DAEMON=0', 'ROFL_NB_TIMEOUT'].every((w) => has(helpEnv, w)), help);
 check('C2 a notebook that is not there is named, exit 2', nope.code === 2 && has(nope, 'nope.rofl.md: no such file') && !has(nope, 'ENOENT'), nope);
 check('C3 a file that is not a .rofl.md is refused in one line, exit 2', prose.code === 2 && has(prose, 'not a notebook') && prose.out.split('\n').filter((l) => l.includes('README.md')).length === 1, prose);
 check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
@@ -338,7 +340,70 @@ check('U3 translate keeps the cell that landed when a later one hangs, and sends
 check('U3 translate over no natural cell says so, exit 0', nothing.code === 0 && has(nothing, 'no natural cells to translate') && before(none) === reviewText, nothing);
 check('U4 a promise kept and returned is not unawaited; one standing as a statement is', has(out, `[load() at ${at("load('b')")} is unawaited`) && !has(out, at('const p')), out);
 check('U5 a private method call is labelled as written', has(out, `[this.#fetch() at ${at('this.#fetch(k);')} is unawaited`), out);
-check('U6 a code file that did not parse is named on the verdict line', /: not everything was read — not parsed: broken\.js$/.test(out.stdout!.trim()), out);
+check('U6 a code file that did not parse is named on the verdict line', / — not everything was read: not parsed: broken\.js \(exit 2; see npm run nb -- --help\)$/.test(out.stdout!.trim()), out);
+
+// what a newcomer meets, each where the output could mislead: a bare word where a name goes, the engine's words in a proof, a list the reader does not claim,
+// a what-if counted as answers, a natural cell answered by a cell in another section, a note that calls a cell above "further down", a world with no cells
+const newcomer = path.join(tmp, 'newcomer/newcomer.rofl.md'), world = path.join(tmp, 'newcomer/world.rofl.md');
+put(newcomer, `---
+model: none
+---
+
+Declared as facts:
+
+- <a id="on_the_line"></a>A car X is on the line
+- <a id="short_of"></a>A car X is short of a part P
+- <a id="in_stock"></a>A part P is in stock
+- <a id="to_be_painted"></a>A car X is to be painted a colour C
+
+The cars:
+
+- \`car\` is on the line.
+- \`van\` is on the line.
+- \`van\` is short of \`door\`.
+- \`car\` is to be painted \`pink\`.
+- bike is on the line.
+- \`level 1\` is on the line.
+
+> The quoted cars:
+
+- \`bus\` is on the line.
+
+<a id="comes_out"></a>A car X comes out a colour C if X is to be painted C and C is in stock.
+
+A car X passes the gate if X leaves the line.
+
+\`\`\`rofl
+A car X leaves the line if X is on the line, unless X is short of some part.
+? X leaves the line
+never X comes out white
+why \`car\` leaves the line
+whynot \`cab\` is in stock
+excise \`van\` is short of \`door\`
+\`\`\`
+
+\`\`\`natural
+list the cars
+\`\`\`
+
+## Later
+
+\`\`\`rofl
+? X passes the gate
+\`\`\`
+`);
+put(world, readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8'));
+const [nc, ncTimed, wd, vocab, vocab0] = await Promise.all([cli([newcomer]), cli([newcomer, '--timing']), cli([world]), cli(['vocab']), cli(['vocab', 'unawaited'])]);
+check('N1 a bare word where a name goes says to put it in backticks, in a question and in a list', has(nc, 'never X comes out white: white is not a sentence word here: names go in backticks: `white`') && has(nc, 'bike is on the line: bike is not a sentence word here'), nc);
+check('N2 a proof has no engine variable: a blank is some <noun>, a relation is its sentence', has(nc, 'not `car` is short of some part (nothing says so)') && has(nc, 'nothing says `cab` is in stock, and no rule concludes it') && !/\?\d|no rule concludes '/.test(nc.out), nc);
+check('N3 a list the reader does not claim, and a name with a space, are said in the writer\'s words', has(nc, 'a list of facts goes under a plain line of its own ending in a colon') && has(nc, '`level 1` is not a name') && !/LIST|FACT|line \d+: expected/.test(nc.out), nc);
+check('N4 an excise counts the lines that move, and they are not answers', has(nc, 'excise `van` is short of `door`  ->  2 lines move') && has(nc, '\n    ? X leaves the line: 1 -> 2\n      now also: `van` leaves the line'), nc);
+check('N5 a natural cell is not answered by a cell in another section; a prose rule over a cell above it is not "further down"', has(nc, 'note: not translated yet') && !has(nc, 'further down'), nc);
+check('N6 the last line counts what was asked and, off exit 0, says why and the code; timings only with --timing', is(nc, 2) && /: 2 questions answered, 2 explained, 1 what-if — not everything was read \(exit 2; see npm run nb -- --help\)$/.test(nc.stdout!.trim())
+  && !/^load \d+ ms/m.test(nc.out) && /^load \d+ ms/m.test(ncTimed.out) && has(fails, '— FAILS at line '), nc);
+check('N7 a world with no cells says so, exit 0', is(wd, 0) && has(wd, '0 cells: this is a world (facts and rules), not a notebook'), wd);
+check('N8 vocab starts with a few sentences to start from, then by area; a word it lacks names the nearest', vocab.code === 0 && vocab.stdout!.startsWith('Start here') && has(vocab, 'are not listed here') && has(vocab, '\ncallgraph: resolution\n') && has(vocab, '\n  a call C resolves to a function F   (resolves)\n')
+  && vocab0.code === 0 && has(vocab0, '0 sentences with "unawaited"') && /The nearest: [^\n]*await/.test(vocab0.out), vocab0);
 
 // the tutorial: each level as shipped is unsolved by its own goal, and its file under solutions/ solves it
 const TUT = path.join(ROOT, 'examples/tutorial'), levels = readdirSync(TUT).filter((f) => /^\d-.*\.rofl\.md$/.test(f)).sort();

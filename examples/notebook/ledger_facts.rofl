@@ -78,6 +78,7 @@ path_exists("examples/spat/").
 path_exists("examples/spat/README.md").
 path_exists("examples/sus/").
 path_exists("examples/sus/sus.rofl").
+path_exists("examples/tutorial/README.md").
 path_exists("examples/wtf/").
 path_exists("examples/yak/").
 path_exists("facts/checks.rofl").
@@ -106,6 +107,7 @@ path_exists("facts/worlds.rofl").
 path_exists("lsp/know.ts").
 path_exists("lsp/test.ts").
 path_exists("notebook/cli.ts").
+path_exists("notebook/front.ts").
 path_exists("notebook/kernel.ts").
 path_exists("notebook/serve.ts").
 path_exists("package.json").
