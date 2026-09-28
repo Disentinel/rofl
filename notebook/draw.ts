@@ -91,150 +91,16 @@ export function diff(before: View, after: View): View {
 export const linkTags = (v: View, f: Fact) => [...v.facts.filter((x) => x.rel === 'link_tagged' && x.args[0] === f.args[0] && x.args[1] === f.args[1]).map((x) => unquote(x.args[2])),
   ...(v.marks[f.args[1]]?.tags.includes('dangling') || v.marks[f.args[0]]?.tags.includes('dangling') ? ['dangling'] : []), ...(f.change ? [f.change] : [])];
 
-// ------------------------------------------------------------ text backends
+/** A text backend: how a picture of `kind` is written in `format`; `when`, the views it fits (a gantt the intervals, a sequence the messages).
+ *  A backend lives in its own module (notebook/draw-*.ts) and notebook/draw-text.ts lists the modules. */
+export type Backend = { kind: DrawKind; format: string; fence: string; when?(v: View): boolean; write(v: View): string };
 
-export const FORMATS: Record<DrawKind, string[]> = { graph: ['mermaid', 'dot'], argument: ['argdown'], time: ['mermaid'], table: ['markdown', 'vega-lite'] };
-
-export function text(v: View, format = FORMATS[v.kind][0]): string {
-  if (!FORMATS[v.kind].includes(format)) format = FORMATS[v.kind][0];
-  if (v.kind === 'graph') return format === 'dot' ? dot(v) : flowchart(v);
-  if (v.kind === 'argument') return argdown(v);
-  if (v.kind === 'time') return v.facts.some((f) => f.rel === 'message') ? sequence(v) : gantt(v);
-  return format === 'vega-lite' ? JSON.stringify(vegaLite(v), null, 1) : markdown(v);
-}
-
-const STYLE: Record<string, string> = {
-  failing: 'stroke:#b91c1c,stroke-width:3px,color:#b91c1c', dangling: 'stroke:#b91c1c,stroke-dasharray:4 3,color:#b91c1c',
-  blind: 'stroke:#a15c07,stroke-dasharray:6 3', unknown: 'stroke:#66706b,stroke-dasharray:2 3,color:#66706b',
-  gone: 'stroke:#66706b,stroke-dasharray:5 5,opacity:0.5', new: 'stroke:#047857,stroke-width:3px',
-};
-const safe = (s: string) => s.replace(/"/g, '#quot;').replace(/[\n\r]+/g, ' ');
-const nodes = (v: View) => Object.keys(v.marks).sort();
-const ids = (v: View) => new Map(nodes(v).map((id, i) => [id, `m${i}`]));
-
-function flowchart(v: View): string {
-  const id = ids(v), out = ['flowchart LR'], parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]]));
-  const groups = new Set(parent.values());
-  const kids = (g: string | undefined) => nodes(v).filter((m) => parent.get(m) === g && !groups.has(m)).concat([...groups].filter((x) => parent.get(x) === g).sort());
-  const put = (m: string, pad: string, seen: Set<string>) => {
-    const name = id.get(m) ?? `g${[...groups].indexOf(m)}`, label = safe(v.marks[m]?.label ?? unquote(m));
-    if (!groups.has(m)) { out.push(`${pad}${name}["${label}"]`); return; }
-    if (seen.has(m)) return;
-    seen.add(m);
-    out.push(`${pad}subgraph ${name}["${label}"]`);
-    for (const k of kids(m)) put(k, pad + '  ', seen);
-    out.push(`${pad}end`);
-  };
-  for (const m of kids(undefined)) put(m, '  ', new Set());
-  const name = (m: string) => id.get(m) ?? `g${[...groups].indexOf(m)}`;
-  const styled: string[] = [];
-  v.facts.filter((f) => f.rel === 'link').forEach((f, i) => {
-    const ts = linkTags(v, f), shown = ts.filter((t) => !RESERVED.includes(t));
-    out.push(`  ${name(f.args[0])} ${ts.includes('dangling') || ts.includes('gone') ? '-.->' : '-->'}${shown.length ? `|${safe(shown.join(', '))}|` : ''} ${name(f.args[1])}`);
-    const r = ts.find((t) => STYLE[t]); if (r) styled.push(`  linkStyle ${i} ${STYLE[r].replace(/,color:[^,]*/, '')}`);
-  });
-  out.push(...styled);
-  for (const [t, s] of Object.entries(STYLE)) if (nodes(v).some((m) => v.marks[m].tags.includes(t))) out.push(`  classDef ${t} ${s}`);
-  for (const m of nodes(v)) for (const t of v.marks[m].tags) if (!groups.has(m)) out.push(`  class ${name(m)} ${t}`);
-  return out.join('\n');
-}
-
-function dot(v: View): string {
-  const q = (s: string) => JSON.stringify(s), out = ['digraph view {', '  rankdir=LR;', '  node [shape=box, style=rounded];'];
-  const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
-  const color = (ts: string[]) => ts.includes('failing') || ts.includes('dangling') ? '#b91c1c' : ts.includes('new') ? '#047857' : ts.includes('gone') || ts.includes('unknown') ? '#66706b' : ts.includes('blind') ? '#a15c07' : '';
-  const style = (ts: string[]) => ts.includes('blind') || ts.includes('dangling') || ts.includes('gone') ? 'dashed' : ts.includes('unknown') ? 'dotted' : '';
-  const attrs = (label: string, ts: string[], tip: string[]) => [`label=${q(label)}`, ts.length && `class=${q(ts.join(' '))}`, color(ts) && `color=${q(color(ts))}`, style(ts) && `style=${q(style(ts) + ',rounded')}`, tip.length && `tooltip=${q(tip.join('\n'))}`].filter(Boolean).join(', ');
-  const put = (m: string, pad: string, seen: Set<string>) => {
-    if (!groups.has(m)) { const k = v.marks[m]; out.push(`${pad}${q(m)} [${attrs(k?.label ?? m, k?.tags ?? [], k?.from ?? [])}];`); return; }
-    if (seen.has(m)) return;
-    seen.add(m);
-    out.push(`${pad}subgraph ${q('cluster_' + m)} {`, `${pad}  label=${q(v.marks[m]?.label ?? unquote(m))};`);
-    for (const k of [...nodes(v).filter((x) => parent.get(x) === m && !groups.has(x)), ...[...groups].filter((x) => parent.get(x) === m)]) put(k, pad + '  ', seen);
-    out.push(`${pad}}`);
-  };
-  for (const m of [...nodes(v).filter((x) => !parent.has(x) && !groups.has(x)), ...[...groups].filter((x) => !parent.has(x))]) put(m, '  ', new Set());
-  for (const f of v.facts.filter((x) => x.rel === 'link')) {
-    const ts = linkTags(v, f), shown = ts.filter((t) => !RESERVED.includes(t));
-    out.push(`  ${q(f.args[0])} -> ${q(f.args[1])}${ts.length ? ` [${[shown.length && `label=${q(shown.join(', '))}`, color(ts) && `color=${q(color(ts))}`, style(ts) && `style=${style(ts)}`].filter(Boolean).join(', ')}]` : ''};`);
-  }
-  const levels = new Map<string, string[]>();
-  for (const f of v.facts.filter((x) => x.rel === 'level')) levels.set(f.args[1], [...(levels.get(f.args[1]) ?? []), f.args[0]]);
-  for (const [, ms] of [...levels].sort((a, b) => Number(a[0]) - Number(b[0]))) out.push(`  { rank=same; ${ms.map(q).join('; ')}; }`);
-  out.push('}');
-  return out.join('\n');
-}
-
-/** Argdown: a mark that only links to others is an argument `<..>`, any other a statement `[..]`; a link is `+`, tagged `attack` it is `-`. */
-function argdown(v: View): string {
-  const links = v.facts.filter((f) => f.rel === 'link'), out: string[] = [];
-  const title = (m: string) => (v.marks[m]?.label ?? unquote(m)).replace(/[[\]<>]/g, '');
-  const hashes = (m: string) => (v.marks[m]?.tags ?? []).map((t) => ` #${t.replace(/\W+/g, '-')}`).join('');
-  const argument = new Set(links.map((f) => f.args[0]).filter((m) => !links.some((f) => f.args[1] === m)));
-  const shape = (m: string) => argument.has(m) ? `<${title(m)}>` : `[${title(m)}]`;
-  const walk = (m: string, pad: string, path: Set<string>) => {
-    for (const f of links.filter((x) => x.args[1] === m)) {
-      const s = f.args[0], attack = linkTags(v, f).includes('attack');
-      out.push(`${pad}${attack ? '-' : '+'} ${shape(s)}${path.has(s) ? '' : hashes(s)}`);
-      if (!path.has(s)) walk(s, pad + '  ', new Set([...path, s]));
-    }
-  };
-  const roots = nodes(v).filter((m) => !links.some((f) => f.args[0] === m));
-  for (const m of roots) { out.push(`${shape(m)}${hashes(m)}`); walk(m, '  ', new Set([m])); out.push(''); }
-  return out.join('\n').trim();
-}
-
-const byTime = (a: Fact, b: Fact, i: number) => Number(a.args[i]) - Number(b.args[i]) || a.args[0].localeCompare(b.args[0]);
-const gname = (s: string) => s.replace(/[:;#\n]/g, ' ').trim();
-const lanes = (v: View) => new Map(v.facts.filter((f) => f.rel === 'lane').map((f) => [f.args[0], unquote(f.args[1])]));
-const suffix = (m?: Mark) => m?.tags.length ? ` [${m.tags.join(', ')}]` : '';
-
-function gantt(v: View): string {
-  const lane = lanes(v), out = ['gantt', '  dateFormat X', '  axisFormat %s'];
-  const items = [...v.facts.filter((f) => f.rel === 'during').sort((a, b) => byTime(a, b, 1)), ...v.facts.filter((f) => f.rel === 'happens').sort((a, b) => byTime(a, b, 1))];
-  for (const l of [...new Set(items.map((f) => lane.get(f.args[0]) ?? '(no lane)'))].sort()) {
-    out.push(`  section ${gname(l)}`);
-    for (const f of items.filter((x) => (lane.get(x.args[0]) ?? '(no lane)') === l)) {
-      const m = v.marks[f.args[0]], tags = [f.rel === 'happens' && 'milestone', m?.tags.some((t) => t === 'failing' || t === 'dangling') && 'crit', m?.tags.some((t) => t === 'blind' || t === 'unknown' || t === 'new') && 'active', m?.tags.includes('gone') && 'done'].filter(Boolean);
-      const end = f.rel === 'happens' ? f.args[1] : f.args[2];
-      out.push(`    ${gname((m?.label ?? f.args[0]) + suffix(m))} :${[...tags, `t${items.indexOf(f)}`, f.args[1], end].join(', ')}`);
-    }
-  }
-  return out.join('\n');
-}
-
-function sequence(v: View): string {
-  const msgs = v.facts.filter((f) => f.rel === 'message').sort((a, b) => byTime(a, b, 3));
-  const who = [...new Set(msgs.flatMap((f) => [f.args[1], f.args[2]]))];
-  const out = ['sequenceDiagram', ...who.map((p, i) => `  participant p${i} as ${gname(unquote(p))}`)];
-  for (const f of msgs) {
-    const m = v.marks[f.args[0]], ts = m?.tags ?? [];
-    const arrow = ts.includes('failing') || ts.includes('gone') ? (ts.includes('gone') ? '--x' : '-x') : ts.includes('blind') || ts.includes('unknown') ? '-->>' : '->>';
-    out.push(`  p${who.indexOf(f.args[1])}${arrow}p${who.indexOf(f.args[2])}: ${gname((m?.label ?? f.args[0]) + suffix(m))} at ${f.args[3]}`);
-  }
-  return out.join('\n');
-}
-
+export const nodes = (v: View) => Object.keys(v.marks).sort();
+export const suffix = (m?: Mark) => m?.tags.length ? ` [${m.tags.join(', ')}]` : '';
 const order = (xs: string[]) => [...new Set(xs)].sort((a, b) => (/^-?\d+$/.test(a) && /^-?\d+$/.test(b) ? Number(a) - Number(b) : 0) || unquote(a).localeCompare(unquote(b)));
 export function grid(v: View) {
   const vals = v.facts.filter((f) => f.rel === 'value');
   return { vals, rows: order(vals.map((f) => f.args[0])), cols: order(vals.map((f) => f.args[1])) };
-}
-
-function markdown(v: View): string {
-  const { vals, rows, cols } = grid(v), cell = (s: string) => s.replace(/\|/g, '\\|');
-  const out = [`| | ${cols.map((c) => cell(unquote(c))).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`];
-  const tags = (r: string, c: string) => v.cells?.find((x) => x.row === r && x.column === c)?.tags ?? [];
-  for (const r of rows) out.push(`| ${cell((v.marks[r]?.label ?? unquote(r)) + suffix(v.marks[r]))} | ${cols.map((c) => cell(vals.filter((f) => f.args[0] === r && f.args[1] === c).map((f) => unquote(f.args[2])).join(', ') + (tags(r, c).length ? ` [${tags(r, c).join(', ')}]` : ''))).join(' | ')} |`);
-  return out.join('\n');
-}
-
-function vegaLite(v: View): object {
-  const { vals, rows } = grid(v);
-  const values = rows.map((r) => Object.fromEntries([['row', unquote(r)], ...vals.filter((f) => f.args[0] === r).map((f) => [unquote(f.args[1]), /^-?\d+(\.\d+)?$/.test(f.args[2]) ? Number(f.args[2]) : unquote(f.args[2])]), ['tags', v.marks[r]?.tags.join(' ') ?? '']]));
-  const mark = v.facts.find((f) => f.rel === 'draws')?.args[0] ?? 'bar';
-  const encoding = Object.fromEntries(v.facts.filter((f) => f.rel === 'shows').map((f) => [unquote(f.args[0]), { field: unquote(f.args[1]), type: unquote(f.args[2]) }]));
-  return { $schema: 'https://vega.github.io/schema/vega-lite/v5.json', data: { values }, mark: unquote(mark), encoding: { ...encoding, tooltip: [{ field: 'row' }, { field: 'tags' }] } };
 }
 
 /** What the picture holds, counted: the verdict of a draw line. */

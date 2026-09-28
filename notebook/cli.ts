@@ -15,7 +15,8 @@ import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
-import { counted, text as drawn } from './draw.ts';
+import { counted } from './draw.ts';
+import { backendOf } from './draw-text.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -114,8 +115,8 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
       if (l.view) {
         for (const n of l.view.notes) out.push(`    note: ${n}`);
-        const t = drawn(l.view, format), fence = t.startsWith('|') ? '' : t.startsWith('{') ? 'json' : t.startsWith('digraph') ? 'dot' : l.view.kind === 'argument' ? 'argdown' : 'mermaid';
-        out.push(...(fence ? ['```' + fence, t, '```'] : [t]).join('\n').split('\n').map((x) => `    ${x}`));
+        const b = backendOf(l.view, format), t = b.write(l.view);
+        out.push(...(b.fence ? ['```' + b.fence, t, '```'] : [t]).join('\n').split('\n').map((x) => `    ${x}`));
       }
     }
   }

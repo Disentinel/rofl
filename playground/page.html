@@ -670,12 +670,12 @@ const pics = new Map();   // "cell:line" -> { view, cy }
 async function mountPictures() {
   const els = [...cellsEl.querySelectorAll('.pic[data-pic]')];
   if (!els.length) return;
-  drawMod ??= await import('./lib/draw.js');
+  drawMod ??= { ...await import('./lib/draw.js'), ...await import('./lib/draw-text.js') };
   for (const el of els) {
     const l = results.get(el.dataset.pic)?.lines[Number(el.dataset.n)], v = l?.view; if (!v || el.dataset.drawn) continue;
     el.dataset.drawn = '1';
     const key = `${el.dataset.pic}:${el.dataset.n}`, graph = v.kind === 'graph' || v.kind === 'argument';
-    const as = [[drawMod.FORMATS[v.kind][0], drawMod.text(v)], ...(v.kind === 'argument' ? [['mermaid', drawMod.text({ ...v, kind: 'graph' })]] : [])];
+    const as = [[drawMod.backendOf(v).format, drawMod.text(v)], ...(v.kind === 'argument' ? [['mermaid', drawMod.text({ ...v, kind: 'graph' })]] : [])];
     el.innerHTML = `<div class="pbar"><span>${esc(drawMod.counted(v))}</span><div class="spacer"></div>${graph ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div><div class="stage"></div><div class="detail" hidden></div>${as.map(([f, t]) => `<details class="as"><summary>as ${f}</summary><pre>${esc(t)}</pre></details>`).join('')}`;
     const stage = el.querySelector('.stage');
     pics.set(key, { view: v });
