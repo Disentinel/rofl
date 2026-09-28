@@ -35,10 +35,10 @@ for (const f of seen) {
   // an extension host that predates ES module extensions resolves `vscode` only for require
   if (f === 'vscode/extension.ts' || f === 'vscode/lsp.ts') js = js.replace("import * as vscode from 'vscode';", "import { createRequire } from 'node:module';\nconst vscode = createRequire(import.meta.url)('vscode');");
   if (f === 'notebook/cli.ts') {
-    const help = "Then: examples/notebook/review.rofl.md (no code), examples/notebook/self.rofl.md (over this tree's code).";
+    const help = "Then: examples/notebook/review.rofl.md, examples/notebook/self.rofl.md.";
     if (!js.includes(help)) throw new Error(`${f}: the help no longer names the examples as the build expects`);
     js = js.replace(help, 'Then copy and read ${path.join(ROOT, "examples/notebook")}: review.rofl.md (no code) and small.rofl.md (over small.js).');
-    const play = 'Play examples/tutorial (6 short levels), from examples/tutorial/1-what-ships.rofl.md.';
+    const play = 'Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.';
     if (!js.includes(play)) throw new Error(`${f}: the help no longer names the tutorial as the build expects`);
     js = js.replace(play, 'Copy and play ${path.join(ROOT, "examples/tutorial")} (6 short levels), from 1-what-ships.rofl.md.');
   }
