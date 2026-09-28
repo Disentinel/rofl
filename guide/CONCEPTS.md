@@ -8,8 +8,8 @@ A notebook is Markdown. `rofl-nb` reads it in cells:
   is for people.
 - **`rofl`** fence: rules and asking lines, in sentences.
 - **`datalog`** fence: the same in Datalog.
-- **`natural`** fence: a request in words; `rofl-nb translate` has Claude
-  write the `rofl` cell.
+- **`natural`** fence: a request in words; `rofl-nb translate` has a model
+  write the `rofl` cell ([Models](MODELS.md)).
 
 ## Sentences
 

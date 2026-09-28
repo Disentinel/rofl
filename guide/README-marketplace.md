@@ -29,7 +29,7 @@ marks every `never` that fails, on the line in your code where it fails.
 
 - Desktop VS Code only; not in the browser.
 - No telemetry. Nothing leaves your machine, except:
-- **Translate** (natural-language cells) runs the `claude` CLI, which sends
-  the notebook's text to Anthropic. It needs `claude` installed and signed in.
+- **Translate** (natural-language cells) sends the notebook text to the model you
+  chose: VS Code's language model (e.g. Copilot) or a CLI (`ROFL: Choose model`).
 - A notebook reads the code files its front matter names, so it runs only
   in a trusted workspace.

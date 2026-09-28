@@ -70,7 +70,7 @@ for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 
 }
 const guide = (f: string) => readFileSync(path.join(ROOT, 'guide', f), 'utf8').replace(/<!-- (BEGIN|END) [^>]*-->\n/g, '');
 if (!guide('INSTALL.md').includes(`Node ${NODE.match(/\d+/)![0]} or later`) || !guide('INSTALL.md').includes(`VS Code ${VSCODE.slice(1).replace(/\.0$/, '')} or later`)) throw new Error(`guide/INSTALL.md does not ask for Node ${NODE} and VS Code ${VSCODE}`);
-for (const f of ['QUICKSTART.md', 'CONCEPTS.md', 'WRITING.md', 'AGENTS.md', 'CHEATSHEET.md', 'INSTALL.md']) writeFileSync(path.join(PKG, f), guide(f));
+for (const f of ['QUICKSTART.md', 'CONCEPTS.md', 'WRITING.md', 'AGENTS.md', 'CHEATSHEET.md', 'INSTALL.md', 'MODELS.md']) writeFileSync(path.join(PKG, f), guide(f));
 writeFileSync(path.join(PKG, 'README.md'), guide('README-npm.md'));
 writeFileSync(path.join(OUT, 'INSTALL.md'), guide('INSTALL.md'));
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
