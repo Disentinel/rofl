@@ -4,17 +4,18 @@
 // 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Kernel, type NbLine, type NbResult } from './kernel.ts';
 import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty
 
@@ -242,7 +243,7 @@ The first run starts a kept kernel (the model loads once, about 10 to 20 s); lat
 ROFL_NB_DAEMON=0 runs in this process instead.
 Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).`;
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
+const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const argv = process.argv.slice(2);
   if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(HELP); process.exit(argv.length ? 0 : 2); }

@@ -4,19 +4,20 @@
 import { createServer, connect } from 'node:net';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { globSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { globSync, readdirSync, readFileSync, realpathSync, unlinkSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
 import { runFile } from './cli.ts';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 type Reply = { result: ReturnType<typeof runFile> } | { error: string };
 
 /** `rofl-nb-<tree>-<engine source>.sock`: an edited engine is a new daemon and never an old one answering, and the tree lets the new one find the old. */
 export function socketPath(): string {
   const h = createHash('sha1').update(ROOT + process.version);
-  for (const f of globSync('{notebook,playground,scanners,src,scripts}/**/*.ts', { cwd: ROOT }).sort()) h.update(f).update(readFileSync(path.join(ROOT, f)));
+  for (const f of globSync('{notebook,playground,scanners,src,scripts}/**/*.{ts,js}', { cwd: ROOT }).sort()) h.update(f).update(readFileSync(path.join(ROOT, f)));
   return path.join(os.tmpdir(), `rofl-nb-${createHash('sha1').update(ROOT).digest('hex').slice(0, 8)}-${h.digest('hex').slice(0, 16)}.sock`);
 }
 
@@ -50,7 +51,7 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
       if (code !== 'ENOENT' && code !== 'ECONNREFUSED') return undefined;
       if (i === 0) {
         if (code === 'ECONNREFUSED') try { unlinkSync(sock); } catch { /* another run took it */ }
-        spawn(process.execPath, ['--experimental-strip-types', new URL(import.meta.url).pathname, sock], { detached: true, stdio: 'ignore' }).unref();
+        spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), sock], { detached: true, stdio: 'ignore' }).unref();
       }
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -81,4 +82,4 @@ function serve(sock: string) {
   server.listen(sock, () => { rest(); retire(sock); });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) serve(process.argv[2]);
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) serve(process.argv[2]);
