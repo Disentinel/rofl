@@ -93,6 +93,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')"],
   picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', cases.slice(3)],
   why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", cases.slice(3)],
+  placed: ['visual/out/pic-graph.js', /placed\.get\(c\.id\) \?\? /, '', cases.slice(3)],
   pin: ['extension.ts', /writeFileSync\(file, facts\);/, "writeFileSync(file, '');", cases.slice(3)],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
@@ -101,7 +102,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {

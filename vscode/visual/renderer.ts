@@ -18,6 +18,7 @@ export const activate = (ctx: Ctx) => {
         ...(talk && {
           why: (literal: string, into: HTMLElement) => { const id = ++asked; waiting.set(id, into); talk({ why: literal, notebook, id }); },
           pin: (facts: string) => talk({ pin: facts, notebook }),
+          laid: (facts: string[]) => talk({ laid: facts, notebook }),
         }),
       });
     },

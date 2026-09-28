@@ -103,11 +103,14 @@ export function activate(ctx: vscode.ExtensionContext) {
   controller.executeHandler = (_cells, nb) => run(nb);
   // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
+  const laid = new Map<string, string[]>();   // where the renderer last put each notebook's graph marks
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => pinLayout(nb, facts)));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
   ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
     const nb = vscode.Uri.parse(String(m.notebook));
     if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
+    if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
     if (m.pin !== undefined) void vscode.commands.executeCommand('rofl-notebook.pinLayout', nb, String(m.pin));
   }));
 

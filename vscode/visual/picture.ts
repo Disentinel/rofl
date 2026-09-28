@@ -8,6 +8,8 @@ export type Hooks = {
   why?(literal: string, into: HTMLElement): void;
   /** the picture's layout as placed(M, X, Y) facts, to keep beside the notebook */
   pin?(facts: string): void;
+  /** where a graph's marks were laid, as placed(M, X, Y) facts, each time it is drawn: what a test reads back */
+  laid?(facts: string[]): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
   libs(): Promise<boolean>;
 };

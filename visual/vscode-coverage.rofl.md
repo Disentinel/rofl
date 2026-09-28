@@ -45,6 +45,10 @@ done(tb_table, v_render, "vscode/test/suite.ts").   done(tb_table, v_status, "vs
 done(K, v_compare, "vscode/test/suite.ts") :- first_wave(K).
 -- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl, and a notebook reading it carries the
 -- placed facts the renderer lays the marks at (vscode/test/suite.ts, pin; planted: --break pin). The renderer's use of them was seen, not tested.
+-- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl; a notebook reading it is drawn,
+-- and the renderer reports by message where it laid each mark, which must be the placed position (vscode/test/suite.ts, pin;
+-- planted: --break pin, and --break placed, a renderer that ignores placements, red with c1 at ELK's 40, 77)
+done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, "vscode/test/suite.ts").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 
@@ -74,10 +78,10 @@ work(wN, "notation: the emitted standard file, opened in a VS Code preview").
 work(wF, "frames: one view per tick, small multiples or animation, every kind (the shared frame)").
 work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
-state(w1, done). state(w2a, done). state(w3a, open). state(w11a, done).
+state(w1, done). state(w2a, done). state(w3a, done). state(w11a, done).
 state(wG, open). state(wT, open). state(wB, open). state(wS, open). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
-owner(w3a, nb_draw). owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wS, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
+owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wS, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 core(v_render). core(v_why). core(v_status).

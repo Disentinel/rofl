@@ -54,6 +54,13 @@ export async function run() {
     if (c.pin) {
       const view = runs.flatMap((x) => x.outputs).flatMap((o) => o.items).filter((i) => i.mime === VIEW_MIME).map((i) => JSON.parse(new TextDecoder().decode(i.data)).view)[0];
       if (!view?.facts.some((f: { literal: string }) => `${f.literal}.\n` === c.pin)) bad.push(`${c.file}: the picture does not carry the pinned ${c.pin.trim()}`);
+      // and the renderer put the mark there: where it laid each mark, as it reported it
+      // an output off screen is not drawn: bring the picture's cell into view first
+      const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
+      if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
+      let at: string[] = [];
+      for (const end = Date.now() + 45_000; !at.length && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) at = await vscode.commands.executeCommand<string[]>('rofl-notebook.laid', nb.uri);
+      if (!at.includes(c.pin.trim())) bad.push(`${c.file}: the renderer laid ${c.pin.trim().replace(/, \d+, \d+\)\.$/, '')} elsewhere: ${at.find((x) => x.startsWith(c.pin!.slice(0, c.pin!.indexOf(',')))) ?? 'nothing reported'}`);
       console.log(`${c.file}: ${Date.now() - t0} ms`);
       continue;
     }

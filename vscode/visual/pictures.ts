@@ -23,7 +23,7 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<void> {
   stage.addEventListener('click', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-mark]'); if (t) pick(t.dataset.mark!); });
   const p = PICTURES.find((x) => x.kind === v.kind);
   if (graphs && !await h.libs()) el.querySelector('[data-pin]')?.remove(), stage.innerHTML = `<div class="note">The graph library did not load (offline, or its CDN is blocked), so the picture is its mermaid text, which GitHub and mermaid.live draw:</div><pre class="fallback">${esc(backendOf({ ...v, kind: 'graph' }).write(v))}</pre>`;
-  else await p?.mount(stage, v, h, pick);
+  else { await p?.mount(stage, v, h, pick); const laid = layouts.get(stage)?.(); if (laid) h.laid?.(laid); }
   el.querySelector<HTMLButtonElement>('[data-pin]')?.addEventListener('click', () => { const facts = layouts.get(stage)?.(); if (facts) h.pin!(`-- pinned layout: placed(M, X, Y), written by Pin layout; commit it beside the notebook and name it under reads:\n${facts.join('\n')}\n`); });
 }
 
