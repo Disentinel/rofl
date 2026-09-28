@@ -17,7 +17,7 @@ import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
-import { answer, BUDGET, gitFiles, PROTOCOL, requestsOf, resolve, ROUNDS, type Repo } from './reader.ts';
+import { answer, BUDGET, gitFiles, PROTOCOL, readTracked, requestsOf, ROUNDS, type Repo } from './reader.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -193,10 +193,11 @@ const OUTLINE = /^\s*(export\s+)?(default\s+)?(async\s+)?(function\*?\s+\w+|clas
 /** What the first prompt reads of the code without asking: an outline of each code file, and the files the request names, within a part of the budget. */
 function slice(cx: Context, request: string): { text: string; read: string[] } {
   const outlines = Object.entries(cx.input.code).map(([name, t]) => [`${name}:`, ...t.split('\n').flatMap((l, i) => OUTLINE.test(l) ? [`  ${i + 1}  ${l.trim().slice(0, 160)}`] : []).slice(0, 60)].join('\n'));
-  const named = [...new Set(request.match(/[\w./-]+\.\w+/g) ?? [])].flatMap((w) => { const r = resolve(cx.repo, w); return 'file' in r ? [r.file] : [...cx.repo.files].filter((f) => f.endsWith(`/${w}`)).slice(0, 1); });
-  const shown = named.map((f) => `${f}:\n${readFileSync(path.join(cx.repo.root, f), 'utf8').split('\n').slice(0, 300).map((l, i) => `${i + 1}  ${l}`).join('\n')}`);
+  // a word of the request that is a tracked path, or the end of one; read only through readTracked, which refuses what the model may not see
+  const named = [...new Set(request.match(/[\w./-]+\.\w+/g) ?? [])].flatMap((w) => [w, ...[...cx.repo.files].filter((f) => f.endsWith(`/${w}`)).slice(0, 1)]).flatMap((w) => { const r = readTracked(cx.repo, w); return 'file' in r ? [r] : []; }).filter((r, i, all) => all.findIndex((x) => x.file === r.file) === i);
+  const shown = named.map((r) => `${r.file}:\n${r.lines.slice(0, 300).map((l, i) => `${i + 1}  ${l}`).join('\n')}`);
   const text = [...outlines.length ? [`An outline of the code files (line, then the line):\n${outlines.join('\n')}`] : [], ...shown.length ? [`The files the request names:\n${shown.join('\n\n')}`] : []].join('\n\n').slice(0, BUDGET / 4);
-  return { text: text ? `${text}\n\n` : '', read: named.map((f) => `${f}:1-300`) };
+  return { text: text ? `${text}\n\n` : '', read: named.map((r) => `${r.file}:1-300`) };
 }
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong.

@@ -33,7 +33,7 @@ function gitGrep(repo: Repo, pattern: string, glob?: string): { lines: string[] 
 }
 
 /** A path the model named, as the tracked file it is, or why it may not be read. */
-export function resolve(repo: Repo, asked: string): { file: string } | { refused: string } {
+function resolve(repo: Repo, asked: string): { file: string } | { refused: string } {
   let real: string;
   try { real = realpathSync(path.resolve(repo.root, asked)); } catch { return { refused: `${asked}: no such file` }; }
   const rel = path.relative(repo.root, real);
@@ -42,6 +42,14 @@ export function resolve(repo: Repo, asked: string): { file: string } | { refused
   if (!repo.files.has(rel)) return { refused: `${asked}: not a file git tracks here` };
   return { file: rel };
 }
+
+/** The one way to read a file of the repository: the path resolved and checked, then read; its lines, or why not. */
+export function readTracked(repo: Repo, asked: string): { file: string; lines: string[] } | { refused: string } {
+  const r = resolve(repo, asked);
+  return 'refused' in r ? r : { file: r.file, lines: readFileSync(path.join(repo.root, r.file), 'utf8').split('\n') };
+}
+/** Whether a path may be read, without reading it: for a line git grep found. */
+export const readable = (repo: Repo, asked: string) => !('refused' in resolve(repo, asked));
 
 /** The lines of an answer that are requests; none when the answer is a cell or words. */
 export const requestsOf = (answer: string) => /```/.test(answer) ? [] : answer.split('\n').map((l) => l.trim()).filter((l) => /^(list|grep|show) \S|^\? \S/.test(l));
@@ -64,13 +72,13 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
     const globbed = rest.length > 1 && /[*/]/.test(rest.at(-1)!), glob = globbed ? rest.at(-1)! : '**', pattern = globbed ? rest.slice(0, -1).join(' ') : arg;
     const g = repo.git ? gitGrep(repo, pattern, globbed ? glob : undefined) : { refused: 'not in a git repository' };
     if ('refused' in g) return { text: `refused: grep ${pattern}: ${g.refused}`, read: `grep ${pattern} refused` };
-    const hits = g.lines.filter((l) => !('refused' in resolve(repo, l.slice(0, l.search(/:\d+: /)))));
+    const hits = g.lines.filter((l) => readable(repo, l.slice(0, l.search(/:\d+: /))));
     return { text: hits.length ? fit(hits, SHOWN.grep, 'lines') : '(no tracked line matches)', read: `grep ${pattern} in ${glob} (${hits.length})` };
   }
   if (verb === 'show') {
-    const m = /^(.+?)(?::(\d+)(?:-(\d+))?)?$/.exec(arg)!, r = resolve(repo, m[1]);
+    const m = /^(.+?)(?::(\d+)(?:-(\d+))?)?$/.exec(arg)!, r = readTracked(repo, m[1]);
     if ('refused' in r) return { text: `refused: ${r.refused}`, read: `show ${m[1]} refused` };
-    const lines = readFileSync(path.join(repo.root, r.file), 'utf8').split('\n'), from = Math.max(1, Number(m[2] ?? 1)), to = Math.min(lines.length, Number(m[3] ?? from + SHOWN.show - 1));
+    const lines = r.lines, from = Math.max(1, Number(m[2] ?? 1)), to = Math.min(lines.length, Number(m[3] ?? from + SHOWN.show - 1));
     return { text: fit(lines.slice(from - 1, to).map((l, i) => `${from + i}  ${l}`), SHOWN.show, 'lines'), read: `${r.file}:${from}-${to}` };
   }
   const said = ask(arg);
