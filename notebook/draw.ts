@@ -1,8 +1,8 @@
 // A picture of a notebook: the view facts its adapter rules concluded (visual/*.rofl.md), the tags the run itself knows, and text backends.
 // Pure: the host collects a view where the world is, the command line prints it, the playground draws it.
 
-export type DrawKind = 'graph' | 'time' | 'table' | 'argument';
-export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument'];
+export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space';
+export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument', 'space'];
 /** The tags only the renderer writes: from what the model could not see, from a what-if, from a failing never, from a link to no node. */
 /** The MIME type of a draw line's output, which VS Code's notebook renderer (vscode/visual/renderer.ts) draws. */
 export const VIEW_MIME = 'application/vnd.rofl.view+json';
@@ -20,8 +20,9 @@ const RELS: Record<DrawKind, [string, number][]> = {
   argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
   time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
+  space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
 };
-const VARS = ['A', 'B', 'C', 'D'];
+const VARS = ['A', 'B', 'C', 'D', 'E'];
 
 /** How the host answers: the rows of a literal, null when nothing can put a row there; a fact's premises said, null when it was given. */
 export type World = { rows(lit: string): Record<string, string>[] | null; from(literal: string): { said: string[]; terms: string[] } | null; label(term: string): { label: string; at?: string[] } };
@@ -39,7 +40,7 @@ export function collect(kind: DrawKind, w: World): View {
   }
   const first = RELS[kind][0][0];
   if (!facts.length && !w.rows(`${first}(${VARS.slice(0, RELS[kind][0][1]).join(', ')})`)) notes.push(`nothing to draw: no sentence here writes ${first}; a notebook reads the words of visual/${kind === 'argument' ? 'graph' : kind}.rofl.md and says in rules what is a mark`);
-  const given = facts.filter((f) => f.given && f.rel !== 'placed');
+  const given = facts.filter((f) => f.given && !['placed', 'projection', 'axis'].includes(f.rel));
   if (given.length) notes.push(`${given.length} view ${given.length === 1 ? 'fact is' : 'facts are'} given, not derived from the domain, so ${given.length === 1 ? 'it has' : 'they have'} no provenance: ${given.slice(0, 5).map((f) => f.literal).join(', ')}`);
   const marks: Record<string, Mark> = {};
   const mark = (id: string, f?: Fact) => {
@@ -54,6 +55,10 @@ export function collect(kind: DrawKind, w: World): View {
   }
   if (kind === 'time') for (const f of facts) if (['lane', 'during', 'happens', 'message'].includes(f.rel)) mark(f.args[0], f);
   if (kind === 'table') for (const f of is('value')) mark(f.args[0], f);
+  if (kind === 'space') {
+    for (const f of facts) if (['at', 'box', 'corner'].includes(f.rel)) mark(f.args[0], f);
+    for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');
+  }
   for (const f of is('labelled')) if (marks[f.args[0]]) marks[f.args[0]].label = unquote(f.args[1]);
   for (const f of is('tagged')) { mark(f.args[0], f); tag(marks[f.args[0]], unquote(f.args[1])); }
   const own = is('tagged').filter((f) => RESERVED.includes(unquote(f.args[1])));
@@ -151,7 +156,7 @@ export function zoom(v: View, shut = shutOf(v)): View {
   for (const f of v.facts) {
     if (f.rel === 'collapsed' || f.rel === 'lane_group' && shut.has(f.args[1])) continue;
     if (f.rel === 'inside' && top(f.args[0]) !== f.args[0]) continue;
-    if (f.rel === 'placed' && top(f.args[0]) !== f.args[0]) continue;
+    if (['placed', 'at', 'box', 'corner'].includes(f.rel) && top(f.args[0]) !== f.args[0]) continue;
     if (f.rel === 'link' || f.rel === 'link_tagged') { const [a, b] = [top(f.args[0]), top(f.args[1])]; if (a !== b) put({ ...f, args: [a, b, ...f.args.slice(2)] }); continue; }
     if (f.rel === 'lane') { put({ ...f, args: [f.args[0], lane(f.args[1])] }); continue; }
     if (f.rel === 'message') { const [a, b] = [lane(f.args[1]), lane(f.args[2])]; if (a !== b || !group.has(f.args[1])) put({ ...f, args: [f.args[0], a, b, f.args[3]] }); continue; }

@@ -18,6 +18,9 @@ export type Hooks = {
 /** A kind's module: `mount` draws the view into `el`, calls `detail` when a mark is picked and `toggle` when a group is (zoom). */
 export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fact?: string) => void, toggle: (group: string) => void): Promise<void> | void };
 
+/** Each drawn picture's positions now, as facts (placed(M, X, Y) for a graph, at(M, X, Y) for space): what Pin layout writes and a test reads back. */
+export const layouts = new WeakMap<HTMLElement, () => string[]>();
+
 export const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const tagsOf = (v: View, id: string) => v.marks[id]?.tags ?? [];
 /** A colour of the picture's theme by its token (`--p-fail`), as its element resolves it: VS Code's colours in the editor, the page's in the playground. */
@@ -85,6 +88,9 @@ export function style(doc: Document): void {
 .rofl-pic .unknown, .rofl-pic svg .unknown { color: var(--p-mute); stroke: var(--p-mute); stroke-dasharray: 2 3; }
 .rofl-pic .gone, .rofl-pic svg .gone { opacity: .45; text-decoration: line-through; stroke-dasharray: 5 5; }
 .rofl-pic .new { outline: 2px solid var(--p-pass); outline-offset: -2px; }
-.rofl-pic svg .new { stroke: var(--p-pass); stroke-width: 3; }`;
+.rofl-pic svg .new { stroke: var(--p-pass); stroke-width: 3; }
+.rofl-pic svg .region { fill: var(--p-soft); fill-opacity: .5; stroke: var(--p-mute); }
+.rofl-pic svg line.link { stroke: var(--p-mute); stroke-width: 1.5; }
+.rofl-pic svg .collapsed { stroke-width: 3; }`;
   doc.head.append(s);
 }

@@ -52,12 +52,18 @@ done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, 
 -- wFa: a view whose marks name a frame draws as small multiples, one picture a frame in order, a mark new or gone against the frame before
 -- (notebook/draw.ts framesOf); test:vscode puts each first-wave picture in frames 1 and 2 and reads back the frames the renderer drew
 -- (planted: --break frames, red); test:nb:product draws the SPAT week a day a frame (planted: draw-frames, red)
-done(K, v_frames, "vscode/test/suite.ts") :- first_wave(K).
+done(K, v_frames, "vscode/test/suite.ts") :- drawn_now(K).
 -- wZa: a shut group (`A mark G is collapsed`; a graph's group is what marks are inside, a timeline's what lanes are in) draws as one mark
 -- labelled with its count and opens on a click (notebook/draw.ts zoom); test:vscode shuts a group in each first-wave picture, reads back
 -- "shop (3)" without its members, zooms in as a click does and reads the members back (planted: --break zoom, red); test:nb:product draws
 -- the shop shut (planted: draw-zoom, red)
-done(K, v_zoom, "vscode/test/suite.ts") :- first_wave(K), not waived(K, v_zoom, _).
+done(K, v_zoom, "vscode/test/suite.ts") :- drawn_now(K), not waived(K, v_zoom, _).
+-- wS: visual/space.rofl.md, marks at the data's geometry (a map in lonlat, a plan y down, semantic axes y up); GeoJSON and Vega-Lite as text
+-- (notebook/draw-space.ts), an SVG in VS Code (vscode/visual/pic-space.ts). test:vscode draws each of three examples, holds each to its
+-- status and a why, a what-if, and reads each point back at the data's position and the right way up (planted: --break space, a flipped
+-- map, red); test:nb:product parses the map's GeoJSON (planted: draw-space, swapped coordinates, red). A space's zoom shuts a region.
+done(K, L, "vscode/test/suite.ts") :- family(K, space), lens(L), L != v_example, not shared(L), not waived(K, L, _).
+done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_example, "examples/visual/office-plan.rofl.md"). done(s_axes, v_example, "examples/visual/wardley.rofl.md").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 
@@ -85,16 +91,18 @@ work(wB, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
 work(wS, "space: map, plan, semantic axes").
 work(wN, "notation: the emitted standard file, opened in a VS Code preview").
 work(wF, "frames: small multiples, every kind (the shared frame)").
-work(wFa, "frames for the first-wave kinds").
+work(wFa, "frames for the kinds that render now: the first wave and space").
 work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
-work(wZa, "zoom for the first-wave kinds").
+work(wZa, "zoom for the kinds that render now: the first wave and space").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
 state(w1, done). state(wFa, done). state(wZa, done). state(w2a, done). state(w3a, done). state(w11a, done).
-state(wG, open). state(wT, open). state(wB, open). state(wS, open). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
+state(wG, open). state(wT, open). state(wB, open). state(wS, done). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
-owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wS, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
+owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
+drawn_now(K) :- first_wave(K).
+drawn_now(K) :- family(K, space).
 core(v_render). core(v_why). core(v_status).
 shared(v_frames). shared(v_zoom). shared(v_docs).
 row_of(wG, g_architecture). row_of(wG, g_state). row_of(wG, g_process). row_of(wG, g_causal). row_of(wG, g_proof).
@@ -108,10 +116,10 @@ claims(w2a, K, v_compare) :- first_wave(K).
 claims(w3a, K, v_geometry) :- family(K, graph), first_wave(K).
 claims(w11a, K, v_test) :- first_wave(K).
 claims(W, K, L) :- row_of(W, K), lens(L), not shared(L), not waived(K, L, _).
-claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _), not first_wave(K).
-claims(wFa, K, v_frames) :- first_wave(K).
-claims(wZ, K, v_zoom) :- kind(K), not waived(K, v_zoom, _), not first_wave(K).
-claims(wZa, K, v_zoom) :- first_wave(K), not waived(K, v_zoom, _).
+claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _), not drawn_now(K).
+claims(wFa, K, v_frames) :- drawn_now(K).
+claims(wZ, K, v_zoom) :- kind(K), not waived(K, v_zoom, _), not drawn_now(K).
+claims(wZa, K, v_zoom) :- drawn_now(K), not waived(K, v_zoom, _).
 claims(wD, K, v_docs) :- kind(K).
 
 cell(K, L) :- kind(K), lens(L).

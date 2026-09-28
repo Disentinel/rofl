@@ -1,6 +1,6 @@
 // A graph (and the argument dialect of one) as Cytoscape laid out by ELK; a placed mark stays where the pinned layout put it.
 import { linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
-import { colour, tagsOf, type Hooks, type Picture } from './picture.ts';
+import { colour, layouts, tagsOf, type Hooks, type Picture } from './picture.ts';
 
 declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
   nodes(): { filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
@@ -48,8 +48,5 @@ async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: string, fa
   cy.on('tap', 'edge', (e) => detail(e.target.data('source'), e.target.data('fact')));
   layouts.set(el, () => cy.nodes().filter((n) => !n.hasClass('group')).map((n) => `placed(${n.id()}, ${Math.round(n.position('x'))}, ${Math.round(n.position('y'))}).`).sort());
 }
-
-/** Each drawn graph's layout now, as placed(M, X, Y) facts: what Pin layout writes. */
-export const layouts = new WeakMap<HTMLElement, () => string[]>();
 
 export const pictures: Picture[] = [{ kind: 'graph', mount }, { kind: 'argument', mount }];

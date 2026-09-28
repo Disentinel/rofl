@@ -28,7 +28,7 @@ const emit = (src: string) => {
   writeFileSync(`${OUT}/lib/${src.replace(/^.*\//, '').replace(/\.ts$/, '.js')}`, js);
 };
 for (const f of readdirSync(`${ROOT}src`)) if (f.endsWith('.ts') && f !== 'repl.ts') emit(`src/${f}`);
-for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'notebook/front.ts', 'notebook/book.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'notebook/draw.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'playground/host.ts', 'playground/worker.ts',
+for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'notebook/front.ts', 'notebook/book.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-space.ts', 'notebook/draw-space.ts', 'notebook/draw.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'playground/host.ts', 'playground/worker.ts',
   'runtime/semirings.ts', 'examples/npc/sim.ts', 'playground/npc_host.ts', 'playground/npc_worker.ts']) emit(f);
 for (const [m, text] of Object.entries(SHIMS)) writeFileSync(`${OUT}/lib/shim-${m.slice(5)}.js`, text);
 copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);

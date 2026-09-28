@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[] };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string] };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -107,6 +107,15 @@ export async function run() {
       if (kinds.join() !== c.pictures.join()) bad.push(`${c.file}: the pictures drawn are [${kinds}], not [${c.pictures}]`);
       const [mark, tag] = c.status!, tags = drawn[0]?.marks[mark]?.tags ?? [];
       if (!tags.includes(tag)) bad.push(`${c.file}: the mark ${mark} is drawn with the tags [${tags}], not ${tag}`);
+      if (c.laid) {   // space is never laid out: the renderer reports each point back at the data's position
+        const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
+        if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
+        let at: string[] = [];
+        for (const end = Date.now() + 45_000; !at.length && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) at = await vscode.commands.executeCommand<string[]>('rofl-notebook.laid', nb.uri);
+        if (!at.includes(c.laid)) bad.push(`${c.file}: the renderer put ${c.laid.slice(3, c.laid.indexOf(','))} elsewhere: ${at.find((x) => x.startsWith(c.laid!.slice(0, c.laid!.indexOf(',')))) ?? 'nothing reported'}`);
+        const y = (m: string) => Number(/, (-?\d+)\)\.$/.exec(at.find((x) => x.startsWith(`drawn_at(${m},`)) ?? '')?.[1] ?? NaN);
+        if (c.below && !(y(c.below[0]) > y(c.below[1]))) bad.push(`${c.file}: ${c.below[0]} is not drawn below ${c.below[1]} (page y ${y(c.below[0])} and ${y(c.below[1])})`);
+      }
       if (c.compare) { const [m, t] = c.compare, got = drawn.at(-1)?.marks[m]?.tags ?? []; if (!got.includes(t)) bad.push(`${c.file}: the what-if draws ${m} with the tags [${got}], not ${t}`); }
       const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
       if (!why?.includes(says)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);

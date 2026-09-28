@@ -52,8 +52,9 @@ export type Ask = { kind: Kind; lit: string; text: string };
 /** `close`: by part, what each new sentence it declares is close to (closeTo). */
 export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][] };
 
-/** The words of a sentence with every hole, every name and every `a noun` before one as `_`: `<0:car> is inside a mark \`shop\`` -> `_ is inside _`. */
-const skeleton = (p: string) => p.replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1').replace(/<\d+:[\w ]+>|`[^`]*`|"[^"]*"|\b\d+\b/g, '_').replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? _/g, '_').replace(/\s+/g, ' ').trim();
+/** A sentence as a pattern: a hole and a name are blanks; `named` also blanks a noun a name stands beside (`a mark \`shop\``), the constant-for-noun mistake. */
+const skeleton = (p: string, named = false) => (named ? p.replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? `[^`]*`/g, '_') : p).replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1')
+  .replace(/<\d+:[\w ]+>|`[^`]*`|"[^"]*"|\b\d+\b/g, '_').replace(/\s+/g, ' ').trim();
 const said = (p: string) => p.replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n}`);
 
 /** A sentence a cell declares that reads as one already declared, its holes and names aside: an anchor on a head (`<a id="car_node">A car X is a node`),
@@ -62,7 +63,7 @@ export function closeTo(learned: string[], vocab: string): string[] {
   const known = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].map((m) => ({ rel: m[1], text: m[2], k: skeleton(m[2]) }));
   return learned.flatMap((l) => {
     const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); if (!m) return [];
-    const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2]));
+    const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2], true));
     return near ? [`"${said(m[2])}" makes a new relation, ${m[1]}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
   });
 }
@@ -75,8 +76,8 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     if (!first[i]) return null;
     // a head another cell declares the sentence of is that cell's relation, not a new one named from its words
     const heads = (r: ReadResult) => r.problems.unparsed.filter((u) => u.startsWith('HEAD ')).map((u) => u.slice(5));
-    const others = first.flatMap((f, j) => j !== i && f ? f.phrases : []), known = new Set(others.map(skeleton));
-    const again = heads(first[i]!).some((h) => known.has(skeleton(h.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\$?[a-z_]\w*\([^()]*\)|\b[A-Z][A-Za-z0-9]*\b/g, '_'))));
+    const others = first.flatMap((f, j) => j !== i && f ? f.phrases : []), known = new Set(others.map((p) => skeleton(p)));
+    const again = heads(first[i]!).some((h) => known.has(skeleton(h.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\$?[a-z_]\w*\([^()]*\)|\b[A-Z][A-Za-z0-9]*\b/g, '_')).replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? _/g, '_')));
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
     const text = anchored(clauses, unread);
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
