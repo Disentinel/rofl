@@ -21,8 +21,9 @@ const SHOWN = 12;   // answers printed per line; --json has the first fifty, --a
 /** How long a run's evaluation may take, in ms: a rule that climbs for ever stops there and its notebook is exit 3. */
 export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
 
-/** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk. */
-export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string> } {
+/** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk.
+ *  `outside`: the names in its front matter that reach out of the notebook's folder, which a notebook from someone else can use to show a file of yours. */
+export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string>; outside: string[] } {
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
   const at = (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));   // relative to the notebook, or absolute, or from home
   const read = (p: string) => { try { return unsaved[path.resolve(p)] ?? readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
@@ -39,8 +40,11 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const names = codeNames(path.resolve(file), found.map((p) => path.resolve(p)));
   const paths: Record<string, string> = {};
   for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; paths[names[path.resolve(p)]] = path.resolve(p); }
-  return { input: { lib, reads, code, data: dataFiles(paths, code) }, errors, paths };
+  const outside = [...front.reads, ...front.code].filter((p) => { const r = path.relative(dir, at(p)); return r === '..' || r.startsWith(`..${path.sep}`) || path.isAbsolute(r); });
+  return { input: { lib, reads, code, data: dataFiles(paths, code) }, errors, paths, outside };
 }
+
+export const OUTSIDE = (outside: string[]) => `reads files outside this notebook's folder: ${outside.join(', ')}`;
 
 /** The files a relative specifier in the code names that exist and are not code, by their name in the notebook; one outside the notebook's root, or code nobody listed, stays out of sight. */
 function dataFiles(paths: Record<string, string>, code: Record<string, string>): string[] {
@@ -62,11 +66,11 @@ const CODE = /\.[cm]?[jt]sx?$/;
 const isFile = (p: string) => { try { return statSync(p).isFile(); } catch { return false; } };
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
-export function runFile(file: string, kernel = new Kernel({ limit: LIMIT }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string> } {
-  const { input, errors, paths } = inputs(file, text, unsaved);
+export function runFile(file: string, kernel = new Kernel({ limit: LIMIT }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string>; outside: string[] } {
+  const { input, errors, paths, outside } = inputs(file, text, unsaved);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
-  return { ...r, paths };
+  return { ...r, paths, outside };
 }
 
 export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
@@ -329,9 +333,10 @@ if (isMain) {
   }
   const file = named;
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
-  let r: NbResult;
+  let r: ReturnType<typeof runFile>;
   const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
   try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, limit: LIMIT })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
+  if (r.outside?.length) console.error(`${file}: ${OUTSIDE(r.outside)}`);
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
   process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN)) + '\n', () => process.exit(EXIT[r.status]));

@@ -287,6 +287,7 @@ check('F1 an empty relation asked in one book the program writes in another says
 check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
 check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);
 check('F5 a conjunctive question is refused with what to write instead', is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), fr);
+check('M1 a notebook that reads a file outside its folder says so; one reading only inside does not', has(review, "review.rofl.md: reads files outside this notebook's folder: ../review.rofl.md") && !has(small, 'outside this notebook') && !has(badRead, 'outside this notebook'), review);
 check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
 check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
 const argv = (() => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } })();
