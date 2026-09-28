@@ -34,12 +34,20 @@ for (const f of seen) {
   if (f === 'notebook/cli.ts') {
     const help = "Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).";
     if (!js.includes(help)) throw new Error(`${f}: the help no longer names the examples as the build expects`);
-    js = '#!/usr/bin/env node\n' + js.replace(help, 'Copy and read first: ${path.join(ROOT, "examples/notebook")}: review.rofl.md (no code) and small.rofl.md (over small.js).');
+    js = js.replace(help, 'Copy and read first: ${path.join(ROOT, "examples/notebook")}: review.rofl.md (no code) and small.rofl.md (over small.js).');
   }
   if (/from '(?!node:|\.)/.test(js)) throw new Error(`${f} imports a package the build does not carry`);
   mkdirSync(path.dirname(path.join(PKG, f)), { recursive: true });
   writeFileSync(path.join(PKG, f.replace(/\.ts$/, '.js')), js);
 }
+// the command's entry asks for Node 22 before any import that needs it, then runs cli.js as the main module
+writeFileSync(path.join(PKG, 'notebook/rofl-nb.js'), `#!/usr/bin/env node
+const major = Number(process.versions.node.split('.')[0]);
+if (major < 22) { console.error(\`rofl-nb needs Node 22 or later; this is Node \${process.versions.node} — install Node 22 (nvm install 22)\`); process.exit(2); }
+const { fileURLToPath } = await import('node:url');
+process.argv[1] = fileURLToPath(new URL('./cli.js', import.meta.url));
+await import('./cli.js');
+`);
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
 for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js']) {
@@ -51,7 +59,7 @@ writeFileSync(path.join(PKG, 'README.md'), install);
 writeFileSync(path.join(OUT, 'INSTALL.md'), install);
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
   name: 'rofl-nb', version, description: 'The ROFL notebook: run a .rofl.md notebook from the command line', license: root.license, type: 'module',
-  bin: { 'rofl-nb': 'notebook/cli.js' }, engines: { node: NODE }, repository: root.repository,
+  bin: { 'rofl-nb': 'notebook/rofl-nb.js' }, engines: { node: NODE }, repository: root.repository,
 }, null, 2) + '\n');
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 

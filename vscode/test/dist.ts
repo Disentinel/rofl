@@ -29,7 +29,7 @@ const strip = (s: string) => { try { return JSON.stringify(JSON.parse(s), (k, v)
 const bad: string[] = [];
 
 // the command line: the package against the tree on the tree's notebook, and the package on a copy outside the tree
-const pkg = path.join(DIST, 'rofl-nb/notebook/cli.js'), nb = path.join(tmp, 'nb');
+const pkg = path.join(DIST, 'rofl-nb/notebook/rofl-nb.js'), nb = path.join(tmp, 'nb');
 cpSync(path.join(DIST, 'examples'), nb, { recursive: true });
 const review = path.join(ROOT, 'examples/notebook/review.rofl.md');
 const [inTree, packaged, ...copies] = await Promise.all([
