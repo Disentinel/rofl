@@ -53,7 +53,9 @@ path_exists("examples/jopa/").
 path_exists("examples/loot/").
 path_exists("examples/loot/demo.ts").
 path_exists("examples/moot/moot.rofl").
+path_exists("examples/notebook/cjs.rofl.md").
 path_exists("examples/notebook/self.rofl.md").
+path_exists("examples/notebook/small.rofl.md").
 path_exists("examples/npc/").
 path_exists("examples/npc/demo.ts").
 path_exists("examples/npc/npc.rofl").
