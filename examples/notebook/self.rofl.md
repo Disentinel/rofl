@@ -111,7 +111,9 @@ I4 The file is the truth: the notebook is the Markdown file; outputs are derived
 ```rofl
 A call C writes a file either:
 1. if C is a host site of `node` from "node:fs" at "writeFileSync";
-2. if C is a host site of `node` from "node:fs" at "openSync".
+2. if C is a host site of `node` from "node:fs" at "openSync", unless C opens only to read.
+
+A call C opens only to read if C passes the argument a node X at 1 and X may be the literal "r".
 
 A function F may write a file either:
 1. if F answers to "translate";

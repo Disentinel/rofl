@@ -16,6 +16,7 @@ const redFile = planted('red', 'self.rofl.md', (t) => t, [
   ['notebook/kernel.ts', mutate('notebook/kernel.ts', /^export class Kernel \{/m, (m) => `import { readFileSync } from 'node:fs';\nexport const peek = (f: string) => readFileSync(f, 'utf8');\n\n${m}`)],
   ['notebook/front.ts', mutate('notebook/front.ts', /^export function normal\(p: string\): string \{/m, (m) => `${m}\n  if (!p) process.exit(3);`)],
   ['notebook/cli.ts', mutate('notebook/cli.ts', runLine, (m) => `${m}\n  writeFileSync(file, text + JSON.stringify(r));\n  spawn('claude', ['-p', 'check this']);`)],
+  ['notebook/reader.ts', mutate('notebook/reader.ts', /^export const readable = /m, (m) => `export const leak = (f: string) => openSync(f, 'w');\n${m}`)],
   ['notebook/model.ts', mutate('notebook/model.ts', /^  const runnable = /m, (m) => `  spawn('which', [bin]);\n${m}`)],
   ['vscode/worker.ts', mutate('vscode/worker.ts', /const r = runFile\(file, kernel, text, unsaved\);/, (m) => `${m} translateText(file, text, llm, kernel);`)],
 ]);
@@ -126,6 +127,7 @@ check('I6 a print planted in the kernel turns self red', is(red, 1) && has(red, 
 check('I6 a node:fs import and read planted in the kernel turns self red', is(red, 1) && has(red, 'readFileSync() at notebook/kernel.ts'), red);
 check('I6 an exit planted in the kernel turns self red', is(red, 1) && has(red, 'process.exit() at notebook/front.ts'), red);
 check('I4 a write planted in a run turns self red', is(red, 1) && has(red, 'never C writes outside translation  ->  FAILS'), red);
+check('I4 a file opened to write beside the repository reads, in notebook/reader.ts, turns self red (one opened to read does not)', is(red, 1) && /\[openSync\(\) at notebook\/reader\.ts:\d+\] writes outside translation/.test(red.out) && (red.out.match(/openSync\(\) at notebook\/reader\.ts/g) ?? []).length === 1, red);
 check('I5 a process started in a run turns self red', is(red, 1) && has(red, 'never C starts a process outside the model call  ->  FAILS'), red);
 check('I5 a process started beside the harness call, in notebook/model.ts, turns self red', is(red, 1) && /\[spawn\(\) at notebook\/model\.ts:\d+\] starts a process outside the model call/.test(red.out), red);
 check('I5 the model handed over on the editor\'s run path turns self red', is(red, 1) && has(red, '[translateText() at vscode/worker.ts:9] hands the model over outside translation'), red);
