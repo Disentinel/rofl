@@ -10,6 +10,8 @@ export type Hooks = {
   pin?(facts: string): void;
   /** where a graph's marks were laid, as placed(M, X, Y) facts, each time it is drawn: what a test reads back */
   laid?(facts: string[]): void;
+  /** what was drawn, once it is: the frames, each by its key, so a test can read the picture back */
+  drawn?(what: { frames: string[] }): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
   libs(): Promise<boolean>;
 };
@@ -54,6 +56,9 @@ export function style(doc: Document): void {
 .rofl-pic button { font: 12px/1 inherit; padding: 4px 8px; color: var(--p-fg); background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; cursor: pointer; }
 .rofl-pic .stage { overflow-x: auto; }
 .rofl-pic .cy { height: 380px; }
+.rofl-pic .frame { border-top: 1px dashed var(--p-line); }
+.rofl-pic .frame-key { padding: 4px 8px; font: 12px var(--p-mono); }
+.rofl-pic .frame .cy { height: 260px; }
 .rofl-pic .detail { padding: 8px 10px; border-top: 1px solid var(--p-line); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 .rofl-pic .detail pre, .rofl-pic .why { margin: 0; padding: 6px 8px; background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; font: 12px/1.5 var(--p-mono); white-space: pre-wrap; }
 .rofl-pic .facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }

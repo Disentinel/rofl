@@ -49,6 +49,10 @@ done(K, v_compare, "vscode/test/suite.ts") :- first_wave(K).
 -- and the renderer reports by message where it laid each mark, which must be the placed position (vscode/test/suite.ts, pin;
 -- planted: --break pin, and --break placed, a renderer that ignores placements, red with c1 at ELK's 40, 77)
 done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, "vscode/test/suite.ts").
+-- wFa: a view whose marks name a frame draws as small multiples, one picture a frame in order, a mark new or gone against the frame before
+-- (notebook/draw.ts framesOf); test:vscode puts each first-wave picture in frames 1 and 2 and reads back the frames the renderer drew
+-- (planted: --break frames, red); test:nb:product draws the SPAT week a day a frame (planted: draw-frames, red)
+done(K, v_frames, "vscode/test/suite.ts") :- first_wave(K).
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 
@@ -75,10 +79,11 @@ work(wT, "time forms: timeline, timing").
 work(wB, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
 work(wS, "space: map, plan, semantic axes").
 work(wN, "notation: the emitted standard file, opened in a VS Code preview").
-work(wF, "frames: one view per tick, small multiples or animation, every kind (the shared frame)").
+work(wF, "frames: small multiples, every kind (the shared frame)").
+work(wFa, "frames for the first-wave kinds").
 work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
-state(w1, done). state(w2a, done). state(w3a, done). state(w11a, done).
+state(w1, done). state(wFa, done). state(w2a, done). state(w3a, done). state(w11a, done).
 state(wG, open). state(wT, open). state(wB, open). state(wS, open). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
 owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wS, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
@@ -97,7 +102,8 @@ claims(w2a, K, v_compare) :- first_wave(K).
 claims(w3a, K, v_geometry) :- family(K, graph), first_wave(K).
 claims(w11a, K, v_test) :- first_wave(K).
 claims(W, K, L) :- row_of(W, K), lens(L), not shared(L), not waived(K, L, _).
-claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _).
+claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _), not first_wave(K).
+claims(wFa, K, v_frames) :- first_wave(K).
 claims(wZ, K, v_zoom) :- kind(K), not waived(K, v_zoom, _).
 claims(wD, K, v_docs) :- kind(K).
 

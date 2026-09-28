@@ -16,10 +16,10 @@ export type Mark = { label: string; tags: string[]; from: string[]; on: string[]
 export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[] };
 
 const RELS: Record<DrawKind, [string, number][]> = {
-  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3]],
-  argument: [['node', 1], ['link', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2]],
-  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2]],
-  table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2]],
+  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2]],
+  argument: [['node', 1], ['link', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2]],
+  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2]],
+  table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
 };
 const VARS = ['A', 'B', 'C', 'D'];
 
@@ -103,6 +103,31 @@ const order = (xs: string[]) => [...new Set(xs)].sort((a, b) => (/^-?\d+$/.test(
 export function grid(v: View) {
   const vals = v.facts.filter((f) => f.rel === 'value');
   return { vals, rows: order(vals.map((f) => f.args[0])), cols: order(vals.map((f) => f.args[1])) };
+}
+
+/** A view's frames, when its marks name one (`A mark M is in the frame F`): a view per frame, in order (numbers by value, else by name), each
+ *  holding the facts about its marks and about marks in no frame, and each after the first compared with the one before (a mark new, gone). */
+export function framesOf(v: View): { key: string; view: View }[] | null {
+  const of = new Map(v.facts.filter((f) => f.rel === 'frame').map((f) => [f.args[0], f.args[1]]));
+  if (!of.size) return null;
+  const keys = [...new Set(of.values())].sort((a, b) => (/^-?\d+$/.test(a) && /^-?\d+$/.test(b) ? Number(a) - Number(b) : 0) || a.localeCompare(b));
+  const one = (k: string): View => {
+    const facts = v.facts.filter((f) => f.rel !== 'frame' && (!of.has(f.args[0]) || of.get(f.args[0]) === k));
+    const ids = new Set(facts.flatMap((f) => f.rel === 'value' ? [f.args[0]] : f.rel === 'message' ? [f.args[0]] : f.args.filter((a) => v.marks[a])));
+    return { ...v, facts, marks: Object.fromEntries(Object.entries(v.marks).filter(([id]) => ids.has(id))), cells: v.cells, notes: [] };
+  };
+  // across frames a mark is the same by its label ($on(work_am, mon) and $on(work_am, tue) both read work_am): one only now is new, one only before is gone
+  const label = (w: View) => new Set(Object.values(w.marks).map((m) => m.label));
+  return keys.map((key, i) => {
+    const now = one(key); if (!i) return { key, view: now };
+    const before = one(keys[i - 1]), was = label(before), is = label(now);
+    for (const [id, m] of Object.entries(now.marks)) if (!was.has(m.label)) now.marks[id] = { ...m, tags: [...m.tags, 'new'] };
+    for (const [id, m] of Object.entries(before.marks)) if (!is.has(m.label) && !now.marks[id]) {
+      now.marks[id] = { ...m, tags: [...m.tags, 'gone'] };
+      now.facts.push(...before.facts.filter((f) => f.args[0] === id).map((f) => ({ ...f, change: 'gone' as const })));
+    }
+    return { key, view: now };
+  });
 }
 
 /** What the picture holds, counted: the verdict of a draw line. */

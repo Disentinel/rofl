@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[] };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -51,6 +51,14 @@ export async function run() {
     const runs = nb.getCells().filter((x) => ['rofl', 'datalog', 'natural'].includes(x.document.languageId));
     await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end');
     const said = (x: vscode.NotebookCell) => x.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
+    // small multiples: the renderer reports each picture's frames as it draws them
+    if (c.frames) {
+      const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
+      if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
+      let got: { kind: string; frames: string[] }[] = [];
+      for (const end = Date.now() + 45_000; !got.some((d) => d.frames.length) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) got = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+      if (!got.some((d) => d.frames.join() === c.frames!.join())) bad.push(`${c.file}: the renderer drew the frames ${JSON.stringify(got)}, not [${c.frames}]`);
+    }
     if (c.pin) {
       const view = runs.flatMap((x) => x.outputs).flatMap((o) => o.items).filter((i) => i.mime === VIEW_MIME).map((i) => JSON.parse(new TextDecoder().decode(i.data)).view)[0];
       if (!view?.facts.some((f: { literal: string }) => `${f.literal}.\n` === c.pin)) bad.push(`${c.file}: the picture does not carry the pinned ${c.pin.trim()}`);

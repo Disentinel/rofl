@@ -19,6 +19,7 @@ export const activate = (ctx: Ctx) => {
           why: (literal: string, into: HTMLElement) => { const id = ++asked; waiting.set(id, into); talk({ why: literal, notebook, id }); },
           pin: (facts: string) => talk({ pin: facts, notebook }),
           laid: (facts: string[]) => talk({ laid: facts, notebook }),
+          drawn: (what: { frames: string[] }) => talk({ drawn: { kind: view.kind, ...what }, notebook }),
         }),
       });
     },

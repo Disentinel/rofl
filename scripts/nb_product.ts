@@ -287,6 +287,7 @@ const PICTURE: [string, string[], (o: Out) => boolean][] = [
   ['time: messages draw as a sequence diagram, the unanswered call crossed', ['checkout-sequence.rofl.md'], (q) => is(q, 1) && has(q, 'sequenceDiagram') && has(q, 'p1-xp3: c3 [unanswered, failing] at 4') && has(q, 'p2->>p1: $reply(c2) at 3')],
   ['table: a Markdown table, the cells the audits name marked', ['coverage.rofl.md'], (m) => is(m, 1) && has(m, '| k_a [failing] | done | open [failing] |') && has(m, '| k_b | claimed | waived |')],
   ['argument: Argdown, a refutation as -, the grade and the unknown as hashtags', ['deploy-argument.rofl.md'], (a) => is(a, 0) && has(a, '[safe_to_ship] #contested\n      + <canary_clean>\n      - <incident_4711>') && has(a, '[cheap_to_run] #unknown')],
+  ['frames: small multiples, a Gantt chart a day, a bar new against the day before', ['spat-week.rofl.md'], (w) => is(w, 1) && has(w, '    frame 4:') && has(w, 'acme [new] :active, ') && has(w, 'dentist [gone] :done, ')],
 ];
 const picMutants: [string, string][] = [
   ['draw-flow', drawMutant('draw-flow', 'notebook/draw-graph.ts', /ts\.includes\('dangling'\) \|\| ts\.includes\('gone'\) \? '-\.->' : '-->'/, () => `'-->'`)],
@@ -295,6 +296,7 @@ const picMutants: [string, string][] = [
   ['draw-sequence', drawMutant('draw-sequence', 'notebook/draw-time.ts', /\(ts\.includes\('gone'\) \? '--x' : '-x'\)/, () => `'->>'`)],
   ['draw-table', drawMutant('draw-table', 'notebook/draw-table.ts', /\(tags\(r, c\)\.length \? ` \[\$\{tags\(r, c\)\.join\(', '\)\}\]` : ''\)/, () => `''`)],
   ['draw-argdown', drawMutant('draw-argdown', 'notebook/draw-argument.ts', /\$\{attack \? '-' : '\+'\}/, () => '+')],
+  ['draw-frames', drawMutant('draw-frames', 'notebook/draw.ts', /if \(!of\.size\) return null;/, () => 'return null;')],
 ];
 const picture = ([, [f, ...rest]]: typeof PICTURE[number], root: string) => cli([VIS(root, f), ...rest], {}, root);
 // a what-if drawn: a retraction adds marks as well as removing them; a head close to a declared sentence is said
