@@ -315,6 +315,7 @@ Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, s
 --all       every answer of every line, in the text and in the JSON; runs in this process, not the kept kernel
 The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
 ROFL_NB_DAEMON=0 runs in this process instead.
+New here? Play examples/tutorial: six levels of a few minutes, one new word each, from examples/tutorial/1-what-ships.rofl.md.
 Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);

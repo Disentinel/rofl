@@ -13,6 +13,10 @@ and the `claude` CLI only to translate natural-language cells. No checkout of th
     rofl-nb review.rofl.md                # a world of changes and teams, no code
     rofl-nb small.rofl.md                 # a question over small.js with the JS model
 
+New here? The tutorial is a game in six short levels, one new word each:
+
+    cd ~/rofl-examples/tutorial && rofl-nb 1-what-ships.rofl.md
+
 In VS Code: open the folder, open `review.rofl.md`, Run All. A `.rofl.md` anywhere on disk opens
 as a notebook. To ask about your own code, name it in the front matter: `model: js` and
 `code:` with paths or globs relative to the notebook (`- ../src/**/*.ts`). What a cell can say about
