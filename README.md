@@ -1,3 +1,7 @@
+> **Using the notebook?** Start with [guide/QUICKSTART.md](guide/QUICKSTART.md):
+> install, the tutorial, a notebook of your own and one over your code.
+> The rest of this page is the language and the repository.
+
 # ROFL v1
 
 **ROFL** — *Relation-Oriented Fixpoint Language*. A Datalog-family language with

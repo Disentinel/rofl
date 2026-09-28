@@ -1,0 +1,38 @@
+// npm run guide — the user's guide (guide/*.md) shows the tool's real output, never a hand-written one.
+// `<!-- BEGIN run DIR: rofl-nb ARGS -->` runs the command line in DIR and writes what it printed on stdout;
+// `run+exit` adds the exit code; `| head -N` keeps the first N lines. `<!-- BEGIN file PATH -->` writes the file.
+// `-- --check` fails if a block differs from its render; `npm run dist` runs it.
+import { spawnSync } from 'node:child_process';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url)), GUIDE = path.join(ROOT, 'guide');
+const BLOCK = /(<!-- BEGIN (run\+exit|run|file) ([^:>]+?)(?:: (.+?))? -->\n)[\s\S]*?(<!-- END \2 -->)/g;
+
+function render(kind: string, where: string, cmd?: string): string {
+  if (kind === 'file') {
+    const text = readFileSync(path.join(ROOT, where), 'utf8').trimEnd();
+    const fence = text.includes('```') ? '````' : '```';
+    return `${fence}${where.endsWith('.md') ? 'markdown' : where.endsWith('.js') ? 'js' : ''}\n${text}\n${fence}`;
+  }
+  const [line, head] = cmd!.split(' | head -');
+  const args = line.split(' ').slice(1);
+  const r = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), ...args],
+    { cwd: path.join(ROOT, where), encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_NB_DAEMON: '0', ROFL_NB_LIMIT: '120' } });
+  if (r.error || r.status === null) throw new Error(`${where}: ${line}: ${r.error?.message ?? 'killed'}`);
+  let out = r.stdout.trimEnd().split('\n');
+  if (head) out = out.slice(0, Number(head));
+  return ['```', `$ ${cmd}`, ...out, ...(kind === 'run+exit' ? ['$ echo $?', String(r.status)] : []), '```'].join('\n');
+}
+
+const check = process.argv.includes('--check');
+let stale = 0;
+for (const f of readdirSync(GUIDE).filter((f) => f.endsWith('.md'))) {
+  const p = path.join(GUIDE, f), doc = readFileSync(p, 'utf8');
+  const out = doc.replace(BLOCK, (_, begin, kind, where, cmd, end) => begin + render(kind, where.trim(), cmd) + '\n' + end);
+  if (out === doc) continue;
+  if (check) { console.error(`STALE guide/${f}: run \`npm run guide\``); stale++; }
+  else { writeFileSync(p, out); console.log(`wrote guide/${f}`); }
+}
+process.exit(stale ? 1 : 0);
