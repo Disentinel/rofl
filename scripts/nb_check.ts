@@ -130,6 +130,13 @@ const xdirRed = planted('xdir-red', 'xdir.rofl.md', (t) => t, [['examples/notebo
 const translateSlow = planted('tr-slow', 'review.rofl.md', withNatural);
 // a relative require the model cannot resolve: the never over the rest holds only as far as the model sees
 const cjsLost = planted('cjs-lost', 'cjs.rofl.md', (t) => t, [['examples/notebook/cjs/cart.js', `${readFileSync(path.join(NB, 'cjs/cart.js'), 'utf8')}\nexports.tax = require('./missing');\n`], ['examples/notebook/cjs/package.json', readFileSync(path.join(NB, 'cjs/package.json'), 'utf8')]]);
+// a name in a question over code: a node is not its name, so a never over the name can only hold; the same name misspelt in a world, and one only a cell's rule mentions
+put(path.join(tmp, 'named/fact.js'), 'export function factorial(n) {\n  return n <= 1 ? 1 : n * factorial(n - 1);\n}\n');
+const namedFront = '---\nmodel: js\ncode:\n  - fact.js\n---\n\n';
+const named = path.join(tmp, 'named/named.rofl.md'), selfCall = path.join(tmp, 'named/self.rofl.md');
+put(named, `${namedFront}\`\`\`rofl\nnever \`factorial\` calls \`factorial\`\nnever \`nosuchfunction\` calls some function\n\`\`\`\n`);
+put(selfCall, `${namedFront}\`\`\`rofl\nnever F calls F\n\`\`\`\n`);
+const misspelt = planted('misspelt', 'review.rofl.md', withCell('A change C is escalated if C is blocked by `legal`.\n\nnever C is blocked by `legal`\nnever C is blocked by `paymnets`'));
 // a rule that climbs for ever
 const runaway = path.join(tmp, 'runaway/runaway.rofl.md');
 put(runaway, '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
@@ -204,13 +211,14 @@ const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
 const layering = node('scripts/nb_layers.ts', []);
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy, nm, nmSelf, nmWorld] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
   cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
   cli([path.join(NB, 'spat.rofl.md')]), cli([excised, '--json']), cli([without, '--json']), cli([holey]),
   cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]), cli([runaway], { ROFL_NB_LIMIT: '3' }), cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
+  cli([named]), cli([selfCall]), cli([misspelt]),
 ]);
 const layered = await layering;
 const [keptOk, keptStale] = await keptRuns;
@@ -285,6 +293,11 @@ check('E3 an excise in the notebook moves the lines the same as the notebook ove
   return moved.length > 0 && [...before].every(([t, n]) => (said.get(t)?.[0] ?? n) === n && (said.get(t)?.[1] ?? n) === after.get(t));
 })(), { code: ex.code, out: (ex.stdout ?? '') + (wo.stdout ?? '') });
 check('E5 a never over a rule that met an expression it could not evaluate holds only as far as it sees', is(hol, 3) && has(hol, 'note: the rule for short name met an expression it could not evaluate') && has(hol, 'never short_name(C, L)  ->  holds as far as it sees · it rests on short name'), hol);
+check('I1 a never over a backticked name no fact or rule mentions holds only as far as it sees, and says to ask by variable or by name', is(nm, 3) && has(nm, 'never `factorial` calls `factorial`  ->  holds as far as it sees · `factorial` names nothing in the model')
+  && has(nm, 'ask with a variable (never X calls X) or by name, as in: F answers to "factorial"') && has(nm, 'never `nosuchfunction` calls some function  ->  holds as far as it sees · `nosuchfunction` names nothing'), nm);
+check('  and with a variable it fails on the function that calls itself', is(nmSelf, 1) && has(nmSelf, 'never F calls F  ->  FAILS · 1') && has(nmSelf, '[function factorial() at fact.js:1]'), nmSelf);
+check('  and over a world: a misspelt name is said, one a cell\'s rule mentions is not, one a fact has is not (review)', is(nmWorld, 3) && has(nmWorld, 'never C is blocked by `paymnets`  ->  holds as far as it sees · `paymnets` names nothing in the model, so this line cannot match: check the spelling')
+  && has(nmWorld, 'never C is blocked by `legal`  ->  holds\n') && !has(review, 'names nothing'), nmWorld);
 check('H2 a rule that climbs for ever stops at ROFL_NB_LIMIT, says the budget ran out, exit 3', is(climb, 3) && has(climb, '? n(5)  ->  1 answer · the budget ran out before every answer was found') && climb.ms! < 20_000, climb);
 check('H2 the same runaway with the time far off stops at ROFL_NB_MEMORY gigabytes of heap instead, exit 3', is(heavy, 3) && has(heavy, 'the budget ran out') && heavy.ms! < 30_000, heavy);
 check('F1 an empty relation asked in one book the program writes in another says which', has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), fr);

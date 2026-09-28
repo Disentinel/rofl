@@ -1,13 +1,13 @@
 // The notebook's engine side: the JS model loaded once, then every run forks it, scans the code, adds the book's cells and answers their lines.
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
-import { parseProgram } from '../src/parser.ts';
+import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
 import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
-import { varsOf, canonTerm, mka, type Clause } from '../src/unify.ts';
+import { varsOf, canonTerm, mka, type Clause, type Term } from '../src/unify.ts';
 import type { FactRec, FactStore, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
@@ -112,6 +112,13 @@ function elsewhere(lit: string, program: string): string | null {
   for (const x of program.matchAll(new RegExp(`^${m[1]}(?:\\[(\\w+)\\])?\\(`, 'gm'))) books.add(x[1] ?? 'main');
   books.delete(asked);
   return books.size ? `${m[1]} is written in ${[...books].map((b) => `[${b}]`).join(', ')}, not in [${asked}]: ask ${m[1]}[${[...books][0]}](...)` : null;
+}
+
+/** Every atom a term mentions. */
+function atomsIn(x: unknown, into = new Set<string>()): Set<string> {
+  if (Array.isArray(x)) for (const y of x) atomsIn(y, into);
+  else if (x && typeof x === 'object') { const t = x as Term; if (t.k === 'a') into.add(t.name); else for (const v of Object.values(x)) atomsIn(v, into); }
+  return into;
 }
 
 const ground = (lit: string, b: Record<string, string>): string => lit.replace(/\b[A-Z_][A-Za-z0-9_]*\b/g, (v) => b[v] ?? v);
@@ -327,20 +334,46 @@ export class Host {
       outs[at.cell].notes.push(`the rule for ${at.rel.replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
     }
     const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
+    // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
+    let known: Set<string> | null = null;
+    const worlds = base ? [base, f] : [f];
+    const nameless = (lit: string, text: string): string | undefined => {
+      let l: ReturnType<typeof parseLiteral>;
+      try { l = parseLiteral(lit); } catch { return; }
+      const want = atomsIn(l.args);
+      if (!want.size) return;
+      if (!known) { known = new Set(); for (const w of worlds) for (const r of w.store.allFacts()) atomsIn(r.args, known); }
+      const name = [...want].find((x) => !known!.has(x));
+      if (!name) return;
+      // the sentence that names a node by this name, the node one the asked relation holds first, the shortest, a conclusion over a given fact
+      const held = new Set<string>();
+      if (l.persp.k === 'a') for (const w of worlds) for (const r of w.store.relPersp(l.rel, l.persp.name)) atomsIn(r.args, held);
+      const rank = (r: FactRec) => [r.args.some((t) => t.k === 'a' && held.has(t.name)) ? 0 : 1, r.args.length, r.base ? 1 : 0];
+      const before = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+      let by: FactRec | undefined;
+      for (const w of worlds) for (const r of w.store.allFacts()) {
+        if (!r.args.some((t) => t.k === 's' && t.v === name) || !r.args.some((t) => t.k === 'a' && t.name in nodes)) continue;
+        if ((!by || before(rank(r), rank(by)) < 0) && vocab.say(r.key)) by = r;
+      }
+      const v = 'FGHJK';
+      const asked = by && vocab.say(`${by.rel}[${by.persp}](${by.args.map((t, j) => t.k === 's' && t.v === name ? canonTerm(t) : v[j] ?? `X${j}`).join(', ')})`);
+      const byName = asked ? `as in: ${asked}` : 'with a sentence npm run nb -- vocab lists';
+      return `\`${name}\` names nothing in the model, so this line cannot match: ${Object.keys(files).length ? `a thing of the code is a node, not its name; ask with a variable (${text.split(`\`${name}\``).join('X')}) or by name, ${byName}` : `check the spelling${asked ? `, or ask by name, ${byName}` : ''}`}`;
+    };
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
         if (!a.lit) { const w = bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${w ? BARE(w) : 'no sentence reads this question'}`); continue; }
         if (a.kind === 'excise') continue;
         try {
-          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined }); continue; }
-          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text) }); continue; }
+          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text) }); continue; }
+          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text), note: nameless(a.lit, a.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
-        const note = !q.unpopulatable && holedUnder(relOf(a.lit)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
+        const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
