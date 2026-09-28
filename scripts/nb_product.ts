@@ -335,6 +335,9 @@ const proto = (name: string, untracked = false) => {
   git('init', '-q'); git('add', '-f', ...(untracked ? [] : ['examples']), 'src', '.env', 'keys', 'conf');
   // a submodule's gitlink: tracked, and a directory
   mkdirSync(path.join(repo, 'vendor/sub'), { recursive: true }); git('update-index', '--add', '--cacheinfo', `160000,${'1'.repeat(40)},vendor/sub`);
+  // another repository whose index tracks untracked.ts, for GIT_DIR and GIT_WORK_TREE to point at
+  const other = `${repo}-other`; mkdirSync(other); spawnSync('git', ['init', '-q'], { cwd: other });
+  spawnSync('git', ['add', '-f', 'examples', 'untracked.ts'], { cwd: repo, env: { ...process.env, GIT_DIR: path.join(other, '.git'), GIT_WORK_TREE: repo } });
   return nbFile;
 };
 const READS = ['list src/**', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
@@ -350,7 +353,7 @@ process.stdin.on('data', (d) => { i += d; }).on('end', () => {
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
 const protoRun = (name: string, env: Record<string, string> = {}, root = ROOT, forever = false, untracked = false) => { const nb = proto(name, untracked), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root).then((o) => ({ o, prompts: m.prompts(), nb })); };
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
-const RUNS = ['plain', 'small', 'forever', 'untracked', 'home'];
+const RUNS = ['plain', 'small', 'forever', 'untracked', 'home', 'gitenv'];
 /** Each planted defect, and the runs that can see it: the rest are not run for it. */
 const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, ''],
@@ -364,6 +367,7 @@ const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
   ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
   ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
   ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, ''],
+  ['git environment', 'notebook/reader.ts', /, env: gitEnv\(\) \}\);/g, ' });', ['gitenv']],
   ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
   ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
   ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever']],
@@ -379,6 +383,8 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     plain: [{}, false, false], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, false], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, false],
     // a notebook git does not track, and a repository that is the home directory: nothing is read
     untracked: [{}, false, true], home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, false],
+    // git's own variables pointing at another repository, which tracks untracked.ts
+    gitenv: [{ GIT_DIR: path.join(tmp, `proto-${tag}-gitenv-other/.git`), GIT_WORK_TREE: path.join(tmp, `proto-${tag}-gitenv`) }, false, false],
   };
   const got = Object.fromEntries(await Promise.all(runs.map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2])] as const)));
   const { plain, small, forever } = got, all = Object.values(got).flatMap((r) => r.prompts).join('\n');
