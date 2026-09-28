@@ -1,7 +1,7 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
 // `-- --mutants` codeline, marks and cells; `translate`, `revert`, `wrap` and `startup` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -9,6 +9,9 @@ import * as path from 'node:path';
 const ROOT = new URL('../..', import.meta.url).pathname, EXT = path.join(ROOT, 'vscode');
 const CODE = process.env.ROFL_VSCODE ?? '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-vscode-'));
+process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));
+// a VS Code left running would write its user dir back after the removal
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
 const t0 = performance.now();
 
 // The notebooks: review with a never planted to fail, review as it is, small with a function that calls itself.
@@ -35,7 +38,7 @@ esac
 chmodSync(fake, 0o755);
 
 const cli = (file: string, out: string) => new Promise<string>((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json']);
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json'], { env: { ...process.env, ROFL_NB_DAEMON: '0' } });
   let s = ''; p.stdout.on('data', (d) => { s += d; });
   p.on('close', () => done(put(out, s)));
 });
@@ -103,5 +106,4 @@ for (const { v, red, s } of results) {
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${v === 'as it is' ? 'as it is: green' : `planted "${v}": red`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
 }
 console.log(`\n${results.length - failed}/${results.length} VS Code runs as expected, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
-if (failed) console.log(`VS Code's own output is in ${tmp}`); else rmSync(tmp, { recursive: true, force: true });
 process.exit(failed ? 1 : 0);
