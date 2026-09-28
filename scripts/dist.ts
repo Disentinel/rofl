@@ -15,6 +15,8 @@ const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf
 const NODE = '>=22.0.0', VSCODE = '^1.101.0';   // fs.globSync is Node 22; VS Code 1.101 is the first on Node 22 (Electron 35)
 const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
 rmSync(OUT, { recursive: true, force: true });
+// the guide shows the tool's own output; a stale block is a build error, not a doc that lies
+execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
 
 // every module the command line, the kept kernel and the extension reach by relative imports
 const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts'];
@@ -57,7 +59,8 @@ const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parse
 writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is @babel/parser ${babel} (https://github.com/babel/babel), under the MIT license:\n\n${readFileSync(path.join(ROOT, 'node_modules/@babel/parser/LICENSE'), 'utf8')}`);
 for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 const tutorial = (readdirSync(path.join(ROOT, 'examples/tutorial'), { recursive: true }) as string[]).filter((f) => f.endsWith('.md')).map((f) => `examples/tutorial/${f}`);
-for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js', ...tutorial]) {
+const start = readdirSync(path.join(ROOT, 'examples/start')).map((f) => `examples/start/${f}`);
+for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js', ...tutorial, ...start]) {
   // a shipped notebook still tells the reader to run it from the checkout; point it at the installed command instead
   const text = f.endsWith('.md') ? readFileSync(path.join(ROOT, f), 'utf8').replace(/npm run nb -- (translate )?examples\/(notebook|tutorial)\//g, 'rofl-nb $1') : null;
   for (const dst of [path.join(PKG, f), path.join(OUT, f)]) {
@@ -65,9 +68,11 @@ for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 
     else cpSync(path.join(ROOT, f), dst);
   }
 }
-const install = readFileSync(path.join(ROOT, 'scripts/dist-install.md'), 'utf8').replaceAll('<v>', version).replaceAll('<ext>', ext.version).replaceAll('<id>', `${ext.publisher}.${ext.name}`).replaceAll('<node>', NODE).replaceAll('<vscode>', VSCODE);
-writeFileSync(path.join(PKG, 'README.md'), install);
-writeFileSync(path.join(OUT, 'INSTALL.md'), install);
+const guide = (f: string) => readFileSync(path.join(ROOT, 'guide', f), 'utf8').replace(/<!-- (BEGIN|END) [^>]*-->\n/g, '');
+if (!guide('INSTALL.md').includes(`Node ${NODE.match(/\d+/)![0]} or later`) || !guide('INSTALL.md').includes(`VS Code ${VSCODE.slice(1).replace(/\.0$/, '')} or later`)) throw new Error(`guide/INSTALL.md does not ask for Node ${NODE} and VS Code ${VSCODE}`);
+for (const f of ['QUICKSTART.md', 'CONCEPTS.md', 'WRITING.md', 'AGENTS.md', 'CHEATSHEET.md', 'INSTALL.md']) writeFileSync(path.join(PKG, f), guide(f));
+writeFileSync(path.join(PKG, 'README.md'), guide('README-npm.md'));
+writeFileSync(path.join(OUT, 'INSTALL.md'), guide('INSTALL.md'));
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
   name: 'rofl-nb', version, description: 'The ROFL notebook: run a .rofl.md notebook from the command line; rofl-lsp, a language server for .rofl and .rofl.md', license: root.license, type: 'module',
   bin: { 'rofl-nb': 'notebook/rofl-nb.js', 'rofl-lsp': 'lsp/rofl-lsp.js' }, engines: { node: NODE }, repository: root.repository,
@@ -75,13 +80,13 @@ writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 
 cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
-for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json', 'language-configuration.json']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
+for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json', 'language-configuration.json', 'icon.png', 'file-light.png', 'file-dark.png', 'CHANGELOG.md']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
 for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES']) cpSync(path.join(PKG, f), path.join(VSIX, f));
-writeFileSync(path.join(VSIX, 'README.md'), install);
+writeFileSync(path.join(VSIX, 'README.md'), guide('README-marketplace.md'));
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
 writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,
-  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
+  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', '*.png', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
 execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
 for (const f of [`rofl-nb-${version}.tgz`, vsix]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);
