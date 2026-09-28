@@ -1,7 +1,7 @@
 // npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook, print what every cell said
 // npm run nb -- translate <file.rofl.md>                 write a rofl cell under every natural cell that has none
 // Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
-// 3: every never holds, some only as far as the model sees.
+// 3: every never holds, some only as far as the model sees or ROFL_NB_LIMIT let it.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
@@ -18,6 +18,8 @@ import { viaDaemon } from './serve.ts';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty, --all every one
+/** How long a run's evaluation may take, in ms: a rule that climbs for ever stops there and its notebook is exit 3. */
+export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk. */
 export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string> } {
@@ -60,7 +62,7 @@ const CODE = /\.[cm]?[jt]sx?$/;
 const isFile = (p: string) => { try { return statSync(p).isFile(); } catch { return false; } };
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
-export function runFile(file: string, kernel = new Kernel(), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string> } {
+export function runFile(file: string, kernel = new Kernel({ limit: LIMIT }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string> } {
   const { input, errors, paths } = inputs(file, text, unsaved);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
@@ -167,7 +169,7 @@ const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].repla
 export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
   const said: string[] = [], tmp = `${file}.${process.pid}.tmp`;
   let code = 0;
-  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel(), (line) => process.stderr.write(line + '\n'))) {
+  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ limit: LIMIT }), (line) => process.stderr.write(line + '\n'))) {
     said.push(...r.said);
     code = r.code || code;
     if (r.text !== undefined) { writeFileSync(tmp, r.text); renameSync(tmp, file); }
@@ -296,7 +298,8 @@ Asking lines, one per line, in a rofl or datalog cell:
   unsure S     under a never: what it could not see    why S        a proof of one answer
   whynot S     why S does not hold                     excise F     which lines answer differently without F
   extends R    this cell adds rules to R on purpose
-Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees.
+Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees,
+      or the evaluation ran past ROFL_NB_LIMIT seconds (120) and answers what it found.
 --json      the whole result as JSON (the first fifty answers per line)       --cell N   only cell N
 --all       every answer of every line, in the text and in the JSON; runs in this process, not the kept kernel
 The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
@@ -328,7 +331,7 @@ if (isMain) {
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: NbResult;
   const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
-  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, limit: LIMIT })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
   process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN)) + '\n', () => process.exit(EXIT[r.status]));

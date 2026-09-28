@@ -216,6 +216,8 @@ export class Rofl {
   retainTicks: number | undefined;
   /** See `EvalOpts.space`; undefined leaves the kernel's default. */
   private readonly space: number | undefined;
+  /** When every later evaluation of this world and of its forks stops, in `performance.now()` ms, as if its budget ran out. */
+  deadline = Infinity;
   diagnostics: string[] = [];
   private qn = 0;
   private loadn = 0;
@@ -284,6 +286,7 @@ export class Rofl {
   fork(): Rofl {
     const r = new Rofl({ naive: this.naive, reuse: this.reuse,
       evaluator: this.evaluator, retainTicks: this.retainTicks, space: this.space });
+    r.deadline = this.deadline;
     r.store = this.store.clone();
     return r;
   }
@@ -700,7 +703,7 @@ export class Rofl {
    *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
    *  through `ensure`/`prepared` and must not be able to disagree about it. */
   private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space };
+    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space, deadline: this.deadline };
     return this.evaluator === 'strata'
       ? new Evaluation(this.store, opts)
       : new RoundEvaluation(this.store, opts);

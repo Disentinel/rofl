@@ -9,7 +9,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
-import { runFile } from './cli.ts';
+import { LIMIT, runFile } from './cli.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 type Reply = { result: ReturnType<typeof runFile> } | { error: string };
@@ -70,7 +70,7 @@ function serve(sock: string) {
       if (!text.includes('\n')) return;
       const { file, quit } = JSON.parse(text) as { file: string; quit?: boolean };
       if (quit) { c.end(); try { unlinkSync(sock); } catch { /* gone already */ } process.exit(0); }
-      const k = kernels.get(file) ?? new Kernel();
+      const k = kernels.get(file) ?? new Kernel({ limit: LIMIT });
       let reply: Reply;
       try { reply = { result: runFile(file, k) }; kernels.set(file, k); } catch (e) { reply = { error: (e as Error).message }; kernels.delete(file); }
       c.end(JSON.stringify(reply));

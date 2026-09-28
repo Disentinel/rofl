@@ -25,7 +25,7 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
-export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string };
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation ran out of its limit */ partial?: boolean };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
@@ -212,10 +212,12 @@ export class Host {
     return { ok: l.ok, diagnostics: l.diagnostics.slice(0, 5), ms: Math.round(performance.now() - t) };
   }
 
-  /** `data`: files that exist beside the code and are not code, which a specifier may name. */
-  run(code: string | Record<string, string>, cells: Cell[], data: string[] = []): RunOut {
+  /** `data`: files that exist beside the code and are not code, which a specifier may name.
+   *  `limit`: ms every evaluation of this run may take together; past it the run stops as when the budget runs out. */
+  run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], limit = Infinity): RunOut {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
+    for (const w of [this.core, this.shell]) if (w) w.deadline = performance.now() + limit;
     const home = this.home;
     this.last = null;   // the last world held while the next is built doubles the heap: 70 s runs took 100-115 s in a kept kernel
     const t = performance.now();
@@ -276,11 +278,11 @@ export class Host {
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
-    let unresolved: string[] = [];
-    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error });
+    let unresolved: string[] = [], partial = false;
+    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial });
     let base: Rofl | null = null;
     if (layered) {
-      try { base = this.evaluated(files, sc); } catch (e) { return done((e as Error).message); }
+      try { base = this.evaluated(files, sc); partial = base.store.partialEval; } catch (e) { return done((e as Error).message); }
     }
     lap('model');
     const f = base ? this.shell!.fork() : this.core.fork();
@@ -293,7 +295,7 @@ export class Host {
       texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
     }
     lap('load');
-    try { f.evaluate(BUDGET); } catch (e) { return done((e as Error).message); }
+    try { partial ||= f.evaluate(BUDGET).partial; } catch (e) { return done((e as Error).message); }
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
     const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
@@ -348,7 +350,7 @@ export class Host {
       if (!cut.length || refused.has(i)) return;
       const g = f.fork();
       for (const a of cut) { const r = g.retract(a.lit); if (!r.ok) outs[i].errors.push(`${a.text}: ${r.diagnostics[0]}`); }
-      try { g.evaluate(BUDGET); } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
+      try { partial ||= g.evaluate(BUDGET).partial; } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
       const rows: Row[] = [];
       const said = (lit: string) => vocab.say(lit) ?? lit;
       parts.forEach((_, j) => {
@@ -401,8 +403,7 @@ export class Host {
     const b = this.core!.fork();
     const given = b.assert(sc.text);
     if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
-    b.evaluate(BUDGET);
-    return this.base = b;
+    return b.evaluate(BUDGET).partial ? b : this.base = b;   // a world cut short by the limit is not kept for the next run
   }
 
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */

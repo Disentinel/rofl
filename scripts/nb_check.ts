@@ -12,13 +12,13 @@ const NB = path.join(ROOT, 'examples/notebook');
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'nb-check-'));
 const t0 = performance.now();
 
-type Out = { code: number; out: string; stdout?: string };
+type Out = { code: number; out: string; stdout?: string; ms?: number };
 const node = (script: string, args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
-  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, script), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
+  const t = performance.now(), p = spawn(process.execPath, ['--experimental-strip-types', path.join(root, script), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
   let out = '', stdout = '';
   p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);
-  p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out, stdout }); });
+  p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out, stdout, ms: performance.now() - t }); });
 });
 const cli = (args: string[], env: Record<string, string> = {}, root = ROOT) => node('notebook/cli.ts', args, env, root);
 
@@ -129,6 +129,9 @@ const xdirRed = planted('xdir-red', 'xdir.rofl.md', (t) => t, [['examples/notebo
 const translateSlow = planted('tr-slow', 'review.rofl.md', withNatural);
 // a relative require the model cannot resolve: the never over the rest holds only as far as the model sees
 const cjsLost = planted('cjs-lost', 'cjs.rofl.md', (t) => t, [['examples/notebook/cjs/cart.js', `${readFileSync(path.join(NB, 'cjs/cart.js'), 'utf8')}\nexports.tax = require('./missing');\n`], ['examples/notebook/cjs/package.json', readFileSync(path.join(NB, 'cjs/package.json'), 'utf8')]]);
+// a rule that climbs for ever
+const runaway = path.join(tmp, 'runaway/runaway.rofl.md');
+put(runaway, '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
 
 // the kept kernel (notebook/serve.ts) answers what a fresh process answers, after a cell edit, a code edit and a kill -9; and a daemon
 // that keys its answer on the notebook's text alone, blind to the code, is caught by the same comparison
@@ -166,13 +169,13 @@ const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
 const layering = node('scripts/nb_layers.ts', []);
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
   cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
   cli([path.join(NB, 'spat.rofl.md')]), cli([excised, '--json']), cli([without, '--json']), cli([holey]),
-  cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]),
+  cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]), cli([runaway], { ROFL_NB_LIMIT: '3' }),
 ]);
 const layered = await layering;
 const [keptOk, keptStale] = await keptRuns;
@@ -247,6 +250,7 @@ check('E3 an excise in the notebook moves the lines the same as the notebook ove
   return moved.length > 0 && [...before].every(([t, n]) => (said.get(t)?.[0] ?? n) === n && (said.get(t)?.[1] ?? n) === after.get(t));
 })(), { code: ex.code, out: (ex.stdout ?? '') + (wo.stdout ?? '') });
 check('E5 a never over a rule that met an expression it could not evaluate holds only as far as it sees', is(hol, 3) && has(hol, 'note: the rule for short name met an expression it could not evaluate') && has(hol, 'never short_name(C, L)  ->  holds as far as it sees · it rests on short name'), hol);
+check('H2 a rule that climbs for ever stops at ROFL_NB_LIMIT, says the budget ran out, exit 3', is(climb, 3) && has(climb, '? n(5)  ->  1 answer · the budget ran out before every answer was found') && climb.ms! < 20_000, climb);
 check('F1 an empty relation asked in one book the program writes in another says which', has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), fr);
 check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
 check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);
