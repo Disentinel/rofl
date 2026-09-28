@@ -9,6 +9,10 @@
   "type": "module",
   "main": "./extension.ts",
   "activationEvents": ["onStartupFinished"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": false, "description": "A notebook reads the code files its front matter names, anywhere on disk, and its Translate command runs Claude on its text." },
+    "virtualWorkspaces": false
+  },
   "engines": {
     "vscode": "^1.132.0"
   },
@@ -21,8 +25,8 @@
       }
     ],
     "languages": [
-      { "id": "rofl", "aliases": ["ROFL"] },
-      { "id": "datalog", "aliases": ["Datalog"] },
+      { "id": "rofl", "aliases": ["ROFL"], "configuration": "./language-configuration.json" },
+      { "id": "datalog", "aliases": ["Datalog"], "configuration": "./language-configuration.json" },
       { "id": "natural", "aliases": ["Natural language"] }
     ],
     "grammars": [

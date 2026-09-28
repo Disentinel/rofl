@@ -49,6 +49,8 @@ process.argv[1] = fileURLToPath(new URL('./cli.js', import.meta.url));
 await import('./cli.js');
 `);
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
+const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parser/package.json'), 'utf8')).version;
+writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is @babel/parser ${babel} (https://github.com/babel/babel), under the MIT license:\n\n${readFileSync(path.join(ROOT, 'node_modules/@babel/parser/LICENSE'), 'utf8')}`);
 for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js']) {
   // a shipped .rofl.md still tells the reader to run it from the checkout; point it at the installed command instead
@@ -68,13 +70,13 @@ writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 
 cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
-for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
-cpSync(path.join(ROOT, 'LICENSE'), path.join(VSIX, 'LICENSE'));
+for (const f of ['rofl.tmLanguage.json', 'datalog.tmLanguage.json', 'language-configuration.json']) cpSync(path.join(ROOT, 'vscode', f), path.join(VSIX, f));
+for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES']) cpSync(path.join(PKG, f), path.join(VSIX, f));
 writeFileSync(path.join(VSIX, 'README.md'), install);
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
 writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest, version, description: 'A .rofl.md opens as a notebook and runs through the ROFL notebook kernel',
-  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'LICENSE'], engines: { vscode: VSCODE }, repository: root.repository }, null, 2) + '\n');
+  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE }, repository: root.repository }, null, 2) + '\n');
 execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, `rofl-notebook-${version}.vsix`)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
 for (const f of [`rofl-nb-${version}.tgz`, `rofl-notebook-${version}.vsix`]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);

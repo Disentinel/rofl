@@ -10,14 +10,14 @@ const until = async (get, ms, what) => {
 };
 
 exports.run = async () => {
-  const { ROFL_DIST_EXTENSIONS: dir, ROFL_DIST_CASES: cases, ROFL_DIST_REPORT: report, ROFL_DIST_SHOT: shot } = process.env, bad = [];
-  const ext = vscode.extensions.getExtension('rofl.rofl-notebook');
+  const { ROFL_DIST_EXTENSIONS: dir, ROFL_DIST_ID: id, ROFL_DIST_CASES: cases, ROFL_DIST_REPORT: report, ROFL_DIST_SHOT: shot } = process.env, bad = [];
+  const ext = vscode.extensions.getExtension(id);
   if (!ext?.extensionPath.startsWith(dir)) bad.push(`the extension is ${ext ? `at ${ext.extensionPath}` : 'not there'}, not installed under ${dir}`);
   const api = ext && await ext.activate();
   for (const c of api ? JSON.parse(cases) : []) {
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
     await vscode.window.showNotebookDocument(nb);
-    await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+    await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: id });
     await vscode.commands.executeCommand('notebook.execute');
     const r = await until(() => api.result(nb.uri), 110_000, `a result for ${c.file}`).catch((e) => void bad.push(e.message));
     if (!r) continue;

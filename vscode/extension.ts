@@ -226,7 +226,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   /** An execution of the cell, choosing this kernel for the notebook if none is chosen; none while the cell is running. */
   async function execution(cell: vscode.NotebookCell) {
     try { return controller.createNotebookCellExecution(cell); } catch {}
-    await vscode.commands.executeCommand('notebook.selectKernel', { notebookEditor: vscode.window.visibleNotebookEditors.find((e) => e.notebook === cell.notebook), id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+    await vscode.commands.executeCommand('notebook.selectKernel', { notebookEditor: vscode.window.visibleNotebookEditors.find((e) => e.notebook === cell.notebook), id: 'rofl-kernel', extension: ctx.extension.id });
     try { return controller.createNotebookCellExecution(cell); } catch { return undefined; }
   }
   /** `words` asked for in an input box, where Claude's question, if it asked one, is the prompt. */
