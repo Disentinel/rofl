@@ -1,5 +1,5 @@
-// npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command, ROFL's version) and dist/rofl-<ext>.vsix (the editor, the
-// extension's own version from vscode/package.json), both plain JS.
+// npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command and the `rofl-lsp` language server, ROFL's version) and
+// dist/rofl-<ext>.vsix (the editor, the extension's own version from vscode/package.json), both plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -17,7 +17,7 @@ const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
 rmSync(OUT, { recursive: true, force: true });
 
 // every module the command line, the kept kernel and the extension reach by relative imports
-const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'vscode/extension.ts', 'vscode/worker.ts'];
+const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts'];
 const seen = new Set<string>();
 for (const q = [...ENTRIES]; q.length;) {
   const f = q.pop()!;
@@ -31,7 +31,7 @@ for (const f of seen) {
     .replace(/from '@babel\/parser'/g, `from '${path.relative(path.dirname(f), 'vendor/babel-parser.js').replace(/^(?!\.)/, './')}'`)
     .replace(/npm run nb -- /g, 'rofl-nb ');
   // an extension host that predates ES module extensions resolves `vscode` only for require
-  if (f === 'vscode/extension.ts') js = js.replace("import * as vscode from 'vscode';", "import { createRequire } from 'node:module';\nconst vscode = createRequire(import.meta.url)('vscode');");
+  if (f === 'vscode/extension.ts' || f === 'vscode/lsp.ts') js = js.replace("import * as vscode from 'vscode';", "import { createRequire } from 'node:module';\nconst vscode = createRequire(import.meta.url)('vscode');");
   if (f === 'notebook/cli.ts') {
     const help = "Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).";
     if (!js.includes(help)) throw new Error(`${f}: the help no longer names the examples as the build expects`);
@@ -41,13 +41,13 @@ for (const f of seen) {
   mkdirSync(path.dirname(path.join(PKG, f)), { recursive: true });
   writeFileSync(path.join(PKG, f.replace(/\.ts$/, '.js')), js);
 }
-// the command's entry asks for Node 22 before any import that needs it, then runs cli.js as the main module
-writeFileSync(path.join(PKG, 'notebook/rofl-nb.js'), `#!/usr/bin/env node
+// each command's entry asks for Node 22 before any import that needs it, then runs its module as the main one
+for (const [bin, main] of [['notebook/rofl-nb.js', './cli.js'], ['lsp/rofl-lsp.js', './server.js']]) writeFileSync(path.join(PKG, bin), `#!/usr/bin/env node
 const major = Number(process.versions.node.split('.')[0]);
-if (major < 22) { console.error(\`rofl-nb needs Node 22 or later; this is Node \${process.versions.node} — install Node 22 (nvm install 22)\`); process.exit(2); }
+if (major < 22) { console.error(\`${path.basename(bin, '.js')} needs Node 22 or later; this is Node \${process.versions.node} — install Node 22 (nvm install 22)\`); process.exit(2); }
 const { fileURLToPath } = await import('node:url');
-process.argv[1] = fileURLToPath(new URL('./cli.js', import.meta.url));
-await import('./cli.js');
+process.argv[1] = fileURLToPath(new URL('${main}', import.meta.url));
+await import('${main}');
 `);
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
 const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parser/package.json'), 'utf8')).version;
@@ -65,8 +65,8 @@ const install = readFileSync(path.join(ROOT, 'scripts/dist-install.md'), 'utf8')
 writeFileSync(path.join(PKG, 'README.md'), install);
 writeFileSync(path.join(OUT, 'INSTALL.md'), install);
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
-  name: 'rofl-nb', version, description: 'The ROFL notebook: run a .rofl.md notebook from the command line', license: root.license, type: 'module',
-  bin: { 'rofl-nb': 'notebook/rofl-nb.js' }, engines: { node: NODE }, repository: root.repository,
+  name: 'rofl-nb', version, description: 'The ROFL notebook: run a .rofl.md notebook from the command line; rofl-lsp, a language server for .rofl and .rofl.md', license: root.license, type: 'module',
+  bin: { 'rofl-nb': 'notebook/rofl-nb.js', 'rofl-lsp': 'lsp/rofl-lsp.js' }, engines: { node: NODE }, repository: root.repository,
 }, null, 2) + '\n');
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 

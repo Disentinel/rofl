@@ -27,6 +27,16 @@ exports.run = async () => {
     for (const x of runs) if (!x.outputs.length) bad.push(`${c.file}: cell ${x.index} has no output`);
     console.log(`${c.file}: ${r.status}, ${runs.length} cells, ${runs.filter((x) => x.outputs.length).length} with output, load ${r.ms.load} ms, run ${r.ms.run} ms`);
   }
+  // the language server of the installed extension: a broken rule is marked on its line, a hover says what a relation is; the window is left showing both
+  const rofl = process.env.ROFL_DIST_LSP, t0 = Date.now();
+  const doc = api && await vscode.workspace.openTextDocument(vscode.Uri.file(rofl));
+  const editor = doc && await vscode.window.showTextDocument(doc);
+  const d = doc && await until(() => vscode.languages.getDiagnostics(doc.uri).find((x) => x.source === 'rofl' && x.severity === vscode.DiagnosticSeverity.Error), 20_000, `a diagnostic on ${rofl}`).catch(() => undefined);
+  if (d?.range.start.line !== 2) bad.push(`${rofl}: the broken rule on line 3 is marked ${d ? `on line ${d.range.start.line + 1}` : 'nowhere'}`);
+  const hover = doc ? await vscode.commands.executeCommand('vscode.executeHoverProvider', doc.uri, new vscode.Position(2, 14)) : [];
+  if (!hover.some((h) => h.contents.some((c) => (c.value ?? String(c)).includes('**b**')))) bad.push(`${rofl}: no hover on b`);
+  if (editor) { editor.selection = new vscode.Selection(2, 14, 2, 14); await vscode.commands.executeCommand('editor.action.showHover'); await new Promise((f) => setTimeout(f, 1_000)); }
+  console.log(`${rofl}: language server, ${d ? 'marked' : 'not marked'}, ${Date.now() - t0} ms`);
   if (shot) { writeFileSync(`${shot}.ready`, ''); await until(() => existsSync(`${shot}.done`), 30_000, 'the screenshot').catch(() => {}); }
   writeFileSync(report, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));

@@ -3,7 +3,7 @@
 Needs Node <node> (`node -v`) for the command line, VS Code <vscode> for the editor,
 and the `claude` CLI only to translate natural-language cells. No checkout of the repository.
 
-    npm install -g ./rofl-nb-<v>.tgz                 # the `rofl-nb` command
+    npm install -g ./rofl-nb-<v>.tgz                 # the `rofl-nb` command and the `rofl-lsp` language server
     code --install-extension ./rofl-<ext>.vsix       # the editor, ROFL; add --force to replace the same version
 
 ## A first notebook
@@ -18,6 +18,12 @@ as a notebook. To ask about your own code, name it in the front matter: `model: 
 `code:` with paths or globs relative to the notebook (`- ../src/**/*.ts`). What a cell can say about
 code (`a function F may throw`, `a call C resolves to a function F`, ...) is listed by `rofl-nb vocab`;
 `rofl-nb vocab throw` lists those with the word.
+
+A `.rofl` file, and a `.rofl.md` reopened as text (Reopen Editor With… > Text Editor), gets the
+language server: errors on their lines, a sentence not read with the nearest sentences, hover, go to
+definition, references, the outline and completion. Another editor starts it as `rofl-lsp --stdio`.
+It reads the open files, the model it ships with and the `.rofl`/`.rofl.md` files a front matter's
+`reads:` names; it never reads `code:`, runs nothing and opens no port.
 
 ## For an agent
 

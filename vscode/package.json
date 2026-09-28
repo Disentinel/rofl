@@ -29,7 +29,7 @@
       }
     ],
     "languages": [
-      { "id": "rofl", "aliases": ["ROFL"], "configuration": "./language-configuration.json" },
+      { "id": "rofl", "aliases": ["ROFL"], "extensions": [".rofl"], "configuration": "./language-configuration.json" },
       { "id": "datalog", "aliases": ["Datalog"], "configuration": "./language-configuration.json" },
       { "id": "natural", "aliases": ["Natural language"] }
     ],

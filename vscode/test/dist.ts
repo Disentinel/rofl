@@ -41,6 +41,8 @@ if (Object.values(shipped).some((v) => !v)) bad.push(`the packages lack: ${Objec
 const pkg = path.join(DIST, 'rofl-nb/notebook/rofl-nb.js'), nb = path.join(tmp, 'nb');
 cpSync(path.join(DIST, 'examples'), nb, { recursive: true });
 const review = path.join(ROOT, 'examples/notebook/review.rofl.md');
+const broken = path.join(nb, 'broken.rofl');
+writeFileSync(broken, 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n');
 const [inTree, packaged, ...copies] = await Promise.all([
   node(['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), review, '--json']), node([pkg, review, '--json']),
   ...['review', 'small'].map((n) => node([pkg, `${n}.rofl.md`, '--json'], path.join(nb, 'notebook')))]);
@@ -51,6 +53,18 @@ const cases = ['review', 'small'].map((n, i) => {
   writeFileSync(cli, copies[i].stdout);
   return { file: path.join(nb, 'notebook', `${n}.rofl.md`), cli };
 });
+// the language server as installed from the package: `rofl-lsp --stdio` answers initialize and marks a broken rule on its line
+const prefix = path.join(tmp, 'prefix'), installedTgz = spawnSync('npm', ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--offline', path.join(DIST, tgz)], { encoding: 'utf8', timeout: 60_000 });
+if (installedTgz.status !== 0) bad.push(`npm install ${tgz}: ${installedTgz.stdout}${installedTgz.stderr}`);
+const rpc = (m: object) => { const b = JSON.stringify({ jsonrpc: '2.0', ...m }); return `Content-Length: ${Buffer.byteLength(b)}\r\n\r\n${b}`; };
+const talk = spawnSync(path.join(prefix, 'node_modules/.bin/rofl-lsp'), ['--stdio'], { encoding: 'utf8', timeout: 20_000, input: [
+  rpc({ id: 1, method: 'initialize', params: { rootUri: null, capabilities: {} } }),
+  rpc({ method: 'textDocument/didOpen', params: { textDocument: { uri: `file://${broken}`, languageId: 'rofl', version: 1, text: readFileSync(broken, 'utf8') } } }),
+  rpc({ id: 2, method: 'shutdown' }), rpc({ method: 'exit' })].join('') });
+const said = [...(talk.stdout ?? '').matchAll(/Content-Length: \d+\r\n\r\n(\{.*?\})(?=Content-Length|$)/gs)].map((m) => JSON.parse(m[1]));
+const init = said.find((m) => m.id === 1)?.result, marked = said.find((m) => m.method === 'textDocument/publishDiagnostics')?.params.diagnostics ?? [];
+if (!init?.capabilities?.hoverProvider || marked.length !== 1 || marked[0].range.start.line !== 2) bad.push(`rofl-lsp --stdio from ${tgz}: initialize ${JSON.stringify(init)?.slice(0, 120)}, diagnostics ${JSON.stringify(marked)}, stderr ${talk.stderr}`);
+else console.log(`rofl-lsp from ${tgz}: initialize answered, the broken rule marked on line ${marked[0].range.start.line + 1}`);
 console.log(`command line: ${bad.length ? 'FAIL' : 'ok'}, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 
 // the editor: the VSIX installed into an empty extensions directory, and a harness extension that installs nothing of its own
@@ -70,7 +84,7 @@ try {
   if (!installed.status) await runTests({
     vscodeExecutablePath: code, extensionDevelopmentPath: harness, extensionTestsPath: path.join(ROOT, 'vscode/test/installed.cjs'),
     launchArgs: [nb, '--extensions-dir', extensions, '--user-data-dir', path.join(tmp, 'user'), '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes'],
-    extensionTestsEnv: { ROFL_DIST_EXTENSIONS: extensions, ROFL_DIST_ID: id, ROFL_DIST_CASES: JSON.stringify(cases), ROFL_DIST_REPORT: report, ...(shot && { ROFL_DIST_SHOT: shot }) },
+    extensionTestsEnv: { ROFL_DIST_EXTENSIONS: extensions, ROFL_DIST_ID: id, ROFL_DIST_CASES: JSON.stringify(cases), ROFL_DIST_REPORT: report, ROFL_DIST_LSP: broken, ...(shot && { ROFL_DIST_SHOT: shot }) },
     stdout: log, stderr: log,
   });
 } catch (e) { bad.push(existsSync(report) ? readFileSync(report, 'utf8') || (e as Error).message : `${(e as Error).message}\n${readFileSync(logFile, 'utf8').slice(-2000)}`); }

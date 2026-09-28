@@ -5,6 +5,7 @@ import { CODE, KINDS, deserialize, serialize, type Cell, type Doc } from './seri
 import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
+import { lsp } from './lsp.ts';
 
 const TYPE = 'rofl-notebook';
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
@@ -251,7 +252,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     void vscode.commands.executeCommand('setContext', 'rofl-notebook.translations', uris(runs.filter((c) => c.document.languageId !== 'natural' && naturalOf(c))));
   };
 
-  ctx.subscriptions.push(controller, channel, bad, warn, { dispose: () => { worker?.terminate(); for (const d of diagnostics.values()) d.dispose(); } },
+  ctx.subscriptions.push(...lsp(channel), controller, channel, bad, warn, { dispose: () => { worker?.terminate(); for (const d of diagnostics.values()) d.dispose(); } },
     vscode.workspace.registerNotebookSerializer(TYPE, {
       deserializeNotebook: (bytes) => { const d = deserialize(new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes)); return Object.assign(new vscode.NotebookData(cellsOf(d)), { metadata: d.metadata }); },
       serializeNotebook: (data) => new TextEncoder().encode(serialize({ cells: data.cells as Cell[], metadata: data.metadata ?? {} })),

@@ -27,6 +27,7 @@ export async function run() {
   const opened = await until(() => vscode.window.activeNotebookEditor?.notebook.notebookType, 10_000, 'a notebook editor').catch(() => vscode.window.activeTextEditor?.document.languageId);
   if (opened !== 'rofl-notebook') bad.push(`${cases[0].file}: opening it the way a click does gives ${opened}, not a notebook`);
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+  await language(bad);
   for (const c of cases) {
     const t0 = Date.now();
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
@@ -66,6 +67,26 @@ export async function run() {
   if (!bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** The language server: a `.rofl` with a broken rule on line 3 has its error there and a hover on a relation says what it is; a `.rofl.md` opened as text has its sentence not read marked. */
+async function language(bad: string[]) {
+  const [rofl, md] = JSON.parse(process.env.ROFL_LSP_FILES!) as string[], t0 = Date.now();
+  const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(rofl));
+  await vscode.window.showTextDocument(doc);
+  if (doc.languageId !== 'rofl') bad.push(`${rofl}: opened as ${doc.languageId}, not rofl`);
+  const error = (d: vscode.TextDocument) => vscode.languages.getDiagnostics(d.uri).find((x) => x.source === 'rofl' && x.severity === vscode.DiagnosticSeverity.Error);
+  const d = await until(() => error(doc), 20_000, `a diagnostic on ${rofl}`).catch(() => undefined);
+  if (d?.range.start.line !== 2) bad.push(`${rofl}: the broken rule on line 3 is marked ${d ? `on line ${d.range.start.line + 1}: ${d.message}` : 'nowhere'}`);
+  const hover = await vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', doc.uri, new vscode.Position(1, 0));
+  const said = hover.flatMap((h) => h.contents.map((c) => (c as vscode.MarkdownString).value ?? String(c))).join('\n');
+  if (!said.includes('**b**')) bad.push(`${rofl}: a hover on b says ${JSON.stringify(said)}`);
+  const text = await vscode.workspace.openTextDocument(vscode.Uri.file(md));
+  await vscode.window.showTextDocument(text);
+  const m = await until(() => error(text), 20_000, `a diagnostic on ${md}`).catch(() => undefined);
+  if (!m?.message.startsWith('not read: M is frozen by a team T') || m.range.start.line !== text.lineCount - 2) bad.push(`${md}: the sentence not read is marked ${m ? `on line ${m.range.start.line + 1}: ${m.message}` : 'nowhere'}`);
+  console.log(`language server: ${Date.now() - t0} ms`);
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
 /** A rule that climbs for ever, stopped: every cell ends at once, and the next run, in a new worker, answers what the command line does. */

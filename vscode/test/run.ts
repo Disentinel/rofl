@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks and cells; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -23,6 +23,8 @@ const review = put(path.join(tmp, 'nb/examples/notebook/review.rofl.md'), `${src
 const small = put(path.join(tmp, 'nb/examples/notebook/small.rofl.md'), src('examples/notebook/small.rofl.md'));
 const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('examples/notebook/small.js')}\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n`);
 
+const broken = put(path.join(tmp, 'nb/examples/broken.rofl'), 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n');
+const late = put(path.join(tmp, 'nb/examples/late.rofl.md'), `${src('examples/review.rofl.md')}\nA change C is late if C touches a module M and M is frozen by a team T.\n`);
 const runaway = put(path.join(tmp, 'nb/examples/notebook/runaway.rofl.md'), '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
 const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n\nA cell after it, which no edit of the cell above may take.\n`);
 // the model: a question, a cell that does not read, or no answer until stopped when told to; the cell as a question once told something else; and else the cell as an invariant
@@ -63,10 +65,11 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   stop: ['extension.ts', / e\.token\.onCancellationRequested\(restart\);/, ''],
   startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, ''],
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
+  lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')"],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells'] : ['as it is', 'prose'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp'] : ['as it is', 'prose'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
@@ -91,7 +94,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: fake, ROFL_NB_PID: path.join(tmp, 'claude.pid') },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: fake, ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); }
