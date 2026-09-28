@@ -207,6 +207,10 @@ async function harnesses(src: string, tag: string): Promise<string[]> {
     if (!cwd.startsWith(`${realpathSync(os.tmpdir())}/rofl-nb-model-`) || existsSync(cwd)) bad.push(`${name}: run in ${cwd}, ${existsSync(cwd) ? 'which is still there' : 'not a directory of its own'}`);
     if (Number(bytes) + Number(argv.includes('[the prompt]')) * 10 !== 10) bad.push(`${name}: the prompt went neither on stdin nor in argv once: ${bytes} bytes on stdin, ${argv}`);
   }
+  // a request copilot would get as one argument past Linux's 128 KB: refused before anything starts
+  const big = recorder(tag, 'big'), bigRec = `${big}.rec`;
+  const tooBig = await m.llm(m.choose('copilot', { ...process.env, ROFL_NB_COPILOT: big, ROFL_NB_ALLOW_TOOLS: '1' }))('x'.repeat(200_000));
+  if (tooBig.ok || !/takes the request as one argument, at most 100 KB/.test(tooBig.error) || existsSync(bigRec)) bad.push(`a 200 KB request was put in copilot's argv: ${JSON.stringify(tooBig).slice(0, 200)}`);
   const odd = ['constructor', '__proto__', 'toString'].map((n) => { try { return m.choose(n, process.env).error ?? 'chosen'; } catch (e) { return `threw ${(e as Error).message}`; } });
   if (!odd.every((e: string) => e.includes('is not a harness'))) bad.push(`a name an object has is not refused as a harness: ${odd.join(' | ')}`);
   const fail = recorder(tag, 'fails', "process.stderr.write('\\x1b[91mError:\\x1b[0m Incorrect API key provided\\n'); process.exit(1)"), quiet = recorder(tag, 'quiet', "process.stderr.write('Error: the free tier cannot be used here\\n')");
@@ -224,6 +228,7 @@ const H3_BREAKS: [string, RegExp, string][] = [
   ['copilot', /'--no-custom-instructions', /, ''], ['hermes', /'--safe-mode', /, ''], ['refusal', /!allow && HARNESSES\[name\]\.keeps/, 'false'],
   ['cwd', /cwd: dir,/, 'cwd: os.tmpdir(),'], ['empty', /^ *if \(!out\.trim\(\)\).*$/m, ''],
   ['model name', /^ *if \(model && !\/.*$/m, ''], ['PWD', /PWD: dir, /, ''], ['opencode data', /, XDG_DATA_HOME: path\.join\(dir, 'data'\)/, ''],
+  ['argv cap', /  if \(args\.includes\(prompt\) && Buffer\.byteLength\(prompt\) > ARG_BYTES\) .*\n/, ''],
   ['session', /, '--no-session-persistence'/, ''], ['claude leaves', /for \(const d of \[path\.join\(project, 'memory'\), project\]\)/, 'for (const d of [])'], ['timeout', /if \(p\.killed\)/, 'if (false)'], ['own names', /Object\.hasOwn\(HARNESSES, name\)/, 'HARNESSES[name]'],
 ];
 const h3 = await harnesses(MODEL_SRC, 'as-is');

@@ -60,6 +60,7 @@ export const HARNESSES: Record<string, Harness> = {
     argv: (m) => ['chat', '--safe-mode', '--ignore-user-config', '--ignore-rules', '-Q', '--toolsets', 'safe', '--max-turns', '1', ...(m ? ['--model', m] : []), '--query-file', '-'],
   },
 };
+const ARG_BYTES = 100_000;
 const ORDER = ['claude', 'codex', 'opencode', 'pi', 'copilot', 'hermes'];
 const envOf = (name: string) => `ROFL_NB_${name.toUpperCase()}`;
 
@@ -105,6 +106,8 @@ function runHarness(c: Choice, who: string, prompt: string, signal?: AbortSignal
   const limit = c.limit ?? 180_000;
   const dir = mkdtempSync(path.join(os.tmpdir(), 'rofl-nb-model-')), h = HARNESSES[c.name];
   const [cmd, args] = c.command ? ['/bin/sh', ['-c', c.command]] : [c.path!, h.argv(c.model, prompt)];
+  // copilot ignores stdin under -p, so its request is one argument, which Linux caps at 128 KB (E2BIG)
+  if (args.includes(prompt) && Buffer.byteLength(prompt) > ARG_BYTES) { rmSync(dir, { recursive: true, force: true }); return Promise.resolve({ ok: false, error: `${who} takes the request as one argument, at most ${ARG_BYTES / 1000} KB, and this one is ${Math.round(Buffer.byteLength(prompt) / 1000)} KB: choose a model that reads it on stdin` }); }
   h?.prepare?.(dir);
   // PWD too: a harness that asks the shell's variable rather than its own cwd would take the notebook's directory for its project
   const p = spawn(cmd, args, { timeout: limit, signal, cwd: dir, env: { ...process.env, PWD: dir, ...h?.env?.(dir) } });
