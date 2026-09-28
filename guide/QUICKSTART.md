@@ -15,15 +15,15 @@ Works from any folder:
 <!-- BEGIN run+exit examples/tutorial: rofl-nb 1-what-ships.rofl.md -->
 ```
 $ rofl-nb 1-what-ships.rofl.md
-1-what-ships.rofl.md:72: cell 1 · rofl
-  1-what-ships.rofl.md:72: ? X leaves the line  ->  3 answers
+1-what-ships.rofl.md:65: cell 1 · rofl
+  1-what-ships.rofl.md:65: ? X leaves the line  ->  3 answers
     - `bike` leaves the line
     - `car` leaves the line
     - `scooter` leaves the line
-1-what-ships.rofl.md:111: cell 2 · rofl
-  1-what-ships.rofl.md:111: never L is missing an answer  ->  FAILS · 1
+1-what-ships.rofl.md:104: cell 2 · rofl
+  1-what-ships.rofl.md:104: never L is missing an answer  ->  FAILS · 1
     - `level1` is missing an answer
-  1-what-ships.rofl.md:112: never X is on your list by mistake  ->  FAILS · 1
+  1-what-ships.rofl.md:105: never X is on your list by mistake  ->  FAILS · 1
     - `sofa` is on your list by mistake
 1-what-ships.rofl.md: a never fails
 $ echo $?
