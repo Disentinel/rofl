@@ -106,11 +106,12 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN): 
 
 export type Ask = (prompt: string, signal?: AbortSignal) => Promise<{ ok: true; text: string } | { ok: false; error: string }>;
 
-/** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script; `signal` stops it. */
+/** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script; `signal` stops it.
+ *  No tools, no MCP servers, no settings, hooks or CLAUDE.md of the user's or of the notebook's project: a natural cell is text from whoever wrote the file. */
 export const claude: Ask = (prompt, signal) => {
   const cmd = process.env.ROFL_NB_CLAUDE ?? 'claude';
   const limit = Number(process.env.ROFL_NB_CLAUDE_TIMEOUT ?? 180) * 1000;
-  const p = spawn(cmd, ['-p', '--model', 'sonnet', '--tools', ''], { timeout: limit, signal });
+  const p = spawn(cmd, ['-p', '--model', 'sonnet', '--tools', '', '--strict-mcp-config', '--setting-sources', ''], { timeout: limit, signal, cwd: os.tmpdir() });
   let out = '', err = '', error: NodeJS.ErrnoException | undefined;
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { err += d; });

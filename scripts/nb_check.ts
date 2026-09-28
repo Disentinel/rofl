@@ -1,7 +1,7 @@
 // npm run test:nb — the notebook's behavioural gate: the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { worlds } from './goldens.ts';
@@ -77,7 +77,7 @@ const natural = planted('natural', 'review.rofl.md', withNatural);
 const unparsed = planted('unparsed', 'review.rofl.md', withCell('whynot calls itself(c2)\nwhy calls itself(c2)', 'datalog'));
 // the command line run from a tree whose kernel exits 0 before it answers: a gate executed by the code it checks
 const exec = linked('exec', 'notebook/kernel.ts', mutate('notebook/kernel.ts', /^  run\(path: string, text: string, input: Inputs\): NbResult \{/m, (m) => `${m}\n    new Function('return process')().exit(0);`));
-const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
+const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\nprintf '[%s]' "$@" >> ${path.join(tmp, 'argv')}; echo " $(pwd -P)" >> ${path.join(tmp, 'argv')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
 const good = fake('good.sh', 'Here it is.\n```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n```');
 const bad = fake('bad.sh', '```rofl\nA module M is gloriously unowned whenever nobody.\n```');
 const translateOk = planted('tr-ok', 'review.rofl.md', withNatural);
@@ -253,6 +253,8 @@ check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answer
 check('F5 a conjunctive question is refused with what to write instead', is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), fr);
 check('F3 an error in a read file is at that file\'s line', is(badRead, 2) && has(badRead, 'bad.rofl:3: unexpected character'), badRead);
 check('F6 a model that does not answer is stopped in bounded time and said', trSlow.code === 2 && has(trSlow, 'gave no answer in 2 s'), trSlow);
+const argv = (() => { try { return readFileSync(path.join(tmp, 'argv'), 'utf8').trim().split('\n'); } catch { return []; } })();
+check('H1 the model is called with no MCP server and no settings, from outside the notebook\'s project', argv.length > 0 && argv.every((l) => l.includes('[--tools][][--strict-mcp-config][--setting-sources][] ') && l.endsWith(` ${realpathSync(os.tmpdir())}`)), { code: 0, out: argv.join('\n') });
 check('I5 no model to call is exit 2 and said plainly', trGone.code === 2 && has(trGone, 'not installed'), trGone);
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
 const [help, bare, nope, prose] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md'])]);
