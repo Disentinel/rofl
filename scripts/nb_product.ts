@@ -209,7 +209,8 @@ async function harnesses(src: string, tag: string): Promise<string[]> {
   }
   // a request copilot would get as one argument past Linux's 128 KB: refused before anything starts
   const big = recorder(tag, 'big'), bigRec = `${big}.rec`;
-  const tooBig = await m.llm(m.choose('copilot', { ...process.env, ROFL_NB_COPILOT: big, ROFL_NB_ALLOW_TOOLS: '1' }))('x'.repeat(200_000));
+  // on Linux the argument itself throws E2BIG from spawn, which crashed translate
+  const tooBig = await (async () => { try { return await m.llm(m.choose('copilot', { ...process.env, ROFL_NB_COPILOT: big, ROFL_NB_ALLOW_TOOLS: '1' }))('x'.repeat(200_000)); } catch (e) { return { ok: false, error: `threw ${(e as Error).message}` }; } })();
   if (tooBig.ok || !/takes the request as one argument, at most 100 KB/.test(tooBig.error) || existsSync(bigRec)) bad.push(`a 200 KB request was put in copilot's argv: ${JSON.stringify(tooBig).slice(0, 200)}`);
   const odd = ['constructor', '__proto__', 'toString'].map((n) => { try { return m.choose(n, process.env).error ?? 'chosen'; } catch (e) { return `threw ${(e as Error).message}`; } });
   if (!odd.every((e: string) => e.includes('is not a harness'))) bad.push(`a name an object has is not refused as a harness: ${odd.join(' | ')}`);
