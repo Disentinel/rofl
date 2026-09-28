@@ -272,9 +272,10 @@ export class Host {
       && ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))
       && !over.some((r) => this.kernelRels.has(r))
       && asks.every((as, i) => refused.has(i) || as.every((a) => a.kind !== 'excise' && !this.kernelRels.has(relOf(a.lit))));
+    const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error });
     let base: Rofl | null = null;
     if (layered) {
-      try { base = this.evaluated(files, sc); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
+      try { base = this.evaluated(files, sc); } catch (e) { return done((e as Error).message); }
     }
     lap('model');
     const f = base ? this.shell!.fork() : this.core.fork();
@@ -287,38 +288,35 @@ export class Host {
       texts.forEach((x, i) => { if (!x.trim()) return; const l = f.load(x, { budget: BUDGET }); if (!l.ok) outs[i].errors.push(...l.diagnostics); });
     }
     lap('load');
-    try { f.evaluate(BUDGET); } catch (e) { return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, error: (e as Error).message }; }
+    try { f.evaluate(BUDGET); } catch (e) { return done((e as Error).message); }
     lap('evaluate');
     // a proof reads the cells' facts in their world and the model's in the kept one, so a why walks down into the model without evaluating it again
     const w = base ? proofs(base.store, f.store, heads, this.kernelRels, new Set(over)) : f;
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
-    const deps = new Map<string, Set<string>>();
-    for (const x of texts) if (x.trim()) try { for (const cl of parseProgram(x)) { const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel); } } catch { /* said by the load */ }
-    const undefinedRel = (rel: string) => !deps.has(rel) && !(rel in home) && !this.modelRels.has(rel);
-    const restsOn = (rel: string, seen = new Set<string>()): string | undefined => {
-      if (seen.size && undefinedRel(rel)) return `it rests on ${rel.replace(/_/g, ' ')}, which nothing defines`;
+    const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>();
+    texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) {
+      const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel);
+      if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
+    } } catch { /* said by the load */ } });
+    /** What `say` says of the first relation `rel` rests on, or of `rel` itself when `self`. */
+    const under = (rel: string, say: (r: string) => string | undefined, self: boolean, seen = new Set<string>()): string | undefined => {
+      const why = self ? say(rel) : undefined; if (why) return why;
       if (seen.has(rel)) return undefined;
       seen.add(rel);
-      for (const d of deps.get(rel) ?? []) { const why = restsOn(d, seen); if (why) return why; }
+      for (const d of deps.get(rel) ?? []) { const why = under(d, say, true, seen); if (why) return why; }
     };
+    const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, which nothing defines` : undefined, false);
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
     const holed = new Map<string, string>();
-    const rules = new Map<string, { rel: string; cell: number }>();
-    texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i }); } catch { /* said by the load */ } });
     for (const r of f.query('hole[$kernel](H, R)').rows) {
       const at = rules.get(/\$rule\((\w+)\)/.exec(r.bindings.H)?.[1] ?? '');
       if (!at || holed.has(at.rel)) continue;
       holed.set(at.rel, r.bindings.R);
       outs[at.cell].notes.push(`the rule for ${at.rel.replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
     }
-    const holedUnder = (rel: string, seen = new Set<string>()): string | undefined => {
-      if (holed.has(rel)) return `it rests on ${rel.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(rel)})`;
-      if (seen.has(rel)) return undefined;
-      seen.add(rel);
-      for (const d of deps.get(rel) ?? []) { const why = holedUnder(d, seen); if (why) return why; }
-    };
+    const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
@@ -364,7 +362,7 @@ export class Host {
       outs[i].lines.push({ unasked: unread[i], kind: 'excise', text, lit: cut.map((a) => a.lit).join(', '), rows, total: rows.filter((r) => !r.sentence.startsWith('  ')).length, ok: true, note: rows.length ? undefined : 'no line of this notebook answers differently' });
     });
     lap('ask');
-    return { parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes };
+    return done();
   }
 
   /** The code's facts, scanned once per text of the files. */
@@ -388,7 +386,7 @@ export class Host {
     labelNodes(facts, nodes);
     const all = [...facts, ...hostFacts(Object.keys(files), strings)];
     this.base = null;
-    return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map((x) => x.slice(0, x.search(/[[(]/)))) };
+    return this.scanned = { key, facts, nodes, parseErrors, text: all.join('\n'), rels: new Set(all.map(relOf)) };
   }
 
   /** The model evaluated over the code, once per text of the files. */
