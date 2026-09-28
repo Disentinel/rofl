@@ -54,50 +54,40 @@ waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin"
 waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
 waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL marks") :- lens(L), L != v_render, L != v_example, L != v_docs, L != v_test.
 
--- the plan
+-- the plan, by family: a work item owns rows, across every lens but the shared three (frames, zoom, docs), so two agents never share a file
+-- (each family writes its own vscode/visual/pic-*.ts, notebook/draw-*.ts and examples/visual/*; a family agent adds done/waived facts for its rows only)
 work(w1, "a VS Code notebook output renderer for view facts, with click to why and status tags").
-work(w2, "excise before/after drawn in VS Code (new and gone marks)").
-work(w2a, "the same, for the first-wave kinds").
-work(w3, "pinned layout honoured in VS Code, and the pin action there").
-work(w3a, "the same, for the first-wave graphs").
-work(w4, "graph dialects in VS Code: architecture, state, process, causal, proof").
-work(w5, "time forms beyond gantt/sequence: timeline, timing").
-work(w6, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
-work(w7, "space: map, plan, semantic axes").
-work(w8, "notation: open the emitted standard file in a VS Code preview").
-work(w9, "frames: one view per tick, small multiples or animation").
-work(w10, "zoom: collapse inside groups and aggregate them").
-work(w11, "a test:vscode check per kind").
-work(w11a, "the same, for the first-wave kinds").
-work(w12, "an example notebook per kind").
-work(w13, "a guide page on drawing, with generated pictures").
-state(w1, done). state(w2, open). state(w3, open). state(w4, open). state(w5, open). state(w6, open). state(w7, open).
-state(w8, open). state(w2a, done). state(w3a, done). state(w11a, done). state(w9, open). state(w10, open). state(w11, open). state(w12, open). state(w13, open).
+work(w2a, "excise before/after drawn in VS Code, first-wave kinds").
+work(w3a, "pinned layout honoured in VS Code, and the pin action there, first-wave graphs").
+work(w11a, "a test:vscode check per first-wave kind").
+work(wG, "graph dialects: architecture, state, process, causal, proof").
+work(wT, "time forms: timeline, timing").
+work(wB, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
+work(wS, "space: map, plan, semantic axes").
+work(wN, "notation: the emitted standard file, opened in a VS Code preview").
+work(wF, "frames: one view per tick, small multiples or animation, every kind (the shared frame)").
+work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
+work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
+state(w1, done). state(w2a, done). state(w3a, done). state(w11a, done).
+state(wG, open). state(wT, open). state(wB, open). state(wS, open). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 core(v_render). core(v_why). core(v_status).
-dialect(g_architecture). dialect(g_state). dialect(g_process). dialect(g_causal). dialect(g_proof).
-later_time(t_timeline). later_time(t_timing).
-later_table(tb_chart). later_table(tb_heatmap). later_table(tb_upset). later_table(tb_euler). later_table(tb_decision).
-dialect_lens(v_render). dialect_lens(v_why). dialect_lens(v_status).
+shared(v_frames). shared(v_zoom). shared(v_docs).
+row_of(wG, g_architecture). row_of(wG, g_state). row_of(wG, g_process). row_of(wG, g_causal). row_of(wG, g_proof).
+row_of(wT, t_timeline). row_of(wT, t_timing).
+row_of(wB, tb_chart). row_of(wB, tb_heatmap). row_of(wB, tb_upset). row_of(wB, tb_euler). row_of(wB, tb_decision).
+row_of(wS, s_map). row_of(wS, s_plan). row_of(wS, s_axes).
+row_of(wN, n_notation).
 
 claims(w1, K, L) :- first_wave(K), core(L).
-claims(w2, K, v_compare) :- kind(K), K != n_notation, not first_wave(K).
 claims(w2a, K, v_compare) :- first_wave(K).
-claims(w3, K, v_geometry) :- family(K, graph), not first_wave(K).
 claims(w3a, K, v_geometry) :- family(K, graph), first_wave(K).
-claims(w3, K, v_geometry) :- family(K, space).
-claims(w4, K, L) :- dialect(K), dialect_lens(L).
-claims(w5, K, L) :- later_time(K), dialect_lens(L).
-claims(w6, K, L) :- later_table(K), dialect_lens(L).
-claims(w7, K, L) :- family(K, space), dialect_lens(L).
-claims(w8, n_notation, v_render).
-claims(w9, K, v_frames) :- kind(K), K != n_notation.
-claims(w10, K, v_zoom) :- kind(K), K != n_notation.
-claims(w11, K, v_test) :- kind(K), not first_wave(K).
 claims(w11a, K, v_test) :- first_wave(K).
-claims(w12, K, v_example) :- kind(K), not done(K, v_example, _).
-claims(w13, K, v_docs) :- kind(K).
+claims(W, K, L) :- row_of(W, K), lens(L), not shared(L), not waived(K, L, _).
+claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _).
+claims(wZ, K, v_zoom) :- kind(K), not waived(K, v_zoom, _).
+claims(wD, K, v_docs) :- kind(K).
 
 cell(K, L) :- kind(K), lens(L).
 closed(K, L) :- done(K, L, _).
