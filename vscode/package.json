@@ -45,8 +45,8 @@
         { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" }
       ],
       "notebook/cell/title": [
-        { "command": "rofl-notebook.translateCell", "group": "inline", "when": "notebookType == rofl-notebook && cellLangId == natural" },
-        { "command": "rofl-notebook.refine", "group": "inline", "when": "notebookType == rofl-notebook && (cellLangId == natural || notebookCellResource in rofl-notebook.translations)" },
+        { "command": "rofl-notebook.translateCell", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.naturals" },
+        { "command": "rofl-notebook.refine", "group": "inline", "when": "notebookType == rofl-notebook && (notebookCellResource in rofl-notebook.naturals || notebookCellResource in rofl-notebook.translations)" },
         { "command": "rofl-notebook.revert", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.translations" }
       ]
     }

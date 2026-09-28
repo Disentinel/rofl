@@ -128,7 +128,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     const nb = vscode.workspace.notebookDocuments.find((d) => d.getCells().some((c) => c.document.uri.toString() === uri));
     const cell = nb?.getCells().find((c) => c.document.uri.toString() === uri);
     if (!nb || !cell) return;
-    await vscode.window.showNotebookDocument(nb, { selections: [new vscode.NotebookRange(cell.index, cell.index + 1)] });
+    const group = vscode.window.tabGroups.all.find((g) => g.tabs.some((t) => t.input instanceof vscode.TabInputNotebook && t.input.uri.toString() === nb.uri.toString()));
+    await vscode.window.showNotebookDocument(nb, { viewColumn: group?.viewColumn, selections: [new vscode.NotebookRange(cell.index, cell.index + 1)] });
     const e = await vscode.window.showTextDocument(cell.document, { selection: new vscode.Range(line, 0, line, 0) });
     e.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.InCenter);
   }
@@ -193,9 +194,12 @@ export function activate(ctx: vscode.ExtensionContext) {
     asked.delete(natural);
     await change(arg.notebook, vscode.NotebookEdit.deleteCells(new vscode.NotebookRange(arg.index, arg.index + 1)));
   }
-  /** The rofl and datalog cells that answer a natural cell, for the cell toolbar's Revert. */
-  const translations = () => vscode.commands.executeCommand('setContext', 'rofl-notebook.translations', vscode.workspace.notebookDocuments.filter((nb) => nb.notebookType === TYPE)
-    .flatMap((nb) => runsOf(nb).filter((c) => c.document.languageId !== 'natural' && naturalOf(c)).map((c) => c.document.uri.toString())));
+  /** The natural cells and the cells that answer one, for the cell toolbar: a `when` clause sees a cell by its resource, not its language. */
+  const translations = () => {
+    const runs = vscode.workspace.notebookDocuments.filter((nb) => nb.notebookType === TYPE).flatMap(runsOf), uris = (cs: vscode.NotebookCell[]) => cs.map((c) => c.document.uri.toString());
+    void vscode.commands.executeCommand('setContext', 'rofl-notebook.naturals', uris(runs.filter((c) => c.document.languageId === 'natural')));
+    void vscode.commands.executeCommand('setContext', 'rofl-notebook.translations', uris(runs.filter((c) => c.document.languageId !== 'natural' && naturalOf(c))));
+  };
 
   ctx.subscriptions.push(controller, channel, bad, warn, { dispose: () => { worker?.terminate(); for (const d of diagnostics.values()) d.dispose(); } },
     vscode.workspace.registerNotebookSerializer(TYPE, {
@@ -203,7 +207,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       serializeNotebook: (data) => new TextEncoder().encode(serialize({ cells: data.cells as Cell[], metadata: data.metadata ?? {} })),
     }, { transientOutputs: true }),
     vscode.workspace.onDidCloseNotebookDocument((nb) => { results.delete(nb.uri.toString()); diagnostics.get(nb.uri.toString())?.clear(); notes.delete(nb.uri.toString()); paint(); translations(); }),
-    vscode.workspace.onDidOpenNotebookDocument(translations), vscode.workspace.onDidChangeNotebookDocument(translations),
+    vscode.workspace.onDidOpenNotebookDocument(translations), vscode.workspace.onDidChangeNotebookDocument(translations), vscode.workspace.onDidOpenTextDocument(translations),
     vscode.window.onDidChangeVisibleTextEditors(paint),
     vscode.commands.registerCommand('rofl-notebook.translate', translate),
     vscode.commands.registerCommand('rofl-notebook.translateCell', (c?: vscode.NotebookCell) => translateOne(cellArg(c))),

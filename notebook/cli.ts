@@ -98,7 +98,7 @@ export const claude: Ask = (prompt) => {
 };
 
 const FORM = `A cell is written in ROFL's Markdown sentence form:
-- A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless".
+- A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless", after a comma: "<head> if <condition>, unless <condition>."
 - A long rule: "<head> if all of:" and then a list, one condition per item "  - <condition>;", the last ending in ".".
 - Alternatives: "<head> either:" and then a numbered list, each item "1. if <condition>, <condition>;".
 - Variables are capitalised words: C, F. "a call C" introduces C and says what it is; "something" or "some team" is anything, unnamed. An atom is in backticks, \`true\`; a string is in double quotes. Only variables are capitalised.
