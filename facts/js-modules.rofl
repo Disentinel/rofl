@@ -512,28 +512,17 @@ handled(js, string_literal, modules, r_import_decl_module_edge).
 handled(js, identifier,     modules, r_named_binding).
 
 -- ...and the one construct that IS a module edge and is not an import.
--- `require('./x')` parses as an ordinary call under `sourceType: 'module'`, so
--- the model can SEE it and says nothing. Whether CommonJS belongs in scope at
--- all is the owner's call - `bare` next to it already carries his
--- `out_of_scope` - and until he says, it is honest work rather than a waiver.
---
--- RE-MEASURED 2026-09-08 (w_mod_beyond_the_import) AND THERE IS NO SITE. Every
--- `.ts`, `.mjs`, `.js` and `.ts.txt` file in this repository was parsed — 265
--- of them, 2 unparseable — and walked for a CallExpression whose callee is the
--- identifier `require`: ZERO, in the whole tree and in both scanned corpora.
--- So this cell is not merely unscoped, it has nothing to be measured on, which
--- is the first of the three questions HANDOFF.md asks of a survivor: it waits
--- on a CORPUS as well as on a decision, and the corpus half is ours.
---
--- AND THE GATES CANNOT SEE IT EITHER, which is the part worth carrying. Every
--- frontier relation in section 6 of rules/js-modules.rofl is keyed on
--- `module_site`, and a `require` call is not one — so a site the layer declines
--- to model moves no row of `unaccounted_site[audit]`, `site_without_kind[audit]`
--- or `reason_missing[audit]`, and the oracle in test/js-modules.test.ts
--- enumerates four node types and would not see it. That is
--- f_two_enumerations_with_one_blind_spot_agree_about_nothing arriving one level
--- up, and it is asserted on a probe holding a real `require` site rather than
--- argued: recorded as f_a_require_site_moves_no_row_of_the_frontier.
+-- `require('./x')` parses as an ordinary call under `sourceType: 'module'`.
+-- Until 2026-09-28 the model could SEE it and said nothing, and every gate of
+-- section 6 was keyed on `module_site`, so none could say so
+-- (f_a_require_site_moves_no_row_of_the_frontier). An outside user's test over
+-- the `semver` package made it the worst finding of a review: `never F depends
+-- on T` held with exit 0 over 49 files that require each other 129 times.
+-- Now `require_site` is a `module_site` of form `require_call`, resolved by the
+-- same walk, and its value is the target's `module.exports`
+-- (rules/js-dataflow.rofl section 11). The row below stays because the matrix
+-- is keyed by KIND and a call is a module site only when its callee is
+-- `require`; `require(expr)` is `computed` and `require.resolve` is no site.
 unknown_because(js, call_expression, modules, not_yet).
 
 

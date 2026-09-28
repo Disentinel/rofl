@@ -351,14 +351,15 @@ eff_op_off_kind[audit](N, K) :- eff_op_inspects[code](N), ast_node[code](N, K, _
 -- 5c. AN IMPORT EVALUATES A MODULE
 --
 -- `import './m.js'` runs m's top level, so an import's effect is the target's
--- module effect — a missing EDGE, not a missing surface. The dynamic form is
--- the one kind `module_source` does not carry. Erasure needs both markers:
+-- module effect — a missing EDGE, not a missing surface. The dynamic form and
+-- `require` are the kinds `module_source` does not carry. Erasure needs both markers:
 -- `import type {X}` marks the declaration, `import {type X}` the specifier; a
 -- declaration ALL of whose specifiers are erased evaluates nothing and one
 -- with NO specifier evaluates everything, hence `eff_has_spec`.
 eff_mod_src[code](N, Src, F) :- module_source[code](N, Src, F).
 eff_mod_src[code](N, Src, F) :- ast_node[code](N, import_expression, F, _),
                                 ast_child[code](N, source, 0, S), ast_value[code](S, Src).
+eff_mod_src[code](N, Src, F) :- require_site[code](N), site_source[code](N, Src), site_file[code](N, F).
 
 eff_type_only[code](I)  :- ast_attr[code](I, import_kind, "type").
 eff_type_only[code](I)  :- ast_attr[code](I, export_kind, "type").

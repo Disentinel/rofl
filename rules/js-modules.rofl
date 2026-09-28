@@ -33,7 +33,7 @@ edb(shape_verdict).
 edb(unknown_because).
 
 -- =========================================================================
--- 1. THE PLACES A MODULE SPECIFIER OCCURS — four kinds. A re-export is a site
+-- 1. THE PLACES A MODULE SPECIFIER OCCURS — five kinds. A re-export is a site
 -- because it has a `source`, not because of its kind: `export { a as b }` and
 -- `export { a as b } from './d'` are one kind. `import_site` keeps its meaning
 -- (section 4 binds LOCAL names and a re-export introduces none); `module_site`
@@ -46,19 +46,30 @@ reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declara
 reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declaration, _, _),
                                           ast_child[code](E, source, 0, _).
 
+-- `require('./p')` is CommonJS's import: an ordinary call whose callee is the
+-- name `require` and whose first argument is the specifier. Scope-blind, as the
+-- call graph is: a local `require` would count too. `require.resolve(s)` names
+-- a file and loads nothing, and is not a site.
+require_site[code](C) :- ast_name[code](N, "require"), ast_node[code](N, identifier, _, _),
+                         ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _, _),
+                         ast_child[code](C, arguments, 0, _).
+
 module_site[code](N, K) :- import_site[code](N, K).
 module_site[code](N, K) :- reexport_site[code](N, K).
+module_site[code](C, require_call) :- require_site[code](C).
 
 site_kind[code](I, import_declaration) :- ast_node[code](I, import_declaration, _, _).
 site_kind[code](I, import_expression)  :- ast_node[code](I, import_expression, _, _).
 site_kind[code](E, export_named_declaration) :- reexport_site[code](E, reexport_named).
 site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).
+site_kind[code](C, call_expression)          :- require_site[code](C).
 
 site_file[code](I, F) :- module_site[code](I, _), ast_node[code](I, _, F, _).
 
 site_line[code](I, L) :- module_site[code](I, _), ast_node[code](I, _, _, L).
 
 site_source_node[code](I, Src) :- module_site[code](I, _), ast_child[code](I, source, 0, Src).
+site_source_node[code](C, Src) :- require_site[code](C), ast_child[code](C, arguments, 0, Src).
 
 site_source[code](I, S) :- site_source_node[code](I, Src),
                            ast_node[code](Src, string_literal, _, _),
@@ -110,8 +121,12 @@ walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
 walk[code](I, K1, P) :- walk[code](I, K, D), site_source[code](I, S),
                         str_seg[code](S, K, ".."), fs_parent[code](D, P), K1 is K + 1.
 
+-- the empty segment of `../` stays where it is, so a directory's index answers
+walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, ""), K1 is K + 1.
+
 walk[code](I, K1, C) :- walk[code](I, K, D), site_source[code](I, S),
-                        str_seg[code](S, K, Seg), Seg != ".", Seg != "..",
+                        str_seg[code](S, K, Seg), Seg != ".", Seg != "..", Seg != "",
                         fs_dir_in[code](D, Seg, C), K1 is K + 1.
 
 resolved_import[code](I, T) :- walk[code](I, K, D), site_source[code](I, S),
@@ -309,6 +324,8 @@ flows[code](F, T) :- has_value_binding[code](I),
                      module_target[code](I, T), site_file[code](I, F).
 flows[code](F, T) :- import_site[code](I, dynamic_import),
                      module_target[code](I, T), site_file[code](I, F).
+flows[code](F, T) :- require_site[code](I),
+                     module_target[code](I, T), site_file[code](I, F).
 
 evaluates[code](F, T) :- flows[code](F, T).
 evaluates[code](F, T) :- no_specifiers[code](I), not decl_type_only[code](I),
@@ -383,6 +400,13 @@ export_internal_homeless[audit](Sp) :- export_binding[code](_, Sp, _, _),
 -- unresolved-with-a-shape, and `unaccounted_site` says so.
 unresolved_import[code](I, Sh)       :- site_shape[code](I, Sh), not resolved_site[code](I).
 unresolved_import[code](I, computed) :- site_source_computed[code](I).
+
+-- what a run over this corpus cannot see: a relative specifier — static,
+-- dynamic, re-exported or required — that names no file the corpus holds. A
+-- `never` over the rest holds only as far as these; a package name is not one.
+has_module_target[code](I) :- module_target[code](I, _).
+unresolved_relative[code](F, L, S) :- site_shape[code](I, relative), not has_module_target[code](I),
+                                      site_source[code](I, S), site_file[code](I, F), site_line[code](I, L).
 
 accounted[audit](I) :- resolved_site[code](I).
 accounted[audit](I) :- unresolved_import[code](I, _).

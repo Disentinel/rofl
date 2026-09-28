@@ -734,6 +734,26 @@ may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
                            exports_default[code](F, Target),
                            ident_in[code](E, Local, File).
 
+-- CommonJS. `require(S)` is what the target's `module.exports` may be: first
+-- the module's own object — its `program` node, as for a namespace — then
+-- whatever `module.exports = X` puts there. Both stay in the may-set, so
+-- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
+-- is an ordinary member write (section 8) on the first.
+cjs_module_exports[code](M, File) :- ident_in[code](O, "module", File), ast_child[code](M, object, 0, O),
+                                     ast_node[code](M, member_expression, _, _), ast_attr[code](M, computed, false),
+                                     ast_child[code](M, property, 0, P), ast_name[code](P, "exports").
+
+cjs_key[code](E) :- ast_child[code](M, property, 0, E), ast_attr[code](M, computed, false).
+
+cjs_exports[flow](File, P) :- module_object[flow](P, File).
+cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), ast_child[code](A, left, 0, L),
+                              plain_assign[flow](A), ast_child[code](A, right, 0, R), may_be_node[flow](R, V).
+
+may_be_node[flow](M, V) :- cjs_module_exports[code](M, File), cjs_exports[flow](File, V).
+may_be_node[flow](E, P) :- ident_in[code](E, "exports", File), not cjs_key[code](E),
+                           module_object[flow](P, File).
+may_be_node[flow](C, V) :- require_site[code](C), module_target[code](C, T), cjs_exports[flow](T, V).
+
 -- The frontier: a module this corpus does not contain, one row per module.
 import_outside_corpus[audit](Src, File) :- module_source[code](N, Src, File),
                                            not module_target[code](N, _).

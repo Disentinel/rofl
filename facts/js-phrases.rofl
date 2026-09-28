@@ -224,6 +224,8 @@ sig(imports_name, "imports(name Local, name Name, at site D, in file File)").
 sig(imports_ns, "imports_the_namespace(name Local, at site D, in file File)").
 sig(imports_default, "imports_the_default(name Local, at site D, in file File)").
 sig(module_object, "is_the_module_object_of(node P, file Target)").
+sig(cjs_module_exports, "is_module_exports_in(node M, file File)").
+sig(cjs_exports, "exports_by_commonjs(file File, node V)").
 sig(reexport_decl, "re_exports(named export E)").
 sig(export_list_erased, "exports_types_only(named export E)").
 sig(export_item_erased, "is_a_type_only_specifier(node Sp)").
@@ -906,6 +908,7 @@ sig(str_scheme, "has_the_scheme(text S, text Scheme)").
 sig(import_site, "is_an_import_site(node I, of form N)").
 sig(reexport_site, "is_a_reexport_site(node E, of form N)").
 sig(module_site, "is_a_module_site(node N, of form K)").
+sig(require_site, "is_a_require_site(node C)").
 sig(site_kind, "the_site_kind(of node I, is kind N)").
 sig(site_line, "sits_at_line(site I, line L)").
 sig(site_source_node, "the_source_node(of site I, is node Src)").
@@ -919,6 +922,8 @@ sig(site_shape, "the_site_shape(of site I, is shape Sh)").
 sig(resolved_import, "resolves_to_the_file(site I, file T)").
 sig(builtin_canonical, "the_canonical_builtin(of text S, is spec N)").
 sig(dangling_import, "is_a_dangling_import(site I, of text S)").
+sig(has_module_target, "names_a_file_of_the_code(site I)").
+sig(unresolved_relative, "leaves_unresolved(file F, text S:2, at line L:1)").
 sig(module_target, "means_the_file(site I, file T)").
 sig(ts_resolved, "names_under_typescript(site I, file T)").
 sig(site_last_seg, "reaches(site I, directory D, before segment Seg)").
