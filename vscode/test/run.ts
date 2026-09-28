@@ -20,12 +20,14 @@ const small = put(path.join(tmp, 'nb/examples/notebook/small.rofl.md'), src('exa
 const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('examples/notebook/small.js')}\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n`);
 
 const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n\nA cell after it, which no edit of the cell above may take.\n`);
-// the model: a question when asked to, the cell as a question once told something, and else the cell as an invariant
+// the model: a question, a cell that does not read, or no answer until stopped when told to; the cell as a question once told something else; and else the cell as an invariant
 const fake = put(path.join(tmp, 'claude.sh'), `#!/bin/sh
 p=$(cat)
 rule='A module M is unowned if some change touches M, unless some team owns M.'
 case "$p" in
   *"The person says: ask me"*) echo 'Which modules count as owned?' ;;
+  *"The person says: break it"*) printf '%s\\n' '\`\`\`rofl' 'A module M is gloriously unowned whenever nobody.' '\`\`\`' ;;
+  *"The person says: wait"*) echo $$ > ${path.join(tmp, 'claude.pid')}; exec sleep 60 ;;
   *"The person says"*) printf '%s\\n' '\`\`\`rofl' "$rule" '' '? M is unowned' '\`\`\`' ;;
   *) printf '%s\\n' 'Here it is.' '\`\`\`rofl' "$rule" '' 'never M is unowned' '\`\`\`' ;;
 esac
@@ -82,7 +84,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_CLAUDE: fake },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_CLAUDE: fake, ROFL_NB_PID: path.join(tmp, 'claude.pid') },
     });
   } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); }

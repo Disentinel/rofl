@@ -1,10 +1,10 @@
 // Inside a real VS Code: open the notebooks the runner planted, run them, and hold the outputs and the marks against the command line's.
 import * as vscode from 'vscode';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
-type Api = { result: (u: vscode.Uri) => Run | undefined; notes: (file: string) => { line: number; text: string }[] };
+type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
 type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] } };
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 
@@ -49,6 +49,9 @@ export async function run() {
       const cell = runs.find((x) => x.document.getText().split('\n').some((l) => l.trim() === c.fails!.text));
       const line = cell?.document.getText().split('\n').findIndex((l) => l.trim() === c.fails!.text);
       if (!ours.some(({ u, d }) => u.toString() === cell?.document.uri.toString() && d.range.start.line === line && d.message === c.fails!.text)) bad.push(`${c.file}: no error "${c.fails.text}" on its line in its cell`);
+      if (!cell || !api.verdict(cell).some((t) => t.includes('FAILS'))) bad.push(`${c.file}: the failing cell's status bar says ${JSON.stringify(cell && api.verdict(cell))}, not FAILS`);
+      const holds = runs.find((x) => x !== cell && x.document.getText().includes('never'));
+      if (holds && !api.verdict(holds).some((t) => t.includes('holds'))) bad.push(`${c.file}: a cell whose never holds has the status ${JSON.stringify(api.verdict(holds))}`);
       const code = c.fails.code;
       if (code && !runs.some((x) => said(x).includes(`](<${code[0]}:${code[1]}>)`))) bad.push(`${c.file}: no output links to ${code[0]}:${code[1]}`);
       if (code && !errors.some(({ u, d }) => u.fsPath === code[0] && d.range.start.line === code[1] - 1 && d.message === c.fails!.text)) bad.push(`${c.file}: no error "${c.fails.text}" at ${code[0]}:${code[1]}`);
@@ -115,11 +118,23 @@ async function cellControls(nb: vscode.NotebookDocument, natural: number, before
   if (text() !== before) bad.push(`${nb.uri.fsPath}: after Revert the notebook is not the file it was: ${nb.cellAt(natural)?.document.languageId} cell ${natural} holds ${JSON.stringify(nb.cellAt(natural)?.document.getText())}`);
   await vscode.commands.executeCommand('rofl-notebook.translateCell', nb.cellAt(natural));
   if (!under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: Translate on the natural cell put no translation under it`);
+  await until(() => said(nb.cellAt(natural + 1)).includes('never M is unowned') || undefined, 10_000, 'the translation to answer').catch(() => bad.push(`${nb.uri.fsPath}: the translation came back without its answers: ${said(nb.cellAt(natural + 1))}`));
+  await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'break it');
+  if (!said(nb.cellAt(natural)).includes('Not translated') || !said(nb.cellAt(natural)).includes('gloriously') || !under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: a translation that did not read is not said under the natural cell, or the cell under it changed: ${said(nb.cellAt(natural))}`);
+  const pid = process.env.ROFL_NB_PID!, stopping = vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'wait');
+  await until(() => existsSync(pid) || undefined, 10_000, 'the model to start').catch(() => {});
+  await until(() => said(nb.cellAt(natural)).includes('Claude is writing the cell') || undefined, 5_000, 'the progress').catch(() => {});
+  if (!said(nb.cellAt(natural)).includes('Claude is writing the cell')) bad.push(`${nb.uri.fsPath}: while Claude works the natural cell does not say so: ${said(nb.cellAt(natural))}`);
+  await vscode.commands.executeCommand('notebook.cancelExecution');
+  await stopping;
+  const alive = () => { try { process.kill(Number(readFileSync(pid, 'utf8')), 0); return true; } catch { return false; } };
+  await until(() => !alive() || undefined, 5_000, 'the model to die').catch(() => bad.push(`${nb.uri.fsPath}: Stop left the model's process running`));
+  if (!said(nb.cellAt(natural)).includes('Stopped')) bad.push(`${nb.uri.fsPath}: Stop is not said under the natural cell: ${said(nb.cellAt(natural))}`);
   const n = nb.cellCount;
   await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'ask me');
   await until(() => said(nb.cellAt(natural)).includes('Which modules count as owned?') || undefined, 5_000, 'the question').catch(() => {});
   if (!said(nb.cellAt(natural)).includes('Which modules count as owned?') || nb.cellCount !== n || !under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: Claude's question is not under the natural cell, or the notebook changed: ${said(nb.cellAt(natural))}`);
   await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural), 'a team owns it');
   await until(() => !said(nb.cellAt(natural)).includes('Which modules') || undefined, 5_000, 'the question to go').catch(() => {});
-  if (nb.cellCount !== n || !under().includes('? M is unowned') || said(nb.cellAt(natural)).includes('Which modules')) bad.push(`${nb.uri.fsPath}: the answer did not replace the translation, or the question stayed: ${JSON.stringify(under())}`);
+  if (nb.cellCount !== n || !under().includes('? M is unowned') || said(nb.cellAt(natural)).includes('Which modules') || said(nb.cellAt(natural)).includes('Not translated')) bad.push(`${nb.uri.fsPath}: the answer did not replace the translation, or the question stayed: ${JSON.stringify(under())}`);
 }

@@ -4,20 +4,27 @@ import { Worker } from 'node:worker_threads';
 import { CODE, KINDS, deserialize, serialize, type Cell, type Doc } from './serial.ts';
 import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
+import type { NbCellOut } from '../notebook/kernel.ts';
 
 const TYPE = 'rofl-notebook';
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
 let worker: Worker | undefined, seq = 0;
-const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void }>();
-function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask): Promise<T> {
+const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void }>();
+/** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process. */
+function ask<T>(op: 'run' | 'translate', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken): Promise<T> {
   if (!worker) {
     const w = worker = new Worker(new URL('./worker.ts', import.meta.url));
-    w.on('message', ({ id, r, error }) => { const p = waiting.get(id)!; waiting.delete(id); error ? p.fail(new Error(error)) : p.ok(r); });
+    w.on('message', ({ id, r, error, step }) => {
+      const p = waiting.get(id)!;
+      if (step !== undefined) return p.step?.(step);
+      waiting.delete(id); error ? p.fail(new Error(error)) : p.ok(r);
+    });
     w.on('error', (e) => { worker = undefined; for (const p of waiting.values()) p.fail(e); waiting.clear(); });
   }
   const id = ++seq;
-  return new Promise((ok, fail) => { waiting.set(id, { ok, fail }); worker!.postMessage({ id, op, file, text, unsaved, cell }); });
+  stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
+  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step }); worker!.postMessage({ id, op, file, text, unsaved, cell }); });
 }
 
 const docOf = (nb: vscode.NotebookDocument): Doc => ({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
@@ -34,6 +41,7 @@ const cellArg = (c?: vscode.NotebookCell) => { const e = vscode.window.activeNot
 export function activate(ctx: vscode.ExtensionContext) {
   const results = new Map<string, Run>(), diagnostics = new Map<string, vscode.DiagnosticCollection>();
   const notes = new Map<string, Note[]>(), asked = new WeakMap<vscode.NotebookCell, string>();
+  const said = new WeakMap<vscode.NotebookCell, { text: string; out: NbCellOut; paths: Record<string, string> }>(), saidChanged = new vscode.EventEmitter<void>();
   const [bad, warn] = ['editorError.foreground', 'editorWarning.foreground'].map((c) => vscode.window.createTextEditorDecorationType({ after: { color: new vscode.ThemeColor(c), margin: '0 0 0 2em', fontStyle: 'italic' } }));
   const channel = vscode.window.createOutputChannel('ROFL notebook');
   const controller = vscode.notebooks.createNotebookController('rofl-kernel', TYPE, 'ROFL');
@@ -59,6 +67,8 @@ export function activate(ctx: vscode.ExtensionContext) {
       return;
     }
     results.set(nb.uri.toString(), r);
+    runs.forEach((c, k) => { if (r.cells[k + 1]) said.set(c, { text: c.document.getText(), out: r.cells[k + 1], paths: r.paths }); });
+    saidChanged.fire();
     for (const [c, x] of execs) {
       const head = { ...r.shown.head, md: r.shown.head.md.replace(/rofl-cell:(\d+)/g, (m, k) => runs[Number(k) - 1]?.document.uri.toString() ?? m) };
       const shown = [...(c === (front ?? runs[0]) ? [head] : []), ...(c === front ? [] : [r.shown.cells[runs.indexOf(c)] ?? { md: '', err: '', ok: r.status !== 'unread' }])];
@@ -134,6 +144,24 @@ export function activate(ctx: vscode.ExtensionContext) {
     e.revealRange(new vscode.Range(line, 0, line, 0), vscode.TextEditorRevealType.InCenter);
   }
 
+  /** A run cell's verdict in a word or two under it; a click on a failing one opens the code line of its first answer. */
+  function verdict(cell: vscode.NotebookCell): vscode.NotebookCellStatusBarItem[] {
+    const s = said.get(cell);
+    if (!s || cell.document.languageId === 'natural') return [];
+    if (s.text !== cell.document.getText()) return [new vscode.NotebookCellStatusBarItem('$(circle-outline) edited, not run yet', vscode.NotebookCellStatusBarAlignment.Left)];
+    const { errors, lines } = s.out, has = (v: string) => lines.filter((l) => l.verdict === v);
+    const fails = has('fails'), blind = has('blind'), excise = lines.find((l) => l.kind === 'excise'), answers = has('answers').filter((l) => l !== excise);
+    const text = errors.length ? '$(circle-slash) not read' : fails.length ? `$(error) FAILS \u00b7 ${fails.length > 1 ? `${fails.length} nevers` : fails[0].total}` : has('unasked').length ? '$(circle-slash) not asked'
+      : blind.length ? `$(warning) as far as it sees \u00b7 ${blind.reduce((n, l) => n + (l.unsure?.total ?? 0), 0)} unseen` : has('holds').length ? '$(pass) holds'
+      : excise ? `excise: ${excise.total} ${excise.total === 1 ? 'line moves' : 'lines move'}` : answers.length ? ((n) => `${n} ${n === 1 ? 'answer' : 'answers'}`)(answers.reduce((n, l) => n + l.total, 0)) : has('explained').length ? 'explained' : '';
+    if (!text) return [];
+    const item = new vscode.NotebookCellStatusBarItem(text, vscode.NotebookCellStatusBarAlignment.Left);
+    item.tooltip = [...errors, ...lines.map((l) => `${l.text}: ${l.verdict === 'unasked' ? 'not asked' : l.verdict}${l.total ? ` (${l.total})` : ''}`)].join('\n');
+    const at = fails[0]?.answers.flatMap((a) => a.at)[0], i = at?.lastIndexOf(':') ?? -1, file = at && s.paths[at.slice(0, i)];
+    if (file) item.command = { title: 'Open the line', command: 'vscode.open', arguments: [vscode.Uri.file(file), { selection: new vscode.Range(Number(at.slice(i + 1)) - 1, 0, Number(at.slice(i + 1)) - 1, 0) }] };
+    return [item];
+  }
+
   /** The notebook made `text`: only the cells that differ are replaced, so the others keep their outputs. */
   async function apply(nb: vscode.NotebookDocument, text: string) {
     const was = docOf(nb).cells, now = deserialize(text).cells, same = (a: Cell, b: Cell) => JSON.stringify(a) === JSON.stringify(b);
@@ -161,23 +189,37 @@ export function activate(ctx: vscode.ExtensionContext) {
   }
 
   /** One natural cell, or the natural cell a translation answers, translated again; with `words`, what the person says to Claude. Claude's words instead of a cell are the natural cell's output. */
+  /** While Claude works the natural cell says what it is doing and for how long, and its Stop kills the model; then it says what came back:
+   *  nothing when a cell was written (the notebook runs, so the new cell answers), Claude's words, or why nothing was written. */
   async function translateOne(arg?: vscode.NotebookCell, words = '') {
     const natural = arg && naturalOf(arg);
     if (!natural) return void vscode.window.showWarningMessage('ROFL: select a natural cell or the rofl cell under one.');
     const nb = natural.notebook, text = serialize(docOf(nb)), at = runsOf(nb).indexOf(natural) + 1;
-    const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: words ? 'ROFL: Claude takes in what you said' : 'ROFL: Claude translates the cell' },
-      () => ask<{ code: number; said: string[]; text: string; reply?: string }>('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural) }));
+    const x = await execution(natural);
+    if (!x) return void vscode.window.showWarningMessage('ROFL: the notebook is running; translate when it is done.');
+    const t0 = Date.now(), show = (md: string) => x.replaceOutput(md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(md, 'text/markdown')])] : []);
+    let step = 'Claude is writing the cell';
+    const tick = () => show(`*${step.replace(/\*/g, '\\*')} \u00b7 ${Math.round((Date.now() - t0) / 1000)} s*`), timer = setInterval(tick, 1000);
+    x.start(t0); tick();
+    let r: { code: number; said: string[]; text: string; reply?: string };
+    try { r = await ask('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural) }, (s) => { step = s; tick(); }, x.token); }
+    catch (e) { r = { code: 2, said: [(e as Error).message], text }; }
+    finally { clearInterval(timer); }
     channel.appendLine(r.said.join('\n'));
-    if (r.reply || asked.has(natural)) await say(natural, r.reply);
     if (r.reply) asked.set(natural, r.reply); else asked.delete(natural);
-    if (r.text !== text) await apply(nb, r.text);
-    else if (r.code && !r.reply) vscode.window.showErrorMessage('ROFL: the cell was not translated', 'Show').then((a) => a && channel.show());
+    const stopped = r.said.includes('translation failed: stopped');
+    await show(r.reply ? `**Claude:** ${r.reply}\n\n*Answer with Refine.*` : r.text !== text ? '' : stopped ? '*Stopped; nothing written.*'
+      : `**Not translated:** \`${why(r.said).replace(/`/g, "'")}\`\n\n\`\`\`\n${r.said.join('\n')}\n\`\`\`\n\n*Refine to say more, or change the words and Translate again.*`);
+    x.end(r.text !== text || !!r.reply, Date.now());
+    if (r.text !== text) { await apply(nb, r.text); await run(nb); }
   }
-  async function say(cell: vscode.NotebookCell, reply?: string) {
-    try {
-      const x = controller.createNotebookCellExecution(cell);
-      x.start(); await x.replaceOutput(reply ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(`**Claude:** ${reply}`, 'text/markdown')])] : []); x.end(undefined);
-    } catch { if (reply) vscode.window.showInformationMessage(`Claude: ${reply}`); }
+  /** The last thing that went wrong, in a sentence. */
+  const why = (said: string[]) => { const h = said.map((l) => !l.startsWith(' ')).lastIndexOf(true); return (said.slice(h + 1).find((l) => !l.startsWith('  |')) ?? said[h] ?? '').trim(); };
+  /** An execution of the cell, choosing this kernel for the notebook if none is chosen; none while the cell is running. */
+  async function execution(cell: vscode.NotebookCell) {
+    try { return controller.createNotebookCellExecution(cell); } catch {}
+    await vscode.commands.executeCommand('notebook.selectKernel', { notebookEditor: vscode.window.visibleNotebookEditors.find((e) => e.notebook === cell.notebook), id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+    try { return controller.createNotebookCellExecution(cell); } catch { return undefined; }
   }
   /** `words` asked for in an input box, where Claude's question, if it asked one, is the prompt. */
   async function refine(arg?: vscode.NotebookCell, words?: string) {
@@ -207,8 +249,9 @@ export function activate(ctx: vscode.ExtensionContext) {
       serializeNotebook: (data) => new TextEncoder().encode(serialize({ cells: data.cells as Cell[], metadata: data.metadata ?? {} })),
     }, { transientOutputs: true }),
     vscode.workspace.onDidCloseNotebookDocument((nb) => { results.delete(nb.uri.toString()); diagnostics.get(nb.uri.toString())?.clear(); notes.delete(nb.uri.toString()); paint(); translations(); }),
-    vscode.workspace.onDidOpenNotebookDocument(translations), vscode.workspace.onDidChangeNotebookDocument(translations), vscode.workspace.onDidOpenTextDocument(translations),
-    vscode.window.onDidChangeVisibleTextEditors(paint),
+    vscode.workspace.onDidOpenNotebookDocument(translations), vscode.workspace.onDidChangeNotebookDocument(() => { translations(); saidChanged.fire(); }), vscode.workspace.onDidOpenTextDocument(translations),
+    vscode.window.onDidChangeVisibleTextEditors(paint), saidChanged,
+    vscode.notebooks.registerNotebookCellStatusBarItemProvider(TYPE, { onDidChangeCellStatusBarItems: saidChanged.event, provideCellStatusBarItems: verdict }),
     vscode.commands.registerCommand('rofl-notebook.translate', translate),
     vscode.commands.registerCommand('rofl-notebook.translateCell', (c?: vscode.NotebookCell) => translateOne(cellArg(c))),
     vscode.commands.registerCommand('rofl-notebook.refine', (c?: vscode.NotebookCell, words?: string) => refine(cellArg(c), words)),
@@ -221,5 +264,5 @@ export function activate(ctx: vscode.ExtensionContext) {
     const uri = tab.input.uri;
     void vscode.window.tabGroups.close(tab).then(() => vscode.commands.executeCommand('vscode.openWith', uri, TYPE));
   }
-  return { result: (uri: vscode.Uri) => results.get(uri.toString()), notes: (file: string) => [...notesOn(file, false), ...notesOn(file, true)] };
+  return { result: (uri: vscode.Uri) => results.get(uri.toString()), verdict: (cell: vscode.NotebookCell) => verdict(cell).map((i) => i.text), notes: (file: string) => [...notesOn(file, false), ...notesOn(file, true)] };
 }

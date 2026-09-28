@@ -4,8 +4,8 @@
 // 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
-import { globSync, readFileSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Kernel, type NbLine, type NbResult } from './kernel.ts';
@@ -82,19 +82,29 @@ export function print(file: string, r: NbResult, only?: number): string {
 
 // ------------------------------------------------------------ translation
 
-export type Ask = (prompt: string) => { ok: true; text: string } | { ok: false; error: string };
+export type Ask = (prompt: string, signal?: AbortSignal) => Promise<{ ok: true; text: string } | { ok: false; error: string }>;
 
-/** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script. */
-export const claude: Ask = (prompt) => {
+/** `claude -p` with sonnet, or the command in ROFL_NB_CLAUDE, which a test points at a script; `signal` stops it. */
+export const claude: Ask = (prompt, signal) => {
   const cmd = process.env.ROFL_NB_CLAUDE ?? 'claude';
   const limit = Number(process.env.ROFL_NB_CLAUDE_TIMEOUT ?? 180) * 1000;
-  const r = spawnSync(cmd, ['-p', '--model', 'sonnet', '--tools', ''], { input: prompt, encoding: 'utf8', maxBuffer: 1 << 26, timeout: limit });
-  const code = (r.error as NodeJS.ErrnoException | undefined)?.code;
-  if (code === 'ENOENT') return { ok: false, error: `${cmd} is not installed or not on the PATH` };
-  if (code === 'ETIMEDOUT') return { ok: false, error: `${cmd} -p gave no answer in ${limit / 1000} s to a prompt of ${prompt.length} characters and was stopped; it printed ${(r.stdout ?? '').length} characters${r.stderr ? `, and on stderr: ${r.stderr.trim().slice(-300)}` : ''}. ROFL_NB_CLAUDE_TIMEOUT sets the limit in seconds` };
-  if (r.error) return { ok: false, error: r.error.message };
-  if (r.status !== 0) return { ok: false, error: `${cmd} exited with ${r.status}: ${(r.stderr || r.stdout).trim().slice(0, 300)}` };
-  return { ok: true, text: r.stdout };
+  const p = spawn(cmd, ['-p', '--model', 'sonnet', '--tools', ''], { timeout: limit, signal });
+  let out = '', err = '', error: NodeJS.ErrnoException | undefined;
+  p.stdout.on('data', (d) => { out += d; });
+  p.stderr.on('data', (d) => { err += d; });
+  p.stdin.on('error', () => {});
+  p.stdin.end(prompt);
+  return new Promise((done) => {
+    p.on('error', (e) => { error = e; });
+    p.on('close', (status, killed) => {
+      if (error?.code === 'ENOENT') return done({ ok: false, error: `${cmd} is not installed or not on the PATH` });
+      if (signal?.aborted) return done({ ok: false, error: 'stopped' });
+      if (killed) return done({ ok: false, error: `${cmd} -p gave no answer in ${limit / 1000} s to a prompt of ${prompt.length} characters and was stopped; it printed ${out.length} characters${err ? `, and on stderr: ${err.trim().slice(-300)}` : ''}. ROFL_NB_CLAUDE_TIMEOUT sets the limit in seconds` });
+      if (error) return done({ ok: false, error: error.message });
+      if (status !== 0) return done({ ok: false, error: `${cmd} exited with ${status}: ${(err || out).trim().slice(0, 300)}` });
+      done({ ok: true, text: out });
+    });
+  });
 };
 
 const FORM = `A cell is written in ROFL's Markdown sentence form:
@@ -130,14 +140,14 @@ const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.
 const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n} ${n[0].toUpperCase()}`) ?? p;
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong. */
-export function translate(file: string, ask: Ask): { code: number; said: string[] } {
-  const start = readFileSync(file, 'utf8'), r = translateText(file, start, ask);
+export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
+  const start = readFileSync(file, 'utf8'), r = await translateText(file, start, ask);
   if (r.text !== start) writeFileSync(file, r.text);
   return r;
 }
 
 /** What translate writes, for a host that shows it before it is saved. */
-export function translateText(file: string, text: string, ask: Ask, kernel = new Kernel()): { code: number; said: string[]; text: string } {
+export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel()): Promise<{ code: number; said: string[]; text: string }> {
   const said: string[] = [], start = text, cx = context(file, text);
   if ('errors' in cx) return { code: 2, said: cx.errors, text };
   let code = 0;
@@ -145,7 +155,7 @@ export function translateText(file: string, text: string, ask: Ask, kernel = new
     const cells = cellsOf(text), c = cells.find((x) => x.kind === 'natural' && !translated(cells, x) && x.index > done);
     if (!c) break;
     done = c.index;
-    const r = translateOne(file, text, c, ask, kernel, cx);
+    const r = await translateOne(file, text, c, ask, kernel, cx);
     said.push(...r.said);
     if (r.failed) return { code: 2, said, text: start };
     if (r.code) code = r.code;
@@ -154,8 +164,8 @@ export function translateText(file: string, text: string, ask: Ask, kernel = new
   return { code, said, text };
 }
 
-/** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what Claude said last instead of a cell. */
-export function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), words = '', asked = ''): { code: number; said: string[]; text: string; reply?: string } {
+/** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what Claude said last instead of a cell, `step` hears each step as it starts. */
+export async function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), { words = '', asked = '', step = (_: string) => {} } = {}): Promise<{ code: number; said: string[]; text: string; reply?: string }> {
   const cx = context(file, text), cells = cellsOf(text), c = cells[index];
   if ('errors' in cx) return { code: 2, said: cx.errors, text };
   if (c?.kind !== 'natural') return { code: 2, said: [`cell ${index} is not a natural cell`], text };
@@ -166,7 +176,7 @@ export function translateCell(file: string, text: string, index: number, ask: As
     follow += `\n\nYou answered:\n\`\`\`rofl\n${under.text}\n\`\`\`\nThe notebook said:\n${[...r.errors, ...out.errors, ...out.lines.map((l) => `${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)].join('\n') || '(nothing)'}`;
   }
   if (words) follow += `\n\nThe person says: ${words}\nWrite the cell again with this taken in.`;
-  const r = translateOne(file, text, c, ask, kernel, cx, follow);
+  const r = await translateOne(file, text, c, ask, kernel, cx, follow, step);
   return { code: r.failed ? 2 : r.code, said: r.said, text: r.failed ? text : r.text, ...(r.reply && { reply: r.reply }) };
 }
 
@@ -183,7 +193,7 @@ function context(file: string, text: string): Context | { errors: string[] } {
 }
 
 /** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
-function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = ''): { code: number; said: string[]; text: string; failed?: boolean; reply?: string } {
+async function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = '', step = (_: string) => {}): Promise<{ code: number; said: string[]; text: string; failed?: boolean; reply?: string }> {
   const said: string[] = [], lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
   const cells = cellsOf(text), under = translated(cells, c) ? cells[c.index + 1] : undefined;
   const shut = under ? lines.findIndex((l, i) => i >= under.line - 1 && /^```\s*$/.test(l)) : -1;
@@ -196,14 +206,16 @@ function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: K
   };
   const words = (a: string) => ({ code: 2, said: [...said, `${file}:${c.line}: Claude answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
   const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code)) + follow;
-  let a = ask(base);
+  step('Claude is writing the cell');
+  let a = await ask(base);
   if (!a.ok) return { code: 2, said: [`translation failed: ${a.error}`], text, failed: true };
   let cell = fenced(a.text);
   if (cell === undefined) return words(a.text);
   let t = tryCell(cell);
   if (t.errors.length) {
     said.push(`${file}:${c.line}: the first try did not read:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
-    a = ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
+    step(`the first try did not read (${t.errors[0]}); asking again`);
+    a = await ask(`${base}\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nWrite the cell again.`);
     if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
     cell = fenced(a.text);
     if (cell === undefined) return words(a.text);
@@ -213,17 +225,37 @@ function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: K
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 
+const HELP = `npm run nb -- <file.rofl.md> [--json] [--cell N]   run a notebook: what every cell says
+npm run nb -- translate <file.rofl.md>             Claude writes a rofl cell under every natural cell without one
+
+A notebook is Markdown. Its cells are fenced blocks:
+  \`\`\`rofl      rules in sentences, and asking lines        \`\`\`datalog   the same in Datalog
+  \`\`\`natural   a request in words, for translate           the rest is prose, read for its sentences
+Asking lines, one per line, in a rofl or datalog cell:
+  ? S          every answer to S                      never S      an invariant: holds when nothing answers
+  unsure S     under a never: what it could not see    why S        a proof of one answer
+  whynot S     why S does not hold                     excise F     which lines answer differently without F
+  extends R    this cell adds rules to R on purpose
+Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees.
+--json      the whole result as JSON (the first fifty answers per line)       --cell N   only cell N
+The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
+ROFL_NB_DAEMON=0 runs in this process instead.
+Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).`;
+
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname;
 if (isMain) {
   const argv = process.argv.slice(2);
+  if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
+  const named = argv[0] === 'translate' ? argv[1] : argv.find((a) => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--cell');
+  if (!named) { console.error(`usage: npm run nb -- ${argv[0] === 'translate' ? 'translate ' : ''}<file.rofl.md> (see --help)`); process.exit(2); }
+  if (!named.endsWith('.rofl.md')) { console.error(`${named}: not a notebook: a notebook is a .rofl.md file (see --help)`); process.exit(2); }
+  if (!existsSync(named)) { console.error(`${named}: no such file`); process.exit(2); }
   if (argv[0] === 'translate') {
-    if (!argv[1]) { console.error('usage: npm run nb -- translate <file.rofl.md>'); process.exit(2); }
-    const r = translate(argv[1], claude);
+    const r = await translate(named, claude);
     console.log(r.said.join('\n'));
     process.exit(r.code);
   }
-  const file = argv.find((a) => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--cell');
-  if (!file) { console.error('usage: npm run nb -- <file.rofl.md> [--json] [--cell N]'); process.exit(2); }
+  const file = named;
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: NbResult;
   const d = await viaDaemon(file);
