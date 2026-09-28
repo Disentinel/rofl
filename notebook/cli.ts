@@ -4,7 +4,7 @@
 // 3: every never holds, some only as far as the model sees.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
-import { existsSync, globSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -140,31 +140,45 @@ Answer with the cell alone inside one \`\`\`rofl fence, nothing else. When you c
 const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.[1].trim();
 const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n} ${n[0].toUpperCase()}`) ?? p;
 
-/** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong. */
+/** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong.
+ *  Each is written into the file as it lands, whole or not at all, so a failure or a kill later keeps the cells before it. */
 export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
-  const start = readFileSync(file, 'utf8'), r = await translateText(file, start, ask, new Kernel(), (line) => process.stderr.write(line + '\n'));
-  if (r.text !== start) writeFileSync(file, r.text);
-  return r;
+  const said: string[] = [], tmp = `${file}.${process.pid}.tmp`;
+  let code = 0;
+  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel(), (line) => process.stderr.write(line + '\n'))) {
+    said.push(...r.said);
+    code = r.code || code;
+    if (r.text !== undefined) { writeFileSync(tmp, r.text); renameSync(tmp, file); }
+  }
+  return { code, said };
 }
 
 /** What translate writes, for a host that shows it before it is saved. `note`: one line per model call, before it is made — a call can run 30-120 s with nothing on stdout until it returns. */
 export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel(), note: (line: string) => void = () => {}): Promise<{ code: number; said: string[]; text: string }> {
-  const said: string[] = [], start = text, cx = context(file, text);
-  if ('errors' in cx) return { code: 2, said: cx.errors, text };
+  const said: string[] = [];
   let code = 0;
+  for await (const r of translating(file, text, ask, kernel, note)) { said.push(...r.said); code = r.code || code; text = r.text ?? text; }
+  return { code, said, text };
+}
+
+/** The natural cells one by one: what was said of each, and the text with its cell in when one landed. An empty natural cell is skipped, not sent. */
+async function* translating(file: string, text: string, ask: Ask, kernel: Kernel, note: (line: string) => void): AsyncGenerator<{ code: number; said: string[]; text?: string }> {
+  const cx = context(file, text), natural = cellsOf(text).filter((x) => x.kind === 'natural');
+  if ('errors' in cx) { yield { code: 2, said: cx.errors }; return; }
+  if (!natural.length) yield { code: 0, said: [`${file}: no natural cells to translate`] };
+  else if (natural.every((x) => translated(cellsOf(text), x))) yield { code: 0, said: [`${file}: every natural cell has a cell under it, nothing to translate`] };
   for (let done = 0; ;) {
     const cells = cellsOf(text), c = cells.find((x) => x.kind === 'natural' && !translated(cells, x) && x.index > done);
-    if (!c) break;
+    if (!c) return;
     done = c.index;
+    if (!c.text.trim()) { yield { code: 0, said: [`${file}:${c.line}: an empty natural cell, skipped`] }; continue; }
     let tries = 0;
     const step = (s: string) => note(`${file}:${c.line}: ${s}${tries++ ? '' : ' (usually 30–120 s)'}…`);
     const r = await translateOne(file, text, c, ask, kernel, cx, '', step);
-    said.push(...r.said);
-    if (r.failed) return { code: 2, said, text: start };
-    if (r.code) code = r.code;
+    if (r.failed) { yield { code: 2, said: r.said }; return; }
+    yield { code: r.code, said: r.said, ...(r.text !== text && { text: r.text }) };
     text = r.text;
   }
-  return { code, said, text };
 }
 
 /** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what Claude said last instead of a cell, `step` hears each step as it starts. */
