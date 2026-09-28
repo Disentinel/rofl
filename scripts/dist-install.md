@@ -4,7 +4,7 @@ Needs Node <node> (`node -v`) for the command line, VS Code <vscode> for the edi
 and the `claude` CLI only to translate natural-language cells. No checkout of the repository.
 
     npm install -g ./rofl-nb-<v>.tgz                 # the `rofl-nb` command
-    code --install-extension ./rofl-notebook-<v>.vsix   # the editor; add --force to replace the same version
+    code --install-extension ./rofl-<ext>.vsix       # the editor, ROFL; add --force to replace the same version
 
 ## A first notebook
 
@@ -41,4 +41,4 @@ Claude Code does not know `rofl-nb` exists; paste this into the project's CLAUDE
 ## Uninstall
 
     npm uninstall -g rofl-nb
-    code --uninstall-extension rofl.rofl-notebook
+    code --uninstall-extension <id>

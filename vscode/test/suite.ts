@@ -7,6 +7,7 @@ import { serialize } from '../serial.ts';
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
 type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] } };
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
+const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
 
 const strip = (r: any) => JSON.stringify({ status: r.status, errors: r.errors, cells: r.cells });
 const until = async <T>(get: () => T | undefined, ms: number, what: string): Promise<T> => {
@@ -15,7 +16,7 @@ const until = async <T>(get: () => T | undefined, ms: number, what: string): Pro
 };
 
 export async function run() {
-  const api = await vscode.extensions.getExtension('rofl.rofl-notebook')!.activate() as Api;
+  const api = await vscode.extensions.getExtension(ID)!.activate() as Api;
   const bad: string[] = [];
   for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
   const startup = process.env.ROFL_NB_STARTUP!;
@@ -31,7 +32,7 @@ export async function run() {
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
     if (nb.notebookType !== 'rofl-notebook') { bad.push(`${c.file}: opened as ${nb.notebookType}`); continue; }
     await vscode.window.showNotebookDocument(nb);
-    await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+    await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
     await vscode.commands.executeCommand('notebook.execute');
     const r = await until(() => api.result(nb.uri), 110_000, `a result for ${c.file}`);
     const runs = nb.getCells().filter((x) => ['rofl', 'datalog', 'natural'].includes(x.document.languageId));
@@ -71,7 +72,7 @@ export async function run() {
 async function interrupt(file: string, again: Case, api: Api, bad: string[]) {
   const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
   await vscode.window.showNotebookDocument(nb);
-  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
   const cell = nb.getCells().find((c) => c.document.languageId === 'datalog')!;
   void vscode.commands.executeCommand('notebook.execute');
   await new Promise((f) => setTimeout(f, 3_000));
@@ -135,7 +136,7 @@ async function cellControls(nb: vscode.NotebookDocument, natural: number, before
   const text = () => serialize({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
   const said = (c: vscode.NotebookCell) => c.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
   const under = () => nb.cellAt(natural + 1).document.getText();
-  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: 'rofl.rofl-notebook' });
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
   await vscode.commands.executeCommand('rofl-notebook.revert', nb.cellAt(natural + 1));
   if (text() !== before) bad.push(`${nb.uri.fsPath}: after Revert the notebook is not the file it was: ${nb.cellAt(natural)?.document.languageId} cell ${natural} holds ${JSON.stringify(nb.cellAt(natural)?.document.getText())}`);
   await vscode.commands.executeCommand('rofl-notebook.translateCell', nb.cellAt(natural));

@@ -1,4 +1,5 @@
-// npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command) and dist/rofl-notebook-<v>.vsix (the editor), both plain JS.
+// npm run dist — the notebook without a checkout: dist/rofl-nb-<v>.tgz (the `rofl-nb` command, ROFL's version) and dist/rofl-<ext>.vsix (the editor, the
+// extension's own version from vscode/package.json), both plain JS.
 // One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -10,7 +11,7 @@ import { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), OUT = path.join(ROOT, 'dist');
 const root = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')), version: string = root.version;
-const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf8'));
+const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf8')), vsix = `${ext.name}-${ext.version}.vsix`;
 const NODE = '>=22.0.0', VSCODE = '^1.101.0';   // fs.globSync is Node 22; VS Code 1.101 is the first on Node 22 (Electron 35)
 const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
 rmSync(OUT, { recursive: true, force: true });
@@ -60,7 +61,7 @@ for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 
     else cpSync(path.join(ROOT, f), dst);
   }
 }
-const install = readFileSync(path.join(ROOT, 'scripts/dist-install.md'), 'utf8').replaceAll('<v>', version).replaceAll('<node>', NODE).replaceAll('<vscode>', VSCODE);
+const install = readFileSync(path.join(ROOT, 'scripts/dist-install.md'), 'utf8').replaceAll('<v>', version).replaceAll('<ext>', ext.version).replaceAll('<id>', `${ext.publisher}.${ext.name}`).replaceAll('<node>', NODE).replaceAll('<vscode>', VSCODE);
 writeFileSync(path.join(PKG, 'README.md'), install);
 writeFileSync(path.join(OUT, 'INSTALL.md'), install);
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
@@ -75,8 +76,8 @@ for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES']) cpSync(path.join(PKG, f), pa
 writeFileSync(path.join(VSIX, 'README.md'), install);
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;
-writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest, version, description: 'A .rofl.md opens as a notebook and runs through the ROFL notebook kernel',
-  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE }, repository: root.repository }, null, 2) + '\n');
-execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, `rofl-notebook-${version}.vsix`)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
+writeFileSync(path.join(VSIX, 'package.json'), JSON.stringify({ ...manifest,
+  main: './main.js', files: ['main.js', 'rofl-nb', '*.tmLanguage.json', 'language-configuration.json', 'LICENSE', 'THIRD_PARTY_NOTICES'], engines: { vscode: VSCODE } }, null, 2) + '\n');
+execFileSync(path.join(ROOT, 'vscode/node_modules/.bin/vsce'), ['package', '--no-dependencies', '--out', path.join(OUT, vsix)], { cwd: VSIX, stdio: ['ignore', 'ignore', 'inherit'] });
 
-for (const f of [`rofl-nb-${version}.tgz`, `rofl-notebook-${version}.vsix`]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);
+for (const f of [`rofl-nb-${version}.tgz`, vsix]) console.log(`dist/${f}: ${Math.round(readFileSync(path.join(OUT, f)).length / 1024)} KB`);
