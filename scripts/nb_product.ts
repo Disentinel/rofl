@@ -327,13 +327,14 @@ check('a head with an anchor, or a name beside a hole\'s noun, close to a declar
 const proto = (name: string) => {
   const nbFile = planted(name, 'review.rofl.md', withNatural), repo = path.join(tmp, name), git = (...a: string[]) => spawnSync('git', a, { cwd: repo });
   put(path.join(repo, 'src/a.ts'), 'export function alpha() {\n  return 1;\n}\n' + Array.from({ length: 400 }, (_, i) => `// filler line ${i} of a long file, to spend a small budget`).join('\n') + '\n');
+  put(path.join(repo, 'src/long.txt'), `${'a'.repeat(40)}!\n`);
   put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'untracked.ts'), 'UNTRACKED_TOKEN_9f2\n');
   put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
   symlinkSync('../../outside.txt', path.join(repo, 'src/link.ts'));
   git('init', '-q'); git('add', '-f', 'examples', 'src', '.env', 'keys');
   return nbFile;
 };
-const READS = ['list src/**', 'grep TOKEN_9f2', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', '? C is blocked by T'];
+const READS = ['list src/**', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', '? C is blocked by T'];
 /** The fake: each prompt kept as prompt.N; the first answer is the requests, later ones the cell, or requests for ever with `forever`. */
 const reader = (name: string, forever = false) => { const f = path.join(tmp, `${name}-model`), dir = path.join(tmp, `${name}-prompts`); mkdirSync(dir, { recursive: true }); put(f, `#!/usr/bin/env node
 const fs = require('fs'); let i = '';
@@ -349,7 +350,9 @@ const R_BREAKS: [string, string, RegExp, string][] = [
   ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, ''],
   ['secret', 'notebook/reader.ts', /export const SECRET = .*;/, 'export const SECRET = /$^/;'],
   ['tracked', 'notebook/reader.ts', /  if \(!repo\.files\.has\(rel\)\) return .*\n/, ''],
-  ['grep through a link', 'notebook/reader.ts', /if \('refused' in resolve\(repo, f\)\) return \[\]; /, ''],
+  ['grep path check', 'notebook/reader.ts', /const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;'],
+  ['grep time limit', 'notebook/reader.ts', /timeout: GREP_MS, /, ''],
+  ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
   ['budget', 'notebook/reader.ts', /if \(used \+ l\.length \+ 1 > room\) break; /, ''],
   ['rounds', 'notebook/cli.ts', /round <= ROUNDS; round\+\+/, 'round <= 99; round++'],
   ['logging', 'notebook/cli.ts', /reads\.push\(x\.read\); /, ''],
@@ -357,13 +360,16 @@ const R_BREAKS: [string, string, RegExp, string][] = [
 /** What is wrong with a run of the protocol: empty when every guard held. */
 async function protocol(tag: string, root = ROOT): Promise<string[]> {
   const bad: string[] = [];
-  const [plain, small, forever] = await Promise.all([protoRun(`proto-${tag}`, {}, root), protoRun(`proto-${tag}-small`, { ROFL_NB_READ_BUDGET: '600' }, root), protoRun(`proto-${tag}-ever`, { ROFL_NB_READ_ROUNDS: '3' }, root, true)]);
+  const [plain, small, forever] = await Promise.all([protoRun(`proto-${tag}`, {}, root), protoRun(`proto-${tag}-small`, { ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, root), protoRun(`proto-${tag}-ever`, { ROFL_NB_READ_ROUNDS: '3' }, root, true)]);
   const second = plain.prompts[1] ?? '', all = [plain, small, forever].flatMap((r) => r.prompts).join('\n');
   if (plain.o.code !== 0 || !readFileSync(plain.nb, 'utf8').includes('never M is unowned')) bad.push(`the cell after reading was not written: exit ${plain.o.code}\n${plain.o.out.slice(-600)}`);
   if (!second.includes('1  export function alpha() {') || !second.includes('src/a.ts') || !second.includes('`c2` is blocked by `platform`')) bad.push(`list, show or ? did not answer: ${second.slice(second.indexOf('You asked:'), second.indexOf('You asked:') + 1500)}`);
   for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret']])
     if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`show ${asked} was not refused as ${why}`);
   for (const token of ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'UNTRACKED_TOKEN']) if (all.includes(`${token}_9f2`)) bad.push(`${token} reached a prompt`);
+  // a pattern that backtracks for ever in JavaScript (2^40 steps on that line) is answered at once; a grep stopped at its limit is a refusal, not no match
+  if (!second.includes('> grep (a+)+$ src/*.txt\n(no tracked line matches)')) bad.push(`a catastrophic pattern was not answered as no match: ${second.slice(second.indexOf('> grep (a+)'), second.indexOf('> grep (a+)') + 200)}`);
+  if (!small.prompts[1]?.includes('refused: grep TOKEN_9f2: timed out after 0.001 s')) bad.push(`a grep stopped at its time limit does not say so: ${(small.prompts[1] ?? '').slice((small.prompts[1] ?? '').indexOf('> grep TOKEN'), (small.prompts[1] ?? '').indexOf('> grep TOKEN') + 200)}`);
   if (!/read: .*src\/a\.ts:1-3/.test(plain.o.out) || !plain.o.out.includes('list src/** (')) bad.push(`the reads were not said: ${plain.o.out.slice(-800)}`);
   if (!small.prompts[1]?.includes('the read budget is spent') || (small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length > 600 + 1500) bad.push(`600 bytes of reading were not held to: the second prompt grew by ${(small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length}`);
   if (forever.o.code !== 2 || !forever.o.out.includes('still asked to read after 3 rounds') || forever.prompts.length !== 4) bad.push(`a model that only reads was not stopped after 3 rounds: exit ${forever.o.code}, ${forever.prompts.length} calls`);

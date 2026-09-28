@@ -10,6 +10,8 @@ export const BUDGET = Number(process.env.ROFL_NB_READ_BUDGET ?? 200_000);
 /** Left out even when tracked: a file whose name looks like a secret. */
 export const SECRET = /(^|\/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*)$/i;
 const SHOWN = { list: 200, grep: 100, show: 400 };
+/** How long one grep may run: its pattern is the model's, steered by the text it has just read. */
+const GREP_MS = Number(process.env.ROFL_NB_GREP_MS ?? 5000);
 
 export type Repo = { root: string; files: Set<string>; git: boolean };
 
@@ -19,6 +21,15 @@ export function gitFiles(dir: string): Repo {
   if (top.status !== 0) return { root: realpathSync(dir), files: new Set(), git: false };
   const root = realpathSync(top.stdout.trim()), ls = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 2 ** 20 });
   return { root, files: new Set((ls.stdout ?? '').split('\0').filter((f) => f && !SECRET.test(f))), git: true };
+}
+
+/** git grep over the tracked files: its regex engine does not backtrack, and it is stopped at GREP_MS; lines as `path:line: text`, or why none. */
+function gitGrep(repo: Repo, pattern: string, glob?: string): { lines: string[] } | { refused: string } {
+  const g = spawnSync('git', ['grep', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : [])], { cwd: repo.root, encoding: 'utf8', timeout: GREP_MS, maxBuffer: 16 * 2 ** 20 });
+  if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS') return { refused: 'more than 16 MB of matching lines: narrow the pattern or the glob' };
+  if (g.error || g.signal) return { refused: `timed out after ${GREP_MS / 1000} s` };
+  if (g.status !== 0 && g.status !== 1) return { refused: g.stderr.trim().split('\n').pop() ?? `git grep exited with ${g.status}` };
+  return { lines: g.stdout.split('\n').flatMap((l) => { const m = /^(.*?):(\d+):(.*)$/.exec(l); return m ? [`${m[1]}:${m[2]}: ${m[3].trim().slice(0, 200)}`] : []; }) };
 }
 
 /** A path the model named, as the tracked file it is, or why it may not be read. */
@@ -47,14 +58,14 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
   const matches = (glob: string) => [...repo.files].filter((f) => path.matchesGlob(f, glob)).sort();
   if (verb === 'list') {
     const found = matches(arg);
-    return { text: fit(found, SHOWN.list, 'files'), read: `list ${arg} (${found.length})` };
+    return { text: found.length ? fit(found, SHOWN.list, 'files') : '(no tracked file matches)', read: `list ${arg} (${found.length})` };
   }
   if (verb === 'grep') {
     const globbed = rest.length > 1 && /[*/]/.test(rest.at(-1)!), glob = globbed ? rest.at(-1)! : '**', pattern = globbed ? rest.slice(0, -1).join(' ') : arg;
-    let re: RegExp;
-    try { re = new RegExp(pattern); } catch (e) { return { text: `refused: ${(e as Error).message}`, read: `grep ${pattern} (not a regex)` }; }
-    const hits = matches(glob).flatMap((f) => { if ('refused' in resolve(repo, f)) return []; try { return readFileSync(path.join(repo.root, f), 'utf8').split('\n').flatMap((l, i) => re.test(l) ? [`${f}:${i + 1}: ${l.trim().slice(0, 200)}`] : []); } catch { return []; } });
-    return { text: fit(hits, SHOWN.grep, 'lines'), read: `grep ${pattern} in ${glob} (${hits.length})` };
+    const g = repo.git ? gitGrep(repo, pattern, globbed ? glob : undefined) : { refused: 'not in a git repository' };
+    if ('refused' in g) return { text: `refused: grep ${pattern}: ${g.refused}`, read: `grep ${pattern} refused` };
+    const hits = g.lines.filter((l) => !('refused' in resolve(repo, l.slice(0, l.search(/:\d+: /)))));
+    return { text: hits.length ? fit(hits, SHOWN.grep, 'lines') : '(no tracked line matches)', read: `grep ${pattern} in ${glob} (${hits.length})` };
   }
   if (verb === 'show') {
     const m = /^(.+?)(?::(\d+)(?:-(\d+))?)?$/.exec(arg)!, r = resolve(repo, m[1]);
