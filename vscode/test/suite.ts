@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string] };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string] };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -74,6 +74,7 @@ export async function run() {
       if (kinds.join() !== c.pictures.join()) bad.push(`${c.file}: the pictures drawn are [${kinds}], not [${c.pictures}]`);
       const [mark, tag] = c.status!, tags = drawn[0]?.marks[mark]?.tags ?? [];
       if (!tags.includes(tag)) bad.push(`${c.file}: the mark ${mark} is drawn with the tags [${tags}], not ${tag}`);
+      if (c.compare) { const [m, t] = c.compare, got = drawn.at(-1)?.marks[m]?.tags ?? []; if (!got.includes(t)) bad.push(`${c.file}: the what-if draws ${m} with the tags [${got}], not ${t}`); }
       const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
       if (!why?.includes(says)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
       if (views.some((o) => !o.items.some((i) => i.mime === 'text/markdown' && new TextDecoder().decode(i.data).length > 20))) bad.push(`${c.file}: a picture has no text for an editor without its renderer`);

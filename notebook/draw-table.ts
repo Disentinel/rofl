@@ -5,7 +5,7 @@ function markdown(v: View): string {
   const { vals, rows, cols } = grid(v), cell = (s: string) => s.replace(/\|/g, '\\|');
   const out = [`| | ${cols.map((c) => cell(unquote(c))).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`];
   const tags = (r: string, c: string) => v.cells?.find((x) => x.row === r && x.column === c)?.tags ?? [];
-  for (const r of rows) out.push(`| ${cell((v.marks[r]?.label ?? unquote(r)) + suffix(v.marks[r]))} | ${cols.map((c) => cell(vals.filter((f) => f.args[0] === r && f.args[1] === c).map((f) => unquote(f.args[2])).join(', ') + (tags(r, c).length ? ` [${tags(r, c).join(', ')}]` : ''))).join(' | ')} |`);
+  for (const r of rows) out.push(`| ${cell((v.marks[r]?.label ?? unquote(r)) + suffix(v.marks[r]))} | ${cols.map((c) => cell(vals.filter((f) => f.args[0] === r && f.args[1] === c).map((f) => unquote(f.args[2]) + (f.change ? ` [${f.change}]` : '')).join(', ') + (tags(r, c).length ? ` [${tags(r, c).join(', ')}]` : ''))).join(' | ')} |`);
   return out.join('\n');
 }
 

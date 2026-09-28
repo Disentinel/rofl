@@ -49,26 +49,29 @@ const cli = (file: string, out: string) => new Promise<string>((done) => {
 });
 // the pictures: each example of examples/visual beside the vocabularies it reads, and the kinds its cells draw
 // each with a mark's status its picture must carry, and a fact of it whose why must say a sentence
-type Visual = { f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string] };
+// and a what-if: a cell that excises a fact and draws again, whose picture must tag a mark gone or new
+type Visual = { f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string]; whatif: [string, string, string] };
 const VISUAL: Visual[] = [
-  { f: 'paint-shop', kinds: ['graph'], fails: 'never M is tagged `unpainted`', status: ['pink', 'dangling'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'] },
-  { f: 'spat-thursday', kinds: ['time'], fails: 'never M is tagged `alone`', status: ['$alone(kit,1060)', 'failing'], why: ['during($alone(kit, 1060), 1060, 1080)', '`kit` is alone on `thu` at 1060'] },
-  { f: 'checkout-sequence', kinds: ['time'], fails: 'never C is unanswered', status: ['c3', 'failing'], why: ['message(c3, api, payments, 4)', '`c3` is sent by `api` to `payments` at 4'] },
-  { f: 'coverage', kinds: ['table'], fails: 'never unqueued(K, L)', status: ['k_a', 'failing'], why: ['value(k_a, l_y, open)', 'open_cell'] },
-  { f: 'deploy-argument', kinds: ['argument', 'graph'], status: ['cheap_to_run', 'unknown'], why: ['link_tagged(incident_4711, safe_to_ship, attack)', 'refutes'] },
+  { f: 'paint-shop', kinds: ['graph'], fails: 'never M is tagged `unpainted`', status: ['pink', 'dangling'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'], whatif: ['excise `blue` is in the paint shop\ndraw graph', 'c1', 'new'] },
+  { f: 'spat-thursday', kinds: ['time'], fails: 'never M is tagged `alone`', status: ['$alone(kit,1060)', 'failing'], why: ['during($alone(kit, 1060), 1060, 1080)', '`kit` is alone on `thu` at 1060'], whatif: ['excise moved(c_dentist, swim, w0831, wed, thu, 1020, 1080)\ndraw time', 'swim', 'gone'] },
+  { f: 'checkout-sequence', kinds: ['time'], fails: 'never C is unanswered', status: ['c3', 'failing'], why: ['message(c3, api, payments, 4)', '`c3` is sent by `api` to `payments` at 4'], whatif: ['excise `c3` is sent by `api` to `payments` at 4\ndraw time', 'c3', 'gone'] },
+  { f: 'coverage', kinds: ['table'], fails: 'never unqueued(K, L)', status: ['k_a', 'failing'], why: ['value(k_a, l_y, open)', 'open_cell'], whatif: ['excise done(k_c, l_y, "test/c_y.test.ts")\ndraw table', 'k_c', 'new'] },
+  { f: 'deploy-argument', kinds: ['argument', 'graph'], status: ['cheap_to_run', 'unknown'], why: ['link_tagged(incident_4711, safe_to_ship, attack)', 'refutes'], whatif: ['excise refutes[obs](incident_4711, safe_to_ship)\ndraw argument', 'incident_4711', 'gone'] },
 ];
 cpSync(path.join(ROOT, 'visual'), path.join(tmp, 'nb/visual'), { recursive: true });
 for (const f of ['spat/spat.rofl', 'spat/week.example.rofl', 'visual/deploy-case.rofl']) put(path.join(tmp, 'nb/examples', f), src(`examples/${f}`));
 for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl']) put(path.join(tmp, 'nb', f), src(f));
+const whatifs = VISUAL.map(({ f, whatif: [cell] }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${cell}\n\`\`\`\n`));
 const pictures = VISUAL.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
 const [a, b, c, ...pics] = await Promise.all([cli(review, path.join(tmp, 'review.json')), cli(clean, path.join(tmp, 'clean.json')), cli(small, path.join(tmp, 'small.json')),
-  ...pictures.map((f, k) => cli(f, path.join(tmp, `picture-${k}.json`)))]);
+  ...pictures.map((f, k) => cli(f, path.join(tmp, `picture-${k}.json`))), ...whatifs.map((f, k) => cli(f, path.join(tmp, `whatif-${k}.json`)))]);
 const cases = [
   { file: review, cli: a, fails: { text: 'never C is blocked by T' } },
   { file: clean, cli: b },
   { file: small, cli: c, fails: { text: 'never C recurses', code: [smallJs, 12] } },
   ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: VISUAL[k].kinds, status: VISUAL[k].status, why: VISUAL[k].why, ...(VISUAL[k].fails && { fails: { text: VISUAL[k].fails } }) })),
+  ...whatifs.map((file, k) => ({ file, cli: pics[VISUAL.length + k], pictures: [...VISUAL[k].kinds, VISUAL[k].whatif[0].split(' ').pop()!], status: VISUAL[k].status, why: VISUAL[k].why, compare: VISUAL[k].whatif.slice(1) as [string, string], ...(VISUAL[k].fails && { fails: { text: VISUAL[k].fails } }) })),
 ];
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
