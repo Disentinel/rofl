@@ -52,7 +52,7 @@ function knowMd(file: string, text: string, lib: Get, reads: Get, load: boolean)
   const world = assemble(file, text, input);
   for (const e of world.errors) {
     const name = e.replace(/: not given$/, ''), at = lines.findIndex((l, i) => i < 40 && l.includes(name));
-    diags.push({ ...whole(lines, Math.max(at, 0)), ...(kept.has(name) ? { severity: WARNING, message: `${name}: not read here; the language server reads only the .rofl and .rofl.md files a front matter names` } : { severity: ERROR, message: `${name}: not read` }) });
+    diags.push({ ...whole(lines, Math.max(at, 0)), ...(kept.has(name) ? { severity: WARNING, message: `${name}: not read here, since it is outside the workspace or not a .rofl or .rofl.md file` } : { severity: ERROR, message: `${name}: not read` }) });
   }
   const cells = cellsOf(text).filter((c) => c.kind !== 'natural');
   const book = readBook(cells.map(asCell), world.phrases, world.home);

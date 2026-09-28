@@ -23,7 +23,8 @@ A `.rofl` file, and a `.rofl.md` reopened as text (Reopen Editor With… > Text 
 language server: errors on their lines, a sentence not read with the nearest sentences, hover, go to
 definition, references, the outline and completion. Another editor starts it as `rofl-lsp --stdio`.
 It reads the open files, the model it ships with and the `.rofl`/`.rofl.md` files a front matter's
-`reads:` names; it never reads `code:`, runs nothing and opens no port.
+`reads:` names that are, links followed, inside the workspace; it never reads `code:`, runs nothing
+and opens no port.
 
 ## For an agent
 

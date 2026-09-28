@@ -1,7 +1,8 @@
 // rofl-lsp --stdio — a language server for `.rofl` and `.rofl.md`: diagnostics, hover, definition, references, the outline, completion. What it knows is lsp/know.ts.
-// It reads the open texts, the model's files beside it, the `.rofl` and `.rofl.md` files a front matter's `reads:` names, and a `.rofl` file's `.rofl` neighbours
-// inside a workspace folder. Nothing else: it runs no code, asks no model, opens no port, never reads `code:`.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+// It reads the open texts, the model's files beside it, and the `.rofl` and `.rofl.md` files a front matter's `reads:` names and a `.rofl` file's `.rofl` neighbours
+// are, once every link is followed, inside a workspace folder (with none, in the file's own directory). Nothing else: it runs no code, asks no model, opens no port,
+// never reads `code:`.
+import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -20,7 +21,10 @@ let roots: string[] = [];
 const fileOf = (uri: string) => uri.startsWith('file:') ? fileURLToPath(uri) : uri;
 const uriOf = (file: string) => pathToFileURL(file).href;
 const ours = (f: string) => f.endsWith('.rofl') || f.endsWith('.rofl.md');
-const inside = (f: string) => roots.some((r) => f === r || f.startsWith(r + path.sep));
+const real = (f: string) => { try { return realpathSync(f); } catch { return undefined; } };
+const under = (f: string, dir: string) => f === dir || f.startsWith(dir + path.sep);
+/** A file a text names may be read: what it is after every link is a `.rofl` or `.rofl.md` inside a workspace folder, or with no folder beside the text. */
+const allowed = (p: string, by: string) => { const r = real(p); return !!r && ours(r) && (roots.length ? roots.some((x) => under(r, real(x) ?? x)) : path.dirname(r) === path.dirname(real(by) ?? by)); };
 
 /** An open text, else a regular file of at most 16 MB on disk; null for something there that is not one. */
 function text(file: string): string | undefined | null {
@@ -29,7 +33,7 @@ function text(file: string): string | undefined | null {
 }
 const lib = (f: string) => LIB.has(f) ? text(path.join(ROOT, f)) : undefined;
 /** What a front matter's `reads:` names, from the file's directory as the kernel resolves it; only a `.rofl` or `.rofl.md`. */
-const readsOf = (file: string) => (name: string) => { const p = named(file, name); return ours(p) ? text(p) : exists(p) ? null : undefined; };
+const readsOf = (file: string) => (name: string) => { const p = named(file, name); return allowed(p, file) ? text(p) : exists(p) ? null : undefined; };
 const exists = (p: string) => { try { statSync(p); return true; } catch { return false; } };
 const named = (file: string, name: string) => path.resolve(path.dirname(file), name.replace(/^~(?=\/|$)/, os.homedir()));
 
@@ -48,11 +52,11 @@ const current = (uri: string) => due.has(uri) || !known.has(uri) ? analyse(uri) 
 /** The files a text stands on, each as the language server knows it: the model and what it reads for a `.rofl.md`, the kernel and the neighbours for a `.rofl`. */
 function around(uri: string, k: Known): [string, Known][] {
   const file = fileOf(uri), out: string[] = [];
-  if (k.front) out.push(...libFiles(file, k.front).model.map((f) => path.join(ROOT, f)), ...k.front.reads.map((r) => named(file, r)).filter(ours));
+  if (k.front) out.push(...libFiles(file, k.front).model.map((f) => path.join(ROOT, f)), ...k.front.reads.map((r) => named(file, r)).filter((f) => allowed(f, file)));
   else {
     out.push(path.join(ROOT, 'boot.rofl'));
     const dir = path.dirname(file);
-    if (inside(dir)) try { out.push(...readdirSync(dir).filter((f) => f.endsWith('.rofl')).map((f) => path.join(dir, f))); } catch {}
+    if (roots.length) try { out.push(...readdirSync(dir).map((f) => path.join(dir, f)).filter((f) => f.endsWith('.rofl') && allowed(f, file))); } catch {}
   }
   return [[file, k] as [string, Known], ...[...new Set(out)].filter((f) => f !== file).flatMap((f): [string, Known][] => {
     const t = text(f); if (typeof t !== 'string') return [];
@@ -148,13 +152,18 @@ function handle(m: Msg) {
   try { send({ id: m.id, result: h(m.params) ?? null }); } catch (e) { send({ id: m.id, error: { code: -32603, message: (e as Error).message } }); }
 }
 
+// a header longer than 64 KB is dropped; a message said to be longer than 32 MB ends the server, since nothing after it can be trusted to start a frame
+const HEADER = 64 << 10, BODY = 32 << 20;
 let buf = Buffer.alloc(0);
 process.stdin.on('data', (d: Buffer) => {
   buf = Buffer.concat([buf, d]);
   for (;;) {
-    const h = buf.indexOf('\r\n\r\n'); if (h < 0) return;
+    const h = buf.indexOf('\r\n\r\n');
+    if (h < 0) { if (buf.length > HEADER) { process.stderr.write(`dropped ${buf.length} bytes with no header\n`); buf = Buffer.alloc(0); } return; }
     const n = Number(/Content-Length: *(\d+)/i.exec(buf.subarray(0, h).toString())?.[1]);
+    if (h > HEADER) { const c = buf.lastIndexOf('Content-Length:', h); buf = buf.subarray(c > 0 ? c : h + 4); continue; }   // junk before a header: resync on it
     if (!Number.isFinite(n)) { buf = buf.subarray(h + 4); continue; }
+    if (n > BODY) { process.stderr.write(`a message of ${n} bytes is over ${BODY}; ending\n`); process.exit(1); }
     if (buf.length < h + 4 + n) return;
     const body = buf.subarray(h + 4, h + 4 + n).toString('utf8');
     buf = buf.subarray(h + 4 + n);

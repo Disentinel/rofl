@@ -1,10 +1,11 @@
 // npm run test:lsp — the language server against the tree and against planted defects, under a minute; `-- --all` sweeps docs/ too, in about two.
 // 1. Every `.rofl` and `.rofl.md` in the tree: no error but on the files listed below, each of which must have one; no warning but those listed.
 // 2. One planted defect per feature, through lsp/know.ts: a broken rule, a refused program, a sentence not read; hover, definition, references, outline, completion on a known relation.
-// 3. The server over stdio, as it is and with a planted defect in its code for each feature, which must turn it red.
+// 3. The server over stdio, as it is and with a planted defect in its code for each feature, which must turn it red: what it answers, what it will not read
+//    (a link to outside the workspace, a .rofl outside it), and a frame too long or a header lost in junk.
 import { spawn } from 'node:child_process';
-import { globSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { availableParallelism } from 'node:os';
+import { globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { availableParallelism, tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { know, type Known } from './know.ts';
@@ -108,15 +109,19 @@ async function converse(server: string): Promise<Rpc> {
     { id: 6, method: 'textDocument/completion', params: { textDocument: { uri: broken }, position: { line: 0, character: 0 } } },
     { id: 7, method: 'shutdown' }, { method: 'exit' },
   ];
-  const out = await node([server, '--stdio'], msgs.map((m) => { const b = JSON.stringify({ jsonrpc: '2.0', ...m }); return `Content-Length: ${Buffer.byteLength(b)}\r\n\r\n${b}`; }).join(''));
+  const got = parse(await node([server, '--stdio'], frames(msgs)));
+  const res = (id: number) => got.find((m) => m.id === id)?.result;
+  return { diags: got.filter((m) => m.method === 'textDocument/publishDiagnostics' && m.params.uri === broken).flatMap((m) => m.params.diagnostics), hover: res(2), def: res(3), refs: res(4), symbols: res(5), completion: res(6) };
+}
+const frames = (msgs: object[]) => msgs.map((m) => { const b = JSON.stringify({ jsonrpc: '2.0', ...m }); return `Content-Length: ${Buffer.byteLength(b)}\r\n\r\n${b}`; }).join('');
+function parse(out: string): any[] {
   const got: any[] = [];
   for (let b = Buffer.from(out); b.length;) {
     const h = b.indexOf('\r\n\r\n'); if (h < 0) break;
     const len = Number(/Content-Length: (\d+)/.exec(b.subarray(0, h).toString())?.[1]);
     got.push(JSON.parse(b.subarray(h + 4, h + 4 + len).toString())); b = b.subarray(h + 4 + len);
   }
-  const res = (id: number) => got.find((m) => m.id === id)?.result;
-  return { diags: got.filter((m) => m.method === 'textDocument/publishDiagnostics' && m.params.uri === broken).flatMap((m) => m.params.diagnostics), hover: res(2), def: res(3), refs: res(4), symbols: res(5), completion: res(6) };
+  return got;
 }
 function judge(r: Rpc): string[] {
   const out: string[] = [], line = (x: any) => x?.range?.start?.line;
@@ -134,6 +139,10 @@ const MUTANTS: Record<string, [RegExp, string]> = {
   'hover says nothing': [/return k && rel \? \{ contents/, 'return false && rel ? { contents'],
   'definition takes uses': [/s\.rel === rel && s\.def\)\.map/, 's.rel === rel && !s.def).map'],
   'references give the heads': [/\(!s\.def \|\| context\?\.includeDeclaration\)/, '(s.def || context?.includeDeclaration)'],
+  'reads through a link': [/return allowed\(p, file\) \? text\(p\)/, 'return ours(p) ? text(p)'],
+  'reads outside the workspace': [/roots\.some\(\(x\) => under\(r, real\(x\) \?\? x\)\)/, 'true'],
+  'waits on a huge frame': [/process\.exit\(1\); \}/, '}'],
+  'deaf after junk': [/buf = buf\.subarray\(c > 0 \? c : h \+ 4\)/, 'buf = buf.subarray(h + 4)'],
   'outline empty': [/return \(k\?\.sites \?\? \[\]\)\.filter\(\(s\) => s\.def/, 'return (k?.sites ?? []).filter((s) => !s.def'],
   'completion without the kernel': [/for \(const \[, x\] of around\(d\.uri, k\)\)/, 'for (const x of [k])'],
 };
@@ -143,7 +152,48 @@ const conversations = () => Promise.all([['as it is', SERVER] as const, ...Objec
   const f = path.join(ROOT, `lsp/mutant-${name.replace(/ /g, '-')}.ts`);
   writeFileSync(f, src.replace(at, plant));
   return [name, f] as const;
-})].map(async ([name, f]) => { try { return { name, red: judge(await converse(f)) }; } finally { if (f !== SERVER) rmSync(f, { force: true }); } }));
+})].map(async ([name, f]) => { try { const [r, c, w] = await Promise.all([converse(f), confined(f), framing(f)]); return { name, red: [...judge(r), ...c, ...w] }; } finally { if (f !== SERVER) rmSync(f, { force: true }); } }));
+
+// 4. what the server will not read: a link named .rofl to a file outside the workspace, and a .rofl outside it, next to a .rofl inside it that it reads
+async function confined(server: string): Promise<string[]> {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'rofl-lsp-')), ws = path.join(tmp, 'ws'), out = path.join(tmp, 'outside'), TOKEN = 'canary_7f3a9e';
+  try {
+    mkdirSync(ws); mkdirSync(out);
+    writeFileSync(path.join(out, 'secret.txt'), `${TOKEN}(1).\n`); writeFileSync(path.join(out, 'plain.rofl'), `${TOKEN}(2).\n`);
+    symlinkSync(path.join(out, 'secret.txt'), path.join(ws, 'creds.rofl'));
+    writeFileSync(path.join(ws, 'ok.rofl'), 'okrel(1).\n');
+    const md = pathToFileURL(path.join(ws, 'nb.rofl.md')).href, a = pathToFileURL(path.join(ws, 'a.rofl')).href;
+    const said = await node([server, '--stdio'], frames([
+      { id: 1, method: 'initialize', params: { rootUri: pathToFileURL(ws).href, capabilities: {} } },
+      { method: 'textDocument/didOpen', params: { textDocument: { uri: md, languageId: 'markdown', version: 1, text: '---\nreads: [creds.rofl, ok.rofl, ../outside/plain.rofl]\n---\n\nA thing X is odd if X is odd.\n' } } },
+      { method: 'textDocument/didOpen', params: { textDocument: { uri: a, languageId: 'rofl', version: 1, text: 'a(1).\n' } } },
+      { id: 2, method: 'textDocument/completion', params: { textDocument: { uri: a }, position: { line: 0, character: 0 } } },
+      { id: 3, method: 'shutdown' }, { method: 'exit' }]));
+    const got = parse(said), diags = got.filter((m) => m.params?.uri === md).flatMap((m) => m.params.diagnostics), labels = got.find((m) => m.id === 2)?.result?.map((i: any) => i.label) ?? [];
+    const kept = (n: string) => diags.some((d: any) => d.severity === 2 && d.message.startsWith(`${n}: not read here`));
+    return [
+      ...(said.includes(TOKEN) ? [`the canary ${TOKEN} is in what the server said`] : []),
+      ...(!kept('creds.rofl') || !kept('../outside/plain.rofl') ? [`no warning for what it would not read: ${JSON.stringify(diags)}`] : []),
+      ...(diags.some((d: any) => d.message.includes('ok.rofl')) || !labels.includes('okrel') ? [`the .rofl inside the workspace was not read: ${JSON.stringify(diags)} ${labels}`] : []),
+    ];
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+/** The server's stdin kept open: after `input`, does it end or answer within a second. */
+const within = (server: string, input: string) => new Promise<{ ended: boolean; out: string }>((done) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', server, '--stdio'], { stdio: ['pipe', 'pipe', 'ignore'] });
+  let out = '', ended = false;
+  let sent = false;
+  const stop = (why: string) => { p.kill(); done({ ended, out: why + out }); }, late = setTimeout(() => stop('never started: '), 20_000);
+  // the second is the server's, not its start's: `input` goes once it has answered an initialize
+  p.stdout.on('data', (d) => { out += d; if (!sent && out.includes('"id":0')) { sent = true; clearTimeout(late); out = ''; p.stdin.write(input); setTimeout(() => stop(''), 1_000); } });
+  p.on('exit', () => { ended = true; });
+  p.stdin.on('error', () => {});
+  p.stdin.write(frames([{ id: 0, method: 'initialize', params: { capabilities: {} } }]));
+});
+async function framing(server: string): Promise<string[]> {
+  const [huge, junk] = await Promise.all([within(server, 'Content-Length: 999999999\r\n\r\nabc'), within(server, 'x'.repeat(70_000) + frames([{ id: 1, method: 'initialize', params: { capabilities: {} } }]))]);
+  return [...(huge.ended ? [] : ['a frame said to be 1 GB wedged the server instead of ending it']), ...(parse(junk.out).some((m) => m.id === 1) ? [] : ['70 KB with no header left the server deaf to the next frame'])];
+}
 
 const swept = await sweeping; console.log(`swept in ${((performance.now() - t0) / 1000).toFixed(1)} s`); const talks = await conversations();
 const all = swept.flat();
@@ -155,7 +205,7 @@ for (const s of all) {
 }
 for (const f of Object.keys(REFUSED).filter((f) => ALL || !f.startsWith('docs/'))) expect(all.some((s) => s.f === f), `${f} is listed as refused and is not in the tree`);
 for (const t of talks) {
-  if (t.name === 'as it is') { for (const r of t.red) bad.push(`the server: ${r}`); console.log(`${t.red.length ? 'FAIL' : 'ok  '} the server over stdio`); }
+  if (t.name === 'as it is') { for (const r of t.red) bad.push(`the server: ${r}`); console.log(`${t.red.length ? 'FAIL' : 'ok  '} the server over stdio: what it answers, what it will not read, its framing`); }
   else { expect(t.red.length > 0, `planted "${t.name}" stayed green`); console.log(`${t.red.length ? 'ok  ' : 'FAIL'} planted "${t.name}": red`); }
 }
 const slow = [...all].sort((a, b) => b.ms - a.ms).slice(0, 3).map((s) => `${s.f} ${s.ms} ms`).join(', ');
