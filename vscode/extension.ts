@@ -34,10 +34,11 @@ function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, uns
   return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model }); });
 }
 /** Pin layout, a person's click on a picture: its placed(M, X, Y) facts in <notebook>.layout.rofl beside the notebook, never in it. */
-function pinLayout(nb: vscode.Uri, facts: string) {
+function pinLayout(nb: vscode.Uri, facts: string): string {
   const file = nb.fsPath.replace(/\.rofl\.md$/, '.layout.rofl');
   writeFileSync(file, facts);
   void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
+  return file;
 }
 /** One prompt to VS Code's language model (GitHub Copilot's, or any other the editor has), as text alone: no tool is offered, so none can be called. */
 async function viaLm(model: vscode.LanguageModelChat, prompt: string, stop?: vscode.CancellationToken): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
@@ -102,11 +103,12 @@ export function activate(ctx: vscode.ExtensionContext) {
   controller.executeHandler = (_cells, nb) => run(nb);
   // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => pinLayout(nb, facts)));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
   ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
     const nb = vscode.Uri.parse(String(m.notebook));
     if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
-    if (m.pin !== undefined) pinLayout(nb, String(m.pin));
+    if (m.pin !== undefined) void vscode.commands.executeCommand('rofl-notebook.pinLayout', nb, String(m.pin));
   }));
 
   async function run(nb: vscode.NotebookDocument) {

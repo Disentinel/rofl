@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string] };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -37,6 +37,11 @@ export async function run() {
   await language(bad);
   for (const c of cases) {
     const t0 = Date.now();
+    // Pin layout, as the renderer's button asks it: the facts in <notebook>.layout.rofl, which this notebook reads, then drawn where they put the marks
+    if (c.pin) {
+      const file = await vscode.commands.executeCommand<string>('rofl-notebook.pinLayout', vscode.Uri.file(c.file), c.pin);
+      if (!existsSync(file) || readFileSync(file, 'utf8') !== c.pin) { bad.push(`${c.file}: Pin layout did not write ${file}`); break; }
+    }
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
     if (nb.notebookType !== 'rofl-notebook') { bad.push(`${c.file}: opened as ${nb.notebookType}`); continue; }
     await vscode.window.showNotebookDocument(nb);
@@ -46,6 +51,12 @@ export async function run() {
     const runs = nb.getCells().filter((x) => ['rofl', 'datalog', 'natural'].includes(x.document.languageId));
     await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end');
     const said = (x: vscode.NotebookCell) => x.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
+    if (c.pin) {
+      const view = runs.flatMap((x) => x.outputs).flatMap((o) => o.items).filter((i) => i.mime === VIEW_MIME).map((i) => JSON.parse(new TextDecoder().decode(i.data)).view)[0];
+      if (!view?.facts.some((f: { literal: string }) => `${f.literal}.\n` === c.pin)) bad.push(`${c.file}: the picture does not carry the pinned ${c.pin.trim()}`);
+      console.log(`${c.file}: ${Date.now() - t0} ms`);
+      continue;
+    }
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the extension's result is not the command line's --json`);
     r.cells.slice(1).forEach((k, i) => {
       if (!runs[i] || !said(runs[i]) && (k.lines.length || k.notes.length || k.errors.length)) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);

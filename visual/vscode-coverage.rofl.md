@@ -41,6 +41,14 @@ done(t_gantt, v_render, "vscode/test/suite.ts").    done(t_gantt, v_status, "vsc
 done(t_sequence, v_render, "vscode/test/suite.ts"). done(t_sequence, v_status, "vscode/test/suite.ts"). done(t_sequence, v_why, "vscode/test/suite.ts").
 done(tb_table, v_render, "vscode/test/suite.ts").   done(tb_table, v_status, "vscode/test/suite.ts").   done(tb_table, v_why, "vscode/test/suite.ts").
 
+-- w2a: each first-wave picture again with an excise in its cell; the what-if's picture tags the mark the retraction moved (vscode/test/suite.ts, compare)
+done(K, v_compare, "vscode/test/suite.ts") :- first_wave(K).
+-- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl, and a notebook reading it carries the
+-- placed facts the renderer lays the marks at (vscode/test/suite.ts, pin; planted: --break pin). The renderer's use of them was seen, not tested.
+done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, "vscode/test/suite.ts").
+-- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
+done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
+
 -- waived, with reasons that can go stale
 waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
 waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
@@ -49,7 +57,9 @@ waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL 
 -- the plan
 work(w1, "a VS Code notebook output renderer for view facts, with click to why and status tags").
 work(w2, "excise before/after drawn in VS Code (new and gone marks)").
+work(w2a, "the same, for the first-wave kinds").
 work(w3, "pinned layout honoured in VS Code, and the pin action there").
+work(w3a, "the same, for the first-wave graphs").
 work(w4, "graph dialects in VS Code: architecture, state, process, causal, proof").
 work(w5, "time forms beyond gantt/sequence: timeline, timing").
 work(w6, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
@@ -58,10 +68,11 @@ work(w8, "notation: open the emitted standard file in a VS Code preview").
 work(w9, "frames: one view per tick, small multiples or animation").
 work(w10, "zoom: collapse inside groups and aggregate them").
 work(w11, "a test:vscode check per kind").
+work(w11a, "the same, for the first-wave kinds").
 work(w12, "an example notebook per kind").
 work(w13, "a guide page on drawing, with generated pictures").
 state(w1, done). state(w2, open). state(w3, open). state(w4, open). state(w5, open). state(w6, open). state(w7, open).
-state(w8, open). state(w9, open). state(w10, open). state(w11, open). state(w12, open). state(w13, open).
+state(w8, open). state(w2a, done). state(w3a, done). state(w11a, done). state(w9, open). state(w10, open). state(w11, open). state(w12, open). state(w13, open).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 core(v_render). core(v_why). core(v_status).
@@ -71,8 +82,10 @@ later_table(tb_chart). later_table(tb_heatmap). later_table(tb_upset). later_tab
 dialect_lens(v_render). dialect_lens(v_why). dialect_lens(v_status).
 
 claims(w1, K, L) :- first_wave(K), core(L).
-claims(w2, K, v_compare) :- kind(K), K != n_notation.
-claims(w3, K, v_geometry) :- family(K, graph).
+claims(w2, K, v_compare) :- kind(K), K != n_notation, not first_wave(K).
+claims(w2a, K, v_compare) :- first_wave(K).
+claims(w3, K, v_geometry) :- family(K, graph), not first_wave(K).
+claims(w3a, K, v_geometry) :- family(K, graph), first_wave(K).
 claims(w3, K, v_geometry) :- family(K, space).
 claims(w4, K, L) :- dialect(K), dialect_lens(L).
 claims(w5, K, L) :- later_time(K), dialect_lens(L).
@@ -81,7 +94,8 @@ claims(w7, K, L) :- family(K, space), dialect_lens(L).
 claims(w8, n_notation, v_render).
 claims(w9, K, v_frames) :- kind(K), K != n_notation.
 claims(w10, K, v_zoom) :- kind(K), K != n_notation.
-claims(w11, K, v_test) :- kind(K).
+claims(w11, K, v_test) :- kind(K), not first_wave(K).
+claims(w11a, K, v_test) :- first_wave(K).
 claims(w12, K, v_example) :- kind(K), not done(K, v_example, _).
 claims(w13, K, v_docs) :- kind(K).
 
