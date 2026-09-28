@@ -18,6 +18,7 @@ path_exists("docs/books-and-permission.md").
 path_exists("docs/choosing-perspectives.md").
 path_exists("docs/failure-modes.md").
 path_exists("docs/formal-reasoning-landscape.md").
+path_exists("docs/md-world.md").
 path_exists("docs/medium-and-large.md").
 path_exists("docs/modelling-a-language.md").
 path_exists("docs/normalisation-and-profiling.md").
@@ -102,6 +103,7 @@ path_exists("facts/worklist.rofl").
 path_exists("facts/worlds.rofl").
 path_exists("notebook/cli.ts").
 path_exists("notebook/kernel.ts").
+path_exists("notebook/serve.ts").
 path_exists("package.json").
 path_exists("playground/host.ts").
 path_exists("playground/npc.html").
