@@ -1,8 +1,8 @@
 // A picture of a notebook: the view facts its adapter rules concluded (visual/*.rofl.md), the tags the run itself knows, and text backends.
 // Pure: the host collects a view where the world is, the command line prints it, the playground draws it.
 
-export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space';
-export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument', 'space'];
+export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation';
+export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument', 'space', 'notation'];
 /** The tags only the renderer writes: from what the model could not see, from a what-if, from a failing never, from a link to no node. */
 /** The MIME type of a draw line's output, which VS Code's notebook renderer (vscode/visual/renderer.ts) draws. */
 export const VIEW_MIME = 'application/vnd.rofl.view+json';
@@ -20,6 +20,7 @@ const RELS: Record<DrawKind, [string, number][]> = {
   argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
   time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
+  notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2]],
   space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
 };
 const VARS = ['A', 'B', 'C', 'D', 'E'];
@@ -55,6 +56,7 @@ export function collect(kind: DrawKind, w: World): View {
   }
   if (kind === 'time') for (const f of facts) if (['lane', 'during', 'happens', 'message'].includes(f.rel)) mark(f.args[0], f);
   if (kind === 'table') for (const f of is('value')) mark(f.args[0], f);
+  if (kind === 'notation') for (const f of facts) { mark(f.args[0], f); if (f.rel === 'partner' || f.rel === 'child') mark(f.args[1], f); }
   if (kind === 'space') {
     for (const f of facts) if (['at', 'box', 'corner'].includes(f.rel)) mark(f.args[0], f);
     for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');

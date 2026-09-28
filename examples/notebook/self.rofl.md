@@ -104,7 +104,8 @@ I4 The file is the truth: the notebook is the Markdown file; outputs are derived
 > the translator, and nowhere a run passes through; the kept kernel
 > (`notebook/serve.ts`) writes two more beside its socket, its pid and its
 > log, neither of them a notebook. The editor's Pin layout, a click on a
-> picture, writes a layout file beside the notebook, never the notebook.
+> picture, and a notation's Open, write a file beside the notebook (a layout,
+> a GEDCOM file), never the notebook.
 
 ```rofl
 A call C writes a file either:
@@ -115,7 +116,7 @@ A function F may write a file either:
 1. if F answers to "translate";
 2. if F answers to "writePid";
 3. if F answers to "logOf";
-4. if F answers to "pinLayout".
+4. if F answers to "besideNotebook".
 
 A call C writes outside translation if C writes a file, a function F is the nearest function of C, and unless F may write a file.
 

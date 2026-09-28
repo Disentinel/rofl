@@ -12,6 +12,8 @@ export type Hooks = {
   laid?(facts: string[]): void;
   /** what was drawn, once it is: the frames, each by its key, so a test can read the picture back */
   drawn?(what: { frames: string[]; labels: string[] }): void;
+  /** a notation's standard file, opened for the domain's own tool: `ext` its file name's ending */
+  open?(text: string, ext: string): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
   libs(): Promise<boolean>;
 };

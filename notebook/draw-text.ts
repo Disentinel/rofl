@@ -5,8 +5,9 @@ import { backends as argument } from './draw-argument.ts';
 import { backends as time } from './draw-time.ts';
 import { backends as table } from './draw-table.ts';
 import { backends as space } from './draw-space.ts';
+import { backends as notation } from './draw-notation.ts';
 
-export const BACKENDS: Backend[] = [...graph, ...argument, ...time, ...table, ...space];
+export const BACKENDS: Backend[] = [...graph, ...argument, ...time, ...table, ...space, ...notation];
 
 /** The backend a view is written in: the one of its kind in `format` that fits it, else its kind's first that fits. */
 export function backendOf(v: View, format?: string): Backend {

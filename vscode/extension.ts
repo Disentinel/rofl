@@ -33,11 +33,11 @@ function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, uns
   stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
   return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model }); });
 }
-/** Pin layout, a person's click on a picture: its placed(M, X, Y) facts in <notebook>.layout.rofl beside the notebook, never in it. */
-function pinLayout(nb: vscode.Uri, facts: string): string {
-  const file = nb.fsPath.replace(/\.rofl\.md$/, '.layout.rofl');
-  writeFileSync(file, facts);
-  void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
+/** A person's click on a picture writes a file beside the notebook, never the notebook: Pin layout its placed(M, X, Y) facts in
+ *  <notebook>.layout.rofl, a notation its standard file (<notebook>.ged), which VS Code then opens for the domain's own tool. */
+function besideNotebook(nb: vscode.Uri, ext: string, text: string): string {
+  const file = nb.fsPath.replace(/\.rofl\.md$/, ext);
+  writeFileSync(file, text);
   return file;
 }
 /** One prompt to VS Code's language model (GitHub Copilot's, or any other the editor has), as text alone: no tool is offered, so none can be called. */
@@ -107,13 +107,23 @@ export function activate(ctx: vscode.ExtensionContext) {
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.zoom', (nb: vscode.Uri, group: string) => pictures.postMessage({ zoom: group, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.drawn', (nb: vscode.Uri) => drawn.get(nb.toString()) ?? []));
-  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => pinLayout(nb, facts)));
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => {
+    const file = besideNotebook(nb, '.layout.rofl', facts);
+    void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
+    return file;
+  }));
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.openNotation', async (nb: vscode.Uri, ext: string, text: string) => {
+    const file = besideNotebook(nb, `.${ext.replace(/\W/g, '')}`, text);
+    await vscode.window.showTextDocument(vscode.Uri.file(file), { viewColumn: vscode.ViewColumn.Beside, preview: true });
+    return file;
+  }));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
   ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
     const nb = vscode.Uri.parse(String(m.notebook));
     if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
     if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
     if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as { kind: string; frames: string[]; labels: string[] }]);
+    if (m.notation !== undefined) void vscode.commands.executeCommand('rofl-notebook.openNotation', nb, String(m.ext), String(m.notation));
     if (m.pin !== undefined) void vscode.commands.executeCommand('rofl-notebook.pinLayout', nb, String(m.pin));
   }));
 

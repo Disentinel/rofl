@@ -5,10 +5,11 @@ import { BACKENDS, backendOf } from '../../notebook/draw-text.ts';
 import { detail, esc, layouts, style, type Hooks, type Picture } from './picture.ts';
 import { pictures as graph } from './pic-graph.ts';
 import { pictures as space } from './pic-space.ts';
+import { pictures as notation } from './pic-notation.ts';
 import { pictures as time } from './pic-time.ts';
 import { pictures as table } from './pic-table.ts';
 
-export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space];
+export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space, ...notation];
 
 /** A drawn picture's handle: its groups can be opened and shut from outside (the extension's zoom message), as a click does. */
 export type Drawn = { toggle(group: string): Promise<void> };

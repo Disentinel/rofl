@@ -288,6 +288,7 @@ const PICTURE: [string, string[], (o: Out) => boolean][] = [
   ['table: a Markdown table, the cells the audits name marked', ['coverage.rofl.md'], (m) => is(m, 1) && has(m, '| k_a [failing] | done | open [failing] |') && has(m, '| k_b | claimed | waived |')],
   ['argument: Argdown, a refutation as -, the grade and the unknown as hashtags', ['deploy-argument.rofl.md'], (a) => is(a, 0) && has(a, '[safe_to_ship] #contested\n      + <canary_clean>\n      - <incident_4711>') && has(a, '[cheap_to_run] #unknown')],
   ['space: GeoJSON, a station a Point at its longitude and latitude, the stranded one failing', ['rail-map.rofl.md'], (m) => is(m, 1) && geo(m).some((f) => f.properties.mark === 'rome' && f.geometry.coordinates.join() === '12,42' && f.properties.tags.includes('failing')) && geo(m).filter((f) => f.geometry.type === 'LineString').length === 6],
+  ['notation: GEDCOM 7, a family its partners and its child', ['family-tree.rofl.md'], (g) => is(g, 1) && has(g, '    0 @F1@ FAM\n    1 HUSB @I1@\n    1 WIFE @I2@\n    1 CHIL @I4@\n') && has(g, '    0 TRLR')],
   ['frames: small multiples, a Gantt chart a day, a bar new against the day before', ['spat-week.rofl.md'], (w) => is(w, 1) && has(w, '    frame 4:') && has(w, 'acme [new] :active, ') && has(w, 'dentist [gone] :done, ')],
 ];
 const picMutants: [string, string][] = [
@@ -298,6 +299,7 @@ const picMutants: [string, string][] = [
   ['draw-table', drawMutant('draw-table', 'notebook/draw-table.ts', /\(tags\(r, c\)\.length \? ` \[\$\{tags\(r, c\)\.join\(', '\)\}\]` : ''\)/, () => `''`)],
   ['draw-argdown', drawMutant('draw-argdown', 'notebook/draw-argument.ts', /\$\{attack \? '-' : '\+'\}/, () => '+')],
   ['draw-space', drawMutant('draw-space', 'notebook/draw-space.ts', /out\.set\(f\.args\[0\], \{ point: \[num\(f\.args\[1\]\), num\(f\.args\[2\]\)\] \}\)/, () => 'out.set(f.args[0], { point: [num(f.args[2]), num(f.args[1])] })')],
+  ['draw-notation', drawMutant('draw-notation', 'notebook/draw-notation.ts', /out\.push\(`1 CHIL \$\{id\(c, 'I', people\)\}`\)/, () => '0')],
   ['draw-frames', drawMutant('draw-frames', 'notebook/draw.ts', /if \(!of\.size\) return null;/, () => 'return null;')],
 ];
 /** The features of the GeoJSON a run printed. */

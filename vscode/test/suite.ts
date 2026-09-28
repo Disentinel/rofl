@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string] };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -62,7 +62,8 @@ export async function run() {
         const [group, shut, member] = c.zoom, n = got.length, has = (d: { labels: string[] }, l: string) => d.labels.includes(l);
         if (!got.some((d) => has(d, shut) && !has(d, member))) bad.push(`${c.file}: the shut group ${group} is not drawn as "${shut}" without ${member}: ${JSON.stringify(got.map((d) => d.labels))}`);
         await vscode.commands.executeCommand('rofl-notebook.zoom', nb.uri, group);
-        for (const end = Date.now() + 20_000; got.length === n && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) got = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+        // a picture still finishing its first paint may report after the zoom too: wait for a report with the member, not for the next one
+        for (const end = Date.now() + 20_000; !got.slice(n).some((d) => has(d, member)) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) got = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
         if (!got.slice(n).some((d) => has(d, member) && !has(d, shut))) bad.push(`${c.file}: zoomed into ${group}, the renderer does not draw ${member}: ${JSON.stringify(got.slice(n).map((d) => d.labels))}`);
       }
     }
@@ -115,6 +116,12 @@ export async function run() {
         if (!at.includes(c.laid)) bad.push(`${c.file}: the renderer put ${c.laid.slice(3, c.laid.indexOf(','))} elsewhere: ${at.find((x) => x.startsWith(c.laid!.slice(0, c.laid!.indexOf(',')))) ?? 'nothing reported'}`);
         const y = (m: string) => Number(/, (-?\d+)\)\.$/.exec(at.find((x) => x.startsWith(`drawn_at(${m},`)) ?? '')?.[1] ?? NaN);
         if (c.below && !(y(c.below[0]) > y(c.below[1]))) bad.push(`${c.file}: ${c.below[0]} is not drawn below ${c.below[1]} (page y ${y(c.below[0])} and ${y(c.below[1])})`);
+      }
+      if (c.notation) {   // a notation opens as the standard file beside the notebook, the same text the picture shows
+        const text = /```\w+\n([\s\S]*)\n```/.exec(views.flatMap((o) => o.items).filter((i) => i.mime === 'text/markdown').map((i) => new TextDecoder().decode(i.data))[0] ?? '')?.[1] ?? '';
+        const file = await vscode.commands.executeCommand<string>('rofl-notebook.openNotation', nb.uri, c.notation, text);
+        const shown = vscode.window.visibleTextEditors.find((e) => e.document.uri.fsPath === file)?.document.getText();
+        if (!text.startsWith('0 HEAD') || !file?.endsWith(`.${c.notation}`) || shown !== text) bad.push(`${c.file}: the notation did not open as ${c.notation}: ${file}, ${shown === text ? 'same text' : `text ${JSON.stringify((shown ?? '').slice(0, 60))}`}`);
       }
       if (c.compare) { const [m, t] = c.compare, got = drawn.at(-1)?.marks[m]?.tags ?? []; if (!got.includes(t)) bad.push(`${c.file}: the what-if draws ${m} with the tags [${got}], not ${t}`); }
       const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);

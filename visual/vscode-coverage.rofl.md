@@ -64,6 +64,10 @@ done(K, v_zoom, "vscode/test/suite.ts") :- drawn_now(K), not waived(K, v_zoom, _
 -- map, red); test:nb:product parses the map's GeoJSON (planted: draw-space, swapped coordinates, red). A space's zoom shuts a region.
 done(K, L, "vscode/test/suite.ts") :- family(K, space), lens(L), L != v_example, not shared(L), not waived(K, L, _).
 done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_example, "examples/visual/office-plan.rofl.md"). done(s_axes, v_example, "examples/visual/wardley.rofl.md").
+-- wN: visual/notation.rofl.md, GEDCOM 7 written from a family's facts (notebook/draw-notation.ts); in VS Code the picture shows the file and
+-- opens it beside the notebook for a genealogy tool (rofl-notebook.openNotation; test:vscode reads the opened file back, planted --break
+-- notation red); test:nb:product holds the file to its FAM record (planted draw-notation, a family with no child, red)
+done(n_notation, v_render, "vscode/test/suite.ts"). done(n_notation, v_test, "vscode/test/suite.ts"). done(n_notation, v_example, "examples/visual/family-tree.rofl.md").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 
@@ -96,9 +100,9 @@ work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the share
 work(wZa, "zoom for the kinds that render now: the first wave and space").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
 state(w1, done). state(wFa, done). state(wZa, done). state(w2a, done). state(w3a, done). state(w11a, done).
-state(wG, open). state(wT, open). state(wB, open). state(wS, done). state(wN, open). state(wF, open). state(wZ, open). state(wD, open).
+state(wG, open). state(wT, open). state(wB, open). state(wS, done). state(wN, done). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
-owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wN, nb_draw). owner(wD, nb_draw).
+owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 drawn_now(K) :- first_wave(K).
