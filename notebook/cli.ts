@@ -10,10 +10,10 @@ import { getHeapStatistics } from 'node:v8';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Kernel, unresolvedSaid, type NbLine, type NbResult } from './kernel.ts';
+import { Kernel, nearest, unresolvedSaid, type NbLine, type NbResult } from './kernel.ts';
 import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
-import { homeOf, translatorVocab } from '../playground/host.ts';
+import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -89,6 +89,7 @@ export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${c
 
 export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
+  : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : '';
 
 export function print(file: string, r: NbResult, only?: number, shown = SHOWN): string {
@@ -104,15 +105,37 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN): 
     for (const l of c.lines) {
       out.push(`  ${file}:${l.line}: ${l.text}${VERDICT(l) ? `  ->  ${VERDICT(l)}` : ''}`);
       if (l.verdict === 'unasked') continue;
-      for (const a of l.answers.slice(0, shown)) out.push(`    - ${a.sentence}`);
+      for (const a of l.answers.slice(0, shown)) out.push(l.kind === 'excise' ? `    ${a.sentence}` : `    - ${a.sentence}`);
       if (l.total > shown) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
     }
   }
-  const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
-  out.push(`${file}: ${SAID[r.status]}${unparsed.length ? ` — not parsed: ${unparsed.join(', ')}` : ''}`);   // the verdict line, read by npm run test:nb
+  out.push(`${file}: ${tally(r)}`);   // the verdict line, read by npm run test:nb
   return out.join('\n');
+}
+
+const HELP_AT = 'see npm run nb -- --help';
+const plural = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+/** What the run asked and how it came out, counted; on an exit other than 0, why, and the code. */
+export function tally(r: NbResult): string {
+  const ls = r.cells.flatMap((c) => c.lines), count = (f: (l: NbLine) => boolean) => ls.filter(f).length;
+  const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind');
+  const fails = count((l) => l.verdict === 'fails'), told = count((l) => l.verdict === 'explained'), moved = count((l) => l.kind === 'excise' && l.verdict !== 'unasked'), unasked = count((l) => l.verdict === 'unasked');
+  const said = [
+    asked && plural(asked, 'question answered', 'questions answered'),
+    holds && plural(holds, 'invariant holds', 'invariants hold'),
+    blind && `${plural(blind, holds ? 'holds' : 'invariant holds', holds ? 'hold' : 'invariants hold')} as far as the model sees`,
+    (holds || blind || fails) && (!fails ? 'none fails' : holds || blind ? plural(fails, 'fails', 'fail') : plural(fails, 'invariant fails', 'invariants fail')),
+    told && plural(told, 'explained', 'explained'),
+    moved && plural(moved, 'what-if', 'what-ifs'),
+    unasked && plural(unasked, 'line not asked', 'lines not asked'),
+  ].filter(Boolean).join(', ') || (r.cells.length > 1 ? 'nothing asked' : `0 cells: this is a world (facts and rules), not a notebook; a notebook asks in fenced \`\`\`rofl cells`);
+  const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
+  const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => l.line));
+  const why = r.status === 'fails' ? `FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : r.status === 'unread' ? `not everything was read${unparsed.length ? `: not parsed: ${unparsed.join(', ')}` : ''}`
+    : r.status === 'blind' ? 'some invariant holds only as far as the model sees, or the run stopped at its limit' : '';
+  return why ? `${said} — ${why} (exit ${EXIT[r.status]}; ${HELP_AT})` : r.cells.length > 1 ? said : `${said} (${HELP_AT})`;
 }
 
 // ------------------------------------------------------------ translation
@@ -245,9 +268,10 @@ function context(file: string, text: string): Context | { errors: string[] } {
 }
 
 /** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,
- *  a meaning under it where the phrase file writes one, the notebook's own sentences, then the functions; only those that mention `word`. */
+ *  a meaning under it where the phrase file writes one, by the section of the model that concludes it, the notebook's own sentences, then the functions;
+ *  only those that mention `word`, and without one a few to start with first. */
 export function vocabulary(file: string | undefined, word = ''): { lines: string[]; errors: string[] } {
-  const cx = file ? context(file, readFileSync(file, 'utf8')) : context(path.resolve('vocab.rofl.md'), '---\nmodel: js\n---\n');
+  const text = file ? readFileSync(file, 'utf8') : '---\nmodel: js\n---\n', cx = context(file ?? path.resolve('vocab.rofl.md'), text);
   if ('errors' in cx) return { lines: [], errors: cx.errors };
   const meant = new Map<string, string>(), ls = cx.phrases.split('\n');
   ls.forEach((l, i) => {   // a comment between two lines of phrases says what the relation under it means
@@ -255,14 +279,26 @@ export function vocabulary(file: string | undefined, word = ''): { lines: string
     while (rel && j > 0 && ls[j - 1].startsWith('--')) j--;
     if (rel && j < i && /^(?:sig|phrase)\(/.test(ls[j - 1] ?? '')) meant.set(rel, ls.slice(j, i).map((x) => x.replace(/^--\s*/, '')).join(' '));
   });
+  const rules = libFiles(path.relative(ROOT, path.resolve(file ?? 'vocab.rofl.md')), parseFront(text)).model.filter((f) => f.startsWith('rules/'));
+  const area = concernsOf(rules.map((f) => [f, cx.input.lib[f] ?? ''])).rels;
   const w = word.toLowerCase().replace(/(?:ing|ed|s)$/, ''), has = (t: string) => t.toLowerCase().includes(w);
-  const lines = [
-    ...cx.vocab.flatMap((v, i) => has(v + ' ' + cx.rels[i]) ? [`${v}   (${cx.rels[i]})`, ...(meant.has(cx.rels[i]) ? [`    ${meant.get(cx.rels[i])}`] : [])] : []),
-    ...cx.own.filter(has).map((v) => `${v}   (this notebook)`),
-    ...cx.functions.filter(has),
-  ];
-  return { lines, errors: [] };
+  const groups = new Map<string, string[]>(), put = (g: string, ...xs: string[]) => (groups.get(g) ?? groups.set(g, []).get(g)!).push(...xs);
+  cx.vocab.forEach((v, i) => { const rel = cx.rels[i]; if (has(v + ' ' + rel)) put(area[rel] ?? (rel.startsWith('ast_') ? 'syntax: what the scanner gives' : 'given facts'), `  ${v}   (${rel})`, ...(meant.has(rel) ? [`      ${meant.get(rel)}`] : [])); });
+  for (const v of cx.own.filter(has)) put('this notebook', `  ${v}`);
+  for (const f of cx.functions.filter(has)) put('functions', `  ${f}`);
+  const n = [...groups.values()].flat().filter((l) => !l.startsWith('    ')).length;
+  const OWN = 'Sentences you define in your own cells (like `C recurses`) are not listed here: write them as rules over these.';
+  const lines = word ? [] : cx.rels.includes('resolves') ? ['Start here: the sentences a first question over code needs', ...START.map((x) => `  ${x}`), '', OWN, ''] : [OWN, ''];
+  for (const g of [...groups.keys()].sort((a, b) => Number(a === 'functions') - Number(b === 'functions') || a.localeCompare(b))) lines.push(g, ...groups.get(g)!, '');
+  if (word && !n) {
+    const near = nearest(word, cx.vocab), grams = (x: string) => new Set(Array.from({ length: x.length - 4 }, (_, i) => x.slice(i, i + 5)));
+    if (!near.length) near.push(...cx.vocab.map((v) => ({ v, k: [...grams(word.toLowerCase())].filter((g) => grams(v.toLowerCase()).has(g)).length })).filter((x) => x.k).sort((a, b) => b.k - a.k || a.v.length - b.v.length).slice(0, 3).map((x) => x.v));
+    return { lines: [`0 sentences with "${word}". ${OWN}`, ...(near.length ? [`The nearest: ${near.map((x) => `"${x}"`).join(' · ')}`] : [])], errors: [] };
+  }
+  return { lines: [...lines, `${n} ${n === 1 ? 'sentence' : 'sentences'}${word ? ` with "${word}"` : ''}`], errors: [] };
 }
+const START = ['a function F may throw', 'a function F throws outright', 'a function F is exported', 'F depends on T', 'a call C resolves to a function F', 'a function Caller calls a function Callee',
+  'the attribute `async` of a function F is `true`', 'a node S is of kind `expression_statement`', 'the `expression` of a node S is a call C', 'a node N is in file F', 'a node N is at line L'];
 
 /** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
 async function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = '', step = (_: string) => {}): Promise<{ code: number; said: string[]; text: string; failed?: boolean; reply?: string }> {
@@ -297,37 +333,51 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 
-const HELP = `npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook: what every cell says
-npm run nb -- translate <file.rofl.md>             Claude writes a rofl cell under every natural cell without one
-npm run nb -- vocab [<file.rofl.md>] [word]         the sentences a cell can use over code (or over that notebook's model), those with the word
+const HELP = `New here? Play examples/tutorial (6 short levels), from examples/tutorial/1-what-ships.rofl.md.
 
-A notebook is Markdown. Its cells are fenced blocks:
-  \`\`\`rofl      rules in sentences, and asking lines        \`\`\`datalog   the same in Datalog
-  \`\`\`natural   a request in words, for translate           the rest is prose, read for its sentences
-Asking lines, one per line, in a rofl or datalog cell:
-  ? S          every answer to S                      never S      an invariant: holds when nothing answers
-  unsure S     under a never: what it could not see    why S        a proof of one answer
-  whynot S     why S does not hold                     excise F     which lines answer differently without F
-  extends R    this cell adds rules to R on purpose
-Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees,
-      or the evaluation ran past ROFL_NB_LIMIT seconds (120) or ROFL_NB_MEMORY gigabytes of heap and answers what it found.
---json      the whole result as JSON (the first fifty answers per line)       --cell N   only cell N
---all       every answer of every line, in the text and in the JSON; runs in this process, not the kept kernel
-The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
-ROFL_NB_DAEMON=0 runs in this process instead.
-New here? Play examples/tutorial: six levels of a few minutes, one new word each, from examples/tutorial/1-what-ships.rofl.md.
-Read first: examples/notebook/review.rofl.md (small, no code), examples/notebook/self.rofl.md (over this tree's code).`;
+npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--timing]   run a notebook
+npm run nb -- translate <file.rofl.md>        Claude answers each natural cell in rofl
+npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
+npm run nb -- --help env                      the environment variables
+
+Cells are fenced blocks: \`\`\`rofl (sentences), \`\`\`datalog (plain ROFL), \`\`\`natural (words, for translate).
+Asking lines, in a rofl cell:
+  ? S           every answer                        ? C is blocked by T
+  never S       holds when nothing answers          never X leaves unpainted
+  unsure S      under a never: what it cannot see   unsure C is unresolved
+  why S         a proof of one answer               why \`c3\` leaves unpainted
+  whynot S      why S does not hold                 whynot \`c3\` comes out \`pink\`
+  excise F      which lines move without fact F     excise \`c1\` is approved by \`ben\`
+  extends R     this cell adds to the model's R     extends blocked
+Capitalised: a blank. A name goes in backticks.
+
+Exit  0  every never holds, every cell read
+      1  a never fails
+      2  a cell, a file or the model was not read
+      3  holds as far as the model sees, or stopped at its limit
+
+--json  JSON, fifty answers a line    --cell N  only cell N
+--all   every answer                 --timing  times on stderr
+Then: examples/notebook/review.rofl.md (no code), examples/notebook/self.rofl.md (over this tree's code).`;
+
+const HELP_ENV = `ROFL_NB_LIMIT=120        seconds a run evaluates before it stops and answers what it found (exit 3)
+ROFL_NB_MEMORY=<GB>      gigabytes of heap likewise; by default most of what Node allows
+ROFL_NB_DAEMON=0         run in this process; by default runs go to a kept kernel, started on first use
+                         (the model loads once, 10 to 20 s; later runs take seconds)
+ROFL_NB_TIMEOUT=<s>      how long to wait for the kept kernel; by default ROFL_NB_LIMIT + 180
+ROFL_NB_IDLE=900         seconds the kept kernel waits for a run before it exits
+ROFL_NB_CLAUDE=claude    the command translate asks; ROFL_NB_CLAUDE_TIMEOUT=180 its limit in seconds`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const argv = process.argv.slice(2);
-  if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
+  if (!argv.length || argv.includes('--help') || argv.includes('-h')) { console.log(argv[argv.indexOf('--help') + 1] === 'env' ? HELP_ENV : HELP); process.exit(argv.length ? 0 : 2); }
   if (argv[0] === 'vocab') {
     const file = argv[1]?.endsWith('.rofl.md') ? argv[1] : undefined, word = argv.slice(file ? 2 : 1).join(' ');
     if (file && !existsSync(file)) { console.error(`${file}: no such file`); process.exit(2); }
-    const v = vocabulary(file, word), n = v.lines.filter((l) => !l.startsWith(' ')).length;
+    const v = vocabulary(file, word);
     for (const e of v.errors) console.error(`${file}: error: ${e}`);
-    console.log([...v.lines, `${n} ${n === 1 ? 'sentence' : 'sentences'}${word ? ` with "${word}"` : ''}`].join('\n'));
+    console.log(v.lines.join('\n'));
     process.exit(v.errors.length ? 2 : 0);
   }
   const named = argv[0] === 'translate' ? argv[1] : argv.find((a) => !a.startsWith('--') && argv[argv.indexOf(a) - 1] !== '--cell');
@@ -343,9 +393,9 @@ if (isMain) {
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: ReturnType<typeof runFile>;
   const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
-  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, wall })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
-  if (r.outside?.length) console.error(`${file}: ${OUTSIDE(r.outside)}`);
-  console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, wall })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: nothing asked — not everything was read (exit 2; ${HELP_AT})`); process.exit(2); }
+  if (r.outside?.length) console.error(`${file}: note: ${OUTSIDE(r.outside)}`);
+  if (argv.includes('--timing')) console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
   process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN)) + '\n', () => process.exit(EXIT[r.status]));
 }

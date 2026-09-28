@@ -20,7 +20,7 @@ model: none
 >     npm run nb -- examples/tutorial/1-what-ships.rofl.md
 >
 > (or open it in VS Code and press Run All). You have solved a level when the
-> last line says **every never holds**.
+> last line says **none fails**.
 
 ## The factory
 
