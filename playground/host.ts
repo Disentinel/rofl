@@ -329,7 +329,7 @@ export class Host {
     };
     const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, which nothing defines` : undefined, false);
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
-    const seen = { failing: new Set<string>(), blind: new Set<string>(), unknown: new Set<string>() };   // the terms a never's rows, an unsure's rows and unknown name
+    const seen = { failing: [] as string[][], blind: [] as string[][], unknown: [] as string[][] };   // the rows of the nevers, the unsures and unknown, as their terms
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
     const holed = new Map<string, string>();
     for (const r of f.query('hole[$kernel](H, R)').rows) {
@@ -378,14 +378,14 @@ export class Host {
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
-        if (a.kind === 'never' || a.kind === 'unsure') for (const r of q.rows) for (const t of Object.values(r.bindings)) (a.kind === 'never' ? seen.failing : seen.blind).add(t);
+        if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
         const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
       }
     });
-    const excised = new Map<number, { world: Rofl; failing: Set<string> }>();
+    const excised = new Map<number, { world: Rofl; failing: string[][] }>();
     // what if: a cell's `excise F` lines take those facts out of the world every line was asked over, and say which lines' answers move
     parts.forEach((_, i) => {
       const cut = asks[i].filter((a) => a.kind === 'excise' && a.lit);
@@ -393,7 +393,7 @@ export class Host {
       const g = f.fork();
       for (const a of cut) { const r = g.retract(a.lit); if (!r.ok) outs[i].errors.push(`${a.text}: ${r.diagnostics[0]}`); }
       try { partial ||= g.evaluate(BUDGET).partial; } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
-      const rows: Row[] = [], failing = new Set<string>();
+      const rows: Row[] = [], failing: string[][] = [];
       excised.set(i, { world: g, failing });
       const said = (lit: string) => vocab.say(lit) ?? lit;
       parts.forEach((_, j) => {
@@ -402,7 +402,7 @@ export class Host {
           if (!['answers', 'never', 'unsure'].includes(a.kind) || !a.lit || conjunction(a.lit)) continue;
           const set = (w: Rofl) => new Set(w.query(a.lit).rows.map((r) => ground(a.lit, r.bindings)));
           const was = set(f), now = set(g);
-          if (a.kind === 'never') for (const r of g.query(a.lit).rows) for (const t of Object.values(r.bindings)) failing.add(t);
+          if (a.kind === 'never') failing.push(...g.query(a.lit).rows.map((r) => Object.values(r.bindings)));
           const gone = [...was].filter((x) => !now.has(x)), come = [...now].filter((x) => !was.has(x));
           if (!gone.length && !come.length) continue;
           rows.push({ literal: a.lit, sentence: `${a.text}: ${was.size} -> ${now.size}` });
@@ -415,8 +415,8 @@ export class Host {
     });
     // a picture: the view facts the cells concluded, tagged with what the run knows of them
     const lostFiles = new Set(unresolved.map((u) => u.slice(0, u.search(/:\d+ /))));
-    for (const [id, n] of Object.entries(nodes)) if (lostFiles.has(n.file)) seen.blind.add(id);
-    for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) for (const r of q.rows) seen.unknown.add(r.bindings.X); }
+    seen.blind.push(Object.keys(nodes).filter((id) => lostFiles.has(nodes[id].file)));
+    for (const lit of ['unknown[epistemic](X)', 'unknown(X)']) { const q = f.query(lit); if (!q.error) seen.unknown.push(...q.rows.map((r) => [r.bindings.X])); }
     const world = (r: Rofl, proofsOf: Rofl): World => ({
       rows: (lit) => { const q = (base && r === f && !heads.has(relOf(lit)) ? base : r).query(lit); return q.error || q.unpopulatable ? null : q.rows.map((x) => x.bindings); },
       from: (lit) => {

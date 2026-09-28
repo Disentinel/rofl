@@ -680,7 +680,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const u of [...new Set(unparsed)].slice(0, 20)) report.push('  ' + u);
   const bk = (rel: string, tail?: string) => { const b = tail ?? homeBook.get(rel) ?? headBook.get(rel) ?? defaultBook; return b === 'main' ? '' : `[${b}]`; };
   const rofl = (x: string): string => { let m; if ((m = /^([-+*\/]|mod)\((.*),(.*)\)$/.exec(x))) return `${rofl(m[2])} ${m[1]} ${rofl(m[3])}`; if ((m = /^(\w+)\((.*)\)$/.exec(x))) return `${m[1]}(${m[2].split(',').map(rofl).join(', ')})`; return x.replace(/^\?/, ''); };
-  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${c.args.join(', ')})${c.tense ? ' @' + c.tense : ''}${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
+  // a variable inside a functor is `?X` only in the canonical form the round trip compares; a clause writes it bare, `$alone(Ch, S)`
+  const bare = (xs: string[]) => xs.map((x) => x.replace(/"(?:[^"\\]|\\.)*"|\?(?=[A-Z_])/g, (m) => m === '?' ? '' : m)).join(', ');
+  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${bare(c.args)})${c.tense ? ' @' + c.tense : ''}${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${bare(l.args)})`}`).join(', ') : ''}.`;
   const declaredFacts = new Set(declared);
   const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')})${l.tense ? ' @' + l.tense : ''}.`;
   // one sentence as the literal it names, read against this file's vocabulary: how a question in the file's words is asked

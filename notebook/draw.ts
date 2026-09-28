@@ -10,7 +10,8 @@ export const RESERVED = ['unknown', 'blind', 'gone', 'new', 'failing', 'dangling
 export type Fact = { rel: string; args: string[]; literal: string; from: string[]; given?: boolean; change?: 'gone' | 'new' };
 /** `on`: the terms the proofs of its facts rest on, one step down. */
 export type Mark = { label: string; tags: string[]; from: string[]; on: string[]; at?: string[] };
-export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[] };
+/** `cells`: a table's cells a row of a failing never names by both its row and its column, with that tag. */
+export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[] };
 
 const RELS: Record<DrawKind, [string, number][]> = {
   graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3]],
@@ -61,10 +62,17 @@ export function collect(kind: DrawKind, w: World): View {
 const tag = (m: Mark, k: string) => { if (!m.tags.includes(k)) m.tags.push(k); };
 export const unquote = (t: string) => /^".*"$/.test(t) ? JSON.parse(t) as string : t;
 
-/** The renderer's own tags: `terms` by tag (a failing never's rows, what the model could not see), put on every mark that is one of them
- *  or whose proof rests on a fact about one. */
-export function status(v: View, terms: Record<string, Set<string>>): void {
-  for (const [id, m] of Object.entries(v.marks)) for (const [k, ts] of Object.entries(terms)) if (ts.has(id) || m.on.some((t) => ts.has(t))) tag(m, k);
+/** The renderer's own tags from `rows` by tag, each row the terms of an answer (a failing never's, an unsure's, unknown's): a mark one names gets
+ *  the tag; `blind` and `unknown` also go on a mark whose proof rests on a fact about one of their terms. */
+export function status(v: View, rows: Record<string, string[][]>): void {
+  for (const [k, rs] of Object.entries(rows)) {
+    const terms = new Set(rs.flat());
+    for (const [id, m] of Object.entries(v.marks)) if (terms.has(id) || k !== 'failing' && m.on.some((t) => terms.has(t))) tag(m, k);
+    if (v.kind === 'table') for (const f of v.facts.filter((x) => x.rel === 'value')) if (rs.some((r) => r.includes(f.args[0]) && r.includes(f.args[1]))) {
+      const c = (v.cells ??= []).find((x) => x.row === f.args[0] && x.column === f.args[1]) ?? (v.cells.push({ row: f.args[0], column: f.args[1], tags: [] }), v.cells[v.cells.length - 1]);
+      if (!c.tags.includes(k)) c.tags.push(k);
+    }
+  }
 }
 
 /** One view of the marks before a what-if and after it: a mark only before is `gone`, one only after `new`; a retraction can add marks. */
@@ -156,13 +164,13 @@ function dot(v: View): string {
   return out.join('\n');
 }
 
-/** Argdown: a mark something links to is a statement `[..]`, a mark that only links is an argument `<..>`; a link is `+`, tagged `attack` it is `-`. */
+/** Argdown: a mark that only links to others is an argument `<..>`, any other a statement `[..]`; a link is `+`, tagged `attack` it is `-`. */
 function argdown(v: View): string {
   const links = v.facts.filter((f) => f.rel === 'link'), out: string[] = [];
   const title = (m: string) => (v.marks[m]?.label ?? unquote(m)).replace(/[[\]<>]/g, '');
   const hashes = (m: string) => (v.marks[m]?.tags ?? []).map((t) => ` #${t.replace(/\W+/g, '-')}`).join('');
-  const target = new Set(links.map((f) => f.args[1]));
-  const shape = (m: string) => target.has(m) ? `[${title(m)}]` : `<${title(m)}>`;
+  const argument = new Set(links.map((f) => f.args[0]).filter((m) => !links.some((f) => f.args[1] === m)));
+  const shape = (m: string) => argument.has(m) ? `<${title(m)}>` : `[${title(m)}]`;
   const walk = (m: string, pad: string, path: Set<string>) => {
     for (const f of links.filter((x) => x.args[1] === m)) {
       const s = f.args[0], attack = linkTags(v, f).includes('attack');
@@ -215,7 +223,8 @@ function grid(v: View) {
 function markdown(v: View): string {
   const { vals, rows, cols } = grid(v), cell = (s: string) => s.replace(/\|/g, '\\|');
   const out = [`| | ${cols.map((c) => cell(unquote(c))).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`];
-  for (const r of rows) out.push(`| ${cell((v.marks[r]?.label ?? unquote(r)) + suffix(v.marks[r]))} | ${cols.map((c) => cell(vals.filter((f) => f.args[0] === r && f.args[1] === c).map((f) => unquote(f.args[2])).join(', '))).join(' | ')} |`);
+  const tags = (r: string, c: string) => v.cells?.find((x) => x.row === r && x.column === c)?.tags ?? [];
+  for (const r of rows) out.push(`| ${cell((v.marks[r]?.label ?? unquote(r)) + suffix(v.marks[r]))} | ${cols.map((c) => cell(vals.filter((f) => f.args[0] === r && f.args[1] === c).map((f) => unquote(f.args[2])).join(', ') + (tags(r, c).length ? ` [${tags(r, c).join(', ')}]` : ''))).join(' | ')} |`);
   return out.join('\n');
 }
 

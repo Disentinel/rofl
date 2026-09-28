@@ -109,7 +109,7 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
       out.push(`  ${file}:${l.line}: ${l.text}${VERDICT(l) ? `  ->  ${VERDICT(l)}` : ''}`);
       if (l.verdict === 'unasked') continue;
       for (const a of l.answers.slice(0, shown)) out.push(l.kind === 'excise' ? `    ${a.sentence}` : `    - ${a.sentence}`);
-      if (l.total > shown) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
+      if (l.total > shown && !l.view) out.push(`    ... ${l.total - shown} more${shown < l.answers.length ? ' (--all prints them)' : ''}`);
       if (l.unsure?.total) { out.push(`    out of sight (${l.unsure.text}):`); for (const a of l.unsure.answers) out.push(`    - ${a.sentence}`); }
       if (l.why) out.push(...l.why.split('\n').map((x) => `    ${x}`));
       if (l.view) {
