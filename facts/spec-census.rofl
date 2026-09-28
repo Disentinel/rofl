@@ -89,6 +89,10 @@ check[checks]("facts/goldens.rofl", "sensors", world).
 check[checks]("facts/goldens.rofl", "sentence", world).
 check[checks]("facts/goldens.rofl", "slop", world).
 check[checks]("facts/goldens.rofl", "spat", world).
+check[checks]("facts/goldens.rofl", "start_app", world).
+check[checks]("facts/goldens.rofl", "start_pets", world).
+check[checks]("facts/goldens.rofl", "start_shop", world).
+check[checks]("facts/goldens.rofl", "start_whatif", world).
 check[checks]("facts/goldens.rofl", "sus", world).
 check[checks]("facts/goldens.rofl", "tm", world).
 check[checks]("facts/goldens.rofl", "tm_diverge", world).

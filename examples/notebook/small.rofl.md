@@ -1,7 +1,4 @@
 ---
-world: small-notebook
-books: main
-default: main
 model: js
 code:
   - small.js

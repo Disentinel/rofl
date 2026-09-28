@@ -1,8 +1,4 @@
 ---
-world: review-notebook
-books: main
-default: main
-model: none
 reads:
   - ../review.rofl.md
 ---
