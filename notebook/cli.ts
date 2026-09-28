@@ -7,7 +7,9 @@
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import * as path from 'node:path';
-import { Kernel, cellsOf, codeNames, libFiles, parseFront, translated, worldOf, type Inputs, type NbLine, type NbResult } from './kernel.ts';
+import { Kernel, type NbLine, type NbResult } from './kernel.ts';
+import { cellsOf, codeNames, libFiles, parseFront, translated } from './front.ts';
+import { worldOf, type Inputs } from './world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
 

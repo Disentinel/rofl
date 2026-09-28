@@ -2,6 +2,7 @@
 // The link is a bare path: VS Code's Markdown refuses `file:` links, and a notebook output opens `/path:line` at that line.
 // A code file is named from the directory all of them share; a failing never is named `rofl-cell:K`, which the editor turns into its cell.
 import { said, VERDICT } from '../notebook/cli.ts';
+import { codeNames } from '../notebook/front.ts';
 import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
 
 const FOLD = 10;   // answers shown under a line; the rest fold
@@ -11,12 +12,9 @@ export type Run = NbResult & { paths: Record<string, string> };
 
 /** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1. */
 export function render(r: Run): { head: Shown; cells: Shown[] } {
-  const dirs = Object.keys(r.paths).map((f) => f.split('/').slice(0, -1));
-  let n = 0;
-  while (dirs.length && dirs.every((d) => n < d.length && d[n] === dirs[0][n])) n++;
-  const short = (f: string) => f.split('/').slice(n).join('/');
+  const files = Object.keys(r.paths), short = codeNames(files[0] ?? '', files);
   const link = (s: string) => s.replace(/</g, '&lt;').replace(/\[([^\]]*?) at ([^\]\s]+):(\d+)\]/g, (m, label, f, k) =>
-    r.paths[f] ? `[${label} at ${short(f)}:${k}](<${r.paths[f]}:${k}>)` : m);
+    r.paths[f] ? `[${label} at ${short[f]}:${k}](<${r.paths[f]}:${k}>)` : m);
   const list = (rows: { sentence: string }[], total: number) => {
     const items = rows.map((a) => `- ${link(a.sentence)}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
     return items.length + more.length <= FOLD ? [...items, ...more].join('\n')

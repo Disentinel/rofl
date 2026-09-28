@@ -4,9 +4,6 @@ import { Host, concernsOf, type Line, type Node, type Row } from '../playground/
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
 
-export { cellsOf, parseFront, libFiles, codeNames, normal, translated } from './front.ts';
-export { worldOf, assemble, type Inputs } from './world.ts';
-
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked';
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];

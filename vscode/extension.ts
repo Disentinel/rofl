@@ -117,5 +117,3 @@ export function activate(ctx: vscode.ExtensionContext) {
   }
   return { result: (uri: vscode.Uri) => results.get(uri.toString()) };
 }
-
-export function deactivate() { worker?.terminate(); }
