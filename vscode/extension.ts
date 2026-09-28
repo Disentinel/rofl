@@ -33,6 +33,12 @@ function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, uns
   stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
   return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model }); });
 }
+/** Pin layout, a person's click on a picture: its placed(M, X, Y) facts in <notebook>.layout.rofl beside the notebook, never in it. */
+function pinLayout(nb: vscode.Uri, facts: string) {
+  const file = nb.fsPath.replace(/\.rofl\.md$/, '.layout.rofl');
+  writeFileSync(file, facts);
+  void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
+}
 /** One prompt to VS Code's language model (GitHub Copilot's, or any other the editor has), as text alone: no tool is offered, so none can be called. */
 async function viaLm(model: vscode.LanguageModelChat, prompt: string, stop?: vscode.CancellationToken): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   const cancel = new vscode.CancellationTokenSource(), limit = Number(process.env.ROFL_NB_MODEL_TIMEOUT ?? 180);
@@ -100,12 +106,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
     const nb = vscode.Uri.parse(String(m.notebook));
     if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
-    if (m.pin !== undefined) {
-      const file = nb.fsPath.replace(/\.rofl\.md$/, '.layout.rofl');
-      writeFileSync(file, String(m.pin));
-      const name = file.slice(file.lastIndexOf('/') + 1);
-      void vscode.window.showInformationMessage(`ROFL: the layout is in ${name}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
-    }
+    if (m.pin !== undefined) pinLayout(nb, String(m.pin));
   }));
 
   async function run(nb: vscode.NotebookDocument) {
