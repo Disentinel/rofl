@@ -1,17 +1,20 @@
 // The notebook kept alive for the command line: `npm run nb` asks this process over a unix socket, so a run pays the model's
 // load and the code's evaluation only when their texts changed, as in the editor. Every request re-reads every file.
 // One per tree: started by the first run, it retires the daemon of the tree's previous engine source, and is gone after ROFL_NB_IDLE seconds (900) with no request.
-// It keeps the kernel of the last notebook asked and no other: one after a mid-size run holds gigabytes.
+// It keeps one kernel, the last one asked for, shared by every notebook over the same model, worlds and code files: a second notebook over a
+// codebase pays neither the model's load nor the code's evaluation, and a kernel after a mid-size run holds gigabytes, so there is no second.
+// It says why it ended, and whatever it printed, in daemon.log beside its socket.
 // Its socket is in rofl-nb-<uid> under $XDG_RUNTIME_DIR or the temporary directory, used only while this user owns it and nobody else may enter.
 import { createServer, connect } from 'node:net';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { globSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+import { globSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
-import { LIMIT, runFile } from './cli.ts';
+import { LIMIT, from, runFile, wall } from './cli.ts';
+import { libFiles, parseFront } from './front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 type Reply = { result: ReturnType<typeof runFile> } | { error: string };
@@ -45,6 +48,14 @@ function retire(sock: string) {
 
 /** The daemon's pid beside its socket, which a run that waits too long stops it by: the one file a run writes, and no notebook. */
 function writePid(sock: string) { writeFileSync(`${sock}.pid`, String(process.pid)); }
+
+/** daemon.log beside the socket, the daemon's stderr: its exits and anything the process says as it dies, a heap out of memory too. Past a megabyte it starts again. */
+function logOf(sock: string): number {
+  const log = path.join(path.dirname(sock), 'daemon.log');
+  let big = false;
+  try { big = statSync(log).size > 1 << 20; } catch { /* none yet */ }
+  return openSync(log, big ? 'w' : 'a');
+}
 
 /** The daemon that listens on `sock` killed, by the pid it wrote beside it. */
 function stop(sock: string) {
@@ -82,7 +93,7 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
       if (code !== 'ENOENT' && code !== 'ECONNREFUSED') return undefined;
       if (i === 0) {
         if (code === 'ECONNREFUSED') try { unlinkSync(sock); } catch { /* another run took it */ }
-        spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), sock], { detached: true, stdio: 'ignore' }).unref();
+        spawn(process.execPath, [...process.execArgv, fileURLToPath(import.meta.url), sock], { detached: true, stdio: ['ignore', 'ignore', logOf(sock)] }).unref();
       }
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -90,11 +101,21 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
   return undefined;
 }
 
+/** What a notebook's kernel keeps, by name: the model's and the phrases' files, the worlds it reads and its code files. Notebooks alike share a kernel,
+ *  which loads the model again only when those texts change and evaluates the code again only when the code does. */
+function keptFor(file: string): string {
+  try {
+    const front = parseFront(readFileSync(file, 'utf8')), at = from(path.dirname(file));
+    return JSON.stringify([libFiles(path.relative(ROOT, file), front), front.reads.map(at), front.code.flatMap((g) => globSync(at(g))).sort()]);
+  } catch { return file; }
+}
+
 function serve(sock: string) {
   owned(path.dirname(sock));
   const idle = Number(process.env.ROFL_NB_IDLE ?? 900) * 1000;
-  let kept: { file: string; kernel: Kernel } | undefined, timer: NodeJS.Timeout | undefined;
-  const rest = () => { clearTimeout(timer); timer = setTimeout(() => server.close(() => process.exit(0)), idle); };
+  const bye = (why: string, code = 0) => { console.error(`${new Date().toISOString()} daemon ${process.pid} ${path.basename(sock)}: ${why}`); process.exit(code); };
+  let kept: { key: string; kernel: Kernel } | undefined, timer: NodeJS.Timeout | undefined;
+  const rest = () => { clearTimeout(timer); timer = setTimeout(() => server.close(() => bye(`idle ${idle / 1000} s`)), idle); };
   const server = createServer((c) => {
     let text = '';
     c.on('data', (d) => {
@@ -103,19 +124,21 @@ function serve(sock: string) {
       if (!text.includes('\n')) return;
       let req: { file?: unknown; quit?: boolean };
       try { req = JSON.parse(text) ?? {}; } catch { return void c.end(JSON.stringify({ error: 'not a request' })); }
-      if (req.quit) { c.end(); try { unlinkSync(sock); } catch { /* gone already */ } process.exit(0); }
+      if (req.quit) { c.end(); try { unlinkSync(sock); } catch { /* gone already */ } bye('retired by a daemon of a newer engine'); }
       const file = req.file;
       if (typeof file !== 'string' || !file.endsWith('.rofl.md')) return void c.end(JSON.stringify({ error: `${String(file)}: not a notebook: a notebook is a .rofl.md file` }));
-      const kernel = kept?.file === file ? kept.kernel : new Kernel({ limit: LIMIT });
+      const key = keptFor(file), kernel = kept?.key === key ? kept.kernel : new Kernel({ wall });
       kept = undefined;
       let reply: Reply;
-      try { reply = { result: runFile(file, kernel) }; kept = { file, kernel }; } catch (e) { reply = { error: (e as Error).message }; }
+      try { reply = { result: runFile(file, kernel) }; kept = { key, kernel }; } catch (e) { reply = { error: (e as Error).message }; }
       c.end(JSON.stringify(reply));
       rest();
     });
     c.on('error', () => {});
   });
-  server.on('error', () => process.exit(0));   // another daemon took the socket first
+  server.on('error', (e) => bye(`not listening: ${e.message}`));   // another daemon took the socket first
+  process.on('uncaughtException', (e) => bye(`crashed: ${e.stack ?? e}`, 1));
+  for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT'] as const) process.on(sig, () => bye(`killed by ${sig}`, 1));
   process.on('exit', () => { try { if (readFileSync(`${sock}.pid`, 'utf8') === String(process.pid)) unlinkSync(`${sock}.pid`); } catch { /* gone already */ } });
   server.listen(sock, () => { writePid(sock); rest(); retire(sock); });
 }

@@ -6,6 +6,7 @@
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { getHeapStatistics } from 'node:v8';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,14 +19,20 @@ import { viaDaemon } from './serve.ts';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
 const SHOWN = 12;   // answers printed per line; --json has the first fifty, --all every one
-/** How long a run's evaluation may take, in ms: a rule that climbs for ever stops there and its notebook is exit 3. */
+/** A run's evaluation stops after ROFL_NB_LIMIT seconds or past ROFL_NB_MEMORY gigabytes of heap: a rule that climbs for ever ends there, exit 3.
+ *  The heap's default stays under what V8 allows this process, whose end is a crash and no answer. */
 export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
+const MEMORY = process.env.ROFL_NB_MEMORY ? Number(process.env.ROFL_NB_MEMORY) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
+export const wall = () => { const end = performance.now() + LIMIT; return () => performance.now() > end || process.memoryUsage().heapUsed > MEMORY; };
+
+/** A path the front matter names, from the notebook's directory `dir`: relative to it, or absolute, or from home. */
+export const from = (dir: string) => (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk.
  *  `outside`: the names in its front matter that reach out of the notebook's folder, which a notebook from someone else can use to show a file of yours. */
 export function inputs(file: string, text: string, unsaved: Record<string, string> = {}): { input: Inputs; errors: string[]; paths: Record<string, string>; outside: string[] } {
   const front = parseFront(text), dir = path.dirname(file), errors: string[] = [];
-  const at = (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));   // relative to the notebook, or absolute, or from home
+  const at = from(dir);
   const read = (p: string) => { try { return unsaved[path.resolve(p)] ?? readFileSync(p, 'utf8'); } catch (e) { errors.push(`${path.relative(ROOT, p) || p}: ${(e as Error).message}`); return undefined; } };
   const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
   const want = libFiles(path.relative(ROOT, path.resolve(file)), front);
@@ -66,7 +73,7 @@ const CODE = /\.[cm]?[jt]sx?$/;
 const isFile = (p: string) => { try { return statSync(p).isFile(); } catch { return false; } };
 
 /** `paths`: where each code file the answers name is, for a host that opens it. */
-export function runFile(file: string, kernel = new Kernel({ limit: LIMIT }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string>; outside: string[] } {
+export function runFile(file: string, kernel = new Kernel({ wall }), text = readFileSync(file, 'utf8'), unsaved: Record<string, string> = {}): NbResult & { paths: Record<string, string>; outside: string[] } {
   const { input, errors, paths, outside } = inputs(file, text, unsaved);
   const r = kernel.run(path.relative(ROOT, path.resolve(file)), text, input);
   if (errors.length) { r.errors.unshift(...errors); r.status = 'unread'; }
@@ -173,7 +180,7 @@ const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].repla
 export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
   const said: string[] = [], tmp = `${file}.${process.pid}.tmp`;
   let code = 0;
-  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ limit: LIMIT }), (line) => process.stderr.write(line + '\n'))) {
+  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ wall }), (line) => process.stderr.write(line + '\n'))) {
     said.push(...r.said);
     code = r.code || code;
     if (r.text !== undefined) { writeFileSync(tmp, r.text); renameSync(tmp, file); }
@@ -303,7 +310,7 @@ Asking lines, one per line, in a rofl or datalog cell:
   whynot S     why S does not hold                     excise F     which lines answer differently without F
   extends R    this cell adds rules to R on purpose
 Exit: 0 every never holds; 1 a never fails; 2 something was not read; 3 holds, some only as far as the model sees,
-      or the evaluation ran past ROFL_NB_LIMIT seconds (120) and answers what it found.
+      or the evaluation ran past ROFL_NB_LIMIT seconds (120) or ROFL_NB_MEMORY gigabytes of heap and answers what it found.
 --json      the whole result as JSON (the first fifty answers per line)       --cell N   only cell N
 --all       every answer of every line, in the text and in the JSON; runs in this process, not the kept kernel
 The first run starts a kept kernel (the model loads once, about 10 to 20 s); later runs take seconds.
@@ -335,7 +342,7 @@ if (isMain) {
   const ci = argv.indexOf('--cell'), only = ci >= 0 ? Number(argv[ci + 1]) : undefined;
   let r: ReturnType<typeof runFile>;
   const all = argv.includes('--all'), d = all ? undefined : await viaDaemon(file);
-  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, limit: LIMIT })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
+  try { if (d && 'error' in d) throw new Error(d.error); r = d?.result ?? runFile(file, new Kernel({ all, wall })); } catch (e) { console.error(`${file}: ${(e as Error).message}`); console.log(`${file}: not everything was read`); process.exit(2); }
   if (r.outside?.length) console.error(`${file}: ${OUTSIDE(r.outside)}`);
   console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short

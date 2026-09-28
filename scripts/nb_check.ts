@@ -163,27 +163,30 @@ const retired = (async () => {
   await new Promise((r) => setTimeout(r, 1000));
   const after = live();
   spawnSync('pkill', ['-f', serve]);
-  return { code: second.code, out: `before the edit: ${before}; after: ${after}`, stdout: second.stdout };
+  const log = (() => { try { return readFileSync(path.join(dir, 'daemon.log'), 'utf8'); } catch { return ''; } })();
+  return { code: second.code, out: `before the edit: ${before}; after: ${after}${log.includes(': retired by a daemon of a newer engine') ? '; the old one said so in daemon.log' : `; daemon.log: ${log}`}`, stdout: second.stdout };
 })();
 
 // the daemon at its edges, one daemon in turn: a request that is not one, a file that is not a notebook, a runaway then a normal run,
 // two notebooks in turn, and a run that outwaits ROFL_NB_TIMEOUT, after which the daemon is gone and the next run starts another
 const edges = (async () => {
   const sock = path.join(tmp, 'edges.sock'), env = { ROFL_NB_DAEMON: '1', ROFL_NB_SOCKET: sock, ROFL_NB_IDLE: '60', ROFL_NB_LIMIT: '3' };
-  const small = planted('edges', 'small.rofl.md', (t) => t);
+  const small = planted('edges', 'small.rofl.md', (t) => t), other = path.join(path.dirname(small), 'other.rofl.md');
+  writeFileSync(other, withCell('never C is unawaited')(readFileSync(small, 'utf8')));
   const raw = (line: string) => new Promise<string>((done) => { const c = connect(sock); let s = ''; c.on('connect', () => c.end(line)); c.on('data', (d) => { s += d; }); c.on('close', () => done(s)); c.on('error', (e) => done(e.message)); });
   const first = await cli([REVIEW], env);
   const garbage = await raw('{not json\n'), notNb = await raw(JSON.stringify({ file: path.join(ROOT, 'README.md') }) + '\n');
   const climbed = await cli([runaway], env), after = await cli([REVIEW], env);
-  const load = async (f: string) => { const o = await cli([f, '--json'], env); try { return JSON.parse(o.stdout ?? '').ms.load as number; } catch { return -1; } };
-  const inTurn = [await load(small), await load(small), await load(REVIEW), await load(small)];
+  const strip = (o: Out) => { try { const r = JSON.parse(o.stdout ?? ''); const ms = r.ms; delete r.ms; return { r: `${o.code} ${JSON.stringify(r)}`, load: ms.load as number, model: ms.phases.model as number }; } catch { return { r: o.out, load: -1, model: -1 }; } };
+  const load = async (f: string) => strip(await cli([f, '--json'], env));
+  const inTurn = [await load(small), await load(other), await load(REVIEW), await load(small)], fresh = strip(await cli([other, '--json']));
   const pid = Number(readFileSync(`${sock}.pid`, 'utf8'));
   const waited = await cli([runaway], { ...env, ROFL_NB_TIMEOUT: '1' });
   await new Promise((r) => setTimeout(r, 500));
   const alive = (() => { try { process.kill(pid, 0); return true; } catch { return false; } })();
   const next = await cli([REVIEW], env);
   try { process.kill(Number(readFileSync(`${sock}.pid`, 'utf8'))); } catch { /* gone */ }
-  return { first, garbage, notNb, climbed, after, inTurn, waited, alive, next };
+  return { first, garbage, notNb, climbed, after, inTurn, fresh, waited, alive, next };
 })();
 // the socket's directory: made 0700 and the user's own; one others may enter, or a link, is refused and the run is in-process
 const sockDirs = (async () => {
@@ -201,13 +204,13 @@ const before = (f: string) => readFileSync(f, 'utf8');
 const reviewText = before(REVIEW), selfText = before(path.join(NB, 'self.rofl.md')), naturalText = before(natural), badText = before(translateBad);
 
 const layering = node('scripts/nb_layers.ts', []);
-const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb] = await Promise.all([
+const [review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy] = await Promise.all([
   cli([REVIEW], { ROFL_NB_CLAUDE: spy }), cli([path.join(NB, 'small.rofl.md')]), cli([path.join(NB, 'self.rofl.md'), '--json'], { ROFL_NB_CLAUDE: spy }), cli([REVIEW, '--json']),
   cli([failing]), cli([unread]), cli([loose]), cli([extend]), cli([collide]), cli([recursion]), cli([redFile]), cli([blindFile, '--json']), cli([unpopulated]), cli([path.join(exec, 'examples/notebook/review.rofl.md')], {}, exec), cli([natural]),
   cli(['translate', translateOk], { ROFL_NB_CLAUDE: good }), cli(['translate', translateBad], { ROFL_NB_CLAUDE: bad }), cli(['translate', translateGone], { ROFL_NB_CLAUDE: path.join(tmp, 'no-such-claude') }), cli([unparsed]),
   cli([friction]), cli([path.join(tmp, 'badread/examples/notebook/badread.rofl.md')]), cli(['translate', translateSlow], { ROFL_NB_CLAUDE: slow, ROFL_NB_CLAUDE_TIMEOUT: '2' }),
   cli([path.join(NB, 'spat.rofl.md')]), cli([excised, '--json']), cli([without, '--json']), cli([holey]),
-  cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]), cli([runaway], { ROFL_NB_LIMIT: '3' }),
+  cli([path.join(NB, 'xdir.rofl.md')]), cli([xdirRed]), cli([path.join(NB, 'cjs.rofl.md')]), cli([cjsLost]), cli([runaway], { ROFL_NB_LIMIT: '3' }), cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
 ]);
 const layered = await layering;
 const [keptOk, keptStale] = await keptRuns;
@@ -283,6 +286,7 @@ check('E3 an excise in the notebook moves the lines the same as the notebook ove
 })(), { code: ex.code, out: (ex.stdout ?? '') + (wo.stdout ?? '') });
 check('E5 a never over a rule that met an expression it could not evaluate holds only as far as it sees', is(hol, 3) && has(hol, 'note: the rule for short name met an expression it could not evaluate') && has(hol, 'never short_name(C, L)  ->  holds as far as it sees · it rests on short name'), hol);
 check('H2 a rule that climbs for ever stops at ROFL_NB_LIMIT, says the budget ran out, exit 3', is(climb, 3) && has(climb, '? n(5)  ->  1 answer · the budget ran out before every answer was found') && climb.ms! < 20_000, climb);
+check('H2 the same runaway with the time far off stops at ROFL_NB_MEMORY gigabytes of heap instead, exit 3', is(heavy, 3) && has(heavy, 'the budget ran out') && heavy.ms! < 30_000, heavy);
 check('F1 an empty relation asked in one book the program writes in another says which', has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), fr);
 check('F2 a positional never works in a rofl cell', has(fr, 'never blocked(C, payments)  ->  holds'), fr);
 check('F4 a datalog cell under a natural cell answers it', has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), fr);
@@ -306,13 +310,14 @@ const e = await edges;
 check('L2 a request that is not JSON is answered, and the daemon goes on', e.garbage.includes('not a request') && is(e.climbed, 3), { code: 0, out: e.garbage });
 check('L3 the daemon refuses a file that is not a .rofl.md', e.notNb.includes('not a notebook') && !e.notNb.includes('result'), { code: 0, out: e.notNb.slice(0, 300) });
 check('H2 through the daemon a runaway stops at the limit, exit 3, and the next run is right and quick', is(e.first, 0) && is(e.climbed, 3) && has(e.climbed, 'the budget ran out') && e.climbed.ms! < 20_000 && is(e.after, 0) && has(e.after, '`c2` is blocked by `platform`') && e.after.ms! < 5_000, { code: e.after.code, out: `${e.climbed.ms} ms, then ${e.after.ms} ms\n${e.climbed.out}\n${e.after.out}` });
-check('M3 the daemon keeps the last notebook\'s kernel only: asked again after another, a notebook loads its model again', e.inTurn[1] === 0 && e.inTurn[3] > 0, { code: 0, out: `loads ${e.inTurn.join(', ')} ms` });
+check('M3 a second notebook over the same code loads no model and evaluates no code, and answers what a fresh process does; one over other code evicts it', e.inTurn[0].load > 0 && e.inTurn[1].load === 0 && e.inTurn[1].model < e.inTurn[0].model / 10 && e.inTurn[1].r === e.fresh.r && e.inTurn[3].load > 0,
+  { code: 0, out: `load, model: ${e.inTurn.map((x) => `${x.load}, ${x.model}`).join(' · ')} ms; the same as fresh: ${e.inTurn[1].r === e.fresh.r}` });
 check('H2 a daemon that outwaits ROFL_NB_TIMEOUT is killed and said, exit 2, and the next run starts another', is(e.waited, 2) && has(e.waited, 'gave no answer in 1 s and was stopped') && !e.alive && is(e.next, 0), { code: e.waited.code, out: `${e.alive ? 'still alive; ' : ''}${e.waited.out}\n${e.next.out}` });
 const sd = await sockDirs;
 check('M2 the socket directory is made 0700 and the user\'s; one open to others or a link is refused, the run in-process', sd.mode === 0o700 && sd.owner && sd.socks.join() === '1,0,0'
   && [sd.made, sd.opened, sd.linked].every((o) => is(o, 0)) && has(sd.opened, 'open to others (mode 755), so the kept kernel is not used') && has(sd.linked, 'not a directory, so the kept kernel is not used'), { code: 0, out: JSON.stringify({ ...sd, made: sd.made.out, opened: sd.opened.out, linked: sd.linked.out }) });
 const retire = await retired;
-check('an engine edit leaves one daemon per tree: the new one retires the old', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1', retire);
+check('an engine edit leaves one daemon per tree: the new one retires the old, which says so in daemon.log', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1; the old one said so in daemon.log', retire);
 const worldNames = new Set(worlds().map((w) => w.name));   // it reads every notebook, 13 s: once, and not while a run's output is read, which it would reorder
 check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir', 'notebook_cjs'].every((n) => worldNames.has(n)));
 

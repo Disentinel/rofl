@@ -1,10 +1,10 @@
 // The kernel off the extension host's thread: one Kernel per window, so the model loads once and a run does not freeze the editor.
 import { parentPort } from 'node:worker_threads';
 import { Kernel } from '../notebook/kernel.ts';
-import { LIMIT, claude, runFile, translateCell, translateText } from '../notebook/cli.ts';
+import { claude, wall, runFile, translateCell, translateText } from '../notebook/cli.ts';
 import { render } from './render.ts';
 
-const kernel = new Kernel({ limit: LIMIT });
+const kernel = new Kernel({ wall });
 const run = (file: string, text: string, unsaved: Record<string, string>) => { const r = runFile(file, kernel, text, unsaved); return { ...r, shown: render(r) }; };
 export type Cell = { at?: number; words?: string; asked?: string };
 const stops = new Map<number, AbortController>();

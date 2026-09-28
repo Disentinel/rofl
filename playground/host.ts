@@ -25,7 +25,7 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
-export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation ran out of its limit */ partial?: boolean };
+export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean };
 
 const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in ROFL
 
@@ -213,11 +213,11 @@ export class Host {
   }
 
   /** `data`: files that exist beside the code and are not code, which a specifier may name.
-   *  `limit`: ms every evaluation of this run may take together; past it the run stops as when the budget runs out. */
-  run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], limit = Infinity): RunOut {
+   *  `stop`: asked as the run's evaluations go; true stops them as when the budget runs out. */
+  run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], stop?: () => boolean): RunOut {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
     if (!this.core) throw new Error('the model is not loaded');
-    for (const w of [this.core, this.shell]) if (w) w.deadline = performance.now() + limit;
+    for (const w of [this.core, this.shell]) if (w) w.stop = stop;
     const home = this.home;
     this.last = null;   // the last world held while the next is built doubles the heap: 70 s runs took 100-115 s in a kept kernel
     const t = performance.now();
@@ -403,7 +403,7 @@ export class Host {
     const b = this.core!.fork();
     const given = b.assert(sc.text);
     if (!given.ok) throw new Error(`the code's facts were refused, so nothing was asked: ${given.diagnostics[0]}`);
-    return b.evaluate(BUDGET).partial ? b : this.base = b;   // a world cut short by the limit is not kept for the next run
+    return b.evaluate(BUDGET).partial ? b : this.base = b;   // a world cut short is not kept for the next run
   }
 
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */

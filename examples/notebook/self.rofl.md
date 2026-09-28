@@ -100,15 +100,18 @@ I4 The file is the truth: the notebook is the Markdown file; outputs are derived
 > Step 1. The kernel writes nothing (I6 below), so only the command line
 > could write into the notebook. It writes a file in exactly one function,
 > the translator, and nowhere a run passes through; the kept kernel
-> (`notebook/serve.ts`) writes one more, its pid beside its socket, which is
-> no notebook.
+> (`notebook/serve.ts`) writes two more beside its socket, its pid and its
+> log, neither of them a notebook.
 
 ```rofl
-A call C writes a file if C is a host site of `node` from "node:fs" at "writeFileSync".
+A call C writes a file either:
+1. if C is a host site of `node` from "node:fs" at "writeFileSync";
+2. if C is a host site of `node` from "node:fs" at "openSync".
 
 A function F may write a file either:
 1. if F answers to "translate";
-2. if F answers to "writePid".
+2. if F answers to "writePid";
+3. if F answers to "logOf".
 
 A call C writes outside translation if C writes a file, a function F is the nearest function of C, and unless F may write a file.
 

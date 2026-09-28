@@ -9,7 +9,7 @@ export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string };
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
-/** `blind`: every never holds, some only as far as the model sees or the limit let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
+/** `blind`: every never holds, some only as far as the model sees or its wall let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
 export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number> } };
@@ -19,11 +19,11 @@ export class Kernel {
   private loaded = '';
   private vocab?: { key: string; sentences: string[] };
   private whole: boolean;
-  private limit: number;
+  private wall?: () => () => boolean;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty.
-   *  `limit`: ms a run's evaluation may take; one cut short answers what it found and its status is `blind`. */
-  constructor(opts: { whole?: boolean; all?: boolean; limit?: number } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.limit = opts.limit ?? Infinity; }
+   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `blind`. */
+  constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
 
   run(path: string, text: string, input: Inputs): NbResult {
     const front = parseFront(text);
@@ -39,7 +39,7 @@ export class Kernel {
     }
     const cells = cellsOf(text);
     const runs = cells.filter((c) => c.kind !== 'natural');
-    const out = this.host.run(input.code, runs.map(asCell), input.data, this.limit);
+    const out = this.host.run(input.code, runs.map(asCell), input.data, this.wall?.());
     for (const [f, e] of Object.entries(out.parseErrors)) errors.push(`${f}: not parsed: ${e}`);
     if (out.error) errors.push(out.error);
     const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;
