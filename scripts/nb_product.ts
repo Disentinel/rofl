@@ -386,7 +386,7 @@ const protoRun = (name: string, env: Record<string, string>, root: string, forev
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
 // a PATH with node on it and no git: grep falls back to a search in a process of its own
 const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
-const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
+const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'compound', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
 /** Each planted defect, the runs that can see it (the rest are not run for it), and what the red must say: red for another reason is not its. */
 const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['outside', 'notebook/reader.ts', [[/  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, '']], ['plain'], 'was not refused as outside the workspace'],
@@ -421,10 +421,12 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['a control file that is a link', 'notebook/reader.ts', [[/  if \(!st\.isFile\(\)\) throw .*\n/, '']], ['config'], 'as a link to /dev/zero was not refused as a link'],
   ['a control file of any size', 'notebook/reader.ts', [[/  if \(st\.size > CONTROL_BYTES\) throw .*\n/, '']], ['config'], 'a 2 MB .gitignore was read'],
   ['grep split at colons', 'notebook/reader.ts', [[/'-z', /, ''], [/  return \{ hits: .*\n/, "  return { hits: g.stdout.split('\\n').flatMap((l) => { const m = /^(.*?):(\\d+):(.*)$/.exec(l); return m ? [{ file: m[1], line: m[2], text: m[3] }] : []; }) };\n"]], ['config'], 'a secret whose name holds colons was read by grep'],
+  ['arithmetic in the config', 'notebook/reader.ts', [[/    for \(const b of c\.body\) if \(b\.t === 'bi' .*\n/, '']], ['config'], 'Y is X + 1. was not refused as not plain Datalog'],
+  ['terms built of terms in the config', 'notebook/reader.ts', [[/      if \(l\.args\.some\(built\)\) return .*\n/, '']], ['compound'], 'a term built of terms was not refused'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
-  ['a broken config read as none', 'notebook/reader.ts', [[/  if \(!loaded\[1\]\.ok\) return .*\n/, '']], ['config'], 'a config that does not load let files be read'],
+  ['a broken config read as none', 'notebook/reader.ts', [[/  if \(!loaded\[1\]\.ok\) return .*\n/, ''], [/catch \(e\) \{ return \(e as Error\)\.message; \}/, 'catch { return null; }']], ['config'], 'a config that does not load let files be read'],
 ];
 /** The workspace's .rofl/read.rofl, asked of reader.ts under `root` in this process: what it narrows, what it may not do, and a broken one. */
 async function configs(tag: string, root: string): Promise<string[]> {
@@ -495,6 +497,13 @@ async function configs(tag: string, root: string): Promise<string[]> {
     put0(ws, 'README.md', 'r'); put0(ws, 'README.md:1:x.pem', 'PEM_TOKEN\n'); put0(ws, 'src/a.ts:1: y.pem', 'PEM_TOKEN\n');
     const colons = answer(as(null), 'grep PEM_TOKEN', 10_000, () => '').text;
     if (colons.includes('PEM_TOKEN')) bad.push(`a secret whose name holds colons was read by grep: ${colons}`);
+    // plain Datalog only: the two configs that took 4.4 GB and 480 MB are refused before a rule runs; a rule of one's own still narrows
+    for (const c of ['n(a). n(g(X, X)) :- n(X).\n', 'n(0). n(Y) :- n(X), Y is X + 1.\n']) {
+      const t = performance.now(), w = as(c);
+      if (!w.refused?.includes('not plain Datalog') || performance.now() - t > 2000) bad.push(`${c.trim()} was not refused as not plain Datalog, at once: ${w.refused ?? w.files.size}, ${Math.round(performance.now() - t)} ms`);
+    }
+    const team = as('in_team("src/a.ts", platform).\nskipped(F) :- file(F), not in_team(F, platform).\n');
+    if (!reads(team, 'src/a.ts') || reads(team, 'src/b.ts')) bad.push(`a rule of the workspace's own did not narrow: ${team.refused ?? [...team.files]}`);
     const svn = as('untracked_by(svn).\n');
     if (!svn.refused?.includes('not built in')) bad.push(`untracked_by(svn) was not refused as not built in: ${svn.refused}`);
     // a socket, which is not a regular file: listed, and refused when asked for
@@ -516,6 +525,8 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     // a folder with no git, and one on a machine with no git, named by ROFL_NB_ROOT from elsewhere
     // `.` first on PATH, and a program named git in the workspace, which the search must not run
     dotgit: [{ PATH: `.${path.delimiter}${noGit}` }, false, false],
+    // a config whose rule builds ever larger terms, in a process of 256 MB: refused before it runs, or the process dies
+    compound: [{ NODE_OPTIONS: '--max-old-space-size=256' }, false, false, undefined, 'n(a).\nn(g(X, X)) :- n(X).\n'],
     nogit: [{}, false, false], nobin: [{ PATH: noGit, ROFL_NB_ROOT: path.join(tmp, `proto-${tag}-nobin`) }, false, false, ROOT],
     // the workspace is the home directory, or holds it: nothing is read
     home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, true], above: [{ HOME: path.join(tmp, `proto-${tag}-above/src`) }, false, true],
@@ -531,6 +542,8 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   const at = (s: string, from: string, n = 200) => s.slice(s.indexOf(from), s.indexOf(from) + n);
   for (const [k, r] of Object.entries(got)) for (const token of [...BANNED, ...k === 'sub' ? ['PARENT_TOKEN'] : [], ...k === 'gitenv' ? ['OTHER_TOKEN'] : []]) if (r.prompts.join('\n').includes(`${token}_9f2`)) bad.push(`${token} reached a prompt in the ${k} run`);
   const { plain, nogit, nobin, small, forever, home, above, sub, words, gitenv, dotgit } = got;
+  const { compound } = got;
+  if (compound && !(compound.prompts[1] ?? '').includes('refused: src/a.ts: .rofl/read.rofl: not plain Datalog: a term built of terms in n')) bad.push(`a term built of terms was not refused: exit ${compound.o.code} ${compound.o.out.slice(-300)}`);
   if (dotgit && existsSync(path.join(tmp, `proto-${tag}-dotgit`, 'RAN'))) bad.push('a git of the workspace ran');
   if (dotgit && !(dotgit.prompts[1] ?? '').includes('> grep alpha\nsrc/a.ts:1: export function alpha() {')) bad.push(`with . on PATH, grep did not answer: ${at(dotgit.prompts[1] ?? '', '> grep alpha')}`);
   // what git tracks is read, what it does not is not

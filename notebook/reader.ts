@@ -7,6 +7,9 @@ import { accessSync, closeSync, constants, existsSync, fstatSync, lstatSync, ope
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
+import { parseProgram } from '../src/parser.ts';
+import { IFACE, RESERVED } from '../src/reflect.ts';
+import type { Clause, Term } from '../src/unify.ts';
 
 export const ROUNDS = Number(process.env.ROFL_NB_READ_ROUNDS ?? 6);
 export const BUDGET = Number(process.env.ROFL_NB_READ_BUDGET ?? 200_000);
@@ -139,6 +142,27 @@ export const CONFIG = '.rofl/read.rofl';
 /** Past this many files the rules are not run: read_prefix in CONFIG narrows the walk itself. */
 const FILES = Number(process.env.ROFL_NB_READ_FILES ?? 50_000);
 
+/** How long, and how much more heap, CONFIG's rules may take: a second guard, under the one that they are plain Datalog. */
+const RULE_MS = 10_000, RULE_HEAP = 512 * 2 ** 20;
+const COMPARE = new Set(['=', '!=', '<', '<=', '>', '>=']), ENGINE = new Set([...RESERVED, ...Object.values(IFACE)]);
+/** Why CONFIG is not plain Datalog, or null: a variable, a number, a string or a name, never a term built of terms; a comparison, never
+ *  `is`; no perspective, no time, no relation the engine keeps for itself. Then its rules make no new value, and end in time polynomial in
+ *  the files. `n(g(X, X)) :- n(X).` took 4.4 GB before this; `n(Y) :- n(X), Y is X + 1.` 480 MB. */
+function impure(text: string): string | null {
+  let clauses: Clause[];
+  try { clauses = parseProgram(text); } catch (e) { return (e as Error).message; }
+  const built = (t: Term) => t.k === 'f';
+  for (const c of clauses) {
+    for (const b of c.body) if (b.t === 'bi' && (!COMPARE.has(b.op) || built(b.l) || built(b.r))) return `not plain Datalog: \`${b.op}\` in a rule for ${c.head.rel}, where only a comparison of two values may stand`;
+    for (const l of [c.head, ...c.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])]) {
+      if (l.args.some(built)) return `not plain Datalog: a term built of terms in ${l.rel}`;
+      if (l.perspExplicit || l.temporal !== 'now') return `not plain Datalog: a perspective or a time in ${l.rel}`;
+      if (ENGINE.has(l.rel) || l.rel.startsWith('$')) return `${l.rel} is the engine's own relation`;
+    }
+  }
+  return null;
+}
+
 export type Repo = { root: string; files: Set<string>; refused?: string };
 
 const within = (dir: string, p: string) => { const r = path.relative(dir, p); return r !== '' && r !== '..' && !r.startsWith(`..${path.sep}`) && !path.isAbsolute(r); };
@@ -164,6 +188,10 @@ export function workspace(notebook: string, { root, command = process.env.ROFL_N
 function listing(dir: string, command?: string): Repo {
   const none = (refused: string): Repo => ({ root: dir, files: new Set(), refused });
   const r = new Rofl(), refuse = (why: string) => none(`${CONFIG}: ${why}; nothing is read`), text = control(dir, CONFIG);
+  const not = impure(text);
+  if (not) return refuse(not);
+  const end = performance.now() + RULE_MS, heap = process.memoryUsage().heapUsed + RULE_HEAP;
+  r.stop = () => performance.now() > end || process.memoryUsage().heapUsed > heap;
   const loaded = [r.load(RULES), r.load(text)];
   if (!loaded[1].ok) return refuse(loaded[1].diagnostics[0] ?? 'it does not load');
   const values = (q: string) => r.query(q).rows.map((x) => Object.values(x.bindings)[0]).map((v) => { try { return v.startsWith('"') ? JSON.parse(v) as string : v; } catch { return v; } });
