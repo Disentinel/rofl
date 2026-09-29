@@ -351,8 +351,10 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
   if (cell === undefined) return words(a.text);
   let t = tryCell(cell);
   if (t.errors.length) {
-    said.push(`${file}:${c.line}: the first try did not read:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
-    step(`the first try did not read (${t.errors[0]}); asking again`);
+    // a cell that read and whose never holds over nothing is said as that, not as a cell that did not read
+    const how = (e: string[]) => e.every((x) => x.includes(': holds over nothing')) ? 'read, and checks nothing' : 'did not read';
+    said.push(`${file}:${c.line}: the first try ${how(t.errors)}:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
+    step(`the first try ${how(t.errors)} (${t.errors[0]}); asking again`);
     convo += `\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nCheck with \`?\` lines the sentences you are unsure of, then write the cell again.`;
     a = await converse(base);
     if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
@@ -361,7 +363,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
     t = tryCell(cell);
   }
   said.push(...readLine());
-  if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: no cell read after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
+  if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: ${t.errors.every((x) => x.includes(': holds over nothing')) ? 'no cell that checks something' : 'no cell read'} after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
   return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
 }
 

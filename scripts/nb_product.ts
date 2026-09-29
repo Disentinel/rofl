@@ -474,7 +474,7 @@ process.stdin.on('data', (d) => { i += d; }).on('end', () => {
 `); chmodSync(f, 0o755); return f; };
 const vacTranslate = (root = ROOT, name = 'vac-tr') => { const nb = planted(`${name}-${path.basename(root)}`, 'review.rofl.md', withNatural); return cli(['translate', nb], { ROFL_NB_CLAUDE: vacModel(`${name}-${path.basename(root)}`) }, root).then((o) => ({ o, text: readFileSync(nb, 'utf8') })); };
 const vacOk = (o: Out) => is(o, 3) && has(o, 'never C is held back  ->  holds as far as it sees · holds over nothing: its condition');
-const trOk = (t: { o: Out; text: string }) => t.o.code === 0 && t.text.includes('C is blocked by `platform`') && !t.text.includes('`legal`') && has(t.o, 'holds over nothing');
+const trOk = (t: { o: Out; text: string }) => t.o.code === 0 && t.text.includes('C is blocked by `platform`') && !t.text.includes('`legal`') && has(t.o, 'the first try read, and checks nothing (') && has(t.o, 'holds over nothing') && !has(t.o, 'did not read');
 const vacRoots = { kernel: linked('vac-kernel', 'playground/host.ts', mutate('playground/host.ts', / \|\| a\.kind === 'never' && !q\.rows\.length && vacuous\(relOf\(a\.lit\)\)/, () => '')),
   gate: linked('vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')) };
 // with no exception, a condition that finds nothing is the answer (nothing is blocked by legal), not a vacuous never
