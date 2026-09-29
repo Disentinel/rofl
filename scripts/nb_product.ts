@@ -10,6 +10,31 @@ import { worlds } from './goldens.ts';
 import { check, cli, good, has, is, linked, mutate, node, planted, put, report, REVIEW, ROOT, spinning, spy, tmp, withCell, withNatural, type Out } from './nb_lib.ts';
 
 const t0 = performance.now();
+// Each part below is a group of checks and the runs only they read. `--only PATTERN` the parts whose name it matches; `--shard I/N` the I-th
+// of N fixed parts, which together hold every part once; `--shards N` each shard's parts, that they hold every part once, and that a
+// partition dropping one is seen to. A part's runs start only when it is chosen. Alone on grafema-dev: layers 33 s, worlds 28, kept 23, edges 22,
+// protocol 13, the rest under 7; the shards are those in three, the heaviest first.
+const PARTS: Record<string, number> = { layers: 0, protocol: 0, 'protocol-breaks-0': 0, pictures: 0, contact: 0, sockets: 0, worlds: 1, kept: 1, 'protocol-breaks-1': 1, vacuous: 1, newcomer: 1, tutorial: 1, edges: 2, harness: 2, 'protocol-breaks-2': 2, retire: 2 };
+const arg = (flag: string) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : undefined; };
+const shardsOf = (n: number, at = (p: string) => PARTS[p] % n) => Array.from({ length: n }, (_, i) => Object.keys(PARTS).filter((p) => at(p) === i));
+const whole = (ps: string[][]) => ps.flat().length === Object.keys(PARTS).length && new Set(ps.flat()).size === Object.keys(PARTS).length;
+const shards = Number(arg('--shards') ?? 0), shard = arg('--shard'), only = arg('--only');
+if (shards) {
+  shardsOf(shards).forEach((ps, i) => console.log(`shard ${i + 1}/${shards}: ${ps.join(' ')}`));
+  const dropped = !whole(shardsOf(shards, (p) => p === 'pictures' ? -1 : PARTS[p] % shards));
+  console.log(`${whole(shardsOf(shards)) ? 'ok  ' : 'FAIL'} the ${shards} shards hold each of the ${Object.keys(PARTS).length} parts once\n${dropped ? 'ok  ' : 'FAIL'} a partition that drops a part is seen to`);
+  process.exit(whole(shardsOf(shards)) && dropped ? 0 : 1);
+}
+let chosen = Object.keys(PARTS);
+if (shard) {
+  const [i, n] = shard.split('/').map(Number);
+  if (!(i >= 1 && i <= n)) throw new Error(`--shard takes I/N with 1 <= I <= N, not ${shard}`);
+  if (!whole(shardsOf(n))) throw new Error(`the ${n} shards do not hold each part once: npm run test:nb:product -- --shards ${n}`);
+  chosen = shardsOf(n)[i - 1];
+}
+if (only) chosen = chosen.filter((p) => new RegExp(only).test(p));
+const asked = new Set<string>();
+const on = (part: string) => { if (!(part in PARTS)) throw new Error(`${part}: not a part of PARTS`); asked.add(part); return chosen.includes(part); };
 // a rule that climbs for ever
 const runaway = path.join(tmp, 'runaway/runaway.rofl.md');
 put(runaway, '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
@@ -29,9 +54,9 @@ const kept = async (name: string, root: string) => {
   spawnSync('pkill', ['-f', sock]);
   return steps;
 };
-const keptRuns = Promise.all([kept('kept', ROOT), kept('kept-stale', staleRoot)]);
+const keptRuns = on('kept') ? Promise.all([kept('kept', ROOT), kept('kept-stale', staleRoot)]) : undefined;
 // one daemon per tree: a run after an engine edit starts a new daemon, and the new one retires the old
-const retired = (async () => {
+const retired = !on('retire') ? undefined : (async () => {
   const root = linked('retire', 'notebook/front.ts', readFileSync(path.join(ROOT, 'notebook/front.ts'), 'utf8')), top = path.join(tmp, 'retire-tmp'), dir = path.join(top, `rofl-nb-${process.getuid!()}`);
   mkdirSync(top);
   const env = { ROFL_NB_DAEMON: '1', XDG_RUNTIME_DIR: top, ROFL_NB_IDLE: '60' }, serve = path.join(root, 'notebook/serve.ts');
@@ -49,7 +74,7 @@ const retired = (async () => {
 
 // the daemon at its edges, one daemon in turn: a request that is not one, a file that is not a notebook, a runaway then a normal run,
 // two notebooks in turn, and a run that outwaits ROFL_NB_TIMEOUT, after which the daemon is gone and the next run starts another
-const edges = (async () => {
+const edges = !on('edges') ? undefined : (async () => {
   const sock = path.join(tmp, 'edges.sock'), env = { ROFL_NB_DAEMON: '1', ROFL_NB_SOCKET: sock, ROFL_NB_IDLE: '60', ROFL_NB_LIMIT: '3' };
   const small = planted('edges', 'small.rofl.md', (t) => t), other = path.join(path.dirname(small), 'other.rofl.md');
   writeFileSync(other, withCell('never C is unawaited')(readFileSync(small, 'utf8')));
@@ -71,7 +96,7 @@ const edges = (async () => {
   return { first, garbage, notNb, climbed, after, inTurn, fresh, waited, alive, next };
 })();
 // the socket's directory: made 0700 and the user's own; one others may enter, or a link, is refused and the run is in-process
-const sockDirs = (async () => {
+const sockDirs = !on('sockets') ? undefined : (async () => {
   const uid = process.getuid!(), top = mkdtempSync('/tmp/nbsock-'), own = path.join(top, 'fresh'), open = path.join(top, 'open'), link = path.join(top, 'link');
   mkdirSync(path.join(open, `rofl-nb-${uid}`), { recursive: true }); chmodSync(path.join(open, `rofl-nb-${uid}`), 0o755);
   mkdirSync(path.join(link, 'target'), { recursive: true, mode: 0o700 }); symlinkSync(path.join(link, 'target'), path.join(link, `rofl-nb-${uid}`));
@@ -84,7 +109,7 @@ const sockDirs = (async () => {
 
 // H3 on the command line: a harness that keeps tools refused, one whose login fails said; started now, read with the rest of H3
 const noLogin = path.join(tmp, 'no-login.sh'); writeFileSync(noLogin, '#!/bin/sh\ncat > /dev/null\nprintf "\\033[91mError:\\033[0m Incorrect API key provided\\n" >&2\nexit 1\n'); chmodSync(noLogin, 0o755);
-const h3cli = Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: noLogin })]);
+const h3cli = !on('harness') ? undefined : Promise.all([cli(['translate', planted('tr-refused', 'review.rofl.md', withNatural), '--model', 'codex'], { ROFL_NB_CODEX: good }), cli(['translate', planted('tr-auth', 'review.rofl.md', withNatural)], { ROFL_NB_HARNESS: 'opencode', ROFL_NB_OPENCODE: noLogin })]);
 // what a newcomer meets, each where the output could mislead: a bare word where a name goes, the engine's words in a proof, a list the reader does not claim,
 // a what-if counted as answers, a natural cell answered by a cell in another section, a note that calls a cell above "further down", a world with no cells
 const newcomer = path.join(tmp, 'newcomer/newcomer.rofl.md'), world = path.join(tmp, 'newcomer/world.rofl.md');
@@ -136,27 +161,36 @@ list the cars
 \`\`\`
 `);
 put(world, readFileSync(path.join(ROOT, 'examples/review.rofl.md'), 'utf8'));
-const newcomerRuns = Promise.all([cli([newcomer]), cli([newcomer, '--timing']), cli([world]), cli(['vocab']), cli(['vocab', 'unawaited']), cli([planted('review-fails', 'review.rofl.md', withCell('never C is blocked by T'))])]);
-const layering = node('scripts/nb_layers.ts', []);
-const layered = await layering;
-const [keptOk, keptStale] = await keptRuns;
-
-check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
-for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);
-check('the kept kernel answers what a fresh process answers: first run, a cell edit, a code edit, after kill -9', keptOk.every((s) => s.daemon.r === s.fresh.r) && keptOk[1].daemon.loaded === false && keptOk[0].fresh.r !== keptOk[1].fresh.r && keptOk[1].fresh.r !== keptOk[2].fresh.r, { code: 0, out: JSON.stringify(keptOk.map((s) => [s.daemon.loaded, s.daemon.r === s.fresh.r, s.daemon.r.slice(0, 300), s.fresh.r.slice(0, 300)])) });
-check('  and a kept kernel blind to the code files, it does not', keptStale[2].daemon.r !== keptStale[2].fresh.r && keptStale[1].daemon.r === keptStale[1].fresh.r, { code: 0, out: JSON.stringify(keptStale.map((s) => s.daemon.r === s.fresh.r)) });
-const e = await edges;
-check('L2 a request that is not JSON is answered, and the daemon goes on', e.garbage.includes('not a request') && is(e.climbed, 3), { code: 0, out: e.garbage });
-check('L3 the daemon refuses a file that is not a .rofl.md', e.notNb.includes('not a notebook') && !e.notNb.includes('result'), { code: 0, out: e.notNb.slice(0, 300) });
-check('H2 through the daemon a runaway stops at the limit, exit 3, and the next run is right and quick', is(e.first, 0) && is(e.climbed, 3) && has(e.climbed, 'the budget ran out') && e.climbed.ms! < 20_000 && is(e.after, 0) && has(e.after, '`c2` is blocked by `platform`') && e.after.ms! < 5_000, { code: e.after.code, out: `${e.climbed.ms} ms, then ${e.after.ms} ms\n${e.climbed.out}\n${e.after.out}` });
-check('M3 a second notebook over the same code loads no model and evaluates no code, and answers what a fresh process does; one over other code evicts it', !!e.inTurn[0].loaded && e.inTurn[0].model === 'evaluated' && !e.inTurn[1].loaded && e.inTurn[1].model === 'kept' && e.inTurn[1].r === e.fresh.r && !!e.inTurn[3].loaded && e.inTurn[3].model === 'evaluated',
-  { code: 0, out: `loaded, model: ${e.inTurn.map((x) => `${x.loaded}, ${x.model}`).join(' · ')}; the same as fresh: ${e.inTurn[1].r === e.fresh.r}` });
-check('H2 a daemon that outwaits ROFL_NB_TIMEOUT is killed and said, exit 2, and the next run starts another', is(e.waited, 2) && has(e.waited, 'gave no answer in 1 s and was stopped') && !e.alive && is(e.next, 0), { code: e.waited.code, out: `${e.alive ? 'still alive; ' : ''}${e.waited.out}\n${e.next.out}` });
-const sd = await sockDirs;
-check('M2 the socket directory is made 0700 and the user\'s; one open to others or a link is refused, the run in-process', sd.mode === 0o700 && sd.owner && sd.socks.join() === '1,0,0'
-  && [sd.made, sd.opened, sd.linked].every((o) => is(o, 0)) && has(sd.opened, 'open to others (mode 755), so the kept kernel is not used') && has(sd.linked, 'not a directory, so the kept kernel is not used'), { code: 0, out: JSON.stringify({ ...sd, made: sd.made.out, opened: sd.opened.out, linked: sd.linked.out }) });
-const retire = await retired;
-check('an engine edit leaves one daemon per tree: the new one retires the old, which says so in daemon.log', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1; the old one said so in daemon.log', retire);
+const newcomerRuns = !on('newcomer') ? undefined : Promise.all([cli([newcomer]), cli([newcomer, '--timing']), cli([world]), cli(['vocab']), cli(['vocab', 'unawaited']), cli([planted('review-fails', 'review.rofl.md', withCell('never C is blocked by T'))])]);
+const layering = on('layers') ? node('scripts/nb_layers.ts', []) : undefined;
+if (layering) {
+  const layered = await layering;
+  check('a cell edit over kept code answers what the whole world answers (scripts/nb_layers.ts)', layered.code === 0 && /^same$/m.test(layered.out), layered);
+  for (const g of ['model', 'asked', 'kernel', 'why']) check(`  and with its ${g} guard spoilt, it does not`, new RegExp(`^--break ${g}: differ: ${g}$`, 'm').test(layered.out), layered);
+}
+if (keptRuns) {
+  const [keptOk, keptStale] = await keptRuns;
+  check('the kept kernel answers what a fresh process answers: first run, a cell edit, a code edit, after kill -9', keptOk.every((s) => s.daemon.r === s.fresh.r) && keptOk[1].daemon.loaded === false && keptOk[0].fresh.r !== keptOk[1].fresh.r && keptOk[1].fresh.r !== keptOk[2].fresh.r, { code: 0, out: JSON.stringify(keptOk.map((s) => [s.daemon.loaded, s.daemon.r === s.fresh.r, s.daemon.r.slice(0, 300), s.fresh.r.slice(0, 300)])) });
+  check('  and a kept kernel blind to the code files, it does not', keptStale[2].daemon.r !== keptStale[2].fresh.r && keptStale[1].daemon.r === keptStale[1].fresh.r, { code: 0, out: JSON.stringify(keptStale.map((s) => s.daemon.r === s.fresh.r)) });
+}
+if (edges) {
+  const e = await edges;
+  check('L2 a request that is not JSON is answered, and the daemon goes on', e.garbage.includes('not a request') && is(e.climbed, 3), { code: 0, out: e.garbage });
+  check('L3 the daemon refuses a file that is not a .rofl.md', e.notNb.includes('not a notebook') && !e.notNb.includes('result'), { code: 0, out: e.notNb.slice(0, 300) });
+  check('H2 through the daemon a runaway stops at the limit, exit 3, and the next run is right and quick', is(e.first, 0) && is(e.climbed, 3) && has(e.climbed, 'the budget ran out') && e.climbed.ms! < 20_000 && is(e.after, 0) && has(e.after, '`c2` is blocked by `platform`') && e.after.ms! < 5_000, { code: e.after.code, out: `${e.climbed.ms} ms, then ${e.after.ms} ms\n${e.climbed.out}\n${e.after.out}` });
+  check('M3 a second notebook over the same code loads no model and evaluates no code, and answers what a fresh process does; one over other code evicts it', !!e.inTurn[0].loaded && e.inTurn[0].model === 'evaluated' && !e.inTurn[1].loaded && e.inTurn[1].model === 'kept' && e.inTurn[1].r === e.fresh.r && !!e.inTurn[3].loaded && e.inTurn[3].model === 'evaluated',
+    { code: 0, out: `loaded, model: ${e.inTurn.map((x) => `${x.loaded}, ${x.model}`).join(' · ')}; the same as fresh: ${e.inTurn[1].r === e.fresh.r}` });
+  check('H2 a daemon that outwaits ROFL_NB_TIMEOUT is killed and said, exit 2, and the next run starts another', is(e.waited, 2) && has(e.waited, 'gave no answer in 1 s and was stopped') && !e.alive && is(e.next, 0), { code: e.waited.code, out: `${e.alive ? 'still alive; ' : ''}${e.waited.out}\n${e.next.out}` });
+}
+if (sockDirs) {
+  const sd = await sockDirs;
+  check('M2 the socket directory is made 0700 and the user\'s; one open to others or a link is refused, the run in-process', sd.mode === 0o700 && sd.owner && sd.socks.join() === '1,0,0'
+    && [sd.made, sd.opened, sd.linked].every((o) => is(o, 0)) && has(sd.opened, 'open to others (mode 755), so the kept kernel is not used') && has(sd.linked, 'not a directory, so the kept kernel is not used'), { code: 0, out: JSON.stringify({ ...sd, made: sd.made.out, opened: sd.opened.out, linked: sd.linked.out }) });
+}
+if (retired) {
+  const retire = await retired;
+  check('an engine edit leaves one daemon per tree: the new one retires the old, which says so in daemon.log', retire.code === 0 && retire.out === 'before the edit: 1 daemons, sockets 1; after: 1 daemons, sockets 1; the old one said so in daemon.log', retire);
+}
 
 // H3 each harness (notebook/model.ts) against a fake of its binary that records how it was started: the flags that leave it no tools, a directory of
 // its own, removed after, the answer read; one that keeps tools refused unless allowed, one that fails said in a line. Each isolation, spoilt, turns it red.
@@ -232,41 +266,49 @@ const H3_BREAKS: [string, RegExp, string][] = [
   ['argv cap', /  if \(args\.includes\(prompt\) && Buffer\.byteLength\(prompt\) > ARG_BYTES\) .*\n/, ''],
   ['session', /, '--no-session-persistence'/, ''], ['claude leaves', /for \(const d of \[path\.join\(project, 'memory'\), project\]\)/, 'for (const d of [])'], ['timeout', /if \(p\.killed\)/, 'if (false)'], ['own names', /Object\.hasOwn\(HARNESSES, name\)/, 'HARNESSES[name]'],
 ];
-const h3 = await harnesses(MODEL_SRC, 'as-is');
-check('H3 every harness is started with the flags that leave it no tools, in a directory of its own, and its answer read; one that keeps tools is refused', !h3.length, { code: 0, out: h3.join('\n') });
-const spoilt = await Promise.all(H3_BREAKS.map(([name, at, plant]) => {
-  const src = MODEL_SRC.replace(at, plant);
-  if (src === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
-  return harnesses(src, name.replace(/ /g, '-'));
-}));
-H3_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, spoilt[k].length > 0));
-const [refusedCli, failedCli] = await h3cli;
-check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
-check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);
+if (on('harness')) {
+  const h3 = await harnesses(MODEL_SRC, 'as-is');
+  check('H3 every harness is started with the flags that leave it no tools, in a directory of its own, and its answer read; one that keeps tools is refused', !h3.length, { code: 0, out: h3.join('\n') });
+  const spoilt = await Promise.all(H3_BREAKS.map(([name, at, plant]) => {
+    const src = MODEL_SRC.replace(at, plant);
+    if (src === MODEL_SRC) throw new Error(`H3 ${name}: the planted defect did not apply`);
+    return harnesses(src, name.replace(/ /g, '-'));
+  }));
+  H3_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, spoilt[k].length > 0));
+  const [refusedCli, failedCli] = await h3cli!;
+  check('H3 translate with a harness that keeps tools is refused in one line, exit 2, nothing written', refusedCli.code === 2 && refusedCli.out.trim().split('\n').length === 1 && has(refusedCli, 'codex cannot be run without tools') && !readFileSync(path.join(tmp, 'tr-refused/examples/notebook/review.rofl.md'), 'utf8').includes('```rofl\nA module'), refusedCli);
+  check('H3 a harness that fails its login is said in a line, exit 2, the natural cell kept', failedCli.code === 2 && has(failedCli, 'translation failed: opencode exited with 1: Error: Incorrect API key provided') && readFileSync(path.join(tmp, 'tr-auth/examples/notebook/review.rofl.md'), 'utf8').includes('No change touches a module nobody owns.'), failedCli);
+}
 
-const [nc, ncTimed, wd, vocab, vocab0, fails] = await newcomerRuns;
-check('N1 a bare word where a name goes says to put it in backticks, in a question and in a list', has(nc, 'never X comes out white: white is not a sentence word here: names go in backticks: `white`') && has(nc, 'bike is on the line: bike is not a sentence word here'), nc);
-check('N2 a proof has no engine variable: a blank is some <noun>, a relation is its sentence', has(nc, 'not `car` is short of some part (nothing says so)') && has(nc, 'nothing says `cab` is in stock, and no rule concludes it') && !/\?\d|no rule concludes '/.test(nc.out), nc);
-check('N3 a list the reader does not claim, and a name with a space, are said in the writer\'s words', has(nc, 'a list of facts goes under a plain line of its own ending in a colon') && has(nc, '`level 1` is not a name') && !/LIST|FACT|line \d+: expected/.test(nc.out), nc);
-check('N4 an excise counts the lines that move, and they are not answers', has(nc, 'excise `van` is short of `door`  ->  2 lines move') && has(nc, '\n    ? X leaves the line: 1 -> 2\n      now also: `van` leaves the line'), nc);
-check('N5 a natural cell is not answered by a cell in another section; a prose rule over a cell above it is not "further down"', has(nc, 'note: not translated yet') && !has(nc, 'further down'), nc);
-check('N6 the last line counts what was asked and, off exit 0, says why and the code; timings only with --timing', is(nc, 2) && /: 2 questions answered, 2 explained, 1 what-if — not everything was read \(exit 2; see npm run nb -- --help\)$/.test(nc.stdout!.trim())
-  && !/^load \d+ ms/m.test(nc.out) && /^load \d+ ms/m.test(ncTimed.out) && has(fails, '— FAILS at line '), nc);
-check('N7 a world with no cells says so, exit 0', is(wd, 0) && has(wd, '0 cells: this is a world (facts and rules), not a notebook'), wd);
-check('N8 vocab starts with a few sentences to start from, then by area; a word it lacks names the nearest', vocab.code === 0 && vocab.stdout!.startsWith('Start here') && has(vocab, 'are not listed here') && has(vocab, '\ncallgraph: resolution\n') && has(vocab, '\n  a call C resolves to a function F   (resolves)\n')
-  && vocab0.code === 0 && has(vocab0, '0 sentences with "unawaited"') && /The nearest: [^\n]*await/.test(vocab0.out), vocab0);
+if (newcomerRuns) {
+  const [nc, ncTimed, wd, vocab, vocab0, fails] = await newcomerRuns;
+  check('N1 a bare word where a name goes says to put it in backticks, in a question and in a list', has(nc, 'never X comes out white: white is not a sentence word here: names go in backticks: `white`') && has(nc, 'bike is on the line: bike is not a sentence word here'), nc);
+  check('N2 a proof has no engine variable: a blank is some <noun>, a relation is its sentence', has(nc, 'not `car` is short of some part (nothing says so)') && has(nc, 'nothing says `cab` is in stock, and no rule concludes it') && !/\?\d|no rule concludes '/.test(nc.out), nc);
+  check('N3 a list the reader does not claim, and a name with a space, are said in the writer\'s words', has(nc, 'a list of facts goes under a plain line of its own ending in a colon') && has(nc, '`level 1` is not a name') && !/LIST|FACT|line \d+: expected/.test(nc.out), nc);
+  check('N4 an excise counts the lines that move, and they are not answers', has(nc, 'excise `van` is short of `door`  ->  2 lines move') && has(nc, '\n    ? X leaves the line: 1 -> 2\n      now also: `van` leaves the line'), nc);
+  check('N5 a natural cell is not answered by a cell in another section; a prose rule over a cell above it is not "further down"', has(nc, 'note: not translated yet') && !has(nc, 'further down'), nc);
+  check('N6 the last line counts what was asked and, off exit 0, says why and the code; timings only with --timing', is(nc, 2) && /: 2 questions answered, 2 explained, 1 what-if — not everything was read \(exit 2; see npm run nb -- --help\)$/.test(nc.stdout!.trim())
+    && !/^load \d+ ms/m.test(nc.out) && /^load \d+ ms/m.test(ncTimed.out) && has(fails, '— FAILS at line '), nc);
+  check('N7 a world with no cells says so, exit 0', is(wd, 0) && has(wd, '0 cells: this is a world (facts and rules), not a notebook'), wd);
+  check('N8 vocab starts with a few sentences to start from, then by area; a word it lacks names the nearest', vocab.code === 0 && vocab.stdout!.startsWith('Start here') && has(vocab, 'are not listed here') && has(vocab, '\ncallgraph: resolution\n') && has(vocab, '\n  a call C resolves to a function F   (resolves)\n')
+    && vocab0.code === 0 && has(vocab0, '0 sentences with "unawaited"') && /The nearest: [^\n]*await/.test(vocab0.out), vocab0);
+}
 
 // the first contact: what the tool is, a file that is not there, a file that is not a notebook
-const [help, bare, nope, prose, helpEnv, ver, v] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md']), cli(['--help', 'env']), cli(['--version']), cli(['-v'])]);
-const pkgVersion = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
-check('C4 --version and -v print the version and exit 0', [ver, v].every((o) => o.code === 0 && o.stdout === `rofl-nb ${pkgVersion}\n`), ver);
-check('C1 --help is the cheat sheet in 230 words, the tutorial first, exit 0; no arguments, the same and exit 2; the environment in --help env', help.code === 0 && help.out.startsWith('New here? Play examples/tutorial') && help.out.split(/\s+/).filter(Boolean).length <= 230
-  && ['```natural', 'whynot `c3` comes out `pink`', 'never X leaves unpainted', 'excise', 'Exit  0', '--help env', 'review.rofl.md'].every((w) => has(help, w)) && !has(help, 'ROFL_NB_') && bare.code === 2 && has(bare, 'whynot')
-  && helpEnv.code === 0 && ['ROFL_NB_LIMIT', 'ROFL_NB_MEMORY', 'ROFL_NB_DAEMON=0', 'ROFL_NB_TIMEOUT'].every((w) => has(helpEnv, w)), help);
-check('C2 a notebook that is not there is named, exit 2', nope.code === 2 && has(nope, 'nope.rofl.md: no such file') && !has(nope, 'ENOENT'), nope);
-check('C3 a file that is not a .rofl.md is refused in one line, exit 2', prose.code === 2 && has(prose, 'not a notebook') && prose.out.split('\n').filter((l) => l.includes('README.md')).length === 1, prose);
-const worldNames = new Set(worlds().map((w) => w.name));   // it reads every notebook, 13 s: once, and not while a run's output is read, which it would reorder
-check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir', 'notebook_cjs', 'tutorial_1-what-ships', 'tutorial_6-in-your-words'].every((n) => worldNames.has(n)));
+if (on('contact')) {
+  const [help, bare, nope, prose, helpEnv, ver, v] = await Promise.all([cli(['--help']), cli([]), cli(['nope.rofl.md']), cli(['README.md']), cli(['--help', 'env']), cli(['--version']), cli(['-v'])]);
+  const pkgVersion = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+  check('C4 --version and -v print the version and exit 0', [ver, v].every((o) => o.code === 0 && o.stdout === `rofl-nb ${pkgVersion}\n`), ver);
+  check('C1 --help is the cheat sheet in 230 words, the tutorial first, exit 0; no arguments, the same and exit 2; the environment in --help env', help.code === 0 && help.out.startsWith('New here? Play examples/tutorial') && help.out.split(/\s+/).filter(Boolean).length <= 230
+    && ['```natural', 'whynot `c3` comes out `pink`', 'never X leaves unpainted', 'excise', 'Exit  0', '--help env', 'review.rofl.md'].every((w) => has(help, w)) && !has(help, 'ROFL_NB_') && bare.code === 2 && has(bare, 'whynot')
+    && helpEnv.code === 0 && ['ROFL_NB_LIMIT', 'ROFL_NB_MEMORY', 'ROFL_NB_DAEMON=0', 'ROFL_NB_TIMEOUT'].every((w) => has(helpEnv, w)), help);
+  check('C2 a notebook that is not there is named, exit 2', nope.code === 2 && has(nope, 'nope.rofl.md: no such file') && !has(nope, 'ENOENT'), nope);
+  check('C3 a file that is not a .rofl.md is refused in one line, exit 2', prose.code === 2 && has(prose, 'not a notebook') && prose.out.split('\n').filter((l) => l.includes('README.md')).length === 1, prose);
+}
+if (on('worlds')) {
+  const worldNames = new Set(worlds().map((w) => w.name));   // it reads every notebook, 13 s: once, and not while a run's output is read, which it would reorder
+  check('a notebook is a world the goldens load, each of them', ['notebook_review', 'notebook_small', 'notebook_self', 'notebook_xdir', 'notebook_cjs', 'tutorial_1-what-ships', 'tutorial_6-in-your-words'].every((n) => worldNames.has(n)));
+}
 
 // the tutorial: each level as shipped is unsolved by its own goal, and its file under solutions/ solves it
 const TUT = path.join(ROOT, 'examples/tutorial'), levels = readdirSync(TUT).filter((f) => /^\d-.*\.rofl\.md$/.test(f)).sort();
@@ -275,13 +317,15 @@ const UNSOLVED: Record<string, [number, string]> = {
   '3-missing-part.rofl.md': [1, 'never X is late  ->  FAILS · 1'], '4-late-delivery.rofl.md': [1, 'never L is missing an answer  ->  FAILS · 1'],
   '5-quality-gate.rofl.md': [1, 'never X slips through  ->  FAILS · 2'], '6-in-your-words.rofl.md': [2, 'never X is kept by mistake  ->  not asked: it rests on goes to its customer, which nothing defines'],
 };
-const played = await Promise.all(levels.flatMap((f) => [cli([path.join(TUT, f)]), cli([path.join(TUT, 'solutions', f)])]));
-check('the tutorial has its six levels, each with a solution', levels.join() === Object.keys(UNSOLVED).join() && levels.every((f) => existsSync(path.join(TUT, 'solutions', f))), { code: 0, out: levels.join(' ') });
-levels.forEach((f, k) => {
-  const [start, solved] = [played[2 * k], played[2 * k + 1]], [code, says] = UNSOLVED[f] ?? [-1, ''];
-  check(`tutorial ${f}: unsolved as shipped`, is(start, code) && has(start, says), start);
-  check(`  and its solution solves it`, is(solved, 0), solved);
-});
+if (on('tutorial')) {
+  const played = await Promise.all(levels.flatMap((f) => [cli([path.join(TUT, f)]), cli([path.join(TUT, 'solutions', f)])]));
+  check('the tutorial has its six levels, each with a solution', levels.join() === Object.keys(UNSOLVED).join() && levels.every((f) => existsSync(path.join(TUT, 'solutions', f))), { code: 0, out: levels.join(' ') });
+  levels.forEach((f, k) => {
+    const [start, solved] = [played[2 * k], played[2 * k + 1]], [code, says] = UNSOLVED[f] ?? [-1, ''];
+    check(`tutorial ${f}: unsolved as shipped`, is(start, code) && has(start, says), start);
+    check(`  and its solution solves it`, is(solved, 0), solved);
+  });
+}
 
 // pictures: each example of examples/visual through its backend, and a defect planted in each backend's module that its check must see
 const VIS = (root: string, f: string) => path.join(root, 'examples/visual', f);
@@ -332,44 +376,46 @@ const foldNb = path.join(tmp, 'draw-fold', 'n.rofl.md');
 put(foldNb, readFileSync(VIS(ROOT, 'claim-proof.rofl.md'), 'utf8').replace('  - claim-process.rofl.md', `  - ${VIS(ROOT, 'claim-process.rofl.md')}`) + '\n```datalog\ncollapsed("reached(covered)").\n```\n');
 const folded = (o: Out) => has(o, 'covered is reached (7) [unknown, collapsed]') && !has(o, 'check is reached');
 const foldOff = drawMutant('draw-fold', 'notebook/draw.ts', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, () => "f.rel === 'inside'");
-const [pics, mutantPics, [whatIf, near, zoomRun, zoomBroken, foldRun, foldBroken]] = await Promise.all([Promise.all(PICTURE.map((p) => picture(p, ROOT))), Promise.all(PICTURE.map((p, k) => picture(p, picMutants[k][1]))),
-  Promise.all([cli([visNb('draw-excise', '\n```rofl\nexcise `blue` is in the paint shop\ndraw graph\n```\n')]), cli([visNb('draw-near', '\n<a id="car_node"></a>A car X is a node if X is on the line.\n\nA mark X is tagged a colour `red` if X is on the line.\n')]),
-    cli([zoomNb]), cli([zoomNb], {}, zoomOff), cli([foldNb]), cli([foldNb], {}, foldOff)])]);
-check('draw: zoom, a shut group is one mark with its count, the links into it end at it', zoomed(zoomRun), zoomRun);
-check('  and a zoom that never shuts (draw-zoom) turns it red', !zoomed(zoomBroken), zoomBroken);
-check('draw: a proof zoomed, a shut fact is one mark with the count of the facts it rests on', folded(foldRun), foldRun);
-check('  and a proof whose group is not its subproof (draw-fold) turns it red', !folded(foldBroken), foldBroken);
-PICTURE.forEach(([name, , ok], k) => {
-  check(`draw ${name}`, ok(pics[k]), pics[k]);
-  check(`  and a defect planted in its backend (${picMutants[k][0]}) turns it red`, !ok(mutantPics[k]), mutantPics[k]);
-});
-// icons and colours, decided where the view is collected: a notebook's own icon wins over the renderer's of its name, one nobody draws is said, one past
-// the cap and a colour that is none are refused, the renderer's own tags keep their look, and the text names the icon and paints the fill.
-// Each with a defect planted where it is decided, which must turn its own check red.
-const looksNb = path.join(tmp, 'draw-looks', 'n.rofl.md');
-put(looksNb, `---\nreads:\n  - rofl:visual/graph.rofl.md\n---\n\n# Looks\n\n\`\`\`datalog\nnode(a1). node(a2). node(a3). node(a4).\nicon(a1, car). icon(a2, crane). icon(a3, huge). icon(a4, van).
-icon_drawing(car, "<svg viewBox='0 0 4 4'><desc>own car</desc></svg>").\nicon_drawing(huge, "<svg>${'x'.repeat(17 * 1024)}</svg>").
-tagged(a1, blue). tag_colour(blue, "blue"). tagged(a4, evil). tag_colour(evil, "red\\" onload=\\"x"). tag_colour(failing, "pink").\n\`\`\`\n\n\`\`\`rofl\ndraw graph\n\`\`\`\n`);
-type Looked = { view?: { icons?: Record<string, string>; colours?: Record<string, string>; notes: string[] }; text: string };
-const LOOKS: [string, (l: Looked) => boolean, string, RegExp, string][] = [
-  ['a notebook\'s own icon wins over the renderer\'s', (l) => !!l.view?.icons?.car?.includes('own car'), 'notebook/draw.ts', /drawn\.get\(name\) \?\? ICONS\[name\]/, 'ICONS[name] ?? drawn.get(name)'],
-  ['an icon nobody draws is said, and its mark keeps its shape', (l) => !!l.view?.notes.some((n) => n.startsWith('no icon is named crane:')), 'notebook/draw.ts', /unknown\.add\(name\);/, ';'],
-  ['an icon past 16 KB is refused with a note', (l) => !l.view?.icons?.huge && !!l.view?.notes.some((n) => n.includes('huge is more than 16 KB')), 'notebook/draw.ts', /text\.length > ICON_MAX/, 'false'],
-  ['a colour that is none is refused, never passed on', (l) => !l.view?.colours?.evil && !!l.view?.notes.some((n) => n.includes('is no colour')) && l.view?.colours?.blue === 'blue', 'notebook/icons.ts', /export const isColour = \(c: string\) =>/, 'export const isColour = (c: string) => true ||'],
-  ['the renderer\'s own tag keeps its look', (l) => !l.view?.colours?.failing && !!l.view?.notes.some((n) => n.includes('failing is the renderer\'s tag')), 'notebook/draw.ts', /if \(RESERVED\.includes\(k\)\) notes\.push/, 'if (false) notes.push'],
-  ['mermaid names the icon and paints the fill', (l) => l.text.includes('m0["a1 · car"]') && l.text.includes('style m0 fill:blue'), 'notebook/draw-graph.ts', /\$\{k\?\.icon && k\.icon !== label \? ` · \$\{k\.icon\}` : ''\}/, ''],
-];
-const looked = async (root: string): Promise<Looked> => {
-  const [j, t] = await Promise.all([cli([looksNb, '--json'], {}, root), cli([looksNb], {}, root)]);
-  try { return { view: JSON.parse(j.stdout ?? '').cells.flatMap((c: { lines: { view?: object }[] }) => c.lines).find((l: { view?: object }) => l.view)?.view, text: t.out }; } catch { return { text: t.out }; }
-};
-const [looks, ...looksBroken] = await Promise.all([looked(ROOT), ...LOOKS.map(([, , file, at, plant], k) => looked(linked(`draw-looks-${k}`, file, mutate(file, at, () => plant), ['playground'])))]);   // the view is collected by playground/host.ts, which must see the mutant
-LOOKS.forEach(([name, ok], k) => {
-  check(`draw: ${name}`, ok(looks), { code: 0, out: JSON.stringify(looks.view?.notes) + looks.text.slice(-600) });
-  check(`  and a defect planted where it is decided turns it red`, !ok(looksBroken[k]), { code: 0, out: JSON.stringify(looksBroken[k].view?.notes) });
-});
-check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
-check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
+if (on('pictures')) {
+  const [pics, mutantPics, [whatIf, near, zoomRun, zoomBroken, foldRun, foldBroken]] = await Promise.all([Promise.all(PICTURE.map((p) => picture(p, ROOT))), Promise.all(PICTURE.map((p, k) => picture(p, picMutants[k][1]))),
+    Promise.all([cli([visNb('draw-excise', '\n```rofl\nexcise `blue` is in the paint shop\ndraw graph\n```\n')]), cli([visNb('draw-near', '\n<a id="car_node"></a>A car X is a node if X is on the line.\n\nA mark X is tagged a colour `red` if X is on the line.\n')]),
+      cli([zoomNb]), cli([zoomNb], {}, zoomOff), cli([foldNb]), cli([foldNb], {}, foldOff)])]);
+  check('draw: zoom, a shut group is one mark with its count, the links into it end at it', zoomed(zoomRun), zoomRun);
+  check('  and a zoom that never shuts (draw-zoom) turns it red', !zoomed(zoomBroken), zoomBroken);
+  check('draw: a proof zoomed, a shut fact is one mark with the count of the facts it rests on', folded(foldRun), foldRun);
+  check('  and a proof whose group is not its subproof (draw-fold) turns it red', !folded(foldBroken), foldBroken);
+  PICTURE.forEach(([name, , ok], k) => {
+    check(`draw ${name}`, ok(pics[k]), pics[k]);
+    check(`  and a defect planted in its backend (${picMutants[k][0]}) turns it red`, !ok(mutantPics[k]), mutantPics[k]);
+  });
+  // icons and colours, decided where the view is collected: a notebook's own icon wins over the renderer's of its name, one nobody draws is said, one past
+  // the cap and a colour that is none are refused, the renderer's own tags keep their look, and the text names the icon and paints the fill.
+  // Each with a defect planted where it is decided, which must turn its own check red.
+  const looksNb = path.join(tmp, 'draw-looks', 'n.rofl.md');
+  put(looksNb, `---\nreads:\n  - rofl:visual/graph.rofl.md\n---\n\n# Looks\n\n\`\`\`datalog\nnode(a1). node(a2). node(a3). node(a4).\nicon(a1, car). icon(a2, crane). icon(a3, huge). icon(a4, van).
+  icon_drawing(car, "<svg viewBox='0 0 4 4'><desc>own car</desc></svg>").\nicon_drawing(huge, "<svg>${'x'.repeat(17 * 1024)}</svg>").
+  tagged(a1, blue). tag_colour(blue, "blue"). tagged(a4, evil). tag_colour(evil, "red\\" onload=\\"x"). tag_colour(failing, "pink").\n\`\`\`\n\n\`\`\`rofl\ndraw graph\n\`\`\`\n`);
+  type Looked = { view?: { icons?: Record<string, string>; colours?: Record<string, string>; notes: string[] }; text: string };
+  const LOOKS: [string, (l: Looked) => boolean, string, RegExp, string][] = [
+    ['a notebook\'s own icon wins over the renderer\'s', (l) => !!l.view?.icons?.car?.includes('own car'), 'notebook/draw.ts', /drawn\.get\(name\) \?\? ICONS\[name\]/, 'ICONS[name] ?? drawn.get(name)'],
+    ['an icon nobody draws is said, and its mark keeps its shape', (l) => !!l.view?.notes.some((n) => n.startsWith('no icon is named crane:')), 'notebook/draw.ts', /unknown\.add\(name\);/, ';'],
+    ['an icon past 16 KB is refused with a note', (l) => !l.view?.icons?.huge && !!l.view?.notes.some((n) => n.includes('huge is more than 16 KB')), 'notebook/draw.ts', /text\.length > ICON_MAX/, 'false'],
+    ['a colour that is none is refused, never passed on', (l) => !l.view?.colours?.evil && !!l.view?.notes.some((n) => n.includes('is no colour')) && l.view?.colours?.blue === 'blue', 'notebook/icons.ts', /export const isColour = \(c: string\) =>/, 'export const isColour = (c: string) => true ||'],
+    ['the renderer\'s own tag keeps its look', (l) => !l.view?.colours?.failing && !!l.view?.notes.some((n) => n.includes('failing is the renderer\'s tag')), 'notebook/draw.ts', /if \(RESERVED\.includes\(k\)\) notes\.push/, 'if (false) notes.push'],
+    ['mermaid names the icon and paints the fill', (l) => l.text.includes('m0["a1 · car"]') && l.text.includes('style m0 fill:blue'), 'notebook/draw-graph.ts', /\$\{k\?\.icon && k\.icon !== label \? ` · \$\{k\.icon\}` : ''\}/, ''],
+  ];
+  const looked = async (root: string): Promise<Looked> => {
+    const [j, t] = await Promise.all([cli([looksNb, '--json'], {}, root), cli([looksNb], {}, root)]);
+    try { return { view: JSON.parse(j.stdout ?? '').cells.flatMap((c: { lines: { view?: object }[] }) => c.lines).find((l: { view?: object }) => l.view)?.view, text: t.out }; } catch { return { text: t.out }; }
+  };
+  const [looks, ...looksBroken] = await Promise.all([looked(ROOT), ...LOOKS.map(([, , file, at, plant], k) => looked(linked(`draw-looks-${k}`, file, mutate(file, at, () => plant), ['playground'])))]);   // the view is collected by playground/host.ts, which must see the mutant
+  LOOKS.forEach(([name, ok], k) => {
+    check(`draw: ${name}`, ok(looks), { code: 0, out: JSON.stringify(looks.view?.notes) + looks.text.slice(-600) });
+    check(`  and a defect planted where it is decided turns it red`, !ok(looksBroken[k]), { code: 0, out: JSON.stringify(looksBroken[k].view?.notes) });
+  });
+  check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
+  check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
+}
 // R the read protocol (notebook/reader.ts), driven by a fake model through the command line: it lists, greps, shows and asks the kernel over
 // the notebook's workspace, in a git repository or a plain folder alike; what it may not read (outside the workspace, a link out of it, a file
 // its .gitignore names, a build or package folder, a secret-looking name, a workspace that is home) is refused in a line and never reaches a
@@ -623,13 +669,19 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   }
   return bad;
 }
-const r0 = await protocol('as-is');
-check('R the translator reads the notebook\'s workspace, with git or without, by list, grep, show and ?, as its .rofl/read.rofl narrows it (a prefix, CVS, git, the person\'s command); outside, a link out, ignored, skipped and secret-looking files, a workspace that is home, a config that widens, names a command or does not load, are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
-const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, plants, runs]) => {
-  const src = srcOf(file), spoilt = plants.reduce((t, [at, plant]) => { const u = t.replace(at, plant); if (u === t) throw new Error(`R ${name}: the planted defect did not apply`); return u; }, src);
-  return protocol(name.replace(/ /g, '-'), linked(`reader-${name.replace(/ /g, '-')}`, file, spoilt), runs);
-}));
-R_BREAKS.forEach(([name, , , , why], k) => check(`  and with ${name} spoilt, it is red: ${why}`, rSpoilt[k].some((b) => b.includes(why)), { code: 0, out: rSpoilt[k].join('\n') || 'green' }));
+if (on('protocol')) {
+  const r0 = await protocol('as-is');
+  check('R the translator reads the notebook\'s workspace, with git or without, by list, grep, show and ?, as its .rofl/read.rofl narrows it (a prefix, CVS, git, the person\'s command); outside, a link out, ignored, skipped and secret-looking files, a workspace that is home, a config that widens, names a command or does not load, are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
+}
+// the planted defects in three parts: all at once they start some hundred runs, which alone pass two minutes
+for (const part of [0, 1, 2]) if (on(`protocol-breaks-${part}`)) {
+  const breaks = R_BREAKS.filter((_, k) => k % 3 === part);
+  const rSpoilt = await Promise.all(breaks.map(([name, file, plants, runs]) => {
+    const src = srcOf(file), spoilt = plants.reduce((t, [at, plant]) => { const u = t.replace(at, plant); if (u === t) throw new Error(`R ${name}: the planted defect did not apply`); return u; }, src);
+    return protocol(name.replace(/ /g, '-'), linked(`reader-${name.replace(/ /g, '-')}`, file, spoilt), runs);
+  }));
+  breaks.forEach(([name, , , , why], k) => check(`  and with ${name} spoilt, it is red: ${why}`, rSpoilt[k].some((b) => b.includes(why)), { code: 0, out: rSpoilt[k].join('\n') || 'green' }));
+}
 
 // V a never that holds over nothing: a rule with an exception whose conditions find no row BECAUSE OF A CONSTANT that looks like a slip of a
 // value its column holds (`platfrom` where there is `platform`, the name `exit` where the model holds the string "exit") cannot fail, whatever
@@ -668,21 +720,25 @@ const vacRoots = {
   near: linked('root-vac-near', 'playground/host.ts', mutate('playground/host.ts', /const v = near\(c, held\);\n\s*if \(!v\) continue;/, () => 'const v = \'something\';')),
 };
 const eqCell = (team: string, root = ROOT) => cli([planted(`vac-eq-${team}-${path.basename(root)}`, 'review.rofl.md', withCell(EQ(team), 'datalog'))], {}, root);
-const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff, eqTypo, eqRight, eqOff, direct, join, matrix, matrixOff, codexV, codexOff] = await Promise.all([
-  vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`platfrom`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate),
-  cli([planted('vac-plain', 'review.rofl.md', withCell(PLAIN))]), cli([planted('vac-plain-off', 'review.rofl.md', withCell(PLAIN))], {}, vacRoots.excepts),
-  eqCell('platfrom'), eqCell('platform'), eqCell('platfrom', vacRoots.eq), cli([planted('vac-direct', 'review.rofl.md', withCell('bad(X) :- owns(platfrom, X), X != auth.\n\nnever bad(X)', 'datalog'))]),
-  cli([planted('vac-join', 'review.rofl.md', withCell(JOIN, 'datalog'))]), matrixAt(), matrixAt(vacRoots.near), codexCell(), codexCell(vacRoots.kernel)]);
-const flagged = (o: Out) => is(o, 3) && has(o, 'holds over nothing: its condition');
-check('V a constant that looks like a slip of a value its column holds holds over nothing, blind: in the rule, given by an equality, or a name where the model holds a string (codex\'s held-out cell)', vacOk(vac) && flagged(direct) && flagged(eqTypo) && flagged(codexV) && /`(exit|process)` is not a value there, "(exit|process)" is/.test(codexV.out), codexV);
-check('  spelt right, the never is asked as usual', !has(vacAtom, 'holds over nothing') && is(eqRight, 1), eqRight);
-check('  and with the kernel\'s note removed, the held-out cell is green', !has(codexOff, 'holds over nothing') && is(codexOff, 0) && !vacOk(vacKernelOff), codexOff);
-check('  and with the equalities\' constants not put into the conditions, the equality case is green', !flagged(eqOff), eqOff);
-check('V a work matrix at 100% holds plainly: no open cell and no open item are the work done, not a slip', is(matrix, 0) && !has(matrix, 'holds over nothing') && has(matrix, 'never idle(W)  ->  holds\n'), matrix);
-check('  and with any constant not held counted as a slip, `open` where all are `done` is said to hold over nothing', has(matrixOff, 'holds over nothing'), matrixOff);
-check('V a join with no constant to blame, and a never with no exception, hold plainly', is(join, 0) && !has(join, 'holds over nothing') && plainOk(plain0), join);
-check('  and with the kernel asking it of every never, the one with no exception is said to hold over nothing', !plainOk(plainOff), plainOff);
-check('V translate refuses a cell whose never holds over nothing and asks again; the second cell is written', trOk(vacTr), vacTr.o);
-check('  and with the translator\'s gate removed, the vacuous cell is written', !trOk(vacGateOff), vacGateOff.o);
+if (on('vacuous')) {
+  const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff, eqTypo, eqRight, eqOff, direct, join, matrix, matrixOff, codexV, codexOff] = await Promise.all([
+    vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`platfrom`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate),
+    cli([planted('vac-plain', 'review.rofl.md', withCell(PLAIN))]), cli([planted('vac-plain-off', 'review.rofl.md', withCell(PLAIN))], {}, vacRoots.excepts),
+    eqCell('platfrom'), eqCell('platform'), eqCell('platfrom', vacRoots.eq), cli([planted('vac-direct', 'review.rofl.md', withCell('bad(X) :- owns(platfrom, X), X != auth.\n\nnever bad(X)', 'datalog'))]),
+    cli([planted('vac-join', 'review.rofl.md', withCell(JOIN, 'datalog'))]), matrixAt(), matrixAt(vacRoots.near), codexCell(), codexCell(vacRoots.kernel)]);
+  const flagged = (o: Out) => is(o, 3) && has(o, 'holds over nothing: its condition');
+  check('V a constant that looks like a slip of a value its column holds holds over nothing, blind: in the rule, given by an equality, or a name where the model holds a string (codex\'s held-out cell)', vacOk(vac) && flagged(direct) && flagged(eqTypo) && flagged(codexV) && /`(exit|process)` is not a value there, "(exit|process)" is/.test(codexV.out), codexV);
+  check('  spelt right, the never is asked as usual', !has(vacAtom, 'holds over nothing') && is(eqRight, 1), eqRight);
+  check('  and with the kernel\'s note removed, the held-out cell is green', !has(codexOff, 'holds over nothing') && is(codexOff, 0) && !vacOk(vacKernelOff), codexOff);
+  check('  and with the equalities\' constants not put into the conditions, the equality case is green', !flagged(eqOff), eqOff);
+  check('V a work matrix at 100% holds plainly: no open cell and no open item are the work done, not a slip', is(matrix, 0) && !has(matrix, 'holds over nothing') && has(matrix, 'never idle(W)  ->  holds\n'), matrix);
+  check('  and with any constant not held counted as a slip, `open` where all are `done` is said to hold over nothing', has(matrixOff, 'holds over nothing'), matrixOff);
+  check('V a join with no constant to blame, and a never with no exception, hold plainly', is(join, 0) && !has(join, 'holds over nothing') && plainOk(plain0), join);
+  check('  and with the kernel asking it of every never, the one with no exception is said to hold over nothing', !plainOk(plainOff), plainOff);
+  check('V translate refuses a cell whose never holds over nothing and asks again; the second cell is written', trOk(vacTr), vacTr.o);
+  check('  and with the translator\'s gate removed, the vacuous cell is written', !trOk(vacGateOff), vacGateOff.o);
+}
 
-report('checks around the kernel and what a user meets first', t0);
+// a part the file has and PARTS does not, or one PARTS names and the file never asks for, is a check no shard runs
+if (Object.keys(PARTS).some((p) => !asked.has(p))) throw new Error(`PARTS names parts the file never asks for: ${Object.keys(PARTS).filter((p) => !asked.has(p)).join(', ')}`);
+report(`checks around the kernel and what a user meets first${shard ? `, shard ${shard}` : ''}${only ? `, matching ${only}` : ''}`, t0);
