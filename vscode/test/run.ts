@@ -29,6 +29,10 @@ const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('exa
 const broken = put(path.join(tmp, 'nb/examples/broken.rofl'), 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n');
 const late = put(path.join(tmp, 'nb/examples/late.rofl.md'), `${src('examples/review.rofl.md')}\nA change C is late if C touches a module M and M is frozen by a team T.\n`);
 const tutorial = put(path.join(tmp, 'nb/examples/tutorial/2-paint-shop.rofl.md'), src('examples/tutorial/2-paint-shop.rofl.md'));
+// the three branches at once: a fenced cell of English lines, and in the delivery's bare cell a fact that does not read and an English line
+const mixed = put(path.join(tmp, 'nb/examples/tutorial/3-mixed.rofl.md'), src('examples/tutorial/3-missing-part.rofl.md')
+  .replace('- `mirror` is in stock.\n', '- `mirror` is in stock.\n- `door` glows in the dark.\nIs `door` in stock?\n')
+  .replace('```rofl\nnever X is late\n```\n', '```rofl\nnever X is late\n```\n\n```rofl\nWhich products leave the line?\nIs `truck` late?\n```\n'));
 const runaway = put(path.join(tmp, 'nb/examples/notebook/runaway.rofl.md'), '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
 const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n\nA cell after it, which no edit of the cell above may take.\n`);
 // the model: a question, a cell that does not read, or no answer until stopped when told to; the cell as a question once told something else; and else the cell as an invariant
@@ -250,7 +254,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }

@@ -186,6 +186,7 @@ export async function run() {
   if (extras && (planted || !bad.length)) await guard('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
   if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
   if (extras && (planted || !bad.length)) await guard('bare', () => bare(process.env.ROFL_NB_BARE!, bad));
+  if (extras && (planted || !bad.length)) await guard('mixed', () => mixed(process.env.ROFL_NB_MIXED!, bad));
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 }
@@ -400,6 +401,36 @@ async function bare(file: string, bad: string[]) {
   if (head.length) bad.push(`${file}: the fact not read is said in cell ${head[0].index} too, not only under its own`);
   await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
   console.log(`bare cells: ${Date.now() - t0} ms`);
+}
+
+/** The three together: a fenced cell's English lines answered with what they read as, the why of one of their rows, and in the bare cells
+ *  an English line read there and a fact that does not read said under the cell that holds it. */
+async function mixed(file: string, bad: string[]) {
+  const t0 = Date.now(), nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
+  await vscode.window.showNotebookDocument(nb);
+  const holding = (t: string) => nb.getCells().find((c) => c.document.getText().includes(t));
+  const said = (c?: vscode.NotebookCell) => (c?.outputs ?? []).flatMap((o) => o.items.filter((i) => i.mime === 'text/markdown').map((i) => new TextDecoder().decode(i.data))).join('\n');
+  const english = holding('Which products leave the line?'), facts = holding('`door` glows in the dark');
+  if (!english || english.metadata.bare) return void bad.push(`${file}: the English lines are not a fenced cell`);
+  if (!facts?.metadata.bare || !facts.document.getText().includes('Is `door` in stock?')) return void bad.push(`${file}: the delivery and its question are not one bare cell: ${JSON.stringify(facts?.document.getText())}`);
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
+  await vscode.commands.executeCommand('notebook.execute');
+  await until(() => said(english).includes('read as') || undefined, 60_000, 'the English cell answered').catch(() => {});
+  for (const want of ['read as: ? X leaves the line', 'yes · read as: ? `truck` is late']) if (!said(english).includes(want)) bad.push(`${file}: the English cell does not say "${want}": ${JSON.stringify(said(english).slice(0, 400))}`);
+  if (!said(facts).includes('not read (list item): `door` glows in the dark')) bad.push(`${file}: the fact not read is not said under its bare cell: ${JSON.stringify(said(facts).slice(0, 300))}`);
+  if (!said(facts).includes('read as: ? `door` is in stock')) bad.push(`${file}: the bare cell's English line is not read under it: ${JSON.stringify(said(facts).slice(0, 400))}`);
+  const elsewhere = nb.getCells().filter((c) => c !== facts && /glows in the dark|door. is in stock/.test(said(c)));
+  if (elsewhere.length) bad.push(`${file}: the bare cell's lines are said in cell ${elsewhere[0].index} too`);
+  // the why of a row an English line answered, clicked as a person would
+  const press = (m: object) => vscode.commands.executeCommand('rofl-notebook.press', nb.uri, m);
+  vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(english.index, english.index + 1), vscode.NotebookEditorRevealType.InCenter);
+  await until(async () => { await press({ rows: true }); await new Promise((f) => setTimeout(f, 200)); return (await vscode.commands.executeCommand<{ row: string; why: boolean }[]>('rofl-notebook.rows', nb.uri)).some((r) => r.row === 'car leaves the line' && r.why) || undefined; }, 20_000, 'the English answers drawn').catch(() => {});
+  const n = (await vscode.commands.executeCommand<{ row: string; tree: string | null }[]>('rofl-notebook.whys', nb.uri)).length;
+  await press({ why: 'car leaves the line' });
+  const tree = (await until(async () => (await vscode.commands.executeCommand<{ row: string; tree: string | null }[]>('rofl-notebook.whys', nb.uri)).slice(n).find((w) => w.row === 'car leaves the line' && w.tree !== 'asking the kernel\u2026'), 20_000, 'the why of an English row').catch(() => undefined))?.tree;
+  if (!tree?.startsWith('`car` leaves the line, because')) bad.push(`${file}: the why under the English line's row "car leaves the line" is not its proof: ${JSON.stringify(tree)}`);
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  console.log(`mixed: ${Date.now() - t0} ms`);
 }
 
 /** A rule that climbs for ever, stopped: every cell ends at once, and the next run, in a new worker, answers what the command line does. */
