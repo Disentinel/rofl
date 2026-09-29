@@ -370,15 +370,17 @@ param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P)
 -- (`function f(x) { var x }` is the same binding: region F itself, not hidden)
 -- and a nested function with its own parameter of the name. `ast_within(F, G)`
 -- before `fn_node(G)`: the other order read all of `fn_node` once per
--- parameter, 58.7 % of a world.
+-- parameter, 58.7 % of a world. The nested function is found by its
+-- parameter's name before it is looked for under F: every descendant of F
+-- was read once per parameter, 16.3 s of the self notebook against 5.1 s.
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                   binds_name[code](D, Name, _),
                                   binder_region[code](D, R),
                                   ast_within[code](F, R), ast_within[code](R, U),
                                   ident[code](U, Name).
 param_hidden[flow](F, Name, U) :- param_of[flow](F, _, Name),
-                                  ast_within[code](F, G), fn_node[code](G),
                                   param_of[flow](G, _, Name),
+                                  ast_within[code](F, G), fn_node[code](G),
                                   ast_within[code](G, U), ident[code](U, Name).
 param_use[flow](F, Name, U) :- param_of[flow](F, _, Name),
                                ast_within[code](F, U),
