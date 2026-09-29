@@ -1,7 +1,7 @@
 ---
 reads:
-  - ../../rules/inquiry/terminology.rofl
-  - ../../rules/inquiry/epistemic.rofl
+  - rofl:rules/inquiry/terminology.rofl
+  - rofl:rules/inquiry/epistemic.rofl
   - deploy-case.rofl
   - rofl:visual/graph.rofl.md
 ---

@@ -183,16 +183,15 @@ done(K, v_docs, "guide/DRAWING.md") :- kind(K).
 -- wI: drawn from the installed packages alone. npm run test:dist installs the tgz, copies its examples/visual out, runs each with the installed
 -- rofl-nb and holds it to the tree's --json with its marks; test:dist:vscode runs each copy in a clean VS Code with the VSIX and holds its view
 -- output to its marks. Every kind has its own example there, so a row closes on its own example, not on its family's (planted, each red:
--- --break vocab, the vocabularies left out, in both; --break resolver, a rofl: name read as a path). claim-proof reads no vocabulary.
+-- --break vocab, the vocabularies and inquiry rules left out, in both; --break resolver, a rofl: name read as a path). claim-proof reads no vocabulary.
 installed(g_plain, "paint-shop"). installed(g_architecture, "shop-architecture"). installed(g_state, "order-states"). installed(g_process, "claim-process").
-installed(g_causal, "burnout-loop"). installed(g_proof, "claim-proof").
+installed(g_causal, "burnout-loop"). installed(g_proof, "claim-proof"). installed(g_argument, "deploy-argument").
 installed(t_gantt, "spat-thursday"). installed(t_sequence, "checkout-sequence"). installed(t_timeline, "outage-timeline"). installed(t_timing, "breaker-timing").
 installed(tb_table, "coverage"). installed(tb_chart, "suite-chart"). installed(tb_heatmap, "coverage-heatmap"). installed(tb_upset, "access-upset").
 installed(tb_euler, "oncall-euler"). installed(tb_decision, "shipping-decision").
 installed(s_map, "rail-map"). installed(s_plan, "office-plan"). installed(s_axes, "wardley"). installed(n_notation, "family-tree").
 done(K, v_installed, "vscode/test/dist.ts") :- installed(K, _).
-waived(g_argument, v_installed, "its one example reads rules/inquiry, which the packages do not carry, so it is not shipped; stale when an argument example reads only rofl:visual names").
-work(wI, "drawn from the installed packages alone: the vocabularies and examples in the tgz and the VSIX, named as rofl:visual/NAME.rofl.md").
+work(wI, "drawn from the installed packages alone: the vocabularies and examples in the tgz and the VSIX, named as rofl:visual/NAME.rofl.md and rofl:rules/inquiry/NAME.rofl").
 state(wI, done). owner(wI, nb_ship).
 claims(wI, K, v_installed) :- kind(K), not waived(K, v_installed, _).
 

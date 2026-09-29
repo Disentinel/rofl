@@ -179,7 +179,7 @@ async function confined(server: string): Promise<string[]> {
       ...(said.includes(TOKEN) ? [`the canary ${TOKEN} is in what the server said`] : []),
       ...(!kept('creds.rofl') || !kept('../outside/plain.rofl') ? [`no warning for what it would not read: ${JSON.stringify(diags)}`] : []),
       ...(diags.some((d: any) => d.message.includes('ok.rofl')) || !labels.includes('okrel') ? [`the .rofl inside the workspace was not read: ${JSON.stringify(diags)} ${labels}`] : []),
-      // a vocabulary shipped with ROFL is read from outside the workspace; a `rofl:` name that is none is not read at all
+      // a file shipped with ROFL is read from outside the workspace; a `rofl:` name ROFL does not ship is not read at all
       ...(diags.some((d: any) => d.message.includes('rofl:visual/graph')) ? [`the shipped vocabulary was not read: ${JSON.stringify(diags)}`] : []),
       ...(said.includes('Relation-Oriented') || !diags.some((d: any) => d.severity === 1 && d.message === 'rofl:visual/../package.json: not read') ? [`rofl:visual/../package.json was read or not refused: ${JSON.stringify(diags)}`] : []),
     ];

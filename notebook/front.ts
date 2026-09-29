@@ -9,11 +9,13 @@ export const MODEL_FILES = ['boot.rofl',
   'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl'];
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
-/** The draw vocabularies shipped with ROFL. `reads:` names one as `rofl:visual/graph.rofl.md`, which is that file of the tree or of the installed package. */
-export const VOCABULARIES = ['graph', 'notation', 'space', 'table', 'time'].map((v) => `visual/${v}.rofl.md`);
-/** A `reads:` name's file from the root of the tree: undefined for a path, which the notebook's folder resolves; null for a `rofl:` name that is no vocabulary. */
-export const builtin = (name: string): string | null | undefined => name.startsWith('rofl:') ? VOCABULARIES.find((v) => name === `rofl:${v}`) ?? null : undefined;
-export const NOT_BUILTIN = (name: string) => `${name}: not a vocabulary shipped with ROFL, which are ${VOCABULARIES.map((v) => `rofl:${v}`).join(', ')}`;
+/** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or
+ *  `rofl:rules/inquiry/epistemic.rofl`, which is that file of the tree or of the installed package. */
+export const SHIPPED = [...['graph', 'notation', 'space', 'table', 'time'].map((v) => `visual/${v}.rofl.md`),
+  ...['epistemic', 'intents', 'obligations', 'ontology', 'perspectives', 'terminology'].map((r) => `rules/inquiry/${r}.rofl`)];
+/** A `reads:` name's file from the root of the tree: undefined for a path, which the notebook's folder resolves; null for a `rofl:` name ROFL does not ship. */
+export const builtin = (name: string): string | null | undefined => name.startsWith('rofl:') ? SHIPPED.find((v) => name === `rofl:${v}`) ?? null : undefined;
+export const NOT_BUILTIN = (name: string) => `${name}: not a file shipped with ROFL, which are ${SHIPPED.map((v) => `rofl:${v}`).join(', ')}`;
 
 export type Front = { model: 'js' | 'none'; code: string[]; reads: string[]; keys: Record<string, string | string[]> };
 export type CellKind = 'prose' | 'rofl' | 'datalog' | 'natural';

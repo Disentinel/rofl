@@ -58,7 +58,7 @@ const cases: { file: string; cli: string; view?: boolean }[] = ['review', 'small
   return { file: path.join(nb, 'notebook', `${n}.rofl.md`), cli };
 });
 // every picture the package carries, run by the packaged command line on a copy outside the tree, for the editor to draw the same
-const pictures = readdirSync(path.join(ROOT, 'examples/visual')).filter((f) => f.endsWith('.rofl.md') && !f.startsWith('deploy-'));
+const pictures = readdirSync(path.join(ROOT, 'examples/visual')).filter((f) => f.endsWith('.rofl.md'));
 for (const [i, r] of (await Promise.all(pictures.map((f) => node([pkg, f, '--json'], path.join(nb, 'visual'))))).entries()) {
   const cli = path.join(tmp, `${pictures[i]}.json`);
   writeFileSync(cli, r.stdout);
@@ -96,7 +96,7 @@ for (const [i, [got, tree]] of runs.entries()) {
 }
 writeFileSync(path.join(drawn, 'escape.rofl.md'), '---\nreads: [rofl:visual/../package.json]\n---\n\n```datalog\n? p(X)\n```\n');
 const escape = await node([path.join(home, 'notebook/rofl-nb.js'), 'escape.rofl.md', '--json'], drawn);
-const refused = escape.code === 2 && strip(escape.stdout).includes('rofl:visual/../package.json: not a vocabulary shipped with ROFL');
+const refused = escape.code === 2 && strip(escape.stdout).includes('rofl:visual/../package.json: not a file shipped with ROFL');
 if (!refused) bad.push(`rofl:visual/../package.json was not refused: exit ${escape.code}, ${strip(escape.stdout).slice(0, 300)}`);
 console.log(`examples/visual from ${tgz}: ${drew} of ${pictures.length} drawn as the tree draws, rofl:visual/../package.json ${refused ? 'refused' : 'NOT refused'}, ${((performance.now() - t1) / 1000).toFixed(1)} s`);
 const ver = spawnSync(path.join(prefix, 'node_modules/.bin/rofl-nb'), ['--version'], { encoding: 'utf8', timeout: 20_000 });
