@@ -8,7 +8,7 @@ import { collect, diff, status, KINDS, unquote as termText, type DrawKind, type 
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
-import { varsOf, canonTerm, mka, type Clause, type Term } from '../src/unify.ts';
+import { varsOf, canonTerm, mka, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, FactStore, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
@@ -316,10 +316,11 @@ export class Host {
     unresolved = (base ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
-    const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>();
+    const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>(), bodies = new Map<string, { pos: Lit[]; excepts: boolean }[]>();
     texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) {
       const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel);
       if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
+      if (cl.body.length) (bodies.get(cl.head.rel) ?? bodies.set(cl.head.rel, []).get(cl.head.rel)!).push({ pos: cl.body.flatMap((b) => b.t === 'pos' ? [b.lit] : []), excepts: cl.body.some((b) => b.t !== 'pos') });
     } } catch { /* said by the load */ } });
     /** What `say` says of the first relation `rel` rests on, or of `rel` itself when `self`. */
     const under = (rel: string, say: (r: string) => string | undefined, self: boolean, seen = new Set<string>()): string | undefined => {
@@ -340,6 +341,21 @@ export class Host {
       outs[at.cell].notes.push(`the rule for ${at.rel.replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
     }
     const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
+    // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
+    // (its variables apart): nothing reaches the exceptions, and the never holds whatever they say; the way a translation that wrote a name
+    // where the model holds a string held. A rule with no exception whose condition finds nothing (no exec anywhere) is an answer, not this.
+    const dead = (l: Lit): string | undefined => {
+      if (l.args.some((t) => t.k === 'f' && varsOf(t).size)) return;
+      let k = 0;
+      const text = `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${l.args.map((t) => t.k === 'v' ? `V_${k++}` : canonTerm(t)).join(', ')})`;
+      const q = (base && !heads.has(l.rel) ? base : f).query(text);
+      return !q.error && !q.partial && !q.unpopulatable && !q.rows.length ? text : undefined;
+    };
+    const vacuous = (rel: string): string | undefined => {
+      const rs = bodies.get(rel) ?? [], found = rs.map((r) => r.pos.map(dead).find(Boolean));
+      if (!rs.some((r) => r.excepts) || !found.length || found.some((x) => !x)) return;
+      return `holds over nothing: its condition "${vocab.say(found[0]!)?.replace(/\bV_\d+\b/g, 'some') ?? found[0]}" finds no row, so its exceptions are never tested`;
+    };
     // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
     let known: Set<string> | null = null;
     const worlds = base ? [base, f] : [f];
@@ -380,7 +396,7 @@ export class Host {
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
         if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
-        const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text)) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
+        const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text) || a.kind === 'never' && !q.rows.length && vacuous(relOf(a.lit))) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
         outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });

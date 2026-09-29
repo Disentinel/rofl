@@ -313,7 +313,9 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
     const r = kernel.run(path.relative(ROOT, path.resolve(file)), next, cx.input);
     const out = r.cells.find((x) => x.index === c.index + 1)!;
     const silent = out.lines.length ? [] : ['the cell asks nothing: a request for something that must hold ends in a never line, a question in a ? line'];
-    return { next, errors: [...r.errors, ...out.errors, ...silent], lines: out.lines };
+    // a never that holds over nothing checks nothing: the model is asked again with the condition that finds no row
+    const vacuous = out.lines.filter((l) => l.note?.startsWith('holds over nothing')).map((l) => `${l.text}: ${l.note}`);
+    return { next, errors: [...r.errors, ...out.errors, ...silent, ...vacuous], lines: out.lines };
   };
   const words = (a: string) => ({ code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
   const who = ask.who ?? 'the model', first = slice(cx, c.text.trim()), reads = [...first.read];

@@ -1,7 +1,7 @@
 // What both notebook gates share: the command line run in a child process, a notebook planted with a change, a source with a planted defect,
 // a fake model, and the verdict of a run read from what it printed.
 import { spawn } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -35,12 +35,12 @@ export function mutate(file: string, at: RegExp, plant: (m: string) => string): 
   if (out === src) throw new Error(`${file}: the planted defect did not apply`);
   return out;
 }
-/** The tree, linked, with its own copy of notebook/ in which one file is replaced. */
+/** The tree, linked, with its own copy of notebook/ and of the directory of `file`, in which that one file is replaced. */
 export function linked(name: string, file: string, text: string): string {
-  const root = path.join(tmp, name);
-  mkdirSync(path.join(root, 'notebook'), { recursive: true });
-  for (const e of readdirSync(ROOT)) if (e !== 'notebook' && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(root, e));
-  for (const f of readdirSync(path.join(ROOT, 'notebook'))) copyFileSync(path.join(ROOT, 'notebook', f), path.join(root, 'notebook', f));
+  const root = path.join(tmp, name), copied = new Set(['notebook', file.split('/')[0]]);
+  mkdirSync(root, { recursive: true });
+  for (const e of readdirSync(ROOT)) if (!copied.has(e) && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(root, e));
+  for (const d of copied) cpSync(path.join(ROOT, d), path.join(root, d), { recursive: true });
   writeFileSync(path.join(root, file), text);
   return root;
 }

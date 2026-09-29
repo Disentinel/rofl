@@ -443,4 +443,33 @@ const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, at, plant, runs = [
 }));
 R_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, rSpoilt[k].length > 0, { code: 0, out: 'green' }));
 
+// V a never that holds over nothing: a cell's rule whose condition finds no row on its own (here a team no fact names, in the rule and not in
+// the never line, where the names-nothing note does not look) cannot fail, whatever its exceptions say. The kernel says so and the never is blind; translate refuses such a cell and asks again.
+const VACUOUS = 'A change C is held back if C is blocked by `legal`, unless C is approved by some person.\n\nnever C is held back';
+const vacCell = (root = ROOT, name = 'vac') => cli([planted(`${name}-${path.basename(root)}`, 'review.rofl.md', withCell(VACUOUS))], {}, root);
+const vacModel = (name: string) => { const f = path.join(tmp, `${name}-model`), n = path.join(tmp, `${name}-count`); put(f, `#!/usr/bin/env node
+const fs = require('fs'); let i = '';
+process.stdin.on('data', (d) => { i += d; }).on('end', () => {
+  fs.appendFileSync(${JSON.stringify(n)}, 'x'); const first = fs.readFileSync(${JSON.stringify(n)}, 'utf8').length === 1;
+  console.log('\`\`\`rofl\\n' + (first ? ${JSON.stringify(VACUOUS)} : ${JSON.stringify(VACUOUS.replace('`legal`', '`platform`'))}) + '\\n\`\`\`');
+});
+`); chmodSync(f, 0o755); return f; };
+const vacTranslate = (root = ROOT, name = 'vac-tr') => { const nb = planted(`${name}-${path.basename(root)}`, 'review.rofl.md', withNatural); return cli(['translate', nb], { ROFL_NB_CLAUDE: vacModel(`${name}-${path.basename(root)}`) }, root).then((o) => ({ o, text: readFileSync(nb, 'utf8') })); };
+const vacOk = (o: Out) => is(o, 3) && has(o, 'never C is held back  ->  holds as far as it sees · holds over nothing: its condition');
+const trOk = (t: { o: Out; text: string }) => t.o.code === 0 && t.text.includes('C is blocked by `platform`') && !t.text.includes('`legal`') && has(t.o, 'holds over nothing');
+const vacRoots = { kernel: linked('vac-kernel', 'playground/host.ts', mutate('playground/host.ts', / \|\| a\.kind === 'never' && !q\.rows\.length && vacuous\(relOf\(a\.lit\)\)/, () => '')),
+  gate: linked('vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')) };
+// with no exception, a condition that finds nothing is the answer (nothing is blocked by legal), not a vacuous never
+const PLAIN = 'A change C is held up if C is blocked by `legal`.\n\nnever C is held up';
+const vacRoots2 = { excepts: linked('vac-excepts', 'playground/host.ts', mutate('playground/host.ts', /!rs\.some\(\(r\) => r\.excepts\) \|\| /, () => '')) };
+const plainCell = (root = ROOT) => cli([planted(`vac-plain-${path.basename(root)}`, 'review.rofl.md', withCell(PLAIN))], {}, root);
+const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff] = await Promise.all([vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`legal`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate), plainCell(), plainCell(vacRoots2.excepts)]);
+const plainOk = (o: Out) => is(o, 0) && has(o, 'never C is held up  ->  holds\n');
+check('V a never with no exception over a condition that finds nothing holds, plainly', plainOk(plain0), plain0);
+check('  and with the kernel asking it of every never, it is said to hold over nothing', !plainOk(plainOff), plainOff);
+check('V a never over a rule whose condition finds no row holds over nothing, and is blind, not green; the same with the name finding rows is not', vacOk(vac) && !has(vacAtom, 'holds over nothing'), vac);
+check('  and with the kernel\'s vacuity note removed, it is green', !vacOk(vacKernelOff), vacKernelOff);
+check('V translate refuses a cell whose never holds over nothing and asks again; the second cell is written', trOk(vacTr), vacTr.o);
+check('  and with the translator\'s gate removed, the vacuous cell is written', !trOk(vacGateOff), vacGateOff.o);
+
 report('checks around the kernel and what a user meets first', t0);
