@@ -10,9 +10,10 @@ export const NB = path.join(ROOT, 'examples/notebook');
 export const tmp = mkdtempSync(path.join(os.tmpdir(), 'nb-check-'));
 
 export type Out = { code: number; out: string; stdout?: string; ms?: number };
-// a young generation of 256 MB: the self notebook's run spent 24 of 88 s collecting at the default, 12.7 s at this (npm run nb has it too)
+// a young generation of 256 MB: the self notebook's run spent 24 of 88 s collecting at the default, 12.7 s at this (npm run nb has it too);
+// an old one of 8 GB: the self notebook's world peaks past node's default 4 GB, where every collection is a full one (126 s against 104 s)
 export const node = (script: string, args: string[], env: Record<string, string> = {}, root = ROOT, cwd?: string): Promise<Out> => new Promise((done) => {
-  const t = performance.now(), p = spawn(process.execPath, ['--max-semi-space-size=256', '--experimental-strip-types', path.join(root, script), ...args], { cwd, env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
+  const t = performance.now(), p = spawn(process.execPath, ['--max-semi-space-size=256', '--max-old-space-size=8192', '--experimental-strip-types', path.join(root, script), ...args], { cwd, env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
   let out = '', stdout = '';
   p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);

@@ -123,9 +123,8 @@ function elsewhere(lit: string, program: string): string | null {
 }
 
 /** Every atom a term mentions. */
-function atomsIn(x: unknown, into = new Set<string>()): Set<string> {
-  if (Array.isArray(x)) for (const y of x) atomsIn(y, into);
-  else if (x && typeof x === 'object') { const t = x as Term; if (t.k === 'a') into.add(t.name); else for (const v of Object.values(x)) atomsIn(v, into); }
+function atomsIn(ts: Term[], into = new Set<string>()): Set<string> {
+  for (const t of ts) if (t.k === 'a') into.add(t.name); else if (t.k === 'f') atomsIn(t.args, into);
   return into;
 }
 
