@@ -551,13 +551,13 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   const spans: [number, number][] = [];
   let from = 0, taken = false, before: number[] = [];
   const problems = () => [unparsed, dropped, ambiguous, badAlternatives], made = () => [rules, parsedFacts, declared], madeAt: number[][] = [[], [], []];
-  const settle = (to: number) => {
+  const account = (to: number) => {
     if (taken) spans.push([blocks[from].at!, blocks[to].end!]);
     problems().forEach((ps, k) => { for (const u of ps.slice(before[k])) if (!(u in lineOf)) lineOf[u] = blocks[from].at!; });
     made().forEach((xs, k) => { while (madeAt[k].length < xs.length) madeAt[k].push(blocks[from].at!); });
   };
   made().forEach((xs, k) => madeAt[k].push(...xs.map(() => -1)));
-  for (let i = 0; i < blocks.length; settle(Math.min(i, blocks.length - 1)), i++) {
+  for (let i = 0; i < blocks.length; account(Math.min(i, blocks.length - 1)), i++) {
     from = i; taken = false; before = problems().map((ps) => ps.length);
     const b = blocks[i], next = blocks[i + 1];
     if (b.type === 'h') { section = b.text!; continue; }
