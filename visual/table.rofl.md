@@ -20,7 +20,13 @@ Declared as facts:
 
 > `draws` takes `bar`, `rect`, `point`, `line` or `text`; `shows` a channel
 > (`x`, `y`, `color`) with a Vega-Lite type (`nominal`, `ordinal`,
-> `quantitative`). A row for `row` itself is the row's name.
+> `quantitative`). A row for `row` itself is the row's name. The form is
+> the draw line's: `draw table` a table, `draw chart` the mark `draws`
+> names (a bar by default), `draw heatmap` a cell coloured by its value,
+> `draw upset` and `draw euler` a row's values as the sets it is in, a
+> column a set (an Euler diagram for three sets or fewer, else the UpSet),
+> and `draw decision` a decision table, a rule a column, its conditions
+> above its actions: the channel `condition` or `action` shows a column.
 
 The renderer's tags:
 

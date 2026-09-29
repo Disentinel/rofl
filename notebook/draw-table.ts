@@ -18,4 +18,4 @@ function vegaLite(v: View): object {
 }
 
 
-export const backends: Backend[] = [{ kind: 'table', format: 'markdown', fence: '', write: markdown }, { kind: 'table', format: 'vega-lite', fence: 'json', write: (v) => JSON.stringify(vegaLite(v), null, 1) }];
+export const backends: Backend[] = [{ kind: 'table', format: 'markdown', fence: '', write: markdown }, { kind: 'table', format: 'vega-lite', fence: 'json', when: (v) => v.kind === 'chart' || v.facts.some((f) => f.rel === 'draws'), write: (v) => JSON.stringify(vegaLite(v), null, 1) }];

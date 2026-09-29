@@ -7,8 +7,11 @@ world: view-time
 > The words a notebook draws time with (docs/renderers.md, *Time*): a mark
 > runs over an interval or happens at a point, in a lane, or goes from one
 > lane to another. Time is an integer, a tick or a minute: atoms have no
-> order, so order comes only from numbers. Marks with `runs from` draw as a
-> Gantt chart, marks that go from lane to lane as a sequence diagram.
+> order, so order comes only from numbers. `draw time` draws marks with
+> `runs from` as a Gantt chart, and marks that go from lane to lane as a
+> sequence diagram; `draw timeline` draws the marks that happen at a point
+> on one axis, and `draw timing` the intervals in a state, a lane's signal
+> stepping from state to state.
 
 Declared as facts:
 
@@ -16,6 +19,7 @@ Declared as facts:
 - <a id="during"></a>A mark M runs from T1 to T2
 - <a id="happens"></a>A mark M happens at T
 - <a id="message"></a>A mark M goes from a lane P to a lane Q at T
+- <a id="in_state"></a>A mark M is in the state S
 - <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="frame"></a>A mark M is in the frame F
 - <a id="collapsed"></a>A mark G is collapsed

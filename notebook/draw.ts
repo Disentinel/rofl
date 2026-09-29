@@ -1,8 +1,12 @@
 // A picture of a notebook: the view facts its adapter rules concluded (visual/*.rofl.md), the tags the run itself knows, and text backends.
 // Pure: the host collects a view where the world is, the command line prints it, the playground draws it.
 
-export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation';
-export const KINDS: DrawKind[] = ['graph', 'time', 'table', 'argument', 'space', 'notation'];
+export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation' | 'timeline' | 'timing' | 'chart' | 'heatmap' | 'upset' | 'euler' | 'decision';
+type Family = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation';
+/** A kind's family: the relations it reads, and the picture and text it falls back to when it has none of its own. */
+export const FAMILY: Record<DrawKind, Family> = { graph: 'graph', time: 'time', table: 'table', argument: 'argument', space: 'space', notation: 'notation',
+  timeline: 'time', timing: 'time', chart: 'table', heatmap: 'table', upset: 'table', euler: 'table', decision: 'table' };
+export const KINDS = Object.keys(FAMILY) as DrawKind[];
 /** The tags only the renderer writes: from what the model could not see, from a what-if, from a failing never, from a link to no node. */
 /** The MIME type of a draw line's output, which VS Code's notebook renderer (vscode/visual/renderer.ts) draws. */
 export const VIEW_MIME = 'application/vnd.rofl.view+json';
@@ -15,10 +19,10 @@ export type Mark = { label: string; tags: string[]; from: string[]; on: string[]
 /** `cells`: a table's cells a row of a failing never names by both its row and its column, with that tag. */
 export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[] };
 
-const RELS: Record<DrawKind, [string, number][]> = {
+const RELS: Record<Family, [string, number][]> = {
   graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1]],
   argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
-  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
+  time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['in_state', 2], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
   notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2]],
   space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
@@ -29,8 +33,8 @@ const VARS = ['A', 'B', 'C', 'D', 'E'];
 export type World = { rows(lit: string): Record<string, string>[] | null; from(literal: string): { said: string[]; terms: string[] } | null; label(term: string): { label: string; at?: string[] } };
 
 export function collect(kind: DrawKind, w: World): View {
-  const facts: Fact[] = [], notes: string[] = [], on = new Map<string, string[]>();
-  for (const [rel, n] of RELS[kind]) {
+  const fam = FAMILY[kind], facts: Fact[] = [], notes: string[] = [], on = new Map<string, string[]>();
+  for (const [rel, n] of RELS[fam]) {
     const vars = VARS.slice(0, n), rows = w.rows(`${rel}(${vars.join(', ')})`);
     if (!rows) continue;
     for (const b of rows) {
@@ -39,8 +43,8 @@ export function collect(kind: DrawKind, w: World): View {
       if (from) on.set(literal, from.terms);
     }
   }
-  const first = RELS[kind][0][0];
-  if (!facts.length && !w.rows(`${first}(${VARS.slice(0, RELS[kind][0][1]).join(', ')})`)) notes.push(`nothing to draw: no sentence here writes ${first}; a notebook reads the words of visual/${kind === 'argument' ? 'graph' : kind}.rofl.md and says in rules what is a mark`);
+  const first = RELS[fam][0][0];
+  if (!facts.length && !w.rows(`${first}(${VARS.slice(0, RELS[fam][0][1]).join(', ')})`)) notes.push(`nothing to draw: no sentence here writes ${first}; a notebook reads the words of visual/${fam === 'argument' ? 'graph' : fam}.rofl.md and says in rules what is a mark`);
   const given = facts.filter((f) => f.given && !['placed', 'projection', 'axis'].includes(f.rel));
   if (given.length) notes.push(`${given.length} view ${given.length === 1 ? 'fact is' : 'facts are'} given, not derived from the domain, so ${given.length === 1 ? 'it has' : 'they have'} no provenance: ${given.slice(0, 5).map((f) => f.literal).join(', ')}`);
   const marks: Record<string, Mark> = {};
@@ -50,14 +54,14 @@ export function collect(kind: DrawKind, w: World): View {
     return m;
   };
   const is = (rel: string) => facts.filter((f) => f.rel === rel);
-  if (kind === 'graph' || kind === 'argument') {
+  if (fam === 'graph' || fam === 'argument') {
     for (const f of is('node')) mark(f.args[0], f);
     for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');
   }
-  if (kind === 'time') for (const f of facts) if (['lane', 'during', 'happens', 'message'].includes(f.rel)) mark(f.args[0], f);
-  if (kind === 'table') for (const f of is('value')) mark(f.args[0], f);
-  if (kind === 'notation') for (const f of facts) { mark(f.args[0], f); if (f.rel === 'partner' || f.rel === 'child') mark(f.args[1], f); }
-  if (kind === 'space') {
+  if (fam === 'time') for (const f of facts) if (['lane', 'during', 'happens', 'message', 'in_state'].includes(f.rel)) mark(f.args[0], f);
+  if (fam === 'table') for (const f of is('value')) mark(f.args[0], f);
+  if (fam === 'notation') for (const f of facts) { mark(f.args[0], f); if (f.rel === 'partner' || f.rel === 'child') mark(f.args[1], f); }
+  if (fam === 'space') {
     for (const f of facts) if (['at', 'box', 'corner'].includes(f.rel)) mark(f.args[0], f);
     for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');
   }
@@ -77,7 +81,7 @@ export function status(v: View, rows: Record<string, string[][]>): void {
   for (const [k, rs] of Object.entries(rows)) {
     const terms = new Set(rs.flat());
     for (const [id, m] of Object.entries(v.marks)) if (terms.has(id) || k !== 'failing' && m.on.some((t) => terms.has(t))) tag(m, k);
-    if (v.kind === 'table') for (const f of v.facts.filter((x) => x.rel === 'value')) if (rs.some((r) => r.includes(f.args[0]) && r.includes(f.args[1]))) {
+    if (FAMILY[v.kind] === 'table') for (const f of v.facts.filter((x) => x.rel === 'value')) if (rs.some((r) => r.includes(f.args[0]) && r.includes(f.args[1]))) {
       const c = (v.cells ??= []).find((x) => x.row === f.args[0] && x.column === f.args[1]) ?? (v.cells.push({ row: f.args[0], column: f.args[1], tags: [] }), v.cells[v.cells.length - 1]);
       if (!c.tags.includes(k)) c.tags.push(k);
     }
@@ -180,6 +184,6 @@ export function zoom(v: View, shut = shutOf(v)): View {
 export function counted(v: View): string {
   const n = Object.keys(v.marks).length, links = v.facts.filter((f) => f.rel === 'link' || f.rel === 'message').length;
   const tags = RESERVED.map((t) => [t, Object.values(v.marks).filter((m) => m.tags.includes(t)).length] as const).filter(([, k]) => k);
-  const what = v.kind === 'table' ? `${n} ${n === 1 ? 'row' : 'rows'}, ${v.facts.filter((f) => f.rel === 'value').length} values` : `${n} ${n === 1 ? 'mark' : 'marks'}${links ? `, ${links} ${v.kind === 'time' ? 'messages' : 'links'}` : ''}`;
+  const what = FAMILY[v.kind] === 'table' ? `${n} ${n === 1 ? 'row' : 'rows'}, ${v.facts.filter((f) => f.rel === 'value').length} values` : `${n} ${n === 1 ? 'mark' : 'marks'}${links ? `, ${links} ${FAMILY[v.kind] === 'time' ? 'messages' : 'links'}` : ''}`;
   return [what, ...tags.map(([t, k]) => `${k} ${t}`)].join(', ');
 }

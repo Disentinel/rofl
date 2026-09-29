@@ -1,15 +1,19 @@
 // The pictures, each kind's module's list: a new kind or dialect is a module of its own and one line here. `draw` frames a view the same way
 // wherever it is shown: what it holds counted, the picture, the mark picked, and the view as text in each backend it has.
-import { counted, framesOf, shutOf, unquote, zoom, type View } from '../../notebook/draw.ts';
-import { BACKENDS, backendOf } from '../../notebook/draw-text.ts';
+import { counted, FAMILY, framesOf, shutOf, unquote, zoom, type View } from '../../notebook/draw.ts';
+import { backendOf, backendsOf } from '../../notebook/draw-text.ts';
 import { detail, esc, layouts, style, type Hooks, type Picture } from './picture.ts';
 import { pictures as graph } from './pic-graph.ts';
 import { pictures as space } from './pic-space.ts';
 import { pictures as notation } from './pic-notation.ts';
 import { pictures as time } from './pic-time.ts';
 import { pictures as table } from './pic-table.ts';
+import { pictures as moments } from './pic-moments.ts';
+import { pictures as charts } from './pic-charts.ts';
 
-export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space, ...notation];
+export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space, ...notation, ...moments, ...charts];
+/** The picture a view is drawn with: its kind's, else its family's. */
+export const pictureOf = (v: View) => PICTURES.find((x) => x.kind === v.kind) ?? PICTURES.find((x) => x.kind === FAMILY[v.kind]);
 
 /** A drawn picture's handle: its groups can be opened and shut from outside (the extension's zoom message), as a click does. */
 export type Drawn = { toggle(group: string): Promise<void> };
@@ -17,10 +21,10 @@ export type Drawn = { toggle(group: string): Promise<void> };
 export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
   style(el.ownerDocument);
   el.classList.add('rofl-pic');
-  const graphs = v.kind === 'graph' || v.kind === 'argument', p = PICTURES.find((x) => x.kind === v.kind), shut = shutOf(v);
+  const graphs = FAMILY[v.kind] === 'graph' || FAMILY[v.kind] === 'argument', p = pictureOf(v), shut = shutOf(v);
   const paint = async () => {
     const z = zoom(v, shut), frames = framesOf(z);
-    const as = [...new Set(BACKENDS.filter((b) => b.kind === v.kind && (b.when?.(z) ?? true)).map((b) => b.format))].map((f) => [f, backendOf(z, f).write(z)]);
+    const as = [...new Set(backendsOf(z).map((b) => b.format))].map((f) => [f, backendOf(z, f).write(z)]);
     if (v.kind === 'argument') as.push(['mermaid', backendOf({ ...z, kind: 'graph' }).write(z)]);
     el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${graphs && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
       + `${v.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}<div class="stage"></div><div class="detail" hidden></div>`
