@@ -62,7 +62,11 @@ async function problems(dir: string): Promise<string[]> {
   const hint = (await bench.run([{ id: 'hint', kind: 'rofl', text: wb.HINT }])), hl = hint.byCell.get('hint');
   if (hint.result.status !== 'ok' || hl?.lines.map((l: { verdict: string }) => l.verdict).join(' ') !== 'holds answers' || !Object.keys(hl.lines[1].view?.marks ?? {}).length) bad.push(`the hint does not read, hold and draw: ${hint.result.status}; ${JSON.stringify([...hint.head.errors, ...hl?.errors ?? []])}`);
   const key = (k: string) => ({ key: 'Enter', shiftKey: k === 'shift', metaKey: k === 'meta', ctrlKey: k === 'ctrl' });
-  if (wb.runsOn(key('shift'), 'prose') || !wb.runsOn(key('shift'), 'rofl') || !wb.runsOn(key('meta'), 'prose') || !wb.runsOn(key('ctrl'), 'datalog')) bad.push('Shift+Enter in prose runs, or Cmd/Ctrl+Enter or Shift+Enter elsewhere does not');
+  const keys = (['prose', 'rofl', 'datalog', 'natural'] as const).map((k) => `${k}: ${wb.keyAction(key('shift'), k)} ${wb.keyAction(key('meta'), k)} ${wb.keyAction(key('ctrl'), k)}`).join('; ');
+  if (keys !== 'prose: null run run; rofl: run run run; datalog: run run run; natural: null translate translate') bad.push(`the keys do the wrong thing (Shift, Cmd, Ctrl+Enter by cell): ${keys}`);
+  if (/prose: run/.test(keys)) bad.push('Shift+Enter in prose runs');
+  if (/natural: run/.test(keys)) bad.push('Shift+Enter in natural runs');
+  if (!/natural: \w+ translate translate/.test(keys)) bad.push('Cmd/Ctrl+Enter in natural does not translate');
   // a domain's own sentence is not a picture's: `reads` labels nothing, and one that does read as a picture's sentence is said
   const reads = (await bench.run([{ id: 'r', kind: 'rofl', text: 'A service S reads a feed F if S is "w", F is "f".\n\nA mark X is a node if X is "w".\n\ndraw graph' }])).byCell.get('r');
   const label = (Object.values(reads?.lines.at(-1)?.view?.marks ?? {}) as { label: string }[]).map((m) => m.label).join();
@@ -103,7 +107,9 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the verdict classes flattened', (d) => spoil(d, 'lib/kernel.js', "fails: ['fail',", "fails: ['pass',"), /is not drawn as a failing verdict/],
   ['the verdict colours flattened', (d) => spoil(d, 'index.html', '.verdict.fail { color: var(--fail); }', '.verdict.fail { color: var(--fg); }'), /does not colour \.verdict\.fail/],
   ['an example published', (d) => cpSync(path.join(ROOT, 'examples/visual/paint-shop.rofl.md'), path.join(d, 'examples/paint-shop.rofl.md'), { recursive: true }), /examples are published with the page/],
-  ['Shift+Enter running in prose', (d) => spoil(d, 'lib/bench.js', " && kind !== 'prose'", ''), /Shift\+Enter in prose runs/],
+  ['Shift+Enter running in prose', (d) => spoil(d, 'lib/bench.js', "(kind === 'rofl' || kind === 'datalog')", "kind !== 'natural'"), /Shift\+Enter in prose runs/],
+  ['Shift+Enter running in natural', (d) => spoil(d, 'lib/bench.js', "(kind === 'rofl' || kind === 'datalog')", "kind !== 'prose'"), /Shift\+Enter in natural runs/],
+  ['Cmd/Ctrl+Enter in natural not translating', (d) => spoil(d, 'lib/bench.js', "(kind === 'natural' ? 'translate' : 'run')", "'run'"), /Cmd\/Ctrl\+Enter in natural does not translate/],
   ['the empty-picture gate off', (d) => spoil(d, 'lib/translate.js', '...blank, ', ''), /a first cell that draws nothing was not refused/],
   ['the drawing paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'So a request to draw or diagram something is answered with rules', 'So'), /the prompt does not say how a picture is drawn/],
   ['the label sentence as it was', (d) => spoil(d, 'visual/graph.rofl.md', 'A mark M is labelled S', 'A mark M reads S'), /relabelled a mark/],
