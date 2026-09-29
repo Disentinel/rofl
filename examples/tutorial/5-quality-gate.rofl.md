@@ -20,9 +20,9 @@ reads:
 
 Declared as facts:
 
-- <a id="came_off"></a>A car X came off the line
+- A car X came off the line
 - A car X is painted a colour C
-- <a id="scratch"></a>A car X has a scratch
+- A car X has a scratch
 
 Off the line today:
 

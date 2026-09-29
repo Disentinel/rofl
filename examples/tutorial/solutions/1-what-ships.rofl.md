@@ -30,7 +30,7 @@ Declared as facts:
 
 - A product X is made of a part P
 - A part P is in stock
-- <a id="on_the_plan"></a>A product X is on the plan
+- A product X is on the plan
 
 What the products are made of:
 
@@ -64,9 +64,9 @@ What the plan asks for:
 > How the line works: a product waits for a part that is not in stock, and
 > a product on the plan leaves the line unless it waits for something.
 
-<a id="waits_for"></a>A product X waits for a part P if X is made of P, unless P is in stock.
+A product X waits for a part P if X is made of P, unless P is in stock.
 
-<a id="leaves"></a>A product X leaves the line if X is on the plan, unless X waits for some part.
+A product X leaves the line if X is on the plan, unless X waits for some part.
 
 ## The question
 
@@ -138,15 +138,15 @@ Your list:
 
 Declared as facts:
 
-- <a id="playing"></a>A level L is being played
+- A level L is being played
 
 Now playing:
 
 - `level1` is being played.
 
-<a id="missing"></a>A level L is missing an answer if L is being played, X leaves the line, unless X is on your list.
+A level L is missing an answer if L is being played, X leaves the line, unless X is on your list.
 
-<a id="by_mistake"></a>A product X is on your list by mistake if X is on your list, unless X leaves the line.
+A product X is on your list by mistake if X is on your list, unless X leaves the line.
 
 ```rofl
 never L is missing an answer

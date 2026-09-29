@@ -13,6 +13,7 @@ const VOCAB = readFileSync(path.join(ROOT, 'facts/phrases.rofl'), 'utf8');
 const LEVEL: Record<number, string> = { 1: '1-what-ships', 2: '2-paint-shop', 3: '3-missing-part', 5: '5-quality-gate' };
 const text = (n: number) => readFileSync(path.join(ROOT, `examples/tutorial/${LEVEL[n]}.rofl.md`), 'utf8');
 type Reader = typeof import('./read_md.ts');
+type Book = typeof import('../notebook/book.ts');
 type Want = string | { line: string; count?: string; yesno?: true; note?: string } | { error: string } | { blank: string };
 
 const CASES: [number, number, string, Want][] = [
@@ -54,10 +55,12 @@ const CASES: [number, number, string, Want][] = [
 ];
 const PROSE_CONTROLS = ['> No function calls itself, directly.', '> Which change is blocked, and by which team.', 'A product X leaves the line if X is on the plan, unless X is short of some thing.', '- `car` is on the plan.', 'What this file calls a node, and what each word stands for:'];
 
-/** Every case against a reader, as the failures it gives, each named by its case number. */
-function run(reader: Reader): string[] {
+/** Every case against a reader, as the failures it gives, each named by its case number. A level is read as the kernel reads its prose,
+ *  through the book over this reader: a head with no anchor is named there. */
+function run(reader: Reader, book: Book): string[] {
+  const prose = (md: string) => book.readBook([{ id: 'p', text: md, form: 'md', prose: true }], VOCAB, {}).read[0]!;
   const read = new Map<number, ReturnType<Reader['readMd']>>();
-  const at = (n: number) => read.get(n) ?? read.set(n, reader.readMd(text(n), { vocab: VOCAB })).get(n)!;
+  const at = (n: number) => read.get(n) ?? read.set(n, prose(text(n))).get(n)!;
   const bad: string[] = [];
   for (const [n, level, input, want] of CASES) {
     const q = at(level).question(input);
@@ -70,7 +73,8 @@ function run(reader: Reader): string[] {
   const l3 = at(3), truck = l3.literal('`truck` is late');
   for (const x of ['product `truck` is late', 'the product `truck` is late']) if (l3.literal(x) !== truck) bad.push(`case 15: ${x} -> ${l3.literal(x)}, not ${truck}`);
   // 27: a quantifier in prose is a promise, never a rule with the quantifier for a variable
-  const nothing = reader.readMd(text(3) + '\nNothing is late.\n', { vocab: VOCAB });
+  // (read as prose it is an English line that asks; the reader alone, with the sentences the book names, meets it as a rule)
+  const nothing = reader.readMd(text(3) + '\nNothing is late.\n', { vocab: book.readBook([{ id: 'p', text: text(3), form: 'md', prose: true }], VOCAB, {}).vocab });
   if (/late\(Nothing\)/.test(nothing.rofl)) bad.push('case 27: Nothing is late. loaded as late(Nothing)');
   const said = '"Nothing is late" is a promise, not a rule: write it in a cell as "never X is late", or as "No product is late."';
   if (!nothing.problems.dropped.includes(said)) bad.push(`case 27: Nothing is late. said ${JSON.stringify(nothing.problems.dropped)}, not ${said}`);
@@ -94,7 +98,7 @@ function english(files: [string, string][]): string[] {
 let failed = 0;
 const say = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${!ok && detail ? `\n     ${detail}` : ''}`); };
 
-const own = run(await import('./read_md.ts'));
+const own = run(await import('./read_md.ts'), await import('../notebook/book.ts'));
 say(!own.length, `${CASES.length + 5} cases read as their line or say their message`, own.join('\n     '));
 const controls = readBook([{ id: 'c', text: PROSE_CONTROLS.join('\n'), form: 'md' }], VOCAB, {}).parts[0].asks;
 say(!controls.length, `${PROSE_CONTROLS.length} negative controls stay unread as English`, controls.map((a) => a.text).join(' · '));
@@ -107,7 +111,7 @@ say(planted.length === 1 && /Which products leave the line\?$/.test(planted[0]),
 const inProse = english([['3-missing-part (planted)', text(3).replace('\n```rofl\nnever X is late', '\nWhich products leave the line?\n\n```rofl\nnever X is late')]]);
 say(inProse.length === 1 && /Which products leave the line\?$/.test(inProse[0]), 'planted, a plain English line in the prose: the gate names it', inProse.join(' · ') || 'green');
 
-// each defect in a copy of the reader, whose imports point back into the tree
+// each defect in a copy of the reader, whose imports point back into the tree, read through a copy of the book over it
 const dir = mkdtempSync(path.join(os.tmpdir(), 'rofl-english-'));
 const source = readFileSync(path.join(ROOT, 'scripts/read_md.ts'), 'utf8').replace("'../src/say.ts'", `'${path.join(ROOT, 'src/say.ts')}'`).replace("'./md_blocks.ts'", `'${path.join(ROOT, 'scripts/md_blocks.ts')}'`);
 const PLANTS: [string, string, string, RegExp][] = [
@@ -120,7 +124,9 @@ for (const [name, from, to, why] of PLANTS) {
   if (!source.includes(from)) { say(false, `planted, ${name}`, 'the planted defect did not apply'); continue; }
   const f = path.join(dir, `${name.replace(/\W+/g, '-')}.ts`);
   writeFileSync(f, source.replace(from, to));
-  const got = run(await import(f)).join('\n');
+  const b = f.replace(/\.ts$/, '-book.ts');
+  writeFileSync(b, readFileSync(path.join(ROOT, 'notebook/book.ts'), 'utf8').replace("'../scripts/read_md.ts'", `'${f}'`));
+  const got = run(await import(f), await import(b)).join('\n');
   say(why.test(got), `planted, ${name}: red, because ${why.source.replace(/^\^/, '').replace(/\\/g, '')}`, got || 'green');
 }
 rmSync(dir, { recursive: true, force: true });

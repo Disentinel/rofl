@@ -18,19 +18,19 @@ reads:
 
 Declared as facts:
 
-- <a id="on_the_line"></a>A car X is on the line
+- A car X is on the line
 - A car X is to be painted a colour C
-- <a id="in_the_shop"></a>A colour C is in the paint shop
+- A colour C is in the paint shop
 
 > A car comes out a colour when it is to be painted that colour and the
 > paint shop has it; then it is painted. A car on the line that is not
 > painted leaves unpainted.
 
-<a id="comes_out"></a>A car X comes out a colour C if X is to be painted C and C is in the paint shop.
+A car X comes out a colour C if X is to be painted C and C is in the paint shop.
 
-<a id="painted"></a>A car X is painted if X comes out some colour.
+A car X is painted if X comes out some colour.
 
-<a id="unpainted"></a>A car X leaves unpainted if X is on the line, unless X is painted.
+A car X leaves unpainted if X is on the line, unless X is painted.
 
 ## The picture
 
@@ -109,7 +109,7 @@ never X comes out `white`
 
 Declared as facts:
 
-- <a id="ordered"></a>A car X is ordered by a customer P
+- A car X is ordered by a customer P
 
 The orders:
 
@@ -118,7 +118,7 @@ The orders:
 - `c3` is ordered by `cy`.
 - `c4` is ordered by `di`.
 
-<a id="missing"></a>A car X is missing if X is ordered by some customer, unless X is on the line.
+A car X is missing if X is ordered by some customer, unless X is on the line.
 
 ```rofl
 never X is missing

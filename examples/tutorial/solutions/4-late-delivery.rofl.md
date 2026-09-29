@@ -20,7 +20,7 @@ reads:
 Declared as facts:
 
 - A thing X is made of a thing Y
-- <a id="on_the_plan"></a>A product X is on the plan
+- A product X is on the plan
 - A part P is in stock
 
 What things are made of:
@@ -55,13 +55,13 @@ Today's stock:
 - `mirror` is in stock.
 - `frame` is in stock.
 
-<a id="lacks"></a>A thing S lacks a part P if S is made of P, unless P is in stock.
+A thing S lacks a part P if S is made of P, unless P is in stock.
 
-<a id="ready"></a>A thing S is ready if S is made of some thing, unless S lacks some part.
+A thing S is ready if S is made of some thing, unless S lacks some part.
 
-<a id="short"></a>A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
+A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
 
-<a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
+A product X leaves the line if X is on the plan, unless X is short of some thing.
 
 ## The picture
 
@@ -112,20 +112,20 @@ Your list:
 
 Declared as facts:
 
-- <a id="playing"></a>A level L is being played
+- A level L is being played
 
 Now playing:
 
 - `level4` is being played.
 
-<a id="uses"></a>A thing X uses a part P either:
+A thing X uses a part P either:
 
 1. if X is made of P;
 2. if X is made of a thing Y and Y uses P.
 
-<a id="missing"></a>A level L is missing an answer if L is being played, X is on the plan, X uses `door`, unless X is on your list.
+A level L is missing an answer if L is being played, X is on the plan, X uses `door`, unless X is on your list.
 
-<a id="by_mistake"></a>A product X is on your list by mistake if X is on your list, unless X uses `door`.
+A product X is on your list by mistake if X is on your list, unless X uses `door`.
 
 ```rofl
 never L is missing an answer

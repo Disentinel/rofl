@@ -20,8 +20,8 @@ reads:
 Declared as facts:
 
 - A thing X is made of a thing Y
-- <a id="on_the_plan"></a>A product X is on the plan
-- <a id="ordered"></a>A product X is ordered by a customer P
+- A product X is on the plan
+- A product X is ordered by a customer P
 
 What things are made of:
 
@@ -50,15 +50,15 @@ What the plan asks for, and who ordered it:
 > product is short of a thing it is made of that is neither in stock nor
 > ready, and it leaves the line when it is short of nothing.
 
-<a id="lacks"></a>A thing S lacks a part P if S is made of P, unless P is in stock.
+A thing S lacks a part P if S is made of P, unless P is in stock.
 
-<a id="ready"></a>A thing S is ready if S is made of some thing, unless S lacks some part.
+A thing S is ready if S is made of some thing, unless S lacks some part.
 
-<a id="short"></a>A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
+A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
 
-<a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
+A product X leaves the line if X is on the plan, unless X is short of some thing.
 
-<a id="late"></a>A product X is late if X is ordered by some customer, unless X leaves the line.
+A product X is late if X is ordered by some customer, unless X leaves the line.
 
 ## The picture
 
@@ -124,7 +124,7 @@ never X is late
 
 ## The referee
 
-<a id="bought_whole"></a>A thing X is bought whole if X is in stock and X is made of some thing.
+A thing X is bought whole if X is in stock and X is made of some thing.
 
 ```rofl
 never X is bought whole
