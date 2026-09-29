@@ -4,6 +4,12 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-29 by the nb-look session: left open, on the team lead's word.
+
+finding(f_a_frame_draws_the_other_frames_people_under_bare_ids, defect).
+recorded(f_a_frame_draws_the_other_frames_people_under_bare_ids, "2026-09-29").
+finding_note(f_a_frame_draws_the_other_frames_people_under_bare_ids, "REPRO: append a datalog cell `frame(ivan, 1). frame(olga, 1). frame(boris, 2). frame(lena, 2).` to examples/visual/family-tree.rofl.md and run `npm run nb` on it: frame 1's GEDCOM has `1 NAME boris` and `1 NAME lena`, frame 2's `1 NAME ivan` and `1 NAME olga`, and the pedigree in VS Code draws them so. CAUSE: notebook/draw.ts framesOf keeps a fact by its FIRST argument's frame, so partner(F, P) and child(F, C), whose first argument is a family in no frame, come into every frame with a person of another frame, while that person's named and born facts stay in their own frame. A graph's link(A, B) has the same shape: its far end comes into the frame without its facts. Not fixed: which frame a relation between marks of two frames belongs to is a decision, not a slip.").
+
 -- Recorded 2026-09-29 by the nb-look session: the notation drawn, and its waiver withdrawn.
 
 finding(f_the_notation_waiver_was_argued_from_the_implementation, defect).
