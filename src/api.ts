@@ -558,7 +558,11 @@ export class Rofl {
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
-      if (!h.args.every(isGround)) return `fact ${canonClause(c)}: must be ground`;
+      if (!h.args.every(isGround)) {
+        // a capitalised word is a variable, which a fact cannot hold: most often a name written as a proper noun
+        const said = canonClause(c), v = /\?([A-Z][A-Za-z0-9_]*)\b/.exec(said)?.[1];
+        return `fact ${said}: must be ground${v ? `: \`${v}\` is read as a variable: a name is lower-case in backticks, \`${v.toLowerCase()}\`` : ''}`;
+      }
       if (h.temporal === 'next') return `fact ${canonClause(c)}: '@next' facts are not assertable`;
       if (h.temporal === 'init' && this.store.tick !== 0) {
         this.diagnostics.push(`fact ${canonClause(c)}: '@init' ignored after tick 0`);
