@@ -80,6 +80,9 @@ async function problems(dir: string): Promise<string[]> {
   const view = wb.shown(logical, true), ran1 = JSON.stringify((await bench.run(logical)).result.cells);
   if (JSON.stringify(view.map((c: { id: string }) => c.id)) !== JSON.stringify(logical.map((c: { id: string }) => c.id).reverse())) bad.push('newest first does not reverse the cells shown');
   if (JSON.stringify(logical) !== before || JSON.stringify((await bench.run(logical)).result.cells) !== ran1) bad.push('newest first changed the notebook: its order or its run');
+  // a hyphen in an anchor is said as a name, not left to the parser
+  const hy = (await bench.run([{ id: 'h', kind: 'rofl', text: 'Declared as facts:\n\n- <a id="pipeline-config"></a>A thing X is a pipeline config\n\nThe configs:\n\n- `c1` is a pipeline config.' }])).byCell.get('h')?.errors ?? [];
+  if (!hy.some((e: string) => e.includes('names no relation, a name is one word: "pipeline_config"'))) bad.push(`a hyphenated anchor is not said as a name: ${JSON.stringify(hy)}`);
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -129,6 +132,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases)', ''), /reads as a picture's is not said/],
   ['newest first changing the notebook', (d) => spoil(d, 'lib/bench.js', '[...cells].reverse()', 'cells.reverse()'), /newest first changed the notebook/],
   ['the facts paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'A fact is stated in a sentence the notebook declares first', 'A fact'), /the prompt does not say how a fact is declared/],
+  ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

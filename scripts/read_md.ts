@@ -478,6 +478,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       if (!a) { if (!line.startsWith('- ') && !/[.:]$/.test(line)) subject = clean(line); else if (!line.startsWith('- ')) subject = ''; continue; }
       const text = clean(a[3]).trim();
       const head = a[1] && subject && /^[a-z]/.test(text) ? `${subject} ${text}` : text;
+      // a hyphen in a relation's name is a subtraction to the parser: said here, where the writer can see which anchor
+      if (a[2].includes('-') && /\b[A-Z]/.test(head.replace(/^(?:An?|The) /, ''))) { unparsed.push(`HEAD the anchor "${a[2]}" names no relation, a name is one word: "${a[2].replace(/-/g, '_')}" (${headOf(head)})`); continue; }
       learn(a[2], headOf(head));
     }
   }
