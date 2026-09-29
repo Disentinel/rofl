@@ -58,6 +58,8 @@ async function problems(dir: string): Promise<string[]> {
   // the page's hint is one sentences cell with no front matter: it reads the graph's words by default, holds, and draws
   const hint = (await bench.run([{ id: 'hint', kind: 'rofl', text: wb.HINT }])), hl = hint.byCell.get('hint');
   if (hint.result.status !== 'ok' || hl?.lines.map((l: { verdict: string }) => l.verdict).join(' ') !== 'holds answers' || !Object.keys(hl.lines[1].view?.marks ?? {}).length) bad.push(`the hint does not read, hold and draw: ${hint.result.status}; ${JSON.stringify([...hint.head.errors, ...hl?.errors ?? []])}`);
+  const key = (k: string) => ({ key: 'Enter', shiftKey: k === 'shift', metaKey: k === 'meta', ctrlKey: k === 'ctrl' });
+  if (wb.runsOn(key('shift'), 'prose') || !wb.runsOn(key('shift'), 'rofl') || !wb.runsOn(key('meta'), 'prose') || !wb.runsOn(key('ctrl'), 'datalog')) bad.push('Shift+Enter in prose runs, or Cmd/Ctrl+Enter or Shift+Enter elsewhere does not');
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -85,6 +87,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the verdict classes flattened', (d) => spoil(d, 'lib/kernel.js', "fails: ['fail',", "fails: ['pass',"), /is not drawn as a failing verdict/],
   ['the verdict colours flattened', (d) => spoil(d, 'index.html', '.verdict.fail { color: var(--fail); }', '.verdict.fail { color: var(--fg); }'), /does not colour \.verdict\.fail/],
   ['an example published', (d) => cpSync(path.join(ROOT, 'examples/visual/paint-shop.rofl.md'), path.join(d, 'examples/paint-shop.rofl.md'), { recursive: true }), /examples are published with the page/],
+  ['Shift+Enter running in prose', (d) => spoil(d, 'lib/bench.js', " && kind !== 'prose'", ''), /Shift\+Enter in prose runs/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

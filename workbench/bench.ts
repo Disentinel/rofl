@@ -24,6 +24,8 @@ const WALL = 20_000;
 export const READS = '---\nreads:\n  - rofl:visual/graph.rofl.md\n---';
 /** The syntax in one cell that reads and draws, which the page shows as its hint: a sentence declared, a fact, rules, a check, a picture. */
 export const HINT = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n\nThe facts:\n\n- `a` leads to `b`.\n\nA mark X is a node if X leads to something.\n\nA mark X links to a mark Y if X leads to Y.\n\nnever X leads to X\n\ndraw graph';
+/** Whether a key press in a cell of `kind` runs the notebook: Cmd/Ctrl+Enter in any cell, Shift+Enter outside prose, where it is a new line. */
+export const runsOn = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind) => e.key === 'Enter' && (e.metaKey || e.ctrlKey || e.shiftKey && kind !== 'prose');
 /** Every file the page fetches besides its modules, by its path from the root of the tree. */
 export const FILES = ['boot.rofl', 'facts/phrases.rofl', ...SHIPPED];
 

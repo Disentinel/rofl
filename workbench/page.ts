@@ -13,7 +13,7 @@
 //    text: "Declared as facts:\n\n- <a id=\"calls\"></a>A service A calls a service B\n\nThe calls:\n\n- `web` calls `api`.\n- `api` calls `db`.\n\nA mark X is a node if X calls something.\n\nA mark X is a node if something calls X.\n\nA mark X links to a mark Y if X calls Y.\n\nnever X calls X"}}
 //   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c020", data: {kind: "rofl", order: 20, text: "draw graph"}}
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
-import { Bench, HINT, answered, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
+import { Bench, HINT, answered, runsOn, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
@@ -51,7 +51,7 @@ function cellEl(c: Pc): HTMLElement {
     <select class="kind" aria-label="Cell kind">${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <span class="state"></span><span class="peers"></span><span class="spacer"></span>
     <button type="button" class="tr-go" title="Claude writes the cell under this one. It runs on your own Claude account and uses your Claude usage." hidden>Translate</button>
-    <button type="button" class="run" title="Run the notebook (Shift+Enter)">Run</button>
+    <button type="button" class="run" title="Run the notebook (Cmd/Ctrl+Enter)">Run</button>
     <select class="add" aria-label="Add a cell below"><option value="">+ below</option>${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <button type="button" class="x" aria-label="Delete cell" title="Delete cell">&#x2715;</button>
   </div><div class="md" tabindex="0"></div><textarea rows="1" spellcheck="false" aria-label="Cell text"></textarea><div class="tr" hidden></div><div class="out"></div>`;
@@ -191,7 +191,8 @@ book.addEventListener('focusout', (e) => {
   });
 });
 book.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.shiftKey && (e.target as HTMLElement).tagName === 'TEXTAREA') { e.preventDefault(); run(0); }
+  const kind = cells.find((c) => c.id === (e.target as HTMLElement).closest<HTMLElement>('article')?.dataset.id)?.kind;
+  if ((e.target as HTMLElement).tagName === 'TEXTAREA' && kind && runsOn(e, kind)) { e.preventDefault(); run(0); }
   if (e.key === 'Enter' && (e.target as HTMLElement).classList.contains('md')) { e.preventDefault(); startProse((e.target as HTMLElement).closest<HTMLElement>('article')!.dataset.id!); }
 });
 
