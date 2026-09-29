@@ -4,6 +4,18 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-29 by the nb-look session: the owner's three findings from the extension in dark theme.
+
+finding(f_a_graph_was_fitted_once_to_the_box_it_was_drawn_in, defect).
+recorded(f_a_graph_was_fitted_once_to_the_box_it_was_drawn_in, "2026-09-29").
+addressed_by(f_a_graph_was_fitted_once_to_the_box_it_was_drawn_in, "vscode/visual/pic-graph.ts").
+finding_note(f_a_graph_was_fitted_once_to_the_box_it_was_drawn_in, "The owner saw the proof of examples/visual/claim-proof.rofl.md cut at the right edge. CAUSE: pic-graph fitted Cytoscape once, to the box as it was when drawn; a notebook output narrows when a side bar or the chat opens, and the drawing kept its old zoom. MEASURED with the refit planted away: laid 49..959 in a box 708 wide. Every graph kind shares that mount (graph, argument, architecture, state, process, causal, proof), so one ResizeObserver refits them all; the SVG kinds scale with their width or scroll in the stage. THE CHECK: each picture reports what reaches past its box (Cytoscape's rendered bounding box against the box, an SVG's getBBox against its viewBox); test:vscode draws every picture case with the side bar shut, opens it, asks again, and requires nothing past; `--break fit` is red for that reason. It found a second one at once: a chart's tag line under its last bar ran 2 px past the viewBox, now kept inside. The same report measures the picture in its own editor tab (Open in editor, vscode/visual/panel.ts, the renderer's modules in a WebviewPanel): it must fit and fill over half the tab; `--break show` and `--break panel` are red. In the tab a graph pans and zooms as Cytoscape does, an SVG by its viewBox, a table scrolls; why, pin, zoom and Open as .ged work as in the notebook. Not yet checked by a test: the wheel and drag on an SVG, and the Fit button.").
+
+finding(f_a_verdicts_colour_is_read_back_from_the_webview, insight).
+recorded(f_a_verdicts_colour_is_read_back_from_the_webview, "2026-09-29").
+addressed_by(f_a_verdicts_colour_is_read_back_from_the_webview, "vscode/visual/renderer.ts").
+finding_note(f_a_verdicts_colour_is_read_back_from_the_webview, "A cell's answers were all one grey: holds, FAILS and holds as far as it sees read the same. Now each verdict is a span with a glyph and a class (render.ts: holds pass, fails fail, blind and not asked warn), in an output of our own MIME (application/vnd.rofl.said+markdown) beside the same text/markdown. Our renderer does not render Markdown itself: it hands the text to VS Code's own Markdown renderer (getRenderer('vscode.markdown-it-renderer')), so links to lines and cells behave as before, then adds the colours from the theme (testing.iconPassed, testing.iconFailed or errorForeground, editorWarning.foreground) into its shadow root. The own MIME is there to be MEASURED: the renderer reports each verdict's computed colour and the text's around it, and test:vscode requires one colour a meaning, the meanings apart, none the text's; `--break verdict` (fails drawn as pass) is red for that reason. Seen in dark and light (--theme). Not seen: high contrast, and an untrusted workspace, where VS Code's renderer sanitizes the HTML.").
+
 -- Recorded 2026-09-29 by the nb-tt session: the second wave of time and table forms in VS Code.
 
 finding(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, insight).
