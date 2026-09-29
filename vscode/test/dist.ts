@@ -1,7 +1,7 @@
 // npm run test:dist — what `npm run dist` built, away from the tree: the packaged command line answers what `npm run nb` answers, on a copy of the starter
 // notebooks outside the tree too, and the VSIX, installed into an empty profile, runs them in VS Code with the same result.
 // Two halves, each under two minutes: `-- --cli` stops after the command line; `-- --editor-only` runs the editor alone, with only the packaged command line's
-// answers it holds the editor to, on the build in dist/ when no file of the tree is newer (npm run test:dist and test:dist:vscode). `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
+// answers it holds the editor to, on the build in dist/ when it was built from the same files, none since changed (npm run test:dist and test:dist:vscode). `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
 // `-- --break vocab` builds the packages without the draw vocabularies, `-- --break resolver` with a `rofl:` name read as a path: each must turn this red.
 import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -19,10 +19,13 @@ process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
 
 const editor = process.argv.includes('--editor-only'), vsixAt = existsSync(DIST) ? readdirSync(DIST).find((f) => f.endsWith('.vsix')) : undefined;
-const newest = () => Math.max(...spawnSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).stdout.split('\n').filter(Boolean).map((f) => { try { return statSync(path.join(ROOT, f)).mtimeMs; } catch { return 0; } }));
-const fresh = editor && !arg('--break') && vsixAt && statSync(path.join(DIST, vsixAt)).mtimeMs > newest();
-if (fresh) console.log(`dist/${vsixAt} is newer than every file of the tree: not built again`);
+// the build is reused when it was made by this script from the same list of files, none of them since changed: a file added or deleted rebuilds it
+const files = spawnSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).stdout.split('\n').filter((f) => f && existsSync(path.join(ROOT, f)));
+const TREE = path.join(DIST, 'tree.json'), tree = JSON.stringify(files);
+const fresh = editor && !arg('--break') && vsixAt && existsSync(TREE) && readFileSync(TREE, 'utf8') === tree && statSync(path.join(DIST, vsixAt)).mtimeMs > Math.max(...files.map((f) => statSync(path.join(ROOT, f)).mtimeMs));
+if (fresh) console.log(`dist/${vsixAt} was built from these files, none since changed: not built again`);
 const built = fresh ? { status: 0, stdout: '', stderr: '' } : spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/dist.ts')], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ROFL_DIST_BREAK: arg('--break') ?? '' } });
+if (!fresh && built.status === 0 && !arg('--break')) writeFileSync(TREE, tree);
 if (built.status !== 0) { console.error(built.stdout + built.stderr); process.exit(1); }
 const vsix = readdirSync(DIST).find((f) => f.endsWith('.vsix'))!, tgz = readdirSync(DIST).find((f) => f.endsWith('.tgz'))!;
 const manifest = JSON.parse(readFileSync(path.join(DIST, 'vsix/package.json'), 'utf8')), id = `${manifest.publisher}.${manifest.name}`;
