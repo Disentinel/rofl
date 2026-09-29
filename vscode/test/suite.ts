@@ -46,7 +46,7 @@ export async function run() {
     await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
     await vscode.commands.executeCommand('notebook.execute');
     const r = await until(() => api.result(nb.uri), 110_000, `a result for ${c.file}`);
-    const runs = nb.getCells().filter((x) => ['rofl', 'datalog', 'natural'].includes(x.document.languageId));
+    const runs = nb.getCells().filter((x) => ['rofl', 'datalog', 'natural'].includes(x.document.languageId) && !x.metadata.bare);
     await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end');
     const said = (x: vscode.NotebookCell) => x.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
     // small multiples: the renderer reports each picture's frames as it draws them
@@ -185,6 +185,7 @@ export async function run() {
   }
   if (extras && (planted || !bad.length)) await guard('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
   if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
+  if (extras && (planted || !bad.length)) await guard('bare', () => bare(process.env.ROFL_NB_BARE!, bad));
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 }
@@ -366,6 +367,39 @@ async function language(bad: string[]) {
   if (!m?.message.startsWith('not read: M is frozen by a team T') || m.range.start.line !== text.lineCount - 2) bad.push(`${md}: the sentence not read is marked ${m ? `on line ${m.range.start.line + 1}: ${m.message}` : 'nowhere'}`);
   console.log(`language server: ${Date.now() - t0} ms`);
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+/** The tutorial's fact list is a rofl cell with no fence: a fact edited in place stays in that cell, saved the file differs by that edit alone,
+ *  and a fact that does not read is said under that cell, not in the notebook's head. */
+async function bare(file: string, bad: string[]) {
+  const t0 = Date.now(), before = readFileSync(file, 'utf8'), from = '- `c1` is to be painted `blue`.', to = '- `c1` is to be painted `red`.';
+  const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
+  await vscode.window.showNotebookDocument(nb);
+  const count = nb.cellCount, cell = nb.getCells().find((c) => c.document.getText().includes(from));
+  if (!cell || cell.kind !== vscode.NotebookCellKind.Code || cell.document.languageId !== 'rofl' || !cell.metadata.bare) return void bad.push(`${file}: the paint orders are not a bare rofl cell: ${cell ? `${cell.kind} ${cell.document.languageId} ${JSON.stringify(cell.metadata)}` : 'no cell holds them'}`);
+  const edit = async (a: string, b: string) => {
+    const at = cell.document.getText().indexOf(a), e = new vscode.WorkspaceEdit();
+    e.replace(cell.document.uri, new vscode.Range(cell.document.positionAt(at), cell.document.positionAt(at + a.length)), b);
+    await vscode.workspace.applyEdit(e);
+  };
+  await edit(from, to);
+  const now = nb.cellAt(cell.index);
+  if (nb.cellCount !== count || now.kind !== vscode.NotebookCellKind.Code || !now.metadata.bare) bad.push(`${file}: after the edit the cell is ${now.kind} ${JSON.stringify(now.metadata)} and the notebook has ${nb.cellCount} cells, not ${count}`);
+  await nb.save();
+  const after = readFileSync(file, 'utf8');
+  if (after !== before.replace(from, to)) bad.push(`${file}: after the edit the file is not the file with that edit: ${JSON.stringify(after.slice(0, 300))}`);
+  // a fact that does not read: its error under its cell, and not in the head
+  await edit('`c2` is on the line.', '`c2` flies over the moon.');
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
+  await vscode.commands.executeCommand('notebook.execute');
+  const lines = nb.getCells().find((c) => c.document.getText().includes('flies over the moon'))!;
+  const said = (c: vscode.NotebookCell) => c.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
+  await until(() => said(lines).includes('flies over the moon') || undefined, 60_000, 'the error under the cell').catch(() => {});
+  if (!said(lines).includes('not read (list item): `c2` flies over the moon')) bad.push(`${file}: the fact not read is not said under its cell: ${JSON.stringify(said(lines))}`);
+  const head = nb.getCells().filter((c) => c !== lines && said(c).includes('flies over the moon'));
+  if (head.length) bad.push(`${file}: the fact not read is said in cell ${head[0].index} too, not only under its own`);
+  await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+  console.log(`bare cells: ${Date.now() - t0} ms`);
 }
 
 /** A rule that climbs for ever, stopped: every cell ends at once, and the next run, in a new worker, answers what the command line does. */

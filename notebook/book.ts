@@ -59,8 +59,8 @@ export function homeOf(model: string): Record<string, string> {
 
 /** `english`: the line is English, and `lit` is still its text. */
 export type Ask = { kind: Kind; lit: string; text: string; english?: true };
-/** `close`: by part, what each new sentence it declares is close to (closeTo). */
-export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][] };
+/** `close`: by part, what each new sentence it declares is close to (closeTo); `closeAt`, the line of the anchor each is about. */
+export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][]; closeAt: (number | undefined)[][] };
 
 /** A sentence as a pattern: a hole and a name are blanks; `named` also blanks a noun a name stands beside (`a mark \`shop\``), the constant-for-noun mistake. */
 const skeleton = (p: string, named = false) => (named ? p.replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? `[^`]*`/g, '_') : p).replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1')
@@ -69,15 +69,16 @@ const said = (p: string) => p.replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n}`);
 
 /** A sentence a cell declares that reads as one already declared, its holes and names aside: an anchor on a head (`<a id="car_node">A car X is a node`),
  *  or a name beside a hole's noun (``is inside a mark `shop` ``), makes a new relation where the writer meant a row of the declared one. */
-export function closeTo(learned: string[], vocab: string): string[] {
+export const closeTo = (learned: string[], vocab: string): string[] => closeBy(learned, vocab).map((c) => c.said);
+function closeBy(learned: string[], vocab: string): { said: string; rel: string }[] {
   const known = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].map((m) => ({ rel: m[1], text: m[2], k: skeleton(m[2]) }));
   // two sentences the cell declares that differ only in a noun: a row leaves the nouns out, so it cannot say which it is a row of
   const own = learned.flatMap((l) => { const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); return m ? [{ rel: m[1], text: m[2], k: skeleton(m[2]) }] : []; });
-  const twins = own.flatMap((a, i) => own.slice(i + 1).filter((b) => b.rel !== a.rel && b.k === a.k).map((b) => `"${said(a.text)}" and "${said(b.text)}" read as one sentence: a row can't tell them apart; say one of them in other words`));
+  const twins = own.flatMap((a, i) => own.slice(i + 1).filter((b) => b.rel !== a.rel && b.k === a.k).map((b) => ({ rel: a.rel, said: `"${said(a.text)}" and "${said(b.text)}" read as one sentence: a row can't tell them apart; say one of them in other words` })));
   return [...twins, ...learned.flatMap((l) => {
     const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); if (!m) return [];
     const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2], true));
-    return near ? [`"${said(m[2])}" makes a new relation, ${m[1].replace(OWN, '')}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
+    return near ? [{ rel: m[1], said: `"${said(m[2])}" makes a new relation, ${m[1].replace(OWN, '')}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)` }] : [];
   })];
 }
 
@@ -112,9 +113,10 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
     const mis = own ? misbound(clauses, phrases) : [], text = anchored(clauses, [...unread, ...mis], own ? OWN : ''), meant = new Set(mis.map((h) => OWN + slug(h)));
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
-    return { text, learned, close: closeTo(learned.filter((l) => !meant.has(/^phrase\((\w+),/.exec(l)?.[1] ?? '')), phrases) };
+    const close = closeBy(learned.filter((l) => !meant.has(/^phrase\((\w+),/.exec(l)?.[1] ?? '')), phrases), lines = text.split('\n');
+    return { text, learned, close: close.map((c) => c.said), closeAt: close.map((c) => { const k = lines.findIndex((l) => l.includes(`<a id="${c.rel}">`)); return k < 0 ? undefined : k; }) };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');
-  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab, close: md.map((m) => m?.close ?? []) };
+  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab, close: md.map((m) => m?.close ?? []), closeAt: md.map((m) => m?.closeAt ?? []) };
 }
