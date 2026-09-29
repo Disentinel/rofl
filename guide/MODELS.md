@@ -30,17 +30,59 @@ folder you run from, if the notebook is in it, else the notebook's own folder;
 Nothing is read when the workspace is your home directory, holds it, or is the
 filesystem root. VS Code runs the extension only in a trusted workspace.
 
-Every regular file in the workspace is read, with git or without, except what
-is ignored: in a git repository, what git ignores (so a new file you have not
-added is read, and a gitignored one is not); in a plain folder, what its
-`.gitignore` names and `node_modules`, `.git`, `dist`, `build`, `out`,
+Every regular file in the workspace is read, except what its `.gitignore`
+names and `node_modules`, `.git`, `CVS`, `.svn`, `.hg`, `dist`, `build`, `out`,
 `target`, `.venv`, `venv`, `__pycache__`, `.cache`, `coverage`, `.next` and
-`.vscode-test`, at any depth. Never a file outside the workspace, nor a link
-out of it. Files whose names look like secrets are left out: `.env*`, keys and certificates (`*.pem`,
-`*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.asc`, `id_*`), `*credential*`,
+`.vscode-test`, at any depth. Git is not needed and not asked. Never a file
+outside the workspace, nor a link out of it, nor one past 50,000 files. Files
+whose names look like secrets are left out: `.env*`, keys and certificates
+(`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.asc`, `id_*`), `*credential*`,
 `*secret*`, `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.vault-token`,
 `kubeconfig`, `.kube/config`, `.docker/config.json`, `auth.json`,
 `service-account*.json`, `*.tfstate*`, `*.kdbx`, `.gnupg/`, and shell histories.
-Without git on the machine, grep runs in a process of its own, stopped after
-5 s. At most 6 rounds and 200 KB (`ROFL_NB_READ_ROUNDS`, `ROFL_NB_READ_BUDGET`).
+grep runs as `git grep --no-index` when git is installed, else in a process of
+its own, stopped after 5 s. At most 6 rounds and 200 KB (`ROFL_NB_READ_ROUNDS`,
+`ROFL_NB_READ_BUDGET`).
+
+### Narrowing it: `.rofl/read.rofl`
+
+A workspace can narrow what is read with a ROFL file at `.rofl/read.rofl`, run
+by the same engine as a notebook. It lives in a `.rofl` folder so that later
+settings of the workspace have a place, and it is a `.rofl` file so the editor
+and the linter read it like any other. Its facts:
+
+    read_prefix("src/").        -- read only under these (any number)
+    skip_prefix("src/gen/").    -- and never under these
+    untracked_by(cvs).          -- only what CVS tracks: cvs, git, none, or command
+
+A file is read when `readable(F)` holds of it. The shipped rules derive it from
+`file(F)` (each file listed above), the prefixes, and `tracked(F)` (what the
+version control system lists), and the file may add its own:
+
+    skipped(F) :- file(F), X is str_sub(F, 0, 4), X = "old/".
+
+It can only narrow. Whatever its rules derive, only a file of the list above is
+read, so it cannot bring back a secret, a skipped folder or a file outside. A
+prefix that is absolute or holds `..` refuses the whole file; so does a file
+that does not load, or whose rules do not finish. A refused file reads nothing
+and says why: it never falls back to reading everything.
+
+**CVS.** `untracked_by(cvs).` reads each folder's `CVS/Entries` and reads only
+the files listed there. No command is run.
+
+    -- .rofl/read.rofl, in a CVS checkout
+    untracked_by(cvs).
+    read_prefix("src/").
+    skip_prefix("src/generated/").
+
+**git.** `untracked_by(git).` asks `git ls-files` for what git tracks.
+
+**Anything else** (svn, hg, ...): set a command that prints the tracked files,
+one a line, in your own settings: `ROFL_NB_UNTRACKED_COMMAND` on the command
+line, `rofl.untrackedCommand` in VS Code's user settings. Then write
+`untracked_by(command).` in the workspace. A workspace cannot name the command
+itself (`untracked_command(...)` refuses the file): it comes from whoever
+cloned the repository, and a command there would run their code on your
+machine. `svn` and `hg` are not built in.
+
 Every read is said: `Claude read: src/server.ts:240-280 · …`.
