@@ -4,7 +4,7 @@
 import { OUTSIDE } from '../notebook/cli.ts';
 import { said, SIGN, VERDICT } from '../notebook/kernel.ts';
 import { codeNames } from '../notebook/front.ts';
-import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
+import type { Answer, NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
 import type { View } from '../notebook/draw.ts';
 
 const FOLD = 10;   // answers shown under a line; the rest fold
@@ -12,25 +12,31 @@ const FOLD = 10;   // answers shown under a line; the rest fold
 export type Shown = { md: string; err: string; ok: boolean; views?: View[] };
 export type Run = NbResult & { paths: Record<string, string>; outside?: string[] };
 
-/** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1. */
-export function render(r: Run): { head: Shown; cells: Shown[] } {
+/** A literal as an attribute no Markdown reading can split: every character but a letter or a digit percent-encoded. */
+export const WHY_ATTR = (literal: string) => encodeURIComponent(literal).replace(/[^A-Za-z0-9%]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+
+/** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1.
+ *  `run`: the run this is, which a row's why names so that a proof is never asked of another; with none, no row has a why. */
+export function render(r: Run, run = ''): { head: Shown; cells: Shown[] } {
   const files = Object.keys(r.paths), short = codeNames(files[0] ?? '', files);
   // a sentence is text, a string from the code in it too: every bracket is escaped, then the kernel's `[label at file:line]` becomes the one link
   const link = (s: string) => s.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;').replace(/\\\[((?:[^\\]|\\[^\]])*?) at ((?:[^\s\\]|\\.)+):(\d+)\\\]/g, (m, label, esc, k) => {
     const f = esc.replace(/\\(.)/g, '$1');
     return r.paths[f] ? `[${label} at ${short[f]}:${k}](<${r.paths[f]}:${k}>)` : m;
   });
-  const list = (rows: { sentence: string }[], total: number, fold = FOLD) => {
-    const items = rows.map((a) => `- ${link(a.sentence)}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
+  // a row's why is a mark the notebook renderer turns into a button; any other reader of the Markdown shows nothing
+  const why = (literal: string) => run ? ` <span class="rofl-why" data-why="${WHY_ATTR(literal)}" data-run="${run}"></span>` : '';
+  const list = (rows: Answer[], total: number, fold: number, asks: boolean) => {
+    const items = rows.map((a) => `- ${link(a.sentence)}${asks ? why(a.literal) : ''}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
     return items.length + more.length <= fold ? [...items, ...more].join('\n')
       : `${items.slice(0, FOLD).join('\n')}\n\n<details><summary>${total - FOLD} more</summary>\n\n${[...items.slice(FOLD), ...more].join('\n')}\n\n</details>`;
   };
   const line = (l: NbLine) => {
-    const v = VERDICT(l), sign = SIGN[l.verdict], word = l.verdict === 'fails' ? `**${v}**` : v;
+    const v = VERDICT(l), sign = SIGN[l.verdict], word = l.verdict === 'fails' ? `**${v}**` : v, asks = l.kind !== 'excise' && l.verdict !== 'unasked';
     const out = [`**${link(l.text)}**${v ? ` — ${sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${word}</span>` : word}` : ''}`];
     // a question's answers fold whole under its line and count; a failing never's rows are the point and stay open
-    if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity)}\n\n</details>` : list(l.answers, l.total));
-    if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total));
+    if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity, asks)}\n\n</details>` : list(l.answers, l.total, FOLD, asks));
+    if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total, FOLD, asks));
     if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);
     return out.join('\n\n');
   };

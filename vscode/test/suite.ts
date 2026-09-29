@@ -6,7 +6,7 @@ import { serialize } from '../serial.ts';
 import { framesOf, GRAPHS, zoom } from '../../notebook/draw.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring' };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring'; asks?: boolean };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -100,6 +100,7 @@ export async function run() {
       if (code && !api.notes(code[0]).some((n) => n.line === code[1] - 1 && n.text.includes(c.fails!.text))) bad.push(`${c.file}: line ${code[1]} of ${code[0]} does not say after it that "${c.fails.text}" marked it: ${JSON.stringify(api.notes(code[0]))}`);
       if (code && !bad.length) await stale(nb, api, c.fails.text, code, bad);
     }
+    if (c.asks) await asks(nb, runs, api, c.file, bad);
     // a picture: an output the notebook renderer draws, the view in it, and the view as text for an editor without the renderer
     if (c.pictures) {
       const views = runs.flatMap((x) => x.outputs.filter((o) => o.items.some((i) => i.mime === VIEW_MIME)));
@@ -205,6 +206,77 @@ async function colours(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[],
   const one = [...by.values()].map((cs) => [...cs][0]);
   if (want.some((g) => !by.has(g)) || [...by.values()].some((cs) => cs.size !== 1) || new Set(one).size !== one.length || seen.some((v) => !v.colour || v.colour === v.around))
     bad.push(`${file}: the verdicts are not coloured by meaning: ${JSON.stringify([...by].map(([g, cs]) => [g, [...cs]]))}, of ${JSON.stringify(want)}, around ${JSON.stringify([...new Set(seen.map((v) => v.around))])}`);
+}
+
+/** Each answer row's why as a person clicks it: the proof of that row shown under it, and hidden at a second click; none on a row that is
+ *  no answer of its own; and once the notebook has changed, the kernel restarted or run another notebook, why there is no proof in place of one. */
+async function asks(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[], api: Api, file: string, bad: string[]) {
+  type Shown = { row: string; tree: string | null };
+  const press = (m: object) => vscode.commands.executeCommand('rofl-notebook.press', nb.uri, m);
+  const whys = () => vscode.commands.executeCommand<Shown[]>('rofl-notebook.whys', nb.uri);
+  const OWN = ['bike leaves the line', 'car leaves the line', 'scooter leaves the line', 'n(0)', 'low(0)'], NONE = ['? X leaves the line: 3 -> 2', 'no longer: bike leaves the line'];
+  const more = (r: string) => r.startsWith('\u2026 ') && r.endsWith('not sent by the kernel'), said = (r: string) => r.startsWith('said(');
+  const seen = new Map<string, boolean>(), all = () => [...OWN, ...NONE].every((r) => seen.has(r)) && [...seen.keys()].some(more) && [...seen.keys()].some(said);
+  for (const x of runs) {   // an output out of view may not be drawn
+    vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(x.index, x.index + 1), vscode.NotebookEditorRevealType.InCenter);
+    await press({ rows: true });
+    await new Promise((f) => setTimeout(f, 300));
+  }
+  await until(async () => {
+    for (const { row, why } of await vscode.commands.executeCommand<{ row: string; why: boolean }[]>('rofl-notebook.rows', nb.uri)) seen.set(row, (seen.get(row) ?? true) && why);
+    if (all()) return true;
+    await press({ rows: true });
+  }, 20_000, 'every row drawn').catch(() => {});
+  for (const r of [...OWN, [...seen.keys()].find(said) ?? 'said(…)']) if (!seen.has(r)) bad.push(`${file}: the row "${r}" is not drawn`); else if (!seen.get(r)) bad.push(`${file}: the row "${r}" has no why button`);
+  for (const r of [...NONE, [...seen.keys()].find(more) ?? '… more']) if (seen.get(r)) bad.push(`${file}: a row with no answer of its own has a why: "${r}"`);
+  if (!OWN.every((r) => seen.get(r))) return;
+  const click = async (row: string) => {
+    const n = (await whys()).length;
+    await press({ why: row });
+    return (await until(async () => (await whys()).slice(n).find((s) => s.row === row && s.tree !== 'asking the kernel\u2026'), 20_000, `the why of "${row}"`).catch(() => undefined))?.tree;
+  };
+  const own = async (row: string, begins: string, what = '') => {
+    const tree = await click(row);
+    if (!tree?.startsWith(begins)) bad.push(`${file}: the why under "${row}"${what} is not the proof of its own row: ${JSON.stringify(tree)}`);
+    if (await click(row) !== null) bad.push(`${file}: a second click did not hide the why under "${row}"`);
+  };
+  await own('bike leaves the line', '`bike` leaves the line, because\n  `bike` is on the plan (given)');
+  await own('low(0)', 'low(0), because\n  n(0) (given)', ', a failing never\'s row,');
+  const string = [...seen.keys()].find(said);
+  if (string) await own(string, 'said("a \\"q\\" `b` [c] (d) <e> *f*") (given)');
+  // the notebook changed after its run: no proof; the change undone, the proof again; the kernel restarted: no proof
+  const edit = async (e: vscode.NotebookEdit) => { const w = new vscode.WorkspaceEdit(); w.set(nb.uri, [e]); await vscode.workspace.applyEdit(w); };
+  await edit(vscode.NotebookEdit.insertCells(nb.cellCount, [new vscode.NotebookCellData(vscode.NotebookCellKind.Markup, 'A line written after the run.', 'markdown')]));
+  const after = await click('bike leaves the line');
+  if (!after?.startsWith('No proof: the notebook changed')) bad.push(`${file}: after an edit, a why showed a proof, or nothing: ${JSON.stringify(after)}`);
+  await click('bike leaves the line');
+  await edit(vscode.NotebookEdit.deleteCells(new vscode.NotebookRange(nb.cellCount - 1, nb.cellCount)));
+  await own('bike leaves the line', '`bike` leaves the line, because', ', the edit undone,');
+  await vscode.commands.executeCommand('rofl-notebook.restart');
+  const restarted = await click('bike leaves the line');
+  if (!restarted?.startsWith('No proof: the kernel no longer holds')) bad.push(`${file}: after a restart, a why showed a proof, or nothing: ${JSON.stringify(restarted)}`);
+  await click('bike leaves the line');
+  // run again, the proof is back; another notebook run in the one kernel since, it is gone
+  const execute = async (doc: vscode.NotebookDocument) => {
+    const before = api.result(doc.uri);
+    await vscode.window.showNotebookDocument(doc);
+    await vscode.commands.executeCommand('notebook.execute');
+    await until(() => api.result(doc.uri) !== before || undefined, 60_000, `a run of ${doc.uri.fsPath}`).catch(() => bad.push(`${file}: ${doc.uri.fsPath} did not run again`));
+  };
+  // a run draws its outputs anew, and an output out of view is not drawn: the question brought into view until its rows are
+  const drawn = async () => {
+    const x = runs.find((y) => y.document.getText().includes('? X leaves the line'))!;
+    vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(x.index, x.index + 1), vscode.NotebookEditorRevealType.InCenter);
+    await until(async () => { await press({ rows: true }); await new Promise((f) => setTimeout(f, 200)); return (await vscode.commands.executeCommand<{ row: string; why: boolean }[]>('rofl-notebook.rows', nb.uri)).some((r) => r.row === 'bike leaves the line' && r.why) || undefined; }, 20_000, 'the answers drawn again').catch(() => {});
+  };
+  await execute(nb);
+  await drawn();
+  await own('bike leaves the line', '`bike` leaves the line, because', ', run again,');
+  await execute(await vscode.workspace.openNotebookDocument(vscode.Uri.file(process.env.ROFL_NB_STARTUP!)));
+  await vscode.window.showNotebookDocument(nb);
+  await drawn();
+  const other = await click('bike leaves the line');
+  if (!other?.startsWith('No proof: the kernel no longer holds')) bad.push(`${file}: after another notebook ran, a why showed a proof, or nothing: ${JSON.stringify(other)}`);
 }
 
 /** Every picture fits its box: drawn with the side bar shut, measured again with it open, and drawn in an editor tab of its own by its Open in editor, sized to the tab. */
