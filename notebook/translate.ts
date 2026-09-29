@@ -23,7 +23,7 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
   The flows:
 
   - \`writer\` sends \`pages\` to \`store\`.
-  The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S", and a row keeps those words: "- \`c1\` defines the match \`m1\`.". A sentence no rule, declaration or listed sentence gives is not read.
+  The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. Every sentence declared gets at least one row. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S", and a row keeps those words: "- \`c1\` defines the match \`m1\`.". A sentence no rule, declaration or listed sentence gives is not read.
 - A picture is a line "draw <kind>": graph, architecture, state, process, causal, proof, time, timeline, timing, table, heatmap, chart, space. It draws only what rules conclude in the view's own sentences, which the notebook declares when it reads a view (for a graph: "A mark M is a node", "A mark M links to a mark N", "A mark M is inside a mark G", "A mark M is tagged a tag K", "A mark M is at the level I"). So a request to draw or diagram something is answered with rules that map its things onto those sentences, "A mark X is a node if X is a service." and "A mark X links to a mark Y if X calls Y.", and then the draw line.
 Write an asking line only when the request asks a question ("?", "why", "whynot") or states something that must hold ("never"); a cell that models, facts and definitions, asks nothing, and never lists with "?" what it defines. Say what must hold of any data, not of the rows there happen to be.`;
 
@@ -103,10 +103,16 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
   /** A cell with no asking line is a model of its own: kept when a sentence it declares or concludes holds a row, which is asked here and not
    *  written into it; refused only when it adds nothing and asks nothing. */
   const tryCell = (cell: string) => {
-    const t = attempt(cell);
-    if (t.lines.length || t.errors.some((e) => e !== 'the cell asks nothing')) return { ...t, cell, added: '' };
-    const asks = [...new Set([...[...cell.matchAll(/^- <a id="\w+"><\/a>(.+)$/gm)].map((m) => m[1].trim()), ...[...cell.matchAll(/^((?:An?|The) [^\n]*?) (?:if|unless)\b/gm)].map((m) => m[1])])];
-    const held = asks.length ? attempt(`${cell}\n\n${asks.map((q) => `? ${q}`).join('\n')}`).lines.filter((l) => l.total) : [];
+    const t = attempt(cell), asksNothing = (e: string) => e === 'the cell asks nothing';
+    if (t.errors.some((e) => !asksNothing(e))) return { ...t, cell, added: '' };
+    // each sentence the cell declares, and each it concludes, asked here and not written into it: a declared fact with no row is a sentence given nothing
+    const declared = [...cell.matchAll(/^- <a id="\w+"><\/a>(.+)$/gm)].map((m) => m[1].trim());
+    const asks = [...new Set([...declared, ...[...cell.matchAll(/^((?:An?|The) [^\n]*?) (?:if|unless)\b/gm)].map((m) => m[1])])];
+    const probed = asks.length ? attempt(`${cell}\n\n${asks.map((q) => `? ${q}`).join('\n')}`).lines.slice(-asks.length) : [];
+    const empty = declared.filter((d) => !probed[asks.indexOf(d)]?.total);
+    if (empty.length) return { ...t, cell, added: '', errors: [...t.errors.filter((e) => !asksNothing(e)), `declared and never given a row: ${empty.join(', ')}`] };
+    if (t.lines.length) return { ...t, cell, added: '' };
+    const held = probed.filter((l) => l.total);
     if (!held.length) return { ...t, cell, added: '', errors: ['the cell adds nothing and asks nothing: no sentence it declares or concludes holds a row, and no line of it asks'] };
     const n = held.reduce((k, l) => k + l.total, 0);
     return { ...t, errors: [], cell, added: `adds ${n} ${n === 1 ? 'fact' : 'facts'} in ${held.length} ${held.length === 1 ? 'sentence' : 'sentences'}` };
