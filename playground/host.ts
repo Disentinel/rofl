@@ -355,29 +355,39 @@ export class Host {
     // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
     // (its variables apart): nothing reaches the exceptions, and the never holds whatever they say; the way a translation that wrote a name
     // where the model holds a string held. A rule with no exception whose condition finds nothing (no exec anywhere) is an answer, not this.
-    const VACUITY_STEPS = 2000;
-    const dead = (l: Lit): string | undefined => {
-      if (l.args.some((t) => t.k === 'f' && varsOf(t).size)) return;
-      let k = 0;
-      const text = `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${l.args.map((t) => t.k === 'v' ? `V_${k++}` : canonTerm(t)).join(', ')})`;
-      const q = (base && !heads.has(l.rel) ? base : f).query(text);
-      return !q.error && !q.partial && !q.unpopulatable && !q.rows.length ? text : undefined;
-    };
-    /** Whether the positive conditions together find a row: true, false, or undefined when the search gave up (VACUITY_STEPS queries). */
+    // the conditions are matched against the evaluated store directly, stopping at the first row: a query would list every row of
+    // relations as large as the model's own, for every never, and this only asks whether one exists (VACUITY_STEPS facts looked at at most)
+    const VACUITY_STEPS = 200_000;
+    /** Whether the conditions together find a row: true, false, or undefined when it cannot tell (a compound term, a book by variable, the steps spent). */
     const together = (pos: Lit[]): boolean | undefined => {
       let steps = VACUITY_STEPS;
       const ordered = [...pos].sort((a, b) => b.args.filter((t) => t.k !== 'v').length - a.args.filter((t) => t.k !== 'v').length);
-      const at = (l: Lit, b: Record<string, string>) => `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${l.args.map((t) => t.k === 'v' ? b[t.name] ?? t.name : canonTerm(t)).join(', ')})`;
-      const go = (i: number, b: Record<string, string>): boolean | undefined => {
+      const go = (i: number, b: Map<string, string>): boolean | undefined => {
         if (i === ordered.length) return true;
-        if (--steps < 0 || ordered[i].args.some((t) => t.k === 'f')) return undefined;
-        const q = (base && !heads.has(ordered[i].rel) ? base : f).query(at(ordered[i], b));
-        if (q.error || q.partial) return undefined;
+        const l = ordered[i];
+        if (l.persp.k !== 'a' || l.args.some((t) => t.k === 'f')) return undefined;
+        const store = (base && !heads.has(l.rel) ? base : f).store, val = (t: Term) => t.k === 'v' ? b.get(t.name) : canonTerm(t);
+        const pos = l.args.flatMap((t, k) => val(t) === undefined ? [] : [k]);
+        const rows = (pos.length && store.indexed(l.rel, l.persp.name) ? store.argMatches(l.rel, l.persp.name, l.args.length, pos, pos.map((k) => val(l.args[k])!)) : null) ?? store.relPersp(l.rel, l.persp.name);
         let gaveUp = false;
-        for (const r of q.rows) { const x = go(i + 1, { ...b, ...r.bindings }); if (x) return true; if (x === undefined) gaveUp = true; }
+        for (const r of rows) {
+          if (--steps < 0) return undefined;
+          if (r.args.length !== l.args.length) continue;
+          const next = new Map(b);
+          if (!l.args.every((t, k) => { const v = canonTerm(r.args[k]), w = t.k === 'v' ? next.get(t.name) : canonTerm(t); if (w === undefined) next.set((t as { name: string }).name, v); return w === undefined || w === v; })) continue;
+          const x = go(i + 1, next);
+          if (x) return true;
+          if (x === undefined) gaveUp = true;
+        }
         return gaveUp ? undefined : false;
       };
-      return go(0, {});
+      return go(0, new Map());
+    };
+    /** A condition that alone, its variables apart, finds no row: its text, to say. */
+    const dead = (l: Lit): string | undefined => {
+      let k = 0;
+      const apart = { ...l, args: l.args.map((t) => t.k === 'v' ? { k: 'v' as const, name: `V_${k++}` } : t) };
+      return together([apart]) === false ? `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${apart.args.map(canonTerm).join(', ')})` : undefined;
     };
     const vacuous = (rel: string): string | undefined => {
       const rs = bodies.get(rel) ?? [];
