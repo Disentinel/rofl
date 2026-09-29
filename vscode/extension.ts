@@ -282,13 +282,15 @@ export function activate(ctx: vscode.ExtensionContext) {
     await vscode.workspace.applyEdit(edit);
   }
 
+  /** What the model may read: the workspace folder that holds the notebook, or with none the notebook's own directory. */
+  const rootOf = (uri: vscode.Uri) => vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath ?? vscode.Uri.joinPath(uri, '..').fsPath;
   async function translate() {
     const nb = vscode.window.activeNotebookEditor?.notebook;
     if (nb?.notebookType !== TYPE) return void vscode.window.showWarningMessage('Open a .rofl.md notebook first.');
     const text = serialize(docOf(nb)), v = await via();
     if ('error' in v) return void vscode.window.showErrorMessage(`ROFL: ${v.error}`);
     const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: translating the natural cells' },
-      () => ask<{ code: number; said: string[]; text: string }>('translate', nb.uri.fsPath, text, {}, undefined, undefined, undefined, v));
+      () => ask<{ code: number; said: string[]; text: string }>('translate', nb.uri.fsPath, text, {}, { root: rootOf(nb.uri) }, undefined, undefined, v));
     channel.appendLine(r.said.join('\n'));
     if (r.text !== text) await apply(nb, r.text);
     if (r.code) { vscode.window.showErrorMessage('ROFL: not every natural cell was translated', 'Show').then((a) => a && channel.show()); }
@@ -311,7 +313,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     const tick = () => show(`*${step.replace(/\*/g, '\\*')} \u00b7 ${Math.round((Date.now() - t0) / 1000)} s*`), timer = setInterval(tick, 1000);
     x.start(t0); tick();
     let r: { code: number; said: string[]; text: string; reply?: string; who?: string };
-    try { r = await ask('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural) }, (s) => { step = s; tick(); }, x.token, v); }
+    try { r = await ask('translate', nb.uri.fsPath, text, {}, { at, words, asked: asked.get(natural), root: rootOf(nb.uri) }, (s) => { step = s; tick(); }, x.token, v); }
     catch (e) { r = { code: 2, said: [(e as Error).message], text }; }
     finally { clearInterval(timer); }
     channel.appendLine(r.said.join('\n'));

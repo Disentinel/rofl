@@ -345,26 +345,31 @@ PICTURE.forEach(([name, , ok], k) => {
 });
 check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
 check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
-// R the read protocol (notebook/reader.ts), driven by a fake model through the command line: it lists, greps, shows and asks the kernel,
-// and what it may not read (a file outside the repository, a link out of it, an untracked file, a secret-looking one) is refused in a line
-// and never reaches a prompt; the rounds and the bytes are bounded, and every read is said. Each guard, spoilt, turns it red.
-const proto = (name: string, untracked = false) => {
-  // the request names files by their last part: a.ts to be read, and two tracked links, one out of the repository and one onto the .env
-  const nbFile = planted(name, 'review.rofl.md', withCell('No change touches a module nobody owns; see a.ts, link.ts and cfg.ts.', 'natural')), repo = path.join(tmp, name), git = (...a: string[]) => spawnSync('git', a, { cwd: repo });
+// R the read protocol (notebook/reader.ts), driven by a fake model through the command line: it lists, greps, shows and asks the kernel over
+// the notebook's workspace, a git repository or a plain folder; what it may not read (outside the workspace, a link out of it, a file git
+// ignores, a build or package folder without git, a secret-looking name, a workspace that is home) is refused in a line and never reaches a
+// prompt; the rounds and the bytes are bounded, and every read is said. Each guard, spoilt, turns it red for its own reason.
+const proto = (name: string, git = true) => {
+  // the request names files by their last part: a.ts to be read, and two links, one out of the workspace and one onto the .env
+  const nbFile = planted(name, 'review.rofl.md', withCell('No change touches a module nobody owns; see a.ts, link.ts and cfg.ts.', 'natural')), repo = path.join(tmp, name), run = (...a: string[]) => spawnSync('git', a, { cwd: repo });
   put(path.join(repo, 'src/a.ts'), 'export function alpha() {\n  return 1;\n}\n' + Array.from({ length: 400 }, (_, i) => `// filler line ${i} of a long file, to spend a small budget`).join('\n') + '\n');
   put(path.join(repo, 'src/long.txt'), `${'a'.repeat(40)}!\n`); put(path.join(repo, 'src/.github/ci.yml'), 'on: push\n');
-  put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'conf/.npmrc'), 'NPMRC_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'untracked.ts'), 'UNTRACKED_TOKEN_9f2\n');
+  put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'conf/.npmrc'), 'NPMRC_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'new.ts'), 'NEW_TOKEN_9f2\n');
+  put(path.join(repo, 'ignored.ts'), 'IGNORED_TOKEN_9f2\n'); put(path.join(repo, 'node_modules/x.js'), 'MODULES_TOKEN_9f2\n'); put(path.join(repo, 'examples/PARENT.txt'), 'PARENT_TOKEN_9f2\n');
+  // with git, node_modules is ignored as a repository ignores it; without, the default skip list must leave it out on its own
+  put(path.join(repo, '.gitignore'), git ? 'ignored.ts\nnode_modules/\n' : 'ignored.ts\n');
   put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
   symlinkSync('../../outside.txt', path.join(repo, 'src/link.ts')); symlinkSync('../.env', path.join(repo, 'src/cfg.ts'));
-  git('init', '-q'); git('add', '-f', ...(untracked ? [] : ['examples']), 'src', '.env', 'keys', 'conf');
+  if (!git) return nbFile;
+  run('init', '-q'); run('add', '-f', 'examples', 'src', '.env', 'keys', 'conf');
   // a submodule's gitlink: tracked, and a directory
-  mkdirSync(path.join(repo, 'vendor/sub'), { recursive: true }); git('update-index', '--add', '--cacheinfo', `160000,${'1'.repeat(40)},vendor/sub`);
-  // another repository whose index tracks untracked.ts, for GIT_DIR and GIT_WORK_TREE to point at
+  mkdirSync(path.join(repo, 'vendor/sub'), { recursive: true }); run('update-index', '--add', '--cacheinfo', `160000,${'1'.repeat(40)},vendor/sub`);
+  // another repository whose index tracks ignored.ts, for GIT_DIR and GIT_WORK_TREE to point at
   const other = `${repo}-other`; mkdirSync(other); spawnSync('git', ['init', '-q'], { cwd: other });
-  spawnSync('git', ['add', '-f', 'examples', 'untracked.ts'], { cwd: repo, env: { ...process.env, GIT_DIR: path.join(other, '.git'), GIT_WORK_TREE: repo } });
+  spawnSync('git', ['add', '-f', 'examples', 'ignored.ts'], { cwd: repo, env: { ...process.env, GIT_DIR: path.join(other, '.git'), GIT_WORK_TREE: repo } });
   return nbFile;
 };
-const READS = ['list src/**', 'list **/*.yml', 'grep TOKEN_9f2', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show ../outside.txt:1-1', 'show .env', 'show untracked.ts', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
+const READS = ['list src/**', 'list **/*.yml', 'grep TOKEN_9f2', 'grep alpha', 'grep (a+)+$ src/*.txt', 'show src/a.ts:1-3', 'show src/a.ts:1-400', 'show new.ts', 'show ../outside.txt:1-1', 'show ../PARENT.txt', 'show .env', 'show ignored.ts', 'show node_modules/x.js', 'show src/link.ts', 'show keys/id_rsa', 'show conf/.npmrc', 'show vendor/sub', '? C is blocked by T'];
 /** The fake: each prompt kept as prompt.N; the first answer is the requests, later ones the cell, or requests for ever with `forever`. */
 const reader = (name: string, forever = false) => { const f = path.join(tmp, `${name}-model`), dir = path.join(tmp, `${name}-prompts`); mkdirSync(dir, { recursive: true }); put(f, `#!/usr/bin/env node
 const fs = require('fs'); let i = '';
@@ -376,90 +381,104 @@ process.stdin.on('data', (d) => { i += d; }).on('end', () => {
   else console.log('\`\`\`rofl\\nA module M is unowned if some change touches M, unless some team owns M.\\n\\nnever M is unowned\\n\`\`\`');
 });
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
-const protoRun = (name: string, env: Record<string, string> = {}, root = ROOT, forever = false, untracked = false) => { const nb = proto(name, untracked), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root).then((o) => ({ o, prompts: m.prompts(), nb })); };
+/** A run of translate over a planted workspace, from `cwd` (by default the workspace, which then is the boundary). */
+const protoRun = (name: string, env: Record<string, string>, root: string, forever: boolean, git: boolean, cwd?: string) => { const nb = proto(name, git), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root, cwd ?? path.join(tmp, name)).then((o) => ({ o, prompts: m.prompts(), nb })); };
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
-const RUNS = ['plain', 'small', 'forever', 'untracked', 'home', 'gitenv', 'words'];
-/** Each planted defect, and the runs that can see it: the rest are not run for it. */
-const R_BREAKS: [string, string, RegExp, string, string[]?][] = [
-  ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, ''],
-  ['secret', 'notebook/reader.ts', /export const SECRET = [\s\S]*?'i'\);/, 'export const SECRET = /$^/;'],
-  ['secret list of 0adee37', 'notebook/reader.ts', /export const SECRET = [\s\S]*?'i'\);/, 'export const SECRET = /(^|\\/)(\\.env[^/]*|[^/]*\\.(pem|key|p12|pfx)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*)$/i;'],
-  ['home repository', 'notebook/reader.ts', /  if \(root === realpathSync\(os\.homedir\(\)\)\) return .*\n/, '', ['home']],
-  ['untracked notebook', 'notebook/reader.ts', /  if \(!files\.has\(path\.relative\(root, realpathSync\(notebook\)\)\)\) return .*\n/, '', ['untracked']],
-  ['tracked', 'notebook/reader.ts', /  if \(!repo\.files\.has\(rel\)\) return .*\n/, ''],
-  ['grep path check', 'notebook/reader.ts', /const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;'],
-  ['grep time limit', 'notebook/reader.ts', /\], GREP_MS, 16 \* 2 \*\* 20\)/, '], undefined, 16 * 2 ** 20)', ['small']],
-  ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no tracked line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"],
-  ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"],
-  ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, ''],
-  ['git environment', 'notebook/reader.ts', /, env: Object\.fromEntries\(.*$/m, ' });', ['gitenv']],
-  ['list skips dotfiles', 'notebook/reader.ts', /runGit\(repo\.root, \['ls-files', '-z', '--', `:\(glob\)\$\{arg\}`\], GREP_MS\)\.stdout\.split\('\\0'\)/, '[...repo.files].filter((f) => path.matchesGlob(f, arg))'],
-  ['requests among words', 'notebook/reader.ts', /return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);", ['words']],
-  ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever']],
-  ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small']],
-  ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever']],
-  ['budget', 'notebook/reader.ts', /if \(used \+ l\.length \+ 1 > room\) break; /, '', ['small']],
-  ['rounds', 'notebook/cli.ts', /round <= ROUNDS; round\+\+/, 'round <= 99; round++', ['forever']],
-  ['logging', 'notebook/cli.ts', /reads\.push\(x\.read\); /, ''],
+// a PATH with node on it and no git: grep falls back to a search in a process of its own
+const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
+const RUNS = ['plain', 'nogit', 'nobin', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words'];
+/** Each planted defect, the runs that can see it (the rest are not run for it), and what the red must say: red for another reason is not its. */
+const R_BREAKS: [string, string, RegExp, string, string[], string][] = [
+  ['outside', 'notebook/reader.ts', /  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, '', ['plain'], 'was not refused as outside the workspace'],
+  ['secret', 'notebook/reader.ts', /export const SECRET = [\s\S]*?'i'\);/, 'export const SECRET = /$^/;', ['nogit'], 'ENV_TOKEN reached a prompt'],
+  ['secret list of 0adee37', 'notebook/reader.ts', /export const SECRET = [\s\S]*?'i'\);/, 'export const SECRET = /(^|\\/)(\\.env[^/]*|[^/]*\\.(pem|key|p12|pfx)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*)$/i;', ['nogit'], 'NPMRC_TOKEN reached a prompt'],
+  ['home refusal', 'notebook/reader.ts', /  if \(dir === home\) return .*\n/, '', ['home'], 'a workspace that is the home directory was read'],
+  ['refusal of an ancestor of home', 'notebook/reader.ts', /  if \(within\(dir, home\) \|\| path\.dirname\(dir\) === dir\) return .*\n/, '', ['above'], 'a workspace that holds the home directory was read'],
+  ['the boundary widened to its parent', 'notebook/reader.ts', /dir = realpathSync\(root \?\? path\.dirname\(nb\)\)/, 'dir = path.dirname(realpathSync(root ?? path.dirname(nb)))', ['sub'], 'PARENT_TOKEN reached a prompt'],
+  ['default skip list', 'notebook/reader.ts', /const SKIP = new Set\(\[.*\]\);/, 'const SKIP = new Set<string>();', ['nogit'], 'MODULES_TOKEN reached a prompt'],
+  ['ignore respect with git', 'notebook/reader.ts', /, '--exclude-standard'\]\)\.stdout/, "]).stdout", ['plain'], 'IGNORED_TOKEN reached a prompt'],
+  ['ignore respect without git', 'notebook/reader.ts', /  try \{ text = readFileSync\(path\.join\(root, '\.gitignore'\), 'utf8'\); \} catch \{ \/\* none \*\/ \}\n/, '', ['nogit'], 'IGNORED_TOKEN reached a prompt'],
+  ['listed', 'notebook/reader.ts', /  if \(!repo\.files\.has\(rel\)\) return .*\n/, '', ['plain'], 'IGNORED_TOKEN reached a prompt'],
+  ['grep path check', 'notebook/reader.ts', /const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;', ['plain'], 'reached a prompt'],
+  ['grep time limit', 'notebook/reader.ts', /\], GREP_MS, 16 \* 2 \*\* 20\)/, '], undefined, 16 * 2 ** 20)', ['small'], 'a grep stopped at its time limit does not say so'],
+  ['grep empty said', 'notebook/reader.ts', /hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no line matches\)'/, "fit(hits, SHOWN.grep, 'lines')", ['plain'], 'a catastrophic pattern was not answered as no match'],
+  ['first prompt reads around the check', 'notebook/cli.ts', /const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();", ['plain'], 'ENV_TOKEN reached a prompt'],
+  ['regular files only', 'notebook/reader.ts', /  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, '', ['plain'], 'was not refused as not a regular file'],
+  ['git environment', 'notebook/reader.ts', /, env: Object\.fromEntries\(.*$/m, ' });', ['gitenv'], 'IGNORED_TOKEN reached a prompt'],
+  ['list skips dotfiles', 'notebook/reader.ts', /\.filter\(\(f\) => under\(arg, f\)\)/, '.filter((f) => path.matchesGlob(f, arg))', ['plain'], 'list ** left out a dotfile'],
+  ['requests among words', 'notebook/reader.ts', /return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);", ['words'], 'words with a request line in them were taken as requests'],
+  ['requests a round', 'notebook/cli.ts', /        if \(i >= PER_ROUND\) return .*\n/, '', ['forever'], 'answered past the 20th'],
+  ['work after the budget', 'notebook/cli.ts', /        if \(left <= 0\) return .*\n/, '', ['small'], 'a request after the budget was spent was still answered'],
+  ['bytes read of a file', 'notebook/reader.ts', /Math\.min\(size, FILE_BYTES\)/, 'size', ['forever'], 'a file was read past its cap'],
+  ['budget', 'notebook/reader.ts', /if \(used \+ l\.length \+ 1 > room\) break; /, '', ['small'], 'bytes of reading were not held to'],
+  ['rounds', 'notebook/cli.ts', /round <= ROUNDS; round\+\+/, 'round <= 99; round++', ['forever'], 'was not stopped after 3 rounds'],
+  ['logging', 'notebook/cli.ts', /reads\.push\(x\.read\); /, '', ['plain'], 'the reads were not said'],
 ];
-/** What is wrong with a run of the protocol: empty when every guard held. */
+const BANNED = ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'NPMRC_TOKEN', 'IGNORED_TOKEN', 'MODULES_TOKEN'];
 /** What is wrong with the runs of the protocol named in `runs`: empty when every guard held. */
 async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]> {
   const bad: string[] = [];
-  const env: Record<string, [Record<string, string>, boolean, boolean]> = {
-    plain: [{}, false, false], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, false], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, false],
-    // a notebook git does not track, and a repository that is the home directory: nothing is read
-    untracked: [{}, false, true], home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, false],
-    // git's own variables pointing at another repository, which tracks untracked.ts
+  const env: Record<string, [Record<string, string>, boolean, boolean, string?]> = {
+    plain: [{}, false, true], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, true], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, true],
+    // a folder with no git, and one on a machine with no git, named by ROFL_NB_ROOT from elsewhere
+    nogit: [{}, false, false], nobin: [{ PATH: noGit, ROFL_NB_ROOT: path.join(tmp, `proto-${tag}-nobin`) }, false, false, ROOT],
+    // the workspace is the home directory, or holds it: nothing is read
+    home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, true], above: [{ HOME: path.join(tmp, `proto-${tag}-above/src`) }, false, true],
+    // run from elsewhere: the workspace is the notebook's own folder, and its parent is not read
+    sub: [{}, false, true, ROOT],
+    // git's own variables pointing at another repository, whose index tracks ignored.ts
+    gitenv: [{ GIT_DIR: path.join(tmp, `proto-${tag}-gitenv-other/.git`), GIT_WORK_TREE: path.join(tmp, `proto-${tag}-gitenv`) }, false, true],
     // an answer of words with one request line in it is words to the person, and nothing is read
-    words: [{ ROFL_FAKE_WORDS: '1' }, false, false],
-    gitenv: [{ GIT_DIR: path.join(tmp, `proto-${tag}-gitenv-other/.git`), GIT_WORK_TREE: path.join(tmp, `proto-${tag}-gitenv`) }, false, false],
+    words: [{ ROFL_FAKE_WORDS: '1' }, false, true],
   };
-  const got = Object.fromEntries(await Promise.all(runs.map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2])] as const)));
-  const { plain, small, forever, words } = got, all = Object.values(got).flatMap((r) => r.prompts).join('\n');
-  for (const token of ['OUTSIDE_TOKEN', 'ENV_TOKEN', 'KEY_TOKEN', 'UNTRACKED_TOKEN', 'NPMRC_TOKEN']) if (all.includes(`${token}_9f2`)) bad.push(`${token} reached a prompt`);
-  for (const [k, why] of [['untracked', 'git does not track this notebook'], ['home', 'the repository is the home directory']] as const) {
-    const r = got[k];
-    if (r && (!(r.prompts[1] ?? '').includes(`refused: src/a.ts: ${why}`) || (r.prompts[1] ?? '').includes('1  export function alpha') || (r.prompts[0] ?? '').includes('export function alpha'))) bad.push(`a repository that must not be read (${why}) was read: ${(r.prompts[1] ?? '').slice((r.prompts[1] ?? '').indexOf('> show src/a.ts:1-3'), (r.prompts[1] ?? '').indexOf('> show src/a.ts:1-3') + 200)}`);
-  }
+  const got = Object.fromEntries(await Promise.all(runs.map(async (k) => [k, await protoRun(`proto-${tag}-${k}`, env[k][0], root, env[k][1], env[k][2], env[k][3])] as const)));
+  const at = (s: string, from: string, n = 200) => s.slice(s.indexOf(from), s.indexOf(from) + n);
+  for (const [k, r] of Object.entries(got)) for (const token of [...BANNED, ...k === 'sub' ? ['PARENT_TOKEN'] : []]) if (r.prompts.join('\n').includes(`${token}_9f2`)) bad.push(`${token} reached a prompt in the ${k} run`);
+  const { plain, nogit, nobin, small, forever, home, above, sub, words } = got;
+  for (const [r, why] of [[home, 'is'], [above, 'holds']] as const)
+    if (r && (!(r.prompts[1] ?? '').includes(`refused: src/a.ts: the workspace ${why} the home directory`) || (r.prompts[1] ?? '').includes('1  export function alpha') || (r.prompts[0] ?? '').includes('export function alpha'))) bad.push(`a workspace that ${why === 'is' ? 'is' : 'holds'} the home directory was read: ${at(r.prompts[1] ?? '', '> show src/a.ts:1-3')}`);
+  if (sub && (sub.prompts.join('\n').includes('export function alpha') || !(sub.prompts[1] ?? '').includes('refused: ../PARENT.txt: outside the workspace'))) bad.push(`the parent of the notebook's folder was read, run from elsewhere: ${at(sub.prompts[1] ?? '', '> show ../PARENT.txt')}`);
   if (words && (words.o.code !== 2 || !words.o.out.includes('answered in words, not with a cell') || words.prompts.length !== 1 || /read: [^\n]*src\/a\.ts:1-3(?!\d)/.test(words.o.out))) bad.push(`words with a request line in them were taken as requests: exit ${words.o.code}, ${words.prompts.length} calls`);
-  if (plain) {
-    const second = plain.prompts[1] ?? '';
-    if (!(plain.prompts[0] ?? '').includes('The files the request names:\nsrc/a.ts:\n1  export function alpha')) bad.push(`a file the request names by its last part was not read into the first prompt`);
-    if (plain.o.code !== 0 || !readFileSync(plain.nb, 'utf8').includes('never M is unowned')) bad.push(`the cell after reading was not written: exit ${plain.o.code}\n${plain.o.out.slice(-600)}`);
-    if (!second.includes('> list **/*.yml\nsrc/.github/ci.yml')) bad.push(`list ** left out a dotfile: ${second.slice(second.indexOf('> list **/*.yml'), second.indexOf('> list **/*.yml') + 100)}`);
-    if (!second.includes('1  export function alpha() {') || !second.includes('src/a.ts') || !second.includes('`c2` is blocked by `platform`')) bad.push(`list, show or ? did not answer: ${second.slice(second.indexOf('You asked:'), second.indexOf('You asked:') + 1500)}`);
-    for (const [asked, why] of [['../outside.txt', 'outside the repository'], ['.env', 'looks like a secret'], ['untracked.ts', 'not a file git tracks here'], ['src/link.ts', 'outside the repository'], ['keys/id_rsa', 'looks like a secret'], ['conf/.npmrc', 'looks like a secret'], ['vendor/sub', 'not a regular file']])
-      if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`show ${asked} was not refused as ${why}`);
-    // a pattern that backtracks for ever in JavaScript (2^40 steps on that line) is answered at once
-    if (!second.includes('> grep (a+)+$ src/*.txt\n(no tracked line matches)')) bad.push(`a catastrophic pattern was not answered as no match: ${second.slice(second.indexOf('> grep (a+)'), second.indexOf('> grep (a+)') + 200)}`);
-    if (!/read: .*src\/a\.ts:1-3/.test(plain.o.out) || !plain.o.out.includes('list src/** (')) bad.push(`the reads were not said: ${plain.o.out.slice(-800)}`);
+  for (const [k, r] of Object.entries({ plain, nogit, nobin })) {
+    if (!r) continue;
+    const second = r.prompts[1] ?? '';
+    if (!(r.prompts[0] ?? '').includes('The files the request names:\nsrc/a.ts:\n1  export function alpha')) bad.push(`${k}: a file the request names by its last part was not read into the first prompt`);
+    if (r.o.code !== 0 || !readFileSync(r.nb, 'utf8').includes('never M is unowned')) bad.push(`${k}: the cell after reading was not written: exit ${r.o.code}\n${r.o.out.slice(-600)}`);
+    if (!second.includes('> list **/*.yml\nsrc/.github/ci.yml')) bad.push(`${k}: list ** left out a dotfile: ${at(second, '> list **/*.yml', 100)}`);
+    if (!second.includes('1  export function alpha() {') || !second.includes('> list src/**\nsrc/.github/ci.yml\nsrc/a.ts') || !second.includes('> grep alpha\nsrc/a.ts:1: export function alpha() {') || !second.includes('`c2` is blocked by `platform`')) bad.push(`${k}: list, grep, show or ? did not answer: ${at(second, 'You asked:', 1500)}`);
+    // a file git does not track, and does not ignore, is read
+    if (!second.includes('> show new.ts\n1  NEW_TOKEN_9f2')) bad.push(`${k}: a new file not ignored was not read: ${at(second, '> show new.ts')}`);
+    for (const [asked, why] of [['../outside.txt', 'outside the workspace'], ['.env', 'looks like a secret'], ['ignored.ts', 'not among the files read here'], ['node_modules/x.js', 'not among the files read here'], ['src/link.ts', 'outside the workspace'], ['keys/id_rsa', 'looks like a secret'], ['conf/.npmrc', 'looks like a secret'], ...k === 'plain' ? [['vendor/sub', 'not a regular file']] : []])
+      if (!second.includes(`refused: ${asked}: ${why}`)) bad.push(`${k}: show ${asked} was not refused as ${why}`);
+    // a pattern that backtracks for ever in JavaScript (2^40 steps on that line) is answered at once by git, and stopped at its limit without it
+    if (!second.includes(`> grep (a+)+$ src/*.txt\n${k === 'nobin' ? 'refused: grep (a+)+$: timed out after 5 s' : '(no line matches)'}`)) bad.push(`${k}: a catastrophic pattern was not answered as no match: ${at(second, '> grep (a+)')}`);
+    if (!/read: .*src\/a\.ts:1-3/.test(r.o.out) || !r.o.out.includes('list src/** (')) bad.push(`${k}: the reads were not said: ${r.o.out.slice(-800)}`);
   }
   if (small) {
     // a grep stopped at its limit is a refusal, not no match
-    if (!small.prompts[1]?.includes('refused: grep TOKEN_9f2: timed out after 0.001 s')) bad.push(`a grep stopped at its time limit does not say so: ${(small.prompts[1] ?? '').slice((small.prompts[1] ?? '').indexOf('> grep TOKEN'), (small.prompts[1] ?? '').indexOf('> grep TOKEN') + 200)}`);
+    if (!small.prompts[1]?.includes('refused: grep TOKEN_9f2: timed out after 0.001 s')) bad.push(`a grep stopped at its time limit does not say so: ${at(small.prompts[1] ?? '', '> grep TOKEN')}`);
     // none is answered once the budget is spent: the kernel is not asked
     const s2 = small.prompts[1] ?? '';
-    if (!s2.includes('> ? C is blocked by T\nrefused: the read budget is spent')) bad.push(`a request after the budget was spent was still answered: ${s2.slice(s2.indexOf('> ? C'), s2.indexOf('> ? C') + 200)}`);
-    if (!small.prompts[1]?.includes('the read budget is spent') || (small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length > 600 + 1500) bad.push(`600 bytes of reading were not held to: the second prompt grew by ${(small.prompts[1] ?? '').length - (small.prompts[0] ?? '').length}`);
+    if (!s2.includes('> ? C is blocked by T\nrefused: the read budget is spent')) bad.push(`a request after the budget was spent was still answered: ${at(s2, '> ? C')}`);
+    if (!s2.includes('the read budget is spent') || s2.length - (small.prompts[0] ?? '').length > 600 + 1700) bad.push(`600 bytes of reading were not held to: the second prompt grew by ${s2.length - (small.prompts[0] ?? '').length}`);
   }
   if (forever) {
     // a request past the 20th is not answered, and a file is read only to its cap
     const f2 = forever.prompts[1] ?? '';
-    if (!f2.includes('> list src/**\n(not answered: at most 20 requests a round)')) bad.push('a round of 44 requests was answered past the 20th');
-    if (!f2.includes('only its first 1000 are read')) bad.push(`a file was read past its cap: ${f2.slice(f2.indexOf('> show src/a.ts:16-20'), f2.indexOf('> show src/a.ts:16-20') + 300)}`);
+    if (!f2.includes('> list src/**\n(not answered: at most 20 requests a round)')) bad.push('a round of 49 requests was answered past the 20th');
+    if (!f2.includes('only its first 1000 are read')) bad.push(`a file was read past its cap: ${at(f2, '> show src/a.ts:16-20', 300)}`);
+    if (forever.o.code !== 2 || !forever.o.out.includes('still asked to read after 3 rounds') || forever.prompts.length !== 4) bad.push(`a model that only reads was not stopped after 3 rounds: exit ${forever.o.code}, ${forever.prompts.length} calls`);
   }
-  if (forever && (forever.o.code !== 2 || !forever.o.out.includes('still asked to read after 3 rounds') || forever.prompts.length !== 4)) bad.push(`a model that only reads was not stopped after 3 rounds: exit ${forever.o.code}, ${forever.prompts.length} calls`);
   return bad;
 }
 const r0 = await protocol('as-is');
-check('R the translator reads the repository by list, grep, show and ?; outside, a link out, untracked and secret-looking files are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
-const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, at, plant, runs = ['plain']]) => {
+check('R the translator reads the notebook\'s workspace, with git or without, by list, grep, show and ?; outside, a link out, ignored, skipped and secret-looking files, and a workspace that is home, are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
+const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, at, plant, runs]) => {
   const src = file.endsWith('reader.ts') ? readerSrc : cliSrc, spoilt = src.replace(at, plant);
   if (spoilt === src) throw new Error(`R ${name}: the planted defect did not apply`);
   return protocol(name.replace(/ /g, '-'), linked(`reader-${name.replace(/ /g, '-')}`, file, spoilt), runs);
 }));
-R_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, rSpoilt[k].length > 0, { code: 0, out: 'green' }));
+R_BREAKS.forEach(([name, , , , , why], k) => check(`  and with ${name} spoilt, it is red: ${why}`, rSpoilt[k].some((b) => b.includes(why)), { code: 0, out: rSpoilt[k].join('\n') || 'green' }));
 
 // V a never that holds over nothing: a rule with an exception whose conditions find no row BECAUSE OF A CONSTANT that looks like a slip of a
 // value its column holds (`platfrom` where there is `platform`, the name `exit` where the model holds the string "exit") cannot fail, whatever

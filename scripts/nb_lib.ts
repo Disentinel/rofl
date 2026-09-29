@@ -11,14 +11,14 @@ export const tmp = mkdtempSync(path.join(os.tmpdir(), 'nb-check-'));
 
 export type Out = { code: number; out: string; stdout?: string; ms?: number };
 // a young generation of 256 MB: the self notebook's run spent 24 of 88 s collecting at the default, 12.7 s at this (npm run nb has it too)
-export const node = (script: string, args: string[], env: Record<string, string> = {}, root = ROOT): Promise<Out> => new Promise((done) => {
-  const t = performance.now(), p = spawn(process.execPath, ['--max-semi-space-size=256', '--experimental-strip-types', path.join(root, script), ...args], { env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
+export const node = (script: string, args: string[], env: Record<string, string> = {}, root = ROOT, cwd?: string): Promise<Out> => new Promise((done) => {
+  const t = performance.now(), p = spawn(process.execPath, ['--max-semi-space-size=256', '--experimental-strip-types', path.join(root, script), ...args], { cwd, env: { ...process.env, ROFL_NB_DAEMON: '0', ...env } });
   let out = '', stdout = '';
   p.stdout.on('data', (d) => { out += d; stdout += d; }); p.stderr.on('data', (d) => { out += d; });
   const kill = setTimeout(() => p.kill(), 280_000);
   p.on('close', (code) => { clearTimeout(kill); done({ code: code ?? -1, out, stdout, ms: performance.now() - t }); });
 });
-export const cli = (args: string[], env: Record<string, string> = {}, root = ROOT) => node('notebook/cli.ts', args, env, root);
+export const cli = (args: string[], env: Record<string, string> = {}, root = ROOT, cwd?: string) => node('notebook/cli.ts', args, env, root, cwd);
 
 /** A file written under tmp, and nowhere else: a planted notebook named like a linked tree would write through its links into the tree. */
 export const put = (to: string, text: string) => {

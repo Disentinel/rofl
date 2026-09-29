@@ -17,7 +17,7 @@ import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
-import { answer, BUDGET, gitFiles, PER_ROUND, PROTOCOL, readTracked, requestsOf, ROUNDS, type Repo } from './reader.ts';
+import { answer, BUDGET, PER_ROUND, PROTOCOL, readTracked, requestsOf, ROUNDS, workspace, type Repo } from './reader.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -195,7 +195,7 @@ const OUTLINE = /^\s*(export\s+)?(default\s+)?(async\s+)?(function\*?\s+\w+|clas
 /** What the first prompt reads of the code without asking: an outline of each code file, and the files the request names, within a part of the budget. */
 function slice(cx: Context, request: string): { text: string; read: string[] } {
   const outlines = Object.entries(cx.input.code).map(([name, t]) => [`${name}:`, ...t.split('\n').flatMap((l, i) => OUTLINE.test(l) ? [`  ${i + 1}  ${l.trim().slice(0, 160)}`] : []).slice(0, 60)].join('\n'));
-  // a word of the request that is a tracked path, or the end of one; read only through readTracked, which refuses what the model may not see
+  // a word of the request that is a path of the workspace, or the end of one; read only through readTracked, which refuses what the model may not see
   const named = [...new Set(request.match(/[\w./-]+\.\w+/g) ?? [])].flatMap((w) => [w, ...[...cx.repo.files].filter((f) => f.endsWith(`/${w}`)).slice(0, 1)]).flatMap((w) => { const r = readTracked(cx.repo, w); return 'file' in r ? [r] : []; }).filter((r, i, all) => all.findIndex((x) => x.file === r.file) === i);
   const shown = named.map((r) => `${r.file}:\n${r.lines.slice(0, 300).map((l, i) => `${i + 1}  ${l}`).join('\n')}`);
   const text = [...outlines.length ? [`An outline of the code files (line, then the line):\n${outlines.join('\n')}`] : [], ...shown.length ? [`The files the request names:\n${shown.join('\n\n')}`] : []].join('\n\n').slice(0, BUDGET / 4);
@@ -204,10 +204,10 @@ function slice(cx: Context, request: string): { text: string; read: string[] } {
 
 /** Every natural cell with no rofl cell under it gets one, tried against the kernel first and asked again once with what went wrong.
  *  Each is written into the file as it lands, whole or not at all, so a failure or a kill later keeps the cells before it. */
-export async function translate(file: string, ask: Ask): Promise<{ code: number; said: string[] }> {
+export async function translate(file: string, ask: Ask, root?: string): Promise<{ code: number; said: string[] }> {
   const said: string[] = [], tmp = `${file}.${process.pid}.tmp`;
   let code = 0;
-  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ wall }), (line) => process.stderr.write(line + '\n'))) {
+  for await (const r of translating(file, readFileSync(file, 'utf8'), ask, new Kernel({ wall }), (line) => process.stderr.write(line + '\n'), root)) {
     said.push(...r.said);
     code = r.code || code;
     if (r.text !== undefined) { writeFileSync(tmp, r.text); renameSync(tmp, file); }
@@ -215,17 +215,18 @@ export async function translate(file: string, ask: Ask): Promise<{ code: number;
   return { code, said };
 }
 
-/** What translate writes, for a host that shows it before it is saved. `note`: one line per model call, before it is made — a call can run 30-120 s with nothing on stdout until it returns. */
-export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel(), note: (line: string) => void = () => {}): Promise<{ code: number; said: string[]; text: string }> {
+/** What translate writes, for a host that shows it before it is saved. `note`: one line per model call, before it is made — a call can run 30-120 s with nothing on stdout until it returns.
+ *  `root`: the workspace the model may read (notebook/reader.ts), by default the notebook's directory. */
+export async function translateText(file: string, text: string, ask: Ask, kernel = new Kernel(), note: (line: string) => void = () => {}, root?: string): Promise<{ code: number; said: string[]; text: string }> {
   const said: string[] = [];
   let code = 0;
-  for await (const r of translating(file, text, ask, kernel, note)) { said.push(...r.said); code = r.code || code; text = r.text ?? text; }
+  for await (const r of translating(file, text, ask, kernel, note, root)) { said.push(...r.said); code = r.code || code; text = r.text ?? text; }
   return { code, said, text };
 }
 
 /** The natural cells one by one: what was said of each, and the text with its cell in when one landed. An empty natural cell is skipped, not sent. */
-async function* translating(file: string, text: string, ask: Ask, kernel: Kernel, note: (line: string) => void): AsyncGenerator<{ code: number; said: string[]; text?: string }> {
-  const cx = context(file, text), natural = cellsOf(text).filter((x) => x.kind === 'natural');
+async function* translating(file: string, text: string, ask: Ask, kernel: Kernel, note: (line: string) => void, root?: string): AsyncGenerator<{ code: number; said: string[]; text?: string }> {
+  const cx = context(file, text, root), natural = cellsOf(text).filter((x) => x.kind === 'natural');
   if ('errors' in cx) { yield { code: 2, said: cx.errors }; return; }
   if (!natural.length) yield { code: 0, said: [`${file}: no natural cells to translate`] };
   else if (natural.every((x) => translated(cellsOf(text), x))) yield { code: 0, said: [`${file}: every natural cell has a cell under it, nothing to translate`] };
@@ -244,8 +245,8 @@ async function* translating(file: string, text: string, ask: Ask, kernel: Kernel
 }
 
 /** The natural cell `index` translated again, its cell under it replaced: `words` is what the person says, `asked` what the model said last instead of a cell, `step` hears each step as it starts. */
-export async function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), { words = '', asked = '', step = (_: string) => {} } = {}): Promise<{ code: number; said: string[]; text: string; reply?: string }> {
-  const cx = context(file, text), cells = cellsOf(text), c = cells[index];
+export async function translateCell(file: string, text: string, index: number, ask: Ask, kernel = new Kernel(), { words = '', asked = '', step = (_: string) => {}, root = undefined as string | undefined } = {}): Promise<{ code: number; said: string[]; text: string; reply?: string }> {
+  const cx = context(file, text, root), cells = cellsOf(text), c = cells[index];
   if ('errors' in cx) return { code: 2, said: cx.errors, text };
   if (c?.kind !== 'natural') return { code: 2, said: [`cell ${index} is not a natural cell`], text };
   const under = translated(cells, c) ? cells[index + 1] : undefined;
@@ -260,7 +261,7 @@ export async function translateCell(file: string, text: string, index: number, a
 }
 
 type Context = { repo: Repo; outside: string[]; input: Inputs; vocab: string[]; functions: string[]; own: string[]; rels: string[]; phrases: string };
-function context(file: string, text: string): Context | { errors: string[] } {
+function context(file: string, text: string, root?: string): Context | { errors: string[] } {
   const { input, errors, outside } = inputs(file, text);
   if (errors.length) return { errors };
   const front = parseFront(text), want = libFiles(path.relative(ROOT, path.resolve(file)), front);
@@ -268,7 +269,7 @@ function context(file: string, text: string): Context | { errors: string[] } {
   const { vocab, functions, rels } = translatorVocab(model, phrases);
   const home = homeOf(model);
   const own = [...Object.entries(input.reads).filter(([r]) => r.endsWith('.rofl.md')).map(([, t]) => t), text].flatMap((t) => worldOf(t, phrases, home).phrases).map(sentenceOf);
-  return { repo: gitFiles(path.resolve(file)), outside, input, vocab, functions, own, rels, phrases };
+  return { repo: workspace(path.resolve(file), root), outside, input, vocab, functions, own, rels, phrases };
 }
 
 /** What a notebook's model reads, or the JS model's with no notebook: every sentence with a noun before each hole and the relation it is,
@@ -372,7 +373,8 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
 const HELP = `New here? Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.
 
 npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--format dot|vega-lite]   run a notebook
-npm run nb -- translate <file.rofl.md>        a model answers each natural cell in rofl
+npm run nb -- translate <file.rofl.md> [--root DIR]   a model answers each natural cell in rofl, reading DIR
+                                              (the working directory if it holds the notebook, else its own)
 npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
 npm run nb -- --help env                      the environment variables
 
@@ -409,7 +411,8 @@ ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the
 ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
 ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
 ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
-ROFL_NB_READ_ROUNDS=6    rounds the model may read the repository's tracked files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all`;
+ROFL_NB_READ_ROUNDS=6    rounds the model may read the workspace's files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all
+ROFL_NB_ROOT=<dir>       the workspace translate reads, as --root does`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
@@ -432,7 +435,8 @@ if (isMain) {
   if (argv[0] === 'translate') {
     const m = argv.indexOf('--model'), c = choose(m > 0 ? argv[m + 1] : undefined);
     if (c.error || c.refused) { console.error(`${named}: ${c.error ?? c.refused}`); process.exit(2); }
-    const r = await translate(named, llm(c));
+    const at = argv.indexOf('--root'), root = at > 0 ? argv[at + 1] : process.env.ROFL_NB_ROOT, cwd = realpathSync(process.cwd());
+    const r = await translate(named, llm(c), root ? path.resolve(root) : path.relative(cwd, realpathSync(named)).startsWith(`..${path.sep}`) ? undefined : cwd);
     console.log(r.said.join('\n'));
     process.exit(r.code);
   }
