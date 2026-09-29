@@ -52,7 +52,7 @@ done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, 
 -- wFa: a view whose marks name a frame draws as small multiples, one picture a frame in order, a mark new or gone against the frame before
 -- (notebook/draw.ts framesOf); test:vscode puts each first-wave picture in frames 1 and 2 and reads back the frames the renderer drew
 -- (planted: --break frames, red); test:nb:product draws the SPAT week a day a frame (planted: draw-frames, red)
-done(K, v_frames, "vscode/test/suite.ts") :- drawn_now(K).
+done(K, v_frames, "vscode/test/suite.ts") :- drawn_now(K), not waived(K, v_frames, _).
 -- wZa: a shut group (`A mark G is collapsed`; a graph's group is what marks are inside, a timeline's what lanes are in) draws as one mark
 -- labelled with its count and opens on a click (notebook/draw.ts zoom); test:vscode shuts a group in each first-wave picture, reads back
 -- "shop (3)" without its members, zooms in as a click does and reads the members back (planted: --break zoom, red); test:nb:product draws
@@ -68,6 +68,14 @@ done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_examp
 -- opens it beside the notebook for a genealogy tool (rofl-notebook.openNotation; test:vscode reads the opened file back, planted --break
 -- notation red); test:nb:product holds the file to its FAM record (planted draw-notation, a family with no child, red)
 done(n_notation, v_render, "vscode/test/suite.ts"). done(n_notation, v_test, "vscode/test/suite.ts"). done(n_notation, v_example, "examples/visual/family-tree.rofl.md").
+-- wG: the graph's dialects, each a look over the graph (vscode/visual/pic-dialects.ts: architecture flows down, a state machine has its entry
+-- dot, a process its lanes as bands, a causal loop its marks on a ring, a proof goes up) and its own notation (notebook/draw-dialects.ts,
+-- draw-proof.ts). test:vscode draws each in a what-if copy: the renderer's report of the kind, a mark's status, a why, the what-if, and the look
+-- read back from where the renderer put the marks (planted, each red: --break d-arch, d-state, d-proc, d-loop, d-proof); test:nb:product holds
+-- each notation (planted draw-arch, draw-state, draw-process, draw-causal, draw-proof). A dialect's frames and zoom close with wFa, wZa.
+done(K, L, "vscode/test/suite.ts") :- row_of(wG, K), lens(L), L != v_example, not shared(L), not waived(K, L, _).
+done(g_architecture, v_example, "examples/visual/shop-architecture.rofl.md"). done(g_state, v_example, "examples/visual/order-states.rofl.md").
+done(g_process, v_example, "examples/visual/claim-process.rofl.md"). done(g_causal, v_example, "examples/visual/burnout-loop.rofl.md"). done(g_proof, v_example, "examples/visual/claim-proof.rofl.md").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
 -- wT, wB: each form's what-if in vscode/test/suite.ts (the picture cases, `form`), drawn by the renderer's own module in the form it names, with the
@@ -88,6 +96,8 @@ waived(K, v_geometry, "position is the time axis; lane order comes from the fact
 waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL marks") :- lens(L), L != v_render, L != v_example, L != v_docs, L != v_test.
 waived(K, v_zoom, "a table's grouping is the query; group-by counts come with engine aggregates (another session)") :- family(K, table).
 waived(t_timeline, v_zoom, "a timeline is one axis with no lanes, so there is no lane group to shut; stale once it draws lanes").
+waived(g_proof, v_geometry, "the tree's shape is its layout; a literal is not a mark term placed() can carry").
+waived(g_proof, v_frames, "a proof is of one run; its frames would be ticks it does not span, and a what-if already draws it before and after").
 
 -- what a lens means where it is not plain: v_frames is small multiples, one picture per value of a view fact's frame key in order, each
 -- mark new or gone against the frame before it (compare, reused); an animation or a slider is not asked for, since small multiples show
@@ -112,9 +122,9 @@ work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the share
 work(wZa, "zoom for the kinds that render now: the first wave and space").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
 state(w1, done). state(wFa, done). state(wZa, done). state(w2a, done). state(w3a, done). state(w11a, done).
-state(wG, open). state(wT, done). state(wB, done). state(wS, done). state(wN, done). state(wF, open). state(wZ, open). state(wD, open).
+state(wG, done). state(wT, done). state(wB, done). state(wS, done). state(wN, done). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
-owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wD, nb_draw).
+owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 drawn_now(K) :- first_wave(K).
@@ -122,6 +132,7 @@ drawn_now(K) :- family(K, space).
 -- wT, wB: the second wave's forms, each put in frames 1 and 2 and timing's lanes shut in a group by its what-if case (vscode/test/run.ts, FORMS)
 drawn_now(K) :- row_of(wT, K).
 drawn_now(K) :- row_of(wB, K).
+drawn_now(K) :- row_of(wG, K).
 core(v_render). core(v_why). core(v_status).
 shared(v_frames). shared(v_zoom). shared(v_docs).
 row_of(wG, g_architecture). row_of(wG, g_state). row_of(wG, g_process). row_of(wG, g_causal). row_of(wG, g_proof).
