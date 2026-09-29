@@ -1,10 +1,10 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { readMd, type ReadResult } from '../scripts/read_md.ts';
+import { english, proseAsks, readMd, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
-export type Cell = { id: string; text: string; form?: 'md' | 'rofl'; /** prose: read for its sentences, no line of it asks */ prose?: boolean };
+export type Cell = { id: string; text: string; form?: 'md' | 'rofl'; /** prose: read for its sentences; only a line in English asks */ prose?: boolean };
 
 /** Every relation the model's rules conclude, and the books they write it in. */
 export function booksOf(model: string): Map<string, Set<string>> {
@@ -15,18 +15,23 @@ export function booksOf(model: string): Map<string, Set<string>> {
 
 const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends|excise|draw)\s+(.+?)\.?\s*$/;
 
-/** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier. */
-export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l);
+export { english };
+
+/** The prose's English lines ask as a sentence cell's do (read_md.ts proseAsks); no other line of it asks. */
+function proseSplit(text: string): { clauses: string; asks: Ask[] } {
+  const asks = proseAsks(text), lines = text.split('\n');
+  return { clauses: lines.map((l, k) => asks.includes(k) ? '' : l).join('\n'), asks: asks.map((k) => ({ kind: 'answers', lit: lines[k].trim(), text: lines[k].trim(), english: true, at: k })) };
+}
 
 /** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing, `draw K` shows the view facts of the kind K.
  *  In a sentence cell a line in English asks too; the reader reads it as one of these (read_md.ts question). */
 function split(text: string, md: boolean): { clauses: string; asks: Ask[] } {
   const clauses: string[] = []; const asks: Ask[] = [];
-  for (const raw of text.split('\n')) {
+  for (const [at, raw] of text.split('\n').entries()) {
     const l = raw.trim();
     const m = DIRECTIVE.exec(l), en = !m && md && english(l);
-    if (m) asks.push({ kind: m[1] === '?' ? 'answers' : m[1] as Kind, lit: m[2], text: l });
-    else if (en) asks.push({ kind: 'answers', lit: l, text: l, english: true });
+    if (m) asks.push({ kind: m[1] === '?' ? 'answers' : m[1] as Kind, lit: m[2], text: l, at });
+    else if (en) asks.push({ kind: 'answers', lit: l, text: l, english: true, at });
     clauses.push(m || en || l.startsWith('>') ? '' : raw);   // blank, so an error's line number is the cell's
   }
   return { clauses: clauses.join('\n'), asks };
@@ -57,8 +62,8 @@ export function homeOf(model: string): Record<string, string> {
   return home;
 }
 
-/** `english`: the line is English, and `lit` is still its text. */
-export type Ask = { kind: Kind; lit: string; text: string; english?: true };
+/** `english`: the line is English, and `lit` is still its text; `at`: its line, from 0, in the cell. */
+export type Ask = { kind: Kind; lit: string; text: string; english?: true; at?: number };
 /** `close`: by part, what each new sentence it declares is close to (closeTo); `closeAt`, the line of the anchor each is about. */
 export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][]; closeAt: (number | undefined)[][] };
 
@@ -102,7 +107,7 @@ export function misbound(text: string, phrases: string): string[] {
 /** `own`: the cells are a notebook's, whose relations are its own (host.ts): a head named from its words is named with OWN, and one about
  *  other things than a read vocabulary's sentence says is its own; a world read by a notebook keeps its names. */
 export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, own = false): Book {
-  const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text, c.form === 'md')) }));
+  const parts = cells.map((c) => ({ c, ...(c.prose ? proseSplit(c.text) : split(c.text, c.form === 'md')) }));
   const first = parts.map(({ c, clauses }) => c.form === 'md' ? readMd(clauses, { vocab: phrases, homeBooks: home }) : null);
   const md = parts.map(({ clauses }, i) => {
     if (!first[i]) return null;

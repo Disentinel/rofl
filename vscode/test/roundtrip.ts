@@ -27,6 +27,10 @@ const breaks: [string, string, string][] = [
   ['a rule, then prose with no blank line', '# Cars\n\nA car X is fine if X is on the line.\nWhat follows is prose and not a rule\n', 'M B M'],
   ['a quote of sentences', '> A car X is fine if X is on the line.\n>\n> - `c1` is on the line.\n\n```rofl\n? X is fine\n```\n', 'M C'],
   ['a colon line under a fence', '```rofl\n? X is fine\n```\nThe cars:\n\n- `c1` is on the line.\n', 'C B'],
+  // an English line asks from the prose as from a cell, and so is in the bare cell it stands in; a question a line of prose runs on into is prose
+  ['an English question under a fact list', `# Cars\n\n${LIST}\nWhich cars are on the line?\n`, 'M B'],
+  ['an English question on its own', '# Cars\n\nWhich cars are on the line?\n', 'M B'],
+  ['a question a line runs on into', '# Cars\n\nThis paragraph runs on and\nIs it a question?\n', 'M'],
 ];
 const ATTRIBUTION = `# Attribution
 
@@ -40,6 +44,8 @@ The cars:
 
 - \`c1\` is on the line.
 - \`c2\` flies over the moon.
+Which cars are on the line?
+Which cars glow?
 
 > and a rule with a condition nobody can read
 
@@ -98,6 +104,9 @@ function attribution(serial: Serial, share: Share): string[] {
   if (bares.length !== 3) bad.push(`attribution: ${bares.length} bare cells, not 3: ${JSON.stringify(bares)}`);
   under(/^not read \(list item\): `c2` flies over the moon/, 'The cars:');
   under(/^left out: A car X is fine/, 'glows brightly');
+  under(/^Which cars glow\?: /, 'The cars:');
+  const k = bares.findIndex((v) => v.includes('The cars:')), asked = blocks[k]?.lines.find((l) => l.text === 'Which cars are on the line?');
+  if (!asked || asked.readAs !== '? X is on the line' || asked.total !== 1) bad.push(`attribution: "Which cars are on the line?" is not answered under its cell, read as "? X is on the line": cell ${JSON.stringify(blocks[k]?.lines.map((l) => [l.text, l.readAs, l.total]))}, head ${JSON.stringify(rest.lines.map((l) => l.text))}`);
   if (rest.errors.length) bad.push(`attribution: the head keeps ${JSON.stringify(rest.errors)}`);
   const before = [...r.cells[0].errors].sort(), after = [...rest.errors, ...blocks.flatMap((b) => b.errors)].sort();
   if (JSON.stringify(before) !== JSON.stringify(after)) bad.push(`attribution: the errors shared out are not the run's: ${JSON.stringify(after)} for ${JSON.stringify(before)}`);
@@ -114,6 +123,8 @@ const PLANTS: Record<string, [string, RegExp, string, 'serial' | 'share', RegExp
   fence: ['vscode/serial.ts', /if \(c\.kind === MARKUP \|\| m\.bare\) \{/, 'if (c.kind === MARKUP) {', 'serial', /not the same bytes/],
   regex: ['vscode/serial.ts', /spans = sentenceSpans\(text\);/, "spans = text.split('\\n').flatMap((l, i): [number, number][] => /^- |\\.$/.test(l) ? [[i, i + 1]] : []);", 'serial', /the reader does not read line|reads line .* of a markdown cell/],
   head: ['notebook/kernel.ts', /return k < 0 \? rest : out\[k\];/, 'return rest;', 'share', /is in the head, not under its cell/],
+  'english-cut': ['vscode/serial.ts', /spans = sentenceSpans\(text\);/, "spans = sentenceSpans(text).filter(([a, b]) => b - a > 1 || !/\\?$/.test(lines[a]));", 'serial', /an English question .*: cut as/],
+  'english-head': ['notebook/kernel.ts', /prose\.lines\.forEach\(\(l\) => to\(l\.line\)\.lines\.push\(l\)\);/, 'prose.lines.forEach((l) => rest.lines.push(l));', 'share', /is not answered under its cell/],
 };
 async function planted(name: string): Promise<string[]> {
   const [file, at, plant, kind] = PLANTS[name], text = readFileSync(path.join(ROOT, file), 'utf8'), copy = path.join(ROOT, file.replace(/\.ts$/, `.planted-${name}.ts`));

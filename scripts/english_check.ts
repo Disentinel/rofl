@@ -83,10 +83,10 @@ function run(reader: Reader): string[] {
   return bad;
 }
 
-/** The lines of the given .rofl.md texts that a sentence cell would read as English. */
+/** The lines of the given .rofl.md texts that a sentence cell, or the prose, would read as English. */
 function english(files: [string, string][]): string[] {
   return files.flatMap(([f, t]) => {
-    const cells = cellsOf(t).filter((c) => c.kind === 'rofl').map((c) => ({ id: `c${c.index}`, text: c.text, form: 'md' as const }));
+    const cells = cellsOf(t).filter((c) => c.kind === 'rofl' || c.kind === 'prose').map((c) => ({ id: `c${c.index}`, text: c.text, form: 'md' as const, prose: c.kind === 'prose' }));
     return readBook(cells, '', {}).parts.flatMap((p) => p.asks.filter((a) => a.english).map((a) => `${f}: ${a.text}`));
   });
 }
@@ -104,6 +104,8 @@ const found = english(tree);
 say(!found.length && tree.length > 0, `the gate: 0 of the ${tree.length} .rofl.md files has a line newly read as English`, found.join('\n     '));
 const planted = english([['3-missing-part (planted)', text(3).replace('```rofl\nnever X is late', '```rofl\nWhich products leave the line?\nnever X is late')]]);
 say(planted.length === 1 && /Which products leave the line\?$/.test(planted[0]), 'planted, a plain English line in a cell: the gate names it', planted.join(' · ') || 'green');
+const inProse = english([['3-missing-part (planted)', text(3).replace('\n```rofl\nnever X is late', '\nWhich products leave the line?\n\n```rofl\nnever X is late')]]);
+say(inProse.length === 1 && /Which products leave the line\?$/.test(inProse[0]), 'planted, a plain English line in the prose: the gate names it', inProse.join(' · ') || 'green');
 
 // each defect in a copy of the reader, whose imports point back into the tree
 const dir = mkdtempSync(path.join(os.tmpdir(), 'rofl-english-'));

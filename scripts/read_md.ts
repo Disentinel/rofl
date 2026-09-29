@@ -1020,4 +1020,22 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
 }
 
 /** The lines of `md` the reader reads as sentences, whatever the words: which blocks it reads does not hang on the vocabulary, only what they say. */
-export const sentenceSpans = (md: string): [number, number][] => readMd(md, { vocab: '' }).spans;
+export const sentenceSpans = (md: string): [number, number][] => {
+  const asks = proseAsks(md), lines = md.split('\n');
+  return [...readMd(lines.map((l, k) => asks.includes(k) ? '' : l).join('\n'), { vocab: '' }).spans, ...asks.map((k): [number, number] => [k, k + 1])].sort((a, b) => a[0] - b[0]);
+};
+
+/** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier. */
+export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l);
+
+/** The lines, from 0, of the prose that ask in English, as a line of a sentence cell does: outside a fence, a whole sentence on its line, not the rest of one above it. */
+export function proseAsks(md: string): number[] {
+  const lines = md.split('\n'), out: number[] = [];
+  let fenced = false;
+  lines.forEach((raw, k) => {
+    if (/^```/.test(raw)) { fenced = !fenced; return; }
+    const l = raw.trim(), above = (lines[k - 1] ?? '').trim();
+    if (!fenced && english(l) && /[.?]$/.test(l) && (!above || /[.?:!]$/.test(above) || /^(?:[-*>#|]|\d+\. )/.test(above))) out.push(k);
+  });
+  return out;
+}

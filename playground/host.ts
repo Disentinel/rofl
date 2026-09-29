@@ -500,31 +500,37 @@ export class Host {
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
-        if (!a.lit) { const w = a.unread ? undefined : bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : 'no sentence reads this question')}`); continue; }
-        const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && atoms().has(x.toLowerCase()));
-        for (const x of blanks) outs[i].notes.push(`${a.text}: ${x} is read as a blank, which matches anything; \`${x.toLowerCase()}\` is a name here, and a name is in backticks`);
-        if (a.kind === 'excise' || a.kind === 'draw') continue;
-        const english = a.q && { line: a.q.line, note: a.q.note };
-        if (a.q?.blank) {
-          const b = a.q.blank, over = base && !heads.has(relOf(a.lit)) ? base : f, q = over.query(owned(b.lit));
-          outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
-        }
+        // what a line of the cell says is said on that line: under a bare cell, when the line is the prose's
+        const e0 = outs[i].errors.length, n0 = outs[i].notes.length;
         try {
-          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
-          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
-        } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
-        if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
-        if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
-        const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
-        if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
-        const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal: plain(literal), sentence: plain(vocab.say(literal) ?? literal) }; });
-        if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
-        const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text) || a.kind === 'never' && !q.rows.length && vacuous(relOf(a.lit))) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
-        const above = outs[i].lines[outs[i].lines.length - 1];
-        if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
-        const counted = a.q?.count && new Set(q.rows.map((r) => r.bindings[a.q!.count!])).size;
-        const headline = a.q?.yesno ? (q.rows.length ? 'yes' : 'no') : counted !== undefined ? `${counted} ${counted === 1 || !a.q!.noun ? a.q!.noun ?? '' : plural(a.q!.noun)}`.trim() : undefined;
-        outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note, ...(english && { english: { ...english, ...(headline && { headline }) } }) });
+          if (!a.lit) { const w = a.unread ? undefined : bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : 'no sentence reads this question')}`); continue; }
+          const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && atoms().has(x.toLowerCase()));
+          for (const x of blanks) outs[i].notes.push(`${a.text}: ${x} is read as a blank, which matches anything; \`${x.toLowerCase()}\` is a name here, and a name is in backticks`);
+          if (a.kind === 'excise' || a.kind === 'draw') continue;
+          const english = a.q && { line: a.q.line, note: a.q.note };
+          if (a.q?.blank) {
+            const b = a.q.blank, over = base && !heads.has(relOf(a.lit)) ? base : f, q = over.query(owned(b.lit));
+            outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
+          }
+          try {
+            if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
+            if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
+          } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
+          if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
+          if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
+          const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
+          if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
+          const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal: plain(literal), sentence: plain(vocab.say(literal) ?? literal) }; });
+          if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
+          const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text) || a.kind === 'never' && !q.rows.length && vacuous(relOf(a.lit))) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
+          const above = outs[i].lines[outs[i].lines.length - 1];
+          if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
+          const counted = a.q?.count && new Set(q.rows.map((r) => r.bindings[a.q!.count!])).size;
+          const headline = a.q?.yesno ? (q.rows.length ? 'yes' : 'no') : counted !== undefined ? `${counted} ${counted === 1 || !a.q!.noun ? a.q!.noun ?? '' : plural(a.q!.noun)}`.trim() : undefined;
+          outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note, ...(english && { english: { ...english, ...(headline && { headline }) } }) });
+        } finally {
+          if (a.at !== undefined) { const at = outs[i].at ??= {}; for (const m of [...outs[i].errors.slice(e0), ...outs[i].notes.slice(n0)]) if (!(m in at)) at[m] = a.at; }
+        }
       }
     });
     const excised = new Map<number, { world: Rofl; failing: string[][] }>();

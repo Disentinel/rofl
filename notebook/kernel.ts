@@ -63,7 +63,10 @@ export class Kernel {
       if (c.kind === 'natural') return { index: c.index, kind: c.kind, line: c.line, errors: [], notes: translated(cells, c) ? ['answered by the cell below it'] : ['not translated yet: `npm run nb -- translate` writes the rofl cell below it'], lines: [] };
       const o = out.cells[runs.indexOf(c)];
       const seen = new Set<number>();
-      const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
+      // the prose is the whole file: a line it asks is one outside every fence
+      let fenced = false;
+      const ls = c.text.split('\n').map((l) => c.kind !== 'prose' ? l : /^```/.test(l) ? (fenced = !fenced, '') : fenced ? '' : l);
+      const lineOf = (t: string) => { let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
       const at = o.at && ((ms: string[]) => ms.map((m) => m in o.at! ? c.line + o.at![m] : null));
       return { index: c.index, kind: c.kind, line: c.line, ...(at && { at: { errors: at(o.errors), notes: at(o.notes) } }), errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
@@ -78,13 +81,14 @@ export class Kernel {
   }
 }
 
-/** The prose's errors and notes, each given to the block of lines holding the line it was found on (a bare cell: vscode/serial.ts), the rest left to the prose.
+/** The prose's errors, notes and asking lines, each given to the block of lines holding the line it was found on (a bare cell: vscode/serial.ts), the rest left to the prose.
  *  `blocks`: the first line of each, from 1, and how many lines it has. */
 export function share(prose: NbCellOut, blocks: { line: number; lines: number }[]): { rest: NbCellOut; blocks: NbCellOut[] } {
-  const { at: _, ...keep } = prose, rest: NbCellOut = { ...keep, errors: [], notes: [] }, out = blocks.map(({ line }): NbCellOut => ({ index: 0, kind: 'prose', line, errors: [], notes: [], lines: [] }));
+  const { at: _, ...keep } = prose, rest: NbCellOut = { ...keep, errors: [], notes: [], lines: [] }, out = blocks.map(({ line }): NbCellOut => ({ index: 0, kind: 'prose', line, errors: [], notes: [], lines: [] }));
   const to = (at?: number | null) => { const k = at == null ? -1 : blocks.findIndex((b) => at >= b.line && at < b.line + b.lines); return k < 0 ? rest : out[k]; };
   prose.errors.forEach((e, k) => to(prose.at?.errors[k]).errors.push(e));
   prose.notes.forEach((n, k) => to(prose.at?.notes[k]).notes.push(n));
+  prose.lines.forEach((l) => to(l.line).lines.push(l));
   return { rest, blocks: out };
 }
 
