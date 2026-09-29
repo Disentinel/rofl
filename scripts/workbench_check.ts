@@ -86,6 +86,9 @@ async function problems(dir: string): Promise<string[]> {
   // a capitalised name in a fact is said as one
   const grRan = await bench.run([{ id: 'g', kind: 'datalog', text: 'system(Firehose).' }]), gr = [...grRan.head.errors, ...grRan.byCell.get('g')?.errors ?? []] as string[];
   if (!gr.some((e) => e.includes('`Firehose` is read as a variable: a name is lower-case in backticks, `firehose`'))) bad.push(`a capitalised name in a fact is not said as one: ${JSON.stringify(gr)}`);
+  // two declared sentences that differ only in a noun are said as one
+  const tw = (await bench.run([{ id: 't', kind: 'rofl', text: 'Declared as facts:\n\n- <a id="defines_match"></a>A config C defines a match M\n- <a id="defines_stage"></a>A config C defines a stage S\n\nThe configs:\n\n- `c1` defines `m1`.' }])).byCell.get('t')?.notes ?? [];
+  if (!tw.some((n: string) => n.includes("read as one sentence: a row can't tell them apart"))) bad.push(`two sentences that differ only in a noun are not said: ${JSON.stringify(tw)}`);
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -137,6 +140,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the facts paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'A fact is stated in a sentence the notebook declares first', 'A fact'), /the prompt does not say how a fact is declared/],
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
   ['the variable-name hint off', (d) => spoil(d, 'lib/api.js', '${v ? `', '${false ? `'), /a capitalised name in a fact is not said as one/],
+  ['the twin-sentence note off', (d) => spoil(d, 'lib/book.js', 'b.rel !== a.rel && b.k === a.k', 'false'), /two sentences that differ only in a noun are not said/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

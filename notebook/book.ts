@@ -62,11 +62,14 @@ const said = (p: string) => p.replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n}`);
  *  or a name beside a hole's noun (``is inside a mark `shop` ``), makes a new relation where the writer meant a row of the declared one. */
 export function closeTo(learned: string[], vocab: string): string[] {
   const known = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].map((m) => ({ rel: m[1], text: m[2], k: skeleton(m[2]) }));
-  return learned.flatMap((l) => {
+  // two sentences the cell declares that differ only in a noun: a row leaves the nouns out, so it cannot say which it is a row of
+  const own = learned.flatMap((l) => { const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); return m ? [{ rel: m[1], text: m[2], k: skeleton(m[2]) }] : []; });
+  const twins = own.flatMap((a, i) => own.slice(i + 1).filter((b) => b.rel !== a.rel && b.k === a.k).map((b) => `"${said(a.text)}" and "${said(b.text)}" read as one sentence: a row can't tell them apart; say one of them in other words`));
+  return [...twins, ...learned.flatMap((l) => {
     const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); if (!m) return [];
     const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2], true));
     return near ? [`"${said(m[2])}" makes a new relation, ${m[1]}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
-  });
+  })];
 }
 
 /** A rule of a cell whose head reads as a picture's sentence about other things (`A service S links to a feed F`, where the sentence is about a mark):
