@@ -160,7 +160,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}', first, /natural cells do not wrap/],
   lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')", first, /the broken rule on line 3 is marked|the sentence not read is marked/],
   picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', named('paint-shop'), /the pictures drawn are \[\], not/],
-  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", named('paint-shop'), /a picture's why of .* does not say/],
+  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal, \{\}, undefined, undefined, undefined, \{ stamp \}\)/, "Promise.resolve('')", named('paint-shop'), /a picture's why of .* does not say/],
   placed: ['visual/out/pic-graph.js', /placed\.get\(id\) \?\? /, '', named('paint-pinned'), /the renderer laid .* elsewhere/],
   // a dialect's look, planted in the built renderer: each must turn its own case red
   'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('shop-architecture-whatif'), /is not drawn down/],
