@@ -205,7 +205,7 @@ for (const f of files) { const t = fs.readFileSync(root + '/' + f); if (!t.subar
 }
 
 /** A path the model named, as the file of the workspace it is, or why it may not be read. */
-function resolve(repo: Repo, asked: string): { file: string } | { refused: string } {
+function resolve(repo: Repo, asked: string): { file: string; st: Stats } | { refused: string } {
   if (repo.refused) return { refused: `${asked}: ${repo.refused}` };
   let real: string;
   try { real = realpathSync(path.resolve(repo.root, asked)); } catch { return { refused: `${asked}: no such file` }; }
@@ -213,17 +213,19 @@ function resolve(repo: Repo, asked: string): { file: string } | { refused: strin
   if (rel.startsWith('..') || path.isAbsolute(rel)) return { refused: `${asked}: outside the workspace` };
   if (SECRET.test(rel)) return { refused: `${asked}: looks like a secret, not read` };
   if (!repo.files.has(rel)) return { refused: `${asked}: not among the files read here (ignored, or skipped)` };
-  if (!statSync(real).isFile()) return { refused: `${asked}: not a regular file` };
-  return { file: rel };
+  const st = statSync(real);
+  if (!st.isFile()) return { refused: `${asked}: not a regular file` };
+  return { file: rel, st };
 }
 
 /** The one way to read a file of the workspace: the path resolved and checked, then read; its lines, or why not. */
 export function readTracked(repo: Repo, asked: string): { file: string; lines: string[] } | { refused: string } {
   const r = resolve(repo, asked);
   if ('refused' in r) return r;
-  const at = path.join(repo.root, r.file), size = statSync(at).size, buf = Buffer.alloc(Math.min(size, FILE_BYTES)), fd = openSync(at, 'r');
-  try { readSync(fd, buf, 0, buf.length, 0); } finally { closeSync(fd); }
-  const lines = buf.toString('utf8').split('\n');
+  // the file as it was checked: one swapped in between (a link out, a pipe) is not the one the descriptor finds
+  const got = readChecked(path.join(repo.root, r.file), r.st, FILE_BYTES);
+  if (!got) return { refused: `${asked}: changed while it was read` };
+  const lines = got.text.split('\n'), size = got.size;
   return { file: r.file, lines: size > FILE_BYTES ? [...lines.slice(0, -1), `(the file is ${size} bytes; only its first ${FILE_BYTES} are read)`] : lines };
 }
 /** Whether a path may be read, without reading it: for a line grep found. */
