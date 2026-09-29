@@ -1,10 +1,10 @@
 // npm run test:dist — what `npm run dist` built, away from the tree: the packaged command line answers what `npm run nb` answers, on a copy of the starter
 // notebooks outside the tree too, and the VSIX, installed into an empty profile, runs them in VS Code with the same result.
-// Two halves, each under two minutes: `-- --cli` stops after the command line, `-- --editor` leaves out the installed language server and version
-// (npm run test:dist and test:dist:vscode). `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
+// Two halves, each under two minutes: `-- --cli` stops after the command line; `-- --editor` runs the editor alone, with only the packaged command line's
+// answers it holds the editor to, on the build in dist/ when no file of the tree is newer (npm run test:dist and test:dist:vscode). `-- --vscode 1.101.0` runs that VS Code release (downloaded once into the temp directory) instead of the installed one; `-- --shot F` screenshots the window.
 // `-- --break vocab` builds the packages without the draw vocabularies, `-- --break resolver` with a `rofl:` name read as a path: each must turn this red.
 import { spawn, spawnSync } from 'node:child_process';
-import { cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,11 @@ const t0 = performance.now(), tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-dis
 process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
 
-const built = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/dist.ts')], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ROFL_DIST_BREAK: arg('--break') ?? '' } });
+const editor = process.argv.includes('--editor'), vsixAt = existsSync(DIST) ? readdirSync(DIST).find((f) => f.endsWith('.vsix')) : undefined;
+const newest = () => Math.max(...spawnSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' }).stdout.split('\n').filter(Boolean).map((f) => { try { return statSync(path.join(ROOT, f)).mtimeMs; } catch { return 0; } }));
+const fresh = editor && !arg('--break') && vsixAt && statSync(path.join(DIST, vsixAt)).mtimeMs > newest();
+if (fresh) console.log(`dist/${vsixAt} is newer than every file of the tree: not built again`);
+const built = fresh ? { status: 0, stdout: '', stderr: '' } : spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/dist.ts')], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, ROFL_DIST_BREAK: arg('--break') ?? '' } });
 if (built.status !== 0) { console.error(built.stdout + built.stderr); process.exit(1); }
 const vsix = readdirSync(DIST).find((f) => f.endsWith('.vsix'))!, tgz = readdirSync(DIST).find((f) => f.endsWith('.tgz'))!;
 const manifest = JSON.parse(readFileSync(path.join(DIST, 'vsix/package.json'), 'utf8')), id = `${manifest.publisher}.${manifest.name}`;
@@ -47,10 +51,12 @@ cpSync(path.join(DIST, 'examples'), nb, { recursive: true });
 const review = path.join(ROOT, 'examples/notebook/review.rofl.md');
 const broken = path.join(nb, 'broken.rofl');
 writeFileSync(broken, 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n');
-const [inTree, packaged, ...copies] = await Promise.all([
-  node(['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), review, '--json']), node([pkg, review, '--json']),
-  ...['review', 'small'].map((n) => node([pkg, `${n}.rofl.md`, '--json'], path.join(nb, 'notebook')))]);
+const copying = Promise.all(['review', 'small'].map((n) => node([pkg, `${n}.rofl.md`, '--json'], path.join(nb, 'notebook'))));
+if (!editor) {
+const [inTree, packaged] = await Promise.all([node(['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), review, '--json']), node([pkg, review, '--json'])]);
 if (inTree.code !== 0 || strip(inTree.stdout) !== strip(packaged.stdout)) bad.push(`review.rofl.md: the package says ${packaged.code}, ${strip(packaged.stdout).length} characters; the tree ${inTree.code}, ${strip(inTree.stdout).length}; ${strip(inTree.stdout) === strip(packaged.stdout) ? 'the same' : 'not the same'}`);
+}
+const copies = await copying;
 const cases: { file: string; cli: string; view?: boolean }[] = ['review', 'small'].map((n, i) => {
   if (copies[i].code !== 0) bad.push(`${n}.rofl.md outside the tree: exit ${copies[i].code}`);
   const cli = path.join(tmp, `${n}.json`);
@@ -65,9 +71,11 @@ for (const [i, r] of (await Promise.all(pictures.map((f) => node([pkg, f, '--jso
   cases.push({ file: path.join(nb, 'visual', pictures[i]), cli, view: true });
 }
 // the guide's output blocks, printed again by the packaged command line rather than the tree's
+if (!editor) {
 const guide = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { encoding: 'utf8', timeout: 120_000, env: { ...process.env, ROFL_GUIDE_CLI: pkg } });
 if (guide.status !== 0) bad.push(`the guide, run by the package: ${guide.stdout}${guide.stderr}`.trim());
 else console.log('guide/: every output block is what the package prints');
+}
 // the language server as installed from the package: `rofl-lsp --stdio` answers initialize and marks a broken rule on its line
 if (!process.argv.includes('--editor')) {
 const prefix = path.join(tmp, 'prefix'), installedTgz = spawnSync('npm', ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--offline', path.join(DIST, tgz)], { encoding: 'utf8', timeout: 60_000 });
