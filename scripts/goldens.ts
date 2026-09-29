@@ -497,6 +497,7 @@ if (isMain) {
   if (docs.status !== 0) {
     for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
   }
+  for (const l of docs.stderr.split('\n').filter((l) => /UNVERIFIABLE/.test(l))) console.log(`!! ${l.trim()}`);
   // AND THE [checks] BOOK, for the same reason and by the same means. The
   // coverage world reads `facts/spec-census.rofl` — which checks exist, which
   // citations resolve — and a world cannot walk a filesystem, so the pack is

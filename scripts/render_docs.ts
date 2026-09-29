@@ -102,8 +102,8 @@ export function splice(doc: string, b: Block, body: string): string {
 // commit after the folder was deleted, and this check read it as prose.
 const PATHY = /`((?:src|rules|facts|scanners|test|scripts|runtime|examples|adapters|bench|docs|skills|rust)\/[A-Za-z0-9_./-]*)`/g;
 
-function danglingPaths(): string[] {
-  const out: string[] = [];
+function danglingPaths(): { dangling: string[]; unverifiable: string[] } {
+  const out: string[] = [], unverifiable: string[] = [];
   const docs = ['README.md', 'CLAUDE.md', 'LIMITS.md', 'START.md',
     ...fs.readdirSync(path.join(ROOT, 'docs')).filter((f) => f.endsWith('.md')).map((f) => `docs/${f}`)];
   for (const d of docs) {
@@ -118,11 +118,15 @@ function danglingPaths(): string[] {
       // own declaration that a path is built, not kept, and in a fresh clone
       // every such path is missing — which read as nine dangling references
       // the first time this ran anywhere but on a working machine.
-      if (spawnSync('git', ['check-ignore', '-q', ref], { cwd: ROOT }).status === 0) continue;
-      out.push(`${d} → ${ref}`);
+      // Exit 1 is git saying the path is not ignored; anything else is git not
+      // answering, as in a copy of the tree without its repository (an rsync of
+      // a worktree), where every generated path read as dangling.
+      const ignored = spawnSync('git', ['check-ignore', '-q', ref], { cwd: ROOT }).status;
+      if (ignored === 0) continue;
+      (ignored === 1 ? out : unverifiable).push(`${d} → ${ref}`);
     }
   }
-  return out;
+  return { dangling: out, unverifiable };
 }
 
 /** A SETTLEMENT MUST CITE SOMETHING THAT EXISTS. `addressed_by(F, Path)` is
@@ -186,13 +190,18 @@ if (isMain) {
     console.log(`  wrote ${b.file} ${b.name}`);
   }
   const graves = danglingSettlements();
-  const dangling = [...danglingPaths(), ...graves.dangling];
+  const paths = danglingPaths();
+  const dangling = [...paths.dangling, ...graves.dangling];
   for (const d of dangling) console.error(`  DANGLING ${d}`);
   // SAID, NOT FAILED. A shallow clone cannot answer, and a check that cannot
   // answer must say so rather than pass quietly or accuse.
   if (graves.unverifiable.length) {
     console.error(`  UNVERIFIABLE ${graves.unverifiable.length} grave(s) — shallow clone, run with full history to check them`);
     for (const u of graves.unverifiable.slice(0, 3)) console.error(`    ${u}`);
+  }
+  if (paths.unverifiable.length) {
+    console.error(`  UNVERIFIABLE ${paths.unverifiable.length} missing path(s) — git cannot say whether they are generated here (no repository)`);
+    for (const u of paths.unverifiable.slice(0, 3)) console.error(`    ${u}`);
   }
   process.exit(bad === 0 && dangling.length === 0 ? 0 : 1);
 }
