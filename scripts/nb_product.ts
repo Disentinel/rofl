@@ -357,6 +357,8 @@ const proto = (name: string, git = true, config?: string) => {
   put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'conf/.npmrc'), 'NPMRC_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'new.ts'), 'NEW_TOKEN_9f2\n');
   put(path.join(repo, 'ignored.ts'), 'IGNORED_TOKEN_9f2\n'); put(path.join(repo, 'other.ts'), 'OTHER_TOKEN_9f2\n');
   if (config) put(path.join(repo, '.rofl/read.rofl'), config);
+  // empty folders, which count toward the cap as files do
+  if (name.endsWith('-dirs')) for (let i = 0; i < 100; i++) mkdirSync(path.join(repo, `empty/d${i}`), { recursive: true });
   put(path.join(repo, 'git'), `#!/bin/sh\n/usr/bin/touch ${path.join(repo, 'RAN')}\n`); chmodSync(path.join(repo, 'git'), 0o755); put(path.join(repo, 'node_modules/x.js'), 'MODULES_TOKEN_9f2\n'); put(path.join(repo, 'examples/PARENT.txt'), 'PARENT_TOKEN_9f2\n');
   // with git, node_modules is in the .gitignore as a repository has it; without, the default skip list must leave it out on its own
   put(path.join(repo, '.gitignore'), git ? 'ignored.ts\nnode_modules/\n' : 'ignored.ts\n');
@@ -386,7 +388,7 @@ const protoRun = (name: string, env: Record<string, string>, root: string, forev
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
 // a PATH with node on it and no git: grep falls back to a search in a process of its own
 const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
-const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'compound', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
+const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'compound', 'dirs', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
 /** Each planted defect, the runs that can see it (the rest are not run for it), and what the red must say: red for another reason is not its. */
 const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['outside', 'notebook/reader.ts', [[/  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, '']], ['plain'], 'was not refused as outside the workspace'],
@@ -423,6 +425,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['grep split at colons', 'notebook/reader.ts', [[/'-z', /, ''], [/  return \{ hits: .*\n/, "  return { hits: g.stdout.split('\\n').flatMap((l) => { const m = /^(.*?):(\\d+):(.*)$/.exec(l); return m ? [{ file: m[1], line: m[2], text: m[3] }] : []; }) };\n"]], ['config'], 'a secret whose name holds colons was read by grep'],
   ['arithmetic in the config', 'notebook/reader.ts', [[/    for \(const b of c\.body\) if \(b\.t === 'bi' .*\n/, '']], ['config'], 'Y is X + 1. was not refused as not plain Datalog'],
   ['terms built of terms in the config', 'notebook/reader.ts', [[/      if \(l\.args\.some\(built\)\) return .*\n/, '']], ['compound'], 'a term built of terms was not refused'],
+  ['folders not counted', 'notebook/reader.ts', [[/      if \(\+\+seen > FILES\) throw .*\n/, "      if (!e.isDirectory() && ++seen > FILES) throw new Refused(`more than ${FILES} files and folders; nothing is read`);\n"]], ['dirs'], 'a hundred empty folders were not counted toward the cap'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -527,6 +530,7 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
     dotgit: [{ PATH: `.${path.delimiter}${noGit}` }, false, false],
     // a config whose rule builds ever larger terms, in a process of 256 MB: refused before it runs, or the process dies
     compound: [{ NODE_OPTIONS: '--max-old-space-size=256' }, false, false, undefined, 'n(a).\nn(g(X, X)) :- n(X).\n'],
+    dirs: [{ ROFL_NB_READ_FILES: '80' }, false, false],
     nogit: [{}, false, false], nobin: [{ PATH: noGit, ROFL_NB_ROOT: path.join(tmp, `proto-${tag}-nobin`) }, false, false, ROOT],
     // the workspace is the home directory, or holds it: nothing is read
     home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, true], above: [{ HOME: path.join(tmp, `proto-${tag}-above/src`) }, false, true],
@@ -542,7 +546,8 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   const at = (s: string, from: string, n = 200) => s.slice(s.indexOf(from), s.indexOf(from) + n);
   for (const [k, r] of Object.entries(got)) for (const token of [...BANNED, ...k === 'sub' ? ['PARENT_TOKEN'] : [], ...k === 'gitenv' ? ['OTHER_TOKEN'] : []]) if (r.prompts.join('\n').includes(`${token}_9f2`)) bad.push(`${token} reached a prompt in the ${k} run`);
   const { plain, nogit, nobin, small, forever, home, above, sub, words, gitenv, dotgit } = got;
-  const { compound } = got;
+  const { compound, dirs } = got;
+  if (dirs && !(dirs.prompts[1] ?? '').includes('refused: src/a.ts: more than 80 files and folders')) bad.push(`a hundred empty folders were not counted toward the cap: ${at(dirs.prompts[1] ?? '', '> show src/a.ts:1-3')}`);
   if (compound && !(compound.prompts[1] ?? '').includes('refused: src/a.ts: .rofl/read.rofl: not plain Datalog: a term built of terms in n')) bad.push(`a term built of terms was not refused: exit ${compound.o.code} ${compound.o.out.slice(-300)}`);
   if (dotgit && existsSync(path.join(tmp, `proto-${tag}-dotgit`, 'RAN'))) bad.push('a git of the workspace ran');
   if (dotgit && !(dotgit.prompts[1] ?? '').includes('> grep alpha\nsrc/a.ts:1: export function alpha() {')) bad.push(`with . on PATH, grep did not answer: ${at(dotgit.prompts[1] ?? '', '> grep alpha')}`);

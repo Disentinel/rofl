@@ -87,11 +87,14 @@ function walk(root: string, prefixes: string[]): string[] {
     .map((l) => l.includes('/') ? (_: string, r: string) => globbed(l.replace(/^\//, ''), r) : (name: string) => globbed(l, name));
   const toward = (d: string) => !prefixes.length || prefixes.some((p) => `${d}/`.startsWith(p) || p.startsWith(`${d}/`));
   const files: string[] = [], dirs = [''];
-  for (let d; (d = dirs.pop()) !== undefined && files.length <= FILES;) {
+  let seen = 0;
+  for (let d; (d = dirs.pop()) !== undefined;) {
     let entries;
     try { entries = readdirSync(path.join(root, d), { withFileTypes: true }); } catch { continue; }
     for (const e of entries) {
       const r = d ? `${d}/${e.name}` : e.name;
+      // a folder counts as a file does: a million empty ones take as long to walk
+      if (++seen > FILES) throw new Refused(`more than ${FILES} files and folders; name the folders to read with read_prefix("src/") in ${CONFIG}; nothing is read`);
       if (SKIP.has(e.name) || ignored.some((m) => m(e.name, r))) continue;
       if (!e.isDirectory()) files.push(r); else if (toward(r)) dirs.push(r);
     }
@@ -200,7 +203,6 @@ function listing(dir: string, command?: string): Repo {
   const out = [...prefixes, ...values('skip_prefix(P)')].find((p) => path.posix.isAbsolute(p) || p.split('/').includes('..'));
   if (out !== undefined) return refuse(`"${out}" reaches out of the workspace: a prefix is a path inside it, like "src/"`);
   const listed = walk(dir, prefixes).filter((f) => !SECRET.test(f) && !/["\\\p{Cc}]/u.test(f));
-  if (listed.length > FILES) return refuse(`more than ${FILES} files: name the folders to read with read_prefix("src/")`);
   const by = values('untracked_by(V)');
   if (by.length > 1) return refuse(`untracked_by names ${by.length} systems`);
   const known = by.length && by[0] !== 'none' ? tracked(by[0], dir, listed, command) : new Set<string>();
