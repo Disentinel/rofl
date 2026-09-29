@@ -125,6 +125,14 @@ function declared(): World[] {
   return [...out.values()];
 }
 
+/** The files a world is declared to refuse, as `world\tfile`. */
+function expectedRefusals(): Set<string> {
+  const r = pack('facts/checks.rofl');
+  return new Set(r ? col(r, 'check_refuses(N, F)', 'N', 'F').map(([n, f]) => `${n}\t${f}`) : []);
+}
+const undeclared = (w: World, a: Answer, ok: Set<string>): string[] =>
+  a.dropped.filter((d) => !ok.has(`${w.name}\t${d.slice(0, d.indexOf(':'))}`));
+
 /** Rows per relation, read off the canonical state. `wit` lines are counted as
  *  one pseudo-relation: which support a store records among equals is not fixed
  *  by the semantics, so the COUNT is the part worth pinning. */
@@ -404,6 +412,13 @@ if (isMain) {
       ? demos().map((f) => [path.basename(path.dirname(f)), answerDemo(f)] as [string, { hash: string; exit: number; lines: number }])
       : [...hostsBefore];
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
+    const ok = expectedRefusals();
+    const bad = rows.flatMap(([w, a]) => undeclared(w, a, ok).map((d) => `${w.name}: ${d}`));
+    if (bad.length > 0) {
+      for (const b of bad) console.log(`REFUSED ${b}`);
+      console.log('not blessed: a world refuses a file it is not declared to refuse (check_refuses in facts/checks.rofl)');
+      process.exit(1);
+    }
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
       console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
@@ -448,6 +463,7 @@ if (isMain) {
   const t0 = Date.now();
   let pass = 0; const fail: string[] = [];
   const rustMissing = !fs.existsSync(RUST);
+  const ok = expectedRefusals();
   for (const w of ws) {
     const g = want.get(w.name);
     if (!g) { fail.push(`${w.name}: no golden — bless it or delete the world`); continue; }
@@ -465,6 +481,7 @@ if (isMain) {
     // this is a claim that the number must be none, and the two must not be
     // confusable — a world that raises one fails even when its census matches.
     for (const a of ts.alarms) bad.push(`ALARM ${a}`);
+    for (const d of undeclared(w, ts, ok)) bad.push(`REFUSED ${d}`);
     if (bad.length === 0) pass++; else fail.push(`${w.name.padEnd(28)} ${bad.join('  |  ')}`);
   }
   // A CHECK THAT CANNOT RUN SAYS SO. A missing Rust binary halves the oracle,

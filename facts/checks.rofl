@@ -11,6 +11,20 @@
 edb(check_world).
 edb(check_file).
 edb(check_opt).
+edb(check_refuses).
+
+-- A REFUSAL IS EXPECTED ONLY WHERE IT IS DECLARED. A world that refuses a file
+-- it is not declared to refuse fails `npm test` and `npm run bless` alike: a
+-- stray `);` in facts/findings.rofl was blessed as `finding 1044 -> 0` and then
+-- read green, because the golden had pinned the refusal as the answer.
+check_refuses("refused", "refused.rofl").
+check_refuses("async_refused", "async-refused.rofl").
+check_refuses("not_as_a_name", "not-as-a-name.rofl").
+check_refuses("unstratifiable", "unstratifiable.rofl").
+check_refuses("premise_arity", "premise-arity.rofl").
+-- The dense form of ring 1 is written for examples/ring1/dense.ts, not for the
+-- loader; the directory world has refused it since it was first blessed.
+check_refuses("ring1", "l1.dense.rofl").
 
 check_world("refused").
 check_file("refused", "examples/checks/refused.rofl").
