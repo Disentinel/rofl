@@ -383,16 +383,42 @@ export class Host {
       };
       return go(0, new Map());
     };
-    /** A condition that alone, its variables apart, finds no row: its text, to say. */
-    const dead = (l: Lit): string | undefined => {
-      let k = 0;
-      const apart = { ...l, args: l.args.map((t) => t.k === 'v' ? { k: 'v' as const, name: `V_${k++}` } : t) };
-      return together([apart]) === false ? `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${apart.args.map(canonTerm).join(', ')})` : undefined;
+    /** The values a relation's column holds, at most VACUITY_STEPS facts looked at. */
+    const column = (l: Lit, k: number): Set<string> => {
+      const out = new Set<string>();
+      let steps = VACUITY_STEPS;
+      for (const r of (base && !heads.has(l.rel) ? base : f).store.relPersp(l.rel, (l.persp as { name: string }).name)) { if (--steps < 0) break; if (r.args.length === l.args.length) out.add(canonTerm(r.args[k])); }
+      return out;
+    };
+    const plainOf = (c: string) => c.replace(/^["'`]|["'`]$/g, '');
+    /** A value the column holds that `c` looks like a slip of: the same text as another kind (a name where the model holds a string),
+     *  a letter or two apart, or one inside the other. A value simply not held now (`open` when every item is `done`) is none. */
+    const near = (c: string, held: Set<string>): string | undefined => {
+      const a = plainOf(c), far = (x: string, y: string) => { const d = Array.from({ length: y.length + 1 }, (_, j) => j); for (let i = 1; i <= x.length; i++) { let p = d[0]; d[0] = i; for (let j = 1; j <= y.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, p + (x[i - 1] === y[j - 1] ? 0 : 1)); p = t; } } return d[y.length]; };
+      return [...held].find((v) => { const b = plainOf(v); return b === a || far(a, b) <= Math.max(1, Math.floor(a.length / 4)) || Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a)); });
+    };
+    /** Why a rule's conditions find no row because of a constant: the condition, the constant, and the value it looks like a slip of. */
+    const slip = (pos: Lit[]): string | undefined => {
+      if (together(pos) !== false) return;
+      for (const l of pos) {
+        if (l.persp.k !== 'a') continue;
+        for (const [k, t] of l.args.entries()) {
+          if (t.k === 'v' || t.k === 'f') continue;
+          const held = column(l, k), c = canonTerm(t);
+          if (held.has(c)) continue;
+          const v = near(c, held);
+          if (!v) continue;
+          let n = 0;
+          const said = `${l.rel}[${l.persp.name}](${l.args.map((x) => x.k === 'v' ? `V_${n++}` : canonTerm(x)).join(', ')})`;
+          const shown = (x: string) => /^[a-z]\w*$/.test(x) ? `\`${x}\`` : x;
+          return `its condition "${vocab.say(said)?.replace(/\bV_\d+\b/g, 'some') ?? said}" finds no row: ${shown(c)} is not a value there, ${shown(v)} is`;
+        }
+      }
     };
     const vacuous = (rel: string): string | undefined => {
       const rs = bodies.get(rel) ?? [];
       if (!rs.length || !rs.some((r) => r.excepts)) return;
-      const why = rs.map((r) => { const d = r.pos.map(dead).find(Boolean); return d ? `its condition "${vocab.say(d)?.replace(/\bV_\d+\b/g, 'some') ?? d}" finds no row` : together(r.pos) === false ? 'its conditions find no row together' : undefined; });
+      const why = rs.map((r) => slip(r.pos));
       if (why.some((x) => !x)) return;
       return `holds over nothing: ${why[0]}, so its exceptions are never tested`;
     };

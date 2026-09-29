@@ -461,46 +461,57 @@ const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, at, plant, runs = [
 }));
 R_BREAKS.forEach(([name], k) => check(`  and with ${name} spoilt, it is red`, rSpoilt[k].length > 0, { code: 0, out: 'green' }));
 
-// V a never that holds over nothing: a cell's rule whose condition finds no row on its own (here a team no fact names, in the rule and not in
-// the never line, where the names-nothing note does not look) cannot fail, whatever its exceptions say. The kernel says so and the never is blind; translate refuses such a cell and asks again.
-const VACUOUS = 'A change C is held back if C is blocked by `legal`, unless C is approved by some person.\n\nnever C is held back';
+// V a never that holds over nothing: a rule with an exception whose conditions find no row BECAUSE OF A CONSTANT that looks like a slip of a
+// value its column holds (`platfrom` where there is `platform`, the name `exit` where the model holds the string "exit") cannot fail, whatever
+// its exceptions say: the kernel says so and the never is blind, and translate refuses such a cell and asks again. A relation that is empty
+// because the work is done (no open cell, no item `open` when all are `done`) is the answer, and stays plain, as does a never with no exception.
+const VACUOUS = 'A change C is held back if C is blocked by `platfrom`, unless C is approved by some person.\n\nnever C is held back';
 const vacCell = (root = ROOT, name = 'vac') => cli([planted(`${name}-${path.basename(root)}`, 'review.rofl.md', withCell(VACUOUS))], {}, root);
 const vacModel = (name: string) => { const f = path.join(tmp, `${name}-model`), n = path.join(tmp, `${name}-count`); put(f, `#!/usr/bin/env node
 const fs = require('fs'); let i = '';
 process.stdin.on('data', (d) => { i += d; }).on('end', () => {
   fs.appendFileSync(${JSON.stringify(n)}, 'x'); const first = fs.readFileSync(${JSON.stringify(n)}, 'utf8').length === 1;
-  console.log('\`\`\`rofl\\n' + (first ? ${JSON.stringify(VACUOUS)} : ${JSON.stringify(VACUOUS.replace('`legal`', '`platform`'))}) + '\\n\`\`\`');
+  console.log('\`\`\`rofl\\n' + (first ? ${JSON.stringify(VACUOUS)} : ${JSON.stringify(VACUOUS.replace('`platfrom`', '`platform`'))}) + '\\n\`\`\`');
 });
 `); chmodSync(f, 0o755); return f; };
 const vacTranslate = (root = ROOT, name = 'vac-tr') => { const nb = planted(`${name}-${path.basename(root)}`, 'review.rofl.md', withNatural); return cli(['translate', nb], { ROFL_NB_CLAUDE: vacModel(`${name}-${path.basename(root)}`) }, root).then((o) => ({ o, text: readFileSync(nb, 'utf8') })); };
-const vacOk = (o: Out) => is(o, 3) && has(o, 'never C is held back  ->  holds as far as it sees · holds over nothing: its condition');
-const trOk = (t: { o: Out; text: string }) => t.o.code === 0 && t.text.includes('C is blocked by `platform`') && !t.text.includes('`legal`') && has(t.o, 'the first try read, and checks nothing (') && has(t.o, 'holds over nothing') && !has(t.o, 'did not read');
-const vacRoots = { kernel: linked('vac-kernel', 'playground/host.ts', mutate('playground/host.ts', / \|\| a\.kind === 'never' && !q\.rows\.length && vacuous\(relOf\(a\.lit\)\)/, () => '')),
-  gate: linked('vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')) };
-// with no exception, a condition that finds nothing is the answer (nothing is blocked by legal), not a vacuous never
-const PLAIN = 'A change C is held up if C is blocked by `legal`.\n\nnever C is held up';
-const vacRoots2 = { excepts: linked('vac-excepts', 'playground/host.ts', mutate('playground/host.ts', / \|\| !rs\.some\(\(r\) => r\.excepts\)/, () => '')) };
-const plainCell = (root = ROOT) => cli([planted(`vac-plain-${path.basename(root)}`, 'review.rofl.md', withCell(PLAIN))], {}, root);
-const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff] = await Promise.all([vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`legal`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate), plainCell(), plainCell(vacRoots2.excepts)]);
+const vacOk = (o: Out) => is(o, 3) && has(o, 'never C is held back  ->  holds as far as it sees · holds over nothing: its condition') && has(o, '`platfrom` is not a value there, `platform` is');
+const trOk = (t: { o: Out; text: string }) => t.o.code === 0 && t.text.includes('C is blocked by `platform`') && !t.text.includes('`platfrom`') && has(t.o, 'the first try read, and checks nothing (') && has(t.o, 'holds over nothing') && !has(t.o, 'did not read');
+// with no exception, a condition that finds nothing is the answer, not a vacuous never
+const PLAIN = 'A change C is held up if C is blocked by `platfrom`.\n\nnever C is held up';
 const plainOk = (o: Out) => is(o, 0) && has(o, 'never C is held up  ->  holds\n');
-// the top level's two shapes: a misspelt team in the condition, and the same misspelt team given by an equality, which is empty only together
+// the top level's shapes: a misspelt team in the condition, and given by an equality; a join with no constant to blame
 const EQ = (team: string) => `bad(T, X) :- owns(T, X), T = ${team}, X != auth.\n\nnever bad(T, X)`;
-const eqCell = (team: string, root = ROOT) => cli([planted(`vac-eq-${team}-${path.basename(root)}`, 'review.rofl.md', withCell(EQ(team), 'datalog'))], {}, root);
-const vacRoots3 = { eq: linked('vac-eq', 'playground/host.ts', mutate('playground/host.ts', /\[put\(b\.lit\)\]/, () => '[b.lit]')) };
-// and two conditions each with rows that no row satisfies together: a module owned, taken as a change approved
 const JOIN = 'bad(X) :- owns(T, X), approved(X, P), X != auth.\n\nnever bad(X)';
-const vacRoots4 = { join: linked('root-vac-join', 'playground/host.ts', mutate('playground/host.ts', /together\(r\.pos\) === false/, () => 'false')) };
-const [eqTypo, eqRight, eqOff, direct, join, joinOff] = await Promise.all([eqCell('platfrom'), eqCell('platform'), eqCell('platfrom', vacRoots3.eq), cli([planted('vac-direct', 'review.rofl.md', withCell('bad(X) :- owns(platfrom, X), X != auth.\n\nnever bad(X)', 'datalog'))]),
-  cli([planted('vac-join', 'review.rofl.md', withCell(JOIN, 'datalog'))]), cli([planted('vac-join-off', 'review.rofl.md', withCell(JOIN, 'datalog'))], {}, vacRoots4.join)]);
-const eqOk = (o: Out) => is(o, 3) && has(o, 'holds over nothing: its condition');
-check('V a misspelt constant holds over nothing, in the condition itself or given by an equality (T = platfrom); spelt right, the never fails', eqOk(direct) && eqOk(eqTypo) && is(eqRight, 1), eqTypo);
-check('  and with the equalities\' constants not put into the conditions, the second is green', !eqOk(eqOff), eqOff);
-check('V conditions that each find rows and none together hold over nothing', is(join, 3) && has(join, 'holds over nothing: its conditions find no row together'), join);
-check('  and with the search of them together removed, it is green', !has(joinOff, 'holds over nothing'), joinOff);
-check('V a never with no exception over a condition that finds nothing holds, plainly', plainOk(plain0), plain0);
-check('  and with the kernel asking it of every never, it is said to hold over nothing', !plainOk(plainOff), plainOff);
-check('V a never over a rule whose condition finds no row holds over nothing, and is blind, not green; the same with the name finding rows is not', vacOk(vac) && !has(vacAtom, 'holds over nothing'), vac);
-check('  and with the kernel\'s vacuity note removed, it is green', !vacOk(vacKernelOff), vacKernelOff);
+// a work matrix at 100%: every item done, so no open cell and no item open; its audits are empty because the work is done
+const MATRIX = '```datalog\nkind(k1). kind(k2). lens(l1).\nwork(w1). work(w2).\nstate(w1, done). state(w2, done).\ndone(K, L) :- kind(K), lens(L).\nclaims(w1, k1, l1). claims(w2, k2, l1).\ncell(K, L) :- kind(K), lens(L).\nopen_cell(K, L) :- cell(K, L), not done(K, L).\nclaimed(K, L) :- claims(W, K, L), not state(W, done).\nunqueued(K, L) :- open_cell(K, L), not claimed(K, L).\nclaims_some(W) :- claims(W, _, _).\nidle(W) :- state(W, open), not claims_some(W).\n\nnever unqueued(K, L)\nnever idle(W)\n```\n';
+const matrixAt = (root = ROOT) => { const f = path.join(tmp, `vac-matrix-${path.basename(root)}/m.rofl.md`); put(f, MATRIX); return cli([f], {}, root); };
+// codex's held-out cell, over a small file that calls process.exit: the member and the module as names where the model holds strings
+const CODEX = 'A call C is a forbidden process exit if a call C calls the host member `exit` of `process` in a host H, C is a call site in F, and F differs from "index.js".\n\nnever C is a forbidden process exit';
+const exiting = readFileSync(path.join(ROOT, 'examples/notebook/small.js'), 'utf8') + '\nexport function stop() {\n  process.exit(1);\n}\n';
+const codexCell = (root = ROOT) => cli([planted(`vac-codex-${path.basename(root)}`, 'small.rofl.md', withCell(CODEX), [['examples/notebook/small.js', exiting]])], {}, root);
+const vacRoots = {
+  kernel: linked('root-vac-kernel', 'playground/host.ts', mutate('playground/host.ts', / \|\| a\.kind === 'never' && !q\.rows\.length && vacuous\(relOf\(a\.lit\)\)/, () => '')),
+  gate: linked('root-vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')),
+  excepts: linked('root-vac-excepts', 'playground/host.ts', mutate('playground/host.ts', / \|\| !rs\.some\(\(r\) => r\.excepts\)/, () => '')),
+  eq: linked('root-vac-eq', 'playground/host.ts', mutate('playground/host.ts', /\[put\(b\.lit\)\]/, () => '[b.lit]')),
+  near: linked('root-vac-near', 'playground/host.ts', mutate('playground/host.ts', /const v = near\(c, held\);\n\s*if \(!v\) continue;/, () => 'const v = \'something\';')),
+};
+const eqCell = (team: string, root = ROOT) => cli([planted(`vac-eq-${team}-${path.basename(root)}`, 'review.rofl.md', withCell(EQ(team), 'datalog'))], {}, root);
+const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff, eqTypo, eqRight, eqOff, direct, join, matrix, matrixOff, codexV, codexOff] = await Promise.all([
+  vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`platfrom`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate),
+  cli([planted('vac-plain', 'review.rofl.md', withCell(PLAIN))]), cli([planted('vac-plain-off', 'review.rofl.md', withCell(PLAIN))], {}, vacRoots.excepts),
+  eqCell('platfrom'), eqCell('platform'), eqCell('platfrom', vacRoots.eq), cli([planted('vac-direct', 'review.rofl.md', withCell('bad(X) :- owns(platfrom, X), X != auth.\n\nnever bad(X)', 'datalog'))]),
+  cli([planted('vac-join', 'review.rofl.md', withCell(JOIN, 'datalog'))]), matrixAt(), matrixAt(vacRoots.near), codexCell(), codexCell(vacRoots.kernel)]);
+const flagged = (o: Out) => is(o, 3) && has(o, 'holds over nothing: its condition');
+check('V a constant that looks like a slip of a value its column holds holds over nothing, blind: in the rule, given by an equality, or a name where the model holds a string (codex\'s held-out cell)', vacOk(vac) && flagged(direct) && flagged(eqTypo) && flagged(codexV) && /`(exit|process)` is not a value there, "(exit|process)" is/.test(codexV.out), codexV);
+check('  spelt right, the never is asked as usual', !has(vacAtom, 'holds over nothing') && is(eqRight, 1), eqRight);
+check('  and with the kernel\'s note removed, the held-out cell is green', !has(codexOff, 'holds over nothing') && is(codexOff, 0) && !vacOk(vacKernelOff), codexOff);
+check('  and with the equalities\' constants not put into the conditions, the equality case is green', !flagged(eqOff), eqOff);
+check('V a work matrix at 100% holds plainly: no open cell and no open item are the work done, not a slip', is(matrix, 0) && !has(matrix, 'holds over nothing') && has(matrix, 'never idle(W)  ->  holds\n'), matrix);
+check('  and with any constant not held counted as a slip, `open` where all are `done` is said to hold over nothing', has(matrixOff, 'holds over nothing'), matrixOff);
+check('V a join with no constant to blame, and a never with no exception, hold plainly', is(join, 0) && !has(join, 'holds over nothing') && plainOk(plain0), join);
+check('  and with the kernel asking it of every never, the one with no exception is said to hold over nothing', !plainOk(plainOff), plainOff);
 check('V translate refuses a cell whose never holds over nothing and asks again; the second cell is written', trOk(vacTr), vacTr.o);
 check('  and with the translator\'s gate removed, the vacuous cell is written', !trOk(vacGateOff), vacGateOff.o);
 
