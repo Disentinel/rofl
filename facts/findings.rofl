@@ -4,6 +4,14 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-29 by the nb-tt session: the second wave of time and table forms in VS Code.
+
+finding(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, insight).
+recorded(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, "2026-09-29").
+demands(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, code).
+addressed_by(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, "vscode/test/suite.ts").
+finding_note(f_a_form_is_a_draw_kind_and_its_render_check_runs_the_webview_module, "Timeline, timing, chart, heatmap, UpSet, Euler and decision table are drawn in VS Code (vscode/visual/pic-moments.ts, pic-charts.ts). FIRST BUILT with the form picked by `when` on the Picture from the view's facts (a table's `draws`: upset, euler, decision beside Vega's marks); the lead decided there is ONE way to pick a form, the draw line, so each form is a draw kind (`draw upset`) with a family in notebook/draw.ts (FAMILY: its relations, and the picture and text it falls back to), and `when` on Picture is gone. `draws` keeps only Vega's marks inside `draw chart`; the Vega-Lite text fits `draw chart` or a view with a draws fact. The renderer's `as FORMAT` list is the backends that fit (the kind's, then its family's): before, a format with no fitting backend showed another format's text under its name. Timing reads one time relation, in_state(M, S), not state, because the view vocabulary is in main and notebooks already say state(W, done). BEFORE THIS the picture cases checked the view JSON, never what the renderer draws: a picture module could draw nothing and test:vscode stayed green. NOW a case with `form` mounts the view with the renderer's own module in the extension host and requires the form's aria-label, the status mark on a drawn element with its class, and the what-if's gone or new; seven planted defects (--break timeline ... decision, in --mutants), one a form, each turn only their own form red. The webview itself is still only seen (--shot). Checked offline first: the positive control caught a check that stayed green under every plant because Node's module cache served the unplanted pic module to the planted copy. Chart is SVG, not Vega-Lite in the webview: vega + vega-lite + vega-embed are ~1 MB from a CDN and their marks carry no data-mark, so click-to-why and the status classes would have to be rebuilt through Vega's own events. A decision table's gaps and overlaps are the notebook's own rules and nevers, not the renderer's, so they have a why. An Euler diagram past three sets draws the UpSet with a note; every region is drawn, an empty one too.").
+
 -- Recorded 2026-09-28 by the notebook-name session: the Marketplace page's images are on the notebook branch until it merges.
 
 finding(f_the_marketplace_images_point_at_the_notebook_branch, pitfall).

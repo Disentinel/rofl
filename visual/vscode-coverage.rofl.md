@@ -70,12 +70,24 @@ done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_examp
 done(n_notation, v_render, "vscode/test/suite.ts"). done(n_notation, v_test, "vscode/test/suite.ts"). done(n_notation, v_example, "examples/visual/family-tree.rofl.md").
 -- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
 done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
+-- wT, wB: each form's what-if in vscode/test/suite.ts (the picture cases, `form`), drawn by the renderer's own module in the form it names, with the
+-- status mark and the what-if's change on a drawn element, and a why of one of its facts (planted, one a form: --break timeline, timing, chart,
+-- heatmap, upset, euler, decision). The module is run in the extension host, not in the webview; the webview was seen (test:vscode --shot).
+second_wave(t_timeline). second_wave(t_timing). second_wave(tb_chart). second_wave(tb_heatmap). second_wave(tb_upset). second_wave(tb_euler). second_wave(tb_decision).
+done(K, L, "vscode/test/suite.ts") :- second_wave(K), core(L).
+done(K, v_compare, "vscode/test/suite.ts") :- second_wave(K).
+done(K, v_test, "vscode/test/suite.ts") :- second_wave(K).
+done(t_timeline, v_example, "examples/visual/outage-timeline.rofl.md"). done(t_timing, v_example, "examples/visual/breaker-timing.rofl.md").
+done(tb_chart, v_example, "examples/visual/suite-chart.rofl.md"). done(tb_heatmap, v_example, "examples/visual/coverage-heatmap.rofl.md").
+done(tb_upset, v_example, "examples/visual/access-upset.rofl.md"). done(tb_euler, v_example, "examples/visual/oncall-euler.rofl.md").
+done(tb_decision, v_example, "examples/visual/shipping-decision.rofl.md").
 
 -- waived, with reasons that can go stale
 waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
 waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
 waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL marks") :- lens(L), L != v_render, L != v_example, L != v_docs, L != v_test.
 waived(K, v_zoom, "a table's grouping is the query; group-by counts come with engine aggregates (another session)") :- family(K, table).
+waived(t_timeline, v_zoom, "a timeline is one axis with no lanes, so there is no lane group to shut; stale once it draws lanes").
 
 -- what a lens means where it is not plain: v_frames is small multiples, one picture per value of a view fact's frame key in order, each
 -- mark new or gone against the frame before it (compare, reused); an animation or a slider is not asked for, since small multiples show
@@ -100,13 +112,16 @@ work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the share
 work(wZa, "zoom for the kinds that render now: the first wave and space").
 work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
 state(w1, done). state(wFa, done). state(wZa, done). state(w2a, done). state(w3a, done). state(w11a, done).
-state(wG, open). state(wT, open). state(wB, open). state(wS, done). state(wN, done). state(wF, open). state(wZ, open). state(wD, open).
+state(wG, open). state(wT, done). state(wB, done). state(wS, done). state(wN, done). state(wF, open). state(wZ, open). state(wD, open).
 -- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
 owner(wG, nb_graph). owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wD, nb_draw).
 
 first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
 drawn_now(K) :- first_wave(K).
 drawn_now(K) :- family(K, space).
+-- wT, wB: the second wave's forms, each put in frames 1 and 2 and timing's lanes shut in a group by its what-if case (vscode/test/run.ts, FORMS)
+drawn_now(K) :- row_of(wT, K).
+drawn_now(K) :- row_of(wB, K).
 core(v_render). core(v_why). core(v_status).
 shared(v_frames). shared(v_zoom). shared(v_docs).
 row_of(wG, g_architecture). row_of(wG, g_state). row_of(wG, g_process). row_of(wG, g_causal). row_of(wG, g_proof).
