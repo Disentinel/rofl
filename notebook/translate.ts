@@ -15,6 +15,15 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
 - A new head names what it is about with a noun and a variable: "A call C is a stray write if ...", "A file F is a handler file if ...". Never start a head with a variable and "is" ("Key is a disk write"): that reads as the built-in "X is Y". Every rule's conditions include at least one sentence of the model.
 - An asking line holds one sentence. To ask about several conditions together, write a rule and ask its head.
 - A call into a Node module's function, like fs's writeFileSync, however it was imported: "C is a host site of \`node\` from "node:fs" at "writeFileSync"".
+- A fact is stated in a sentence the notebook declares first. Declare it once, then list its rows under a plain line ending in a colon, a blank line between the parts:
+  Declared as facts:
+
+  - <a id="sends"></a>A service S sends an artifact A to a service T
+
+  The flows:
+
+  - \`writer\` sends \`pages\` to \`store\`.
+  The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S". A sentence no rule, declaration or listed sentence gives is not read.
 - A picture is a line "draw <kind>": graph, architecture, state, process, causal, proof, time, timeline, timing, table, heatmap, chart, space. It draws only what rules conclude in the view's own sentences, which the notebook declares when it reads a view (for a graph: "A mark M is a node", "A mark M links to a mark N", "A mark M is inside a mark G", "A mark M is tagged a tag K", "A mark M is at the level I"). So a request to draw or diagram something is answered with rules that map its things onto those sentences, "A mark X is a node if X is a service." and "A mark X links to a mark Y if X calls Y.", and then the draw line.
 Prefer "never" for something that must always hold and "?" for a question. Say what must hold of any data, not of the rows there happen to be.`;
 

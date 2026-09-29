@@ -27,6 +27,8 @@ const VACUOUS = 'A container A is a risky caller if A calls `billing_dbb`, unles
 const FACTS = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n\nThe facts:\n\n- `a` leads to `b`.\n- `b` leads to `c`.';
 const BLANK_DRAW = 'draw graph';
 const DRAWS = 'A mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\ndraw graph';
+const UNDECLARED = 'An entity `writer` sends the artifact `pages` to the entity `store`.\n\n? A service S sends an artifact A to a service T';
+const DECLARED = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.\n\n? A service S sends an artifact A to a service T';
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
 
 /** Everything wrong with the build in `dir`, said; nothing when it is right. */
@@ -96,6 +98,12 @@ async function problems(dir: string): Promise<string[]> {
   if (drew.length !== 2 || !d.said.some((s: string) => s.includes('draws nothing'))) bad.push(`a first cell that draws nothing was not refused and asked again: ${drew.length} calls; ${d.said.join(' / ')}`);
   if (d.code !== 0 || d.cell !== DRAWS) bad.push(`the drawing cell was not kept: exit ${d.code}, ${d.said.join(' / ')}`);
   if (!drew[0]?.includes('a request to draw or diagram something is answered with rules')) bad.push('the prompt does not say how a picture is drawn');
+  // facts: a first cell in sentences nobody declared does not read and is asked again, the declared one is kept; the prompt says how to declare
+  const told: string[] = [], facts = [UNDECLARED, DECLARED, DECLARED];
+  const modeller = Object.assign(async (prompt: string) => { told.push(prompt); return { ok: true, text: '```rofl\n' + facts[told.length - 1] + '\n```' }; }, { who: 'the fake model' });
+  const m = await bench.translate([{ id: 'n', kind: 'natural', text: 'Services send artifacts.' }], 'n', modeller);
+  if (told.length !== 2 || m.code !== 0 || m.cell !== DECLARED) bad.push(`a declared fact cell was not kept after an undeclared one: ${told.length} calls, exit ${m.code}; ${m.said.join(' / ')}`);
+  if (!told[0]?.includes('A fact is stated in a sentence the notebook declares first')) bad.push('the prompt does not say how a fact is declared');
   if (!asked[0]?.includes('? <sentence>') || /\blist <glob>|\bshow <path>/.test(asked[0] ?? '')) bad.push('the prompt offers the model something other than "?" lines to read with');
   return bad;
 }
@@ -120,6 +128,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the label sentence as it was', (d) => spoil(d, 'visual/graph.rofl.md', 'A mark M is labelled S', 'A mark M reads S'), /relabelled a mark/],
   ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases)', ''), /reads as a picture's is not said/],
   ['newest first changing the notebook', (d) => spoil(d, 'lib/bench.js', '[...cells].reverse()', 'cells.reverse()'), /newest first changed the notebook/],
+  ['the facts paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'A fact is stated in a sentence the notebook declares first', 'A fact'), /the prompt does not say how a fact is declared/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {
