@@ -140,7 +140,12 @@ async function problems(dir: string): Promise<string[]> {
   const f = await bench.translate([{ id: 'n', kind: 'natural', text: 'Services send artifacts.' }], 'n', onlyFacts);
   if (f.code !== 0) bad.push(`a cell that only models was refused: ${f.said.join(' / ')}`);
   else if (f.cell !== FACTS_ONLY) bad.push(`? lines were written into a cell that only models: ${JSON.stringify(f.cell)}`);
-  else if (!f.said.some((s: string) => s.includes('translated, adds 1 fact in 1 sentence'))) bad.push(`what a modelling cell adds is not said: ${f.said.join(' / ')}`);
+  else if (f.added !== 'adds 1 fact in 1 sentence') bad.push(`what a modelling cell adds is not said: ${f.added}; ${f.said.join(' / ')}`);
+  // the prompt's example of two sentences that differ in a noun: its row keeps the words, and a cell written that way is kept
+  const match = 'Declared as facts:\n\n- <a id="defines_match"></a>A config C defines the match M\n- <a id="lists_stage"></a>A config C lists the stage S\n\nThe configs:\n\n- `c1` defines the match `m1`.\n- `c1` lists the stage `s1`.';
+  const mt = await bench.translate([{ id: 'n', kind: 'natural', text: 'A config defines a match and lists stages.' }], 'n', Object.assign(async () => ({ ok: true, text: '```rofl\n' + match + '\n```' }), { who: 'the fake model' }));
+  if (mt.code !== 0 || mt.added !== 'adds 2 facts in 2 sentences') bad.push(`the prompt's example of rows under "defines the match M" does not read: ${mt.said.join(' / ')}`);
+  if (!f.said.length || !told[0]?.includes('a row keeps those words: "- `c1` defines the match `m1`."')) bad.push('the prompt does not show a row under "defines the match M" keeping its words');
   if (!asked[0]?.includes('? <sentence>') || /\blist <glob>|\bshow <path>/.test(asked[0] ?? '')) bad.push('the prompt offers the model something other than "?" lines to read with');
   return bad;
 }
@@ -169,6 +174,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
   ['the variable-name hint off', (d) => spoil(d, 'lib/api.js', '${v ? `', '${false ? `'), /a capitalised name in a fact is not said as one/],
   ['the twin-sentence note off', (d) => spoil(d, 'lib/book.js', 'b.rel !== a.rel && b.k === a.k', 'false'), /two sentences that differ only in a noun are not said/],
+  ['the prompt\'s row example wrong again', (d) => spoil(d, 'lib/translate.js', 'defines the match \\`m1\\`.', 'defines \\`m1\\`.'), /does not show a row under "defines the match M"/],
   ['a facts-only cell refused', (d) => spoil(d, 'lib/translate.js', 'if (!held.length)', 'if (true)'), /a cell that only models was refused/],
   ['the translator appending ? lines', (d) => spoil(d, 'lib/translate.js', 'return { ...t, errors: [], cell, added', "return { ...attempt(cell + '\\n\\n? ' + asks[0]), errors: [], cell, added"), /\? lines were written into a cell that only models/],
   ['a ? list rendered unfolded', (d) => spoil(d, 'lib/bench.js', "(l.kind === 'answers' || l.verdict === 'fails')", "l.verdict === 'fails'"), /a \? list is rendered unfolded/],

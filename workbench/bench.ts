@@ -117,7 +117,7 @@ export class Bench {
   why(literal: string): string { return this.kernel.why(literal); }
 
   /** The natural cell `id` translated: its rofl cell, tried against the kernel and asked again once, or what the model said instead. `ask` is the page's model. */
-  async translate(cells: Cell[], id: string, ask: Ask, step: (s: string) => void = () => {}): Promise<{ code: number; said: string[]; cell?: string; reply?: string }> {
+  async translate(cells: Cell[], id: string, ask: Ask, step: (s: string) => void = () => {}): Promise<{ code: number; said: string[]; cell?: string; reply?: string; added?: string }> {
     const { text, starts } = join(cells), k = cells.findIndex((c) => c.id === id);
     const c = cellsOf(text).find((x) => x.kind === 'natural' && x.line === starts[k] + 1);
     if (!c) return { code: 2, said: ['not a natural cell'] };
@@ -129,7 +129,7 @@ export class Bench {
       protocol: QUESTIONS(3), rounds: 3, budget: 40_000, perRound: 10, answer: questionsOnly, step });
     if (r.code || r.failed) return { code: r.code || 2, said: r.said, reply: r.reply };
     const next = cellsOf(r.text), at = next.find((x) => x.index === c.index + 1);
-    return { code: 0, said: r.said, cell: at?.text };
+    return { code: 0, said: r.said, cell: at?.text, added: r.said.map((s) => /: translated, (adds .*)$/.exec(s)?.[1]).find(Boolean) };
   }
 }
 

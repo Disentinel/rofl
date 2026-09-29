@@ -260,7 +260,7 @@ async function translate(id: string) {
       if (under) { under.text = r.cell; under.kind = 'rofl'; changed(under, true); } else add('rofl', id, r.cell);
     }
     box.innerHTML = `${r.reply ? `<div class="reply"><b>Claude:</b> ${esc(r.reply)}</div>` : ''}${partial ? `<div class="reply"><b>Claude, cut short:</b> ${esc(partial)}</div>` : ''}`
-      + `<details class="as"${r.code ? ' open' : ''}><summary>${r.cell !== undefined ? 'translated, and checked by the kernel' : 'no cell written'}</summary><pre>${esc(r.said.join('\n'))}</pre></details>`;
+      + `<details class="as"${r.code ? ' open' : ''}><summary>${r.cell !== undefined ? `translated, and checked by the kernel${r.added ? ` · ${esc(r.added)}` : ''}` : 'no cell written'}</summary><pre>${esc(r.said.join('\n'))}</pre></details>`;
   } finally {
     stopping = null;
     if (Date.now() >= sampleUntil) go.disabled = false;
