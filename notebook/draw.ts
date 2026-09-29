@@ -31,6 +31,8 @@ const RELS: Record<Family, [string, number][]> = {
   notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2], ['frame', 2], ['collapsed', 1]],
   space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
 };
+/** Every relation a picture reads. */
+export const VIEW_RELS = new Set(Object.values(RELS).flatMap((rs) => rs.map(([r]) => r)));
 const VARS = ['A', 'B', 'C', 'D', 'E'];
 
 /** How the host answers: the rows of a literal, null when nothing can put a row there; a fact's premises said, null when it was given. */

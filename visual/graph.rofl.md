@@ -20,7 +20,7 @@ Declared as facts:
 - <a id="frame"></a>A mark M is in the frame F
 - <a id="collapsed"></a>A mark G is collapsed
 - <a id="link_tagged"></a>The link from a mark M to a mark N is tagged a tag K
-- <a id="labelled"></a>A mark M reads S
+- <a id="labelled"></a>A mark M is labelled S
 - <a id="level"></a>A mark M is at the level I
 - <a id="placed"></a>A mark M is placed at X Y
 - <a id="reserved"></a>A tag K is reserved

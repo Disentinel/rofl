@@ -27,7 +27,7 @@ $on(E, D) runs from F to T if some constraint puts E on some person at some plac
 
 $on(E, D) is in the frame N if some constraint puts E on some person at some place on D from something to something and D is the day number N of the week.
 
-$on(E, D) reads E if some constraint puts E on some person at some place on D from something to something.
+$on(E, D) is labelled E if some constraint puts E on some person at some place on D from something to something.
 
 $alone(Ch, D, S) is in the lane Ch if Ch is alone on D at S.
 

@@ -36,9 +36,9 @@ The chain:
 
 ## The picture
 
-The axis `x` reads "evolution".
+The axis `x` is titled "evolution".
 
-The axis `y` reads "visibility".
+The axis `y` is titled "visibility".
 
 A mark C is at X Y if C has evolved to X and is visible to Y.
 

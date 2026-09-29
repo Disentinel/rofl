@@ -23,8 +23,8 @@ Declared as facts:
 - <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="frame"></a>A mark M is in the frame F
 - <a id="collapsed"></a>A mark G is collapsed
-- <a id="labelled"></a>A mark M reads S
-- <a id="axis"></a>The axis N reads S
+- <a id="labelled"></a>A mark M is labelled S
+- <a id="axis"></a>The axis N is titled S
 - <a id="projection"></a>The space is projected as P
 - <a id="reserved"></a>A tag K is reserved
 

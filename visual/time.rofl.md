@@ -24,7 +24,7 @@ Declared as facts:
 - <a id="frame"></a>A mark M is in the frame F
 - <a id="collapsed"></a>A mark G is collapsed
 - <a id="lane_group"></a>A lane L is in the group G
-- <a id="labelled"></a>A mark M reads S
+- <a id="labelled"></a>A mark M is labelled S
 - <a id="reserved"></a>A tag K is reserved
 
 The renderer's tags:

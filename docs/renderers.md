@@ -148,7 +148,7 @@ names are stable.
 | `inside(M, G)` | A mark M is inside a mark G |
 | `tagged(M, K)` | A mark M is tagged K |
 | `link_tagged(M, N, K)` | The link from a mark M to a mark N is tagged K |
-| `labelled(M, S)` | A mark M reads S *(optional: the default label is the sentence `say` gives M)* |
+| `labelled(M, S)` | A mark M is labelled S *(optional: the default label is the sentence `say` gives M)* |
 | `level(M, I)` | A mark M is at the level I *(rank; optional)* |
 
 A tag is a **meaning**, never a colour; a stylesheet maps tags to styles, as

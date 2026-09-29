@@ -1,6 +1,7 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
+import { VIEW_RELS } from './draw.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -68,6 +69,21 @@ export function closeTo(learned: string[], vocab: string): string[] {
   });
 }
 
+/** A rule of a cell whose head reads as a picture's sentence about other things (`A service S links to a feed F`, where the sentence is about a mark):
+ *  it draws, and the writer meant their own relation. The head's nouns against the sentence's, hole by hole; an untyped hole (`node`) matches any. */
+export function viewLike(text: string, vocab: string): string[] {
+  const views = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].filter((m) => VIEW_RELS.has(m[1]))
+    .map((m) => ({ rel: m[1], text: m[2], k: m[2].replace(/<\d+:[\w ]+>/g, '_'), nouns: [...m[2].matchAll(/<\d+:([\w ]+)>/g)].map((x) => x[1]) }));
+  const out: string[] = [];
+  for (const [, head] of text.matchAll(/(?:^|\n\s*)((?:An?|The) [^\n.]*?) (?:if|unless|either)\b/g)) {
+    const nouns: (string | null)[] = [];
+    const k = head.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\b(?:an?|the|some) ([a-z][\w-]*(?: [a-z][\w-]*)?) [A-Z]\w*\b|`[^`]*`|"[^"]*"|\b[A-Z]\w*\b/g, (m, n) => { nouns.push(n ?? null); return '_'; });
+    const v = views.find((x) => x.k === k && nouns.some((n, i) => n && x.nouns[i] !== 'node' && n !== x.nouns[i]));
+    if (v) out.push(`"${head}" reads as the picture's sentence "${v.text.replace(/<\d+:([\w ]+)>/g, 'a $1')}" (${v.rel}), so it draws: say it in other words to keep it out of the picture`);
+  }
+  return out;
+}
+
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
 export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
   const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
@@ -81,7 +97,7 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
     const text = anchored(clauses, unread);
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
-    return { text, learned, close: closeTo(learned, phrases) };
+    return { text, learned, close: [...closeTo(learned, phrases), ...viewLike(clauses, phrases)] };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');
