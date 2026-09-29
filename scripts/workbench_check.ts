@@ -73,6 +73,11 @@ async function problems(dir: string): Promise<string[]> {
   if (label !== 'w') bad.push(`a domain sentence "S reads F" relabelled a mark: it is drawn as ${JSON.stringify(label)}`);
   const links = (await bench.run([{ id: 'l', kind: 'rofl', text: 'A service S links to a service T if S is "a", T is "b".\n\ndraw graph' }])).byCell.get('l');
   if (!links?.notes.some((n: string) => n.includes('reads as the picture\'s sentence'))) bad.push(`a domain sentence that reads as a picture's is not said: ${JSON.stringify(links?.notes)}`);
+  // newest first reverses what is shown, and neither the notebook's order nor its run
+  const logical = cellsOf(example('platform-whatif')).map((c: object, i: number) => ({ ...c, order: (i + 1) * 10 })), before = JSON.stringify(logical);
+  const view = wb.shown(logical, true), ran1 = JSON.stringify((await bench.run(logical)).result.cells);
+  if (JSON.stringify(view.map((c: { id: string }) => c.id)) !== JSON.stringify(logical.map((c: { id: string }) => c.id).reverse())) bad.push('newest first does not reverse the cells shown');
+  if (JSON.stringify(logical) !== before || JSON.stringify((await bench.run(logical)).result.cells) !== ran1) bad.push('newest first changed the notebook: its order or its run');
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -114,6 +119,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the drawing paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'So a request to draw or diagram something is answered with rules', 'So'), /the prompt does not say how a picture is drawn/],
   ['the label sentence as it was', (d) => spoil(d, 'visual/graph.rofl.md', 'A mark M is labelled S', 'A mark M reads S'), /relabelled a mark/],
   ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases)', ''), /reads as a picture's is not said/],
+  ['newest first changing the notebook', (d) => spoil(d, 'lib/bench.js', '[...cells].reverse()', 'cells.reverse()'), /newest first changed the notebook/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

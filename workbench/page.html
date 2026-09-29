@@ -16,6 +16,7 @@
   button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   button:disabled { opacity: .5; cursor: default; }
   select { font: 13px var(--sans); padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--fg); max-width: 100%; }
+  .ex { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mute); }
   #runinfo { font: 12.5px var(--mono); color: var(--mute); }
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; min-height: 30px; }
   .bar .live { font: 600 12px/1 var(--mono); color: var(--pass); background: var(--pass-bg); padding: 5px 8px; border-radius: 99px; }
@@ -106,6 +107,7 @@
   <header>
     <h1>ROFL Workbench <span>&middot; notebook</span></h1>
     <div class="spacer"></div>
+    <label class="ex"><input type="checkbox" id="newest"> Newest first</label>
     <button type="button" class="primary" id="runall">Run all</button>
     <span id="runinfo" aria-live="polite"></span>
   </header>

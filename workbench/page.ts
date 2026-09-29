@@ -13,7 +13,7 @@
 //    text: "Declared as facts:\n\n- <a id=\"calls\"></a>A service A calls a service B\n\nThe calls:\n\n- `web` calls `api`.\n- `api` calls `db`.\n\nA mark X is a node if X calls something.\n\nA mark X is a node if something calls X.\n\nA mark X links to a mark Y if X calls Y.\n\nnever X calls X"}}
 //   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c020", data: {kind: "rofl", order: 20, text: "draw graph"}}
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
-import { Bench, HINT, answered, keyAction, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
+import { Bench, HINT, answered, keyAction, shown, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
@@ -27,6 +27,8 @@ const book = $('book'), bar = $('bar'), head = $('head');
 const bench = new Bench((p) => fetch(p).then((r) => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.text(); }));
 const newId = () => 'c' + Math.random().toString(36).slice(2, 10);
 
+// newest first: this viewer's choice, the display reversed; the notebook's order and its run are the same
+let newest = (() => { try { return localStorage.getItem('rofl-workbench:newest') === '1'; } catch { return false; } })();
 let mode: 'local' | 'shared' = 'local', ran: Ran | null = null, editing: string | null = null;
 const views = new Map<string, View[]>();   // each cell's pictures, as last drawn
 const drawn = new Map<string, string>();   // each cell's output as last painted, so a run that says the same keeps its pictures
@@ -50,9 +52,9 @@ function cellEl(c: Pc): HTMLElement {
   el.innerHTML = `<div class="head">
     <select class="kind" aria-label="Cell kind">${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <span class="state"></span><span class="peers"></span><span class="spacer"></span>
-    <button type="button" class="tr-go" title="Claude writes the cell under this one (Cmd/Ctrl+Enter in the cell). It runs on your own Claude account and uses your Claude usage." hidden>Translate</button>
+    <button type="button" class="tr-go" title="Claude writes the cell that answers this one (Cmd/Ctrl+Enter in the cell). It runs on your own Claude account and uses your Claude usage." hidden>Translate</button>
     <button type="button" class="run" title="Run the notebook (Cmd/Ctrl+Enter; Shift+Enter in a sentences or datalog cell)">Run</button>
-    <select class="add" aria-label="Add a cell below"><option value="">+ below</option>${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
+    <select class="add" aria-label="Add a cell after this one"><option value="">+ below</option>${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <button type="button" class="x" aria-label="Delete cell" title="Delete cell">&#x2715;</button>
   </div><div class="md" tabindex="0"></div><textarea rows="1" spellcheck="false" aria-label="Cell text"></textarea><div class="tr" hidden></div><div class="out"></div>`;
   return el;
@@ -63,7 +65,7 @@ const grow = (t: HTMLTextAreaElement) => { t.style.height = 'auto'; t.style.heig
 /** Every cell's element in order, made or kept, its text and kind as the cell holds them. */
 function paint() {
   const keep = new Map([...book.querySelectorAll<HTMLElement>('article[data-id]')].map((e) => [e.dataset.id!, e]));
-  cells.forEach((c, i) => {
+  shown(cells, newest).forEach((c, i) => {
     const el = keep.get(c.id) ?? cellEl(c);
     keep.delete(c.id);
     if (book.children[i] !== el) book.insertBefore(el, book.children[i] ?? null);
@@ -75,6 +77,7 @@ function paint() {
 function fill(el: HTMLElement, c: Pc) {
   el.className = `cell ${c.kind}${editing === c.id ? ' editing' : ''}`;
   el.querySelector<HTMLSelectElement>('.kind')!.value = c.kind;
+  el.querySelector<HTMLSelectElement>('.add')!.options[0].text = newest ? '+ above' : '+ below';
   const t = el.querySelector('textarea')!;
   if (t.value !== c.text && !(document.activeElement === t && writes.get(c.id)?.dirty)) {
     const [a, b] = [t.selectionStart, t.selectionEnd]; t.value = c.text;
@@ -93,7 +96,7 @@ function paintOuts() {
   for (const c of cells) {
     const el = elOf(c.id); if (!el) continue;
     const s = ran.byCell.get(c.id), key = JSON.stringify(s ?? null), st = state(s), stEl = el.querySelector<HTMLElement>('.state')!;
-    stEl.textContent = c.kind === 'natural' ? answered(cells, c.id) ? 'answered by the cell below' : sample && !sampleOff ? 'not translated yet' : 'not translated: Claude is not reachable here' : st.text;
+    stEl.textContent = c.kind === 'natural' ? answered(cells, c.id) ? `answered by the cell ${newest ? 'above' : 'below'}` : sample && !sampleOff ? 'not translated yet' : 'not translated: Claude is not reachable here' : st.text;
     stEl.className = `state ${st.cls}`;
     if (drawn.get(c.id) === key) continue;
     drawn.set(c.id, key);
@@ -318,6 +321,9 @@ function paintPeers() {
 // ------------------------------------------------------------ the page's own controls
 $('hint').innerHTML = `A sentences cell, its parts a blank line apart: ${HINT.split(/\n\n+/).map((p) => `<code>${esc(p)}</code>`).join(' ')}`;
 $('runall').addEventListener('click', () => run(0));
+const newestBox = $<HTMLInputElement>('newest');
+newestBox.checked = newest;
+newestBox.addEventListener('change', () => { newest = newestBox.checked; try { localStorage.setItem('rofl-workbench:newest', newest ? '1' : '0'); } catch {} paint(); drawn.clear(); paintOuts(); });
 document.querySelector('.adds')!.addEventListener('click', (e) => { const k = (e.target as HTMLElement).closest<HTMLElement>('[data-add]')?.dataset.add; if (k) add(k as Kind, cells.at(-1)?.id); });
 $('oclose').addEventListener('click', closeOverlay);
 $('ofit').addEventListener('click', () => pz?.fit());

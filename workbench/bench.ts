@@ -24,6 +24,9 @@ const WALL = 20_000;
 export const READS = '---\nreads:\n  - rofl:visual/graph.rofl.md\n---';
 /** The syntax in one cell that reads and draws, which the page shows as its hint: a sentence declared, a fact, rules, a check, a picture. */
 export const HINT = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n\nThe facts:\n\n- `a` leads to `b`.\n\nA mark X is a node if X leads to something.\n\nA mark X links to a mark Y if X leads to Y.\n\nnever X leads to X\n\ndraw graph';
+/** The cells in the order a viewer reads them: newest first reverses the display, never the notebook. */
+export const shown = <T>(cells: T[], newest: boolean): T[] => newest ? [...cells].reverse() : cells;
+
 /** What a key press in a cell of `kind` does: Cmd/Ctrl+Enter translates a natural cell and runs the notebook from any other; Shift+Enter runs from a
  *  sentences or datalog cell and is a new line in prose and natural. */
 export const keyAction = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind): 'run' | 'translate' | null =>
