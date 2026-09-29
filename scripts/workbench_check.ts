@@ -24,6 +24,9 @@ const example = (name: string) => readFileSync(path.join(ROOT, 'examples/visual'
 const HOLDS = 'A container A neglects a container B if A owns B, unless A calls B.\n\nnever A neglects B';
 const NATURAL = 'Only the service that owns a database may call it.';
 const VACUOUS = 'A container A is a risky caller if A calls `billing_dbb`, unless A owns some container.\n\nnever A is a risky caller';
+const FACTS = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n\nThe facts:\n\n- `a` leads to `b`.\n- `b` leads to `c`.';
+const BLANK_DRAW = 'draw graph';
+const DRAWS = 'A mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\ndraw graph';
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
 
 /** Everything wrong with the build in `dir`, said; nothing when it is right. */
@@ -71,6 +74,13 @@ async function problems(dir: string): Promise<string[]> {
   const t = await bench.translate(withNatural, 'nat', fake);
   if (asked.length !== 2 || !t.said.some((s: string) => s.includes('the first try read, and checks nothing'))) bad.push(`a first cell that checks nothing was not refused and asked again: ${asked.length} calls; ${t.said.join(' / ')}`);
   if (t.code !== 0 || t.cell !== GOOD) bad.push(`the second, good cell was not kept: exit ${t.code}, cell ${JSON.stringify(t.cell)}`);
+  // a drawing asked for: a cell whose picture shows nothing is asked again, one that maps the things onto the view's sentences is kept
+  const drew: string[] = [], drawing = [BLANK_DRAW, DRAWS, DRAWS];
+  const painter = Object.assign(async (prompt: string) => { drew.push(prompt); return { ok: true, text: '```rofl\n' + drawing[drew.length - 1] + '\n```' }; }, { who: 'the fake model' });
+  const d = await bench.translate([{ id: 'f', kind: 'rofl', text: FACTS }, { id: 'n', kind: 'natural', text: 'Draw what leads where.' }], 'n', painter);
+  if (drew.length !== 2 || !d.said.some((s: string) => s.includes('draws nothing'))) bad.push(`a first cell that draws nothing was not refused and asked again: ${drew.length} calls; ${d.said.join(' / ')}`);
+  if (d.code !== 0 || d.cell !== DRAWS) bad.push(`the drawing cell was not kept: exit ${d.code}, ${d.said.join(' / ')}`);
+  if (!drew[0]?.includes('a request to draw or diagram something is answered with rules')) bad.push('the prompt does not say how a picture is drawn');
   if (!asked[0]?.includes('? <sentence>') || /\blist <glob>|\bshow <path>/.test(asked[0] ?? '')) bad.push('the prompt offers the model something other than "?" lines to read with');
   return bad;
 }
@@ -88,6 +98,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the verdict colours flattened', (d) => spoil(d, 'index.html', '.verdict.fail { color: var(--fail); }', '.verdict.fail { color: var(--fg); }'), /does not colour \.verdict\.fail/],
   ['an example published', (d) => cpSync(path.join(ROOT, 'examples/visual/paint-shop.rofl.md'), path.join(d, 'examples/paint-shop.rofl.md'), { recursive: true }), /examples are published with the page/],
   ['Shift+Enter running in prose', (d) => spoil(d, 'lib/bench.js', " && kind !== 'prose'", ''), /Shift\+Enter in prose runs/],
+  ['the empty-picture gate off', (d) => spoil(d, 'lib/translate.js', '...blank, ', ''), /a first cell that draws nothing was not refused/],
+  ['the drawing paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'So a request to draw or diagram something is answered with rules', 'So'), /the prompt does not say how a picture is drawn/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

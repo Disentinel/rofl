@@ -15,6 +15,7 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
 - A new head names what it is about with a noun and a variable: "A call C is a stray write if ...", "A file F is a handler file if ...". Never start a head with a variable and "is" ("Key is a disk write"): that reads as the built-in "X is Y". Every rule's conditions include at least one sentence of the model.
 - An asking line holds one sentence. To ask about several conditions together, write a rule and ask its head.
 - A call into a Node module's function, like fs's writeFileSync, however it was imported: "C is a host site of \`node\` from "node:fs" at "writeFileSync"".
+- A picture is a line "draw <kind>": graph, architecture, state, process, causal, proof, time, timeline, timing, table, heatmap, chart, space. It draws only what rules conclude in the view's own sentences, which the notebook declares when it reads a view (for a graph: "A mark M is a node", "A mark M links to a mark N", "A mark M is inside a mark G", "A mark M is tagged a tag K", "A mark M is at the level I"). So a request to draw or diagram something is answered with rules that map its things onto those sentences, "A mark X is a node if X is a service." and "A mark X links to a mark Y if X calls Y.", and then the draw line.
 Prefer "never" for something that must always hold and "?" for a question. Say what must hold of any data, not of the rows there happen to be.`;
 
 /** The lines of an answer when every one is a request; none when the answer is a cell or holds any words to the person. */
@@ -86,7 +87,9 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
     const silent = out.lines.length ? [] : ['the cell asks nothing: a request for something that must hold ends in a never line, a question in a ? line'];
     // a never that holds over nothing checks nothing: the model is asked again with the condition that finds no row
     const vacuous = out.lines.filter((l) => l.note?.startsWith('holds over nothing')).map((l) => `${l.text}: ${l.note}`);
-    return { next, errors: [...r.errors, ...out.errors, ...silent, ...vacuous], lines: out.lines };
+    // a picture of nothing shows nothing: no rule concludes a mark in the view's sentences
+    const blank = out.lines.filter((l) => l.kind === 'draw' && l.verdict !== 'unasked' && !Object.keys(l.view?.marks ?? {}).length).map((l) => `${l.text}: draws nothing: no rule concludes a mark in the view's sentences`);
+    return { next, errors: [...r.errors, ...out.errors, ...blank, ...silent, ...vacuous], lines: out.lines };
   };
   const words = (a: string) => ({ code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
   const who = ask.who ?? 'the model', first = o.first ?? { text: '', read: [] }, reads = [...first.read];
