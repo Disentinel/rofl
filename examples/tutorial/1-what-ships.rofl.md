@@ -28,8 +28,8 @@ reads:
 
 Declared as facts:
 
-- <a id="made_of"></a>A product X is made of a part P
-- <a id="in_stock"></a>A part P is in stock
+- A product X is made of a part P
+- A part P is in stock
 - <a id="on_the_plan"></a>A product X is on the plan
 
 What the products are made of:
@@ -119,7 +119,7 @@ draw graph
 
 Declared as facts:
 
-- <a id="on_your_list"></a>A product X is on your list
+- A product X is on your list
 
 Your list:
 

@@ -1,6 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { english, proseAsks, readMd, type ReadResult } from '../scripts/read_md.ts';
+import { english, proseAsks, readMd, slug, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -40,9 +40,7 @@ function split(text: string, md: boolean): { clauses: string; asks: Ask[] } {
 /** The prefix of a relation a notebook introduces: nothing outside a notebook is named with it, so what it introduces is its own. */
 export const OWN = 'nb__';
 
-/** A head the reader knew no sentence for gets an anchor named from its words, `A call C is unawaited` -> `unawaited`, so the sentence declares a relation. */
-const slug = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
-  .toLowerCase().replace(/\b(a|an|the|is|are)\b/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+/** A head the reader knew no sentence for gets an anchor named from its words (read_md.ts slug), so the sentence declares a relation. */
 function anchored(md: string, heads: string[], prefix = ''): string {
   const lines = md.split('\n');
   for (const h of heads) {

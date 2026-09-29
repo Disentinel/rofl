@@ -510,7 +510,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // its typed holes (`a rule R`) are the arguments in order, a bare capital is a hole
   // too, and `A`, `An`, `The` on their own are articles, so a variable A is written typed.
   const learned: Tpl[] = [];   // the file's own vocabulary, written beside the rules as phrase facts
-  function learn(rel: string, head: string) {
+  const learnedAt = new Map<Tpl, number>();   // the line each was declared on
+  function learn(rel: string, head: string, at = 0) {
     if (templates.some((t) => t.rel === rel)) return;
     head = head.charAt(0).toLowerCase() + head.slice(1);
     const parts: Part[] = []; let buf = ''; let n = 0; let last = 0; let m;
@@ -525,7 +526,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     buf += head.slice(last); flush();
     if (n === 0) return;
     const t = { rel, parts, arity: n, src: head };
-    templates.push(t); learned.push(t);
+    templates.push(t); learned.push(t); learnedAt.set(t, at);
     for (const p of parts) if (p.t === 'hole') nouns.add(p.noun);
   }
   {
@@ -541,8 +542,27 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       const head = a[1] && subject && /^[a-z]/.test(text) ? `${subject} ${text}` : text;
       // a hyphen in a relation's name is a subtraction to the parser: said here, where the writer can see which anchor
       if (a[2].includes('-') && /\b[A-Z]/.test(head.replace(/^(?:An?|The) /, ''))) { const u = `HEAD the anchor "${a[2]}" names no relation, a name is one word: "${a[2].replace(/-/g, '_')}" (${headOf(head)})`; unparsed.push(u); if (!(u in lineOf)) lineOf[u] = k; continue; }
-      learn(a[2], headOf(head));
+      learn(a[2], headOf(head), k);
     }
+  }
+  // a declaration with no anchor is named from its words, as a head the reader has no sentence for is (slug); a name another relation has,
+  // or two declarations share, names neither, and each says so
+  const refusedName = new Map<string, string>();
+  {
+    const lines = md.split('\n'), at = new Map<string, number>();
+    const decls = blocks.flatMap((b, i) => b.type === 'p' && b.text!.trim() === 'Declared as facts:' && blocks[i + 1]?.type === 'ul' ? blocks[i + 1].items!.map((it) => {
+      const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); at.set(t, lines.findIndex((l, k) => k >= blocks[i + 1].at! && l.includes(t))); return t;
+    }) : []).filter((t) => !/^`\w+`$/.test(t) && /\s[A-Z][A-Za-z0-9]*\b/.test(t) && !matchLit(t, []));
+    for (const t of decls) {
+      const name = slug(t), twin = decls.find((x) => x !== t && slug(x) === name), held = templates.find((x) => x.rel === name);
+      if (!name) continue;
+      if (twin) refusedName.set(t, `its name from its words, ${name}, is also the name of "${twin}": give one of them an anchor, <a id="..."></a>, to name it`);
+      else if (held) refusedName.set(t, `its name from its words, ${name}, is the relation of "${held.src}": give it an anchor of its own, <a id="..."></a>`);
+    }
+    for (const t of decls) if (!refusedName.has(t) && slug(t)) learn(slug(t), t, at.get(t));
+    // the file's sentences in the order it says them, anchored or not
+    learned.sort((a, b) => learnedAt.get(a)! - learnedAt.get(b)!);
+    templates.splice(templates.length - learned.length, learned.length, ...learned);
   }
   let section = '';
   let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
@@ -584,7 +604,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (text === 'Declared as facts:' && next && next.type === 'ul') {
       // a declared fact reads as its signature sentence, `A kind K catches via a field Field`, or as its bare name
       // a declared table may say where its rows are after a dash: `A kind K is a call kind — rows in Words`
-      for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}`); }
+      for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}${refusedName.has(t) ? ` — ${refusedName.get(t)}` : ''}`); }
       i++; continue;
     }
     const lead = /^(Initially|In the next tick), /.exec(text), tense = lead ? (lead[1] === 'Initially' ? 'init' : 'next') : undefined;
@@ -1020,6 +1040,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
 }
 
 /** The lines of `md` the reader reads as sentences, whatever the words: which blocks it reads does not hang on the vocabulary, only what they say. */
+/** A sentence's relation named from its words, `A call C is unawaited` -> `unawaited`: a head the reader knew no sentence for (notebook/book.ts), a declaration with no anchor. */
+export const slug = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
+  .toLowerCase().replace(/\b(a|an|the|is|are)\b/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
 export const sentenceSpans = (md: string): [number, number][] => {
   const asks = proseAsks(md), lines = md.split('\n');
   return [...readMd(lines.map((l, k) => asks.includes(k) ? '' : l).join('\n'), { vocab: '' }).spans, ...asks.map((k): [number, number] => [k, k + 1])].sort((a, b) => a[0] - b[0]);

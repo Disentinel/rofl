@@ -19,7 +19,7 @@ reads:
 Declared as facts:
 
 - <a id="on_the_line"></a>A car X is on the line
-- <a id="to_be_painted"></a>A car X is to be painted a colour C
+- A car X is to be painted a colour C
 - <a id="in_the_shop"></a>A colour C is in the paint shop
 
 > A car comes out a colour when it is to be painted that colour and the

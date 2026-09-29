@@ -21,7 +21,7 @@ reads:
 Declared as facts:
 
 - <a id="came_off"></a>A car X came off the line
-- <a id="painted"></a>A car X is painted a colour C
+- A car X is painted a colour C
 - <a id="scratch"></a>A car X has a scratch
 
 Off the line today:
@@ -85,8 +85,8 @@ A car X passes the gate if X came off the line and X is painted some colour, unl
 
 Declared as facts:
 
-- <a id="must_pass"></a>A car X must pass
-- <a id="must_not_pass"></a>A car X must not pass
+- A car X must pass
+- A car X must not pass
 
 The inspector's list:
 
