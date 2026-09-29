@@ -140,7 +140,8 @@ I5 The LLM proposes, the book decides: a translation enters the file only after 
 ```
 
 > Step 1. A model is called by starting a process; only the function that
-> starts the harness (`notebook/model.ts`) may start one, the one that runs git to list and search the files the model may read (`notebook/reader.ts`), and the one that starts the kept kernel
+> starts the harness (`notebook/model.ts`) may start one, the one that runs git to list and search the files the model may read (`notebook/reader.ts`), the one that searches them
+> where git is not installed, in a node process killed at its time limit (`notebook/reader.ts`), and the one that starts the kept kernel
 > (`notebook/serve.ts`), whose command is node itself.
 
 ```rofl
@@ -149,7 +150,8 @@ A call C starts a process if C is a host site of `node` from "node:child_process
 A function F may start a process either:
 1. if F answers to "runHarness";
 2. if F answers to "viaDaemon";
-3. if F answers to "runGit".
+3. if F answers to "runGit";
+4. if F answers to "search".
 
 A call C starts a process outside the model call if C starts a process, a function F is the nearest function of C, and unless F may start a process.
 

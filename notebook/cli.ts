@@ -373,8 +373,7 @@ async function translateOne(file: string, text: string, c: NbCell, ask: Ask, ker
 const HELP = `New here? Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.
 
 npm run nb -- <file.rofl.md> [--json] [--cell N] [--all] [--format dot|vega-lite]   run a notebook
-npm run nb -- translate <file.rofl.md> [--root DIR]   a model answers each natural cell in rofl, reading DIR
-                                              (the working directory if it holds the notebook, else its own)
+npm run nb -- translate <file.rofl.md>        a model answers each natural cell in rofl
 npm run nb -- vocab [<file.rofl.md>] [word]   the sentences a cell can use
 npm run nb -- --help env                      the environment variables
 
@@ -412,7 +411,8 @@ ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/cl
 ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
 ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
 ROFL_NB_READ_ROUNDS=6    rounds the model may read the workspace's files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all
-ROFL_NB_ROOT=<dir>       the workspace translate reads, as --root does`;
+ROFL_NB_ROOT=<dir>       the folder translate lets the model read, as --root DIR does; by default the working
+                         directory if it holds the notebook, else the notebook's folder`;
 
 const isMain = process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
