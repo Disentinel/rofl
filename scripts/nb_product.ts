@@ -391,7 +391,7 @@ process.stdin.on('data', (d) => { i += d; }).on('end', () => {
 `); chmodSync(f, 0o755); return { f, prompts: () => readdirSync(dir).sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1])).map((x) => readFileSync(path.join(dir, x), 'utf8')) }; };
 /** A run of translate over a planted workspace, from `cwd` (by default the workspace, which then is the boundary). */
 const protoRun = (name: string, env: Record<string, string>, root: string, forever: boolean, git: boolean, cwd?: string, config?: string) => { const nb = proto(name, git, config), m = reader(name, forever); return cli(['translate', nb], { ROFL_NB_CLAUDE: m.f, ...env }, root, cwd ?? path.join(tmp, name)).then((o) => ({ o, prompts: m.prompts(), nb })); };
-const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
+const srcOf = (file: string) => readFileSync(path.join(ROOT, file), 'utf8');
 // a PATH with node on it and no git: grep falls back to a search in a process of its own
 const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
 const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'compound', 'dirs', 'big', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
@@ -412,13 +412,13 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['first prompt reads around the check', 'notebook/cli.ts', [[/const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"]], ['plain'], 'ENV_TOKEN reached a prompt'],
   ['git environment', 'notebook/reader.ts', [[/, env: Object\.fromEntries\(.*$/m, ' });']], ['gitenv'], 'OTHER_TOKEN reached a prompt'],
   ['list skips dotfiles', 'notebook/reader.ts', [[/\.filter\(\(f\) => under\(arg, f\)\)/, '.filter((f) => path.matchesGlob(f, arg))']], ['plain'], 'list ** left out a dotfile'],
-  ['requests among words', 'notebook/reader.ts', [[/return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);"]], ['words'], 'words with a request line in them were taken as requests'],
-  ['requests a round', 'notebook/cli.ts', [[/        if \(i >= PER_ROUND\) return .*\n/, '']], ['forever'], 'answered past the 20th'],
-  ['work after the budget', 'notebook/cli.ts', [[/        if \(left <= 0\) return .*\n/, '']], ['small'], 'a request after the budget was spent was still answered'],
+  ['requests among words', 'notebook/translate.ts', [[/return lines\.every\(\(l\) => (.*?)\) \? lines : \[\];/, "return lines.filter((l) => $1);"]], ['words'], 'words with a request line in them were taken as requests'],
+  ['requests a round', 'notebook/translate.ts', [[/        if \(i >= perRound\) return .*\n/, '']], ['forever'], 'answered past the 20th'],
+  ['work after the budget', 'notebook/translate.ts', [[/        if \(left <= 0\) return .*\n/, '']], ['small'], 'a request after the budget was spent was still answered'],
   ['bytes read of a file', 'notebook/reader.ts', [[/Math\.min\(now\.size, cap\)/, 'now.size']], ['forever'], 'a file was read past its cap'],
   ['budget', 'notebook/reader.ts', [[/if \(used \+ l\.length \+ 1 > room\) break; /, '']], ['small'], 'bytes of reading were not held to'],
-  ['rounds', 'notebook/cli.ts', [[/round <= ROUNDS; round\+\+/, 'round <= 99; round++']], ['forever'], 'was not stopped after 3 rounds'],
-  ['logging', 'notebook/cli.ts', [[/reads\.push\(x\.read\); /, '']], ['plain'], 'the reads were not said'],
+  ['rounds', 'notebook/translate.ts', [[/round <= rounds; round\+\+/, 'round <= 99; round++']], ['forever'], 'was not stopped after 3 rounds'],
+  ['logging', 'notebook/translate.ts', [[/reads\.push\(x\.read\); /, '']], ['plain'], 'the reads were not said'],
   // the workspace's .rofl/read.rofl, asked in this process (configs below): each of its guards
   ['regular files only', 'notebook/reader.ts', [[/  if \(!st\.isFile\(\)\) return .*\n/, '']], ['config'], 'a socket was not refused as not a regular file'],
   ['CVS/Entries ignored', 'notebook/reader.ts', [[/  if \(by === 'cvs'\) \{\n/, "  if (by === 'cvs') { return new Set(files);\n"]], ['config'], 'a file CVS does not list was read'],
@@ -601,7 +601,7 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
 const r0 = await protocol('as-is');
 check('R the translator reads the notebook\'s workspace, with git or without, by list, grep, show and ?, as its .rofl/read.rofl narrows it (a prefix, CVS, git, the person\'s command); outside, a link out, ignored, skipped and secret-looking files, a workspace that is home, a config that widens, names a command or does not load, are refused; the rounds and bytes are bounded; each read is said', !r0.length, { code: 0, out: r0.join('\n') });
 const rSpoilt = await Promise.all(R_BREAKS.map(([name, file, plants, runs]) => {
-  const src = file.endsWith('reader.ts') ? readerSrc : cliSrc, spoilt = plants.reduce((t, [at, plant]) => { const u = t.replace(at, plant); if (u === t) throw new Error(`R ${name}: the planted defect did not apply`); return u; }, src);
+  const src = srcOf(file), spoilt = plants.reduce((t, [at, plant]) => { const u = t.replace(at, plant); if (u === t) throw new Error(`R ${name}: the planted defect did not apply`); return u; }, src);
   return protocol(name.replace(/ /g, '-'), linked(`reader-${name.replace(/ /g, '-')}`, file, spoilt), runs);
 }));
 R_BREAKS.forEach(([name, , , , why], k) => check(`  and with ${name} spoilt, it is red: ${why}`, rSpoilt[k].some((b) => b.includes(why)), { code: 0, out: rSpoilt[k].join('\n') || 'green' }));
@@ -637,7 +637,7 @@ const exiting = readFileSync(path.join(ROOT, 'examples/notebook/small.js'), 'utf
 const codexCell = (root = ROOT) => cli([planted(`vac-codex-${path.basename(root)}`, 'small.rofl.md', withCell(CODEX), [['examples/notebook/small.js', exiting]])], {}, root);
 const vacRoots = {
   kernel: linked('root-vac-kernel', 'playground/host.ts', mutate('playground/host.ts', / \|\| a\.kind === 'never' && !q\.rows\.length && vacuous\(relOf\(a\.lit\)\)/, () => '')),
-  gate: linked('root-vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')),
+  gate: linked('root-vac-gate', 'notebook/translate.ts', mutate('notebook/translate.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')),
   excepts: linked('root-vac-excepts', 'playground/host.ts', mutate('playground/host.ts', / \|\| !rs\.some\(\(r\) => r\.excepts\)/, () => '')),
   eq: linked('root-vac-eq', 'playground/host.ts', mutate('playground/host.ts', /\[put\(b\.lit\)\]/, () => '[b.lit]')),
   near: linked('root-vac-near', 'playground/host.ts', mutate('playground/host.ts', /const v = near\(c, held\);\n\s*if \(!v\) continue;/, () => 'const v = \'something\';')),

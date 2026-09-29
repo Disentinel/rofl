@@ -3,7 +3,7 @@
 import { Host, concernsOf, translatorVocab, type Line, type Node, type Row } from '../playground/host.ts';
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
-import type { View } from './draw.ts';
+import { counted, type View } from './draw.ts';
 
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked';
 export type Answer = { sentence: string; literal: string; at: string[] };
@@ -48,7 +48,7 @@ export class Kernel {
     if (out.error) errors.push(out.error);
     const lost = out.unresolved.length ? `${unresolvedSaid(out.unresolved)}: ${out.unresolved.slice(0, 5).join(', ')}${out.unresolved.length > 5 ? ', …' : ''}` : undefined;
     const at = (literal: string) => [...literal.matchAll(/n[0-9a-f]{8}_\d+/g)].flatMap((m) => out.nodes[m[0]] ? [`${out.nodes[m[0]].file}:${out.nodes[m[0]].line}`] : []);
-    const answers = (rows: Row[]) => rows.map((r) => ({ sentence: said(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
+    const answers = (rows: Row[]) => rows.map((r) => ({ sentence: labelled(r.sentence, out.nodes), literal: r.literal, at: at(r.literal) }));
     const hint = (e: string) => {
       const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
       if (!m) return e;
@@ -72,6 +72,22 @@ export class Kernel {
     return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
 }
+
+export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
+/** The run's status in a sentence, naming where each failing never is; `at` writes a place, a link in an editor. The command line's last line stays the bare verdict. */
+export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${cell} (line ${line})`): string => {
+  const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => at(c.index, l.line)));
+  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
+};
+
+export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
+  : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
+  : l.kind === 'draw' && l.view ? counted(l.view)
+  : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
+  : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
+
+/** A verdict's colour by its meaning, as a class a host colours from its theme, and a glyph that says it without colour. */
+export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'] };
 
 const STOP = new Set(['a', 'an', 'the', 'is', 'are', 'of', 'in', 'to', 'by', 'if', 'and', 'at', 'some', 'it', 'its', 'on', 'as', 'with', 'from', 'unless', 'something']);
 const stem = (w: string) => w.length > 4 ? w.replace(/(?:ing|ed|(?<!s)s)$/, '') : w;
@@ -120,4 +136,4 @@ export function legible(text: string): string {
 }
 
 /** A node in a sentence as the code writes it, with where it is. */
-const said = (s: string, nodes: Record<string, Node>) => s.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => nodes[id] ? `[${nodes[id].label} at ${nodes[id].file}:${nodes[id].line}]` : m);
+const labelled = (s: string, nodes: Record<string, Node>) => s.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => nodes[id] ? `[${nodes[id].label} at ${nodes[id].file}:${nodes[id].line}]` : m);

@@ -9,7 +9,7 @@ import { getHeapStatistics } from 'node:v8';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Kernel, nearest, unresolvedSaid, type NbLine, type NbResult } from './kernel.ts';
+import { Kernel, nearest, unresolvedSaid, VERDICT, type NbLine, type NbResult } from './kernel.ts';
 import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
@@ -17,7 +17,8 @@ import { viaDaemon } from './serve.ts';
 import { choose, llm, models, type Ask } from './model.ts';
 import { counted, framesOf, zoom, type View } from './draw.ts';
 import { backendOf } from './draw-text.ts';
-import { answer, BUDGET, PER_ROUND, PROTOCOL, readTracked, requestsOf, ROUNDS, workspace, type Repo, type Where } from './reader.ts';
+import { answer, BUDGET, PER_ROUND, PROTOCOL, readTracked, ROUNDS, workspace, type Repo, type Where } from './reader.ts';
+import { sentenceOf, translateOne as translateCell_ } from './translate.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
@@ -85,18 +86,7 @@ export function runFile(file: string, kernel = new Kernel({ wall }), text = read
   return { ...r, paths, outside };
 }
 
-export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
-/** The run's status in a sentence, naming where each failing never is; `at` writes a place, a link in an editor. The command line's last line stays the bare verdict. */
-export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${cell} (line ${line})`): string => {
-  const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => at(c.index, l.line)));
-  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
-};
-
-export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
-  : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
-  : l.kind === 'draw' && l.view ? counted(l.view)
-  : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
-  : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
+export { SAID, said, VERDICT } from './kernel.ts';
 
 /** `format`: the backend a picture is written in, `dot` for a graph or `vega-lite` for a table; the kind's first (notebook/draw.ts FORMATS) otherwise. */
 export function print(file: string, r: NbResult, only?: number, shown = SHOWN, format?: string): string {
@@ -154,42 +144,6 @@ export function tally(r: NbResult): string {
 
 // ------------------------------------------------------------ translation
 
-const FORM = `A cell is written in ROFL's Markdown sentence form:
-- A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless", after a comma: "<head> if <condition>, unless <condition>."
-- A long rule: "<head> if all of:" and then a list, one condition per item "  - <condition>;", the last ending in ".".
-- Alternatives: "<head> either:" and then a numbered list, each item "1. if <condition>, <condition>;".
-- Variables are capitalised words: C, F. "a call C" introduces C and says what it is; "something" or "some team" is anything, unnamed. An atom is in backticks, \`true\`; a string is in double quotes. Only variables are capitalised.
-- A condition is a sentence from the lists below with your own terms in its holes, or a sentence a rule in the cell defines. Built in: "L > 6", "X is Y", "X differs from Y", "N is A + B".
-- A rule whose head no sentence reads yet defines a new relation, and its words become its sentence. Keep a new head short and in words no listed sentence starts with.
-- Asking lines, each on its own line, no final period: "? <sentence>" lists every answer; "never <sentence>" is an invariant that holds when nothing answers; "unsure <sentence>" right under a never lists what the invariant could not see; "why <sentence>" explains one answer; "whynot <sentence>" says why a sentence does not hold.
-- A new head names what it is about with a noun and a variable: "A call C is a stray write if ...", "A file F is a handler file if ...". Never start a head with a variable and "is" ("Key is a disk write"): that reads as the built-in "X is Y". Every rule's conditions include at least one sentence of the model.
-- An asking line holds one sentence. To ask about several conditions together, write a rule and ask its head.
-- A call into a Node module's function, like fs's writeFileSync, however it was imported: "C is a host site of \`node\` from "node:fs" at "writeFileSync"".
-Prefer "never" for something that must always hold and "?" for a question. Say what must hold of any data, not of the rows there happen to be.`;
-
-function prompt(request: string, vocab: string[], own: string[], functions: string[], notebook: string, code: string[], slice = ''): string {
-  return `You turn one plain-language request into one notebook cell.
-
-${FORM}
-${functions.length ? `Functions, written "R is <phrase>":\n${functions.join('\n')}\n` : ''}
-The sentences of the model, a noun before each variable saying what it stands for:
-${vocab.join('\n') || '(none)'}
-
-The sentences this notebook and the worlds it reads declare:
-${own.join('\n') || '(none)'}
-
-${code.length ? `The code files, by the names the book gives them (a file in a sentence is one of these strings, not the path in the front matter): ${code.map((c) => JSON.stringify(c)).join(', ')}\n\n` : ''}The notebook as it stands:
-${notebook}
-
-${slice}The request: ${request}
-
-${PROTOCOL(ROUNDS, BUDGET)}
-
-Answer with the cell alone inside one \`\`\`rofl fence, nothing else. When you cannot write it without guessing what the person means, answer instead with your questions to them, briefly, in the language of the request, and no fence.`;
-}
-
-const fenced = (text: string) => /```(?:rofl)?\s*\n([\s\S]*?)\n```/.exec(text)?.[1].trim();
-const sentenceOf = (p: string) => /^phrase\(\w+, "(.*)"\)\.$/.exec(p)?.[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `a ${n} ${n[0].toUpperCase()}`) ?? p;
 
 const OUTLINE = /^\s*(export\s+)?(default\s+)?(async\s+)?(function\*?\s+\w+|class\s+\w+|(const|let)\s+\w+\s*=\s*(async\s*)?(\(|function|\w+\s*=>))|^\s+(async\s+)?(static\s+)?#?\w+\s*\([^)]*\)\s*\{/;
 /** What the first prompt reads of the code without asking: an outline of each code file, and the files the request names, within a part of the budget. */
@@ -305,69 +259,12 @@ export function vocabulary(file: string | undefined, word = ''): { lines: string
 const START = ['a function F may throw', 'a function F throws outright', 'a function F is exported', 'F depends on T', 'a call C resolves to a function F', 'a function Caller calls a function Callee',
   'the attribute `async` of a function F is `true`', 'a node S is of kind `expression_statement`', 'the `expression` of a node S is a call C', 'a node N is in file F', 'a node N is at line L'];
 
-/** One natural cell: its rofl cell tried against the kernel, asked again once with what went wrong, and put under it. `failed`: the model gave no answer. */
-async function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = '', step = (_: string) => {}): Promise<{ code: number; said: string[]; text: string; failed?: boolean; reply?: string }> {
-  const said = cx.outside.length ? [`${file}: note: ${OUTSIDE(cx.outside)}, and what they say goes to the model with the request`] : [], lines = text.split('\n'), close = c.line - 1 + c.text.split('\n').length;   // the natural cell's closing fence
-  const cells = cellsOf(text), under = translated(cells, c) ? cells[c.index + 1] : undefined;
-  const shut = under ? lines.findIndex((l, i) => i >= under.line - 1 && /^```\s*$/.test(l)) : -1;
-  const from = under ? under.line - 2 : close + 1, to = !under ? close + 1 : shut < 0 ? lines.length : shut + 1;
-  const tryCell = (cell: string) => {
-    const next = [...lines.slice(0, from), ...(under ? [] : ['']), '```rofl', cell, '```', ...lines.slice(to)].join('\n');
-    const r = kernel.run(path.relative(ROOT, path.resolve(file)), next, cx.input);
-    const out = r.cells.find((x) => x.index === c.index + 1)!;
-    const silent = out.lines.length ? [] : ['the cell asks nothing: a request for something that must hold ends in a never line, a question in a ? line'];
-    // a never that holds over nothing checks nothing: the model is asked again with the condition that finds no row
-    const vacuous = out.lines.filter((l) => l.note?.startsWith('holds over nothing')).map((l) => `${l.text}: ${l.note}`);
-    return { next, errors: [...r.errors, ...out.errors, ...silent, ...vacuous], lines: out.lines };
-  };
-  const words = (a: string) => ({ code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
-  const who = ask.who ?? 'the model', first = slice(cx, c.text.trim()), reads = [...first.read];
-  const base = prompt(c.text.trim(), cx.vocab, cx.own, cx.functions, text, Object.keys(cx.input.code), first.text) + follow;
-  /** A question the model puts to the notebook, answered by the kernel over the notebook with one more cell. */
-  const question = (q: string) => {
-    const r = kernel.run(path.relative(ROOT, path.resolve(file)), `${text}\n\n\`\`\`rofl\n? ${q}\n\`\`\`\n`, cx.input), out = r.cells.at(-1), l = out?.lines[0];
-    return l ? [`${l.verdict}${l.total ? ` · ${l.total}` : ''}`, ...l.answers.slice(0, 30).map((x) => `- ${x.sentence}`)].join('\n') : `not asked: ${[...r.errors, ...out?.errors ?? []].join('; ') || 'no line'}`;
-  };
-  let left = BUDGET, convo = '';
-  /** The model asked, and asked again with what it read, while it answers with requests: at most ROUNDS rounds and BUDGET bytes of answers. */
-  const converse = async (p: string) => {
-    let a = await ask(p + convo);
-    for (let round = 1; a.ok && requestsOf(a.text).length && round <= ROUNDS; round++) {
-      // at most PER_ROUND requests are answered, and none once the budget is spent: an answer costs work before it costs bytes
-      const reqs = requestsOf(a.text), got = reqs.map((r, i) => {
-        if (i >= PER_ROUND) return `> ${r}\n(not answered: at most ${PER_ROUND} requests a round)`;
-        if (left <= 0) return `> ${r}\nrefused: the read budget is spent`;
-        const x = answer(cx.repo, r, left, question); left -= x.text.length; reads.push(x.read); return `> ${r}\n${x.text}`;
-      });
-      step(`${who} read: ${reads.slice(-3).join(' · ')}`);
-      convo += `\n\nYou asked:\n${reqs.join('\n')}\nThe answers:\n${got.join('\n')}${round === ROUNDS || left <= 0 ? '\nThat was the last of the reading: write the cell now.' : ''}`;
-      a = await ask(p + convo);
-    }
-    return a;
-  };
-  const readLine = () => reads.length ? [`${file}:${c.line}: ${who} read: ${reads.join(' · ')}`] : [];
-  step(`${who} is writing the cell`);
-  let a = await converse(base);
-  if (a.ok && requestsOf(a.text).length) return { code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${who} still asked to read after ${ROUNDS} rounds, and wrote no cell`], text, failed: true };
-  if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
-  let cell = fenced(a.text);
-  if (cell === undefined) return words(a.text);
-  let t = tryCell(cell);
-  if (t.errors.length) {
-    // a cell that read and whose never holds over nothing is said as that, not as a cell that did not read
-    const how = (e: string[]) => e.every((x) => x.includes(': holds over nothing')) ? 'read, and checks nothing' : 'did not read';
-    said.push(`${file}:${c.line}: the first try ${how(t.errors)}:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`));
-    step(`the first try ${how(t.errors)} (${t.errors[0]}); asking again`);
-    convo += `\n\nYou answered:\n\`\`\`rofl\n${cell}\n\`\`\`\nThe notebook could not read it:\n${t.errors.join('\n')}\nCheck with \`?\` lines the sentences you are unsure of, then write the cell again.`;
-    a = await converse(base);
-    if (!a.ok) return { code: 2, said: [...said, `translation failed: ${a.error}`], text, failed: true };
-    cell = fenced(a.text);
-    if (cell === undefined) return words(a.text);
-    t = tryCell(cell);
-  }
-  said.push(...readLine());
-  if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: ${t.errors.every((x) => x.includes(': holds over nothing')) ? 'no cell that checks something' : 'no cell read'} after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
-  return { code: 0, said: [...said, `${file}:${c.line}: translated`, ...cell.split('\n').map((l) => `  ${l}`), ...t.lines.map((l) => `  -> ${l.text}: ${l.verdict}${l.total ? ` (${l.total})` : ''}`)], text: t.next };
+/** One natural cell, translated with the workspace to read: the loop is notebook/translate.ts. */
+function translateOne(file: string, text: string, c: NbCell, ask: Ask, kernel: Kernel, cx: Context, follow = '', step = (_: string) => {}) {
+  const at = path.relative(ROOT, path.resolve(file));
+  return translateCell_({ file, text, c, ask, run: (t) => kernel.run(at, t, cx.input), vocab: cx.vocab, functions: cx.functions, own: cx.own, code: Object.keys(cx.input.code),
+    first: slice(cx, c.text.trim()), protocol: PROTOCOL(ROUNDS, BUDGET), rounds: ROUNDS, budget: BUDGET, perRound: PER_ROUND, answer: (r, room, q) => answer(cx.repo, r, room, q),
+    said: cx.outside.length ? [`${file}: note: ${OUTSIDE(cx.outside)}, and what they say goes to the model with the request`] : [], follow, step });
 }
 
 const HELP = `New here? Play examples/tutorial (6 levels), from examples/tutorial/1-what-ships.rofl.md.

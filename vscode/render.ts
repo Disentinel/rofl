@@ -1,15 +1,13 @@
 // What a run says, per cell, as the Markdown a notebook output shows: answers as sentences, every code node a link to its line.
 // The link is a bare path: VS Code's Markdown refuses `file:` links, and a notebook output opens `/path:line` at that line.
 // A code file is named from the directory all of them share; a failing never is named `rofl-cell:K`, which the editor turns into its cell.
-import { OUTSIDE, said, VERDICT } from '../notebook/cli.ts';
+import { OUTSIDE } from '../notebook/cli.ts';
+import { said, SIGN, VERDICT } from '../notebook/kernel.ts';
 import { codeNames } from '../notebook/front.ts';
 import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
 import type { View } from '../notebook/draw.ts';
 
 const FOLD = 10;   // answers shown under a line; the rest fold
-/** A verdict's colour by its meaning, as a class the renderer colours from the theme, and a glyph that says it without colour. */
-const SIGN: Partial<Record<NbLine['verdict'], [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'] };
-
 /** `views`: the cell's pictures, each an output of its own that the notebook renderer draws (vscode/visual/renderer.ts). */
 export type Shown = { md: string; err: string; ok: boolean; views?: View[] };
 export type Run = NbResult & { paths: Record<string, string>; outside?: string[] };
