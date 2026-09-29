@@ -54,7 +54,7 @@ export const REVIEW = path.join(NB, 'review.rofl.md');
 export const withCell = (cell: string, kind = 'rofl') => (t: string) => `${t}\n\`\`\`${kind}\n${cell}\n\`\`\`\n`;
 export const withNatural = withCell('No change touches a module nobody owns.', 'natural');
 export const smallJs = readFileSync(path.join(NB, 'small.js'), 'utf8'), spinning = smallJs + '\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n';
-export const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\nprintf '[%s]' "$@" >> ${path.join(tmp, 'argv')}; echo " $(pwd -P)" >> ${path.join(tmp, 'argv')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
+export const fake = (name: string, answer: string) => { const f = path.join(tmp, name); writeFileSync(f, `#!/bin/sh\ncat > /dev/null\necho "$0" >> ${path.join(tmp, 'called')}\necho "$(printf '[%s]' "$@") $(pwd -P)" >> ${path.join(tmp, 'argv')}\ncat <<'EOF'\n${answer}\nEOF\n`); chmodSync(f, 0o755); return f; };
 export const spy = fake('spy.sh', 'x');
 export const good = fake('good.sh', 'Here it is.\n```rofl\nA module M is unowned if some change touches M, unless some team owns M.\n\nnever M is unowned\n```');
 
