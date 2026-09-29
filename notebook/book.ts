@@ -15,14 +15,19 @@ export function booksOf(model: string): Map<string, Set<string>> {
 
 const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends|excise|draw)\s+(.+?)\.?\s*$/;
 
-/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing, `draw K` shows the view facts of the kind K. */
-function split(text: string): { clauses: string; asks: Ask[] } {
+/** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier. */
+export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l);
+
+/** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing, `draw K` shows the view facts of the kind K.
+ *  In a sentence cell a line in English asks too; the reader reads it as one of these (read_md.ts question). */
+function split(text: string, md: boolean): { clauses: string; asks: Ask[] } {
   const clauses: string[] = []; const asks: Ask[] = [];
   for (const raw of text.split('\n')) {
     const l = raw.trim();
-    const m = DIRECTIVE.exec(l);
+    const m = DIRECTIVE.exec(l), en = !m && md && english(l);
     if (m) asks.push({ kind: m[1] === '?' ? 'answers' : m[1] as Kind, lit: m[2], text: l });
-    clauses.push(m || l.startsWith('>') ? '' : raw);   // blank, so an error's line number is the cell's
+    else if (en) asks.push({ kind: 'answers', lit: l, text: l, english: true });
+    clauses.push(m || en || l.startsWith('>') ? '' : raw);   // blank, so an error's line number is the cell's
   }
   return { clauses: clauses.join('\n'), asks };
 }
@@ -52,7 +57,8 @@ export function homeOf(model: string): Record<string, string> {
   return home;
 }
 
-export type Ask = { kind: Kind; lit: string; text: string };
+/** `english`: the line is English, and `lit` is still its text. */
+export type Ask = { kind: Kind; lit: string; text: string; english?: true };
 /** `close`: by part, what each new sentence it declares is close to (closeTo). */
 export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][] };
 
@@ -95,7 +101,7 @@ export function misbound(text: string, phrases: string): string[] {
 /** `own`: the cells are a notebook's, whose relations are its own (host.ts): a head named from its words is named with OWN, and one about
  *  other things than a read vocabulary's sentence says is its own; a world read by a notebook keeps its names. */
 export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, own = false): Book {
-  const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
+  const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text, c.form === 'md')) }));
   const first = parts.map(({ c, clauses }) => c.form === 'md' ? readMd(clauses, { vocab: phrases, homeBooks: home }) : null);
   const md = parts.map(({ clauses }, i) => {
     if (!first[i]) return null;

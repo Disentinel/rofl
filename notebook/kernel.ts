@@ -8,7 +8,9 @@ import { counted, type View } from './draw.ts';
 export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked';
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
-  unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View };
+  unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View;
+  /** a line in English: the asking line it reads as; `headline`, the yes, no or count it answers with */
+  readAs?: string; headline?: string };
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
 /** `blind`: every never holds, some only as far as the model sees or its wall let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
@@ -52,7 +54,7 @@ export class Kernel {
     const hint = (e: string) => {
       const m = /^not read(?: \(list item\))?: (?!the table |under "|a list item |\d+ list items )((?:(?!names go in backticks|is not a name).)*)$|^(?:\?|never|unsure|why|whynot) (.*): no sentence reads this question$/.exec(e);
       if (!m) return e;
-      if (this.vocab?.key !== key) this.vocab = { key, sentences: translatorVocab(model, phrases).vocab };
+      if (this.vocab?.key !== key) this.vocab = { key, sentences: [...translatorVocab(model, phrases).vocab, ...sentencesOf(out.learned)] };
       const near = nearest(m[1] ?? m[2], this.vocab.sentences);
       return near.length ? `${e}; the nearest sentences: ${near.map((x) => `"${x}"`).join(' · ')} (npm run nb -- vocab lists them)` : e;
     };
@@ -62,7 +64,8 @@ export class Kernel {
       const seen = new Set<number>();
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
       return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
-        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }) };
+        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
+          ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
@@ -80,11 +83,12 @@ export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${c
   return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
 };
 
-export const VERDICT = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
+export const VERDICT = (l: NbLine): string => { const v = verdictOf(l); return l.readAs ? `${v ? `${v} · ` : ''}read as: ${l.readAs}` : v; };
+const verdictOf = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.kind === 'draw' && l.view ? counted(l.view)
   : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
-  : l.verdict === 'answers' ? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
+  : l.verdict === 'answers' ? `${l.headline ?? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}`}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
 
 /** A verdict's colour by its meaning, as a class a host colours from its theme, and a glyph that says it without colour. */
 export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'] };
@@ -92,6 +96,12 @@ export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass'
 const STOP = new Set(['a', 'an', 'the', 'is', 'are', 'of', 'in', 'to', 'by', 'if', 'and', 'at', 'some', 'it', 'its', 'on', 'as', 'with', 'from', 'unless', 'something']);
 const stem = (w: string) => w.length > 4 ? w.replace(/(?:ing|ed|(?<!s)s)$/, '') : w;
 const words = (s: string) => new Set(s.replace(/`[^`]*`|"[^"]*"/g, ' ').split(/[^A-Za-z]+/).filter((w) => w && !/^[A-Z]/.test(w) && !STOP.has(w)).map(stem));
+
+/** A notebook's own sentences, `phrase(late, "<0:product> is late")`, as a cell says them: `a product X is late`. */
+const sentencesOf = (learned: string[]) => learned.flatMap((p) => {
+  const m = /^phrase\(\w+, "(.*)"\)\.$/.exec(p); if (!m) return [];
+  let k = 0; return [m[1].replace(/<\d+:([\w ]+)>/g, (_, n) => `${/^[aeiou]/.test(n) ? 'an' : 'a'} ${n} ${'XYZW'[k++] ?? 'V'}`)];
+});
 
 /** The `n` sentences of `vocab` that share the most words with `s`, a word fewer sentences use counting for more. */
 export function nearest(s: string, vocab: string[], n = 3): string[] {

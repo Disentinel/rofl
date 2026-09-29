@@ -8,7 +8,8 @@ import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
-import { readBook, homeOf, booksOf, OWN, type Cell, type Kind } from '../notebook/book.ts';
+import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
+import { plural, type Question } from '../scripts/read_md.ts';
 import { varsOf, canonTerm, mka, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, FactStore, Store } from '../src/store.ts';
 
@@ -25,7 +26,9 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
   /** why the line's answer means nothing: it rests on a relation whose rules a cell meant to write and the reader left out */
   unasked?: string;
   /** a `draw` line's picture */
-  view?: View };
+  view?: View;
+  /** a line in English: the asking line it reads as, what the reader noted, and the answer a yes-or-no or a How many question gives */
+  english?: { line: string; note?: string; headline?: string } };
 export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
@@ -312,7 +315,12 @@ export class Host {
       } catch (e) { errors.push((e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m)); texts[i] = ''; }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
     });
-    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => a.kind === 'draw' ? a : { ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) }));
+    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a): Ask & { q?: Exclude<Question, { error: string }>; unread?: string } => {
+      if (a.kind === 'draw') return a;
+      if (!a.english) return { ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) };
+      const q = read[i]!.question(a.text);
+      return 'error' in q ? { ...a, lit: '', unread: q.error } : { ...a, kind: q.kind, lit: owned(q.lit), q };
+    }));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
     const over = [...reads].filter((r) => !heads.has(r));
     const layered = !!this.shell && Object.keys(files).length > 0
@@ -458,13 +466,13 @@ export class Host {
     // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
     let known: Set<string> | null = null;
     const worlds = base ? [base, f] : [f];
+    const atoms = (): Set<string> => { if (!known) { known = new Set(); for (const w of worlds) for (const r of w.store.allFacts()) atomsIn(r.args, known); } return known; };
     const nameless = (lit: string, text: string): string | undefined => {
       let l: ReturnType<typeof parseLiteral>;
       try { l = parseLiteral(lit); } catch { return; }
       const want = atomsIn(l.args);
       if (!want.size) return;
-      if (!known) { known = new Set(); for (const w of worlds) for (const r of w.store.allFacts()) atomsIn(r.args, known); }
-      const name = [...want].find((x) => !known!.has(x));
+      const name = [...want].find((x) => !atoms().has(x));
       if (!name) return;
       // the sentence that names a node by this name, the node one the asked relation holds first, the shortest, a conclusion over a given fact
       const held = new Set<string>();
@@ -484,11 +492,18 @@ export class Host {
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
-        if (!a.lit) { const w = bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${w ? BARE(w) : 'no sentence reads this question'}`); continue; }
+        if (!a.lit) { const w = a.unread ? undefined : bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${a.unread ?? (w ? BARE(w) : 'no sentence reads this question')}`); continue; }
+        const blanks = a.q ? [] : [...a.text.replace(/`[^`]*`|"[^"]*"/g, '').matchAll(/\b[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*\b/g)].map((x) => x[0]).filter((x) => new RegExp(`\\b${x}\\b`).test(a.lit) && atoms().has(x.toLowerCase()));
+        for (const x of blanks) outs[i].notes.push(`${a.text}: ${x} is read as a blank, which matches anything; \`${x.toLowerCase()}\` is a name here, and a name is in backticks`);
         if (a.kind === 'excise' || a.kind === 'draw') continue;
+        const english = a.q && { line: a.q.line, note: a.q.note };
+        if (a.q?.blank) {
+          const b = a.q.blank, over = base && !heads.has(relOf(a.lit)) ? base : f, q = over.query(owned(b.lit));
+          outs[i].errors.push(`${a.text}: ${b.say([...new Set(q.rows.map((r) => r.bindings[b.v]).filter(Boolean).map((x) => x.startsWith('"') ? unquote(x) : x))])}`); continue;
+        }
         try {
-          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text) }); continue; }
-          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text) }); continue; }
+          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text), english }); continue; }
+          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text), english }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
         if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
@@ -499,7 +514,9 @@ export class Host {
         const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text) || a.kind === 'never' && !q.rows.length && vacuous(relOf(a.lit))) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
         if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
-        outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note });
+        const counted = a.q?.count && new Set(q.rows.map((r) => r.bindings[a.q!.count!])).size;
+        const headline = a.q?.yesno ? (q.rows.length ? 'yes' : 'no') : counted !== undefined ? `${counted} ${counted === 1 || !a.q!.noun ? a.q!.noun ?? '' : plural(a.q!.noun)}`.trim() : undefined;
+        outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note, ...(english && { english: { ...english, ...(headline && { headline }) } }) });
       }
     });
     const excised = new Map<number, { world: Rofl; failing: string[][] }>();
