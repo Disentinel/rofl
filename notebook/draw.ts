@@ -28,7 +28,7 @@ const RELS: Record<Family, [string, number][]> = {
   argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
   time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['in_state', 2], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
-  notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2]],
+  notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2], ['frame', 2], ['collapsed', 1]],
   space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
 };
 const VARS = ['A', 'B', 'C', 'D', 'E'];
@@ -149,11 +149,13 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
 export const shutOf = (v: View) => new Set(v.facts.filter((f) => f.rel === 'collapsed').map((f) => f.args[0]));
 
 /** Zoom: every group in `shut` drawn as one mark labelled with how many it holds, its members' tags on it; a link or a message inside it goes,
- *  one across its edge ends at it. A graph's group is what marks are `inside`; a proof's, the facts a fact rests on; a timeline's is what lanes are in (`A lane L is in the group G`).
+ *  one across its edge ends at it. A graph's group is what marks are `inside`; a proof's, the facts a fact rests on; a timeline's is what lanes are in (`A lane L is in the group G`);
+ *  a notation's family, its children.
  *  The count is the picture's, from membership, not the engine's. */
 export function zoom(v: View, shut = shutOf(v)): View {
   if (!shut.size) return v;
-  const parent = new Map(v.facts.filter((f) => f.rel === (v.kind === 'proof' ? 'link' : 'inside')).map((f) => [f.args[0], f.args[1]]));   // a proof's group is its subproof
+  const parent = new Map(v.kind === 'notation' ? v.facts.filter((f) => f.rel === 'child').map((f) => [f.args[1], f.args[0]])
+    : v.facts.filter((f) => f.rel === (v.kind === 'proof' ? 'link' : 'inside')).map((f) => [f.args[0], f.args[1]]));   // a proof's group is its subproof
   const top = (m: string) => { let out = m; for (let g = m, seen = new Set<string>(); parent.has(g) && !seen.has(g); ) { seen.add(g); g = parent.get(g)!; if (shut.has(g)) out = g; } return out; };
   const group = new Map(v.facts.filter((f) => f.rel === 'lane_group' && shut.has(f.args[1])).map((f) => [f.args[0], f.args[1]]));
   const held = new Map<string, Set<string>>(), hold = (g: string, m: string) => (held.get(g) ?? held.set(g, new Set()).get(g)!).add(m);
@@ -166,8 +168,8 @@ export function zoom(v: View, shut = shutOf(v)): View {
   for (const f of v.facts) {
     if (f.rel === 'collapsed' || f.rel === 'lane_group' && shut.has(f.args[1])) continue;
     if (f.rel === 'inside' && top(f.args[0]) !== f.args[0]) continue;
-    if (['placed', 'at', 'box', 'corner'].includes(f.rel) && top(f.args[0]) !== f.args[0]) continue;
-    if (f.rel === 'link' || f.rel === 'link_tagged') { const [a, b] = [top(f.args[0]), top(f.args[1])]; if (a !== b) put({ ...f, args: [a, b, ...f.args.slice(2)] }); continue; }
+    if (['placed', 'at', 'box', 'corner', 'named', 'born'].includes(f.rel) && top(f.args[0]) !== f.args[0]) continue;
+    if (f.rel === 'link' || f.rel === 'link_tagged' || f.rel === 'partner' || f.rel === 'child') { const [a, b] = [top(f.args[0]), top(f.args[1])]; if (a !== b) put({ ...f, args: [a, b, ...f.args.slice(2)] }); continue; }
     if (f.rel === 'lane') { put({ ...f, args: [f.args[0], lane(f.args[1])] }); continue; }
     if (f.rel === 'message') { const [a, b] = [lane(f.args[1]), lane(f.args[2])]; if (a !== b || !group.has(f.args[1])) put({ ...f, args: [f.args[0], a, b, f.args[3]] }); continue; }
     put({ ...f, args: [top(f.args[0]), ...f.args.slice(1)] });

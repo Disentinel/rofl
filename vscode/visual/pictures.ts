@@ -2,7 +2,7 @@
 // wherever it is shown: what it holds counted, the picture, the mark picked, and the view as text in each backend it has.
 import { counted, FAMILY, framesOf, GRAPHS, shutOf, unquote, zoom, type View } from '../../notebook/draw.ts';
 import { backendOf, backendsOf } from '../../notebook/draw-text.ts';
-import { detail, esc, features, layouts, spills, style, type Hooks, type Picture } from './picture.ts';
+import { detail, drawnTags, esc, features, layouts, spills, style, type Hooks, type Picture } from './picture.ts';
 import { pictures as graph } from './pic-graph.ts';
 import { pictures as space } from './pic-space.ts';
 import { pictures as notation } from './pic-notation.ts';
@@ -39,7 +39,7 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
     if (graphs && !await h.libs()) { el.querySelector('[data-pin]')?.remove(); stage.innerHTML = `<div class="note">The graph library did not load (offline, or its CDN is blocked), so the picture is its mermaid text, which GitHub and mermaid.live draw:</div><pre class="fallback">${esc(backendOf({ ...z, kind: 'graph' }).write(z))}</pre>`; }
     else for (const s of stages) { await p?.mount(s.el, s.view, h, (id, fact) => detail(box, s.view, h, id, fact), toggle); const laid = layouts.get(s.el)?.(); if (laid && !frames) h.laid?.(laid); }
     // the positions of the first frame alone, since each frame is laid out alone
-    report = () => h.drawn?.({ size: [stage.clientWidth, stage.clientHeight], spill: stages.flatMap((s) => spilt(s.el)), laid: layouts.get(stages[0].el)?.() ?? [], features: stages.flatMap((s) => features.get(s.el)?.() ?? []), frames: frames?.map((f) => f.key) ?? [], labels: [...Object.values(z.marks).map((m) => m.label), ...z.facts.flatMap((f) => f.rel === 'lane' ? [unquote(f.args[1])] : f.rel === 'message' ? [unquote(f.args[1]), unquote(f.args[2])] : [])] });
+    report = () => h.drawn?.({ size: [stage.clientWidth, stage.clientHeight], spill: stages.flatMap((s) => spilt(s.el)), tags: stages.flatMap((s) => drawnTags.get(s.el)?.() ?? []), laid: layouts.get(stages[0].el)?.() ?? [], features: stages.flatMap((s) => features.get(s.el)?.() ?? []), frames: frames?.map((f) => f.key) ?? [], labels: [...Object.values(z.marks).map((m) => m.label), ...z.facts.flatMap((f) => f.rel === 'lane' ? [unquote(f.args[1])] : f.rel === 'message' ? [unquote(f.args[1]), unquote(f.args[2])] : [])] });
     report();
     el.querySelector('[data-show]')?.addEventListener('click', () => h.show!());
     el.querySelector<HTMLButtonElement>('[data-pin]')?.addEventListener('click', () => { const facts = layouts.get(stage)?.(); if (facts) h.pin!(`-- pinned layout: placed(M, X, Y), written by Pin layout; commit it beside the notebook and name it under reads:\n${facts.join('\n')}\n`); });

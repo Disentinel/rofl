@@ -1,9 +1,9 @@
 // A graph (and its dialects) as Cytoscape laid out by ELK; a placed mark stays where the pinned layout put it.
 import { linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
-import { colour, features, fits, layouts, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
+import { colour, drawnTags, features, fits, layouts, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
 
 declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; resize(): void; elements(): { renderedBoundingBox(): { x1: number; y1: number; x2: number; y2: number } }; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
-  nodes(): { filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
+  nodes(): { map<T>(f: (n: { id(): string; hasClass(c: string): boolean }) => T): T[]; filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
 declare const ELK: new () => { layout(g: object): Promise<{ children: { id: string; x: number; y: number; width: number; height: number }[] }> };
 
 /** What a dialect changes: the direction of flow, its tags' styles (drawn under the status tags), a word for a link tag, an entry dot into the marks a tag names,
@@ -86,6 +86,7 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
   cy.on('tap', 'node[label != ""]', (e) => groups.has(e.target.id()) || tagsOf(v, e.target.id()).includes('collapsed') ? toggle(e.target.id()) : detail(e.target.id()));
   cy.on('tap', 'edge[fact]', (e) => detail(e.target.data('source'), e.target.data('fact')));
   features.set(el, () => entries.map((e) => `entry(${e.to}).`));
+  drawnTags.set(el, () => cy.nodes().map((n) => RESERVED.filter((t) => n.hasClass(t)).map((t) => `tagged(${n.id()}, ${t}).`)).flat());
   layouts.set(el, () => cy.nodes().filter((n) => !n.hasClass('group') && !n.hasClass('entry')).map((n) => `placed(${n.id()}, ${Math.round(n.position('x'))}, ${Math.round(n.position('y'))}).`).sort());
 }
 

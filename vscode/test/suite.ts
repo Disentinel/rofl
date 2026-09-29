@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
-import { framesOf, zoom } from '../../notebook/draw.ts';
+import { framesOf, GRAPHS, zoom } from '../../notebook/draw.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
 type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring' };
@@ -118,12 +118,21 @@ export async function run() {
       // drawn by the renderer's own module: a report for each kind, and a dialect's look read back from where it put the marks
       const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
       if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
-      type Report = { kind: string; laid: string[]; features: string[] };
+      type Report = { kind: string; laid: string[]; features: string[]; tags: string[] };
       let reports: Report[] = [];
       for (const end = Date.now() + 45_000; !c.pictures.every((k) => reports.some((d) => d.kind === k)) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) reports = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
       const missing = c.pictures.filter((k) => !reports.some((d) => d.kind === k));
       if (missing.length) bad.push(`${c.file}: the renderer drew no ${missing.join(', ')} (it reported ${JSON.stringify(reports.map((d) => d.kind))})`);
       await fitted(nb, c.file, reports.length, bad);
+      // a graph drawn by the renderer carries the mark's status as it drew it (a shut group may hold the mark, so not under zoom)
+      const own = reports.find((d) => d.kind === c.pictures![0]);
+      if (!c.zoom && own && (GRAPHS.includes(own.kind as never) || own.kind === 'notation') && !own.tags.includes(`tagged(${c.status![0]}, ${c.status![1]}).`)) bad.push(`${c.file}: the ${own.kind} does not draw ${c.status!.join(' ')}: ${JSON.stringify(own.tags)}`);
+      // a pedigree: each partner above the family, the family above each child
+      if (own?.kind === 'notation') {
+        const y = new Map(own.laid.flatMap((l) => { const m = /^placed\((.*), -?\d+, (-?\d+)\)\.$/.exec(l); return m ? [[m[1], Number(m[2])] as const] : []; }));
+        const z = zoom(drawn[0]), rows = (framesOf(z)?.[0].view ?? z).facts.filter((f: { rel: string; args: string[] }) => (f.rel === 'partner' || f.rel === 'child') && y.has(f.args[0]) && y.has(f.args[1]));
+        if (!rows.length || rows.some((f: { rel: string; args: string[] }) => !(f.rel === 'partner' ? y.get(f.args[1])! < y.get(f.args[0])! : y.get(f.args[1])! > y.get(f.args[0])!))) bad.push(`${c.file}: the pedigree is not drawn down: ${JSON.stringify(own.laid)}`);
+      }
       if (c.look) {
         // the first report of the kind is the notebook's own picture as first painted: its groups shut as the notebook shuts them, its first frame
         const kind = c.pictures![0], d = reports.find((x) => x.kind === kind), z = zoom(drawn[0]), v0 = framesOf(z)?.[0].view ?? z;

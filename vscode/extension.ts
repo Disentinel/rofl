@@ -12,7 +12,7 @@ import { backendOf } from '../notebook/draw-text.ts';
 import { writeFileSync } from 'node:fs';
 
 const TYPE = 'rofl-notebook', SAID_MIME = 'application/vnd.rofl.said+markdown';
-type Drawn = { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number]; panel?: boolean };
+type Drawn = { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number]; tags: string[]; panel?: boolean };
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
 let worker: Worker | undefined, seq = 0;

@@ -2,8 +2,8 @@
 // Runs in a browser: no node, no VS Code API.
 import { linkTags, unquote, type DrawKind, type View } from '../../notebook/draw.ts';
 
-/** What a drawn picture says of itself, for a test to read back: `size` its stage, `spill` what reaches past a box. */
-export type Report = { frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number] };
+/** What a drawn picture says of itself, for a test to read back: `size` its stage, `spill` what reaches past a box, `tags` a graph's status as drawn. */
+export type Report = { frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number]; tags: string[] };
 /** What the host of a picture does for it: explain a fact under a mark, keep a layout, load the graph libraries. */
 export type Hooks = {
   /** `why` of a view fact, written into `into` */
@@ -28,6 +28,8 @@ export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks
 export const layouts = new WeakMap<HTMLElement, () => string[]>();
 /** What a dialect's look put in a drawn picture beyond its marks, as facts (entry(M) for a state machine's entry dot): what a test reads back. */
 export const features = new WeakMap<HTMLElement, () => string[]>();
+/** The status tags a graph's marks are drawn with, as tagged(M, T) facts: what a test reads back. */
+export const drawnTags = new WeakMap<HTMLElement, () => string[]>();
 /** A graph's drawing fitted to its box again: what a Fit button does. */
 export const fits = new WeakMap<HTMLElement, () => void>();
 /** A graph's drawing against its box, as Cytoscape draws it: what reaches past the box's edges, said; nothing when all of it is in. */

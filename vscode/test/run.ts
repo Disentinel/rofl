@@ -80,7 +80,9 @@ const VISUAL: Visual[] = [
     frames: 'frame(overtime, 1). frame(attrition, 2).', zoom: ['inside(bugs, quality). inside(fatigue, quality). collapsed(quality).', 'quality', 'quality (2)', 'bugs'] },
   { look: 'up', f: 'claim-proof', kinds: ['proof'], status: ['next[main](check,covered)', 'unknown'], why: ['reached[main](pay)', '`covered` is reached'], whatif: ['why `pay` is reached\nexcise `covered` is followed by `pay` when `yes`\ndraw proof', 'next[main](covered,pay)', 'gone'],
     zoom: ['collapsed("reached(covered)").', 'reached[main](covered)', 'covered is reached (7)', 'check is reached'] },
-  { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged' },
+  { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged',
+    whatif: ['excise `lena` was born to `boris` and `anna`\ndraw notation', '$family(boris,anna)', 'gone'], frames: 'frame(ivan, 1). frame(olga, 1). frame(boris, 2). frame(lena, 2).',
+    zoom: ['collapsed($family(ivan, olga)).', '$family(ivan,olga)', '$family(ivan,olga) (1)', 'anna'] },
 ];
 // the second wave, a draw kind each: only its what-if, which holds its picture's status, why, frames and zoom too, drawn by the renderer's module in that form
 const FORMS: (Visual & { form: string })[] = [
@@ -160,6 +162,9 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset'), /does not draw a upset with/],
   euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler'), /does not draw a euler with/],
   decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision'), /does not draw a decision with/],
+  // a pedigree that draws lena without her status, or its generations across the page instead of down
+  pedigree: ['visual/out/pic-notation.js', /tags: families\.has\(id\) \? \[\.\.\.m\.tags, 'family'\] : m\.tags/, "tags: families.has(id) ? [...m.tags, 'family'] : []", named('family-tree'), /the notation does not draw lena failing/],
+  'd-ped': ['visual/out/pic-notation.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('family-tree'), /the pedigree is not drawn down/],
   // the verdicts all drawn in one colour; a picture's Open in editor gone, or its tab not opened; a graph not fitted again when its box narrows
   verdict: ['render.ts', /\{ holds: \['pass', '\\u2713'\], fails: \['fail',/, "{ holds: ['pass', '\\u2713'], fails: ['pass',", first, /the verdicts are not coloured by meaning/],
   show: ['visual/out/pictures.js', /\$\{h\.show \? '<button/, "${false ? '<button", named('paint-shop'), /Open in editor opened no picture in an editor tab/],
@@ -172,7 +177,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
 const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined;
 const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
