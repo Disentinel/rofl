@@ -317,11 +317,21 @@ export class Host {
     unresolved = (base ?? f).query('unresolved_relative[code](F, L, S)').rows.map((r) => `${unquote(r.bindings.F)}:${r.bindings.L} ${r.bindings.S}`).sort();
     this.last = w;
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
+    /** A rule's positive conditions, each with the constants its equalities give its variables (`T = platfrom`, `F is "src/a.ts"`), and
+     *  whether it has an exception: a negation or a `!=` (differs from). */
+    const conditions = (cl: Clause): { pos: Lit[]; excepts: boolean } => {
+      const eq = new Map<string, Term>(), ground = (t: Term) => t.k === 'a' || t.k === 's' || t.k === 'i';
+      for (const b of cl.body) if (b.t === 'bi' && (b.op === '=' || b.op === 'is')) {
+        if (b.l.k === 'v' && ground(b.r)) eq.set(b.l.name, b.r); else if (b.r.k === 'v' && ground(b.l)) eq.set(b.r.name, b.l);
+      }
+      const put = (l: Lit): Lit => ({ ...l, args: l.args.map((t) => t.k === 'v' && eq.has(t.name) ? eq.get(t.name)! : t) });
+      return { pos: cl.body.flatMap((b) => b.t === 'pos' ? [put(b.lit)] : []), excepts: cl.body.some((b) => b.t === 'neg' || b.t === 'bi' && b.op === '!=') };
+    };
     const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>(), bodies = new Map<string, { pos: Lit[]; excepts: boolean }[]>();
     texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) {
       const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel);
       if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
-      if (cl.body.length) (bodies.get(cl.head.rel) ?? bodies.set(cl.head.rel, []).get(cl.head.rel)!).push({ pos: cl.body.flatMap((b) => b.t === 'pos' ? [b.lit] : []), excepts: cl.body.some((b) => b.t !== 'pos') });
+      if (cl.body.length) (bodies.get(cl.head.rel) ?? bodies.set(cl.head.rel, []).get(cl.head.rel)!).push(conditions(cl));
     } } catch { /* said by the load */ } });
     /** What `say` says of the first relation `rel` rests on, or of `rel` itself when `self`. */
     const under = (rel: string, say: (r: string) => string | undefined, self: boolean, seen = new Set<string>()): string | undefined => {
@@ -345,6 +355,7 @@ export class Host {
     // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
     // (its variables apart): nothing reaches the exceptions, and the never holds whatever they say; the way a translation that wrote a name
     // where the model holds a string held. A rule with no exception whose condition finds nothing (no exec anywhere) is an answer, not this.
+    const VACUITY_STEPS = 2000;
     const dead = (l: Lit): string | undefined => {
       if (l.args.some((t) => t.k === 'f' && varsOf(t).size)) return;
       let k = 0;
@@ -352,10 +363,28 @@ export class Host {
       const q = (base && !heads.has(l.rel) ? base : f).query(text);
       return !q.error && !q.partial && !q.unpopulatable && !q.rows.length ? text : undefined;
     };
+    /** Whether the positive conditions together find a row: true, false, or undefined when the search gave up (VACUITY_STEPS queries). */
+    const together = (pos: Lit[]): boolean | undefined => {
+      let steps = VACUITY_STEPS;
+      const ordered = [...pos].sort((a, b) => b.args.filter((t) => t.k !== 'v').length - a.args.filter((t) => t.k !== 'v').length);
+      const at = (l: Lit, b: Record<string, string>) => `${l.rel}${l.persp.k === 'a' ? `[${l.persp.name}]` : ''}(${l.args.map((t) => t.k === 'v' ? b[t.name] ?? t.name : canonTerm(t)).join(', ')})`;
+      const go = (i: number, b: Record<string, string>): boolean | undefined => {
+        if (i === ordered.length) return true;
+        if (--steps < 0 || ordered[i].args.some((t) => t.k === 'f')) return undefined;
+        const q = (base && !heads.has(ordered[i].rel) ? base : f).query(at(ordered[i], b));
+        if (q.error || q.partial) return undefined;
+        let gaveUp = false;
+        for (const r of q.rows) { const x = go(i + 1, { ...b, ...r.bindings }); if (x) return true; if (x === undefined) gaveUp = true; }
+        return gaveUp ? undefined : false;
+      };
+      return go(0, {});
+    };
     const vacuous = (rel: string): string | undefined => {
-      const rs = bodies.get(rel) ?? [], found = rs.map((r) => r.pos.map(dead).find(Boolean));
-      if (!rs.some((r) => r.excepts) || !found.length || found.some((x) => !x)) return;
-      return `holds over nothing: its condition "${vocab.say(found[0]!)?.replace(/\bV_\d+\b/g, 'some') ?? found[0]}" finds no row, so its exceptions are never tested`;
+      const rs = bodies.get(rel) ?? [];
+      if (!rs.length || !rs.some((r) => r.excepts)) return;
+      const why = rs.map((r) => { const d = r.pos.map(dead).find(Boolean); return d ? `its condition "${vocab.say(d)?.replace(/\bV_\d+\b/g, 'some') ?? d}" finds no row` : together(r.pos) === false ? 'its conditions find no row together' : undefined; });
+      if (why.some((x) => !x)) return;
+      return `holds over nothing: ${why[0]}, so its exceptions are never tested`;
     };
     // a constant no fact mentions matches nothing, and a never over it holds whatever the code does; a rule's constants are facts too, in its reflection
     let known: Set<string> | null = null;

@@ -479,10 +479,24 @@ const vacRoots = { kernel: linked('vac-kernel', 'playground/host.ts', mutate('pl
   gate: linked('vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')) };
 // with no exception, a condition that finds nothing is the answer (nothing is blocked by legal), not a vacuous never
 const PLAIN = 'A change C is held up if C is blocked by `legal`.\n\nnever C is held up';
-const vacRoots2 = { excepts: linked('vac-excepts', 'playground/host.ts', mutate('playground/host.ts', /!rs\.some\(\(r\) => r\.excepts\) \|\| /, () => '')) };
+const vacRoots2 = { excepts: linked('vac-excepts', 'playground/host.ts', mutate('playground/host.ts', / \|\| !rs\.some\(\(r\) => r\.excepts\)/, () => '')) };
 const plainCell = (root = ROOT) => cli([planted(`vac-plain-${path.basename(root)}`, 'review.rofl.md', withCell(PLAIN))], {}, root);
 const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff] = await Promise.all([vacCell(), cli([planted('vac-atom', 'review.rofl.md', withCell(VACUOUS.replace('`legal`', '`platform`')))]), vacTranslate(), vacCell(vacRoots.kernel), vacTranslate(vacRoots.gate), plainCell(), plainCell(vacRoots2.excepts)]);
 const plainOk = (o: Out) => is(o, 0) && has(o, 'never C is held up  ->  holds\n');
+// the top level's two shapes: a misspelt team in the condition, and the same misspelt team given by an equality, which is empty only together
+const EQ = (team: string) => `bad(T, X) :- owns(T, X), T = ${team}, X != auth.\n\nnever bad(T, X)`;
+const eqCell = (team: string, root = ROOT) => cli([planted(`vac-eq-${team}-${path.basename(root)}`, 'review.rofl.md', withCell(EQ(team), 'datalog'))], {}, root);
+const vacRoots3 = { eq: linked('vac-eq', 'playground/host.ts', mutate('playground/host.ts', /\[put\(b\.lit\)\]/, () => '[b.lit]')) };
+// and two conditions each with rows that no row satisfies together: a module owned, taken as a change approved
+const JOIN = 'bad(X) :- owns(T, X), approved(X, P), X != auth.\n\nnever bad(X)';
+const vacRoots4 = { join: linked('root-vac-join', 'playground/host.ts', mutate('playground/host.ts', /together\(r\.pos\) === false/, () => 'false')) };
+const [eqTypo, eqRight, eqOff, direct, join, joinOff] = await Promise.all([eqCell('platfrom'), eqCell('platform'), eqCell('platfrom', vacRoots3.eq), cli([planted('vac-direct', 'review.rofl.md', withCell('bad(X) :- owns(platfrom, X), X != auth.\n\nnever bad(X)', 'datalog'))]),
+  cli([planted('vac-join', 'review.rofl.md', withCell(JOIN, 'datalog'))]), cli([planted('vac-join-off', 'review.rofl.md', withCell(JOIN, 'datalog'))], {}, vacRoots4.join)]);
+const eqOk = (o: Out) => is(o, 3) && has(o, 'holds over nothing: its condition');
+check('V a misspelt constant holds over nothing, in the condition itself or given by an equality (T = platfrom); spelt right, the never fails', eqOk(direct) && eqOk(eqTypo) && is(eqRight, 1), eqTypo);
+check('  and with the equalities\' constants not put into the conditions, the second is green', !eqOk(eqOff), eqOff);
+check('V conditions that each find rows and none together hold over nothing', is(join, 3) && has(join, 'holds over nothing: its conditions find no row together'), join);
+check('  and with the search of them together removed, it is green', !has(joinOff, 'holds over nothing'), joinOff);
 check('V a never with no exception over a condition that finds nothing holds, plainly', plainOk(plain0), plain0);
 check('  and with the kernel asking it of every never, it is said to hold over nothing', !plainOk(plainOff), plainOff);
 check('V a never over a rule whose condition finds no row holds over nothing, and is blind, not green; the same with the name finding rows is not', vacOk(vac) && !has(vacAtom, 'holds over nothing'), vac);

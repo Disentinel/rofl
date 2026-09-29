@@ -1,7 +1,7 @@
 // What both notebook gates share: the command line run in a child process, a notebook planted with a change, a source with a planted defect,
 // a fake model, and the verdict of a run read from what it printed.
 import { spawn } from 'node:child_process';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, realpathSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -19,7 +19,12 @@ export const node = (script: string, args: string[], env: Record<string, string>
 });
 export const cli = (args: string[], env: Record<string, string> = {}, root = ROOT) => node('notebook/cli.ts', args, env, root);
 
-export const put = (to: string, text: string) => { mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, text); };
+/** A file written under tmp, and nowhere else: a planted notebook named like a linked tree would write through its links into the tree. */
+export const put = (to: string, text: string) => {
+  mkdirSync(path.dirname(to), { recursive: true });
+  if (!realpathSync(path.dirname(to)).startsWith(realpathSync(tmp))) throw new Error(`${to}: would be written outside ${tmp}, through a link`);
+  writeFileSync(to, text);
+};
 /** A copy of a notebook, with its text changed, next to a copy of every file its front matter names; `also` replaces some of them. */
 export function planted(name: string, from: string, change: (t: string) => string, also: [string, string][] = []): string {
   const text = readFileSync(path.join(NB, from), 'utf8');
