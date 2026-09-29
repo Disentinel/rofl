@@ -1,14 +1,20 @@
 // The kernel off the extension host's thread: one Kernel per window, so the model loads once and a run does not freeze the editor.
 import { parentPort } from 'node:worker_threads';
-import { Kernel } from '../notebook/kernel.ts';
+import { Kernel, share } from '../notebook/kernel.ts';
 import { wall, runFile, translateCell, translateText } from '../notebook/cli.ts';
 import { choose, llm, type Ask } from '../notebook/model.ts';
 import { render } from './render.ts';
 
 const kernel = new Kernel({ wall });
-const run = (file: string, text: string, unsaved: Record<string, string>) => { const r = runFile(file, kernel, text, unsaved); return { ...r, shown: render(r) }; };
+/** `bare`: where the bare cells stand (vscode/serial.ts bareLines); the prose's errors and notes found in one are said under it, not in the notebook's head. */
+const run = (file: string, text: string, unsaved: Record<string, string>, bare: Cell['bare'] = []) => {
+  const r = runFile(file, kernel, text, unsaved);
+  if (!r.cells[0]) return { ...r, shown: render(r), bare: [] };
+  const { rest, blocks } = share(r.cells[0], bare), shown = render({ ...r, cells: [rest, ...blocks] });
+  return { ...r, shown: render({ ...r, cells: [rest, ...r.cells.slice(1)] }), bare: blocks.map((out, k) => ({ out, shown: shown.cells[k] })) };
+};
 /** `where`: the workspace folder the model may read, and the person's untracked command. */
-export type Cell = { at?: number; words?: string; asked?: string; where?: import('../notebook/reader.ts').Where };
+export type Cell = { at?: number; words?: string; asked?: string; where?: import('../notebook/reader.ts').Where; bare?: { line: number; lines: number }[] };
 const stops = new Map<number, AbortController>(), answers = new Map<number, (a: Awaited<ReturnType<Ask>>) => void>();
 let asks = 0;
 /** VS Code's language model, which only the extension host can reach: the prompt goes there and the answer comes back; a stop cancels it there. */
@@ -24,6 +30,6 @@ function translate(id: number, file: string, text: string, { at, words, asked, w
 parentPort!.on('message', async ({ id, op, file, text, unsaved, cell, model, k, answer }: { id: number; op: 'run' | 'translate' | 'why' | 'stop' | 'answer'; file: string; text: string; unsaved: Record<string, string>; cell: Cell; model?: string; k: number; answer: Awaited<ReturnType<Ask>> }) => {
   if (op === 'stop') return void stops.get(id)?.abort();
   if (op === 'answer') { answers.get(k)?.(answer); return void answers.delete(k); }
-  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text, unsaved) : op === 'why' ? kernel.why(text) : await translate(id, file, text, cell, model) }); }
+  try { parentPort!.postMessage({ id, r: op === 'run' ? run(file, text, unsaved, cell?.bare) : op === 'why' ? kernel.why(text) : await translate(id, file, text, cell, model) }); }
   catch (e) { parentPort!.postMessage({ id, error: (e as Error).stack ?? String(e) }); }
 });

@@ -1,7 +1,7 @@
 // A `.rofl.md` opens as a notebook; Run goes through notebook/kernel.ts in a worker; a failing never marks the lines it names.
 import * as vscode from 'vscode';
 import { Worker } from 'node:worker_threads';
-import { CODE, KINDS, deserialize, serialize, type Cell, type Doc } from './serial.ts';
+import { CODE, KINDS, bareLines, deserialize, serialize, type Cell, type Doc } from './serial.ts';
 import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
@@ -84,7 +84,7 @@ function restart() {
 
 const docOf = (nb: vscode.NotebookDocument): Doc => ({ cells: nb.getCells().map((c) => ({ kind: c.kind, value: c.document.getText(), languageId: c.document.languageId, metadata: c.metadata })), metadata: nb.metadata });
 const cellsOf = (d: Doc) => d.cells.map((c) => Object.assign(new vscode.NotebookCellData(c.kind, c.value, c.languageId), { metadata: c.metadata }));
-const runsOf = (nb: vscode.NotebookDocument) => nb.getCells().filter((c) => c.kind === CODE && KINDS.includes(c.document.languageId));
+const runsOf = (nb: vscode.NotebookDocument) => nb.getCells().filter((c) => c.kind === CODE && KINDS.includes(c.document.languageId) && !c.metadata.bare);
 /** The natural cell a cell answers to, as the kernel reads it: itself, or the natural cell before a rofl or datalog one. */
 const naturalOf = (cell: vscode.NotebookCell) => {
   const runs = runsOf(cell.notebook), k = runs.indexOf(cell), lang = cell.document.languageId;
@@ -151,9 +151,9 @@ export function activate(ctx: vscode.ExtensionContext) {
 
   async function run(nb: vscode.NotebookDocument) {
     const runs = runsOf(nb);
-    const front = nb.cellAt(0)?.document.languageId === 'yaml' ? nb.cellAt(0) : undefined;
+    const front = nb.cellAt(0)?.document.languageId === 'yaml' ? nb.cellAt(0) : undefined, bare = nb.getCells().filter((c) => c.metadata.bare);
     const execs = new Map<vscode.NotebookCell, vscode.NotebookCellExecution>();
-    try { for (const c of front ? [front, ...runs] : runs) execs.set(c, controller.createNotebookCellExecution(c)); }
+    try { for (const c of [...front ? [front] : [], ...runs, ...bare]) execs.set(c, controller.createNotebookCellExecution(c)); }
     catch { for (const e of execs.values()) { e.start(); e.end(undefined); } return; }   // a run of this notebook is already going
     // Stop: a run cannot be told anything while it computes, so its worker goes
     for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); e.token.onCancellationRequested(restart); }
@@ -164,20 +164,21 @@ export function activate(ctx: vscode.ExtensionContext) {
       // a picture: the renderer draws the view; an editor without it shows the view as text
       ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString() }, VIEW_MIME),
         vscode.NotebookCellOutputItem.text(b.fence ? `\`\`\`${b.fence}\n${b.write(view)}\n\`\`\`` : b.write(view), 'text/markdown')]); })]);
-    let r: Run & { shown: { head: Shown; cells: Shown[] } };
+    let r: Run & { shown: { head: Shown; cells: Shown[] }; bare: { out: NbCellOut; shown: Shown }[] };
     try {
       r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `ROFL: running ${vscode.workspace.asRelativePath(nb.uri)}` },
-        () => ask('run', nb.uri.fsPath, serialize(docOf(nb)), Object.fromEntries(vscode.workspace.textDocuments.filter((d) => d.isDirty && d.uri.scheme === 'file').map((d) => [d.uri.fsPath, d.getText()]))));
+        () => ask('run', nb.uri.fsPath, serialize(docOf(nb)), Object.fromEntries(vscode.workspace.textDocuments.filter((d) => d.isDirty && d.uri.scheme === 'file').map((d) => [d.uri.fsPath, d.getText()])), { bare: bareLines(docOf(nb)) }));
     } catch (e) {
       for (const [c, x] of execs) { if (c === (front ?? runs[0])) x.replaceOutput(out([{ md: '', err: (e as Error).message, ok: false }])); x.end(false, Date.now()); }
       return;
     }
     results.set(nb.uri.toString(), r);
     runs.forEach((c, k) => { if (r.cells[k + 1]) said.set(c, { text: c.document.getText(), out: r.cells[k + 1], paths: r.paths }); });
+    bare.forEach((c, k) => { if (r.bare[k]) said.set(c, { text: c.document.getText(), out: r.bare[k].out, paths: r.paths }); });
     saidChanged.fire();
     for (const [c, x] of execs) {
       const head = { ...r.shown.head, md: r.shown.head.md.replace(/rofl-cell:(\d+)/g, (m, k) => runs[Number(k) - 1]?.document.uri.toString() ?? m) };
-      const shown = [...(c === (front ?? runs[0]) ? [head] : []), ...(c === front ? [] : [r.shown.cells[runs.indexOf(c)] ?? { md: '', err: '', ok: r.status !== 'unread' }])];
+      const shown = [...(c === (front ?? runs[0] ?? bare[0]) ? [head] : []), ...(c === front ? [] : [(bare.includes(c) ? r.bare[bare.indexOf(c)]?.shown : r.shown.cells[runs.indexOf(c)]) ?? { md: '', err: '', ok: r.status !== 'unread' }])];
       x.replaceOutput(out(shown));
       x.end(shown.every((s) => s.ok), Date.now());
     }

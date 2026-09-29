@@ -9,7 +9,8 @@ export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'u
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View };
-export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[] };
+/** `at`: the prose's, the file's line each error and note was found on, where the reader knows it. */
+export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[]; at?: { errors: (number | null)[]; notes: (number | null)[] } };
 /** `blind`: every never holds, some only as far as the model sees or its wall let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
 export type Status = 'ok' | 'blind' | 'fails' | 'unread';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
@@ -61,7 +62,8 @@ export class Kernel {
       const o = out.cells[runs.indexOf(c)];
       const seen = new Set<number>();
       const lineOf = (t: string) => { const ls = c.text.split('\n'); let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
-      return { index: c.index, kind: c.kind, line: c.line, errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
+      const at = o.at && ((ms: string[]) => ms.map((m) => m in o.at! ? c.line + o.at![m] : null));
+      return { index: c.index, kind: c.kind, line: c.line, ...(at && { at: { errors: at(o.errors), notes: at(o.notes) } }), errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
@@ -71,6 +73,16 @@ export class Kernel {
     const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
+}
+
+/** The prose's errors and notes, each given to the block of lines holding the line it was found on (a bare cell: vscode/serial.ts), the rest left to the prose.
+ *  `blocks`: the first line of each, from 1, and how many lines it has. */
+export function share(prose: NbCellOut, blocks: { line: number; lines: number }[]): { rest: NbCellOut; blocks: NbCellOut[] } {
+  const { at: _, ...keep } = prose, rest: NbCellOut = { ...keep, errors: [], notes: [] }, out = blocks.map(({ line }): NbCellOut => ({ index: 0, kind: 'prose', line, errors: [], notes: [], lines: [] }));
+  const to = (at?: number | null) => { const k = at == null ? -1 : blocks.findIndex((b) => at >= b.line && at < b.line + b.lines); return k < 0 ? rest : out[k]; };
+  prose.errors.forEach((e, k) => to(prose.at?.errors[k]).errors.push(e));
+  prose.notes.forEach((n, k) => to(prose.at?.notes[k]).notes.push(n));
+  return { rest, blocks: out };
 }
 
 export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };

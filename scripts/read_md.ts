@@ -28,6 +28,12 @@ export type ReadResult = {
   problems: { unparsed: string[]; dropped: string[]; ambiguous: string[]; nowhere: string[]; badAlternatives: string[]; collisions: string[] };
   /** the relations the text defines or declares */
   defined: string[];
+  /** the lines, [from, to) from 0, of every block read as sentences: a rule, a list of facts with its line, a declaration */
+  spans: [number, number][];
+  /** the line, from 0, of the block a problem was found in */
+  lineOf: Record<string, number>;
+  /** by line of `rofl`, the line, from 0, of the block it was read from */
+  roflAt: (number | undefined)[];
   literal(text: string): string | null;
 };
 
@@ -164,6 +170,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // ------------------------------------------------------------- sentences
   type Rule = { head: Lit; body: Lit[]; guards: Map<string, { noun: string; nouns?: string[]; file?: Term }>; where: string; book: string };
   let unparsed: string[] = [];
+  const lineOf: Record<string, number> = {};
   function condition(text: string, intros: Intro[], rule: Rule): boolean {
     let neg = false;
     text = text.trim().replace(/[;.]$/, '');
@@ -401,15 +408,15 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   // --------------------------------------------------------------- markdown
   // a link is on one line and holds no bracket: a stray `[` in prose must not open one that ends at the next real link
   const clean = (s: string) => s.replace(/\[([^\][\n]+)\]\([^)\n]*\)/g, '$1').replace(/<a id="[^"]+"><\/a>/g, '');
-  type Block = { type: string; text?: string; lines?: string[]; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][] };
+  type Block = { type: string; text?: string; lines?: string[]; items?: { text: string; sub: string[] }[]; head?: string[]; rows?: string[][]; at?: number; end?: number };
   const md = clean(rawMd);
   // a line ending in a full stop, followed by one that starts a sentence, ends a paragraph: rules one to a line are read one by one
-  const sentences = (lines: string[]): Block[] => {
-    const ps: string[][] = [];
-    lines.forEach((l, i) => { if (!i || (/\.$/.test(lines[i - 1]) && /^[A-Z`]/.test(l))) ps.push([]); ps[ps.length - 1].push(l); });
-    return ps.map((p) => ({ type: 'p', text: p.join(' ') }));
+  const sentences = ({ lines, at }: Block): Block[] => {
+    const ps: number[][] = [];
+    lines!.forEach((l, i) => { if (!i || (/\.$/.test(lines![i - 1]) && /^[A-Z`]/.test(l))) ps.push([]); ps[ps.length - 1].push(i); });
+    return ps.map((p) => ({ type: 'p', text: p.map((i) => lines![i]).join(' '), at: at! + p[0], end: at! + p[p.length - 1] + 1 }));
   };
-  const blocks = (parseMd(md) as Block[]).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code').flatMap((b) => b.type === 'p' && b.lines ? sentences(b.lines) : [b]);
+  const blocks = (parseMd(md) as Block[]).filter((b) => b.type !== 'front' && b.type !== 'q' && b.type !== 'code').flatMap((b) => b.type === 'p' && b.lines ? sentences(b) : [b]);
   let defaultBook = 'main';
   { const fm = /^---\n([\s\S]*?)\n---/.exec(rawMd); if (fm) { const d = /^default: (\w+)$/m.exec(fm[1]); if (d) defaultBook = d[1]; } }
   const headBook = new Map<string, string>();   // relation -> the book its rules write
@@ -470,7 +477,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   {
     const headOf = (t: string) => t.replace(/ either:$/, '').replace(/ if all of:$/, '').split(/ if | unless |, unless /)[0].replace(/[.;:]$/, '').trim();
     let subject = '', fenced = false;
-    for (const raw of rawMd.split('\n')) {
+    for (const [k, raw] of rawMd.split('\n').entries()) {
       const line = raw.trim();
       if (/^```/.test(raw)) { fenced = !fenced; continue; }   // a fence is not read, and neither is an anchor inside one
       if (fenced || !line || line.startsWith('>') || line.startsWith('#') || line.startsWith('|') || /^\d+\. /.test(line)) continue;
@@ -479,14 +486,25 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       const text = clean(a[3]).trim();
       const head = a[1] && subject && /^[a-z]/.test(text) ? `${subject} ${text}` : text;
       // a hyphen in a relation's name is a subtraction to the parser: said here, where the writer can see which anchor
-      if (a[2].includes('-') && /\b[A-Z]/.test(head.replace(/^(?:An?|The) /, ''))) { unparsed.push(`HEAD the anchor "${a[2]}" names no relation, a name is one word: "${a[2].replace(/-/g, '_')}" (${headOf(head)})`); continue; }
+      if (a[2].includes('-') && /\b[A-Z]/.test(head.replace(/^(?:An?|The) /, ''))) { const u = `HEAD the anchor "${a[2]}" names no relation, a name is one word: "${a[2].replace(/-/g, '_')}" (${headOf(head)})`; unparsed.push(u); if (!(u in lineOf)) lineOf[u] = k; continue; }
       learn(a[2], headOf(head));
     }
   }
   let section = '';
   let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
   let blockSet = false;
-  for (let i = 0; i < blocks.length; i++) {
+  // what each block made: whether it was read as sentences, and the line of each problem found in it
+  const spans: [number, number][] = [];
+  let from = 0, taken = false, before: number[] = [];
+  const problems = () => [unparsed, dropped, ambiguous, badAlternatives], made = () => [rules, parsedFacts, declared], madeAt: number[][] = [[], [], []];
+  const settle = (to: number) => {
+    if (taken) spans.push([blocks[from].at!, blocks[to].end!]);
+    problems().forEach((ps, k) => { for (const u of ps.slice(before[k])) if (!(u in lineOf)) lineOf[u] = blocks[from].at!; });
+    made().forEach((xs, k) => { while (madeAt[k].length < xs.length) madeAt[k].push(blocks[from].at!); });
+  };
+  made().forEach((xs, k) => madeAt[k].push(...xs.map(() => -1)));
+  for (let i = 0; i < blocks.length; settle(Math.min(i, blocks.length - 1)), i++) {
+    from = i; taken = false; before = problems().map((ps) => ps.length);
     const b = blocks[i], next = blocks[i + 1];
     if (b.type === 'h') { section = b.text!; continue; }
     // a list or a table nothing above it claimed is not read, and says so rather than vanishing
@@ -495,6 +513,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (b.type !== 'p') continue;
     const text = b.text!.trim(); let m;
     if (/^Kinds without a noun:/.test(text) || /^What this file calls a node/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
+    // from here every branch reads the block as sentences, save a colon line or a paragraph with no full stop that nothing follows
+    taken = true;
     if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; blockSet = true; continue; }
     if (text === 'Reads:' && next && next.type === 'ul') {
       // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
@@ -564,7 +584,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       }
       i++; continue;
     }
-    if (/\.$/.test(text)) ruleText(text, section, null);
+    if (/\.$/.test(text)) ruleText(text, section, null); else taken = false;
   }
 
   // ---------------------------------------------------- back into clauses
@@ -614,7 +634,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body], book: rule.book, tense: rule.head.tense });
     return out;
   }
-  const parsed: Clause[] = rules.flatMap(expand);
+  const expanded = rules.map(expand), parsed: Clause[] = expanded.flat();
+  const roflAt = [...madeAt[2], ...madeAt[1], ...expanded.flatMap((cs, k) => cs.map(() => madeAt[0][k]))].map((l) => l < 0 ? undefined : l);
 
   // the source clauses from the facts dump
   const srcClauses = new Map<string, Clause>();
@@ -701,6 +722,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     traced,
     problems: { unparsed: [...new Set(unparsed)], dropped, ambiguous: [...new Set(ambiguous)], nowhere, badAlternatives, collisions },
     defined: [...new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel)])],
+    spans, lineOf, roflAt,
     literal,
   };
 }
+
+/** The lines of `md` the reader reads as sentences, whatever the words: which blocks it reads does not hang on the vocabulary, only what they say. */
+export const sentenceSpans = (md: string): [number, number][] => readMd(md, { vocab: '' }).spans;

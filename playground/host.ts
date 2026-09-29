@@ -26,7 +26,8 @@ export type Line = { kind: Kind; text: string; lit: string; rows: Row[]; total: 
   unasked?: string;
   /** a `draw` line's picture */
   view?: View };
-export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string };
+/** `at`: the line, from 0 in the cell, an error or a note of a Markdown cell was found on, where the reader knows it. */
+export type CellOut = { id: string; errors: string[]; notes: string[]; lines: Line[]; rofl?: string; at?: Record<string, number> };
 export type Node = { kind: string; file: string; line: number; label: string };
 /** `unresolved`: a relative import or require that names no file of the code, as `file:line 'spec'`; a never holds only as far as these. */
 export type RunOut = { parseErrors: Record<string, string>; facts: number; ms: number; phases: Record<string, number>; learned: string[]; cells: CellOut[]; nodes: Record<string, Node>; unresolved: string[]; error?: string; /** an evaluation was stopped */ partial?: boolean; /** the model over the code: evaluated by this run, or kept from one before */ model?: 'evaluated' | 'kept' };
@@ -255,7 +256,7 @@ export class Host {
     const sc = this.code(files, data);
     const { facts, nodes, parseErrors } = sc;
     lap('scan');
-    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, readHome, true);
+    const { parts, read, learned, vocab: allVocab, close, closeAt } = readBook(cells, this.phrases, readHome, true);
     lap('read');
     // what the notebook introduces is its own: every sentence it declares or names from its words, and every datalog head no sentence says
     // an anchor that names a relation of a world the notebook reads (`<a id="uncovered">` over spat.rofl) gives it a sentence: that one stays the world's
@@ -272,27 +273,30 @@ export class Host {
     const notebook = this.notebook = new Map();
     const heads = new Set<string>(), reads = new Set<string>();
     const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
-      const errors: string[] = [], notes: string[] = [];
+      const errors: string[] = [], notes: string[] = [], at: Record<string, number> = {};
       const r = read[i];
       const text = owned(r ? r.rofl : clauses);
       if (r) {
+        const put = (to: string[], said: string, line?: number) => { to.push(said); if (line !== undefined && !(said in at)) at[said] = line; };
         const items = r.problems.unparsed.flatMap((u) => u.startsWith('LIST ') ? [u.slice(5)] : []);
         if (items.length) errors.push(`not read: ${items.length === 1 ? 'a list item' : `${items.length} list items`} no line above introduces (${items.map((x) => `- ${x}`).join(' ')}): a list of facts goes under a plain line of its own ending in a colon, like "The cars:"`);
-        for (const u of r.problems.unparsed) if (!u.startsWith('LIST ')) errors.push(unreadSaid(u, vocab));
-        for (const d of r.problems.dropped) errors.push(`left out: ${d}`);
+        for (const u of r.problems.unparsed) if (!u.startsWith('LIST ')) put(errors, unreadSaid(u, vocab), r.lineOf[u]);
+        for (const d of r.problems.dropped) put(errors, `left out: ${d}`, r.lineOf[d]);
         const nowhere = r.problems.nowhere.filter((x) => !everywhere.has(x));
         if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
-        for (const a of r.problems.ambiguous) notes.push(`read one way of several: ${a}`);
-        notes.push(...close[i]);
+        for (const a of r.problems.ambiguous) put(notes, `read one way of several: ${a}`, r.lineOf[a]);
+        close[i].forEach((n, k) => put(notes, n, closeAt[i][k]));
         if (!c.prose) for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
       }
       try {
         texts[i] = text;
         const program = parseProgram(text);
+        // a clause the reader made is said on the line of the block it made it from, when every line of what it made is one clause
+        const madeAt = (k: number) => r && program.length === r.roflAt.length ? r.roflAt[k] : undefined, said = (e: string, k: number) => { errors.push(e); const l = madeAt(k); if (l !== undefined && !(e in at)) at[e] = l; };
         // the kernel's relations and its boot's are read only where a cell names their book: unbooked, a word of the notebook would reach their rows
         const foreign = program.flatMap((cl) => cl.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])).find((l) => this.foreign.has(l.rel) && !l.perspExplicit);
-        if (foreign) { errors.push(`${NOT_OURS(foreign.rel, home)}: this cell is left out`); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined }; }
-        for (const cl of program) {
+        if (foreign) { said(`${NOT_OURS(foreign.rel, home)}: this cell is left out`, program.findIndex((cl) => cl.body.some((b) => b.t !== 'bi' && b.lit === foreign))); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined, ...(Object.keys(at).length && { at }) }; }
+        for (const [k, cl] of program.entries()) {
           if (!cl.body.length) continue;
           notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${plain(cl.head.rel).replace(/_/g, ' ')}`);
           const free = loose(cl);
@@ -301,16 +305,20 @@ export class Host {
           if (!free.length && parts[i].asks.some((a) => a.kind === 'extends' && a.lit === cl.head.rel)) { const n = `extends the model's ${cl.head.rel}`; if (!notes.includes(n)) notes.push(n); continue; }
           if (!free.length) {
             // a new sentence whose words the model already speaks lands in the model's relation, and every program then answers it: an accident unless the cell says so
-            errors.push(`the conclusion lands in the model's own sentence "${vocab.say(lit) ?? lit}" (${cl.head.rel}), so this cell would change what the model says of every program. It is left out: say it in words no sentence of the model uses, or add the line \`extends ${cl.head.rel}\` to the cell to extend the model on purpose.`);
+            said(`the conclusion lands in the model's own sentence "${vocab.say(lit) ?? lit}" (${cl.head.rel}), so this cell would change what the model says of every program. It is left out: say it in words no sentence of the model uses, or add the line \`extends ${cl.head.rel}\` to the cell to extend the model on purpose.`, k);
             texts[i] = ''; refused.add(i); continue;
           }
           // the reader took the head for one of the model's sentences, with a word of it as a variable: loaded, it would write into the model and no round could settle it
-          errors.push(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`);
+          said(`the conclusion reads as the model's own sentence "${vocab.say(lit) ?? lit}", with ${free.join(', ')} standing for words of it, so this cell would rewrite the model. It is left out: say the conclusion in words the model does not use, and ask with the same words.`, k);
           texts[i] = ''; refused.add(i);
         }
         if (!refused.has(i)) { for (const cl of program) heads.add(cl.head.rel); relsOf(program, reads); }
-      } catch (e) { errors.push((e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m)); texts[i] = ''; }
-      return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
+      } catch (e) {
+        const n = Number(/^line (\d+):/.exec((e as Error).message)?.[1] ?? 0), made = r ? (r.rofl.match(/\n/g) ?? []).length === r.roflAt.length ? r.roflAt[n - 1] : undefined : undefined;
+        const m = (e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m);
+        errors.push(m); if (made !== undefined && !(m in at)) at[m] = made; texts[i] = '';
+      }
+      return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined, ...(Object.keys(at).length && { at }) };
     });
     const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => a.kind === 'draw' ? a : { ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) }));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
