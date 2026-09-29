@@ -4,6 +4,13 @@
 
 -- ---------------------------------------------------------------- open ---
 
+-- Recorded 2026-09-29 by the nb-look session: the notation drawn, and its waiver withdrawn.
+
+finding(f_the_notation_waiver_was_argued_from_the_implementation, defect).
+recorded(f_the_notation_waiver_was_argued_from_the_implementation, "2026-09-29").
+addressed_by(f_the_notation_waiver_was_argued_from_the_implementation, "vscode/visual/pic-notation.ts").
+finding_note(f_the_notation_waiver_was_argued_from_the_implementation, "The owner opened examples/visual/family-tree.rofl.md in VS Code: its header said 1 failing, the output was the GEDCOM file as text, and nothing showed WHICH person failed (lena, born before her mother). The matrix waived why, status, compare, geometry, frames and zoom for n_notation as drawn by the domain's own engine, its marks not ROFL marks: a property of how it was built, not of family trees, whose people are marks like any other. NOW the notation keeps its file (the as gedcom fold, Open as .ged) and is drawn as a pedigree with the graph's layout: a partner above the family, the family above each child, a link standing for its partner or child fact so a click asks why of it; a family shut holds its children (notebook/draw.ts zoom). The waiver is gone; why, status and compare are done by test:vscode, frames and zoom by its what-if copy, and geometry alone stays waived, for the domain's reason: a pedigree's rows are its generations, and a person pinned out of its row could stand above a parent, the very defect it shows. test:vscode now reads a graph's status back as the renderer drew it (tagged(M, T) from Cytoscape's classes) for every graph case without a shut group; --break pedigree (lena drawn without her status) and --break d-ped (generations across) are red, each for its own reason.").
+
 -- Recorded 2026-09-29 by the nb-look session: the owner's three findings from the extension in dark theme.
 
 finding(f_a_graph_was_fitted_once_to_the_box_it_was_drawn_in, defect).
