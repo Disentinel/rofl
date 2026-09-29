@@ -120,9 +120,10 @@ export type Where = { root?: string; command?: string };
 export function workspace(notebook: string, { root, command = process.env.ROFL_NB_UNTRACKED_COMMAND }: Where = {}): Repo {
   const none = (dir: string, refused: string): Repo => ({ root: dir, files: new Set(), refused });
   if (!existsSync(notebook)) return none(path.dirname(notebook), 'the notebook is not a file on disk');
-  const nb = realpathSync(notebook), home = existsSync(os.homedir()) ? realpathSync(os.homedir()) : path.resolve(os.homedir());
+  // the native realpath, which gives a name as the disk spells it: on a disk that ignores case, /users/ME is the home directory too
+  const nb = realpathSync.native(notebook), home = existsSync(os.homedir()) ? realpathSync.native(os.homedir()) : path.resolve(os.homedir());
   let dir: string;
-  try { dir = realpathSync(root ?? path.dirname(nb)); } catch { return none(root!, 'the workspace is not on disk'); }
+  try { dir = realpathSync.native(root ?? path.dirname(nb)); } catch { return none(root!, 'the workspace is not on disk'); }
   if (!within(dir, nb)) return none(dir, 'the workspace does not hold the notebook');
   if (dir === home) return none(dir, 'the workspace is the home directory: open the project\'s folder, or name it with --root');
   if (within(dir, home) || path.dirname(dir) === dir) return none(dir, 'the workspace holds the home directory: open the project\'s folder, or name it with --root');

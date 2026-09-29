@@ -393,7 +393,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['secret list of 0adee37', 'notebook/reader.ts', [[/export const SECRET = [\s\S]*?'i'\);/, 'export const SECRET = /(^|\\/)(\\.env[^/]*|[^/]*\\.(pem|key|p12|pfx)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*)$/i;']], ['nogit'], 'NPMRC_TOKEN reached a prompt'],
   ['home refusal', 'notebook/reader.ts', [[/  if \(dir === home\) return .*\n/, '']], ['home'], 'a workspace that is the home directory was read'],
   ['refusal of an ancestor of home', 'notebook/reader.ts', [[/  if \(within\(dir, home\) \|\| path\.dirname\(dir\) === dir\) return .*\n/, '']], ['above'], 'a workspace that holds the home directory was read'],
-  ['the boundary widened to its parent', 'notebook/reader.ts', [[/dir = realpathSync\(root \?\? path\.dirname\(nb\)\)/, 'dir = path.dirname(realpathSync(root ?? path.dirname(nb)))']], ['sub'], 'PARENT_TOKEN reached a prompt'],
+  ['the boundary widened to its parent', 'notebook/reader.ts', [[/dir = realpathSync\.native\(root \?\? path\.dirname\(nb\)\)/, 'dir = path.dirname(realpathSync.native(root ?? path.dirname(nb)))']], ['sub'], 'PARENT_TOKEN reached a prompt'],
   ['default skip list', 'notebook/reader.ts', [[/const SKIP = new Set\(\[.*\]\);/, 'const SKIP = new Set<string>();']], ['nogit'], 'MODULES_TOKEN reached a prompt'],
   ['the .gitignore', 'notebook/reader.ts', [[/  try \{ text = readFileSync\(path\.join\(root, '\.gitignore'\), 'utf8'\); \} catch \{ \/\* none \*\/ \}\n/, '']], ['nogit'], 'IGNORED_TOKEN reached a prompt'],
   ['listed', 'notebook/reader.ts', [[/  if \(!repo\.files\.has\(rel\)\) return .*\n/, '']], ['plain'], 'IGNORED_TOKEN reached a prompt'],
@@ -414,6 +414,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['regular files only', 'notebook/reader.ts', [[/  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, '']], ['config'], 'a socket was not refused as not a regular file'],
   ['CVS/Entries ignored', 'notebook/reader.ts', [[/  if \(by === 'cvs'\) \{\n/, "  if (by === 'cvs') { return new Set(files);\n"]], ['config'], 'a file CVS does not list was read'],
   ['CVS removals ignored', 'notebook/reader.ts', [[/if \(!m\[2\]\.startsWith\('-'\)\) out\.add/, 'out.add']], ['config'], 'a file CVS has removed was read'],
+  ...process.platform === 'darwin' ? [['the home directory in another case', 'notebook/reader.ts', [[/realpathSync\.native/g, 'realpathSync']], ['config'], 'the home directory named in capitals was read'] as [string, string, [RegExp, string][], string[], string]] : [],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -457,6 +458,11 @@ async function configs(tag: string, root: string): Promise<string[]> {
     if (reads(env, 'node_modules/x.js')) bad.push('a config re-allowed a skipped folder');
     const broken = as('read_prefix(\n');
     if (!broken.refused?.includes('.rofl/read.rofl: line ') || broken.files.size || reads(broken, 'src/a.ts')) bad.push(`a config that does not load let files be read: ${broken.refused ?? [...broken.files]}`);
+    // the home directory named in another case, which a disk that ignores case (macOS's) takes as the same folder
+    const HOME = process.env.HOME;
+    process.env.HOME = ws; rmSync(path.join(ws, '.rofl'), { recursive: true, force: true });
+    try { const up = workspace(path.join(ws, 'n.rofl.md').toUpperCase(), { root: ws.toUpperCase() }); if (up.files.size) bad.push(`the home directory named in capitals was read: ${up.files.size} files`); }
+    finally { process.env.HOME = HOME; }
     const svn = as('untracked_by(svn).\n');
     if (!svn.refused?.includes('not built in')) bad.push(`untracked_by(svn) was not refused as not built in: ${svn.refused}`);
     // a socket, which is not a regular file: listed, and refused when asked for
