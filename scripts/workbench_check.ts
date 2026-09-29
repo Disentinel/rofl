@@ -6,12 +6,39 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, wri
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { RESERVED } from '../src/reflect.ts';
+import { chrome, drift, type Drift } from './workbench_browser.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-workbench-'));
 const built = path.join(tmp, 'as-built');
 const b = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/workbench.ts'), '--out', built], { encoding: 'utf8', timeout: 60_000 });
 if (b.status !== 0) { console.error(b.stdout, b.stderr); process.exit(1); }
+// in a browser: the line being typed in a long cell holds still while the notebook runs under it (scripts/workbench_browser.ts)
+const still = (d: Drift, how: string, regrow = true) => [...d.error ? [`${how}: ${d.error}`] : [], ...d.max > d.line ? [`${how}: the line being typed moved ${d.max.toFixed(0)} px, more than a line (${d.line} px)`] : [],
+  ...regrow && d.regrown ? [`${how}: ${d.regrown} times a textarea no one typed in was grown`] : []];
+const browsed = (async () => {
+if (!chrome() || process.env.ROFL_NO_BROWSER === '1') return () => say(process.env.ROFL_NO_BROWSER === '1', 'in a browser: no Chrome here (CHROME names one; ROFL_NO_BROWSER=1 to go without), so the line being typed was not measured');
+const said: (() => void)[] = [];
+  const HOWS = ['plain', 'newest', 'end', 'peer'] as const;
+  const ds = await Promise.all(HOWS.map((h) => drift(built, h)));
+  const bad = HOWS.flatMap((h, k) => still(ds[k], h, h !== 'peer'));
+  said.push(() => say(!bad.length, `in a browser: typing 30 characters mid a 60-line cell, and at its end, with newest first, and while someone rewrites a cell above, the line moves at most ${Math.max(...ds.map((d) => d.max)).toFixed(1)} px (a line is ${ds[0].line} px)`, bad.join('\n     ')));
+  const BROWSER_PLANTS: [string, string, [string, string], (typeof HOWS)[number], RegExp][] = [
+    ['grow collapsing the page', 'lib/page.js', ['if (scrollY !== y)\n    scrollTo(scrollX, y);', ''], 'plain', /the line being typed moved/],
+    ['fill regrowing every textarea', 'lib/page.js', ['    if (fresh)\n        requestAnimationFrame(() => steady(() => grow(t)));', '    requestAnimationFrame(() => grow(t));'], 'plain', /a textarea no one typed in was grown/],
+    ['the anchor removed', 'lib/page.js', ['        if (d)\n            scrollBy(0, d);', ''], 'peer', /the line being typed moved/],
+  ];
+  const got = await Promise.all(BROWSER_PLANTS.map(async ([name, file, [from, to], how]) => {
+    const dir = path.join(tmp, `browser-${name.replace(/\W+/g, '-')}`);
+    cpSync(built, dir, { recursive: true });
+    const f = path.join(dir, file), text = readFileSync(f, 'utf8');
+    if (!text.includes(from)) throw new Error(`${file}: the planted defect did not apply`);
+    writeFileSync(f, text.split(from).join(to));
+    return still(await drift(dir, how), how);
+  }));
+  BROWSER_PLANTS.forEach(([name, , , , why], k) => said.push(() => say(got[k].some((x) => why.test(x)), `planted in a browser, ${name}: red, because ${why.source}`, got[k].join('\n     ') || 'green')));
+  return () => said.forEach((f) => f());
+})();
 
 /** What each notebook of examples/visual must say, run through the built modules (they are not published): the lines that fail, the pictures it
  *  draws and the tag a failing never gives them. */
@@ -38,7 +65,8 @@ const FACTS_ONLY = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends 
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
 
 /** Everything wrong with the build in `dir`, said; nothing when it is right. */
-async function problems(dir: string): Promise<string[]> {
+/** `every`: also the generative check over every outside name, which only the build as it is and the plant that turns ownership off need. */
+async function problems(dir: string, every = true): Promise<string[]> {
   const bad: string[] = [];
   writeFileSync(path.join(dir, 'lib/package.json'), '{"type":"module"}');   // node reads the page's modules as the browser does; not published
   const wb = await import(path.join(dir, 'lib/bench.js'));
@@ -119,7 +147,7 @@ async function problems(dir: string): Promise<string[]> {
   if (xm.some((m) => rid.test(m)) || !kr.byCell.get('x')?.errors.some((e: string) => e.startsWith("rule is the kernel's, not this notebook's"))) bad.push(`a kernel row reaches a picture: ${xm.length} marks`);
   // every relation outside the notebook, said as a domain sentence from its own words, is the notebook's own: its question answers the cell's one row
   const leaks: string[] = [];
-  for (const rel of OUTSIDE) {
+  for (const rel of every ? OUTSIDE : []) {
     const w = rel.replace(/_/g, ' ').trim();
     const ran = await bench.run([{ id: 'g', kind: 'rofl', text: `A thing X ${w} a thing Y if X is \`p\`, Y is \`q\`.\n\n? A thing ${w} a thing` }]);
     const n = ran.byCell.get('g')?.lines[0]?.total ?? 0;
@@ -214,9 +242,10 @@ for (const [name, plant, why] of PLANTS) {
   const dir = path.join(tmp, name.replace(/\W+/g, '-'));
   cpSync(built, dir, { recursive: true });
   plant(dir);
-  const p = await problems(dir).catch((e) => [`crashed: ${(e as Error).stack?.split("\n").slice(0, 2).join(" ")}`]);
+  const p = await problems(dir, name === 'ownership off').catch((e) => [`crashed: ${(e as Error).stack?.split("\n").slice(0, 2).join(" ")}`]);
   say(p.some((x) => why.test(x)), `planted, ${name}: red, because ${why.source.replace(/\\/g, '')}`, p.length ? p.join('\n     ') : 'green');
 }
+(await browsed)();
 rmSync(tmp, { recursive: true, force: true });
 console.log(`${red ? `${red} red` : 'all green'} in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(red ? 1 : 0);

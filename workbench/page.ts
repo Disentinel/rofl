@@ -64,10 +64,20 @@ function cellEl(c: Pc): HTMLElement {
   return el;
 }
 const elOf = (id: string) => book.querySelector<HTMLElement>(`article[data-id="${id}"]`);
-const grow = (t: HTMLTextAreaElement) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+/** A textarea as tall as its text. Measuring collapses it for an instant, which can shorten the page and move it: the page is put back. */
+const grow = (t: HTMLTextAreaElement) => { const y = scrollY; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; if (scrollY !== y) scrollTo(scrollX, y); };
+/** The line being typed stays where it is on screen while `fn` changes the page above it: its textarea's top, before and after. */
+const focused = () => document.activeElement instanceof HTMLTextAreaElement && book.contains(document.activeElement) ? document.activeElement : null;
+function steady<T>(fn: () => T): T {
+  const t = focused(), top = t?.getBoundingClientRect().top;
+  const r = fn();
+  if (t && top !== undefined && t.isConnected) { const d = t.getBoundingClientRect().top - top; if (d) scrollBy(0, d); }
+  return r;
+}
 
 /** Every cell's element in order, made or kept, its text and kind as the cell holds them. */
-function paint() {
+function paint() { steady(paintCells); }
+function paintCells() {
   const keep = new Map([...book.querySelectorAll<HTMLElement>('article[data-id]')].map((e) => [e.dataset.id!, e]));
   shown(cells, newest).forEach((c, i) => {
     const el = keep.get(c.id) ?? cellEl(c);
@@ -84,20 +94,26 @@ function fill(el: HTMLElement, c: Pc) {
   el.querySelector<HTMLSelectElement>('.kind')!.value = c.kind;
   el.querySelector<HTMLSelectElement>('.add')!.options[0].text = newest ? '+ above' : '+ below';
   const t = el.querySelector('textarea')!;
+  const fresh = !t.style.height;
   if (t.value !== c.text && !(document.activeElement === t && writes.get(c.id)?.dirty)) {
     const [a, b] = [t.selectionStart, t.selectionEnd]; t.value = c.text;
     if (document.activeElement === t) t.setSelectionRange(Math.min(a, c.text.length), Math.min(b, c.text.length));
+    grow(t);
   }
   t.readOnly = mode === 'shared' && readOnly;
   t.spellcheck = c.kind === 'natural' || c.kind === 'prose';
-  if (c.kind === 'prose') el.querySelector('.md')!.innerHTML = prose(c.text) || '<p class="mute">Empty prose: click to write.</p>';
+  const md = el.querySelector('.md')!, html = c.kind === 'prose' ? prose(c.text) || '<p class="mute">Empty prose: click to write.</p>' : '';
+  if (c.kind === 'prose' && md.innerHTML !== html) md.innerHTML = html;
   el.querySelector<HTMLElement>('.tr-go')!.hidden = c.kind !== 'natural' || !sample || sampleOff;
-  requestAnimationFrame(() => grow(t));
+  if (fresh) requestAnimationFrame(() => steady(() => grow(t)));
 }
 
 /** What the last run said under each cell; a cell whose output did not change keeps its drawn pictures. */
-function paintOuts() {
-  if (!ran) return;
+function paintOuts() { for (const d of steady(paintAnswers)) void settle(d); }
+/** The outputs, and the pictures still to draw, drawn after the page is steady again. */
+function paintAnswers(): (() => Promise<unknown>)[] {
+  const later: (() => Promise<unknown>)[] = [];
+  if (!ran) return later;
   for (const c of cells) {
     const el = elOf(c.id); if (!el) continue;
     const s = ran.byCell.get(c.id), key = JSON.stringify(s ?? null), st = state(s), stEl = el.querySelector<HTMLElement>('.state')!;
@@ -106,14 +122,25 @@ function paintOuts() {
     if (drawn.get(c.id) === key) continue;
     drawn.set(c.id, key);
     const vs: View[] = [], out = el.querySelector<HTMLElement>('.out')!;
+    // a picture redrawn keeps its room until it is drawn, so the page does not shrink and grow back under the line being typed
+    if (out.querySelector('.pic')) out.style.minHeight = `${out.offsetHeight}px`;
     out.innerHTML = c.kind === 'natural' ? '' : said(s, vs);
     for (const d of out.querySelectorAll<HTMLDetailsElement>('details.fold-line')) { const o = opened.get(`${c.id}\u0000${d.dataset.line}`); if (o !== undefined) d.open = o; }
     views.set(c.id, vs);
-    for (const p of out.querySelectorAll<HTMLElement>('.pic[data-view]')) void picture(p, vs[Number(p.dataset.view)]);
+    const pics = [...out.querySelectorAll<HTMLElement>('.pic[data-view]')];
+    later.push(async () => { await Promise.all(pics.map((p) => picture(p, vs[Number(p.dataset.view)]))); out.style.minHeight = ''; });
   }
   const r = ran.result, sign = r.status === 'ok' ? 'pass' : r.status === 'fails' ? 'fail' : 'warn';
   head.innerHTML = `<span class="verdict ${sign}">${r.status === 'ok' ? '✓' : r.status === 'fails' ? '✗' : '⚠'} ${esc(SAID[r.status])}</span><span class="mute">ran in ${r.ms.run} ms, in this page</span>`
     + [...ran.head.errors.map((e) => `<div class="err">${esc(e)}</div>`), ...ran.head.notes.map((n) => `<div class="note">${esc(n)}</div>`)].join('');
+  return later;
+}
+
+/** A picture drawn later changes the page above the line being typed as well: the line is held where it was when the drawing began. */
+async function settle(draw: () => Promise<unknown>) {
+  const t = focused(), top = t?.getBoundingClientRect().top;
+  await draw();
+  if (t && top !== undefined && t === focused()) { const d = t.getBoundingClientRect().top - top; if (d) scrollBy(0, d); }
 }
 
 // ------------------------------------------------------------ pictures
