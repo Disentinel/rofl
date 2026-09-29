@@ -71,10 +71,13 @@ function walk(root: string, prefixes: string[]): string[] {
 function tracked(by: string, root: string, files: string[], command?: string): Set<string> | string {
   if (by === 'cvs') {
     const out = new Set<string>();
+    // a line `/name/revision/...` per file of its folder (`D/name////` is a folder), a revision starting `-` removed; CVS/Entries.Log
+    // adds (`A /name/...`) and removes (`R /name/...`) until CVS folds it in
+    const read = (f: string) => { try { return readFileSync(path.join(root, f), 'utf8'); } catch { return ''; } };
     for (const d of new Set(files.map((f) => path.posix.dirname(f)))) {
-      let text = '';
-      try { text = readFileSync(path.join(root, d, 'CVS/Entries'), 'utf8'); } catch { continue; }
-      for (const m of text.matchAll(/^\/([^/\n]+)\//gm)) out.add(d === '.' ? m[1] : `${d}/${m[1]}`);
+      const at = (name: string) => d === '.' ? name : `${d}/${name}`;
+      for (const m of read(`${d}/CVS/Entries`).matchAll(/^\/([^/\n]+)\/([^/\n]*)\//gm)) if (!m[2].startsWith('-')) out.add(at(m[1]));
+      for (const m of read(`${d}/CVS/Entries.Log`).matchAll(/^([AR]) \/([^/\n]+)\/([^/\n]*)\//gm)) if (m[1] === 'A' && !m[3].startsWith('-')) out.add(at(m[2])); else out.delete(at(m[2]));
     }
     return out;
   }
@@ -87,7 +90,7 @@ function tracked(by: string, root: string, files: string[], command?: string): S
     const c = userCommand(root, command);
     return c.status === 0 ? new Set(c.stdout.split('\n').map((l) => l.trim().replace(/^\.\//, '')).filter(Boolean)) : `the untracked command failed: ${c.error?.message ?? c.stderr.trim().split('\n').pop() ?? `exit ${c.status}`}`;
   }
-  return `untracked_by(${by}) is not built in: the built-in ones are cvs, git and none; for another, set your own command and write untracked_by(command)`;
+  return `untracked_by(${by}) is not built in: the built-in ones are cvs, git and none (svn and hg are not); for another, set your own command and write untracked_by(command)`;
 }
 /** The person's own command, never the workspace's: it is set where only they can set it. */
 function userCommand(cwd: string, command: string) {

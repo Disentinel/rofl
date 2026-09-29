@@ -413,6 +413,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   // the workspace's .rofl/read.rofl, asked in this process (configs below): each of its guards
   ['regular files only', 'notebook/reader.ts', [[/  if \(!statSync\(real\)\.isFile\(\)\) return .*\n/, '']], ['config'], 'a socket was not refused as not a regular file'],
   ['CVS/Entries ignored', 'notebook/reader.ts', [[/  if \(by === 'cvs'\) \{\n/, "  if (by === 'cvs') { return new Set(files);\n"]], ['config'], 'a file CVS does not list was read'],
+  ['CVS removals ignored', 'notebook/reader.ts', [[/if \(!m\[2\]\.startsWith\('-'\)\) out\.add/, 'out.add']], ['config'], 'a file CVS has removed was read'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -424,7 +425,13 @@ async function configs(tag: string, root: string): Promise<string[]> {
   const bad: string[] = [], ws = mkdtempSync(`/tmp/nbrd-${tag.replace(/\W/g, "").slice(0, 6)}-`), marker = path.join(ws, 'ran');
   try {
     put0(ws, 'n.rofl.md', 'x'); put0(ws, 'src/a.ts', 'A'); put0(ws, 'src/b.ts', 'B'); put0(ws, 'new.ts', 'N'); put0(ws, '.env', 'E'); put0(ws, 'node_modules/x.js', 'M');
-    put0(ws, 'src/CVS/Entries', '/a.ts/1.1/Mon Jan  1 00:00:00 2024//\nD/sub////\n');
+    // CVS: a listed file, a removed one (`-` revision), one added and one removed since in Entries.Log, a subfolder with its own Entries
+    put0(ws, 'src/CVS/Entries', '/a.ts/1.1/Mon Jan  1 00:00:00 2024//\n/gone.ts/-1.1/dummy timestamp//\n/dropped.ts/1.3/Mon Jan  1 00:00:00 2024//\nD/sub////\n');
+    put0(ws, 'src/CVS/Entries.Log', 'A /added.ts/0/Initial added.ts//\nR /dropped.ts/1.3/Mon Jan  1 00:00:00 2024//\n');
+    put0(ws, 'src/sub/CVS/Entries', '/c.ts/1.2/Mon Jan  1 00:00:00 2024//\n');
+    for (const f of ['gone.ts', 'dropped.ts', 'added.ts', 'sub/c.ts', 'sub/d.ts']) put0(ws, `src/${f}`, f);
+    // git's own exclusions beyond the root .gitignore are not asked when no config names git
+    spawnSync('git', ['init', '-q'], { cwd: ws }); put0(ws, '.git/info/exclude', 'new.ts\n');
     const as = (config: string | null, command?: string) => {
       rmSync(path.join(ws, '.rofl'), { recursive: true, force: true });
       if (config !== null) put0(ws, '.rofl/read.rofl', config);
@@ -432,12 +439,13 @@ async function configs(tag: string, root: string): Promise<string[]> {
     };
     const reads = (r: ReturnType<typeof as>, f: string) => !answer(r, `show ${f}`, 10_000, () => '').text.startsWith('refused');
     const none = as(null);
-    if (!reads(none, 'src/a.ts') || !reads(none, 'new.ts') || reads(none, 'node_modules/x.js')) bad.push(`with no config, not the whole workspace less the skip list: ${[...none.files]}`);
+    if (!reads(none, 'src/a.ts') || !reads(none, 'new.ts') || reads(none, 'node_modules/x.js')) bad.push(`with no config, not the whole workspace less the skip list (git's info/exclude asked?): ${[...none.files]}`);
     const narrow = as('read_prefix("src/").\n');
     if (!reads(narrow, 'src/a.ts') || reads(narrow, 'new.ts')) bad.push(`read_prefix("src/") did not narrow to src/: ${[...narrow.files]}`);
     const cvs = as('untracked_by(cvs).\n');
-    if (!reads(cvs, 'src/a.ts')) bad.push(`a file CVS lists was not read: ${cvs.refused ?? [...cvs.files]}`);
-    if (reads(cvs, 'src/b.ts') || reads(cvs, 'new.ts')) bad.push(`a file CVS does not list was read: ${[...cvs.files]}`);
+    if (!reads(cvs, 'src/a.ts') || !reads(cvs, 'src/sub/c.ts') || !reads(cvs, 'src/added.ts')) bad.push(`a file CVS lists was not read: ${cvs.refused ?? [...cvs.files]}`);
+    if (reads(cvs, 'src/b.ts') || reads(cvs, 'new.ts') || reads(cvs, 'src/sub/d.ts')) bad.push(`a file CVS does not list was read: ${[...cvs.files]}`);
+    if (reads(cvs, 'src/gone.ts') || reads(cvs, 'src/dropped.ts')) bad.push(`a file CVS has removed was read: ${[...cvs.files]}`);
     const mine = as('untracked_by(command).\n', "printf 'src/b.ts\\n'");
     if (!reads(mine, 'src/b.ts') || reads(mine, 'src/a.ts')) bad.push(`the person's own untracked command was not used: ${mine.refused ?? [...mine.files]}`);
     const theirs = as(`untracked_by(command).\nuntracked_command("touch ${marker}").\n`);

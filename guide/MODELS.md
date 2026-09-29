@@ -33,7 +33,9 @@ filesystem root. VS Code runs the extension only in a trusted workspace.
 Every regular file in the workspace is read, except what its `.gitignore`
 names and `node_modules`, `.git`, `CVS`, `.svn`, `.hg`, `dist`, `build`, `out`,
 `target`, `.venv`, `venv`, `__pycache__`, `.cache`, `coverage`, `.next` and
-`.vscode-test`, at any depth. Git is not needed and not asked. Never a file
+`.vscode-test`, at any depth. Git is not needed and not asked: without
+`untracked_by(git)`, what git alone ignores (`.git/info/exclude`, a `.gitignore`
+below the top folder, your global excludes) is read. Never a file
 outside the workspace, nor a link out of it, nor one past 50,000 files. Files
 whose names look like secrets are left out: `.env*`, keys and certificates
 (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.asc`, `id_*`), `*credential*`,
@@ -67,8 +69,11 @@ prefix that is absolute or holds `..` refuses the whole file; so does a file
 that does not load, or whose rules do not finish. A refused file reads nothing
 and says why: it never falls back to reading everything.
 
-**CVS.** `untracked_by(cvs).` reads each folder's `CVS/Entries` and reads only
-the files listed there. No command is run.
+**CVS.** `untracked_by(cvs).` reads each folder's `CVS/Entries` (every
+subfolder has its own) and reads only the files listed there: not a file
+missing from it, not one whose revision starts with `-` (removed), and as
+`CVS/Entries.Log` says, one added since (`A`) and not one removed since (`R`).
+No command is run.
 
     -- .rofl/read.rofl, in a CVS checkout
     untracked_by(cvs).
