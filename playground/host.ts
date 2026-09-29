@@ -383,16 +383,7 @@ export class Host {
       };
       return go(0, new Map());
     };
-    /** The values a relation's column holds, at most VACUITY_STEPS facts looked at. */
-    /** Whether a relation's column holds a value: through the store's index when it has one, else the first match of a scan. */
-    const holds = (l: Lit, k: number, c: string): boolean => {
-      const store = (base && !heads.has(l.rel) ? base : f).store, p = (l.persp as { name: string }).name;
-      const hit = store.indexed(l.rel, p) ? store.argMatches(l.rel, p, l.args.length, [k], [c]) : null;
-      if (hit) return hit.some((r) => r.args.length === l.args.length);
-      let steps = VACUITY_STEPS;
-      for (const r of store.relPersp(l.rel, p)) { if (--steps < 0) return true; if (r.args.length === l.args.length && canonTerm(r.args[k]) === c) return true; }
-      return false;
-    };
+    /** The values a relation's column holds, each column read once, at most VACUITY_STEPS facts looked at. */
     const columns = new Map<string, Set<string>>();
     const column = (l: Lit, k: number): Set<string> => {
       const key = `${l.rel}[${(l.persp as { name: string }).name}]/${l.args.length}#${k}`;
@@ -418,9 +409,9 @@ export class Host {
         if (why || l.persp.k !== 'a') continue;
         for (const [k, t] of l.args.entries()) {
           if (t.k === 'v' || t.k === 'f') continue;
-          const c = canonTerm(t);
-          if (holds(l, k, c)) continue;
-          const v = near(c, column(l, k));
+          const c = canonTerm(t), held = column(l, k);
+          if (held.has(c)) continue;
+          const v = near(c, held);
           if (!v) continue;
           let n = 0;
           const said = `${l.rel}[${l.persp.name}](${l.args.map((x) => x.k === 'v' ? `V_${n++}` : canonTerm(x)).join(', ')})`;

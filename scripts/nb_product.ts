@@ -495,7 +495,7 @@ const vacRoots = {
   gate: linked('root-vac-gate', 'notebook/cli.ts', mutate('notebook/cli.ts', /, \.\.\.silent, \.\.\.vacuous\]/, () => ', ...silent]')),
   excepts: linked('root-vac-excepts', 'playground/host.ts', mutate('playground/host.ts', / \|\| !rs\.some\(\(r\) => r\.excepts\)/, () => '')),
   eq: linked('root-vac-eq', 'playground/host.ts', mutate('playground/host.ts', /\[put\(b\.lit\)\]/, () => '[b.lit]')),
-  near: linked('root-vac-near', 'playground/host.ts', mutate('playground/host.ts', /const v = near\(c, column\(l, k\)\);\n\s*if \(!v\) continue;/, () => 'const v = \'something\';')),
+  near: linked('root-vac-near', 'playground/host.ts', mutate('playground/host.ts', /const v = near\(c, held\);\n\s*if \(!v\) continue;/, () => 'const v = \'something\';')),
 };
 const eqCell = (team: string, root = ROOT) => cli([planted(`vac-eq-${team}-${path.basename(root)}`, 'review.rofl.md', withCell(EQ(team), 'datalog'))], {}, root);
 const [vac, vacAtom, vacTr, vacKernelOff, vacGateOff, plain0, plainOff, eqTypo, eqRight, eqOff, direct, join, matrix, matrixOff, codexV, codexOff] = await Promise.all([
