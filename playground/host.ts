@@ -133,10 +133,10 @@ const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
 const DRAWN = new Set([...VIEW_RELS, 'unknown']);
 /** What a notebook is told when it reads a relation that is not its own and no sentence it reads says. */
 const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the kernel's, not this notebook's: write ${rel}[${KERNEL_BOOK.has(rel) ? '$kernel' : home[rel] ?? 'main'}](...) to read its rows, or say it in the notebook's own sentence`;
-/** The kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK says why): a notebook's own `edb(r).` is one of them, not a relation of its own. */
 /** A sentence or a literal as the writer wrote it: a relation the notebook introduced without the prefix that makes it its own. */
 const plain = (s: string) => s.replace(/\bnb__/g, '');
-const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);   // and the vocabulary's own: a cell's phrase(r, "...") gives r its sentence
+/** What a notebook writes without introducing a relation: the kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK), and phrases. */
+const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);
 const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
@@ -206,9 +206,9 @@ export class Host {
   private shell: Rofl | null = null;   // the kernel alone, which the cells are evaluated in when they stand on the model without touching it
   private kernelRels = new Set<string>();
   private said = new Set<string>();      // the relations a sentence of the model or a read vocabulary says
-  private foreign = new Set<string>();
-  private worldRels = new Set<string>();
-  private reown = (t: string) => t;      // a literal as the writer sees it, back to the name the last run gave it // the relations of the worlds the notebook reads, which an anchor of its own may give a sentence   // the kernel's and its boot's relations no sentence says: a notebook reads them only by naming their book
+  private foreign = new Set<string>();   // the kernel's and its boot's relations no sentence says: read only by naming their book
+  private worldRels = new Set<string>(); // the relations of the worlds the notebook reads
+  private reown = (t: string) => t;      // a literal as the writer sees it, back to the name the last run gave it
   private modelRels = new Set<string>();
   private scanned: Scanned | null = null;
   private base: Rofl | null = null;
