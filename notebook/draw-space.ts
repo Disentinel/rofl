@@ -1,5 +1,5 @@
 // Space as GeoJSON, the standard a map or a plan is exchanged in (a point a Point, a box or a region a Polygon), and axes as a Vega-Lite point chart.
-import { linkTags, nodes, unquote, type Backend, type View } from './draw.ts';
+import { colourOf, linkTags, nodes, unquote, type Backend, type View } from './draw.ts';
 
 const num = Number;
 /** Each mark's geometry as GeoJSON coordinates: a point, a box's four corners, a region's corners in order, the ring closed. */
@@ -16,7 +16,7 @@ export function shapes(v: View): Map<string, { point?: [number, number]; ring?: 
 }
 
 function geojson(v: View): string {
-  const at = shapes(v), mark = (m: string) => ({ mark: m, label: v.marks[m]?.label ?? unquote(m), tags: v.marks[m]?.tags ?? [], from: v.marks[m]?.from ?? [] });
+  const at = shapes(v), mark = (m: string) => ({ mark: m, label: v.marks[m]?.label ?? unquote(m), tags: v.marks[m]?.tags ?? [], from: v.marks[m]?.from ?? [], ...(v.marks[m]?.icon && { icon: v.marks[m].icon }), ...(colourOf(v, v.marks[m]?.tags ?? []) && { colour: colourOf(v, v.marks[m].tags) }) });
   const features = [
     ...nodes(v).flatMap((m) => { const s = at.get(m); return !s ? [] : [{ type: 'Feature', geometry: s.point ? { type: 'Point', coordinates: s.point } : { type: 'Polygon', coordinates: [s.ring] }, properties: mark(m) }]; }),
     ...v.facts.filter((f) => f.rel === 'link').flatMap((f) => {

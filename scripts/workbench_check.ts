@@ -62,6 +62,9 @@ async function problems(dir: string): Promise<string[]> {
     }
     if (want.moves && !lines.some((l) => l.kind === 'excise' && html(l).includes(want.moves!))) bad.push(`${name}: the what-if does not say ${want.moves}`);
   }
+  // a tutorial scene as the page draws it: each car an icon, painted its colour
+  const scene = (await bench.run(cellsOf(readFileSync(path.join(ROOT, 'examples/tutorial/2-paint-shop.rofl.md'), 'utf8')))).result.cells.flatMap((c: { lines: { view?: { marks: Record<string, { icon?: string }>; icons?: Record<string, string>; colours?: Record<string, string> } }[] }) => c.lines).find((l: { view?: object }) => l.view)?.view;
+  if (scene?.marks.c1?.icon !== 'car' || !scene.icons?.car || scene.colours?.blue !== 'blue') bad.push(`the paint shop's scene does not carry its icons and colours: ${JSON.stringify({ c1: scene?.marks.c1, colours: scene?.colours })}`);
   // a never that holds, in the colour of one that holds, and each verdict's colour a token of its own
   const platform = cellsOf(example('platform-whatif'));
   const held = (await bench.run([...platform, { id: 'h', kind: 'rofl', text: HOLDS }])).byCell.get('h')?.lines[0];
@@ -203,6 +206,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['ownership off', (d) => { spoil(d, 'lib/host.js', 'const names = [...own].map(', 'const names = [].map('); spoil(d, 'lib/book.js', 'const id = prefix + name;', 'const id = name;'); }, /does not answer its own one row .*flows_to/],
   ['a kernel row let into a ? answer', (d) => spoil(d, 'lib/host.js', 'this.foreign.has(relOf(a.lit)) && !/^\\w+\\[/.test(a.lit)', 'false'), /a kernel row reaches a \? answer/],
   ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => this.foreign.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
+  ['the icons and colours left out of a graph', (d) => spoil(d, 'lib/draw.js', ", ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]", ''), /the paint shop's scene does not carry its icons and colours/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

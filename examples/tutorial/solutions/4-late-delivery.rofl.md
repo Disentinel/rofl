@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 4 · The door lorry is late
 
 > The Tin Can Works now builds cars, trucks and bikes. A phone call: the
@@ -58,15 +63,33 @@ Today's stock:
 
 <a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
 
+## The picture
+
+> The products that leave the line and the parts in stock, each drawn as
+> the icon of its name, with a line from a product to each part in stock
+> it uses. Drawn in the same cell as an `excise`, the picture is the factory
+> before and after at once: what the excised fact takes with it is drawn
+> faded and dashed, `gone`.
+
+A mark X is a node if X leaves the line.
+
+A mark P is a node if P is in stock.
+
+A mark X is drawn as the icon X if X is a node.
+
+A mark X links to a mark P if X leaves the line, X uses P and P is in stock.
+
 ## Your move
 
 > Add an `excise` line under the question in this cell, taking out the fact
 > that the doors are in stock (copy it from *Today's stock*, without the
-> dash and the full stop). Run, and read what changes.
+> dash and the full stop). Run, and read what changes, in the answers
+> and in the picture.
 
 ```rofl
 ? X leaves the line
 excise `door` is in stock
+draw graph
 ```
 
 > Then write down every product that stops, one line each, like the list in

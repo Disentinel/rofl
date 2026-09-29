@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 3 · The truck that never comes
 
 > Ana ordered a truck three weeks ago. The line builds cars every day, and
@@ -54,6 +59,39 @@ What the plan asks for, and who ordered it:
 <a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
 
 <a id="late"></a>A product X is late if X is ordered by some customer, unless X leaves the line.
+
+## The picture
+
+> Every thing is a mark, drawn as the icon of its name, with a line from
+> each part to what is made of it. A part that is missing is orange, and so
+> is each line along which it stops something: from the part to what is
+> short of it, and on to what is short of that. What is short of something
+> is grey, and a late product is edged in red. Follow the orange lines
+> back from the truck.
+
+A mark X is a node if X is made of something.
+
+A mark Y is a node if something is made of Y.
+
+A mark Y links to a mark X if X is made of Y.
+
+A mark X is drawn as the icon X if X is a node.
+
+A mark P is tagged `missing` if something lacks P, unless P is made of something.
+
+A mark X is tagged `stuck` if X is short of something.
+
+The link from a mark Y to a mark X is tagged `short` if X is short of Y.
+
+`missing` is coloured `orange`.
+
+`short` is coloured `orange`.
+
+`stuck` is coloured `grey`.
+
+```rofl
+draw graph
+```
 
 ## Your move: the delivery
 

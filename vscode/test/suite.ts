@@ -3,10 +3,12 @@ import * as vscode from 'vscode';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
+import { createServer } from 'node:http';
 import { framesOf, GRAPHS, zoom } from '../../notebook/draw.ts';
+import { ICONS } from '../../notebook/icons.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring' };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring'; looks?: string[]; probe?: boolean };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -30,6 +32,9 @@ export async function run() {
   const extras = !process.env.ROFL_NB_CASES_ONLY, planted = !!process.env.ROFL_NB_PLANTED;
   const guard = (what: string, f: () => Promise<void>) => f().catch((e: Error) => { bad.push(`${what}: ${e.message}`); });
   if (extras) await guard('before the cases', () => beforeCases(bad));
+  // what the planted icons' SVG would fetch, were it drawn other than as an image
+  const hits: string[] = [], server = createServer((q, a) => { hits.push(q.url ?? ''); a.end(); });
+  if (cases.some((c) => c.probe)) await new Promise<void>((f) => server.listen(Number(process.env.ROFL_NB_PROBE_PORT), '127.0.0.1', f));
   for (const c of cases) {
     const t0 = Date.now();
     await guard(c.file, async () => {
@@ -119,7 +124,7 @@ export async function run() {
       // drawn by the renderer's own module: a report for each kind, and a dialect's look read back from where it put the marks
       const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
       if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
-      type Report = { kind: string; laid: string[]; features: string[]; tags: string[] };
+      type Report = { kind: string; laid: string[]; features: string[]; tags: string[]; looks: string[] };
       let reports: Report[] = [];
       for (const end = Date.now() + 45_000; !c.pictures.every((k) => reports.some((d) => d.kind === k)) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) reports = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
       const missing = c.pictures.filter((k) => !reports.some((d) => d.kind === k));
@@ -167,8 +172,28 @@ export async function run() {
         if (!first.includes(`aria-label="${c.form}"`) || !marked(first, c.status!)) bad.push(`${c.file}: the renderer does not draw a ${c.form} with ${c.status!.join(' tagged ')}: ${first.slice(0, 300)}`);
         if (c.compare && !marked(last, c.compare)) bad.push(`${c.file}: the renderer does not draw the what-if's ${c.compare.join(' tagged ')}`);
       }
-      const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
-      if (!why?.includes(says)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
+      if (c.looks) {   // what each mark is drawn as, read back from the drawing: an icon an image, from a data: URI of its SVG
+        if (c.probe) await new Promise((f) => setTimeout(f, 2000));   // time for a handler to run and a load to arrive, were there any
+        const seen = (await vscode.commands.executeCommand<Report[]>('rofl-notebook.drawn', nb.uri)).find((d) => d.kind === c.pictures![0])?.looks ?? [];
+        const of = (m: string, what: string) => seen.find((l) => l.startsWith(`${m} ${what} `))?.slice(m.length + what.length + 2);
+        const svg = (src?: string) => src?.startsWith('data:image/svg+xml,') ? decodeURIComponent(src.slice(19)) : undefined;
+        const likeIcon = (text: string | undefined, name: string) => { let at = 0; return text !== undefined && ICONS[name].split('currentColor').every((p, k) => { const i = text.indexOf(p, at); if (i < 0 || !k && i) return false; at = i + p.length; return true; }) && at === text.length; };
+        for (const want of c.looks) {
+          const [m, what, ...rest] = want.split(' '), x = rest.join(' ');
+          const ok = what === 'colour' ? of(m, 'colour') === x : what === 'plain' ? !of(m, 'icon') : what === 'uncoloured' ? !of(m, 'colour')
+            : x.startsWith('~') ? !!svg(of(m, 'icon'))?.includes(x.slice(1)) : likeIcon(svg(of(m, 'icon')), x);
+          if (!ok) bad.push(`${c.file}: ${m} is not drawn ${what === 'colour' ? x : what === 'icon' ? `as the icon ${x}` : what}: ${JSON.stringify(seen.filter((l) => l.startsWith(`${m} `)).map((l) => l.slice(0, 90)))}`);
+        }
+        if (c.probe) {
+          const own = (await vscode.commands.executeCommand<Report[]>('rofl-notebook.drawn', nb.uri)).filter((d) => d.kind === 'space').at(-1);
+          if (!own?.laid.includes('at(p2, 3, 1).')) bad.push(`${c.file}: an icon's SVG ran in the picture: its handler took the drawing away (laid ${JSON.stringify(own?.laid)})`);
+          if (hits.length) bad.push(`${c.file}: an icon's SVG loaded ${hits.join(', ')} from outside`);
+          const notes = drawn[0]?.notes.join('\n') ?? '';
+          for (const n of ['is no colour', 'no icon is named crane', 'huge is more than 16 KB']) if (!notes.includes(n)) bad.push(`${c.file}: the picture does not say "${n}": ${notes}`);
+        }
+      }
+      const [fact, says] = c.why ?? [], why = c.why && await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
+      if (c.why && !why?.includes(says!)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
       if (views.some((o) => !o.items.some((i) => i.mime === 'text/markdown' && new TextDecoder().decode(i.data).length > 20))) bad.push(`${c.file}: a picture has no text for an editor without its renderer`);
       const shot = process.env.ROFL_NB_SHOT;   // the runner screenshots the window while the picture is on it
       if (shot && !bad.length) {
@@ -184,6 +209,7 @@ export async function run() {
   }
   if (extras && (planted || !bad.length)) await guard('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
   if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
+  server.close();
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 }

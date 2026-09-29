@@ -343,6 +343,31 @@ PICTURE.forEach(([name, , ok], k) => {
   check(`draw ${name}`, ok(pics[k]), pics[k]);
   check(`  and a defect planted in its backend (${picMutants[k][0]}) turns it red`, !ok(mutantPics[k]), mutantPics[k]);
 });
+// icons and colours, decided where the view is collected: a notebook's own icon wins over the renderer's of its name, one nobody draws is said, one past
+// the cap and a colour that is none are refused, the renderer's own tags keep their look, and the text names the icon and paints the fill.
+// Each with a defect planted where it is decided, which must turn its own check red.
+const looksNb = path.join(tmp, 'draw-looks', 'n.rofl.md');
+put(looksNb, `---\nreads:\n  - rofl:visual/graph.rofl.md\n---\n\n# Looks\n\n\`\`\`datalog\nnode(a1). node(a2). node(a3). node(a4).\nicon(a1, car). icon(a2, crane). icon(a3, huge). icon(a4, van).
+icon_drawing(car, "<svg viewBox='0 0 4 4'><desc>own car</desc></svg>").\nicon_drawing(huge, "<svg>${'x'.repeat(17 * 1024)}</svg>").
+tagged(a1, blue). tag_colour(blue, "blue"). tagged(a4, evil). tag_colour(evil, "red\\" onload=\\"x"). tag_colour(failing, "pink").\n\`\`\`\n\n\`\`\`rofl\ndraw graph\n\`\`\`\n`);
+type Looked = { view?: { icons?: Record<string, string>; colours?: Record<string, string>; notes: string[] }; text: string };
+const LOOKS: [string, (l: Looked) => boolean, string, RegExp, string][] = [
+  ['a notebook\'s own icon wins over the renderer\'s', (l) => !!l.view?.icons?.car?.includes('own car'), 'notebook/draw.ts', /drawn\.get\(name\) \?\? ICONS\[name\]/, 'ICONS[name] ?? drawn.get(name)'],
+  ['an icon nobody draws is said, and its mark keeps its shape', (l) => !!l.view?.notes.some((n) => n.startsWith('no icon is named crane:')), 'notebook/draw.ts', /unknown\.add\(name\);/, ';'],
+  ['an icon past 16 KB is refused with a note', (l) => !l.view?.icons?.huge && !!l.view?.notes.some((n) => n.includes('huge is more than 16 KB')), 'notebook/draw.ts', /text\.length > ICON_MAX/, 'false'],
+  ['a colour that is none is refused, never passed on', (l) => !l.view?.colours?.evil && !!l.view?.notes.some((n) => n.includes('is no colour')) && l.view?.colours?.blue === 'blue', 'notebook/icons.ts', /export const isColour = \(c: string\) =>/, 'export const isColour = (c: string) => true ||'],
+  ['the renderer\'s own tag keeps its look', (l) => !l.view?.colours?.failing && !!l.view?.notes.some((n) => n.includes('failing is the renderer\'s tag')), 'notebook/draw.ts', /if \(RESERVED\.includes\(k\)\) notes\.push/, 'if (false) notes.push'],
+  ['mermaid names the icon and paints the fill', (l) => l.text.includes('m0["a1 · car"]') && l.text.includes('style m0 fill:blue'), 'notebook/draw-graph.ts', /\$\{k\?\.icon && k\.icon !== label \? ` · \$\{k\.icon\}` : ''\}/, ''],
+];
+const looked = async (root: string): Promise<Looked> => {
+  const [j, t] = await Promise.all([cli([looksNb, '--json'], {}, root), cli([looksNb], {}, root)]);
+  try { return { view: JSON.parse(j.stdout ?? '').cells.flatMap((c: { lines: { view?: object }[] }) => c.lines).find((l: { view?: object }) => l.view)?.view, text: t.out }; } catch { return { text: t.out }; }
+};
+const [looks, ...looksBroken] = await Promise.all([looked(ROOT), ...LOOKS.map(([, , file, at, plant], k) => looked(linked(`draw-looks-${k}`, file, mutate(file, at, () => plant), ['playground'])))]);   // the view is collected by playground/host.ts, which must see the mutant
+LOOKS.forEach(([name, ok], k) => {
+  check(`draw: ${name}`, ok(looks), { code: 0, out: JSON.stringify(looks.view?.notes) + looks.text.slice(-600) });
+  check(`  and a defect planted where it is decided turns it red`, !ok(looksBroken[k]), { code: 0, out: JSON.stringify(looksBroken[k].view?.notes) });
+});
 check('draw: an excise in the cell draws what goes and what comes', has(whatIf, '1 gone, 1 new') && has(whatIf, 'class m0 gone') && has(whatIf, 'class m1 new'), whatIf);
 check('a head with an anchor, or a name beside a hole\'s noun, close to a declared sentence is said, naming it', has(near, 'makes a new relation, car_node, close to the declared sentence "a mark is a node" (node)') && has(near, 'makes a new relation, tagged_colour, close to the declared sentence "a mark is tagged a tag" (tagged)'), near);
 // R the read protocol (notebook/reader.ts), driven by a fake model through the command line: it lists, greps, shows and asks the kernel over

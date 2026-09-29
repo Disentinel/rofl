@@ -1,5 +1,6 @@
 // A picture of a notebook: the view facts its adapter rules concluded (visual/*.rofl.md), the tags the run itself knows, and text backends.
 // Pure: the host collects a view where the world is, the command line prints it, the playground draws it.
+import { ICON_MAX, ICONS, isColour } from './icons.ts';
 
 export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation' | 'timeline' | 'timing' | 'chart' | 'heatmap' | 'upset' | 'euler' | 'decision'
   | 'architecture' | 'state' | 'process' | 'causal' | 'proof';
@@ -19,17 +20,19 @@ export const RESERVED = ['unknown', 'blind', 'gone', 'new', 'failing', 'dangling
 /** One row of a view relation: `from`, the sentences its proof rests on one step down; none when it was given, not derived. */
 export type Fact = { rel: string; args: string[]; literal: string; from: string[]; given?: boolean; change?: 'gone' | 'new' };
 /** `on`: the terms the proofs of its facts rest on, one step down. */
-export type Mark = { label: string; tags: string[]; from: string[]; on: string[]; at?: string[] };
-/** `cells`: a table's cells a row of a failing never names by both its row and its column, with that tag. */
-export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[] };
+/** `icon`: the name of the icon it is drawn as, which the view's `icons` draws unless it is unknown. */
+export type Mark = { label: string; tags: string[]; from: string[]; on: string[]; at?: string[]; icon?: string };
+/** `cells`: a table's cells a row of a failing never names by both its row and its column, with that tag. `icons`: the SVG text of each icon a mark
+ *  is drawn as, the notebook's own or the renderer's; `colours`: each coloured tag's colour, checked. */
+export type View = { kind: DrawKind; facts: Fact[]; marks: Record<string, Mark>; notes: string[]; cells?: { row: string; column: string; tags: string[] }[]; icons?: Record<string, string>; colours?: Record<string, string> };
 
 const RELS: Record<Family, [string, number][]> = {
-  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1]],
-  argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1]],
+  graph: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['level', 2], ['placed', 3], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]],
+  argument: [['node', 1], ['link', 2], ['inside', 2], ['tagged', 2], ['link_tagged', 3], ['labelled', 2], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]],
   time: [['lane', 2], ['during', 3], ['happens', 2], ['message', 4], ['in_state', 2], ['tagged', 2], ['labelled', 2], ['frame', 2], ['lane_group', 2], ['collapsed', 1]],
   table: [['value', 3], ['draws', 1], ['shows', 3], ['tagged', 2], ['frame', 2]],
   notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2], ['frame', 2], ['collapsed', 1]],
-  space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
+  space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1], ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]],
 };
 /** Every relation a picture reads: the renderer's words, which a notebook writes into by name. */
 export const VIEW_RELS = new Set(Object.values(RELS).flatMap((rs) => rs.map(([r]) => r)));
@@ -51,7 +54,7 @@ export function collect(kind: DrawKind, w: World): View {
   }
   const first = RELS[fam][0][0];
   if (!facts.length && !w.rows(`${first}(${VARS.slice(0, RELS[fam][0][1]).join(', ')})`)) notes.push(`nothing to draw: no sentence here writes ${first}; a notebook reads the words of visual/${fam === 'argument' ? 'graph' : fam}.rofl.md and says in rules what is a mark`);
-  const given = facts.filter((f) => f.given && !['placed', 'projection', 'axis'].includes(f.rel));
+  const given = facts.filter((f) => f.given && !['placed', 'projection', 'axis', 'tag_colour', 'icon_drawing'].includes(f.rel));
   if (given.length) notes.push(`${given.length} view ${given.length === 1 ? 'fact is' : 'facts are'} given, not derived from the domain, so ${given.length === 1 ? 'it has' : 'they have'} no provenance: ${given.slice(0, 5).map((f) => f.literal).join(', ')}`);
   const marks: Record<string, Mark> = {};
   const mark = (id: string, f?: Fact) => {
@@ -75,8 +78,41 @@ export function collect(kind: DrawKind, w: World): View {
   for (const f of is('tagged')) { mark(f.args[0], f); tag(marks[f.args[0]], unquote(f.args[1])); }
   const own = is('tagged').filter((f) => RESERVED.includes(unquote(f.args[1])));
   if (own.length) notes.push(`${own.map((f) => f.literal).join(', ')}: ${RESERVED.join(', ')} are the renderer's tags, not an adapter's`);
-  return { kind, facts, marks, notes };
+  return { kind, facts, marks, notes, ...looks(is, marks, notes) };
 }
+
+/** Each mark's icon and each tag's colour, checked, and a note for each one refused: a mark whose icon is not drawn keeps its shape. */
+function looks(is: (rel: string) => Fact[], marks: Record<string, Mark>, notes: string[]): Pick<View, 'icons' | 'colours'> {
+  const drawn = new Map(is('icon_drawing').map((f) => [unquote(f.args[0]), unquote(f.args[1])]));
+  const icons: Record<string, string> = {}, unknown = new Set<string>(), big = new Set<string>(), bad = new Set<string>();
+  for (const f of is('icon')) {
+    const m = marks[f.args[0]], name = unquote(f.args[1]), text = drawn.get(name) ?? ICONS[name];
+    if (!m) continue;
+    m.icon = name;
+    if (text === undefined) unknown.add(name);
+    else if (text.length > ICON_MAX) big.add(name);
+    else if (!/^\s*<svg[\s>]/i.test(text)) bad.add(name);
+    else icons[name] = text;
+  }
+  if (unknown.size) notes.push(`no icon is named ${[...unknown].join(', ')}: ${unknown.size === 1 ? 'its marks are' : 'their marks are'} drawn as shapes; the renderer's icons are ${Object.keys(ICONS).join(', ')}, and a notebook draws its own with "The icon I is drawn as S"`);
+  if (big.size) notes.push(`the icon ${[...big].join(', ')} is more than ${ICON_MAX / 1024} KB of SVG, so it is not drawn`);
+  if (bad.size) notes.push(`the icon ${[...bad].join(', ')} is no SVG (an icon's text starts with <svg), so it is not drawn`);
+  const colours: Record<string, string> = {};
+  for (const f of is('tag_colour')) {
+    const [k, c] = f.args.map(unquote);
+    if (RESERVED.includes(k)) notes.push(`the tag ${k} is not coloured: ${k} is the renderer's tag, which keeps its own look`);
+    else if (!isColour(c)) notes.push(`the tag ${k} is not coloured: ${JSON.stringify(c).slice(0, 60)} is no colour; a colour is a CSS colour name or a #hex`);
+    else colours[k] = c;
+  }
+  for (const m of Object.values(marks)) {
+    const cs = [...new Set(m.tags.filter((t) => colours[t]).map((t) => colours[t]))];
+    if (cs.length > 1) notes.push(`${m.label} has tags coloured ${cs.join(' and ')}: it is drawn ${cs[0]}, its first tag's`);
+  }
+  return { ...(Object.keys(icons).length && { icons }), ...(Object.keys(colours).length && { colours }) };
+}
+
+/** The colour of the first of `tags` a notebook coloured. */
+export const colourOf = (v: View, tags: string[]) => tags.map((t) => v.colours?.[t]).find(Boolean);
 
 const tag = (m: Mark, k: string) => { if (!m.tags.includes(k)) m.tags.push(k); };
 export const unquote = (t: string) => /^".*"$/.test(t) ? JSON.parse(t) as string : t;
@@ -103,7 +139,7 @@ export function diff(before: View, after: View): View {
   // a mark changes with the facts about it: one only before is gone, one only after is new, and a mark in both can be either or both
   for (const f of facts) if (f.change && marks[f.args[0]]) tag(marks[f.args[0]], f.change);
   const n = (c: string) => facts.filter((f) => f.change === c).length;
-  return { kind: after.kind, facts, marks, notes: [...after.notes, `what-if: ${n('gone')} view facts gone, ${n('new')} new`] };
+  return { kind: after.kind, facts, marks, notes: [...after.notes, `what-if: ${n('gone')} view facts gone, ${n('new')} new`], icons: { ...before.icons, ...after.icons }, colours: { ...before.colours, ...after.colours } };
 }
 
 /** A link's own tags: its link_tagged rows, a dangling end, and a change a what-if made. */

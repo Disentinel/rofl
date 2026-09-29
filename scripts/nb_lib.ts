@@ -41,9 +41,9 @@ export function mutate(file: string, at: RegExp, plant: (m: string) => string): 
   if (out === src) throw new Error(`${file}: the planted defect did not apply`);
   return out;
 }
-/** The tree, linked, with its own copy of notebook/ and of the directory of `file`, in which that one file is replaced. */
-export function linked(name: string, file: string, text: string): string {
-  const root = path.join(tmp, name), copied = new Set(['notebook', file.split('/')[0]]);
+/** The tree, linked, with its own copy of notebook/, of the directory of `file` and of `also`, in which that one file is replaced. */
+export function linked(name: string, file: string, text: string, also: string[] = []): string {
+  const root = path.join(tmp, name), copied = new Set(['notebook', file.split('/')[0], ...also]);
   mkdirSync(root, { recursive: true });
   for (const e of readdirSync(ROOT)) if (!copied.has(e) && e !== '.git') symlinkSync(path.join(ROOT, e), path.join(root, e));
   for (const d of copied) cpSync(path.join(ROOT, d), path.join(root, d), { recursive: true });

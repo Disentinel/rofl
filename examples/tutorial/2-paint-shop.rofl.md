@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 2 · Nothing leaves unpainted
 
 > Four cars came off the line and went through the paint shop. The boss has
@@ -26,6 +31,38 @@ Declared as facts:
 <a id="painted"></a>A car X is painted if X comes out some colour.
 
 <a id="unpainted"></a>A car X leaves unpainted if X is on the line, unless X is painted.
+
+## The picture
+
+> Each car on the line and each tin in the shop is a mark, drawn as a car
+> or a paint can, with a line from a car to the tin it comes out of. A tin
+> is its own colour, and so is the car painted from it. A car that leaves
+> unpainted is grey, and edged in red while the goal below fails. Change
+> the factory, run again, and watch the cars.
+
+A mark X is a node if X is on the line.
+
+A mark C is a node if C is in the paint shop.
+
+A mark X is drawn as the icon `car` if X is on the line.
+
+A mark C is drawn as the icon `paint_can` if C is in the paint shop.
+
+A mark X links to a mark C if X comes out C.
+
+A mark X is tagged C if X comes out C.
+
+A mark C is tagged C if C is in the paint shop.
+
+A mark X is tagged `unpainted` if X leaves unpainted.
+
+A tag C is coloured C if C is in the paint shop.
+
+`unpainted` is coloured `grey`.
+
+```rofl
+draw graph
+```
 
 ## Your move: change the factory
 

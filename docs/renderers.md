@@ -150,9 +150,24 @@ names are stable.
 | `link_tagged(M, N, K)` | The link from a mark M to a mark N is tagged K |
 | `labelled(M, S)` | A mark M is labelled S *(optional: the default label is the sentence `say` gives M)* |
 | `level(M, I)` | A mark M is at the level I *(rank; optional)* |
+| `icon(M, I)` | A mark M is drawn as the icon I *(graph and space)* |
+| `icon_drawing(I, S)` | The icon I is drawn as S *(S an `<svg>`; wins over the renderer's icon of that name)* |
+| `tag_colour(K, C)` | A tag K is coloured C *(a CSS colour name or a #hex)* |
 
-A tag is a **meaning**, never a colour; a stylesheet maps tags to styles, as
-Structurizr and mermaid's `classDef` do, so a `never` stays about the domain.
+A tag is a **meaning**; a stylesheet maps tags to styles, as Structurizr and
+mermaid's `classDef` do, so a `never` stays about the domain. A notebook may
+give its own tags a colour (`` `unpainted` is coloured `grey`. ``), which
+paints the marks and links wearing it; the reserved tags keep their look.
+
+An icon is SVG text, the renderer's own (notebook/icons.ts: car, van, truck,
+bike, scooter, engine, wheel, seat, frame, door, motor, paint_can, store,
+gate, body, panel, cab, chassis, axle, mirror) or one a notebook draws. It is
+untrusted input and is only ever shown as an image, from a `data:` URI, never
+put in the page: as an image an SVG runs no script and loads nothing. More
+than 16 KB of it is refused with a note, and so is a colour that is neither
+a name nor a #hex; a mark whose icon has no drawing keeps its shape and the
+picture says so. Its `currentColor` parts take the mark's colour. The text
+backends name the icon beside the label and fill with the colour.
 
 The renderer reserves six tags adapters may not write: `unknown`, `blind`
 (status), `gone`, `new` (compare), `failing` (a `never` row), `dangling` (a
