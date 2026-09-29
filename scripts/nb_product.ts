@@ -295,6 +295,11 @@ const PICTURE: [string, string[], (o: Out) => boolean][] = [
   ['argument: Argdown, a refutation as -, the grade and the unknown as hashtags', ['deploy-argument.rofl.md'], (a) => is(a, 0) && has(a, '[safe_to_ship] #contested\n      + <canary_clean>\n      - <incident_4711>') && has(a, '[cheap_to_run] #unknown')],
   ['space: GeoJSON, a station a Point at its longitude and latitude, the stranded one failing', ['rail-map.rofl.md'], (m) => is(m, 1) && geo(m).some((f) => f.properties.mark === 'rome' && f.geometry.coordinates.join() === '12,42' && f.properties.tags.includes('failing')) && geo(m).filter((f) => f.geometry.type === 'LineString').length === 6],
   ['notation: GEDCOM 7, a family its partners and its child', ['family-tree.rofl.md'], (g) => is(g, 1) && has(g, '    0 @F1@ FAM\n    1 HUSB @I1@\n    1 WIFE @I2@\n    1 CHIL @I4@\n') && has(g, '    0 TRLR')],
+  ['architecture: architecture-beta, a store a database in its group, a call an edge', ['shop-architecture.rofl.md'], (o) => is(o, 1) && has(o, 'architecture-beta') && has(o, 'service c3(database)[orders_db] in g0') && has(o, 'c0:B --> T:c4')],
+  ['state: a stateDiagram, the entry and a transition by its event', ['order-states.rofl.md'], (o) => is(o, 1) && has(o, '      [*] --> s1\n') && has(o, 's3 --> s4: refund')],
+  ['process: a flowchart in lanes, a decision a diamond, an event a stadium', ['claim-process.rofl.md'], (o) => is(o, 1) && has(o, 'm3{"covered"}') && has(o, 'm4(["filed"])') && has(o, 'subgraph g1["clerk"]')],
+  ['causal: a loop with each link signed', ['burnout-loop.rofl.md'], (o) => is(o, 1) && has(o, 'm0 -->|+| m1') && has(o, 'm5 -->|-| m1')],
+  ['proof: the proof of a why as a tree, a given fact so tagged', ['claim-proof.rofl.md'], (o) => has(o, '    pay is reached\n      covered leads to pay\n        covered is followed by pay when yes [given]\n')],
   ['frames: small multiples, a Gantt chart a day, a bar new against the day before', ['spat-week.rofl.md'], (w) => is(w, 1) && has(w, '    frame 4:') && has(w, 'acme [new] :active, ') && has(w, 'dentist [gone] :done, ')],
 ];
 const picMutants: [string, string][] = [
@@ -306,6 +311,12 @@ const picMutants: [string, string][] = [
   ['draw-argdown', drawMutant('draw-argdown', 'notebook/draw-argument.ts', /\$\{attack \? '-' : '\+'\}/, () => '+')],
   ['draw-space', drawMutant('draw-space', 'notebook/draw-space.ts', /out\.set\(f\.args\[0\], \{ point: \[num\(f\.args\[1\]\), num\(f\.args\[2\]\)\] \}\)/, () => 'out.set(f.args[0], { point: [num(f.args[2]), num(f.args[1])] })')],
   ['draw-notation', drawMutant('draw-notation', 'notebook/draw-notation.ts', /out\.push\(`1 CHIL \$\{id\(c, 'I', people\)\}`\)/, () => '0')],
+  ['draw-arch', drawMutant('draw-arch', 'notebook/draw-dialects.ts', /has\(v, m, 'database'\) \? 'database'/, () => "has(v, m, 'database') ? 'server'")],
+  ['draw-state', drawMutant('draw-state', 'notebook/draw-dialects.ts', /if \(has\(v, m, 'initial'\)\) out\.push/, () => 'if (false) out.push')],
+  ['draw-process', drawMutant('draw-process', 'notebook/draw-dialects.ts', /has\(v, m, 'decision'\) \? \['\{', '\}'\]/, () => "has(v, m, 'decision') ? ['[', ']']")],
+  ['draw-causal', drawMutant('draw-causal', 'notebook/draw-dialects.ts', /negative: '-'/, () => "negative: '+'")],
+  // the text a proof is written in (a mutant of proofView would not reach the run: playground/host.ts imports it from the tree itself)
+  ['draw-proof', drawMutant('draw-proof', 'notebook/draw-proof.ts', /\$\{m\?\.tags\.length \? ` \[\$\{m\.tags\.join\(', '\)\}\]` : ''\}/, () => '')],
   ['draw-frames', drawMutant('draw-frames', 'notebook/draw.ts', /if \(!of\.size\) return null;/, () => 'return null;')],
 ];
 /** The features of the GeoJSON a run printed. */

@@ -55,7 +55,7 @@ const cli = (file: string, out: string) => new Promise<string>((done) => {
 // and frames: a datalog cell that puts its marks in frames 1 and 2, drawn as small multiples
 // and zoom: facts that shut a group, which must draw as one mark with its count, and open when the extension zooms it as a click would
 // and, for space, a point the renderer must report at the data's own position
-type Visual = { f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string]; whatif?: [string, string, string]; frames?: string; notation?: string; zoom?: [string, string, string, string]; laid?: string; below?: [string, string] };
+type Visual = { look?: string; f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string]; whatif?: [string, string, string]; frames?: string; notation?: string; zoom?: [string, string, string, string]; laid?: string; below?: [string, string] };
 const VISUAL: Visual[] = [
   { f: 'paint-shop', kinds: ['graph'], fails: 'never M is tagged `unpainted`', status: ['pink', 'dangling'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'], whatif: ['excise `blue` is in the paint shop\ndraw graph', 'c1', 'new'], frames: 'frame(c1, 1). frame(c2, 1). frame(c3, 2). frame(c4, 2).', zoom: ['collapsed(shop).', 'shop', 'shop (3)', 'blue'] },
   { f: 'spat-thursday', kinds: ['time'], fails: 'never M is tagged `alone`', status: ['$alone(kit,1060)', 'failing'], why: ['during($alone(kit, 1060), 1060, 1080)', '`kit` is alone on `thu` at 1060'], whatif: ['excise moved(c_dentist, swim, w0831, wed, thu, 1020, 1080)\ndraw time', 'swim', 'gone'], frames: 'frame(work_am, 1). frame(work_pm, 2). frame(acme, 2).', zoom: ['lane_group(kit, children). lane_group(nico, children). collapsed(children).', 'children', 'children (2)', 'kit'] },
@@ -70,6 +70,15 @@ const VISUAL: Visual[] = [
   { f: 'wardley', kinds: ['space'], fails: 'never A is upside down', status: ['payments', 'failing'], why: ['at(payments, 70, 70)', '`payments` has evolved to 70 and is visible to 70'], laid: 'at(payments, 70, 70).', below: ['compute', 'payments'],
     whatif: ['excise `payments` needs `fraud_model`\ndraw space', 'payments', 'gone'], frames: 'frame(checkout, 1). frame(compute, 2).',
     zoom: ['corner(platform, 1, 75, 0). corner(platform, 2, 100, 0). corner(platform, 3, 100, 40). corner(platform, 4, 75, 40). inside(database, platform). inside(compute, platform). collapsed(platform).', 'platform', 'platform (2)', 'compute'] },
+  { look: 'entry', f: 'order-states', kinds: ['state'], fails: 'never S is stuck', status: ['refund_pending', 'failing'], why: ['tagged(shipped, current)', 'is now in `shipped`'], whatif: ['excise `paid` moves to `refund_pending` on `refund`\ndraw state', 'refund_pending', 'gone'],
+    frames: 'frame(cart, 1). frame(delivered, 2).', zoom: ['inside(paid, fulfilment). inside(shipped, fulfilment). collapsed(fulfilment).', 'fulfilment', 'fulfilment (2)', 'shipped'] },
+  { look: 'down', f: 'shop-architecture', kinds: ['architecture'], fails: 'never A calls up to B', status: ['billing', 'failing'], why: ['link_tagged(billing, session, upward)', '`billing` calls up to `session`'], whatif: ['excise `billing` calls `session`\ndraw architecture', 'billing', 'gone'],
+    frames: 'frame(customer, 1). frame(stripe, 2).', zoom: ['collapsed(shop).', 'shop', 'shop (5)', 'web'] },
+  { look: 'bands', f: 'claim-process', kinds: ['process'], fails: 'never A is unreachable', status: ['appeal', 'failing'], why: ['link_tagged(covered, pay, yes)', '`covered` is followed by `pay` when `yes`'], whatif: ['excise `appeal` is followed by `review`\ndraw process', 'appeal', 'gone'],
+    frames: 'frame(filed, 1). frame(closed, 2).', zoom: ['collapsed(manager).', 'manager', 'manager (2)', 'review'] },
+  { look: 'ring', f: 'burnout-loop', kinds: ['causal'], fails: 'never an influence from A to B is unsigned', status: ['morale', 'failing'], why: ['link_tagged(overtime, backlog, negative)', '`overtime` lowers `backlog`'], whatif: ['excise `morale` moves `attrition`\ndraw causal', 'morale', 'gone'],
+    frames: 'frame(overtime, 1). frame(attrition, 2).', zoom: ['inside(bugs, quality). inside(fatigue, quality). collapsed(quality).', 'quality', 'quality (2)', 'bugs'] },
+  { look: 'up', f: 'claim-proof', kinds: ['proof'], status: ['next[main](check,covered)', 'unknown'], why: ['reached[main](pay)', '`covered` is reached'], whatif: ['why `pay` is reached\nexcise `covered` is followed by `pay` when `yes`\ndraw proof', 'next[main](covered,pay)', 'gone'] },
   { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged' },
 ];
 // the second wave, a draw kind each: only its what-if, which holds its picture's status, why, frames and zoom too, drawn by the renderer's module in that form
@@ -83,14 +92,16 @@ const FORMS: (Visual & { form: string })[] = [
   { f: 'shipping-decision', form: 'decision', kinds: ['decision'], fails: 'never M is tagged `gap`', status: ['r1', 'failing'], why: ['value(r1, free_shipping, x)', '`r1` does `free_shipping`'], whatif: ['excise `r2` does `free_shipping`\ndraw decision', 'r2', 'gone'], frames: 'frame(r1, 1). frame(r2, 1). frame(r3, 2).' },
 ];
 cpSync(path.join(ROOT, 'visual'), path.join(tmp, 'nb/visual'), { recursive: true });
+cpSync(path.join(ROOT, 'examples/visual'), path.join(tmp, 'nb/examples/visual'), { recursive: true });   // an example may read another (claim-proof reads claim-process)
 for (const f of ['spat/spat.rofl', 'spat/week.example.rofl', 'visual/deploy-case.rofl']) put(path.join(tmp, 'nb/examples', f), src(`examples/${f}`));
 for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl']) put(path.join(tmp, 'nb', f), src(f));
 // the what-if and the frames go in one copy of each notebook, to keep the run under its two minutes
 const WHATIF: Visual[] = [...VISUAL.filter((x) => x.whatif), ...FORMS];
-const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n\n\`\`\`datalog\n${frames}\n${zoom?.[0] ?? ''}\n\`\`\`\n`));
+const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n${frames || zoom ? `\n\`\`\`datalog\n${frames ?? ''}\n${zoom?.[0] ?? ''}\n\`\`\`\n` : ''}`));
 // a pinned layout: Pin layout writes the facts, and a notebook that reads them draws its marks there
 const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - ../../visual/graph.rofl.md', '  - ../../visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
-const pictures = VISUAL.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
+// a dialect is held to everything in its what-if copy alone, whose first picture is the notebook's own: one window less a dialect keeps test:vscode under two minutes
+const based = VISUAL.filter((x) => !x.look), pictures = based.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
 const [a, b, c, ...pics] = await Promise.all([cli(review, path.join(tmp, 'review.json')), cli(clean, path.join(tmp, 'clean.json')), cli(small, path.join(tmp, 'small.json')),
   ...pictures.map((f, k) => cli(f, path.join(tmp, `picture-${k}.json`))), ...whatifs.map((f, k) => cli(f, path.join(tmp, `whatif-${k}.json`)))]);
@@ -98,9 +109,9 @@ const cases = [
   { file: review, cli: a, fails: { text: 'never C is blocked by T' } },
   { file: clean, cli: b },
   { file: small, cli: c, fails: { text: 'never C recurses', code: [smallJs, 12] } },
-  ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: VISUAL[k].kinds, status: VISUAL[k].status, why: VISUAL[k].why, laid: VISUAL[k].laid, below: VISUAL[k].below, notation: VISUAL[k].notation, ...(VISUAL[k].fails && { fails: { text: VISUAL[k].fails } }) })),
+  ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
   { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
-  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: pics[VISUAL.length + k], pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], frames: ['1', '2'], ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
+  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: pics[based.length + k], pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
 ];
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
@@ -119,6 +130,12 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', cases.slice(3)],
   why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", cases.slice(3)],
   placed: ['visual/out/pic-graph.js', /placed\.get\(c\.id\) \?\? /, '', cases.slice(3)],
+  // a dialect's look, planted in the built renderer: each must turn its own case red
+  'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", cases.filter((c) => c.file.includes('shop-architecture'))],
+  'd-state': ['visual/out/pic-dialects.js', /entry: 'initial'/, "entry: 'none'", cases.filter((c) => c.file.includes('order-states'))],
+  'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', cases.filter((c) => c.file.includes('claim-process'))],
+  'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', cases.filter((c) => c.file.includes('burnout-loop'))],
+  'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", cases.filter((c) => c.file.includes('claim-proof'))],
   space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', cases.slice(3)],
   notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", cases.slice(3)],
   zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', cases.slice(3)],
@@ -139,7 +156,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {
@@ -159,7 +176,7 @@ const one = async (v: string) => {
   cpSync(path.join(tmp, 'nb'), nb, { recursive: true });
   // a workspace that names a model: only the person's own settings may, so this one must be ignored and VS Code's model asked
   if (v === 'vscode lm') put(path.join(nb, '.vscode/settings.json'), JSON.stringify({ 'rofl.model': 'claude' }));
-  let red = '';
+  let red = '', said = '';   // `said`: what the suite found; a planted defect is caught only when the suite says so, not when VS Code fails to start
   // `--shot F`: the window screenshotted as each picture is drawn, F-<case>.png
   const shot = v === 'as it is' ? process.argv[process.argv.indexOf('--shot') + 1] : undefined, shooting = process.argv.includes('--shot') && shot ? setInterval(() => {
     for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) { spawnSync('screencapture', ['-x', `${shot}-${k}.png`]); writeFileSync(`${shot}-${k}.done`, ''); }
@@ -172,10 +189,10 @@ const one = async (v: string) => {
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
       extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
-  } catch (e) { red = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })() || (e as Error).message; }
+  } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }
   if (v === 'as it is') for (const l of readFileSync(path.join(tmp, 'as-it-is.log'), 'utf8').split('\n')) if (/: (run after .*: )?\d+ ms$/.test(l)) console.log(`     ${l.replace(tmp, '')}`);
-  return { v, red, s: ((performance.now() - t) / 1000).toFixed(1) };
+  return { v, red, said, s: ((performance.now() - t) / 1000).toFixed(1) };
 };
 // Two at a time: each window loads the JS model, and more of them at once only share the same cores.
 const results: Awaited<ReturnType<typeof one>>[] = [], queue = [...variants];
@@ -183,8 +200,8 @@ await Promise.all([0, 1].map(async () => { for (let v; (v = queue.shift()); ) re
 
 results.sort((x, y) => variants.indexOf(x.v) - variants.indexOf(y.v));
 let failed = 0;
-for (const { v, red, s } of results) {
-  const ok = BREAKS[v] ? !!red : !red;
+for (const { v, red, said, s } of results) {
+  const ok = BREAKS[v] ? !!said : !red;
   if (!ok) failed++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${!BREAKS[v] ? `${v}: green` : `planted "${v}": red`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
 }

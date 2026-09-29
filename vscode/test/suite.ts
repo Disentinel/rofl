@@ -3,9 +3,10 @@ import * as vscode from 'vscode';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
+import { framesOf, zoom } from '../../notebook/draw.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string; look?: 'down' | 'up' | 'entry' | 'bands' | 'ring' };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -116,6 +117,31 @@ export async function run() {
         if (!at.includes(c.laid)) bad.push(`${c.file}: the renderer put ${c.laid.slice(3, c.laid.indexOf(','))} elsewhere: ${at.find((x) => x.startsWith(c.laid!.slice(0, c.laid!.indexOf(',')))) ?? 'nothing reported'}`);
         const y = (m: string) => Number(/, (-?\d+)\)\.$/.exec(at.find((x) => x.startsWith(`drawn_at(${m},`)) ?? '')?.[1] ?? NaN);
         if (c.below && !(y(c.below[0]) > y(c.below[1]))) bad.push(`${c.file}: ${c.below[0]} is not drawn below ${c.below[1]} (page y ${y(c.below[0])} and ${y(c.below[1])})`);
+      }
+      // drawn by the renderer's own module: a report for each kind, and a dialect's look read back from where it put the marks
+      const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
+      if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
+      type Report = { kind: string; laid: string[]; features: string[] };
+      let reports: Report[] = [];
+      for (const end = Date.now() + 45_000; !c.pictures.every((k) => reports.some((d) => d.kind === k)) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) reports = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+      const missing = c.pictures.filter((k) => !reports.some((d) => d.kind === k));
+      if (missing.length) bad.push(`${c.file}: the renderer drew no ${missing.join(', ')} (it reported ${JSON.stringify(reports.map((d) => d.kind))})`);
+      if (c.look) {
+        // the first report of the kind is the notebook's own picture as first painted: its groups shut as the notebook shuts them, its first frame
+        const kind = c.pictures![0], d = reports.find((x) => x.kind === kind), z = zoom(drawn[0]), v0 = framesOf(z)?.[0].view ?? z;
+        const at = new Map((d?.laid ?? []).flatMap((l) => { const m = /^placed\((.*), (-?\d+), (-?\d+)\)\.$/.exec(l); return m ? [[m[1], { x: Number(m[2]), y: Number(m[3]) }] as const] : []; }));
+        const links = v0.facts.filter((f: { rel: string }) => f.rel === 'link').map((f: { args: string[] }) => f.args).filter(([a, b]: string[]) => at.has(a) && at.has(b) && a !== b);
+        const parent = new Map<string, string>(v0.facts.filter((f: { rel: string }) => f.rel === 'inside').map((f: { args: string[] }) => [f.args[0], f.args[1]]));
+        const ok = {
+          // an architecture flows down, save the call that is the defect: a link from a failing mark may go up, as it does
+          down: () => links.length > 0 && links.every(([a, b]: string[]) => at.get(b)!.y > at.get(a)!.y || v0.marks[a]?.tags.includes('failing')),
+          up: () => links.length > 0 && links.every(([a, b]: string[]) => at.get(b)!.y < at.get(a)!.y),
+          entry: () => (d?.features ?? []).some((x) => x.startsWith('entry(')),
+          bands: () => { const band = new Map<string, number[]>(); for (const [m, p] of at) if (parent.has(m)) band.set(parent.get(m)!, [...(band.get(parent.get(m)!) ?? []), p.y]);
+            const spans = [...band.values()].map((ys) => [Math.min(...ys), Math.max(...ys)]).sort((p, q) => p[0] - q[0]); return spans.length > 1 && spans.every((s, i) => !i || s[0] > spans[i - 1][1]); },
+          ring: () => { const ps = [...at.values()], cx = ps.reduce((a, p) => a + p.x, 0) / ps.length, cy = ps.reduce((a, p) => a + p.y, 0) / ps.length, r = ps.map((p) => Math.hypot(p.x - cx, p.y - cy)); return ps.length > 2 && Math.max(...r) - Math.min(...r) < 4; },
+        }[c.look]();
+        if (!ok) bad.push(`${c.file}: the ${kind} is not drawn ${c.look}: ${JSON.stringify({ laid: d?.laid, features: d?.features })}`);
       }
       if (c.notation) {   // a notation opens as the standard file beside the notebook, the same text the picture shows
         const text = /```\w+\n([\s\S]*)\n```/.exec(views.flatMap((o) => o.items).filter((i) => i.mime === 'text/markdown').map((i) => new TextDecoder().decode(i.data))[0] ?? '')?.[1] ?? '';
