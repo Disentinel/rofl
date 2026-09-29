@@ -5,7 +5,7 @@ const { existsSync, readFileSync, writeFileSync } = require('node:fs');
 
 const strip = (r) => JSON.stringify({ status: r.status, errors: r.errors, cells: r.cells });
 const until = async (get, ms, what) => {
-  for (const end = Date.now() + ms; Date.now() < end; await new Promise((f) => setTimeout(f, 100))) { const v = get(); if (v) return v; }
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((f) => setTimeout(f, 100))) { const v = await get(); if (v) return v; }
   throw new Error(`waited ${ms} ms for ${what}`);
 };
 
@@ -14,6 +14,7 @@ exports.run = async () => {
   const ext = vscode.extensions.getExtension(id);
   if (!ext?.extensionPath.startsWith(dir)) bad.push(`the extension is ${ext ? `at ${ext.extensionPath}` : 'not there'}, not installed under ${dir}`);
   const api = ext && await ext.activate();
+  let shown = false;
   for (const c of api ? JSON.parse(cases) : []) {
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
     await vscode.window.showNotebookDocument(nb);
@@ -29,8 +30,10 @@ exports.run = async () => {
     const marks = runs.flatMap((x) => x.outputs.flatMap((o) => o.items.filter((i) => i.mime === 'application/vnd.rofl.view+json').map((i) => Object.keys(JSON.parse(Buffer.from(i.data).toString()).view.marks).length)));
     if (c.view && (!marks.length || marks.includes(0))) bad.push(`${c.file}: no picture with marks, ${JSON.stringify(marks)}`);
     if (c.view) console.log(`${c.file}: drawn, ${marks.join(' + ')} marks`);
+    if (c.view && !shown) shown = await inTab(nb, c.file, bad);
     console.log(`${c.file}: ${r.status}, ${runs.length} cells, ${runs.filter((x) => x.outputs.length).length} with output, load ${r.ms.load} ms, run ${r.ms.run} ms`);
   }
+  if (api && !shown) bad.push('no picture was opened in its own tab');
   // the language server of the installed extension: a broken rule is marked on its line, a hover says what a relation is; the window is left showing both
   const rofl = process.env.ROFL_DIST_LSP, t0 = Date.now();
   const doc = api && await vscode.workspace.openTextDocument(vscode.Uri.file(rofl));
@@ -45,3 +48,18 @@ exports.run = async () => {
   writeFileSync(report, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 };
+
+/** The installed renderer, once: the picture is drawn, its Open in editor draws it again in a tab of its own, and the verdicts above it have their colours. */
+async function inTab(nb, file, bad) {
+  const drawn = () => vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+  const at = nb.getCells().find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === 'application/vnd.rofl.view+json')));
+  if (at) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(at.index, at.index + 1), vscode.NotebookEditorRevealType.AtTop);
+  const first = await until(async () => (await drawn()).length || undefined, 20_000, 'the picture drawn').catch(() => 0);
+  await vscode.commands.executeCommand('rofl-notebook.press', nb.uri, { show: true });
+  const tab = await until(async () => (await drawn()).slice(first).find((d) => d.panel), 20_000, 'the picture in its tab').catch(() => undefined);
+  if (!first || !tab || tab.spill.length) bad.push(`${file}: the installed renderer ${!first ? 'drew no picture' : !tab ? 'opened no picture in its tab' : `drew it past its tab: ${tab.spill}`}`);
+  const colours = await vscode.commands.executeCommand('rofl-notebook.verdicts', nb.uri);
+  if (!colours.length) bad.push(`${file}: the installed renderer coloured no verdict`);
+  console.log(`${file}: in its own tab ${tab ? `${tab.size.join(' x ')}` : 'not drawn'}, ${colours.length} verdicts coloured`);
+  return true;
+}

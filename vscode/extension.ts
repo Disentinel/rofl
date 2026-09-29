@@ -136,7 +136,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   ctx.subscriptions.push(pictures.onDidReceiveMessage(({ editor, message: m }) => hear(m, m.notebook ? vscode.Uri.parse(String(m.notebook)) : editor.notebook.uri, (r) => void pictures.postMessage(r, editor))));
   /** A picture in an editor tab of its own, drawn by the renderer's modules (vscode/visual/panel.ts), sized to the tab. */
   function showPicture(nb: vscode.Uri, view: View) {
-    const out = vscode.Uri.joinPath(ctx.extensionUri, 'visual', 'out');
+    const out = vscode.Uri.parse(new URL('./visual/out', import.meta.url).href);   // beside this file, in the tree and in the VSIX alike
     const p = vscode.window.createWebviewPanel('rofl-picture', `${view.kind} · ${nb.path.slice(nb.path.lastIndexOf('/') + 1)}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [out], retainContextWhenHidden: true });
     const w = p.webview, data = JSON.stringify({ view, notebook: nb.toString() }).replace(/</g, '\\u003c');
     w.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${w.cspSource} https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data:">
