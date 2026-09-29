@@ -34,6 +34,14 @@ function run(reader: Reader): string[] {
   const held = read(`${md(['A car X is late'], ['`c1` is late.'])}\n<a id="late"></a>A product X is overdue if X is on the plan.\n`);
   if (!held.unparsed.some((u) => u.startsWith('DECLARED A car X is late — ') && /is the relation of "a product X is overdue"/i.test(u))) bad.push(`held: a declaration named as an anchor is not refused: ${JSON.stringify(held.unparsed)}`);
   if (/\blate\(c1\)/.test(held.rofl)) bad.push(`held: its row went into the anchor's relation: ${JSON.stringify(held.rofl)}`);
+  // a sentence declared a second time says where it was declared, under a declaration list or any other; a rule's sentence listed as declared does not
+  const once = md(['A product X is on the plan'], ['`car` is on the plan.']);
+  for (const [name, text] of [['again, declared', `${once}\nDeclared as facts:\n\n- A product X is on the plan\n`], ['again, under another line', `${once}\nAlso declared:\n\n- A product X is on the plan\n`]]) {
+    const r = read(text);
+    if (!r.unparsed.includes('AGAIN 3 A product X is on the plan')) bad.push(`${name}: not said to be declared at line 3: ${JSON.stringify(r.unparsed)}`);
+  }
+  const ruled = read(`<a id="late"></a>A product X is late if X is on the plan.\n\n${md(['A product X is on the plan', 'A product X is late — rows from the rules in this file'], ['`car` is on the plan.'])}`);
+  if (ruled.unparsed.length) bad.push(`a rule's sentence listed as declared: ${JSON.stringify(ruled.unparsed)}`);
   return bad;
 }
 
@@ -41,7 +49,7 @@ let failed = 0;
 const say = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${!ok && detail ? `\n     ${detail}` : ''}`); };
 
 const own = run(await import('./read_md.ts'));
-say(!own.length, '6 cases: named from its words, an anchor wins, a name in its words, twins refused both ways and not merged, a name an anchor holds', own.join('\n     '));
+say(!own.length, '9 cases: named from its words, an anchor wins, a name in its words, twins refused both ways and not merged, a name an anchor holds, declared again in a declaration list and under another line, a rule\'s sentence listed as declared', own.join('\n     '));
 
 // a declaration named as a relation of boot.rofl: the notebook's is its own, the kernel's rows untouched
 const file = path.join(os.tmpdir(), 'rofl-declared-boot.rofl.md'), k = new Kernel({ wall });
@@ -57,6 +65,7 @@ const source = readFileSync(path.join(ROOT, 'scripts/read_md.ts'), 'utf8').repla
 const PLANTS: [string, string, string, RegExp][] = [
   ['the slug off, an unanchored declaration not read again', 'for (const t of decls) if (!refusedName.has(t) && slug(t)) learn(slug(t), t, at.get(t));', '', /^named from its words: no made_of\(car, wheel\)/m],
   ['a slug collision merged', 'if (twin) refusedName.set(', 'if (false) refusedName.set(', /^twins: "A car X is late" is not refused/m],
+  ['a sentence declared again not said', 'return k !== undefined && k !== here ? k + 1 : undefined;', 'return undefined;', /^again, declared: not said to be declared at line 3/m],
   ['a name another relation holds taken', 'else if (held) refusedName.set(', 'else if (false) refusedName.set(', /^held: a declaration named as an anchor is not refused/m],
 ];
 for (const [name, from, to, why] of PLANTS) {

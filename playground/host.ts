@@ -653,7 +653,7 @@ function bare(s: string, vocab: Vocabulary): string | undefined {
 }
 const BARE = (w: string) => `${w} is not a sentence word here: names go in backticks: \`${w}\``;
 
-/** What the reader could not read, in the writer's words, not its own (FACT, TABLE, DECLARED). */
+/** What the reader could not read, in the writer's words, not its own (FACT, TABLE, DECLARED, AGAIN). */
 function unreadSaid(u: string, vocab: Vocabulary): string {
   const [kind, ...rest] = u.split(' '), t = rest.join(' ');
   if (kind === 'FACT') {
@@ -663,6 +663,7 @@ function unreadSaid(u: string, vocab: Vocabulary): string {
   }
   if (kind === 'TABLE') return `not read: the table ${t}: a table of facts goes under a line like "\`rel\` lists:"`;
   if (kind === 'DECLARED') return `not read: under "Declared as facts:": ${t}`;
+  if (kind === 'AGAIN') { const [n, ...said] = rest; return `${said.join(' ')}: already declared at line ${n}: a sentence is declared once`; }
   return `not read: ${kind === 'HEAD' ? t : u}`;
 }
 

@@ -547,12 +547,14 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
   // a declaration with no anchor is named from its words, as a head the reader has no sentence for is (slug); a name another relation has,
   // or two declarations share, names neither, and each says so
-  const refusedName = new Map<string, string>();
+  const refusedName = new Map<string, string>(), saidAt = new Map<string, number>();   // and the line, from 0, each sentence was first declared on
   {
     const lines = md.split('\n'), at = new Map<string, number>();
-    const decls = blocks.flatMap((b, i) => b.type === 'p' && b.text!.trim() === 'Declared as facts:' && blocks[i + 1]?.type === 'ul' ? blocks[i + 1].items!.map((it) => {
-      const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); at.set(t, lines.findIndex((l, k) => k >= blocks[i + 1].at! && l.includes(t))); return t;
-    }) : []).filter((t) => !/^`\w+`$/.test(t) && /\s[A-Z][A-Za-z0-9]*\b/.test(t) && !matchLit(t, []));
+    const items = blocks.flatMap((b, i) => b.type === 'p' && b.text!.trim() === 'Declared as facts:' && blocks[i + 1]?.type === 'ul' ? blocks[i + 1].items!.map((it) => {
+      const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); if (!at.has(t)) at.set(t, lines.findIndex((l, k) => k >= blocks[i + 1].at! && l.includes(t))); return t;
+    }) : []).filter((t) => !/^`\w+`$/.test(t) && /\s[A-Z][A-Za-z0-9]*\b/.test(t));
+    for (const t of items) { const src = t.charAt(0).toLowerCase() + t.slice(1); if (!saidAt.has(src)) saidAt.set(src, at.get(t)!); }
+    const decls = items.filter((t) => !matchLit(t, []));
     for (const t of decls) {
       const name = slug(t), twin = decls.find((x) => x !== t && slug(x) === name), held = templates.find((x) => x.rel === name);
       if (!name) continue;
@@ -564,6 +566,12 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     learned.sort((a, b) => learnedAt.get(a)! - learnedAt.get(b)!);
     templates.splice(templates.length - learned.length, learned.length, ...learned);
   }
+  // a sentence this file declared on another line than the item at `from` in the list block `b`: its line, from 1
+  const mdLines = md.split('\n');
+  const declaredAt = (t: string, b: Block): number | undefined => {
+    const here = mdLines.findIndex((l, k) => k >= b.at! && l.includes(t)), k = saidAt.get(t.charAt(0).toLowerCase() + t.slice(1));
+    return k !== undefined && k !== here ? k + 1 : undefined;
+  };
   let section = '';
   let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
   let blockSet = false;
@@ -604,7 +612,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (text === 'Declared as facts:' && next && next.type === 'ul') {
       // a declared fact reads as its signature sentence, `A kind K catches via a field Field`, or as its bare name
       // a declared table may say where its rows are after a dash: `A kind K is a call kind — rows in Words`
-      for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel; if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}${refusedName.has(t) ? ` — ${refusedName.get(t)}` : ''}`); }
+      for (const it of next.items!) { const t = it.text.trim().split(' — ')[0].replace(/\.$/, ''); const nm = /^`(\w+)`$/.exec(t); const rel = nm ? nm[1] : matchLit(t, [])?.rel, again = nm ? undefined : declaredAt(t, next); if (again) unparsed.push(`AGAIN ${again} ${t}`); else if (rel) { declared.push(rel); homeBook.set(rel, 'main'); } else unparsed.push(`DECLARED ${t}${refusedName.has(t) ? ` — ${refusedName.get(t)}` : ''}`); }
       i++; continue;
     }
     const lead = /^(Initially|In the next tick), /.exec(text), tense = lead ? (lead[1] === 'Initially' ? 'init' : 'next') : undefined;
@@ -646,8 +654,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
         const t = it.text.trim().replace(/\.$/, '');
         badTerm = null;
         const lit = matchLit(t, []);
+        const again = lit && lit.args.every((a) => 'v' in a) ? declaredAt(t, next) : undefined;
         if (lit && !badTerm && lit.args.every((a) => !('v' in a))) { parsedFacts.push(lit); if (!homeBook.has(lit.rel)) homeBook.set(lit.rel, 'main'); }
-        else unparsed.push(`FACT ${t}`);
+        else unparsed.push(again ? `AGAIN ${again} ${t}` : `FACT ${t}`);
       }
       i++; continue;
     }
