@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { accessSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readdirSync, readSync, realpathSync, statSync, type Stats } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { getHeapStatistics } from 'node:v8';
 import { Rofl } from '../src/api.ts';
 import { parseProgram } from '../src/parser.ts';
 import { IFACE, RESERVED } from '../src/reflect.ts';
@@ -145,8 +146,10 @@ export const CONFIG = '.rofl/read.rofl';
 /** Past this many files the rules are not run: read_prefix in CONFIG narrows the walk itself. */
 const FILES = Number(process.env.ROFL_NB_READ_FILES ?? 50_000);
 
-/** How long, and how much more heap, CONFIG's rules may take: a second guard, under the one that they are plain Datalog. */
-const RULE_MS = 10_000, RULE_HEAP = 512 * 2 ** 20;
+/** How long the rules may take, and the heap they may reach: a second guard, under plain Datalog, that keeps a fault of the engine from
+ *  taking the editor down. The time grows with the files and the heap is the process's own, so a config that reads at 20,000 files reads
+ *  at 50,000: a fixed 512 MB more refused `x(a).` there, since the files alone took most of it. */
+const RULE_MS = 10_000, RULE_MS_A_FILE = 0.5, HEAP = 0.8 * getHeapStatistics().heap_size_limit;
 const COMPARE = new Set(['=', '!=', '<', '<=', '>', '>=']), ENGINE = new Set([...RESERVED, ...Object.values(IFACE)]);
 /** Why CONFIG is not plain Datalog, or null: a variable, a number, a string or a name, never a term built of terms; a comparison, never
  *  `is`; no perspective, no time, no relation the engine keeps for itself. Then its rules make no new value, and end in time polynomial in
@@ -193,8 +196,9 @@ function listing(dir: string, command?: string): Repo {
   const r = new Rofl(), refuse = (why: string) => none(`${CONFIG}: ${why}; nothing is read`), text = control(dir, CONFIG);
   const not = impure(text);
   if (not) return refuse(not);
-  const end = performance.now() + RULE_MS, heap = process.memoryUsage().heapUsed + RULE_HEAP;
-  r.stop = () => performance.now() > end || process.memoryUsage().heapUsed > heap;
+  const start = performance.now();
+  let end = start + RULE_MS;
+  r.stop = () => performance.now() > end || process.memoryUsage().heapUsed > HEAP;
   const loaded = [r.load(RULES), r.load(text)];
   if (!loaded[1].ok) return refuse(loaded[1].diagnostics[0] ?? 'it does not load');
   const values = (q: string) => r.query(q).rows.map((x) => Object.values(x.bindings)[0]).map((v) => { try { return v.startsWith('"') ? JSON.parse(v) as string : v; } catch { return v; } });
@@ -203,6 +207,7 @@ function listing(dir: string, command?: string): Repo {
   const out = [...prefixes, ...values('skip_prefix(P)')].find((p) => path.posix.isAbsolute(p) || p.split('/').includes('..'));
   if (out !== undefined) return refuse(`"${out}" reaches out of the workspace: a prefix is a path inside it, like "src/"`);
   const listed = walk(dir, prefixes).filter((f) => !SECRET.test(f) && !/["\\\p{Cc}]/u.test(f));
+  end = start + RULE_MS + listed.length * RULE_MS_A_FILE;
   const by = values('untracked_by(V)');
   if (by.length > 1) return refuse(`untracked_by names ${by.length} systems`);
   const known = by.length && by[0] !== 'none' ? tracked(by[0], dir, listed, command) : new Set<string>();
