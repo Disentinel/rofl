@@ -42,6 +42,7 @@ One per line, in a `rofl` or `datalog` cell:
 | `whynot S` | the condition where S stops |
 | `excise F` | which lines would answer differently without the fact F |
 | `unsure S` | under a `never`: what it could not see |
+| `draw K` | a picture of what the notebook concluded, of kind K: a graph, time, a table, space or a notation, and their forms (guide/DRAWING.md in the repository) |
 
 `review.rofl.md` in `~/rofl-examples/notebook`, run:
 

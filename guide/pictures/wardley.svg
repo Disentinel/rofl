@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" viewBox="0 0 680 448" width="100%" role="img" aria-label="space"><style>
+.rofl-pic { --p-fg: var(--vscode-editor-foreground, var(--fg, #1c2120)); --p-mute: var(--vscode-descriptionForeground, var(--mute, #66706b));
+  --p-line: var(--vscode-panel-border, var(--line, #d9ddd6)); --p-bg: var(--vscode-editor-background, var(--code-bg, #fcfcfa)); --p-panel: var(--vscode-editorWidget-background, var(--panel, #fff));
+  --p-soft: var(--vscode-editor-inactiveSelectionBackground, var(--soft, #eef0eb)); --p-accent: var(--vscode-focusBorder, var(--accent, #1d4ed8)); --p-accent-bg: color-mix(in srgb, var(--p-accent) 12%, transparent);
+  --p-fail: var(--vscode-errorForeground, var(--fail, #b91c1c)); --p-fail-bg: color-mix(in srgb, var(--p-fail) 12%, transparent);
+  --p-warn: var(--vscode-editorWarning-foreground, var(--warn, #a15c07)); --p-warn-bg: color-mix(in srgb, var(--p-warn) 14%, transparent); --p-pass: var(--vscode-testing-iconPassed, var(--pass, #047857));
+  --p-mono: var(--vscode-editor-font-family, var(--mono, ui-monospace, Menlo, monospace));
+  border: 1px solid var(--p-line); border-radius: 5px; background: var(--p-bg); color: var(--p-fg); min-width: 0; }
+.rofl-pic .pbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px; border-bottom: 1px solid var(--p-line); font: 12px/1.4 var(--p-mono); color: var(--p-mute); }
+.rofl-pic .pbar .spacer { flex: 1; }
+.rofl-pic button { font: 12px/1 inherit; padding: 4px 8px; color: var(--p-fg); background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; cursor: pointer; }
+.rofl-pic .stage { overflow-x: auto; }
+.rofl-pic .cy { height: 380px; }
+.rofl-pic .frame { border-top: 1px dashed var(--p-line); }
+.rofl-pic .frame-key { padding: 4px 8px; font: 12px var(--p-mono); }
+.rofl-pic .frame .cy { height: 260px; }
+.rofl-pic .detail { padding: 8px 10px; border-top: 1px solid var(--p-line); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.rofl-pic .detail pre, .rofl-pic .why { margin: 0; padding: 6px 8px; background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; font: 12px/1.5 var(--p-mono); white-space: pre-wrap; }
+.rofl-pic .facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.rofl-pic .facts code { font: 12.5px var(--p-mono); }
+.rofl-pic .mute { color: var(--p-mute); }
+.rofl-pic .note { color: var(--p-warn); background: var(--p-warn-bg); padding: 5px 10px; font-size: 13px; }
+.rofl-pic details.as { padding: 4px 10px 8px; font-size: 12.5px; color: var(--p-mute); }
+.rofl-pic details.as pre, .rofl-pic pre.fallback { margin: 6px 0 0; padding: 8px 10px; font: 12px/1.5 var(--p-mono); white-space: pre; overflow-x: auto; color: var(--p-fg); }
+.rofl-pic .tag { font: 11px var(--p-mono); padding: 1px 6px; border-radius: 3px; background: var(--p-soft); color: var(--p-mute); }
+.rofl-pic table.view { border-collapse: collapse; margin: 8px; font: 12.5px var(--p-mono); }
+.rofl-pic table.view th, .rofl-pic table.view td { border: 1px solid var(--p-line); padding: 4px 9px; text-align: left; }
+.rofl-pic [data-mark], .rofl-pic [data-group] { cursor: pointer; }
+.rofl-pic text[data-group] { text-decoration: underline dotted; }
+.rofl-pic { display: block; }
+.rofl-pic text { font: 11px var(--p-mono); fill: var(--p-fg); }
+.rofl-pic .axis text { fill: var(--p-mute); }
+.rofl-pic .axis line, .rofl-pic .lanes line { stroke: var(--p-line); }
+.rofl-pic [data-mark] { fill: var(--p-accent-bg); stroke: var(--p-accent); stroke-width: 1.2; }
+.rofl-pic line[data-mark] { stroke-width: 1.6; }
+.rofl-pic .failing, .rofl-pic .dangling, .rofl-pic .failing, .rofl-pic .dangling { color: var(--p-fail); background: var(--p-fail-bg); fill: var(--p-fail-bg); stroke: var(--p-fail); }
+.rofl-pic .dangling, .rofl-pic .dangling { border-style: dashed; stroke-dasharray: 4 3; }
+.rofl-pic .blind { background: repeating-linear-gradient(45deg, var(--p-warn-bg), var(--p-warn-bg) 4px, transparent 4px, transparent 8px); }
+.rofl-pic .blind { fill: url(#rofl-hatch); stroke: var(--p-warn); stroke-dasharray: 5 3; }
+.rofl-pic .unknown, .rofl-pic .unknown { color: var(--p-mute); stroke: var(--p-mute); stroke-dasharray: 2 3; }
+.rofl-pic .gone, .rofl-pic .gone { opacity: .45; text-decoration: line-through; stroke-dasharray: 5 5; }
+.rofl-pic .new { outline: 2px solid var(--p-pass); outline-offset: -2px; }
+.rofl-pic .new { stroke: var(--p-pass); stroke-width: 3; }
+.rofl-pic .region { fill: var(--p-soft); fill-opacity: .5; stroke: var(--p-mute); }
+.rofl-pic line.link { stroke: var(--p-mute); stroke-width: 1.5; }
+.rofl-pic .collapsed { stroke-width: 3; }</style><defs><pattern id="rofl-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--p-warn-bg)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--p-warn)" stroke-width="2"/></pattern></defs><g class="axis"><line x1="44" x2="636" y1="404" y2="404"/><line x1="44" x2="44" y1="44" y2="404"/><text x="636" y="420" text-anchor="end">evolution</text><text x="38" y="36">visibility</text></g><line data-mark="catalogue" class="link " x1="149.88235294117646" y1="128.70588235294116" x2="107.52941176470588" y2="192.23529411764704"/><line data-mark="checkout" class="link " x1="213.41176470588235" y1="44" x2="149.88235294117646" y2="128.70588235294116"/><line data-mark="checkout" class="link " x1="213.41176470588235" y1="44" x2="276.94117647058823" y2="149.88235294117646"/><line data-mark="database" class="link " x1="340.47058823529414" y1="319.29411764705884" x2="382.8235294117647" y2="404"/><line data-mark="payments" class="link " x1="276.94117647058823" y1="149.88235294117646" x2="44" y2="107.52941176470586"/><line data-mark="search" class="link " x1="107.52941176470588" y1="192.23529411764704" x2="340.47058823529414" y2="319.29411764705884"/><circle data-mark="catalogue" data-at="40 75" class="" cx="149.88235294117646" cy="128.70588235294116" r="6"><title>catalogue</title></circle><text x="158.88235294117646" y="132.70588235294116" pointer-events="none">catalogue</text><circle data-mark="checkout" data-at="55 95" class="" cx="213.41176470588235" cy="44" r="6"><title>checkout</title></circle><text x="222.41176470588235" y="48" pointer-events="none">checkout</text><circle data-mark="compute" data-at="95 10" class="" cx="382.8235294117647" cy="404" r="6"><title>compute</title></circle><text x="391.8235294117647" y="408" pointer-events="none">compute</text><circle data-mark="database" data-at="85 30" class="" cx="340.47058823529414" cy="319.29411764705884" r="6"><title>database</title></circle><text x="349.47058823529414" y="323.29411764705884" pointer-events="none">database</text><circle data-mark="fraud_model" data-at="15 80" class="" cx="44" cy="107.52941176470586" r="6"><title>fraud_model</title></circle><text x="53" y="111.52941176470586" pointer-events="none">fraud_model</text><circle data-mark="payments" data-at="70 70" class="upside_down failing" cx="276.94117647058823" cy="149.88235294117646" r="6"><title>payments</title></circle><text x="285.94117647058823" y="153.88235294117646" pointer-events="none">payments</text><circle data-mark="search" data-at="30 60" class="" cx="107.52941176470588" cy="192.23529411764704" r="6"><title>search</title></circle><text x="116.52941176470588" y="196.23529411764704" pointer-events="none">search</text></svg>

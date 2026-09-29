@@ -11,7 +11,7 @@ reads:
 > day of it drawn as a Gantt chart: a lane per person, a bar per thing they
 > do, and a red bar wherever a child is alone while awake. The picture is
 > one day because a Gantt chart is one axis of time; a week is seven of
-> them (the *frames* modifier of docs/renderers.md, not built).
+> them, drawn as frames in `spat-week.rofl.md`.
 
 Reads:
 
