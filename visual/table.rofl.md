@@ -16,7 +16,7 @@ Declared as facts:
 - <a id="shows"></a>The channel Ch shows the column C as a type Ty
 - <a id="tagged"></a>A mark M is tagged a tag K
 - <a id="frame"></a>A mark M is in the frame F
-- <a id="reserved"></a>A tag K is reserved
+- <a id="reserved_tag"></a>A tag K is reserved
 
 > `draws` takes `bar`, `rect`, `point`, `line` or `text`; `shows` a channel
 > (`x`, `y`, `color`) with a Vega-Lite type (`nominal`, `ordinal`,

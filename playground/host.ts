@@ -2,7 +2,7 @@
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
-import { ruleIdOf } from '../src/reflect.ts';
+import { KERNEL_BOOK, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, status, KINDS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
@@ -266,6 +266,9 @@ export class Host {
       try {
         texts[i] = text;
         const program = parseProgram(text);
+        // the kernel's own rows (which rule writes where) are read only where a cell names the kernel's book: unbooked, a domain word would reach them
+        const kernelRead = program.flatMap((cl) => [cl.head, ...cl.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])]).find((l) => KERNEL_BOOK.has(l.rel) && !l.perspExplicit);
+        if (kernelRead) { errors.push(`${kernelRead.rel} is the kernel's own relation: this cell is left out; write ${kernelRead.rel}[$kernel](...) to read the kernel's rows, or say it in other words`); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined }; }
         for (const cl of program) {
           if (!cl.body.length) continue;
           notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
@@ -465,6 +468,7 @@ export class Host {
           if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text), note: nameless(a.lit, a.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
+        if (KERNEL_BOOK.has(relOf(a.lit)) && !a.lit.includes('[$')) { outs[i].lines.push({ unasked: `${relOf(a.lit)} is the kernel's own relation: ask ${relOf(a.lit)}[$kernel](...) to see the kernel's rows`, kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
         const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });

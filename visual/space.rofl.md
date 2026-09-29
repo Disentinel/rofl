@@ -26,7 +26,7 @@ Declared as facts:
 - <a id="labelled"></a>A mark M is labelled S
 - <a id="axis"></a>The axis N is titled S
 - <a id="projection"></a>The space is projected as P
-- <a id="reserved"></a>A tag K is reserved
+- <a id="reserved_tag"></a>A tag K is reserved
 
 The renderer's tags:
 

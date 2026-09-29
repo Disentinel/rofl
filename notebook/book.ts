@@ -2,6 +2,7 @@
 // Pure: the page, the notebook kernel and the reader of worlds share it.
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
 import { VIEW_RELS } from './draw.ts';
+import { RESERVED } from '../src/reflect.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -29,8 +30,12 @@ function split(text: string): { clauses: string; asks: Ask[] } {
 }
 
 /** A head the reader knew no sentence for gets an anchor named from its words, `A call C is unawaited` -> `unawaited`, so the sentence declares a relation. */
-const slug = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
+const words = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
   .toLowerCase().replace(/\b(a|an|the|is|are)\b/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+/** The name, never one of the kernel's own relations: `C writes to D` named `writes_to` would write the kernel's table and read its rows. */
+const slug = (head: string): string => { const s = words(head); return RESERVED.has(s) ? `own_${s}` : s; };
+/** A head named from words that are the kernel's own, said. */
+export const kernelWords = (heads: string[]): string[] => heads.filter((h) => RESERVED.has(words(h))).map((h) => `'${words(h).replace(/_/g, ' ')}' is also the kernel's word; this cell's sentence is its own relation (${h})`);
 function anchored(md: string, heads: string[]): string {
   const lines = md.split('\n');
   for (const h of heads) {
@@ -100,7 +105,7 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
     const text = anchored(clauses, unread);
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
-    return { text, learned, close: [...closeTo(learned, phrases), ...viewLike(clauses, phrases)] };
+    return { text, learned, close: [...closeTo(learned, phrases), ...viewLike(clauses, phrases), ...kernelWords(unread)] };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');

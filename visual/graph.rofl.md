@@ -23,7 +23,7 @@ Declared as facts:
 - <a id="labelled"></a>A mark M is labelled S
 - <a id="level"></a>A mark M is at the level I
 - <a id="placed"></a>A mark M is placed at X Y
-- <a id="reserved"></a>A tag K is reserved
+- <a id="reserved_tag"></a>A tag K is reserved
 
 > `labelled` overrides the label, which is otherwise the mark as a sentence
 > says it. `level` is a rank: equal levels are drawn in one row. `placed` is

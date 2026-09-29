@@ -98,6 +98,18 @@ async function problems(dir: string): Promise<string[]> {
   if (!failing || !/<details class="fold-line" data-line="[^"]*" open>/.test(html(failing))) bad.push('a failing never\'s rows are not open');
   const rows = [wb.addWhere('top', false), wb.addWhere('bottom', false), wb.addWhere('top', true), wb.addWhere('bottom', true)].join(' ');
   if (rows !== 'start end end start') bad.push(`the add rows do not add next to where they sit (top, bottom; then newest first): ${rows}`);
+  // the kernel's own rows stay out: a domain "writes to" is its own relation, a ? of the kernel's relation and a rule over it are said, not answered
+  const kr = await bench.run([
+    { id: 'w', kind: 'rofl', text: 'A component C writes to a component D if all of:\n  - C is "webarchive-writer";\n  - D is "S3".\n\nA component C writes to a component D if C is "webarchive-indexer", D is "WebarchiveIndex".\n\nA component C writes to a component D if C is "webarchive-writer", D is "webarchive-indexer".\n\nA component C sends a component P to a component D if C is "unblocker", P is "pages", D is "webarchive-writer".\n\n? A component writes to a component' },
+    { id: 'p', kind: 'rofl', text: 'A mark M is a node if M writes to something.\n\nA mark M is a node if something writes to M.\n\nA mark M links to a mark N if M writes to N, unless M sends some component to N.\n\ndraw graph' },
+    { id: 'k', kind: 'datalog', text: '? writes_to(R, B)' },
+    { id: 'x', kind: 'datalog', text: 'node(R) :- rule(R).\n\ndraw graph' }]);
+  const rid = /\br[0-9a-f]{8}\b/, wq = kr.byCell.get('w')?.lines[0], pic = kr.byCell.get('p')?.lines[0]?.view;
+  if (wq?.total !== 3 || wq.answers.some((a: { sentence: string }) => rid.test(a.sentence))) bad.push(`the owner's "writes to" does not give its 3 domain rows alone: ${wq?.total} rows`);
+  if (!pic || Object.keys(pic.marks).length !== 4 || Object.keys(pic.marks).some((m) => rid.test(m))) bad.push(`the owner's picture is not its 4 components: ${JSON.stringify(Object.keys(pic?.marks ?? {}))}`);
+  if (kr.byCell.get('k')?.lines[0]?.verdict !== 'unasked') bad.push(`a kernel row reaches a ? answer: ${kr.byCell.get('k')?.lines[0]?.total} rows`);
+  const xm = Object.keys(kr.byCell.get('x')?.lines[0]?.view?.marks ?? {});
+  if (xm.some((m) => rid.test(m)) || !kr.byCell.get('x')?.errors.some((e: string) => e.startsWith("rule is the kernel's own relation"))) bad.push(`a kernel row reaches a picture: ${xm.length} marks`);
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -151,7 +163,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the empty-picture gate off', (d) => spoil(d, 'lib/translate.js', '...blank, ', ''), /a first cell that draws nothing was not refused/],
   ['the drawing paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'So a request to draw or diagram something is answered with rules', 'So'), /the prompt does not say how a picture is drawn/],
   ['the label sentence as it was', (d) => spoil(d, 'visual/graph.rofl.md', 'A mark M is labelled S', 'A mark M reads S'), /relabelled a mark/],
-  ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases)', ''), /reads as a picture's is not said/],
+  ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases), ', ''), /reads as a picture's is not said/],
   ['newest first changing the notebook', (d) => spoil(d, 'lib/bench.js', '[...cells].reverse()', 'cells.reverse()'), /newest first changed the notebook/],
   ['the facts paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'A fact is stated in a sentence the notebook declares first', 'A fact'), /the prompt does not say how a fact is declared/],
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
@@ -161,6 +173,9 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the translator appending ? lines', (d) => spoil(d, 'lib/translate.js', 'return { ...t, errors: [], cell, added', "return { ...attempt(cell + '\\n\\n? ' + asks[0]), errors: [], cell, added"), /\? lines were written into a cell that only models/],
   ['a ? list rendered unfolded', (d) => spoil(d, 'lib/bench.js', "(l.kind === 'answers' || l.verdict === 'fails')", "l.verdict === 'fails'"), /a \? list is rendered unfolded/],
   ['the top add row adding at the end', (d) => spoil(d, 'lib/bench.js', "(row === 'top') !== newest ? 'start' : 'end'", "newest ? 'start' : 'end'"), /the add rows do not add next to where they sit/],
+  ['the reader binding writes_to again', (d) => spoil(d, 'lib/book.js', 'RESERVED.has(s) ? `own_${s}` : s', 's'), /does not give its 3 domain rows alone/],
+  ['a kernel row let into a ? answer', (d) => spoil(d, 'lib/host.js', "KERNEL_BOOK.has(relOf(a.lit)) && !a.lit.includes('[$')", 'false'), /a kernel row reaches a \? answer/],
+  ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => KERNEL_BOOK.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {
@@ -172,7 +187,7 @@ for (const [name, plant, why] of PLANTS) {
   const dir = path.join(tmp, name.replace(/\W+/g, '-'));
   cpSync(built, dir, { recursive: true });
   plant(dir);
-  const p = await problems(dir);
+  const p = await problems(dir).catch((e) => [`crashed: ${(e as Error).stack?.split("\n").slice(0, 2).join(" ")}`]);
   say(p.some((x) => why.test(x)), `planted, ${name}: red, because ${why.source.replace(/\\/g, '')}`, p.length ? p.join('\n     ') : 'green');
 }
 rmSync(tmp, { recursive: true, force: true });
