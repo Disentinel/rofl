@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --break NAME` one planted defect.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME` one planted defect.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -104,16 +104,23 @@ const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), sr
 // a dialect is held to everything in its what-if copy alone, whose first picture is the notebook's own: one window less a dialect keeps test:vscode under two minutes
 const based = VISUAL.filter((x) => !x.look), pictures = based.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
-const [a, b, c, ...pics] = await Promise.all([cli(review, path.join(tmp, 'review.json')), cli(clean, path.join(tmp, 'clean.json')), cli(small, path.join(tmp, 'small.json')),
-  ...pictures.map((f, k) => cli(f, path.join(tmp, `picture-${k}.json`))), ...whatifs.map((f, k) => cli(f, path.join(tmp, `whatif-${k}.json`)))]);
 const cases = [
-  { file: review, cli: a, fails: { text: 'never C is blocked by T' } },
-  { file: clean, cli: b },
-  { file: small, cli: c, fails: { text: 'never C recurses', code: [smallJs, 12] } },
-  ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
+  { file: review, cli: path.join(tmp, 'review.json'), fails: { text: 'never C is blocked by T' } },
+  { file: clean, cli: path.join(tmp, 'clean.json') },
+  { file: small, cli: path.join(tmp, 'small.json'), fails: { text: 'never C recurses', code: [smallJs, 12] } },
+  ...pictures.map((file, k) => ({ file, cli: path.join(tmp, `picture-${k}.json`), pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
   { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
-  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: pics[based.length + k], pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
+  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: path.join(tmp, `whatif-${k}.json`), pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
 ];
+// `--group`: the run as it is over one group of cases, each window under two minutes; `core` also holds the checks that are not a case
+const GROUPS: Record<string, typeof cases> = {
+  core: cases.filter((c) => !('pictures' in c) && !('pin' in c)),
+  pictures: cases.filter((c) => ('pictures' in c || 'pin' in c) && !('compare' in c)),
+  whatif: cases.filter((c) => 'compare' in c && !('form' in c)),
+  forms: cases.filter((c) => 'form' in c),
+};
+const gi = process.argv.indexOf('--group'), group = gi >= 0 ? process.argv[gi + 1] : undefined;
+if (group !== undefined && !GROUPS[group]) throw new Error(`--group takes one of ${Object.keys(GROUPS).join(', ')}`);
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
 // Each runs the notebooks until the first that goes red; `codeline` only the one with code lines.
@@ -158,8 +165,11 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
+const casesOf = (v: string) => BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases);
+// the command line's answer for each case a window will hold it against
+await Promise.all([...new Set(variants.flatMap(casesOf))].flatMap((c) => c.cli ? [cli(c.file, c.cli)] : []));
 
 const one = async (v: string) => {
   const t = performance.now();
@@ -189,7 +199,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(BREAKS[v]?.[3] ?? cases)), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(v === 'as it is' && group && group !== 'core' && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }

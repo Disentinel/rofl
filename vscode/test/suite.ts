@@ -26,16 +26,8 @@ export async function run() {
     if (bad.length) throw new Error(bad.join('\n'));
     return;
   }
-  for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
-  const startup = process.env.ROFL_NB_STARTUP!;
-  const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs).filter((t) => (t.input as { uri?: vscode.Uri })?.uri?.fsPath === startup);
-  await until(() => tabs().some((t) => t.input instanceof vscode.TabInputNotebook && t.input.notebookType === 'rofl-notebook') || undefined, 10_000, 'the notebook named at launch')
-    .catch(() => bad.push(`${startup}: named on the command line, it opened as ${tabs().map((t) => t.input instanceof vscode.TabInputText ? 'text' : String(t.input?.constructor.name)).join(', ') || 'nothing'}, not a notebook`));
-  await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(cases[0].file));
-  const opened = await until(() => vscode.window.activeNotebookEditor?.notebook.notebookType, 10_000, 'a notebook editor').catch(() => vscode.window.activeTextEditor?.document.languageId);
-  if (opened !== 'rofl-notebook') bad.push(`${cases[0].file}: opening it the way a click does gives ${opened}, not a notebook`);
-  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-  await language(bad);
+  const extras = !process.env.ROFL_NB_CASES_ONLY;
+  if (extras) await beforeCases(bad);
   for (const c of cases) {
     const t0 = Date.now();
     // Pin layout, as the renderer's button asks it: the facts in <notebook>.layout.rofl, which this notebook reads, then drawn where they put the marks
@@ -173,10 +165,24 @@ export async function run() {
     console.log(`${c.file}: ${Date.now() - t0} ms`);
     if (bad.length) break;
   }
-  if (!bad.length) await translate(process.env.ROFL_NB_TRANSLATE!, bad);
-  if (!bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
+  if (extras && !bad.length) await translate(process.env.ROFL_NB_TRANSLATE!, bad);
+  if (extras && !bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** What is checked once per window and is not a case: cells wrap, the notebook named at launch and one opened as a click opens it are notebooks, the language server answers. */
+async function beforeCases(bad: string[]) {
+  for (const l of ['rofl', 'datalog', 'natural']) if (vscode.workspace.getConfiguration('editor', { languageId: l }).get('wordWrap') !== 'on') bad.push(`${l} cells do not wrap`);
+  const startup = process.env.ROFL_NB_STARTUP!;
+  const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs).filter((t) => (t.input as { uri?: vscode.Uri })?.uri?.fsPath === startup);
+  await until(() => tabs().some((t) => t.input instanceof vscode.TabInputNotebook && t.input.notebookType === 'rofl-notebook') || undefined, 10_000, 'the notebook named at launch')
+    .catch(() => bad.push(`${startup}: named on the command line, it opened as ${tabs().map((t) => t.input instanceof vscode.TabInputText ? 'text' : String(t.input?.constructor.name)).join(', ') || 'nothing'}, not a notebook`));
+  await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(cases[0].file));
+  const opened = await until(() => vscode.window.activeNotebookEditor?.notebook.notebookType, 10_000, 'a notebook editor').catch(() => vscode.window.activeTextEditor?.document.languageId);
+  if (opened !== 'rofl-notebook') bad.push(`${cases[0].file}: opening it the way a click does gives ${opened}, not a notebook`);
+  await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+  await language(bad);
 }
 
 /** VS Code's language model, one the extension declares only in this copy: Translate asks it and not the command line, offers it no tool,
