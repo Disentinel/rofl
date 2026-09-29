@@ -107,7 +107,9 @@ path_exists("facts/worlds.rofl").
 path_exists("guide/QUICKSTART.md").
 path_exists("lsp/know.ts").
 path_exists("lsp/test.ts").
+path_exists("notebook/book.ts").
 path_exists("notebook/cli.ts").
+path_exists("notebook/draw.ts").
 path_exists("notebook/front.ts").
 path_exists("notebook/kernel.ts").
 path_exists("notebook/model.ts").
