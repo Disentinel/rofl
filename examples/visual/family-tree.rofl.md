@@ -5,11 +5,10 @@ reads:
 
 # A family, written as GEDCOM
 
-> Three generations of a family, checked and then handed to genealogy
-> software in the standard it reads, GEDCOM 7: no layout of ours can draw a
-> pedigree the way that software does, so the notebook writes the file and
-> lets it. A child recorded as born before one of its parents is the defect
-> the check finds.
+> Three generations of a family, checked, drawn as a pedigree, and handed
+> to genealogy software in the standard it reads, GEDCOM 7. A child
+> recorded as born before one of its parents is the defect the check finds,
+> and the pedigree marks that child.
 
 Declared as facts:
 

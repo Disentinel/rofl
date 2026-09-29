@@ -478,9 +478,11 @@ more visible one breaks the chain's order.
 ## Notation
 
 When a domain has its own tool and standard, the notebook writes the file
-that tool reads and leaves the drawing to it.
+that tool reads.
 [`family-tree.rofl.md`](../examples/visual/family-tree.rofl.md) writes
-GEDCOM 7, and in VS Code *Open* puts it beside the notebook.
+GEDCOM 7; in VS Code it is also drawn as a pedigree, generations down, with
+the child born before a parent marked failing, and *Open as .ged* puts the
+file beside the notebook.
 
 <!-- BEGIN draw examples/visual: family-tree.rofl.md -->
 ```gedcom

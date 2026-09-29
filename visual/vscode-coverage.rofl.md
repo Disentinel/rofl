@@ -74,6 +74,13 @@ done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_examp
 -- opens it beside the notebook for a genealogy tool (rofl-notebook.openNotation; test:vscode reads the opened file back, planted --break
 -- notation red); test:nb:product holds the file to its FAM record (planted draw-notation, a family with no child, red)
 done(n_notation, v_render, "vscode/test/suite.ts"). done(n_notation, v_test, "vscode/test/suite.ts"). done(n_notation, v_example, "examples/visual/family-tree.rofl.md").
+-- wN, the picture (2026-09-29): the notation keeps its file (the "as gedcom" fold, Open as .ged) and is also drawn as a pedigree, the graph's layout
+-- over its facts (vscode/visual/pic-notation.ts): a partner above the family, the family above each child, a link standing for its partner or child
+-- fact, so a click on it asks why of that fact. test:vscode reads back the status as drawn (lena failing; planted --break pedigree, red) and the
+-- generations down from where the marks were laid (planted --break d-ped, red); its what-if copy excises lena's birth and the family is drawn gone,
+-- its frames are drawn 1 and 2, and a shut family is one mark with its count that opens as a click does (notebook/draw.ts zoom: a family holds its children).
+done(n_notation, v_why, "vscode/test/suite.ts"). done(n_notation, v_status, "vscode/test/suite.ts"). done(n_notation, v_compare, "vscode/test/suite.ts").
+drawn_now(K) :- row_of(wN, K).
 -- wG: the graph's dialects, each a look over the graph (vscode/visual/pic-dialects.ts: architecture flows down, a state machine has its entry
 -- dot, a process its lanes as bands, a causal loop its marks on a ring, a proof goes up) and its own notation (notebook/draw-dialects.ts,
 -- draw-proof.ts). test:vscode draws each in a what-if copy: the renderer's report of the kind, a mark's status, a why, the what-if, and the look
@@ -99,9 +106,9 @@ done(tb_decision, v_example, "examples/visual/shipping-decision.rofl.md").
 -- waived, with reasons that can go stale
 waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
 waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
-waived(n_notation, L, "drawn by the domain's own engine; its marks are not ROFL marks") :- lens(L), L != v_render, L != v_example, L != v_docs, L != v_test, L != v_installed.
 waived(K, v_zoom, "a table's grouping is the query; group-by counts come with engine aggregates (another session)") :- family(K, table).
 waived(t_timeline, v_zoom, "a timeline is one axis with no lanes, so there is no lane group to shut; stale once it draws lanes").
+waived(n_notation, v_geometry, "a pedigree's rows are its generations, read from descent: a person pinned elsewhere could stand above a parent, which is the defect the picture shows; GEDCOM carries no positions").
 waived(g_proof, v_geometry, "the tree's shape is its layout; a literal is not a mark term placed() can carry").
 waived(g_proof, v_frames, "a proof is of one run; its frames would be ticks it does not span, and a what-if already draws it before and after").
 
