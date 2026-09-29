@@ -72,11 +72,22 @@ const VISUAL: Visual[] = [
     zoom: ['corner(platform, 1, 75, 0). corner(platform, 2, 100, 0). corner(platform, 3, 100, 40). corner(platform, 4, 75, 40). inside(database, platform). inside(compute, platform). collapsed(platform).', 'platform', 'platform (2)', 'compute'] },
   { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged' },
 ];
+// the second wave, a draw kind each: only its what-if, which holds its picture's status, why, frames and zoom too, drawn by the renderer's module in that form
+const FORMS: (Visual & { form: string })[] = [
+  { f: 'outage-timeline', form: 'timeline', kinds: ['timeline'], fails: 'never A is late', status: ['error_alert', 'failing'], why: ['happens(error_alert, 11)', '`error_alert` happened at 11'], whatif: ['excise `error_alert` happened at 11\ndraw timeline', 'error_alert', 'gone'], frames: 'frame(deploy, 1). frame(errors_rise, 1). frame(acked, 2). frame(rollback, 2).' },
+  { f: 'breaker-timing', form: 'timing', kinds: ['timing'], fails: 'never M is tagged `stuck`', status: ['$span(payments,4)', 'failing'], why: ['in_state($span(payments,4), open)', '`payments` was in `open` from 4 to 17'], whatif: ['excise `search` was in `open` from 9 to 14\ndraw timing', '$span(search,9)', 'gone'], frames: 'frame($span(payments,0), 1). frame($span(search,0), 1). frame($span(payments,19), 2). frame($span(search,22), 2).', zoom: ['lane_group(payments, breakers). lane_group(search, breakers). collapsed(breakers).', 'breakers', 'breakers (2)', 'payments'] },
+  { f: 'suite-chart', form: 'chart', kinds: ['chart'], fails: 'never M is tagged `over_budget`', status: ['vscode', 'failing'], why: ['value(vscode, seconds, 142)', '`vscode` took 142 seconds'], whatif: ['excise `unit` took 11 seconds\ndraw chart', 'unit', 'gone'], frames: 'frame(hosts, 1). frame(unit, 1). frame(vscode, 2).' },
+  { f: 'coverage-heatmap', form: 'heatmap', kinds: ['heatmap'], fails: 'never unqueued(K, L)', status: ['k_space', 'failing'], why: ['value(k_space, l_test, open)', 'open_cell'], whatif: ['excise done(k_graph, l_test, "test/graph.ts")\ndraw heatmap', 'k_graph', 'new'], frames: 'frame(k_graph, 1). frame(k_time, 1). frame(k_space, 2).' },
+  { f: 'access-upset', form: 'upset', kinds: ['upset'], fails: 'never M is tagged `two_duties`', status: ['eli', 'failing'], why: ['value(eli, billing, yes)', '`eli` is in `billing`'], whatif: ['excise `hal` is in `audit`\ndraw upset', 'hal', 'gone'], frames: 'frame(ana, 1). frame(ben, 1). frame(eli, 2). frame(hal, 2).' },
+  { f: 'oncall-euler', form: 'euler', kinds: ['euler'], fails: 'never M is tagged `overloaded`', status: ['fay', 'failing'], why: ['value(fay, web, yes)', '`fay` is on `web`'], whatif: ['excise `ana` is on `web`\ndraw euler', 'ana', 'gone'], frames: 'frame(ana, 1). frame(ben, 1). frame(fay, 2). frame(gus, 2).' },
+  { f: 'shipping-decision', form: 'decision', kinds: ['decision'], fails: 'never M is tagged `gap`', status: ['r1', 'failing'], why: ['value(r1, free_shipping, x)', '`r1` does `free_shipping`'], whatif: ['excise `r2` does `free_shipping`\ndraw decision', 'r2', 'gone'], frames: 'frame(r1, 1). frame(r2, 1). frame(r3, 2).' },
+];
 cpSync(path.join(ROOT, 'visual'), path.join(tmp, 'nb/visual'), { recursive: true });
 for (const f of ['spat/spat.rofl', 'spat/week.example.rofl', 'visual/deploy-case.rofl']) put(path.join(tmp, 'nb/examples', f), src(`examples/${f}`));
 for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl']) put(path.join(tmp, 'nb', f), src(f));
 // the what-if and the frames go in one copy of each notebook, to keep the run under its two minutes
-const whatifs = VISUAL.filter((x) => x.whatif).map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n\n\`\`\`datalog\n${frames}\n${zoom?.[0] ?? ''}\n\`\`\`\n`));
+const WHATIF: Visual[] = [...VISUAL.filter((x) => x.whatif), ...FORMS];
+const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n\n\`\`\`datalog\n${frames}\n${zoom?.[0] ?? ''}\n\`\`\`\n`));
 // a pinned layout: Pin layout writes the facts, and a notebook that reads them draws its marks there
 const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - ../../visual/graph.rofl.md', '  - ../../visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
 const pictures = VISUAL.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
@@ -89,11 +100,12 @@ const cases = [
   { file: small, cli: c, fails: { text: 'never C recurses', code: [smallJs, 12] } },
   ...pictures.map((file, k) => ({ file, cli: pics[k], pictures: VISUAL[k].kinds, status: VISUAL[k].status, why: VISUAL[k].why, laid: VISUAL[k].laid, below: VISUAL[k].below, notation: VISUAL[k].notation, ...(VISUAL[k].fails && { fails: { text: VISUAL[k].fails } }) })),
   { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
-  ...whatifs.map((file, k) => { const x = VISUAL.filter((y) => y.whatif)[k]; return { file, cli: pics[VISUAL.length + k], pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], frames: ['1', '2'], ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }) }; }),
+  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: pics[VISUAL.length + k], pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], frames: ['1', '2'], ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
 ];
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
 // Each runs the notebooks until the first that goes red; `codeline` only the one with code lines.
+const of = (form: string) => cases.filter((c) => 'form' in c && c.form === form);
 const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   codeline: ['extension.ts', /Number\(at\.slice\(i \+ 1\)\) - 1/, 'Number(at.slice(i + 1))', cases.slice(2)],
   marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, ''],
@@ -110,8 +122,16 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', cases.slice(3)],
   notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", cases.slice(3)],
   zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', cases.slice(3)],
-  frames: ['visual/out/pictures.js', /frames = framesOf\(v\)/, 'frames = null', cases.slice(3)],
+  frames: ['visual/out/pictures.js', /frames = framesOf\(z\)/, 'frames = null', cases.slice(3)],
   pin: ['extension.ts', /writeFileSync\(file, text\);/, "writeFileSync(file, '');", cases.slice(3)],
+  // a form's status class dropped from the element the renderer draws its mark with, each run on that form's what-if alone
+  timeline: ['visual/pic-moments.ts', /class="\$\{cls\(v, e\.id\)\}" cx=/, 'class="" cx=', of('timeline')],
+  timing: ['visual/pic-moments.ts', /class="\$\{cls\(v, s\.id\)\}" x=/, 'class="" x=', of('timing')],
+  chart: ['visual/pic-charts.ts', /\? `<rect data-mark="\$\{esc\(p\.id\)\}" class="\$\{esc\(tagsOf\(v, p\.id\)\.join\(' '\)\)\}"/, '? `<rect data-mark="${esc(p.id)}" class=""', of('chart')],
+  heatmap: ['visual/pic-charts.ts', /cls = \(ts: string\[\]\) => esc\(ts\.join\(' '\)\)/, "cls = (ts: string[]) => ''", of('heatmap')],
+  upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset')],
+  euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler')],
+  decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision')],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -119,7 +139,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {

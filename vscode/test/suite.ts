@@ -5,7 +5,7 @@ import type { Run } from '../render.ts';
 import { serialize } from '../serial.ts';
 
 type Api = { result: (u: vscode.Uri) => Run | undefined; verdict: (c: vscode.NotebookCell) => string[]; notes: (file: string) => { line: number; text: string }[] };
-type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string };
+type Case = { file: string; cli: string; fails?: { text: string; code?: [string, number] }; pictures?: string[]; status?: [string, string]; why?: [string, string]; compare?: [string, string]; pin?: string; frames?: string[]; zoom?: string[]; laid?: string; below?: [string, string]; notation?: string; form?: string };
 const VIEW_MIME = 'application/vnd.rofl.view+json';
 const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
@@ -124,6 +124,15 @@ export async function run() {
         if (!text.startsWith('0 HEAD') || !file?.endsWith(`.${c.notation}`) || shown !== text) bad.push(`${c.file}: the notation did not open as ${c.notation}: ${file}, ${shown === text ? 'same text' : `text ${JSON.stringify((shown ?? '').slice(0, 60))}`}`);
       }
       if (c.compare) { const [m, t] = c.compare, got = drawn.at(-1)?.marks[m]?.tags ?? []; if (!got.includes(t)) bad.push(`${c.file}: the what-if draws ${m} with the tags [${got}], not ${t}`); }
+      // the renderer's own picture module, as the webview runs it: the form the view is drawn in, its status mark and the what-if's change on a drawn element
+      if (c.form) {
+        const { pictureOf } = await import('../visual/pictures.ts');
+        const html = async (v: any) => { const el = { innerHTML: '' }; await pictureOf(v)?.mount(el as any, v, { libs: async () => false }, () => {}, () => {}); return el.innerHTML; };
+        const marked = (h: string, [m, t]: [string, string]) => new RegExp(`data-mark="${m.replace(/[$()[\]\\.*+?^{}|]/g, '\\$&')}" class="[^"]*\\b${t}\\b`).test(h);
+        const first = await html(drawn[0]), last = await html(drawn.at(-1));
+        if (!first.includes(`aria-label="${c.form}"`) || !marked(first, c.status!)) bad.push(`${c.file}: the renderer does not draw a ${c.form} with ${c.status!.join(' tagged ')}: ${first.slice(0, 300)}`);
+        if (c.compare && !marked(last, c.compare)) bad.push(`${c.file}: the renderer does not draw the what-if's ${c.compare.join(' tagged ')}`);
+      }
       const [fact, says] = c.why!, why = await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
       if (!why?.includes(says)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
       if (views.some((o) => !o.items.some((i) => i.mime === 'text/markdown' && new TextDecoder().decode(i.data).length > 20))) bad.push(`${c.file}: a picture has no text for an editor without its renderer`);
