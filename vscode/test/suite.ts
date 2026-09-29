@@ -26,17 +26,20 @@ export async function run() {
     if (bad.length) throw new Error(bad.join('\n'));
     return;
   }
-  const extras = !process.env.ROFL_NB_CASES_ONLY;
-  if (extras) await beforeCases(bad);
+  // under a plant every check runs, so the one the plant is for gives its reason whatever broke before it
+  const extras = !process.env.ROFL_NB_CASES_ONLY, planted = !!process.env.ROFL_NB_PLANTED;
+  const guard = (what: string, f: () => Promise<void>) => f().catch((e: Error) => { bad.push(`${what}: ${e.message}`); });
+  if (extras) await guard('before the cases', () => beforeCases(bad));
   for (const c of cases) {
     const t0 = Date.now();
+    await guard(c.file, async () => {
     // Pin layout, as the renderer's button asks it: the facts in <notebook>.layout.rofl, which this notebook reads, then drawn where they put the marks
     if (c.pin) {
       const file = await vscode.commands.executeCommand<string>('rofl-notebook.pinLayout', vscode.Uri.file(c.file), c.pin);
-      if (!existsSync(file) || readFileSync(file, 'utf8') !== c.pin) { bad.push(`${c.file}: Pin layout did not write ${file}`); break; }
+      if (!existsSync(file) || readFileSync(file, 'utf8') !== c.pin) { bad.push(`${c.file}: Pin layout did not write ${file}`); return; }
     }
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
-    if (nb.notebookType !== 'rofl-notebook') { bad.push(`${c.file}: opened as ${nb.notebookType}`); continue; }
+    if (nb.notebookType !== 'rofl-notebook') { bad.push(`${c.file}: opened as ${nb.notebookType}`); return; }
     await vscode.window.showNotebookDocument(nb);
     await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
     await vscode.commands.executeCommand('notebook.execute');
@@ -70,8 +73,7 @@ export async function run() {
       let at: string[] = [];
       for (const end = Date.now() + 45_000; !at.length && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) at = await vscode.commands.executeCommand<string[]>('rofl-notebook.laid', nb.uri);
       if (!at.includes(c.pin.trim())) bad.push(`${c.file}: the renderer laid ${c.pin.trim().replace(/, \d+, \d+\)\.$/, '')} elsewhere: ${at.find((x) => x.startsWith(c.pin!.slice(0, c.pin!.indexOf(',')))) ?? 'nothing reported'}`);
-      console.log(`${c.file}: ${Date.now() - t0} ms`);
-      continue;
+      return;
     }
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the extension's result is not the command line's --json`);
     r.cells.slice(1).forEach((k, i) => {
@@ -162,11 +164,12 @@ export async function run() {
         await until(() => existsSync(`${shot}-${k}.done`), 30_000, 'the screenshot').catch(() => {});
       }
     }
+    });
     console.log(`${c.file}: ${Date.now() - t0} ms`);
-    if (bad.length) break;
+    if (bad.length && !planted) break;
   }
-  if (extras && !bad.length) await translate(process.env.ROFL_NB_TRANSLATE!, bad);
-  if (extras && !bad.length) await interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad);
+  if (extras && (planted || !bad.length)) await guard('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
+  if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 }

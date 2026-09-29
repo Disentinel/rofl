@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME` one planted defect.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -123,50 +123,52 @@ const gi = process.argv.indexOf('--group'), group = gi >= 0 ? process.argv[gi + 
 if (group !== undefined && !GROUPS[group]) throw new Error(`--group takes one of ${Object.keys(GROUPS).join(', ')}`);
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
-// Each runs the notebooks until the first that goes red; `codeline` only the one with code lines.
+// Each runs only the cases that can show it, and is red only when the suite gives its own reason: red for another reason is a check that did not run.
 const of = (form: string) => cases.filter((c) => 'form' in c && c.form === form);
-const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
-  codeline: ['extension.ts', /Number\(at\.slice\(i \+ 1\)\) - 1/, 'Number(at.slice(i + 1))', cases.slice(2)],
-  marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, ''],
-  cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]'],
-  translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, ''],
-  revert: ['extension.ts', /NotebookRange\(arg\.index, arg\.index \+ 1\)/, 'NotebookRange(natural.index, natural.index + 1)'],
-  stop: ['extension.ts', / e\.token\.onCancellationRequested\(restart\);/, ''],
-  startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, ''],
-  wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}'],
-  lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')"],
-  picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', cases.slice(3)],
-  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", cases.slice(3)],
-  placed: ['visual/out/pic-graph.js', /placed\.get\(c\.id\) \?\? /, '', cases.slice(3)],
+const named = (f: string) => cases.filter((c) => c.file.endsWith(`/${f}.rofl.md`));
+const first = [cases[0]];   // a plant whose check is not a case: the one case the checks around them read
+const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
+  codeline: ['extension.ts', /Number\(at\.slice\(i \+ 1\)\) - 1/, 'Number(at.slice(i + 1))', named('small'), /no output links to|no error "never C recurses" at/],
+  marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, '', first, /no error "never C is blocked by T" on its line/],
+  cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]', first, /is not in the output of the cell it was asked in|has no output in notebook cell/],
+  translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, '', first, /no rofl cell under the natural cell after Translate/],
+  revert: ['extension.ts', /NotebookRange\(arg\.index, arg\.index \+ 1\)/, 'NotebookRange(natural.index, natural.index + 1)', first, /after Revert the notebook is not the file it was/],
+  stop: ['extension.ts', / e\.token\.onCancellationRequested\(restart\);/, '', first, /Stop left the model's process running|Stop is not said|Stop did not end the run/],
+  startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, '', first, /named on the command line, it opened as/],
+  wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}', first, /natural cells do not wrap/],
+  lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')", first, /the broken rule on line 3 is marked|the sentence not read is marked/],
+  picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', named('paint-shop'), /the pictures drawn are \[\], not/],
+  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal\)/, "Promise.resolve('')", named('paint-shop'), /a picture's why of .* does not say/],
+  placed: ['visual/out/pic-graph.js', /placed\.get\(id\) \?\? /, '', named('paint-pinned'), /the renderer laid .* elsewhere/],
   // a dialect's look, planted in the built renderer: each must turn its own case red
-  'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", cases.filter((c) => c.file.includes('shop-architecture'))],
-  'd-state': ['visual/out/pic-dialects.js', /entry: 'initial'/, "entry: 'none'", cases.filter((c) => c.file.includes('order-states'))],
-  'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', cases.filter((c) => c.file.includes('claim-process'))],
-  'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', cases.filter((c) => c.file.includes('burnout-loop'))],
-  'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", cases.filter((c) => c.file.includes('claim-proof'))],
-  'd-fold': ['visual/out/draw.js', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, "f.rel === 'inside'", cases.filter((c) => c.file.includes('claim-proof'))],
-  space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', cases.slice(3)],
-  notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", cases.slice(3)],
-  zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', cases.slice(3)],
-  frames: ['visual/out/pictures.js', /frames = framesOf\(z\)/, 'frames = null', cases.slice(3)],
-  pin: ['extension.ts', /writeFileSync\(file, text\);/, "writeFileSync(file, '');", cases.slice(3)],
+  'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('shop-architecture-whatif'), /is not drawn down/],
+  'd-state': ['visual/out/pic-dialects.js', /entry: 'initial'/, "entry: 'none'", named('order-states-whatif'), /is not drawn entry/],
+  'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', named('claim-process-whatif'), /is not drawn bands/],
+  'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', named('burnout-loop-whatif'), /is not drawn ring/],
+  'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", named('claim-proof-whatif'), /is not drawn up/],
+  'd-fold': ['visual/out/draw.js', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, "f.rel === 'inside'", named('claim-proof-whatif'), /the shut group .* is not drawn as|zoomed into .* the renderer does not draw/],
+  space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', named('rail-map'), /is not drawn below/],
+  notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", named('family-tree'), /the notation did not open as ged/],
+  zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', named('paint-shop-whatif'), /zoomed into shop, the renderer does not draw/],
+  frames: ['visual/out/pictures.js', /frames = framesOf\(z\)/, 'frames = null', named('paint-shop-whatif'), /the renderer drew the frames .*, not \[1,2\]/],
+  pin: ['extension.ts', /writeFileSync\(file, text\);/, "writeFileSync(file, '');", named('paint-pinned'), /Pin layout did not write|does not carry the pinned/],
   // a form's status class dropped from the element the renderer draws its mark with, each run on that form's what-if alone
-  timeline: ['visual/pic-moments.ts', /class="\$\{cls\(v, e\.id\)\}" cx=/, 'class="" cx=', of('timeline')],
-  timing: ['visual/pic-moments.ts', /class="\$\{cls\(v, s\.id\)\}" x=/, 'class="" x=', of('timing')],
-  chart: ['visual/pic-charts.ts', /\? `<rect data-mark="\$\{esc\(p\.id\)\}" class="\$\{esc\(tagsOf\(v, p\.id\)\.join\(' '\)\)\}"/, '? `<rect data-mark="${esc(p.id)}" class=""', of('chart')],
-  heatmap: ['visual/pic-charts.ts', /cls = \(ts: string\[\]\) => esc\(ts\.join\(' '\)\)/, "cls = (ts: string[]) => ''", of('heatmap')],
-  upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset')],
-  euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler')],
-  decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision')],
-  prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata'],
+  timeline: ['visual/pic-moments.ts', /class="\$\{cls\(v, e\.id\)\}" cx=/, 'class="" cx=', of('timeline'), /does not draw a timeline with/],
+  timing: ['visual/pic-moments.ts', /class="\$\{cls\(v, s\.id\)\}" x=/, 'class="" x=', of('timing'), /does not draw a timing with/],
+  chart: ['visual/pic-charts.ts', /\? `<rect data-mark="\$\{esc\(p\.id\)\}" class="\$\{esc\(tagsOf\(v, p\.id\)\.join\(' '\)\)\}"/, '? `<rect data-mark="${esc(p.id)}" class=""', of('chart'), /does not draw a chart with/],
+  heatmap: ['visual/pic-charts.ts', /cls = \(ts: string\[\]\) => esc\(ts\.join\(' '\)\)/, "cls = (ts: string[]) => ''", of('heatmap'), /does not draw a heatmap with/],
+  upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset'), /does not draw a upset with/],
+  euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler'), /does not draw a euler with/],
+  decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision'), /does not draw a decision with/],
+  prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
 const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"languageModelChatProviders": [{ "vendor": "rofl-test", "displayName": "ROFL test" }],\n    "configuration": {'];
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
-if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
 const casesOf = (v: string) => BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases);
 // the command line's answer for each case a window will hold it against
 await Promise.all([...new Set(variants.flatMap(casesOf))].flatMap((c) => c.cli ? [cli(c.file, c.cli)] : []));
@@ -199,7 +201,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(v === 'as it is' && group && group !== 'core' && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...(v === 'as it is' && group && group !== 'core' && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }
@@ -213,9 +215,9 @@ await Promise.all([0, 1].map(async () => { for (let v; (v = queue.shift()); ) re
 results.sort((x, y) => variants.indexOf(x.v) - variants.indexOf(y.v));
 let failed = 0;
 for (const { v, red, said, s } of results) {
-  const ok = BREAKS[v] ? !!said : !red;
+  const ok = BREAKS[v] ? BREAKS[v][4].test(said) : !red;
   if (!ok) failed++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${!BREAKS[v] ? `${v}: green` : `planted "${v}": red`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${!BREAKS[v] ? `${v}: green` : `planted "${v}": ${ok ? 'red for its own reason' : said ? `red, but not for ${BREAKS[v][4]}` : 'not red'}`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
 }
 console.log(`\n${results.length - failed}/${results.length} VS Code runs as expected, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(failed ? 1 : 0);
