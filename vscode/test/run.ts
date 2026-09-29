@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms|why` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --theme NAME` in that colour theme.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms|why` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --extras NAME[,NAME]` of the checks that are not a case (before the cases, translate, stop, bare, mixed) only those; `-- --theme NAME` in that colour theme.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -209,6 +209,8 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   // a bare cell fenced when saved; its errors left in the notebook's head
   'bare-fence': ['serial.ts', /if \(c\.kind === MARKUP \|\| m\.bare\) \{/, 'if (c.kind === MARKUP) {', first, /after the edit the file is not the file with that edit/],
   'bare-head': ['worker.ts', /share\(r\.cells\[0\], bare\)/, 'share(r.cells[0], [])', first, /the fact not read is not said under its cell/],
+  // a row an English line answered, left without its why
+  'english-why': ['render.ts', /asks = l\.kind !== 'excise' && l\.verdict !== 'unasked';/, "asks = l.kind !== 'excise' && l.verdict !== 'unasked' && !l.readAs;", first, /the why under the English line's row/],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -218,7 +220,7 @@ chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
 const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
-const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined;
+const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined, xi = process.argv.indexOf('--extras');
 const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
 // the command line's answer for each case a window will hold it against
 await Promise.all([...new Set(variants.flatMap(casesOf))].flatMap((c) => c.cli ? [cli(c.file, c.cli)] : []));
@@ -254,7 +256,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ...(xi >= 0 && { ROFL_NB_EXTRAS: process.argv[xi + 1] }), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }

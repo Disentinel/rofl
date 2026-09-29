@@ -28,8 +28,10 @@ export async function run() {
   }
   // under a plant every check runs, so the one the plant is for gives its reason whatever broke before it
   const extras = !process.env.ROFL_NB_CASES_ONLY, planted = !!process.env.ROFL_NB_PLANTED;
+  // `ROFL_NB_EXTRAS`: only the checks named, by commas, of those that are not a case
   const guard = (what: string, f: () => Promise<void>) => f().catch((e: Error) => { bad.push(`${what}: ${e.message}`); });
-  if (extras) await guard('before the cases', () => beforeCases(bad));
+  const named = process.env.ROFL_NB_EXTRAS?.split(','), extra = (what: string, f: () => Promise<void>) => named && !named.includes(what) ? Promise.resolve() : guard(what, f);
+  if (extras) await extra('before the cases', () => beforeCases(bad));
   for (const c of cases) {
     const t0 = Date.now();
     await guard(c.file, async () => {
@@ -183,10 +185,10 @@ export async function run() {
     console.log(`${c.file}: ${Date.now() - t0} ms`);
     if (bad.length && !planted) break;
   }
-  if (extras && (planted || !bad.length)) await guard('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
-  if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
-  if (extras && (planted || !bad.length)) await guard('bare', () => bare(process.env.ROFL_NB_BARE!, bad));
-  if (extras && (planted || !bad.length)) await guard('mixed', () => mixed(process.env.ROFL_NB_MIXED!, bad));
+  if (extras && (planted || !bad.length)) await extra('translate', () => translate(process.env.ROFL_NB_TRANSLATE!, bad));
+  if (extras && (planted || !bad.length)) await extra('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
+  if (extras && (planted || !bad.length)) await extra('bare', () => bare(process.env.ROFL_NB_BARE!, bad));
+  if (extras && (planted || !bad.length)) await extra('mixed', () => mixed(process.env.ROFL_NB_MIXED!, bad));
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
 }
@@ -409,7 +411,7 @@ async function mixed(file: string, bad: string[]) {
   const t0 = Date.now(), nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));
   await vscode.window.showNotebookDocument(nb);
   const holding = (t: string) => nb.getCells().find((c) => c.document.getText().includes(t));
-  const said = (c?: vscode.NotebookCell) => (c?.outputs ?? []).flatMap((o) => o.items.filter((i) => i.mime === 'text/markdown').map((i) => new TextDecoder().decode(i.data))).join('\n');
+  const said = (c?: vscode.NotebookCell) => (c?.outputs ?? []).flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
   const english = holding('Which products leave the line?'), facts = holding('`door` glows in the dark');
   if (!english || english.metadata.bare) return void bad.push(`${file}: the English lines are not a fenced cell`);
   if (!facts?.metadata.bare || !facts.document.getText().includes('Is `door` in stock?')) return void bad.push(`${file}: the delivery and its question are not one bare cell: ${JSON.stringify(facts?.document.getText())}`);
