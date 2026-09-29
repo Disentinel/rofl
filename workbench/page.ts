@@ -8,6 +8,10 @@
 //   text   the cell's text, without its fence
 //   order  a number; cells are shown by it, ascending, a tie or a missing one by id
 // Nothing else: no order document, no notebook document. Every open view hears a write live; no cell at all shows an empty rofl cell.
+// With the Artifact tool, two cells, a sentences cell and one that draws it:
+//   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c010", data: {kind: "rofl", order: 10,
+//    text: "Declared as facts:\n\n- <a id=\"calls\"></a>A service A calls a service B\n\nThe calls:\n\n- `web` calls `api`.\n- `api` calls `db`.\n\nA mark X is a node if X calls something.\n\nA mark X is a node if something calls X.\n\nA mark X links to a mark Y if X calls Y.\n\nnever X calls X"}}
+//   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c020", data: {kind: "rofl", order: 20, text: "draw graph"}}
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
 import { Bench, HINT, answered, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
