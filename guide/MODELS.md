@@ -61,12 +61,21 @@ A file is read when `readable(F)` holds of it. The shipped rules derive it from
 `file(F)` (each file listed above), the prefixes, and `tracked(F)` (what the
 version control system lists), and the file may add its own:
 
-    skipped(F) :- file(F), X is str_sub(F, 0, 4), X = "old/".
+    owned("src/billing.ts", payments).
+    skipped(F) :- file(F), not owned(F, payments).
+
+It is plain Datalog: facts and rules over names, strings and numbers, with
+comparisons (`=`, `!=`, `<`, ...). A term built of terms (`g(X)`), `is` and
+arithmetic, a perspective or a time are refused, so a rule makes no new value
+and always ends.
 
 It can only narrow. Whatever its rules derive, only a file of the list above is
 read, so it cannot bring back a secret, a skipped folder or a file outside. A
 prefix that is absolute or holds `..` refuses the whole file; so does a file
-that does not load, or whose rules do not finish. A refused file reads nothing
+that does not load, or whose rules do not finish (10 s, 512 MB). The files that
+steer the reading (`.rofl/read.rofl`, the `.gitignore`, `CVS/Entries`,
+`CVS/Entries.Log`) must be regular files inside the workspace, not links, and
+at most 1 MB; any other refuses the workspace. A refused file reads nothing
 and says why: it never falls back to reading everything.
 
 **CVS.** `untracked_by(cvs).` reads each folder's `CVS/Entries` (every
@@ -80,7 +89,9 @@ No command is run.
     read_prefix("src/").
     skip_prefix("src/generated/").
 
-**git.** `untracked_by(git).` asks `git ls-files` for what git tracks.
+**git.** `untracked_by(git).` asks `git ls-files` for what git tracks. git is
+the one found on `PATH`'s absolute folders, never one in the workspace, and runs
+with the repository's `core.fsmonitor` and hooks turned off.
 
 **Anything else** (svn, hg, ...): set a command that prints the tracked files,
 one a line, in your own settings: `ROFL_NB_UNTRACKED_COMMAND` on the command
