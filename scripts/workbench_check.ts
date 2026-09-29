@@ -29,6 +29,7 @@ const BLANK_DRAW = 'draw graph';
 const DRAWS = 'A mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\ndraw graph';
 const UNDECLARED = 'An entity `writer` sends the artifact `pages` to the entity `store`.\n\n? A service S sends an artifact A to a service T';
 const DECLARED = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.\n\n? A service S sends an artifact A to a service T';
+const FACTS_ONLY = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.';
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
 
 /** Everything wrong with the build in `dir`, said; nothing when it is right. */
@@ -113,6 +114,11 @@ async function problems(dir: string): Promise<string[]> {
   const m = await bench.translate([{ id: 'n', kind: 'natural', text: 'Services send artifacts.' }], 'n', modeller);
   if (told.length !== 2 || m.code !== 0 || m.cell !== DECLARED) bad.push(`a declared fact cell was not kept after an undeclared one: ${told.length} calls, exit ${m.code}; ${m.said.join(' / ')}`);
   if (!told[0]?.includes('A fact is stated in a sentence the notebook declares first')) bad.push('the prompt does not say how a fact is declared');
+  // a cell that only models is kept, its sentences asked; a first try that states nothing the notebook reads is still asked again
+  let k = 0;
+  const onlyFacts = Object.assign(async () => ({ ok: true, text: '```rofl\n' + FACTS_ONLY + '\n```', n: k++ }), { who: 'the fake model' });
+  const f = await bench.translate([{ id: 'n', kind: 'natural', text: 'Services send artifacts.' }], 'n', onlyFacts);
+  if (f.code !== 0 || f.cell !== `${FACTS_ONLY}\n\n? A service S sends an artifact A to a service T` || !f.said.some((s: string) => s.includes('(1)'))) bad.push(`a cell that only models was not kept with its sentence asked: exit ${f.code}; ${f.said.join(' / ')}`);
   if (!asked[0]?.includes('? <sentence>') || /\blist <glob>|\bshow <path>/.test(asked[0] ?? '')) bad.push('the prompt offers the model something other than "?" lines to read with');
   return bad;
 }
@@ -141,6 +147,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
   ['the variable-name hint off', (d) => spoil(d, 'lib/api.js', '${v ? `', '${false ? `'), /a capitalised name in a fact is not said as one/],
   ['the twin-sentence note off', (d) => spoil(d, 'lib/book.js', 'b.rel !== a.rel && b.k === a.k', 'false'), /two sentences that differ only in a noun are not said/],
+  ['the modelling cell refused', (d) => spoil(d, 'lib/translate.js', 'if (!asks.length)', 'if (true)'), /a cell that only models was not kept/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

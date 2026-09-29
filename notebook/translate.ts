@@ -23,7 +23,7 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
   The flows:
 
   - \`writer\` sends \`pages\` to \`store\`.
-  The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S". A sentence no rule, declaration or listed sentence gives is not read.
+  The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S". A sentence no rule, declaration or listed sentence gives is not read. A cell that only models (facts and definitions) needs no asking line: each sentence it declares is asked for it, and it is kept when they answer.
 - A picture is a line "draw <kind>": graph, architecture, state, process, causal, proof, time, timeline, timing, table, heatmap, chart, space. It draws only what rules conclude in the view's own sentences, which the notebook declares when it reads a view (for a graph: "A mark M is a node", "A mark M links to a mark N", "A mark M is inside a mark G", "A mark M is tagged a tag K", "A mark M is at the level I"). So a request to draw or diagram something is answered with rules that map its things onto those sentences, "A mark X is a node if X is a service." and "A mark X links to a mark Y if X calls Y.", and then the draw line.
 Prefer "never" for something that must always hold and "?" for a question. Say what must hold of any data, not of the rows there happen to be.`;
 
@@ -89,7 +89,7 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
   const cells = cellsOf(text), under = translated(cells, c) ? cells[c.index + 1] : undefined;
   const shut = under ? lines.findIndex((l, i) => i >= under.line - 1 && /^```\s*$/.test(l)) : -1;
   const from = under ? under.line - 2 : close + 1, to = !under ? close + 1 : shut < 0 ? lines.length : shut + 1;
-  const tryCell = (cell: string) => {
+  const attempt = (cell: string) => {
     const next = [...lines.slice(0, from), ...(under ? [] : ['']), '```rofl', cell, '```', ...lines.slice(to)].join('\n');
     const r = o.run(next);
     const out = r.cells.find((x) => x.index === c.index + 1)!;
@@ -99,6 +99,17 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
     // a picture of nothing shows nothing: no rule concludes a mark in the view's sentences
     const blank = out.lines.filter((l) => l.kind === 'draw' && l.verdict !== 'unasked' && !Object.keys(l.view?.marks ?? {}).length).map((l) => `${l.text}: draws nothing: no rule concludes a mark in the view's sentences`);
     return { next, errors: [...r.errors, ...out.errors, ...blank, ...silent, ...vacuous], lines: out.lines };
+  };
+  /** A cell with no asking line that states facts or defines sentences is a model of its own: each sentence it declares or concludes is asked,
+   *  the `?` lines are kept in it, and it is refused only when none of them answers a row. */
+  const tryCell = (cell: string) => {
+    const t = attempt(cell);
+    if (t.lines.length || t.errors.some((e) => !e.startsWith('the cell asks nothing'))) return { ...t, cell };
+    const asks = [...new Set([...[...cell.matchAll(/^- <a id="\w+"><\/a>(.+)$/gm)].map((m) => m[1].trim()), ...[...cell.matchAll(/^((?:An?|The) [^\n]*?) (?:if|unless)\b/gm)].map((m) => m[1])])];
+    if (!asks.length) return { ...t, cell };
+    const asked = `${cell}\n\n${asks.map((q) => `? ${q}`).join('\n')}`, u = attempt(asked);
+    const none = u.lines.every((l) => !l.total) ? [`the cell adds nothing: none of its sentences answers a row (${asks.join(' · ')})`] : [];
+    return { ...u, errors: [...u.errors, ...none], cell: asked };
   };
   const words = (a: string) => ({ code: 2, said: [...said, ...readLine(), `${file}:${c.line}: ${ask.who ?? 'the model'} answered in words, not with a cell:`, ...a.trim().split('\n').map((l) => `  ${l}`)], text, reply: a.trim() });
   const who = ask.who ?? 'the model', first = o.first ?? { text: '', read: [] }, reads = [...first.read];
@@ -133,6 +144,7 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
   let cell = fenced(a.text);
   if (cell === undefined) return words(a.text);
   let t = tryCell(cell);
+  cell = t.cell;
   if (t.errors.length) {
     // a cell that read and whose never holds over nothing is said as that, not as a cell that did not read
     const how = (e: string[]) => e.every((x) => x.includes(': holds over nothing')) ? 'read, and checks nothing' : 'did not read';
@@ -144,6 +156,7 @@ export async function translateOne(o: Translation): Promise<{ code: number; said
     cell = fenced(a.text);
     if (cell === undefined) return words(a.text);
     t = tryCell(cell);
+    cell = t.cell;
   }
   said.push(...readLine());
   if (t.errors.length) return { code: 2, said: [...said, `${file}:${c.line}: ${t.errors.every((x) => x.includes(': holds over nothing')) ? 'no cell that checks something' : 'no cell read'} after two tries, nothing written:`, ...cell.split('\n').map((l) => `  | ${l}`), ...t.errors.map((e) => `  ${e}`)], text };
