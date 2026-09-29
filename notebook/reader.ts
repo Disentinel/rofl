@@ -3,7 +3,7 @@
 // `grep`, `show`, `?`), this answers them, within a number of rounds and a number of bytes, and says each read. The model's own tools stay off
 // (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
-import { accessSync, closeSync, constants, existsSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs';
+import { accessSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readdirSync, readSync, realpathSync, statSync, type Stats } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
@@ -49,12 +49,38 @@ export function globbed(glob: string, p: string): boolean {
 /** A path matches a glob when it or a folder it is in does, as git's pathspec: `list src` is every file under src. */
 const under = (glob: string, p: string) => p.split('/').some((_, k, all) => globbed(glob, all.slice(0, k + 1).join('/')));
 
+class Refused extends Error {}
+const CONTROL_BYTES = 1_000_000;
+/** A file that steers what is read (.gitignore, CVS/Entries, CVS/Entries.Log, CONFIG): '' when there is none; one that is a link, not a
+ *  regular file, in a folder that links out, or past CONTROL_BYTES refuses the workspace instead of being read. */
+function control(root: string, rel: string): string {
+  const at = path.join(root, rel), refused = (why: string) => new Refused(`${rel} ${why}; nothing is read`);
+  let st: Stats;
+  try { st = lstatSync(at); } catch (e) { if (['ENOENT', 'ENOTDIR'].includes((e as NodeJS.ErrnoException).code!)) return ''; throw refused('cannot be read'); }
+  if (!st.isFile()) throw refused(st.isSymbolicLink() ? 'is a link' : 'is not a regular file');
+  if (st.size > CONTROL_BYTES) throw refused(`is more than ${CONTROL_BYTES} bytes`);
+  const parent = realpathSync.native(path.dirname(at));
+  if (parent !== root && !within(root, parent)) throw refused('is in a folder that links out of the workspace');
+  const r = readChecked(at, st, CONTROL_BYTES);
+  if (!r) throw refused('changed while it was read');
+  return r.text;
+}
+/** A regular file read through one descriptor that is still the file `st` describes (a file swapped in since is not read), to `cap` bytes. */
+function readChecked(at: string, st: Stats, cap: number): { size: number; text: string } | null {
+  const fd = openSync(at, 'r');
+  try {
+    const now = fstatSync(fd);
+    if (!now.isFile() || now.ino !== st.ino || now.dev !== st.dev) return null;
+    const buf = Buffer.alloc(Math.min(now.size, cap));
+    readSync(fd, buf, 0, buf.length, 0);
+    return { size: now.size, text: buf.toString('utf8') };
+  } finally { closeSync(fd); }
+}
+
 /** Every file under `root` less SKIP, and less what the .gitignore at `root` names (a `!` line, which would let one back in, is not read); into
  *  a folder only on the way to one of `prefixes`, when there are any. A link is listed as a file, and read only if it resolves inside. */
 function walk(root: string, prefixes: string[]): string[] {
-  let text = '';
-  try { text = readFileSync(path.join(root, '.gitignore'), 'utf8'); } catch { /* none */ }
-  const ignored = text.split('\n').map((l) => l.trim().replace(/\/+$/, '')).filter((l) => l && !/^[#!]/.test(l))
+  const ignored = control(root, '.gitignore').split('\n').map((l) => l.trim().replace(/\/+$/, '')).filter((l) => l && !/^[#!]/.test(l))
     .map((l) => l.includes('/') ? (_: string, r: string) => globbed(l.replace(/^\//, ''), r) : (name: string) => globbed(l, name));
   const toward = (d: string) => !prefixes.length || prefixes.some((p) => `${d}/`.startsWith(p) || p.startsWith(`${d}/`));
   const files: string[] = [], dirs = [''];
@@ -78,11 +104,10 @@ function tracked(by: string, root: string, files: string[], command?: string): S
     const out = new Set<string>();
     // a line `/name/revision/...` per file of its folder (`D/name////` is a folder), a revision starting `-` removed; CVS/Entries.Log
     // adds (`A /name/...`) and removes (`R /name/...`) until CVS folds it in
-    const read = (f: string) => { try { return readFileSync(path.join(root, f), 'utf8'); } catch { return ''; } };
     for (const d of new Set(files.map((f) => path.posix.dirname(f)))) {
       const at = (name: string) => d === '.' ? name : `${d}/${name}`;
-      for (const m of read(`${d}/CVS/Entries`).matchAll(/^\/([^/\n]+)\/([^/\n]*)\//gm)) if (!m[2].startsWith('-')) out.add(at(m[1]));
-      for (const m of read(`${d}/CVS/Entries.Log`).matchAll(/^([AR]) \/([^/\n]+)\/([^/\n]*)\//gm)) if (m[1] === 'A' && !m[3].startsWith('-')) out.add(at(m[2])); else out.delete(at(m[2]));
+      for (const m of control(root, `${d}/CVS/Entries`).matchAll(/^\/([^/\n]+)\/([^/\n]*)\//gm)) if (!m[2].startsWith('-')) out.add(at(m[1]));
+      for (const m of control(root, `${d}/CVS/Entries.Log`).matchAll(/^([AR]) \/([^/\n]+)\/([^/\n]*)\//gm)) if (m[1] === 'A' && !m[3].startsWith('-')) out.add(at(m[2])); else out.delete(at(m[2]));
     }
     return out;
   }
@@ -132,12 +157,13 @@ export function workspace(notebook: string, { root, command = process.env.ROFL_N
   if (!within(dir, nb)) return none(dir, 'the workspace does not hold the notebook');
   if (dir === home) return none(dir, 'the workspace is the home directory: open the project\'s folder, or name it with --root');
   if (within(dir, home) || path.dirname(dir) === dir) return none(dir, 'the workspace holds the home directory: open the project\'s folder, or name it with --root');
-  const r = new Rofl(), config = path.join(dir, CONFIG), refuse = (why: string) => none(dir, `${CONFIG}: ${why}; nothing is read`);
-  let text = '';
-  if (existsSync(config)) {
-    if (!within(dir, realpathSync(config))) return refuse('a link out of the workspace');
-    text = readFileSync(config, 'utf8');
-  }
+  try { return listing(dir, command); }
+  catch (e) { if (e instanceof Refused) return none(dir, e.message); throw e; }
+}
+/** The workspace `dir`, past its refusals: what its files and CONFIG's rules let be read. */
+function listing(dir: string, command?: string): Repo {
+  const none = (refused: string): Repo => ({ root: dir, files: new Set(), refused });
+  const r = new Rofl(), refuse = (why: string) => none(`${CONFIG}: ${why}; nothing is read`), text = control(dir, CONFIG);
   const loaded = [r.load(RULES), r.load(text)];
   if (!loaded[1].ok) return refuse(loaded[1].diagnostics[0] ?? 'it does not load');
   const values = (q: string) => r.query(q).rows.map((x) => Object.values(x.bindings)[0]).map((v) => { try { return v.startsWith('"') ? JSON.parse(v) as string : v; } catch { return v; } });

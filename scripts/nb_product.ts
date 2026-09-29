@@ -3,7 +3,7 @@
 // the tutorial, every notebook a world the goldens load. npm run test:nb is the kernel's; both run, in that order.
 import { spawnSync } from 'node:child_process';
 import { connect, createServer } from 'node:net';
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { worlds } from './goldens.ts';
@@ -396,7 +396,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['refusal of an ancestor of home', 'notebook/reader.ts', [[/  if \(within\(dir, home\) \|\| path\.dirname\(dir\) === dir\) return .*\n/, '']], ['above'], 'a workspace that holds the home directory was read'],
   ['the boundary widened to its parent', 'notebook/reader.ts', [[/dir = realpathSync\.native\(root \?\? path\.dirname\(nb\)\)/, 'dir = path.dirname(realpathSync.native(root ?? path.dirname(nb)))']], ['sub'], 'PARENT_TOKEN reached a prompt'],
   ['default skip list', 'notebook/reader.ts', [[/const SKIP = new Set\(\[.*\]\);/, 'const SKIP = new Set<string>();']], ['nogit'], 'MODULES_TOKEN reached a prompt'],
-  ['the .gitignore', 'notebook/reader.ts', [[/  try \{ text = readFileSync\(path\.join\(root, '\.gitignore'\), 'utf8'\); \} catch \{ \/\* none \*\/ \}\n/, '']], ['nogit'], 'IGNORED_TOKEN reached a prompt'],
+  ['the .gitignore', 'notebook/reader.ts', [[/control\(root, '\.gitignore'\)/, "''"]], ['nogit'], 'IGNORED_TOKEN reached a prompt'],
   ['listed', 'notebook/reader.ts', [[/  if \(!repo\.files\.has\(rel\)\) return .*\n/, '']], ['plain'], 'IGNORED_TOKEN reached a prompt'],
   ['grep path check', 'notebook/reader.ts', [[/const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;']], ['plain'], 'reached a prompt'],
   ['grep time limit', 'notebook/reader.ts', [[/\], GREP_MS, 16 \* 2 \*\* 20\)/, '], undefined, 16 * 2 ** 20)']], ['small'], 'a grep stopped at its time limit does not say so'],
@@ -418,6 +418,8 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ...process.platform === 'darwin' ? [['the home directory in another case', 'notebook/reader.ts', [[/realpathSync\.native/g, 'realpathSync']], ['config'], 'the home directory named in capitals was read'] as [string, string, [RegExp, string][], string[], string]] : [],
   ['git runs the repository\'s own program', 'notebook/reader.ts', [[/\['-c', 'core\.fsmonitor=false', '-c', 'core\.hooksPath=\/dev\/null', \.\.\.args\]/, 'args']], ['config'], "git ran the repository's own program"],
   ['a bare git', 'notebook/reader.ts', [[/const GIT = [\s\S]*?\}\);\n/, "const GIT = 'git';\n"]], ['dotgit'], 'a git of the workspace ran'],
+  ['a control file that is a link', 'notebook/reader.ts', [[/  if \(!st\.isFile\(\)\) throw .*\n/, '']], ['config'], 'as a link to /dev/zero was not refused as a link'],
+  ['a control file of any size', 'notebook/reader.ts', [[/  if \(st\.size > CONTROL_BYTES\) throw .*\n/, '']], ['config'], 'a 2 MB .gitignore was read'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -473,6 +475,21 @@ async function configs(tag: string, root: string): Promise<string[]> {
     process.env.HOME = ws; rmSync(path.join(ws, '.rofl'), { recursive: true, force: true });
     try { const up = workspace(path.join(ws, 'n.rofl.md').toUpperCase(), { root: ws.toUpperCase() }); if (up.files.size) bad.push(`the home directory named in capitals was read: ${up.files.size} files`); }
     finally { process.env.HOME = HOME; }
+    // a file that steers the reading, as a link to /dev/zero (git commits one as it is), and one too long: refused, not read
+    for (const [f, config] of [['.gitignore', ''], ['src/CVS/Entries', 'untracked_by(cvs).\n'], ['.rofl/read.rofl', '']]) {
+      const at = path.join(ws, f), kept = `${at}.kept`;
+      rmSync(path.join(ws, '.rofl'), { recursive: true, force: true });
+      if (existsSync(at)) renameSync(at, kept);
+      if (config) put0(ws, '.rofl/read.rofl', config);
+      mkdirSync(path.dirname(at), { recursive: true }); symlinkSync('/dev/zero', at);
+      const z = workspace(path.join(ws, 'n.rofl.md'), { root: ws });
+      if (!z.refused?.includes(`${f} is a link`) || z.files.size) bad.push(`${f} as a link to /dev/zero was not refused as a link: ${z.refused ?? z.files.size}`);
+      rmSync(at); if (existsSync(kept)) renameSync(kept, at);
+    }
+    put0(ws, '.gitignore', `${'x'.repeat(2 ** 21)}\n`);
+    const long = as(null);
+    if (!long.refused?.includes('.gitignore is more than') || long.files.size) bad.push(`a 2 MB .gitignore was read: ${long.refused ?? long.files.size}`);
+    rmSync(path.join(ws, '.gitignore'));
     const svn = as('untracked_by(svn).\n');
     if (!svn.refused?.includes('not built in')) bad.push(`untracked_by(svn) was not refused as not built in: ${svn.refused}`);
     // a socket, which is not a regular file: listed, and refused when asked for
