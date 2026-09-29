@@ -327,11 +327,18 @@ const visNb = (name: string, cells: string) => { const f = path.join(tmp, name, 
 // zoom: a shut group drawn as one mark with its count, and the same run with a zoom that never shuts
 const zoomNb = visNb('draw-zoom', '\n```datalog\ncollapsed(shop).\n```\n'), zoomed = (o: Out) => has(o, 'm5["shop (3)"]') && has(o, 'm0 --> m5') && !has(o, '["blue"]');
 const zoomOff = drawMutant('draw-zoom', 'notebook/draw.ts', /if \(!shut\.size\) return v;/, () => 'return v;');
-const [pics, mutantPics, [whatIf, near, zoomRun, zoomBroken]] = await Promise.all([Promise.all(PICTURE.map((p) => picture(p, ROOT))), Promise.all(PICTURE.map((p, k) => picture(p, picMutants[k][1]))),
+// a proof's zoom: a shut fact is one mark with the count of the facts under it, and the same run with a proof whose group is not its subproof
+const foldNb = path.join(tmp, 'draw-fold', 'n.rofl.md');
+put(foldNb, readFileSync(VIS(ROOT, 'claim-proof.rofl.md'), 'utf8').replace('  - claim-process.rofl.md', `  - ${VIS(ROOT, 'claim-process.rofl.md')}`) + '\n```datalog\ncollapsed("reached(covered)").\n```\n');
+const folded = (o: Out) => has(o, 'covered is reached (7) [unknown, collapsed]') && !has(o, 'check is reached');
+const foldOff = drawMutant('draw-fold', 'notebook/draw.ts', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, () => "f.rel === 'inside'");
+const [pics, mutantPics, [whatIf, near, zoomRun, zoomBroken, foldRun, foldBroken]] = await Promise.all([Promise.all(PICTURE.map((p) => picture(p, ROOT))), Promise.all(PICTURE.map((p, k) => picture(p, picMutants[k][1]))),
   Promise.all([cli([visNb('draw-excise', '\n```rofl\nexcise `blue` is in the paint shop\ndraw graph\n```\n')]), cli([visNb('draw-near', '\n<a id="car_node"></a>A car X is a node if X is on the line.\n\nA mark X is tagged a colour `red` if X is on the line.\n')]),
-    cli([zoomNb]), cli([zoomNb], {}, zoomOff)])]);
+    cli([zoomNb]), cli([zoomNb], {}, zoomOff), cli([foldNb]), cli([foldNb], {}, foldOff)])]);
 check('draw: zoom, a shut group is one mark with its count, the links into it end at it', zoomed(zoomRun), zoomRun);
 check('  and a zoom that never shuts (draw-zoom) turns it red', !zoomed(zoomBroken), zoomBroken);
+check('draw: a proof zoomed, a shut fact is one mark with the count of the facts it rests on', folded(foldRun), foldRun);
+check('  and a proof whose group is not its subproof (draw-fold) turns it red', !folded(foldBroken), foldBroken);
 PICTURE.forEach(([name, , ok], k) => {
   check(`draw ${name}`, ok(pics[k]), pics[k]);
   check(`  and a defect planted in its backend (${picMutants[k][0]}) turns it red`, !ok(mutantPics[k]), mutantPics[k]);

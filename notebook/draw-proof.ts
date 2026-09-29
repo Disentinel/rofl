@@ -4,8 +4,9 @@ import { type Backend, type Fact, type Mark, type View } from './draw.ts';
 /** A fact of the run by its key: its sentence, the facts it rests on one step down (none when it was given), and the terms it is about. */
 export type Proven = (key: string) => { said: string; prems: string[]; terms: string[] } | null;
 
-/** The view of the proofs of `goals`: a mark per fact, a link from a premise to what it proves, a fact nothing concluded tagged `given`. */
-export function proofView(goals: string[], proven: Proven): View {
+/** The view of the proofs of `goals`: a mark per fact, a link from a premise to what it proves, a fact nothing concluded tagged `given`;
+ *  a fact `shut` names, with or without its namespace, drawn with its subproof folded into it. */
+export function proofView(goals: string[], proven: Proven, shut: string[] = []): View {
   const facts: Fact[] = [], marks: Record<string, Mark> = {}, notes: string[] = [];
   const put = (k: string) => {
     if (marks[k]) return;
@@ -15,6 +16,7 @@ export function proofView(goals: string[], proven: Proven): View {
     for (const x of p.prems) { put(x); facts.push({ rel: 'link', args: [x, k], literal: `link(${x}, ${k})`, from: [] }); }
   };
   for (const g of goals) proven(g) ? put(g) : notes.push(`${g} does not hold, so it has no proof to draw`);
+  for (const k of Object.keys(marks)) if (shut.includes(k) || shut.includes(k.replace(/\[\w+\]/, ''))) facts.push({ rel: 'collapsed', args: [k], literal: `collapsed(${k})`, from: [] });
   if (!goals.length) notes.push('nothing to draw: draw proof draws the proof of each why in its cell, and this cell asks none');
   return { kind: 'proof', facts, marks, notes };
 }

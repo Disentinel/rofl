@@ -451,7 +451,7 @@ export class Host {
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       const goals = asks[i].filter((x) => x.kind === 'why').flatMap((x) => { try { return [keyOf(x.lit)]; } catch { return []; } });
-      const picture = (kind: DrawKind, r: Rofl, proofsOf: Rofl) => kind === 'proof' ? proofView(goals, proven(proofsOf)) : collect(kind, world(r, proofsOf));
+      const picture = (kind: DrawKind, r: Rofl, proofsOf: Rofl) => kind === 'proof' ? proofView(goals, proven(proofsOf), world(r, proofsOf).rows('collapsed(A)')?.map((b) => termText(b.A)) ?? []) : collect(kind, world(r, proofsOf));
       for (const a of asks[i].filter((x) => x.kind === 'draw')) {
         if (!KINDS.includes(a.lit as DrawKind)) { outs[i].errors.push(`${a.text}: draw takes ${KINDS.join(', ')}`); continue; }
         const kind = a.lit as DrawKind, cut = excised.get(i);

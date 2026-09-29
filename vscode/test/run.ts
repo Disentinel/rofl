@@ -78,7 +78,8 @@ const VISUAL: Visual[] = [
     frames: 'frame(filed, 1). frame(closed, 2).', zoom: ['collapsed(manager).', 'manager', 'manager (2)', 'review'] },
   { look: 'ring', f: 'burnout-loop', kinds: ['causal'], fails: 'never an influence from A to B is unsigned', status: ['morale', 'failing'], why: ['link_tagged(overtime, backlog, negative)', '`overtime` lowers `backlog`'], whatif: ['excise `morale` moves `attrition`\ndraw causal', 'morale', 'gone'],
     frames: 'frame(overtime, 1). frame(attrition, 2).', zoom: ['inside(bugs, quality). inside(fatigue, quality). collapsed(quality).', 'quality', 'quality (2)', 'bugs'] },
-  { look: 'up', f: 'claim-proof', kinds: ['proof'], status: ['next[main](check,covered)', 'unknown'], why: ['reached[main](pay)', '`covered` is reached'], whatif: ['why `pay` is reached\nexcise `covered` is followed by `pay` when `yes`\ndraw proof', 'next[main](covered,pay)', 'gone'] },
+  { look: 'up', f: 'claim-proof', kinds: ['proof'], status: ['next[main](check,covered)', 'unknown'], why: ['reached[main](pay)', '`covered` is reached'], whatif: ['why `pay` is reached\nexcise `covered` is followed by `pay` when `yes`\ndraw proof', 'next[main](covered,pay)', 'gone'],
+    zoom: ['collapsed("reached(covered)").', 'reached[main](covered)', 'covered is reached (7)', 'check is reached'] },
   { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged' },
 ];
 // the second wave, a draw kind each: only its what-if, which holds its picture's status, why, frames and zoom too, drawn by the renderer's module in that form
@@ -136,6 +137,7 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases?]> = {
   'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', cases.filter((c) => c.file.includes('claim-process'))],
   'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', cases.filter((c) => c.file.includes('burnout-loop'))],
   'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", cases.filter((c) => c.file.includes('claim-proof'))],
+  'd-fold': ['visual/out/draw.js', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, "f.rel === 'inside'", cases.filter((c) => c.file.includes('claim-proof'))],
   space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', cases.slice(3)],
   notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", cases.slice(3)],
   zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', cases.slice(3)],
@@ -156,7 +158,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? [process.argv[bi + 1]] : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !BREAKS[variants[0]]) throw new Error(`--break takes one of ${Object.keys(BREAKS).join(', ')}`);
 
 const one = async (v: string) => {

@@ -149,11 +149,11 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
 export const shutOf = (v: View) => new Set(v.facts.filter((f) => f.rel === 'collapsed').map((f) => f.args[0]));
 
 /** Zoom: every group in `shut` drawn as one mark labelled with how many it holds, its members' tags on it; a link or a message inside it goes,
- *  one across its edge ends at it. A graph's group is what marks are `inside`; a timeline's is what lanes are in (`A lane L is in the group G`).
+ *  one across its edge ends at it. A graph's group is what marks are `inside`; a proof's, the facts a fact rests on; a timeline's is what lanes are in (`A lane L is in the group G`).
  *  The count is the picture's, from membership, not the engine's. */
 export function zoom(v: View, shut = shutOf(v)): View {
   if (!shut.size) return v;
-  const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]]));
+  const parent = new Map(v.facts.filter((f) => f.rel === (v.kind === 'proof' ? 'link' : 'inside')).map((f) => [f.args[0], f.args[1]]));   // a proof's group is its subproof
   const top = (m: string) => { let out = m; for (let g = m, seen = new Set<string>(); parent.has(g) && !seen.has(g); ) { seen.add(g); g = parent.get(g)!; if (shut.has(g)) out = g; } return out; };
   const group = new Map(v.facts.filter((f) => f.rel === 'lane_group' && shut.has(f.args[1])).map((f) => [f.args[0], f.args[1]]));
   const held = new Map<string, Set<string>>(), hold = (g: string, m: string) => (held.get(g) ?? held.set(g, new Set()).get(g)!).add(m);
@@ -176,7 +176,7 @@ export function zoom(v: View, shut = shutOf(v)): View {
   for (const [id, m] of Object.entries(v.marks)) { const t = top(id); if (t === id) marks[id] = { ...m, tags: [...m.tags] }; }
   for (const g of new Set(group.values())) put({ rel: 'lane_group', args: [JSON.stringify(name(g)), g], literal: '', from: [] });   // a shut lane group still names its group
   for (const [g, ms] of held) if ([...ms].some((m) => v.marks[m])) {   // a graph's group becomes a mark; a timeline's is a lane
-    const had = [...ms].flatMap((m) => v.marks[m]?.tags ?? []);
+    const had = [...ms].flatMap((m) => v.marks[m]?.tags ?? []).filter((t) => t !== 'given');   // a proof's folded fact is still concluded
     marks[g] = { label: name(g), tags: [...new Set([...(v.marks[g]?.tags ?? []), ...had, 'collapsed'])], from: v.marks[g]?.from ?? [], on: [] };
     put({ rel: 'node', args: [g], literal: '', from: [] });
   }

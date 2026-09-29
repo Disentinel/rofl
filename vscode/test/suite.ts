@@ -53,12 +53,12 @@ export async function run() {
     await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end');
     const said = (x: vscode.NotebookCell) => x.outputs.flatMap((o) => o.items.map((i) => new TextDecoder().decode(i.data))).join('\n');
     // small multiples: the renderer reports each picture's frames as it draws them
-    if (c.frames) {
+    if (c.frames || c.zoom) {
       const drawing = runs.find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === VIEW_MIME)));
       if (drawing) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(drawing.index, drawing.index + 1), vscode.NotebookEditorRevealType.AtTop);
       let got: { kind: string; frames: string[]; labels: string[] }[] = [];
-      for (const end = Date.now() + 45_000; !got.some((d) => d.frames.length) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) got = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
-      if (!got.some((d) => d.frames.join() === c.frames!.join())) bad.push(`${c.file}: the renderer drew the frames ${JSON.stringify(got)}, not [${c.frames}]`);
+      for (const end = Date.now() + 45_000; !got.some((d) => !c.frames || d.frames.length) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) got = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+      if (c.frames && !got.some((d) => d.frames.join() === c.frames!.join())) bad.push(`${c.file}: the renderer drew the frames ${JSON.stringify(got)}, not [${c.frames}]`);
       if (c.zoom) {
         const [group, shut, member] = c.zoom, n = got.length, has = (d: { labels: string[] }, l: string) => d.labels.includes(l);
         if (!got.some((d) => has(d, shut) && !has(d, member))) bad.push(`${c.file}: the shut group ${group} is not drawn as "${shut}" without ${member}: ${JSON.stringify(got.map((d) => d.labels))}`);
