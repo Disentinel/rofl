@@ -27,6 +27,10 @@ export const HINT = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads t
 /** The cells in the order a viewer reads them: newest first reverses the display, never the notebook. */
 export const shown = <T>(cells: T[], newest: boolean): T[] => newest ? [...cells].reverse() : cells;
 
+/** Where a row of add buttons adds a cell in the notebook's order: next to where it sits on screen, so the top row adds at the start, or at the
+ *  end when the newest are shown first. */
+export const addWhere = (row: 'top' | 'bottom', newest: boolean): 'start' | 'end' => (row === 'top') !== newest ? 'start' : 'end';
+
 /** What a key press in a cell of `kind` does: Cmd/Ctrl+Enter translates a natural cell and runs the notebook from any other; Shift+Enter runs from a
  *  sentences or datalog cell and is a new line in prose and natural. */
 export const keyAction = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind): 'run' | 'translate' | null =>
@@ -163,13 +167,17 @@ const ROWS = 10;   // answers shown under a line; the rest fold
 /** One asking line: its verdict coloured by meaning, its answers as sentences, each with a why; a picture as a slot `views[k]` is drawn into. */
 export function line(l: NbLine, views: View[]): string {
   const v = VERDICT(l), sign = SIGN[l.verdict];
-  let h = `<div class="ask"><div class="q"><span class="said">${rich(l.text)}</span>${v ? sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${esc(v)}</span>` : `<span class="verdict info">${esc(v)}</span>` : ''}</div>`;
+  const q = `<span class="said">${rich(l.text)}</span>${v ? sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${esc(v)}</span>` : `<span class="verdict info">${esc(v)}</span>` : ''}`;
   const rows = (as: { sentence: string; literal: string }[], total: number) => {
     const li = as.map((a) => l.kind === 'excise' ? `<li class="moved"><span class="s">${rich(a.sentence.trim())}</span></li>` : `<li><span class="s">${rich(a.sentence)}</span><button type="button" class="why" data-why="${esc(a.literal)}">why</button></li>`);
     const more = total > as.length ? [`<li class="more">and ${total - as.length} more</li>`] : [];
     return li.length > ROWS ? `<ul class="rows">${li.slice(0, ROWS).join('')}</ul><details class="fold"><summary>${total - ROWS} more</summary><ul class="rows">${[...li.slice(ROWS), ...more].join('')}</ul></details>` : `<ul class="rows">${[...li, ...more].join('')}</ul>`;
   };
-  if (l.verdict !== 'unasked' && l.answers.length && !l.view) h += rows(l.answers, l.total);
+  // a question's answers fold under the line and its count, a failing never's rows stay open: they are the point
+  const answers = l.verdict !== 'unasked' && l.answers.length && !l.view ? rows(l.answers, l.total) : '';
+  const fold = answers && (l.kind === 'answers' || l.verdict === 'fails');
+  let h = fold ? `<div class="ask"><details class="fold-line" data-line="${esc(l.text)}"${l.verdict === 'fails' ? ' open' : ''}><summary class="q">${q}</summary>${answers}</details>`
+    : `<div class="ask"><div class="q">${q}</div>${answers}`;
   if (l.unsure?.total) h += `<div class="unsure-head">out of sight (${rich(l.unsure.text)}):</div>${rows(l.unsure.answers, l.unsure.total)}`;
   if (l.why) h += `<pre class="why-tree">${esc(l.why)}</pre>`;
   if (l.view) { views.push(l.view); h += `<div class="pic" data-view="${views.length - 1}"></div>`; }

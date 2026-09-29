@@ -64,9 +64,14 @@
   .scroll { overflow-x: auto; }
   .md table { border-collapse: collapse; font-size: 13px; } .md th, .md td { border: 1px solid var(--line); padding: 3px 8px; text-align: left; }
   .out { border-top: 1px solid var(--line); padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  .out:empty { display: none; }
+  .out:empty, .cell.out-hidden .out { display: none; }
+  details.fold-line > summary { cursor: pointer; }
+  details.fold-line > summary::marker { color: var(--mute); }
+  details.fold-line[open] > summary { margin-bottom: 4px; }
   .ask { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .ask .q { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; }
+  .ask summary.q { display: list-item; }
+  .ask summary.q > * { margin-right: 10px; }
   .ask .said { font: 600 13.5px/1.4 var(--sans); }
   .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
   .rows li { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; }
@@ -114,8 +119,9 @@
   <div class="bar" id="bar" aria-live="polite"></div>
   <div class="nbhead" id="head" aria-live="polite"><span class="mute">loading the kernel…</span></div>
   <p class="hint" id="hint"></p>
+  <div class="adds" data-row="top">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
   <main class="book" id="book"></main>
-  <div class="adds">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
+  <div class="adds" data-row="bottom">Add a cell: <button type="button" data-add="rofl">sentences</button><button type="button" data-add="datalog">datalog</button><button type="button" data-add="natural">natural</button><button type="button" data-add="prose">prose</button></div>
   <p class="help">Facts and rules are sentences, in prose or in a <b>sentences</b> cell; a <b>datalog</b> cell takes plain ROFL; a <b>natural</b> cell is words Claude turns into a cell, on your own Claude account: Translate, or Cmd/Ctrl+Enter in a natural cell, translates. A cell asks with its lines: <code>? S</code> lists the answers, <code>never S</code> holds when nothing answers, <code>why S</code> and <code>whynot S</code> explain, <code>excise F</code> asks what moves without a fact, <code>draw graph</code> (or <code>time</code>, <code>table</code>, <code>architecture</code>, <code>heatmap</code>, …) draws. A notebook reads a vocabulary in the front matter of a first prose cell, <code>reads: - rofl:visual/time.rofl.md</code>; without one it reads the graph's. The notebook runs a moment after you stop typing; Cmd/Ctrl+Enter runs now, and so does Shift+Enter in a sentences or datalog cell (in prose and natural cells it is a new line).</p>
 </div>
 <div class="overlay" id="overlay" hidden role="dialog" aria-label="The picture, full screen">

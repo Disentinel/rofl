@@ -90,6 +90,14 @@ async function problems(dir: string): Promise<string[]> {
   // two declared sentences that differ only in a noun are said as one
   const tw = (await bench.run([{ id: 't', kind: 'rofl', text: 'Declared as facts:\n\n- <a id="defines_match"></a>A config C defines a match M\n- <a id="defines_stage"></a>A config C defines a stage S\n\nThe configs:\n\n- `c1` defines `m1`.' }])).byCell.get('t')?.notes ?? [];
   if (!tw.some((n: string) => n.includes("read as one sentence: a row can't tell them apart"))) bad.push(`two sentences that differ only in a noun are not said: ${JSON.stringify(tw)}`);
+  // a question's answers fold under its line and count, closed; a failing never's rows are open
+  const q1 = (await bench.run([...platform, { id: 'q', kind: 'rofl', text: '? A container A calls a container B' }])).byCell.get('q')?.lines[0];
+  const qh = q1 ? html(q1) : '';
+  if (!/<details class="fold-line" data-line="[^"]*"><summary class="q">/.test(qh) || !qh.includes('answers</span></summary><ul class="rows">')) bad.push(`a ? list is rendered unfolded: ${qh.slice(0, 200)}`);
+  const failing = (await bench.run(platform)).result.cells.flatMap((c: { lines: { verdict: string }[] }) => c.lines).find((l: { verdict: string }) => l.verdict === 'fails');
+  if (!failing || !/<details class="fold-line" data-line="[^"]*" open>/.test(html(failing))) bad.push('a failing never\'s rows are not open');
+  const rows = [wb.addWhere('top', false), wb.addWhere('bottom', false), wb.addWhere('top', true), wb.addWhere('bottom', true)].join(' ');
+  if (rows !== 'start end end start') bad.push(`the add rows do not add next to where they sit (top, bottom; then newest first): ${rows}`);
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -151,6 +159,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the twin-sentence note off', (d) => spoil(d, 'lib/book.js', 'b.rel !== a.rel && b.k === a.k', 'false'), /two sentences that differ only in a noun are not said/],
   ['a facts-only cell refused', (d) => spoil(d, 'lib/translate.js', 'if (!held.length)', 'if (true)'), /a cell that only models was refused/],
   ['the translator appending ? lines', (d) => spoil(d, 'lib/translate.js', 'return { ...t, errors: [], cell, added', "return { ...attempt(cell + '\\n\\n? ' + asks[0]), errors: [], cell, added"), /\? lines were written into a cell that only models/],
+  ['a ? list rendered unfolded', (d) => spoil(d, 'lib/bench.js', "(l.kind === 'answers' || l.verdict === 'fails')", "l.verdict === 'fails'"), /a \? list is rendered unfolded/],
+  ['the top add row adding at the end', (d) => spoil(d, 'lib/bench.js', "(row === 'top') !== newest ? 'start' : 'end'", "newest ? 'start' : 'end'"), /the add rows do not add next to where they sit/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

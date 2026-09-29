@@ -13,7 +13,7 @@
 //    text: "Declared as facts:\n\n- <a id=\"calls\"></a>A service A calls a service B\n\nThe calls:\n\n- `web` calls `api`.\n- `api` calls `db`.\n\nA mark X is a node if X calls something.\n\nA mark X is a node if something calls X.\n\nA mark X links to a mark Y if X calls Y.\n\nnever X calls X"}}
 //   {action: "write_db", db_op: "set", collection: "notebooks/shared/cells", doc_id: "c020", data: {kind: "rofl", order: 20, text: "draw graph"}}
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
-import { Bench, HINT, answered, keyAction, shown, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
+import { Bench, HINT, addWhere, answered, keyAction, shown, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
@@ -30,6 +30,9 @@ const newId = () => 'c' + Math.random().toString(36).slice(2, 10);
 // newest first: this viewer's choice, the display reversed; the notebook's order and its run are the same
 let newest = (() => { try { return localStorage.getItem('rofl-workbench:newest') === '1'; } catch { return false; } })();
 let mode: 'local' | 'shared' = 'local', ran: Ran | null = null, editing: string | null = null;
+// what this viewer opened and hid: a question's answers by its line, kept across runs while the line reads the same; a cell's whole output
+const opened = new Map<string, boolean>();
+const hidden = new Set<string>((() => { try { return JSON.parse(localStorage.getItem('rofl-workbench:hidden') ?? '[]'); } catch { return []; } })());
 const views = new Map<string, View[]>();   // each cell's pictures, as last drawn
 const drawn = new Map<string, string>();   // each cell's output as last painted, so a run that says the same keeps its pictures
 
@@ -53,6 +56,7 @@ function cellEl(c: Pc): HTMLElement {
     <select class="kind" aria-label="Cell kind">${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <span class="state"></span><span class="peers"></span><span class="spacer"></span>
     <button type="button" class="tr-go" title="Claude writes the cell that answers this one (Cmd/Ctrl+Enter in the cell). It runs on your own Claude account and uses your Claude usage." hidden>Translate</button>
+    <button type="button" class="hide-out" title="Hide this cell's output, for you only">hide output</button>
     <button type="button" class="run" title="Run the notebook (Cmd/Ctrl+Enter; Shift+Enter in a sentences or datalog cell)">Run</button>
     <select class="add" aria-label="Add a cell after this one"><option value="">+ below</option>${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <button type="button" class="x" aria-label="Delete cell" title="Delete cell">&#x2715;</button>
@@ -75,7 +79,8 @@ function paint() {
   paintBar(); paintPeers();
 }
 function fill(el: HTMLElement, c: Pc) {
-  el.className = `cell ${c.kind}${editing === c.id ? ' editing' : ''}`;
+  el.className = `cell ${c.kind}${editing === c.id ? ' editing' : ''}${hidden.has(c.id) ? ' out-hidden' : ''}`;
+  el.querySelector('.hide-out')!.textContent = hidden.has(c.id) ? 'show output' : 'hide output';
   el.querySelector<HTMLSelectElement>('.kind')!.value = c.kind;
   el.querySelector<HTMLSelectElement>('.add')!.options[0].text = newest ? '+ above' : '+ below';
   const t = el.querySelector('textarea')!;
@@ -102,6 +107,7 @@ function paintOuts() {
     drawn.set(c.id, key);
     const vs: View[] = [], out = el.querySelector<HTMLElement>('.out')!;
     out.innerHTML = c.kind === 'natural' ? '' : said(s, vs);
+    for (const d of out.querySelectorAll<HTMLDetailsElement>('details.fold-line')) { const o = opened.get(`${c.id}\u0000${d.dataset.line}`); if (o !== undefined) d.open = o; }
     views.set(c.id, vs);
     for (const p of out.querySelectorAll<HTMLElement>('.pic[data-view]')) void picture(p, vs[Number(p.dataset.view)]);
   }
@@ -138,14 +144,16 @@ function changed(c: Pc, soon = false) {
   if (mode === 'shared') write(c); else saveLocal();
   paint(); run(soon ? 0 : 700);
 }
-function add(kind: Kind, after: string | undefined, text = '') {
-  const k = after ? cells.findIndex((c) => c.id === after) : cells.length - 1;
-  const a = cells[k]?.order ?? 0, b = cells[k + 1]?.order ?? a + 2000;
+/** A new cell after the cell `after`, at the end when there is none, at the start when it is null. */
+function add(kind: Kind, after: string | undefined | null, text = '') {
+  const k = after === null ? -1 : after ? cells.findIndex((c) => c.id === after) : cells.length - 1;
+  const next = cells[k + 1]?.order, a = k >= 0 ? cells[k].order : (next ?? 2000) - 2000, b = next ?? a + 2000;
   const c: Pc = { id: newId(), kind, text, order: (a + b) / 2 };
   cells.splice(k + 1, 0, c);
   changed(c);
   const t = elOf(c.id)?.querySelector('textarea');
   if (kind === 'prose') startProse(c.id); else t?.focus();
+  elOf(c.id)?.scrollIntoView({ block: 'nearest' });
   return c;
 }
 function remove(id: string) {
@@ -174,6 +182,7 @@ book.addEventListener('click', (e) => {
   if (!id) return;
   if (t.closest('.x')) return remove(id);
   if (t.closest('.run')) return run(0);
+  if (t.closest('.hide-out')) { if (!hidden.delete(id)) hidden.add(id); try { localStorage.setItem('rofl-workbench:hidden', JSON.stringify([...hidden])); } catch {} return paint(); }
   if (t.closest('.tr-go')) return void translate(id);
   if (t.closest('.tr-stop')) return stopping?.abort();
   if (t.closest('.md') && !(t.closest('a'))) return startProse(id);
@@ -184,6 +193,10 @@ book.addEventListener('click', (e) => {
     const row = document.createElement('li'); row.className = 'why-row'; row.innerHTML = `<pre class="why-tree">${esc(bench.why(why.dataset.why!))}</pre>`; li.after(row);
   }
 });
+book.addEventListener('toggle', (e) => {
+  const d = e.target as HTMLDetailsElement, id = d.closest<HTMLElement>('article')?.dataset.id;
+  if (id && d.classList?.contains('fold-line')) opened.set(`${id}\u0000${d.dataset.line}`, d.open);
+}, true);
 book.addEventListener('focusin', (e) => { const id = (e.target as HTMLElement).closest<HTMLElement>('article')?.dataset.id; if (id && (e.target as HTMLElement).tagName === 'TEXTAREA' && editing !== id) { editing = id; presence(); } });
 book.addEventListener('focusout', (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>('article');
@@ -324,7 +337,10 @@ $('runall').addEventListener('click', () => run(0));
 const newestBox = $<HTMLInputElement>('newest');
 newestBox.checked = newest;
 newestBox.addEventListener('change', () => { newest = newestBox.checked; try { localStorage.setItem('rofl-workbench:newest', newest ? '1' : '0'); } catch {} paint(); drawn.clear(); paintOuts(); });
-document.querySelector('.adds')!.addEventListener('click', (e) => { const k = (e.target as HTMLElement).closest<HTMLElement>('[data-add]')?.dataset.add; if (k) add(k as Kind, cells.at(-1)?.id); });
+for (const row of document.querySelectorAll<HTMLElement>('.adds')) row.addEventListener('click', (e) => {
+  const k = (e.target as HTMLElement).closest<HTMLElement>('[data-add]')?.dataset.add;
+  if (k) add(k as Kind, addWhere(row.dataset.row as 'top' | 'bottom', newest) === 'start' ? null : cells.at(-1)?.id);
+});
 $('oclose').addEventListener('click', closeOverlay);
 $('ofit').addEventListener('click', () => pz?.fit());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('overlay').hidden) closeOverlay(); });
