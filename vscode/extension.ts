@@ -321,7 +321,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     channel.appendLine(r.said.join('\n'));
     if (r.reply) asked.set(natural, r.reply); else asked.delete(natural);
     const stopped = r.said.includes('translation failed: stopped');
-    await show(r.reply ? `**${r.who}:** ${r.reply}\n\n*Answer with Refine.*` : r.text !== text ? '' : stopped ? '*Stopped; nothing written.*'
+    const added = r.said.map((l) => /: translated, (adds .*)$/.exec(l)?.[1]).find(Boolean);
+    await show(r.reply ? `**${r.who}:** ${r.reply}\n\n*Answer with Refine.*` : r.text !== text ? (added ? `*Translated: ${added}.*` : '') : stopped ? '*Stopped; nothing written.*'
       : `**Not translated:** \`${why(r.said).replace(/`/g, "'")}\`\n\n\`\`\`\n${r.said.join('\n')}\n\`\`\`\n\n*Refine to say more, or change the words and Translate again.*`);
     x.end(r.text !== text || !!r.reply, Date.now());
     if (r.text !== text) { await apply(nb, r.text); await run(nb); }

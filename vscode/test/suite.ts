@@ -80,6 +80,7 @@ export async function run() {
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the extension's result is not the command line's --json`);
     r.cells.slice(1).forEach((k, i) => {
       if (!runs[i] || !said(runs[i]) && (k.lines.length || k.notes.length || k.errors.length)) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);
+      for (const l of k.lines) if (l.kind === 'answers' && l.answers.length) { const t = said(runs[i]), h = t.indexOf(`**${l.text.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;')}**`), d = t.indexOf(`<details><summary>${l.total} answer`, h), li = t.indexOf('\n- ', h); if (h < 0 || d < 0 || li < d) bad.push(`${c.file}: a ? line's answers are not folded under it: "${l.text}"`); }
       for (const l of k.lines) if (!said(runs[i]).includes(l.text.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;'))) bad.push(`${c.file}: "${l.text}" is not in the output of the cell it was asked in`);
     });
     await colours(nb, runs, said, c.file, bad);
@@ -366,7 +367,14 @@ async function cellControls(nb: vscode.NotebookDocument, natural: number, before
   await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
   await vscode.commands.executeCommand('rofl-notebook.revert', nb.cellAt(natural + 1));
   if (text() !== before) bad.push(`${nb.uri.fsPath}: after Revert the notebook is not the file it was: ${nb.cellAt(natural)?.document.languageId} cell ${natural} holds ${JSON.stringify(nb.cellAt(natural)?.document.getText())}`);
-  await vscode.commands.executeCommand('rofl-notebook.translateCell', nb.cellAt(natural));
+  // Cmd/Ctrl+Enter in a natural cell: its binding, and the command it runs with no argument over the selected cell, as a key press runs it
+  const keys = (vscode.extensions.getExtension(ID)?.packageJSON?.contributes?.keybindings ?? []) as { command: string; key: string; mac?: string; when?: string }[];
+  const key = keys.find((k) => k.command === 'rofl-notebook.translateCell');
+  if (!key || key.key !== 'ctrl+enter' || key.mac !== 'cmd+enter' || !key.when?.includes('notebookCellResource in rofl-notebook.naturals')) bad.push(`${nb.uri.fsPath}: Cmd/Ctrl+Enter in a natural cell does not translate: ${JSON.stringify(key)}`);
+  const editor = vscode.window.activeNotebookEditor;
+  if (editor?.notebook !== nb) bad.push(`${nb.uri.fsPath}: the notebook is not the one in the editor, so the key's path was not tried`);
+  else editor.selections = [new vscode.NotebookRange(natural, natural + 1)];
+  await vscode.commands.executeCommand('rofl-notebook.translateCell');
   if (!under().includes('never M is unowned')) bad.push(`${nb.uri.fsPath}: Translate on the natural cell put no translation under it`);
   await until(() => said(nb.cellAt(natural + 1)).includes('never M is unowned') || undefined, 10_000, 'the translation to answer').catch(() => bad.push(`${nb.uri.fsPath}: the translation came back without its answers: ${said(nb.cellAt(natural + 1))}`));
   await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural + 1), 'break it');
@@ -387,4 +395,8 @@ async function cellControls(nb: vscode.NotebookDocument, natural: number, before
   await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural), 'a team owns it');
   await until(() => !said(nb.cellAt(natural)).includes('Which modules') || undefined, 5_000, 'the question to go').catch(() => {});
   if (nb.cellCount !== n || !under().includes('? M is unowned') || said(nb.cellAt(natural)).includes('Which modules') || said(nb.cellAt(natural)).includes('Not translated')) bad.push(`${nb.uri.fsPath}: the answer did not replace the translation, or the question stayed: ${JSON.stringify(under())}`);
+  // a cell that only models: what it adds is said where the translation's result is
+  await vscode.commands.executeCommand('rofl-notebook.refine', nb.cellAt(natural), 'model it');
+  await until(() => under().includes('keeps') || undefined, 10_000, 'the modelling cell').catch(() => {});
+  if (!said(nb.cellAt(natural)).includes('adds 1 fact in 1 sentence')) bad.push(`${nb.uri.fsPath}: the translation's facts are not said under the natural cell: ${said(nb.cellAt(natural))} / ${JSON.stringify(under())}`);
 }

@@ -38,6 +38,7 @@ case "$p" in
   *"The person says: ask me"*) echo 'Which modules count as owned?' ;;
   *"The person says: break it"*) printf '%s\\n' '\`\`\`rofl' 'A module M is gloriously unowned whenever nobody.' '\`\`\`' ;;
   *"The person says: wait"*) echo $$ > ${path.join(tmp, 'claude.pid')}; exec sleep 60 ;;
+  *"The person says: model it"*) printf '%s\\n' '\`\`\`rofl' 'Declared as facts:' '' '- <a id="keeps"></a>A team T keeps a module M' '' 'The keepers:' '' '- \`core\` keeps \`kernel\`.' '\`\`\`' ;;
   *"The person says"*) printf '%s\\n' '\`\`\`rofl' "$rule" '' '? M is unowned' '\`\`\`' ;;
   *) printf '%s\\n' 'Here it is.' '\`\`\`rofl' "$rule" '' 'never M is unowned' '\`\`\`' ;;
 esac
@@ -170,6 +171,10 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   show: ['visual/out/pictures.js', /\$\{h\.show \? '<button/, "${false ? '<button", named('paint-shop'), /Open in editor opened no picture in an editor tab/],
   panel: ['extension.ts', /w\.html = `/, 'w.html = `<!-- nothing -->` || `', named('paint-shop'), /Open in editor opened no picture in an editor tab/],
   fit: ['visual/out/pic-graph.js', /new ResizeObserver\(fit\)\.observe\(box\);/, '', named('claim-proof-whatif'), /the proof reaches past its picture/],
+  // Cmd/Ctrl+Enter in a natural cell translates; a question's answers fold under it; what a modelling cell adds is said
+  'key-translate': ['package.json', /"keybindings": \[\n[^\]]*\],\n/, '', first, /Cmd\/Ctrl\+Enter in a natural cell does not translate/],
+  'fold-answers': ['render.ts', /l\.kind === 'answers' \? `<details>/, 'false ? `<details>', first, /a \? line's answers are not folded under it/],
+  'said-adds': ['extension.ts', /\(added \? `\*Translated: \$\{added\}\.\*` : ''\)/, "''", first, /the translation's facts are not said/],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.

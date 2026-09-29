@@ -71,6 +71,9 @@
         }
       }
     },
+    "keybindings": [
+      { "command": "rofl-notebook.translateCell", "key": "ctrl+enter", "mac": "cmd+enter", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.naturals && (notebookEditorFocused || editorTextFocus)" }
+    ],
     "menus": {
       "notebook/toolbar": [
         { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" },

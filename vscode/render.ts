@@ -20,15 +20,16 @@ export function render(r: Run): { head: Shown; cells: Shown[] } {
     const f = esc.replace(/\\(.)/g, '$1');
     return r.paths[f] ? `[${label} at ${short[f]}:${k}](<${r.paths[f]}:${k}>)` : m;
   });
-  const list = (rows: { sentence: string }[], total: number) => {
+  const list = (rows: { sentence: string }[], total: number, fold = FOLD) => {
     const items = rows.map((a) => `- ${link(a.sentence)}`), more = total > rows.length ? [`- … ${total - rows.length} more, not sent by the kernel`] : [];
-    return items.length + more.length <= FOLD ? [...items, ...more].join('\n')
+    return items.length + more.length <= fold ? [...items, ...more].join('\n')
       : `${items.slice(0, FOLD).join('\n')}\n\n<details><summary>${total - FOLD} more</summary>\n\n${[...items.slice(FOLD), ...more].join('\n')}\n\n</details>`;
   };
   const line = (l: NbLine) => {
     const v = VERDICT(l), sign = SIGN[l.verdict], word = l.verdict === 'fails' ? `**${v}**` : v;
     const out = [`**${link(l.text)}**${v ? ` — ${sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${word}</span>` : word}` : ''}`];
-    if (l.answers.length) out.push(list(l.answers, l.total));
+    // a question's answers fold whole under its line and count; a failing never's rows are the point and stay open
+    if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity)}\n\n</details>` : list(l.answers, l.total));
     if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total));
     if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);
     return out.join('\n\n');
