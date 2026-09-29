@@ -104,7 +104,7 @@
     "test:nb:product": "node --experimental-strip-types scripts/nb_product.ts",
     "test:workbench": "node --experimental-strip-types scripts/workbench_check.ts",
     "test:lsp": "node --experimental-strip-types lsp/test.ts",
-    "test:vscode": "node --experimental-strip-types vscode/test/roundtrip.ts && node --experimental-strip-types vscode/test/run.ts --only --group core && node --experimental-strip-types vscode/test/run.ts --only --group pictures && node --experimental-strip-types vscode/test/run.ts --only --group whatif && node --experimental-strip-types vscode/test/run.ts --only --group forms && node --experimental-strip-types vscode/test/run.ts --planted --group core",
+    "test:vscode": "node --experimental-strip-types vscode/test/roundtrip.ts && node --experimental-strip-types vscode/test/run.ts --only --group core && node --experimental-strip-types vscode/test/run.ts --only --group pictures && node --experimental-strip-types vscode/test/run.ts --only --group whatif && node --experimental-strip-types vscode/test/run.ts --only --group forms && node --experimental-strip-types vscode/test/run.ts --only --group why && node --experimental-strip-types vscode/test/run.ts --planted --group core",
     "test:vscode:mutants": "node --experimental-strip-types vscode/test/run.ts --mutants",
     "vscode": "node --experimental-strip-types scripts/renderer.ts && code --extensionDevelopmentPath=\"$PWD/vscode\"",
     "test:dist": "node --experimental-strip-types vscode/test/dist.ts --cli",

@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --theme NAME` in that colour theme.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms|why` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --theme NAME` in that colour theme.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -106,6 +106,23 @@ const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `
 const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - rofl:visual/graph.rofl.md', '  - rofl:visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
 // a dialect is held to everything in its what-if copy alone, whose first picture is the notebook's own: one window less a dialect keeps test:vscode under two minutes
 const based = VISUAL.filter((x) => !x.look), pictures = based.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
+// why: the tutorial's three answers; more answers than the kernel sends; a string with every character Markdown reads; a failing never; an excise
+const asking = put(path.join(tmp, 'nb/examples/why.rofl.md'), `${src('examples/tutorial/solutions/1-what-ships.rofl.md')}
+\`\`\`datalog
+n(0).
+n(Y) :- n(X), X < 60, Y is X + 1.
+said("a \\"q\\" \`b\` [c] (d) <e> *f*").
+
+? n(X)
+? said(X)
+low(X) :- n(X), X < 1.
+never low(X)
+\`\`\`
+
+\`\`\`rofl
+excise \`bike\` is on the plan
+\`\`\`
+`);
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
 const cases = [
   { file: review, cli: path.join(tmp, 'review.json'), fails: { text: 'never C is blocked by T' } },
@@ -113,11 +130,13 @@ const cases = [
   { file: small, cli: path.join(tmp, 'small.json'), fails: { text: 'never C recurses', code: [smallJs, 12] } },
   ...pictures.map((file, k) => ({ file, cli: path.join(tmp, `picture-${k}.json`), pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
   { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
+  { file: asking, cli: path.join(tmp, 'why.json'), asks: true, fails: { text: 'never low(X)' } },
   ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: path.join(tmp, `whatif-${k}.json`), pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
 ];
 // `--group`: the run as it is over one group of cases, each window under two minutes; `core` also holds the checks that are not a case
 const GROUPS: Record<string, typeof cases> = {
-  core: cases.filter((c) => !('pictures' in c) && !('pin' in c)),
+  core: cases.filter((c) => !('pictures' in c) && !('pin' in c) && !('asks' in c)),
+  why: cases.filter((c) => 'asks' in c),
   pictures: cases.filter((c) => ('pictures' in c || 'pin' in c) && !('compare' in c)),
   whatif: cases.filter((c) => 'compare' in c && !('form' in c)),
   forms: cases.filter((c) => 'form' in c),
@@ -126,7 +145,7 @@ const gi = process.argv.indexOf('--group'), group = gi >= 0 ? process.argv[gi + 
 if (group !== undefined && !GROUPS[group]) throw new Error(`--group takes one of ${Object.keys(GROUPS).join(', ')}`);
 
 // A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
-// Each runs only the cases that can show it, and is red only when the suite gives its own reason: red for another reason is a check that did not run.
+// Each runs only the cases that can show it, and the checks that are not a case only when its case is `first`; it is red only when the suite gives its own reason: red for another reason is a check that did not run.
 const of = (form: string) => cases.filter((c) => 'form' in c && c.form === form);
 const named = (f: string) => cases.filter((c) => c.file.endsWith(`/${f}.rofl.md`));
 const first = [cases[0]];   // a plant whose check is not a case: the one case the checks around them read
@@ -175,6 +194,13 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   'key-translate': ['package.json', /"keybindings": \[\n[^\]]*\],\n/, '', first, /Cmd\/Ctrl\+Enter in a natural cell does not translate/],
   'fold-answers': ['render.ts', /l\.kind === 'answers' \? `<details>/, 'false ? `<details>', first, /a \? line's answers are not folded under it/],
   'said-adds': ['extension.ts', /\(added \? `\*Translated: \$\{added\}\.\*` : ''\)/, "''", first, /the translation's facts are not said/],
+  // a row's why: its button gone; row 2's literal on row 1; a proof shown after the notebook changed; a why on the row the kernel did not send; the literal not escaped; a proof asked of whatever the kernel ran last
+  'why-button': ['visual/out/renderer.js', /mark\.replaceWith\(b\);/, 'mark.remove();', named('why'), /has no why button/],
+  'why-literal': ['render.ts', /rows\.map\(\(a\) => `- \$\{link\(a\.sentence\)\}\$\{asks \? why\(a\.literal\)/, 'rows.map((a, k) => `- ${link(a.sentence)}${asks ? why((rows[k + 1] ?? a).literal)', named('why'), /is not the proof of its own row/],
+  'why-stale': ['extension.ts', /if \(stamp !== undefined && open && serialize\(docOf\(open\)\) !== last!\.text\)/, 'if (false)', named('why'), /after an edit, a why showed a proof/],
+  'why-escape': ['render.ts', /data-why="\$\{WHY_ATTR\(literal\)\}"/, 'data-why="${literal}"', named('why'), /the why under "said\(.* is not the proof of its own row/],
+  'why-kernel': ['worker.ts', /stamp === undefined \|\| stamp === last \?/, 'true ?', named('why'), /after another notebook ran, a why showed a proof/],
+  'why-more': ['render.ts', /more, not sent by the kernel`\]/, 'more, not sent by the kernel${why(rows[0].literal)}`]', named('why'), /a row with no answer of its own has a why/],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -182,7 +208,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
 const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined;
 const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
@@ -220,7 +246,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...(v === 'as it is' && group && group !== 'core' && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }

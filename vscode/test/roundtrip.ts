@@ -25,6 +25,11 @@ for (const [name, text] of [...files.map((f): [string, string] => [f, readFileSy
 const line = { line: 2, kind: 'answers', text: '? S', verdict: 'answers', total: 1, answers: [{ sentence: '[f() at a.js:3] says "[login](https://evil) [go](command:x)"', literal: '', at: [] }] };
 const md = render({ status: 'ok', errors: [], ms: { load: 0, run: 0 }, paths: { 'a.js': '/w/a.js' }, cells: [{ index: 0, kind: 'prose', line: 1, errors: [], notes: [], lines: [] }, { index: 1, kind: 'rofl', line: 1, errors: [], notes: [], lines: [line] }] } as unknown as Run).cells[0].md;
 if (!md.includes('[f\\(\\) at a.js:3](</w/a.js:3>) says "\\[login\\]\\(https://evil\\) \\[go\\]\\(command:x\\)"')) bad.push(`a Markdown link in a code string is rendered as a link: ${md}`);
-console.log(bad.length ? bad.join('\n') : `ok   ${files.length} notebooks from the tree and ${odd.length} odd texts round-trip byte for byte, cut as the kernel cuts`);
+// every answer row carries its own literal whole, whatever it holds, in an attribute of letters, digits and %; a row not sent and an excise row carry none
+const odder = 'said("a \\"q\\" `b` [c] (d) <e> *f* &amp; %41 \'g\'")', rows = (kind: string, answers: string[], total: number) => ({ line: 2, kind, text: '? S', verdict: 'answers', total, answers: answers.map((literal) => ({ sentence: literal, literal, at: [] })) });
+const marked = render({ status: 'ok', errors: [], ms: { load: 0, run: 0 }, paths: {}, cells: [{ index: 0, kind: 'prose', line: 1, errors: [], notes: [], lines: [] }, { index: 1, kind: 'rofl', line: 1, errors: [], notes: [], lines: [rows('answers', [odder, 'p(2)'], 3), rows('excise', ['nb__p(1)'], 1)] }] } as unknown as Run, 'w.1').cells[0].md;
+const whys = [...marked.matchAll(/<span class="rofl-why" data-why="([A-Za-z0-9%]*)" data-run="w\.1"><\/span>/g)].map((m) => decodeURIComponent(m[1]));
+if (JSON.stringify(whys) !== JSON.stringify([odder, 'p(2)']) || (marked.match(/rofl-why/g) ?? []).length !== 2) bad.push(`the rows' whys are not their literals, one each: ${JSON.stringify(whys)} in ${marked}`);
+console.log(bad.length ? bad.join('\n') : `ok   ${files.length} notebooks from the tree and ${odd.length} odd texts round-trip byte for byte, cut as the kernel cuts; every answer row's why carries its own literal`);
 if (!files.length) { console.log('FAIL git listed no .rofl.md'); process.exit(1); }
 process.exit(bad.length ? 1 : 0);

@@ -16,7 +16,7 @@ type Drawn = { kind: string; frames: string[]; labels: string[]; laid: string[];
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
 let worker: Worker | undefined, seq = 0;
-type Via = { model?: string; lm?: vscode.LanguageModelChat };
+type Via = { model?: string; lm?: vscode.LanguageModelChat; stamp?: string };
 const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void; lm?: vscode.LanguageModelChat; stop?: vscode.CancellationToken }>();
 /** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process, or cancels VS Code's model's request. */
 function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
@@ -32,7 +32,7 @@ function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, uns
   }
   const id = ++seq;
   stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
-  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model }); });
+  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model, stamp: via.stamp }); });
 }
 /** A person's click on a picture writes a file beside the notebook, never the notebook: Pin layout its placed(M, X, Y) facts in
  *  <notebook>.layout.rofl, a notation its standard file (<notebook>.ged), which VS Code then opens for the domain's own tool. */
@@ -106,12 +106,17 @@ export function activate(ctx: vscode.ExtensionContext) {
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
   const laid = new Map<string, string[]>(), drawn = new Map<string, Drawn[]>();   // what the renderer last reported of each notebook's pictures
   const verdicts = new Map<string, { text: string; colour: string; around: string }[]>();   // and the colour each verdict in its outputs was drawn in
+  const whys = new Map<string, { row: string; tree: string | null }[]>(), rows = new Map<string, { row: string; why: boolean }[]>();   // and each why a row showed or hid, and every row with a why or none
+  const ran = new Map<string, { stamp: string; text: string }>();   // each notebook's last run, and its text then
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.zoom', (nb: vscode.Uri, group: string) => pictures.postMessage({ zoom: group, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.drawn', (nb: vscode.Uri) => drawn.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.verdicts', (nb: vscode.Uri) => verdicts.get(nb.toString()) ?? []));
-  // what a test asks of the notebook's pictures as a person would: `{ show: true }` presses Open in editor, `{ measure: true }` has each say again what it drew
-  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.press', (nb: vscode.Uri, m: object) => pictures.postMessage({ ...m, notebook: nb.toString() })));
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.whys', (nb: vscode.Uri) => whys.get(nb.toString()) ?? []));
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.rows', (nb: vscode.Uri) => rows.get(nb.toString()) ?? []));
+  // what a test asks of the notebook's outputs as a person would: `{ show: true }` presses Open in editor, `{ measure: true }` has each picture say again what it drew,
+  // `{ why: row }` presses the why of the row that reads so, `{ rows: true }` has every row say whether it has a why
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.press', (nb: vscode.Uri, m: object) => pictures.postMessage({ ...m, notebook: nb.toString() }, vscode.window.visibleNotebookEditors.find((e) => e.notebook.uri.toString() === nb.toString()))));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => {
     const file = besideNotebook(nb, '.layout.rofl', facts);
     void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
@@ -122,10 +127,18 @@ export function activate(ctx: vscode.ExtensionContext) {
     await vscode.window.showTextDocument(vscode.Uri.file(file), { viewColumn: vscode.ViewColumn.Beside, preview: true });
     return file;
   }));
-  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
+  // a row's why names its run: asked of another, or of a notebook changed since, it says so in place of a proof
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri, stamp?: string) => {
+    const last = ran.get(nb.toString()), open = vscode.workspace.notebookDocuments.find((d) => d.uri.toString() === nb.toString());
+    if (stamp !== undefined && last?.stamp !== stamp) return 'No proof: these answers are from an earlier run of the notebook. Run it again, then ask why.';
+    if (stamp !== undefined && open && serialize(docOf(open)) !== last!.text) return 'No proof: the notebook changed since these answers were given. Run it again, then ask why.';
+    return ask<string>('why', nb.fsPath, literal, {}, undefined, undefined, undefined, { stamp }).catch((e: Error) => e.message);
+  }));
   /** What a picture asks, from a notebook's output or from its own tab; `reply` answers it there. */
   const hear = async (m: any, nb: vscode.Uri, reply: (r: object) => void) => {
-    if (m.why !== undefined) return reply({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) });
+    if (m.why !== undefined) return reply({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb, m.run === undefined ? undefined : String(m.run)) });
+    if (m.whyShown !== undefined) whys.set(nb.toString(), [...(whys.get(nb.toString()) ?? []), m.whyShown]);
+    if (m.rows !== undefined) rows.set(nb.toString(), m.rows);
     if (m.verdicts !== undefined) verdicts.set(nb.toString(), [...(verdicts.get(nb.toString()) ?? []), ...m.verdicts]);
     if (m.show !== undefined) showPicture(nb, m.show as View);
     if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
@@ -164,15 +177,17 @@ export function activate(ctx: vscode.ExtensionContext) {
       // a picture: the renderer draws the view; an editor without it shows the view as text
       ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString() }, VIEW_MIME),
         vscode.NotebookCellOutputItem.text(b.fence ? `\`\`\`${b.fence}\n${b.write(view)}\n\`\`\`` : b.write(view), 'text/markdown')]); })]);
-    let r: Run & { shown: { head: Shown; cells: Shown[] } };
+    let r: Run & { stamp: string; shown: { head: Shown; cells: Shown[] } };
+    const text = serialize(docOf(nb));
     try {
       r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `ROFL: running ${vscode.workspace.asRelativePath(nb.uri)}` },
-        () => ask('run', nb.uri.fsPath, serialize(docOf(nb)), Object.fromEntries(vscode.workspace.textDocuments.filter((d) => d.isDirty && d.uri.scheme === 'file').map((d) => [d.uri.fsPath, d.getText()]))));
+        () => ask('run', nb.uri.fsPath, text, Object.fromEntries(vscode.workspace.textDocuments.filter((d) => d.isDirty && d.uri.scheme === 'file').map((d) => [d.uri.fsPath, d.getText()]))));
     } catch (e) {
       for (const [c, x] of execs) { if (c === (front ?? runs[0])) x.replaceOutput(out([{ md: '', err: (e as Error).message, ok: false }])); x.end(false, Date.now()); }
       return;
     }
     results.set(nb.uri.toString(), r);
+    ran.set(nb.uri.toString(), { stamp: r.stamp, text });
     runs.forEach((c, k) => { if (r.cells[k + 1]) said.set(c, { text: c.document.getText(), out: r.cells[k + 1], paths: r.paths }); });
     saidChanged.fire();
     for (const [c, x] of execs) {
@@ -362,7 +377,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       deserializeNotebook: (bytes) => { const d = deserialize(new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes)); return Object.assign(new vscode.NotebookData(cellsOf(d)), { metadata: d.metadata }); },
       serializeNotebook: (data) => new TextEncoder().encode(serialize({ cells: data.cells as Cell[], metadata: data.metadata ?? {} })),
     }, { transientOutputs: true }),
-    vscode.workspace.onDidCloseNotebookDocument((nb) => { results.delete(nb.uri.toString()); diagnostics.get(nb.uri.toString())?.clear(); notes.delete(nb.uri.toString()); paint(); translations(); }),
+    vscode.workspace.onDidCloseNotebookDocument((nb) => { results.delete(nb.uri.toString()); ran.delete(nb.uri.toString()); diagnostics.get(nb.uri.toString())?.clear(); notes.delete(nb.uri.toString()); paint(); translations(); }),
     vscode.workspace.onDidOpenNotebookDocument(translations), vscode.workspace.onDidChangeNotebookDocument(() => { translations(); saidChanged.fire(); }), vscode.workspace.onDidOpenTextDocument(translations),
     vscode.window.onDidChangeVisibleTextEditors(paint), saidChanged,
     vscode.notebooks.registerNotebookCellStatusBarItemProvider(TYPE, { onDidChangeCellStatusBarItems: saidChanged.event, provideCellStatusBarItems: verdict }),
