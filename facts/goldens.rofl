@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 141 worlds.
+-- 142 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -32,7 +32,7 @@ golden_state("nope", "b164f1936f7bf90f", 2713).
 golden_state("notebook", "0970878d1c98b36c", 1226).
 golden_state("notebook_cjs", "933148bf226c8fd3", 611).
 golden_state("notebook_cli_exits", "dc917789bffdc462", 749).
-golden_state("notebook_ledger", "6c7315ceb9ae9ccf", 17604).
+golden_state("notebook_ledger", "e21787b4bce49607", 17622).
 golden_state("notebook_mcp", "576059aaecfb0dc9", 1091).
 golden_state("notebook_review", "910a464c5fe1c938", 662).
 golden_state("notebook_self", "ae16768d8c935b64", 1642).
@@ -79,6 +79,7 @@ golden_state("visual_oncall-euler", "3ad0edfef5fc4220", 649).
 golden_state("visual_order-states", "a888d85f51546dbc", 835).
 golden_state("visual_outage-timeline", "0c64f1d74fa776a5", 745).
 golden_state("visual_paint-shop", "ddd260a3b245f820", 788).
+golden_state("visual_platform-whatif", "58a24d5d57909ec1", 932).
 golden_state("visual_rail-map", "61944837ab34d31f", 813).
 golden_state("visual_shipping-decision", "91f518807ce44e06", 816).
 golden_state("visual_shop-architecture", "def56988b17d3bbd", 820).
@@ -94,7 +95,7 @@ golden_state("rules_depends", "f5383aaf35c88116", 8689).
 golden_state("rules_engine-split", "d1222225f9fe93f7", 708).
 golden_state("rules_eval-cost", "472dc5657e4f237b", 5704).
 golden_state("rules_features", "4c669f63e883f0ad", 891).
-golden_state("rules_findings", "952f7bfb2b9bc1bb", 15530).
+golden_state("rules_findings", "d7293bedb51de4c5", 15546).
 golden_state("rules_floor-census", "7b93e1e6ce802232", 2005).
 golden_state("rules_ingest", "a1a342452fb584ad", 808).
 golden_state("rules_inquiry_epistemic", "a7df1d966583a8b5", 837).
@@ -151,7 +152,7 @@ golden_state("readiness_rofl", "a4e9338f48304f21", 2132).
 golden_state("refactoring_queue", "6244dd5a8c4d04c1", 3616).
 golden_state("refused", "9bcbfb814755ce39", 504).
 golden_state("sensors_t3", "e48cb0ce13bebca1", 832).
-golden_state("spec_coverage", "1394fa51d33915a9", 3150).
+golden_state("spec_coverage", "742eb6e09faaed5b", 3152).
 golden_state("unstratifiable", "79fbe73fc51f0377", 504).
 
 golden_host("oops", "012d40f715163c70", 0, 214).
@@ -1150,11 +1151,11 @@ golden_rel("notebook_cli_exits", "undefined_premise[audit]", 21).
 golden_rel("notebook_cli_exits", "uses_builtin[$kernel]", 3).
 golden_rel("notebook_cli_exits", "writes_to[$kernel]", 33).
 golden_rel("notebook_ledger", "@other", 1).
-golden_rel("notebook_ledger", "@wit", 2561).
+golden_rel("notebook_ledger", "@wit", 2566).
 golden_rel("notebook_ledger", "addressed_by[main]", 816).
 golden_rel("notebook_ledger", "alarm[main]", 2).
 golden_rel("notebook_ledger", "artifact_removed[main]", 259).
-golden_rel("notebook_ledger", "asserted_by[$kernel]", 5792).
+golden_rel("notebook_ledger", "asserted_by[$kernel]", 5796).
 golden_rel("notebook_ledger", "authority[main]", 5).
 golden_rel("notebook_ledger", "blocked_by[main]", 5).
 golden_rel("notebook_ledger", "blocks[main]", 12).
@@ -1164,15 +1165,15 @@ golden_rel("notebook_ledger", "conclusion_tense[$kernel]", 57).
 golden_rel("notebook_ledger", "corrected[main]", 34).
 golden_rel("notebook_ledger", "corrected_unsettled[audit]", 1).
 golden_rel("notebook_ledger", "deadlocked[main]", 2).
-golden_rel("notebook_ledger", "demands[main]", 879).
-golden_rel("notebook_ledger", "derived_by[$kernel]", 2673).
+golden_rel("notebook_ledger", "demands[main]", 880).
+golden_rel("notebook_ledger", "derived_by[$kernel]", 2678).
 golden_rel("notebook_ledger", "dismissed[main]", 38).
 golden_rel("notebook_ledger", "documented_demand[main]", 4).
 golden_rel("notebook_ledger", "documented_kind[main]", 4).
 golden_rel("notebook_ledger", "edb[main]", 45).
-golden_rel("notebook_ledger", "finding[main]", 1056).
-golden_rel("notebook_ledger", "finding_action[main]", 221).
-golden_rel("notebook_ledger", "finding_note[main]", 1094).
+golden_rel("notebook_ledger", "finding[main]", 1057).
+golden_rel("notebook_ledger", "finding_action[main]", 222).
+golden_rel("notebook_ledger", "finding_note[main]", 1095).
 golden_rel("notebook_ledger", "flow[main]", 4).
 golden_rel("notebook_ledger", "flows_to[main]", 4).
 golden_rel("notebook_ledger", "guardrail[main]", 16).
@@ -1182,7 +1183,7 @@ golden_rel("notebook_ledger", "has_premise[$kernel]", 105).
 golden_rel("notebook_ledger", "imports[main]", 3).
 golden_rel("notebook_ledger", "mode[main]", 14).
 golden_rel("notebook_ledger", "negated_under[main]", 18).
-golden_rel("notebook_ledger", "open_finding[main]", 237).
+golden_rel("notebook_ledger", "open_finding[main]", 238).
 golden_rel("notebook_ledger", "open_undecided[main]", 16).
 golden_rel("notebook_ledger", "path_exists[main]", 244).
 golden_rel("notebook_ledger", "perspective[main]", 3).
@@ -1191,11 +1192,11 @@ golden_rel("notebook_ledger", "premise_neg[$kernel]", 24).
 golden_rel("notebook_ledger", "premise_pos[$kernel]", 72).
 golden_rel("notebook_ledger", "proven[main]", 59).
 golden_rel("notebook_ledger", "reads_from[$kernel]", 61).
-golden_rel("notebook_ledger", "ready[main]", 233).
-golden_rel("notebook_ledger", "ready_proven[main]", 185).
+golden_rel("notebook_ledger", "ready[main]", 234).
+golden_rel("notebook_ledger", "ready_proven[main]", 186).
 golden_rel("notebook_ledger", "reason_len[main]", 38).
 golden_rel("notebook_ledger", "reason_shape[main]", 38).
-golden_rel("notebook_ledger", "recorded[main]", 1056).
+golden_rel("notebook_ledger", "recorded[main]", 1057).
 golden_rel("notebook_ledger", "removed_in[main]", 129).
 golden_rel("notebook_ledger", "reserved[main]", 20).
 golden_rel("notebook_ledger", "rule[$kernel]", 57).
@@ -1204,7 +1205,7 @@ golden_rel("notebook_ledger", "sees[main]", 6).
 golden_rel("notebook_ledger", "settled[main]", 819).
 golden_rel("notebook_ledger", "stale_repair[main]", 6).
 golden_rel("notebook_ledger", "undecided[main]", 177).
-golden_rel("notebook_ledger", "undocumented_demand[main]", 68).
+golden_rel("notebook_ledger", "undocumented_demand[main]", 69).
 golden_rel("notebook_ledger", "undocumented_kind[main]", 351).
 golden_rel("notebook_ledger", "unproven[main]", 50).
 golden_rel("notebook_ledger", "uses_builtin[$kernel]", 5).
@@ -3060,6 +3061,46 @@ golden_rel("visual_paint-shop", "to_be_painted[main]", 3).
 golden_rel("visual_paint-shop", "unpainted[main]", 2).
 golden_rel("visual_paint-shop", "uses_builtin[$kernel]", 3).
 golden_rel("visual_paint-shop", "writes_to[$kernel]", 39).
+golden_rel("visual_platform-whatif", "@other", 1).
+golden_rel("visual_platform-whatif", "@wit", 119).
+golden_rel("visual_platform-whatif", "asserted_by[$kernel]", 68).
+golden_rel("visual_platform-whatif", "authority[main]", 5).
+golden_rel("visual_platform-whatif", "calls[main]", 12).
+golden_rel("visual_platform-whatif", "concludes[$kernel]", 40).
+golden_rel("visual_platform-whatif", "conclusion_lit[$kernel]", 40).
+golden_rel("visual_platform-whatif", "conclusion_tense[$kernel]", 40).
+golden_rel("visual_platform-whatif", "derived_by[$kernel]", 126).
+golden_rel("visual_platform-whatif", "edb[main]", 38).
+golden_rel("visual_platform-whatif", "flow[main]", 4).
+golden_rel("visual_platform-whatif", "flows_to[main]", 4).
+golden_rel("visual_platform-whatif", "has_conclusion[$kernel]", 40).
+golden_rel("visual_platform-whatif", "has_premise[$kernel]", 70).
+golden_rel("visual_platform-whatif", "imports[main]", 3).
+golden_rel("visual_platform-whatif", "inside[main]", 9).
+golden_rel("visual_platform-whatif", "layer[main]", 11).
+golden_rel("visual_platform-whatif", "level[main]", 11).
+golden_rel("visual_platform-whatif", "link[main]", 12).
+golden_rel("visual_platform-whatif", "link_tagged[main]", 2).
+golden_rel("visual_platform-whatif", "mode[main]", 14).
+golden_rel("visual_platform-whatif", "negated_under[main]", 10).
+golden_rel("visual_platform-whatif", "node[main]", 11).
+golden_rel("visual_platform-whatif", "owns[main]", 3).
+golden_rel("visual_platform-whatif", "part_of[main]", 9).
+golden_rel("visual_platform-whatif", "perspective[main]", 3).
+golden_rel("visual_platform-whatif", "premise_lit[$kernel]", 70).
+golden_rel("visual_platform-whatif", "premise_neg[$kernel]", 14).
+golden_rel("visual_platform-whatif", "premise_pos[$kernel]", 51).
+golden_rel("visual_platform-whatif", "reaches[main]", 1).
+golden_rel("visual_platform-whatif", "reads_from[$kernel]", 44).
+golden_rel("visual_platform-whatif", "reserved[main]", 26).
+golden_rel("visual_platform-whatif", "rule[$kernel]", 40).
+golden_rel("visual_platform-whatif", "rule_known[main]", 40).
+golden_rel("visual_platform-whatif", "sees[main]", 6).
+golden_rel("visual_platform-whatif", "shape[main]", 5).
+golden_rel("visual_platform-whatif", "tagged[main]", 5).
+golden_rel("visual_platform-whatif", "up[main]", 1).
+golden_rel("visual_platform-whatif", "uses_builtin[$kernel]", 4).
+golden_rel("visual_platform-whatif", "writes_to[$kernel]", 40).
 golden_rel("visual_rail-map", "@other", 1).
 golden_rel("visual_rail-map", "@wit", 97).
 golden_rel("visual_rail-map", "asserted_by[$kernel]", 41).
@@ -3815,11 +3856,11 @@ golden_rel("rules_features", "sees[main]", 8).
 golden_rel("rules_features", "uses_builtin[$kernel]", 12).
 golden_rel("rules_features", "writes_to[$kernel]", 43).
 golden_rel("rules_findings", "@other", 1).
-golden_rel("rules_findings", "@wit", 1925).
+golden_rel("rules_findings", "@wit", 1929).
 golden_rel("rules_findings", "addressed_by[main]", 816).
 golden_rel("rules_findings", "alarm[main]", 2).
 golden_rel("rules_findings", "artifact_removed[main]", 259).
-golden_rel("rules_findings", "asserted_by[$kernel]", 5462).
+golden_rel("rules_findings", "asserted_by[$kernel]", 5466).
 golden_rel("rules_findings", "authority[main]", 5).
 golden_rel("rules_findings", "blocked_by[main]", 3).
 golden_rel("rules_findings", "blocks[main]", 10).
@@ -3828,13 +3869,13 @@ golden_rel("rules_findings", "conclusion_lit[$kernel]", 47).
 golden_rel("rules_findings", "conclusion_tense[$kernel]", 47).
 golden_rel("rules_findings", "corrected[main]", 34).
 golden_rel("rules_findings", "corrected_unsettled[audit]", 1).
-golden_rel("rules_findings", "demands[main]", 879).
-golden_rel("rules_findings", "derived_by[$kernel]", 2037).
+golden_rel("rules_findings", "demands[main]", 880).
+golden_rel("rules_findings", "derived_by[$kernel]", 2041).
 golden_rel("rules_findings", "dismissed[main]", 38).
 golden_rel("rules_findings", "edb[main]", 40).
-golden_rel("rules_findings", "finding[main]", 1056).
-golden_rel("rules_findings", "finding_action[main]", 221).
-golden_rel("rules_findings", "finding_note[main]", 1094).
+golden_rel("rules_findings", "finding[main]", 1057).
+golden_rel("rules_findings", "finding_action[main]", 222).
+golden_rel("rules_findings", "finding_note[main]", 1095).
 golden_rel("rules_findings", "flow[main]", 4).
 golden_rel("rules_findings", "flows_to[main]", 4).
 golden_rel("rules_findings", "guardrail[main]", 16).
@@ -3844,16 +3885,16 @@ golden_rel("rules_findings", "has_premise[$kernel]", 82).
 golden_rel("rules_findings", "imports[main]", 3).
 golden_rel("rules_findings", "mode[main]", 14).
 golden_rel("rules_findings", "negated_under[main]", 14).
-golden_rel("rules_findings", "open_finding[main]", 237).
+golden_rel("rules_findings", "open_finding[main]", 238).
 golden_rel("rules_findings", "perspective[main]", 3).
 golden_rel("rules_findings", "premise_lit[$kernel]", 82).
 golden_rel("rules_findings", "premise_neg[$kernel]", 19).
 golden_rel("rules_findings", "premise_pos[$kernel]", 57).
 golden_rel("rules_findings", "proven[main]", 59).
 golden_rel("rules_findings", "reads_from[$kernel]", 51).
-golden_rel("rules_findings", "ready[main]", 235).
-golden_rel("rules_findings", "ready_proven[main]", 185).
-golden_rel("rules_findings", "recorded[main]", 1056).
+golden_rel("rules_findings", "ready[main]", 236).
+golden_rel("rules_findings", "ready_proven[main]", 186).
+golden_rel("rules_findings", "recorded[main]", 1057).
 golden_rel("rules_findings", "removed_in[main]", 129).
 golden_rel("rules_findings", "reserved[main]", 20).
 golden_rel("rules_findings", "rule[$kernel]", 47).
@@ -6033,9 +6074,9 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 15).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 566).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 567).
 golden_rel("spec_coverage", "authority[main]", 35).
-golden_rel("spec_coverage", "check[checks]", 193).
+golden_rel("spec_coverage", "check[checks]", 194).
 golden_rel("spec_coverage", "check_stands[coverage]", 13).
 golden_rel("spec_coverage", "citation_ok[checks]", 132).
 golden_rel("spec_coverage", "cited_check[map]", 13).

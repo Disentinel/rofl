@@ -118,6 +118,7 @@ check[checks]("facts/goldens.rofl", "visual_oncall-euler", world).
 check[checks]("facts/goldens.rofl", "visual_order-states", world).
 check[checks]("facts/goldens.rofl", "visual_outage-timeline", world).
 check[checks]("facts/goldens.rofl", "visual_paint-shop", world).
+check[checks]("facts/goldens.rofl", "visual_platform-whatif", world).
 check[checks]("facts/goldens.rofl", "visual_rail-map", world).
 check[checks]("facts/goldens.rofl", "visual_shipping-decision", world).
 check[checks]("facts/goldens.rofl", "visual_shop-architecture", world).
