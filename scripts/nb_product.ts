@@ -398,7 +398,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['default skip list', 'notebook/reader.ts', [[/const SKIP = new Set\(\[.*\]\);/, 'const SKIP = new Set<string>();']], ['nogit'], 'MODULES_TOKEN reached a prompt'],
   ['the .gitignore', 'notebook/reader.ts', [[/control\(root, '\.gitignore'\)/, "''"]], ['nogit'], 'IGNORED_TOKEN reached a prompt'],
   ['listed', 'notebook/reader.ts', [[/  if \(!repo\.files\.has\(rel\)\) return .*\n/, '']], ['plain'], 'IGNORED_TOKEN reached a prompt'],
-  ['grep path check', 'notebook/reader.ts', [[/const hits = g\.lines\.filter\(.*$/m, 'const hits = g.lines;']], ['plain'], 'reached a prompt'],
+  ['grep path check', 'notebook/reader.ts', [[/const hits = g\.hits\.filter\(\(h\) => readable\(repo, h\.file\)\)/, 'const hits = g.hits']], ['plain'], 'reached a prompt'],
   ['grep time limit', 'notebook/reader.ts', [[/\], GREP_MS, 16 \* 2 \*\* 20\)/, '], undefined, 16 * 2 ** 20)']], ['small'], 'a grep stopped at its time limit does not say so'],
   ['grep empty said', 'notebook/reader.ts', [[/hits\.length \? fit\(hits, SHOWN\.grep, 'lines'\) : '\(no line matches\)'/, "fit(hits, SHOWN.grep, 'lines')"]], ['plain'], 'a catastrophic pattern was not answered as no match'],
   ['first prompt reads around the check', 'notebook/cli.ts', [[/const r = readTracked\(cx\.repo, w\);/, "const r = (() => { try { return { file: w, lines: readFileSync(path.join(cx.repo.root, w), 'utf8').split('\\n') }; } catch { return { refused: w }; } })();"]], ['plain'], 'ENV_TOKEN reached a prompt'],
@@ -420,6 +420,7 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['a bare git', 'notebook/reader.ts', [[/const GIT = [\s\S]*?\}\);\n/, "const GIT = 'git';\n"]], ['dotgit'], 'a git of the workspace ran'],
   ['a control file that is a link', 'notebook/reader.ts', [[/  if \(!st\.isFile\(\)\) throw .*\n/, '']], ['config'], 'as a link to /dev/zero was not refused as a link'],
   ['a control file of any size', 'notebook/reader.ts', [[/  if \(st\.size > CONTROL_BYTES\) throw .*\n/, '']], ['config'], 'a 2 MB .gitignore was read'],
+  ['grep split at colons', 'notebook/reader.ts', [[/'-z', /, ''], [/  return \{ hits: .*\n/, "  return { hits: g.stdout.split('\\n').flatMap((l) => { const m = /^(.*?):(\\d+):(.*)$/.exec(l); return m ? [{ file: m[1], line: m[2], text: m[3] }] : []; }) };\n"]], ['config'], 'a secret whose name holds colons was read by grep'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -490,6 +491,10 @@ async function configs(tag: string, root: string): Promise<string[]> {
     const long = as(null);
     if (!long.refused?.includes('.gitignore is more than') || long.files.size) bad.push(`a 2 MB .gitignore was read: ${long.refused ?? long.files.size}`);
     rmSync(path.join(ws, '.gitignore'));
+    // a file whose name reads as another file's line, for a parser that splits git grep's output at colons
+    put0(ws, 'README.md', 'r'); put0(ws, 'README.md:1:x.pem', 'PEM_TOKEN\n'); put0(ws, 'src/a.ts:1: y.pem', 'PEM_TOKEN\n');
+    const colons = answer(as(null), 'grep PEM_TOKEN', 10_000, () => '').text;
+    if (colons.includes('PEM_TOKEN')) bad.push(`a secret whose name holds colons was read by grep: ${colons}`);
     const svn = as('untracked_by(svn).\n');
     if (!svn.refused?.includes('not built in')) bad.push(`untracked_by(svn) was not refused as not built in: ${svn.refused}`);
     // a socket, which is not a regular file: listed, and refused when asked for

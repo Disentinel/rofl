@@ -186,21 +186,23 @@ function listing(dir: string, command?: string): Repo {
 
 /** Every line that matches, as `path:line: text`, or why none: git grep --no-index, whose regex engine does not backtrack, used as a search
  *  and never asked about a repository; with no git on the machine, a search in a process of its own. Stopped at GREP_MS; only readable lines kept. */
-function grep(repo: Repo, pattern: string, glob?: string): { lines: string[] } | { refused: string } {
+type Hit = { file: string; line: string; text: string };
+function grep(repo: Repo, pattern: string, glob?: string): { hits: Hit[] } | { refused: string } {
   const skip = [...SKIP].map((d) => `:(exclude,glob)**/${d}/**`);
-  let g = runGit(repo.root, ['grep', '--no-index', '--exclude-standard', '--no-textconv', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
+  let g = runGit(repo.root, ['grep', '--no-index', '--exclude-standard', '--no-textconv', '-z', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') g = search(repo, pattern, glob);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS') return { refused: 'more than 16 MB of matching lines: narrow the pattern or the glob' };
   if (g.error || g.signal) return { refused: `timed out after ${GREP_MS / 1000} s` };
   if (g.status !== 0 && g.status !== 1) return { refused: g.stderr.trim().split('\n').pop() ?? `grep exited with ${g.status}` };
-  return { lines: g.stdout.split('\n').flatMap((l) => { const m = /^(.*?):(\d+):(.*)$/.exec(l); return m ? [`${m[1]}:${m[2]}: ${m[3].trim().slice(0, 200)}`] : []; }) };
+  // `path NUL line NUL text LF`, read from the start: a name holds any byte but NUL (`a.md:1:x.pem`, a newline), a text any but LF
+  return { hits: [...g.stdout.matchAll(/([^\0]*)\0(\d+)\0([^\n]*)\n/gy)].map(([, file, line, text]) => ({ file, line, text })) };
 }
 /** Without git: JavaScript's regex, which can backtrack for ever, in a process of its own that is killed at GREP_MS, over the readable files only. */
 function search(repo: Repo, pattern: string, glob?: string) {
   const files = [...repo.files].filter((f) => (!glob || under(glob, f)) && readable(repo, f));
   const code = `const fs = require('fs'), { root, files, pattern } = JSON.parse(fs.readFileSync(0, 'utf8')); let re;
 try { re = new RegExp(pattern); } catch (e) { console.error(e.message); process.exit(2); }
-for (const f of files) { const t = fs.readFileSync(root + '/' + f); if (!t.subarray(0, 8000).includes(0)) t.toString('utf8').split('\\n').forEach((l, i) => { if (re.test(l)) process.stdout.write(f + ':' + (i + 1) + ':' + l + '\\n'); }); }`;
+for (const f of files) { const t = fs.readFileSync(root + '/' + f); if (!t.subarray(0, 8000).includes(0)) t.toString('utf8').split('\\n').forEach((l, i) => { if (re.test(l)) process.stdout.write(f + '\\0' + (i + 1) + '\\0' + l + '\\n'); }); }`;
   return spawnSync(process.execPath, ['-e', code], { input: JSON.stringify({ root: repo.root, files, pattern }), encoding: 'utf8', timeout: GREP_MS, maxBuffer: 16 * 2 ** 20, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } });
 }
 
@@ -255,7 +257,7 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
     const named = rest.length > 1 && /[*/]/.test(rest.at(-1)!), glob = named ? rest.at(-1)! : '**', pattern = named ? rest.slice(0, -1).join(' ') : arg;
     const g = repo.refused ? { refused: repo.refused } : grep(repo, pattern, named ? glob : undefined);
     if ('refused' in g) return { text: `refused: grep ${pattern}: ${g.refused}`, read: `grep ${pattern} refused` };
-    const hits = g.lines.filter((l) => readable(repo, l.slice(0, l.search(/:\d+: /))));
+    const hits = g.hits.filter((h) => readable(repo, h.file)).map((h) => `${h.file}:${h.line}: ${h.text.trim().slice(0, 200)}`);
     return { text: hits.length ? fit(hits, SHOWN.grep, 'lines') : '(no line matches)', read: `grep ${pattern} in ${glob} (${hits.length})` };
   }
   if (verb === 'show') {
