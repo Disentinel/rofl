@@ -4,6 +4,7 @@ import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
+import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, status, KINDS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
@@ -445,14 +446,18 @@ export class Host {
       },
       label: (t) => nodes[t] ? { label: nodes[t].label, at: [`${nodes[t].file}:${nodes[t].line}`] } : { label: termText(t) },
     });
+    // a proof: the facts under each why of the cell, from the witnesses of the run
+    const proven = (r: Rofl): Proven => (k) => r.store.has(k) ? { said: vocab.say(k) ?? k, prems: r.store.witnessOf(k)?.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []) ?? [], terms: parseLiteral(k).args.map(canonTerm) } : null;
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
+      const goals = asks[i].filter((x) => x.kind === 'why').flatMap((x) => { try { return [keyOf(x.lit)]; } catch { return []; } });
+      const picture = (kind: DrawKind, r: Rofl, proofsOf: Rofl) => kind === 'proof' ? proofView(goals, proven(proofsOf)) : collect(kind, world(r, proofsOf));
       for (const a of asks[i].filter((x) => x.kind === 'draw')) {
         if (!KINDS.includes(a.lit as DrawKind)) { outs[i].errors.push(`${a.text}: draw takes ${KINDS.join(', ')}`); continue; }
         const kind = a.lit as DrawKind, cut = excised.get(i);
-        let view = collect(kind, world(f, w));
+        let view = picture(kind, f, w);
         status(view, seen);
-        if (cut) { const after = collect(kind, world(cut.world, cut.world)); status(after, { ...seen, failing: cut.failing }); view = diff(view, after); }
+        if (cut) { const after = picture(kind, cut.world, cut.world); status(after, { ...seen, failing: cut.failing }); view = diff(view, after); }
         if (partial) view.notes.push('the run stopped at its limit, so marks may be missing');
         outs[i].lines.push({ unasked: unread[i], kind: 'draw', text: a.text, lit: a.lit, rows: [], total: Object.keys(view.marks).length, ok: true, view });
       }

@@ -1,17 +1,18 @@
 // The pictures, each kind's module's list: a new kind or dialect is a module of its own and one line here. `draw` frames a view the same way
 // wherever it is shown: what it holds counted, the picture, the mark picked, and the view as text in each backend it has.
-import { counted, FAMILY, framesOf, shutOf, unquote, zoom, type View } from '../../notebook/draw.ts';
+import { counted, FAMILY, framesOf, GRAPHS, shutOf, unquote, zoom, type View } from '../../notebook/draw.ts';
 import { backendOf, backendsOf } from '../../notebook/draw-text.ts';
-import { detail, esc, layouts, style, type Hooks, type Picture } from './picture.ts';
+import { detail, esc, features, layouts, style, type Hooks, type Picture } from './picture.ts';
 import { pictures as graph } from './pic-graph.ts';
 import { pictures as space } from './pic-space.ts';
 import { pictures as notation } from './pic-notation.ts';
+import { pictures as dialects } from './pic-dialects.ts';
 import { pictures as time } from './pic-time.ts';
 import { pictures as table } from './pic-table.ts';
 import { pictures as moments } from './pic-moments.ts';
 import { pictures as charts } from './pic-charts.ts';
 
-export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space, ...notation, ...moments, ...charts];
+export const PICTURES: Picture[] = [...graph, ...time, ...table, ...space, ...notation, ...moments, ...charts, ...dialects];
 /** The picture a view is drawn with: its kind's, else its family's. */
 export const pictureOf = (v: View) => PICTURES.find((x) => x.kind === v.kind) ?? PICTURES.find((x) => x.kind === FAMILY[v.kind]);
 
@@ -21,12 +22,12 @@ export type Drawn = { toggle(group: string): Promise<void> };
 export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
   style(el.ownerDocument);
   el.classList.add('rofl-pic');
-  const graphs = FAMILY[v.kind] === 'graph' || FAMILY[v.kind] === 'argument', p = pictureOf(v), shut = shutOf(v);
+  const graphs = GRAPHS.includes(v.kind), p = pictureOf(v), shut = shutOf(v);
   const paint = async () => {
     const z = zoom(v, shut), frames = framesOf(z);
     const as = [...new Set(backendsOf(z).map((b) => b.format))].map((f) => [f, backendOf(z, f).write(z)]);
-    if (v.kind === 'argument') as.push(['mermaid', backendOf({ ...z, kind: 'graph' }).write(z)]);
-    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${graphs && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
+    if (graphs && v.kind !== 'graph') as.push(['mermaid (as a graph)', backendOf({ ...z, kind: 'graph' }).write(z)]);
+    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${graphs && v.kind !== 'proof' && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
       + `${v.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}<div class="stage"></div><div class="detail" hidden></div>`
       + as.map(([f, t]) => `<details class="as"><summary>as ${esc(f)}</summary><pre>${esc(t)}</pre></details>`).join('');
     const stage = el.querySelector<HTMLElement>('.stage')!, box = el.querySelector<HTMLElement>('.detail')!;
@@ -35,7 +36,8 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
     const stages = frames ? frames.map((f) => { const d = el.ownerDocument.createElement('div'); d.className = 'frame'; d.innerHTML = `<div class="mute frame-key">frame ${esc(f.key)}</div><div class="frame-stage"></div>`; stage.append(d); return { el: d.lastElementChild as HTMLElement, view: f.view }; }) : [{ el: stage, view: z }];
     if (graphs && !await h.libs()) { el.querySelector('[data-pin]')?.remove(); stage.innerHTML = `<div class="note">The graph library did not load (offline, or its CDN is blocked), so the picture is its mermaid text, which GitHub and mermaid.live draw:</div><pre class="fallback">${esc(backendOf({ ...z, kind: 'graph' }).write(z))}</pre>`; }
     else for (const s of stages) { await p?.mount(s.el, s.view, h, (id, fact) => detail(box, s.view, h, id, fact), toggle); const laid = layouts.get(s.el)?.(); if (laid && !frames) h.laid?.(laid); }
-    h.drawn?.({ frames: frames?.map((f) => f.key) ?? [], labels: [...Object.values(z.marks).map((m) => m.label), ...z.facts.flatMap((f) => f.rel === 'lane' ? [unquote(f.args[1])] : f.rel === 'message' ? [unquote(f.args[1]), unquote(f.args[2])] : [])] });
+    // the positions of the first frame alone, since each frame is laid out alone
+    h.drawn?.({ laid: layouts.get(stages[0].el)?.() ?? [], features: stages.flatMap((s) => features.get(s.el)?.() ?? []), frames: frames?.map((f) => f.key) ?? [], labels: [...Object.values(z.marks).map((m) => m.label), ...z.facts.flatMap((f) => f.rel === 'lane' ? [unquote(f.args[1])] : f.rel === 'message' ? [unquote(f.args[1]), unquote(f.args[2])] : [])] });
     el.querySelector<HTMLButtonElement>('[data-pin]')?.addEventListener('click', () => { const facts = layouts.get(stage)?.(); if (facts) h.pin!(`-- pinned layout: placed(M, X, Y), written by Pin layout; commit it beside the notebook and name it under reads:\n${facts.join('\n')}\n`); });
   };
   // zoom: a group shut is one mark with its count; a click on it opens it, a click on an open group shuts it

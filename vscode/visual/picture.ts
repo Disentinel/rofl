@@ -11,7 +11,7 @@ export type Hooks = {
   /** where a graph's marks were laid, as placed(M, X, Y) facts, each time it is drawn: what a test reads back */
   laid?(facts: string[]): void;
   /** what was drawn, once it is: the frames, each by its key, so a test can read the picture back */
-  drawn?(what: { frames: string[]; labels: string[] }): void;
+  drawn?(what: { frames: string[]; labels: string[]; laid: string[]; features: string[] }): void;
   /** a notation's standard file, opened for the domain's own tool: `ext` its file name's ending */
   open?(text: string, ext: string): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
@@ -22,6 +22,8 @@ export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks
 
 /** Each drawn picture's positions now, as facts (placed(M, X, Y) for a graph, at(M, X, Y) for space): what Pin layout writes and a test reads back. */
 export const layouts = new WeakMap<HTMLElement, () => string[]>();
+/** What a dialect's look put in a drawn picture beyond its marks, as facts (entry(M) for a state machine's entry dot): what a test reads back. */
+export const features = new WeakMap<HTMLElement, () => string[]>();
 
 export const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const tagsOf = (v: View, id: string) => v.marks[id]?.tags ?? [];

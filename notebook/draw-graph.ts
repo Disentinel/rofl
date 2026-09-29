@@ -10,13 +10,14 @@ const safe = (s: string) => s.replace(/"/g, '#quot;').replace(/[\n\r]+/g, ' ');
 const ids = (v: View) => new Map(nodes(v).map((id, i) => [id, `m${i}`]));
 
 
-function flowchart(v: View): string {
+/** `shape`: a mark's bracket pair, `[` `]` unless a dialect gives its own (`{` `}` a decision, `([` `])` an event). */
+export function flowchart(v: View, shape: (m: string) => [string, string] = () => ['[', ']']): string {
   const id = ids(v), out = ['flowchart LR'], parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]]));
   const groups = new Set(parent.values());
   const kids = (g: string | undefined) => nodes(v).filter((m) => parent.get(m) === g && !groups.has(m)).concat([...groups].filter((x) => parent.get(x) === g).sort());
   const put = (m: string, pad: string, seen: Set<string>) => {
     const name = id.get(m) ?? `g${[...groups].indexOf(m)}`, label = safe(v.marks[m]?.label ?? unquote(m));
-    if (!groups.has(m)) { out.push(`${pad}${name}["${label}"]`); return; }
+    if (!groups.has(m)) { const [o, c] = shape(m); out.push(`${pad}${name}${o}"${label}"${c}`); return; }
     if (seen.has(m)) return;
     seen.add(m);
     out.push(`${pad}subgraph ${name}["${label}"]`);

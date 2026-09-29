@@ -13,6 +13,7 @@ code:
   - ../../notebook/reader.ts
   - ../../notebook/serve.ts
   - ../../notebook/draw.ts
+  - ../../notebook/draw-proof.ts
   - ../../playground/host.ts
   - ../../vscode/extension.ts
   - ../../vscode/worker.ts

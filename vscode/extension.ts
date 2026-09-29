@@ -103,7 +103,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   controller.executeHandler = (_cells, nb) => run(nb);
   // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
-  const laid = new Map<string, string[]>(), drawn = new Map<string, { kind: string; frames: string[]; labels: string[] }[]>();   // what the renderer last reported of each notebook's pictures
+  const laid = new Map<string, string[]>(), drawn = new Map<string, { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[] }[]>();   // what the renderer last reported of each notebook's pictures
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.zoom', (nb: vscode.Uri, group: string) => pictures.postMessage({ zoom: group, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.drawn', (nb: vscode.Uri) => drawn.get(nb.toString()) ?? []));
@@ -122,7 +122,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     const nb = vscode.Uri.parse(String(m.notebook));
     if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
     if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
-    if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as { kind: string; frames: string[]; labels: string[] }]);
+    if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[] }]);
     if (m.notation !== undefined) void vscode.commands.executeCommand('rofl-notebook.openNotation', nb, String(m.ext), String(m.notation));
     if (m.pin !== undefined) void vscode.commands.executeCommand('rofl-notebook.pinLayout', nb, String(m.pin));
   }));

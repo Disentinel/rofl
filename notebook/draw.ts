@@ -1,12 +1,16 @@
 // A picture of a notebook: the view facts its adapter rules concluded (visual/*.rofl.md), the tags the run itself knows, and text backends.
 // Pure: the host collects a view where the world is, the command line prints it, the playground draws it.
 
-export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation' | 'timeline' | 'timing' | 'chart' | 'heatmap' | 'upset' | 'euler' | 'decision';
+export type DrawKind = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation' | 'timeline' | 'timing' | 'chart' | 'heatmap' | 'upset' | 'euler' | 'decision'
+  | 'architecture' | 'state' | 'process' | 'causal' | 'proof';
 type Family = 'graph' | 'time' | 'table' | 'argument' | 'space' | 'notation';
 /** A kind's family: the relations it reads, and the picture and text it falls back to when it has none of its own. */
 export const FAMILY: Record<DrawKind, Family> = { graph: 'graph', time: 'time', table: 'table', argument: 'argument', space: 'space', notation: 'notation',
-  timeline: 'time', timing: 'time', chart: 'table', heatmap: 'table', upset: 'table', euler: 'table', decision: 'table' };
+  timeline: 'time', timing: 'time', chart: 'table', heatmap: 'table', upset: 'table', euler: 'table', decision: 'table',
+  architecture: 'graph', state: 'graph', process: 'graph', causal: 'graph', proof: 'graph' };
 export const KINDS = Object.keys(FAMILY) as DrawKind[];
+/** The graph and its dialects: the graph's words, a dialect's tags, its own layout and notation. */
+export const GRAPHS = KINDS.filter((k) => FAMILY[k] === 'graph' || FAMILY[k] === 'argument');
 /** The tags only the renderer writes: from what the model could not see, from a what-if, from a failing never, from a link to no node. */
 /** The MIME type of a draw line's output, which VS Code's notebook renderer (vscode/visual/renderer.ts) draws. */
 export const VIEW_MIME = 'application/vnd.rofl.view+json';
@@ -54,7 +58,7 @@ export function collect(kind: DrawKind, w: World): View {
     return m;
   };
   const is = (rel: string) => facts.filter((f) => f.rel === rel);
-  if (fam === 'graph' || fam === 'argument') {
+  if (GRAPHS.includes(kind)) {
     for (const f of is('node')) mark(f.args[0], f);
     for (const f of is('link')) for (const end of f.args) if (!marks[end]) tag(mark(end), 'dangling');
   }

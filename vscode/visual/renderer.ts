@@ -24,7 +24,7 @@ export const activate = (ctx: Ctx) => {
           pin: (facts: string) => talk({ pin: facts, notebook }),
           open: (text: string, ext: string) => talk({ notation: text, ext, notebook }),
           laid: (facts: string[]) => talk({ laid: facts, notebook }),
-          drawn: (what: { frames: string[]; labels: string[] }) => talk({ drawn: { kind: view.kind, ...what }, notebook }),
+          drawn: (what: { frames: string[]; labels: string[]; laid: string[]; features: string[] }) => talk({ drawn: { kind: view.kind, ...what }, notebook }),
         }),
       }).then((d) => drawn.set(notebook, [...(drawn.get(notebook) ?? []), d]));
     },
