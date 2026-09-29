@@ -356,7 +356,8 @@ const proto = (name: string, git = true, config?: string) => {
   put(path.join(repo, 'src/long.txt'), `${'a'.repeat(40)}!\n`); put(path.join(repo, 'src/.github/ci.yml'), 'on: push\n');
   put(path.join(repo, '.env'), 'ENV_TOKEN_9f2\n'); put(path.join(repo, 'conf/.npmrc'), 'NPMRC_TOKEN_9f2\n'); put(path.join(repo, 'keys/id_rsa'), 'KEY_TOKEN_9f2\n'); put(path.join(repo, 'new.ts'), 'NEW_TOKEN_9f2\n');
   put(path.join(repo, 'ignored.ts'), 'IGNORED_TOKEN_9f2\n'); put(path.join(repo, 'other.ts'), 'OTHER_TOKEN_9f2\n');
-  if (config) put(path.join(repo, '.rofl/read.rofl'), config); put(path.join(repo, 'node_modules/x.js'), 'MODULES_TOKEN_9f2\n'); put(path.join(repo, 'examples/PARENT.txt'), 'PARENT_TOKEN_9f2\n');
+  if (config) put(path.join(repo, '.rofl/read.rofl'), config);
+  put(path.join(repo, 'git'), `#!/bin/sh\n/usr/bin/touch ${path.join(repo, 'RAN')}\n`); chmodSync(path.join(repo, 'git'), 0o755); put(path.join(repo, 'node_modules/x.js'), 'MODULES_TOKEN_9f2\n'); put(path.join(repo, 'examples/PARENT.txt'), 'PARENT_TOKEN_9f2\n');
   // with git, node_modules is in the .gitignore as a repository has it; without, the default skip list must leave it out on its own
   put(path.join(repo, '.gitignore'), git ? 'ignored.ts\nnode_modules/\n' : 'ignored.ts\n');
   put(path.join(tmp, 'outside.txt'), 'OUTSIDE_TOKEN_9f2\n');
@@ -385,7 +386,7 @@ const protoRun = (name: string, env: Record<string, string>, root: string, forev
 const readerSrc = readFileSync(path.join(ROOT, 'notebook/reader.ts'), 'utf8'), cliSrc = readFileSync(path.join(ROOT, 'notebook/cli.ts'), 'utf8');
 // a PATH with node on it and no git: grep falls back to a search in a process of its own
 const noGit = path.join(tmp, 'no-git-path'); mkdirSync(noGit); symlinkSync(process.execPath, path.join(noGit, 'node'));
-const RUNS = ['plain', 'nogit', 'nobin', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
+const RUNS = ['plain', 'nogit', 'nobin', 'dotgit', 'small', 'forever', 'home', 'above', 'sub', 'gitenv', 'words', 'config'];
 /** Each planted defect, the runs that can see it (the rest are not run for it), and what the red must say: red for another reason is not its. */
 const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['outside', 'notebook/reader.ts', [[/  if \(rel\.startsWith\('\.\.'\) \|\| path\.isAbsolute\(rel\)\) return .*\n/, '']], ['plain'], 'was not refused as outside the workspace'],
@@ -415,6 +416,8 @@ const R_BREAKS: [string, string, [RegExp, string][], string[], string][] = [
   ['CVS/Entries ignored', 'notebook/reader.ts', [[/  if \(by === 'cvs'\) \{\n/, "  if (by === 'cvs') { return new Set(files);\n"]], ['config'], 'a file CVS does not list was read'],
   ['CVS removals ignored', 'notebook/reader.ts', [[/if \(!m\[2\]\.startsWith\('-'\)\) out\.add/, 'out.add']], ['config'], 'a file CVS has removed was read'],
   ...process.platform === 'darwin' ? [['the home directory in another case', 'notebook/reader.ts', [[/realpathSync\.native/g, 'realpathSync']], ['config'], 'the home directory named in capitals was read'] as [string, string, [RegExp, string][], string[], string]] : [],
+  ['git runs the repository\'s own program', 'notebook/reader.ts', [[/\['-c', 'core\.fsmonitor=false', '-c', 'core\.hooksPath=\/dev\/null', \.\.\.args\]/, 'args']], ['config'], "git ran the repository's own program"],
+  ['a bare git', 'notebook/reader.ts', [[/const GIT = [\s\S]*?\}\);\n/, "const GIT = 'git';\n"]], ['dotgit'], 'a git of the workspace ran'],
   ['the config allowed to widen', 'notebook/reader.ts', [[/new Set\(values\('readable\(F\)'\)\.filter\(\(f\) => floor\.has\(f\)\)\)/, "new Set(values('readable(F)'))"]], ['config'], 'a config re-allowed a skipped folder'],
   ['a prefix out of the workspace', 'notebook/reader.ts', [[/  if \(out !== undefined\) return .*\n/, '']], ['config'], 'was not refused as reaching out'],
   ['the command accepted from the workspace', 'notebook/reader.ts', [[/  if \(values\('untracked_command\(C\)'\)\.length\) return .*\n/, ''], [/tracked\(by\[0\], dir, listed, command\)/, "tracked(by[0], dir, listed, command ?? values('untracked_command(C)')[0])"]], ['config'], "the workspace's command ran"],
@@ -431,8 +434,10 @@ async function configs(tag: string, root: string): Promise<string[]> {
     put0(ws, 'src/CVS/Entries.Log', 'A /added.ts/0/Initial added.ts//\nR /dropped.ts/1.3/Mon Jan  1 00:00:00 2024//\n');
     put0(ws, 'src/sub/CVS/Entries', '/c.ts/1.2/Mon Jan  1 00:00:00 2024//\n');
     for (const f of ['gone.ts', 'dropped.ts', 'added.ts', 'sub/c.ts', 'sub/d.ts']) put0(ws, `src/${f}`, f);
-    // git's own exclusions beyond the root .gitignore are not asked when no config names git
+    // git's own exclusions beyond the root .gitignore are not asked when no config names git; and a repository whose .git/config runs a
+    // program whenever git lists its files
     spawnSync('git', ['init', '-q'], { cwd: ws }); put0(ws, '.git/info/exclude', 'new.ts\n');
+    spawnSync('git', ['add', 'src/a.ts'], { cwd: ws }); spawnSync('git', ['config', 'core.fsmonitor', `touch ${marker}`], { cwd: ws });
     const as = (config: string | null, command?: string) => {
       rmSync(path.join(ws, '.rofl'), { recursive: true, force: true });
       if (config !== null) put0(ws, '.rofl/read.rofl', config);
@@ -447,6 +452,11 @@ async function configs(tag: string, root: string): Promise<string[]> {
     if (!reads(cvs, 'src/a.ts') || !reads(cvs, 'src/sub/c.ts') || !reads(cvs, 'src/added.ts')) bad.push(`a file CVS lists was not read: ${cvs.refused ?? [...cvs.files]}`);
     if (reads(cvs, 'src/b.ts') || reads(cvs, 'new.ts') || reads(cvs, 'src/sub/d.ts')) bad.push(`a file CVS does not list was read: ${[...cvs.files]}`);
     if (reads(cvs, 'src/gone.ts') || reads(cvs, 'src/dropped.ts')) bad.push(`a file CVS has removed was read: ${[...cvs.files]}`);
+    const tracks = as('untracked_by(git).\n');
+    if (existsSync(marker)) bad.push(`git ran the repository's own program: ${tracks.refused ?? tracks.files.size}`);
+    answer(tracks, 'grep A', 10_000, () => '');
+    if (existsSync(marker)) bad.push('git grep ran the repository\'s own program');
+    if (!reads(tracks, 'src/a.ts') || reads(tracks, 'src/b.ts')) bad.push(`untracked_by(git) did not read what git tracks and only it: ${tracks.refused ?? [...tracks.files]}`);
     const mine = as('untracked_by(command).\n', "printf 'src/b.ts\\n'");
     if (!reads(mine, 'src/b.ts') || reads(mine, 'src/a.ts')) bad.push(`the person's own untracked command was not used: ${mine.refused ?? [...mine.files]}`);
     const theirs = as(`untracked_by(command).\nuntracked_command("touch ${marker}").\n`);
@@ -482,6 +492,8 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   const env: Record<string, [Record<string, string>, boolean, boolean, string?, string?]> = {
     plain: [{}, false, true], small: [{ ROFL_NB_READ_BUDGET: '600', ROFL_NB_GREP_MS: '1' }, false, true], forever: [{ ROFL_NB_READ_ROUNDS: '3', ROFL_NB_READ_FILE_BYTES: '1000', ROFL_FAKE_MANY: '1' }, true, true],
     // a folder with no git, and one on a machine with no git, named by ROFL_NB_ROOT from elsewhere
+    // `.` first on PATH, and a program named git in the workspace, which the search must not run
+    dotgit: [{ PATH: `.${path.delimiter}${noGit}` }, false, false],
     nogit: [{}, false, false], nobin: [{ PATH: noGit, ROFL_NB_ROOT: path.join(tmp, `proto-${tag}-nobin`) }, false, false, ROOT],
     // the workspace is the home directory, or holds it: nothing is read
     home: [{ HOME: path.join(tmp, `proto-${tag}-home`) }, false, true], above: [{ HOME: path.join(tmp, `proto-${tag}-above/src`) }, false, true],
@@ -496,7 +508,9 @@ async function protocol(tag: string, root = ROOT, runs = RUNS): Promise<string[]
   if (runs.includes('config')) bad.push(...await configs(tag, root));
   const at = (s: string, from: string, n = 200) => s.slice(s.indexOf(from), s.indexOf(from) + n);
   for (const [k, r] of Object.entries(got)) for (const token of [...BANNED, ...k === 'sub' ? ['PARENT_TOKEN'] : [], ...k === 'gitenv' ? ['OTHER_TOKEN'] : []]) if (r.prompts.join('\n').includes(`${token}_9f2`)) bad.push(`${token} reached a prompt in the ${k} run`);
-  const { plain, nogit, nobin, small, forever, home, above, sub, words, gitenv } = got;
+  const { plain, nogit, nobin, small, forever, home, above, sub, words, gitenv, dotgit } = got;
+  if (dotgit && existsSync(path.join(tmp, `proto-${tag}-dotgit`, 'RAN'))) bad.push('a git of the workspace ran');
+  if (dotgit && !(dotgit.prompts[1] ?? '').includes('> grep alpha\nsrc/a.ts:1: export function alpha() {')) bad.push(`with . on PATH, grep did not answer: ${at(dotgit.prompts[1] ?? '', '> grep alpha')}`);
   // what git tracks is read, what it does not is not
   if (gitenv && (!(gitenv.prompts[1] ?? '').includes('1  export function alpha') || !(gitenv.prompts[1] ?? '').includes('refused: other.ts: not among the files read here') || !(gitenv.prompts[1] ?? '').includes('refused: new.ts: not among'))) bad.push(`untracked_by(git) did not read the tracked file and only it: ${at(gitenv.prompts[1] ?? '', '> show src/a.ts:1-3', 600)}`);
   for (const [r, why] of [[home, 'is'], [above, 'holds']] as const)

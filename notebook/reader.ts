@@ -3,7 +3,7 @@
 // `grep`, `show`, `?`), this answers them, within a number of rounds and a number of bytes, and says each read. The model's own tools stay off
 // (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs';
+import { accessSync, closeSync, constants, existsSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
@@ -22,10 +22,15 @@ const SHOWN = { list: 200, grep: 100, show: 400 };
 /** How long one grep may run: its pattern is the model's, steered by the text it has just read. */
 const GREP_MS = Number(process.env.ROFL_NB_GREP_MS ?? 5000);
 
+/** git's own path, from the absolute folders on PATH: a bare `git`, or `.` on PATH, would run a git the workspace holds. */
+const GIT = (process.env.PATH ?? '').split(path.delimiter).filter((d) => path.isAbsolute(d)).map((d) => path.join(d, process.platform === 'win32' ? 'git.exe' : 'git'))
+  .find((f) => { try { accessSync(f, constants.X_OK); return statSync(f).isFile(); } catch { return false; } });
 /** git, in `cwd`, without GIT_* in its environment (GIT_DIR, GIT_WORK_TREE or GIT_INDEX_FILE set around translate would point it at another
- *  repository), stopped at `timeout` ms. */
+ *  repository), and with the two settings of a repository's own .git/config that run a program turned off (core.fsmonitor, run by
+ *  ls-files; hooks); stopped at `timeout` ms. No git on PATH reads as ENOENT. */
 function runGit(cwd: string, args: string[], timeout?: number, maxBuffer = 64 * 2 ** 20) {
-  return spawnSync('git', args, { cwd, encoding: 'utf8', timeout, maxBuffer, env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))) });
+  if (!GIT) return { status: null, signal: null, stdout: '', stderr: '', error: Object.assign(new Error('git is not installed'), { code: 'ENOENT' }) };
+  return spawnSync(GIT, ['-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null', ...args], { cwd, encoding: 'utf8', timeout, maxBuffer, env: Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))) });
 }
 
 /** Whether `glob` matches the path `p` as git reads a glob: `*` and `?` within a name, `**` across names. A row of the table at a time,
@@ -157,7 +162,7 @@ export function workspace(notebook: string, { root, command = process.env.ROFL_N
  *  and never asked about a repository; with no git on the machine, a search in a process of its own. Stopped at GREP_MS; only readable lines kept. */
 function grep(repo: Repo, pattern: string, glob?: string): { lines: string[] } | { refused: string } {
   const skip = [...SKIP].map((d) => `:(exclude,glob)**/${d}/**`);
-  let g = runGit(repo.root, ['grep', '--no-index', '--exclude-standard', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
+  let g = runGit(repo.root, ['grep', '--no-index', '--exclude-standard', '--no-textconv', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') g = search(repo, pattern, glob);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS') return { refused: 'more than 16 MB of matching lines: narrow the pattern or the glob' };
   if (g.error || g.signal) return { refused: `timed out after ${GREP_MS / 1000} s` };
