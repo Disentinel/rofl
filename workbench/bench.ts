@@ -20,27 +20,10 @@ const FENCED = new Set(['rofl', 'datalog', 'natural']);
 /** A run stops after this long: a rule that climbs for ever ends there, and the page answers what it found. */
 const WALL = 20_000;
 
-/** The examples the picker opens, by the file the build publishes. */
-export const EXAMPLES: { name: string; title: string; file?: string }[] = [
-  { name: 'platform', title: 'Services and dependencies, with a what-if', file: 'examples/platform-whatif.rofl.md' },
-  { name: 'paint-shop', title: 'The paint shop, as a graph', file: 'examples/paint-shop.rofl.md' },
-  { name: 'outage', title: 'An outage, as a timeline', file: 'examples/outage-timeline.rofl.md' },
-  { name: 'coverage', title: 'Test coverage, as a heatmap', file: 'examples/coverage-heatmap.rofl.md' },
-  { name: 'blank', title: 'A blank notebook' },
-];
-export const BLANK = `---
-reads:
-  - rofl:visual/graph.rofl.md
----
-
-# A notebook
-
-> Facts and rules are sentences, written in prose like this page's or in a
-> sentences cell; a cell asks with its lines, and \`draw graph\` draws.
-
-\`\`\`rofl
-\`\`\`
-`;
+/** What a notebook reads when no cell names what: the graph's words, so `draw graph` works in a notebook of bare cells. */
+export const READS = '---\nreads:\n  - rofl:visual/graph.rofl.md\n---';
+/** The syntax in one cell that reads and draws, which the page shows as its hint: a sentence declared, a fact, rules, a check, a picture. */
+export const HINT = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n\nThe facts:\n\n- `a` leads to `b`.\n\nA mark X is a node if X leads to something.\n\nA mark X links to a mark Y if X leads to Y.\n\nnever X leads to X\n\ndraw graph';
 /** Every file the page fetches besides its modules, by its path from the root of the tree. */
 export const FILES = ['boot.rofl', 'facts/phrases.rofl', ...SHIPPED];
 
@@ -64,8 +47,9 @@ export function split(text: string): { kind: Kind; text: string }[] {
 
 /** The cells as one `.rofl.md`, and the line each cell starts on. */
 export function join(cells: Cell[]): { text: string; starts: number[] } {
-  const parts: string[] = [], starts: number[] = [];
-  let line = 1;
+  const own = cells[0]?.kind === 'prose' && /^\n*---\n/.test(cells[0].text);
+  const parts: string[] = own ? [] : [READS], starts: number[] = [];
+  let line = own ? 1 : READS.split('\n').length + 2;
   for (const c of cells) {
     const t = c.kind === 'prose' ? c.text : '```' + c.kind + '\n' + c.text + '\n```';
     starts.push(line);
@@ -99,11 +83,6 @@ export class Bench {
       if (t === undefined) errors.push(`${r}: not published with the page`); else reads[r] = t;
     }
     return { input: { lib, reads, code: {} }, errors };
-  }
-
-  async example(name: string): Promise<string | undefined> {
-    const e = EXAMPLES.find((x) => x.name === name);
-    return e && (e.file ? this.file(e.file) : BLANK);
   }
 
   /** The whole notebook run; each kernel cell said under the page cell it came from, the prose's under `head`. */

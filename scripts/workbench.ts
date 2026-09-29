@@ -3,7 +3,7 @@
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
 import { emitAll } from './emit.ts';
-import { EXAMPLES, FILES } from '../workbench/bench.ts';
+import { FILES } from '../workbench/bench.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2), oi = argv.indexOf('--out');
@@ -15,7 +15,6 @@ mkdirSync(`${OUT}/lib`, { recursive: true });
 emitAll(ROOT, `${OUT}/lib`, ['workbench/page.ts'], { 'scanners/js_ast.ts': 'export const scan = () => { throw new Error("no code in the workbench"); };\n' });
 const copy = (from: string, to: string) => { mkdirSync(path.dirname(`${OUT}/${to}`), { recursive: true }); copyFileSync(`${ROOT}${from}`, `${OUT}/${to}`); };
 for (const f of FILES) copy(f, f);
-for (const e of EXAMPLES) if (e.file) copy(`examples/visual/${path.basename(e.file)}`, e.file);
 const read = (f: string) => readFileSync(`${ROOT}${f}`, 'utf8');
 const page = read('workbench/page.html').replace('  /* tokens */\n', () => read('playground/tokens.css'));
 // `--standalone`: the head an artifact's skeleton otherwise gives it, for any web server

@@ -1,23 +1,28 @@
-// The workbench page: a ROFL notebook, its cells run by the kernel in the page, its pictures drawn by the modules VS Code draws with.
-// Alone it keeps the notebook in this browser. Where the page is an artifact, what resolves lights up: a shared notebook (db), who is here and in
-// which cell (room, user), and a natural cell translated by the viewer's own Claude (sample). Each is null alone and the page works without it.
-import { Bench, EXAMPLES, answered, esc, prose, said, split, state, type Cell, type Kind, type Ran } from './bench.ts';
+// The workbench page: one ROFL notebook, its cells run by the kernel in the page, its pictures drawn by the modules VS Code draws with.
+// Alone it keeps the notebook in this browser. Where the page is an artifact, what resolves lights up: the shared notebook (db), who is here and
+// in which cell (room, user), and a natural cell translated by the viewer's own Claude (sample). Each is null alone and the page works without it.
+//
+// THE SHARED NOTEBOOK, for anyone writing it (another page, or a session with write_db): one document per cell in the collection
+// `notebooks/shared/cells`, its id any path segment (`c01`, `intro`), its fields
+//   kind   "prose" | "rofl" | "datalog" | "natural"   (rofl: the sentence form; anything else is read as rofl)
+//   text   the cell's text, without its fence
+//   order  a number; cells are shown by it, ascending, a tie or a missing one by id
+// Nothing else: no order document, no notebook document. Every open view hears a write live; no cell at all shows an empty rofl cell.
+// A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
+import { Bench, HINT, answered, esc, prose, said, state, type Cell, type Kind, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
 import type { View } from '../notebook/draw.ts';
 
-type Pc = Cell & { pos: number };
+type Pc = Cell & { order: number };
 type Cap = any;   // a capability's namespace, as claude.use resolves it (artifact contract 0.2.56)
 const KINDS: [Kind, string][] = [['rofl', 'sentences'], ['datalog', 'datalog'], ['natural', 'natural'], ['prose', 'prose']];
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const book = $('book'), bar = $('bar'), head = $('head');
 const bench = new Bench((p) => fetch(p).then((r) => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.text(); }));
 const newId = () => 'c' + Math.random().toString(36).slice(2, 10);
-const tab = newId();
 
-const asked = location.hash.slice(1);   // `#shared`, an example's name, or nothing: the shared notebook when there is one
-let cells: Pc[] = [], example = EXAMPLES.some((e) => e.name === asked) ? asked : 'platform';
 let mode: 'local' | 'shared' = 'local', ran: Ran | null = null, editing: string | null = null;
 const views = new Map<string, View[]>();   // each cell's pictures, as last drawn
 const drawn = new Map<string, string>();   // each cell's output as last painted, so a run that says the same keeps its pictures
@@ -27,24 +32,12 @@ const use = (name: string): Promise<Cap> => (window as any).claude?.use ? (windo
 let db: Cap = null, room: Cap = null, user: Cap = null, sample: Cap = null;
 let me: { id: string | null } = { id: null }, readOnly = false, sampleOff = false, sampleUntil = 0, sampleWait = 5_000;
 
-// ------------------------------------------------------------ the notebook in this browser
-const KEY = (ex: string) => `rofl-workbench:v1:${ex}`;
-const local = { get(ex: string): Pc[] | null { try { const s = JSON.parse(localStorage.getItem(KEY(ex)) ?? 'null'); return Array.isArray(s) ? s : null; } catch { return null; } },
-  set(ex: string, cs: Pc[]) { try { localStorage.setItem(KEY(ex), JSON.stringify(cs)); } catch {} },
-  drop(ex: string) { try { localStorage.removeItem(KEY(ex)); } catch {} } };
-const fromText = (text: string): Pc[] => split(text).map((c, i) => ({ id: newId(), kind: c.kind, text: c.text, pos: (i + 1) * 1000 }));
-
-async function open(ex: string, fresh = false) {
-  example = ex; mode = 'local';
-  const saved = !fresh && local.get(ex), text = saved ? '' : await bench.example(ex) ?? '';
-  cells = saved || fromText(text);
-  if (fresh) local.drop(ex);
-  history.replaceState(null, '', `#${ex}`);
-  presence();
-  paint(); run(0);
-}
+// ------------------------------------------------------------ the notebook in this browser, and the empty one
+const KEY = 'rofl-workbench:v2';
+const blank = (): Pc[] => [{ id: newId(), kind: 'rofl', text: '', order: 1000 }];
+let cells: Pc[] = (() => { try { const s = JSON.parse(localStorage.getItem(KEY) ?? 'null'); if (Array.isArray(s) && s.length) return s; } catch {} return blank(); })();
 let saveT = 0;
-const saveLocal = () => { clearTimeout(saveT); saveT = window.setTimeout(() => { if (mode === 'local') local.set(example, cells); }, 400); };
+const saveLocal = () => { clearTimeout(saveT); saveT = window.setTimeout(() => { if (mode === 'local') try { localStorage.setItem(KEY, JSON.stringify(cells)); } catch {} }, 400); };
 
 // ------------------------------------------------------------ cells on the page
 function cellEl(c: Pc): HTMLElement {
@@ -140,8 +133,8 @@ function changed(c: Pc, soon = false) {
 }
 function add(kind: Kind, after: string | undefined, text = '') {
   const k = after ? cells.findIndex((c) => c.id === after) : cells.length - 1;
-  const a = cells[k]?.pos ?? 0, b = cells[k + 1]?.pos ?? a + 2000;
-  const c: Pc = { id: newId(), kind, text, pos: (a + b) / 2 };
+  const a = cells[k]?.order ?? 0, b = cells[k + 1]?.order ?? a + 2000;
+  const c: Pc = { id: newId(), kind, text, order: (a + b) / 2 };
   cells.splice(k + 1, 0, c);
   changed(c);
   const t = elOf(c.id)?.querySelector('textarea');
@@ -150,6 +143,7 @@ function add(kind: Kind, after: string | undefined, text = '') {
 }
 function remove(id: string) {
   cells = cells.filter((c) => c.id !== id);
+  if (!cells.length && mode === 'local') cells = blank();
   if (mode === 'shared') { clearTimeout(writes.get(id)?.timer); writes.delete(id); void db.doc(`notebooks/shared/cells/${id}`).delete().catch(refused); } else saveLocal();
   paint(); run(0);
 }
@@ -249,10 +243,10 @@ async function translate(id: string) {
 const SAMPLE: Record<string, string> = { not_granted: 'Claude was not allowed in this view', rate_limited: 'Claude is busy: try again in a little while', cancelled: 'stopped',
   prompt_too_large: 'the notebook is too long to send', refused: 'Claude declined', session_expired: 'the session expired: reload the page' };
 
-// ------------------------------------------------------------ the shared notebook (db): one document per cell, placed by its pos
+// ------------------------------------------------------------ the shared notebook (db): one document per cell, placed by its order
 type Write = { dirty: boolean; busy: boolean; last: string; again?: boolean; timer?: number };
 const writes = new Map<string, Write>();
-let shared: Pc[] = [], sharedSeen = false;
+const KNOWN = new Set(['prose', 'rofl', 'datalog', 'natural']);
 const refused = (err: { code?: string }) => { if (err?.code === 'invalid_argument') { readOnly = true; paint(); } };
 /** One write at a time per cell, only when it changed, a pause after the last keystroke. */
 function write(c: Pc) {
@@ -265,61 +259,34 @@ async function flush(id: string) {
   const w = writes.get(id), c = cells.find((x) => x.id === id);
   if (!w || !c || mode !== 'shared' || readOnly) return;
   if (w.busy) { w.again = true; return; }
-  const body = { kind: c.kind, text: c.text, pos: c.pos }, j = JSON.stringify(body);
+  const body = { kind: c.kind, text: c.text, order: c.order }, j = JSON.stringify(body);
   if (j === w.last) { w.dirty = false; return; }
   w.busy = true;
   try { await db.doc(`notebooks/shared/cells/${id}`).set(body); w.last = j; } catch (err) { refused(err as { code?: string }); }
-  finally { w.busy = false; w.dirty = !!w.again || JSON.stringify({ kind: c.kind, text: c.text, pos: c.pos }) !== w.last; if (w.again) { w.again = false; void flush(id); } }
+  finally { w.busy = false; w.dirty = !!w.again || JSON.stringify({ kind: c.kind, text: c.text, order: c.order }) !== w.last; if (w.again) { w.again = false; void flush(id); } }
 }
-/** The shared cells as they arrive: a cell someone else changed is taken in, the one being typed in here keeps its text until its write lands. */
+/** The shared cells as they arrive: a cell someone else changed is taken in, one being typed in here keeps its text until its write lands. */
 function heard(docs: { id: string; data(): any }[]) {
-  shared = docs.map((d) => ({ id: d.id, kind: d.data().kind, text: d.data().text, pos: d.data().pos })).filter((c) => typeof c.text === 'string').sort((a, b) => a.pos - b.pos);
-  sharedSeen = true;
-  if (mode === 'shared') {
-    const pending = (id: string) => { const w = writes.get(id); return !!w && (w.dirty || w.busy); };
-    cells = [...shared.map((s) => { const mine = cells.find((c) => c.id === s.id); return mine && pending(s.id) ? mine : { ...s }; }),
-      ...cells.filter((c) => pending(c.id) && !shared.some((s) => s.id === c.id))].sort((a, b) => a.pos - b.pos);
-    paint(); run(300);
-  }
-  paintBar();
-}
-function joinShared() {
-  mode = 'shared'; cells = shared.map((s) => ({ ...s })); drawn.clear();
-  history.replaceState(null, '', '#shared');
-  presence(); paint(); run(0);
-}
-/** Seeded from the example on screen, only when no cell is there yet, one person at a time. */
-async function startShared() {
-  const meta = db.doc('notebooks/shared');
-  try {
-    const lease = await meta.acquire({ holder: tab, ttlMs: 20_000 });
-    if (!lease.acquired) { bar.querySelector('.say')!.textContent = 'Someone is starting the shared notebook: a moment.'; return; }
-    const now = await db.collection('notebooks/shared/cells').get();
-    if (now.empty) {
-      const seed = cells.map((c) => ({ ...c, id: newId() }));
-      for (const c of seed) await db.doc(`notebooks/shared/cells/${c.id}`).set({ kind: c.kind, text: c.text, pos: c.pos });
-      await meta.set({ example, started: Date.now() });
-      shared = seed;
-    }
-    joinShared();
-  } catch (err) { refused(err as { code?: string }); bar.querySelector('.say')!.textContent = 'The shared notebook could not be started.'; }
+  const shared: Pc[] = docs.map((d) => { const x = d.data() ?? {}; return { id: d.id, kind: KNOWN.has(x.kind) ? x.kind : 'rofl', text: typeof x.text === 'string' ? x.text : '', order: typeof x.order === 'number' ? x.order : Infinity }; });
+  const pending = (id: string) => { const w = writes.get(id); return !!w && (w.dirty || w.busy); };
+  const next = [...shared.map((s) => { const mine = cells.find((c) => c.id === s.id); return mine && pending(s.id) ? mine : s; }),
+    ...cells.filter((c) => pending(c.id) && !shared.some((s) => s.id === c.id))]
+    .sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  // nothing shared yet: the empty cell stays, the same one, so typing into it is not interrupted
+  cells = next.length ? next : cells.length === 1 && !cells[0].text ? cells : blank();
+  paint(); run(300);
 }
 function paintBar() {
-  const n = peers.filter((p) => p.presence?.nb === here()).length;
+  const n = peers.filter((p) => p.presence?.nb === mode).length;
   const who = n ? `<span class="mute">${n === 1 ? '1 other person' : `${n} other people`} here</span>` : '';
-  if (!db) { bar.innerHTML = `<span class="say mute">This notebook is kept in this browser.</span>`; return; }
-  if (mode === 'shared') { bar.innerHTML = `<span class="live">Shared notebook</span>${who}<span class="say mute">${readOnly ? 'You can read it; editing is not allowed for you here.' : 'Everyone here edits it; a cell someone is in shows their initials.'}</span>`; return; }
-  bar.innerHTML = shared.length ? `<button type="button" class="primary" id="join">Open the shared notebook</button><span class="say mute">You are looking at an example on your own.</span>`
-    : sharedSeen ? `<button type="button" class="primary" id="start">Start shared notebook from this example</button><span class="say mute">No shared notebook yet: this makes one everyone here edits.</span>` : '<span class="say mute">Looking for a shared notebook…</span>';
-  bar.querySelector('#join')?.addEventListener('click', joinShared);
-  bar.querySelector('#start')?.addEventListener('click', () => void startShared());
+  bar.innerHTML = mode === 'shared' ? `<span class="live">Shared notebook</span>${who}<span class="say mute">${readOnly ? 'You can read it; editing is not allowed for you here.' : 'Everyone here edits it; a cell someone is in shows their initials.'}</span>`
+    : '<span class="say mute">This notebook is kept in this browser.</span>';
 }
 
 // ------------------------------------------------------------ who is here (room, user): ids only, names as each viewer's page resolves them
 let peers: Cap[] = [];
 const names = new Map<string, { name: string; color: string }>();
-const here = () => mode === 'shared' ? 'shared' : `ex:${example}`;
-function presence() { if (room) void room.presence({ nb: here(), cell: editing, uid: me.id }).catch(() => {}); paintBar(); }
+function presence() { if (room) void room.presence({ nb: mode, cell: editing, uid: me.id }).catch(() => {}); paintBar(); }
 async function heardPeers(ps: Cap[]) {
   peers = ps.filter((p) => !p.sameTab);
   const ids = [...new Set(peers.map((p) => p.by ?? p.presence?.uid).filter((x): x is string => typeof x === 'string' && !names.has(x)))];
@@ -329,7 +296,7 @@ async function heardPeers(ps: Cap[]) {
 function paintPeers() {
   for (const el of book.querySelectorAll<HTMLElement>('.peers')) el.innerHTML = '';
   for (const p of peers) {
-    if (p.presence?.nb !== here() || typeof p.presence?.cell !== 'string') continue;
+    if (p.presence?.nb !== mode || typeof p.presence?.cell !== 'string') continue;
     const at = elOf(p.presence.cell)?.querySelector('.peers'); if (!at) continue;
     const n = names.get(p.by ?? p.presence.uid) ?? { name: p.isMe ? 'You, in another tab' : 'Someone', color: '' };
     const initials = n.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -338,18 +305,14 @@ function paintPeers() {
 }
 
 // ------------------------------------------------------------ the page's own controls
-const picker = $<HTMLSelectElement>('example');
-picker.innerHTML = EXAMPLES.map((e) => `<option value="${e.name}">${esc(e.title)}</option>`).join('');
-picker.value = example;
-picker.addEventListener('change', () => void open(picker.value));
-$('reset').addEventListener('click', () => void open(mode === 'shared' ? example : picker.value, true));
+$('hint').innerHTML = `A sentences cell, its parts a blank line apart: ${HINT.split(/\n\n+/).map((p) => `<code>${esc(p)}</code>`).join(' ')}`;
 $('runall').addEventListener('click', () => run(0));
 document.querySelector('.adds')!.addEventListener('click', (e) => { const k = (e.target as HTMLElement).closest<HTMLElement>('[data-add]')?.dataset.add; if (k) add(k as Kind, cells.at(-1)?.id); });
 $('oclose').addEventListener('click', closeOverlay);
 $('ofit').addEventListener('click', () => pz?.fit());
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('overlay').hidden) closeOverlay(); });
 
-await open(example);
+paint(); run(0);
 
 // each capability as it resolves; the page above already works without any of them
 void use('sample').then((s) => { sample = s; paint(); if (ran) { drawn.clear(); paintOuts(); } });
@@ -361,9 +324,7 @@ void use('user').then(async (u) => {
 });
 void use('room').then((r) => { room = r; if (!r) return; r.onPeers((ch: { peers: Cap[] }) => void heardPeers([...ch.peers]), () => {}); presence(); });
 void use('db').then((d) => {
-  db = d; paintBar(); if (!d) return;
-  d.collection('notebooks/shared/cells').onSnapshot((snap: { docs: { id: string; data(): any }[] }) => {
-    const first = !sharedSeen; heard(snap.docs);
-    if (first && shared.length && (asked === '' || asked === 'shared') && mode === 'local') joinShared();
-  }, () => { db = null; paintBar(); });
+  if (!d) return;
+  db = d; mode = 'shared'; cells = blank(); drawn.clear(); presence(); paint();
+  d.collection('notebooks/shared/cells').onSnapshot((snap: { docs: { id: string; data(): any }[] }) => heard(snap.docs), () => { db = null; mode = 'local'; paint(); });
 });

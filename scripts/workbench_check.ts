@@ -2,7 +2,7 @@
 // says its verdicts, each coloured by its meaning; every draw gives a picture with marks and its failing tag; a translation whose first cell checks
 // nothing is asked again and its second kept. Then each planted defect, made in a copy of the build, must turn it red for its own reason.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -12,13 +12,15 @@ const built = path.join(tmp, 'as-built');
 const b = spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/workbench.ts'), '--out', built], { encoding: 'utf8', timeout: 60_000 });
 if (b.status !== 0) { console.error(b.stdout, b.stderr); process.exit(1); }
 
-/** What each example must say: the lines that fail, the pictures it draws and the tag a failing never gives them. */
+/** What each notebook of examples/visual must say, run through the built modules (they are not published): the lines that fail, the pictures it
+ *  draws and the tag a failing never gives them. */
 const WANT: Record<string, { fails: string[]; draws: number; moves?: string }> = {
-  platform: { fails: ['never A calls up to B', 'never A reaches into B'], draws: 2, moves: '1 line moves' },
+  'platform-whatif': { fails: ['never A calls up to B', 'never A reaches into B'], draws: 2, moves: '1 line moves' },
   'paint-shop': { fails: ['never M is tagged `unpainted`', 'never N dangles'], draws: 1 },
-  outage: { fails: ['never A is late'], draws: 1 },
-  coverage: { fails: ['never unqueued(K, L)'], draws: 1 },
+  'outage-timeline': { fails: ['never A is late'], draws: 1 },
+  'coverage-heatmap': { fails: ['never unqueued(K, L)'], draws: 1 },
 };
+const example = (name: string) => readFileSync(path.join(ROOT, 'examples/visual', `${name}.rofl.md`), 'utf8');
 const HOLDS = 'A container A neglects a container B if A owns B, unless A calls B.\n\nnever A neglects B';
 const NATURAL = 'Only the service that owns a database may call it.';
 const VACUOUS = 'A container A is a risky caller if A calls `billing_dbb`, unless A owns some container.\n\nnever A is a risky caller';
@@ -34,9 +36,7 @@ async function problems(dir: string): Promise<string[]> {
   const cellsOf = (text: string) => wb.split(text).map((c: object) => ({ id: `c${++n}`, ...c }));
   const html = (l: object) => wb.line(l, []);
   for (const [name, want] of Object.entries(WANT)) {
-    const text = await bench.example(name).catch(() => undefined);
-    if (!text) { bad.push(`${name}: the example is not published`); continue; }
-    const ran = await bench.run(cellsOf(text)), lines = ran.result.cells.flatMap((c: { lines: object[] }) => c.lines) as { text: string; verdict: string; kind: string; total: number; view?: { marks: Record<string, { tags: string[] }>; cells?: { tags: string[] }[] } }[];
+    const ran = await bench.run(cellsOf(example(name))), lines = ran.result.cells.flatMap((c: { lines: object[] }) => c.lines) as { text: string; verdict: string; kind: string; total: number; view?: { marks: Record<string, { tags: string[] }>; cells?: { tags: string[] }[] } }[];
     if (ran.head.errors.length) bad.push(`${name}: not read: ${ran.head.errors.join('; ')}`);
     const fails = lines.filter((l) => l.verdict === 'fails').map((l) => l.text);
     if (fails.join('|') !== want.fails.join('|')) bad.push(`${name}: fails ${JSON.stringify(fails)}, not ${JSON.stringify(want.fails)}`);
@@ -52,9 +52,13 @@ async function problems(dir: string): Promise<string[]> {
     if (want.moves && !lines.some((l) => l.kind === 'excise' && html(l).includes(want.moves!))) bad.push(`${name}: the what-if does not say ${want.moves}`);
   }
   // a never that holds, in the colour of one that holds, and each verdict's colour a token of its own
-  const platform = cellsOf(await bench.example('platform'));
+  const platform = cellsOf(example('platform-whatif'));
   const held = (await bench.run([...platform, { id: 'h', kind: 'rofl', text: HOLDS }])).byCell.get('h')?.lines[0];
   if (held?.verdict !== 'holds' || !html(held).includes('<span class="verdict pass">✓ holds')) bad.push(`a never that holds is not drawn as one: ${held ? html(held).slice(0, 160) : 'no line'}`);
+  // the page's hint is one sentences cell with no front matter: it reads the graph's words by default, holds, and draws
+  const hint = (await bench.run([{ id: 'hint', kind: 'rofl', text: wb.HINT }])), hl = hint.byCell.get('hint');
+  if (hint.result.status !== 'ok' || hl?.lines.map((l: { verdict: string }) => l.verdict).join(' ') !== 'holds answers' || !Object.keys(hl.lines[1].view?.marks ?? {}).length) bad.push(`the hint does not read, hold and draw: ${hint.result.status}; ${JSON.stringify([...hint.head.errors, ...hl?.errors ?? []])}`);
+  if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
   // a translation by a model that first writes a cell checking nothing, then one that checks something
@@ -73,13 +77,14 @@ let red = 0;
 const say = (ok: boolean, what: string, detail = '') => { if (!ok) red++; console.log(`${ok ? 'ok  ' : 'RED '} ${what}${ok || !detail ? '' : `\n     ${detail}`}`); };
 const t0 = performance.now();
 const asBuilt = await problems(built);
-say(!asBuilt.length, 'as built: every example says its verdicts in their colours, draws its failing marks, and a vacuous translation is asked again', asBuilt.join('\n     '));
+say(!asBuilt.length, 'as built: every example of examples/visual says its verdicts in their colours and draws its failing marks, the hint reads and draws, no example is published, and a vacuous translation is asked again', asBuilt.join('\n     '));
 
 /** A copy of the build with one defect; red, and for the reason `why` names. */
 const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the vocabularies left out of the build', (d) => rmSync(path.join(d, 'visual'), { recursive: true }), /rofl:visual\/graph\.rofl\.md: not published with the page/],
   ['the verdict classes flattened', (d) => spoil(d, 'lib/kernel.js', "fails: ['fail',", "fails: ['pass',"), /is not drawn as a failing verdict/],
   ['the verdict colours flattened', (d) => spoil(d, 'index.html', '.verdict.fail { color: var(--fail); }', '.verdict.fail { color: var(--fg); }'), /does not colour \.verdict\.fail/],
+  ['an example published', (d) => cpSync(path.join(ROOT, 'examples/visual/paint-shop.rofl.md'), path.join(d, 'examples/paint-shop.rofl.md'), { recursive: true }), /examples are published with the page/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {
