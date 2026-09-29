@@ -5,7 +5,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
-import { parseFront } from '../notebook/front.ts';
+import { builtin, parseFront } from '../notebook/front.ts';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -15,7 +15,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
  *  but not loaded, since each model file is a world of its own already and loading the JS model file by file costs about a minute. */
 export function worldFiles(mdPath: string): string[] {
   const out: string[] = [];
-  for (const r of parseFront(readFileSync(mdPath, 'utf8')).reads) { const p = path.resolve(path.dirname(mdPath), r); out.push(...(r.endsWith('.rofl.md') ? worldFiles(p) : [p])); }
+  for (const r of parseFront(readFileSync(mdPath, 'utf8')).reads) { const p = builtin(r) ? path.join(ROOT, builtin(r)!) : path.resolve(path.dirname(mdPath), r); out.push(...(r.endsWith('.rofl.md') ? worldFiles(p) : [p])); }
   return [...new Set([...out, roflFromMd(mdPath)])];
 }
 

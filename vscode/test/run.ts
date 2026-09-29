@@ -100,7 +100,7 @@ for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl
 const WHATIF: Visual[] = [...VISUAL.filter((x) => x.whatif), ...FORMS];
 const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n${frames || zoom ? `\n\`\`\`datalog\n${frames ?? ''}\n${zoom?.[0] ?? ''}\n\`\`\`\n` : ''}`));
 // a pinned layout: Pin layout writes the facts, and a notebook that reads them draws its marks there
-const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - ../../visual/graph.rofl.md', '  - ../../visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
+const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - rofl:visual/graph.rofl.md', '  - rofl:visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
 // a dialect is held to everything in its what-if copy alone, whose first picture is the notebook's own: one window less a dialect keeps test:vscode under two minutes
 const based = VISUAL.filter((x) => !x.look), pictures = based.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');

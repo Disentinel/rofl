@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/graph.rofl.md
+  - rofl:visual/graph.rofl.md
 ---
 
 # Overtime and burnout, drawn as causal loops

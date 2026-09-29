@@ -13,7 +13,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
-import { LIMIT, from, runFile, wall } from './cli.ts';
+import { LIMIT, from, readAt, runFile, wall } from './cli.ts';
 import { libFiles, parseFront } from './front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -106,7 +106,7 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
 function keptFor(file: string): string {
   try {
     const front = parseFront(readFileSync(file, 'utf8')), at = from(path.dirname(file));
-    return JSON.stringify([libFiles(path.relative(ROOT, file), front), front.reads.map(at), front.code.flatMap((g) => globSync(at(g))).sort()]);
+    return JSON.stringify([libFiles(path.relative(ROOT, file), front), front.reads.map(readAt(path.dirname(file))), front.code.flatMap((g) => globSync(at(g))).sort()]);
   } catch { return file; }
 }
 

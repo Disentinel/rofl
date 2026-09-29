@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/space.rofl.md
+  - rofl:visual/space.rofl.md
 ---
 
 # An office, drawn as a plan

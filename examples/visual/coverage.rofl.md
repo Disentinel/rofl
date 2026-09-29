@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/table.rofl.md
+  - rofl:visual/table.rofl.md
 ---
 
 # A coverage matrix, drawn

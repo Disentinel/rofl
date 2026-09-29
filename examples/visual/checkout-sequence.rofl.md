@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/time.rofl.md
+  - rofl:visual/time.rofl.md
 ---
 
 # A checkout, drawn as a sequence

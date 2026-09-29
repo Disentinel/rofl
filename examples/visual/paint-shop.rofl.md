@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/graph.rofl.md
+  - rofl:visual/graph.rofl.md
 ---
 
 # The paint shop, drawn

@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/time.rofl.md
+  - rofl:visual/time.rofl.md
 ---
 
 # An outage, drawn as a timeline

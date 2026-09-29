@@ -1,5 +1,5 @@
 // rofl-lsp --stdio — a language server for `.rofl` and `.rofl.md`: diagnostics, hover, definition, references, the outline, completion. What it knows is lsp/know.ts.
-// It reads the open texts, the model's files beside it, and the `.rofl` and `.rofl.md` files a front matter's `reads:` names and a `.rofl` file's `.rofl` neighbours
+// It reads the open texts, the model's files and the draw vocabularies beside it, and the `.rofl` and `.rofl.md` files a front matter's `reads:` names and a `.rofl` file's `.rofl` neighbours
 // are, once every link is followed, inside a workspace folder (with none, in the file's own directory). Nothing else: it runs no code, asks no model, opens no port,
 // never reads `code:`.
 import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
@@ -7,7 +7,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { know, type Known, type Site } from './know.ts';
-import { libFiles, MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+import { builtin, libFiles, MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
 import { Vocabulary } from '../src/say.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -32,8 +32,11 @@ function text(file: string): string | undefined | null {
   try { const s = statSync(file); return s.isFile() && s.size <= LARGEST ? readFileSync(file, 'utf8') : null; } catch { return undefined; }
 }
 const lib = (f: string) => LIB.has(f) ? text(path.join(ROOT, f)) : undefined;
-/** What a front matter's `reads:` names, from the file's directory as the kernel resolves it; only a `.rofl` or `.rofl.md`. */
-const readsOf = (file: string) => (name: string) => { const p = named(file, name); return allowed(p, file) ? text(p) : exists(p) ? null : undefined; };
+/** What a front matter's `reads:` names: a vocabulary shipped with ROFL, or from the file's directory as the kernel resolves it, only a `.rofl` or `.rofl.md`. */
+const readsOf = (file: string) => (name: string) => {
+  const b = builtin(name); if (b !== undefined) return b ? text(path.join(ROOT, b)) : undefined;
+  const p = named(file, name); return allowed(p, file) ? text(p) : exists(p) ? null : undefined;
+};
 const exists = (p: string) => { try { statSync(p); return true; } catch { return false; } };
 const named = (file: string, name: string) => path.resolve(path.dirname(file), name.replace(/^~(?=\/|$)/, os.homedir()));
 
@@ -52,7 +55,7 @@ const current = (uri: string) => due.has(uri) || !known.has(uri) ? analyse(uri) 
 /** The files a text stands on, each as the language server knows it: the model and what it reads for a `.rofl.md`, the kernel and the neighbours for a `.rofl`. */
 function around(uri: string, k: Known): [string, Known][] {
   const file = fileOf(uri), out: string[] = [];
-  if (k.front) out.push(...libFiles(file, k.front).model.map((f) => path.join(ROOT, f)), ...k.front.reads.map((r) => named(file, r)).filter((f) => allowed(f, file)));
+  if (k.front) out.push(...libFiles(file, k.front).model.map((f) => path.join(ROOT, f)), ...k.front.reads.flatMap((r) => { const b = builtin(r); return b ? [path.join(ROOT, b)] : b === null ? [] : [named(file, r)].filter((f) => allowed(f, file)); }));
   else {
     out.push(path.join(ROOT, 'boot.rofl'));
     const dir = path.dirname(file);

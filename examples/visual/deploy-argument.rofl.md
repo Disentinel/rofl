@@ -3,7 +3,7 @@ reads:
   - ../../rules/inquiry/terminology.rofl
   - ../../rules/inquiry/epistemic.rofl
   - deploy-case.rofl
-  - ../../visual/graph.rofl.md
+  - rofl:visual/graph.rofl.md
 ---
 
 # Should we ship: the argument, drawn

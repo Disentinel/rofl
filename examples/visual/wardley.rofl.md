@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/space.rofl.md
+  - rofl:visual/space.rofl.md
 ---
 
 # A value chain, drawn on a Wardley map

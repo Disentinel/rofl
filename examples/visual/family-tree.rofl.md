@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/notation.rofl.md
+  - rofl:visual/notation.rofl.md
 ---
 
 # A family, written as GEDCOM

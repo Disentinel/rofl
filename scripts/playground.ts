@@ -5,7 +5,7 @@ import { MODEL_FILES, PHRASE_FILES, translatorVocab, concernsOf } from '../playg
 import { NPC_FILES } from '../playground/npc_host.ts';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
-import { cellsOf, parseFront } from '../notebook/front.ts';
+import { builtin, cellsOf, parseFront } from '../notebook/front.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -70,7 +70,7 @@ const body = (t: string) => t.replace(/^---\n[\s\S]*?\n---\n/, '');
 const pictures = readdirSync(`${ROOT}examples/visual`).filter((f) => f.endsWith('.rofl.md')).sort().map((f) => {
   const text = read(`examples/visual/${f}`), dir = 'examples/visual/';
   const reads = parseFront(text).reads.map((r) => {
-    const t = read(new URL(r, `file://${ROOT}${dir}`).pathname.slice(ROOT.length));
+    const t = read(builtin(r) ?? new URL(r, `file://${ROOT}${dir}`).pathname.slice(ROOT.length));
     return r.endsWith('.rofl.md') ? { kind: 'formal', text: body(t) } : { kind: 'rofl', text: t };
   });
   const cells = cellsOf(text).slice(1).map((c) => ({ kind: c.kind === 'datalog' ? 'rofl' : c.kind === 'natural' ? 'natural' : 'formal', text: c.text }));

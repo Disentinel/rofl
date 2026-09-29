@@ -2,7 +2,7 @@
 reads:
   - ../spat/spat.rofl
   - ../spat/week.example.rofl
-  - ../../visual/time.rofl.md
+  - rofl:visual/time.rofl.md
 ---
 
 # The SPAT week, a day a frame

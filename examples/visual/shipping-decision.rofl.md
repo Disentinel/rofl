@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/table.rofl.md
+  - rofl:visual/table.rofl.md
 ---
 
 # Shipping rules, drawn as a decision table

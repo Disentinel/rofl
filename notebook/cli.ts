@@ -10,7 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel, nearest, unresolvedSaid, type NbLine, type NbResult } from './kernel.ts';
-import { cellsOf, codeNames, libFiles, parseFront, translated, type NbCell } from './front.ts';
+import { builtin, cellsOf, codeNames, libFiles, NOT_BUILTIN, parseFront, translated, type NbCell } from './front.ts';
 import { worldOf, type Inputs } from './world.ts';
 import { concernsOf, homeOf, translatorVocab } from '../playground/host.ts';
 import { viaDaemon } from './serve.ts';
@@ -30,6 +30,8 @@ export const wall = () => { const end = performance.now() + LIMIT; return () => 
 
 /** A path the front matter names, from the notebook's directory `dir`: relative to it, or absolute, or from home. */
 export const from = (dir: string) => (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));
+/** What a `reads:` name is: a vocabulary shipped with ROFL (front.ts builtin), else a path from `dir`; null for a `rofl:` name that is none. */
+export const readAt = (dir: string) => (r: string): string | null => { const b = builtin(r); return b === undefined ? from(dir)(r) : b && path.join(ROOT, b); };
 
 /** Every file the notebook names, read; what could not be read is said, not skipped. `unsaved`: an editor's text for a file, by its absolute path, read instead of the disk.
  *  `outside`: the names in its front matter that reach out of the notebook's folder, which a notebook from someone else can use to show a file of yours. */
@@ -40,7 +42,7 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const lib: Record<string, string> = {}, reads: Record<string, string> = {}, code: Record<string, string> = {};
   const want = libFiles(path.relative(ROOT, path.resolve(file)), front);
   for (const f of [...want.model, ...want.phrases]) { const t = read(path.join(ROOT, f)); if (t !== undefined) lib[f] = t; }
-  for (const r of front.reads) { const t = read(at(r)); if (t !== undefined) reads[r] = t; }
+  for (const r of front.reads) { const p = readAt(dir)(r); if (p === null) { errors.push(NOT_BUILTIN(r)); continue; } const t = read(p); if (t !== undefined) reads[r] = t; }
   const found: string[] = [];
   for (const g of front.code) {
     const hits = globSync(at(g)).sort();
@@ -50,7 +52,7 @@ export function inputs(file: string, text: string, unsaved: Record<string, strin
   const names = codeNames(path.resolve(file), found.map((p) => path.resolve(p)));
   const paths: Record<string, string> = {};
   for (const p of found) { const t = read(p); if (t !== undefined) code[names[path.resolve(p)]] = t; paths[names[path.resolve(p)]] = path.resolve(p); }
-  const outside = [...front.reads, ...front.code].filter((p) => { const r = path.relative(dir, at(p)); return r === '..' || r.startsWith(`..${path.sep}`) || path.isAbsolute(r); });
+  const outside = [...front.reads.filter((r) => builtin(r) === undefined), ...front.code].filter((p) => { const r = path.relative(dir, at(p)); return r === '..' || r.startsWith(`..${path.sep}`) || path.isAbsolute(r); });
   return { input: { lib, reads, code, data: dataFiles(paths, code) }, errors, paths, outside };
 }
 

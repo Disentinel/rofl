@@ -9,11 +9,12 @@ import { availableParallelism, tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { know, type Known } from './know.ts';
+import { builtin } from '../notebook/front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), t0 = performance.now();
 const get = (p: string) => { try { return readFileSync(p, 'utf8'); } catch { return undefined; } };
 const lib = (f: string) => get(path.join(ROOT, f));
-const knownAt = (f: string, text = readFileSync(path.join(ROOT, f), 'utf8')) => know(path.join(ROOT, f), text, lib, (r) => get(path.resolve(path.dirname(path.join(ROOT, f)), r)));
+const knownAt = (f: string, text = readFileSync(path.join(ROOT, f), 'utf8')) => know(path.join(ROOT, f), text, lib, (r) => get(builtin(r) ? path.join(ROOT, builtin(r)!) : path.resolve(path.dirname(path.join(ROOT, f)), r)));
 
 // the files that are refused as they are, with why; a golden world among them is refused in facts/goldens.rofl too
 const REFUSED: Record<string, string> = {
@@ -141,6 +142,8 @@ const MUTANTS: Record<string, [RegExp, string]> = {
   'references give the heads': [/\(!s\.def \|\| context\?\.includeDeclaration\)/, '(s.def || context?.includeDeclaration)'],
   'reads through a link': [/return allowed\(p, file\) \? text\(p\)/, 'return ours(p) ? text(p)'],
   'reads outside the workspace': [/roots\.some\(\(x\) => under\(r, real\(x\) \?\? x\)\)/, 'true'],
+  'no shipped vocabulary': [/if \(b !== undefined\) return b \? text\(path\.join\(ROOT, b\)\) : undefined;/, ''],
+  'a rofl: name as a path from the root': [/return b \? text\(path\.join\(ROOT, b\)\) : undefined;/, 'return text(path.join(ROOT, name.slice(5)));'],
   'waits on a huge frame': [/process\.exit\(1\); \}/, '}'],
   'deaf after junk': [/buf = buf\.subarray\(c > 0 \? c : h \+ 4\)/, 'buf = buf.subarray(h + 4)'],
   'outline empty': [/return \(k\?\.sites \?\? \[\]\)\.filter\(\(s\) => s\.def/, 'return (k?.sites ?? []).filter((s) => !s.def'],
@@ -154,7 +157,8 @@ const conversations = () => Promise.all([['as it is', SERVER] as const, ...Objec
   return [name, f] as const;
 })].map(async ([name, f]) => { try { const [r, c, w] = await Promise.all([converse(f), confined(f), framing(f)]); return { name, red: [...judge(r), ...c, ...w] }; } finally { if (f !== SERVER) rmSync(f, { force: true }); } }));
 
-// 4. what the server will not read: a link named .rofl to a file outside the workspace, and a .rofl outside it, next to a .rofl inside it that it reads
+// 4. what the server will not read: a link named .rofl to a file outside the workspace, a .rofl outside it and a `rofl:` name that is no vocabulary,
+// next to a .rofl inside it and a shipped vocabulary that it reads
 async function confined(server: string): Promise<string[]> {
   const tmp = mkdtempSync(path.join(tmpdir(), 'rofl-lsp-')), ws = path.join(tmp, 'ws'), out = path.join(tmp, 'outside'), TOKEN = 'canary_7f3a9e';
   try {
@@ -165,7 +169,7 @@ async function confined(server: string): Promise<string[]> {
     const md = pathToFileURL(path.join(ws, 'nb.rofl.md')).href, a = pathToFileURL(path.join(ws, 'a.rofl')).href;
     const said = await node([server, '--stdio'], frames([
       { id: 1, method: 'initialize', params: { rootUri: pathToFileURL(ws).href, capabilities: {} } },
-      { method: 'textDocument/didOpen', params: { textDocument: { uri: md, languageId: 'markdown', version: 1, text: '---\nreads: [creds.rofl, ok.rofl, ../outside/plain.rofl]\n---\n\nA thing X is odd if X is odd.\n' } } },
+      { method: 'textDocument/didOpen', params: { textDocument: { uri: md, languageId: 'markdown', version: 1, text: '---\nreads: [creds.rofl, ok.rofl, ../outside/plain.rofl, rofl:visual/graph.rofl.md, rofl:visual/../package.json]\n---\n\nA thing X is odd if X is odd.\n' } } },
       { method: 'textDocument/didOpen', params: { textDocument: { uri: a, languageId: 'rofl', version: 1, text: 'a(1).\n' } } },
       { id: 2, method: 'textDocument/completion', params: { textDocument: { uri: a }, position: { line: 0, character: 0 } } },
       { id: 3, method: 'shutdown' }, { method: 'exit' }]));
@@ -175,6 +179,9 @@ async function confined(server: string): Promise<string[]> {
       ...(said.includes(TOKEN) ? [`the canary ${TOKEN} is in what the server said`] : []),
       ...(!kept('creds.rofl') || !kept('../outside/plain.rofl') ? [`no warning for what it would not read: ${JSON.stringify(diags)}`] : []),
       ...(diags.some((d: any) => d.message.includes('ok.rofl')) || !labels.includes('okrel') ? [`the .rofl inside the workspace was not read: ${JSON.stringify(diags)} ${labels}`] : []),
+      // a vocabulary shipped with ROFL is read from outside the workspace; a `rofl:` name that is none is not read at all
+      ...(diags.some((d: any) => d.message.includes('rofl:visual/graph')) ? [`the shipped vocabulary was not read: ${JSON.stringify(diags)}`] : []),
+      ...(said.includes('Relation-Oriented') || !diags.some((d: any) => d.severity === 1 && d.message === 'rofl:visual/../package.json: not read') ? [`rofl:visual/../package.json was read or not refused: ${JSON.stringify(diags)}`] : []),
     ];
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }

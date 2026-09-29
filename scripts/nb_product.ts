@@ -323,7 +323,7 @@ const picMutants: [string, string][] = [
 const geo = (o: Out): { geometry: { type: string; coordinates: number[] }; properties: { mark: string; tags: string[] } }[] => { try { return JSON.parse(/```json\n([\s\S]*?)\n\s*```/.exec((o.stdout ?? '').replace(/^    /gm, ''))![1]).features; } catch { return []; } };
 const picture = ([, [f, ...rest]]: typeof PICTURE[number], root: string) => cli([VIS(root, f), ...rest], {}, root);
 // a what-if drawn: a retraction adds marks as well as removing them; a head close to a declared sentence is said
-const visNb = (name: string, cells: string) => { const f = path.join(tmp, name, 'n.rofl.md'); put(f, readFileSync(VIS(ROOT, 'paint-shop.rofl.md'), 'utf8').replace('../../visual/graph.rofl.md', path.join(ROOT, 'visual/graph.rofl.md')) + cells); return f; };
+const visNb = (name: string, cells: string) => { const f = path.join(tmp, name, 'n.rofl.md'); put(f, readFileSync(VIS(ROOT, 'paint-shop.rofl.md'), 'utf8') + cells); return f; };
 // zoom: a shut group drawn as one mark with its count, and the same run with a zoom that never shuts
 const zoomNb = visNb('draw-zoom', '\n```datalog\ncollapsed(shop).\n```\n'), zoomed = (o: Out) => has(o, 'm5["shop (3)"]') && has(o, 'm0 --> m5') && !has(o, '["blue"]');
 const zoomOff = drawMutant('draw-zoom', 'notebook/draw.ts', /if \(!shut\.size\) return v;/, () => 'return v;');

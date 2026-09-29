@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/time.rofl.md
+  - rofl:visual/time.rofl.md
 ---
 
 # Circuit breakers, drawn as a timing diagram

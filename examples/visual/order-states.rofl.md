@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/graph.rofl.md
+  - rofl:visual/graph.rofl.md
 ---
 
 # An order's life, drawn as a state machine

@@ -1,6 +1,6 @@
 ---
 reads:
-  - ../../visual/table.rofl.md
+  - rofl:visual/table.rofl.md
 ---
 
 # On-call rotations, drawn as an Euler diagram

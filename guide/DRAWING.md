@@ -17,7 +17,9 @@ GitHub draws.
    `visual/graph.rofl.md` (a mark, a link, a group), `visual/time.rofl.md`
    (a lane, an interval, a message), `visual/table.rofl.md` (a row, a
    column, a value), `visual/space.rofl.md` (a point, a box, an axis) and
-   `visual/notation.rofl.md` (a person, a birth, a family).
+   `visual/notation.rofl.md` (a person, a birth, a family). They ship with
+   ROFL, so a notebook names one without a path:
+   `reads: [rofl:visual/graph.rofl.md]`.
 2. **Say, in rules, what is a mark.** For example, "a car X is a node if X
    is on the line", or "X links to Y if X is to be painted Y". These rules
    are the adapter from your domain to the picture.
