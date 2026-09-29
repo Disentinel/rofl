@@ -24,7 +24,11 @@ exports.run = async () => {
     const runs = nb.getCells().filter((x) => ['rofl', 'datalog'].includes(x.document.languageId));
     await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end').catch((e) => bad.push(e.message));
     if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the result is not the packaged command line's --json`);
-    for (const x of runs) if (!x.outputs.length) bad.push(`${c.file}: cell ${x.index} has no output`);
+    for (const x of runs) if (!x.outputs.length && !c.view) bad.push(`${c.file}: cell ${x.index} has no output`);
+    // a picture's notebook may have a cell of facts alone, which says nothing; the picture is a view output with its marks, which the renderer draws
+    const marks = runs.flatMap((x) => x.outputs.flatMap((o) => o.items.filter((i) => i.mime === 'application/vnd.rofl.view+json').map((i) => Object.keys(JSON.parse(Buffer.from(i.data).toString()).view.marks).length)));
+    if (c.view && (!marks.length || marks.includes(0))) bad.push(`${c.file}: no picture with marks, ${JSON.stringify(marks)}`);
+    if (c.view) console.log(`${c.file}: drawn, ${marks.join(' + ')} marks`);
     console.log(`${c.file}: ${r.status}, ${runs.length} cells, ${runs.filter((x) => x.outputs.length).length} with output, load ${r.ms.load} ms, run ${r.ms.run} ms`);
   }
   // the language server of the installed extension: a broken rule is marked on its line, a hover says what a relation is; the window is left showing both

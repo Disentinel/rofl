@@ -15,6 +15,8 @@ const root = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')), 
 const ext = JSON.parse(readFileSync(path.join(ROOT, 'vscode/package.json'), 'utf8')), vsix = `${ext.name}-${ext.version}.vsix`;
 const NODE = '>=22.0.0', VSCODE = '^1.101.0';   // fs.globSync is Node 22; VS Code 1.101 is the first on Node 22 (Electron 35)
 const PKG = path.join(OUT, 'rofl-nb'), VSIX = path.join(OUT, 'vsix');
+// ROFL_DIST_BREAK, for vscode/test/dist.ts --break: `vocab` leaves the draw vocabularies out, `resolver` makes a `rofl:` name read as a path
+const BREAK = process.env.ROFL_DIST_BREAK;
 rmSync(OUT, { recursive: true, force: true });
 // the guide shows the tool's own output; a stale block is a build error, not a doc that lies
 execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
@@ -43,6 +45,7 @@ for (const f of seen) {
     if (!js.includes(play)) throw new Error(`${f}: the help no longer names the tutorial as the build expects`);
     js = js.replace(play, 'Copy and play ${path.join(ROOT, "examples/tutorial")} (6 short levels), from 1-what-ships.rofl.md.');
   }
+  if (BREAK === 'resolver' && f === 'notebook/front.ts') { const broken = js.replace("name.startsWith('rofl:')", 'false'); if (broken === js) throw new Error(`${f}: no resolver to break`); js = broken; }
   if (/from '(?!node:|\.)/.test(js)) throw new Error(`${f} imports a package the build does not carry`);
   mkdirSync(path.dirname(path.join(PKG, f)), { recursive: true });
   writeFileSync(path.join(PKG, f.replace(/\.ts$/, '.js')), js);
@@ -61,7 +64,12 @@ writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is 
 for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 const tutorial = (readdirSync(path.join(ROOT, 'examples/tutorial'), { recursive: true }) as string[]).filter((f) => f.endsWith('.md')).map((f) => `examples/tutorial/${f}`);
 const start = readdirSync(path.join(ROOT, 'examples/start')).map((f) => `examples/start/${f}`);
-for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js', ...tutorial, ...start]) {
+// the pictures a notebook draws: the vocabularies `reads: [rofl:visual/graph.rofl.md]` names, and their examples, but the one that reads the inquiry rules
+const visual = readdirSync(path.join(ROOT, 'visual')).filter((f) => f.endsWith('.rofl.md')).map((f) => `visual/${f}`);
+const drawn = readdirSync(path.join(ROOT, 'examples/visual')).filter((f) => !f.startsWith('deploy-')).map((f) => `examples/visual/${f}`);
+const spat = ['examples/spat/spat.rofl', 'examples/spat/week.example.rofl'];
+for (const f of BREAK === 'vocab' ? [] : visual) cpSync(path.join(ROOT, f), path.join(PKG, f));
+for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 'examples/notebook/small.rofl.md', 'examples/notebook/small.js', ...tutorial, ...start, ...drawn, ...spat]) {
   // a shipped notebook still tells the reader to run it from the checkout; point it at the installed command instead
   const text = f.endsWith('.md') ? readFileSync(path.join(ROOT, f), 'utf8').replace(/npm run nb -- (translate )?examples\/(notebook|tutorial)\//g, 'rofl-nb $1') : null;
   for (const dst of [path.join(PKG, f), path.join(OUT, f)]) {
@@ -72,6 +80,8 @@ for (const f of ['examples/review.rofl.md', 'examples/notebook/review.rofl.md', 
 const guide = (f: string) => readFileSync(path.join(ROOT, 'guide', f), 'utf8').replace(/<!-- (BEGIN|END) [^>]*-->\n/g, '');
 if (!guide('INSTALL.md').includes(`Node ${NODE.match(/\d+/)![0]} or later`) || !guide('INSTALL.md').includes(`VS Code ${VSCODE.slice(1).replace(/\.0$/, '')} or later`)) throw new Error(`guide/INSTALL.md does not ask for Node ${NODE} and VS Code ${VSCODE}`);
 for (const f of ['QUICKSTART.md', 'CONCEPTS.md', 'WRITING.md', 'AGENTS.md', 'CHEATSHEET.md', 'INSTALL.md', 'MODELS.md']) writeFileSync(path.join(PKG, f), guide(f));
+writeFileSync(path.join(PKG, 'DRAWING.md'), guide('DRAWING.md').replace(/\]\(\.\.\//g, ']('));
+cpSync(path.join(ROOT, 'guide/pictures'), path.join(PKG, 'pictures'), { recursive: true });
 writeFileSync(path.join(PKG, 'README.md'), guide('README-npm.md'));
 writeFileSync(path.join(OUT, 'INSTALL.md'), guide('INSTALL.md'));
 writeFileSync(path.join(PKG, 'package.json'), JSON.stringify({
