@@ -33,7 +33,8 @@ export function chartSvg(v: View): string {
     out.push(mark === 'bar' ? `<rect data-mark="${esc(p.id)}" class="${esc(tagsOf(v, p.id).join(' '))}" x="${cx(k) - band * 0.35}" y="${Math.min(y(p.y), y(0))}" width="${band * 0.7}" height="${Math.max(1, Math.abs(y(0) - y(p.y)))}" rx="2">${tip(v, p.id)}</rect>`
       : `<circle data-mark="${esc(p.id)}" class="${esc(tagsOf(v, p.id).join(' '))}" cx="${cx(k)}" cy="${y(p.y)}" r="5">${tip(v, p.id)}</circle>`);
     out.push(`<text x="${cx(k)}" y="${y(p.y) - 7}" text-anchor="middle" pointer-events="none">${p.y}</text>`);
-    if (tagsOf(v, p.id).length && !tilt) out.push(`<text x="${cx(k)}" y="${T + H + 30}" text-anchor="middle" class="axis" style="fill:var(--p-mute)">[${esc(tagsOf(v, p.id).join(', '))}]</text>`);
+    const tags = `[${tagsOf(v, p.id).join(', ')}]`, half = tags.length * 3.3;   // kept inside the picture at either end
+    if (tagsOf(v, p.id).length && !tilt) out.push(`<text x="${Math.max(half, Math.min(W - half, cx(k)))}" y="${T + H + 30}" text-anchor="middle" class="axis" style="fill:var(--p-mute)">${esc(tags)}</text>`);
   });
   return out.join('') + '</svg>';
 }

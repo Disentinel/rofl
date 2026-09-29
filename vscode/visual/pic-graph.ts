@@ -1,8 +1,8 @@
 // A graph (and its dialects) as Cytoscape laid out by ELK; a placed mark stays where the pinned layout put it.
 import { linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
-import { colour, features, layouts, tagsOf, type Hooks, type Picture } from './picture.ts';
+import { colour, features, fits, layouts, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
 
-declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
+declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; resize(): void; elements(): { renderedBoundingBox(): { x1: number; y1: number; x2: number; y2: number } }; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
   nodes(): { filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
 declare const ELK: new () => { layout(g: object): Promise<{ children: { id: string; x: number; y: number; width: number; height: number }[] }> };
 
@@ -74,7 +74,15 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
       { selector: ':selected', style: { 'overlay-color': c('--p-accent'), 'overlay-opacity': 0.15 } },
     ],
   });
-  cy.fit(undefined, 16);
+  // the box narrows and widens with the editor, and may have no size yet when drawn: the drawing is fitted to it whenever it changes
+  const box = el.firstChild as HTMLElement, fit = () => { cy.resize(); cy.fit(undefined, 16); };
+  fit();
+  new ResizeObserver(fit).observe(box);
+  fits.set(el, fit);
+  spills.set(el, () => {
+    const b = cy.elements().renderedBoundingBox(), w = box.clientWidth, h = box.clientHeight;
+    return b.x1 < -1 || b.y1 < -1 || b.x2 > w + 1 || b.y2 > h + 1 ? [`laid ${Math.round(b.x1)}..${Math.round(b.x2)} × ${Math.round(b.y1)}..${Math.round(b.y2)} in a box ${w} × ${h}`] : [];
+  });
   cy.on('tap', 'node[label != ""]', (e) => groups.has(e.target.id()) || tagsOf(v, e.target.id()).includes('collapsed') ? toggle(e.target.id()) : detail(e.target.id()));
   cy.on('tap', 'edge[fact]', (e) => detail(e.target.data('source'), e.target.data('fact')));
   features.set(el, () => entries.map((e) => `entry(${e.to}).`));

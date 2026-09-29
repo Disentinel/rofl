@@ -7,6 +7,8 @@ import type { NbCellOut, NbLine, NbResult } from '../notebook/kernel.ts';
 import type { View } from '../notebook/draw.ts';
 
 const FOLD = 10;   // answers shown under a line; the rest fold
+/** A verdict's colour by its meaning, as a class the renderer colours from the theme, and a glyph that says it without colour. */
+const SIGN: Partial<Record<NbLine['verdict'], [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'] };
 
 /** `views`: the cell's pictures, each an output of its own that the notebook renderer draws (vscode/visual/renderer.ts). */
 export type Shown = { md: string; err: string; ok: boolean; views?: View[] };
@@ -26,7 +28,8 @@ export function render(r: Run): { head: Shown; cells: Shown[] } {
       : `${items.slice(0, FOLD).join('\n')}\n\n<details><summary>${total - FOLD} more</summary>\n\n${[...items.slice(FOLD), ...more].join('\n')}\n\n</details>`;
   };
   const line = (l: NbLine) => {
-    const out = [`**${link(l.text)}**${VERDICT(l) ? ` — ${l.verdict === 'fails' ? `**${VERDICT(l)}**` : VERDICT(l)}` : ''}`];
+    const v = VERDICT(l), sign = SIGN[l.verdict], word = l.verdict === 'fails' ? `**${v}**` : v;
+    const out = [`**${link(l.text)}**${v ? ` — ${sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${word}</span>` : word}` : ''}`];
     if (l.answers.length) out.push(list(l.answers, l.total));
     if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total));
     if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);

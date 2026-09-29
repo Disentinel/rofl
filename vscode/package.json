@@ -23,7 +23,7 @@
   },
   "contributes": {
     "notebookRenderer": [
-      { "id": "rofl-view", "displayName": "ROFL picture", "entrypoint": "./visual/out/renderer.js", "mimeTypes": ["application/vnd.rofl.view+json"], "requiresMessaging": "optional" }
+      { "id": "rofl-view", "displayName": "ROFL picture", "entrypoint": "./visual/out/renderer.js", "mimeTypes": ["application/vnd.rofl.view+json", "application/vnd.rofl.said+markdown"], "requiresMessaging": "optional" }
     ],
     "notebooks": [
       {

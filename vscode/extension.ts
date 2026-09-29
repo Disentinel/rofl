@@ -7,11 +7,12 @@ import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
 import { lsp } from './lsp.ts';
 import { HARNESSES, standing } from '../notebook/model.ts';
-import { VIEW_MIME } from '../notebook/draw.ts';
+import { VIEW_MIME, type View } from '../notebook/draw.ts';
 import { backendOf } from '../notebook/draw-text.ts';
 import { writeFileSync } from 'node:fs';
 
-const TYPE = 'rofl-notebook';
+const TYPE = 'rofl-notebook', SAID_MIME = 'application/vnd.rofl.said+markdown';
+type Drawn = { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number]; panel?: boolean };
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
 let worker: Worker | undefined, seq = 0;
@@ -103,10 +104,14 @@ export function activate(ctx: vscode.ExtensionContext) {
   controller.executeHandler = (_cells, nb) => run(nb);
   // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
-  const laid = new Map<string, string[]>(), drawn = new Map<string, { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[] }[]>();   // what the renderer last reported of each notebook's pictures
+  const laid = new Map<string, string[]>(), drawn = new Map<string, Drawn[]>();   // what the renderer last reported of each notebook's pictures
+  const verdicts = new Map<string, { text: string; colour: string; around: string }[]>();   // and the colour each verdict in its outputs was drawn in
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.zoom', (nb: vscode.Uri, group: string) => pictures.postMessage({ zoom: group, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.drawn', (nb: vscode.Uri) => drawn.get(nb.toString()) ?? []));
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.verdicts', (nb: vscode.Uri) => verdicts.get(nb.toString()) ?? []));
+  // what a test asks of the notebook's pictures as a person would: `{ show: true }` presses Open in editor, `{ measure: true }` has each say again what it drew
+  ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.press', (nb: vscode.Uri, m: object) => pictures.postMessage({ ...m, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.pinLayout', (nb: vscode.Uri, facts: string) => {
     const file = besideNotebook(nb, '.layout.rofl', facts);
     void vscode.window.showInformationMessage(`ROFL: the layout is in ${file.slice(file.lastIndexOf('/') + 1)}; name it under reads: in the notebook's front matter to keep it.`, 'Open').then((a) => a && vscode.window.showTextDocument(vscode.Uri.file(file)));
@@ -118,14 +123,31 @@ export function activate(ctx: vscode.ExtensionContext) {
     return file;
   }));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.why', (literal: string, nb: vscode.Uri) => ask<string>('why', nb.fsPath, literal).catch((e: Error) => e.message)));
-  ctx.subscriptions.push(pictures.onDidReceiveMessage(async ({ editor, message: m }) => {
-    const nb = vscode.Uri.parse(String(m.notebook));
-    if (m.why !== undefined) return void pictures.postMessage({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) }, editor);
+  /** What a picture asks, from a notebook's output or from its own tab; `reply` answers it there. */
+  const hear = async (m: any, nb: vscode.Uri, reply: (r: object) => void) => {
+    if (m.why !== undefined) return reply({ id: m.id, text: await vscode.commands.executeCommand<string>('rofl-notebook.why', String(m.why), nb) });
+    if (m.verdicts !== undefined) verdicts.set(nb.toString(), [...(verdicts.get(nb.toString()) ?? []), ...m.verdicts]);
+    if (m.show !== undefined) showPicture(nb, m.show as View);
     if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
-    if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[] }]);
+    if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as Drawn]);
     if (m.notation !== undefined) void vscode.commands.executeCommand('rofl-notebook.openNotation', nb, String(m.ext), String(m.notation));
     if (m.pin !== undefined) void vscode.commands.executeCommand('rofl-notebook.pinLayout', nb, String(m.pin));
-  }));
+  };
+  ctx.subscriptions.push(pictures.onDidReceiveMessage(({ editor, message: m }) => hear(m, m.notebook ? vscode.Uri.parse(String(m.notebook)) : editor.notebook.uri, (r) => void pictures.postMessage(r, editor))));
+  /** A picture in an editor tab of its own, drawn by the renderer's modules (vscode/visual/panel.ts), sized to the tab. */
+  function showPicture(nb: vscode.Uri, view: View) {
+    const out = vscode.Uri.joinPath(ctx.extensionUri, 'visual', 'out');
+    const p = vscode.window.createWebviewPanel('rofl-picture', `${view.kind} · ${nb.path.slice(nb.path.lastIndexOf('/') + 1)}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [out], retainContextWhenHidden: true });
+    const w = p.webview, data = JSON.stringify({ view, notebook: nb.toString() }).replace(/</g, '\\u003c');
+    w.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${w.cspSource} https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data:">
+<style>html, body { height: 100%; margin: 0; } body { display: flex; flex-direction: column; gap: 6px; padding: 8px; box-sizing: border-box; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); font: 13px var(--vscode-font-family); }
+.tools { display: flex; gap: 10px; align-items: center; color: var(--vscode-descriptionForeground); } .tools button { font: inherit; padding: 3px 10px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 0; border-radius: 3px; cursor: pointer; }
+#pic { flex: 1; min-height: 0; display: flex; flex-direction: column; } #pic > .stage { flex: 1; min-height: 0; overflow: auto; } #pic > .stage > .cy { height: 100%; } #pic .stage svg { width: 100%; height: 100%; }
+#pic .frame .cy, #pic .frame-stage svg { height: 60vh; } #pic > details.as { flex: none; max-height: 25vh; overflow: auto; }</style></head>
+<body><div class="tools"><button type="button" id="fit">Fit</button><span>a wheel zooms, a drag pans</span></div><div id="pic"></div>
+<script type="application/json" id="view">${data}</script><script type="module" src="${w.asWebviewUri(vscode.Uri.joinPath(out, 'panel.js'))}"></script></body></html>`;
+    w.onDidReceiveMessage((m) => hear(m, nb, (r) => void w.postMessage(r)));
+  }
 
   async function run(nb: vscode.NotebookDocument) {
     const runs = runsOf(nb);
@@ -136,7 +158,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     // Stop: a run cannot be told anything while it computes, so its worker goes
     for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); e.token.onCancellationRequested(restart); }
     const out = (shown: Shown[]) => shown.flatMap((s) => [
-      ...(s.md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(s.md, 'text/markdown')])] : []),
+      // the answers: the renderer colours each verdict by its meaning; an editor without it shows the Markdown
+      ...(s.md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(s.md, SAID_MIME), vscode.NotebookCellOutputItem.text(s.md, 'text/markdown')])] : []),
       ...(s.err ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.stderr(s.err)])] : []),
       // a picture: the renderer draws the view; an editor without it shows the view as text
       ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString() }, VIEW_MIME),

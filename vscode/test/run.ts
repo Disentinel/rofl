@@ -1,5 +1,5 @@
 // npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
-// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms` over one group of cases; `-- --planted` the two windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --theme NAME` in that colour theme.
 import { runTests } from '@vscode/test-electron';
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -160,6 +160,11 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset'), /does not draw a upset with/],
   euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler'), /does not draw a euler with/],
   decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision'), /does not draw a decision with/],
+  // the verdicts all drawn in one colour; a picture's Open in editor gone, or its tab not opened; a graph not fitted again when its box narrows
+  verdict: ['render.ts', /\{ holds: \['pass', '\\u2713'\], fails: \['fail',/, "{ holds: ['pass', '\\u2713'], fails: ['pass',", first, /the verdicts are not coloured by meaning/],
+  show: ['visual/out/pictures.js', /\$\{h\.show \? '<button/, "${false ? '<button", named('paint-shop'), /Open in editor opened no picture in an editor tab/],
+  panel: ['extension.ts', /w\.html = `/, 'w.html = `<!-- nothing -->` || `', named('paint-shop'), /Open in editor opened no picture in an editor tab/],
+  fit: ['visual/out/pic-graph.js', /new ResizeObserver\(fit\)\.observe\(box\);/, '', named('claim-proof-whatif'), /the proof reaches past its picture/],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -167,9 +172,10 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
-const casesOf = (v: string) => BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases);
+const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined;
+const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
 // the command line's answer for each case a window will hold it against
 await Promise.all([...new Set(variants.flatMap(casesOf))].flatMap((c) => c.cli ? [cli(c.file, c.cli)] : []));
 
@@ -195,6 +201,9 @@ const one = async (v: string) => {
   const shot = v === 'as it is' ? process.argv[process.argv.indexOf('--shot') + 1] : undefined, shooting = process.argv.includes('--shot') && shot ? setInterval(() => {
     for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) { spawnSync('screencapture', ['-x', `${shot}-${k}.png`]); writeFileSync(`${shot}-${k}.done`, ''); }
   }, 300) : undefined;
+  // `--theme NAME`: the window in that colour theme, for a screenshot in it
+  const ti = process.argv.indexOf('--theme');
+  if (ti >= 0) put(path.join(tmp, `user-${v.replace(/ /g, '-')}`, 'User/settings.json'), JSON.stringify({ 'workbench.colorTheme': process.argv[ti + 1] }));
   const report = path.join(tmp, `report-${v.replace(/ /g, '-')}`), log = createWriteStream(path.join(tmp, `${v.replace(/ /g, '-')}.log`));
   try {
     await runTests({

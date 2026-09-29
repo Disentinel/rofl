@@ -2,6 +2,8 @@
 // Runs in a browser: no node, no VS Code API.
 import { linkTags, unquote, type DrawKind, type View } from '../../notebook/draw.ts';
 
+/** What a drawn picture says of itself, for a test to read back: `size` its stage, `spill` what reaches past a box. */
+export type Report = { frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number] };
 /** What the host of a picture does for it: explain a fact under a mark, keep a layout, load the graph libraries. */
 export type Hooks = {
   /** `why` of a view fact, written into `into` */
@@ -11,7 +13,9 @@ export type Hooks = {
   /** where a graph's marks were laid, as placed(M, X, Y) facts, each time it is drawn: what a test reads back */
   laid?(facts: string[]): void;
   /** what was drawn, once it is: the frames, each by its key, so a test can read the picture back */
-  drawn?(what: { frames: string[]; labels: string[]; laid: string[]; features: string[] }): void;
+  drawn?(what: Report): void;
+  /** the picture opened in an editor tab of its own, to pan and zoom */
+  show?(): void;
   /** a notation's standard file, opened for the domain's own tool: `ext` its file name's ending */
   open?(text: string, ext: string): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */
@@ -24,6 +28,10 @@ export type Picture = { kind: DrawKind; mount(el: HTMLElement, v: View, h: Hooks
 export const layouts = new WeakMap<HTMLElement, () => string[]>();
 /** What a dialect's look put in a drawn picture beyond its marks, as facts (entry(M) for a state machine's entry dot): what a test reads back. */
 export const features = new WeakMap<HTMLElement, () => string[]>();
+/** A graph's drawing fitted to its box again: what a Fit button does. */
+export const fits = new WeakMap<HTMLElement, () => void>();
+/** A graph's drawing against its box, as Cytoscape draws it: what reaches past the box's edges, said; nothing when all of it is in. */
+export const spills = new WeakMap<HTMLElement, () => string[]>();
 
 export const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const tagsOf = (v: View, id: string) => v.marks[id]?.tags ?? [];

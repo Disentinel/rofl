@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import ts from 'typescript';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-export const RENDERER = ['vscode/visual/renderer.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-moments.ts', 'vscode/visual/pic-charts.ts', 'vscode/visual/pic-space.ts', 'vscode/visual/pic-notation.ts', 'vscode/visual/pic-dialects.ts',
+export const RENDERER = ['vscode/visual/renderer.ts', 'vscode/visual/panel.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-moments.ts', 'vscode/visual/pic-charts.ts', 'vscode/visual/pic-space.ts', 'vscode/visual/pic-notation.ts', 'vscode/visual/pic-dialects.ts',
   'notebook/draw.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'notebook/draw-space.ts', 'notebook/draw-notation.ts', 'notebook/draw-forms.ts', 'notebook/draw-dialects.ts', 'notebook/draw-proof.ts'];
 
 export function buildRenderer(out = path.join(ROOT, 'vscode/visual/out')): string {

@@ -12,8 +12,8 @@ const cases: Case[] = JSON.parse(process.env.ROFL_NB_CASES!);
 const ID = ((m) => `${m.publisher}.${m.name}`)(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
 
 const strip = (r: any) => JSON.stringify({ status: r.status, errors: r.errors, cells: r.cells });
-const until = async <T>(get: () => T | undefined, ms: number, what: string): Promise<T> => {
-  for (const end = Date.now() + ms; Date.now() < end; await new Promise((f) => setTimeout(f, 100))) { const v = get(); if (v) return v; }
+const until = async <T>(get: () => T | undefined | Promise<T | undefined>, ms: number, what: string): Promise<T> => {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((f) => setTimeout(f, 100))) { const v = await get(); if (v) return v; }
   throw new Error(`waited ${ms} ms for ${what}`);
 };
 
@@ -41,6 +41,8 @@ export async function run() {
     const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
     if (nb.notebookType !== 'rofl-notebook') { bad.push(`${c.file}: opened as ${nb.notebookType}`); return; }
     await vscode.window.showNotebookDocument(nb);
+    // a picture is drawn with the side bar shut, and measured again with it open: narrower, it must still fit
+    if (c.pictures) await vscode.commands.executeCommand('workbench.action.closeSidebar');
     await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
     await vscode.commands.executeCommand('notebook.execute');
     const r = await until(() => api.result(nb.uri), 110_000, `a result for ${c.file}`);
@@ -80,6 +82,7 @@ export async function run() {
       if (!runs[i] || !said(runs[i]) && (k.lines.length || k.notes.length || k.errors.length)) bad.push(`${c.file}: kernel cell ${k.index} has no output in notebook cell ${runs[i]?.index}`);
       for (const l of k.lines) if (!said(runs[i]).includes(l.text.replace(/[\\[\]()]/g, '\\$&').replace(/</g, '&lt;'))) bad.push(`${c.file}: "${l.text}" is not in the output of the cell it was asked in`);
     });
+    await colours(nb, runs, said, c.file, bad);
     const errors = vscode.languages.getDiagnostics().flatMap(([u, ds]) => ds.filter((d) => d.severity === vscode.DiagnosticSeverity.Error).map((d) => ({ u, d })));
     const ours = errors.filter(({ u }) => runs.some((x) => x.document.uri.toString() === u.toString()));
     if (!c.fails) { if (ours.length) bad.push(`${c.file}: nothing fails, yet ${ours.length} errors are marked: ${ours.map((e) => e.d.message).join('; ')}`); }
@@ -120,6 +123,7 @@ export async function run() {
       for (const end = Date.now() + 45_000; !c.pictures.every((k) => reports.some((d) => d.kind === k)) && Date.now() < end; await new Promise((f) => setTimeout(f, 200))) reports = await vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
       const missing = c.pictures.filter((k) => !reports.some((d) => d.kind === k));
       if (missing.length) bad.push(`${c.file}: the renderer drew no ${missing.join(', ')} (it reported ${JSON.stringify(reports.map((d) => d.kind))})`);
+      await fitted(nb, c.file, reports.length, bad);
       if (c.look) {
         // the first report of the kind is the notebook's own picture as first painted: its groups shut as the notebook shuts them, its first frame
         const kind = c.pictures![0], d = reports.find((x) => x.kind === kind), z = zoom(drawn[0]), v0 = framesOf(z)?.[0].view ?? z;
@@ -172,6 +176,45 @@ export async function run() {
   if (extras && (planted || !bad.length)) await guard('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
+}
+
+/** Each verdict in its outputs as the renderer drew it: one colour a meaning, the three apart, none the colour of the text around it.
+ *  A cell is brought into view for each meaning not yet drawn, since an output out of view may not be. */
+async function colours(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[], said: (x: vscode.NotebookCell) => string, file: string, bad: string[]) {
+  type Seen = { text: string; colour: string; around: string };
+  const signs = (t: string) => [...t.matchAll(/class="verdict \w+">(\S)/g)].map((m) => m[1]), want = [...new Set(runs.flatMap((x) => signs(said(x))))];
+  let seen: Seen[] = [];
+  const get = async () => { seen = await vscode.commands.executeCommand<Seen[]>('rofl-notebook.verdicts', nb.uri); return seen; };
+  for (const g of want) {
+    const x = runs.find((y) => signs(said(y)).includes(g))!;
+    vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(x.index, x.index + 1), vscode.NotebookEditorRevealType.InCenter);
+    await until(async () => (await get()).some((v) => v.text.startsWith(g)) || undefined, 10_000, `a verdict ${g} drawn`).catch(() => {});
+  }
+  const by = new Map<string, Set<string>>();
+  for (const v of seen) by.set(v.text[0], (by.get(v.text[0]) ?? new Set()).add(v.colour));
+  const one = [...by.values()].map((cs) => [...cs][0]);
+  if (want.some((g) => !by.has(g)) || [...by.values()].some((cs) => cs.size !== 1) || new Set(one).size !== one.length || seen.some((v) => !v.colour || v.colour === v.around))
+    bad.push(`${file}: the verdicts are not coloured by meaning: ${JSON.stringify([...by].map(([g, cs]) => [g, [...cs]]))}, of ${JSON.stringify(want)}, around ${JSON.stringify([...new Set(seen.map((v) => v.around))])}`);
+}
+
+/** Every picture fits its box: drawn with the side bar shut, measured again with it open, and drawn in an editor tab of its own by its Open in editor, sized to the tab. */
+async function fitted(nb: vscode.NotebookDocument, file: string, n: number, bad: string[]) {
+  type Report = { kind: string; spill: string[]; size: [number, number]; panel?: [number, number] };
+  const reports = () => vscode.commands.executeCommand<Report[]>('rofl-notebook.drawn', nb.uri);
+  await vscode.commands.executeCommand('workbench.view.explorer');
+  await vscode.window.showNotebookDocument(nb);
+  await new Promise((f) => setTimeout(f, 800));
+  await vscode.commands.executeCommand('rofl-notebook.press', nb.uri, { measure: true });
+  const now = (await until(async () => { const r = (await reports()).slice(n); return r.length ? r : undefined; }, 10_000, 'the pictures measured again').catch(() => [])).filter((d) => !d.panel);
+  if (!now.length) bad.push(`${file}: no picture said what it drew when asked again`);
+  for (const d of now) if (d.spill.length) bad.push(`${file}: the ${d.kind} reaches past its picture: ${d.spill.join('; ')}`);
+  const m = (await reports()).length;
+  await vscode.commands.executeCommand('rofl-notebook.press', nb.uri, { show: true });
+  const shown = await until(async () => (await reports()).slice(m).find((d) => d.panel), 20_000, 'the picture in its tab').catch(() => undefined);
+  const tab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((x) => x.input instanceof vscode.TabInputWebview && x.input.viewType.endsWith('rofl-picture'));
+  if (!shown || !tab) bad.push(`${file}: Open in editor opened no picture in an editor tab (${tab ? 'a tab, no picture' : 'no tab'})`);
+  else if (shown.spill.length || shown.size[1] < shown.panel![1] / 2) bad.push(`${file}: the picture in its tab is not fitted to the tab: ${JSON.stringify(shown)}`);
+  if (tab) await vscode.window.tabGroups.close(tab);
 }
 
 /** What is checked once per window and is not a case: cells wrap, the notebook named at launch and one opened as a click opens it are notebooks, the language server answers. */
