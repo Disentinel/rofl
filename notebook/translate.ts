@@ -3,7 +3,6 @@
 import { cellsOf, translated, type NbCell } from './front.ts';
 import type { NbResult } from './kernel.ts';
 import type { Ask } from './model.ts';
-import { RESERVED } from '../src/reflect.ts';
 
 const FORM = `A cell is written in ROFL's Markdown sentence form:
 - A rule is one sentence ending in a period: "<head> if <condition>, <condition> and <condition>." A condition that must not hold follows "unless", after a comma: "<head> if <condition>, unless <condition>."
@@ -25,7 +24,6 @@ const FORM = `A cell is written in ROFL's Markdown sentence form:
 
   - \`writer\` sends \`pages\` to \`store\`.
   The anchor names the relation, one word with underscores (\`pipeline_config\`, never a hyphen); the sentence's nouns say what each hole holds; a row names things in backticks, lower-case and one word (\`webarchive_writer\`), and leaves the nouns out. A class is a sentence of its own, "- <a id="service"></a>A thing X is a service", with rows "- \`writer\` is a service.". Two declared sentences must differ in more than a noun: a row drops the nouns, so "C defines a match M" and "C defines a stage S" read as one; say "C defines the match M" and "C lists the stage S", and a row keeps those words: "- \`c1\` defines the match \`m1\`.". A sentence no rule, declaration or listed sentence gives is not read.
-- The kernel has words of its own for its relations: ${[...RESERVED].map((r) => `"${r.replace(/_/g, ' ')}"`).join(', ')}. Keep them out of a head ("C writes to D" is the kernel's): say "C stores into D", "C feeds D".
 - A picture is a line "draw <kind>": graph, architecture, state, process, causal, proof, time, timeline, timing, table, heatmap, chart, space. It draws only what rules conclude in the view's own sentences, which the notebook declares when it reads a view (for a graph: "A mark M is a node", "A mark M links to a mark N", "A mark M is inside a mark G", "A mark M is tagged a tag K", "A mark M is at the level I"). So a request to draw or diagram something is answered with rules that map its things onto those sentences, "A mark X is a node if X is a service." and "A mark X links to a mark Y if X calls Y.", and then the draw line.
 Write an asking line only when the request asks a question ("?", "why", "whynot") or states something that must hold ("never"); a cell that models, facts and definitions, asks nothing, and never lists with "?" what it defines. Say what must hold of any data, not of the rows there happen to be.`;
 

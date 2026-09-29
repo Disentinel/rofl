@@ -2,9 +2,10 @@
 // says its verdicts, each coloured by its meaning; every draw gives a picture with marks and its failing tag; a translation whose first cell checks
 // nothing is asked again and its second kept. Then each planted defect, made in a copy of the build, must turn it red for its own reason.
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { RESERVED } from '../src/reflect.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-workbench-'));
@@ -20,6 +21,10 @@ const WANT: Record<string, { fails: string[]; draws: number; moves?: string }> =
   'outage-timeline': { fails: ['never A is late'], draws: 1 },
   'coverage-heatmap': { fails: ['never unqueued(K, L)'], draws: 1 },
 };
+/** Every relation name outside a notebook: the kernel's boot and phrases, the shipped vocabularies and inquiry rules, the reflection's. */
+const OUTSIDE = [...new Set([...['boot.rofl', 'facts/phrases.rofl', 'visual/graph.rofl.md', 'visual/time.rofl.md', 'visual/table.rofl.md', 'visual/space.rofl.md', 'visual/notation.rofl.md',
+  ...readdirSync(path.join(ROOT, 'rules/inquiry')).map((f) => `rules/inquiry/${f}`)].flatMap((f) => [...readFileSync(path.join(ROOT, f), 'utf8').matchAll(/^([a-z_]\w*)(?:\[[^\]\n]*\])?\(|<a id="(\w+)"><\/a>/gm)].map((m) => m[1] ?? m[2])),
+  ...RESERVED])].filter((r) => /^[a-z]/.test(r)).sort();
 const example = (name: string) => readFileSync(path.join(ROOT, 'examples/visual', `${name}.rofl.md`), 'utf8');
 const HOLDS = 'A container A neglects a container B if A owns B, unless A calls B.\n\nnever A neglects B';
 const NATURAL = 'Only the service that owns a database may call it.';
@@ -75,7 +80,8 @@ async function problems(dir: string): Promise<string[]> {
   const label = (Object.values(reads?.lines.at(-1)?.view?.marks ?? {}) as { label: string }[]).map((m) => m.label).join();
   if (label !== 'w') bad.push(`a domain sentence "S reads F" relabelled a mark: it is drawn as ${JSON.stringify(label)}`);
   const links = (await bench.run([{ id: 'l', kind: 'rofl', text: 'A service S links to a service T if S is "a", T is "b".\n\ndraw graph' }])).byCell.get('l');
-  if (!links?.notes.some((n: string) => n.includes('reads as the picture\'s sentence'))) bad.push(`a domain sentence that reads as a picture's is not said: ${JSON.stringify(links?.notes)}`);
+  const drawnLinks = links?.lines[0]?.view?.facts.filter((f: { rel: string }) => f.rel === 'link').length ?? 0;
+  if (drawnLinks) bad.push(`a domain sentence about services drew as the picture's "links to": ${drawnLinks} links`);
   // newest first reverses what is shown, and neither the notebook's order nor its run
   const logical = cellsOf(example('platform-whatif')).map((c: object, i: number) => ({ ...c, order: (i + 1) * 10 })), before = JSON.stringify(logical);
   const view = wb.shown(logical, true), ran1 = JSON.stringify((await bench.run(logical)).result.cells);
@@ -102,14 +108,24 @@ async function problems(dir: string): Promise<string[]> {
   const kr = await bench.run([
     { id: 'w', kind: 'rofl', text: 'A component C writes to a component D if all of:\n  - C is "webarchive-writer";\n  - D is "S3".\n\nA component C writes to a component D if C is "webarchive-indexer", D is "WebarchiveIndex".\n\nA component C writes to a component D if C is "webarchive-writer", D is "webarchive-indexer".\n\nA component C sends a component P to a component D if C is "unblocker", P is "pages", D is "webarchive-writer".\n\n? A component writes to a component' },
     { id: 'p', kind: 'rofl', text: 'A mark M is a node if M writes to something.\n\nA mark M is a node if something writes to M.\n\nA mark M links to a mark N if M writes to N, unless M sends some component to N.\n\ndraw graph' },
-    { id: 'k', kind: 'datalog', text: '? writes_to(R, B)' },
     { id: 'x', kind: 'datalog', text: 'node(R) :- rule(R).\n\ndraw graph' }]);
+  const kq = (await bench.run([{ id: 'k', kind: 'datalog', text: '? writes_to(R, B)\n? writes_to[$kernel](R, B)' }])).byCell.get('k')?.lines ?? [];
   const rid = /\br[0-9a-f]{8}\b/, wq = kr.byCell.get('w')?.lines[0], pic = kr.byCell.get('p')?.lines[0]?.view;
   if (wq?.total !== 3 || wq.answers.some((a: { sentence: string }) => rid.test(a.sentence))) bad.push(`the owner's "writes to" does not give its 3 domain rows alone: ${wq?.total} rows`);
   if (!pic || Object.keys(pic.marks).length !== 4 || Object.keys(pic.marks).some((m) => rid.test(m))) bad.push(`the owner's picture is not its 4 components: ${JSON.stringify(Object.keys(pic?.marks ?? {}))}`);
-  if (kr.byCell.get('k')?.lines[0]?.verdict !== 'unasked') bad.push(`a kernel row reaches a ? answer: ${kr.byCell.get('k')?.lines[0]?.total} rows`);
+  if (kq[0]?.verdict !== 'unasked') bad.push(`a kernel row reaches a ? answer: ${kq[0]?.total} rows`);
+  if (!(kq[1]?.total > 30)) bad.push(`the kernel's rows asked by their book do not answer: ${kq[1]?.total}`);
   const xm = Object.keys(kr.byCell.get('x')?.lines[0]?.view?.marks ?? {});
-  if (xm.some((m) => rid.test(m)) || !kr.byCell.get('x')?.errors.some((e: string) => e.startsWith("rule is the kernel's own relation"))) bad.push(`a kernel row reaches a picture: ${xm.length} marks`);
+  if (xm.some((m) => rid.test(m)) || !kr.byCell.get('x')?.errors.some((e: string) => e.startsWith("rule is the kernel's, not this notebook's"))) bad.push(`a kernel row reaches a picture: ${xm.length} marks`);
+  // every relation outside the notebook, said as a domain sentence from its own words, is the notebook's own: its question answers the cell's one row
+  const leaks: string[] = [];
+  for (const rel of OUTSIDE) {
+    const w = rel.replace(/_/g, ' ').trim();
+    const ran = await bench.run([{ id: 'g', kind: 'rofl', text: `A thing X ${w} a thing Y if X is \`p\`, Y is \`q\`.\n\n? A thing ${w} a thing` }]);
+    const n = ran.byCell.get('g')?.lines[0]?.total ?? 0;
+    if (n !== 1) leaks.push(`${rel} ${n}`);
+  }
+  if (leaks.length) bad.push(`a domain sentence named like a relation outside the notebook does not answer its own one row (name, rows): ${leaks.join(', ')}`);
   if (existsSync(path.join(dir, 'examples'))) bad.push('examples are published with the page');
   const css = readFileSync(path.join(dir, 'index.html'), 'utf8');
   for (const [cls, token] of [['pass', '--pass'], ['fail', '--fail'], ['warn', '--warn']]) if (!css.includes(`.verdict.${cls} { color: var(${token}); }`)) bad.push(`the page does not colour .verdict.${cls} with var(${token})`);
@@ -167,8 +183,7 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['Cmd/Ctrl+Enter in natural not translating', (d) => spoil(d, 'lib/bench.js', "(kind === 'natural' ? 'translate' : 'run')", "'run'"), /Cmd\/Ctrl\+Enter in natural does not translate/],
   ['the empty-picture gate off', (d) => spoil(d, 'lib/translate.js', '...blank, ', ''), /a first cell that draws nothing was not refused/],
   ['the drawing paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'So a request to draw or diagram something is answered with rules', 'So'), /the prompt does not say how a picture is drawn/],
-  ['the label sentence as it was', (d) => spoil(d, 'visual/graph.rofl.md', 'A mark M is labelled S', 'A mark M reads S'), /relabelled a mark/],
-  ['the picture-sentence note off', (d) => spoil(d, 'lib/book.js', '...viewLike(clauses, phrases), ', ''), /reads as a picture's is not said/],
+  ['a head about other things bound to the vocabulary', (d) => spoil(d, 'lib/book.js', '[...unread, ...mis]', 'unread'), /a domain sentence about services drew as the picture's "links to"/],
   ['newest first changing the notebook', (d) => spoil(d, 'lib/bench.js', '[...cells].reverse()', 'cells.reverse()'), /newest first changed the notebook/],
   ['the facts paragraph out of the prompt', (d) => spoil(d, 'lib/translate.js', 'A fact is stated in a sentence the notebook declares first', 'A fact'), /the prompt does not say how a fact is declared/],
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
@@ -179,9 +194,9 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the translator appending ? lines', (d) => spoil(d, 'lib/translate.js', 'return { ...t, errors: [], cell, added', "return { ...attempt(cell + '\\n\\n? ' + asks[0]), errors: [], cell, added"), /\? lines were written into a cell that only models/],
   ['a ? list rendered unfolded', (d) => spoil(d, 'lib/bench.js', "(l.kind === 'answers' || l.verdict === 'fails')", "l.verdict === 'fails'"), /a \? list is rendered unfolded/],
   ['the top add row adding at the end', (d) => spoil(d, 'lib/bench.js', "(row === 'top') !== newest ? 'start' : 'end'", "newest ? 'start' : 'end'"), /the add rows do not add next to where they sit/],
-  ['the reader binding writes_to again', (d) => spoil(d, 'lib/book.js', 'RESERVED.has(s) ? `own_${s}` : s', 's'), /does not give its 3 domain rows alone/],
-  ['a kernel row let into a ? answer', (d) => spoil(d, 'lib/host.js', "KERNEL_BOOK.has(relOf(a.lit)) && !a.lit.includes('[$')", 'false'), /a kernel row reaches a \? answer/],
-  ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => KERNEL_BOOK.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
+  ['ownership off', (d) => { spoil(d, 'lib/host.js', 'const names = [...own].map(', 'const names = [].map('); spoil(d, 'lib/book.js', 'const id = prefix + name;', 'const id = name;'); }, /does not answer its own one row .*flows_to/],
+  ['a kernel row let into a ? answer', (d) => spoil(d, 'lib/host.js', 'this.foreign.has(relOf(a.lit)) && !/^\\w+\\[/.test(a.lit)', 'false'), /a kernel row reaches a \? answer/],
+  ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => this.foreign.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {

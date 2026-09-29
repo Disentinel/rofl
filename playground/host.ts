@@ -2,13 +2,13 @@
 // Runs the same in a worker, in a page and under node.
 import { Rofl } from '../src/api.ts';
 import { parseLiteral, parseProgram } from '../src/parser.ts';
-import { KERNEL_BOOK, ruleIdOf } from '../src/reflect.ts';
+import { KERNEL_BOOK, RESERVED, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
-import { collect, diff, status, KINDS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
+import { collect, diff, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
-import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
+import { readBook, homeOf, booksOf, OWN, type Cell, type Kind } from '../notebook/book.ts';
 import { varsOf, canonTerm, mka, type Clause, type Lit, type Term } from '../src/unify.ts';
 import type { FactRec, FactStore, Store } from '../src/store.ts';
 
@@ -129,6 +129,14 @@ const ground = (lit: string, b: Record<string, string>): string => lit.replace(/
 
 
 const relOf = (key: string) => key.slice(0, key.search(/[[(]/));
+/** The relations the renderer reads by name: the pictures' words and `unknown`, which tags what the model could not see. A notebook writes them. */
+const DRAWN = new Set([...VIEW_RELS, 'unknown']);
+/** What a notebook is told when it reads a relation that is not its own and no sentence it reads says. */
+const NOT_OURS = (rel: string, home: Record<string, string>) => `${rel} is the kernel's, not this notebook's: write ${rel}[${KERNEL_BOOK.has(rel) ? '$kernel' : home[rel] ?? 'main'}](...) to read its rows, or say it in the notebook's own sentence`;
+/** The kernel's tables a program writes by hand (reflect.ts KERNEL_BOOK says why): a notebook's own `edb(r).` is one of them, not a relation of its own. */
+/** A sentence or a literal as the writer wrote it: a relation the notebook introduced without the prefix that makes it its own. */
+const plain = (s: string) => s.replace(/\bnb__/g, '');
+const WRITTEN = new Set([...[...RESERVED].filter((r) => !KERNEL_BOOK.has(r)), 'phrase', 'sig', 'fun_phrase']);   // and the vocabulary's own: a cell's phrase(r, "...") gives r its sentence
 const NODE = /\bn[0-9a-f]{8}_\d+\b/g;
 type Concerns = { rules: Record<string, string>; rels: Record<string, string> };
 type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; text: string; rels: Set<string> };
@@ -197,12 +205,17 @@ export class Host {
   private concerns: Concerns = { rules: {}, rels: {} };   // a model relation -> the one book its rules write
   private shell: Rofl | null = null;   // the kernel alone, which the cells are evaluated in when they stand on the model without touching it
   private kernelRels = new Set<string>();
+  private said = new Set<string>();      // the relations a sentence of the model or a read vocabulary says
+  private foreign = new Set<string>();
+  private worldRels = new Set<string>();
+  private reown = (t: string) => t;      // a literal as the writer sees it, back to the name the last run gave it // the relations of the worlds the notebook reads, which an anchor of its own may give a sentence   // the kernel's and its boot's relations no sentence says: a notebook reads them only by naming their book
   private modelRels = new Set<string>();
   private scanned: Scanned | null = null;
   private base: Rofl | null = null;
   rows = 50;   // answers kept per line
 
-  init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string): { ok: boolean; diagnostics: string[]; ms: number } {
+  /** `boot`: the kernel's boot, whose relations a notebook reads only by naming their book; given apart from `kernel`, which also asks for the layered run. */
+  init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string, boot = kernel): { ok: boolean; diagnostics: string[]; ms: number } {
     const t = performance.now();
     // reuse is off: every run adds the cells' rules, which re-derives the stratum table and throws away all a reuse plan would keep, after paying seconds to plan it
     this.core = new Rofl({ space: 40_000_000, reuse: false });
@@ -211,6 +224,9 @@ export class Host {
     if (concernMap) this.concerns = concernMap;
     this.home = homeOf(model);
     this.model = model;
+    this.said = new Set([...phraseText.matchAll(/^phrase\((\w+),/gm)].map((m) => m[1]));
+    try { this.worldRels = relsOf(parseProgram(model)); } catch { this.worldRels = new Set(); }   // a model that does not parse is said by its load
+    this.foreign = new Set([...(boot !== undefined ? relsOf(parseProgram(boot)) : []), ...RESERVED].filter((r) => !this.said.has(r) && !WRITTEN.has(r)));
     this.scanned = this.base = null;
     this.shell = null;
     if (kernel !== undefined && l.ok) {
@@ -239,9 +255,16 @@ export class Host {
     const sc = this.code(files, data);
     const { facts, nodes, parseErrors } = sc;
     lap('scan');
-    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, readHome);
+    const { parts, read, learned, vocab: allVocab, close } = readBook(cells, this.phrases, readHome, true);
     lap('read');
-    const vocab = this.vocab = new Vocabulary(); vocab.blanks = true; vocab.addText(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n'));   // a phrase a cell declares answers in its own sentence
+    // what the notebook introduces is its own: every sentence it declares or names from its words, and every datalog head no sentence says
+    // an anchor that names a relation of a world the notebook reads (`<a id="uncovered">` over spat.rofl) gives it a sentence: that one stays the world's
+    const own = new Set(learned.flatMap((l) => /^phrase\((\w+),/.exec(l)?.[1] ?? []).filter((r) => !DRAWN.has(r) && (this.foreign.has(r) || !this.worldRels.has(r))));
+    for (const p of parts) if (p.c.form !== 'md' && !p.c.prose) { try { for (const cl of parseProgram(p.clauses)) if (!cl.head.perspExplicit && !this.said.has(cl.head.rel) && !WRITTEN.has(cl.head.rel) && !DRAWN.has(cl.head.rel) && (this.foreign.has(cl.head.rel) || !this.worldRels.has(cl.head.rel))) own.add(cl.head.rel); } catch {} }
+    const names = [...own].map((r) => r.startsWith(OWN) ? r.slice(OWN.length) : r).join('|');   // a datalog cell names a sentence's relation by its words
+    const owned = (t: string) => !names ? t : t.replace(new RegExp(`(?<![\\w$])(${names})(?=\\()`, 'g'), `${OWN}$1`).replace(new RegExp(`\\b(phrase|edb)\\((${names})([,)])`, 'g'), `$1(${OWN}$2$3`);
+    this.reown = owned;
+    const vocab = this.vocab = new Vocabulary(); vocab.blanks = true; vocab.addText(owned(allVocab + '\n' + parts.map((p) => p.c.form === 'md' ? '' : p.clauses).join('\n')));   // a phrase a cell declares answers in its own sentence
     const everywhere = new Set([...Object.keys(home), ...read.flatMap((r) => r?.defined ?? []), ...parts.flatMap((p) => p.c.form === 'md' ? [] : [...p.clauses.matchAll(/^([a-z_]\w*)(?:\[\w+\])?\(/gm)].map((m) => m[1]))]);
     const firstDef = new Map<string, number>();
     read.forEach((r, i) => { for (const rel of r?.defined ?? []) if (!firstDef.has(rel)) firstDef.set(rel, i); });
@@ -251,7 +274,7 @@ export class Host {
     const outs: CellOut[] = parts.map(({ c, clauses }, i) => {
       const errors: string[] = [], notes: string[] = [];
       const r = read[i];
-      const text = r ? r.rofl : clauses;
+      const text = owned(r ? r.rofl : clauses);
       if (r) {
         const items = r.problems.unparsed.flatMap((u) => u.startsWith('LIST ') ? [u.slice(5)] : []);
         if (items.length) errors.push(`not read: ${items.length === 1 ? 'a list item' : `${items.length} list items`} no line above introduces (${items.map((x) => `- ${x}`).join(' ')}): a list of facts goes under a plain line of its own ending in a colon, like "The cars:"`);
@@ -266,12 +289,12 @@ export class Host {
       try {
         texts[i] = text;
         const program = parseProgram(text);
-        // the kernel's own rows (which rule writes where) are read only where a cell names the kernel's book: unbooked, a domain word would reach them
-        const kernelRead = program.flatMap((cl) => [cl.head, ...cl.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])]).find((l) => KERNEL_BOOK.has(l.rel) && !l.perspExplicit);
-        if (kernelRead) { errors.push(`${kernelRead.rel} is the kernel's own relation: this cell is left out; write ${kernelRead.rel}[$kernel](...) to read the kernel's rows, or say it in other words`); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined }; }
+        // the kernel's relations and its boot's are read only where a cell names their book: unbooked, a word of the notebook would reach their rows
+        const foreign = program.flatMap((cl) => cl.body.flatMap((b) => b.t === 'bi' ? [] : [b.lit])).find((l) => this.foreign.has(l.rel) && !l.perspExplicit);
+        if (foreign) { errors.push(`${NOT_OURS(foreign.rel, home)}: this cell is left out`); texts[i] = ''; refused.add(i); return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined }; }
         for (const cl of program) {
           if (!cl.body.length) continue;
-          notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${cl.head.rel.replace(/_/g, ' ')}`);
+          notebook.set(ruleIdOf(cl), `notebook: cell ${i + 1} · ${plain(cl.head.rel).replace(/_/g, ' ')}`);
           const free = loose(cl);
           if (!(cl.head.rel in home)) continue;
           const lit = `${cl.head.rel}(${cl.head.args.map((a) => a.k === 'v' ? a.name : canonTerm(a)).join(', ')})`;
@@ -289,7 +312,7 @@ export class Host {
       } catch (e) { errors.push((e as Error).message.replace(/^line (\d+): (.*)$/, (m, n, why) => r ? `${why}, in the rule the reader made of this cell: ${text.split('\n')[Number(n) - 1]?.trim()}` : m)); texts[i] = ''; }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined };
     });
-    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => read[i] && a.kind !== 'draw' && !LITERAL.test(a.lit) ? { ...a, lit: read[i]!.literal(a.lit) ?? '' } : a));
+    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a) => a.kind === 'draw' ? a : { ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) }));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
     const over = [...reads].filter((r) => !heads.has(r));
     const layered = !!this.shell && Object.keys(files).length > 0
@@ -343,7 +366,7 @@ export class Host {
       seen.add(rel);
       for (const d of deps.get(rel) ?? []) { const why = under(d, say, true, seen); if (why) return why; }
     };
-    const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, which nothing defines` : undefined, false);
+    const restsOn = (rel: string) => under(rel, (r) => !deps.has(r) && !(r in home) && !this.modelRels.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, which nothing defines` : undefined, false);
     const unread = outs.map((o) => o.errors.length ? 'part of this cell was not read (its errors above)' : undefined);
     const seen = { failing: [] as string[][], blind: [] as string[][], unknown: [] as string[][] };   // the rows of the nevers, the unsures and unknown, as their terms
     // a cell's rule that met an expression it could not evaluate concluded nothing there, and the kernel said so only in its hole relation
@@ -352,9 +375,9 @@ export class Host {
       const at = rules.get(/\$rule\((\w+)\)/.exec(r.bindings.H)?.[1] ?? '');
       if (!at || holed.has(at.rel)) continue;
       holed.set(at.rel, r.bindings.R);
-      outs[at.cell].notes.push(`the rule for ${at.rel.replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
+      outs[at.cell].notes.push(`the rule for ${plain(at.rel).replace(/_/g, ' ')} met an expression it could not evaluate (${r.bindings.R}) and concluded nothing there`);
     }
-    const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${r.replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
+    const holedUnder = (rel: string) => under(rel, (r) => holed.has(r) ? `it rests on ${plain(r).replace(/_/g, ' ')}, whose rule could not evaluate an expression (${holed.get(r)})` : undefined, true);
     // a never over a cell's relation with exceptions (unless, differs from), every rule of which has a condition that finds no row on its own
     // (its variables apart): nothing reaches the exceptions, and the never holds whatever they say; the way a translation that wrote a name
     // where the model holds a string held. A rule with no exception whose condition finds nothing (no exec anywhere) is an answer, not this.
@@ -464,14 +487,14 @@ export class Host {
         if (!a.lit) { const w = bare(a.text.replace(/^\S+\s+/, ''), vocab); outs[i].errors.push(`${a.text}: ${w ? BARE(w) : 'no sentence reads this question'}`); continue; }
         if (a.kind === 'excise' || a.kind === 'draw') continue;
         try {
-          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: vocab.sayAll(y.text), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text) }); continue; }
-          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: vocab.sayAll(y.text), note: nameless(a.lit, a.text) }); continue; }
+          if (a.kind === 'why') { const y = w.why(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'why', text: a.text, lit: a.lit, rows: [], total: 0, ok: y.ok, why: plain(vocab.sayAll(y.text)), proof: y.ok ? this.explain(a.lit) : undefined, note: nameless(a.lit, a.text) }); continue; }
+          if (a.kind === 'whynot') { const y = w.whynot(a.lit); outs[i].lines.push({ unasked: unread[i], kind: 'whynot', text: a.text, lit: a.lit, rows: [], total: 0, ok: !y.holds, why: plain(vocab.sayAll(y.text)), note: nameless(a.lit, a.text) }); continue; }
         } catch (e) { outs[i].errors.push(`${a.text}: ${(e as Error).message}`); continue; }
         if (conjunction(a.lit)) { outs[i].errors.push(`${a.text}: a question is one literal; write a rule that joins these and ask its head`); continue; }
-        if (KERNEL_BOOK.has(relOf(a.lit)) && !a.lit.includes('[$')) { outs[i].lines.push({ unasked: `${relOf(a.lit)} is the kernel's own relation: ask ${relOf(a.lit)}[$kernel](...) to see the kernel's rows`, kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
+        if (this.foreign.has(relOf(a.lit)) && !/^\w+\[/.test(a.lit)) { outs[i].lines.push({ unasked: NOT_OURS(relOf(a.lit), home), kind: a.kind, text: a.text, lit: a.lit, rows: [], total: 0, ok: false }); continue; }
         const q = (base && !heads.has(relOf(a.lit)) ? base : f).query(a.lit);
         if (q.error) { outs[i].errors.push(`${a.text}: ${q.error}`); continue; }
-        const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal, sentence: vocab.say(literal) ?? literal }; });
+        const rows = q.rows.slice(0, this.rows).map((r) => { const literal = ground(a.lit, r.bindings); return { literal: plain(literal), sentence: plain(vocab.say(literal) ?? literal) }; });
         if (a.kind === 'never' || a.kind === 'unsure') seen[a.kind === 'never' ? 'failing' : 'blind'].push(...q.rows.map((r) => Object.values(r.bindings)));
         const note = !q.unpopulatable && (holedUnder(relOf(a.lit)) || a.kind !== 'unsure' && nameless(a.lit, a.text) || a.kind === 'never' && !q.rows.length && vacuous(relOf(a.lit))) || (q.unpopulatable ? `nothing in the model can put a row here: ${elsewhere(a.lit, this.model + '\n' + all) ?? 'check the name, the book and the number of arguments'}` : q.partial ? 'the budget ran out before every answer was found' : undefined);
         const above = outs[i].lines[outs[i].lines.length - 1];
@@ -489,7 +512,7 @@ export class Host {
       try { partial ||= g.evaluate(BUDGET).partial; } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
       const rows: Row[] = [], failing: string[][] = [];
       excised.set(i, { world: g, failing });
-      const said = (lit: string) => vocab.say(lit) ?? lit;
+      const said = (lit: string) => plain(vocab.say(lit) ?? lit);
       parts.forEach((_, j) => {
         if (refused.has(j)) return;
         for (const a of asks[j]) {
@@ -518,12 +541,12 @@ export class Host {
       from: (lit) => {
         const wit = proofsOf.store.witnessOf(keyOf(lit)); if (!wit) return null;
         const keys = wit.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []);
-        return { said: keys.map((k) => vocab.say(k) ?? k), terms: keys.flatMap((k) => parseLiteral(k).args.map(canonTerm)) };
+        return { said: keys.map((k) => plain(vocab.say(k) ?? k)), terms: keys.flatMap((k) => parseLiteral(k).args.map(canonTerm)) };
       },
       label: (t) => nodes[t] ? { label: nodes[t].label, at: [`${nodes[t].file}:${nodes[t].line}`] } : { label: termText(t) },
     });
     // a proof: the facts under each why of the cell, from the witnesses of the run
-    const proven = (r: Rofl): Proven => (k) => r.store.has(k) ? { said: vocab.say(k) ?? k, prems: r.store.witnessOf(k)?.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []) ?? [], terms: parseLiteral(k).args.map(canonTerm) } : null;
+    const proven = (r: Rofl): Proven => (k) => r.store.has(k) ? { said: plain(vocab.say(k) ?? k), prems: r.store.witnessOf(k)?.prems.flatMap((p) => p.t === 'fact' ? [p.key] : []) ?? [], terms: parseLiteral(k).args.map(canonTerm) } : null;
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       const goals = asks[i].filter((x) => x.kind === 'why').flatMap((x) => { try { return [keyOf(x.lit)]; } catch { return []; } });
@@ -578,9 +601,9 @@ export class Host {
   /** A proof as steps (playground/fold.ts), by the section of the model or the notebook cell each rule sits in. */
   explain(literal: string): Step | string {
     if (!this.last) return 'run the book first';
-    return fold(this.last.store, literal, {
+    return fold(this.last.store, this.reown(literal), {
       concernOf: (rid, key) => this.concerns.rules[rid] ?? this.notebook.get(rid) ?? this.concerns.rels[relOf(key)] ?? '',
-      say: (key) => this.vocab.say(key) ?? key,
+      say: (key) => plain(this.vocab.say(key) ?? key),
       entities: NODE,
       own: (c) => c.startsWith('notebook'),
     });
@@ -589,7 +612,7 @@ export class Host {
   /** `why` over the last run, without running again. */
   why(literal: string): string {
     if (!this.last) return 'run the book first';
-    return this.vocab.sayAll(this.last.why(literal).text);
+    return plain(this.vocab.sayAll(this.last.why(this.reown(literal)).text));
   }
 }
 

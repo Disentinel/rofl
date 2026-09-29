@@ -1,8 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
 import { readMd, type ReadResult } from '../scripts/read_md.ts';
-import { VIEW_RELS } from './draw.ts';
-import { RESERVED } from '../src/reflect.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -29,19 +27,19 @@ function split(text: string): { clauses: string; asks: Ask[] } {
   return { clauses: clauses.join('\n'), asks };
 }
 
+/** The prefix of a relation a notebook introduces: nothing outside a notebook is named with it, so what it introduces is its own. */
+export const OWN = 'nb__';
+
 /** A head the reader knew no sentence for gets an anchor named from its words, `A call C is unawaited` -> `unawaited`, so the sentence declares a relation. */
-const words = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
+const slug = (head: string): string => head.replace(/\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b/g, ' ').replace(/`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b/g, ' ')
   .toLowerCase().replace(/\b(a|an|the|is|are)\b/g, ' ').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-/** The name, never one of the kernel's own relations: `C writes to D` named `writes_to` would write the kernel's table and read its rows. */
-const slug = (head: string): string => { const s = words(head); return RESERVED.has(s) ? `own_${s}` : s; };
-/** A head named from words that are the kernel's own, said. */
-export const kernelWords = (heads: string[]): string[] => heads.filter((h) => RESERVED.has(words(h))).map((h) => `'${words(h).replace(/_/g, ' ')}' is also the kernel's word; this cell's sentence is its own relation (${h})`);
-function anchored(md: string, heads: string[]): string {
+function anchored(md: string, heads: string[], prefix = ''): string {
   const lines = md.split('\n');
   for (const h of heads) {
     const name = slug(h); if (!name) continue;
+    const id = prefix + name;
     const i = lines.findIndex((l) => l.replace(/^\s*- /, '').startsWith(h));
-    if (i >= 0 && !/<a id=/.test(lines[i])) lines[i] = lines[i].replace(/^(\s*- )?/, (m) => `${m}<a id="${name}"></a>`);
+    if (i >= 0 && !/<a id=/.test(lines[i])) lines[i] = lines[i].replace(/^(\s*- )?/, (m) => `${m}<a id="${id}"></a>`);
   }
   return lines.join('\n');
 }
@@ -73,27 +71,30 @@ export function closeTo(learned: string[], vocab: string): string[] {
   return [...twins, ...learned.flatMap((l) => {
     const m = /^phrase\((\w+), "(.*)"\)\.$/.exec(l); if (!m) return [];
     const near = known.find((x) => x.rel !== m[1] && x.k === skeleton(m[2], true));
-    return near ? [`"${said(m[2])}" makes a new relation, ${m[1]}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
+    return near ? [`"${said(m[2])}" makes a new relation, ${m[1].replace(OWN, '')}, close to the declared sentence "${said(near.text)}" (${near.rel}): to write into ${near.rel}, say that sentence with your terms in its holes and no anchor, a name in place of a noun and its letter (\`X is inside \`shop\`\`)`] : [];
   })];
 }
 
-/** A rule of a cell whose head reads as a picture's sentence about other things (`A service S links to a feed F`, where the sentence is about a mark):
- *  it draws, and the writer meant their own relation. The head's nouns against the sentence's, hole by hole; an untyped hole (`node`) matches any. */
-export function viewLike(text: string, vocab: string): string[] {
-  const views = [...vocab.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].filter((m) => VIEW_RELS.has(m[1]))
-    .map((m) => ({ rel: m[1], text: m[2], k: m[2].replace(/<\d+:[\w ]+>/g, '_'), nouns: [...m[2].matchAll(/<\d+:([\w ]+)>/g)].map((x) => x[1]) }));
+/** The heads of a cell that read as a sentence of a vocabulary the notebook reads, but about other things (`A seat S is reserved`, where the
+ *  vocabulary's sentence is about a tag): such a head is the notebook's own relation, never a row of the vocabulary's. The head's nouns
+ *  against the sentence's, hole by hole; a hole the vocabulary leaves untyped (`node`) takes any noun. The vocabularies are the part of
+ *  `phrases` after the first `-- read:` line (notebook/world.ts). */
+export function misbound(text: string, phrases: string): string[] {
+  const at = phrases.indexOf('\n-- read:'), read = at < 0 ? '' : phrases.slice(at);
+  const said = [...read.matchAll(/^phrase\((\w+), "(.*)"\)\.$/gm)].map((m) => ({ k: m[2].replace(/<\d+:[\w ]+>/g, '_'), nouns: [...m[2].matchAll(/<\d+:([\w ]+)>/g)].map((x) => x[1]) }));
   const out: string[] = [];
   for (const [, head] of text.matchAll(/(?:^|\n\s*)((?:An?|The) [^\n.]*?) (?:if|unless|either)\b/g)) {
     const nouns: (string | null)[] = [];
     const k = head.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\b(?:an?|the|some) ([a-z][\w-]*(?: [a-z][\w-]*)?) [A-Z]\w*\b|`[^`]*`|"[^"]*"|\b[A-Z]\w*\b/g, (m, n) => { nouns.push(n ?? null); return '_'; });
-    const v = views.find((x) => x.k === k && nouns.some((n, i) => n && x.nouns[i] !== 'node' && n !== x.nouns[i]));
-    if (v) out.push(`"${head}" reads as the picture's sentence "${v.text.replace(/<\d+:([\w ]+)>/g, 'a $1')}" (${v.rel}), so it draws: say it in other words to keep it out of the picture`);
+    if (said.some((x) => x.k === k && nouns.some((n, i) => n && x.nouns[i] !== 'node' && n !== x.nouns[i]))) out.push(head);
   }
   return out;
 }
 
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
-export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
+/** `own`: the cells are a notebook's, whose relations are its own (host.ts): a head named from its words is named with OWN, and one about
+ *  other things than a read vocabulary's sentence says is its own; a world read by a notebook keeps its names. */
+export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, own = false): Book {
   const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
   const first = parts.map(({ c, clauses }) => c.form === 'md' ? readMd(clauses, { vocab: phrases, homeBooks: home }) : null);
   const md = parts.map(({ clauses }, i) => {
@@ -103,9 +104,9 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     const others = first.flatMap((f, j) => j !== i && f ? f.phrases : []), known = new Set(others.map((p) => skeleton(p)));
     const again = heads(first[i]!).some((h) => known.has(skeleton(h.replace(/^(?:An?|The) /, (m) => m.toLowerCase()).replace(/\$?[a-z_]\w*\([^()]*\)|\b[A-Z][A-Za-z0-9]*\b/g, '_')).replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? _/g, '_')));
     const unread = again ? heads(readMd(clauses, { vocab: phrases + '\n' + others.join('\n'), homeBooks: home })) : heads(first[i]!);
-    const text = anchored(clauses, unread);
+    const mis = own ? misbound(clauses, phrases) : [], text = anchored(clauses, [...unread, ...mis], own ? OWN : ''), meant = new Set(mis.map((h) => OWN + slug(h)));
     const learned = readMd(text, { vocab: phrases, homeBooks: home }).phrases;
-    return { text, learned, close: [...closeTo(learned, phrases), ...viewLike(clauses, phrases), ...kernelWords(unread)] };
+    return { text, learned, close: closeTo(learned.filter((l) => !meant.has(/^phrase\((\w+),/.exec(l)?.[1] ?? '')), phrases) };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');

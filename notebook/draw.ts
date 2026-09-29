@@ -31,7 +31,7 @@ const RELS: Record<Family, [string, number][]> = {
   notation: [['named', 2], ['born', 2], ['partner', 2], ['child', 2], ['frame', 2], ['collapsed', 1]],
   space: [['at', 3], ['box', 5], ['corner', 4], ['link', 2], ['inside', 2], ['tagged', 2], ['labelled', 2], ['axis', 2], ['projection', 1], ['frame', 2], ['collapsed', 1]],
 };
-/** Every relation a picture reads. */
+/** Every relation a picture reads: the renderer's words, which a notebook writes into by name. */
 export const VIEW_RELS = new Set(Object.values(RELS).flatMap((rs) => rs.map(([r]) => r)));
 const VARS = ['A', 'B', 'C', 'D', 'E'];
 

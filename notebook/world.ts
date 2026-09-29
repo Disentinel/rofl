@@ -24,8 +24,9 @@ export function assemble(path: string, text: string, input: Inputs): { model: st
   for (const r of front.reads) {
     const t = input.reads[r];
     if (t === undefined) { errors.push(`${r}: not given`); continue; }
-    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); parts.push([`the rules read from ${r}`, w.rofl]); phrases += '\n' + w.phrases.join('\n'); }
-    else { parts.push([r, t]); phrases += '\n' + t; }
+    // a vocabulary the notebook reads is marked, so a head about other things than its sentences say is not read as one of them (book.ts misbound)
+    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); parts.push([`the rules read from ${r}`, w.rofl]); phrases += `\n-- read: ${r}\n` + w.phrases.join('\n'); }
+    else { parts.push([r, t]); phrases += `\n-- read: ${r}\n` + t; }
   }
   const model = parts.map((p) => p[1]).join('\n');
   /** A line of the model as the file it came from and its line there. */
