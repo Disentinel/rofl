@@ -16,6 +16,8 @@ export type Hooks = {
   drawn?(what: Report): void;
   /** the picture opened in an editor tab of its own, to pan and zoom */
   show?(): void;
+  /** what the button that shows it says, and its title, where that is not an editor tab */
+  showAs?: [string, string];
   /** a notation's standard file, opened for the domain's own tool: `ext` its file name's ending */
   open?(text: string, ext: string): void;
   /** Cytoscape and ELK, loaded; false when they cannot be (offline, a blocked CDN) */

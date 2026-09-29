@@ -29,7 +29,7 @@ export async function draw(el: HTMLElement, v: View, h: Hooks): Promise<Drawn> {
     const z = zoom(v, shut), frames = framesOf(z);
     const as = [...new Set(backendsOf(z).map((b) => b.format))].map((f) => [f, backendOf(z, f).write(z)]);
     if (graphs && v.kind !== 'graph') as.push(['mermaid (as a graph)', backendOf({ ...z, kind: 'graph' }).write(z)]);
-    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${h.show ? '<button type="button" data-show title="open this picture in an editor tab, to pan and zoom">\u2922 Open in editor</button>' : ''}${graphs && v.kind !== 'proof' && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
+    el.innerHTML = `<div class="pbar"><span>${esc(counted(z))}</span><span class="spacer"></span>${h.show ? `<button type="button" data-show title="${esc(h.showAs?.[1] ?? 'open this picture in an editor tab, to pan and zoom')}">\u2922 ${esc(h.showAs?.[0] ?? 'Open in editor')}</button>` : ''}${graphs && v.kind !== 'proof' && h.pin && !frames ? '<button type="button" data-pin title="write where every mark is as placed(M, X, Y) facts">Pin layout</button>' : ''}</div>`
       + `${v.notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}<div class="stage"></div><div class="detail" hidden></div>`
       + as.map(([f, t]) => `<details class="as"><summary>as ${esc(f)}</summary><pre>${esc(t)}</pre></details>`).join('');
     const stage = el.querySelector<HTMLElement>('.stage')!, box = el.querySelector<HTMLElement>('.detail')!;

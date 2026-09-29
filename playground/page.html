@@ -2,33 +2,7 @@
 <title>ROFL Playground</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  :root {
-    --bg: #F7F8F5; --panel: #FFFFFF; --fg: #1C2120; --mute: #66706B; --line: #D9DDD6; --soft: #EEF0EB;
-    --code-bg: #FCFCFA; --gutter: #9AA39D;
-    --accent: #1D4ED8; --accent-bg: #1D4ED814;
-    --pass: #047857; --pass-bg: #0478571A; --fail: #B91C1C; --fail-bg: #B91C1C14; --warn: #A15C07; --warn-bg: #A15C0714;
-    --kw: #6D28D9; --was: #7A6F5B;
-    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
-      --code-bg: #161A18; --gutter: #69726D;
-      --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
-      --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
-      --kw: #C7A9FF; --was: #B5A98F;
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
-    --code-bg: #161A18; --gutter: #69726D;
-    --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
-    --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
-    --kw: #C7A9FF; --was: #B5A98F;
-  }
+  /* tokens */
   html, body { height: 100%; }
   body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
   .wrap { padding-inline: 16px; padding-block: 14px 24px; max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
