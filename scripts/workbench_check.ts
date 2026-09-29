@@ -118,7 +118,9 @@ async function problems(dir: string): Promise<string[]> {
   let k = 0;
   const onlyFacts = Object.assign(async () => ({ ok: true, text: '```rofl\n' + FACTS_ONLY + '\n```', n: k++ }), { who: 'the fake model' });
   const f = await bench.translate([{ id: 'n', kind: 'natural', text: 'Services send artifacts.' }], 'n', onlyFacts);
-  if (f.code !== 0 || f.cell !== `${FACTS_ONLY}\n\n? A service S sends an artifact A to a service T` || !f.said.some((s: string) => s.includes('(1)'))) bad.push(`a cell that only models was not kept with its sentence asked: exit ${f.code}; ${f.said.join(' / ')}`);
+  if (f.code !== 0) bad.push(`a cell that only models was refused: ${f.said.join(' / ')}`);
+  else if (f.cell !== FACTS_ONLY) bad.push(`? lines were written into a cell that only models: ${JSON.stringify(f.cell)}`);
+  else if (!f.said.some((s: string) => s.includes('translated, adds 1 fact in 1 sentence'))) bad.push(`what a modelling cell adds is not said: ${f.said.join(' / ')}`);
   if (!asked[0]?.includes('? <sentence>') || /\blist <glob>|\bshow <path>/.test(asked[0] ?? '')) bad.push('the prompt offers the model something other than "?" lines to read with');
   return bad;
 }
@@ -147,7 +149,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['the hyphenated anchor let through', (d) => spoil(d, 'lib/read_md.js', "a[2].includes('-') &&", 'false &&'), /a hyphenated anchor is not said as a name/],
   ['the variable-name hint off', (d) => spoil(d, 'lib/api.js', '${v ? `', '${false ? `'), /a capitalised name in a fact is not said as one/],
   ['the twin-sentence note off', (d) => spoil(d, 'lib/book.js', 'b.rel !== a.rel && b.k === a.k', 'false'), /two sentences that differ only in a noun are not said/],
-  ['the modelling cell refused', (d) => spoil(d, 'lib/translate.js', 'if (!asks.length)', 'if (true)'), /a cell that only models was not kept/],
+  ['a facts-only cell refused', (d) => spoil(d, 'lib/translate.js', 'if (!held.length)', 'if (true)'), /a cell that only models was refused/],
+  ['the translator appending ? lines', (d) => spoil(d, 'lib/translate.js', 'return { ...t, errors: [], cell, added', "return { ...attempt(cell + '\\n\\n? ' + asks[0]), errors: [], cell, added"), /\? lines were written into a cell that only models/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {
