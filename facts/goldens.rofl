@@ -156,7 +156,7 @@ golden_state("spec_coverage", "742eb6e09faaed5b", 3152).
 golden_state("unstratifiable", "79fbe73fc51f0377", 504).
 
 golden_host("oops", "012d40f715163c70", 0, 214).
-golden_host("cram", "070a213dcc02bcc6", 0, 210).
+golden_host("cram", "f38f5f204b841ad1", 0, 210).
 golden_host("huh", "0a3bb41c1fc24351", 0, 116).
 golden_host("heck", "0ad760fccc4ace36", 0, 215).
 golden_host("drip", "0c8ab8935aecfca1", 0, 332).
