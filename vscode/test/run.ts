@@ -129,6 +129,28 @@ excise \`bike\` is on the plan
 \`\`\`
 `);
 const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
+// the tutorial's scenes as a player sees them, each mark's icon and colour read back from the drawing (`M icon NAME` the renderer's icon, `M icon ~TEXT` an SVG
+// holding TEXT, `M colour C`): level 1 with a product listed right and one by mistake, level 2 as it ships
+const scene = (n: string, edit: (t: string) => string) => put(path.join(tmp, `nb/examples/tutorial/${n}.rofl.md`), edit(src(`examples/tutorial/${n}.rofl.md`)));
+const SCENES = [
+  { file: scene('1-what-ships', (t) => t.replace('\n- `sofa` is on your list.\n', '\n- `car` is on your list.\n- `van` is on your list.\n')), fails: 'never X is on your list by mistake', status: ['van', 'failing'], why: ['tagged(van, waiting)', '`van` waits for `door`'],
+    looks: ['car icon car', 'car colour mediumseagreen', 'van icon van', 'van colour grey', 'door icon door', 'door colour orange', 'wheel icon wheel'] },
+  { file: scene('2-paint-shop', (t) => t), fails: 'never X leaves unpainted', status: ['c3', 'failing'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'],
+    looks: ['c1 icon car', 'c1 colour blue', 'c2 colour red', 'c3 colour grey', 'blue icon paint_can', 'blue colour blue'] },
+];
+// icons a notebook draws, planted: one whose handler would take the drawing away and one that would load from the suite's own server, were either drawn other
+// than as an image; a notebook's own car, which wins over the renderer's; an icon nobody draws; one past the cap; a colour that tries to leave its attribute
+const svg = (body: string) => `"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'>${body}</svg>"`;
+const iconsNb = put(path.join(tmp, 'nb/examples/visual/icons-planted.rofl.md'), `---\nreads:\n  - rofl:visual/space.rofl.md\n---\n\n# Icons a notebook draws, planted\n\n\`\`\`datalog
+at(p1, 1, 1). at(p2, 3, 1). at(p3, 5, 1). at(p4, 7, 1). at(p5, 9, 1).
+icon(p1, probe). icon(p2, far). icon(p3, car). icon(p4, crane). icon(p5, huge).
+icon_drawing(probe, ${svg("<script>document.body.remove()</script><image href='x' onerror='this.ownerSVGElement.ownerSVGElement.remove()'/><rect width='4' height='4' fill='currentColor'/>")}).
+icon_drawing(far, ${svg("<image href='http://127.0.0.1:PROBE_PORT/far' width='4' height='4' onload='this.ownerSVGElement.ownerSVGElement.remove()'/><rect width='2' height='2'/>")}).
+icon_drawing(car, ${svg("<desc>the notebook's own car</desc><rect width='4' height='4' fill='currentColor'/>")}).
+icon_drawing(huge, ${svg(`<desc>${'x'.repeat(17 * 1024)}</desc>`)}).
+tagged(p1, evil). tag_colour(evil, "red\\" onmouseover=\\"x").
+tagged(p3, painted). tag_colour(painted, "#1e90ff").
+\`\`\`\n\n\`\`\`rofl\ndraw space\n\`\`\`\n`);
 const cases = [
   { file: review, cli: path.join(tmp, 'review.json'), fails: { text: 'never C is blocked by T' } },
   { file: clean, cli: path.join(tmp, 'clean.json') },
@@ -136,6 +158,9 @@ const cases = [
   ...pictures.map((file, k) => ({ file, cli: path.join(tmp, `picture-${k}.json`), pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
   { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
   { file: asking, cli: path.join(tmp, 'why.json'), asks: true, fails: { text: 'never low(X)' } },
+  ...SCENES.map((x, k) => ({ file: x.file, cli: path.join(tmp, `scene-${k}.json`), pictures: ['graph'], status: x.status as [string, string], why: x.why as [string, string], looks: x.looks, fails: { text: x.fails } })),
+  { file: iconsNb, cli: path.join(tmp, 'nb/icons-planted.json'), pictures: ['space'], status: ['p3', 'painted'] as [string, string], probe: true,
+    looks: ['p1 icon ~onerror', 'p2 icon ~/far', 'p3 icon ~the notebook\'s own car', 'p3 icon ~#1e90ff', 'p4 plain', 'p5 plain', 'p1 uncoloured'] },
   ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: path.join(tmp, `whatif-${k}.json`), pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
 ];
 // `--group`: the run as it is over one group of cases, each window under two minutes; `core` also holds the checks that are not a case
@@ -211,6 +236,11 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   'bare-head': ['worker.ts', /share\(r\.cells\[0\], bare\)/, 'share(r.cells[0], [])', first, /the fact not read is not said under its cell/],
   // a row an English line answered, left without its why
   'english-why': ['render.ts', /asks = l\.kind !== 'excise' && l\.verdict !== 'unasked';/, "asks = l.kind !== 'excise' && l.verdict !== 'unasked' && !l.readAs;", first, /the why under the English line's row/],
+  // an icon drawn as what it is not: no image, no paint, or its SVG put in the page, where its href loads (its handler does not run even there:
+  // the webview's policy refuses inline handlers, so in VS Code the handler probe has no positive control; the load probe has)
+  icon: ['visual/out/pic-graph.js', /\.\.\.\(icon\.has\(id\) && \{ icon: icon\.get\(id\) \}\)/, '', named('1-what-ships'), /car is not drawn as the icon car/],
+  colour: ['visual/out/pic-graph.js', /\.\.\.\(paint && \{ paint \}\) \}, position/, '}, position', named('2-paint-shop'), /c1 is not drawn blue/],
+  inline: ['visual/out/pic-space.js', /src \? `<image data-icon=[^`]*`/, 'src ? `<g data-icon="${esc(m)}" transform="translate(${x - 11} ${y - 11})">${v.icons[v.marks[m].icon]}</g>`', named('icons-planted'), /an icon's SVG loaded \/far from outside/],
   prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
 };
 // VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
@@ -218,7 +248,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['icon', 'colour', 'inline', 'verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
 const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined, xi = process.argv.indexOf('--extras');
 const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
@@ -240,12 +270,19 @@ const one = async (v: string) => {
   // each window its own copy of the notebooks, since the suite edits a code file under them
   const nb = path.join(tmp, `nb-${v.replace(/ /g, '-')}`), mine = (s: string) => s.split(path.join(tmp, 'nb') + '/').join(nb + '/');
   cpSync(path.join(tmp, 'nb'), nb, { recursive: true });
+  const port = 47700 + variants.indexOf(v), probe = mine(iconsNb);   // the planted icons' server, one per window
+  writeFileSync(probe, readFileSync(probe, 'utf8').replace('PROBE_PORT', String(port)));
+  if (casesOf(v).some((c) => c.file === iconsNb)) await cli(probe, mine(path.join(tmp, 'nb/icons-planted.json')));
   // a workspace that names a model: only the person's own settings may, so this one must be ignored and VS Code's model asked
   if (v === 'vscode lm') put(path.join(nb, '.vscode/settings.json'), JSON.stringify({ 'rofl.model': 'claude' }));
   let red = '', said = '';   // `said`: what the suite found; a planted defect is caught only when the suite says so, not when VS Code fails to start
-  // `--shot F`: the window screenshotted as each picture is drawn, F-<case>.png
+  // `--shot F`: the test's window alone, screenshotted as each picture is drawn, F-<case>.png
   const shot = v === 'as it is' ? process.argv[process.argv.indexOf('--shot') + 1] : undefined, shooting = process.argv.includes('--shot') && shot ? setInterval(() => {
-    for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) { spawnSync('screencapture', ['-x', `${shot}-${k}.png`]); writeFileSync(`${shot}-${k}.done`, ''); }
+    for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) {
+      const id = spawnSync('swift', [path.join(ROOT, 'vscode/test/window.swift'), path.basename(nb)], { encoding: 'utf8' }).stdout.trim();
+      if (id) spawnSync('screencapture', ['-x', '-o', '-l', id, `${shot}-${k}.png`]); else console.log(`     no window titled ${path.basename(nb)} to screenshot`);
+      writeFileSync(`${shot}-${k}.done`, '');
+    }
   }, 300) : undefined;
   // `--theme NAME`: the window in that colour theme, for a screenshot in it
   const ti = process.argv.indexOf('--theme');
@@ -256,7 +293,7 @@ const one = async (v: string) => {
       vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
       stdout: log, stderr: log,
       launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
-      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ...(xi >= 0 && { ROFL_NB_EXTRAS: process.argv[xi + 1] }), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_PROBE_PORT: String(port), ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ...(xi >= 0 && { ROFL_NB_EXTRAS: process.argv[xi + 1] }), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
     });
   } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
   finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }

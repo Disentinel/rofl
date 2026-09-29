@@ -1,9 +1,10 @@
 // A graph (and its dialects) as Cytoscape laid out by ELK; a placed mark stays where the pinned layout put it.
-import { linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
-import { colour, drawnTags, features, fits, layouts, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
+import { colourOf, linkTags, RESERVED, unquote, type View } from '../../notebook/draw.ts';
+import { iconUri } from '../../notebook/icons.ts';
+import { colour, drawnTags, features, fits, layouts, looks, spills, tagsOf, type Hooks, type Picture } from './picture.ts';
 
 declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; resize(): void; elements(): { renderedBoundingBox(): { x1: number; y1: number; x2: number; y2: number } }; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
-  nodes(): { map<T>(f: (n: { id(): string; hasClass(c: string): boolean }) => T): T[]; filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
+  nodes(): { map<T>(f: (n: { id(): string; hasClass(c: string): boolean; data(k: string): string | undefined }) => T): T[]; filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
 declare const ELK: new () => { layout(g: object): Promise<{ children: { id: string; x: number; y: number; width: number; height: number }[] }> };
 
 /** What a dialect changes: the direction of flow, its tags' styles (drawn under the status tags), a word for a link tag, an entry dot into the marks a tag names,
@@ -37,7 +38,10 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
   const placed = new Map(v.facts.filter((f) => f.rel === 'placed').map((f) => [f.args[0], { x: Number(f.args[1]), y: Number(f.args[2]) }]));
   const level = new Map(v.facts.filter((f) => f.rel === 'level').map((f) => [f.args[0], f.args[1]]));
   const leaves = Object.keys(v.marks).filter((id) => !groups.has(id)), links = v.facts.filter((f) => f.rel === 'link');
-  const size = (id: string) => ({ width: Math.max(56, Math.min(240, 16 + 7.4 * (v.marks[id]?.label ?? id).length)), height: 30 });
+  const c = (t: string) => colour(el, t);
+  // a mark drawn as an icon is the icon, its label under it, painted its tag's colour or the theme's: an image, from a data: URI
+  const icon = new Map(leaves.flatMap((id) => { const i = v.marks[id]?.icon, text = i && v.icons?.[i], src = text && iconUri(text, colourOf(v, tagsOf(v, id)) ?? c('--p-fg')); return src ? [[id, src]] : []; }));
+  const size = (id: string) => icon.has(id) ? { width: 52, height: 52 } : { width: Math.max(56, Math.min(240, 16 + 7.4 * (v.marks[id]?.label ?? id).length)), height: 30 };
   const entries = look.entry ? leaves.filter((id) => tagsOf(v, id).includes(look.entry!)).map((id, i) => ({ id: `entry${i}`, to: id })) : [];
   const laid = await new ELK().layout({ id: 'root', layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': look.direction ?? 'RIGHT', 'elk.spacing.nodeNode': '22', 'elk.layered.spacing.nodeNodeBetweenLayers': '46', ...(level.size && { 'elk.partitioning.activate': 'true' }) },
     children: [...leaves.map((id) => ({ id, ...size(id), ...(level.has(id) && { layoutOptions: { 'elk.partitioning.partition': level.get(id) } }) })), ...entries.map((e) => ({ id: e.id, width: 14, height: 14 }))],
@@ -45,14 +49,13 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
   const elk: At = new Map(laid.children.map((c) => [c.id, { x: c.x + c.width / 2, y: c.y + c.height / 2 }]));
   const auto = look.ring ? ring(leaves, (id) => links.filter((f) => f.args[0] === id).map((f) => f.args[1]).filter((n) => leaves.includes(n))) : look.bands ? bands(elk, parent) : elk;
   const pos = new Map([...elk.keys()].map((id) => [id, placed.get(id) ?? auto.get(id) ?? elk.get(id)!]));
-  const c = (t: string) => colour(el, t);
   const hatch = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><path d="M-2 2L2 -2M0 8L8 0M6 10L10 6" stroke="${c('--p-warn')}" stroke-width="1.4"/></svg>`)}`;
   const cy = cytoscape({
     container: el.firstChild, layout: { name: 'preset' }, wheelSensitivity: 0.3,
     elements: [
       ...[...groups].map((g) => ({ data: { id: g, label: v.marks[g]?.label ?? unquote(g), parent: parent.get(g) }, classes: ['group', ...tagsOf(v, g)].join(' ') })),
-      ...leaves.map((id) => ({ data: { id, label: v.marks[id].label, parent: parent.get(id), ...size(id) }, position: pos.get(id), classes: tagsOf(v, id).join(' ') })),
-      ...links.map((f, i) => { const ts = linkTags(v, f); return { data: { id: `l${i}`, source: f.args[0], target: f.args[1], fact: f.literal, label: ts.filter((t) => !RESERVED.includes(t)).map((t) => look.says?.[t] ?? t).join(', ') }, classes: ts.join(' ') }; }),
+      ...leaves.map((id) => { const paint = colourOf(v, tagsOf(v, id)); return { data: { id, label: v.marks[id].label, parent: parent.get(id), ...size(id), ...(icon.has(id) && { icon: icon.get(id) }), ...(paint && { paint }) }, position: pos.get(id), classes: tagsOf(v, id).join(' ') }; }),
+      ...links.map((f, i) => { const ts = linkTags(v, f); const paint = colourOf(v, ts); return { data: { id: `l${i}`, source: f.args[0], target: f.args[1], fact: f.literal, label: ts.filter((t) => !RESERVED.includes(t)).map((t) => look.says?.[t] ?? t).join(', '), ...(paint && { paint }) }, classes: ts.join(' ') }; }),
       ...entries.flatMap((e) => [{ data: { id: e.id, label: '' }, position: pos.get(e.id), classes: 'entry' }, { data: { id: `${e.id}e`, source: e.id, target: e.to, label: '' }, classes: 'entry' }]),
     ],
     style: [
@@ -60,6 +63,9 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
       { selector: 'node[width]', style: { width: 'data(width)', height: 'data(height)' } },
       { selector: 'node.group', style: { 'text-valign': 'top', 'text-halign': 'center', 'background-color': c('--p-bg'), 'border-style': 'dashed', padding: 12, color: c('--p-mute') } },
       { selector: 'edge', style: { width: 1.5, 'line-color': c('--p-mute'), 'target-arrow-color': c('--p-mute'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', label: 'data(label)', 'font-size': 10, color: c('--p-mute'), 'text-background-color': c('--p-bg'), 'text-background-opacity': 1 } },
+      { selector: 'node[paint][^icon]', style: { 'background-color': 'data(paint)' } },
+      { selector: 'node[icon]', style: { 'background-image': 'data(icon)', 'background-width': '80%', 'background-height': '80%', 'text-valign': 'bottom', 'text-margin-y': 3 } },
+      { selector: 'edge[paint]', style: { 'line-color': 'data(paint)', 'target-arrow-color': 'data(paint)', width: 2.5 } },
       ...look.style ?? [],
       { selector: 'node.entry', style: { shape: 'ellipse', width: 14, height: 14, 'background-color': c('--p-fg'), 'border-width': 0 } },
       { selector: '.failing, .dangling', style: { 'border-color': c('--p-fail'), 'border-width': 3, color: c('--p-fail'), 'line-color': c('--p-fail'), 'target-arrow-color': c('--p-fail') } },
@@ -86,6 +92,7 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
   cy.on('tap', 'node[label != ""]', (e) => groups.has(e.target.id()) || tagsOf(v, e.target.id()).includes('collapsed') ? toggle(e.target.id()) : detail(e.target.id()));
   cy.on('tap', 'edge[fact]', (e) => detail(e.target.data('source'), e.target.data('fact')));
   features.set(el, () => entries.map((e) => `entry(${e.to}).`));
+  looks.set(el, () => cy.nodes().map((n) => [n.data('icon') && `${n.id()} icon ${n.data('icon')}`, n.data('paint') && `${n.id()} colour ${n.data('paint')}`]).flat().filter((x): x is string => !!x));
   drawnTags.set(el, () => cy.nodes().map((n) => RESERVED.filter((t) => n.hasClass(t)).map((t) => `tagged(${n.id()}, ${t}).`)).flat());
   layouts.set(el, () => cy.nodes().filter((n) => !n.hasClass('group') && !n.hasClass('entry')).map((n) => `placed(${n.id()}, ${Math.round(n.position('x'))}, ${Math.round(n.position('y'))}).`).sort());
 }

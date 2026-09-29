@@ -15,17 +15,47 @@ Works from any folder:
 <!-- BEGIN run+exit examples/tutorial: rofl-nb 1-what-ships.rofl.md -->
 ```
 $ rofl-nb 1-what-ships.rofl.md
-1-what-ships.rofl.md:65: cell 1 · rofl
-  1-what-ships.rofl.md:65: ? X leaves the line  ->  3 answers
+1-what-ships.rofl.md:74: cell 1 · rofl
+  1-what-ships.rofl.md:74: ? X leaves the line  ->  3 answers
     - `bike` leaves the line
     - `car` leaves the line
     - `scooter` leaves the line
-1-what-ships.rofl.md:104: cell 2 · rofl
-  1-what-ships.rofl.md:104: never L is missing an answer  ->  FAILS · 1
+1-what-ships.rofl.md:111: cell 2 · rofl
+  1-what-ships.rofl.md:111: draw graph  ->  10 marks, 11 links
+    ```mermaid
+    flowchart LR
+      m0["bike"]
+      m1["car"]
+      m2["door"]
+      m3["engine"]
+      m4["frame"]
+      m5["motor"]
+      m6["scooter"]
+      m7["seat"]
+      m8["van"]
+      m9["wheel"]
+      m2 -->|missing| m8
+      m3 --> m1
+      m3 --> m8
+      m4 --> m0
+      m4 --> m6
+      m5 --> m6
+      m7 --> m1
+      m9 --> m0
+      m9 --> m1
+      m9 --> m6
+      m9 --> m8
+      class m2 missing
+      class m8 waiting
+      style m2 fill:orange
+      style m8 fill:grey
+    ```
+1-what-ships.rofl.md:150: cell 3 · rofl
+  1-what-ships.rofl.md:150: never L is missing an answer  ->  FAILS · 1
     - `level1` is missing an answer
-  1-what-ships.rofl.md:105: never X is on your list by mistake  ->  FAILS · 1
+  1-what-ships.rofl.md:151: never X is on your list by mistake  ->  FAILS · 1
     - `sofa` is on your list by mistake
-1-what-ships.rofl.md: 1 question answered, 2 invariants fail — FAILS at lines 104, 105 (exit 1; see rofl-nb --help)
+1-what-ships.rofl.md: 1 question answered, 2 invariants fail, 1 picture — FAILS at lines 150, 151 (exit 1; see rofl-nb --help)
 $ echo $?
 1
 ```

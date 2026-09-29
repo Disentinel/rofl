@@ -1,5 +1,5 @@
 // The graph as mermaid flowchart (GitHub, agents) and as DOT (large graphs, provenance as a tooltip).
-import { linkTags, nodes, RESERVED, unquote, type Backend, type View } from './draw.ts';
+import { colourOf, linkTags, nodes, RESERVED, unquote, type Backend, type View } from './draw.ts';
 
 const STYLE: Record<string, string> = {
   failing: 'stroke:#b91c1c,stroke-width:3px,color:#b91c1c', dangling: 'stroke:#b91c1c,stroke-dasharray:4 3,color:#b91c1c',
@@ -8,6 +8,8 @@ const STYLE: Record<string, string> = {
 };
 const safe = (s: string) => s.replace(/"/g, '#quot;').replace(/[\n\r]+/g, ' ');
 const ids = (v: View) => new Map(nodes(v).map((id, i) => [id, `m${i}`]));
+/** A mark's label, and after it the icon it is drawn as, unless that is its label: text shows no image. */
+const named = (v: View, m: string) => { const k = v.marks[m], label = k?.label ?? unquote(m); return `${label}${k?.icon && k.icon !== label ? ` · ${k.icon}` : ''}`; };
 
 
 /** `shape`: a mark's bracket pair, `[` `]` unless a dialect gives its own (`{` `}` a decision, `([` `])` an event). */
@@ -16,7 +18,7 @@ export function flowchart(v: View, shape: (m: string) => [string, string] = () =
   const groups = new Set(parent.values());
   const kids = (g: string | undefined) => nodes(v).filter((m) => parent.get(m) === g && !groups.has(m)).concat([...groups].filter((x) => parent.get(x) === g).sort());
   const put = (m: string, pad: string, seen: Set<string>) => {
-    const name = id.get(m) ?? `g${[...groups].indexOf(m)}`, label = safe(v.marks[m]?.label ?? unquote(m));
+    const name = id.get(m) ?? `g${[...groups].indexOf(m)}`, label = safe(named(v, m));
     if (!groups.has(m)) { const [o, c] = shape(m); out.push(`${pad}${name}${o}"${label}"${c}`); return; }
     if (seen.has(m)) return;
     seen.add(m);
@@ -35,6 +37,7 @@ export function flowchart(v: View, shape: (m: string) => [string, string] = () =
   out.push(...styled);
   for (const [t, s] of Object.entries(STYLE)) if (nodes(v).some((m) => v.marks[m].tags.includes(t))) out.push(`  classDef ${t} ${s}`);
   for (const m of nodes(v)) for (const t of v.marks[m].tags) if (!groups.has(m)) out.push(`  class ${name(m)} ${t}`);
+  for (const m of nodes(v)) { const c = colourOf(v, v.marks[m].tags); if (c && !groups.has(m)) out.push(`  style ${name(m)} fill:${c}`); }
   return out.join('\n');
 }
 
@@ -44,9 +47,9 @@ function dot(v: View): string {
   const parent = new Map(v.facts.filter((f) => f.rel === 'inside').map((f) => [f.args[0], f.args[1]])), groups = new Set(parent.values());
   const color = (ts: string[]) => ts.includes('failing') || ts.includes('dangling') ? '#b91c1c' : ts.includes('new') ? '#047857' : ts.includes('gone') || ts.includes('unknown') ? '#66706b' : ts.includes('blind') ? '#a15c07' : '';
   const style = (ts: string[]) => ts.includes('blind') || ts.includes('dangling') || ts.includes('gone') ? 'dashed' : ts.includes('unknown') ? 'dotted' : '';
-  const attrs = (label: string, ts: string[], tip: string[]) => [`label=${q(label)}`, ts.length && `class=${q(ts.join(' '))}`, color(ts) && `color=${q(color(ts))}`, style(ts) && `style=${q(style(ts) + ',rounded')}`, tip.length && `tooltip=${q(tip.join('\n'))}`].filter(Boolean).join(', ');
+  const attrs = (label: string, ts: string[], tip: string[]) => [`label=${q(label)}`, ts.length && `class=${q(ts.join(' '))}`, color(ts) && `color=${q(color(ts))}`, colourOf(v, ts) && `fillcolor=${q(colourOf(v, ts)!)}`, (style(ts) || colourOf(v, ts)) && `style=${q([style(ts), colourOf(v, ts) && 'filled', 'rounded'].filter(Boolean).join(','))}`, tip.length && `tooltip=${q(tip.join('\n'))}`].filter(Boolean).join(', ');
   const put = (m: string, pad: string, seen: Set<string>) => {
-    if (!groups.has(m)) { const k = v.marks[m]; out.push(`${pad}${q(m)} [${attrs(k?.label ?? m, k?.tags ?? [], k?.from ?? [])}];`); return; }
+    if (!groups.has(m)) { const k = v.marks[m]; out.push(`${pad}${q(m)} [${attrs(named(v, m), k?.tags ?? [], k?.from ?? [])}];`); return; }
     if (seen.has(m)) return;
     seen.add(m);
     out.push(`${pad}subgraph ${q('cluster_' + m)} {`, `${pad}  label=${q(v.marks[m]?.label ?? unquote(m))};`);
