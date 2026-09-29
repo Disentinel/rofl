@@ -76,7 +76,7 @@ function asking(talk: (m: object) => void) {
     add(root?: ParentNode) {
       if (!root) return;
       for (const mark of root.querySelectorAll<HTMLElement>('span.rofl-why')) {
-        const li = mark.closest('li'), literal = decodeURIComponent(mark.dataset.why ?? ''), run = mark.dataset.run;
+        const li = mark.closest('li'), literal = (mark.dataset.why ?? '').replace(/_([0-9a-f]{4})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16))), run = mark.dataset.run;
         if (!li) { mark.remove(); continue; }
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'rofl-why'; b.textContent = 'why'; b.title = `why ${literal}`;

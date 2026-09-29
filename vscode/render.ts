@@ -12,8 +12,8 @@ const FOLD = 10;   // answers shown under a line; the rest fold
 export type Shown = { md: string; err: string; ok: boolean; views?: View[] };
 export type Run = NbResult & { paths: Record<string, string>; outside?: string[] };
 
-/** A literal as an attribute no Markdown reading can split: every character but a letter or a digit percent-encoded. */
-export const WHY_ATTR = (literal: string) => encodeURIComponent(literal).replace(/[^A-Za-z0-9%]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+/** A literal as an attribute no Markdown reading can split: every character but a letter or a digit as `_` and its four hex digits (vscode/visual/renderer.ts reads it back). */
+export const WHY_ATTR = (literal: string) => literal.replace(/[^A-Za-z0-9]/g, (c) => `_${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
 /** `head`: what belongs to the notebook, not to one cell; `cells[k]` is the kernel's cell k + 1.
  *  `run`: the run this is, which a row's why names so that a proof is never asked of another; with none, no row has a why. */
