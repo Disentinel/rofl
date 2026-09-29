@@ -1,11 +1,12 @@
-// What the translator lets a model read, for every model alike: the notebook's workspace, its files less those git ignores (or, without git,
-// the build and dependency folders) and those that look like secrets, nothing outside it and no link out of it. A model asks in lines (`list`,
+// What the translator lets a model read, for every model alike: the notebook's workspace, its files less the build and dependency folders, its
+// .gitignore and those that look like secrets, as far as the workspace's .rofl/read.rofl narrows it; nothing outside it and no link out of it. A model asks in lines (`list`,
 // `grep`, `show`, `?`), this answers them, within a number of rounds and a number of bytes, and says each read. The model's own tools stay off
 // (notebook/model.ts); this is the only way it reads.
 import { spawnSync } from 'node:child_process';
 import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { Rofl } from '../src/api.ts';
 
 export const ROUNDS = Number(process.env.ROFL_NB_READ_ROUNDS ?? 6);
 export const BUDGET = Number(process.env.ROFL_NB_READ_BUDGET ?? 200_000);
@@ -15,8 +16,8 @@ const FILE_BYTES = Number(process.env.ROFL_NB_READ_FILE_BYTES ?? 1_000_000);
 /** Left out wherever it is: a file whose name looks like a secret. */
 export const SECRET = new RegExp(String.raw`(^|/)(\.env[^/]*|[^/]*\.(pem|key|p12|pfx|kdbx|jks|asc|tfstate|tfstate\.backup)|id_[^/]*|[^/]*credential[^/]*|[^/]*secret[^/]*`
   + String.raw`|\.npmrc|\.netrc|\.pgpass|\.pypirc|\.vault-token|kubeconfig|auth\.json|service-account[^/]*\.json|\.[^/]*_history|\.kube/config|\.docker/config\.json)$|(^|/)\.gnupg/`, 'i');
-/** Left out without git, at any depth: what a build or a package manager wrote. */
-const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'out', 'target', '.venv', 'venv', '__pycache__', '.cache', 'coverage', '.next', '.vscode-test']);
+/** Left out at any depth: what a build, a package manager or a version control system wrote. */
+const SKIP = new Set(['node_modules', '.git', 'CVS', '.svn', '.hg', 'dist', 'build', 'out', 'target', '.venv', 'venv', '__pycache__', '.cache', 'coverage', '.next', '.vscode-test']);
 const SHOWN = { list: 200, grep: 100, show: 400 };
 /** How long one grep may run: its pattern is the model's, steered by the text it has just read. */
 const GREP_MS = Number(process.env.ROFL_NB_GREP_MS ?? 5000);
@@ -43,34 +44,78 @@ export function globbed(glob: string, p: string): boolean {
 /** A path matches a glob when it or a folder it is in does, as git's pathspec: `list src` is every file under src. */
 const under = (glob: string, p: string) => p.split('/').some((_, k, all) => globbed(glob, all.slice(0, k + 1).join('/')));
 
-/** Every file under `root`, without git: less SKIP, and less what the .gitignore at `root` names (a `!` line, which would let one back in,
- *  is not read). A link is listed as a file, and read only if it resolves inside. */
-function walk(root: string): string[] {
+/** Every file under `root` less SKIP, and less what the .gitignore at `root` names (a `!` line, which would let one back in, is not read); into
+ *  a folder only on the way to one of `prefixes`, when there are any. A link is listed as a file, and read only if it resolves inside. */
+function walk(root: string, prefixes: string[]): string[] {
   let text = '';
   try { text = readFileSync(path.join(root, '.gitignore'), 'utf8'); } catch { /* none */ }
   const ignored = text.split('\n').map((l) => l.trim().replace(/\/+$/, '')).filter((l) => l && !/^[#!]/.test(l))
     .map((l) => l.includes('/') ? (_: string, r: string) => globbed(l.replace(/^\//, ''), r) : (name: string) => globbed(l, name));
+  const toward = (d: string) => !prefixes.length || prefixes.some((p) => `${d}/`.startsWith(p) || p.startsWith(`${d}/`));
   const files: string[] = [], dirs = [''];
-  for (let d; (d = dirs.pop()) !== undefined;) {
+  for (let d; (d = dirs.pop()) !== undefined && files.length <= FILES;) {
     let entries;
     try { entries = readdirSync(path.join(root, d), { withFileTypes: true }); } catch { continue; }
     for (const e of entries) {
       const r = d ? `${d}/${e.name}` : e.name;
       if (SKIP.has(e.name) || ignored.some((m) => m(e.name, r))) continue;
-      if (e.isDirectory()) dirs.push(r); else files.push(r);
+      if (!e.isDirectory()) files.push(r); else if (toward(r)) dirs.push(r);
     }
   }
   return files;
 }
 
-export type Repo = { root: string; files: Set<string>; git: boolean; refused?: string };
+/** The files a version control system tracks, by the name a workspace gives it in untracked_by/1: CVS from its CVS/Entries files, which are
+ *  read and never run; git from `git ls-files`, git itself and no command of the workspace's; `command`, the one the person set outside the
+ *  workspace (ROFL_NB_UNTRACKED_COMMAND, or VS Code's machine setting rofl.untrackedCommand), which prints them one a line. */
+function tracked(by: string, root: string, files: string[], command?: string): Set<string> | string {
+  if (by === 'cvs') {
+    const out = new Set<string>();
+    for (const d of new Set(files.map((f) => path.posix.dirname(f)))) {
+      let text = '';
+      try { text = readFileSync(path.join(root, d, 'CVS/Entries'), 'utf8'); } catch { continue; }
+      for (const m of text.matchAll(/^\/([^/\n]+)\//gm)) out.add(d === '.' ? m[1] : `${d}/${m[1]}`);
+    }
+    return out;
+  }
+  if (by === 'git') {
+    const g = runGit(root, ['ls-files', '-z', '--cached']);
+    return g.status === 0 ? new Set(g.stdout.split('\0')) : `git ls-files failed: ${(g.stderr ?? String(g.error)).trim().split('\n').pop()}`;
+  }
+  if (by === 'command') {
+    if (!command) return 'untracked_by(command) needs a command set outside the workspace: ROFL_NB_UNTRACKED_COMMAND, or VS Code\'s rofl.untrackedCommand';
+    const c = userCommand(root, command);
+    return c.status === 0 ? new Set(c.stdout.split('\n').map((l) => l.trim().replace(/^\.\//, '')).filter(Boolean)) : `the untracked command failed: ${c.error?.message ?? c.stderr.trim().split('\n').pop() ?? `exit ${c.status}`}`;
+  }
+  return `untracked_by(${by}) is not built in: the built-in ones are cvs, git and none; for another, set your own command and write untracked_by(command)`;
+}
+/** The person's own command, never the workspace's: it is set where only they can set it. */
+function userCommand(cwd: string, command: string) {
+  return spawnSync(command, { cwd, shell: true, encoding: 'utf8', timeout: 10_000, maxBuffer: 64 * 2 ** 20 });
+}
+
+/** What a workspace may read, by rule: every file the host lists is readable unless the workspace's CONFIG narrows it. Its own rules may
+ *  add to these; whatever they derive, only a file the host listed is read. */
+const RULES = `chosen(F) :- file(F), not narrowed(yes).
+chosen(F) :- file(F), read_prefix(P), L is str_len(P), N is str_len(F), L <= N, X is str_sub(F, 0, L), X = P.
+narrowed(yes) :- read_prefix(P).
+skipped(F) :- file(F), skip_prefix(P), L is str_len(P), N is str_len(F), L <= N, X is str_sub(F, 0, L), X = P.
+skipped(F) :- file(F), untracked_by(V), V != none, not tracked(F).
+readable(F) :- chosen(F), not skipped(F).`;
+export const CONFIG = '.rofl/read.rofl';
+/** Past this many files the rules are not run: read_prefix in CONFIG narrows the walk itself. */
+const FILES = Number(process.env.ROFL_NB_READ_FILES ?? 50_000);
+
+export type Repo = { root: string; files: Set<string>; refused?: string };
 
 const within = (dir: string, p: string) => { const r = path.relative(dir, p); return r !== '' && r !== '..' && !r.startsWith(`..${path.sep}`) && !path.isAbsolute(r); };
-/** What the model may read of a notebook's workspace `root` (by default the notebook's directory): its files, less what git ignores when the
- *  workspace is in a git repository, else less SKIP and its .gitignore; less secret-looking names. Nothing when the workspace does not hold
- *  the notebook, or is the home directory, one of its ancestors or the filesystem root. */
-export function workspace(notebook: string, root?: string): Repo {
-  const none = (dir: string, refused: string): Repo => ({ root: dir, files: new Set(), git: false, refused });
+/** `root`: the workspace, by default the notebook's directory; `command`: the person's own untracked command. */
+export type Where = { root?: string; command?: string };
+/** What the model may read of a notebook's workspace: its files, less SKIP, its .gitignore and secret-looking names, as far as the rules
+ *  of RULES and the workspace's CONFIG let it. Nothing when the workspace does not hold the notebook, or is the home directory, one of its
+ *  ancestors or the filesystem root, or when CONFIG does not load or asks for what it may not. */
+export function workspace(notebook: string, { root, command = process.env.ROFL_NB_UNTRACKED_COMMAND }: Where = {}): Repo {
+  const none = (dir: string, refused: string): Repo => ({ root: dir, files: new Set(), refused });
   if (!existsSync(notebook)) return none(path.dirname(notebook), 'the notebook is not a file on disk');
   const nb = realpathSync(notebook), home = existsSync(os.homedir()) ? realpathSync(os.homedir()) : path.resolve(os.homedir());
   let dir: string;
@@ -78,16 +123,37 @@ export function workspace(notebook: string, root?: string): Repo {
   if (!within(dir, nb)) return none(dir, 'the workspace does not hold the notebook');
   if (dir === home) return none(dir, 'the workspace is the home directory: open the project\'s folder, or name it with --root');
   if (within(dir, home) || path.dirname(dir) === dir) return none(dir, 'the workspace holds the home directory: open the project\'s folder, or name it with --root');
-  const git = runGit(dir, ['rev-parse', '--show-toplevel']).status === 0;
-  const listed = git ? (runGit(dir, ['ls-files', '-z', '--cached', '--others', '--exclude-standard']).stdout ?? '').split('\0') : walk(dir);
-  return { root: dir, files: new Set(listed.filter((f) => f && !SECRET.test(f))), git };
+  const r = new Rofl(), config = path.join(dir, CONFIG), refuse = (why: string) => none(dir, `${CONFIG}: ${why}; nothing is read`);
+  let text = '';
+  if (existsSync(config)) {
+    if (!within(dir, realpathSync(config))) return refuse('a link out of the workspace');
+    text = readFileSync(config, 'utf8');
+  }
+  const loaded = [r.load(RULES), r.load(text)];
+  if (!loaded[1].ok) return refuse(loaded[1].diagnostics[0] ?? 'it does not load');
+  const values = (q: string) => r.query(q).rows.map((x) => Object.values(x.bindings)[0]).map((v) => { try { return v.startsWith('"') ? JSON.parse(v) as string : v; } catch { return v; } });
+  if (values('untracked_command(C)').length) return refuse('a workspace may not name a command to run; set it outside the workspace (ROFL_NB_UNTRACKED_COMMAND, or VS Code\'s rofl.untrackedCommand) and write untracked_by(command)');
+  const prefixes = values('read_prefix(P)');
+  const out = [...prefixes, ...values('skip_prefix(P)')].find((p) => path.posix.isAbsolute(p) || p.split('/').includes('..'));
+  if (out !== undefined) return refuse(`"${out}" reaches out of the workspace: a prefix is a path inside it, like "src/"`);
+  const listed = walk(dir, prefixes).filter((f) => !SECRET.test(f) && !/["\\\p{Cc}]/u.test(f));
+  if (listed.length > FILES) return refuse(`more than ${FILES} files: name the folders to read with read_prefix("src/")`);
+  const by = values('untracked_by(V)');
+  if (by.length > 1) return refuse(`untracked_by names ${by.length} systems`);
+  const known = by.length && by[0] !== 'none' ? tracked(by[0], dir, listed, command) : new Set<string>();
+  if (typeof known === 'string') return refuse(known);
+  const facts = r.load([...listed.map((f) => `file(${JSON.stringify(f)}).`), ...[...known].filter((f) => !/["\\\p{Cc}]/u.test(f)).map((f) => `tracked(${JSON.stringify(f)}).`)].join('\n'));
+  const q = r.query('readable(F)');
+  if (!facts.ok || q.partial || q.error) return refuse(`its rules did not finish: ${q.error ?? facts.diagnostics[0] ?? 'the budget ran out'}`);
+  const floor = new Set(listed);
+  return { root: dir, files: new Set(values('readable(F)').filter((f) => floor.has(f))) };
 }
 
-/** Every line that matches, as `path:line: text`, or why none: git grep, whose regex engine does not backtrack, over the repository's files
- *  and those it does not ignore, or over the folder without one; with no git on the machine, a search in a process of its own. Stopped at GREP_MS. */
+/** Every line that matches, as `path:line: text`, or why none: git grep --no-index, whose regex engine does not backtrack, used as a search
+ *  and never asked about a repository; with no git on the machine, a search in a process of its own. Stopped at GREP_MS; only readable lines kept. */
 function grep(repo: Repo, pattern: string, glob?: string): { lines: string[] } | { refused: string } {
-  const skip = repo.git ? [] : [...SKIP].map((d) => `:(exclude,glob)**/${d}/**`);
-  let g = runGit(repo.root, ['grep', ...repo.git ? ['--untracked'] : ['--no-index', '--exclude-standard'], '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
+  const skip = [...SKIP].map((d) => `:(exclude,glob)**/${d}/**`);
+  let g = runGit(repo.root, ['grep', '--no-index', '--exclude-standard', '-n', '-I', '-E', '-e', pattern, '--', ...(glob ? [`:(glob)${glob}`] : []), ...skip], GREP_MS, 16 * 2 ** 20);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') g = search(repo, pattern, glob);
   if ((g.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS') return { refused: 'more than 16 MB of matching lines: narrow the pattern or the glob' };
   if (g.error || g.signal) return { refused: `timed out after ${GREP_MS / 1000} s` };
@@ -165,7 +231,7 @@ export function answer(repo: Repo, req: string, room: number, ask: (question: st
   return { text: said.slice(0, room), read: `? ${arg}` };
 }
 
-export const PROTOCOL = (rounds: number, budget: number) => `You may read the notebook's workspace before you answer: its files, less those git ignores and those that look like secrets. To read, answer with request lines only, one per line, and no fence:
+export const PROTOCOL = (rounds: number, budget: number) => `You may read the notebook's workspace before you answer: its files, less build and dependency folders, those its .gitignore names and those that look like secrets, as far as its .rofl/read.rofl allows. To read, answer with request lines only, one per line, and no fence:
   list <glob>                 the files that match, e.g. list src/**/*.ts
   grep <regex> [<glob>]       matching lines as path:line: text (a glob holds * or /)
   show <path>:<from>-<to>     those lines of a file
