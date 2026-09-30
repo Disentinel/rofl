@@ -111,10 +111,12 @@ path_exists("notebook/book.ts").
 path_exists("notebook/cli.ts").
 path_exists("notebook/draw.ts").
 path_exists("notebook/front.ts").
+path_exists("notebook/icons.ts").
 path_exists("notebook/kernel.ts").
 path_exists("notebook/model.ts").
 path_exists("notebook/reader.ts").
 path_exists("notebook/serve.ts").
+path_exists("notebook/translate.ts").
 path_exists("package.json").
 path_exists("playground/host.ts").
 path_exists("playground/npc.html").
@@ -209,8 +211,10 @@ path_exists("scanners/spec.ts").
 path_exists("scanners/store_boundary.ts").
 path_exists("scanners/store_trace.ts").
 path_exists("scanners/ts_lib.ts").
+path_exists("scripts/declared_check.ts").
 path_exists("scripts/derivations.ts").
 path_exists("scripts/dist.ts").
+path_exists("scripts/english_check.ts").
 path_exists("scripts/flag_census.ts").
 path_exists("scripts/goldens.ts").
 path_exists("scripts/guide.ts").
@@ -220,6 +224,7 @@ path_exists("scripts/md_world.ts").
 path_exists("scripts/measurement_check.ts").
 path_exists("scripts/nb_check.ts").
 path_exists("scripts/nb_layers.ts").
+path_exists("scripts/nb_lib.ts").
 path_exists("scripts/nb_product.ts").
 path_exists("scripts/parser_optional.ts").
 path_exists("scripts/playground.ts").
@@ -230,6 +235,7 @@ path_exists("scripts/render_docs.ts").
 path_exists("scripts/text_check.ts").
 path_exists("scripts/view.ts").
 path_exists("scripts/witness_check.ts").
+path_exists("scripts/workbench_check.ts").
 path_exists("skills/guided-formal-reasoning/escalate.md").
 path_exists("src/api.ts").
 path_exists("src/dense.ts").
@@ -244,12 +250,18 @@ path_exists("src/store.ts").
 path_exists("src/tokens.ts").
 path_exists("src/unify.ts").
 path_exists("tsconfig.build.json").
+path_exists("visual/vscode-coverage.rofl.md").
 path_exists("vscode/extension.ts").
 path_exists("vscode/package.json").
 path_exists("vscode/render.ts").
+path_exists("vscode/serial.ts").
 path_exists("vscode/test/dist.ts").
+path_exists("vscode/test/roundtrip.ts").
 path_exists("vscode/test/run.ts").
 path_exists("vscode/test/suite.ts").
+path_exists("vscode/visual/pic-graph.ts").
+path_exists("vscode/visual/pic-notation.ts").
+path_exists("vscode/visual/renderer.ts").
 path_exists("vscode/worker.ts").
 
 reason_len(f_bun_runner_over_budget, 14).
