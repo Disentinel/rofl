@@ -120,7 +120,7 @@ shop.rofl.md: note: 1 relative import or require was not resolved, so a never ho
   shop.js:1 "./tax.js"
 shop.rofl.md:8: cell 1 · rofl
   shop.rofl.md:8: never F always throws  ->  holds as far as it sees · 1 relative import or require was not resolved: shop.js:1 "./tax.js"
-shop.rofl.md: 1 invariant holds as far as the model sees, none fails — some invariant holds only as far as the model sees, or the run stopped at its limit (exit 3; see rofl-nb --help)
+shop.rofl.md: 1 invariant holds as far as the model sees, none fails — some invariant holds only as far as the model sees (exit 3; see rofl-nb --help)
 $ echo $?
 3
 ```
