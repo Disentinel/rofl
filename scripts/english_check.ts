@@ -115,6 +115,9 @@ function run(reader: Reader, book: Book): string[] {
   const looks = asked('# Which one?\n\nThe prose runs on and asks\nWhich products are late?\n\nIt asks mid-line: is it late? Is `car` late? Maybe.\n\n> Which is it?\n\nWhich products leave the line?\n').looks ?? [];
   const noted = looks.map((x) => `${x.at}: ${x.text}`).join(' · ');
   if (noted !== '3: Which products are late? · 5: Is `car` late?') bad.push(`case 36: the prose's questions that do not ask are ${JSON.stringify(noted)}`);
+  // 37: a draw line that names its frame is a draw, however the frame is said
+  const framed = book.readBook([{ id: 'c', text: 'draw graph in q1\ndraw graph in the frame `q2`.', form: 'md' }], VOCAB, {}).parts[0].asks.map((a) => `${a.kind} ${a.lit}`).join(' · ');
+  if (framed !== 'draw graph in q1 · draw graph in the frame `q2`') bad.push(`case 37: the draw lines that name a frame ask ${JSON.stringify(framed)}`);
   return bad;
 }
 
@@ -131,7 +134,7 @@ let failed = 0;
 const say = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}${!ok && detail ? `\n     ${detail}` : ''}`); };
 
 const own = run(await import('./read_md.ts'), await import('../notebook/book.ts'));
-say(!own.length, `${CASES.length + 8} cases read as their line or say their message`, own.join('\n     '));
+say(!own.length, `${CASES.length + 9} cases read as their line or say their message`, own.join('\n     '));
 const controls = readBook([{ id: 'c', text: PROSE_CONTROLS.join('\n'), form: 'md' }], VOCAB, {}).parts[0].asks;
 say(!controls.length, `${PROSE_CONTROLS.length} negative controls stay unread as English`, controls.map((a) => a.text).join(' · '));
 
@@ -169,6 +172,15 @@ for (const [name, from, to, why] of PLANTS) {
   writeFileSync(b, readFileSync(path.join(ROOT, 'notebook/book.ts'), 'utf8').replace("'../scripts/read_md.ts'", `'${f}'`));
   const got = run(await import(f), await import(b)).join('\n');
   say(why.test(got), `planted, ${name}: red, because ${why.source.replace(/^\^/, '').replace(/\\/g, '')}`, got || 'green');
+}
+// the book taking a draw line for a draw only when it names nothing after the kind
+const bookCopy = path.join(dir, 'draw-one-word-book.ts'), bookText = readFileSync(path.join(ROOT, 'notebook/book.ts'), 'utf8').replace("'../scripts/read_md.ts'", `'${path.join(ROOT, 'scripts/read_md.ts')}'`);
+const oneWord = bookText.replace('const m = DIRECTIVE.exec(l),', "const m = ((x) => x?.[1] === 'draw' && /\\s/.test(x[2]) ? null : x)(DIRECTIVE.exec(l)),");
+if (oneWord === bookText) say(false, 'planted, a draw line naming its frame not a draw', 'the planted defect did not apply');
+else {
+  writeFileSync(bookCopy, oneWord);
+  const got = run(await import('./read_md.ts'), await import(bookCopy)).join('\n');
+  say(/^case 37: the draw lines that name a frame ask/m.test(got), 'planted, a draw line naming its frame not a draw: red, because case 37: the draw lines that name a frame ask', got || 'green');
 }
 
 // the kernel: what the lines answer, as npm run nb prints them, over level 3 and its solution, a cell of lines after the goal

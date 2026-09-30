@@ -72,11 +72,9 @@ function cellEl(c: Pc): HTMLElement {
   return el;
 }
 const elOf = (id: string) => book.querySelector<HTMLElement>(`article[data-id="${id}"]`);
-/** A textarea as tall as its text. Measuring collapses it for an instant, which can shorten the page and move it: the page is put back. */
-const grow = (t: HTMLTextAreaElement) => { if (!t.offsetParent) {
-  t.style.height = '';   // hidden (a folded cell): measured when it shows, since a hidden box has no height to measure
-  return;
-} const y = scrollY; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; if (scrollY !== y) scrollTo(scrollX, y); };
+/** A textarea as tall as its text. Measuring collapses it for an instant, which can shorten the page and move it: the page is put back.
+ *  A hidden one (a folded cell) has no height to measure, and is measured when it shows. */
+const grow = (t: HTMLTextAreaElement) => { if (!t.offsetParent) { t.style.height = ''; return; } const y = scrollY; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; if (scrollY !== y) scrollTo(scrollX, y); };
 /** The line being typed stays where it is on screen while `fn` changes the page above it: its textarea's top, before and after. */
 const focused = () => document.activeElement instanceof HTMLTextAreaElement && book.contains(document.activeElement) ? document.activeElement : null;
 function steady<T>(fn: () => T): T {

@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, wri
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { RESERVED } from '../src/reflect.ts';
-import { chrome, drift, type Drift } from './workbench_browser.ts';
+import { chrome, drift, reading, type Drift } from './workbench_browser.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-workbench-'));
@@ -27,6 +27,7 @@ const said: (() => void)[] = [];
     ['grow collapsing the page', 'lib/page.js', ['if (scrollY !== y)\n    scrollTo(scrollX, y);', ''], 'plain', /the line being typed moved/],
     ['fill regrowing every textarea', 'lib/page.js', ['    if (fresh)\n        requestAnimationFrame(() => steady(() => grow(t)));', '    requestAnimationFrame(() => grow(t));'], 'plain', /a textarea no one typed in was grown/],
     ['the anchor removed', 'lib/page.js', ['        if (d)\n            scrollBy(0, d);', ''], 'peer', /the line being typed moved/],
+    ['the reading view on whatever the viewer chose', 'lib/page.js', ["localStorage.getItem('rofl-workbench:reading') !== '0'", 'true'], 'plain', /the typing did not reach/],
   ];
   const got = await Promise.all(BROWSER_PLANTS.map(async ([name, file, [from, to], how]) => {
     const dir = path.join(tmp, `browser-${name.replace(/\W+/g, '-')}`);
@@ -37,6 +38,22 @@ const said: (() => void)[] = [];
     return still(await drift(dir, how), how);
   }));
   BROWSER_PLANTS.forEach(([name, , , , why], k) => said.push(() => say(got[k].some((x) => why.test(x)), `planted in a browser, ${name}: red, because ${why.source}`, got[k].join('\n     ') || 'green')));
+  // the reading view: sentences and datalog cells fold to their head and pictures, a click opens one, and turned off every cell is whole again
+  const READING_PLANTS: [string, string, [string, string], RegExp][] = [
+    ['the reading view folding nothing', 'lib/page.js', ['folded = foldable && !unfolded.has(c.id) && editing !== c.id', 'folded = false'], /is not folded to its head/],
+    ['a folded cell losing its picture', 'index.html', ['.cell.folded .out:not(:has(.pic)) { display: none; }', '.cell.folded .out { display: none; }'], /the picture of a folded cell is gone/],
+    ['a click not opening a folded cell', 'lib/page.js', ['if (!unfolded.delete(id))\n            unfolded.add(id);', 'unfolded.delete(id);'], /does not open it to its answers/],
+  ];
+  const [read, ...readPlanted] = await Promise.all([reading(built), ...READING_PLANTS.map(async ([name, file, [from, to]]) => {
+    const dir = path.join(tmp, `reading-${name.replace(/\W+/g, '-')}`);
+    cpSync(built, dir, { recursive: true });
+    const f = path.join(dir, file), text = readFileSync(f, 'utf8');
+    if (!text.includes(from)) throw new Error(`${file}: the planted defect did not apply`);
+    writeFileSync(f, text.split(from).join(to));
+    return reading(dir);
+  })]);
+  said.push(() => say(!read.length, 'in a browser: the reading view folds each sentences and datalog cell to its head and pictures, keeps prose, opens a cell to its answers and then its source on a click, and turned off shows every cell whole', read.join('\n     ')));
+  READING_PLANTS.forEach(([name, , , why], k) => said.push(() => say(readPlanted[k].some((x) => why.test(x)), `planted in a browser, ${name}: red, because ${why.source}`, readPlanted[k].join('\n     ') || 'green')));
   return () => said.forEach((f) => f());
 })();
 
@@ -62,6 +79,9 @@ const DRAWS = 'A mark X is a node if X leads to something.\n\nA mark X is a node
 const UNDECLARED = 'An entity `writer` sends the artifact `pages` to the entity `store`.\n\n? A service S sends an artifact A to a service T';
 const DECLARED = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.\n\n? A service S sends an artifact A to a service T';
 const FACTS_ONLY = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.';
+const QUARTERS = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n- <a id="quarter"></a>A thing A is in the quarter Q\n\nThe facts:\n\n- `a` leads to `b`.\n- `c` leads to `d`.\n- `a` is in the quarter `q1`.\n- `b` is in the quarter `q1`.\n- `c` is in the quarter `q2`.\n- `d` is in the quarter `q2`.\n\n'
+  + 'A mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\nA mark X is in the frame Q if X is in the quarter Q.\n\n'
+  + 'draw graph in q1\ndraw graph in the frame `q2`\ndraw graph in q9\ndraw graph\ndraw graph on q1';
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
 
 /** Everything wrong with the build in `dir`, said; nothing when it is right. */
@@ -106,6 +126,15 @@ async function problems(dir: string, every = true): Promise<string[]> {
   if (/prose: run/.test(keys)) bad.push('Shift+Enter in prose runs');
   if (/natural: run/.test(keys)) bad.push('Shift+Enter in natural runs');
   if (!/natural: \w+ translate translate/.test(keys)) bad.push('Cmd/Ctrl+Enter in natural does not translate');
+  // `draw K in F` draws the frame F alone, however F is said; one that nothing is in says so, and `draw K` keeps every frame
+  const qs = (await bench.run([{ id: 'q', kind: 'rofl', text: QUARTERS }])).byCell.get('q');
+  const inFrame = (qs?.lines ?? []).map((l: { text: string; view?: { marks: object; notes: string[]; facts: { rel: string }[] } }) => `${l.text}: ${Object.keys(l.view?.marks ?? {}).join(' ')}; ${l.view?.facts.filter((f) => f.rel === 'frame').length} frame facts${l.view?.notes.length ? '; ' + l.view.notes.join() : ''}`);
+  const wantFrames = ['draw graph in q1: a b; 0 frame facts', 'draw graph in the frame `q2`: c d; 0 frame facts', 'draw graph in q9: ; 0 frame facts; nothing is in the frame q9: say which marks are, "A mark M is in the frame `q9` if …"', 'draw graph: a b c d; 4 frame facts'];
+  for (const w of wantFrames) {
+    const line = w.slice(0, w.indexOf(': ')), got = inFrame.find((x: string) => x.startsWith(`${line}: `));
+    if (got !== w) bad.push(got ? `\`draw K in F\` drew ${JSON.stringify(got)}, not ${JSON.stringify(w)}` : `\`draw K in F\` did not draw "${line}"`);
+  }
+  if (!qs?.errors.some((e: string) => e.startsWith('draw graph on q1: draw takes'))) bad.push(`\`draw graph on q1\` was not refused: ${JSON.stringify(qs?.errors)}`);
   // a domain's own sentence is not a picture's: `reads` labels nothing, and one that does read as a picture's sentence is said
   const reads = (await bench.run([{ id: 'r', kind: 'rofl', text: 'A service S reads a feed F if S is "w", F is "f".\n\nA mark X is a node if X is "w".\n\ndraw graph' }])).byCell.get('r');
   const label = (Object.values(reads?.lines.at(-1)?.view?.marks ?? {}) as { label: string }[]).map((m) => m.label).join();
@@ -206,7 +235,7 @@ let red = 0;
 const say = (ok: boolean, what: string, detail = '') => { if (!ok) red++; console.log(`${ok ? 'ok  ' : 'RED '} ${what}${ok || !detail ? '' : `\n     ${detail}`}`); };
 const t0 = performance.now();
 const asBuilt = await problems(built);
-say(!asBuilt.length, 'as built: every example of examples/visual says its verdicts in their colours and draws its failing marks, the hint reads and draws, no example is published, and a vacuous translation is asked again', asBuilt.join('\n     '));
+say(!asBuilt.length, 'as built: every example of examples/visual says its verdicts in their colours and draws its failing marks, the hint reads and draws, `draw K in F` draws its frame alone, no example is published, and a vacuous translation is asked again', asBuilt.join('\n     '));
 
 /** A copy of the build with one defect; red, and for the reason `why` names. */
 const PLANTS: [string, (dir: string) => void, RegExp][] = [
@@ -235,6 +264,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['a kernel row let into a ? answer', (d) => spoil(d, 'lib/host.js', 'this.foreign.has(relOf(a.lit)) && !/^\\w+\\[/.test(a.lit)', 'false'), /a kernel row reaches a \? answer/],
   ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => this.foreign.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
   ['the icons and colours left out of a graph', (d) => spoil(d, 'lib/draw.js', ", ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]", ''), /the paint shop's scene does not carry its icons and colours/],
+  ['`draw K in F` drawing every frame', (d) => spoil(d, 'lib/host.js', 'let view = scoped(picture(kind, f, w), only);', 'let view = picture(kind, f, w);'), /`draw K in F` drew "draw graph in q1: a b c d/],
+  ['`draw K in the frame F` not read', (d) => spoil(d, 'lib/host.js', '(?:the frame\\s+)?', ''), /`draw K in F` did not draw "draw graph in the frame `q2`"/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];
 function spoil(dir: string, file: string, from: string, to: string) {
