@@ -15,10 +15,11 @@ const LOOKS = (c: (token: string) => string): Record<string, Look> => ({
     { selector: 'node.current', style: { 'border-color': c('--p-accent'), 'border-width': 3, 'font-weight': 'bold' } },
     { selector: 'edge', style: { 'loop-direction': '0deg', 'loop-sweep': '-60deg' } },
   ] },
-  process: { bands: true, style: [
+  process: { bands: true, direction: 'DOWN', layerGap: 64, scale: (tags) => tags.includes('decision') ? { w: 1.6, h: 64 } : undefined, style: [
     { selector: 'node.start, node.finish', style: { shape: 'ellipse' } },
     { selector: 'node.finish', style: { 'border-width': 4 } },
-    { selector: 'node.decision', style: { shape: 'diamond', height: 46 } },
+    { selector: 'node.decision', style: { shape: 'diamond', 'text-wrap': 'wrap', 'text-max-width': 'data(textw)' } },
+    { selector: 'edge', style: { 'font-size': 11, 'font-weight': 'bold' } },
     { selector: 'node.group', style: { 'text-valign': 'top', 'text-halign': 'left', 'text-rotation': 'none' } },
   ] },
   causal: { ring: true, says: { positive: '+', negative: '−' }, style: [
