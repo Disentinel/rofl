@@ -62,6 +62,8 @@ const CASES: [number, number, string, Want][] = [
   [33, 3, 'How many products are late or short of `door`?', { line: '? X answers question 1', count: 'X', rules: ['A product X answers question 1 if X is late.', 'A product X answers question 1 if X is short of `door`.'] }],
   [33, 3, 'No product is late or short of `door`.', { line: 'never X is late', also: ['never X is short of `door`'] }],
   [33, 3, 'No product is late and short of `door`.', { line: 'never X breaks promise 1', rules: ['A product X breaks promise 1 if X is late and X is short of `door`.'] }],
+  // a noun phrase holds no and/or: not `? X is painted` about "cars glow or"
+  [33, 7, 'Which cars glow or are painted?', { line: '? X answers question 1', rules: ['A car X answers question 1 if X glows.', 'A car X answers question 1 if X is painted.'] }],
   // 34: a plural question's verb agrees with the sentence's, and the sentence a refusal quotes is said in the singular
   [34, 7, 'Which cars glow?', '? X glows'],
   [34, 2, 'Which cars glow?', { error: 'no sentence says a car glows. Sentences about a car: "X is on the line" · "X is to be painted a colour Y" · "X comes out a colour Y" · "X is painted" · "X leaves unpainted" · "X is ordered by a customer Y". For example: Which cars are on the line?' }],
