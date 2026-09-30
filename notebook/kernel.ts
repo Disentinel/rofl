@@ -11,7 +11,7 @@ export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: 
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View;
   /** a line in English: the asking line it reads as; `headline`, the yes, no or count it answers with */
   readAs?: string; headline?: string;
-  /** the run was cut short: its count is at least `total`, and a never that found nothing is `unknown` */
+  /** the run was cut short: its count is at least `total`, and a never that found nothing, or a no, is `unknown` */
   cut?: true };
 /** `at`: the prose's, the file's line each error and note was found on, where the reader knows it. */
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[]; at?: { errors: (number | null)[]; notes: (number | null)[] } };
@@ -75,7 +75,7 @@ export class Kernel {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
           ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
-        if (out.partial) { line.cut = true; if (line.verdict === 'holds' || line.verdict === 'blind') line.verdict = 'unknown'; }
+        if (out.partial) { line.cut = true; if (line.verdict === 'holds' || line.verdict === 'blind' || line.headline === 'no' || line.headline === 'none') line.verdict = 'unknown'; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
       }) };
@@ -115,7 +115,7 @@ const cutOf = (l: NbLine) => l.verdict === 'unknown' ? 'not known: the run was c
   : l.verdict === 'fails' ? `FAILS · at least ${l.total}, cut short${l.note ? ` · ${l.note}` : ''}`
   : l.kind === 'draw' || l.kind === 'why' || l.kind === 'whynot' ? `${verdictOf(l)}${verdictOf(l) ? ' · ' : ''}cut short`
   : l.kind === 'excise' ? `at least ${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}, cut short${l.note ? ` · ${l.note}` : ''}`
-  : `${l.headline ? `${l.headline} · ` : ''}at least ${l.total} ${l.total === 1 ? 'answer' : 'answers'}, cut short${l.note ? ` · ${l.note}` : ''}`;
+  : `${l.headline === 'yes' ? 'yes' : `at least ${l.headline ?? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}`}`}, cut short${l.note ? ` · ${l.note}` : ''}`;
 
 /** A verdict's colour by its meaning, as a class a host colours from its theme, and a glyph that says it without colour. */
 export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'], unknown: ['warn', '\u26a0'] };

@@ -26,9 +26,15 @@ const exitOf = (r: NbResult) => r.status === 'cut' && r.cells.some((c) => c.line
 const SHOWN = 12;   // answers printed per line; --json has the first fifty, --all every one
 /** A run's evaluation stops after ROFL_NB_LIMIT seconds or past ROFL_NB_MEMORY gigabytes of heap: a rule that climbs for ever ends there, exit 3.
  *  The heap's default stays under what V8 allows this process, whose end is a crash and no answer. */
+export type Limits = { ROFL_NB_LIMIT?: string; ROFL_NB_MEMORY?: string };
+/** The wall of the limits as set, each read afresh, so a kept kernel (notebook/serve.ts) runs under its caller's and not the ones it started with. */
+export const wallOf = ({ ROFL_NB_LIMIT: limit, ROFL_NB_MEMORY: memory }: Limits) => {
+  const ms = Number(limit ?? 120) * 1000, heap = memory ? Number(memory) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
+  return () => { const end = performance.now() + ms; return () => performance.now() > end || process.memoryUsage().heapUsed > heap; };
+};
+export const limits = (): Limits => ({ ROFL_NB_LIMIT: process.env.ROFL_NB_LIMIT, ROFL_NB_MEMORY: process.env.ROFL_NB_MEMORY });
 export const LIMIT = Number(process.env.ROFL_NB_LIMIT ?? 120) * 1000;
-const MEMORY = process.env.ROFL_NB_MEMORY ? Number(process.env.ROFL_NB_MEMORY) * 2 ** 30 : 0.8 * getHeapStatistics().heap_size_limit;
-export const wall = () => { const end = performance.now() + LIMIT; return () => performance.now() > end || process.memoryUsage().heapUsed > MEMORY; };
+export const wall = wallOf(limits());
 
 /** A path the front matter names, from the notebook's directory `dir`: relative to it, or absolute, or from home. */
 export const from = (dir: string) => (p: string) => path.resolve(dir, p.replace(/^~(?=\/|$)/, os.homedir()));
@@ -124,13 +130,14 @@ const plural = (k: number, one: string, many: string) => `${k} ${k === 1 ? one :
 /** What the run asked and how it came out, counted; on an exit other than 0, why, and the code. */
 export function tally(r: NbResult): string {
   const ls = r.cells.flatMap((c) => c.lines), count = (f: (l: NbLine) => boolean) => ls.filter(f).length;
-  const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind'), unknown = count((l) => l.verdict === 'unknown');
+  const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind'), unknown = count((l) => l.verdict === 'unknown' && l.kind === 'never'), unsure = count((l) => l.verdict === 'unknown' && l.kind !== 'never');
   const fails = count((l) => l.verdict === 'fails'), told = count((l) => l.verdict === 'explained'), pictures = count((l) => l.kind === 'draw' && l.verdict !== 'unasked'), moved = count((l) => l.kind === 'excise' && l.verdict !== 'unasked'), unasked = count((l) => l.verdict === 'unasked');
   const said = [
     asked && plural(asked, 'question answered', 'questions answered'),
     holds && plural(holds, 'invariant holds', 'invariants hold'),
     blind && `${plural(blind, holds ? 'holds' : 'invariant holds', holds ? 'hold' : 'invariants hold')} as far as the model sees`,
     unknown && `${plural(unknown, 'invariant', 'invariants')} not known`,
+    unsure && `${plural(unsure, 'question', 'questions')} not known`,
     (holds || blind || fails) && (!fails ? 'none fails' : holds || blind ? plural(fails, 'fails', 'fail') : plural(fails, 'invariant fails', 'invariants fail')),
     told && plural(told, 'explained', 'explained'),
     pictures && plural(pictures, 'picture', 'pictures'),
