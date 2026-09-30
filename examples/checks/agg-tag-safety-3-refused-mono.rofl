@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in the value
+-- T0 > 3 of a cost that can still improve may stop holding: no monotone read
+edb(tsr_f).
+tsr_f(a, b, 5). tsr_f(b, c, 1).
+tag tsr_mono(A, B, tropical T).
+tsr_mono(A, B, W) :- tsr_f(A, B, W).
+tsr_mono(A, C, T) :- tsr_mono(A, B, T0), T0 > 3, tsr_f(B, C, _).

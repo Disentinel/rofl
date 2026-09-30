@@ -1,0 +1,16 @@
+-- examples/checks/agg-cell-holes-wfs.rofl — agg_cell_holes_wfs: under
+-- well-founded semantics what a hole leaves out is possibly true and not
+-- certainly, so the negations over it are shrugs inherited from the fault,
+-- never true, and no paradox: a paradox is the negative cycle's alone
+-- (holes-negation-wfs.rofl, run by both engines; docs/aggregates.md, "Shrugs,
+-- as built").
+-- expect-row: shrug[$kernel](hw_nx(c),inherited,
+-- expect-row: shrug[$kernel](hw_ny(c),inherited,
+-- expect-row: shrug[$kernel](hw_nnx(c),inherited,
+-- expect-row: unknown[main](hw_win(p))
+-- expect-no-row: unknown[main](hw_nx(c))
+-- expect-no-row: hw_nx[main](c)
+-- expect-no-row: hw_ny[main](c)
+-- expect-no-row: unknown[main](hw_nx(e))
+-- expect-no-row: unknown[main](hw_nx(b))
+edb(ahw_marker).

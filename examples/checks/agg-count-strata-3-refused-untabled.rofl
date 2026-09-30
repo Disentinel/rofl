@@ -1,0 +1,15 @@
+-- expect-refusal: the stock evaluator cannot seal its aggregate
+-- examples/checks/agg-count-strata-3-refused-untabled.rofl — under the
+-- stock evaluator with no stratum table, a count over a relation that a
+-- negation derives. The negation and the count would share the final pass,
+-- and the count would be sealed over whatever that pass had derived so far
+-- (it read 0 here, where the answer is 4), so the program is refused.
+edb(acu_r).
+edb(acu_bad).
+acu_r(g1, 1).
+acu_r(g1, 2).
+acu_r(g2, 3).
+acu_r(g2, 4).
+acu_bad(9).
+acu_ok(G, X) :- acu_r(G, X), not acu_bad(X).
+acu_all(C)   :- C is count(G, X : acu_ok(G, X)).

@@ -171,16 +171,17 @@ fn main() {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
     }
     let t1 = std::time::Instant::now();
-    // `--ticks N` IS N CALLS TO `tickAdvance` AND NOTHING ELSE, which is what
-    // the corpus generator does (scripts/port_corpus.ts): each call runs the
-    // standing tick to fixpoint through `ensure` and then advances if the tick
-    // is not quiescent, so no separate `evaluate()` belongs here. A quiescent
-    // or partial call is a no-op that still counts, exactly as the generator's
-    // replay counts it.
+    // `--ticks N` IS N CALLS TO `tickAdvance` AND THE TICK ENTERED EVALUATED,
+    // which is what the corpus generator does (scripts/port_corpus.ts): each
+    // call runs the standing tick to fixpoint through `ensure` and then
+    // advances if the tick is not quiescent, and the last tick is read once it
+    // has run (`ensure`: a quiescent one already has, and is not re-dated). A
+    // quiescent or partial call is a no-op that still counts, exactly as the
+    // generator's replay counts it.
     let out = if ticks == 0 {
         l.eval.run().map(|_| ())
     } else {
-        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ()))
+        (0..ticks).try_for_each(|_| l.eval.tick_advance().map(|_| ())).and_then(|_| l.eval.ensure().map(|_| ()))
     };
     let t_eval = t1.elapsed();
     match out {

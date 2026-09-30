@@ -1,0 +1,24 @@
+-- examples/checks/agg-widen-ticks-data.rofl — A WIDENED HULL ACROSS TICKS, for
+-- agg_widen_ticks (docs/aggregates.md, "Widening, as built"). tw_c counts a
+-- loop `while (i <= B) i = i + 1` with B 1 at tick 0 and 3 at tick 1, its
+-- value staged @next. A widening is forced after N improvements IN A TICK:
+-- at tick 0 the cell improves twice ([0,1], [0,2]) and settles on [0,2]; at
+-- tick 1 it starts from the [0,2] carried and improves twice more ([0,3],
+-- [0,4]), under its N again, so [0,4] holds, exact. tw_w is widened at tick 0
+-- (widen 0): it is a hole there, so what it would stage is not known at
+-- tick 1, a hole there too, and never a value carried as if it were final.
+edb(tw_g).
+edb(tw_start).
+tw_g(1).
+tw_g(3)@next :- tw_g(1).
+tw_start(go).
+lattice tw_c(P, hull I) widen 2.
+tw_c(head, iv(0, 0)) :- tw_start(go).
+tw_c(head, J)        :- tw_c(head, I), tw_g(B), G = iv(ninf, B), K is ivmeet(I, G), J is ivadd(K, 1).
+tw_c(P, I)@next      :- tw_c(P, I).
+lattice tw_w(P, hull I) widen 0.
+tw_w(head, iv(0, 0)) :- tw_start(go).
+tw_w(head, J)        :- tw_w(head, I), J is ivadd(I, 1).
+tw_w(P, I)@next      :- tw_w(P, I).
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

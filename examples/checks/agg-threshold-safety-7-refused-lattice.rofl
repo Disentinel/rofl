@@ -1,0 +1,7 @@
+-- expect-refusal: a threshold may count only what no open lattice
+-- a threshold reads a lattice directly: a value it counted could be superseded
+edb(atsr_e).
+atsr_e(a, b, 1).
+lattice atsr_d(A, C, min D).
+atsr_d(A, C, D) :- atsr_e(A, C, D).
+atsr_lattice() :- at_least(1, C : atsr_d(a, C, _)).

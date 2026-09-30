@@ -1,0 +1,16 @@
+-- examples/checks/agg-phrase-threshold-check.rofl — agg_threshold_phrase: at least 2 holds for c1 alone; at
+-- least N, N read from pv_need, for all three (c3 needs 0 and is bound before); at least 3 of the
+-- (ballot, candidate) pairs for every candidate. From sentences and from rofl, after a round trip.
+pt_wrong(C) :- pv_cand(C), C != c1, pts_backed(C).
+pt_wrong(C) :- pv_cand(C), C != c1, ptr_backed(C).
+pt_wrong(c1) :- not pts_backed(c1).
+pt_wrong(c1) :- not ptr_backed(c1).
+pt_wrong(C) :- pv_cand(C), not pts_enough(C).
+pt_wrong(C) :- pv_cand(C), not ptr_enough(C).
+pt_wrong(C) :- pv_cand(C), not pts_many(C).
+pt_wrong(C) :- pv_cand(C), not ptr_many(C).
+alarm(pt_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(ptr_backed, "at least 2 of B such that").
+sentence_word(ptr_enough, "at least N of B such that").
+sentence_word(ptr_many, "at least 3 of (B, D) such that").

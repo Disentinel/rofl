@@ -1,0 +1,19 @@
+-- examples/checks/agg-tagc-safety-check.rofl — agg_tagc_safety: the rules of
+-- agg-tagc-safety-1-ok.rofl are accepted and evaluate: a has one edge not to
+-- c, weighed 2; b is reached once, weighed 3; c is reached twice, 3 each, 6.
+-- Every agg-tagc-safety-N-refused-*.rofl is refused, each for the reason its
+-- first line names, so none of their rules reaches this world: a weight
+-- computed from a count the engine already multiplies in, a counting tag at
+-- another arity, an asserted fact in one, one relation counted and declared
+-- a lattice, one tagged in two semirings, and a rule whose head key its
+-- body does not bind.
+tcc_want(a, 2). tcc_want(b, 3). tcc_want(c, 6).
+tcc_wrong(A, N)    :- tcc_want(A, N), not tcf_n(A, N).
+tcc_wrong(A, N)    :- tcf_n(A, N), not tcc_want(A, N).
+tcc_big_wrong(A)   :- tcf_big(A), A = a.
+tcc_big_wrong(c)   :- not tcf_big(c).
+tcc_accepted(Rel)  :- concludes[$kernel](_, Rel), tcc_refused(Rel).
+tcc_refused(tcr_w). tcc_refused(tcr_ar). tcc_refused(tcr_as). tcc_refused(tcr_lat). tcc_refused(tcr_two). tcc_refused(tcr_un).
+alarm(tcc_wrong).
+alarm(tcc_big_wrong).
+alarm(tcc_accepted).

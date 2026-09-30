@@ -149,6 +149,10 @@ unmoded[audit](R)     :- uses_builtin(R, B), not mode(B, _).
 -- is the ordinary idiom, not a defect.
 undefined_premise[audit](R, Rel) :- premise_pos(R, Rel),
                                     not concludes(_, Rel), not edb(Rel).
+-- An aggregate over it too: a count of a misspelled relation reads 0, which
+-- is worse than failing, because 0 is an answer.
+undefined_premise[audit](R, Rel) :- premise_agg(R, Rel),
+                                    not concludes(_, Rel), not edb(Rel).
 
 -- Required results on load:
 --   ? malformed[audit](R)  -> empty      ? breach[audit](R)    -> empty
@@ -335,6 +339,10 @@ imports(main, $kernel).
 -- the reified premise and nowhere else, so the literal is destructured, the
 -- way `safety.rofl` already destructures `$builtin`.
 negated_under(Rel, P) :- premise_lit(R, _, $not($lit(Rel, P, _, _))).
+-- and inside an aggregate, whose body is a `$cons` list the walk follows
+agg_tail(T) :- premise_lit(_, _, $agg(_, _, _, _, T)).
+agg_tail(T) :- agg_tail($cons(_, T)).
+negated_under(Rel, P) :- agg_tail($cons($not($lit(Rel, P, _, _)), _)).
 
 -- WHAT "MORE THAN ONE LOADER" MEANS IN TERMS THE KERNEL ALREADY RECORDS, and
 -- the answer is `asserted_by`'s second argument and nothing else. There is no

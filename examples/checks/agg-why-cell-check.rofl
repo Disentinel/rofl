@@ -1,0 +1,40 @@
+-- examples/checks/agg-why-cell-check.rofl — agg_cell_why, run with
+-- `rofl-load --explain`: `why` of a seven-member count prints a digest of
+-- five members and counts the other two; `why_all` prints all seven;
+-- `whynot` of a wrong value says what the value is; `whynot` of a minimum
+-- over an empty group says the group is empty.
+edb(explain_request).
+edb(explained).
+explain_request(why, acl_n(1, 7)).
+explain_request(why_all, acl_n(1, 7)).
+explain_request(whynot, acl_n(1, 99)).
+explain_request(whynot, acl_lo(9, 1)).
+ordinal_text(1, "#1 (").
+ordinal_text(2, "#2 (").
+ordinal_text(3, "#3 (").
+ordinal_text(4, "#4 (").
+ordinal_text(5, "#5 (").
+ordinal_text(6, "#6 (").
+ordinal_text(7, "#7 (").
+ordinal_text(8, "#8 (").
+acly_line(K, I)    :- explained[$explain](K, acl_n(1, 7), _, L), ordinal_text(I, T), N is str_segs(L, T), N > 1.
+digest_missing(I)  :- ordinal_text(I, _), I <= 5, not acly_line(why, I).
+digest_leak(I)     :- acly_line(why, I), I > 5.
+full_short(I)      :- ordinal_text(I, _), I <= 7, not acly_line(why_all, I).
+full_extra(I)      :- acly_line(why_all, I), I > 7.
+acly_more(I)       :- explained[$explain](why, acl_n(1, 7), I, L), N is str_segs(L, "[2 more members: why all acl_n[main](1,7)]"), N > 1.
+more_missing()     :- not acly_more(_).
+more_twice(I, J)   :- acly_more(I), acly_more(J), I != J.
+acly_holds(A, T)   :- explained[$explain](whynot, A, _, L), acly_want(A, T), N is str_segs(L, T), N > 1.
+acly_want(acl_n(1, 99), ", not 99 [aggregate]").
+acly_want(acl_lo(9, 1), "empty group").
+whynot_text_missing(A, T) :- acly_want(A, T), not acly_holds(A, T).
+explain_refused(K, A)     :- explained[$explain](K, A, 0, _).
+alarm(digest_missing).
+alarm(digest_leak).
+alarm(full_short).
+alarm(full_extra).
+alarm(more_missing).
+alarm(more_twice).
+alarm(whynot_text_missing).
+alarm(explain_refused).

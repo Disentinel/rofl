@@ -1,0 +1,9 @@
+-- examples/checks/agg-lattice-wall-budget.rofl — agg_lattice_wall: the
+-- budget stops the evaluation of agg-lattice-wall-data.rofl, and each open
+-- lattice is a hole with its reason.
+-- expect-row: hole[$kernel]($lattice(awt),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(awn),budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(awp),budget_exhausted)
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: hole[$kernel]($lattice(awn),space_exhausted)
+edb(aw_budget).

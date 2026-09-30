@@ -1,0 +1,6 @@
+-- expect-refusal: declares nothing
+-- examples/checks/agg-lattice-safety-13-refused-zero.rofl — a declaration row written by hand with no argument for the cell's value: arity 0 has no slot, so the row is refused, not read.
+edb(alsf_z0).
+alsf_z0(a).
+lattice_decl(alsf_zero, 0, min).
+alsf_zero() :- alsf_z0(a).

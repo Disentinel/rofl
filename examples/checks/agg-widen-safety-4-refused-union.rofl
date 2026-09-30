@@ -1,0 +1,3 @@
+-- expect-refusal: a widening is declared for an interval hull only
+-- a union's top is no set: nothing to widen it to
+lattice awsr_union(X, union S) widen 2.

@@ -1,0 +1,7 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-count-strata-2-refused-recursive.rofl — a count of
+-- the rule's own conclusion. There is no round in which acr_p is closed and
+-- the count of it can be taken, so the program is refused.
+acr_q(1).
+acr_q(2).
+acr_p(X) :- acr_q(X), N is count(Y : acr_p(Y)), N < 5.

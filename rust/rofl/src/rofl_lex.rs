@@ -26,6 +26,9 @@ pub enum Tok {
     Neck,
     Op(&'static str),
     Arith(&'static str),
+    /// A character in code that is in no token and is not white space: not a
+    /// token at all, and the parser refuses it. `stray(K)` in the rules.
+    Stray,
 }
 
 /// A token occupies characters `start ..= end`, inclusive, exactly as `tok/2`
@@ -62,8 +65,10 @@ pub fn tokens(src: &str) -> Vec<Span> {
             Kind::Quote => {
                 let mut j = i + 1;
                 while j < n && !(st[j] == State::Str && kind[j] == Kind::Quote) { j += 1; }
+                // An unterminated quote closes nothing, so it is no `strtok`:
+                // it is stray, and everything after it is in no token either.
                 if j < n { out.push(Span { start: i, end: j, tok: Tok::Str }); i = j + 1; }
-                else { i += 1; }
+                else { out.push(Span { start: i, end: i, tok: Tok::Stray }); i += 1; }
                 continue;
             }
             // punct(I, lpar) :- kind(I, lpar), code_at(I).   ... and six more.
@@ -82,6 +87,16 @@ pub fn tokens(src: &str) -> Vec<Span> {
             Kind::Colon if k(i + 1) == Some(Kind::Dash) => {
                 out.push(Span { start: i, end: i + 1, tok: Tok::Neck });
                 i += 2;
+                continue;
+            }
+            // punct(I, colon) :- kind(I, colon), code_at(I), J is I + 1,
+            //                    not kind(J, dash).
+            // punct(I, semi)  :- kind(I, semi), code_at(I).
+            // An aggregate's two separators; the neck took its colon above.
+            Kind::Colon | Kind::Semi => {
+                let name = if kind[i] == Kind::Colon { "colon" } else { "semi" };
+                out.push(Span { start: i, end: i, tok: Tok::Punct(name) });
+                i += 1;
                 continue;
             }
             // op2(I, J, ne) :- kind(I, bang), J is I + 1, kind(J, eq), code_at(I).
@@ -140,6 +155,16 @@ pub fn tokens(src: &str) -> Vec<Span> {
             out.push(Span { start: i, end: j, tok: Tok::Word });
             i = j + 1;
             continue;
+        }
+        // white(K) :- kind(K, space).   white(K) :- kind(K, nl).
+        // stray(K) :- code_at(K), not in_tok(K), not white(K).
+        // THIS ARM USED TO BE `i += 1` FOR EVERYTHING, so `p(a). ; # q(b).`
+        // loaded both facts where src/parser.ts and ring1 both refuse
+        // (f_the_rust_lexer_skips_characters_it_has_no_token_for). The two
+        // white kinds are all that may pass unremarked; a comment's first
+        // dash never reaches here, its arm above consumed it.
+        if !matches!(kind[i], Kind::Space | Kind::Nl) {
+            out.push(Span { start: i, end: i, tok: Tok::Stray });
         }
         i += 1;
     }

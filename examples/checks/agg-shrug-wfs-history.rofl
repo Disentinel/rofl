@@ -1,0 +1,31 @@
+-- examples/checks/agg-shrug-wfs-history.rofl — agg_cell_shrug_wfs_history, in
+-- both engines: under well-founded semantics the carry of what holes left
+-- out grows with the alternation, and a fault met only under an
+-- over-estimate the alternation leaves behind is carried no more. swh_f(z)
+-- faults in the first round, while swh_w(z) is not yet known; swh_w(z) holds
+-- (n has no move), so `not swh_w(z)` is false for certain, swh_f(z) is
+-- unentailed and swh_g(z) holds. swh_f(k) faults under the final estimates
+-- and stays a shrug, and so does what reads it. Nothing here reads unknown,
+-- so the alternation is one level: the upper level of a program that reads
+-- unknown starts from the lower one's under-estimate and would hide this.
+semantics(well_founded).
+edb(swh_mv).
+edb(swh_at).
+edb(swh_big).
+swh_big(1152921504606846975).
+swh_mv(z, n). swh_mv(k, z). swh_mv(x, y). swh_mv(y, x).
+swh_at(z). swh_at(k). swh_at(x).
+swh_w(X) :- swh_mv(X, Y), not swh_w(Y).
+swh_f(X) :- swh_at(X), not swh_w(X), swh_big(B), Z is B + 1, Z > 0.
+swh_g(X) :- swh_at(X), not swh_f(X).
+-- expect-row: swh_w[main](z)
+-- expect-row: swh_g[main](z)
+-- expect-no-row: shrug[$kernel](swh_f(z)
+-- expect-no-row: shrug[$kernel](swh_g(z)
+-- expect-no-row: swh_f[main](z)
+-- expect-row: shrug[$kernel](swh_f(k),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](swh_g(k),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](swh_w(x),paradox,cycle($cons(swh_w,$nil)))
+-- a fault beside a paradox rests on both: swh_f(x) reads `not swh_w(x)`
+-- expect-row: shrug[$kernel](swh_f(x),inherited,from($cons($rule(r1086cf3f),$cons(swh_w(x),$nil))))
+-- expect-no-row: swh_g[main](k)

@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- the rank never closes
+sxhr_unclosed(R) :- sxh_l(_, _, V, _), R is rank(V, W : sxh_l(_, _, W, _).

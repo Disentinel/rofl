@@ -81,6 +81,7 @@ cls("]", rbrack).
 cls(",", comma).
 cls(".", dot).
 cls(":", colon).
+cls(";", semi).
 cls("-", dash).
 cls("\"", quote).
 cls("\n", nl).

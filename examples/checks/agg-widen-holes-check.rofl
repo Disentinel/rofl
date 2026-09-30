@@ -1,0 +1,124 @@
+-- examples/checks/agg-widen-holes-check.rofl — agg_widen_holes: a widening
+-- is a hole and never a silent value. The widened cell is
+-- `hole($lattice(...), widening_forced)`, its value withdrawn with what rested
+-- on it; an interval function whose finite end leaves the term range is its
+-- rule's fault, `arith_overflow`, and the cell's hole, never an end wrapped
+-- or clamped to an infinity; ivmul by what is no integer is
+-- `arith_type_error`; enumerating the members of an interval with an
+-- infinite end is `unbounded_members`, never a prefix and never a wall; and
+-- what reads a widened cell, by a negation or by a count, is not decided.
+edb(awh_s).
+edb(awh_big).
+edb(awh_p).
+awh_s(a).
+awh_big(1152921504606846970).
+awh_p(head). awh_p(tail).
+-- widened, and read below by a negation, a count and a membership
+lattice awh_w(P, hull I) widen 0.
+awh_w(head, iv(0, 0)) :- awh_s(a).
+awh_w(head, J)        :- awh_w(head, I), J is ivadd(I, 1).
+awh_w(tail, iv(5, 5)) :- awh_s(a).
+awh_has(P)            :- awh_w(P, I), 3 in I.
+awh_lacks(P)          :- awh_p(P), not awh_has(P).
+awh_n(N)              :- N is count(P : awh_w(P, _)).
+-- a finite end past the range
+lattice awh_o(P, hull I) widen 5.
+awh_o(head, iv(B, B)) :- awh_big(B).
+awh_o(head, J)        :- awh_o(head, I), J is ivadd(I, 10).
+-- ivmul by an interval, outside any recursion
+awh_mul(J)            :- awh_s(a), J is ivmul(iv(1, 2), iv(3, 4)).
+-- the members of a widened value, enumerated
+lattice awh_e(P, hull I) widen 0.
+awh_e(head, iv(0, 0)) :- awh_s(a).
+awh_e(head, J)        :- awh_e(head, I), J is ivadd(I, 1).
+awh_mem(E)            :- awh_e(head, I), E in I.
+awh_mem_of(E)         :- awh_s(a), E in iv(3, inf).
+-- an interval operand with Lo above Hi is no value: the function's fault
+awh_inv(J)            :- awh_s(a), J is ivadd(iv(5, 1), 0).
+-- AFTER THE CELL HAS IMPROVED: a firing on the value that replaced an older
+-- one faults, so nothing at least as large was contributed from it. The
+-- cell is its fault's hole, as it is on a first value, never an engine
+-- defect: the doubling counter overflows long before its widening is due
+lattice awh_late(P, hull I) widen 100.
+awh_late(head, iv(1, 1)) :- awh_s(a).
+awh_late(head, J)     :- awh_late(head, I), J is ivmul(I, 2).
+-- ...and the members of a value widened to an infinite end, enumerated
+-- inside the recursion: `unbounded_members` is the cell's hole, and the
+-- widening, of a cell with no value left, is none
+lattice awh_lm(P, hull I) widen 1.
+awh_lm(head, iv(0, 0)) :- awh_s(a).
+awh_lm(head, J)       :- awh_lm(head, I), E in I, E1 is E + 1, J = iv(E1, E1).
+-- ...and with no widening, an infinite end concluded outright
+lattice awh_ni(P, hull I).
+awh_ni(head, iv(0, 0))   :- awh_s(a).
+awh_ni(head, iv(0, inf)) :- awh_ni(head, I), 1 in I.
+awh_ni(head, iv(M, M))   :- awh_ni(head, I), N in I, M is N + 1.
+-- ...and an order lattice whose improving cycle meets the end of the range
+-- first: the cell's hole is arith_overflow
+lattice awh_min(K, min D).
+awh_min(a, -1152921504606846970) :- awh_s(a).
+awh_min(a, D2)        :- awh_min(a, D), D2 is D - 1.
+-- ...and a tuple of the recursion, concluded from a value since widened,
+-- whose rule faults on the value that replaced it
+lattice awh_tq(P, hull I) widen 1.
+awh_tq(head, iv(0, 0)) :- awh_s(a).
+awh_tm(head, E)       :- awh_tq(head, I), E in I.
+awh_tq(head, J)       :- awh_tq(head, I), awh_tm(head, _), J is ivadd(I, 1).
+-- A WIDENED CELL THAT ALSO TAKES A FAULT has no value to enclose: the fault
+-- is its one reason. A contribution off the carrier...
+lattice awh_wo(P, hull I) widen 0.
+awh_wo(head, iv(0, 0)) :- awh_s(a).
+awh_wo(head, J)       :- awh_wo(head, I), J is ivadd(I, 1).
+awh_wo(head, oops)    :- awh_s(a).
+-- ...and a contributing rule's overflow
+edb(awh_st).
+awh_st(0). awh_st(6).
+lattice awh_wf(P, hull I) widen 0.
+awh_wf(head, J)       :- awh_st(X), J is ivadd(iv(X, X), 1152921504606846970).
+awh_wf(head, J)       :- awh_wf(head, I), J is ivsub(I, 1).
+awh_rule(Rel, R)      :- concludes[$kernel](R, Rel).
+awh_fault(Rel, C)     :- awh_rule(Rel, R), shrug[$kernel]($rule(R), fault, C).
+awh_want_fault(awh_mul, arith_type_error).
+awh_want_fault(awh_mem_of, unbounded_members).
+awh_want_fault(awh_inv, arith_type_error).
+awh_want_fault(awh_late, arith_overflow).
+awh_want_fault(awh_lm, unbounded_members).
+awh_want_fault(awh_ni, unbounded_members).
+awh_want_fault(awh_min, arith_overflow).
+awh_want_fault(awh_tm, unbounded_members).
+awh_want_fault(awh_wf, arith_overflow).
+awh_unfaulted(Rel, C) :- awh_want_fault(Rel, C), not awh_fault(Rel, C).
+awh_decided()         :- awh_lacks(head).
+awh_decided()         :- awh_n(_).
+alarm(awh_unfaulted).
+alarm(awh_decided).
+-- expect-row: hole[$kernel]($lattice(awh_w,main,0,$cons(head,$nil)),widening_forced)
+-- expect-row: hole[$kernel]($lattice(awh_o,main,0,$cons(head,$nil)),arith_overflow)
+-- expect-row: awh_w[main](tail,iv(5,5))
+-- expect-row: awh_lacks[main](tail)
+-- expect-row: shrug[$kernel](awh_lacks(head),inherited,
+-- expect-row: shrug[$kernel](awh_mem($unknown_value),inherited,
+-- expect-no-row: awh_w[main](head,
+-- expect-no-row: awh_o[main](head,
+-- expect-no-row: awh_mul[main](
+-- expect-no-row: awh_mem_of[main](
+-- expect-no-row: awh_mem[main](
+-- expect-no-row: awh_lacks[main](head)
+-- expect-no-row: awh_n[main](
+-- expect-no-row: awh_inv[main](
+-- expect-row: hole[$kernel]($lattice(awh_late,main,0,$cons(head,$nil)),arith_overflow)
+-- expect-no-row: awh_late[main](head,
+-- expect-row: hole[$kernel]($lattice(awh_lm,main,0,$cons(head,$nil)),unbounded_members)
+-- expect-no-row: hole[$kernel]($lattice(awh_lm,main,0,$cons(head,$nil)),widening_forced)
+-- expect-no-row: awh_lm[main](head,
+-- expect-row: hole[$kernel]($lattice(awh_ni,main,0,$cons(head,$nil)),unbounded_members)
+-- expect-no-row: awh_ni[main](head,
+-- expect-row: hole[$kernel]($lattice(awh_min,main,0,$cons(a,$nil)),arith_overflow)
+-- expect-no-row: awh_min[main](a,
+-- expect-row: shrug[$kernel](awh_tm(head,$unknown_value),inherited,
+-- expect-row: hole[$kernel]($lattice(awh_wo,main,0,$cons(head,$nil)),agg_type_error)
+-- expect-no-row: hole[$kernel]($lattice(awh_wo,main,0,$cons(head,$nil)),widening_forced)
+-- expect-no-row: awh_wo[main](head,
+-- expect-row: hole[$kernel]($lattice(awh_wf,main,0,$cons(head,$nil)),arith_overflow)
+-- expect-no-row: hole[$kernel]($lattice(awh_wf,main,0,$cons(head,$nil)),widening_forced)
+-- expect-no-row: awh_wf[main](head,

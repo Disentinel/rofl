@@ -1,0 +1,47 @@
+-- examples/checks/agg-sugar-why-check.rofl — agg_sugar_why, run with `rofl-load --explain` over the sugar as the
+-- reader lowers it (agg-sugar-forms.rofl.md): `why` of an average names the sum and the count it divides, the
+-- count's `> 0` and the division rounded toward zero (71 / 2 = 35); of every, the domain and what holds of it,
+-- equal; of at most, the count and its bound. `whynot` of an empty group's average says the count is 0, not 0 > 0
+-- by a division; of every, the two counts that differ; of at most, the count past the bound; and of an average
+-- whose total or scaled total has no value, which hole it is, never an empty group or a missing fact.
+edb(explain_request).
+edb(explained).
+explain_request(why, sgs_mean(g1, 35)).
+explain_request(why, sgs_out(g1)).
+explain_request(why, sgs_small(g4)).
+explain_request(whynot, sgs_mean(g3, 0)).
+explain_request(whynot, sgs_mean(g1, 36)).
+explain_request(whynot, sgs_out(g2)).
+explain_request(whynot, sgs_small(g1)).
+explain_request(whynot, sgs_mean(g6, 0)).
+explain_request(whynot, sgs_micro(g7, 0)).
+sgy_says(K, A, T) :- sgy_want(K, A, T), explained[$explain](K, A, _, L), N is str_segs(L, T), N > 1.
+sgy_want(why, sgs_mean(g1, 35), "sum(?E ; ?M : sg_age[main](g1,?M,?E)) = 71 [aggregate: 2 members").
+sgy_want(why, sgs_mean(g1, 35), "count(?E1,?M1 : sg_age[main](g1,?M1,?E1)) = 2 [aggregate: 2 members").
+sgy_want(why, sgs_mean(g1, 35), "2 > 0 [builtin]").
+sgy_want(why, sgs_mean(g1, 35), "35 is /(71,2) [builtin]").
+sgy_want(why, sgs_out(g1), "count(?M : sg_age[main](g1,?M,?_$0)) = 2 [aggregate").
+sgy_want(why, sgs_out(g1), "count(?M1 : sg_age[main](g1,?M1,?_$1), sg_voted[main](?M1)) = 2 [aggregate").
+sgy_want(why, sgs_out(g1), "2 = 2 [builtin]").
+sgy_want(why, sgs_small(g4), "count(?M : sg_age[main](g4,?M,?_$0)) = 1 [aggregate: 1 member").
+sgy_want(why, sgs_small(g4), "1 <= 1 [builtin]").
+sgy_want(whynot, sgs_mean(g3, 0), "failed premise: 0 > 0 [builtin fails]").
+sgy_want(whynot, sgs_mean(g1, 36), "failed premise: 36 is /(71,2) [builtin fails]").
+sgy_want(whynot, sgs_out(g2), "failed premise: 2 = 1 [builtin fails]").
+sgy_want(whynot, sgs_small(g1), "failed premise: 2 <= 1 [builtin fails]").
+sgy_want(whynot, sgs_mean(g6, 0), "no answer, a shrug").
+sgy_want(whynot, sgs_mean(g6, 0), "has no value: hole(agg_overflow) [aggregate]").
+sgy_want(whynot, sgs_micro(g7, 0), "no answer, a shrug").
+sgy_want(whynot, sgs_micro(g7, 0), "arith_overflow, arithmetic left the integer range").
+sgy_missing(K, A, T) :- sgy_want(K, A, T), not sgy_says(K, A, T).
+alarm(sgy_missing).
+-- an empty group's average is no division, and a hole is not an empty group
+sgy_never(sgs_mean(g3, 0), "by zero").
+sgy_never(sgs_mean(g3, 0), "hole(").
+sgy_never(sgs_mean(g6, 0), "empty group").
+sgy_never(sgs_mean(g6, 0), "no matching base fact").
+sgy_never(sgs_micro(g7, 0), "empty group").
+sgy_leaked(A, T) :- sgy_never(A, T), explained[$explain](whynot, A, _, L), N is str_segs(L, T), N > 1.
+alarm(sgy_leaked).
+sgy_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(sgy_refused).

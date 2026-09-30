@@ -1,0 +1,3 @@
+-- expect-refusal: 'X' is written twice
+-- each value after the key is a variable of its own; compare them in the body
+sxsr_twice(A, X, X) <= sxsr_twice(A, Y, Z) :- Y < X.

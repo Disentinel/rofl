@@ -1,0 +1,62 @@
+-- examples/checks/agg-sub-reflect-check.rofl — agg_sub_reflect: a
+-- dominance rule is rules as data. Each rule of agg-sub-data.rofl is one
+-- `dominance[$kernel](R, Rel, Arity, Key)` row, both directions, and its two
+-- facts are `dominance_lit[$kernel](R, 1, Lo)` and `(R, 2, Hi)`, of Rel at
+-- Arity, sharing exactly their first Key arguments (walked here off the two
+-- literals); its body is a rule body's rows (`has_premise`, `premise_lit`,
+-- `premise_pos`, `premise_neg`), and the rule concludes nothing: no `rule`
+-- and no `concludes` row, so no evaluation runs it as a rule, and none of
+-- the kernel's audits finds it malformed, unmoded or reading nothing. The
+-- TypeScript engine's ids for these rules are held to the Rust store's by
+-- scripts/goldens.ts.
+asr_want(as_route, 4, 2, 2).
+asr_want(as_d, 3, 2, 1).
+asr_want(as_sat, 2, 1, 1).
+asr_want(as_wide, 3, 2, 1).
+asr_want(as_pick, 2, 1, 1).
+asr_want(as_best, 3, 0, 2).
+asr_want(as_bk, 2, 1, 1).
+asr_want(as_p, 3, 2, 1).
+asr_want(as_ud, 2, 1, 1).
+asr_want(as_uc, 3, 1, 2).
+asr_want(as_v, 2, 1, 1).
+asr_row(Rel, N, K, C) :- dominance[$kernel](_, Rel, N, K), C is count(R : dominance[$kernel](R, Rel, N, K)).
+asr_missing(Rel)      :- asr_want(Rel, N, K, C), not asr_row(Rel, N, K, C).
+asr_extra(Rel)        :- asr_row(Rel, N, K, C), not asr_want(Rel, N, K, C).
+alarm(asr_missing).
+alarm(asr_extra).
+-- the two facts: of the relation, at its arity, sharing the key and no more
+asr_pair(R, A1, A2) :- dominance[$kernel](R, Rel, _, _),
+  dominance_lit[$kernel](R, 1, $lit(Rel, _, A1, _)), dominance_lit[$kernel](R, 2, $lit(Rel, _, A2, _)).
+asr_walk(R, A1, A2, 0) :- asr_pair(R, A1, A2).
+asr_walk(R, T1, T2, N) :- asr_walk(R, $cons(X, T1), $cons(X, T2), M), N is M + 1.
+asr_shared(R, N)  :- asr_walk(R, $cons(X, _), $cons(Y, _), N), X != Y.
+asr_len(R, L, 0)  :- asr_pair(R, L, _).
+asr_len(R, T, N)  :- asr_len(R, $cons(_, T), M), N is M + 1.
+asr_arity(R, N)   :- asr_len(R, $nil, N).
+asr_key_wrong(R)  :- dominance[$kernel](R, _, _, K), asr_shared(R, J), J != K.
+asr_key_wrong(R)  :- dominance[$kernel](R, _, _, _), not asr_shared(R, _).
+asr_arity_wrong(R) :- dominance[$kernel](R, _, N, _), asr_arity(R, M), M != N.
+asr_unpaired(R)   :- dominance[$kernel](R, _, _, _), not asr_pair(R, _, _).
+alarm(asr_key_wrong).
+alarm(asr_arity_wrong).
+alarm(asr_unpaired).
+-- the dominated fact is the left one: as_d(X, Y, D1) is dominated when D2 < D1
+asr_side_wrong() :- dominance[$kernel](R, as_d, _, _),
+  not dominance_lit[$kernel](R, 1, $lit(as_d, main, $cons($var("X"), $cons($var("Y"), $cons($var("D1"), $nil))), $now)).
+alarm(asr_side_wrong).
+-- the body is a rule body's rows
+asr_body(pick_pos)  :- dominance[$kernel](R, as_pick, _, _), premise_pos[$kernel](R, as_prefers), premise_pos[$kernel](R, as_qual).
+asr_body(pick_two)  :- dominance[$kernel](R, as_pick, _, _), has_premise[$kernel](R, 2), not has_premise[$kernel](R, 3).
+asr_body(d_builtin) :- dominance[$kernel](R, as_d, _, _), premise_lit[$kernel](R, 1, $builtin("<", _)).
+asr_body_part(pick_pos). asr_body_part(pick_two). asr_body_part(d_builtin).
+asr_body_lost(P) :- asr_body_part(P), not asr_body(P).
+alarm(asr_body_lost).
+-- it concludes nothing, and the audits read it as what it is
+asr_as_rule(R) :- dominance[$kernel](R, _, _, _), rule[$kernel](R).
+asr_as_rule(R) :- dominance[$kernel](R, _, _, _), concludes[$kernel](R, _).
+asr_audited(R) :- dominance[$kernel](R, _, _, _), malformed[audit](R).
+asr_audited(R) :- dominance[$kernel](R, _, _, _), unmoded[audit](R).
+asr_audited(R) :- dominance[$kernel](R, _, _, _), undefined_premise[audit](R, _).
+alarm(asr_as_rule).
+alarm(asr_audited).

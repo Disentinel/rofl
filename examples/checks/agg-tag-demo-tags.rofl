@@ -1,0 +1,19 @@
+-- examples/checks/agg-tag-demo-tags.rofl — THE SAME RELATIONS AS TAGS, in the
+-- kernel: each rule of agg-tag-demo-plain.rofl with its head's tag, the
+-- edge's weight where the edge is read, left to the engine elsewhere; the
+-- counting edges a tag of their own (tgd_mc), since a two-hop derivation
+-- multiplies two weights and a rule has one.
+tag tgd_c(A, B, tropical T).
+tgd_c(A, B, W) :- tgd_w(A, B, W).
+tgd_c(A, C, W) :- tgd_c(A, B, _), tgd_w(B, C, W).
+tag tgd_v(A, B, viterbi P).
+tgd_v(A, B, W) :- tgd_p(A, B, W).
+tgd_v(A, C, W) :- tgd_v(A, B, _), tgd_p(B, C, W).
+tag tgd_r(A, B, trust T).
+tgd_r(A, B, W) :- tgd_t(A, B, W).
+tgd_r(A, C, W) :- tgd_r(A, B, _), tgd_t(B, C, W).
+tag tgd_mc(A, B, counting N).
+tgd_mc(A, B, W) :- tgd_m(A, B, W).
+tag tgd_n(A, C, counting N).
+tgd_n(A, C, N) :- tgd_mc(A, C, _).
+tgd_n(A, C, N) :- tgd_mc(A, B, _), tgd_mc(B, C, _).

@@ -1,0 +1,4 @@
+-- examples/checks/agg-minmax-safety-1-ok.rofl — extremes safety.rofl must
+-- accept: one value, no key, a group variable only the aggregate binds.
+ams_lo(G, M) :- M is min(V : ams_d(G, V)).
+ams_hi(G, M) :- M is max(V : ams_d(G, V)).

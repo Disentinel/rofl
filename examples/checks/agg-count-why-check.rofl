@@ -1,0 +1,29 @@
+-- examples/checks/agg-count-why-check.rofl — agg_count_why, a world run with
+-- `rofl-load --explain`: `why` of a count names the cell, says what it
+-- sealed, and lists each member exactly once; `whynot` of a wrong count says
+-- what the count is.
+edb(explain_request).
+edb(explained).
+explain_request(why, ac_votes(c1, 3)).
+explain_request(whynot, ac_votes(c1, 99)).
+-- `str_segs(L, T)` is how many pieces T cuts L into: more than one, L holds T
+acy_holds(K, A, T) :- explained[$explain](K, A, _, L), acy_want(K, A, T), N is str_segs(L, T), N > 1.
+acy_want(why, ac_votes(c1, 3), "sealed ac_cast@").
+acy_want(why, ac_votes(c1, 3), "[aggregate: 3 members").
+acy_want(whynot, ac_votes(c1, 99), "= 3, not 99 [aggregate]").
+why_seal_missing(T) :- acy_want(why, A, T), not acy_holds(why, A, T).
+whynot_text_missing(T) :- acy_want(whynot, A, T), not acy_holds(whynot, A, T).
+-- each member of c1 on exactly one line, as `(B)`
+acy_mtext(1, "(1) h=").
+acy_mtext(2, "(2) h=").
+acy_mtext(3, "(3) h=").
+acy_on(B, I) :- explained[$explain](why, ac_votes(c1, 3), I, L), acy_mtext(B, T), N is str_segs(L, T), N > 1.
+member_unlisted(B) :- ac_cast(B, c1, _), not acy_any(B).
+acy_any(B)         :- acy_on(B, _).
+member_listed_twice(B) :- acy_on(B, I), acy_on(B, J), I != J.
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(why_seal_missing).
+alarm(whynot_text_missing).
+alarm(member_unlisted).
+alarm(member_listed_twice).
+alarm(explain_refused).

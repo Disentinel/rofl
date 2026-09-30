@@ -1,0 +1,8 @@
+-- expect-refusal: cannot close the subsumptive relation assr_u
+-- the stock evaluator closes a subsumptive relation where its table ranks
+-- it: without rules/strata.rofl nothing ranks it, and it is refused
+edb(assr_v).
+assr_v(a, 1). assr_v(a, 2).
+assr_u(K, V) :- assr_v(K, V).
+assr_u(K, V1) <= assr_u(K, V2) :- V2 < V1.
+assr_w(K) :- assr_u(K, _).

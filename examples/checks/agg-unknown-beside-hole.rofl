@@ -1,0 +1,25 @@
+-- examples/checks/agg-unknown-beside-hole.rofl — `unknown(A)` BESIDE A HOLE
+-- IS A SHRUG, in both engines, under either evaluator (docs/aggregates.md,
+-- "Shrugs, as built"): it was refused (f_unknown_is_read_as_complete_beside_a_hole,
+-- f_unknown_beside_a_hole_was_guarded_only_under_well_founded), and now what a
+-- hole left out, A, makes `unknown(A)` no answer, read positively or under
+-- not, while what is known is decided. Four programs: an overflow
+-- (holes-negation-unknown.rofl), a type error (-type), a positive reader
+-- (-positive), and a hole that keeps a fact from being staged
+-- (holes-negation-ticks-unknown.rofl). Two ticks: each tick's shrugs, read as
+-- data, are carried to the one the state is read at, and so are the answers.
+aub_shrug(A)@next :- shrug(A, inherited, _).
+aub_shrug(A)@next :- aub_shrug(A).
+aub_held(hu, A)@next :- hu_decided(A).
+aub_held(hut, A)@next :- hut_decided(A).
+aub_held(P, A)@next :- aub_held(P, A).
+-- expect-row: aub_shrug[main](hu_decided(c))
+-- expect-row: aub_shrug[main](hut_decided(c))
+-- expect-row: aub_shrug[main](hup_maybe(c))
+-- expect-row: aub_shrug[main](hk_decided(c))
+-- expect-row: aub_held[main](hu,k)
+-- expect-row: aub_held[main](hut,k)
+-- expect-no-row: aub_held[main](hu,c)
+-- expect-no-row: aub_held[main](hut,c)
+-- expect-no-row: aub_shrug[main](hu_decided(k))
+-- expect-no-row: aub_shrug[main](hk_decided(k))

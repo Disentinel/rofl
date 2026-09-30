@@ -1,0 +1,34 @@
+-- examples/checks/agg-shrug-lattice.rofl — agg_lattice_shrug: a lattice cell a
+-- contribution a hole left out could improve is a shrug inherited from the
+-- fault, its value not known, not the best of the rest (a value a hole does
+-- not carry could be below any known one); a cell no hole reaches keeps its
+-- value; a negation of a shrug cell is a shrug; and a lattice whose rule reads
+-- `unknown(A)` of what a hole left out is a shrug there too.
+edb(sl_e).
+edb(sl_big).
+edb(sl_pos).
+sl_big(1152921504606846975).
+sl_pos(a). sl_pos(b). sl_pos(c).
+sl_e(a, b, 1). sl_e(b, c, 2). sl_e(a, d, oops). sl_e(d, c, 1).
+lattice sl_d(X, Y, min D).
+sl_d(X, Y, D) :- sl_e(X, Y, W), D is W + 0.
+sl_d(X, Z, D) :- sl_d(X, Y, D1), sl_e(Y, Z, W), D is D1 + W.
+sl_far(X, Y) :- sl_pos(X), sl_pos(Y), not sl_d(X, Y, 3).
+sl_w(a).
+sl_w(c) :- sl_big(B), Z is B + 1, Z > 0.
+lattice sl_s(X, max D).
+sl_s(X, 1) :- sl_pos(X), not unknown(sl_w(X)).
+-- expect-row: shrug[$kernel]($lattice(sl_d,main,0,$cons(a,$cons(d,$nil))),fault,arith_type_error)
+-- expect-row: shrug[$kernel]($lattice(sl_d,main,0,$cons(a,$cons(c,$nil))),inherited,from($cons($lattice(sl_d,main,0,$cons(a,$cons(d,$nil))),$nil)))
+-- expect-row: shrug[$kernel](sl_d(a,c,$unknown_value),inherited,from($cons($lattice(sl_d,main,0,$cons(a,$cons(d,$nil))),$nil)))
+-- expect-row: shrug[$kernel](sl_far(a,c),inherited,from($cons($lattice(sl_d,main,0,$cons(a,$cons(d,$nil))),$nil)))
+-- expect-row: shrug[$kernel](sl_s(c,$unknown_value),inherited,from($cons($rule(r3b7490a1),$nil)))
+-- expect-row: shrug[$kernel]($lattice(sl_s,main,0,$cons(c,$nil)),inherited,from($cons($rule(r3b7490a1),$nil)))
+-- expect-no-row: sl_d[main](a,c,
+-- expect-no-row: sl_far[main](a,c)
+-- expect-no-row: sl_s[main](c,
+-- expect-row: sl_d[main](a,b,1)
+-- expect-row: sl_d[main](b,c,2)
+-- expect-row: sl_far[main](b,c)
+-- expect-row: sl_s[main](a,1)
+-- expect-row: sl_s[main](b,1)

@@ -1,0 +1,34 @@
+-- examples/checks/agg-tagc-eval-check.rofl — agg_tagc_eval: every counting tag
+-- of agg-tagc-data.rofl holds exactly the count derived by hand, one fact per
+-- key, both directions.
+--
+-- tc_two(A, C) is the sum over B of hop(A, B) x hop(B, C): s -> t by a
+-- (1 x 1) and by b (2 x 1), 3; s -> b by a, 1 x 3; a -> t by b, 3 x 1;
+-- a -> u by t, 1; b -> u by t, 1. tc_any adds the one-hop count to the
+-- two-hop: s -> b 2 + 3 = 5, a -> t 1 + 3 = 4. tc_seen is 2 per edge out of
+-- the node: s and a two edges each, 4; b and t one, 2. tc_total sums every
+-- hop's count, 1 + 2 + 1 + 1 + 3 + 1 = 9.
+tce_want(hop, s, a, 1). tce_want(hop, s, b, 2). tce_want(hop, a, t, 1). tce_want(hop, b, t, 1).
+tce_want(hop, a, b, 3). tce_want(hop, t, u, 1).
+tce_want(two, s, t, 3). tce_want(two, s, b, 3). tce_want(two, a, t, 3). tce_want(two, a, u, 1).
+tce_want(two, b, u, 1).
+tce_want(any, s, a, 1). tce_want(any, s, b, 5). tce_want(any, a, t, 4). tce_want(any, b, t, 1).
+tce_want(any, a, b, 3). tce_want(any, t, u, 1). tce_want(any, s, t, 3). tce_want(any, a, u, 1).
+tce_want(any, b, u, 1).
+tce_want(seen, s, s, 4). tce_want(seen, a, a, 4). tce_want(seen, b, b, 2). tce_want(seen, t, t, 2).
+tce_want(total, all, all, 9).
+tce_got(hop, A, B, N)  :- tc_hop(A, B, N).
+tce_got(two, A, B, N)  :- tc_two(A, B, N).
+tce_got(any, A, B, N)  :- tc_any(A, B, N).
+tce_got(seen, A, A, N) :- tc_seen(A, N).
+tce_got(total, all, all, N) :- tc_total(N).
+tce_missing(R, A, B, N) :- tce_want(R, A, B, N), not tce_got(R, A, B, N).
+tce_extra(R, A, B, N)   :- tce_got(R, A, B, N), not tce_want(R, A, B, N).
+tce_two(R, A, B)        :- tce_got(R, A, B, M), tce_got(R, A, B, N), M != N.
+tce_many_want(s, b). tce_many_want(a, t). tce_many_want(a, b). tce_many_want(s, t).
+tce_many_wrong(A, C) :- tce_many_want(A, C), not tc_many(A, C).
+tce_many_wrong(A, C) :- tc_many(A, C), not tce_many_want(A, C).
+alarm(tce_missing).
+alarm(tce_extra).
+alarm(tce_two).
+alarm(tce_many_wrong).

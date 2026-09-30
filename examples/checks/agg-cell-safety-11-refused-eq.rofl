@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-11-refused-eq.rofl — an equality on the value of a min: it holds of one value only.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_eq(A, C, min D).
+acsr_eq(A, C, D) :- acsr_e(A, C, D).
+acsr_eq(A, C, D) :- acsr_eq(A, B, D1), acsr_e(B, C, W), D1 = 2, D is D1 + W.

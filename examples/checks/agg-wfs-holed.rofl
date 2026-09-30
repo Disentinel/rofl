@@ -1,0 +1,10 @@
+-- examples/checks/agg-wfs-holed.rofl — a well-founded world below with a hole
+-- in it: wg_odds divides by zero for z, so whether wg_odds(z, _) holds is not
+-- known. Fed as base, its absence would read as false, and a count over it
+-- would count the rest; Session::feed_below refuses the whole world.
+semantics(well_founded).
+edb(wh_n).
+wh_n(a, 2). wh_n(z, 0).
+wh_odds(K, Q) :- wh_n(K, N), Q is 10 / N.
+wh_win(X) :- wh_n(X, _), not wh_lose(X).
+wh_lose(X) :- wh_n(X, _), not wh_win(X).

@@ -1,0 +1,6 @@
+-- expect-refusal: unfolded at a call site
+-- big is not range-restricted, so it is answered on demand, and so is what reads it
+edb(atsr_v).
+atsr_v(4, c1).
+atsr_big(X) :- X > 3.
+atsr_demand(C) :- atsr_v(_, C), at_least(1, X : atsr_v(X, C), atsr_big(X)).

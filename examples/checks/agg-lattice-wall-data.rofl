@@ -1,0 +1,102 @@
+-- examples/checks/agg-lattice-wall-data.rofl — THE ORDER LATTICE AT A WALL,
+-- shared by agg_lattice_wall (the budget) and agg_lattice_space (the space);
+-- docs/aggregates.md, "The order lattice, as built", Holes. A min over a
+-- negative cycle (x and y) and a max over a positive one (a and b) improve
+-- until a wall stops them. The wall stops the whole evaluation, so this
+-- world's rules never read what it left; its rows are asserted here, as
+-- lines of the state it must hold and must not (scripts/goldens.ts): each
+-- cell of the cycles is `improving_cycle`, what they reach (z) is
+-- `support_withdrawn`, and a cell no cycle reaches keeps the value it
+-- reached — a zero-weight cycle (u and w) is no improving one, though u
+-- improved — and a fault stands as it would at a close. Each open lattice's
+-- relation hole, with the wall's own reason, is in the file of each world.
+-- A cycle is judged by values, not by cells: cs to cy is first 11 through
+-- cx and later 3 through a longer path (cp, cq), and cs to cx then 4
+-- through cy, so the two cells improved through each other, and yet no value
+-- of either came from an earlier value of its own: both keep their values,
+-- with no hole, as do ds to dx and dy, the same graph with the short path
+-- arriving first (f_a_wall_named_cells_that_improved_through_one_another).
+-- A lattice the wall did not reach is closed as it would have been: aws, a
+-- min over a DAG that reads nothing the cycles reach, settles before the wall
+-- and keeps its values with no hole, where it was holed only for sharing
+-- the round (f_a_settled_lattice_was_holed_for_the_round_it_shared); awt
+-- reads awn and is holed with it; awr, a plain reader above awn, never runs,
+-- and the world says so with its own hole (the file of each world).
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(x,$cons(x,$nil))),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(x,$cons(y,$nil))),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(y,$cons(x,$nil))),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(y,$cons(y,$nil))),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(x,$cons(z,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(y,$cons(z,$nil))),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(awp,main,0,$cons(a,$nil)),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awp,main,0,$cons(b,$nil)),improving_cycle)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(f,$cons(g,$nil))),agg_type_error)
+-- expect-row: hole[$kernel]($lattice(awn,main,0,$cons(f,$cons(h,$nil))),support_withdrawn)
+-- expect-row: awn[main](q,r,1)
+-- expect-row: awp[main](p,1)
+-- expect-row: awp[main](q,2)
+-- expect-row: awn[main](s,u,2)
+-- expect-row: awn[main](s,w,2)
+-- expect-row: awn[main](cs,cx,4)
+-- expect-row: awn[main](cs,cy,3)
+-- expect-row: awn[main](ds,dx,4)
+-- expect-row: awn[main](ds,dy,3)
+-- expect-no-row: awn[main](x,
+-- expect-no-row: awn[main](y,
+-- expect-no-row: awp[main](a,
+-- expect-no-row: awp[main](b,
+-- expect-no-row: hole[$kernel]($lattice(awn,main,0,$cons(s,
+-- expect-no-row: hole[$kernel]($lattice(awn,main,0,$cons(q,
+-- expect-no-row: hole[$kernel]($lattice(awp,main,0,$cons(p,
+-- expect-no-row: hole[$kernel]($lattice(awp,main,0,$cons(q,
+-- expect-no-row: hole[$kernel]($lattice(awn,main,0,$cons(cs,
+-- expect-no-row: hole[$kernel]($lattice(awn,main,0,$cons(ds,
+-- expect-row: aws[main](sa,sc,3)
+-- expect-row: aws[main](sb,sc,2)
+-- expect-no-row: hole[$kernel]($lattice(aws
+-- expect-no-row: awr[main](
+edb(awn_e).
+edb(awp_e).
+awn_e(x, y, 1).
+awn_e(y, x, -2).
+awn_e(y, z, 1).
+awn_e(q, r, 1).
+awn_e(s, u, 5).
+awn_e(s, v, 1).
+awn_e(v, u, 1).
+awn_e(u, w, 0).
+awn_e(w, u, 0).
+awn_e(f, g, oops).
+awn_e(g, h, 1).
+awn_e(cs, cx, 10).
+awn_e(cx, cy, 1).
+awn_e(cy, cx, 1).
+awn_e(cs, cp, 1).
+awn_e(cp, cq, 1).
+awn_e(cq, cy, 1).
+awn_e(ds, dx, 10).
+awn_e(dx, dy, 1).
+awn_e(dy, dx, 1).
+awn_e(ds, dy, 3).
+awp_e(a, b, 1).
+awp_e(b, a, 1).
+awp_e(p, q, 1).
+
+lattice awn(A, C, min D).
+awn(A, C, D) :- awn_e(A, C, D).
+awn(A, C, D) :- awn(A, B, D1), awn_e(B, C, W), D is D1 + W.
+
+lattice awp(A, max D).
+awp(A, D) :- awp_e(A, _, D).
+awp(B, D) :- awp(A, D1), awp_e(A, B, W), D is D1 + W.
+
+edb(aws_e).
+aws_e(sa, sb, 1). aws_e(sb, sc, 2). aws_e(sa, sc, 5).
+lattice aws(A, C, min D).
+aws(A, C, D) :- aws_e(A, C, D).
+aws(A, C, D) :- aws(A, B, D1), aws_e(B, C, W), D is D1 + W.
+
+lattice awt(A, C, min D).
+awt(A, C, D) :- awn(A, C, D1), D is D1 + 0.
+
+awr(C) :- awn(s, C, D), D < 3.

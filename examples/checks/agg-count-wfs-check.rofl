@@ -1,0 +1,17 @@
+-- examples/checks/agg-count-wfs-check.rofl — agg_count_wfs: count over what a
+-- well-founded world concluded, fed from below; inside one, count is refused
+-- (agg-count-wfs-2-refused-count.rofl).
+wcn_wins(N)   :- N is count(X : wg_win(X), not unknown(wg_win(X))).
+wcn_draws(N)  :- N is count(X : unknown(wg_win(X))).
+wcn_losses(N) :- N is count(X : wv_value(X, -1)).
+wcn_want(wins, 2). wcn_want(draws, 4). wcn_want(losses, 3).
+wcn_got(wins, N)   :- wcn_wins(N).
+wcn_got(draws, N)  :- wcn_draws(N).
+wcn_got(losses, N) :- wcn_losses(N).
+wcn_wrong(K, N)    :- wcn_want(K, N), not wcn_got(K, N).
+alarm(wcn_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wcn_got[main](draws,4)
+-- expect-row: wcn_got[main](losses,3)
+-- expect-row: wcn_got[main](wins,2)

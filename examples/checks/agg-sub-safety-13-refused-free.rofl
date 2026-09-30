@@ -1,0 +1,6 @@
+-- expect-refusal: its body uses Z bound neither by the two facts nor by a literal of the body
+-- the body is range-restricted over the two facts
+edb(assr_re).
+assr_re(a, 1).
+assr_free(A, V) :- assr_re(A, V).
+assr_free(A, X) <= assr_free(A, Y) :- Y < Z.

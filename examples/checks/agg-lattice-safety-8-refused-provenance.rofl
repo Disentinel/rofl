@@ -1,0 +1,7 @@
+-- expect-refusal: reads derived_by beside the lattice
+-- examples/checks/agg-lattice-safety-8-refused-provenance.rofl — a cell that improves withdraws its old firings, so provenance read while the evaluation runs would change under its reader.
+edb(alsf_e).
+alsf_e(a, b, 2).
+lattice alsf_pv(A, min D).
+alsf_pv(A, D) :- alsf_e(A, _, D).
+alsf_who(R) :- derived_by(_, R, _).

@@ -1,0 +1,6 @@
+-- expect-refusal: not range-restricted
+-- examples/checks/agg-lattice-safety-7-refused-demand.rofl — a rule concluding a lattice that does not bind the value: its cells would be unfolded at a call site.
+edb(alsf_e).
+alsf_e(a, b, 2).
+lattice alsf_dm(A, min D).
+alsf_dm(A, D) :- alsf_e(A, _, _).

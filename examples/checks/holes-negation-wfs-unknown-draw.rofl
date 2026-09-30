@@ -1,0 +1,10 @@
+-- examples/checks/holes-negation-wfs-unknown-draw.rofl — a positive reader
+-- of `unknown` beside a hole, under well-founded semantics, in both engines:
+-- wv_draw names the draw (x and y), and is a shrug for c, whose move a hole
+-- left out, never absent.
+semantics(well_founded).
+edb(wv_e).
+wv_e(c, d, oops). wv_e(x, y, 1). wv_e(y, x, 1).
+wv_move(A, B) :- wv_e(A, B, W), V is W + 0, V > 0.
+wv_win(X) :- wv_move(X, Y), not wv_win(Y).
+wv_draw(X) :- unknown(wv_win(X)).

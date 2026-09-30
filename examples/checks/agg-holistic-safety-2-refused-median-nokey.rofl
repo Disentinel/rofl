@@ -1,0 +1,4 @@
+-- expect-refusal: median and quantile need their projection key
+-- examples/checks/agg-holistic-safety-2-refused-median-nokey.rofl — without
+-- its key a median would read two equal values as one member.
+ahs_nokey(G, M) :- ahs_group(G), M is median(V : ahs_line(G, _, V)).

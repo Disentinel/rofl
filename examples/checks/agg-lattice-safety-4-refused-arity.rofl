@@ -1,0 +1,6 @@
+-- expect-refusal: at an arity other than its declaration
+-- examples/checks/agg-lattice-safety-4-refused-arity.rofl — a rule writing a lattice at another width than it was declared at.
+edb(alsf_e).
+alsf_e(a, b, 2).
+lattice alsf_ar(A, C, min D).
+alsf_ar(A, D) :- alsf_e(A, _, D).

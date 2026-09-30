@@ -1,0 +1,53 @@
+-- examples/checks/agg-holistic-syntax-2-expect.rofl — agg_holistic_syntax.
+-- The `$agg` tree each form of agg-holistic-syntax-1-forms.rofl reflects to,
+-- both directions (the percent and the subject the first term, the
+-- operation's name the first argument); ring 1 reading a median, a quantile
+-- with its percent and a rank from `src` (a wildcard is `wild` at its
+-- offset); and no refused form reaching the
+-- world.
+sxh_want(sxh_med, $agg(median,$var("M"),$cons($var("V"),$nil),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("_$0"),$cons($var("K"),$cons($var("V"),$cons($var("_$1"),$nil)))),$now),$nil))).
+sxh_want(sxh_med2, $agg(median,$var("M"),$cons($var("V"),$nil),$cons($var("K"),$cons($var("T"),$nil)),$cons($lit(sxh_l,main,$cons($var("_$0"),$cons($var("K"),$cons($var("V"),$cons($var("T"),$nil)))),$now),$nil))).
+sxh_want(sxh_corr, $agg(median,$var("M"),$cons($var("V"),$nil),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("G"),$cons($var("K"),$cons($var("V"),$cons($var("_$0"),$nil)))),$now),$nil))).
+sxh_want(sxh_group, $agg(median,$var("M"),$cons($var("V"),$nil),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("G"),$cons($var("K"),$cons($var("V"),$cons($var("_$0"),$nil)))),$now),$nil))).
+sxh_want(sxh_q, $agg(quantile,$var("Q"),$cons(90,$cons($var("V"),$nil)),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("_$0"),$cons($var("K"),$cons($var("V"),$cons($var("_$1"),$nil)))),$now),$nil))).
+sxh_want(sxh_qp, $agg(quantile,$var("Q"),$cons($var("P"),$cons($var("V"),$nil)),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("G"),$cons($var("K"),$cons($var("V"),$cons($var("_$0"),$nil)))),$now),$nil))).
+sxh_want(sxh_book, $agg(quantile,$var("Q"),$cons(50,$cons($var("V"),$nil)),$cons($var("K"),$nil),$cons($lit(sxh_l,ledger,$cons($var("_$0"),$cons($var("K"),$cons($var("V"),$cons($var("_$1"),$nil)))),$now),$nil))).
+sxh_want(sxh_rank, $agg(rank,$var("R"),$cons($var("V"),$cons($var("W"),$nil)),$nil,$cons($lit(sxh_l,main,$cons($var("_$3"),$cons($var("_$4"),$cons($var("W"),$cons($var("_$5"),$nil)))),$now),$nil))).
+sxh_want(sxh_rank6, $agg(rank,$var("R"),$cons(6,$cons($var("W"),$nil)),$nil,$cons($lit(sxh_l,main,$cons($var("_$0"),$cons($var("_$1"),$cons($var("W"),$cons($var("_$2"),$nil)))),$now),$cons($builtin(">",$cons($var("W"),$cons(5,$nil))),$nil)))).
+sxh_want(sxh_neg, $agg(median,$var("M"),$cons($var("V"),$nil),$cons($var("K"),$nil),$cons($lit(sxh_l,main,$cons($var("G"),$cons($var("K"),$cons($var("V"),$cons($var("T"),$nil)))),$now),$cons($not($lit(sxh_g,main,$cons($var("T"),$nil),$now)),$nil)))).
+sxh_mine(H)        :- sxh_want(H, _).
+sxh_has(H, T)      :- sxh_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxh_want(H, T), not sxh_has(H, T).
+tree_extra(H, T)   :- sxh_has(H, T), not sxh_want(H, T).
+alarm(tree_missing).
+alarm(tree_extra).
+
+src("m(G, M) :- g(G), M is median(V ; K : l(G, K, V)).\nq(G, Q) :- p(G, P), Q is quantile(P, V ; K : l(G, K, V)).\nr(V, R) :- l(_, _, V), R is rank(V, W : l(_, _, W), W > 0).").
+r1h_want($lit(m, $bare, $cons($var("G"), $cons($var("M"), $nil)), $now),
+  $cons($lit(g, $bare, $cons($var("G"), $nil), $now),
+  $cons($agg(median, $var("M"), $cons($var("V"), $nil), $cons($var("K"), $nil),
+    $cons($lit(l, $bare, $cons($var("G"), $cons($var("K"), $cons($var("V"), $nil))), $now), $nil)), $nil))).
+r1h_want($lit(q, $bare, $cons($var("G"), $cons($var("Q"), $nil)), $now),
+  $cons($lit(p, $bare, $cons($var("G"), $cons($var("P"), $nil)), $now),
+  $cons($agg(quantile, $var("Q"), $cons($var("P"), $cons($var("V"), $nil)), $cons($var("K"), $nil),
+    $cons($lit(l, $bare, $cons($var("G"), $cons($var("K"), $cons($var("V"), $nil))), $now), $nil)), $nil))).
+r1h_want($lit(r, $bare, $cons($var("V"), $cons($var("R"), $nil)), $now),
+  $cons($lit(l, $bare, $cons(wild(121), $cons(wild(124), $cons($var("V"), $nil))), $now),
+  $cons($agg(rank, $var("R"), $cons($var("V"), $cons($var("W"), $nil)), $nil,
+    $cons($lit(l, $bare, $cons(wild(150), $cons(wild(153), $cons($var("W"), $nil))), $now),
+    $cons($builtin(">", $cons($var("W"), $cons(int("0"), $nil))), $nil))), $nil))).
+r1h_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1h_want(H, B), not r1h_parsed(H, B).
+ring1_extra(H)    :- r1h_parsed(H, B), not r1h_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+sxh_bad(sxhr_empty_key).
+sxh_bad(sxhr_percent_expression).
+sxh_bad(sxhr_unclosed).
+sxh_bad(sxhr_result).
+bad_accepted(R) :- sxh_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

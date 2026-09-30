@@ -1,0 +1,7 @@
+-- expect-refusal: its body uses W bound neither by the two facts nor by a literal of the body before it
+-- the body is solved in the order it is written, as a rule's is: W is bound
+-- by `W = 3` only after `Z is W + 1` has read it
+edb(assr_oe).
+assr_oe(a, 1).
+assr_order(A, V) :- assr_oe(A, V).
+assr_order(A, X) <= assr_order(A, Y) :- Z is W + 1, W = 3, Y < X.

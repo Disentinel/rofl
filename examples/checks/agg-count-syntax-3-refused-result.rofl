@@ -1,0 +1,3 @@
+-- expect-refusal: not an expression
+-- the result of an aggregate is a variable or a constant
+sxr_result(N) :- N + 1 is count(B : sxc_b(B, _)).

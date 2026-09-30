@@ -88,6 +88,7 @@
 
 import type { FactStore, Witness } from './store.ts';
 import { V } from './reflect.ts';
+import { tarjan, indexer } from './scc.ts';
 
 /** Convergence disciplines. Numeric so the kernel stays free of
  *  identifier-shaped string literals; names for reports live outside src/. */
@@ -215,48 +216,15 @@ function nextTenseRules(store: FactStore): Set<string> {
 }
 
 /** Facts lying on a cycle of the support graph: the members of every
- *  non-trivial strongly connected component, plus self-supporting facts.
- *  Iterative Tarjan — the graph is as deep as the derivation is. */
+ *  non-trivial strongly connected component, plus self-supporting facts. */
 function cyclicKeys(keys: string[], edges: Map<string, string[]>): Set<string> {
-  const index = new Map<string, number>();
-  const low = new Map<string, number>();
-  const onStack = new Set<string>();
-  const stack: string[] = [];
+  const g = indexer();
+  for (const k of keys) g.id(k);
+  for (let i = 0; i < g.keys.length; i++) for (const w of edges.get(g.keys[i]) ?? []) g.succ[i].push(g.id(w));
+  const comp = tarjan(g.succ);
+  const size = new Map<number, number>();
+  for (const c of comp) size.set(c, (size.get(c) ?? 0) + 1);
   const cyclic = new Set<string>();
-  let nextIndex = 0;
-  const open = (v: string) => {
-    index.set(v, nextIndex); low.set(v, nextIndex); nextIndex++;
-    stack.push(v); onStack.add(v);
-  };
-  for (const root of keys) {
-    if (index.has(root)) continue;
-    open(root);
-    const work: { v: string; i: number }[] = [{ v: root, i: 0 }];
-    while (work.length > 0) {
-      const frame = work[work.length - 1];
-      const out = edges.get(frame.v) ?? [];
-      if (frame.i < out.length) {
-        const w = out[frame.i++];
-        if (!index.has(w)) { open(w); work.push({ v: w, i: 0 }); }
-        else if (onStack.has(w)) low.set(frame.v, Math.min(low.get(frame.v)!, index.get(w)!));
-        continue;
-      }
-      work.pop();
-      if (work.length > 0) {
-        const parent = work[work.length - 1].v;
-        low.set(parent, Math.min(low.get(parent)!, low.get(frame.v)!));
-      }
-      if (low.get(frame.v) !== index.get(frame.v)) continue;
-      const comp: string[] = [];
-      for (;;) {
-        const w = stack.pop()!;
-        onStack.delete(w);
-        comp.push(w);
-        if (w === frame.v) break;
-      }
-      const selfSupporting = comp.length === 1 && (edges.get(comp[0]) ?? []).includes(comp[0]);
-      if (comp.length > 1 || selfSupporting) for (const w of comp) cyclic.add(w);
-    }
-  }
+  for (let i = 0; i < g.keys.length; i++) if (size.get(comp[i])! > 1 || g.succ[i].includes(i)) cyclic.add(g.keys[i]);
   return cyclic;
 }

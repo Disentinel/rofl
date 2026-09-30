@@ -1,0 +1,15 @@
+-- expect-refusal: shrug is read of
+-- examples/checks/agg-shrug-late-withdrawn.rofl — a rule reading shrug can
+-- make its own premise go away: slw_a(c) is a shrug (a negation over what a
+-- fault left out), slw_b(c) reads that shrug, and slw_a(c) then holds through
+-- slw_b(c), so the row slw_b read is withdrawn and slw_ok's `not shrug` read
+-- the opposite of the final state. A row withdrawn after the readers fired
+-- is refused like one added, in both engines.
+edb(slw_big). edb(slw_pos).
+slw_big(1152921504606846975).
+slw_pos(a). slw_pos(c).
+slw_w(c) :- slw_big(B), Z is B + 1, Z > 0.
+slw_a(X) :- slw_pos(X), not slw_w(X).
+slw_a(X) :- slw_pos(X), slw_b(X).
+slw_b(X) :- slw_pos(X), shrug(slw_a(X), _, _).
+slw_ok(X) :- slw_pos(X), not shrug(slw_a(X), _, _).

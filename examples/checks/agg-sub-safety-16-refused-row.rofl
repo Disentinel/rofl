@@ -1,0 +1,4 @@
+-- expect-refusal: are not both reflected
+-- a dominance row is the rule's reflection; a row with no facts to compare
+-- is refused, never read as a relation with no order
+dominance(rassr_row, assr_row, 2, 1).

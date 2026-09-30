@@ -1,0 +1,59 @@
+-- examples/checks/agg-widen-data.rofl — A DECLARED WIDENING, for the
+-- agg_widen_* worlds (docs/aggregates.md, "Widening, as built"). Interval
+-- analysis of loop counters, each a hull over program points whose rules are
+-- the loop's transfer functions: `ivadd` the increment, `ivmeet` the guard.
+-- The widened relation is the loop head's; every other point is a plain hull.
+--
+--   aw_loop: i = 0; while (i < 10) i = i + 1;         head widened after 2
+--   aw_up:   i = 0; while (true) i = i + 1;           widened at once (0)
+--   aw_walk: i = 0; loop { i = i + 1 or i = i - 1 }   after 1, both ends
+--   aw_dbl:  i = 1; while (i < 100) i = i * 2;        after 3
+--   aw_tight: i = 0; while (i < 3) i = i + 1;         widened at the third
+--   aw_short: i = 0; while (i < 3) i = i + 1;         5 allowed, 3 taken
+--
+-- A plain join over the same increment would never settle: every value
+-- [0, n] contributes [1, n + 1]. The widening settles each in a few steps,
+-- and says that what it settled on is an enclosure and not the value.
+edb(aw_start).
+aw_start(entry, iv(0, 0)).
+lattice aw_at(P, hull I).
+lattice aw_loop(P, hull I) widen 2.
+aw_at(P, I)      :- aw_start(P, I).
+aw_loop(head, I) :- aw_at(entry, I).
+aw_at(body, J)   :- aw_loop(head, I), J is ivmeet(I, iv(ninf, 9)).
+aw_loop(head, J) :- aw_at(body, I), J is ivadd(I, 1).
+aw_at(exit, J)   :- aw_loop(head, I), J is ivmeet(I, iv(10, inf)).
+
+lattice aw_up(P, hull I) widen 0.
+aw_up(head, iv(0, 0)) :- aw_start(entry, _).
+aw_up(head, J)        :- aw_up(head, I), J is ivadd(I, 1).
+
+lattice aw_walk(P, hull I) widen 1.
+aw_walk(head, iv(0, 0)) :- aw_start(entry, _).
+aw_walk(head, J)        :- aw_walk(head, I), J is ivadd(I, 1).
+aw_walk(head, J)        :- aw_walk(head, I), J is ivsub(I, 1).
+
+lattice aw_dbl(P, hull I) widen 3.
+aw_dbl(head, iv(1, 1)) :- aw_start(entry, _).
+aw_dbl(head, J)        :- aw_dbl(head, I), K is ivmeet(I, iv(ninf, 99)), J is ivmul(K, 2).
+
+lattice aw_tight(P, hull I) widen 2.
+aw_tight(head, iv(0, 0)) :- aw_start(entry, _).
+aw_tight(head, J)        :- aw_tight(head, I), K is ivmeet(I, iv(ninf, 2)), J is ivadd(K, 1).
+
+lattice aw_short(P, hull I) widen 5.
+aw_short(head, iv(0, 0)) :- aw_start(entry, _).
+aw_short(head, J)        :- aw_short(head, I), K is ivmeet(I, iv(ninf, 2)), J is ivadd(K, 1).
+
+-- THE FUNCTIONS THEMSELVES, over constants: each end computed, an infinite
+-- end kept, an empty meet no value at all
+aw_fn(add, J)      :- J is ivadd(iv(1, 2), iv(10, 20)).
+aw_fn(add_inf, J)  :- J is ivadd(iv(ninf, 2), 5).
+aw_fn(sub, J)      :- J is ivsub(iv(1, 2), iv(10, 20)).
+aw_fn(sub_inf, J)  :- J is ivsub(iv(1, inf), iv(ninf, 3)).
+aw_fn(mul, J)      :- J is ivmul(iv(-1, 3), 4).
+aw_fn(mul_neg, J)  :- J is ivmul(iv(-1, inf), -2).
+aw_fn(mul_zero, J) :- J is ivmul(iv(ninf, inf), 0).
+aw_fn(meet, J)     :- J is ivmeet(iv(0, 9), iv(5, inf)).
+aw_fn(point, J)    :- J is ivmeet(7, iv(ninf, inf)).
+aw_fn(empty, J)    :- J is ivmeet(iv(0, 3), iv(5, 9)).

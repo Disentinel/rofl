@@ -1,0 +1,11 @@
+-- expect-refusal: assr_rest[main](a,z,9) rests only on what a dominated value concluded
+-- assr_bg(a, b) copies what assr_rest(a, b, 5) was, and is withdrawn when
+-- assr_rest(a, b, 0) dominates it; assr_rest(a, z, 9) rested on it alone
+-- (and on what it concluded itself): no monotone consumer gives such a value
+edb(assr_ne).
+assr_ne(a, b, 5). assr_ne(a, x, 0). assr_ne(x, y, 0). assr_ne(y, b, 0).
+assr_rest(A, B, D) :- assr_ne(A, B, D).
+assr_rest(A, C, D) :- assr_rest(A, B, D0), assr_ne(B, C, W), D is D0 + W.
+assr_bg(A, B) :- assr_rest(A, B, D), D > 3.
+assr_rest(A, z, 9) :- assr_bg(A, _).
+assr_rest(A, B, X) <= assr_rest(A, B, Y) :- Y < X.

@@ -1,0 +1,40 @@
+-- examples/checks/agg-tagc-witness-check.rofl — agg_tagc_witness: a counting
+-- tag's witness is the Group of its derivations, every one kept: the cell of
+-- each key holds the sum, and each member is one firing of a rule concluding
+-- the tag as written, the count it contributes and the fact of the
+-- derivation it rests on. tc_any(s, b, 5) has two, the hop's 2 (height 5)
+-- and the two-hop walk's 3 (height 8); tc_two(s, t, 3) two, by a and by b,
+-- 1 and 2; tc_total(9) six, one per hop. Each derivation names the rule that
+-- made it, and that rule concludes the tag.
+tcw_cell(C, V, R, K)  :- agg_cell[$kernel](C, V, _), C = $cell(R, 1, 0, K).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _), $nil)), H).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _, _), $nil)), H).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _, _, _), $nil)), H).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _, _, _, _), $nil)), H).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _, _, _, _, _), $nil)), H).
+tcw_mem(K, I, N, H, Rule) :- tcw_cell(C, _, _, K), agg_member[$kernel](C, I, $cons(N, $cons($firing(Rule, _, _, _, _, _, _), $nil)), H).
+tcw_of(K, I, N, H, Rel) :- tcw_mem(K, I, N, H, Rule), concludes[$kernel](Rule, Rel).
+tcw_want($cons(s, $cons(b, $cons(main, $nil))), 1, 2, 5, tc_any).
+tcw_want($cons(s, $cons(b, $cons(main, $nil))), 2, 3, 8, tc_any).
+tcw_want($cons(s, $cons(t, $cons(main, $nil))), 1, 1, 5, tc_two).
+tcw_want($cons(s, $cons(t, $cons(main, $nil))), 2, 2, 5, tc_two).
+tcw_group(K, Rel)    :- tcw_want(K, _, _, _, Rel).
+tcw_missing(K, I, N) :- tcw_want(K, I, N, H, Rel), not tcw_of(K, I, N, H, Rel).
+tcw_extra(K, I, N)   :- tcw_group(K, Rel), tcw_of(K, I, N, H, Rel), not tcw_want(K, I, N, H, Rel).
+-- the sum of each cell is its value, the tag the fact holds
+tcw_value_wrong(K, V) :- tcw_cell(C, V, _, K), K = $cons(s, $cons(b, $cons(main, $nil))), V != 5,
+                        agg_member_prem[$kernel](C, 1, $fact(_, main, $cons(s, $cons(b, $cons($firing(Rule, _, _, _), $cons(_, $nil)))))),
+                        concludes[$kernel](Rule, tc_any).
+-- the key with none: one member per hop, six
+tcw_total_member(I)  :- tcw_cell(C, 9, _, $cons(main, $nil)), agg_member[$kernel](C, I, _, _).
+tcw_total_want(1). tcw_total_want(2). tcw_total_want(3). tcw_total_want(4). tcw_total_want(5). tcw_total_want(6).
+tcw_total_wrong(I)   :- tcw_total_want(I), not tcw_total_member(I).
+tcw_total_wrong(I)   :- tcw_total_member(I), not tcw_total_want(I).
+-- each member rests on the fact of its derivation, in the derivations' relation
+tcw_prem_off(K, I)   :- tcw_cell(C, _, R, K), agg_member_prem[$kernel](C, I, P), not tcw_prem_in(P, R).
+tcw_prem_in($fact(R, main, _), R) :- tcw_cell(_, _, R, _).
+alarm(tcw_missing).
+alarm(tcw_extra).
+alarm(tcw_value_wrong).
+alarm(tcw_total_wrong).
+alarm(tcw_prem_off).

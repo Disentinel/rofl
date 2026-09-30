@@ -182,6 +182,11 @@ punct(I, at)     :- kind(I, at),  code_at(I).
 
 -- the neck `:-` is one token
 neck(I, J) :- kind(I, colon), code_at(I), J is I + 1, kind(J, dash).
+-- AN AGGREGATE'S TWO SEPARATORS. A colon not followed by a dash is not the
+-- neck, and until the aggregate it was no token at all: a lone colon was
+-- stray and refused. `;` separates an aggregate's values from its keys.
+punct(I, colon) :- kind(I, colon), code_at(I), J is I + 1, not kind(J, dash).
+punct(I, semi)  :- kind(I, semi), code_at(I).
 
 tok(I, J) :- word(I, J).
 tok(I, J) :- strtok(I, J).
@@ -215,6 +220,9 @@ p(I, K)        :- punct(I, K).
 -- change is needed for this and no token ever carries its text.
 kw_not(I)  :- word(I, J), J is I + 2, ch(I, "n"), K is I+1, ch(K, "o"), ch(J, "t").
 kw_is(I)   :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "s").
+kw_in(I)   :- word(I, J), J is I + 1, ch(I, "i"), ch(J, "n").
+kw_subset(I) :- word(I, J), J is I + 5, ch(I, "s"), K is I+1, ch(K, "u"), L is I+2, ch(L, "b"),
+                M is I+3, ch(M, "s"), N is I+4, ch(N, "e"), ch(J, "t").
 kw_mod(I)  :- word(I, J), J is I + 2, ch(I, "m"), K is I+1, ch(K, "o"), ch(J, "d").
 kw_init(I) :- word(I, J), J is I + 3, ch(I, "i"), K is I+1, ch(K, "n"),
               L is I+2, ch(L, "i"), ch(J, "t").
@@ -257,6 +265,10 @@ optok(I, I, gt) :- kind(I, gt), code_at(I), not consumed(I), not starts_op2(I).
 -- END, so returning the START of a two- or three-letter word leaves the next
 -- lookup with no boundary to stand on and the clause silently fails to form.
 optok(I, J, is) :- kw_is(I), word(I, J).
+-- the join reads `E in S` and `A subset S` (docs/aggregates.md, "The join
+-- lattice, as built"): operators where an operator stands, as `is` is
+optok(I, J, in)     :- kw_in(I), word(I, J).
+optok(I, J, subset) :- kw_subset(I), word(I, J).
 
 arithtok(I, I, plus)  :- kind(I, plus),  code_at(I).
 arithtok(I, I, star)  :- kind(I, star),  code_at(I).
@@ -381,6 +393,82 @@ belem(I, C, $not(L)) :- kw_not(I), word(I, J), nexttok(J, K), lit(K, C, L).
 belem(I, C, $builtin(OpS, $cons(L, $cons(R, $nil)))) :-
   optok(K1, K2, Op), tok_text(K1, K2, OpS), nexttok(J, K1), expr(I, J, L),
   nexttok(K2, S), expr(S, C, R).
+
+-- A BODY AGGREGATE (docs/aggregates.md):
+--   aggelem := term 'is' aggop '(' termlist [ ';' termlist ] ':' body ')'
+-- The nine operations are WORDS, not keywords: `count` stays a name anywhere
+-- the production does not reach. Values and keys are terms, as a literal's
+-- arguments are; the inner body is the ordinary body, so nesting and `@next`
+-- inside it are the load door's business and not the grammar's.
+agg_word(count). agg_word(sum). agg_word(min). agg_word(max). agg_word(or). agg_word(and).
+agg_word(median). agg_word(quantile). agg_word(rank).
+aggop(I, J, Op) :- identtok(I, J), tok_name(I, J, Op), agg_word(Op).
+belem(I, C, $agg(Op, Res, Vals, Keys, Body)) :-
+  kw_is(K), word(K, K1), nexttok(J, K), term(I, J, Res),
+  nexttok(K1, K2), aggop(K2, K3, Op), nexttok(K3, L), p(L, lpar),
+  nexttok(L, S), args(S, E, Vals), aggkeys(E, E2, Keys),
+  nexttok(E2, D), p(D, colon), nexttok(D, B0), body(B0, BE, Body),
+  nexttok(BE, C), p(C, rpar).
+aggkeys(E, E, $nil)  :- args(_, E, _).
+aggkeys(E, E2, Keys) :- nexttok(E, M), p(M, semi), nexttok(M, S), args(S, E2, Keys).
+
+-- A THRESHOLD (docs/aggregates.md, "The threshold, as built"):
+--   thrselem := 'at_least' '(' term ',' termlist ':' body ')'
+-- `at_least` is a word too, and the colon is what makes it one: without it
+-- `at_least(2, x)` is a literal. The threshold N is read, never bound; the
+-- counted terms are the key, so there is no `;`.
+belem(I, C, $agg(at_least, N, Vals, $nil, Body)) :-
+  p(D, colon), tok_name(I, I2, at_least), identtok(I, I2), nexttok(I2, L), p(L, lpar),
+  nexttok(L, S), term(S, E0, N), nexttok(E0, K), p(K, comma),
+  nexttok(K, S2), args(S2, E, Vals), nexttok(E, D),
+  nexttok(D, B0), body(B0, BE, Body), nexttok(BE, C), p(C, rpar).
+
+-- A LATTICE DECLARATION (docs/aggregates.md, "The order lattice, as built"):
+--   latdecl := 'lattice' ident '(' [ term ',' ]* aggop term ')' [ 'widen' int ] '.'
+-- `lattice` is a word, like the nine operations: it declares only when a
+-- second name follows it, so `lattice(x).` is still a fact. The key is every
+-- argument before the operation; the value is the term after it.
+-- a declaration names an aggregate word or a join: union, hull, bitor
+lat_word(union). lat_word(hull). lat_word(bitor).
+latop(I, J, Op) :- aggop(I, J, Op).
+latop(I, J, Op) :- identtok(I, J), tok_name(I, J, Op), lat_word(Op).
+latargs(I, J, Op, $cons(V, $nil)) :- latop(I, K, Op), nexttok(K, S), term(S, J, V).
+latargs(I, J2, Op, $cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
+                                   nexttok(K, I2), latargs(I2, J2, Op, R).
+clause_at(I, D, $lattice(Op, $lit(R, $bare, A, $now)), $nil) :-
+  identtok(I, I2), tok_name(I, I2, lattice), nexttok(I2, K), identtok(K, K2), not keyword(K),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), latargs(S, E, Op, A),
+  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
+-- A DECLARED WIDENING (docs/aggregates.md, "Widening, as built"):
+--   latdecl := ... ')' 'widen' int '.'
+-- `widen` is a word too; the number is an integer literal, read as written.
+clause_at(I, D, $widen(N, $lattice(Op, $lit(R, $bare, A, $now))), $nil) :-
+  identtok(I, I2), tok_name(I, I2, lattice), nexttok(I2, K), identtok(K, K2), not keyword(K),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), latargs(S, E, Op, A),
+  nexttok(E, C), p(C, rpar), nexttok(C, W), identtok(W, W2), tok_name(W, W2, widen),
+  nexttok(W2, NI), inttok(NI, NJ), term(NI, NJ, N), nexttok(NJ, D), p(D, dot).
+
+-- A TAG DECLARATION (docs/aggregates.md, "Tags, as built"):
+--   tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'
+-- `tag` is a word as `lattice` is, and so are the four semirings: it declares
+-- only when a second name follows it, so `tag(x, hot).` is still a fact.
+tag_word(tropical). tag_word(viterbi). tag_word(trust). tag_word(counting).
+tagop(I, J, Alg) :- identtok(I, J), tok_name(I, J, Alg), tag_word(Alg).
+tagargs(I, J, Alg, $cons(V, $nil)) :- tagop(I, K, Alg), nexttok(K, S), term(S, J, V).
+tagargs(I, J2, Alg, $cons(T, R))  :- term(I, J, T), nexttok(J, K), p(K, comma),
+                                    nexttok(K, I2), tagargs(I2, J2, Alg, R).
+clause_at(I, D, $tag(Alg, $lit(R, $bare, A, $now)), $nil) :-
+  identtok(I, I2), tok_name(I, I2, tag), nexttok(I2, K), identtok(K, K2), not keyword(K),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), tagargs(S, E, Alg, A),
+  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
+
+-- A DOMINANCE RULE (docs/aggregates.md, "Subsumption, as built"):
+--   domrule := lit '<=' lit ':-' body '.'
+-- the left fact is dominated by the right one wherever the body holds. A
+-- head followed by `<=` is no comparison: a comparison stands in a body.
+clause_at(I, D, $dominance(H, G), B) :- lit(I, C, H), nexttok(C, K), op2(K, K2, le),
+  nexttok(K2, S0), lit(S0, C2, G), nexttok(C2, N), neck(N, N2),
+  nexttok(N2, S), body(S, E, B), nexttok(E, D), p(D, dot).
 
 body(I, C, $cons(B, $nil)) :- belem(I, C, B).
 body(I, C2, $cons(B, R))  :- belem(I, C, B), nexttok(C, K), p(K, comma),

@@ -1,0 +1,4 @@
+-- expect-refusal: rank takes no key
+-- examples/checks/agg-holistic-safety-7-refused-rank-key.rofl — rank ranks
+-- among distinct values, which a key would only split.
+ahs_rkey(G, V, R) :- ahs_line(G, _, V), R is rank(V, W ; K : ahs_line(G, K, W)).

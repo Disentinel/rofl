@@ -1,0 +1,28 @@
+-- examples/checks/agg-tagc-data.rofl — THE COUNTING TAG (docs/aggregates.md,
+-- "Tags, as built"), shared by the agg_tagc_* worlds: a tag cell keyed by the
+-- whole head whose tag is its number of derivations, ⊕ the sum over the
+-- firings of the fact, ⊗ the product of the counts a firing reads. It is not
+-- idempotent, so it is stratified: each tag below reads only what is closed
+-- beneath it.
+--
+-- tc_hop: a DAG whose edges carry a multiplicity, the weight of each rule
+-- (s -> b twice, a -> b three times). tc_two: the walks of two hops, the
+-- product of their multiplicities, summed over the middle node. tc_any: of
+-- one hop or two, two rules adding their derivations. tc_seen: a constant
+-- weight 2 per derivation, and no tagged premise. tc_total: no key at all,
+-- the sum of every hop's count.
+edb(tc_d).
+tc_d(s, a, 1). tc_d(s, b, 2). tc_d(a, t, 1). tc_d(b, t, 1). tc_d(a, b, 3). tc_d(t, u, 1).
+tag tc_hop(A, B, counting N).
+tc_hop(A, B, W) :- tc_d(A, B, W).
+tag tc_two(A, C, counting N).
+tc_two(A, C, N) :- tc_hop(A, B, _), tc_hop(B, C, _).
+tag tc_any(A, C, counting N).
+tc_any(A, C, N) :- tc_hop(A, C, _).
+tc_any(A, C, N) :- tc_two(A, C, _).
+tag tc_seen(A, counting N).
+tc_seen(A, 2)   :- tc_d(A, _, _).
+tag tc_total(counting N).
+tc_total(N)     :- tc_hop(_, _, _).
+-- the count is a value a rule reads
+tc_many(A, C)   :- tc_any(A, C, N), N >= 3.

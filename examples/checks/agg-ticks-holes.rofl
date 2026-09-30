@@ -1,0 +1,37 @@
+-- examples/checks/agg-ticks-holes.rofl — WHAT A HOLE AT TICK 0 LEAVES
+-- UNKNOWN AT TICK 1, loaded by the agg_<kind>_ticks worlds beside
+-- agg-ticks-data.rofl (docs/aggregates.md, "Well-founded worlds and ticks, as
+-- built"). A conclusion @next that a hole reaches is not staged, and it is
+-- not absent at tick 1 either: it is unknown there, as it was at tick 0, so a
+-- cell at tick 1 that could read it is a hole, never a value over what is
+-- left. Absent, th_y at tick 1 would be p and r alone, and every aggregate
+-- over it a definite answer.
+edb(th_v).
+edb(th_big).
+edb(th_key).
+-- q's value is no number: th_w(q, _) is unknown at tick 0 (a plain hole),
+-- so th_y(q, _) is not staged, and is unknown at tick 1
+th_v(p, 2). th_v(q, oops). th_v(r, 4).
+th_w(K, W) :- th_v(K, V), W is V + 1.
+th_y(K, W)@next :- th_w(K, W).
+-- a's sum overflows at tick 0: th_s(a, _) is unknown at tick 1
+th_big(a, x, 1152921504606846975). th_big(a, y, 1152921504606846975). th_big(b, z, 1).
+th_s(K, S)@next :- th_big(K, _, _), S is sum(V ; J : th_big(K, J, V)).
+-- th_d(u) is a lattice cell holed by its fault at tick 0, so th_t(u), read
+-- from it, is unknown at tick 1, and not only plainly: a negation or a
+-- threshold that could read it is undecided there, as within a tick
+edb(th_e).
+th_e(s, 1). th_e(t, 2). th_e(u, oops).
+lattice th_d(K, min D).
+th_d(K, D) :- th_e(K, D0), D is D0 + 1.
+th_t(K)@next :- th_d(K, _).
+-- the group keys a cell at tick 1 is asked for, bound from outside it
+th_key(q). th_key(r).
+th_key(K)@next :- th_key(K).
+-- the unknowns tick 1 was carried, one hole each
+th_carried(R, A) :- hole[$kernel]($next(R, main, 1, A), _).
+th_uncarried(y) :- not th_carried(th_y, $cons(q, $cons(_, $nil))).
+th_uncarried(s) :- not th_carried(th_s, $cons(a, $cons(_, $nil))).
+alarm(th_uncarried).
+-- a cell of tick 1 concluding R that is a hole
+th_holed(R) :- hole[$kernel]($cell(C, _, 1, _), _), concludes[$kernel](C, R).

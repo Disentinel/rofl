@@ -1,0 +1,20 @@
+-- examples/checks/agg-empty-holes-check.rofl — agg_empty_holes: a group whose
+-- only member is not known is not known to be empty, so its count and its
+-- sum are holes and never 0; a group with no member reads 0 for certain; a
+-- negation of the 0 is undecided where the 0 is not known
+-- (agg-holes-data.rofl: d's only member is not known, c has none).
+ahe_n(G, N) :- ah_g(G), N is count(K : ah_x(G, K, _)).
+ahe_s(G, S) :- ah_g(G), S is sum(Y ; K : ah_x(G, K, Y)).
+ahe_empty(G) :- ahe_n(G, 0).
+ahe_some(G)  :- ah_g(G), not ahe_empty(G).
+ahe_bad(n_d)    :- ahe_n(d, _).
+ahe_bad(s_d)    :- ahe_s(d, _).
+-- expect-row: ahe_n[main](c,0)
+-- expect-row: ahe_s[main](c,0)
+ahe_bad(some_d) :- ahe_some(d).
+ahe_bad(some_c) :- ahe_some(c).
+-- expect-row: ahe_some[main](a)
+alarm(ahe_bad).
+ahe_holed(G) :- ahe_some(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), support_withdrawn), concludes[$kernel](R, ahe_n).
+ahe_unholed(d) :- ahe_some(_), not ahe_holed(d).
+alarm(ahe_unholed).

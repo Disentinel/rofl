@@ -1,0 +1,3 @@
+-- expect-refusal: needs at least one term
+-- a minimum of nothing written
+sxmr_empty(M) :- M is min(: sxm_d(_, V, _)).

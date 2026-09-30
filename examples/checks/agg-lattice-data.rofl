@@ -1,0 +1,94 @@
+-- examples/checks/agg-lattice-data.rofl — THE ORDER LATTICE DATASET, shared by
+-- the agg_lattice_* and agg_cell_{safety,strata} worlds (facts/checks.rofl,
+-- docs/aggregates.md, "The order lattice, as built").
+--
+-- al_dist: shortest paths over a graph with a positive cycle (a b c), a
+-- zero-weight cycle (c d), a tie (a to c directly and through b, both 3), a
+-- value first reached badly and improved on (b to e: 9 directly, then 7
+-- through c and d), and a node unreachable from the rest (z, on its own loop).
+-- al_wide: widest (bottleneck) paths, max over min, over a cyclic graph.
+-- al_finish: the critical path of a DAG, max, with a tie at p4.
+-- al_taint and al_all: or and and over the same links, a cycle among them.
+-- al_hd: a weight that is not a number, so its cell is a hole, and a cell that
+-- rested on it alone is withdrawn in turn.
+-- al_hop: the lightest last edge of a path; its recursive rule reads a cell
+-- and not its value, so a consumer of al_hop(a, c, 5) (al_hop(a, d, 0))
+-- fires two rounds before a to c improves to 1 through x, and fires again,
+-- to the same value, on the new cell.
+edb(al_edge).
+edb(al_cap).
+edb(al_task).
+edb(al_after).
+edb(al_seed).
+edb(al_link).
+edb(al_hedge).
+edb(al_hop_e).
+al_edge(a, b, 1).
+al_edge(b, c, 2).
+al_edge(a, c, 3).
+al_edge(c, a, 4).
+al_edge(c, d, 0).
+al_edge(d, c, 0).
+al_edge(d, e, 5).
+al_edge(b, e, 9).
+al_edge(z, z, 1).
+al_cap(s, t, 4).
+al_cap(t, u, 7).
+al_cap(s, u, 3).
+al_cap(u, s, 8).
+al_cap(u, v, 2).
+al_cap(t, v, 1).
+al_task(p1, 3).
+al_task(p2, 2).
+al_task(p3, 4).
+al_task(p4, 1).
+al_task(p5, 5).
+al_after(p3, p1).
+al_after(p3, p2).
+al_after(p4, p3).
+al_after(p5, p2).
+al_after(p4, p5).
+al_seed(x1, true).
+al_seed(x2, false).
+al_seed(x4, false).
+al_link(x1, x2).
+al_link(x2, x3).
+al_link(x3, x2).
+al_link(x4, x5).
+al_hedge(h1, h2, 1).
+al_hedge(h1, h2, heavy).
+al_hedge(h2, h3, 1).
+al_hedge(h1, h3, 5).
+al_hop_e(a, c, 5).
+al_hop_e(a, b, 9).
+al_hop_e(b, x, 9).
+al_hop_e(x, c, 1).
+al_hop_e(c, d, 0).
+
+lattice al_dist(A, C, min D).
+al_dist(A, C, D) :- al_edge(A, C, D).
+al_dist(A, C, D) :- al_dist(A, B, D1), al_edge(B, C, W), D is D1 + W.
+
+lattice al_wide(A, C, max W).
+al_wide(A, C, W) :- al_cap(A, C, W).
+al_wide(A, C, W) :- al_wide(A, B, W1), al_cap(B, C, W2), W is min(W1, W2).
+
+lattice al_finish(T, max F).
+al_finish(T, D) :- al_task(T, D).
+al_finish(T, F) :- al_after(T, P), al_finish(P, F0), al_task(T, D), F is F0 + D.
+
+lattice al_taint(X, or B).
+al_taint(X, B) :- al_seed(X, B).
+al_taint(Y, B) :- al_taint(X, B), al_link(X, Y).
+
+lattice al_all(X, and B).
+al_all(X, B) :- al_seed(X, B).
+al_all(Y, B) :- al_all(X, B), al_link(X, Y), B = false.
+
+lattice al_hd(A, C, min D).
+al_hd(A, C, D) :- al_hedge(A, C, D).
+al_hd(A, C, D) :- al_hd(A, B, D1), al_hedge(B, C, W), D is D1 + W.
+
+lattice al_hop(A, C, min W).
+al_hop(A, C, W) :- al_hop_e(A, C, W).
+al_hop(A, C, W) :- al_hop(A, B, _), al_hop_e(B, C, W).

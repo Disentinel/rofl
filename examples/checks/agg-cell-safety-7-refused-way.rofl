@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-7-refused-way.rofl — W - D1 moves the other way: a better (smaller) D1 gives a worse (larger) contribution to a min.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_way(A, C, min D).
+acsr_way(A, C, D) :- acsr_e(A, C, D).
+acsr_way(A, C, D) :- acsr_way(A, B, D1), acsr_e(B, C, W), D is W - D1.

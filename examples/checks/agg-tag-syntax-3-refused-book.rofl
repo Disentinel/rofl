@@ -1,0 +1,3 @@
+-- expect-refusal: a declaration names the relation, not a book
+-- a tag is declared for the relation, in every book
+tag sxtr_book[b](A, tropical T).

@@ -1,0 +1,8 @@
+-- expect-refusal: provenance read during the evaluation
+-- a dominated value's firings are withdrawn, so provenance read while the
+-- front is found would change under the reader
+edb(assr_pe).
+assr_pe(a, 1). assr_pe(a, 2).
+assr_prov(A, V) :- assr_pe(A, V).
+assr_prov(A, X) <= assr_prov(A, Y) :- Y < X.
+assr_seen(F) :- derived_by[$kernel](F, _, _).

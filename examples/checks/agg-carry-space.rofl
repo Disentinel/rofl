@@ -1,0 +1,5 @@
+-- examples/checks/agg-carry-space.rofl — agg_carry_space: the unknowns the
+-- carry around agg-carry-data.rofl's holed sum would store are cut by the
+-- space wall, and the world's hole says so
+-- (f_the_carry_of_unknowns_ran_past_the_walls).
+-- expect-row: hole[$kernel]($adhoc,space_exhausted)

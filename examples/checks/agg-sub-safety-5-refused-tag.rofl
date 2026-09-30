@@ -1,0 +1,7 @@
+-- expect-refusal: subsumption assr_tag: it has dominance rules and is
+-- one algebra per relation: a counting tag sums its derivations
+edb(assr_te).
+assr_te(a, 1).
+tag assr_tag(A, counting N).
+assr_tag(A, 1) :- assr_te(A, _).
+assr_tag(A, X) <= assr_tag(A, Y) :- Y < X.

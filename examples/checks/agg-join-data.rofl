@@ -1,0 +1,178 @@
+-- examples/checks/agg-join-data.rofl — the join lattices' dataset
+-- (docs/aggregates.md, "The join lattice, as built"), read by
+-- agg_join_eval, _witness, _why, _reflect and _strata. Every value below is
+-- enumerated by hand in agg-join-eval-check.rofl.
+
+-- CONNECTED COMPONENTS AS SETS: an undirected graph of a four-node component
+-- with a cycle, a two-node one, a self-loop and a node with no edge.
+edb(aj_e).
+edb(aj_node).
+aj_e(a, b).
+aj_e(b, c).
+aj_e(c, a).
+aj_e(c, d).
+aj_e(p, q).
+aj_e(s, s).
+aj_node(a).
+aj_node(b).
+aj_node(c).
+aj_node(d).
+aj_node(p).
+aj_node(q).
+aj_node(s).
+aj_node(lone).
+aj_u(X, Y) :- aj_e(X, Y).
+aj_u(Y, X) :- aj_e(X, Y).
+lattice aj_comp(X, union S).
+aj_comp(X, set(X)) :- aj_node(X).
+aj_comp(X, S)      :- aj_u(X, Y), aj_comp(Y, S).
+
+-- GEN/KILL DATAFLOW: live variables over a flow graph with a loop. A block's
+-- live-in is what it uses, and what is live out of it that it does not
+-- define; its live-out, what is live into its successors. b1 defines every
+-- variable, so nothing is live into it: no cell, the bottom.
+edb(aj_succ).
+edb(aj_use).
+edb(aj_def).
+aj_succ(b1, b2).
+aj_succ(b2, b3).
+aj_succ(b3, b2).
+aj_succ(b3, b4).
+aj_use(b2, x).
+aj_use(b3, y).
+aj_use(b4, z).
+aj_use(b4, x).
+aj_def(b1, x).
+aj_def(b1, y).
+aj_def(b1, z).
+aj_def(b3, y).
+lattice aj_live_in(B, union S).
+lattice aj_live_out(B, union S).
+aj_live_in(B, set(V)) :- aj_use(B, V).
+aj_live_in(B, set(V)) :- aj_live_out(B, S), V in S, not aj_def(B, V).
+aj_live_out(B, S)     :- aj_succ(B, C), aj_live_in(C, S).
+
+-- THE INTERVAL HULL of the values that reach a node, around a cycle; and a
+-- BITSET of the flags that do, over the same links.
+edb(aj_val).
+edb(aj_link).
+edb(aj_flag).
+aj_val(h1, 3).
+aj_val(h2, 7).
+aj_val(h3, -2).
+aj_val(h4, 10).
+aj_val(h5, 4).
+aj_link(h1, h2).
+aj_link(h2, h3).
+aj_link(h3, h1).
+aj_link(h4, h1).
+aj_link(h5, h5).
+aj_flag(h1, 1).
+aj_flag(h2, 4).
+aj_flag(h3, 16).
+aj_flag(h4, 2).
+aj_flag(h5, 0).
+lattice aj_range(N, hull I).
+aj_range(N, iv(V, V)) :- aj_val(N, V).
+aj_range(N, I)        :- aj_link(N, M), aj_range(M, I).
+lattice aj_bits(N, bitor B).
+aj_bits(N, F) :- aj_flag(N, F).
+aj_bits(N, B) :- aj_link(N, M), aj_bits(M, B).
+
+-- AN ORDER LATTICE AND A JOIN IN ONE RECURSION, each reading the other
+-- monotonically: m's predecessors within a distance below 10 (a comparison
+-- that stays true as the min improves), and the shortest distance through
+-- them alone (a membership that stays true as the set grows).
+edb(aj_w).
+edb(aj_src).
+aj_src(m1).
+aj_w(m1, m2, 2).
+aj_w(m2, m3, 3).
+aj_w(m3, m1, 1).
+aj_w(m2, m4, 20).
+aj_w(m1, m3, 9).
+aj_w(m4, m5, 1).
+lattice aj_dist(X, min D).
+lattice aj_near(X, union S).
+aj_dist(X, 0)        :- aj_src(X).
+aj_near(X, set(Y))   :- aj_dist(Y, D), D < 10, aj_w(Y, X, _).
+aj_dist(Y, D)        :- aj_dist(X, D0), aj_w(X, Y, W), aj_near(Y, S), X in S, D is D0 + W.
+
+-- READERS OUTSIDE THE RECURSIONS, which may read a value any way at all:
+-- the members of a set, the integers of a small interval, the bits of a
+-- bitset, three subset tests, a count over a membership, and a value's parts.
+edb(aj_k).
+edb(aj_small).
+aj_k(-3).
+aj_k(0).
+aj_k(5).
+aj_k(10).
+aj_small(h5).
+aj_small(h1).
+aj_in_comp(X, Y)  :- aj_comp(X, S), Y in S.
+aj_iv_has(N, K)   :- aj_range(N, I), aj_k(K), K in I.
+aj_span(N, K)     :- aj_small(N), aj_range(N, I), K in I, K > 5.
+aj_bit(N, B)      :- aj_bits(N, V), B in V.
+aj_bits5(N)       :- aj_bits(N, V), 5 subset V.
+aj_iv_sub(N)      :- aj_range(N, I), iv(-1, 8) subset I.
+aj_set_sub(X)     :- aj_comp(X, S), set(a, d) subset S.
+aj_with_a(C)      :- C is count(X : aj_comp(X, S), a in S).
+aj_ends(N, L, H)  :- aj_range(N, iv(L, H)).
+
+-- TWO COVERS OF ONE VALUE: set(x, y, z) is reached by two singletons low
+-- down, a pair above them and z at the top, which came last; the Cover is
+-- the lowest, the singletons and z, whatever order the text would give.
+edb(aj_pc).
+edb(aj_d2).
+aj_pc(k, x).
+aj_pc(k, y).
+aj_d2(k).
+aj_d1(K)    :- aj_d2(K).
+aj_deep(K)  :- aj_d1(K).
+aj_far1(K)  :- aj_deep(K).
+aj_far2(K)  :- aj_far1(K).
+aj_far(K)   :- aj_far2(K).
+lattice aj_pick(K, union S).
+aj_pick(K, set(X))    :- aj_pc(K, X).
+aj_pick(K, set(X, Y)) :- aj_pc(K, X), aj_pc(K, Y), X != Y, aj_deep(K).
+aj_pick(K, set(z))    :- aj_far(K).
+-- a contribution built out of order and with a repeat is one canonical value
+-- (built: a ground set the program writes is canonical before it runs)
+edb(aj_pb).
+aj_pb(k, b).
+lattice aj_pair(K, union S).
+aj_pair(K, set(B, a, B)) :- aj_pc(K, x), aj_pb(K, B).
+
+-- A SET IS READ BY ITS VALUE, HOWEVER IT IS WRITTEN: a ground set in a body
+-- pattern, a negation, an `=`, a plain relation's fact and a set inside
+-- another term are each the one canonical value, so each reads the cell
+-- whatever order and repeats it is written with.
+edb(aj_mx).
+edb(aj_held).
+aj_mx(z, "str").
+aj_mx(z, -5).
+aj_mx(z, f(a)).
+lattice aj_mix(K, union S).
+aj_mix(K, set(E)) :- aj_mx(K, E).
+aj_held(set(b, a)).
+aj_held(set(a, b, a)).
+aj_held(f(set(c, set(b, a)))).
+aj_lit(pair_ba)       :- aj_pair(k, set(b, a)).
+aj_lit(pair_repeat)   :- aj_pair(k, set(a, b, a)).
+aj_lit(mixed)         :- aj_mix(z, set(-5, "str", f(a))).
+aj_lit(mixed_eq)      :- aj_mix(z, S), S = set(f(a), -5, "str").
+aj_lit(not_wider)     :- aj_pb(k, _), not aj_pair(k, set(b, c, a)).
+aj_lit(not_same)      :- aj_pb(k, _), not aj_pair(k, set(b, a, b)).
+aj_lit(held)          :- aj_held(S), aj_pair(k, S).
+aj_lit(nested)        :- aj_held(f(set(set(a, b), c))).
+aj_lit(in_literal)    :- b in set(c, b, a).
+-- a set with a variable stands where the kernel reads it as a value: the
+-- right of `in`, either side of `subset`, a join head's value (aj_pair)
+aj_lit(in_open)       :- aj_pb(k, B), a in set(B, a).
+aj_lit(subset_open)   :- aj_pb(k, B), aj_pair(k, S), set(B, a) subset S.
+aj_held_count(N)      :- N is count(S : aj_held(S)).
+
+-- A HOLE: a contribution outside the carrier leaves the cell with no value.
+lattice aj_bad(K, union S).
+aj_bad(K, set(K)) :- aj_pc(K, x).
+aj_bad(K, oops)   :- aj_pc(K, y).

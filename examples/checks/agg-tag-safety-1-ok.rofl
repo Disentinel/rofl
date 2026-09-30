@@ -1,0 +1,14 @@
+-- examples/checks/agg-tag-safety-1-ok.rofl — rules an idempotent tag accepts:
+-- a comparison that stays true as the tag improves, read inside the
+-- recursion (T0 < 5 of a cost), a weight the body binds from a plain
+-- premise, a constant weight, and a body aggregate of the tag's own ⊕ as
+-- the weight (the cheapest edge out of A, a min into a tropical tag).
+edb(tsf_e).
+tsf_e(a, b, 2). tsf_e(b, c, 2). tsf_e(c, d, 2). tsf_e(a, c, 7).
+tag tsf_c(A, B, tropical T).
+tsf_c(A, B, W) :- tsf_e(A, B, W).
+tsf_c(A, C, W) :- tsf_c(A, B, T0), T0 < 5, tsf_e(B, C, W).
+tag tsf_one(A, tropical T).
+tsf_one(A, 1)  :- tsf_e(A, _, _).
+tag tsf_min(A, tropical T).
+tsf_min(A, M)  :- tsf_e(A, _, _), M is min(W : tsf_e(A, _, W)).

@@ -1,0 +1,30 @@
+-- examples/checks/agg-cell-holes-check.rofl — agg_cell_holes: the substrate's
+-- holes. A value is an Int in [-2^60, 2^60): past it, arithmetic has no term
+-- and holes its rule `arith_overflow`, never a wrapped number, and -2^60
+-- itself is a value; a cell is a hole or a value, never both; and what a hole
+-- leaves out is not known to be false, to a negation above it as to an
+-- aggregate (holes-negation.rofl, run by both engines, and
+-- agg-holes-data.rofl).
+ahx_up(Y)    :- ah_top(T), Y is T + 1.
+ahx_low(Y)   :- ah_top(T), Y is 0 - T - 1.
+ahx_below(Y) :- ah_top(T), Y is 0 - T - 2.
+ahx_mul(Y)   :- ah_top(T), Y is T * 4.
+ahx_big(Y)   :- ah_top(T), Y is T * 2 / 2.
+ahx_ok(Y)    :- ah_top(T), Y is T - 1 + 1.
+ahx_bad(up)    :- ahx_up(_).
+ahx_bad(below) :- ahx_below(_).
+ahx_bad(mul)   :- ahx_mul(_).
+ahx_bad(big)   :- ahx_big(_).
+-- expect-row: ahx_low[main](-1152921504606846976)
+-- expect-row: ahx_ok[main](1152921504606846975)
+alarm(ahx_bad).
+-- one cell, one verdict: a holed cell has no value, and a value no hole
+ahx_n(G, N) :- ah_g(G), N is count(K : ah_x(G, K, _)).
+ahx_both(C) :- hole[$kernel](C, _), agg_cell[$kernel](C, _, _).
+alarm(ahx_both).
+-- each overflow is a hole on its rule, read above the rules it holes
+ahx_seen() :- ahx_low(_), ahx_ok(_).
+ahx_holed(Rel) :- ahx_seen(), hole[$kernel]($rule(R), arith_overflow), concludes[$kernel](R, Rel).
+ahx_unholed(Rel) :- ahx_rel(Rel), ahx_seen(), not ahx_holed(Rel).
+ahx_rel(ahx_up). ahx_rel(ahx_below). ahx_rel(ahx_mul). ahx_rel(ahx_big).
+alarm(ahx_unholed).

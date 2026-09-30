@@ -50,6 +50,8 @@ slot(R, K, right) :- premise_lit(R, K, $builtin(_, _)).
 binds_at(R, K, V) :- premise_var(R, K, pos, _, V).
 binds_at(R, K, V) :- premise_lit(R, K, $builtin("is", _)), ground(R, K, right),
                      premise_var(R, K, left, _, V).
+binds_at(R, K, V) :- premise_lit(R, K, $builtin("in", _)), ground(R, K, right),
+                     premise_var(R, K, left, _, V).
 binds_at(R, K, V) :- premise_lit(R, K, $builtin("=", _)), ground(R, K, left),
                      premise_var(R, K, right, _, V).
 binds_at(R, K, V) :- premise_lit(R, K, $builtin("=", _)), ground(R, K, right),
@@ -69,10 +71,13 @@ analysed(R) :- slot_arity(R, 0, head, _).
 binds(R, V) :- binds_at(R, _, V).
 eq_or_is("=").
 eq_or_is("is").
+-- `E in S` binds E from S, as `is` binds its left from its right
+eq_or_is("in").
 op_used(Op) :- premise_lit(_, _, $builtin(Op, _)).
 cmp_op(Op)  :- op_used(Op), not eq_or_is(Op).
 unsafe_rule(R) :- premise_var(R, 0, head, _, V), not binds(R, V).
 unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("is", _)), not ground(R, K, right).
+unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("in", _)), not ground(R, K, right).
 unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin("=", _)), not ground(R, K, left),
                   not ground(R, K, right).
 unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), not ground(R, K, left).
@@ -96,7 +101,8 @@ unsafe_rule(R) :- analysed(R), premise_lit(R, K, $builtin(Op, _)), cmp_op(Op), n
 blocked_head(R) :- analysed(R), concludes(R, Rel), reserved(Rel).
 executable(R)   :- analysed(R), not blocked_head(R).
 has_neg_rule(R) :- analysed(R), premise_neg(R, _).
-mono_rule(R)    :- executable(R), not has_neg_rule(R), not unsafe_rule(R).
+has_agg_rule(R) :- analysed(R), premise_agg(R, _).
+mono_rule(R)    :- executable(R), not has_neg_rule(R), not has_agg_rule(R), not unsafe_rule(R).
 
 -- THE STRATUM CONE: the monotone rules that may not run before the program is
 -- judged -- the ones concluding the stratum table, and anything reading what
@@ -129,6 +135,342 @@ trigger_of(P, X) :- demand_rel(P), concludes(R, P), conclusion_tense(R, now),
 neg_relation(A)      :- analysed(R), premise_neg(R, A).
 provenance_reader(R) :- analysed(R), premise_pos(R, derived_by).
 provenance_reader(R) :- analysed(R), premise_neg(R, derived_by).
+provenance_reader(R) :- analysed(R), premise_agg(R, derived_by).
+
+-- ---------------------------------------------------------------------------
+-- AGGREGATES (docs/aggregates.md). A body aggregate `N is op(Vals ; Keys :
+-- Body)` at position K is seeded as two slots, `agg` (the variables it shares
+-- with the rest of the rule) and `agg_res` (its result), and its inner body
+-- as a rule of its own, `agg_inner(R, K, I)` with I = `$inner(R, K)`, whose
+-- head slot is what the fold reads: the values, the keys and the shared
+-- variables. The inner rule has no `premise_pos`, so it triggers nothing and
+-- depends on nothing; it is here only to be judged.
+--
+-- The PER-OPERATION SHAPE is judged here and nowhere else, so this file is
+-- what a wrong shape is refused by: sum names a key, count and the
+-- idempotent orders do not, sum/min/max/or/and fold exactly one value.
+edb(agg_inner).
+
+-- an aggregate binds what it shares and its result; its inner body starts
+-- with the correlation already bound
+binds_at(R, K, V) :- premise_var(R, K, agg, _, V).
+binds_at(R, K, V) :- premise_var(R, K, agg_res, _, V).
+binds_at(I, 0, V) :- agg_inner(R, K, I), bound_before(R, K, V).
+
+agg_op(R, K, Op)     :- premise_lit(R, K, $agg(Op, _, _, _, _)).
+agg_keyed(R, K)      :- premise_lit(R, K, $agg(_, _, _, $cons(_, _), _)).
+agg_one_value(R, K)  :- premise_lit(R, K, $agg(_, _, $cons(_, $nil), _, _)).
+agg_no_value(R, K)   :- premise_lit(R, K, $agg(_, _, $nil, _, _)).
+needs_key(sum).
+one_value_op(sum).
+one_value_op(min).
+one_value_op(max).
+one_value_op(or).
+one_value_op(and).
+idempotent_op(min).
+idempotent_op(max).
+idempotent_op(or).
+idempotent_op(and).
+-- the joins (docs/aggregates.md, "The join lattice, as built"): only a
+-- lattice declaration names one
+idempotent_op(union).
+idempotent_op(hull).
+idempotent_op(bitor).
+-- WHAT THE KERNEL WRITES WHILE THE EVALUATION RUNS has no round that closes
+-- it, so no aggregate may read it.
+live_kernel_rel(derived_by).
+live_kernel_rel(hole).
+live_kernel_rel(agg_cell).
+live_kernel_rel(agg_member).
+live_kernel_rel(agg_member_prem).
+live_kernel_rel(agg_sealed).
+live_kernel_rel(lattice_member).
+live_kernel_rel(lattice_member_prem).
+live_kernel_rel(dominated_by).
+
+agg_refused(R, sum_needs_key)      :- agg_op(R, K, Op), needs_key(Op), not agg_keyed(R, K).
+agg_refused(R, key_on_count)       :- agg_op(R, K, count), agg_keyed(R, K).
+agg_refused(R, key_on_idempotent)  :- agg_op(R, K, Op), idempotent_op(Op), agg_keyed(R, K).
+agg_refused(R, one_value)          :- agg_op(R, K, Op), one_value_op(Op), not agg_one_value(R, K).
+agg_refused(R, count_needs_a_term) :- agg_op(R, K, count), agg_no_value(R, K).
+agg_refused(R, member_unbound)     :- agg_inner(R, _, I), unsafe_rule(I).
+agg_refused(R, unsafe)             :- agg_op(R, _, _), unsafe_rule(R).
+agg_refused(R, reads_live_kernel)  :- premise_agg(R, Rel), live_kernel_rel(Rel).
+
+-- THE THRESHOLD `at_least(N, Vals : Body)` (docs/aggregates.md, "The
+-- threshold, as built"): `$agg(at_least, N, Vals, $nil, Body)`, seeded with an
+-- empty `agg_res` slot, since it reads N and binds nothing but what it shares.
+-- It is monotone, so it reads its inner body as the rule would read it
+-- inlined (`premise_pos`, `premise_neg`) and may recurse; like count it takes
+-- no key and counts at least one term.
+agg_refused(R, key_on_threshold)       :- agg_op(R, K, at_least), agg_keyed(R, K).
+agg_refused(R, threshold_needs_a_term) :- agg_op(R, K, at_least), agg_no_value(R, K).
+thr_read(R, Q) :- agg_op(R, K, at_least), agg_inner(R, K, I), premise_lit(I, _, $lit(Q, _, _, _)).
+thr_read(R, Q) :- agg_op(R, K, at_least), agg_inner(R, K, I), premise_lit(I, _, $not($lit(Q, _, _, _))).
+
+-- THE HOLISTIC AGGREGATES (docs/aggregates.md, "The holistic aggregates, as
+-- built"): median and quantile fold a multiset of values, so like sum they
+-- name a key; quantile's percent and rank's subject are a first term read
+-- from outside (the door requires it bound before), so both take exactly two
+-- terms; rank ranks among distinct values and takes no key.
+needs_holistic_key(median).
+needs_holistic_key(quantile).
+one_value_op(median).
+param_op(quantile).
+param_op(rank).
+agg_two_terms(R, K) :- premise_lit(R, K, $agg(_, _, $cons(_, $cons(_, $nil)), _, _)).
+agg_refused(R, holistic_needs_key) :- agg_op(R, K, Op), needs_holistic_key(Op), not agg_keyed(R, K).
+agg_refused(R, param_and_value)    :- agg_op(R, K, Op), param_op(Op), not agg_two_terms(R, K).
+agg_refused(R, key_on_rank)        :- agg_op(R, K, rank), agg_keyed(R, K).
+
+-- THE EMPTY GROUP. A zero is a claim that nothing matched, so it exists only
+-- where the group is asked from outside: every variable the aggregate shares
+-- is bound before it. An aggregate that binds one of them groups by it, and
+-- a group with no member is no group.
+agg_group_var(R, K, V) :- premise_var(R, K, agg, _, V), not bound_before(R, K, V).
+agg_groups(R, K)       :- agg_group_var(R, K, _).
+empty_zero(R, K)       :- agg_op(R, K, count), not agg_groups(R, K).
+empty_zero(R, K)       :- agg_op(R, K, sum),   not agg_groups(R, K).
+
+-- who reads a cell's members, which the kernel then writes as facts
+member_reader(R) :- analysed(R), premise_pos(R, agg_member).
+member_reader(R) :- analysed(R), premise_pos(R, agg_member_prem).
+member_reader(R) :- analysed(R), premise_neg(R, agg_member).
+member_reader(R) :- analysed(R), premise_neg(R, agg_member_prem).
+
+-- who reads a lattice's members, which the kernel then writes as facts
+lattice_member_reader(R) :- analysed(R), premise_pos(R, lattice_member).
+lattice_member_reader(R) :- analysed(R), premise_pos(R, lattice_member_prem).
+lattice_member_reader(R) :- analysed(R), premise_neg(R, lattice_member).
+lattice_member_reader(R) :- analysed(R), premise_neg(R, lattice_member_prem).
+-- who reads what a subsumptive cell's front dominates
+dominated_reader(R) :- analysed(R), premise_pos(R, dominated_by).
+dominated_reader(R) :- analysed(R), premise_neg(R, dominated_by).
+
+-- ---------------------------------------------------------------------------
+-- LATTICES (docs/aggregates.md, "The order lattice, as built"). `lattice dist(A, C,
+-- min D).` is the kernel row `lattice_decl(dist, 3, min)`: the cell is keyed
+-- by the head prefix and its value, the last argument, merged by the
+-- operation. For a program that declares one, the host seeds three more
+-- inputs: the slots `neg` (a negated premise's variables), `hkey` and `hval`
+-- (a lattice head's key and, when it is a variable, its value), `lkey` and
+-- `lval` (the same for a positive premise on a lattice relation);
+-- `lit_arity(R, K, Rel, N)` for every literal of a lattice relation; and
+-- `premise_arith(R, K, Res, Op, A, B)` for each `Res is A Op B` whose operands
+-- are variables or integers (`Res is A` is `Op` = "is", B = A), terms reified.
+edb(premise_arith).
+edb(lit_arity).
+
+lattice_rel(P) :- lattice_decl(P, _, _).
+lattice_any()  :- lattice_rel(_).
+lat_op(P, Op)  :- lattice_decl(P, _, Op).
+
+-- THE DECLARATION. Recursion is allowed only where the operation is
+-- idempotent, which is the algebra flag above; one operation and one arity
+-- per relation.
+lattice_refused(P, not_idempotent) :- lattice_decl(P, _, Op), not idempotent_op(Op).
+lattice_refused(P, two_algebras)   :- lattice_decl(P, _, A), lattice_decl(P, _, B), A != B.
+lattice_refused(P, two_arities)    :- lattice_decl(P, N, _), lattice_decl(P, M, _), N != M.
+agg_refused(R, lattice_arity)      :- lit_arity(R, _, P, N), lattice_decl(P, M, _), N != M.
+
+-- SUBSUMPTION (docs/aggregates.md, "Subsumption, as built"). The dominance
+-- rule `p(K..., V1...) <= p(K..., V2...) :- Body.` is the kernel row
+-- `dominance(R, p, N, K)`: p's cell at a key is the antichain of the values
+-- no other value it was given dominates. It closes as a lattice does, so it
+-- is one here: read inside its recursion, from outside it strictly, never
+-- negated inside it, never beside a threshold. Its values may be used any
+-- way inside the recursion: the dominance is the program's own, so no rule
+-- here can say which uses are monotone in it, and the engine checks every
+-- consumer on the facts it made. One algebra, one arity, one key.
+edb(dominance).
+sub_rel(P)     :- dominance(_, P, _, _).
+lattice_rel(P) :- sub_rel(P).
+lattice_refused(P, two_algebras) :- sub_rel(P), lattice_decl(P, _, _).
+lattice_refused(P, two_arities)  :- dominance(_, P, N, _), dominance(_, P, M, _), N != M.
+lattice_refused(P, two_keys)     :- dominance(_, P, _, J), dominance(_, P, _, K), J != K.
+agg_refused(R, lattice_arity)    :- lit_arity(R, _, P, N), dominance(_, P, M, _), N != M.
+-- a body aggregate of another operation as a lattice head's value, directly
+-- or through `X is ...` and `=`: a closed aggregate renamed is the same value
+lat_aggval(R, A, V) :- concludes(R, H), lattice_rel(H), premise_lit(R, _, $agg(A, $var(V), _, _, _)).
+lat_aggval(R, A, X) :- lat_aggval(R, A, Y), premise_var(R, J, right, _, Y),
+                       premise_lit(R, J, $builtin("is", _)), premise_var(R, J, left, _, X).
+lat_aggval(R, A, X) :- lat_aggval(R, A, Y), premise_var(R, J, right, _, Y),
+                       premise_lit(R, J, $builtin("=", _)), premise_var(R, J, left, _, X).
+lat_aggval(R, A, X) :- lat_aggval(R, A, Y), premise_var(R, J, left, _, Y),
+                       premise_lit(R, J, $builtin("=", _)), premise_var(R, J, right, _, X).
+agg_refused(R, lattice_two_algebras) :- concludes(R, H), lat_op(H, Op),
+  lat_aggval(R, A, V), premise_var(R, 0, hval, _, V), A != Op.
+
+-- RECURSION. What a lattice relation depends on, over every edge of the
+-- present tense; a rule reads P INSIDE its recursion when P depends on the
+-- rule's head. Every other read is OUTER: a strict edge, fired once P is
+-- closed, which may read it any way at all.
+lat_edge(A, B)  :- lattice_any(), concludes(R, A), conclusion_tense(R, now), premise_pos(R, B).
+lat_edge(A, B)  :- lattice_any(), concludes(R, A), conclusion_tense(R, now), premise_neg(R, B).
+lat_edge(A, B)  :- lattice_any(), concludes(R, A), conclusion_tense(R, now), premise_agg(R, B).
+lat_reach(P, B) :- lattice_rel(P), lat_edge(P, B).
+lat_reach(P, B) :- lat_reach(P, A), lat_edge(A, B).
+lat_read(R, K, P)   :- premise_lit(R, K, $lit(P, _, _, _)), lattice_rel(P).
+lat_inner(R, K, P)  :- lat_read(R, K, P), concludes(R, H), conclusion_tense(R, now), lat_reach(P, H).
+lattice_outer(R, P) :- lat_read(R, K, P), not lat_inner(R, K, P).
+agg_refused(R, lattice_negated) :- premise_neg(R, P), lattice_rel(P), concludes(R, H),
+  conclusion_tense(R, now), lat_reach(P, H).
+
+-- MONOTONE IN THE VALUE. An inner read's value variable, and every variable
+-- computed from it, is TAINTED; each place a tainted variable occurs must be
+-- one of the uses below, or the rule is refused. `lat_mv` is the direction a
+-- variable moves when the cell improves: min and and improve downwards, max
+-- and or upwards; a join's value grows in its own carrier, a set, an
+-- interval or a bitset, and moves into a head of that carrier only.
+better_move(min, down).
+better_move(and, down).
+better_move(max, up).
+better_move(or, up).
+better_move(union, grow_set).
+better_move(hull, grow_iv).
+better_move(bitor, grow_bits).
+order_move(up).
+order_move(down).
+join_move(grow_set).
+join_move(grow_iv).
+join_move(grow_bits).
+-- the reads a growing value keeps true: `E in S` (E a member of S, which
+-- more members keep true and which enumerates more E as S grows) and
+-- `A subset S`, S on the right
+join_read("in").
+join_read("subset").
+lt_op("<").
+lt_op("<=").
+gt_op(">").
+gt_op(">=").
+top_const(up, true).
+top_const(down, false).
+
+lat_taint(R, K, V) :- lat_inner(R, K, _), premise_var(R, K, lval, _, V).
+lat_taint(R, K, X) :- lat_taint(R, K, Y), premise_var(R, J, right, _, Y),
+                      premise_lit(R, J, $builtin("is", _)), premise_var(R, J, left, _, X).
+lat_taint(R, K, X) :- lat_taint(R, K, Y), premise_var(R, J, right, _, Y),
+                      premise_lit(R, J, $builtin("=", _)), premise_var(R, J, left, _, X).
+lat_taint(R, K, X) :- lat_taint(R, K, Y), premise_var(R, J, left, _, Y),
+                      premise_lit(R, J, $builtin("=", _)), premise_var(R, J, right, _, X).
+lat_dirty(R, K, $var(Z)) :- lat_taint(R, K, Z).
+lat_clean(R, K, E) :- lat_inner(R, K, _), premise_arith(R, _, _, _, E, _), not lat_dirty(R, K, E).
+lat_clean(R, K, E) :- lat_inner(R, K, _), premise_arith(R, _, _, _, _, E), not lat_dirty(R, K, E).
+lat_right_dirty(R, K, J) :- lat_taint(R, K, Z), premise_var(R, J, right, _, Z).
+lat_left_dirty(R, K, J)  :- lat_taint(R, K, Z), premise_var(R, J, left, _, Z).
+
+-- the steps that carry the direction: V + E, E + V, V - E, min(V, E) and
+-- max(V, E) keep it, E - V turns it, `X is V` copies it; E never depends on
+-- the value
+flip(up, down).
+flip(down, up).
+lat_mv(R, K, V, M) :- lat_inner(R, K, P), premise_var(R, K, lval, _, V), lat_op(P, Op), better_move(Op, M).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), "+", $var(Y), E), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), "+", E, $var(Y)), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), "-", $var(Y), E), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, M2) :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), "-", E, $var(Y)), lat_clean(R, K, E),
+                               flip(M, M2).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), premise_arith(R, J, $var(X), "is", $var(Y), $var(Y)).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), Op, $var(Y), E), minmax(Op), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), Op, E, $var(Y)), minmax(Op), lat_clean(R, K, E).
+minmax("min").
+minmax("max").
+-- A SEMIRING TAG'S ⊗ (docs/aggregates.md, "Tags, as built"): the engine
+-- runs `X is $alg(Acc, T)` for each tag a firing multiplies, each monotone in
+-- both operands on its carrier, so it keeps the direction as `+` does
+tag_step("$tropical").
+tag_step("$viterbi").
+tag_step("$trust").
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), Op, $var(Y), E), tag_step(Op), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, M)  :- lat_mv(R, K, Y, M), order_move(M), premise_arith(R, J, $var(X), Op, E, $var(Y)), tag_step(Op), lat_clean(R, K, E).
+lat_mv(R, K, X, M) :- lat_step(R, K, _, _, X, M).
+
+-- THE USES THAT KEEP A RULE MONOTONE
+lat_ok(R, K, V, K, pos)  :- lat_inner(R, K, _), premise_var(R, K, lval, _, V).
+lat_ok(R, K, V, K, lval) :- lat_inner(R, K, _), premise_var(R, K, lval, _, V).
+lat_ok(R, K, Y, J, right) :- lat_step(R, K, Y, J, _, _).
+lat_ok(R, K, X, J, left)  :- lat_step(R, K, _, J, X, _).
+-- a comparison that stays true as the value improves
+lat_ok(R, K, X, J, left)  :- lat_mv(R, K, X, down), premise_lit(R, J, $builtin(Op, $cons($var(X), _))),
+                             lt_op(Op), not lat_right_dirty(R, K, J).
+lat_ok(R, K, X, J, left)  :- lat_mv(R, K, X, up), premise_lit(R, J, $builtin(Op, $cons($var(X), _))),
+                             gt_op(Op), not lat_right_dirty(R, K, J).
+lat_ok(R, K, X, J, right) :- lat_mv(R, K, X, up), premise_lit(R, J, $builtin(Op, $cons(_, $cons($var(X), $nil)))),
+                             lt_op(Op), not lat_left_dirty(R, K, J).
+lat_ok(R, K, X, J, right) :- lat_mv(R, K, X, down), premise_lit(R, J, $builtin(Op, $cons(_, $cons($var(X), $nil)))),
+                             gt_op(Op), not lat_left_dirty(R, K, J).
+-- or's `B = true`, and's `B = false`: equal to the best there is
+lat_ok(R, K, X, J, left)  :- lat_mv(R, K, X, M), top_const(M, C),
+                             premise_lit(R, J, $builtin("=", $cons($var(X), $cons(C, $nil)))).
+lat_ok(R, K, X, J, right) :- lat_mv(R, K, X, M), top_const(M, C),
+                             premise_lit(R, J, $builtin("=", $cons(C, $cons($var(X), $nil)))).
+-- a membership or subset test of a growing value, the value on the right
+lat_ok(R, K, X, J, right) :- lat_mv(R, K, X, M), join_move(M),
+                             premise_lit(R, J, $builtin(Op, $cons(_, $cons($var(X), $nil)))),
+                             join_read(Op), not lat_left_dirty(R, K, J).
+-- the value of a lattice head whose order improves the same way
+lat_head_ok(R, K, X) :- lat_mv(R, K, X, M), concludes(R, H), lat_op(H, Op), better_move(Op, M),
+                        premise_var(R, 0, hval, _, X).
+lat_ok(R, K, X, 0, head) :- lat_head_ok(R, K, X).
+lat_ok(R, K, X, 0, hval) :- lat_head_ok(R, K, X).
+
+-- A DECLARED WIDENING (docs/aggregates.md, "Widening, as built").
+-- `lattice p(K, hull I) widen N.` is the kernel row `lattice_widen(p, N)`: a
+-- cell of p that has improved N times is widened from then on, each end the
+-- join moved going to its infinity. Only an interval hull declares one: a
+-- union's top is no set, a bitset has finite height, and an order lattice
+-- that never settles is an improving cycle.
+edb(lattice_widen).
+lat_widened(P) :- lattice_widen(P, _).
+widenable(hull).
+lattice_refused(P, widen_not_hull) :- lattice_widen(P, _), lat_op(P, Op), not widenable(Op).
+lattice_refused(P, two_widenings)  :- lattice_widen(P, A), lattice_widen(P, B), A != B.
+-- THE INTERVAL FUNCTIONS of `is` move a hull's value monotonely: each is
+-- monotone in every interval operand, so `J is ivadd(I, 1)` grows as I does
+-- (ivmul only by an integer, its first operand the interval). They compute
+-- new ends from the value, so a recursion through one need not settle: every
+-- cycle it lies on passes a relation declared `widen N`, or it is refused.
+iv_op("ivadd").
+iv_op("ivsub").
+iv_op("ivmul").
+iv_op("ivmeet").
+lat_step(R, K, Y, J, X, grow_iv) :- lat_mv(R, K, Y, grow_iv), premise_arith(R, J, $var(X), Op, $var(Y), E),
+                                    iv_op(Op), lat_clean(R, K, E).
+lat_step(R, K, Y, J, X, grow_iv) :- lat_mv(R, K, Y, grow_iv), premise_arith(R, J, $var(X), Op, E, $var(Y)),
+                                    iv_op(Op), Op != "ivmul", lat_clean(R, K, E).
+lat_iv_step(R, K) :- lat_step(R, K, _, J, _, grow_iv), premise_arith(R, J, _, Op, _, _), iv_op(Op).
+unw_edge(A, B)  :- lat_edge(A, B), not lat_widened(A), not lat_widened(B).
+unw_reach(A, B) :- unw_edge(A, B).
+unw_reach(A, C) :- unw_reach(A, B), unw_edge(B, C).
+agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, P), concludes(R, H), unw_reach(P, H).
+agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, H), concludes(R, H), not lat_widened(H).
+
+lat_use(R, K, X, J, S)   :- lat_taint(R, K, X), premise_var(R, J, S, _, X).
+lat_misuse(R)            :- lat_use(R, K, X, J, S), not lat_ok(R, K, X, J, S).
+-- a constant read in the value slot is monotone only as the best there is
+lat_args(R, K, L)        :- lat_inner(R, K, _), premise_lit(R, K, $lit(_, _, L, _)).
+lat_args(R, K, T)        :- lat_args(R, K, $cons(_, T)).
+lat_last(R, K, X)        :- lat_args(R, K, $cons(X, $nil)).
+lat_last_var(R, K)       :- lat_last(R, K, $var(_)).
+lat_const_ok(R, K)       :- lat_inner(R, K, P), lat_last(R, K, C), lat_op(P, Op), better_move(Op, M), top_const(M, C).
+lat_misuse(R)            :- lat_inner(R, K, P), lat_op(P, _), not lat_last_var(R, K), not lat_const_ok(R, K).
+agg_refused(R, lattice_nonmonotone) :- lat_misuse(R).
+
+-- A THRESHOLD BESIDE A LATTICE. A lattice's close supersedes values and
+-- withdraws what a hole left unfounded, and a Quorum counted before the close
+-- would keep a member that is gone. So a threshold may count only facts that
+-- cannot rest on a lattice before that lattice closes: `lat_live(Q, P)` says
+-- Q's facts may rest on P's values while P is still open (Q reads P, or a
+-- relation live on P, inside the recursion or through a positive premise).
+-- A rule holding a threshold neither concludes a lattice nor reads one inside
+-- its recursion.
+lat_live(P, P) :- lattice_rel(P).
+lat_live(A, P) :- lattice_any(), concludes(R, A), conclusion_tense(R, now), premise_pos(R, B),
+                  not lattice_rel(B), lat_live(B, P).
+lat_live(A, P) :- lat_inner(R, _, B), concludes(R, A), lat_live(B, P).
+agg_refused(R, threshold_lattice) :- thr_read(R, Q), lat_live(Q, _).
+agg_refused(R, threshold_lattice) :- agg_op(R, _, at_least), concludes(R, H), lattice_rel(H).
+agg_refused(R, threshold_lattice) :- agg_op(R, _, at_least), lat_inner(R, _, _).
 
 -- ---------------------------------------------------------------------------
 -- THIS PROGRAM'S OWN SCHEDULE, declared as facts.
@@ -164,10 +506,55 @@ stratum(blocked_head, 1).
 stratum(has_neg_rule, 1).
 stratum(neg_relation, 1).
 stratum(provenance_reader, 1).
+stratum(agg_op, 1).
+stratum(agg_keyed, 1).
+stratum(agg_one_value, 1).
+stratum(agg_no_value, 1).
+stratum(agg_two_terms, 1).
+stratum(thr_read, 1).
+stratum(has_agg_rule, 1).
+stratum(member_reader, 1).
 stratum(unsafe_rule, 2).
 stratum(executable, 2).
 stratum(demand_rel, 2).
 stratum(trigger_of, 2).
+stratum(agg_group_var, 2).
+stratum(agg_groups, 2).
+stratum(agg_refused, 3).
 stratum(mono_rule, 3).
 stratum(stratum_cone, 3).
 stratum(late_rule, 3).
+stratum(empty_zero, 3).
+stratum(lat_aggval, 1).
+stratum(lat_args, 1).
+stratum(lat_const_ok, 1).
+stratum(lat_dirty, 1).
+stratum(lat_edge, 1).
+stratum(lat_inner, 1).
+stratum(lat_last, 1).
+stratum(lat_last_var, 1).
+stratum(lat_left_dirty, 1).
+stratum(lat_op, 1).
+stratum(lat_reach, 1).
+stratum(lat_read, 1).
+stratum(lat_right_dirty, 1).
+stratum(lat_taint, 1).
+stratum(lat_use, 1).
+stratum(lattice_any, 1).
+stratum(lattice_member_reader, 1).
+stratum(lattice_refused, 1).
+stratum(lattice_rel, 1).
+stratum(sub_rel, 1).
+stratum(dominated_reader, 1).
+stratum(lat_widened, 1).
+stratum(lat_clean, 2).
+stratum(lat_head_ok, 2).
+stratum(lat_mv, 2).
+stratum(lat_ok, 2).
+stratum(lat_step, 2).
+stratum(lattice_outer, 2).
+stratum(lat_live, 2).
+stratum(lat_iv_step, 2).
+stratum(unw_edge, 2).
+stratum(unw_reach, 2).
+stratum(lat_misuse, 3).

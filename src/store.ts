@@ -1,7 +1,7 @@
 // store.ts — fact store. Map-based, perspective-tagged, deterministic.
 // The store is generic: it knows no relation names at all.
 
-import { type Term, canonTerm, isGround, termToJson, termFromJson } from './unify.ts';
+import { type Term, canonTerm, isGround, termToJson, termFromJson, toJson, fromJson } from './unify.ts';
 
 export type Scope = 'timeless' | 'tick';
 
@@ -18,7 +18,29 @@ export interface FactRec {
 export type PremRef =
   | { t: 'fact'; key: string }
   | { t: 'neg'; key: string }      // canonical key of the absent fact pattern
-  | { t: 'bi'; desc: string };
+  | { t: 'bi'; desc: string }
+  // A SEALED AGGREGATE CELL, the one premise an aggregate element records:
+  // its key text `$cell(Rule,At,Tick,$cons(...))`, which names it uniquely
+  | { t: 'cell'; key: string };
+
+/** A CELL IS AN AGGREGATE'S VALUE AT ONE KEY, sealed when every relation it
+ *  reads is closed (docs/aggregates.md, "The witness of a cell"): an
+ *  immutable record named by `$cell(Rule, At, Tick, Key)`, with its members
+ *  (a count's distinct tuples, a min's derivations reaching the value) and
+ *  the round each relation it read was closed in. */
+export interface CellMember { proj: Term[]; value: Term; height: number; prems: PremRef[] }
+export interface CellSeal { rel: string; round: number }
+export type CellVal = { k: 'value'; t: Term } | { k: 'empty' } | { k: 'hole'; reason: string };
+export interface CellRec {
+  key: string; rule: string; at: number; tick: number; keyTerms: Term[]; op: string;
+  value: CellVal; height: number; desc: string; members: CellMember[]; seals: CellSeal[];
+}
+
+/** `$cell(Rule, At, Tick, Key)` spelled as canonTerm spells that term. */
+export function cellKeyText(rule: string, at: number, tick: number, key: Term[]): string {
+  return `$cell(${rule},${at},${tick},${key.map((k) => `$cons(${canonTerm(k)},`).join('')}$nil${')'.repeat(key.length)})`;
+}
+export const cellValueText = (v: CellVal): string => (v.k === 'value' ? canonTerm(v.t) : v.k === 'empty' ? 'none' : `hole(${v.reason})`);
 
 export interface Witness { ruleId: string; tick: number; prems: PremRef[]; }
 
@@ -44,6 +66,16 @@ export interface EvalRecord { budget: number; steps: number; partial: boolean; }
  *  two being the keys a Map has already flattened to hash them. `.slice()`
  *  reads as a copy and is not one — it measured 100 bytes, no better than
  *  the tree it was meant to collapse. */
+/** A premise as `canonicalState` spells it in a witness line. */
+export const premText = (p: PremRef): string => p.t + ':' + (p.t === 'bi' ? p.desc : p.key);
+
+/** Do two sets of records name the same keys? (Have the mean rounds stopped moving?) */
+export function sameKeys(a: Map<string, unknown>, b: Map<string, unknown>): boolean {
+  if (a.size !== b.size) return false;
+  for (const k of a.keys()) if (!b.has(k)) return false;
+  return true;
+}
+
 export function factKey(rel: string, persp: string, args: Term[]): string {
   return [rel, '[', persp, '](', args.map(canonTerm).join(','), ')'].join('');
 }
@@ -277,7 +309,7 @@ export interface FactStore {
              pos: number[], vals: string[]): FactRec[] | null;
   perspectivesOf(rel: string): string[];
   relCount(rel: string): number;
-  clearDerived(keep?: (rec: FactRec) => boolean): void;
+  clearDerived(keep?: (rec: FactRec) => boolean, rowOf?: (rec: FactRec, w: Witness) => string): void;
   support(key: string, sig: string, w: Witness): boolean;
   supportCount(key: string): number;
   witnessesOf(key: string): Witness[];
@@ -342,6 +374,17 @@ export class Store implements FactStore {
 
   private idx = new Map<string, Map<string, KeyRun>>(); // rel -> persp -> keys
 
+  /** The aggregate cells (src/aggeval.ts), by key text. */
+  cells = new Map<string, CellRec>();
+  /** Records a lattice superseded and whose firings are kept as the cell's
+   *  history (`retireKeepingFirings`), by key: dead, and still cited. */
+  ghosts = new Map<string, FactRec>();
+  /** Every record removed, by key, while `keepDead` is set: the aggregate
+   *  evaluator (src/aggeval.ts) reads a withdrawn fact's record as the Rust
+   *  store reads a dead id's. */
+  keepDead = false;
+  dead = new Map<string, FactRec>();
+
   /** Add a fact. Returns true if it was new. */
   add(rel: string, persp: string, args: Term[], opts: { scope: Scope; base: boolean; frozen?: boolean }): boolean {
     const key = factKey(rel, persp, args);
@@ -351,6 +394,8 @@ export class Store implements FactStore {
       if (opts.base && !existing.base) existing.base = true;
       return false;
     }
+    // a superseded lattice value's history ends when its key comes back
+    if (this.ghosts.size > 0 && this.ghosts.delete(key)) this.firings.delete(key);
     this.facts.set(key, { key, rel, persp, args, scope: opts.scope, base: opts.base, frozen: opts.frozen ?? false });
     let byP = this.idx.get(rel);
     if (!byP) { byP = new Map(); this.idx.set(rel, byP); }
@@ -370,6 +415,7 @@ export class Store implements FactStore {
   remove(key: string): boolean {
     const rec = this.facts.get(key);
     if (!rec) return false;
+    if (this.keepDead) this.dead.set(key, rec);
     this.facts.delete(key);
     this.firings.delete(key);
     const run = this.idx.get(rec.rel)?.get(rec.persp);
@@ -386,16 +432,77 @@ export class Store implements FactStore {
     return true;
   }
 
+  /** Mark a record dead and KEEP its firings: a lattice value another one
+   *  improved on is no answer, and it is how the value that replaced it was
+   *  reached (rust/rofl `retire_keeping_firings`). */
+  retireKeepingFirings(key: string): void {
+    const rec = this.facts.get(key);
+    if (!rec) return;
+    const sigs = this.firings.get(key);
+    this.remove(key);
+    if (sigs) { this.firings.set(key, sigs); this.ghosts.set(key, rec); }
+  }
+
+  /** The record of a key, live or kept as a ghost. */
+  recAny(key: string): FactRec | undefined { return this.facts.get(key) ?? this.ghosts.get(key) ?? this.dead.get(key); }
+
+  /** Every firing of a fact, oldest first (insertion order). */
+  firingList(key: string): Witness[] {
+    const sigs = this.firings.get(key);
+    return sigs ? [...sigs.values()] : [];
+  }
+
+  /** Drop every firing of a fact, live or ghost. */
+  dropFirings(key: string): void {
+    this.firings.delete(key);
+    if (!this.facts.has(key)) this.ghosts.delete(key);
+  }
+
+  /** Remove one firing, named by its signature. True if it was there. */
+  removeFiring(key: string, sig: string): boolean {
+    const sigs = this.firings.get(key);
+    if (!sigs || !sigs.delete(sig)) return false;
+    if (sigs.size === 0) { this.firings.delete(key); if (!this.facts.has(key)) this.ghosts.delete(key); }
+    return true;
+  }
+
+  /** Add a cell; a key already sealed is a defect. */
+  addCell(c: CellRec): void {
+    if (this.cells.has(c.key)) throw new Error(`the cell ${c.key} is sealed twice`);
+    this.cells.set(c.key, c);
+  }
+
+  /** Cells in key order, each with the cell before it in that order whose
+   *  members it shares, if any: what is stored once is written once. */
+  cellsInOrder(): [CellRec, CellRec | null][] {
+    const first = new Map<CellMember[], CellRec>();
+    return [...this.cells.values()].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)).map((c) => {
+      if (c.members.length === 0) return [c, null];
+      const f = first.get(c.members);
+      if (f === undefined) { first.set(c.members, c); return [c, null]; }
+      return [c, f];
+    });
+  }
+
+  /** Drop every cell no firing cites. */
+  gcCells(): void {
+    if (this.cells.size === 0) return;
+    const live = new Set<string>();
+    for (const sigs of this.firings.values()) for (const w of sigs.values()) for (const p of w.prems) if (p.t === 'cell') live.add(p.key);
+    for (const k of [...this.cells.keys()]) if (!live.has(k)) this.cells.delete(k);
+  }
+
   /** Drop many facts in one pass. The mirror image of `add`: a whole derived
    *  layer leaves in the same non-key order it arrived in, and removing it a
    *  key at a time is the same memmove per fact that `add` no longer pays. */
-  private removeMany(keys: string[]): void {
+  removeMany(keys: string[]): void {
     if (keys.length === 0) return;
     const gone = new Set<string>();
     const touched = new Map<string, Set<string>>();  // rel -> perspectives
     for (const key of keys) {
       const rec = this.facts.get(key);
       if (!rec) continue;
+      if (this.keepDead) this.dead.set(key, rec);
       this.facts.delete(key);
       this.firings.delete(key);
       gone.add(key);
@@ -596,13 +703,32 @@ export class Store implements FactStore {
 
   /** Drop the derived (non-base, non-frozen) layer before re-evaluation.
    *  `keep` names records the caller has proved a re-derivation would produce
-   *  identically; everything it does not name goes, as before. */
-  clearDerived(keep?: (rec: FactRec) => boolean): void {
+   *  identically; everything it does not name goes, as before. `rowOf` names
+   *  the key of the provenance row a firing was recorded with. */
+  clearDerived(keep?: (rec: FactRec) => boolean, rowOf?: (rec: FactRec, w: Witness) => string): void {
     const toDrop: string[] = [];
     for (const rec of this.facts.values()) {
       if (!rec.base && !rec.frozen && !(keep && keep(rec))) toDrop.push(rec.key);
     }
     this.removeMany(toDrop);
+    // AND THIS TICK'S FIRINGS ON A FACT THAT STAYS, unless their provenance
+    // row stays too. A base fact a rule also derives keeps its record, but its
+    // `derived_by` row goes with the layer; a firing left behind made the
+    // re-derivation "not new", so the row never came back, and when a premise
+    // went with the layer the firing cited a fact that no longer held. A
+    // firing and its row arrive together (`conclude`) and go together; a row
+    // frozen at the tick boundary keeps its firing.
+    // f_clear_derived_left_this_ticks_firings_on_the_facts_it_kept
+    for (const [key, sigs] of this.firings) {
+      const rec = this.facts.get(key);
+      if (rec && keep && keep(rec)) continue;
+      // a ghost's firings of this tick go too: no row of them stands
+      for (const [sig, w] of sigs) {
+        if (w.tick === this.tick && !(rec && rowOf && this.facts.has(rowOf(rec, w)))) sigs.delete(sig);
+      }
+      if (sigs.size === 0) { this.firings.delete(key); this.ghosts.delete(key); }
+    }
+    this.gcCells();
     // AND THE STORE IS NOW DIRTY, which it was not until 2026-09-09. `ensure`
     // returns immediately on a clean store (src/api.ts:620), so a caller that
     // dropped the derived layer and asked for it back got `{partial: false}`
@@ -684,6 +810,9 @@ export class Store implements FactStore {
    *  lives in `src/api.ts` beside the evaluator predicate it depends on. */
   advanceTick(staged: { rel: string; persp: string; args: Term[] }[],
               keepFrozen?: (rec: FactRec) => boolean): void {
+    // a superseded lattice value's history ends with its tick
+    for (const k of this.ghosts.keys()) this.firings.delete(k);
+    this.ghosts.clear();
     const stale: string[] = [];
     for (const rec of this.facts.values()) {
       if (rec.base || rec.scope !== 'timeless') continue;
@@ -692,19 +821,11 @@ export class Store implements FactStore {
     }
     const toDrop: string[] = [];
     for (const rec of this.facts.values()) if (rec.scope === 'tick') toDrop.push(rec.key);
-    // Provenance a staged fact re-enters the next tick with is read out
-    // before the drop and put back after it, in the same order as before:
-    // removal takes the witness with the fact, and a batch removal is still
-    // a removal.
-    const keptWitnessKeys = new Set(staged.map((f) => factKey(f.rel, f.persp, f.args)));
-    const heldF: [string, Map<string, Witness>][] = [];
-    for (const k of toDrop) {
-      if (!keptWitnessKeys.has(k)) continue;
-      const f = this.firings.get(k);
-      if (f) heldF.push([k, f]);
-    }
+    // A FACT STAGED AGAIN holds at the next tick for what staged it now, and
+    // for nothing it was staged or derived by before: its firings go with the
+    // tick, and the caller gives it the new one
+    // (f_a_plain_staged_firing_is_explained_in_the_tick_it_arrived_in).
     this.removeMany(toDrop);
-    for (const [k, f] of heldF) this.firings.set(k, f);
     // A separate batch, and disjoint from the one above: nothing on the frozen
     // layer is tick-scoped, so no staged fact's witness is at risk here.
     if (stale.length > 0) this.removeMany(stale);
@@ -774,8 +895,17 @@ export class Store implements FactStore {
       // are one language, and a rendering that prints the sequence makes them
       // look like two. Measured: `drip` differed on exactly this, in two
       // witnesses of 9439 lines, with every fact line identical.
-      const prems = w.prems.map((p) => p.t + ':' + (p.t === 'bi' ? p.desc : p.key)).sort();
+      const prems = w.prems.map(premText).sort();
       lines.push(`wit ${k} <- ${w.ruleId}@${w.tick} [${prems.join('; ')}]`);
+    }
+    // THE CELLS, after the witnesses and only when there are any, so a state
+    // without an aggregate is byte for byte what it was
+    for (const [c, like] of this.cellsInOrder()) {
+      lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]`);
+      if (like) { lines.push(`mem ${c.key} = ${like.key}`); continue; }
+      c.members.forEach((m, i) => {
+        lines.push(`mem ${c.key} #${i + 1} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]`);
+      });
     }
     lines.push(...this.tickLog);
     return lines.join('\n');
@@ -805,12 +935,54 @@ export class Store implements FactStore {
     });
     const evals = [...this.evalLog.keys()].sort((a, b) => a - b)
       .map((t) => ({ tick: t, ...this.evalLog.get(t)! }));
-    return JSON.stringify({ tick: this.tick, facts, wits, firings, tickLog: this.tickLog, evals });
+    const out: Record<string, unknown> = { tick: this.tick, facts, wits, firings, tickLog: this.tickLog, evals };
+    // THE CELLS, written only when there are any, in rust/rofl's format
+    if (this.cells.size > 0) {
+      out.cells = this.cellsInOrder().map(([c, like]) => ({
+        key: c.key, rule: c.rule, at: c.at, op: c.op, keyTerms: c.keyTerms.map(termToJson),
+        value: c.value.k === 'value' ? termToJson(c.value.t) : null, hole: c.value.k === 'hole' ? c.value.reason : null,
+        height: c.height, tick: c.tick, desc: c.desc,
+        members: like ? [] : c.members.map((m) => ({ proj: m.proj.map(termToJson), value: termToJson(m.value), height: m.height, prems: m.prems })),
+        sealed: c.seals.map((x) => ({ rel: x.rel, round: x.round })),
+        ...(like ? { membersOf: like.key } : {}),
+      }));
+    }
+    return toJson(out);
   }
 
   static restore(json: string): Store {
-    const d = JSON.parse(json);
+    const d = fromJson(json);
     const s = new Store();
+    // A CELL IS READ WHOLE OR THE SNAPSHOT IS REFUSED: a height, a tick or a
+    // round filled in with 0 is a witness that says something nobody sealed
+    const count = (x: unknown, what: string): number => {
+      if (typeof x !== 'number' || !Number.isInteger(x) || x < 0) throw new Error(`snapshot refused: bad cell ${what}`);
+      return x;
+    };
+    for (const c of Array.isArray(d.cells) ? d.cells : []) {
+      if (typeof c.rule !== 'string' || typeof c.op !== 'string' || !Array.isArray(c.keyTerms)) throw new Error('snapshot refused: bad cell');
+      const keyTerms = c.keyTerms.map(termFromJson);
+      const at = count(c.at, 'position'), tick = count(c.tick, 'tick');
+      const value: CellVal = typeof c.hole === 'string' ? { k: 'hole', reason: c.hole } : c.value !== null && c.value !== undefined
+        ? { k: 'value', t: termFromJson(c.value) } : { k: 'empty' };
+      const members: CellMember[] = (c.members ?? []).map((m: any) => ({ proj: m.proj.map(termFromJson), value: termFromJson(m.value),
+        height: count(m.height, 'member height'), prems: m.prems }));
+      const seals: CellSeal[] = (c.sealed ?? []).map((x: any) => {
+        if (typeof x.rel !== 'string' || x.rel === '') throw new Error('snapshot refused: bad cell seal');
+        return { rel: x.rel, round: count(x.round, 'seal round') };
+      });
+      if (typeof c.desc !== 'string' || c.desc === '') throw new Error('snapshot refused: bad cell description');
+      const key = cellKeyText(c.rule, at, tick, keyTerms);
+      if (c.key !== key) throw new Error(`snapshot refused: a cell's key does not spell its fields: ${key}`);
+      let shared = members;
+      if (c.membersOf !== undefined) {
+        const like = s.cells.get(c.membersOf);
+        if (!like || like.members.length === 0 || members.length > 0) throw new Error('snapshot refused: a cell shares the members of a cell the snapshot does not hold before it');
+        shared = like.members;
+      }
+      if (s.cells.has(key)) throw new Error('snapshot refused: a cell is in the snapshot twice');
+      s.cells.set(key, { key, rule: c.rule, at, tick, keyTerms, op: c.op, value, height: count(c.height, 'height'), desc: c.desc, members: shared, seals });
+    }
     s.tick = d.tick;
     s.tickLog = d.tickLog ?? [];
     for (const f of d.facts) {
@@ -819,8 +991,13 @@ export class Store implements FactStore {
     // d.wits is not read: it is a rendering of d.firings, which follows.
     for (const f of d.firings ?? []) {
       const sigs = new Map<string, Witness>();
-      for (const e of f.sup ?? []) sigs.set(e.sig, { ruleId: e.ruleId, tick: e.tick, prems: e.prems });
-      s.firings.set(f.key, sigs);
+      for (const e of f.sup ?? []) {
+        // a firing citing a cell the snapshot does not hold is no firing
+        if ((e.prems ?? []).some((p: PremRef) => p.t === 'cell' && !s.cells.has(p.key))) continue;
+        const sig = e.sig ?? e.ruleId + (e.prems ?? []).map((p: PremRef) => '|' + (p.t === 'bi' ? 'b:' + p.desc : p.t + ':' + p.key)).join('');
+        sigs.set(sig, { ruleId: e.ruleId, tick: e.tick, prems: e.prems });
+      }
+      if (sigs.size > 0) s.firings.set(f.key, sigs);
     }
     for (const e of d.evals ?? []) {
       s.evalLog.set(e.tick, { budget: e.budget, steps: e.steps, partial: e.partial });
@@ -857,6 +1034,10 @@ export class Store implements FactStore {
     s.tickLog = [...this.tickLog];
     for (const [k, sigs] of this.firings) s.firings.set(k, new Map(sigs));
     for (const [t, e] of this.evalLog) s.evalLog.set(t, { ...e });
+    for (const [k, c] of this.cells) s.cells.set(k, { ...c });
+    for (const [k, r] of this.ghosts) s.ghosts.set(k, { ...r });
+    s.keepDead = this.keepDead;
+    for (const [k, r] of this.dead) s.dead.set(k, r);
     // IN THE ORIGINAL'S ARRIVAL ORDER, decided 2026-09-07 after it was
     // measured. This walked `[...facts.keys()].sort()` because the serialising
     // clone it replaced went through `restore`, which re-adds a sorted

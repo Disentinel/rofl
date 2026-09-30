@@ -26,12 +26,12 @@ use rofl::session::Session;
 use rofl::store::write_fact_key;
 use rofl::term::TermK;
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const BUDGET: i64 = 200_000_000;
 
 fn corpus() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../facts/port-corpus")
+    rofl::corpus::dir()
 }
 
 fn cases() -> Vec<String> {
@@ -52,14 +52,14 @@ fn open(name: &str) -> Session {
     Session::open(&src, BUDGET).unwrap_or_else(|e| panic!("{name}: {e}"))
 }
 
-/// A case named `<x>.t3` IS THREE CALLS TO `tick`, AND NOTHING ELSE.
+/// A case named `<x>.t3` IS THREE CALLS TO `tick`, AND THE TICK ENTERED RUN.
 ///
-/// The corpus generator replays ticks and never calls `evaluate` beside them,
-/// because `tick` already runs the standing tick to fixpoint through `ensure`.
-/// An `evaluate()` here would re-derive a layer the tick already has and
-/// re-date every witness — which is the exact shape of the harness defect
-/// recorded at the top of `src/bin/rofl_eval.rs`, and the reason this helper
-/// exists instead of the two verbs being called wherever they seem to fit.
+/// The corpus generator replays ticks and then reads the tick it entered
+/// once it has been evaluated (f_a_ticked_case_is_read_before_its_tick_is_evaluated),
+/// through `ensure`: a tick already at its fixpoint (a quiescent call) is not
+/// derived again and re-dated — the harness defect recorded at the top of
+/// `src/bin/rofl_eval.rs`, and the reason this helper exists instead of the
+/// two verbs being called wherever they seem to fit.
 fn ticks_of(name: &str) -> u32 {
     name.rsplit('.').next().and_then(|s| s.strip_prefix('t')).and_then(|s| s.parse().ok()).unwrap_or(0)
 }
@@ -67,7 +67,9 @@ fn ticks_of(name: &str) -> u32 {
 fn settle(s: &mut Session, name: &str) -> Result<(), String> {
     match ticks_of(name) {
         0 => s.evaluate().map(|_| ()).map_err(|e| rofl::describe(&e)),
-        n => (0..n).try_for_each(|_| s.tick().map(|_| ()).map_err(|e| rofl::describe(&e))),
+        n => (0..n)
+            .try_for_each(|_| s.tick().map(|_| ()).map_err(|e| rofl::describe(&e)))
+            .and_then(|_| s.eval.ensure().map(|_| ()).map_err(|e| rofl::describe(&e))),
     }
 }
 
@@ -94,6 +96,14 @@ fn evaluate_matches_the_corpus() {
         }
         let got = s.eval.store.canonical_state(&s.eval.h);
         assert_eq!(got.trim_end(), want.trim_end(), "{n}: session state differs from the corpus");
+        // AND AGAIN: an evaluated world evaluated once more is the same world.
+        // A firing left behind by the cleared layer made its re-derivation
+        // "not new", and the `derived_by` row it came with never came back.
+        if ticks_of(n) == 0 {
+            s.evaluate().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
+            let again = s.eval.store.canonical_state(&s.eval.h);
+            assert_eq!(again.trim_end(), want.trim_end(), "{n}: a second evaluation moved the world");
+        }
         checked += 1;
     }
     assert!(checked >= 30, "only {checked} cases compared");

@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-9-refused-false.rofl — reading `false` of an or: it stops holding when the cell becomes true.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_false(X, or B).
+acsr_false(X, B) :- acsr_s(X, B).
+acsr_false(Y, false) :- acsr_false(X, false), acsr_n(X, Y).

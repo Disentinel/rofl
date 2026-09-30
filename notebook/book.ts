@@ -1,6 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { readMd, type ReadResult } from '../scripts/read_md.ts';
+import { readMd, type ReadOptions, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -52,7 +52,7 @@ export type Ask = { kind: Kind; lit: string; text: string };
 export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string };
 
 /** The cells as the reader reads them. Markdown cells are read twice: once to name the heads nobody had a sentence for and learn their sentences, then against every cell's sentences at once. */
-export function readBook(cells: Cell[], phrases: string, home: Record<string, string>): Book {
+export function readBook(cells: Cell[], phrases: string, home: Record<string, string>, opts: Pick<ReadOptions, 'canonVars'> = {}): Book {
   const parts = cells.map((c) => ({ c, ...(c.prose ? { clauses: c.text, asks: [] } : split(c.text)) }));
   const md = parts.map(({ c, clauses }) => {
     if (c.form !== 'md') return null;
@@ -62,5 +62,5 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
   const vocab = phrases + '\n' + learned.join('\n');
-  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab };
+  return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home, ...opts }) : null), learned, vocab };
 }

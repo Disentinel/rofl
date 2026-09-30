@@ -1,0 +1,165 @@
+-- examples/checks/agg-holistic-eval-check.rofl — agg_holistic_eval: median,
+-- quantile and rank evaluated in the Rust engine against values computed BY
+-- HAND from agg-holistic-data.rofl, in both directions, and every group that
+-- cannot have a value has a hole or no row.
+--
+-- Nearest rank: the r-th smallest member value, r = max(1, ceil(P*n/100)).
+--   godd  [1,1,4,6,9,12,15]  n=7: median r=4 -> 6; P 0 14 15 28 -> r 1 1 2 2 -> 1;
+--         P 29 -> r 3 -> 4; P 50 57 -> r 4 -> 6; P 58 -> r 5 -> 9; P 85 -> r 6 -> 12;
+--         P 90 100 -> r 7 -> 15
+--   geven [10,20,30,40]      n=4: median r=2 -> 20 (the lower); P 25 -> 10; 26 50 -> 20;
+--         51 75 -> 30; 76 -> 40
+--   gdup  [2,2,9]            n=3: the (9, k1) read from two sources is one member,
+--         the 100 from an untrusted source none; median r=2 -> 2; P 66 -> r 2 -> 2; 67 -> r 3 -> 9
+--   gone  [7]; gneg [-5,-1,3]: median -1, P 33 -> r 1 -> -5, P 34 -> r 2 -> -1
+--   gzero [0,4]: median r=1 -> 0; ah_inv over godd: 60/V is [60,60,15,10,6,5,4] -> 10
+-- Rank: the position among the DISTINCT values, ascending, from 1.
+--   godd [1,4,6,9,12,15]; geven [10,20,30,40]; gdup [2,9]; gone [7];
+--   gneg [-5,-1,3]; gzero [0,4]
+ahe_med(godd, 6).
+ahe_med(geven, 20).
+ahe_med(gdup, 2).
+ahe_med(gone, 7).
+ahe_med(gneg, -1).
+ahe_med(gzero, 0).
+ahe_q(godd, 0, 1).
+ahe_q(godd, 14, 1).
+ahe_q(godd, 15, 1).
+ahe_q(godd, 28, 1).
+ahe_q(godd, 29, 4).
+ahe_q(godd, 50, 6).
+ahe_q(godd, 57, 6).
+ahe_q(godd, 58, 9).
+ahe_q(godd, 85, 12).
+ahe_q(godd, 90, 15).
+ahe_q(godd, 100, 15).
+ahe_q(geven, 25, 10).
+ahe_q(geven, 26, 20).
+ahe_q(geven, 50, 20).
+ahe_q(geven, 51, 30).
+ahe_q(geven, 75, 30).
+ahe_q(geven, 76, 40).
+ahe_q(gdup, 66, 2).
+ahe_q(gdup, 67, 9).
+ahe_q(gone, 0, 7).
+ahe_q(gone, 100, 7).
+ahe_q(gneg, 33, -5).
+ahe_q(gneg, 34, -1).
+ahe_rank(godd, 1, 1).
+ahe_rank(godd, 4, 2).
+ahe_rank(godd, 6, 3).
+ahe_rank(godd, 9, 4).
+ahe_rank(godd, 12, 5).
+ahe_rank(godd, 15, 6).
+ahe_rank(geven, 10, 1).
+ahe_rank(geven, 20, 2).
+ahe_rank(geven, 30, 3).
+ahe_rank(geven, 40, 4).
+ahe_rank(gdup, 2, 1).
+ahe_rank(gdup, 9, 2).
+ahe_rank(gone, 7, 1).
+ahe_rank(gneg, -5, 1).
+ahe_rank(gneg, -1, 2).
+ahe_rank(gneg, 3, 3).
+ahe_rank(gzero, 0, 1).
+ahe_rank(gzero, 4, 2).
+-- a subject from outside: 12 is godd's fifth distinct value, 5 none of them
+ahe_rank_of(godd, 12, 5).
+ahe_rank_of(geven, 40, 4).
+ahe_inv(godd, 10).
+-- ah_qin: the values above P, then quantile(P) of them. godd P 0 -> all seven
+-- -> 1; P 14 -> [15] -> 15; P 15 and up -> none. geven P 25, 26 -> [30,40],
+-- r = 1 -> 30; P 50 and up -> none. gone P 0 -> [7] -> 7. gdup, gneg: none.
+ahe_qin(godd, 0, 1).
+ahe_qin(godd, 14, 15).
+ahe_qin(geven, 25, 30).
+ahe_qin(geven, 26, 30).
+ahe_qin(gone, 0, 7).
+
+med_wrong(G, M)        :- ah_med(G, M), not ahe_med(G, M).
+med_missing(G, M)      :- ahe_med(G, M), not ah_med(G, M).
+med_by_wrong(G, M)     :- ah_med_by(G, M), not ahe_med(G, M).
+med_by_missing(G, M)   :- ahe_med(G, M), not ah_med_by(G, M).
+q_wrong(G, P, Q)       :- ah_q(G, P, Q), not ahe_q(G, P, Q).
+q_missing(G, P, Q)     :- ahe_q(G, P, Q), not ah_q(G, P, Q).
+rank_wrong(G, V, R)    :- ah_rank(G, V, R), not ahe_rank(G, V, R).
+rank_missing(G, V, R)  :- ahe_rank(G, V, R), not ah_rank(G, V, R).
+rank_of_wrong(G, S, R) :- ah_rank_of(G, S, R), not ahe_rank_of(G, S, R).
+rank_of_missing(G, S, R) :- ahe_rank_of(G, S, R), not ah_rank_of(G, S, R).
+inv_wrong(G, M)        :- ah_inv(G, M), not ahe_inv(G, M).
+inv_missing(G, M)      :- ahe_inv(G, M), not ah_inv(G, M).
+qin_wrong(G, P, Q)     :- ah_qin(G, P, Q), not ahe_qin(G, P, Q).
+qin_missing(G, P, Q)   :- ahe_qin(G, P, Q), not ah_qin(G, P, Q).
+-- one value per group
+ahe_two(G)             :- ah_med(G, A), ah_med(G, B), A != B.
+ahe_two(G)             :- ah_q(G, P, A), ah_q(G, P, B), A != B.
+alarm(med_wrong).
+alarm(med_missing).
+alarm(med_by_wrong).
+alarm(med_by_missing).
+alarm(q_wrong).
+alarm(q_missing).
+alarm(rank_wrong).
+alarm(rank_missing).
+alarm(rank_of_wrong).
+alarm(rank_of_missing).
+alarm(inv_wrong).
+alarm(inv_missing).
+alarm(qin_wrong).
+alarm(qin_missing).
+alarm(ahe_two).
+
+-- A GROUP WITH NO VALUE IS A HOLE, NEVER A VALUE: a member that is no
+-- integer (gbad), a percent outside 0..100 (even over no member, gempty),
+-- a subject that is no integer, and a member dropped for a zero divisor.
+-- The key is every shared variable, in the order the aggregate writes them.
+ahe_hole(ah_med,     $cons(gbad, $nil), agg_type_error).
+ahe_hole(ah_med_by,  $cons(gbad, $nil), agg_type_error).
+ahe_hole(ah_q,       $cons(101, $cons(geven, $nil)), agg_type_error).
+ahe_hole(ah_q,       $cons(101, $cons(gempty, $nil)), agg_type_error).
+ahe_hole(ah_rank,    $cons(3, $cons(gbad, $nil)), agg_type_error).
+ahe_hole(ah_rank,    $cons(lots, $cons(gbad, $nil)), agg_type_error).
+ahe_hole(ah_rank_of, $cons(lots, $cons(godd, $nil)), agg_type_error).
+ahe_hole(ah_inv,     $cons(gzero, $nil), arith_zero_divisor).
+ahe_hole(ah_qin,     $cons(101, $cons(geven, $nil)), agg_type_error).
+ahe_hole(ah_qin,     $cons(101, $cons(gempty, $nil)), agg_type_error).
+ahe_marked(Rel, Key, Why) :- ahe_hole(Rel, Key, Why), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), Why).
+hole_unmarked(Rel, Key, Why) :- ahe_hole(Rel, Key, Why), not ahe_marked(Rel, Key, Why).
+ahe_holed_rel(ah_med).
+ahe_holed_rel(ah_med_by).
+ahe_holed_rel(ah_q).
+ahe_holed_rel(ah_rank).
+ahe_holed_rel(ah_rank_of).
+ahe_holed_rel(ah_inv).
+ahe_holed_rel(ah_qin).
+hole_extra(Rel, Key, Why) :- ahe_holed_rel(Rel), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), Why),
+                             not ahe_hole(Rel, Key, Why).
+-- and no row where there is no value: gbad, gempty, a subject that is none of
+-- the values (godd, 5), and gzero's inverse
+hole_row(G)    :- ah_med(gbad, G).
+hole_row(G)    :- ah_med_by(gbad, G).
+hole_row(P)    :- ah_q(gempty, P, _).
+hole_row(P)    :- ah_q(geven, 101, P).
+hole_row(V)    :- ah_rank(gbad, V, _).
+hole_row(R)    :- ah_rank_of(godd, lots, R).
+hole_row(M)    :- ah_inv(gzero, M).
+empty_row(G)   :- ah_med(gempty, G).
+empty_row(G)   :- ah_med_by(gempty, G).
+empty_row(R)   :- ah_rank_of(gempty, _, R).
+unranked_row(R) :- ah_rank_of(godd, 5, R).
+alarm(hole_unmarked).
+alarm(hole_extra).
+alarm(hole_row).
+alarm(empty_row).
+alarm(unranked_row).
+
+-- the dataset still holds each case a holistic aggregate can get wrong
+ahe_two_sources()   :- ah_line(G, K, V, S1), ah_line(G, K, V, S2), S1 != S2.
+ahe_equal_values()  :- ah_line(G, K1, V, _), ah_line(G, K2, V, _), K1 != K2.
+ahe_dropped()       :- ah_raw(_, _, _, S), not ah_ok(S).
+ahe_late_least()    :- ah_late(godd, _, 1, _).
+ahe_vacuous(two_sources)  :- not ahe_two_sources().
+ahe_vacuous(equal_values) :- not ahe_equal_values().
+ahe_vacuous(dropped)      :- not ahe_dropped().
+ahe_vacuous(late_least)   :- not ahe_late_least().
+alarm(ahe_vacuous).

@@ -1,0 +1,10 @@
+-- examples/checks/agg-holistic-safety-1-ok.rofl — holistic aggregates
+-- safety.rofl and the door must accept: a median with its key and a group
+-- variable only it binds; a quantile whose percent is a literal and one whose
+-- percent a premise binds before it; a rank whose subject a premise binds
+-- before it and one whose subject is a literal.
+ahs_by(G, M)        :- M is median(V ; K : ahs_line(G, K, V)).
+ahs_q90(G, Q)       :- ahs_group(G), Q is quantile(90, V ; K : ahs_line(G, K, V)).
+ahs_qp(G, P, Q)     :- ahs_ask(G, P), Q is quantile(P, V ; K : ahs_line(G, K, V)).
+ahs_rank(G, V, R)   :- ahs_line(G, _, V), R is rank(V, W : ahs_line(G, _, W)).
+ahs_rank7(G, R)     :- ahs_group(G), R is rank(7, W : ahs_line(G, _, W)).

@@ -1,0 +1,19 @@
+-- examples/checks/agg-threshold-syntax-1-forms.rofl — every form of the
+-- threshold the grammar reads: a literal N and a correlated one, one counted
+-- term and two, a book, a negation and a builtin inside, and `at_least` as a
+-- plain name where no colon follows. The TypeScript engine reads this file and
+-- refuses it; its rule ids must be the Rust store's (scripts/goldens.ts).
+edb(sxt_v).
+edb(sxt_need).
+sxt_v(w1, c1).
+sxt_v(w2, c1).
+sxt_v[ledger](w3, c1).
+sxt_need(c1, 2).
+at_least(2, c1).
+sxt_lit(C)     :- sxt_need(C, _), at_least(2, W : sxt_v(W, C)).
+sxt_corr(C)    :- sxt_need(C, N), at_least(N, W : sxt_v(W, C)).
+sxt_two(C)     :- sxt_need(C, _), at_least(1, W, D : sxt_v(W, C), sxt_v(D, C)).
+sxt_group(C)   :- at_least(1, W : sxt_v(W, C)).
+sxt_book(C)    :- sxt_need(C, _), at_least(1, W : sxt_v[ledger](W, C)).
+sxt_inner(C)   :- sxt_need(C, _), at_least(1, W : sxt_v(W, C), not sxt_need(W, _), W != w2).
+sxt_name(N)    :- at_least(N, c1).

@@ -1,0 +1,11 @@
+-- examples/checks/agg-tag-shrug-wall.rofl — agg_tag_shrug_wall, over
+-- agg-tag-budget.rofl under its budget: at the wall a tropical tag over a
+-- negative cycle is a shrug `budget`, its meta what was spent, and each cell
+-- whose value came back through its own a shrug `divergence` whose meta is
+-- its own cycle's cells and no other's (x's cycle and y's are two); what it
+-- reaches is inherited from that cycle.
+-- expect-row: shrug[$kernel]($lattice(tbd_c),budget,spent(steps,
+-- expect-row: shrug[$kernel]($lattice(tbd_c,main,0,$cons(x,$cons(x,$nil))),divergence,cycle($cons($lattice(tbd_c,main,0,$cons(x,$cons(x,$nil))),$cons($lattice(tbd_c,main,0,$cons(x,$cons(y,$nil))),$nil))))
+-- expect-row: shrug[$kernel]($lattice(tbd_c,main,0,$cons(y,$cons(y,$nil))),divergence,cycle($cons($lattice(tbd_c,main,0,$cons(y,$cons(x,$nil))),$cons($lattice(tbd_c,main,0,$cons(y,$cons(y,$nil))),$nil))))
+-- expect-row: shrug[$kernel]($lattice(tbd_c,main,0,$cons(x,$cons(z,$nil))),inherited,from($cons($lattice(tbd_c,main,0,$cons(x,$cons(x,$nil))),$cons($lattice(tbd_c,main,0,$cons(x,$cons(y,$nil))),$nil))))
+-- expect-no-row: shrug[$kernel]($lattice(tbd_s

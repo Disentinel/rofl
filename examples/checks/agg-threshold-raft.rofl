@@ -1,0 +1,71 @@
+-- examples/checks/agg-threshold-raft.rofl — a Raft commit quorum, the
+-- threshold's second shape: N is not written, it is the cluster's majority,
+-- counted below it. Five servers in term 3; `ar_match(S, I)` is the highest
+-- index server S holds. A leader counts replicas only for an entry of its
+-- own term (Raft §5.4.2, the Figure 8 case: index 4, of term 2, sits on four
+-- servers and is not counted); every earlier index commits with the one
+-- counted. A candidate is elected by a majority of votes, and a server
+-- votes only for a log at least as long as its own (§5.4.1).
+--
+-- LEADER COMPLETENESS is the property that must never fail: an elected
+-- leader holds every committed entry. Two majorities of five share a server,
+-- so it holds exactly when the threshold means "at least N distinct".
+edb(ar_server).
+edb(ar_match).
+edb(ar_entry).
+edb(ar_current).
+edb(ar_candidate).
+ar_server(s1).
+ar_server(s2).
+ar_server(s3).
+ar_server(s4).
+ar_server(s5).
+ar_current(3).
+ar_entry(1, 1).
+ar_entry(2, 1).
+ar_entry(3, 2).
+ar_entry(4, 2).
+ar_entry(5, 3).
+ar_entry(6, 3).
+ar_entry(7, 3).
+ar_match(s1, 7).
+ar_match(s2, 7).
+ar_match(s3, 5).
+ar_match(s4, 4).
+ar_match(s5, 0).
+ar_candidate(s3).
+ar_candidate(s4).
+ar_majority(M) :- N is count(S : ar_server(S)), M is N / 2 + 1.
+ar_holds(S, I) :- ar_match(S, M), ar_entry(I, _), I <= M.
+ar_counted(I)  :- ar_entry(I, T), ar_current(T), ar_majority(Q), at_least(Q, S : ar_holds(S, I)).
+ar_committed(I) :- ar_counted(J), ar_entry(I, _), I <= J.
+ar_grants(V, L) :- ar_candidate(L), ar_match(V, MV), ar_match(L, ML), MV <= ML.
+ar_elected(L)  :- ar_candidate(L), ar_majority(Q), at_least(Q, V : ar_grants(V, L)).
+
+-- NEVER: an elected leader missing a committed entry
+lost_commit(L, I) :- ar_elected(L), ar_committed(I), not ar_holds(L, I).
+alarm(lost_commit).
+-- the threshold against a count over the same closed relations, both ways
+ar_replicas(I, N) :- ar_entry(I, _), N is count(S : ar_holds(S, I)).
+ar_votes(L, N)    :- ar_candidate(L), N is count(V : ar_grants(V, L)).
+counted_short(I)  :- ar_counted(I), ar_replicas(I, N), ar_majority(Q), N < Q.
+count_missed(I)   :- ar_entry(I, T), ar_current(T), ar_replicas(I, N), ar_majority(Q), N >= Q, not ar_counted(I).
+elected_short(L)  :- ar_elected(L), ar_votes(L, N), ar_majority(Q), N < Q.
+vote_missed(L)    :- ar_votes(L, N), ar_majority(Q), N >= Q, not ar_elected(L).
+alarm(counted_short).
+alarm(count_missed).
+alarm(elected_short).
+alarm(vote_missed).
+-- and the answer itself: 1..5 committed, 6 and 7 not; 4 committed but not
+-- counted; s3 elected, s4 not
+ar_want_committed(1).
+ar_want_committed(2).
+ar_want_committed(3).
+ar_want_committed(4).
+ar_want_committed(5).
+raft_wrong(committed, I) :- ar_want_committed(I), not ar_committed(I).
+raft_wrong(committed, I) :- ar_committed(I), not ar_want_committed(I).
+raft_wrong(counted, 4)   :- ar_counted(4).
+raft_wrong(elected, s3)  :- not ar_elected(s3).
+raft_wrong(elected, s4)  :- ar_elected(s4).
+alarm(raft_wrong).

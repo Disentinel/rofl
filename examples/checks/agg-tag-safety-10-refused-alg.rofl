@@ -1,0 +1,8 @@
+-- expect-refusal: is no algebra of a tag
+-- a tag declaration row written by hand naming no semiring: refused, never
+-- read as a plain relation
+edb(tsr_a0).
+tsr_a0(a).
+tag_decl(tsr_alg, 2, bogus).
+tsr_alg(a, 5) :- tsr_a0(a).
+tsr_alg(a, 7) :- tsr_a0(a).

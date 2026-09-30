@@ -1,0 +1,21 @@
+-- examples/checks/args-are-terms.rofl — AN ARGUMENT IS A TERM, in both
+-- engines (f_the_rust_parser_read_an_expression_as_an_argument): the grammar
+-- (examples/ring1/ring1.rofl, `args :- term`) and both parsers agree. The two
+-- files beside this one write an expression as an argument and are refused;
+-- loaded, they conclude at_min or at_f, which alarms. What they meant is
+-- written through a variable, and min and max nest.
+edb(at_n).
+edb(at_min).
+edb(at_f).
+at_n(3). at_n(9). at_n(30).
+at_ok(X, Y) :- at_n(X), Z is X + 1, Y is min(Z, 5).
+at_nest(X, Y) :- at_n(X), A is X - 10, B is X / 2, Y is min(max(A, 0), B).
+-- expect-row: at_ok[main](3,4)
+-- expect-row: at_ok[main](9,5)
+-- expect-row: at_nest[main](3,0)
+-- expect-row: at_nest[main](9,0)
+-- expect-row: at_nest[main](30,15)
+-- expect-row: at_ok[main](30,5)
+at_bad(min) :- at_min(_, _).
+at_bad(functor) :- at_f(_).
+alarm(at_bad).

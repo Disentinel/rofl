@@ -1,0 +1,7 @@
+-- expect-refusal: at an arity other than its declaration's
+-- read without its count, the tag's relation is another relation
+edb(tcr_f).
+tcr_f(a).
+tag tcr_ar(A, counting N).
+tcr_ar(A, 1) :- tcr_f(A).
+tcr_seen(A)  :- tcr_ar(A).

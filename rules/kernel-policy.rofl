@@ -36,7 +36,8 @@ executable(R)        :- rule(R), not blocked_head(R).
 -- anything reading what they conclude. Positive premises are the whole body
 -- here by construction — a monotone rule has no negated premise.
 has_neg_rule(R)      :- premise_neg(R, _).
-mono_rule(R)         :- executable(R), not has_neg_rule(R), not unsafe(R).
+has_agg_rule(R)      :- premise_agg(R, _).
+mono_rule(R)         :- executable(R), not has_neg_rule(R), not has_agg_rule(R), not unsafe(R).
 stratum_cone(stratum).
 stratum_cone(Rel)    :- concludes(R, Rel), mono_rule(R), premise_pos(R, Q),
                         stratum_cone(Q).

@@ -1,0 +1,8 @@
+-- expect-refusal: expected ')', got '+'
+-- examples/checks/args-are-terms-min.rofl — AN ARGUMENT IS A TERM, in both
+-- engines (f_the_rust_parser_read_an_expression_as_an_argument). `min` and
+-- `max` in `is` take a variable or a constant; `min(X + 1, 5)` is refused, and
+-- is written `Z is X + 1, Y is min(Z, 5)` (args-are-terms.rofl).
+edb(at_n).
+at_n(3).
+at_min(X, Y) :- at_n(X), Y is min(X + 1, 5).

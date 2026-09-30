@@ -1,0 +1,7 @@
+-- expect-refusal: must be idempotent
+-- examples/checks/agg-lattice-strata-3-refused-count.rofl — count is not
+-- idempotent either.
+edb(alsr_f).
+alsr_f(a, 1).
+lattice alsr_count(A, count N).
+alsr_count(A, N) :- alsr_f(A, N).

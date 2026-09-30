@@ -1,0 +1,8 @@
+-- examples/checks/agg-holistic-budget.rofl — agg_holistic_budget: the budget cuts the
+-- evaluation of agg-budget-data.rofl while ab_r is still being derived, and
+-- a median or a quantile of the weights at a node over it is no answer: the cut is a hole on the world and the
+-- aggregate has no row at all.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: abb_q[main](
+abb_q(C, M) :- ab_node(C), M is median(W ; A : ab_r(A, C, W)).
+abb_q(C, M) :- ab_node(C), M is quantile(90, W ; A : ab_r(C, A, W)).

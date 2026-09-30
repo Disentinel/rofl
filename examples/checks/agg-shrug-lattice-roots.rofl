@@ -1,0 +1,37 @@
+-- examples/checks/agg-shrug-lattice-roots.rofl — agg_lattice_shrug, its roots: the
+-- roots of a shrug are a function of the program and its unknowns, not of how
+-- its constants sort. Two copies of one program, the second with a renamed:
+-- in each, the path cell (a,c) faults, (m,c) faults on its own, and (q,q) and
+-- o(t) rest on p(t), which reads (a,c) alone. A lattice cell withdrawn when
+-- p(t) is left out rests on what it cited, never on the unknown the carry
+-- last worked from, which in the first copy is (m,c), sorted after (a,c).
+edb(ra_e).
+ra_e(a,c,2). ra_e(a,m,1). ra_e(m,c,heavy).
+lattice ra_d(X, Y, min D).
+ra_d(X, Y, W) :- ra_e(X, Y, W).
+ra_d(X, Z, D) :- ra_d(X, Y, D1), ra_e(Y, Z, W), D is D1 + W.
+ra_p(t) :- ra_d(a, c, D), D < 50.
+ra_d(q, q, 0) :- ra_p(t).
+lattice ra_o(X, min D).
+ra_o(X, 0) :- ra_p(X).
+edb(ry_e).
+ry_e(y,c,2). ry_e(y,m,1). ry_e(m,c,heavy).
+lattice ry_d(X, Y, min D).
+ry_d(X, Y, W) :- ry_e(X, Y, W).
+ry_d(X, Z, D) :- ry_d(X, Y, D1), ry_e(Y, Z, W), D is D1 + W.
+ry_p(t) :- ry_d(y, c, D), D < 50.
+ry_d(q, q, 0) :- ry_p(t).
+lattice ry_o(X, min D).
+ry_o(X, 0) :- ry_p(X).
+-- expect-row: shrug[$kernel](ra_p(t),inherited,from($cons($lattice(ra_d,main,0,$cons(a,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel]($lattice(ra_d,main,0,$cons(q,$cons(q,$nil))),inherited,from($cons($lattice(ra_d,main,0,$cons(a,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ra_d(q,q,$unknown_value),inherited,from($cons($lattice(ra_d,main,0,$cons(a,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel]($lattice(ra_o,main,0,$cons(t,$nil)),inherited,from($cons($lattice(ra_d,main,0,$cons(a,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ra_o(t,$unknown_value),inherited,from($cons($lattice(ra_d,main,0,$cons(a,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ra_d(m,c,$unknown_value),inherited,from($cons($lattice(ra_d,main,0,$cons(m,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ry_p(t),inherited,from($cons($lattice(ry_d,main,0,$cons(y,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel]($lattice(ry_d,main,0,$cons(q,$cons(q,$nil))),inherited,from($cons($lattice(ry_d,main,0,$cons(y,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ry_d(q,q,$unknown_value),inherited,from($cons($lattice(ry_d,main,0,$cons(y,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel]($lattice(ry_o,main,0,$cons(t,$nil)),inherited,from($cons($lattice(ry_d,main,0,$cons(y,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ry_o(t,$unknown_value),inherited,from($cons($lattice(ry_d,main,0,$cons(y,$cons(c,$nil))),$nil)))
+-- expect-row: shrug[$kernel](ry_d(m,c,$unknown_value),inherited,from($cons($lattice(ry_d,main,0,$cons(m,$cons(c,$nil))),$nil)))

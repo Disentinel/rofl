@@ -1,0 +1,127 @@
+-- examples/checks/agg-phrase-sugar-check.rofl — agg_sugar_phrase: the sugar read from its sentences and from
+-- the rofl it lowers to, each after a round trip, answers as the sugar says: the scores 10, 20, 20 and 45 average
+-- 95 / 4, 23 rounded toward zero and 2375 in hundredths; c2 (one ballot) and c3 (none) have at most one, c1
+-- exactly two; g1's members all voted and g2's did not; and every candidate voted for stands, as each candidate sees.
+psc_want(avg, 23). psc_want(cents, 2375).
+psc_got(avg, A)   :- psgs_avg(A).
+psc_got(avg, A)   :- psgr_avg(A).
+psc_got(cents, A) :- psgs_cents(A).
+psc_got(cents, A) :- psgr_cents(A).
+psc_wrong(W)      :- psc_want(W, A), not psgs_avg(A), W = avg.
+psc_wrong(W)      :- psc_want(W, A), not psgr_avg(A), W = avg.
+psc_wrong(W)      :- psc_want(W, A), not psgs_cents(A), W = cents.
+psc_wrong(W)      :- psc_want(W, A), not psgr_cents(A), W = cents.
+psc_wrong(W)      :- psc_got(W, A), not psc_want(W, A).
+psc_few(c2). psc_few(c3).
+psc_wrong(C) :- psc_few(C), not psgs_few(C).
+psc_wrong(C) :- psc_few(C), not psgr_few(C).
+psc_wrong(C) :- psgs_few(C), not psc_few(C).
+psc_wrong(C) :- psgr_few(C), not psc_few(C).
+psc_two(c1).
+psc_wrong(C) :- psc_two(C), not psgs_two(C).
+psc_wrong(C) :- psc_two(C), not psgr_two(C).
+psc_wrong(C) :- psgs_two(C), not psc_two(C).
+psc_wrong(C) :- psgr_two(C), not psc_two(C).
+psc_all(g1).
+psc_wrong(G) :- psc_all(G), not psgs_all(G).
+psc_wrong(G) :- psc_all(G), not psgr_all(G).
+psc_wrong(G) :- psgs_all(G), not psc_all(G).
+psc_wrong(G) :- psgr_all(G), not psc_all(G).
+psc_wrong(C) :- pv_cand(C), not psgs_valid(C).
+psc_wrong(C) :- pv_cand(C), not psgr_valid(C).
+alarm(psc_wrong).
+-- no sugar where there is none: 95 over the three scores past 15 is 31; c2 alone has as many ballots as needs
+psc_wrong(ratio) :- not psgr_ratio(31).
+psc_wrong(ratio) :- psgr_ratio(A), A != 31.
+psc_wrong(C) :- psgr_level(C), C != c2.
+psc_wrong(c2) :- not psgr_level(c2).
+-- in thousandths 95000 / 4 = 23750; the scores shifted by one, through V, which the pair alone writes, 99 / 4 = 24;
+-- the voters for a candidate needing more than one (b1 and b2, for c1) all vote for c1 alone
+psc_want(milli, 23750). psc_want(shift, 24).
+psc_got(milli, A) :- psgs_milli(A).
+psc_got(milli, A) :- psgr_milli(A).
+psc_got(shift, A) :- psgs_shift(A).
+psc_got(shift, A) :- psgr_shift(A).
+psc_wrong(W) :- psc_want(W, _), not psc_got(W, _).
+psc_wrong(milli) :- psc_want(milli, A), not psgs_milli(A).
+psc_wrong(milli) :- psc_want(milli, A), not psgr_milli(A).
+psc_wrong(shift) :- psc_want(shift, A), not psgs_shift(A).
+psc_wrong(shift) :- psc_want(shift, A), not psgr_shift(A).
+psc_needy(c1).
+psc_wrong(C) :- psc_needy(C), not psgs_needy(C).
+psc_wrong(C) :- psc_needy(C), not psgr_needy(C).
+psc_wrong(C) :- psgs_needy(C), not psc_needy(C).
+psc_wrong(C) :- psgr_needy(C), not psc_needy(C).
+-- what the sugar takes, bound before it, is asked per value: each key's own mark is its score, and each member
+-- that voted turned out alone
+psc_own(k1, 10). psc_own(k2, 20). psc_own(k3, 20). psc_own(k4, 45).
+psc_wrong(K) :- psc_own(K, A), not psgs_own(K, A).
+psc_wrong(K) :- psc_own(K, A), not psgr_own(K, A).
+psc_wrong(K) :- psgs_own(K, A), not psc_own(K, A).
+psc_wrong(K) :- psgr_own(K, A), not psc_own(K, A).
+psc_each(g1, m1). psc_each(g1, m2). psc_each(g2, m3).
+psc_wrong(M) :- psc_each(G, M), not psgs_each(M, G).
+psc_wrong(M) :- psc_each(G, M), not psgr_each(M, G).
+psc_wrong(M) :- psgs_each(M, G), not psc_each(G, M).
+psc_wrong(M) :- psgr_each(M, G), not psc_each(G, M).
+-- no sugar where one of the two is asked per key and the other is not: each score over all four keys, and all
+-- 95 over each key's one score
+psc_skew(k1, 2). psc_skew(k2, 5). psc_skew(k3, 5). psc_skew(k4, 11).
+psc_wrong(K) :- psc_skew(K, A), not psgr_skew(K, A).
+psc_wrong(K) :- psgr_skew(K, A), not psc_skew(K, A).
+psc_wrong(K) :- pv_score(K, _), not psgr_whole(K, 95).
+psc_wrong(K) :- psgr_whole(K, A), A != 95.
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(psgr_avg, "is the average of V over K such that (K scores V) rounded toward zero").
+sentence_word(psgr_cents, "in hundredths rounded toward zero").
+sentence_word(psgr_few, "at most 1 of B such that").
+sentence_word(psgr_two, "exactly 2 of B such that").
+sentence_word(psgr_all, "every M such that").
+sentence_word(psgr_valid, "every D such that").
+sentence_word(psgs_avg, "rounded toward zero").
+sentence_word(psgr_ratio, "is the sum of V over K such that").
+sentence_word(psgr_level, "N1 is N2").
+sentence_word(psgr_milli, "in thousandths rounded toward zero").
+sentence_word(psgr_shift, "is the average of W over K such that").
+sentence_word(psgr_needy, "every B such that").
+sentence_word(psgr_own, "is the average of V over K such that").
+sentence_word(psgr_each, "every M such that").
+sentence_word(psgr_skew, "is the sum of V over K such that").
+sentence_word(psgr_whole, "is the sum of V over K1 such that").
+-- every over each row: g1 ranks m1 at 1 beside 3, so g1 is not senior, though each of its members has some rank past
+-- 2; g2 is. Counting members alone where the satisfies clause reads their rank is that weaker reading, no every: it
+-- holds of both, and is written as the two counts it is. The spread, two averages with the same letters, is the
+-- tenths average less the plain one, 237 - 23 = 214; the plain mark, named A, is 23; and each key scores what it scores.
+psc_senior(g2).
+psc_wrong(G) :- psc_senior(G), not psgs_senior(G).
+psc_wrong(G) :- psc_senior(G), not psgr_senior(G).
+psc_wrong(G) :- psgs_senior(G), not psc_senior(G).
+psc_wrong(G) :- psgr_senior(G), not psc_senior(G).
+psc_loose(g1). psc_loose(g2).
+psc_wrong(G) :- psc_loose(G), not psgr_loose(G).
+psc_wrong(G) :- psgr_loose(G), not psc_loose(G).
+psc_want(spread, 214). psc_want(plain, 23).
+psc_got(spread, A) :- psgs_spread(A).
+psc_got(spread, A) :- psgr_spread(A).
+psc_got(plain, A) :- psgs_plain(A).
+psc_wrong(spread) :- psc_want(spread, A), not psgs_spread(A).
+psc_wrong(spread) :- psc_want(spread, A), not psgr_spread(A).
+psc_wrong(plain) :- psc_want(plain, A), not psgs_plain(A).
+psc_wrong(K) :- pv_score(K, _), not psgr_same(K).
+-- a capital A, An or The inside a conclusion is a variable wherever it stands (no word after it, a word after it,
+-- words and a capital after it): g1 ranks m1, m1 and m2 at 3, 1 and 5, so its mean is 9 / 3 = 3, and g2's is
+-- (3 + 5) / 2 = 4; above holds of each pair ranked higher in its group, m1 above itself included (3 > 1); and
+-- only m2 and m4 are ranked 5.
+psc_gmean(g1, 3). psc_gmean(g2, 4).
+psc_wrong(gmean) :- psc_gmean(G, A), not psgs_gmean(G, A).
+psc_wrong(gmean) :- psgs_gmean(G, A), not psc_gmean(G, A).
+psc_above(g1, m1, m1). psc_above(g1, m2, m1). psc_above(g2, m4, m3).
+psc_wrong(above) :- psc_above(G, A, M), not psgs_above(G, A, M).
+psc_wrong(above) :- psgs_above(G, A, M), not psc_above(G, A, M).
+psc_first(g1, m2). psc_first(g2, m4).
+psc_wrong(first) :- psc_first(G, A), not psgs_first(G, A).
+psc_wrong(first) :- psgs_first(G, A), not psc_first(G, A).
+sentence_word(psgr_senior, "every M such that").
+sentence_word(psgr_loose, "Domain0 is Holding0").
+sentence_word(psgr_spread, "in tenths rounded toward zero").
+sentence_word(psgr_same, "V is V").

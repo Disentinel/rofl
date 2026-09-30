@@ -20,7 +20,8 @@ export class ParseError extends Error {}
 
 export interface Tok { t: string; v: string; line: number; }
 
-const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?'];
+// `:` and `;` are an aggregate's separators; `:-` still wins by longest match.
+const PUNCT = [':-', '<=', '>=', '!=', '--', '(', ')', '[', ']', ',', '.', '@', '{', '}', '=', '<', '>', '+', '-', '*', '/', '?', ':', ';'];
 
 /** THE ESCAPE TABLE, and the two decisions in it.
  *

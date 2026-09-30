@@ -1,0 +1,21 @@
+-- examples/checks/agg-holistic-reflect-data.rofl — holistic aggregates for
+-- agg_holistic_reflect: a median that reads a book of its own and negates
+-- and compares inside, a quantile whose percent a premise binds, and a rank
+-- over the kernel's `concludes` read bare.
+edb(ahf_item).
+edb(ahf_bad).
+edb(ahf_key).
+edb(ahf_pct).
+edb(ahf_rel).
+ahf_rel(ahf_med).
+ahf_rel(ahf_q).
+ahf_key(k1).
+ahf_key(k2).
+ahf_pct(k1, 90).
+ahf_item[ledger](k1, 1, 4).
+ahf_item[ledger](k1, 2, 6).
+ahf_item[ledger](k2, 3, 5).
+ahf_bad(2).
+ahf_med(K, M)     :- ahf_key(K), M is median(V ; I : ahf_item[ledger](K, I, V), not ahf_bad(I), V > 0).
+ahf_q(K, Q)       :- ahf_pct(K, P), Q is quantile(P, V ; I : ahf_item[ledger](K, I, V)).
+ahf_rules(Rel, R) :- ahf_rel(Rel), R is rank(1, W : concludes(_, Rel), W = 1).

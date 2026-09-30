@@ -1,0 +1,63 @@
+-- examples/checks/agg-sum-data.rofl — THE SUM DATASET, shared by the
+-- agg_sum_* worlds (facts/checks.rofl, docs/aggregates.md).
+--
+-- g1 holds every case a sum can get wrong: two lines with the same value
+-- under different keys (summed twice), one line from two sources (summed
+-- once), a negative value, and one key carrying two values (two members,
+-- because a member is the whole (value, key) tuple). g2's second line comes
+-- from an untrusted source, judged two negations deep; g3 has no line;
+-- gbig's two lines overflow the term range. gmix's total is in range while
+-- the sum of its first two members in the canonical order is not: its
+-- -(2^60-1) arrives three rules deep, so it is folded last. A range check on
+-- a partial sum makes that a hole; the total decides.
+--
+-- as_tripled and as_counted multiply inside the aggregate, and gmix's large
+-- lines overflow the multiplication: a member dropped for an error leaves
+-- its group unknown, a hole and no row, never the group of the survivors.
+edb(as_group).
+edb(as_raw).
+edb(as_late).
+edb(as_src).
+edb(as_trusted).
+edb(as_term_max).
+as_group(g1).
+as_group(g2).
+as_group(g3).
+as_group(gbig).
+as_group(gmix).
+as_raw(g1, 1, 5, a).
+as_raw(g1, 2, 5, a).
+as_raw(g1, 3, -4, a).
+as_raw(g1, 4, 7, a).
+as_raw(g1, 4, 7, b).
+as_raw(g1, 5, 2, a).
+as_raw(g1, 5, 3, a).
+as_raw(g2, 1, 10, a).
+as_raw(g2, 2, 99, c).
+as_raw(gbig, 1, 1152921504606846975, a).
+as_raw(gbig, 2, 1152921504606846975, a).
+as_raw(gmix, 1, 1152921504606846975, a).
+as_raw(gmix, 3, 1152921504606846975, a).
+as_raw(gmix, 4, -5, a).
+as_late(gmix, 2, -1152921504606846975, a).
+as_src(a).
+as_src(b).
+as_src(c).
+as_trusted(a).
+as_trusted(b).
+-- the largest term, 2^60-1: the oracle's bounds are read from it, and a
+-- literal this large stays in a file only the Rust engine reads
+as_term_max(1152921504606846975).
+
+as_void(S)          :- as_src(S), not as_trusted(S).
+as_ok(S)            :- as_src(S), not as_void(S).
+as_line(G, K, V, S) :- as_raw(G, K, V, S), as_ok(S).
+as_late1(G, K, V, S) :- as_late(G, K, V, S).
+as_late2(G, K, V, S) :- as_late1(G, K, V, S).
+as_line(G, K, V, S) :- as_late2(G, K, V, S), as_ok(S).
+
+-- correlated, so g3 sums to 0; and grouped, so g3 has no row
+as_sums(G, S) :- as_group(G), S is sum(V ; K : as_line(G, K, V, _)).
+as_by(G, S)   :- S is sum(V ; K : as_line(G, K, V, _)).
+as_tripled(G, S) :- as_group(G), S is sum(W ; K : as_line(G, K, V, _), W is V * 3).
+as_counted(G, N) :- as_group(G), N is count(K, V : as_line(G, K, V, _), W is V * 3).

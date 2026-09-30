@@ -1,0 +1,8 @@
+-- examples/checks/agg-shrug-cold.rofl — agg_cell_shrug: a volume cooled to disk
+-- is a `federation` shrug for as long as its hole stands, whichever
+-- evaluation reads it, with the address it lives at (runtime/ingest.ts writes
+-- the hole beside the volume it cools).
+hole($cold(vol1), cooled_to_disk).
+sd_elsewhere(A) :- shrug(_, federation, at(A)).
+-- expect-row: shrug[$kernel]($cold(vol1),federation,at(vol1))
+-- expect-row: sd_elsewhere[main](vol1)

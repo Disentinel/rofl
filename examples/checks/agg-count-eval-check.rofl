@@ -1,0 +1,11 @@
+-- examples/checks/agg-count-eval-check.rofl — agg_count_eval: count
+-- evaluated in the Rust engine, correlated, grouped and over a two-term
+-- tuple, against agg-count-oracle.rofl. What this file adds is that every
+-- candidate has exactly one count and every count is a candidate's.
+ace_two(C)   :- ac_votes(C, N), ac_votes(C, M), N != M.
+ace_stray(C) :- ac_votes(C, _), not ac_candidate(C).
+ace_none(C)  :- ac_candidate(C), not ace_has(C).
+ace_has(C)   :- ac_votes(C, _).
+alarm(ace_two).
+alarm(ace_stray).
+alarm(ace_none).

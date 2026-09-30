@@ -1,0 +1,10 @@
+-- expect-refusal: must be idempotent
+-- examples/checks/agg-lattice-strata-2-refused-sum.rofl — a sum through its
+-- own recursion would count every trip round a cycle: sum is not idempotent,
+-- so it is not a lattice (a sum is a body aggregate, stratified, with a key).
+edb(alsr_e).
+alsr_e(a, b, 1).
+alsr_e(b, a, 1).
+lattice alsr_sum(A, sum S).
+alsr_sum(A, S) :- alsr_e(A, _, S).
+alsr_sum(B, S) :- alsr_sum(A, S), alsr_e(A, B, _).

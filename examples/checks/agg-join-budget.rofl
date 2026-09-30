@@ -1,0 +1,26 @@
+-- examples/checks/agg-join-budget.rofl — agg_join_budget: the budget cuts a
+-- world whose union invents an element from every element it holds
+-- (ajb_grow), so it has no finite height: the lattice is a hole on its
+-- relation, `budget_exhausted`, and the value it reached is kept as a bound
+-- (the true value holds every element of it), not withdrawn as a
+-- divergence: a join grows by what it is given, and a cell reached from its
+-- own earlier value is how every join over a cycle is reached. A join the
+-- wall did not reach (ajb_comp, components of a two-cycle) settled before it
+-- and keeps its values with no hole.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(ajb_grow),budget_exhausted)
+-- expect-no-row: hole[$kernel]($lattice(ajb_comp
+-- expect-no-row: hole[$kernel]($lattice(ajb_grow,
+-- expect-row: ajb_comp[main](p,set(p,q))
+-- expect-row: ajb_comp[main](q,set(p,q))
+-- expect-row: ajb_grow[main](a,set(0,1,10,11,12,13,14,15,16,17,18,19,2,20,21,22,23,24,25,26,27,3,4,5,6,7,8,9))
+edb(ajb_start).
+edb(ajb_e).
+ajb_start(a, 0).
+ajb_e(p, q). ajb_e(q, p).
+lattice ajb_grow(N, union S).
+ajb_grow(N, set(V))  :- ajb_start(N, V).
+ajb_grow(N, set(V1)) :- ajb_grow(N, S), V in S, V1 is V + 1.
+lattice ajb_comp(X, union S).
+ajb_comp(X, set(X)) :- ajb_e(X, _).
+ajb_comp(X, S)      :- ajb_e(X, Y), ajb_comp(Y, S).

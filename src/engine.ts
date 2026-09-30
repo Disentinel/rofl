@@ -4,19 +4,21 @@
 // stratum-0 rules); the kernel contains no stratification checker.
 
 import {
-  type Term, type Subst, type ArithFail, mka, mkf, mki, mks, canonTerm, canonVars, resolve, unify, unifyAll, walk,
+  type Term, type Subst, type ArithFail, type Int, mka, mkf, mki, mks, mkv, canonTerm, canonVars, resolve, unify, unifyAll, walk,
   isGround, varsOf, evalArith, fnv1a, ARITH_UNBOUND,
 } from './unify.ts';
-import { type Lit, type BodyElem, type Clause } from './unify.ts';
+import { type Lit, type BodyElem, type Clause, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
 import { denseClauses } from './dense.ts';
 import { POLICY_DENSE, SAFETY_DENSE } from './kernel-dense.ts';
-import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey } from './store.ts';
+import { SHRUG, reasonOf } from './shrug.ts';
+import { tarjan, indexer } from './scc.ts';
+import { Store, type FactStore, type FactRec, type PremRef, type Witness, factKey, sameKeys } from './store.ts';
 import {
   V, IFACE, RESERVED, STR_TYPE, decodeRules, type DRule, factTerm, relOfFactTerm, canonBodyElem, canonLit,
   BUDGET_REASON, SPACE_REASON, evalStrOp, holeReasonOf, RULE_HOLE, MAIN,
   KERNEL_PERSP, isKernelLedger,
   atomTerm, wellFoundedDeclared, encodeRule, resolveClauseBooks,
-  sealedBodies, SEALED_PROVENANCE,
+  sealedBodies, SEALED_PROVENANCE, provenanceRow, list, unlist,
 } from './reflect.ts';
 
 export class BudgetExhausted extends Error {
@@ -57,7 +59,11 @@ export interface StagedFact {
   ruleId: string; prems: PremRef[];
 }
 
-export interface EvalOutcome { partial: boolean; staged: StagedFact[]; diags: string[]; }
+/** Something a hole left unknown: a tuple, `$unknown_value` standing for an
+ *  argument not known, or every tuple of a relation (`persp` null). */
+export interface Unknown { rel: string; persp: string | null; args: Term[] | null; key: string }
+
+export interface EvalOutcome { partial: boolean; staged: StagedFact[]; diags: string[]; unknowns: Unknown[] }
 
 /** What the previous evaluation left standing. `hits` are the relations whose
  *  derived facts (and provenance) this evaluation reuses instead of deriving;
@@ -210,12 +216,11 @@ interface RuleAnswer {
   demandRels: ReadonlySet<string>;
   trigger: ReadonlyMap<string, ReadonlySet<string>>;
   late: ReadonlySet<string>;
-  negRels: ReadonlySet<string>;
   readsProvenance: boolean;
 }
 const EMPTY_ANSWER: RuleAnswer = {
   unsafe: EMPTY_SET, demandRels: EMPTY_SET, trigger: new Map(),
-  late: EMPTY_SET, negRels: EMPTY_SET, readsProvenance: false,
+  late: EMPTY_SET, readsProvenance: false,
 };
 const safetyMemo = new Map<string, RuleAnswer>();
 // The four SLOTS safety.rofl asks a groundness question about. Atoms, not
@@ -228,7 +233,7 @@ const RIGHT_SLOT = 'right';
 
 /** A scratch store holding one of the kernel's own programs and nothing else.
  *  The caller copies in whatever reflection its question needs. */
-function policyStore(src: string): Store {
+export function policyStore(src: string): Store {
   const pol = new Store();
   for (const f of kernelProgram(src)) {
     // A RESERVED relation is auto-perspectived on read, so its rows belong to
@@ -419,6 +424,8 @@ export class Evaluation {
   peakRows = 0;
   diags: string[] = [];
   rules: ERule[] = [];
+  /** Each rule by id. */
+  private ruleById = new Map<string, ERule>();
   demandRels = new Map<string, ERule[]>();
   private active: ERule[] = [];
   private staged = new Map<string, StagedFact>();
@@ -431,6 +438,67 @@ export class Evaluation {
   private assume: Assumption | null = null;
   // One sink, reused: `is` reads it immediately after every null it gets.
   private arithFail: ArithFail = { code: ARITH_UNBOUND };
+  /** Inside `fireRule`: a builtin's fault there leaves its conclusion unknown. */
+  private firing = false;
+  private faultCount = 0;
+  /** The heads of the calls answered on demand being solved, innermost last. */
+  private demandHeads: Lit[] = [];
+  // WHAT A HOLE LEFT OUT (`plainFlush`): every unknown noted, by relation, and
+  // those carried to what reads them; conclusions not yet carried; negations
+  // that could not decide; the rules closed to them; what is staged unknown.
+  private unk = new Map<string, Unknown>();
+  private unkByRel = new Map<string, Unknown[]>();
+  // every unknown by relation, argument position and the value there, as its
+  // place in `unkByRel` (a value not known under UNK_WILD); a whole relation
+  // in `unkAny`. What a literal can read is looked up, not scanned.
+  private unkAt = new Map<string, number[]>();
+  private unkAny = new Map<string, number[]>();
+  private spread = new Set<string>();
+  private pending: Unknown[] = [];
+  // THE CARRY IS WORK LIKE ANY OTHER, charged against the walls the
+  // evaluation started with even where `poisonWalk` lifts them: a solution it
+  // extends is a step, an unknown it stores a row.
+  private carryWall: [number, number] = [Infinity, Infinity];
+  private carrySteps = 0;
+  private carryRows = 0;
+  private undecided: { rid: string; i: number; s: Subst; u: Unknown }[] = [];
+  private closedRules = new Set<string>();
+  private levelMap = new Map<string, number>();
+  private derivedRels = new Set<string>();
+  private unknownSeen = false;
+  stagedUnknown = new Map<string, Unknown>();
+  // THE SHRUG MODEL (docs/aggregates.md, "Shrugs, as built"; rust/rofl/src/
+  // engine.rs, the same). `readsUnknown`: some rule reads `unknown`;
+  // `unknownCone` the relations that read it, transitively; `unknownStrict`
+  // its literals under `not`. What a hole leaves out, A, is read by
+  // `unknown(A)` as a shrug too (`metaQueue`); `metaLate` names one that
+  // arrived after a strict reader could have fired. `unkEdges` holds each
+  // unknown and each inherited hole target (node keys `u:` and `h:`) with a
+  // parent it was reached from; `holesNow` the hole rows this evaluation met.
+  private readsUnknown = false;
+  private unknownCone = new Set<string>();
+  private unknownStrict: Lit[] = [];
+  private metaQueue: { m: Unknown; from: Unknown }[] = [];
+  private metaLate: string | null = null;
+  private unkEdges: [string, string][] = [];
+  private holeNode = new Map<string, Term>();
+  private carrySrc: string | null = null;
+  private holesNow: [Term, string][] = [];
+  private holesMet = new Set<string>();
+  /** The atoms the alternation left undefined, by relation, while
+   *  `paradoxEdges` solves over them as over the unknowns. */
+  private undefAtoms: Map<string, Unknown[]> | null = null;
+  private lastFaultRule: string | null = null;
+  // under well-founded semantics: whether this alternation leaves out the
+  // rules that read `unknown`, and the lower level's undefined atoms, fixed
+  private wfsSkipCone = false;
+  // what the wall that fell measured: what it counted, the count, the limit
+  private wallSpent: [string, number, number] | null = null;
+  // rules that read `shrug` fire above everything else, after the rows were
+  // written once (`shrugSnap`); a row added or withdrawn after that one could read is refused
+  protected shrugReaders = new Set<string>();
+  private shrugSnap: Map<string, Term[]> | null = null;
+  private wfsFixed: { persp: string; at: Term }[] = [];
 
   /** THE BOOTSTRAP RUNG. A store holding one of the kernel's OWN programs is
    *  evaluated with `bootstrap: true`, and the flag says one thing: do not ask
@@ -469,6 +537,12 @@ export class Evaluation {
     this.wellFounded = wellFoundedDeclared(this.store);
     this.noProvenance = sealedBodies(this.store).has(SEALED_PROVENANCE);
     const { rules, diagnostics } = decodeRules(this.store);
+    // A PROGRAM WITH AGGREGATES is src/aggeval.ts's (`storeHasAggregates`);
+    // reaching here with one is a defect of the dispatch, never a run
+    // without it.
+    if (rules.some((r) => r.clause.body.some((b) => b.t === 'agg'))) {
+      throw new Error('a program with aggregates reached the plain evaluator (src/api.ts dispatches it to src/aggeval.ts)');
+    }
     this.diags.push(...diagnostics);
     this.answer = this.safetyAnswer(rules);
     // A RULE THAT READS WHAT THE PROGRAM SEALED IS TOLD SO. The standing
@@ -489,6 +563,7 @@ export class Evaluation {
       kept.push(this.classify(r, this.answer.unsafe));
     }
     this.rules = kept;
+    this.ruleById = new Map(kept.map((r) => [r.id, r]));
     // WHICH RELATIONS ARE DEMAND-BACKED IS safety.rofl'S ANSWER; grouping the
     // rules that define one is this method's. What used to stand here was the
     // same closure written as a `for(;;)` over a growing set.
@@ -596,7 +671,6 @@ export class Evaluation {
       demandRels: atoms(IFACE.demand_rel),
       trigger,
       late: atoms(IFACE.late_rule),
-      negRels: atoms(IFACE.neg_relation),
       readsProvenance: pol.relCount(IFACE.provenance_reader) > 0,
     };
     if (safetyMemo.size >= MEMO_CAP) safetyMemo.clear();
@@ -611,9 +685,10 @@ export class Evaluation {
    *  the loaded program is demonstrably unstratifiable. */
   run(): EvalOutcome {
     const plan = this.planReuse();
-    this.store.clearDerived(plan.hits.size === 0 ? undefined : (rec) => this.reused(plan.hits, rec));
+    this.store.clearDerived(plan.hits.size === 0 ? undefined : (rec) => this.reused(plan.hits, rec), provenanceRow);
     this.active = [];
     this.staged.clear();
+    this.startUnknowns();
     this.steps = 0;
     this.rows = 0;
     this.peakRows = 0;
@@ -623,8 +698,8 @@ export class Evaluation {
     // scratch run never had. Skipping the rule is the whole of the saving.
     let sched = '';
     const safeRules = this.rules.filter((r) => r.safe && !plan.hits.has(r.clause.head.rel));
-    const mono = safeRules.filter((r) => !r.hasNeg);
-    const negRules = safeRules.filter((r) => r.hasNeg);
+    const mono = safeRules.filter((r) => !r.hasNeg && !this.shrugReaders.has(r.id));
+    const negRules = safeRules.filter((r) => r.hasNeg || this.shrugReaders.has(r.id));
     // asked of the WHOLE program: whether this evaluation happens to be
     // re-deriving the negation rules says nothing about whether the program
     // has any, and the rejection path must not weaken with a warm cache.
@@ -636,12 +711,13 @@ export class Evaluation {
           // it needs no phase order and no rejection: a negative cycle is a
           // program with undefined atoms in it, not a program that cannot run.
           this.runWellFounded();
+          this.writeShrugs();
           this.store.dirty = false;
           this.store.partialEval = false;
           this.store.derivedKeys = new Map();
           this.store.derivedSchedule = '';
           const st = [...this.staged.keys()].sort().map((k) => this.staged.get(k)!);
-          return { partial: false, staged: st, diags: this.diags };
+          return { partial: false, staged: st, diags: this.diags, unknowns: [...this.stagedUnknown.values()] };
         }
         // phase A: monotone rules to fixpoint, in two waves.
         //
@@ -660,15 +736,22 @@ export class Evaluation {
         this.checkUnstratified(negated);
         this.activate(mono.filter((r) => late.has(r.id)));
         // strata read from the store; unknown strata run in a final pass
-        const strat = this.readStrata();
+        const strat = this.rankUnknownCone(this.readStrata());
         // the schedule THIS run ordered its negation phases by, recorded so the
         // next one can tell whether it is still standing
         sched = strataToken(strat);
         const levelOf = (r: ERule) => this.negLevel(r, strat);
         const levels = [...new Set(negRules.map(levelOf))].sort((a, b) => a - b);
+        this.unknownLevels(strat);
         for (const lv of levels) {
-          this.activate(negRules.filter((r) => levelOf(r) === lv));
+          const rs = negRules.filter((r) => levelOf(r) === lv);
+          this.beforeLevel(lv);
+          for (const part of this.shrugLevel(rs)) {
+            this.activate(part);
+            this.afterLevel(part);
+          }
         }
+        this.afterLevels();
       } catch (e) {
         if (e instanceof BudgetExhausted) {
           // An alternation cut short is not a fixpoint, so it has no unknown
@@ -676,10 +759,12 @@ export class Evaluation {
           // something the third value never says: the engine ran out.
           if (!this.wellFounded) this.checkUnstratified(negated);
           partial = true;
-          if (this.store.add(V.hole, KERNEL_PERSP, [this.holeId, mka(BUDGET_REASON)],
+          this.holeMet(this.holeId, e.reason);
+          if (this.store.add(V.hole, KERNEL_PERSP, [this.holeId, mka(e.reason)],
             { scope: 'timeless', base: true, frozen: true })) this.chargeRow('', false);
         } else throw e;
       }
+      this.writeShrugs();
     } catch (e) {
       // A rejected program, or a defect. Either way the layer this evaluation
       // was building is not a fixpoint and never will be, and the caller may
@@ -693,10 +778,11 @@ export class Evaluation {
     this.store.partialEval = partial;
     // A partial layer is not a layer: nothing derived under an exhausted
     // budget describes a fixpoint, so nothing about it may be reused.
-    this.store.derivedKeys = partial ? new Map() : plan.keys;
-    this.store.derivedSchedule = partial ? '' : sched;
+    const keep = !partial && !this.hadUnknowns();
+    this.store.derivedKeys = keep ? plan.keys : new Map();
+    this.store.derivedSchedule = keep ? sched : '';
     const stagedSorted = [...this.staged.keys()].sort().map((k) => this.staged.get(k)!);
-    return { partial, staged: partial ? [] : stagedSorted, diags: this.diags };
+    return { partial, staged: partial ? [] : stagedSorted, diags: this.diags, unknowns: partial ? [] : [...this.stagedUnknown.values()] };
   }
 
   // -------------------------------------------------------------------------
@@ -1094,7 +1180,8 @@ export class Evaluation {
    *  `reach` are finite closures — so the diagnostic still answers, as a fact
    *  about the program rather than a verdict on it. */
   private roundRules(): ERule[] {
-    return this.rules.filter((r) => r.safe && r.clause.head.rel !== IFACE.stratum);
+    return this.rules.filter((r) => r.safe && r.clause.head.rel !== IFACE.stratum
+      && !(this.wfsSkipCone && this.unknownCone.has(r.clause.head.rel)));
   }
 
   /** One round: the least fixpoint of the program with every `not p` judged
@@ -1103,7 +1190,8 @@ export class Evaluation {
    *  orders nothing here, and does not need to. */
   private wfsRound(assume: Assumption): void {
     this.assume = assume;
-    this.store.clearDerived();
+    this.store.clearDerived(undefined, provenanceRow);
+    this.refixUnknowns();
     // AND THE ROW CHARGE GOES WITH THEM. Found by asking where the space
     // meter cannot look rather than what else could break it: every round
     // clears the derived layer, so the rows a previous round charged for no
@@ -1155,38 +1243,52 @@ export class Evaluation {
       this.chargeRow('', false);
     }
 
-    this.store.clearDerived();
-    let mean = this.assumptionOf();                 // the base layer: all true
-    let generous = mean;
-    let generousWits = new Map<string, Witness>();
-    for (let i = 0; ; i++) {
-      this.wfsRound(mean);
-      generous = this.assumptionOf();
-      generousWits = this.store.allWitnesses();
-      this.wfsRound(generous);
-      const next = this.assumptionOf();
-      const settled = sameRecs(next.recs, mean.recs);
-      mean = next;
-      if (settled) {
-        // How long the two sequences took to meet. Cheap to say and the only
-        // number that distinguishes "this program alternates twice" from
-        // "this program is why the evaluation took a minute".
-        this.diags.push(`well-founded fixpoint settled after ${i + 1} alternation(s)`);
-        break;
+    // WHAT READS `unknown` IS A LEVEL ABOVE THE REST (docs/aggregates.md,
+    // "Shrugs, as built"; rust/rofl/src/engine.rs, the same): the alternation
+    // runs first without it, its undefined atoms are written, and it runs
+    // again with them fixed, so a negation of `unknown` is judged where its
+    // rows exist (f_a_negation_of_unknown_was_judged_before_unknown_was_written).
+    const carried = this.pending;
+    const twoLevels = this.unknownCone.size > 0;
+    this.wfsSkipCone = twoLevels;
+    this.wfsFixed = [];
+    const l1 = this.alternate(carried);
+    let gap = this.wfsGap(l1.generous, l1.mean);
+    const recOf = new Map<string, FactRec>();
+    for (const k of gap) recOf.set(k, l1.generous.recs.get(k)!);
+    const generousWits = new Map(l1.wits);
+    let mean = l1.mean;
+    if (twoLevels) {
+      for (const k of gap) { const rec = recOf.get(k)!; this.wfsFixed.push({ persp: rec.persp, at: atomTerm(rec.rel, rec.args) }); }
+      if (this.shrugReaders.size > 0) { this.refixUnknowns(); this.shrugSnapshot(); }
+      this.wfsSkipCone = false;
+      // nothing below the level reads it, so the lower level's
+      // under-estimate is one of this level's: it starts there
+      const l2 = this.alternate(carried, l1.mean);
+      const known = new Set(gap);
+      const more = this.wfsGap(l2.generous, l2.mean).filter((k) => !known.has(k) && l2.generous.recs.get(k)!.rel !== IFACE.unknown);
+      const lits = this.rules.flatMap((r) => r.clause.body).filter((b) => b.t !== 'bi' && b.lit.rel === IFACE.unknown).map((b) => (b as { lit: Lit }).lit);
+      for (const k of more) {
+        const rec = l2.generous.recs.get(k)!;
+        const u = unknownOf(IFACE.unknown, rec.persp, [atomTerm(rec.rel, rec.args)]);
+        if (lits.some((l) => this.unknownBinds(l, u, new Map()) !== null)) {
+          this.wfsFixed = [];
+          throw new StratificationError(
+            `program rejected: unknown is read of ${k}, which the level that reads unknown leaves undefined`,
+            'unknown(A) of an atom whose rule reads unknown is not written until that rule is settled');
+        }
+        recOf.set(k, rec);
+        const w = l2.wits.get(k);
+        if (w) generousWits.set(k, w);
       }
-      if (i >= MAX_ALTERNATIONS) throw new BudgetExhausted();
+      gap = [...gap, ...more].sort();
+      mean = l2.mean;
+      this.wfsFixed = [];
     }
-    // The store now holds the TRUE atoms. The gap is what the two limits
-    // disagree about, and every member of it was derived by a real firing.
-    // Kernel bookkeeping is not part of the answer: a `derived_by` row for an
-    // undefined atom is in the gap for the same reason the atom is, and
-    // `unknown(derived_by(...))` states nothing about the program.
-    const gap = [...generous.recs.keys()]
-      .filter((k) => !mean.recs.has(k) && !RESERVED.has(generous.recs.get(k)!.rel))
-      .sort();
+    void mean;
     const undef = new Map<string, string>();
     for (const k of gap) {
-      const rec = generous.recs.get(k)!;
+      const rec = recOf.get(k)!;
       undef.set(k, factKey(IFACE.unknown, rec.persp, [atomTerm(rec.rel, rec.args)]));
     }
     // THE HOST'S ONE UNBOUNDED WRITE, and the reason this check is WHOLESALE
@@ -1203,6 +1305,7 @@ export class Evaluation {
     // member of the gap in canonical order: the unfounded set is made of
     // that rule's conclusions, and `gap` is sorted, so the name is stable.
     if (this.rows + gap.length > this.space) {
+      this.wallSpent = ['rows', this.rows + gap.length, this.space];
       const blame = gap.length > 0 ? generousWits.get(gap[0])?.ruleId ?? '' : '';
       this.arithHole(blame, SPACE_REASON);
       throw new BudgetExhausted(SPACE_REASON, blame);
@@ -1210,7 +1313,7 @@ export class Evaluation {
     const added: FactRec[] = [];
     for (const k of gap) {
       this.chargeRow('', false);
-      const rec = generous.recs.get(k)!;
+      const rec = recOf.get(k)!;
       const args = [atomTerm(rec.rel, rec.args)];
       this.store.add(IFACE.unknown, rec.persp, args, { scope: 'tick', base: false });
       const got = this.store.get(undef.get(k)!);
@@ -1227,33 +1330,6 @@ export class Evaluation {
         { ruleId: w.ruleId, tick: this.store.tick, prems });
     }
 
-    // Unknown is a VALUE, so rules may read it. They get one pass over the
-    // settled model — under THE SAME ASSUMPTION the last round ran under,
-    // plus the rows just written — and that pass may not change what was
-    // settled. The assumption is load-bearing and was measured: judging this
-    // pass against the store instead (the true atoms, which is what it holds)
-    // makes every undefined atom read as false, `not has_win_move(a)` succeed,
-    // and the pass re-derive the very atoms the alternation left undefined.
-    // The guard below caught that, on the first program it was pointed at.
-    const negRels = this.answer.negRels;
-    const before = new Set(this.store.allFactKeys());
-    this.assume = extendAssumption(generous, added);
-    this.active = [];
-    this.staged.clear();
-    this.activate(this.roundRules());
-    const fed: string[] = [];
-    for (const rec of this.store.allFacts()) {
-      if (!before.has(rec.key) && negRels.has(rec.rel)) fed.push(rec.key);
-    }
-    this.assume = null;
-    if (fed.length > 0) {
-      fed.sort();
-      throw new StratificationError(
-        `program rejected: reading unknown fed ${fed.length} fact(s) back into a negated relation`,
-        fed.slice(0, 8).join('\n')
-        + '\nthe three-valued answer was settled without these, and negations elsewhere'
-        + '\nhave already been judged against a model that does not contain them.');
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -1288,7 +1364,10 @@ export class Evaluation {
   }
 
   private fireRule(r: ERule, frontAt: { pos: number; keys: Set<string> } | null, out: FrontInfo): void {
-    const sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id);
+    const was = this.firing;
+    this.firing = true;
+    let sols: Sol[];
+    try { sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id); } finally { this.firing = was; }
     for (const sol of sols) this.conclude(r, sol, out);
   }
 
@@ -1372,7 +1451,10 @@ export class Evaluation {
 
   private bumpSteps(): void {
     this.steps++;
-    if (this.steps > this.budget || (this.steps & 4095) === 0 && this.stop?.()) throw new BudgetExhausted();
+    if (this.steps > this.budget || (this.steps & 4095) === 0 && this.stop?.()) {
+      this.wallSpent = ['steps', this.steps, this.budget];
+      throw new BudgetExhausted();
+    }
   }
 
   /** One row, charged for as long as this evaluation lives. Unlike a partial
@@ -1398,6 +1480,7 @@ export class Evaluation {
     this.rows++;
     if (this.rows > this.peakRows) this.peakRows = this.rows;
     if (enforce && this.rows > this.space) {
+      this.wallSpent = ['rows', this.rows, this.space];
       this.arithHole(ruleId, SPACE_REASON);
       throw new BudgetExhausted(SPACE_REASON, ruleId);
     }
@@ -1438,6 +1521,7 @@ export class Evaluation {
           const now = this.rows + next.length;
           if (now > this.peakRows) this.peakRows = now;
           if (now > this.space) {
+            this.wallSpent = ['rows', now, this.space];
             if (ruleId !== null) this.arithHole(ruleId, SPACE_REASON);
             throw new BudgetExhausted(SPACE_REASON, ruleId);
           }
@@ -1449,16 +1533,40 @@ export class Evaluation {
           };
           if (b.t === 'pos') {
             const only = frontAt && frontAt.pos === i ? frontAt.keys : null;
-            for (const m of this.matchPremise(b.lit, a.s, depth, only)) {
+            const faults = this.faultCount;
+            const found = this.matchPremise(b.lit, a.s, depth, only);
+            if (this.faultCount > faults) this.demandFault(depth, a.s);
+            for (const m of found) {
               next.push({ s: m.s, prems: at(a.prems, m.ref) });
             }
           } else if (b.t === 'neg') {
-            if (this.negHolds(b.lit, a.s, depth)) {
+            const faults = this.faultCount;
+            const holds = this.negHolds(b.lit, a.s, depth);
+            if (this.faultCount > faults && depth > 0 && this.firing) {
+              // below a call: the solution is not known, nor the head it would give
+              this.demandFault(depth, a.s);
+              continue;
+            }
+            if (holds) {
+              // nothing matched; but what a hole left unknown could have, or
+              // what a fault below the negation's own call left out
+              if (depth === 0 && this.firing && ruleId !== null) {
+                const fu = this.faultCount > faults ? this.litUnknown(b.lit, a.s) : null;
+                if (fu) this.faultEdge(fu);
+                const u = fu ?? (this.spread.size > 0 ? this.readUnknown(b.lit, a.s) : null);
+                this.carryCheck(0);
+                if (u) { this.undecided.push({ rid: ruleId, i, s: a.s, u }); continue; }
+              }
               next.push({ s: a.s, prems: at(a.prems, PENDING_NEG) });
             }
           } else {
+            const faults = this.faultCount;
             const s2 = this.evalBuiltin(b, a.s, ruleId);
             if (s2) next.push({ s: s2, prems: at(a.prems, PENDING_BI) });
+            else if (this.faultCount > faults && this.firing) {
+              if (depth === 0) this.plainFault(ruleId, a.s);
+              this.demandFault(depth, a.s);
+            }
           }
         }
         // This position's result is now held and the accumulator it consumed
@@ -1522,7 +1630,12 @@ export class Evaluation {
     const out: number[] = [];
     const held: number[] = [];
     const bound = new Set<string>();
-    const ready = (i: number) => [...varsIn(body[i])].every((v) => bound.has(v));
+    // a variable in no other element is a wildcard, as `planBody` reads it:
+    // waiting for it would move the negation past builtins the planned order
+    // runs after it, and a builtin's fault would then be the order's
+    const uses = new Map<string, number>();
+    for (const b of body) for (const v of varsIn(b)) uses.set(v, (uses.get(v) ?? 0) + 1);
+    const ready = (i: number) => [...varsIn(body[i])].every((v) => bound.has(v) || (body[i].t === 'neg' && uses.get(v) === 1));
     const take = (i: number) => { out.push(i); for (const v of varsIn(body[i])) bound.add(v); };
     for (let i = 0; i < body.length; i++) {
       if (body[i].t === 'neg' && !ready(i)) { held.push(i); continue; }
@@ -1709,7 +1822,7 @@ export class Evaluation {
    *  results are materialized into the store with full provenance. */
   private solveDemandRule(r: ERule, call: Lit, s: Subst, depth: number): { s: Subst; ref: PremRef }[] {
     this.bumpSteps();
-    if (depth > MAX_DEPTH) throw new BudgetExhausted();
+    if (depth > MAX_DEPTH) { this.wallSpent = ['depth', depth, MAX_DEPTH]; throw new BudgetExhausted(); }
     const rn = this.renameClause(r.clause);
     const h = rn.head;
     if (h.rel !== call.rel || h.args.length !== call.args.length) return [];
@@ -1717,7 +1830,9 @@ export class Evaluation {
     if (!s2) return [];
     s2 = unifyAll(h.args, call.args, s2);
     if (!s2) return [];
-    const sols = this.solveBody(rn.body, s2, depth + 1, null, r.id);
+    this.demandHeads.push(h);
+    let sols: Sol[];
+    try { sols = this.solveBody(rn.body, s2, depth + 1, null, r.id); } finally { this.demandHeads.pop(); }
     const out: { s: Subst; ref: PremRef }[] = [];
     for (const sol of sols) {
       const persp = walk(h.persp, sol.s);
@@ -1793,7 +1908,7 @@ export class Evaluation {
           // an unbound variable is not yet an answer either way, and saying so
           // would put a hole under every ordinary rule; and an explanation
           // walk (ruleId === null) must not write the store's history at all
-          if (ruleId !== null && fail.code !== ARITH_UNBOUND) this.arithHole(ruleId, holeReasonOf(fail.code));
+          if (fail.code !== ARITH_UNBOUND) this.builtinFailed(ruleId, fail.code);
           return null;
         }
         return unify(b.l, rv, s);
@@ -1824,7 +1939,7 @@ export class Evaluation {
         // then reading it would report the SECOND operand's code for a failure
         // in the first.
         const fail = this.arithFail;
-        const side = (t: Term): number | null => {
+        const side = (t: Term): Int | null => {
           fail.code = ARITH_UNBOUND;           // reset: the sink is shared
           const sv = evalStrOp(t, s, fail);
           if (sv === undefined) return evalArith(t, s, fail);   // not a destructor
@@ -1836,12 +1951,12 @@ export class Evaluation {
         };
         const lv = side(b.l);
         if (lv === null) {
-          if (ruleId !== null && fail.code !== ARITH_UNBOUND) this.arithHole(ruleId, holeReasonOf(fail.code));
+          if (fail.code !== ARITH_UNBOUND) this.builtinFailed(ruleId, fail.code);
           return null;
         }
         const rv = side(b.r);
         if (rv === null) {
-          if (ruleId !== null && fail.code !== ARITH_UNBOUND) this.arithHole(ruleId, holeReasonOf(fail.code));
+          if (fail.code !== ARITH_UNBOUND) this.builtinFailed(ruleId, fail.code);
           return null;
         }
         const ok = b.op === '<' ? lv < rv : b.op === '<=' ? lv <= rv
@@ -1857,6 +1972,14 @@ export class Evaluation {
    *  answer meaning either "the premise is false" or "the expression could
    *  not be evaluated" with no way to tell them apart. Frozen, like the
    *  budget hole: that an evaluation could not evaluate is history. */
+  /** A builtin that failed for an error, not for falsity: counted, and a
+   *  hole on the rule when there is one to name. */
+  private builtinFailed(ruleId: string | null, code: number): void {
+    this.faultCount++;
+    this.lastFaultRule = ruleId;
+    if (ruleId !== null) this.arithHole(ruleId, holeReasonOf(code));
+  }
+
   private arithHole(ruleId: string, reason: string): void {
     // The name is `arith` because arithmetic was the first inability to reach
     // it; the string destructors report through the same emitter and their
@@ -1867,12 +1990,820 @@ export class Evaluation {
     // that nothing computes. The two arithmetic callers translate at their
     // own call site, which is where the code they hold has a meaning.
     const args = [mkf(RULE_HOLE, [mka(ruleId)]), mka(reason)];
+    // charged once an evaluation meets it, written then or before: what one
+    // evaluation holds is its own count, not the store's history
+    if (this.holeMet(args[0], reason)) this.chargeRow(ruleId, false);
     if (this.store.add(V.hole, KERNEL_PERSP, args, { scope: 'timeless', base: true, frozen: true })) {
-      this.chargeRow(ruleId, false);
       // onto the front, so a rule reading `hole` sees it in THIS fixpoint and
       // not only in the next evaluation
       noteFront(this.curFront, V.hole, factKey(V.hole, KERNEL_PERSP, args));
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // WHAT A HOLE LEAVES OUT IS NOT KNOWN TO BE FALSE (docs/aggregates.md,
+  // "Holes, as built"; rust/rofl/src/engine.rs, the same algorithm). A rule
+  // holed by a builtin's error leaves its conclusion under the failed
+  // solution unknown, and so does a conclusion a hole kept from being staged
+  // at the tick before. It is carried silently through positive rules, into a
+  // rule only once the rule's head relation is closed, so the set is the
+  // program's and not the firing order's; a negation that could match it is
+  // undecided: the solution is not concluded, its rule is holed
+  // `support_withdrawn` where the conclusion does not hold another way, and
+  // what it would conclude is unknown in turn.
+
+  /** THE SHRUG MODEL, set up for one evaluation (rust/rofl/src/engine.rs
+   *  `shrug_reset`). What reads `unknown` sits above everything else, so the
+   *  shrugs `unknown(A)` of what a hole left out are known when it fires; this
+   *  replaces refusing a program that read `unknown` beside a hole
+   *  (f_unknown_is_read_as_complete_beside_a_hole). */
+  private shrugReset(): void {
+    this.wallSpent = null;
+    // the rows describe one evaluation: none is read before it writes them
+    this.dropShrugs();
+    this.metaQueue = []; this.metaLate = null; this.unkEdges = []; this.holeNode = new Map();
+    this.carrySrc = null; this.holesNow = []; this.holesMet = new Set(); this.lastFaultRule = null; this.unknownStrict = [];
+    const cone = new Set<string>();
+    this.shrugSnap = null;
+    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.some((b) => b.t !== 'bi' && b.lit.rel === SHRUG)).map((r) => r.id));
+    this.readsUnknown = false;
+    for (const r of this.rules) {
+      if (this.shrugReaders.has(r.id)) cone.add(r.clause.head.rel);
+      for (const b of r.clause.body) {
+        if (b.t === 'bi' || b.lit.rel !== IFACE.unknown) continue;
+        cone.add(r.clause.head.rel);
+        this.readsUnknown = true;
+        if (b.t === 'neg') this.unknownStrict.push(b.lit);
+      }
+    }
+    if (this.readsUnknown) this.store.add(V.edb, MAIN, [mka(IFACE.unknown)], { scope: 'timeless', base: true });
+    if (this.shrugReaders.size > 0) this.store.add(V.edb, MAIN, [mka(SHRUG)], { scope: 'timeless', base: true });
+    for (;;) {
+      const more = this.rules.filter((r) => !cone.has(r.clause.head.rel)
+        && r.clause.body.some((b) => b.t !== 'bi' && cone.has(b.lit.rel))).map((r) => r.clause.head.rel);
+      if (more.length === 0) break;
+      for (const m of more) cone.add(m);
+    }
+    this.unknownCone = cone;
+  }
+
+  /** The stock evaluator's table ranks what reads `unknown` among the rest:
+   *  its relations are lifted, in their order, above every other. */
+  protected rankUnknownCone(strat: Map<string, number>): Map<string, number> {
+    if (this.unknownCone.size === 0) return strat;
+    let top = 0;
+    for (const [r, n] of strat) if (!this.unknownCone.has(r)) top = Math.max(top, n);
+    top += 1;
+    const out = new Map(strat);
+    // a relation a rule concludes that the table does not rank runs in the
+    // final pass; below the cone, it is given the level above the rest
+    const unranked = this.rules.filter((r) => r.clause.head.temporal !== 'next').map((r) => r.clause.head.rel)
+      .filter((r) => !this.unknownCone.has(r) && !strat.has(r));
+    if (unranked.length > 0) { for (const r of unranked) out.set(r, top); top += 1; }
+    for (const r of this.unknownCone) out.set(r, (strat.get(r) ?? 0) + top);
+    out.set(IFACE.unknown, top);
+    out.set(SHRUG, top);
+    return out;
+  }
+
+  /** A level's rules in the order they fire: at the first level with a rule
+   *  that reads shrug, that rule fires after the rest of it (a rule
+   *  concluding `@next` shares the last one) and after the rows are written. */
+  protected shrugLevel(rs: ERule[]): ERule[][] {
+    if (this.shrugSnap !== null || !rs.some((r) => this.shrugReaders.has(r.id))) return [rs];
+    const early = rs.filter((r) => !this.shrugReaders.has(r.id));
+    const late = rs.filter((r) => this.shrugReaders.has(r.id));
+    const parts: ERule[][] = [];
+    if (early.length > 0) { this.activate(early); this.afterLevel(early); }
+    this.shrugSnapshot();
+    parts.push(late);
+    return parts;
+  }
+
+  private holeKey(t: Term): string {
+    const k = 'h:' + canonTerm(t);
+    if (!this.holeNode.has(k)) this.holeNode.set(k, t);
+    return k;
+  }
+
+  /** `u` is left out by the fault a builtin just met, in the rule it met it in. */
+  private faultEdge(u: Unknown): void {
+    if (this.lastFaultRule !== null) this.unkEdges.push(['u:' + u.key, this.holeKey(mkf(RULE_HOLE, [mka(this.lastFaultRule)]))]);
+  }
+
+  /** A hole row this evaluation writes or meets again; an inherited one is
+   *  reached from what the carry is working from. */
+  protected holeMet(target: Term, cause: string): boolean {
+    const k = this.holeKey(target);
+    const fresh = !this.holesMet.has(k + '\u0000' + cause);
+    this.holesMet.add(k + '\u0000' + cause);
+    this.holesNow.push([target, cause]);
+    if (cause === WITHDRAWN && this.carrySrc !== null) this.unkEdges.push([k, this.carrySrc]);
+    return fresh;
+  }
+
+  /** THE SHRUG ROWS, `shrug(Target, Reason, Meta)` in `[$kernel]`, written
+   *  after every evaluation from what it met (rust/rofl/src/engine.rs
+   *  `write_shrugs`, the same rows). */
+  protected writeShrugs(): void {
+    if (this.metaLate !== null) {
+      const what = this.metaLate;
+      this.metaLate = null;
+      throw new StratificationError(
+        `program rejected: unknown is read under not or in an aggregate of ${what.replace(/\$unknown_value/g, '_')}, which itself reads unknown`,
+        'a shrug of a relation that reads unknown arrives after its readers fired; read it positively, or from a world above');
+    }
+    const rows = this.shrugRows();
+    const snap = this.shrugSnap;
+    this.shrugSnap = null;
+    if (snap) {
+      const readers = this.rules.filter((r) => this.shrugReaders.has(r.id));
+      // a reader could read it: its literal takes the row, and the rest of its
+      // body has a solution over the facts and the unknowns
+      const readable = (row: Term[]): boolean => readers.some((r) => r.plan.some((b, i) => {
+        if (b.t === 'bi' || b.lit.rel !== SHRUG || b.lit.args.length !== 3) return false;
+        const s0 = unifyAll(b.lit.args, row, new Map());
+        return s0 !== null && this.poisonSolve(r, i, s0).length > 0;
+      }));
+      // a row added since the readers fired, and one withdrawn since (a
+      // reader's conclusion made its target hold): either way what a reader
+      // read is not the final state
+      const key = (r: Term[]): string => r.map(canonTerm).join('\u0000');
+      const now = new Set(rows.map(key));
+      const moved: [Term[], boolean][] = rows.filter((r) => !snap.has(key(r))).map((r) => [r, true]);
+      for (const k of [...snap.keys()].filter((k) => !now.has(k)).sort()) moved.push([snap.get(k)!, false]);
+      for (const [row, added] of moved) {
+        if (readable(row)) {
+          throw new StratificationError(
+            `program rejected: shrug is read of ${canonTerm(row[0])}, which a rule that reads shrug ${added ? 'leaves without an answer' : 'answers after it read the shrug'}`,
+            'a rule reading shrug fires once the rest is settled; what it changes has no row it could have read');
+        }
+      }
+    }
+    this.putShrugs(rows);
+  }
+
+  /** The rows as they stand, written for the rules that read them. */
+  protected shrugSnapshot(): void {
+    const rows = this.shrugRows();
+    this.putShrugs(rows);
+    this.shrugSnap = new Map(rows.map((r) => [r.map(canonTerm).join('\u0000'), r]));
+  }
+
+  /** The rows written last, gone at once where the store can: one at a time
+   *  is a memmove per row, over a carry wider than its facts. */
+  private dropShrugs(): void {
+    const keys = this.store.relAll(SHRUG).map((f) => f.key);
+    const st = this.store as Partial<Store>;
+    if (st.removeMany) st.removeMany.call(this.store, keys);
+    else for (const k of keys) this.store.remove(k);
+  }
+
+  private putShrugs(rows: Term[][]): void {
+    this.dropShrugs();
+    for (const r of rows) this.store.add(SHRUG, KERNEL_PERSP, r, { scope: 'tick', base: true });
+  }
+
+  /** A PARADOX IS A ROOT TOO (rust/rofl/src/engine.rs `paradox_edges`, the
+   *  same). Under well-founded semantics what a hole left out can rest on an
+   *  atom the alternation left undefined as well: each derivation of it over
+   *  the facts, the unknowns carried and the undefined atoms names the
+   *  undefined atoms it reads, an edge from it to the paradox's target. The
+   *  carry's walls were paid for the carry; this is not charged to them. */
+  private paradoxEdges(): void {
+    if (this.unk.size === 0) return;
+    const targetOf = new Map<string, Term>();
+    const byRel = new Map<string, Unknown[]>();
+    for (const f of this.store.relAll(IFACE.unknown)) {
+      if (f.args.length !== 1) continue;
+      const at = f.args[0];
+      if (at.k !== 'a' && at.k !== 'f') continue;
+      const u = unknownOf(at.name, f.persp, at.k === 'f' ? at.args : []);
+      if (!byRel.has(u.rel)) byRel.set(u.rel, []);
+      byRel.get(u.rel)!.push(u);
+      targetOf.set(u.key, f.persp === MAIN ? at : mkf('in', [mka(f.persp), at]));
+    }
+    if (targetOf.size === 0) return;
+    const carried = [...this.unk.keys()].sort().map((k) => this.unk.get(k)!)
+      .filter((u) => u.persp !== null && u.rel !== IFACE.unknown && !this.unknownHolds(u));
+    const saved: [number, number, [number, number]] = [this.carrySteps, this.carryRows, this.carryWall];
+    this.carryWall = [Infinity, Infinity];
+    this.undefAtoms = byRel;
+    try {
+      for (const u of carried) {
+        for (const r of this.rules) {
+          const h = r.clause.head;
+          if (!r.safe || h.rel !== u.rel || h.temporal === 'next') continue;
+          const s0 = this.unknownBinds(h, u, new Map());
+          if (!s0) continue;
+          for (const sol of this.poisonSolve(r, -1, s0)) {
+            for (const b of r.plan) {
+              if (b.t !== 'pos' && b.t !== 'neg') continue;
+              const t = targetOf.get(this.litUnknown(b.lit, sol).key);
+              if (t) this.unkEdges.push(['u:' + u.key, this.holeKey(t)]);
+            }
+          }
+        }
+      }
+    } finally {
+      this.undefAtoms = null;
+      [this.carrySteps, this.carryRows, this.carryWall] = saved;
+    }
+  }
+
+  /** Does `l` under `s` read an atom the alternation left undefined, while
+   *  `paradoxEdges` solves over them? */
+  private readsUndefined(l: Lit, s: Subst): boolean {
+    const us = this.undefAtoms?.get(l.rel);
+    if (!us) return false;
+    const k = this.litUnknown(l, s).key;
+    return us.some((u) => u.key === k);
+  }
+
+  /** The shrug rows of what this evaluation met so far. */
+  private shrugRows(): Term[][] {
+    const edges0 = this.unkEdges.length;
+    let rs: ReturnType<typeof rootSets>;
+    try {
+      this.paradoxEdges();
+      rs = rootSets(this.unkEdges);
+    } finally {
+      this.unkEdges.length = edges0;
+    }
+    const parents = rs.parents;
+    const roots = (n: string): Term => {
+      const keys = new Set<string>();
+      for (const p of parents.get(n) ?? []) for (const r of rs.sets[rs.comp.get(p)!]) keys.add(r);
+      return mkf('from', [list([...keys].filter((k) => k.startsWith('h:')).map((k) => k.slice(2)).sort().map((k) => this.holeNode.get('h:' + k)!))]);
+    };
+    const rows: Term[][] = [];
+    const met = new Set<string>();
+    // what lives elsewhere is a shrug for as long as its hole stands: a
+    // volume cooled to disk is no evaluation's, and every one's
+    const standing: [Term, string][] = this.store.relPersp(V.hole, KERNEL_PERSP)
+      .filter((f) => f.args[1].k === 'a' && reasonOf(f.args[1].name) === 'federation')
+      .map((f) => [f.args[0], (f.args[1] as { name: string }).name]);
+    for (const [target, cause] of [...this.holesNow, ...standing]) {
+      const hk = this.holeKey(target);
+      if (met.has(hk + '\u0000' + cause)) continue;
+      met.add(hk + '\u0000' + cause);
+      const reason = reasonOf(cause);
+      if (reason === undefined) throw new Error(`the hole cause ${cause} is not declared in shrug.rofl`);
+      let meta: Term;
+      if (reason === 'inherited') {
+        meta = target.k === 'f' && target.name === NEXT_HOLE && (parents.get(hk) ?? []).length === 0 && target.args[2].k === 'i'
+          ? mkf('earlier', [mki(Number(target.args[2].v) - 1)]) : roots(hk);
+      } else if (reason === 'budget') {
+        const [kind, spent, limit] = this.wallSpent ?? (cause === SPACE_REASON ? ['rows', this.space + 1, this.space] : ['steps', this.budget + 1, this.budget]);
+        meta = mkf('spent', [mka(kind), mki(Math.min(spent, 2 ** 59)), mki(Math.min(limit, 2 ** 59))]);
+      } else if (reason === 'federation') {
+        meta = mkf('at', [target.k === 'f' && target.args.length > 0 ? target.args[0] : target]);
+      } else meta = mka(cause);
+      rows.push([target, mka(reason), meta]);
+    }
+    for (const k of [...this.unk.keys()].sort()) {
+      const u = this.unk.get(k)!;
+      if (this.unknownHolds(u)) continue;
+      rows.push([shrugTarget(u), mka('inherited'), roots('u:' + u.key)]);
+    }
+    let cycles: ((rel: string) => string[]) | null = null;
+    for (const f of this.store.relAll(IFACE.unknown)) {
+      if (f.args.length !== 1) continue;
+      const at = unAtomTermLocal(f.args[0]);
+      if (!at) continue;
+      cycles ??= this.negativeCycles();
+      const target = f.persp === MAIN ? f.args[0] : mkf('in', [mka(f.persp), f.args[0]]);
+      rows.push([target, mka('paradox'), mkf('cycle', [list(cycles(at).map(mka))])]);
+    }
+    const paradoxAt = new Set(rows.filter((r) => r[1].k === 'a' && r[1].name === 'paradox').map((r) => canonTerm(r[0])));
+    const seen = new Set<string>();
+    return rows.filter((r) => {
+      const k = r.map(canonTerm).join('\u0000');
+      if (seen.has(k) || (r[1].k === 'a' && r[1].name === 'inherited' && paradoxAt.has(canonTerm(r[0])))) return false;
+      seen.add(k); return true;
+    });
+  }
+
+  /** THE NEGATIVE CYCLES of the rules' dependency graph, once per
+   *  evaluation's rows (rust/rofl/src/engine.rs `negative_cycles`): for a
+   *  relation, the relations it rests on in a component with a negation
+   *  inside it, sorted and memoised. */
+  private negativeCycles(): (rel: string) => string[] {
+    const g = indexer();
+    const neg: [number, number][] = [];
+    for (const r of this.rules) {
+      const h = g.id(r.clause.head.rel);
+      for (const b of r.clause.body) {
+        if (b.t === 'bi') continue;
+        const t = g.id(b.lit.rel);
+        g.succ[h].push(t);
+        if (b.t === 'neg') neg.push([h, t]);
+      }
+    }
+    const comp = tarjan(g.succ);
+    const negc = new Set(neg.filter(([h, t]) => comp[h] === comp[t]).map(([h]) => comp[h]));
+    const memo = new Map<string, string[]>();
+    return (rel: string): string[] => {
+      const hit = memo.get(rel);
+      if (hit) return hit;
+      const out: string[] = [];
+      const start = g.find(rel);
+      if (start !== undefined) {
+        const seen = new Set([start]), todo = [start];
+        while (todo.length > 0) {
+          const x = todo.pop()!;
+          if (negc.has(comp[x])) out.push(g.keys[x]);
+          for (const y of g.succ[x]) if (!seen.has(y)) { seen.add(y); todo.push(y); }
+        }
+      }
+      out.sort();
+      memo.set(rel, out);
+      return out;
+    };
+  }
+
+  /** Start an evaluation: nothing staged unknown yet, and the unknowns the
+   *  boundary carried into this tick pending. */
+  protected startUnknowns(): void {
+    this.unk = new Map(); this.unkByRel = new Map(); this.unkAt = new Map(); this.unkAny = new Map(); this.spread = new Set();
+    this.undecided = []; this.closedRules = new Set(); this.levelMap = new Map();
+    this.stagedUnknown = new Map();
+    this.derivedRels = new Set(this.rules.filter((r) => r.clause.head.temporal !== 'next').map((r) => r.clause.head.rel));
+    this.shrugReset();
+    this.pending = this.carriedUnknowns();
+    this.unknownSeen = this.pending.length > 0;
+    this.carryWall = [this.budget, this.space];
+    this.carrySteps = 0;
+    this.carryRows = 0;
+  }
+
+  /** The level each relation is complete after: its round, or its stratum. */
+  protected unknownLevels(levels: Map<string, number>): void {
+    this.levelMap = levels;
+  }
+
+  /** WHAT A HOLE LEAVES OUT, UNDER THE ALTERNATING FIXPOINT, is a shrug:
+   *  carried through the model a round just derived (negations judged against
+   *  `assume`, the round's), and through each negation the round could not
+   *  decide for it, it grows with the alternation and is never withdrawn by
+   *  it (rust/rofl/src/engine.rs `wfs_unknowns`, the same). */
+  private wfsUnknowns(assume: Assumption): void {
+    const seeds = this.pending.filter((u) => !this.unknownHolds(u));
+    this.pending = [];
+    if (seeds.length === 0 && this.undecided.length === 0) return;
+    if (seeds.length > 0) this.unknownSeen = true;
+    const before = this.assume;
+    this.assume = assume;
+    try { this.poisonWalk(seeds, []); } finally { this.assume = before; }
+    this.undecided = [];
+  }
+
+  /** A fresh carry for an alternation: nothing noted, every rule closed. */
+  private wfsCarryReset(): void {
+    this.unk = new Map(); this.unkByRel = new Map(); this.unkAt = new Map(); this.unkAny = new Map(); this.spread = new Set(); this.undecided = [];
+    this.closedRules = new Set(this.rules.filter((r) => r.safe).map((r) => r.id));
+  }
+
+  /** The alternating fixpoint over `roundRules`, to its close. THE CARRY
+   *  GROWS WITH THE ALTERNATION, so once it settles with anything carried it
+   *  runs again from the under-estimate it settled on, with what the last run
+   *  met forgotten, until a run settles where it started: a fault met only
+   *  under an over-estimate since left behind is carried no more
+   *  (rust/rofl/src/engine.rs `alternate`, the same). */
+  private alternate(carried: Unknown[], from: Assumption | null = null): { generous: Assumption; wits: Map<string, Witness>; mean: Assumption } {
+    const holes0 = new Set(this.store.relPersp(V.hole, KERNEL_PERSP).map((f) => f.key));
+    const edges0 = this.unkEdges.length, now0 = this.holesNow.length;
+    let start: Assumption | null = from;
+    let restarted = false;
+    let total = 0;
+    for (;;) {
+      const run = this.alternateFrom(start, carried, total);
+      total += run.n;
+      const moved = !restarted || start === null || !sameKeys(start.recs, run.mean.recs);
+      if (this.unk.size === 0 || !moved) {
+        // How long the two sequences took to meet. Cheap to say and the only
+        // number that distinguishes "this program alternates twice" from
+        // "this program is why the evaluation took a minute".
+        this.diags.push(`well-founded fixpoint settled after ${total} alternation(s)`);
+        return run;
+      }
+      const met = this.store.relPersp(V.hole, KERNEL_PERSP).map((f) => f.key).filter((k) => !holes0.has(k));
+      for (const k of met) this.store.remove(k);
+      this.unkEdges.length = edges0;
+      this.holesNow.length = now0;
+      this.holesMet = new Set(this.holesNow.map(([t, c]) => this.holeKey(t) + '\u0000' + c));
+      start = run.mean;
+      restarted = true;
+    }
+  }
+
+  /** One alternation from `start` (the store's facts when null), after `done`. */
+  private alternateFrom(start: Assumption | null, carried: Unknown[], done: number): { generous: Assumption; wits: Map<string, Witness>; mean: Assumption; n: number } {
+    this.store.clearDerived(undefined, provenanceRow);
+    this.refixUnknowns();
+    let mean = start ?? this.assumptionOf();         // the base layer: all true
+    this.wfsCarryReset();
+    for (let i = 0; ; i++) {
+      this.pending = [...carried];
+      const noted = this.unk.size;
+      this.wfsRound(mean);
+      const generous = this.assumptionOf();
+      const wits = this.store.allWitnesses();
+      this.wfsUnknowns(mean);
+      this.wfsRound(generous);
+      this.wfsUnknowns(generous);
+      const next = this.assumptionOf();
+      const settled = sameKeys(next.recs, mean.recs) && this.unk.size === noted;
+      mean = next;
+      if (settled) return { generous, wits, mean, n: i + 1 };
+      if (done + i >= MAX_ALTERNATIONS) { this.wallSpent = ['alternations', done + i, MAX_ALTERNATIONS]; throw new BudgetExhausted(); }
+    }
+  }
+
+  /** The gap: what the two limits disagree about, less kernel bookkeeping.
+   *  What a hole left out is in neither limit: the carry holds it in every
+   *  round after the first (`wfsUnknowns`), so it is a shrug and not undefined. */
+  private wfsGap(generous: Assumption, mean: Assumption): string[] {
+    return [...generous.recs.keys()]
+      .filter((k) => !mean.recs.has(k) && !RESERVED.has(generous.recs.get(k)!.rel))
+      .sort();
+  }
+
+  /** The lower level's undefined atoms, fixed in the store for the upper. */
+  private refixUnknowns(): void {
+    for (const { persp, at } of this.wfsFixed) this.store.add(IFACE.unknown, persp, [at], { scope: 'tick', base: false });
+  }
+
+  /** After the last level: every rule is closed and everything carried. */
+  protected afterLevels(): void {
+    this.closePlainRules(Infinity);
+    this.plainFlush(Infinity);
+  }
+
+  /** Did anything leave something unknown? Then nothing of this evaluation
+   *  may be reused: what it left out is not in the relations reuse keeps. */
+  protected hadUnknowns(): boolean {
+    return this.unknownSeen || this.stagedUnknown.size > 0;
+  }
+
+  private relLevel(rel: string): number {
+    const n = this.levelMap.get(rel);
+    if (n !== undefined) return n;
+    return this.derivedRels.has(rel) ? Infinity : 0;
+  }
+
+  private ruleLevel(r: ERule): number {
+    return r.clause.head.temporal === 'next' ? Infinity : this.relLevel(r.clause.head.rel);
+  }
+
+  /** Before the rules of level `lv` fire: close the rules below it, then
+   *  carry what the holes below it left out. */
+  protected beforeLevel(lv: number): void {
+    this.closePlainRules(lv);
+    this.plainFlush(lv);
+  }
+
+  /** After the rules of a level fired: what they read and what their
+   *  negations could not decide. */
+  protected afterLevel(rs: ERule[]): void {
+    this.poisonReaders(rs);
+  }
+
+  private closePlainRules(lv: number): void {
+    const fresh = this.rules.filter((r) => r.safe && !this.closedRules.has(r.id) && (lv === Infinity || this.ruleLevel(r) < lv));
+    for (const r of fresh) this.closedRules.add(r.id);
+    this.poisonReaders(fresh);
+  }
+
+  private poisonReaders(readers: ERule[]): void {
+    if (this.undecided.length === 0 && (readers.length === 0 || this.spread.size === 0)) return;
+    this.poisonWalk([], readers);
+    this.drainPoison();
+  }
+
+  /** The holes the carry wrote are news; what a firing on them cannot decide is carried on. */
+  private drainPoison(): void {
+    for (;;) {
+      const more = this.curFront;
+      if (more.keys.size > 0) {
+        this.curFront = { keys: new Set(), byRel: new Map() };
+        this.propagate(more);
+      }
+      if (this.undecided.length === 0) return;
+      this.poisonWalk([], []);
+    }
+  }
+
+  private plainFlush(lv: number): void {
+    if (this.pending.length === 0) return;
+    const closed = (rel: string) => lv === Infinity || this.relLevel(rel) < lv;
+    const now = this.pending.filter((u) => closed(u.rel));
+    this.pending = this.pending.filter((u) => !closed(u.rel));
+    const fresh = now.filter((u) => !this.unk.has(u.key) && !this.unknownHolds(u));
+    if (fresh.length === 0) return;
+    this.poisonWalk(fresh, []);
+    this.drainPoison();
+  }
+
+  private noteUnknown(u: Unknown): boolean {
+    if (this.unk.has(u.key)) return false;
+    if (this.readsUnknown && u.rel !== IFACE.unknown) this.metaQueue.push({ m: metaOf(u), from: u });
+    this.carryRows++;
+    this.unk.set(u.key, u);
+    let arr = this.unkByRel.get(u.rel);
+    if (!arr) { arr = []; this.unkByRel.set(u.rel, arr); }
+    const seq = arr.length;
+    arr.push(u);
+    const at = (k: string, m: Map<string, number[]>) => { const v = m.get(k); if (v) v.push(seq); else m.set(k, [seq]); };
+    if (u.args === null) at(u.rel, this.unkAny);
+    else u.args.forEach((a, i) => at(unkAtKey(u.rel, i, holdsUnknown(a) ? UNK_WILD : canonTerm(a)), this.unkAt));
+    return true;
+  }
+
+  /** The unknowns `lit` could read under `s`, in the order they were noted:
+   *  those at its most selective bound argument, or every one of its
+   *  relation when none is bound. */
+  private unknownCands(lit: Lit, s: Subst): Unknown[] {
+    const all = this.unkByRel.get(lit.rel);
+    if (!all) return [];
+    let best: string[] | null = null, size = Infinity;
+    lit.args.forEach((a, i) => {
+      const t = resolve(a, s);
+      if (!isGround(t) || holdsUnknown(t)) return;
+      const keys = [unkAtKey(lit.rel, i, canonTerm(t)), unkAtKey(lit.rel, i, UNK_WILD)];
+      const n = keys.reduce((m, k) => m + (this.unkAt.get(k)?.length ?? 0), 0);
+      if (n < size) { best = keys; size = n; }
+    });
+    if (best === null) { this.carrySteps += all.length; return all; }
+    const seqs = [...new Set([...(best as string[]).flatMap((k) => this.unkAt.get(k) ?? []), ...(this.unkAny.get(lit.rel) ?? [])])];
+    this.carrySteps += seqs.length;
+    return seqs.sort((a, b) => a - b).map((q) => all[q]);
+  }
+
+  private unknownHolds(u: Unknown): boolean {
+    return u.persp !== null && this.store.has(factKey(u.rel, u.persp, u.args!));
+  }
+
+  private poisonWalk(seeds: Unknown[], readers: ERule[]): void {
+    const walls = [this.budget, this.space];
+    this.budget = Infinity; this.space = Infinity;
+    try {
+      const level: Unknown[] = [];
+      const inLevel = new Set<string>();
+      for (const u of seeds) {
+        this.noteUnknown(u);
+        if (!this.spread.has(u.key)) { this.spread.add(u.key); level.push(u); inLevel.add(u.key); }
+      }
+      this.takeMetas(level);
+      for (const u of level) inLevel.add(u.key);
+      const reached: { v: Unknown; from: Unknown }[] = [];
+      if (readers.length > 0) {
+        const old = [...this.spread].filter((k) => !inLevel.has(k)).sort();
+        for (const k of old) {
+          const u = this.unk.get(k)!;
+          this.carrySrc = 'u:' + u.key;
+          for (const x of this.reachedFrom(u, readers)) reached.push({ v: x.v, from: u });
+        }
+      }
+      const undecided = this.undecided;
+      this.undecided = [];
+      for (const { rid, i, s, u } of undecided) {
+        const r = this.ruleById.get(rid);
+        if (!r) continue;
+        this.carrySrc = 'u:' + u.key;
+        const neg = r.plan[i].t === 'neg';
+        for (const s2 of this.poisonSolve(r, i, s)) {
+          const v = this.reachedConclusion(r, s2);
+          if (!v) continue;
+          if (neg && !this.unknownHolds(v)) this.arithHole(rid, WITHDRAWN);
+          reached.push({ v, from: u });
+        }
+      }
+      for (const { v, from } of reached) if (this.carryUnknown(v, from)) level.push(v);
+      this.takeMetas(level);
+      while (level.length > 0) {
+        const keyed = level.splice(0).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+        for (const u of keyed) {
+          this.carrySrc = 'u:' + u.key;
+          for (const { v } of this.reachedFrom(u, null)) if (this.carryUnknown(v, u)) level.push(v);
+        }
+        this.takeMetas(level);
+      }
+    } finally {
+      [this.budget, this.space] = walls;
+      this.carrySrc = null;
+    }
+  }
+
+  /** The `unknown(A)` shrugs of what was noted since the last call, noted and
+   *  spread, each reached from its A. One a strict reader of `unknown` could
+   *  read, of a relation that reads `unknown` itself, arrived after that
+   *  reader fired: `metaLate`. */
+  private takeMetas(level: Unknown[]): void {
+    const q = this.metaQueue;
+    this.metaQueue = [];
+    for (const { m, from } of q) {
+      if (this.metaLate === null && this.unknownCone.has(from.rel)
+          && this.unknownStrict.some((l) => this.unknownBinds(l, m, new Map()) !== null)) this.metaLate = from.key;
+      this.unkEdges.push(['u:' + m.key, 'u:' + from.key]);
+      if (this.noteUnknown(m) && !this.unknownHolds(m) && !this.spread.has(m.key)) { this.spread.add(m.key); level.push(m); }
+    }
+  }
+
+  private carryUnknown(v: Unknown, from: Unknown): boolean {
+    this.unkEdges.push(['u:' + v.key, 'u:' + from.key]);
+    if (!this.noteUnknown(v)) return false;
+    if (this.unknownHolds(v)) return false;
+    if (this.spread.has(v.key)) return false;
+    this.spread.add(v.key);
+    return true;
+  }
+
+  /** Every conclusion a rule draws with `u` in place of one of its positive
+   *  premises: the rules `only`, or every closed one. */
+  private reachedFrom(u: Unknown, only: ERule[] | null): { v: Unknown; rule: string }[] {
+    this.carryCheck(0);
+    const out: { v: Unknown; rule: string }[] = [];
+    for (const r of only ?? this.active) {
+      if (only === null && !this.closedRules.has(r.id)) continue;
+      r.plan.forEach((b, i) => {
+        if (b.t !== 'pos' || b.lit.rel !== u.rel) return;
+        const s0 = this.unknownBinds(b.lit, u, new Map());
+        if (!s0) return;
+        for (const s of this.poisonSolve(r, i, s0)) {
+          const v = this.reachedConclusion(r, s);
+          if (v) out.push({ v, rule: r.id });
+        }
+      });
+    }
+    return out;
+  }
+
+  /** What `r` concludes under `s`, reached from something unknown. A
+   *  conclusion `@next` is not staged: its rule is holed and it is an
+   *  unknown of the next tick. */
+  private reachedConclusion(r: ERule, s: Subst): Unknown | null {
+    if (r.clause.head.temporal === 'next') {
+      this.arithHole(r.id, WITHDRAWN);
+      this.stageUnknown(r, s);
+      return null;
+    }
+    return this.headUnknown(r, s);
+  }
+
+  private stageUnknown(r: ERule, s: Subst): void {
+    const u = this.headUnknown(r, s);
+    if (!this.stagedUnknown.has(u.key)) this.stagedUnknown.set(u.key, u);
+  }
+
+  /** The head of `r` under `s`, every argument not bound standing for an
+   *  unknown value; every tuple of the relation when the book is not bound. */
+  private headUnknown(r: ERule, s: Subst): Unknown {
+    const h = r.clause.head;
+    const p = walk(h.persp, s);
+    if (p.k !== 'a') return unknownOf(h.rel, null, null);
+    const key = h.args.map((a) => resolve(a, s));
+    const s2 = bindUnknown(key, new Map());
+    return unknownOf(h.rel, p.name, key.map((t) => resolve(t, s2)));
+  }
+
+  /** A fault below a call answered on demand, in a firing: the call's head
+   *  under the solution it was met in is unknown, and so, one call up at a
+   *  time, is each call that read it (the premise that called it faulted). */
+  private demandFault(depth: number, s: Subst): void {
+    if (depth === 0 || !this.firing || this.demandHeads.length === 0) return;
+    this.unknownSeen = true;
+    const u = this.litUnknown(this.demandHeads[this.demandHeads.length - 1], s);
+    this.faultEdge(u);
+    this.pending.push(u);
+  }
+
+  /** A literal under `s` as something unknown: its tuple, an argument not
+   *  bound standing for any value, or every tuple when the book is not bound. */
+  private litUnknown(l: Lit, s: Subst): Unknown {
+    const p = walk(l.persp, s);
+    if (p.k !== 'a') return unknownOf(l.rel, null, null);
+    const args = l.args.map((a) => resolve(a, s));
+    const s2 = bindUnknown(args, new Map());
+    return unknownOf(l.rel, p.name, args.map((t) => resolve(t, s2 ?? new Map())));
+  }
+
+  /** A builtin failed for an error in a firing: its conclusion under the
+   *  failed solution is unknown. */
+  private plainFault(ruleId: string | null, s: Subst): void {
+    const r = ruleId === null ? undefined : this.ruleById.get(ruleId);
+    if (!r) return;
+    this.unknownSeen = true;
+    if (r.clause.head.temporal === 'next') { this.stageUnknown(r, s); return; }
+    const u = this.headUnknown(r, s);
+    this.unkEdges.push(['u:' + u.key, this.holeKey(mkf(RULE_HOLE, [mka(r.id)]))]);
+    this.pending.push(u);
+  }
+
+  /** Something unknown a literal could read under `s`. */
+  private readUnknown(lit: Lit, s: Subst): Unknown | null {
+    for (const u of this.unknownCands(lit, s)) {
+      if (this.spread.has(u.key) && this.unknownBinds(lit, u, s)) return u;
+    }
+    return null;
+  }
+
+  /** A literal read over an unknown: an argument that holds the unknown
+   *  value binds every variable of the literal's there to it. */
+  private unknownBinds(lit: Lit, u: Unknown, s: Subst): Subst | null {
+    if (u.persp === null) return s;
+    if (lit.args.length !== u.args!.length) return null;
+    let s2: Subst | null = unify(lit.persp, mka(u.persp), s);
+    for (let i = 0; s2 && i < lit.args.length; i++) s2 = unifyUnknown(lit.args[i], u.args![i], s2);
+    return s2;
+  }
+
+  /** The body of `r` but its element `skip`, over the facts and the
+   *  unknowns: a premise matches a fact or an unknown; a builtin or negation
+   *  that reads an unknown, or a variable nothing bound, is undecided and
+   *  passes, what it binds unknown; so does a builtin that fails for an error. */
+  private poisonSolve(r: ERule, skip: number, s0: Subst): Subst[] {
+    let acc: Subst[] = [s0];
+    for (const j of this.evalOrder(r.plan)) {
+      if (j === skip) continue;
+      const b = r.plan[j];
+      const next: Subst[] = [];
+      for (const s of acc) {
+        this.carryCharge(next.length);
+        if (b.t === 'pos') {
+          const lw: Lit = { ...b.lit, args: b.lit.args.map((a, i) => (holdsUnknown(resolve(a, s)) ? mkv(`?unknown${j}_${i}`) : a)) };
+          for (const m of this.matchPremise(lw, s, 0, null)) next.push(m.s);
+          for (const u of this.unknownCands(lw, s)) {
+            if (!this.spread.has(u.key)) continue;
+            const s2 = this.unknownBinds(lw, u, s);
+            if (s2) next.push(s2);
+          }
+          for (const u of this.undefAtoms?.get(lw.rel) ?? []) {
+            const s2 = this.unknownBinds(lw, u, s);
+            if (s2) next.push(s2);
+          }
+        } else if (b.t === 'neg') {
+          const undecided = b.lit.args.some((a) => { const t = resolve(a, s); return holdsUnknown(t) || !isGround(t); }) || this.readsUndefined(b.lit, s);
+          if (undecided || this.negHolds(b.lit, s, 0)) next.push(s);
+        } else if (b.t === 'bi') {
+          const lv = resolve(b.l, s), rv = resolve(b.r, s);
+          const unknown = holdsUnknown(lv) || holdsUnknown(rv);
+          const open = b.op === 'is' ? !isGround(rv) : b.op === '=' ? false : !isGround(lv) || !isGround(rv);
+          if (unknown || open) {
+            const s2 = bindUnknown([b.l, b.r], s);
+            if (s2) next.push(s2);
+            continue;
+          }
+          const faults = this.faultCount;
+          const s2 = this.evalBuiltin(b, s, null);
+          if (s2) next.push(s2);
+          else if (this.faultCount > faults) { const s3 = bindUnknown([b.l, b.r], s); if (s3) next.push(s3); }
+        }
+      }
+      this.carrySteps += next.length;
+      this.carryCheck(next.length);
+      acc = next;
+      if (acc.length === 0) break;
+    }
+    return acc;
+  }
+
+  /** One solution the carry extends, `width` more it holds. */
+  private carryCharge(width: number): void {
+    this.carrySteps++;
+    this.carryCheck(width);
+  }
+
+  /** The carry's walls, as charged so far (each unknown a lookup looked at
+   *  is a step: `unknownCands`). */
+  private carryCheck(width: number): void {
+    if (this.carrySteps > this.carryWall[0]) { this.wallSpent = ['steps', this.carrySteps, this.carryWall[0]]; throw new BudgetExhausted(); }
+    if (this.carryRows + width > this.carryWall[1]) {
+      this.wallSpent = ['rows', this.carryRows + width, this.carryWall[1]];
+      throw new BudgetExhausted(SPACE_REASON, null);
+    }
+  }
+
+  /** The unknowns the boundary carried into this tick, read back from its
+   *  `$next` holes, so a snapshot reopened carries them as the evaluation
+   *  that wrote them did. */
+  private carriedUnknowns(): Unknown[] {
+    const out: Unknown[] = [];
+    for (const f of this.store.relAll(V.hole)) {
+      const id = f.args[0];
+      if (id.k !== 'f' || id.name !== NEXT_HOLE || id.args.length !== 4) continue;
+      const [rel, p, t, args] = id.args;
+      if (t.k !== 'i' || t.v !== this.store.tick || rel.k !== 'a') continue;
+      const r = f.args[1].k === 'a' ? f.args[1].name : WITHDRAWN;
+      let u: Unknown;
+      if (p.k === 'a' && p.name === ANY) u = unknownOf(rel.name, null, null);
+      else if (p.k === 'a') u = unknownOf(rel.name, p.name, unlist(args));
+      else continue;
+      this.unkEdges.push(['u:' + u.key, this.holeKey(id)]);
+      this.holesNow.push([id, r]);
+      out.push(u);
+    }
+    return out;
   }
 
   // -------------------------------------------------------------------------
@@ -1915,13 +2846,75 @@ function extendAssumption(a: Assumption, extra: FactRec[]): Assumption {
   return { recs, byRel };
 }
 
-/** Have the mean rounds stopped moving? */
-function sameRecs(a: Map<string, FactRec>, b: Map<string, FactRec>): boolean {
-  if (a.size !== b.size) return false;
-  for (const k of a.keys()) if (!b.has(k)) return false;
-  return true;
-}
 
 export function sigOf(p: PremRef): string {
   return p.t === 'bi' ? 'b:' + p.desc : p.t + ':' + p.key;
+}
+
+const WITHDRAWN = 'support_withdrawn';
+const NEXT_HOLE = '$next';
+const ANY = '$any';
+
+function unknownOf(rel: string, persp: string | null, args: Term[] | null): Unknown {
+  return { rel, persp, args, key: persp === null ? 'every tuple of ' + rel : factKey(rel, persp, args!) };
+}
+
+const UNK_WILD = '\u0001';
+const unkAtKey = (rel: string, i: number, v: string): string => `${rel}\u0000${i}\u0000${v}`;
+
+
+/** THE ROOTS OF EVERY NODE AT ONCE (rust/rofl/src/engine.rs `root_sets`):
+ *  the edges, child to parent, condensed into their strongly connected
+ *  components (`tarjan`: a component after every one it reaches), each
+ *  component's roots the union of its parents' outside it, a hole nothing
+ *  reached its own. */
+function rootSets(edges: [string, string][]): { parents: Map<string, string[]>; comp: Map<string, number>; sets: string[][] } {
+  const parents = new Map<string, string[]>();
+  const g = indexer();
+  for (const [c, p] of edges) {
+    const a = parents.get(c); if (a) a.push(p); else parents.set(c, [p]);
+    if (!parents.has(p)) parents.set(p, []);
+    g.succ[g.id(c)].push(g.id(p));
+  }
+  const ids = tarjan(g.succ);
+  const members: number[][] = [];
+  for (let v = 0; v < ids.length; v++) (members[ids[v]] ??= []).push(v);
+  const sets: string[][] = [];
+  for (let c = 0; c < members.length; c++) {
+    const ms = members[c];
+    const roots = new Set<string>();
+    if (ms.length === 1 && g.succ[ms[0]].length === 0) { if (g.keys[ms[0]].startsWith('h:')) roots.add(g.keys[ms[0]]); }
+    else for (const m of ms) for (const q of g.succ[m]) if (ids[q] !== c) for (const r of sets[ids[q]]) roots.add(r);
+    sets.push([...roots]);
+  }
+  const comp = new Map<string, number>();
+  for (let v = 0; v < ids.length; v++) comp.set(g.keys[v], ids[v]);
+  return { parents, comp, sets };
+}
+
+/** `unknown(A)` for an unknown A: the atom as a term, in its own book; every
+ *  row of `unknown` when A's book is not known. */
+function metaOf(u: Unknown): Unknown {
+  return u.args === null || u.persp === null
+    ? unknownOf(IFACE.unknown, null, null)
+    : unknownOf(IFACE.unknown, u.persp, [atomTerm(u.rel, u.args)]);
+}
+
+/** An unknown as the target of its shrug row. */
+function shrugTarget(u: Unknown): Term {
+  if (u.args === null || u.persp === null) return mkf('every', [mka(u.rel)]);
+  const at = atomTerm(u.rel, u.args);
+  return u.persp === MAIN ? at : mkf('in', [mka(u.persp), at]);
+}
+
+/** The relation of an atom term. */
+function unAtomTermLocal(t: Term): string | null {
+  return t.k === 'a' ? t.name : t.k === 'f' ? t.name : null;
+}
+
+/** The row a boundary writes for an unknown staged into `tick`. */
+export function nextHoleArgs(u: Unknown, tick: number): Term[] {
+  const any = mka(ANY);
+  const id = mkf(NEXT_HOLE, [mka(u.rel), u.persp === null ? any : mka(u.persp), mki(tick), u.args === null ? any : list(u.args)]);
+  return [id, mka('fault_left_out')];
 }

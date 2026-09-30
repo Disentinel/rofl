@@ -15,6 +15,7 @@ Reads:
   - <a id="has_conclusion"></a>A rule has the conclusion (`has_conclusion`)
   - <a id="has_premise"></a>A rule has a premise at a position (`has_premise`)
   - <a id="mode"></a>A builtin has the mode (`mode`)
+  - <a id="premise_agg"></a>A rule aggregates over a relation (`premise_agg`)
   - <a id="premise_lit"></a>The premise at a position of a rule is a literal (`premise_lit`)
   - <a id="premise_pos"></a>A rule reads a relation (`premise_pos`)
   - <a id="reads_from"></a>A rule reads the book (`reads_from`)
@@ -29,7 +30,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="rule_known"></a>A rule is known if it [has the conclusion](#has_conclusion) some literal.
 - <a id="perspective"></a>A book has a writer if some writer [has authority over](#authority) it.
 - <a id="collected"></a>A book gathers from books it cannot name if it [collects from](#collects_from) some book.
-- <a id="negated_under"></a>A relation is negated in a book P if [the premise at](#premise_lit) some position of a rule R is $not($lit(it, P, something, something)).
 - A book imports a book Q in the next tick if it [imports](#imports) Q.
 - A book collects in the next tick if it [collects](#collects).
 - <a id="exports"></a>A book exports to a reader W in the next tick if it [exports to](#exports) W.
@@ -216,6 +216,11 @@ In the audit:
 > is the ordinary idiom, not a defect.
 
 <a id="undefined_premise"></a>A rule reads a relation Rel though nothing defines it if it [reads](#premise_pos) Rel, unless some rule [concludes](#concludes) Rel or Rel [is given from outside](#edb).
+
+> An aggregate over it too: a count of a misspelled relation reads 0, which
+> is worse than failing, because 0 is an answer.
+
+A rule reads a relation Rel though nothing defines it if it [aggregates over](#premise_agg) Rel, unless some rule [concludes](#concludes) Rel or Rel [is given from outside](#edb).
 
 > Required results on load:
 >   ? malformed[audit](R)  -> empty      ? breach[audit](R)    -> empty
@@ -418,6 +423,17 @@ In the audit:
 > way `safety.rofl` already destructures `$builtin`.
 
 In the main:
+
+<a id="negated_under"></a>A relation is negated in a book P if [the premise at](#premise_lit) some position of a rule R is $not($lit(it, P, something, something)).
+
+> and inside an aggregate, whose body is a `$cons` list the walk follows
+
+<a id="agg_tail"></a>A list T is the rest of an aggregate's body either:
+
+1. if [the premise at](#premise_lit) some position of some rule is $agg(something, something, something, something, T);
+2. if $cons(something, T) [is the rest of an aggregate's body](#agg_tail).
+
+A relation is negated in a book P if $cons($not($lit(it, P, something, something)), something) [is the rest of an aggregate's body](#agg_tail).
 
 > WHAT "MORE THAN ONE LOADER" MEANS IN TERMS THE KERNEL ALREADY RECORDS, and
 > the answer is `asserted_by`'s second argument and nothing else. There is no

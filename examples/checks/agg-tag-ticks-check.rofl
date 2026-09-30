@@ -1,0 +1,25 @@
+-- examples/checks/agg-tag-ticks-check.rofl — agg_tag_ticks, over
+-- agg-tag-ticks-data.rofl one tick deep with retain_ticks 0: a tropical tag's
+-- value staged @next is a contribution at the next tick, improved on there
+-- by the tick's own (a to c, 7 carried, 1 direct), and `why` of the value
+-- tick 1 holds names the direct edge, while the carried 7 is a firing of the
+-- carry that reached no value. tk_v, a hole at tick 0, is not known at tick
+-- 1: `earlier(0)`, and its cell a hole there too.
+explain_request(why, tk_c(a, c, 1)).
+tkc_wrong(value)  :- not tk_c(a, c, 1).
+tkc_wrong(two)    :- tk_c(A, B, S), tk_c(A, B, T), S != T.
+tkc_line(K, L)    :- explained[$explain](K, _, _, L).
+tkc_has(K, T)     :- tkc_line(K, L), tkc_text(K, T), N is str_segs(L, T), N > 1.
+tkc_text_missing(K, T) :- tkc_text(K, T), not tkc_has(K, T).
+tkc_explain_refused(K) :- explained[$explain](K, _, 0, _).
+tkc_text(why, "tk_c[main](a,c,1) [tag tropical: 1 member]").
+tkc_text(why, "tk_e[main](a,c,1)").
+tkc_text(K, T)@next :- tkc_text(K, T).
+alarm(tkc_wrong).
+alarm(tkc_text_missing).
+alarm(tkc_explain_refused).
+-- expect-row: tk_c[main](a,c,1)
+-- expect-row: tk_c@next[main](a,c,7)
+-- expect-row: hole[$kernel]($lattice(tk_v,main,1,$cons(q,$nil)),support_withdrawn)
+-- expect-row: shrug[$kernel]($next(tk_v,main,1,$cons(q,$nil)),inherited,earlier(0))
+-- expect-no-row: tk_v[main](q,

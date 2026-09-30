@@ -1,0 +1,6 @@
+-- expect-refusal: no value of its carrier can match
+-- a negative bitset in a bitor's value slot, inside an aggregate's body
+edb(ajsr_f). ajsr_f(k, 1).
+lattice ajsr_bits(X, bitor B).
+ajsr_bits(X, F) :- ajsr_f(X, F).
+ajsr_count(N) :- N is count(X : ajsr_bits(X, -1)).

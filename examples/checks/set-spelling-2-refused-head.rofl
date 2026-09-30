@@ -1,0 +1,5 @@
+-- expect-refusal: is a set written with a variable
+-- a set built from variables in a plain relation's head would be stored in
+-- the order it is written, two facts for one set; only a join builds a set
+edb(ss_e). ss_e(k, a).
+ss_built(set(X, b)) :- ss_e(k, X).

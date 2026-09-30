@@ -1,0 +1,34 @@
+-- examples/checks/agg-holistic-scale.rofl — agg_holistic_eval: a rank asked
+-- per member, and a quantile asked at every percent, over ONE group of 2 000
+-- values (f_a_rank_per_member_stored_its_group_per_subject). The percent and
+-- the subject are no member, so the group is sealed once and every cell
+-- shares it: storage and time are linear in the group. Stored per subject,
+-- it was 4 000 000 member rows, and the default space wall (500 000 rows)
+-- cut the world before any rank was concluded.
+--
+-- The values are (N * 7) mod 2000 for N in 0..1999, a permutation of
+-- 0..1999 (7 is prime to 2000), so by hand: rank(V) = V + 1, and
+-- quantile(P) is the r-th smallest with r = max(1, ceil(P * 2000 / 100)) =
+-- max(1, 20 P), which is the value r - 1: 0 at P = 0, else 20 P - 1.
+edb(ahs_seed).
+ahs_seed(0).
+ahs_n(N)        :- ahs_seed(N).
+ahs_n(N)        :- ahs_n(M), M < 1999, N is M + 1.
+ahs_v(N, W)     :- ahs_n(N), W is (N * 7) mod 2000.
+ahs_pct(P)      :- ahs_n(P), P <= 100.
+ahs_rank(V, R)  :- ahs_v(_, V), R is rank(V, W : ahs_v(_, W)).
+ahs_q(P, Q)     :- ahs_pct(P), Q is quantile(P, W ; N : ahs_v(N, W)).
+ahs_ranked(K)   :- K is count(V : ahs_rank(V, _)).
+ahs_asked(K)    :- K is count(P : ahs_q(P, _)).
+
+ahs_rank_wrong(V, R) :- ahs_rank(V, R), E is V + 1, R != E.
+ahs_qe(0, 0).
+ahs_qe(P, E)         :- ahs_pct(P), P > 0, E is 20 * P - 1.
+ahs_q_wrong(P, Q)    :- ahs_q(P, Q), not ahs_qe(P, Q).
+ahs_q_missing(P, E)  :- ahs_qe(P, E), not ahs_q(P, E).
+ahs_short(K)         :- ahs_ranked(K), K != 2000.
+ahs_short(K)         :- ahs_asked(K), K != 101.
+alarm(ahs_rank_wrong).
+alarm(ahs_q_wrong).
+alarm(ahs_q_missing).
+alarm(ahs_short).

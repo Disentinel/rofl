@@ -1,0 +1,35 @@
+-- examples/checks/agg-tag-wfs-check.rofl — agg_tag_wfs: tags over what a
+-- well-founded world concluded, fed from below (agg-wfs-game.rofl): a and b
+-- draw each other round a cycle (the moves copied here: only what the world
+-- below concludes is fed), and e and f; c and h win. tgf_depth, a
+-- tropical tag, is the fewest moves from a start through drawn positions: a
+-- and e 0, b and f 1 (b back to a would be 2, never better). tgf_n, a
+-- counting tag, weighs each move to a drawn position 1 and each move to a
+-- known win 2 (c and h, copied: a positive read of wg_win(a), which the
+-- world below leaves unknown, would make the count unknown too): b has one
+-- of each, 3, g one to a win, 2. Inside a well-founded world a
+-- tag is refused, idempotent (agg-tag-wfs-2-refused-tropical.rofl) or
+-- counting (-3-refused-counting.rofl), as every cell is: a cell merged under
+-- an assumption holds a value no model has.
+edb(tgf_start).
+edb(tgf_move).
+edb(tgf_won).
+tgf_start(a). tgf_start(e).
+tgf_move(a, b). tgf_move(b, a). tgf_move(b, c). tgf_move(c, d).
+tgf_move(e, f). tgf_move(f, e). tgf_move(g, h). tgf_move(h, i).
+tgf_won(c). tgf_won(h).
+tag tgf_depth(X, tropical T).
+tgf_depth(X, 0) :- tgf_start(X), unknown(wg_win(X)).
+tgf_depth(Y, 1) :- tgf_depth(X, _), tgf_move(X, Y), unknown(wg_win(Y)).
+tag tgf_n(X, counting N).
+tgf_n(X, 1)     :- tgf_move(X, Y), unknown(wg_win(Y)).
+tgf_n(X, 2)     :- tgf_move(X, Y), tgf_won(Y).
+tgf_want(depth, a, 0). tgf_want(depth, b, 1). tgf_want(depth, e, 0). tgf_want(depth, f, 1).
+tgf_want(n, a, 1). tgf_want(n, b, 3). tgf_want(n, e, 1). tgf_want(n, f, 1). tgf_want(n, g, 2).
+tgf_got(depth, X, T) :- tgf_depth(X, T).
+tgf_got(n, X, N)     :- tgf_n(X, N).
+tgf_wrong(R, X, T)   :- tgf_want(R, X, T), not tgf_got(R, X, T).
+tgf_wrong(R, X, T)   :- tgf_got(R, X, T), not tgf_want(R, X, T).
+alarm(tgf_wrong).
+-- below: examples/checks/agg-wfs-game.rofl
+-- expect-row: tgf_n[main](b,3)

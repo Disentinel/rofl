@@ -1,0 +1,3 @@
+-- expect-refusal: expected ',' after the threshold
+-- no threshold before the counted terms
+sxtr_nocomma(C) :- at_least(W : sxt_v(W, C)).

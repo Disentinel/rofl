@@ -1,0 +1,10 @@
+-- expect-refusal: which the level that reads unknown leaves undefined
+-- examples/checks/agg-shrug-wfs-upper.rofl — `unknown(A)` of an atom that the
+-- level reading `unknown` itself leaves undefined has no row until that level
+-- settles, so a rule that could read it is refused, in both engines.
+semantics(well_founded).
+edb(su_m).
+su_m(p, q). su_m(q, p).
+su_h(X) :- su_m(X, _).
+su_g(X) :- su_m(X, Y), not unknown(su_h(Y)), not su_g(Y).
+su_ask(X) :- su_m(X, _), unknown(su_g(X)).

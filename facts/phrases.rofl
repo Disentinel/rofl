@@ -10,3 +10,9 @@ fun_phrase(str_len, "the length of <0:text>").
 fun_phrase(str_char, "the character <1:index> of <0:text>").
 fun_phrase(str_sub, "the substring of <0:text> from <1:index> of length <2:number>").
 fun_phrase(atom_of, "the atom of <0:text>").
+-- The answer model's third value is the language's own, read and written in every
+-- file: `shrug[$kernel](p(a, _), R, _)` reads as `p(a, _) has no answer for the
+-- reason R with some meta` (docs/aggregates.md, "Shrugs, as built" and "The
+-- sentence form, as built"). No comma: a comma ends a condition.
+edb(phrase).
+phrase(shrug, "<0:target> has no answer for the reason <1:reason> with <2:meta>").

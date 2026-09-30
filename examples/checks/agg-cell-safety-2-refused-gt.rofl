@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-2-refused-gt.rofl — a threshold that fails as a min improves: D1 > 1 held of the first value and not of a better one.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_gt(A, C, min D).
+acsr_gt(A, C, D) :- acsr_e(A, C, D).
+acsr_gt(A, C, D) :- acsr_gt(A, B, D1), acsr_e(B, C, W), D1 > 1, D is D1 + W.

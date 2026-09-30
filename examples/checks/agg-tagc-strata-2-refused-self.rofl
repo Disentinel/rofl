@@ -1,0 +1,9 @@
+-- expect-refusal: tag tcsr_self (counting) is inside its own recursion
+-- the number of paths over a graph, counted through the count itself: the
+-- counting semiring is not p-stable, so its recursion is refused even where
+-- the graph has no cycle
+edb(tcsr_d).
+tcsr_d(a, b). tcsr_d(b, c).
+tag tcsr_self(A, B, counting N).
+tcsr_self(A, B, N) :- tcsr_d(A, B).
+tcsr_self(A, C, N) :- tcsr_self(A, B, _), tcsr_d(B, C).

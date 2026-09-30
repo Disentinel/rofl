@@ -1,0 +1,13 @@
+-- expect-refusal: answered on demand
+-- examples/checks/agg-lattice-safety-12-refused-demand-reader.rofl — a rule
+-- that is not range-restricted is unfolded wherever it is read, and one that
+-- reads a lattice would be unfolded while the lattice is still improving.
+edb(alsf_e).
+alsf_e(a, b, 2).
+alsf_e(b, c, 1).
+alsf_e(a, c, 5).
+lattice alsf_d(A, C, min D).
+alsf_d(A, C, D) :- alsf_e(A, C, D).
+alsf_d(A, C, D) :- alsf_d(A, B, D1), alsf_e(B, C, W), D is D1 + W.
+alsf_q(X, D, Z) :- alsf_d(a, X, D).
+alsf_r(X) :- alsf_q(X, D, 1), D > 3.

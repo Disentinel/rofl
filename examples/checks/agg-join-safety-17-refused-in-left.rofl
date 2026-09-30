@@ -1,0 +1,7 @@
+-- expect-refusal: is a set written with a variable
+-- the left of `in` is an element, matched as written: an element that is a
+-- set with a variable would match one spelling of it
+edb(ajsr_e). ajsr_e(k, a).
+lattice ajsr_nest(X, union S).
+ajsr_nest(X, set(set(b, a))) :- ajsr_e(X, _).
+ajsr_has(Y) :- ajsr_nest(k, S), set(Y, b) in S.

@@ -1,0 +1,59 @@
+-- examples/checks/agg-sub-syntax-2-expect.rofl — agg_sub_syntax. The
+-- dominance row each form of agg-sub-syntax-1-forms.rofl reads as, both
+-- directions: its relation, its arity and its key, the prefix the two facts
+-- share; the two facts it compares, as literals; its body, a rule body's
+-- rows; `<=` in a body a comparison; ring 1 (examples/ring1) reading a
+-- dominance rule from `src` as the same tree, nothing stray and nothing
+-- uncovered; and no refused form reaching the world.
+sxs_want(sxs_two, 4, 2).
+sxs_want(sxs_one, 2, 1).
+sxs_want(sxs_none, 3, 0).
+sxs_mine(sxs_two). sxs_mine(sxs_one). sxs_mine(sxs_none).
+sxs_mine(sxsr_body). sxs_mine(sxsr_other). sxs_mine(sxsr_book). sxs_mine(sxsr_const).
+sxs_mine(sxsr_twice). sxs_mine(sxsr_tense). sxs_mine(sxsr_arity). sxs_mine(sxsr_same).
+sxs_row(Rel, N, K) :- dominance[$kernel](_, Rel, N, K), sxs_mine(Rel).
+sxs_missing(Rel)   :- sxs_want(Rel, N, K), not sxs_row(Rel, N, K).
+sxs_extra(Rel)     :- sxs_row(Rel, N, K), not sxs_want(Rel, N, K).
+alarm(sxs_missing).
+alarm(sxs_extra).
+-- the two facts, as written
+sxs_lits_lost() :- not sxs_lits().
+sxs_lits() :- dominance[$kernel](R, sxs_one, _, _),
+  dominance_lit[$kernel](R, 1, $lit(sxs_one, main, $cons($var("A"), $cons($var("X"), $nil)), $now)),
+  dominance_lit[$kernel](R, 2, $lit(sxs_one, main, $cons($var("A"), $cons($var("Y"), $nil)), $now)).
+alarm(sxs_lits_lost).
+-- the body is a rule body's rows: a literal read, a negation, the builtins
+sxs_body(pos) :- dominance[$kernel](R, sxs_none, _, _), premise_pos[$kernel](R, sxs_e).
+sxs_body(neg) :- dominance[$kernel](R, sxs_none, _, _), premise_neg[$kernel](R, sxs_skip).
+sxs_body(is)  :- dominance[$kernel](R, sxs_none, _, _), premise_lit[$kernel](R, _, $builtin("is", _)).
+sxs_body(eq)  :- dominance[$kernel](R, sxs_none, _, _), premise_lit[$kernel](R, _, $builtin("=", _)).
+sxs_body(seven) :- dominance[$kernel](R, sxs_none, _, _), has_premise[$kernel](R, 7), not has_premise[$kernel](R, 8).
+sxs_body_part(pos). sxs_body_part(neg). sxs_body_part(is). sxs_body_part(eq). sxs_body_part(seven).
+sxs_body_lost(P) :- sxs_body_part(P), not sxs_body(P).
+alarm(sxs_body_lost).
+-- a dominance rule concludes nothing: no rule of it runs
+sxs_as_rule(R) :- dominance[$kernel](R, _, _, _), rule[$kernel](R).
+sxs_as_rule(R) :- dominance[$kernel](R, _, _, _), concludes[$kernel](R, _).
+alarm(sxs_as_rule).
+-- `<=` in a body is the comparison it always was
+sxs_cmp_lost() :- not sxs_cmp(a).
+-- and every form evaluates
+sxs_lost(two)  :- not sxs_two(a, b, 3, 1).
+sxs_lost(one)  :- not sxs_one(a, 3).
+sxs_lost(none) :- not sxs_none(3, 1, b).
+alarm(sxs_lost).
+alarm(sxs_cmp_lost).
+
+src("p(A, X) <= p(A, Y) :- Y < X, not q(Y).").
+r1s_want($dominance($lit(p, $bare, $cons($var("A"), $cons($var("X"), $nil)), $now),
+                    $lit(p, $bare, $cons($var("A"), $cons($var("Y"), $nil)), $now)),
+         $cons($builtin("<", $cons($var("Y"), $cons($var("X"), $nil))),
+         $cons($not($lit(q, $bare, $cons($var("Y"), $nil), $now)), $nil))).
+r1s_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1s_want(H, B), not r1s_parsed(H, B).
+ring1_extra(H)     :- r1s_parsed(H, B), not r1s_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

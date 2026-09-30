@@ -1,0 +1,7 @@
+-- expect-refusal: (counting): a rule concluding it is not range-restricted
+-- a key the body does not bind: the idempotent twin is refused at load as a
+-- lattice, and so is the counting tag, by name, not left to a shrug
+edb(tcr_u).
+tcr_u(a).
+tag tcr_un(A, K, counting N).
+tcr_un(A, K, K) :- tcr_u(A).

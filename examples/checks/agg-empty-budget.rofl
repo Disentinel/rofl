@@ -1,0 +1,10 @@
+-- examples/checks/agg-empty-budget.rofl — agg_empty_budget: the budget cuts
+-- the evaluation of agg-budget-data.rofl while ab_r is still being derived.
+-- n0 and lone are reached by nothing and would count 0 once ab_r closed; cut
+-- short, no group reads 0, the empty ones included: an empty group is a
+-- negative claim and the wall leaves it unmade.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: abe_n[main](
+-- expect-no-row: abe_s[main](
+abe_n(C, N) :- ab_node(C), N is count(A : ab_r(A, C, _)).
+abe_s(C, S) :- ab_node(C), S is sum(W ; A : ab_r(A, C, W)).

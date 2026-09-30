@@ -29,15 +29,28 @@
 // the state a world evaluates to.
 
 import { Rofl } from '../src/api.ts';
+import { parseProgram } from '../src/parser.ts';
+import { canonClauseSets } from '../src/unify.ts';
+import { ruleIdOf, BUDGET_REASON, SPACE_REASON, ARITH_TYPE_REASON, ARITH_ZERO_REASON, ARITH_OVERFLOW_REASON,
+  STR_TYPE_REASON, STR_INDEX_REASON, STR_SEP_REASON, ATOM_NAME_REASON, SEALED_REASON } from '../src/reflect.ts';
+import { reasonOf } from '../src/shrug.ts';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { worldFiles } from './md_world.ts';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { worldFiles, prefetchMd } from './md_world.ts';
+import { materialize, unreadOf } from './sentences.ts';
+import { runPool, jobs, type Task } from './pool.ts';
+import { parseSelector, select, NotAWorld, belowFiles } from './agg_select.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
-const RUST = path.join(ROOT, 'rust/target/release/rofl-load');
+// ROFL_PROFILE names the cargo profile whose `rofl-load` answers for Rust:
+// `release` unless said otherwise, `fast` for the development loop, `breaks`
+// for scripts/agg_breaks.ts. Every profile has the release semantics.
+export const PROFILE = process.env.ROFL_PROFILE || 'release';
+const RUST = path.join(ROOT, 'rust/target', PROFILE, 'rofl-load');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
 
 /** A FACT PACK IS READ BY LOADING IT, NOT BY MATCHING IT. Every reader here was
@@ -46,19 +59,36 @@ const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
  *  in during one session that had just catalogued seven of them as the class to
  *  remove. A regex reads what it was told to expect; the loader reads what is
  *  written, and refuses what is malformed instead of silently missing it. */
-function pack(file: string): Rofl | null {
+function pack(file: string, text?: string): Rofl | null {
   const p = path.join(ROOT, file);
-  if (!fs.existsSync(p)) return null;
+  if (text === undefined && !fs.existsSync(p)) return null;
   const r = new Rofl();
   r.load(BOOT);
-  if (!r.load(fs.readFileSync(p, 'utf8')).ok) throw new Error(`${file} does not load`);
+  if (!r.load(text ?? fs.readFileSync(p, 'utf8')).ok) throw new Error(`${file} does not load`);
   r.evaluate();
   return r;
 }
 const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
   r.query(lit).rows.map((x) => vs.map((v) => String(x.bindings[v]).replace(/^"|"$/g, '')));
 
-export interface World { name: string; files: string[]; ticks?: number; budget?: number; oneEngine?: boolean }
+/** `oneEngine` names the engine that answers a world alone: `ts` for a host
+ *  contract the two answer differently (budget_wall), `rust` for a world
+ *  only the Rust engine can answer. `strata` runs the stock evaluator, `explain` the
+ *  `explain_request` bridge of rofl-load. */
+export interface World {
+  name: string; files: string[]; ticks?: number; budget?: number; space?: number;
+  oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
+  /** its files load together and are evaluated once, a fixture offered alone
+   *  (as rofl-load runs a world), in both engines: the aggregate proof worlds */
+  together?: boolean;
+  /** its `.rofl.md` files, and its `.rofl` files headed `-- through-sentences`, go once round the sentence form (scripts/sentences.ts) */
+  sentences?: boolean;
+}
+
+/** A declared world as it is loaded: each `.rofl.md` file read into rules, and under `sentences` each file headed
+ *  so written as sentences and read back (scripts/sentences.ts). Done where the world is answered, so a fault
+ *  planted in the reader or the renderer reaches it. */
+const placed = (w: World): World => ({ ...w, files: w.files.map((f) => materialize(f, !!w.sentences)) });
 
 /** Every world buildable from `.rofl` text alone. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
@@ -99,7 +129,12 @@ export function worlds(): World[] {
   return [...out, ...declared()];
 }
 
-export interface Answer { hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[]; }
+/** `problems` are reds that are neither a hash nor an alarm: a refusal
+ *  fixture that loaded, or refused for another reason. */
+export interface Answer {
+  hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[];
+  problems: string[];
+}
 
 /** WORLDS THE TREE CANNOT DISCOVER, declared in facts/checks.rofl. Everything
  *  under examples/ and rules/ is found by walking; a world that needs a TICK
@@ -107,20 +142,57 @@ export interface Answer { hash: string; facts: number; census: Map<string, numbe
  *  and is named there instead. That file is where the 19 test files whose whole
  *  subject is host behaviour — arithmetic holes, budget walls, escapes — become
  *  worlds rather than TypeScript string literals. */
-function declared(): World[] {
-  const r = pack('facts/checks.rofl');
+export function declared(text?: string): World[] {
+  const r = pack('facts/checks.rofl', text);
   if (!r) return [];
   const out = new Map<string, World>();
   for (const [n] of col(r, 'check_world(N)', 'N')) out.set(n, { name: n, files: [] });
   for (const [n, f] of col(r, 'check_file(N, F)', 'N', 'F')) out.get(n)?.files.push(path.join(ROOT, f));
-  for (const [n] of col(r, 'check_opt(N, one_engine, 1)', 'N')) {
-    const w = out.get(n); if (w) w.oneEngine = true;
+  // EVERY OPTION IS ONE THIS HARNESS READS. `one_engine` was read as the
+  // literal `1` and meant "TypeScript only", so any other value was silently
+  // ignored and the world ran on both engines (f_one_engine_meant_ts_only).
+  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together']);
+  for (const [n, k] of col(r, 'check_opt(N, K, V)', 'N', 'K')) {
+    if (!KNOWN.has(k)) throw new Error(`check_opt("${n}", ${k}, _): no such option; the options are ${[...KNOWN].join(', ')}`);
+    if (!out.has(n)) throw new Error(`check_opt("${n}", ${k}, _): no check_world("${n}")`);
+  }
+  for (const [n, e] of col(r, 'check_opt(N, one_engine, E)', 'N', 'E')) {
+    if (e !== 'ts' && e !== 'rust') throw new Error(`check_opt("${n}", one_engine, ${e}): the engine is ts or rust`);
+    out.get(n)!.oneEngine = e;
+  }
+  for (const [n, e] of col(r, 'check_opt(N, evaluator, E)', 'N', 'E')) {
+    if (e !== 'strata') throw new Error(`check_opt("${n}", evaluator, ${e}): the one evaluator to choose is strata`);
+    out.get(n)!.strata = true;
+  }
+  for (const [n, e] of col(r, 'check_opt(N, explain, E)', 'N', 'E')) {
+    if (e !== '1') throw new Error(`check_opt("${n}", explain, ${e}): explain takes 1`);
+    out.get(n)!.explain = true;
+  }
+  for (const [n, e] of col(r, 'check_opt(N, together, E)', 'N', 'E')) {
+    if (e !== '1') throw new Error(`check_opt("${n}", together, ${e}): together takes 1`);
+    out.get(n)!.together = true;
+  }
+  for (const [n, e] of col(r, 'check_opt(N, sentences, E)', 'N', 'E')) {
+    if (e !== '1') throw new Error(`check_opt("${n}", sentences, ${e}): sentences takes 1`);
+    out.get(n)!.sentences = true;
   }
   for (const [n, v] of col(r, 'check_opt(N, ticks, V)', 'N', 'V')) {
     const w = out.get(n); if (w) w.ticks = Number(v);
   }
   for (const [n, v] of col(r, 'check_opt(N, budget, V)', 'N', 'V')) {
     const w = out.get(n); if (w) w.budget = Number(v);
+  }
+  // the completed ticks whose provenance is kept (rofl-load --retain); Rust only
+  for (const [n, v] of col(r, 'check_opt(N, retain, V)', 'N', 'V')) {
+    const w = out.get(n);
+    if (w && w.oneEngine !== 'rust' && !w.together) throw new Error(`check_opt("${n}", retain, ${v}): retain_ticks is set on a world not loaded together`);
+    if (w) w.retain = Number(v);
+  }
+  // the space wall, in rows (rofl-load --space); Rust only
+  for (const [n, v] of col(r, 'check_opt(N, space, V)', 'N', 'V')) {
+    const w = out.get(n);
+    if (w && w.oneEngine !== 'rust' && !w.together) throw new Error(`check_opt("${n}", space, ${v}): a space wall is set on a world not loaded together`);
+    if (w) w.space = Number(v);
   }
   return [...out.values()];
 }
@@ -132,7 +204,8 @@ function census(state: string): Map<string, number> {
   const c = new Map<string, number>();
   for (const l of state.split('\n')) {
     if (l === '') continue;
-    const k = l.startsWith('wit ') ? '@wit' : (/^([a-z_]+\[[a-z$]+\])/.exec(l)?.[1] ?? '@other');
+    const k = l.startsWith('wit ') ? '@wit' : l.startsWith('cell ') ? '@cell' : l.startsWith('mem ') ? '@mem'
+      : (/^([a-z_]+\[[a-z$]+\])/.exec(l)?.[1] ?? '@other');
     c.set(k, (c.get(k) ?? 0) + 1);
   }
   return c;
@@ -172,17 +245,55 @@ const digest = (s: string): string =>
  *  who knows which it is. A world raising one FAILS whatever the golden says,
  *  so blessing cannot paper over it — which is the whole difference between a
  *  check and a record. */
-function alarmsRaised(r: Rofl, c: Map<string, number>): string[] {
-  const out: string[] = [];
-  for (const row of r.query('alarm(R)').rows) {
-    const rel = row.bindings['R'];
-    for (const [key, n] of c) if (n > 0 && key.startsWith(`${rel}[`)) out.push(`${key} ${n}`);
-  }
-  return out.sort();
+function alarmsRaised(r: Rofl, state: string): string[] {
+  return raised(r.query('alarm(R)').rows.map((row) => String(row.bindings['R'])), state);
 }
 
-export function answerTS(w: World): Answer {
-  const r = new Rofl();
+/** Every row of every alarm relation, per book, read off the canonical state
+ *  by prefix rather than off the census, whose key pattern cannot spell a
+ *  relation name with a digit in it. Shared by both engines. */
+function raised(rels: string[], state: string): string[] {
+  const n = new Map<string, number>();
+  for (const l of state.split('\n')) {
+    for (const rel of rels) {
+      if (!l.startsWith(`${rel}[`)) continue;
+      const key = l.slice(0, l.indexOf(']') + 1);
+      n.set(key, (n.get(key) ?? 0) + 1);
+    }
+  }
+  return [...n].map(([k, c]) => `${k} ${c}`).sort();
+}
+
+/** The alarms a Rust state declares: its `alarm[main](rel)` rows. */
+function alarmRels(state: string): string[] {
+  return [...state.matchAll(/^alarm\[main\]\(([a-z_][a-z0-9_]*)\) /gm)].map((m) => m[1]);
+}
+
+/** THE ROWS A WORLD'S FILES SAY ITS STATE MUST HOLD, AND MUST NOT
+ *  (`-- expect-row:`, `-- expect-no-row:`), read against either engine's
+ *  state: an alarm `not answer` goes undecided and silent over a hole beside
+ *  it (f_a_missing_row_check_goes_quiet_over_a_hole), and a row does not. */
+function rowProblems(files: string[], state: string): string[] {
+  const out: string[] = [], lines = state.split('\n');
+  for (const f of files) {
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/^-- expect-(no-)?row: (.+)$/gm)) {
+      const want = m[2].trim(), has = lines.some((l) => l.startsWith(want));
+      if (!m[1] && !has) out.push(`${path.basename(f)}: the state lacks the row ${want}`);
+      if (m[1] && has) out.push(`${path.basename(f)}: the state holds the row ${want}`);
+    }
+  }
+  return out;
+}
+
+/** The TypeScript engine's answer; `Engine` is another build of `Rofl`, which
+ *  scripts/agg_breaks.ts loads from a copy of src/ with a fault planted. */
+export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
+  if (w0.together) return answerTSTogether(w0, Engine);
+  const w = placed(w0);
+  // `evaluator, strata` reaches this engine as it reaches rofl-load: a world
+  // both engines answer runs the stock evaluator in both, or the option would
+  // be read by one and silently dropped by the other
+  const r = new Engine(w.strata ? { evaluator: 'strata' } : {});
   // THE BUDGET GOES ON EVERY LOAD, NOT ONLY ON `evaluate`. In this host a load
   // evaluates what it can with the budget it is given, so a world whose budget
   // reaches `evaluate` alone has already been derived and never walls; in Rust
@@ -204,9 +315,15 @@ export function answerTS(w: World): Answer {
   // `--bless` so a person can still read it.
   const diags: string[] = [];
   const dropped: string[] = [];
+  const loaded: string[] = [], problems: string[] = [];
   for (const f of w.files) {
-    const res = r.load(fs.readFileSync(f, 'utf8'), opt);
-    if (res.ok) continue;
+    const unread = unreadOf(f);
+    const res = unread.length ? { ok: false, diagnostics: unread } : r.load(fs.readFileSync(f, 'utf8'), opt);
+    // a fixture written to be refused says what for, in a world both answer
+    const want = w.oneEngine ? null : expectedRefusal(f);
+    if (want && res.ok) problems.push(`${path.basename(f)} was to be refused (${want}) and loaded`);
+    if (want && !res.ok && !res.diagnostics.join('\n').includes(want)) problems.push(`${path.basename(f)} refused, but not for '${want}': ${res.diagnostics[0] ?? ''}`);
+    if (res.ok) { loaded.push(f); continue; }
     dropped.push(`${path.basename(f)}: ${res.diagnostics[0] ?? ''}`);
     diags.push(`refused ${path.basename(f)}`);
   }
@@ -214,16 +331,111 @@ export function answerTS(w: World): Answer {
   else r.evaluate(w.budget);
   const state = diags.sort().join('\n') + (diags.length ? '\n' : '') + r.store.canonicalState();
   return { hash: digest(state), facts: r.store.allFactKeys().length, census: census(state),
-           dropped, alarms: alarmsRaised(r, census(state)) };
+           dropped, alarms: alarmsRaised(r, state), problems: [...problems, ...rowProblems(loaded, state)] };
 }
 
-export function answerRust(w: World): Answer | null {
+const belowArgs = (files: string[]): string[] => belowFiles(files).flatMap((f) => ['--below', f]);
+
+/** The first line of a refusal fixture: `-- expect-refusal: <substring>`. */
+function expectedRefusal(f: string): string | null {
+  const first = fs.readFileSync(f, 'utf8').split('\n', 1)[0];
+  const m = /^-- expect-refusal: (.+)$/.exec(first);
+  return m ? m[1].trim() : null;
+}
+
+/** A TOGETHER WORLD IN THE TYPESCRIPT ENGINE, as rofl-load runs one
+ *  (`answerRustOnly`): a fixture is offered alone, boot and the world below
+ *  it fed, and refused at the door (`load`) or by the evaluation (`eval`);
+ *  every other file goes into the world, whose files all load before it is
+ *  evaluated once, then ticked, explained, and read. */
+function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
+  const w = placed(w0);
+  const budget = w.budget ?? 200_000_000;
+  const fresh = (): Rofl => {
+    const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), ...(w.space ? { space: w.space } : {}),
+      ...(w.retain !== undefined ? { retainTicks: w.retain } : {}) });
+    if (!r.load(BOOT, { defer: true }).ok) throw new Error('boot.rofl does not load');
+    return r;
+  };
+  // the world below: boot, the first file and the files it names, evaluated, then fed
+  const feed = (r: Rofl, files: string[]): string | null => {
+    const below = belowFiles(files);
+    if (below.length === 0) return null;
+    const b = fresh();
+    for (const f of below) {
+      const res = b.load(fs.readFileSync(f, 'utf8'), { defer: true });
+      if (!res.ok) return `below: ${f} refused: ${res.diagnostics[0] ?? ''}`;
+    }
+    try { b.evaluate(budget); r.feedBelow(b); } catch (e) { return `below: ${(e as Error).message}`; }
+    return null;
+  };
+  // the evaluation: rofl-load's, with its exit class for a refusal
+  const run = (r: Rofl, explain: boolean): { cls: 'eval'; msg: string } | null => {
+    try {
+      if (!w.ticks) {
+        r.evaluate(budget);
+        if (explain) { r.explainRequests({ budget }); r.evaluate(budget); }
+      } else {
+        for (let i = 0; i < w.ticks; i++) r.tickAdvance({ budget });
+        if (explain) { r.evaluate(budget); r.explainRequests({ budget }); r.evaluate(budget); }
+      }
+    } catch (e) { return { cls: 'eval', msg: (e as Error).message }; }
+    return null;
+  };
+  const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
+  for (const f of w.files) {
+    const want = expectedRefusal(f), unread = unreadOf(f);
+    if (!want && !unread.length) { keep.push(f); continue; }
+    const base = path.basename(f);
+    let cls: 'load' | 'eval' | null = null, msg = '';
+    if (unread.length) { cls = 'load'; msg = unread.join('\n'); }
+    else {
+      const r = fresh();
+      const res = r.load(fs.readFileSync(f, 'utf8'), { defer: true });
+      if (!res.ok) { cls = 'load'; msg = res.diagnostics.join('\n'); }
+      else {
+        const fb = feed(r, [f]);
+        if (fb !== null) { cls = 'eval'; msg = fb; }
+        else { const e = run(r, false); if (e) { cls = e.cls; msg = e.msg; } }
+      }
+    }
+    if (cls === null) {
+      keep.push(f);
+      if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
+      continue;
+    }
+    diags.push(`refused ${base} (${cls})`);
+    dropped.push(`${base}: ${msg.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
+    if (!want) problems.push(`${base} refused: ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
+    else if (!msg.includes(want)) problems.push(`${base} refused, but not for '${want}': ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
+  }
+  const r = fresh();
+  let failed: string | null = null;
+  for (const f of keep) {
+    const res = r.load(fs.readFileSync(f, 'utf8'), { defer: true });
+    if (!res.ok) { failed = `${f} refused: ${res.diagnostics.join(' / ')}`; break; }
+  }
+  if (failed === null) failed = feed(r, keep);
+  if (failed === null) { const e = run(r, !!w.explain); if (e) failed = e.msg; }
+  if (failed !== null) problems.push(`the world does not evaluate: ${failed.trim().split('\n').slice(0, 3).join(' / ')}`);
+  const state = r.store.canonicalState();
+  if (!w.budget && !w.space && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
+  problems.push(...rowProblems(keep, state));
+  const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
+  return { hash: digest(full), facts: r.store.allFactKeys().length, census: census(full), dropped, alarms: raised(alarmRels(state), state), problems };
+}
+
+export function answerRust(w0: World): Answer | null {
   if (!fs.existsSync(RUST)) return null;
+  const w = placed(w0);
+  if (w.together) return answerRustOnly(w);
   // A WORLD MAY DECLARE THAT ONE ENGINE ANSWERS IT, and the declaration is in
   // facts/checks.rofl with its reason. Not an escape hatch: the alternative is
   // a permanent red, which this repository has already recorded as the state in
   // which a check gets switched off.
-  if (w.oneEngine) return null;
+  if (w.oneEngine === 'ts') return null;
+  if (w.oneEngine === 'rust') return answerRustOnly(w);
+  if (belowFiles(w.files).length > 0) throw new Error(`${w.name}: a world below is fed by the Rust engine alone, and this world is not Rust-only`);
   // A REFUSED FILE IS OBSERVED, NOT FATAL. `rofl-load` exits non-zero and
   // prints to stderr when it will not load a program — which IS the answer for
   // a world written to be refused. The first version let execFileSync throw,
@@ -237,17 +449,200 @@ export function answerRust(w: World): Answer | null {
   const run = (args: string[]): string => execFileSync(RUST, args,
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
   const boot = path.join(ROOT, 'boot.rofl');
-  const diags: string[] = []; const keep: string[] = [];
+  const diags: string[] = [], keep: string[] = [], problems: string[] = [];
   for (const f of w.files) {
-    try { run([boot, f]); keep.push(f); }
-    catch { diags.push(`refused ${path.basename(f)}`); }
+    const unread = unreadOf(f);
+    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, [boot, ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const want = expectedRefusal(f), base = path.basename(f);
+    if (p.status === 0) {
+      keep.push(f);
+      if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
+      continue;
+    }
+    diags.push(`refused ${base}`);
+    if (want && !p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n')[0]}`);
   }
   const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
-    ...(w.budget ? ['--budget', String(w.budget)] : []), ...keep]);
+    ...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.strata ? ['--strata'] : []), ...keep]);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
-  return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: [] };
+  return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state),
+           problems: [...problems, ...rowProblems(keep, state)] };
 }
 
+/** A WORLD ONLY THE RUST ENGINE ANSWERS: the hash, the census AND THE ALARMS
+ *  come from its state, since nothing else evaluated it. A refusal names its
+ *  class — exit 2 is the load door, exit 3 the evaluation — and a fixture
+ *  written to be refused says what for on its first line, which must appear
+ *  in the refusal or the world fails.
+ *
+ *  ONLY A FIXTURE IS OFFERED ALONE. Any other file goes straight into the
+ *  world, which must then evaluate: a data file that only makes sense beside
+ *  its stratum table (agg_count_strata_stock) is refused alone under the
+ *  stock evaluator, and rightly. */
+function answerRustOnly(w: World): Answer {
+  const boot = path.join(ROOT, 'boot.rofl');
+  const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
+    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
+    ...(w.retain !== undefined ? ['--retain', String(w.retain)] : [])];
+  const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
+  for (const f of w.files) {
+    const want = expectedRefusal(f), unread = unreadOf(f);
+    if (!want && !unread.length) { keep.push(f); continue; }
+    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, [boot, ...opts, ...belowArgs([f]), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const base = path.basename(f);
+    if (p.status === 0) {
+      keep.push(f);
+      if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
+      continue;
+    }
+    if (p.status !== 2 && p.status !== 3) throw new Error(`rofl-load died on ${base} (${p.status}): ${p.stderr}`);
+    diags.push(`refused ${base} (${p.status === 2 ? 'load' : 'eval'})`);
+    dropped.push(`${base}: ${p.stderr.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
+    if (!want) problems.push(`${base} refused: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
+    else if (!p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
+  }
+  const p = spawnSync(RUST, [boot, ...opts, ...(w.explain ? ['--explain'] : []), ...belowArgs(keep), ...keep],
+    { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+  if (p.status !== 0) {
+    problems.push(`the world does not evaluate (${p.status}): ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
+  }
+  const state = p.stdout;
+  // A WORLD THE BUDGET CUT PROVES NOTHING: its alarms may not have been
+  // reached. Only a world that asks for a wall may be cut by it, and what
+  // its alarms cannot say after the cut, its files say as rows the cut state
+  // must hold and must not (`-- expect-row:`, `-- expect-no-row:`).
+  if (!w.budget && !w.space && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
+  problems.push(...rowProblems(keep, state));
+  const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
+  const facts = state.split('\n').filter((l) => / support=\d+$/.test(l)).length;
+  return { hash: digest(full), facts, census: census(full), dropped, alarms: raised(alarmRels(state), state),
+           problems };
+}
+
+/** THE TYPESCRIPT ENGINE'S SHRUG SURFACES (docs/aggregates.md, "Shrugs, as
+ *  built"): `?` lists a shrug with its reason beside the rows that hold, `why`
+ *  explains one down to its root, and `whynot` tells a shrug from what is
+ *  unentailed. They are host verbs, which a world cannot call (the Rust
+ *  engine's are held by agg_cell_shrug_why, through the explain bridge), so
+ *  they are asked here, over the world agg_cell_shrug reads. */
+export function shrugSurfaces(): string[] {
+  const out: string[] = [];
+  // every cause this engine writes on a hole row is declared (shrug.rofl)
+  for (const c of [BUDGET_REASON, SPACE_REASON, ARITH_TYPE_REASON, ARITH_ZERO_REASON, ARITH_OVERFLOW_REASON,
+    STR_TYPE_REASON, STR_INDEX_REASON, STR_SEP_REASON, ATOM_NAME_REASON, SEALED_REASON, 'support_withdrawn', 'fault_left_out']) {
+    if (reasonOf(c) === undefined) out.push(`shrug.rofl does not declare the cause ${c}`);
+  }
+  const r = new Rofl();
+  r.load(BOOT);
+  if (!r.load(fs.readFileSync(path.join(ROOT, 'examples/checks/agg-shrug-data.rofl'), 'utf8')).ok) return ['agg-shrug-data.rofl does not load'];
+  const q = r.query('sd_lose(X)');
+  if (q.rows.map((x) => x.text).join('; ') !== 'X = b; X = e') out.push(`? sd_lose(X) holds for ${q.rows.map((x) => x.text).join('; ')}, not b and e`);
+  const sh = (q.shrugs ?? []).map((x) => `${x.text} ${x.reason}`).join('; ');
+  if (sh !== 'X = c inherited') out.push(`? sd_lose(X) lists the shrugs '${sh}', not 'X = c inherited'`);
+  if (!(q.shrugs ?? []).some((x) => x.line.includes('the answer reads another answer that is a shrug'))) out.push('? sd_lose(X) gives a shrug no reason text');
+  const v = r.query('sd_val(b, V)');
+  if ((v.shrugs ?? []).map((x) => x.text).join() !== 'V = _') out.push(`? sd_val(b, V) names what it does not know as '${(v.shrugs ?? []).map((x) => x.text).join()}', not 'V = _'`);
+  const w = r.why('sd_lose(c)');
+  if (!w.text.includes('root $rule(') || !w.text.includes('arith_overflow, arithmetic left the integer range')) out.push(`why sd_lose(c) does not reach its root: ${w.text.split('\n')[0]}`);
+  if (!w.text.includes('sd_win[main](c)@now :- sd_big[main](?B)@now')) out.push('why sd_lose(c) does not show the rule its root is');
+  const n1 = r.whynot('sd_settled(c)');
+  if (n1.holds || !n1.text.startsWith('whynot sd_settled[main](c): no answer, a shrug')) out.push(`whynot sd_settled(c) does not call it a shrug: ${n1.text.split('\n')[0]}`);
+  // a world a wall cut: what does not hold is no answer, for the budget
+  const b = new Rofl();
+  b.load(BOOT, { budget: 50 });
+  b.load(fs.readFileSync(path.join(ROOT, 'examples/checks/budget-wall.rofl'), 'utf8'), { budget: 50 });
+  b.evaluate(50);
+  const bq = b.query('tri(X, Y, Z)');
+  if (!(bq.shrugs ?? []).some((x) => x.reason === 'budget' && x.line.includes('spent(steps, 51, 50)'))) out.push(`? over a world the wall cut lists no budget shrug: ${JSON.stringify(bq.shrugs ?? [])}`);
+  const n2 = r.whynot('sd_lose(a)');
+  if (n2.text.includes('a shrug') || !n2.text.includes('failed premise')) out.push(`whynot sd_lose(a) does not show an unentailed literal's failed premises: ${n2.text.split('\n').slice(0, 2).join(' / ')}`);
+  return out;
+}
+
+/** EVERY DOOR ADMITS AN AGGREGATE AND ANSWERS AS THE RUST ENGINE DOES
+ *  (docs/aggregates.md, "The TypeScript engine, as built"): `load`, `assert`
+ *  and `assertClauses` of each kind a program writes give one state, and a
+ *  snapshot the Rust engine saved (cells, lattices, a join read, an interval
+ *  function, a dominance) reopens here to the state it saved, and evaluates
+ *  again to it. A world cannot ask this (it is the host's contract), so it is
+ *  asked here. */
+export function aggregateDoors(): string[] {
+  const out: string[] = [];
+  const base = 'edb(agg_door_q). agg_door_q(1). agg_door_q(2). edb(agg_door_e). agg_door_e(k, 1). agg_door_e(k, 2). edb(agg_door_s). agg_door_s(set(1, 2)).';
+  const progs: [string, string][] = [
+    ['a count', 'agg_door(N) :- N is count(X : agg_door_q(X)).'],
+    ['a lattice', 'lattice agg_door_l(X, min D).\nagg_door_l(X, D) :- agg_door_e(X, D).'],
+    ['a threshold', 'agg_door_t() :- at_least(2, X : agg_door_q(X)).'],
+    ['a join', 'lattice agg_door_j(X, union S).\nagg_door_j(K, set(X)) :- agg_door_e(K, X).'],
+    ['a join read', 'agg_door_in(E) :- agg_door_s(S), E in S.\nagg_door_sub(S) :- agg_door_s(S), set(1) subset S.'],
+    ['a widening', 'lattice agg_door_w(X, hull I) widen 2.\nagg_door_w(K, iv(X, X)) :- agg_door_e(K, X).'],
+    ['an interval function', 'agg_door_iv(J) :- agg_door_q(I), J is ivadd(I, 1).'],
+    ['a dominance rule', 'agg_door_d(K, X) :- agg_door_e(K, X).\nagg_door_d(K, X) <= agg_door_d(K, Y) :- Y < X.'],
+  ];
+  const fresh = (): Rofl => { const r = new Rofl(); r.load(BOOT); r.load(base); return r; };
+  const stateOf = (f: (r: Rofl) => { ok: boolean; diagnostics: string[] }): string => {
+    const r = fresh();
+    const res = f(r);
+    if (!res.ok) return `refused: ${res.diagnostics.join('; ')}`;
+    r.evaluate();
+    return r.store.canonicalState();
+  };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-agg-door-'));
+  try {
+    for (const [what, prog] of progs) {
+      const viaLoad = stateOf((r) => r.load(prog));
+      if (viaLoad.startsWith('refused')) { out.push(`load ${what}: ${viaLoad}`); continue; }
+      // the plan the aggregate evaluator used, asked as of any program: each negation at the level its head closes at
+      try {
+        const r = fresh();
+        r.load(`${prog}\nagg_door_not(X) :- agg_door_q(X), not agg_door_e(k, X).`);
+        const plan = r.strataPlan().filter((x) => x.rel === 'agg_door_not');
+        if (plan.length !== 1 || typeof plan[0].level !== 'number') out.push(`strataPlan ${what}: ${JSON.stringify(plan)}, not one negation at a level`);
+      } catch (e) { out.push(`strataPlan ${what}: ${(e as Error).message}`); }
+      // `assert` and `assertClauses` take no declaration or dominance rule's
+      // neighbour in one call less than `load` does: each clause alone
+      const viaAssert = stateOf((r) => { for (const c of parseProgram(prog)) { const x = r.assertClauses([c]); if (!x.ok) return x; } return { ok: true, diagnostics: [] }; });
+      if (viaAssert !== viaLoad) out.push(`assertClauses ${what}: a state other than load's`);
+      const viaText = stateOf((r) => r.assert(prog));
+      if (viaText !== viaLoad) out.push(`assert ${what}: a state other than load's`);
+      if (!fs.existsSync(RUST)) continue;
+      const src = path.join(dir, 'door.rofl'), snap = path.join(dir, 'door.json');
+      fs.writeFileSync(src, `${base}\n${prog}\n`);
+      const rust = execFileSync(RUST, [path.join(ROOT, 'boot.rofl'), '--save', snap, src], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      if (normalise(rust) !== normalise(viaLoad)) out.push(`${what}: the TypeScript engine's state is not the Rust engine's`);
+      try {
+        const r = Rofl.fromSnapshot(fs.readFileSync(snap, 'utf8'));
+        if (normalise(r.store.canonicalState()) !== normalise(rust)) out.push(`${what}: a Rust snapshot reopened to another state`);
+        r.store.dirty = true;
+        r.evaluate();
+        if (normalise(r.store.canonicalState()) !== normalise(rust)) out.push(`${what}: a Rust snapshot evaluated again to another state`);
+      } catch (e) { out.push(`${what}: a Rust snapshot refused: ${(e as Error).message}`); }
+    }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  return out;
+}
+
+/** NO FRAME PER LEVEL: `why` and `whynot` of a chain 3000 derivations deep, by each TypeScript evaluator (the plain
+ *  one, and the aggregate one a lattice declaration hands the program to), reach its bottom with the text the Rust
+ *  engine writes on the same program: rust/rofl/tests/explain.rs holds the same lengths. A world cannot ask whynot
+ *  deeper than the explain bridge's three levels, so this is asked here. */
+export function deepExplain(): string[] {
+  const out: string[] = [], n = 3000;
+  const src = `edb(q). q(0).\np(C) :- q(C).\np(J) :- p(I), I < ${n}, J is I + 1.\nw(J) :- p(J), I is J - 1, w(I).\n`;
+  for (const [what, extra] of [['the plain evaluator', ''], ['the aggregate evaluator', 'lattice dd(C, min D).\ndd(C, 0) :- q(C).\n']]) {
+    const r = new Rofl();
+    r.load(BOOT);
+    if (!r.load(src + extra).ok) { out.push(`${what}: the chain does not load`); continue; }
+    try {
+      const why = r.why(`p(${n})`);
+      if (!why.ok || why.text.length !== 27_268_619 || !why.text.endsWith(`${n} is +(${n - 1},1) [builtin]`)) out.push(`${what}: why of a chain ${n} deep is ${why.text.length} characters (${why.text.slice(0, 80)}), not the Rust engine's 27268619`);
+      const wn = r.whynot(`w(${n})`, { depth: n + 10, nodes: 10 * n });
+      const lines = wn.text.split('\n').length;
+      if (wn.holds || wn.text.length !== 36_585_121 || lines !== 6021) out.push(`${what}: whynot of a chain ${n} deep is ${wn.text.length} characters in ${lines} lines (${wn.text.slice(0, 80)}), not the Rust engine's 36585121 in 6021`);
+    } catch (e) { out.push(`${what}: ${(e as Error).message}`); }
+  }
+  return out;
+}
 
 // ------------------------------------------------------------- the hosts
 //
@@ -362,8 +757,10 @@ function render(rows: [World, Answer][]): string {
 let goldenPack: Rofl | null | undefined;
 const golden = (): Rofl | null => (goldenPack ??= pack('facts/goldens.rofl'));
 
-function parse(): Map<string, { hash: string; facts: number; census: Map<string, number> }> {
-  const r = golden();
+/** The goldens of facts/goldens.rofl, or of `text` in its place (another
+ *  revision of the file, which scripts/agg_breaks.ts --changed compares). */
+export function parse(text?: string): Map<string, { hash: string; facts: number; census: Map<string, number> }> {
+  const r = text === undefined ? golden() : pack('facts/goldens.rofl', text);
   const out = new Map<string, { hash: string; facts: number; census: Map<string, number> }>();
   if (!r) return out;
   for (const [n, h, f] of col(r, 'golden_state(N, H, F)', 'N', 'H', 'F'))
@@ -384,10 +781,128 @@ function parseHosts(): Map<string, { hash: string; exit: number; lines: number }
 
 // ------------------------------------------------------------------- main
 
+/** Every `.rofl.md` world the walk will read, so the reads can run at once. */
+function mdWorldPaths(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string, deep: boolean): void => {
+    for (const e of fs.readdirSync(dir).sort()) {
+      const p = path.join(dir, e);
+      if (fs.statSync(p).isDirectory()) { if (deep || dir.endsWith('examples')) walk(p, deep); continue; }
+      if (e.endsWith('.rofl.md')) out.push(p);
+    }
+  };
+  walk(path.join(ROOT, 'examples'), false);
+  walk(path.join(ROOT, 'rules'), true);
+  return out;
+}
+
+/** One world against its golden: null when it passes, else its FAIL line. */
+export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean): string | null {
+  if (!g) return `${w.name}: no golden — bless it or delete the world`;
+  const ts = answerTS(w);
+  const rs = rustMissing ? null : answerRust(w);
+  const bad: string[] = [];
+  if (w.oneEngine === 'rust') {
+    if (!rs) return `${w.name.padEnd(28)} rust-only world and no Rust binary`;
+    if (rs.hash !== g.hash) {
+      const moved = [...new Set([...g.census.keys(), ...rs.census.keys()])]
+        .filter((k) => (g.census.get(k) ?? 0) !== (rs.census.get(k) ?? 0))
+        .map((k) => `${k} ${g.census.get(k) ?? 0}->${rs.census.get(k) ?? 0}`);
+      bad.push(`rust: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
+    }
+    for (const p of rs.problems) bad.push(p);
+    for (const a of rs.alarms) bad.push(`ALARM ${a}`);
+    return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
+  }
+  for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
+    if (!a || a.hash === g.hash) continue;
+    const moved = [...new Set([...g.census.keys(), ...a.census.keys()])]
+      .filter((k) => (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
+      .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);
+    bad.push(`${who}: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
+  }
+  // AN ALARM IS RED WHATEVER THE GOLDEN SAYS. Blessing records a number;
+  // this is a claim that the number must be none, and the two must not be
+  // confusable — a world that raises one fails even when its census matches.
+  // So is a row the world's files say its state must hold, in either engine.
+  for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
+    if (!a) continue;
+    for (const p of a.problems) bad.push(`${who}: ${p}`);
+    for (const x of a.alarms) if (who === 'ts' || !ts.alarms.includes(x)) bad.push(`ALARM ${who === 'ts' ? '' : 'rust: '}${x}`);
+  }
+  return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
+}
+
+/** The answer a world is blessed from, and what a person must read about it. */
+export function blessAnswer(w: World): { a: Answer; said: string[] } {
+  const ts = answerTS(w);
+  if (w.oneEngine !== 'rust') return { a: ts, said: [...ts.problems, ...ts.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) };
+  const rs = answerRust(w);
+  if (!rs) throw new Error(`${w.name}: rust-only world and no Rust binary`);
+  return { a: rs, said: [...rs.problems, ...rs.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) };
+}
+
+const SELF = new URL(import.meta.url).pathname;
+
+/** A command run beside the worlds, its output read when it is needed. */
+const beside = (script: string, ...args: string[]): Promise<{ status: number | null; out: string }> =>
+  new Promise((resolve) => {
+    const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, script), ...args, '--check'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    p.stdout.on('data', (d) => { out += d; });
+    p.stderr.on('data', (d) => { out += d; });
+    p.on('close', (status) => resolve({ status, out }));
+  });
+
+/** A selection that names nothing is a red run with the reason, not a stack. */
+function refuse(e: unknown): never {
+  console.log(`FAIL ${(e as Error).message}`);
+  process.exit(1);
+}
+
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
-  const ws = worlds();
-  if (process.argv.includes('--bless')) {
+  const { sel, rest } = parseSelector(process.argv.slice(2));
+  const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
+  if (sel && (blessing || hosts)) throw new Error('a selection checks worlds; it neither blesses nor runs the demos');
+  // NO GOLDEN IS TAKEN, AND NO RUN IS JUDGED, WITH A FAULT SWITCHED ON. The
+  // breaks build obeys ROFL_BREAK and ROFL_KERNEL_OVERRIDE, and either one
+  // left exported in a shell turned a bless into a golden of the fault
+  // (`ROFL_PROFILE=breaks ROFL_BREAK=max npm run bless` blessed 23 moves). The
+  // pool workers of scripts/agg_breaks.ts set both empty and never run this.
+  const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_READER'].filter((k) => process.env[k]);
+  if (planted.length) refuse(new Error(`${planted.map((k) => `${k}=${process.env[k]}`).join(', ')} is set: a planted fault is switched on; unset it`));
+  if (blessing && PROFILE === 'breaks') refuse(new Error('ROFL_PROFILE=breaks is the build that holds every planted fault; bless with release or fast'));
+  if (blessing && fs.existsSync(RUST) && fs.readFileSync(RUST).includes('ROFL_BREAK')) {
+    refuse(new Error(`${path.relative(ROOT, RUST)} is built with the planted faults (--features breaks); bless with a build without them`));
+  }
+  const plain = !blessing && !hosts;
+  const docsCheck = plain && !sel ? beside('scripts/render_docs.ts') : null;
+  // the generated packs are checked beside the worlds that read them: all of
+  // them at once in a whole run, and under a selection once it is known
+  const SPEC_PACK = 'facts/spec-census.rofl', BREAKS_PACK = 'examples/checks/agg-breaks-census.rofl';
+  const packCheck = (f: string) => f === SPEC_PACK ? beside('scanners/spec.ts') : beside('scripts/agg_breaks.ts', '--census');
+  const early = plain && !sel ? new Map([SPEC_PACK, BREAKS_PACK].map((f) => [f, packCheck(f)])) : null;
+  // a selection of declared worlds needs no walk, and the walk reads every
+  // Markdown world; anything else is looked for among all of them
+  let picked: World[] | null = null, why: string[] = [];
+  if (sel && sel.files.length === 0) {
+    try { ({ picked, why } = select(declared(), sel)); } catch (e) { if (!(e instanceof NotAWorld)) refuse(e); }
+  }
+  if (!picked) {
+    if (!hosts) await prefetchMd(mdWorldPaths(), jobs());
+    const all = worlds();
+    try { ({ picked, why } = sel ? select(all, sel) : { picked: all, why: [] }); } catch (e) { refuse(e); }
+  }
+  const ws = picked!;
+  // A GENERATED PACK IS REGENERATED AND COMPARED WHENEVER A WORLD THAT READS IT
+  // IS CHECKED, a selection included: a selective run that read the pack only
+  // against its golden would pin the photograph against itself
+  // (f_a_golden_over_a_generated_census_pins_the_photograph_against_itself).
+  const check = (f: string) => early ? early.get(f)!
+    : plain && ws.some((w) => w.files.includes(path.join(ROOT, f))) ? packCheck(f) : null;
+  const specCheck = check(SPEC_PACK), breaksCheck = check(BREAKS_PACK);
+  if (blessing) {
     // BLESSING SAYS WHAT IT CHANGES. The one real hazard of a committed golden
     // is blessing over a defect, and it was paid for within an hour of this
     // file existing: a bless ran while a planted mutant was still in
@@ -403,7 +918,12 @@ if (isMain) {
     hostRows = process.argv.includes('--hosts')
       ? demos().map((f) => [path.basename(path.dirname(f)), answerDemo(f)] as [string, { hash: string; exit: number; lines: number }])
       : [...hostsBefore];
-    const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
+    // A RUST-ONLY WORLD IS BLESSED FROM THE RUST ANSWER, which is the only one
+    // it has; its problems and parity are printed, and a bless over them is a
+    // decision a person reads in the output.
+    const answers = await runPool<{ a: Answer; said: string[] }>(ws.map((w) => ({ mod: SELF, fn: 'blessAnswer', args: [w] })));
+    const rows: [World, Answer][] = ws.map((w, i) => [w, answers[i].a]);
+    for (const { said } of answers) for (const l of said) console.log(l);
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
       console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
@@ -428,7 +948,7 @@ if (isMain) {
     process.exit(0);
   }
 
-  if (process.argv.includes('--hosts')) {
+  if (hosts) {
     const g = parseHosts(); const t = Date.now();
     let ok = 0; const bad: string[] = [];
     for (const f of demos()) {
@@ -446,53 +966,51 @@ if (isMain) {
 
   const want = parse();
   const t0 = Date.now();
-  let pass = 0; const fail: string[] = [];
   const rustMissing = !fs.existsSync(RUST);
-  for (const w of ws) {
-    const g = want.get(w.name);
-    if (!g) { fail.push(`${w.name}: no golden — bless it or delete the world`); continue; }
-    const ts = answerTS(w);
-    const rs = rustMissing ? null : answerRust(w);
-    const bad: string[] = [];
-    for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
-      if (!a || a.hash === g.hash) continue;
-      const moved = [...new Set([...g.census.keys(), ...a.census.keys()])]
-        .filter((k) => (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
-        .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);
-      bad.push(`${who}: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
-    }
-    // AN ALARM IS RED WHATEVER THE GOLDEN SAYS. Blessing records a number;
-    // this is a claim that the number must be none, and the two must not be
-    // confusable — a world that raises one fails even when its census matches.
-    for (const a of ts.alarms) bad.push(`ALARM ${a}`);
-    if (bad.length === 0) pass++; else fail.push(`${w.name.padEnd(28)} ${bad.join('  |  ')}`);
-  }
+  const tasks: Task[] = ws.map((w) => ({ mod: SELF, fn: 'checkWorld', args: [w, want.get(w.name), rustMissing] }));
+  tasks.push({ mod: SELF, fn: 'aggregateDoors', args: [] });
+  tasks.push({ mod: SELF, fn: 'shrugSurfaces', args: [] });
+  tasks.push({ mod: SELF, fn: 'deepExplain', args: [] });
+  const results = await runPool<string | null | string[]>(tasks);
+  const deep = results.pop() as string[];
+  const surfaces = results.pop() as string[];
+  const doors = results.pop() as string[];
+  const fail = (results as (string | null)[]).filter((x): x is string => x !== null);
+  const pass = results.length - fail.length;
+  for (const p of doors) fail.push(`aggregate door: ${p}`);
+  for (const p of surfaces) fail.push(`shrug surface: ${p}`);
+  for (const p of deep) fail.push(`deep explain: ${p}`);
   // A CHECK THAT CANNOT RUN SAYS SO. A missing Rust binary halves the oracle,
   // and a run that quietly checked one engine would read exactly like one that
   // checked two.
   if (rustMissing) console.log(`!! ${path.relative(ROOT, RUST)} is not built — checking ONE engine, not two`);
-  // A DOCUMENT THAT LIES ABOUT THE TREE IS AS RED AS A FACT THAT MOVED, and it
-  // costs about a second. CLAUDE.md was hand-patched three times in two days
-  // because nothing here could see it.
-  const docs = spawnSync(process.execPath,
-    ['--experimental-strip-types', path.join(ROOT, 'scripts/render_docs.ts'), '--check'],
-    { encoding: 'utf8' });
-  if (docs.status !== 0) {
-    for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
+  // A CHECK THAT FAILS IS RED WHATEVER IT PRINTED: one that crashed, or was
+  // killed (status null), says none of the words looked for, and was green.
+  const failed = (c: { status: number | null; out: string }, words: RegExp, what: string): void => {
+    if (c.status === 0) return;
+    const said = c.out.split('\n').filter((l) => words.test(l)).map((l) => l.trim());
+    fail.push(...(said.length ? said : [`${what} exited ${c.status ?? 'on a signal'}`]));
+  };
+  if (sel) {
+    const also = [specCheck && 'the [checks] book', breaksCheck && 'the census of planted faults'].filter(Boolean);
+    console.log(`!! ${ws.length} worlds selected, ${why.join('; ') || sel.worlds.join(', ')}; the rest and the documents are not checked${also.length ? `; ${also.join(' and ')} regenerated and compared` : ''}`);
+  } else {
+    // A DOCUMENT THAT LIES ABOUT THE TREE IS AS RED AS A FACT THAT MOVED, and it
+    // costs about a second. CLAUDE.md was hand-patched three times in two days
+    // because nothing here could see it.
+    failed(await docsCheck!, /STALE|BROKEN|DANGLING/, 'scripts/render_docs.ts --check');
   }
   // AND THE [checks] BOOK, for the same reason and by the same means. The
-  // coverage world reads `facts/spec-census.rofl` — which checks exist, which
-  // citations resolve — and a world cannot walk a filesystem, so the pack is
-  // generated. A generated pack a golden reads is a photograph pinned against
-  // itself unless something regenerates and compares
-  // (f_a_golden_over_a_generated_census_pins_the_photograph_against_itself),
+    // coverage world reads `facts/spec-census.rofl` — which checks exist, which
+    // citations resolve — and a world cannot walk a filesystem, so the pack is
+    // generated. A generated pack a golden reads is a photograph pinned against
+    // itself unless something regenerates and compares
+    // (f_a_golden_over_a_generated_census_pins_the_photograph_against_itself),
   // so this is that something.
-  const spec = spawnSync(process.execPath,
-    ['--experimental-strip-types', path.join(ROOT, 'scanners/spec.ts'), '--check'],
-    { encoding: 'utf8' });
-  if (spec.status !== 0) {
-    for (const l of (spec.stdout + spec.stderr).split('\n').filter((l) => /STALE|Error/.test(l))) fail.push(l.trim());
-  }
+  if (specCheck) failed(await specCheck, /STALE|Error/, 'scanners/spec.ts --check');
+  // AND THE CENSUS OF PLANTED FAULTS, which the world agg_breaks_census
+  // reads: the table of scripts/agg_breaks.ts and the brk! sites in the source
+  if (breaksCheck) failed(await breaksCheck, /STALE|Error/, 'scripts/agg_breaks.ts --census --check');
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);

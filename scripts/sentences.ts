@@ -1,153 +1,202 @@
-// sentences.ts — the sentence generator: eight structures over the reflection.
+// sentences.ts — a world's file through the sentence form (docs/aggregates.md, "The sentence form, as built").
 //
-//   npm run sentences -- rules/js-*.rofl        (needs rust/target/release/rofl-render)
+// A `.rofl.md` file of a declared world is read into rules by the reader. Under `check_opt(W, sentences, 1)`
+// it goes once more round: its rules are written as sentences by rofl-render and read back, and so is every
+// `.rofl` file whose first line is `-- through-sentences`. The world loads what was read back, and beside it
+// the rule ids of what was written, each rule's variables renamed V0, V1, ... in the order the clause writes
+// them (the reader writes the read-back the same way, `canonVars`), with the declarations it made. The world's
+// own alarms (examples/checks/agg-phrase-check.rofl) then say what the round trip lost or gained.
 //
-// Dumps the program as facts, propagates nouns to argument positions, picks a
-// noun per position by support, then lets rules/sentences.rofl decide the
-// structure, subject and markers of every relation. Prints a table and, with
-// --md FILE, writes it as Markdown.
-import { readFileSync, writeFileSync } from 'node:fs';
+// The reader is `ROFL_READER` when set (scripts/agg_breaks.ts plants a fault in a copy of it), and rofl-render is
+// the one ROFL_PROFILE builds, so a break reaches both.
 import { execFileSync } from 'node:child_process';
-import { Rofl } from '../src/api.ts';
+import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { parseProgram } from '../src/parser.ts';
+import { ruleIdOf } from '../src/reflect.ts';
+import { canonClauseSets, type BodyElem, type Clause, type Term } from '../src/unify.ts';
+import { libFiles, parseFront } from '../notebook/front.ts';
 
-const ROOT = new URL('..', import.meta.url).pathname;
-const argv = process.argv.slice(2);
-let md: string | null = null;
-const mi = argv.indexOf('--md'); if (mi >= 0) { md = argv[mi + 1]; argv.splice(mi, 2); }
-if (!argv.length) { console.error('usage: npm run sentences -- <rules.rofl...> [--md out.md]'); process.exit(2); }
+const ROOT = path.resolve(import.meta.dirname, '..');
+export const THROUGH = '-- through-sentences';
+/** This file's own text is in every cache key: what it writes beside a reading changes with it. */
+const SELF = fs.readFileSync(new URL(import.meta.url), 'utf8');
+const reader = (): string => process.env.ROFL_READER || path.join(ROOT, 'scripts/read.ts');
+const renderer = (): string => path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl-render');
 
-const facts = execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...argv], { maxBuffer: 1 << 28 }).toString();
-const INFER = `
-edb(seed).
-seed(ast_node, 0, node).   seed(ast_node, 1, kind).      seed(ast_node, 2, file).   seed(ast_node, 3, line).
-seed(ast_child, 0, node).  seed(ast_child, 1, child).    seed(ast_child, 2, index). seed(ast_child, 3, node).
-seed(ast_attr, 0, node).   seed(ast_attr, 1, attribute). seed(ast_attr, 2, value).
-seed(ast_name, 0, node).   seed(ast_name, 1, name).
-seed(ast_value, 0, node).  seed(ast_value, 1, text).
-seed(key_name, 0, node).   seed(key_name, 1, key).
-seed(ast_within, 0, node). seed(ast_within, 1, node).
-at(R, K, Rel, I, V) :- lit(R, K, Rel, _), argv(R, K, I, V).
-at(R, 0, Rel, I, V) :- head(R, Rel), argv(R, 0, I, V).
-var_noun(R, V, N) :- at(R, K, ast_node, 0, V), arga(R, K, 1, Kind), kind_noun(Kind, N).
-var_noun(R, V, N) :- at(R, K, ast_node, 0, V), argv(R, K, 1, KV), at(R, _, Set, 0, KV), kind_noun(Set, N).
-var_noun(R, V, N) :- at(R, K, Rel, I, V), noun(Rel, I, N).
-vote(Rel, I, N, R, K) :- at(R, K, Rel, I, V), var_noun(R, V, N).
-noun(Rel, I, N) :- seed(Rel, I, N).
-noun(Rel, I, N) :- vote(Rel, I, N, _, _).
-`;
-// two worlds: the propagation is the heavy one, the eight rules are light
-const boot = readFileSync(`${ROOT}boot.rofl`, 'utf8');
-const t0 = Date.now();
-const r1 = new Rofl();
-const res1: any = r1.load([boot, readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8'), INFER, facts].join('\n'), { budget: 300_000_000 });
-if (!res1.ok) { console.error(res1.diagnostics.slice(0, 3).join('\n')); process.exit(1); }
-console.error(`nouns propagated in ${Date.now() - t0} ms${res1.partial ? ' PARTIAL' : ''}`);
-const clean = (x: any) => String(x).replace(/^"|"$/g, '');
-let rows = (q: string) => (r1.query(q).rows as any[]).map((x) => x.bindings);
+export const isThrough = (f: string): boolean => f.endsWith('.rofl') && fs.readFileSync(f, 'utf8').startsWith(THROUGH);
 
-// one noun per position, by support; three or more node kinds at a position is a node
-const VALUE = new Set(['name', 'key', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'value', 'literal', 'child']);
-const support = new Map<string, Map<string, number>>();
-for (const b of rows('vote(Rel, I, N, R, K)')) {
-  const pos = `${b.Rel}/${b.I}`;
-  const m = support.get(pos) ?? new Map(); support.set(pos, m);
-  m.set(clean(b.N), (m.get(clean(b.N)) ?? 0) + 1);
+/** A clause with its variables renamed V0, V1, ... in the order it writes them; `_` stays what it is. */
+function canonNames(c: Clause): Clause {
+  const names = new Map<string, string>();
+  const t = (x: Term): Term => x.k === 'v' ? (x.name.startsWith('_$') ? x : { k: 'v', name: names.get(x.name) ?? (names.set(x.name, `V${names.size}`), names.get(x.name)!) })
+    : x.k === 'f' ? { ...x, args: x.args.map(t) } : x;
+  const lit = (l: Clause['head']) => ({ ...l, args: l.args.map(t) });
+  const el = (b: BodyElem): BodyElem => b.t === 'pos' || b.t === 'neg' ? { ...b, lit: lit(b.lit) } : b.t === 'bi' ? { ...b, l: t(b.l), r: t(b.r) }
+    : (() => { const res = t(b.res), vals = b.vals.map(t), keys = b.keys.map(t); return { ...b, res, vals, keys, body: b.body.map(el) }; })();
+  const head = lit(c.head);
+  const dominator = c.dominator ? lit(c.dominator) : undefined;
+  return { ...c, head, ...(dominator ? { dominator } : {}), body: c.body.map(el) };
 }
-const pick = new Map<string, string>();
-for (const [pos, m] of support) {
-  const sorted = [...m.entries()].sort((a, b) => b[1] - a[1]);
-  const kinds = sorted.filter(([n]) => !VALUE.has(n) && n !== 'node');
-  pick.set(pos, kinds.length >= 3 || (m.has('node') && kinds.length >= 2) ? 'node' : sorted[0][0]);
-}
-const picks = [...pick].map(([pos, n]) => { const [rel, i] = pos.split('/'); return `pick(${rel}, ${i}, ${JSON.stringify(n)}).`; }).join('\n');
-const t1 = Date.now();
-const r = new Rofl();
-const res: any = r.load([boot, readFileSync(`${ROOT}rules/sentences.rofl`, 'utf8'), facts, picks].join('\n'), { budget: 100_000_000 });
-if (!res.ok) { console.error(res.diagnostics.slice(0, 3).join('\n')); process.exit(1); }
-console.error(`sentences decided in ${Date.now() - t1} ms${res.partial ? ' PARTIAL' : ''}`);
-rows = (q: string) => (r.query(q).rows as any[]).map((x) => x.bindings);
 
-// assemble
-const arity = new Map<string, number>(); for (const b of rows('arity(Rel, N)')) arity.set(String(b.Rel), Number(b.N));
-const words = new Map<string, string[]>(); for (const b of rows('word(Rel, I, W)')) { const w = words.get(String(b.Rel)) ?? []; w[Number(b.I)] = clean(b.W); words.set(String(b.Rel), w); }
-const takes = new Map<string, string>(); for (const b of rows('takes(Rel, S)')) takes.set(String(b.Rel), String(b.S));
-const admits = new Map<string, string[]>(); for (const b of rows('admits(Rel, S)')) admits.set(String(b.Rel), [...(admits.get(String(b.Rel)) ?? []), String(b.S)]);
-const subject = new Map<string, number>(); for (const b of rows('subject(Rel, I)')) subject.set(String(b.Rel), Number(b.I));
-const object = new Map<string, number>(); for (const b of rows('object(Rel, I)')) object.set(String(b.Rel), Number(b.I));
-const marker = new Map<string, string>(); for (const b of rows('marker(Rel, I, M)')) marker.set(`${b.Rel}/${b.I}`, String(b.M).replace('_', ' '));
-const pair = new Map<string, { q: string; s: number; i: number; j: number }>(); for (const b of rows('pair(Rel, Q, S, I, J)')) if (!pair.has(String(b.Rel))) pair.set(String(b.Rel), { q: String(b.Q), s: Number(b.S), i: Number(b.I), j: Number(b.J) });
-const plural = (q: string) => { const w = (words.get(q) ?? q.split('_')).filter((x) => x && x !== 'of' && x !== 'to'); const last = w[w.length - 1] ?? q; return [...w.slice(0, -1), last.endsWith('s') ? last : last + 's'].join(' '); };
-const SKIP = new Set(['phrase', 'kind_noun', 'edb', 'seed', 'pick']);
-const VAR = ['X', 'Y', 'Z', 'W', 'U', 'V'];
-const art = (n: string) => (/^[aeiou]/.test(n) ? 'an' : 'a');
-const np = (rel: string, i: number) => { const n = pick.get(`${rel}/${i}`); const v = VAR[i] ?? `A${i}`; return n ? (VALUE.has(n) ? `${n} ${v}` : `${art(n)} ${n} ${v}`) : v; };
-function sentence(rel: string): string {
-  const s = takes.get(rel); if (!s) return '(no structure)';
-  const n = arity.get(rel) ?? 0, S = subject.get(rel) ?? 0, O = object.get(rel);
-  const w = (words.get(rel) ?? []).filter(Boolean);
-  const rest = () => { const out: string[] = []; for (let i = 0; i < n; i++) { if (i === S || i === O) continue; const m = marker.get(`${rel}/${i}`); out.push(`${m ?? '?'} ${np(rel, i)}`); } return out.length ? ' ' + out.join(' ') : ''; };
-  const Sn = np(rel, S), On = O === undefined ? '' : (['may', 'the_of', 'role_of', 'has'].includes(s) ? (VAR[O] ?? `A${O}`) : np(rel, O));
-  switch (s) {
-    case 'adjective': return `${Sn} is ${w.join(' ')}.`;
-    case 'bare_verb': return `${Sn} ${w.join(' ')}.`;
-    case 'verb': return `${Sn} ${w.join(' ')} ${On}${rest()}.`;
-    case 'the_of': return `the ${w.slice(0, -1).join(' ')} of ${Sn} is ${On}${rest()}.`;
-    case 'has': return `${Sn} has ${w.filter((x) => x !== 'has').join(' ')} ${On}${rest()}.`;
-    case 'passive': return `${Sn} is ${w.join(' ')}${On ? ' by ' + On : ''}${rest()}.`;
-    case 'role_of': return `${Sn} is the ${w.join(' ')} of ${On}.`;
-    case 'may': return `${Sn} may be the ${w.slice(2).join(' ')} ${On}.`;
-    case 'among': return `${On} is among the ${w.join(' ')} of ${Sn}.`;
-    case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key'); const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); return `the ${w.join(' ')} ${VAR[K ?? 0]} of ${Sn} is ${Ov === undefined ? '' : np(rel, Ov)}.`; }
-    case 'pair': { const p = pair.get(rel)!; const others: string[] = []; for (let i = 0; i < n; i++) if (![p.s, p.i, p.j].includes(i)) others.push(`${marker.get(`${rel}/${i}`) ?? '?'} ${np(rel, i)}`); return `${np(rel, p.s)} has two ${plural(p.q)} ${VAR[p.i]} and ${VAR[p.j]}${others.length ? ' ' + others.join(' ') : ''}.`; }
+/** What a program writes, as the facts a round trip is held to. */
+export function written(text: string): string[] {
+  const out = ['edb(sentence_want).', 'edb(sentence_rel).', 'edb(sentence_lattice).', 'edb(sentence_widen).', 'edb(sentence_tag).'];
+  const rels = new Set<string>();
+  for (const c of parseProgram(text)) {
+    if (c.lattice !== undefined) {
+      out.push(c.tag ? `sentence_tag(${c.head.rel}, ${c.head.args.length}, ${c.lattice}).` : `sentence_lattice(${c.head.rel}, ${c.head.args.length}, ${c.lattice}).`);
+      if (c.widen !== undefined) out.push(`sentence_widen(${c.head.rel}, ${c.widen}).`);
+      rels.add(c.head.rel);
+      continue;
+    }
+    if (c.body.length === 0) continue;
+    out.push(`sentence_want(${ruleIdOf(canonClauseSets(canonNames(c)))}).`);
+    rels.add(c.head.rel);
   }
-  return '?';
+  for (const r of rels) out.push(`sentence_rel(${r}).`);
+  return out;
 }
-const hand = new Map<string, string>();
-for (const m of readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8').matchAll(/^phrase\((\w+), "([^"]+)"\)/gm)) if (!hand.has(m[1])) hand.set(m[1], m[2]);
-const handSig = new Map<string, string>();
-for (const m of readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8').matchAll(/^sig\((\w+), "([^"]+)"\)/gm)) handSig.set(m[1], m[2]);
-const sigStructure = (t: string) => { const name = t.slice(0, t.indexOf('(')); const n = (t.match(/,/g) ?? []).length + 1; return /^has_two_/.test(name) ? 'pair' : /^the_/.test(name) ? 'the_of' : /^has_/.test(name) ? 'has' : /^may_/.test(name) ? 'may' : /^is_the_.*_of$/.test(name) || /^is_(a|an|the)_/.test(name) ? 'role_of' : /^is_.*(ed|en)$/.test(name) ? 'passive' : /^is_/.test(name) ? (n === 1 ? 'adjective' : 'role_of') : n === 1 ? 'bare_verb' : 'verb'; };
-const handStructure = (t: string) => /^the .* of /.test(t) ? 'the_of' : / has /.test(t) ? 'has' : / may be /.test(t) ? 'may' : / is among /.test(t) ? 'among' : /^<[^>]+> is \w+ed\b/.test(t) ? 'passive' : /^<[^>]+> is (a|an|the) /.test(t) ? 'role_of' : /^<[^>]+> is \w+$/.test(t) ? 'adjective' : 'verb';
 
-const rels = [...arity.keys()].filter((x) => !SKIP.has(x)).sort();
-const byStructure = new Map<string, number>();
-let agree = 0, disagree = 0; const dis: string[] = [];
-const lines: string[] = ['| relation | arity | takes | sentence | also admits | hand |', '|---|---|---|---|---|---|'];
-const sigLine = (rel: string) => '';
-for (const rel of rels) {
-  const s = takes.get(rel) ?? '-'; byStructure.set(s, (byStructure.get(s) ?? 0) + 1);
-  const h = hand.get(rel) ?? handSig.get(rel);
-  if (h) { const hs = hand.has(rel) ? handStructure(h) : sigStructure(h); if (hs === s) agree++; else { disagree++; dis.push(`${rel}: took ${s}, hand ${hs}: ${h}`); } }
-  lines.push(`| ${rel} | ${arity.get(rel)} | ${s} | ${sentence(rel)} | ${(admits.get(rel) ?? []).filter((x) => x !== s).join(', ')} | ${h ? h.replace(/\|/g, '\\|') : ''} |`);
-}
-console.log(`${rels.length} relations; structures: ${[...byStructure].sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s} ${n}`).join(', ')}`);
-console.log(`unmarked positions: ${rows('unmarked(Rel, I)').length}; subjects not at 0: ${[...subject].filter(([, i]) => i !== 0).length}`);
-console.log(`against the hand phrases: structure agrees ${agree}, disagrees ${disagree}`);
-for (const d of dis) console.log('  ' + d);
-console.log('\nsamples:');
-for (const rel of ['may_be_node', 'selects', 'field_of', 'class_member_static', 'member_value', 'resolves', 'plain_assign', 'catch_from_host', 'this_host', 'super_of', 'class_method_of', 'decorated_member', 'imports_name', 'eff_hidden_call', 'callee_shape', 'shape_verdict']) if (arity.has(rel)) console.log(`  ${rel.padEnd(22)} ${takes.get(rel)?.padEnd(9)} ${sentence(rel)}`);
-if (md) writeFileSync(md, `# Sentences, generated\n\n${lines.join('\n')}\n`);
-const sigOf = (rel: string): string => {
-  const st = takes.get(rel) ?? 'verb', n = arity.get(rel) ?? 0, S = subject.get(rel) ?? 0;
-  const w = (words.get(rel) ?? []).filter(Boolean);
-  const vn = (i: number) => `${pick.get(`${rel}/${i}`) ?? 'node'} ${VAR[i] ?? 'A' + i}`;
-  const rest = (skip: number[], lead: string) => { const out: string[] = []; for (let i = 0; i < n; i++) { if (skip.includes(i)) continue; const m = marker.get(`${rel}/${i}`); out.push(`${m ? m + ' ' : (out.length === 0 && lead ? lead + ' ' : '')}${vn(i)}`); } return out; };
-  const O = object.get(rel);
-  const stem = w.join('_');
-  let name = stem, args: string[] = [];
-  switch (st) {
-    case 'adjective': name = w[0] === 'is' ? stem : `is_${stem}`; args = [vn(S)]; break;
-    case 'bare_verb': args = [vn(S)]; break;
-    case 'verb': args = [vn(S), ...rest([S], '')]; break;
-    case 'passive': name = w[0] === 'is' ? stem : `is_${stem}`; args = [vn(S), ...rest([S], 'by')]; break;
-    case 'has': name = w[0] === 'has' ? stem : `has_${stem}`; args = [vn(S), ...rest([S], '')]; break;
-    case 'role_of': name = `is_the_${stem}_of`; args = [vn(S), ...rest([S], '')]; break;
-    case 'may': name = `may_be_the_${w.slice(2).join('_')}`; args = [vn(S), ...rest([S], '')]; break;
-    case 'the_of': name = `the_${w.slice(0, -1).join('_')}`; args = [`of ${vn(S)}`, ...(O === undefined ? [] : [`is ${vn(O)}`]), ...rest([S, O ?? -1], '')]; break;
-    case 'the_role': { const K = [...Array(n).keys()].find((i) => i !== S && pick.get(`${rel}/${i}`) === 'key') ?? -1; const Ov = [...Array(n).keys()].find((i) => i !== S && i !== K); name = `the_${stem}`; args = [`of ${vn(S)}`, ...(K >= 0 ? [vn(K)] : []), ...(Ov === undefined ? [] : [`is ${vn(Ov)}`]), ...rest([S, K, Ov ?? -1], '')]; break; }
-    case 'pair': { const p = pair.get(rel)!; name = `has_two_${plural(p.q).replace(/ /g, '_')}`; args = [vn(p.s), vn(p.i), vn(p.j), ...rest([p.s, p.i, p.j], '')]; break; }
-    default: args = [vn(S), ...rest([S], '')];
+/** What rofl-render wrote, as `sentence_of(Rel, Text)`: each rule's sentence under its anchor, each declaration and
+ *  dominance rule by the relation it names, links reduced to their words. A world asks it for a kind's own words
+ *  (examples/checks/agg-phrase-check.rofl), which a round trip alone cannot: a rule written back as rofl reads back too. */
+export function said(md: string): string[] {
+  const out: string[] = [];
+  const plain = (t: string) => t.replace(/<a id="\w+"><\/a>/g, '').replace(/\[([^\]]*)\]\(#[^)]*\)/g, '$1').replace(/\s+/g, ' ').replace(/[\\"]/g, "'").trim();
+  const paras = md.split(/\n\s*\n/);
+  for (const p of paras) {
+    const ids = [...p.matchAll(/<a id="(\w+)"><\/a>/g)];
+    if (ids.length) {
+      // one anchor per line in a list; a sentence of its own otherwise, its continuation lines with it
+      const lines = p.split('\n');
+      lines.forEach((l, i) => {
+        const m = /<a id="(\w+)"><\/a>/.exec(l);
+        if (!m) return;
+        let text = l;
+        for (let j = i + 1; j < lines.length && !/<a id=/.test(lines[j]) && /^\s+-|^\s{2,}/.test(lines[j]); j++) text += ' ' + lines[j];
+        for (const id of [...l.matchAll(/<a id="(\w+)"><\/a>/g)]) out.push(`sentence_of(${id[1]}, "${plain(text)}").`);
+      });
+      continue;
+    }
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? keeps |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3]}, "${plain(p)}").`);
   }
-  return `sig(${rel}, "${name}(${args.join(', ')})").`;
+  return out;
+}
+
+/** The reader's text and every file it imports, followed to the end: a reading is kept only for the reader that made it. */
+const readerTexts = new Map<string, string>();
+function readerText(): string {
+  const r = reader();
+  if (readerTexts.has(r)) return readerTexts.get(r)!;
+  const seen = new Set<string>(), todo = [r];
+  while (todo.length) {
+    const f = todo.pop()!;
+    if (seen.has(f) || !fs.existsSync(f)) continue;
+    seen.add(f);
+    for (const m of fs.readFileSync(f, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+\.ts)['"]/g)) todo.push(path.resolve(path.dirname(f), m[1]));
+  }
+  // by the path within the reader's tree, so a copy of the reader with only its vocabulary changed differs in that alone
+  const tree = path.resolve(path.dirname(r), '..');
+  const text = [...seen].sort().map((f) => path.relative(tree, f) + '\0' + fs.readFileSync(f, 'utf8')).join('\0');
+  readerTexts.set(r, text);
+  return text;
+}
+/** Every file of vocabulary or model a reading can load (read.ts, `libFiles`), from the reader's own tree: a reading is
+ *  kept only for the words it was read in. */
+const readerLibs = new Map<string, string>();
+function readerLib(): string {
+  const r = reader();
+  if (readerLibs.has(r)) return readerLibs.get(r)!;
+  const tree = path.resolve(path.dirname(r), '..');
+  const all = libFiles('docs/rings/any.rofl.md', { model: 'js', code: [], reads: [], keys: {} });
+  const text = [...new Set([...all.model, ...all.phrases])].sort().map((f) => f + '\0' + fs.readFileSync(path.join(tree, f), 'utf8')).join('\0');
+  readerLibs.set(r, text);
+  return text;
+}
+const rendererStamp = (): string => { const st = fs.statSync(renderer()); return `${renderer()}:${st.size}:${st.mtimeMs}`; };
+
+const cacheDir = (key: string): string => {
+  const d = path.join(os.tmpdir(), 'rofl-sentences', createHash('sha256').update(key).digest('hex').slice(0, 16));
+  fs.mkdirSync(d, { recursive: true });
+  return d;
 };
-if (md) writeFileSync(md.replace(/\.md$/, '.sigs.rofl'), '-- proposed signatures: every relation, the structure the eight rules chose, nouns by support\n' + rels.map(sigOf).join('\n') + '\n');
+/** Written whole or not at all, so two workers reading one file see one text. */
+function put(file: string, text: string): string {
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, file);
+  return file;
+}
+/** The expectations a file states, kept at the top of what is loaded in its place. */
+const expectations = (text: string): string[] =>
+  [...text.matchAll(/^(?:-- |<!-- )(expect-refusal|expect-row|expect-no-row): (.+?)(?: -->)?[ \t]*$/gm)].map((m) => `-- ${m[1]}: ${m[2].trim()}`)
+    .sort((a, b) => Number(b.startsWith('-- expect-refusal')) - Number(a.startsWith('-- expect-refusal')));
+
+/** What the reader could not read of the `.rofl.md` file `f` was read from: a world loads such a file as refused, with
+ *  `not read: <fragment>` for each, never as the rules that happened to read. */
+export const unreadOf = (f: string): string[] => fs.existsSync(`${f}.unread`) ? fs.readFileSync(`${f}.unread`, 'utf8').split('\n').filter(Boolean) : [];
+const UNREAD = /^unparsed \((\d+)\):\n((?:  .*\n?)*)/m;
+
+/** A `.rofl.md` file read into rules, with the expectations it states in comments. */
+export function readWorldMd(md: string): { rofl: string; phrases: string | null } {
+  const text = fs.readFileSync(md, 'utf8');
+  const reads = parseFront(text).reads.map((f) => fs.readFileSync(path.resolve(path.dirname(md), f), 'utf8'));
+  const dir = cacheDir(['md', SELF, ROOT, readerText(), readerLib(), md, text, ...reads].join('\0'));
+  const out = path.join(dir, path.basename(md).replace(/\.rofl\.md$/, '.rofl'));
+  const phrases = out.replace(/\.rofl$/, '.phrases.rofl');
+  if (!fs.existsSync(out)) {
+    const raw = path.join(dir, `raw.${process.pid}.rofl`);
+    const report = execFileSync('node', ['--experimental-strip-types', reader(), md, '--out', raw], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28 });
+    const m = UNREAD.exec(report);
+    const unread = m && Number(m[1]) > 0 ? m[2].split('\n').map((l) => l.trim()).filter(Boolean) : [];
+    if (unread.length) put(`${out}.unread`, unread.map((u) => `not read: ${u}`).join('\n') + '\n');
+    const said = raw.replace(/\.rofl$/, '.phrases.rofl');
+    if (fs.existsSync(said)) put(phrases, fs.readFileSync(said, 'utf8'));
+    put(out, [...expectations(text), fs.readFileSync(raw, 'utf8')].join('\n'));
+  }
+  return { rofl: out, phrases: fs.existsSync(phrases) ? phrases : null };
+}
+
+/** A `.rofl` file written as sentences and read back, beside what it wrote (`written`). */
+export function through(src: string, vocab: string[]): string {
+  const text = fs.readFileSync(src, 'utf8');
+  const key = ['through', SELF, ROOT, readerText(), readerLib(), rendererStamp(), process.env.ROFL_BREAK ?? '', src, text, ...vocab.map((v) => fs.readFileSync(v, 'utf8'))].join('\0');
+  const dir = cacheDir(key);
+  const stem = path.basename(src).replace(/\.rofl$/, '');
+  const out = path.join(dir, `${stem}.rofl`);
+  if (fs.existsSync(out)) return out;
+  // each worker renders into a directory of its own, the vocabulary beside the file
+  const work = path.join(dir, `w${process.pid}`);
+  execFileSync(renderer(), ['--out', work, src, ...vocab], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const md = path.join(work, `${stem}.rofl.md`), back = path.join(work, `${stem}.back.rofl`);
+  execFileSync('node', ['--experimental-strip-types', reader(), md, '--out', back, '--canon', '--vocab', src, ...vocab.flatMap((v) => ['--vocab', v])],
+    { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28 });
+  // and read once more against the source itself, which counts the rules and the declarations that came back exactly
+  // (read_md.ts, `canon`, an aggregate compared whole, a dominance with its dominating fact): `sentence_exact(rules, M, N)`,
+  // M of the source's N rules, `sentence_exact(facts, M, N)` and `sentence_exact(decls, M, N)`
+  const report = execFileSync('node', ['--experimental-strip-types', reader(), md, src, '--vocab', src, ...vocab.flatMap((v) => ['--vocab', v])],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28 });
+  const exact = /^rules round-tripped exactly: (\d+) of (\d+); facts: (\d+) of (\d+); declarations: (\d+) of (\d+)$/m.exec(report);
+  if (!exact) throw new Error(`${src}: the reader's round trip against its source reported no count`);
+  return put(out, [...expectations(text), fs.readFileSync(back, 'utf8'), ...written(text), 'edb(sentence_of).', ...said(fs.readFileSync(md, 'utf8')),
+    'edb(sentence_exact).', `sentence_exact(rules, ${exact[1]}, ${exact[2]}).`, `sentence_exact(facts, ${exact[3]}, ${exact[4]}).`, `sentence_exact(decls, ${exact[5]}, ${exact[6]}).`].join('\n') + '\n');
+}
+
+/** The file a world loads in the place of `f`: a `.rofl.md` read, and under `sentences` once more round. */
+export function materialize(f: string, sentences: boolean): string {
+  if (f.endsWith('.rofl.md')) {
+    const r = readWorldMd(f);
+    // a reading with a sentence not read is refused as it is: what did read goes no further round
+    if (!sentences || unreadOf(r.rofl).length) return r.rofl;
+    return through(r.rofl, [...(r.phrases ? [r.phrases] : []), path.join(ROOT, 'facts/phrases.rofl')]);
+  }
+  if (isThrough(f)) {
+    if (!sentences) throw new Error(`${path.basename(f)} starts ${THROUGH}, and its world has no check_opt(W, sentences, 1)`);
+    return through(f, [path.join(ROOT, 'facts/phrases.rofl')]);
+  }
+  return f;
+}

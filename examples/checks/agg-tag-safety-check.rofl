@@ -1,0 +1,23 @@
+-- examples/checks/agg-tag-safety-check.rofl — agg_tag_safety: the rules of
+-- agg-tag-safety-1-ok.rofl are accepted and evaluate: a to d at 6, walked on
+-- only from prefixes cheaper than 5 (a to c at 4, not the direct 7); every
+-- agg-tag-safety-N-refused-*.rofl is refused, each for the reason its first
+-- line names, so none of their rules reaches this world: a weight computed
+-- from a tag the engine already multiplies in (it would count twice), a read
+-- inside the recursion that is not monotone in the tag, one relation tagged
+-- and declared a lattice, one tagged twice in two semirings, a tag written
+-- at another arity, an asserted fact in a tag, and a body aggregate of
+-- another ⊕ as a tropical tag's weight; and two declaration rows written by
+-- hand, one with no slot for the tag and one naming no semiring.
+tsc_want(a, b, 2). tsc_want(a, c, 4). tsc_want(a, d, 6). tsc_want(b, c, 2). tsc_want(b, d, 4). tsc_want(c, d, 2).
+tsc_wrong(A, B, T) :- tsc_want(A, B, T), not tsf_c(A, B, T).
+tsc_wrong(A, B, T) :- tsf_c(A, B, T), not tsc_want(A, B, T).
+tsc_lost()         :- not tsf_one(a, 1).
+tsc_lost()         :- not tsf_min(a, 2).
+tsc_accepted(Rel)  :- concludes[$kernel](_, Rel), tsc_refused(Rel).
+tsc_refused(tsr_w). tsc_refused(tsr_mono). tsc_refused(tsr_lat). tsc_refused(tsr_two).
+tsc_refused(tsr_ar). tsc_refused(tsr_as). tsc_refused(tsr_cnt).
+tsc_refused(tsr_zero). tsc_refused(tsr_alg).
+alarm(tsc_wrong).
+alarm(tsc_lost).
+alarm(tsc_accepted).

@@ -1,0 +1,44 @@
+-- examples/checks/agg-sub-ticks-data.rofl — A FRONT ACROSS TICKS, for
+-- agg_sub_ticks (docs/aggregates.md, "Subsumption, as built").
+-- `ast_p(K, C, T)@next` stages a value: at tick 1 it is a base fact of
+-- ast_p@next, a relation no program can write, and a value given to the cell
+-- like the ones tick 1's own rules give. Tick 1 loses k's inputs and gains
+-- (2, 2) at k, which dominates the (3, 3) tick 0 carried; (1, 5) is on the
+-- front at tick 1 only by the carry.
+edb(ast_e).
+ast_e(k, 3, 3). ast_e(k, 1, 5). ast_e(k, 4, 4). ast_e(m, 2, 2).
+ast_e(K, C, T)@next :- ast_e(K, C, T), K != k.
+ast_e(k, 2, 2)@next :- ast_e(k, 1, 5).
+ast_p(K, C, T) :- ast_e(K, C, T).
+ast_p(K, C1, T1) <= ast_p(K, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+ast_p(K, C1, T1) <= ast_p(K, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.
+ast_p(K, C, T)@next :- ast_p(K, C, T).
+-- A HOLE ACROSS THE BOUNDARY. heavy is no number: which of ast_h's values
+-- at q dominates is not known at tick 0, so the cell is a hole there and the
+-- staging rule is holed for it; at tick 1 it is unknown, not absent: a hole
+-- there too, and a count of ast_h's facts is no number of what was staged.
+edb(ast_hv).
+ast_hv(p, 1). ast_hv(p, 2). ast_hv(q, heavy). ast_hv(q, 3).
+ast_h(N, V) :- ast_hv(N, V).
+ast_h(N, X) <= ast_h(N, Y) :- Y < X.
+ast_h(N, V)@next :- ast_h(N, V).
+-- What rests on the cell inside its recursion goes with it: ast_hq(q) is
+-- withdrawn with q's front, so what it staged is unknown at tick 1 too.
+edb(ast_hz).
+ast_hq(N) :- ast_h(N, _).
+ast_h(N, 0) :- ast_hq(N), ast_hz(N).
+ast_hs(N)@next :- ast_hq(N).
+-- A PLAIN FACT WITHDRAWN AFTER A RULE @next READ IT. ast_wq copies ast_w
+-- inside its recursion, and ast_wq(a, b, 5), concluded before ast_w(a, b, 0)
+-- dominated the 5, is withdrawn: known not to hold, so what it alone staged
+-- is not at tick 1, and no hole either.
+edb(ast_we).
+ast_we(a, b, 5). ast_we(a, x, 0). ast_we(x, y, 0). ast_we(y, b, 0).
+ast_w(A, B, D) :- ast_we(A, B, D).
+ast_w(A, C, D) :- ast_wq(A, B, D0), ast_we(B, C, W), D is D0 + W.
+ast_wq(A, B, D) :- ast_w(A, B, D).
+ast_w(A, B, X) <= ast_w(A, B, Y) :- Y < X.
+ast_ws(A, B, D)@next :- ast_wq(A, B, D).
+ast_wbig(A, B)@next :- ast_wq(A, B, D), D > 3.
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

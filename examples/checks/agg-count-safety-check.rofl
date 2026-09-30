@@ -1,0 +1,28 @@
+-- examples/checks/agg-count-safety-check.rofl — agg_count_safety. Every
+-- group with a member has its row, which it can only have because safety.rofl
+-- counts the aggregate as binding C and N; a group with none has no row; and
+-- none of the four refused programs reached this world.
+-- the input, here rather than beside the rule, so a refused rule leaves
+-- it behind for the checks to read
+edb(acs_b).
+edb(acs_c).
+acs_b(1, x).
+acs_b(2, x).
+acs_b(3, y).
+acs_c(x).
+acs_c(y).
+acs_c(z).
+acs_has(C)            :- acs_by(C, _).
+expected_row_missing(C) :- acs_b(_, C), not acs_has(C).
+empty_group_row(C)      :- acs_by(C, _), acs_c(C), not acs_member(C).
+acs_member(C)           :- acs_b(_, C).
+key_accepted()          :- concludes[$kernel](_, acs_keyed).
+unbound_accepted()      :- concludes[$kernel](_, acs_unbound).
+late_accepted()         :- concludes[$kernel](_, acs_late).
+two_accepted()          :- concludes[$kernel](_, acs_two).
+alarm(expected_row_missing).
+alarm(empty_group_row).
+alarm(key_accepted).
+alarm(unbound_accepted).
+alarm(late_accepted).
+alarm(two_accepted).

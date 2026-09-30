@@ -1,0 +1,26 @@
+-- examples/checks/agg-shrug-why-check.rofl — agg_cell_shrug_why over
+-- agg-shrug-data.rofl: `why` of a shrug names its reason and each root it
+-- rests on, with the root's own reason and a rule root's text; `whynot` tells
+-- a shrug (no answer, and why) from what is unentailed (no derivation, and
+-- the premises that failed).
+explain_request(why, sd_lose(c)).
+explain_request(whynot, sd_lose(c)).
+explain_request(whynot, sd_settled(c)).
+explain_request(whynot, sd_lose(a)).
+explain_request(why, sd_up(b)).
+sdw_holds(K, A, T) :- explained[$explain](K, A, _, L), sdw_want(K, A, T), N is str_segs(L, T), N > 1.
+sdw_want(why, sd_lose(c), "sd_lose(c) is a shrug: inherited, the answer reads another answer that is a shrug; from([$rule(r011bb866)])").
+sdw_want(why, sd_lose(c), "root $rule(r011bb866) is a shrug: fault, a builtin or a fold could not compute a value; arith_overflow, arithmetic left the integer range").
+sdw_want(why, sd_lose(c), "sd_win[main](c)@now :- sd_big[main](?B)@now").
+sdw_want(whynot, sd_lose(c), "whynot sd_lose[main](c): no answer, a shrug").
+sdw_want(whynot, sd_settled(c), "whynot sd_settled[main](c): no answer, a shrug").
+sdw_want(whynot, sd_settled(c), "sd_settled(c) is a shrug: inherited").
+sdw_want(whynot, sd_lose(a), "whynot sd_lose[main](a):").
+sdw_want(whynot, sd_lose(a), "failed premise").
+sdw_want(why, sd_up(b), "root $rule(rca783681) is a shrug: fault, a builtin or a fold could not compute a value; arith_type_error, arithmetic on a value that is not a number").
+sdw_missing(K, A, T) :- sdw_want(K, A, T), not sdw_holds(K, A, T).
+alarm(sdw_missing).
+-- an unentailed literal is not called a shrug
+sdw_shrugged(A) :- explained[$explain](whynot, A, _, L), N is str_segs(L, "no answer, a shrug"), N > 1.
+-- expect-no-row: sdw_shrugged[main](sd_lose(a))
+-- expect-row: sdw_shrugged[main](sd_lose(c))

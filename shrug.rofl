@@ -1,0 +1,71 @@
+-- shrug.rofl — WHY AN ANSWER IS A SHRUG, the kernel's closed vocabulary.
+--
+-- A literal holds, is unentailed (∅, a definite closed-world "no"), or is a
+-- shrug: no answer, with a reason and structured meta (docs/aggregates.md,
+-- "Shrugs, as built"). Both engines read this file compiled into
+-- src/kernel-dense.ts (`npm run build:dense`) and write `shrug(Target, Reason,
+-- Meta)` rows in `[$kernel]` after every evaluation; a cause a hole names and
+-- this file does not declare is a defect: the engines refuse to write it, and
+-- rust/rofl/src/shrug.rs and scripts/goldens.ts (`shrugSurfaces`) hold that
+-- every cause they write is here.
+--
+-- EXTENDING IT IS ONE FACT: a new cause is `shrug_cause(C, Reason, Text)`, a
+-- new reason `shrug_reason(R, Text)`. A program that reads the rows may load
+-- this file for the text; the engines need nothing else from it.
+--
+-- The meta of each reason:
+--   budget      spent(Kind, Spent, Limit), Kind steps, rows, depth or alternations
+--   fault       the cause, an atom: arith_overflow, agg_type_error, ...
+--   divergence  cycle(Cells): the lattice cells of its own improving cycle;
+--               the target is the lattice cell
+--   paradox     cycle(Rels): the relations it rests on that lie on a negative
+--               cycle (a component of the rules' dependency graph with a
+--               negation inside it); `below` when a world below fed it,
+--               whose own rows name its cycles
+--   conflict    parties(Ps): the answers or books that disagree; for a
+--               subsumptive cell, the values whose dominance is no order,
+--               in canonical order; the target is the cell
+--   federation  at(Address): the volume or book the answer lives in
+--   widened     within(V): the value a cell declared `widen N` closed on once
+--               the widening was forced, an enclosure of its least value;
+--               the target is the lattice cell
+--   inherited   from(Roots): the root shrugs' targets it depends on, sorted;
+--               earlier(T) when the root is in tick T, before this one;
+--               below when it is in the world below, fed to this one
+edb(shrug_reason).
+edb(shrug_cause).
+
+shrug_reason(budget, "the evaluation ran out of steps or rows before it could answer").
+shrug_reason(fault, "a builtin or a fold could not compute a value").
+shrug_reason(divergence, "a value kept improving around a cycle and never settled").
+shrug_reason(paradox, "the answer rests on its own negation and is undefined").
+shrug_reason(conflict, "two answers were given for one key, or two books disagree").
+shrug_reason(federation, "the answer lives in a volume or book that is not loaded").
+shrug_reason(widened, "a declared widening enclosed the value: the least value lies within it, and is not known").
+shrug_reason(inherited, "the answer reads another answer that is a shrug").
+
+shrug_cause(budget_exhausted, budget, "the step budget ran out").
+shrug_cause(space_exhausted, budget, "the row budget ran out").
+shrug_cause(arith_overflow, fault, "arithmetic left the integer range of plus or minus 2^60").
+shrug_cause(arith_type_error, fault, "arithmetic on a value that is not a number").
+shrug_cause(arith_zero_divisor, fault, "a division by zero").
+shrug_cause(str_type_error, fault, "a string builtin read a value that is not a string").
+shrug_cause(str_index_error, fault, "a string builtin read past the end of its string").
+shrug_cause(str_empty_separator, fault, "a string was split on an empty separator").
+shrug_cause(atom_unwritable, fault, "a name no atom can carry").
+shrug_cause(agg_overflow, fault, "an aggregate's total left the integer range").
+shrug_cause(agg_type_error, fault, "an aggregate folded a value of the wrong type").
+shrug_cause(agg_open_member, fault, "an aggregate's member could not be computed").
+shrug_cause(set_type_error, fault, "a membership or subset test read a value that is not a set, an interval or a bitset").
+shrug_cause(tag_off_carrier, fault, "a semiring tag outside its carrier: viterbi and trust hold integers of [0, 1000000], counting integers of at least 1").
+shrug_cause(unbounded_members, fault, "the members of an interval with an infinite end were enumerated").
+shrug_cause(widening_forced, widened, "a lattice cell improved past its declared widening and was widened").
+shrug_cause(improving_cycle, divergence, "a lattice value came back through its own improvement").
+shrug_cause(dominance_cycle, conflict, "a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided").
+shrug_cause(dominance_intransitive, conflict, "a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided").
+shrug_cause(undefined, paradox, "the alternating fixpoint left it undefined").
+shrug_cause(support_withdrawn, inherited, "a premise it read is a shrug").
+shrug_cause(fault_left_out, inherited, "a shrug at the tick before kept it from being staged").
+shrug_cause(left_out_below, inherited, "the world below has no answer for it").
+shrug_cause(cooled_to_disk, federation, "the volume was cooled to disk and is not loaded").
+shrug_cause(reflection_sealed, federation, "the relation is sealed in this world and lives only in the volume that keeps it").

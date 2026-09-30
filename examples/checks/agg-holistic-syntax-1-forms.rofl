@@ -1,0 +1,23 @@
+-- examples/checks/agg-holistic-syntax-1-forms.rofl — every form of median,
+-- quantile and rank the grammar reads: one key and two, correlated and
+-- grouped, a percent written and one bound before, a subject bound before
+-- and one written, a book, a builtin and a negation inside. Read and refused
+-- by the TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxh_l).
+edb(sxh_g).
+edb(sxh_p).
+sxh_l(g, 1, 5, a).
+sxh_l(g, 2, 6, b).
+sxh_l[ledger](g, 3, 7, a).
+sxh_g(g).
+sxh_p(g, 75).
+sxh_med(M)        :- M is median(V ; K : sxh_l(_, K, V, _)).
+sxh_med2(M)       :- M is median(V ; K, T : sxh_l(_, K, V, T)).
+sxh_corr(G, M)    :- sxh_g(G), M is median(V ; K : sxh_l(G, K, V, _)).
+sxh_group(G, M)   :- M is median(V ; K : sxh_l(G, K, V, _)).
+sxh_q(Q)          :- Q is quantile(90, V ; K : sxh_l(_, K, V, _)).
+sxh_qp(G, Q)      :- sxh_p(G, P), Q is quantile(P, V ; K : sxh_l(G, K, V, _)).
+sxh_book(Q)       :- Q is quantile(50, V ; K : sxh_l[ledger](_, K, V, _)).
+sxh_rank(V, R)    :- sxh_l(_, _, V, _), R is rank(V, W : sxh_l(_, _, W, _)).
+sxh_rank6(R)      :- R is rank(6, W : sxh_l(_, _, W, _), W > 5).
+sxh_neg(G, M)     :- sxh_g(G), M is median(V ; K : sxh_l(G, K, V, T), not sxh_g(T)).

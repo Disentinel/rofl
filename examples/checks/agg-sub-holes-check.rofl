@@ -1,0 +1,70 @@
+-- examples/checks/agg-sub-holes-check.rofl — agg_sub_holes: what a
+-- subsumptive cell cannot hold. A dominance body that fails for an error
+-- (`Y < X` with heavy no number) leaves unknown which of the cell's values
+-- dominates, so the cell is a hole with the fault's reason, and the
+-- dominance rule's hole beside it; a rule concluding into the relation that
+-- overflows leaves a value unknown, so its cell is a hole, `arith_overflow`,
+-- never the front of the rest; a dominance body that reads what a hole left
+-- unknown below it is not decided, and its cell is withdrawn,
+-- `support_withdrawn`. A cell a withdrawn one reached is withdrawn; a
+-- negation above a holed cell is undecided and a count over one a hole;
+-- cells and readers no hole reaches keep their answers.
+edb(ash_v).
+ash_v(p, 1). ash_v(p, 2). ash_v(q, heavy). ash_v(q, 3). ash_v(r, 4).
+ash_a(N, V) :- ash_v(N, V).
+ash_a(N, X) <= ash_a(N, Y) :- Y < X.
+-- the value a rule concluding into the relation could not compute
+edb(ash_w).
+ash_w(s, 1). ash_w(s, 1152921504606846975). ash_w(t, 5). ash_w(t, 6).
+ash_o(N, V) :- ash_w(N, V), V < 100.
+ash_o(N, V) :- ash_w(N, W), W > 100, V is W + 1.
+ash_o(N, X) <= ash_o(N, Y) :- Y < X.
+-- a cell a withdrawn one reaches, through the recursion
+edb(ash_l).
+ash_l(t, u).
+ash_o(M, V) :- ash_l(N, M), ash_o(N, V).
+-- a dominance that reads what a hole left unknown below it
+edb(ash_z).
+ash_z(1, 2). ash_z(3, 0).
+ash_rank(X, R) :- ash_z(X, D), R is 6 / D.
+edb(ash_ci).
+ash_ci(k, 1). ash_ci(k, 3). ash_ci(m, 1).
+ash_c(K, V) :- ash_ci(K, V).
+ash_c(K, X) <= ash_c(K, Y) :- ash_rank(Y, RY), ash_rank(X, RX), RY < RX.
+-- a cell of one value, whose only comparison, with itself, faults (100 / 0):
+-- whether that value dominates itself is not known, so it is no front
+edb(ash_si).
+ash_si(k, 0). ash_si(m, 5).
+ash_s(K, V) :- ash_si(K, V).
+ash_s(K, X) <= ash_s(K, Y) :- Z is 100 / X, Y < X.
+-- what reads the holed cells: a negation, a count, and cells no hole reaches
+edb(ash_n).
+ash_n(p). ash_n(q). ash_n(r).
+ash_lacks(N) :- ash_n(N), not ash_a(N, 1).
+ash_count(N, C) :- ash_n(N), C is count(V : ash_a(N, V)).
+-- the holes, each with its reason
+-- expect-row: hole[$kernel]($lattice(ash_a,main,0,$cons(q,$nil)),arith_type_error)
+-- expect-row: hole[$kernel]($lattice(ash_o,main,0,$cons(s,$nil)),arith_overflow)
+-- expect-row: hole[$kernel]($lattice(ash_c,main,0,$cons(k,$nil)),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(ash_s,main,0,$cons(k,$nil)),arith_zero_divisor)
+-- the cells no hole reaches keep their front
+-- expect-row: ash_a[main](p,1)
+-- expect-no-row: ash_a[main](p,2)
+-- expect-row: ash_a[main](r,4)
+-- expect-row: ash_o[main](t,5)
+-- expect-row: ash_o[main](u,5)
+-- expect-row: ash_c[main](m,1)
+-- expect-row: ash_s[main](m,5)
+-- the holed cells hold nothing, and what reads them is not decided
+-- expect-no-row: ash_a[main](q,
+-- expect-no-row: ash_o[main](s,
+-- expect-no-row: ash_c[main](k,
+-- expect-no-row: ash_s[main](k,
+-- expect-row: ash_lacks[main](r)
+-- expect-no-row: ash_lacks[main](p)
+-- expect-no-row: ash_lacks[main](q)
+-- expect-row: ash_count[main](p,1)
+-- expect-no-row: ash_count[main](q,
+asho_wrong(front) :- ash_a(p, 2).
+asho_wrong(reach) :- ash_o(t, 6).
+alarm(asho_wrong).

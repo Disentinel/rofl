@@ -1,0 +1,44 @@
+-- examples/checks/agg-shrug-check.rofl — agg_cell_shrug over
+-- agg-shrug-data.rofl, in both engines: what holds, what is unentailed, and
+-- what is a shrug with its reason and the root it names; and the rows read by
+-- rules, as data: an audit over the reasons, and an answer the shrug decides.
+sd_faulty(T) :- shrug(T, fault, _).
+sd_answered(X) :- sd_pos(X), not shrug(sd_lose(X), _, _).
+-- the roots: an overflow and a type error, each on its rule
+-- expect-row: shrug[$kernel]($rule(r011bb866),fault,arith_overflow)
+-- expect-row: shrug[$kernel]($rule(rca783681),fault,arith_type_error)
+-- what they left out, and what read it, inherit them and name them
+-- expect-row: shrug[$kernel](sd_win(c),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel](sd_val(b,$unknown_value),inherited,from($cons($rule(rca783681),$nil)))
+-- expect-row: shrug[$kernel](sd_up(b),inherited,from($cons($rule(rca783681),$nil)))
+-- expect-row: shrug[$kernel](sd_lose(c),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel](unknown(sd_win(c)),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel](sd_open(c),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel](sd_settled(c),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel](sd_novel(c),inherited,from($cons($rule(r011bb866),$nil)))
+-- expect-row: shrug[$kernel]($rule(r954572d4),inherited,from($cons($rule(r011bb866),$nil)))
+-- a shrug is neither a row nor a definite no
+-- expect-no-row: sd_win[main](c)
+-- expect-no-row: sd_lose[main](c)
+-- expect-no-row: sd_settled[main](c)
+-- expect-no-row: sd_novel[main](c)
+-- expect-no-row: sd_up[main](b)
+-- expect-no-row: sd_open[main](c)
+-- what holds, and what is unentailed, is decided: `not` succeeds only on no
+-- expect-row: sd_lose[main](b)
+-- expect-row: sd_lose[main](e)
+-- expect-row: sd_settled[main](a)
+-- expect-row: sd_settled[main](e)
+-- expect-row: sd_novel[main](b)
+-- expect-row: sd_up[main](e)
+-- expect-no-row: sd_lose[main](a)
+-- expect-no-row: shrug[$kernel](sd_lose(b)
+-- expect-no-row: shrug[$kernel](sd_novel(b)
+-- expect-no-row: shrug[$kernel](sd_settled(a)
+-- the rows, read by rules: the faults by reason, and an answer only where
+-- the question is no shrug
+-- expect-row: sd_faulty[main]($rule(r011bb866))
+-- expect-row: sd_faulty[main]($rule(rca783681))
+-- expect-row: sd_answered[main](a)
+-- expect-row: sd_answered[main](b)
+-- expect-no-row: sd_answered[main](c)

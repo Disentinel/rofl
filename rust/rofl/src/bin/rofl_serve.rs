@@ -183,6 +183,7 @@ impl Server {
                 Ok(json!({
                     "vars": a.vars, "rows": a.rows, "keys": keys,
                     "scanned": a.scanned, "probed": a.probed, "micros": a.micros,
+                    "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
                 }))
             }
             // Written to a path unless the caller insists. See the module note:

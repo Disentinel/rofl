@@ -1,0 +1,14 @@
+-- examples/checks/agg-tag-demo-plain.rofl — THE HOST'S RULES: the demo's
+-- relations as plain rules, one fact per pair, whose support the host fold
+-- (src/semiring.ts `evaluateSemiring`) annotates in each semiring, each edge
+-- its weight. scripts/render_docs.ts runs it in the TypeScript engine and
+-- writes what the fold computes into agg-tag-demo-host.rofl; the Rust
+-- world agg_tag_demo holds the kernel's tags equal to it.
+tgd_hc(A, B) :- tgd_w(A, B, _).
+tgd_hc(A, C) :- tgd_hc(A, B), tgd_w(B, C, _).
+tgd_hp(A, B) :- tgd_p(A, B, _).
+tgd_hp(A, C) :- tgd_hp(A, B), tgd_p(B, C, _).
+tgd_ht(A, B) :- tgd_t(A, B, _).
+tgd_ht(A, C) :- tgd_ht(A, B), tgd_t(B, C, _).
+tgd_hm(A, C) :- tgd_m(A, C, _).
+tgd_hm(A, C) :- tgd_m(A, B, _), tgd_m(B, C, _).

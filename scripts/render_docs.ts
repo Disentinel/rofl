@@ -20,6 +20,9 @@
 // list of commands, a set of names, a count.
 
 import { Rofl } from '../src/api.ts';
+import { canonTerm } from '../src/unify.ts';
+import { evaluateSemiring, BOUNDED, type Semiring } from '../src/semiring.ts';
+import { tropicalSemiring, countingSemiring } from '../runtime/semirings.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -27,7 +30,7 @@ import { spawnSync } from 'node:child_process';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-interface Block { file: string; name: string; source: string; render: () => string }
+interface Block { file: string; name: string; source: string; render: () => string; comment?: string }
 
 /** A fact pack, loaded and queried — never matched. */
 function pack(rel: string): Rofl {
@@ -66,6 +69,9 @@ function commands(): string {
   if (missing.length) throw new Error(`facts/commands.rofl shows scripts package.json does not have: ${missing.join(', ')}`);
   const undescribed = shown.filter((s) => !note.has(s));
   if (undescribed.length) throw new Error(`no command_note for: ${undescribed.join(', ')}`);
+  // A COUNT OR A DURATION IN A NOTE DRIFTS: the command prints its own.
+  const drifting = shown.filter((s) => /\b\d+ ?(s|ms|seconds?|worlds?|mutants?|demos?|breaks?|faults?|cells?)\b/.test(note.get(s)!));
+  if (drifting.length) throw new Error(`facts/commands.rofl states a count or a duration for: ${drifting.join(', ')} (the command prints its own)`);
   // PADDED FROM THE RENDERED PREFIX, not from the script name: `npm run` is
   // four characters longer than `npm`, and padding by the name alone ran
   // `test:hosts` into its own note.
@@ -74,13 +80,53 @@ function commands(): string {
   return shown.map((s) => `    ${label(s).padEnd(w)}${note.get(s)}`).join('\n');
 }
 
+/** THE HOST FOLD OF THE TAG DEMO (docs/aggregates.md, "Tags, as built"): the
+ *  demo's plain rules run in the TypeScript engine, and src/semiring.ts's
+ *  fold annotates their support in each semiring, every edge its weight;
+ *  what it computes is written as facts the Rust world agg_tag_demo holds
+ *  the kernel's tags equal to. The tropical and counting instances are
+ *  runtime/semirings.ts's own; viterbi's and trust's are the kernel's
+ *  carriers (a probability in millionths rounded down, a trust in
+ *  millionths), stated here as the fold's instances, so the fold is the
+ *  host's and the arithmetic each side's own. */
+function tagHostFold(): string {
+  const r = new Rofl();
+  r.load(read('boot.rofl'));
+  for (const f of ['examples/checks/agg-tag-demo-data.rofl', 'examples/checks/agg-tag-demo-plain.rofl']) {
+    if (!r.load(read(f)).ok) throw new Error(`${f} does not load`);
+  }
+  r.evaluate();
+  const weights = (rel: string): Map<string, number> =>
+    new Map(r.store.relAll(rel).map((f) => [f.key, Number((f.args[2] as { v: number | bigint }).v)]));
+  const unit = 1_000_000;
+  const viterbi: Semiring<number> = { discipline: BOUNDED, zero: 0, one: unit, plus: Math.max, times: (a, b) => Math.floor((a * b) / unit), eq: (a, b) => a === b };
+  const trust: Semiring<number> = { discipline: BOUNDED, zero: 0, one: unit, plus: Math.max, times: Math.min, eq: (a, b) => a === b };
+  const out: string[] = [];
+  const fold = <T>(alg: string, head: string, edges: string, sr: Semiring<T>, lift: (w: number) => T, show: (v: T) => string): void => {
+    const w = weights(edges);
+    const res = evaluateSemiring(r.store, sr, { base: (k) => (w.has(k) ? lift(w.get(k)!) : sr.one) });
+    if (!res.converged) throw new Error(`the ${alg} fold did not converge`);
+    for (const f of r.store.relAll(head).sort((a, b) => (a.key < b.key ? -1 : 1))) {
+      out.push(`tgd_host(${alg}, ${f.args.map((a) => canonTerm(a)).join(', ')}, ${show(res.value.get(f.key)!)}).`);
+    }
+  };
+  fold('tropical', 'tgd_hc', 'tgd_w', tropicalSemiring, (w) => w, String);
+  fold('viterbi', 'tgd_hp', 'tgd_p', viterbi, (w) => w, String);
+  fold('trust', 'tgd_ht', 'tgd_t', trust, (w) => w, String);
+  fold('counting', 'tgd_hm', 'tgd_m', countingSemiring, (w) => BigInt(w), (v) => String(v));
+  return out.join('\n');
+}
+
 const BLOCKS: Block[] = [
   { file: 'README.md', name: 'deviations', source: 'facts/deviations.rofl', render: deviations },
   { file: 'CLAUDE.md', name: 'commands', source: 'package.json + facts/commands.rofl', render: commands },
+  { file: 'examples/checks/agg-tag-demo-host.rofl', name: 'host_fold', source: 'agg-tag-demo-plain.rofl folded by src/semiring.ts', render: tagHostFold, comment: '-- ' },
 ];
 
-const begin = (b: Block): string => `<!-- BEGIN ${b.name}: generated from ${b.source} -->`;
-const end = (b: Block): string => `<!-- END ${b.name} -->`;
+// A BLOCK IN A PROGRAM sits in its comments: the markers carry the comment
+// leader, so the file still parses.
+const begin = (b: Block): string => `${b.comment ?? ''}<!-- BEGIN ${b.name}: generated from ${b.source} -->`;
+const end = (b: Block): string => `${b.comment ?? ''}<!-- END ${b.name} -->`;
 
 export function splice(doc: string, b: Block, body: string): string {
   const a = doc.indexOf(begin(b));

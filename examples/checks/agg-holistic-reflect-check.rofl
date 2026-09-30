@@ -1,0 +1,53 @@
+-- examples/checks/agg-holistic-reflect-check.rofl — agg_holistic_reflect: a
+-- median, a quantile and a rank are reflected exactly. Walking each
+-- aggregate's `$agg` body list gives the relations `premise_agg` names, in
+-- both directions; no relation read inside becomes a `premise_pos` (it would
+-- be a trigger and a positive dependency edge); the books read inside are in
+-- `reads_from`; a builtin inside is in `uses_builtin` and the operation
+-- itself is not; a bare kernel relation inside resolves to [$kernel]; each
+-- `$agg` carries its operation, and quantile's percent and rank's subject
+-- as its first term. The rule ids are held to the TypeScript engine's by
+-- scripts/goldens.ts.
+ahrf_rule(R, Op)  :- premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)), concludes[$kernel](R, H), ahrf_mine(H, Op).
+ahrf_mine(ahf_med, median).
+ahrf_mine(ahf_q, quantile).
+ahrf_mine(ahf_rules, rank).
+ahrf_tail(R, T)   :- ahrf_rule(R, _), premise_lit[$kernel](R, _, $agg(_, _, _, _, T)).
+ahrf_tail(R, T)   :- ahrf_tail(R, $cons(_, T)).
+ahrf_reads(R, Rel, P) :- ahrf_tail(R, $cons($lit(Rel, P, _, _), _)).
+ahrf_reads(R, Rel, P) :- ahrf_tail(R, $cons($not($lit(Rel, P, _, _)), _)).
+ahrf_op_inside(R, Op) :- ahrf_tail(R, $cons($builtin(Op, _), _)).
+refl_missing(R, Rel) :- ahrf_reads(R, Rel, _), not premise_agg[$kernel](R, Rel).
+refl_extra(R, Rel)   :- ahrf_rule(R, _), premise_agg[$kernel](R, Rel), not ahrf_reads(R, Rel, _).
+inner_pos(R, Rel)    :- ahrf_reads(R, Rel, _), premise_pos[$kernel](R, Rel).
+reads_missing(R, P)  :- ahrf_reads(R, _, P), not reads_from[$kernel](R, P).
+builtin_missing(R, Op) :- ahrf_op_inside(R, Op), not uses_builtin[$kernel](R, Op).
+op_as_builtin(R)       :- ahrf_rule(R, _), uses_builtin[$kernel](R, Op), ahrf_opname(Op).
+book_unresolved(R)     :- ahrf_reads(R, concludes, main).
+-- the operation, and the first term: the percent a variable, the subject 1
+ahrf_first(R, T)       :- ahrf_rule(R, Op), Op != median, premise_lit[$kernel](R, _, $agg(Op, _, $cons(T, $cons(_, $nil)), _, _)).
+ahrf_first_ok(R)       :- ahrf_rule(R, quantile), ahrf_first(R, $var("P")).
+ahrf_first_ok(R)       :- ahrf_rule(R, rank), ahrf_first(R, 1).
+param_lost(R)          :- ahrf_rule(R, Op), Op != median, not ahrf_first_ok(R).
+ahrf_has(Op)           :- ahrf_rule(_, Op).
+op_missing(Op)         :- ahrf_mine(_, Op), not ahrf_has(Op).
+ahrf_kernel_read(R)    :- ahrf_reads(R, concludes, $kernel).
+ahrf_vacuous(kernel)   :- not ahrf_any_kernel().
+ahrf_any_kernel()      :- ahrf_kernel_read(_).
+ahrf_vacuous(negation) :- not ahrf_any_neg().
+ahrf_any_neg()         :- ahrf_tail(_, $cons($not(_), _)).
+ahrf_vacuous(book)     :- not ahrf_any_book().
+ahrf_any_book()        :- ahrf_reads(_, _, ledger).
+alarm(refl_missing).
+alarm(refl_extra).
+alarm(inner_pos).
+alarm(reads_missing).
+alarm(builtin_missing).
+alarm(op_as_builtin).
+alarm(book_unresolved).
+alarm(param_lost).
+alarm(op_missing).
+alarm(ahrf_vacuous).
+ahrf_opname("median").
+ahrf_opname("quantile").
+ahrf_opname("rank").

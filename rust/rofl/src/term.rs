@@ -186,6 +186,11 @@ impl Term {
         debug_assert!((-(1i64 << 60)..(1i64 << 60)).contains(&v));
         Term(((v as u64) << TAG_BITS) | T_INT)
     }
+    /// The term range is [-2^60, 2^60); an integer outside it has no term.
+    #[inline]
+    pub fn try_int(v: i64) -> Option<Term> {
+        if (-(1i64 << 60)..(1i64 << 60)).contains(&v) { Some(Term::int(v)) } else { None }
+    }
     #[inline]
     pub fn func(idx: u32) -> Term {
         Term(((idx as u64) << TAG_BITS) | T_FUNC)
@@ -796,5 +801,20 @@ mod tests {
         let g = h.mkf_named("p", &[a, a]);
         assert_eq!(f, g);
         assert_eq!(h.func_count(), 1);
+    }
+}
+
+/// `t`, built in `from`, rebuilt in `to`: two worlds share no heap.
+pub fn copy_term(from: &Heap, t: Term, to: &mut Heap) -> Term {
+    match t.kind() {
+        TermK::Var(s) => to.var(from.name(s)),
+        TermK::Atom(s) => to.atom(from.name(s)),
+        TermK::Str(s) => to.string(from.name(s)),
+        TermK::Int(v) => Term::int(v),
+        TermK::Func(i) => {
+            let args: Vec<Term> = from.fargs(i).iter().map(|a| copy_term(from, *a, to)).collect();
+            let f = to.intern(from.name(from.fname(i)));
+            to.mkf(f, &args)
+        }
     }
 }

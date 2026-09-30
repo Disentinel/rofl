@@ -1,0 +1,21 @@
+-- examples/checks/agg-tagc-strata-check.rofl — agg_tagc_strata: a counting tag
+-- is stratified. Its ⊕ is not idempotent, so it reads only what is closed
+-- below it: tc_two reads tc_hop, tc_any reads tc_hop and tc_two, each closed
+-- first, and holds the counts derived by hand. Inside its own recursion it
+-- is refused, directly (agg-tagc-strata-2-refused-self.rofl), through another
+-- counting tag (-3-refused-pair.rofl) and through a plain relation
+-- (-4-refused-plain.rofl): a count of derivations through a recursion need
+-- not settle. None of their rules reach this world.
+tcs_want(two, s, t, 3).
+tcs_want(any, s, b, 5).
+tcs_want(any, a, t, 4).
+tcs_got(two, A, B, N) :- tc_two(A, B, N).
+tcs_got(any, A, B, N) :- tc_any(A, B, N).
+tcs_missing(R, A, B)  :- tcs_want(R, A, B, N), not tcs_got(R, A, B, N).
+-- no counting tag reads itself
+tcs_self(Rel)         :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), tag_decl[$kernel](Rel, _, counting).
+tcs_accepted(Rel)     :- concludes[$kernel](_, Rel), tcs_refused(Rel).
+tcs_refused(tcsr_self). tcs_refused(tcsr_p). tcs_refused(tcsr_q). tcs_refused(tcsr_c).
+alarm(tcs_missing).
+alarm(tcs_self).
+alarm(tcs_accepted).

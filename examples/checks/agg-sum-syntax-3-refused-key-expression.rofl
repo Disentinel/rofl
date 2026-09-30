@@ -1,0 +1,3 @@
+-- expect-refusal: not expressions
+-- a key is a term, not an expression
+sxsr_key_expression(S) :- S is sum(V ; K + 1 : sxs_l(_, K, V, _)).

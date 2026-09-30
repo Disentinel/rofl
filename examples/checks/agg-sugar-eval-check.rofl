@@ -1,0 +1,61 @@
+-- examples/checks/agg-sugar-eval-check.rofl — agg_sugar_eval: the sugar as the reader lowers it
+-- (agg-sugar-forms.rofl.md) answers, over the groups whose every member is known (g1 to g4), exactly what it
+-- says. The average rounds toward zero: g1's 71 / 2 is 35 and g2's -7 / 2 is -3, not -4; in tenths 355 and -35,
+-- in millionths 35500000 and -3500000. g3 has no member and no average: no row, and no division by its zero
+-- count, which would be a hole. Every over a domain bound from outside holds of g1, all voted, and of g3,
+-- vacuously; not of g2 or g4. At most 1 holds of g3 (0) and g4 (1); exactly 2 of g1 and g2; exactly 0 of g3.
+-- In thousandths 35500 and -3500. A body joining through a variable of its own (X, not taken): the ages shifted
+-- by one average 73 / 2 = 36 and -5 / 2 = -2; every member aged past 18 voted in g1, and in g2 and g3, which have
+-- none, vacuously; not in g4. What the sugar takes bound before it asks it per member: each member's own age is
+-- its average, and each member that voted turned out alone. Were the second count's M renamed apart all the same,
+-- it would count the whole group: 15 for m1, and m4 counted as turned out beside m3. Exactly N with N in the
+-- conclusion is the count, 0 for g3. Every over each row: g1 ranks m1 at 1 beside 3, so g1 is not senior, though each
+-- of its members has a rank past 2; g2 is, and g3 and g4, ranking no one, vacuously. Two averages with the same letters
+-- are two averages: the spread is the tenths average less the plain one, 355 - 35 = 320, -35 - -3 = -32, 500 - 50 = 450.
+sge_clean(g1). sge_clean(g2). sge_clean(g3). sge_clean(g4).
+sge_want(mean, g1, 35). sge_want(mean, g2, -3). sge_want(mean, g4, 50).
+sge_want(tenths, g1, 355). sge_want(tenths, g2, -35). sge_want(tenths, g4, 500).
+sge_want(micro, g1, 35500000). sge_want(micro, g2, -3500000). sge_want(micro, g4, 50000000).
+sge_want(milli, g1, 35500). sge_want(milli, g2, -3500). sge_want(milli, g4, 50000).
+sge_want(shift, g1, 36). sge_want(shift, g2, -2). sge_want(shift, g4, 51).
+sge_got(mean, G, Y)   :- sgs_mean(G, Y), sge_clean(G).
+sge_got(tenths, G, Y) :- sgs_tenths(G, Y), sge_clean(G).
+sge_got(micro, G, Y)  :- sgs_micro(G, Y), sge_clean(G).
+sge_got(milli, G, Y)  :- sgs_milli(G, Y), sge_clean(G).
+sge_got(shift, G, Y)  :- sgs_shift(G, Y), sge_clean(G).
+-- the mean named A before a word in its conclusion (`is A in whole years`) is the mean, 35, -3 and 50.
+sge_want(whole, g1, 35). sge_want(whole, g2, -3). sge_want(whole, g4, 50).
+sge_got(whole, G, A)  :- sgs_whole(G, A), sge_clean(G).
+sge_wrong(K, G) :- sge_want(K, G, Y), not sge_got(K, G, Y).
+sge_wrong(K, G) :- sge_got(K, G, Y), not sge_want(K, G, Y).
+sge_holds(out, g1). sge_holds(out, g3).
+sge_holds(small, g3). sge_holds(small, g4).
+sge_holds(pair, g1). sge_holds(pair, g2).
+sge_holds(bare, g3).
+sge_is(out, G)   :- sgs_out(G), sge_clean(G).
+sge_is(small, G) :- sgs_small(G), sge_clean(G).
+sge_is(pair, G)  :- sgs_pair(G), sge_clean(G).
+sge_is(bare, G)  :- sgs_none(G), sge_clean(G).
+sge_wrong(K, G) :- sge_holds(K, G), not sge_is(K, G).
+sge_wrong(K, G) :- sge_is(K, G), not sge_holds(K, G).
+sge_holds(adult, g1). sge_holds(adult, g2). sge_holds(adult, g3).
+sge_is(adult, G) :- sgs_adult(G), sge_clean(G).
+sge_own(m1, g1, 30). sge_own(m2, g1, 41). sge_own(m3, g2, -7). sge_own(m4, g2, 0). sge_own(m5, g4, 50).
+sge_wrong(own, M) :- sge_own(M, G, Y), not sgs_own(M, G, Y).
+sge_wrong(own, M) :- sgs_own(M, G, Y), sge_clean(G), not sge_own(M, G, Y).
+sge_each(m1, g1). sge_each(m2, g1). sge_each(m3, g2).
+sge_wrong(each, M) :- sge_each(M, G), not sgs_each(M, G).
+sge_wrong(each, M) :- sgs_each(M, G), sge_clean(G), not sge_each(M, G).
+alarm(sge_wrong).
+-- no clean group's average divided by zero, or has any hole
+sge_divided(G) :- hole[$kernel](_, arith_zero_divisor), sge_clean(G).
+sge_open(G)    :- shrug[$kernel](T, _, _), T = sgs_mean(G, _), sge_clean(G).
+alarm(sge_divided).
+alarm(sge_open).
+sge_size(g1, 2). sge_size(g2, 2). sge_size(g3, 0). sge_size(g4, 1).
+sge_wrong(size, G) :- sge_size(G, N), not sgs_size(G, N).
+sge_wrong(size, G) :- sgs_size(G, N), sge_clean(G), not sge_size(G, N).
+sge_holds(senior, g2). sge_holds(senior, g3). sge_holds(senior, g4).
+sge_is(senior, G) :- sgs_senior(G), sge_clean(G).
+sge_want(spread, g1, 320). sge_want(spread, g2, -32). sge_want(spread, g4, 450).
+sge_got(spread, G, Y) :- sgs_spread(G, Y), sge_clean(G).

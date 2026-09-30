@@ -1,0 +1,27 @@
+-- examples/checks/agg-phrase-data.rofl — WHAT THE PHRASE WORLDS READ (docs/aggregates.md, "The sentence form,
+-- as built"), loaded as written: candidates and ballots (c3 has none), scores under keys (two keys share 20),
+-- flags, a weighted graph with two ways from a to c, members of two groups and who of them voted, how many
+-- votes each candidate needs, two percents, and where a counter starts; and the ranks groups give their members
+-- (g1 ranks m1 twice, at 3 and at 1).
+edb(pv_cand).
+edb(pv_ballot).
+edb(pv_score).
+edb(pv_flag).
+edb(pv_edge).
+edb(pv_member).
+edb(pv_voted).
+edb(pv_need).
+edb(pv_pct).
+edb(pv_start).
+edb(pv_rank).
+pv_cand(c1). pv_cand(c2). pv_cand(c3).
+pv_ballot(b1, c1). pv_ballot(b2, c1). pv_ballot(b3, c2).
+pv_score(k1, 10). pv_score(k2, 20). pv_score(k3, 20). pv_score(k4, 45).
+pv_flag(f1, true). pv_flag(f2, false).
+pv_edge(a, b, 1). pv_edge(b, c, 1). pv_edge(a, c, 5).
+pv_member(g1, m1). pv_member(g1, m2). pv_member(g2, m3). pv_member(g2, m4).
+pv_voted(m1). pv_voted(m2). pv_voted(m3).
+pv_need(c1, 2). pv_need(c2, 1). pv_need(c3, 0).
+pv_pct(50). pv_pct(100).
+pv_start(p, 0).
+pv_rank(g1, m1, 3). pv_rank(g1, m1, 1). pv_rank(g1, m2, 5). pv_rank(g2, m3, 3). pv_rank(g2, m4, 5).

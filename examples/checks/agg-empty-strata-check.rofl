@@ -1,0 +1,9 @@
+-- examples/checks/agg-empty-strata-check.rofl — agg_empty_strata: a zero is
+-- sealed only once the relation it counts is closed. c3's ballot arrives
+-- two negations deep; a count sealed before that reads it as an empty group.
+ae_zero_but_ballot(C) :- ae_votes(C, 0), ae_ballot(_, C).
+ae_zero_but_ballot(C) :- ae_total(C, 0), ae_ballot(_, C).
+ae_late_seen()        :- ae_late(B, C), ae_ballot(B, C).
+ae_vacuous(late)      :- not ae_late_seen().
+alarm(ae_zero_but_ballot).
+alarm(ae_vacuous).

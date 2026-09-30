@@ -1,0 +1,10 @@
+-- examples/checks/agg-cell-holes-scale.rofl — agg_cell_holes_scale: the
+-- negations of holes-negation-scale.rofl, 1001 of them over 500 unknowns,
+-- finish inside a budget a scan of every unknown per negation runs past
+-- (f_a_negation_scanned_every_unknown_of_its_relation). z is decided (no
+-- hole leaves anything out there); every other node is decided false or
+-- undecided, never a definite answer.
+-- expect-no-row: hole[$kernel]($adhoc,
+-- expect-row: hs_nx[main](z)
+-- expect-no-row: hs_nx[main](1)
+-- expect-no-row: hs_nx[main](2)

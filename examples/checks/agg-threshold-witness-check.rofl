@@ -1,0 +1,117 @@
+-- examples/checks/agg-threshold-witness-check.rofl — agg_threshold_witness: a
+-- threshold's cell is a Quorum. It holds exactly N members, the first N in
+-- the canonical order — height, then projection — whatever order they came
+-- in; each member is at the least height of its derivations and cites the
+-- least-signature one at that height; the cell is one group at one N (the
+-- last of its key); its height is
+-- its highest member's; nothing is sealed (a threshold reached stays reached
+-- however its input grows); and inside the recursion no member rests on the
+-- belief it supports.
+atw_rule(R, Rel) :- premise_lit[$kernel](R, _, $agg(at_least, _, _, _, _)), concludes[$kernel](R, Rel).
+atw_cell(C, Rel, K, H) :- atw_rule(R, Rel), agg_cell[$kernel](C, true, H), C = $cell(R, _, _, $cons(X, $cons(_, $nil))), K = $cons(X, $nil).
+atw_cell_n(C, N) :- atw_cell(C, _, _, _), C = $cell(_, _, _, $cons(_, $cons(N, $nil))).
+atw_any(C) :- atw_rule(R, _), agg_cell[$kernel](C, true, _), C = $cell(R, _, _, _).
+cell_unshaped(C) :- atw_any(C), not atw_cell(C, _, _, _).
+alarm(cell_unshaped).
+atw_member(C, I, P, H) :- atw_cell(C, _, _, _), agg_member[$kernel](C, I, P, H).
+-- N of each cell, from its own rule's data
+atw_need(C, 2) :- atw_cell(C, at_trusted, _, _).
+atw_need(C, 2) :- atw_cell(C, at_clean, _, _).
+atw_need(C, 1) :- atw_cell(C, at_seen, _, _).
+atw_need(C, 2) :- atw_cell(C, at_believed, _, _).
+atw_need(C, N) :- atw_cell(C, at_thm, $cons(S, _), _), at_need(S, N).
+atw_need(C, 3) :- atw_cell(C, ar_counted, _, _).
+atw_need(C, 3) :- atw_cell(C, ar_elected, _, _).
+-- (a group with two Ns: the N its key names, which must be one of them)
+atw_need(C, N) :- atw_cell(C, at_meets, $cons(G, _), _), atw_cell_n(C, N), at_quorum_of(G, N).
+atw_need(C, N) :- atw_cell(C, at_reach, _, _), atw_cell_n(C, N), at_lim(N).
+atw_need(C, N) :- atw_cell(C, at_ok, $cons(S, _), _), atw_cell_n(C, N), at_try(S, N).
+atw_need(C, N) :- atw_cell(C, at_mixed, $cons(S, _), _), atw_cell_n(C, N), at_quota2(S, N).
+atw_need(C, 2) :- atw_cell(C, at_b7, _, _).
+-- a cell is at one N, and its size is that N (a group with two Ns has one
+-- cell for each N it reached)
+key_n_wrong(C) :- atw_cell_n(C, N), atw_size(C, S), N != S, N > 0.
+key_n_wrong(C) :- atw_cell_n(C, N), atw_has(C, 1), N <= 0.
+alarm(key_n_wrong).
+atw_upto(C, 0)  :- atw_need(C, _).
+atw_upto(C, I)  :- atw_upto(C, J), I is J + 1, atw_member(C, I, _, _).
+atw_size(C, N)  :- atw_upto(C, N), J is N + 1, not atw_has(C, J).
+atw_has(C, I)   :- atw_member(C, I, _, _).
+quorum_size(C, N) :- atw_need(C, W), atw_size(C, N), N != W.
+need_unknown(C)   :- atw_cell(C, _, _, _), not atw_need_any(C).
+atw_need_any(C)   :- atw_need(C, _).
+alarm(quorum_size).
+alarm(need_unknown).
+-- canonical: members ascend by height, then by projection text
+-- (every projection here is one name or one small integer; `atw_ord` is
+-- their text order, written out, since `<` compares integers only)
+atw_ord(1, 1). atw_ord(2, 2). atw_ord(a, 3). atw_ord(b, 4). atw_ord(c, 5).
+atw_ord(m, 6). atw_ord(s1, 7). atw_ord(s2, 8). atw_ord(s3, 9). atw_ord(s4, 10).
+atw_ord(s5, 11). atw_ord(t, 12). atw_ord(u, 13). atw_ord(v, 14). atw_ord(w, 15).
+atw_ord(w1, 16). atw_ord(w2, 17). atw_ord(w3, 18). atw_ord(w4, 19). atw_ord(w5, 20).
+atw_ord(x, 21). atw_ord(y, 22). atw_ord(zz, 23). atw_ord(zz1, 24). atw_ord(zz2, 25).
+atw_text(C, I, H, T) :- atw_member(C, I, $cons(X, $nil), H), atw_ord(X, T).
+unranked(C, I) :- atw_member(C, I, _, _), not atw_ranked(C, I).
+atw_ranked(C, I) :- atw_text(C, I, _, _).
+out_of_order(C, I) :- atw_text(C, I, H, _), atw_text(C, J, G, _), J is I + 1, G < H.
+out_of_order(C, I) :- atw_text(C, I, H, T), atw_text(C, J, H, U), J is I + 1, U < T.
+alarm(unranked).
+alarm(out_of_order).
+-- the cell's height is its highest member's; a Quorum of none is height 0
+atw_higher(C, H) :- atw_member(C, _, _, G), atw_cell(C, _, _, H), G > H.
+atw_top(C)       :- atw_member(C, _, _, H), atw_cell(C, _, _, H).
+height_wrong(C)  :- atw_higher(C, _).
+height_wrong(C)  :- atw_cell(C, _, _, H), atw_has(C, 1), not atw_top(C).
+height_wrong(C)  :- atw_cell(C, _, _, H), not atw_has(C, 1), H != 0.
+alarm(height_wrong).
+-- and the heights chain: a belief's member is one above the belief, which is
+-- one above a root's firing or above its own quorum
+height_chain(C, S) :- atw_cell(C, at_believed, _, _), atw_member(C, _, $cons(S, $nil), H), at_root(S), H != 2.
+height_chain(C, S) :- atw_cell(C, at_believed, _, _), atw_member(C, _, $cons(S, $nil), H), not at_root(S),
+                      atw_cell(_, at_believed, $cons(S, $nil), HS), K is HS + 2, H != K.
+atw_chained()      :- atw_cell(C, at_believed, _, _), atw_member(C, _, $cons(S, $nil), _), not at_root(S).
+height_chain(none, none) :- not atw_chained().
+alarm(height_chain).
+-- nothing sealed
+quorum_sealed(C) :- atw_cell(C, _, _, _), agg_sealed[$kernel](C, _, _).
+alarm(quorum_sealed).
+-- the quorums the data decides: the first two of three by height, not by name
+atw_is(C, Rel, K, Ps) :- atw_cell(C, Rel, K, _), atw_member(C, 1, P1, _), atw_member(C, 2, P2, _), Ps = $cons(P1, $cons(P2, $nil)).
+atw_want(at_trusted, $cons(c1, $nil), $cons($cons(w1, $nil), $cons($cons(w2, $nil), $nil))).
+atw_want(at_believed, $cons(t, $nil), $cons($cons(zz, $nil), $cons($cons(x, $nil), $nil))).
+atw_want(at_believed, $cons(m, $nil), $cons($cons(a, $nil), $cons($cons(b, $nil), $nil))).
+atw_want(at_believed, $cons(v, $nil), $cons($cons(zz, $nil), $cons($cons(m, $nil), $nil))).
+-- a member by its least derivation: w of x7 is at v2's height, not
+-- unfounded by the v1 that rests on x7; a of y7 is at v2's, not v1's
+atw_want(at_b7, $cons(x7, $nil), $cons($cons(u, $nil), $cons($cons(w, $nil), $nil))).
+atw_want(at_b7, $cons(y7, $nil), $cons($cons(a, $nil), $cons($cons(b, $nil), $nil))).
+quorum_wrong(Rel, K) :- atw_want(Rel, K, Ps), not atw_is(_, Rel, K, Ps).
+alarm(quorum_wrong).
+-- the Raft quorums, all three members
+atw_three(C, A, B, D) :- atw_member(C, 1, A, _), atw_member(C, 2, B, _), atw_member(C, 3, D, _).
+raft_quorum_wrong(counted) :- atw_cell(C, ar_counted, $cons(5, $nil), _), not atw_three(C, $cons(s1, $nil), $cons(s2, $nil), $cons(s3, $nil)).
+raft_quorum_wrong(elected) :- atw_cell(C, ar_elected, $cons(s3, $nil), _), not atw_three(C, $cons(s3, $nil), $cons(s4, $nil), $cons(s5, $nil)).
+alarm(raft_quorum_wrong).
+-- no member rests on what it supports: m's quorum is a and b, never v
+self_support(X) :- atw_cell(C, at_believed, $cons(X, $nil), _), atw_member(C, _, $cons(X, $nil), _).
+self_support(m) :- atw_cell(C, at_believed, $cons(m, $nil), _), atw_member(C, _, $cons(v, $nil), _).
+alarm(self_support).
+-- the least signature: w1 of c1 is heard by mail and by phone, and cites mail
+atw_w1(P) :- atw_cell(C, at_trusted, $cons(c1, $nil), _), agg_member_prem[$kernel](C, 1, P).
+rep_not_least() :- atw_w1($fact(at_vouch, main, $cons(w1, $cons(c1, $cons(phone, $nil))))).
+rep_missing()   :- not atw_w1($fact(at_vouch, main, $cons(w1, $cons(c1, $cons(mail, $nil))))).
+alarm(rep_not_least).
+-- and cites the derivation it is a member by
+atw_wx7(P) :- atw_cell(C, at_b7, $cons(x7, $nil), _), atw_member(C, I, $cons(w, $nil), _), agg_member_prem[$kernel](C, I, P).
+rep_unfounded() :- atw_wx7($fact(at_ok7, main, $cons(v1, $nil))).
+rep_unfounded() :- not atw_wx7($fact(at_ok7, main, $cons(v2, $nil))).
+alarm(rep_unfounded).
+alarm(rep_missing).
+-- a step that needs nothing is a Quorum of none, and a claim short of N has
+-- no cell at all
+empty_quorum_wrong(s4) :- atw_cell(C, at_thm, $cons(s4, _), _), atw_has(C, 1).
+empty_quorum_wrong(s4) :- not atw_s4().
+atw_s4() :- atw_cell(_, at_thm, $cons(s4, _), _).
+short_has_cell(c2) :- atw_cell(_, at_trusted, $cons(c2, $nil), _).
+alarm(empty_quorum_wrong).
+alarm(short_has_cell).

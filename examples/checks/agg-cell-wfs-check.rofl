@@ -1,0 +1,49 @@
+-- below: examples/checks/agg-wfs-game.rofl
+-- below: examples/checks/agg-wfs-declares.rofl
+-- examples/checks/agg-cell-wfs-check.rofl — agg_cell_wfs: THE COMPOSITION FROM
+-- BELOW, the half of the well-founded policy that is not a refusal. The
+-- world below (agg-wfs-game.rofl) is evaluated on its own under
+-- semantics(well_founded); what it concludes arrives here as base facts
+-- asserted by `below`: its true rows and its unknown rows, and nothing else
+-- (not its own input wg_move, only rows of relations its rules conclude,
+-- asserted ones included, and not what agg-wfs-declares.rofl's rules
+-- conclude into the kernel's declarations: semantics(well_founded) would make
+-- this world well-founded and refuse the cell below).
+edb(wc_true).
+edb(wc_drawn).
+edb(wc_lost).
+wc_true(c). wc_true(h).
+wc_drawn(a). wc_drawn(b). wc_drawn(e). wc_drawn(f).
+wc_lost(d). wc_lost(g). wc_lost(i).
+wc_fed(F) :- asserted_by[$kernel](F, below, _).
+-- every true row and every unknown row is fed, each by `below`
+wc_true_missing(X)  :- wc_true(X), not wc_fed($fact(wg_win, main, $cons(X, $nil))).
+wc_drawn_missing(X) :- wc_drawn(X), not wc_fed($fact(unknown, main, $cons(wg_win(X), $nil))).
+-- and nothing a well-founded world leaves false
+wc_lost_fed(X)      :- wc_lost(X), wg_win(X), not unknown(wg_win(X)).
+wc_lost_fed(X)      :- wc_lost(X), unknown(wg_win(X)).
+-- nor its input, nor its semantics; but a row of a relation its rules
+-- conclude is an answer, asserted or concluded
+wc_input_fed(X, Y)  :- wg_move(X, Y).
+wc_input_fed(wd_q, X) :- wd_q(X).
+wc_answer_missing(X) :- wc_answer(X), not wc_fed($fact(wd_p, main, $cons(X, $nil))).
+wc_answer(a). wc_answer(b).
+wc_semantics_fed(S) :- semantics(S).
+wc_semantics_fed(S) :- sealed(S).
+-- a cell reads the fed rows as the closed relations they are
+wc_draws(N)         :- N is count(X : unknown(wg_win(X))).
+wc_count_wrong(N)   :- wc_draws(N), N != 4.
+wc_count_missing()  :- not wc_counted().
+wc_counted()        :- wc_draws(_).
+alarm(wc_true_missing).
+alarm(wc_drawn_missing).
+alarm(wc_lost_fed).
+alarm(wc_input_fed).
+alarm(wc_answer_missing).
+alarm(wc_semantics_fed).
+alarm(wc_count_wrong).
+alarm(wc_count_missing).
+-- a draw below is a paradox here, meta `below`: the cycle it rests on is the
+-- world below's, which this world's rules do not have and its rows name
+-- expect-row: shrug[$kernel](wg_win(a),paradox,below)
+-- expect-no-row: shrug[$kernel](wg_win(a),paradox,cycle(

@@ -1,0 +1,102 @@
+-- examples/checks/agg-join-holes-check.rofl — agg_join_holes: a join never
+-- wraps a number (a union of sets, the hull of two intervals and the or of
+-- two bitsets of the term range are in it), so what a join cell cannot hold
+-- is what its contributions could not be: an element or a bound past the
+-- term range is its rule's fault, `arith_overflow`, and the cell's hole; a
+-- contribution outside the carrier (no set, an inverted interval, a
+-- negative bitset) the cell's hole, `agg_type_error`; a membership of what
+-- is no set, interval or bitset its rule's, `set_type_error` -- and so is
+-- a read of what is spelled like one and is no value of it (an inverted
+-- interval on either side of `in` or `subset`, a negative bitset, two
+-- carriers against each other), the test a contribution passes. What such a
+-- cell leaves out is not known: a cell that reads it is withdrawn, a member
+-- of it is no answer, a negation above it is undecided, a count over it is
+-- a hole; a cell and a reader no hole reaches keep their answers.
+edb(ajh_e).
+edb(ajh_w).
+edb(ajh_node).
+edb(ajh_tag).
+edb(ajh_bad).
+ajh_e(a, b). ajh_e(b, c). ajh_e(x, y).
+ajh_w(a, 1). ajh_w(b, 1152921504606846975). ajh_w(c, 2). ajh_w(x, 5). ajh_w(y, 6).
+ajh_node(a). ajh_node(b). ajh_node(c). ajh_node(x). ajh_node(y).
+ajh_tag(q, oops).
+lattice ajh_s(N, union S).
+ajh_s(N, set(K)) :- ajh_w(N, V), K is V + 1.
+ajh_s(N, S)      :- ajh_e(N, M), ajh_s(M, S).
+lattice ajh_iv(N, hull I).
+ajh_iv(N, iv(V, H)) :- ajh_w(N, V), H is V + 1.
+lattice ajh_tu(N, union S).
+ajh_tu(N, set(N)) :- ajh_node(N).
+ajh_tu(x, oops)   :- ajh_node(x).
+lattice ajh_th(N, hull I).
+ajh_th(N, iv(1, 2)) :- ajh_node(N).
+ajh_th(y, iv(3, 1)) :- ajh_node(y).
+lattice ajh_tb(N, bitor B).
+ajh_tb(N, 1)  :- ajh_node(N).
+ajh_tb(c, -4) :- ajh_node(c).
+ajh_in(E)       :- ajh_tag(_, T), E in T.
+ajh_in_inv(yes)   :- ajh_node(a), 3 in iv(5, 1).
+ajh_in_enum(X)    :- ajh_node(a), X in iv(5, 1).
+ajh_sub_left(yes) :- ajh_node(a), iv(5, 1) subset iv(4, 4).
+ajh_sub_right(yes) :- ajh_node(a), iv(2, 2) subset iv(5, 1).
+ajh_sub_neg(yes)  :- ajh_node(a), -4 subset 7.
+ajh_sub_mix(yes)  :- ajh_node(a), set(1) subset iv(1, 2).
+ajh_has(N, K)   :- ajh_s(N, S), K in S.
+ajh_lacks(N)    :- ajh_node(N), not ajh_has(N, 3).
+ajh_count(N, C) :- ajh_node(N), C is count(K : ajh_has(N, K)).
+-- the holes, each with its reason
+-- expect-row: hole[$kernel]($lattice(ajh_s,main,0,$cons(b,$nil)),arith_overflow)
+-- expect-row: hole[$kernel]($lattice(ajh_s,main,0,$cons(a,$nil)),support_withdrawn)
+-- expect-row: hole[$kernel]($lattice(ajh_iv,main,0,$cons(b,$nil)),arith_overflow)
+-- expect-row: hole[$kernel]($lattice(ajh_tu,main,0,$cons(x,$nil)),agg_type_error)
+-- expect-row: hole[$kernel]($lattice(ajh_th,main,0,$cons(y,$nil)),agg_type_error)
+-- expect-row: hole[$kernel]($lattice(ajh_tb,main,0,$cons(c,$nil)),agg_type_error)
+-- expect-row: hole[$kernel]($rule(
+-- no value where a hole is, and its contributions go with it
+-- expect-no-row: ajh_s[main](a,
+-- expect-no-row: ajh_s[main](b,
+-- expect-no-row: ajh_s@join[main](a,
+-- expect-no-row: ajh_s@join[main](b,
+-- expect-no-row: ajh_iv[main](b,
+-- expect-no-row: ajh_tu[main](x,
+-- expect-no-row: ajh_th[main](y,
+-- expect-no-row: ajh_tb[main](c,
+-- expect-no-row: ajh_in[main](
+-- expect-no-row: ajh_in_inv[main](
+-- expect-no-row: ajh_in_enum[main](
+-- expect-no-row: ajh_sub_left[main](
+-- expect-no-row: ajh_sub_right[main](
+-- expect-no-row: ajh_sub_neg[main](
+-- expect-no-row: ajh_sub_mix[main](
+-- the cells and readers no hole reaches
+-- expect-row: ajh_s[main](c,set(3))
+-- expect-row: ajh_s[main](x,set(6,7))
+-- expect-row: ajh_s[main](y,set(7))
+-- expect-row: ajh_iv[main](a,iv(1,2))
+-- expect-row: ajh_iv[main](y,iv(6,7))
+-- expect-row: ajh_tu[main](a,set(a))
+-- expect-row: ajh_th[main](x,iv(1,2))
+-- expect-row: ajh_tb[main](a,1)
+-- expect-row: ajh_has[main](c,3)
+-- expect-row: ajh_lacks[main](x)
+-- expect-row: ajh_lacks[main](y)
+-- expect-row: ajh_count[main](x,2)
+-- what a hole left out is no answer, and nothing above it is decided
+-- expect-no-row: ajh_has[main](a,
+-- expect-no-row: ajh_lacks[main](a)
+-- expect-no-row: ajh_lacks[main](b)
+-- expect-no-row: ajh_lacks[main](c)
+-- expect-no-row: ajh_count[main](a,
+-- expect-no-row: ajh_count[main](b,
+-- the membership's fault names its rule
+ajh_in_rule(R)  :- concludes[$kernel](R, ajh_in).
+ajh_in_holed()  :- ajh_in_rule(R), hole[$kernel]($rule(R), set_type_error).
+ajh_in_silent() :- not ajh_in_holed().
+alarm(ajh_in_silent).
+-- and so does every read of what is spelled as a value and is none
+ajh_bad(ajh_in_inv). ajh_bad(ajh_in_enum). ajh_bad(ajh_sub_left).
+ajh_bad(ajh_sub_right). ajh_bad(ajh_sub_neg). ajh_bad(ajh_sub_mix).
+ajh_bad_holed(P)  :- ajh_bad(P), concludes[$kernel](R, P), hole[$kernel]($rule(R), set_type_error).
+ajh_bad_silent(P) :- ajh_bad(P), not ajh_bad_holed(P).
+alarm(ajh_bad_silent).

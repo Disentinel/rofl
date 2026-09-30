@@ -1,0 +1,11 @@
+-- expect-refusal: rank is not evaluated under well_founded semantics
+-- examples/checks/agg-holistic-wfs-2-refused-rank.rofl — rank inside a well-founded
+-- world is refused: its cell would be sealed under an assumption, over
+-- positions whose win is unknown.
+semantics(well_founded).
+edb(wr_move).
+wr_move(a, b). wr_move(b, a). wr_move(b, c).
+wr_win(X) :- wr_move(X, Y), not wr_win(Y).
+wr_d(X, R) :- wr_val(X, V), R is rank(V, W : wr_val(_, W)).
+wr_val(X, 1) :- wr_win(X).
+wr_val(X, 0) :- wr_move(X, _), not wr_win(X).

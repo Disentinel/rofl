@@ -1,0 +1,54 @@
+-- examples/checks/agg-witness-check.rofl — agg_cell_witness: a cell's
+-- witness is its members, each at its derivation height, in canonical
+-- order, complete and contiguous, and final.
+--
+-- THE HEIGHT ORACLE, by the derivation paths agg-witness-data.rofl writes:
+-- a given fact is 0, aw_q then aw_p is 2, aw_q, aw_r, aw_s then aw_p is 4.
+-- A member's height is 1 + the lowest height of its fact.
+aw_given(X)     :- asserted_by[$kernel]($fact(aw_p, main, $cons(X, $nil)), _, _).
+aw_dp(X, 0)     :- aw_given(X).
+aw_dp(X, 2)     :- aw_q(X), aw_base(X).
+aw_dp(X, 4)     :- aw_s(X), aw_base(X).
+aw_shorter(X, D) :- aw_dp(X, D), aw_dp(X, E), E < D.
+aw_best(X, D)    :- aw_dp(X, D), not aw_shorter(X, D).
+aw_cellof(C)     :- concludes[$kernel](R, aw_n), agg_cell[$kernel](C, _, _), C = $cell(R, _, _, _).
+aw_h_wrong(X, H) :- aw_cellof(C), agg_member[$kernel](C, _, $cons(X, $nil), H),
+                    aw_best(X, D), H2 is D + 1, H != H2.
+-- canonical order: height, then the projection
+aw_misordered(I, J) :- aw_cellof(C), agg_member[$kernel](C, I, _, H1), agg_member[$kernel](C, J, _, H2), I < J, H1 > H2.
+aw_misordered(I, J) :- aw_cellof(C), agg_member[$kernel](C, I, $cons(X1, $nil), H), agg_member[$kernel](C, J, $cons(X2, $nil), H),
+                       I < J, X1 > X2.
+-- complete and contiguous: members 1..N, where N is the cell's own value
+aw_has(C, I)     :- agg_member[$kernel](C, I, _, _).
+aw_gap(C, I)     :- aw_has(C, J), J > 1, I is J - 1, not aw_has(C, I).
+aw_short(C)      :- aw_cellof(C), agg_cell[$kernel](C, N, _), N > 0, not aw_has(C, N).
+aw_long(C)       :- aw_cellof(C), agg_cell[$kernel](C, N, _), M is N + 1, aw_has(C, M).
+aw_member(C, X)  :- aw_cellof(C), agg_member[$kernel](C, _, $cons(X, $nil), _).
+aw_mem_missing(X) :- aw_p(X), aw_cellof(C), not aw_member(C, X).
+aw_mem_extra(X)   :- aw_member(_, X), not aw_p(X).
+-- a cell is as high as its highest member
+aw_mh_above(C, H) :- agg_member[$kernel](C, _, _, H), agg_member[$kernel](C, _, _, H2), H2 > H.
+aw_mh_top(C, H)   :- agg_member[$kernel](C, _, _, H), not aw_mh_above(C, H).
+aw_cell_h_wrong(C) :- aw_cellof(C), agg_cell[$kernel](C, _, H), not aw_mh_top(C, H).
+-- the second level: aw_top's member aw_n(N) stands one above the cell it
+-- rests on, and the member one above that
+aw_topcell(C)     :- concludes[$kernel](R, aw_top), agg_cell[$kernel](C, _, _), C = $cell(R, _, _, _).
+aw_top_h_wrong(H) :- aw_topcell(T), agg_member[$kernel](T, _, $cons(N, $nil), H),
+                     aw_cellof(C), agg_cell[$kernel](C, N, HC), H2 is HC + 2, H != H2.
+-- final values only: a member cites a fact that holds
+aw_stale(C)       :- agg_member_prem[$kernel](C, _, $fact(aw_n, main, $cons(N, $nil))), not aw_n(N).
+aw_top_seen()     :- aw_topcell(_).
+aw_vacuous(top)   :- not aw_top_seen().
+aw_two_heights()  :- aw_dp(X, 2), aw_dp(X, 4).
+aw_vacuous(min)   :- not aw_two_heights().
+alarm(aw_h_wrong).
+alarm(aw_misordered).
+alarm(aw_gap).
+alarm(aw_short).
+alarm(aw_long).
+alarm(aw_mem_missing).
+alarm(aw_mem_extra).
+alarm(aw_cell_h_wrong).
+alarm(aw_top_h_wrong).
+alarm(aw_stale).
+alarm(aw_vacuous).

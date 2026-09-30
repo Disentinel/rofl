@@ -37,6 +37,7 @@ Reads:
 
 - from outside these files:
   - <a id="concludes"></a>A rule concludes a relation (`concludes`)
+  - <a id="premise_agg"></a>A rule aggregates over a relation (`premise_agg`)
   - <a id="premise_neg"></a>A rule negates a relation (`premise_neg`)
   - <a id="premise_pos"></a>A rule reads a relation (`premise_pos`)
 
@@ -44,6 +45,11 @@ Reads:
 
 1. if a rule R [concludes](#concludes) X and R [reads](#premise_pos) B;
 2. if a rule R [concludes](#concludes) X and R [negates](#premise_neg) B.
+
+> an aggregate's inner relations; the host (TypeScript only) seeds
+> `premise_agg` into this store once w_agg_ts lets that engine load one
+
+The rules of a relation X read a relation B if a rule R [concludes](#concludes) X and R [aggregates over](#premise_agg) B.
 
 > EVERY RELATION THE RULES MENTION, on either side. `planReuse` builds this as
 > `rels` while it walks; here it falls out of what is already derived.

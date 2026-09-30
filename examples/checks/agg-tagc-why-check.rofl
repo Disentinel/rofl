@@ -1,0 +1,28 @@
+-- examples/checks/agg-tagc-why-check.rofl — agg_tagc_why, run with
+-- `rofl-load --explain`. `why` of a counting tag's fact names it the sum of
+-- its derivations and shows each, the count it adds and its height, and the
+-- fact of the derivation with the rule that made it; `whynot` of another
+-- count says what the cell holds and lists every derivation it adds; of a
+-- key with no derivation, the rule and the premise that failed.
+edb(explain_request).
+edb(explained).
+explain_request(why, tc_any(s, b, 5)).
+explain_request(why, tc_total(9)).
+explain_request(whynot, tc_any(s, b, 4)).
+explain_request(whynot, tc_two(u, u, 1)).
+tcy_holds(K, A, T) :- explained[$explain](K, A, _, L), tcy_want(K, A, T), N is str_segs(L, T), N > 1.
+tcy_want(why, tc_any(s, b, 5), "tc_any[main](s,b,5) [tag counting: the sum of 2 derivations] <= tc_any@count @tick 0").
+tcy_want(why, tc_any(s, b, 5), "#1 x2 h=5").
+tcy_want(why, tc_any(s, b, 5), "#2 x3 h=8").
+tcy_want(why, tc_any(s, b, 5), "tc_hop[main](s,b,2) [tag counting: the sum of 1 derivation]").
+tcy_want(why, tc_total(9), "tc_total[main](9) [tag counting: the sum of 6 derivations]").
+tcy_want(why, tc_total(9), "[1 more derivations: why all tc_total[main](9)]").
+tcy_want(whynot, tc_any(s, b, 4), "tc_any[main](s,b) is a tag cell (counting) holding 5 [tag]").
+tcy_want(whynot, tc_any(s, b, 4), "4 is not its value: counting adds every derivation, and its 2 derivations add to 5").
+tcy_want(whynot, tc_any(s, b, 4), "x2 by r").
+tcy_want(whynot, tc_any(s, b, 4), "x3 by r").
+tcy_want(whynot, tc_two(u, u, 1), "failed premise: tc_hop[main](u,").
+tcy_text_missing(K, A, T) :- tcy_want(K, A, T), not tcy_holds(K, A, T).
+tcy_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(tcy_text_missing).
+alarm(tcy_refused).

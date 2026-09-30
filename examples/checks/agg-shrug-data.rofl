@@ -1,0 +1,26 @@
+-- examples/checks/agg-shrug-data.rofl — THE ANSWER MODEL, in both engines
+-- (docs/aggregates.md, "Shrugs, as built"). A literal holds, is unentailed
+-- (a closed-world no), or is a shrug: no answer, with a reason from
+-- shrug.rofl and structured meta, a row `shrug(Target, Reason, Meta)` in
+-- [$kernel]. A builtin's fault is a root; what reads what it left out, through
+-- a positive rule, a negation, or `unknown(A)`, inherits it and names it.
+edb(sd_pos).
+edb(sd_big).
+edb(sd_k).
+sd_pos(a). sd_pos(b). sd_pos(c). sd_pos(e).
+sd_big(1152921504606846975).
+sd_k(a, 1). sd_k(b, oops). sd_k(e, 2).
+-- c's win is one past the largest term: an overflow, a root
+sd_win(a).
+sd_win(c) :- sd_big(B), Z is B + 1, Z > 0.
+-- b's value is no number: a type error, a root; its value is not known
+sd_val(X, V) :- sd_k(X, K), V is K + 1.
+-- inherited through a positive rule and through a negation
+sd_up(X) :- sd_val(X, _).
+sd_lose(X) :- sd_pos(X), not sd_win(X).
+-- unknown(A) of what a hole left out is a shrug, read positively or under not
+sd_open(X) :- sd_pos(X), unknown(sd_win(X)).
+sd_settled(X) :- sd_pos(X), not unknown(sd_win(X)).
+-- the structure around what is not known is known: unknown(sd_val(b, _))
+-- is no unknown(sd_lose(b)), so b's novelty is decided
+sd_novel(X) :- sd_pos(X), not unknown(sd_lose(X)).

@@ -1,0 +1,18 @@
+-- examples/checks/agg-lattice-wfs-check.rofl — agg_lattice_wfs: a lattice
+-- over what a well-founded world concluded, fed from below: the fewest
+-- moves from a position to a drawn one; inside one, a lattice is refused
+-- (agg-lattice-wfs-2-refused-lattice.rofl).
+edb(wlt_move).
+wlt_move(a, b). wlt_move(b, a). wlt_move(b, c). wlt_move(c, d).
+wlt_move(e, f). wlt_move(f, e). wlt_move(g, h). wlt_move(h, i).
+lattice wlt_to_draw(X, min D).
+wlt_to_draw(X, 0) :- unknown(wg_win(X)).
+wlt_to_draw(X, D) :- wlt_move(X, Y), wlt_to_draw(Y, D1), D is D1 + 1.
+wlt_want(a, 0). wlt_want(b, 0). wlt_want(e, 0). wlt_want(f, 0).
+wlt_wrong(X, D) :- wlt_want(X, D), not wlt_to_draw(X, D).
+wlt_wrong(X, D) :- wlt_to_draw(X, D), not wlt_want(X, D).
+alarm(wlt_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wlt_to_draw[main](a,0)
+-- expect-row: wlt_to_draw[main](f,0)

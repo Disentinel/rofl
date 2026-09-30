@@ -1,0 +1,21 @@
+-- examples/checks/agg-threshold-holes-check.rofl — agg_threshold_holes: a
+-- threshold is monotone, so a quorum reached without the member not known
+-- stands (b reaches one), and one short of it is not known: neither a row
+-- nor a definite `not`, however the members that are not known would have
+-- gone (agg-holes-data.rofl). c has no member and reaches nothing, for certain;
+-- d's one member is not known, so it could reach one but never two: short of
+-- two under every completion, decided (docs/aggregates.md, "Shrugs, as built").
+aht_two(G) :- ah_g(G), at_least(2, K : ah_x(G, K, _)).
+aht_one(G) :- ah_g(G), at_least(1, K : ah_x(G, K, _)).
+aht_ntwo(G) :- ah_g(G), not aht_two(G).
+aht_none(G) :- ah_g(G), not aht_one(G).
+-- expect-row: aht_two[main](a)
+-- expect-row: aht_one[main](b)
+aht_bad(two_b)   :- aht_two(b).
+aht_bad(ntwo_b)  :- aht_ntwo(b).
+aht_bad(ntwo_big) :- aht_ntwo(big).
+aht_bad(none_d)  :- aht_none(d).
+-- expect-row: aht_ntwo[main](c)
+-- expect-row: aht_ntwo[main](d)
+-- expect-row: aht_none[main](c)
+alarm(aht_bad).

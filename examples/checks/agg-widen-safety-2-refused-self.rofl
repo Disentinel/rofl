@@ -1,0 +1,8 @@
+-- expect-refusal: no relation on that cycle declares a widening
+-- a hull computing its value from its own by an interval function, with no
+-- widening declared: nothing bounds how often the value grows
+edb(awsr_s).
+awsr_s(a).
+lattice awsr_self(X, hull I).
+awsr_self(X, iv(0, 0)) :- awsr_s(X).
+awsr_self(X, J)        :- awsr_self(X, I), J is ivadd(I, 1).

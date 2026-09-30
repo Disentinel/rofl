@@ -1,0 +1,5 @@
+-- expect-refusal: a relation has one algebra
+-- a count's value as a union's contribution: a relation has one algebra
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_agg(X, union S).
+ajsr_agg(X, N) :- ajsr_e(X, _), N is count(Y : ajsr_e(Y, _)).

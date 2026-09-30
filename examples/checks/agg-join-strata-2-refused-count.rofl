@@ -1,0 +1,9 @@
+-- expect-refusal: reads a closed relation
+-- a count reads a closed relation, and a join lattice closes only after
+-- its recursion: a count of its own cells inside that recursion is refused
+edb(ajsr_n).
+ajsr_n(a).
+ajsr_n(b).
+lattice ajsr_s(X, union S).
+ajsr_s(X, set(X)) :- ajsr_n(X).
+ajsr_s(X, set(N)) :- ajsr_n(X), N is count(Y : ajsr_s(Y, _)).

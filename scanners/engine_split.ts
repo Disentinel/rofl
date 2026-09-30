@@ -334,7 +334,7 @@ export const ABSORBED: Record<string, string[]> = {
   solveBody: ['evalOrder', 'recordPrem', 'resolvedLitKey', 'anonLitKey'],
   indexProbe: ['scanRel'],
   evalBuiltin: ['arithHole'],
-  strataToken: ['extendAssumption', 'sameRecs', 'sigOf'],
+  strataToken: ['extendAssumption', 'sigOf'],
 };
 
 // ---------------------------------------------------------------------------

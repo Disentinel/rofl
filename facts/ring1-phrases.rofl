@@ -44,6 +44,8 @@ phrase(p, "there is a <1:mark> at <0:position>").
 -- keywords, spelled character by character
 phrase(kw_not, "<0:position> spells the keyword for negation").
 phrase(kw_is, "<0:position> spells the keyword for evaluation").
+phrase(kw_in, "<0:position> spells the word for membership").
+phrase(kw_subset, "<0:position> spells the word for a subset").
 phrase(kw_mod, "<0:position> spells the keyword for the remainder").
 phrase(kw_init, "<0:position> spells the keyword for the first tick").
 phrase(kw_now, "<0:position> spells the keyword for this tick").
@@ -74,6 +76,12 @@ phrase(tmark, "the tense mark from <0:position> to <1:position> says <2:tense>")
 phrase(tensed, "<0:position> is followed by a tense mark").
 phrase(lit, "the literal from <0:position> to <1:position> is <2:literal>").
 phrase(belem, "the condition from <0:position> to <1:position> is <2:condition>").
+phrase(agg_word, "<0:operation> names an aggregate").
+phrase(aggop, "the aggregate operation from <0:position> to <1:position> is <2:operation>").
+phrase(aggkeys, "the keys after <0:position> end at <1:position> and are <2:list>").
+phrase(latargs, "the lattice arguments from <0:position> to <1:position>, merged by <2:operation>, are <3:list>").
+phrase(tagop, "the semiring <2:algebra> is named from <0:position> to <1:position>").
+phrase(tagargs, "the tag arguments from <0:position> to <1:position>, in the semiring <2:algebra>, are <3:list>").
 phrase(body, "the body from <0:position> to <1:position> is <2:list>").
 phrase(clause_at, "the clause from <0:position> to <1:position> has the head <2:literal> and the body <3:list>").
 -- the file, and what it did not cover

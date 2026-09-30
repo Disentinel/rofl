@@ -41,11 +41,11 @@
 use std::collections::HashMap;
 
 use crate::describe;
-use crate::engine::{Eval, Halt, Mode, TickOutcome, WhynotBounds};
+use crate::engine::{Eval, Halt, Mode, TickOutcome, WhyOpts, WhynotBounds};
 use crate::program;
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{write_fact_key, FactId, Store, F_BASE};
+use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 
 /// A world. Built once with [`Session::open`], then forked per unit of work.
@@ -106,6 +106,10 @@ pub struct Answer {
     /// relation was walked. A caller tuning a question watches this flip.
     pub probed: bool,
     pub micros: u128,
+    /// The answers that are shrugs (docs/aggregates.md, "Shrugs, as built"):
+    /// the bindings each names, `_` where it does not know, in `vars` order,
+    /// and its line (`Eval::shrug_line`).
+    pub shrugs: Vec<(Vec<String>, String)>,
 }
 
 impl Session {
@@ -148,8 +152,8 @@ impl Session {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let mut n = 0;
         for c in &cs {
-            if !c.body.is_empty() {
-                return Err(format!("assert takes facts, not rules: {}", rofl_parse::show(&self.eval.h, c)));
+            if !c.body.is_empty() || c.lattice.is_some() {
+                return Err(format!("assert takes facts, not rules or declarations: {}", rofl_parse::show(&self.eval.h, c)));
             }
             if c.head.tense != Tense::Now {
                 return Err(format!("assert takes facts of the present tense: {}", rofl_parse::show(&self.eval.h, c)));
@@ -196,6 +200,103 @@ impl Session {
         }
         self.eval.reprepare();
         Ok(r.admitted)
+    }
+
+    /// THE COMPOSITION FROM BELOW (docs/aggregates.md, "Well-founded worlds
+    /// and ticks, as built"): a world evaluated on its own, typically under
+    /// `semantics(well_founded)`, hands its answers to this one as base facts
+    /// asserted by `below`, and this one aggregates them stratified. What is
+    /// fed is what the world below concludes: every live row, in a program's
+    /// book, of a relation a rule of its own concludes (a rule this world
+    /// also holds, boot's, is not its own), and every `unknown(Atom)` row the
+    /// alternating fixpoint wrote. A declaration the kernel reads
+    /// (`semantics`, `sealed`, `stratum`) is not an answer and is not fed.
+    ///
+    /// What the world below has no answer for crosses as a shrug
+    /// (docs/aggregates.md, "Shrugs, as built"): each atom it names a shrug,
+    /// and every row of each relation it feeds when a wall cut it, is written
+    /// here as `hole($below(Rel, Book, Args), left_out_below)`, which this
+    /// world carries as what a hole left out. Fed as base, it would read as
+    /// false. Refused: a world below that is not evaluated.
+    /// Returns how many facts were fed.
+    pub fn feed_below(&mut self, below: &mut Session) -> Result<usize, String> {
+        let b = &mut below.eval;
+        if b.store.dirty {
+            return Err("the world below is not evaluated".into());
+        }
+        let mine: std::collections::HashSet<&str> = self.eval.rules.iter().map(|r| self.eval.h.name(r.id)).collect();
+        let declared = [b.v.semantics, b.v.sealed, b.v.stratum];
+        let mut fed: std::collections::HashSet<Sym> = b
+            .rules
+            .iter()
+            .filter(|r| !mine.contains(b.h.name(r.id)))
+            .map(|r| r.clause.head.rel)
+            .filter(|r| brk!("below_feeds_declarations" => true; !declared.contains(r)))
+            .collect();
+        if brk!("below_drops_unknown" => false; true) {
+            fed.insert(b.v.unknown);
+        }
+        let mut keys: Vec<String> = Vec::new();
+        for id in b.store.all_facts() {
+            let r = *b.store.rec(id);
+            if !b.store.alive(id) || !fed.contains(&r.rel) || is_kernel_ledger(&b.h, r.persp) || brk!("below_drops_concluded_input" => r.base(); false) {
+                continue;
+            }
+            let mut k = String::new();
+            write_fact_key(&b.h, r.rel, r.persp, b.store.args(id), &mut k);
+            keys.push(k);
+        }
+        keys.sort_by(|x, y| crate::term::cmp_js(x, y));
+        // what it has no answer for: an atom a shrug names, or every row of a
+        // relation it feeds when a wall cut it
+        let mut open: Vec<(Sym, Option<Sym>, Vec<Term>)> = Vec::new();
+        if b.store.partial_eval {
+            let mut rels: Vec<Sym> = fed.iter().copied().collect();
+            rels.sort_by(|x, y| crate::term::cmp_js(b.h.name(*x), b.h.name(*y)));
+            open.extend(rels.into_iter().map(|r| (r, None, Vec::new())));
+        }
+        let (every, inn) = (b.h.intern("every"), b.h.intern("in"));
+        for id in b.store.rel_all(&b.h, b.v.shrug) {
+            let t = b.store.args(id)[0];
+            let (persp, at) = match t.kind() {
+                TermK::Func(i) if b.h.fname(i) == inn && b.h.fargs(i).len() == 2 => match b.h.fargs(i)[0].as_atom() {
+                    Some(p) => (p, b.h.fargs(i)[1]),
+                    None => continue,
+                },
+                _ => (b.v.main, t),
+            };
+            let (rel, args) = match at.kind() {
+                TermK::Atom(r) => (r, Vec::new()),
+                TermK::Func(i) if b.h.fname(i) == every => match b.h.fargs(i)[0].as_atom() {
+                    Some(r) if fed.contains(&r) => {
+                        open.push((r, None, Vec::new()));
+                        continue;
+                    }
+                    _ => continue,
+                },
+                TermK::Func(i) => (b.h.fname(i), b.h.fargs(i).to_vec()),
+                _ => continue,
+            };
+            if brk!("below_drops_shrugs" => false; fed.contains(&rel) && !b.h.name(rel).starts_with('$')) {
+                open.push((rel, Some(persp), args));
+            }
+        }
+        let text: String = keys.iter().map(|k| format!("{k}.\n")).collect();
+        self.load(&text, Some("below")).map_err(|d| format!("what the world below concludes does not load here: {}", d.join("; ")))?;
+        let e = &mut self.eval;
+        let (mark, cause, any) = (e.h.intern("$below"), e.h.atom("left_out_below"), e.h.atom("$any"));
+        for (rel, persp, args) in open {
+            let rel = e.h.intern(below.eval.h.name(rel));
+            let persp = persp.map(|p| e.h.atom(below.eval.h.name(p))).unwrap_or(any);
+            let args = if persp == any { any } else {
+                let xs: Vec<Term> = args.iter().map(|a| crate::term::copy_term(&below.eval.h, *a, &mut e.h)).collect();
+                e.h.list(&xs)
+            };
+            let target = e.h.mkf(mark, &[Term::atom(rel), persp, args]);
+            e.store.add(&e.h, e.v.hole, e.v.kernel_persp, &[target, cause], crate::store::F_BASE | crate::store::F_FROZEN);
+        }
+        self.eval.store.dirty = true;
+        Ok(keys.len())
     }
 
     /// Run to fixpoint, or to a wall. `Err` is a defect or a stratification
@@ -336,7 +437,7 @@ impl Session {
     pub fn reheat_trail(&mut self, path: &str) -> Result<usize, String> {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
         let head = text.lines().next().unwrap_or("");
-        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", env!("ROFL_KERNEL_HASH"));
+        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", crate::kernel::hash());
         if !head.starts_with(&want) {
             return Err(format!(
                 "{path}: not a trail this engine wrote, so what it means is unknown.\n  \
@@ -348,7 +449,7 @@ impl Session {
         let kp = self.eval.v.kernel_persp;
         let mut n = 0;
         for c in &cs {
-            if !c.body.is_empty() || c.head.rel != ab {
+            if !c.body.is_empty() || c.lattice.is_some() || c.head.rel != ab {
                 return Err(format!("{path}: a trail holds `asserted_by` facts and nothing else"));
             }
             let args = c.head.args.clone();
@@ -377,7 +478,7 @@ impl Session {
     pub fn reheat(&mut self, path: &str) -> Result<usize, Vec<String>> {
         let text = std::fs::read_to_string(path).map_err(|e| vec![format!("{path}: {e}")])?;
         let head = text.lines().next().unwrap_or("");
-        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", env!("ROFL_KERNEL_HASH"));
+        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", crate::kernel::hash());
         if !head.starts_with(&want) {
             return Err(vec![format!(
                 "{path}: not a volume this engine wrote, so what it means is unknown.\n                   header: {head}\n  wanted: {want}...\n                   Re-parse the source instead; a volume cannot be translated, because \
@@ -565,7 +666,7 @@ impl Session {
 
     fn header(&self, prefix: &str) -> String {
         format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={} prefix={prefix}\n",
-            env!("ROFL_KERNEL_HASH"))
+            crate::kernel::hash())
     }
 
     fn mentions(&self, t: Term, prefix: &str) -> bool {
@@ -596,7 +697,7 @@ impl Session {
         let t0 = std::time::Instant::now();
         let src = format!("{}.", query.trim().trim_end_matches('.'));
         let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
-        if cs.len() != 1 || !cs[0].body.is_empty() {
+        if cs.len() != 1 || !cs[0].body.is_empty() || cs[0].lattice.is_some() {
             return Err("ask takes exactly one literal".into());
         }
         let lit = &cs[0].head;
@@ -679,7 +780,39 @@ impl Session {
             keys.push(k);
         }
 
-        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros() })
+        let lit = self.one_lit(query)?;
+        let mut shrugs: Vec<(Vec<String>, String)> = Vec::new();
+        for (f, s) in self.eval.shrugs_of(&lit) {
+            let row: Vec<String> = vars
+                .iter()
+                .map(|v| {
+                    let vt = self.eval.h.var(v);
+                    let t = crate::term::resolve(&mut self.eval.h, vt, &s);
+                    if matches!(t.kind(), TermK::Var(_)) { "_".to_string() } else { self.eval.shown(t) }
+                })
+                .collect();
+            let line = self.eval.shrug_line(f);
+            if !shrugs.iter().any(|x| x.0 == row && x.1 == line) {
+                shrugs.push((row, line));
+            }
+        }
+        // A WALL CUT THE WORLD: every answer that does not hold is no answer
+        if self.eval.store.partial_eval {
+            let budget = self.eval.h.atom("budget");
+            for f in self.eval.store.rel_persp(&self.eval.h, self.eval.v.shrug, self.eval.v.kernel_persp) {
+                let a = self.eval.store.args(f).to_vec();
+                let kernel_target = match a[0].kind() {
+                    TermK::Atom(s) => self.eval.h.name(s).starts_with('$'),
+                    TermK::Func(i) => self.eval.h.name(self.eval.h.fname(i)).starts_with('$'),
+                    _ => false,
+                };
+                if a[1] == budget && kernel_target {
+                    shrugs.push((vars.iter().map(|_| "_".to_string()).collect(), self.eval.shrug_line(f)));
+                    break;
+                }
+            }
+        }
+        Ok(Answer { vars, rows, keys, scanned, probed, micros: t0.elapsed().as_micros(), shrugs })
     }
 
     /// A parsed literal, in this world's vocabulary.
@@ -839,6 +972,75 @@ impl Session {
         self.eval.why_text(&lit)
     }
 
+    /// `why`, with every member of every aggregate cell it passes through,
+    /// where `why` prints a digest of the first `WHY_MEMBERS`.
+    pub fn why_all(&mut self, query: &str) -> Result<String, String> {
+        let lit = self.one_lit(query)?;
+        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() })
+    }
+
+    /// THE EXPLAIN BRIDGE, and why it exists: `why` and `whynot` are host
+    /// verbs, and a `.rofl` world cannot call one, so a property of their text
+    /// had no world that could hold it. A program asks with
+    /// `explain_request(Kind, Atom)` — `Kind` is `why`, `why_all` or
+    /// `whynot`, `Atom` is `rel(args...)` in the main book — and after an
+    /// evaluation this answers each, in key order, as
+    /// `explained[$explain](Kind, Atom, I, "line")`, one row per line from
+    /// I = 1, or one row at I = 0 carrying the refusal. `$explain` is a `$`
+    /// ledger: a program reads it and cannot write it. The rows are base and
+    /// tick-scoped; the caller evaluates again so rules can read them.
+    /// Returns how many requests were answered.
+    pub fn explain_requests(&mut self) -> Result<usize, String> {
+        let (req, main) = (self.eval.v.explain_request, self.eval.v.main);
+        let mut asks: Vec<(String, Term, Term)> = Vec::new();
+        for f in self.eval.store.rel_persp(&self.eval.h, req, main) {
+            let args = self.eval.store.args(f).to_vec();
+            if args.len() != 2 {
+                continue;
+            }
+            let k = self.eval.store.key(&self.eval.h, f);
+            asks.push((k, args[0], args[1]));
+        }
+        asks.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
+        let (why, why_all, whynot) = (self.eval.h.intern("why"), self.eval.h.intern("why_all"), self.eval.h.intern("whynot"));
+        let mut rows: Vec<(Term, Term, i64, String)> = Vec::new();
+        for (_, kind, atom) in &asks {
+            let lit = match atom.kind() {
+                TermK::Atom(rel) => Ok(reflect::Lit { rel, persp: Term::atom(main), persp_explicit: false, args: Vec::new(), temporal: reflect::Temporal::Now }),
+                TermK::Func(i) => Ok(reflect::Lit {
+                    rel: self.eval.h.fname(i),
+                    persp: Term::atom(main),
+                    persp_explicit: false,
+                    args: self.eval.h.fargs(i).to_vec(),
+                    temporal: reflect::Temporal::Now,
+                }),
+                _ => Err("an explain request names an atom: rel(args...)".to_string()),
+            };
+            let text = lit.and_then(|l| match kind.as_atom() {
+                Some(k) if k == why => self.eval.why_text(&l),
+                Some(k) if k == why_all => brk!("why_all_digest" => self.eval.why_text(&l);
+                    self.eval.why_text_with(&l, &WhyOpts { members: usize::MAX, query: String::new() })),
+                Some(k) if k == whynot => self.eval.whynot_text(&l, &WhynotBounds::default()).map(|(_, t)| t).map_err(|h| describe(&h)),
+                _ => Err("the kinds of explanation are why, why_all and whynot".to_string()),
+            });
+            match text {
+                Ok(t) => {
+                    for (i, line) in t.lines().enumerate() {
+                        rows.push((*kind, *atom, i as i64 + 1, line.to_string()));
+                    }
+                }
+                Err(e) => rows.push((*kind, *atom, 0, e)),
+            }
+        }
+        let (rel, book) = (self.eval.v.explained, self.eval.v.explain_persp);
+        for (kind, atom, i, line) in rows {
+            let l = self.eval.h.string(&line);
+            self.eval.store.add(&self.eval.h, rel, book, &[kind, atom, Term::int(i), l], F_BASE | F_TICK);
+        }
+        self.eval.store.dirty = true;
+        Ok(asks.len())
+    }
+
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
     /// is the answer, not an error, and says so in the same shape.
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
@@ -856,6 +1058,7 @@ impl Session {
             return Err("this takes exactly one literal".into());
         }
         let mut c = program::to_clause(&mut self.eval.h, &self.eval.v, &cs[0])?;
+        program::check_query_sets(&self.eval.h, &self.eval.v, &c.head.args)?;
         reflect::resolve_clause_books(&self.eval.v, &mut c);
         Ok(c.head)
     }
@@ -871,6 +1074,9 @@ impl Session {
                 ))
             }
         };
-        Ok((l.rel, persp, l.args.clone()))
+        let (h, v) = (&mut self.eval.h, &self.eval.v);
+        let args: Vec<Term> = l.args.iter().map(|t| crate::program::canon_sets(h, v, *t)).collect();
+        crate::program::check_query_sets(h, v, &args)?;
+        Ok((l.rel, persp, args))
     }
 }

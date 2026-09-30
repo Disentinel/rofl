@@ -1,0 +1,7 @@
+-- expect-refusal: expected a term, got ')'
+-- examples/checks/agg-shrug-wfs-nullary-term-refused.rofl — agg_cell_shrug_wfs:
+-- `p()` is a nullary literal and never a term. Read as a compound of no
+-- arguments, `not unknown(sw_n1())` asked of a term no atom is, and held
+-- beside the paradox sw_n1; the TypeScript parser refused it.
+semantics(well_founded).
+sw_n_wrong() :- not unknown(sw_n1()).

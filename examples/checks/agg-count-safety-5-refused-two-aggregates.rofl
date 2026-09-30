@@ -1,0 +1,8 @@
+-- expect-refusal: is bound by another aggregate after the aggregate
+-- examples/checks/agg-count-safety-5-refused-two-aggregates.rofl — B occurs
+-- in no premise but the two aggregates, and in both. A variable is local to
+-- an aggregate only when it occurs nowhere else in the rule, and the other
+-- aggregate is elsewhere: so B is shared, bound by the second aggregate after
+-- the first, which the load door refuses (docs/aggregates.md, "Scope"). Two
+-- independent counts name their variables apart.
+acs_two(N, M) :- N is count(B : acs_b(B, _)), M is count(B : acs_b(B, x)).

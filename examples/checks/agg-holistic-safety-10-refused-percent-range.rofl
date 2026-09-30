@@ -1,0 +1,4 @@
+-- expect-refusal: quantile's percent is an integer from 0 to 100
+-- examples/checks/agg-holistic-safety-10-refused-percent-range.rofl — a
+-- literal percent past 100 is refused where it is written.
+ahs_q150(G, Q) :- ahs_group(G), Q is quantile(150, V ; K : ahs_line(G, K, V)).

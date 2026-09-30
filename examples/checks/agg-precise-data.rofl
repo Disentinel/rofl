@@ -1,0 +1,77 @@
+-- examples/checks/agg-precise-data.rofl — WHAT THE PRECISE HOLES READ
+-- (docs/aggregates.md, "Precise holes, as built"): grouped body aggregates and
+-- a counting tag over members some of which a hole left out. Each unknown is
+-- a tuple a rule would conclude but for an overflow (`ph_big(B), Z is B + 1`),
+-- so what it is, is known and whether it holds is not; two leave a position
+-- not known as well, the group of one and a group variable of the other.
+--
+-- ph_m(G, X, V), the members, by group:
+--   g1  a:3, and b:7 not known         a member only a completion adds
+--   g2  a:5, and a:9 not known         a projection a count already holds
+--   g3  only c:1, not known            a group only a completion makes
+--   g4  z:2 and y:6, z out when ph_off(z) holds, which is not known
+--   g5  d:4, and e:0 not known         a member a sum does not feel
+--   g6  none                           nothing reaches it: empty for certain
+--   g7  only f:0, not known            a group only a 0 makes: a sum it
+--                                      makes (0, or none), a correlated
+--                                      sum it does not (0 either way)
+-- ph_n(G, H, X): (g1,h1,k) (g1,h2,j) (g2,h1,k), and (g1, ?, k) not known.
+-- ph_w(G, X): (g1,k9) (g2,k1), and (?, k9) not known.
+-- the tag ph_t: a weighs 1, b 2, and b has a third derivation not known.
+-- ph_off2(y, 1) holds, and ph_off2(y, ?) is not known: a negation of
+-- ph_off2(X, _) is decided for y whatever the unknown is.
+edb(ph_big).
+edb(ph_m0).
+edb(ph_g).
+edb(ph_n0).
+edb(ph_w0).
+edb(ph_tw).
+edb(ph_o2).
+ph_big(1152921504606846975).
+ph_m0(g1, a, 3).
+ph_m0(g2, a, 5).
+ph_m0(g4, z, 2). ph_m0(g4, y, 6).
+ph_m0(g5, d, 4).
+ph_g(g1). ph_g(g2). ph_g(g3). ph_g(g4). ph_g(g5). ph_g(g6). ph_g(g7).
+ph_n0(g1, h1, k). ph_n0(g1, h2, j). ph_n0(g2, h1, k).
+ph_w0(g1, k9). ph_w0(g2, k1).
+ph_tw(a, 1). ph_tw(b, 2).
+ph_o2(y, 1).
+
+ph_m(G, X, V)  :- ph_m0(G, X, V).
+ph_m(g1, b, 7) :- ph_big(B), Z is B + 1, Z > 0.
+ph_m(g2, a, 9) :- ph_big(B), Z is B + 1, Z > 0.
+ph_m(g3, c, 1) :- ph_big(B), Z is B + 1, Z > 0.
+ph_m(g5, e, 0) :- ph_big(B), Z is B + 1, Z > 0.
+ph_m(g7, f, 0) :- ph_big(B), Z is B + 1, Z > 0.
+ph_off(z)      :- ph_big(B), Z is B + 1, Z > 0.
+ph_off2(X, V)  :- ph_o2(X, V).
+ph_off2(y, V)  :- ph_big(B), V is B + 1.
+ph_n(G, H, X)  :- ph_n0(G, H, X).
+ph_n(g1, H, k) :- ph_big(B), H is B + 1.
+ph_w(G, X)     :- ph_w0(G, X).
+ph_w(G, k9)    :- ph_big(B), G is B + 1.
+tag ph_t(A, counting N).
+ph_t(A, W)     :- ph_tw(A, W).
+ph_t(b, 1)     :- ph_big(B), Z is B + 1, Z > 0.
+
+-- the kinds, grouped (the group bound by the inner body) ...
+ph_cnt(G, N) :- N is count(X : ph_m(G, X, _)).
+ph_sum(G, S) :- S is sum(V ; X : ph_m(G, X, V)).
+ph_min(G, M) :- M is min(V : ph_m(G, _, V)).
+ph_max(G, M) :- M is max(V : ph_m(G, _, V)).
+ph_med(G, M) :- M is median(V ; X : ph_m(G, X, V)).
+ph_q90(G, Q) :- Q is quantile(90, V ; X : ph_m(G, X, V)).
+ph_rk5(G, R) :- R is rank(5, V : ph_m(G, _, V)).
+ph_rk4(G, R) :- R is rank(4, V : ph_m(G, _, V)).
+ph_neg(G, N) :- N is count(X : ph_m(G, X, _), not ph_off(X)).
+ph_neg2(G, N) :- N is count(X : ph_m(G, X, _), not ph_off2(X, _)).
+ph_pair(G, H, N) :- N is count(X : ph_n(G, H, X)).
+ph_wc(G, N) :- N is count(X : ph_w(G, X)).
+-- ... fired once for each solution of what precedes it, over one sealing
+edb(ph_side).
+ph_side(1). ph_side(2).
+ph_two(S, G, N) :- ph_side(S), N is count(X : ph_m(G, X, _)).
+-- ... and correlated (the group bound before it), where an empty group is 0
+ph_cq(G, N) :- ph_g(G), N is count(X : ph_m(G, X, _)).
+ph_sq(G, S) :- ph_g(G), S is sum(V ; X : ph_m(G, X, V)).

@@ -41,14 +41,15 @@
 //! started from, so a rejected program leaves nothing behind. That is a
 //! `Store` clone, which is the same copy `fork` makes.
 
-use crate::engine::{plan_body, Eval};
+use crate::cell::AggOp;
+use crate::engine::{plan_body, plan_elems, plan_order, Eval};
 use crate::reflect::{
-    canon_clause, encode_rule, fact_term, is_kernel_ledger, register_persp, resolve_clause_books,
-    sealed_bodies, BodyElem, Clause, Lit, Temporal, Vocab,
+    annotate_aggs, canon_clause, encode_dominance, encode_rule, fact_term, is_kernel_ledger, register_persp,
+    resolve_clause_books, sealed_bodies, Agg, BodyElem, Clause, Lit, Temporal, Vocab,
 };
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{F_BASE, F_FROZEN, F_TICK};
-use crate::term::{Heap, Sym, Term};
+use crate::term::{Heap, Sym, Term, TermK};
 
 pub const KERNEL_CLAIM: &str = "$kernel_authority";
 
@@ -79,20 +80,52 @@ pub struct Loaded {
 /// engine runs. Collapsing them would put the parser inside the evaluator's
 /// type and make a syntax change an evaluator change.
 pub fn to_clause(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Clause, String> {
+    if c.lattice.is_some() {
+        return Err(format!("{} is a lattice declaration, not a clause", rofl_parse::decl_text(h, c)));
+    }
+    if c.dom.is_some() {
+        return Err(format!("dominance {}: a dominance rule is loaded with its program, not asserted", h.name(c.head.rel)));
+    }
     let head = to_lit(h, v, &c.head)?;
-    let mut body = Vec::with_capacity(c.body.len());
-    for e in &c.body {
+    let body = to_body(h, v, &c.body)?;
+    let mut c = Clause { head, body };
+    annotate_aggs(h, &mut c);
+    Ok(c)
+}
+
+fn to_body(h: &mut Heap, v: &Vocab, es: &[rofl_parse::Elem]) -> Result<Vec<BodyElem>, String> {
+    let mut body = Vec::with_capacity(es.len());
+    for e in es {
         body.push(match e {
             rofl_parse::Elem::Pos(l) => BodyElem::Pos(to_lit(h, v, l)?),
             rofl_parse::Elem::Neg(l) => BodyElem::Neg(to_lit(h, v, l)?),
-            rofl_parse::Elem::Builtin(op, l, r) => BodyElem::Bi { op: *op, l: *l, r: *r },
+            rofl_parse::Elem::Builtin(op, l, r) => {
+                let (l, r) = (canon_sets(h, v, *l), canon_sets(h, v, *r));
+                BodyElem::Bi { op: *op, l, r }
+            }
+            rofl_parse::Elem::Agg(a) => {
+                let op = AggOp::from_name(h.name(a.op)).ok_or("aggregate: no such operation")?;
+                BodyElem::Agg(Box::new(Agg {
+                    op,
+                    result: a.res,
+                    vals: a.vals.iter().map(|t| canon_sets(h, v, *t)).collect(),
+                    keys: a.keys.iter().map(|t| canon_sets(h, v, *t)).collect(),
+                    body: to_body(h, v, &a.body)?,
+                    at: 0,
+                    shared: Vec::new(),
+                }))
+            }
         });
     }
-    Ok(Clause { head, body })
+    Ok(body)
+}
+
+/// A term as the program means it: every ground set its canonical value.
+pub fn canon_sets(h: &mut Heap, v: &Vocab, t: Term) -> Term {
+    crate::cell::canon_set_literals(h, v, &mut Default::default(), t)
 }
 
 fn to_lit(h: &mut Heap, v: &Vocab, l: &rofl_parse::Lit) -> Result<Lit, String> {
-    let _ = h;
     // `persp_explicit` is what `check_kernel_book` reads, so it must record
     // whether the AUTHOR typed a bracket — not whether the clause ends up with
     // a book, which after `resolve_clause_books` is always true.
@@ -105,7 +138,7 @@ fn to_lit(h: &mut Heap, v: &Vocab, l: &rofl_parse::Lit) -> Result<Lit, String> {
         rel: l.rel,
         persp,
         persp_explicit: explicit,
-        args: l.args.clone(),
+        args: l.args.iter().map(|t| canon_sets(h, v, *t)).collect(),
         temporal: match l.tense {
             Tense::Now => Temporal::Now,
             Tense::Init => Temporal::Init,
@@ -181,12 +214,197 @@ fn check_arity(h: &Heap, v: &Vocab, c: &Clause) -> Option<String> {
             BodyElem::Pos(l) => at(l, " in a premise"),
             BodyElem::Neg(l) => at(l, " in a negated premise"),
             BodyElem::Bi { .. } => None,
+            BodyElem::Agg(_) => b.lits_deep().into_iter().find_map(|l| at(l, " inside an aggregate")),
         };
         if d.is_some() {
             return d;
         }
     }
     None
+}
+
+/// `'@next' is not allowed in rule bodies` — src/parser.ts refuses it while it
+/// parses; here the door does, for the outer body and an aggregate's alike.
+fn check_next_in_body(h: &Heap, c: &Clause) -> Option<String> {
+    let nexted = c.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.temporal == Temporal::Next);
+    nexted.then(|| format!("rule {}: '@next' is not allowed in rule bodies", canon_clause(h, c)))
+}
+
+/// THE DOOR OF AN AGGREGATE: pure functions of the clause, run before any
+/// write. The per-operation shape (a key on sum, none on count, one value on
+/// min) is NOT here: it is safety.rofl's judgement, so that file is what a
+/// wrong shape is refused by.
+fn check_aggregates(h: &Heap, c: &Clause) -> Option<String> {
+    for (k, b) in c.body.iter().enumerate() {
+        let BodyElem::Agg(a) = b else { continue };
+        let canon = || canon_clause(h, c);
+        let (_, _, _, before) = plan_elems(h, &[], &c.body[..k], &[], &[]);
+        // A THRESHOLD READS N: an integer, or a variable bound before it.
+        if a.op == AggOp::AtLeast {
+            let bound_before = matches!(a.result.kind(), TermK::Var(n) if before.contains(&n));
+            if brk!("thr_door_n" => false && !bound_before && !matches!(a.result.kind(), TermK::Int(_));
+                    !bound_before && !matches!(a.result.kind(), TermK::Int(_))) {
+                return Some(format!(
+                    "rule {}: at_least's threshold is an integer or a variable bound before it, not {}",
+                    canon(),
+                    h.canon(a.result)
+                ));
+            }
+        } else if a.result.is_func() {
+            return Some(format!("rule {}: an aggregate's result is a variable or a constant", canon()));
+        }
+        // QUANTILE'S PERCENT AND RANK'S SUBJECT are read from outside, like
+        // a threshold's N: an integer, or a variable bound before it. The
+        // count of terms is safety.rofl's (`param_and_value`).
+        if a.op.params() == 1 && a.vals.len() == 2 {
+            let p = a.vals[0];
+            let bound_before = matches!(p.kind(), TermK::Var(n) if before.contains(&n));
+            let what = if a.op == AggOp::Quantile { "quantile's percent" } else { "rank's subject" };
+            if brk!("hol_door_param" => false && !bound_before; !bound_before && !matches!(p.kind(), TermK::Int(_))) {
+                return Some(format!(
+                    "rule {}: {what} is an integer or a variable bound before it, not {}",
+                    canon(),
+                    h.canon(p)
+                ));
+            }
+            if let (AggOp::Quantile, TermK::Int(n)) = (a.op, p.kind()) {
+                if brk!("hol_door_percent_range" => false; !(0..=100).contains(&n)) {
+                    return Some(format!("rule {}: quantile's percent is an integer from 0 to 100, not {n}", canon()));
+                }
+            }
+        }
+        if let (TermK::Var(r), false) = (a.result.kind(), a.op == AggOp::AtLeast) {
+            let mut inner = Vec::new();
+            a.inner_vars(h, &mut inner);
+            if inner.contains(&r) {
+                return Some(format!("rule {}: '{}' is the aggregate's result and also appears inside it", canon(), h.name(r)));
+            }
+        }
+        if a.body.iter().any(|x| matches!(x, BodyElem::Agg(_))) {
+            return Some(format!("rule {}: an aggregate inside an aggregate is not supported", canon()));
+        }
+        // WRITTEN ORDER DECIDES CORRELATION, so a variable the aggregate
+        // shares must not be bound only after it: whether an empty group
+        // reads 0 would then depend on where a premise is written.
+        for v in &a.shared {
+            if before.contains(v) {
+                continue;
+            }
+            for later in &c.body[k + 1..] {
+                if let Some(by) = binder_of(h, later, *v) {
+                    let n = h.name(*v);
+                    return Some(format!(
+                        "rule {}: {n} is bound by {by} after the aggregate, so whether the aggregate is asked per {n} \
+                         or groups by {n} would depend on where it is written; bind {n} before the aggregate (an empty \
+                         group then counts 0) or leave {n} to the aggregate (only groups with members appear)",
+                        canon()
+                    ));
+                }
+            }
+        }
+        // AN INNER NEGATION MUST BE ORDERABLE INSIDE, over what the inner
+        // body and the premises before the aggregate bind.
+        let mut outside: Vec<Sym> = Vec::new();
+        for t in a.vals.iter().chain(a.keys.iter()) {
+            h.vars_of(*t, &mut outside);
+        }
+        for t in c.head.args.iter().chain(std::iter::once(&c.head.persp)) {
+            h.vars_of(*t, &mut outside);
+        }
+        for (j, x) in c.body.iter().enumerate() {
+            if j != k {
+                x.vars(h, &mut outside);
+            }
+        }
+        let (_, stuck, _, bound) = plan_elems(h, &[], &a.body, &before, &outside);
+        if let Some(i) = stuck {
+            if let BodyElem::Neg(l) = &a.body[i] {
+                return Some(format!("{} inside the aggregate", stuck_message(h, c, l, &bound)));
+            }
+        }
+    }
+    None
+}
+
+/// What would bind `v` in a later element: a positive premise, an `=` or
+/// `is`, or another aggregate. A negation or a comparison never binds.
+fn binder_of(h: &Heap, b: &BodyElem, v: Sym) -> Option<String> {
+    let mut vs = Vec::new();
+    match b {
+        BodyElem::Pos(l) => {
+            b.vars(h, &mut vs);
+            vs.contains(&v).then(|| format!("{}/{}", h.name(l.rel), l.args.len()))
+        }
+        BodyElem::Bi { op, .. } if matches!(h.name(*op), "=" | "is") => {
+            b.vars(h, &mut vs);
+            vs.contains(&v).then(|| format!("'{}'", h.name(*op)))
+        }
+        BodyElem::Agg(a) => {
+            if a.op != AggOp::AtLeast {
+                h.vars_of(a.result, &mut vs);
+            }
+            vs.extend(a.shared.iter().copied());
+            vs.contains(&v).then(|| "another aggregate".to_string())
+        }
+        BodyElem::Bi { .. } | BodyElem::Neg(_) => None,
+    }
+}
+
+/// A SET HAS ONE SPELLING, and a set written with a variable has none until
+/// it is bound: `set(Y, b)` matches `set(a, b)` and not `set(b, c)`, by the
+/// order the variables fall in. So one stands only where the kernel makes it
+/// canonical as it reads it: the value of a head (a join's contribution;
+/// any other head is refused by the safety pass, which knows the lattices)
+/// and an operand of `subset` or the right of `in`. `checkSetPatterns`
+/// (src/api.ts) says the same words.
+fn check_set_patterns(h: &Heap, v: &Vocab, c: &Clause) -> Option<String> {
+    if brk!("set_pattern_admitted" => true; false) {
+        return None;
+    }
+    let (hl, n) = (&c.head, c.head.args.len());
+    let head = hl.args.iter().enumerate().find_map(|(i, a)| {
+        if i + 1 == n { crate::cell::open_set_below(h, v, *a) } else { crate::cell::open_set(h, v, *a) }
+    });
+    let found = head.or_else(|| body_open_set(h, v, &c.body));
+    found.map(|t| set_pattern_message(h, &canon_clause(h, c), t))
+}
+
+fn body_open_set(h: &Heap, v: &Vocab, body: &[BodyElem]) -> Option<Term> {
+    use crate::cell::{open_set, open_set_below};
+    body.iter().find_map(|b| match b {
+        BodyElem::Pos(l) | BodyElem::Neg(l) => l.args.iter().find_map(|a| open_set(h, v, *a)),
+        BodyElem::Bi { op, l, r } if *op == v.op_in => open_set(h, v, *l).or_else(|| open_set_below(h, v, *r)),
+        BodyElem::Bi { op, l, r } if *op == v.op_subset => open_set_below(h, v, *l).or_else(|| open_set_below(h, v, *r)),
+        BodyElem::Bi { l, r, .. } => open_set(h, v, *l).or_else(|| open_set(h, v, *r)),
+        BodyElem::Agg(a) => std::iter::once(&a.result)
+            .chain(a.vals.iter())
+            .chain(a.keys.iter())
+            .find_map(|t| open_set(h, v, *t))
+            .or_else(|| body_open_set(h, v, &a.body)),
+    })
+}
+
+/// A question or a request is one literal and no place the kernel builds a
+/// set: a set in it with a variable is refused wherever it stands.
+pub fn check_query_sets(h: &Heap, v: &Vocab, args: &[Term]) -> Result<(), String> {
+    match args.iter().find_map(|a| crate::cell::open_set(h, v, *a)) {
+        Some(t) if !brk!("set_pattern_admitted" => true; false) => Err(set_pattern_reason(&h.canon(t))),
+        _ => Ok(()),
+    }
+}
+
+/// The refusal of a set written with a variable, in both engines' words.
+pub fn set_pattern_message(h: &Heap, what: &str, t: Term) -> String {
+    format!("rule {what}: {}", set_pattern_reason(&h.canon(t)))
+}
+
+pub fn set_pattern_reason(set: &str) -> String {
+    format!(
+        "{set} is a set written with a variable, so which spelling it has depends on what the variable is bound to, \
+         and it would match or be stored only in the order it is written: a set with a variable stands only as a join \
+         lattice's value in a head, as either side of `subset` and as the right of `in`; elsewhere name the set with a \
+         variable and read its members with `in`"
+    )
 }
 
 /// `checkOrderable` (src/api.ts:98). ONLY A RULE THAT WOULD OTHERWISE PASS
@@ -201,6 +419,10 @@ fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
         return None;
     }
     let BodyElem::Neg(l) = &c.body[i] else { return None };
+    Some(stuck_message(h, c, l, &bound))
+}
+
+fn stuck_message(h: &Heap, c: &Clause, l: &Lit, bound: &[Sym]) -> String {
     let mut vs: Vec<Sym> = Vec::new();
     for a in &l.args {
         h.vars_of(*a, &mut vs);
@@ -221,7 +443,7 @@ fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
         }
     }
     let vars = names.join(", ");
-    Some(format!(
+    format!(
         "rule {}: no premise binds {vars} before 'not {}/{}', so what the negation asks \
          would depend on where it is written -- unbound it asks whether ANY such fact exists, \
          bound it asks about that one. Bind {vars} in a positive premise, or write '_' if the \
@@ -229,7 +451,7 @@ fn check_orderable(h: &Heap, c: &Clause) -> Option<String> {
         canon_clause(h, c),
         h.name(l.rel),
         l.args.len()
-    ))
+    )
 }
 
 /// EVERY REASON A CLAUSE CAN BE REFUSED, and nothing that changes the world.
@@ -285,6 +507,15 @@ fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bo
         }
     }
     if let Some(d) = check_arity(h, v, &c) {
+        return Err(d);
+    }
+    if let Some(d) = check_next_in_body(h, &c) {
+        return Err(d);
+    }
+    if let Some(d) = check_aggregates(h, &c) {
+        return Err(d);
+    }
+    if let Some(d) = check_set_patterns(h, v, &c) {
         return Err(d);
     }
     // `checkOrderable` plans the body to find a negation nothing binds. A
@@ -349,7 +580,7 @@ fn admit_clause(e: &mut Eval, c: &Clause, who: Option<&str>) {
         register_persp(&mut e.h, &e.v, &mut e.store, p);
     }
     for b in &c.body {
-        if let Some(l) = b.lit() {
+        for l in b.lits_deep() {
             if let Some(p) = l.persp.as_atom() {
                 register_persp(&mut e.h, &e.v, &mut e.store, p);
             }
@@ -438,6 +669,171 @@ fn add_fact(e: &mut Eval, c: &Clause, who: Option<&str>) {
     e.store.dirty = true;
 }
 
+/// A LATTICE DECLARATION AT THE DOOR: `lattice dist(A, C, min D).` names a
+/// relation the program may write, and its key and value as distinct
+/// variables. Which operation may recurse is safety.rofl's judgement (the
+/// algebra flag), not this function's.
+fn check_lattice_decl(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<(Sym, usize, Sym, Option<i64>), String> {
+    let op = c.lattice.expect("a declaration");
+    let rel = c.head.rel;
+    let what = || rofl_parse::decl_text(h, c);
+    if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
+        return Err(format!("{}: '{}' is a kernel relation and cannot be {}", what(), h.name(rel), if c.tag { "tagged" } else { "a lattice" }));
+    }
+    let mut seen: Vec<Sym> = Vec::new();
+    for a in &c.head.args {
+        match a.kind() {
+            TermK::Var(x) if !seen.contains(&x) => seen.push(x),
+            TermK::Var(x) => {
+                return Err(format!("{}: '{}' is written twice; a declaration names each argument once", what(), h.name(x)))
+            }
+            _ => return Err(format!("{}: a declaration's arguments are variables, the key and then the value", what())),
+        }
+    }
+    Ok((rel, c.head.args.len(), op, c.widen))
+}
+
+/// A DOMINANCE RULE AT THE DOOR (docs/aggregates.md, "Subsumption, as
+/// built"): `p(K..., V1...) <= p(K..., V2...) :- Body.` compares two facts of
+/// one relation, never a kernel one, now, in no book the author names. The
+/// key is the longest prefix where both write the same variable, and the rest
+/// are the values, a distinct variable each and none shared; there is at
+/// least one. The body is ordinary rofl over the two facts: every variable it
+/// uses is bound by them or by one of its literals, it reads neither the
+/// relation itself nor anything `@next`, and it folds no aggregate (a count
+/// or a min belongs in a rule of its own, which the body then reads).
+fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<&str>) -> Result<(Lit, Lit, Vec<BodyElem>, usize), String> {
+    let rel = c.head.rel;
+    let what = format!("dominance {}", h.name(rel));
+    let hi = c.dom.as_ref().expect("a dominance rule");
+    if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
+        return Err(format!("{what}: '{}' is a kernel relation, and its facts are the kernel's to keep", h.name(rel)));
+    }
+    if hi.rel != rel {
+        return Err(format!("{what}: a dominance rule compares two facts of one relation, and the right of `<=` is {}", h.name(hi.rel)));
+    }
+    if c.head.args.len() != hi.args.len() {
+        return Err(format!("{what}: its two facts are written at two arities, {} and {}", c.head.args.len(), hi.args.len()));
+    }
+    if c.head.book != Book::Bare || hi.book != Book::Bare {
+        return Err(format!("{what}: a dominance rule names the relation, not a book; it orders the facts of every book"));
+    }
+    if c.head.tense != Tense::Now || hi.tense != Tense::Now {
+        return Err(format!("{what}: a dominance rule compares facts that hold now; it takes no tense"));
+    }
+    let lo = to_lit(h, v, &c.head)?;
+    let hi = to_lit(h, v, hi)?;
+    let n = lo.args.len();
+    let var = |t: &Term| match t.kind() { TermK::Var(x) => Some(x), _ => None };
+    if !lo.args.iter().chain(&hi.args).all(|t| var(t).is_some()) {
+        return Err(format!("{what}: a dominance rule's facts are written with variables, the key they share and then each one's values"));
+    }
+    let k = (0..n).take_while(|i| lo.args[*i] == hi.args[*i]).count();
+    if k == n {
+        return Err(format!("{what}: the two facts are one: a dominance rule compares two values at one key, so the facts differ after the key"));
+    }
+    let key: Vec<Sym> = lo.args[..k].iter().filter_map(var).collect();
+    let mut seen: Vec<Sym> = key.clone();
+    for t in lo.args[k..].iter().chain(&hi.args[k..]) {
+        let x = var(t).unwrap();
+        if seen.contains(&x) {
+            return Err(format!(
+                "{what}: '{}' is written twice; the key is the prefix both facts share, and each value after it is a variable of its own \
+                 (compare them in the body: `V1 = V2`)",
+                h.name(x)
+            ));
+        }
+        seen.push(x);
+    }
+    let body = to_body(h, v, &c.body)?;
+    let probe = Clause { head: lo.clone(), body: body.clone() };
+    if let Some(d) = check_kernel_book(h, &probe).or_else(|| check_who(h, who, &probe)).or_else(|| check_arity(h, v, &probe)) {
+        return Err(d);
+    }
+    if body.iter().any(|b| matches!(b, BodyElem::Agg(_))) {
+        return Err(format!("{what}: a dominance body folds no aggregate; conclude the count or the min in a rule of its own and read it"));
+    }
+    if body.iter().flat_map(|b| b.lits_deep()).any(|l| l.temporal != Temporal::Now) {
+        return Err(format!("{what}: a dominance body reads facts that hold now; '@next' and '@init' are not read there"));
+    }
+    if body.iter().flat_map(|b| b.lits_deep()).any(|l| l.rel == rel) {
+        return Err(format!(
+            "{what}: its body reads {} itself; which of two facts dominates is decided before either is kept, from the two facts and what lies below",
+            h.name(rel)
+        ));
+    }
+    if let Some(d) = check_set_patterns(h, v, &probe) {
+        return Err(d);
+    }
+    // RANGE-RESTRICTED over the two facts, in the order the engine solves
+    // the body (`plan_order`, as it plans it): a positive literal binds its
+    // variables, `is` and `in` bind their left from a bound right, `=` one
+    // side from the other, and every other element reads only what is bound
+    let (order, stuck, _, _) = plan_order(h, &[], &body, &seen, &[]);
+    let vars = |t: Term| {
+        let mut v = Vec::new();
+        h.vars_of(t, &mut v);
+        v
+    };
+    let mut bound = seen.clone();
+    let mut free: Option<Vec<Sym>> = None;
+    for i in order {
+        if free.is_some() {
+            break;
+        }
+        let unbound = |ts: &[Sym], bound: &[Sym]| -> Vec<Sym> { ts.iter().copied().filter(|x| !bound.contains(x)).collect() };
+        let binds: Result<Vec<Sym>, Vec<Sym>> = match &body[i] {
+            BodyElem::Pos(l) => Ok(l.args.iter().flat_map(|a| vars(*a)).collect()),
+            BodyElem::Neg(_) => Ok(Vec::new()),
+            BodyElem::Bi { op, l, r } => {
+                let (lv, rv) = (vars(*l), vars(*r));
+                let (lu, ru) = (unbound(&lv, &bound), unbound(&rv, &bound));
+                match h.name(*op) {
+                    "is" | "in" if ru.is_empty() => Ok(lv),
+                    "=" if ru.is_empty() => Ok(lv),
+                    "=" if lu.is_empty() => Ok(rv),
+                    "is" | "in" | "=" => Err(ru),
+                    _ if lu.is_empty() && ru.is_empty() => Ok(Vec::new()),
+                    _ => Err([lu, ru].concat()),
+                }
+            }
+            BodyElem::Agg(_) => Ok(Vec::new()),
+        };
+        match binds {
+            Ok(bs) => {
+                for x in bs {
+                    if !bound.contains(&x) {
+                        bound.push(x);
+                    }
+                }
+            }
+            Err(vs) => free = brk!("dominance_body_unordered" => None; Some(vs)),
+        }
+    }
+    if let (None, Some(i)) = (&free, stuck) {
+        let mut vs = Vec::new();
+        for l in body[i].lits_deep() {
+            for a in &l.args {
+                h.vars_of(*a, &mut vs);
+            }
+        }
+        free = Some(vs.into_iter().filter(|x| !h.name(*x).starts_with("_$")).collect());
+    }
+    if let Some(vs) = free {
+        let mut names: Vec<&str> = Vec::new();
+        for x in vs.iter().filter(|x| !bound.contains(x)) {
+            if !names.contains(&h.name(*x)) {
+                names.push(h.name(*x));
+            }
+        }
+        return Err(format!(
+            "{what}: its body uses {} bound neither by the two facts nor by a literal of the body before it",
+            if names.is_empty() { "a variable".to_string() } else { names.join(", ") }
+        ));
+    }
+    Ok((lo, hi, body, k))
+}
+
 fn is_sealed_body(v: &Vocab, b: Sym) -> bool {
     b == v.sealed_provenance || b == v.sealed_rules || b == v.sealed_assertions
 }
@@ -466,8 +862,8 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // stop it. After that the door is shut for the life of the store.
     let mut who_owned = who.map(|s| s.to_string());
     let claim = e.h.intern(KERNEL_CLAIM);
-    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty();
-    if !clauses.is_empty() {
+    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none();
+    if !clauses.is_empty() && clauses[0].lattice.is_none() && clauses[0].dom.is_none() {
         let first = match to_clause(&mut e.h, &e.v, &clauses[0]) {
             Ok(c) => c,
             Err(d) => return Loaded { ok: false, diagnostics: vec![d], admitted: 0 },
@@ -507,7 +903,25 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // See `check_clause` for why every refusal can be decided before any write.
     let mut cs: Vec<Clause> = Vec::with_capacity(clauses.len());
     let mut diags: Vec<String> = Vec::new();
+    let mut decls: Vec<(Sym, usize, Sym, Option<i64>)> = Vec::new();
+    let mut tags: Vec<(Sym, usize, Sym)> = Vec::new();
+    let mut doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)> = Vec::new();
     for pc in &clauses {
+        if pc.dom.is_some() {
+            match check_dominance(&mut e.h, &e.v, pc, who_owned.as_deref()) {
+                Ok(d) => doms.push(d),
+                Err(d) => diags.push(d),
+            }
+            continue;
+        }
+        if pc.lattice.is_some() {
+            match check_lattice_decl(&e.h, &e.v, pc) {
+                Ok((r, n, alg, _)) if pc.tag => tags.push((r, n, alg)),
+                Ok(d) => decls.push(d),
+                Err(d) => diags.push(d),
+            }
+            continue;
+        }
         match to_clause(&mut e.h, &e.v, pc) {
             Ok(c) => cs.push(c),
             Err(d) => diags.push(d),
@@ -528,5 +942,48 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     for c in &ready {
         admit_clause(e, c, who_owned.as_deref());
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() }
+    // THE DECLARATION IS ONE KERNEL ROW, timeless like the semantics
+    // declaration: which algebra a relation has is a property of the program.
+    for (rel, n, op, widen) in &decls {
+        let (ld, kp) = (e.v.lattice_decl, e.v.kernel_persp);
+        let args = brk!("lattice_op_min" => [Term::atom(*rel), Term::int(*n as i64), Term::atom(e.v.op_sym(AggOp::Min))],
+                        "lattice_arity_short" => [Term::atom(*rel), Term::int(*n as i64 - 1), Term::atom(*op)];
+                        [Term::atom(*rel), Term::int(*n as i64), Term::atom(*op)]);
+        e.store.add(&e.h, ld, kp, &args, F_BASE);
+        // a declared widening is a row of its own: `lattice_widen(Rel, N)`
+        if let Some(w) = widen {
+            let w = brk!("widen_row_late" => *w + 1; *w);
+            e.store.add(&e.h, e.v.lattice_widen, kp, &[Term::atom(*rel), Term::int(w)], F_BASE);
+        }
+        e.store.dirty = true;
+    }
+    // A TAG IS ONE KERNEL ROW too, `tag_decl(Rel, Arity, Alg)`
+    // (docs/aggregates.md, "Tags, as built").
+    for (rel, n, alg) in &tags {
+        let n = brk!("tag_arity_short" => *n as i64 - 1; *n as i64);
+        e.store.add(&e.h, e.v.tag_decl, e.v.kernel_persp, &[Term::atom(*rel), Term::int(n), Term::atom(*alg)], F_BASE);
+        e.store.dirty = true;
+    }
+    // A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
+    // as built"): rows in the kernel's book, the body a rule body's
+    for (lo, hi, body, k) in &doms {
+        for b in body {
+            for l in b.lits_deep() {
+                if let Some(p) = l.persp.as_atom() {
+                    register_persp(&mut e.h, &e.v, &mut e.store, p);
+                }
+            }
+        }
+        let drop = sealed_rels(e);
+        let k = brk!("dominance_key_long" => *k + 1; *k);
+        let (_, facts) = encode_dominance(&mut e.h, &e.v, lo, hi, body, k);
+        for f in facts {
+            if drop.contains(&f.rel) {
+                continue;
+            }
+            e.store.add(&e.h, f.rel, e.v.kernel_persp, &f.args, F_BASE);
+        }
+        e.store.dirty = true;
+    }
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + decls.len() + tags.len() + doms.len() }
 }

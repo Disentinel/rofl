@@ -1,0 +1,6 @@
+-- expect-refusal: is not monotone in the value
+-- a comparison orders numbers, and a join's value is not one
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_cmp(X, bitor B).
+ajsr_cmp(X, 1) :- ajsr_e(X, _).
+ajsr_cmp(X, B) :- ajsr_e(X, Y), ajsr_cmp(Y, B), B < 4.

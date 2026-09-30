@@ -32,8 +32,9 @@ import {
   Evaluation, BudgetExhausted, StratificationError,
   type EvalOutcome, type ERule, type StagedFact,
 } from './engine.ts';
-import { V, KERNEL_PERSP, BUDGET_REASON } from './reflect.ts';
+import { V, IFACE, KERNEL_PERSP, provenanceRow } from './reflect.ts';
 import { mka } from './unify.ts';
+import { SHRUG } from './shrug.ts';
 
 /** What one peel produced: the round each relation settles in, whether it
  *  stalled, and — when it did — the relations still standing. */
@@ -104,6 +105,25 @@ export function peelRounds(rules: ERule[]): Peel {
     for (const b of r.clause.body) {
       if (b.t === 'pos') pos.add(b.lit.rel);
       else if (b.t === 'neg') neg.add(b.lit.rel);
+    }
+  }
+  // WHAT READS `unknown` SITS ABOVE EVERYTHING ELSE (docs/aggregates.md,
+  // "Shrugs, as built"; rust/rofl/src/engine.rs `peel_rounds`): `unknown(A)`
+  // of an A a hole left out is a shrug, so every relation that does not read
+  // it is closed, and its shrugs known, before one that does fires
+  const reads = (h: string, set: Set<string>) => [...(posDeps.get(h) ?? []), ...(negDeps.get(h) ?? [])].some((x) => set.has(x));
+  if ([...heads].some((h) => reads(h, new Set([IFACE.unknown, SHRUG])))) {
+    const cone = new Set<string>([IFACE.unknown, SHRUG]);
+    for (;;) {
+      const more = [...heads].filter((h) => !cone.has(h) && reads(h, cone));
+      if (more.length === 0) break;
+      for (const m of more) cone.add(m);
+    }
+    const below = [...heads].filter((h) => !cone.has(h));
+    for (const m of [IFACE.unknown, SHRUG]) {
+      heads.add(m);
+      posDeps.set(m, new Set());
+      negDeps.set(m, new Set(below));
     }
   }
   const all = new Set<string>(heads);
@@ -228,15 +248,16 @@ export class RoundEvaluation extends Evaluation {
     const plan = E.planReuse();
     this.store.clearDerived(plan.hits.size === 0
       ? undefined
-      : (rec) => E.reused(plan.hits, rec));
+      : (rec) => E.reused(plan.hits, rec), provenanceRow);
     E.active = [];
     E.staged.clear();
+    this.startUnknowns();
     this.steps = 0;
     let partial = false;
     let sched = '';
     const safeRules = this.rules.filter((r) => r.safe && !plan.hits.has(r.clause.head.rel));
-    const mono = safeRules.filter((r) => !r.hasNeg);
-    const negRules = safeRules.filter((r) => r.hasNeg);
+    const mono = safeRules.filter((r) => !r.hasNeg && !this.shrugReaders.has(r.id));
+    const negRules = safeRules.filter((r) => r.hasNeg || this.shrugReaders.has(r.id));
 
     try {
       try {
@@ -281,16 +302,25 @@ export class RoundEvaluation extends Evaluation {
             : this.peel.round.get(r.clause.head.rel) ?? null,
         }));
         const levels = [...new Set(negRules.map(levelOf))].sort((a, b) => a - b);
+        this.unknownLevels(this.peel.round);
         for (const lv of levels) {
-          E.activate(negRules.filter((r) => levelOf(r) === lv));
+          const rs = negRules.filter((r) => levelOf(r) === lv);
+          this.beforeLevel(lv);
+          for (const part of this.shrugLevel(rs)) {
+            E.activate(part);
+            this.afterLevel(part);
+          }
         }
+        this.afterLevels();
       } catch (e) {
         if (e instanceof BudgetExhausted) {
           partial = true;
-          this.store.add(V.hole, KERNEL_PERSP, [this.holeId, mka(BUDGET_REASON)],
+          this.holeMet(this.holeId, e.reason);
+          this.store.add(V.hole, KERNEL_PERSP, [this.holeId, mka(e.reason)],
             { scope: 'timeless', base: true, frozen: true });
         } else throw e;
       }
+      this.writeShrugs();
     } catch (e) {
       this.store.derivedKeys = new Map();
       this.store.derivedSchedule = '';
@@ -298,10 +328,11 @@ export class RoundEvaluation extends Evaluation {
     }
     this.store.dirty = false;
     this.store.partialEval = partial;
-    this.store.derivedKeys = partial ? new Map() : plan.keys;
-    this.store.derivedSchedule = partial ? '' : sched;
+    const keep = !partial && !this.hadUnknowns();
+    this.store.derivedKeys = keep ? plan.keys : new Map();
+    this.store.derivedSchedule = keep ? sched : '';
     const staged = E.staged as Map<string, StagedFact>;
     const stagedSorted = [...staged.keys()].sort().map((k) => staged.get(k)!);
-    return { partial, staged: partial ? [] : stagedSorted, diags: this.diags };
+    return { partial, staged: partial ? [] : stagedSorted, diags: this.diags, unknowns: partial ? [] : [...this.stagedUnknown.values()] };
   }
 }

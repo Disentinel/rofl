@@ -1,0 +1,7 @@
+-- expect-refusal: is asserted, but
+-- examples/checks/agg-lattice-safety-5-refused-asserted.rofl — a lattice cell holds what its rules conclude, so an asserted fact in it is refused.
+edb(alsf_e).
+alsf_e(a, b, 2).
+lattice alsf_as(A, min D).
+alsf_as(a, 3).
+alsf_as(A, D) :- alsf_e(A, _, D).

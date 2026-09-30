@@ -1,0 +1,22 @@
+-- examples/checks/agg-phrase-tag-check.rofl — agg_tag_phrase: each idempotent tag read from its sentence and
+-- from rofl keeps what its semiring keeps: the tropical cost a to c is 2 by b, not the edge of 5; each place with
+-- an edge is likely by 500000 (viterbi); and the trust of each edge is the same whichever reading made it.
+pt_cost(a, b, 1). pt_cost(b, c, 1). pt_cost(a, c, 2).
+pt_likely(a, 500000). pt_likely(b, 500000).
+pt_wrong(X, Y) :- pt_cost(X, Y, W), not pts_cost(X, Y, W).
+pt_wrong(X, Y) :- pt_cost(X, Y, W), not ptr_cost(X, Y, W).
+pt_wrong(X, Y) :- pts_cost(X, Y, W), not pt_cost(X, Y, W).
+pt_wrong(X, Y) :- ptr_cost(X, Y, W), not pt_cost(X, Y, W).
+pt_wrong(X, likely) :- pt_likely(X, P), not pts_likely(X, P).
+pt_wrong(X, likely) :- pt_likely(X, P), not ptr_likely(X, P).
+pt_wrong(X, likely) :- pts_likely(X, P), not pt_likely(X, P).
+pt_wrong(X, likely) :- ptr_likely(X, P), not pt_likely(X, P).
+pt_wrong(X, Y) :- pts_trust(X, Y, T), not ptr_trust(X, Y, T).
+pt_wrong(X, Y) :- ptr_trust(X, Y, T), not pts_trust(X, Y, T).
+pt_wrong(X, Y) :- pv_edge(X, Y, _), not pts_trust(X, Y, _).
+alarm(pt_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(ptr_step, "carries a tropical tag W").
+sentence_word(ptr_cost, "carries a tropical tag T").
+sentence_word(ptr_likely, "carries a viterbi tag P").
+sentence_word(ptr_trust, "carries a trust tag T").

@@ -1,0 +1,26 @@
+-- examples/checks/agg-sugar-safety-check.rofl — agg_sugar_safety: the sugar is safe exactly where what it lowers
+-- to is. Each form over a closed relation and a domain bound from outside loads and concludes
+-- (agg-sugar-forms.rofl.md); at most and exactly N, and an average, inside their own recursion are refused, as the
+-- count and sum they are; every over a domain bound by nothing outside it is refused, as is at most a number
+-- nothing binds; and an average that does not state its rounding is not read, so its world refuses it, as are
+-- exactly N with N named nowhere else, and at most or exactly N over a group nothing binds before the count, whose
+-- empty groups would be left out. None of the refused programs reached the world.
+sgf_form(sgs_mean). sgf_form(sgs_tenths). sgf_form(sgs_micro). sgf_form(sgs_out).
+sgf_form(sgs_small). sgf_form(sgs_pair). sgf_form(sgs_none). sgf_form(sgs_size).
+sgf_form(sgs_milli). sgf_form(sgs_shift). sgf_form(sgs_adult). sgf_form(sgs_own). sgf_form(sgs_each).
+sgf_form(sgs_senior). sgf_form(sgs_spread).
+sgf_loaded(Rel) :- concludes[$kernel](_, Rel), sgf_form(Rel).
+sgf_missing(Rel) :- sgf_form(Rel), not sgf_loaded(Rel).
+alarm(sgf_missing).
+sgf_refused(sgr_quiet). sgf_refused(sgr_even). sgf_refused(sgr_all).
+sgf_refused(sgr_few). sgf_refused(sgr_mean). sgf_refused(sgr_level).
+sgf_refused(sgr_exact). sgf_refused(sgr_thin). sgf_refused(sgr_bare).
+sgf_accepted(Rel) :- sgf_refused(Rel), concludes[$kernel](_, Rel).
+alarm(sgf_accepted).
+-- the lowering is count, sum and a comparison, nothing else: each form's aggregates are counts and sums
+sgf_op(Rel, Op) :- concludes[$kernel](R, Rel), sgf_form(Rel), premise_lit[$kernel](R, _, $agg(Op, _, _, _, _)).
+sgf_foreign(Rel, Op) :- sgf_op(Rel, Op), Op != count, Op != sum.
+alarm(sgf_foreign).
+sgf_counted(Rel) :- sgf_op(Rel, count).
+sgf_uncounted(Rel) :- sgf_form(Rel), not sgf_counted(Rel).
+alarm(sgf_uncounted).

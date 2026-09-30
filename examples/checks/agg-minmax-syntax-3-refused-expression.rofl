@@ -1,0 +1,3 @@
+-- expect-refusal: not expressions
+-- a value is a term, not an expression
+sxmr_expression(M) :- M is max(V * 2 : sxm_d(_, V, _)).

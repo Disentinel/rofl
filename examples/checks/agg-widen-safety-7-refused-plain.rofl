@@ -1,0 +1,9 @@
+-- expect-refusal: is not monotone in the value
+-- an interval function's value carried into a plain relation: a relation
+-- keeps every value it was given, so the value no longer only grows
+edb(awsr_s).
+awsr_s(a).
+lattice awsr_plainv(X, hull I) widen 1.
+awsr_plainv(X, iv(0, 0)) :- awsr_s(X).
+awsr_step(X, J)          :- awsr_plainv(X, I), J is ivadd(I, 1).
+awsr_plainv(X, J)        :- awsr_step(X, J).

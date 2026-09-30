@@ -1,0 +1,38 @@
+-- examples/checks/agg-join-ticks-check.rofl — agg_join_ticks, over
+-- agg-join-ticks-data.rofl two ticks deep with retain_ticks 0: a join value
+-- staged @next is a contribution at tick 1, joined with the rest into a new
+-- value; `why` of a value only the carry reaches names its Cover, the
+-- carried contribution and the value tick 0 staged, as the fact of tick 0
+-- with the rule that derived it then; a hole at tick 0 is a hole at tick 1.
+explain_request(why, tj_reach(b, set(c, d))).
+explain_request(whynot, tj_reach(x, set(y))).
+tjk_wrong(carried_only, b)  :- not tj_reach(b, set(c, d)).
+tjk_wrong(carried_join, a)  :- not tj_reach(a, set(b, c, d)).
+tjk_wrong(joined_new, x)    :- not tj_reach(x, set(y, z)).
+tjk_wrong(kept, c)          :- not tj_reach(c, set(d)).
+tjk_wrong(two_values, A)    :- tj_reach(A, S), tj_reach(A, T), S != T.
+tjk_line(K, L)  :- explained[$explain](K, _, _, L).
+tjk_has(K, T)   :- tjk_line(K, L), tjk_text(K, T), N is str_segs(L, T), N > 1.
+tjk_text_missing(K, T) :- tjk_text(K, T), not tjk_has(K, T).
+tjk_explain_refused(K) :- explained[$explain](K, _, 0, _).
+alarm(tjk_wrong).
+alarm(tjk_text_missing).
+alarm(tjk_explain_refused).
+tjk_text(why, "tj_reach[main](b,set(c,d)) [lattice union: a cover of 1 contribution] <= tj_reach@join @tick 1").
+tjk_text(why, "tj_reach@join[main](b,set(c,d))  <= tj_reach@next @tick 1").
+tjk_text(why, "@tick 0 [past tick]").
+tjk_text(whynot, "set(y) is not its value: union joins every contribution, and they join to set(y,z)").
+tjk_text(K, T)@next :- tjk_text(K, T).
+-- a hole at tick 0 reaches tick 1: the cells it left unstaged are holes
+-- there, and so is what counts them
+tjk_hn(N) :- N is count(C : tj_h(C, _)).
+tjk_hole_read(count, N) :- tjk_hn(N).
+tjk_hole_read(p, S)     :- tj_h(p, S).
+tjk_hole_read(q, S)     :- tj_h(q, S).
+tjk_unholed(C, K) :- tjk_cell(C, K), not hole[$kernel]($lattice(C, main, 1, K), support_withdrawn).
+tjk_cell(tj_h, $cons(p, $nil)).
+tjk_cell(tj_h, $cons(q, $nil)).
+tjk_cell(C, K)@next :- tjk_cell(C, K).
+alarm(tjk_hole_read).
+alarm(tjk_unholed).
+-- expect-row: tj_h[main](r,set(4))

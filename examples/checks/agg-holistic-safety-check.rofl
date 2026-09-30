@@ -1,0 +1,53 @@
+-- examples/checks/agg-holistic-safety-check.rofl — agg_holistic_safety.
+-- Every accepted form has its rows, which it can have only because
+-- safety.rofl counts the aggregate as binding what it groups by and its
+-- result; the percent and the subject bound before the aggregate are read
+-- from outside, never a member's; a group with no line has no row; and no
+-- refused program reached the world.
+-- the input, here rather than beside the rules, so a refused rule leaves
+-- it behind for the checks to read
+edb(ahs_line).
+edb(ahs_group).
+edb(ahs_ask).
+ahs_line(g1, 1, 4).
+ahs_line(g1, 2, 4).
+ahs_line(g1, 3, 7).
+ahs_line(g2, 1, 9).
+ahs_group(g1).
+ahs_group(g2).
+ahs_group(g3).
+ahs_ask(g1, 34).
+ahs_ask(g1, 67).
+ahs_want(ahs_by, $cons(g1, $cons(4, $nil))).
+ahs_want(ahs_by, $cons(g2, $cons(9, $nil))).
+ahs_want(ahs_q90, $cons(g1, $cons(7, $nil))).
+ahs_want(ahs_q90, $cons(g2, $cons(9, $nil))).
+ahs_want(ahs_qp, $cons(g1, $cons(34, $cons(4, $nil)))).
+ahs_want(ahs_qp, $cons(g1, $cons(67, $cons(7, $nil)))).
+ahs_want(ahs_rank, $cons(g1, $cons(4, $cons(1, $nil)))).
+ahs_want(ahs_rank, $cons(g1, $cons(7, $cons(2, $nil)))).
+ahs_want(ahs_rank, $cons(g2, $cons(9, $cons(1, $nil)))).
+ahs_want(ahs_rank7, $cons(g1, $cons(2, $nil))).
+ahs_got(ahs_by, $cons(G, $cons(M, $nil)))           :- ahs_by(G, M).
+ahs_got(ahs_q90, $cons(G, $cons(Q, $nil)))          :- ahs_q90(G, Q).
+ahs_got(ahs_qp, $cons(G, $cons(P, $cons(Q, $nil)))) :- ahs_qp(G, P, Q).
+ahs_got(ahs_rank, $cons(G, $cons(V, $cons(R, $nil)))) :- ahs_rank(G, V, R).
+ahs_got(ahs_rank7, $cons(G, $cons(R, $nil)))        :- ahs_rank7(G, R).
+expected_row_missing(Rel, T) :- ahs_want(Rel, T), not ahs_got(Rel, T).
+unexpected_row(Rel, T)       :- ahs_got(Rel, T), not ahs_want(Rel, T).
+ahs_refused(ahs_nokey).
+ahs_refused(ahs_qnokey).
+ahs_refused(ahs_medtwo).
+ahs_refused(ahs_qone).
+ahs_refused(ahs_rone).
+ahs_refused(ahs_rkey).
+ahs_refused(ahs_qin).
+ahs_refused(ahs_qlate).
+ahs_refused(ahs_q150).
+ahs_refused(ahs_qatom).
+ahs_refused(ahs_rfree).
+ahs_refused(ahs_unbound).
+refused_accepted(Rel) :- ahs_refused(Rel), concludes[$kernel](_, Rel).
+alarm(expected_row_missing).
+alarm(unexpected_row).
+alarm(refused_accepted).

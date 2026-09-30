@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-5-refused-key.rofl — the value as a key: a better value would be another cell.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_key(A, C, min D).
+acsr_key(A, C, D) :- acsr_e(A, C, D).
+acsr_key(A, D, D) :- acsr_key(A, _, D), acsr_e(_, _, D).

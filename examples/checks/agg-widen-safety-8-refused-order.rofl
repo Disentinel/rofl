@@ -1,0 +1,10 @@
+-- expect-refusal: is not monotone in the value
+-- an interval function of an order lattice's value: a max moving up makes
+-- ivadd(M, 1) move, not grow
+edb(awsr_s).
+awsr_s(a).
+lattice awsr_top(X, max M).
+lattice awsr_order(X, hull I) widen 1.
+awsr_top(X, 1)       :- awsr_s(X).
+awsr_order(X, J)     :- awsr_top(X, M), J is ivadd(M, 1).
+awsr_top(X, M)       :- awsr_order(X, I), M in I.

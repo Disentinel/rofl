@@ -1,0 +1,11 @@
+-- expect-refusal: tag tgfr_d (tropical) is not evaluated under well_founded semantics
+-- examples/checks/agg-tag-wfs-2-refused-tropical.rofl — a tropical tag
+-- inside a well-founded world is refused: its cell would improve under an
+-- assumption.
+semantics(well_founded).
+edb(tgfr_move).
+tgfr_move(a, b). tgfr_move(b, a). tgfr_move(b, c).
+tgfr_win(X) :- tgfr_move(X, Y), not tgfr_win(Y).
+tag tgfr_d(X, tropical T).
+tgfr_d(X, 0) :- tgfr_win(X).
+tgfr_d(Y, 1) :- tgfr_d(X, _), tgfr_move(X, Y).

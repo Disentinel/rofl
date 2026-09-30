@@ -1,0 +1,66 @@
+-- examples/checks/agg-threshold-syntax-2-expect.rofl — agg_threshold_syntax.
+-- The `$agg(at_least, N, Vals, $nil, Body)` tree each form of
+-- agg-threshold-syntax-1-forms.rofl must reflect to, in both directions;
+-- `at_least` still a relation where no colon follows it; ring 1
+-- (examples/ring1, loaded before this file) reading the same grammar from
+-- `src`, nothing stray and nothing uncovered; and no refused form reaching the
+-- world.
+sxt_want(sxt_lit, $agg(at_least, 2, $cons($var("W"), $nil), $nil,
+  $cons($lit(sxt_v, main, $cons($var("W"), $cons($var("C"), $nil)), $now), $nil))).
+sxt_want(sxt_corr, $agg(at_least, $var("N"), $cons($var("W"), $nil), $nil,
+  $cons($lit(sxt_v, main, $cons($var("W"), $cons($var("C"), $nil)), $now), $nil))).
+sxt_want(sxt_two, $agg(at_least, 1, $cons($var("W"), $cons($var("D"), $nil)), $nil,
+  $cons($lit(sxt_v, main, $cons($var("W"), $cons($var("C"), $nil)), $now),
+  $cons($lit(sxt_v, main, $cons($var("D"), $cons($var("C"), $nil)), $now), $nil)))).
+sxt_want(sxt_group, $agg(at_least, 1, $cons($var("W"), $nil), $nil,
+  $cons($lit(sxt_v, main, $cons($var("W"), $cons($var("C"), $nil)), $now), $nil))).
+sxt_want(sxt_book, $agg(at_least, 1, $cons($var("W"), $nil), $nil,
+  $cons($lit(sxt_v, ledger, $cons($var("W"), $cons($var("C"), $nil)), $now), $nil))).
+sxt_want(sxt_inner, $agg(at_least, 1, $cons($var("W"), $nil), $nil,
+  $cons($lit(sxt_v, main, $cons($var("W"), $cons($var("C"), $nil)), $now),
+  $cons($not($lit(sxt_need, main, $cons($var("W"), $cons($var("_$1"), $nil)), $now)),
+  $cons($builtin("!=", $cons($var("W"), $cons(w2, $nil))), $nil))))).
+sxt_mine(H)    :- sxt_want(H, _).
+sxt_has(H, T)  :- sxt_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxt_want(H, T), not sxt_has(H, T).
+tree_extra(H, T)   :- sxt_has(H, T), not sxt_want(H, T).
+alarm(tree_missing).
+alarm(tree_extra).
+-- `at_least` where no colon follows is a name: a fact, and a premise
+sxt_named()    :- concludes[$kernel](R, sxt_name), premise_pos[$kernel](R, at_least).
+word_lost(at_least) :- not at_least(2, c1).
+word_lost(premise)  :- not sxt_named().
+word_lost(read)     :- not sxt_name(2).
+alarm(word_lost).
+
+-- RING 1 reads the same grammar: the source below parses to these trees and
+-- to nothing else (ring 1 spells an integer `int("2")`).
+src("t(C) :- n(C, N), at_least(N, W : v(W, C), not x(W)).\nu(C) :- at_least(2, W, D : v(W, C), v(D, C)).\nat_least(2, c).").
+r1t_want($lit(t, $bare, $cons($var("C"), $nil), $now),
+  $cons($lit(n, $bare, $cons($var("C"), $cons($var("N"), $nil)), $now),
+  $cons($agg(at_least, $var("N"), $cons($var("W"), $nil), $nil,
+    $cons($lit(v, $bare, $cons($var("W"), $cons($var("C"), $nil)), $now),
+    $cons($not($lit(x, $bare, $cons($var("W"), $nil), $now)), $nil))), $nil))).
+r1t_want($lit(u, $bare, $cons($var("C"), $nil), $now),
+  $cons($agg(at_least, int("2"), $cons($var("W"), $cons($var("D"), $nil)), $nil,
+    $cons($lit(v, $bare, $cons($var("W"), $cons($var("C"), $nil)), $now),
+    $cons($lit(v, $bare, $cons($var("D"), $cons($var("C"), $nil)), $now), $nil))), $nil)).
+r1t_want($lit(at_least, $bare, $cons(int("2"), $cons(c, $nil)), $now), $nil).
+r1t_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1t_want(H, B), not r1t_parsed(H, B).
+ring1_extra(H)    :- r1t_parsed(H, B), not r1t_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+-- the forms that must not parse
+sxt_bad(sxtr_nocomma).
+sxt_bad(sxtr_nothreshold).
+sxt_bad(sxtr_empty).
+sxt_bad(sxtr_expression).
+sxt_bad(sxtr_key).
+sxt_bad(sxtr_unclosed).
+bad_accepted(R) :- sxt_bad(R), concludes[$kernel](_, R).
+alarm(bad_accepted).

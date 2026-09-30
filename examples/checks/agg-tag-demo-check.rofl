@@ -1,0 +1,22 @@
+-- examples/checks/agg-tag-demo-check.rofl — agg_tag_demo: THE TAGGED WORLD IS
+-- THE HOST FOLD. Over the same store (agg-tag-demo-data.rofl), the kernel's
+-- tags (agg-tag-demo-tags.rofl) hold, fact for fact and value for value,
+-- what src/semiring.ts's fold computes over the plain rules' support in the
+-- TypeScript engine (agg-tag-demo-host.rofl, generated): cheapest costs round
+-- two cycles, most probable paths, most trusted, and the two-hop derivation
+-- counts, both directions, in all four semirings. The fold iterates the
+-- whole support graph to a fixed point; the kernel keeps one cell per fact
+-- and merges each firing into it as it comes. That they agree is the claim.
+tgd_alg(tropical). tgd_alg(viterbi). tgd_alg(trust). tgd_alg(counting).
+tgd_kernel(tropical, A, B, T) :- tgd_c(A, B, T).
+tgd_kernel(viterbi, A, B, T)  :- tgd_v(A, B, T).
+tgd_kernel(trust, A, B, T)    :- tgd_r(A, B, T).
+tgd_kernel(counting, A, B, T) :- tgd_n(A, B, T).
+tgd_differs(Alg, A, B, T) :- tgd_host(Alg, A, B, T), not tgd_kernel(Alg, A, B, T).
+tgd_differs(Alg, A, B, T) :- tgd_kernel(Alg, A, B, T), not tgd_host(Alg, A, B, T).
+tgd_some(Alg)             :- tgd_host(Alg, _, _, _).
+tgd_unfolded(Alg)         :- tgd_alg(Alg), not tgd_some(Alg).
+alarm(tgd_differs).
+alarm(tgd_unfolded).
+-- expect-row: tgd_c[main](a,e,10)
+-- expect-row: tgd_n[main](s,t,7)

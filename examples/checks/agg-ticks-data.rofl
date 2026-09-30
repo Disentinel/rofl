@@ -1,0 +1,46 @@
+-- examples/checks/agg-ticks-data.rofl — THE TICKS DATASET, shared by the
+-- agg_<kind>_ticks worlds (docs/aggregates.md, "Well-founded worlds and
+-- ticks, as built"), each run two ticks deep with `retain_ticks` 0 and
+-- `--explain`: tick 0 is evaluated, crosses the boundary, and tick 1 is
+-- evaluated and asked.
+--
+-- tk_v loses c at tick 1 and c2's first ballot arrives there, so every
+-- aggregate staged `@next` at tick 0 holds another value than the same
+-- aggregate asked at tick 1: the staged value is tick 0's, arriving as base.
+-- tk_w is derived, so each member a cell of tick 0 cites has a derived_by
+-- row of tick 0 that retain_ticks 0 would drop but for the cell citing it.
+edb(tk_v).
+edb(tk_cand).
+edb(tk_ballot).
+tk_v(a, 3). tk_v(b, 5). tk_v(c, 5).
+tk_v(K, V)@next :- tk_v(K, V), K != c.
+tk_w(K, V) :- tk_v(K, V).
+tk_seen(K) :- tk_v(K, _).
+tk_cand(c1). tk_cand(c2).
+tk_cand(C)@next :- tk_cand(C).
+tk_ballot(b1, c1).
+tk_ballot(B, C)@next :- tk_ballot(B, C).
+tk_ballot(b2, c2)@next :- tk_ballot(b1, c1).
+-- staged at tick 0, base at tick 1 ...
+tk_n(N)@next      :- N is count(K : tk_w(K, _)).
+tk_s(S)@next      :- S is sum(V ; K : tk_w(K, V)).
+tk_x(M)@next      :- M is max(V : tk_w(K, V), K != b).
+tk_lo(M)@next     :- M is min(V : tk_w(K, V), K != a, K != b).
+tk_any(B)@next    :- B is or(F : tk_w(K, _), tk_flag(K, F)).
+tk_med(M)@next    :- M is median(V ; K : tk_w(K, V)).
+tk_ok(K)@next     :- tk_w(K, _), at_least(3, Y : tk_w(Y, _)).
+tk_cnt(C, N)@next :- tk_cand(C), N is count(B : tk_ballot(B, C)).
+tk_flag(c, true).
+tk_flag(K, false) :- tk_w(K, _), K != c.
+-- ... and the same, asked in the tick they are read in
+tk_n_now(N)      :- N is count(K : tk_w(K, _)).
+tk_s_now(S)      :- S is sum(V ; K : tk_w(K, V)).
+tk_x_now(M)      :- M is max(V : tk_w(K, V), K != b).
+tk_lo_now(M)     :- M is min(V : tk_w(K, V), K != a, K != b).
+tk_any_now(B)    :- B is or(F : tk_w(K, _), tk_flag(K, F)).
+tk_med_now(M)    :- M is median(V ; K : tk_w(K, V)).
+tk_ok_now(K)     :- tk_w(K, _), at_least(3, Y : tk_w(Y, _)).
+tk_cnt_now(C, N) :- tk_cand(C), N is count(B : tk_ballot(B, C)).
+-- what the checks ask, and what they alarm on, is carried to tick 1
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

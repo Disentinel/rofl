@@ -1,0 +1,47 @@
+-- examples/checks/agg-join-safety-check.rofl — agg_join_safety: the monotone
+-- reads of agg-join-safety-1-ok.rofl are accepted and evaluate to the values
+-- enumerated here; every agg-join-safety-N-refused-*.rofl is refused, each
+-- for the reason its first line names (the harness holds the text), so none
+-- of their rules reaches this world: a non-monotone use of a join's value
+-- (an equality, arithmetic, a comparison, a value of another carrier, a
+-- constant in the value slot, the value on the left of subset, an order
+-- lattice's value made into a set), a membership whose set nothing bound, two
+-- operations on one relation, an asserted cell, and a body aggregate's value
+-- of another operation.
+ajsf_want(reach, a, set(a, b, c)).
+ajsf_want(reach, b, set(a, b, c)).
+ajsf_want(reach, c, set(a, b, c)).
+ajsf_want(low, a, 1).
+ajsf_want(low, b, 1).
+ajsf_want(low, c, 1).
+ajsf_want(close, a, set(a, b, c)).
+ajsf_want(close, b, set(a, b, c)).
+ajsf_want(close, c, set(a, b, c)).
+ajsf_want(span, a, iv(1, 3)).
+ajsf_want(span, b, iv(1, 3)).
+ajsf_want(span, c, iv(1, 3)).
+ajsf_want(lo, a, 1).
+ajsf_want(size, a, 3).
+ajsf_want(same, a, b).
+ajsf_have(reach, K, V) :- ajs_reach(K, V).
+ajsf_have(low, K, V)   :- ajs_low(K, V).
+ajsf_have(close, K, V) :- ajs_close(K, V).
+ajsf_have(span, K, V)  :- ajs_span(K, V).
+ajsf_have(lo, K, V)    :- ajs_lo(K, V).
+ajsf_have(size, K, V)  :- ajs_size(K, V).
+ajsf_have(same, K, V)  :- ajs_same(K, V).
+ajsf_missing(R, K, V)  :- ajsf_want(R, K, V), not ajsf_have(R, K, V).
+ajsf_accepted(Rel)     :- concludes[$kernel](_, Rel), ajsf_refused(Rel).
+ajsf_refused(ajsr_eq).
+ajsf_refused(ajsr_arith).
+ajsf_refused(ajsr_cmp).
+ajsf_refused(ajsr_carrier).
+ajsf_refused(ajsr_const).
+ajsf_refused(ajsr_left).
+ajsf_refused(ajsr_open).
+ajsf_refused(ajsr_order).
+ajsf_refused(ajsr_two).
+ajsf_refused(ajsr_assert).
+ajsf_refused(ajsr_agg).
+alarm(ajsf_missing).
+alarm(ajsf_accepted).

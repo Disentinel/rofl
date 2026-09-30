@@ -1,0 +1,40 @@
+-- examples/checks/agg-sum-ticks-check.rofl — agg_sum_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: sum.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_s(13)).
+tsm_line(L) :- explained[$explain](why, tk_s(13), _, L).
+tsm_has(T)  :- tsm_line(L), tsm_text(T), N is str_segs(L, T), N > 1.
+tsm_past(M) :- tsm_line(L), tsm_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tsm_text_missing(T)    :- tsm_text(T), not tsm_has(T).
+tsm_member_not_past(M) :- tsm_member(M, _), not tsm_past(M).
+tsm_explain_refused()  :- explained[$explain](why, tk_s(13), 0, _).
+tsm_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_s).
+tsm_cell_missing(T, V) :- tsm_cell(T, V), not tsm_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+tsm_early(V)          :- tsm_cells(1, V).
+alarm(tsm_wrong).
+alarm(tsm_text_missing).
+alarm(tsm_member_not_past).
+alarm(tsm_explain_refused).
+alarm(tsm_cell_missing).
+alarm(tsm_early).
+tsm_text(T)@next      :- tsm_text(T).
+tsm_member(M, T)@next :- tsm_member(M, T).
+tsm_cell(T, V)@next   :- tsm_cell(T, V).
+tsm_wrong(carried) :- not tk_s(13).
+tsm_wrong(present) :- not tk_s_now(8).
+tsm_wrong(stale)   :- tk_s(8).
+tsm_text("sum(?V ; ?K : tk_w[main](?K,?V)) = 13 [aggregate: 3 members").
+tsm_member(a, "tk_w[main](a,3)  <= r"). tsm_member(b, "tk_w[main](b,5)  <= r"). tsm_member(c, "tk_w[main](c,5)  <= r").
+tsm_cell(0, 13).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): a cell that could read it is a hole, with no row.
+tsm_h(S) :- S is sum(W ; K : th_y(K, W)).
+tsm_hole_read(S) :- tsm_h(S).
+tsm_unholed() :- not th_holed(tsm_h).
+alarm(tsm_hole_read).
+alarm(tsm_unholed).

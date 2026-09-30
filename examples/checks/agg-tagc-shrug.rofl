@@ -1,0 +1,46 @@
+-- examples/checks/agg-tagc-shrug.rofl — agg_tagc_shrug, run with `rofl-load
+-- --explain`: a counting tag's fault is a shrug. A derivation weighed off the
+-- carrier is its rule's `fault`, `tag_off_carrier`; the tag's cell of the key
+-- it was met under, whose member could not be computed, a shrug inherited
+-- from that rule, and so is that key's tuple and each rule reading it: none
+-- is a definite no. The tag's other keys stand, and what reads them is
+-- decided (docs/aggregates.md, "Precise holes, as built"). A sum of
+-- derivations past the range is the cell's own `fault`, `agg_overflow`, on
+-- its key alone, and the fact of that key inherited from it. `why` of a
+-- reader names its root rule and the cause.
+edb(tcg_w).
+tcg_w(a, 1). tcg_w(b, 0).
+tag tcg_n(A, counting N).
+tcg_n(A, W)      :- tcg_w(A, W).
+tcg_any(A)       :- tcg_w(A, _), tcg_n(A, N), N >= 1.
+edb(tcg_h).
+tcg_h(p, 1, 1152921504606846000). tcg_h(p, 2, 1152921504606846000). tcg_h(q, 1, 5).
+tag tcg_s(A, counting N).
+tcg_s(A, W)      :- tcg_h(A, _, W).
+tcg_rule(Rel, R) :- concludes[$kernel](R, Rel).
+tcg_faulted(Rel, C) :- tcg_rule(Rel, R), shrug[$kernel]($rule(R), fault, C).
+tcg_unfaulted()  :- not tcg_faulted(tcg_n, tag_off_carrier).
+tcg_lost()       :- not tcg_s(q, 5).
+edb(explain_request).
+edb(explained).
+explain_request(why, tcg_any(b)).
+explain_request(why, tcg_any(a)).
+tcg_holds(T)     :- explained[$explain](why, _, _, L), tcg_want(T), N is str_segs(L, T), N > 1.
+tcg_want("tcg_any(b) is a shrug: inherited").
+tcg_want("tcg_n[main](a,1) [tag counting: the sum of 1 derivation]").
+tcg_want("is a shrug: fault, a builtin or a fold could not compute a value; tag_off_carrier").
+tcg_text_missing(T) :- tcg_want(T), not tcg_holds(T).
+alarm(tcg_unfaulted).
+alarm(tcg_lost).
+alarm(tcg_text_missing).
+-- expect-row: shrug[$kernel]($cell(tcg_n@count,1,0,$cons(b,$cons(main,$nil))),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](tcg_n(b,$unknown_value),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](tcg_any(b),inherited,from($cons($rule(
+-- expect-no-row: shrug[$kernel](every(tcg_n)
+-- expect-no-row: shrug[$kernel](tcg_any(a)
+-- expect-row: tcg_n[main](a,1)
+-- expect-row: tcg_any[main](a)
+-- expect-row: shrug[$kernel]($cell(tcg_s@count,1,0,$cons(p,$cons(main,$nil))),fault,agg_overflow)
+-- expect-row: shrug[$kernel](tcg_s(p,$unknown_value),inherited,from($cons($cell(tcg_s@count,1,0,$cons(p,$cons(main,$nil))),$nil)))
+-- expect-no-row: tcg_n[main](b,
+-- expect-no-row: tcg_any[main](b)

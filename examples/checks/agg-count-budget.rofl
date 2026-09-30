@@ -1,0 +1,7 @@
+-- examples/checks/agg-count-budget.rofl — agg_count_budget: the budget cuts the
+-- evaluation of agg-budget-data.rofl while ab_r is still being derived, and
+-- the count of what reached a node over it is no answer: the cut is a hole on the world and the
+-- aggregate has no row at all.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-no-row: abb_n[main](
+abb_n(C, N) :- ab_node(C), N is count(A : ab_r(A, C, _)).

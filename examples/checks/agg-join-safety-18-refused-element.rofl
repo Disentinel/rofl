@@ -1,0 +1,6 @@
+-- expect-refusal: is a set written with a variable
+-- a join canonicalises the set it is given, not the sets inside it: an
+-- element that is a set with a variable would be stored as written
+edb(ajsr_e). ajsr_e(k, a).
+lattice ajsr_nest(X, union S).
+ajsr_nest(X, set(set(Y, b))) :- ajsr_e(X, Y).

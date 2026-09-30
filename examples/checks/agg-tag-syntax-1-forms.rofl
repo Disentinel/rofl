@@ -1,0 +1,23 @@
+-- examples/checks/agg-tag-syntax-1-forms.rofl — every form of a tag
+-- declaration the grammar reads: `tag rel(K..., alg T).` with each of the
+-- four semirings, a key of one, of two and of none; the tag slot left to the
+-- engine in a head, and bound by the body as the rule's weight; and `tag`
+-- and the semirings' names still ordinary names where no declaration reads
+-- them (`tag(x, hot).` is a fact, `tropical` a constant). Read and refused by
+-- the TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxt_e).
+sxt_e(a, b, 2).
+tag sxt_trop(A, B, tropical T).
+tag sxt_vit(A, viterbi P).
+tag sxt_tru(A, B, trust T).
+tag sxt_cnt(counting N).
+sxt_trop(A, B, W) :- sxt_e(A, B, W).
+sxt_trop(A, C, T) :- sxt_trop(A, B, _), sxt_e(B, C, _).
+sxt_vit(A, 500000) :- sxt_e(A, _, _).
+sxt_tru(A, B, T)  :- sxt_vit(A, _), sxt_e(A, B, _).
+sxt_cnt(N)        :- sxt_e(_, _, _).
+-- the words are names elsewhere
+tag(x, hot).
+tropical(viterbi).
+sxt_word(X) :- tag(X, hot), tropical(Y), Y = viterbi, counting(trust).
+counting(trust).

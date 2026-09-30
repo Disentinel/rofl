@@ -1,0 +1,6 @@
+-- expect-refusal: is not monotone in the value
+-- a constant in the value slot matches one value, which the cell grows past
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_const(X, union S).
+ajsr_const(X, set(X))  :- ajsr_e(X, _).
+ajsr_const(X, set(Y))  :- ajsr_e(X, Y), ajsr_const(Y, set(a)).

@@ -1,0 +1,6 @@
+-- expect-refusal: is not monotone in the value
+-- a growing value on the left of subset is a test it can stop passing
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_left(X, union S).
+ajsr_left(X, set(X))  :- ajsr_e(X, _).
+ajsr_left(X, set(Y))  :- ajsr_e(X, Y), ajsr_left(Y, S), S subset set(a, b).

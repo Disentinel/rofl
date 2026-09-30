@@ -1,0 +1,8 @@
+-- expect-refusal: expected ')', got '+'
+-- examples/checks/args-are-terms-functor.rofl — an expression inside a
+-- functor's arguments is refused in both engines, not stored as the
+-- structure f(+(X, 1)) by one of them
+-- (f_the_rust_parser_read_an_expression_as_an_argument).
+edb(at_n).
+at_n(3).
+at_f(f(X + 1)) :- at_n(X).

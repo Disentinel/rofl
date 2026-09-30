@@ -1,0 +1,11 @@
+-- expect-refusal: one algebra
+-- examples/checks/agg-cell-safety-12-refused-alias.rofl — a body max renamed and shifted (`M is max(...)`, `D is M + 0`) as the value of a min: still two algebras on one relation.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_alias(A, C, min D).
+acsr_alias(A, C, D) :- acsr_e(A, C, _), M is max(W : acsr_e(A, _, W)), D is M + 0.

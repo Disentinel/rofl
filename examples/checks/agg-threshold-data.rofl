@@ -1,0 +1,158 @@
+-- examples/checks/agg-threshold-data.rofl — the threshold `at_least(N, X :
+-- body)` (docs/aggregates.md, "The threshold, as built"), for the
+-- agg_threshold_* worlds. Five shapes:
+--
+--  1. over closed input: a claim is trusted once two DISTINCT witnesses vouch
+--     for it; a witness heard on two channels is one member;
+--  2. the need_count trick of examples/goof, now spelled as what it means —
+--     every premise of a step holds — with N bound per step, a step that
+--     needs nothing, and the recursion through the theorems; beside it the
+--     old spelling, walking the premises by index, which must agree;
+--  3. independent witnesses inside a recursive belief relation: believed
+--     when two believed sources support it, over a cycle, with a member that
+--     rests on the very belief it would support;
+--  4. a negation and a builtin inside;
+--  5. a threshold that is not an integer: a hole, and no row;
+--  6. two Ns for one group, correlated and grouped, closed and inside the
+--     recursion, and an N that is no integer beside one that is: a cell is
+--     one group at one N;
+--  7. a member with two derivations, the text-least of which rests on the
+--     belief its own quorum supports: it is a member by the other, at the
+--     least height of the two.
+edb(at_claim).
+edb(at_vouch).
+edb(at_revoked).
+at_claim(c1).
+at_claim(c2).
+at_claim(c3).
+at_claim(c4).
+at_vouch(w1, c1, mail).
+at_vouch(w1, c1, phone).
+at_vouch(w2, c1, mail).
+at_vouch(w3, c1, mail).
+at_vouch(w1, c2, mail).
+at_vouch(w1, c2, phone).
+at_vouch(w4, c3, mail).
+at_vouch(w5, c3, phone).
+at_revoked(w2).
+at_trusted(C) :- at_claim(C), at_least(2, W : at_vouch(W, C, _)).
+at_clean(C)   :- at_claim(C), at_least(2, W : at_vouch(W, C, M), not at_revoked(W), M != phone).
+at_seen(C)    :- at_least(1, W : at_vouch(W, C, _)).
+
+-- 2. every premise of a step holds
+edb(at_axiom).
+edb(at_step).
+edb(at_needs).
+edb(at_need).
+at_axiom(p1).
+at_axiom(p2).
+at_step(s1, q1).
+at_needs(s1, 1, p1).
+at_needs(s1, 2, p2).
+at_need(s1, 2).
+at_step(s2, q2).
+at_needs(s2, 1, q1).
+at_needs(s2, 2, p1).
+at_need(s2, 2).
+at_step(s3, q3).
+at_needs(s3, 1, q2).
+at_needs(s3, 2, r9).
+at_need(s3, 2).
+at_step(s4, q4).
+at_need(s4, 0).
+at_step(s5, q5).
+at_needs(s5, 1, q4).
+at_needs(s5, 2, q2).
+at_need(s5, 2).
+at_thm(A) :- at_axiom(A).
+at_thm(P) :- at_step(S, P), at_need(S, N), at_least(N, K : at_needs(S, K, Q), at_thm(Q)).
+at_from(S, K1)  :- at_need(S, N), K1 is N + 1.
+at_from(S, K)   :- at_needs(S, K, Q), at_thm_old(Q), K1 is K + 1, at_from(S, K1).
+at_thm_old(A)   :- at_axiom(A).
+at_thm_old(P)   :- at_step(S, P), at_from(S, 1).
+
+-- 3. independent witnesses, recursive. u leans on y alone, z on y and on q,
+-- which nobody believes; t has three believed sources, and the two lowest
+-- are its quorum; m is supported by a, b and by v, which rests on m itself;
+-- k rests on y, whose quorum's height is its second member's.
+edb(at_root).
+edb(at_supports).
+at_root(a).
+at_root(b).
+at_root(zz).
+at_supports(a, x).
+at_supports(b, x).
+at_supports(x, y).
+at_supports(a, y).
+at_supports(y, z).
+at_supports(q, z).
+at_supports(y, u).
+at_supports(u, y).
+at_supports(x, t).
+at_supports(y, t).
+at_supports(zz, t).
+at_supports(v, m).
+at_supports(b, m).
+at_supports(a, m).
+at_supports(m, v).
+at_supports(zz, v).
+at_supports(y, k).
+at_supports(zz, k).
+at_believed(X) :- at_root(X).
+at_believed(X) :- at_least(2, S : at_supports(S, X), at_believed(S)).
+
+-- 5. a threshold that is not an integer
+edb(at_quota).
+at_quota(s1, many).
+at_bad(S) :- at_quota(S, N), at_least(N, K : at_needs(S, K, _)).
+
+-- 6. two Ns for one group. g1 has two members: reached at 1, not at 3, and
+-- at `many` not at all; the same with the group bound inside, and inside the
+-- recursion (s2 has two theorems to stand on, s3 one).
+edb(at_quorum_of).
+edb(at_member_of).
+edb(at_lim).
+edb(at_try).
+at_quorum_of(g1, 1).
+at_quorum_of(g1, 3).
+at_member_of(g1, zz1).
+at_member_of(g1, zz2).
+at_lim(1).
+at_lim(3).
+at_meets(G, N) :- at_quorum_of(G, N), at_least(N, M : at_member_of(G, M)).
+at_reach(G, N) :- at_lim(N), at_least(N, M : at_member_of(G, M)).
+at_try(s2, 2).
+at_try(s2, 3).
+at_try(s3, 1).
+at_try(s3, 2).
+at_ok(S, N) :- at_try(S, N), at_least(N, K : at_needs(S, K, Q), at_thm(Q)).
+at_quota2(s1, many).
+at_quota2(s1, 2).
+at_mixed(S, N) :- at_quota2(S, N), at_least(N, K : at_needs(S, K, _)).
+
+-- 7. two derivations of one member. w backs x7 through v1, which rests on
+-- x7's own belief, and through v2, which is founded: w is a member at the
+-- height of v2, beside u; t, higher, is not in the quorum. a backs y7
+-- through v1 (high) and v2 (low): a is a member at v2's height, beside b.
+edb(at_node).
+edb(at_edge).
+edb(at_okb).
+edb(at_okc).
+at_node(x7).
+at_node(y7).
+at_edge(w, x7, v1).
+at_edge(w, x7, v2).
+at_edge(u, x7, v2).
+at_edge(t, x7, v4).
+at_edge(a, y7, v1).
+at_edge(a, y7, v2).
+at_edge(b, y7, v3).
+at_edge(c, y7, v3).
+at_okb(v2).
+at_okb(v3).
+at_okc(v4).
+at_okd(V) :- at_okc(V).
+at_ok7(V) :- at_okb(V).
+at_ok7(V) :- at_okd(V).
+at_ok7(v1) :- at_b7(x7).
+at_b7(X) :- at_node(X), at_least(2, W : at_edge(W, X, V), at_ok7(V)).

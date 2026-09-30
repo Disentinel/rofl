@@ -1,0 +1,30 @@
+-- examples/checks/set-spelling.rofl — set_spelling, both engines: a set
+-- has one spelling (docs/aggregates.md, "The join lattice, as built"), so a
+-- ground set a program writes is its canonical value wherever it stands,
+-- a plain relation's fact included: its elements in the kernel's order, the
+-- order of their canonical text, with no repeat, inner sets first. Five
+-- spellings of three sets are three facts, and every spelling reads them.
+edb(ss_held).
+ss_held(set(b, a)).
+ss_held(set(a, b, a)).
+ss_held(set("str", -5, f(a))).
+ss_held(set(f(a), "str", -5, -5)).
+ss_held(f(set(c, set(b, a)))).
+ss_want(set(a, b)).
+ss_want(set("str", -5, f(a))).
+ss_want(f(set(c, set(a, b)))).
+ss_extra(S)   :- ss_held(S), not ss_want(S).
+ss_missing(S) :- ss_want(S), not ss_held(S).
+-- every spelling of a held set reads it, as a pattern, a negation and an `=`
+ss_read(pattern) :- ss_held(set(b, a, b)).
+ss_read(nested)  :- ss_held(f(set(set(a, b), c))).
+ss_read(eq)      :- ss_held(S), S = set(-5, f(a), "str").
+ss_read(negated) :- ss_want(_), not ss_held(set(b, a, c)).
+ss_want_read(pattern).
+ss_want_read(nested).
+ss_want_read(eq).
+ss_want_read(negated).
+ss_read_missing(X) :- ss_want_read(X), not ss_read(X).
+alarm(ss_extra).
+alarm(ss_missing).
+alarm(ss_read_missing).

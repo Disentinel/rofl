@@ -1,0 +1,3 @@
+-- expect-refusal: names the relation, not a book
+-- a dominance rule orders the facts of every book, each book a cell of its own
+sxsr_book[w](A, X) <= sxsr_book[w](A, Y) :- Y < X.

@@ -1,6 +1,7 @@
 // api.ts — load, assert, retract, ?, why, whynot, excise, ticks, snapshots.
 
-import { type Term, mka, mkv, mkf, mki, canonTerm, resolve, walk, isGround, varsOf, type Subst } from './unify.ts';
+import { type Term, mka, mkv, mkf, mki, mks, canonTerm, resolve, walk, isGround, varsOf, type Subst, annotateAggs,
+  canonClauseSets, canonLitSets, clauseOpenSet, openSet, setPatternReason, litsOf } from './unify.ts';
 import { parseProgram, parseLiteral } from './parser.ts';
 import type { Clause, Lit } from './unify.ts';
 const KERNEL_CLAIM = '$kernel_authority';
@@ -9,13 +10,20 @@ import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
   factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
-  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels,
+  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, unlist, list as listT,
 } from './reflect.ts';
-import { Evaluation, StratificationError, BudgetExhausted, planBody, DEFAULT_SPACE, type StagedFact, sigOf } from './engine.ts';
+import { Evaluation, StratificationError, BudgetExhausted, planBody, DEFAULT_SPACE, type StagedFact, type Unknown, sigOf, nextHoleArgs } from './engine.ts';
 import { RoundEvaluation } from './rounds.ts';
+import { SHRUG, shrugsOf, shrugLine, shrugWhy, shrugAtom } from './shrug.ts';
+import { AggEval, storeHasAggregates, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
+  checkNextInBody, checkLatticeDecl, checkDominance } from './aggeval.ts';
+import { encodeDominance } from './reflect.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
+/** An answer that is a shrug (docs/aggregates.md, "Shrugs, as built"): the
+ *  bindings it names, `_` where it does not know, its reason, and its line. */
+export interface ShrugAnswer { text: string; bindings: Record<string, string>; reason: string; line: string; }
 
 /** `unpopulatable` separates the two empty answers a query used to give with
  *  one voice: NO ROWS (the relation exists and nothing satisfies the literal)
@@ -28,7 +36,7 @@ export interface QueryRow { text: string; bindings: Record<string, string>; }
  *
  *  It is a field rather than an error because an empty world is a legitimate
  *  thing to ask about — a caller decides whether unpopulatable is a defect. */
-export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; }
+export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: string; unpopulatable?: boolean; shrugs?: ShrugAnswer[]; }
 
 /** What an evaluation spent, beside whether it finished. `peakRows` is the most
  *  rows held at once and `space` is the wall — so a caller can see it coming
@@ -183,6 +191,35 @@ export function sameKeySet(a: readonly string[], b: readonly string[]): boolean 
  *  src/dense.ts) or by hand, because a literal is DATA. */
 export type Ask = string | Lit;
 
+/** One step of the plain evaluator's `why` walk (`renderTree`). */
+type PlainWhyTask = { t: 'fact'; key: string; indent: number } | { t: 'line'; line: string } | { t: 'unvisit'; key: string };
+/** One step of its `whynot` walk (`explainTree`). */
+type PlainWnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: Evaluation['rules'][number]; level: number }
+  | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string } | { t: 'unpath'; ck: string };
+
+/** What `query` reads of the evaluator standing over the store; both `Evaluation` and `AggEval` are one. */
+type Asked = { rules: readonly { id: string; canon: string; clause: Clause }[];
+  matchPremise(lit: Lit, s: Subst, depth: number, only: null): unknown[] };
+
+/** The ids of the rules a store reflects. */
+function storeRuleIds(store: FactStore): string[] {
+  return store.relAll(V.rule).flatMap((f) => (f.args[0]?.k === 'a' ? [f.args[0].name] : []));
+}
+
+/** A halt of the aggregate evaluator as a sentence (rust/rofl `describe`). */
+function describeHalt(e: unknown): string {
+  if (e instanceof Wall) return `wall: ${e.reason}`;
+  if (e instanceof Rejected) return e.message;
+  return `defect: ${(e as Error).message}`;
+}
+
+/** Does a clause write an aggregate, a join read or an interval function
+ *  (docs/aggregates.md): then the door that knows them judges it. */
+function aggConstructs(c: Clause): boolean {
+  const ivs = new Set(['ivadd', 'ivsub', 'ivmul', 'ivmeet']);
+  return c.body.some((b) => b.t === 'agg' || (b.t === 'bi' && (b.op === 'in' || b.op === 'subset' || (b.op === 'is' && b.r.k === 'f' && ivs.has(b.r.name)))));
+}
+
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
   // The declared type stays concrete because `Evaluation` is declared over
@@ -224,6 +261,8 @@ export class Rofl {
   /** Whether some load has already claimed the kernel ring. One per store. */
   private kernelClaimed = false;
   private lastStaged: StagedFact[] = [];
+  /** What a hole kept the last evaluation from staging: unknown at the next tick. */
+  private lastUnknowns: Unknown[] = [];
   private lastSteps = 0;
   // THE NEAREST HARD CEILING, READABLE WITHOUT HITTING IT. `space` is a wall
   // counted in ROWS, and until now the only way to learn how close a world
@@ -294,13 +333,18 @@ export class Rofl {
   /** A question as a literal, however it arrived. `resolveBook` is idempotent,
    *  so a literal that already names its book keeps it. */
   private asked(q: Ask): Lit {
-    return resolveBook(typeof q === 'string' ? parseLiteral(q) : q);
+    const l = canonLitSets(typeof q === 'string' ? parseLiteral(q) : q);
+    const open = l.args.map(openSet).find((t) => t);
+    if (open) throw new Error(setPatternReason(canonTerm(open)));
+    return resolveBook(l);
   }
 
   // -------------------------------------------------------------------------
   // loading & asserting (rules become reflection facts through this one path)
 
-  load(text: string, opts: { who?: string; budget?: number } = {}): LoadResult {
+  /** `defer` writes the clauses and leaves the evaluation to the caller, as
+   *  rofl-load loads every file of a world before it evaluates once. */
+  load(text: string, opts: { who?: string; budget?: number; defer?: boolean } = {}): LoadResult {
     this.loadn++;
     const holeId = mkf('$load', [mki(this.loadn)]);
     let clauses: Clause[];
@@ -329,13 +373,13 @@ export class Rofl {
     // The caller's claim is checked HERE, before the file's own claim can
     // replace it: `checkWho` refuses a `$` name from outside, and the kernel's
     // directive is not from outside — it is in the text being read.
-    if (clauses.length > 0) {
+    if (clauses.length > 0 && !clauses[0].lattice && !clauses[0].dominator) {
       const bad = this.checkWho(opts.who, clauses[0]);
       if (bad) return { ok: false, diagnostics: [bad] };
     }
     let who = opts.who;
     if (clauses.length > 0 && clauses[0].head.rel === KERNEL_CLAIM
-        && clauses[0].body.length === 0) {
+        && clauses[0].body.length === 0 && !clauses[0].lattice && !clauses[0].dominator) {
       if (this.kernelClaimed) {
         return { ok: false, diagnostics: [
           `'${KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's`] };
@@ -343,7 +387,7 @@ export class Rofl {
       this.kernelClaimed = true;
       who = KERNEL_WHO;
       clauses = clauses.slice(1);
-    } else if (clauses.some((c) => c.head.rel === KERNEL_CLAIM)) {
+    } else if (clauses.some((c) => c.head.rel === KERNEL_CLAIM && !c.lattice && !c.dominator)) {
       return { ok: false, diagnostics: [
         `'${KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all`] };
     }
@@ -357,6 +401,7 @@ export class Rofl {
       this.store = backup;
       return { ok: false, diagnostics: diags };
     }
+    if (opts.defer) return { ok: true, diagnostics: [] };
     try {
       this.ensure(opts.budget ?? DEFAULT_BUDGET, holeId);
     } catch (e) {
@@ -531,6 +576,10 @@ export class Rofl {
     // nothing for ever.
     for (const b of c.body) {
       if (b.t === 'bi') continue;
+      if (b.t === 'agg') {
+        for (const l of litsOf(b)) { const badInner = at(l, ' inside an aggregate'); if (badInner) return badInner; }
+        continue;
+      }
       const badPrem = at(b.lit, ` in a ${b.t === 'neg' ? 'negated ' : ''}premise`);
       if (badPrem) return badPrem;
     }
@@ -546,15 +595,26 @@ export class Rofl {
     // The `$` ledger check reads the clause AS WRITTEN — `resolveClauseBooks`
     // puts `$kernel` on a bare `concludes(...)`, and refusing that would be
     // refusing the resolver's own work rather than the author's.
+    // A DECLARATION or A DOMINANCE RULE is its rows (docs/aggregates.md)
+    if (c0.lattice) return this.addDecl(c0);
+    if (c0.dominator) return this.addDominance(c0, who);
     const badBook = this.checkKernelBook(c0);
     if (badBook) return badBook;
-    const c = resolveClauseBooks(c0);
+    const c = annotateAggs(resolveClauseBooks(canonClauseSets(c0)));
+    const agg = aggConstructs(c) || c.head.args.some((a) => openSet(a) !== null);
     const badWho = trusted ? null : this.checkWho(who, c);
     if (badWho) return badWho;
     const badArity = this.checkArity(c);
     if (badArity) return badArity;
-    const badOrder = checkOrderable(c);
-    if (badOrder) return badOrder;
+    if (agg) {
+      const bad = checkNextInBody(c) ?? checkAggregatesDoor(c) ?? checkSetPatternsDoor(c) ?? (c.body.length > 0 ? checkOrderableAgg(c) : null);
+      if (bad) return bad;
+    } else {
+      const open = clauseOpenSet(c);
+      if (open) return `rule ${canonClause(c)}: ${setPatternReason(canonTerm(open))}`;
+      const badOrder = checkOrderable(c);
+      if (badOrder) return badOrder;
+    }
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
@@ -654,9 +714,7 @@ export class Rofl {
     }
     if (c.head.persp.k === 'a') registerPersp(this.store, c.head.persp.name, who ?? ANON_WHO);
     for (const b of c.body) {
-      if ((b.t === 'pos' || b.t === 'neg') && b.lit.persp.k === 'a') {
-        registerPersp(this.store, b.lit.persp.name, who ?? ANON_WHO);
-      }
+      for (const l of litsOf(b)) if (l.persp.k === 'a') registerPersp(this.store, l.persp.name, who ?? ANON_WHO);
     }
     const enc = encodeRule(c);
     // A SEALED BODY IS WITHHELD HERE AND NOWHERE ELSE. `encodeRule` still
@@ -669,6 +727,38 @@ export class Rofl {
     for (const f of enc.facts) {
       if (drop.has(f.rel)) continue;
       this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
+    }
+    this.store.dirty = true;
+    return null;
+  }
+
+  /** A LATTICE OR TAG DECLARATION IS ONE KERNEL ROW, timeless like the
+   *  semantics declaration: `lattice_decl(Rel, Arity, Op)` and, for a
+   *  declared widening, `lattice_widen(Rel, N)`; `tag_decl(Rel, Arity, Alg)`. */
+  private addDecl(c: Clause): string | null {
+    const bad = checkLatticeDecl(c, (rel) => ARITY[rel]);
+    if (bad) return bad;
+    const row = [mka(c.head.rel), mki(c.head.args.length), mka(c.lattice!)];
+    this.store.add(c.tag ? V.tag_decl : V.lattice_decl, KERNEL_PERSP, row, { scope: 'timeless', base: true });
+    if (!c.tag && c.widen !== undefined) {
+      this.store.add(V.lattice_widen, KERNEL_PERSP, [mka(c.head.rel), mki(c.widen)], { scope: 'timeless', base: true });
+    }
+    this.store.dirty = true;
+    return null;
+  }
+
+  /** A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
+   *  as built"): rows in the kernel's book, its body a rule body's. */
+  private addDominance(c0: Clause, who?: string): string | null {
+    const d = checkDominance(c0, (rel) => ARITY[rel]);
+    if (typeof d === 'string') return d;
+    const probe: Clause = resolveClauseBooks({ head: d.lo, body: d.body });
+    const bad = this.checkKernelBook(probe) ?? this.checkWho(who, probe) ?? this.checkArity(probe);
+    if (bad) return bad;
+    for (const b of d.body) for (const l of litsOf(b)) if (l.persp.k === 'a') registerPersp(this.store, l.persp.name, who ?? ANON_WHO);
+    const drop = sealedRels(sealedBodies(this.store));
+    for (const f of encodeDominance(d.lo, d.hi, d.body, d.k).facts) {
+      if (!drop.has(f.rel)) this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
     }
     this.store.dirty = true;
     return null;
@@ -709,13 +799,53 @@ export class Rofl {
       : new RoundEvaluation(this.store, opts);
   }
 
+  /** THE EVALUATOR OF A PROGRAM WITH AGGREGATES (src/aggeval.ts), kept past
+   *  its run: the tick boundary, `why` and `whynot` read what it met. */
+  private agg: AggEval | null = null;
+
+  private aggEval(budget: number, holeId: Term): AggEval {
+    let ev: AggEval;
+    try { ev = new AggEval(this.store, budget, this.evaluator === 'strata' ? 'strata' : 'rounds'); } catch (e) {
+      if (e instanceof Rejected) throw new StratificationError(e.message, e.demo);
+      throw e;
+    }
+    ev.holeId = holeId;
+    ev.space = this.space ?? DEFAULT_SPACE;
+    ev.retainTicks = this.retainTicks;
+    ev.naive = this.naive;
+    this.agg = ev;
+    return ev;
+  }
+
+  private ensureAgg(budget: number, holeId: Term): EvalReport {
+    const ev = this.aggEval(budget, holeId);
+    let partial: boolean;
+    try { partial = ev.run().partial; } catch (e) {
+      if (e instanceof Rejected) throw new StratificationError(e.message, e.demo);
+      if (!(e instanceof Wall)) throw e;
+      this.store.noteEval(budget, ev.steps, true);
+      partial = true;
+    }
+    this.lastStaged = [];
+    this.lastUnknowns = [];
+    this.lastSteps = ev.steps;
+    this.lastPeakRows = ev.peakRows;
+    this.lastSpace = ev.space;
+    this.readsProvenance = ev.answer.readsProvenance;
+    this.diagnostics.push(...ev.diags);
+    return { partial, peakRows: ev.peakRows, space: ev.space };
+  }
+
   private ensure(budget: number, holeId: Term): EvalReport {
     if (!this.store.dirty) {
       return { partial: this.store.partialEval, peakRows: this.lastPeakRows, space: this.lastSpace };
     }
+    this.agg = null;
+    if (storeHasAggregates(this.store)) return this.ensureAgg(budget, holeId);
     const ev = this.newEval(budget, holeId);
     const out = ev.run();
     this.lastStaged = out.staged;
+    this.lastUnknowns = out.unknowns;
     this.lastSteps = ev.steps;
     this.lastPeakRows = ev.peakRows;
     // Read off the rules this evaluation actually ran, not the ones a caller
@@ -762,8 +892,22 @@ export class Rofl {
    *  program derives, so it needs no evaluation and cannot depend on the order
    *  loads happened to arrive in. */
 
-  private prepared(budget: number): Evaluation {
+  /** The evaluator a query reads, whichever runs this store: the rules it holds and a premise matched against the
+   *  store. Everything else a plain evaluator answers is asked of `plain`, after `aggStanding` has taken its turn. */
+  private prepared(budget: number): Asked {
+    return this.aggStanding(budget) ?? this.plain(budget);
+  }
+
+  /** The plain evaluator over this store; a program with aggregates is `aggStanding`'s. */
+  private plain(budget: number): Evaluation {
+    if (storeHasAggregates(this.store)) throw new Error('a program with aggregates is asked of the aggregate evaluator');
     return this.newEval(budget, mka('$adhoc'));
+  }
+
+  /** The aggregate evaluator standing over this store, or null for a plain program. */
+  private aggStanding(budget: number): AggEval | null {
+    if (!storeHasAggregates(this.store)) return null;
+    return this.agg ?? this.aggEval(budget, mka('$adhoc'));
   }
 
   // -------------------------------------------------------------------------
@@ -800,9 +944,10 @@ export class Rofl {
     const vars = [...varsOf(lit.persp, varsOf(mkf('$t', lit.args)))].sort();
     let ms: { s: Subst }[] = [];
     try {
-      ms = ev.matchPremise(lit, new Map(), 0, null);
+      const got = ev.matchPremise(lit, new Map(), 0, null) as unknown[];
+      ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
-      if (e instanceof BudgetExhausted) {
+      if (e instanceof BudgetExhausted || e instanceof Wall) {
         this.store.add(V.hole, KERNEL_PERSP, [holeId, mka(BUDGET_REASON)], { scope: 'timeless', base: true, frozen: true });
         partial = true;
       } else throw e;
@@ -855,7 +1000,29 @@ export class Rofl {
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       if (!rows.has(rtext)) rows.set(rtext, { text: rtext, bindings });
     }
-    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable };
+    const shrugs = new Map<string, ShrugAnswer>();
+    for (const { row, s } of shrugsOf(this.store, lit)) {
+      const bindings: Record<string, string> = {};
+      for (const v of vars) {
+        const t = resolve({ k: 'v', name: v }, s);
+        bindings[v] = t.k === 'v' ? '_' : canonTerm(t).replace(/\$unknown_value/g, '_');
+      }
+      const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
+      const reason = row.args[1].k === 'a' ? row.args[1].name : canonTerm(row.args[1]);
+      if (!shrugs.has(rtext + '\u0000' + reason)) shrugs.set(rtext + '\u0000' + reason, { text: rtext, bindings, reason, line: shrugLine(row) });
+    }
+    // A WALL CUT THE WORLD: every answer that does not hold is no answer
+    if (this.store.partialEval) {
+      for (const row of this.store.relPersp(SHRUG, KERNEL_PERSP)) {
+        if (row.args[1].k !== 'a' || row.args[1].name !== 'budget' || shrugAtom(row.args[0]) !== null) continue;
+        const bindings: Record<string, string> = Object.fromEntries(vars.map((v) => [v, '_']));
+        const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = _`).join(', ');
+        shrugs.set(rtext + '\u0000budget', { text: rtext, bindings, reason: 'budget', line: shrugLine(row) });
+        break;
+      }
+    }
+    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
+             ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }
 
   holds(text: Ask): boolean {
@@ -865,7 +1032,7 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // why / whynot / excise
 
-  why(text: Ask, opts: { budget?: number } = {}): { ok: boolean; text: string } {
+  why(text: Ask, opts: { budget?: number; all?: boolean } = {}): { ok: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
     try { lit = this.asked(text); } catch (e) { return { ok: false, text: (e as Error).message }; }
@@ -874,13 +1041,19 @@ export class Rofl {
       if (e instanceof StratificationError) return { ok: false, text: e.message + '\n' + e.demo };
       throw e;
     }
+    const agg = this.aggStanding(budget);
+    if (agg !== null) {
+      try { return { ok: true, text: agg.whyText(lit, opts.all ? Infinity : undefined) }; } catch (e) { return { ok: false, text: (e as Error).message }; }
+    }
     const key = factKey(lit.rel, lit.persp.name, lit.args);
     if (!this.store.has(key)) {
+      const sh = shrugsOf(this.store, lit);
+      if (sh.length > 0) return { ok: false, text: sh.map(({ row }) => this.shrugWhyText(row)).join('\n') };
       return { ok: false, text: `${key} does not hold; try: whynot ${text}` };
     }
-    const ev = this.prepared(budget);
+    const ev = this.plain(budget);
     const unk = this.unknownCtx();
-    const tree = this.renderWhy(ev, key, 0, new Set(), true, unk);
+    const tree = this.renderTree(ev, key, true, unk);
     // A `why` on an undefined atom answers with the tree AND with the set the
     // tree walked: the circular dependency that left it undefined, named. An
     // absence explains nothing; this explains itself.
@@ -888,6 +1061,12 @@ export class Rofl {
       return { ok: true, text: tree + '\nunfounded set: ' + [...unk.hit].sort().join(', ') };
     }
     return { ok: true, text: tree };
+  }
+
+  /** A shrug row explained down to its roots, a rule root with its text. */
+  private shrugWhyText(row: FactRec): string {
+    const ev = this.prepared(DEFAULT_BUDGET);
+    return shrugWhy(this.store, row, (id) => ev.rules.find((r) => r.id === id)?.canon);
   }
 
   /** The `unknown` rows the store holds, keyed by the atom each stands for.
@@ -905,50 +1084,85 @@ export class Rofl {
     return { index, hit: new Set() };
   }
 
+  /** THE TREE, WALKED WITH A STACK OF ITS OWN: a derivation as deep as the store holds renders without a frame per
+   *  level, and each line is written once. Every step pushes, in order, the lines and the premises it would have
+   *  written and recursed into; they run in that order (src/aggeval.ts's `renderTree` is the same walk). */
+  private renderTree(ev: Evaluation, key: string, expandNeg: boolean, unk: UnknownCtx | null): string {
+    const visited = new Set<string>(), lines: string[] = [], todo: PlainWhyTask[] = [{ t: 'fact', key, indent: 0 }], next: PlainWhyTask[] = [];
+    for (let t = todo.pop(); t !== undefined; t = todo.pop()) {
+      if (t.t === 'fact') this.renderWhy(ev, t.key, t.indent, visited, expandNeg, unk, next);
+      else if (t.t === 'line') lines.push(t.line);
+      else visited.delete(t.key);
+      for (let i = next.length - 1; i >= 0; i--) todo.push(next[i]);
+      next.length = 0;
+    }
+    return lines.join('\n');
+  }
+
   private renderWhy(ev: Evaluation, key: string, indent: number, visited: Set<string>,
-                    expandNeg: boolean, unk: UnknownCtx | null = null): string {
+                    expandNeg: boolean, unk: UnknownCtx | null, next: PlainWhyTask[]): void {
     const pad = '  '.repeat(indent);
-    if (visited.has(key)) return pad + key + ' [cycle]';
+    const line = (l: string) => next.push({ t: 'line', line: l });
+    if (visited.has(key)) { line(pad + key + ' [cycle]'); return; }
     visited.add(key);
     const rec = this.store.get(key);
     const w = this.store.witnessOf(key);
-    let out: string;
     if (!w) {
-      out = pad + key + (rec ? ' [axiom]' : ' [past tick]');
+      line(pad + key + (rec ? ' [axiom]' : ' [past tick]'));
     } else {
-      const lines = [pad + key + `  <= ${w.ruleId} @tick ${w.tick}`];
+      line(pad + key + `  <= ${w.ruleId} @tick ${w.tick}`);
+      // A STAGED FIRING read the tick before its own: its premises are that
+      // tick's facts, named with the rules that derived them then, whatever
+      // the store holds under their keys now
+      const staged = ev.rules.some((r) => r.id === w.ruleId && r.clause.head.temporal === 'next');
       if (unk && rec && rec.rel === IFACE.unknown && rec.args.length === 1) {
         const at = unAtomTerm(rec.args[0]);
         if (at) unk.hit.add(factKey(at.rel, rec.persp, at.args));
       }
       for (const p of w.prems) {
-        if (p.t === 'fact') lines.push(this.renderWhy(ev, p.key, indent + 1, visited, expandNeg, unk));
+        if (p.t === 'fact' && staged) line(this.renderPast(p.key, w.tick - 1, indent + 1));
+        else if (p.t === 'fact') next.push({ t: 'fact', key: p.key, indent: indent + 1 });
         else if (p.t === 'neg') {
           // An undefined premise is not a finite failure, and the difference is
           // the whole point of the third value: `not p` where p is undefined
-          // did not FAIL, it never settled. Recurse into p's own row instead of
+          // did not FAIL, it never settled. Walk into p's own row instead of
           // demonstrating a failure that did not happen.
           const und = unk?.index.get(p.key);
           if (und !== undefined) {
-            lines.push('  '.repeat(indent + 1) + 'not ' + p.key + ' [undefined]');
-            lines.push(this.renderWhy(ev, und, indent + 2, visited, expandNeg, unk));
+            line('  '.repeat(indent + 1) + 'not ' + p.key + ' [undefined]');
+            next.push({ t: 'fact', key: und, indent: indent + 2 });
             continue;
           }
-          lines.push('  '.repeat(indent + 1) + 'not ' + p.key + ' [finite failure]');
+          line('  '.repeat(indent + 1) + 'not ' + p.key + ' [finite failure]');
           if (expandNeg && !p.key.includes('?')) {
             try {
               // the finite-failure demo `why` inlines is the single-step form
               const sub = this.whynotStruct(p.key, ev,
                 { maxDepth: 1, maxNodes: DEFAULT_WHYNOT_NODES, nodes: 0, path: new Set() });
-              lines.push(sub.text.split('\n').map((l) => '  '.repeat(indent + 2) + l).join('\n'));
+              line(sub.text.split('\n').map((l) => '  '.repeat(indent + 2) + l).join('\n'));
             } catch { /* demo elided */ }
           }
-        } else lines.push('  '.repeat(indent + 1) + p.desc + ' [builtin]');
+        } else line('  '.repeat(indent + 1) + p.desc + ' [builtin]');
       }
-      out = lines.join('\n');
     }
-    visited.delete(key);
-    return out;
+    // what it rests on is rendered before it leaves the path
+    next.push({ t: 'unvisit', key });
+  }
+
+  /** A premise read in a past tick, with the rules its frozen `derived_by`
+   *  rows say derived it then, and explained no further. */
+  private renderPast(key: string, t: number, indent: number): string {
+    const rules: string[] = [];
+    for (const d of this.store.relAll(V.derived_by)) {
+      const [ft, rule, tick] = d.args;
+      if (tick.k !== 'i' || tick.v !== t || rule.k !== 'a' || ft.k !== 'f' || ft.args.length !== 3) continue;
+      const [rel, persp, args] = ft.args;
+      if (rel.k !== 'a' || persp.k !== 'a' || factKey(rel.name, persp.name, unlist(args)) !== key) continue;
+      rules.push(rule.name);
+    }
+    rules.sort();
+    const pad = '  '.repeat(indent);
+    return rules.length === 0 ? `${pad}${key} [past tick]` : `${pad}${key}  <= ${rules.join(', ')} @tick ${t} [past tick]`;
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
@@ -957,7 +1171,16 @@ export class Rofl {
       if (e instanceof StratificationError) return { holds: false, text: e.message + '\n' + e.demo };
       throw e;
     }
-    const ev = this.prepared(budget);
+    const agg = this.aggStanding(budget);
+    if (agg !== null) {
+      let lit: Lit;
+      try { lit = this.asked(text); } catch (e) { return { holds: false, text: (e as Error).message }; }
+      try {
+        const [holds, t] = agg.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES });
+        return { holds, text: t };
+      } catch (e) { return { holds: false, text: describeHalt(e) }; }
+    }
+    const ev = this.plain(budget);
     const r = this.whynotStruct(text, ev, {
       maxDepth: Math.max(1, opts.depth ?? DEFAULT_WHYNOT_DEPTH),
       maxNodes: Math.max(1, opts.nodes ?? DEFAULT_WHYNOT_NODES),
@@ -974,68 +1197,89 @@ export class Rofl {
       const shown = typeof text === 'string' ? text.trim() : ev.resolvedLitKey(lit, new Map());
       return { holds: true, text: `${shown} holds; nothing to demonstrate` };
     }
-    const lines: string[] = [`whynot ${ev.resolvedLitKey(lit, new Map())}:`];
+    // A SHRUG IS NOT A FAILURE: no answer, and why, before the premises it
+    // rests on (docs/aggregates.md, "Shrugs, as built")
+    const sh = shrugsOf(this.store, lit);
+    const lines: string[] = sh.length > 0
+      ? [`whynot ${ev.resolvedLitKey(lit, new Map())}: no answer, a shrug`, ...sh.map(({ row }) => this.shrugWhyText(row))]
+      : [`whynot ${ev.resolvedLitKey(lit, new Map())}:`];
     ctx.path.add(this.cycleKey(lit));
-    lines.push(...this.explainFailure(ev, lit, 1, ctx));
+    for (const l of this.explainTree(ev, lit, ctx)) lines.push(l);
     return { holds: false, text: lines.join('\n') };
   }
 
   /** One node of the demonstration: for each rule that could conclude `lit`,
-   *  the failing premise instances, each recursively explained in turn.
+   *  the failing premise instances, each followed in turn (`explainRule`).
    *  Level 1 renders at the indent whynot has always used; every level below
    *  adds two — the failed premise line, then that premise's own rules. */
-  private explainFailure(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx): string[] {
+  private explainFailure(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx, next: PlainWnTask[]): void {
     ctx.nodes++;
     const pad = '  '.repeat(2 * level - 1);
-    const lines: string[] = [];
     const rules = ev.rules.filter((r) => r.clause.head.rel === lit.rel);
     if (rules.length === 0) {
-      lines.push(`${pad}no rule concludes '${lit.rel}' and no matching base fact exists`);
-      return lines;
+      next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists` });
+      return;
     }
-    for (const r of rules) {
-      const rn = (ev as any).renameClause(r.clause) as Clause;
-      let s: Subst | null = new Map();
-      s = ev.evalBuiltin({ op: '=', l: rn.head.persp, r: lit.persp }, s);
-      for (let i = 0; s && i < Math.min(rn.head.args.length, lit.args.length); i++) {
-        s = ev.evalBuiltin({ op: '=', l: rn.head.args[i], r: lit.args[i] }, s);
-      }
-      if (!s || rn.head.args.length !== lit.args.length) {
-        lines.push(`${pad}rule ${r.id}: head does not unify`);
-        continue;
-      }
-      const failures = this.failingPremises(ev, rn, s);
-      lines.push(`${pad}rule ${r.id}: ${r.canon}`);
-      const fs = [...failures.keys()].sort().slice(0, 12);
-      if (fs.length === 0) lines.push(`${pad}  (no failing premise found within exploration bounds)`);
-      for (const f of fs) {
-        lines.push(`${pad}  failed premise: ${f}`);
-        const sub = failures.get(f);
-        if (sub) lines.push(...this.explainDeeper(ev, sub, level + 1, ctx));
-      }
-    }
-    return lines;
+    // each rule is explored when its turn comes, after the one before it has been followed down
+    for (const r of rules) next.push({ t: 'rule', lit, r, level });
   }
 
-  /** Recurse into one failing premise instance. Everything that makes the
-   *  recursion terminate lives here: the cycle path, the depth cap, the node
-   *  cap. Each of them says so in the output rather than truncating quietly. */
-  private explainDeeper(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx): string[] {
+  private explainRule(ev: Evaluation, lit: Lit, r: Evaluation['rules'][number], level: number, next: PlainWnTask[]): void {
     const pad = '  '.repeat(2 * level - 1);
+    const line = (l: string) => next.push({ t: 'line', line: l });
+    const rn = (ev as any).renameClause(r.clause) as Clause;
+    let s: Subst | null = new Map();
+    s = ev.evalBuiltin({ op: '=', l: rn.head.persp, r: lit.persp }, s);
+    for (let i = 0; s && i < Math.min(rn.head.args.length, lit.args.length); i++) {
+      s = ev.evalBuiltin({ op: '=', l: rn.head.args[i], r: lit.args[i] }, s);
+    }
+    if (!s || rn.head.args.length !== lit.args.length) {
+      line(`${pad}rule ${r.id}: head does not unify`);
+      return;
+    }
+    const failures = this.failingPremises(ev, rn, s);
+    line(`${pad}rule ${r.id}: ${r.canon}`);
+    const fs = [...failures.keys()].sort().slice(0, 12);
+    if (fs.length === 0) line(`${pad}  (no failing premise found within exploration bounds)`);
+    for (const f of fs) {
+      line(`${pad}  failed premise: ${f}`);
+      const sub = failures.get(f);
+      if (sub) next.push({ t: 'deeper', lit: sub, level: level + 1 });
+    }
+  }
+
+  /** One failing premise instance, followed. Everything that makes the walk
+   *  terminate lives here: the cycle path, the depth cap, the node cap. Each
+   *  of them says so in the output rather than truncating quietly. */
+  private explainDeeper(ev: Evaluation, lit: Lit, level: number, ctx: WhynotCtx, next: PlainWnTask[]): void {
+    const pad = '  '.repeat(2 * level - 1);
+    const line = (l: string) => next.push({ t: 'line', line: l });
     if (level > ctx.maxDepth) {
       // maxDepth 1 is the single-step form: nothing below the named premises
       // was promised, so there is nothing there to report as cut off.
-      return ctx.maxDepth > 1 ? [`${pad}[depth limit ${ctx.maxDepth} reached]`] : [];
+      if (ctx.maxDepth > 1) line(`${pad}[depth limit ${ctx.maxDepth} reached]`);
+      return;
     }
-    if (ctx.nodes >= ctx.maxNodes) return [`${pad}[node limit ${ctx.maxNodes} reached]`];
+    if (ctx.nodes >= ctx.maxNodes) { line(`${pad}[node limit ${ctx.maxNodes} reached]`); return; }
     const ck = this.cycleKey(lit);
-    if (ctx.path.has(ck)) return [`${pad}${ev.resolvedLitKey(lit, new Map())} [cycle]`];
+    if (ctx.path.has(ck)) { line(`${pad}${ev.resolvedLitKey(lit, new Map())} [cycle]`); return; }
     ctx.path.add(ck);
-    try {
-      return this.explainFailure(ev, lit, level, ctx);
-    } finally {
-      ctx.path.delete(ck);
+    next.push({ t: 'failure', lit, level }, { t: 'unpath', ck });
+  }
+
+  /** THE DEMONSTRATION, WALKED WITH A STACK OF ITS OWN (as `renderTree` walks `why`). */
+  private explainTree(ev: Evaluation, lit: Lit, ctx: WhynotCtx): string[] {
+    const lines: string[] = [], todo: PlainWnTask[] = [{ t: 'failure', lit, level: 1 }], next: PlainWnTask[] = [];
+    for (let t = todo.pop(); t !== undefined; t = todo.pop()) {
+      if (t.t === 'failure') this.explainFailure(ev, t.lit, t.level, ctx, next);
+      else if (t.t === 'rule') this.explainRule(ev, t.lit, t.r, t.level, next);
+      else if (t.t === 'deeper') this.explainDeeper(ev, t.lit, t.level, ctx, next);
+      else if (t.t === 'line') lines.push(t.line);
+      else ctx.path.delete(t.ck);
+      for (let i = next.length - 1; i >= 0; i--) todo.push(next[i]);
+      next.length = 0;
     }
+    return lines;
   }
 
   /** Single-step failure analysis of one rule body under a head substitution:
@@ -1174,15 +1418,25 @@ export class Rofl {
    *  ended, n = 3 keeps it and the two before it. The tick being entered
    *  writes its own records after this boundary and is never a candidate, so
    *  the current tick's provenance is always present — n counts history, not
-   *  the present. */
+   *  the present. Of the tick just ended, whatever n is, the rows a firing
+   *  staged into the next one read are kept: `why` explains that firing as of
+   *  the tick it read them in
+   *  (f_a_plain_staged_firing_is_explained_in_the_tick_it_arrived_in). */
   private frozenRetention(): ((rec: FactRec) => boolean) | undefined {
     const n = this.retainTicks;
     if (n === undefined || this.readsProvenance) return undefined;
     const oldest = this.store.tick + 1 - n;
+    // what a staged firing read, as of the tick it read it in, while the
+    // firing crosses into the next tick and cites it
+    const cited = new Set<string>();
+    for (const f of this.lastStaged) for (const p of f.prems) if (p.t === 'fact') cited.add(`${p.key}|${this.store.tick}`);
     return (rec: FactRec) => {
       if (rec.rel !== V.derived_by) return true;
       const t = rec.args[2];
-      return t.k !== 'i' || t.v >= oldest;
+      if (t.k !== 'i' || t.v >= oldest) return true;
+      const ft = rec.args[0];
+      if (ft.k !== 'f' || ft.args.length !== 3 || ft.args[0].k !== 'a' || ft.args[1].k !== 'a') return false;
+      return cited.has(`${factKey(ft.args[0].name, ft.args[1].name, unlist(ft.args[2]))}|${t.v}`);
     };
   }
 
@@ -1196,6 +1450,8 @@ export class Rofl {
     const { partial } = this.ensure(budget, holeId);
     if (partial) return { advanced: false, quiescent: false, partial: true };
     opts.onFixpoint?.(this);
+    const agg = this.aggStanding(budget);
+    if (agg !== null) return agg.tickAdvance();
     const staged = this.lastStaged;
     const curBase = this.store.allFacts()
       .filter((f) => f.scope === 'tick' && f.base).map((f) => f.key);
@@ -1205,13 +1461,25 @@ export class Rofl {
     // rather than inline, so neither side may borrow an order the other
     // happens to arrive in. `stagedKeys` is left in arrival order because
     // `tickLog` below records it and `canonicalState` reads that.
-    if (sameKeySet(curBase, stagedKeys)) {
+    // THE NEXT TICK IS THE SAME ONLY IF IT CARRIES THE SAME UNKNOWNS: a
+    // conclusion a hole kept from being staged is unknown there, not absent.
+    const certain = new Set(stagedKeys);
+    const unknowns = this.lastUnknowns.filter((u) => u.persp === null || !certain.has(factKey(u.rel, u.persp, u.args!)));
+    const unknownKeys = unknowns.map((u) => canonTerm(nextHoleArgs(u, this.store.tick)[0]));
+    const carriedKeys = this.store.relAll(V.hole).map((f) => f.args[0])
+      .filter((id) => id.k === 'f' && id.name === '$next' && id.args.length === 4 && id.args[2].k === 'i' && id.args[2].v === this.store.tick)
+      .map((id) => canonTerm(id));
+    if (sameKeySet(curBase, stagedKeys) && sameKeySet(carriedKeys, unknownKeys)) {
       return { advanced: false, quiescent: true, partial: false };
     }
     this.store.advanceTick(staged.map(({ rel, persp, args }) => ({ rel, persp, args })),
                            this.frozenRetention());
     const t = this.store.tick;
     this.store.tickLog.push(`tick ${t}: ${stagedKeys.join(' ') || '(empty)'}`);
+    for (const u of unknowns) {
+      this.store.add(V.hole, KERNEL_PERSP, nextHoleArgs(u, t), { scope: 'timeless', base: true, frozen: true });
+    }
+    this.lastUnknowns = [];
     for (const f of staged) {
       const sig = f.ruleId + '|' + f.prems.map(sigOf).join('|');
       this.store.support(f.key, sig, { ruleId: f.ruleId, tick: t, prems: f.prems });
@@ -1220,6 +1488,79 @@ export class Rofl {
     }
     this.lastStaged = [];
     return { advanced: true, quiescent: false, partial: false };
+  }
+
+  /** THE EXPLAIN BRIDGE (rust/rofl `Session::explain_requests`): each
+   *  `explain_request(Kind, Atom)` answered, in key order, as
+   *  `explained[$explain](Kind, Atom, I, "line")`, one row per line from
+   *  I = 1, or one row at I = 0 carrying the refusal. The caller evaluates
+   *  again so rules can read them. Returns how many requests were answered. */
+  explainRequests(opts: { budget?: number } = {}): number {
+    const budget = opts.budget ?? DEFAULT_BUDGET;
+    // the explanations read what the evaluation met (the unknowns a hole
+    // reached and why): a plain program is evaluated again here to have it
+    let ev = this.agg;
+    if (ev === null) {
+      ev = this.aggEval(budget, mka('$adhoc'));
+      try { ev.run(); } catch (e) { if (!(e instanceof Wall)) throw e; }
+    }
+    const asks = this.store.relPersp('explain_request', MAIN).filter((f) => f.args.length === 2).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const rows: [Term, Term, number, string][] = [];
+    for (const f of asks) {
+      const [kind, atom] = f.args;
+      let text: string;
+      let ok = true;
+      if (atom.k !== 'a' && atom.k !== 'f') { text = 'an explain request names an atom: rel(args...)'; ok = false; }
+      else {
+        const lit: Lit = { rel: atom.name, persp: mka(MAIN), perspExplicit: false, args: atom.k === 'f' ? atom.args : [], temporal: 'now' };
+        const k = kind.k === 'a' ? kind.name : '';
+        try {
+          if (k === 'why') text = ev.whyText(lit);
+          else if (k === 'why_all') text = ev.whyText(lit, Infinity);
+          else if (k === 'whynot') text = ev.whynotText(lit, { maxDepth: 3, maxNodes: 64 })[1];
+          else { text = 'the kinds of explanation are why, why_all and whynot'; ok = false; }
+        } catch (e) { text = k === 'whynot' ? describeHalt(e) : (e as Error).message; ok = false; }
+      }
+      if (ok) text.split('\n').forEach((line, i) => rows.push([kind, atom, i + 1, line]));
+      else rows.push([kind, atom, 0, text]);
+    }
+    for (const [kind, atom, i, line] of rows) this.store.add('explained', '$explain', [kind, atom, mki(i), mks(line)], { scope: 'tick', base: true });
+    this.store.dirty = true;
+    return asks.length;
+  }
+
+  /** THE COMPOSITION FROM BELOW (rust/rofl `Session::feed_below`): what the
+   *  world `below` concludes, fed here as base facts asserted by `below`, and
+   *  what it has no answer for as `hole($below(Rel, Book, Args), left_out_below)`. */
+  feedBelow(below: Rofl): number {
+    if (below.store.dirty) throw new Error('the world below is not evaluated');
+    const mine = new Set(storeRuleIds(this.store));
+    const bev = new AggEval(below.store, DEFAULT_BUDGET, below.evaluator === 'strata' ? 'strata' : 'rounds');
+    const fed = new Set(bev.rules.filter((r) => !mine.has(r.id)).map((r) => r.clause.head.rel)
+      .filter((r) => r !== IFACE.semantics && r !== IFACE.sealed && r !== IFACE.stratum));
+    fed.add(IFACE.unknown);
+    const keys = below.store.allFacts().filter((r) => fed.has(r.rel) && !isKernelLedger(r.persp)).map((r) => r.key)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const open: [string, string | null, Term[]][] = [];
+    if (below.store.partialEval) for (const r of [...fed].sort()) open.push([r, null, []]);
+    for (const row of below.store.relAll(SHRUG)) {
+      const t = row.args[0];
+      let persp = MAIN, at = t;
+      if (t.k === 'f' && t.name === 'in' && t.args.length === 2) { if (t.args[0].k !== 'a') continue; persp = t.args[0].name; at = t.args[1]; }
+      if (at.k === 'a') { if (fed.has(at.name) && !at.name.startsWith('$')) open.push([at.name, persp, []]); }
+      else if (at.k === 'f' && at.name === 'every') { if (at.args[0]?.k === 'a' && fed.has(at.args[0].name)) open.push([at.args[0].name, null, []]); }
+      else if (at.k === 'f') { if (fed.has(at.name) && !at.name.startsWith('$')) open.push([at.name, persp, at.args]); }
+    }
+    const res = this.load(keys.map((k) => `${k}.\n`).join(''), { who: 'below' });
+    if (!res.ok) throw new Error(`what the world below concludes does not load here: ${res.diagnostics.join('; ')}`);
+    const any = mka('$any');
+    for (const [rel, persp, args] of open) {
+      const p = persp === null ? any : mka(persp);
+      this.store.add(V.hole, KERNEL_PERSP, [mkf('$below', [mka(rel), p, persp === null ? any : listT(args)]), mka('left_out_below')],
+        { scope: 'timeless', base: true, frozen: true });
+    }
+    this.store.dirty = true;
+    return keys.length;
   }
 
   /** Advance ticks until quiescence, budget exhaustion, or maxTicks. */
@@ -1250,7 +1591,10 @@ export class Rofl {
   }
 
   strataPlan(): { rule: string; rel: string; level: number | null }[] {
-    return this.prepared(DEFAULT_BUDGET).strataPlan();
+    if (!storeHasAggregates(this.store)) return this.plain(DEFAULT_BUDGET).strataPlan();
+    this.ensure(DEFAULT_BUDGET, mka('$adhoc'));
+    if (!this.agg?.planned) this.ensureAgg(DEFAULT_BUDGET, mka('$adhoc'));
+    return this.agg!.strataPlan();
   }
 }
 

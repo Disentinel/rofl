@@ -1,0 +1,17 @@
+-- examples/checks/agg-shrug-holistic-check.rofl — agg_holistic_shrug over
+-- agg-shrug-agg-data.rofl: a median, quantile or rank over a group with a
+-- member a hole left out is a shrug inherited from the fault, never the
+-- statistic of the rest; one the unknown cannot reach is decided.
+sah_med(G, M) :- sa_g(G), M is median(Y ; K : sa_x(G, K, Y)).
+sah_rank(G, R) :- sa_g(G), R is rank(3, Y : sa_x(G, _, Y)).
+sah_settled(M) :- M is median(V ; X : sa_pos(X), not unknown(sa_w(X)), V = 1).
+sah_known(M) :- M is median(V ; X : sa_pos(X), sa_w(X), X != c, V = 5).
+-- expect-row: sah_med[main](p,2)
+-- expect-row: sah_rank[main](p,2)
+-- expect-row: shrug[$kernel](sah_med(q,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-row: shrug[$kernel](sah_rank(r,$unknown_value),inherited,from($cons($rule(r1f3a2f99),$nil)))
+-- expect-no-row: sah_med[main](q,
+-- expect-no-row: sah_rank[main](r,
+-- expect-row: shrug[$kernel](sah_settled($unknown_value),inherited,from($cons($rule(rcc5ce487),$nil)))
+-- expect-no-row: sah_settled[main](
+-- expect-row: sah_known[main](5)

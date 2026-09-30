@@ -1,0 +1,3 @@
+-- expect-refusal: not expressions
+-- a percent is a term, not an expression: bind it before the quantile
+sxhr_percent_expression(Q) :- sxh_p(G, P), Q is quantile(P + 1, V ; K : sxh_l(G, K, V, _)).

@@ -1,0 +1,46 @@
+-- examples/checks/agg-lattice-why-check.rofl — agg_lattice_why, run with
+-- `rofl-load --explain`. `why` of a lattice fact names its cell and every
+-- member, lowest first (the tie al_dist(a, c, 3); the tie al_finish(p4, 8));
+-- `whynot` of a value better than the cell's says what the cell holds and
+-- lists the contributions, none of which reaches it: that is why there is
+-- nothing smaller; of a worse value, that the cell keeps the better one; of a
+-- holed cell, the hole and not an empty cell; of a key no path reaches, the
+-- ordinary exploration, with no cell to name.
+edb(explain_request).
+edb(explained).
+explain_request(why, al_dist(a, c, 3)).
+explain_request(why, al_finish(p4, 8)).
+explain_request(whynot, al_dist(a, c, 2)).
+explain_request(whynot, al_dist(b, e, 9)).
+explain_request(whynot, al_hd(h1, h2, 1)).
+explain_request(whynot, al_dist(a, z, 1)).
+aly_holds(K, A, T) :- explained[$explain](K, A, _, L), aly_want(K, A, T), N is str_segs(L, T), N > 1.
+aly_want(why, al_dist(a, c, 3), "al_dist[main](a,c,3) [lattice min: 2 members]").
+aly_want(why, al_dist(a, c, 3), "#1 h=1").
+aly_want(why, al_dist(a, c, 3), "al_edge[main](a,c,3) [axiom]").
+aly_want(why, al_dist(a, c, 3), "#2 h=2").
+aly_want(why, al_dist(a, c, 3), "al_dist[main](a,b,1) [lattice min: 1 member]").
+aly_want(why, al_finish(p4, 8), "[lattice max: 2 members]").
+aly_want(why, al_finish(p4, 8), "al_finish[main](p3,7)").
+aly_want(why, al_finish(p4, 8), "al_finish[main](p5,7)").
+aly_want(whynot, al_dist(a, c, 2), "al_dist[main](a,c) is a lattice cell (min) holding 3").
+aly_want(whynot, al_dist(a, c, 2), "no contribution reaches 2").
+aly_want(whynot, al_dist(a, c, 2), "3 <= ").
+aly_want(whynot, al_dist(a, c, 2), "al_dist[main](a,b,1), al_edge[main](b,c,2)").
+aly_want(whynot, al_dist(b, e, 9), "9 is not its value: min keeps the best contribution, 7").
+aly_want(whynot, al_dist(b, e, 9), "9 <= ").
+aly_want(whynot, al_hd(h1, h2, 1), "al_hd[main](h1,h2) has no value: hole(agg_type_error) [lattice min]").
+aly_want(whynot, al_dist(a, z, 1), "failed premise").
+why_text_missing(K, A, T) :- aly_want(K, A, T), not aly_holds(K, A, T).
+-- no contribution listed for the value asked about, when it would be better
+why_smaller_listed()  :- explained[$explain](whynot, al_dist(a, c, 2), _, L), N is str_segs(L, "    2 <= "), N > 1.
+-- a key no path reaches is no cell
+why_phantom_cell()    :- explained[$explain](whynot, al_dist(a, z, 1), _, L), N is str_segs(L, "lattice cell"), N > 1.
+-- a hole is not explored as if nothing contributed
+why_hole_explored()   :- explained[$explain](whynot, al_hd(h1, h2, 1), _, L), N is str_segs(L, "failed premise"), N > 1.
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(why_text_missing).
+alarm(why_smaller_listed).
+alarm(why_phantom_cell).
+alarm(why_hole_explored).
+alarm(explain_refused).

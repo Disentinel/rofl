@@ -1,0 +1,30 @@
+-- examples/checks/agg-tag-strata-check.rofl — agg_tag_strata: an idempotent
+-- tag recurses, as the order lattice of its ⊕ does (the recursion gate's
+-- flag: tropical, viterbi and trust are idempotent), and its values exist
+-- only round its recursion: tg_cost(a, d) at 9 is three steps from a, and
+-- tg_pr(a, a) comes back through c. The recursion is a positive edge of its
+-- own relation, never an aggregate's. A count of a tag's own cells and a
+-- negation of one, each inside its recursion (agg-tag-strata-2-refused-count
+-- .rofl, -3-refused-neg.rofl), are refused, so their rules never reach this
+-- world.
+tgs_want(cost, a, d, 9).
+tgs_want(cost, b, b, 8).
+tgs_want(pr, a, a, 360000).
+tgs_want(tr, b, b, 500000).
+tgs_got(cost, A, B, T) :- tg_cost(A, B, T).
+tgs_got(pr, A, B, T)   :- tg_pr(A, B, T).
+tgs_got(tr, A, B, T)   :- tg_tr(A, B, T).
+tgs_missing(R, A, B)   :- tgs_want(R, A, B, T), not tgs_got(R, A, B, T).
+-- the recursion is a positive edge of the tag's own relation
+tgs_self(Rel)          :- concludes[$kernel](R, Rel), premise_pos[$kernel](R, Rel), tag_decl[$kernel](Rel, _, _).
+tgs_rec(tg_cost). tgs_rec(tg_short). tgs_rec(tg_pr). tgs_rec(tg_tr).
+tgs_not_recursive(R)   :- tgs_rec(R), not tgs_self(R).
+tgs_as_aggregate(Rel)  :- concludes[$kernel](R, Rel), premise_agg[$kernel](R, Rel), tag_decl[$kernel](Rel, _, _).
+tgs_accepted(Rel)      :- concludes[$kernel](_, Rel), tgs_refused(Rel).
+tgs_refused(tgsr_c).
+tgs_refused(tgsr_n).
+alarm(tgs_missing).
+alarm(tgs_not_recursive).
+alarm(tgs_as_aggregate).
+alarm(tgs_accepted).
+-- expect-row: tg_cost[main](a,d,9)

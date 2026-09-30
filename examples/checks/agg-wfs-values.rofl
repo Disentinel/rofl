@@ -1,0 +1,12 @@
+-- below: examples/checks/agg-wfs-game.rofl
+-- examples/checks/agg-wfs-values.rofl — THE STRATIFIED WORLD ABOVE the game,
+-- shared by the agg_<kind>_wfs worlds: every position's value read from
+-- what the world below concluded, 1 a win, 0 a draw (its win unknown), -1 a
+-- loss. The positions are this world's own: a loss is what the world below
+-- did not conclude, which only a relation bound here can ask.
+edb(wv_pos).
+wv_pos(a). wv_pos(b). wv_pos(c). wv_pos(d). wv_pos(e).
+wv_pos(f). wv_pos(g). wv_pos(h). wv_pos(i).
+wv_value(X, 1)  :- wg_win(X), not unknown(wg_win(X)).
+wv_value(X, 0)  :- unknown(wg_win(X)).
+wv_value(X, -1) :- wv_pos(X), not wg_win(X), not unknown(wg_win(X)).

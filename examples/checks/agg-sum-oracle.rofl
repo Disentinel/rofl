@@ -1,0 +1,85 @@
+-- examples/checks/agg-sum-oracle.rofl — WHAT agg-sum-data.rofl's SUMS MUST
+-- BE, computed without an aggregate: the (key, value) pairs are chained in
+-- order and folded along the chain. gbig is left to the overflow checks,
+-- since its fold has no value in the term range either. gmix's chain runs
+-- in key order, whose partial sums stay in range. A group with a member
+-- past a third of the range is left to the dropped-member checks.
+aso_cost(G, K, V)          :- as_line(G, K, V, _), G != gbig.
+aso_lt(G, K1, V1, K2, V2)  :- aso_cost(G, K1, V1), aso_cost(G, K2, V2), K1 < K2.
+aso_lt(G, K, V1, K, V2)    :- aso_cost(G, K, V1), aso_cost(G, K, V2), V1 < V2.
+aso_btw(G, K1, V1, K2, V2) :- aso_lt(G, K1, V1, K, V), aso_lt(G, K, V, K2, V2).
+aso_next(G, K1, V1, K2, V2) :- aso_lt(G, K1, V1, K2, V2), not aso_btw(G, K1, V1, K2, V2).
+aso_hasprev(G, K, V)       :- aso_next(G, _, _, K, V).
+aso_hasnext(G, K, V)       :- aso_next(G, K, V, _, _).
+aso_acc(G, K, V, V)        :- aso_cost(G, K, V), not aso_hasprev(G, K, V).
+aso_acc(G, K2, V2, S)      :- aso_acc(G, K1, V1, S1), aso_next(G, K1, V1, K2, V2), S is S1 + V2.
+aso_total(G, S)            :- aso_acc(G, K, V, S), not aso_hasnext(G, K, V).
+aso_member(G)              :- aso_cost(G, _, _).
+aso_total(G, 0)            :- as_group(G), G != gbig, not aso_member(G).
+aso_cnt(G, K, V, 1)        :- aso_cost(G, K, V), not aso_hasprev(G, K, V).
+aso_cnt(G, K2, V2, N)      :- aso_cnt(G, K1, V1, N1), aso_next(G, K1, V1, K2, V2), N is N1 + 1.
+aso_count(G, N)            :- aso_cnt(G, K, V, N), not aso_hasnext(G, K, V).
+aso_count(G, 0)            :- as_group(G), G != gbig, not aso_member(G).
+-- tripled, where no member's product leaves the range
+aso_third(T)               :- as_term_max(M), T is M / 3.
+aso_big(G)                 :- aso_cost(G, _, V), aso_third(T), V > T.
+aso_big(G)                 :- aso_cost(G, _, V), aso_third(T), N is 0 - T, V < N.
+aso_tripled(G, T)          :- aso_total(G, S), not aso_big(G), T is S * 3.
+
+as_sum_wrong(G, S)   :- as_sums(G, S), G != gbig, not aso_total(G, S).
+as_sum_missing(G, S) :- aso_total(G, S), not as_sums(G, S).
+as_by_wrong(G, S)    :- as_by(G, S), G != gbig, not aso_total(G, S).
+as_by_missing(G, S)  :- aso_total(G, S), aso_member(G), not as_by(G, S).
+as_by_empty(G)       :- as_by(G, _), G != gbig, not aso_member(G).
+as_tripled_wrong(G, S)   :- as_tripled(G, S), not aso_tripled(G, S).
+as_tripled_missing(G, S) :- aso_tripled(G, S), not as_tripled(G, S).
+as_counted_wrong(G, N)   :- as_counted(G, N), not aso_big(G), not aso_count(G, N).
+as_counted_missing(G, N) :- aso_count(G, N), not aso_big(G), not as_counted(G, N).
+-- A MEMBER DROPPED FOR AN ERROR LEAVES ITS GROUP A HOLE, NEVER THE SURVIVORS' VALUE
+as_dropped_row(G, Rel)     :- as_tripled(G, _), aso_big(G), Rel = as_tripled.
+as_dropped_row(G, Rel)     :- as_counted(G, _), aso_big(G), Rel = as_counted.
+aso_inner(as_tripled).
+aso_inner(as_counted).
+as_dropped_marked(G, Rel)  :- aso_inner(Rel), concludes[$kernel](R, Rel),
+                              hole[$kernel]($cell(R, _, _, $cons(G, $nil)), arith_overflow).
+as_dropped_unmarked(G, Rel) :- aso_big(G), as_group(G), aso_inner(Rel), not as_dropped_marked(G, Rel).
+-- AN OVERFLOW IS A HOLE AND NEVER A VALUE
+as_overflow_row(S)     :- as_sums(gbig, S).
+as_overflow_row(S)     :- as_by(gbig, S).
+as_hole_marked()       :- hole[$kernel]($cell(_, _, _, $cons(gbig, $nil)), agg_overflow).
+as_overflow_unmarked() :- not as_hole_marked().
+alarm(as_sum_wrong).
+alarm(as_sum_missing).
+alarm(as_by_wrong).
+alarm(as_by_missing).
+alarm(as_by_empty).
+alarm(as_overflow_row).
+alarm(as_overflow_unmarked).
+alarm(as_tripled_wrong).
+alarm(as_tripled_missing).
+alarm(as_counted_wrong).
+alarm(as_counted_missing).
+alarm(as_dropped_row).
+alarm(as_dropped_unmarked).
+
+-- the dataset still holds each case the sum can get wrong
+aso_equal_values()  :- as_line(G, K1, V, _), as_line(G, K2, V, _), K1 != K2.
+aso_two_sources()   :- as_line(G, K, V, S1), as_line(G, K, V, S2), S1 != S2.
+aso_negative()      :- aso_cost(_, _, V), V < 0.
+aso_two_values()    :- aso_cost(G, K, V1), aso_cost(G, K, V2), V1 != V2.
+aso_empty()         :- aso_total(G, 0), not aso_member(G).
+aso_dropped()       :- as_raw(_, _, _, S), not as_ok(S).
+-- two members of one group whose sum leaves the range, in a group whose total does not
+aso_partial_out()   :- aso_cost(G, K1, V1), aso_cost(G, K2, V2), K1 < K2,
+                       as_term_max(M), L is M - V2, V1 > L, aso_total(G, _).
+-- a group some of whose members survive the multiplication and some do not
+aso_some_dropped()  :- aso_big(G), aso_cost(G, _, V), aso_third(T), V <= T, N is 0 - T, V >= N.
+aso_vacuous(equal_values) :- not aso_equal_values().
+aso_vacuous(two_sources)  :- not aso_two_sources().
+aso_vacuous(negative)     :- not aso_negative().
+aso_vacuous(two_values)   :- not aso_two_values().
+aso_vacuous(empty)        :- not aso_empty().
+aso_vacuous(dropped)      :- not aso_dropped().
+aso_vacuous(partial_out)  :- not aso_partial_out().
+aso_vacuous(some_dropped) :- not aso_some_dropped().
+alarm(aso_vacuous).

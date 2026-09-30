@@ -1,0 +1,3 @@
+-- expect-refusal: written with variables
+-- the two facts are written with variables: the key they share, then values
+sxsr_const(A, 1) <= sxsr_const(A, Y) :- 1 < Y.

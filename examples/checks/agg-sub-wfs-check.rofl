@@ -1,0 +1,25 @@
+-- examples/checks/agg-sub-wfs-check.rofl — agg_sub_wfs: a subsumptive
+-- relation over what a well-founded world concluded, fed from below: how
+-- many moves reach a drawn position from each position, the fewest kept
+-- (a dominance on a total order) round the cycles a and b, e and f make;
+-- inside a well-founded world a dominance is refused
+-- (agg-sub-wfs-2-refused.rofl), since a value dropped for one that holds
+-- under an assumption is dropped for a fact no model may have.
+edb(wst_move).
+wst_move(a, b). wst_move(b, a). wst_move(b, c). wst_move(c, d).
+wst_move(e, f). wst_move(f, e). wst_move(g, h). wst_move(h, i).
+wst_d(X, Y, 1) :- wst_move(X, Y), unknown(wg_win(Y)).
+wst_d(X, Z, D) :- wst_d(X, Y, D0), wst_move(Y, Z), unknown(wg_win(Z)), D is D0 + 1.
+wst_d(X, Y, D1) <= wst_d(X, Y, D2) :- D2 < D1.
+wst_want(a, b, 1). wst_want(a, a, 2). wst_want(b, a, 1). wst_want(b, b, 2).
+wst_want(e, f, 1). wst_want(e, e, 2). wst_want(f, e, 1). wst_want(f, f, 2).
+wst_wrong(X, Y, D) :- wst_want(X, Y, D), not wst_d(X, Y, D).
+wst_wrong(X, Y, D) :- wst_d(X, Y, D), not wst_want(X, Y, D).
+alarm(wst_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wst_d[main](a,a,2)
+-- expect-row: wst_d[main](f,e,1)
+-- expect-no-row: wst_d[main](a,a,4)
+-- expect-no-row: wst_d[main](h,i,1)
+-- below: examples/checks/agg-wfs-game.rofl

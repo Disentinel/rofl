@@ -1,0 +1,47 @@
+-- examples/checks/agg-widen-witness-check.rofl — agg_widen_witness, run with
+-- `rofl-load --explain`. A widened cell's witness is Widened: not a Cover,
+-- since no set of contributions joins to an infinite end, but the record of
+-- how the value was reached — the declared N, and each widening in order,
+-- the value before it, the contribution, their join and the value widened to
+-- — beside the enclosure it closed on, which the shrug's meta names: the
+-- last value, not the first widening's (aw_walk's high end went first, its
+-- low end after). A cell that never came to its widening keeps its Cover.
+edb(explain_request).
+edb(explained).
+explain_request(why, aw_loop(head, iv(0, inf))).
+explain_request(why, aw_walk(head, iv(ninf, inf))).
+explain_request(why, aw_dbl(head, iv(1, inf))).
+explain_request(why, aw_tight(head, iv(0, inf))).
+explain_request(why, aw_short(head, iv(0, 3))).
+aww_holds(A, T) :- explained[$explain](why, A, _, L), aww_want(A, T), N is str_segs(L, T), N > 1.
+aww_want(aw_loop(head, iv(0, inf)), "[widened: after 2 improvements each end the join moved went to its infinity; the least value lies within iv(0, inf), which is an over-approximation of it]").
+aww_want(aw_loop(head, iv(0, inf)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)").
+aww_want(aw_walk(head, iv(ninf, inf)), "[widened: after 1 improvement each end the join moved went to its infinity; the least value lies within iv(ninf, inf)").
+aww_want(aw_walk(head, iv(ninf, inf)), "iv(0, 1) joined with iv(1, 2) is iv(0, 2), widened to iv(0, inf)").
+aww_want(aw_walk(head, iv(ninf, inf)), "iv(0, inf) joined with iv(-1, inf) is iv(-1, inf), widened to iv(ninf, inf)").
+aww_want(aw_dbl(head, iv(1, inf)), "[widened: after 3 improvements").
+aww_want(aw_dbl(head, iv(1, inf)), "iv(1, 8) joined with iv(2, 16) is iv(1, 16), widened to iv(1, inf)").
+aww_want(aw_tight(head, iv(0, inf)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)").
+aww_want(aw_short(head, iv(0, 3)), "aw_short[main](head,iv(0,3)) [lattice hull: a cover of 2 contributions]").
+aww_want(aw_short(head, iv(0, 3)), "#1 iv(0,0) h=1").
+aww_want(aw_short(head, iv(0, 3)), "#2 iv(1,3) h=7").
+aww_missing(A, T) :- aww_want(A, T), not aww_holds(A, T).
+-- a cell widened once takes one line per widening, and no other
+aww_step(A, I)    :- explained[$explain](why, A, I, L), N is str_segs(L, ", widened to "), N > 1.
+aww_steps(A, N)   :- aww_counted(A), N is count(I : aww_step(A, I)).
+aww_counted(aw_loop(head, iv(0, inf))).
+aww_counted(aw_walk(head, iv(ninf, inf))).
+aww_counted(aw_dbl(head, iv(1, inf))).
+aww_nsteps(aw_loop(head, iv(0, inf)), 1).
+aww_nsteps(aw_walk(head, iv(ninf, inf)), 2).
+aww_nsteps(aw_dbl(head, iv(1, inf)), 1).
+aww_wrong_steps(A, N) :- aww_steps(A, N), not aww_nsteps(A, N).
+-- the enclosure is the value the cell closed on
+aww_meta(R, V)    :- shrug[$kernel]($lattice(R, main, 0, $cons(head, $nil)), widened, within(V)).
+aww_meta_wrong(aw_walk, V) :- aww_meta(aw_walk, V), V != iv(ninf, inf).
+aww_refused(A)    :- explained[$explain](why, A, 0, _).
+alarm(aww_missing).
+alarm(aww_wrong_steps).
+alarm(aww_meta_wrong).
+alarm(aww_refused).
+-- expect-row: shrug[$kernel]($lattice(aw_walk,main,0,$cons(head,$nil)),widened,within(iv(ninf,inf)))

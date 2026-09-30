@@ -1,0 +1,17 @@
+-- examples/checks/holes-negation-ticks-unknown.rofl — `unknown(A)` of what a
+-- hole kept from being staged is a shrug at the next tick, in both engines
+-- (docs/aggregates.md, "Shrugs, as built"): hk_m(c, d) is not staged, for
+-- B + 1 is past the range, so at tick 1 hk_win(c) may hold, and
+-- `not unknown(hk_win(c))` is no answer there.
+edb(hk_big).
+edb(hk_pos).
+edb(hk_m).
+hk_big(1152921504606846975).
+hk_pos(c). hk_pos(k).
+hk_m(k, l).
+hk_pos(X)@next :- hk_pos(X).
+hk_m(A, B)@next :- hk_m(A, B).
+hk_big(B)@next :- hk_big(B).
+hk_m(c, d)@next :- hk_big(B), Z is B + 1, Z > 0.
+hk_win(X) :- hk_m(X, _).
+hk_decided(X) :- hk_pos(X), not unknown(hk_win(X)).

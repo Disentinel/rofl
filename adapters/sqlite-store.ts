@@ -460,7 +460,7 @@ export class SqliteStore implements FactStore {
     return r.n;
   }
 
-  clearDerived(keep?: (rec: FactRec) => boolean): void {
+  clearDerived(keep?: (rec: FactRec) => boolean, rowOf?: (rec: FactRec, w: Witness) => string): void {
     const rows = this.prep(
       'SELECT key, rel, persp, args, scope, base, frozen FROM f WHERE base = 0 AND frozen = 0 ORDER BY seq')
       .all() as unknown as Row[];
@@ -470,6 +470,26 @@ export class SqliteStore implements FactStore {
       drop.push(r.key);
     }
     this.removeMany(drop);
+    // This tick's firings on a fact that stays go unless their provenance row
+    // stays too: the reference store's rule (src/store.ts, `clearDerived`).
+    const firings = this.prep(
+      'SELECT fi.key AS fk, fi.sig AS sig, fi.ruleId AS ruleId, fi.tick AS tick, fi.prems AS prems,'
+      + ' f.key AS key, f.rel AS rel, f.persp AS persp, f.args AS args, f.scope AS scope,'
+      + ' f.base AS base, f.frozen AS frozen FROM fi JOIN f ON f.key = fi.key WHERE fi.tick = ?')
+      .all(this.tick) as unknown as (Row & { fk: string; sig: string; ruleId: string; tick: number; prems: string })[];
+    const dfi = this.prep('DELETE FROM fi WHERE key = ? AND sig = ?');
+    const touched = new Set<string>();
+    for (const x of firings) {
+      const rec = recOf(x);
+      if (keep && keep(rec)) continue;
+      const w: Witness = { ruleId: x.ruleId, tick: x.tick, prems: JSON.parse(x.prems) as PremRef[] };
+      if (rowOf && this.has(rowOf(rec, w))) continue;
+      dfi.run(x.fk, x.sig);
+      touched.add(x.fk);
+    }
+    const left = this.prep('SELECT 1 FROM fi WHERE key = ? LIMIT 1');
+    const dw = this.prep('DELETE FROM w WHERE key = ?');
+    for (const k of touched) if (left.get(k) === undefined) dw.run(k);
     this.partialEval = false;
     // The same flag the in-memory store sets here, and for the same reason:
     // `ensure` skips a clean store, so dropping the derived layer without

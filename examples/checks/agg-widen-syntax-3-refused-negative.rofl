@@ -1,0 +1,3 @@
+-- expect-refusal: `widen` is followed by the number of improvements
+-- the number is at least zero
+lattice sxwr_neg(A, hull I) widen -1.

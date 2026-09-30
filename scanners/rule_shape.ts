@@ -103,6 +103,8 @@ export interface Analysis {
   posSites: number;
   /** disagreements between this fold and `planBody`'s own `headGround` */
   disagreements: number;
+  /** rules with an aggregate, counted and not shaped (the Rust engine's) */
+  aggregates: number;
   cross: Cross[];
 }
 
@@ -120,6 +122,7 @@ let posSites = 0;
 let clauses = 0;
 let rules = 0;
 let disagreements = 0;
+let aggregates = 0;
 
 for (const { group, path } of programs()) {
   const rel = relative(ROOT, path);
@@ -133,6 +136,9 @@ for (const { group, path } of programs()) {
       continue;
     }
     rules++;
+    // an aggregate's rule is planned by src/aggeval.ts and not by the plain
+    // planner this scanner shapes with, so it is counted and not shaped
+    if (c.body.some((b) => b.t === 'agg')) { aggregates++; continue; }
     const rid = `${rel}#${ci}`;
     facts.push(`concl(${q(rid)}, ${q(c.head.rel)}, ${q(headBook)}, ${q(group)}, ${q(rel)}).`);
     // THE READ SIDE, because "the relation is derived" is not yet a blocker.
@@ -245,7 +251,7 @@ for (const { group, path } of programs()) {
   }
 }
 
-  return { facts, clauses, rules, negSites: sites, posSites, disagreements, cross };
+  return { facts, clauses, rules, negSites: sites, posSites, disagreements, aggregates, cross };
 }
 
 export function render(a: Analysis): string {
@@ -286,6 +292,6 @@ if (isMain()) {
   console.log(
     `clauses ${a.clauses}, rules ${a.rules}, negative premises ${a.negSites}, ` +
     `positive premises ${a.posSites}, cross products ${a.cross.length}; ` +
-    `fold disagreements with planBody: ${a.disagreements}`,
+    `fold disagreements with planBody: ${a.disagreements}; ${a.aggregates} rules with an aggregate not shaped`,
   );
 }

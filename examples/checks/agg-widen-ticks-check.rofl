@@ -1,0 +1,27 @@
+-- examples/checks/agg-widen-ticks-check.rofl — agg_widen_ticks, over
+-- agg-widen-ticks-data.rofl one tick deep with retain_ticks 0: a widened
+-- hull's N counts the improvements of one tick, so tw_c, which improved
+-- twice at each tick, is never widened and holds [0,4] at tick 1, joined
+-- from the [0,2] tick 0 staged; `why` of it names the carried contribution
+-- and the value tick 0 staged, as the fact of tick 0 with the rule that
+-- derived it then. tw_w, widened at tick 0, is a hole there, and what it
+-- staged is not known at tick 1: `earlier(0)`, and its cell a hole there too.
+explain_request(why, tw_c(head, iv(0, 4))).
+twk_wrong(value, head) :- not tw_c(head, iv(0, 4)).
+twk_wrong(two_values, P) :- tw_c(P, S), tw_c(P, T), S != T.
+twk_line(K, L)  :- explained[$explain](K, _, _, L).
+twk_has(K, T)   :- twk_line(K, L), twk_text(K, T), N is str_segs(L, T), N > 1.
+twk_text_missing(K, T) :- twk_text(K, T), not twk_has(K, T).
+twk_explain_refused(K) :- explained[$explain](K, _, 0, _).
+twk_text(why, "tw_c[main](head,iv(0,4)) [lattice hull: a cover of").
+twk_text(why, "tw_c@join[main](head,iv(0,2))  <= tw_c@next @tick 1").
+twk_text(why, "@tick 0 [past tick]").
+twk_text(K, T)@next :- twk_text(K, T).
+alarm(twk_wrong).
+alarm(twk_text_missing).
+alarm(twk_explain_refused).
+-- expect-row: tw_c[main](head,iv(0,4))
+-- expect-row: hole[$kernel]($lattice(tw_w,main,1,$cons(head,$nil)),support_withdrawn)
+-- expect-row: shrug[$kernel]($next(tw_w,main,1,$cons(head,$nil)),inherited,earlier(0))
+-- expect-no-row: shrug[$kernel]($lattice(tw_c,
+-- expect-no-row: tw_w[main](head,

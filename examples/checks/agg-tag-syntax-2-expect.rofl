@@ -1,0 +1,39 @@
+-- examples/checks/agg-tag-syntax-2-expect.rofl — agg_tag_syntax. The
+-- declaration rows each form of agg-tag-syntax-1-forms.rofl reads as, both
+-- directions: `tag_decl(Rel, Arity, Alg)`, the arity the whole head's, the
+-- tag included; no `lattice_decl` for any (the tag's order lattice is the
+-- engine's, never a declaration); the words still names; ring 1
+-- (examples/ring1) reading a tag declaration of each semiring from `src` as
+-- the same trees, nothing stray and nothing uncovered; and no refused form
+-- reaching the world.
+sxt_want(sxt_trop, 3, tropical).
+sxt_want(sxt_vit, 2, viterbi).
+sxt_want(sxt_tru, 3, trust).
+sxt_want(sxt_cnt, 1, counting).
+sxt_mine(sxt_trop). sxt_mine(sxt_vit). sxt_mine(sxt_tru). sxt_mine(sxt_cnt).
+sxt_mine(sxtr_alg). sxt_mine(sxtr_book). sxt_mine(sxtr_dot). sxt_mine(sxtr_min).
+sxt_row(R, N, A)     :- tag_decl[$kernel](R, N, A), sxt_mine(R).
+sxt_missing(R)       :- sxt_want(R, N, A), not sxt_row(R, N, A).
+sxt_extra(R)         :- sxt_row(R, N, A), not sxt_want(R, N, A).
+sxt_as_lattice(R)    :- lattice_decl[$kernel](R, _, _), sxt_mine(R).
+sxt_lost()           :- not tag(x, hot).
+sxt_lost()           :- not sxt_word(x).
+alarm(sxt_missing).
+alarm(sxt_extra).
+alarm(sxt_as_lattice).
+alarm(sxt_lost).
+
+src("tag c(A, B, tropical T).\ntag v(viterbi P).\ntag t(K, trust T).\ntag n(K, counting N).\ntag(x, hot).").
+r1t_want($tag(tropical, $lit(c, $bare, $cons($var("A"), $cons($var("B"), $cons($var("T"), $nil))), $now)), $nil).
+r1t_want($tag(viterbi, $lit(v, $bare, $cons($var("P"), $nil), $now)), $nil).
+r1t_want($tag(trust, $lit(t, $bare, $cons($var("K"), $cons($var("T"), $nil)), $now)), $nil).
+r1t_want($tag(counting, $lit(n, $bare, $cons($var("K"), $cons($var("N"), $nil)), $now)), $nil).
+r1t_want($lit(tag, $bare, $cons(x, $cons(hot, $nil)), $now), $nil).
+r1t_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1t_want(H, B), not r1t_parsed(H, B).
+ring1_extra(H)     :- r1t_parsed(H, B), not r1t_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

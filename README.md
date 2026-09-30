@@ -148,7 +148,9 @@ verdict at all. Failure mode 17 in `failure-modes.md` is the entry they answer.
 is instrumental to), `medium-and-large.md` (two engines, and the line between
 them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
-costs), `modelling-a-language.md` (the JS model as a research programme).
+costs), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
+(every aggregate class as one cell engine with two syntaxes, and the matrix
+that holds the work to it).
 
 **The plan** — `roadmap.md` (what the next version commits to, each item naming
 - **Writing a world as Markdown** — `md-world.md` (ROFL 1.05): the sentence form as a source, `X.rofl.md` (executable Markdown; a plain `.md` is a document), how to write one, what the reader reports; `examples/review.rofl.md` is one, and `npm run repl -- examples/review.rofl.md` asks it in its own sentences.
@@ -351,7 +353,7 @@ deleted on 2026-09-10 (15 commits of appeasement, 3% coverage).
 | `mode(Builtin, ModeList)` | 2 | declared directionality of builtins, kernel-emitted at boot |
 | `reserved(Rel)` | 1 | this table itself, queryable |
 | `authority(Persp, Who)` | 2 | who may assert; kernel registers each perspective on first use as `authority(P, $kernel)` |
-| `hole(QueryId, Reason)` | 2 | inability marker — the kernel could not finish, said so rather than returning an empty answer that reads like an honest no. Ids: `$q(N)`, `$tick(T)`, `$load(N)`, `$rule(Id)`. Reasons: `budget_exhausted` and `space_exhausted` when an evaluation runs out of steps or of rows it may hold; `arith_type_error` and `arith_zero_divisor` for an `is` whose expression could not be evaluated (see *Arithmetic that cannot be evaluated* below); and `str_type_error`, `str_index_error`, `str_empty_separator` for a string destructor given an operand it cannot take; and `reflection_sealed`, the one reason that is not a failure — the program declared `sealed(Body)` and the kernel stopped keeping that body, so the answer is missing on purpose. Id `$sealed(Body)` for the standing declaration, `$q(N)` for a query that asked a sealed body |
+| `hole(QueryId, Reason)` | 2 | inability marker — the kernel could not finish, said so rather than returning an empty answer that reads like an honest no. Ids: `$q(N)`, `$tick(T)`, `$load(N)`, `$adhoc`, `$rule(Id)`, and `$next(Rel, Book, T, Args)` for a conclusion a hole kept from being staged into tick T, unknown there. Reasons: `budget_exhausted` and `space_exhausted` when an evaluation runs out of steps or of rows it may hold; `arith_type_error`, `arith_zero_divisor` and `arith_overflow` (a result outside [-2^60, 2^60), never a wrapped one) for an `is` whose expression could not be evaluated; `support_withdrawn` on a rule whose negation could not decide, for what a hole left out could have matched, and `fault_left_out` on what such a conclusion carries into the next tick (see *Arithmetic that cannot be evaluated* below); and `str_type_error`, `str_index_error`, `str_empty_separator` for a string destructor given an operand it cannot take; and `reflection_sealed`, the one reason that is not a failure — the program declared `sealed(Body)` and the kernel stopped keeping that body, so the answer is missing on purpose. Id `$sealed(Body)` for the standing declaration, `$q(N)` for a query that asked a sealed body |
 | `edb(Rel)` | 1 | relation has base facts (also emitted for all reserved relations at boot) |
 
 **`in_perspective(Fact, Persp)` WAS IN THIS TABLE AND IS GONE**, removed from

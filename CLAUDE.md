@@ -7,23 +7,26 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 <!-- BEGIN commands: generated from package.json + facts/commands.rofl -->
 
-    npm test            81 worlds, both engines, one committed golden — 11 s. THIS IS THE LOOP.
-    npm run bless       rewrite the golden, printing every world and demo it moves
-    npm run test:hosts  21 demos by their stdout, one engine — 100 s
-    npm run docs        regenerate every generated block; `-- --check` fails if one is stale
-    npm run textcheck   no unreadable byte reached a source file
-    npm run findings    the ledger, rendered
-    npm run features    what the system can do, which demo shows it, what promises it
-    npm run repl        `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world
-    npm run scan        -- <dir>   turn TypeScript into facts under facts/generated
-    npm run report      -- <files>   the epistemic report over a set of packs
-    npm run depends     · cleanliness · layering · nullary — the models over the tree itself
-    npm run speccheck   every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
-    npm run untyped     -- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model
-    npm run view        -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
-    npm run playground  the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
-    npm run conform     `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
-    npm run nb          -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use
+    npm test                 every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build
+    npm run bless            rewrite the golden, printing every world and demo it moves
+    npm run test:fast        rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates
+    npm run test:agg         the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red
+    npm run test:agg:breaks  every planted fault of scripts/agg_breaks.ts, switched on in one `--features breaks` build and run in parallel beside a no-break control; `-- <id>...`, `--item I`, `--world W`, `--changed[=REF]` for fewer; `--legacy` plants in the source and rebuilds per fault
+    npm run test:hosts       every demo by its stdout, one engine; the slowest of the gates
+    npm run docs             regenerate every generated block; `-- --check` fails if one is stale
+    npm run textcheck        no unreadable byte reached a source file
+    npm run findings         the ledger, rendered
+    npm run features         what the system can do, which demo shows it, what promises it
+    npm run repl             `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world
+    npm run scan             -- <dir>   turn TypeScript into facts under facts/generated
+    npm run report           -- <files>   the epistemic report over a set of packs
+    npm run depends          · cleanliness · layering · nullary — the models over the tree itself
+    npm run speccheck        every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
+    npm run untyped          -- rules/js-*.rofl   the one-letter variables nothing in their rule types, and what each letter means across the model
+    npm run view             -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
+    npm run playground       the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
+    npm run conform          `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
+    npm run nb               -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use
 
 <!-- END commands -->
 

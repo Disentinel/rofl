@@ -1,0 +1,129 @@
+-- examples/checks/holes-negation.rofl — WHAT A HOLE LEAVES OUT IS NOT KNOWN
+-- TO BE FALSE, in both engines (docs/aggregates.md, "Holes, as built";
+-- f_a_negation_of_what_a_hole_left_out_succeeds). A rule holed by a
+-- builtin's error leaves its conclusion under the failed solution unknown;
+-- a negation that could match it is undecided: the solution is not
+-- concluded, its rule is holed `support_withdrawn`, and what it would
+-- conclude is unknown in turn. A fact that matches still decides it.
+edb(hn_d).
+edb(hn_k).
+edb(hn_node).
+edb(hn_also).
+edb(hn_e).
+edb(hn_nd).
+edb(hn_g).
+edb(hn_quiet).
+hn_d(a, b, 2). hn_d(a, c, 1). hn_d(a, f, 1).
+hn_k(b, 3). hn_k(c, oops). hn_k(f, 4).
+hn_node(b). hn_node(c). hn_node(e). hn_node(f).
+-- x(c, _) is unknown: 1 + oops is no number
+hn_x(C, Y) :- hn_d(a, C, D), hn_k(C, K), Y is D + K.
+-- ... and so is whatever reads it, through positive rules, silently
+hn_y(C) :- hn_x(C, _).
+hn_z(C) :- hn_y(C), hn_node(C).
+-- a comparison that cannot compare leaves its conclusion unknown too
+hn_big(C) :- hn_k(C, K), K > 3.
+
+-- the negations: c is undecided in every one, b and e are decided
+hn_nx(C)  :- hn_node(C), not hn_x(C, _).
+hn_nx5(C) :- hn_node(C), not hn_x(C, 5).
+hn_nz(C)  :- hn_node(C), not hn_z(C).
+hn_nbig(C) :- hn_node(C), not hn_big(C).
+-- and what an undecided negation would conclude is unknown to the next one
+hn_nnx(C) :- hn_node(C), not hn_nx(C).
+
+-- a tuple that holds another way is known: the negation of it is decided
+-- by the fact, and no hole reaches the rule that reads it
+hn_w(C, Y) :- hn_d(a, C, D), hn_k(C, K), Y is D + K.
+hn_w(c, 9) :- hn_also(c).
+hn_also(c).
+hn_nw(C) :- hn_node(C), not hn_w(C, _).
+-- an undecided solution whose conclusion holds another way holes nothing
+hn_v(C) :- hn_node(C), not hn_x(C, _).
+hn_v(c) :- hn_also(c).
+
+-- through a recursion: q is unknown to reach from p, and so is r beyond it
+hn_e(p, q, oops). hn_e(q, r, 1). hn_e(r, s2, 1). hn_e(t, p, 1).
+hn_nd(p). hn_nd(q). hn_nd(r). hn_nd(t).
+hn_path(A, B) :- hn_e(A, B, W), V is W + 0, V >= 0.
+hn_path(A, C) :- hn_path(A, B), hn_e(B, C, W), V is W + 0, V >= 0.
+hn_unreach(A, B) :- hn_nd(A), hn_nd(B), A != B, not hn_path(A, B).
+
+-- a reader that closes late: z3 reads x and a relation three negations up,
+-- so it has all its solutions only after x's unknown was carried; it is
+-- reached when it closes, and not z3(c) is undecided
+hn_g(c). hn_g(b). hn_g(d).
+hn_w5(K) :- hn_g(K), not hn_absent(K).
+hn_w4(K) :- hn_g(K), not hn_w5(K).
+hn_w3(K) :- hn_g(K), not hn_w4(K).
+hn_z3(K) :- hn_x(K, _), hn_w3(K).
+hn_nz3(K) :- hn_g(K), not hn_z3(K).
+edb(hn_absent).
+
+-- a relation answered on demand (hn_dbl binds X from its caller): a fault
+-- below the call leaves what the call would have matched unknown, to a
+-- positive reader (hn_r) and to a negation of the call itself (hn_nd)
+hn_dbl(X, Y) :- Y is X * 2.
+hn_r(C, Y)   :- hn_k(C, X), hn_dbl(X, Y).
+hn_nr(C)     :- hn_node(C), not hn_r(C, _).
+hn_s(C)      :- hn_r(C, _).
+hn_ns(C)     :- hn_node(C), not hn_s(C).
+hn_ndbl(C)   :- hn_node(C), hn_k(C, X), not hn_dbl(X, 6).
+-- and below a call: a negation inside a relation answered on demand whose
+-- own call faulted gives no solution there, and leaves the head unknown
+hn_dq(C)     :- not hn_r(C, 6).
+hn_t(C)      :- hn_node(C), hn_dq(C).
+
+-- THE ALARMS. A definite answer over what a hole left out is the defect.
+-- A decided answer is a row the state must hold (`expect-row`): an alarm
+-- `not answer` would be undecided, and silent, exactly when the answer is
+-- wrongly held unknown.
+hn_bad(nx_c)       :- hn_nx(c).
+hn_bad(nx_b)       :- hn_nx(b).
+-- expect-row: hn_nx[main](e)
+hn_bad(nx5_c)      :- hn_nx5(c).
+-- expect-row: hn_nx5[main](e)
+hn_bad(nz_c)       :- hn_nz(c).
+-- expect-row: hn_nz[main](e)
+hn_bad(nbig_c)     :- hn_nbig(c).
+-- expect-row: hn_nbig[main](b)
+hn_bad(nnx_c)      :- hn_nnx(c).
+-- expect-row: hn_nnx[main](b)
+hn_bad(nw_c)       :- hn_nw(c).
+-- expect-row: hn_nw[main](e)
+-- expect-row: hn_v[main](c)
+hn_bad(unreach_pq) :- hn_unreach(p, q).
+hn_bad(unreach_pr) :- hn_unreach(p, r).
+hn_bad(unreach_tq) :- hn_unreach(t, q).
+-- expect-row: hn_unreach[main](q,p)
+-- expect-row: hn_unreach[main](r,t)
+hn_bad(nz3_c)      :- hn_nz3(c).
+-- expect-row: hn_z3[main](b)
+hn_bad(nr_c)       :- hn_nr(c).
+-- expect-row: hn_nr[main](e)
+hn_bad(ns_c)       :- hn_ns(c).
+hn_bad(t_c)        :- hn_t(c).
+-- expect-row: hn_t[main](e)
+-- expect-row: hn_ns[main](e)
+hn_bad(ndbl_c)     :- hn_ndbl(c).
+-- expect-row: hn_ndbl[main](f)
+alarm(hn_bad).
+
+-- THE HOLES, read above what they hole: each check depends on the relation
+-- whose rule it asks about, so it runs once that rule has run
+hn_holed(Rel)   :- hn_asked(Rel), hole[$kernel]($rule(R), support_withdrawn), concludes[$kernel](R, Rel).
+hn_asked(hn_nx) :- hn_nx(_).
+hn_asked(hn_nz) :- hn_nz(_).
+hn_asked(hn_nw) :- hn_nw(_).
+hn_asked(hn_v)  :- hn_v(_).
+hn_asked(hn_unreach) :- hn_unreach(_, _).
+hn_asked(hn_nz3) :- hn_nz3(_).
+-- quiet: a negation decided by a fact, a conclusion that holds another way,
+-- and the positive readers of x, which carry what it left out silently
+hn_asked(hn_y)  :- hn_y(_).
+hn_asked(hn_z)  :- hn_z(_).
+hn_quiet(hn_nw). hn_quiet(hn_v). hn_quiet(hn_y). hn_quiet(hn_z).
+hn_unholed(Rel) :- hn_asked(Rel), not hn_quiet(Rel), not hn_holed(Rel).
+hn_overholed(Rel) :- hn_holed(Rel), hn_quiet(Rel).
+alarm(hn_unholed).
+alarm(hn_overholed).

@@ -1,0 +1,7 @@
+-- expect-refusal: subsumption assr_key: its dominance rules read two keys
+-- one relation, one key: the prefix both facts share is the same in every rule
+edb(assr_ke).
+assr_ke(a, b, 1).
+assr_key(A, B, V) :- assr_ke(A, B, V).
+assr_key(A, B, X) <= assr_key(A, B, Y) :- Y < X.
+assr_key(A, B, X) <= assr_key(A, C, Y) :- B = C, Y < X.

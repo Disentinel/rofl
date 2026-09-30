@@ -1,0 +1,3 @@
+-- expect-refusal: it takes no tense
+-- a dominance rule compares facts that hold now
+sxsr_tense(A, X)@next <= sxsr_tense(A, Y) :- Y < X.

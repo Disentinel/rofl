@@ -1,0 +1,22 @@
+-- examples/checks/holes-negation-scale.rofl — A NEGATION FINDS WHAT A HOLE LEFT
+-- OUT BY LOOKING IT UP, in both engines (holes_negation_scale). 1001 nodes,
+-- the odd ones' hs_x(C, _) unknown (1 + oops is no number), and a negation
+-- per node over hs_x: each asks only the unknowns at its own node, so the
+-- whole reads a number of unknowns linear in the nodes. Every one it looks
+-- at is carry work, charged against the budget; a scan of every unknown of
+-- the relation per negation is quadratic and runs past this world's budget
+-- (f_a_negation_scanned_every_unknown_of_its_relation).
+edb(hs_top).
+edb(hs_other).
+hs_top(1000).
+hs_other(z).
+hs_ev(0) :- hs_top(_).
+hs_od(M) :- hs_ev(N), hs_top(T), N < T, M is N + 1.
+hs_ev(M) :- hs_od(N), hs_top(T), N < T, M is N + 1.
+hs_node(C) :- hs_ev(C).
+hs_node(C) :- hs_od(C).
+hs_node(C) :- hs_other(C).
+hs_k(C, C) :- hs_ev(C).
+hs_k(C, oops) :- hs_od(C).
+hs_x(C, Y) :- hs_k(C, K), Y is K + 1.
+hs_nx(C) :- hs_node(C), not hs_x(C, _).

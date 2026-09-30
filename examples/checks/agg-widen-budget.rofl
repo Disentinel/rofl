@@ -1,0 +1,29 @@
+-- examples/checks/agg-widen-budget.rofl — agg_widen_budget, under a budget of
+-- 400 steps: the loop counter `i = 0; while (true) i = i + 1` twice over. As
+-- a plain hull (awb_plain) that reads its value by membership and adds one,
+-- it never settles: each value [0, n] gives [n + 1, n + 1], so the wall cuts
+-- it, the lattice a hole on its relation, `budget_exhausted`, its value a
+-- bound. Declared `widen 2` (awb_wide, the same counter by ivadd), it
+-- settles in four steps whatever the budget, widened to [0,inf): a lattice
+-- the wall did not reach, closed as it would have been, a shrug `widened`
+-- with its enclosure and not a budget hole. And the members of an interval
+-- with an infinite end are a fault at once, `unbounded_members`, never a walk
+-- that spends the budget and meets the wall.
+edb(awb_start).
+awb_start(i, 0).
+lattice awb_plain(V, hull I).
+awb_plain(V, iv(N, N))   :- awb_start(V, N).
+awb_plain(V, iv(M, M))   :- awb_plain(V, I), N in I, M is N + 1.
+lattice awb_wide(V, hull I) widen 2.
+awb_wide(V, iv(N, N))    :- awb_start(V, N).
+awb_wide(V, J)           :- awb_wide(V, I), J is ivadd(I, 1).
+awb_mem(E)               :- awb_start(i, _), E in iv(3, inf).
+-- the rule of awb_mem, by its id: a wall stops the rules that would read it
+-- expect-row: hole[$kernel]($rule(rd3b23df3),unbounded_members)
+-- expect-no-row: awb_mem[main](
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: hole[$kernel]($lattice(awb_plain),budget_exhausted)
+-- expect-row: shrug[$kernel]($lattice(awb_wide,main,0,$cons(i,$nil)),widened,within(iv(0,inf)))
+-- expect-no-row: hole[$kernel]($lattice(awb_wide),
+-- expect-no-row: awb_wide[main](i,
+-- expect-row: awb_plain[main](i,iv(0,

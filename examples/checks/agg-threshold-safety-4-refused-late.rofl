@@ -1,0 +1,7 @@
+-- expect-refusal: a variable bound before it
+-- N is bound, but after the threshold: which N it reads would depend on where a premise is written
+edb(atsr_v).
+edb(atsr_n).
+atsr_v(w1, c1).
+atsr_n(c1, 1).
+atsr_late(C) :- atsr_v(_, C), at_least(N, W : atsr_v(W, C)), atsr_n(C, N).

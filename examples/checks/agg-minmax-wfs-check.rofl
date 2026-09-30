@@ -1,0 +1,32 @@
+-- examples/checks/agg-minmax-wfs-check.rofl — agg_minmax_wfs: min, max, or and
+-- and over what a well-founded world concluded, fed from below: a position's
+-- value is the best a move reaches, from the side of the one who moves (the
+-- negated value of the position moved to); inside one, each is refused
+-- (agg-minmax-wfs-2-refused-*.rofl).
+edb(wmx_move).
+wmx_move(a, b). wmx_move(b, a). wmx_move(b, c). wmx_move(c, d).
+wmx_move(e, f). wmx_move(f, e). wmx_move(g, h). wmx_move(h, i).
+wmx_best(X, M)   :- wv_pos(X), M is max(W : wmx_move(X, Y), wv_value(Y, V), W is 0 - V).
+wmx_worst(M)     :- M is min(V : wv_value(_, V)).
+wmx_flag(X, true)  :- unknown(wg_win(X)).
+wmx_flag(X, false) :- wv_pos(X), not unknown(wg_win(X)).
+wmx_any_draw(B)  :- B is or(F : wmx_flag(_, F)).
+wmx_all_draw(B)  :- B is and(F : wmx_flag(_, F)).
+-- a win is a move to a loss, a draw a move to a draw at best
+wmx_want(a, 0). wmx_want(b, 0). wmx_want(c, 1). wmx_want(e, 0).
+wmx_want(f, 0). wmx_want(g, -1). wmx_want(h, 1).
+wmx_wrong(X, M)  :- wmx_want(X, M), not wmx_best(X, M).
+wmx_wrong(X, M)  :- wmx_best(X, M), not wmx_want(X, M).
+wmx_value_wrong(X) :- wmx_best(X, 1), not wg_win(X).
+wmx_agg_wrong(worst) :- not wmx_worst(-1).
+wmx_agg_wrong(any)   :- not wmx_any_draw(true).
+wmx_agg_wrong(all)   :- not wmx_all_draw(false).
+alarm(wmx_wrong).
+alarm(wmx_value_wrong).
+alarm(wmx_agg_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wmx_best[main](a,0)
+-- expect-row: wmx_best[main](c,1)
+-- expect-row: wmx_best[main](g,-1)
+-- expect-row: wmx_best[main](h,1)

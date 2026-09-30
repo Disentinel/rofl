@@ -13,6 +13,16 @@ phrase(concludes, "<0:rule> concludes <1:relation>").
 phrase(conclusion_tense, "<0:rule> concludes at <1:tense>").
 phrase(premise_pos, "<0:rule> reads <1:relation>").
 phrase(premise_neg, "<0:rule> negates <1:relation>").
+phrase(premise_agg, "<0:rule> aggregates over <1:relation>").
+phrase(agg_cell, "the cell <0:cell> holds <1:value> at the height <2:number>").
+phrase(agg_sealed, "the cell <0:cell> sealed <1:relation> at the round <2:number>").
+phrase(agg_member, "the member <1:index> of the cell <0:cell> is <2:list> at the height <3:number>").
+phrase(agg_member_prem, "the member <1:index> of the cell <0:cell> rests on <2:premise>").
+phrase(lattice_decl, "<0:relation> is a lattice of <1:number> arguments merged by <2:operation>").
+phrase(lattice_widen, "the lattice <0:relation> is widened after <1:number> improvements of a cell").
+phrase(tag_decl, "<0:relation> of <1:number> arguments is tagged in the <2:algebra> semiring").
+phrase(lattice_member, "the member <1:index> of the lattice fact <0:fact> is at the height <2:number> by <3:rule>").
+phrase(lattice_member_prem, "the member <1:index> of the lattice fact <0:fact> rests on <2:premise>").
 phrase(uses_builtin, "<0:rule> uses the builtin <1:builtin>").
 phrase(reads_from, "<0:rule> reads the book <1:book>").
 phrase(writes_to, "<0:rule> writes the book <1:book>").
@@ -44,6 +54,7 @@ phrase(undefined_premise, "<0:rule> reads <1:relation> though nothing defines it
 phrase(negated_under, "<0:relation> is negated in <1:book>").
 phrase(exported_to, "<0:book> is exported to <1:book>").
 phrase(exported, "<0:book> is exported").
+phrase(agg_tail, "<0:list> is the rest of an aggregate's body").
 -- safety.rofl
 phrase(slot, "<0:rule> asks about the <2:slot> at <1:position>").
 phrase(binds_at, "the premise at <1:position> of <0:rule> binds <2:variable>").
@@ -66,7 +77,65 @@ phrase(demand_rel, "<0:relation> is answered on demand").
 phrase(trigger_of, "<0:relation> can trigger <1:relation>").
 phrase(neg_relation, "<0:relation> is negated somewhere").
 phrase(provenance_reader, "<0:rule> reads provenance").
+phrase(agg_inner, "the aggregate at <1:position> of <0:rule> is judged as <2:rule>").
+phrase(agg_op, "the aggregate at <1:position> of <0:rule> is a <2:operation>").
+phrase(agg_keyed, "the aggregate at <1:position> of <0:rule> names a key").
+phrase(agg_one_value, "the aggregate at <1:position> of <0:rule> folds one value").
+phrase(agg_no_value, "the aggregate at <1:position> of <0:rule> names no value").
+phrase(needs_key, "a <0:operation> needs a key").
+phrase(one_value_op, "a <0:operation> folds one value").
+phrase(idempotent_op, "a <0:operation> is idempotent").
+phrase(live_kernel_rel, "the kernel writes <0:relation> while it evaluates").
+phrase(agg_refused, "<0:rule> is refused because <1:reason>").
+phrase(agg_group_var, "the aggregate at <1:position> of <0:rule> groups by <2:variable>").
+phrase(agg_groups, "the aggregate at <1:position> of <0:rule> groups").
+phrase(empty_zero, "the aggregate at <1:position> of <0:rule> reads an empty group as zero").
+phrase(has_agg_rule, "<0:rule> has an aggregate").
+phrase(member_reader, "<0:rule> reads a cell's members").
 phrase(stratum, "<0:relation> is in the stratum <1:number>").
+phrase(lattice_member_reader, "<0:rule> reads a lattice's members").
+phrase(premise_arith, "the premise at <1:position> of <0:rule> computes <2:term> as <4:term> <3:operator> <5:term>").
+phrase(lit_arity, "the literal at <1:position> of <0:rule> writes <2:relation> with <3:number> arguments").
+phrase(lattice_rel, "<0:relation> is a lattice").
+phrase(lattice_any, "some relation is a lattice").
+phrase(lat_op, "the lattice <0:relation> is merged by <1:operation>").
+phrase(lattice_refused, "the lattice <0:relation> is refused because <1:reason>").
+phrase(lat_edge, "<0:relation> depends directly on <1:relation>").
+phrase(lat_reach, "the lattice <0:relation> depends on <1:relation>").
+phrase(lat_read, "the premise at <1:position> of <0:rule> reads the lattice <2:relation>").
+phrase(lat_inner, "the premise at <1:position> of <0:rule> reads the lattice <2:relation> inside its recursion").
+phrase(lattice_outer, "<0:rule> reads the lattice <1:relation> from outside its recursion").
+phrase(better_move, "a <0:operation> improves <1:direction>").
+phrase(lt_op, "<0:operator> holds below").
+phrase(gt_op, "<0:operator> holds above").
+phrase(top_const, "the best value moving <0:direction> is <1:value>").
+phrase(flip, "<0:direction> turns to <1:direction>").
+phrase(minmax, "<0:operator> keeps an order").
+phrase(lat_taint, "<2:variable> of <0:rule> depends on the value read at <1:position>").
+phrase(lat_aggval, "<2:variable> of <0:rule> carries the result of a body aggregate of <1:operation>").
+phrase(lat_dirty, "<2:term> of <0:rule> depends on the value read at <1:position>").
+phrase(lat_clean, "<2:term> of <0:rule> does not depend on the value read at <1:position>").
+phrase(lat_right_dirty, "the right side of the premise at <2:position> of <0:rule> depends on the value read at <1:position>").
+phrase(lat_left_dirty, "the left side of the premise at <2:position> of <0:rule> depends on the value read at <1:position>").
+phrase(lat_mv, "<2:variable> of <0:rule> moves <3:direction> as the value read at <1:position> improves").
+phrase(lat_step, "the premise at <3:position> of <0:rule> carries <2:variable> into <4:variable>, moving <5:direction>, from the value read at <1:position>").
+phrase(lat_ok, "<2:variable> of <0:rule> is used monotonically in the <4:slot> of the premise at <3:position>, for the value read at <1:position>").
+phrase(lat_head_ok, "<2:variable> of <0:rule> is the value of a lattice head that improves with the value read at <1:position>").
+phrase(lat_use, "<2:variable> of <0:rule> is used in the <4:slot> of the premise at <3:position>, for the value read at <1:position>").
+phrase(lat_misuse, "<0:rule> is not monotone in a lattice value it reads").
+phrase(lat_args, "the arguments of the lattice premise at <1:position> of <0:rule> end with <2:list>").
+phrase(lat_last, "the lattice premise at <1:position> of <0:rule> reads the value <2:term>").
+phrase(lat_last_var, "the lattice premise at <1:position> of <0:rule> reads its value into a variable").
+phrase(lat_const_ok, "the lattice premise at <1:position> of <0:rule> reads the best value there is").
+phrase(lat_widened, "the lattice <0:relation> declares a widening").
+phrase(widenable, "a <0:operation> may declare a widening").
+phrase(iv_op, "<0:operator> is an interval function").
+phrase(tag_step, "<0:operator> is a semiring tag's ⊗").
+phrase(tag_lattice, "the semiring <0:algebra> is the order lattice of its ⊕").
+phrase(counting_tag, "<0:relation> is a counting tag").
+phrase(lat_iv_step, "<0:rule> computes a hull's value by an interval function from the value read at <1:position>").
+phrase(unw_edge, "<0:relation> depends directly on <1:relation>, and neither declares a widening").
+phrase(unw_reach, "<0:relation> depends on <1:relation> through relations none of which declares a widening").
 -- policy.rofl
 phrase(rule_reads, "the rules of <0:relation> read <1:relation>").
 phrase(rule_relation, "<0:relation> is mentioned by a rule").
@@ -77,3 +146,5 @@ phrase(dep, "<0:relation> depends on <1:relation>").
 phrase(dep_neg, "<0:relation> depends negatively on <1:relation>").
 phrase(reach, "<0:relation> reaches <1:relation>").
 phrase(unstratified, "<0:relation> is unstratified").
+phrase(agg_reflection, "the kernel reflects cells into <0:relation>").
+phrase(lattice_reflection, "the kernel writes <0:relation> when a lattice closes").

@@ -1,0 +1,83 @@
+-- examples/checks/agg-shrug-oracle.rofl — THE COMPLETIONS ORACLE for
+-- agg-shrug-threshold-check.rofl (docs/aggregates.md, "Shrugs, as built").
+-- Its two unknowns, whether st_bad(c) and st_has(c, 1) hold, are enumerated
+-- by hand: four completions, each the program with the unknowns decided. A
+-- question the engine answers must agree with every completion: it holds
+-- only if it holds in all of them, it is unentailed only if it holds in none,
+-- and it is a shrug only if they disagree (each small program here is one the
+-- engine claims to decide wherever the completions agree). `so_agree` is
+-- derived for a question only when the engine's verdict and the completions'
+-- match, so a verdict wrong either way loses its row.
+edb(so_comp).
+edb(so_bad_c).
+edb(so_has_c).
+edb(so_query).
+edb(so_target).
+so_comp(k00). so_comp(k01). so_comp(k10). so_comp(k11).
+so_bad_c(k10). so_bad_c(k11).
+so_has_c(k01). so_has_c(k11).
+so_bad(K, c) :- so_bad_c(K).
+so_has(K, a) :- so_comp(K).
+so_has(K, d) :- so_comp(K).
+so_has(K, c) :- so_has_c(K).
+so_q(K, ok3) :- so_comp(K), at_least(3, X : st_item(X), not so_bad(K, X)).
+so_q(K, ok4) :- so_comp(K), at_least(4, X : st_item(X), not so_bad(K, X)).
+so_q(K, many2) :- so_comp(K), at_least(2, X : so_has(K, X)).
+so_m3(K) :- so_comp(K), at_least(3, X : so_has(K, X)).
+so_m4(K) :- so_comp(K), at_least(4, X : so_has(K, X)).
+so_q(K, many3) :- so_m3(K).
+so_q(K, many4) :- so_m4(K).
+so_q(K, nmany4) :- so_comp(K), not so_m4(K).
+so_q(K, nmany3) :- so_comp(K), not so_m3(K).
+so_q(K, za) :- so_comp(K), at_least(1, X : st_edge(a, X), so_bad(K, X)).
+so_q(K, zz) :- so_comp(K), at_least(1, X : st_edge(z, X), so_bad(K, X)).
+so_zc(K, Y) :- so_comp(K), st_item(Y), at_least(1, X : st_edge(Y, X), so_bad(K, X)).
+so_q(K, zca) :- so_zc(K, a).
+so_q(K, zcb) :- so_zc(K, b).
+so_act(K, X) :- so_bad(K, X).
+so_act(K, X) :- so_comp(K), st_item(X), at_least(1, Y : st_edge(X, Y), so_act(K, Y)).
+so_q(K, acta) :- so_act(K, a).
+so_q(K, actb) :- so_act(K, b).
+so_q(K, nacta) :- so_comp(K), not so_act(K, a).
+so_query(za). so_query(zz). so_query(zca). so_query(zcb). so_query(acta). so_query(actb). so_query(nacta).
+so_target(za, st_za). so_target(zz, st_zz). so_target(zca, st_zc(a)). so_target(zcb, st_zc(b)).
+so_target(acta, st_act(a)). so_target(actb, st_act(b)). so_target(nacta, st_nact(a)).
+so_holds(za) :- st_za().
+so_holds(zz) :- st_zz().
+so_holds(zca) :- st_zc(a).
+so_holds(zcb) :- st_zc(b).
+so_holds(acta) :- st_act(a).
+so_holds(actb) :- st_act(b).
+so_holds(nacta) :- st_nact(a).
+so_query(ok3). so_query(ok4). so_query(many2). so_query(many3). so_query(many4). so_query(nmany4). so_query(nmany3).
+so_target(ok3, st_ok3). so_target(ok4, st_ok4). so_target(many2, st_many2). so_target(many3, st_many3).
+so_target(many4, st_many4). so_target(nmany4, st_nmany4). so_target(nmany3, st_nmany3).
+so_in(Q, N) :- so_query(Q), N is count(K : so_q(K, Q)).
+so_in_all(Q) :- so_in(Q, 4).
+so_in_none(Q) :- so_in(Q, 0).
+-- the engine's verdicts: a row, a shrug row, or neither
+so_holds(ok3) :- st_ok3().
+so_holds(ok4) :- st_ok4().
+so_holds(many2) :- st_many2().
+so_holds(many3) :- st_many3().
+so_holds(many4) :- st_many4().
+so_holds(nmany4) :- st_nmany4().
+so_holds(nmany3) :- st_nmany3().
+so_shrug(Q) :- so_target(Q, T), shrug(T, _, _).
+so_agree(Q) :- so_holds(Q), so_in_all(Q).
+so_agree(Q) :- so_query(Q), not so_holds(Q), not so_shrug(Q), so_in_none(Q).
+so_agree(Q) :- so_shrug(Q), not so_in_all(Q), not so_in_none(Q).
+-- expect-row: so_agree[main](ok3)
+-- expect-row: so_agree[main](ok4)
+-- expect-row: so_agree[main](many2)
+-- expect-row: so_agree[main](many3)
+-- expect-row: so_agree[main](many4)
+-- expect-row: so_agree[main](nmany4)
+-- expect-row: so_agree[main](nmany3)
+-- expect-row: so_agree[main](za)
+-- expect-row: so_agree[main](zz)
+-- expect-row: so_agree[main](zca)
+-- expect-row: so_agree[main](zcb)
+-- expect-row: so_agree[main](acta)
+-- expect-row: so_agree[main](actb)
+-- expect-row: so_agree[main](nacta)

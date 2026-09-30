@@ -1,0 +1,8 @@
+-- examples/checks/agg-rederived-2-read.rofl — THE CHECK ON
+-- agg-rederived-1-given.rofl, loaded after it: every given fact a rule also
+-- concludes has its `derived_by` row after the evaluation this load causes.
+
+said(X) :- derived_by[$kernel]($fact(seen, main, $cons(X, $nil)), _, _).
+
+provenance_lost(X) :- seen(X), given(X), not said(X).
+alarm(provenance_lost).

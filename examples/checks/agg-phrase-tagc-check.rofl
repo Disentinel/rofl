@@ -1,0 +1,16 @@
+-- examples/checks/agg-phrase-tagc-check.rofl — agg_tagc_phrase: the counting tag read from its sentence and
+-- from rofl counts derivations: a reaches c by its own edge and by b, two hops; a to b and b to c one each; and
+-- the hops number 4 in all.
+ptc_hops(a, b, 1). ptc_hops(b, c, 1). ptc_hops(a, c, 2).
+ptc_wrong(X, Y) :- ptc_hops(X, Y, N), not ptcs_hops(X, Y, N).
+ptc_wrong(X, Y) :- ptc_hops(X, Y, N), not ptcr_hops(X, Y, N).
+ptc_wrong(X, Y) :- ptcs_hops(X, Y, N), not ptc_hops(X, Y, N).
+ptc_wrong(X, Y) :- ptcr_hops(X, Y, N), not ptc_hops(X, Y, N).
+ptc_wrong(all, all) :- not ptcs_all(4).
+ptc_wrong(all, all) :- not ptcr_all(4).
+ptc_wrong(all, N) :- ptcs_all(N), N != 4.
+ptc_wrong(all, N) :- ptcr_all(N), N != 4.
+alarm(ptc_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(ptcr_hops, "fact of X and Y carries a counting tag N").
+sentence_word(ptcr_all, "fact carries a counting tag N").

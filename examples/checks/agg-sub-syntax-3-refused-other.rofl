@@ -1,0 +1,3 @@
+-- expect-refusal: compares two facts of one relation
+-- a dominance rule orders the values of one relation
+sxsr_other(A, X) <= sxsr_q(A, Y) :- Y < X.

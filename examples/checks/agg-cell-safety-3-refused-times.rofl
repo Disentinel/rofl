@@ -1,0 +1,12 @@
+-- expect-refusal: not monotone in the value
+-- examples/checks/agg-cell-safety-3-refused-times.rofl — a product with a weight of unknown sign.
+edb(acsr_e).
+edb(acsr_n).
+edb(acsr_s).
+acsr_e(a, b, 2).
+acsr_e(b, a, 3).
+acsr_n(a, b).
+acsr_s(a, false).
+lattice acsr_times(A, C, min D).
+acsr_times(A, C, D) :- acsr_e(A, C, D).
+acsr_times(A, C, D) :- acsr_times(A, B, D1), acsr_e(B, C, W), D is D1 * W.

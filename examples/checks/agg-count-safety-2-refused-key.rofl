@@ -1,0 +1,4 @@
+-- expect-refusal: count takes no key
+-- examples/checks/agg-count-safety-2-refused-key.rofl — the counted terms
+-- ARE the key; a count that names another is refused by safety.rofl.
+acs_keyed(C, N) :- acs_c(C), N is count(B ; C : acs_b(B, C)).

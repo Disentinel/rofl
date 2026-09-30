@@ -1,0 +1,54 @@
+-- examples/checks/agg-minmax-oracle.rofl — WHAT agg-minmax-data.rofl's
+-- EXTREMES MUST BE, by negation: a minimum is a value nothing is below; `or`
+-- is true where some flag is, false where flags exist and none is; `and` is
+-- the dual. The group whose value is not a number is left to the type checks.
+amo_num(G, V)     :- am_d(G, V, _), G != gt.
+amo_smaller(G, V) :- amo_num(G, V), amo_num(G, W), W < V.
+amo_larger(G, V)  :- amo_num(G, V), amo_num(G, W), W > V.
+amo_min(G, V)     :- amo_num(G, V), not amo_smaller(G, V).
+amo_max(G, V)     :- amo_num(G, V), not amo_larger(G, V).
+amo_t(G)          :- am_flag(G, true, _).
+amo_f(G)          :- am_flag(G, false, _).
+amo_or(G, true)   :- amo_t(G).
+amo_or(G, false)  :- amo_f(G), not amo_t(G).
+amo_and(G, false) :- amo_f(G).
+amo_and(G, true)  :- amo_t(G), not amo_f(G).
+
+am_min_wrong(G, M)   :- am_min(G, M), not amo_min(G, M).
+am_min_missing(G, M) :- amo_min(G, M), not am_min(G, M).
+am_max_wrong(G, M)   :- am_max(G, M), not amo_max(G, M).
+am_max_missing(G, M) :- amo_max(G, M), not am_max(G, M).
+am_lo_wrong(G, M)    :- am_lo(G, M), not amo_min(G, M).
+am_lo_missing(G, M)  :- amo_min(G, M), not am_lo(G, M).
+am_or_wrong(G, B)    :- am_or(G, B), not amo_or(G, B).
+am_or_missing(G, B)  :- amo_or(G, B), not am_or(G, B).
+am_and_wrong(G, B)   :- am_and(G, B), not amo_and(G, B).
+am_and_missing(G, B) :- amo_and(G, B), not am_and(G, B).
+-- no value where there is nothing to fold, and a hole where the value is not one
+am_empty_row(Rel)  :- am_min(g3, _), Rel = am_min.
+am_empty_row(Rel)  :- am_or(g3, _), Rel = am_or.
+am_type_row(Rel)   :- am_min(gt, _), Rel = am_min.
+am_type_row(Rel)   :- am_lo(gt, _), Rel = am_lo.
+am_type_row(Rel)   :- am_and(gt, _), Rel = am_and.
+am_type_marked()   :- hole[$kernel]($cell(_, _, _, $cons(gt, $nil)), agg_type_error).
+am_type_unmarked() :- not am_type_marked().
+alarm(am_min_wrong).
+alarm(am_min_missing).
+alarm(am_max_wrong).
+alarm(am_max_missing).
+alarm(am_lo_wrong).
+alarm(am_lo_missing).
+alarm(am_or_wrong).
+alarm(am_or_missing).
+alarm(am_and_wrong).
+alarm(am_and_missing).
+alarm(am_empty_row).
+alarm(am_type_row).
+alarm(am_type_unmarked).
+
+-- the dataset still holds a tie at the minimum and a value dropped below it
+amo_tie()        :- amo_min(G, V), am_d(G, V, S1), am_d(G, V, S2), S1 != S2.
+amo_dropped()    :- am_raw(G, V, S), not am_ok(S), amo_min(G, M), V < M.
+amo_vacuous(tie)     :- not amo_tie().
+amo_vacuous(dropped) :- not amo_dropped().
+alarm(amo_vacuous).

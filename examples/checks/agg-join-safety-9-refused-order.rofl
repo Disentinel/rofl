@@ -1,0 +1,9 @@
+-- expect-refusal: is not monotone in the value
+-- an order lattice's value made into a set: the set of every value the max
+-- passed through, which no model holds
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_order(X, union S).
+lattice ajsr_top(X, max M).
+ajsr_top(X, 1)          :- ajsr_e(X, _).
+ajsr_top(X, M)          :- ajsr_order(X, S), M in S.
+ajsr_order(X, set(M))   :- ajsr_e(X, Y), ajsr_top(Y, M).

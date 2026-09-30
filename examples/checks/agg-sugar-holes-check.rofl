@@ -1,0 +1,45 @@
+-- examples/checks/agg-sugar-holes-check.rofl — agg_sugar_holes over agg-sugar-data.rofl: a hole the sugar's
+-- lowering meets is a hole of what it lowers to, never a value, and what it leaves out is not known to be false.
+-- g6's total leaves the term range: the sum cell of each average is `agg_overflow`, and no average of g6 has a
+-- value (not a wrapped one); its every, at most and exactly read no total and are decided. g7's total scales past
+-- the range in millionths alone: that rule's `arith_overflow` and no row, while its mean and tenths hold. g5's
+-- member m7 is listed at `oops`: whether m7 has an age is not known, so no sugar form of g5 is decided, and a
+-- negation above each is undecided, never true.
+sgh_notout(G)   :- sg_group(G), not sgs_out(G).
+sgh_big(G)      :- sg_group(G), not sgs_small(G).
+sgh_notpair(G)  :- sg_group(G), not sgs_pair(G).
+sgh_hasmean(G)  :- sgs_mean(G, _).
+sgh_nomean(G)   :- sg_group(G), not sgh_hasmean(G).
+-- expect-no-row: sgs_mean[main](g6,
+-- expect-no-row: sgs_tenths[main](g6,
+-- expect-no-row: sgs_micro[main](g6,
+-- expect-row: sgs_pair[main](g6)
+-- expect-row: sgh_notout[main](g6)
+-- expect-row: sgh_big[main](g6)
+-- expect-no-row: sgs_micro[main](g7,
+-- expect-row: sgs_mean[main](g7,1152921504606847)
+-- expect-row: sgs_tenths[main](g7,11529215046068470)
+-- expect-row: sgh_nomean[main](g3)
+-- expect-row: sgh_notout[main](g2)
+sgh_bad(mean, G)    :- sgs_mean(G, _), sgh_open(G).
+sgh_bad(tenths, G)  :- sgs_tenths(G, _), sgh_open(G).
+sgh_bad(micro, G)   :- sgs_micro(G, _), sgh_open(G).
+sgh_bad(micro, g7)  :- sgs_micro(g7, _).
+sgh_bad(out, g5)    :- sgs_out(g5).
+sgh_bad(small, g5)  :- sgs_small(g5).
+sgh_bad(pair, g5)   :- sgs_pair(g5).
+sgh_bad(bare, g5)   :- sgs_none(g5).
+sgh_bad(notout, g5) :- sgh_notout(g5).
+sgh_bad(big, g5)    :- sgh_big(g5).
+sgh_bad(notpair, g5) :- sgh_notpair(g5).
+sgh_bad(nomean, G)  :- sgh_nomean(G), sgh_open(G).
+sgh_open(g5). sgh_open(g6).
+alarm(sgh_bad).
+-- each hole names its reason, read above the averages
+sgh_cell(G, Why)  :- sgh_nomean(g3), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), Why), concludes[$kernel](R, sgs_mean).
+sgh_rule(Rel, Why) :- sgh_nomean(g3), hole[$kernel]($rule(R), Why), concludes[$kernel](R, Rel).
+sgh_unholed(g6)   :- sgh_nomean(g3), not sgh_cell(g6, agg_overflow).
+sgh_unholed(g7)   :- sgh_nomean(g3), not sgh_rule(sgs_micro, arith_overflow).
+sgh_unholed(g5)   :- sgh_nomean(g3), not sgh_rule(sg_age, arith_type_error).
+sgh_unholed(g5)   :- sgh_nomean(g3), not sgh_cell(g5, support_withdrawn).
+alarm(sgh_unholed).

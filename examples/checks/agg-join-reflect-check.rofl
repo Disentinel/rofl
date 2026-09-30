@@ -1,0 +1,52 @@
+-- examples/checks/agg-join-reflect-check.rofl — agg_join_reflect: a join
+-- declaration is rules as data, as an order lattice's is. Each declaration
+-- of agg-join-data.rofl is exactly one `lattice_decl[$kernel](Rel, Arity,
+-- Op)` row, both directions; its arity is the width every rule concluding
+-- the relation writes, walked off the rule's own `conclusion_lit`; the
+-- recursion is an ordinary positive premise (`premise_pos`), never an
+-- aggregate's. The join reads are builtins, reflected as `$builtin("in",
+-- ...)` and `$builtin("subset", ...)`, each with its mode (`in` binds its
+-- left from its right, as `is` does; `subset` reads both), so the kernel's
+-- own audit finds no builtin without one. The TypeScript engine's rule ids
+-- for these rules are held to the Rust store's by scripts/goldens.ts.
+ajr_want(aj_comp, 2, union).
+ajr_want(aj_live_in, 2, union).
+ajr_want(aj_live_out, 2, union).
+ajr_want(aj_range, 2, hull).
+ajr_want(aj_bits, 2, bitor).
+ajr_want(aj_dist, 2, min).
+ajr_want(aj_near, 2, union).
+ajr_want(aj_pick, 2, union).
+ajr_want(aj_pair, 2, union).
+ajr_want(aj_bad, 2, union).
+ajr_want(aj_mix, 2, union).
+ajr_row(R, N, Op)   :- lattice_decl[$kernel](R, N, Op).
+ajr_missing(R)      :- ajr_want(R, N, Op), not ajr_row(R, N, Op).
+ajr_extra(R)        :- ajr_row(R, N, Op), not ajr_want(R, N, Op).
+ajr_tail(Q, T, 0)   :- lattice_decl[$kernel](Rel, _, _), concludes[$kernel](Q, Rel),
+                       conclusion_lit[$kernel](Q, _, $lit(Rel, _, T, _)).
+ajr_tail(Q, T, N)   :- ajr_tail(Q, $cons(_, T), M), N is M + 1.
+ajr_width(Q, N)     :- ajr_tail(Q, $nil, N).
+ajr_arity_wrong(Q)  :- concludes[$kernel](Q, Rel), lattice_decl[$kernel](Rel, N, _), ajr_width(Q, M), M != N.
+ajr_recursive(Rel)  :- concludes[$kernel](Q, Rel), premise_pos[$kernel](Q, Rel).
+ajr_not_positive(Rel) :- ajr_want(Rel, _, Op), ajr_join(Op), Rel != aj_pick, Rel != aj_pair, Rel != aj_bad, Rel != aj_mix, Rel != aj_live_in,
+                         Rel != aj_live_out, Rel != aj_near, not ajr_recursive(Rel).
+ajr_join(union).
+ajr_join(hull).
+ajr_join(bitor).
+ajr_as_aggregate(Q) :- concludes[$kernel](Q, Rel), premise_agg[$kernel](Q, Rel), ajr_want(Rel, _, _).
+-- the reads, as builtins with their modes
+ajr_builtin(Op)     :- premise_lit[$kernel](_, _, $builtin(Op, _)).
+ajr_read_lost(Op)   :- ajr_op(Op, _), not ajr_builtin(Op).
+ajr_op("in", $cons(out, $cons(in, $nil))).
+ajr_op("subset", $cons(in, $cons(in, $nil))).
+ajr_mode_lost(Op)   :- ajr_op(Op, M), not mode(Op, M).
+ajr_unmoded(R)      :- unmoded[audit](R).
+alarm(ajr_missing).
+alarm(ajr_extra).
+alarm(ajr_arity_wrong).
+alarm(ajr_not_positive).
+alarm(ajr_as_aggregate).
+alarm(ajr_read_lost).
+alarm(ajr_mode_lost).
+alarm(ajr_unmoded).

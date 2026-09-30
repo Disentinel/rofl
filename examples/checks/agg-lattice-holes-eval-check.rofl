@@ -1,0 +1,129 @@
+-- examples/checks/agg-lattice-holes-eval-check.rofl — agg_lattice_eval over
+-- agg-lattice-holes-data.rofl: what a hole reaches is a hole. Each lattice
+-- there holds exactly the facts enumerated here, in both directions; its
+-- holes are exactly these; the three graphs of ahp, alike but for a value
+-- the holed cell reached first, have the same holes; and the rules that
+-- conclude ahq_near and ahs_near are holed, since a conclusion of each is
+-- not known.
+ahx(ahp, g0, a, c, 1).
+ahx(ahp, g0, k, f, 1).
+ahx(ahp, g5, a, c, 1).
+ahx(ahp, g5, k, f, 1).
+ahx(ahp, g100, a, c, 1).
+ahx(ahp, g100, k, f, 1).
+ahx(ahq, none, a, b, 1).
+ahx(ahq, none, s, b, 0).
+ahx(ahq_near, none, none, b, true).
+ahy(ahp, G, A, C, D)            :- ahp(G, A, C, D).
+ahy(ahq, none, A, C, D)         :- ahq(A, C, D).
+ahy(ahq_near, none, none, C, true) :- ahq_near(C).
+ahy(ahs, none, A, C, D)         :- ahs(A, C, D).
+ahy(ahs_near, none, none, C, true) :- ahs_near(C).
+ahy(ahr, none, A, C, D)         :- ahr(A, C, D).
+ahy(ahr2, none, A, C, D)        :- ahr2(A, C, D).
+ah_missing(R, G, A, C, D) :- ahx(R, G, A, C, D), not ahy(R, G, A, C, D).
+ah_extra(R, G, A, C, D)   :- ahy(R, G, A, C, D), not ahx(R, G, A, C, D).
+alarm(ah_missing).
+alarm(ah_extra).
+
+-- the holes, exactly, for every graph alike
+ah_graph(g0).
+ah_graph(g5).
+ah_graph(g100).
+ahw($lattice(ahp, main, 0, $cons(G, $cons(c, $cons(k, $nil)))), agg_type_error)    :- ah_graph(G).
+ahw($lattice(ahp, main, 0, $cons(G, $cons(a, $cons(k, $nil)))), arith_type_error)  :- ah_graph(G).
+ahw($lattice(ahp, main, 0, $cons(G, $cons(a, $cons(f, $nil)))), support_withdrawn) :- ah_graph(G).
+ahw($lattice(ahp, main, 0, $cons(G, $cons(c, $cons(f, $nil)))), support_withdrawn) :- ah_graph(G).
+ahw($lattice(ahq, main, 0, $cons(a, $cons(m, $nil))), agg_type_error).
+ahw($lattice(ahq, main, 0, $cons(s, $cons(m, $nil))), support_withdrawn).
+ahw($lattice(ahs, main, 0, $cons(a, $cons(n, $nil))), agg_type_error).
+ahw($lattice(ahs, main, 0, $cons(s, $cons(n, $nil))), support_withdrawn).
+ahw($lattice(ahr), arith_type_error).
+ahw($lattice(ahr2), support_withdrawn).
+ahw($lattice(ahq3, main, 0, $cons(m, $nil)), support_withdrawn).
+ahw($lattice(ahd1, main, 0, $cons(a, $cons(k, $nil))), agg_type_error).
+ahw($lattice(ahd2, main, 0, $cons(a, $cons(k, $nil))), support_withdrawn).
+ah_rel(ahp).
+ah_rel(ahq).
+ah_rel(ahs).
+ah_rel(ahr).
+ah_rel(ahr2).
+ah_rel(ahq3).
+ah_rel(ahd1).
+ah_rel(ahd2).
+ahh(M, R) :- hole[$kernel](M, R), M = $lattice(Rel, _, _, _), ah_rel(Rel).
+ahh(M, R) :- hole[$kernel](M, R), M = $lattice(Rel), ah_rel(Rel).
+ah_hole_missing(M, R) :- ahw(M, R), not ahh(M, R).
+ah_hole_extra(M, R)   :- ahh(M, R), not ahw(M, R).
+alarm(ah_hole_missing).
+alarm(ah_hole_extra).
+-- a tuple not known to hold is absent, and the rule that would conclude it holed
+ah_rule_holed(H) :- hole[$kernel]($rule(R), support_withdrawn), concludes[$kernel](R, H).
+ah_rule_unholed(ahq_near) :- not ah_rule_holed(ahq_near).
+ah_rule_unholed(ahs_near) :- not ah_rule_holed(ahs_near).
+ah_rule_unholed(ahp_unreach) :- not ah_rule_holed(ahp_unreach).
+ah_rule_unholed(ahq_far) :- not ah_rule_holed(ahq_far).
+ah_rule_unholed(ahq_two) :- not ah_rule_holed(ahq_two).
+alarm(ah_rule_unholed).
+
+-- readers outside the recursion: exactly these rows, and each count a hole
+-- where its group could hold a holed cell
+aho_x(ahq3, z, none, 5).
+aho_x(ahq3, b, none, 0).
+aho_x(ahd2, a, j, 7).
+aho_x(ahu, a, a, none).
+aho_x(ahu, c, a, none).
+aho_x(ahu, c, c, none).
+aho_x(ahu, k, a, none).
+aho_x(ahu, k, c, none).
+aho_x(ahu, k, k, none).
+aho_x(ahu, f, a, none).
+aho_x(ahu, f, c, none).
+aho_x(ahu, f, k, none).
+aho_x(ahu, f, f, none).
+aho_x(ahfar, z, none, none).
+aho_x(ahc3, z, none, none).
+aho_x(ahn, k, none, 1).
+aho_x(ahn, f, none, 0).
+aho_y(ahq3, C, none, D) :- ahq3(C, D).
+aho_y(ahd2, A, C, D)    :- ahd2(A, C, D).
+aho_y(ahu, A, C, none)  :- ahp_unreach(g0, A, C).
+aho_y(ahfar, C, none, none) :- ahq_far(C).
+aho_y(ahn, A, none, N)  :- ahp_n(g0, A, N).
+aho_y(ahtwo, C, none, none) :- ahq_two(C).
+aho_y(ahc2, C, none, none) :- ahq_c2(C).
+aho_y(ahc3, C, none, none) :- ahq_c3(C).
+aho_y(ahc4, C, none, none) :- ahq_c4(C).
+aho_extra(R, A, C, D) :- aho_y(R, A, C, D), not aho_x(R, A, C, D).
+alarm(aho_extra).
+-- aho_extra reads aho_y's unknown rows, so it is holed too; its hole is
+-- written when its stratum runs, the last of this world's, and a negation
+-- of what reads `hole` must run above it
+ah_rule_unholed(aho_extra) :- not ah_rule_holed(aho_extra).
+ah_rule_unholed(ahq_c4) :- not ah_rule_holed(ahq_c4).
+aho_known(ahq3, z, none, 5).
+aho_known(ahd2, a, j, 7).
+aho_known(ahu, k, a, none).
+aho_known(ahu, f, f, none).
+aho_known(ahfar, z, none, none).
+aho_known(ahc3, z, none, none).
+aho_known(ahn, k, none, 1).
+aho_known(ahn, f, none, 0).
+aho_missing(R, A, C, D) :- aho_known(R, A, C, D), not aho_y(R, A, C, D).
+alarm(aho_missing).
+aho_cell(A) :- hole[$kernel]($cell(_, _, _, $cons(g0, $cons(A, $nil))), support_withdrawn).
+aho_cell_unholed(A) :- ahp_node(g0, A), not aho_cell(A), A != k, A != f.
+alarm(aho_cell_unholed).
+
+-- the dataset still holds what makes the checks above bite: through k, f is
+-- nearer than the direct edge in g5 and farther in g100
+ahv(nearer)  :- ahp_e(g5, a, k, K), ahp_e(g5, k, f, F), ahp_e(g5, a, f, D), S is K + F, S < D.
+ahv(farther) :- ahp_e(g100, a, k, K), ahp_e(g100, k, f, F), ahp_e(g100, a, f, D), S is K + F, S > D.
+ahv(near_m)  :- ahq_e(a, m, oops).
+ahv(held_n)  :- ahs_e(a, n, 1), ahs_e(a, n, oops).
+ah_vacuous(K) :- ah_vk(K), not ahv(K).
+ah_vk(nearer).
+ah_vk(farther).
+ah_vk(near_m).
+ah_vk(held_n).
+alarm(ah_vacuous).

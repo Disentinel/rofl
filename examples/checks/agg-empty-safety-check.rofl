@@ -1,0 +1,16 @@
+-- examples/checks/agg-empty-safety-check.rofl — agg_empty_safety: a zero
+-- exists exactly where the group is asked from outside. Every candidate
+-- without a ballot has a count and a sum of 0, and no candidate with one
+-- does; the grouped count has no zero row, because C is bound only by the
+-- aggregate and a group with no member is no group.
+ae_has(C)             :- ae_ballot(_, C).
+ae_zero_missing(Rel, C) :- ae_candidate(C), not ae_has(C), not ae_votes(C, 0), Rel = ae_votes.
+ae_zero_missing(Rel, C) :- ae_candidate(C), not ae_has(C), not ae_total(C, 0), Rel = ae_total.
+ae_zero_wrong(C)      :- ae_votes(C, 0), ae_has(C).
+ae_group_zero(C)      :- ae_by(C, 0).
+ae_empty_seen()       :- ae_candidate(C), not ae_has(C).
+ae_vacuous(empty)     :- not ae_empty_seen().
+alarm(ae_zero_missing).
+alarm(ae_zero_wrong).
+alarm(ae_group_zero).
+alarm(ae_vacuous).

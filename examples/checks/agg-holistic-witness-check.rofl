@@ -1,0 +1,86 @@
+-- examples/checks/agg-holistic-witness-check.rofl — agg_holistic_witness: a
+-- holistic cell is a Group, the whole group it was recomputed from. A median
+-- or quantile cell's members are exactly the group's distinct (value, key)
+-- pairs, both ways, and never the percent; a pair read from two sources is
+-- one member, and every member cites a real ah_line fact with that value
+-- and key; a rank cell's members are the group's distinct values, and the
+-- cell of a subject that is none of them keeps them all and has no value;
+-- members are in the canonical order (height first, so the two least values
+-- of godd, which arrive three rules deep, come last); each cell sealed
+-- ah_line and nothing else, one per group asked. The per-member rank cells
+-- (ah_rank, the subject each member's own value, so a cell per subject, all
+-- sharing one stored group) are held to the same: members, order, seals and
+-- height, and a cell for every value of every group.
+ahw_cell(C, G)      :- concludes[$kernel](R, ah_med), agg_sealed[$kernel](C, _, _),
+                       C = $cell(R, _, _, $cons(G, $nil)).
+ahw_qcell(C, G)     :- concludes[$kernel](R, ah_q), agg_sealed[$kernel](C, _, _),
+                       C = $cell(R, _, _, $cons(_, $cons(G, $nil))).
+ahw_rcell(C, S, G)  :- concludes[$kernel](R, ah_rank_of), agg_sealed[$kernel](C, _, _),
+                       C = $cell(R, _, _, $cons(S, $cons(G, $nil))).
+ahw_rcell(C, S, G)  :- concludes[$kernel](R, ah_rank), agg_sealed[$kernel](C, _, _),
+                       C = $cell(R, _, _, $cons(S, $cons(G, $nil))).
+ahw_any(C, G)       :- ahw_cell(C, G).
+ahw_any(C, G)       :- ahw_qcell(C, G).
+ahw_pair(C, T)      :- ahw_cell(C, _), agg_member[$kernel](C, _, T, _).
+ahw_pair(C, T)      :- ahw_qcell(C, _), agg_member[$kernel](C, _, T, _).
+ahw_should(C, T)    :- ahw_any(C, G), ah_line(G, K, V, _), T = $cons(V, $cons(K, $nil)).
+member_missing(C, T) :- ahw_should(C, T), not ahw_pair(C, T).
+member_extra(C, T)   :- ahw_pair(C, T), not ahw_should(C, T).
+member_twice(C, T)   :- ahw_any(C, _), agg_member[$kernel](C, I, T, _), agg_member[$kernel](C, J, T, _), I != J.
+ahw_prem_ok(C, I)    :- ahw_any(C, G), agg_member[$kernel](C, I, $cons(V, $cons(K, $nil)), _),
+                        agg_member_prem[$kernel](C, I, P),
+                        P = $fact(ah_line, main, $cons(G, $cons(K, $cons(V, $cons(S, $nil))))), ah_line(G, K, V, S).
+prem_mismatch(C, I)  :- ahw_any(C, _), agg_member[$kernel](C, I, _, _), not ahw_prem_ok(C, I).
+-- rank: the distinct values, and a subject that is none of them
+ahw_rval(C, W)       :- ahw_rcell(C, _, _), agg_member[$kernel](C, _, $cons(W, $nil), _).
+ahw_rshould(C, W)    :- ahw_rcell(C, _, G), ah_line(G, _, W, _).
+rank_member_missing(C, W) :- ahw_rshould(C, W), not ahw_rval(C, W).
+rank_member_extra(C, T)   :- ahw_rcell(C, _, _), agg_member[$kernel](C, _, T, _), T != $cons(_, $nil).
+rank_member_extra(C, W)   :- ahw_rval(C, W), not ahw_rshould(C, W).
+rank_member_twice(C, T)   :- ahw_rcell(C, _, _), agg_member[$kernel](C, I, T, _), agg_member[$kernel](C, J, T, _), I != J.
+ahw_unranked(C)      :- ahw_rcell(C, 5, godd).
+unranked_valued(C)   :- ahw_unranked(C), agg_cell[$kernel](C, _, _).
+ahw_unranked_kept(C) :- ahw_unranked(C), agg_member[$kernel](C, 6, _, _).
+unranked_bare(C)     :- ahw_unranked(C), not ahw_unranked_kept(C).
+ahw_has_unranked()   :- ahw_unranked(_).
+unranked_absent()    :- not ahw_has_unranked().
+-- a per-member rank cell for every value of every group
+ahw_subject(G, S)    :- concludes[$kernel](R, ah_rank), agg_sealed[$kernel](C, _, _),
+                        C = $cell(R, _, _, $cons(S, $cons(G, $nil))).
+rank_cell_absent(G, V) :- ah_line(G, _, V, _), not ahw_subject(G, V).
+-- the canonical order: height, then the projection
+ahw_ordered(C)       :- ahw_any(C, _).
+ahw_ordered(C)       :- ahw_rcell(C, _, _).
+order_wrong(C, I, J) :- agg_member[$kernel](C, I, _, H1), agg_member[$kernel](C, J, _, H2), ahw_ordered(C), I < J, H1 > H2.
+ahw_late_last(C)     :- ahw_cell(C, godd), agg_member[$kernel](C, 6, $cons(1, _), _), agg_member[$kernel](C, 7, $cons(1, _), _).
+late_not_last(C)     :- ahw_cell(C, godd), not ahw_late_last(C).
+-- sealed ah_line and nothing else; a cell per group asked
+ahw_sealed_line(C)   :- ahw_any(C, _), agg_sealed[$kernel](C, ah_line, _).
+ahw_sealed_line(C)   :- ahw_rcell(C, _, _), agg_sealed[$kernel](C, ah_line, _).
+seal_missing(C)      :- ahw_any(C, _), not ahw_sealed_line(C).
+seal_missing(C)      :- ahw_rcell(C, _, _), not ahw_sealed_line(C).
+seal_foreign(C, R)   :- ahw_any(C, _), agg_sealed[$kernel](C, R, _), R != ah_line.
+ahw_group(G)         :- ahw_cell(_, G).
+cell_absent(G)       :- ah_group(G), not ahw_group(G).
+-- the cell's height is its highest member's
+ahw_higher(C, H)     :- ahw_ordered(C), agg_cell[$kernel](C, _, H), agg_member[$kernel](C, _, _, M), M > H.
+ahw_top(C, H)        :- ahw_ordered(C), agg_cell[$kernel](C, _, H), agg_member[$kernel](C, _, _, H).
+height_wrong(C)      :- ahw_higher(C, _).
+height_wrong(C)      :- ahw_ordered(C), agg_cell[$kernel](C, _, H), not ahw_top(C, H).
+alarm(member_missing).
+alarm(member_extra).
+alarm(member_twice).
+alarm(prem_mismatch).
+alarm(rank_member_missing).
+alarm(rank_member_extra).
+alarm(rank_member_twice).
+alarm(unranked_valued).
+alarm(unranked_bare).
+alarm(unranked_absent).
+alarm(rank_cell_absent).
+alarm(order_wrong).
+alarm(late_not_last).
+alarm(seal_missing).
+alarm(seal_foreign).
+alarm(cell_absent).
+alarm(height_wrong).

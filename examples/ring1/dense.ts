@@ -23,10 +23,12 @@ const term = (t: Term): string =>
 
 const lit = (l: Lit): string => `l(${l.rel}, [${l.args.map(term).join(', ')}])`;
 
-const elem = (b: BodyElem): string =>
-  b.t === 'pos' ? lit(b.lit)
-  : b.t === 'neg' ? `n(${lit(b.lit)})`
-  : `b(${escapeString(b.op)}, ${term(b.l)}, ${term(b.r)})`;
+const elem = (b: BodyElem): string => {
+  if (b.t === 'agg') throw new Error('the dense form carries no aggregate');
+  return b.t === 'pos' ? lit(b.lit)
+    : b.t === 'neg' ? `n(${lit(b.lit)})`
+    : `b(${escapeString(b.op)}, ${term(b.l)}, ${term(b.r)})`;
+};
 
 /** A program as dense facts. Rule ids are positional and therefore stable
  *  under regeneration, which is what makes the correspondence gate a diff. */

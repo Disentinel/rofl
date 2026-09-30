@@ -1,0 +1,16 @@
+-- examples/checks/agg-wfs-declares.rofl — below agg_cell_wfs beside the game:
+-- rules that conclude what the kernel reads as a declaration. A declaration
+-- is no answer, so neither is fed: `semantics(well_founded)` fed would make
+-- the world above well-founded and refuse its cells, and `sealed(provenance)`
+-- would seal the provenance of a world that never asked. And a relation
+-- that is both input and concluded: every row of it that holds is an answer,
+-- the asserted one too (wd_p(a) and wd_p(b) are fed), while wd_q, input that
+-- no rule concludes, is not.
+edb(wd_mode).
+wd_mode(well_founded). wd_mode(provenance).
+semantics(S) :- wd_mode(S), S = well_founded.
+sealed(S)    :- wd_mode(S), S = provenance.
+edb(wd_q).
+wd_q(b).
+wd_p(a).
+wd_p(X) :- wd_q(X).

@@ -1,0 +1,19 @@
+-- examples/checks/wfs-unknown-negated.rofl — A NEGATION OF `unknown` IS
+-- JUDGED AFTER `unknown` IS WRITTEN, in both engines
+-- (f_a_negation_of_unknown_was_judged_before_unknown_was_written;
+-- docs/aggregates.md, "Shrugs, as built"). x and y are a draw,
+-- unknown(wn_win(x)); a rule reading `unknown` runs a level above the rest,
+-- once its rows exist, so `not unknown(wn_win(x))` fails there and
+-- wn_decided(x) is unentailed; k's win and l's loss are decided.
+semantics(well_founded).
+edb(wn_m).
+edb(wn_pos).
+wn_m(x, y). wn_m(y, x). wn_m(k, l).
+wn_pos(x). wn_pos(k). wn_pos(l).
+wn_win(X) :- wn_m(X, Y), not wn_win(Y).
+wn_decided(X) :- wn_pos(X), not unknown(wn_win(X)).
+-- expect-row: unknown[main](wn_win(x))
+-- expect-row: wn_decided[main](k)
+-- expect-row: wn_decided[main](l)
+-- expect-no-row: wn_decided[main](x)
+-- expect-no-row: shrug[$kernel](wn_decided(

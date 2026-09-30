@@ -1,0 +1,3 @@
+-- expect-refusal: `<=` is followed by the dominating fact and `:-` the condition under which it dominates
+-- a dominance rule says when one fact dominates the other
+sxsr_body(A, X) <= sxsr_body(A, Y).

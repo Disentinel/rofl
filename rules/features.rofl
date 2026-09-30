@@ -52,6 +52,8 @@ private_name("explainFailure"). private_name("failingPremises").
 private_name("frozenRetention"). private_name("newEval").
 private_name("prepared").     private_name("renderWhy").
 private_name("unknownCtx").   private_name("whynotStruct").
+private_name("plain").        private_name("renderTree").
+private_name("explainRule").  private_name("explainTree").
 private_name("constructor").
 
 entry_point(M) :- src_method[code]("api.ts", "Rofl", M, _), not private_name(M).

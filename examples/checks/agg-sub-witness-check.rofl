@@ -1,0 +1,80 @@
+-- examples/checks/agg-sub-witness-check.rofl — agg_sub_witness: the
+-- Antichain witness of the cells of agg-sub-data.rofl. Each member of a
+-- front is explained by its members, `lattice_member[$kernel](Fact, I,
+-- Height, Rule)` and `lattice_member_prem[$kernel](Fact, I, Prem)`: a Best of
+-- its derivations, over values that stand where those found it (the routes
+-- cite no dominated route) and through the values it was reached by where
+-- they did not (as_sat, a decrement floored at 0); on a total order the
+-- members are the min lattice's, count for count and height for height.
+-- Every value a cell was given and does not hold is named with the member of
+-- the front that dominates it, the first in canonical order, and the rule
+-- that says so: `dominated_by[$kernel](Value, By, Rule)`.
+asw_by(V, B, R) :- dominated_by[$kernel](V, B, R).
+-- the member that dominates each value given to a route cell, by hand
+asw_want(as_route, $cons(a, $cons(c, $cons(6, $cons(14, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+asw_want(as_route, $cons(a, $cons(c, $cons(8, $cons(12, $nil)))), $cons(a, $cons(c, $cons(2, $cons(10, $nil))))).
+asw_want(as_route, $cons(a, $cons(c, $cons(7, $cons(7, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+asw_want(as_route, $cons(a, $cons(c, $cons(9, $cons(5, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+asw_want(as_route, $cons(a, $cons(c, $cons(11, $cons(3, $nil)))), $cons(a, $cons(c, $cons(3, $cons(3, $nil))))).
+asw_want(as_route, $cons(a, $cons(b, $cons(5, $cons(9, $nil)))), $cons(a, $cons(b, $cons(1, $cons(5, $nil))))).
+asw_want(as_route, $cons(c, $cons(a, $cons(5, $cons(5, $nil)))), $cons(c, $cons(a, $cons(1, $cons(1, $nil))))).
+asw_want(as_pick, $cons(k1, $cons(bronze, $nil)), $cons(k1, $cons(silver, $nil))).
+asw_want(as_pick, $cons(k2, $cons(bronze, $nil)), $cons(k2, $cons(gold, $nil))).
+asw_want(as_best, $cons(i4, $cons(6, $cons(6, $nil))), $cons(i2, $cons(5, $cons(5, $nil)))).
+asw_want(as_sat, $cons(p, $cons(5, $nil)), $cons(p, $cons(0, $nil))).
+asw_want(as_sat, $cons(q, $cons(4, $nil)), $cons(q, $cons(0, $nil))).
+asw_named(Rel, V, B) :- asw_by($fact(Rel, main, V), $fact(Rel, main, B), _).
+asw_missing(Rel, V, B) :- asw_want(Rel, V, B), not asw_named(Rel, V, B).
+alarm(asw_missing).
+-- in the book it was given in
+asw_book_wrong(V) :- asw_by($fact(as_bk, P, V), $fact(as_bk, Q, _), _), P != Q.
+asw_book_missing() :- not asw_by($fact(as_bk, w1, $cons(k, $cons(3, $nil))), $fact(as_bk, w1, $cons(k, $cons(1, $nil))), _).
+alarm(asw_book_wrong).
+alarm(asw_book_missing).
+-- the one that dominates stands, dominates (Pareto, recomputed here), and
+-- is of the same cell; the rule is a dominance rule of the relation; what
+-- it dominates does not stand
+asw_by_route(A, B, C1, T1, C2, T2, R) :-
+  asw_by($fact(as_route, main, $cons(A, $cons(B, $cons(C1, $cons(T1, $nil))))),
+         $fact(as_route, main, $cons(A2, $cons(B2, $cons(C2, $cons(T2, $nil))))), R), A = A2, B = B2.
+asw_bad(fallen, A, B, C2, T2)  :- asw_by_route(A, B, _, _, C2, T2, _), not as_route(A, B, C2, T2).
+asw_bad(stands, A, B, C1, T1)  :- asw_by_route(A, B, C1, T1, _, _, _), as_route(A, B, C1, T1).
+asw_bad(not_worse, A, B, C1, T1) :- asw_by_route(A, B, C1, T1, C2, T2, _), C2 > C1.
+asw_bad(not_worse, A, B, C1, T1) :- asw_by_route(A, B, C1, T1, C2, T2, _), T2 > T1.
+asw_bad(equal, A, B, C1, T1)   :- asw_by_route(A, B, C1, T1, C2, T2, _), C1 = C2, T1 = T2.
+asw_bad(other_cell, V, B, x, x) :- asw_by($fact(as_route, main, $cons(A, $cons(B0, V))), $fact(as_route, main, $cons(A2, $cons(B, _))), _), B0 != B.
+asw_rule_wrong(R) :- asw_by($fact(Rel, _, _), _, R), not dominance[$kernel](R, Rel, _, _).
+alarm(asw_bad).
+alarm(asw_rule_wrong).
+-- a value a cell holds is dominated by nothing it was given
+asw_front_dominated(A, B, C, T) :- asw_by_route(A, B, C, T, _, _, _), as_route(A, B, C, T).
+alarm(asw_front_dominated).
+-- every member of a front has members, numbered from 1; the routes' cite
+-- only routes that stand
+asw_f(route, A, B, $fact(as_route, main, $cons(A, $cons(B, $cons(C, $cons(T, $nil)))))) :- as_route(A, B, C, T).
+asw_f(pick, K, K, $fact(as_pick, main, $cons(K, $cons(V, $nil)))) :- as_pick(K, V).
+asw_f(best, I, I, $fact(as_best, main, $cons(I, $cons(C, $cons(T, $nil))))) :- as_best(I, C, T).
+asw_bare(K, A, B) :- asw_f(K, A, B, F), not lattice_member[$kernel](F, 1, _, _).
+asw_stale(F, A, B, C, T) :- asw_f(route, _, _, F),
+  lattice_member_prem[$kernel](F, _, $fact(as_route, main, $cons(A, $cons(B, $cons(C, $cons(T, $nil)))))),
+  not as_route(A, B, C, T).
+alarm(asw_bare).
+alarm(asw_stale).
+-- through its history where only that founds it: the floored decrement
+asw_history(Q, W) :- lattice_member_prem[$kernel]($fact(as_sat, main, _), _,
+                       $fact(as_sat, main, $cons(Q, $cons(W, $nil)))), not as_sat(Q, W).
+asw_no_history() :- not asw_history(_, _).
+alarm(asw_no_history).
+-- on a total order, the lattice's members: as many, as high, in one order
+asw_members(d, X, Y, D, I, H) :- lattice_member[$kernel]($fact(as_d, main, $cons(X, $cons(Y, $cons(D, $nil)))), I, H, _).
+asw_members(m, X, Y, D, I, H) :- lattice_member[$kernel]($fact(as_m, main, $cons(X, $cons(Y, $cons(D, $nil)))), I, H, _).
+asw_members(sat, A, A, W, I, H)  :- lattice_member[$kernel]($fact(as_sat, main, $cons(A, $cons(W, $nil))), I, H, _).
+asw_members(satm, A, A, W, I, H) :- lattice_member[$kernel]($fact(as_satm, main, $cons(A, $cons(W, $nil))), I, H, _).
+asw_unlike(d, X, Y, D, I, H)   :- asw_members(d, X, Y, D, I, H), not asw_members(m, X, Y, D, I, H).
+asw_unlike(m, X, Y, D, I, H)   :- asw_members(m, X, Y, D, I, H), not asw_members(d, X, Y, D, I, H).
+asw_unlike(sat, X, Y, D, I, H) :- asw_members(sat, X, Y, D, I, H), not asw_members(satm, X, Y, D, I, H).
+asw_unlike(satm, X, Y, D, I, H) :- asw_members(satm, X, Y, D, I, H), not asw_members(sat, X, Y, D, I, H).
+alarm(asw_unlike).
+-- the tie at as_d(a, t, 1), directly and through a2 and back, is two members
+asw_tie_lost() :- not asw_members(d, a, t, 1, 2, _).
+alarm(asw_tie_lost).

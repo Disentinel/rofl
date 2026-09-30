@@ -1,0 +1,6 @@
+-- examples/checks/agg-lattice-plain-space.rofl — agg_lattice_plain_space:
+-- agg_lattice_plain_budget with the space wall. alp_lo is holed with the
+-- wall's reason and never closed as final
+-- (f_a_wall_closed_a_lattice_a_plain_hole_had_not_reached).
+-- expect-row: hole[$kernel]($adhoc,space_exhausted)
+-- expect-row: hole[$kernel]($lattice(alp_lo),space_exhausted)

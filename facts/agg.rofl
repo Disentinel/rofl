@@ -1,0 +1,1054 @@
+-- facts/agg.rofl — THE AGGREGATES PROGRAMME: rows, columns, verdicts, and the
+-- work that owns every open cell. Design: docs/aggregates.md. Decision:
+-- f_aggregation_is_one_cell_engine_with_two_syntaxes. Rules: rules/agg.rofl.
+-- Seeded 2026-09-28 with every cell `not_yet` except the ones that do not
+-- apply, each waived with a reason from a closed list.
+--
+-- READ THE QUEUE, DO NOT READ THIS FILE:
+--     npm run repl -- facts/agg.rofl rules/agg.rofl
+--     ? next_work[audit](W)                    what to take
+--     ? owner[audit](agg, K, S, L, W)          whose cell this is
+--     ? open_cell[audit](agg, K, S, L)         what is not done
+--     ? unqueued[audit](agg, K, S, L)          work nobody owns (an alarm)
+--     ? blocked[audit](W)                      what waits, on `work_needs`
+--     ? verdict[audit](agg, K, L, V)           the matrix
+--
+-- ADDING TO IT. A row is `agg_kind(K).` plus `algebra_class(K, C).`; a column
+-- is `obligation(L).`. `npm test` then goes red on `unqueued` for every cell
+-- nobody owns, and the cells are owned with `claim(queued, agg, K, none, L, W)`
+-- or waived with `ignored(agg, K, L, Reason)`. A column one item carries for
+-- every row is `work_sweeps(W, L)`.
+--
+-- CLOSING A CELL is `handled(agg, K, L, "world")`, and the registry in
+-- facts/checks.rofl must say `proves("world", agg, K, L)`; an item that owns
+-- no cell closes by `work_proof(W, "world")` and `proves_work`. Taking a cell
+-- off the queue as out_of_scope or budget_exhausted needs
+-- `decided_not_work(agg, K, L, Finding)`. docs/aggregates.md says why.
+
+-- ===========================================================================
+-- ROWS — the aggregate kinds. The substrate is a row of its own because its
+-- obligations (the witness record, the ⊕ that must not wrap, the tick staging)
+-- are owned before any kind can use them.
+agg_kind(cell).
+agg_kind(count).
+agg_kind(sum).
+agg_kind(min_max_strat).
+agg_kind(threshold).
+agg_kind(order_lattice).
+agg_kind(join_lattice).
+agg_kind(widening).
+agg_kind(tag_idempotent).
+agg_kind(tag_counting).
+agg_kind(holistic).
+agg_kind(subsumption).
+agg_kind(sugar).
+agg_kind(empty_group).
+
+agg_kind_note(cell, "the one cell engine: key -> value merged by ⊕, members, heights, PremRef::Cell naming an immutable sealed record that holds its seals, canonical order").
+agg_kind_note(count, "`N is count(R : body)` — invertible, stratified, dedup by the projection tuple, Group witness").
+agg_kind_note(sum, "`S is sum(V ; K : body)` — the projection key is mandatory, invertible, stratified, Group witness").
+agg_kind_note(min_max_strat, "`M is min(V : body)`, max, and the boolean or / and (the idempotent total order on {false < true}) in a rule body — stratified, Best witness").
+agg_kind_note(threshold, "`at_least(N, X : body)` — monotone, allowed in recursion, Quorum witness of exactly N members").
+agg_kind_note(order_lattice, "`lattice dist(A, C, min D)`, max, or, and — recursive over a total order, Best witness").
+agg_kind_note(join_lattice, "`lattice reach(X, union S)` — set union, interval hull, bitset or; recursive, Cover witness").
+agg_kind_note(widening, "a join lattice of infinite height with a declared widening, forced after N improvements; Widened witness, the marker a hole").
+agg_kind_note(tag_idempotent, "a semiring tag in the kernel whose ⊕ is idempotent (boolean, tropical): the cell keyed by the whole head, ⊗ through the body, recursion allowed").
+agg_kind_note(tag_counting, "a semiring tag in the kernel whose ⊕ is not idempotent (counting, the support count): the cell keyed by the whole head, stratified, refused inside recursion").
+agg_kind_note(holistic, "quantile, median, rank — stratified, dedup, the group recomputed; Group witness").
+agg_kind_note(subsumption, "Souffle-style `p(A, B, D1) <= p(A, B, D2) :- D2 < D1.` — partial orders without a join, antichain cells, Pareto; Antichain witness").
+agg_kind_note(sugar, "sentence form: at least / at most / exactly N, every, avg; lowered before the kernel sees it. avg is sum over count with a declared rounding and no row for an empty group (never a division by zero); every is count-equality over a domain bound from outside; at most / exactly N are non-monotone and refused inside recursion").
+agg_kind_note(empty_group, "count/sum of a group with no members is 0 only when the group key is bound from outside: a negative claim, stratified only, witnessed by Sealed alone; min/max give no row").
+
+-- why empty_group is a row of its own: docs/aggregates.md, "The matrix"
+
+-- ===========================================================================
+-- COLUMNS — what a kind owes before it is done.
+obligation(syntax).
+obligation(reflect).
+obligation(strata).
+obligation(safety).
+obligation(eval_rust).
+obligation(eval_ts).
+obligation(witness).
+obligation(why).
+obligation(wfs).
+obligation(ticks).
+obligation(holes).
+obligation(parity).
+obligation(phrase).
+obligation(incremental_ready).
+obligation(demo).
+obligation(retire).
+obligation(shrug).
+
+obligation_note(syntax, "the Rust parser (rofl_parse.rs), the TS parser and the ring 1 grammar all read it").
+obligation_note(reflect, "rules as data: encode, canon, reify; the rule id identical in TS and Rust").
+obligation_note(strata, "the aggregate premise is a dependency edge; peel_rounds, rules/strata.rofl, the recursion gate by algebra flag").
+obligation_note(safety, "safety.rofl: the range-restriction slot kind, the projection key for non-idempotent kinds, monotone consumers of a recursive cell, one algebra per predicate; recompiled from src/kernel-dense.ts and re-signed into ROFL_KERNEL_HASH").
+obligation_note(eval_rust, "rust/rofl evaluates it: plan_body, solve_body, the insert algorithm, fired once after its input round closes (its inner relations kept out of trigger_rels, never re-fired by semi-naive); record_prem (engine.rs:1054) no longer assumes prems[i] <-> body[i] once a premise is a variable-length Group").
+obligation_note(eval_ts, "the TS engine evaluates it, best-effort at small scale").
+obligation_note(witness, "the cell witness kind and its invariants: canonical at seal time, final-value premises only, well-founded by height, full storage").
+obligation_note(why, "render_why and whynot explore it: PremRef::Cell, Sealed, digest display").
+obligation_note(wfs, "the well-founded mode policy, first: refuse, with a diagnostic both engines agree on").
+obligation_note(ticks, "@next staging of a cell value, retain_ticks pruning of its provenance").
+obligation_note(holes, "overflow writes a hole and never wraps; a budget cut is a hole, not a smaller value; widening markers are holes").
+obligation_note(parity, "TS and Rust canonical_state agree, pinned by facts/goldens.rofl").
+obligation_note(phrase, "the sentence form reads and writes it").
+obligation_note(incremental_ready, "stable contribution ids, algebra flags in the cell record, value-at-use premises: the next engine can maintain it").
+obligation_note(demo, "an acceptance demo from the catalogue proves it by rofl alarms").
+obligation_note(retire, "the workaround in the tree it replaces is gone").
+obligation_note(shrug, "the answer model (docs/aggregates.md, Shrugs, as built): a literal holds, is unentailed, or is shrug(Target, Reason, Meta) with a reason shrug.rofl declares; the kind reading a shrug is a shrug inherited from its roots unless decided under every completion of the unknowns, each such decision documented; the rows are kernel data rules read").
+
+-- ===========================================================================
+-- THE ALGEBRA of each kind; it decides which world closes its strata cell
+-- (rules/agg.rofl: `strata_without_refusal`, `strata_without_recursion`).
+algebra_class(cell, none).
+algebra_class(count, invertible).
+algebra_class(sum, invertible).
+algebra_class(min_max_strat, idempotent_order).
+algebra_class(threshold, threshold).
+algebra_class(order_lattice, idempotent_order).
+algebra_class(join_lattice, idempotent_join).
+algebra_class(widening, idempotent_join).
+algebra_class(tag_idempotent, idempotent_semiring).
+algebra_class(tag_counting, counting_semiring).
+algebra_class(holistic, holistic).
+algebra_class(subsumption, partial_order).
+algebra_class(sugar, none).
+algebra_class(empty_group, none).
+-- the body form of min, max, or and and reads a closed relation; recursion
+-- over the same algebra is order_lattice's declaration (rules/agg.rofl)
+stratified_form(min_max_strat).
+
+algebra_note(idempotent_order, "min, max, or, and: recursion yes, no dedup, Best witness").
+algebra_note(idempotent_join, "set union, interval hull, bitset or: recursion yes, declared widening if the height is infinite, Cover witness").
+algebra_note(invertible, "count, sum: stratified only, dedup by the projection tuple, Group witness, subtract on retraction").
+algebra_note(holistic, "quantile, median, rank: stratified, dedup, recompute the group").
+algebra_note(threshold, "at_least: monotone, recursion yes, Quorum witness of exactly N").
+algebra_note(idempotent_semiring, "a tag whose ⊕ is idempotent (boolean, tropical): recursion yes").
+algebra_note(counting_semiring, "a tag whose ⊕ is not idempotent (counting): stratified only").
+algebra_note(partial_order, "subsumption: antichain cells, no join, Antichain witness").
+algebra_note(none, "not an algebra: the substrate, or a row that lowers onto other rows").
+
+-- ===========================================================================
+-- WAIVERS. Each reason is scoped to its cells by `waiver_applies` in
+-- rules/agg.rofl; a waiver outside its scope is `bad_waiver`.
+ignored(agg, cell, syntax, no_surface).
+ignored(agg, cell, phrase, no_surface).
+ignored(agg, cell, retire, no_workaround).
+
+ignored(agg, empty_group, syntax, no_own_syntax).
+ignored(agg, empty_group, reflect, no_own_syntax).
+ignored(agg, empty_group, retire, no_workaround).
+
+ignored(agg, sugar, syntax, sentence_form_only).
+ignored(agg, sugar, reflect, lowers_to_core).
+ignored(agg, sugar, strata, lowers_to_core).
+ignored(agg, sugar, witness, lowers_to_core).
+ignored(agg, sugar, wfs, lowers_to_core).
+ignored(agg, sugar, ticks, lowers_to_core).
+ignored(agg, sugar, incremental_ready, lowers_to_core).
+ignored(agg, sugar, retire, no_workaround).
+
+ignored(agg, widening, retire, no_workaround).
+ignored(agg, subsumption, retire, no_workaround).
+
+-- the sites the retire column retires: every place in the tree that folds,
+-- sums, counts or ranks around the missing aggregate, host-side or in rules
+workaround_site(count, "scripts/lint.ts").
+workaround_site(count, "examples/wtf/wtf.rofl").
+workaround_site(sum, "examples/slop/slop.rofl").
+workaround_site(sum, "examples/spat/spat.rofl").
+workaround_site(sum, "examples/spat/spat.ts").
+workaround_site(sum, "examples/aka/aka.rofl").
+workaround_site(sum, "examples/blam/demo.ts").
+workaround_site(min_max_strat, "rules/js-dataflow.rofl").
+workaround_site(min_max_strat, "examples/wtf/wtf.rofl").
+workaround_site(threshold, "examples/moot/moot.rofl").
+workaround_site(threshold, "examples/goof/goof.rofl").
+workaround_site(order_lattice, "examples/rip/demo.ts").
+workaround_site(join_lattice, "examples/spat/spat.ts").
+workaround_site(join_lattice, "examples/moot/demo.ts").
+workaround_site(tag_idempotent, "runtime/semirings.ts").
+workaround_site(tag_idempotent, "examples/spat/spat.ts").
+workaround_site(tag_counting, "runtime/semirings.ts").
+workaround_site(tag_counting, "examples/huh/huh.rofl").
+workaround_site(holistic, "examples/huh/demo.ts").
+workaround_site(holistic, "examples/blam/demo.ts").
+-- examples/notebook/gen_ledger_facts.ts is not a site: it measures a string's
+-- length and asks the filesystem, neither of which is an aggregate.
+
+-- PROSE THE PROGRAMME FALSIFIES. An item that owns any closes only by a
+-- `work_proof`; the example prose goes with its workaround.
+contradiction_site(w_agg_reconcile_docs, "LIMITS.md", "l_no_aggregation: no aggregation").
+contradiction_site(w_agg_reconcile_docs, "START.md", "section 8 lists aggregation as out of scope").
+contradiction_site(w_agg_reconcile_docs, "docs/roadmap.md", "1.1: one aggregate, in a rule body").
+contradiction_site(w_agg_reconcile_docs, "facts/spec.rofl", "s8_out_of_scope and l_no_aggregation cite aggregation as prohibited").
+contradiction_site(w_agg_reconcile_docs, "facts/deviations.rofl", "r_optimizations_exist, rendered into README.md: l_no_aggregation still reads no aggregation").
+contradiction_site(w_agg_reconcile_docs, "rules/worklist.rofl", "leverage is a boolean because the kernel has no aggregation").
+contradiction_site(w_agg_retire_workarounds, "rules/js-dataflow.rofl", "seq_later: a maximum as the absence of a later element (and docs/js rendered from it)").
+contradiction_site(w_agg_retire_workarounds, "examples/slop/README.md", "SUM is a chain because v0 has no aggregation").
+contradiction_site(w_agg_retire_workarounds, "examples/slop/slop.rofl", "SUM: a range is a chain").
+contradiction_site(w_agg_retire_workarounds, "examples/spat/README.md", "the sum is a chain fold").
+contradiction_site(w_agg_retire_workarounds, "examples/spat/spat.rofl", "the SUM is host-side").
+contradiction_site(w_agg_retire_workarounds, "examples/spat/spat.ts", "merge, totals and the tropical fold are host-side").
+contradiction_site(w_agg_retire_workarounds, "examples/notebook/spat.rofl.md", "no aggregation, spat's own note").
+contradiction_site(w_agg_retire_workarounds, "examples/wtf/README.md", "v0 has no aggregation").
+contradiction_site(w_agg_retire_workarounds, "examples/wtf/wtf.rofl", "the count is a fold; the walk is a key").
+contradiction_site(w_agg_retire_workarounds, "examples/huh/README.md", "ranking is host-side sorting").
+contradiction_site(w_agg_retire_workarounds, "examples/huh/huh.rofl", "counting-semiring fold and sort -rn | head").
+contradiction_site(w_agg_retire_workarounds, "examples/huh/demo.ts", "ranking is presentation").
+contradiction_site(w_agg_retire_workarounds, "examples/aka/README.md", "a sum is a scan").
+contradiction_site(w_agg_retire_workarounds, "examples/aka/aka.rofl", "a sum is a scan").
+contradiction_site(w_agg_retire_workarounds, "examples/blam/README.md", "the money arithmetic is host-side").
+contradiction_site(w_agg_retire_workarounds, "examples/blam/blam.rofl", "no rule reads minutes/3").
+contradiction_site(w_agg_retire_workarounds, "examples/blam/demo.ts", "the money arithmetic is here").
+contradiction_site(w_agg_retire_workarounds, "examples/moot/demo.ts", "the deletion search is host arithmetic").
+
+-- ===========================================================================
+-- THE WORK. Features before tests: the proof world of every cell belongs to
+-- the item that owns the cell, and closing the cell names it.
+
+-- the loop, and the substrate: the two things everything else waits on
+work(w_agg_baseline, "regenerate facts/port-corpus (scripts/port_corpus.ts), which 4 lib tests and 2 tests/program.rs read, so the Rust loop can see a regression; done only with a work_proof world").
+work_state(w_agg_baseline, done).
+work_proof(w_agg_baseline, "agg_rederived_provenance").
+work_spawned(w_agg_baseline, f_the_rust_tests_read_an_ungenerated_corpus_and_a_stale_one_alike).
+
+work(w_agg_session_tests, "diagnose the 6 tests/session.rs failures (cause unknown); gates no feature, features come first; done only with a work_proof world").
+work_state(w_agg_session_tests, done).
+work_proof(w_agg_session_tests, "agg_rederived_provenance").
+work_spawned(w_agg_session_tests, f_clear_derived_left_this_ticks_firings_on_the_facts_it_kept).
+
+work(w_agg_fast_loop, "the loop in seconds and no check weaker: every planted fault of scripts/agg_breaks.ts a run-time switch in one `--features breaks` build, or a kernel or file edit loaded in place, run in parallel beside a no-break control; npm test and the ledger mutants over a worker pool; the `fast` cargo profile; runs selected by item, world, cell, file or git change; build.rs reads the tree it builds; done only with a work_proof world").
+work_state(w_agg_fast_loop, done).
+work_proof(w_agg_fast_loop, "agg_breaks_census").
+work_spawned(w_agg_fast_loop, f_a_planted_fault_is_a_switch_in_one_build).
+work_spawned(w_agg_fast_loop, f_a_build_script_compiled_in_one_tree_watched_that_tree).
+
+work(w_agg_cell_store, "store.rs: cell identity (predicate, key), contributions with stable ids, value and height, PremRef::Cell(key, v_used) and PremRef::Sealed, canonical order; the insert algorithm").
+work_state(w_agg_cell_store, done).
+work_spawned(w_agg_cell_store, f_an_aggregate_premise_is_one_cell_premise).
+work_spawned(w_agg_cell_store, f_cells_are_reflected_as_five_kernel_relations).
+claim(queued, agg, cell, none, reflect,   w_agg_cell_store).
+claim(queued, agg, cell, none, eval_rust, w_agg_cell_store).
+claim(queued, agg, cell, none, witness,   w_agg_cell_store).
+claim(queued, agg, cell, none, why,       w_agg_cell_store).
+
+-- the first kinds, end to end in Rust
+work(w_agg_body_strat, "count, sum, min, max, or, and as body aggregates, and the empty group: syntax, reflect, strata edge (the refusal world for count and sum inside recursion), safety slot with safety.rofl re-signed into ROFL_KERNEL_HASH, eval fired once and kept out of trigger_rels, record_prem for a variable-length Group premise, Group/Best witness, why").
+work_state(w_agg_body_strat, done).
+work_spawned(w_agg_body_strat, f_the_rust_lexer_skips_characters_it_has_no_token_for).
+work_spawned(w_agg_body_strat, f_an_integer_literal_past_i64_reads_as_zero).
+work_spawned(w_agg_body_strat, f_arithmetic_wraps_past_the_term_range).
+work_spawned(w_agg_body_strat, f_min_max_strat_strata_demands_the_recursion_its_body_form_refuses).
+work_spawned(w_agg_body_strat, f_body_aggregate_variables_are_bound_before_it_or_only_by_it).
+work_spawned(w_agg_body_strat, f_why_is_proved_through_an_explain_bridge).
+work_spawned(w_agg_body_strat, f_one_engine_meant_ts_only).
+work_spawned(w_agg_body_strat, f_safety_and_policy_changed_the_kernel_hash).
+work_spawned(w_agg_body_strat, f_aggregates_over_live_kernel_relations_are_refused).
+work_spawned(w_agg_body_strat, f_the_rust_stock_evaluator_read_its_table_before_deriving_it).
+work_spawned(w_agg_body_strat, f_the_first_aggregates_are_proved_by_thirty_worlds).
+work_needs(w_agg_body_strat, w_agg_baseline).
+work_needs(w_agg_body_strat, w_agg_cell_store).
+claim(queued, agg, count, none, syntax,    w_agg_body_strat).
+claim(queued, agg, count, none, reflect,   w_agg_body_strat).
+claim(queued, agg, count, none, strata,    w_agg_body_strat).
+claim(queued, agg, count, none, safety,    w_agg_body_strat).
+claim(queued, agg, count, none, eval_rust, w_agg_body_strat).
+claim(queued, agg, count, none, witness,   w_agg_body_strat).
+claim(queued, agg, count, none, why,       w_agg_body_strat).
+claim(queued, agg, sum, none, syntax,    w_agg_body_strat).
+claim(queued, agg, sum, none, reflect,   w_agg_body_strat).
+claim(queued, agg, sum, none, strata,    w_agg_body_strat).
+claim(queued, agg, sum, none, safety,    w_agg_body_strat).
+claim(queued, agg, sum, none, eval_rust, w_agg_body_strat).
+claim(queued, agg, sum, none, witness,   w_agg_body_strat).
+claim(queued, agg, sum, none, why,       w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, syntax,    w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, reflect,   w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, strata,    w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, safety,    w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, eval_rust, w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, witness,   w_agg_body_strat).
+claim(queued, agg, min_max_strat, none, why,       w_agg_body_strat).
+claim(queued, agg, empty_group, none, strata,    w_agg_body_strat).
+claim(queued, agg, empty_group, none, safety,    w_agg_body_strat).
+claim(queued, agg, empty_group, none, eval_rust, w_agg_body_strat).
+claim(queued, agg, empty_group, none, witness,   w_agg_body_strat).
+claim(queued, agg, empty_group, none, why,       w_agg_body_strat).
+
+-- CLOSED 2026-09-29, each cell by the world facts/checks.rofl binds to it;
+-- every world is shown red under a planted engine fault by
+-- scripts/agg_breaks.ts (f_the_first_aggregates_are_proved_by_thirty_worlds).
+handled(agg, cell, reflect, "agg_cell_reflect").
+handled(agg, cell, eval_rust, "agg_cell_eval").
+handled(agg, cell, witness, "agg_cell_witness").
+handled(agg, cell, why, "agg_cell_why").
+handled(agg, count, syntax, "agg_count_syntax").
+handled(agg, count, reflect, "agg_count_reflect").
+handled(agg, count, strata, "agg_count_strata").
+handled(agg, count, safety, "agg_count_safety").
+handled(agg, count, eval_rust, "agg_count_eval").
+handled(agg, count, witness, "agg_count_witness").
+handled(agg, count, why, "agg_count_why").
+handled(agg, sum, syntax, "agg_sum_syntax").
+handled(agg, sum, reflect, "agg_sum_reflect").
+handled(agg, sum, strata, "agg_sum_strata").
+handled(agg, sum, safety, "agg_sum_safety").
+handled(agg, sum, eval_rust, "agg_sum_eval").
+handled(agg, sum, witness, "agg_sum_witness").
+handled(agg, sum, why, "agg_sum_why").
+handled(agg, min_max_strat, syntax, "agg_minmax_syntax").
+handled(agg, min_max_strat, reflect, "agg_minmax_reflect").
+handled(agg, min_max_strat, strata, "agg_minmax_strata").
+handled(agg, min_max_strat, safety, "agg_minmax_safety").
+handled(agg, min_max_strat, eval_rust, "agg_minmax_eval").
+handled(agg, min_max_strat, witness, "agg_minmax_witness").
+handled(agg, min_max_strat, why, "agg_minmax_why").
+handled(agg, empty_group, strata, "agg_empty_strata").
+handled(agg, empty_group, safety, "agg_empty_safety").
+handled(agg, empty_group, eval_rust, "agg_empty_eval").
+handled(agg, empty_group, witness, "agg_empty_witness").
+handled(agg, empty_group, why, "agg_empty_why").
+
+work(w_agg_threshold, "at_least(N, X : body), stratified and inside recursion; Quorum witness of the first N canonical members, no Sealed").
+work_state(w_agg_threshold, done).
+work_spawned(w_agg_threshold, f_a_threshold_is_a_monotone_premise_closed_with_its_conclusion).
+work_spawned(w_agg_threshold, f_a_quorum_is_a_lower_bound_so_an_error_drops_a_member).
+work_spawned(w_agg_threshold, f_a_threshold_never_counts_what_an_open_lattice_can_withdraw).
+work_spawned(w_agg_threshold, f_a_proof_world_can_be_masked_by_the_kernels_own_aggregates).
+work_needs(w_agg_threshold, w_agg_body_strat).
+claim(queued, agg, threshold, none, syntax,    w_agg_threshold).
+claim(queued, agg, threshold, none, reflect,   w_agg_threshold).
+claim(queued, agg, threshold, none, strata,    w_agg_threshold).
+claim(queued, agg, threshold, none, safety,    w_agg_threshold).
+claim(queued, agg, threshold, none, eval_rust, w_agg_threshold).
+claim(queued, agg, threshold, none, witness,   w_agg_threshold).
+claim(queued, agg, threshold, none, why,       w_agg_threshold).
+
+-- CLOSED 2026-09-29, each cell by the world facts/checks.rofl binds to it;
+-- every world is shown red under a planted engine fault by
+-- scripts/agg_breaks.ts (`thr_*`; f_a_threshold_is_a_monotone_premise_closed_with_its_conclusion).
+handled(agg, threshold, syntax, "agg_threshold_syntax").
+handled(agg, threshold, reflect, "agg_threshold_reflect").
+handled(agg, threshold, strata, "agg_threshold_strata").
+handled(agg, threshold, safety, "agg_threshold_safety").
+handled(agg, threshold, eval_rust, "agg_threshold_eval").
+handled(agg, threshold, witness, "agg_threshold_witness").
+handled(agg, threshold, why, "agg_threshold_why").
+
+work(w_agg_order_lattice, "the relation declaration `lattice p(..., min D)`; recursive min, max, or, and; the recursion gate reads the algebra flag; the cross-kind checks in safety.rofl (a consumer of a recursive cell monotone in it, a non-monotone read only from a higher stratum, one algebra per predicate: a body sum and a lattice min on one predicate refused) on the cell row; Best witness, no self-support on zero-weight cycles").
+work_state(w_agg_order_lattice, done).
+work_spawned(w_agg_order_lattice, f_a_lattice_cell_is_its_fact).
+work_spawned(w_agg_order_lattice, f_monotone_in_the_value_is_judged_per_rule_by_safety).
+work_spawned(w_agg_order_lattice, f_a_lattice_hole_is_applied_when_the_lattice_closes).
+work_spawned(w_agg_order_lattice, f_the_stock_evaluator_cannot_rank_a_read_from_outside_a_lattice).
+work_spawned(w_agg_order_lattice, f_an_unknown_value_reaches_what_reads_it).
+work_spawned(w_agg_order_lattice, f_a_wall_left_lattice_values_as_if_final).
+work_spawned(w_agg_order_lattice, f_a_hole_stopped_at_the_close_of_its_lattice).
+work_spawned(w_agg_order_lattice, f_a_wall_named_cells_that_improved_through_one_another).
+work_spawned(w_agg_order_lattice, f_a_negation_of_what_a_hole_left_out_succeeds).
+work_needs(w_agg_order_lattice, w_agg_baseline).
+work_needs(w_agg_order_lattice, w_agg_cell_store).
+claim(queued, agg, cell, none, strata, w_agg_order_lattice).
+claim(queued, agg, cell, none, safety, w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, syntax,    w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, reflect,   w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, strata,    w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, safety,    w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, eval_rust, w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, witness,   w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, why,       w_agg_order_lattice).
+
+-- CLOSED 2026-09-29, each cell by the world facts/checks.rofl binds to it;
+-- every world is shown red under a planted engine fault by
+-- scripts/agg_breaks.ts (f_a_lattice_cell_is_its_fact).
+handled(agg, cell, strata, "agg_cell_strata").
+handled(agg, cell, safety, "agg_cell_safety").
+handled(agg, order_lattice, syntax, "agg_lattice_syntax").
+handled(agg, order_lattice, reflect, "agg_lattice_reflect").
+handled(agg, order_lattice, strata, "agg_lattice_strata").
+handled(agg, order_lattice, safety, "agg_lattice_safety").
+handled(agg, order_lattice, eval_rust, "agg_lattice_eval").
+handled(agg, order_lattice, witness, "agg_lattice_witness").
+handled(agg, order_lattice, why, "agg_lattice_why").
+-- REOPENED 2026-09-29 by the independent verifier, eval_rust and why, and
+-- closed again (f_an_unknown_value_reaches_what_reads_it,
+-- f_a_wall_left_lattice_values_as_if_final): what a hole reaches is a hole,
+-- order-independently, and whynot names the path; any wall holes every open
+-- lattice, and a cell on an improving cycle is named. The wall stops the
+-- rules of its own world, so two worlds more prove eval_rust by the rows
+-- their cut state must hold.
+handled(agg, order_lattice, eval_rust, "agg_lattice_wall").
+handled(agg, order_lattice, eval_rust, "agg_lattice_space").
+-- REOPENED 2026-09-29 by review of that close, eval_rust and why, and closed
+-- again (f_a_hole_stopped_at_the_close_of_its_lattice,
+-- f_a_wall_named_cells_that_improved_through_one_another): a hole reaches
+-- the readers outside the recursion (a lattice above, a negation, a body
+-- aggregate, a threshold), and a wall names a cell only when a value of it
+-- came back through its own. The same worlds, widened; six breaks more.
+
+work(w_agg_join_lattice, "`lattice p(X, union S)`: set union, interval hull, bitset or; Cover witness, canonical and irredundant").
+work_state(w_agg_join_lattice, done).
+work_spawned(w_agg_join_lattice, f_a_join_value_is_a_canonical_term_the_join_builds).
+work_spawned(w_agg_join_lattice, f_a_join_contribution_is_a_fact_of_its_own).
+work_spawned(w_agg_join_lattice, f_a_cover_is_taken_lowest_first_and_ranked_by_height).
+work_spawned(w_agg_join_lattice, f_a_join_grows_by_what_it_is_given).
+work_spawned(w_agg_join_lattice, f_the_mode_table_is_in_every_world).
+work_spawned(w_agg_join_lattice, f_a_join_set_history_is_cubic).
+work_spawned(w_agg_join_lattice, f_a_planted_join_fault_was_caught_by_the_monotonicity_check).
+work_spawned(w_agg_join_lattice, f_a_set_is_one_spelling_wherever_it_is_written).
+work_needs(w_agg_join_lattice, w_agg_order_lattice).
+claim(queued, agg, join_lattice, none, syntax,    w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, reflect,   w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, strata,    w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, safety,    w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, eval_rust, w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, witness,   w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, why,       w_agg_join_lattice).
+-- the policy of a kind is proved with the kind: a join lattice under
+-- well-founded semantics, and one across a tick, are this item's to refuse
+-- or build (f_a_kind_not_built_owes_its_wfs_and_ticks_to_the_item_that_builds_it)
+claim(queued, agg, join_lattice, none, wfs,       w_agg_join_lattice).
+claim(queued, agg, join_lattice, none, ticks,     w_agg_join_lattice).
+work_needs(w_agg_join_lattice, w_agg_wfs_ticks).
+
+-- CLOSED 2026-09-30, each cell by the worlds facts/checks.rofl binds to it,
+-- each red under planted faults of scripts/agg_breaks.ts (`join_*`, and the
+-- order lattice's faults the join shares; docs/aggregates.md, "The join
+-- lattice, as built")
+handled(agg, join_lattice, syntax, "agg_join_syntax").
+handled(agg, join_lattice, reflect, "agg_join_reflect").
+handled(agg, join_lattice, strata, "agg_join_strata").
+handled(agg, join_lattice, safety, "agg_join_safety").
+handled(agg, join_lattice, eval_rust, "agg_join_eval").
+handled(agg, join_lattice, witness, "agg_join_witness").
+handled(agg, join_lattice, why, "agg_join_why").
+handled(agg, join_lattice, wfs, "agg_join_wfs").
+handled(agg, join_lattice, ticks, "agg_join_ticks").
+handled(agg, join_lattice, holes, "agg_join_holes").
+handled(agg, join_lattice, holes, "agg_join_budget").
+handled(agg, join_lattice, holes, "agg_join_span_budget").
+handled(agg, join_lattice, shrug, "agg_join_shrug").
+handled(agg, join_lattice, shrug, "agg_join_shrug_wall").
+
+work(w_agg_widening, "a declared widening for an infinite-height join, forced after N improvements; safety refuses the infinite lattice without one; Widened witness; the marker is a hole").
+work_state(w_agg_widening, done).
+work_spawned(w_agg_widening, f_a_widened_value_is_an_enclosure_and_a_shrug).
+work_spawned(w_agg_widening, f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take).
+work_spawned(w_agg_widening, f_the_loop_counter_is_answered_by_an_enclosure_not_a_value).
+work_spawned(w_agg_widening, f_a_fault_on_the_replacing_value_is_a_hole_not_a_defect).
+work_spawned(w_agg_widening, f_one_cell_one_reason_a_fault_outranks_a_widening).
+work_spawned(w_agg_widening, f_widening_counts_the_back_edges_only).
+work_needs(w_agg_widening, w_agg_join_lattice).
+claim(queued, agg, widening, none, syntax,    w_agg_widening).
+claim(queued, agg, widening, none, reflect,   w_agg_widening).
+claim(queued, agg, widening, none, strata,    w_agg_widening).
+claim(queued, agg, widening, none, safety,    w_agg_widening).
+claim(queued, agg, widening, none, eval_rust, w_agg_widening).
+claim(queued, agg, widening, none, witness,   w_agg_widening).
+claim(queued, agg, widening, none, why,       w_agg_widening).
+claim(queued, agg, widening, none, holes,     w_agg_widening).
+claim(queued, agg, widening, none, wfs,       w_agg_widening).
+claim(queued, agg, widening, none, ticks,     w_agg_widening).
+-- CLOSED 2026-09-30, each cell by the worlds facts/checks.rofl binds to it,
+-- each red under planted faults of scripts/agg_breaks.ts (`widen_*`, `iv*`,
+-- `ring1_widen_unread`, `wfs_admits_lattice`; docs/aggregates.md,
+-- "Widening, as built"). Its holes and shrug cells, claimed below with the
+-- kinds not built, are closed here too.
+handled(agg, widening, syntax, "agg_widen_syntax").
+handled(agg, widening, reflect, "agg_widen_reflect").
+handled(agg, widening, strata, "agg_widen_strata").
+handled(agg, widening, safety, "agg_widen_safety").
+handled(agg, widening, eval_rust, "agg_widen_eval").
+handled(agg, widening, witness, "agg_widen_witness").
+handled(agg, widening, why, "agg_widen_why").
+handled(agg, widening, wfs, "agg_widen_wfs").
+handled(agg, widening, ticks, "agg_widen_ticks").
+handled(agg, widening, holes, "agg_widen_holes").
+handled(agg, widening, holes, "agg_widen_budget").
+handled(agg, widening, shrug, "agg_widen_shrug").
+
+work(w_agg_tags, "semiring tags move into the kernel: the cell keyed by the whole head, ⊗ through the body; an idempotent ⊕ (boolean, tropical) may recurse, the counting one is stratified and refused inside recursion; the demo is a tagged world equal to the host fold on the same store").
+work_state(w_agg_tags, done).
+work_needs(w_agg_tags, w_agg_order_lattice).
+work_needs(w_agg_tags, w_agg_body_strat).
+claim(queued, agg, tag_idempotent, none, syntax,    w_agg_tags).
+claim(queued, agg, tag_idempotent, none, reflect,   w_agg_tags).
+claim(queued, agg, tag_idempotent, none, strata,    w_agg_tags).
+claim(queued, agg, tag_idempotent, none, safety,    w_agg_tags).
+claim(queued, agg, tag_idempotent, none, eval_rust, w_agg_tags).
+claim(queued, agg, tag_idempotent, none, witness,   w_agg_tags).
+claim(queued, agg, tag_idempotent, none, why,       w_agg_tags).
+claim(queued, agg, tag_idempotent, none, demo,      w_agg_tags).
+claim(queued, agg, tag_counting, none, syntax,    w_agg_tags).
+claim(queued, agg, tag_counting, none, reflect,   w_agg_tags).
+claim(queued, agg, tag_counting, none, strata,    w_agg_tags).
+claim(queued, agg, tag_counting, none, safety,    w_agg_tags).
+claim(queued, agg, tag_counting, none, eval_rust, w_agg_tags).
+claim(queued, agg, tag_counting, none, witness,   w_agg_tags).
+claim(queued, agg, tag_counting, none, why,       w_agg_tags).
+claim(queued, agg, tag_counting, none, demo,      w_agg_tags).
+claim(queued, agg, tag_idempotent, none, wfs,   w_agg_tags).
+claim(queued, agg, tag_idempotent, none, ticks, w_agg_tags).
+claim(queued, agg, tag_counting, none, wfs,     w_agg_tags).
+claim(queued, agg, tag_counting, none, ticks,   w_agg_tags).
+work_needs(w_agg_tags, w_agg_wfs_ticks).
+work_spawned(w_agg_tags, f_a_semiring_tag_runs_as_the_cell_its_algebra_already_is).
+work_spawned(w_agg_tags, f_viterbi_in_millionths_rounds_down_and_associates_to_a_unit).
+work_spawned(w_agg_tags, f_a_weight_that_reads_a_multiplied_tag_counts_it_twice).
+work_spawned(w_agg_tags, f_a_counting_tag_fault_holes_every_key_of_the_tag).
+work_spawned(w_agg_tags, f_the_kernel_tags_are_the_host_fold).
+-- CLOSED 2026-09-30, each cell by the worlds facts/checks.rofl binds to it,
+-- each red under planted faults of scripts/agg_breaks.ts (`tag_*`, `count_*`,
+-- `tropical_max`, `viterbi_rounds_up`, `trust_max`, `wfs_admits_tag`,
+-- `ring1_tag_unread`, `strata_counting_unranked`, `ts_tag_admitted`, and the
+-- lattice's faults the idempotent tags share; docs/aggregates.md, "Tags, as
+-- built"). The 74 831-fact tropical case is agg_tag_bounded.
+handled(agg, tag_idempotent, syntax, "agg_tag_syntax").
+handled(agg, tag_idempotent, syntax, "agg_tag_ts").
+handled(agg, tag_idempotent, reflect, "agg_tag_reflect").
+handled(agg, tag_idempotent, strata, "agg_tag_strata").
+handled(agg, tag_idempotent, safety, "agg_tag_safety").
+handled(agg, tag_idempotent, eval_rust, "agg_tag_eval").
+handled(agg, tag_idempotent, eval_rust, "agg_tag_bounded").
+handled(agg, tag_idempotent, witness, "agg_tag_witness").
+handled(agg, tag_idempotent, why, "agg_tag_why").
+handled(agg, tag_idempotent, demo, "agg_tag_demo").
+handled(agg, tag_idempotent, wfs, "agg_tag_wfs").
+handled(agg, tag_idempotent, ticks, "agg_tag_ticks").
+handled(agg, tag_idempotent, holes, "agg_tag_holes").
+handled(agg, tag_idempotent, holes, "agg_tag_budget").
+handled(agg, tag_idempotent, shrug, "agg_tag_shrug").
+handled(agg, tag_idempotent, shrug, "agg_tag_shrug_wall").
+handled(agg, tag_counting, syntax, "agg_tag_syntax").
+handled(agg, tag_counting, syntax, "agg_tag_ts").
+handled(agg, tag_counting, reflect, "agg_tag_reflect").
+handled(agg, tag_counting, strata, "agg_tagc_strata").
+handled(agg, tag_counting, strata, "agg_tagc_strata_stock").
+handled(agg, tag_counting, safety, "agg_tagc_safety").
+handled(agg, tag_counting, eval_rust, "agg_tagc_eval").
+handled(agg, tag_counting, witness, "agg_tagc_witness").
+handled(agg, tag_counting, why, "agg_tagc_why").
+handled(agg, tag_counting, demo, "agg_tag_demo").
+handled(agg, tag_counting, wfs, "agg_tag_wfs").
+handled(agg, tag_counting, ticks, "agg_tagc_ticks").
+handled(agg, tag_counting, holes, "agg_tagc_holes").
+handled(agg, tag_counting, holes, "agg_tagc_budget").
+handled(agg, tag_counting, shrug, "agg_tagc_shrug").
+
+work(w_agg_holistic, "quantile, median, rank: stratified, dedup, the group recomputed; Group witness").
+work_state(w_agg_holistic, done).
+work_spawned(w_agg_holistic, f_a_holistic_value_is_read_from_the_sorted_group).
+work_spawned(w_agg_holistic, f_an_aggregate_read_what_a_plain_hole_left_out).
+work_spawned(w_agg_holistic, f_a_rank_per_member_stored_its_group_per_subject).
+work_needs(w_agg_holistic, w_agg_body_strat).
+claim(queued, agg, holistic, none, syntax,    w_agg_holistic).
+claim(queued, agg, holistic, none, reflect,   w_agg_holistic).
+claim(queued, agg, holistic, none, strata,    w_agg_holistic).
+claim(queued, agg, holistic, none, safety,    w_agg_holistic).
+claim(queued, agg, holistic, none, eval_rust, w_agg_holistic).
+claim(queued, agg, holistic, none, witness,   w_agg_holistic).
+claim(queued, agg, holistic, none, why,       w_agg_holistic).
+
+-- CLOSED 2026-09-29, each cell by the world facts/checks.rofl binds to it;
+-- every world is shown red under a planted engine fault by
+-- scripts/agg_breaks.ts (f_a_holistic_value_is_read_from_the_sorted_group).
+handled(agg, holistic, syntax, "agg_holistic_syntax").
+handled(agg, holistic, reflect, "agg_holistic_reflect").
+handled(agg, holistic, strata, "agg_holistic_strata").
+handled(agg, holistic, safety, "agg_holistic_safety").
+handled(agg, holistic, eval_rust, "agg_holistic_eval").
+handled(agg, holistic, witness, "agg_holistic_witness").
+handled(agg, holistic, why, "agg_holistic_why").
+
+work(w_agg_subsumption, "subsumption rules `p(..D1) <= p(..D2) :- D2 < D1.`: antichain cells for partial orders without a join; Antichain witness; a Pareto-front demo of its own").
+work_state(w_agg_subsumption, done).
+work_needs(w_agg_subsumption, w_agg_order_lattice).
+claim(queued, agg, subsumption, none, syntax,    w_agg_subsumption).
+claim(queued, agg, subsumption, none, reflect,   w_agg_subsumption).
+claim(queued, agg, subsumption, none, strata,    w_agg_subsumption).
+claim(queued, agg, subsumption, none, safety,    w_agg_subsumption).
+claim(queued, agg, subsumption, none, eval_rust, w_agg_subsumption).
+claim(queued, agg, subsumption, none, witness,   w_agg_subsumption).
+claim(queued, agg, subsumption, none, why,       w_agg_subsumption).
+claim(queued, agg, subsumption, none, demo,      w_agg_subsumption).
+claim(queued, agg, subsumption, none, wfs,       w_agg_subsumption).
+claim(queued, agg, subsumption, none, ticks,     w_agg_subsumption).
+work_needs(w_agg_subsumption, w_agg_wfs_ticks).
+work_spawned(w_agg_subsumption, f_a_dominance_is_a_cell_whose_order_is_rofl).
+work_spawned(w_agg_subsumption, f_the_front_is_checked_against_every_value_given).
+work_spawned(w_agg_subsumption, f_what_a_dominated_value_concluded_is_withdrawn).
+work_spawned(w_agg_subsumption, f_a_program_monotone_in_its_own_order_is_checked_on_its_data).
+work_spawned(w_agg_subsumption, f_a_conflict_is_a_dominance_that_is_no_order).
+work_spawned(w_agg_subsumption, f_a_clause_type_with_two_heads_lost_one_at_a_book_resolution).
+
+-- CLOSED 2026-09-30, each cell by the worlds facts/checks.rofl binds to it,
+-- each red under planted faults of scripts/agg_breaks.ts (`dominance_*`,
+-- `wfs_admits_subsumption`, `shrug_conflict_parties_off`,
+-- `strata_dominance_unranked`, `ring1_dominance_unread`,
+-- `ts_dominance_admitted`; docs/aggregates.md, "Subsumption, as built").
+-- Its holes and shrug cells, claimed below with the kinds not built, are
+-- closed here too.
+handled(agg, subsumption, syntax, "agg_sub_syntax").
+handled(agg, subsumption, syntax, "agg_sub_ts").
+handled(agg, subsumption, reflect, "agg_sub_reflect").
+handled(agg, subsumption, strata, "agg_sub_strata").
+handled(agg, subsumption, strata, "agg_sub_strata_stock").
+handled(agg, subsumption, safety, "agg_sub_safety").
+handled(agg, subsumption, eval_rust, "agg_sub_eval").
+handled(agg, subsumption, witness, "agg_sub_witness").
+handled(agg, subsumption, why, "agg_sub_why").
+handled(agg, subsumption, demo, "agg_sub_demo").
+handled(agg, subsumption, wfs, "agg_sub_wfs").
+handled(agg, subsumption, ticks, "agg_sub_ticks").
+handled(agg, subsumption, holes, "agg_sub_holes").
+handled(agg, subsumption, holes, "agg_sub_budget").
+handled(agg, subsumption, shrug, "agg_sub_shrug").
+handled(agg, subsumption, shrug, "agg_sub_shrug_wall").
+-- the review of w_agg_subsumption (2026-09-30) found five proofs wanting:
+-- eval_rust's (a monotone consumer an improvement reached back through a
+-- plain relation was refused, where the min lattice answers), ticks' (a
+-- conclusion staged @next from a fact withdrawn later in the tick stayed
+-- staged; the same held for a lattice's hole, so order_lattice's ticks proof
+-- was wanting too), holes' (a value whose only comparison, with itself,
+-- faults was proven by no world), why's (whynot read a faulting or unknown
+-- comparison as no) and safety's (the door read a dominance body in no
+-- order). Each is closed again only by the strengthened agg_sub_eval,
+-- agg_sub_ticks, agg_lattice_ticks, agg_sub_holes, agg_sub_why and
+-- agg_sub_safety, red under `dominance_history_unfounded`,
+-- `staged_keeps_withdrawn`, `dominance_self_fault_ignored`,
+-- `dominance_whynot_unasked` and `dominance_body_unordered`.
+work_spawned(w_agg_subsumption, f_a_monotone_consumer_an_improvement_reached_back_through_was_refused).
+work_spawned(w_agg_subsumption, f_a_staged_conclusion_outlived_what_a_lattice_withdrew).
+work_spawned(w_agg_subsumption, f_the_dominance_door_read_its_body_in_no_order).
+work_spawned(w_agg_subsumption, f_whynot_asked_less_than_the_close_would).
+work_spawned(w_agg_subsumption, f_a_why_scanned_the_relation_at_every_front).
+
+-- the columns every kind owes, each carried by one item across the rows
+work(w_agg_ts, "the TS engine, best-effort for small scale: every kind evaluates and canonical_state agrees with Rust").
+work_state(w_agg_ts, done).
+work_sweeps(w_agg_ts, eval_ts).
+work_sweeps(w_agg_ts, parity).
+work_needs(w_agg_ts, w_agg_body_strat).
+work_needs(w_agg_ts, w_agg_threshold).
+work_needs(w_agg_ts, w_agg_order_lattice).
+work_needs(w_agg_ts, w_agg_join_lattice).
+work_needs(w_agg_ts, w_agg_widening).
+work_needs(w_agg_ts, w_agg_tags).
+work_needs(w_agg_ts, w_agg_holistic).
+work_needs(w_agg_ts, w_agg_subsumption).
+work_needs(w_agg_ts, w_agg_phrase).
+work_spawned(w_agg_ts, f_the_typescript_aggregate_engine_is_the_rust_one_transliterated).
+work_spawned(w_agg_ts, f_a_wall_leaves_the_batch_it_fell_in_standing).
+work_spawned(w_agg_ts, f_compact_wits_reverses_a_firing_list).
+work_spawned(w_agg_ts, f_the_parsers_refused_in_different_words).
+work_spawned(w_agg_ts, f_a_switch_break_was_judged_by_both_engines).
+
+-- CLOSED 2026-09-30 (w_agg_ts): the TypeScript engine evaluates every kind
+-- (src/aggeval.ts, a transliteration of rust/rofl/src/engine.rs) and its
+-- canonical state is the Rust engine's byte for byte on every aggregate proof
+-- world, the one_engine restriction lifted (`together`). eval_ts by the
+-- kind's eval world, parity by its why world, each red under a `ts_*` fault
+-- of scripts/agg_breaks.ts (docs/aggregates.md, "The TypeScript engine, as built").
+handled(agg, cell, eval_ts, "agg_cell_eval").
+handled(agg, cell, parity, "agg_cell_why").
+handled(agg, count, eval_ts, "agg_count_eval").
+handled(agg, count, parity, "agg_count_why").
+handled(agg, sum, eval_ts, "agg_sum_eval").
+handled(agg, sum, parity, "agg_sum_why").
+handled(agg, min_max_strat, eval_ts, "agg_minmax_eval").
+handled(agg, min_max_strat, parity, "agg_minmax_why").
+handled(agg, threshold, eval_ts, "agg_threshold_eval").
+handled(agg, threshold, parity, "agg_threshold_why").
+handled(agg, order_lattice, eval_ts, "agg_lattice_eval").
+handled(agg, order_lattice, parity, "agg_lattice_why").
+handled(agg, join_lattice, eval_ts, "agg_join_eval").
+handled(agg, join_lattice, parity, "agg_join_why").
+handled(agg, widening, eval_ts, "agg_widen_eval").
+handled(agg, widening, parity, "agg_widen_why").
+handled(agg, tag_idempotent, eval_ts, "agg_tag_eval").
+handled(agg, tag_idempotent, parity, "agg_tag_why").
+handled(agg, tag_counting, eval_ts, "agg_tagc_eval").
+handled(agg, tag_counting, parity, "agg_tagc_why").
+handled(agg, holistic, eval_ts, "agg_holistic_eval").
+handled(agg, holistic, parity, "agg_holistic_why").
+handled(agg, subsumption, eval_ts, "agg_sub_eval").
+handled(agg, subsumption, parity, "agg_sub_why").
+handled(agg, sugar, eval_ts, "agg_sugar_eval").
+handled(agg, sugar, parity, "agg_sugar_why").
+handled(agg, empty_group, eval_ts, "agg_empty_eval").
+handled(agg, empty_group, parity, "agg_empty_why").
+
+work(w_agg_phrase, "the sentence form: every kind read and written, and the sugar lowered onto the core in Rust: avg as sum over count with a declared rounding and no row for an empty group, every as count-equality over a bound domain, at most / exactly N refused inside recursion by safety").
+work_state(w_agg_phrase, done).
+work_sweeps(w_agg_phrase, phrase).
+claim(queued, agg, sugar, none, why,       w_agg_phrase).
+claim(queued, agg, sugar, none, eval_rust, w_agg_phrase).
+claim(queued, agg, sugar, none, safety,    w_agg_phrase).
+work_needs(w_agg_phrase, w_agg_body_strat).
+work_needs(w_agg_phrase, w_agg_threshold).
+work_spawned(w_agg_phrase, f_the_sugar_is_its_lowering_with_the_rounding_stated).
+work_spawned(w_agg_phrase, f_the_sugar_shared_what_it_takes_between_its_two_counts).
+work_spawned(w_agg_phrase, f_a_declaration_merged_with_its_neighbour_read_as_nothing).
+work_spawned(w_agg_phrase, f_a_dominance_named_its_dominating_values_twice).
+work_spawned(w_agg_phrase, f_an_unread_sentence_vanished_from_its_world).
+work_spawned(w_agg_phrase, f_the_shrug_sentence_was_written_and_never_read).
+work_spawned(w_agg_phrase, f_the_sugar_counted_the_whole_group_for_a_member_bound_before).
+work_spawned(w_agg_phrase, f_the_sugar_shared_the_variables_its_body_joins_through).
+work_spawned(w_agg_phrase, f_exactly_a_number_nothing_named_held_of_every_group).
+work_spawned(w_agg_phrase, f_at_most_left_out_the_groups_it_never_counted).
+work_spawned(w_agg_phrase, f_a_reading_outlived_the_vocabulary_it_was_read_in).
+work_spawned(w_agg_phrase, f_every_counted_members_where_its_sentence_says_rows).
+work_spawned(w_agg_phrase, f_two_aggregates_with_one_letter_were_one_variable).
+work_spawned(w_agg_phrase, f_a_self_equality_was_read_back_as_nothing).
+work_spawned(w_agg_phrase, f_a_bare_capital_a_in_a_conclusion_was_read_as_an_article).
+work_spawned(w_agg_phrase, f_a_capital_a_before_a_word_was_still_read_as_an_article).
+work_spawned(w_agg_phrase, f_the_round_trip_count_saw_an_aggregate_as_its_operator_alone).
+
+-- REOPENED and CLOSED again 2026-09-30: sugar phrase and eval_rust, after the second verification found a capital A
+-- before a word, or before words and a capital, still read as an article, the conclusion an argument short and an
+-- average's result dropped (f_a_capital_a_before_a_word_was_still_read_as_an_article); agg_sugar_phrase now reads
+-- A as a variable at the end, before a word and before a word and a capital (and agg_sugar_eval an average named A
+-- before a word); and every phrase world is read once more against its source and must count every rule, fact and
+-- declaration as come back, an aggregate compared whole (f_the_round_trip_count_saw_an_aggregate_as_its_operator_alone).
+-- REOPENED and CLOSED again 2026-09-30: sugar eval_rust and phrase, after verification found every counting
+-- members where its sentence says rows (f_every_counted_members_where_its_sentence_says_rows); agg_sugar_eval and
+-- agg_sugar_phrase now hold a failing row beside a passing one of the same member.
+-- CLOSED 2026-09-30, each cell by the world facts/checks.rofl binds to it, each
+-- red under planted faults of scripts/agg_breaks.ts (`phrase_*` in rofl-render,
+-- `reader_*` in scripts/read_md.ts, `div_floor` in the engine; docs/aggregates.md,
+-- "The sentence form, as built"). The phrase column is swept: one world per row
+-- reads the kind's rules from sentences and from rofl, writes both as sentences
+-- and reads them back, loses and gains nothing, and answers as the kind does.
+handled(agg, count, phrase, "agg_count_phrase").
+handled(agg, sum, phrase, "agg_sum_phrase").
+handled(agg, min_max_strat, phrase, "agg_minmax_phrase").
+handled(agg, holistic, phrase, "agg_holistic_phrase").
+handled(agg, empty_group, phrase, "agg_empty_phrase").
+handled(agg, threshold, phrase, "agg_threshold_phrase").
+handled(agg, order_lattice, phrase, "agg_lattice_phrase").
+handled(agg, join_lattice, phrase, "agg_join_phrase").
+handled(agg, widening, phrase, "agg_widen_phrase").
+handled(agg, tag_idempotent, phrase, "agg_tag_phrase").
+handled(agg, tag_counting, phrase, "agg_tagc_phrase").
+handled(agg, subsumption, phrase, "agg_sub_phrase").
+handled(agg, sugar, phrase, "agg_sugar_phrase").
+handled(agg, sugar, phrase, "agg_sugar_shrug").
+handled(agg, sugar, eval_rust, "agg_sugar_eval").
+handled(agg, sugar, safety, "agg_sugar_safety").
+handled(agg, sugar, why, "agg_sugar_why").
+handled(agg, sugar, holes, "agg_sugar_holes").
+handled(agg, sugar, shrug, "agg_sugar_shrug").
+
+work(w_agg_wfs_ticks, "well-founded mode refuses aggregates, with one diagnostic in both engines; the composition that reads well-founded answers from below (a well-founded world's true and undefined rows fed as EDB to a stratified world that aggregates them), which the minimax demo uses; @next staging of a cell value; retain_ticks keeps the provenance a live cell cites").
+work_state(w_agg_wfs_ticks, done).
+work_sweeps(w_agg_wfs_ticks, wfs).
+work_sweeps(w_agg_wfs_ticks, ticks).
+work_needs(w_agg_wfs_ticks, w_agg_body_strat).
+work_spawned(w_agg_wfs_ticks, f_no_cell_under_the_alternating_fixpoint_the_well_founded_world_is_read_from_below).
+work_spawned(w_agg_wfs_ticks, f_a_cell_carried_across_a_tick_is_read_as_of_its_tick).
+work_spawned(w_agg_wfs_ticks, f_a_lattice_value_crosses_a_tick_as_a_contribution).
+work_spawned(w_agg_wfs_ticks, f_a_kind_not_built_owes_its_wfs_and_ticks_to_the_item_that_builds_it).
+work_spawned(w_agg_wfs_ticks, f_a_plain_staged_firing_is_explained_in_the_tick_it_arrived_in).
+work_spawned(w_agg_wfs_ticks, f_a_hole_at_a_tick_read_as_absent_at_the_next).
+work_spawned(w_agg_wfs_ticks, f_a_fact_staged_again_was_explained_by_its_first_staging).
+work_spawned(w_agg_wfs_ticks, f_the_provenance_a_boundary_keeps_was_walked_per_citing_firing).
+work_spawned(w_agg_wfs_ticks, f_a_proof_alarm_its_data_could_not_raise).
+work_spawned(w_agg_wfs_ticks, f_rofl_load_built_the_world_below_outside_its_walls).
+work_spawned(w_agg_wfs_ticks, f_the_world_below_feeds_every_row_of_a_relation_it_concludes).
+
+-- CLOSED 2026-09-29, each cell by the world facts/checks.rofl binds to it;
+-- every world is shown red under a planted engine fault by
+-- scripts/agg_breaks.ts (`wfs_*`, `below_*`, `carry_*`, `retain_*`, `*_why_present`).
+handled(agg, cell, wfs, "agg_cell_wfs").
+handled(agg, count, wfs, "agg_count_wfs").
+handled(agg, sum, wfs, "agg_sum_wfs").
+handled(agg, min_max_strat, wfs, "agg_minmax_wfs").
+handled(agg, holistic, wfs, "agg_holistic_wfs").
+handled(agg, threshold, wfs, "agg_threshold_wfs").
+handled(agg, empty_group, wfs, "agg_empty_wfs").
+handled(agg, order_lattice, wfs, "agg_lattice_wfs").
+handled(agg, cell, ticks, "agg_cell_ticks").
+handled(agg, count, ticks, "agg_count_ticks").
+handled(agg, sum, ticks, "agg_sum_ticks").
+handled(agg, min_max_strat, ticks, "agg_minmax_ticks").
+handled(agg, holistic, ticks, "agg_holistic_ticks").
+handled(agg, threshold, ticks, "agg_threshold_ticks").
+handled(agg, empty_group, ticks, "agg_empty_ticks").
+handled(agg, order_lattice, ticks, "agg_lattice_ticks").
+
+work(w_agg_overflow_holes, "Int is ±2^60 and ⊕ writes a hole on overflow, in both engines, never a wrapped value; a budget cut is a hole and never a smaller value; what a hole leaves out is not known to be false, to a negation above it as to an aggregate, in both engines and across a tick").
+work_state(w_agg_overflow_holes, done).
+work_sweeps(w_agg_overflow_holes, holes).
+work_proof(w_agg_overflow_holes, "agg_int_range").
+work_proof(w_agg_overflow_holes, "agg_unknown_beside_hole").
+work_needs(w_agg_overflow_holes, w_agg_cell_store).
+work_spawned(w_agg_overflow_holes, f_a_negation_of_what_a_hole_left_out_succeeds).
+work_spawned(w_agg_overflow_holes, f_a_plain_unknown_reached_a_rule_before_it_closed).
+work_spawned(w_agg_overflow_holes, f_the_engines_placed_a_wildcard_negation_apart).
+work_spawned(w_agg_overflow_holes, f_the_space_wall_cut_the_world_without_saying_so).
+work_spawned(w_agg_overflow_holes, f_a_settled_lattice_was_holed_for_the_round_it_shared).
+work_spawned(w_agg_overflow_holes, f_a_budget_cut_seals_no_partial_group).
+work_spawned(w_agg_overflow_holes, f_a_kind_not_built_owes_its_holes_to_the_item_that_builds_it).
+work_spawned(w_agg_overflow_holes, f_a_command_note_stated_numbers_that_drift).
+work_spawned(w_agg_overflow_holes, f_a_new_proof_file_overwrote_an_old_one_of_the_same_name).
+work_spawned(w_agg_overflow_holes, f_the_typescript_integer_range_had_no_proof_world).
+work_spawned(w_agg_overflow_holes, f_unknown_is_read_as_complete_beside_a_hole).
+work_spawned(w_agg_overflow_holes, f_a_negation_of_unknown_was_judged_before_unknown_was_written).
+work_spawned(w_agg_overflow_holes, f_holes_are_wider_than_the_unknown_they_carry).
+work_spawned(w_agg_overflow_holes, f_unknown_beside_a_hole_was_guarded_only_under_well_founded).
+work_spawned(w_agg_overflow_holes, f_a_world_both_engines_answer_dropped_its_evaluator).
+work_spawned(w_agg_overflow_holes, f_the_rust_parser_read_an_expression_as_an_argument).
+-- the holes of a kind not built are the item's that builds it
+-- (f_a_kind_not_built_owes_its_holes_to_the_item_that_builds_it); widening's
+-- was always w_agg_widening's
+claim(queued, agg, join_lattice,   none, holes, w_agg_join_lattice).
+claim(queued, agg, tag_idempotent, none, holes, w_agg_tags).
+-- tag_counting's holes cell: REOPENED 2026-09-30, owned by w_agg_precise_holes
+claim(queued, agg, subsumption,    none, holes, w_agg_subsumption).
+claim(queued, agg, sugar,          none, holes, w_agg_phrase).
+
+-- CLOSED 2026-09-29, each cell by the worlds facts/checks.rofl binds to it:
+-- agg_<kind>_holes, what an overflow, a type error or a builtin's fault
+-- leaves, read by the kind and by a negation above it, and agg_<kind>_budget,
+-- a cut while the kind's input is still being derived; each red under a
+-- planted fault of scripts/agg_breaks.ts (`plain_neg_*`, `plain_reader_unclosed`,
+-- `arith_wraps`, `wrap`, `agg_seal_at_wall`, `lattice_settled_cut`,
+-- `space_uncut_world`; f_a_negation_of_what_a_hole_left_out_succeeds).
+handled(agg, cell, holes, "agg_cell_holes").
+handled(agg, cell, holes, "agg_cell_holes_wfs").
+handled(agg, cell, holes, "agg_cell_holes_ticks").
+handled(agg, cell, holes, "agg_unknown_beside_hole").
+handled(agg, cell, holes, "agg_unknown_beside_hole_strata").
+handled(agg, count, holes, "agg_count_holes").
+handled(agg, count, holes, "agg_count_budget").
+handled(agg, sum, holes, "agg_sum_holes").
+handled(agg, sum, holes, "agg_sum_budget").
+handled(agg, min_max_strat, holes, "agg_minmax_holes").
+handled(agg, min_max_strat, holes, "agg_minmax_budget").
+handled(agg, threshold, holes, "agg_threshold_holes").
+handled(agg, order_lattice, holes, "agg_lattice_holes").
+handled(agg, order_lattice, holes, "agg_lattice_budget").
+handled(agg, holistic, holes, "agg_holistic_holes").
+handled(agg, holistic, holes, "agg_holistic_budget").
+handled(agg, empty_group, holes, "agg_empty_holes").
+handled(agg, empty_group, holes, "agg_empty_budget").
+-- reviewed the same day: a wall closed a lattice a plain hole had not
+-- reached, the carry of unknowns ran past both walls, and the decided
+-- answers' alarms could not see an answer wrongly held unknown; closed
+-- again by the strengthened worlds (expect-row) and these
+handled(agg, order_lattice, holes, "agg_lattice_plain_budget").
+handled(agg, order_lattice, holes, "agg_lattice_plain_space").
+handled(agg, order_lattice, holes, "agg_lattice_carry_cut").
+handled(agg, order_lattice, holes, "agg_lattice_cut_fallback").
+handled(agg, sum, holes, "agg_carry_budget").
+handled(agg, sum, holes, "agg_carry_space").
+handled(agg, cell, holes, "agg_carry_plain_budget").
+handled(agg, cell, holes, "agg_cell_holes_scale").
+
+work(w_agg_shrug, "the answer model: holds | unentailed | shrug(Target, Reason, Meta), one kernel relation that unifies hole, support_withdrawn, the lattice and cell holes, the walls and the well-founded unknown; a closed vocabulary of reasons in shrug.rofl (budget, fault, divergence, paradox, conflict, federation, inherited), one fact to extend; `not` succeeds only on unentailed; what reads a shrug is a shrug inherited from its roots unless decided under every completion; the refusals of unknown beside a hole replaced by propagation; ? lists shrugs, why explains one to its roots, whynot tells a shrug from unentailed; both engines for the kernel, Rust for the aggregates. Owner decision 2026-09-29").
+work_state(w_agg_shrug, done).
+work_needs(w_agg_shrug, w_agg_overflow_holes).
+claim(queued, agg, cell,          none, shrug, w_agg_shrug).
+-- count, sum, min_max_strat, holistic and empty_group's shrug cells were
+-- claimed here; REOPENED 2026-09-30 and owned by w_agg_precise_holes
+claim(queued, agg, threshold,     none, shrug, w_agg_shrug).
+claim(queued, agg, order_lattice, none, shrug, w_agg_shrug).
+-- the kinds not built owe their shrug cells to the item that builds each
+claim(queued, agg, join_lattice,   none, shrug, w_agg_join_lattice).
+claim(queued, agg, widening,       none, shrug, w_agg_widening).
+claim(queued, agg, tag_idempotent, none, shrug, w_agg_tags).
+-- tag_counting's shrug cell: REOPENED 2026-09-30, owned by w_agg_precise_holes
+claim(queued, agg, subsumption,    none, shrug, w_agg_subsumption).
+claim(queued, agg, sugar,          none, shrug, w_agg_phrase).
+work_needs(w_agg_join_lattice, w_agg_shrug).
+work_needs(w_agg_widening, w_agg_shrug).
+work_needs(w_agg_tags, w_agg_shrug).
+work_needs(w_agg_subsumption, w_agg_shrug).
+-- CLOSED 2026-09-30, each cell by the worlds facts/checks.rofl binds to it,
+-- each red under planted faults of scripts/agg_breaks.ts (`shrug_*`,
+-- `ts_shrug_*`, `below_drops_shrugs`; docs/aggregates.md, "Shrugs, as built")
+handled(agg, cell, shrug, "agg_cell_shrug").
+handled(agg, cell, shrug, "agg_cell_shrug_wfs").
+handled(agg, cell, shrug, "agg_cell_shrug_wfs_upper").
+handled(agg, cell, shrug, "agg_cell_shrug_wfs_history").
+handled(agg, cell, shrug, "agg_cell_shrug_ticks").
+handled(agg, cell, shrug, "agg_cell_shrug_strata").
+handled(agg, cell, shrug, "agg_cell_shrug_why").
+handled(agg, count, shrug, "agg_count_shrug").
+handled(agg, sum, shrug, "agg_sum_shrug").
+handled(agg, min_max_strat, shrug, "agg_minmax_shrug").
+handled(agg, threshold, shrug, "agg_threshold_shrug").
+handled(agg, order_lattice, shrug, "agg_lattice_shrug").
+handled(agg, order_lattice, shrug, "agg_lattice_shrug_wall").
+handled(agg, holistic, shrug, "agg_holistic_shrug").
+handled(agg, empty_group, shrug, "agg_empty_shrug").
+-- the completions oracle: every verdict of a threshold against the four
+-- completions of what its holes left out, enumerated by hand
+work_proof(w_agg_shrug, "agg_threshold_shrug").
+work_spawned(w_agg_shrug, f_a_shrug_is_the_third_answer).
+work_spawned(w_agg_shrug, f_a_negation_of_a_shrug_under_well_founded_semantics_is_no_paradox).
+work_spawned(w_agg_shrug, f_a_threshold_under_every_completion_is_decided).
+work_spawned(w_agg_shrug, f_a_threshold_counted_a_member_a_negation_could_not_decide).
+work_spawned(w_agg_shrug, f_rules_that_read_shrug_fire_after_the_rows).
+-- the review of w_agg_shrug (2026-09-30) found four proofs wanting: the cell
+-- row's (a reader withdrawing what it read; a fault from a discarded
+-- over-estimate, now agg_cell_shrug_wfs_history), threshold's (the oracle had
+-- no group without members) and order_lattice's (the divergence meta named
+-- other cycles). Each is closed again only by the strengthened worlds.
+work_spawned(w_agg_shrug, f_a_shrug_reader_withdrew_the_row_it_read).
+work_spawned(w_agg_shrug, f_a_threshold_with_no_possible_member_stayed_a_shrug).
+work_spawned(w_agg_shrug, f_a_fault_met_under_a_discarded_over_estimate_stayed_carried).
+work_spawned(w_agg_shrug, f_a_shrug_meta_named_cycles_it_does_not_rest_on).
+work_spawned(w_agg_shrug, f_the_shrug_rows_were_quadratic_where_they_need_not_be).
+-- the second review (2026-09-30) found two proofs wanting: threshold's (a
+-- group left open named only the unknown that reached it last, and the
+-- firing path only the first a negation read) and the cell row's (a paradox
+-- was never a root; Rust read `q()` as a term no atom is). Both cells are
+-- closed again only by the strengthened agg_threshold_shrug and
+-- agg_cell_shrug_wfs, red under `shrug_thr_cosource_off`,
+-- `shrug_thr_first_root`, `shrug_paradox_root_off`, `shrug_paradox_neg_off`,
+-- `nullary_compound_term` and the `ts_shrug_paradox_*` twins.
+work_spawned(w_agg_shrug, f_a_threshold_named_only_the_unknown_that_reached_it_last).
+work_spawned(w_agg_shrug, f_a_nullary_literal_parsed_as_a_term_in_one_engine).
+work_spawned(w_agg_shrug, f_a_shrug_beside_a_paradox_named_the_fault_alone).
+
+-- PER-KEY PRECISION (w_agg_precise_holes, docs/aggregates.md, "Precise
+-- holes, as built"). A grouped body aggregate or a counting tag whose inner
+-- body could read an unknown held the whole correlation a hole, every key of
+-- the tag withdrawn (f_a_counting_tag_fault_holes_every_key_of_the_tag). The
+-- holes and shrug cells of every kind that reads a plain unknown through a
+-- body aggregate are REOPENED here, their claims moved from w_agg_shrug,
+-- w_agg_tags and the holes sweep, and closed again only by the worlds that
+-- hold each group to what every completion of the unknowns gives it.
+work(w_agg_precise_holes, "per-key precision: what a hole left out reaches exactly the groups of a grouped body aggregate (count, sum, min, max, or, and, median, quantile, rank) and the keys of a counting tag whose value it could change, each a hole on its own cell, decided under every completion where it cannot (a projection held, a value no possible improves on, a sum it does not move, an order statistic neither extreme moves); a group only an unknown could make a cell of its own; a possible whose group is not known the correlation's hole beside the groups sealed; in both engines, with a completions oracle").
+work_state(w_agg_precise_holes, done).
+work_needs(w_agg_precise_holes, w_agg_shrug).
+work_needs(w_agg_precise_holes, w_agg_tags).
+work_needs(w_agg_precise_holes, w_agg_holistic).
+work_needs(w_agg_precise_holes, w_agg_ts).
+claim(queued, agg, count,         none, holes, w_agg_precise_holes).
+claim(queued, agg, sum,           none, holes, w_agg_precise_holes).
+claim(queued, agg, min_max_strat, none, holes, w_agg_precise_holes).
+claim(queued, agg, holistic,      none, holes, w_agg_precise_holes).
+claim(queued, agg, empty_group,   none, holes, w_agg_precise_holes).
+claim(queued, agg, tag_counting,  none, holes, w_agg_precise_holes).
+claim(queued, agg, count,         none, shrug, w_agg_precise_holes).
+claim(queued, agg, sum,           none, shrug, w_agg_precise_holes).
+claim(queued, agg, min_max_strat, none, shrug, w_agg_precise_holes).
+claim(queued, agg, holistic,      none, shrug, w_agg_precise_holes).
+claim(queued, agg, empty_group,   none, shrug, w_agg_precise_holes).
+claim(queued, agg, tag_counting,  none, shrug, w_agg_precise_holes).
+-- CLOSED again 2026-09-30, each cell by agg_precise_holes (a hole on each
+-- group the unknowns could change and on no other, what reads the others
+-- decided) and agg_precise_oracle (every verdict against the 1024
+-- completions of what the holes left out), each red under the planted faults
+-- `agg_reach_*` and their `ts_agg_reach_*` twins of scripts/agg_breaks.ts;
+-- the earlier worlds of these cells hold the same answers, the tag's two
+-- rewritten from every key withdrawn to its own.
+-- REVIEWED 2026-09-30: the sum cells' proof was wanting (a group only a
+-- member of 0 could make was decided absent, unsound: g7 was missing from the
+-- data) and every cell's too for a fault every completion keeps, which was
+-- relabelled withdrawn; a projection two unknowns add named one, and the
+-- conclusion was judged again against the withdrawn value. Fixed in both
+-- engines and closed again on the strengthened worlds (g7 in the oracle; the
+-- fault, alias and roots groups of agg_precise_holes; agg_precise_scale for
+-- the one decision per correlation), red under agg_reach_sum_empty,
+-- agg_reach_fault_relabel, agg_reach_overflow_kept, agg_reach_alias_first,
+-- agg_reach_redecide, agg_reach_unmemo and their ts_ twins.
+handled(agg, count, holes, "agg_precise_holes").
+handled(agg, sum, holes, "agg_precise_holes").
+handled(agg, min_max_strat, holes, "agg_precise_holes").
+handled(agg, holistic, holes, "agg_precise_holes").
+handled(agg, empty_group, holes, "agg_precise_holes").
+handled(agg, tag_counting, holes, "agg_precise_holes").
+handled(agg, count, shrug, "agg_precise_oracle").
+handled(agg, sum, shrug, "agg_precise_oracle").
+handled(agg, min_max_strat, shrug, "agg_precise_oracle").
+handled(agg, holistic, shrug, "agg_precise_oracle").
+handled(agg, empty_group, shrug, "agg_precise_oracle").
+handled(agg, tag_counting, shrug, "agg_precise_oracle").
+work_proof(w_agg_precise_holes, "agg_precise_oracle").
+work_spawned(w_agg_precise_holes, f_a_hole_reaches_the_groups_it_could_change).
+work_spawned(w_agg_precise_holes, f_a_median_a_member_could_join_was_held_open).
+work_spawned(w_agg_precise_holes, f_a_fault_every_completion_keeps_was_withdrawn).
+work_spawned(w_agg_precise_holes, f_a_zero_made_sum_group_was_decided_absent).
+work_spawned(w_agg_precise_holes, f_a_projection_two_unknowns_add_named_one).
+work_spawned(w_agg_precise_holes, f_a_undecided_was_decided_again_at_every_firing).
+
+work(w_agg_incremental_ready, "stable contribution and member ids, algebra flags in the cell record, value-at-use premises, Sealed as its own premise, identity without the value; checked, not built").
+work_state(w_agg_incremental_ready, open).
+work_sweeps(w_agg_incremental_ready, incremental_ready).
+work_needs(w_agg_incremental_ready, w_agg_body_strat).
+work_needs(w_agg_incremental_ready, w_agg_threshold).
+work_needs(w_agg_incremental_ready, w_agg_order_lattice).
+work_needs(w_agg_incremental_ready, w_agg_join_lattice).
+work_needs(w_agg_incremental_ready, w_agg_widening).
+work_needs(w_agg_incremental_ready, w_agg_tags).
+work_needs(w_agg_incremental_ready, w_agg_holistic).
+work_needs(w_agg_incremental_ready, w_agg_subsumption).
+
+work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows").
+work_state(w_agg_retire_workarounds, open).
+work_sweeps(w_agg_retire_workarounds, retire).
+work_needs(w_agg_retire_workarounds, w_agg_body_strat).
+work_needs(w_agg_retire_workarounds, w_agg_threshold).
+work_needs(w_agg_retire_workarounds, w_agg_order_lattice).
+work_needs(w_agg_retire_workarounds, w_agg_tags).
+work_needs(w_agg_retire_workarounds, w_agg_join_lattice).
+work_needs(w_agg_retire_workarounds, w_agg_holistic).
+
+work(w_agg_reconcile_docs, "rewrite every `contradiction_site` it owns against docs/aggregates.md; done only with a work_proof world that fails while any of them still says there is no aggregation").
+work_state(w_agg_reconcile_docs, open).
+work_needs(w_agg_reconcile_docs, w_agg_body_strat).
+
+-- the acceptance demos, one item each, each proving its property by alarms
+work(w_agg_demo_slo, "SLO multi-window burn rate with proof rows, a p99 latency window, and `excise` of the budget").
+work_state(w_agg_demo_slo, open).
+work_needs(w_agg_demo_slo, w_agg_body_strat).
+work_needs(w_agg_demo_slo, w_agg_holistic).
+claim(queued, agg, sum,      none, demo, w_agg_demo_slo).
+claim(queued, agg, holistic, none, demo, w_agg_demo_slo).
+
+work(w_agg_demo_critical_path, "critical path and shortest taint path as recursive min over a lattice relation").
+work_state(w_agg_demo_critical_path, open).
+work_needs(w_agg_demo_critical_path, w_agg_order_lattice).
+claim(queued, agg, order_lattice, none, demo, w_agg_demo_critical_path).
+
+work(w_agg_demo_linter, "the linter as rules: `probably_a_table(Rel) :- N is count(R : concludes(R, Rel)), N >= 5.` replaces the counting-semiring hack in scripts/lint.ts").
+work_state(w_agg_demo_linter, open).
+work_needs(w_agg_demo_linter, w_agg_body_strat).
+claim(queued, agg, count, none, demo, w_agg_demo_linter).
+
+work(w_agg_demo_voting, "voting with pivotality: excise one ballot and the winner moves; a candidate with no votes reads 0 because the candidate is bound from outside").
+work_state(w_agg_demo_voting, open).
+work_needs(w_agg_demo_voting, w_agg_body_strat).
+claim(queued, agg, empty_group, none, demo, w_agg_demo_voting).
+
+work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; retires req_count/need_count in examples/moot and examples/goof").
+work_state(w_agg_demo_quorum, open).
+work_needs(w_agg_demo_quorum, w_agg_threshold).
+work_needs(w_agg_demo_quorum, w_agg_phrase).
+claim(queued, agg, threshold, none, demo, w_agg_demo_quorum).
+claim(queued, agg, sugar,     none, demo, w_agg_demo_quorum).
+
+work(w_agg_demo_life, "Game of Life: a neighbour count per cell per tick, the cell engine across @next").
+work_state(w_agg_demo_life, open).
+work_needs(w_agg_demo_life, w_agg_body_strat).
+work_needs(w_agg_demo_life, w_agg_wfs_ticks).
+claim(queued, agg, cell, none, demo, w_agg_demo_life).
+
+work(w_agg_demo_minimax, "minimax tic-tac-toe: min and max over a finished stratum, the draws computed by a well-founded world and read by the aggregating world through the composition w_agg_wfs_ticks owns").
+work_state(w_agg_demo_minimax, open).
+work_needs(w_agg_demo_minimax, w_agg_body_strat).
+work_needs(w_agg_demo_minimax, w_agg_wfs_ticks).
+claim(queued, agg, min_max_strat, none, demo, w_agg_demo_minimax).
+
+work(w_agg_demo_interval, "interval analysis of a loop counter: hull join, widening forced, the widened bound a hole (f_the_aggregate_is_needed_only_where_an_infinite_set_must_be_compressed)").
+work_state(w_agg_demo_interval, open).
+work_needs(w_agg_demo_interval, w_agg_join_lattice).
+work_needs(w_agg_demo_interval, w_agg_widening).
+claim(queued, agg, join_lattice, none, demo, w_agg_demo_interval).
+claim(queued, agg, widening,     none, demo, w_agg_demo_interval).

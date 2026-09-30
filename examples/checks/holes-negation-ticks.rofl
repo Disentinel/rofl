@@ -1,0 +1,30 @@
+-- examples/checks/holes-negation-ticks.rofl — WHAT A HOLE KEPT FROM BEING
+-- STAGED IS UNKNOWN AT THE NEXT TICK, in both engines, and a negation there
+-- is undecided (docs/aggregates.md, "Holes, as built"). Two ticks: at tick 0
+-- y(q, _) is not staged, for q's value is no number, and the boundary writes
+-- hole($next(ht_y, main, 1, [q, $unknown_value]), fault_left_out); at tick 1
+-- `not ht_y(q, _)` is undecided and ht_absent(q) is neither concluded nor
+-- staged, while s, which nothing staged, is absent for certain. What tick 1
+-- concluded is read at tick 2, staged.
+edb(ht_v).
+edb(ht_key).
+ht_v(q, oops). ht_v(r, 1).
+ht_key(q). ht_key(r). ht_key(s).
+ht_key(K)@next :- ht_key(K).
+ht_y(K, Y)@next :- ht_v(K, X), Y is X + 1.
+ht_absent(K) :- ht_key(K), not ht_y(K, _).
+ht_seen(K)@next :- ht_absent(K), ht_y(_, _).
+-- a staged rule reading a relation answered on demand: the fault below the
+-- call at tick 0 leaves ht_w(q) unknown at tick 1, and ht_nw(q) undecided
+ht_dbl(X, Y) :- Y is X * 2.
+ht_r(K, Y) :- ht_v(K, X), ht_dbl(X, Y).
+ht_w(K)@next :- ht_key(K), ht_r(K, _).
+ht_nw(K) :- ht_key(K), ht_y(r, _), not ht_w(K).
+-- tick 1's answers, read at tick 2
+ht_bad(absent_q)@next :- ht_absent(q).
+ht_bad(absent_r)@next :- ht_absent(r).
+ht_bad(absent_s)@next :- ht_key(s), ht_y(r, _), not ht_absent(s).
+ht_bad(nw_q)@next :- ht_nw(q).
+ht_bad(nw_s)@next :- ht_key(s), ht_y(r, _), not ht_nw(s).
+alarm(R)@next :- alarm(R).
+alarm(ht_bad).

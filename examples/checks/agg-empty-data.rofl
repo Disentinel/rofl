@@ -1,0 +1,41 @@
+-- examples/checks/agg-empty-data.rofl — THE EMPTY GROUP DATASET, shared by the
+-- agg_empty_* worlds (facts/checks.rofl, docs/aggregates.md).
+--
+-- c4 has no ballot. c3's only ballot arrives through a relation that closes
+-- two negations deep, so an aggregate sealed early would read c3 as empty
+-- and write a 0 that is false. Every operation is asked per candidate, where
+-- count and sum have a zero and min, max, or and and have none; count is
+-- also asked grouped, where an empty group has no row at all.
+edb(ae_candidate).
+edb(ae_raw).
+edb(ae_late).
+edb(ae_mark).
+edb(ae_okmark).
+edb(ae_flag).
+ae_candidate(c1).
+ae_candidate(c2).
+ae_candidate(c3).
+ae_candidate(c4).
+ae_raw(1, c1).
+ae_raw(2, c1).
+ae_raw(4, c2).
+ae_late(3, c3).
+ae_mark(3, 1).
+ae_okmark(1).
+ae_flag(1, true).
+ae_flag(2, false).
+ae_flag(3, true).
+ae_flag(4, false).
+
+ae_spoiled(B)   :- ae_mark(B, M), not ae_okmark(M).
+ae_valid(B)     :- ae_late(B, _), not ae_spoiled(B).
+ae_ballot(B, C) :- ae_raw(B, C).
+ae_ballot(B, C) :- ae_late(B, C), ae_valid(B).
+
+ae_votes(C, N) :- ae_candidate(C), N is count(B : ae_ballot(B, C)).
+ae_by(C, N)    :- N is count(B : ae_ballot(B, C)).
+ae_total(C, S) :- ae_candidate(C), S is sum(B ; B : ae_ballot(B, C)).
+ae_best(C, M)  :- ae_candidate(C), M is min(B : ae_ballot(B, C)).
+ae_worst(C, M) :- ae_candidate(C), M is max(B : ae_ballot(B, C)).
+ae_any(C, F)   :- ae_candidate(C), F is or(X : ae_ballot(B, C), ae_flag(B, X)).
+ae_all(C, F)   :- ae_candidate(C), F is and(X : ae_ballot(B, C), ae_flag(B, X)).

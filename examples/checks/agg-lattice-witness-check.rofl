@@ -1,0 +1,68 @@
+-- examples/checks/agg-lattice-witness-check.rofl — agg_lattice_witness: a
+-- lattice fact's members, read as `lattice_member[$kernel](Fact, I, Height,
+-- Rule)` and `lattice_member_prem[$kernel](Fact, I, Prem)`, are a Best: every
+-- derivation reaching the final value (the tie al_dist(a, c, 3) directly and
+-- through b; the tie al_finish(p4, 8) through p3 and p5), and no other; none
+-- is self-support (al_dist(c, d, 0) through al_dist(c, c, 0), which rests on
+-- al_dist(c, d, 0) itself, over the zero-weight cycle; al_taint(x2, true)
+-- through x3, which it reached first); each cites only facts that stand, so
+-- final values (al_hop(a, d, 0) was reached through al_hop(a, c, 5) two
+-- rounds before a to c improved to 1); members come in order of height, first the lowest.
+alw_f(dist, A, C, D, $fact(al_dist, main, $cons(A, $cons(C, $cons(D, $nil))))) :- al_dist(A, C, D).
+alw_f(wide, A, C, W, $fact(al_wide, main, $cons(A, $cons(C, $cons(W, $nil))))) :- al_wide(A, C, W).
+alw_f(finish, T, T, F, $fact(al_finish, main, $cons(T, $cons(F, $nil)))) :- al_finish(T, F).
+alw_f(hop, A, C, W, $fact(al_hop, main, $cons(A, $cons(C, $cons(W, $nil))))) :- al_hop(A, C, W).
+alw_f(taint, X, X, B, $fact(al_taint, main, $cons(X, $cons(B, $nil)))) :- al_taint(X, B).
+alw_f(all, X, X, B, $fact(al_all, main, $cons(X, $cons(B, $nil)))) :- al_all(X, B).
+-- how many members: the last index (members are numbered from 1, no gaps)
+alw_n(K, A, C, N)  :- alw_f(K, A, C, _, F), lattice_member[$kernel](F, N, _, _), M is N + 1,
+                      not lattice_member[$kernel](F, M, _, _).
+alw_gap(F, I)      :- lattice_member[$kernel](F, I, _, _), I > 1, J is I - 1, not lattice_member[$kernel](F, J, _, _).
+alarm(alw_gap).
+alw_want(dist, a, c, 2).
+alw_want(dist, c, d, 1).
+alw_want(dist, d, c, 1).
+alw_want(dist, c, c, 1).
+alw_want(dist, a, b, 1).
+alw_want(wide, s, v, 1).
+alw_want(hop, a, d, 1).
+alw_want(hop, a, c, 1).
+alw_want(wide, s, s, 1).
+alw_want(finish, p4, p4, 2).
+alw_want(finish, p3, p3, 1).
+alw_want(dist, c, a, 2).
+alw_want(dist, d, e, 2).
+alw_want(dist, b, e, 1).
+alw_want(taint, x2, x2, 1).
+alw_want(all, x3, x3, 1).
+alw_wrong_count(K, A, C, N) :- alw_want(K, A, C, W), alw_n(K, A, C, N), N != W.
+alw_uncounted(K, A, C)      :- alw_want(K, A, C, _), not alw_counted(K, A, C).
+alw_counted(K, A, C)        :- alw_n(K, A, C, _).
+-- the tie, member by member: the direct edge first (lower), then through b
+alw_first(F)   :- alw_f(dist, a, c, 3, F), lattice_member[$kernel](F, 1, 1, _),
+                  lattice_member_prem[$kernel](F, 1, $fact(al_edge, main, $cons(a, $cons(c, $cons(3, $nil))))).
+alw_second(F)  :- alw_f(dist, a, c, 3, F), lattice_member[$kernel](F, 2, 2, _),
+                  lattice_member_prem[$kernel](F, 2, $fact(al_dist, main, $cons(a, $cons(b, $cons(1, $nil))))).
+alw_tie_lost(first)  :- not alw_first(_).
+alw_tie_lost(second) :- not alw_second(_).
+-- no self-support over the zero-weight cycle
+alw_self(F)    :- alw_f(dist, c, d, 0, F), lattice_member_prem[$kernel](F, _, $fact(al_dist, main, $cons(c, $cons(c, $cons(0, $nil))))).
+alw_self(F)    :- alw_f(taint, x2, x2, true, F), lattice_member_prem[$kernel](F, _, $fact(al_taint, main, $cons(x3, $cons(true, $nil)))).
+-- only final values: a lattice premise is a fact that stands
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_dist, main, $cons(A, $cons(C, $cons(D, $nil)))), not al_dist(A, C, D).
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_wide, main, $cons(A, $cons(C, $cons(W, $nil)))), not al_wide(A, C, W).
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_hop, main, $cons(A, $cons(C, $cons(W, $nil)))), not al_hop(A, C, W).
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_finish, main, $cons(T, $cons(V, $nil))), not al_finish(T, V).
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_taint, main, $cons(T, $cons(V, $nil))), not al_taint(T, V).
+alw_stale(F, P) :- lattice_member_prem[$kernel](F, _, P), P = $fact(al_all, main, $cons(T, $cons(V, $nil))), not al_all(T, V).
+-- in order of height, and every lattice fact has a member
+alw_misordered(F, I) :- lattice_member[$kernel](F, I, H1, _), J is I + 1, lattice_member[$kernel](F, J, H2, _), H2 < H1.
+alw_bare(K, A, C)    :- alw_f(K, A, C, _, F), not alw_member(F).
+alw_member(F)        :- lattice_member[$kernel](F, 1, _, _).
+alarm(alw_wrong_count).
+alarm(alw_uncounted).
+alarm(alw_tie_lost).
+alarm(alw_self).
+alarm(alw_stale).
+alarm(alw_misordered).
+alarm(alw_bare).

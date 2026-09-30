@@ -1,0 +1,48 @@
+-- examples/checks/agg-cell-strata-check.rofl — agg_cell_strata: a read of a
+-- lattice that is not monotone in its value comes only from a higher
+-- stratum, where the cell is final. Each rule below reads a lattice of
+-- agg-lattice-data.rofl from outside its recursion, none of them monotone:
+-- a threshold the wrong way (b to e was 9 before it was 7), a negation, a
+-- maximum by negation, a join on the value, a count. Each reads the final
+-- values, whatever the order the cells improved in. A negation of a lattice
+-- inside its own recursion (agg-cell-strata-2-refused-negated.rofl) and a
+-- body aggregate over it there (-3-refused-aggregate.rofl) are refused.
+acst_far(A, C)        :- al_dist(A, C, D), D > 7.
+acst_reached(A, C)    :- al_dist(A, C, _).
+acst_node(N)          :- al_edge(N, _, _).
+acst_unreached(A, C)  :- acst_node(A), acst_node(C), not acst_reached(A, C).
+acst_later(F)         :- al_finish(_, F), al_finish(_, G), G > F.
+acst_crit(T)          :- al_finish(T, F), not acst_later(F).
+acst_crit_edge(T, P)  :- al_after(T, P), al_finish(P, F0), al_task(T, D), al_finish(T, F), F is F0 + D.
+acst_pairs(N)         :- N is count(A, C : al_dist(A, C, _)).
+
+acst_want_far(a, e).
+acst_want_unreached(a, z).
+acst_want_unreached(b, z).
+acst_want_unreached(c, z).
+acst_want_unreached(d, z).
+acst_want_unreached(z, a).
+acst_want_unreached(z, b).
+acst_want_unreached(z, c).
+acst_want_unreached(z, d).
+acst_want_crit(p4).
+acst_want_edge(p4, p3).
+acst_want_edge(p4, p5).
+acst_want_edge(p3, p1).
+acst_want_edge(p5, p2).
+acst_wrong(far, A, C)       :- acst_far(A, C), not acst_want_far(A, C).
+acst_wrong(far, A, C)       :- acst_want_far(A, C), not acst_far(A, C).
+acst_wrong(unreached, A, C) :- acst_unreached(A, C), not acst_want_unreached(A, C).
+acst_wrong(unreached, A, C) :- acst_want_unreached(A, C), not acst_unreached(A, C).
+acst_wrong(crit, T, T)      :- acst_crit(T), not acst_want_crit(T).
+acst_wrong(crit, T, T)      :- acst_want_crit(T), not acst_crit(T).
+acst_wrong(edge, T, P)      :- acst_crit_edge(T, P), not acst_want_edge(T, P).
+acst_wrong(edge, T, P)      :- acst_want_edge(T, P), not acst_crit_edge(T, P).
+acst_count_ok()             :- acst_pairs(21).
+acst_count_wrong()          :- not acst_count_ok().
+acst_accepted(Rel)          :- concludes[$kernel](_, Rel), acst_refused(Rel).
+acst_refused(acstr_neg).
+acst_refused(acstr_agg).
+alarm(acst_wrong).
+alarm(acst_count_wrong).
+alarm(acst_accepted).

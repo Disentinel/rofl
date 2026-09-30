@@ -1,0 +1,3 @@
+-- expect-refusal: takes no key
+-- the counted terms are the key
+sxtr_key(C) :- at_least(2, W ; C : sxt_v(W, C)).

@@ -1,0 +1,6 @@
+-- expect-refusal: a dominance body folds no aggregate
+-- a count or a min belongs in a rule of its own, which the body then reads
+edb(assr_ge).
+assr_ge(a, 1).
+assr_agg(A, V) :- assr_ge(A, V).
+assr_agg(A, X) <= assr_agg(A, Y) :- N is count(W : assr_ge(W, _)), Y < X.

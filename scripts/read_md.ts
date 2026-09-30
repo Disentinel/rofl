@@ -15,6 +15,8 @@ export type ReadOptions = {
   facts?: string;
   /** relation -> the book it is read from, for relations defined outside the text */
   homeBooks?: Record<string, string>;
+  /** every clause's variables renamed V0, V1, ... in the order it writes them, so two readings compare by rule id */
+  canonVars?: boolean;
 };
 export type ReadResult = {
   /** the clauses, facts and declarations, as ROFL */
@@ -113,12 +115,19 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     src += '$';
     r = new RegExp(src); cache.set(t, r); return r;
   }
-  type Lit = { rel: string; args: Term[]; neg?: boolean; book?: string; tense?: string };
+  /** A body aggregate or a threshold; its body is the conditions of one or more rules read in its parentheses, one after another. */
+  /** `copy`: the sugar's second aggregate over the first one's body; its own variables are renamed apart when it is
+   *  written (`apart`), since a variable two aggregates share is refused as a group bound by the other. `alone`: the
+   *  sentence of an at most or exactly N, whose count is compared by the literal after it. `every`: the copy of an
+   *  every, whose body is the domain's and then what each must satisfy (`rows`). */
+  type Agg = { op: string; res: Term; vals: Term[]; keys: Term[]; subs: Rule[]; copy?: boolean; alone?: string; every?: boolean };
+  /** `keep`: a comparison the sugar lowers to, never folded into the head. */
+  type Lit = { rel: string; args: Term[]; neg?: boolean; book?: string; tense?: string; agg?: Agg; keep?: boolean };
   let ambiguous: string[] = [];
   let known = new Map<string, string>();   // variable -> noun, from intros and typed positions in this rule
   function matchLit(text: string, intros: Intro[], asHead = false): Lit | null {
     let book: string | undefined;
-    let m = /^(.*) in the (\w+)$/.exec(text);
+    let m = /^(.*) in the (\$?\w+)$/.exec(text);
     if (m && !templates.some((t) => regexOf(t).test(text))) { text = m[1]; book = m[2]; }
     text = text.replace(/^next, /, '');
     const variants = [text, text[0] === text[0].toUpperCase() && /^(A|An|The) /.test(text) ? text[0].toLowerCase() + text.slice(1) : null].filter((x): x is string => !!x);
@@ -157,7 +166,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return { rel: nounGuards.get(m[2])!, args: [t] };
   }
   function positional(text: string, intros: Intro[]): Lit | null {
-    const m = /^`(\w+)`\((.*)\)(?:,? in the (?:book )?(\w+))?$/.exec(text); if (!m) return null;
+    const m = /^`(\w+)`\((.*)\)(?:,? in the (?:book )?(\$?\w+))?$/.exec(text); if (!m) return null;
     return { rel: m[1], args: m[2] ? splitTop(m[2]).map((a) => term(a, intros)) : [], book: m[3] };
   }
 
@@ -168,6 +177,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     let neg = false;
     text = text.trim().replace(/[;.]$/, '');
     if (text.startsWith('unless ')) { neg = true; text = text.slice(7); }
+    const agg = aggregate(text, intros, rule);
+    if (agg !== null) { if (neg || !agg) unparsed.push(neg ? `unless ${text}: an aggregate is not negated` : aggWhy ? `${text}: ${aggWhy}` : text); return agg && !neg; }
     let m;
     const subjOf = (t: string) => (/^[A-Z]\w*$/.test(t) || t === 'it') ? t : ((/ ([A-Z]\w*)$/.exec(t) || [])[1] ?? t);
     if (!neg && (m = /^(.+?) but is not (.+)$/.exec(text)) && !/["`]/.test(m[1].slice(0, 2))) {
@@ -213,6 +224,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     // `X is Y` between two terms is equality; a bare word is not a term, so `T is huge` is unparsed rather than `T = huge`
     if ((m = /^(.+?) is (.+)$/.exec(text)) && [m[1], m[2]].every((x) => /^(it|[A-Z][A-Za-z0-9]*|`[^`]+`|"[^"]*"|-?\d+)$/.test(x))) { rule.body.push({ rel: '=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
     if ((m = /^(.+?) differs from (.+)$/.exec(text))) { rule.body.push({ rel: '!=', args: [term(m[1], intros), term(m[2], intros)], neg }); return true; }
+    // the reads of a join (docs/aggregates.md, "The join lattice, as built")
+    if ((m = new RegExp(`^(${TERM}) is (a member|a subset) of (${TERM})$`).exec(text))) { rule.body.push({ rel: m[2] === 'a member' ? 'in' : 'subset', args: [term(m[1], intros), term(m[3], intros)], neg }); return true; }
     if ((m = /^(\S+) ([<>]=?) (\S+)$/.exec(text))) { rule.body.push({ rel: m[2], args: [term(m[1], intros), term(m[3], intros)], neg }); return true; }
     if ((m = /^(.*?) ([Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}) that (.+)$/.exec(text))) {
       const fresh = `Rel${freshN++}`;
@@ -241,6 +254,95 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       }
     }
     unparsed.push(text); return false;
+  }
+  // AN AGGREGATE (docs/aggregates.md, "The sentence form, as built"): a condition naming its result, what it takes,
+  // and its own body in parentheses, `N is the number of B such that (B votes for C)`. The sugar is lowered here
+  // onto count, sum and a comparison, each in the one spelling rofl-render reads back as the sugar.
+  const TAKES = `\\((?:[^()"\`]|"[^"]*"|\`[^\`]*\`)*\\)|${TERM}`;
+  let freshNames = new Set<string>();
+  const fresh = (stem: string): string => { for (let k = 0; ; k++) if (!freshNames.has(`${stem}${k}`)) { freshNames.add(`${stem}${k}`); return `${stem}${k}`; } };
+  /** The index of the `)` closing the `(` at `at`, or -1. */
+  function closer(text: string, at: number): number {
+    let depth = 0, q: string | null = null;
+    for (let i = at; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === q) q = null; continue; }
+      if (c === '"' || c === '`') { q = c; continue; }
+      if (c === '(') depth++;
+      else if (c === ')' && --depth === 0) return i;
+    }
+    return -1;
+  }
+  const takes = (text: string, intros: Intro[]): Term[] => (text.startsWith('(') ? splitTop(text.slice(1, -1)).map((x) => term(x, intros)) : [term(text, intros)]);
+  /** An aggregate's body, read as the conditions of a rule of its own: the guards its nouns name stay inside it. */
+  function innerRule(text: string, rule: Rule): Rule | null {
+    const sub: Rule = { head: { rel: rule.head.rel, args: [] }, body: [], guards: new Map(), where: rule.where, book: rule.book };
+    const ii: Intro[] = [];
+    let ok = true;
+    for (const c of splitConds(text)) ok = condition(c, ii, sub) && ok;
+    for (const it of ii) { if (!VALUE.has(it.noun) && !sub.guards.has(it.v)) sub.guards.set(it.v, { noun: it.noun }); if (!known.has(it.v)) known.set(it.v, it.noun); }
+    return ok ? sub : null;
+  }
+  const SCALE: Record<string, number> = { tenths: 10, hundredths: 100, thousandths: 1000, millionths: 1000000 };
+  /** Why the last aggregate did not read, when the sentence breaks a rule of the sugar rather than of the grammar. */
+  let aggWhy: string | null = null;
+  /** true: read into `rule`; false: an aggregate that does not read; null: no aggregate. */
+  function aggregate(text: string, intros: Intro[], rule: Rule): boolean | null {
+    aggWhy = null;
+    const at = text.indexOf(' such that (');
+    if (at < 0) return null;
+    const open = at + ' such that '.length, close = closer(text, open);
+    if (close < 0) return null;
+    const pre = text.slice(0, at), inner = text.slice(open + 1, close), tail = text.slice(close + 1);
+    const T = TERM, X = TAKES;
+    const push = (op: string, res: Term, vals: Term[], keys: Term[], subs: Rule[], copy = false, every = false) =>
+      rule.body.push({ rel: '$agg', args: [], agg: { op, res, vals, keys, subs, ...(copy ? { copy } : {}), ...(every ? { every } : {}) } });
+    let m: RegExpExecArray | null;
+    if ((m = new RegExp(`^every (${X})$`).exec(pre))) {
+      const sat = /^ satisfies \(/.exec(tail);
+      if (!sat || closer(tail, sat[0].length - 1) !== tail.length - 1) { aggWhy = 'every names what each must satisfy, `satisfies (...)`'; return false; }
+      const xs = takes(m[1], intros), d = innerRule(inner, rule), b = innerRule(tail.slice(sat[0].length, -1), rule);
+      if (!d || !b) return false;
+      const all = { v: fresh('Domain') }, holding = { v: fresh('Holding') };
+      push('count', all, xs, [], [d]);
+      push('count', holding, xs, [], [d, b], true, true);
+      rule.body.push({ rel: '=', args: [all, holding], keep: true });
+      return true;
+    }
+    if ((m = new RegExp(`^(${T}) is the average of (${T}) over (${X})$`).exec(pre))) {
+      const r = /^(?: in (tenths|hundredths|thousandths|millionths))? rounded toward zero$/.exec(tail);
+      if (!r) { aggWhy = 'an average states its rounding: `rounded toward zero`, after a scale (`in tenths` ... `in millionths`) if any'; return false; }
+      const res = term(m[1], intros), v = term(m[2], intros), ks = takes(m[3], intros), b = innerRule(inner, rule);
+      if (!b) return false;
+      const total = { v: fresh('Total') }, count = { v: fresh('Count') };
+      push('sum', total, [v], ks, [b]);
+      push('count', count, [v, ...ks], [], [b], true);
+      rule.body.push({ rel: '>', args: [count, { n: 0 }] });
+      let num: Term = total;
+      if (r[1]) { num = { v: fresh('Scaled') }; rule.body.push({ rel: 'is', args: [num, { f: '*', args: [total, { n: SCALE[r[1]] }] }] }); }
+      rule.body.push({ rel: 'is', args: [res, { f: '/', args: [num, count] }] });
+      return true;
+    }
+    if (tail !== '') return false;
+    const b = () => innerRule(inner, rule);
+    const read = (op: string, res: Term, vals: Term[], keys: Term[]): boolean => { const s = b(); if (!s) return false; push(op, res, vals, keys, [s]); return true; };
+    if ((m = new RegExp(`^(${T}) is the number of (${X})$`).exec(pre))) return read('count', term(m[1], intros), takes(m[2], intros), []);
+    if ((m = new RegExp(`^(${T}) is the (sum|median) of (${T}) over (${X})$`).exec(pre))) return read(m[2], term(m[1], intros), [term(m[3], intros)], takes(m[4], intros));
+    if ((m = new RegExp(`^(${T}) is the quantile (${T}) of (${T}) over (${X})$`).exec(pre))) return read('quantile', term(m[1], intros), [term(m[2], intros), term(m[3], intros)], takes(m[4], intros));
+    if ((m = new RegExp(`^(${T}) is the rank of (${T}) among (${T})$`).exec(pre))) return read('rank', term(m[1], intros), [term(m[2], intros), term(m[3], intros)], []);
+    if ((m = new RegExp(`^(${T}) is the (least|greatest) (${T})$`).exec(pre))) return read(m[2] === 'least' ? 'min' : 'max', term(m[1], intros), [term(m[3], intros)], []);
+    if ((m = new RegExp(`^(${T}) is the (disjunction|conjunction) of (${T})$`).exec(pre))) return read(m[2] === 'disjunction' ? 'or' : 'and', term(m[1], intros), [term(m[3], intros)], []);
+    if ((m = new RegExp(`^at least (${T}) of (${X})$`).exec(pre))) return read('at_least', term(m[1], intros), takes(m[2], intros), []);
+    if ((m = new RegExp(`^(at most|exactly) (${T}) of (${X})$`).exec(pre))) {
+      const n = term(m[2], intros), xs = takes(m[3], intros), s = b();
+      if (!s) return false;
+      const count = { v: fresh('Count') };
+      push('count', count, xs, [], [s]);
+      (rule.body[rule.body.length - 1].agg as Agg).alone = text;
+      rule.body.push(m[1] === 'at most' ? { rel: '<=', args: [count, n] } : { rel: '=', args: [count, n], keep: true });
+      return true;
+    }
+    return false;
   }
   function splitOr(text: string): string[] {
     const out: string[] = []; let q: string | null = null, cur = '';
@@ -310,8 +412,14 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return joined;
   }
   // what `is` evaluates rather than builds: arithmetic and the seven destructors
-  const EVALUABLE = new Set(['+', '-', '*', '/', 'mod', 'str_len', 'str_char', 'str_sub', 'str_pre', 'str_seg', 'str_segs', 'atom_of']);
+  const EVALUABLE = new Set(['+', '-', '*', '/', 'mod', 'min', 'max', 'str_len', 'str_char', 'str_sub', 'str_pre', 'str_seg', 'str_segs', 'atom_of', 'ivadd', 'ivsub', 'ivmul', 'ivmeet']);
   const varsOf = (t: Term): string[] => ('v' in t ? [t.v] : 'f' in t ? t.args.flatMap(varsOf) : 'or' in t ? t.or.flatMap(varsOf) : []);
+  const litVars = (l: Lit): string[] => [...l.args.flatMap(varsOf), ...(l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys].flatMap(varsOf).concat(l.agg.subs.flatMap((r) => r.body.flatMap(litVars))) : [])];
+  /** A literal with every term mapped, inside an aggregate too. */
+  const mapLit = (l: Lit, fn: (t: Term) => Term): void => {
+    l.args = l.args.map(fn);
+    if (l.agg) { const a = l.agg; a.res = fn(a.res); a.vals = a.vals.map(fn); a.keys = a.keys.map(fn); for (const r of a.subs) for (const b of r.body) mapLit(b, fn); }
+  };
   const rules: Rule[] = []; const parsedFacts: Lit[] = []; const declared: string[] = []; const imported = new Set<string>();
   const badAlternatives: string[] = [];   // a numbered alternative that does not start with `if` or `unless`
   function finish(rule: Rule, intros: Intro[]) {
@@ -321,24 +429,29 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       // `N is int(S)` with N a head variable: a term the renderer moved out of the head of one alternative goes back into it
       if ((l.rel === '=' || l.rel === 'is') && !l.neg && 'v' in l.args[0] && 'f' in l.args[1] && !EVALUABLE.has(l.args[1].f)) {
         const v = (l.args[0] as { v: string }).v, k = l.args[1];
-        const elsewhere = rule.body.some((b, j) => j !== i && b.args.some((a) => varsOf(a).includes(v))) || varsOf(k).includes(v);
+        const elsewhere = rule.body.some((b, j) => j !== i && litVars(b).includes(v)) || varsOf(k).includes(v);
         if (!elsewhere && rule.head.args.some((a) => 'v' in a && a.v === v)) {
           rule.head.args = rule.head.args.map((a) => ('v' in a && a.v === v ? k : a));
           rule.body.splice(i, 1); continue;
         }
       }
-      if (l.rel === '=' && !l.neg && 'v' in l.args[0] && !('v' in l.args[1]) && !('or' in l.args[1]) && !('f' in l.args[1]) && rule.head.args.some((a) => 'v' in a && a.v === (l.args[0] as { v: string }).v)) {
+      if (l.rel === '=' && !l.neg && !l.keep && 'v' in l.args[0] && !('v' in l.args[1]) && !('or' in l.args[1]) && !('f' in l.args[1]) && rule.head.args.some((a) => 'v' in a && a.v === (l.args[0] as { v: string }).v)) {
         const v = (l.args[0] as { v: string }).v, k = l.args[1];
         const sub = (t: Term) => mapT(t, (x) => (x === v ? k : { v: x }));
         rule.head.args = rule.head.args.map(sub);
-        for (const b of rule.body) b.args = b.args.map(sub);
+        for (const b of rule.body) mapLit(b, sub);
         rule.body.splice(i, 1); continue;
       }
-      if (l.rel === '=' && !l.neg && 'v' in l.args[0] && 'v' in l.args[1] && !('or' in l.args[0]) && !('or' in l.args[1])) {
+      // two aggregates' results compared stay compared: folded into one variable, the second would be asked with its result;
+      // and `X is X` stays as written: folded, it is no condition at all, though the rule it came from has one (one that
+      // may not even load, with X bound by nothing else)
+      const aggRes = (t: Term) => 'v' in t && rule.body.some((b) => b.agg && 'v' in b.agg.res && b.agg.res.v === t.v);
+      const same = l.rel === '=' && l.args.length === 2 && 'v' in l.args[0] && 'v' in l.args[1] && l.args[0].v === l.args[1].v;
+      if (l.rel === '=' && !l.neg && !l.keep && !same && 'v' in l.args[0] && 'v' in l.args[1] && !('or' in l.args[0]) && !('or' in l.args[1]) && !(aggRes(l.args[0]) && aggRes(l.args[1]))) {
         const from = (l.args[1] as { v: string }).v, to = (l.args[0] as { v: string }).v;
         const sub = (t: Term): Term => mapT(t, (x) => ({ v: x === from ? to : x }));
         rule.head.args = rule.head.args.map(sub);
-        for (const b of rule.body) b.args = b.args.map(sub);
+        for (const b of rule.body) mapLit(b, sub);
         const g = rule.guards.get(from); if (g) { rule.guards.delete(from); if (!rule.guards.has(to)) rule.guards.set(to, g); }
         rule.body.splice(i, 1);
       }
@@ -354,6 +467,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     badTerm = null;
     for (let pass = 0; pass < 2; pass++) {
       const intros: Intro[] = [];
+      freshNames = new Set([headText, ...conds].join(' ').match(/\b[A-Z][A-Za-z0-9_]*\b/g) ?? []);
       const savedAmb = ambiguous.length, savedUn = unparsed.length;
       subjectVar = null;
       tracing = pass === 1;
@@ -414,6 +528,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   { const fm = /^---\n([\s\S]*?)\n---/.exec(rawMd); if (fm) { const d = /^default: (\w+)$/m.exec(fm[1]); if (d) defaultBook = d[1]; } }
   const headBook = new Map<string, string>();   // relation -> the book its rules write
   const homeBook = new Map<string, string>(Object.entries(opts.homeBooks ?? {}));   // relation -> the book it is read from when no tail says otherwise
+  if (!homeBook.has('shrug')) homeBook.set('shrug', '$kernel');   // the answer model's third value is the kernel's
   {
     let sec = '';
     for (let i = 0; i < blocks.length; i++) {
@@ -446,17 +561,19 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const [n, rels] of guardOf) if (!nounGuards.has(n)) nounGuards.set(n, rels.find((r) => usedHere.has(r)) ?? rels[0]);
   // THE FILE'S OWN VOCABULARY. An anchored head sentence (`<a id="letter"></a>A rule R
   // has the letter V either:`) declares the sentence of the relation the anchor names:
-  // its typed holes (`a rule R`) are the arguments in order, a bare capital is a hole
-  // too, and `A`, `An`, `The` on their own are articles, so a variable A is written typed.
+  // its typed holes (`a rule R`) are the arguments in order, and a bare capital is a hole
+  // too. The sentence's opening article is lower-cased before it is read, and mid-sentence an article is lower
+  // case (the rule splitConds reads bodies by), so a capital `A`, `An` or `The` inside a conclusion is always
+  // a variable: `the mean of a team T is A`, `... is A in whole units`, `... puts A above M` each keep A as an
+  // argument, and a capital article never opens a typed hole, which would swallow it into the noun's article.
   const learned: Tpl[] = [];   // the file's own vocabulary, written beside the rules as phrase facts
   function learn(rel: string, head: string) {
     if (templates.some((t) => t.rel === rel)) return;
     head = head.charAt(0).toLowerCase() + head.slice(1);
     const parts: Part[] = []; let buf = ''; let n = 0; let last = 0; let m;
     const flush = () => { const t = buf.trim(); if (t) parts.push({ t: 'text', s: t }); buf = ''; };
-    const re = /(?:\b([Aa]n?) ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) )?\b([A-Z][A-Za-z0-9]*)\b/g;
+    const re = /(?:\b(an?) ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) )?\b([A-Z][A-Za-z0-9]*)\b/g;
     while ((m = re.exec(head))) {
-      if (!m[2] && ['A', 'An', 'The'].includes(m[3])) continue;
       buf += head.slice(last, m.index); flush();
       parts.push({ t: 'hole', i: n++, noun: m[2] ?? (VALUE.has(m[3].toLowerCase()) ? m[3].toLowerCase() : 'node') });
       last = m.index + m[0].length;
@@ -481,6 +598,52 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       learn(a[2], headOf(head));
     }
   }
+  // A DECLARATION (docs/aggregates.md, "The sentence form, as built"): `dist` keeps the least D for each A and C;
+  // Each `cost` fact of A and C carries a tropical tag T.
+  const decls: string[] = [];
+  const LATTICE_WORD: Record<string, string> = { least: 'min', greatest: 'max', disjunction: 'or', conjunction: 'and', union: 'union', hull: 'hull', 'bitwise or': 'bitor', sum: 'sum', count: 'count', median: 'median', quantile: 'quantile', rank: 'rank' };
+  const NAME = '(?:_|[A-Z][A-Za-z0-9_]*)';
+  const keyList = (t: string | undefined): string[] | null => {
+    if (!t) return [];
+    const ks = t.split(/, | and /);
+    return ks.every((k) => new RegExp(`^${NAME}$`).test(k)) ? ks : null;
+  };
+  function declaration(text: string): boolean {
+    let m = new RegExp(`^\`(\\w+)\`(?: in the \`(\\$?\\w+)\`)? keeps the (${Object.keys(LATTICE_WORD).join('|')}) (${NAME})(?: for each (.+?))?(?:, widened after (\\d+) improvements?)?\\.$`).exec(text);
+    if (m) {
+      const ks = keyList(m[5]);
+      if (!ks) { unparsed.push(`DECLARATION ${text}`); return true; }
+      decls.push(`lattice ${m[1]}${m[2] ? `[${m[2]}]` : ''}(${[...ks, `${LATTICE_WORD[m[3]]} ${m[4]}`].join(', ')})${m[6] ? ` widen ${m[6]}` : ''}.`);
+      return true;
+    }
+    m = new RegExp(`^Each \`(\\w+)\` fact(?: of (.+?))? carries an? (tropical|viterbi|trust|counting) tag (${NAME})\\.$`).exec(text);
+    if (m) {
+      const ks = keyList(m[2]);
+      if (!ks) { unparsed.push(`DECLARATION ${text}`); return true; }
+      decls.push(`tag ${m[1]}(${[...ks, `${m[3]} ${m[4]}`].join(', ')}).`);
+      return true;
+    }
+    return false;
+  }
+  // A DOMINANCE RULE: A fact that the distance from X to Y is D1 is dominated by one that the distance from X to Y is D2 if D2 < D1.
+  const dominances: Clause[] = [];
+  function dominance(text: string, where: string): boolean {
+    const m = /^A fact that (.+?) is dominated by one that (.+?) if (.+)\.$/.exec(text);
+    if (!m) return false;
+    known = new Map(); subjectVar = null; badTerm = null;
+    freshNames = new Set(text.match(/\b[A-Z][A-Za-z0-9_]*\b/g) ?? []);
+    const intros: Intro[] = [];
+    const lo = positional(m[1], intros) ?? matchLit(m[1], intros), hi = positional(m[2], intros) ?? matchLit(m[2], intros);
+    if (!lo || !hi) { unparsed.push(`DOMINANCE ${text}`); return true; }
+    const rule: Rule = { head: lo, body: [], guards: new Map(), where, book: curBook };
+    let whole = true;
+    for (const c of splitConds(m[3])) whole = condition(c, intros, rule) && whole;
+    for (const it of intros) if (!VALUE.has(it.noun) && !rule.guards.has(it.v)) rule.guards.set(it.v, { noun: it.noun });
+    const cs = whole && !badTerm ? expand(rule) : [];
+    if (cs.length !== 1) { dropped.push(`${text}: a dominance rule reads as one rule or not at all`); return true; }
+    dominances.push({ ...cs[0], dom: { rel: hi.rel, neg: false, args: hi.args.map(tstr), book: hi.book } });
+    return true;
+  }
   let section = '';
   let curBook = defaultBook;   // a book is a block: `In the audit:` opens the rules that write there
   let blockSet = false;
@@ -494,6 +657,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const text = b.text!.trim(); let m;
     if (/^Kinds without a noun:/.test(text) || /^What this file calls a node/.test(text) || /trailing comments/.test(text)) { if (next && next.type !== 'p' && next.type !== 'h') i++; continue; }
     if ((m = /^In the (\w+):$/.exec(text))) { curBook = m[1]; blockSet = true; continue; }
+    if (declaration(text) || dominance(text, section)) continue;
     if (text === 'Reads:' && next && next.type === 'ul') {
       // the imports: `from js-dataflow, in the flow: a, b, c`; a book given here is where those relations are read
       for (const it of next.items!) {
@@ -566,7 +730,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   }
 
   // ---------------------------------------------------- back into clauses
-  type Clause = { head: string; args: string[]; body: { rel: string; neg: boolean; args: string[]; book?: string }[]; book: string; tense?: string };
+  type CAgg = { op: string; res: string; vals: string[]; keys: string[]; body: CLit[]; copy?: boolean; alone?: string; every?: boolean };
+  type CLit = { rel: string; neg: boolean; args: string[]; book?: string; agg?: CAgg };
+  /** `dom`: the dominating fact of a dominance rule, whose head is the dominated one */
+  type Clause = { head: string; args: string[]; body: CLit[]; book: string; tense?: string; dom?: CLit };
   function tstr(t: Term): string { return 'v' in t ? t.v : 'a' in t ? t.a : 's' in t ? JSON.stringify(t.s) : 'n' in t ? String(t.n) : 'or' in t ? tstr(t.or[0]) : 'f' in t ? `${t.f}(${t.args.map(inner).join(',')})` : '_'; }
   // inside a functor the kernel's canonical form: variables carry `?`
   function inner(t: Term): string { return 'v' in t ? `?${t.v}` : 'w' in t ? '_' : tstr(t); }
@@ -582,7 +749,95 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     out.push(cur);
     return out.map((x) => x.trim()).filter(Boolean);
   }
-  const alternatives = (t: Term): Term[] => ('or' in t ? t.or : [t]);
+  /** The variables an argument names: itself, or the `?V` inside a functor. */
+  const namesIn = (x: string): string[] => /^[A-Z]\w*$/.test(x) ? [x] : [...x.replace(/"(?:[^"\\]|\\.)*"/g, '').matchAll(/\?([A-Z]\w*)/g)].map((m) => m[1]);
+  const cNames = (l: CLit): string[] => l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys].flatMap(namesIn).concat(l.agg.body.flatMap(cNames)) : l.args.flatMap(namesIn);
+  /** The sugar's copies with their own variables renamed to names the clause does not use (`M` to `M1`, `K_M` with it):
+   *  every variable the pair alone writes, taken or not. One written outside the pair, in the head or another premise,
+   *  is the same in both, a correlation or a group of each as it is of any aggregate. */
+  function apart(c: Clause): Clause {
+    const body = c.body.slice();
+    for (let j = 1; j < body.length; j++) {
+      const a = body[j].agg;
+      if (!a?.copy) continue;
+      const outside = new Set([...c.args.flatMap(namesIn), ...body.filter((_, k) => k !== j && k !== j - 1).flatMap(cNames)]);
+      const used = new Set([...outside, ...body.flatMap(cNames)]);
+      const to = new Map<string, string>();
+      const name = (x: string): string => { let k = 1; while (used.has(`${x}${k}`)) k++; used.add(`${x}${k}`); return `${x}${k}`; };
+      const own = (x: string) => !outside.has(x);
+      const mine = cNames(body[j]).filter((x, i, xs) => own(x) && xs.indexOf(x) === i);
+      for (const x of mine) if (!x.startsWith('K_')) to.set(x, name(x));
+      // a noun's guard names its kind after the variable it guards, `K_M`: it goes with it
+      for (const x of mine) if (x.startsWith('K_')) { const y = to.get(x.slice(2)); to.set(x, y && !used.has(`K_${y}`) ? (used.add(`K_${y}`), `K_${y}`) : name(x)); }
+      const arg = (x: string): string => /^[A-Z]\w*$/.test(x) ? (to.get(x) ?? x) : x.replace(/("(?:[^"\\]|\\.)*")|\?([A-Z]\w*)/g, (t, q, v) => (q ? t : `?${to.get(v) ?? v}`));
+      const lit = (l: CLit): CLit => l.agg ? { ...l, agg: { ...l.agg, res: arg(l.agg.res), vals: l.agg.vals.map(arg), keys: l.agg.keys.map(arg), body: l.agg.body.map(lit) } } : { ...l, args: l.args.map(arg) };
+      body[j] = lit(body[j]);
+    }
+    return { ...c, body };
+  }
+  /** Each aggregate's own variables apart from every other's: `such that (...)` scopes what it writes, so a letter two
+   *  aggregates of one rule write and nothing outside them does (neither the conclusion, nor a premise, nor a result)
+   *  names two variables, one in each, as it would in two rules. A sugar's pair is one aggregate here; the copy is
+   *  renamed apart from its first by `apart`. Kept shared, Rust safety refuses the pair as a group one aggregate binds
+   *  for the other, with advice a sentence cannot follow. */
+  function unitsApart(c: Clause): Clause {
+    const body = c.body.slice();
+    const units: number[][] = [];
+    body.forEach((l, j) => { if (!l.agg) return; if (l.agg.copy && units.length && units[units.length - 1].includes(j - 1)) units[units.length - 1].push(j); else units.push([j]); });
+    if (units.length < 2) return c;
+    const outside = new Set([...c.args.flatMap(namesIn), ...body.filter((l) => !l.agg).flatMap(cNames), ...body.filter((l) => l.agg).flatMap((l) => namesIn(l.agg!.res))]);
+    const used = new Set([...outside, ...body.flatMap(cNames)]);
+    const seen = new Set<string>();
+    for (const u of units) {
+      const mine = [...new Set(u.flatMap((j) => cNames(body[j])))].filter((x) => !outside.has(x));
+      const to = new Map<string, string>();
+      const name = (x: string): string => { let k = 1; while (used.has(`${x}${k}`)) k++; used.add(`${x}${k}`); return `${x}${k}`; };
+      for (const x of mine) if (seen.has(x) && !x.startsWith('K_')) to.set(x, name(x));
+      for (const x of mine) if (seen.has(x) && x.startsWith('K_')) { const y = to.get(x.slice(2)); to.set(x, y && !used.has(`K_${y}`) ? (used.add(`K_${y}`), `K_${y}`) : name(x)); }
+      for (const x of mine) seen.add(x);
+      if (!to.size) continue;
+      const arg = (x: string): string => /^[A-Z]\w*$/.test(x) ? (to.get(x) ?? x) : x.replace(/("(?:[^"\\]|\\.)*")|\?([A-Z]\w*)/g, (t, q, v) => (q ? t : `?${to.get(v) ?? v}`));
+      const lit = (l: CLit): CLit => l.agg ? { ...l, agg: { ...l.agg, res: arg(l.agg.res), vals: l.agg.vals.map(arg), keys: l.agg.keys.map(arg), body: l.agg.body.map(lit) } } : { ...l, args: l.args.map(arg) };
+      for (const j of u) body[j] = lit(body[j]);
+    }
+    return { ...c, body };
+  }
+  /** What `every X such that (D) satisfies (B)` quantifies over: each row of D, not each X. A variable D writes that B
+   *  reads and nothing outside the pair does is taken by both counts beside X, so a row of D that fails B is a row
+   *  fewer in the second count however many other rows its X has (`count(M, R : D)` beside `count(M1, R1 : D', B')`).
+   *  Taking X alone, one passing row per X would do. */
+  function rows(c: Clause): Clause {
+    const body = c.body.slice();
+    for (let j = 1; j < body.length; j++) {
+      const a = body[j].agg, d = body[j - 1].agg;
+      if (!a?.every || !d) continue;
+      const outside = new Set([...c.args.flatMap(namesIn), ...body.filter((_, k) => k !== j && k !== j - 1).flatMap(cNames)]);
+      const reads = new Set(a.body.slice(d.body.length).flatMap(cNames));
+      const takes = new Set(d.vals.flatMap(namesIn));
+      const extra = [...new Set(d.body.flatMap(cNames))].filter((x) => !outside.has(x) && reads.has(x) && !takes.has(x));
+      if (!extra.length) continue;
+      body[j - 1] = { ...body[j - 1], agg: { ...d, vals: [...d.vals, ...extra] } };
+      body[j] = { ...body[j], agg: { ...a, vals: [...a.vals, ...extra] } };
+    }
+    return { ...c, body };
+  }
+  /** Why an at most or exactly N does not say what its sentence says, or null. Its count is a group's only when the
+   *  rule binds the group before it: bound by the count, a group with none has no count and no row, and `exactly 0`
+   *  never holds. And `exactly N` with N written nowhere else binds N to the count and holds of any. */
+  function aloneWhy(c: Clause): string | null {
+    for (let j = 0; j < c.body.length; j++) {
+      const a = c.body[j].agg;
+      if (!a?.alone) continue;
+      const n = c.body[j + 1].args[1], head = c.args.flatMap(namesIn), mine = cNames(c.body[j]);
+      const written = (x: string, from: number, to: number) => c.body.some((l, k) => k >= from && k < to && k !== j && k !== j + 1 && cNames(l).includes(x));
+      if (c.body[j + 1].rel === '=' && /^[A-Z]\w*$/.test(n) && !head.includes(n) && !mine.includes(n) && !written(n, 0, c.body.length))
+        return `${a.alone}: exactly N names a number the rule binds elsewhere; the count itself is \`the number of\``;
+      const late = mine.find((x) => x !== a.res && (head.includes(x) || x === n || written(x, j + 2, c.body.length)) && !written(x, 0, j));
+      if (late) return `${a.alone}: at most and exactly N count within a group the rule binds before them, and ${late} is not: a group with none is part of what they say`;
+    }
+    return null;
+  }
+  function alternatives(t: Term): Term[] { return 'or' in t ? t.or : [t]; }
   function expand(rule: Rule): Clause[] {
     let variants: { rel: string; neg: boolean; args: string[] }[][] = [[]];
     for (const [v, g] of rule.guards) {
@@ -599,8 +854,16 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       variants = variants.flatMap((vs) => opts.map((o) => [...vs, ...o]));
     }
     // an `or` inside a literal is one rule per alternative
-    let bodies: { rel: string; neg: boolean; args: string[] }[][] = [[]];
+    let bodies: CLit[][] = [[]];
     for (const l of rule.body) {
+      if (l.agg) {
+        // an aggregate's body is one rule's body, or it does not read
+        const a = l.agg, one = a.subs.map(expand);
+        if (one.some((cs) => cs.length !== 1)) { dropped.push(`${rule.head.rel}: an aggregate's body reads as more than one rule`); return []; }
+        const agg: CAgg = { op: a.op, res: tstr(a.res), vals: a.vals.map(tstr), keys: a.keys.map(tstr), body: one.flatMap((cs) => cs[0].body), ...(a.copy ? { copy: true } : {}), ...(a.alone ? { alone: a.alone } : {}), ...(a.every ? { every: true } : {}) };
+        bodies = bodies.map((b) => [...b, { rel: '$agg', neg: false, args: [], agg }]);
+        continue;
+      }
       const per = l.args.map(alternatives);
       let combos: string[][] = [[]];
       for (const opts of per) combos = combos.flatMap((c) => opts.map((o) => [...c, tstr(o)]));
@@ -610,7 +873,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     for (const opts of rule.head.args.map(alternatives)) heads = heads.flatMap((h) => opts.map((o) => [...h, tstr(o)]));
     const out: Clause[] = [];
     for (const args of heads) for (const extra of variants) for (const body of bodies) out.push({ head: rule.head.rel, args, body: [...extra, ...body], book: rule.book, tense: rule.head.tense });
-    return out;
+    const own = out.map(unitsApart).map(rows);
+    for (const c of own) { const why = aloneWhy(c); if (why) { unparsed.push(why); return []; } }
+    return own.map(apart);
   }
   const parsed: Clause[] = rules.flatMap(expand);
 
@@ -623,32 +888,92 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const m of facts.matchAll(/^tense\((r\d+), (next|init)\)\.$/gm)) srcClauses.get(m[1])!.tense = m[2];
   for (const m of facts.matchAll(/^lit\((r\d+), (\d+), (\w+), (pos|neg)\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: m[4] === 'neg', args: argsOf(m[1], Number(m[2])) });
   for (const m of facts.matchAll(/^bi\((r\d+), (\d+), "([^"]+)"\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) });
+  // an aggregate whole (`aggj`, rofl-render's JSON of it), compared whole by `canon`
+  for (const m of facts.matchAll(/^aggj\((r\d+), (\d+), (".*")\)\.$/gm)) srcClauses.get(m[1])!.body.push({ rel: '$agg', neg: false, args: [], agg: fromAggJ(JSON.parse(JSON.parse(m[3])) as AggJ) });
+  // a lattice or tag declaration (`decl`, `decl_widen`): its head, the operation of its last argument
+  const declOf = new Map<string, { kind: string; op: string; widen?: string }>();
+  for (const m of facts.matchAll(/^decl\((r\d+), (lattice|tag), (\w+)\)\.$/gm)) declOf.set(m[1], { kind: m[2], op: m[3] });
+  for (const m of facts.matchAll(/^decl_widen\((r\d+), (\d+)\)\.$/gm)) declOf.get(m[1])!.widen = m[2];
+  // a dominance rule's dominating fact (`dom`, after the body)
+  for (const m of facts.matchAll(/^dom\((r\d+), (\d+), (\$?\w+)\)\.$/gm)) srcClauses.get(m[1])!.dom = { rel: m[3], neg: false, args: argsOf(m[1], Number(m[2])) };
   const OWN = new Set(['phrase', 'kind_noun', 'sig', 'edb']);
-  const src = [...srcClauses.values()].filter((c) => !OWN.has(c.head));
-  for (const c of src) for (let i = c.body.length - 1; i >= 0; i--) {
-    const l = c.body[i];
-    if ((l.rel === '=' || l.rel === 'is') && !l.neg && /^[A-Z]/.test(l.args[0]) && /^[A-Z]/.test(l.args[1]) && !/^"/.test(l.args[1])) {
-      const [to, from] = l.args; const sub = (x: string) => (x === from ? to : x);
-      c.args = c.args.map(sub); for (const b of c.body) b.args = b.args.map(sub); c.body.splice(i, 1);
-    }
+  /** An aggregate as rofl-render's `--facts` writes it whole (`aggj`): each term in the kernel's canonical spelling. */
+  type AggJ = { op: string; res: string; vals: string[]; keys: string[]; body: ({ k: 'pos' | 'neg'; rel: string; args: string[] } | { k: 'bi'; op: string; args: string[] } | { k: 'agg'; agg: AggJ })[] };
+  /** The source's aggregate in the read-back clause's spelling: a variable `?X` is `X`, a wildcard `?_$0` is `_`. */
+  function fromAggJ(a: AggJ): CAgg {
+    const t = (x: string) => { x = x.replace(/\?_\$\d+/g, '_'); return /^\?[A-Z][\w$]*$/.test(x) ? x.slice(1) : x; };
+    const el = (e: AggJ['body'][number]): CLit => e.k === 'agg' ? { rel: '$agg', neg: false, args: [], agg: fromAggJ(e.agg) } : e.k === 'bi' ? { rel: e.op, neg: false, args: e.args.map(t) } : { rel: e.rel, neg: e.k === 'neg', args: e.args.map(t) };
+    return { op: a.op, res: t(a.res), vals: a.vals.map(t), keys: a.keys.map(t), body: a.body.map(el) };
   }
+  // every term of a literal, an aggregate's result, values, keys and body included, mapped
+  const mapTerms = (l: CLit, f: (x: string) => string): CLit => l.agg
+    ? { ...l, agg: { ...l.agg, res: f(l.agg.res), vals: l.agg.vals.map(f), keys: l.agg.keys.map(f), body: l.agg.body.map((b) => mapTerms(b, f)) } }
+    : { ...l, args: l.args.map(f) };
+  const termsOf = (l: CLit): string[] => l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys, ...l.agg.body.flatMap(termsOf)] : l.args;
+  // `X = Y` and `X is Y` between two variables folded into one, in a clause from either side and in an aggregate's
+  // body, before they are compared
+  const foldVars = (c0: Clause): Clause => {
+    const copy = (l: CLit) => mapTerms(l, (x) => x);
+    let c: Clause = { ...c0, args: [...c0.args], body: c0.body.map(copy), ...(c0.dom ? { dom: copy(c0.dom) } : {}) };
+    const isEq = (l: CLit) => !l.agg && !l.neg && (l.rel === '=' || l.rel === 'is') && /^[A-Z]/.test(l.args[0]) && /^[A-Z]/.test(l.args[1]);
+    // the last such equality taken out of a body, an aggregate's included
+    const take = (body: CLit[]): [string, string] | null => {
+      for (let i = body.length - 1; i >= 0; i--) {
+        const l = body[i];
+        if (l.agg) { const r = take(l.agg.body); if (r) return r; continue; }
+        if (isEq(l)) { body.splice(i, 1); return [l.args[0], l.args[1]]; }
+      }
+      return null;
+    };
+    for (let eq = take(c.body); eq; eq = take(c.body)) {
+      const [to, from] = eq, inside = new RegExp(`\\?${from.replace(/\$/g, '\\$')}(?![\\w$])`, 'g');
+      const f = (x: string) => (x === from ? to : x.includes('?') ? x.replace(inside, `?${to}`) : x);
+      c = { ...c, args: c.args.map(f), body: c.body.map((b) => mapTerms(b, f)), ...(c.dom ? { dom: mapTerms(c.dom, f) } : {}) };
+    }
+    return c;
+  };
+  // a declaration as one text, its variables renamed V0, V1, ... in order: from the source's `decl`, and from the reader's
+  const declText = (kind: string, rel: string, args: string[], op: string, widen?: string): string => {
+    const names = new Map<string, string>(); const v = (x: string) => /^[A-Z]/.test(x) ? (names.get(x) ?? (names.set(x, `V${names.size}`), names.get(x)!)) : x;
+    const as = args.map(v);
+    return `${kind} ${rel}(${[...as.slice(0, -1), `${op} ${as[as.length - 1]}`].join(',')})${widen ? ` widen ${widen}` : ''}`;
+  };
+  const srcDecls = [...srcClauses.entries()].filter(([r]) => declOf.has(r)).map(([r, c]) => { const d = declOf.get(r)!; return declText(d.kind, c.head, c.args, d.op, d.widen); });
+  const readDecls = decls.map((d) => {
+    const m = /^(lattice|tag) (\$?\w+)(?:\[[^\]]*\])?\((.*)\)(?: widen (\d+))?\.$/.exec(d);
+    if (!m) return d;
+    const as = m[3].split(', '), last = as[as.length - 1].split(' '), val = last.pop()!;
+    return declText(m[1], m[2], [...as.slice(0, -1), val], last.join(' '), m[4]);
+  });
+  const src = [...srcClauses.entries()].filter(([r, c]) => !OWN.has(c.head) && !declOf.has(r)).map(([, c]) => foldVars(c));
 
+  /** A clause as one canonical text: variables renamed V0, V1, ... in the order the head, the dominating fact and
+   *  the body (sorted) first name them, a variable written once `_`. An aggregate is compared whole, its result,
+   *  values, keys and body (sorted the same way), not as its operator alone. */
   function canon(c: Clause): string {
     const count = new Map<string, number>();
     const isVar = (x: string) => /^[A-Z]/.test(x) && !/^"/.test(x);
     const bump = (x: string) => count.set(x, (count.get(x) ?? 0) + 1);
-    for (const x of [...c.args, ...c.body.flatMap((l) => l.args)]) { if (isVar(x)) bump(x); else if (x.includes('?')) for (const v of x.matchAll(/\?([A-Z]\w*)/g)) bump(v[1]); }
+    for (const x of [...c.args, ...(c.dom ? termsOf(c.dom) : []), ...c.body.flatMap(termsOf)]) { if (isVar(x)) bump(x); else if (x.includes('?')) for (const v of x.matchAll(/\?([A-Z][\w$]*)/g)) bump(v[1]); }
     const names = new Map<string, string>(); let n = 0;
     const one = (x: string) => { if ((count.get(x) ?? 0) <= 1) return '_'; if (!names.has(x)) names.set(x, `V${n++}`); return names.get(x)!; };
-    const nm = (x: string) => isVar(x) ? one(x) : x.includes('?') ? x.replace(/\?([A-Z]\w*)/g, (_, v) => '?' + one(v)) : x;
-    const head = `${c.head}(${c.args.map(nm).join(',')})${c.tense ? '@' + c.tense : ''}`;
-    const key = (l: Clause['body'][0]) => `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map((x) => isVar(x) ? (names.has(x) ? names.get(x) : (count.get(x) ?? 0) <= 1 ? '_' : '?') : x).join(',')})`;
-    const body = [...c.body].sort((a, b) => key(a).localeCompare(key(b)));
-    const lits = body.map((l) => `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map(nm).join(',')})`).sort();
+    const nm = (x: string) => isVar(x) ? one(x) : x.includes('?') ? x.replace(/"(?:[^"\\]|\\.)*"|\?([A-Z][\w$]*)/g, (m, v) => (v ? '?' + one(v) : m)) : x;
+    const kt = (x: string) => isVar(x) ? (names.has(x) ? names.get(x)! : (count.get(x) ?? 0) <= 1 ? '_' : '?') : x.replace(/"(?:[^"\\]|\\.)*"|\?([A-Z][\w$]*)/g, (m, v) => (v ? (names.has(v) ? '?' + names.get(v) : '?') : m));
+    const key = (l: CLit): string => l.agg
+      ? `$agg:${l.agg.op}[${kt(l.agg.res)}](${l.agg.vals.map(kt).join(',')};${l.agg.keys.map(kt).join(',')}:${l.agg.body.map(key).sort().join('|')})`
+      : `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map(kt).join(',')})`;
+    const order = (ls: CLit[]) => [...ls].sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
+    const render = (l: CLit): string => {
+      if (!l.agg) return `${l.neg ? 'not ' : ''}${l.rel}(${l.args.map(nm).join(',')})`;
+      const a = l.agg, res = nm(a.res), vals = a.vals.map(nm), keys = a.keys.map(nm);
+      return `$agg:${a.op}[${res}](${vals.join(',')};${keys.join(',')}:${order(a.body).map(render).sort().join('|')})`;
+    };
+    const head = `${c.head}(${c.args.map(nm).join(',')})${c.tense ? '@' + c.tense : ''}${c.dom ? ` <= ${render(c.dom)}` : ''}`;
+    const lits = order(c.body).map(render).sort();
     return `${head} :- ${lits.join(', ')}`;
   }
   const srcRules = src.filter((c) => c.body.length); const srcFacts = src.filter((c) => !c.body.length);
-  const parsedSet = new Map<string, number>(); for (const c of parsed) parsedSet.set(canon(c), (parsedSet.get(canon(c)) ?? 0) + 1);
+  const parsedSet = new Map<string, number>(); for (const c of [...parsed, ...dominances].map(foldVars)) parsedSet.set(canon(c), (parsedSet.get(canon(c)) ?? 0) + 1);
   let matched = 0; const missing: string[] = [];
   for (const c of srcRules) { const k = canon(c); const n = parsedSet.get(k) ?? 0; if (n > 0) { matched++; parsedSet.set(k, n - 1); } else missing.push(k); }
   const extra = [...parsedSet.entries()].filter(([, n]) => n > 0).map(([k, n]) => `${k}${n > 1 ? ` x${n}` : ''}`);
@@ -658,7 +983,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   for (const c of srcFacts) { if (pf.has(factKey(c))) factsMatched++; else factsMissing.push(factKey(c)); }
 
   report.push(`source: ${srcRules.length} rules, ${srcFacts.length} facts; read back: ${rules.length} sentences -> ${parsed.length} rules, ${parsedFacts.length} facts`);
-  report.push(`rules round-tripped exactly: ${matched} of ${srcRules.length}; facts: ${factsMatched} of ${srcFacts.length}`);
+  const declLeft = [...readDecls]; let declsMatched = 0;
+  for (const d of srcDecls) { const i = declLeft.indexOf(d); if (i >= 0) { declsMatched++; declLeft.splice(i, 1); } }
+  report.push(`rules round-tripped exactly: ${matched} of ${srcRules.length}; facts: ${factsMatched} of ${srcFacts.length}; declarations: ${declsMatched} of ${srcDecls.length}`);
   report.push(`ambiguous fragments: ${ambiguous.length}; unparsed fragments: ${unparsed.length}; sentences dropped: ${dropped.length}`);
   for (const d of dropped) report.push('  dropped: ' + d);
   report.push(`\nsource rules with no exact match (${missing.length}):`);
@@ -666,9 +993,10 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   report.push(`\nread-back rules the source does not have (${extra.length}):`);
   for (const e of extra.slice(0, 15)) report.push('  ' + e);
   // every relation a rule reads has somewhere to link: a definition or declaration in this file, a line in its Reads list, or the caller's model
-  const BUILTIN = new Set(['=', '!=', '<', '>', '<=', '>=', 'is']);
+  const BUILTIN = new Set(['=', '!=', '<', '>', '<=', '>=', 'is', '$agg', 'shrug']);
   const linkable = new Set([...rules.map((r) => r.head.rel), ...declared, ...parsedFacts.map((f) => f.rel), ...imported, ...Object.keys(opts.homeBooks ?? {})]);
-  const nowhere = [...new Set(rules.flatMap((r) => r.body.map((l) => l.rel)))].filter((rel) => !linkable.has(rel) && !BUILTIN.has(rel));
+  const relsOf = (l: Lit): string[] => [l.rel, ...(l.agg?.subs ?? []).flatMap((r) => r.body.flatMap(relsOf))];
+  const nowhere = [...new Set(rules.flatMap((r) => r.body.flatMap(relsOf)))].filter((rel) => !linkable.has(rel) && !BUILTIN.has(rel));
   report.push(`\nused with nowhere to link (${nowhere.length}): ${nowhere.join(', ')}`);
   report.push(`alternatives not starting with if or unless (${badAlternatives.length}):${badAlternatives.length ? '\n  ' + badAlternatives.join('\n  ') : ''}`);
   if (learned.length) report.push(`vocabulary the file declares: ${learned.length} sentences`);
@@ -679,8 +1007,53 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   report.push(`\nunparsed (${unparsed.length}):`);
   for (const u of [...new Set(unparsed)].slice(0, 20)) report.push('  ' + u);
   const bk = (rel: string, tail?: string) => { const b = tail ?? homeBook.get(rel) ?? headBook.get(rel) ?? defaultBook; return b === 'main' ? '' : `[${b}]`; };
-  const rofl = (x: string): string => { let m; if ((m = /^([-+*\/]|mod)\((.*),(.*)\)$/.exec(x))) return `${rofl(m[2])} ${m[1]} ${rofl(m[3])}`; if ((m = /^(\w+)\((.*)\)$/.exec(x))) return `${m[1]}(${m[2].split(',').map(rofl).join(', ')})`; return x.replace(/^\?/, ''); };
-  const show = (c: Clause) => `${c.head}${bk(c.head, c.book)}(${c.args.join(', ')})${c.tense ? ' @' + c.tense : ''}${c.body.length ? ' :- ' + c.body.map((l) => `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.join(', ')})`}`).join(', ') : ''}.`;
+  // a term back in rofl: arithmetic infix, an operand that is itself infix in parentheses (the same tree)
+  const INFIX = /^(?:[-+*\/]|mod)$/;
+  const rofl = (x: string): string => {
+    const m = /^([-+*\/]|mod|\$?[a-z_]\w*)\((.*)\)$/s.exec(x);
+    if (!m) return plain(x);
+    const args = splitTop(m[2]);
+    if (!INFIX.test(m[1]) || args.length !== 2) return `${m[1]}(${args.map(rofl).join(', ')})`;
+    const side = (a: string) => { const r = rofl(a); return /^(?:[-+*\/]|mod)\(/.test(a) ? `(${r})` : r; };
+    return `${side(args[0])} ${m[1]} ${side(args[1])}`;
+  };
+  // a variable inside a functor is `?X` in the canonical form and `X` in rofl
+  const plain = (x: string): string => x.replace(/"(?:[^"\\]|\\.)*"|\?(?=[A-Z_])/g, (t) => (t === '?' ? '' : t));
+  const el = (l: CLit): string => l.agg ? aggText(l.agg) : `${l.neg ? 'not ' : ''}${l.rel === 'is' ? `${l.args[0]} is ${rofl(l.args[1])}` : /^[<>=!]/.test(l.rel) || l.rel === 'in' || l.rel === 'subset' ? `${rofl(l.args[0])} ${l.rel} ${rofl(l.args[1])}` : `${l.rel}${bk(l.rel, l.book)}(${l.args.map(plain).join(', ')})`}`;
+  const aggText = (a: CAgg): string => {
+    const inner = a.body.map(el).join(', ');
+    if (a.op === 'at_least') return `at_least(${plain(a.res)}, ${a.vals.map(plain).join(', ')} : ${inner})`;
+    return `${plain(a.res)} is ${a.op}(${a.vals.map(plain).join(', ')}${a.keys.length ? ' ; ' + a.keys.map(plain).join(', ') : ''} : ${inner})`;
+  };
+  const show = (c0: Clause): string => {
+    const c = opts.canonVars ? canonNames(c0) : c0;
+    const head = `${c.head}${bk(c.head, c.book)}(${c.args.map(plain).join(', ')})${c.tense ? ' @' + c.tense : ''}`;
+    if (c.dom) return `${head} <= ${c.dom.rel}${bk(c.dom.rel, c.dom.book)}(${c.dom.args.map(plain).join(', ')}) :- ${c.body.map(el).join(', ')}.`;
+    return `${head}${c.body.length ? ' :- ' + c.body.map(el).join(', ') : ''}.`;
+  };
+  /** Every variable of a clause renamed V0, V1, ... in the order the clause writes it: head, dominating fact, body, an
+   *  aggregate's result, values, keys and body; `_` is no variable. The TypeScript parser's order (scripts/sentences.ts). */
+  function canonNames(c: Clause): Clause {
+    const names = new Map<string, string>();
+    const nm = (v: string) => { if (!names.has(v)) names.set(v, `V${names.size}`); return names.get(v)!; };
+    const arg = (x: string): string => {
+      if (/^[A-Z]\w*$/.test(x)) return nm(x);
+      let out = '', q: string | null = null;
+      for (let i = 0; i < x.length; i++) {
+        const ch = x[i];
+        if (q) { out += ch; if (ch === q) q = null; continue; }
+        if (ch === '"') { q = ch; out += ch; continue; }
+        const m = ch === '?' ? /^\?([A-Z]\w*)/.exec(x.slice(i)) : null;
+        if (m) { out += `?${nm(m[1])}`; i += m[0].length - 1; continue; }
+        out += ch;
+      }
+      return out;
+    };
+    const lit = (l: CLit): CLit => l.agg ? { ...l, agg: (() => { const a = l.agg!; const res = arg(a.res), vals = a.vals.map(arg), keys = a.keys.map(arg); return { ...a, res, vals, keys, body: a.body.map(lit) }; })() } : { ...l, args: l.args.map(arg) };
+    const args = c.args.map(arg);
+    const dom = c.dom ? lit(c.dom) : undefined;
+    return { ...c, args, dom, body: c.body.map(lit) };
+  }
   const declaredFacts = new Set(declared);
   const factLine = (l: Lit) => `${l.rel}${declaredFacts.has(l.rel) ? '' : bk(l.rel)}(${l.args.map(tstr).join(', ')})${l.tense ? ' @' + l.tense : ''}.`;
   // one sentence as the literal it names, read against this file's vocabulary: how a question in the file's words is asked
@@ -691,7 +1064,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return lit && `${lit.rel}${bk(lit.rel, lit.book)}(${lit.args.map(tstr).join(', ')})`;
   };
   return {
-    rofl: [...declared.map((d) => `edb(${d}).`), ...parsedFacts.map(factLine), ...parsed.map(show)].join('\n') + '\n',
+    rofl: [...declared.map((d) => `edb(${d}).`), ...decls, ...parsedFacts.map(factLine), ...parsed.map(show), ...dominances.map(show)].join('\n') + '\n',
     phrases: learned.map((t) => `phrase(${t.rel}, "${phraseOf(t)}").`),
     report: report.join('\n'),
     traced,

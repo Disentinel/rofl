@@ -37,7 +37,7 @@ check_opt("budget_wall", budget, 50).
 -- once, recording `hole($adhoc, budget_exhausted)`. Same wall, same reason atom,
 -- different attribution. Whether a load evaluates is a decision about the host
 -- contract and not something to patch under a green bar.
-check_opt("budget_wall", one_engine, 1).
+check_opt("budget_wall", one_engine, ts).
 
 -- ================================================ DEMOS THAT ARE NOT GOLDENS
 -- `npm run test:hosts` hashes each demo's output, because 21 of 23 demos call
@@ -151,3 +151,1907 @@ check_file("provenance_relational", "examples/checks/provenance-relational.rofl"
 -- two-column `derived_by` loaded clean and matched nothing for ever.
 check_world("premise_arity").
 check_file("premise_arity", "examples/checks/premise-arity.rofl").
+
+-- THE AGGREGATES LEDGER WITH THE REGISTRY AND THE FINDINGS BESIDE IT
+-- (docs/aggregates.md, "Closing a cell"). A proof world for facts/agg.rofl is
+-- declared here with `proves(World, agg, K, L)`, `proves_work(World, Item)`,
+-- and for a strata cell `proves_refusal` or `proves_recursion`.
+registry_file(checks).
+check_world("agg_proofs").
+check_file("agg_proofs", "facts/checks.rofl").
+check_file("agg_proofs", "facts/findings.rofl").
+check_file("agg_proofs", "facts/agg.rofl").
+check_file("agg_proofs", "rules/agg.rofl").
+
+-- A FACT THAT IS GIVEN AND ALSO DERIVED KEEPS ITS `derived_by` ROW ACROSS A
+-- SECOND EVALUATION. Two files because the TypeScript host evaluates on every
+-- load; the second file reads provenance and raises `provenance_lost` when the
+-- row is gone. It is the defect the regenerated corpus showed on rules_agg,
+-- and it lives in examples/checks/, which the corpus loads as the world
+-- `checks`, so the Rust loop holds it too (tests/session.rs evaluates every
+-- case twice). f_clear_derived_left_this_ticks_firings_on_the_facts_it_kept
+check_world("agg_rederived_provenance").
+check_file("agg_rederived_provenance", "examples/checks/agg-rederived-1-given.rofl").
+check_file("agg_rederived_provenance", "examples/checks/agg-rederived-2-read.rofl").
+proves_work("agg_rederived_provenance", w_agg_baseline).
+proves_work("agg_rederived_provenance", w_agg_session_tests).
+
+-- THE PLANTED FAULTS AGAINST THE ENGINE SOURCE AND THE LEDGER. The census is
+-- written by `scripts/agg_breaks.ts --census --write` and `npm test` fails
+-- when it is stale; the check raises an alarm for a switch break with no
+-- `brk!` site, a site no break names, and a world `handled` closes a cell with
+-- that no planted fault turns red. scripts/agg_mutants.ts plants each.
+check_world("agg_breaks_census").
+check_file("agg_breaks_census", "examples/checks/agg-breaks-census.rofl").
+check_file("agg_breaks_census", "examples/checks/agg-breaks-census-check.rofl").
+proves_work("agg_breaks_census", w_agg_fast_loop).
+
+-- =============================================== THE AGGREGATE PROOF WORLDS
+-- One world per cell of facts/agg.rofl that w_agg_cell_store and
+-- w_agg_body_strat close, named `agg_<kind>_<column>`, each bound to its cell
+-- by `proves` (docs/aggregates.md, "Closing a cell"). Every one is loaded
+-- together (`check_opt(W, together, 1)`: its files load before it is
+-- evaluated once, a fixture offered alone) and answered by both engines,
+-- which reach one hash (w_agg_ts). A file whose first line is
+-- `-- expect-refusal: <text>` must be refused with that text, by both.
+
+-- COUNT
+check_world("agg_count_syntax").
+check_file("agg_count_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_count_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-1-forms.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-2-expect.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-empty.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-unclosed.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-expression.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-result.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-semicolon.rofl").
+check_file("agg_count_syntax", "examples/checks/agg-count-syntax-3-refused-nocolon.rofl").
+check_opt("agg_count_syntax", together, 1).
+proves("agg_count_syntax", agg, count, syntax).
+
+check_world("agg_count_reflect").
+check_file("agg_count_reflect", "examples/checks/agg-count-reflect-data.rofl").
+check_file("agg_count_reflect", "examples/checks/agg-count-reflect-check.rofl").
+check_opt("agg_count_reflect", together, 1).
+proves("agg_count_reflect", agg, count, reflect).
+
+check_world("agg_count_strata").
+check_file("agg_count_strata", "examples/checks/agg-count-data.rofl").
+check_file("agg_count_strata", "examples/checks/agg-count-oracle.rofl").
+check_file("agg_count_strata", "rules/strata.rofl").
+check_file("agg_count_strata", "examples/checks/agg-count-strata-check.rofl").
+check_file("agg_count_strata", "examples/checks/agg-count-strata-2-refused-recursive.rofl").
+check_opt("agg_count_strata", together, 1).
+proves("agg_count_strata", agg, count, strata).
+proves_refusal("agg_count_strata", count).
+
+-- the same world under the stock evaluator, which reads the `stratum` table
+-- rules/strata.rofl derives: coverage of that path, and no cell's proof
+check_world("agg_count_strata_stock").
+check_file("agg_count_strata_stock", "examples/checks/agg-count-data.rofl").
+check_file("agg_count_strata_stock", "examples/checks/agg-count-oracle.rofl").
+check_file("agg_count_strata_stock", "rules/strata.rofl").
+check_file("agg_count_strata_stock", "examples/checks/agg-count-strata-check.rofl").
+check_opt("agg_count_strata_stock", together, 1).
+check_opt("agg_count_strata_stock", evaluator, strata).
+
+-- the stock evaluator with NO stratum table: an aggregate it cannot order is
+-- refused, never sealed over a relation still being derived. Coverage of the
+-- refusal on that path; no cell's proof
+check_world("agg_count_strata_untabled").
+check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-3-refused-untabled.rofl").
+check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-4-refused-untabled-recursive.rofl").
+check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-untabled-check.rofl").
+check_opt("agg_count_strata_untabled", together, 1).
+check_opt("agg_count_strata_untabled", evaluator, strata).
+
+check_world("agg_count_safety").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-3-refused-unbound.rofl").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-4-refused-late-binder.rofl").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-5-refused-two-aggregates.rofl").
+check_file("agg_count_safety", "examples/checks/agg-count-safety-check.rofl").
+check_opt("agg_count_safety", together, 1).
+proves("agg_count_safety", agg, count, safety).
+
+check_world("agg_count_eval").
+check_file("agg_count_eval", "examples/checks/agg-count-data.rofl").
+check_file("agg_count_eval", "examples/checks/agg-count-oracle.rofl").
+check_file("agg_count_eval", "examples/checks/agg-count-eval-check.rofl").
+check_opt("agg_count_eval", together, 1).
+proves("agg_count_eval", agg, count, eval_rust).
+
+check_world("agg_count_witness").
+check_file("agg_count_witness", "examples/checks/agg-count-data.rofl").
+check_file("agg_count_witness", "examples/checks/agg-count-witness-check.rofl").
+check_opt("agg_count_witness", together, 1).
+proves("agg_count_witness", agg, count, witness).
+
+check_world("agg_count_why").
+check_file("agg_count_why", "examples/checks/agg-count-data.rofl").
+check_file("agg_count_why", "examples/checks/agg-count-why-check.rofl").
+check_opt("agg_count_why", together, 1).
+check_opt("agg_count_why", explain, 1).
+proves("agg_count_why", agg, count, why).
+
+-- SUM
+
+check_world("agg_sum_syntax").
+check_file("agg_sum_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_sum_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_sum_syntax", "examples/checks/agg-sum-syntax-1-forms.rofl").
+check_file("agg_sum_syntax", "examples/checks/agg-sum-syntax-2-expect.rofl").
+check_file("agg_sum_syntax", "examples/checks/agg-sum-syntax-3-refused-empty-key.rofl").
+check_file("agg_sum_syntax", "examples/checks/agg-sum-syntax-3-refused-key-expression.rofl").
+check_file("agg_sum_syntax", "examples/checks/agg-sum-syntax-3-refused-unclosed.rofl").
+check_opt("agg_sum_syntax", together, 1).
+proves("agg_sum_syntax", agg, sum, syntax).
+
+check_world("agg_sum_reflect").
+check_file("agg_sum_reflect", "examples/checks/agg-sum-reflect-data.rofl").
+check_file("agg_sum_reflect", "examples/checks/agg-sum-reflect-check.rofl").
+check_opt("agg_sum_reflect", together, 1).
+proves("agg_sum_reflect", agg, sum, reflect).
+
+check_world("agg_sum_strata").
+check_file("agg_sum_strata", "examples/checks/agg-sum-data.rofl").
+check_file("agg_sum_strata", "examples/checks/agg-sum-oracle.rofl").
+check_file("agg_sum_strata", "rules/strata.rofl").
+check_file("agg_sum_strata", "examples/checks/agg-sum-strata-check.rofl").
+check_file("agg_sum_strata", "examples/checks/agg-sum-strata-2-refused-recursive.rofl").
+check_opt("agg_sum_strata", together, 1).
+proves_refusal("agg_sum_strata", sum).
+proves("agg_sum_strata", agg, sum, strata).
+
+check_world("agg_sum_safety").
+check_file("agg_sum_safety", "examples/checks/agg-sum-safety-1-ok.rofl").
+check_file("agg_sum_safety", "examples/checks/agg-sum-safety-2-refused-nokey.rofl").
+check_file("agg_sum_safety", "examples/checks/agg-sum-safety-3-refused-two-values.rofl").
+check_file("agg_sum_safety", "examples/checks/agg-sum-safety-check.rofl").
+check_opt("agg_sum_safety", together, 1).
+proves("agg_sum_safety", agg, sum, safety).
+
+check_world("agg_sum_eval").
+check_file("agg_sum_eval", "examples/checks/agg-sum-data.rofl").
+check_file("agg_sum_eval", "examples/checks/agg-sum-oracle.rofl").
+check_file("agg_sum_eval", "examples/checks/agg-sum-eval-check.rofl").
+check_opt("agg_sum_eval", together, 1).
+proves("agg_sum_eval", agg, sum, eval_rust).
+
+check_world("agg_sum_witness").
+check_file("agg_sum_witness", "examples/checks/agg-sum-data.rofl").
+check_file("agg_sum_witness", "examples/checks/agg-sum-witness-check.rofl").
+check_opt("agg_sum_witness", together, 1).
+proves("agg_sum_witness", agg, sum, witness).
+
+check_world("agg_sum_why").
+check_file("agg_sum_why", "examples/checks/agg-sum-data.rofl").
+check_file("agg_sum_why", "examples/checks/agg-sum-why-check.rofl").
+check_opt("agg_sum_why", together, 1).
+check_opt("agg_sum_why", explain, 1).
+proves("agg_sum_why", agg, sum, why).
+
+-- MIN, MAX, OR AND AND, IN A RULE BODY
+
+check_world("agg_minmax_syntax").
+check_file("agg_minmax_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_minmax_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_minmax_syntax", "examples/checks/agg-minmax-syntax-1-forms.rofl").
+check_file("agg_minmax_syntax", "examples/checks/agg-minmax-syntax-2-expect.rofl").
+check_file("agg_minmax_syntax", "examples/checks/agg-minmax-syntax-3-refused-empty.rofl").
+check_file("agg_minmax_syntax", "examples/checks/agg-minmax-syntax-3-refused-expression.rofl").
+check_opt("agg_minmax_syntax", together, 1).
+proves("agg_minmax_syntax", agg, min_max_strat, syntax).
+
+check_world("agg_minmax_reflect").
+check_file("agg_minmax_reflect", "examples/checks/agg-minmax-reflect-data.rofl").
+check_file("agg_minmax_reflect", "examples/checks/agg-minmax-reflect-check.rofl").
+check_opt("agg_minmax_reflect", together, 1).
+proves("agg_minmax_reflect", agg, min_max_strat, reflect).
+
+check_world("agg_minmax_strata").
+check_file("agg_minmax_strata", "examples/checks/agg-minmax-data.rofl").
+check_file("agg_minmax_strata", "examples/checks/agg-minmax-oracle.rofl").
+check_file("agg_minmax_strata", "rules/strata.rofl").
+check_file("agg_minmax_strata", "examples/checks/agg-minmax-strata-check.rofl").
+check_file("agg_minmax_strata", "examples/checks/agg-minmax-strata-2-refused-recursive.rofl").
+check_opt("agg_minmax_strata", together, 1).
+proves_refusal("agg_minmax_strata", min_max_strat).
+proves("agg_minmax_strata", agg, min_max_strat, strata).
+
+check_world("agg_minmax_safety").
+check_file("agg_minmax_safety", "examples/checks/agg-minmax-safety-1-ok.rofl").
+check_file("agg_minmax_safety", "examples/checks/agg-minmax-safety-2-refused-key.rofl").
+check_file("agg_minmax_safety", "examples/checks/agg-minmax-safety-3-refused-two-values.rofl").
+check_file("agg_minmax_safety", "examples/checks/agg-minmax-safety-check.rofl").
+check_opt("agg_minmax_safety", together, 1).
+proves("agg_minmax_safety", agg, min_max_strat, safety).
+
+check_world("agg_minmax_eval").
+check_file("agg_minmax_eval", "examples/checks/agg-minmax-data.rofl").
+check_file("agg_minmax_eval", "examples/checks/agg-minmax-oracle.rofl").
+check_file("agg_minmax_eval", "examples/checks/agg-minmax-eval-check.rofl").
+check_opt("agg_minmax_eval", together, 1).
+proves("agg_minmax_eval", agg, min_max_strat, eval_rust).
+
+check_world("agg_minmax_witness").
+check_file("agg_minmax_witness", "examples/checks/agg-minmax-data.rofl").
+check_file("agg_minmax_witness", "examples/checks/agg-minmax-oracle.rofl").
+check_file("agg_minmax_witness", "examples/checks/agg-minmax-witness-check.rofl").
+check_opt("agg_minmax_witness", together, 1).
+proves("agg_minmax_witness", agg, min_max_strat, witness).
+
+check_world("agg_minmax_why").
+check_file("agg_minmax_why", "examples/checks/agg-minmax-data.rofl").
+check_file("agg_minmax_why", "examples/checks/agg-minmax-why-check.rofl").
+check_opt("agg_minmax_why", together, 1).
+check_opt("agg_minmax_why", explain, 1).
+proves("agg_minmax_why", agg, min_max_strat, why).
+
+-- THE EMPTY GROUP
+
+check_world("agg_empty_strata").
+check_file("agg_empty_strata", "examples/checks/agg-empty-data.rofl").
+check_file("agg_empty_strata", "examples/checks/agg-empty-strata-check.rofl").
+check_opt("agg_empty_strata", together, 1).
+proves("agg_empty_strata", agg, empty_group, strata).
+
+check_world("agg_empty_safety").
+check_file("agg_empty_safety", "examples/checks/agg-empty-data.rofl").
+check_file("agg_empty_safety", "examples/checks/agg-empty-safety-check.rofl").
+check_opt("agg_empty_safety", together, 1).
+proves("agg_empty_safety", agg, empty_group, safety).
+
+check_world("agg_empty_eval").
+check_file("agg_empty_eval", "examples/checks/agg-empty-data.rofl").
+check_file("agg_empty_eval", "examples/checks/agg-empty-eval-check.rofl").
+check_opt("agg_empty_eval", together, 1).
+proves("agg_empty_eval", agg, empty_group, eval_rust).
+
+check_world("agg_empty_witness").
+check_file("agg_empty_witness", "examples/checks/agg-empty-data.rofl").
+check_file("agg_empty_witness", "examples/checks/agg-empty-witness-check.rofl").
+check_opt("agg_empty_witness", together, 1).
+proves("agg_empty_witness", agg, empty_group, witness).
+
+check_world("agg_empty_why").
+check_file("agg_empty_why", "examples/checks/agg-empty-data.rofl").
+check_file("agg_empty_why", "examples/checks/agg-empty-why-check.rofl").
+check_opt("agg_empty_why", together, 1).
+check_opt("agg_empty_why", explain, 1).
+proves("agg_empty_why", agg, empty_group, why).
+
+-- THE CELL SUBSTRATE
+
+check_world("agg_cell_eval").
+check_file("agg_cell_eval", "examples/checks/agg-cell-data.rofl").
+check_file("agg_cell_eval", "examples/checks/agg-cell-eval-check.rofl").
+check_opt("agg_cell_eval", together, 1).
+proves("agg_cell_eval", agg, cell, eval_rust).
+
+check_world("agg_cell_witness").
+check_file("agg_cell_witness", "examples/checks/agg-witness-data.rofl").
+check_file("agg_cell_witness", "examples/checks/agg-witness-check.rofl").
+check_opt("agg_cell_witness", together, 1).
+proves("agg_cell_witness", agg, cell, witness).
+
+check_world("agg_cell_reflect").
+check_file("agg_cell_reflect", "examples/checks/agg-witness-data.rofl").
+check_file("agg_cell_reflect", "examples/checks/agg-reflect-check.rofl").
+check_opt("agg_cell_reflect", together, 1).
+proves("agg_cell_reflect", agg, cell, reflect).
+
+check_world("agg_cell_why").
+check_file("agg_cell_why", "examples/checks/agg-cell-data.rofl").
+check_file("agg_cell_why", "examples/checks/agg-why-cell-check.rofl").
+check_opt("agg_cell_why", together, 1).
+check_opt("agg_cell_why", explain, 1).
+proves("agg_cell_why", agg, cell, why).
+
+-- WELL-FOUNDED WORLDS AND TICKS (w_agg_wfs_ticks; docs/aggregates.md,
+-- "Well-founded worlds and ticks, as built"). The wfs column: a cell under
+-- semantics(well_founded) is refused (each world's `-refused-` fixtures),
+-- and a well-founded world below is read by a stratified one above it
+-- (`-- below:` in a file: rofl-load --below, Session::feed_below). The world
+-- below is declared on its own too, so both engines agree on what is fed.
+check_world("agg_wfs_game").
+check_file("agg_wfs_game", "examples/checks/agg-wfs-game.rofl").
+check_world("agg_cell_wfs").
+check_file("agg_cell_wfs", "examples/checks/agg-cell-wfs-check.rofl").
+check_file("agg_cell_wfs", "examples/checks/agg-cell-wfs-2-holed-below.rofl").
+check_opt("agg_cell_wfs", together, 1).
+proves("agg_cell_wfs", agg, cell, wfs).
+
+check_world("agg_count_wfs").
+check_file("agg_count_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_count_wfs", "examples/checks/agg-count-wfs-check.rofl").
+check_file("agg_count_wfs", "examples/checks/agg-count-wfs-2-refused-count.rofl").
+check_opt("agg_count_wfs", together, 1).
+proves("agg_count_wfs", agg, count, wfs).
+
+check_world("agg_sum_wfs").
+check_file("agg_sum_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_sum_wfs", "examples/checks/agg-sum-wfs-check.rofl").
+check_file("agg_sum_wfs", "examples/checks/agg-sum-wfs-2-refused-sum.rofl").
+check_opt("agg_sum_wfs", together, 1).
+proves("agg_sum_wfs", agg, sum, wfs).
+
+check_world("agg_minmax_wfs").
+check_file("agg_minmax_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_minmax_wfs", "examples/checks/agg-minmax-wfs-check.rofl").
+check_file("agg_minmax_wfs", "examples/checks/agg-minmax-wfs-2-refused-min.rofl").
+check_file("agg_minmax_wfs", "examples/checks/agg-minmax-wfs-2-refused-max.rofl").
+check_file("agg_minmax_wfs", "examples/checks/agg-minmax-wfs-2-refused-or.rofl").
+check_file("agg_minmax_wfs", "examples/checks/agg-minmax-wfs-2-refused-and.rofl").
+check_opt("agg_minmax_wfs", together, 1).
+proves("agg_minmax_wfs", agg, min_max_strat, wfs).
+
+check_world("agg_holistic_wfs").
+check_file("agg_holistic_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_holistic_wfs", "examples/checks/agg-holistic-wfs-check.rofl").
+check_file("agg_holistic_wfs", "examples/checks/agg-holistic-wfs-2-refused-median.rofl").
+check_file("agg_holistic_wfs", "examples/checks/agg-holistic-wfs-2-refused-quantile.rofl").
+check_file("agg_holistic_wfs", "examples/checks/agg-holistic-wfs-2-refused-rank.rofl").
+check_opt("agg_holistic_wfs", together, 1).
+proves("agg_holistic_wfs", agg, holistic, wfs).
+
+check_world("agg_threshold_wfs").
+check_file("agg_threshold_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_threshold_wfs", "examples/checks/agg-threshold-wfs-check.rofl").
+check_file("agg_threshold_wfs", "examples/checks/agg-threshold-wfs-2-refused-at-least.rofl").
+check_opt("agg_threshold_wfs", together, 1).
+proves("agg_threshold_wfs", agg, threshold, wfs).
+
+check_world("agg_empty_wfs").
+check_file("agg_empty_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_empty_wfs", "examples/checks/agg-empty-wfs-check.rofl").
+check_file("agg_empty_wfs", "examples/checks/agg-empty-wfs-2-refused-count.rofl").
+check_opt("agg_empty_wfs", together, 1).
+proves("agg_empty_wfs", agg, empty_group, wfs).
+
+check_world("agg_lattice_wfs").
+check_file("agg_lattice_wfs", "examples/checks/agg-wfs-values.rofl").
+check_file("agg_lattice_wfs", "examples/checks/agg-lattice-wfs-check.rofl").
+check_file("agg_lattice_wfs", "examples/checks/agg-lattice-wfs-2-refused-lattice.rofl").
+check_opt("agg_lattice_wfs", together, 1).
+proves("agg_lattice_wfs", agg, order_lattice, wfs).
+
+-- The ticks column: a value staged @next at T is base at T+1, its cell
+-- carried under its own name (the tick is in it) and read there as data;
+-- `why` names what the cell read as the facts of T, by the derived_by rows
+-- of T that retain_ticks keeps while a live cell cites them. Every world
+-- runs with retain_ticks 0, so any row not so cited is gone.
+check_world("agg_cell_ticks").
+check_file("agg_cell_ticks", "examples/checks/agg-cell-ticks.rofl").
+check_file("agg_cell_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_cell_ticks", "examples/checks/agg-cell-ticks-check.rofl").
+check_opt("agg_cell_ticks", together, 1).
+check_opt("agg_cell_ticks", ticks, 2).
+check_opt("agg_cell_ticks", explain, 1).
+check_opt("agg_cell_ticks", retain, 0).
+proves("agg_cell_ticks", agg, cell, ticks).
+
+check_world("agg_count_ticks").
+check_file("agg_count_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_count_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_count_ticks", "examples/checks/agg-count-ticks-check.rofl").
+check_opt("agg_count_ticks", together, 1).
+check_opt("agg_count_ticks", ticks, 1).
+check_opt("agg_count_ticks", explain, 1).
+check_opt("agg_count_ticks", retain, 0).
+proves("agg_count_ticks", agg, count, ticks).
+
+check_world("agg_sum_ticks").
+check_file("agg_sum_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_sum_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_sum_ticks", "examples/checks/agg-sum-ticks-check.rofl").
+check_opt("agg_sum_ticks", together, 1).
+check_opt("agg_sum_ticks", ticks, 1).
+check_opt("agg_sum_ticks", explain, 1).
+check_opt("agg_sum_ticks", retain, 0).
+proves("agg_sum_ticks", agg, sum, ticks).
+
+check_world("agg_minmax_ticks").
+check_file("agg_minmax_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_minmax_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_minmax_ticks", "examples/checks/agg-minmax-ticks-check.rofl").
+check_opt("agg_minmax_ticks", together, 1).
+check_opt("agg_minmax_ticks", ticks, 1).
+check_opt("agg_minmax_ticks", explain, 1).
+check_opt("agg_minmax_ticks", retain, 0).
+proves("agg_minmax_ticks", agg, min_max_strat, ticks).
+
+check_world("agg_holistic_ticks").
+check_file("agg_holistic_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_holistic_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_holistic_ticks", "examples/checks/agg-holistic-ticks-check.rofl").
+check_opt("agg_holistic_ticks", together, 1).
+check_opt("agg_holistic_ticks", ticks, 1).
+check_opt("agg_holistic_ticks", explain, 1).
+check_opt("agg_holistic_ticks", retain, 0).
+proves("agg_holistic_ticks", agg, holistic, ticks).
+
+check_world("agg_threshold_ticks").
+check_file("agg_threshold_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_threshold_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_threshold_ticks", "examples/checks/agg-threshold-ticks-check.rofl").
+check_opt("agg_threshold_ticks", together, 1).
+check_opt("agg_threshold_ticks", ticks, 1).
+check_opt("agg_threshold_ticks", explain, 1).
+check_opt("agg_threshold_ticks", retain, 0).
+proves("agg_threshold_ticks", agg, threshold, ticks).
+
+check_world("agg_empty_ticks").
+check_file("agg_empty_ticks", "examples/checks/agg-ticks-data.rofl").
+check_file("agg_empty_ticks", "examples/checks/agg-ticks-holes.rofl").
+check_file("agg_empty_ticks", "examples/checks/agg-empty-ticks-check.rofl").
+check_opt("agg_empty_ticks", together, 1).
+check_opt("agg_empty_ticks", ticks, 1).
+check_opt("agg_empty_ticks", explain, 1).
+check_opt("agg_empty_ticks", retain, 0).
+proves("agg_empty_ticks", agg, empty_group, ticks).
+
+check_world("agg_lattice_ticks").
+check_file("agg_lattice_ticks", "examples/checks/agg-lattice-ticks-data.rofl").
+check_file("agg_lattice_ticks", "examples/checks/agg-lattice-ticks-check.rofl").
+check_opt("agg_lattice_ticks", together, 1).
+check_opt("agg_lattice_ticks", ticks, 1).
+check_opt("agg_lattice_ticks", explain, 1).
+check_opt("agg_lattice_ticks", retain, 0).
+proves("agg_lattice_ticks", agg, order_lattice, ticks).
+
+
+-- THE ORDER LATTICE (w_agg_order_lattice): the relation declaration
+-- `lattice p(K..., op V)`, recursive min, max, or and and, and the cross-kind
+-- rules of the cell row (a consumer inside a lattice's recursion is monotone
+-- in it; a non-monotone read comes from a higher stratum; one algebra per
+-- predicate). docs/aggregates.md, "The order lattice, as built".
+
+check_world("agg_lattice_syntax").
+check_file("agg_lattice_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_lattice_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-1-forms.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-2-expect.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-3-refused-book.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-3-refused-nodot.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-3-refused-noop.rofl").
+check_file("agg_lattice_syntax", "examples/checks/agg-lattice-syntax-3-refused-unclosed.rofl").
+check_opt("agg_lattice_syntax", together, 1).
+proves("agg_lattice_syntax", agg, order_lattice, syntax).
+
+check_world("agg_lattice_reflect").
+check_file("agg_lattice_reflect", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_reflect", "examples/checks/agg-lattice-reflect-check.rofl").
+check_opt("agg_lattice_reflect", together, 1).
+proves("agg_lattice_reflect", agg, order_lattice, reflect).
+
+check_world("agg_lattice_strata").
+check_file("agg_lattice_strata", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_strata", "rules/strata.rofl").
+check_file("agg_lattice_strata", "examples/checks/agg-lattice-strata-check.rofl").
+check_file("agg_lattice_strata", "examples/checks/agg-lattice-strata-2-refused-sum.rofl").
+check_file("agg_lattice_strata", "examples/checks/agg-lattice-strata-3-refused-count.rofl").
+check_opt("agg_lattice_strata", together, 1).
+proves("agg_lattice_strata", agg, order_lattice, strata).
+proves_recursion("agg_lattice_strata", order_lattice).
+
+check_world("agg_lattice_safety").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-1-ok.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-check.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-2-refused-two-ops.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-3-refused-two-arities.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-4-refused-arity.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-5-refused-asserted.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-7-refused-demand.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-8-refused-provenance.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-9-refused-kernel.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-10-refused-repeated.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-11-refused-constant.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-12-refused-demand-reader.rofl").
+check_file("agg_lattice_safety", "examples/checks/agg-lattice-safety-13-refused-zero.rofl").
+check_opt("agg_lattice_safety", together, 1).
+proves("agg_lattice_safety", agg, order_lattice, safety).
+
+check_world("agg_lattice_eval").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-eval-check.rofl").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-history-data.rofl").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-history-eval-check.rofl").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-holes-data.rofl").
+check_file("agg_lattice_eval", "examples/checks/agg-lattice-holes-eval-check.rofl").
+check_opt("agg_lattice_eval", together, 1).
+proves("agg_lattice_eval", agg, order_lattice, eval_rust).
+
+check_world("agg_lattice_witness").
+check_file("agg_lattice_witness", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_witness", "examples/checks/agg-lattice-witness-check.rofl").
+check_file("agg_lattice_witness", "examples/checks/agg-lattice-history-data.rofl").
+check_file("agg_lattice_witness", "examples/checks/agg-lattice-history-witness-check.rofl").
+check_opt("agg_lattice_witness", together, 1).
+proves("agg_lattice_witness", agg, order_lattice, witness).
+
+check_world("agg_lattice_why").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-why-check.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-history-data.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-history-why-check.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-holes-data.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-holes-why-check.rofl").
+check_file("agg_lattice_why", "examples/checks/agg-lattice-why-deep.rofl").
+check_opt("agg_lattice_why", together, 1).
+check_opt("agg_lattice_why", explain, 1).
+proves("agg_lattice_why", agg, order_lattice, why).
+
+-- A WALL, where no rule of the world runs after it: the rows the cut state
+-- must and must not hold are lines of its files (`-- expect-row:`), checked
+-- by scripts/goldens.ts. The budget and the space, one world each.
+check_world("agg_lattice_wall").
+check_file("agg_lattice_wall", "examples/checks/agg-lattice-wall-data.rofl").
+check_file("agg_lattice_wall", "examples/checks/agg-lattice-wall-budget.rofl").
+check_opt("agg_lattice_wall", together, 1).
+check_opt("agg_lattice_wall", budget, 3000).
+proves("agg_lattice_wall", agg, order_lattice, eval_rust).
+
+check_world("agg_lattice_space").
+check_file("agg_lattice_space", "examples/checks/agg-lattice-wall-data.rofl").
+check_file("agg_lattice_space", "examples/checks/agg-lattice-wall-space.rofl").
+check_opt("agg_lattice_space", together, 1).
+check_opt("agg_lattice_space", space, 2000).
+proves("agg_lattice_space", agg, order_lattice, eval_rust).
+
+check_world("agg_cell_safety").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-1-ok.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-check.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-2-refused-gt.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-3-refused-times.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-4-refused-join.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-5-refused-key.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-6-refused-plain.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-7-refused-way.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-8-refused-twice.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-9-refused-false.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-10-refused-sum.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-11-refused-eq.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-12-refused-alias.rofl").
+check_file("agg_cell_safety", "examples/checks/agg-cell-safety-13-refused-unify.rofl").
+check_opt("agg_cell_safety", together, 1).
+proves("agg_cell_safety", agg, cell, safety).
+
+check_world("agg_cell_strata").
+check_file("agg_cell_strata", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_cell_strata", "examples/checks/agg-cell-strata-check.rofl").
+check_file("agg_cell_strata", "examples/checks/agg-cell-strata-2-refused-negated.rofl").
+check_file("agg_cell_strata", "examples/checks/agg-cell-strata-3-refused-aggregate.rofl").
+check_opt("agg_cell_strata", together, 1).
+proves("agg_cell_strata", agg, cell, strata).
+
+-- the stock evaluator over the same lattices: rules/strata.rofl ranks what
+-- it can and the program ranks its readers from outside a lattice's recursion
+-- (agg-lattice-strata-ranks.rofl), and a lattice it cannot rank is refused.
+-- Coverage of that path; no cell's proof
+check_world("agg_lattice_strata_stock").
+check_file("agg_lattice_strata_stock", "examples/checks/agg-lattice-data.rofl").
+check_file("agg_lattice_strata_stock", "rules/strata.rofl").
+check_file("agg_lattice_strata_stock", "examples/checks/agg-lattice-strata-ranks.rofl").
+check_file("agg_lattice_strata_stock", "examples/checks/agg-cell-strata-check.rofl").
+check_file("agg_lattice_strata_stock", "examples/checks/agg-lattice-strata-4-refused-unranked.rofl").
+check_opt("agg_lattice_strata_stock", together, 1).
+check_opt("agg_lattice_strata_stock", evaluator, strata).
+
+-- THE THRESHOLD (w_agg_threshold): `at_least(N, X : body)`, monotone, over
+-- closed input and inside its own recursion; its witness is a Quorum, the
+-- first N members in the canonical order, and nothing sealed.
+-- docs/aggregates.md, "The threshold, as built".
+
+check_world("agg_threshold_syntax").
+check_file("agg_threshold_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_threshold_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-1-forms.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-2-expect.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-nocomma.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-nothreshold.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-empty.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-expression.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-key.rofl").
+check_file("agg_threshold_syntax", "examples/checks/agg-threshold-syntax-3-refused-unclosed.rofl").
+check_opt("agg_threshold_syntax", together, 1).
+proves("agg_threshold_syntax", agg, threshold, syntax).
+
+check_world("agg_threshold_reflect").
+check_file("agg_threshold_reflect", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_reflect", "examples/checks/agg-threshold-raft.rofl").
+check_file("agg_threshold_reflect", "examples/checks/agg-threshold-reflect-check.rofl").
+check_opt("agg_threshold_reflect", together, 1).
+proves("agg_threshold_reflect", agg, threshold, reflect).
+
+check_world("agg_threshold_strata").
+check_file("agg_threshold_strata", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_strata", "rules/strata.rofl").
+check_file("agg_threshold_strata", "examples/checks/agg-threshold-strata-check.rofl").
+check_file("agg_threshold_strata", "examples/checks/agg-threshold-strata-2-refused-negated.rofl").
+check_opt("agg_threshold_strata", together, 1).
+proves("agg_threshold_strata", agg, threshold, strata).
+proves_recursion("agg_threshold_strata", threshold).
+
+-- the same under the stock evaluator, by rules/strata.rofl's table. Coverage
+-- of that path; no cell's proof
+check_world("agg_threshold_strata_stock").
+check_file("agg_threshold_strata_stock", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_strata_stock", "rules/strata.rofl").
+check_file("agg_threshold_strata_stock", "examples/checks/agg-threshold-strata-check.rofl").
+check_opt("agg_threshold_strata_stock", together, 1).
+check_opt("agg_threshold_strata_stock", evaluator, strata).
+
+check_world("agg_threshold_safety").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-1-ok.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-check.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-2-refused-unbound.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-3-refused-atom.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-4-refused-late.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-5-refused-member.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-6-refused-unsafe.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-7-refused-lattice.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-8-refused-live.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-9-refused-head.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-10-refused-inside.rofl").
+check_file("agg_threshold_safety", "examples/checks/agg-threshold-safety-11-refused-demand.rofl").
+check_opt("agg_threshold_safety", together, 1).
+proves("agg_threshold_safety", agg, threshold, safety).
+
+check_world("agg_threshold_eval").
+check_file("agg_threshold_eval", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_eval", "examples/checks/agg-threshold-raft.rofl").
+check_file("agg_threshold_eval", "examples/checks/agg-threshold-eval-check.rofl").
+check_opt("agg_threshold_eval", together, 1).
+proves("agg_threshold_eval", agg, threshold, eval_rust).
+
+check_world("agg_threshold_witness").
+check_file("agg_threshold_witness", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_witness", "examples/checks/agg-threshold-raft.rofl").
+check_file("agg_threshold_witness", "examples/checks/agg-threshold-witness-check.rofl").
+check_opt("agg_threshold_witness", together, 1).
+proves("agg_threshold_witness", agg, threshold, witness).
+
+check_world("agg_threshold_why").
+check_file("agg_threshold_why", "examples/checks/agg-threshold-data.rofl").
+check_file("agg_threshold_why", "examples/checks/agg-threshold-raft.rofl").
+check_file("agg_threshold_why", "examples/checks/agg-threshold-why-check.rofl").
+check_opt("agg_threshold_why", together, 1).
+check_opt("agg_threshold_why", explain, 1).
+proves("agg_threshold_why", agg, threshold, why).
+
+-- THE HOLISTIC AGGREGATES (w_agg_holistic): median, quantile and rank over
+-- Int, stratified, the group recomputed whole; nearest rank, the lower
+-- median of an even count, rank among distinct values; Group witness.
+-- docs/aggregates.md, "The holistic aggregates, as built".
+
+check_world("agg_holistic_syntax").
+check_file("agg_holistic_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_holistic_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-1-forms.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-2-expect.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-3-refused-empty-key.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-3-refused-percent-expression.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-3-refused-unclosed.rofl").
+check_file("agg_holistic_syntax", "examples/checks/agg-holistic-syntax-3-refused-result.rofl").
+check_opt("agg_holistic_syntax", together, 1).
+proves("agg_holistic_syntax", agg, holistic, syntax).
+
+check_world("agg_holistic_reflect").
+check_file("agg_holistic_reflect", "examples/checks/agg-holistic-reflect-data.rofl").
+check_file("agg_holistic_reflect", "examples/checks/agg-holistic-reflect-check.rofl").
+check_opt("agg_holistic_reflect", together, 1).
+proves("agg_holistic_reflect", agg, holistic, reflect).
+
+check_world("agg_holistic_strata").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-data.rofl").
+check_file("agg_holistic_strata", "rules/strata.rofl").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-eval-check.rofl").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-strata-check.rofl").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-strata-2-refused-median.rofl").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-strata-2-refused-quantile.rofl").
+check_file("agg_holistic_strata", "examples/checks/agg-holistic-strata-2-refused-rank.rofl").
+check_opt("agg_holistic_strata", together, 1).
+proves("agg_holistic_strata", agg, holistic, strata).
+proves_refusal("agg_holistic_strata", holistic).
+
+check_world("agg_holistic_safety").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-1-ok.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-check.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-2-refused-median-nokey.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-3-refused-quantile-nokey.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-4-refused-median-two.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-5-refused-quantile-one.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-6-refused-rank-one.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-7-refused-rank-key.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-8-refused-percent-inside.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-9-refused-percent-late.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-10-refused-percent-range.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-11-refused-percent-atom.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-12-refused-subject-unbound.rofl").
+check_file("agg_holistic_safety", "examples/checks/agg-holistic-safety-13-refused-unbound.rofl").
+check_opt("agg_holistic_safety", together, 1).
+proves("agg_holistic_safety", agg, holistic, safety).
+
+check_world("agg_holistic_eval").
+check_file("agg_holistic_eval", "examples/checks/agg-holistic-data.rofl").
+check_file("agg_holistic_eval", "examples/checks/agg-holistic-eval-check.rofl").
+check_file("agg_holistic_eval", "examples/checks/agg-holistic-holes-data.rofl").
+check_file("agg_holistic_eval", "examples/checks/agg-holistic-holes-check.rofl").
+check_file("agg_holistic_eval", "examples/checks/agg-holistic-scale.rofl").
+check_opt("agg_holistic_eval", together, 1).
+proves("agg_holistic_eval", agg, holistic, eval_rust).
+
+check_world("agg_holistic_witness").
+check_file("agg_holistic_witness", "examples/checks/agg-holistic-data.rofl").
+check_file("agg_holistic_witness", "examples/checks/agg-holistic-witness-check.rofl").
+check_opt("agg_holistic_witness", together, 1).
+proves("agg_holistic_witness", agg, holistic, witness).
+
+check_world("agg_holistic_why").
+check_file("agg_holistic_why", "examples/checks/agg-holistic-data.rofl").
+check_file("agg_holistic_why", "examples/checks/agg-holistic-why-check.rofl").
+check_opt("agg_holistic_why", together, 1).
+check_opt("agg_holistic_why", explain, 1).
+proves("agg_holistic_why", agg, holistic, why).
+
+-- ============================================ THE HOLES COLUMN (w_agg_overflow_holes)
+-- What a hole leaves out is not known to be false, in both engines: two
+-- worlds with no aggregate, answered by both (docs/aggregates.md, "Holes, as
+-- built"; f_a_negation_of_what_a_hole_left_out_succeeds).
+-- Int is ±2^60 in both engines: every operator past the range at both ends,
+-- -2^60 a value, exact results past 2^53, the signs of / and mod, and a
+-- literal of 2^60 refused (f_arithmetic_wraps_past_the_term_range). Two
+-- engines answer it, so a fault in either one's `is` reds it.
+check_world("agg_int_range").
+check_file("agg_int_range", "examples/checks/agg-int-range.rofl").
+check_file("agg_int_range", "examples/checks/agg-int-range-literal.rofl").
+proves_work("agg_int_range", w_agg_overflow_holes).
+
+-- an argument is a term, not an expression, in both parsers
+-- (f_the_rust_parser_read_an_expression_as_an_argument)
+check_world("args_are_terms").
+check_file("args_are_terms", "examples/checks/args-are-terms.rofl").
+check_file("args_are_terms", "examples/checks/args-are-terms-min.rofl").
+check_file("args_are_terms", "examples/checks/args-are-terms-functor.rofl").
+
+check_world("holes_negation").
+check_file("holes_negation", "examples/checks/holes-negation.rofl").
+check_world("holes_negation_ticks").
+check_file("holes_negation_ticks", "examples/checks/holes-negation-ticks.rofl").
+check_opt("holes_negation_ticks", ticks, 2).
+-- a negation of `unknown` in a well-founded world, judged once it is
+-- written: refused when it would read what was undefined as decided
+check_world("wfs_unknown_negated").
+check_file("wfs_unknown_negated", "examples/checks/wfs-unknown-negated-check.rofl").
+check_file("wfs_unknown_negated", "examples/checks/wfs-unknown-negated.rofl").
+check_world("holes_negation_wfs").
+check_file("holes_negation_wfs", "examples/checks/holes-negation-wfs.rofl").
+check_file("holes_negation_wfs", "examples/checks/holes-negation-wfs-unknown.rofl").
+check_file("holes_negation_wfs", "examples/checks/holes-negation-wfs-unknown-draw.rofl").
+
+-- w_agg_shrug: the answer model's third value (docs/aggregates.md, "Shrugs, as built")
+check_world("agg_cell_shrug").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-data.rofl").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-check.rofl").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-late-meta.rofl").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-late-row.rofl").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-late-withdrawn.rofl").
+check_file("agg_cell_shrug", "examples/checks/agg-shrug-cold.rofl").
+proves("agg_cell_shrug", agg, cell, shrug).
+
+check_world("agg_cell_shrug_wfs").
+check_file("agg_cell_shrug_wfs", "examples/checks/agg-shrug-wfs.rofl").
+check_file("agg_cell_shrug_wfs", "examples/checks/agg-shrug-wfs-nullary-term-refused.rofl").
+proves("agg_cell_shrug_wfs", agg, cell, shrug).
+
+check_world("agg_cell_shrug_strata").
+check_file("agg_cell_shrug_strata", "rules/strata.rofl").
+check_file("agg_cell_shrug_strata", "examples/checks/agg-shrug-strata.rofl").
+check_opt("agg_cell_shrug_strata", evaluator, strata).
+proves("agg_cell_shrug_strata", agg, cell, shrug).
+
+check_world("agg_cell_shrug_wfs_upper").
+check_file("agg_cell_shrug_wfs_upper", "examples/checks/agg-shrug-wfs-upper.rofl").
+proves("agg_cell_shrug_wfs_upper", agg, cell, shrug).
+check_world("agg_cell_shrug_wfs_history").
+check_file("agg_cell_shrug_wfs_history", "examples/checks/agg-shrug-wfs-history.rofl").
+proves("agg_cell_shrug_wfs_history", agg, cell, shrug).
+
+check_world("agg_cell_shrug_ticks").
+check_file("agg_cell_shrug_ticks", "examples/checks/agg-shrug-ticks.rofl").
+check_opt("agg_cell_shrug_ticks", ticks, 2).
+proves("agg_cell_shrug_ticks", agg, cell, shrug).
+
+check_world("agg_cell_shrug_why").
+check_file("agg_cell_shrug_why", "examples/checks/agg-shrug-data.rofl").
+check_file("agg_cell_shrug_why", "examples/checks/agg-shrug-why-check.rofl").
+check_opt("agg_cell_shrug_why", together, 1).
+check_opt("agg_cell_shrug_why", explain, 1).
+proves("agg_cell_shrug_why", agg, cell, shrug).
+
+check_world("agg_count_shrug").
+check_file("agg_count_shrug", "examples/checks/agg-shrug-agg-data.rofl").
+check_file("agg_count_shrug", "examples/checks/agg-shrug-count-check.rofl").
+check_opt("agg_count_shrug", together, 1).
+proves("agg_count_shrug", agg, count, shrug).
+
+check_world("agg_sum_shrug").
+check_file("agg_sum_shrug", "examples/checks/agg-shrug-agg-data.rofl").
+check_file("agg_sum_shrug", "examples/checks/agg-shrug-sum-check.rofl").
+check_opt("agg_sum_shrug", together, 1).
+proves("agg_sum_shrug", agg, sum, shrug).
+
+check_world("agg_minmax_shrug").
+check_file("agg_minmax_shrug", "examples/checks/agg-shrug-agg-data.rofl").
+check_file("agg_minmax_shrug", "examples/checks/agg-shrug-minmax-check.rofl").
+check_opt("agg_minmax_shrug", together, 1).
+proves("agg_minmax_shrug", agg, min_max_strat, shrug).
+
+check_world("agg_holistic_shrug").
+check_file("agg_holistic_shrug", "examples/checks/agg-shrug-agg-data.rofl").
+check_file("agg_holistic_shrug", "examples/checks/agg-shrug-holistic-check.rofl").
+check_opt("agg_holistic_shrug", together, 1).
+proves("agg_holistic_shrug", agg, holistic, shrug).
+
+check_world("agg_empty_shrug").
+check_file("agg_empty_shrug", "examples/checks/agg-shrug-agg-data.rofl").
+check_file("agg_empty_shrug", "examples/checks/agg-shrug-empty-check.rofl").
+check_opt("agg_empty_shrug", together, 1).
+proves("agg_empty_shrug", agg, empty_group, shrug).
+
+check_world("agg_threshold_shrug").
+check_file("agg_threshold_shrug", "examples/checks/agg-shrug-threshold-check.rofl").
+check_file("agg_threshold_shrug", "examples/checks/agg-shrug-oracle.rofl").
+check_opt("agg_threshold_shrug", together, 1).
+proves("agg_threshold_shrug", agg, threshold, shrug).
+proves_work("agg_threshold_shrug", w_agg_shrug).
+
+-- PRECISE HOLES (w_agg_precise_holes, docs/aggregates.md, "Precise holes, as
+-- built"): what a hole left out reaches exactly the groups of a body aggregate
+-- and the keys of a counting tag whose value it could change. The holes per
+-- group, and the completions oracle every verdict is held to.
+check_world("agg_precise_holes").
+check_file("agg_precise_holes", "examples/checks/agg-precise-data.rofl").
+check_file("agg_precise_holes", "examples/checks/agg-precise-holes-check.rofl").
+check_opt("agg_precise_holes", together, 1).
+proves("agg_precise_holes", agg, count, holes).
+proves("agg_precise_holes", agg, sum, holes).
+proves("agg_precise_holes", agg, min_max_strat, holes).
+proves("agg_precise_holes", agg, holistic, holes).
+proves("agg_precise_holes", agg, empty_group, holes).
+proves("agg_precise_holes", agg, tag_counting, holes).
+
+check_world("agg_precise_oracle").
+check_file("agg_precise_oracle", "examples/checks/agg-precise-data.rofl").
+check_file("agg_precise_oracle", "examples/checks/agg-precise-oracle.rofl").
+check_opt("agg_precise_oracle", together, 1).
+-- 1024 completions of fifteen aggregates over eight groups outgrow the
+-- default wall of 500 000 rows held at once
+check_opt("agg_precise_oracle", space, 1000000).
+proves("agg_precise_oracle", agg, count, shrug).
+proves("agg_precise_oracle", agg, sum, shrug).
+proves("agg_precise_oracle", agg, min_max_strat, shrug).
+proves("agg_precise_oracle", agg, holistic, shrug).
+proves("agg_precise_oracle", agg, empty_group, shrug).
+proves("agg_precise_oracle", agg, tag_counting, shrug).
+proves_work("agg_precise_oracle", w_agg_precise_holes).
+-- the undecided decided once per correlation: many firings over many unknowns
+-- inside a budget their product runs past
+check_world("agg_precise_scale").
+check_file("agg_precise_scale", "examples/checks/agg-precise-scale.rofl").
+check_opt("agg_precise_scale", budget, 20000).
+proves("agg_precise_scale", agg, count, holes).
+
+check_world("agg_lattice_shrug").
+check_file("agg_lattice_shrug", "examples/checks/agg-shrug-lattice.rofl").
+check_file("agg_lattice_shrug", "examples/checks/agg-shrug-lattice-roots.rofl").
+check_opt("agg_lattice_shrug", together, 1).
+proves("agg_lattice_shrug", agg, order_lattice, shrug).
+
+check_world("agg_lattice_shrug_wall").
+check_file("agg_lattice_shrug_wall", "examples/checks/agg-lattice-wall-data.rofl").
+check_file("agg_lattice_shrug_wall", "examples/checks/agg-lattice-wall-budget.rofl").
+check_file("agg_lattice_shrug_wall", "examples/checks/agg-shrug-lattice-wall.rofl").
+check_opt("agg_lattice_shrug_wall", together, 1).
+check_opt("agg_lattice_shrug_wall", budget, 3000).
+proves("agg_lattice_shrug_wall", agg, order_lattice, shrug).
+
+check_world("agg_cell_holes").
+check_file("agg_cell_holes", "examples/checks/holes-negation.rofl").
+check_file("agg_cell_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_cell_holes", "examples/checks/agg-cell-holes-check.rofl").
+check_opt("agg_cell_holes", together, 1).
+proves("agg_cell_holes", agg, cell, holes).
+
+check_world("agg_cell_holes_ticks").
+check_file("agg_cell_holes_ticks", "examples/checks/holes-negation-ticks.rofl").
+check_file("agg_cell_holes_ticks", "examples/checks/agg-cell-holes-ticks.rofl").
+check_opt("agg_cell_holes_ticks", together, 1).
+check_opt("agg_cell_holes_ticks", ticks, 2).
+proves("agg_cell_holes_ticks", agg, cell, holes).
+
+check_world("agg_cell_holes_wfs").
+check_file("agg_cell_holes_wfs", "examples/checks/holes-negation-wfs.rofl").
+check_file("agg_cell_holes_wfs", "examples/checks/holes-negation-wfs-unknown.rofl").
+check_file("agg_cell_holes_wfs", "examples/checks/holes-negation-wfs-unknown-draw.rofl").
+check_file("agg_cell_holes_wfs", "examples/checks/agg-cell-holes-wfs.rofl").
+check_opt("agg_cell_holes_wfs", together, 1).
+proves("agg_cell_holes_wfs", agg, cell, holes).
+
+-- `unknown` read beside a hole is refused under the default semantics as it
+-- is under well-founded, in both engines and across a tick
+-- (f_unknown_beside_a_hole_was_guarded_only_under_well_founded)
+check_world("agg_unknown_beside_hole").
+check_file("agg_unknown_beside_hole", "examples/checks/agg-unknown-beside-hole.rofl").
+check_file("agg_unknown_beside_hole", "examples/checks/holes-negation-unknown.rofl").
+check_file("agg_unknown_beside_hole", "examples/checks/holes-negation-unknown-type.rofl").
+check_file("agg_unknown_beside_hole", "examples/checks/holes-negation-unknown-positive.rofl").
+check_file("agg_unknown_beside_hole", "examples/checks/holes-negation-ticks-unknown.rofl").
+check_opt("agg_unknown_beside_hole", ticks, 2).
+proves("agg_unknown_beside_hole", agg, cell, holes).
+proves_work("agg_unknown_beside_hole", w_agg_overflow_holes).
+-- the same world under the stock evaluator, in both engines: the refusal
+-- is written once per stratified evaluator in TypeScript (src/rounds.ts and
+-- src/engine.ts), and each one needs a world that reaches it
+check_world("agg_unknown_beside_hole_strata").
+check_file("agg_unknown_beside_hole_strata", "examples/checks/agg-unknown-beside-hole.rofl").
+check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unknown.rofl").
+check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unknown-type.rofl").
+check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unknown-positive.rofl").
+check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-ticks-unknown.rofl").
+check_opt("agg_unknown_beside_hole_strata", ticks, 2).
+check_opt("agg_unknown_beside_hole_strata", evaluator, strata).
+proves("agg_unknown_beside_hole_strata", agg, cell, holes).
+
+check_world("agg_count_holes").
+check_file("agg_count_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_count_holes", "examples/checks/agg-count-holes-check.rofl").
+check_opt("agg_count_holes", together, 1).
+proves("agg_count_holes", agg, count, holes).
+
+check_world("agg_sum_holes").
+check_file("agg_sum_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_sum_holes", "examples/checks/agg-sum-holes-check.rofl").
+check_opt("agg_sum_holes", together, 1).
+proves("agg_sum_holes", agg, sum, holes).
+
+check_world("agg_minmax_holes").
+check_file("agg_minmax_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_minmax_holes", "examples/checks/agg-minmax-holes-check.rofl").
+check_opt("agg_minmax_holes", together, 1).
+proves("agg_minmax_holes", agg, min_max_strat, holes).
+
+check_world("agg_holistic_holes").
+check_file("agg_holistic_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_holistic_holes", "examples/checks/agg-holistic-holes-column.rofl").
+check_opt("agg_holistic_holes", together, 1).
+proves("agg_holistic_holes", agg, holistic, holes).
+
+check_world("agg_threshold_holes").
+check_file("agg_threshold_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_threshold_holes", "examples/checks/agg-threshold-holes-check.rofl").
+check_opt("agg_threshold_holes", together, 1).
+proves("agg_threshold_holes", agg, threshold, holes).
+
+check_world("agg_empty_holes").
+check_file("agg_empty_holes", "examples/checks/agg-holes-data.rofl").
+check_file("agg_empty_holes", "examples/checks/agg-empty-holes-check.rofl").
+check_opt("agg_empty_holes", together, 1).
+proves("agg_empty_holes", agg, empty_group, holes).
+
+check_world("agg_lattice_holes").
+check_file("agg_lattice_holes", "examples/checks/agg-lattice-holes-check.rofl").
+check_opt("agg_lattice_holes", together, 1).
+proves("agg_lattice_holes", agg, order_lattice, holes).
+
+-- A BUDGET CUT IS A HOLE, NOT A SMALLER VALUE: each world is cut while the
+-- closure its aggregate reads is still being derived, and its file says the
+-- rows the cut state must hold and must not.
+
+check_world("agg_count_budget").
+check_file("agg_count_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_count_budget", "examples/checks/agg-count-budget.rofl").
+check_opt("agg_count_budget", together, 1).
+check_opt("agg_count_budget", budget, 500).
+proves("agg_count_budget", agg, count, holes).
+
+check_world("agg_sum_budget").
+check_file("agg_sum_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_sum_budget", "examples/checks/agg-sum-budget.rofl").
+check_opt("agg_sum_budget", together, 1).
+check_opt("agg_sum_budget", budget, 500).
+proves("agg_sum_budget", agg, sum, holes).
+
+check_world("agg_minmax_budget").
+check_file("agg_minmax_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_minmax_budget", "examples/checks/agg-minmax-budget.rofl").
+check_opt("agg_minmax_budget", together, 1).
+check_opt("agg_minmax_budget", budget, 500).
+proves("agg_minmax_budget", agg, min_max_strat, holes).
+
+check_world("agg_holistic_budget").
+check_file("agg_holistic_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_holistic_budget", "examples/checks/agg-holistic-budget.rofl").
+check_opt("agg_holistic_budget", together, 1).
+check_opt("agg_holistic_budget", budget, 500).
+proves("agg_holistic_budget", agg, holistic, holes).
+
+check_world("agg_empty_budget").
+check_file("agg_empty_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_empty_budget", "examples/checks/agg-empty-budget.rofl").
+check_opt("agg_empty_budget", together, 1).
+check_opt("agg_empty_budget", budget, 500).
+proves("agg_empty_budget", agg, empty_group, holes).
+
+check_world("agg_lattice_budget").
+check_file("agg_lattice_budget", "examples/checks/agg-lattice-budget.rofl").
+check_opt("agg_lattice_budget", together, 1).
+check_opt("agg_lattice_budget", budget, 400).
+proves("agg_lattice_budget", agg, order_lattice, holes).
+
+-- THE CARRY AND THE WALLS (f_the_carry_of_unknowns_ran_past_the_walls,
+-- f_a_wall_closed_a_lattice_a_plain_hole_had_not_reached,
+-- f_a_negation_scanned_every_unknown_of_its_relation).
+check_world("agg_lattice_plain_budget").
+check_file("agg_lattice_plain_budget", "examples/checks/agg-lattice-plain-data.rofl").
+check_file("agg_lattice_plain_budget", "examples/checks/agg-lattice-plain-budget.rofl").
+check_opt("agg_lattice_plain_budget", together, 1).
+check_opt("agg_lattice_plain_budget", budget, 150).
+proves("agg_lattice_plain_budget", agg, order_lattice, holes).
+
+check_world("agg_lattice_plain_space").
+check_file("agg_lattice_plain_space", "examples/checks/agg-lattice-plain-data.rofl").
+check_file("agg_lattice_plain_space", "examples/checks/agg-lattice-plain-space.rofl").
+check_opt("agg_lattice_plain_space", together, 1).
+check_opt("agg_lattice_plain_space", space, 190).
+proves("agg_lattice_plain_space", agg, order_lattice, holes).
+
+check_world("agg_lattice_carry_cut").
+check_file("agg_lattice_carry_cut", "examples/checks/agg-lattice-carry-cut.rofl").
+check_opt("agg_lattice_carry_cut", together, 1).
+check_opt("agg_lattice_carry_cut", budget, 2000).
+proves("agg_lattice_carry_cut", agg, order_lattice, holes).
+
+check_world("agg_lattice_cut_fallback").
+check_file("agg_lattice_cut_fallback", "examples/checks/agg-lattice-cut-fallback.rofl").
+check_opt("agg_lattice_cut_fallback", together, 1).
+check_opt("agg_lattice_cut_fallback", budget, 100000).
+proves("agg_lattice_cut_fallback", agg, order_lattice, holes).
+
+check_world("agg_carry_budget").
+check_file("agg_carry_budget", "examples/checks/agg-carry-data.rofl").
+check_file("agg_carry_budget", "examples/checks/agg-carry-budget.rofl").
+check_opt("agg_carry_budget", together, 1).
+check_opt("agg_carry_budget", budget, 2000).
+proves("agg_carry_budget", agg, sum, holes).
+
+check_world("agg_carry_space").
+check_file("agg_carry_space", "examples/checks/agg-carry-data.rofl").
+check_file("agg_carry_space", "examples/checks/agg-carry-space.rofl").
+check_opt("agg_carry_space", together, 1).
+check_opt("agg_carry_space", space, 3000).
+proves("agg_carry_space", agg, sum, holes).
+
+check_world("agg_carry_plain_budget").
+check_file("agg_carry_plain_budget", "examples/checks/agg-carry-plain-data.rofl").
+check_file("agg_carry_plain_budget", "examples/checks/agg-carry-plain-budget.rofl").
+check_opt("agg_carry_plain_budget", together, 1).
+check_opt("agg_carry_plain_budget", budget, 2000).
+proves("agg_carry_plain_budget", agg, cell, holes).
+-- the same carry in the TypeScript engine, whose wall is attributed to the
+-- load that ran out (budget_wall)
+check_world("agg_carry_plain_budget_ts").
+check_file("agg_carry_plain_budget_ts", "examples/checks/agg-carry-plain-data.rofl").
+check_opt("agg_carry_plain_budget_ts", one_engine, ts).
+check_opt("agg_carry_plain_budget_ts", budget, 2000).
+
+check_world("holes_negation_scale").
+check_file("holes_negation_scale", "examples/checks/holes-negation-scale.rofl").
+check_opt("holes_negation_scale", budget, 20000).
+check_world("agg_cell_holes_scale").
+check_file("agg_cell_holes_scale", "examples/checks/holes-negation-scale.rofl").
+check_file("agg_cell_holes_scale", "examples/checks/agg-cell-holes-scale.rofl").
+check_opt("agg_cell_holes_scale", together, 1).
+check_opt("agg_cell_holes_scale", budget, 20000).
+proves("agg_cell_holes_scale", agg, cell, holes).
+
+-- THE JOIN LATTICE (w_agg_join_lattice): `lattice p(K..., union S)`, hull,
+-- bitor; a value a canonical term the join builds anew; recursion; the
+-- Cover; the reads `E in S` and `A subset S`. docs/aggregates.md, "The join
+-- lattice, as built".
+
+check_world("agg_join_syntax").
+check_file("agg_join_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_join_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_join_syntax", "examples/checks/agg-join-syntax-1-forms.rofl").
+check_file("agg_join_syntax", "examples/checks/agg-join-syntax-2-expect.rofl").
+check_file("agg_join_syntax", "examples/checks/agg-join-syntax-3-refused-body.rofl").
+check_file("agg_join_syntax", "examples/checks/agg-join-syntax-3-refused-neg.rofl").
+check_file("agg_join_syntax", "examples/checks/agg-join-syntax-3-refused-bare.rofl").
+check_opt("agg_join_syntax", together, 1).
+proves("agg_join_syntax", agg, join_lattice, syntax).
+
+check_world("agg_join_reflect").
+check_file("agg_join_reflect", "examples/checks/agg-join-data.rofl").
+check_file("agg_join_reflect", "examples/checks/agg-join-reflect-check.rofl").
+check_opt("agg_join_reflect", together, 1).
+proves("agg_join_reflect", agg, join_lattice, reflect).
+
+check_world("agg_join_strata").
+check_file("agg_join_strata", "examples/checks/agg-join-data.rofl").
+check_file("agg_join_strata", "rules/strata.rofl").
+check_file("agg_join_strata", "examples/checks/agg-join-strata-check.rofl").
+check_file("agg_join_strata", "examples/checks/agg-join-strata-2-refused-count.rofl").
+check_file("agg_join_strata", "examples/checks/agg-join-strata-3-refused-neg.rofl").
+check_opt("agg_join_strata", together, 1).
+proves("agg_join_strata", agg, join_lattice, strata).
+proves_recursion("agg_join_strata", join_lattice).
+
+check_world("agg_join_safety").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-1-ok.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-check.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-2-refused-eq.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-3-refused-arith.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-4-refused-cmp.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-5-refused-carrier.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-6-refused-const.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-7-refused-left.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-8-refused-open.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-9-refused-order.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-10-refused-two.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-11-refused-assert.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-12-refused-agg.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-13-refused-pattern.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-14-refused-off-carrier.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-15-refused-off-iv.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-16-refused-off-bits.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-17-refused-in-left.rofl").
+check_file("agg_join_safety", "examples/checks/agg-join-safety-18-refused-element.rofl").
+check_opt("agg_join_safety", together, 1).
+proves("agg_join_safety", agg, join_lattice, safety).
+
+-- A SET HAS ONE SPELLING, in both engines: a ground set a program writes is
+-- its canonical value wherever it stands, a plain relation's fact included,
+-- and a set written with a variable stands only where the kernel reads it as
+-- a value (a join's head, `in`, `subset`); anywhere else both engines refuse it.
+check_world("set_spelling").
+check_file("set_spelling", "examples/checks/set-spelling.rofl").
+check_file("set_spelling", "examples/checks/set-spelling-2-refused-head.rofl").
+check_file("set_spelling", "examples/checks/set-spelling-3-refused-eq.rofl").
+check_file("set_spelling", "examples/checks/set-spelling-4-refused-body.rofl").
+
+check_world("agg_join_eval").
+check_file("agg_join_eval", "examples/checks/agg-join-data.rofl").
+check_file("agg_join_eval", "examples/checks/agg-join-eval-check.rofl").
+check_opt("agg_join_eval", together, 1).
+proves("agg_join_eval", agg, join_lattice, eval_rust).
+
+check_world("agg_join_witness").
+check_file("agg_join_witness", "examples/checks/agg-join-data.rofl").
+check_file("agg_join_witness", "examples/checks/agg-join-witness-check.rofl").
+check_opt("agg_join_witness", together, 1).
+proves("agg_join_witness", agg, join_lattice, witness).
+
+check_world("agg_join_why").
+check_file("agg_join_why", "examples/checks/agg-join-data.rofl").
+check_file("agg_join_why", "examples/checks/agg-join-why-check.rofl").
+check_opt("agg_join_why", together, 1).
+check_opt("agg_join_why", explain, 1).
+proves("agg_join_why", agg, join_lattice, why).
+
+check_world("agg_join_wfs").
+check_file("agg_join_wfs", "examples/checks/agg-join-wfs-check.rofl").
+check_file("agg_join_wfs", "examples/checks/agg-join-wfs-2-refused-join.rofl").
+check_opt("agg_join_wfs", together, 1).
+proves("agg_join_wfs", agg, join_lattice, wfs).
+
+check_world("agg_join_ticks").
+check_file("agg_join_ticks", "examples/checks/agg-join-ticks-data.rofl").
+check_file("agg_join_ticks", "examples/checks/agg-join-ticks-check.rofl").
+check_opt("agg_join_ticks", together, 1).
+check_opt("agg_join_ticks", ticks, 1).
+check_opt("agg_join_ticks", explain, 1).
+check_opt("agg_join_ticks", retain, 0).
+proves("agg_join_ticks", agg, join_lattice, ticks).
+
+check_world("agg_join_holes").
+check_file("agg_join_holes", "examples/checks/agg-join-holes-check.rofl").
+check_opt("agg_join_holes", together, 1).
+proves("agg_join_holes", agg, join_lattice, holes).
+
+check_world("agg_join_budget").
+check_file("agg_join_budget", "examples/checks/agg-join-budget.rofl").
+check_opt("agg_join_budget", together, 1).
+check_opt("agg_join_budget", budget, 400).
+proves("agg_join_budget", agg, join_lattice, holes).
+
+check_world("agg_join_span_budget").
+check_file("agg_join_span_budget", "examples/checks/agg-join-span-budget.rofl").
+check_opt("agg_join_span_budget", together, 1).
+check_opt("agg_join_span_budget", budget, 300).
+proves("agg_join_span_budget", agg, join_lattice, holes).
+
+check_world("agg_join_shrug").
+check_file("agg_join_shrug", "examples/checks/agg-shrug-join.rofl").
+check_opt("agg_join_shrug", together, 1).
+proves("agg_join_shrug", agg, join_lattice, shrug).
+
+check_world("agg_join_shrug_wall").
+check_file("agg_join_shrug_wall", "examples/checks/agg-join-budget.rofl").
+check_file("agg_join_shrug_wall", "examples/checks/agg-shrug-join-wall.rofl").
+check_opt("agg_join_shrug_wall", together, 1).
+check_opt("agg_join_shrug_wall", budget, 400).
+proves("agg_join_shrug_wall", agg, join_lattice, shrug).
+
+-- A DECLARED WIDENING (w_agg_widening): `lattice p(K, hull I) widen N.`, the
+-- interval functions of `is`, a cell widened after N improvements in a tick
+-- a hole `widening_forced` and a shrug `widened` whose meta is its
+-- enclosure. docs/aggregates.md, "Widening, as built".
+check_world("agg_widen_syntax").
+check_file("agg_widen_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_widen_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_widen_syntax", "examples/checks/agg-widen-syntax-1-forms.rofl").
+check_file("agg_widen_syntax", "examples/checks/agg-widen-syntax-2-expect.rofl").
+check_file("agg_widen_syntax", "examples/checks/agg-widen-syntax-3-refused-nonumber.rofl").
+check_file("agg_widen_syntax", "examples/checks/agg-widen-syntax-3-refused-name.rofl").
+check_file("agg_widen_syntax", "examples/checks/agg-widen-syntax-3-refused-negative.rofl").
+check_opt("agg_widen_syntax", together, 1).
+proves("agg_widen_syntax", agg, widening, syntax).
+
+check_world("agg_widen_reflect").
+check_file("agg_widen_reflect", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_reflect", "examples/checks/agg-widen-reflect-check.rofl").
+check_opt("agg_widen_reflect", together, 1).
+proves("agg_widen_reflect", agg, widening, reflect).
+
+check_world("agg_widen_strata").
+check_file("agg_widen_strata", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_strata", "rules/strata.rofl").
+check_file("agg_widen_strata", "examples/checks/agg-widen-strata-check.rofl").
+check_file("agg_widen_strata", "examples/checks/agg-widen-strata-2-refused-count.rofl").
+check_file("agg_widen_strata", "examples/checks/agg-widen-strata-3-refused-neg.rofl").
+check_opt("agg_widen_strata", together, 1).
+proves("agg_widen_strata", agg, widening, strata).
+proves_recursion("agg_widen_strata", widening).
+
+check_world("agg_widen_safety").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-1-ok.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-check.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-2-refused-self.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-3-refused-pair.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-4-refused-union.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-5-refused-min.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-6-refused-two.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-7-refused-plain.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-8-refused-order.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-9-refused-mul.rofl").
+check_file("agg_widen_safety", "examples/checks/agg-widen-safety-10-refused-keys.rofl").
+check_opt("agg_widen_safety", together, 1).
+proves("agg_widen_safety", agg, widening, safety).
+
+check_world("agg_widen_eval").
+check_file("agg_widen_eval", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_eval", "examples/checks/agg-widen-eval-check.rofl").
+check_opt("agg_widen_eval", together, 1).
+proves("agg_widen_eval", agg, widening, eval_rust).
+
+check_world("agg_widen_witness").
+check_file("agg_widen_witness", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_witness", "examples/checks/agg-widen-witness-check.rofl").
+check_opt("agg_widen_witness", together, 1).
+check_opt("agg_widen_witness", explain, 1).
+proves("agg_widen_witness", agg, widening, witness).
+
+check_world("agg_widen_why").
+check_file("agg_widen_why", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_why", "examples/checks/agg-widen-why-check.rofl").
+check_opt("agg_widen_why", together, 1).
+check_opt("agg_widen_why", explain, 1).
+proves("agg_widen_why", agg, widening, why).
+
+check_world("agg_widen_wfs").
+check_file("agg_widen_wfs", "examples/checks/agg-widen-wfs-check.rofl").
+check_file("agg_widen_wfs", "examples/checks/agg-widen-wfs-2-refused-widen.rofl").
+check_opt("agg_widen_wfs", together, 1).
+proves("agg_widen_wfs", agg, widening, wfs).
+
+check_world("agg_widen_ticks").
+check_file("agg_widen_ticks", "examples/checks/agg-widen-ticks-data.rofl").
+check_file("agg_widen_ticks", "examples/checks/agg-widen-ticks-check.rofl").
+check_opt("agg_widen_ticks", together, 1).
+check_opt("agg_widen_ticks", ticks, 1).
+check_opt("agg_widen_ticks", explain, 1).
+check_opt("agg_widen_ticks", retain, 0).
+proves("agg_widen_ticks", agg, widening, ticks).
+
+check_world("agg_widen_holes").
+check_file("agg_widen_holes", "examples/checks/agg-widen-holes-check.rofl").
+check_opt("agg_widen_holes", together, 1).
+proves("agg_widen_holes", agg, widening, holes).
+
+check_world("agg_widen_budget").
+check_file("agg_widen_budget", "examples/checks/agg-widen-budget.rofl").
+check_opt("agg_widen_budget", together, 1).
+check_opt("agg_widen_budget", budget, 400).
+proves("agg_widen_budget", agg, widening, holes).
+
+check_world("agg_widen_cut").
+check_file("agg_widen_cut", "examples/checks/agg-widen-cut.rofl").
+check_opt("agg_widen_cut", together, 1).
+check_opt("agg_widen_cut", budget, 115).
+proves("agg_widen_cut", agg, widening, holes).
+
+check_world("agg_widen_shrug").
+check_file("agg_widen_shrug", "examples/checks/agg-widen-data.rofl").
+check_file("agg_widen_shrug", "examples/checks/agg-widen-shrug.rofl").
+check_opt("agg_widen_shrug", together, 1).
+proves("agg_widen_shrug", agg, widening, shrug).
+
+-- SEMIRING TAGS (w_agg_tags): `tag p(K..., alg T).`, a cell keyed by the whole
+-- head, ⊗ through the body; tropical, viterbi and trust are idempotent and
+-- recurse as the order lattice of their ⊕, counting is stratified and refused
+-- inside recursion (docs/aggregates.md, "Tags, as built").
+
+check_world("agg_tag_syntax").
+check_file("agg_tag_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_tag_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-1-forms.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-2-expect.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-3-refused-alg.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-3-refused-min.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-3-refused-book.rofl").
+check_file("agg_tag_syntax", "examples/checks/agg-tag-syntax-3-refused-dot.rofl").
+check_opt("agg_tag_syntax", together, 1).
+proves("agg_tag_syntax", agg, tag_idempotent, syntax).
+proves("agg_tag_syntax", agg, tag_counting, syntax).
+
+check_world("agg_tag_reflect").
+check_file("agg_tag_reflect", "examples/checks/agg-tag-data.rofl").
+check_file("agg_tag_reflect", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tag_reflect", "examples/checks/agg-tag-reflect-check.rofl").
+check_opt("agg_tag_reflect", together, 1).
+proves("agg_tag_reflect", agg, tag_idempotent, reflect).
+proves("agg_tag_reflect", agg, tag_counting, reflect).
+
+check_world("agg_tag_strata").
+check_file("agg_tag_strata", "examples/checks/agg-tag-data.rofl").
+check_file("agg_tag_strata", "rules/strata.rofl").
+check_file("agg_tag_strata", "examples/checks/agg-tag-strata-check.rofl").
+check_file("agg_tag_strata", "examples/checks/agg-tag-strata-2-refused-count.rofl").
+check_file("agg_tag_strata", "examples/checks/agg-tag-strata-3-refused-neg.rofl").
+check_opt("agg_tag_strata", together, 1).
+proves("agg_tag_strata", agg, tag_idempotent, strata).
+proves_recursion("agg_tag_strata", tag_idempotent).
+
+check_world("agg_tagc_strata").
+check_file("agg_tagc_strata", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tagc_strata", "rules/strata.rofl").
+check_file("agg_tagc_strata", "examples/checks/agg-tagc-strata-check.rofl").
+check_file("agg_tagc_strata", "examples/checks/agg-tagc-strata-2-refused-self.rofl").
+check_file("agg_tagc_strata", "examples/checks/agg-tagc-strata-3-refused-pair.rofl").
+check_file("agg_tagc_strata", "examples/checks/agg-tagc-strata-4-refused-plain.rofl").
+check_opt("agg_tagc_strata", together, 1).
+proves("agg_tagc_strata", agg, tag_counting, strata).
+proves_refusal("agg_tagc_strata", tag_counting).
+
+check_world("agg_tagc_strata_stock").
+check_file("agg_tagc_strata_stock", "rules/strata.rofl").
+check_file("agg_tagc_strata_stock", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tagc_strata_stock", "examples/checks/agg-tagc-eval-check.rofl").
+check_file("agg_tagc_strata_stock", "examples/checks/agg-tagc-strata-stock.rofl").
+check_opt("agg_tagc_strata_stock", together, 1).
+check_opt("agg_tagc_strata_stock", evaluator, strata).
+proves("agg_tagc_strata_stock", agg, tag_counting, strata).
+
+check_world("agg_tag_safety").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-1-ok.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-check.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-2-refused-weight.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-3-refused-mono.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-4-refused-lattice.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-5-refused-two.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-6-refused-arity.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-7-refused-asserted.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-8-refused-count.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-9-refused-zero.rofl").
+check_file("agg_tag_safety", "examples/checks/agg-tag-safety-10-refused-alg.rofl").
+check_opt("agg_tag_safety", together, 1).
+proves("agg_tag_safety", agg, tag_idempotent, safety).
+
+check_world("agg_tagc_safety").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-1-ok.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-check.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-2-refused-weight.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-3-refused-arity.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-4-refused-asserted.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-5-refused-lattice.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-6-refused-two.rofl").
+check_file("agg_tagc_safety", "examples/checks/agg-tagc-safety-7-refused-unsafe.rofl").
+check_opt("agg_tagc_safety", together, 1).
+proves("agg_tagc_safety", agg, tag_counting, safety).
+
+check_world("agg_tag_eval").
+check_file("agg_tag_eval", "examples/checks/agg-tag-data.rofl").
+check_file("agg_tag_eval", "examples/checks/agg-tag-eval-check.rofl").
+check_opt("agg_tag_eval", together, 1).
+proves("agg_tag_eval", agg, tag_idempotent, eval_rust).
+
+check_world("agg_tag_bounded").
+check_file("agg_tag_bounded", "examples/checks/agg-tag-bounded.rofl").
+check_opt("agg_tag_bounded", together, 1).
+check_opt("agg_tag_bounded", budget, 2000).
+proves("agg_tag_bounded", agg, tag_idempotent, eval_rust).
+
+check_world("agg_tagc_eval").
+check_file("agg_tagc_eval", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tagc_eval", "examples/checks/agg-tagc-eval-check.rofl").
+check_file("agg_tagc_eval", "examples/checks/agg-tagc-bind.rofl").
+check_opt("agg_tagc_eval", together, 1).
+proves("agg_tagc_eval", agg, tag_counting, eval_rust).
+
+check_world("agg_tag_witness").
+check_file("agg_tag_witness", "examples/checks/agg-tag-data.rofl").
+check_file("agg_tag_witness", "examples/checks/agg-tag-witness-check.rofl").
+check_opt("agg_tag_witness", together, 1).
+proves("agg_tag_witness", agg, tag_idempotent, witness).
+
+check_world("agg_tagc_witness").
+check_file("agg_tagc_witness", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tagc_witness", "examples/checks/agg-tagc-witness-check.rofl").
+check_opt("agg_tagc_witness", together, 1).
+proves("agg_tagc_witness", agg, tag_counting, witness).
+
+check_world("agg_tag_why").
+check_file("agg_tag_why", "examples/checks/agg-tag-data.rofl").
+check_file("agg_tag_why", "examples/checks/agg-tag-why-check.rofl").
+check_opt("agg_tag_why", together, 1).
+check_opt("agg_tag_why", explain, 1).
+proves("agg_tag_why", agg, tag_idempotent, why).
+
+check_world("agg_tagc_why").
+check_file("agg_tagc_why", "examples/checks/agg-tagc-data.rofl").
+check_file("agg_tagc_why", "examples/checks/agg-tagc-why-check.rofl").
+check_opt("agg_tagc_why", together, 1).
+check_opt("agg_tagc_why", explain, 1).
+proves("agg_tagc_why", agg, tag_counting, why).
+
+check_world("agg_tag_wfs").
+check_file("agg_tag_wfs", "examples/checks/agg-tag-wfs-check.rofl").
+check_file("agg_tag_wfs", "examples/checks/agg-tag-wfs-2-refused-tropical.rofl").
+check_file("agg_tag_wfs", "examples/checks/agg-tag-wfs-3-refused-counting.rofl").
+check_opt("agg_tag_wfs", together, 1).
+proves("agg_tag_wfs", agg, tag_idempotent, wfs).
+proves("agg_tag_wfs", agg, tag_counting, wfs).
+
+check_world("agg_tag_ticks").
+check_file("agg_tag_ticks", "examples/checks/agg-tag-ticks-data.rofl").
+check_file("agg_tag_ticks", "examples/checks/agg-tag-ticks-check.rofl").
+check_opt("agg_tag_ticks", together, 1).
+check_opt("agg_tag_ticks", ticks, 1).
+check_opt("agg_tag_ticks", explain, 1).
+check_opt("agg_tag_ticks", retain, 0).
+proves("agg_tag_ticks", agg, tag_idempotent, ticks).
+
+check_world("agg_tagc_ticks").
+check_file("agg_tagc_ticks", "examples/checks/agg-tag-ticks-data.rofl").
+check_file("agg_tagc_ticks", "examples/checks/agg-tagc-ticks-check.rofl").
+check_opt("agg_tagc_ticks", together, 1).
+check_opt("agg_tagc_ticks", ticks, 1).
+check_opt("agg_tagc_ticks", explain, 1).
+check_opt("agg_tagc_ticks", retain, 0).
+proves("agg_tagc_ticks", agg, tag_counting, ticks).
+
+check_world("agg_tag_holes").
+check_file("agg_tag_holes", "examples/checks/agg-tag-holes-check.rofl").
+check_opt("agg_tag_holes", together, 1).
+proves("agg_tag_holes", agg, tag_idempotent, holes).
+
+check_world("agg_tag_budget").
+check_file("agg_tag_budget", "examples/checks/agg-tag-budget.rofl").
+check_opt("agg_tag_budget", together, 1).
+check_opt("agg_tag_budget", budget, 600).
+proves("agg_tag_budget", agg, tag_idempotent, holes).
+
+check_world("agg_tagc_holes").
+check_file("agg_tagc_holes", "examples/checks/agg-tagc-holes-check.rofl").
+check_opt("agg_tagc_holes", together, 1).
+proves("agg_tagc_holes", agg, tag_counting, holes).
+
+check_world("agg_tagc_budget").
+check_file("agg_tagc_budget", "examples/checks/agg-budget-data.rofl").
+check_file("agg_tagc_budget", "examples/checks/agg-tagc-budget.rofl").
+check_opt("agg_tagc_budget", together, 1).
+check_opt("agg_tagc_budget", budget, 500).
+proves("agg_tagc_budget", agg, tag_counting, holes).
+
+check_world("agg_tag_shrug").
+check_file("agg_tag_shrug", "examples/checks/agg-tag-shrug.rofl").
+check_opt("agg_tag_shrug", together, 1).
+check_opt("agg_tag_shrug", explain, 1).
+proves("agg_tag_shrug", agg, tag_idempotent, shrug).
+
+check_world("agg_tag_shrug_wall").
+check_file("agg_tag_shrug_wall", "examples/checks/agg-tag-budget.rofl").
+check_file("agg_tag_shrug_wall", "examples/checks/agg-tag-shrug-wall.rofl").
+check_opt("agg_tag_shrug_wall", together, 1).
+check_opt("agg_tag_shrug_wall", budget, 600).
+proves("agg_tag_shrug_wall", agg, tag_idempotent, shrug).
+
+check_world("agg_tagc_shrug").
+check_file("agg_tagc_shrug", "examples/checks/agg-tagc-shrug.rofl").
+check_opt("agg_tagc_shrug", together, 1).
+check_opt("agg_tagc_shrug", explain, 1).
+proves("agg_tagc_shrug", agg, tag_counting, shrug).
+
+check_world("agg_tag_demo").
+check_file("agg_tag_demo", "examples/checks/agg-tag-demo-data.rofl").
+check_file("agg_tag_demo", "examples/checks/agg-tag-demo-tags.rofl").
+check_file("agg_tag_demo", "examples/checks/agg-tag-demo-host.rofl").
+check_file("agg_tag_demo", "examples/checks/agg-tag-demo-check.rofl").
+check_opt("agg_tag_demo", together, 1).
+proves("agg_tag_demo", agg, tag_idempotent, demo).
+proves("agg_tag_demo", agg, tag_counting, demo).
+
+-- the TypeScript engine reads a tag and refuses it, in a world both answer
+check_world("agg_tag_ts").
+check_file("agg_tag_ts", "examples/checks/agg-tag-ts-1-data.rofl").
+check_file("agg_tag_ts", "examples/checks/agg-tag-ts-2-refused-tropical.rofl").
+check_file("agg_tag_ts", "examples/checks/agg-tag-ts-3-refused-counting.rofl").
+proves("agg_tag_ts", agg, tag_idempotent, syntax).
+proves("agg_tag_ts", agg, tag_counting, syntax).
+
+-- SUBSUMPTION (w_agg_subsumption): `p(K..., V1...) <= p(K..., V2...) :- Body.`,
+-- a cell per key holding the antichain of the values none of the values it
+-- was given dominates; the dominance ordinary rofl over closed relations,
+-- rules as data; the consequences of a dominated value withdrawn, and a
+-- consumer not monotone in the dominance refused on the facts it made; the
+-- Antichain witness; a conflict for a dominance that is no strict partial
+-- order. docs/aggregates.md, "Subsumption, as built".
+check_world("agg_sub_syntax").
+check_file("agg_sub_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_sub_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-1-forms.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-2-expect.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-body.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-other.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-book.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-const.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-twice.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-tense.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-arity.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-same.rofl").
+check_file("agg_sub_syntax", "examples/checks/agg-sub-syntax-3-refused-kernel.rofl").
+check_opt("agg_sub_syntax", together, 1).
+proves("agg_sub_syntax", agg, subsumption, syntax).
+
+-- the TypeScript engine reads a dominance rule and refuses it, in a world both answer
+check_world("agg_sub_ts").
+check_file("agg_sub_ts", "examples/checks/agg-sub-ts-1-data.rofl").
+check_file("agg_sub_ts", "examples/checks/agg-sub-ts-2-refused.rofl").
+proves("agg_sub_ts", agg, subsumption, syntax).
+
+check_world("agg_sub_reflect").
+check_file("agg_sub_reflect", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_reflect", "examples/checks/agg-sub-reflect-check.rofl").
+check_opt("agg_sub_reflect", together, 1).
+proves("agg_sub_reflect", agg, subsumption, reflect).
+
+check_world("agg_sub_strata").
+check_file("agg_sub_strata", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_strata", "rules/strata.rofl").
+check_file("agg_sub_strata", "examples/checks/agg-sub-strata-check.rofl").
+check_file("agg_sub_strata", "examples/checks/agg-sub-strata-2-refused-count.rofl").
+check_file("agg_sub_strata", "examples/checks/agg-sub-strata-3-refused-neg.rofl").
+check_file("agg_sub_strata", "examples/checks/agg-sub-strata-4-refused-loop.rofl").
+check_opt("agg_sub_strata", together, 1).
+proves("agg_sub_strata", agg, subsumption, strata).
+proves_recursion("agg_sub_strata", subsumption).
+
+-- the stock evaluator closes a subsumptive relation where rules/strata.rofl
+-- ranks it, the program ranking its outer readers
+-- (agg-sub-strata-ranks.rofl); one it cannot rank is refused
+check_world("agg_sub_strata_stock").
+check_file("agg_sub_strata_stock", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_strata_stock", "rules/strata.rofl").
+check_file("agg_sub_strata_stock", "examples/checks/agg-sub-strata-ranks.rofl").
+check_file("agg_sub_strata_stock", "examples/checks/agg-sub-strata-check.rofl").
+check_file("agg_sub_strata_stock", "examples/checks/agg-sub-strata-5-refused-unranked.rofl").
+check_opt("agg_sub_strata_stock", together, 1).
+check_opt("agg_sub_strata_stock", evaluator, strata).
+proves("agg_sub_strata_stock", agg, subsumption, strata).
+
+check_world("agg_sub_safety").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-1-ok.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-check.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-2-refused-keys.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-3-refused-arities.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-4-refused-lattice.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-5-refused-tag.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-6-refused-asserted.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-7-refused-width.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-8-refused-provenance.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-9-refused-threshold.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-10-refused-demand.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-11-refused-self.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-12-refused-aggregate.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-13-refused-free.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-14-refused-monotone.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-15-refused-rests.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-16-refused-row.rofl").
+check_file("agg_sub_safety", "examples/checks/agg-sub-safety-17-refused-order.rofl").
+check_opt("agg_sub_safety", together, 1).
+proves("agg_sub_safety", agg, subsumption, safety).
+
+check_world("agg_sub_eval").
+check_file("agg_sub_eval", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_eval", "examples/checks/agg-sub-eval-check.rofl").
+check_opt("agg_sub_eval", together, 1).
+proves("agg_sub_eval", agg, subsumption, eval_rust).
+
+check_world("agg_sub_witness").
+check_file("agg_sub_witness", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_witness", "examples/checks/agg-sub-witness-check.rofl").
+check_opt("agg_sub_witness", together, 1).
+proves("agg_sub_witness", agg, subsumption, witness).
+
+check_world("agg_sub_why").
+check_file("agg_sub_why", "examples/checks/agg-sub-data.rofl").
+check_file("agg_sub_why", "examples/checks/agg-sub-why-check.rofl").
+check_opt("agg_sub_why", together, 1).
+check_opt("agg_sub_why", explain, 1).
+proves("agg_sub_why", agg, subsumption, why).
+
+check_world("agg_sub_demo").
+check_file("agg_sub_demo", "examples/checks/agg-sub-demo-check.rofl").
+check_opt("agg_sub_demo", together, 1).
+proves("agg_sub_demo", agg, subsumption, demo).
+
+check_world("agg_sub_wfs").
+check_file("agg_sub_wfs", "examples/checks/agg-sub-wfs-check.rofl").
+check_file("agg_sub_wfs", "examples/checks/agg-sub-wfs-2-refused.rofl").
+check_opt("agg_sub_wfs", together, 1).
+proves("agg_sub_wfs", agg, subsumption, wfs).
+
+check_world("agg_sub_ticks").
+check_file("agg_sub_ticks", "examples/checks/agg-sub-ticks-data.rofl").
+check_file("agg_sub_ticks", "examples/checks/agg-sub-ticks-check.rofl").
+check_opt("agg_sub_ticks", together, 1).
+check_opt("agg_sub_ticks", ticks, 1).
+check_opt("agg_sub_ticks", explain, 1).
+check_opt("agg_sub_ticks", retain, 0).
+proves("agg_sub_ticks", agg, subsumption, ticks).
+
+check_world("agg_sub_holes").
+check_file("agg_sub_holes", "examples/checks/agg-sub-holes-check.rofl").
+check_opt("agg_sub_holes", together, 1).
+proves("agg_sub_holes", agg, subsumption, holes).
+
+check_world("agg_sub_budget").
+check_file("agg_sub_budget", "examples/checks/agg-sub-budget.rofl").
+check_opt("agg_sub_budget", together, 1).
+check_opt("agg_sub_budget", budget, 400).
+proves("agg_sub_budget", agg, subsumption, holes).
+
+check_world("agg_sub_shrug").
+check_file("agg_sub_shrug", "examples/checks/agg-sub-shrug.rofl").
+check_opt("agg_sub_shrug", together, 1).
+check_opt("agg_sub_shrug", explain, 1).
+proves("agg_sub_shrug", agg, subsumption, shrug).
+
+check_world("agg_sub_shrug_wall").
+check_file("agg_sub_shrug_wall", "examples/checks/agg-sub-budget.rofl").
+check_file("agg_sub_shrug_wall", "examples/checks/agg-sub-shrug-wall.rofl").
+check_opt("agg_sub_shrug_wall", together, 1).
+check_opt("agg_sub_shrug_wall", budget, 400).
+proves("agg_sub_shrug_wall", agg, subsumption, shrug).
+
+-- THE SENTENCE FORM OF EVERY KIND (w_agg_phrase; docs/aggregates.md, "The sentence form, as built"). Each
+-- world reads the kind's rules from sentences and from rofl in one `.rofl.md` file, writes them as sentences
+-- with rofl-render and reads them back (`sentences`), and must lose and gain nothing
+-- (examples/checks/agg-phrase-check.rofl) and answer as the kind does (its own check).
+check_world("agg_count_phrase").
+check_file("agg_count_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_count_phrase", "examples/checks/agg-phrase-count.rofl.md").
+check_file("agg_count_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_count_phrase", "examples/checks/agg-phrase-count-check.rofl").
+check_opt("agg_count_phrase", together, 1).
+check_opt("agg_count_phrase", sentences, 1).
+proves("agg_count_phrase", agg, count, phrase).
+
+check_world("agg_sum_phrase").
+check_file("agg_sum_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_sum_phrase", "examples/checks/agg-phrase-sum.rofl.md").
+check_file("agg_sum_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_sum_phrase", "examples/checks/agg-phrase-sum-check.rofl").
+check_opt("agg_sum_phrase", together, 1).
+check_opt("agg_sum_phrase", sentences, 1).
+proves("agg_sum_phrase", agg, sum, phrase).
+
+check_world("agg_minmax_phrase").
+check_file("agg_minmax_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_minmax_phrase", "examples/checks/agg-phrase-minmax.rofl.md").
+check_file("agg_minmax_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_minmax_phrase", "examples/checks/agg-phrase-minmax-check.rofl").
+check_opt("agg_minmax_phrase", together, 1).
+check_opt("agg_minmax_phrase", sentences, 1).
+proves("agg_minmax_phrase", agg, min_max_strat, phrase).
+
+check_world("agg_holistic_phrase").
+check_file("agg_holistic_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_holistic_phrase", "examples/checks/agg-phrase-holistic.rofl.md").
+check_file("agg_holistic_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_holistic_phrase", "examples/checks/agg-phrase-holistic-check.rofl").
+check_opt("agg_holistic_phrase", together, 1).
+check_opt("agg_holistic_phrase", sentences, 1).
+proves("agg_holistic_phrase", agg, holistic, phrase).
+
+check_world("agg_empty_phrase").
+check_file("agg_empty_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_empty_phrase", "examples/checks/agg-phrase-empty.rofl.md").
+check_file("agg_empty_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_empty_phrase", "examples/checks/agg-phrase-empty-check.rofl").
+check_opt("agg_empty_phrase", together, 1).
+check_opt("agg_empty_phrase", sentences, 1).
+proves("agg_empty_phrase", agg, empty_group, phrase).
+
+check_world("agg_threshold_phrase").
+check_file("agg_threshold_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_threshold_phrase", "examples/checks/agg-phrase-threshold.rofl.md").
+check_file("agg_threshold_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_threshold_phrase", "examples/checks/agg-phrase-threshold-check.rofl").
+check_opt("agg_threshold_phrase", together, 1).
+check_opt("agg_threshold_phrase", sentences, 1).
+proves("agg_threshold_phrase", agg, threshold, phrase).
+
+check_world("agg_lattice_phrase").
+check_file("agg_lattice_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_lattice_phrase", "examples/checks/agg-phrase-lattice.rofl.md").
+check_file("agg_lattice_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_lattice_phrase", "examples/checks/agg-phrase-lattice-check.rofl").
+check_opt("agg_lattice_phrase", together, 1).
+check_opt("agg_lattice_phrase", sentences, 1).
+proves("agg_lattice_phrase", agg, order_lattice, phrase).
+
+check_world("agg_join_phrase").
+check_file("agg_join_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_join_phrase", "examples/checks/agg-phrase-join.rofl.md").
+check_file("agg_join_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_join_phrase", "examples/checks/agg-phrase-join-check.rofl").
+check_opt("agg_join_phrase", together, 1).
+check_opt("agg_join_phrase", sentences, 1).
+proves("agg_join_phrase", agg, join_lattice, phrase).
+
+check_world("agg_widen_phrase").
+check_file("agg_widen_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_widen_phrase", "examples/checks/agg-phrase-widen.rofl.md").
+check_file("agg_widen_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_widen_phrase", "examples/checks/agg-phrase-widen-check.rofl").
+check_opt("agg_widen_phrase", together, 1).
+check_opt("agg_widen_phrase", sentences, 1).
+proves("agg_widen_phrase", agg, widening, phrase).
+
+check_world("agg_tag_phrase").
+check_file("agg_tag_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_tag_phrase", "examples/checks/agg-phrase-tag.rofl.md").
+check_file("agg_tag_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_tag_phrase", "examples/checks/agg-phrase-tag-check.rofl").
+check_opt("agg_tag_phrase", together, 1).
+check_opt("agg_tag_phrase", sentences, 1).
+proves("agg_tag_phrase", agg, tag_idempotent, phrase).
+
+check_world("agg_tagc_phrase").
+check_file("agg_tagc_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_tagc_phrase", "examples/checks/agg-phrase-tagc.rofl.md").
+check_file("agg_tagc_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_tagc_phrase", "examples/checks/agg-phrase-tagc-check.rofl").
+check_opt("agg_tagc_phrase", together, 1).
+check_opt("agg_tagc_phrase", sentences, 1).
+proves("agg_tagc_phrase", agg, tag_counting, phrase).
+
+check_world("agg_sub_phrase").
+check_file("agg_sub_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_sub_phrase", "examples/checks/agg-phrase-sub.rofl.md").
+check_file("agg_sub_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_sub_phrase", "examples/checks/agg-phrase-sub-check.rofl").
+check_opt("agg_sub_phrase", together, 1).
+check_opt("agg_sub_phrase", sentences, 1).
+proves("agg_sub_phrase", agg, subsumption, phrase).
+
+check_world("agg_sugar_phrase").
+check_file("agg_sugar_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_sugar_phrase", "examples/checks/agg-phrase-sugar.rofl.md").
+check_file("agg_sugar_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_sugar_phrase", "examples/checks/agg-phrase-sugar-check.rofl").
+check_opt("agg_sugar_phrase", together, 1).
+check_opt("agg_sugar_phrase", sentences, 1).
+proves("agg_sugar_phrase", agg, sugar, phrase).
+
+-- THE SUGAR, LOWERED (w_agg_phrase; docs/aggregates.md, "The sentence form, as built"). The sugar exists only as
+-- sentences: each world reads agg-sugar-forms.rofl.md, which the reader lowers onto count, sum and a comparison,
+-- over agg-sugar-data.rofl, and holds what the lowering answers, explains, refuses, leaves out and shrugs.
+check_world("agg_sugar_eval").
+check_file("agg_sugar_eval", "examples/checks/agg-sugar-data.rofl").
+check_file("agg_sugar_eval", "examples/checks/agg-sugar-forms.rofl.md").
+check_file("agg_sugar_eval", "examples/checks/agg-sugar-eval-check.rofl").
+check_opt("agg_sugar_eval", together, 1).
+proves("agg_sugar_eval", agg, sugar, eval_rust).
+
+check_world("agg_sugar_safety").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-data.rofl").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-forms.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-2-refused-atmost-recursive.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-3-refused-exactly-recursive.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-4-refused-every-unbound.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-5-refused-atmost-unbound.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-6-refused-unrounded.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-7-refused-avg-recursive.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-8-refused-exactly-unbound.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-9-refused-atmost-ungrouped.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-10-refused-exactly-ungrouped.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-check.rofl").
+check_opt("agg_sugar_safety", together, 1).
+proves("agg_sugar_safety", agg, sugar, safety).
+
+check_world("agg_sugar_why").
+check_file("agg_sugar_why", "examples/checks/agg-sugar-data.rofl").
+check_file("agg_sugar_why", "examples/checks/agg-sugar-forms.rofl.md").
+check_file("agg_sugar_why", "examples/checks/agg-sugar-why-check.rofl").
+check_opt("agg_sugar_why", together, 1).
+check_opt("agg_sugar_why", explain, 1).
+proves("agg_sugar_why", agg, sugar, why).
+
+check_world("agg_sugar_holes").
+check_file("agg_sugar_holes", "examples/checks/agg-sugar-data.rofl").
+check_file("agg_sugar_holes", "examples/checks/agg-sugar-forms.rofl.md").
+check_file("agg_sugar_holes", "examples/checks/agg-sugar-holes-check.rofl").
+check_opt("agg_sugar_holes", together, 1).
+proves("agg_sugar_holes", agg, sugar, holes).
+
+check_world("agg_sugar_shrug").
+check_file("agg_sugar_shrug", "examples/checks/agg-sugar-data.rofl").
+check_file("agg_sugar_shrug", "examples/checks/agg-sugar-forms.rofl.md").
+check_file("agg_sugar_shrug", "examples/checks/agg-sugar-shrug.rofl.md").
+check_file("agg_sugar_shrug", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_sugar_shrug", "examples/checks/agg-sugar-shrug-check.rofl").
+check_opt("agg_sugar_shrug", together, 1).
+check_opt("agg_sugar_shrug", sentences, 1).
+proves("agg_sugar_shrug", agg, sugar, shrug).
+proves("agg_sugar_shrug", agg, sugar, phrase).
+
+-- THE TYPESCRIPT ENGINE (w_agg_ts, docs/aggregates.md, "The TypeScript engine,
+-- as built"). Every world above is loaded together (`together`) and answered
+-- by both engines, and facts/goldens.rofl pins the one hash both reach. A
+-- kind's eval world proves it evaluates in TypeScript and its why world that
+-- the two agree on its witness and its explanations, each red under a
+-- TypeScript fault (`ts_*` in scripts/agg_breaks.ts).
+proves("agg_cell_eval", agg, cell, eval_ts).
+proves("agg_cell_why", agg, cell, parity).
+proves("agg_count_eval", agg, count, eval_ts).
+proves("agg_count_why", agg, count, parity).
+proves("agg_sum_eval", agg, sum, eval_ts).
+proves("agg_sum_why", agg, sum, parity).
+proves("agg_minmax_eval", agg, min_max_strat, eval_ts).
+proves("agg_minmax_why", agg, min_max_strat, parity).
+proves("agg_threshold_eval", agg, threshold, eval_ts).
+proves("agg_threshold_why", agg, threshold, parity).
+proves("agg_lattice_eval", agg, order_lattice, eval_ts).
+proves("agg_lattice_why", agg, order_lattice, parity).
+proves("agg_join_eval", agg, join_lattice, eval_ts).
+proves("agg_join_why", agg, join_lattice, parity).
+proves("agg_widen_eval", agg, widening, eval_ts).
+proves("agg_widen_why", agg, widening, parity).
+proves("agg_tag_eval", agg, tag_idempotent, eval_ts).
+proves("agg_tag_why", agg, tag_idempotent, parity).
+proves("agg_tagc_eval", agg, tag_counting, eval_ts).
+proves("agg_tagc_why", agg, tag_counting, parity).
+proves("agg_holistic_eval", agg, holistic, eval_ts).
+proves("agg_holistic_why", agg, holistic, parity).
+proves("agg_sub_eval", agg, subsumption, eval_ts).
+proves("agg_sub_why", agg, subsumption, parity).
+proves("agg_sugar_eval", agg, sugar, eval_ts).
+proves("agg_sugar_why", agg, sugar, parity).
+proves("agg_empty_eval", agg, empty_group, eval_ts).
+proves("agg_empty_why", agg, empty_group, parity).

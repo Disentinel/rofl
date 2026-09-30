@@ -1,0 +1,6 @@
+-- expect-refusal: is not monotone in the value
+-- arithmetic is no step of a join: its value is no number
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_arith(X, union S).
+ajsr_arith(X, set(X))  :- ajsr_e(X, _).
+ajsr_arith(X, N)       :- ajsr_e(X, Y), ajsr_arith(Y, S), N is S + 1.

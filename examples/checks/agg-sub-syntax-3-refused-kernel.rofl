@@ -1,0 +1,3 @@
+-- expect-refusal: is a kernel relation
+-- the kernel's relations are the kernel's to keep
+derived_by(A, B, C) <= derived_by(A, B, D) :- C < D.

@@ -130,6 +130,8 @@ pub const VALUED: &[Valued] = &[
         (&[T::Kind(0, "comma"), T::Pred(0, "code_at")], "comma"),
         (&[T::Kind(0, "dot"), T::Pred(0, "code_at")], "dot"),
         (&[T::Kind(0, "at"), T::Pred(0, "code_at")], "at"),
+        (&[T::Kind(0, "colon"), T::Pred(0, "code_at"), T::Not(&T::Kind(1, "dash"))], "colon"),
+        (&[T::Kind(0, "semi"), T::Pred(0, "code_at")], "semi"),
     ] },
 ];
 

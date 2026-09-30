@@ -1,0 +1,25 @@
+-- examples/checks/agg-holistic-holes-column.rofl — agg_holistic_holes: a
+-- median, quantile or rank over a member not known is a hole,
+-- `support_withdrawn`, never the median of the survivors; over a value that
+-- is no number, `agg_type_error`; a negation above it is undecided
+-- (agg-holes-data.rofl).
+ahh_med(G, M)  :- ah_g(G), M is median(Y ; K : ah_x(G, K, Y)).
+ahh_raw(G, M)  :- ah_g(G), M is median(V ; K : ah_v(G, K, V)).
+ahh_q(G, M)    :- ah_g(G), M is quantile(100, Y ; K : ah_x(G, K, Y)).
+ahh_has(G)     :- ahh_med(G, _).
+ahh_none(G)    :- ah_g(G), not ahh_has(G).
+ahh_bad(med_b)   :- ahh_med(b, _).
+ahh_bad(med_d)   :- ahh_med(d, _).
+ahh_bad(med_big) :- ahh_med(big, _).
+-- expect-row: ahh_med[main](a,4)
+ahh_bad(raw_b)   :- ahh_raw(b, _).
+ahh_bad(q_b)     :- ahh_q(b, _).
+-- expect-row: ahh_q[main](a,5)
+ahh_bad(none_b)  :- ahh_none(b).
+ahh_bad(none_d)  :- ahh_none(d).
+alarm(ahh_bad).
+ahh_holed(G, Why) :- ahh_has(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), Why), concludes[$kernel](R, Rel), ahh_rel(Rel).
+ahh_rel(ahh_med). ahh_rel(ahh_raw).
+ahh_unholed(b)   :- ahh_has(_), not ahh_holed(b, support_withdrawn).
+ahh_unholed(raw_b) :- ahh_has(_), not ahh_holed(b, agg_type_error).
+alarm(ahh_unholed).

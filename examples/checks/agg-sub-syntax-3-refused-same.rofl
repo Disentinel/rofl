@@ -1,0 +1,3 @@
+-- expect-refusal: the two facts are one
+-- a dominance rule compares two values at one key
+sxsr_same(A, X) <= sxsr_same(A, X) :- X < 1.

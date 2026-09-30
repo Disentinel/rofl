@@ -1,0 +1,10 @@
+-- expect-refusal: shrug is read of
+-- examples/checks/agg-shrug-late-row.rofl — a rule reading shrug fires once the
+-- rest is settled; a shrug a rule that reads shrug leaves has no row it could
+-- have read, so a reader that could read one is refused, in both engines.
+edb(slr_big).
+slr_big(1152921504606846975).
+slr_w(c) :- slr_big(B), Z is B + 1, Z > 0.
+slr_seen(A) :- shrug(A, fault, _).
+slr_q(A) :- slr_seen(A), slr_w(c).
+slr_again(A) :- shrug(A, inherited, _).

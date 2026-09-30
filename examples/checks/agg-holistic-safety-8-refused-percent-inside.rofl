@@ -1,0 +1,4 @@
+-- expect-refusal: quantile's percent is an integer or a variable bound before it
+-- examples/checks/agg-holistic-safety-8-refused-percent-inside.rofl — a
+-- percent the body binds would be a percent per member.
+ahs_qin(G, Q) :- ahs_group(G), Q is quantile(P, V ; K : ahs_line(G, K, V), ahs_ask(G, P)).

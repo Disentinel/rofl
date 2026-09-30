@@ -1,0 +1,19 @@
+-- examples/checks/agg-phrase-widen-check.rofl — agg_widen_phrase: each widening read from its sentence and from
+-- rofl widens where its declaration says: the counter's hull, grown by one at each round, is widened after two
+-- improvements and has no value, only its enclosure [0, inf] (a shrug `widened`), and what reads it inherits
+-- the shrug. Neither reading holds a value for either relation.
+pw_cell(pws_loop). pw_cell(pwr_loop).
+pw_widened(R) :- shrug[$kernel]($lattice(R, main, 0, $cons(p, $nil)), widened, within(iv(0, inf))).
+pw_wrong(R) :- pw_cell(R), not pw_widened(R).
+pw_inherits(pws_once) :- shrug[$kernel]($lattice(pws_once, main, 0, $nil), inherited, from($cons($lattice(pws_loop, main, 0, $cons(p, $nil)), $nil))).
+pw_inherits(pwr_once) :- shrug[$kernel]($lattice(pwr_once, main, 0, $nil), inherited, from($cons($lattice(pwr_loop, main, 0, $cons(p, $nil)), $nil))).
+pw_reader(pws_once). pw_reader(pwr_once).
+pw_wrong(R) :- pw_reader(R), not pw_inherits(R).
+pw_wrong(pws_loop) :- pws_loop(_, _).
+pw_wrong(pwr_loop) :- pwr_loop(_, _).
+pw_wrong(pws_once) :- pws_once(_).
+pw_wrong(pwr_once) :- pwr_once(_).
+alarm(pw_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(pwr_loop, "keeps the hull I for each P, widened after 2 improvements.").
+sentence_word(pwr_once, "keeps the hull I, widened after 1 improvement.").

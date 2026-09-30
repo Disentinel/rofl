@@ -1,0 +1,8 @@
+-- expect-refusal: the weight reads a tag of the body the engine multiplies in
+-- the weight doubles the count of a premise the engine already multiplies in
+edb(tcr_e).
+tcr_e(a).
+tag tcr_n(A, counting N).
+tcr_n(A, 1) :- tcr_e(A).
+tag tcr_w(A, counting N).
+tcr_w(A, W) :- tcr_n(A, C), W is C * 2.

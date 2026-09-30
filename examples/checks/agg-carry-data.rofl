@@ -1,0 +1,16 @@
+-- examples/checks/agg-carry-data.rofl — A HOLED AGGREGATE'S CARRY IS CHARGED
+-- (agg_carry_budget, agg_carry_space). ca_k's sum leaves the range, so its
+-- cell is a hole, `agg_overflow`, and what ca_big would conclude is unknown
+-- under every solution of the rest of its body: 27000 of them, from a
+-- handful of facts. The rest of the body is solved around the hole against
+-- the evaluation's walls, never with them lifted
+-- (f_the_carry_of_unknowns_ran_past_the_walls).
+edb(ca_g).
+edb(ca_v).
+edb(ca_n).
+ca_g(k).
+ca_v(k, x1, 1152921504606846975). ca_v(k, x2, 1152921504606846975).
+ca_n(a0). ca_n(a1). ca_n(a2). ca_n(a3). ca_n(a4). ca_n(a5). ca_n(a6). ca_n(a7). ca_n(a8). ca_n(a9).
+ca_n(a10). ca_n(a11). ca_n(a12). ca_n(a13). ca_n(a14). ca_n(a15). ca_n(a16). ca_n(a17). ca_n(a18). ca_n(a19).
+ca_n(a20). ca_n(a21). ca_n(a22). ca_n(a23). ca_n(a24). ca_n(a25). ca_n(a26). ca_n(a27). ca_n(a28). ca_n(a29).
+ca_big(A, B, C, S) :- ca_g(G), S is sum(W ; X : ca_v(G, X, W)), ca_n(A), ca_n(B), ca_n(C).

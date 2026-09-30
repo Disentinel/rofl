@@ -1,0 +1,463 @@
+-- rules/agg.rofl — THE AGGREGATES PROGRAMME AS A MATRIX AND A QUEUE.
+-- The design, and why a proof is a registered world: docs/aggregates.md.
+-- Shapes copied from rules/js-model.rofl and rules/worklist.rofl, keyed on
+-- Lang = agg; those two are hard-wired to js and loaded in w_queue.
+-- Worlds: `rules_agg` (facts/agg.rofl + this) and `agg_proofs` (the same with
+-- facts/checks.rofl and facts/findings.rofl, declared in facts/checks.rofl).
+
+edb(agg_kind).         -- agg_kind(K)                a row
+edb(agg_kind_note).    -- agg_kind_note(K, Text)
+edb(obligation).       -- obligation(L)              a column
+edb(obligation_note).  -- obligation_note(L, Text)
+edb(algebra_class).    -- algebra_class(K, Class)    what decides recursion and dedup
+edb(algebra_note).     -- algebra_note(Class, Text)
+edb(handled).          -- handled(agg, K, L, ProofWorld)   closed, by a proof
+edb(ignored).          -- ignored(agg, K, L, Reason)       does not apply, and why
+edb(unknown_because).  -- unknown_because(agg, K, L, Reason)
+edb(decided_not_work). -- decided_not_work(agg, K, L, Finding)  the owner took it off the queue
+edb(workaround_site).  -- workaround_site(K, Path)
+edb(contradiction_site). -- contradiction_site(Item, Path, What)  prose the programme falsifies
+-- the registry: facts/checks.rofl and facts/findings.rofl own these, and only
+-- the world that loads them (agg_proofs) has rows in them
+edb(registry_file).    -- registry_file(checks)      the sentinel facts/checks.rofl asserts
+edb(check_world).
+edb(check_file).
+edb(proves).           -- proves(World, agg, K, L)   the one cell a world closes
+edb(proves_work).      -- proves_work(World, Item)   the item without cells a world closes
+edb(proves_refusal).   -- proves_refusal(World, K)   K inside recursion is refused
+edb(proves_recursion). -- proves_recursion(World, K) K inside recursion is evaluated
+edb(finding).
+
+-- =========================================================================
+-- THE MATRIX. Three buckets partition it, as in js-model.
+cell[audit](Lang, K, L)        :- agg_lang(Lang), agg_kind(K), obligation(L).
+cell[audit](Lang, K, none, L)  :- cell[audit](Lang, K, L).
+
+edb(agg_lang).
+agg_lang(agg).
+
+modelled[audit](Lang, K, L)    :- handled(Lang, K, L, _).
+waived[audit](Lang, K, L)      :- ignored(Lang, K, L, _).
+
+unaccounted[audit](Lang, K, L) :- cell[audit](Lang, K, L),
+                                  not modelled[audit](Lang, K, L),
+                                  not waived[audit](Lang, K, L).
+
+double_claimed[audit](Lang, K, L) :- modelled[audit](Lang, K, L),
+                                     waived[audit](Lang, K, L).
+alarm(double_claimed).
+
+-- the claim ledger, one relation with the ledger name as an argument
+edb(claim).
+edb(claim_kind).
+claim_kind(handled).
+claim_kind(ignored).
+claim_kind(unknown_because).
+claim_kind(queued).
+
+claim(handled,         Lang, K, L, R) :- handled(Lang, K, L, R).
+claim(ignored,         Lang, K, L, R) :- ignored(Lang, K, L, R).
+claim(unknown_because, Lang, K, L, R) :- unknown_because(Lang, K, L, R).
+
+handled(Lang, K, L, R)         :- claim(handled, Lang, K, L, R).
+ignored(Lang, K, L, R)         :- claim(ignored, Lang, K, L, R).
+unknown_because(Lang, K, L, R) :- claim(unknown_because, Lang, K, L, R).
+
+-- a claim over no cell evaporates silently unless it is a row
+orphan[audit](What, Lang, K, L)    :- claim(What, Lang, K, L, _),
+                                      not cell[audit](Lang, K, L).
+orphan[audit](What, Lang, K, S, L) :- claim(What, Lang, K, S, L, _),
+                                      not cell[audit](Lang, K, S, L).
+alarm(orphan).
+
+unknown_ledger[audit](What) :- claim(What, _, _, _, _), not claim_kind(What).
+unknown_ledger[audit](What) :- claim(What, _, _, _, _, _), not claim_kind(What).
+alarm(unknown_ledger).
+
+-- THE COLUMN LIST IS THE OWNER'S, as a row, as the layer list is in
+-- rules/js-model.rofl: `obligation(L)` is one fact and opens a cell in every
+-- row, so the column and the owners of its cells land together, and a column
+-- the owner did not authorise is an alarm.
+edb(obligation_authorised).
+obligation_authorised(syntax).
+obligation_authorised(reflect).
+obligation_authorised(strata).
+obligation_authorised(safety).
+obligation_authorised(eval_rust).
+obligation_authorised(eval_ts).
+obligation_authorised(witness).
+obligation_authorised(why).
+obligation_authorised(wfs).
+obligation_authorised(ticks).
+obligation_authorised(holes).
+obligation_authorised(parity).
+obligation_authorised(phrase).
+obligation_authorised(incremental_ready).
+obligation_authorised(demo).
+obligation_authorised(retire).
+-- decided by the owner 2026-09-29: the answer model's third value (w_agg_shrug)
+obligation_authorised(shrug).
+obligation_unauthorised[audit](L) :- obligation(L), not obligation_authorised(L).
+alarm(obligation_unauthorised).
+
+-- =========================================================================
+-- THE VERDICT. `not_modelled` is what a cell is born with; the reason says
+-- whose move it is.
+verdict[audit](Lang, K, L, modelled)     :- handled(Lang, K, L, _).
+verdict[audit](Lang, K, L, waived)       :- ignored(Lang, K, L, _).
+verdict[audit](Lang, K, L, not_modelled) :- cell[audit](Lang, K, L),
+                                            not handled(Lang, K, L, _),
+                                            not ignored(Lang, K, L, _).
+
+-- A WAIVER IS SCOPED. `ignored` is the one verdict that makes a cell leave the
+-- queue, so each reason names the cells it may be used on, here and not in
+-- the ledger it polices.
+edb(waiver_applies).   -- waiver_applies(Reason, K, L)
+edb(surface_obligation).
+edb(own_syntax_obligation).
+edb(lowered_obligation).
+surface_obligation(syntax).
+surface_obligation(phrase).
+own_syntax_obligation(syntax).
+own_syntax_obligation(reflect).
+lowered_obligation(reflect).
+lowered_obligation(strata).
+lowered_obligation(witness).
+lowered_obligation(wfs).
+lowered_obligation(ticks).
+lowered_obligation(incremental_ready).
+
+-- the substrate is written by nobody
+waiver_applies(no_surface, cell, L)            :- surface_obligation(L).
+-- the empty group is written with count's and sum's syntax
+waiver_applies(no_own_syntax, empty_group, L)  :- own_syntax_obligation(L).
+-- the sugar exists only in the sentence form, which the phrase column owns
+waiver_applies(sentence_form_only, sugar, syntax).
+-- the sugar is rewritten onto count, sum and threshold; its evaluation (the
+-- lowering, avg's division and empty group) and its safety are NOT waivable
+waiver_applies(lowers_to_core, sugar, L)       :- lowered_obligation(L).
+-- nothing in the tree to retire (`retire_waived_sited` checks the claim)
+waiver_applies(no_workaround, K, retire)       :- agg_kind(K).
+
+waiver_kind(R) :- waiver_applies(R, _, _).
+
+bad_waiver[audit](Lang, K, L, R) :- ignored(Lang, K, L, R), not waiver_applies(R, K, L).
+alarm(bad_waiver).
+
+edb(unknown_type).
+unknown_type(not_yet,          ours).
+unknown_type(budget_exhausted, ours).
+unknown_type(out_of_scope,     ours).
+
+reason[audit](Lang, K, L, R)       :- verdict[audit](Lang, K, L, not_modelled),
+                                      unknown_because(Lang, K, L, R).
+reason[audit](Lang, K, L, not_yet) :- verdict[audit](Lang, K, L, not_modelled),
+                                      not unknown_because(Lang, K, L, _).
+
+our_unknown[audit](Lang, K, L)     :- reason[audit](Lang, K, L, R), unknown_type(R, ours).
+
+bad_reason[audit](Lang, K, L, R)   :- unknown_because(Lang, K, L, R), not unknown_type(R, _).
+alarm(bad_reason).
+
+stale_reason[audit](Lang, K, L, R) :- unknown_because(Lang, K, L, R),
+                                      cell[audit](Lang, K, L),
+                                      not verdict[audit](Lang, K, L, not_modelled).
+alarm(stale_reason).
+
+-- a workaround column that says what it retires: an open `retire` cell names
+-- the site, and a waived one has none to name
+sited(K)                        :- workaround_site(K, _).
+retire_unsited[audit](Lang, K)  :- verdict[audit](Lang, K, retire, not_modelled), not sited(K).
+retire_waived_sited[audit](Lang, K) :- verdict[audit](Lang, K, retire, waived), sited(K).
+alarm(retire_unsited).
+alarm(retire_waived_sited).
+
+-- =========================================================================
+-- THE REGISTRY IS NOT THE LEDGER. rules_agg loads facts/agg.rofl and this
+-- file alone, so a registry row there was written by the ledger about itself.
+registry_loaded() :- registry_file(checks).
+
+registry_in_ledger[audit](check_world, W)      :- check_world(W), not registry_loaded().
+registry_in_ledger[audit](check_file, W)       :- check_file(W, _), not registry_loaded().
+registry_in_ledger[audit](proves, W)           :- proves(W, _, _, _), not registry_loaded().
+registry_in_ledger[audit](proves_work, W)      :- proves_work(W, _), not registry_loaded().
+registry_in_ledger[audit](proves_refusal, W)   :- proves_refusal(W, _), not registry_loaded().
+registry_in_ledger[audit](proves_recursion, W) :- proves_recursion(W, _), not registry_loaded().
+registry_in_ledger[audit](finding, F)          :- finding(F, _), not registry_loaded().
+alarm(registry_in_ledger).
+
+-- =========================================================================
+-- A CLOSED CELL NAMES ITS PROOF, AND THE PROOF NAMES THE CELL. The fourth
+-- argument of `handled` is a world; `none`, or the three-argument spelling,
+-- is a tick with nothing under it. An item that owns no cell closes the same
+-- way, by `work_proof(Item, World)`.
+edb(work_proof).       -- work_proof(Item, World)
+
+closed_without_proof[audit](Lang, K, L) :- handled(Lang, K, L, none).
+closed_without_proof[audit](Lang, K, L) :- handled(Lang, K, L).
+alarm(closed_without_proof).
+
+used_proof(P) :- handled(_, _, _, P), P != none.
+used_proof(P) :- work_proof(_, P).
+
+proof_not_a_world[audit](P) :- used_proof(P), registry_loaded(), not check_world(P).
+alarm(proof_not_a_world).
+
+-- a declared world that loads nothing proves nothing
+has_file(W) :- check_file(W, _).
+proof_world_empty[audit](P) :- used_proof(P), check_world(P), not has_file(P).
+alarm(proof_world_empty).
+
+-- the registry says which cell each world proves; any other cell is asserted
+proof_unbound[audit](Lang, K, L, P) :- handled(Lang, K, L, P), P != none,
+                                       registry_loaded(), not proves(P, Lang, K, L).
+work_proof_unbound[audit](W, P)     :- work_proof(W, P), registry_loaded(),
+                                       not proves_work(P, W).
+alarm(proof_unbound).
+alarm(work_proof_unbound).
+
+-- a proof that loads the ledger or its registry is the ledger vouching for itself
+edb(ledger_file).
+ledger_file("facts/agg.rofl").
+ledger_file("rules/agg.rofl").
+ledger_file("facts/checks.rofl").
+proof_is_ledger[audit](P, F) :- used_proof(P), check_file(P, F), ledger_file(F).
+alarm(proof_is_ledger).
+
+-- a proof world is written for the programme: at least one of its files is
+-- examples/checks/agg-*, so an unrelated check world cannot be borrowed
+agg_check_file(P) :- check_file(P, F), N is str_len(F), N > 20,
+                     H is str_sub(F, 0, 20), H = "examples/checks/agg-".
+proof_off_convention[audit](P) :- used_proof(P), check_world(P), not agg_check_file(P).
+alarm(proof_off_convention).
+
+-- a binding that points at no world or at no cell
+binding_not_a_world[audit](P) :- proves(P, _, _, _),     registry_loaded(), not check_world(P).
+binding_not_a_world[audit](P) :- proves_work(P, _),      registry_loaded(), not check_world(P).
+binding_not_a_world[audit](P) :- proves_refusal(P, _),   registry_loaded(), not check_world(P).
+binding_not_a_world[audit](P) :- proves_recursion(P, _), registry_loaded(), not check_world(P).
+binding_orphan[audit](P, K, L) :- proves(P, Lang, K, L), not cell[audit](Lang, K, L).
+binding_orphan[audit](P, W, none) :- proves_work(P, W), not work(W, _).
+alarm(binding_not_a_world).
+alarm(binding_orphan).
+
+-- without the registry a proof is not checkable here; a census, not an alarm
+proof_unverified[audit](P) :- used_proof(P), not registry_loaded().
+
+-- =========================================================================
+-- THE ALGEBRA DECIDES, MECHANICALLY. One class per kind; the class says
+-- whether a cell of this kind may sit inside recursion, and closing its
+-- `strata` cell needs the registry to name a world that shows it: a refusal
+-- for a stratified kind, an evaluation inside recursion for a recursive one.
+edb(algebra_known).
+edb(recursive_class).
+algebra_known(idempotent_order).
+algebra_known(idempotent_join).
+algebra_known(invertible).
+algebra_known(holistic).
+algebra_known(threshold).
+algebra_known(idempotent_semiring).
+algebra_known(counting_semiring).
+algebra_known(partial_order).
+algebra_known(none).
+recursive_class(idempotent_order).
+recursive_class(idempotent_join).
+recursive_class(threshold).
+recursive_class(idempotent_semiring).
+recursive_class(partial_order).
+
+has_algebra(K)                       :- algebra_class(K, _).
+algebra_undeclared[audit](K)         :- agg_kind(K), not has_algebra(K).
+algebra_unknown[audit](K, C)         :- algebra_class(K, C), not algebra_known(C).
+two_algebras[audit](K, C, D)         :- algebra_class(K, C), algebra_class(K, D), C != D.
+alarm(algebra_undeclared).
+alarm(algebra_unknown).
+alarm(two_algebras).
+
+-- A WRITTEN FORM CAN BE STRATIFIED WHATEVER ITS ALGEBRA. min in a rule body
+-- is the idempotent total order, which may recurse as a lattice declaration,
+-- and as a body aggregate it reads a closed relation like count does; the
+-- class alone asked the body form for a world that evaluates it inside
+-- recursion, which its own engine refuses
+-- (f_min_max_strat_strata_demands_the_recursion_its_body_form_refuses).
+edb(stratified_form).  -- stratified_form(K)  its written form is stratified whatever its algebra
+algebra_permits_recursion(K) :- algebra_class(K, C), recursive_class(C), not stratified_form(K).
+stratified_only(K)            :- algebra_class(K, C), C != none, not recursive_class(C).
+stratified_only(K)            :- stratified_form(K).
+stratified_form_unknown[audit](K) :- stratified_form(K), not agg_kind(K).
+alarm(stratified_form_unknown).
+
+refusal_proved(K)   :- proves_refusal(P, K), check_world(P).
+recursion_proved(K) :- proves_recursion(P, K), check_world(P).
+strata_without_refusal[audit](K)   :- stratified_only(K), verdict[audit](agg, K, strata, modelled),
+                                      registry_loaded(), not refusal_proved(K).
+strata_without_recursion[audit](K) :- algebra_permits_recursion(K),
+                                      verdict[audit](agg, K, strata, modelled),
+                                      registry_loaded(), not recursion_proved(K).
+alarm(strata_without_refusal).
+alarm(strata_without_recursion).
+
+-- =========================================================================
+-- THE QUEUE, DERIVED. rules/worklist.rofl at Lang = agg, with one change: a
+-- sweep owns a COLUMN, which is what the cross-cutting items are.
+edb(work).          -- work(Item, Note)
+edb(work_state).    -- work_state(Item, open | taken | done)
+edb(work_sweeps).   -- work_sweeps(Item, Obligation)  owns that column's residue
+edb(work_needs).    -- work_needs(Item, Other)        Other must be done first
+edb(work_spawned).  -- work_spawned(Item, Finding)
+edb(work_state_kind).
+work_state_kind(open).
+work_state_kind(taken).
+work_state_kind(done).
+
+-- A REASON THAT IS NOT WORK takes a cell off the queue, so it needs the
+-- owner's decision, recorded as a finding (checked in agg_proofs).
+edb(reason_is_work).
+edb(reason_not_work).
+reason_is_work(not_yet).
+reason_not_work(out_of_scope).
+reason_not_work(budget_exhausted).
+
+decided(Lang, K, L)       :- decided_not_work(Lang, K, L, _).
+not_work_cell(Lang, K, L) :- reason[audit](Lang, K, L, R), reason_not_work(R).
+undecided_not_work[audit](Lang, K, L, R) :- reason[audit](Lang, K, L, R), reason_not_work(R),
+                                            not decided(Lang, K, L).
+decision_stale[audit](Lang, K, L, F)     :- decided_not_work(Lang, K, L, F),
+                                            not not_work_cell(Lang, K, L).
+decision_not_a_finding[audit](Lang, K, L, F) :- decided_not_work(Lang, K, L, F),
+                                                registry_loaded(), not finding(F, decision).
+decision_unverified[audit](Lang, K, L, F)    :- decided_not_work(Lang, K, L, F),
+                                                not registry_loaded().
+alarm(undecided_not_work).
+alarm(decision_stale).
+alarm(decision_not_a_finding).
+
+reason_unclassified[audit](R) :- unknown_type(R, ours),
+                                 not reason_is_work(R), not reason_not_work(R).
+alarm(reason_unclassified).
+
+open_cell[audit](Lang, K, none, L) :- our_unknown[audit](Lang, K, L),
+                                     reason[audit](Lang, K, L, R), reason_is_work(R).
+
+-- a blocker that is not a work item
+edb(cell_blocked).   -- cell_blocked(agg, K, L, Cause)
+edb(blocker_kind).
+blocker_kind(decision_owed).
+blocker_kind(external).
+
+blocked_cell[audit](Lang, K, none, L) :- cell_blocked(Lang, K, L, _).
+workable(Lang, K, S, L) :- open_cell[audit](Lang, K, S, L),
+                           not blocked_cell[audit](Lang, K, S, L).
+blocker_unknown[audit](Lang, K, L, C) :- cell_blocked(Lang, K, L, C), not blocker_kind(C).
+blocker_stale[audit](Lang, K, L)      :- cell_blocked(Lang, K, L, _),
+                                         not open_cell[audit](Lang, K, none, L).
+alarm(blocker_unknown).
+alarm(blocker_stale).
+
+-- CLAIMED OR SWEPT, and the ways a plan can lie
+claimed(Lang, K, S, L)  :- claim(queued, Lang, K, S, L, _).
+sweeper(Lang, K, S, L, W) :- work_sweeps(W, L), not work_state(W, done),
+                             open_cell[audit](Lang, K, S, L),
+                             not claimed(Lang, K, S, L).
+swept(Lang, K, S, L)    :- sweeper(Lang, K, S, L, _).
+
+-- who owns a cell, whichever way: the one relation to read for "whose is this"
+owner[audit](Lang, K, S, L, W) :- claim(queued, Lang, K, S, L, W).
+owner[audit](Lang, K, S, L, W) :- sweeper(Lang, K, S, L, W).
+
+-- 1. an open cell nobody owns
+unqueued[audit](Lang, K, S, L) :- open_cell[audit](Lang, K, S, L),
+                                  not claimed(Lang, K, S, L), not swept(Lang, K, S, L).
+alarm(unqueued).
+
+-- 2. an item claiming a cell that is neither open nor closed by a proof: a
+-- waived cell, or one taken off the queue by a decision
+queue_stale[audit](W, Lang, K, S, L) :- claim(queued, Lang, K, S, L, W),
+                                        not work_state(W, done),
+                                        not open_cell[audit](Lang, K, S, L),
+                                        not verdict[audit](Lang, K, L, modelled).
+alarm(queue_stale).
+
+-- 3. two owners is nobody: two named claims, or two items sweeping one column
+double_owned[audit](Lang, K, S, L, A, B) :- claim(queued, Lang, K, S, L, A),
+                                            claim(queued, Lang, K, S, L, B), A != B.
+double_owned[audit](Lang, K, S, L, A, B) :- sweeper(Lang, K, S, L, A),
+                                            sweeper(Lang, K, S, L, B), A != B.
+alarm(double_owned).
+
+-- 4. done, and the model says otherwise: a claimed cell a proof has not
+-- closed (open, waived, or decided away alike), or a swept column left open
+false_done[audit](W, Lang, K, S, L) :- work_state(W, done), claim(queued, Lang, K, S, L, W),
+                                       not verdict[audit](Lang, K, L, modelled).
+false_done[audit](W, Lang, K, S, L) :- work_state(W, done), work_sweeps(W, L),
+                                       open_cell[audit](Lang, K, S, L),
+                                       not claimed(Lang, K, S, L).
+alarm(false_done).
+
+-- 5. done by assertion: an item that owns no cell, or that owns prose the
+-- programme falsifies, is done only when a registered world says so
+claims_cell(W)       :- claim(queued, _, _, _, _, W).
+needs_work_proof(W)  :- work(W, _), not claims_cell(W), not work_sweeps(W, _).
+needs_work_proof(W)  :- contradiction_site(W, _, _).
+has_work_proof(W)    :- work_proof(W, _).
+done_by_assertion[audit](W) :- work_state(W, done), needs_work_proof(W), not has_work_proof(W).
+alarm(done_by_assertion).
+
+-- hygiene of the authored table
+stated_state(W)                  :- work_state(W, _).
+work_unstated[audit](W)          :- claim(queued, _, _, _, _, W), not work(W, _).
+work_unstated[audit](W)          :- work_sweeps(W, _), not work(W, _).
+work_unstated[audit](W)          :- work_needs(W, _), not work(W, _).
+work_unstated[audit](W)          :- work_proof(W, _), not work(W, _).
+work_unstated[audit](W)          :- contradiction_site(W, _, _), not work(W, _).
+work_stateless[audit](W)         :- work(W, _), not stated_state(W).
+work_bad_state[audit](W, S)      :- work_state(W, S), not work_state_kind(S).
+work_sweeps_nocolumn[audit](W, L) :- work_sweeps(W, L), not obligation(L).
+alarm(work_unstated).
+alarm(work_stateless).
+alarm(work_bad_state).
+alarm(work_sweeps_nocolumn).
+
+-- DEPENDENCIES
+blocked[audit](W)          :- work_needs(W, O), not work_state(O, done).
+needs_unknown[audit](W, O) :- work_needs(W, O), not work(O, _).
+waits_on(W, P)             :- work_needs(W, P).
+waits_on(W, P)             :- work_needs(W, Q), waits_on(Q, P).
+work_needs_cycle[audit](W) :- waits_on(W, W).
+alarm(needs_unknown).
+alarm(work_needs_cycle).
+
+-- WHAT TO DO NEXT
+has_workable(W)     :- claim(queued, Lang, K, S, L, W), workable(Lang, K, S, L).
+sweep_workable(W)   :- sweeper(Lang, K, S, L, W), workable(Lang, K, S, L).
+unclaimed_item(W)   :- work(W, _), not claims_cell(W), not work_sweeps(W, _).
+
+edb(held).
+on_hold(W)             :- held(W, _).
+held_unknown[audit](W) :- held(W, _), not work(W, _).
+alarm(held_unknown).
+
+takeable(W) :- work_state(W, open), not blocked[audit](W), has_workable(W),   not on_hold(W).
+takeable(W) :- work_state(W, open), not blocked[audit](W), sweep_workable(W), not on_hold(W).
+takeable(W) :- work_state(W, open), not blocked[audit](W), unclaimed_item(W), not on_hold(W).
+
+-- an open item with cells and nothing workable in them: every cell blocked,
+-- or every cell closed and nobody said done
+nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W),
+                              not sweep_workable(W).
+
+-- the order is leverage: an item something else waits on comes first
+unblocks(P)            :- work_needs(_, P).
+unblocking_work(W)     :- takeable(W), unblocks(W).
+anything_unblocks()    :- unblocking_work(_).
+next_work[audit](W)    :- unblocking_work(W).
+next_work[audit](W)    :- takeable(W), not anything_unblocks().
+in_flight[audit](W)    :- work_state(W, taken).
+
+-- what an item cost, in problems found; fires only beside the findings ledger
+spawned_by[audit](W, F)   :- work_spawned(W, F), finding(F, _).
+
+-- the audits read the authored tables in [main], and the queue in [main]
+-- reads the open cells in [audit]
+imports(audit, main).
+imports(main, audit).

@@ -1,0 +1,3 @@
+-- expect-refusal: no closing dot
+-- a declaration is a clause and ends with one
+lattice sxlr_dot(A, min D)

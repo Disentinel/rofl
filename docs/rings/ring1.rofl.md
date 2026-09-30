@@ -295,6 +295,20 @@ A position starts a word if [the character at](#kind) it is a `dollar` and it [i
   - J is I + 1;
   - [the character at](#kind) J is a `dash`.
 
+> AN AGGREGATE'S TWO SEPARATORS. A colon not followed by a dash is not the
+> neck, and until the aggregate it was no token at all: a lone colon was
+> stray and refused. `;` separates an aggregate's values from its keys.
+
+The punctuation at a position I is a N either:
+
+1. if all of:
+   - [the character at](#kind) I is a `colon`;
+   - I [is code](#code_at);
+   - a position J is I + 1;
+   - N is `colon`;
+   - unless [the character at](#kind) J is a `dash`;
+2. if [the character at](#kind) I is a `semi`, I [is code](#code_at), and N is `semi`.
+
 <a id="tok"></a>A token runs from a position I to a position J either:
 
 1. if [a word runs from](#word) I to J;
@@ -347,6 +361,24 @@ A position
   - J is it + 1;
   - "i" [stands at](#ch) it;
   - "s" [stands at](#ch) J.
+- <a id="kw_in"></a>spells the word for membership if all of:
+  - [a word runs from](#word) it to a position J;
+  - J is it + 1;
+  - "i" [stands at](#ch) it;
+  - "n" [stands at](#ch) J.
+- <a id="kw_subset"></a>spells the word for a subset if all of:
+  - [a word runs from](#word) it to a position J;
+  - J is it + 5;
+  - "s" [stands at](#ch) it;
+  - a position K is it + 1;
+  - "u" [stands at](#ch) K;
+  - a position L is it + 2;
+  - "b" [stands at](#ch) L;
+  - a position M is it + 3;
+  - "s" [stands at](#ch) M;
+  - a position N is it + 4;
+  - "e" [stands at](#ch) N;
+  - "t" [stands at](#ch) J.
 - <a id="kw_mod"></a>spells the keyword for the remainder if all of:
   - [a word runs from](#word) it to a position J;
   - J is it + 2;
@@ -450,6 +482,14 @@ A position
 > lookup with no boundary to stand on and the clause silently fails to form.
 
 The comparison `is` runs from a position I to a position J if I [spells the keyword for evaluation](#kw_is) and [a word runs from](#word) I to J.
+
+> the join reads `E in S` and `A subset S` (docs/aggregates.md, "The join
+> lattice, as built"): operators where an operator stands, as `is` is
+
+The comparison N runs from a position I to a position J either:
+
+1. if I [spells the word for membership](#kw_in), [a word runs from](#word) I to J, and N is `in`;
+2. if I [spells the word for a subset](#kw_subset), [a word runs from](#word) I to J, and N is `subset`.
 
 <a id="arithtok"></a>The arithmetic operator E runs from a position I to a position N either:
 
@@ -723,6 +763,183 @@ The condition from a position I to a position C is $builtin(OpS, $cons(an expres
   - [the token after](#nexttok) K2 starts at a position S;
   - [the expression from](#expr) S to C is R.
 
+> A BODY AGGREGATE (docs/aggregates.md):
+>   aggelem := term 'is' aggop '(' termlist [ ';' termlist ] ':' body ')'
+> The nine operations are WORDS, not keywords: `count` stays a name anywhere
+> the production does not reach. Values and keys are terms, as a literal's
+> arguments are; the inner body is the ordinary body, so nesting and `@next`
+> inside it are the load door's business and not the grammar's.
+
+<a id="agg_word"></a>`agg_word` includes `count`, `sum`, `min`, `max`, `or`, `and`, `median`, `quantile`, `rank`.
+
+<a id="aggop"></a>The aggregate operation from a position I to a position J is an operation Op if all of:
+  - [a name runs from](#identtok) I to J;
+  - [the name from](#tok_name) I to J is Op;
+  - Op [names an aggregate](#agg_word).
+
+The condition from a position I to a position C is $agg(an operation Op, a term Res, a list Vals, a list Keys, a list Body) if all of:
+  - a position K [spells the keyword for evaluation](#kw_is);
+  - [a word runs from](#word) K to a position K1;
+  - [the token after](#nexttok) a position J starts at K;
+  - [the term from](#term) I to J is Res;
+  - [the token after](#nexttok) K1 starts at a position K2;
+  - [the aggregate operation from](#aggop) K2 to a position K3 is Op;
+  - [the token after](#nexttok) K3 starts at a position L;
+  - [there is a](#p) `lpar` at L;
+  - [the token after](#nexttok) L starts at a position S;
+  - [the arguments from](#args) S to a position E are Vals;
+  - [the keys after](#aggkeys) E end at a position E2 and are Keys;
+  - [the token after](#nexttok) E2 starts at a position D;
+  - [there is a](#p) `colon` at D;
+  - [the token after](#nexttok) D starts at a position B0;
+  - [the body from](#body) B0 to a position BE is Body;
+  - [the token after](#nexttok) BE starts at C;
+  - [there is a](#p) `rpar` at C.
+
+<a id="aggkeys"></a>The keys after a position E end at a position N and are a list X either:
+
+1. if [the arguments from](#args) some position to E are some list, N is E, and X is `$nil`;
+2. if all of:
+   - [the token after](#nexttok) E starts at a position M;
+   - [there is a](#p) `semi` at M;
+   - [the token after](#nexttok) M starts at a position S;
+   - [the arguments from](#args) S to N are X.
+
+> A THRESHOLD (docs/aggregates.md, "The threshold, as built"):
+>   thrselem := 'at_least' '(' term ',' termlist ':' body ')'
+> `at_least` is a word too, and the colon is what makes it one: without it
+> `at_least(2, x)` is a literal. The threshold N is read, never bound; the
+> counted terms are the key, so there is no `;`.
+
+The condition from a position I to a position C is $agg(`at_least`, a term N, a list Vals, `$nil`, a list Body) if all of:
+  - [there is a](#p) `colon` at a position D;
+  - [the name from](#tok_name) I to a position I2 is `at_least`;
+  - [a name runs from](#identtok) I to I2;
+  - [the token after](#nexttok) I2 starts at a position L;
+  - [there is a](#p) `lpar` at L;
+  - [the token after](#nexttok) L starts at a position S;
+  - [the term from](#term) S to a position E0 is N;
+  - [the token after](#nexttok) E0 starts at a position K;
+  - [there is a](#p) `comma` at K;
+  - [the token after](#nexttok) K starts at a position S2;
+  - [the arguments from](#args) S2 to a position E are Vals;
+  - [the token after](#nexttok) E starts at D;
+  - [the token after](#nexttok) D starts at a position B0;
+  - [the body from](#body) B0 to a position BE is Body;
+  - [the token after](#nexttok) BE starts at C;
+  - [there is a](#p) `rpar` at C.
+
+> A LATTICE DECLARATION (docs/aggregates.md, "The order lattice, as built"):
+>   latdecl := 'lattice' ident '(' [ term ',' ]* aggop term ')' [ 'widen' int ] '.'
+> `lattice` is a word, like the nine operations: it declares only when a
+> second name follows it, so `lattice(x).` is still a fact. The key is every
+> argument before the operation; the value is the term after it.
+> a declaration names an aggregate word or a join: union, hull, bitor
+
+<a id="lat_word"></a>`lat_word` includes `union`, `hull`, `bitor`.
+
+<a id="latop"></a>`latop`(I, J, Op) either:
+
+1. if [the aggregate operation from](#aggop) a position I to a position J is an operation Op;
+2. if all of:
+   - [a name runs from](#identtok) a position I to a position J;
+   - [the name from](#tok_name) I to J is an atom Op;
+   - [`lat_word`](#lat_word)(Op).
+
+<a id="latargs"></a>The lattice arguments from a position I to a position J , merged by an operation Op , are $cons(a term V, `$nil`) if all of:
+  - [`latop`](#latop)(I, K, Op);
+  - [the token after](#nexttok) a position K starts at a position S;
+  - [the term from](#term) S to J is V.
+
+The lattice arguments from a position I to a position J2 , merged by an operation Op , are $cons(a term T, a list R) if all of:
+  - [the term from](#term) I to a position J is T;
+  - [the token after](#nexttok) J starts at a position K;
+  - [there is a](#p) `comma` at K;
+  - [the token after](#nexttok) K starts at a position I2;
+  - [the lattice arguments from](#latargs) I2 to J2 , merged by Op , are R.
+
+<a id="clause_at"></a>The clause from a position I to a position D has the head $lattice(an operation Op, $lit(an atom R, `$bare`, a list X, `$now`)) and the body `$nil` if all of:
+  - [a name runs from](#identtok) I to a position I2;
+  - [the name from](#tok_name) I to I2 is `lattice`;
+  - [the token after](#nexttok) I2 starts at a position K;
+  - [a name runs from](#identtok) K to a position K2;
+  - [the name from](#tok_name) K to K2 is R;
+  - [the token after](#nexttok) K2 starts at a position L;
+  - [there is a](#p) `lpar` at L;
+  - [the token after](#nexttok) L starts at a position S;
+  - [the lattice arguments from](#latargs) S to a position E , merged by Op , are X;
+  - [the token after](#nexttok) E starts at a position C;
+  - [there is a](#p) `rpar` at C;
+  - [the token after](#nexttok) C starts at D;
+  - [there is a](#p) `dot` at D;
+  - unless K [starts a keyword](#keyword).
+
+> A DECLARED WIDENING (docs/aggregates.md, "Widening, as built"):
+>   latdecl := ... ')' 'widen' int '.'
+> `widen` is a word too; the number is an integer literal, read as written.
+
+The clause from a position I to a position D has the head $widen(a term N, $lattice(an operation Op, $lit(an atom R, `$bare`, a list X, `$now`))) and the body `$nil` if all of:
+  - [a name runs from](#identtok) I to a position I2;
+  - [the name from](#tok_name) I to I2 is `lattice`;
+  - [the token after](#nexttok) I2 starts at a position K;
+  - [a name runs from](#identtok) K to a position K2;
+  - [the name from](#tok_name) K to K2 is R;
+  - [the token after](#nexttok) K2 starts at a position L;
+  - [there is a](#p) `lpar` at L;
+  - [the token after](#nexttok) L starts at a position S;
+  - [the lattice arguments from](#latargs) S to a position E , merged by Op , are X;
+  - [the token after](#nexttok) E starts at a position C;
+  - [there is a](#p) `rpar` at C;
+  - [the token after](#nexttok) C starts at a position W;
+  - [a name runs from](#identtok) W to a position W2;
+  - [the name from](#tok_name) W to W2 is `widen`;
+  - [the token after](#nexttok) W2 starts at a position NI;
+  - [a numeral runs from](#inttok) NI to a position NJ;
+  - [the term from](#term) NI to NJ is N;
+  - [the token after](#nexttok) NJ starts at D;
+  - [there is a](#p) `dot` at D;
+  - unless K [starts a keyword](#keyword).
+
+> A TAG DECLARATION (docs/aggregates.md, "Tags, as built"):
+>   tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'
+> `tag` is a word as `lattice` is, and so are the four semirings: it declares
+> only when a second name follows it, so `tag(x, hot).` is still a fact.
+
+<a id="tag_word"></a>`tag_word` includes `tropical`, `viterbi`, `trust`, `counting`.
+
+<a id="tagop"></a>The semiring Alg is named from a position I to a position J if all of:
+  - [a name runs from](#identtok) I to J;
+  - [the name from](#tok_name) I to J is Alg;
+  - [`tag_word`](#tag_word)(Alg).
+
+<a id="tagargs"></a>The tag arguments from a position I to a position J , in the semiring Alg , are $cons(a term V, `$nil`) if all of:
+  - the semiring Alg [is named from](#tagop) I to a position K;
+  - [the token after](#nexttok) K starts at a position S;
+  - [the term from](#term) S to J is V.
+
+The tag arguments from a position I to a position J2 , in the semiring Alg , are $cons(a term T, a list R) if all of:
+  - [the term from](#term) I to a position J is T;
+  - [the token after](#nexttok) J starts at a position K;
+  - [there is a](#p) `comma` at K;
+  - [the token after](#nexttok) K starts at a position I2;
+  - [the tag arguments from](#tagargs) I2 to J2 , in the semiring Alg , are R.
+
+The clause from a position I to a position D has the head $tag(an algebra Alg, $lit(an atom R, `$bare`, a list X, `$now`)) and the body `$nil` if all of:
+  - [a name runs from](#identtok) I to a position I2;
+  - [the name from](#tok_name) I to I2 is `tag`;
+  - [the token after](#nexttok) I2 starts at a position K;
+  - [a name runs from](#identtok) K to a position K2;
+  - [the name from](#tok_name) K to K2 is R;
+  - [the token after](#nexttok) K2 starts at a position L;
+  - [there is a](#p) `lpar` at L;
+  - [the token after](#nexttok) L starts at a position S;
+  - [the tag arguments from](#tagargs) S to a position E , in the semiring Alg , are X;
+  - [the token after](#nexttok) E starts at a position C;
+  - [there is a](#p) `rpar` at C;
+  - [the token after](#nexttok) C starts at D;
+  - [there is a](#p) `dot` at D;
+  - unless K [starts a keyword](#keyword).
+
 <a id="body"></a>The body from a position I to a position C is $cons(a condition B, `$nil`) if [the condition from](#belem) I to C is B.
 
 The body from a position I to a position C2 is $cons(a condition B, a list R) if all of:
@@ -732,7 +949,7 @@ The body from a position I to a position C2 is $cons(a condition B, a list R) if
   - [the token after](#nexttok) K starts at a position I2;
   - [the body from](#body) I2 to C2 is R.
 
-<a id="clause_at"></a>The clause from a position I to a position D has the head L and the body N either:
+The clause from a position I to a position D has the head L and the body N either:
 
 1. if all of:
    - [the literal from](#lit) I to a position C is L;

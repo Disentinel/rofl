@@ -1,0 +1,7 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-holistic-strata-2-refused-median.rofl — a median of
+-- the rule's own conclusion: no round closes ahr_med before its median is
+-- taken, so the program is refused.
+ahr_seed(a, 1).
+ahr_seed(b, 3).
+ahr_med(X, M) :- ahr_seed(X, _), M is median(V ; Y : ahr_med(Y, V)).

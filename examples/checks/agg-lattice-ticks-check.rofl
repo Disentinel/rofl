@@ -1,0 +1,49 @@
+-- examples/checks/agg-lattice-ticks-check.rofl — agg_lattice_ticks, over
+-- agg-lattice-ticks-data.rofl two ticks deep with retain_ticks 0: a lattice
+-- value staged @next is a contribution at tick 1, folded by ⊕ with the rest;
+-- `why` of a value only the carry reaches names the carry, the value tick 0
+-- staged, and that value as the fact of tick 0 with the rule that derived
+-- it then, whose derived_by row retain_ticks keeps because it is cited.
+explain_request(why, tl_dist(b, c, 1)).
+explain_request(whynot, tl_dist(x, y, 4)).
+tlk_wrong(carried_only, b, c)  :- not tl_dist(b, c, 1).
+tlk_wrong(carried_better, a, c) :- not tl_dist(a, c, 6).
+tlk_wrong(improved, x, y)      :- not tl_dist(x, y, 2).
+tlk_wrong(folded, a, b)        :- not tl_dist(a, b, 5).
+tlk_wrong(worse_kept, A, C)    :- tl_dist(A, C, D), D >= 100.
+tlk_wrong(two_values, A, C)    :- tl_dist(A, C, D), tl_dist(A, C, E), D != E.
+tlk_line(K, L)  :- explained[$explain](K, _, _, L).
+tlk_has(K, T)   :- tlk_line(K, L), tlk_text(K, T), N is str_segs(L, T), N > 1.
+tlk_text_missing(K, T) :- tlk_text(K, T), not tlk_has(K, T).
+tlk_past() :- tlk_line(why, L), N is str_segs(L, "tl_dist[main](b,c,1)  <= r"), N > 1,
+              P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+tlk_not_past() :- not tlk_past().
+tlk_explain_refused(K) :- explained[$explain](K, _, 0, _).
+alarm(tlk_wrong).
+alarm(tlk_text_missing).
+alarm(tlk_not_past).
+alarm(tlk_explain_refused).
+tlk_text(why, "[lattice min: 1 member]").
+tlk_text(why, "<= tl_dist@next @tick 1").
+tlk_text(why, "tl_dist@next[main](b,c,1)  <= r").
+tlk_text(whynot, "4 is not its value: min keeps the best contribution, 2").
+tlk_text(K, T)@next :- tlk_text(K, T).
+-- a hole at tick 0 reaches tick 1: the cells it left unstaged are holes
+-- there, and so is what reads them
+tlk_hn(N) :- N is count(C : tl_h(a, C, _)).
+tlk_hole_read(count, N) :- tlk_hn(N).
+tlk_hole_read(a_f, D)   :- tl_h(a, f, D).
+tlk_hole_read(best, D)  :- tl_best(k, D).
+tlk_known(a_c)          :- not tl_h(a, c, 1).
+tlk_unholed(C) :- tlk_cell(C, K), not hole[$kernel]($lattice(C, main, 1, K), support_withdrawn).
+tlk_cell(tl_h, $cons(a, $cons(f, $nil))).
+tlk_cell(tl_best, $cons(k, $nil)).
+tlk_cell(C, K)@next :- tlk_cell(C, K).
+alarm(tlk_hole_read).
+alarm(tlk_known).
+alarm(tlk_unholed).
+-- what a hole withdrew after it was staged is unknown at tick 1
+tlk_hole_read(ws, b) :- tl_ws(b).
+tlk_known(ws_a)      :- not tl_ws(a).
+tlk_staged_unholed() :- not hole[$kernel]($next(tl_ws, main, 1, $cons(b, $nil)), support_withdrawn).
+alarm(tlk_staged_unholed).

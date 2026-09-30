@@ -1,0 +1,15 @@
+-- examples/checks/agg-threshold-wfs-check.rofl — agg_threshold_wfs: at_least
+-- over what a well-founded world concluded, fed from below: four positions
+-- are drawn and two won; inside one, at_least is refused
+-- (agg-threshold-wfs-2-refused-at-least.rofl).
+wth_contested() :- at_least(3, X : unknown(wg_win(X))).
+wth_decided()   :- at_least(3, X : wg_win(X), not unknown(wg_win(X))).
+wth_two_won()   :- at_least(2, X : wg_win(X), not unknown(wg_win(X))).
+wth_wrong(contested) :- not wth_contested().
+wth_wrong(decided)   :- wth_decided().
+wth_wrong(two_won)   :- not wth_two_won().
+alarm(wth_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wth_contested[main]()
+-- expect-row: wth_two_won[main]()

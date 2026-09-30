@@ -1,0 +1,22 @@
+-- examples/checks/agg-cell-ticks.rofl — agg_cell_ticks, two ticks: a cell is
+-- named with its tick. The sum overflows at tick 0 (two lines of 2^60-1) and
+-- not at tick 1 (one line carried), so the rule, position and key are the
+-- same and the verdicts differ: tick 0's hole stands, frozen, beside tick 1's
+-- value. Named without the tick, one cell had a hole and a value at once.
+edb(act_n).
+act_n(a, 1152921504606846975).
+act_n(b, 1152921504606846975).
+act_n(K, V)@next :- act_n(K, V), K != b.
+act_tot(S) :- S is sum(V ; K : act_n(K, V)).
+-- one name, one verdict
+act_both(C)        :- hole[$kernel](C, _), agg_cell[$kernel](C, _, _).
+alarm(act_both).
+-- tick 1's value, and tick 0's hole, are both here to be told apart
+act_valued()       :- act_tot(S), act_n(a, S).
+act_holed()        :- hole[$kernel]($cell(R, _, 0, $nil), agg_overflow), concludes[$kernel](R, act_tot).
+act_vacuous(value) :- not act_valued().
+act_vacuous(hole)  :- not act_holed().
+alarm(act_vacuous).
+-- an asserted fact lasts one tick, so the alarm declarations are carried to
+-- the tick the harness reads, or it would read none
+alarm(R)@next      :- alarm(R).

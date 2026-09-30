@@ -1,0 +1,14 @@
+-- examples/checks/agg-sum-wfs-check.rofl — agg_sum_wfs: sum over what a
+-- well-founded world concluded, fed from below: 2 wins, 4 draws and 3 losses
+-- total -1; inside one, sum is refused (agg-sum-wfs-2-refused-sum.rofl).
+wsm_total(S)      :- S is sum(V ; X : wv_value(X, V)).
+wsm_drawn(S)      :- S is sum(1 ; X : unknown(wg_win(X))).
+wsm_want(total, -1). wsm_want(drawn, 4).
+wsm_got(total, S) :- wsm_total(S).
+wsm_got(drawn, S) :- wsm_drawn(S).
+wsm_wrong(K, S)   :- wsm_want(K, S), not wsm_got(K, S).
+alarm(wsm_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wsm_got[main](drawn,4)
+-- expect-row: wsm_got[main](total,-1)

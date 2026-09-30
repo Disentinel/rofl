@@ -1,0 +1,8 @@
+-- expect-refusal: the weight reads a tag of the body the engine multiplies in
+-- the head binds its tag from T0, the tag of a premise the engine already
+-- multiplies in: T0 would count twice
+edb(tsr_e).
+tsr_e(a, b, 1).
+tag tsr_w(A, B, tropical T).
+tsr_w(A, B, W) :- tsr_e(A, B, W).
+tsr_w(A, C, T) :- tsr_w(A, B, T0), tsr_e(B, C, W), T is T0 + W.

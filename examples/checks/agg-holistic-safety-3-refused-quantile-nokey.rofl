@@ -1,0 +1,4 @@
+-- expect-refusal: median and quantile need their projection key
+-- examples/checks/agg-holistic-safety-3-refused-quantile-nokey.rofl — a
+-- quantile needs its key for the same reason.
+ahs_qnokey(G, Q) :- ahs_group(G), Q is quantile(50, V : ahs_line(G, _, V)).

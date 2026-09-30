@@ -87,7 +87,7 @@ export function denseFacts(src: string): DenseRow[] {
   };
   function term(): Term {
     const t = next();
-    if (t.t === 'int') return mki(parseInt(t.v, 10));
+    if (t.t === 'int') return mki(BigInt(t.v));
     if (t.t === 'str') return mks(t.v);
     if (t.t === '[') {
       if (peek().t === ']') { next(); return mka('$nil'); }

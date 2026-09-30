@@ -1,0 +1,4 @@
+-- expect-refusal: quantile's percent is an integer or a variable bound before it
+-- examples/checks/agg-holistic-safety-9-refused-percent-late.rofl — a
+-- percent bound only by a premise written after the quantile.
+ahs_qlate(G, Q) :- ahs_group(G), Q is quantile(P, V ; K : ahs_line(G, K, V)), ahs_ask(G, P).

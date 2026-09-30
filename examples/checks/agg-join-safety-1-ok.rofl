@@ -1,0 +1,31 @@
+-- examples/checks/agg-join-safety-1-ok.rofl — the reads safety.rofl lets a
+-- rule make of a join inside the join's recursion, each monotone in the
+-- value: a membership that enumerates it (`E in S`), a subset of it (`A
+-- subset S`), the value copied whole into a head of the same join; an
+-- order lattice reading a join by membership and a join
+-- reading an order lattice by a comparison that stays true; a set built of
+-- an element. And outside the recursion, any read at all.
+edb(ajs_e).
+edb(ajs_w).
+ajs_e(a, b).
+ajs_e(b, c).
+ajs_e(c, a).
+ajs_w(a, 1).
+ajs_w(b, 2).
+ajs_w(c, 3).
+lattice ajs_reach(X, union S).
+ajs_reach(X, set(Y)) :- ajs_e(X, Y).
+ajs_reach(X, S)      :- ajs_e(X, Y), ajs_reach(Y, S).
+ajs_reach(X, set(Z)) :- ajs_reach(X, S), Z in S, set(a) subset S, ajs_e(Z, _).
+lattice ajs_low(X, min D).
+ajs_low(X, D)        :- ajs_reach(X, S), Y in S, ajs_w(Y, D).
+lattice ajs_close(X, union S).
+ajs_close(X, set(X)) :- ajs_w(X, _).
+ajs_close(X, S)      :- ajs_low(X, D), D < 2, ajs_e(X, Y), ajs_close(Y, S).
+lattice ajs_span(X, hull I).
+ajs_span(X, iv(W, W)) :- ajs_w(X, W).
+ajs_span(X, I)        :- ajs_e(X, Y), ajs_span(Y, I), 2 in I, iv(2, 2) subset I.
+-- outside: an equality on the value, its parts, its size by count
+ajs_same(X, Y)  :- ajs_reach(X, S), ajs_reach(Y, S), X != Y.
+ajs_lo(X, L)    :- ajs_span(X, iv(L, _)).
+ajs_size(X, N)  :- ajs_reach(X, _), N is count(E : ajs_reach(X, S), E in S).

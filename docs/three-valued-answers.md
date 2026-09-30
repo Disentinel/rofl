@@ -48,8 +48,18 @@ atom's own perspective, with the atom as an ordinary term rather than the
   argument would have made `why unknown(...)` untypeable — a third value nobody
   can interrogate is the refusal it was meant to replace.
 - **Rules can read it.** `dlq_candidate(S) :- state(S), unknown(win(S)).` is
-  the sentence the whole decision exists for. Reading rules get one pass over
-  the settled model, under the same assumption the last round ran under.
+  the sentence the whole decision exists for. The rules that read it are a
+  level above the alternation: it runs first without them, its undefined
+  atoms are fixed as `unknown` rows, and it runs again with them, so a
+  negation of `unknown` is judged where the rows exist and a rule reading an
+  atom's `unknown` gets a three-valued answer of its own. `unknown(A)` of an
+  atom that level itself leaves undefined is refused, since no row names it
+  before its reader. Beside a hole `unknown` names only what the alternation
+  left undefined, a paradox, and never what the hole left out: that is a
+  shrug, inherited from the fault, and `unknown(A)` of it is a shrug too,
+  under either semantics, in both engines and at whichever tick the hole
+  arrives (docs/aggregates.md, "Shrugs, as built"). The rules reading
+  `unknown` beside a hole were refused until then.
 - **It carries provenance.** The row keeps the firing that derived the atom
   under the generous assumption, with every premise that is itself undefined
   redirected to that premise's own row. Following them walks the unfounded set

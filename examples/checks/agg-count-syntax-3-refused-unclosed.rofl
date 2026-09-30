@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- the aggregate never closes
+sxr_unclosed(N) :- N is count(B : sxc_b(B, _).

@@ -1,0 +1,4 @@
+-- expect-refusal: it is declared twice
+-- one relation, two semirings
+tag tsr_two(A, tropical T).
+tag tsr_two(A, viterbi T).

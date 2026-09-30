@@ -1,0 +1,40 @@
+-- examples/checks/agg-lattice-syntax-2-expect.rofl — agg_lattice_syntax. The
+-- declaration row each form of agg-lattice-syntax-1-forms.rofl reads as, both
+-- directions; `lattice` and `min` still names; ring 1 (examples/ring1)
+-- reading three declarations from `src` as the same trees, nothing stray and
+-- nothing uncovered; and no refused form reaching the world.
+sxl_want(sxl_min, 3, min).
+sxl_want(sxl_max, 2, max).
+sxl_want(sxl_or, 2, or).
+sxl_want(sxl_and, 3, and).
+sxl_want(sxl_one, 1, min).
+sxl_mine(sxl_min).
+sxl_mine(sxl_max).
+sxl_mine(sxl_or).
+sxl_mine(sxl_and).
+sxl_mine(sxl_one).
+sxl_mine(sxlr_noop).
+sxl_mine(sxlr_open).
+sxl_mine(sxlr_book).
+sxl_mine(sxlr_dot).
+sxl_has(R, N, Op)   :- lattice_decl[$kernel](R, N, Op), sxl_mine(R).
+decl_missing(R)     :- sxl_want(R, N, Op), not sxl_has(R, N, Op).
+decl_extra(R)       :- sxl_has(R, N, Op), not sxl_want(R, N, Op).
+word_lost()         :- not sxl_word(min).
+alarm(decl_missing).
+alarm(decl_extra).
+alarm(word_lost).
+
+src("lattice dist(A, C, min D).\nlattice best(max W).\nlattice r(X, or B). lattice(x).").
+r1l_want($lattice(min, $lit(dist, $bare, $cons($var("A"), $cons($var("C"), $cons($var("D"), $nil))), $now)), $nil).
+r1l_want($lattice(max, $lit(best, $bare, $cons($var("W"), $nil), $now)), $nil).
+r1l_want($lattice(or, $lit(r, $bare, $cons($var("X"), $cons($var("B"), $nil)), $now)), $nil).
+r1l_want($lit(lattice, $bare, $cons(x, $nil), $now), $nil).
+r1l_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1l_want(H, B), not r1l_parsed(H, B).
+ring1_extra(H)    :- r1l_parsed(H, B), not r1l_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

@@ -1,0 +1,31 @@
+-- examples/checks/agg-tagc-bind.rofl — agg_tagc_eval: a counting derivation is
+-- named by every variable its body binds, not only its premises'. A generator
+-- (`X in S`) and an aggregate's group variable each bind one derivation per
+-- solution, even when the solutions share every premise.
+--
+-- tcb_in: s's set is {1, 3, 4, 5}, three members above 2, 3; a's is {7}, 1.
+-- tcb_iv: weight 2 per member of iv(1, 3), three members, 6.
+-- tcb_grp: one derivation per weight group of s's and a's edges: s has
+-- weights 1 and 2, 2; a has 1 and 3, 2.
+edb(tcb_v). edb(tcb_e). edb(tcb_node).
+tcb_v(s, 1). tcb_v(s, 3). tcb_v(s, 4). tcb_v(s, 5). tcb_v(a, 7).
+tcb_e(s, a, 1). tcb_e(s, b, 2). tcb_e(a, t, 1). tcb_e(a, b, 3).
+tcb_node(s). tcb_node(a).
+lattice tcb_set(A, union S).
+tcb_set(A, set(X)) :- tcb_v(A, X).
+tag tcb_in(A, counting N).
+tcb_in(A, N)  :- tcb_set(A, S), X in S, X > 2.
+tag tcb_iv(A, counting N).
+tcb_iv(A, 2)  :- tcb_node(A), X in iv(1, 3).
+tag tcb_grp(A, counting N).
+tcb_grp(A, N) :- tcb_node(A), C is count(B : tcb_e(A, B, W)), W > 0.
+tcb_want(in, s, 3). tcb_want(in, a, 1).
+tcb_want(iv, s, 6). tcb_want(iv, a, 6).
+tcb_want(grp, s, 2). tcb_want(grp, a, 2).
+tcb_got(in, A, N)  :- tcb_in(A, N).
+tcb_got(iv, A, N)  :- tcb_iv(A, N).
+tcb_got(grp, A, N) :- tcb_grp(A, N).
+tcb_missing(R, A, N) :- tcb_want(R, A, N), not tcb_got(R, A, N).
+tcb_extra(R, A, N)   :- tcb_got(R, A, N), not tcb_want(R, A, N).
+alarm(tcb_missing).
+alarm(tcb_extra).

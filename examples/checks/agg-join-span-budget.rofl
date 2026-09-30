@@ -1,0 +1,13 @@
+-- examples/checks/agg-join-span-budget.rofl — agg_join_span_budget: the
+-- members of an interval are enumerated one step each against the budget,
+-- so a wide one meets the wall and is a hole on the world; nothing it
+-- would have enumerated is an answer (a budget cut is a hole, never a
+-- prefix taken as the whole), and nothing is capped in silence.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: ajc_r[main](k,iv(0,100000))
+-- expect-no-row: ajc_n[main](
+edb(ajc_k).
+ajc_k(k).
+lattice ajc_r(K, hull I).
+ajc_r(K, iv(0, 100000)) :- ajc_k(K).
+ajc_n(N) :- ajc_r(k, I), N in I.

@@ -1,0 +1,70 @@
+-- examples/checks/agg-holistic-holes-check.rofl — agg_holistic_eval: a
+-- holistic (or count) aggregate over what a plain hole left out has no value
+-- and no row: a hole `support_withdrawn` on its cell, never the value of the
+-- members that survived. By hand from agg-holistic-holes-data.rofl:
+--   ahp_med, ahp_q, ahp_rank   read ahp_val(b, _), not known: holed, no row
+--   ahp_mid                    reads ahp_top(g2, _), not known: holed, no row
+--   ahp_gmed                   h1 reads ahp_gval(h1, b, _): holed, no row;
+--                              h2 [2, 8, 18] -> median 8
+--   ahp_cnt                    ahp_seen(b) holds by the second rule: a, b, c, d -> 4
+-- The positive reader ahp_val2 is not holed: a plain hole's rule holes stay
+-- where the plain engine writes them (the TypeScript engine agrees).
+ahpe_hole(ahp_med,  $nil).
+ahpe_hole(ahp_q,    $nil).
+ahpe_hole(ahp_rank, $nil).
+ahpe_hole(ahp_mid,  $nil).
+ahpe_hole(ahp_gmed, $cons(h1, $nil)).
+ahpe_marked(Rel, Key) :- ahpe_hole(Rel, Key), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), support_withdrawn).
+ahp_hole_unmarked(Rel, Key) :- ahpe_hole(Rel, Key), not ahpe_marked(Rel, Key).
+ahpe_rel(ahp_med).
+ahpe_rel(ahp_q).
+ahpe_rel(ahp_rank).
+ahpe_rel(ahp_mid).
+ahpe_rel(ahp_gmed).
+ahpe_rel(ahp_cnt).
+ahp_hole_extra(Rel, Key, Why) :- ahpe_rel(Rel), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), Why),
+                                 not ahpe_hole(Rel, Key).
+ahp_row(M)        :- ahp_med(M).
+ahp_row(Q)        :- ahp_q(Q).
+ahp_row(R)        :- ahp_rank(R).
+ahp_row(M)        :- ahp_mid(M).
+ahp_row(M)        :- ahp_gmed(h1, M).
+ahpe_gmed(h2, 8).
+ahp_gmed_wrong(G, M)   :- ahp_gmed(G, M), G != h1, not ahpe_gmed(G, M).
+ahp_gmed_missing(G, M) :- ahpe_gmed(G, M), not ahp_gmed(G, M).
+ahpe_cnt(4).
+ahp_cnt_wrong(N)       :- ahp_cnt(N), not ahpe_cnt(N).
+ahp_cnt_missing(N)     :- ahpe_cnt(N), not ahp_cnt(N).
+-- the plain rule holes: ahp_val's and ahp_gval's and ahp_seen's first rule,
+-- for their errors, and none on a positive reader
+ahpe_rule_hole(ahp_val).
+ahpe_rule_hole(ahp_gval).
+ahpe_rule_hole(ahp_seen).
+ahpe_rule_holed(Rel)   :- ahpe_rule_hole(Rel), concludes[$kernel](R, Rel), hole[$kernel]($rule(R), arith_type_error).
+ahp_rule_unholed(Rel)  :- ahpe_rule_hole(Rel), not ahpe_rule_holed(Rel).
+ahp_reader_holed(R, W) :- concludes[$kernel](R, ahp_val2), hole[$kernel]($rule(R), W).
+alarm(ahp_hole_unmarked).
+alarm(ahp_hole_extra).
+alarm(ahp_row).
+alarm(ahp_gmed_wrong).
+alarm(ahp_gmed_missing).
+alarm(ahp_cnt_wrong).
+alarm(ahp_cnt_missing).
+alarm(ahp_rule_unholed).
+alarm(ahp_reader_holed).
+
+-- the dataset still holds each case: a fault in a member rule, in a max, in
+-- one group of two, and one whose conclusion holds another way
+ahpe_vacuous(val)  :- not ahp_raw(b, oops).
+ahpe_vacuous(top)  :- not ahp_in(g2, b, oops).
+ahpe_vacuous(seen) :- not ahp_seen(b).
+alarm(ahpe_vacuous).
+-- ahp_seen(b) holds by its second rule though its first faults: it is no
+-- unknown, to `unknown` as to an aggregate. A count over what `unknown` names
+-- is decided, and so is a negation of it (a group whose member is held is
+-- decided whatever an unknown might add, so the count alone no longer shows a
+-- tuple that holds carried as unknown: "Precise holes, as built").
+ahp_alive()   :- not unknown(ahp_seen(b)).
+ahp_alive_n(N) :- N is count(K : ahp_raw(K, _), not unknown(ahp_seen(K))).
+-- expect-row: ahp_alive[main]()
+-- expect-row: ahp_alive_n[main](4)

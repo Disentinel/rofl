@@ -1,0 +1,72 @@
+-- examples/checks/agg-sub-shrug.rofl — agg_sub_shrug: a subsumptive cell
+-- whose dominance is no strict partial order over the values it was given
+-- has no front, and says so: `shrug(Cell, conflict, parties(Ps))`, Ps the
+-- values in canonical order. A value that dominates itself (`Y <= X`) is a
+-- conflict, `dominance_cycle`; so is a dominance that is not transitive over
+-- the values given (rock, paper, scissors: each beats the next, and each
+-- value given is dominated by one no member of the front dominates), and
+-- two values that dominate each other, one of them on the front,
+-- `dominance_intransitive`. What reads a conflicted cell is a shrug
+-- inherited from it; a cell with an order keeps its front, and whynot of a
+-- conflicted value names the hole and its parties.
+edb(asg_in).
+asg_in(k, 1). asg_in(k, 2). asg_in(m, 5).
+asg_le(K, V) :- asg_in(K, V).
+asg_le(K, X) <= asg_le(K, Y) :- Y <= X.
+edb(asg_beats).
+asg_beats(rock, scissors). asg_beats(scissors, paper). asg_beats(paper, rock).
+edb(asg_hand).
+asg_hand(g1, rock). asg_hand(g1, paper).
+asg_hand(g2, rock). asg_hand(g2, paper). asg_hand(g2, scissors).
+asg_rps(G, H) :- asg_hand(G, H).
+asg_rps(G, X) <= asg_rps(G, Y) :- asg_beats(Y, X).
+edb(asg_tw).
+asg_tw(t, x). asg_tw(t, y). asg_tw(t, z).
+edb(asg_over).
+asg_over(y, x). asg_over(x, y). asg_over(y, z). asg_over(x, z).
+asg_two(T, V) :- asg_tw(T, V).
+asg_two(T, X) <= asg_two(T, Y) :- asg_over(Y, X).
+asg_top(G) :- asg_rps(G, _).
+asg_none(G) :- asg_hand(G, _), not asg_rps(G, rock).
+edb(explain_request).
+edb(explained).
+explain_request(whynot, asg_rps(g2, rock)).
+asgs_want(C, M) :- shrug[$kernel](C, conflict, M).
+asgs_meta($lattice(asg_le, main, 0, $cons(k, $nil)),
+  parties($cons($fact(asg_le, main, $cons(k, $cons(1, $nil))), $cons($fact(asg_le, main, $cons(k, $cons(2, $nil))), $nil)))).
+asgs_meta($lattice(asg_le, main, 0, $cons(m, $nil)),
+  parties($cons($fact(asg_le, main, $cons(m, $cons(5, $nil))), $nil))).
+asgs_meta($lattice(asg_rps, main, 0, $cons(g2, $nil)),
+  parties($cons($fact(asg_rps, main, $cons(g2, $cons(paper, $nil))),
+          $cons($fact(asg_rps, main, $cons(g2, $cons(rock, $nil))),
+          $cons($fact(asg_rps, main, $cons(g2, $cons(scissors, $nil))), $nil))))).
+asgs_meta($lattice(asg_two, main, 0, $cons(t, $nil)),
+  parties($cons($fact(asg_two, main, $cons(t, $cons(x, $nil))), $cons($fact(asg_two, main, $cons(t, $cons(y, $nil))), $nil)))).
+asgs_missing(C) :- asgs_meta(C, M), not asgs_want(C, M).
+asgs_extra(C)   :- asgs_want(C, M), not asgs_meta(C, M).
+alarm(asgs_missing).
+alarm(asgs_extra).
+asgs_cause(C, R) :- hole[$kernel](C, R), asgs_meta(C, _).
+asgs_cause_wrong(C) :- asgs_cause(C, R), C = $lattice(asg_le, _, _, _), R != dominance_cycle.
+asgs_cause_wrong(C) :- asgs_cause(C, R), C = $lattice(asg_rps, _, _, _), R != dominance_intransitive.
+asgs_cause_wrong(C) :- asgs_cause(C, R), C = $lattice(asg_two, _, _, _), R != dominance_intransitive.
+alarm(asgs_cause_wrong).
+-- what reads a conflicted cell is a shrug inherited from it
+asgs_inherits(A) :- shrug[$kernel](A, inherited, from($cons($lattice(asg_rps, main, 0, $cons(g2, $nil)), $nil))).
+asgs_not_inherited(A) :- asgs_reader(A), not asgs_inherits(A).
+asgs_reader(asg_top(g2)).
+asgs_reader(asg_none(g2)).
+alarm(asgs_not_inherited).
+-- a cell with an order keeps its front
+asgs_lost() :- not asg_rps(g1, paper).
+asgs_lost() :- asg_rps(g1, rock).
+asgs_lost() :- not asg_top(g1).
+alarm(asgs_lost).
+asgs_text("asg_rps[main](g2) has no value: hole(dominance_intransitive) [subsumption]").
+asgs_text("its dominance is no order over $fact(asg_rps, main, [g2, paper]), $fact(asg_rps, main, [g2, rock]), $fact(asg_rps, main, [g2, scissors])").
+asgs_has(T) :- explained[$explain](whynot, _, _, L), asgs_text(T), N is str_segs(L, T), N > 1.
+asgs_text_missing(T) :- asgs_text(T), not asgs_has(T).
+alarm(asgs_text_missing).
+-- expect-no-row: asg_rps[main](g2,
+-- expect-no-row: asg_le[main](
+-- expect-no-row: asg_two[main](t,

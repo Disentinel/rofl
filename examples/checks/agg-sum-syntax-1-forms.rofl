@@ -1,0 +1,17 @@
+-- examples/checks/agg-sum-syntax-1-forms.rofl — every form of sum the
+-- grammar reads: one key and two, correlated and grouped, a book, a
+-- wildcard, a builtin and a negation inside. Read and refused by the
+-- TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxs_l).
+edb(sxs_g).
+sxs_l(g, 1, 5, a).
+sxs_l(g, 2, 6, b).
+sxs_l[ledger](g, 3, 7, a).
+sxs_g(g).
+sxs_one(S)      :- S is sum(V ; K : sxs_l(_, K, V, _)).
+sxs_two(S)      :- S is sum(V ; K, T : sxs_l(_, K, V, T)).
+sxs_corr(G, S)  :- sxs_g(G), S is sum(V ; K : sxs_l(G, K, V, _)).
+sxs_group(G, S) :- S is sum(V ; K : sxs_l(G, K, V, _)).
+sxs_book(S)     :- S is sum(V ; K : sxs_l[ledger](_, K, V, _)).
+sxs_bi(S)       :- S is sum(V ; K : sxs_l(_, K, V, _), V > 5).
+sxs_neg(G, S)   :- sxs_g(G), S is sum(V ; K : sxs_l(G, K, V, T), not sxs_g(T)).

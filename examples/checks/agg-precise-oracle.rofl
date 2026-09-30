@@ -1,0 +1,221 @@
+-- examples/checks/agg-precise-oracle.rofl — THE COMPLETIONS ORACLE for
+-- agg-precise-data.rofl (docs/aggregates.md, "Precise holes, as built").
+-- What its holes left out is enumerated: whether each of the seven tuples
+-- not known holds (ph_m(g1,b,7), ph_m(g2,a,9), ph_m(g3,c,1), ph_m(g5,e,0),
+-- ph_off(z), b's third derivation of the tag and ph_m(g7,f,0)), the group
+-- of ph_w(?, k9) (absent, g1, g2, or a group no fact names, gx) and the
+-- group variable of ph_n(g1, ?, k) (absent, h1, h2, or hx): 1024 completions,
+-- ph_m(g7,f,0) on g3's bit (no aggregate reads g3 and g7 together, so each
+-- group's values over the completions are what a bit of its own would give), each the program with its
+-- unknowns decided, every aggregate recomputed per completion over what is
+-- certain here. Then, per aggregate and group:
+--
+--   a row the engine holds holds with that value in every completion;
+--   a group the completions give one value is a row, never a shrug (the
+--     precision this item is for: a group the unknowns cannot move is decided);
+--   a group the engine shrugs by its own key is one the completions disagree on;
+--   a group the completions disagree on the engine shrugs, by its key or by a
+--     key it leaves open (a possible whose group is not known).
+edb(po_bit).
+edb(po_gw).
+edb(po_hn).
+edb(po_name).
+po_bit(0). po_bit(1).
+po_gw(no). po_gw(g1). po_gw(g2). po_gw(gx).
+po_hn(no). po_hn(h1). po_hn(h2). po_hn(hx).
+po_name(g1). po_name(g2). po_name(g3). po_name(g4). po_name(g5). po_name(g6). po_name(g7). po_name(gx).
+po_name(h1). po_name(h2). po_name(hx). po_name(a). po_name(b).
+
+po_comp(c(A, B, C, D, E, F, G, H)) :- po_bit(A), po_bit(B), po_bit(C), po_bit(D), po_bit(E), po_bit(F), po_gw(G), po_hn(H).
+po_m(K, G, X, V) :- po_comp(K), ph_m0(G, X, V).
+po_m(c(1, B, C, D, E, F, G, H), g1, b, 7) :- po_comp(c(1, B, C, D, E, F, G, H)).
+po_m(c(A, 1, C, D, E, F, G, H), g2, a, 9) :- po_comp(c(A, 1, C, D, E, F, G, H)).
+po_m(c(A, B, 1, D, E, F, G, H), g3, c, 1) :- po_comp(c(A, B, 1, D, E, F, G, H)).
+po_m(c(A, B, C, 1, E, F, G, H), g5, e, 0) :- po_comp(c(A, B, C, 1, E, F, G, H)).
+po_m(c(A, B, 1, D, E, F, G, H), g7, f, 0) :- po_comp(c(A, B, 1, D, E, F, G, H)).
+po_off(c(A, B, C, D, 1, F, G, H), z)      :- po_comp(c(A, B, C, D, 1, F, G, H)).
+po_td(K, A, A, W) :- po_comp(K), ph_tw(A, W).
+po_td(c(A, B, C, D, E, 1, G, H), b, third, 1) :- po_comp(c(A, B, C, D, E, 1, G, H)).
+po_w(K, G, X) :- po_comp(K), ph_w0(G, X).
+po_w(c(A, B, C, D, E, F, G, H), G, k9) :- po_comp(c(A, B, C, D, E, F, G, H)), G != no.
+po_n(K, G, H, X) :- po_comp(K), ph_n0(G, H, X).
+po_n(c(A, B, C, D, E, F, G, H), g1, H, k) :- po_comp(c(A, B, C, D, E, F, G, H)), H != no.
+
+-- every aggregate of the program, in each completion
+po_v(K, cnt, G, N)  :- N is count(X : po_m(K, G, X, _)).
+po_v(K, sum, G, S)  :- S is sum(V ; X : po_m(K, G, X, V)).
+po_v(K, min, G, M)  :- M is min(V : po_m(K, G, _, V)).
+po_v(K, max, G, M)  :- M is max(V : po_m(K, G, _, V)).
+po_v(K, med, G, M)  :- M is median(V ; X : po_m(K, G, X, V)).
+po_v(K, q90, G, Q)  :- Q is quantile(90, V ; X : po_m(K, G, X, V)).
+po_v(K, rk5, G, R)  :- R is rank(5, V : po_m(K, G, _, V)).
+po_v(K, rk4, G, R)  :- R is rank(4, V : po_m(K, G, _, V)).
+po_v(K, neg2, G, N) :- N is count(X : po_m(K, G, X, _), not ph_o2(X, _)).
+po_v(K, neg, G, N)  :- N is count(X : po_m(K, G, X, _), not po_off(K, X)).
+po_v(K, pair, gh(G, H), N) :- N is count(X : po_n(K, G, H, X)).
+po_v(K, wc, G, N)   :- N is count(X : po_w(K, G, X)).
+po_v(K, cq, G, N)   :- po_comp(K), ph_g(G), N is count(X : po_m(K, G, X, _)).
+po_v(K, sq, G, S)   :- po_comp(K), ph_g(G), S is sum(V ; X : po_m(K, G, X, V)).
+po_v(K, t, A, N)    :- N is sum(W ; R : po_td(K, A, R, W)).
+
+-- the engine's answers: a row, a shrug by the group's own key, or a shrug
+-- whose key a position of is not known (it could be any group)
+po_eng(cnt, G, N) :- ph_cnt(G, N).
+po_eng(sum, G, N) :- ph_sum(G, N).
+po_eng(min, G, N) :- ph_min(G, N).
+po_eng(max, G, N) :- ph_max(G, N).
+po_eng(med, G, N) :- ph_med(G, N).
+po_eng(q90, G, N) :- ph_q90(G, N).
+po_eng(rk5, G, N) :- ph_rk5(G, N).
+po_eng(rk4, G, N) :- ph_rk4(G, N).
+po_eng(neg, G, N) :- ph_neg(G, N).
+po_eng(neg2, G, N) :- ph_neg2(G, N).
+po_eng(pair, gh(G, H), N) :- ph_pair(G, H, N).
+po_eng(wc, G, N)  :- ph_wc(G, N).
+po_eng(cq, G, N)  :- ph_cq(G, N).
+po_eng(sq, G, N)  :- ph_sq(G, N).
+po_eng(t, A, N)   :- ph_t(A, N).
+po_sh(cnt, G) :- shrug(ph_cnt(G, _), _, _).
+po_sh(sum, G) :- shrug(ph_sum(G, _), _, _).
+po_sh(min, G) :- shrug(ph_min(G, _), _, _).
+po_sh(max, G) :- shrug(ph_max(G, _), _, _).
+po_sh(med, G) :- shrug(ph_med(G, _), _, _).
+po_sh(q90, G) :- shrug(ph_q90(G, _), _, _).
+po_sh(rk5, G) :- shrug(ph_rk5(G, _), _, _).
+po_sh(rk4, G) :- shrug(ph_rk4(G, _), _, _).
+po_sh(neg, G) :- shrug(ph_neg(G, _), _, _).
+po_sh(neg2, G) :- shrug(ph_neg2(G, _), _, _).
+po_sh(wc, G)  :- shrug(ph_wc(G, _), _, _).
+po_sh(cq, G)  :- shrug(ph_cq(G, _), _, _).
+po_sh(sq, G)  :- shrug(ph_sq(G, _), _, _).
+po_sh(t, A)   :- shrug(ph_t(A, _), _, _).
+po_es(A, G) :- po_sh(A, G), po_name(G).
+po_es(pair, gh(G, H)) :- shrug(ph_pair(G, H, _), _, _), po_name(G), po_name(H).
+po_open(A) :- po_sh(A, G), not po_name(G).
+po_open_pair(G) :- shrug(ph_pair(G, H, _), _, _), not po_name(H).
+
+po_q(A, G) :- po_v(_, A, G, _).
+po_q(A, G) :- po_es(A, G).
+-- and a rank over every group, where no completion ranks it
+edb(po_every).
+po_every(rk5). po_every(rk4).
+po_q(A, G) :- po_every(A), ph_g(G).
+po_ps(A, G) :- po_q(A, G), po_open(A).
+po_ps(pair, gh(G, H)) :- po_q(pair, gh(G, H)), po_open_pair(G).
+
+-- what the completions say
+po_total(N) :- N is count(K : po_comp(K)).
+po_with(A, G, V, N) :- po_q(A, G), N is count(K : po_v(K, A, G, V)).
+po_all(A, G, V) :- po_with(A, G, V, N), po_total(N).
+po_agreed(A, G) :- po_all(A, G, _).
+po_some(A, G) :- po_v(_, A, G, _).
+po_split(A, G) :- po_some(A, G), not po_agreed(A, G).
+
+po_bad(held_not_in_all, A, G) :- po_eng(A, G, V), not po_all(A, G, V).
+po_bad(agreed_not_held, A, G) :- po_all(A, G, V), not po_eng(A, G, V).
+po_bad(agreed_but_shrug, A, G) :- po_es(A, G), not po_split(A, G).
+po_bad(split_not_shrug, A, G) :- po_split(A, G), not po_es(A, G), not po_ps(A, G).
+alarm(po_bad).
+
+po_ok(A, G) :- po_eng(A, G, V), po_all(A, G, V).
+po_ok(A, G) :- po_es(A, G), po_split(A, G).
+po_ok(A, G) :- po_q(A, G), not po_some(A, G), not po_eng(A, G, _), not po_es(A, G), not po_ps(A, G).
+-- expect-row: po_total[main](1024)
+-- expect-no-row: po_bad[main](
+-- DECIDED: every completion gives the value held, and the others' holes do
+-- not reach it: no possible at all (g4 but for neg; g6), a projection already
+-- held (cnt/cq g2, neg g2, pair (g1,h1), wc g1: the pattern's k9 is g1's),
+-- a member a fact takes away whatever the unknown beside it (neg2 g4),
+-- a value no possible improves on (min g1 g2, max g5), a sum no possible
+-- moves (sum/sq g5: e weighs 0), a median neither extreme moves (med g1 g2),
+-- a quantile likewise (q90 g5), a rank nothing new below its subject reaches
+-- (rk5 g2), a correlated sum a 0 does not move (sq g7: 0 with f or without)
+-- expect-row: po_ok[main](cnt,g2)
+-- expect-row: po_ok[main](cnt,g4)
+-- expect-row: po_ok[main](cq,g2)
+-- expect-row: po_ok[main](cq,g4)
+-- expect-row: po_ok[main](cq,g6)
+-- expect-row: po_ok[main](max,g4)
+-- expect-row: po_ok[main](max,g5)
+-- expect-row: po_ok[main](med,g1)
+-- expect-row: po_ok[main](med,g2)
+-- expect-row: po_ok[main](med,g4)
+-- expect-row: po_ok[main](min,g1)
+-- expect-row: po_ok[main](min,g2)
+-- expect-row: po_ok[main](min,g4)
+-- expect-row: po_ok[main](neg,g2)
+-- expect-row: po_ok[main](neg2,g2)
+-- expect-row: po_ok[main](neg2,g4)
+-- expect-row: po_ok[main](pair,gh(g1,h1))
+-- expect-row: po_ok[main](pair,gh(g2,h1))
+-- expect-row: po_ok[main](q90,g4)
+-- expect-row: po_ok[main](q90,g5)
+-- expect-row: po_ok[main](rk5,g2)
+-- expect-row: po_ok[main](sq,g4)
+-- expect-row: po_ok[main](sq,g5)
+-- expect-row: po_ok[main](sq,g6)
+-- expect-row: po_ok[main](sq,g7)
+-- expect-row: po_ok[main](sum,g4)
+-- expect-row: po_ok[main](sum,g5)
+-- expect-row: po_ok[main](t,a)
+-- expect-row: po_ok[main](wc,g1)
+-- A SHRUG ON ITS OWN GROUP, the others kept: a member a completion adds
+-- (g1, g5 but for the sum and max), a projection one adds (sum/sq/max/q90 g2),
+-- a group one makes (g3; g7, whose one member weighs 0: a sum of it is 0
+-- or none), a member a negation may take away (neg g4),
+-- a group one position of which it leaves open (pair (g1,h2): h1's k is held)
+-- expect-row: po_ok[main](cnt,g1)
+-- expect-row: po_ok[main](cnt,g3)
+-- expect-row: po_ok[main](cnt,g5)
+-- expect-row: po_ok[main](cnt,g7)
+-- expect-row: po_ok[main](cq,g1)
+-- expect-row: po_ok[main](cq,g3)
+-- expect-row: po_ok[main](cq,g5)
+-- expect-row: po_ok[main](cq,g7)
+-- expect-row: po_ok[main](max,g1)
+-- expect-row: po_ok[main](max,g2)
+-- expect-row: po_ok[main](max,g3)
+-- expect-row: po_ok[main](max,g7)
+-- expect-row: po_ok[main](med,g3)
+-- expect-row: po_ok[main](med,g5)
+-- expect-row: po_ok[main](med,g7)
+-- expect-row: po_ok[main](min,g3)
+-- expect-row: po_ok[main](min,g5)
+-- expect-row: po_ok[main](min,g7)
+-- expect-row: po_ok[main](neg,g1)
+-- expect-row: po_ok[main](neg,g3)
+-- expect-row: po_ok[main](neg,g4)
+-- expect-row: po_ok[main](neg,g5)
+-- expect-row: po_ok[main](neg,g7)
+-- expect-row: po_ok[main](neg2,g1)
+-- expect-row: po_ok[main](neg2,g3)
+-- expect-row: po_ok[main](neg2,g5)
+-- expect-row: po_ok[main](neg2,g7)
+-- expect-row: po_ok[main](pair,gh(g1,h2))
+-- expect-row: po_ok[main](q90,g1)
+-- expect-row: po_ok[main](q90,g2)
+-- expect-row: po_ok[main](q90,g3)
+-- expect-row: po_ok[main](q90,g7)
+-- expect-row: po_ok[main](rk4,g5)
+-- expect-row: po_ok[main](sq,g1)
+-- expect-row: po_ok[main](sq,g2)
+-- expect-row: po_ok[main](sq,g3)
+-- expect-row: po_ok[main](sum,g1)
+-- expect-row: po_ok[main](sum,g2)
+-- expect-row: po_ok[main](sum,g3)
+-- expect-row: po_ok[main](sum,g7)
+-- expect-row: po_ok[main](t,b)
+-- expect-row: po_ok[main](wc,g2)
+-- NO RANK, in any completion, and none held nor shrugged
+-- expect-row: po_ok[main](rk5,g1)
+-- expect-row: po_ok[main](rk5,g3)
+-- expect-row: po_ok[main](rk5,g4)
+-- expect-row: po_ok[main](rk5,g5)
+-- expect-row: po_ok[main](rk5,g6)
+-- expect-row: po_ok[main](rk5,g7)
+-- expect-row: po_ok[main](rk4,g1)
+-- expect-row: po_ok[main](rk4,g2)
+-- expect-row: po_ok[main](rk4,g3)
+-- expect-row: po_ok[main](rk4,g4)
+-- expect-row: po_ok[main](rk4,g6)
+-- expect-row: po_ok[main](rk4,g7)

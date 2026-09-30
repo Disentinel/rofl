@@ -1,0 +1,74 @@
+-- examples/checks/agg-shrug-wfs.rofl — agg_cell_shrug_wfs, in both engines: under
+-- well-founded semantics a paradox and a hole are two reasons, not one. An
+-- atom the alternating fixpoint leaves undefined (x and y's draw) is a
+-- `paradox`, with its `unknown` row; what a hole left out (c's win, an
+-- overflow) is `inherited` from the fault and has no `unknown` row, and
+-- neither has what a negation over it reaches. A rule reading `unknown` runs a
+-- level above the rest, once the rows exist: `not unknown(A)` is decided by
+-- them, and a shrug for what a hole left out. A paradox's meta names the
+-- relations of the negative cycles it rests on: sw_rwin reads the positive
+-- recursion sw_r, decided, which is on no negative cycle; sw_p and sw_q
+-- are one negative cycle of two relations. A nullary atom is named bare,
+-- `unknown(sw_n0)`: `sw_n0()` is a literal, never a term, and both engines
+-- refuse it as one (agg-shrug-wfs-nullary-term-refused.rofl), where Rust once
+-- read a compound of no arguments that no atom is. What a hole left out and
+-- a paradox both reach rests on both: its roots name the fault's rule and the
+-- undefined atom, read positively or under not, and so do its readers'.
+semantics(well_founded).
+edb(sw_pos).
+edb(sw_big).
+edb(sw_m).
+sw_pos(a). sw_pos(b). sw_pos(c). sw_pos(x). sw_pos(y).
+sw_big(1152921504606846975).
+sw_m(x, y). sw_m(y, x).
+sw_win(a).
+sw_win(c) :- sw_big(B), Z is B + 1, Z > 0.
+sw_win(X) :- sw_m(X, Y), not sw_win(Y).
+sw_lose(X) :- sw_pos(X), not sw_win(X).
+sw_decided(X) :- sw_pos(X), not unknown(sw_win(X)).
+sw_open(X) :- sw_pos(X), unknown(sw_win(X)).
+sw_rest(X) :- sw_pos(X), not sw_decided(X).
+sw_paradox(A) :- shrug(A, paradox, _).
+sw_r(X, Y) :- sw_m(X, Y).
+sw_r(X, Z) :- sw_r(X, Y), sw_m(Y, Z).
+sw_rwin(X) :- sw_m(X, Y), not sw_rwin(Y), sw_r(Y, X).
+sw_p(X) :- sw_m(X, Y), not sw_q(Y).
+sw_q(X) :- sw_m(X, Y), not sw_p(Y).
+sw_n0() :- not sw_n1().
+sw_n1() :- not sw_n0().
+sw_n_open() :- unknown(sw_n0).
+sw_n_decided() :- not unknown(sw_n1).
+sw_mix() :- sw_n0(), sw_win(c).
+sw_mix_not() :- not sw_n1(), sw_pos(X), not sw_win(X), X = c.
+sw_mix_up() :- sw_mix().
+-- expect-row: unknown[main](sw_n0)
+-- expect-row: shrug[$kernel](sw_mix,inherited,from($cons($rule(rea688f7c),$cons(sw_n0,$nil))))
+-- expect-row: shrug[$kernel](sw_mix_not,inherited,from($cons($rule(rea688f7c),$cons(sw_n1,$nil))))
+-- expect-row: shrug[$kernel](sw_mix_up,inherited,from($cons($rule(rea688f7c),$cons(sw_n0,$nil))))
+-- expect-row: sw_n_open[main]()
+-- expect-no-row: sw_n_decided[main]()
+-- expect-row: shrug[$kernel](sw_win(x),paradox,cycle($cons(sw_win,$nil)))
+-- expect-row: shrug[$kernel](sw_lose(x),paradox,cycle($cons(sw_win,$nil)))
+-- expect-row: unknown[main](sw_win(x))
+-- expect-row: shrug[$kernel](sw_win(c),inherited,from($cons($rule(rea688f7c),$nil)))
+-- expect-row: shrug[$kernel](sw_lose(c),inherited,from($cons($rule(rea688f7c),$nil)))
+-- expect-no-row: unknown[main](sw_win(c))
+-- expect-no-row: unknown[main](sw_lose(c))
+-- expect-no-row: shrug[$kernel](sw_lose(c),paradox
+-- expect-row: sw_decided[main](a)
+-- expect-row: sw_decided[main](b)
+-- expect-no-row: sw_decided[main](x)
+-- expect-no-row: shrug[$kernel](sw_decided(x)
+-- expect-row: shrug[$kernel](sw_decided(c),inherited,from($cons($rule(rea688f7c),$nil)))
+-- expect-no-row: sw_decided[main](c)
+-- expect-row: sw_open[main](x)
+-- expect-row: shrug[$kernel](sw_open(c),inherited,from($cons($rule(rea688f7c),$nil)))
+-- expect-row: sw_rest[main](x)
+-- expect-row: shrug[$kernel](sw_rest(c),inherited,from($cons($rule(rea688f7c),$nil)))
+-- expect-no-row: sw_rest[main](a)
+-- expect-row: sw_paradox[main](sw_win(x))
+-- expect-row: sw_paradox[main](sw_lose(y))
+-- expect-no-row: sw_paradox[main](sw_win(c))
+-- expect-row: shrug[$kernel](sw_rwin(x),paradox,cycle($cons(sw_rwin,$nil)))
+-- expect-row: shrug[$kernel](sw_p(x),paradox,cycle($cons(sw_p,$cons(sw_q,$nil))))
+-- expect-row: shrug[$kernel](sw_q(y),paradox,cycle($cons(sw_p,$cons(sw_q,$nil))))

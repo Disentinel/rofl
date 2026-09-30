@@ -1,0 +1,6 @@
+-- expect-refusal: its body reads assr_self itself
+-- which of two facts dominates is decided before either is kept
+edb(assr_fe).
+assr_fe(a, 1).
+assr_self(A, V) :- assr_fe(A, V).
+assr_self(A, X) <= assr_self(A, Y) :- assr_self(A, Z), Y < X.

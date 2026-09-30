@@ -1,0 +1,45 @@
+-- examples/checks/agg-threshold-why-check.rofl — agg_threshold_why, a world
+-- run with `rofl-load --explain`. `why` of a conclusion a threshold reached
+-- names its Quorum and lists exactly its N members, the first by height,
+-- each with its derivation, and says nothing of a seal; `whynot` of one it
+-- did not reach says how far it got — `reached k of N` — and names the k,
+-- says `has no value: hole(...)` where N is no integer, and with no member at
+-- all goes on to the literal that has no match.
+edb(explain_request).
+edb(explained).
+explain_request(why, at_trusted(c1)).
+explain_request(why, at_believed(t)).
+explain_request(whynot, at_trusted(c2)).
+explain_request(whynot, at_trusted(c4)).
+explain_request(whynot, at_believed(z)).
+explain_request(whynot, at_thm(q3)).
+explain_request(whynot, at_bad(s1)).
+explain_request(whynot, ar_elected(s4)).
+aty_holds(K, A, T) :- explained[$explain](K, A, _, L), aty_want(K, A, T), N is str_segs(L, T), N > 1.
+aty_want(why, at_trusted(c1), "[quorum: the first 2 members]").
+aty_want(why, at_trusted(c1), "#1 (w1) h=1").
+aty_want(why, at_trusted(c1), "#2 (w2) h=1").
+aty_want(why, at_trusted(c1), "at_vouch[main](w1,c1,mail) [axiom]").
+aty_want(why, at_believed(t), "at_least(2, ?S : at_supports[main](?S,t), at_believed[main](?S)) [quorum: the first 2 members]").
+aty_want(why, at_believed(t), "#1 (zz) h=2").
+aty_want(why, at_believed(t), "#2 (x) h=4").
+aty_want(whynot, at_trusted(c2), "reached 1 of 2 [threshold]: #1 (w1) h=1").
+aty_want(whynot, at_trusted(c4), "reached 0 of 2 [threshold]").
+aty_want(whynot, at_trusted(c4), "no rule concludes 'at_vouch'").
+aty_want(whynot, at_believed(z), "reached 1 of 2 [threshold]: #1 (y) h=6").
+aty_want(whynot, at_thm(q3), "reached 1 of 2 [threshold]: #1 (1) h=").
+aty_want(whynot, at_bad(s1), "has no value: hole(agg_type_error) [threshold]").
+aty_want(whynot, ar_elected(s4), "reached 2 of 3 [threshold]: #1 (s4) h=2, #2 (s5) h=2").
+text_missing(K, A, T) :- aty_want(K, A, T), not aty_holds(K, A, T).
+alarm(text_missing).
+-- what must never be said: a member outside the quorum, a seal, a value
+aty_never(why, at_trusted(c1), "(w3)").
+aty_never(why, at_trusted(c1), "sealed").
+aty_never(why, at_believed(t), "(y) h=").
+aty_never(whynot, at_trusted(c2), "empty group").
+aty_never(whynot, at_trusted(c2), " = ").
+aty_never(whynot, at_bad(s1), "reached").
+text_leaked(K, A, T) :- aty_never(K, A, T), explained[$explain](K, A, _, L), N is str_segs(L, T), N > 1.
+alarm(text_leaked).
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(explain_refused).

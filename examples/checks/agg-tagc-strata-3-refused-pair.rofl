@@ -1,0 +1,9 @@
+-- expect-refusal: (counting) is inside its own recursion
+-- two counting tags, each counted through the other
+edb(tcsr_g).
+tcsr_g(a, b).
+tag tcsr_p(A, B, counting N).
+tag tcsr_q(A, B, counting N).
+tcsr_p(A, B, N) :- tcsr_g(A, B).
+tcsr_p(A, B, N) :- tcsr_q(A, B, _).
+tcsr_q(A, B, N) :- tcsr_p(B, A, _).

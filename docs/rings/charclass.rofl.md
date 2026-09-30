@@ -93,6 +93,7 @@ default: main
 | "," | `comma` |
 | "." | `dot` |
 | ":" | `colon` |
+| ";" | `semi` |
 | "-" | `dash` |
 | "\"" | `quote` |
 | "\n" | `nl` |

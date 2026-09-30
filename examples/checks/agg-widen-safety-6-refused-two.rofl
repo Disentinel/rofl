@@ -1,0 +1,4 @@
+-- expect-refusal: it is declared with two widenings
+-- one relation, one widening
+lattice awsr_two(X, hull I) widen 2.
+lattice awsr_two(X, hull I) widen 3.

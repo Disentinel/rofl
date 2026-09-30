@@ -1,0 +1,9 @@
+-- expect-refusal: reads a closed relation
+-- examples/checks/agg-cell-strata-3-refused-aggregate.rofl — a body aggregate
+-- over a lattice inside that lattice's recursion reads it before it is closed.
+edb(acstr_f).
+acstr_f(a, b, 1).
+acstr_f(b, a, 2).
+lattice acstr_agg(A, C, min D).
+acstr_agg(A, C, D) :- acstr_f(A, C, D).
+acstr_agg(A, C, D) :- acstr_f(A, C, W), M is min(E : acstr_agg(C, _, E)), D is M + W.

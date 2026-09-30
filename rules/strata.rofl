@@ -1,6 +1,6 @@
 -- rules/strata.rofl — the schedule as data, for the evaluator that reads it.
 --
--- These ten rules stood in `boot.rofl` until the evaluator stopped needing
+-- The first ten rules stood in `boot.rofl` until the evaluator stopped needing
 -- them. They compute, over a program's own reflection, the dependency graph
 -- (`dep/2`, `dep_neg/2`), its transitive closure (`reach/2`), the relations no
 -- schedule can order (`unstratified/1`), and the stratum table (`stratum/2`)
@@ -28,6 +28,64 @@
 dep(A, B)          :- concludes(R, A), conclusion_tense(R, now), premise_pos(R, B).
 dep(A, B)          :- concludes(R, A), conclusion_tense(R, now), premise_neg(R, B).
 dep_neg(A, B)      :- concludes(R, A), conclusion_tense(R, now), premise_neg(R, B).
+-- AN AGGREGATE READS AS A NEGATION DOES: what it reads is closed below it.
+-- The four relations the kernel reflects cells into, and `hole`, which a
+-- fold that overflows writes, sit above every aggregate, so a rule that
+-- negates one of them is above them all.
+dep(A, B)          :- concludes(R, A), conclusion_tense(R, now), premise_agg(R, B).
+dep_neg(A, B)      :- concludes(R, A), conclusion_tense(R, now), premise_agg(R, B).
+agg_reflection(agg_cell).
+agg_reflection(agg_member).
+agg_reflection(agg_member_prem).
+agg_reflection(agg_sealed).
+agg_reflection(hole).
+dep(X, B)          :- agg_reflection(X), premise_agg(_, B).
+dep_neg(X, B)      :- agg_reflection(X), premise_agg(_, B).
+-- A THRESHOLD reads its inner body as premises (it is monotone), and its
+-- cells are closed with its conclusion's relation: the reflection sits above
+-- that relation, so above what the threshold reads.
+threshold_rule(R)  :- premise_lit(R, _, $agg(at_least, _, _, _, _)).
+dep(X, A)          :- agg_reflection(X), threshold_rule(R), concludes(R, A), conclusion_tense(R, now).
+dep_neg(X, A)      :- agg_reflection(X), threshold_rule(R), concludes(R, A), conclusion_tense(R, now).
+
+-- THE MEMBERS THE KERNEL WRITES OF A LATTICE when it closes sit above every
+-- lattice (docs/aggregates.md, "The order lattice, as built"). A rule reading a lattice
+-- from OUTSIDE its recursion is strict too, but saying which reads are outside
+-- takes `not reach(B, A)`, a negation the stock evaluator cannot order before
+-- it reads this table; so this table does not rank such a reader, and the
+-- stock evaluator refuses it unless the program ranks it itself.
+lattice_rel(B)     :- lattice_decl(B, _, _).
+lattice_reflection(lattice_member).
+lattice_reflection(lattice_member_prem).
+lattice_reflection(hole).
+dep(X, B)          :- lattice_reflection(X), lattice_rel(B).
+dep_neg(X, B)      :- lattice_reflection(X), lattice_rel(B).
+
+-- A SEMIRING TAG (docs/aggregates.md, "Tags, as built"). An idempotent one
+-- is the order lattice of its ⊕. A counting one is a sum of the derivations
+-- its rules conclude, sealed once they close: its rules' premises are read as
+-- an aggregate reads, closed below it, and what the kernel reflects of its
+-- cells sits above it. (The engine ranks the relation of the derivations
+-- themselves between the two.)
+tag_lattice(tropical).
+tag_lattice(viterbi).
+tag_lattice(trust).
+lattice_rel(B)     :- tag_decl(B, _, Alg), tag_lattice(Alg).
+counting_tag(A)    :- tag_decl(A, _, counting).
+dep(A, B)          :- counting_tag(A), concludes(R, A), conclusion_tense(R, now), premise_pos(R, B).
+dep_neg(A, B)      :- counting_tag(A), concludes(R, A), conclusion_tense(R, now), premise_pos(R, B).
+dep(X, B)          :- agg_reflection(X), counting_tag(B).
+dep_neg(X, B)      :- agg_reflection(X), counting_tag(B).
+
+-- A SUBSUMPTIVE RELATION (docs/aggregates.md, "Subsumption, as built")
+-- closes as a lattice does, what its front dominates is written above it,
+-- and its dominance reads what its bodies read closed, strictly below it.
+lattice_rel(B)     :- dominance(_, B, _, _).
+lattice_reflection(dominated_by).
+dep(A, B)          :- dominance(R, A, _, _), premise_pos(R, B).
+dep(A, B)          :- dominance(R, A, _, _), premise_neg(R, B).
+dep_neg(A, B)      :- dominance(R, A, _, _), premise_pos(R, B).
+dep_neg(A, B)      :- dominance(R, A, _, _), premise_neg(R, B).
 
 reach(A, B)        :- dep(A, B).
 reach(A, B)        :- reach(A, X), dep(X, B).

@@ -1,0 +1,3 @@
+-- expect-refusal: not a book
+-- a declaration is of a relation in every book, so it names none
+lattice sxlr_book[ledger](A, min D).

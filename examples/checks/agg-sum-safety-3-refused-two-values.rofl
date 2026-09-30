@@ -1,0 +1,4 @@
+-- expect-refusal: exactly one value
+-- examples/checks/agg-sum-safety-3-refused-two-values.rofl — a sum adds one
+-- value per member, not two.
+ass_twovals(G, S) :- ass_group(G), S is sum(V, K ; K : ass_line(G, K, V)).

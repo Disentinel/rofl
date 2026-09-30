@@ -20,8 +20,9 @@
 //! the `of` argument, then the rest; any other name reads the first argument,
 //! the words, then the rest. A signature whose name differs from the relation
 //! is also a proposed rename, listed in index.md.
-use rofl::rofl_parse::{parse, Book, Clause, Elem, Lit, Tense};
-use rofl::term::{Heap, Sym, Term, TermK};
+use rofl::brk;
+use rofl::rofl_parse::{parse, AggSrc, Book, Clause, Elem, Lit, Tense};
+use rofl::term::{json_string, Heap, Sym, Term, TermK};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::path::Path;
@@ -84,7 +85,10 @@ fn parse_phrase(t: &str) -> Result<Phrase, String> {
     Ok(Phrase { parts, fixes })
 }
 
-const MARKERS: &[&str] = &["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
+/// The word a lattice declaration's operation reads as: `dist` keeps the least D.
+const LATTICE_WORDS: &[(&str, &str)] = &[("min", "least"), ("max", "greatest"), ("or", "disjunction"), ("and", "conjunction"), ("union", "union"), ("hull", "hull"), ("bitor", "bitwise or"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
+
+const MARKERS: &[&str] =&["at", "in", "to", "from", "by", "as", "for", "on", "through", "with", "holding", "named", "being", "of", "under", "over", "than", "is", "has", "into", "after", "before", "within", "among", "replaced", "the"];
 const VALUE_NOUN_LIST: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 const VALUE_NOUNS: &[&str] = &["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score"];
 const NOUN_WORDS: &[&str] = &["this", "scope", "this-binder", "effect label"];
@@ -261,7 +265,8 @@ struct Folded { c: Clause, extra: Vec<(Sym, Term)>, or_at: Option<(usize, usize,
 
 /// What a rendered clause is to the file: a whole block of text, or a rule
 /// whose subject phrase may be shared with its neighbours.
-enum Item { Block(String), Rule { key: Option<String>, subject: String, predicate: String, anchor: String } }
+/// `Whole`: a sentence of its own (a declaration, a dominance rule), never merged with its neighbour.
+enum Item { Block(String), Whole(String), Rule { key: Option<String>, subject: String, predicate: String, anchor: String } }
 
 fn pad(s: &mut String, raw: &str, text: &str) {
     if raw.trim().is_empty() { s.push(' '); return; }
@@ -269,6 +274,53 @@ fn pad(s: &mut String, raw: &str, text: &str) {
     s.push_str(text);
     if !raw.ends_with('-') { s.push(' '); }
 }
+/// The sugar's second aggregate against its first (docs/aggregates.md, "The
+/// sentence form, as built"): the copy's variables mapped one to one onto the
+/// first's, position by position through what each takes and, given `bodies`
+/// (the first's body, then the copy's first as many elements), the body. A
+/// variable written outside the pair maps to itself; one the pair alone writes
+/// maps a name of the copy's alone onto one of the first's alone, as the reader
+/// renames it. `None` when the copy is anything else.
+fn apart_map(h: &Heap, c: &Clause, (first_at, copy_at): (usize, usize), copy: &[Term], first: &[Term], bodies: Option<(&[Elem], &[Elem])>) -> Option<HashMap<Sym, Sym>> {
+    fn wild(h: &Heap, v: Sym) -> bool { h.name(v).starts_with("_$") }
+    fn t(h: &Heap, to: &mut HashMap<Sym, Sym>, x: Term, y: Term) -> bool {
+        match (x.kind(), y.kind()) {
+            // a wildcard is its own variable in each copy
+            (TermK::Var(u), TermK::Var(v)) if wild(h, u) && wild(h, v) => true,
+            (TermK::Var(u), TermK::Var(v)) if !wild(h, u) && !wild(h, v) => *to.entry(u).or_insert(v) == v,
+            (TermK::Var(_), _) | (_, TermK::Var(_)) => false,
+            (TermK::Func(i), TermK::Func(j)) => h.fname(i) == h.fname(j) && ts(h, to, h.fargs(i), h.fargs(j)),
+            _ => x == y,
+        }
+    }
+    fn ts(h: &Heap, to: &mut HashMap<Sym, Sym>, xs: &[Term], ys: &[Term]) -> bool {
+        xs.len() == ys.len() && xs.iter().zip(ys).all(|(x, y)| t(h, to, *x, *y))
+    }
+    fn es(h: &Heap, to: &mut HashMap<Sym, Sym>, xs: &[Elem], ys: &[Elem]) -> bool {
+        xs.len() == ys.len() && xs.iter().zip(ys).all(|(x, y)| match (x, y) {
+            (Elem::Pos(p), Elem::Pos(q)) | (Elem::Neg(p), Elem::Neg(q)) => p.rel == q.rel && p.book == q.book && p.tense == q.tense && ts(h, to, &p.args, &q.args),
+            (Elem::Builtin(o, p1, p2), Elem::Builtin(r, q1, q2)) => o == r && t(h, to, *p1, *q1) && t(h, to, *p2, *q2),
+            (Elem::Agg(p), Elem::Agg(q)) => p.op == q.op && t(h, to, p.res, q.res) && ts(h, to, &p.vals, &q.vals) && ts(h, to, &p.keys, &q.keys) && es(h, to, &p.body, &q.body),
+            _ => false,
+        })
+    }
+    let mut to = HashMap::new();
+    if !ts(h, &mut to, copy, first) { return None; }
+    if let Some((fb, cb)) = bodies { if !es(h, &mut to, cb, fb) { return None; } }
+    let mut vals: Vec<Sym> = to.values().copied().collect();
+    vals.sort_unstable(); vals.dedup();
+    if vals.len() != to.len() { return None; }
+    let names = |ts: &[Term]| { let mut vs = Vec::new(); for t in ts { h.vars_of(*t, &mut vs); } vs.retain(|v| !wild(h, *v)); vs };
+    let mut outside = names(&c.head.args);
+    for (k, e) in c.body.iter().enumerate() { if k != first_at && k != copy_at { outside.extend(names(&e.terms())); } }
+    let (fv, cv) = (names(&c.body[first_at].terms()), names(&c.body[copy_at].terms()));
+    // a variable both write is written outside them too: one the pair alone wrote the reader would rename apart
+    if cv.iter().any(|w| fv.contains(w) && !outside.contains(w)) { return None; }
+    if to.iter().any(|(u, v)| u != v && (brk!("phrase_apart_copy_bound" => false; outside.contains(u)) || brk!("phrase_apart_first_bound" => false; outside.contains(v)))) { return None; }
+    if brk!("phrase_apart_takes_only" => { let taken = names(copy); to.iter().any(|(u, v)| u != v && !taken.contains(u)) }; false) { return None; }
+    Some(to)
+}
+
 fn is_wild(h: &Heap, t: Term) -> bool { matches!(t.kind(), TermK::Var(v) if h.name(v).starts_with("_$")) }
 fn capitalize(s: &str) -> String { let mut c = s.chars(); match c.next() { Some(f) => f.to_uppercase().collect::<String>() + c.as_str(), None => String::new() } }
 // a string as ROFL source writes it, C-style: a line feed in a table cell would end the row
@@ -478,7 +530,7 @@ impl<'a> R<'a> {
         let mut count: HashMap<Sym, usize> = HashMap::new();
         let mut bump = |t: Term| if let TermK::Var(v) = t.kind() { *count.entry(v).or_insert(0) += 1; };
         for a in &c.head.args { bump(*a); }
-        for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|a| bump(*a)), Elem::Builtin(_, a, b) => { bump(*a); bump(*b); } } }
+        for e in &c.body { e.terms().into_iter().for_each(&mut bump); }
         let lits: Vec<(usize, &Lit)> = c.body.iter().enumerate().filter_map(|(k, e)| match e { Elem::Pos(l) if !ctx.absorbed.contains(&k) => Some((k, l)), _ => None }).collect();
         for &(k1, l1) in &lits {
             let p1 = match self.phrase_for(l1) { Some(p) => p, None => continue };
@@ -544,8 +596,194 @@ impl<'a> R<'a> {
         match self.h.name(op) {
             "=" | "eq" | "is" => format!("{a} is {b}"),
             "!=" | "neq" | "ne" => format!("{a} differs from {b}"),
+            // the reads of a join (docs/aggregates.md, "The join lattice, as built")
+            "in" => format!("{a} is a member of {b}"),
+            "subset" => format!("{a} is {} of {b}", brk!("phrase_subset_as_member" => "a member"; "a subset")),
             op => format!("{a} {op} {b}"),
         }
+    }
+
+    // ------------------------------------------------ aggregates (w_agg_phrase)
+    // docs/aggregates.md, "The sentence form, as built": every aggregate is a
+    // condition that names its result, what it takes, and its own body in
+    // parentheses, and the reader (scripts/read_md.ts) reads each back.
+
+    /// What an aggregate counts, sums or ranks: one term, or several in parentheses.
+    fn tuple(&self, ts: &[Term], ctx: &mut Ctx) -> String {
+        let xs: Vec<String> = ts.iter().map(|t| self.bare(*t, ctx)).collect();
+        if xs.len() == 1 { xs[0].clone() } else { format!("({})", xs.join(", ")) }
+    }
+
+    /// A term an aggregate takes, by its name alone: its body says what it is.
+    fn bare(&self, t: Term, ctx: &mut Ctx) -> String {
+        if let TermK::Var(v) = t.kind() { if ctx.subject != Some(v) { ctx.intro.insert(v); } }
+        self.term(t, None, ctx)
+    }
+
+    /// An aggregate's own body, as the conditions of a rule, inline and in
+    /// parentheses; the positions it absorbs and pairs are its own.
+    fn inner(&self, c: &Clause, body: &[Elem], ctx: &mut Ctx, stats: &mut Stats) -> String {
+        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None };
+        let saved = (std::mem::take(&mut ctx.absorbed), std::mem::take(&mut ctx.residual), std::mem::take(&mut ctx.kind_conds), std::mem::take(&mut ctx.rel_pairs), std::mem::take(&mut ctx.consumed), ctx.or_at.take(), ctx.cur_k, std::mem::take(&mut ctx.deferred));
+        let (pos, neg) = brk!("phrase_inner_unread" => (Vec::new(), Vec::new()); self.conditions(&tmp, &[], ctx, stats));
+        (ctx.absorbed, ctx.residual, ctx.kind_conds, ctx.rel_pairs, ctx.consumed, ctx.or_at, ctx.cur_k, ctx.deferred) = saved;
+        let s = Self::join_with(&pos, &neg, "", true);
+        format!("({})", s.strip_prefix("if ").unwrap_or(&s))
+    }
+
+    /// A body aggregate or a threshold as the sentence it reads as.
+    fn agg_sentence(&self, c: &Clause, a: &AggSrc, ctx: &mut Ctx, stats: &mut Stats) -> String {
+        let op = self.h.name(a.op);
+        if op == "at_least" {
+            let n = self.term(a.res, None, ctx);
+            let x = self.tuple(&a.vals, ctx);
+            let b = self.inner(c, &a.body, ctx, stats);
+            return format!("{} {n} of {x} such that {b}", brk!("phrase_threshold_as_atmost" => "at most"; "at least"));
+        }
+        let r = self.term(a.res, None, ctx);
+        let head = match (op, a.vals.len()) {
+            ("count", _) => format!("the number of {}", self.tuple(brk!("phrase_count_tuple_first" => &a.vals[..1]; &a.vals), ctx)),
+            ("sum" | "median", 1) => { let v = self.bare(a.vals[0], ctx); let k = self.tuple(&a.keys, ctx); format!("the {} of {v} over {k}", brk!("phrase_sum_as_median" => if op == "sum" { "median" } else { op }; op)) }
+            ("quantile", 2) => { let p = self.term(a.vals[0], None, ctx); let v = self.bare(a.vals[1], ctx); let k = self.tuple(&a.keys, ctx); brk!("phrase_quantile_swapped" => format!("the quantile {v} of {p} over {k}"); format!("the quantile {p} of {v} over {k}")) }
+            ("rank", 2) if a.keys.is_empty() => { let s = self.term(a.vals[0], None, ctx); let v = self.bare(a.vals[1], ctx); format!("the rank of {s} among {v}") }
+            ("min" | "max", 1) if a.keys.is_empty() => format!("the {} {}", if op == "min" { "least" } else { brk!("phrase_max_as_min" => "least"; "greatest") }, self.bare(a.vals[0], ctx)),
+            ("or" | "and", 1) if a.keys.is_empty() => format!("the {} of {}", if op == "or" { "disjunction" } else { "conjunction" }, self.bare(a.vals[0], ctx)),
+            // a shape safety refuses has no sentence: it reads as written
+            _ => return format!("`{}`", rofl::rofl_parse::src_elem(self.h, &Elem::Agg(a.clone()))),
+        };
+        let b = self.inner(c, &a.body, ctx, stats);
+        format!("{r} is {head} such that {b}")
+    }
+
+    /// The sugar the reader lowers (docs/aggregates.md, "The sentence form, as
+    /// built"), found where its lowering stands at `i`: the sentence, and the
+    /// positions it covers. A lowering's own variables stand nowhere else.
+    fn sugar(&self, c: &Clause, i: usize, ctx: &mut Ctx, stats: &mut Stats) -> Option<(String, usize)> {
+        let h = self.h;
+        let uses = |v: Sym| -> usize {
+            let mut n = 0;
+            let mut ts: Vec<Term> = c.head.args.clone();
+            for e in &c.body { ts.extend(e.terms()); }
+            for t in ts { let mut vs = Vec::new(); h.vars_of(t, &mut vs); n += vs.iter().filter(|x| **x == v).count(); }
+            n
+        };
+        let var = |t: Term| match t.kind() { TermK::Var(v) if !h.name(v).starts_with("_$") => Some(v), _ => None };
+        let agg = |k: usize, op: &str| match c.body.get(k) { Some(Elem::Agg(a)) if h.name(a.op) == op => Some(a.clone()), _ => None };
+        let bi = |k: usize, op: &str| match c.body.get(k) { Some(Elem::Builtin(o, x, y)) if h.name(*o) == op => Some((*x, *y)), _ => None };
+        let fun = |t: Term, f: &str| match t.kind() { TermK::Func(i) if h.name(h.fname(i)) == f && h.fargs(i).len() == 2 => Some((h.fargs(i)[0], h.fargs(i)[1])), _ => None };
+        // avg: S is sum(V ; K : B), C is count(V, K : B), C > 0, [P is S * 10^k,] A is S / C
+        if let (Some(s), Some(cn)) = (agg(i, "sum"), agg(i + 1, "count")) {
+            let (sv, cv) = (var(s.res)?, var(cn.res)?);
+            let mut proj = s.vals.clone();
+            proj.extend(s.keys.iter().copied());
+            if s.vals.len() != 1 || s.keys.is_empty() || !cn.keys.is_empty() { return None; }
+            apart_map(h, c, (i, i + 1), &cn.vals, &proj, brk!("phrase_avg_copy_unchecked" => None; Some((&s.body, &cn.body))))?;
+            let (g, zero) = bi(i + 2, ">")?;
+            if var(g) != Some(cv) || zero.as_int() != Some(0) { return None; }
+            let (a, q) = bi(i + 3, "is")?;
+            let (scale, end, num) = match fun(q, "*") {
+                Some((x, m)) => {
+                    let word = match m.as_int()? { 10 => "tenths", 100 => "hundredths", 1000 => "thousandths", 1_000_000 => "millionths", _ => return None };
+                    if var(x) != Some(sv) { return None; }
+                    let (a2, q2) = bi(i + 4, "is")?;
+                    let (p, d) = fun(q2, "/")?;
+                    if var(p) != var(a) || var(p).is_none() || var(d) != Some(cv) || uses(var(a)?) != 2 { return None; }
+                    (format!(" in {word}"), i + 4, a2)
+                }
+                None => {
+                    let (x, d) = fun(q, "/")?;
+                    if var(x) != Some(sv) || var(d) != Some(cv) { return None; }
+                    (String::new(), i + 3, a)
+                }
+            };
+            if uses(sv) != 2 || uses(cv) != 3 { return None; }
+            let r = self.term(num, None, ctx);
+            let v = self.bare(s.vals[0], ctx);
+            let k = self.tuple(&s.keys, ctx);
+            let b = self.inner(c, &s.body, ctx, stats);
+            let round = brk!("phrase_avg_rounding_lost" => ""; " rounded toward zero");
+            return Some((format!("{r} is the average of {v} over {k} such that {b}{scale}{round}"), end));
+        }
+        let c0 = agg(i, "count")?;
+        let n0 = var(c0.res)?;
+        if !c0.keys.is_empty() { return None; }
+        // every: N1 is count(X : D), N2 is count(X : D, B), N1 = N2
+        if let Some(c1) = agg(i + 1, "count") {
+            let n1 = var(c1.res)?;
+            let (x, y) = bi(i + 2, "=")?;
+            let k = c0.body.len();
+            if !c1.keys.is_empty() || c1.body.len() <= k { return None; }
+            let to = apart_map(h, c, (i, i + 1), &c1.vals, &c0.vals, Some((&c0.body, &c1.body[..k])))?;
+            if !((var(x) == Some(n0) && var(y) == Some(n1)) || (var(x) == Some(n1) && var(y) == Some(n0))) || uses(n0) != 2 || uses(n1) != 2 { return None; }
+            // what the copy asks of each, in the first one's names when every one of its own is a top-level term
+            let back: Vec<Elem> = c1.body[k..].iter().map(|e| e.map_terms(&|t| match t.kind() { TermK::Var(u) => to.get(&u).map_or(t, |v| Term::var(*v)), _ => t })).collect();
+            let mut left = Vec::new();
+            for e in &back { for t in e.terms() { h.vars_of(t, &mut left); } }
+            // each row of the domain (read_md.ts `rows`): beside what the sentence takes, both counts take every variable
+            // the domain writes, the satisfies clause reads and nothing outside the pair writes, in the order the domain
+            // writes them; the sentence takes the shortest start of the counts' tuple that the reader completes to it
+            let mut outside = Vec::new();
+            for t in &c.head.args { h.vars_of(*t, &mut outside); }
+            for (j, e) in c.body.iter().enumerate() { if j < i || j > i + 2 { for t in e.terms() { h.vars_of(t, &mut outside); } } }
+            let mut writes: Vec<Sym> = Vec::new();
+            for e in &c0.body { for t in e.terms() { let mut vs = Vec::new(); h.vars_of(t, &mut vs); for v in vs { if !writes.contains(&v) && !h.name(v).starts_with("_$") { writes.push(v); } } } }
+            let completes = |p: usize| {
+                let taken: Vec<Sym> = c0.vals[..p].iter().filter_map(|t| var(*t)).collect();
+                let extra: Vec<Sym> = writes.iter().copied().filter(|v| !outside.contains(v) && left.contains(v) && !taken.contains(v)).collect();
+                extra.len() == c0.vals.len() - p && c0.vals[p..].iter().zip(&extra).all(|(t, v)| var(*t) == Some(*v))
+            };
+            let n = brk!("phrase_every_rows_unchecked" => 1; (1..=c0.vals.len()).find(|p| completes(*p))?);
+            let (vals, dom, sat) = if to.iter().any(|(u, v)| u != v && left.contains(u)) { (&c1.vals, &c1.body[..k], c1.body[k..].to_vec()) } else { (&c0.vals, &c0.body[..], back) };
+            let x = self.tuple(&vals[..n], ctx);
+            let d = self.inner(c, dom, ctx, stats);
+            let b = self.inner(c, &sat, ctx, stats);
+            return Some((format!("every {x} such that {d} satisfies {b}"), i + 2));
+        }
+        // at most N: C is count(X : B), C <= N; exactly N: C is count(X : B), C = N
+        let (word, (x, n)) = match (bi(i + 1, "<="), bi(i + 1, "=")) { (Some(p), _) => ("at most", p), (_, Some(p)) => ("exactly", p), _ => return None };
+        if var(x) != Some(n0) || uses(n0) != 2 { return None; }
+        let n = self.term(n, None, ctx);
+        let xs = self.tuple(&c0.vals, ctx);
+        let b = self.inner(c, &c0.body, ctx, stats);
+        Some((format!("{} {n} of {xs} such that {b}", brk!("phrase_atmost_as_exactly" => "exactly"; word)), i + 1))
+    }
+
+    /// `lattice p(K..., op V) [widen N].` and `tag p(K..., alg T).` as the
+    /// sentence each reads as.
+    fn declaration(&self, c: &Clause) -> String {
+        let h = self.h;
+        let name = |t: Term| match t.kind() { TermK::Var(v) if h.name(v).starts_with("_$") => "_".to_string(), TermK::Var(v) => h.name(v).to_string(), _ => h.canon(t) };
+        let n = c.head.args.len();
+        let keys: Vec<String> = c.head.args[..n.saturating_sub(1)].iter().map(|t| name(*t)).collect();
+        let keys = match keys.len() { 0 => String::new(), 1 => keys[0].clone(), k => format!("{} and {}", keys[..k - 1].join(", "), keys[k - 1]) };
+        let v = c.head.args.last().map(|t| name(*t)).unwrap_or_default();
+        let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
+        let op = h.name(c.lattice.expect("a declaration"));
+        if c.tag {
+            let of = if keys.is_empty() { String::new() } else { format!(" of {keys}") };
+            let op = brk!("phrase_tag_alg_lost" => "tropical"; op);
+            return format!("Each `{rel}` fact{of} carries {} {op} tag {v}.\n\n", article(op));
+        }
+        let word = brk!("phrase_lattice_op_lost" => "least"; LATTICE_WORDS.iter().find(|(o, _)| *o == op).map_or(op, |(_, w)| *w));
+        let each = if keys.is_empty() { String::new() } else { format!(" for each {keys}") };
+        let widen = match brk!("phrase_widen_off_by_one" => c.widen.map(|k| k + 1); c.widen) { Some(1) => ", widened after 1 improvement".to_string(), Some(k) => format!(", widened after {k} improvements"), None => String::new() };
+        format!("`{rel}` keeps the {word} {v}{each}{widen}.\n\n")
+    }
+
+    /// `lo <= hi :- body.` as the sentence it reads as.
+    fn dominance(&self, c: &Clause, hi: &Lit, file: usize, stats: &mut Stats) -> String {
+        let taken: HashSet<String> = HashSet::new();
+        let mut ctx = self.ctx(c, file, false, &taken);
+        let lo = self.lit(&c.head, &mut ctx, stats);
+        let hi_text = self.lit(hi, &mut ctx, stats);
+        // both facts name their variables, however they were written: the body reads them as named
+        let mut vs = Vec::new();
+        for t in c.head.args.iter().chain(&hi.args) { self.h.vars_of(*t, &mut vs); }
+        if brk!("phrase_dom_reintroduced" => false; true) { ctx.intro.extend(vs); }
+        let hi = hi_text;
+        let (pos, neg) = self.conditions(c, &[], &mut ctx, stats);
+        let body = Self::join_with(&pos, &neg, "", true);
+        format!("A fact that {lo} is dominated by one that {hi} {body}.\n\n")
     }
 
     /// Nouns for the variables of one clause, and the kind guards a noun absorbs.
@@ -558,7 +796,7 @@ impl<'a> R<'a> {
         let head_vars: Vec<Sym> = c.head.args.iter().filter_map(|a| match a.kind() { TermK::Var(v) => Some(v), _ => None }).collect();
         let kind_used_elsewhere = |k: Sym, i: usize, j: usize| -> bool {
             let mut hit = |t: Term| matches!(t.kind(), TermK::Var(v) if v == k);
-            c.head.args.iter().any(|a| hit(*a)) || c.body.iter().enumerate().any(|(n, e)| n != i && n != j && match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().any(|a| hit(*a)), Elem::Builtin(_, a, b) => hit(*a) || hit(*b) })
+            c.head.args.iter().any(|a| hit(*a)) || c.body.iter().enumerate().any(|(n, e)| n != i && n != j && e.terms().into_iter().any(&mut hit))
         };
         let set_noun = |k: Sym| -> Option<(String, usize)> {
             for (j, e) in c.body.iter().enumerate() {
@@ -633,6 +871,13 @@ impl<'a> R<'a> {
                 continue;
             }
             if ctx.consumed.contains(&i) { continue; }
+            if matches!(e, Elem::Agg(_)) {
+                if let Some((s, end)) = brk!("phrase_sugar_unseen" => None; self.sugar(c, i, ctx, stats)) {
+                    for k in i + 1..=end { ctx.consumed.insert(k); }
+                    pos.push(s);
+                    continue;
+                }
+            }
             match e {
                 Elem::Pos(l) => match ctx.rel_pairs.get(&i).copied() {
                     Some((k2, v)) => { let l2 = match &c.body[k2] { Elem::Pos(l2) => l2.clone(), _ => unreachable!() }; pos.push(self.lit_relative(l, &l2, v, k2, ctx, stats)); }
@@ -648,6 +893,7 @@ impl<'a> R<'a> {
                     }
                 }
                 Elem::Builtin(op, a, b) => pos.push(self.builtin(*op, *a, *b, ctx)),
+                Elem::Agg(a) => { let s = self.agg_sentence(c, a, ctx, stats); pos.push(s); }
             }
         }
         for (v, t) in extra {
@@ -738,11 +984,11 @@ impl<'a> R<'a> {
         let l = |l: &Lit| Lit { rel: l.rel, book: l.book, tense: l.tense, args: l.args.iter().map(|a| t(*a)).collect() };
         Clause {
             head: l(&c.head),
-            body: c.body.iter().map(|e| match e {
-                Elem::Pos(x) => Elem::Pos(l(x)),
-                Elem::Neg(x) => Elem::Neg(l(x)),
-                Elem::Builtin(op, a, b) => Elem::Builtin(*op, t(*a), t(*b)),
-            }).collect(),
+            body: c.body.iter().map(|e| e.map_terms(&t)).collect(),
+            lattice: c.lattice,
+            widen: c.widen,
+            tag: c.tag,
+            dom: c.dom.as_ref().map(l),
         }
     }
 
@@ -790,7 +1036,7 @@ impl<'a> R<'a> {
     fn all_vars(h: &Heap, c: &Clause) -> Vec<Sym> {
         let mut all: Vec<Sym> = Vec::new();
         let mut terms: Vec<Term> = c.head.args.clone();
-        for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => terms.extend(l.args.iter().copied()), Elem::Builtin(_, a, b) => { terms.push(*a); terms.push(*b); } } }
+        for e in &c.body { terms.extend(e.terms()); }
         for t in terms { let mut vs = Vec::new(); h.vars_of(t, &mut vs); for v in vs { if !all.contains(&v) { all.push(v); } } }
         all
     }
@@ -832,7 +1078,7 @@ impl<'a> R<'a> {
             let extra: Vec<(Sym, Term)> = extra.into_iter().map(|(g, t)| (g, match t.kind() { TermK::Var(v) => map.get(&v).map_or(t, |w| Term::var(*w)), _ => t })).collect();
             // a variable inside a functor term keeps its symbol and is shown under its group name
             let mut inside: Vec<Sym> = Vec::new();
-            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => for a in &l.args { if matches!(a.kind(), TermK::Func(_)) { h.vars_of(*a, &mut inside); } }, Elem::Builtin(_, a, b) => { for t in [a, b] { if matches!(t.kind(), TermK::Func(_)) { h.vars_of(*t, &mut inside); } } } } }
+            for e in &c.body { for t in e.terms() { if matches!(t.kind(), TermK::Func(_)) { h.vars_of(t, &mut inside); } } }
             let shown: HashMap<Sym, Sym> = inside.iter().filter_map(|v| map.get(v).map(|w| (*v, *w))).collect();
             out.push((renamed, extra, shown));
         }
@@ -908,7 +1154,7 @@ impl<'a> R<'a> {
             let mut conditioned: HashSet<Sym> = HashSet::new();
             for i in kind_conds.keys().chain(residual.keys()) { if let Elem::Pos(l) = &c.body[*i] { if let TermK::Var(v) = l.args[0].kind() { conditioned.insert(v); } } }
             let mut lits: Vec<&Lit> = vec![&c.head];
-            for e in &c.body { if let Elem::Pos(l) | Elem::Neg(l) = e { lits.push(l); } }
+            for e in &c.body { lits.extend(e.lits()); }
             for l in lits {
                 let Some(p) = self.phrase_for(l) else { continue };
                 for part in &p.parts {
@@ -928,7 +1174,7 @@ impl<'a> R<'a> {
             let mut vars: Vec<Sym> = Vec::new();
             let mut collect = |t: Term| if let TermK::Var(v) = t.kind() { vars.push(v); };
             for x in &c.head.args { collect(*x); }
-            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|x| collect(*x)), Elem::Builtin(_, x, y) => { collect(*x); collect(*y); } } }
+            for e in &c.body { e.terms().into_iter().for_each(&mut collect); }
             if vars.contains(&a) {
                 let used: HashSet<String> = vars.iter().map(|v| self.h.name(*v).to_string()).chain(taken.iter().cloned()).collect();
                 if let Some(free) = ["X", "Y", "Z", "W", "U", "Q"].iter().find(|c| !used.contains(**c)) { display.insert(a, free.to_string()); }
@@ -961,7 +1207,7 @@ impl<'a> R<'a> {
             let mut vs: Vec<String> = Vec::new();
             let mut collect = |t: Term| if let TermK::Var(v) = t.kind() { vs.push(self.h.name(v).to_string()); };
             for x in &c.head.args { collect(*x); }
-            for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => l.args.iter().for_each(|x| collect(*x)), Elem::Builtin(_, x, y) => { collect(*x); collect(*y); } } }
+            for e in &c.body { e.terms().into_iter().for_each(&mut collect); }
             vs
         }).collect();
         let rel = group[0].head.rel;
@@ -1126,7 +1372,7 @@ impl<'a> R<'a> {
         let mut i = 0;
         while i < items.len() {
             match &items[i] {
-                Item::Block(t) => { out.push_str(t); i += 1; }
+                Item::Block(t) | Item::Whole(t) => { out.push_str(t); i += 1; }
                 Item::Rule { key: Some(k), subject, .. } => {
                     let mut j = i + 1;
                     while j < items.len() && matches!(&items[j], Item::Rule { key: Some(k2), .. } if k2 == k) { j += 1; }
@@ -1214,10 +1460,10 @@ impl<'a> R<'a> {
         let mut reads: BTreeMap<String, usize> = BTreeMap::new();
         // a relation with exactly one rule in this file may read as a phrase defined in one step
         let mut rule_count: HashMap<Sym, usize> = HashMap::new();
-        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() { *rule_count.entry(c.head.rel).or_default() += 1; } } } }
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() && c.dom.is_none() { *rule_count.entry(c.head.rel).or_default() += 1; } } } }
         let single: HashSet<Sym> = rule_count.iter().filter(|(_, n)| **n == 1).map(|(r, _)| *r).collect();
         let mut own_rows: HashSet<Sym> = HashSet::new();
-        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.head.rel != self.edb { own_rows.insert(c.head.rel); } } } }
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.lattice.is_none() && c.head.rel != self.edb { own_rows.insert(c.head.rel); } } } }
         let mut glossary: Vec<String> = Vec::new();
         let mut set_members: BTreeMap<Sym, Vec<String>> = BTreeMap::new();
         // the file's own opening comment, before any heading or clause, is its lead and comes first
@@ -1241,19 +1487,32 @@ impl<'a> R<'a> {
                     stats.clauses += clauses.len();
                     for c in clauses {
                         books.insert(self.book_name(c.head.book));
-                        for e in &c.body { match e { Elem::Pos(l) | Elem::Neg(l) => {
+                        for l in c.body.iter().flat_map(|e| e.lits()) {
                             books.insert(self.book_name(l.book));
                             if let Some(&f) = self.defs.get(&l.rel) { if f != file { reads.insert(self.h.name(l.rel).to_string(), f); } }
-                        } _ => {} } }
+                        }
                     }
                     let mut declared: Vec<(String, Sym)> = Vec::new();
                     let mut items: Vec<Item> = Vec::new();
                     let mut i = 0;
                     while i < clauses.len() {
                         let c = &clauses[i];
+                        // a dominance rule and a declaration conclude nothing: each is one sentence
+                        if let Some(hi) = &c.dom {
+                            let t = self.dominance(c, hi, file, &mut stats);
+                            items.push(brk!("phrase_decl_twinned" => Item::Block(t.clone()); Item::Whole(t)));
+                            i += 1;
+                            continue;
+                        }
+                        if c.lattice.is_some() {
+                            let t = self.declaration(c);
+                            items.push(brk!("phrase_decl_twinned" => Item::Block(t.clone()); Item::Whole(t)));
+                            i += 1;
+                            continue;
+                        }
                         let fact = c.body.is_empty();
                         let mut j = i + 1;
-                        while j < clauses.len() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() && clauses[j].head.tense == c.head.tense { j += 1; }
+                        while j < clauses.len() && clauses[j].dom.is_none() && clauses[j].lattice.is_none() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() && clauses[j].head.tense == c.head.tense { j += 1; }
                         if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored, &mut set_members); }
                         else {
                             let b = self.book_name(c.head.book);
@@ -1457,7 +1716,7 @@ fn main() {
     for doc in &docs {
         for seg in &doc.segs {
             if let Seg::Code(cs) = seg {
-                for c in cs { for e in &c.body { if let Elem::Pos(l) | Elem::Neg(l) = e { home.entry(l.rel).or_insert(l.book); } } }
+                for c in cs { for l in c.body.iter().flat_map(|e| e.lits()) { home.entry(l.rel).or_insert(l.book); } }
             }
         }
     }
@@ -1479,7 +1738,7 @@ fn main() {
         let mut uses: HashMap<Sym, usize> = HashMap::new();
         for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs {
             if noun_guards.contains_key(&c.head.rel) { *uses.entry(c.head.rel).or_default() += 1; }
-            for e in &c.body { if let Elem::Pos(l) | Elem::Neg(l) = e { if noun_guards.contains_key(&l.rel) { *uses.entry(l.rel).or_default() += 1; } } }
+            for l in c.body.iter().flat_map(|e| e.lits()) { if noun_guards.contains_key(&l.rel) { *uses.entry(l.rel).or_default() += 1; } }
         } } }
         let mut bound: HashMap<String, Sym> = HashMap::new();
         let mut by_noun: HashMap<String, Vec<(usize, String, Sym)>> = HashMap::new();
@@ -1528,10 +1787,32 @@ fn main() {
     if let Some(d) = &out_dir { std::fs::write(format!("{d}/index.md"), index).expect("write"); }
 }
 
+/// A body aggregate whole, as JSON, for `--facts`: its operator, result, values,
+/// keys and body, each term in the kernel's canonical spelling (a variable
+/// `?X`), each body element `{"k":"pos"|"neg","rel",...,"args"}`,
+/// `{"k":"bi","op","args"}` or `{"k":"agg","agg"}`. `agg(r, k, op)` names
+/// only the operator and the result; the reader's round trip compares the
+/// whole aggregate (scripts/read_md.ts, `aggCanon`).
+fn agg_json(h: &Heap, a: &AggSrc) -> String {
+    let t = |x: Term| { let mut s = String::new(); json_string(&h.canon(x), &mut s); s };
+    let ts = |xs: &[Term]| xs.iter().map(|x| t(*x)).collect::<Vec<_>>().join(",");
+    let name = |x: Sym| { let mut s = String::new(); json_string(h.name(x), &mut s); s };
+    let body = a.body.iter().map(|e| match e {
+        Elem::Pos(l) => format!("{{\"k\":\"pos\",\"rel\":{},\"args\":[{}]}}", name(l.rel), ts(&l.args)),
+        Elem::Neg(l) => format!("{{\"k\":\"neg\",\"rel\":{},\"args\":[{}]}}", name(l.rel), ts(&l.args)),
+        Elem::Builtin(op, x, y) => format!("{{\"k\":\"bi\",\"op\":{},\"args\":[{},{}]}}", name(*op), t(*x), t(*y)),
+        Elem::Agg(b) => format!("{{\"k\":\"agg\",\"agg\":{}}}", agg_json(h, b)),
+    }).collect::<Vec<_>>().join(",");
+    format!("{{\"op\":{},\"res\":{},\"vals\":[{}],\"keys\":[{}],\"body\":[{}]}}", name(a.op), t(a.res), ts(&a.vals), ts(&a.keys), body)
+}
+
 /// `--facts`: the parsed program as facts, one clause id per clause, slot 0 the
-/// head, slots 1.. the body in order. Variables are strings, atoms atoms.
+/// head, slots 1.. the body in order, and after the body a dominance rule's
+/// dominating fact (`dom`); an aggregate is `agg` (operator and result) and
+/// `aggj` (the whole of it); a lattice or tag declaration is its head with
+/// `decl` (and `decl_widen`). Variables are strings, atoms atoms.
 fn dump_facts(h: &Heap, docs: &[FileDoc]) {
-    let mut out = String::from("edb(clause). edb(head). edb(lit). edb(bi). edb(argv). edb(arga). edb(args). edb(argf). edb(argn). edb(arity). edb(pos). edb(name_word). edb(word_shape).\n");
+    let mut out = String::from("edb(clause). edb(head). edb(lit). edb(bi). edb(agg). edb(aggj). edb(dom). edb(decl). edb(decl_widen). edb(argv). edb(arga). edb(args). edb(argf). edb(argn). edb(arity). edb(pos). edb(name_word). edb(word_shape).\n");
     let mut n = 0usize;
     let mut arity: BTreeMap<String, usize> = BTreeMap::new();
     let term = |out: &mut String, r: usize, k: usize, i: usize, t: Term| {
@@ -1551,6 +1832,11 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                     let _ = writeln!(out, "clause(r{n}, {:?}).", doc.stem);
                     let _ = writeln!(out, "head(r{n}, {}).", h.name(c.head.rel));
                     match c.head.tense { Tense::Next => { let _ = writeln!(out, "tense(r{n}, next)."); } Tense::Init => { let _ = writeln!(out, "tense(r{n}, init)."); } Tense::Now => {} }
+                    // a declaration is its head with the operation (or tag algebra) of its last argument, not a fact
+                    if let Some(op) = c.lattice.filter(|_| !brk!("facts_decl_as_fact" => true; false)) {
+                        let _ = writeln!(out, "decl(r{n}, {}, {}).", if c.tag { "tag" } else { "lattice" }, h.name(op));
+                        if let Some(w) = c.widen { let _ = writeln!(out, "decl_widen(r{n}, {w})."); }
+                    }
                     let _ = writeln!(out, "nargs(r{n}, 0, {}).", c.head.args.len());
                     let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
                     *e = (*e).max(c.head.args.len());
@@ -1561,7 +1847,21 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                             Elem::Pos(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, pos).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
                             Elem::Neg(l) => { let _ = writeln!(out, "lit(r{n}, {k}, {}, neg).", h.name(l.rel)); let _ = writeln!(out, "nargs(r{n}, {k}, {}).", l.args.len()); for (i, a) in l.args.iter().enumerate() { term(&mut out, n, k, i, *a); } }
                             Elem::Builtin(op, a, b) => { let _ = writeln!(out, "bi(r{n}, {k}, {:?}).", h.name(*op)); term(&mut out, n, k, 0, *a); term(&mut out, n, k, 1, *b); }
+                            Elem::Agg(a) => {
+                                let _ = writeln!(out, "agg(r{n}, {k}, {}).", h.name(a.op)); term(&mut out, n, k, 0, a.res);
+                                if !brk!("facts_agg_unwritten" => true; false) {
+                                    let mut j = String::new(); json_string(&agg_json(h, a), &mut j);
+                                    let _ = writeln!(out, "aggj(r{n}, {k}, {j}).");
+                                }
+                            }
                         }
+                    }
+                    // a dominance rule's dominating fact, in the slot after the body
+                    if let Some(d) = c.dom.as_ref().filter(|_| !brk!("facts_dom_unwritten" => true; false)) {
+                        let k = c.body.len() + 1;
+                        let _ = writeln!(out, "dom(r{n}, {k}, {}).", h.name(d.rel));
+                        let _ = writeln!(out, "nargs(r{n}, {k}, {}).", d.args.len());
+                        for (i, a) in d.args.iter().enumerate() { term(&mut out, n, k, i, *a); }
                     }
                 }
             }

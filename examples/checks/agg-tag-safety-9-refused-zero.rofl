@@ -1,0 +1,7 @@
+-- expect-refusal: declares nothing
+-- a tag declaration row written by hand with no argument for the tag: arity
+-- 0 has no slot, so the row is refused, not read
+edb(tsr_z0).
+tsr_z0(a).
+tag_decl(tsr_zero, 0, tropical).
+tsr_zero() :- tsr_z0(a).

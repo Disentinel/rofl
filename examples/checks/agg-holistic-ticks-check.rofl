@@ -1,0 +1,40 @@
+-- examples/checks/agg-holistic-ticks-check.rofl — agg_holistic_ticks, over
+-- agg-ticks-data.rofl two ticks deep with retain_ticks 0: median.
+-- A value staged @next at tick 0 is base at tick 1, beside the value the same
+-- aggregate has at tick 1; `why` of it names tick 0's cell, and each member
+-- as the fact of tick 0 with the rule that derived it then, whose derived_by
+-- row retain_ticks keeps because the carried cell cites it.
+explain_request(why, tk_med(5)).
+thl_line(L) :- explained[$explain](why, tk_med(5), _, L).
+thl_has(T)  :- thl_line(L), thl_text(T), N is str_segs(L, T), N > 1.
+thl_past(M) :- thl_line(L), thl_member(M, T), N is str_segs(L, T), N > 1, P is str_segs(L, "@tick 0 [past tick]"), P > 1.
+thl_text_missing(T)    :- thl_text(T), not thl_has(T).
+thl_member_not_past(M) :- thl_member(M, _), not thl_past(M).
+thl_explain_refused()  :- explained[$explain](why, tk_med(5), 0, _).
+thl_cells(T, V) :- agg_cell[$kernel]($cell(R, _, T, _), V, _), concludes[$kernel](R, tk_med).
+thl_cell_missing(T, V) :- thl_cell(T, V), not thl_cells(T, V).
+-- the cell the same rule seals at tick 1 is data at tick 2, where its
+-- conclusion arrives, and not here
+thl_early(V)          :- thl_cells(1, V).
+alarm(thl_wrong).
+alarm(thl_text_missing).
+alarm(thl_member_not_past).
+alarm(thl_explain_refused).
+alarm(thl_cell_missing).
+alarm(thl_early).
+thl_text(T)@next      :- thl_text(T).
+thl_member(M, T)@next :- thl_member(M, T).
+thl_cell(T, V)@next   :- thl_cell(T, V).
+thl_wrong(carried) :- not tk_med(5).
+thl_wrong(present) :- not tk_med_now(3).
+thl_wrong(stale) :- tk_med(3).
+thl_text("median(?V ; ?K : tk_w[main](?K,?V)) = 5 [aggregate: 3 members").
+thl_member(a, "tk_w[main](a,3)  <= r"). thl_member(b, "tk_w[main](b,5)  <= r"). thl_member(c, "tk_w[main](c,5)  <= r").
+thl_cell(0, 5).
+-- What a hole at tick 0 left unstaged is unknown at tick 1
+-- (agg-ticks-holes.rofl): a cell that could read it is a hole, with no row.
+thl_h(M) :- M is median(W ; K : th_y(K, W)).
+thl_hole_read(M) :- thl_h(M).
+thl_unholed() :- not th_holed(thl_h).
+alarm(thl_hole_read).
+alarm(thl_unholed).

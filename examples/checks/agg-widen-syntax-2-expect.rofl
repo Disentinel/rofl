@@ -1,0 +1,49 @@
+-- examples/checks/agg-widen-syntax-2-expect.rofl — agg_widen_syntax. The
+-- declaration rows each form of agg-widen-syntax-1-forms.rofl reads as,
+-- both directions: `lattice_widen(Rel, N)` beside `lattice_decl`; an
+-- interval function a term on the right of `is`, reflected as itself; the
+-- words still names; ring 1 (examples/ring1) reading a widened declaration
+-- and a rule with an interval function from `src` as the same trees,
+-- nothing stray and nothing uncovered; and no refused form reaching the
+-- world.
+sxw_want(sxw_h, 3).
+sxw_want(sxw_z, 0).
+sxw_mine(sxw_h).
+sxw_mine(sxw_z).
+sxw_mine(sxwr_n).
+sxw_mine(sxwr_name).
+sxw_mine(sxwr_neg).
+sxw_row(R, N)      :- lattice_widen[$kernel](R, N), sxw_mine(R).
+sxw_missing(R)     :- sxw_want(R, N), not sxw_row(R, N).
+sxw_extra(R)       :- sxw_row(R, N), not sxw_want(R, N).
+sxw_undeclared(R)  :- sxw_row(R, _), not lattice_decl[$kernel](R, _, hull).
+-- each interval function is a term of `is`, read as written
+sxw_is(T)          :- premise_lit[$kernel](_, _, $builtin("is", $cons(_, $cons(T, $nil)))).
+sxw_read(ivadd)    :- sxw_is(ivadd(_, _)).
+sxw_read(ivsub)    :- sxw_is(ivsub(_, _)).
+sxw_read(ivmul)    :- sxw_is(ivmul(_, _)).
+sxw_read(ivmeet)   :- sxw_is(ivmeet(_, _)).
+sxw_fn(ivadd). sxw_fn(ivsub). sxw_fn(ivmul). sxw_fn(ivmeet).
+sxw_unread(F)      :- sxw_fn(F), not sxw_read(F).
+sxw_lost()         :- not sxw_word(inf).
+sxw_lost()         :- not sxw_iv(iv(ninf, inf)).
+alarm(sxw_missing).
+alarm(sxw_extra).
+alarm(sxw_undeclared).
+alarm(sxw_unread).
+alarm(sxw_lost).
+
+src("lattice r(K, hull I) widen 2.\nlattice s(hull I).\nr(K, J) :- r(K, I), J is ivadd(I, 1).").
+r1w_want($widen(int("2"), $lattice(hull, $lit(r, $bare, $cons($var("K"), $cons($var("I"), $nil)), $now))), $nil).
+r1w_want($lattice(hull, $lit(s, $bare, $cons($var("I"), $nil), $now)), $nil).
+r1w_want($lit(r, $bare, $cons($var("K"), $cons($var("J"), $nil)), $now),
+         $cons($lit(r, $bare, $cons($var("K"), $cons($var("I"), $nil)), $now),
+         $cons($builtin("is", $cons($var("J"), $cons(comp(ivadd, $cons($var("I"), $cons(int("1"), $nil))), $nil))), $nil))).
+r1w_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1w_want(H, B), not r1w_parsed(H, B).
+ring1_extra(H)     :- r1w_parsed(H, B), not r1w_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

@@ -1,0 +1,3 @@
+-- expect-refusal: the last argument is the tag
+-- a tag names its semiring before the tag: min is a lattice's operation, not a semiring
+tag sxtr_min(A, min T).

@@ -1,0 +1,5 @@
+-- expect-refusal: a variable bound before it
+-- N is bound by nothing: a threshold reads N, it never binds it
+edb(atsr_v).
+atsr_v(w1, c1).
+atsr_unbound(C) :- atsr_v(_, C), at_least(N, W : atsr_v(W, C)).

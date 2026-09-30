@@ -1,0 +1,22 @@
+-- examples/checks/agg-empty-wfs-check.rofl — agg_empty_wfs: a count per
+-- player over what a well-founded world concluded, fed from below, reads 0
+-- for a player bound here whose positions none of the world below won; a
+-- drawn position is not a loss, and not a win either. Inside one, the count
+-- is refused (agg-empty-wfs-2-refused-count.rofl).
+edb(wem_player).
+edb(wem_owns).
+wem_player(p1). wem_player(p2). wem_player(p3).
+wem_owns(p1, c). wem_owns(p1, a).
+wem_owns(p2, e). wem_owns(p2, f).
+wem_owns(p3, g).
+wem_wins(P, N)  :- wem_player(P), N is count(X : wem_owns(P, X), wg_win(X), not unknown(wg_win(X))).
+wem_draws(P, N) :- wem_player(P), N is count(X : wem_owns(P, X), unknown(wg_win(X))).
+wem_want(p1, 1, 1). wem_want(p2, 0, 2). wem_want(p3, 0, 0).
+wem_got(P, W, D) :- wem_wins(P, W), wem_draws(P, D).
+wem_wrong(P)     :- wem_want(P, W, D), not wem_got(P, W, D).
+alarm(wem_wrong).
+-- the answers as rows the state must hold: an alarm `not answer` is silent
+-- when the answer is a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
+-- expect-row: wem_got[main](p1,1,1)
+-- expect-row: wem_got[main](p2,0,2)
+-- expect-row: wem_got[main](p3,0,0)

@@ -1,0 +1,38 @@
+-- examples/checks/agg-lattice-safety-check.rofl — agg_lattice_safety: the
+-- declared shapes of agg-lattice-safety-1-ok.rofl evaluate, one fact per key;
+-- each refused file (-2 to -13) breaks one rule of the declaration's shape
+-- and none of their relations reaches this world.
+alsk_want(one, x, 1).
+alsk_want(out, ab, 2).
+alsk_want(out, ac, 5).
+alsk_want(out, bc, 1).
+alsk_want(any, a, true).
+alsk_want(any, b, true).
+alsk_want(all, a, false).
+alsk_want(all, b, false).
+alsk_have(one, x, D)   :- alsk_one(D).
+alsk_have(out, ab, D)  :- alsk_out(a, b, D).
+alsk_have(out, ac, D)  :- alsk_out(a, c, D).
+alsk_have(out, bc, D)  :- alsk_out(b, c, D).
+alsk_have(any, A, F)   :- alsk_any(A, F).
+alsk_have(all, A, F)   :- alsk_all(A, F).
+alsk_missing(K, X, V)  :- alsk_want(K, X, V), not alsk_have(K, X, V).
+alsk_extra(K, X, V)    :- alsk_have(K, X, V), not alsk_want(K, X, V).
+alarm(alsk_missing).
+alarm(alsk_extra).
+alsk_refused(alsf_two).
+alsk_refused(alsf_wide).
+alsk_refused(alsf_ar).
+alsk_refused(alsf_as).
+alsk_refused(alsf_nx).
+alsk_refused(alsf_dm).
+alsk_refused(alsf_pv).
+alsk_refused(alsf_rp).
+alsk_refused(alsf_ct).
+alsk_refused(alsf_q).
+alsk_refused(alsf_zero).
+alsk_accepted(Rel) :- alsk_refused(Rel), concludes[$kernel](_, Rel).
+alsk_accepted(Rel) :- alsk_refused(Rel), lattice_decl[$kernel](Rel, _, _).
+alsk_kernel()      :- lattice_decl[$kernel](hole, _, _).
+alarm(alsk_accepted).
+alarm(alsk_kernel).

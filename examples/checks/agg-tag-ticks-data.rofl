@@ -1,0 +1,33 @@
+-- examples/checks/agg-tag-ticks-data.rofl — TAGS ACROSS TICKS, for agg_tag_ticks
+-- and agg_tagc_ticks (docs/aggregates.md, "Tags, as built"). tk_c is a
+-- tropical cost staged @next: at tick 0 a to c costs 7 through b; tick 1
+-- adds a direct edge of 1, and the 7 carried is improved on. tk_n is a
+-- counting tag staged @next: its count at tick 0 arrives at tick 1 as one
+-- derivation of that count, added to the tick's own (x has one edge at tick
+-- 0 and another at tick 1: 1, then 1 + 1). tk_v is a viterbi tag whose
+-- weight at tick 0 is off its carrier: a hole there, so what it would stage
+-- is not known at tick 1, a hole there too, never a value carried as if it
+-- were final; and tk_k, a counting tag whose weight 0 is off its carrier.
+edb(tk_e).
+edb(tk_d).
+edb(tk_p).
+tk_e(a, b, 3). tk_e(b, c, 4).
+tk_e(a, c, 1)@next :- tk_e(a, b, 3).
+tag tk_c(A, B, tropical T).
+tk_c(A, B, W)    :- tk_e(A, B, W).
+tk_c(A, C, T)    :- tk_c(A, B, _), tk_c(B, C, _).
+tk_c(A, B, T)@next :- tk_c(A, B, _).
+tk_d(x, y).
+tk_d(x, z)@next  :- tk_d(x, y).
+tag tk_n(A, counting N).
+tk_n(A, N)       :- tk_d(A, _).
+tk_n(A, N)@next  :- tk_n(A, _).
+tk_p(q, 1500000).
+tag tk_v(A, viterbi P).
+tk_v(A, W)       :- tk_p(A, W).
+tk_v(A, P)@next  :- tk_v(A, _).
+tag tk_k(A, counting N).
+tk_k(A, 0)       :- tk_p(A, _).
+tk_k(A, N)@next  :- tk_k(A, _).
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

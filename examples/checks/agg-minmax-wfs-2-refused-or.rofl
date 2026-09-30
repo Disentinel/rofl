@@ -1,0 +1,11 @@
+-- expect-refusal: or is not evaluated under well_founded semantics
+-- examples/checks/agg-minmax-wfs-2-refused-or.rofl — or inside a well-founded
+-- world is refused: its cell would be sealed under an assumption, over
+-- positions whose win is unknown.
+semantics(well_founded).
+edb(wr_move).
+wr_move(a, b). wr_move(b, a). wr_move(b, c).
+wr_win(X) :- wr_move(X, Y), not wr_win(Y).
+wr_o(B) :- B is or(T : wr_move(X, _), wr_flag(X, T)).
+wr_flag(X, true) :- wr_win(X).
+wr_flag(X, false) :- wr_move(X, _), not wr_win(X).

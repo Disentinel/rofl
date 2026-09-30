@@ -483,3 +483,27 @@ fn the_audits_are_a_loaded_pack_and_not_a_property_of_the_engine() {
     assert!(settle(false).is_empty(), "without the pack nothing accuses");
     assert!(!settle(true).is_empty(), "with the pack loaded the gap is reported");
 }
+
+/// A chain `n` derivations deep: `p` reaching every number to `n`, `w` none.
+fn chain(n: usize) -> Session {
+    let src = format!("edb(q). q(0).\np(C) :- q(C).\np(J) :- p(I), I < {n}, J is I + 1.\nw(J) :- p(J), I is J - 1, w(I).\n");
+    let mut s = Session::fresh(10_000_000);
+    s.load(&src, None).expect("load");
+    s.evaluate().expect("evaluate");
+    s
+}
+
+/// NO FRAME PER LEVEL: `why` and `whynot` walk a derivation 3000 deep to its
+/// bottom, as the TypeScript host does, to the byte (the lengths scripts/goldens.ts
+/// `deepExplain` holds both TypeScript evaluators to).
+#[test]
+fn a_derivation_thousands_deep_is_explained_to_its_bottom() {
+    let n = 3000;
+    let mut s = chain(n);
+    let why = s.why(&format!("p({n})")).unwrap();
+    assert_eq!(why.len(), 27_268_619);
+    assert!(why.ends_with(&format!("{n} is +({},1) [builtin]", n - 1)), "{}", &why[why.len() - 200..]);
+    let (holds, whynot) = s.whynot(&format!("w({n})"), &WhynotBounds { max_depth: n + 10, max_nodes: 10 * n }).unwrap();
+    assert!(!holds);
+    assert_eq!((whynot.len(), whynot.lines().count()), (36_585_121, 6021));
+}

@@ -1,0 +1,35 @@
+-- examples/checks/agg-sum-holes-check.rofl — agg_sum_holes: a total past the
+-- term range is a hole, `agg_overflow`, never a wrapped number; a value that
+-- is no number is `agg_type_error`; a member not known leaves the group not
+-- known, `support_withdrawn`; and a negation above each is undecided
+-- (agg-holes-data.rofl). c sums to 0, for certain.
+ahs_s(G, S)  :- ah_g(G), S is sum(V ; K : ah_v(G, K, V)).
+ahs_x(G, S)  :- ah_g(G), S is sum(Y ; K : ah_x(G, K, Y)).
+ahs_pos(G)   :- ahs_s(G, S), S > 0.
+ahs_nonpos(G) :- ah_g(G), not ahs_pos(G).
+ahs_xhas(G)  :- ahs_x(G, _).
+ahs_xnone(G) :- ah_g(G), not ahs_xhas(G).
+ahs_bad(big)      :- ahs_s(big, _).
+ahs_bad(b)        :- ahs_s(b, _).
+ahs_bad(d)        :- ahs_s(d, _).
+-- expect-row: ahs_s[main](a,7)
+-- expect-row: ahs_s[main](c,0)
+ahs_bad(x_b)      :- ahs_x(b, _).
+ahs_bad(x_big)    :- ahs_x(big, _).
+-- expect-row: ahs_x[main](a,9)
+ahs_bad(nonpos_big) :- ahs_nonpos(big).
+ahs_bad(nonpos_b) :- ahs_nonpos(b).
+ahs_bad(nonpos_d) :- ahs_nonpos(d).
+-- expect-row: ahs_nonpos[main](c)
+ahs_bad(xnone_b)  :- ahs_xnone(b).
+ahs_bad(xnone_d)  :- ahs_xnone(d).
+alarm(ahs_bad).
+-- each hole names its reason, read above the sums
+ahs_holed(G, Why)  :- ahs_pos(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), Why), concludes[$kernel](R, ahs_s).
+ahs_xholed(G, Why) :- ahs_xhas(_), hole[$kernel]($cell(R, _, _, $cons(G, $nil)), Why), concludes[$kernel](R, ahs_x).
+ahs_unholed(big) :- ahs_pos(_), not ahs_holed(big, agg_overflow).
+ahs_unholed(b)   :- ahs_pos(_), not ahs_holed(b, agg_type_error).
+ahs_unholed(d)   :- ahs_pos(_), not ahs_holed(d, agg_type_error).
+ahs_unholed(x_b) :- ahs_xhas(_), not ahs_xholed(b, support_withdrawn).
+ahs_unholed(x_d) :- ahs_xhas(_), not ahs_xholed(d, support_withdrawn).
+alarm(ahs_unholed).

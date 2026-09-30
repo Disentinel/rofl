@@ -1,0 +1,114 @@
+-- examples/checks/agg-holistic-data.rofl — THE HOLISTIC DATASET, shared by
+-- the agg_holistic_* worlds (facts/checks.rofl; docs/aggregates.md, "The
+-- holistic aggregates, as built"). The expected values are computed by hand
+-- in agg-holistic-eval-check.rofl.
+--
+-- godd has seven members, an odd count: two equal values under different
+-- keys (two members), and both of them arrive three rules deep, so they are
+-- the last in the canonical order although they are the least values: the
+-- value must come from the sorted values, not the order members arrive in.
+-- geven has four, so its median is the lower one. gdup holds one (value,
+-- key) from two sources (one member), two keys with one value (two members)
+-- and a line from an untrusted source, dropped two negations deep. gone has
+-- one member, gneg negative values, gzero a zero divisor for ah_inv, gbad a
+-- value that is not an integer, and gempty no line at all.
+edb(ah_group).
+edb(ah_raw).
+edb(ah_late).
+edb(ah_src).
+edb(ah_trusted).
+edb(ah_ask).
+edb(ah_probe).
+edb(ah_inv_ask).
+ah_group(godd).
+ah_group(geven).
+ah_group(gdup).
+ah_group(gone).
+ah_group(gneg).
+ah_group(gzero).
+ah_group(gbad).
+ah_group(gempty).
+ah_raw(godd, k1, 4, a).
+ah_late(godd, k2, 1, a).
+ah_raw(godd, k3, 9, a).
+ah_late(godd, k4, 1, b).
+ah_raw(godd, k5, 6, a).
+ah_raw(godd, k6, 12, a).
+ah_raw(godd, k7, 15, b).
+ah_raw(geven, k1, 40, a).
+ah_raw(geven, k2, 10, a).
+ah_late(geven, k3, 30, a).
+ah_raw(geven, k4, 20, a).
+ah_raw(gdup, k1, 9, a).
+ah_raw(gdup, k1, 9, b).
+ah_raw(gdup, k2, 2, a).
+ah_raw(gdup, k3, 2, a).
+ah_raw(gdup, k4, 100, c).
+ah_raw(gone, k1, 7, a).
+ah_raw(gneg, k1, -5, a).
+ah_raw(gneg, k2, 3, a).
+ah_raw(gneg, k3, -1, a).
+ah_raw(gzero, k1, 4, a).
+ah_raw(gzero, k2, 0, a).
+ah_raw(gbad, k1, 3, a).
+ah_raw(gbad, k2, lots, a).
+ah_src(a).
+ah_src(b).
+ah_src(c).
+ah_trusted(a).
+ah_trusted(b).
+
+ah_void(S)           :- ah_src(S), not ah_trusted(S).
+ah_ok(S)             :- ah_src(S), not ah_void(S).
+ah_line(G, K, V, S)  :- ah_raw(G, K, V, S), ah_ok(S).
+ah_late1(G, K, V, S) :- ah_late(G, K, V, S).
+ah_late2(G, K, V, S) :- ah_late1(G, K, V, S).
+ah_line(G, K, V, S)  :- ah_late2(G, K, V, S), ah_ok(S).
+
+-- the percents asked, each bound before its quantile; 101 is no percent
+ah_ask(godd, 0).
+ah_ask(godd, 14).
+ah_ask(godd, 15).
+ah_ask(godd, 28).
+ah_ask(godd, 29).
+ah_ask(godd, 50).
+ah_ask(godd, 57).
+ah_ask(godd, 58).
+ah_ask(godd, 85).
+ah_ask(godd, 90).
+ah_ask(godd, 100).
+ah_ask(geven, 25).
+ah_ask(geven, 26).
+ah_ask(geven, 50).
+ah_ask(geven, 51).
+ah_ask(geven, 75).
+ah_ask(geven, 76).
+ah_ask(geven, 101).
+ah_ask(gdup, 66).
+ah_ask(gdup, 67).
+ah_ask(gone, 0).
+ah_ask(gone, 100).
+ah_ask(gneg, 33).
+ah_ask(gneg, 34).
+ah_ask(gempty, 50).
+ah_ask(gempty, 101).
+-- subjects asked from outside: a value of the group, one that is not, a
+-- group with no value, and a subject that is no integer
+ah_probe(godd, 12).
+ah_probe(godd, 5).
+ah_probe(geven, 40).
+ah_probe(gempty, 1).
+ah_probe(godd, lots).
+ah_inv_ask(godd).
+ah_inv_ask(gzero).
+
+-- correlated, so gempty is asked and has no row; and grouped, the same rows
+ah_med(G, M)        :- ah_group(G), M is median(V ; K : ah_line(G, K, V, _)).
+ah_med_by(G, M)     :- M is median(V ; K : ah_line(G, K, V, _)).
+ah_q(G, P, Q)       :- ah_ask(G, P), Q is quantile(P, V ; K : ah_line(G, K, V, _)).
+ah_rank(G, V, R)    :- ah_line(G, _, V, _), R is rank(V, W : ah_line(G, _, W, _)).
+ah_rank_of(G, S, R) :- ah_probe(G, S), R is rank(S, W : ah_line(G, _, W, _)).
+ah_inv(G, M)        :- ah_inv_ask(G), M is median(W ; K : ah_line(G, K, V, _), W is 60 / V).
+-- the percent read inside the body too: the group differs per percent, so it
+-- is not one group shared across percents
+ah_qin(G, P, Q)     :- ah_ask(G, P), Q is quantile(P, V ; K : ah_line(G, K, V, _), V > P).

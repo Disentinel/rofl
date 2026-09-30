@@ -1,0 +1,3 @@
+-- expect-refusal: not an expression
+-- the threshold is a term: bind it before
+sxtr_expression(C) :- sxt_need(C, N), at_least(N + 1, W : sxt_v(W, C)).

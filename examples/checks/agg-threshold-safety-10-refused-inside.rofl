@@ -1,0 +1,10 @@
+-- expect-refusal: a threshold may count only what no open lattice
+-- the rule reads the lattice inside its recursion, beside a threshold
+edb(atsr_e).
+edb(atsr_ok).
+atsr_e(a, b, 1).
+atsr_ok(w, b).
+lattice atsr_d(A, C, min D).
+atsr_d(A, C, D) :- atsr_e(A, C, D).
+atsr_d(a, C, 0) :- atsr_inside(C).
+atsr_inside(C) :- atsr_d(a, C, D), D < 5, at_least(1, X : atsr_ok(X, C)).

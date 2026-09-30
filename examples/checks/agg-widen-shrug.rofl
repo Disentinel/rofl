@@ -1,0 +1,33 @@
+-- examples/checks/agg-widen-shrug.rofl — agg_widen_shrug, over
+-- agg-widen-data.rofl: a widened cell is a shrug, `widened`, its meta the
+-- enclosure `within(V)` it closed on, one row per cell; the atom it held is a
+-- shrug inherited from it, and so is every point that read it, a membership
+-- over one and a negation over one: never a definite answer computed from an
+-- over-approximation. What is decided is what no widening reached. And the
+-- rows are data: a rule reads the enclosure off them, an infinite end an atom
+-- it names (`ninf` is no number, so `Lo >= 0` is asked of finite ends only):
+-- which loop counters can never go negative, by the enclosure alone.
+edb(awg_pt).
+awg_pt(entry). awg_pt(body). awg_pt(exit).
+awg_bound(R, Lo, Hi)  :- shrug[$kernel]($lattice(R, main, 0, $cons(head, $nil)), widened, within(iv(Lo, Hi))).
+awg_nonneg(R)         :- awg_bound(R, Lo, _), Lo != ninf, Lo >= 0.
+awg_want_nonneg(aw_loop). awg_want_nonneg(aw_up). awg_want_nonneg(aw_dbl). awg_want_nonneg(aw_tight).
+awg_nonneg_wrong(R)   :- awg_want_nonneg(R), not awg_nonneg(R).
+awg_nonneg_wrong(R)   :- awg_nonneg(R), not awg_want_nonneg(R).
+awg_rows(R, N)        :- awg_want_nonneg(R), N is count(V : awg_bound(R, V, _)).
+awg_one_row(R, N)     :- awg_rows(R, N), N != 1.
+awg_zero(P)           :- aw_at(P, I), 0 in I.
+awg_quiet(P)          :- awg_pt(P), not awg_zero(P).
+alarm(awg_nonneg_wrong).
+alarm(awg_one_row).
+-- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel](aw_loop(head,$unknown_value),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
+-- expect-row: shrug[$kernel](awg_zero(body),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
+-- expect-row: shrug[$kernel](awg_quiet(body),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
+-- expect-row: shrug[$kernel](awg_quiet(exit),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
+-- expect-row: awg_zero[main](entry)
+-- expect-row: awg_nonneg[main](aw_dbl)
+-- expect-no-row: awg_quiet[main](
+-- expect-no-row: awg_zero[main](body)
+-- expect-no-row: awg_nonneg[main](aw_walk)
+-- expect-no-row: shrug[$kernel](awg_quiet(entry)

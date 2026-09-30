@@ -1,0 +1,8 @@
+-- expect-refusal: negates a lattice relation inside
+-- a negation is no monotone read: a subsumptive relation read under `not`
+-- inside its own recursion is refused, as a lattice's is
+edb(assr_f).
+assr_f(a, b). assr_f(b, a).
+assr_g(X, 1) :- assr_f(X, _).
+assr_g(X, 2) :- assr_f(X, Y), assr_g(Y, _), not assr_g(Y, 1).
+assr_g(X, V1) <= assr_g(X, V2) :- V2 < V1.

@@ -1,0 +1,8 @@
+-- expect-refusal: is asserted, but assr_asr is subsumptive
+-- a front holds what the rules conclude that nothing dominates: assert the
+-- input elsewhere and conclude it
+edb(assr_se).
+assr_se(a, 3).
+assr_asr(a, 1).
+assr_asr(A, V) :- assr_se(A, V).
+assr_asr(A, X) <= assr_asr(A, Y) :- Y < X.

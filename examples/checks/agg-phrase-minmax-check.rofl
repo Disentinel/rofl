@@ -1,0 +1,18 @@
+-- examples/checks/agg-phrase-minmax-check.rofl — agg_minmax_phrase: the least, the greatest, the
+-- disjunction and the conjunction read from their sentences and from rofl, each after a round trip.
+pm_wrong(lo)  :- not pms_lo(10).
+pm_wrong(lo)  :- not pmr_lo(10).
+pm_wrong(hi)  :- not pms_hi(45).
+pm_wrong(hi)  :- not pmr_hi(45).
+pm_wrong(any) :- not pms_any(true).
+pm_wrong(any) :- not pmr_any(true).
+pm_wrong(all) :- not pms_all(false).
+pm_wrong(all) :- not pmr_all(false).
+pm_wrong(lo)  :- pms_lo(M), M != 10.
+pm_wrong(hi)  :- pms_hi(M), M != 45.
+alarm(pm_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(pmr_lo, "is the least V such that").
+sentence_word(pmr_hi, "is the greatest V such that").
+sentence_word(pmr_any, "is the disjunction of X such that").
+sentence_word(pmr_all, "is the conjunction of X such that").

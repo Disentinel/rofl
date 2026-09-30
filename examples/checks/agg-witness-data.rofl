@@ -1,0 +1,25 @@
+-- examples/checks/agg-witness-data.rofl — DERIVATION HEIGHTS, for the cell
+-- witness and its reflection (agg_cell_witness, agg_cell_reflect).
+--
+-- aw_p(X) is derived two ways, at height 2 (through aw_q) and, for X > 4,
+-- at height 4 (through aw_r and aw_s); a fact's height is its lowest. Each
+-- derivation joins a premise at height 1 with one at height 0, so a height
+-- is 1 + the HIGHEST premise. aw_p(3) is also given, so its height is 0.
+-- aw_top reads aw_n's conclusion: an aggregate over an aggregate.
+edb(aw_base).
+aw_base(1).
+aw_base(2).
+aw_base(3).
+aw_base(4).
+aw_base(5).
+aw_base(6).
+aw_base(7).
+aw_p(3).
+aw_q(X) :- aw_base(X).
+aw_r(X) :- aw_q(X), X > 4.
+aw_s(X) :- aw_r(X).
+aw_p(X) :- aw_q(X), aw_base(X).
+aw_p(X) :- aw_s(X), aw_base(X).
+aw_n(N)   :- N is count(X : aw_p(X)).
+aw_top(M) :- M is max(N : aw_n(N)).
+aw_odd(N) :- N is count(X : aw_q(X), not aw_r(X)).

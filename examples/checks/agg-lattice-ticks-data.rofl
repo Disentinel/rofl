@@ -1,0 +1,50 @@
+-- examples/checks/agg-lattice-ticks-data.rofl — A LATTICE ACROSS TICKS, for
+-- agg_lattice_ticks (docs/aggregates.md, "Well-founded worlds and ticks, as
+-- built"). `tl_dist(A, C, D)@next` stages a contribution: at tick 1 it is a
+-- base fact of tl_dist@next, a relation no program can write, and the cell
+-- folds it with the contributions of tick 1's own rules. Tick 1 loses every
+-- edge out of b and gains x -> y at 2, so b -> c holds only by what tick 0
+-- carried, a -> c keeps the 6 tick 0 reached through b over the 9 it can
+-- reach itself, x -> y improves on the 4 carried, and a -> b folds the 5
+-- carried with the 105 the second staging rule carried.
+edb(tl_e).
+tl_e(a, b, 5). tl_e(b, c, 1). tl_e(a, c, 9). tl_e(c, d, 1). tl_e(x, y, 4).
+tl_e(A, B, W)@next :- tl_e(A, B, W), A != b.
+tl_e(x, y, 2)@next :- tl_e(x, y, 4).
+lattice tl_dist(A, C, min D).
+tl_dist(A, C, D) :- tl_e(A, C, D).
+tl_dist(A, C, D) :- tl_dist(A, B, D1), tl_e(B, C, W), D is D1 + W.
+tl_dist(A, C, D)@next :- tl_dist(A, C, D).
+tl_dist(A, C, D)@next :- tl_e(A, C, W), D is W + 100.
+-- A HOLE ACROSS THE BOUNDARY. heavy is no weight: tl_h's cells (c,k),
+-- (a,k), (c,f) and (a,f) are holes at tick 0, and the staging rule is holed
+-- for them. At tick 1 they are unknown, not absent: a cell of tl_h there is
+-- no better than a hole, and a count of a's cells is not 1. Tick 0's (a,f)
+-- was at most 10, never known.
+edb(tl_he).
+tl_he(a, c, 1). tl_he(c, k, heavy). tl_he(k, f, 1). tl_he(a, f, 10).
+lattice tl_h(A, C, min D).
+tl_h(A, B, W) :- tl_he(A, B, W).
+tl_h(A, C, D) :- tl_h(A, B, D1), tl_he(B, C, W), D is D1 + W.
+tl_h(A, C, D)@next :- tl_h(A, C, D).
+-- A staging rule a hole reaches beside the values it stages: b's value is
+-- no number, so tl_x(b, _) is unknown and so is the least of tl_x at tick 0;
+-- tl_best(k) at tick 1 is a hole, not the 6 that was staged beside it.
+edb(tl_v).
+tl_v(a, 5). tl_v(b, oops). tl_v(c, 7).
+tl_x(K, Y) :- tl_v(K, X), Y is X + 1.
+lattice tl_best(K, min D).
+tl_best(k, Y)@next :- tl_x(_, Y).
+-- A FACT A HOLE WITHDREW AFTER A RULE @next READ IT: tl_wq(b) rests on
+-- b's cell, a hole at its close (10 / 0), and was staged before the close;
+-- at tick 1 tl_ws(b) is unknown, as it would be had the hole come first,
+-- and tl_ws(a) holds.
+edb(tl_we).
+tl_we(a, 1). tl_we(b, 0). tl_we(b, 2).
+lattice tl_w(K, min V).
+tl_w(K, V) :- tl_we(K, W), V is 10 / W.
+tl_wq(K) :- tl_w(K, _).
+tl_w(K, V) :- tl_wq(K), tl_we(K, V).
+tl_ws(K)@next :- tl_wq(K).
+explain_request(K, A)@next :- explain_request(K, A).
+alarm(R)@next :- alarm(R).

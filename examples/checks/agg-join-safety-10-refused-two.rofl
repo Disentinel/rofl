@@ -1,0 +1,6 @@
+-- expect-refusal: two operations
+-- one relation, one algebra
+edb(ajsr_e). ajsr_e(a, b). ajsr_e(b, a).
+lattice ajsr_two(X, union S).
+lattice ajsr_two(X, hull S).
+ajsr_two(X, set(X)) :- ajsr_e(X, _).

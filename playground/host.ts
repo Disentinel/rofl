@@ -7,7 +7,7 @@ import { fold, type Step } from './fold.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, type Cell, type Kind } from '../notebook/book.ts';
-import { varsOf, canonTerm, mka, type Clause } from '../src/unify.ts';
+import { varsOf, canonTerm, mka, litsOf, termsOf, type Clause } from '../src/unify.ts';
 import type { FactRec, FactStore, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
@@ -94,7 +94,7 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
 /** The head's variables that nothing in the body gives a value. */
 function loose(cl: Clause): string[] {
   const bound = new Set<string>();
-  for (const b of cl.body) if (b.t === 'bi') { varsOf(b.l, bound); varsOf(b.r, bound); } else if (b.t === 'pos') b.lit.args.forEach((a) => varsOf(a, bound));
+  for (const b of cl.body) if (b.t === 'bi') { varsOf(b.l, bound); varsOf(b.r, bound); } else if (b.t === 'pos') b.lit.args.forEach((a) => varsOf(a, bound)); else if (b.t === 'agg') termsOf(b).forEach((a) => varsOf(a, bound));
   return [...cl.head.args.reduce((s, a) => varsOf(a, s), new Set<string>())].filter((v) => !v.startsWith('_') && !bound.has(v));
 }
 
@@ -124,7 +124,7 @@ type Scanned = { key: string; facts: string[]; nodes: Record<string, Node>; pars
 
 /** Every relation the clauses conclude or read. */
 function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
-  for (const cl of program) { into.add(cl.head.rel); for (const b of cl.body) if (b.t !== 'bi') into.add(b.lit.rel); }
+  for (const cl of program) { into.add(cl.head.rel); for (const b of cl.body) for (const l of litsOf(b)) into.add(l.rel); }
   return into;
 }
 
@@ -306,7 +306,7 @@ export class Host {
     // a relation the cells read and nothing defines, a cell's left-out rule the usual cause: what rests on it is empty for no reason in the code
     const deps = new Map<string, Set<string>>(), rules = new Map<string, { rel: string; cell: number }>();
     texts.forEach((x, i) => { if (x.trim()) try { for (const cl of parseProgram(x)) {
-      const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) if (b.t !== 'bi') d.add(b.lit.rel);
+      const d = deps.get(cl.head.rel) ?? deps.set(cl.head.rel, new Set()).get(cl.head.rel)!; for (const b of cl.body) for (const l of litsOf(b)) d.add(l.rel);
       if (cl.body.length) rules.set(ruleIdOf(cl), { rel: cl.head.rel, cell: i });
     } } catch { /* said by the load */ } });
     /** What `say` says of the first relation `rel` rests on, or of `rel` itself when `self`. */
