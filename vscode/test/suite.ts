@@ -217,6 +217,7 @@ export async function run() {
   if (extras && (planted || !bad.length)) await extra('stop', () => interrupt(process.env.ROFL_NB_RUNAWAY!, cases[0], api, bad));
   if (extras && (planted || !bad.length)) await extra('bare', () => bare(process.env.ROFL_NB_BARE!, bad));
   if (extras && (planted || !bad.length)) await extra('mixed', () => mixed(process.env.ROFL_NB_MIXED!, bad));
+  if (extras && (planted || !bad.length)) await extra('reading', () => reading(process.env.ROFL_NB_READING!, bad));
   server.close();
   writeFileSync(process.env.ROFL_NB_REPORT!, bad.join('\n'));
   if (bad.length) throw new Error(bad.join('\n'));
@@ -414,6 +415,32 @@ async function language(bad: string[]) {
 
 /** The tutorial's fact list is a rofl cell with no fence: a fact edited in place stays in that cell, saved the file differs by that edit alone,
  *  and a fact that does not read is said under that cell, not in the notebook's head. */
+/** `draw K in F` draws the frame F alone; ROFL: Reading view collapses the sentences and datalog cells, which no API reports, so it is seen as
+ *  VS Code shows it: more cells in the window at once, as many as before once it is off again. The file is not touched. */
+async function reading(file: string, bad: string[]) {
+  const t0 = Date.now(), before = readFileSync(file, 'utf8');
+  const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file)), ed = await vscode.window.showNotebookDocument(nb);
+  await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: ID });
+  await vscode.commands.executeCommand('notebook.execute');
+  const marks = (text: string) => { const c = nb.getCells().find((x) => x.document.getText().includes(text)); const o = c?.outputs.flatMap((x) => x.items).find((i) => i.mime === VIEW_MIME);
+    return o && Object.keys(JSON.parse(new TextDecoder().decode(o.data)).view.marks).sort().join(' '); };
+  await until(() => marks('draw graph in the frame'), 60_000, 'the pictures').catch(() => {});
+  for (const [line, want] of [['draw graph in q1', 'a b'], ['draw graph in the frame `q2`', 'c d']]) if (marks(line) !== want) bad.push(`${file}: ${line} drew ${JSON.stringify(marks(line))}, not ${want}`);
+  const seen = async () => { ed.revealRange(new vscode.NotebookRange(0, 1), vscode.NotebookEditorRevealType.AtTop); await new Promise((f) => setTimeout(f, 1500)); return ed.visibleRanges.reduce((n, r) => n + r.end - r.start, 0); };
+  const open = await seen(), acted = await vscode.commands.executeCommand<number[]>('rofl-notebook.reading', nb.uri), folded = await seen();
+  const code = nb.getCells().filter((c) => c.kind === vscode.NotebookCellKind.Code && c.document.languageId !== 'yaml' && !c.metadata.bare).map((c) => c.index);
+  if (JSON.stringify(acted) !== JSON.stringify(code)) bad.push(`${file}: the reading view acted on the cells ${JSON.stringify(acted)}, not the sentences and datalog cells ${JSON.stringify(code)}`);
+  if (folded <= open) bad.push(`${file}: the reading view collapsed no input: ${open} cells in the window before, ${folded} after`);
+  await vscode.commands.executeCommand('rofl-notebook.reading', nb.uri);
+  const again = await seen();
+  if (again !== open) bad.push(`${file}: the reading view turned off does not open the cells again: ${open} cells in the window before, ${again} after`);
+  if (nb.isDirty) bad.push(`${file}: the reading view made the notebook dirty`);
+  await nb.save();
+  if (readFileSync(file, 'utf8') !== before) bad.push(`${file}: the reading view reached the file`);
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+  console.log(`reading view: ${open} cells in the window, ${folded} in reading view, ${again} after: ${Date.now() - t0} ms`);
+}
+
 async function bare(file: string, bad: string[]) {
   const t0 = Date.now(), before = readFileSync(file, 'utf8'), from = '- `c1` is to be painted `blue`.', to = '- `c1` is to be painted `red`.';
   const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(file));

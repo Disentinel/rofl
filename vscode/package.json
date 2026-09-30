@@ -52,6 +52,7 @@
       { "command": "rofl-notebook.refine", "title": "Refine in plain language", "category": "ROFL", "icon": "$(comment-discussion)" },
       { "command": "rofl-notebook.revert", "title": "Revert to the natural cell", "category": "ROFL", "icon": "$(discard)" },
       { "command": "rofl-notebook.restart", "title": "Restart kernel", "category": "ROFL", "icon": "$(debug-restart)" },
+      { "command": "rofl-notebook.reading", "title": "Reading view", "category": "ROFL", "icon": "$(book)" },
       { "command": "rofl-notebook.chooseModel", "title": "Choose model", "category": "ROFL" }
     ],
     "configuration": {
@@ -77,7 +78,8 @@
     "menus": {
       "notebook/toolbar": [
         { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" },
-        { "command": "rofl-notebook.restart", "when": "notebookType == rofl-notebook" }
+        { "command": "rofl-notebook.restart", "when": "notebookType == rofl-notebook" },
+        { "command": "rofl-notebook.reading", "when": "notebookType == rofl-notebook" }
       ],
       "notebook/cell/title": [
         { "command": "rofl-notebook.translateCell", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.naturals" },

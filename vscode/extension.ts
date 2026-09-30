@@ -108,6 +108,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   const verdicts = new Map<string, { text: string; colour: string; around: string }[]>();   // and the colour each verdict in its outputs was drawn in
   const whys = new Map<string, { row: string; tree: string | null }[]>(), rows = new Map<string, { row: string; why: boolean }[]>();   // and each why a row showed or hid, and every row with a why or none
   const ran = new Map<string, { stamp: string; text: string }>();   // each notebook's last run, and its text then
+  const reading = new Set<string>();   // the notebooks in reading view, in this window
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.laid', (nb: vscode.Uri) => laid.get(nb.toString()) ?? []));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.zoom', (nb: vscode.Uri, group: string) => pictures.postMessage({ zoom: group, notebook: nb.toString() })));
   ctx.subscriptions.push(vscode.commands.registerCommand('rofl-notebook.drawn', (nb: vscode.Uri) => drawn.get(nb.toString()) ?? []));
@@ -389,8 +390,20 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('rofl-notebook.revert', (c?: vscode.NotebookCell) => revert(cellArg(c))),
     vscode.commands.registerCommand('rofl-notebook.reveal', reveal),
     vscode.commands.registerCommand('rofl-notebook.restart', restart),
+    vscode.commands.registerCommand('rofl-notebook.reading', readingView),
     vscode.commands.registerCommand('rofl-notebook.chooseModel', chooseModel));
   translations();
+  /** Reading view: the inputs of the sentences and datalog cells collapsed to their first line, their outputs kept, and back. VS Code keeps it
+   *  in the editor's view state; the file never sees it. A bare cell is prose as written and stays open. The indices it acted on. */
+  async function readingView(arg?: unknown): Promise<number[]> {
+    const ed = arg instanceof vscode.Uri ? vscode.window.visibleNotebookEditors.find((e) => e.notebook.uri.toString() === arg.toString()) : vscode.window.activeNotebookEditor;
+    if (!ed || ed.notebook.notebookType !== TYPE) return [];
+    const key = ed.notebook.uri.toString(), on = !reading.delete(key);
+    if (on) reading.add(key);
+    const cells = runsOf(ed.notebook).filter((c) => c.document.getText().trim());
+    if (cells.length) await vscode.commands.executeCommand(on ? 'notebook.cell.collapseCellInput' : 'notebook.cell.expandCellInput', { ranges: cells.map((c) => ({ start: c.index, end: c.index + 1 })), document: ed.notebook.uri });
+    return cells.map((c) => c.index);
+  }
   // A .rofl.md named on the `code` command line opens as text before this extension's notebook is known; reopen it as the notebook.
   for (const tab of vscode.window.tabGroups.all.flatMap((g) => g.tabs)) {
     if (!(tab.input instanceof vscode.TabInputText) || !tab.input.uri.path.endsWith('.rofl.md') || tab.isDirty) continue;
