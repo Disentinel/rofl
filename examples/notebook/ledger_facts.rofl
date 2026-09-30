@@ -236,6 +236,7 @@ path_exists("scripts/render_docs.ts").
 path_exists("scripts/text_check.ts").
 path_exists("scripts/view.ts").
 path_exists("scripts/witness_check.ts").
+path_exists("scripts/workbench_browser.ts").
 path_exists("scripts/workbench_check.ts").
 path_exists("skills/guided-formal-reasoning/escalate.md").
 path_exists("src/api.ts").
@@ -264,6 +265,7 @@ path_exists("vscode/visual/pic-graph.ts").
 path_exists("vscode/visual/pic-notation.ts").
 path_exists("vscode/visual/renderer.ts").
 path_exists("vscode/worker.ts").
+path_exists("workbench/page.ts").
 
 reason_len(f_bun_runner_over_budget, 14).
 reason_len(f_the_check_budget_is_nearly_spent, 28).
