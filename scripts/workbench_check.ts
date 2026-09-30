@@ -80,7 +80,7 @@ const DRAWS = 'A mark X is a node if X leads to something.\n\nA mark X is a node
 const UNDECLARED = 'An entity `writer` sends the artifact `pages` to the entity `store`.\n\n? A service S sends an artifact A to a service T';
 const DECLARED = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.\n\n? A service S sends an artifact A to a service T';
 const FACTS_ONLY = 'Declared as facts:\n\n- <a id="sends"></a>A service S sends an artifact A to a service T\n\nThe flows:\n\n- `writer` sends `pages` to `store`.';
-const QUARTERS = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n- <a id="quarter"></a>A thing A is in the quarter Q\n\nThe facts:\n\n- `a` leads to `b`.\n- `c` leads to `d`.\n- `a` is in the quarter `q1`.\n- `b` is in the quarter `q1`.\n- `c` is in the quarter `q2`.\n- `d` is in the quarter `q2`.\n\n'
+const QUARTERS = 'Declared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n- <a id="quarter"></a>A thing A is in the quarter Q\n\nThe facts:\n\n- `a` leads to `b`.\n- `c` leads to `d`.\n- `b` leads to `c`.\n- `a` leads to `d`.\n- `a` is in the quarter `q1`.\n- `b` is in the quarter `q1`.\n- `b` is in the quarter `q2`.\n- `c` is in the quarter `q2`.\n- `d` is in the quarter `q2`.\n\n'
   + 'A mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\nA mark X is in the frame Q if X is in the quarter Q.\n\n'
   + 'draw graph in q1\ndraw graph in the frame `q2`\ndraw graph in q9\ndraw graph\ndraw graph on q1';
 const GOOD = 'A container A is a risky caller if A calls B, B has the shape `database`, unless A owns B.\n\nnever A is a risky caller';
@@ -127,10 +127,12 @@ async function problems(dir: string, every = true): Promise<string[]> {
   if (/prose: run/.test(keys)) bad.push('Shift+Enter in prose runs');
   if (/natural: run/.test(keys)) bad.push('Shift+Enter in natural runs');
   if (!/natural: \w+ translate translate/.test(keys)) bad.push('Cmd/Ctrl+Enter in natural does not translate');
-  // `draw K in F` draws the frame F alone, however F is said; one that nothing is in says so, and `draw K` keeps every frame
+  // `draw K in F` draws the frame F alone, however F is said; one that nothing is in says so, and `draw K` keeps every frame. Decided by the
+  // owner on 2026-09-30: a mark is in every frame it is placed in (`b`, in both), and a link whose far end is outside the frame is not drawn in it
+  // (`b` to `c` only in q2, `a` to `d` in neither)
   const qs = (await bench.run([{ id: 'q', kind: 'rofl', text: QUARTERS }])).byCell.get('q');
-  const inFrame = (qs?.lines ?? []).map((l: { text: string; view?: { marks: object; notes: string[]; facts: { rel: string }[] } }) => `${l.text}: ${Object.keys(l.view?.marks ?? {}).join(' ')}; ${l.view?.facts.filter((f) => f.rel === 'frame').length} frame facts${l.view?.notes.length ? '; ' + l.view.notes.join() : ''}`);
-  const wantFrames = ['draw graph in q1: a b; 0 frame facts', 'draw graph in the frame `q2`: c d; 0 frame facts', 'draw graph in q9: ; 0 frame facts; nothing is in the frame q9: say which marks are, "A mark M is in the frame `q9` if …"', 'draw graph: a b c d; 4 frame facts'];
+  const inFrame = (qs?.lines ?? []).map((l: { text: string; view?: { marks: object; notes: string[]; facts: { rel: string }[] } }) => `${l.text}: ${Object.keys(l.view?.marks ?? {}).join(' ')}; links ${l.view?.facts.filter((f) => f.rel === 'link').map((f) => (f as unknown as { args: string[] }).args.join('>')).join(' ')}; ${l.view?.facts.filter((f) => f.rel === 'frame').length} frame facts${l.view?.notes.length ? '; ' + l.view.notes.join() : ''}`);
+  const wantFrames = ['draw graph in q1: a b; links a>b; 0 frame facts', 'draw graph in the frame `q2`: b c d; links b>c c>d; 0 frame facts', 'draw graph in q9: ; links ; 0 frame facts; nothing is in the frame q9: say which marks are, "A mark M is in the frame `q9` if …"', 'draw graph: a b c d; links a>b a>d b>c c>d; 5 frame facts'];
   for (const w of wantFrames) {
     const line = w.slice(0, w.indexOf(': ')), got = inFrame.find((x: string) => x.startsWith(`${line}: `));
     if (got !== w) bad.push(got ? `\`draw K in F\` drew ${JSON.stringify(got)}, not ${JSON.stringify(w)}` : `\`draw K in F\` did not draw "${line}"`);
@@ -276,6 +278,8 @@ const PLANTS: [string, (dir: string) => void, RegExp][] = [
   ['a kernel row let into a picture', (d) => spoil(d, 'lib/host.js', '.find((l) => this.foreign.has(l.rel) && !l.perspExplicit)', '.find(() => false)'), /a kernel row reaches a picture/],
   ['the icons and colours left out of a graph', (d) => spoil(d, 'lib/draw.js', ", ['icon', 2], ['icon_drawing', 2], ['tag_colour', 2]", ''), /the paint shop's scene does not carry its icons and colours/],
   ['`draw K in F` drawing every frame', (d) => spoil(d, 'lib/host.js', 'let view = scoped(picture(kind, f, w), only);', 'let view = picture(kind, f, w);'), /`draw K in F` drew "draw graph in q1: a b c d/],
+  ['a link across frames drawn in the frame of its near end', (d) => spoil(d, 'lib/draw.js', '(!PAIRS.includes(f.rel) || mine(f.args[1]))', 'true'), /`draw K in F` drew "draw graph in q1: a b; links a>b a>d b>c;/],
+  ['a mark in its last frame only', (d) => spoil(d, 'lib/draw.js', '(of.get(f.args[0]) ?? of.set(f.args[0], new Set()).get(f.args[0])).add(', 'of.set(f.args[0], new Set()).get(f.args[0]).add('), /`draw K in F` drew "draw graph in q1: a;/],
   ['`draw K in the frame F` not read', (d) => spoil(d, 'lib/host.js', '(?:the frame\\s+)?', ''), /`draw K in F` did not draw "draw graph in the frame `q2`"/],
   ['the vacuous-cell gate off', (d) => spoil(d, 'lib/translate.js', ', ...silent, ...vacuous]', ', ...silent]'), /a first cell that checks nothing was not refused/],
 ];

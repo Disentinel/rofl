@@ -190,9 +190,11 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
 const SETTINGS = ['tag_colour', 'icon_drawing', 'draws', 'shows', 'projection', 'axis'];
 export function scoped(v: View, key?: string): View {
   if (key === undefined) return { ...v, facts: v.facts.filter((f) => f.rel !== 'frame' || v.marks[f.args[0]]) };
-  const of = new Map(v.facts.filter((f) => f.rel === 'frame').map((f) => [f.args[0], unquote(f.args[1])]));
-  const mine = (id: string) => of.get(id) === key;
-  const facts = v.facts.filter((f) => f.rel !== 'frame' && (SETTINGS.includes(f.rel) || mine(f.args[0])));
+  const of = new Map<string, Set<string>>();
+  for (const f of v.facts.filter((f) => f.rel === 'frame')) (of.get(f.args[0]) ?? of.set(f.args[0], new Set()).get(f.args[0])!).add(unquote(f.args[1]));
+  const mine = (id: string) => !!of.get(id)?.has(key);   // a mark may be in several frames: a part drawn in each flow it takes part in
+  const PAIRS = ['link', 'link_tagged', 'inside'];   // a link or a box that leaves the frame goes with its far end
+  const facts = v.facts.filter((f) => f.rel !== 'frame' && (SETTINGS.includes(f.rel) || (mine(f.args[0]) && (!PAIRS.includes(f.rel) || mine(f.args[1])))));
   const marks = Object.fromEntries(Object.entries(v.marks).filter(([id]) => mine(id)));
   const notes = Object.keys(marks).length ? v.notes : [...v.notes, `nothing is in the frame ${key}: say which marks are, "A mark M is in the frame \`${key}\` if …"`];
   return { ...v, facts, marks, notes, ...(v.cells && { cells: v.cells.filter((c) => mine(c.row)) }) };
