@@ -7,6 +7,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { RESERVED } from '../src/reflect.ts';
 import { chrome, drift, reading, type Drift } from './workbench_browser.ts';
+import { publishedDiff } from './published_diff.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-workbench-'));
@@ -24,7 +25,7 @@ const said: (() => void)[] = [];
   const bad = HOWS.flatMap((h, k) => still(ds[k], h, h !== 'peer'));
   said.push(() => say(!bad.length, `in a browser: typing 30 characters mid a 60-line cell, and at its end, with newest first, and while someone rewrites a cell above, the line moves at most ${Math.max(...ds.map((d) => d.max)).toFixed(1)} px (a line is ${ds[0].line} px)`, bad.join('\n     ')));
   const BROWSER_PLANTS: [string, string, [string, string], (typeof HOWS)[number], RegExp][] = [
-    ['grow collapsing the page', 'lib/page.js', ['if (scrollY !== y)\n    scrollTo(scrollX, y);', ''], 'plain', /the line being typed moved/],
+    ['grow collapsing the page', 'lib/page.js', ['scrollTo(scrollX, y);', ';'], 'plain', /the line being typed moved/],
     ['fill regrowing every textarea', 'lib/page.js', ['    if (fresh)\n        requestAnimationFrame(() => steady(() => grow(t)));', '    requestAnimationFrame(() => grow(t));'], 'plain', /a textarea no one typed in was grown/],
     ['the anchor removed', 'lib/page.js', ['        if (d)\n            scrollBy(0, d);', ''], 'peer', /the line being typed moved/],
     ['the reading view on whatever the viewer chose', 'lib/page.js', ["localStorage.getItem('rofl-workbench:reading') !== '0'", 'true'], 'plain', /the typing did not reach/],
@@ -236,6 +237,16 @@ const say = (ok: boolean, what: string, detail = '') => { if (!ok) red++; consol
 const t0 = performance.now();
 const asBuilt = await problems(built);
 say(!asBuilt.length, 'as built: every example of examples/visual says its verdicts in their colours and draws its failing marks, the hint reads and draws, `draw K in F` draws its frame alone, no example is published, and a vacuous translation is asked again', asBuilt.join('\n     '));
+
+// npm run published-diff: the build as published, in the artifact's skeleton, is what the tree builds; a file edited in it is named
+const pub = path.join(tmp, 'published'), skeleton = '<!doctype html><html><head><meta charset=utf8></head><body>\n';
+cpSync(built, pub, { recursive: true });
+writeFileSync(path.join(pub, 'index.html'), skeleton + readFileSync(path.join(built, 'index.html'), 'utf8').replace(/\n$/, '') + '\n\n</body></html>');
+const same = publishedDiff(pub, built);
+writeFileSync(path.join(pub, 'lib/pic-dialects.js'), readFileSync(path.join(pub, 'lib/pic-dialects.js'), 'utf8').replace("height: 40", "height: 41"));
+writeFileSync(path.join(pub, 'lib/draw.js'), readFileSync(path.join(pub, 'lib/draw.js'), 'utf8').replace(/\n/g, '\n  '));
+const edited = publishedDiff(pub, built).map((d) => `${d.file} ${d.how}`).join(', ');
+say(!same.length && edited === 'lib/draw.js whitespace, lib/pic-dialects.js differs', 'published-diff: the build in the artifact\'s skeleton is what the tree builds; a file edited in it is named, and one only re-indented is said to differ in whitespace', `${JSON.stringify(same)}; planted: ${edited}`);
 
 /** A copy of the build with one defect; red, and for the reason `why` names. */
 const PLANTS: [string, (dir: string) => void, RegExp][] = [

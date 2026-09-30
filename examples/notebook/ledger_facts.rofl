@@ -230,6 +230,7 @@ path_exists("scripts/nb_product.ts").
 path_exists("scripts/parser_optional.ts").
 path_exists("scripts/playground.ts").
 path_exists("scripts/port_corpus.ts").
+path_exists("scripts/published_diff.ts").
 path_exists("scripts/read.ts").
 path_exists("scripts/read_md.ts").
 path_exists("scripts/render_docs.ts").

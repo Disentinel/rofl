@@ -69,6 +69,7 @@
     "view": "node --experimental-strip-types scripts/view.ts",
     "playground": "node --experimental-strip-types scripts/playground.ts",
     "workbench": "node --experimental-strip-types scripts/workbench.ts",
+    "published-diff": "node --experimental-strip-types scripts/published_diff.ts",
     "conform": "node --experimental-strip-types examples/ring1/conform.ts",
     "sentences": "node --experimental-strip-types scripts/sentences.ts",
     "render:js": "rust/target/release/rofl-render --out docs/js facts/phrases.rofl facts/js-phrases.rofl rules/js-*.rofl --tables facts/js-*.rofl",
