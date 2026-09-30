@@ -36,12 +36,15 @@ export type ReadResult = {
   roflAt: (number | undefined)[];
   literal(text: string): string | null;
   /** an English asking line in the file's own sentences: the line it reads as, or what stops it */
-  question(text: string): Question;
+  question(text: string, number?: Numbering): Question;
 };
 /** `line`: the asking line an English one reads as, `? X leaves the line`. `count`: How many, the blank it counts. `blank`: a why with a blank
- *  in it, which the host answers with the names that fill it. `noun`: what the blank stands for. */
+ *  in it, which the host answers with the names that fill it. `noun`: what the blank stands for. `rules`: the rules a line that says more
+ *  than one sentence makes, which `line` asks, and `phrase` their head's sentence. `also`: a second line the same English asks. */
 export type Question = { kind: 'answers' | 'never' | 'why' | 'whynot'; line: string; lit: string; noun?: string; yesno?: true; count?: string; note?: string;
-  blank?: { lit: string; v: string; say: (names: string[]) => string } } | { error: string };
+  blank?: { lit: string; v: string; say: (names: string[]) => string }; rules?: string[]; phrase?: string; also?: { line: string; lit: string }[] } | { error: string };
+/** The number of a promise (`breaks promise 1`) or a question (`answers question 1`) a line makes a rule for: the book counts them. */
+export type Numbering = (what: 'promise' | 'question') => number;
 
 /** A noun's plural, `thing` -> `things`, `person` -> `people`: the head word, the one before `of` if there is one. */
 export function plural(n: string): string {
@@ -55,6 +58,8 @@ const BE = new Map([['is', ['is', 'are', 'am']], ['are', ['are', 'is']], ['was',
 const MODAL = new Set(['can', 'could', 'must', 'may', 'will', 'should', 'would']);
 const AUX = new Set([...BE.keys(), 'did', ...MODAL]);
 const NOT = new Map([['wo', 'will'], ['ca', 'can']]);
+/** the irregular pasts a plural question may use, which take no -s: `Which cars came off the line?` */
+const PAST = new Set(['came', 'ran', 'took', 'went', 'got', 'made', 'had', 'said', 'saw', 'gave', 'found', 'left', 'kept', 'held', 'put', 'set', 'sent', 'built', 'bought', 'sold', 'told', 'became']);
 const PRONOUN = new Set(['it', 'they', 'them', 'he', 'she', 'this', 'that']);
 const STOP = new Set(['a', 'an', 'the', 'is', 'are', 'of', 'in', 'to', 'by', 'and', 'at', 'some', 'on', 'as', 'with', 'from', 'something', 'for']);
 /** a verb as the template writes it, `leaves`, and the forms a question may use: `leave`; `happened` after did: `happen` */
@@ -891,16 +896,28 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if (all.length > 1) return { error: `this reads ${all.length} ways, ${all.map((x) => `"${x.r.said}"`).join(' · ')}: ask the one you mean with ?` };
     return { error: unread(raw, cands.map((c) => ({ ...c, s: indefinite(c.s) })), then) };
   }
-  /** Why an English line reads as no sentence, in the writer's terms, with a line that does read. */
-  function unread(raw: string, ss: Cand[], then: string): string {
-    if (!ss.length) return `no sentence reads "${raw.trim()}": the words after the question word must start with a name, a blank or "some" and a noun`;
+  /** Two sentences a line joins with and or or, `X are late and short of \`door\``: each read, and the subject they share. */
+  function joined(ss: Cand[]): { op: string; l: Reading; r: Reading; subj: string; np?: string } | undefined {
     for (const c of ss) {
       const j = / (and|or) /.exec(c.s.replace(/`[^`]*`|"[^"]*"/g, (x) => '_'.repeat(x.length))); if (!j) continue;
       const left = c.s.slice(0, j.index), right = c.s.slice(j.index + j[0].length), [subj, verb] = tokens(left);
       const l = reads(left, c.past)[0], r = l && [right, `${subj} ${right}`, `${subj} ${verb} ${right}`].map((x) => reads(x, c.past)[0]).find(Boolean);
-      if (!l || !r) continue;
-      if (j[1] === 'or') return `"or" joins two sentences here, "${l.said}" and "${r.said}": ask each on a line of its own`;
-      const noun = singular(c.np ?? '') ?? l.holes[0].noun;
+      if (l && r) return { op: j[1], l, r, subj: subj ?? '', np: c.np };
+    }
+  }
+  /** The rules a line makes when it says more than one sentence, one for each body: `A product X breaks promise 1 if …`. */
+  function generated(what: 'promise' | 'question', noun: string, bodies: string[], number: Numbering) {
+    const k = number(what), words = what === 'promise' ? 'breaks promise' : 'answers question', rel = `${words.replace(' ', '_')}_${k}`;
+    return { rules: bodies.map((b) => `${art(noun).replace(/^a/, 'A')} ${noun} X ${words} ${k} if ${b}.`), phrase: `phrase(${rel}, "<0:${noun}> ${words} ${k}").`, said: `X ${words} ${k}`, lit: `${rel}(X)` };
+  }
+  /** Why an English line reads as no sentence, in the writer's terms, with a line that does read. */
+  function unread(raw: string, ss: Cand[], then: string): string {
+    if (!ss.length) return `no sentence reads "${raw.trim()}": the words after the question word must start with a name, a blank or "some" and a noun`;
+    const j = joined(ss);
+    if (j) {
+      const { l, r, subj } = j;
+      if (j.op === 'or') return `"or" joins two sentences here, "${l.said}" and "${r.said}": ask each on a line of its own`;
+      const noun = singular(j.np ?? '') ?? l.holes[0].noun;
       return `an asking line holds one sentence, and this one holds two: "${l.said}", "${r.said}". Join them in a rule: ${art(noun).replace(/^a/, 'A')} ${noun} ${subj} is stuck if ${l.said} and ${r.said}. Then ${then === 'never' ? `write: never ${subj} is stuck` : `ask: Which ${plural(noun)} are stuck?`}`;
     }
     for (const c of ss.filter((x) => x.past)) {
@@ -924,7 +941,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     const stem = (w: string) => w.length > 4 ? w.replace(/(?:ing|ed|es|s)$/, '') : w;
     const content = (ws: string[]) => new Set(ws.filter((w) => /^[a-z]/.test(w) && !STOP.has(w) && !AUX.has(w)).map(stem));
     const c = ss[0], want = content(tokens(c.s)), terms = tokens(c.s).filter((w) => TERM_ONLY.test(w)), noun = singular(c.np ?? '');
-    const said = c.s.replace(/^(X )(\S+)/, (_, x, v) => x + (({ are: 'is', have: 'has', do: 'does', were: 'was' } as Record<string, string>)[v] ?? v));
+    // the sentence says the blank's verb in the singular, whatever number the question's noun was in: `Which cars glow?`, "a car glows"
+    const many = !!c.np && !!noun && c.np !== noun;
+    const said = c.s.replace(/^(X )(\S+)/, (_, x, v) => x + (({ are: 'is', have: 'has', do: 'does', were: 'was' } as Record<string, string>)[v] ?? (many && /^[a-z]+$/.test(v) && !AUX.has(v) && !/(?:[^s]s|ed)$/.test(v) && !PAST.has(v) ? third(v) : v)));
     const about = (ts: Tpl[]) => ts.filter((t) => t.parts[0].t === 'hole' && t.parts[0].noun === noun);
     let close = templates.filter((t) => [...content(textWords(t))].some((w) => want.has(w)));
     if (about(close).length) close = about(close);
@@ -947,33 +966,70 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
   const nounOf = (r: Reading, np?: string) => singular(np ?? '') ?? r.holes.find((h) => h.text === 'X')?.noun;
   const unnot = (raw: string) => raw.replace(/\b(?:do|does|did)(?: not|n['’]t)\b ?/, '').replace(/\bnot\b ?/, '').replace(/n['’]t\b/, '');
   /** The line as written first; a noun before a name (`the product \`truck\``) is dropped only when that does not read, since `call \`foo\`` may be a verb. */
-  function question(raw: string): Question {
+  function question(raw: string, number: Numbering = () => 1): Question {
     const text = raw.trim().replace(/\s*[?.!]$/, '');
     const cap = tokens(text).slice(1).find((w) => /^[A-Z][A-Za-z0-9]*$/.test(w) && !/^[A-Z]\d*$/.test(w));
     if (cap) return { error: `"${cap}" is not a name: a name is in backticks, \`${cap.toLowerCase()}\`; a blank is one capital letter, X` };
-    const first = asked(raw, text, []);
+    const first = asked(raw, text, [], number);
     if (!('error' in first)) return first;
     const seen: { noun: string; name: string }[] = [], s = named(text, seen);
-    return s === text ? first : asked(raw, s, seen);
+    return s === text ? first : asked(raw, s, seen, number);
   }
-  function asked(raw: string, s: string, seen: { noun: string; name: string }[]): Question {
+  /** `Every product that is on the plan leaves the line`: a promise with its domain, as a rule that finds what breaks it and a never over that */
+  function every(raw: string, q: string, s: string, seen: { noun: string; name: string }[], number: Numbering): Question {
+    if (/\bnot\b|n['’]t\b/.test(s)) return { error: `"${q.toLowerCase()} … not" reads two ways. For none of them: No ${unnot(s)}.` };
+    const w = tokens(s);
+    for (let k = 1; k <= Math.min(3, w.length - 2); k++) {
+      if (!/^(?:that|who|which)$/.test(w[k])) continue;
+      const np = w.slice(0, k).join(' '), rest = w.slice(k + 1).join(' '), comma = rest.indexOf(', ');
+      const splits = comma > 0 ? [[rest.slice(0, comma), rest.slice(comma + 2)]] : tokens(rest).map((_, j, t) => [t.slice(0, j).join(' '), t.slice(j).join(' ')]).slice(1);
+      const found = new Map<string, [Reading, Reading]>();
+      for (const [c, p] of splits) for (const rc of reads(indefinite(`X ${c}`))) for (const rp of reads(indefinite(`X ${p}`))) found.set(`${rc.lit} ${rp.lit}`, [rc, rp]);
+      const both = [...found.values()];
+      if (both.length > 1) return { error: `this reads ${both.length} ways, ${both.map(([c, p]) => `"${c.said}" then "${p.said}"`).join(' · ')}: put a comma after the condition` };
+      if (!both.length) {
+        const c = splits.find(([c]) => reads(indefinite(`X ${c}`)).length);
+        const why = c && settle(raw, [{ s: `X ${c[1]}`, np }], 'never');
+        return { error: why && 'error' in why ? `"that ${c![0]}" reads as the condition, and what must hold of it does not: ${why.error}` : `the condition "that ${rest}" reads as no sentence: say it as Every ${np} that <a sentence> <a sentence>, or put a comma after the condition` };
+      }
+      const [c, p] = both[0], noun = singular(np) ?? c.holes.find((h) => h.text === 'X')?.noun ?? np;
+      const g = generated('promise', noun, [`${c.said}, unless ${p.said}`], number);
+      return { kind: 'never', line: `never ${g.said}`, lit: g.lit, noun, rules: g.rules, phrase: g.phrase, note: noted(c, np, seen) };
+    }
+    // no domain: the things it ranges over are named by no sentence
+    const got = settle(raw, w.slice(0, 3).map((_, k) => ({ s: `X ${w.slice(k + 1).join(' ')}`, np: w.slice(0, k + 1).join(' ') })), 'never');
+    if ('error' in got) return got;
+    const n = nounOf(got.r, got.np) ?? 'thing', rel = /^(\w+)/.exec(got.r.lit)?.[1];
+    const domain = templates.find((t) => t.arity === 1 && t.rel !== rel && t.parts[0].t === 'hole' && t.parts[0].noun === n);
+    return { error: domain ? `"${q.toLowerCase()}" needs the ${plural(n)} it ranges over, and no sentence lists every ${n}: say which, as in ${q} ${n} that ${lettered(domain).replace(/^X /, '')} ${got.r.said.replace(/^X /, '')}.`
+      : `"${q.toLowerCase()}" needs the ${plural(n)} it ranges over, and no sentence lists every ${n}: say which, as ${q} ${n} that <a sentence about ${art(n)} ${n}> ${got.r.said.replace(/^X /, '')}.` };
+  }
+  function asked(raw: string, s: string, seen: { noun: string; name: string }[], number: Numbering): Question {
     let m;
-    if ((m = /^(Every|Each) (.+)$/.exec(s))) return { error: /\bnot\b|n['’]t\b/.test(m[2]) ? `"${m[1].toLowerCase()} … not" reads two ways. For none of them: No ${unnot(m[2])}.` : `a line with "${m[1].toLowerCase()}" is not read yet: say what must never happen, as "No …" or "never …"` };
+    if ((m = /^(Every|Each) (.+)$/.exec(s))) return every(raw, m[1], m[2], seen, number);
     if (/^(?:No|Nothing|Nobody|None|There (?:is|are) no)\b/.test(s)) {
       const subj: { np?: string; rest: string }[] = [];
       if ((m = /^There (?:is|are) no (.+?) that (.+)$/.exec(s))) subj.push({ np: m[1], rest: m[2] });
       else if ((m = /^(?:Nothing|Nobody|None|No one) (.+)$/.exec(s))) subj.push({ rest: m[1] });
-      else if ((m = /^No (.+)$/.exec(s))) { const w = tokens(m[1]); for (let k = 1; k <= Math.min(3, w.length - 1); k++) subj.push({ np: w.slice(0, k).join(' '), rest: w.slice(k).join(' ') }); }
+      else if ((m = /^No (.+)$/.exec(s))) { const w = tokens(m[1]); for (let k = 1; k <= Math.min(3, w.length - 1) && w[k - 1] !== 'and' && w[k - 1] !== 'or'; k++) subj.push({ np: w.slice(0, k).join(' '), rest: w.slice(k).join(' ') }); }
       if (subj.some((x) => /\bnot\b|n['’]t\b/.test(x.rest))) return { error: `"no … not" reads two ways: say what must never happen without "not"` };
-      const got = settle(raw, subj.map((x) => ({ s: `X ${x.rest}`, np: x.np })), 'never');
-      if ('error' in got) return got;
+      const cands = subj.map((x) => ({ s: `X ${x.rest}`, np: x.np }));
+      const got = settle(raw, cands, 'never');
+      if ('error' in got) {
+        // no A or B: two nevers; no A and B: a rule for the two together, and a never over it
+        const j = joined(cands.map((c) => ({ ...c, s: indefinite(c.s) })));
+        if (!j || j.subj !== 'X') return got;
+        if (j.op === 'or') return { kind: 'never', line: `never ${j.l.said}`, lit: j.l.lit, noun: nounOf(j.l, j.np), also: [{ line: `never ${j.r.said}`, lit: j.r.lit }] };
+        const noun = nounOf(j.l, j.np) ?? 'thing', g = generated('promise', noun, [`${j.l.said} and ${j.r.said}`], number);
+        return { kind: 'never', line: `never ${g.said}`, lit: g.lit, noun, rules: g.rules, phrase: g.phrase };
+      }
       return { kind: 'never', line: `never ${got.r.said}`, lit: got.r.lit, noun: nounOf(got.r, got.np), note: noted(got.r, got.np, seen) };
     }
     if ((m = /^(How many|Which|What|Whom|Who) (.+)$/i.exec(s))) {
       const w0 = m[1].toLowerCase(), w = tokens(m[2]), cands: Cand[] = [];
       const neg = /\bnot\b|n['’]t\b/.test(m[2]);
       for (const k of w0 === 'who' || w0 === 'whom' ? [0] : w0 === 'what' ? [0, 1, 2] : [1, 2, 3]) {
-        if (k > w.length - 1) continue;
+        if (k > w.length - 1 || w.slice(0, k).some((x) => x === 'and' || x === 'or')) continue;   // a noun phrase joins nothing: `calls recurse or` is no noun
         const np = w.slice(0, k).join(' ') || undefined;
         const rest = w.slice(k).join(' ').replace(/\b(?:which|what) ([a-z][\w-]*)\b/, (x, n) => singular(n) ? 'Y' : x).replace(/\b(?:who|whom|what)\b/, 'Y');
         cands.push({ s: `X ${rest}`, np });
@@ -982,7 +1038,13 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       }
       if (neg) return { error: notSaid(unnot(raw)) };
       const got = settle(raw, cands, 'answers');
-      if ('error' in got) return got;
+      if ('error' in got) {
+        // which are A and B, which are A or B: a rule with a body for each way, and a question over it
+        const j = joined(cands.map((c) => ({ ...c, s: indefinite(c.s) })));
+        if (!j || j.subj !== 'X') return got;
+        const noun = nounOf(j.l, j.np) ?? 'thing', g = generated('question', noun, j.op === 'and' ? [`${j.l.said} and ${j.r.said}`] : [j.l.said, j.r.said], number);
+        return { kind: 'answers', line: `? ${g.said}`, lit: g.lit, noun, rules: g.rules, phrase: g.phrase, ...(w0 === 'how many' && { count: 'X' }) };
+      }
       return { kind: 'answers', line: `? ${got.r.said}`, lit: got.r.lit, noun: nounOf(got.r, got.np), note: noted(got.r, got.np, seen), ...(w0 === 'how many' && { count: 'X' }) };
     }
     if ((m = /^Why (\w+?)(n['’]t)? (.+)$/.exec(s))) {
@@ -1061,14 +1123,51 @@ export const sentenceSpans = (md: string): [number, number][] => {
 /** A line of a sentence cell that asks in English: a question, or a promise that opens with a quantifier. */
 export const english = (l: string): boolean => /^[A-Za-z].*\?$/.test(l) || /^(?:No|Nothing|Nobody|None|Every|Each|There (?:is|are) no)\s/.test(l);
 
-/** The lines, from 0, of the prose that ask in English, as a line of a sentence cell does: outside a fence, a whole sentence on its line, not the rest of one above it. */
+/** A line of the prose that asks as a cell's prefixed line does, `never X is late`: the word in lower case, first on its line, and a blank, a name
+ *  in backticks or a string after it, so a sentence of prose that happens to start with the word (`why this matters…`) is never one. */
+const ASKING = /^(\?|never|whynot|why)\s+(?=.*(?:`[^`]+`|"[^"]*"|\b[A-Z]\d*\b))(.+?)\.?\s*$/;
+export const asking = (l: string): RegExpExecArray | null => ASKING.exec(l);
+
+/** The lines, from 0, of the prose that ask, in English or by a prefixed word, as a line of a sentence cell does: outside a fence, not indented
+ *  as code, a whole sentence on its line, not the rest of one above it (the line above blank, a sentence's end, a list item, quote, heading or table row, or asking itself). */
 export function proseAsks(md: string): number[] {
   const lines = md.split('\n'), out: number[] = [];
   let fenced = false;
   lines.forEach((raw, k) => {
     if (/^```/.test(raw)) { fenced = !fenced; return; }
     const l = raw.trim(), above = (lines[k - 1] ?? '').trim();
-    if (!fenced && english(l) && /[.?]$/.test(l) && (!above || /[.?:!]$/.test(above) || /^(?:[-*>#|]|\d+\. )/.test(above))) out.push(k);
+    if (fenced || /^(?: {4}|\t)/.test(raw) || !(ASKING.test(l) || english(l) && /[.?]$/.test(l))) return;
+    if (!above || /[.?:!]$/.test(above) || /^(?:[-*>#|]|\d+\. )/.test(above) || out.includes(k - 1)) out.push(k);
   });
+  return out;
+}
+
+/** The questions of the prose that are not asked: a sentence of a plain paragraph or a list item that asks with a question word and ends in
+ *  `?`, not a line of its own (proseAsks). Each with the line, from 0, it starts on. A quote, a heading, a table and a fence are never looked at. */
+export function proseLooks(md: string): { at: number; text: string }[] {
+  const lines = md.split('\n'), asked = new Set(proseAsks(md)), out: { at: number; text: string }[] = [];
+  let fenced = false, para: { at: number; text: string }[] = [];
+  const flush = () => {
+    const text = para.map((p) => p.text).join(' '), asks = /^(?:Which|What|Who|Whom|Why|How many|Is|Are|Does|Do|Did|Can|Must|May|Will|Should|Could|Would|Has|Have|Was|Were)\b.*\?$/;
+    let from = 0;
+    const found = new Map<string, { at: number; text: string }>();
+    for (const s of text.split(/(?<=[.?!])\s+/)) {
+      const at = text.indexOf(s, from); from = at + s.length;
+      let n = 0; while (n + 1 < para.length && text.indexOf(para[n + 1].text) <= at) n++;
+      if (asks.test(s)) found.set(s, { at: para[n].at, text: s });
+    }
+    // a question on a line of its own that a sentence above runs on into
+    for (const p of para) if (asks.test(p.text) && ![...found.values()].some((f) => f.text.endsWith(p.text))) found.set(p.text, p);
+    out.push(...found.values());
+    para = [];
+  };
+  lines.forEach((raw, k) => {
+    if (/^```/.test(raw)) { fenced = !fenced; flush(); return; }
+    const l = raw.trim(), item = /^(?:[-*+]|\d+\.) (.*)$/.exec(l);
+    if (fenced || !l || asked.has(k) || /^[>#|]/.test(l) || /^(?: {4}|\t)/.test(raw)) { flush(); return; }
+    if (item) { flush(); para.push({ at: k, text: item[1] }); flush(); return; }
+    para.push({ at: k, text: l });
+  });
+  flush();
   return out;
 }
