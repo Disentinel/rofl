@@ -183,6 +183,21 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
   });
 }
 
+/** A view scoped by its draw line. `draw K in F` keeps the marks in the frame F and the facts about them, and the view's own settings
+ *  (colours, icons, a chart's channels), and draws them as one picture, not as frames compared; so a notebook, whose world is one, can draw
+ *  several tables or graphs, each of its own frame. A plain `draw K` keeps only the frame facts of its own marks: a frame another view's
+ *  marks are in does not cut this one into frames. */
+const SETTINGS = ['tag_colour', 'icon_drawing', 'draws', 'shows', 'projection', 'axis'];
+export function scoped(v: View, key?: string): View {
+  if (key === undefined) return { ...v, facts: v.facts.filter((f) => f.rel !== 'frame' || v.marks[f.args[0]]) };
+  const of = new Map(v.facts.filter((f) => f.rel === 'frame').map((f) => [f.args[0], unquote(f.args[1])]));
+  const mine = (id: string) => of.get(id) === key;
+  const facts = v.facts.filter((f) => f.rel !== 'frame' && (SETTINGS.includes(f.rel) || mine(f.args[0])));
+  const marks = Object.fromEntries(Object.entries(v.marks).filter(([id]) => mine(id)));
+  const notes = Object.keys(marks).length ? v.notes : [...v.notes, `nothing is in the frame ${key}: say which marks are, "A mark M is in the frame \`${key}\` if …"`];
+  return { ...v, facts, marks, notes, ...(v.cells && { cells: v.cells.filter((c) => mine(c.row)) }) };
+}
+
 /** The groups a view starts with shut: `A mark G is collapsed`. */
 export const shutOf = (v: View) => new Set(v.facts.filter((f) => f.rel === 'collapsed').map((f) => f.args[0]));
 

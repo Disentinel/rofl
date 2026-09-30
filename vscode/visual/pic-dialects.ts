@@ -6,6 +6,7 @@ const LOOKS = (c: (token: string) => string): Record<string, Look> => ({
   architecture: { direction: 'DOWN', style: [
     { selector: 'node.person', style: { shape: 'ellipse', height: 40 } },
     { selector: 'node.database', style: { shape: 'barrel', height: 40 } },
+    { selector: 'node.queue', style: { shape: 'rhomboid', 'border-style': 'dashed' } },
     { selector: 'node.external', style: { 'background-color': c('--p-soft'), 'border-width': 1 } },
   ] },
   state: { entry: 'initial', style: [

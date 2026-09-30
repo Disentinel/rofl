@@ -5,7 +5,7 @@ import { parseLiteral, parseProgram } from '../src/parser.ts';
 import { KERNEL_BOOK, RESERVED, ruleIdOf } from '../src/reflect.ts';
 import { fold, keyOf, type Step } from './fold.ts';
 import { proofView, type Proven } from '../notebook/draw-proof.ts';
-import { collect, diff, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
+import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
@@ -609,11 +609,13 @@ export class Host {
       const goals = asks[i].filter((x) => x.kind === 'why').flatMap((x) => { try { return [keyOf(x.lit)]; } catch { return []; } });
       const picture = (kind: DrawKind, r: Rofl, proofsOf: Rofl) => kind === 'proof' ? proofView(goals, proven(proofsOf), world(r, proofsOf).rows('collapsed(A)')?.map((b) => termText(b.A)) ?? []) : collect(kind, world(r, proofsOf));
       for (const a of asks[i].filter((x) => x.kind === 'draw')) {
-        if (!KINDS.includes(a.lit as DrawKind)) { outs[i].errors.push(`${a.text}: draw takes ${KINDS.join(', ')}`); continue; }
-        const kind = a.lit as DrawKind, cut = excised.get(i);
-        let view = picture(kind, f, w);
+        // `draw K`, or `draw K in F`: the view of the frame F alone (draw.ts scoped)
+        const dm = /^([a-z]+)(?:\s+in\s+(?:the frame\s+)?`?([\w.:-]+)`?)?$/.exec(a.lit.trim());
+        if (!dm || !KINDS.includes(dm[1] as DrawKind)) { outs[i].errors.push(`${a.text}: draw takes ${KINDS.join(', ')}, and after it "in F" for the marks in the frame F alone`); continue; }
+        const kind = dm[1] as DrawKind, only = dm[2], cut = excised.get(i);
+        let view = scoped(picture(kind, f, w), only);
         status(view, seen);
-        if (cut) { const after = picture(kind, cut.world, cut.world); status(after, { ...seen, failing: cut.failing }); view = diff(view, after); }
+        if (cut) { const after = scoped(picture(kind, cut.world, cut.world), only); status(after, { ...seen, failing: cut.failing }); view = diff(view, after); }
         if (partial) view.notes.push('the run stopped at its limit, so marks may be missing');
         outs[i].lines.push({ unasked: unread[i], kind: 'draw', text: a.text, lit: a.lit, rows: [], total: Object.keys(view.marks).length, ok: true, view });
       }

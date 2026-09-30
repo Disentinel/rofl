@@ -98,6 +98,22 @@
   .help code { font: 12.5px var(--mono); color: var(--fg); }
   .rofl-pic .pbar button[data-show] { font-weight: 600; }
 
+  /* reading view: sentences and datalog cells fold to their head line and their pictures; a click unfolds one, for this viewer only */
+  .head .fold-t { font: 12px/1 var(--mono); color: var(--mute); background: transparent; border-color: transparent; padding: 5px 6px; }
+  .head .fold-t:hover { color: var(--fg); border-color: var(--line); }
+  .cell.folded { background: transparent; border-style: dashed; }
+  .cell.folded .head { padding-bottom: 6px; }
+  .head .src-t { font: 12px/1 var(--mono); color: var(--mute); background: transparent; border-color: transparent; padding: 5px 6px; }
+  .head .src-t:hover { color: var(--fg); border-color: var(--line); }
+  .cell.src-hidden textarea { display: none; }
+  .cell.src-hidden .head { padding-bottom: 6px; }
+  .cell.folded .head > :not(.fold-t):not(.state):not(.peers) { display: none; }
+  .cell.folded textarea, .cell.folded .tr { display: none; }
+  .cell.folded .out > :not(.ask), .cell.folded .out > .ask:not(:has(.pic)), .cell.folded .out > .ask > .q { display: none; }
+  .cell.folded .out:not(:has(.pic)) { display: none; }
+  .cell.folded .out { border-top-style: dashed; }
+  body.reading .hint, body.reading .help, body.reading .adds { display: none; }
+
   .overlay { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
   .overlay[hidden] { display: none; }
   .obar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 13px; }
@@ -112,6 +128,7 @@
   <header>
     <h1>ROFL Workbench <span>&middot; notebook</span></h1>
     <div class="spacer"></div>
+    <label class="ex" title="Show prose and pictures; fold the rest of each cell until you open it"><input type="checkbox" id="reading"> Reading view</label>
     <label class="ex"><input type="checkbox" id="newest"> Newest first</label>
     <button type="button" class="primary" id="runall">Run all</button>
     <span id="runinfo" aria-live="polite"></span>

@@ -5,7 +5,8 @@ import { colour, drawnTags, features, fits, layouts, looks, spills, tagsOf, type
 
 declare const cytoscape: (o: object) => { fit(e?: unknown, p?: number): void; resize(): void; elements(): { renderedBoundingBox(): { x1: number; y1: number; x2: number; y2: number } }; on(ev: string, sel: string, f: (e: { target: { id(): string; data(k: string): string } }) => void): void;
   nodes(): { map<T>(f: (n: { id(): string; hasClass(c: string): boolean; data(k: string): string | undefined }) => T): T[]; filter(f: (n: { hasClass(c: string): boolean }) => boolean): { map<T>(f: (n: { id(): string; position(a: 'x' | 'y'): number }) => T): T[] } } };
-declare const ELK: new () => { layout(g: object): Promise<{ children: { id: string; x: number; y: number; width: number; height: number }[] }> };
+type Laid = { id: string; x: number; y: number; width: number; height: number; children?: Laid[] };
+declare const ELK: new () => { layout(g: object): Promise<{ children?: Laid[] }> };
 
 /** What a dialect changes: the direction of flow, its tags' styles (drawn under the status tags), a word for a link tag, an entry dot into the marks a tag names,
  *  each outermost group a band of its own (swimlanes), or the marks on a ring in the order the links go round (loops). */
@@ -43,10 +44,22 @@ export async function mount(el: HTMLElement, v: View, h: Hooks, detail: (id: str
   const icon = new Map(leaves.flatMap((id) => { const i = v.marks[id]?.icon, text = i && v.icons?.[i], src = text && iconUri(text, colourOf(v, tagsOf(v, id)) ?? c('--p-fg')); return src ? [[id, src]] : []; }));
   const size = (id: string) => icon.has(id) ? { width: 52, height: 52 } : { width: Math.max(56, Math.min(240, 16 + 7.4 * (v.marks[id]?.label ?? id).length)), height: 30 };
   const entries = look.entry ? leaves.filter((id) => tagsOf(v, id).includes(look.entry!)).map((id, i) => ({ id: `entry${i}`, to: id })) : [];
-  const laid = await new ELK().layout({ id: 'root', layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': look.direction ?? 'RIGHT', 'elk.spacing.nodeNode': '22', 'elk.layered.spacing.nodeNodeBetweenLayers': '46', ...(level.size && { 'elk.partitioning.activate': 'true' }) },
-    children: [...leaves.map((id) => ({ id, ...size(id), ...(level.has(id) && { layoutOptions: { 'elk.partitioning.partition': level.get(id) } }) })), ...entries.map((e) => ({ id: e.id, width: 14, height: 14 }))],
-    edges: [...links.filter((f) => leaves.includes(f.args[0]) && leaves.includes(f.args[1])).map((f, i) => ({ id: `e${i}`, sources: [f.args[0]], targets: [f.args[1]] })), ...entries.map((e) => ({ id: `${e.id}e`, sources: [e.id], targets: [e.to] }))] });
-  const elk: At = new Map(laid.children.map((c) => [c.id, { x: c.x + c.width / 2, y: c.y + c.height / 2 }]));
+  // groups go to ELK as nested nodes, so a group's box is laid around its members and nothing else: laid flat, a box drawn round its
+  // members afterwards also takes in whatever the layout put between them
+  const leaf = (id: string) => ({ id, ...size(id), ...(level.has(id) && { layoutOptions: { 'elk.partitioning.partition': level.get(id) } }) });
+  const inGroup = (g?: string) => [...leaves.filter((id) => parent.get(id) === g), ...[...groups].filter((x) => parent.get(x) === g && x !== g)].sort();
+  const node = (id: string, seen: Set<string>): object => !groups.has(id) ? leaf(id) : seen.has(id) ? { id, width: 20, height: 20 }
+    : { id, layoutOptions: { 'elk.padding': '[top=30,left=14,bottom=14,right=14]' }, children: inGroup(id).map((k) => node(k, new Set([...seen, id]))) };
+  const laidOut = new Set([...leaves, ...groups]);   // a group is a node to ELK, so a link from a box is laid out too
+  const laid = await new ELK().layout({ id: 'root', layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': look.direction ?? 'RIGHT', 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': '22', 'elk.layered.spacing.nodeNodeBetweenLayers': '46', ...(level.size && { 'elk.partitioning.activate': 'true' }) },
+    children: [...inGroup(undefined).map((id) => node(id, new Set())), ...entries.map((e) => ({ id: e.id, width: 14, height: 14 }))],
+    edges: [...links.filter((f) => laidOut.has(f.args[0]) && laidOut.has(f.args[1])).map((f, i) => ({ id: `e${i}`, sources: [f.args[0]], targets: [f.args[1]] })), ...entries.map((e) => ({ id: `${e.id}e`, sources: [e.id], targets: [e.to] }))] });
+  // a nested node's place is its parent's: the centres are summed down the tree
+  const elk: At = new Map(), walk = (n: { children?: Laid[] }, x0: number, y0: number): void => { for (const c of n.children ?? []) {
+    const x = x0 + c.x, y = y0 + c.y;
+    if (c.children?.length) walk(c, x, y); else elk.set(c.id, { x: x + c.width / 2, y: y + c.height / 2 });
+  } };
+  walk(laid, 0, 0);
   const auto = look.ring ? ring(leaves, (id) => links.filter((f) => f.args[0] === id).map((f) => f.args[1]).filter((n) => leaves.includes(n))) : look.bands ? bands(elk, parent) : elk;
   const pos = new Map([...elk.keys()].map((id) => [id, placed.get(id) ?? auto.get(id) ?? elk.get(id)!]));
   const hatch = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><path d="M-2 2L2 -2M0 8L8 0M6 10L10 6" stroke="${c('--p-warn')}" stroke-width="1.4"/></svg>`)}`;

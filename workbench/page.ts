@@ -30,6 +30,12 @@ const newId = () => 'c' + Math.random().toString(36).slice(2, 10);
 // newest first: this viewer's choice, the display reversed; the notebook's order and its run are the same
 let newest = (() => { try { return localStorage.getItem('rofl-workbench:newest') === '1'; } catch { return false; } })();
 let mode: 'local' | 'shared' = 'local', ran: Ran | null = null, editing: string | null = null;
+// reading view: this viewer's choice, on unless they turned it off; a sentences or datalog cell shows its head and pictures until opened
+let reading = (() => { try { return localStorage.getItem('rofl-workbench:reading') !== '0'; } catch { return true; } })();
+const unfolded = new Set<string>();   // the cells this viewer opened in reading view, for this visit
+// a cell's source shows apart from its output: in reading view only when opened, otherwise unless shut; for this visit
+const srcOpen = new Set<string>(), srcShut = new Set<string>();
+const kindName = (k: Kind) => KINDS.find(([x]) => x === k)?.[1] ?? k;
 // what this viewer opened and hid: a question's answers by its line, kept across runs while the line reads the same; a cell's whole output
 const opened = new Map<string, boolean>();
 const hidden = new Set<string>((() => { try { return JSON.parse(localStorage.getItem('rofl-workbench:hidden') ?? '[]'); } catch { return []; } })());
@@ -53,6 +59,8 @@ function cellEl(c: Pc): HTMLElement {
   const el = document.createElement('article');
   el.dataset.id = c.id;
   el.innerHTML = `<div class="head">
+    <button type="button" class="fold-t" hidden></button>
+    <button type="button" class="src-t" hidden></button>
     <select class="kind" aria-label="Cell kind">${KINDS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('')}</select>
     <span class="state"></span><span class="peers"></span><span class="spacer"></span>
     <button type="button" class="tr-go" title="Claude writes the cell that answers this one (Cmd/Ctrl+Enter in the cell). It runs on your own Claude account and uses your Claude usage." hidden>Translate</button>
@@ -65,7 +73,10 @@ function cellEl(c: Pc): HTMLElement {
 }
 const elOf = (id: string) => book.querySelector<HTMLElement>(`article[data-id="${id}"]`);
 /** A textarea as tall as its text. Measuring collapses it for an instant, which can shorten the page and move it: the page is put back. */
-const grow = (t: HTMLTextAreaElement) => { const y = scrollY; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; if (scrollY !== y) scrollTo(scrollX, y); };
+const grow = (t: HTMLTextAreaElement) => { if (!t.offsetParent) {
+  t.style.height = '';   // hidden (a folded cell): measured when it shows, since a hidden box has no height to measure
+  return;
+} const y = scrollY; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; if (scrollY !== y) scrollTo(scrollX, y); };
 /** The line being typed stays where it is on screen while `fn` changes the page above it: its textarea's top, before and after. */
 const focused = () => document.activeElement instanceof HTMLTextAreaElement && book.contains(document.activeElement) ? document.activeElement : null;
 function steady<T>(fn: () => T): T {
@@ -89,7 +100,20 @@ function paintCells() {
   paintBar(); paintPeers();
 }
 function fill(el: HTMLElement, c: Pc) {
-  el.className = `cell ${c.kind}${editing === c.id ? ' editing' : ''}${hidden.has(c.id) ? ' out-hidden' : ''}`;
+  const foldable = reading && c.kind !== 'prose' && c.text.trim() !== '', folded = foldable && !unfolded.has(c.id) && editing !== c.id;
+  const code = c.kind !== 'prose', empty = c.text.trim() === '';
+  const src = !code || empty || editing === c.id || (reading ? !folded && srcOpen.has(c.id) : !srcShut.has(c.id));
+  el.className = `cell ${c.kind}${editing === c.id ? ' editing' : ''}${hidden.has(c.id) ? ' out-hidden' : ''}${folded ? ' folded' : ''}${src ? '' : ' src-hidden'}`;
+  const st = el.querySelector<HTMLButtonElement>('.src-t')!;
+  st.hidden = !code || empty || folded;
+  st.textContent = src ? '\u25BE source' : '\u25B8 source';
+  st.title = src ? 'Hide the cell\'s sentences, keep its output' : 'Show the cell\'s sentences';
+  st.setAttribute('aria-expanded', String(src));
+  const ft = el.querySelector<HTMLButtonElement>('.fold-t')!;
+  ft.hidden = !foldable;
+  ft.textContent = folded ? `\u25B8 ${kindName(c.kind)}` : '\u25BE fold';
+  ft.title = folded ? 'Show the whole cell' : 'Fold the cell to its head and pictures';
+  ft.setAttribute('aria-expanded', String(!folded));
   el.querySelector('.hide-out')!.textContent = hidden.has(c.id) ? 'show output' : 'hide output';
   el.querySelector<HTMLSelectElement>('.kind')!.value = c.kind;
   el.querySelector<HTMLSelectElement>('.add')!.options[0].text = newest ? '+ above' : '+ below';
@@ -207,6 +231,8 @@ book.addEventListener('change', (e) => {
 book.addEventListener('click', (e) => {
   const t = e.target as HTMLElement, id = t.closest<HTMLElement>('article')?.dataset.id;
   if (!id) return;
+  if (t.closest('.src-t')) { const s = reading ? srcOpen : srcShut; if (!s.delete(id)) s.add(id); return paint(); }
+  if (t.closest('.fold-t')) { if (!unfolded.delete(id)) unfolded.add(id); return paint(); }
   if (t.closest('.x')) return remove(id);
   if (t.closest('.run')) return run(0);
   if (t.closest('.hide-out')) { if (!hidden.delete(id)) hidden.add(id); try { localStorage.setItem('rofl-workbench:hidden', JSON.stringify([...hidden])); } catch {} return paint(); }
@@ -361,6 +387,10 @@ function paintPeers() {
 // ------------------------------------------------------------ the page's own controls
 $('hint').innerHTML = `A sentences cell, its parts a blank line apart: ${HINT.split(/\n\n+/).map((p) => `<code>${esc(p)}</code>`).join(' ')}`;
 $('runall').addEventListener('click', () => run(0));
+const readingBox = $<HTMLInputElement>('reading');
+readingBox.checked = reading;
+document.body.classList.toggle('reading', reading);
+readingBox.addEventListener('change', () => { reading = readingBox.checked; try { localStorage.setItem('rofl-workbench:reading', reading ? '1' : '0'); } catch {} document.body.classList.toggle('reading', reading); paint(); });
 const newestBox = $<HTMLInputElement>('newest');
 newestBox.checked = newest;
 newestBox.addEventListener('change', () => { newest = newestBox.checked; try { localStorage.setItem('rofl-workbench:newest', newest ? '1' : '0'); } catch {} paint(); drawn.clear(); paintOuts(); });
