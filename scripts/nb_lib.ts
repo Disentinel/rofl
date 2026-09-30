@@ -74,7 +74,7 @@ export const verdict = (o: Out): string | null => {
   const last = text.trim().split('\n').pop() ?? '', m = /\(exit ([123]); see npm run nb -- --help\)$/.exec(last);
   return m ? STATUS[Number(m[1])] : /^\S+: (?:\d+ [a-z]|nothing asked|0 cells)[^—]*$/.test(last) ? 'ok' : null;
 };
-export const is = (o: Out, code: number) => o.code === code && verdict(o) === STATUS[code];
+export const is = (o: Out, code: number) => o.code === code && (verdict(o) === STATUS[code] || code === 3 && verdict(o) === 'cut');
 /** Every check as ok or FAIL, the count and the time, and the exit. */
 export function report(what: string, t0: number): never {
   for (const [name, ok, why] of results) console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${why ? `\n${why.replace(/^/gm, '     ')}` : ''}`);

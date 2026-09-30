@@ -1,7 +1,7 @@
 // npm run nb -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook, print what every cell said
 // npm run nb -- translate <file.rofl.md>                 write a rofl cell under every natural cell that has none
 // Exit 0: every never holds and every cell was read; 1: some never fails; 2: a cell, a file or the model was not read;
-// 3: every never holds, some only as far as the model sees or ROFL_NB_LIMIT let it.
+// 3: every never holds, some only as far as the model sees; or the run was cut short by ROFL_NB_LIMIT or ROFL_NB_MEMORY and no never found a row.
 // The reading and the answering are notebook/kernel.ts; this reads the files, calls the model, prints and exits.
 // A run goes to the kept kernel of notebook/serve.ts, started on first use; ROFL_NB_DAEMON=0 runs in this process.
 import { existsSync, globSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
@@ -21,7 +21,8 @@ import { answer, BUDGET, PER_ROUND, PROTOCOL, readTracked, ROUNDS, workspace, ty
 import { sentenceOf, translateOne as translateCell_ } from './translate.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3 } as const;
+const EXIT = { ok: 0, fails: 1, unread: 2, blind: 3, cut: 3 } as const;
+const exitOf = (r: NbResult) => r.status === 'cut' && r.cells.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? EXIT.fails : EXIT[r.status];
 const SHOWN = 12;   // answers printed per line; --json has the first fifty, --all every one
 /** A run's evaluation stops after ROFL_NB_LIMIT seconds or past ROFL_NB_MEMORY gigabytes of heap: a rule that climbs for ever ends there, exit 3.
  *  The heap's default stays under what V8 allows this process, whose end is a crash and no answer. */
@@ -123,12 +124,13 @@ const plural = (k: number, one: string, many: string) => `${k} ${k === 1 ? one :
 /** What the run asked and how it came out, counted; on an exit other than 0, why, and the code. */
 export function tally(r: NbResult): string {
   const ls = r.cells.flatMap((c) => c.lines), count = (f: (l: NbLine) => boolean) => ls.filter(f).length;
-  const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind');
+  const asked = count((l) => l.kind === 'answers' && l.verdict === 'answers'), holds = count((l) => l.verdict === 'holds'), blind = count((l) => l.verdict === 'blind'), unknown = count((l) => l.verdict === 'unknown');
   const fails = count((l) => l.verdict === 'fails'), told = count((l) => l.verdict === 'explained'), pictures = count((l) => l.kind === 'draw' && l.verdict !== 'unasked'), moved = count((l) => l.kind === 'excise' && l.verdict !== 'unasked'), unasked = count((l) => l.verdict === 'unasked');
   const said = [
     asked && plural(asked, 'question answered', 'questions answered'),
     holds && plural(holds, 'invariant holds', 'invariants hold'),
     blind && `${plural(blind, holds ? 'holds' : 'invariant holds', holds ? 'hold' : 'invariants hold')} as far as the model sees`,
+    unknown && `${plural(unknown, 'invariant', 'invariants')} not known`,
     (holds || blind || fails) && (!fails ? 'none fails' : holds || blind ? plural(fails, 'fails', 'fail') : plural(fails, 'invariant fails', 'invariants fail')),
     told && plural(told, 'explained', 'explained'),
     pictures && plural(pictures, 'picture', 'pictures'),
@@ -137,9 +139,10 @@ export function tally(r: NbResult): string {
   ].filter(Boolean).join(', ') || (r.cells.length > 1 ? 'nothing asked' : `0 cells: this is a world (facts and rules), not a notebook; a notebook asks in fenced \`\`\`rofl cells`);
   const unparsed = r.errors.flatMap((e) => /^(.*): not parsed: /.exec(e)?.[1] ?? []);
   const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => l.line));
-  const why = r.status === 'fails' ? `FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : r.status === 'unread' ? `not everything was read${unparsed.length ? `: not parsed: ${unparsed.join(', ')}` : ''}`
-    : r.status === 'blind' ? 'some invariant holds only as far as the model sees, or the run stopped at its limit' : '';
-  return why ? `${said} — ${why} (exit ${EXIT[r.status]}; ${HELP_AT})` : r.cells.length > 1 ? said : `${said} (${HELP_AT})`;
+  const why = r.status === 'cut' ? `CUT SHORT at its limit: every count is at least, and no never is known to hold${failed.length ? `; FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : ''}`
+    : r.status === 'fails' ? `FAILS at ${failed.length === 1 ? 'line' : 'lines'} ${failed.join(', ')}` : r.status === 'unread' ? `not everything was read${unparsed.length ? `: not parsed: ${unparsed.join(', ')}` : ''}`
+    : r.status === 'blind' ? 'some invariant holds only as far as the model sees' : '';
+  return why ? `${said} — ${why} (exit ${exitOf(r)}; ${HELP_AT})` : r.cells.length > 1 ? said : `${said} (${HELP_AT})`;
 }
 
 // ------------------------------------------------------------ translation
@@ -346,5 +349,5 @@ if (isMain) {
   if (r.outside?.length) console.error(`${file}: note: ${OUTSIDE(r.outside)}`);
   if (argv.includes('--timing')) console.error(`load ${r.ms.load} ms, run ${r.ms.run} ms (${Object.entries(r.ms.phases ?? {}).map(([k, v]) => `${k} ${v}`).join(", ")})`);
   // exit once the text is out: a pipe takes 64 KB at a time, and an exit before it drains cuts the JSON short
-  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN, argv.includes('--format') ? argv[argv.indexOf('--format') + 1] : undefined)) + '\n', () => process.exit(EXIT[r.status]));
+  process.stdout.write((argv.includes('--json') ? JSON.stringify(only === undefined ? r : { ...r, cells: r.cells.filter((c) => c.index === only) }, null, 1) : print(file, r, only, all ? Infinity : SHOWN, argv.includes('--format') ? argv[argv.indexOf('--format') + 1] : undefined)) + '\n', () => process.exit(exitOf(r)));
 }

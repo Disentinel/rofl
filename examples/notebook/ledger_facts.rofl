@@ -211,6 +211,7 @@ path_exists("scanners/spec.ts").
 path_exists("scanners/store_boundary.ts").
 path_exists("scanners/store_trace.ts").
 path_exists("scanners/ts_lib.ts").
+path_exists("scripts/cut_check.ts").
 path_exists("scripts/declared_check.ts").
 path_exists("scripts/derivations.ts").
 path_exists("scripts/dist.ts").

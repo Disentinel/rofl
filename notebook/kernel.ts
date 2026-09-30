@@ -5,16 +5,19 @@ import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } 
 import { asCell, assemble, type Inputs } from './world.ts';
 import { counted, type View } from './draw.ts';
 
-export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked';
+export type Verdict = 'answers' | 'holds' | 'blind' | 'fails' | 'explained' | 'unasked' | 'unknown';
 export type Answer = { sentence: string; literal: string; at: string[] };
 export type NbLine = { line: number; kind: Line['kind']; text: string; verdict: Verdict; total: number; answers: Answer[];
   unsure?: { text: string; total: number; answers: Answer[] }; note?: string; why?: string; whyRaw?: string; unasked?: string; view?: View;
   /** a line in English: the asking line it reads as; `headline`, the yes, no or count it answers with */
-  readAs?: string; headline?: string };
+  readAs?: string; headline?: string;
+  /** the run was cut short: its count is at least `total`, and a never that found nothing is `unknown` */
+  cut?: true };
 /** `at`: the prose's, the file's line each error and note was found on, where the reader knows it. */
 export type NbCellOut = { index: number; kind: CellKind; line: number; errors: string[]; notes: string[]; lines: NbLine[]; at?: { errors: (number | null)[]; notes: (number | null)[] } };
-/** `blind`: every never holds, some only as far as the model sees or its wall let it; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read. */
-export type Status = 'ok' | 'blind' | 'fails' | 'unread';
+/** `blind`: every never holds, some only as far as the model sees; `fails`: some never found a row; `unread`: a cell, a code file or the model was not read;
+ *  `cut`: the wall stopped the run, so what it found is a part and a never that found nothing is not known. */
+export type Status = 'ok' | 'blind' | 'fails' | 'unread' | 'cut';
 /** `unresolved`, only when there is one: the relative imports and requires that name no file of the code, which every never is blind to. */
 export type NbResult = { status: Status; front: Front; cells: NbCellOut[]; errors: string[]; unresolved?: string[]; ms: { load: number; run: number; phases?: Record<string, number>; loaded?: boolean; model?: 'evaluated' | 'kept' } };
 
@@ -26,7 +29,7 @@ export class Kernel {
   private wall?: () => () => boolean;
 
   /** `whole`: every run evaluates the model, the code and the cells as one world, never the cells alone over the model kept from the last run. `all`: every answer of a line, not the first fifty.
-   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `blind`. */
+   *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`. */
   constructor(opts: { whole?: boolean; all?: boolean; wall?: () => () => boolean } = {}) { this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall; }
 
   /** The proof of a ground literal over the last run, as a person reads it: what a picture's mark asks. */
@@ -72,11 +75,12 @@ export class Kernel {
         const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
           ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
+        if (out.partial) { line.cut = true; if (line.verdict === 'holds' || line.verdict === 'blind') line.verdict = 'unknown'; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
         return line;
       }) };
     });
-    const status: Status = errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
+    const status: Status = out.partial ? 'cut' : errors.length || result.some((c) => c.errors.length || c.lines.some((l) => l.verdict === 'unasked')) ? 'unread' : result.some((c) => c.lines.some((l) => l.verdict === 'fails')) ? 'fails' : out.partial || result.some((c) => c.lines.some((l) => l.verdict === 'blind')) ? 'blind' : 'ok';
     return { status, front, cells: result, errors, ...(out.unresolved.length ? { unresolved: out.unresolved } : {}), ms: { load, run: out.ms, phases: out.phases, loaded, model: out.model } };
   }
 }
@@ -92,22 +96,29 @@ export function share(prose: NbCellOut, blocks: { line: number; lines: number }[
   return { rest, blocks: out };
 }
 
-export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read' };
+export const SAID: Record<NbResult['status'], string> = { ok: 'every never holds, every cell read', fails: 'a never fails', blind: 'every never holds, some only as far as the model sees', unread: 'not everything was read',
+  cut: 'the run was cut short at its limit: every count is at least, and no never is known to hold' };
 /** The run's status in a sentence, naming where each failing never is; `at` writes a place, a link in an editor. The command line's last line stays the bare verdict. */
 export const said = (r: NbResult, at = (cell: number, line: number) => `cell ${cell} (line ${line})`): string => {
   const failed = r.cells.flatMap((c) => c.lines.filter((l) => l.verdict === 'fails').map((l) => at(c.index, l.line)));
-  return SAID[r.status] + (failed.length ? `: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
+  return SAID[r.status] + (failed.length ? `${r.status === 'cut' ? '; a never fails' : ''}: ${failed.join(' · ')}` : '') + (r.unresolved ? ` · ${unresolvedSaid(r.unresolved)}` : '');
 };
 
-export const VERDICT = (l: NbLine): string => { const v = verdictOf(l); return l.readAs ? `${v ? `${v} · ` : ''}read as: ${l.readAs}` : v; };
+export const VERDICT = (l: NbLine): string => { const v = l.cut ? cutOf(l) : verdictOf(l); return l.readAs ? `${v ? `${v} · ` : ''}read as: ${l.readAs}` : v; };
 const verdictOf = (l: NbLine) => l.verdict === 'unasked' ? `not asked: ${l.unasked ?? 'part of this cell was not read (its errors above)'}` : l.verdict === 'fails' ? `FAILS · ${l.total}${l.note ? ` · ${l.note}` : ''}` : l.verdict === 'holds' ? 'holds'
   : l.verdict === 'blind' ? `holds as far as it sees${l.unsure?.total ? ` · ${l.unsure.total} out of sight` : ''}${l.note ? ` · ${l.note}` : ''}`
   : l.kind === 'draw' && l.view ? counted(l.view)
   : l.kind === 'excise' ? `${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}${l.note ? ` · ${l.note}` : ''}`
   : l.verdict === 'answers' ? `${l.headline ?? `${l.total} ${l.total === 1 ? 'answer' : 'answers'}`}${l.note ? ` · ${l.note}` : ''}` : l.note ?? '';
 
+const cutOf = (l: NbLine) => l.verdict === 'unknown' ? 'not known: the run was cut short' : l.verdict === 'unasked' ? verdictOf(l)
+  : l.verdict === 'fails' ? `FAILS · at least ${l.total}, cut short${l.note ? ` · ${l.note}` : ''}`
+  : l.kind === 'draw' || l.kind === 'why' || l.kind === 'whynot' ? `${verdictOf(l)}${verdictOf(l) ? ' · ' : ''}cut short`
+  : l.kind === 'excise' ? `at least ${l.total} ${l.total === 1 ? 'line moves' : 'lines move'}, cut short${l.note ? ` · ${l.note}` : ''}`
+  : `${l.headline ? `${l.headline} · ` : ''}at least ${l.total} ${l.total === 1 ? 'answer' : 'answers'}, cut short${l.note ? ` · ${l.note}` : ''}`;
+
 /** A verdict's colour by its meaning, as a class a host colours from its theme, and a glyph that says it without colour. */
-export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'] };
+export const SIGN: Partial<Record<Verdict, [string, string]>> = { holds: ['pass', '\u2713'], fails: ['fail', '\u2717'], blind: ['warn', '\u26a0'], unasked: ['warn', '\u26a0'], unknown: ['warn', '\u26a0'] };
 
 const STOP = new Set(['a', 'an', 'the', 'is', 'are', 'of', 'in', 'to', 'by', 'if', 'and', 'at', 'some', 'it', 'its', 'on', 'as', 'with', 'from', 'unless', 'something']);
 const stem = (w: string) => w.length > 4 ? w.replace(/(?:ing|ed|(?<!s)s)$/, '') : w;

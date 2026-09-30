@@ -195,6 +195,7 @@ export function state(s: Said | undefined): { text: string; cls: string } {
   if (!s) return { text: '', cls: '' };
   if (s.errors.length) return { text: 'not everything read', cls: 'warn' };
   const nev = s.lines.filter((l) => l.kind === 'never'), bad = nev.filter((l) => l.verdict === 'fails').length, blind = nev.filter((l) => l.verdict === 'blind').length;
+  if (s.lines.some((l) => l.cut)) return { text: bad ? `${bad} of ${nev.length} ${nev.length === 1 ? 'invariant fails' : 'invariants fail'}, cut short` : 'cut short: not known', cls: bad ? 'fail' : 'warn' };
   if (bad) return { text: `${bad} of ${nev.length} ${nev.length === 1 ? 'invariant fails' : 'invariants fail'}`, cls: 'fail' };
   if (blind) return { text: 'holds as far as it sees', cls: 'warn' };
   if (nev.length) return { text: nev.length === 1 ? 'the invariant holds' : `all ${nev.length} invariants hold`, cls: 'pass' };

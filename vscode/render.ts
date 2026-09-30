@@ -35,7 +35,7 @@ export function render(r: Run, run = ''): { head: Shown; cells: Shown[] } {
     const v = VERDICT(l), sign = SIGN[l.verdict], word = l.verdict === 'fails' ? `**${v}**` : v, asks = l.kind !== 'excise' && l.verdict !== 'unasked';
     const out = [`**${link(l.text)}**${v ? ` — ${sign ? `<span class="verdict ${sign[0]}">${sign[1]} ${word}</span>` : word}` : ''}`];
     // a question's answers fold whole under its line and count; a failing never's rows are the point and stay open
-    if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity, asks)}\n\n</details>` : list(l.answers, l.total, FOLD, asks));
+    if (l.answers.length) out.push(l.kind === 'answers' ? `<details><summary>${l.cut ? 'at least ' : ''}${l.total} ${l.total === 1 ? 'answer' : 'answers'}</summary>\n\n${list(l.answers, l.total, Infinity, asks)}\n\n</details>` : list(l.answers, l.total, FOLD, asks));
     if (l.unsure?.total) out.push(`**warning**, out of sight (${link(l.unsure.text)}):\n\n` + list(l.unsure.answers, l.unsure.total, FOLD, asks));
     if (l.why) out.push(`<details><summary>proof</summary>\n\n\`\`\`\n${l.why}\n\`\`\`\n\n</details>`);
     return out.join('\n\n');

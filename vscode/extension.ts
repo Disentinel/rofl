@@ -272,10 +272,11 @@ export function activate(ctx: vscode.ExtensionContext) {
     if (!s || cell.document.languageId === 'natural') return [];
     if (s.text !== cell.document.getText()) return [new vscode.NotebookCellStatusBarItem('$(circle-outline) edited, not run yet', vscode.NotebookCellStatusBarAlignment.Left)];
     const { errors, lines } = s.out, has = (v: string) => lines.filter((l) => l.verdict === v);
-    const fails = has('fails'), blind = has('blind'), excise = lines.find((l) => l.kind === 'excise'), answers = has('answers').filter((l) => l !== excise);
-    const text = errors.length ? '$(circle-slash) not read' : fails.length ? `$(error) FAILS \u00b7 ${fails.length > 1 ? `${fails.length} nevers` : fails[0].total}` : has('unasked').length ? '$(circle-slash) not asked'
+    const fails = has('fails'), blind = has('blind'), excise = lines.find((l) => l.kind === 'excise'), answers = has('answers').filter((l) => l !== excise), least = lines.some((l) => l.cut) ? 'at least ' : '';
+    const text = errors.length ? '$(circle-slash) not read' : fails.length ? `$(error) FAILS \u00b7 ${fails.length > 1 ? `${fails.length} nevers` : least + fails[0].total}` : has('unasked').length ? '$(circle-slash) not asked'
+      : has('unknown').length ? '$(warning) not known: the run was cut short'
       : blind.length ? `$(warning) as far as it sees \u00b7 ${blind.reduce((n, l) => n + (l.unsure?.total ?? 0), 0)} unseen` : has('holds').length ? '$(pass) holds'
-      : excise ? `excise: ${excise.total} ${excise.total === 1 ? 'line moves' : 'lines move'}` : answers.length ? ((n) => `${n} ${n === 1 ? 'answer' : 'answers'}`)(answers.reduce((n, l) => n + l.total, 0)) : has('explained').length ? 'explained' : '';
+      : excise ? `excise: ${least}${excise.total} ${excise.total === 1 ? 'line moves' : 'lines move'}` : answers.length ? ((n) => `${least}${n} ${n === 1 ? 'answer' : 'answers'}`)(answers.reduce((n, l) => n + l.total, 0)) : has('explained').length ? 'explained' : '';
     if (!text) return [];
     const item = new vscode.NotebookCellStatusBarItem(text, vscode.NotebookCellStatusBarAlignment.Left);
     item.tooltip = [...errors, ...lines.map((l) => `${l.text}: ${l.verdict === 'unasked' ? 'not asked' : l.verdict}${l.total ? ` (${l.total})` : ''}`)].join('\n');
