@@ -288,6 +288,7 @@ export class Host {
         if (nowhere.length) errors.push(`used but defined nowhere: ${nowhere.join(', ')}`);
         for (const a of r.problems.ambiguous) put(notes, `read one way of several: ${a}`, r.lineOf[a]);
         close[i].forEach((n, k) => put(notes, n, closeAt[i][k]));
+        for (const x of parts[i].looks ?? []) put(notes, `${x.text}: this reads as a question but is not asked here: put it in a cell`, x.at);
         if (!c.prose) for (const rel of r.problems.nowhere) { const j = firstDef.get(rel); if (j !== undefined && j > i) notes.push(`uses "${rel.replace(/_/g, ' ')}", which a cell further down defines`); }
       }
       try {
@@ -322,11 +323,14 @@ export class Host {
       }
       return { id: c.id, errors, notes, lines: [], rofl: r ? r.rofl : undefined, ...(Object.keys(at).length && { at }) };
     });
-    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').map((a): Ask & { q?: Exclude<Question, { error: string }>; unread?: string } => {
-      if (a.kind === 'draw') return a;
-      if (!a.english) return { ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) };
-      const q = read[i]!.question(a.text);
-      return 'error' in q ? { ...a, lit: '', unread: q.error } : { ...a, kind: q.kind, lit: owned(q.lit), q };
+    const asks = parts.map(({ asks }, i) => asks.filter((a) => a.kind !== 'extends').flatMap((a): (Ask & { q?: Exclude<Question, { error: string }>; unread?: string })[] => {
+      if (a.kind === 'draw') return [a];
+      if (!a.english) return [{ ...a, lit: owned(read[i] && !LITERAL.test(a.lit) ? read[i]!.literal(a.lit) ?? '' : a.lit) }];
+      const q = read[i]!.question(a.text, () => a.n ?? 1);
+      if ('error' in q) return [{ ...a, lit: '', unread: q.error }];
+      // a line that makes a rule reads as the rule and the line that asks it; `No A or B` asks two lines
+      const shown = { ...q, line: q.rules ? `${q.line}, where ${q.rules.join(' ')}` : q.line };
+      return [{ ...a, kind: q.kind, lit: owned(q.lit), q: shown }, ...(q.also ?? []).map((x) => ({ ...a, kind: q.kind, lit: owned(x.lit), q: { ...shown, ...x } }))];
     }));
     // the cells alone over the code's evaluated model, when they write nothing the model reads and read nothing but its conclusions: an edit to a cell then costs the cells
     const over = [...reads].filter((r) => !heads.has(r));
@@ -496,6 +500,28 @@ export class Host {
       const byName = asked ? `as in: ${asked}` : 'with a sentence npm run nb -- vocab lists';
       return `\`${name}\` names nothing in the model, so this line cannot match: ${Object.keys(files).length ? `a thing of the code is a node, not its name; ask with a variable (${text.split(`\`${name}\``).join('X')}) or by name, ${byName}` : `check the spelling${asked ? `, or ask by name, ${byName}` : ''}`}`;
     };
+    /** Why a question in English over a sentence rules conclude finds nothing (E17): each rule's conditions, and the furthest of them whynot
+     *  finds a row stops at, with the rows it stops for. */
+    const emptied = (lit: string): string | undefined => {
+      let y: { holds: boolean; text: string };
+      try { y = w.whynot(lit, { depth: 1 }); } catch { return; }
+      if (y.holds) return;
+      const say = (x: string) => plain(vocab.sayAll(x)).replace(/ ?@(?:tick \d+|now)\b/g, '').replace(/, in the [\w ]+$/, '').replace(/\?_\$\d+(?:#\d+)?/g, 'something').replace(/\?([A-Z]\w*)(?:#\d+)?/g, '$1');
+      const top = (s: string) => { const out: string[] = []; let depth = 0, from = 0; for (let k = 0; k < s.length; k++) { if ('([{'.includes(s[k])) depth++; else if (')]}'.includes(s[k])) depth--; else if (s[k] === ',' && !depth) { out.push(s.slice(from, k).trim()); from = k + 1; } } return [...out, s.slice(from).trim()]; };
+      const rules: { head: string; body: string[]; stops: [number, string][] }[] = [];
+      for (const l of y.text.split('\n')) {
+        let m;
+        if ((m = /^\s*rule \w+: (.*?) :- (.*)$/.exec(l))) rules.push({ head: m[1], body: top(m[2]), stops: [] });
+        else if (rules.length && (m = /failed premise: (.*)$/.exec(l))) {
+          const r = rules[rules.length - 1], p = m[1], blocked = /^not .* -- blocked: (.*) holds$/.exec(p), rel = /^(?:not )?(\w+)/.exec(p)?.[1];
+          r.stops.push([r.body.findIndex((b) => b.replace(/^not /, '').startsWith(rel + '[') || b.replace(/^not /, '').startsWith(rel + '(')), blocked ? say(blocked[1]) : p.startsWith('[') ? p : `nothing says ${say(p)}`]);
+        }
+      }
+      return rules.map((r) => {
+        const last = Math.max(-1, ...r.stops.map(([k]) => k)), stops = [...new Set(r.stops.filter(([k]) => k === last).map(([, s]) => s))];
+        return `"${say(r.head)}" needs ${r.body.map(say).join(' and ')}${stops.length ? `; it stops ${stops.length > 1 ? `for ${stops.length}` : 'at'}: ${stops.slice(0, 5).join(' · ')}${stops.length > 5 ? ' · …' : ''}` : ''}`;
+      }).join('; or ') || undefined;
+    };
     parts.forEach((_, i) => {
       if (refused.has(i)) return;
       for (const a of asks[i]) {
@@ -525,8 +551,9 @@ export class Host {
           const above = outs[i].lines[outs[i].lines.length - 1];
           if (a.kind === 'unsure' && above?.kind === 'never') { above.unsure = { text: a.text, lit: a.lit, rows, total: q.rows.length }; if (note) above.note = note; continue; }
           const counted = a.q?.count && new Set(q.rows.map((r) => r.bindings[a.q!.count!])).size;
-          const headline = a.q?.yesno ? (q.rows.length ? 'yes' : 'no') : counted !== undefined ? `${counted} ${counted === 1 || !a.q!.noun ? a.q!.noun ?? '' : plural(a.q!.noun)}`.trim() : undefined;
-          outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note, ...(english && { english: { ...english, ...(headline && { headline }) } }) });
+          const empty = !note && a.q && a.kind === 'answers' && !q.rows.length ? emptied(a.lit) : undefined;
+          const headline = a.q?.yesno ? (q.rows.length ? 'yes' : 'no') : counted !== undefined ? `${counted} ${counted === 1 || !a.q!.noun ? a.q!.noun ?? '' : plural(a.q!.noun)}`.trim() : empty ? 'none' : undefined;
+          outs[i].lines.push({ unasked: unread[i] ?? restsOn(relOf(a.lit)), kind: a.kind, text: a.text, lit: a.lit, rows, total: q.rows.length, ok: a.kind === 'never' ? q.rows.length === 0 && !q.unpopulatable : true, note: a.kind === 'unsure' ? 'an unsure line says what the never line just above it cannot see' : note || empty, ...(english && { english: { ...english, ...(headline && { headline }) } }) });
         } finally {
           if (a.at !== undefined) { const at = outs[i].at ??= {}; for (const m of [...outs[i].errors.slice(e0), ...outs[i].notes.slice(n0)]) if (!(m in at)) at[m] = a.at; }
         }

@@ -1,6 +1,6 @@
 // A book as the reader reads it: cells of sentences or of plain ROFL, the lines in them that ask, and the heads that name themselves.
 // Pure: the page, the notebook kernel and the reader of worlds share it.
-import { english, proseAsks, readMd, slug, type ReadResult } from '../scripts/read_md.ts';
+import { asking, english, proseAsks, proseLooks, readMd, slug, type ReadResult } from '../scripts/read_md.ts';
 
 export type Kind = 'answers' | 'never' | 'why' | 'whynot' | 'unsure' | 'extends' | 'excise' | 'draw';
 /** A cell in the Markdown sentence form, as a `.rofl.md` is written, or in plain ROFL. */
@@ -17,10 +17,14 @@ const DIRECTIVE = /^(\?|never|whynot|why|unsure|extends|excise|draw)\s+(.+?)\.?\
 
 export { english };
 
-/** The prose's English lines ask as a sentence cell's do (read_md.ts proseAsks); no other line of it asks. */
-function proseSplit(text: string): { clauses: string; asks: Ask[] } {
+/** The prose's asking lines, English or `? L`, `never L`, `why L`, `whynot L`, ask as a sentence cell's do (read_md.ts proseAsks); no other line
+ *  of it asks. A question of the prose that is not such a line is looked at, to say so (proseLooks). */
+function proseSplit(text: string): { clauses: string; asks: Ask[]; looks: { at: number; text: string }[] } {
   const asks = proseAsks(text), lines = text.split('\n');
-  return { clauses: lines.map((l, k) => asks.includes(k) ? '' : l).join('\n'), asks: asks.map((k) => ({ kind: 'answers', lit: lines[k].trim(), text: lines[k].trim(), english: true, at: k })) };
+  return { clauses: lines.map((l, k) => asks.includes(k) ? '' : l).join('\n'), looks: proseLooks(text), asks: asks.map((k): Ask => {
+    const l = lines[k].trim(), m = asking(l);
+    return m ? { kind: m[1] === '?' ? 'answers' : m[1] as Kind, lit: m[2], text: l, at: k } : { kind: 'answers', lit: l, text: l, english: true, at: k };
+  }) };
 }
 
 /** A cell is clauses plus lines that ask: `? L` lists, `never L` holds when nothing answers, `unsure L` says what the `never` above it cannot see, `why L` explains, `whynot L` says what is missing, `draw K` shows the view facts of the kind K.
@@ -60,10 +64,11 @@ export function homeOf(model: string): Record<string, string> {
   return home;
 }
 
-/** `english`: the line is English, and `lit` is still its text; `at`: its line, from 0, in the cell. */
-export type Ask = { kind: Kind; lit: string; text: string; english?: true; at?: number };
-/** `close`: by part, what each new sentence it declares is close to (closeTo); `closeAt`, the line of the anchor each is about. */
-export type Book = { parts: { c: Cell; clauses: string; asks: Ask[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][]; closeAt: (number | undefined)[][] };
+/** `english`: the line is English, and `lit` is still its text; `at`: its line, from 0, in the cell; `n`: the number of the promise or question
+ *  its rule was made under (read_md.ts Numbering). */
+export type Ask = { kind: Kind; lit: string; text: string; english?: true; at?: number; n?: number };
+/** `close`: by part, what each new sentence it declares is close to (closeTo); `closeAt`, the line of the anchor each is about. `looks`: the prose's questions that do not ask. */
+export type Book = { parts: { c: Cell; clauses: string; asks: Ask[]; looks?: { at: number; text: string }[] }[]; read: (ReadResult | null)[]; learned: string[]; vocab: string; close: string[][]; closeAt: (number | undefined)[][] };
 
 /** A sentence as a pattern: a hole and a name are blanks; `named` also blanks a noun a name stands beside (`a mark \`shop\``), the constant-for-noun mistake. */
 const skeleton = (p: string, named = false) => (named ? p.replace(/\b(?:an?|the|some) [a-z][\w-]*(?: [a-z][\w-]*)? `[^`]*`/g, '_') : p).replace(/^phrase\(\w+, "(.*)"\)\.$/, '$1')
@@ -120,6 +125,19 @@ export function readBook(cells: Cell[], phrases: string, home: Record<string, st
     return { text, learned, close: close.map((c) => c.said), closeAt: close.map((c) => { const k = lines.findIndex((l) => l.includes(`<a id="${c.rel}">`)); return k < 0 ? undefined : k; }) };
   });
   const learned = md.flatMap((m) => m?.learned ?? []);
-  const vocab = phrases + '\n' + learned.join('\n');
+  let vocab = phrases + '\n' + learned.join('\n');
+  // an English line that says more than one sentence makes a rule, read in its cell: numbered in the book's order, its head's sentence learned
+  const n = { promise: 0, question: 0 };
+  let over: ReadResult | undefined;
+  parts.forEach(({ asks }, i) => {
+    for (const a of asks) {
+      if (!md[i] || !a.english || !/^(?:Every|Each)\b|\b(?:and|or)\b/.test(a.text)) continue;
+      const q = (over ??= readMd('', { vocab, homeBooks: home })).question(a.text, (what) => a.n = ++n[what]);
+      if ('error' in q || !q.rules) continue;
+      md[i]!.text += '\n\n' + q.rules.join('\n\n') + '\n';
+      learned.push(q.phrase!);
+    }
+  });
+  if (n.promise + n.question) vocab = phrases + '\n' + learned.join('\n');
   return { parts, read: parts.map((_, i) => md[i] ? readMd(md[i]!.text, { vocab, homeBooks: home }) : null), learned, vocab, close: md.map((m) => m?.close ?? []), closeAt: md.map((m) => m?.closeAt ?? []) };
 }

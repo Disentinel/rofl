@@ -66,10 +66,10 @@ export class Kernel {
       // the prose is the whole file: a line it asks is one outside every fence
       let fenced = false;
       const ls = c.text.split('\n').map((l) => c.kind !== 'prose' ? l : /^```/.test(l) ? (fenced = !fenced, '') : fenced ? '' : l);
-      const lineOf = (t: string) => { let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = 0; seen.add(k); return c.line + k; };
+      const lineOf = (t: string) => { let k = ls.findIndex((l, j) => !seen.has(j) && l.trim() === t); if (k < 0) k = Math.max(0, ls.findIndex((l) => l.trim() === t)); seen.add(k); return c.line + k; };
       const at = o.at && ((ms: string[]) => ms.map((m) => m in o.at! ? c.line + o.at![m] : null));
       return { index: c.index, kind: c.kind, line: c.line, ...(at && { at: { errors: at(o.errors), notes: at(o.notes) } }), errors: c.kind === 'datalog' ? o.errors.map((e) => e.replace(/^line (\d+)/, (_, n) => `line ${c.line + Number(n) - 1}`)) : o.errors.map(hint), notes: o.notes, lines: o.lines.map((l) => {
-        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note, why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
+        const line: NbLine = { line: lineOf(l.text), kind: l.kind, text: l.text, verdict: l.unasked ? 'unasked' : verdict(l), total: l.total, answers: answers(l.rows), note: l.note && labelled(l.note, out.nodes), why: l.why && legible(l.why), whyRaw: l.why, unasked: l.unasked, ...(l.view && { view: l.view }),
           ...(l.english && { readAs: l.english.line + (l.english.note ? ` (${l.english.note})` : ''), ...(l.english.headline && { headline: l.english.headline }) }) };
         if (lost && line.verdict === 'holds') { line.verdict = 'blind'; line.note = lost; }
         if (l.unsure) { lineOf(l.unsure.text); line.unsure = { text: l.unsure.text, total: l.unsure.total, answers: answers(l.unsure.rows) }; }
