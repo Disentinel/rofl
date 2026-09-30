@@ -224,12 +224,16 @@ const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
   'key-translate': ['package.json', /"keybindings": \[\n[^\]]*\],\n/, '', first, /Cmd\/Ctrl\+Enter in a natural cell does not translate/],
   'fold-answers': ['render.ts', /l\.kind === 'answers' \? `<details>/, 'false ? `<details>', first, /a \? line's answers are not folded under it/],
   'said-adds': ['extension.ts', /\(added \? `\*Translated: \$\{added\}\.\*` : ''\)/, "''", first, /the translation's facts are not said/],
-  // a row's why: its button gone; row 2's literal on row 1; a proof shown after the notebook changed; a why on the row the kernel did not send; the literal not escaped; a proof asked of whatever the kernel ran last
+  // a row's why: its button gone; row 2's literal on row 1; a proof shown after the notebook changed; a why on the row the kernel did not send; the literal not escaped;
+  // one kernel shared by every notebook again; a dropped run still answering; a translation borrowing a notebook's kernel; a picture that does not name its run
   'why-button': ['visual/out/renderer.js', /mark\.replaceWith\(b\);/, 'mark.remove();', named('why'), /has no why button/],
   'why-literal': ['render.ts', /rows\.map\(\(a\) => `- \$\{link\(a\.sentence\)\}\$\{asks \? why\(a\.literal\)/, 'rows.map((a, k) => `- ${link(a.sentence)}${asks ? why((rows[k + 1] ?? a).literal)', named('why'), /is not the proof of its own row/],
   'why-stale': ['extension.ts', /if \(stamp !== undefined && open && serialize\(docOf\(open\)\) !== last!\.text\)/, 'if (false)', named('why'), /after an edit, a why showed a proof/],
   'why-escape': ['render.ts', /data-why="\$\{WHY_ATTR\(literal\)\}"/, 'data-why="${literal}"', named('why'), /the why under "said\(.* is not the proof of its own row/],
-  'why-kernel': ['worker.ts', /stamp === undefined \|\| stamp === last \?/, 'true ?', named('why'), /after another notebook ran, a why showed a proof/],
+  'why-kernel': ['worker.ts', /const kernel = kept\.get\(file\)\?\.kernel \?\? new Kernel/, 'const kernel = [...kept.values()].at(-1)?.kernel ?? new Kernel', named('why'), /after two other notebooks ran and a third was translated, a why did not show this notebook's proof/],
+  'why-dropped': ['worker.ts', /dropped\.add\(kept\.get\(file\)!\.stamp\); kept\.delete\(file\);/, 'dropped.add(kept.get(file)!.stamp);', named('why'), /after three other notebooks ran, a why did not say its run was dropped/],
+  'why-translate': ['worker.ts', /translating \?\?= new Kernel\(\{ wall \}\);/, 'translating = [...kept.values()][0]?.kernel ?? new Kernel({ wall });', named('why'), /after two other notebooks ran and a third was translated, a why did not show this notebook's proof/],
+  'why-picture': ['extension.ts', /notebook: nb\.uri\.toString\(\), run: stamp \}/, 'notebook: nb.uri.toString() }', named('paint-shop'), /a picture does not name the run that drew it/],
   'why-more': ['render.ts', /more, not sent by the kernel`\]/, 'more, not sent by the kernel${why(rows[0].literal)}`]', named('why'), /a row with no answer of its own has a why/],
   // a bare cell fenced when saved; its errors left in the notebook's head
   'bare-fence': ['serial.ts', /if \(c\.kind === MARKUP \|\| m\.bare\) \{/, 'if (c.kind === MARKUP) {', first, /after the edit the file is not the file with that edit/],
@@ -248,7 +252,7 @@ const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"l
 const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
 chmodSync(failing, 0o755);
 const bi = process.argv.indexOf('--break');
-const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['icon', 'colour', 'inline', 'verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel'] : ['as it is', 'prose', 'vscode lm'];
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'vscode lm'] : process.argv.includes('--mutants') ? ['icon', 'colour', 'inline', 'verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel', 'why-dropped', 'why-translate', 'why-picture'] : ['as it is', 'prose', 'vscode lm'];
 if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
 const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined, xi = process.argv.indexOf('--extras');
 const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));

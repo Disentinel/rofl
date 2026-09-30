@@ -102,7 +102,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   const controller = vscode.notebooks.createNotebookController('rofl-kernel', TYPE, 'ROFL');
   controller.supportedLanguages = [...KINDS, 'yaml'];
   controller.executeHandler = (_cells, nb) => run(nb);
-  // a picture's why is asked of the kernel's last run; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
+  // a picture's why is asked of the run that drew it; Pin layout writes <notebook>.layout.rofl beside the notebook, which its reads: then names
   const pictures = vscode.notebooks.createRendererMessaging('rofl-view');
   const laid = new Map<string, string[]>(), drawn = new Map<string, Drawn[]>();   // what the renderer last reported of each notebook's pictures
   const verdicts = new Map<string, { text: string; colour: string; around: string }[]>();   // and the colour each verdict in its outputs was drawn in
@@ -140,7 +140,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     if (m.whyShown !== undefined) whys.set(nb.toString(), [...(whys.get(nb.toString()) ?? []), m.whyShown]);
     if (m.rows !== undefined) rows.set(nb.toString(), m.rows);
     if (m.verdicts !== undefined) verdicts.set(nb.toString(), [...(verdicts.get(nb.toString()) ?? []), ...m.verdicts]);
-    if (m.show !== undefined) showPicture(nb, m.show as View);
+    if (m.show !== undefined) showPicture(nb, m.show as View, m.run);
     if (m.laid !== undefined) laid.set(nb.toString(), m.laid as string[]);
     if (m.drawn !== undefined) drawn.set(nb.toString(), [...(drawn.get(nb.toString()) ?? []), m.drawn as Drawn]);
     if (m.notation !== undefined) void vscode.commands.executeCommand('rofl-notebook.openNotation', nb, String(m.ext), String(m.notation));
@@ -148,10 +148,10 @@ export function activate(ctx: vscode.ExtensionContext) {
   };
   ctx.subscriptions.push(pictures.onDidReceiveMessage(({ editor, message: m }) => hear(m, m.notebook ? vscode.Uri.parse(String(m.notebook)) : editor.notebook.uri, (r) => void pictures.postMessage(r, editor))));
   /** A picture in an editor tab of its own, drawn by the renderer's modules (vscode/visual/panel.ts), sized to the tab. */
-  function showPicture(nb: vscode.Uri, view: View) {
+  function showPicture(nb: vscode.Uri, view: View, run?: string) {
     const out = vscode.Uri.parse(new URL('./visual/out', import.meta.url).href);   // beside this file, in the tree and in the VSIX alike
     const p = vscode.window.createWebviewPanel('rofl-picture', `${view.kind} · ${nb.path.slice(nb.path.lastIndexOf('/') + 1)}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [out], retainContextWhenHidden: true });
-    const w = p.webview, data = JSON.stringify({ view, notebook: nb.toString() }).replace(/</g, '\\u003c');
+    const w = p.webview, data = JSON.stringify({ view, notebook: nb.toString(), run }).replace(/</g, '\\u003c');
     w.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${w.cspSource} https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data:">
 <style>html, body { height: 100%; margin: 0; } body { display: flex; flex-direction: column; gap: 6px; padding: 8px; box-sizing: border-box; background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); font: 13px var(--vscode-font-family); }
 .tools { display: flex; gap: 10px; align-items: center; color: var(--vscode-descriptionForeground); } .tools button { font: inherit; padding: 3px 10px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 0; border-radius: 3px; cursor: pointer; }
@@ -170,12 +170,12 @@ export function activate(ctx: vscode.ExtensionContext) {
     catch { for (const e of execs.values()) { e.start(); e.end(undefined); } return; }   // a run of this notebook is already going
     // Stop: a run cannot be told anything while it computes, so its worker goes
     for (const e of execs.values()) { e.start(Date.now()); e.clearOutput(); e.token.onCancellationRequested(restart); }
-    const out = (shown: Shown[]) => shown.flatMap((s) => [
+    const out = (shown: Shown[], stamp?: string) => shown.flatMap((s) => [
       // the answers: the renderer colours each verdict by its meaning; an editor without it shows the Markdown
       ...(s.md ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.text(s.md, SAID_MIME), vscode.NotebookCellOutputItem.text(s.md, 'text/markdown')])] : []),
       ...(s.err ? [new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.stderr(s.err)])] : []),
       // a picture: the renderer draws the view; an editor without it shows the view as text
-      ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString() }, VIEW_MIME),
+      ...(s.views ?? []).map((view) => { const b = backendOf(view); return new vscode.NotebookCellOutput([vscode.NotebookCellOutputItem.json({ view, notebook: nb.uri.toString(), run: stamp }, VIEW_MIME),
         vscode.NotebookCellOutputItem.text(b.fence ? `\`\`\`${b.fence}\n${b.write(view)}\n\`\`\`` : b.write(view), 'text/markdown')]); })]);
     let r: Run & { stamp: string; shown: { head: Shown; cells: Shown[] }; bare: { out: NbCellOut; shown: Shown }[] };
     const text = serialize(docOf(nb));
@@ -194,7 +194,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     for (const [c, x] of execs) {
       const head = { ...r.shown.head, md: r.shown.head.md.replace(/rofl-cell:(\d+)/g, (m, k) => runs[Number(k) - 1]?.document.uri.toString() ?? m) };
       const shown = [...(c === (front ?? runs[0] ?? bare[0]) ? [head] : []), ...(c === front ? [] : [(bare.includes(c) ? r.bare[bare.indexOf(c)]?.shown : r.shown.cells[runs.indexOf(c)]) ?? { md: '', err: '', ok: r.status !== 'unread' }])];
-      x.replaceOutput(out(shown));
+      x.replaceOutput(out(shown, r.stamp));
       x.end(shown.every((s) => s.ok), Date.now());
     }
     mark(nb, runs, r);

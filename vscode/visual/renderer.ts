@@ -6,7 +6,7 @@ import type { View } from '../../notebook/draw.ts';
 
 type Heard = { id?: number; text?: string; zoom?: string; notebook?: string; measure?: boolean; show?: boolean; why?: string; rows?: boolean };
 type Ctx = { postMessage?(m: unknown): void; onDidReceiveMessage?(f: (m: Heard) => void): unknown; getRenderer?(id: string): Promise<{ renderOutputItem(item: unknown, el: HTMLElement): void } | undefined> };
-type Item = { id: string; mime: string; metadata?: unknown; text(): string; json(): { view: View; notebook: string } };
+type Item = { id: string; mime: string; metadata?: unknown; text(): string; json(): { view: View; notebook: string; run?: string } };
 
 const SAID = 'application/vnd.rofl.said+markdown';
 const VERDICT_STYLE = `.verdict { font-weight: 600; } .verdict.pass { color: var(--vscode-testing-iconPassed); }
@@ -15,11 +15,11 @@ button.rofl-why { margin-left: .6em; padding: 0 .5em; font: inherit; font-size: 
 pre.rofl-why-tree { margin: .3em 0 .6em; padding: .4em .6em; white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); }`;
 
 let asked = 0;
-/** A picture's hooks when `talk` reaches the extension: a why is answered by `heard` with its id. Shared by the notebook and the editor tab. */
-export function talking(talk: (m: object) => void, view: View, notebook: string, where: () => object = () => ({})) {
+/** A picture's hooks when `talk` reaches the extension: a why, asked of the `run` that drew it, is answered by `heard` with its id. Shared by the notebook and the editor tab. */
+export function talking(talk: (m: object) => void, view: View, notebook: string, run?: string, where: () => object = () => ({})) {
   const waiting = new Map<number, HTMLElement>();
   const hooks: Omit<Hooks, 'libs'> = {
-    why: (literal, into) => { const id = ++asked; waiting.set(id, into); talk({ why: literal, notebook, id }); },
+    why: (literal, into) => { const id = ++asked; waiting.set(id, into); talk({ why: literal, notebook, id, run }); },
     pin: (facts) => talk({ pin: facts, notebook }),
     open: (text, ext) => talk({ notation: text, ext, notebook }),
     laid: (facts) => talk({ laid: facts, notebook }),
@@ -44,9 +44,9 @@ export const activate = (ctx: Ctx) => {
   return {
     async renderOutputItem(item: Item, el: HTMLElement) {
       if (item.mime === SAID) return void rows?.add(await said(ctx, item, el, talk));
-      const { view, notebook } = item.json(), t = talk && talking(talk, view, notebook);
+      const { view, notebook, run } = item.json(), t = talk && talking(talk, view, notebook, run);
       if (t) heard.push(t.heard);
-      const d = await draw(el, view, { libs: () => graphLibs(el.ownerDocument), ...(t && { ...t.hooks, show: () => talk!({ show: view, notebook }) }) });
+      const d = await draw(el, view, { libs: () => graphLibs(el.ownerDocument), ...(t && { ...t.hooks, show: () => talk!({ show: view, notebook, run }) }) });
       drawn.set(notebook, [...(drawn.get(notebook) ?? []), d]);
     },
   };

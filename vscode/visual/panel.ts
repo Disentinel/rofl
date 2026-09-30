@@ -6,8 +6,8 @@ import { talking } from './renderer.ts';
 import type { View } from '../../notebook/draw.ts';
 
 declare const acquireVsCodeApi: () => { postMessage(m: unknown): void };
-const vs = acquireVsCodeApi(), { view, notebook } = JSON.parse(document.getElementById('view')!.textContent!) as { view: View; notebook: string };
-const el = document.getElementById('pic')!, t = talking((m) => vs.postMessage(m), view, notebook, () => ({ panel: [innerWidth, innerHeight] }));
+const vs = acquireVsCodeApi(), { view, notebook, run } = JSON.parse(document.getElementById('view')!.textContent!) as { view: View; notebook: string; run?: string };
+const el = document.getElementById('pic')!, t = talking((m) => vs.postMessage(m), view, notebook, run, () => ({ panel: [innerWidth, innerHeight] }));
 addEventListener('message', (e) => t.heard(e.data));
 
 const pz = panZoom(el);

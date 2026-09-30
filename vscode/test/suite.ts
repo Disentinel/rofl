@@ -195,7 +195,10 @@ export async function run() {
           for (const n of ['is no colour', 'no icon is named crane', 'huge is more than 16 KB']) if (!notes.includes(n)) bad.push(`${c.file}: the picture does not say "${n}": ${notes}`);
         }
       }
-      const [fact, says] = c.why ?? [], why = c.why && await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri);
+      // a picture's why, asked as its renderer asks it: of the run that drew it
+      const run = views.map((o) => JSON.parse(new TextDecoder().decode(o.items.find((i) => i.mime === VIEW_MIME)!.data)).run)[0];
+      if (views.length && run !== (api.result(nb.uri) as { stamp?: string } | undefined)?.stamp) bad.push(`${c.file}: a picture does not name the run that drew it: ${run}`);
+      const [fact, says] = c.why ?? [], why = c.why && await vscode.commands.executeCommand<string>('rofl-notebook.why', fact, nb.uri, run);
       if (c.why && !why?.includes(says!)) bad.push(`${c.file}: a picture's why of ${fact} does not say "${says}": ${why}`);
       if (views.some((o) => !o.items.some((i) => i.mime === 'text/markdown' && new TextDecoder().decode(i.data).length > 20))) bad.push(`${c.file}: a picture has no text for an editor without its renderer`);
       const shot = process.env.ROFL_NB_SHOT;   // the runner screenshots the window while the picture is on it
@@ -239,7 +242,8 @@ async function colours(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[],
 }
 
 /** Each answer row's why as a person clicks it: the proof of that row shown under it, and hidden at a second click; none on a row that is
- *  no answer of its own; and once the notebook has changed, the kernel restarted or run another notebook, why there is no proof in place of one. */
+ *  no answer of its own; after other notebooks ran and one was translated, still this notebook's proof; and once the notebook has changed, the kernel
+ *  restarted or this notebook's run dropped for newer ones, why there is no proof in place of one. */
 async function asks(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[], api: Api, file: string, bad: string[]) {
   type Shown = { row: string; tree: string | null };
   const press = (m: object) => vscode.commands.executeCommand('rofl-notebook.press', nb.uri, m);
@@ -286,7 +290,7 @@ async function asks(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[], ap
   const restarted = await click('bike leaves the line');
   if (!restarted?.startsWith('No proof: the kernel no longer holds')) bad.push(`${file}: after a restart, a why showed a proof, or nothing: ${JSON.stringify(restarted)}`);
   await click('bike leaves the line');
-  // run again, the proof is back; another notebook run in the one kernel since, it is gone
+  // run again, the proof is back
   const execute = async (doc: vscode.NotebookDocument) => {
     const before = api.result(doc.uri);
     await vscode.window.showNotebookDocument(doc);
@@ -302,11 +306,21 @@ async function asks(nb: vscode.NotebookDocument, runs: vscode.NotebookCell[], ap
   await execute(nb);
   await drawn();
   await own('bike leaves the line', '`bike` leaves the line, because', ', run again,');
-  await execute(await vscode.workspace.openNotebookDocument(vscode.Uri.file(process.env.ROFL_NB_STARTUP!)));
+  // two notebooks more run and a translation of a third: this one's run is still kept, and its why its own; a fourth run, and it was dropped
+  for (const f of [process.env.ROFL_NB_STARTUP!, process.env.ROFL_NB_BARE!]) await execute(await vscode.workspace.openNotebookDocument(vscode.Uri.file(f)));
+  await vscode.window.showNotebookDocument(await vscode.workspace.openNotebookDocument(vscode.Uri.file(process.env.ROFL_NB_TRANSLATE!)));
+  await vscode.commands.executeCommand('rofl-notebook.translate');
+  await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
   await vscode.window.showNotebookDocument(nb);
   await drawn();
-  const other = await click('bike leaves the line');
-  if (!other?.startsWith('No proof: the kernel no longer holds')) bad.push(`${file}: after another notebook ran, a why showed a proof, or nothing: ${JSON.stringify(other)}`);
+  const kept = await click('bike leaves the line');
+  if (!kept?.startsWith('`bike` leaves the line, because')) bad.push(`${file}: after two other notebooks ran and a third was translated, a why did not show this notebook's proof: ${JSON.stringify(kept)}`);
+  await click('bike leaves the line');
+  await execute(await vscode.workspace.openNotebookDocument(vscode.Uri.file(process.env.ROFL_NB_MIXED!)));
+  await vscode.window.showNotebookDocument(nb);
+  await drawn();
+  const gone = await click('bike leaves the line');
+  if (!gone?.startsWith('No proof: the run these answers came from was dropped to save memory')) bad.push(`${file}: after three other notebooks ran, a why did not say its run was dropped: ${JSON.stringify(gone)}`);
 }
 
 /** Every picture fits its box: drawn with the side bar shut, measured again with it open, and drawn in an editor tab of its own by its Open in editor, sized to the tab. */
