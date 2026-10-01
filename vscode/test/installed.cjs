@@ -1,0 +1,65 @@
+// Inside a VS Code that has the built VSIX installed (vscode/test/dist.ts): the extension is the installed one, and a run of each notebook gives
+// every cell an output and the result the packaged command line gave. Plain CommonJS, so a VS Code that neither strips types nor loads ES module tests runs it.
+const vscode = require('vscode');
+const { existsSync, readFileSync, writeFileSync } = require('node:fs');
+
+const strip = (r) => JSON.stringify({ status: r.status, errors: r.errors, cells: r.cells });
+const until = async (get, ms, what) => {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise((f) => setTimeout(f, 100))) { const v = await get(); if (v) return v; }
+  throw new Error(`waited ${ms} ms for ${what}`);
+};
+
+exports.run = async () => {
+  const { ROFL_DIST_EXTENSIONS: dir, ROFL_DIST_ID: id, ROFL_DIST_CASES: cases, ROFL_DIST_REPORT: report, ROFL_DIST_SHOT: shot } = process.env, bad = [];
+  const ext = vscode.extensions.getExtension(id);
+  if (!ext?.extensionPath.startsWith(dir)) bad.push(`the extension is ${ext ? `at ${ext.extensionPath}` : 'not there'}, not installed under ${dir}`);
+  const api = ext && await ext.activate();
+  let shown = false;
+  for (const c of api ? JSON.parse(cases) : []) {
+    const nb = await vscode.workspace.openNotebookDocument(vscode.Uri.file(c.file));
+    await vscode.window.showNotebookDocument(nb);
+    await vscode.commands.executeCommand('notebook.selectKernel', { id: 'rofl-kernel', extension: id });
+    await vscode.commands.executeCommand('notebook.execute');
+    const r = await until(() => api.result(nb.uri), 110_000, `a result for ${c.file}`).catch((e) => void bad.push(e.message));
+    if (!r) continue;
+    const runs = nb.getCells().filter((x) => ['rofl', 'datalog'].includes(x.document.languageId));
+    await until(() => runs.every((x) => x.executionSummary?.success !== undefined) || undefined, 5_000, 'every cell to end').catch((e) => bad.push(e.message));
+    if (strip(r) !== strip(JSON.parse(readFileSync(c.cli, 'utf8')))) bad.push(`${c.file}: the result is not the packaged command line's --json`);
+    for (const x of runs) if (!x.outputs.length && !c.view) bad.push(`${c.file}: cell ${x.index} has no output`);
+    // a picture's notebook may have a cell of facts alone, which says nothing; the picture is a view output with its marks, which the renderer draws
+    const marks = runs.flatMap((x) => x.outputs.flatMap((o) => o.items.filter((i) => i.mime === 'application/vnd.rofl.view+json').map((i) => Object.keys(JSON.parse(Buffer.from(i.data).toString()).view.marks).length)));
+    if (c.view && (!marks.length || marks.includes(0))) bad.push(`${c.file}: no picture with marks, ${JSON.stringify(marks)}`);
+    if (c.view) console.log(`${c.file}: drawn, ${marks.join(' + ')} marks`);
+    if (c.view && !shown) shown = await inTab(nb, c.file, bad);
+    console.log(`${c.file}: ${r.status}, ${runs.length} cells, ${runs.filter((x) => x.outputs.length).length} with output, load ${r.ms.load} ms, run ${r.ms.run} ms`);
+  }
+  if (api && !shown) bad.push('no picture was opened in its own tab');
+  // the language server of the installed extension: a broken rule is marked on its line, a hover says what a relation is; the window is left showing both
+  const rofl = process.env.ROFL_DIST_LSP, t0 = Date.now();
+  const doc = api && await vscode.workspace.openTextDocument(vscode.Uri.file(rofl));
+  const editor = doc && await vscode.window.showTextDocument(doc);
+  const d = doc && await until(() => vscode.languages.getDiagnostics(doc.uri).find((x) => x.source === 'rofl' && x.severity === vscode.DiagnosticSeverity.Error), 20_000, `a diagnostic on ${rofl}`).catch(() => undefined);
+  if (d?.range.start.line !== 2) bad.push(`${rofl}: the broken rule on line 3 is marked ${d ? `on line ${d.range.start.line + 1}` : 'nowhere'}`);
+  const hover = doc ? await vscode.commands.executeCommand('vscode.executeHoverProvider', doc.uri, new vscode.Position(2, 14)) : [];
+  if (!hover.some((h) => h.contents.some((c) => (c.value ?? String(c)).includes('**b**')))) bad.push(`${rofl}: no hover on b`);
+  if (editor) { editor.selection = new vscode.Selection(2, 14, 2, 14); await vscode.commands.executeCommand('editor.action.showHover'); await new Promise((f) => setTimeout(f, 1_000)); }
+  console.log(`${rofl}: language server, ${d ? 'marked' : 'not marked'}, ${Date.now() - t0} ms`);
+  if (shot) { writeFileSync(`${shot}.ready`, ''); await until(() => existsSync(`${shot}.done`), 30_000, 'the screenshot').catch(() => {}); }
+  writeFileSync(report, bad.join('\n'));
+  if (bad.length) throw new Error(bad.join('\n'));
+};
+
+/** The installed renderer, once: the picture is drawn, its Open in editor draws it again in a tab of its own, and the verdicts above it have their colours. */
+async function inTab(nb, file, bad) {
+  const drawn = () => vscode.commands.executeCommand('rofl-notebook.drawn', nb.uri);
+  const at = nb.getCells().find((x) => x.outputs.some((o) => o.items.some((i) => i.mime === 'application/vnd.rofl.view+json')));
+  if (at) vscode.window.activeNotebookEditor?.revealRange(new vscode.NotebookRange(at.index, at.index + 1), vscode.NotebookEditorRevealType.AtTop);
+  const first = await until(async () => (await drawn()).length || undefined, 20_000, 'the picture drawn').catch(() => 0);
+  await vscode.commands.executeCommand('rofl-notebook.press', nb.uri, { show: true });
+  const tab = await until(async () => (await drawn()).slice(first).find((d) => d.panel), 20_000, 'the picture in its tab').catch(() => undefined);
+  if (!first || !tab || tab.spill.length) bad.push(`${file}: the installed renderer ${!first ? 'drew no picture' : !tab ? 'opened no picture in its tab' : `drew it past its tab: ${tab.spill}`}`);
+  const colours = await vscode.commands.executeCommand('rofl-notebook.verdicts', nb.uri);
+  if (!colours.length) bad.push(`${file}: the installed renderer coloured no verdict`);
+  console.log(`${file}: in its own tab ${tab ? `${tab.size.join(' x ')}` : 'not drawn'}, ${colours.length} verdicts coloured`);
+  return true;
+}

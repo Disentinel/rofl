@@ -6,10 +6,13 @@
 //
 // Executable Markdown ends in `.rofl.md`; a plain `.md` is a document and no world.
 //
-// The reading itself is readMd in scripts/read_md.ts; this reads the files and writes the results.
+// The reading itself is readMd in scripts/read_md.ts, and for a world the notebook's (notebook/world.ts); this reads the files and writes the results.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import * as path from 'node:path';
 import { readMd } from './read_md.ts';
+import { builtin, libFiles, parseFront } from '../notebook/front.ts';
+import { assemble, worldOf } from '../notebook/world.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -21,14 +24,23 @@ const [mdPath, ...srcPaths] = argv;
 if (!mdPath) { console.error('usage: npm run read -- <file.rofl.md> [source.rofl...] [--out FILE.rofl] [--vocab FILE.rofl]'); process.exit(2); }
 const abs = (p: string) => (p.startsWith('/') ? p : `${ROOT}${p}`);
 
-// a rendered model's vocabulary comes with a file rendered from it (docs/js, docs/rings); any other file brings its own
-if (/(^|\/)docs\/js\//.test(mdPath)) vocabPaths.unshift('facts/js-phrases.rofl');
-if (/(^|\/)docs\/rings\//.test(mdPath)) vocabPaths.unshift('facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl');
-const vocab = readFileSync(`${ROOT}facts/phrases.rofl`, 'utf8') + vocabPaths.map((v) => readFileSync(abs(v), 'utf8')).join('\n');
-// the source, as facts: the same dump the renderer reads
-const facts = srcPaths.length ? execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...srcPaths.map(abs)], { maxBuffer: 1 << 28 }).toString() : '';
-
-const r = readMd(readFileSync(abs(mdPath), 'utf8'), { vocab, facts });
+const text = readFileSync(abs(mdPath), 'utf8');
+const extra = vocabPaths.map((v) => '\n' + readFileSync(abs(v), 'utf8')).join('');
+let r: { report: string; traced: string[]; rofl: string; phrases: string[] };
+if (srcPaths.length) {
+  // a round trip: the source as facts, the same dump the renderer reads; a rendered model's vocabulary comes with a file rendered from it
+  const vocab = libFiles(mdPath, parseFront(text)).phrases.map((v) => readFileSync(abs(v), 'utf8')).join('\n') + extra;
+  const facts = execFileSync(`${ROOT}rust/target/release/rofl-render`, ['--facts', ...srcPaths.map(abs)], { maxBuffer: 1 << 28 }).toString();
+  r = readMd(text, { vocab, facts });
+} else {
+  // a world is read the way a notebook is: its prose and its cells, in the words its front matter names, after the worlds it reads
+  const rel = path.relative(ROOT, abs(mdPath)), front = parseFront(text), want = libFiles(rel, front);
+  const lib = Object.fromEntries([...want.model, ...want.phrases].map((f) => [f, readFileSync(abs(f), 'utf8')]));
+  const reads = Object.fromEntries(front.reads.map((f) => [f, readFileSync(builtin(f) ? abs(builtin(f)!) : path.resolve(path.dirname(abs(mdPath)), f), 'utf8')]));
+  const a = assemble(rel, text, { lib, reads, code: {} });
+  const w = worldOf(text, a.phrases + extra, a.home);
+  r = { report: w.reports.join('\n'), traced: w.traced, rofl: w.rofl, phrases: w.phrases };
+}
 console.log(r.report);
 // READ_TRACE=file: the literals matched on the deciding pass; the oracle examples/sentence/sentence.ts measures the ring 1 sentence grammar against
 if (process.env.READ_TRACE) writeFileSync(process.env.READ_TRACE, r.traced.join('\n') + '\n');

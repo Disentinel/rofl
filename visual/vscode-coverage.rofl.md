@@ -1,0 +1,228 @@
+---
+reads:
+  - table.rofl.md
+---
+
+# Visual kinds × VS Code: the coverage matrix
+
+> Rows are the forms of docs/renderers.md's updated typology (the table under
+> "The typology, updated": four kinds with their dialects, plus the notation
+> escape). Columns are what "covered inside VS Code" means. A cell is done with
+> evidence, waived with a reason, or open. Work items claim open cells. The
+> never lines are the audits: run `npm run nb -- visual/vscode-coverage.rofl.md`
+> before any progress claim. Owner's goal (2026-09-29): every cell done or
+> honestly waived, inside VS Code.
+
+```datalog
+-- rows: the typology (graph dialects, time forms, table forms, space forms, notation)
+kind(g_plain). kind(g_architecture). kind(g_state). kind(g_process). kind(g_argument). kind(g_causal). kind(g_proof).
+kind(t_gantt). kind(t_sequence). kind(t_timeline). kind(t_timing).
+kind(tb_table). kind(tb_chart). kind(tb_heatmap). kind(tb_upset). kind(tb_euler). kind(tb_decision).
+kind(s_map). kind(s_plan). kind(s_axes).
+kind(n_notation).
+family(g_plain, graph). family(g_architecture, graph). family(g_state, graph). family(g_process, graph). family(g_argument, graph). family(g_causal, graph). family(g_proof, graph).
+family(t_gantt, time). family(t_sequence, time). family(t_timeline, time). family(t_timing, time).
+family(tb_table, table). family(tb_chart, table). family(tb_heatmap, table). family(tb_upset, table). family(tb_euler, table). family(tb_decision, table).
+family(s_map, space). family(s_plan, space). family(s_axes, space).
+family(n_notation, notation).
+
+-- columns: inside VS Code
+lens(v_render). lens(v_why). lens(v_status). lens(v_compare). lens(v_geometry).
+lens(v_frames). lens(v_zoom). lens(v_test). lens(v_example). lens(v_docs).
+lens(v_installed).
+
+-- done, with evidence (branch notebook-draw; examples load as golden worlds)
+done(g_plain, v_example, "examples/visual/paint-shop.rofl.md").
+done(t_gantt, v_example, "examples/visual/spat-thursday.rofl.md").
+done(tb_table, v_example, "examples/visual/coverage.rofl.md").
+done(g_argument, v_example, "examples/visual/deploy-argument.rofl.md").
+done(t_sequence, v_example, "examples/visual/checkout-sequence.rofl.md").
+
+-- w1: vscode/visual (the notebook renderer) draws each first-wave kind in VS Code; vscode/test/suite.ts, the picture cases, holds each
+-- to the kinds it draws, a mark's status and a why (planted: `--break picture` and `--break why` turn it red). The why is asked by the
+-- command the renderer's button sends to (rofl-notebook.why); the button's message itself is not driven by a test.
+done(g_plain, v_render, "vscode/test/suite.ts").   done(g_plain, v_status, "vscode/test/suite.ts").   done(g_plain, v_why, "vscode/test/suite.ts").
+done(g_argument, v_render, "vscode/test/suite.ts"). done(g_argument, v_status, "vscode/test/suite.ts"). done(g_argument, v_why, "vscode/test/suite.ts").
+done(t_gantt, v_render, "vscode/test/suite.ts").    done(t_gantt, v_status, "vscode/test/suite.ts").    done(t_gantt, v_why, "vscode/test/suite.ts").
+done(t_sequence, v_render, "vscode/test/suite.ts"). done(t_sequence, v_status, "vscode/test/suite.ts"). done(t_sequence, v_why, "vscode/test/suite.ts").
+done(tb_table, v_render, "vscode/test/suite.ts").   done(tb_table, v_status, "vscode/test/suite.ts").   done(tb_table, v_why, "vscode/test/suite.ts").
+
+-- w2a: each first-wave picture again with an excise in its cell; the what-if's picture tags the mark the retraction moved (vscode/test/suite.ts, compare)
+done(K, v_compare, "vscode/test/suite.ts") :- first_wave(K).
+-- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl, and a notebook reading it carries the
+-- placed facts the renderer lays the marks at (vscode/test/suite.ts, pin; planted: --break pin). The renderer's use of them was seen, not tested.
+-- w3a: Pin layout (rofl-notebook.pinLayout, what the renderer's button sends) writes <notebook>.layout.rofl; a notebook reading it is drawn,
+-- and the renderer reports by message where it laid each mark, which must be the placed position (vscode/test/suite.ts, pin;
+-- planted: --break pin, and --break placed, a renderer that ignores placements, red with c1 at ELK's 40, 77)
+done(g_plain, v_geometry, "vscode/test/suite.ts"). done(g_argument, v_geometry, "vscode/test/suite.ts").
+-- wFa: a view whose marks name a frame draws as small multiples, one picture a frame in order, a mark new or gone against the frame before
+-- (notebook/draw.ts framesOf); test:vscode puts each first-wave picture in frames 1 and 2 and reads back the frames the renderer drew
+-- (planted: --break frames, red); test:nb:product draws the SPAT week a day a frame (planted: draw-frames, red)
+done(K, v_frames, "vscode/test/suite.ts") :- drawn_now(K), not waived(K, v_frames, _).
+-- wZa: a shut group (`A mark G is collapsed`; a graph's group is what marks are inside, a timeline's what lanes are in) draws as one mark
+-- labelled with its count and opens on a click (notebook/draw.ts zoom); test:vscode shuts a group in each first-wave picture, reads back
+-- "shop (3)" without its members, zooms in as a click does and reads the members back (planted: --break zoom, red); test:nb:product draws
+-- the shop shut (planted: draw-zoom, red)
+done(K, v_zoom, "vscode/test/suite.ts") :- drawn_now(K), not waived(K, v_zoom, _).
+-- wS: visual/space.rofl.md, marks at the data's geometry (a map in lonlat, a plan y down, semantic axes y up); GeoJSON and Vega-Lite as text
+-- (notebook/draw-space.ts), an SVG in VS Code (vscode/visual/pic-space.ts). test:vscode draws each of three examples, holds each to its
+-- status and a why, a what-if, and reads each point back at the data's position and the right way up (planted: --break space, a flipped
+-- map, red); test:nb:product parses the map's GeoJSON (planted: draw-space, swapped coordinates, red). A space's zoom shuts a region.
+done(K, L, "vscode/test/suite.ts") :- family(K, space), lens(L), L != v_example, L != v_installed, not shared(L), not waived(K, L, _).
+done(s_map, v_example, "examples/visual/rail-map.rofl.md"). done(s_plan, v_example, "examples/visual/office-plan.rofl.md"). done(s_axes, v_example, "examples/visual/wardley.rofl.md").
+-- wN: visual/notation.rofl.md, GEDCOM 7 written from a family's facts (notebook/draw-notation.ts); in VS Code the picture shows the file and
+-- opens it beside the notebook for a genealogy tool (rofl-notebook.openNotation; test:vscode reads the opened file back, planted --break
+-- notation red); test:nb:product holds the file to its FAM record (planted draw-notation, a family with no child, red)
+done(n_notation, v_render, "vscode/test/suite.ts"). done(n_notation, v_test, "vscode/test/suite.ts"). done(n_notation, v_example, "examples/visual/family-tree.rofl.md").
+-- wN, the picture (2026-09-29): the notation keeps its file (the "as gedcom" fold, Open as .ged) and is also drawn as a pedigree, the graph's layout
+-- over its facts (vscode/visual/pic-notation.ts): a partner above the family, the family above each child, a link standing for its partner or child
+-- fact, so a click on it asks why of that fact. test:vscode reads back the status as drawn (lena failing; planted --break pedigree, red) and the
+-- generations down from where the marks were laid (planted --break d-ped, red); its what-if copy excises lena's birth and the family is drawn gone,
+-- its frames are drawn 1 and 2, and a shut family is one mark with its count that opens as a click does (notebook/draw.ts zoom: a family holds its children).
+done(n_notation, v_why, "vscode/test/suite.ts"). done(n_notation, v_status, "vscode/test/suite.ts"). done(n_notation, v_compare, "vscode/test/suite.ts").
+drawn_now(K) :- row_of(wN, K).
+-- wG: the graph's dialects, each a look over the graph (vscode/visual/pic-dialects.ts: architecture flows down, a state machine has its entry
+-- dot, a process its lanes as bands, a causal loop its marks on a ring, a proof goes up) and its own notation (notebook/draw-dialects.ts,
+-- draw-proof.ts). test:vscode draws each in a what-if copy: the renderer's report of the kind, a mark's status, a why, the what-if, and the look
+-- read back from where the renderer put the marks (planted, each red: --break d-arch, d-state, d-proc, d-loop, d-proof); test:nb:product holds
+-- each notation (planted draw-arch, draw-state, draw-process, draw-causal, draw-proof). A dialect's frames and zoom close with wFa, wZa.
+done(K, L, "vscode/test/suite.ts") :- row_of(wG, K), lens(L), L != v_example, L != v_installed, not shared(L), not waived(K, L, _).
+done(g_architecture, v_example, "examples/visual/shop-architecture.rofl.md"). done(g_state, v_example, "examples/visual/order-states.rofl.md").
+done(g_process, v_example, "examples/visual/claim-process.rofl.md"). done(g_causal, v_example, "examples/visual/burnout-loop.rofl.md"). done(g_proof, v_example, "examples/visual/claim-proof.rofl.md").
+-- w11a: the picture cases of vscode/test/suite.ts, and test:nb:product's picture checks with a planted defect per backend (scripts/nb_product.ts)
+done(K, v_test, "vscode/test/suite.ts") :- first_wave(K).
+-- wT, wB: each form's what-if in vscode/test/suite.ts (the picture cases, `form`), drawn by the renderer's own module in the form it names, with the
+-- status mark and the what-if's change on a drawn element, and a why of one of its facts (planted, one a form: --break timeline, timing, chart,
+-- heatmap, upset, euler, decision). The module is run in the extension host, not in the webview; the webview was seen (test:vscode --shot).
+second_wave(t_timeline). second_wave(t_timing). second_wave(tb_chart). second_wave(tb_heatmap). second_wave(tb_upset). second_wave(tb_euler). second_wave(tb_decision).
+done(K, L, "vscode/test/suite.ts") :- second_wave(K), core(L).
+done(K, v_compare, "vscode/test/suite.ts") :- second_wave(K).
+done(K, v_test, "vscode/test/suite.ts") :- second_wave(K).
+done(t_timeline, v_example, "examples/visual/outage-timeline.rofl.md"). done(t_timing, v_example, "examples/visual/breaker-timing.rofl.md").
+done(tb_chart, v_example, "examples/visual/suite-chart.rofl.md"). done(tb_heatmap, v_example, "examples/visual/coverage-heatmap.rofl.md").
+done(tb_upset, v_example, "examples/visual/access-upset.rofl.md"). done(tb_euler, v_example, "examples/visual/oncall-euler.rofl.md").
+done(tb_decision, v_example, "examples/visual/shipping-decision.rofl.md").
+
+-- waived, with reasons that can go stale
+waived(K, v_geometry, "a table's layout is its rows and columns; nothing to pin") :- family(K, table).
+waived(K, v_geometry, "position is the time axis; lane order comes from the facts") :- family(K, time).
+waived(K, v_zoom, "a table's grouping is the query; group-by counts come with engine aggregates (another session)") :- family(K, table).
+waived(t_timeline, v_zoom, "a timeline is one axis with no lanes, so there is no lane group to shut; stale once it draws lanes").
+waived(n_notation, v_geometry, "a pedigree's rows are its generations, read from descent: a person pinned elsewhere could stand above a parent, which is the defect the picture shows; GEDCOM carries no positions").
+waived(g_proof, v_geometry, "the tree's shape is its layout; a literal is not a mark term placed() can carry").
+waived(g_proof, v_frames, "a proof is of one run; its frames would be ticks it does not span, and a what-if already draws it before and after").
+
+-- what a lens means where it is not plain: v_frames is small multiples, one picture per value of a view fact's frame key in order, each
+-- mark new or gone against the frame before it (compare, reused); an animation or a slider is not asked for, since small multiples show
+-- the same thing at once and can be tested. v_zoom collapses a group into one mark labelled with its member count, expanded on click; the
+-- count is the renderer's, from membership, never an engine aggregate. v_geometry is done only when a test reads back where the renderer put
+-- a placed mark.
+
+-- the plan, by family: a work item owns rows, across every lens but the shared three (frames, zoom, docs), so two agents never share a file
+-- (each family writes its own vscode/visual/pic-*.ts, notebook/draw-*.ts and examples/visual/*; a family agent adds done/waived facts for its rows only)
+work(w1, "a VS Code notebook output renderer for view facts, with click to why and status tags").
+work(w2a, "excise before/after drawn in VS Code, first-wave kinds").
+work(w3a, "pinned layout honoured in VS Code, and the pin action there, first-wave graphs").
+work(w11a, "a test:vscode check per first-wave kind").
+work(wG, "graph dialects: architecture, state, process, causal, proof").
+work(wT, "time forms: timeline, timing").
+work(wB, "table forms: chart, heatmap/DSM, UpSet, Euler, decision table").
+work(wS, "space: map, plan, semantic axes").
+work(wN, "notation: the emitted standard file, opened in a VS Code preview").
+work(wF, "frames: small multiples, every kind (the shared frame)").
+work(wFa, "frames for the kinds that render now: the first wave and space").
+work(wZ, "zoom: collapse inside groups and aggregate them, every kind (the shared frame)").
+work(wZa, "zoom for the kinds that render now: the first wave and space").
+work(wD, "docs: a guide page on drawing, with generated pictures, every kind").
+state(w1, done). state(wFa, done). state(wZa, done). state(w2a, done). state(w3a, done). state(w11a, done).
+state(wG, done). state(wT, done). state(wB, done). state(wS, done). state(wN, done). state(wF, done). state(wZ, done). state(wD, done).
+-- who works each open item (2026-09-29): nb-graph the graph dialects, nb-tt time and table forms, nb-draw the shared frame, space, notation, docs
+owner(wT, nb_tt). owner(wB, nb_tt). owner(wF, nb_draw). owner(wZ, nb_draw). owner(wD, nb_draw).
+
+first_wave(g_plain). first_wave(g_argument). first_wave(t_gantt). first_wave(t_sequence). first_wave(tb_table).
+drawn_now(K) :- first_wave(K).
+drawn_now(K) :- family(K, space).
+-- wT, wB: the second wave's forms, each put in frames 1 and 2 and timing's lanes shut in a group by its what-if case (vscode/test/run.ts, FORMS)
+drawn_now(K) :- row_of(wT, K).
+drawn_now(K) :- row_of(wB, K).
+drawn_now(K) :- row_of(wG, K).
+core(v_render). core(v_why). core(v_status).
+shared(v_frames). shared(v_zoom). shared(v_docs).
+row_of(wG, g_architecture). row_of(wG, g_state). row_of(wG, g_process). row_of(wG, g_causal). row_of(wG, g_proof).
+row_of(wT, t_timeline). row_of(wT, t_timing).
+row_of(wB, tb_chart). row_of(wB, tb_heatmap). row_of(wB, tb_upset). row_of(wB, tb_euler). row_of(wB, tb_decision).
+row_of(wS, s_map). row_of(wS, s_plan). row_of(wS, s_axes).
+row_of(wN, n_notation).
+
+claims(w1, K, L) :- first_wave(K), core(L).
+claims(w2a, K, v_compare) :- first_wave(K).
+claims(w3a, K, v_geometry) :- family(K, graph), first_wave(K).
+claims(w11a, K, v_test) :- first_wave(K).
+claims(W, K, L) :- row_of(W, K), lens(L), not shared(L), not waived(K, L, _).
+claims(wF, K, v_frames) :- kind(K), not waived(K, v_frames, _), not drawn_now(K).
+claims(wFa, K, v_frames) :- drawn_now(K).
+claims(wZ, K, v_zoom) :- kind(K), not waived(K, v_zoom, _), not drawn_now(K).
+claims(wZa, K, v_zoom) :- drawn_now(K), not waived(K, v_zoom, _).
+claims(wD, K, v_docs) :- kind(K).
+
+cell(K, L) :- kind(K), lens(L).
+closed(K, L) :- done(K, L, _).
+closed(K, L) :- waived(K, L, _).
+open_cell(K, L) :- cell(K, L), not closed(K, L).
+claimed(K, L) :- claims(W, K, L), not state(W, done).
+has_state(W) :- state(W, _).
+
+unqueued(K, L) :- open_cell(K, L), not claimed(K, L).
+queue_stale(W, K, L) :- claims(W, K, L), not state(W, done), closed(K, L).
+false_done(W, K, L) :- claims(W, K, L), state(W, done), open_cell(K, L).
+double_owned(K, L, A, B) :- claims(A, K, L), claims(B, K, L), not state(A, done), not state(B, done), A != B.
+stateless(W) :- work(W, _), not has_state(W).
+unknown_axis(K) :- claims(_, K, _), not kind(K).
+owned(W) :- owner(W, _).
+claims_some(W) :- claims(W, _, _).
+idle(W) :- state(W, open), not claims_some(W).
+ownerless(W) :- state(W, open), not owned(W).
+
+-- wD: guide/DRAWING.md, a section per kind with its example and its picture as the renderer draws it (an SVG in guide/pictures) or as
+-- mermaid, a Markdown table or the notation's own file; generated by npm run guide, and `-- --check` fails when a block or a picture is stale
+done(K, v_docs, "guide/DRAWING.md") :- kind(K).
+
+-- wI: drawn from the installed packages alone. npm run test:dist installs the tgz, copies its examples/visual out, runs each with the installed
+-- rofl-nb and holds it to the tree's --json with its marks; test:dist:vscode runs each copy in a clean VS Code with the VSIX and holds its view
+-- output to its marks. Every kind has its own example there, so a row closes on its own example, not on its family's (planted, each red:
+-- --break vocab, the vocabularies and inquiry rules left out, in both; --break resolver, a rofl: name read as a path). claim-proof reads no vocabulary.
+installed(g_plain, "paint-shop"). installed(g_architecture, "shop-architecture"). installed(g_state, "order-states"). installed(g_process, "claim-process").
+installed(g_causal, "burnout-loop"). installed(g_proof, "claim-proof"). installed(g_argument, "deploy-argument").
+installed(t_gantt, "spat-thursday"). installed(t_sequence, "checkout-sequence"). installed(t_timeline, "outage-timeline"). installed(t_timing, "breaker-timing").
+installed(tb_table, "coverage"). installed(tb_chart, "suite-chart"). installed(tb_heatmap, "coverage-heatmap"). installed(tb_upset, "access-upset").
+installed(tb_euler, "oncall-euler"). installed(tb_decision, "shipping-decision").
+installed(s_map, "rail-map"). installed(s_plan, "office-plan"). installed(s_axes, "wardley"). installed(n_notation, "family-tree").
+done(K, v_installed, "vscode/test/dist.ts") :- installed(K, _).
+work(wI, "drawn from the installed packages alone: the vocabularies and examples in the tgz and the VSIX, named as rofl:visual/NAME.rofl.md and rofl:rules/inquiry/NAME.rofl").
+state(wI, done). owner(wI, nb_ship).
+claims(wI, K, v_installed) :- kind(K), not waived(K, v_installed, _).
+
+-- the matrix drawn as its own heatmap: a cell coloured by its verdict, and one no work claims outlined red by the audit below
+value(K, L, done) :- done(K, L, _).
+value(K, L, waived) :- waived(K, L, _), not done(K, L, _).
+value(K, L, claimed) :- open_cell(K, L), claimed(K, L).
+value(K, L, open) :- unqueued(K, L).
+
+? open_cell(K, L)
+never unqueued(K, L)
+never queue_stale(W, K, L)
+never false_done(W, K, L)
+never double_owned(K, L, A, B)
+never stateless(W)
+never unknown_axis(K)
+never ownerless(W)
+never idle(W)
+draw heatmap
+```
+
+> What has no cell: an n-ary relation drawn as a reified node (a dialect of
+> graph, but its role-tagged links need their own check); combined views (a
+> postmortem is a timeline plus a causal graph — the unit is the view, not the
+> kind); accessibility of every picture (screen reader text, high contrast);
+> the reverse direction (a drawn diagram read back as facts). Add a column or
+> a row when one of these is taken up.

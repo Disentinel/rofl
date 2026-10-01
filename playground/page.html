@@ -2,33 +2,7 @@
 <title>ROFL Playground</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  :root {
-    --bg: #F7F8F5; --panel: #FFFFFF; --fg: #1C2120; --mute: #66706B; --line: #D9DDD6; --soft: #EEF0EB;
-    --code-bg: #FCFCFA; --gutter: #9AA39D;
-    --accent: #1D4ED8; --accent-bg: #1D4ED814;
-    --pass: #047857; --pass-bg: #0478571A; --fail: #B91C1C; --fail-bg: #B91C1C14; --warn: #A15C07; --warn-bg: #A15C0714;
-    --kw: #6D28D9; --was: #7A6F5B;
-    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
-      --code-bg: #161A18; --gutter: #69726D;
-      --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
-      --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
-      --kw: #C7A9FF; --was: #B5A98F;
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --bg: #131615; --panel: #1A1E1C; --fg: #E6E8E3; --mute: #9AA39D; --line: #343A37; --soft: #222725;
-    --code-bg: #161A18; --gutter: #69726D;
-    --accent: #8AB4FF; --accent-bg: #8AB4FF1F;
-    --pass: #5FD3A1; --pass-bg: #5FD3A11A; --fail: #F87171; --fail-bg: #F871711A; --warn: #F2B34F; --warn-bg: #F2B34F1A;
-    --kw: #C7A9FF; --was: #B5A98F;
-  }
+  /* tokens */
   html, body { height: 100%; }
   body { background: var(--bg); color: var(--fg); font: 14.5px/1.5 var(--sans); }
   .wrap { padding-inline: 16px; padding-block: 14px 24px; max-width: 1480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
@@ -48,6 +22,10 @@
   button:disabled { opacity: .5; cursor: default; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 14px; align-items: start; }
   @media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .grid.nocode { grid-template-columns: minmax(0, 1fr); max-width: 1000px; }
+  .grid.nocode .code { display: none; }
+  .nocode-note { display: none; font-size: 13px; color: var(--mute); margin: 0; }
+  .grid.nocode .nocode-note { display: block; }
 
   /* the code pane */
   .code { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
@@ -154,6 +132,7 @@
   .adds span { color: var(--mute); font-size: 12.5px; }
   .help { color: var(--mute); font-size: 13px; max-width: 78ch; margin: 0; }
   .help code { font: 12.5px var(--mono); color: var(--fg); }
+
 </style>
 
 <div class="wrap">
@@ -165,7 +144,8 @@
     <button type="button" class="primary" id="runall" disabled>Run the book</button>
   </header>
   <p class="help">The code is scanned into facts and read by the ROFL model of JavaScript. Every formal cell is part of one book that runs over it. A formal cell is written in sentences, the way a <code>.rofl.md</code> is; a rofl cell takes plain Datalog. <code>? S</code> lists answers, <code>never S</code> is an invariant that holds when nothing answers, <code>unsure S</code> under it says what the invariant could not see, <code>why S</code> explains one. Files import each other with <code>import ... from './x.js'</code>. A natural cell is translated into a formal one when you run it. Shift+Enter runs.</p>
-  <div class="grid">
+  <div class="grid" id="grid">
+    <p class="nocode-note">No code: this notebook draws its own facts.</p>
     <section class="code" aria-label="JavaScript">
       <div class="bar"><div class="files" id="files" role="tablist" aria-label="Files"></div><span id="lines"></span><div class="spacer"></div><span id="runinfo"></span></div>
       <div class="editor">
@@ -387,16 +367,21 @@ A call C is out of sight of main if a function F answers to "main" and F is blin
 
 never F is a writing main
 unsure C is out of sight of main` },
-      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
+      { kind: 'prose', text: `The model does not know what an event bus does, so bus.emit is where it stops seeing. The next cell teaches it in three sentences; its last line, extends resolves, says the third one adds to the model's own call graph on purpose. Switch it from prose to formal and run: the invariant turns red, and why on it goes through the new rule and across the files.` },
       { kind: 'prose', text: `A call C emits E if the callee of C is M, M selects "emit", C passes the argument X at 0 and X may be the literal E.
 
 A function F handles E if the callee of a call R is M, M selects "on", R passes the argument X at 0, X may be the literal E, R passes the argument Y at 1 and Y points to F.
 
-A call C resolves to a function F if C emits E and F handles E.` },
+A call C resolves to a function F if C emits E and F handles E.
+
+extends resolves` },
     ],
   },
 };
-const fresh = (name) => { const ex = EXAMPLES[name]; return { example: name, files: { ...ex.files }, active: Object.keys(ex.files)[0], cells: ex.cells.map(cell) }; };
+// the pictures (pictures.json): examples/visual, a notebook with no code, whose cells draw
+let pictures = [];
+const picture = (name) => { const p = pictures.find((x) => `pic:${x.name}` === name); return p && { files: { 'notes.js': '' }, cells: p.cells }; };
+const fresh = (name) => { const ex = EXAMPLES[name] ?? picture(name) ?? EXAMPLES.await; return { example: name, files: { ...ex.files }, active: Object.keys(ex.files)[0], cells: ex.cells.map(cell) }; };
 
 const $ = (id) => document.getElementById(id);
 const runs = (c) => c.kind === 'formal' || c.kind === 'rofl';
@@ -416,8 +401,20 @@ const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { local
 
 // ------------------------------------------------------------ the engine
 let host = null;          // { call(op, ...args): Promise }
+const text = (f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); });
+// a picture's notebook has no code and runs over the kernel alone, as `model: none` does on the command line; the JS examples over the JS model
+let loadedModel = null;
+async function useModel(which) {
+  if (loadedModel === which) return { ok: true };
+  const t0 = performance.now();
+  setStatus(`<span class="busy">loading ${which === 'js' ? 'the JS model' : 'the kernel'}</span>`);
+  const r = which === 'js' ? await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map(text)).then(([m, p, c]) => host.call('init', m, p, JSON.parse(c)))
+    : await Promise.all(['boot.txt', 'phrases-none.txt'].map(text)).then(([m, p]) => host.call('init', m, p));
+  if (r.ok) { loadedModel = which; setStatus(`<span>${which === 'js' ? 'JS model' : 'Kernel (no code model)'} loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`); }
+  return r;
+}
+const modelFor = () => String(state.example ?? '').startsWith('pic:') ? 'none' : 'js';
 async function startHost() {
-  const [model, phrases, concerns] = await Promise.all(['model.txt', 'phrases.txt', 'concerns.json'].map((f) => fetch(f).then((r) => { if (!r.ok) throw new Error(`${f}: ${r.status}`); return r.text(); })));
   const viaWorker = await new Promise((resolve) => {
     let w;
     try { w = new Worker('lib/worker.js', { type: 'module' }); } catch (e) { resolve(null); return; }
@@ -433,7 +430,7 @@ async function startHost() {
     const m = await import('./lib/host.js');
     host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
   }
-  return host.call('init', model, phrases, JSON.parse(concerns));
+  return useModel(modelFor());
 }
 
 // ------------------------------------------------------------ the editor
@@ -459,6 +456,7 @@ function paintEditor() {
 const filesEl = $('files');
 let renaming = null;
 function renderFiles() {
+  $('grid').classList.toggle('nocode', String(state.example ?? '').startsWith('pic:'));
   const names = Object.keys(state.files);
   filesEl.innerHTML = names.map((f) => renaming === f
     ? `<input id="rename" value="${esc(f)}" aria-label="File name" spellcheck="false">`
@@ -559,6 +557,7 @@ function renderCells() {
     </article>`;
   }).join('');
   for (const t of cellsEl.querySelectorAll('textarea')) grow(t);
+  mountPictures();
 }
 // a translated cell takes more plain language: an open one asks for it, a finished one offers it
 const drafts = new Map();
@@ -575,7 +574,8 @@ function summary(r) {
 }
 function outputs(r) {
   let h = r.errors.map((e) => `<div class="err">${esc(e)}</div>`).join('') + (r.notes || []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
-  for (const l of r.lines) {
+  for (const [n, l] of r.lines.entries()) {
+    if (l.kind === 'draw') { h += `<div class="ask"><div class="q"><span class="pill info">picture</span><span>${esc(l.text)}</span></div>${(l.view?.notes || []).map((x) => `<div class="note">${esc(x)}</div>`).join('')}${l.view ? `<div class="pic" data-pic="${esc(r.id)}" data-n="${n}"></div>` : ''}</div>`; continue; }
     const blind = l.kind === 'never' && l.ok && l.unsure && l.unsure.total > 0;
     const pill = l.kind === 'never' ? (l.ok && r.errors.length ? '<span class="pill warn">unproven &middot; part of the cell was left out</span>' : blind ? `<span class="pill warn">holds as far as it sees &middot; ${l.unsure.total} out of sight</span>` : l.ok ? '<span class="pill pass">holds</span>' : `<span class="pill fail">fails &middot; ${l.total}</span>`) : l.kind === 'answers' ? `<span class="pill info">${l.total} ${l.total === 1 ? 'answer' : 'answers'}</span>` : '<span class="pill info">why</span>';
     h += `<div class="ask"><div class="q">${pill}<span>${esc(l.text)}</span>${l.lit && !l.text.endsWith(l.lit) ? `<span class="lit">${esc(l.lit)}</span>` : ''}</div>`;
@@ -606,6 +606,32 @@ function markBad() {
   renderFiles(); paintEditor();
 }
 
+// ------------------------------------------------------------ pictures
+// drawn by the modules VS Code's notebook renderer draws with (vscode/visual): a why here is the page's folded proof, Pin layout a file and a rofl cell
+let pictures_ = null;
+async function mountPictures() {
+  const els = [...cellsEl.querySelectorAll('.pic[data-pic]')];
+  if (!els.length) return;
+  pictures_ ??= await import('./lib/pictures.js');
+  for (const el of els) {
+    const v = results.get(el.dataset.pic)?.lines[Number(el.dataset.n)]?.view; if (!v || el.dataset.drawn) continue;
+    el.dataset.drawn = '1';
+    await pictures_.draw(el, v, {
+      libs: () => pictures_.graphLibs(document),
+      why: async (literal, into) => { try { into.outerHTML = renderProof(await host.call('explain', literal), literal); } catch (e) { into.textContent = e.message; } },
+      pin,
+    });
+  }
+}
+// a pinned layout is a facts file beside the notebook, placed(M, X, Y) a line; here it also goes into a rofl cell, so the next run keeps it
+function pin(text) {
+  const name = `${String(state.example ?? 'notebook').replace(/^pic:/, '')}.layout.rofl`;
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = name; a.click(); } catch (e) {}
+  const was = state.cells.find((c) => c.kind === 'rofl' && c.text.startsWith('-- pinned layout'));
+  if (was) was.text = text; else state.cells.push(cell({ kind: 'rofl', text }));
+  save(); runBook();
+}
+
 // ------------------------------------------------------------ running
 let running = false, again = false, lastMs = 0;
 const setStatus = (html) => { $('status').innerHTML = html; };
@@ -615,6 +641,8 @@ async function runBook() {
   if (!host) return;
   if (running) { again = true; return; }
   running = true; again = false;
+  const m = await useModel(modelFor());
+  if (!m.ok) { running = false; setStatus(`<span style="color:var(--fail)">The model did not load: ${esc(m.diagnostics.join('; '))}</span>`); return; }
   $('runinfo').innerHTML = '<span class="status"><span class="busy">running</span></span>';
   try {
     const out = await host.call('run', state.files, formal());
@@ -813,6 +841,14 @@ $('runall').addEventListener('click', () => runBook());
 
 // ------------------------------------------------------------ start
 code.value = state.files[state.active]; $('example').value = state.example ?? 'await'; renderFiles(); paintEditor(); renderCells();
+fetch('pictures.json').then((r) => r.ok ? r.json() : []).then((ps) => {
+  pictures = ps;
+  if (!ps.length) return;
+  $('example').insertAdjacentHTML('beforeend', `<optgroup label="Pictures">${ps.map((p) => `<option value="pic:${esc(p.name)}">${esc(p.title)}</option>`).join('')}</optgroup>`);
+  $('example').value = state.example ?? 'await';
+  const want = new URLSearchParams(location.search).get('example');   // ?example=pic:paint-shop opens one as shipped
+  if (want && (EXAMPLES[want] || picture(want))) { $('example').value = want; $('example').dispatchEvent(new Event('change')); }
+}).catch(() => {});
 (async () => {
   try {
     sample = window.claude && window.claude.use ? await window.claude.use('sample') : null;
@@ -826,7 +862,6 @@ code.value = state.files[state.active]; $('example').value = state.example ?? 'a
     const [init, vocab, fns] = await Promise.all([startHost(), ...['vocab.txt', 'functions.txt'].map((f) => fetch(f).then((r) => r.ok ? r.text() : ''))]);
     vocabText = vocab; functionsText = fns;
     if (!init.ok) throw new Error(init.diagnostics.join('; '));
-    setStatus(`<span>JS model loaded in <b>${((performance.now() - t0) / 1000).toFixed(1)} s</b>, running in ${host.where}</span>`);
     $('runall').disabled = false;
     await runBook();
   } catch (e) { setStatus(`<span style="color:var(--fail)">The JS model did not load: ${esc(e.message)}</span>`); }

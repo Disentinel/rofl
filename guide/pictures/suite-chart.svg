@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="rofl-pic" viewBox="0 0 680 264" width="100%" role="img" aria-label="chart"><style>
+.rofl-pic { --p-fg: var(--vscode-editor-foreground, var(--fg, #1c2120)); --p-mute: var(--vscode-descriptionForeground, var(--mute, #66706b));
+  --p-line: var(--vscode-panel-border, var(--line, #d9ddd6)); --p-bg: var(--vscode-editor-background, var(--code-bg, #fcfcfa)); --p-panel: var(--vscode-editorWidget-background, var(--panel, #fff));
+  --p-soft: var(--vscode-editor-inactiveSelectionBackground, var(--soft, #eef0eb)); --p-accent: var(--vscode-focusBorder, var(--accent, #1d4ed8)); --p-accent-bg: color-mix(in srgb, var(--p-accent) 12%, transparent);
+  --p-fail: var(--vscode-errorForeground, var(--fail, #b91c1c)); --p-fail-bg: color-mix(in srgb, var(--p-fail) 12%, transparent);
+  --p-warn: var(--vscode-editorWarning-foreground, var(--warn, #a15c07)); --p-warn-bg: color-mix(in srgb, var(--p-warn) 14%, transparent); --p-pass: var(--vscode-testing-iconPassed, var(--pass, #047857));
+  --p-mono: var(--vscode-editor-font-family, var(--mono, ui-monospace, Menlo, monospace));
+  border: 1px solid var(--p-line); border-radius: 5px; background: var(--p-bg); color: var(--p-fg); min-width: 0; }
+.rofl-pic .pbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px; border-bottom: 1px solid var(--p-line); font: 12px/1.4 var(--p-mono); color: var(--p-mute); }
+.rofl-pic .pbar .spacer { flex: 1; }
+.rofl-pic button { font: 12px/1 inherit; padding: 4px 8px; color: var(--p-fg); background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; cursor: pointer; }
+.rofl-pic .stage { overflow-x: auto; }
+.rofl-pic .cy { height: 380px; }
+.rofl-pic .frame { border-top: 1px dashed var(--p-line); }
+.rofl-pic .frame-key { padding: 4px 8px; font: 12px var(--p-mono); }
+.rofl-pic .frame .cy { height: 260px; }
+.rofl-pic .detail { padding: 8px 10px; border-top: 1px solid var(--p-line); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.rofl-pic .detail pre, .rofl-pic .why { margin: 0; padding: 6px 8px; background: var(--p-panel); border: 1px solid var(--p-line); border-radius: 4px; font: 12px/1.5 var(--p-mono); white-space: pre-wrap; }
+.rofl-pic .facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.rofl-pic .facts code { font: 12.5px var(--p-mono); }
+.rofl-pic .mute { color: var(--p-mute); }
+.rofl-pic .note { color: var(--p-warn); background: var(--p-warn-bg); padding: 5px 10px; font-size: 13px; }
+.rofl-pic details.as { padding: 4px 10px 8px; font-size: 12.5px; color: var(--p-mute); }
+.rofl-pic details.as pre, .rofl-pic pre.fallback { margin: 6px 0 0; padding: 8px 10px; font: 12px/1.5 var(--p-mono); white-space: pre; overflow-x: auto; color: var(--p-fg); }
+.rofl-pic .tag { font: 11px var(--p-mono); padding: 1px 6px; border-radius: 3px; background: var(--p-soft); color: var(--p-mute); }
+.rofl-pic table.view { border-collapse: collapse; margin: 8px; font: 12.5px var(--p-mono); }
+.rofl-pic table.view th, .rofl-pic table.view td { border: 1px solid var(--p-line); padding: 4px 9px; text-align: left; }
+.rofl-pic [data-mark], .rofl-pic [data-group] { cursor: pointer; }
+.rofl-pic text[data-group] { text-decoration: underline dotted; }
+.rofl-pic { display: block; }
+.rofl-pic text { font: 11px var(--p-mono); fill: var(--p-fg); }
+.rofl-pic .axis text { fill: var(--p-mute); }
+.rofl-pic .axis line, .rofl-pic .lanes line { stroke: var(--p-line); }
+.rofl-pic [data-mark] { fill: var(--p-accent-bg); stroke: var(--p-accent); stroke-width: 1.2; }
+.rofl-pic line[data-mark] { stroke-width: 1.6; }
+.rofl-pic .failing, .rofl-pic .dangling, .rofl-pic .failing, .rofl-pic .dangling { color: var(--p-fail); background: var(--p-fail-bg); fill: var(--p-fail-bg); stroke: var(--p-fail); }
+.rofl-pic .dangling, .rofl-pic .dangling { border-style: dashed; stroke-dasharray: 4 3; }
+.rofl-pic .blind { background: repeating-linear-gradient(45deg, var(--p-warn-bg), var(--p-warn-bg) 4px, transparent 4px, transparent 8px); }
+.rofl-pic .blind { fill: url(#rofl-hatch); stroke: var(--p-warn); stroke-dasharray: 5 3; }
+.rofl-pic .unknown, .rofl-pic .unknown { color: var(--p-mute); stroke: var(--p-mute); stroke-dasharray: 2 3; }
+.rofl-pic .gone, .rofl-pic .gone { opacity: .45; text-decoration: line-through; stroke-dasharray: 5 5; }
+.rofl-pic .new { outline: 2px solid var(--p-pass); outline-offset: -2px; }
+.rofl-pic .new { stroke: var(--p-pass); stroke-width: 3; }
+.rofl-pic .region { fill: var(--p-soft); fill-opacity: .5; stroke: var(--p-mute); }
+.rofl-pic line.link { stroke: var(--p-mute); stroke-width: 1.5; }
+.rofl-pic .collapsed { stroke-width: 3; }</style><g class="axis"><line x1="52" x2="672" y1="224" y2="224"/><text x="46" y="228" text-anchor="end">0</text><line x1="52" x2="672" y1="157.33333333333334" y2="157.33333333333334"/><text x="46" y="161.33333333333334" text-anchor="end">50</text><line x1="52" x2="672" y1="90.66666666666669" y2="90.66666666666669"/><text x="46" y="94.66666666666669" text-anchor="end">100</text><line x1="52" x2="672" y1="24" y2="24"/><text x="46" y="28" text-anchor="end">150</text><text x="129.25" y="240" text-anchor="middle">hosts</text><text x="283.75" y="240" text-anchor="middle">product</text><text x="438.25" y="240" text-anchor="middle">unit</text><text x="592.75" y="240" text-anchor="middle">vscode</text></g><rect data-mark="hosts" class="" x="75.17500000000001" y="90.66666666666669" width="108.14999999999999" height="133.33333333333331" rx="2"><title>hosts</title></rect><text x="129.25" y="83.66666666666669" text-anchor="middle" pointer-events="none">100</text><rect data-mark="product" class="" x="229.675" y="138.66666666666666" width="108.14999999999999" height="85.33333333333334" rx="2"><title>product</title></rect><text x="283.75" y="131.66666666666666" text-anchor="middle" pointer-events="none">64</text><rect data-mark="unit" class="" x="384.175" y="209.33333333333334" width="108.14999999999999" height="14.666666666666657" rx="2"><title>unit</title></rect><text x="438.25" y="202.33333333333334" text-anchor="middle" pointer-events="none">11</text><rect data-mark="vscode" class="over_budget failing" x="538.675" y="34.66666666666666" width="108.14999999999999" height="189.33333333333334" rx="2"><title>vscode [over_budget, failing]</title></rect><text x="592.75" y="27.666666666666657" text-anchor="middle" pointer-events="none">142</text><text x="592.75" y="254" text-anchor="middle" class="axis" style="fill:var(--p-mute)">[over_budget, failing]</text></svg>

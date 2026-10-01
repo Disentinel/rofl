@@ -5,9 +5,11 @@
 -- start hook renders open_finding into every session's face.
 --
 -- EDB (facts/findings.rofl):
---   finding(F, Kind)           Kind: insight | pitfall | question | idea
+--   finding(F, Kind)           Kind: insight | pitfall | question | idea | defect | decision
 --   recorded(F, Date)          "YYYY-MM-DD"
---   demands(F, What)           What: rule_and_test | kernel_test | doc | decision
+--   demands(F, What)           What: rule_and_test | kernel_test | doc | decision, and in use also
+--                              code | demo | kernel_change | none | requeue | test | test_repair
+--                              (f_the_ledger_header_drifted_from_its_vocabulary)
 --   finding_note(F, Note)      one-line human summary (prose lives in docs/dogfood/)
 --   addressed_by(F, Artifact)  path of the rule/test/doc that settles it
 --   dismissed(F, Reason)       explicit refusal, with a named reason
@@ -67,8 +69,11 @@ finding_action(F, W) :- open_finding(F), demands(F, W).
 -- settled before B is briefed; until 2026-08-31 the order of work lived
 -- nowhere but in my head, so the ledger could say what was found and whether
 -- it was closed, and not what to do next. Three rules make the order a
--- consequence of the facts, with a why-tree, and a circular queue would be
--- refused by the same machinery that refuses a circular program.
+-- consequence of the facts, with a why-tree. A CIRCULAR QUEUE IS NOT REFUSED:
+-- `blocks` is data and these rules read only a finding's direct blocker, so
+-- nothing here is recursive and nothing sees a cycle; two findings blocking
+-- each other are both `waiting` for ever, silently. Measured by
+-- examples/notebook/ledger.rofl.md (N6); see f_the_queue_accepts_a_cycle_silently.
 waiting(F)           :- blocks(A, F), not settled(A).
 ready(F)             :- open_finding(F), not waiting(F).
 blocked_by(F, A)     :- blocks(A, F), not settled(A).

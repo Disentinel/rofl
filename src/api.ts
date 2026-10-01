@@ -216,6 +216,8 @@ export class Rofl {
   retainTicks: number | undefined;
   /** See `EvalOpts.space`; undefined leaves the kernel's default. */
   private readonly space: number | undefined;
+  /** Asked every 4096 steps of every later evaluation of this world and of its forks; true stops it as if its budget ran out. */
+  stop: (() => boolean) | undefined;
   diagnostics: string[] = [];
   private qn = 0;
   private loadn = 0;
@@ -284,6 +286,7 @@ export class Rofl {
   fork(): Rofl {
     const r = new Rofl({ naive: this.naive, reuse: this.reuse,
       evaluator: this.evaluator, retainTicks: this.retainTicks, space: this.space });
+    r.stop = this.stop;
     r.store = this.store.clone();
     return r;
   }
@@ -555,7 +558,11 @@ export class Rofl {
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
-      if (!h.args.every(isGround)) return `fact ${canonClause(c)}: must be ground`;
+      if (!h.args.every(isGround)) {
+        // a capitalised word is a variable, which a fact cannot hold: most often a name written as a proper noun
+        const said = canonClause(c), v = /\?([A-Z][A-Za-z0-9_]*)\b/.exec(said)?.[1];
+        return `fact ${said}: must be ground${v ? `: \`${v}\` is read as a variable: a name is lower-case in backticks, \`${v.toLowerCase()}\`` : ''}`;
+      }
       if (h.temporal === 'next') return `fact ${canonClause(c)}: '@next' facts are not assertable`;
       if (h.temporal === 'init' && this.store.tick !== 0) {
         this.diagnostics.push(`fact ${canonClause(c)}: '@init' ignored after tick 0`);
@@ -700,7 +707,7 @@ export class Rofl {
    *  `load`, `evaluate`, `query`, `why`, `tickAdvance` and `run` all funnel
    *  through `ensure`/`prepared` and must not be able to disagree about it. */
   private newEval(budget: number, holeId: Term): Evaluation {
-    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space };
+    const opts = { budget, naive: this.naive, reuse: this.reuse, holeId, space: this.space, stop: this.stop };
     return this.evaluator === 'strata'
       ? new Evaluation(this.store, opts)
       : new RoundEvaluation(this.store, opts);

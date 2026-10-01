@@ -1,0 +1,323 @@
+// npm run test:vscode — the extension in the installed VS Code, as it is and with the planted defect that proves one kernel, which must turn it red.
+// `-- --mutants` codeline, marks, cells and lsp; `translate`, `revert`, `wrap`, `startup` and `stop` run by name, which keeps each run under two minutes; `-- --only` as it is and nothing else; `-- --group core|pictures|whatif|forms|why` over one group of cases; `-- --planted` the three windows that are not as it is; `-- --break NAME[,NAME]` planted defects by name; `-- --case NAME` the cases of that notebook alone; `-- --extras NAME[,NAME]` of the checks that are not a case (before the cases, translate, stop, bare, mixed, reading) only those; `-- --theme NAME` in that colour theme.
+import { runTests } from '@vscode/test-electron';
+import { spawn, spawnSync } from 'node:child_process';
+import { chmodSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { vscodeLock } from './lock.ts';
+
+const ROOT = new URL('../..', import.meta.url).pathname, EXT = path.join(ROOT, 'vscode');
+const CODE = process.env.ROFL_VSCODE ?? '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
+const tmp = mkdtempSync(path.join(os.tmpdir(), 'rofl-vscode-'));
+const made = new Set([tmp]);
+process.on('exit', () => made.forEach((d) => rmSync(d, { recursive: true, force: true })));
+// a VS Code left running would write its user dir back after the removal
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { spawnSync('pkill', ['-9', '-f', tmp]); process.exit(1); });
+vscodeLock();
+const t0 = performance.now();
+spawnSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/renderer.ts')], { stdio: 'inherit' });   // the notebook renderer the extension declares
+
+// The notebooks: review with a never planted to fail, review as it is, small with a function that calls itself.
+const put = (to: string, text: string) => { mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, text); return to; };
+const src = (f: string) => readFileSync(path.join(ROOT, f), 'utf8');
+put(path.join(tmp, 'nb/examples/review.rofl.md'), src('examples/review.rofl.md'));
+const review = put(path.join(tmp, 'nb/examples/notebook/review.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`rofl\nnever C is blocked by T\n\`\`\`\n`);
+const small = put(path.join(tmp, 'nb/examples/notebook/small.rofl.md'), src('examples/notebook/small.rofl.md'));
+const smallJs = put(path.join(tmp, 'nb/examples/notebook/small.js'), `${src('examples/notebook/small.js')}\nexport function spin(n) {\n  return n ? spin(n - 1) : 0;\n}\n`);
+
+const broken = put(path.join(tmp, 'nb/examples/broken.rofl'), 'a(1).\nb(X) :- a(X).\nc(X) :- a(X) b(X).\n');
+const late = put(path.join(tmp, 'nb/examples/late.rofl.md'), `${src('examples/review.rofl.md')}\nA change C is late if C touches a module M and M is frozen by a team T.\n`);
+const tutorial = put(path.join(tmp, 'nb/examples/tutorial/2-paint-shop.rofl.md'), src('examples/tutorial/2-paint-shop.rofl.md'));
+// the three branches at once: a fenced cell of English lines, and in the delivery's bare cell a fact that does not read and an English line
+const mixed = put(path.join(tmp, 'nb/examples/tutorial/3-mixed.rofl.md'), src('examples/tutorial/3-missing-part.rofl.md')
+  .replace('- `mirror` is in stock.\n', '- `mirror` is in stock.\n- `door` glows in the dark.\nIs `door` in stock?\n')
+  .replace('```rofl\nnever X is late\n```\n', '```rofl\nnever X is late\n```\n\n```rofl\nWhich products leave the line?\nIs `truck` late?\n```\n'));
+// two quarters drawn each as its own picture, and long cells for the reading view to collapse
+const long = (n: number) => Array.from({ length: 14 }, (_, i) => `step${n}(${i}).`).join('\n');
+const readingNb = put(path.join(tmp, 'nb/examples/notebook/reading.rofl.md'), `---\nreads:\n  - rofl:visual/graph.rofl.md\n---\n\n# Two quarters\n\n\`\`\`rofl\nDeclared as facts:\n\n- <a id="leads"></a>A thing A leads to a thing B\n- <a id="quarter"></a>A thing A is in the quarter Q\n\nThe facts:\n\n- \`a\` leads to \`b\`.\n- \`c\` leads to \`d\`.\n- \`a\` is in the quarter \`q1\`.\n- \`b\` is in the quarter \`q1\`.\n- \`c\` is in the quarter \`q2\`.\n- \`d\` is in the quarter \`q2\`.\n\nA mark X is a node if X leads to something.\n\nA mark X is a node if something leads to X.\n\nA mark X links to a mark Y if X leads to Y.\n\nA mark X is in the frame Q if X is in the quarter Q.\n\`\`\`\n\n${[1, 2, 3, 4].map((n) => `\`\`\`datalog\n${long(n)}\n\`\`\`\n\n`).join('')}\`\`\`rofl\ndraw graph in q1\n\`\`\`\n\n\`\`\`rofl\ndraw graph in the frame \`q2\`\n\`\`\`\n`);
+const runaway = put(path.join(tmp, 'nb/examples/notebook/runaway.rofl.md'), '```datalog\nn(0).\nn(Y) :- n(X), Y is X + 1.\n\n? n(5)\n```\n');
+const natural = put(path.join(tmp, 'nb/examples/notebook/natural.rofl.md'), `${src('examples/notebook/review.rofl.md')}\n\`\`\`natural\nNo change touches a module nobody owns.\n\`\`\`\n\nA cell after it, which no edit of the cell above may take.\n`);
+// the model: a question, a cell that does not read, or no answer until stopped when told to; the cell as a question once told something else; and else the cell as an invariant
+const fake = put(path.join(tmp, 'claude.sh'), `#!/bin/sh
+p=$(cat)
+rule='A module M is unowned if some change touches M, unless some team owns M.'
+case "$p" in
+  *"The person says: ask me"*) echo 'Which modules count as owned?' ;;
+  *"The person says: break it"*) printf '%s\\n' '\`\`\`rofl' 'A module M is gloriously unowned whenever nobody.' '\`\`\`' ;;
+  *"The person says: wait"*) echo $$ > ${path.join(tmp, 'claude.pid')}; exec sleep 60 ;;
+  *"The person says: model it"*) printf '%s\\n' '\`\`\`rofl' 'Declared as facts:' '' '- <a id="keeps"></a>A team T keeps a module M' '' 'The keepers:' '' '- \`core\` keeps \`kernel\`.' '\`\`\`' ;;
+  *"The person says"*) printf '%s\\n' '\`\`\`rofl' "$rule" '' '? M is unowned' '\`\`\`' ;;
+  *) printf '%s\\n' 'Here it is.' '\`\`\`rofl' "$rule" '' 'never M is unowned' '\`\`\`' ;;
+esac
+`);
+chmodSync(fake, 0o755);
+
+const cli = (file: string, out: string) => new Promise<string>((done) => {
+  const p = spawn(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'notebook/cli.ts'), file, '--json'], { env: { ...process.env, ROFL_NB_DAEMON: '0' } });
+  let s = ''; p.stdout.on('data', (d) => { s += d; });
+  p.on('close', () => done(put(out, s)));
+});
+// the pictures: each example of examples/visual beside the vocabularies it reads, and the kinds its cells draw
+// each with a mark's status its picture must carry, and a fact of it whose why must say a sentence
+// and a what-if: a cell that excises a fact and draws again, whose picture must tag a mark gone or new
+// and frames: a datalog cell that puts its marks in frames 1 and 2, drawn as small multiples
+// and zoom: facts that shut a group, which must draw as one mark with its count, and open when the extension zooms it as a click would
+// and, for space, a point the renderer must report at the data's own position
+type Visual = { look?: string; f: string; kinds: string[]; fails?: string; status: [string, string]; why: [string, string]; whatif?: [string, string, string]; frames?: string; notation?: string; zoom?: [string, string, string, string]; laid?: string; below?: [string, string] };
+const VISUAL: Visual[] = [
+  { f: 'paint-shop', kinds: ['graph'], fails: 'never M is tagged `unpainted`', status: ['pink', 'dangling'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'], whatif: ['excise `blue` is in the paint shop\ndraw graph', 'c1', 'new'], frames: 'frame(c1, 1). frame(c2, 1). frame(c3, 2). frame(c4, 2).', zoom: ['collapsed(shop).', 'shop', 'shop (3)', 'blue'] },
+  { f: 'spat-thursday', kinds: ['time'], fails: 'never M is tagged `alone`', status: ['$alone(kit,1060)', 'failing'], why: ['during($alone(kit, 1060), 1060, 1080)', '`kit` is alone on `thu` at 1060'], whatif: ['excise moved(c_dentist, swim, w0831, wed, thu, 1020, 1080)\ndraw time', 'swim', 'gone'], frames: 'frame(work_am, 1). frame(work_pm, 2). frame(acme, 2).', zoom: ['lane_group(kit, children). lane_group(nico, children). collapsed(children).', 'children', 'children (2)', 'kit'] },
+  { f: 'checkout-sequence', kinds: ['time'], fails: 'never C is unanswered', status: ['c3', 'failing'], why: ['message(c3, api, payments, 4)', '`c3` is sent by `api` to `payments` at 4'], whatif: ['excise `c3` is sent by `api` to `payments` at 4\ndraw time', 'c3', 'gone'], frames: 'frame(c1, 1). frame(c2, 1). frame(c3, 2).', zoom: ['lane_group(api, backend). lane_group(db, backend). collapsed(backend).', 'backend', 'backend (2)', 'db'] },
+  { f: 'coverage', kinds: ['table'], fails: 'never unqueued(K, L)', status: ['k_a', 'failing'], why: ['value(k_a, l_y, open)', 'open_cell'], whatif: ['excise done(k_c, l_y, "test/c_y.test.ts")\ndraw table', 'k_c', 'new'], frames: 'frame(k_a, 1). frame(k_b, 2). frame(k_c, 2).' },
+  { f: 'deploy-argument', kinds: ['argument', 'graph'], status: ['cheap_to_run', 'unknown'], why: ['link_tagged(incident_4711, safe_to_ship, attack)', 'refutes'], whatif: ['excise refutes[obs](incident_4711, safe_to_ship)\ndraw argument', 'incident_4711', 'gone'], frames: 'frame(bench_p99, 1). frame(canary_clean, 2). frame(incident_4711, 2).', zoom: ['inside(suite_green, evidence). inside(canary_clean, evidence). collapsed(evidence).', 'evidence', 'evidence (2)', 'suite_green'] },
+  { f: 'rail-map', kinds: ['space'], fails: 'never S is stranded', status: ['rome', 'failing'], why: ['at(rome, 12, 42)', '`rome` stands at longitude 12 and latitude 42'], laid: 'at(rome, 12, 42).', below: ['rome', 'berlin'],
+    whatif: ['excise `rome` stands at longitude 12 and latitude 42\ndraw space', 'rome', 'gone'], frames: 'frame(paris, 1). frame(madrid, 1). frame(berlin, 2).',
+    zoom: ['corner(west, 1, -10, 38). corner(west, 2, 5, 38). corner(west, 3, 5, 50). corner(west, 4, -10, 50). inside(paris, west). inside(madrid, west). inside(lisbon, west). collapsed(west).', 'west', 'west (3)', 'paris'] },
+  { f: 'office-plan', kinds: ['space'], fails: 'never D is homeless', status: ['d6', 'failing'], why: ['at(d6, 950, 200)', '`d6` stands at 950 200'], laid: 'at(d6, 950, 200).', below: ['d5', 'd1'],
+    whatif: ['excise `d6` stands at 950 200\ndraw space', 'd6', 'gone'], frames: 'frame(d1, 1). frame(d4, 2).', zoom: ['collapsed(studio).', 'studio', 'studio (3)', 'd1'] },
+  { f: 'wardley', kinds: ['space'], fails: 'never A is upside down', status: ['payments', 'failing'], why: ['at(payments, 70, 70)', '`payments` has evolved to 70 and is visible to 70'], laid: 'at(payments, 70, 70).', below: ['compute', 'payments'],
+    whatif: ['excise `payments` needs `fraud_model`\ndraw space', 'payments', 'gone'], frames: 'frame(checkout, 1). frame(compute, 2).',
+    zoom: ['corner(platform, 1, 75, 0). corner(platform, 2, 100, 0). corner(platform, 3, 100, 40). corner(platform, 4, 75, 40). inside(database, platform). inside(compute, platform). collapsed(platform).', 'platform', 'platform (2)', 'compute'] },
+  { look: 'entry', f: 'order-states', kinds: ['state'], fails: 'never S is stuck', status: ['refund_pending', 'failing'], why: ['tagged(shipped, current)', 'is now in `shipped`'], whatif: ['excise `paid` moves to `refund_pending` on `refund`\ndraw state', 'refund_pending', 'gone'],
+    frames: 'frame(cart, 1). frame(delivered, 2).', zoom: ['inside(paid, fulfilment). inside(shipped, fulfilment). collapsed(fulfilment).', 'fulfilment', 'fulfilment (2)', 'shipped'] },
+  { look: 'down', f: 'shop-architecture', kinds: ['architecture'], fails: 'never A calls up to B', status: ['billing', 'failing'], why: ['link_tagged(billing, session, upward)', '`billing` calls up to `session`'], whatif: ['excise `billing` calls `session`\ndraw architecture', 'billing', 'gone'],
+    frames: 'frame(customer, 1). frame(stripe, 2).', zoom: ['collapsed(shop).', 'shop', 'shop (5)', 'web'] },
+  { look: 'bands', f: 'claim-process', kinds: ['process'], fails: 'never A is unreachable', status: ['appeal', 'failing'], why: ['link_tagged(covered, pay, yes)', '`covered` is followed by `pay` when `yes`'], whatif: ['excise `appeal` is followed by `review`\ndraw process', 'appeal', 'gone'],
+    frames: 'frame(filed, 1). frame(closed, 2).', zoom: ['collapsed(manager).', 'manager', 'manager (2)', 'review'] },
+  { look: 'ring', f: 'burnout-loop', kinds: ['causal'], fails: 'never an influence from A to B is unsigned', status: ['morale', 'failing'], why: ['link_tagged(overtime, backlog, negative)', '`overtime` lowers `backlog`'], whatif: ['excise `morale` moves `attrition`\ndraw causal', 'morale', 'gone'],
+    frames: 'frame(overtime, 1). frame(attrition, 2).', zoom: ['inside(bugs, quality). inside(fatigue, quality). collapsed(quality).', 'quality', 'quality (2)', 'bugs'] },
+  { look: 'up', f: 'claim-proof', kinds: ['proof'], status: ['next[main](check,covered)', 'unknown'], why: ['reached[main](pay)', '`covered` is reached'], whatif: ['why `pay` is reached\nexcise `covered` is followed by `pay` when `yes`\ndraw proof', 'next[main](covered,pay)', 'gone'],
+    zoom: ['collapsed("reached(covered)").', 'reached[main](covered)', 'covered is reached (7)', 'check is reached'] },
+  { f: 'family-tree', kinds: ['notation'], fails: 'never C is born before a parent', status: ['lena', 'failing'], why: ['child($family(boris, anna), lena)', '`lena` was born to `boris` and `anna`'], notation: 'ged',
+    whatif: ['excise `lena` was born to `boris` and `anna`\ndraw notation', '$family(boris,anna)', 'gone'], frames: 'frame(ivan, 1). frame(olga, 1). frame(boris, 2). frame(lena, 2).',
+    zoom: ['collapsed($family(ivan, olga)).', '$family(ivan,olga)', '$family(ivan,olga) (1)', 'anna'] },
+];
+// the second wave, a draw kind each: only its what-if, which holds its picture's status, why, frames and zoom too, drawn by the renderer's module in that form
+const FORMS: (Visual & { form: string })[] = [
+  { f: 'outage-timeline', form: 'timeline', kinds: ['timeline'], fails: 'never A is late', status: ['error_alert', 'failing'], why: ['happens(error_alert, 11)', '`error_alert` happened at 11'], whatif: ['excise `error_alert` happened at 11\ndraw timeline', 'error_alert', 'gone'], frames: 'frame(deploy, 1). frame(errors_rise, 1). frame(acked, 2). frame(rollback, 2).' },
+  { f: 'breaker-timing', form: 'timing', kinds: ['timing'], fails: 'never M is tagged `stuck`', status: ['$span(payments,4)', 'failing'], why: ['in_state($span(payments,4), open)', '`payments` was in `open` from 4 to 17'], whatif: ['excise `search` was in `open` from 9 to 14\ndraw timing', '$span(search,9)', 'gone'], frames: 'frame($span(payments,0), 1). frame($span(search,0), 1). frame($span(payments,19), 2). frame($span(search,22), 2).', zoom: ['lane_group(payments, breakers). lane_group(search, breakers). collapsed(breakers).', 'breakers', 'breakers (2)', 'payments'] },
+  { f: 'suite-chart', form: 'chart', kinds: ['chart'], fails: 'never M is tagged `over_budget`', status: ['vscode', 'failing'], why: ['value(vscode, seconds, 142)', '`vscode` took 142 seconds'], whatif: ['excise `unit` took 11 seconds\ndraw chart', 'unit', 'gone'], frames: 'frame(hosts, 1). frame(unit, 1). frame(vscode, 2).' },
+  { f: 'coverage-heatmap', form: 'heatmap', kinds: ['heatmap'], fails: 'never unqueued(K, L)', status: ['k_space', 'failing'], why: ['value(k_space, l_test, open)', 'open_cell'], whatif: ['excise done(k_graph, l_test, "test/graph.ts")\ndraw heatmap', 'k_graph', 'new'], frames: 'frame(k_graph, 1). frame(k_time, 1). frame(k_space, 2).' },
+  { f: 'access-upset', form: 'upset', kinds: ['upset'], fails: 'never M is tagged `two_duties`', status: ['eli', 'failing'], why: ['value(eli, billing, yes)', '`eli` is in `billing`'], whatif: ['excise `hal` is in `audit`\ndraw upset', 'hal', 'gone'], frames: 'frame(ana, 1). frame(ben, 1). frame(eli, 2). frame(hal, 2).' },
+  { f: 'oncall-euler', form: 'euler', kinds: ['euler'], fails: 'never M is tagged `overloaded`', status: ['fay', 'failing'], why: ['value(fay, web, yes)', '`fay` is on `web`'], whatif: ['excise `ana` is on `web`\ndraw euler', 'ana', 'gone'], frames: 'frame(ana, 1). frame(ben, 1). frame(fay, 2). frame(gus, 2).' },
+  { f: 'shipping-decision', form: 'decision', kinds: ['decision'], fails: 'never M is tagged `gap`', status: ['r1', 'failing'], why: ['value(r1, free_shipping, x)', '`r1` does `free_shipping`'], whatif: ['excise `r2` does `free_shipping`\ndraw decision', 'r2', 'gone'], frames: 'frame(r1, 1). frame(r2, 1). frame(r3, 2).' },
+];
+cpSync(path.join(ROOT, 'visual'), path.join(tmp, 'nb/visual'), { recursive: true });
+cpSync(path.join(ROOT, 'examples/visual'), path.join(tmp, 'nb/examples/visual'), { recursive: true });   // an example may read another (claim-proof reads claim-process)
+for (const f of ['spat/spat.rofl', 'spat/week.example.rofl', 'visual/deploy-case.rofl']) put(path.join(tmp, 'nb/examples', f), src(`examples/${f}`));
+for (const f of ['rules/inquiry/terminology.rofl', 'rules/inquiry/epistemic.rofl']) put(path.join(tmp, 'nb', f), src(f));
+// the what-if and the frames go in one copy of each notebook, to keep the run under its two minutes
+const WHATIF: Visual[] = [...VISUAL.filter((x) => x.whatif), ...FORMS];
+const whatifs = WHATIF.map(({ f, whatif, frames, zoom }) => put(path.join(tmp, `nb/examples/visual/${f}-whatif.rofl.md`), `${src(`examples/visual/${f}.rofl.md`)}\n\`\`\`rofl\n${whatif![0]}\n\`\`\`\n${frames || zoom ? `\n\`\`\`datalog\n${frames ?? ''}\n${zoom?.[0] ?? ''}\n\`\`\`\n` : ''}`));
+// a pinned layout: Pin layout writes the facts, and a notebook that reads them draws its marks there
+const pinned = put(path.join(tmp, 'nb/examples/visual/paint-pinned.rofl.md'), src('examples/visual/paint-shop.rofl.md').replace('  - rofl:visual/graph.rofl.md', '  - rofl:visual/graph.rofl.md\n  - paint-pinned.layout.rofl'));
+// a dialect is held to everything in its what-if copy alone, whose first picture is the notebook's own: one window less a dialect keeps test:vscode under two minutes
+const based = VISUAL.filter((x) => !x.look), pictures = based.map(({ f }) => put(path.join(tmp, `nb/examples/visual/${f}.rofl.md`), src(`examples/visual/${f}.rofl.md`)));
+// why: the tutorial's three answers; more answers than the kernel sends; a string with every character Markdown reads; a failing never; an excise
+const asking = put(path.join(tmp, 'nb/examples/why.rofl.md'), `${src('examples/tutorial/solutions/1-what-ships.rofl.md')}
+\`\`\`datalog
+n(0).
+n(Y) :- n(X), X < 60, Y is X + 1.
+said("a \\"q\\" \`b\` [c] (d) <e> *f*").
+
+? n(X)
+? said(X)
+low(X) :- n(X), X < 1.
+never low(X)
+\`\`\`
+
+\`\`\`rofl
+excise \`bike\` is on the plan
+\`\`\`
+`);
+const clean = path.join(ROOT, 'examples/notebook/review.rofl.md');
+// the tutorial's scenes as a player sees them, each mark's icon and colour read back from the drawing (`M icon NAME` the renderer's icon, `M icon ~TEXT` an SVG
+// holding TEXT, `M colour C`): level 1 with a product listed right and one by mistake, level 2 as it ships
+const scene = (n: string, edit: (t: string) => string) => put(path.join(tmp, `nb/examples/tutorial/${n}.rofl.md`), edit(src(`examples/tutorial/${n}.rofl.md`)));
+const SCENES = [
+  { file: scene('1-what-ships', (t) => t.replace('\n- `sofa` is on your list.\n', '\n- `car` is on your list.\n- `van` is on your list.\n')), fails: 'never X is on your list by mistake', status: ['van', 'failing'], why: ['tagged(van, waiting)', '`van` waits for `door`'],
+    looks: ['car icon car', 'car colour mediumseagreen', 'van icon van', 'van colour grey', 'door icon door', 'door colour orange', 'wheel icon wheel'] },
+  { file: scene('2-paint-shop', (t) => t), fails: 'never X leaves unpainted', status: ['c3', 'failing'], why: ['tagged(c3, unpainted)', '`c3` leaves unpainted'],
+    looks: ['c1 icon car', 'c1 colour blue', 'c2 colour red', 'c3 colour grey', 'blue icon paint_can', 'blue colour blue'] },
+];
+// icons a notebook draws, planted: one whose handler would take the drawing away and one that would load from the suite's own server, were either drawn other
+// than as an image; a notebook's own car, which wins over the renderer's; an icon nobody draws; one past the cap; a colour that tries to leave its attribute
+const svg = (body: string) => `"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'>${body}</svg>"`;
+const iconsNb = put(path.join(tmp, 'nb/examples/visual/icons-planted.rofl.md'), `---\nreads:\n  - rofl:visual/space.rofl.md\n---\n\n# Icons a notebook draws, planted\n\n\`\`\`datalog
+at(p1, 1, 1). at(p2, 3, 1). at(p3, 5, 1). at(p4, 7, 1). at(p5, 9, 1).
+icon(p1, probe). icon(p2, far). icon(p3, car). icon(p4, crane). icon(p5, huge).
+icon_drawing(probe, ${svg("<script>document.body.remove()</script><image href='x' onerror='this.ownerSVGElement.ownerSVGElement.remove()'/><rect width='4' height='4' fill='currentColor'/>")}).
+icon_drawing(far, ${svg("<image href='http://127.0.0.1:PROBE_PORT/far' width='4' height='4' onload='this.ownerSVGElement.ownerSVGElement.remove()'/><rect width='2' height='2'/>")}).
+icon_drawing(car, ${svg("<desc>the notebook's own car</desc><rect width='4' height='4' fill='currentColor'/>")}).
+icon_drawing(huge, ${svg(`<desc>${'x'.repeat(17 * 1024)}</desc>`)}).
+tagged(p1, evil). tag_colour(evil, "red\\" onmouseover=\\"x").
+tagged(p3, painted). tag_colour(painted, "#1e90ff").
+\`\`\`\n\n\`\`\`rofl\ndraw space\n\`\`\`\n`);
+const cases = [
+  { file: review, cli: path.join(tmp, 'review.json'), fails: { text: 'never C is blocked by T' } },
+  { file: clean, cli: path.join(tmp, 'clean.json') },
+  { file: small, cli: path.join(tmp, 'small.json'), fails: { text: 'never C recurses', code: [smallJs, 12] } },
+  ...pictures.map((file, k) => ({ file, cli: path.join(tmp, `picture-${k}.json`), pictures: based[k].kinds, status: based[k].status, why: based[k].why, laid: based[k].laid, below: based[k].below, notation: based[k].notation, look: based[k].look, ...(based[k].fails && { fails: { text: based[k].fails } }) })),
+  { file: pinned, pin: 'placed(c1, 300, 260).\n', fails: { text: VISUAL[0].fails! } },
+  { file: asking, cli: path.join(tmp, 'why.json'), asks: true, fails: { text: 'never low(X)' } },
+  ...SCENES.map((x, k) => ({ file: x.file, cli: path.join(tmp, `scene-${k}.json`), pictures: ['graph'], status: x.status as [string, string], why: x.why as [string, string], looks: x.looks, fails: { text: x.fails } })),
+  { file: iconsNb, cli: path.join(tmp, 'nb/icons-planted.json'), pictures: ['space'], status: ['p3', 'painted'] as [string, string], probe: true,
+    looks: ['p1 icon ~onerror', 'p2 icon ~/far', 'p3 icon ~the notebook\'s own car', 'p3 icon ~#1e90ff', 'p4 plain', 'p5 plain', 'p1 uncoloured'] },
+  ...whatifs.map((file, k) => { const x = WHATIF[k]; return { file, cli: path.join(tmp, `whatif-${k}.json`), pictures: [...x.kinds, x.whatif![0].split(' ').pop()!], status: x.status, why: x.why, compare: x.whatif!.slice(1) as [string, string], ...(x.frames && { frames: ['1', '2'] }), look: x.look, ...(x.zoom && { zoom: x.zoom.slice(1) }), ...(x.fails && { fails: { text: x.fails } }), ...('form' in x && { form: x.form as string }) }; }),
+];
+// `--group`: the run as it is over one group of cases, each window under two minutes; `core` also holds the checks that are not a case
+const GROUPS: Record<string, typeof cases> = {
+  core: cases.filter((c) => !('pictures' in c) && !('pin' in c) && !('asks' in c)),
+  why: cases.filter((c) => 'asks' in c),
+  pictures: cases.filter((c) => ('pictures' in c || 'pin' in c) && !('compare' in c)),
+  whatif: cases.filter((c) => 'compare' in c && !('form' in c)),
+  forms: cases.filter((c) => 'form' in c),
+};
+const gi = process.argv.indexOf('--group'), group = gi >= 0 ? process.argv[gi + 1] : undefined;
+if (group !== undefined && !GROUPS[group]) throw new Error(`--group takes one of ${Object.keys(GROUPS).join(', ')}`);
+
+// A planted defect is a copy of the extension beside it, one line changed; a pattern that no longer matches plants nothing, so it throws.
+// Each runs only the cases that can show it, and the checks that are not a case only when its case is `first`; it is red only when the suite gives its own reason: red for another reason is a check that did not run.
+const of = (form: string) => cases.filter((c) => 'form' in c && c.form === form);
+const named = (f: string) => cases.filter((c) => c.file.endsWith(`/${f}.rofl.md`));
+const first = [cases[0]];   // a plant whose check is not a case: the one case the checks around them read
+const BREAKS: Record<string, [string, RegExp, string, typeof cases, RegExp]> = {
+  codeline: ['extension.ts', /Number\(at\.slice\(i \+ 1\)\) - 1/, 'Number(at.slice(i + 1))', named('small'), /no output links to|no error "never C recurses" at/],
+  marks: ['extension.ts', /for \(const \[uri, ds\] of by\.values\(\)\) coll\.set\(uri, ds\);/, '', first, /no error "never C is blocked by T" on its line/],
+  cells: ['extension.ts', /r\.shown\.cells\[runs\.indexOf\(c\)\]/, 'r.shown.cells[runs.indexOf(c) + 1]', first, /is not in the output of the cell it was asked in|has no output in notebook cell/],
+  translate: ['extension.ts', /await vscode\.workspace\.applyEdit\(edit\);/, '', first, /no rofl cell under the natural cell after Translate/],
+  revert: ['extension.ts', /NotebookRange\(arg\.index, arg\.index \+ 1\)/, 'NotebookRange(natural.index, natural.index + 1)', first, /after Revert the notebook is not the file it was/],
+  stop: ['extension.ts', / e\.token\.onCancellationRequested\(restart\);/, '', first, /Stop left the model's process running|Stop is not said|Stop did not end the run/],
+  startup: ['extension.ts', /void vscode\.window\.tabGroups\.close\(tab\)[^\n]*;/, '', first, /named on the command line, it opened as/],
+  reading: ['extension.ts', /on \? 'notebook\.cell\.collapseCellInput' : /, "on ? 'notebook.cell.expandCellInput' : ", first, /the reading view collapsed no input/],
+  wrap: ['package.json', /"\[natural\]": \{ "editor\.wordWrap": "on" \}/, '"[natural]": {}', first, /natural cells do not wrap/],
+  lsp: ['lsp.ts', /else if \(m\.method === 'textDocument\/publishDiagnostics'\)/, "else if (m.method === 'none')", first, /the broken rule on line 3 is marked|the sentence not read is marked/],
+  picture: ['extension.ts', /\.\.\.\(s\.views \?\? \[\]\)\.map\(/, '...[].map(', named('paint-shop'), /the pictures drawn are \[\], not/],
+  why: ['extension.ts', /ask<string>\('why', nb\.fsPath, literal, \{\}, undefined, undefined, undefined, \{ stamp \}\)/, "Promise.resolve('')", named('paint-shop'), /a picture's why of .* does not say/],
+  placed: ['visual/out/pic-graph.js', /placed\.get\(id\) \?\? /, '', named('paint-pinned'), /the renderer laid .* elsewhere/],
+  // a dialect's look, planted in the built renderer: each must turn its own case red
+  'd-arch': ['visual/out/pic-dialects.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('shop-architecture-whatif'), /is not drawn down/],
+  'd-state': ['visual/out/pic-dialects.js', /entry: 'initial'/, "entry: 'none'", named('order-states-whatif'), /is not drawn entry/],
+  'd-proc': ['visual/out/pic-dialects.js', /bands: true/, 'bands: false', named('claim-process-whatif'), /is not drawn bands/],
+  'd-loop': ['visual/out/pic-dialects.js', /ring: true/, 'ring: false', named('burnout-loop-whatif'), /is not drawn ring/],
+  'd-proof': ['visual/out/pic-dialects.js', /direction: 'UP'/, "direction: 'DOWN'", named('claim-proof-whatif'), /is not drawn up/],
+  'd-fold': ['visual/out/draw.js', /f\.rel === \(v\.kind === 'proof' \? 'link' : 'inside'\)/, "f.rel === 'inside'", named('claim-proof-whatif'), /the shut group .* is not drawn as|zoomed into .* the renderer does not draw/],
+  space: ['visual/out/pic-space.js', /const up = proj !== 'plan';/, 'const up = proj === \'plan\';', named('rail-map'), /is not drawn below/],
+  notation: ['extension.ts', /besideNotebook\(nb, `\.\$\{ext\.replace\(\/\\W\/g, ''\)\}`, text\)/, "besideNotebook(nb, '.txt', text)", named('family-tree'), /the notation did not open as ged/],
+  zoom: ['visual/out/pictures.js', /const toggle = async \(g\) => \{ if \(!shut\.delete\(g\)\)/, 'const toggle = async (g) => { if (true)', named('paint-shop-whatif'), /zoomed into shop, the renderer does not draw/],
+  frames: ['visual/out/pictures.js', /frames = framesOf\(z\)/, 'frames = null', named('paint-shop-whatif'), /the renderer drew the frames .*, not \[1,2\]/],
+  pin: ['extension.ts', /writeFileSync\(file, text\);/, "writeFileSync(file, '');", named('paint-pinned'), /Pin layout did not write|does not carry the pinned/],
+  // a form's status class dropped from the element the renderer draws its mark with, each run on that form's what-if alone
+  timeline: ['visual/pic-moments.ts', /class="\$\{cls\(v, e\.id\)\}" cx=/, 'class="" cx=', of('timeline'), /does not draw a timeline with/],
+  timing: ['visual/pic-moments.ts', /class="\$\{cls\(v, s\.id\)\}" x=/, 'class="" x=', of('timing'), /does not draw a timing with/],
+  chart: ['visual/pic-charts.ts', /\? `<rect data-mark="\$\{esc\(p\.id\)\}" class="\$\{esc\(tagsOf\(v, p\.id\)\.join\(' '\)\)\}"/, '? `<rect data-mark="${esc(p.id)}" class=""', of('chart'), /does not draw a chart with/],
+  heatmap: ['visual/pic-charts.ts', /cls = \(ts: string\[\]\) => esc\(ts\.join\(' '\)\)/, "cls = (ts: string[]) => ''", of('heatmap'), /does not draw a heatmap with/],
+  upset: ['visual/pic-charts.ts', /g\.rows\.slice\(0, MAX\)\.map\(\(r, k\) => chip\(v, r, x, under \+ k \* 18 \+ 10\)\)\.join\(''\)/, "''", of('upset'), /does not draw a upset with/],
+  euler: ['visual/pic-charts.ts', /g\.rows\.forEach\(\(row, k\) => out\.push\(chip\(/, 'g.rows.forEach((row, k) => void (chip(', of('euler'), /does not draw a euler with/],
+  decision: ['visual/pic-charts.ts', /<th data-mark="\$\{esc\(r\)\}" class="\$\{esc\(tagsOf\(v, r\)\.join\(' '\)\)\}">/, '<th data-mark="${esc(r)}" class="">', of('decision'), /does not draw a decision with/],
+  // a pedigree that draws lena without her status, or its generations across the page instead of down
+  pedigree: ['visual/out/pic-notation.js', /tags: families\.has\(id\) \? \[\.\.\.m\.tags, 'family'\] : m\.tags/, "tags: families.has(id) ? [...m.tags, 'family'] : []", named('family-tree'), /the notation does not draw lena failing/],
+  'd-ped': ['visual/out/pic-notation.js', /direction: 'DOWN'/, "direction: 'RIGHT'", named('family-tree'), /the pedigree is not drawn down/],
+  // the verdicts all drawn in one colour; a picture's Open in editor gone, or its tab not opened; a graph not fitted again when its box narrows
+  verdict: ['render.ts', /\{ holds: \['pass', '\\u2713'\], fails: \['fail',/, "{ holds: ['pass', '\\u2713'], fails: ['pass',", first, /the verdicts are not coloured by meaning/],
+  show: ['visual/out/pictures.js', /\$\{h\.show \? '<button/, "${false ? '<button", named('paint-shop'), /Open in editor opened no picture in an editor tab/],
+  panel: ['extension.ts', /w\.html = `/, 'w.html = `<!-- nothing -->` || `', named('paint-shop'), /Open in editor opened no picture in an editor tab/],
+  fit: ['visual/out/pic-graph.js', /new ResizeObserver\(fit\)\.observe\(box\);/, '', named('claim-proof-whatif'), /the proof reaches past its picture/],
+  // Cmd/Ctrl+Enter in a natural cell translates; a question's answers fold under it; what a modelling cell adds is said
+  'key-translate': ['package.json', /"keybindings": \[\n[^\]]*\],\n/, '', first, /Cmd\/Ctrl\+Enter in a natural cell does not translate/],
+  'fold-answers': ['render.ts', /l\.kind === 'answers' \? `<details>/, 'false ? `<details>', first, /a \? line's answers are not folded under it/],
+  'said-adds': ['extension.ts', /\(added \? `\*Translated: \$\{added\}\.\*` : ''\)/, "''", first, /the translation's facts are not said/],
+  // a row's why: its button gone; row 2's literal on row 1; a proof shown after the notebook changed; a why on the row the kernel did not send; the literal not escaped;
+  // one kernel shared by every notebook again; a dropped run still answering; a translation borrowing a notebook's kernel; a picture that does not name its run
+  'why-button': ['visual/out/renderer.js', /mark\.replaceWith\(b\);/, 'mark.remove();', named('why'), /has no why button/],
+  'why-literal': ['render.ts', /rows\.map\(\(a\) => `- \$\{link\(a\.sentence\)\}\$\{asks \? why\(a\.literal\)/, 'rows.map((a, k) => `- ${link(a.sentence)}${asks ? why((rows[k + 1] ?? a).literal)', named('why'), /is not the proof of its own row/],
+  'why-stale': ['extension.ts', /if \(stamp !== undefined && open && serialize\(docOf\(open\)\) !== last!\.text\)/, 'if (false)', named('why'), /after an edit, a why showed a proof/],
+  'why-escape': ['render.ts', /data-why="\$\{WHY_ATTR\(literal\)\}"/, 'data-why="${literal}"', named('why'), /the why under "said\(.* is not the proof of its own row/],
+  'why-kernel': ['worker.ts', /const kernel = kept\.get\(file\)\?\.kernel \?\? new Kernel/, 'const kernel = [...kept.values()].at(-1)?.kernel ?? new Kernel', named('why'), /after two other notebooks ran and a third was translated, a why did not show this notebook's proof/],
+  'why-dropped': ['worker.ts', /dropped\.add\(kept\.get\(file\)!\.stamp\); kept\.delete\(file\);/, 'dropped.add(kept.get(file)!.stamp);', named('why'), /after three other notebooks ran, a why did not say its run was dropped/],
+  'why-translate': ['worker.ts', /translating \?\?= new Kernel\(\{ wall \}\);/, 'translating = [...kept.values()][0]?.kernel ?? new Kernel({ wall });', named('why'), /after two other notebooks ran and a third was translated, a why did not show this notebook's proof/],
+  'why-picture': ['extension.ts', /notebook: nb\.uri\.toString\(\), run: stamp \}/, 'notebook: nb.uri.toString() }', named('paint-shop'), /a picture does not name the run that drew it/],
+  'why-more': ['render.ts', /more, not sent by the kernel`\]/, 'more, not sent by the kernel${why(rows[0].literal)}`]', named('why'), /a row with no answer of its own has a why/],
+  // a bare cell fenced when saved; its errors left in the notebook's head
+  'bare-fence': ['serial.ts', /if \(c\.kind === MARKUP \|\| m\.bare\) \{/, 'if (c.kind === MARKUP) {', first, /after the edit the file is not the file with that edit/],
+  'bare-head': ['worker.ts', /share\(r\.cells\[0\], bare\)/, 'share(r.cells[0], [])', first, /the fact not read is not said under its cell/],
+  // a row an English line answered, left without its why
+  'english-why': ['render.ts', /asks = l\.kind !== 'excise' && l\.verdict !== 'unasked';/, "asks = l.kind !== 'excise' && l.verdict !== 'unasked' && !l.readAs;", first, /the why under the English line's row/],
+  // an icon drawn as what it is not: no image, no paint, or its SVG put in the page, where its href loads (its handler does not run even there:
+  // the webview's policy refuses inline handlers, so in VS Code the handler probe has no positive control; the load probe has)
+  icon: ['visual/out/pic-graph.js', /\.\.\.\(icon\.has\(id\) && \{ icon: icon\.get\(id\) \}\)/, '', named('1-what-ships'), /car is not drawn as the icon car/],
+  colour: ['visual/out/pic-graph.js', /\.\.\.\(paint && \{ paint \}\) \}, position/, '}, position', named('2-paint-shop'), /c1 is not drawn blue/],
+  inline: ['visual/out/pic-space.js', /src \? `<image data-icon=[^`]*`/, 'src ? `<g data-icon="${esc(m)}" transform="translate(${x - 11} ${y - 11})">${v.icons[v.marks[m].icon]}</g>`', named('icons-planted'), /an icon's SVG loaded \/far from outside/],
+  prose: ['extension.ts', /metadata: c\.metadata \}\)\), metadata: nb\.metadata/, 'metadata: c.metadata })).filter((c) => c.kind === CODE), metadata: nb.metadata', first, /the extension's result is not the command line's --json/],
+};
+// VS Code's language model: a copy of the extension that also declares one, which the suite registers and Translate must ask, the command-line model failing.
+const LM: [string, RegExp, string] = ['package.json', /"configuration": \{/, '"languageModelChatProviders": [{ "vendor": "rofl-test", "displayName": "ROFL test" }],\n    "configuration": {'];
+const failing = put(path.join(tmp, 'no-model.sh'), '#!/bin/sh\necho "the command-line model was asked" >&2\nexit 1\n');
+chmodSync(failing, 0o755);
+const bi = process.argv.indexOf('--break');
+const variants = bi >= 0 ? process.argv[bi + 1].split(',') : process.argv.includes('--only') ? ['as it is'] : process.argv.includes('--lm') ? ['vscode lm'] : process.argv.includes('--planted') ? ['prose', 'reading', 'vscode lm'] : process.argv.includes('--mutants') ? ['icon', 'colour', 'inline', 'verdict', 'show', 'panel', 'fit', 'pedigree', 'd-ped', 'codeline', 'marks', 'cells', 'lsp', 'picture', 'why', 'pin', 'placed', 'frames', 'zoom', 'space', 'notation', 'd-arch', 'd-state', 'd-proc', 'd-loop', 'd-proof', 'd-fold', 'timeline', 'timing', 'chart', 'heatmap', 'upset', 'euler', 'decision', 'why-button', 'why-literal', 'why-stale', 'why-more', 'why-escape', 'why-kernel', 'why-dropped', 'why-translate', 'why-picture'] : ['as it is', 'prose', 'vscode lm'];
+if (bi >= 0 && !variants.every((v) => BREAKS[v])) throw new Error(`--break takes some of ${Object.keys(BREAKS).join(', ')}, by commas`);
+const ci = process.argv.indexOf('--case'), only = ci >= 0 ? process.argv[ci + 1] : undefined, xi = process.argv.indexOf('--extras');
+const casesOf = (v: string) => (BREAKS[v]?.[3] ?? (group ? GROUPS[group] : cases)).filter((c) => !only || c.file.endsWith(`/${only}.rofl.md`));
+// the command line's answer for each case a window will hold it against
+await Promise.all([...new Set(variants.flatMap(casesOf))].flatMap((c) => c.cli ? [cli(c.file, c.cli)] : []));
+
+const one = async (v: string) => {
+  const t = performance.now();
+  let dir = EXT;
+  if (BREAKS[v] || v === 'vscode lm') {
+    const [file, at, plant] = BREAKS[v] ?? LM;
+    dir = path.join(ROOT, `vscode-break-${v.replace(/ /g, '-')}`);
+    made.add(dir);
+    cpSync(EXT, dir, { recursive: true, filter: (s) => !s.includes('node_modules') });
+    const text = readFileSync(path.join(EXT, file), 'utf8');
+    if (!at.test(text)) throw new Error(`${v}: the planted defect did not apply`);
+    writeFileSync(path.join(dir, file), text.replace(at, plant));
+  }
+  // each window its own copy of the notebooks, since the suite edits a code file under them
+  const nb = path.join(tmp, `nb-${v.replace(/ /g, '-')}`), mine = (s: string) => s.split(path.join(tmp, 'nb') + '/').join(nb + '/');
+  cpSync(path.join(tmp, 'nb'), nb, { recursive: true });
+  const port = 47700 + variants.indexOf(v), probe = mine(iconsNb);   // the planted icons' server, one per window
+  writeFileSync(probe, readFileSync(probe, 'utf8').replace('PROBE_PORT', String(port)));
+  if (casesOf(v).some((c) => c.file === iconsNb)) await cli(probe, mine(path.join(tmp, 'nb/icons-planted.json')));
+  // a workspace that names a model: only the person's own settings may, so this one must be ignored and VS Code's model asked
+  if (v === 'vscode lm') put(path.join(nb, '.vscode/settings.json'), JSON.stringify({ 'rofl.model': 'claude' }));
+  let red = '', said = '';   // `said`: what the suite found; a planted defect is caught only when the suite says so, not when VS Code fails to start
+  // `--shot F`: the test's window alone, screenshotted as each picture is drawn, F-<case>.png
+  const shot = v === 'as it is' ? process.argv[process.argv.indexOf('--shot') + 1] : undefined, shooting = process.argv.includes('--shot') && shot ? setInterval(() => {
+    for (let k = 0; k < cases.length; k++) if (existsSync(`${shot}-${k}.ready`) && !existsSync(`${shot}-${k}.done`)) {
+      const id = spawnSync('swift', [path.join(ROOT, 'vscode/test/window.swift'), path.basename(nb)], { encoding: 'utf8' }).stdout.trim();
+      if (id) spawnSync('screencapture', ['-x', '-o', '-l', id, `${shot}-${k}.png`]); else console.log(`     no window titled ${path.basename(nb)} to screenshot`);
+      writeFileSync(`${shot}-${k}.done`, '');
+    }
+  }, 300) : undefined;
+  // `--theme NAME`: the window in that colour theme, for a screenshot in it
+  const ti = process.argv.indexOf('--theme');
+  if (ti >= 0) put(path.join(tmp, `user-${v.replace(/ /g, '-')}`, 'User/settings.json'), JSON.stringify({ 'workbench.colorTheme': process.argv[ti + 1] }));
+  const report = path.join(tmp, `report-${v.replace(/ /g, '-')}`), log = createWriteStream(path.join(tmp, `${v.replace(/ /g, '-')}.log`));
+  try {
+    await runTests({
+      vscodeExecutablePath: CODE, extensionDevelopmentPath: dir, extensionTestsPath: path.join(dir, 'test/suite.ts'),
+      stdout: log, stderr: log,
+      launchArgs: [nb, mine(review), '--extensions-dir', path.join(tmp, 'ext'), '--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', '--user-data-dir', path.join(tmp, `user-${v.replace(/ /g, '-')}`)],
+      extensionTestsEnv: { ROFL_NB_CASES: mine(JSON.stringify(casesOf(v))), ...(BREAKS[v] && { ROFL_NB_PLANTED: '1' }), ...((v === 'as it is' && group && group !== 'core' || BREAKS[v] && BREAKS[v][3] !== first) && { ROFL_NB_CASES_ONLY: '1' }), ROFL_NB_REPORT: report, ROFL_NB_PROBE_PORT: String(port), ROFL_NB_TRANSLATE: mine(natural), ROFL_NB_STARTUP: mine(review), ROFL_NB_RUNAWAY: mine(runaway), ROFL_NB_BARE: mine(tutorial), ROFL_NB_MIXED: mine(mixed), ROFL_NB_READING: mine(readingNb), ...(xi >= 0 && { ROFL_NB_EXTRAS: process.argv[xi + 1] }), ROFL_NB_CLAUDE: v === 'vscode lm' ? failing : fake, ...(shooting && { ROFL_NB_SHOT: shot! }), ...(v === 'vscode lm' && { ROFL_NB_FAKE_LM: '1' }), ROFL_NB_PID: path.join(tmp, 'claude.pid'), ROFL_LSP_FILES: mine(JSON.stringify([broken, late])) },
+    });
+  } catch (e) { said = (() => { try { return readFileSync(report, 'utf8'); } catch { return ''; } })(); red = said || (e as Error).message; }
+  finally { if (dir !== EXT) rmSync(dir, { recursive: true, force: true }); log.end(); clearInterval(shooting); }
+  if (v === 'as it is') for (const l of readFileSync(path.join(tmp, 'as-it-is.log'), 'utf8').split('\n')) if (/: (run after .*: )?\d+ ms$/.test(l)) console.log(`     ${l.replace(tmp, '')}`);
+  return { v, red, said, s: ((performance.now() - t) / 1000).toFixed(1) };
+};
+// Two at a time: each window loads the JS model, and more of them at once only share the same cores.
+const results: Awaited<ReturnType<typeof one>>[] = [], queue = [...variants];
+await Promise.all([0, 1].map(async () => { for (let v; (v = queue.shift()); ) results.push(await one(v)); }));
+
+results.sort((x, y) => variants.indexOf(x.v) - variants.indexOf(y.v));
+let failed = 0;
+for (const { v, red, said, s } of results) {
+  const ok = BREAKS[v] ? BREAKS[v][4].test(said) : !red;
+  if (!ok) failed++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${!BREAKS[v] ? `${v}: green` : `planted "${v}": ${ok ? 'red for its own reason' : said ? `red, but not for ${BREAKS[v][4]}` : 'not red'}`} (${s} s)${red ? `\n     ${red.replace(/\n/g, '\n     ')}` : ''}`);
+}
+console.log(`\n${results.length - failed}/${results.length} VS Code runs as expected, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+process.exit(failed ? 1 : 0);

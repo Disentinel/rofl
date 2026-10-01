@@ -33,7 +33,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { roflFromMd } from './md_world.ts';
+import { worldFiles } from './md_world.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -75,8 +75,10 @@ export function worlds(): World[] {
     if (fs.statSync(p).isDirectory()) {
       const files = fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl')).map((x) => path.join(p, x));
       if (files.length > 0) out.push({ name: e, files });
+      // a notebook is a world of its own, with the model and the worlds it names
+      for (const x of fs.readdirSync(p).sort().filter((x) => x.endsWith('.rofl.md'))) out.push({ name: `${e}_${x.replace(/\.rofl\.md$/, '')}`, files: worldFiles(path.join(p, x)) });
     } else if (e.endsWith('.rofl')) out.push({ name: e.replace(/\.rofl$/, ''), files: [p] });
-    else if (e.endsWith('.rofl.md')) out.push({ name: e.replace(/\.rofl\.md$/, ''), files: [roflFromMd(p)] });  // executable Markdown; a plain .md is a document
+    else if (e.endsWith('.rofl.md')) out.push({ name: e.replace(/\.rofl\.md$/, ''), files: worldFiles(p) });  // executable Markdown; a plain .md is a document
   }
   const rl = path.join(ROOT, 'rules');
   const pack = (dir: string, prefix: string): void => {
@@ -87,9 +89,9 @@ export function worlds(): World[] {
       if (!e.endsWith('.rofl') && !e.endsWith('.rofl.md')) continue;
       const stem = e.replace(/\.rofl(\.md)?$/, '');
       const facts = path.join(ROOT, 'facts', `${stem}.rofl`);
-      const file = e.endsWith('.rofl.md') ? roflFromMd(p) : p;
+      const file = e.endsWith('.rofl.md') ? worldFiles(p) : [p];
       out.push({ name: `rules_${prefix}${stem}`,
-        files: fs.existsSync(facts) ? [facts, file] : [file] });
+        files: fs.existsSync(facts) ? [facts, ...file] : file });
     }
   };
   pack(rl, '');
@@ -122,6 +124,14 @@ function declared(): World[] {
   }
   return [...out.values()];
 }
+
+/** The files a world is declared to refuse, as `world\tfile`. */
+function expectedRefusals(): Set<string> {
+  const r = pack('facts/checks.rofl');
+  return new Set(r ? col(r, 'check_refuses(N, F)', 'N', 'F').map(([n, f]) => `${n}\t${f}`) : []);
+}
+const undeclared = (w: World, a: Answer, ok: Set<string>): string[] =>
+  a.dropped.filter((d) => !ok.has(`${w.name}\t${d.slice(0, d.indexOf(':'))}`));
 
 /** Rows per relation, read off the canonical state. `wit` lines are counted as
  *  one pseudo-relation: which support a store records among equals is not fixed
@@ -402,6 +412,13 @@ if (isMain) {
       ? demos().map((f) => [path.basename(path.dirname(f)), answerDemo(f)] as [string, { hash: string; exit: number; lines: number }])
       : [...hostsBefore];
     const rows: [World, Answer][] = ws.map((w) => [w, answerTS(w)]);
+    const ok = expectedRefusals();
+    const bad = rows.flatMap(([w, a]) => undeclared(w, a, ok).map((d) => `${w.name}: ${d}`));
+    if (bad.length > 0) {
+      for (const b of bad) console.log(`REFUSED ${b}`);
+      console.log('not blessed: a world refuses a file it is not declared to refuse (check_refuses in facts/checks.rofl)');
+      process.exit(1);
+    }
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
       console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
@@ -446,6 +463,7 @@ if (isMain) {
   const t0 = Date.now();
   let pass = 0; const fail: string[] = [];
   const rustMissing = !fs.existsSync(RUST);
+  const ok = expectedRefusals();
   for (const w of ws) {
     const g = want.get(w.name);
     if (!g) { fail.push(`${w.name}: no golden — bless it or delete the world`); continue; }
@@ -463,6 +481,7 @@ if (isMain) {
     // this is a claim that the number must be none, and the two must not be
     // confusable — a world that raises one fails even when its census matches.
     for (const a of ts.alarms) bad.push(`ALARM ${a}`);
+    for (const d of undeclared(w, ts, ok)) bad.push(`REFUSED ${d}`);
     if (bad.length === 0) pass++; else fail.push(`${w.name.padEnd(28)} ${bad.join('  |  ')}`);
   }
   // A CHECK THAT CANNOT RUN SAYS SO. A missing Rust binary halves the oracle,
@@ -478,6 +497,7 @@ if (isMain) {
   if (docs.status !== 0) {
     for (const l of (docs.stdout + docs.stderr).split('\n').filter((l) => /STALE|BROKEN|DANGLING/.test(l))) fail.push(l.trim());
   }
+  for (const l of docs.stderr.split('\n').filter((l) => /UNVERIFIABLE/.test(l))) console.log(`!! ${l.trim()}`);
   // AND THE [checks] BOOK, for the same reason and by the same means. The
   // coverage world reads `facts/spec-census.rofl` — which checks exist, which
   // citations resolve — and a world cannot walk a filesystem, so the pack is

@@ -23,6 +23,9 @@ where the form was measured and `roadmap.md` is what 1.05 ships and defers.
   not matter, and `it` for the subject of the sentence before.
 - **Prose is a quote block** (`>`). A paragraph that ends in a full stop is a
   sentence of the language, so an essay goes in quotes. Headings are free.
+- **A line that ends in a full stop ends its sentence** when the next line
+  starts one (a capital or a backtick), so rules one to a line need no blank
+  line between them. A sentence wrapped over lines breaks anywhere else.
 - **A book is a block**: `In the audit:` opens the rules that write there.
 - **Say a sentence the same way everywhere.** The head declares `guards the
   variable V`; a body that says `guards V` is a different sentence and is
@@ -142,6 +145,26 @@ goes; `why` and `whynot` take a ground one.
 A question no sentence of the document reads is refused by name:
 `error: no sentence in the vocabulary reads: C is owned by T`. The
 positional form still works everywhere: `? blocked(C, T)`.
+
+**Sentences for what a notebook reads.** A plain `.rofl` world a notebook
+`reads:` brings relations with no sentence. A `Reads:` list gives them one,
+an anchored sentence per relation, the anchor its name; cells then ask in it
+and answers print in it (`examples/notebook/spat.rofl.md`):
+
+    Reads:
+
+    - from spat:
+      - <a id="uncovered"></a>A child Ch is alone on a day D at a minute S
+
+In a notebook (`npm run nb`), `why` and `whynot` print without the engine's
+bookkeeping (`--json` keeps it as `whyRaw`), and `excise F` in a cell takes
+the fact F out of the world every line was asked over and lists the lines
+whose answers move, before and after, leaving their own answers as they are.
+A cell whose rule concludes one of the model's own sentences must say
+`extends <relation>`. `code:` and `reads:` paths are relative to the
+notebook, absolute, or from `~`. A code file the scanner could not parse is
+a row of `ast_parse_error[code](File, Message)`, which has no sentence: ask
+`? ast_parse_error[code](F, M)`.
 
 ## What the reader reports
 

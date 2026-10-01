@@ -408,6 +408,8 @@ export class Evaluation {
   steps = 0;
   /** The space wall, in rows (DEFAULT_SPACE). */
   space: number;
+  /** A caller's wall, asked every 4096 steps (a deadline, a heap): true stops the evaluation as the step budget does, a budget hole and a partial result. */
+  stop: (() => boolean) | undefined;
   /** Rows held RIGHT NOW: derived rows written by this evaluation (they never
    *  go away while it runs) plus the partial solutions the live `solveBody`
    *  frames are carrying (they are released when a frame returns). */
@@ -450,11 +452,12 @@ export class Evaluation {
    *  world is kept rather than facts about its subject. */
   private noProvenance = false;
 
-  constructor(store: FactStore, opts: { budget?: number; space?: number; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
+  constructor(store: FactStore, opts: { budget?: number; space?: number; stop?: () => boolean; naive?: boolean; reuse?: boolean; holeId?: Term; bootstrap?: boolean } = {}) {
     this.store = store;
     this.bootstrap = opts.bootstrap ?? false;
     this.budget = opts.budget ?? 100_000;
     this.space = opts.space ?? DEFAULT_SPACE;
+    this.stop = opts.stop;
     this.naive = opts.naive ?? false;
     this.reuse = opts.reuse ?? true;
     this.holeId = opts.holeId ?? mka('$adhoc');
@@ -1369,7 +1372,7 @@ export class Evaluation {
 
   private bumpSteps(): void {
     this.steps++;
-    if (this.steps > this.budget) throw new BudgetExhausted();
+    if (this.steps > this.budget || (this.steps & 4095) === 0 && this.stop?.()) throw new BudgetExhausted();
   }
 
   /** One row, charged for as long as this evaluation lives. Unlike a partial

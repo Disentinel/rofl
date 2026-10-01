@@ -68,6 +68,8 @@ export class Vocabulary {
   kindSet = new Set<string>();
   nounGuard = new Map<string, string>();
   nouns = new Set<string>([...VALUE_NOUNS, ...NOUN_WORDS]);
+  /** An unbound term in a hole reads as `some <noun>`, the hole's noun, not `something` or the engine's `?0`. */
+  blanks = false;
 
   /** The phrase files a tree keeps, if present, then whatever else is given. */
   static fromFiles(root: string, paths: string[]): Vocabulary {
@@ -122,7 +124,7 @@ export class Vocabulary {
     const fixes = (t: Tpl) => t.parts.filter((p) => p.t === 'fix').length;
     const t = this.templates.filter(fits).sort((a, b) => fixes(b) - fixes(a)).find(() => true);
     if (t) {
-      const words = t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? this.term(args[p.i]) : '').filter(Boolean).join(' ');
+      const words = t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? this.term(args[p.i], p.noun) : '').filter(Boolean).join(' ');
       return cap(words.replace(/\s+/g, ' ').trim());
     }
     if (n === 1 && this.nounGuard.has(rel)) return cap(`${this.term(args[0])} is ${article(this.nounGuard.get(rel)!)} ${this.nounGuard.get(rel)}`);
@@ -152,8 +154,9 @@ export class Vocabulary {
   }
 
   /** A term as the document writes it: an atom in backticks, a string as is, a wildcard as `something`, a destructor by its phrase. */
-  term(a: string): string {
+  term(a: string, noun?: string): string {
     a = a.trim();
+    if (this.blanks && noun && /^(?:_|\?_\$\d+(?:#\d+)?|\?\d+|\?[A-Z]\w*#\d+)$/.test(a)) return `some ${noun}`;
     if (a === '_' || /^\?_\$\d+$/.test(a)) return 'something';
     if (/^-?\d+$/.test(a) || a.startsWith('"')) return a;
     const f = /^(\$?[a-z_]\w*)\((.*)\)$/s.exec(a);

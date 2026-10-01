@@ -1,16 +1,12 @@
----
-world: review
-books: main
-default: main
----
+# review: a world, not a notebook
 
-# review
-
+> This file holds facts and rules and asks nothing, so running it prints no
+> answers. `notebook/review.rofl.md` reads it and asks the questions: open
+> that one.
+>
 > Who has to approve a change before it merges: every team that owns a
 > module the change touches, unless someone on that team wrote it or has
-> approved it. A world written as Markdown: `npm run repl -- examples/review.rofl.md`
-> loads it and answers `? C is blocked by T`, `why`, `whynot` in these
-> sentences.
+> approved it.
 
 ## What the repository knows
 

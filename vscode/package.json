@@ -1,0 +1,96 @@
+{
+  "name": "rofl",
+  "displayName": "ROFL",
+  "description": "ROFL: a notebook of checked invariants over your code — ask, explain (why / whynot), what-if",
+  "version": "0.1.0",
+  "private": true,
+  "preview": true,
+  "publisher": "GrafemaLabs",
+  "license": "MIT",
+  "icon": "icon.png",
+  "categories": ["Notebooks", "Linters"],
+  "keywords": ["rofl", "datalog", "notebook", "invariants", "static analysis", "javascript", "typescript", "why", "explain"],
+  "repository": { "type": "git", "url": "https://github.com/Disentinel/rofl", "directory": "vscode" },
+  "type": "module",
+  "main": "./extension.ts",
+  "activationEvents": ["onStartupFinished"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": false, "description": "A notebook reads the code files its front matter names, anywhere on disk, and its Translate command sends its text to a language model." },
+    "virtualWorkspaces": false
+  },
+  "engines": {
+    "vscode": "^1.132.0"
+  },
+  "contributes": {
+    "notebookRenderer": [
+      { "id": "rofl-view", "displayName": "ROFL picture", "entrypoint": "./visual/out/renderer.js", "mimeTypes": ["application/vnd.rofl.view+json", "application/vnd.rofl.said+markdown"], "requiresMessaging": "optional" }
+    ],
+    "notebooks": [
+      {
+        "type": "rofl-notebook",
+        "displayName": "ROFL notebook",
+        "selector": [{ "filenamePattern": "*.rofl.md" }]
+      }
+    ],
+    "languages": [
+      { "id": "rofl", "aliases": ["ROFL"], "extensions": [".rofl"], "configuration": "./language-configuration.json", "icon": { "light": "./file-light.png", "dark": "./file-dark.png" } },
+      { "id": "datalog", "aliases": ["Datalog"], "configuration": "./language-configuration.json" },
+      { "id": "natural", "aliases": ["Natural language"] }
+    ],
+    "grammars": [
+      { "language": "rofl", "scopeName": "source.rofl", "path": "./rofl.tmLanguage.json" },
+      { "language": "datalog", "scopeName": "source.datalog", "path": "./datalog.tmLanguage.json" }
+    ],
+    "configurationDefaults": {
+      "[rofl]": { "editor.wordWrap": "on" },
+      "[datalog]": { "editor.wordWrap": "on" },
+      "[natural]": { "editor.wordWrap": "on" }
+    },
+    "commands": [
+      { "command": "rofl-notebook.translate", "title": "Translate natural cells", "category": "ROFL" },
+      { "command": "rofl-notebook.translateCell", "title": "Translate", "category": "ROFL", "icon": "$(sparkle)" },
+      { "command": "rofl-notebook.refine", "title": "Refine in plain language", "category": "ROFL", "icon": "$(comment-discussion)" },
+      { "command": "rofl-notebook.revert", "title": "Revert to the natural cell", "category": "ROFL", "icon": "$(discard)" },
+      { "command": "rofl-notebook.restart", "title": "Restart kernel", "category": "ROFL", "icon": "$(debug-restart)" },
+      { "command": "rofl-notebook.reading", "title": "Reading view", "category": "ROFL", "icon": "$(book)" },
+      { "command": "rofl-notebook.chooseModel", "title": "Choose model", "category": "ROFL" }
+    ],
+    "configuration": {
+      "title": "ROFL",
+      "properties": {
+        "rofl.model": {
+          "type": "string",
+          "scope": "application",
+          "default": "auto",
+          "markdownDescription": "The model Translate asks. `auto`: VS Code's language model (GitHub Copilot's, for one) if there is one, else the first installed command-line harness that runs with no tools. `vscode:<id>`: that language model. Or a harness: `claude`, `codex`, `opencode`, `pi`, `copilot`, `hermes`, `command`, with `:<model>` to pick its model. **ROFL: Choose model** sets it."
+        },
+        "rofl.untrackedCommand": {
+          "type": "string",
+          "scope": "machine",
+          "default": "",
+          "markdownDescription": "A command that prints, one a line, the files your version control tracks, run in the workspace folder when its `.rofl/read.rofl` says `untracked_by(command)`. Only your user settings are read for it, never a workspace's: a cloned repository writes those."
+        }
+      }
+    },
+    "keybindings": [
+      { "command": "rofl-notebook.translateCell", "key": "ctrl+enter", "mac": "cmd+enter", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.naturals && (notebookEditorFocused || editorTextFocus)" }
+    ],
+    "menus": {
+      "notebook/toolbar": [
+        { "command": "rofl-notebook.translate", "when": "notebookType == rofl-notebook" },
+        { "command": "rofl-notebook.restart", "when": "notebookType == rofl-notebook" },
+        { "command": "rofl-notebook.reading", "when": "notebookType == rofl-notebook" }
+      ],
+      "notebook/cell/title": [
+        { "command": "rofl-notebook.translateCell", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.naturals" },
+        { "command": "rofl-notebook.refine", "group": "inline", "when": "notebookType == rofl-notebook && (notebookCellResource in rofl-notebook.naturals || notebookCellResource in rofl-notebook.translations)" },
+        { "command": "rofl-notebook.revert", "group": "inline", "when": "notebookType == rofl-notebook && notebookCellResource in rofl-notebook.translations" }
+      ]
+    }
+  },
+  "devDependencies": {
+    "@types/vscode": "1.90",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0"
+  }
+}

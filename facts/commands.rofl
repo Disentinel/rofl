@@ -62,3 +62,6 @@ command_note("playground", "the JS playground as static files in playground/dist
 
 command_shown("conform", 15).
 command_note("conform", "`-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail").
+
+command_shown("nb", 16).
+command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use").

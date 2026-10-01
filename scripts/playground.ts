@@ -1,11 +1,11 @@
 // The playground as static files: the engine, the JS scanner and part of the JS model, run in a browser. Publish the directory as an artifact or serve it as is.
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import ts from 'typescript';
-import { MODEL_FILES, PHRASE_FILES, booksOf } from '../playground/host.ts';
+import { emit as emitTo, finish } from './emit.ts';
+import { MODEL_FILES, PHRASE_FILES, translatorVocab, concernsOf } from '../playground/host.ts';
 import { NPC_FILES } from '../playground/npc_host.ts';
-import { Vocabulary } from '../src/say.ts';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
+import { builtin, cellsOf, parseFront } from '../notebook/front.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const argv = process.argv.slice(2);
@@ -14,80 +14,27 @@ const OUT = oi >= 0 ? argv[oi + 1] : `${ROOT}playground/dist`;
 const standalone = argv.includes('--standalone');
 mkdirSync(`${OUT}/lib`, { recursive: true });
 
-// Every module lands flat in lib/; a relative `x.ts` import becomes `./x.js`, and the two node modules the kernel's neighbours use get a browser stand-in.
-const SHIMS: Record<string, string> = {
-  'node:fs': 'export const existsSync = () => false;\nexport const readFileSync = () => { throw new Error("no files in a browser"); };\n',
-  'node:crypto': 'export const createHash = () => { let h = 0x811c9dc5; const o = { update(s) { for (const c of String(s)) h = Math.imul(h ^ c.codePointAt(0), 16777619) >>> 0; return o; }, digest: () => h.toString(16).padStart(8, "0") }; return o; };\n',
-};
-const emit = (src: string) => {
-  const js = ts.transpileModule(readFileSync(`${ROOT}${src}`, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
-    .replace(/from '(?:\.\.?\/)+(?:[\w-]+\/)*([\w-]+)\.ts'/g, "from './$1.js'")
-    .replace(/from '@babel\/parser'/g, "from './babel-parser.js'")
-    .replace(/from 'node:(fs|crypto)'/g, "from './shim-$1.js'");
-  if (/from 'node:/.test(js)) throw new Error(`${src} still imports a node module`);
-  writeFileSync(`${OUT}/lib/${src.replace(/^.*\//, '').replace(/\.ts$/, '.js')}`, js);
-};
+const emit = (src: string) => emitTo(ROOT, `${OUT}/lib`, src);
 for (const f of readdirSync(`${ROOT}src`)) if (f.endsWith('.ts') && f !== 'repl.ts') emit(`src/${f}`);
-for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'playground/host.ts', 'playground/worker.ts',
+for (const f of ['scanners/js_ast.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'notebook/front.ts', 'notebook/book.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-moments.ts', 'vscode/visual/pic-charts.ts', 'vscode/visual/pic-space.ts', 'notebook/draw-space.ts', 'vscode/visual/pic-notation.ts', 'notebook/draw-notation.ts', 'notebook/draw.ts', 'notebook/icons.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'notebook/draw-forms.ts', 'vscode/visual/pic-dialects.ts', 'notebook/draw-dialects.ts', 'notebook/draw-proof.ts', 'playground/host.ts', 'playground/worker.ts',
   'runtime/semirings.ts', 'examples/npc/sim.ts', 'playground/npc_host.ts', 'playground/npc_worker.ts']) emit(f);
-for (const [m, text] of Object.entries(SHIMS)) writeFileSync(`${OUT}/lib/shim-${m.slice(5)}.js`, text);
 copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);
-const modules = new Set(readdirSync(`${OUT}/lib`));
-for (const m of modules) for (const [, dep] of readFileSync(`${OUT}/lib/${m}`, 'utf8').matchAll(/from '\.\/([\w-]+\.js)'/g)) if (!modules.has(dep)) throw new Error(`lib/${m} imports ${dep}, which the build did not emit`);
+finish(`${OUT}/lib`);
 
 const read = (f: string) => readFileSync(`${ROOT}${f}`, 'utf8');
 const model = MODEL_FILES.map(read).join('\n');
 const phrases = PHRASE_FILES.map(read).join('\n');
 writeFileSync(`${OUT}/model.txt`, model);
 writeFileSync(`${OUT}/phrases.txt`, phrases);
+// a notebook with no code, a picture's, runs over the kernel alone, as `model: none` does on the command line
+writeFileSync(`${OUT}/boot.txt`, read('boot.rofl'));
+writeFileSync(`${OUT}/phrases-none.txt`, read('facts/phrases.rofl'));
 
-// What the translator of a plain-language cell may say: each relation the scanner gives or the model's rules conclude, as the sentence the reader reads it in,
-// with a noun before each variable, `a call C resolves to a function F`. The sentence of a signature first, where one is written.
-const v = new Vocabulary(); v.addText(phrases);
-const rels = new Set(['ast_node', 'ast_child', 'ast_attr', ...booksOf(model).keys()]);
-const VALUE = new Set(['key', 'name', 'file', 'index', 'text', 'kind', 'line', 'attribute', 'number', 'score', 'value', 'child']);
-const vocab: string[] = [];
-for (const rel of [...rels].sort()) {
-  const ts = v.templates.filter((t) => t.rel === rel);
-  for (const t of rel.startsWith('ast_') ? ts.slice(1) : ts.slice(0, 1)) {
-    const sig = /\((.*)\)$/.exec(t.src)?.[1].split(/,\s*/) ?? [];
-    const holes = t.parts.filter((p) => p.t === 'hole') as { i: number; noun: string }[];
-    const names = new Map<number, string>();
-    for (const h of holes) {
-      let n = /([A-Z]\w*)(?::\d+)?$/.exec(sig.find((x) => x.endsWith(`:${h.i}`)) ?? sig[h.i] ?? '')?.[1] ?? h.noun[0].toUpperCase();
-      while ([...names.values()].includes(n)) n += String(h.i);
-      names.set(h.i, n);
-    }
-    // a value (a name, a kind, a line) is written as its variable; anything else with the noun that says what it is
-    const term = (h: { i: number; noun: string }) => VALUE.has(h.noun) ? names.get(h.i)! : `${/^[aeiou]/.test(h.noun) ? 'an' : 'a'} ${h.noun} ${names.get(h.i)}`;
-    vocab.push(t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? term(p) : '').filter(Boolean).join(' '));
-  }
-}
+const { vocab, functions } = translatorVocab(model, phrases);
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
-// The functions a condition may compute with, as the reader reads them: `L is the length of T`.
-const NAME: Record<string, string> = { text: 'T', index: 'I', number: 'N' };
-const functions = v.funs.map((t) => {
-  const used: string[] = [];
-  const name = (noun: string) => { let n = NAME[noun] ?? noun[0].toUpperCase(); while (used.includes(n)) n += '2'; used.push(n); return n; };
-  return 'R is ' + t.parts.map((p) => p.t === 'text' ? p.s : p.t === 'hole' ? name(p.noun) : '').filter(Boolean).join(' ') + `   (${t.rel})`;
-});
 writeFileSync(`${OUT}/functions.txt`, functions.join('\n') + '\n');
 
-// What each rule is about, for folding a proof into steps: the numbered section of the model file it sits in, `dataflow: construction`.
-// A rule is known by the id the kernel gives it, so a proof's witness names its section; a relation falls back to the first section concluding it.
-const concerns = { rules: {} as Record<string, string>, rels: {} as Record<string, string> };
-for (const f of MODEL_FILES.filter((x) => x.startsWith('rules/'))) {
-  const parts = read(f).split(/^-- (?=\d+\. )/m);
-  for (const part of parts.slice(1)) {
-    const t = part.slice(0, part.indexOf('\n')).replace(/^\d+\. /, '').split(/ — |: |, |\. /)[0].replace(/[.`]/g, '').trim();
-    const label = `${f.slice(9, -5)}: ${t.split(' ').map((w, i) => (/[A-Z]/.test(w) && w === w.toUpperCase()) || i === 0 ? w.toLowerCase() : w).join(' ')}`;
-    for (const c of parseProgram(part.slice(part.indexOf('\n') + 1))) {
-      if (!c.body.length) continue;
-      concerns.rules[ruleIdOf(c)] ??= label;
-      concerns.rels[c.head.rel] ??= label;
-    }
-  }
-}
+const concerns = concernsOf(MODEL_FILES.filter((x) => x.startsWith('rules/')).map((f) => [f, read(f)]));
 writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
 
 // The NPC yard: the kernel's boot, the yard's rules and phrases, and the section of npc.rofl each rule sits in.
@@ -104,7 +51,20 @@ writeFileSync(`${OUT}/npc-concerns.json`, JSON.stringify(npcConcerns));
 const npcPage = read('playground/npc.html');
 writeFileSync(`${OUT}/npc.html`, standalone ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${npcPage}` : npcPage);
 
-const page = read('playground/page.html');
+// the pictures: each notebook of examples/visual as the page's cells, the worlds it reads first, each in a cell of its own
+const body = (t: string) => t.replace(/^---\n[\s\S]*?\n---\n/, '');
+const pictures = readdirSync(`${ROOT}examples/visual`).filter((f) => f.endsWith('.rofl.md')).sort().map((f) => {
+  const text = read(`examples/visual/${f}`), dir = 'examples/visual/';
+  const reads = parseFront(text).reads.map((r) => {
+    const t = read(builtin(r) ?? new URL(r, `file://${ROOT}${dir}`).pathname.slice(ROOT.length));
+    return r.endsWith('.rofl.md') ? { kind: 'formal', text: body(t) } : { kind: 'rofl', text: t };
+  });
+  const cells = cellsOf(text).slice(1).map((c) => ({ kind: c.kind === 'datalog' ? 'rofl' : c.kind === 'natural' ? 'natural' : 'formal', text: c.text }));
+  return { name: f.replace(/\.rofl\.md$/, ''), title: /^# (.*)$/m.exec(text)?.[1] ?? f, cells: [...reads, { kind: 'formal', text: body(text).replace(/^```\w*\n[\s\S]*?^```\n?/gm, '') }, ...cells] };
+});
+writeFileSync(`${OUT}/pictures.json`, JSON.stringify(pictures));
+
+const page = read('playground/page.html').replace('  /* tokens */\n', () => read('playground/tokens.css'));
 writeFileSync(`${OUT}/index.html`, standalone ? `<!doctype html>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${page}` : page);
 const size = (p: string) => readFileSync(p).length;
 console.log(`${OUT}: model ${Math.round(size(`${OUT}/model.txt`) / 1024)} KB, ${vocab.length} relations for the translator, ${readdirSync(`${OUT}/lib`).length} modules`);

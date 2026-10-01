@@ -40,3 +40,4 @@ view.html
 
 # built by npm run playground
 playground/dist
+vscode/visual/out/
