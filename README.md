@@ -9,6 +9,9 @@ perspectives (first-class truth contexts), explicit time, kernel-emitted
 provenance, structured terms, and budgets. Turing-complete by design; budgets
 are part of the semantics.
 
+> Also known as Reshetnikov's Opinionated Formal Logic
+> Also known as Research -> Observe -> Formalize -> Lock
+
 The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
 graph as data (`boot.rofl`). The kernel has zero runtime dependencies (the
