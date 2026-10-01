@@ -10,6 +10,7 @@ provenance, structured terms, and budgets. Turing-complete by design; budgets
 are part of the semantics.
 
 > Also known as Reshetnikov's Opinionated Formal Logic
+> 
 > Also known as Research -> Observe -> Formalize -> Lock
 
 The kernel is a *generic* inference machine: all semantics — including the
