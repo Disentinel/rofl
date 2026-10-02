@@ -11,12 +11,17 @@ edb(proof_world).
 brk("mono"). brk_kind("mono", switch).
 brk_expects("mono", "agg_cell_eval").
 brk_expects("mono", "agg_life_demo").
+brk_expects("mono", "agg_critpath_demo").
+brk_expects("mono", "agg_minimax_demo").
+brk_expects("mono", "agg_quorum_demo").
 brk("memo"). brk_kind("memo", switch).
 brk_expects("memo", "agg_cell_eval").
 brk("max"). brk_kind("max", switch).
 brk_expects("max", "agg_cell_eval").
 brk_expects("max", "agg_minmax_eval").
 brk_expects("max", "agg_lattice_eval").
+brk_expects("max", "agg_critpath_demo").
+brk_expects("max", "agg_minimax_demo").
 brk("height_min"). brk_kind("height_min", switch).
 brk_expects("height_min", "agg_tag_witness").
 brk_expects("height_min", "agg_cell_witness").
@@ -64,6 +69,7 @@ brk_expects("no_agg_edge", "agg_empty_strata").
 brk_expects("no_agg_edge", "agg_count_strata").
 brk_expects("no_agg_edge", "agg_sum_strata").
 brk_expects("no_agg_edge", "agg_minmax_strata").
+brk_expects("no_agg_edge", "agg_minimax_demo").
 brk("no_unbound"). brk_kind("no_unbound", kernel).
 brk_expects("no_unbound", "agg_count_safety").
 brk("no_agg_binds"). brk_kind("no_agg_binds", kernel).
@@ -79,6 +85,7 @@ brk("one_member"). brk_kind("one_member", switch).
 brk_expects("one_member", "agg_holistic_witness").
 brk_expects("one_member", "agg_count_witness").
 brk_expects("one_member", "agg_sum_witness").
+brk_expects("one_member", "agg_minimax_demo").
 brk("no_sealed_text"). brk_kind("no_sealed_text", switch).
 brk_expects("no_sealed_text", "agg_holistic_why").
 brk_expects("no_sealed_text", "agg_count_why").
@@ -101,17 +108,22 @@ brk("best_all"). brk_kind("best_all", switch).
 brk_expects("best_all", "agg_minmax_witness").
 brk("min_by_value"). brk_kind("min_by_value", switch).
 brk_expects("min_by_value", "agg_minmax_witness").
+brk_expects("min_by_value", "agg_minimax_demo").
 brk("no_idem_key"). brk_kind("no_idem_key", kernel).
 brk_expects("no_idem_key", "agg_minmax_safety").
 brk("no_empty_zero"). brk_kind("no_empty_zero", kernel).
 brk_expects("no_empty_zero", "agg_empty_safety").
 brk_expects("no_empty_zero", "agg_empty_eval").
+brk_expects("no_empty_zero", "agg_minimax_demo").
+brk_expects("no_empty_zero", "agg_quorum_demo").
 brk("zero_ignores_groups"). brk_kind("zero_ignores_groups", kernel).
 brk_expects("zero_ignores_groups", "agg_empty_safety").
 brk("empty_none"). brk_kind("empty_none", switch).
 brk_expects("empty_none", "agg_life_demo").
 brk_expects("empty_none", "agg_voting_demo").
 brk_expects("empty_none", "agg_empty_eval").
+brk_expects("empty_none", "agg_minimax_demo").
+brk_expects("empty_none", "agg_quorum_demo").
 brk("phantom"). brk_kind("phantom", switch).
 brk_expects("phantom", "agg_empty_witness").
 brk("empty_text"). brk_kind("empty_text", switch).
@@ -129,6 +141,7 @@ brk_expects("whynot_hole_empty", "agg_minmax_why").
 brk("max_tie_last"). brk_kind("max_tie_last", switch).
 brk_expects("max_tie_last", "agg_minmax_witness").
 brk_expects("max_tie_last", "agg_minmax_why").
+brk_expects("max_tie_last", "agg_minimax_demo").
 brk("or_tie_last"). brk_kind("or_tie_last", switch).
 brk_expects("or_tie_last", "agg_minmax_witness").
 brk_expects("or_tie_last", "agg_minmax_why").
@@ -141,6 +154,7 @@ brk_expects("strata_untabled", "agg_count_strata_untabled").
 brk("lattice_op_min"). brk_kind("lattice_op_min", switch).
 brk_expects("lattice_op_min", "agg_join_syntax").
 brk_expects("lattice_op_min", "agg_lattice_syntax").
+brk_expects("lattice_op_min", "agg_critpath_demo").
 brk("lattice_value_dropped"). brk_kind("lattice_value_dropped", switch).
 brk_expects("lattice_value_dropped", "agg_lattice_syntax").
 brk("lattice_arity_short"). brk_kind("lattice_arity_short", switch).
@@ -158,12 +172,14 @@ brk("lattice_keep_dominated"). brk_kind("lattice_keep_dominated", switch).
 brk_expects("lattice_keep_dominated", "agg_lattice_eval").
 brk("lattice_no_retire"). brk_kind("lattice_no_retire", switch).
 brk_expects("lattice_no_retire", "agg_lattice_eval").
+brk_expects("lattice_no_retire", "agg_critpath_demo").
 brk("lattice_self_support"). brk_kind("lattice_self_support", switch).
 brk_expects("lattice_self_support", "agg_lattice_witness").
 brk("lattice_stale_firings"). brk_kind("lattice_stale_firings", switch).
 brk_expects("lattice_stale_firings", "agg_lattice_witness").
 brk("lattice_whynot_plain"). brk_kind("lattice_whynot_plain", switch).
 brk_expects("lattice_whynot_plain", "agg_lattice_why").
+brk_expects("lattice_whynot_plain", "agg_critpath_demo").
 brk("lattice_misuse_ignored"). brk_kind("lattice_misuse_ignored", kernel).
 brk_expects("lattice_misuse_ignored", "agg_cell_safety").
 brk("lattice_lt_as_gt"). brk_kind("lattice_lt_as_gt", kernel).
@@ -191,6 +207,7 @@ brk("lattice_rule_hole_early"). brk_kind("lattice_rule_hole_early", switch).
 brk_expects("lattice_rule_hole_early", "agg_lattice_eval").
 brk("lattice_max_stuck"). brk_kind("lattice_max_stuck", switch).
 brk_expects("lattice_max_stuck", "agg_lattice_eval").
+brk_expects("lattice_max_stuck", "agg_critpath_demo").
 brk("lattice_alias_unfollowed"). brk_kind("lattice_alias_unfollowed", kernel).
 brk_expects("lattice_alias_unfollowed", "agg_cell_safety").
 brk("lattice_stale_solution"). brk_kind("lattice_stale_solution", switch).
@@ -231,25 +248,31 @@ brk_expects("lattice_whynot_no_path", "agg_lattice_why").
 brk("lattice_why_one_member"). brk_kind("lattice_why_one_member", switch).
 brk_expects("lattice_why_one_member", "agg_tag_why").
 brk_expects("lattice_why_one_member", "agg_lattice_why").
+brk_expects("lattice_why_one_member", "agg_critpath_demo").
 brk("lattice_why_ghost_unmarked"). brk_kind("lattice_why_ghost_unmarked", switch).
 brk_expects("lattice_why_ghost_unmarked", "agg_lattice_why").
 brk("thr_n_minus_one"). brk_kind("thr_n_minus_one", switch).
 brk_expects("thr_n_minus_one", "agg_threshold_eval").
 brk_expects("thr_n_minus_one", "agg_threshold_witness").
+brk_expects("thr_n_minus_one", "agg_quorum_demo").
 brk("thr_no_refire"). brk_kind("thr_no_refire", switch).
 brk_expects("thr_no_refire", "agg_threshold_eval").
 brk_expects("thr_no_refire", "agg_threshold_strata").
+brk_expects("thr_no_refire", "agg_quorum_demo").
 brk("thr_text_order"). brk_kind("thr_text_order", switch).
 brk_expects("thr_text_order", "agg_threshold_witness").
 brk_expects("thr_text_order", "agg_threshold_why").
+brk_expects("thr_text_order", "agg_quorum_demo").
 brk("thr_first_height"). brk_kind("thr_first_height", switch).
 brk_expects("thr_first_height", "agg_threshold_witness").
 brk_expects("thr_first_height", "agg_threshold_why").
 brk("thr_no_close"). brk_kind("thr_no_close", switch).
 brk_expects("thr_no_close", "agg_threshold_witness").
 brk_expects("thr_no_close", "agg_threshold_why").
+brk_expects("thr_no_close", "agg_quorum_demo").
 brk("thr_whynot_reached"). brk_kind("thr_whynot_reached", switch).
 brk_expects("thr_whynot_reached", "agg_threshold_why").
+brk_expects("thr_whynot_reached", "agg_quorum_demo").
 brk("thr_no_hole"). brk_kind("thr_no_hole", switch).
 brk_expects("thr_no_hole", "agg_threshold_eval").
 brk("thr_reflect_agg"). brk_kind("thr_reflect_agg", switch).
@@ -271,6 +294,7 @@ brk("thr_one_deriv"). brk_kind("thr_one_deriv", switch).
 brk_expects("thr_one_deriv", "agg_threshold_witness").
 brk("thr_acc_frozen"). brk_kind("thr_acc_frozen", switch).
 brk_expects("thr_acc_frozen", "agg_threshold_eval").
+brk_expects("thr_acc_frozen", "agg_quorum_demo").
 brk("median_upper"). brk_kind("median_upper", switch).
 brk_expects("median_upper", "agg_holistic_eval").
 brk("quantile_floor"). brk_kind("quantile_floor", switch).
@@ -1059,18 +1083,25 @@ brk("ts_max"). brk_kind("ts_max", ts).
 brk_expects("ts_max", "agg_cell_eval").
 brk_expects("ts_max", "agg_minmax_eval").
 brk_expects("ts_max", "agg_lattice_eval").
+brk_expects("ts_max", "agg_critpath_demo").
+brk_expects("ts_max", "agg_minimax_demo").
 brk("ts_no_agg_edge"). brk_kind("ts_no_agg_edge", ts).
 brk_expects("ts_no_agg_edge", "agg_count_eval").
 brk_expects("ts_no_agg_edge", "agg_sum_eval").
 brk_expects("ts_no_agg_edge", "agg_minmax_eval").
+brk_expects("ts_no_agg_edge", "agg_minimax_demo").
 brk("ts_no_empty_zero"). brk_kind("ts_no_empty_zero", ts).
 brk_expects("ts_no_empty_zero", "agg_empty_eval").
+brk_expects("ts_no_empty_zero", "agg_minimax_demo").
+brk_expects("ts_no_empty_zero", "agg_quorum_demo").
 brk("ts_median_upper"). brk_kind("ts_median_upper", ts).
 brk_expects("ts_median_upper", "agg_holistic_eval").
 brk("ts_thr_n_minus_one"). brk_kind("ts_thr_n_minus_one", ts).
 brk_expects("ts_thr_n_minus_one", "agg_threshold_eval").
+brk_expects("ts_thr_n_minus_one", "agg_quorum_demo").
 brk("ts_lattice_no_retire"). brk_kind("ts_lattice_no_retire", ts).
 brk_expects("ts_lattice_no_retire", "agg_lattice_eval").
+brk_expects("ts_lattice_no_retire", "agg_critpath_demo").
 brk("ts_union_left"). brk_kind("ts_union_left", ts).
 brk_expects("ts_union_left", "agg_join_eval").
 brk("ts_widen_both_ends"). brk_kind("ts_widen_both_ends", ts).
@@ -1097,9 +1128,11 @@ brk_expects("ts_empty_text", "agg_empty_why").
 brk("ts_thr_text_order"). brk_kind("ts_thr_text_order", ts).
 brk_expects("ts_thr_text_order", "agg_threshold_why").
 brk_expects("ts_thr_text_order", "agg_threshold_witness").
+brk_expects("ts_thr_text_order", "agg_quorum_demo").
 brk("ts_lattice_why_one_member"). brk_kind("ts_lattice_why_one_member", ts).
 brk_expects("ts_lattice_why_one_member", "agg_lattice_why").
 brk_expects("ts_lattice_why_one_member", "agg_tag_why").
+brk_expects("ts_lattice_why_one_member", "agg_critpath_demo").
 brk("ts_join_why_one_member"). brk_kind("ts_join_why_one_member", ts).
 brk_expects("ts_join_why_one_member", "agg_join_why").
 brk("ts_widen_whynot_bare"). brk_kind("ts_widen_whynot_bare", ts).
@@ -1555,6 +1588,7 @@ proof_world("agg_count_ticks").
 proof_world("agg_count_wfs").
 proof_world("agg_count_why").
 proof_world("agg_count_witness").
+proof_world("agg_critpath_demo").
 proof_world("agg_empty_budget").
 proof_world("agg_empty_eval").
 proof_world("agg_empty_holes").
@@ -1615,6 +1649,7 @@ proof_world("agg_lattice_wfs").
 proof_world("agg_lattice_why").
 proof_world("agg_lattice_witness").
 proof_world("agg_life_demo").
+proof_world("agg_minimax_demo").
 proof_world("agg_minmax_budget").
 proof_world("agg_minmax_eval").
 proof_world("agg_minmax_holes").
@@ -1630,6 +1665,7 @@ proof_world("agg_minmax_why").
 proof_world("agg_minmax_witness").
 proof_world("agg_precise_holes").
 proof_world("agg_precise_oracle").
+proof_world("agg_quorum_demo").
 proof_world("agg_slo_demo").
 proof_world("agg_sub_budget").
 proof_world("agg_sub_demo").

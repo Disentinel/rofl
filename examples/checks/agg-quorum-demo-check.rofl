@@ -1,0 +1,169 @@
+-- examples/checks/agg-quorum-demo-check.rofl — agg_quorum_demo, THREE QUORUMS
+-- (examples/quorum/README.md). The rules are examples/quorum/quorum.rofl and,
+-- the same questions in sentences, quorum-says.rofl.md, over quorum-data.rofl.
+--
+-- BY HAND, belief: c1 stands on the wire and the broadcaster, two origins, and
+-- is believed. c2 stands on two accounts of the forum: one origin, not believed.
+-- c3 stands on c1 (desk a) and the wire, c4 on three nodes of two origins (the
+-- forum twice and the wire), c5 on c3 and c4 (desks b and c): all believed. c6
+-- stands on c3 and on c2, which is not believed, so on one origin: not. m1 and
+-- m2 hold each other up and each has one founded backer: neither is believed.
+-- BY HAND, proof: q1 from p1 p2; q2 from q1 p3; q3 from q2 q1 p1; q4 needs
+-- nothing; q6 from q4 q3. s5 needs r9, nobody establishes it, and s7 needs q5:
+-- q5 and q7 are not proved. BY HAND, Raft: prod is five servers, a majority is 3,
+-- entry 5 (term 3, the current one) is on s1, s2, s3 and is counted, entries 6
+-- and 7 on two: committed 1 to 5, and the reported 5 is safe. edge3, a majority 2,
+-- counts 1 and 2. The drill `lag` reports 3, held by one of three: no majority.
+-- The drill `old` reports 2, held by 3 of 5, but the cluster is in term 4 and its
+-- one entry of term 4 is held by one server: nothing is counted, nothing
+-- committed, the report is old_term.
+--
+-- The oracle below is computed from quorum-data.rofl by a script of its own
+-- (a fixpoint over sets of origins, a fixpoint over premise sets, a replica
+-- count), not by these rules.
+qo_believed(b1).
+qo_believed(c1).
+qo_believed(c3).
+qo_believed(c4).
+qo_believed(c5).
+qo_believed(f1).
+qo_believed(f2).
+qo_believed(w1).
+qo_proved(p1).
+qo_proved(p2).
+qo_proved(p3).
+qo_proved(q1).
+qo_proved(q2).
+qo_proved(q3).
+qo_proved(q4).
+qo_proved(q6).
+qo_premises(s1, 2).
+qo_premises(s2, 2).
+qo_premises(s3, 3).
+qo_premises(s4, 0).
+qo_premises(s5, 2).
+qo_premises(s6, 2).
+qo_premises(s7, 2).
+qo_committed(edge3, 1).
+qo_committed(edge3, 2).
+qo_counted(edge3, 1).
+qo_counted(edge3, 2).
+qo_majority(edge3, 2).
+qo_unsafe(lag, 3, no_majority).
+qo_majority(lag, 2).
+qo_unsafe(old, 2, old_term).
+qo_majority(old, 3).
+qo_committed(prod, 1).
+qo_committed(prod, 2).
+qo_committed(prod, 3).
+qo_committed(prod, 4).
+qo_committed(prod, 5).
+qo_counted(prod, 5).
+qo_majority(prod, 3).
+qc_miss(believed, X)   :- qo_believed(X), not believed(X).
+qc_extra(believed, X)  :- believed(X), not qo_believed(X).
+qc_miss(proved, P)     :- qo_proved(P), not proved(P).
+qc_extra(proved, P)    :- proved(P), not qo_proved(P).
+qc_miss(walked, P)     :- qo_proved(P), not walked(P).
+qc_extra(walked, P)    :- walked(P), not qo_proved(P).
+qc_miss(premises, S)   :- qo_premises(S, N), not premises(S, N).
+qc_extra(premises, S)  :- premises(S, N), not qo_premises(S, N).
+qc_miss(counted, C)    :- qo_counted(C, I), not counted(C, I).
+qc_extra(counted, C)   :- counted(C, I), not qo_counted(C, I).
+qc_miss(committed, C)  :- qo_committed(C, I), not committed(C, I).
+qc_extra(committed, C) :- committed(C, I), not qo_committed(C, I).
+qc_miss(majority, C)   :- qo_majority(C, Q), not majority(C, Q).
+qc_extra(majority, C)  :- majority(C, Q), not qo_majority(C, Q).
+qc_miss(unsafe, C)     :- qo_unsafe(C, J, K), not unsafe_commit(C, J, K).
+qc_extra(unsafe, C)    :- unsafe_commit(C, J, K), not qo_unsafe(C, J, K).
+alarm(qc_miss).
+alarm(qc_extra).
+-- the index walk and the quorum are one answer, and the stated count is the
+-- counted one (the step that needs nothing is a quorum of 0)
+qc_walk(P)  :- proved(P), not walked(P).
+qc_walk(P)  :- walked(P), not proved(P).
+qc_count(S) :- need_count(S, N), not premises(S, N).
+qc_count(S) :- premises(S, N), not need_count(S, N).
+alarm(qc_walk).
+alarm(qc_count).
+-- the sentences read into the same rules: each answer of the sentence form is
+-- the answer of the rule form
+qc_said(believed, X)  :- says_credited(X), not believed(X).
+qc_said(believed, X)  :- believed(X), not says_credited(X).
+qc_said(proved, P)    :- says_established(P), not proved(P).
+qc_said(proved, P)    :- proved(P), not says_established(P).
+qc_said(premises, S)  :- says_premises(S, N), not premises(S, N).
+qc_said(premises, S)  :- premises(S, N), not says_premises(S, N).
+qc_said(majority, C)  :- says_majority(I, C), not on_majority(C, I).
+qc_said(majority, C)  :- on_majority(C, I), not says_majority(I, C).
+qc_said(counted, C)   :- says_counted(I, C), not counted(C, I).
+qc_said(counted, C)   :- counted(C, I), not says_counted(I, C).
+qc_said(committed, C) :- says_committed(I, C), not committed(C, I).
+qc_said(committed, C) :- committed(C, I), not says_committed(I, C).
+qc_said(unsafe, C)    :- says_unsafe(C, J), not unsafe_commit(C, J, _).
+qc_said(unsafe, C)    :- unsafe_commit(C, J, _), not says_unsafe(C, J).
+qc_said(size, C)      :- says_size(C, N), not size(C, N).
+qc_said(size, C)      :- size(C, N), not says_size(C, N).
+qc_said(quorum, C)    :- says_quorum(C, Q), not majority(C, Q).
+qc_said(quorum, C)    :- majority(C, Q), not says_quorum(C, Q).
+alarm(qc_said).
+-- NEVER: an unsafe commit in a cluster nobody planted one in. The drills are
+-- logs corrupted on purpose, and the alarm is held to them: it must fire there,
+-- as the kind that was planted.
+qc_unplanned(C, J) :- unsafe_commit(C, J, _), not drill(C).
+qc_unplanned(C, J) :- says_unsafe(C, J), not drill(C).
+qc_drill_silent(C) :- drill(C), not unsafe_commit(C, _, _).
+qc_drill_silent(C) :- drill(C), not says_unsafe(C, _).
+alarm(qc_unplanned).
+alarm(qc_drill_silent).
+-- the shape: a quorum counts origins, not nodes, and founds a belief before it
+-- counts it; a majority of 5 is not the majority of 3
+qc_shape(one_origin_is_one)    :- backs(f1, c2), backs(f2, c2), speaks_for(f1, O), speaks_for(f2, O), not believed(c2).
+qc_shape(three_nodes_two_origins) :- backs(f1, c4), backs(f2, c4), backs(w1, c4), believed(c4).
+qc_shape(circle_is_unfounded)  :- backs(m1, m2), backs(m2, m1), not believed(m1), not believed(m2).
+qc_shape(chain_is_believed)    :- believed(c1), believed(c3), believed(c5).
+qc_shape(unbelieved_backer)    :- backs(c2, c6), not believed(c6).
+qc_shape(no_premises_is_proved) :- need_count(s4, 0), proved(q4).
+qc_shape(missing_premise)      :- needs_at(s5, 2, r9), not proved(q5), not proved(q7).
+qc_shape(majorities_differ)    :- majority(prod, 3), majority(edge3, 2).
+qc_shape(old_term_is_not_counted) :- on_majority(old, 2), not counted(old, 2).
+qc_shape(old_term_is_not_committed) :- reported(old, 2), not committed(old, 1), not committed(old, 2).
+qc_shape_want(one_origin_is_one). qc_shape_want(three_nodes_two_origins). qc_shape_want(circle_is_unfounded).
+qc_shape_want(chain_is_believed). qc_shape_want(unbelieved_backer). qc_shape_want(no_premises_is_proved).
+qc_shape_want(missing_premise). qc_shape_want(majorities_differ). qc_shape_want(old_term_is_not_counted).
+qc_shape_want(old_term_is_not_committed).
+qc_shape_missing(W) :- qc_shape_want(W), not qc_shape(W).
+alarm(qc_shape_missing).
+
+-- THE PROOF ROWS. `why` of a belief names the origins it was counted over, the
+-- node that voiced each; `whynot` says how far a quorum got and from whom
+explain_request(why, believed(c3)).
+explain_request(why, committed(prod, 5)).
+explain_request(why, unsafe_commit(lag, 3, no_majority)).
+explain_request(why, unsafe_commit(old, 2, old_term)).
+explain_request(whynot, believed(c2)).
+explain_request(whynot, believed(m1)).
+explain_request(whynot, on_majority(prod, 6)).
+qc_says(K, A, T) :- explained[$explain](K, A, _, L), qc_want(K, A, T), N is str_segs(L, T), N > 1.
+qc_want(why, believed(c3), "[quorum: the first 2 members]").
+qc_want(why, believed(c3), "#1 (wire) h=2").
+qc_want(why, believed(c3), "#2 (desk_a) h=4").
+qc_want(why, believed(c3), "believed[main](c1)").
+qc_want(why, committed(prod, 5), "at_least(3, ?S : holds[main](prod,?S,5)) [quorum: the first 3 members]").
+qc_want(why, committed(prod, 5), "#3 (s3) h=2").
+qc_want(why, unsafe_commit(lag, 3, no_majority), "reached 1 of 2 [threshold]: #1 (a1) h=2").
+qc_want(why, unsafe_commit(old, 2, old_term), "[quorum: the first 3 members]").
+qc_want(why, unsafe_commit(old, 2, old_term), "not committed[main](old,2) [finite failure]").
+qc_want(whynot, believed(c2), "reached 1 of 2 [threshold]: #1 (forum) h=2").
+qc_want(whynot, believed(m1), "reached 1 of 2 [threshold]: #1 (wire) h=2").
+qc_want(whynot, on_majority(prod, 6), "reached 2 of 3 [threshold]: #1 (s1) h=2, #2 (s2) h=2").
+qc_unsaid(K, A, T) :- qc_want(K, A, T), not qc_says(K, A, T).
+alarm(qc_unsaid).
+-- and a quorum names no backer it did not count: the forum is not a member of c3's
+qc_line(L) :- explained[$explain](why, believed(c3), _, L).
+qc_stranger(T) :- qc_line(L), qc_other(T), N is str_segs(L, T), N > 1.
+qc_other("(forum)"). qc_other("backs[main](f1,c3)"). qc_other("(bbc) h=4").
+alarm(qc_stranger).
+-- no answer of this world is a shrug, which `not` would pass in silence
+qc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(qc_shrug).

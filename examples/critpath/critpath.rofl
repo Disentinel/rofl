@@ -1,0 +1,29 @@
+-- examples/critpath/critpath.rofl — the critical path of a release plan.
+--
+-- A task has a duration in days and the tasks it waits for. The earliest a
+-- task can finish is its duration after the latest finish among what it waits
+-- for: a longest path, a MAX over sums. `finish` is declared a lattice, so the
+-- relation keeps one row per task, the greatest, and the path that reached it
+-- is what `why` prints (examples/critpath/README.md).
+--
+-- The second pass runs backwards from the end of the plan: the latest a task
+-- may finish without moving the release, a MIN over differences. A task whose
+-- two numbers are equal has no slack and is on a critical path; a tie is two
+-- critical paths, and both are in the proof.
+edb(task).
+edb(dep).
+
+lattice finish(T, max F).
+lattice latest(T, min L).
+
+-- a task finishes at least its duration after it starts, at the earliest at 0
+finish(T, D) :- task(T, D).
+finish(T, F) :- dep(T, P), finish(P, FP), task(T, D), F is FP + D.
+
+-- the length of the plan, read from the closed relation, and the way back
+length(L) :- L is max(F : finish(_, F)).
+latest(T, L) :- task(T, _), length(L).
+latest(P, L) :- dep(T, P), latest(T, LT), task(T, D), L is LT - D.
+
+slack(T, S)  :- finish(T, F), latest(T, L), S is L - F.
+critical(T)  :- slack(T, 0).

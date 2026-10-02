@@ -119,6 +119,7 @@ check[checks]("facts/goldens.rofl", "blam", world).
 check[checks]("facts/goldens.rofl", "bleep", world).
 check[checks]("facts/goldens.rofl", "counter", world).
 check[checks]("facts/goldens.rofl", "cram", world).
+check[checks]("facts/goldens.rofl", "critpath", world).
 check[checks]("facts/goldens.rofl", "ditto", world).
 check[checks]("facts/goldens.rofl", "drip", world).
 check[checks]("facts/goldens.rofl", "flag", world).
@@ -129,6 +130,7 @@ check[checks]("facts/goldens.rofl", "iffy", world).
 check[checks]("facts/goldens.rofl", "jopa", world).
 check[checks]("facts/goldens.rofl", "life", world).
 check[checks]("facts/goldens.rofl", "loot", world).
+check[checks]("facts/goldens.rofl", "minimax", world).
 check[checks]("facts/goldens.rofl", "moot", world).
 check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "notebook", world).
@@ -143,6 +145,8 @@ check[checks]("facts/goldens.rofl", "notebook_spat", world).
 check[checks]("facts/goldens.rofl", "notebook_xdir", world).
 check[checks]("facts/goldens.rofl", "npc", world).
 check[checks]("facts/goldens.rofl", "oops", world).
+check[checks]("facts/goldens.rofl", "quorum", world).
+check[checks]("facts/goldens.rofl", "quorum_quorum-says", world).
 check[checks]("facts/goldens.rofl", "reach", world).
 check[checks]("facts/goldens.rofl", "review", world).
 check[checks]("facts/goldens.rofl", "ring1", world).
@@ -287,6 +291,7 @@ check[checks]("facts/goldens.rofl", "agg_count_ticks", world).
 check[checks]("facts/goldens.rofl", "agg_count_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_count_why", world).
 check[checks]("facts/goldens.rofl", "agg_count_witness", world).
+check[checks]("facts/goldens.rofl", "agg_critpath_demo", world).
 check[checks]("facts/goldens.rofl", "agg_empty_budget", world).
 check[checks]("facts/goldens.rofl", "agg_empty_eval", world).
 check[checks]("facts/goldens.rofl", "agg_empty_holes", world).
@@ -349,6 +354,7 @@ check[checks]("facts/goldens.rofl", "agg_lattice_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_why", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_witness", world).
 check[checks]("facts/goldens.rofl", "agg_life_demo", world).
+check[checks]("facts/goldens.rofl", "agg_minimax_demo", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_budget", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_eval", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_holes", world).
@@ -367,6 +373,7 @@ check[checks]("facts/goldens.rofl", "agg_precise_oracle", world).
 check[checks]("facts/goldens.rofl", "agg_precise_scale", world).
 check[checks]("facts/goldens.rofl", "agg_proofs", world).
 check[checks]("facts/goldens.rofl", "agg_prose", world).
+check[checks]("facts/goldens.rofl", "agg_quorum_demo", world).
 check[checks]("facts/goldens.rofl", "agg_rederived_provenance", world).
 check[checks]("facts/goldens.rofl", "agg_slo_demo", world).
 check[checks]("facts/goldens.rofl", "agg_sub_budget", world).
