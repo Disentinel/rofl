@@ -3502,3 +3502,96 @@ work(w_amend_runtime_duties,
   "AMEND, DO NOT BREAK, the START.md duties s_zero_deps (zero runtime dependencies) and s_two_runtimes (runs under Bun or Node): Rust first with crates such as oxc contradicts both. Record the amendment in the decided book with its citation, state what each duty now means for each engine, and let speccheck show the pair as an amendment rather than a defect.").
 work_state(w_amend_runtime_duties, open).
 work_needs(w_rust_scanner_oxc, w_amend_runtime_duties).
+
+-- ===========================================================================
+-- FROM MODELLING A REAL REPO (Node/CJS, ~5k files; cross-file port resolution through Express), recorded 2026-10-02.
+-- The demo's local rule files (js-port-source, js-etask, js-construct, js-param-pattern, js-value-gaps,
+-- js-object-assign, js-express, js-mq-effects, js-net-listen) are prior art for the items below.
+-- ===========================================================================
+
+work(w_dataflow_pruning,
+  "THE JS DATAFLOW MUST STOP BLOWING UP. Value may-sets grow super-linearly on real files (one whynot went 217 KB to 9.3 MB with no new signal; two real files cut short in the TS kernel). Find the pruning that keeps answers sound: k-limited call-site contexts, demand-driven evaluation (magic sets) so a question computes its neighbourhood only, may-sets as join lattices with widening, subsumption of dominated values, and the rule-refiring cost already measured (f_a_rule_that_is_not_recursive_fires_on_every_round_of_a_recursive_one, w_the_fixpoint_spends_half_itself_on_two_rules_that_conclude_nearly_nothing). AFTER the aggregates programme. ACCEPTANCE: the two-file Express corpus and a grafema package evaluate with bounded growth, every answer the unpruned model gives is still given or is a shrug with a reason, and the measurements are recorded before and after.").
+work_state(w_dataflow_pruning, open).
+
+work(w_why_is_a_dag,
+  "WHY AND WHYNOT PRINT A DAG, NOT A TREE (f_why_writes_a_shared_derivation_out_in_full, f_provenance_is_a_dag_not_a_tree): a sub-goal shared by sibling branches is written once and referred to after, in both engines, so output grows with the derivation graph and not with its unfolding; [cycle] stays per path. ACCEPTANCE: the 9.3 MB whynot of the demo shrinks to the size of its distinct sub-goals, whycheck stays at 0 differences.").
+work_state(w_why_is_a_dag, open).
+
+work(w_whynot_stays_near_its_target,
+  "A WHYNOT WITH AN UNBOUND VARIABLE enumerates the whole corpus instead of the target's neighbourhood. Bind what the question's own constants and the failing premise's join can bind first, and say how many candidates were left unexplored rather than walking them. ACCEPTANCE: whynot of a literal with one open variable over a 5k-file world answers in the size of the target's cone.").
+work_state(w_whynot_stays_near_its_target, open).
+
+work(w_whynot_tells_absent_from_unloaded,
+  "\"NO RULE CONCLUDES X\" READS THE SAME whether the model has no such rule or the session merely did not load the file that has it (13 of 24 MODEL_FILES loaded gave the wording of a real gap). whynot names the units loaded and, when a reference unit set is known (MODEL_FILES, a declared world), names the unloaded unit that concludes X. Both engines, same text. Makes trimmed digest worlds safe for searching a chain break.").
+work_state(w_whynot_tells_absent_from_unloaded, open).
+
+work(w_witnesses_survive_cooling,
+  "A COOLED AND REHEATED SESSION ANSWERS WHY WITH [axiom]: the witness arena is not persisted, so a cache keeps facts but not proofs. Persist the witnesses with the volume (or derive them again on reheat, said so), so why after reheat equals why before cooling, byte for byte.").
+work_state(w_witnesses_survive_cooling, open).
+
+work(w_a_wall_names_itself_in_the_notebook,
+  "rofl-nb over 2-3 real files answers \"at least N answers, cut short\" (exit 3) after about 30 s and ROFL_NB_LIMIT does not change it, because the cut is not the clock (the memory wall, f_a_run_cut_short_said_it_held). The message names which wall cut the run and the setting that raises it. Speed is w_rust_default_backend's.").
+work_state(w_a_wall_names_itself_in_the_notebook, open).
+
+work(w_reads_is_transitive_or_says_not,
+  "QUESTION FOR THE OWNER, then code: a world file's own `reads:` is not followed when another notebook reads it, so every view lists every world. Decide transitive or not; if not, refuse or warn on a read file whose reads are dropped.").
+work_state(w_reads_is_transitive_or_says_not, open).
+
+work(w_rofl_md_survives_agent_editing,
+  "AGENT TOOLS CORRUPT .rofl.md: in VS Code it is a notebook document, so create_file / replace_string_in_file produce empty or shredded files, and edit_notebook_file with language datalog writes a cell without a fence that rofl-nb then reads as prose. A cell's language and fence must round-trip whatever writes it, and the CLI gives agents a safe edit path (rofl nb edit / a cell-level write that validates). ACCEPTANCE: each of the three edits leaves a file rofl-nb reads as written.").
+work_state(w_rofl_md_survives_agent_editing, open).
+
+work(w_a_refused_cycle_names_itself,
+  "\"PROGRAM REJECTED: ROUND N SETTLED NOTHING WHILE <huge predicate list> REMAINED\" gives no hint that the cause is a negation (or aggregate) cycle through one relation. Name the cycle: the relations and the negated or aggregated edge on it (e.g. may_be_node -> resolves -> resolved_site -> unresolved_call -/-> may_be_node), both engines, the same text; examples/checks/unstratifiable.rofl and lsp/test.ts pin the message.").
+work_state(w_a_refused_cycle_names_itself, open).
+
+work(w_kernel_backend_seam,
+  "THE NOTEBOOK KERNEL HAS NO EXECUTION SEAM: vscode/worker.ts -> notebook/kernel.ts -> playground/host.ts Host is one path, and Host.run both executes and renders. Put Host on a backend interface (init / run / why / whynot) with two implementations, the TS evaluator in process and a rofl-serve child with fork reuse, rendering shared so answers and witnesses are identical. w_rust_default_backend builds on it.").
+work_state(w_kernel_backend_seam, open).
+work_needs(w_rust_default_backend, w_kernel_backend_seam).
+
+work(w_the_sentence_form_never_fails_silently,
+  "FOUR SILENT FAILURES OF THE SENTENCE FORM, each to become a refusal with a reason: (1) a declared sentence containing `not` or `but` gives \"nothing in the model can put a row here\" with no parse error; (2) a bound variable written with `the` (`under the area A`) gives 0 answers where a/an works; (3) two relations sharing one verb phrase collide, and an atom equal to a declared noun can make the reader learn the wrong relation; (4) datalog cells: only `--` comments, integers only (74.006 says \"expected ')'\"), no `==`, no string builtins -- the messages must name these limits. ACCEPTANCE: a refusal fixture per case.").
+work_state(w_the_sentence_form_never_fails_silently, open).
+
+work(w_every_picture_its_own_frame,
+  "`draw space` WITHOUT A PER-PICTURE `frame` MERGES ALL PICTURES INTO ONE CANVAS (beside f_whole_picture_frames_do_not_follow_the_frame_decision). A picture without a frame is its own frame, or the draw refuses with a reason.").
+work_state(w_every_picture_its_own_frame, open).
+
+work(w_js_dead_call_sites,
+  "arg_at TAKES ARGUMENTS FROM DEAD CALL SITES: code under `if (!module.parent) main()` or `require.main === module` (1021 and 778 files in the demo repo) contributes values to every callee. Model the entry guards (dead_guard / dead_fn in the demo's js-net-listen.rofl) and keep their sites out of arg_at, with a world over both guard shapes.").
+work_state(w_js_dead_call_sites, open).
+
+work(w_js_call_site_context,
+  "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning.").
+work_state(w_js_call_site_context, open).
+work_needs(w_js_call_site_context, w_dataflow_pruning).
+
+work(w_js_framework_contracts,
+  "A GENERAL HOOK FOR FRAMEWORK CONTRACTS, declared as facts rather than special-cased: (1) injected parameters -- etask._class methods are written *m(_this, a, b) and called o.m(a, b), so param_of must shift by the contract (the demo's injects_this); (2) coroutine runners -- `x = yield p` under etask/co is transparent (x gets p's value), etask._class(c) is c, etask(function*(){ ... return v }) is v; (3) the same shape for other runner libraries. ACCEPTANCE: the demo's send_to_queue('q', msg) binds msg to the message, and a co-style yield carries its value.").
+work_state(w_js_framework_contracts, open).
+
+work(w_js_new_of_an_imported_class,
+  "`new C()` OF A CLASS FROM ANOTHER FILE: the class is found only by a name declared in the same file (the declared limit covers `extends` of an imported class only). Follow the callee by dataflow (the demo's js-construct.rofl), and read instance fields back: `this.f = v` in a constructor is stored on the class node but `inst.f` reads only static members, so fields are never read (beside f_a_member_assigned_to_a_class_or_to_this_has_no_half, which is about methods).").
+work_state(w_js_new_of_an_imported_class, open).
+
+work(w_js_destructuring_claims_are_true,
+  "THE MATRIX CLAIMS WHAT THE RULES DO NOT DO: handled(js, object_pattern, dataflow, r_destructure) and handled(js, assignment_pattern, dataflow, r_param_default) are claimed, yet object-pattern PARAMETERS (`({port, host}) =>`) bind nothing any rule reads, `const {PORT = 1343} = env` binds nothing, `const {PORT} = require('./config')` has only the node arm and no literal arm, and `(port = 80) =>` / `({port = 80}) =>` give no literal. Either the rules do it or the claims become unknown_because cells; plus parseInt / Number / parseFloat keep their argument's value. The over-claim is the defect: a handled cell must be proven by its oracle on these shapes.").
+work_state(w_js_destructuring_claims_are_true, open).
+
+work(w_js_object_assign,
+  "Object.assign(target, ...sources) IS NOT MODELLED as mutating and returning its first argument (311 files in the demo repo start with `const E = assign(exports, {...})`; without it E.f() never resolves). Model it by the library contract, not by method name.").
+work_state(w_js_object_assign, open).
+
+work(w_js_keyed_collections,
+  "KEYED COLLECTIONS: .set(k, v) / .get(k) pairing on a Map or an Express app has no edge (the demo matched by method name), and iteration of a Map as [key, value] pairs (`for (const [k, w] of m)`) is not modelled. Needs the receiver's type (w_js_receiver_typed_catalogues, w_prototype_of_a_constructed_value).").
+work_state(w_js_keyed_collections, open).
+work_needs(w_js_keyed_collections, w_js_receiver_typed_catalogues).
+
+work(w_js_external_packages,
+  "VALUES FROM OUTSIDE THE CORPUS, TOLD APART: an npm package and a repo file merely left out of the slice are one thing today (import_outside_corpus; the demo's external_module); give each its package name and provenance, and make member reads on an external value external too (the demo's ext_pkg / from_pkg). Coordinates with the ExternalModule work on the JS-model branch.").
+work_state(w_js_external_packages, open).
+
+work(w_js_receiver_typed_catalogues,
+  "METHOD CATALOGUES ARE KEYED BY METHOD NAME, NOT RECEIVER TYPE: listen, bind, set, get, assign match any receiver, and `.bind(` is Function.prototype.bind in about 170 files of the demo repo. Key the catalogues by the receiver's type where the model knows it, and by name only as a declared fallback that says so.").
+work_state(w_js_receiver_typed_catalogues, open).
