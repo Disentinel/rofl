@@ -551,6 +551,9 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       if (badTerm) { dropped.push(`${headText}: a term the sentence form cannot carry, ${badTerm}`); continue; }
       // a rule missing a condition it could not read would answer more than the sentence says: it is not loaded, and the condition is reported
       if (!whole) { dropped.push(`${headText}: a condition was not read`); continue; }
+      // the opening `A`/`An` was read as an article, so a variable of that name in the conditions lost its place in the head
+      const art = /^(An?) (?!(?:is|are|has|have|was|were|does|do)\b)[a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z]/.test(headText) ? undefined : /^(An?) /.exec(headText)?.[1];
+      if (art && conds.some((c) => new RegExp(`\\b${art}\\b`).test(c))) { unparsed.push(`${headText}: "${art}" opens the sentence and is read as an article, but the conditions use a variable ${art}; write it typed (\`a number ${art}\`) or name it otherwise`); continue; }
       finish(rule, intros);
     }
   }
@@ -860,8 +863,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return out.map((x) => x.trim()).filter(Boolean);
   }
   /** The variables an argument names: itself, or the `?V` inside a functor. */
-  const namesIn = (x: string): string[] => /^[A-Z]\w*$/.test(x) ? [x] : [...x.replace(/"(?:[^"\\]|\\.)*"/g, '').matchAll(/\?([A-Z]\w*)/g)].map((m) => m[1]);
-  const cNames = (l: CLit): string[] => l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys].flatMap(namesIn).concat(l.agg.body.flatMap(cNames)) : l.args.flatMap(namesIn);
+  function namesIn(x: string): string[] { return /^[A-Z]\w*$/.test(x) ? [x] : [...x.replace(/"(?:[^"\\]|\\.)*"/g, '').matchAll(/\?([A-Z]\w*)/g)].map((m) => m[1]); }
+  function cNames(l: CLit): string[] { return l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys].flatMap(namesIn).concat(l.agg.body.flatMap(cNames)) : l.args.flatMap(namesIn); }
   /** The sugar's copies with their own variables renamed to names the clause does not use (`M` to `M1`, `K_M` with it):
    *  every variable the pair alone writes, taken or not. One written outside the pair, in the head or another premise,
    *  is the same in both, a correlation or a group of each as it is of any aggregate. */
@@ -947,6 +950,15 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     }
     return null;
   }
+  /** A value the clause computes and never reads: the sentence said something the rule drops. */
+  function unusedWhy(c: Clause): string | null {
+    const all = [...c.args.flatMap(namesIn), ...c.body.flatMap(cNames)];
+    for (const l of c.body) {
+      const v = l.agg ? l.agg.res : !l.neg && l.rel === 'is' ? l.args[0] : null;
+      if (v && /^[A-Z]\w*$/.test(v) && all.filter((x) => x === v).length === 1) return `${c.head}: ${v} is computed and never used, so the rule drops what its sentence says`;
+    }
+    return null;
+  }
   function alternatives(t: Term): Term[] { return 'or' in t ? t.or : [t]; }
   function expand(rule: Rule): Clause[] {
     let variants: { rel: string; neg: boolean; args: string[] }[][] = [[]];
@@ -987,7 +999,8 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     for (const c of own) { const why = aloneWhy(c); if (why) { unparsed.push(why); return []; } }
     return own.map(apart);
   }
-  const expanded = rules.map(expand), parsed: Clause[] = expanded.flat();
+  // an aggregate's own body is expanded as a rule too, and a value it computes is read by the aggregate: only a whole rule is asked
+  const expanded = rules.map((r) => { const cs = expand(r), why = cs.map(unusedWhy).find((w) => w); if (why) { unparsed.push(why); return []; } return cs; }), parsed: Clause[] = expanded.flat();
   const roflAt = [...madeAt[2], ...madeAt[3], ...madeAt[1], ...expanded.flatMap((cs, k) => cs.map(() => madeAt[0][k])), ...madeAt[4]].map((l) => l < 0 ? undefined : l);
 
   // the source clauses from the facts dump

@@ -2021,6 +2021,8 @@ check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-3-refused-exact
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-4-refused-every-unbound.rofl.md").
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-5-refused-atmost-unbound.rofl.md").
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-6-refused-unrounded.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-11-refused-article-variable.rofl.md").
+check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-12-refused-unused-value.rofl.md").
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-7-refused-avg-recursive.rofl.md").
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-8-refused-exactly-unbound.rofl.md").
 check_file("agg_sugar_safety", "examples/checks/agg-sugar-safety-9-refused-atmost-ungrouped.rofl.md").
