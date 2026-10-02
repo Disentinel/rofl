@@ -454,7 +454,86 @@ lat_last(R, K, X)        :- lat_args(R, K, $cons(X, $nil)).
 lat_last_var(R, K)       :- lat_last(R, K, $var(_)).
 lat_const_ok(R, K)       :- lat_inner(R, K, P), lat_last(R, K, C), lat_op(P, Op), better_move(Op, M), top_const(M, C).
 lat_misuse(R)            :- lat_inner(R, K, P), lat_op(P, _), not lat_last_var(R, K), not lat_const_ok(R, K).
-agg_refused(R, lattice_nonmonotone) :- lat_misuse(R).
+agg_refused(R, lattice_nonmonotone) :- lat_misuse(R), not ord_rule(R).
+agg_refused(R, order_nonmonotone)   :- lat_misuse(R), ord_rule(R).
+
+-- DECLARED ORDERS (docs/aggregates.md, "Declared orders, as built").
+-- `pareto route(A, B, min C, min T).` and `lex route(A, B, min C, max Q).` are
+-- the kernel rows `order_comp(P, Kind, I, Dir, R)`, one for each value the
+-- order compares, R the dominance rule the declaration lowered to that is
+-- strict in it; the rules themselves are `dominance` rows, so the relation is
+-- subsumptive as any is. What a declaration adds is that its dominance is a
+-- strict partial order by construction, and with it the judgement a custom
+-- dominance cannot have: a rule reading it inside its recursion must be
+-- monotone in the order, which the order lattice's analysis says value by
+-- value. The host seeds, for a rule that concludes or reads an ordered
+-- relation, `premise_var(R, K, oval, I, V)` (K = 0 the head) for the variable
+-- at its I-th value, the key in the `hkey` and `lkey` slots as a lattice's,
+-- and `order_bad_read(R, K)` for a read whose values are no distinct
+-- variables of their own.
+edb(order_comp).
+edb(order_bad_read).
+ord_rel(P)      :- order_comp(P, _, _, _, _).
+ord_owned(P, R) :- order_comp(P, _, _, _, R).
+-- the declaration is the relation's whole dominance, and it is one
+lattice_refused(P, order_and_rules) :- ord_rel(P), dominance(R, P, _, _), not ord_owned(P, R).
+lattice_refused(P, two_orders)      :- order_comp(P, K1, _, _, _), order_comp(P, K2, _, _, _), K1 != K2.
+lattice_refused(P, two_orders)      :- order_comp(P, _, I, D1, _), order_comp(P, _, I, D2, _), D1 != D2.
+-- an ordered read's values are tainted, and each moves the way its direction
+-- improves it
+lat_taint(R, K, V) :- lat_inner(R, K, P), ord_rel(P), premise_var(R, K, oval, _, V).
+lat_mv(R, K, V, M) :- lat_inner(R, K, P), premise_var(R, K, oval, I, V), order_comp(P, _, I, Dir, _), better_move(Dir, M).
+lat_ok(R, K, V, K, oval) :- lat_inner(R, K, P), ord_rel(P), premise_var(R, K, oval, _, V).
+lat_ok(R, K, V, K, pos)  :- lat_inner(R, K, P), ord_rel(P), premise_var(R, K, oval, _, V).
+lat_misuse(R) :- lat_inner(R, K, P), ord_rel(P), order_bad_read(R, K).
+-- a value of a head's order goes where that value improves the same way
+ord_head_dir(R, K, X, I) :- premise_var(R, 0, oval, I, X), concludes(R, H), order_comp(H, _, I, Dir, _),
+                            lat_mv(R, K, X, M), better_move(Dir, M).
+ord_head_unfit(R, K, X)  :- lat_taint(R, K, X), premise_var(R, 0, oval, I, X), not ord_head_dir(R, K, X, I).
+lat_ok(R, K, X, 0, oval) :- lat_taint(R, K, X), premise_var(R, 0, oval, _, X), not ord_head_unfit(R, K, X).
+lat_ok(R, K, X, 0, head) :- lat_ok(R, K, X, 0, oval).
+-- WHERE WHAT AN ORDER KEEPS IS THE LEXICOGRAPHIC ORDER'S ALONE. A value that
+-- is better lexicographically is better in the first value only: the later
+-- ones may be worse, so a comparison of one, or a use of it where a head
+-- keeps its direction, is no monotone use. `ord_org` is the value a variable
+-- is computed from, `ord_str` that a strictly better input gives a strictly
+-- better output of it (`+`, `-` and a copy, not min or max).
+lat_base(R, K, V, I) :- lat_inner(R, K, P), ord_rel(P), premise_var(R, K, oval, I, V).
+lat_base(R, K, V, 1) :- lat_inner(R, K, P), not ord_rel(P), premise_var(R, K, lval, _, V).
+ord_org(R, K, V, I) :- lat_base(R, K, V, I).
+ord_org(R, K, X, I) :- ord_org(R, K, Y, I), lat_step(R, K, Y, _, X, _).
+strict_step(R, J) :- premise_arith(R, J, _, "+", _, _).
+strict_step(R, J) :- premise_arith(R, J, _, "-", _, _).
+strict_step(R, J) :- premise_arith(R, J, $var(X), "is", $var(Y), $var(Y)).
+ord_str(R, K, V) :- lat_base(R, K, V, _).
+ord_str(R, K, X) :- ord_str(R, K, Y), lat_step(R, K, Y, J, X, _), strict_step(R, J).
+ord_has_org(R, K, X) :- ord_org(R, K, X, _).
+lex_rel(P)       :- order_comp(P, lex, _, _, _).
+lex_head(R)      :- concludes(R, H), lex_rel(H).
+lex_late(R, K, X) :- lat_inner(R, K, P), lex_rel(P), ord_org(R, K, X, I), I > 1.
+ord_cmp("<").
+ord_cmp("<=").
+ord_cmp(">").
+ord_cmp(">=").
+ord_cmp("=").
+ord_cmp("!=").
+lat_misuse(R) :- lex_late(R, K, X), premise_lit(R, J, $builtin(Op, _)), premise_var(R, J, _, _, X), ord_cmp(Op).
+lat_misuse(R) :- lex_late(R, K, X), premise_var(R, 0, hval, _, X).
+lat_misuse(R) :- lex_late(R, K, X), premise_var(R, 0, oval, _, X), concludes(R, H), not lex_rel(H).
+-- a lexicographic head keeps the order only when each of its values but the
+-- last, if the rule's head is computed from a read at all, is computed
+-- STRICTLY from the value at its own place: a tuple better in its first
+-- value is better whatever the later ones do, and one equal in it is better
+-- in the first it differs in, so a value before the last that stayed put
+-- while an earlier or later one moved would conclude a worse tuple
+ord_more(P, I)      :- order_comp(P, _, I, _, _), order_comp(P, _, J, _, _), J > I.
+lex_pos(R, I)       :- concludes(R, H), lex_rel(H), ord_more(H, I).
+lex_track(R, K)     :- lex_head(R), premise_var(R, 0, oval, _, X), lat_taint(R, K, X).
+lex_strict(R, K, I) :- premise_var(R, 0, oval, I, X), ord_org(R, K, X, I), ord_str(R, K, X).
+lat_misuse(R) :- lex_track(R, K), lex_pos(R, I), not lex_strict(R, K, I).
+lat_misuse(R) :- lex_head(R), premise_var(R, 0, oval, _, X), lat_taint(R, K, X), not ord_has_org(R, K, X).
+ord_rule(R) :- lat_inner(R, _, P), ord_rel(P).
+ord_rule(R) :- concludes(R, H), ord_rel(H).
 
 -- A THRESHOLD BESIDE A LATTICE. A lattice's close supersedes values and
 -- withdraws what a hole left unfounded, and a Quorum counted before the close
@@ -520,7 +599,7 @@ stratum(demand_rel, 2).
 stratum(trigger_of, 2).
 stratum(agg_group_var, 2).
 stratum(agg_groups, 2).
-stratum(agg_refused, 3).
+stratum(agg_refused, 5).
 stratum(mono_rule, 3).
 stratum(stratum_cone, 3).
 stratum(late_rule, 3).
@@ -542,7 +621,7 @@ stratum(lat_taint, 1).
 stratum(lat_use, 1).
 stratum(lattice_any, 1).
 stratum(lattice_member_reader, 1).
-stratum(lattice_refused, 1).
+stratum(lattice_refused, 2).
 stratum(lattice_rel, 1).
 stratum(sub_rel, 1).
 stratum(dominated_reader, 1).
@@ -550,11 +629,28 @@ stratum(lat_widened, 1).
 stratum(lat_clean, 2).
 stratum(lat_head_ok, 2).
 stratum(lat_mv, 2).
-stratum(lat_ok, 2).
+stratum(lat_ok, 4).
 stratum(lat_step, 2).
 stratum(lattice_outer, 2).
 stratum(lat_live, 2).
 stratum(lat_iv_step, 2).
 stratum(unw_edge, 2).
 stratum(unw_reach, 2).
-stratum(lat_misuse, 3).
+stratum(lat_misuse, 5).
+stratum(ord_rel, 1).
+stratum(ord_owned, 1).
+stratum(ord_head_dir, 2).
+stratum(ord_head_unfit, 3).
+stratum(lat_base, 2).
+stratum(ord_org, 2).
+stratum(strict_step, 1).
+stratum(ord_str, 2).
+stratum(ord_has_org, 2).
+stratum(lex_rel, 1).
+stratum(lex_head, 1).
+stratum(lex_late, 2).
+stratum(lex_track, 1).
+stratum(ord_more, 1).
+stratum(lex_pos, 1).
+stratum(lex_strict, 2).
+stratum(ord_rule, 1).

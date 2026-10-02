@@ -57,6 +57,11 @@ export const V = {
   // SEMIRING TAGS (docs/aggregates.md, "Tags, as built"):
   // `tag_decl(Rel, Arity, Alg)` for `tag rel(..., alg T).`
   tag_decl: 'tag_decl',
+  // DECLARED ORDERS (docs/aggregates.md, "Declared orders, as built"):
+  // `order_comp(Rel, Kind, I, Dir, Rule)` for `pareto rel(K..., min C, ...).` and
+  // `lex rel(...)`: the I-th value, its direction (min or max), and the
+  // dominance rule that is strict in it.
+  order_comp: 'order_comp',
   // SUBSUMPTION (docs/aggregates.md, "Subsumption, as built"): a dominance
   // rule `p(K..., V1...) <= p(K..., V2...) :- B.`
   // is `dominance(R, Rel, Arity, KeyLen)` and its two facts
@@ -104,7 +109,7 @@ export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
   V.reads_from, V.writes_to, V.uses_builtin, V.asserted_by,
   V.bridge_decl, V.derived_by, V.hole,
   V.premise_agg, V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed,
-  V.lattice_decl, V.lattice_widen, V.lattice_member, V.lattice_member_prem, V.tag_decl,
+  V.lattice_decl, V.lattice_widen, V.lattice_member, V.lattice_member_prem, V.tag_decl, V.order_comp,
   V.dominance, V.dominance_lit, V.dominated_by,
 ]);
 
@@ -201,7 +206,7 @@ export const ARITY: Readonly<Record<string, number>> = {
   sealed: 1,
   premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
   lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
-  tag_decl: 3,
+  tag_decl: 3, order_comp: 5,
   dominance: 4, dominance_lit: 3, dominated_by: 3,
 };
 

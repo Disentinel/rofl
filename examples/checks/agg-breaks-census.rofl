@@ -860,10 +860,13 @@ brk_expects("wfs_admits_subsumption", "agg_sub_ts").
 brk("dominance_why_ghost_unmarked"). brk_kind("dominance_why_ghost_unmarked", switch).
 brk_expects("dominance_why_ghost_unmarked", "agg_sub_why").
 brk("dominance_why_one_member"). brk_kind("dominance_why_one_member", switch).
+brk_expects("dominance_why_one_member", "agg_sub_order_why").
 brk_expects("dominance_why_one_member", "agg_sub_why").
 brk("dominance_why_beaten_off"). brk_kind("dominance_why_beaten_off", switch).
+brk_expects("dominance_why_beaten_off", "agg_sub_order_why").
 brk_expects("dominance_why_beaten_off", "agg_sub_why").
 brk("dominance_whynot_plain"). brk_kind("dominance_whynot_plain", switch).
+brk_expects("dominance_whynot_plain", "agg_sub_order_why").
 brk_expects("dominance_whynot_plain", "agg_sub_why").
 brk_expects("dominance_whynot_plain", "agg_sub_ticks").
 brk("dominance_history_unfounded"). brk_kind("dominance_history_unfounded", switch).
@@ -889,6 +892,56 @@ brk("ring1_dominance_unread"). brk_kind("ring1_dominance_unread", file).
 brk_expects("ring1_dominance_unread", "agg_sub_syntax").
 brk("ts_dominance_admitted"). brk_kind("ts_dominance_admitted", ts).
 brk_expects("ts_dominance_admitted", "agg_sub_ts").
+brk("order_unread"). brk_kind("order_unread", switch).
+brk_expects("order_unread", "agg_sub_order_syntax").
+brk_expects("order_unread", "agg_sub_order_reflect").
+brk_expects("order_unread", "agg_sub_order_eval").
+brk_expects("order_unread", "agg_sub_order_safety").
+brk_expects("order_unread", "agg_sub_order_witness").
+brk_expects("order_unread", "agg_sub_order_why").
+brk_expects("order_unread", "agg_sub_order_demo").
+brk("order_pareto_weak"). brk_kind("order_pareto_weak", switch).
+brk_expects("order_pareto_weak", "agg_sub_order_reflect").
+brk_expects("order_pareto_weak", "agg_sub_order_eval").
+brk_expects("order_pareto_weak", "agg_sub_order_witness").
+brk_expects("order_pareto_weak", "agg_sub_order_demo").
+brk("order_lex_as_pareto"). brk_kind("order_lex_as_pareto", switch).
+brk_expects("order_lex_as_pareto", "agg_sub_order_eval").
+brk_expects("order_lex_as_pareto", "agg_sub_order_witness").
+brk_expects("order_lex_as_pareto", "agg_sub_order_demo").
+brk("order_max_as_min"). brk_kind("order_max_as_min", switch).
+brk_expects("order_max_as_min", "agg_sub_order_eval").
+brk("order_row_rule_first"). brk_kind("order_row_rule_first", switch).
+brk_expects("order_row_rule_first", "agg_sub_order_reflect").
+brk_expects("order_row_rule_first", "agg_sub_order_syntax").
+brk("order_row_unread"). brk_kind("order_row_unread", switch).
+brk_expects("order_row_unread", "agg_sub_order_safety").
+brk("order_head_unseeded"). brk_kind("order_head_unseeded", switch).
+brk_expects("order_head_unseeded", "agg_sub_order_safety").
+brk("ring1_order_unread"). brk_kind("ring1_order_unread", file).
+brk_expects("ring1_order_unread", "agg_sub_order_syntax").
+brk("ts_order_unread"). brk_kind("ts_order_unread", ts).
+brk_expects("ts_order_unread", "agg_sub_order_syntax").
+brk("ts_order_lex_as_pareto"). brk_kind("ts_order_lex_as_pareto", ts).
+brk_expects("ts_order_lex_as_pareto", "agg_sub_order_eval").
+brk("order_dir_ignored"). brk_kind("order_dir_ignored", kernel).
+brk_expects("order_dir_ignored", "agg_sub_order_safety").
+brk("order_head_fit_ignored"). brk_kind("order_head_fit_ignored", kernel).
+brk_expects("order_head_fit_ignored", "agg_sub_order_safety").
+brk("order_taint_dropped"). brk_kind("order_taint_dropped", kernel).
+brk_expects("order_taint_dropped", "agg_sub_order_safety").
+brk("order_bad_read_ignored"). brk_kind("order_bad_read_ignored", kernel).
+brk_expects("order_bad_read_ignored", "agg_sub_order_safety").
+brk("order_and_rules_admitted"). brk_kind("order_and_rules_admitted", kernel).
+brk_expects("order_and_rules_admitted", "agg_sub_order_safety").
+brk("order_two_kinds_admitted"). brk_kind("order_two_kinds_admitted", kernel).
+brk_expects("order_two_kinds_admitted", "agg_sub_order_safety").
+brk("order_lex_late_compared"). brk_kind("order_lex_late_compared", kernel).
+brk_expects("order_lex_late_compared", "agg_sub_order_safety").
+brk("order_lex_strict_unchecked"). brk_kind("order_lex_strict_unchecked", kernel).
+brk_expects("order_lex_strict_unchecked", "agg_sub_order_safety").
+brk("order_lex_late_into_pareto"). brk_kind("order_lex_late_into_pareto", kernel).
+brk_expects("order_lex_late_into_pareto", "agg_sub_order_safety").
 brk("phrase_subset_as_member"). brk_kind("phrase_subset_as_member", switch).
 brk_expects("phrase_subset_as_member", "agg_join_phrase").
 brk("phrase_inner_unread"). brk_kind("phrase_inner_unread", switch).
@@ -1310,7 +1363,14 @@ switch_site("no_sealed_text", "rust/rofl/src/engine.rs").
 switch_site("nullary_compound_term", "rust/rofl/src/rofl_parse.rs").
 switch_site("one_member", "rust/rofl/src/engine.rs").
 switch_site("or_tie_last", "rust/rofl/src/cell.rs").
+switch_site("order_head_unseeded", "rust/rofl/src/engine.rs").
+switch_site("order_lex_as_pareto", "rust/rofl/src/program.rs").
+switch_site("order_max_as_min", "rust/rofl/src/program.rs").
+switch_site("order_pareto_weak", "rust/rofl/src/program.rs").
 switch_site("order_proj", "rust/rofl/src/engine.rs").
+switch_site("order_row_rule_first", "rust/rofl/src/program.rs").
+switch_site("order_row_unread", "rust/rofl/src/engine.rs").
+switch_site("order_unread", "rust/rofl/src/rofl_parse.rs").
 switch_site("partial_check", "rust/rofl/src/cell.rs").
 switch_site("phantom", "rust/rofl/src/engine.rs").
 switch_site("phrase_apart_copy_bound", "rust/rofl/src/bin/rofl_render.rs").
@@ -1566,6 +1626,13 @@ proof_world("agg_sub_budget").
 proof_world("agg_sub_demo").
 proof_world("agg_sub_eval").
 proof_world("agg_sub_holes").
+proof_world("agg_sub_order_demo").
+proof_world("agg_sub_order_eval").
+proof_world("agg_sub_order_reflect").
+proof_world("agg_sub_order_safety").
+proof_world("agg_sub_order_syntax").
+proof_world("agg_sub_order_why").
+proof_world("agg_sub_order_witness").
 proof_world("agg_sub_phrase").
 proof_world("agg_sub_reflect").
 proof_world("agg_sub_safety").

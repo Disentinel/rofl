@@ -367,6 +367,13 @@ check[checks]("facts/goldens.rofl", "agg_sub_budget", world).
 check[checks]("facts/goldens.rofl", "agg_sub_demo", world).
 check[checks]("facts/goldens.rofl", "agg_sub_eval", world).
 check[checks]("facts/goldens.rofl", "agg_sub_holes", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_demo", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_eval", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_reflect", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_safety", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_syntax", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_why", world).
+check[checks]("facts/goldens.rofl", "agg_sub_order_witness", world).
 check[checks]("facts/goldens.rofl", "agg_sub_phrase", world).
 check[checks]("facts/goldens.rofl", "agg_sub_reflect", world).
 check[checks]("facts/goldens.rofl", "agg_sub_safety", world).

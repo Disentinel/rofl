@@ -38,6 +38,10 @@ export const LATTICE_OPS = new Set([...AGG_OPS, 'union', 'hull', 'bitor']);
 /** The semirings a tag declaration may name (docs/aggregates.md, "Tags, as
  *  built"): words, names everywhere else. */
 export const TAG_ALGS = new Set(['tropical', 'viterbi', 'trust', 'counting']);
+/** The kinds of declared order (docs/aggregates.md, "Declared orders, as
+ *  built") and the directions of the values they compare: words, names
+ *  elsewhere. */
+export const ORDER_KINDS = new Set(['pareto', 'lex']);
 
 class P {
   toks: Tok[];
@@ -405,6 +409,39 @@ class P {
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: alg, tag: true };
   }
 
+  /**   orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'
+   *    dir       := 'min' | 'max'
+   *  Words, not keywords: one declares only when a second name follows. */
+  orderDecl(): Clause {
+    const kind = this.next().v;
+    const rel = this.expect('ident').v;
+    const what = `${kind} ${rel}`;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`${what}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`${what}: expected '('`);
+    this.next();
+    const isDir = () => { const t = this.peek(), n = this.toks[this.pos + 1].t; return t.t === 'ident' && (t.v === 'min' || t.v === 'max') && n !== ',' && n !== ')' && n !== '('; };
+    const args: Term[] = [];
+    while (!isDir()) {
+      args.push(this.term());
+      if (this.peek().t !== ',') this.err(`${what}: the last arguments are the values the order compares, each written with its direction: min C, max T`);
+      this.next();
+    }
+    const ord: string[] = [];
+    for (;;) {
+      if (!isDir()) this.err(`${what}: every value after the key is written with its direction, min or max, then its variable`);
+      ord.push(this.next().v);
+      args.push(this.term());
+      if (this.peek().t !== ',') break;
+      this.next();
+    }
+    if (this.peek().t !== ')') this.err(`${what}: \`(\` is not closed`);
+    this.next();
+    if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
+    this.next();
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: kind, ord };
+  }
+
   clause(): Clause {
     this.freshCounter = 0; // wildcard names are clause-local => content-addressed
     if (this.peek().t === 'ident' && this.peek().v === 'lattice' && this.toks[this.pos + 1].t === 'ident') {
@@ -412,6 +449,9 @@ class P {
     }
     if (this.peek().t === 'ident' && this.peek().v === 'tag' && this.toks[this.pos + 1].t === 'ident') {
       return this.tagDecl();
+    }
+    if (this.peek().t === 'ident' && ORDER_KINDS.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
+      return this.orderDecl();
     }
     const head = this.literal();
     // `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,

@@ -254,6 +254,7 @@ export function aggRefusalText(reason: string, rel: string | null): string {
     case 'set_pattern': return `${setPatternReason('the value of its head')}; this head's relation is no join lattice`;
     case 'join_value_off_carrier': return "it reads a join lattice with a value no value of its carrier can match, so the literal could never hold: a union's value is `set(E, ...)`, a hull's `iv(Lo, Hi)` with Lo <= Hi, a bitor's an integer of [0, 2^60); the slot takes a variable, such a value, `set(T)` or `iv(A, B)` of variables and integers (`ninf` a low end, `inf` a high one)";
     case 'lattice_unwidened': return "it computes a hull's value from that hull's own value by an interval function (ivadd, ivsub, ivmul, ivmeet) inside its recursion, and no relation on that cycle declares a widening, so nothing bounds how often the value can grow: declare one, `lattice p(K, hull I) widen N.`";
+    case 'order_nonmonotone': return "it reads a relation with a declared order inside its recursion, or concludes one, and is not monotone in that order: a value of an ordered relation may flow only into a value of a head that improves the same way (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) and into a comparison that stays true as the value improves (V < N for min, V > N for max); under pareto each value moves on its own, and under lex only the first value, strictly (+, - or a copy), may be compared, and each later value goes only into the value at its own place of a lex head whose first value is computed from the first one read";
     case 'lattice_nonmonotone': return "it reads a lattice relation inside its recursion and is not monotone in the value: the value may flow only into a lattice head's value (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) in the direction that head improves, or into a comparison that stays true as the value improves (D < N for min, D > N for max, B = true for or, B = false for and); a join's value (union, hull, bitor) only into a head of the same join or as S in `E in S` and `A subset S`, and a hull's through an interval function, X is ivadd(V, E), ivsub(V, E), ivsub(E, V), ivmul(V, K), ivmeet(V, E)";
     case 'tag_weight_reads_tag': return 'its head\'s tag is its weight, and the weight reads a tag of the body the engine multiplies in (⊗ through the body), so that tag would count twice: leave the head\'s tag a variable the body does not bind, and the engine writes the ⊗ of the body\'s tags (docs/aggregates.md, "Tags, as built")';
     case 'tag_arity': return "it writes or reads a tagged relation at an arity other than its declaration's";
@@ -940,7 +941,7 @@ export class AggEval {
     const pol = policyStore(SAFETY_DENSE);
     const add = (rel: string, persp: string, args: Term[]) => pol.add(rel, persp, args, F_BASE);
     for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos,
-      V.premise_neg, V.premise_agg, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance]) {
+      V.premise_neg, V.premise_agg, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance, V.order_comp]) {
       for (const f of this.store.relAll(rel)) {
         const a0 = f.args[0];
         if (a0 !== undefined && a0.k === 'a' && this.tagChanged.has(a0.name) && rel !== V.lattice_decl) continue;
@@ -1004,11 +1005,24 @@ export class AggEval {
         });
       }
     }
-    if (lattices.length > 0) {
+    // A DECLARED ORDER'S RELATIONS and how many values each compares
+    const ords = new Map<string, number>();
+    for (const f of this.store.relAll(V.order_comp)) {
+      if (f.args[0]?.k === 'a') ords.set(f.args[0].name, (ords.get(f.args[0].name) ?? 0) + 1);
+    }
+    const oval = (rid: Term, k: number, i: number, x: string) => add(IFACE.premise_var, MAIN, [rid, mki(k), mka('oval'), mki(i), mks(x)]);
+    if (lattices.length > 0 || ords.size > 0) {
       const isLat = (rel: string) => lattices.some(([p]) => p === rel);
       for (const r of rules) {
         const rid = mka(r.id);
         const head = r.clause.head;
+        const hm = ords.get(head.rel);
+        if (hm !== undefined) {
+          const n = head.args.length;
+          const key = head.args.slice(0, Math.max(0, n - hm)), comps = head.args.slice(Math.max(0, n - hm));
+          islot(rid, 0, 'hkey', [...key, ...comps.filter((t) => t.k !== 'v'), head.persp]);
+          comps.forEach((t, i) => { if (t.k === 'v') oval(rid, 0, i + 1, t.name); });
+        }
         if (isLat(head.rel)) {
           const n = head.args.length;
           islot(rid, 0, 'hkey', [...head.args.slice(0, Math.max(0, n - 1)), head.persp]);
@@ -1021,6 +1035,17 @@ export class AggEval {
           if (b.t === 'neg') {
             islot(rid, k, 'neg', [...b.lit.args, b.lit.persp]);
             if (isLat(b.lit.rel)) add('lit_arity', MAIN, [rid, mki(k), mka(b.lit.rel), mki(b.lit.args.length)]);
+          } else if (b.t === 'pos' && ords.has(b.lit.rel)) {
+            const m = ords.get(b.lit.rel)!, n = b.lit.args.length;
+            const key = b.lit.args.slice(0, Math.max(0, n - m)), comps = b.lit.args.slice(Math.max(0, n - m));
+            islot(rid, k, 'lkey', [...key, b.lit.persp]);
+            const seen = new Set<string>();
+            for (const t of key) for (const v of varsOf(t)) seen.add(v);
+            let bad = false;
+            comps.forEach((t, i) => {
+              if (t.k === 'v' && !seen.has(t.name)) { seen.add(t.name); oval(rid, k, i + 1, t.name); } else bad = true;
+            });
+            if (bad) add('order_bad_read', MAIN, [rid, mki(k)]);
           } else if (b.t === 'pos' && isLat(b.lit.rel)) {
             const n = b.lit.args.length;
             islot(rid, k, 'lkey', [...b.lit.args.slice(0, Math.max(0, n - 1)), b.lit.persp]);
@@ -5006,6 +5031,8 @@ export class AggEval {
       const text = dom[1] === 'two_algebras' ? 'it has dominance rules and is declared a lattice or a tag too; a relation has one algebra'
         : dom[1] === 'two_arities' ? 'its dominance rules compare its facts at two arities'
         : dom[1] === 'two_keys' ? 'its dominance rules read two keys: the prefix both facts share must be the same in every rule'
+        : dom[1] === 'two_orders' ? 'its declarations order it two ways: a relation has one declared order, in one direction for each value'
+        : dom[1] === 'order_and_rules' ? 'it has a declared order and dominance rules of its own: the declaration is its whole dominance, whose transitivity is by construction; write the rules or declare the order'
         : 'safety.rofl refused its dominance rules';
       throw reject(`subsumption ${dom[0]}: ${text}`);
     }
@@ -6558,6 +6585,10 @@ const srcTerm = (t: Term): string => (t.k === 'v' ? t.name : t.k === 'f' ? `${t.
 /** `lattice dist(A, C, min D)` as a reader wrote it. */
 export function declText(c: Clause): string {
   const n = c.head.args.length;
+  if (c.ord) {
+    const m = c.ord.length;
+    return `${c.lattice} ${c.head.rel}(${c.head.args.map((t, k) => (k + m >= n ? `${c.ord![k + m - n]} ` : '') + srcTerm(t)).join(', ')})`;
+  }
   const args = c.head.args.map((t, k) => (k + 1 === n && c.lattice ? `${c.lattice} ` : '') + srcTerm(t)).join(', ');
   return `${c.tag ? 'tag' : 'lattice'} ${c.head.rel}(${args})${c.widen !== undefined ? ` widen ${c.widen}` : ''}`;
 }
@@ -6686,6 +6717,39 @@ export function checkLatticeDecl(c: Clause, arityOf: (rel: string) => number | u
     seen.push(a.name);
   }
   return null;
+}
+
+/** A DECLARED ORDER AT THE DOOR (docs/aggregates.md, "Declared orders, as
+ *  built"; `lower_order`, rust/rofl/src/program.rs): the refusal, or the
+ *  dominance rules the order stands for as source text, one strict in each
+ *  value. */
+export function lowerOrder(c: Clause, arityOf: (rel: string) => number | undefined): string | string[] {
+  const rel = c.head.rel, kind = c.lattice!, dirs = c.ord!;
+  const what = declText(c);
+  if (RESERVED.has(rel) || rel.startsWith('$') || arityOf(rel) !== undefined) return `${what}: '${rel}' is a kernel relation and cannot be ordered`;
+  const names: string[] = [];
+  for (const a of c.head.args) {
+    if (a.k !== 'v') return `${what}: a declaration's arguments are variables, the key and then each value with its direction`;
+    if (names.includes(a.name)) return `${what}: '${a.name}' is written twice; a declaration names each argument once`;
+    names.push(a.name);
+  }
+  // a wildcard is a value no rule reads, and a name of its own in a rule
+  const named = [...names];
+  names.forEach((x, i) => { if (x.startsWith('_$')) { let y = `Any${i + 1}`; while (named.includes(y)) y += '_'; names[i] = y; } });
+  const m = dirs.length, key = names.slice(0, names.length - m), lo = names.slice(names.length - m);
+  const hi = lo.map((x) => { let y = `${x}_`; while (names.includes(y)) y += '_'; return y; });
+  const fact = (vs: string[]) => `${rel}(${[...key, ...vs].join(', ')})`;
+  const cmp = (i: number, strict: boolean) => `${hi[i]} ${dirs[i] === 'min' ? (strict ? '<' : '<=') : (strict ? '>' : '>=')} ${lo[i]}`;
+  const out: string[] = [];
+  for (let j = 0; j < m; j++) {
+    const body: string[] = [];
+    for (let i = 0; i < m; i++) {
+      if (kind !== 'pareto' && i > j) continue;
+      body.push(i === j ? cmp(i, true) : kind === 'pareto' ? cmp(i, false) : `${hi[i]} = ${lo[i]}`);
+    }
+    out.push(`${fact(lo)} <= ${fact(hi)} :- ${body.join(', ')}.`);
+  }
+  return out;
 }
 
 /** A DOMINANCE RULE AT THE DOOR: the refusal, or the rule's parts and key length. */

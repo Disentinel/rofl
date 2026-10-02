@@ -1,0 +1,7 @@
+-- expect-refusal: negates
+-- the relation negated inside its own recursion: a non-monotone read comes only from a higher stratum
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_neg(A, B, min C, min T).
+aosr_neg(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_neg(A, C, C1, T1) :- aosr_e(A, B, C0, T0), aosr_e(B, C, C2, T2), not aosr_neg(A, C, C0, T0), C1 is C0 + C2, T1 is T0 + T2.

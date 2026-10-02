@@ -19,7 +19,7 @@ import { Evaluation, StratificationError, BudgetExhausted, planBody, DEFAULT_SPA
 import { RoundEvaluation } from './rounds.ts';
 import { SHRUG, shrugsOf, shrugLine, shrugWhy, shrugAtom } from './shrug.ts';
 import { AggEval, storeHasAggregates, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
-  checkNextInBody, checkLatticeDecl, checkDominance } from './aggeval.ts';
+  checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
@@ -606,6 +606,7 @@ export class Rofl {
     // puts `$kernel` on a bare `concludes(...)`, and refusing that would be
     // refusing the resolver's own work rather than the author's.
     // A DECLARATION or A DOMINANCE RULE is its rows (docs/aggregates.md)
+    if (c0.ord) return this.addOrder(c0, who);
     if (c0.lattice) return this.addDecl(c0);
     if (c0.dominator) return this.addDominance(c0, who);
     const badBook = this.checkKernelBook(c0);
@@ -763,6 +764,24 @@ export class Rofl {
 
   /** A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
    *  as built"): rows in the kernel's book, its body a rule body's. */
+  private addOrder(c: Clause, who?: string): string | null {
+    const texts = lowerOrder(c, (rel) => ARITY[rel]);
+    if (typeof texts === 'string') return texts;
+    const ids: string[] = [];
+    for (const t of texts) {
+      const bad = this.addDominance(parseProgram(t)[0], who);
+      if (bad) return bad;
+      ids.push(this.lastDominance);
+    }
+    c.ord!.forEach((d, i) => {
+      this.store.add(V.order_comp, KERNEL_PERSP, [mka(c.head.rel), mka(c.lattice!), mki(i + 1), mka(d), mka(ids[i])], { scope: 'timeless', base: true });
+    });
+    this.store.dirty = true;
+    return null;
+  }
+
+  private lastDominance = '';
+
   private addDominance(c0: Clause, who?: string): string | null {
     const d = checkDominance(c0, (rel) => ARITY[rel]);
     if (typeof d === 'string') return d;
@@ -771,7 +790,9 @@ export class Rofl {
     if (bad) return bad;
     for (const b of d.body) for (const l of litsOf(b)) if (l.persp.k === 'a') registerPersp(this.store, l.persp.name, who ?? ANON_WHO);
     const drop = sealedRels(sealedBodies(this.store));
-    for (const f of encodeDominance(d.lo, d.hi, d.body, d.k).facts) {
+    const enc = encodeDominance(d.lo, d.hi, d.body, d.k);
+    this.lastDominance = enc.id;
+    for (const f of enc.facts) {
       if (!drop.has(f.rel)) this.store.add(f.rel, KERNEL_PERSP, f.args, { scope: 'timeless', base: true });
     }
     this.store.dirty = true;

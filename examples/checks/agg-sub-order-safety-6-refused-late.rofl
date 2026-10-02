@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- a lexicographically better tuple is better in its first value alone: its second value compared says nothing as it improves
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+lex aosr_late(A, B, min C, min T).
+aosr_late(A, B, C, T) :- aosr_e(A, B, C, T).
+aosr_late(A, C, C1, T1) :- aosr_late(A, B, C0, T0), aosr_e(B, C, C2, T2), T0 < 20, C1 is C0 + C2, T1 is T0 + T2.

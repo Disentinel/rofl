@@ -1,0 +1,94 @@
+-- examples/checks/agg-sub-order-safety-check.rofl — agg_sub_order_safety: the
+-- consumers of agg-sub-order-safety-1-ok.rofl are accepted and evaluate to the
+-- values enumerated here; every agg-sub-order-safety-N-refused-*.rofl is
+-- refused at load, each for the reason its first line names, from the
+-- declaration alone, so none of their rules reaches this world: a value of
+-- the wrong direction, one compared the wrong way, two values mixed, a
+-- product of a value, a later value of a lex order compared or put in the
+-- first place, a first value that is not computed strictly, a read that
+-- matches a constant, a value that reaches a key, a declaration beside
+-- dominance rules of its own, two declarations that disagree, and a
+-- declared order that is a lattice or a tag too.
+-- the fronts of the accepted file, by hand: a to b (2, 9); a to c (9, 2) direct
+-- and (5, 10) through b; b to c (3, 1); c to a (1, 1); round the cycle, a to a
+-- (6, 11) and (10, 3) (through c), b to b (6, 11), c to c (6, 11) and (10, 3),
+-- and the paths between: b to a (4, 2), c to b (3, 10)
+aoss_want(sum, a, b, 2, 9). aoss_want(sum, a, c, 9, 2). aoss_want(sum, a, c, 5, 10). aoss_want(sum, b, c, 3, 1).
+aoss_want(sum, c, a, 1, 1). aoss_want(sum, a, a, 6, 11). aoss_want(sum, a, a, 10, 3). aoss_want(sum, b, b, 6, 11).
+aoss_want(sum, c, c, 6, 11). aoss_want(sum, c, c, 10, 3). aoss_want(sum, b, a, 4, 2). aoss_want(sum, c, b, 3, 10).
+aoss_have(sum, A, B, C, T) :- aos_sum(A, B, C, T).
+-- lex: the cheapest of each pair, and its quickest
+aoss_want(lex, a, b, 2, 9). aoss_want(lex, a, c, 5, 10). aoss_want(lex, b, c, 3, 1). aoss_want(lex, c, a, 1, 1).
+aoss_want(lex, a, a, 6, 11). aoss_want(lex, b, b, 6, 11). aoss_want(lex, c, c, 6, 11). aoss_want(lex, b, a, 4, 2).
+aoss_want(lex, c, b, 3, 10).
+aoss_have(lex, A, B, C, T) :- aos_lex(A, B, C, T).
+-- lex3: the cost and the time are sums, the third a cap, the least of the roads' third values
+aoss_want(lex3, a, b, 2, 9, 4). aoss_want(lex3, b, c, 3, 1, 2). aoss_want(lex3, c, a, 1, 1, 5). aoss_want(lex3, a, c, 5, 10, 2).
+aoss_want(lex3, b, a, 4, 2, 2). aoss_want(lex3, c, b, 3, 10, 4). aoss_want(lex3, a, a, 6, 11, 2).
+aoss_want(lex3, b, b, 6, 11, 2). aoss_want(lex3, c, c, 6, 11, 2).
+aoss_have3(lex3, A, B, C, T, U) :- aos_lex3(A, B, C, T, U).
+aoss_missing3(R, A, B, C, T, U) :- aoss_want(R, A, B, C, T, U), not aoss_have3(R, A, B, C, T, U).
+aoss_extra3(R, A, B, C, T, U) :- aoss_have3(R, A, B, C, T, U), not aoss_want(R, A, B, C, T, U).
+alarm(aoss_missing3).
+alarm(aoss_extra3).
+-- lex2: the time falls by each road's time instead of rising
+aoss_want(lex2, a, b, 2, 9). aoss_want(lex2, a, c, 5, 8). aoss_want(lex2, b, c, 3, 1). aoss_want(lex2, c, a, 1, 1).
+aoss_want(lex2, a, a, 6, 7). aoss_want(lex2, b, b, 6, -9). aoss_want(lex2, c, c, 6, -9). aoss_want(lex2, b, a, 4, 0).
+aoss_want(lex2, c, b, 3, -8).
+aoss_have(lex2, A, B, C, T) :- aos_lex2(A, B, C, T).
+-- widest and cheapest: the widest road of a path is its narrowest, and round a cycle it is 1
+aoss_want(mix, a, b, 2, 9). aoss_want(mix, a, c, 9, 2). aoss_want(mix, b, c, 3, 1). aoss_want(mix, c, a, 1, 1).
+aoss_want(mix, a, a, 1, 3). aoss_want(mix, b, b, 1, 11). aoss_want(mix, c, c, 1, 3). aoss_want(mix, b, a, 1, 2).
+aoss_want(mix, c, b, 1, 10).
+aoss_have(mix, A, B, W, P) :- aos_mix(A, B, W, P).
+-- a few of the others, by hand: 10 - 9 is the 1 of the widest road; 9 times 2 is 18; 5 times 10 is 50
+aoss_want(rev, a, c, 1, 2). aoss_want(rev, b, c, 7, 1). aoss_want(swap, a, b, 2, 9). aoss_want(swap, b, c, 3, 1).
+aoss_have(rev, A, B, L, P) :- aos_rev(A, B, L, P).
+aoss_have(swap, A, B, L, P) :- aos_swap(A, B, L, P).
+aoss_want(out, a, c, 50, x). aoss_want(out, b, c, 3, x). aoss_have(out, A, B, X, x) :- aos_out(A, B, X).
+aoss_want(wide, a, c, 18, x). aoss_want(wide, b, c, 6, x). aoss_have(wide, A, B, X, x) :- aos_wide(A, B, X).
+aoss_want(cheap, a, c, 5, x). aoss_want(cheap, c, c, 6, x). aoss_have(cheap, A, B, X, x) :- aos_cheap(A, B, X).
+aoss_missing(R, A, B, C, T) :- aoss_want(R, A, B, C, T), not aoss_have(R, A, B, C, T).
+alarm(aoss_missing).
+-- nothing more than the fronts
+aoss_extra(R, A, B, C, T) :- aoss_have(R, A, B, C, T), aoss_whole(R), not aoss_want(R, A, B, C, T).
+aoss_whole(sum). aoss_whole(lex). aoss_whole(lex2). aoss_whole(mix).
+alarm(aoss_extra).
+-- a lex front's first value into a lattice is that lattice's: the cheapest cost
+aoss_unlike(A, B, C) :- aos_lcheap(A, B, C), not aos_cheap(A, B, C).
+aoss_unlike(A, B, C) :- aos_cheap(A, B, C), not aos_lcheap(A, B, C).
+aoss_unlike(A, B, C) :- aos_lex(A, B, C, _), not aos_lcheap(A, B, C).
+alarm(aoss_unlike).
+-- no front holds two values one of which dominates the other
+aoss_dominated(R, A, B, C1, T1) :- aoss_whole(R), aoss_have(R, A, B, C1, T1), aoss_have(R, A, B, C2, T2), C2 <= C1, T2 <= T1, C2 < C1.
+aoss_dominated(R, A, B, C1, T1) :- aoss_whole(R), aoss_have(R, A, B, C1, T1), aoss_have(R, A, B, C2, T2), C2 <= C1, T2 <= T1, T2 < T1.
+alarm(aoss_dominated).
+aoss_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(aoss_shrug).
+-- every consumer of the accepted file concluded, and nothing is refused
+aoss_alive(sum) :- aos_sum(_, _, _, _).
+aoss_alive(swap) :- aos_swap(_, _, _, _).
+aoss_alive(mix) :- aos_mix(_, _, _, _).
+aoss_alive(rev) :- aos_rev(_, _, _, _).
+aoss_alive(copy) :- aos_copy(_, _, _, _).
+aoss_alive(back) :- aos_back(_, _, _, _).
+aoss_alive(next) :- aos_next(_, _, _, _).
+aoss_alive(cheap) :- aos_cheap(_, _, _).
+aoss_alive(lex) :- aos_lex(_, _, _, _).
+aoss_alive(lex2) :- aos_lex2(_, _, _, _).
+aoss_alive(lcheap) :- aos_lcheap(_, _, _).
+aoss_alive(out) :- aos_out(_, _, _).
+aoss_alive(wide) :- aos_wide(_, _, _).
+aoss_alive(lex3) :- aos_lex3(_, _, _, _, _).
+aoss_part(sum). aoss_part(swap). aoss_part(mix). aoss_part(rev). aoss_part(copy). aoss_part(back).
+aoss_part(next). aoss_part(cheap). aoss_part(lex). aoss_part(lex2). aoss_part(lcheap). aoss_part(out). aoss_part(wide). aoss_part(lex3).
+aoss_dead(P) :- aoss_part(P), not aoss_alive(P).
+alarm(aoss_dead).
+aoss_accepted(Rel) :- concludes[$kernel](_, Rel), aoss_refused(Rel).
+aoss_accepted(Rel) :- dominance[$kernel](_, Rel, _, _), aoss_refused(Rel).
+aoss_accepted(Rel) :- order_comp[$kernel](Rel, _, _, _, _), aoss_refused(Rel).
+aoss_refused(aosr_dir). aoss_refused(aosr_cmp). aoss_refused(aosr_mixed). aoss_refused(aosr_times).
+aoss_refused(aosr_late). aoss_refused(aosr_first). aoss_refused(aosr_swap). aoss_refused(aosr_rules).
+aoss_refused(aosr_lexp). aoss_refused(aosr_lexq). aoss_refused(aosr_twice). aoss_refused(aosr_const). aoss_refused(aosr_key). aoss_refused(aosr_algebra).
+aoss_refused(aosr_neg). aoss_refused(aosr_middle).
+alarm(aoss_accepted).

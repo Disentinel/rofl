@@ -325,6 +325,7 @@ pub fn agg_refusal_text(reason: &str, rel: Option<&str>) -> String {
         "lattice_unwidened" => "it computes a hull's value from that hull's own value by an interval function (ivadd, ivsub, ivmul, ivmeet) \
             inside its recursion, and no relation on that cycle declares a widening, so nothing bounds how often the value can grow: \
             declare one, `lattice p(K, hull I) widen N.`".into(),
+        "order_nonmonotone" => "it reads a relation with a declared order inside its recursion, or concludes one, and is not monotone in that order: a value of an ordered relation may flow only into a value of a head that improves the same way (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) and into a comparison that stays true as the value improves (V < N for min, V > N for max); under pareto each value moves on its own, and under lex only the first value, strictly (+, - or a copy), may be compared, and each later value goes only into the value at its own place of a lex head whose first value is computed from the first one read".into(),
         "lattice_nonmonotone" => "it reads a lattice relation inside its recursion and is not monotone in the value: the value may flow only into \
             a lattice head's value (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) in the direction that head improves, or into a comparison \
             that stays true as the value improves (D < N for min, D > N for max, B = true for or, B = false for and); a join's value \
@@ -1309,6 +1310,7 @@ impl Eval {
             self.v.lattice_decl,
             brk!("widen_row_unread" => self.v.lattice_decl; self.v.lattice_widen),
             brk!("dominance_row_unread" => self.v.lattice_decl; self.v.dominance),
+            brk!("order_row_unread" => self.v.lattice_decl; self.v.order_comp),
         ] {
             for f in self.store.rel_all(&h, rel) {
                 let persp = self.store.rec(f).persp;
@@ -1454,7 +1456,17 @@ impl Eval {
                 }
             }
         }
-        if !lattices.is_empty() {
+        // A DECLARED ORDER'S RELATIONS and how many values each compares
+        let mut ords: Vec<(Sym, usize)> = Vec::new();
+        for f in self.store.rel_all(&h, self.v.order_comp) {
+            if let Some(p) = self.store.args(f)[0].as_atom() {
+                match ords.iter_mut().find(|(q, _)| *q == p) {
+                    Some(o) => o.1 += 1,
+                    None => ords.push((p, 1)),
+                }
+            }
+        }
+        if !lattices.is_empty() || !ords.is_empty() {
             let (s_neg, s_hkey, s_hval, s_lkey, s_lval) = (
                 Term::atom(self.v.slot_neg),
                 Term::atom(self.v.slot_hkey),
@@ -1465,9 +1477,28 @@ impl Eval {
             let lit_arity = h.atom("lit_arity");
             let lit_arity = lit_arity.as_atom().unwrap();
             let is_lat = |rel: Sym| lattices.iter().any(|(p, _, _)| *p == rel);
+            let ord_of = |rel: Sym| ords.iter().find(|(p, _)| *p == rel).map(|(_, m)| *m);
+            let s_oval = h.atom("oval");
+            let s_bad = h.atom("order_bad_read");
+            let s_bad = s_bad.as_atom().unwrap();
             for r in rules {
                 let rid = Term::atom(r.id);
                 let head = &r.clause.head;
+                if let Some(m) = ord_of(head.rel).filter(|_| !brk!("order_head_unseeded" => true; false)) {
+                    let n = head.args.len();
+                    let (key, comps) = head.args.split_at(n.saturating_sub(m));
+                    let mut ks: Vec<Term> = key.to_vec();
+                    ks.extend(comps.iter().filter(|t| !t.is_var()).copied());
+                    ks.push(head.persp);
+                    self.seed_slot(&mut h, &mut pol, rid, 0, s_hkey, &ks);
+                    for (i, t) in comps.iter().enumerate() {
+                        if let TermK::Var(x) = t.kind() {
+                            let name = h.name(x).to_string();
+                            let name = h.string(&name);
+                            pol.add(&h, self.v.premise_var, main, &[rid, Term::int(0), s_oval, Term::int(i as i64 + 1), name], F_BASE);
+                        }
+                    }
+                }
                 if is_lat(head.rel) {
                     let n = head.args.len();
                     let mut key: Vec<Term> = head.args[..n.saturating_sub(1)].to_vec();
@@ -1486,6 +1517,33 @@ impl Eval {
                             self.seed_slot(&mut h, &mut pol, rid, k, s_neg, &ts);
                             if is_lat(l.rel) {
                                 pol.add(&h, lit_arity, main, &[rid, Term::int(k), Term::atom(l.rel), Term::int(l.args.len() as i64)], F_BASE);
+                            }
+                        }
+                        BodyElem::Pos(l) if ord_of(l.rel).is_some() => {
+                            let m = ord_of(l.rel).unwrap();
+                            let n = l.args.len();
+                            let (key, comps) = l.args.split_at(n.saturating_sub(m));
+                            let mut ks: Vec<Term> = key.to_vec();
+                            ks.push(l.persp);
+                            self.seed_slot(&mut h, &mut pol, rid, k, s_lkey, &ks);
+                            let mut seen: Vec<Sym> = Vec::new();
+                            for t in key {
+                                h.vars_of(*t, &mut seen);
+                            }
+                            let mut bad = false;
+                            for (i, t) in comps.iter().enumerate() {
+                                match t.kind() {
+                                    TermK::Var(x) if !seen.contains(&x) => {
+                                        seen.push(x);
+                                        let name = h.name(x).to_string();
+                                        let name = h.string(&name);
+                                        pol.add(&h, self.v.premise_var, main, &[rid, Term::int(k), s_oval, Term::int(i as i64 + 1), name], F_BASE);
+                                    }
+                                    _ => bad = true,
+                                }
+                            }
+                            if bad {
+                                pol.add(&h, s_bad, main, &[rid, Term::int(k)], F_BASE);
                             }
                         }
                         BodyElem::Pos(l) if is_lat(l.rel) => {
@@ -8046,6 +8104,8 @@ impl Eval {
                 "two_algebras" => "it has dominance rules and is declared a lattice or a tag too; a relation has one algebra",
                 "two_arities" => "its dominance rules compare its facts at two arities",
                 "two_keys" => "its dominance rules read two keys: the prefix both facts share must be the same in every rule",
+                "two_orders" => "its declarations order it two ways: a relation has one declared order, in one direction for each value",
+                "order_and_rules" => "it has a declared order and dominance rules of its own: the declaration is its whole dominance, whose transitivity is by construction; write the rules or declare the order",
                 _ => "safety.rofl refused its dominance rules",
             };
             return reject(format!("subsumption {}: {text}", self.h.name(*p)));

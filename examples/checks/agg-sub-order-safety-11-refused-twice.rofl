@@ -1,0 +1,7 @@
+-- expect-refusal: its declarations order it two ways
+-- two declarations of one relation that disagree: one relation has one declared order
+edb(aosr_e).
+aosr_e(a, b, 2, 9).
+pareto aosr_twice(A, B, min C, min T).
+lex aosr_twice(A, B, min C, min T).
+aosr_twice(A, B, C, T) :- aosr_e(A, B, C, T).

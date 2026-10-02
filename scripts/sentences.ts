@@ -81,7 +81,7 @@ export function said(md: string): string[] {
       });
       continue;
     }
-    const d = /^`(\w+)`(?: in the `\$?\w+`)? keeps |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered) |^Each `(\w+)` fact|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
     if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3]}, "${plain(p)}").`);
   }
   return out;

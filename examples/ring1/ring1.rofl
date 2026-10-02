@@ -462,6 +462,27 @@ clause_at(I, D, $tag(Alg, $lit(R, $bare, A, $now)), $nil) :-
   tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), tagargs(S, E, Alg, A),
   nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
 
+-- A DECLARED ORDER (docs/aggregates.md, "Declared orders, as built"):
+--   orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'
+--   dir       := 'min' | 'max'
+-- `pareto` and `lex` are words as `lattice` is: one declares only when a
+-- second name follows it, so `lex(x).` is still a fact. The key is every
+-- argument before the first direction; the tree holds the directions in a
+-- list beside the head, whose arguments are the key and then the values.
+ord_kind(pareto). ord_kind(lex).
+ord_dir(min). ord_dir(max).
+ordcomp(I, J, Dir, T) :- identtok(I, K), tok_name(I, K, Dir), ord_dir(Dir), nexttok(K, S), term(S, J, T).
+ordtail(I, J, $cons(D, $nil), $cons(T, $nil)) :- ordcomp(I, J, D, T).
+ordtail(I, J, $cons(D, Ds), $cons(T, As)) :- ordcomp(I, J0, D, T), nexttok(J0, K), p(K, comma),
+                                            nexttok(K, I2), ordtail(I2, J, Ds, As).
+ordargs(I, J, Ds, As)               :- ordtail(I, J, Ds, As).
+ordargs(I, J, Ds, $cons(T, As))     :- term(I, J0, T), nexttok(J0, K), p(K, comma),
+                                      nexttok(K, I2), ordargs(I2, J, Ds, As).
+clause_at(I, D, $order(Kind, Ds, $lit(R, $bare, A, $now)), $nil) :-
+  identtok(I, I2), tok_name(I, I2, Kind), ord_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),
+  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), ordargs(S, E, Ds, A),
+  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).
+
 -- A DOMINANCE RULE (docs/aggregates.md, "Subsumption, as built"):
 --   domrule := lit '<=' lit ':-' body '.'
 -- the left fact is dominated by the right one wherever the body holds. A

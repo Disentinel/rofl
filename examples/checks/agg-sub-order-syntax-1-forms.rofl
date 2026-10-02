@@ -1,0 +1,23 @@
+-- examples/checks/agg-sub-order-syntax-1-forms.rofl — every form of a
+-- declared order the grammar reads: a key of two, of one and of none; one
+-- value, two and three; min and max in either place; both kinds; a wildcard
+-- for a value; and `pareto` and `lex` still names where no second name
+-- follows them. Read by both engines, whose rule ids and rows must agree.
+edb(sox_e).
+sox_e(a, b, 3, 1, 7).
+pareto sox_two(A, B, min C, max T).
+sox_two(A, B, C, T) :- sox_e(A, B, C, T, _).
+lex sox_lex(A, B, min C, max T).
+sox_lex(A, B, C, T) :- sox_e(A, B, C, T, _).
+pareto sox_one(A, max C).
+sox_one(A, C) :- sox_e(A, _, C, _, _).
+lex sox_none(min C, min T, max Q).
+sox_none(C, T, Q) :- sox_e(_, _, C, T, Q).
+pareto sox_solo(min C).
+sox_solo(C) :- sox_e(_, _, C, _, _).
+pareto sox_wild(A, min C, min _).
+sox_wild(A, C, T) :- sox_e(A, _, C, T, _).
+lex(sox_name). pareto(sox_name, min).
+sox_seen(X) :- lex(X).
+sox_seen(X) :- pareto(X, _).
+sox_seen(M) :- pareto(_, M).

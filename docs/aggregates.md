@@ -2434,16 +2434,133 @@ dominance on a total order equal to the min lattice, with and without its
 improvements flowing back through plain relations, and inclusion of bitsets
 keeping exactly the maximal sets.
 
-**Not built, or not yet.** Monotonicity is checked on the evaluation's own facts, not proven
-from the rules: a program can be refused on one input and not on another,
-and a consumer non-monotone only on values the pruning never produced is not
-seen (a declared order, Pareto over named components or lexicographic, would
-let safety.rofl judge it statically). Transitivity is checked over the
-values each cell was given and the front, not over every value the rules
+**Not built, or not yet.** For a custom dominance rule, monotonicity is
+checked on the evaluation's own facts, not proven from the rules: a program
+can be refused on one input and not on another, and a consumer non-monotone
+only on values the pruning never produced is not seen. A declared order
+("Declared orders, as built", next) is judged statically instead, and keeps
+the data check beside it. Transitivity of a custom dominance is checked over
+the values each cell was given and the front, not over every value the rules
 could give. The cost of the close's check is at most |D| |A| dominance
 solves a cell, less the pairs the insert answered. `why` finds a cell's front
 through the relation's index on its key and the values a member dominates
 through `sub_by_of`, not a scan of the relation.
+
+## Declared orders, as built
+
+w_agg_subsumption_orders, in both engines;
+f_a_declared_order_is_a_dominance_judged_statically settles what
+f_a_program_monotone_in_its_own_order_is_checked_on_its_data left to the data.
+
+**Syntax.** A word and a head, as `lattice` and `tag` are: the key is every
+argument before the first direction, and each value after it is `min` or
+`max` and a variable of its own. `pareto` and `lex` are words, not keywords:
+one declares only when a second name follows it, so `lex(x).` is still a fact.
+Read by `rust/rofl/src/rofl_parse.rs`, `src/parser.ts` and ring 1 alike.
+
+    pareto route(A, B, min C, min T).        no worse in both, better in one
+    lex    route(A, B, min C, max Q).        the least C, of those the greatest Q
+
+    orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'
+    dir       := 'min' | 'max'
+
+The door (`lower_order`, program.rs; `lowerOrder`, aggeval.ts) requires: a
+relation that is no kernel relation and no book, every argument a variable
+written once (`_` for a value nothing reads), at least one value. A custom
+dominance rule is still `p(K..., V1...) <= p(K..., V2...) :- Body.`, read,
+evaluated and checked exactly as in "Subsumption, as built"; a relation has
+either a declaration or rules of its own, never both (`order_and_rules`), one
+declaration (`two_orders`), and no lattice or tag beside it (`two_algebras`).
+The sentence form says `` `route` is ordered by Pareto dominance, the least C
+and the least T for each A and B. `` and `` `route` is ordered
+lexicographically, the least C then the greatest Q for each A and B. ``
+(rofl-render writes it, scripts/read_md.ts reads it).
+
+**Lowering.** The declaration is lowered at the door to the dominance rules it
+stands for, as source text the ordinary door then reads, one rule strict in
+each value, so the engine, the cell, the Antichain witness, why and whynot see
+dominance rules and nothing in them is new. For values 1..m with direction
+d_i (the other fact's value is the variable with `_` after its name):
+
+    pareto:  p(K, V1..Vm) <= p(K, V1_..Vm_) :- ok_1, .., strict_j, .., ok_m.     for j = 1..m
+    lex:     p(K, V1..Vm) <= p(K, V1_..Vm_) :- V1_ = V1, .., V(j-1)_ = V(j-1), strict_j.
+
+where `strict_i` is `Vi_ < Vi` for min and `Vi_ > Vi` for max, and `ok_i` the
+same with `<=` and `>=`. Both are strict partial orders for every input
+(irreflexive: a tuple is strictly better in some value than itself in none;
+transitive: the componentwise order, and the lexicographic order, are), so a
+declared order cannot raise `dominance_intransitive` or `dominance_cycle`; the
+close's check and the engine's data checks still run, and never fire. The
+declaration is also the kernel row `order_comp(Rel, Kind, I, Dir, Rule)` for
+each value, `Rule` the dominance rule strict in it (`reflect.ts` /
+`reflect.rs`: reserved, arity 5). A whynot of a dominated value names the
+member that dominates it and writes the lowered rule out, as for a custom rule
+(`C_ < C, T_ <= T`). On one value a declared order is the lattice of its
+direction, fact for fact (agg_sub_order_eval).
+
+**Judged statically.** safety.rofl reads `order_comp` and judges every rule
+that reads the relation inside its recursion, or concludes it, with the order
+lattice's own analysis, value by value ("MONOTONE IN THE VALUE"): the host
+seeds `premise_var(R, K, oval, I, V)` for the variable at the I-th value of a
+read (K) or a head (K = 0), and `order_bad_read(R, K)` for a read whose values
+are no distinct variables of their own (a constant, a repeated variable, or one
+that is also a key). Each value is tainted and moves the way its direction
+improves it (`lat_mv`: min and the like improve down, max up); the uses that
+keep a rule monotone are the lattice's (`V + E`, `V - E`, `E - V`, `min(V, E)`,
+`max(V, E)`, a copy, a comparison that stays true as the value improves: `V < N`
+for min, `V > N` for max), and a value of the head must improve the way its
+own direction does. A rule that is not monotone is refused at load with the
+reason `order_nonmonotone`, whatever the data (agg-sub-order-safety-N-refused-*).
+
+- *pareto*: a better tuple is no worse in every value, so each value is judged
+  on its own: it may flow into any value of a head of the same direction (the
+  cost into the time's place included), or into a lattice head of its
+  direction, and into the comparisons above.
+- *lex*: a better tuple is better in its first differing value only, so the
+  later values may be worse. Only the first value may be compared. A later
+  value (`lex_late`) is no operand of a comparison, no value of a lattice head
+  and no value of a head that is not lex. A lex head's values but the last,
+  when the rule reads the relation at all, are each computed STRICTLY (`+`,
+  `-` or a copy; `min` and `max` are not strict) from the value at their own
+  place; the last may be computed from any earlier one or left as it is.
+  Refused: a first value `min(C0, 5)`, a second (not last) value that does not
+  track its own place, a first value taken from the second read.
+- A read of the relation in a rule that concludes a PLAIN relation is not
+  constrained here, as an order lattice's is not: the copy is withdrawn with
+  the dominated value (`sub_withdraw`), and a consumer behind it is held by the
+  data check. Two reads inside one rule are judged each on its own.
+
+The analysis is conservative: it refuses some monotone rules (a lex head from
+a pareto read in swapped places, a head whose value is a sum of two tainted
+values) and admits none that is not. What it cannot say is left to the engine's
+checks.
+
+**Proofs.** Seven worlds over `examples/checks/agg-sub-order-data.rofl`
+(declared fronts of routes over a cycle, equal fact for fact to the same front
+written by hand as dominance rules; directions that differ; the total orders
+beside the min and max lattices; no key; a cell per book; lexicographic bests
+enumerated by hand, a third value breaking a tie) and each world's own data:
+`agg_sub_order_syntax` (both parsers, ring 1, nine refused forms),
+`_reflect` (the lowered rules, premise by premise), `_eval`, `_safety`
+(`agg-sub-order-safety-1-ok.rofl`, accepted and evaluated, and sixteen
+refusals, each by its reason: direction, comparison, mixing, product, later lex
+value compared or put first, a first value not strict, a middle one, a constant
+in a read, a value reaching a key, rules beside a declaration, two orders, a
+lattice beside one, a negation, a lex value into a pareto head), `_witness`,
+`_why` and `_demo` (the flights of agg_sub_demo declared, held against the
+brute force with no declaration, and the lexicographic bests against min
+aggregates). Each is red under planted faults: `order_unread`,
+`ring1_order_unread`, `ts_order_unread`, `ts_order_lex_as_pareto`,
+`order_pareto_weak`, `order_lex_as_pareto`, `order_max_as_min`,
+`order_row_rule_first`, `order_row_unread`, `order_head_unseeded`,
+`order_dir_ignored`, `order_head_fit_ignored`, `order_taint_dropped`,
+`order_bad_read_ignored`, `order_and_rules_admitted`,
+`order_two_kinds_admitted`, `order_lex_late_compared`,
+`order_lex_strict_unchecked`, `order_lex_late_into_pareto`, and the
+dominance why faults for `_why`. They close cells of the subsumption row
+beside the custom-rule worlds (syntax, reflect, safety, eval_rust, eval_ts,
+witness, why, demo); the phrase cell's world for the declared sentences is not
+built (the sentences read back, scripts/read_md.ts, unproven by a world).
 
 ## The sentence form, as built
 
@@ -2466,6 +2583,7 @@ the right, and rofl-render writes that rofl back as the sentence on the left.
 | join reads | `E is a member of S`, `I is a subset of J` | `E in S`, `I subset J` |
 | tags | ``Each `cost` fact of X and Y carries a tropical tag T.`` (viterbi, trust, counting) | `tag cost(X, Y, tropical T).` |
 | subsumption | `A fact that <p D1> is dominated by one that <p D2> if D2 < D1.` | `p(.., D1) <= p(.., D2) :- D2 < D1.` |
+| declared order | `` `p` is ordered by Pareto dominance, the least C and the greatest T for each K. ``, `lexicographically` and `then` | `pareto p(K, min C, max T).`, `lex p(K, min C, max T).` |
 | shrug | `p(a, some value) has no answer for the reason R with some meta` | `shrug[$kernel](p(a, _), R, _)` |
 
 **The sugar** exists only as sentences and is exactly what the reader lowers

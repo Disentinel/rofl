@@ -1,0 +1,3 @@
+-- expect-refusal: the last arguments are the values the order compares
+-- a value is written min or max, then its variable
+lex soxr_dir(A, up C).

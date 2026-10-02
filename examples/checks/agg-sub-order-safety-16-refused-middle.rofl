@@ -1,0 +1,7 @@
+-- expect-refusal: is not monotone in that order
+-- a value before the last computed by min against a constant is not strict: a better first value may leave it put, and a worse third would then conclude a worse tuple
+edb(aosr_e3).
+aosr_e3(a, b, 2, 9, 4).
+lex aosr_middle(A, B, min C, min T, min U).
+aosr_middle(A, B, C, T, U) :- aosr_e3(A, B, C, T, U).
+aosr_middle(A, C, C1, T1, U1) :- aosr_middle(A, B, C0, T0, U0), aosr_e3(B, C, C2, T2, U2), C1 is C0 + C2, T1 is min(T0, 5), U1 is U0 + U2.

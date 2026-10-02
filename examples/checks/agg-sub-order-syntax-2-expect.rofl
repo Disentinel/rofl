@@ -1,0 +1,78 @@
+-- examples/checks/agg-sub-order-syntax-2-expect.rofl — agg_sub_order_syntax.
+-- What each form of agg-sub-order-syntax-1-forms.rofl reads as, both
+-- directions: one `order_comp` row for each value (its relation, kind, place
+-- and direction), the dominance rows the declaration lowered to (a rule
+-- strict in each value, over the relation's arity and key), the body of each
+-- rule (a pareto rule compares every value, a lex rule the values up to its
+-- own); `pareto` and `lex` as plain names; ring 1 (examples/ring1) reading a
+-- declaration from `src` as the same tree, nothing stray and nothing
+-- uncovered; and no refused form reaching the world.
+soxs_want(sox_two, pareto, 1, min). soxs_want(sox_two, pareto, 2, max).
+soxs_want(sox_lex, lex, 1, min). soxs_want(sox_lex, lex, 2, max).
+soxs_want(sox_one, pareto, 1, max).
+soxs_want(sox_none, lex, 1, min). soxs_want(sox_none, lex, 2, min). soxs_want(sox_none, lex, 3, max).
+soxs_want(sox_solo, pareto, 1, min).
+soxs_want(sox_wild, pareto, 1, min). soxs_want(sox_wild, pareto, 2, min).
+soxs_mine(sox_two). soxs_mine(sox_lex). soxs_mine(sox_one). soxs_mine(sox_none). soxs_mine(sox_solo). soxs_mine(sox_wild).
+soxs_row(Rel, K, I, D) :- order_comp[$kernel](Rel, K, I, D, _), soxs_mine(Rel).
+soxs_missing(Rel, K, I, D) :- soxs_want(Rel, K, I, D), not soxs_row(Rel, K, I, D).
+soxs_extra(Rel, K, I, D)   :- soxs_row(Rel, K, I, D), not soxs_want(Rel, K, I, D).
+alarm(soxs_missing).
+alarm(soxs_extra).
+-- each value's row names a dominance rule of the relation, at its arity and key
+soxs_dom(sox_two, 4, 2). soxs_dom(sox_lex, 4, 2). soxs_dom(sox_one, 2, 1).
+soxs_dom(sox_none, 3, 0). soxs_dom(sox_solo, 1, 0). soxs_dom(sox_wild, 3, 1).
+soxs_rule_ok(Rel) :- soxs_dom(Rel, N, K), dominance[$kernel](R, Rel, N, K), order_comp[$kernel](Rel, _, 1, _, R).
+soxs_rule_lost(Rel) :- soxs_dom(Rel, _, _), not soxs_rule_ok(Rel).
+alarm(soxs_rule_lost).
+-- no dominance rule of these relations but a declaration's: one for each value
+soxs_rules(Rel, N) :- soxs_mine(Rel), N is count(R : dominance[$kernel](R, Rel, _, _)).
+soxs_want_rules(sox_two, 2). soxs_want_rules(sox_lex, 2). soxs_want_rules(sox_one, 1).
+soxs_want_rules(sox_none, 3). soxs_want_rules(sox_solo, 1). soxs_want_rules(sox_wild, 2).
+soxs_rules_wrong(Rel) :- soxs_want_rules(Rel, N), not soxs_rules(Rel, N).
+alarm(soxs_rules_wrong).
+-- a rule of a pareto declaration compares each value: two builtins for two values;
+-- a lex rule only the values up to its own: one for the first, two for the second
+soxs_prem(R, N) :- dominance[$kernel](R, _, _, _), N is count(K : has_premise[$kernel](R, K)).
+soxs_body(Rel, I, N) :- order_comp[$kernel](Rel, _, I, _, R), soxs_prem(R, N), soxs_mine(Rel).
+soxs_want_body(sox_two, 1, 2). soxs_want_body(sox_two, 2, 2).
+soxs_want_body(sox_lex, 1, 1). soxs_want_body(sox_lex, 2, 2).
+soxs_want_body(sox_none, 1, 1). soxs_want_body(sox_none, 2, 2). soxs_want_body(sox_none, 3, 3).
+soxs_want_body(sox_solo, 1, 1).
+soxs_body_wrong(Rel, I) :- soxs_want_body(Rel, I, N), not soxs_body(Rel, I, N).
+alarm(soxs_body_wrong).
+-- the first comparison of the first rule of a lex declaration, strict, in the
+-- direction of its value: min is `<`, max `>`
+soxs_cmp(Rel, I, Op) :- order_comp[$kernel](Rel, lex, I, _, R), premise_lit[$kernel](R, _, $builtin(Op, _)).
+soxs_op_lost() :- not soxs_cmp(sox_lex, 1, "<").
+soxs_op_lost() :- not soxs_cmp(sox_lex, 2, ">").
+soxs_op_lost() :- not soxs_cmp(sox_lex, 2, "=").
+alarm(soxs_op_lost).
+-- a declaration concludes nothing: no rule of it runs
+soxs_as_rule(R) :- order_comp[$kernel](_, _, _, _, R), rule[$kernel](R).
+soxs_as_rule(R) :- order_comp[$kernel](_, _, _, _, R), concludes[$kernel](R, _).
+alarm(soxs_as_rule).
+-- the two words are names where no second name follows them
+soxs_name_lost() :- not sox_seen(sox_name).
+soxs_name_lost() :- not sox_seen(min).
+alarm(soxs_name_lost).
+-- and every form evaluates
+soxs_lost(two)  :- not sox_two(a, b, 3, 1).
+soxs_lost(lex)  :- not sox_lex(a, b, 3, 1).
+soxs_lost(one)  :- not sox_one(a, 3).
+soxs_lost(none) :- not sox_none(3, 1, 7).
+soxs_lost(solo) :- not sox_solo(3).
+soxs_lost(wild) :- not sox_wild(a, 3, 1).
+alarm(soxs_lost).
+
+src("pareto route(A, B, min C, max T).").
+r1s_want($order(pareto, $cons(min, $cons(max, $nil)),
+                $lit(route, $bare, $cons($var("A"), $cons($var("B"), $cons($var("C"), $cons($var("T"), $nil)))), $now)), $nil).
+r1s_parsed(H, B)   :- parsed(_, _, H, B).
+ring1_missing(H)   :- r1s_want(H, B), not r1s_parsed(H, B).
+ring1_extra(H)     :- r1s_parsed(H, B), not r1s_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).

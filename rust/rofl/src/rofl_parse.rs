@@ -124,6 +124,22 @@ pub fn src_term(h: &Heap, t: Term, out: &mut String) {
 /// A lattice declaration as source text: `lattice dist(A, C, min D)`, or a
 /// tag's, `tag cost(A, C, tropical T)`.
 pub fn decl_text(h: &Heap, c: &Clause) -> String {
+    if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
+        let n = c.head.args.len();
+        let mut o = format!("{} {}(", h.name(kind), h.name(c.head.rel));
+        for (k, t) in c.head.args.iter().enumerate() {
+            if k > 0 {
+                o.push_str(", ");
+            }
+            if k + dirs.len() >= n {
+                o.push_str(h.name(dirs[k + dirs.len() - n]));
+                o.push(' ');
+            }
+            src_term(h, *t, &mut o);
+        }
+        o.push(')');
+        return o;
+    }
     let mut o = format!("{} {}(", if c.tag { "tag" } else { "lattice" }, h.name(c.head.rel));
     let n = c.head.args.len();
     for (k, t) in c.head.args.iter().enumerate() {
@@ -232,9 +248,11 @@ fn word_ops() -> &'static [&'static str] {
 /// A clause, or a lattice declaration: `lattice dist(A, C, min D).` is the
 /// head `dist(A, C, D)` with no body and `lattice` the operation `min`;
 /// `lattice p(K, hull I) widen 3.` declares a widening forced after three
-/// improvements of a cell (`widen`).
+/// improvements of a cell (`widen`). `pareto r(K, min C, max T).` is the same
+/// shape with `lattice` the kind (`pareto` or `lex`) and `ord` the direction
+/// of each of the last arguments.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit> }
+pub struct Clause { pub head: Lit, pub body: Vec<Elem>, pub lattice: Option<Sym>, pub widen: Option<i64>, pub tag: bool, pub dom: Option<Lit>, pub ord: Option<Vec<Sym>> }
 
 pub struct Parser<'a> {
     src: &'a [char],
@@ -769,7 +787,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("lattice {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(op), widen, tag: false, dom: None, ord: None })
     }
 
     /// `tagdecl := 'tag' ident '(' [ term ',' ]* tagalg term ')' '.'`
@@ -809,7 +827,53 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("tag {}: the declaration has no closing dot", self.h.name(rel)));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(alg), widen: None, tag: true, dom: None, ord: None })
+    }
+
+    /// `orderdecl := ('pareto' | 'lex') ident '(' [ term ',' ]* dir term [ ',' dir term ]* ')' '.'`
+    /// `dir       := min | max`
+    ///
+    /// `clause_at(I, D, $order(Kind, Dirs, $lit(R, $bare, A, $now)), $nil) :-
+    ///     identtok(I, I2), tok_name(I, I2, Kind), order_kind(Kind), ... ordargs(S, E, Dirs, A), ... p(D, dot).`
+    /// Words, not keywords, as `lattice` is: one declares only when a second
+    /// name follows it, so `lex(x).` is still a fact.
+    fn order_decl(&mut self) -> P<Clause> {
+        let kind = { let s = self.bump().ok_or("order: end of input")?; self.sym(&s) };
+        let (rel, book) = self.relbook()?;
+        let what = format!("{} {}", self.h.name(kind), self.h.name(rel));
+        if book != Book::Bare {
+            return Err(format!("{what}: a declaration names the relation, not a book"));
+        }
+        if !self.eat_punct("lpar") {
+            return Err(format!("{what}: expected '('"));
+        }
+        let is_dir = |p: &Self| ["min", "max"].iter().any(|w| p.is_word(0, w)) && !p.is_punct(1, "comma") && !p.is_punct(1, "rpar") && !p.is_punct(1, "lpar");
+        let mut args = Vec::new();
+        while !is_dir(self) {
+            args.push(self.term()?);
+            if !self.eat_punct("comma") {
+                return Err(format!("{what}: the last arguments are the values the order compares, each written with its direction: min C, max T"));
+            }
+        }
+        let mut dirs = Vec::new();
+        loop {
+            if !is_dir(self) {
+                return Err(format!("{what}: every value after the key is written with its direction, min or max, then its variable"));
+            }
+            let s = self.bump().ok_or("order: end of input")?;
+            dirs.push(self.sym(&s));
+            args.push(self.term()?);
+            if !self.eat_punct("comma") {
+                break;
+            }
+        }
+        if !self.eat_punct("rpar") {
+            return Err(format!("{what}: `(` is not closed"));
+        }
+        if !self.eat_punct("dot") {
+            return Err(format!("{what}: the declaration has no closing dot"));
+        }
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: Some(kind), widen: None, tag: false, dom: None, ord: Some(dirs) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
@@ -831,7 +895,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("dominance {what}: the rule has no closing dot"));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom) })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: Some(dom), ord: None })
     }
 
     /// `clause_at(I, D, L, nil) :- lit(I, C, L), p(D, dot).`
@@ -843,6 +907,9 @@ impl<'a> Parser<'a> {
         }
         if brk!("tag_unread" => false; self.is_word(0, "tag")) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
             return self.tag_decl();
+        }
+        if brk!("order_unread" => false; (self.is_word(0, "pareto") || self.is_word(0, "lex")) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident)) {
+            return self.order_decl();
         }
         let head = self.lit()?;
         if brk!("dominance_unread" => false; matches!(self.peek(), Some(s) if s.tok == Tok::Op("le"))) {
@@ -856,7 +923,7 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("dot") {
             return Err(format!("clause: `{}` has no closing dot", self.h.name(head.rel)));
         }
-        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None })
+        Ok(Clause { head, body, lattice: None, widen: None, tag: false, dom: None, ord: None })
     }
 }
 
@@ -920,6 +987,10 @@ pub fn show_elem(h: &Heap, e: &Elem) -> String {
     }
 }
 pub fn show(h: &Heap, c: &Clause) -> String {
+    if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
+        let dirs = dirs.iter().map(|d| h.name(*d)).collect::<Vec<_>>().join(" ");
+        return format!("(order {} [{}] {})", h.name(kind), dirs, show_lit(h, &c.head));
+    }
     if let Some(op) = c.lattice {
         return format!("({} {} {})", if c.tag { "tag" } else { "lattice" }, h.name(op), show_lit(h, &c.head));
     }

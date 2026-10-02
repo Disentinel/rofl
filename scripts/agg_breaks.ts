@@ -533,7 +533,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "safety.rofl",
-    "agg_refused(R, lattice_nonmonotone) :- lat_misuse(R).\n",
+    "agg_refused(R, lattice_nonmonotone) :- lat_misuse(R), not ord_rule(R).\n",
     ""
    ]
   ],
@@ -3021,6 +3021,7 @@ export const BREAKS: Break[] = [
   "id": "dominance_why_one_member",
   "what": "why of a member of a front prints its first member alone and nothing it dominates beyond the digest",
   "expect": {
+   "agg_sub_order_why": "aoy_text_missing",
    "agg_sub_why": "asy_text_missing"
   }
  },
@@ -3028,6 +3029,7 @@ export const BREAKS: Break[] = [
   "id": "dominance_why_beaten_off",
   "what": "why of a member of a front does not name the values it dominates",
   "expect": {
+   "agg_sub_order_why": "aoy_text_missing",
    "agg_sub_why": "asy_text_missing"
   }
  },
@@ -3035,6 +3037,7 @@ export const BREAKS: Break[] = [
   "id": "dominance_whynot_plain",
   "what": "whynot of a value given and dominated does not name what dominates it",
   "expect": {
+   "agg_sub_order_why": "aoy_text_missing",
    "agg_sub_why": "asy_text_missing",
    "agg_sub_ticks": "astk_text_missing"
   }
@@ -3145,6 +3148,235 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_sub_ts": "was to be refused"
+  }
+ },
+ {
+  "id": "order_unread",
+  "what": "the Rust parser reads no declared order: `pareto` and `lex` are names, and a declaration a clause with no closing dot",
+  "expect": {
+   "agg_sub_order_syntax": "does not evaluate",
+   "agg_sub_order_reflect": "does not evaluate",
+   "agg_sub_order_eval": "does not evaluate",
+   "agg_sub_order_safety": "does not evaluate",
+   "agg_sub_order_witness": "does not evaluate",
+   "agg_sub_order_why": "does not evaluate",
+   "agg_sub_order_demo": "does not evaluate"
+  }
+ },
+ {
+  "id": "order_pareto_weak",
+  "what": "a declared order is lowered with every comparison weak: a value dominates itself",
+  "expect": {
+   "agg_sub_order_reflect": "sor_missing",
+   "agg_sub_order_eval": "aoe_unlike",
+   "agg_sub_order_witness": "aow_missing",
+   "agg_sub_order_demo": "aodb_lp_missing"
+  }
+ },
+ {
+  "id": "order_lex_as_pareto",
+  "what": "a lex declaration is lowered as a pareto one: a better first value no longer decides",
+  "expect": {
+   "agg_sub_order_eval": "aoe_two",
+   "agg_sub_order_witness": "aow_missing",
+   "agg_sub_order_demo": "aodb_lp_extra"
+  }
+ },
+ {
+  "id": "order_max_as_min",
+  "what": "a max value of a declared order is lowered as a min",
+  "expect": {
+   "agg_sub_order_eval": "aoe_missing"
+  }
+ },
+ {
+  "id": "order_row_rule_first",
+  "what": "every `order_comp` row of a declaration names its first dominance rule, not the one strict in its value",
+  "expect": {
+   "agg_sub_order_reflect": "does not evaluate",
+   "agg_sub_order_syntax": "does not evaluate"
+  }
+ },
+ {
+  "id": "order_row_unread",
+  "what": "safety.rofl is not given the `order_comp` rows, so a declared order is judged as a custom dominance: every consumer admitted",
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_head_unseeded",
+  "what": "the host seeds no value of a declared order in a head: what a rule concludes into it is judged by nothing",
+  "expect": {
+   "agg_sub_order_safety": "does not evaluate"
+  }
+ },
+ {
+  "id": "ring1_order_unread",
+  "what": "ring 1 reads no declared order",
+  "edits": [
+   [
+    "examples/ring1/ring1.rofl",
+    "clause_at(I, D, $order(Kind, Ds, $lit(R, $bare, A, $now)), $nil) :-\n  identtok(I, I2), tok_name(I, I2, Kind), ord_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),\n  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), ordargs(S, E, Ds, A),\n  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_syntax": "ring1_missing"
+  }
+ },
+ {
+  "id": "ts_order_unread",
+  "what": "the TypeScript parser reads no declared order",
+  "edits": [
+   [
+    "src/parser.ts",
+    "if (this.peek().t === 'ident' && ORDER_KINDS.has(this.peek().v) &&",
+    "if (false && ORDER_KINDS.has(this.peek().v) &&"
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_syntax": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_order_lex_as_pareto",
+  "what": "the TypeScript door lowers a lex declaration as a pareto one",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      if (kind !== 'pareto' && i > j) continue;\n      body.push(i === j ? cmp(i, true) : kind === 'pareto' ? cmp(i, false)",
+    "      body.push(i === j ? cmp(i, true) : true ? cmp(i, false)"
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_eval": "aoe_two"
+  }
+ },
+ {
+  "id": "order_dir_ignored",
+  "what": "safety.rofl takes every value of a declared order for a min: a max is judged as it improves downwards",
+  "edits": [
+   [
+    "safety.rofl",
+    "premise_var(R, K, oval, I, V), order_comp(P, _, I, Dir, _), better_move(Dir, M).\n",
+    "premise_var(R, K, oval, I, V), order_comp(P, _, I, Dir, _), better_move(min, M).\n"
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "does not evaluate"
+  }
+ },
+ {
+  "id": "order_head_fit_ignored",
+  "what": "safety.rofl admits a value of a declared order into a head of any direction",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_ok(R, K, X, 0, oval) :- lat_taint(R, K, X), premise_var(R, 0, oval, _, X), not ord_head_unfit(R, K, X).\n",
+    "lat_ok(R, K, X, 0, oval) :- lat_taint(R, K, X), premise_var(R, 0, oval, _, X).\n"
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_taint_dropped",
+  "what": "safety.rofl does not taint what a declared order reads: no use of its values is judged",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_taint(R, K, V) :- lat_inner(R, K, P), ord_rel(P), premise_var(R, K, oval, _, V).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_bad_read_ignored",
+  "what": "safety.rofl admits a read of a declared order whose value is a constant or repeated",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_misuse(R) :- lat_inner(R, K, P), ord_rel(P), order_bad_read(R, K).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_and_rules_admitted",
+  "what": "safety.rofl admits a declared order beside dominance rules of its own",
+  "edits": [
+   [
+    "safety.rofl",
+    "lattice_refused(P, order_and_rules) :- ord_rel(P), dominance(R, P, _, _), not ord_owned(P, R).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_two_kinds_admitted",
+  "what": "safety.rofl admits two declarations of one relation of two kinds",
+  "edits": [
+   [
+    "safety.rofl",
+    "lattice_refused(P, two_orders)      :- order_comp(P, K1, _, _, _), order_comp(P, K2, _, _, _), K1 != K2.\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_lex_late_compared",
+  "what": "safety.rofl admits a comparison of a later value of a lex order",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_misuse(R) :- lex_late(R, K, X), premise_lit(R, J, $builtin(Op, _)), premise_var(R, J, _, _, X), ord_cmp(Op).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_lex_strict_unchecked",
+  "what": "safety.rofl does not require a lex head's values but the last to be computed strictly from the value at their own place",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_misuse(R) :- lex_track(R, K), lex_pos(R, I), not lex_strict(R, K, I).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "order_lex_late_into_pareto",
+  "what": "safety.rofl admits a lex read's later value into a head that is not lex",
+  "edits": [
+   [
+    "safety.rofl",
+    "lat_misuse(R) :- lex_late(R, K, X), premise_var(R, 0, oval, _, X), concludes(R, H), not lex_rel(H).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_sub_order_safety": "was to be refused"
   }
  },
  {

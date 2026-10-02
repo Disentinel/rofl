@@ -378,7 +378,7 @@ export type BodyElem =
 /** A clause, a lattice declaration (`lattice dist(A, C, min D).` is the head
  *  `dist(A, C, D)` with no body and `lattice` the operation `min`; a tag's
  *  semiring is in `lattice` with `tag` set), or a dominance rule (`dominator`). */
-export interface Clause { head: Lit; body: BodyElem[]; lattice?: string; widen?: number; tag?: boolean; dominator?: Lit; }
+export interface Clause { head: Lit; body: BodyElem[]; lattice?: string; widen?: number; tag?: boolean; dominator?: Lit; ord?: string[]; }
 
 /** The variables of a body element, in the order they are written: a
  *  literal's arguments then its book, a builtin's two sides, an aggregate's

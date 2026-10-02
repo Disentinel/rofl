@@ -70,9 +70,10 @@ fn r1_elem(h: &Heap, e: &Elem) -> String {
 }
 
 fn r1_clause(h: &Heap, c: &Clause) -> (String, String) {
-    let head = match c.lattice {
-        Some(op) => format!("$lattice({},{})", h.name(op), r1_lit(h, &c.head)),
-        None => r1_lit(h, &c.head),
+    let head = match (c.lattice, &c.ord) {
+        (Some(kind), Some(dirs)) => format!("$order({},{},{})", h.name(kind), list(dirs.iter().map(|d| h.name(*d).to_string()).collect()), r1_lit(h, &c.head)),
+        (Some(op), None) => format!("$lattice({},{})", h.name(op), r1_lit(h, &c.head)),
+        _ => r1_lit(h, &c.head),
     };
     (head, list(c.body.iter().map(|e| r1_elem(h, e)).collect()))
 }
@@ -108,6 +109,8 @@ fn ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_t
         "lattice dist(A, C, min D).",
         "lattice best(max W).\nlattice r(X, or B). lattice s(K, J, and B).",
         "lattice(x). lattice p(min, max X).",
+        "pareto route(A, B, min C, min T).\nlex q(max W). pareto r(min, max X, min Y).",
+        "lex(x). pareto(y, min). lex p(K, min V).",
     ];
     for src in cases {
         let mut h = Heap::default();
@@ -135,6 +138,10 @@ fn what_the_parser_refuses_ring1_does_not_cover() {
         "lattice d(A, min D",
         "lattice d(A, min D)",
         "lattice d[b](A, min D).",
+        "pareto r(A, C).",
+        "pareto r(A, min C",
+        "pareto r(A, min C, T).",
+        "lex r[b](A, min C).",
     ] {
         let mut h = Heap::default();
         assert!(parse(&mut h, src).is_err(), "{src}: the parser read it");

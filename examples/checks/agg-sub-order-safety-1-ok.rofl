@@ -1,0 +1,57 @@
+-- examples/checks/agg-sub-order-safety-1-ok.rofl — rules that read a
+-- declared order inside its recursion and are monotone in it, which
+-- safety.rofl accepts from the declaration alone, whatever the data:
+-- a Pareto front whose values flow into the value of the same direction (a
+-- sum, a copy, a difference taken from a constant, min and max against one),
+-- one value flowing into the other's place, a comparison that stays true as a
+-- value improves, a front read inside another's recursion and a value
+-- flowing into a lattice; and a lexicographic order whose first value is
+-- computed strictly from the first read, its second from the second, its
+-- first compared. The agg_sub_order_safety check holds the values each
+-- evaluates to.
+edb(aos_e).
+aos_e(a, b, 2, 9). aos_e(b, c, 3, 1). aos_e(a, c, 9, 2). aos_e(c, a, 1, 1).
+-- sums into the same direction, a cap of cost at most 40 compared as the value improves
+pareto aos_sum(A, B, min C, min T).
+aos_sum(A, B, C, T) :- aos_e(A, B, C, T).
+aos_sum(A, C, C1, T1) :- aos_sum(A, B, C0, T0), aos_e(B, C, C2, T2), C0 < 40, C1 is C0 + C2, T1 is T0 + T2.
+-- a value moves into the other's place, and a constant bound on it as it improves
+pareto aos_swap(A, B, min C, min T).
+aos_swap(A, B, C, T) :- aos_e(A, B, C, T).
+aos_swap(A, C, C1, T1) :- aos_swap(A, B, C0, T0), aos_e(B, C, C2, T2), C1 is T0 + C2, T1 is C0 + T2, T1 < 50.
+-- directions that differ: a difference taken from a constant turns a max into the min it improves as
+pareto aos_mix(A, B, max W, min P).
+aos_mix(A, B, W, P) :- aos_e(A, B, W, P).
+aos_mix(A, C, W1, P1) :- aos_mix(A, B, W0, P0), aos_e(B, C, W2, P2), W1 is min(W0, W2), P1 is P0 + P2.
+pareto aos_rev(A, B, min L, min P).
+aos_rev(A, B, L, P) :- aos_mix(A, B, W, P), L is 10 - W.
+-- a plain relation inside the recursion copies the value, as it does of any cell
+aos_copy(A, B, C, T) :- aos_sum(A, B, C, T).
+aos_back(A, C, C1, T1) :- aos_copy(A, B, C0, T0), aos_e(B, C, C2, T2), C0 < 6, C1 is C0 + C2, T1 is T0 + T2.
+-- a front read inside another's recursion, and its value flowing into a lattice
+pareto aos_next(A, B, min C, min T).
+aos_next(A, B, C, T) :- aos_sum(A, B, C, T), C < 12.
+aos_next(A, C, C1, T1) :- aos_next(A, B, C0, T0), aos_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2, C1 < 12.
+lattice aos_cheap(A, B, min C).
+aos_cheap(A, B, C) :- aos_sum(A, B, C, _).
+aos_cheap(A, C, C1) :- aos_cheap(A, B, C0), aos_e(B, C, C2, _), C1 is C0 + C2, C1 < 12.
+-- LEXICOGRAPHIC: cost first, strictly (a sum), time second from the time; the first is compared
+lex aos_lex(A, B, min C, min T).
+aos_lex(A, B, C, T) :- aos_e(A, B, C, T).
+aos_lex(A, C, C1, T1) :- aos_lex(A, B, C0, T0), aos_e(B, C, C2, T2), C0 < 30, C1 is C0 + C2, T1 is T0 + T2.
+-- the first value kept as it is, as a copy; the second taken from a constant less the second
+lex aos_lex2(A, B, min C, max T).
+aos_lex2(A, B, C, T) :- aos_e(A, B, C, T).
+aos_lex2(A, C, C1, T1) :- aos_lex2(A, B, C0, T0), aos_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 - T2.
+-- a lex front's first value into a min lattice, and read from outside by anything
+lattice aos_lcheap(A, B, min C).
+aos_lcheap(A, B, C) :- aos_lex(A, B, C, _).
+aos_lcheap(A, C, C1) :- aos_lcheap(A, B, C0), aos_e(B, C, C2, _), C1 is C0 + C2, C1 < 12.
+aos_out(A, B, X) :- aos_lex(A, B, C, T), X is C * T.
+aos_wide(A, B, X) :- aos_sum(A, B, C, T), C > T, X is C * 2.
+-- three values: each but the last computed strictly from the value at its place (a sum), the last from a cap
+edb(aos_e3).
+aos_e3(a, b, 2, 9, 4). aos_e3(b, c, 3, 1, 2). aos_e3(c, a, 1, 1, 5).
+lex aos_lex3(A, B, min C, min T, min U).
+aos_lex3(A, B, C, T, U) :- aos_e3(A, B, C, T, U).
+aos_lex3(A, C, C1, T1, U1) :- aos_lex3(A, B, C0, T0, U0), aos_e3(B, C, C2, T2, U2), C0 < 30, C1 is C0 + C2, T1 is T0 + T2, U1 is min(U0, U2).

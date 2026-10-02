@@ -693,6 +693,62 @@ fn check_lattice_decl(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<(Sy
     Ok((rel, c.head.args.len(), op, c.widen))
 }
 
+/// A DECLARED ORDER AT THE DOOR (docs/aggregates.md, "Declared orders, as
+/// built"): `pareto route(A, B, min C, min T).` and `lex route(A, B, min C,
+/// max Q).` name a relation, its key (every argument before the first
+/// direction) and the values the order compares, each a distinct variable. The
+/// order is lowered to the dominance rules it stands for, as source text the
+/// ordinary door then reads, one rule strict in each value (the Pareto rule
+/// of value j is no worse in every value and better in j; the lexicographic
+/// rule of j is equal in the values before it and better in j), so the
+/// dominance is a strict partial order by construction.
+fn lower_order(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Vec<String>, String> {
+    let kind = brk!("order_lex_as_pareto" => "pareto".to_string(); h.name(c.lattice.expect("a declaration")).to_string());
+    let dirs: Vec<&str> = c.ord.as_ref().expect("an order").iter()
+        .map(|d| brk!("order_max_as_min" => "min"; h.name(*d)))
+        .collect();
+    let rel = c.head.rel;
+    let what = rofl_parse::decl_text(h, c);
+    if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
+        return Err(format!("{what}: '{}' is a kernel relation and cannot be ordered", h.name(rel)));
+    }
+    let mut names: Vec<String> = Vec::new();
+    for a in &c.head.args {
+        match a.kind() {
+            TermK::Var(x) if !names.iter().any(|n| n == h.name(x)) => names.push(h.name(x).to_string()),
+            TermK::Var(x) => return Err(format!("{what}: '{}' is written twice; a declaration names each argument once", h.name(x))),
+            _ => return Err(format!("{what}: a declaration's arguments are variables, the key and then each value with its direction")),
+        }
+    }
+    // a wildcard is a value no rule reads, and a name of its own in a rule
+    let named = names.clone();
+    for (i, x) in names.iter_mut().enumerate() {
+        if x.starts_with("_$") {
+            let mut y = format!("Any{}", i + 1);
+            while named.contains(&y) { y.push('_'); }
+            *x = y;
+        }
+    }
+    let (n, m) = (names.len(), dirs.len());
+    let (key, lo) = names.split_at(n - m);
+    let hi: Vec<String> = lo.iter().map(|x| { let mut y = format!("{x}_"); while names.contains(&y) { y.push('_'); } y }).collect();
+    let fact = |vs: &[String]| format!("{}({})", h.name(rel), key.iter().chain(vs.iter()).cloned().collect::<Vec<_>>().join(", "));
+    let cmp = |i: usize, strict: bool| {
+        let strict = brk!("order_pareto_weak" => false; strict);
+        let op = match (dirs[i], strict) { ("min", true) => "<", ("min", false) => "<=", (_, true) => ">", (_, false) => ">=" };
+        format!("{} {op} {}", hi[i], lo[i])
+    };
+    let mut out = Vec::new();
+    for j in 0..m {
+        let body: Vec<String> = (0..m)
+            .filter(|i| kind == "pareto" || *i <= j)
+            .map(|i| if i == j { cmp(i, true) } else if kind == "pareto" { cmp(i, false) } else { format!("{} = {}", hi[i], lo[i]) })
+            .collect();
+        out.push(format!("{} <= {} :- {}.", fact(lo), fact(&hi), body.join(", ")));
+    }
+    Ok(out)
+}
+
 /// A DOMINANCE RULE AT THE DOOR (docs/aggregates.md, "Subsumption, as
 /// built"): `p(K..., V1...) <= p(K..., V2...) :- Body.` compares two facts of
 /// one relation, never a kernel one, now, in no book the author names. The
@@ -931,7 +987,25 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     let mut decls: Vec<(Sym, usize, Sym, Option<i64>)> = Vec::new();
     let mut tags: Vec<(Sym, usize, Sym)> = Vec::new();
     let mut doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)> = Vec::new();
+    let mut ords: Vec<(Sym, Sym, Vec<Sym>, usize)> = Vec::new();
     for pc in &clauses {
+        if pc.ord.is_some() {
+            match lower_order(&e.h, &e.v, pc) {
+                Ok(texts) => {
+                    let first = doms.len();
+                    for t in &texts {
+                        let lowered = rofl_parse::parse(&mut e.h, t).expect("a lowered order reads");
+                        match check_dominance(&mut e.h, &e.v, &lowered[0], who_owned.as_deref()) {
+                            Ok(d) => doms.push(d),
+                            Err(d) => diags.push(d),
+                        }
+                    }
+                    ords.push((pc.head.rel, pc.lattice.unwrap(), pc.ord.clone().unwrap(), first));
+                }
+                Err(d) => diags.push(d),
+            }
+            continue;
+        }
         if pc.dom.is_some() {
             match check_dominance(&mut e.h, &e.v, pc, who_owned.as_deref()) {
                 Ok(d) => doms.push(d),
@@ -991,6 +1065,7 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     }
     // A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
     // as built"): rows in the kernel's book, the body a rule body's
+    let mut dom_ids: Vec<Sym> = Vec::new();
     for (lo, hi, body, k) in &doms {
         for b in body {
             for l in b.lits_deep() {
@@ -1001,12 +1076,22 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         let drop = sealed_rels(e);
         let k = brk!("dominance_key_long" => *k + 1; *k);
-        let (_, facts) = encode_dominance(&mut e.h, &e.v, lo, hi, body, k);
+        let (id, facts) = encode_dominance(&mut e.h, &e.v, lo, hi, body, k);
+        dom_ids.push(e.h.intern(&id));
         for f in facts {
             if drop.contains(&f.rel) {
                 continue;
             }
             e.store.add(&e.h, f.rel, e.v.kernel_persp, &f.args, F_BASE);
+        }
+        e.store.dirty = true;
+    }
+    // A DECLARED ORDER is a row for each value it compares: its kind, place,
+    // direction and the dominance rule strict in it
+    for (rel, kind, dirs, first) in &ords {
+        for (i, d) in dirs.iter().enumerate() {
+            let row = [Term::atom(*rel), Term::atom(*kind), Term::int(i as i64 + 1), Term::atom(*d), Term::atom(brk!("order_row_rule_first" => dom_ids[*first]; dom_ids[first + i]))];
+            e.store.add(&e.h, e.v.order_comp, e.v.kernel_persp, &row, F_BASE);
         }
         e.store.dirty = true;
     }

@@ -1,0 +1,50 @@
+-- examples/checks/agg-sub-order-reflect-check.rofl — agg_sub_order_reflect:
+-- a declared order is its rows, and the rows are exactly the dominance rules
+-- the declaration stands for: one rule for each value, strict in it. A pareto
+-- rule compares every value (no worse in the others, better in its own); a
+-- lex rule is equal in the values before its own and better in it, and says
+-- nothing of the values after. The rows are read the same by both engines
+-- (rule ids and canonical state are held to the golden).
+edb(sor_e).
+sor_e(k, 1, 2, 3).
+pareto sor_p(K, min C, max T).
+sor_p(K, C, T) :- sor_e(K, C, T, _).
+lex sor_l(K, min C, max T, min U).
+sor_l(K, C, T, U) :- sor_e(K, C, T, U).
+-- the comparison of each rule, by relation, the value it is strict in, and its place in the body
+sor_prem(Rel, I, N, Op, L, R) :- order_comp[$kernel](Rel, _, I, _, Rr),
+  premise_lit[$kernel](Rr, N, $builtin(Op, $cons($var(L), $cons($var(R), $nil)))).
+sor_want(sor_p, 1, 1, "<", "C_", "C").  sor_want(sor_p, 1, 2, ">=", "T_", "T").
+sor_want(sor_p, 2, 1, "<=", "C_", "C"). sor_want(sor_p, 2, 2, ">", "T_", "T").
+sor_want(sor_l, 1, 1, "<", "C_", "C").
+sor_want(sor_l, 2, 1, "=", "C_", "C").  sor_want(sor_l, 2, 2, ">", "T_", "T").
+sor_want(sor_l, 3, 1, "=", "C_", "C").  sor_want(sor_l, 3, 2, "=", "T_", "T"). sor_want(sor_l, 3, 3, "<", "U_", "U").
+sor_missing(Rel, I, N) :- sor_want(Rel, I, N, Op, L, R), not sor_prem(Rel, I, N, Op, L, R).
+sor_extra(Rel, I, N)   :- sor_prem(Rel, I, N, Op, L, R), not sor_want(Rel, I, N, Op, L, R).
+alarm(sor_missing).
+alarm(sor_extra).
+-- the two facts of a rule: the key shared, each value a variable of its own,
+-- the dominated fact's the declaration's and the dominating one's primed
+sor_lits(sor_p, 1, $cons($var("K"), $cons($var("C"), $cons($var("T"), $nil))), $cons($var("K"), $cons($var("C_"), $cons($var("T_"), $nil)))).
+sor_lits(sor_l, 3, $cons($var("K"), $cons($var("C"), $cons($var("T"), $cons($var("U"), $nil)))), $cons($var("K"), $cons($var("C_"), $cons($var("T_"), $cons($var("U_"), $nil))))).
+sor_lit_ok(Rel, I) :- sor_lits(Rel, I, Lo, Hi), order_comp[$kernel](Rel, _, I, _, R),
+  dominance_lit[$kernel](R, 1, $lit(Rel, main, Lo, $now)),
+  dominance_lit[$kernel](R, 2, $lit(Rel, main, Hi, $now)).
+sor_lit_lost(Rel, I) :- sor_lits(Rel, I, _, _), not sor_lit_ok(Rel, I).
+alarm(sor_lit_lost).
+-- the key is the prefix both facts share
+sor_key_wrong(Rel) :- dominance[$kernel](_, Rel, 3, K), Rel = sor_p, K != 1.
+sor_key_wrong(Rel) :- dominance[$kernel](_, Rel, 4, K), Rel = sor_l, K != 1.
+alarm(sor_key_wrong).
+-- each rule has exactly the premises counted, and no more
+sor_prem_count(Rel, I, N) :- order_comp[$kernel](Rel, _, I, _, R), N is count(K : has_premise[$kernel](R, K)).
+sor_count_want(sor_p, 1, 2). sor_count_want(sor_p, 2, 2).
+sor_count_want(sor_l, 1, 1). sor_count_want(sor_l, 2, 2). sor_count_want(sor_l, 3, 3).
+sor_count_wrong(Rel, I) :- sor_count_want(Rel, I, N), not sor_prem_count(Rel, I, N).
+alarm(sor_count_wrong).
+-- a declaration is no rule and concludes nothing
+sor_as_rule(R) :- order_comp[$kernel](_, _, _, _, R), rule[$kernel](R).
+alarm(sor_as_rule).
+-- the declaration's rows and the lowered rules agree on the relation
+sor_stray(Rel) :- order_comp[$kernel](Rel, _, _, _, R), not dominance[$kernel](R, Rel, _, _).
+alarm(sor_stray).

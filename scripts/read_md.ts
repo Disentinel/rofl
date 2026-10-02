@@ -688,6 +688,14 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       decls.push(`lattice ${m[1]}${m[2] ? `[${m[2]}]` : ''}(${[...ks, `${LATTICE_WORD[m[3]]} ${m[4]}`].join(', ')})${m[6] ? ` widen ${m[6]}` : ''}.`);
       return true;
     }
+    m = new RegExp(`^\`(\\w+)\` is ordered (by Pareto dominance|lexicographically), (.+?)(?: for each (.+?))?\\.$`).exec(text);
+    if (m) {
+      const kind = m[2] === 'lexicographically' ? 'lex' : 'pareto';
+      const ks = keyList(m[4]), vs = m[3].split(kind === 'lex' ? ' then ' : ' and ').map((v) => new RegExp(`^the (least|greatest) (${NAME})$`).exec(v));
+      if (!ks || vs.some((v) => !v)) { unparsed.push(`DECLARATION ${text}`); return true; }
+      decls.push(`${kind} ${m[1]}(${[...ks, ...vs.map((v) => `${v![1] === 'least' ? 'min' : 'max'} ${v![2]}`)].join(', ')}).`);
+      return true;
+    }
     m = TAG_DECL.exec(text);
     if (m) {
       const ks = keyList(m[2]);

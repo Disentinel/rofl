@@ -1,0 +1,3 @@
+-- expect-refusal: every value after the key is written with its direction
+-- a key argument after a value is no key: the values come last
+pareto soxr_late(min C, A).

@@ -1,0 +1,82 @@
+-- examples/checks/agg-sub-order-eval-check.rofl — agg_sub_order_eval: every
+-- cell of agg-sub-order-data.rofl holds exactly the values enumerated here
+-- by hand, both directions. The declared Pareto front is the front of the
+-- same rules written by hand (the rules a declaration lowers to); directions
+-- that differ keep a wide-and-dear route beside a narrow-and-cheap; on one
+-- value a declared order is the lattice of its direction, fact for fact; with
+-- no key one front is held over the whole relation; one cell a book; and a
+-- lexicographic order keeps one value a key, the first value first.
+aoe_want(route, a, a, 3, 11). aoe_want(route, a, a, 4, 4). aoe_want(route, a, a, 6, 2).
+aoe_want(route, a, b, 1, 5).
+aoe_want(route, a, c, 2, 10). aoe_want(route, a, c, 3, 3). aoe_want(route, a, c, 5, 1).
+aoe_want(route, b, a, 2, 6). aoe_want(route, b, b, 3, 11). aoe_want(route, b, c, 1, 5).
+aoe_want(route, c, a, 1, 1). aoe_want(route, c, b, 2, 6).
+aoe_want(route, c, c, 3, 11). aoe_want(route, c, c, 4, 4). aoe_want(route, c, c, 6, 2).
+aoe_have(route, A, B, C, T) :- ao_route(A, B, C, T).
+aoe_want(fastest, a, a, 2, 2). aoe_want(fastest, a, b, 5, 5). aoe_want(fastest, a, c, 1, 1).
+aoe_want(fastest, b, a, 6, 6). aoe_want(fastest, b, b, 11, 11). aoe_want(fastest, b, c, 5, 5).
+aoe_want(fastest, c, a, 1, 1). aoe_want(fastest, c, b, 6, 6). aoe_want(fastest, c, c, 2, 2).
+aoe_have(fastest, A, B, T, T) :- ao_fastest(A, B, T).
+-- the same facts as the front written by hand, each way
+aoe_unlike(hand, A, B, C, T) :- ao_hand(A, B, C, T), not ao_route(A, B, C, T).
+aoe_unlike(decl, A, B, C, T) :- ao_route(A, B, C, T), not ao_hand(A, B, C, T).
+alarm(aoe_unlike).
+-- widest and cheapest: the 2-wide road at 1 reaches m beside the 9-wide at 5;
+-- s to t is 3 wide for 2 direct, and 4 wide for 6 through m (the 2-wide road
+-- through m, 2 for 2, is dominated by the direct one); round the cycle s and
+-- m each get 5 wide for 10 and 2 wide for 6
+aoe_want(cap, s, m, 9, 5). aoe_want(cap, s, m, 2, 1).
+aoe_want(cap, m, t, 4, 1). aoe_want(cap, s, t, 3, 2). aoe_want(cap, s, t, 4, 6).
+aoe_want(cap, m, s, 5, 5). aoe_want(cap, m, m, 5, 10). aoe_want(cap, s, s, 5, 10).
+aoe_want(cap, m, m, 2, 6). aoe_want(cap, s, s, 2, 6).
+aoe_have(cap, A, B, W, P) :- ao_cap(A, B, W, P).
+-- a declared order on one value is the lattice of its direction
+aoe_unlike(d, X, Y, D, x)  :- ao_dp(X, Y, D), not ao_dm(X, Y, D).
+aoe_unlike(dm, X, Y, D, x) :- ao_dm(X, Y, D), not ao_dp(X, Y, D).
+aoe_unlike(dl, X, Y, D, x) :- ao_dl(X, Y, D), not ao_dm(X, Y, D).
+aoe_unlike(dlm, X, Y, D, x) :- ao_dm(X, Y, D), not ao_dl(X, Y, D).
+aoe_unlike(w, X, Y, C, x)  :- ao_wp(X, Y, C), not ao_wm(X, Y, C).
+aoe_unlike(wm, X, Y, C, x) :- ao_wm(X, Y, C), not ao_wp(X, Y, C).
+aoe_want_d(s, t, 3). aoe_want_d(s, a, 2). aoe_want_d(a, a, 0). aoe_want_d(a, a2, 0).
+aoe_d_missing(X, Y, D) :- aoe_want_d(X, Y, D), not ao_dp(X, Y, D).
+aoe_dl_missing(X, Y, D) :- aoe_want_d(X, Y, D), not ao_dl(X, Y, D).
+alarm(aoe_d_missing).
+alarm(aoe_dl_missing).
+aoe_want_w(s, t, 1). aoe_want_w(s, a, 4). aoe_want_w(a, t, 1).
+aoe_w_missing(X, Y, C) :- aoe_want_w(X, Y, C), not ao_wp(X, Y, C).
+alarm(aoe_w_missing).
+-- no key: (3, 9), (5, 5), (7, 4) and (9, 3) stand; (6, 6) is dominated by (5, 5)
+aoe_want(best, 3, 9, x, x). aoe_want(best, 5, 5, x, x). aoe_want(best, 7, 4, x, x). aoe_want(best, 9, 3, x, x).
+aoe_have(best, C, T, x, x) :- ao_best(C, T).
+-- a cell a book
+aoe_want(bk, w1, k, 1, x). aoe_want(bk, w2, k, 5, x).
+aoe_have(bk, w1, K, V, x) :- ao_bk[w1](K, V).
+aoe_have(bk, w2, K, V, x) :- ao_bk[w2](K, V).
+-- lexicographic: the cheapest and its quickest, the quickest and its cheapest
+aoe_want(lc, a, a, 3, 11). aoe_want(lc, a, b, 1, 5). aoe_want(lc, a, c, 2, 10).
+aoe_want(lc, b, a, 2, 6). aoe_want(lc, b, b, 3, 11). aoe_want(lc, b, c, 1, 5).
+aoe_want(lc, c, a, 1, 1). aoe_want(lc, c, b, 2, 6). aoe_want(lc, c, c, 3, 11).
+aoe_have(lc, A, B, C, T) :- ao_lc(A, B, C, T).
+aoe_want(lt, a, a, 2, 6). aoe_want(lt, a, b, 5, 1). aoe_want(lt, a, c, 1, 5).
+aoe_want(lt, b, a, 6, 2). aoe_want(lt, b, b, 11, 3). aoe_want(lt, b, c, 5, 1).
+aoe_want(lt, c, a, 1, 1). aoe_want(lt, c, b, 6, 2). aoe_want(lt, c, c, 2, 6).
+aoe_have(lt, A, B, T, C) :- ao_lt(A, B, T, C).
+-- the widest, then the least, then the widest again: k's (5, 1, 1) and
+-- (5, 1, 4) tie on the first two, and the third takes the second; j has one
+aoe_want(l3, k, 5, 1, 4). aoe_want(l3, j, 4, 4, 4).
+aoe_have(l3, K, A, B, C) :- ao_l3(K, A, B, C).
+-- every want held, nothing else held, and no cell is a shrug
+aoe_missing(R, A, B, C, T) :- aoe_want(R, A, B, C, T), not aoe_have(R, A, B, C, T).
+aoe_extra(R, A, B, C, T)   :- aoe_have(R, A, B, C, T), not aoe_want(R, A, B, C, T).
+alarm(aoe_missing).
+alarm(aoe_extra).
+aoe_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(aoe_shrug).
+-- no front holds two values one of which dominates the other
+aoe_dominated(A, B, C1, T1) :- ao_route(A, B, C1, T1), ao_route(A, B, C2, T2), C2 <= C1, T2 <= T1, C2 < C1.
+aoe_dominated(A, B, C1, T1) :- ao_route(A, B, C1, T1), ao_route(A, B, C2, T2), C2 <= C1, T2 <= T1, T2 < T1.
+alarm(aoe_dominated).
+-- a lexicographic order keeps one value a key
+aoe_two(A, B) :- ao_lc(A, B, C1, T1), ao_lc(A, B, C2, T2), C1 != C2.
+aoe_two(A, B) :- ao_lc(A, B, C1, T1), ao_lc(A, B, C2, T2), T1 != T2.
+alarm(aoe_two).

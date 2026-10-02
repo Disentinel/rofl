@@ -1843,6 +1843,80 @@ check_file("agg_sub_demo", "examples/checks/agg-sub-demo-check.rofl").
 check_opt("agg_sub_demo", together, 1).
 proves("agg_sub_demo", agg, subsumption, demo).
 
+-- DECLARED ORDERS (w_agg_subsumption_orders): `pareto p(K..., min C, max Q).`
+-- and `lex p(K..., min C, max Q).`, lowered at the door to the dominance
+-- rules they stand for, so the dominance is a strict partial order by
+-- construction, and judged statically for every consumer inside the
+-- recursion. docs/aggregates.md, "Declared orders, as built".
+check_world("agg_sub_order_syntax").
+check_file("agg_sub_order_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_sub_order_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-1-forms.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-2-expect.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-none.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-dir.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-late.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-twice.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-const.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-book.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-kernel.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-open.rofl").
+check_file("agg_sub_order_syntax", "examples/checks/agg-sub-order-syntax-3-refused-dot.rofl").
+check_opt("agg_sub_order_syntax", together, 1).
+proves("agg_sub_order_syntax", agg, subsumption, syntax).
+
+check_world("agg_sub_order_reflect").
+check_file("agg_sub_order_reflect", "examples/checks/agg-sub-order-reflect-check.rofl").
+check_opt("agg_sub_order_reflect", together, 1).
+proves("agg_sub_order_reflect", agg, subsumption, reflect).
+
+check_world("agg_sub_order_safety").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-1-ok.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-check.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-2-refused-dir.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-3-refused-cmp.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-4-refused-mixed.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-5-refused-times.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-6-refused-late.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-7-refused-first.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-8-refused-swap.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-9-refused-lexpareto.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-10-refused-rules.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-11-refused-twice.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-12-refused-const.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-13-refused-key.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-14-refused-algebra.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-15-refused-neg.rofl").
+check_file("agg_sub_order_safety", "examples/checks/agg-sub-order-safety-16-refused-middle.rofl").
+check_opt("agg_sub_order_safety", together, 1).
+proves("agg_sub_order_safety", agg, subsumption, safety).
+proves_work("agg_sub_order_safety", w_agg_subsumption_orders).
+
+check_world("agg_sub_order_witness").
+check_file("agg_sub_order_witness", "examples/checks/agg-sub-order-data.rofl").
+check_file("agg_sub_order_witness", "examples/checks/agg-sub-order-witness-check.rofl").
+check_opt("agg_sub_order_witness", together, 1).
+proves("agg_sub_order_witness", agg, subsumption, witness).
+
+check_world("agg_sub_order_why").
+check_file("agg_sub_order_why", "examples/checks/agg-sub-order-data.rofl").
+check_file("agg_sub_order_why", "examples/checks/agg-sub-order-why-check.rofl").
+check_opt("agg_sub_order_why", together, 1).
+check_opt("agg_sub_order_why", explain, 1).
+proves("agg_sub_order_why", agg, subsumption, why).
+
+check_world("agg_sub_order_demo").
+check_file("agg_sub_order_demo", "examples/checks/agg-sub-order-demo-check.rofl").
+check_opt("agg_sub_order_demo", together, 1).
+proves("agg_sub_order_demo", agg, subsumption, demo).
+
+check_world("agg_sub_order_eval").
+check_file("agg_sub_order_eval", "examples/checks/agg-sub-order-data.rofl").
+check_file("agg_sub_order_eval", "examples/checks/agg-sub-order-eval-check.rofl").
+check_opt("agg_sub_order_eval", together, 1).
+proves("agg_sub_order_eval", agg, subsumption, eval_rust).
+proves("agg_sub_order_eval", agg, subsumption, eval_ts).
+
 check_world("agg_sub_wfs").
 check_file("agg_sub_wfs", "examples/checks/agg-sub-wfs-check.rofl").
 check_file("agg_sub_wfs", "examples/checks/agg-sub-wfs-2-refused.rofl").

@@ -1,0 +1,3 @@
+-- expect-refusal: 'C' is written twice
+-- each argument of a declaration is a variable of its own
+pareto soxr_twice(A, min C, max C).

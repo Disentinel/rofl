@@ -623,7 +623,7 @@ impl<'a> R<'a> {
     /// An aggregate's own body, as the conditions of a rule, inline and in
     /// parentheses; the positions it absorbs and pairs are its own.
     fn inner(&self, c: &Clause, body: &[Elem], ctx: &mut Ctx, stats: &mut Stats) -> String {
-        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None };
+        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None, ord: None };
         let saved = (std::mem::take(&mut ctx.absorbed), std::mem::take(&mut ctx.residual), std::mem::take(&mut ctx.kind_conds), std::mem::take(&mut ctx.rel_pairs), std::mem::take(&mut ctx.consumed), ctx.or_at.take(), ctx.cur_k, std::mem::take(&mut ctx.deferred));
         let (pos, neg) = brk!("phrase_inner_unread" => (Vec::new(), Vec::new()); self.conditions(&tmp, &[], ctx, stats));
         (ctx.absorbed, ctx.residual, ctx.kind_conds, ctx.rel_pairs, ctx.consumed, ctx.or_at, ctx.cur_k, ctx.deferred) = saved;
@@ -759,6 +759,15 @@ impl<'a> R<'a> {
         let v = c.head.args.last().map(|t| name(*t)).unwrap_or_default();
         let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
         let op = h.name(c.lattice.expect("a declaration"));
+        if let Some(dirs) = &c.ord {
+            let m = dirs.len();
+            let keys: Vec<String> = c.head.args[..n - m].iter().map(|t| name(*t)).collect();
+            let keys = match keys.len() { 0 => String::new(), 1 => keys[0].clone(), k => format!("{} and {}", keys[..k - 1].join(", "), keys[k - 1]) };
+            let (how, sep) = if op == "pareto" { ("by Pareto dominance", " and ") } else { ("lexicographically", " then ") };
+            let vals: Vec<String> = dirs.iter().zip(&c.head.args[n - m..]).map(|(d, t)| format!("the {} {}", if h.name(*d) == "min" { "least" } else { "greatest" }, name(*t))).collect();
+            let each = if keys.is_empty() { String::new() } else { format!(" for each {keys}") };
+            return format!("`{rel}` is ordered {how}, {}{each}.\n\n", vals.join(sep));
+        }
         if c.tag {
             let of = if keys.is_empty() { String::new() } else { format!(" of {keys}") };
             let op = brk!("phrase_tag_alg_lost" => "tropical"; op);
@@ -989,6 +998,7 @@ impl<'a> R<'a> {
             widen: c.widen,
             tag: c.tag,
             dom: c.dom.as_ref().map(l),
+            ord: c.ord.clone(),
         }
     }
 

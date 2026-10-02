@@ -1,0 +1,3 @@
+-- expect-refusal: a declaration's arguments are variables
+-- a value is a variable, never a constant
+lex soxr_const(A, min 3).

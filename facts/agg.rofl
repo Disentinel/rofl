@@ -626,6 +626,28 @@ work_spawned(w_agg_subsumption, f_the_dominance_door_read_its_body_in_no_order).
 work_spawned(w_agg_subsumption, f_whynot_asked_less_than_the_close_would).
 work_spawned(w_agg_subsumption, f_a_why_scanned_the_relation_at_every_front).
 
+-- DECLARED ORDERS (w_agg_subsumption_orders, 2026-10-02): `pareto p(K...,
+-- min C, max Q).` and `lex p(K..., min C, max Q).` are lowered at the door to
+-- the dominance rules they stand for, so the dominance is a strict partial
+-- order by construction (f_a_declared_order_is_a_dominance_judged_statically)
+-- and safety.rofl judges, from the declaration, every rule that reads the
+-- relation inside its recursion. The item owns no cell of its own: it
+-- strengthens the cells of the subsumption row, each closed beside the
+-- custom-rule worlds by a world of its own, and closes by its work_proof.
+work(w_agg_subsumption_orders, "declared dominance orders, pareto over named values and lexicographic, whose transitivity holds by construction and whose consumers are judged statically in safety.rofl, both engines; custom dominance rules keep working and keep the data check; done only with the work_proof world").
+work_state(w_agg_subsumption_orders, done).
+work_needs(w_agg_subsumption_orders, w_agg_subsumption).
+work_proof(w_agg_subsumption_orders, "agg_sub_order_safety").
+work_spawned(w_agg_subsumption_orders, f_a_declared_order_is_a_dominance_judged_statically).
+handled(agg, subsumption, syntax, "agg_sub_order_syntax").
+handled(agg, subsumption, reflect, "agg_sub_order_reflect").
+handled(agg, subsumption, eval_rust, "agg_sub_order_eval").
+handled(agg, subsumption, eval_ts, "agg_sub_order_eval").
+handled(agg, subsumption, safety, "agg_sub_order_safety").
+handled(agg, subsumption, witness, "agg_sub_order_witness").
+handled(agg, subsumption, why, "agg_sub_order_why").
+handled(agg, subsumption, demo, "agg_sub_order_demo").
+
 -- the columns every kind owes, each carried by one item across the rows
 work(w_agg_ts, "the TS engine, best-effort for small scale: every kind evaluates and canonical_state agrees with Rust").
 work_state(w_agg_ts, done).
