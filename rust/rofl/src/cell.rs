@@ -427,10 +427,10 @@ impl AggOp {
     pub fn join(self, h: &mut Heap, v: &Vocab, keys: &mut KeyCache, a: Term, b: Term) -> Result<Term, OffCarrier> {
         match self {
             AggOp::Union => {
-                let xs = set_elems(h, v, a).ok_or(OffCarrier)?.to_vec();
-                let ys = set_elems(h, v, b).ok_or(OffCarrier)?.to_vec();
+                let xs = set_elems(h, v, a).ok_or(OffCarrier)?;
+                let ys = set_elems(h, v, b).ok_or(OffCarrier)?;
                 Ok(brk!("union_left" => a; {
-                    let zs = merge_terms(h, keys, &xs, &ys);
+                    let zs = merge_terms(h, keys, xs, ys);
                     mk_set(h, v, zs)
                 }))
             }

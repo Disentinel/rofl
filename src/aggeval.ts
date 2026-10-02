@@ -19,14 +19,14 @@
 
 import {
   type Term, type Subst, type Lit, type BodyElem, type Clause, mka, mkf, mki, mks, mkv, canonTerm, canonVars,
-  resolve, unify, unifyAll, walk, isGround, varsOf, elemVars, aggInnerVars, annotateAggs, evalArith,
+  resolve, unify, unifyAll, walk, isGround, varsOf, elemVars, aggInnerVars, evalArith,
   type ArithFail, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO, ARITH_OVERFLOW, TERM_MIN, TERM_MAX, type Int,
 } from './unify.ts';
 import {
-  type AggOp, type Val, type Sorted, type TagAlg, Refused, OffCarrier, IvFailed, TagFailed, opFromName, opClass, isJoin,
+  type AggOp, type Val, type Sorted, Refused, IvFailed, TagFailed, opFromName, opClass, isJoin,
   dedupByProjection, opParams, opIdentity, lift, insert, finish, lower, holisticSorted, sortedOf, joinCanon, join,
   joinLeq, joinCarrierOf, setElems, setContains, ivBounds, mkIv, ivApply, type IvFn, IV_FNS, widenIv, narrowIv, NINF, PINF,
-  tagFromTimesName, tagTimes, tagIdempotent, latAlg, quorum, AGG_OPS, AGG_OVERFLOW,
+  tagFromTimesName, tagTimes, tagIdempotent, latAlg, quorum, AGG_OVERFLOW,
 } from './cell.ts';
 import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.ts';
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
@@ -34,8 +34,8 @@ import { Store, type FactStore, type FactRec, type PremRef, type Witness, type L
 import { parseLiteral } from './parser.ts';
 import { canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
 import {
-  V, IFACE, RESERVED, decodeRules, type DRule, factTerm, canonLit, canonBodyElem, canonClause, encodeRule,
-  resolveClauseBooks, sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
+  V, IFACE, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
+  sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
   SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME,
 } from './reflect.ts';
@@ -467,25 +467,6 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
     for (const rel of cand) { settled.add(rel); round.set(rel, n); }
   }
   return { round, rounds: n, stalled: false, stuck: [], aggEdges };
-}
-
-/** Does `from` reach `to` over the rules' dependency edges? */
-function reaches(rules: ERule[], from: string, to: string): boolean {
-  const deps = new Map<string, string[]>();
-  for (const r of rules) {
-    if (r.clause.head.temporal === 'next') continue;
-    let e = deps.get(r.clause.head.rel);
-    if (!e) { e = []; deps.set(r.clause.head.rel, e); }
-    for (const b of r.clause.body) for (const l of litsDeep(b)) e.push(l.rel);
-  }
-  const seen = new Set<string>();
-  const stack = [from];
-  while (stack.length > 0) {
-    const x = stack.pop()!;
-    if (x === to) return true;
-    if (!seen.has(x)) { seen.add(x); stack.push(...(deps.get(x) ?? [])); }
-  }
-  return false;
 }
 
 function levelSplit(rules: ERule[], levelOf: (r: ERule) => number): [number, ERule[]][] {
@@ -1210,9 +1191,9 @@ export class AggEval {
         const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
         const peel = peelRounds(this.rules, lats, domEdges);
         if (peel.stalled) {
-          const stuck = new Set(peel.stuck);
+          const stuck = new Set(peel.stuck), deps = this.relDeps();
           for (const [rid, head, inner] of peel.aggEdges) {
-            if (stuck.has(head) && stuck.has(inner) && reaches(this.rules, inner, head)) {
+            if (stuck.has(head) && stuck.has(inner) && reachesIn(deps, inner, head)) {
               const r = this.rules.find((x) => x.id === rid);
               const b = r?.clause.body.find((x) => x.t === 'agg' && litsDeep(x).some((l) => l.rel === inner));
               const op = b && b.t === 'agg' ? b.op : 'an aggregate';
@@ -1220,7 +1201,7 @@ export class AggEval {
             }
           }
           for (const [p, x] of [...this.subs].sort((a, b) => cmpStr(a[0], b[0]))) {
-            const b = x.reads.find((b) => stuck.has(p) && stuck.has(b) && reaches(this.rules, b, p));
+            const b = x.reads.find((b) => stuck.has(p) && stuck.has(b) && reachesIn(deps, b, p));
             if (b !== undefined) {
               throw new Rejected(`program rejected: the dominance of ${p} reads ${b}, which depends on ${p} itself: which of two values dominates is decided from relations closed below it (docs/aggregates.md, "Subsumption, as built")`);
             }
@@ -5166,8 +5147,9 @@ export class AggEval {
         throw reject(`tag ${p} (counting): a rule concluding it is not range-restricted, so its derivations would be unfolded at a call site`);
       }
     }
+    const deps = this.relDeps();
     const inRecursion = (p: string) => this.rules.some((r) => r.clause.head.rel === p && r.clause.head.temporal !== 'next'
-      && r.clause.body.flatMap(litsDeep).some((l) => reaches(this.rules, l.rel, p)));
+      && r.clause.body.flatMap(litsDeep).some((l) => reachesIn(deps, l.rel, p)));
     const counting = names.find((p) => !tagIdempotent(this.tags.byRel.get(p)![1]) && inRecursion(p));
     if (counting !== undefined) {
       throw reject(`tag ${counting} (counting) is inside its own recursion: counting's ⊕ is not idempotent, so a count of derivations through a recursion need not settle (it is not p-stable); count over a relation closed below it, or tag it tropical, viterbi or trust`);

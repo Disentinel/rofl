@@ -245,8 +245,7 @@ impl Eval {
         }
         // a later aggregate is sealed only for the groups an earlier one reached: one that may leave
         // no solution (a group, a min over nothing) decides which cells there are
-        for (i, a) in aggs.iter().enumerate().skip(1) {
-            let _ = a;
+        for i in 1..aggs.len() {
             let partial = aggs[..i].iter().any(|b| {
                 let total = self.agg_plans.get(&(rule, b.at)).is_some_and(|p| p.group.is_empty() && matches!(p.op, AggOp::Count | AggOp::Sum));
                 brk!("retract_partial_gate_off" => false; !total)
@@ -271,10 +270,11 @@ impl Eval {
         let mut seen: HashSet<Sym> = from.clone();
         let mut rels: HashSet<Sym> = HashSet::new();
         let mut rules: Vec<Rc<ERule>> = Vec::new();
+        let mut taken: HashSet<Sym> = HashSet::new();
         loop {
             let mut grew = false;
             for r in &self.rules {
-                if own.contains(&r.clause.head.rel) || rules.iter().any(|x| x.id == r.id) {
+                if own.contains(&r.clause.head.rel) || taken.contains(&r.id) {
                     continue;
                 }
                 let (mut reads, mut inner) = (false, false);
@@ -300,6 +300,7 @@ impl Eval {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
                 rules.push(r.clone());
+                taken.insert(r.id);
                 rels.insert(head);
                 seen.insert(head);
                 grew = true;
@@ -312,7 +313,7 @@ impl Eval {
         // too, so that rule is fired again as well
         for r in &self.rules {
             let head = r.clause.head.rel;
-            if !rels.contains(&head) || rules.iter().any(|x| x.id == r.id) || own.contains(&head) {
+            if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
             if r.has_neg || r.has_agg || r.has_thr || r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {

@@ -515,6 +515,8 @@ pub struct Eval {
     join_contribs: HashMap<LatKey, Vec<FactId>>,
     /// Each set element's canonical text, the key the join orders by.
     join_keys: KeyCache,
+    /// the sets already known canonical: what a cell holds, or a join made (`join_canon_of`)
+    join_canonical: HashSet<Term>,
     /// Contributions read from a value since widened that the monotonicity
     /// check has already found answered.
     join_checked: HashSet<FactId>,
@@ -930,6 +932,7 @@ impl Eval {
             join_of: HashMap::new(),
             join_contribs: HashMap::new(),
             join_keys: KeyCache::new(),
+            join_canonical: HashSet::new(),
             join_checked: HashSet::new(),
             lat_holed_rel: HashSet::new(),
             lat_superseded: HashSet::new(),
@@ -1870,6 +1873,7 @@ impl Eval {
         self.conflict_marks.clear();
         self.join_contribs.clear();
         self.join_keys.clear();
+        self.join_canonical.clear();
         self.join_checked.clear();
         self.lat_holed_rel.clear();
         self.lat_superseded.clear();
@@ -1927,8 +1931,9 @@ impl Eval {
                     if peel.stalled {
                         // AN AGGREGATE THROUGH ITS OWN CONCLUSION is named for
                         // what it is, before the generic stall.
+                        let deps = self.rel_deps();
                         for (rid, head, inner) in &peel.agg_edges {
-                            if peel.stuck.contains(head) && peel.stuck.contains(inner) && reaches(&self.rules, *inner, *head) {
+                            if peel.stuck.contains(head) && peel.stuck.contains(inner) && reaches_in(&deps, *inner, *head) {
                                 let op = self
                                     .rules
                                     .iter()
@@ -1954,7 +1959,7 @@ impl Eval {
                         let mut subs: Vec<(Sym, Rc<Sub>)> = self.subs.iter().map(|(p, x)| (*p, x.clone())).collect();
                         subs.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)));
                         for (p, x) in subs {
-                            if let Some(b) = x.reads.iter().find(|b| peel.stuck.contains(&p) && peel.stuck.contains(*b) && reaches(&self.rules, **b, p)) {
+                            if let Some(b) = x.reads.iter().find(|b| peel.stuck.contains(&p) && peel.stuck.contains(*b) && reaches_in(&deps, **b, p)) {
                                 return Err(Halt::Strat(
                                     format!(
                                         "program rejected: the dominance of {} reads {}, which depends on {} itself: which of two values \
@@ -4870,7 +4875,7 @@ impl Eval {
                 Mode::Rounds => Halt::Bug(msg),
             });
         }
-        let c = match op.join_canon(&mut self.h, &self.v, &mut self.join_keys, args[n - 1]) {
+        let c = match self.join_canon_of(op, args[n - 1]) {
             Ok(c) => c,
             Err(reason) => {
                 let facts = fact_prems(&prems);
@@ -4916,6 +4921,9 @@ impl Eval {
                     return Ok(());
                 }
                 let joined = op.join(&mut self.h, &self.v, &mut self.join_keys, v, c).map_err(|_| off_carrier(op))?;
+                if op == AggOp::Union {
+                    self.join_canonical.insert(joined);
+                }
                 let new = self.widened(&ck, rid, v, c, joined)?;
                 let prems = if new == c { vec![PremRef::Fact(cid)] } else { vec![PremRef::Fact(old), PremRef::Fact(cid)] };
                 brk!("join_no_retire" => (); self.supersede(old, &ck));
@@ -5092,7 +5100,7 @@ impl Eval {
                 }
                 (Err(e), _) => return Err(e),
                 // a wall cut the pass: what was narrowed so far stands
-                (Ok(_), _) | (_, None) => break,
+                (Ok(_), _) => break,
             }
         }
         for c in cells {
@@ -5128,8 +5136,6 @@ impl Eval {
     /// contributed nothing, and what it would have is unknown: the cells of
     /// every relation in its recursion are left as they were.
     fn narrow_gathered(&mut self, due: &[Sym]) -> Result<(), Halt> {
-        let deps = if self.narrowing.is_some() { self.rel_deps() } else { return Ok(()) };
-        let met: Vec<Sym> = self.lat_pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
         let Some(nr) = self.narrowing.as_mut() else { return Ok(()) };
         for p in due {
             nr.left.remove(p);
@@ -5137,12 +5143,16 @@ impl Eval {
         if !nr.left.is_empty() {
             return Ok(());
         }
+        let met: Vec<Sym> = self.lat_pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
         if !met.is_empty() {
             let frozen: HashSet<Sym> = nr.frozen.keys().map(|k| k.0).collect();
-            for p in frozen {
-                if met.iter().any(|&c| brk!("narrow_fault_ignored" => false; c == p || (reaches_in(&deps, c, p) && reaches_in(&deps, p, c)))) {
-                    nr.faulted.insert(p);
-                }
+            let deps = self.rel_deps();
+            let faulted: Vec<Sym> = frozen
+                .into_iter()
+                .filter(|&p| met.iter().any(|&c| brk!("narrow_fault_ignored" => false; c == p || (reaches_in(&deps, c, p) && reaches_in(&deps, p, c)))))
+                .collect();
+            if let Some(nr) = self.narrowing.as_mut() {
+                nr.faulted.extend(faulted);
             }
         }
         Err(Halt::Narrowed)
@@ -8335,11 +8345,12 @@ impl Eval {
                 ));
             }
         }
+        let deps = self.rel_deps();
         let in_recursion = |p: Sym| {
             self.rules.iter().any(|r| {
                 r.clause.head.rel == p
                     && r.clause.head.temporal != Temporal::Next
-                    && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| reaches(&self.rules, l.rel, p))
+                    && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| reaches_in(&deps, l.rel, p))
             })
         };
         let counting = names.iter().copied().find(|p| !self.tags.by_rel[p].1.idempotent() && in_recursion(*p));
@@ -9186,6 +9197,20 @@ impl Eval {
         }
     }
 
+    /// `join_canon` of a value, a set remembered: a join is canonical, and a set read from a cell is one a join or
+    /// `join_canon` made, so each is sorted and rebuilt once, not at every use.
+    fn join_canon_of(&mut self, op: AggOp, t: Term) -> Result<Term, Sym> {
+        if op != AggOp::Union {
+            return op.join_canon(&mut self.h, &self.v, &mut self.join_keys, t);
+        }
+        if self.join_canonical.contains(&t) {
+            return Ok(t);
+        }
+        let c = op.join_canon(&mut self.h, &self.v, &mut self.join_keys, t)?;
+        self.join_canonical.insert(c);
+        Ok(c)
+    }
+
     /// What the right side of `in` or `subset` reads: the term as the
     /// canonical value of the carrier its shape names, or None when it is no
     /// value of any -- `set_type_error`. The same test a contribution passes
@@ -9193,7 +9218,7 @@ impl Eval {
     /// set are refused here as they are refused as values.
     fn join_read(&mut self, t: Term) -> Option<(AggOp, Term)> {
         let op = AggOp::join_carrier_of(&self.h, &self.v, t)?;
-        let c = brk!("join_read_unchecked" => Ok(t); op.join_canon(&mut self.h, &self.v, &mut self.join_keys, t)).ok()?;
+        let c = brk!("join_read_unchecked" => Ok(t); self.join_canon_of(op, t)).ok()?;
         Some((op, c))
     }
 
@@ -10410,36 +10435,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
         stuck: Vec::new(),
         agg_edges,
     }
-}
-
-/// Does `from` reach `to` over the rules' dependency edges (positive,
-/// negated, aggregated)?
-fn reaches(rules: &[Rc<ERule>], from: Sym, to: Sym) -> bool {
-    let mut deps: HashMap<Sym, Vec<Sym>> = HashMap::new();
-    for r in rules {
-        if r.clause.head.temporal == Temporal::Next {
-            continue;
-        }
-        let e = deps.entry(r.clause.head.rel).or_default();
-        for b in &r.clause.body {
-            for l in b.lits_deep() {
-                e.push(l.rel);
-            }
-        }
-    }
-    let mut seen: HashSet<Sym> = HashSet::new();
-    let mut stack = vec![from];
-    while let Some(x) = stack.pop() {
-        if x == to {
-            return true;
-        }
-        if seen.insert(x) {
-            if let Some(ds) = deps.get(&x) {
-                stack.extend(ds.iter().copied());
-            }
-        }
-    }
-    false
 }
 
 /// The shape of an `is` right-hand side that safety.rofl reads for a lattice:
