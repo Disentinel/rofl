@@ -1054,9 +1054,10 @@ handled(agg, sum, demo, "agg_slo_demo").
 handled(agg, holistic, demo, "agg_slo_demo").
 
 work(w_agg_demo_critical_path, "critical path and shortest taint path as recursive min over a lattice relation").
-work_state(w_agg_demo_critical_path, open).
+work_state(w_agg_demo_critical_path, done).
 work_needs(w_agg_demo_critical_path, w_agg_order_lattice).
 claim(queued, agg, order_lattice, none, demo, w_agg_demo_critical_path).
+handled(agg, order_lattice, demo, "agg_critpath_demo").
 
 work(w_agg_demo_linter, "the linter as rules: `probably_a_table(Rel) :- N is count(R : concludes(R, Rel)), N >= 5.` replaces the counting-semiring hack in scripts/lint.ts").
 work_state(w_agg_demo_linter, open).
@@ -1069,12 +1070,14 @@ work_needs(w_agg_demo_voting, w_agg_body_strat).
 claim(queued, agg, empty_group, none, demo, w_agg_demo_voting).
 handled(agg, empty_group, demo, "agg_voting_demo").
 
-work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; retires req_count/need_count in examples/moot and examples/goof").
-work_state(w_agg_demo_quorum, open).
+work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; shows that the req_count/need_count walk of examples/moot and examples/goof is an at_least over the premises (the rewrite of those examples is w_agg_retire_workarounds)").
+work_state(w_agg_demo_quorum, done).
 work_needs(w_agg_demo_quorum, w_agg_threshold).
 work_needs(w_agg_demo_quorum, w_agg_phrase).
 claim(queued, agg, threshold, none, demo, w_agg_demo_quorum).
 claim(queued, agg, sugar,     none, demo, w_agg_demo_quorum).
+handled(agg, threshold, demo, "agg_quorum_demo").
+handled(agg, sugar, demo, "agg_quorum_demo").
 
 work(w_agg_demo_life, "Game of Life: a neighbour count per cell per tick, the cell engine across @next").
 work_state(w_agg_demo_life, done).
@@ -1083,11 +1086,12 @@ work_needs(w_agg_demo_life, w_agg_wfs_ticks).
 claim(queued, agg, cell, none, demo, w_agg_demo_life).
 handled(agg, cell, demo, "agg_life_demo").
 
-work(w_agg_demo_minimax, "minimax tic-tac-toe: min and max over a finished stratum, the draws computed by a well-founded world and read by the aggregating world through the composition w_agg_wfs_ticks owns").
-work_state(w_agg_demo_minimax, open).
+work(w_agg_demo_minimax, "minimax tic-tac-toe: min and max over a relation finished first, one per ply (a game that never repeats a position unrolls by ply, so no well-founded world is needed and a draw is a row at 0); the draws of a game that can repeat are the composition w_agg_wfs_ticks owns, held by agg_minimax_wfs").
+work_state(w_agg_demo_minimax, done).
 work_needs(w_agg_demo_minimax, w_agg_body_strat).
 work_needs(w_agg_demo_minimax, w_agg_wfs_ticks).
 claim(queued, agg, min_max_strat, none, demo, w_agg_demo_minimax).
+handled(agg, min_max_strat, demo, "agg_minimax_demo").
 
 work(w_agg_demo_interval, "interval analysis of a loop counter: hull join, widening forced, the widened bound a hole (f_the_aggregate_is_needed_only_where_an_infinite_set_must_be_compressed)").
 work_state(w_agg_demo_interval, open).

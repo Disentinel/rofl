@@ -1,0 +1,164 @@
+-- examples/checks/agg-critpath-demo-check.rofl — agg_critpath_demo, THE
+-- CRITICAL PATH AND THE CHEAPEST CHAIN (examples/critpath/README.md). The
+-- rules are examples/critpath/critpath.rofl over critpath-plan.rofl, and
+-- examples/critpath/taint.rofl over taint-hosts.rofl.
+--
+-- BY HAND, the plan (days): spec 3, design 4, schema 2, api 6, ui 8, auth 4,
+-- integ 3, docs 2, tests 4, perf 3, release 1. Finish: spec 3, design 7,
+-- schema 9, api 15 (design 7 + schema 2 + 6), ui 15 (7 + 8: a tie with api),
+-- auth 7, integ 18, docs 17, tests 22, perf 21, release 23. The plan is 23
+-- long and has TWO critical paths, spec-design-schema-api-integ-tests-release
+-- and spec-design-ui-integ-tests-release; auth has 8 days of slack (it may
+-- finish at 15, integ's latest start), docs 5 (22 - 17), perf 1.
+--
+-- BY HAND, the network: from the internet the cheapest ways in are web 5,
+-- phish 3, ci 9 (phish + 6), admin 11 (ci + 2), db 12 (admin + 1), jump 7
+-- (web + 7 and phish + 4 tie), api 7 (web + 2), backup 14. The contractor
+-- reaches jump 2, ci 3, api 3 (jump + 1), web 4, phish 4, admin 5, db 6,
+-- backup 8. The cycles never pay: a lap adds cost. Inside the budget of 12
+-- the internet reaches admin and db, the contractor all three jewels.
+--
+-- The oracle below is computed from the two data files by a script of its
+-- own (a memoised longest path, a backward pass, Dijkstra), not by these rules.
+cp_finish(spec, 3).
+cp_finish(design, 7).
+cp_finish(schema, 9).
+cp_finish(api, 15).
+cp_finish(ui, 15).
+cp_finish(auth, 7).
+cp_finish(integ, 18).
+cp_finish(docs, 17).
+cp_finish(tests, 22).
+cp_finish(perf, 21).
+cp_finish(release, 23).
+cp_length(23).
+cp_slack(spec, 0).
+cp_slack(design, 0).
+cp_slack(schema, 0).
+cp_slack(api, 0).
+cp_slack(ui, 0).
+cp_slack(auth, 8).
+cp_slack(integ, 0).
+cp_slack(docs, 5).
+cp_slack(tests, 0).
+cp_slack(perf, 1).
+cp_slack(release, 0).
+cp_critical(spec).
+cp_critical(design).
+cp_critical(schema).
+cp_critical(api).
+cp_critical(ui).
+cp_critical(integ).
+cp_critical(tests).
+cp_critical(release).
+tt_cost(internet, admin, 11).
+tt_cost(internet, api, 7).
+tt_cost(internet, backup, 14).
+tt_cost(internet, ci, 9).
+tt_cost(internet, db, 12).
+tt_cost(internet, internet, 0).
+tt_cost(internet, jump, 7).
+tt_cost(internet, phish, 3).
+tt_cost(internet, web, 5).
+tt_cost(contractor, admin, 5).
+tt_cost(contractor, api, 3).
+tt_cost(contractor, backup, 8).
+tt_cost(contractor, ci, 3).
+tt_cost(contractor, contractor, 0).
+tt_cost(contractor, db, 6).
+tt_cost(contractor, jump, 2).
+tt_cost(contractor, phish, 4).
+tt_cost(contractor, web, 4).
+tt_exposed(internet, admin, 11).
+tt_exposed(internet, db, 12).
+tt_exposed(contractor, admin, 5).
+tt_exposed(contractor, backup, 8).
+tt_exposed(contractor, db, 6).
+cpc_miss(finish, T)    :- cp_finish(T, N), not finish(T, N).
+cpc_miss(length, N)    :- cp_length(N), not length(N).
+cpc_miss(slack, T)     :- cp_slack(T, N), not slack(T, N).
+cpc_miss(critical, T)  :- cp_critical(T), not critical(T).
+cpc_miss(cost, N)      :- tt_cost(S, N, C), not exploit(S, N, C).
+cpc_miss(exposed, N)   :- tt_exposed(S, N, C), not exposed(S, N, C).
+cpc_extra(finish, T)   :- finish(T, N), not cp_finish(T, N).
+cpc_extra(length, N)   :- length(N), not cp_length(N).
+cpc_extra(slack, T)    :- slack(T, N), not cp_slack(T, N).
+cpc_extra(critical, T) :- critical(T), not cp_critical(T).
+cpc_extra(cost, N)     :- exploit(S, N, C), not tt_cost(S, N, C).
+cpc_extra(exposed, N)  :- exposed(S, N, C), not tt_exposed(S, N, C).
+alarm(cpc_miss).
+alarm(cpc_extra).
+-- one row per cell: the value a better one replaced is no answer, however
+-- many paths and laps reached the cell
+cpc_two(finish, T)  :- finish(T, N), finish(T, M), N != M.
+cpc_two(latest, T)  :- latest(T, N), latest(T, M), N != M.
+cpc_two(cost, N)    :- exploit(S, N, C), exploit(S, N, D), C != D.
+alarm(cpc_two).
+-- the tie is real: ui and api finish together, so integ has two ways to its 18
+cpc_shape(two_ways_to_integ) :- finish(integ, 18), finish(ui, 15), finish(api, 15).
+cpc_shape(auth_has_room)     :- slack(auth, 8), not critical(auth).
+cpc_shape(cycle_reached)     :- exploit(internet, ci, 9), exploit(internet, phish, 3), edge(ci, phish, 1).
+cpc_shape(laps_do_not_pay)   :- exploit(internet, phish, 3), exploit(contractor, phish, 4).
+cpc_shape_want(two_ways_to_integ). cpc_shape_want(auth_has_room).
+cpc_shape_want(cycle_reached). cpc_shape_want(laps_do_not_pay).
+cpc_shape_missing(W) :- cpc_shape_want(W), not cpc_shape(W).
+alarm(cpc_shape_missing).
+
+-- THE PROOF ROWS. `why` of the release names the stem of the critical path
+-- (tests, then integ); `why all` of integ, where the tie is, names both ways
+-- up from the spec; no other edge of the plan is named by either
+explain_request(why, finish(release, 23)).
+explain_request(why_all, finish(integ, 18)).
+cpc_line(L) :- explained[$explain](why, finish(release, 23), _, L).
+cpc_line(L) :- explained[$explain](why_all, finish(integ, 18), _, L).
+cpc_named(E) :- cpc_line(L), cpc_edge(E, T), N is str_segs(L, T), N > 1.
+cpc_edge(r_tests, "dep[main](release,tests)"). cpc_edge(t_integ, "dep[main](tests,integ)").
+cpc_edge(i_ui, "dep[main](integ,ui)"). cpc_edge(i_api, "dep[main](integ,api)").
+cpc_edge(u_design, "dep[main](ui,design)"). cpc_edge(a_schema, "dep[main](api,schema)").
+cpc_edge(s_design, "dep[main](schema,design)"). cpc_edge(d_spec, "dep[main](design,spec)").
+cpc_unnamed(E) :- cpc_edge(E, _), not cpc_named(E).
+cpc_off(E) :- cpc_line(L), cpc_other(E, T), N is str_segs(L, T), N > 1.
+cpc_other(r_perf, "dep[main](release,perf)"). cpc_other(r_docs, "dep[main](release,docs)").
+cpc_other(i_auth, "dep[main](integ,auth)"). cpc_other(a_design, "dep[main](api,design)").
+cpc_other(d_api, "dep[main](docs,api)"). cpc_other(p_integ, "dep[main](perf,integ)").
+cpc_other(au_spec, "dep[main](auth,spec)").
+cpc_proof_empty(plan) :- not cpc_line(_).
+alarm(cpc_unnamed).
+alarm(cpc_off).
+alarm(cpc_proof_empty).
+-- the same for the cheapest chain to the database: phish, ci, admin, db, and
+-- not the lap back from ci to phish, nor the road through the web tier
+explain_request(why_all, exploit(internet, db, 12)).
+cpc_tline(L) :- explained[$explain](why_all, exploit(internet, db, 12), _, L).
+cpc_tnamed(E) :- cpc_tline(L), cpc_hop(E, T), N is str_segs(L, T), N > 1.
+cpc_hop(h1, "edge[main](internet,phish,3)"). cpc_hop(h2, "edge[main](phish,ci,6)").
+cpc_hop(h3, "edge[main](ci,admin,2)"). cpc_hop(h4, "edge[main](admin,db,1)").
+cpc_tunnamed(E) :- cpc_hop(E, _), not cpc_tnamed(E).
+cpc_toff(E) :- cpc_tline(L), cpc_tother(E, T), N is str_segs(L, T), N > 1.
+cpc_tother(o1, "edge[main](internet,web,5)"). cpc_tother(o2, "edge[main](api,db,6)").
+cpc_tother(o3, "edge[main](ci,phish,1)"). cpc_tother(o4, "edge[main](phish,jump,4)").
+cpc_tother(o5, "edge[main](web,api,2)").
+cpc_tproof_empty(chain) :- not cpc_tline(_).
+alarm(cpc_tunnamed).
+alarm(cpc_toff).
+alarm(cpc_tproof_empty).
+-- and a value nobody reaches is answered by what the cell holds, the best
+-- contribution and the other roads, not by a bare no
+explain_request(whynot, exploit(internet, db, 9)).
+explain_request(whynot, exploit(contractor, db, 5)).
+explain_request(whynot, finish(release, 20)).
+cpc_says(K, A, T) :- explained[$explain](K, A, _, L), cpc_want(K, A, T), N is str_segs(L, T), N > 1.
+cpc_want(whynot, exploit(internet, db, 9), "exploit[main](internet,db) is a lattice cell (min) holding 12").
+cpc_want(whynot, exploit(internet, db, 9), "9 would improve it, and no contribution reaches 9: 2 contributions, the best 12").
+cpc_want(whynot, exploit(internet, db, 9), "13 <= ").
+cpc_want(whynot, exploit(internet, db, 9), "exploit[main](internet,api,7), edge[main](api,db,6)").
+cpc_want(whynot, exploit(contractor, db, 5), "holding 6").
+cpc_want(whynot, exploit(contractor, db, 5), "exploit[main](contractor,admin,5), edge[main](admin,db,1)").
+cpc_want(whynot, finish(release, 20), "finish[main](release) is a lattice cell (max) holding 23").
+cpc_want(whynot, finish(release, 20), "20 is not its value: max keeps the best contribution, 23").
+cpc_want(whynot, finish(release, 20), "22 <= ").
+cpc_unsaid(K, A, T) :- cpc_want(K, A, T), not cpc_says(K, A, T).
+alarm(cpc_unsaid).
+-- no answer of this world is a shrug, which `not` would pass in silence
+cpc_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(cpc_shrug).

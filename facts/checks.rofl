@@ -2219,3 +2219,33 @@ check_opt("agg_life_demo", together, 1).
 check_opt("agg_life_demo", ticks, 8).
 check_opt("agg_life_demo", explain, 1).
 proves("agg_life_demo", agg, cell, demo).
+
+-- w_agg_demo_critical_path: the longest path of a plan and the cheapest chain through a cyclic network, examples/critpath/
+check_world("agg_critpath_demo").
+check_file("agg_critpath_demo", "examples/critpath/critpath.rofl").
+check_file("agg_critpath_demo", "examples/critpath/critpath-plan.rofl").
+check_file("agg_critpath_demo", "examples/critpath/taint.rofl").
+check_file("agg_critpath_demo", "examples/critpath/taint-hosts.rofl").
+check_file("agg_critpath_demo", "examples/checks/agg-critpath-demo-check.rofl").
+check_opt("agg_critpath_demo", together, 1).
+check_opt("agg_critpath_demo", explain, 1).
+proves("agg_critpath_demo", agg, order_lattice, demo).
+
+-- w_agg_demo_minimax: tic-tac-toe by minimax, a max and a min over a relation finished first, one per ply, examples/minimax/
+check_world("agg_minimax_demo").
+check_file("agg_minimax_demo", "examples/minimax/minimax.rofl").
+check_file("agg_minimax_demo", "examples/checks/agg-minimax-demo-check.rofl").
+check_opt("agg_minimax_demo", together, 1).
+check_opt("agg_minimax_demo", explain, 1).
+proves("agg_minimax_demo", agg, min_max_strat, demo).
+
+-- w_agg_demo_quorum: belief over independent origins, a proof by quorum, a Raft commit, in rules and in sentences, examples/quorum/
+check_world("agg_quorum_demo").
+check_file("agg_quorum_demo", "examples/quorum/quorum.rofl").
+check_file("agg_quorum_demo", "examples/quorum/quorum-data.rofl").
+check_file("agg_quorum_demo", "examples/quorum/quorum-says.rofl.md").
+check_file("agg_quorum_demo", "examples/checks/agg-quorum-demo-check.rofl").
+check_opt("agg_quorum_demo", together, 1).
+check_opt("agg_quorum_demo", explain, 1).
+proves("agg_quorum_demo", agg, threshold, demo).
+proves("agg_quorum_demo", agg, sugar, demo).

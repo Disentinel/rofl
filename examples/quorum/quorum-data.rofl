@@ -1,0 +1,60 @@
+-- examples/quorum/quorum-data.rofl — THE DATA, written by hand from README.md.
+--
+-- BELIEF. Nodes and where they speak for. w1 is the wire, b1 the broadcaster,
+-- f1 and f2 are two accounts of one forum, d1 to d3 desks. backs(S, X): S backs X.
+vetted(w1). vetted(b1). vetted(f1). vetted(f2).
+speaks_for(w1, wire). speaks_for(b1, bbc). speaks_for(f1, forum). speaks_for(f2, forum).
+speaks_for(c1, desk_a). speaks_for(c2, desk_b). speaks_for(c3, desk_b). speaks_for(c4, desk_c).
+speaks_for(c5, desk_d). speaks_for(c6, desk_e). speaks_for(m1, desk_f). speaks_for(m2, desk_g).
+claim(c1). claim(c2). claim(c3). claim(c4). claim(c5). claim(c6). claim(m1). claim(m2).
+-- the wire and the broadcaster agree: two origins
+backs(w1, c1). backs(b1, c1).
+-- two accounts of the forum: one origin
+backs(f1, c2). backs(f2, c2).
+-- c3 stands on c1 (desk a) and the wire
+backs(c1, c3). backs(w1, c3).
+-- c4 has three backers and two origins, the forum and the wire
+backs(f1, c4). backs(f2, c4). backs(w1, c4).
+-- c5 stands on c3 and c4, from desks b and c
+backs(c3, c5). backs(c4, c5).
+-- c6 stands on c3 and c2: c2 is not believed, so it has one
+backs(c3, c6). backs(c2, c6).
+-- m1 and m2 hold each other up, m1 with the wire, m2 with the broadcaster
+backs(w1, m1). backs(m2, m1). backs(b1, m2). backs(m1, m2).
+
+-- PROOF. needs_at(Step, Place, Premise), need_count(Step, N): the shape of
+-- examples/goof. The steps conclude q1 to q7; s4 needs nothing, s5 rests on
+-- a premise nobody establishes, s7 on s5's conclusion.
+axiom(p1). axiom(p2). axiom(p3).
+step(s1, q1). step(s2, q2). step(s3, q3). step(s4, q4). step(s5, q5). step(s6, q6). step(s7, q7).
+needs_at(s1, 1, p1). needs_at(s1, 2, p2). need_count(s1, 2).
+needs_at(s2, 1, q1). needs_at(s2, 2, p3). need_count(s2, 2).
+needs_at(s3, 1, q2). needs_at(s3, 2, q1). needs_at(s3, 3, p1). need_count(s3, 3).
+need_count(s4, 0).
+needs_at(s5, 1, p1). needs_at(s5, 2, r9). need_count(s5, 2).
+needs_at(s6, 1, q4). needs_at(s6, 2, q3). need_count(s6, 2).
+needs_at(s7, 1, q6). needs_at(s7, 2, q5). need_count(s7, 2).
+
+-- RAFT. prod: five servers in term 3, the log of the Raft paper's figure 8
+-- region, the leader (s1) reports 5. edge3: three servers in term 1, reports 2.
+-- The two drills are logs corrupted on purpose, to see the alarm fire:
+-- lag reports an entry only its leader holds; old reports an entry of term 2
+-- held by a majority while the cluster is in term 4 and no entry of term 4
+-- has reached a majority.
+cluster(prod). cluster(edge3). cluster(lag). cluster(old).
+member(prod, s1). member(prod, s2). member(prod, s3). member(prod, s4). member(prod, s5).
+member(edge3, e1). member(edge3, e2). member(edge3, e3).
+member(lag, a1). member(lag, a2). member(lag, a3).
+member(old, o1). member(old, o2). member(old, o3). member(old, o4). member(old, o5).
+term(prod, 3). term(edge3, 1). term(lag, 2). term(old, 4).
+entry(prod, 1, 1). entry(prod, 2, 1). entry(prod, 3, 2). entry(prod, 4, 2).
+entry(prod, 5, 3). entry(prod, 6, 3). entry(prod, 7, 3).
+entry(edge3, 1, 1). entry(edge3, 2, 1).
+entry(lag, 1, 1). entry(lag, 2, 2). entry(lag, 3, 2).
+entry(old, 1, 1). entry(old, 2, 2). entry(old, 3, 4).
+match(prod, s1, 7). match(prod, s2, 7). match(prod, s3, 5). match(prod, s4, 4). match(prod, s5, 0).
+match(edge3, e1, 2). match(edge3, e2, 2). match(edge3, e3, 1).
+match(lag, a1, 3). match(lag, a2, 1). match(lag, a3, 1).
+match(old, o1, 3). match(old, o2, 2). match(old, o3, 2). match(old, o4, 1). match(old, o5, 1).
+reported(prod, 5). reported(edge3, 2). reported(lag, 3). reported(old, 2).
+drill(lag). drill(old).

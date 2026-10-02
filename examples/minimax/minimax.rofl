@@ -1,0 +1,84 @@
+-- examples/minimax/minimax.rofl — tic-tac-toe, solved by minimax.
+--
+-- A board is b(A, B, C, D, E, F, G, H, I), the cells read left to right, top
+-- to bottom, each x, o or e (empty). reach(Ply, Board) is every board
+-- unrestricted play can make from the empty board, X moving on even plies and
+-- O on odd ones: 6 046 of them, enough to ask who has a line. real(Ply, Board)
+-- is the boards of a game that stops at the first line, 5 478, found from the
+-- empty board by the moves of the boards not yet decided.
+--
+-- THE VALUE of a board is what perfect play gives X: 1 X wins, 0 a draw,
+-- -1 O wins. X takes the greatest value among its moves, O the least. That
+-- is a max and a min over the values of the boards one ply deeper, so the
+-- value of a board is a body aggregate over a relation that is finished
+-- first, and there is one such relation per ply: v0 is the empty board, v9 the
+-- full ones. A game that never repeats a position is a recursion that
+-- unrolls, and the engine wants it unrolled: a max or a min over a relation
+-- still being derived is refused (docs/aggregates.md), and the same value
+-- written as a lattice is refused too (README.md says why).
+--
+-- A DRAW is a full board nobody has won, a row at 0 like any other, so nothing
+-- here is undecided; a game that can go round in a circle has draws that are
+-- undefined, and is a different world (examples/minimax/README.md, the end).
+edb(mk).
+edb(turn).
+mk(x). mk(o).
+turn(0, x). turn(1, o). turn(2, x). turn(3, o). turn(4, x).
+turn(5, o). turn(6, x). turn(7, o). turn(8, x).
+
+reach(0, b(e,e,e,e,e,e,e,e,e)).
+reach(M, C) :- move(N, _, C), M is N + 1.
+
+-- a move puts the mark of the side to move on an empty cell
+move(N, b(e,B,C,D,E,F,G,H,I), b(Z,B,C,D,E,F,G,H,I)) :- reach(N, b(e,B,C,D,E,F,G,H,I)), turn(N, Z).
+move(N, b(A,e,C,D,E,F,G,H,I), b(A,Z,C,D,E,F,G,H,I)) :- reach(N, b(A,e,C,D,E,F,G,H,I)), turn(N, Z).
+move(N, b(A,B,e,D,E,F,G,H,I), b(A,B,Z,D,E,F,G,H,I)) :- reach(N, b(A,B,e,D,E,F,G,H,I)), turn(N, Z).
+move(N, b(A,B,C,e,E,F,G,H,I), b(A,B,C,Z,E,F,G,H,I)) :- reach(N, b(A,B,C,e,E,F,G,H,I)), turn(N, Z).
+move(N, b(A,B,C,D,e,F,G,H,I), b(A,B,C,D,Z,F,G,H,I)) :- reach(N, b(A,B,C,D,e,F,G,H,I)), turn(N, Z).
+move(N, b(A,B,C,D,E,e,G,H,I), b(A,B,C,D,E,Z,G,H,I)) :- reach(N, b(A,B,C,D,E,e,G,H,I)), turn(N, Z).
+move(N, b(A,B,C,D,E,F,e,H,I), b(A,B,C,D,E,F,Z,H,I)) :- reach(N, b(A,B,C,D,E,F,e,H,I)), turn(N, Z).
+move(N, b(A,B,C,D,E,F,G,e,I), b(A,B,C,D,E,F,G,Z,I)) :- reach(N, b(A,B,C,D,E,F,G,e,I)), turn(N, Z).
+move(N, b(A,B,C,D,E,F,G,H,e), b(A,B,C,D,E,F,G,H,Z)) :- reach(N, b(A,B,C,D,E,F,G,H,e)), turn(N, Z).
+
+-- a line is three of one mark
+won(B, M) :- reach(_, B), B = b(M,M,M,_,_,_,_,_,_), mk(M).
+won(B, M) :- reach(_, B), B = b(_,_,_,M,M,M,_,_,_), mk(M).
+won(B, M) :- reach(_, B), B = b(_,_,_,_,_,_,M,M,M), mk(M).
+won(B, M) :- reach(_, B), B = b(M,_,_,M,_,_,M,_,_), mk(M).
+won(B, M) :- reach(_, B), B = b(_,M,_,_,M,_,_,M,_), mk(M).
+won(B, M) :- reach(_, B), B = b(_,_,M,_,_,M,_,_,M), mk(M).
+won(B, M) :- reach(_, B), B = b(M,_,_,_,M,_,_,_,M), mk(M).
+won(B, M) :- reach(_, B), B = b(_,_,M,_,M,_,M,_,_), mk(M).
+
+-- a board is decided when a side has a line, or it is full
+tv(B, 1)  :- won(B, x).
+tv(B, -1) :- won(B, o), not won(B, x).
+tv(B, 0)  :- reach(9, B), not won(B, x), not won(B, o).
+decided(B) :- tv(B, _).
+
+real(0, b(e,e,e,e,e,e,e,e,e)).
+real(M, C) :- real(N, B), not decided(B), move(N, B, C), M is N + 1.
+
+-- VALUE BY PLY. X to move on even plies takes the max, O on odd plies the min.
+v9(B, V) :- real(9, B), tv(B, V).
+v8(B, V) :- real(8, B), tv(B, V).
+v8(B, V) :- real(8, B), not decided(B), V is max(W : move(8, B, C), v9(C, W)).
+v7(B, V) :- real(7, B), tv(B, V).
+v7(B, V) :- real(7, B), not decided(B), V is min(W : move(7, B, C), v8(C, W)).
+v6(B, V) :- real(6, B), tv(B, V).
+v6(B, V) :- real(6, B), not decided(B), V is max(W : move(6, B, C), v7(C, W)).
+v5(B, V) :- real(5, B), tv(B, V).
+v5(B, V) :- real(5, B), not decided(B), V is min(W : move(5, B, C), v6(C, W)).
+v4(B, V) :- real(4, B), tv(B, V).
+v4(B, V) :- real(4, B), not decided(B), V is max(W : move(4, B, C), v5(C, W)).
+v3(B, V) :- real(3, B), tv(B, V).
+v3(B, V) :- real(3, B), not decided(B), V is min(W : move(3, B, C), v4(C, W)).
+v2(B, V) :- real(2, B), tv(B, V).
+v2(B, V) :- real(2, B), not decided(B), V is max(W : move(2, B, C), v3(C, W)).
+v1(B, V) :- real(1, B), tv(B, V).
+v1(B, V) :- real(1, B), not decided(B), V is min(W : move(1, B, C), v2(C, W)).
+v0(B, V) :- real(0, B), tv(B, V).
+v0(B, V) :- real(0, B), not decided(B), V is max(W : move(0, B, C), v1(C, W)).
+
+-- the value of the game
+game(V) :- v0(b(e,e,e,e,e,e,e,e,e), V).

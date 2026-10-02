@@ -59,7 +59,10 @@ export const BREAKS: Break[] = [
   "what": "aggregate rules run as monotone rules, in phase A, before what they read is closed",
   "expect": {
    "agg_cell_eval": "acl_wrong",
-   "agg_life_demo": "lf_wrong"
+   "agg_life_demo": "lf_wrong",
+   "agg_critpath_demo": "cpc_miss",
+   "agg_minimax_demo": "mmc_miss",
+   "agg_quorum_demo": "qc_said"
   }
  },
  {
@@ -75,7 +78,9 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_cell_eval": "acl_wrong",
    "agg_minmax_eval": "am_max_wrong",
-   "agg_lattice_eval": "al_missing"
+   "agg_lattice_eval": "al_missing",
+   "agg_critpath_demo": "cpc_miss",
+   "agg_minimax_demo": "mmc_miss"
   }
  },
  {
@@ -182,7 +187,8 @@ export const BREAKS: Break[] = [
    "agg_empty_strata": "ae_zero_but_ballot",
    "agg_count_strata": "acr_accepted",
    "agg_sum_strata": "asr_accepted",
-   "agg_minmax_strata": "amr_accepted"
+   "agg_minmax_strata": "amr_accepted",
+   "agg_minimax_demo": "mmc_miss"
   }
  },
  {
@@ -236,7 +242,8 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_holistic_witness": "member_missing",
    "agg_count_witness": "member_missing",
-   "agg_sum_witness": "member_missing"
+   "agg_sum_witness": "member_missing",
+   "agg_minimax_demo": "mmc_unsaid"
   }
  },
  {
@@ -295,7 +302,8 @@ export const BREAKS: Break[] = [
   "id": "min_by_value",
   "what": "min members deduplicated by value",
   "expect": {
-   "agg_minmax_witness": "am_tie_missing"
+   "agg_minmax_witness": "am_tie_missing",
+   "agg_minimax_demo": "mmc_unsaid"
   }
  },
  {
@@ -324,7 +332,9 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_empty_safety": "ae_zero_missing",
-   "agg_empty_eval": "ae_zero_missing"
+   "agg_empty_eval": "ae_zero_missing",
+   "agg_minimax_demo": "mmc_miss",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -347,7 +357,9 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_life_demo": "lf_wrong",
    "agg_voting_demo": "vc_miss",
-   "agg_empty_eval": "ae_zero_missing"
+   "agg_empty_eval": "ae_zero_missing",
+   "agg_minimax_demo": "mmc_miss",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -394,7 +406,8 @@ export const BREAKS: Break[] = [
   "what": "max keeps only the last of its tied members",
   "expect": {
    "agg_minmax_witness": "am_tie_missing",
-   "agg_minmax_why": "why_text_missing"
+   "agg_minmax_why": "why_text_missing",
+   "agg_minimax_demo": "mmc_unsaid"
   }
  },
  {
@@ -431,7 +444,8 @@ export const BREAKS: Break[] = [
   "what": "the door writes every declaration as a min",
   "expect": {
    "agg_join_syntax": "sxj_missing",
-   "agg_lattice_syntax": "decl_missing"
+   "agg_lattice_syntax": "decl_missing",
+   "agg_critpath_demo": "cpc_miss"
   }
  },
  {
@@ -509,7 +523,8 @@ export const BREAKS: Break[] = [
   "id": "lattice_no_retire",
   "what": "a better value does not retire the fact it improves on",
   "expect": {
-   "agg_lattice_eval": "al_two"
+   "agg_lattice_eval": "al_two",
+   "agg_critpath_demo": "cpc_two"
   }
  },
  {
@@ -530,7 +545,8 @@ export const BREAKS: Break[] = [
   "id": "lattice_whynot_plain",
   "what": "whynot explores a lattice value like any other literal",
   "expect": {
-   "agg_lattice_why": "why_text_missing"
+   "agg_lattice_why": "why_text_missing",
+   "agg_critpath_demo": "cpc_unsaid"
   }
  },
  {
@@ -650,7 +666,8 @@ export const BREAKS: Break[] = [
   "id": "lattice_max_stuck",
   "what": "a max lattice keeps the first value it gets: a better one is dropped as if it were worse",
   "expect": {
-   "agg_lattice_eval": "al_missing"
+   "agg_lattice_eval": "al_missing",
+   "agg_critpath_demo": "cpc_miss"
   }
  },
  {
@@ -782,7 +799,8 @@ export const BREAKS: Break[] = [
   "what": "why of a lattice fact prints its canonical member alone, not the digest of members",
   "expect": {
    "agg_tag_why": "tgy_text_missing",
-   "agg_lattice_why": "why_text_missing"
+   "agg_lattice_why": "why_text_missing",
+   "agg_critpath_demo": "cpc_unnamed"
   }
  },
  {
@@ -797,7 +815,8 @@ export const BREAKS: Break[] = [
   "what": "a threshold reads N as N - 1: reached one member short",
   "expect": {
    "agg_threshold_eval": "oracle_short",
-   "agg_threshold_witness": "quorum_size"
+   "agg_threshold_witness": "quorum_size",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -805,7 +824,8 @@ export const BREAKS: Break[] = [
   "what": "news on a relation read inside a threshold does not fire its rule again: the recursion stops at the first round",
   "expect": {
    "agg_threshold_eval": "ate_wrong",
-   "agg_threshold_strata": "recursion_short"
+   "agg_threshold_strata": "recursion_short",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -813,7 +833,8 @@ export const BREAKS: Break[] = [
   "what": "the Quorum is the first N by projection text, not by height",
   "expect": {
    "agg_threshold_witness": "quorum_wrong",
-   "agg_threshold_why": "text_missing"
+   "agg_threshold_why": "text_missing",
+   "agg_quorum_demo": "qc_unsaid"
   }
  },
  {
@@ -829,14 +850,16 @@ export const BREAKS: Break[] = [
   "what": "a quorum keeps the members it was reached with: never closed, never canonical",
   "expect": {
    "agg_threshold_witness": "quorum_wrong",
-   "agg_threshold_why": "text_missing"
+   "agg_threshold_why": "text_missing",
+   "agg_quorum_demo": "qc_unsaid"
   }
  },
  {
   "id": "thr_whynot_reached",
   "what": "whynot takes a group one member short for reached",
   "expect": {
-   "agg_threshold_why": "text_missing"
+   "agg_threshold_why": "text_missing",
+   "agg_quorum_demo": "qc_unsaid"
   }
  },
  {
@@ -921,7 +944,8 @@ export const BREAKS: Break[] = [
   "id": "thr_acc_frozen",
   "what": "a threshold group short of N keeps the members it had when first touched: the round's news never grows it",
   "expect": {
-   "agg_threshold_eval": "ate_wrong"
+   "agg_threshold_eval": "ate_wrong",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -4035,7 +4059,9 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_cell_eval": "acl_wrong",
    "agg_minmax_eval": "am_max_wrong",
-   "agg_lattice_eval": "al_missing"
+   "agg_lattice_eval": "al_missing",
+   "agg_critpath_demo": "cpc_miss",
+   "agg_minimax_demo": "mmc_miss"
   }
  },
  {
@@ -4051,7 +4077,8 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_count_eval": "ac_count_wrong",
    "agg_sum_eval": "as_sum_wrong",
-   "agg_minmax_eval": "am_min_missing"
+   "agg_minmax_eval": "am_min_missing",
+   "agg_minimax_demo": "mmc_miss"
   }
  },
  {
@@ -4065,7 +4092,9 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_empty_eval": "ae_zero_missing"
+   "agg_empty_eval": "ae_zero_missing",
+   "agg_minimax_demo": "mmc_miss",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -4093,7 +4122,8 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_threshold_eval": "oracle_short"
+   "agg_threshold_eval": "oracle_short",
+   "agg_quorum_demo": "qc_miss"
   }
  },
  {
@@ -4107,7 +4137,8 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_lattice_eval": "al_two"
+   "agg_lattice_eval": "al_two",
+   "agg_critpath_demo": "cpc_two"
   }
  },
  {
@@ -4253,7 +4284,8 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_threshold_why": "text_missing",
-   "agg_threshold_witness": "quorum_wrong"
+   "agg_threshold_witness": "quorum_wrong",
+   "agg_quorum_demo": "qc_unsaid"
   }
  },
  {
@@ -4268,7 +4300,8 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_lattice_why": "why_text_missing",
-   "agg_tag_why": "tgy_text_missing"
+   "agg_tag_why": "tgy_text_missing",
+   "agg_critpath_demo": "cpc_unnamed"
   }
  },
  {
