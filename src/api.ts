@@ -1157,6 +1157,7 @@ export class Rofl {
       for (const p of w.prems) {
         if (p.t === 'fact' && staged) line(this.renderPast(p.key, w.tick - 1, indent + 1));
         else if (p.t === 'fact') next.push({ t: 'fact', key: p.key, indent: indent + 1 });
+        else if (p.t === 'neg' && staged) line('  '.repeat(indent + 1) + 'not ' + p.key + ' [finite failure]');
         else if (p.t === 'neg') {
           // An undefined premise is not a finite failure, and the difference is
           // the whole point of the third value: `not p` where p is undefined

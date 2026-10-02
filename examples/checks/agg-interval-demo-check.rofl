@@ -1,0 +1,149 @@
+-- examples/checks/agg-interval-demo-check.rofl — agg_interval_demo, INTERVAL
+-- ANALYSIS OF LOOP COUNTERS (examples/interval/README.md). The rules are
+-- examples/interval/interval.rofl, run with --explain: seven loops, each head
+-- declared `widen 2`. Every head must close within exactly the enclosure
+-- derived here by hand, a `widened` shrug and never a value; no enclosure may
+-- lie below the least value of its loop; the questions an enclosure is asked
+-- (can the counter be past N after the loop) are answered as derived here; and
+-- `why` of a head tells its widenings and narrowings, and no more.
+--
+-- BY HAND. A head starts at its entry value and the loop adds its step to what
+-- the guard lets in; the least value is the hull of every value it takes.
+--
+--   c: i = 0; while (i < 10) i = i + 1. 0 to 10: [0,10]. The third
+--      improvement, [0,3], goes to the next bound written at or past 3: 9
+--      (the guard is (-inf,9]). One step past it, [0,10], is the least value
+--      and the end the exit writes. Nothing comes down.
+--   f: while (i < N), N a fact, 7. No number in the rules names it: the third
+--      improvement goes to infinity, [0,inf). From there the body is the meet
+--      with (-inf,6], plus one [1,7], joined with [0,0]: [0,7].
+--   n: i = 0; while (i < 8) { j = 0; while (j < 5) j = j + 1; i = i + 1 }.
+--      The inner head is entered from the outer body, each time at 0: its
+--      values are 0 to 5, [0,5]. The outer head 0 to 8, [0,8]. Each widens to
+--      a written bound (4 and 7) and the loop steps one past it.
+--   d: i = 10; while (i > 0) i = i - 1. 10 down to 0, [0,10]. The third
+--      improvement, [7,10], goes down to the lowest written bound, 1, and one
+--      step below it is 0.
+--   m: while (i < 1000000): [0,1000000], by the widening in a handful of
+--      steps; a plain hull would pay a million.
+--   t: i = 0; while (i < 5) i = i + 2. 0, 2, 4, 6: [0,6]. The third
+--      improvement, [0,6], is past every bound written (5 is the largest), so
+--      it goes to [0,inf); the descending pass brings it to what the rules
+--      contribute from it, [0,6].
+--   z: i = 0; while (true) i = i + 1. [0,inf), and it stays there: the
+--      concrete loop does not end, so the enclosure is the honest answer, and
+--      nothing comes down.
+edb(ivc_closes).
+ivc_closes(c_head, iv(0, 10)).
+ivc_closes(f_head, iv(0, 7)).
+ivc_closes(n_oh, iv(0, 8)).
+ivc_closes(n_ih, iv(0, 5)).
+ivc_closes(d_head, iv(0, 10)).
+ivc_closes(m_head, iv(0, 1000000)).
+ivc_closes(t_head, iv(0, 6)).
+ivc_closes(z_head, iv(0, inf)).
+edb(ivc_least).
+ivc_least(c_head, 0, 10).
+ivc_least(f_head, 0, 7).
+ivc_least(n_oh, 0, 8).
+ivc_least(n_ih, 0, 5).
+ivc_least(d_head, 0, 10).
+ivc_least(m_head, 0, 1000000).
+ivc_least(t_head, 0, 6).
+ivc_least(z_head, 0, inf).
+ivc_mark(R, V)      :- shrug[$kernel]($lattice(R, main, 0, $cons(head, $nil)), widened, within(V)).
+ivc_hole(R)         :- hole[$kernel]($lattice(R, main, 0, $cons(head, $nil)), widening_forced).
+ivc_wrong(R, V)     :- ivc_closes(R, V), not ivc_mark(R, V).
+ivc_extra(R, V)     :- ivc_mark(R, V), not ivc_closes(R, V).
+ivc_unheld(R)       :- ivc_closes(R, _), not ivc_hole(R).
+-- an enclosure that does not hold the least value is unsound
+ivc_below(R)        :- ivc_least(R, L, _), ivc_mark(R, iv(Lo, _)), Lo != ninf, Lo > L.
+ivc_below(R)        :- ivc_least(R, _, H), ivc_mark(R, iv(_, Hi)), H != inf, Hi != inf, Hi < H.
+ivc_below(R)        :- ivc_least(R, _, inf), ivc_mark(R, iv(_, Hi)), Hi != inf.
+alarm(ivc_wrong).
+alarm(ivc_extra).
+alarm(ivc_unheld).
+alarm(ivc_below).
+
+-- THE QUESTION AN ENCLOSURE ANSWERS: is the counter at most N after the loop
+-- (an index checked against N, not against 0). Narrowing is what makes it
+-- answerable for f and t, whose widened value was [0,inf); a loop that does
+-- not end answers no to every N, and that no is the enclosure's, not the loop's
+ivc_safe(R, N)      :- ivc_ask(R, N), ivc_mark(R, iv(_, H)), H != inf, H <= N.
+ivc_wrong_ask(R, N) :- ivc_ask(R, N), ivc_yes(R, N), not ivc_safe(R, N).
+ivc_wrong_ask(R, N) :- ivc_ask(R, N), ivc_safe(R, N), not ivc_yes(R, N).
+edb(ivc_ask).
+ivc_ask(c_head, 10).
+ivc_ask(c_head, 9).
+ivc_ask(f_head, 7).
+ivc_ask(f_head, 6).
+ivc_ask(t_head, 6).
+ivc_ask(t_head, 5).
+ivc_ask(n_ih, 5).
+ivc_ask(d_head, 10).
+ivc_ask(z_head, 1000000000).
+edb(ivc_yes).
+ivc_yes(c_head, 10).
+ivc_yes(f_head, 7).
+ivc_yes(t_head, 6).
+ivc_yes(n_ih, 5).
+ivc_yes(d_head, 10).
+alarm(ivc_wrong_ask).
+
+-- THE PROOF ROWS. `why` of a head names its widenings, in the order they were
+-- made, and its narrowings, each with the join it came down by
+edb(explain_request).
+edb(explained).
+explain_request(why, c_head(head, iv(0, 10))).
+explain_request(why, f_head(head, iv(0, 7))).
+explain_request(why, t_head(head, iv(0, 6))).
+explain_request(why, d_head(head, iv(0, 10))).
+explain_request(why, n_oh(head, iv(0, 8))).
+explain_request(why, z_head(head, iv(0, inf))).
+ivw_holds(A, T)     :- explained[$explain](why, A, _, L), ivw_want(A, T), N is str_segs(L, T), N > 1.
+ivw_want(c_head(head, iv(0, 10)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, 9)").
+ivw_want(c_head(head, iv(0, 10)), "is a shrug: widened, a declared widening enclosed the value").
+ivw_want(f_head(head, iv(0, 7)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)").
+ivw_want(f_head(head, iv(0, 7)), "narrowed iv(0, inf) to iv(0, 7) by iv(0, 7), the join of what its rules contribute from it").
+ivw_want(t_head(head, iv(0, 6)), "iv(0, 4) joined with iv(2, 6) is iv(0, 6), widened to iv(0, inf)").
+ivw_want(t_head(head, iv(0, 6)), "narrowed iv(0, inf) to iv(0, 6) by iv(0, 6), the join of what its rules contribute from it").
+ivw_want(d_head(head, iv(0, 10)), "iv(8, 10) joined with iv(7, 9) is iv(7, 10), widened to iv(1, 10)").
+ivw_want(n_oh(head, iv(0, 8)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, 4)").
+ivw_want(n_oh(head, iv(0, 8)), "iv(0, 5) joined with iv(1, 6) is iv(0, 6), widened to iv(0, 7)").
+ivw_want(z_head(head, iv(0, inf)), "iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)").
+ivw_missing(A, T)   :- ivw_want(A, T), not ivw_holds(A, T).
+-- a loop narrowing could not help says nothing of narrowing, and one it did
+-- help says it once
+ivw_line(A, I)      :- explained[$explain](why, A, I, L), N is str_segs(L, "narrowed iv("), N > 1.
+ivw_lines(A, N)     :- ivw_counted(A), N is count(I : ivw_line(A, I)).
+edb(ivw_counted).
+ivw_counted(c_head(head, iv(0, 10))).
+ivw_counted(f_head(head, iv(0, 7))).
+ivw_counted(t_head(head, iv(0, 6))).
+ivw_counted(d_head(head, iv(0, 10))).
+ivw_counted(n_oh(head, iv(0, 8))).
+ivw_counted(z_head(head, iv(0, inf))).
+edb(ivw_nlines).
+ivw_nlines(c_head(head, iv(0, 10)), 0).
+ivw_nlines(f_head(head, iv(0, 7)), 1).
+ivw_nlines(t_head(head, iv(0, 6)), 1).
+ivw_nlines(d_head(head, iv(0, 10)), 0).
+ivw_nlines(n_oh(head, iv(0, 8)), 0).
+ivw_nlines(z_head(head, iv(0, inf)), 0).
+ivw_wrong_lines(A, N) :- ivw_lines(A, N), not ivw_nlines(A, N).
+ivw_refused(A)      :- explained[$explain](why, A, 0, L), N is str_segs(L, "does not hold"), N > 1.
+alarm(ivw_missing).
+alarm(ivw_wrong_lines).
+alarm(ivw_refused).
+-- every head is a shrug, so no head holds a row
+-- expect-row: shrug[$kernel]($lattice(f_head,main,0,$cons(head,$nil)),widened,within(iv(0,7)))
+-- expect-row: shrug[$kernel]($lattice(t_head,main,0,$cons(head,$nil)),widened,within(iv(0,6)))
+-- expect-row: shrug[$kernel]($lattice(z_head,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))
+-- expect-no-row: c_head[main](head,
+-- expect-no-row: f_head[main](head,
+-- expect-no-row: n_oh[main](head,
+-- expect-no-row: n_ih[main](head,
+-- expect-no-row: d_head[main](head,
+-- expect-no-row: m_head[main](head,
+-- expect-no-row: t_head[main](head,
+-- expect-no-row: z_head[main](head,

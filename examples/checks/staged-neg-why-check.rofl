@@ -1,0 +1,23 @@
+-- examples/checks/staged-neg-why-check.rofl — `why` of a firing staged @next
+-- explains its negated premise as it stood in the tick the rule fired in.
+-- The premise `not sn_r(a)` held at tick 0 (finite failure); at tick 1, where
+-- the fact is asked, sn_r(a) holds. Read against the arrival tick it printed
+-- "sn_r[main](a) holds; nothing to demonstrate" under a negation: the answer
+-- about tick 1 for a premise read at tick 0
+-- (f_why_reads_a_staged_negation_on_the_arrival_tick).
+edb(explain_request).
+edb(explained).
+explain_request(why, sn_p(a)).
+-- an asserted fact lasts one tick: the request is carried to tick 1, where p(a) holds
+explain_request(K, A)@next :- explain_request(K, A).
+snw_line(L) :- explained[$explain](why, sn_p(a), _, L).
+snw_failed() :- snw_line(L), N is str_segs(L, "not sn_r[main](a) [finite failure]"), N > 1.
+snw_demo() :- snw_line(L), N is str_segs(L, "nothing to demonstrate"), N > 1.
+snw_holds() :- snw_line(L), N is str_segs(L, "sn_r[main](a) holds"), N > 1.
+snw_bad(missing) :- not snw_failed().
+snw_bad(arrival_tick) :- snw_demo().
+snw_bad(arrival_tick) :- snw_holds().
+alarm(snw_bad).
+-- an asserted fact lasts one tick, so the alarm declaration is carried to the
+-- tick the harness reads
+alarm(R)@next :- alarm(R).

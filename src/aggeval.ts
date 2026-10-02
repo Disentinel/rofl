@@ -5940,6 +5940,13 @@ export class AggEval {
 
   /** A PREMISE READ IN A PAST TICK, named with the rules that derived it then. */
   private renderPast(pr: PremRef, t: number, indent: number, o: WhyOpts, next: WhyTask[]): void {
+    const bare = pr.t === 'neg';
+    if (pr.t === 'neg' && bare) {
+      // a negated premise of a staged firing held in the tick it was read: the arrival tick's store says nothing
+      // about it, so it is the bare claim, no demonstration
+      next.push(line(`${'  '.repeat(indent)}not ${pr.key} [finite failure]`));
+      return;
+    }
     if (pr.t !== 'fact') { this.renderPrem(pr, indent, o, next); return; }
     const r = this.rec(pr.key);
     const ft = canonTerm(factTerm(r.rel, r.persp, r.args));

@@ -1486,6 +1486,28 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "staged_neg_arrival",
+  "what": "why explains a staged firing's negated premise against the arrival tick's store (an inlined whynot that says the fact holds) instead of as it stood in the tick the rule fired in",
+  "expect": {
+   "staged_neg_why": "snw_bad",
+   "staged_neg_why_agg": "snw_bad"
+  }
+ },
+ {
+  "id": "ts_staged_neg_arrival_agg",
+  "what": "the TypeScript aggregate explainer reads a staged firing's negated premise against the arrival tick",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const bare = pr.t === 'neg';",
+    "const bare = false;"
+   ]
+  ],
+  "expect": {
+   "staged_neg_why_agg": "snw_bad"
+  }
+ },
+ {
   "id": "wfs_unknowns_decide",
   "what": "under well-founded semantics a negation of what a hole left out is judged as if it were false, and holds for certain",
   "expect": {
@@ -2634,6 +2656,7 @@ export const BREAKS: Break[] = [
   "id": "narrow_off",
   "what": "no descending pass is made: a widened cell closes on the value the widening left",
   "expect": {
+   "agg_interval_demo": "ivc_wrong",
    "agg_narrow_eval": "ann_wrong",
    "agg_narrow_why": "anw_missing",
    "agg_widen_eval": "awe_unwidened"
@@ -2699,6 +2722,7 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
+   "agg_interval_demo": "ivc_wrong",
    "agg_narrow_eval": "ann_wrong"
   }
  },
