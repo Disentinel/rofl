@@ -5,7 +5,8 @@
     rofl-nb file.rofl.md           run it; --json, --cell N, --all
     rofl-nb vocab [word]           what you can say about code
     rofl-nb vocab file.rofl.md     ... plus that notebook's own sentences
-    rofl-nb translate file.rofl.md Claude turns natural cells into rofl
+    rofl-nb translate file.rofl.md a model turns natural cells into rofl
+    rofl-nb models                 which model translate asks
     rofl-nb --help
 
 Exit: 0 holds · 1 a `never` fails · 2 not read · 3 holds as far as it sees.

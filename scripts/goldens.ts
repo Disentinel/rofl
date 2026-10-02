@@ -197,6 +197,25 @@ export function declared(text?: string): World[] {
   return [...out.values()];
 }
 
+/** The files a world is declared to refuse, as `world\tfile`. */
+function expectedRefusals(): Set<string> {
+  const r = pack('facts/checks.rofl');
+  return new Set(r ? col(r, 'check_refuses(N, F)', 'N', 'F').map(([n, f]) => `${n}\t${f}`) : []);
+}
+/** The refusals a world is not declared to make: by check_refuses, or by its file's first line, `-- expect-refusal: <text>`, which the
+ *  refusal says (expectedRefusal). */
+function undeclared(w: World, a: Answer, ok: Set<string>): string[] {
+  const left = a.dropped.filter((d) => !ok.has(`${w.name}\t${d.slice(0, d.indexOf(':'))}`));
+  if (left.length === 0) return left;
+  // a world in sentences is refused as the file the reader wrote, which carries the line (sentences.ts)
+  const files = placed(w).files;
+  return left.filter((d) => {
+    const base = d.slice(0, d.indexOf(':')), f = files.find((x) => path.basename(x) === base), want = f && expectedRefusal(f);
+    return !(want && d.slice(base.length + 1).includes(want));
+  });
+}
+
+
 /** Rows per relation, read off the canonical state. `wit` lines are counted as
  *  one pseudo-relation: which support a store records among equals is not fixed
  *  by the semantics, so the COUNT is the part worth pinning. */
@@ -796,12 +815,16 @@ function mdWorldPaths(): string[] {
   return out;
 }
 
+let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
 export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean): string | null {
   if (!g) return `${w.name}: no golden — bless it or delete the world`;
   const ts = answerTS(w);
   const rs = rustMissing ? null : answerRust(w);
   const bad: string[] = [];
+  // a file the world refuses and is not declared to refuse (check_refuses in facts/checks.rofl)
+  const blessed = w.oneEngine === 'rust' ? rs : ts;
+  if (blessed) for (const d of undeclared(w, blessed, refusalsOk ??= expectedRefusals())) bad.push(`REFUSED ${d}`);
   if (w.oneEngine === 'rust') {
     if (!rs) return `${w.name.padEnd(28)} rust-only world and no Rust binary`;
     if (rs.hash !== g.hash) {
@@ -924,6 +947,13 @@ if (isMain) {
     const answers = await runPool<{ a: Answer; said: string[] }>(ws.map((w) => ({ mod: SELF, fn: 'blessAnswer', args: [w] })));
     const rows: [World, Answer][] = ws.map((w, i) => [w, answers[i].a]);
     for (const { said } of answers) for (const l of said) console.log(l);
+    const ok = expectedRefusals();
+    const bad = rows.flatMap(([w, a]) => undeclared(w, a, ok).map((d) => `${w.name}: ${d}`));
+    if (bad.length > 0) {
+      for (const b of bad) console.log(`REFUSED ${b}`);
+      console.log('not blessed: a world refuses a file it is not declared to refuse (check_refuses in facts/checks.rofl)');
+      process.exit(1);
+    }
     fs.writeFileSync(GOLDEN, render(rows));
     for (const [w, a] of rows) if (a.dropped.length > 0)
       console.log(`  refused ${w.name}: ${a.dropped.join('; ')}`);
@@ -998,7 +1028,9 @@ if (isMain) {
     // A DOCUMENT THAT LIES ABOUT THE TREE IS AS RED AS A FACT THAT MOVED, and it
     // costs about a second. CLAUDE.md was hand-patched three times in two days
     // because nothing here could see it.
-    failed(await docsCheck!, /STALE|BROKEN|DANGLING/, 'scripts/render_docs.ts --check');
+    const docs = await docsCheck!;
+    failed(docs, /STALE|BROKEN|DANGLING/, 'scripts/render_docs.ts --check');
+    for (const l of docs.out.split('\n').filter((l) => /UNVERIFIABLE/.test(l))) console.log(`!! ${l.trim()}`);
   }
   // AND THE [checks] BOOK, for the same reason and by the same means. The
     // coverage world reads `facts/spec-census.rofl` — which checks exist, which

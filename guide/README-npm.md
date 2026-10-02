@@ -24,6 +24,8 @@ The tutorial is a game in six short levels, one new word each. Then:
   exit codes, a glossary.
 - [WRITING.md](WRITING.md): how to write sentences and rules.
 - [CHEATSHEET.md](CHEATSHEET.md): all of it on one screen.
+- [DRAWING.md](DRAWING.md): `draw K`, a picture of what a notebook
+  concludes, and the examples in `examples/visual`.
 
 ## For an agent
 

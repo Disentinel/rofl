@@ -13,7 +13,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Kernel } from './kernel.ts';
-import { LIMIT, from, runFile, wall } from './cli.ts';
+import { LIMIT, from, limits, readAt, runFile, wallOf, type Limits } from './cli.ts';
 import { libFiles, parseFront } from './front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -72,7 +72,7 @@ function ask(sock: string, file: string): Promise<Reply> {
     const interrupt = () => { stop(sock); process.exit(130); };
     const end = () => { clearTimeout(timer); process.off('SIGINT', interrupt); };
     c.on('connect', () => {
-      c.end(JSON.stringify({ file }) + '\n');
+      c.end(JSON.stringify({ file, limits: limits() }) + '\n');
       process.on('SIGINT', interrupt);
       timer = setTimeout(() => { end(); c.destroy(); stop(sock); done({ error: `the kept kernel gave no answer in ${wait / 1000} s and was stopped; ROFL_NB_TIMEOUT sets the wait in seconds` }); }, wait);
     });
@@ -106,7 +106,7 @@ export async function viaDaemon(file: string): Promise<Reply | undefined> {
 function keptFor(file: string): string {
   try {
     const front = parseFront(readFileSync(file, 'utf8')), at = from(path.dirname(file));
-    return JSON.stringify([libFiles(path.relative(ROOT, file), front), front.reads.map(at), front.code.flatMap((g) => globSync(at(g))).sort()]);
+    return JSON.stringify([libFiles(path.relative(ROOT, file), front), front.reads.map(readAt(path.dirname(file))), front.code.flatMap((g) => globSync(at(g))).sort()]);
   } catch { return file; }
 }
 
@@ -114,7 +114,7 @@ function serve(sock: string) {
   owned(path.dirname(sock));
   const idle = Number(process.env.ROFL_NB_IDLE ?? 900) * 1000;
   const bye = (why: string, code = 0) => { console.error(`${new Date().toISOString()} daemon ${process.pid} ${path.basename(sock)}: ${why}`); process.exit(code); };
-  let kept: { key: string; kernel: Kernel } | undefined, timer: NodeJS.Timeout | undefined;
+  let kept: { key: string; kernel: Kernel } | undefined, timer: NodeJS.Timeout | undefined, wall = wallOf({});   // each run's, from its request
   const rest = () => { clearTimeout(timer); timer = setTimeout(() => server.close(() => bye(`idle ${idle / 1000} s`)), idle); };
   const server = createServer((c) => {
     let text = '';
@@ -122,12 +122,13 @@ function serve(sock: string) {
       if (text.includes('\n')) return;
       text += d;
       if (!text.includes('\n')) return;
-      let req: { file?: unknown; quit?: boolean };
+      let req: { file?: unknown; quit?: boolean; limits?: Limits };
       try { req = JSON.parse(text) ?? {}; } catch { return void c.end(JSON.stringify({ error: 'not a request' })); }
       if (req.quit) { c.end(); try { unlinkSync(sock); } catch { /* gone already */ } bye('retired by a daemon of a newer engine'); }
       const file = req.file;
       if (typeof file !== 'string' || !file.endsWith('.rofl.md')) return void c.end(JSON.stringify({ error: `${String(file)}: not a notebook: a notebook is a .rofl.md file` }));
-      const key = keptFor(file), kernel = kept?.key === key ? kept.kernel : new Kernel({ wall });
+      wall = wallOf(req.limits ?? {});
+      const key = keptFor(file), kernel = kept?.key === key ? kept.kernel : new Kernel({ wall: () => wall() });
       kept = undefined;
       let reply: Reply;
       try { reply = { result: runFile(file, kernel) }; kept = { key, kernel }; } catch (e) { reply = { error: (e as Error).message }; }

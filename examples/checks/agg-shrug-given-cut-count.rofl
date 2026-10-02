@@ -1,0 +1,13 @@
+-- examples/checks/agg-shrug-given-cut-count.rofl — agg_cell_shrug_given_cut_agg:
+-- agg-shrug-given-cut.rofl with an aggregate over what the readers of shrug
+-- read, so the TypeScript side is the aggregate evaluator (src/aggeval.ts):
+-- cut short after they fired (check_opt budget 2500), never refused.
+-- expect-row: hole[$kernel]($adhoc,budget_exhausted)
+-- expect-row: shrug[$kernel]($adhoc,budget,spent(steps,
+-- expect-row: shrug[$kernel](in(sgy_b,sgy_k(0)),given,concluded)
+sgy_n(0).
+sgy_n(Y) :- sgy_n(X), X < 60, Y is X + 1.
+unknown[sgy_b](sgy_k(X)) :- sgy_n(X).
+sgy_any(T, R) :- shrug(T, R, _).
+sgy_two(T, U) :- sgy_any(T, _), sgy_any(U, _).
+sgy_m(N) :- N is count(T, U : sgy_two(T, U)).

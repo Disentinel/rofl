@@ -22,6 +22,9 @@
 --               cycle (a component of the rules' dependency graph with a
 --               negation inside it); `below` when a world below fed it,
 --               whose own rows name its cycles
+--   given       stated when a book asserted `unknown` of it as a fact,
+--               concluded when a rule of a book did; the alternating
+--               fixpoint did not leave it undefined, so it rests on no cycle
 --   conflict    parties(Ps): the answers or books that disagree; for a
 --               subsumptive cell, the values whose dominance is no order,
 --               in canonical order; the target is the cell
@@ -43,6 +46,7 @@ shrug_reason(conflict, "two answers were given for one key, or two books disagre
 shrug_reason(federation, "the answer lives in a volume or book that is not loaded").
 shrug_reason(widened, "a declared widening enclosed the value: the least value lies within it, and is not known").
 shrug_reason(inherited, "the answer reads another answer that is a shrug").
+shrug_reason(given, "a book states that it is not known").
 
 shrug_cause(budget_exhausted, budget, "the step budget ran out").
 shrug_cause(space_exhausted, budget, "the row budget ran out").
@@ -64,6 +68,8 @@ shrug_cause(improving_cycle, divergence, "a lattice value came back through its 
 shrug_cause(dominance_cycle, conflict, "a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided").
 shrug_cause(dominance_intransitive, conflict, "a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided").
 shrug_cause(undefined, paradox, "the alternating fixpoint left it undefined").
+shrug_cause(stated, given, "the book asserted unknown of it as a fact; the alternating fixpoint did not leave it undefined").
+shrug_cause(concluded, given, "a rule of the book concluded unknown of it; the alternating fixpoint did not leave it undefined").
 shrug_cause(support_withdrawn, inherited, "a premise it read is a shrug").
 shrug_cause(fault_left_out, inherited, "a shrug at the tick before kept it from being staged").
 shrug_cause(left_out_below, inherited, "the world below has no answer for it").

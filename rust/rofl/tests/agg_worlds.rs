@@ -152,6 +152,116 @@ fn state(s: &Session) -> String {
     s.eval.store.canonical_state(&s.eval.h)
 }
 
+/// One world loaded together, held to every property the test names: what is
+/// wrong with it, one line each.
+fn check_world(w: &World) -> Vec<String> {
+    let mut bad: Vec<String> = Vec::new();
+    let walled = w.budget.is_some() || w.space.is_some();
+    let mut s = fresh_walled(w.strata, w.budget.unwrap_or(BUDGET));
+    if let Some(n) = w.space {
+        s.eval.space = n;
+    }
+    s.eval.retain_ticks = w.retain;
+    for f in &w.files {
+        let base = f.file_name().unwrap().to_string_lossy().into_owned();
+        // only a fixture is offered alone, as the harness offers it
+        let Some(want) = expected_refusal(f) else {
+            s.load(&read(f), None).unwrap_or_else(|d| panic!("{}: {base}: {}", w.name, d.join("; ")));
+            continue;
+        };
+        match alone(f, w.strata) {
+            Ok(()) => bad.push(format!("{}: {base} was to be refused ({want}) and loaded", w.name)),
+            Err(e) if e.contains(&want) => {}
+            Err(e) => bad.push(format!("{}: {base} refused ({e}); expected {want:?}", w.name)),
+        }
+    }
+    let kept: Vec<PathBuf> = w.files.iter().filter(|f| expected_refusal(f).is_none()).cloned().collect();
+    if let Err(e) = feed(&mut s, &below(&kept)) {
+        bad.push(format!("{}: {e}", w.name));
+        return bad;
+    }
+    // as `rofl-load --ticks N` runs it: N boundaries, each evaluating first
+    let run = if w.ticks > 0 {
+        (0..w.ticks).try_for_each(|_| s.tick().map(|_| ()))
+    } else {
+        s.evaluate().map(|_| ())
+    };
+    if let Err(e) = run {
+        bad.push(format!("{}: does not evaluate: {}", w.name, rofl::describe(&e)));
+        return bad;
+    }
+    // the explain bridge answers once the world is evaluated, as
+    // `rofl-load --explain` does, and its rows are read with the rest
+    if w.explain {
+        if w.ticks > 0 {
+            s.evaluate().unwrap();
+        }
+        s.explain_requests().unwrap();
+        s.evaluate().unwrap();
+    }
+    // A WORLD THE BUDGET CUT PROVES NOTHING: its alarms may simply not
+    // have been reached. What it proves, its files say as rows the state
+    // must hold and must not, and a world that asks for a wall says so
+    // with the world's hole; one whose wall is a ceiling says the hole is
+    // not there, and is an ordinary world.
+    let cut = !s.ask("hole(M, space_exhausted)").unwrap().rows.is_empty();
+    let st = state(&s);
+    for f in &w.files {
+        for l in read(f).lines() {
+            let (want, prefix) = match (l.strip_prefix("-- expect-row: "), l.strip_prefix("-- expect-no-row: ")) {
+                (Some(p), _) => (true, p.trim()),
+                (_, Some(p)) => (false, p.trim()),
+                _ => continue,
+            };
+            if st.lines().any(|x| x.starts_with(prefix)) != want {
+                bad.push(format!("{}: the state {} the row {prefix}", w.name, if want { "lacks" } else { "holds" }));
+            }
+        }
+    }
+    if walled && s.eval.store.partial_eval {
+        s.eval.store.dirty = true;
+        let again = s.evaluate();
+        if again.is_err() || state(&s) != st {
+            bad.push(format!("{}: a second evaluation to the wall is a different world", w.name));
+        }
+        return bad;
+    }
+    if s.eval.store.partial_eval || cut {
+        bad.push(format!("{}: the world was cut by the budget", w.name));
+        return bad;
+    }
+    // the tick a ticked world entered is evaluated before it is read
+    // (f_a_ticked_case_is_read_before_its_tick_is_evaluated)
+    if w.ticks > 0 {
+        s.evaluate().unwrap();
+    }
+    for a in alarms(&mut s) {
+        bad.push(format!("{}: ALARM {a}", w.name));
+    }
+    let first = state(&s);
+    s.eval.store.dirty = true;
+    s.evaluate().unwrap();
+    if state(&s) != first {
+        bad.push(format!("{}: a second evaluation is a different world", w.name));
+    }
+    // A SNAPSHOT CARRIES THE WORLD, NOT ITS WALLS: the opener gives them, as
+    // `open` takes the budget, so the world is opened under the walls it was
+    // evaluated under. Opened under the default space, agg_precise_oracle's
+    // 528 720 rows met the wall of 500 000 and came back with a hole
+    // (f_a_snapshot_carries_the_world_not_its_walls).
+    let mut back = Session::open(&s.save(), s.eval.budget).unwrap_or_else(|e| panic!("{}: {e}", w.name));
+    back.eval.mode = s.eval.mode;
+    back.eval.space = s.eval.space;
+    back.eval.retain_ticks = s.eval.retain_ticks;
+    back.evaluate().unwrap();
+    if state(&back) != first {
+        let (a, b) = (state(&back), first.clone());
+        let diff: Vec<&str> = a.lines().filter(|l| !b.lines().any(|m| m == *l)).take(3).collect();
+        bad.push(format!("{}: saved and opened, it evaluates to another world: {diff:?}", w.name));
+    }
+    bad
+}
+
 #[test]
 fn every_world_loaded_together_holds_its_properties_and_its_state() {
     let ws = registry();
@@ -164,107 +274,24 @@ fn every_world_loaded_together_holds_its_properties_and_its_state() {
     let (read_first, ws): (Vec<World>, Vec<World>) = ws.into_iter().partition(|w| w.sentences || w.files.iter().any(|f| f.to_string_lossy().ends_with(".rofl.md")));
     eprintln!("{} worlds in sentences are answered through the reader by npm test: {}", read_first.len(),
         read_first.iter().map(|w| w.name.as_str()).collect::<Vec<_>>().join(", "));
-    let mut bad: Vec<String> = Vec::new();
-    for w in &ws {
-        let walled = w.budget.is_some() || w.space.is_some();
-        let mut s = fresh_walled(w.strata, w.budget.unwrap_or(BUDGET));
-        if let Some(n) = w.space {
-            s.eval.space = n;
-        }
-        s.eval.retain_ticks = w.retain;
-        for f in &w.files {
-            let base = f.file_name().unwrap().to_string_lossy().into_owned();
-            // only a fixture is offered alone, as the harness offers it
-            let Some(want) = expected_refusal(f) else {
-                s.load(&read(f), None).unwrap_or_else(|d| panic!("{}: {base}: {}", w.name, d.join("; ")));
-                continue;
-            };
-            match alone(f, w.strata) {
-                Ok(()) => bad.push(format!("{}: {base} was to be refused ({want}) and loaded", w.name)),
-                Err(e) if e.contains(&want) => {}
-                Err(e) => bad.push(format!("{}: {base} refused ({e}); expected {want:?}", w.name)),
+    // the worlds are independent and each builds its own sessions, so they are
+    // checked side by side; the slowest (a world saved, opened and evaluated
+    // again) sets the time instead of the sum
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let jobs = std::thread::available_parallelism().map_or(4, |n| n.get()).min(ws.len().max(1));
+    let mut bad: Vec<(usize, Vec<String>)> = std::thread::scope(|sc| {
+        let hands: Vec<_> = (0..jobs).map(|_| sc.spawn(|| {
+            let mut out = Vec::new();
+            loop {
+                let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let Some(w) = ws.get(i) else { break out };
+                out.push((i, check_world(w)));
             }
-        }
-        let kept: Vec<PathBuf> = w.files.iter().filter(|f| expected_refusal(f).is_none()).cloned().collect();
-        if let Err(e) = feed(&mut s, &below(&kept)) {
-            bad.push(format!("{}: {e}", w.name));
-            continue;
-        }
-        // as `rofl-load --ticks N` runs it: N boundaries, each evaluating first
-        let run = if w.ticks > 0 {
-            (0..w.ticks).try_for_each(|_| s.tick().map(|_| ()))
-        } else {
-            s.evaluate().map(|_| ())
-        };
-        if let Err(e) = run {
-            bad.push(format!("{}: does not evaluate: {}", w.name, rofl::describe(&e)));
-            continue;
-        }
-        // the explain bridge answers once the world is evaluated, as
-        // `rofl-load --explain` does, and its rows are read with the rest
-        if w.explain {
-            if w.ticks > 0 {
-                s.evaluate().unwrap();
-            }
-            s.explain_requests().unwrap();
-            s.evaluate().unwrap();
-        }
-        // A WORLD THE BUDGET CUT PROVES NOTHING: its alarms may simply not
-        // have been reached. What it proves, its files say as rows the state
-        // must hold and must not, and a world that asks for a wall says so
-        // with the world's hole; one whose wall is a ceiling says the hole is
-        // not there, and is an ordinary world.
-        let cut = !s.ask("hole(M, space_exhausted)").unwrap().rows.is_empty();
-        let st = state(&s);
-        for f in &w.files {
-            for l in read(f).lines() {
-                let (want, prefix) = match (l.strip_prefix("-- expect-row: "), l.strip_prefix("-- expect-no-row: ")) {
-                    (Some(p), _) => (true, p.trim()),
-                    (_, Some(p)) => (false, p.trim()),
-                    _ => continue,
-                };
-                if st.lines().any(|x| x.starts_with(prefix)) != want {
-                    bad.push(format!("{}: the state {} the row {prefix}", w.name, if want { "lacks" } else { "holds" }));
-                }
-            }
-        }
-        if walled && s.eval.store.partial_eval {
-            s.eval.store.dirty = true;
-            let again = s.evaluate();
-            if again.is_err() || state(&s) != st {
-                bad.push(format!("{}: a second evaluation to the wall is a different world", w.name));
-            }
-            continue;
-        }
-        if s.eval.store.partial_eval || cut {
-            bad.push(format!("{}: the world was cut by the budget", w.name));
-            continue;
-        }
-        // the tick a ticked world entered is evaluated before it is read
-        // (f_a_ticked_case_is_read_before_its_tick_is_evaluated)
-        if w.ticks > 0 {
-            s.evaluate().unwrap();
-        }
-        for a in alarms(&mut s) {
-            bad.push(format!("{}: ALARM {a}", w.name));
-        }
-        let first = state(&s);
-        s.eval.store.dirty = true;
-        s.evaluate().unwrap();
-        if state(&s) != first {
-            bad.push(format!("{}: a second evaluation is a different world", w.name));
-        }
-        let mut back = Session::open(&s.save(), BUDGET).unwrap_or_else(|e| panic!("{}: {e}", w.name));
-        if w.strata {
-            back.eval.mode = Mode::Strata;
-        }
-        back.evaluate().unwrap();
-        if state(&back) != first {
-            let (a, b) = (state(&back), first.clone());
-            let diff: Vec<&str> = a.lines().filter(|l| !b.lines().any(|m| m == *l)).take(3).collect();
-            bad.push(format!("{}: saved and opened, it evaluates to another world: {diff:?}", w.name));
-        }
-    }
+        })).collect();
+        hands.into_iter().flat_map(|h| h.join().unwrap_or_else(|e| std::panic::resume_unwind(e))).collect()
+    });
+    bad.sort_by_key(|(i, _)| *i);
+    let bad: Vec<String> = bad.into_iter().flat_map(|(_, b)| b).collect();
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
 
@@ -564,4 +591,43 @@ fn the_world_below_is_built_under_the_run_s_walls() {
     assert_eq!(code, Some(0), "{err}");
     assert!(out.contains("hole[$kernel]($below(wg_win,$any,$any),left_out_below)"), "the cut world below is fed as a shrug");
     assert!(!out.contains("wg_win[main]("), "no row of the cut world below is fed as an answer");
+}
+
+/// THE PRODUCT OPENER GIVES THE WALLS TOO (f_a_snapshot_carries_the_world_not_its_walls):
+/// rofl-serve's `open` and `fresh` take `space`, `retainTicks` and `mode`, so
+/// a snapshot reopened through it is evaluated under the walls it was saved
+/// under, not the defaults.
+#[test]
+fn rofl_serve_opens_a_snapshot_under_the_walls_it_is_given() {
+    use std::io::Write;
+    let root = repo();
+    let mut s = Session::fresh(BUDGET);
+    s.load(&read(&root.join("boot.rofl")), None).expect("boot");
+    s.load(&read(&root.join("examples/checks/agg-wfs-game.rofl")), None).expect("the world");
+    let seed = s.save().replace('\\', "\\\\").replace('"', "\\\"");
+    let reqs = [
+        format!(r#"{{"op":"open","seed":"{seed}","id":1}}"#),
+        r#"{"op":"evaluate","session":1,"id":2}"#.to_string(),
+        format!(r#"{{"op":"open","seed":"{seed}","space":100,"retainTicks":2,"mode":"strata","id":3}}"#),
+        r#"{"op":"evaluate","session":2,"id":4}"#.to_string(),
+        r#"{"op":"fresh","space":7,"id":5}"#.to_string(),
+        r#"{"op":"evaluate","session":3,"id":6}"#.to_string(),
+        format!(r#"{{"op":"open","seed":"{seed}","mode":"sideways","id":7}}"#),
+        format!(r#"{{"op":"open","seed":"{seed}","space":-1,"id":8}}"#),
+    ];
+    let mut p = std::process::Command::new(env!("CARGO_BIN_EXE_rofl-serve"))
+        .current_dir(&root)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("rofl-serve");
+    p.stdin.take().unwrap().write_all((reqs.join("\n") + "\n").as_bytes()).unwrap();
+    let out = String::from_utf8(p.wait_with_output().unwrap().stdout).unwrap();
+    let lines: Vec<&str> = out.lines().collect();
+    assert_eq!(lines.len(), reqs.len(), "{out}");
+    assert!(lines[1].contains(r#""partial":false"#) && lines[1].contains(r#""space":500000"#), "unwalled: {}", lines[1]);
+    assert!(lines[3].contains(r#""partial":true"#) && lines[3].contains(r#""space":100"#), "walled: {}", lines[3]);
+    assert!(lines[5].contains(r#""space":7"#), "a fresh world takes its walls: {}", lines[5]);
+    assert!(lines[6].contains(r#""ok":false"#) && lines[6].contains("mode"), "{}", lines[6]);
+    assert!(lines[7].contains(r#""ok":false"#) && lines[7].contains("space"), "{}", lines[7]);
 }

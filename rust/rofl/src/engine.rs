@@ -622,6 +622,9 @@ pub struct Eval {
     /// The atoms the alternation left undefined, by relation, while
     /// `paradox_edges` solves over them as over the unknowns.
     undef_atoms: Option<HashMap<Sym, Vec<Unknown>>>,
+    /// The `unknown` rows this evaluation's alternating fixpoint wrote: a
+    /// paradox each. Any other `unknown` row is a book's own word (`given`).
+    wfs_written: HashSet<FactId>,
     carry_steps: i64,
     carry_rows: i64,
     carry_broken: bool,
@@ -922,6 +925,7 @@ impl Eval {
             cycle_of: HashMap::new(),
             carry_wall: (budget, DEFAULT_SPACE),
             undef_atoms: None,
+            wfs_written: HashSet::new(),
             carry_steps: 0,
             carry_rows: 0,
             carry_broken: false,
@@ -1626,7 +1630,7 @@ impl Eval {
                 }
                 Err(e) => return Err(e),
             };
-            self.write_shrugs()?;
+            self.write_shrugs(partial)?;
             self.store.dirty = false;
             self.store.partial_eval = partial;
             self.store.note_eval(self.budget, self.steps, partial);
@@ -1887,7 +1891,7 @@ impl Eval {
             Err(e) => return Err(e),
         }
         self.settle_staged();
-        self.write_shrugs()?;
+        self.write_shrugs(partial)?;
         self.store.dirty = false;
         self.store.partial_eval = partial;
         // EVERY EXIT NOTES, including this one, because the record is what a
@@ -1921,6 +1925,7 @@ impl Eval {
         self.holes_met.clear();
         self.last_fault_rule = None;
         self.unknown_strict.clear();
+        self.wfs_written.clear();
         let un = self.v.unknown;
         let sh = self.v.shrug;
         self.shrug_snap = None;
@@ -2064,8 +2069,10 @@ impl Eval {
     /// each atom a hole left out, and each `unknown(A)` read of one,
     /// `inherited` from the root targets it was reached from; each atom the
     /// alternating fixpoint left undefined, a `paradox` over the relations
-    /// of its negative cycle.
-    fn write_shrugs(&mut self) -> Result<(), Halt> {
+    /// of its negative cycle. `cut`: a wall fell, so the rows are not final
+    /// and what moved since the readers fired is the wall's, which its hole
+    /// already says; no reader is refused over it.
+    fn write_shrugs(&mut self, cut: bool) -> Result<(), Halt> {
         if let Some(what) = self.meta_late.take().filter(|_| brk!("shrug_meta_late_unrefused" => false; true)) {
             return Err(Halt::Strat(
                 format!("program rejected: unknown is read under not or in an aggregate of {what}, which itself reads unknown"),
@@ -2074,7 +2081,8 @@ impl Eval {
             ));
         }
         let rows = self.shrug_rows()?;
-        if let Some(snap) = self.shrug_snap.take() {
+        let snap = self.shrug_snap.take().filter(|_| !cut || brk!("shrug_late_cut_refused" => true; false));
+        if let Some(snap) = snap {
             let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.shrug_readers.contains(&r.id)).cloned().collect();
             // a row added since the readers fired, and one withdrawn since
             // (a reader's conclusion made its target hold): either way what
@@ -2371,6 +2379,16 @@ impl Eval {
                     let ft = crate::reflect::fact_term(&mut self.h, &self.v, un, persp, &a);
                     fed_below.get_or_insert_with(|| self.asserted_below()).contains(&ft)
                 };
+                // asserted or concluded by a book of its own, and no
+                // alternation left it undefined: the book's word, not a paradox
+                let wfs = brk!("shrug_given_wfs_unread" => false; self.wfs_written.contains(&id));
+                let mine = brk!("shrug_given_base_only" => self.store.rec(id).base(); true);
+                if !fed && !wfs && mine && brk!("shrug_given_off" => false; true) {
+                    let how = if self.store.rec(id).base() { "stated" } else { "concluded" };
+                    let (given, how) = (self.h.atom("given"), self.h.atom(how));
+                    rows.push([target, given, how]);
+                    continue;
+                }
                 let meta = if fed && brk!("below_paradox_meta_off" => false; true) {
                     self.h.atom("below")
                 } else {
@@ -2382,10 +2400,11 @@ impl Eval {
                 rows.push([target, paradox, meta]);
             }
         }
-        // an atom the world below left undefined is a paradox here, not
-        // something a hole left out
-        let paradox = self.h.atom("paradox");
-        let undefined: HashSet<Term> = rows.iter().filter(|r| r[1] == paradox).map(|r| r[0]).collect();
+        // an atom the world below left undefined is a paradox here, and one a
+        // book states is not known is the book's: neither is something a
+        // hole left out
+        let (paradox, given) = (self.h.atom("paradox"), self.h.atom("given"));
+        let undefined: HashSet<Term> = rows.iter().filter(|r| r[1] == paradox || r[1] == given).map(|r| r[0]).collect();
         let mut seen: HashSet<[Term; 3]> = HashSet::new();
         rows.retain(|r| seen.insert(*r) && !(r[1] == inherited && undefined.contains(&r[0])));
         Ok(rows)
@@ -9151,6 +9170,7 @@ impl Eval {
             self.store
                 .add(&self.h, self.v.unknown, persp, &[at], F_TICK);
             let uid = self.store.get(self.v.unknown, persp, &[at]);
+            self.wfs_written.extend(uid);
             uids.push(uid);
         }
         for (n, (_, k, _)) in gap.iter().enumerate() {
@@ -9294,6 +9314,7 @@ impl Eval {
     fn refix_unknowns(&mut self) {
         for (p, at) in self.wfs_fixed.clone() {
             self.store.add(&self.h, self.v.unknown, p, &[at], F_TICK);
+            self.wfs_written.extend(self.store.get(self.v.unknown, p, &[at]));
         }
     }
 

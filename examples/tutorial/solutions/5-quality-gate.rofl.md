@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 5 · The quality gate
 
 > Five cars came off the line today. Before a car goes to its customer it
@@ -15,9 +20,9 @@
 
 Declared as facts:
 
-- <a id="came_off"></a>A car X came off the line
-- <a id="painted"></a>A car X is painted a colour C
-- <a id="scratch"></a>A car X has a scratch
+- A car X came off the line
+- A car X is painted a colour C
+- A car X has a scratch
 
 Off the line today:
 
@@ -38,6 +43,34 @@ The inspector's notes:
 
 - `c3` has a scratch.
 
+## The picture
+
+> The gate is a mark in the middle, and each car that came off the line a
+> car in its paint colour: before the gate when it is stopped there, after
+> it when it passes. A car that slips through, or is held back by mistake,
+> is edged in red. Rewrite the gate's rule below, run again, and watch the
+> cars move.
+
+`gate` is a node if some car came off the line.
+
+`gate` is drawn as the icon `gate` if some car came off the line.
+
+A mark X is a node if X came off the line.
+
+A mark X is drawn as the icon `car` if X came off the line.
+
+X links to `gate` if X came off the line, unless X passes the gate.
+
+`gate` links to X if X passes the gate.
+
+A mark X is tagged C if X is painted C.
+
+A tag C is coloured C if some car is painted C.
+
+```rofl
+draw graph
+```
+
 ## Your move: the gate
 
 > Rewrite the rule below so that a car passes the gate only when it
@@ -52,8 +85,8 @@ A car X passes the gate if X came off the line and X is painted some colour, unl
 
 Declared as facts:
 
-- <a id="must_pass"></a>A car X must pass
-- <a id="must_not_pass"></a>A car X must not pass
+- A car X must pass
+- A car X must not pass
 
 The inspector's list:
 

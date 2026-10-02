@@ -1292,6 +1292,7 @@ vocabulary with their text, `shrug.rofl`, compiled into `src/kernel-dense.ts`
 | fault | the cause: `arith_overflow`, `arith_type_error`, `agg_overflow`, ... | a builtin's or a fold's error, on its rule, cell or lattice cell |
 | divergence | `cycle(Cells)`, the cells of its own improving cycle: one component of the graph of first firings, never another cycle's | `improving_cycle` |
 | paradox | `cycle(Rels)`, the relations it rests on that lie on a negative cycle (a component of the rules' dependency graph with a negation or a strict aggregate read inside it; a positive recursion is none); `below` when the world below fed its `unknown` row (`asserted_by(F, below, _)`): its cycles are that world's, named by that world's rows | an atom the alternating fixpoint leaves undefined (`unknown`) |
+| given | `stated` when a book asserted the row as a fact, `concluded` when a rule of a book concluded it | an `unknown(A)` row the alternating fixpoint did not write and no world below fed (`wfs_written`, `wfsWritten`): a book's own word that A is not known, resting on no cycle (f_a_hand_asserted_unknown_row_reads_as_a_paradox_with_no_cycle) |
 | conflict | `parties(Ps)`, the values in conflict in canonical order | a subsumptive cell whose dominance is no strict partial order over its values (`dominance_cycle`, `dominance_intransitive`; "Subsumption, as built") |
 | federation | `at(Address)` | a cold volume (`cooled_to_disk`), a sealed relation |
 | widened | `within(V)`, the value the cell closed on, an enclosure of its least value | a cell of a relation declared `widen N` that was widened (`widening_forced`; "Widening, as built") |
@@ -1348,7 +1349,11 @@ out. What changed:
   end, or one they withdraw (a reader's conclusion made the row's target hold,
   so what it read is not the final state: `b(X) :- shrug(a(X), _, _).` with
   `a(X) :- b(X).`), that a reader could read (its literal takes the row and
-  the rest of its body has a solution), refuses the program.
+  the rest of its body has a solution), refuses the program. Not when a wall
+  fell after the readers fired: the rows at the end are the cut's, the hole
+  says so, and the evaluation is cut short rather than refused
+  (`write_shrugs(cut)`, `writeShrugs(cut)`;
+  f_a_wall_after_the_readers_of_shrug_was_refused_as_a_late_shrug).
 - **Under well-founded semantics** what a hole left out is carried through the
   alternation and never withdrawn by it, and the alternation settles only when
   the carry does, so it is in neither limit: an inherited shrug, and no

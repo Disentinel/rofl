@@ -695,6 +695,8 @@ export class AggEval {
   private cycleOf = new Map<string, number>();
   private carryWall: [number, number];
   private undefAtoms: Map<string, Unknown[]> | null = null;
+  /** The keys of the `unknown` rows this evaluation's alternating fixpoint wrote: a paradox each. Any other is a book's own word (`given`). */
+  private wfsWritten = new Set<string>();
   private carrySteps = 0;
   private carryRows = 0;
   private carryBroken = false;
@@ -1081,7 +1083,7 @@ export class AggEval {
         this.wallHole(e.reason);
         p = true;
       }
-      this.writeShrugs();
+      this.writeShrugs(p);
       this.store.dirty = false;
       this.store.partialEval = p;
       this.store.noteEval(this.budget, this.steps, p);
@@ -1195,7 +1197,7 @@ export class AggEval {
       this.withWallsLifted(() => this.closeThresholdsBelow(Infinity, false));
     }
     this.settleStaged();
-    this.writeShrugs();
+    this.writeShrugs(partial);
     this.store.dirty = false;
     this.store.partialEval = partial;
     this.store.noteEval(this.budget, this.steps, partial);
@@ -1214,6 +1216,7 @@ export class AggEval {
     this.holesMet.clear();
     this.lastFaultRule = null;
     this.unknownStrict = [];
+    this.wfsWritten.clear();
     const un = IFACE.unknown, sh = 'shrug';
     this.shrugSnap = null;
     this.cycleGroups = [];
@@ -1297,7 +1300,10 @@ export class AggEval {
   }
 
   /** THE SHRUG ROWS, written after every evaluation from what it met. */
-  private writeShrugs(): void {
+  /** `cut`: a wall fell, so the rows are not final and what moved since the
+   *  readers fired is the wall's, which its hole already says; no reader is
+   *  refused over it. */
+  private writeShrugs(cut: boolean): void {
     if (this.metaLate !== null) {
       const what = this.metaLate;
       this.metaLate = null;
@@ -1305,7 +1311,7 @@ export class AggEval {
         'a shrug of a relation that reads unknown arrives after its readers fired; read it positively, or from a world above');
     }
     const rows = this.shrugRows();
-    const snap = this.shrugSnap;
+    const snap = cut ? null : this.shrugSnap;
     this.shrugSnap = null;
     if (snap !== null) {
       const readers = this.rules.filter((r) => this.shrugReaders.has(r.id));
@@ -1472,13 +1478,15 @@ export class AggEval {
         if (rel === null) continue;
         const target = f.persp === MAIN ? a[0] : mkf('in', [mka(f.persp), a[0]]);
         const fed = f.base && (fedBelow ??= this.assertedBelow()).has(canonTerm(factTerm(IFACE.unknown, f.persp, a)));
+        // asserted or concluded by a book of its own, and no alternation left it undefined: the book's word, not a paradox
+        if (!fed && !this.wfsWritten.has(f.key)) { rows.push([target, mka('given'), mka(f.base ? 'stated' : 'concluded')]); continue; }
         let meta: Term;
         if (fed) meta = mka('below');
         else meta = mkf('cycle', [list((negCycles ??= this.negativeCycles()).of(rel).map(mka))]);
         rows.push([target, paradox, meta]);
       }
     }
-    const paradoxT = new Set(rows.filter((r) => r[1].k === 'a' && r[1].name === 'paradox').map((r) => canonTerm(r[0])));
+    const paradoxT = new Set(rows.filter((r) => r[1].k === 'a' && (r[1].name === 'paradox' || r[1].name === 'given')).map((r) => canonTerm(r[0])));
     const seen = new Set<string>();
     return rows.filter((r) => {
       const k = rowKey(r);
@@ -5482,7 +5490,9 @@ export class AggEval {
     const uids: string[] = [];
     for (const [, , rec] of gap) {
       this.rows++;
-      uids.push(this.put(IFACE.unknown, rec.persp, [atomTerm(rec.rel, rec.args)], F_TICK)[1]);
+      const uid = this.put(IFACE.unknown, rec.persp, [atomTerm(rec.rel, rec.args)], F_TICK)[1];
+      this.wfsWritten.add(uid);
+      uids.push(uid);
     }
     gap.forEach(([, k], n) => {
       const w = wits.get(k);
@@ -5560,7 +5570,10 @@ export class AggEval {
 
   /** The lower level's undefined atoms, fixed in the store for the upper level's rounds. */
   private refixUnknowns(): void {
-    for (const [p, at] of this.wfsFixed) this.store.add(IFACE.unknown, p, [at], F_TICK);
+    for (const [p, at] of this.wfsFixed) {
+      this.store.add(IFACE.unknown, p, [at], F_TICK);
+      this.wfsWritten.add(factKey(IFACE.unknown, p, [at]));
+    }
   }
 
   private allWitnesses(): Map<string, Witness> {

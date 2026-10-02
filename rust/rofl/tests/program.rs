@@ -238,6 +238,28 @@ fn the_door_refuses_what_the_kernel_refuses() {
             Err(d) => assert!(d.iter().any(|x| x.contains("already claimed")), "{d:?}"),
         }
     }
+    // The door is the store's: a claim made after a user's load, or into a
+    // store reopened from a snapshot, is too late. Only a bare store takes one.
+    {
+        let mut s = Session::fresh(BUDGET);
+        s.load("p(a).", None).expect("a plain load");
+        match s.load("$kernel_authority(late).\nq(b).", None) {
+            Ok(_) => panic!("a claim after a user's load was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("too late")), "{d:?}"),
+        }
+        let mut o = Session::open(&s.save(), BUDGET).expect("the snapshot opens");
+        match o.load("$kernel_authority(reopened).", None) {
+            Ok(_) => panic!("a claim into a reopened store was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("too late")), "{d:?}"),
+        }
+        let mut f = fresh().fork();
+        match f.load("$kernel_authority(forked).", None) {
+            Ok(_) => panic!("a claim into a fork of a claimed store was accepted"),
+            Err(d) => assert!(d.iter().any(|x| x.contains("already claimed")), "{d:?}"),
+        }
+        let mut b = Session::open(&Session::fresh(BUDGET).save(), BUDGET).expect("a bare snapshot opens");
+        b.load("$kernel_authority(bare).\nq(b).", None).expect("a bare reopened store takes the claim");
+    }
     // A FACT whose book is a variable — refused, while the same book on a RULE
     // is legal and must still load. This pair is the one place `check_clause`
     // and `admit_clause` could drift apart: admission asserts the perspective

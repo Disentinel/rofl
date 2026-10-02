@@ -872,6 +872,10 @@ work_needs(w_agg_subsumption, w_agg_shrug).
 -- `ts_shrug_*`, `below_drops_shrugs`; docs/aggregates.md, "Shrugs, as built")
 handled(agg, cell, shrug, "agg_cell_shrug").
 handled(agg, cell, shrug, "agg_cell_shrug_wfs").
+handled(agg, cell, shrug, "agg_cell_shrug_given").
+handled(agg, cell, shrug, "agg_cell_shrug_given_agg").
+handled(agg, cell, shrug, "agg_cell_shrug_given_cut").
+handled(agg, cell, shrug, "agg_cell_shrug_given_cut_agg").
 handled(agg, cell, shrug, "agg_cell_shrug_wfs_upper").
 handled(agg, cell, shrug, "agg_cell_shrug_wfs_history").
 handled(agg, cell, shrug, "agg_cell_shrug_ticks").

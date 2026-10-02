@@ -847,6 +847,19 @@ fn sealed_rels(e: &mut Eval) -> Vec<Sym> {
     out
 }
 
+/// How many rows a store holds with the kernel's bootstrap tables and
+/// nothing else: the only store a kernel claim may enter.
+fn bootstrap_rows() -> usize {
+    static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *N.get_or_init(|| {
+        let mut h = Heap::default();
+        let v = Vocab::new(&mut h);
+        let mut store = crate::store::Store::new();
+        crate::reflect::bootstrap_kernel(&mut h, &v, &mut store);
+        store.fact_count()
+    })
+}
+
 /// `Rofl.load` (src/api.ts:268). Parse, check the kernel claim, admit every
 /// clause, and evaluate — or restore the store and return every diagnostic.
 pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
@@ -880,6 +893,18 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
                 admitted: 0,
                 diagnostics: vec![format!(
                     "'{KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's"
+                )],
+            };
+        }
+        // the door is the store's, not this session's: a store reopened from
+        // a snapshot, or one a load already wrote into, holds more than the
+        // bootstrap tables, and the claim is too late for it
+        if e.store.fact_count() > bootstrap_rows() {
+            return Loaded {
+                ok: false,
+                admitted: 0,
+                diagnostics: vec![format!(
+                    "'{KERNEL_CLAIM}' comes too late: this store holds more than the bootstrap tables, and only the first load of a store may be the kernel's"
                 )],
             };
         }

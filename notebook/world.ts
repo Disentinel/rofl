@@ -11,7 +11,7 @@ export const asCell = (c: NbCell): Cell => ({ id: `c${c.index}`, text: c.text, f
 
 /** A world written as Markdown, read the way a notebook's cells are: its prose, then its rofl and datalog cells; the lines that ask are not part of it. */
 export function worldOf(text: string, phrases: string, home: Record<string, string>, opts: Pick<ReadOptions, 'canonVars'> = {}): { rofl: string; phrases: string[]; reports: string[]; traced: string[] } {
-  const b = readBook(cellsOf(text).filter((c) => c.kind !== 'natural').map(asCell), phrases, home, opts);
+  const b = readBook(cellsOf(text).filter((c) => c.kind !== 'natural').map(asCell), phrases, home, false, opts);
   return { rofl: b.parts.map((p, i) => b.read[i]?.rofl ?? p.clauses).join('\n'), phrases: b.learned, reports: b.read.flatMap((r) => r ? [r.report] : []), traced: b.read.flatMap((r) => r?.traced ?? []) };
 }
 
@@ -25,8 +25,9 @@ export function assemble(path: string, text: string, input: Inputs): { model: st
   for (const r of front.reads) {
     const t = input.reads[r];
     if (t === undefined) { errors.push(`${r}: not given`); continue; }
-    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); parts.push([`the rules read from ${r}`, w.rofl]); phrases += '\n' + w.phrases.join('\n'); }
-    else { parts.push([r, t]); phrases += '\n' + t; }
+    // a vocabulary the notebook reads is marked, so a head about other things than its sentences say is not read as one of them (book.ts misbound)
+    if (r.endsWith('.rofl.md')) { const w = worldOf(t, phrases, home); parts.push([`the rules read from ${r}`, w.rofl]); phrases += `\n-- read: ${r}\n` + w.phrases.join('\n'); }
+    else { parts.push([r, t]); phrases += `\n-- read: ${r}\n` + t; }
   }
   const model = parts.map((p) => p[1]).join('\n');
   /** A line of the model as the file it came from and its line there. */

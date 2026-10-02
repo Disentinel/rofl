@@ -9,11 +9,12 @@ import { availableParallelism, tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { know, type Known } from './know.ts';
+import { builtin } from '../notebook/front.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), t0 = performance.now();
 const get = (p: string) => { try { return readFileSync(p, 'utf8'); } catch { return undefined; } };
 const lib = (f: string) => get(path.join(ROOT, f));
-const knownAt = (f: string, text = readFileSync(path.join(ROOT, f), 'utf8')) => know(path.join(ROOT, f), text, lib, (r) => get(path.resolve(path.dirname(path.join(ROOT, f)), r)));
+const knownAt = (f: string, text = readFileSync(path.join(ROOT, f), 'utf8')) => know(path.join(ROOT, f), text, lib, (r) => get(builtin(r) ? path.join(ROOT, builtin(r)!) : path.resolve(path.dirname(path.join(ROOT, f)), r)));
 
 // the files that are refused as they are, with why; a golden world among them is refused in facts/goldens.rofl too
 const REFUSED: Record<string, string> = {
@@ -23,6 +24,8 @@ const REFUSED: Record<string, string> = {
   'examples/checks/refused.rofl': 'a world written to be refused: a syntax error',
   'examples/checks/unstratifiable.rofl': 'a world written to be refused: no stratification',
   'examples/ring1/l1.dense.rofl': 'ring 1 in the dense form, which the goldens record as refused',
+  'examples/checks/agg-int-range-literal.rofl': 'a world written to be refused: a literal of 2^60 (check_refuses in facts/checks.rofl)',
+  'guide/examples/typo.rofl.md': 'the guide\'s world written with a typo, to show what a sentence not read looks like',
   // renderings of the model the reader cannot read back as a world; no golden loads docs/
   'docs/js/js-attrs.rofl.md': 'the reader writes $var(?X)', 'docs/js/js-pack-home.rofl.md': 'the reader writes ?X', 'docs/js/js-vocabulary.rofl.md': 'the reader writes ?X',
   'docs/js/js-phrases.rofl.md': 'the reader writes a backtick', 'docs/rings/boot.rofl.md': 'the reader writes ?X', 'docs/rings/host.rofl.md': 'the reader writes ?X',
@@ -141,6 +144,8 @@ const MUTANTS: Record<string, [RegExp, string]> = {
   'references give the heads': [/\(!s\.def \|\| context\?\.includeDeclaration\)/, '(s.def || context?.includeDeclaration)'],
   'reads through a link': [/return allowed\(p, file\) \? text\(p\)/, 'return ours(p) ? text(p)'],
   'reads outside the workspace': [/roots\.some\(\(x\) => under\(r, real\(x\) \?\? x\)\)/, 'true'],
+  'no shipped vocabulary': [/if \(b !== undefined\) return b \? text\(path\.join\(ROOT, b\)\) : undefined;/, ''],
+  'a rofl: name as a path from the root': [/return b \? text\(path\.join\(ROOT, b\)\) : undefined;/, 'return text(path.join(ROOT, name.slice(5)));'],
   'waits on a huge frame': [/process\.exit\(1\); \}/, '}'],
   'deaf after junk': [/buf = buf\.subarray\(c > 0 \? c : h \+ 4\)/, 'buf = buf.subarray(h + 4)'],
   'outline empty': [/return \(k\?\.sites \?\? \[\]\)\.filter\(\(s\) => s\.def/, 'return (k?.sites ?? []).filter((s) => !s.def'],
@@ -154,7 +159,8 @@ const conversations = () => Promise.all([['as it is', SERVER] as const, ...Objec
   return [name, f] as const;
 })].map(async ([name, f]) => { try { const [r, c, w] = await Promise.all([converse(f), confined(f), framing(f)]); return { name, red: [...judge(r), ...c, ...w] }; } finally { if (f !== SERVER) rmSync(f, { force: true }); } }));
 
-// 4. what the server will not read: a link named .rofl to a file outside the workspace, and a .rofl outside it, next to a .rofl inside it that it reads
+// 4. what the server will not read: a link named .rofl to a file outside the workspace, a .rofl outside it and a `rofl:` name that is no vocabulary,
+// next to a .rofl inside it and a shipped vocabulary that it reads
 async function confined(server: string): Promise<string[]> {
   const tmp = mkdtempSync(path.join(tmpdir(), 'rofl-lsp-')), ws = path.join(tmp, 'ws'), out = path.join(tmp, 'outside'), TOKEN = 'canary_7f3a9e';
   try {
@@ -165,7 +171,7 @@ async function confined(server: string): Promise<string[]> {
     const md = pathToFileURL(path.join(ws, 'nb.rofl.md')).href, a = pathToFileURL(path.join(ws, 'a.rofl')).href;
     const said = await node([server, '--stdio'], frames([
       { id: 1, method: 'initialize', params: { rootUri: pathToFileURL(ws).href, capabilities: {} } },
-      { method: 'textDocument/didOpen', params: { textDocument: { uri: md, languageId: 'markdown', version: 1, text: '---\nreads: [creds.rofl, ok.rofl, ../outside/plain.rofl]\n---\n\nA thing X is odd if X is odd.\n' } } },
+      { method: 'textDocument/didOpen', params: { textDocument: { uri: md, languageId: 'markdown', version: 1, text: '---\nreads: [creds.rofl, ok.rofl, ../outside/plain.rofl, rofl:visual/graph.rofl.md, rofl:visual/../package.json]\n---\n\nA thing X is odd if X is odd.\n' } } },
       { method: 'textDocument/didOpen', params: { textDocument: { uri: a, languageId: 'rofl', version: 1, text: 'a(1).\n' } } },
       { id: 2, method: 'textDocument/completion', params: { textDocument: { uri: a }, position: { line: 0, character: 0 } } },
       { id: 3, method: 'shutdown' }, { method: 'exit' }]));
@@ -175,6 +181,9 @@ async function confined(server: string): Promise<string[]> {
       ...(said.includes(TOKEN) ? [`the canary ${TOKEN} is in what the server said`] : []),
       ...(!kept('creds.rofl') || !kept('../outside/plain.rofl') ? [`no warning for what it would not read: ${JSON.stringify(diags)}`] : []),
       ...(diags.some((d: any) => d.message.includes('ok.rofl')) || !labels.includes('okrel') ? [`the .rofl inside the workspace was not read: ${JSON.stringify(diags)} ${labels}`] : []),
+      // a file shipped with ROFL is read from outside the workspace; a `rofl:` name ROFL does not ship is not read at all
+      ...(diags.some((d: any) => d.message.includes('rofl:visual/graph')) ? [`the shipped vocabulary was not read: ${JSON.stringify(diags)}`] : []),
+      ...(said.includes('Relation-Oriented') || !diags.some((d: any) => d.severity === 1 && d.message === 'rofl:visual/../package.json: not read') ? [`rofl:visual/../package.json was read or not refused: ${JSON.stringify(diags)}`] : []),
     ];
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
@@ -198,10 +207,15 @@ async function framing(server: string): Promise<string[]> {
 const swept = await sweeping; console.log(`swept in ${((performance.now() - t0) / 1000).toFixed(1)} s`); const talks = await conversations();
 const all = swept.flat();
 expect(all.length === files().length, `swept ${all.length} of ${files().length} files`);
+// a fixture written to be refused says so on its first lines, `-- expect-refusal: <text>` (`<!-- ... -->` in sentences), as the goldens read it;
+// the goldens and tests/agg_worlds.rs hold it to those words in its world
+const fixture = (f: string): string | undefined => /^(?:-- |<!-- )expect-refusal: (.+?)(?: -->)?[ \t]*$/m.exec(readFileSync(path.join(ROOT, f), 'utf8').split('\n').slice(0, 5).join('\n'))?.[1].trim();
 for (const s of all) {
+  expect(!s.warnings.length === !WARNED.includes(s.f), `${s.f}: warnings ${s.warnings.join(' · ') || 'none'}`);
+  // whether a fixture is refused, and in which words, is its world's to say: under the stock evaluator, beside the world below, which the file alone has not
+  if (fixture(s.f)) continue;
   if (REFUSED[s.f]) expect(s.errors.length > 0, `${s.f}: ${REFUSED[s.f]}, yet no error`);
   else expect(!s.errors.length, `${s.f}: ${s.errors.join(' · ')}`);
-  expect(!s.warnings.length === !WARNED.includes(s.f), `${s.f}: warnings ${s.warnings.join(' · ') || 'none'}`);
 }
 for (const f of Object.keys(REFUSED).filter((f) => ALL || !f.startsWith('docs/'))) expect(all.some((s) => s.f === f), `${f} is listed as refused and is not in the tree`);
 for (const t of talks) {
@@ -209,7 +223,7 @@ for (const t of talks) {
   else { expect(t.red.length > 0, `planted "${t.name}" stayed green`); console.log(`${t.red.length ? 'ok  ' : 'FAIL'} planted "${t.name}": red`); }
 }
 const slow = [...all].sort((a, b) => b.ms - a.ms).slice(0, 3).map((s) => `${s.f} ${s.ms} ms`).join(', ');
-console.log(`${all.length} files swept: ${all.filter((s) => s.errors.length).length} with errors, all listed as refused; ${all.filter((s) => s.warnings.length).length} with warnings; slowest ${slow}`);
+console.log(`${all.length} files swept: ${all.filter((s) => s.errors.length).length} with errors, all listed as refused or written to be; ${all.filter((s) => s.warnings.length).length} with warnings; slowest ${slow}`);
 for (const b of bad) console.log(`FAIL ${b}`);
 console.log(`${bad.length ? 'FAIL' : 'ok'}: npm run test:lsp, ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(bad.length ? 1 : 0);

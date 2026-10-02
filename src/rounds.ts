@@ -320,7 +320,7 @@ export class RoundEvaluation extends Evaluation {
             { scope: 'timeless', base: true, frozen: true });
         } else throw e;
       }
-      this.writeShrugs();
+      this.writeShrugs(partial);
     } catch (e) {
       this.store.derivedKeys = new Map();
       this.store.derivedSchedule = '';

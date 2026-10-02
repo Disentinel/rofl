@@ -30,6 +30,8 @@
 //! takes a session id.
 //!
 //!   {"op":"open","seedPath":"x.seed.json"}   -> {"ok":true,"session":1,...}
+//!     `open` and `fresh` also take the walls a snapshot does not carry:
+//!     `space` (rows), `retainTicks`, `mode` ("rounds" or "strata")
 //!   {"op":"fork","session":1}                -> {"ok":true,"session":2}
 //!   {"op":"assert","session":2,"rofl":"p(a)."}
 //!   {"op":"evaluate","session":2}
@@ -62,6 +64,26 @@ impl Server {
         id
     }
 
+    /// THE WALLS A SNAPSHOT DOES NOT CARRY (f_a_snapshot_carries_the_world_not_its_walls):
+    /// a world saved under a row limit above the default comes back holed
+    /// unless its opener gives the limit again.
+    fn walls(r: &Value, s: &mut Session) -> Result<(), String> {
+        if let Some(v) = r.get("space").filter(|v| !v.is_null()) {
+            s.eval.space = v.as_i64().filter(|n| *n > 0).ok_or("`space` is a positive number of rows")?;
+        }
+        if let Some(v) = r.get("retainTicks").filter(|v| !v.is_null()) {
+            s.eval.retain_ticks = Some(v.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or("`retainTicks` is a number of ticks")?);
+        }
+        if let Some(v) = r.get("mode").filter(|v| !v.is_null()) {
+            s.eval.mode = match v.as_str() {
+                Some("rounds") => rofl::engine::Mode::Rounds,
+                Some("strata") => rofl::engine::Mode::Strata,
+                _ => return Err("`mode` is \"rounds\" or \"strata\"".into()),
+            };
+        }
+        Ok(())
+    }
+
     fn handle(&mut self, r: &Value) -> Result<Value, String> {
         let op = r.get("op").and_then(|v| v.as_str()).ok_or("`op` is required")?;
         match op {
@@ -75,7 +97,8 @@ impl Server {
                     (None, Some(s)) => s.to_string(),
                     (None, None) => return Err("open needs `seedPath` or `seed`".into()),
                 };
-                let s = Session::open(&seed, budget)?;
+                let mut s = Session::open(&seed, budget)?;
+                Self::walls(r, &mut s)?;
                 let facts = s.eval.store.fact_count();
                 let dangling = s.dangling;
                 let id = self.keep(s);
@@ -86,7 +109,8 @@ impl Server {
             // a seed, and therefore never needs the TypeScript kernel.
             "fresh" => {
                 let budget = r.get("budget").and_then(|v| v.as_i64()).unwrap_or(DEFAULT_BUDGET);
-                let s = Session::fresh(budget);
+                let mut s = Session::fresh(budget);
+                Self::walls(r, &mut s)?;
                 let facts = s.eval.store.fact_count();
                 let id = self.keep(s);
                 Ok(json!({ "session": id, "facts": facts, "dangling": 0 }))

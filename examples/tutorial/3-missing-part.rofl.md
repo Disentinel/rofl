@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 3 · The truck that never comes
 
 > Ana ordered a truck three weeks ago. The line builds cars every day, and
@@ -14,9 +19,9 @@
 
 Declared as facts:
 
-- <a id="made_of"></a>A thing X is made of a thing Y
-- <a id="on_the_plan"></a>A product X is on the plan
-- <a id="ordered"></a>A product X is ordered by a customer P
+- A thing X is made of a thing Y
+- A product X is on the plan
+- A product X is ordered by a customer P
 
 What things are made of:
 
@@ -45,15 +50,48 @@ What the plan asks for, and who ordered it:
 > product is short of a thing it is made of that is neither in stock nor
 > ready, and it leaves the line when it is short of nothing.
 
-<a id="lacks"></a>A thing S lacks a part P if S is made of P, unless P is in stock.
+A thing S lacks a part P if S is made of P, unless P is in stock.
 
-<a id="ready"></a>A thing S is ready if S is made of some thing, unless S lacks some part.
+A thing S is ready if S is made of some thing, unless S lacks some part.
 
-<a id="short"></a>A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
+A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
 
-<a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
+A product X leaves the line if X is on the plan, unless X is short of some thing.
 
-<a id="late"></a>A product X is late if X is ordered by some customer, unless X leaves the line.
+A product X is late if X is ordered by some customer, unless X leaves the line.
+
+## The picture
+
+> Every thing is a mark, drawn as the icon of its name, with a line from
+> each part to what is made of it. A part that is missing is orange, and so
+> is each line along which it stops something: from the part to what is
+> short of it, and on to what is short of that. What is short of something
+> is grey, and a late product is edged in red. Follow the orange lines
+> back from the truck.
+
+A mark X is a node if X is made of something.
+
+A mark Y is a node if something is made of Y.
+
+A mark Y links to a mark X if X is made of Y.
+
+A mark X is drawn as the icon X if X is a node.
+
+A mark P is tagged `missing` if something lacks P, unless P is made of something.
+
+A mark X is tagged `stuck` if X is short of something.
+
+The link from a mark Y to a mark X is tagged `short` if X is short of Y.
+
+`missing` is coloured `orange`.
+
+`short` is coloured `orange`.
+
+`stuck` is coloured `grey`.
+
+```rofl
+draw graph
+```
 
 ## Your move: the delivery
 
@@ -62,7 +100,7 @@ What the plan asks for, and who ordered it:
 
 Declared as facts:
 
-- <a id="in_stock"></a>A part P is in stock
+- A part P is in stock
 
 This morning's delivery:
 
@@ -85,7 +123,7 @@ never X is late
 
 ## The referee
 
-<a id="bought_whole"></a>A thing X is bought whole if X is in stock and X is made of some thing.
+A thing X is bought whole if X is in stock and X is made of some thing.
 
 ```rofl
 never X is bought whole

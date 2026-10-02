@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { readMd } from './read_md.ts';
-import { libFiles, parseFront } from '../notebook/front.ts';
+import { builtin, libFiles, parseFront } from '../notebook/front.ts';
 import { assemble, worldOf } from '../notebook/world.ts';
 
 // the tree the files are read from; a copy of the reader with a fault planted in it reads this one (scripts/agg_breaks.ts)
@@ -41,7 +41,7 @@ if (srcPaths.length) {
   // a world is read the way a notebook is: its prose and its cells, in the words its front matter names, after the worlds it reads
   const rel = path.relative(ROOT, abs(mdPath)), front = parseFront(text), want = libFiles(rel, front);
   const lib = Object.fromEntries([...want.model, ...want.phrases].map((f) => [f, readFileSync(LIB + f, 'utf8')]));
-  const reads = Object.fromEntries(front.reads.map((f) => [f, readFileSync(path.resolve(path.dirname(abs(mdPath)), f), 'utf8')]));
+  const reads = Object.fromEntries(front.reads.map((f) => [f, readFileSync(builtin(f) ? LIB + builtin(f)! : path.resolve(path.dirname(abs(mdPath)), f), 'utf8')]));
   const a = assemble(rel, text, { lib, reads, code: {} });
   const w = worldOf(text, a.phrases + extra, a.home, { canonVars });
   r = { report: w.reports.join('\n'), traced: w.traced, rofl: w.rofl, phrases: w.phrases };

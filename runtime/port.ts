@@ -70,6 +70,9 @@ export interface Answer {
 export interface Ticked { advanced: boolean; quiescent: boolean; partial: boolean }
 
 /** One world. Obtained from `open` or, far more cheaply, from `fork`. */
+/** The walls a snapshot does not carry: the row limit, the ticks of provenance kept, the evaluator. */
+export type Walls = { space?: number; retainTicks?: number; mode?: 'rounds' | 'strata' };
+
 export class RoflSession {
   readonly port: RoflPort;
   readonly id: number;
@@ -323,13 +326,15 @@ export class RoflPort {
   /** An EMPTY world with the kernel's bootstrap tables and nothing else —
    *  `new Rofl()`. With `load` beside it a caller never needs a seed, and
    *  therefore never needs the TypeScript kernel at all. */
-  async fresh(budget?: number): Promise<RoflSession> {
-    const r = await this.send({ op: 'fresh', budget });
+  async fresh(budget?: number, walls: Walls = {}): Promise<RoflSession> {
+    const r = await this.send({ op: 'fresh', budget, ...walls });
     return new RoflSession(this, r.session as number, r.facts as number);
   }
 
-  /** Build the core from a snapshot. Expensive; fork it after that. */
-  async open(opts: { seedPath?: string; seed?: string; budget?: number }): Promise<RoflSession> {
+  /** Build the core from a snapshot. Expensive; fork it after that. A snapshot
+   *  carries the world, not its walls: give them again or a world past the
+   *  default row limit comes back holed. */
+  async open(opts: { seedPath?: string; seed?: string; budget?: number } & Walls): Promise<RoflSession> {
     const r = await this.send({ op: 'open', ...opts });
     return new RoflSession(this, r.session as number, r.facts as number);
   }

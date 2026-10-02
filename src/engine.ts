@@ -476,6 +476,8 @@ export class Evaluation {
   // unknown and each inherited hole target (node keys `u:` and `h:`) with a
   // parent it was reached from; `holesNow` the hole rows this evaluation met.
   private readsUnknown = false;
+  /** The keys of the `unknown` rows this evaluation's alternating fixpoint wrote: a paradox each. Any other is a book's own word (`given`). */
+  private wfsWritten = new Set<string>();
   private unknownCone = new Set<string>();
   private unknownStrict: Lit[] = [];
   private metaQueue: { m: Unknown; from: Unknown }[] = [];
@@ -711,7 +713,7 @@ export class Evaluation {
           // it needs no phase order and no rejection: a negative cycle is a
           // program with undefined atoms in it, not a program that cannot run.
           this.runWellFounded();
-          this.writeShrugs();
+          this.writeShrugs(false);
           this.store.dirty = false;
           this.store.partialEval = false;
           this.store.derivedKeys = new Map();
@@ -764,7 +766,7 @@ export class Evaluation {
             { scope: 'timeless', base: true, frozen: true })) this.chargeRow('', false);
         } else throw e;
       }
-      this.writeShrugs();
+      this.writeShrugs(partial);
     } catch (e) {
       // A rejected program, or a defect. Either way the layer this evaluation
       // was building is not a fixpoint and never will be, and the caller may
@@ -1316,6 +1318,7 @@ export class Evaluation {
       const rec = recOf.get(k)!;
       const args = [atomTerm(rec.rel, rec.args)];
       this.store.add(IFACE.unknown, rec.persp, args, { scope: 'tick', base: false });
+      this.wfsWritten.add(undef.get(k)!);
       const got = this.store.get(undef.get(k)!);
       if (got) added.push(got);
       const w = generousWits.get(k);
@@ -2023,6 +2026,7 @@ export class Evaluation {
     this.dropShrugs();
     this.metaQueue = []; this.metaLate = null; this.unkEdges = []; this.holeNode = new Map();
     this.carrySrc = null; this.holesNow = []; this.holesMet = new Set(); this.lastFaultRule = null; this.unknownStrict = [];
+    this.wfsWritten = new Set();
     const cone = new Set<string>();
     this.shrugSnap = null;
     this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.some((b) => b.t !== 'bi' && b.lit.rel === SHRUG)).map((r) => r.id));
@@ -2105,7 +2109,10 @@ export class Evaluation {
   /** THE SHRUG ROWS, `shrug(Target, Reason, Meta)` in `[$kernel]`, written
    *  after every evaluation from what it met (rust/rofl/src/engine.rs
    *  `write_shrugs`, the same rows). */
-  protected writeShrugs(): void {
+  /** `cut`: a wall fell, so the rows are not final and what moved since the
+   *  readers fired is the wall's, which its hole already says; no reader is
+   *  refused over it. */
+  protected writeShrugs(cut: boolean): void {
     if (this.metaLate !== null) {
       const what = this.metaLate;
       this.metaLate = null;
@@ -2114,7 +2121,7 @@ export class Evaluation {
         'a shrug of a relation that reads unknown arrives after its readers fired; read it positively, or from a world above');
     }
     const rows = this.shrugRows();
-    const snap = this.shrugSnap;
+    const snap = cut ? null : this.shrugSnap;
     this.shrugSnap = null;
     if (snap) {
       const readers = this.rules.filter((r) => this.shrugReaders.has(r.id));
@@ -2267,15 +2274,21 @@ export class Evaluation {
       rows.push([shrugTarget(u), mka('inherited'), roots('u:' + u.key)]);
     }
     let cycles: ((rel: string) => string[]) | null = null;
+    let fedBelow: Set<string> | null = null;
     for (const f of this.store.relAll(IFACE.unknown)) {
       if (f.args.length !== 1) continue;
       const at = unAtomTermLocal(f.args[0]);
       if (!at) continue;
-      cycles ??= this.negativeCycles();
       const target = f.persp === MAIN ? f.args[0] : mkf('in', [mka(f.persp), f.args[0]]);
+      // asserted or concluded by a book of its own, and no alternation left it undefined: the book's word, not a paradox
+      fedBelow ??= new Set(this.store.relPersp(V.asserted_by, KERNEL_PERSP)
+        .filter((g) => g.args.length === 3 && g.args[1].k === 'a' && g.args[1].name === 'below').map((g) => canonTerm(g.args[0])));
+      const fed = f.base && fedBelow.has(canonTerm(factTerm(IFACE.unknown, f.persp, f.args)));
+      if (!fed && !this.wfsWritten.has(f.key)) { rows.push([target, mka('given'), mka(f.base ? 'stated' : 'concluded')]); continue; }
+      cycles ??= this.negativeCycles();
       rows.push([target, mka('paradox'), mkf('cycle', [list(cycles(at).map(mka))])]);
     }
-    const paradoxAt = new Set(rows.filter((r) => r[1].k === 'a' && r[1].name === 'paradox').map((r) => canonTerm(r[0])));
+    const paradoxAt = new Set(rows.filter((r) => r[1].k === 'a' && (r[1].name === 'paradox' || r[1].name === 'given')).map((r) => canonTerm(r[0])));
     const seen = new Set<string>();
     return rows.filter((r) => {
       const k = r.map(canonTerm).join('\u0000');
@@ -2431,7 +2444,10 @@ export class Evaluation {
 
   /** The lower level's undefined atoms, fixed in the store for the upper. */
   private refixUnknowns(): void {
-    for (const { persp, at } of this.wfsFixed) this.store.add(IFACE.unknown, persp, [at], { scope: 'tick', base: false });
+    for (const { persp, at } of this.wfsFixed) {
+      this.store.add(IFACE.unknown, persp, [at], { scope: 'tick', base: false });
+      this.wfsWritten.add(factKey(IFACE.unknown, persp, [at]));
+    }
   }
 
   /** After the last level: every rule is closed and everything carried. */

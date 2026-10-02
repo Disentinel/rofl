@@ -5,6 +5,9 @@ import { type Term, mka, mkv, mkf, mki, mks, canonTerm, resolve, walk, isGround,
 import { parseProgram, parseLiteral } from './parser.ts';
 import type { Clause, Lit } from './unify.ts';
 const KERNEL_CLAIM = '$kernel_authority';
+/** How many rows a store holds with the kernel's bootstrap tables and nothing else: the only store a kernel claim may enter. */
+let bootRows: number | undefined;
+const bootstrapRows = (): number => bootRows ??= (() => { const s = new Store(); bootstrapKernel(s); return s.factCount(); })();
 import { Store, factKey, type FactRec, type FactStore } from './store.ts';
 import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
@@ -384,6 +387,13 @@ export class Rofl {
         return { ok: false, diagnostics: [
           `'${KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's`] };
       }
+      // the door is the store's, not this object's: a store restored from a
+      // snapshot, forked, or written by an earlier load holds more than the
+      // bootstrap tables, and the claim is too late for it
+      if (this.store.factCount() > bootstrapRows()) {
+        return { ok: false, diagnostics: [
+          `'${KERNEL_CLAIM}' comes too late: this store holds more than the bootstrap tables, and only the first load of a store may be the kernel's`] };
+      }
       this.kernelClaimed = true;
       who = KERNEL_WHO;
       clauses = clauses.slice(1);
@@ -618,7 +628,11 @@ export class Rofl {
     if (c.body.length === 0) {
       const h = c.head;
       if (h.persp.k !== 'a') return `fact ${canonClause(c)}: perspective must be an atom`;
-      if (!h.args.every(isGround)) return `fact ${canonClause(c)}: must be ground`;
+      if (!h.args.every(isGround)) {
+        // a capitalised word is a variable, which a fact cannot hold: most often a name written as a proper noun
+        const said = canonClause(c), v = /\?([A-Z][A-Za-z0-9_]*)\b/.exec(said)?.[1];
+        return `fact ${said}: must be ground${v ? `: \`${v}\` is read as a variable: a name is lower-case in backticks, \`${v.toLowerCase()}\`` : ''}`;
+      }
       if (h.temporal === 'next') return `fact ${canonClause(c)}: '@next' facts are not assertable`;
       if (h.temporal === 'init' && this.store.tick !== 0) {
         this.diagnostics.push(`fact ${canonClause(c)}: '@init' ignored after tick 0`);

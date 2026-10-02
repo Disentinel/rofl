@@ -1,0 +1,18 @@
+-- examples/checks/agg-shrug-given-count.rofl — agg_cell_shrug_given_agg: the
+-- given rows of agg-shrug-given.rofl in a stratified world with an aggregate,
+-- so the TypeScript side evaluates it with the aggregate evaluator
+-- (src/aggeval.ts) where agg_cell_shrug_given has the plain one
+-- (src/engine.ts); an aggregate is refused under well-founded semantics, and
+-- with no alternation every `unknown` row a book writes is given: sgc_said
+-- stated, sgc_concl(b) concluded. The count reads the shrug rows: two.
+-- expect-row: shrug[$kernel](sgc_said,given,stated)
+-- expect-row: shrug[$kernel](in(sgc_book,sgc_concl(b)),given,concluded)
+-- expect-row: sgc_n_given[main](2)
+edb(sgc_pos).
+edb(sgc_seen).
+sgc_pos(a). sgc_pos(b).
+sgc_seen(a).
+unknown(sgc_said).
+unknown[sgc_book](sgc_concl(X)) :- sgc_pos(X), not sgc_seen(X).
+sgc_given(T, M) :- shrug(T, given, M).
+sgc_n_given(N) :- N is count(T : shrug(T, given, _)).

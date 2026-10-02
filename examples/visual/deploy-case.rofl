@@ -1,0 +1,12 @@
+-- deploy-case.rofl — the evidence for three claims about a release, read by
+-- deploy-argument.rofl.md through rules/inquiry.
+claim(safe_to_ship).
+claim(fast_enough).
+claim(cheap_to_run).
+claim(tests_cover_payments).
+
+supports[obs](suite_green, tests_cover_payments).
+supports[obs](tests_cover_payments, safe_to_ship).
+supports[obs](canary_clean, safe_to_ship).
+refutes[obs](incident_4711, safe_to_ship).
+supports[obs](bench_p99, fast_enough).

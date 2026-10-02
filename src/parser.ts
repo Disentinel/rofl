@@ -53,6 +53,11 @@ class P {
   err(msg: string): never {
     throw new ParseError(`line ${this.peek().line}: ${msg}`);
   }
+  /** A statement that ends without its dot, and the token found there, so an editor marks that token (lsp/know.ts). */
+  noDot(what: string): never {
+    const t = this.peek();
+    return this.err(`${what} has no closing dot: got '${t.v || t.t}'`);
+  }
 
   // --- terms ------------------------------------------------------------
   private freshCounter = 0;
@@ -367,7 +372,7 @@ class P {
       this.next();
       widen = Number(this.intLiteral(n.v, false));
     }
-    if (this.peek().t !== '.') this.err(`lattice ${rel}: the declaration has no closing dot`);
+    if (this.peek().t !== '.') this.noDot(`lattice ${rel}: the declaration`);
     this.next();
     const decl: Clause = { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: op };
     if (widen !== undefined) decl.widen = widen;
@@ -395,7 +400,7 @@ class P {
     args.push(this.term());
     if (this.peek().t !== ')') this.err(`tag ${rel}: \`(\` is not closed`);
     this.next();
-    if (this.peek().t !== '.') this.err(`tag ${rel}: the declaration has no closing dot`);
+    if (this.peek().t !== '.') this.noDot(`tag ${rel}: the declaration`);
     this.next();
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: alg, tag: true };
   }
@@ -418,16 +423,16 @@ class P {
       this.next();
       const body: BodyElem[] = [this.bodyElem()];
       while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
-      if (this.peek().t !== '.') this.err(`dominance ${head.rel}: the rule has no closing dot`);
+      if (this.peek().t !== '.') this.noDot(`dominance ${head.rel}: the rule`);
       this.next();
       return { head, body, dominator };
     }
     if (this.peek().t === '.') { this.next(); return { head, body: [] }; }
-    if (this.peek().t !== ':-') this.err(`\`${head.rel}\` has no closing dot`);
+    if (this.peek().t !== ':-') this.noDot(`\`${head.rel}\``);
     this.next();
     const body: BodyElem[] = [this.bodyElem()];
     while (this.peek().t === ',') { this.next(); body.push(this.bodyElem()); }
-    if (this.peek().t !== '.') this.err(`\`${head.rel}\` has no closing dot`);
+    if (this.peek().t !== '.') this.noDot(`\`${head.rel}\``);
     this.next();
     for (const b of body) {
       if ((b.t === 'pos' || b.t === 'neg') && b.lit.temporal === 'next') {

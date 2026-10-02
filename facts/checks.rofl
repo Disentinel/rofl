@@ -11,6 +11,23 @@
 edb(check_world).
 edb(check_file).
 edb(check_opt).
+edb(check_refuses).
+
+-- A REFUSAL IS EXPECTED ONLY WHERE IT IS DECLARED. A world that refuses a file
+-- it is not declared to refuse fails `npm test` and `npm run bless` alike: a
+-- stray `);` in facts/findings.rofl was blessed as `finding 1044 -> 0` and then
+-- read green, because the golden had pinned the refusal as the answer.
+check_refuses("refused", "refused.rofl").
+check_refuses("async_refused", "async-refused.rofl").
+check_refuses("not_as_a_name", "not-as-a-name.rofl").
+check_refuses("unstratifiable", "unstratifiable.rofl").
+check_refuses("premise_arity", "premise-arity.rofl").
+-- The dense form of ring 1 is written for examples/ring1/dense.ts, not for the
+-- loader; the directory world has refused it since it was first blessed.
+check_refuses("ring1", "l1.dense.rofl").
+-- a literal of 2^60 is past the term (w_agg_overflow_holes); a fixture carries
+-- its expected refusal on its first line instead (`-- expect-refusal: <text>`)
+check_refuses("agg_int_range", "agg-int-range-literal.rofl").
 
 check_world("refused").
 check_file("refused", "examples/checks/refused.rofl").
@@ -946,6 +963,23 @@ check_world("agg_cell_shrug_wfs").
 check_file("agg_cell_shrug_wfs", "examples/checks/agg-shrug-wfs.rofl").
 check_file("agg_cell_shrug_wfs", "examples/checks/agg-shrug-wfs-nullary-term-refused.rofl").
 proves("agg_cell_shrug_wfs", agg, cell, shrug).
+
+check_world("agg_cell_shrug_given").
+check_file("agg_cell_shrug_given", "examples/checks/agg-shrug-given.rofl").
+proves("agg_cell_shrug_given", agg, cell, shrug).
+check_world("agg_cell_shrug_given_agg").
+check_file("agg_cell_shrug_given_agg", "examples/checks/agg-shrug-given-count.rofl").
+proves("agg_cell_shrug_given_agg", agg, cell, shrug).
+check_world("agg_cell_shrug_given_cut").
+check_file("agg_cell_shrug_given_cut", "examples/checks/agg-shrug-given-cut.rofl").
+check_opt("agg_cell_shrug_given_cut", together, 1).
+check_opt("agg_cell_shrug_given_cut", budget, 2500).
+proves("agg_cell_shrug_given_cut", agg, cell, shrug).
+check_world("agg_cell_shrug_given_cut_agg").
+check_file("agg_cell_shrug_given_cut_agg", "examples/checks/agg-shrug-given-cut-count.rofl").
+check_opt("agg_cell_shrug_given_cut_agg", together, 1).
+check_opt("agg_cell_shrug_given_cut_agg", budget, 2500).
+proves("agg_cell_shrug_given_cut_agg", agg, cell, shrug).
 
 check_world("agg_cell_shrug_strata").
 check_file("agg_cell_shrug_strata", "rules/strata.rofl").

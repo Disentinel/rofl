@@ -8,8 +8,8 @@ A notebook is Markdown. `rofl-nb` reads it in cells:
   is for people.
 - **`rofl`** fence: rules and asking lines, in sentences.
 - **`datalog`** fence: the same in Datalog.
-- **`natural`** fence: a request in words; `rofl-nb translate` has Claude
-  write the `rofl` cell.
+- **`natural`** fence: a request in words; `rofl-nb translate` has a model
+  write the `rofl` cell ([Models](MODELS.md)).
 
 ## Sentences
 
@@ -42,6 +42,7 @@ One per line, in a `rofl` or `datalog` cell:
 | `whynot S` | the condition where S stops |
 | `excise F` | which lines would answer differently without the fact F |
 | `unsure S` | under a `never`: what it could not see |
+| `draw K` | a picture of what the notebook concluded, of kind K: a graph, time, a table, space or a notation, and their forms (guide/DRAWING.md in the repository) |
 
 `review.rofl.md` in `~/rofl-examples/notebook`, run:
 
@@ -103,7 +104,9 @@ folder gets a `note:` on stderr; the examples' world is one folder up.
 A **model** turns code into facts. `model: js` reads the JavaScript and
 TypeScript files listed under `code:`. `rofl-nb vocab` lists its sentences
 (with a notebook, its own too). In code, a function is a node, not a name:
-`` `f` calls `f` `` matches nothing, so write `never F calls F`.
+`` `f` calls `f` `` matches nothing, so write `never F calls F`, or name it
+with `F answers to "f"`. A name no fact holds is noted on its line, and a
+`never` over it holds only as far as it sees (exit 3).
 
 ## Could not see: exit 3
 
@@ -117,7 +120,7 @@ shop.rofl.md: note: 1 relative import or require was not resolved, so a never ho
   shop.js:1 "./tax.js"
 shop.rofl.md:8: cell 1 · rofl
   shop.rofl.md:8: never F always throws  ->  holds as far as it sees · 1 relative import or require was not resolved: shop.js:1 "./tax.js"
-shop.rofl.md: 1 invariant holds as far as the model sees, none fails — some invariant holds only as far as the model sees, or the run stopped at its limit (exit 3; see rofl-nb --help)
+shop.rofl.md: 1 invariant holds as far as the model sees, none fails — some invariant holds only as far as the model sees (exit 3; see rofl-nb --help)
 $ echo $?
 3
 ```

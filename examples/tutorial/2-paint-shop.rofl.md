@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 2 · Nothing leaves unpainted
 
 > Four cars came off the line and went through the paint shop. The boss has
@@ -13,19 +18,51 @@
 
 Declared as facts:
 
-- <a id="on_the_line"></a>A car X is on the line
-- <a id="to_be_painted"></a>A car X is to be painted a colour C
-- <a id="in_the_shop"></a>A colour C is in the paint shop
+- A car X is on the line
+- A car X is to be painted a colour C
+- A colour C is in the paint shop
 
 > A car comes out a colour when it is to be painted that colour and the
 > paint shop has it; then it is painted. A car on the line that is not
 > painted leaves unpainted.
 
-<a id="comes_out"></a>A car X comes out a colour C if X is to be painted C and C is in the paint shop.
+A car X comes out a colour C if X is to be painted C and C is in the paint shop.
 
-<a id="painted"></a>A car X is painted if X comes out some colour.
+A car X is painted if X comes out some colour.
 
-<a id="unpainted"></a>A car X leaves unpainted if X is on the line, unless X is painted.
+A car X leaves unpainted if X is on the line, unless X is painted.
+
+## The picture
+
+> Each car on the line and each tin in the shop is a mark, drawn as a car
+> or a paint can, with a line from a car to the tin it comes out of. A tin
+> is its own colour, and so is the car painted from it. A car that leaves
+> unpainted is grey, and edged in red while the goal below fails. Change
+> the factory, run again, and watch the cars.
+
+A mark X is a node if X is on the line.
+
+A mark C is a node if C is in the paint shop.
+
+A mark X is drawn as the icon `car` if X is on the line.
+
+A mark C is drawn as the icon `paint_can` if C is in the paint shop.
+
+A mark X links to a mark C if X comes out C.
+
+A mark X is tagged C if X comes out C.
+
+A mark C is tagged C if C is in the paint shop.
+
+A mark X is tagged `unpainted` if X leaves unpainted.
+
+A tag C is coloured C if C is in the paint shop.
+
+`unpainted` is coloured `grey`.
+
+```rofl
+draw graph
+```
 
 ## Your move: change the factory
 
@@ -69,7 +106,7 @@ never X leaves unpainted
 
 Declared as facts:
 
-- <a id="ordered"></a>A car X is ordered by a customer P
+- A car X is ordered by a customer P
 
 The orders:
 
@@ -78,7 +115,7 @@ The orders:
 - `c3` is ordered by `cy`.
 - `c4` is ordered by `di`.
 
-<a id="missing"></a>A car X is missing if X is ordered by some customer, unless X is on the line.
+A car X is missing if X is ordered by some customer, unless X is on the line.
 
 ```rofl
 never X is missing

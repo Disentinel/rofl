@@ -14,9 +14,9 @@
 
 Declared as facts:
 
-- <a id="ordered_in"></a>A car X is ordered in a colour C
-- <a id="painted"></a>A car X is painted a colour C
-- <a id="goes_to_its_customer"></a>A car X goes to its customer
+- A car X is ordered in a colour C
+- A car X is painted a colour C
+- A car X goes to its customer
 
 The orders:
 
@@ -36,8 +36,8 @@ Out of the paint shop:
 
 Declared as facts:
 
-- <a id="must_go"></a>A car X must go
-- <a id="must_stay"></a>A car X must stay
+- A car X must go
+- A car X must stay
 
 The inspector's list:
 

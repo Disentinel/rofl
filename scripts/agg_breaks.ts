@@ -1682,6 +1682,107 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "shrug_given_off",
+  "what": "an unknown row a book writes itself is a paradox with no cycle, as the alternating fixpoint's are",
+  "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](sg_said,given,stated)",
+   "agg_cell_shrug_given_agg": "shrug[$kernel](sgc_said,given,stated)"
+  }
+ },
+ {
+  "id": "shrug_given_base_only",
+  "what": "only an unknown row asserted as a fact is given; one a rule of a book concluded is a paradox",
+  "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](in(sg_book,sg_concl(b)),given,concluded)",
+   "agg_cell_shrug_given_agg": "shrug[$kernel](in(sgc_book,sgc_concl(b)),given,concluded)"
+  }
+ },
+ {
+  "id": "shrug_given_wfs_unread",
+  "what": "an atom the alternating fixpoint leaves undefined is given when a book also asserted its unknown row",
+  "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](sg_p,paradox,cycle($cons(sg_p,$cons(sg_q,$nil))))"
+  }
+ },
+ {
+  "id": "shrug_late_cut_refused",
+  "what": "a wall that falls after a reader of shrug fired refuses the program over the wall's own row instead of cutting it short",
+  "expect": {
+   "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer",
+   "agg_cell_shrug_given_cut_agg": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
+  }
+ },
+ {
+  "id": "ts_shrug_late_cut_refused",
+  "what": "the plain TypeScript engine refuses a program a wall cut after a reader of shrug fired",
+  "edits": [
+   [
+    "src/engine.ts",
+    "const snap = cut ? null : this.shrugSnap;",
+    "const snap = this.shrugSnap;"
+   ]
+  ],
+  "expect": {
+   "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
+  }
+ },
+ {
+  "id": "ts_agg_shrug_late_cut_refused",
+  "what": "the TypeScript aggregate evaluator refuses a program a wall cut after a reader of shrug fired",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const snap = cut ? null : this.shrugSnap;",
+    "const snap = this.shrugSnap;"
+   ]
+  ],
+  "expect": {
+   "agg_cell_shrug_given_cut_agg": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
+  }
+ },
+ {
+  "id": "ts_shrug_given_off",
+  "what": "the plain TypeScript engine makes an unknown row a book writes itself a paradox",
+  "edits": [
+   [
+    "src/engine.ts",
+    "if (!fed && !this.wfsWritten.has(f.key)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](sg_said,given,stated)"
+  }
+ },
+ {
+  "id": "ts_shrug_given_wfs_unread",
+  "what": "the plain TypeScript engine calls an undefined atom given when a book also asserted its unknown row",
+  "edits": [
+   [
+    "src/engine.ts",
+    "if (!fed && !this.wfsWritten.has(f.key)) {",
+    "if (!fed) {"
+   ]
+  ],
+  "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](sg_p,paradox,cycle($cons(sg_p,$cons(sg_q,$nil))))"
+  }
+ },
+ {
+  "id": "ts_agg_shrug_given_off",
+  "what": "the TypeScript aggregate evaluator makes an unknown row a book writes itself a paradox",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!fed && !this.wfsWritten.has(f.key)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_cell_shrug_given_agg": "shrug[$kernel](sgc_said,given,stated)"
+  }
+ },
+ {
   "id": "below_paradox_meta_off",
   "what": "a paradox fed from the world below is given the cycles of this world's rules, which have none",
   "expect": {

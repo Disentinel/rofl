@@ -1,3 +1,8 @@
+---
+reads:
+  - rofl:visual/graph.rofl.md
+---
+
 # Level 4 · The door lorry is late
 
 > The Tin Can Works now builds cars, trucks and bikes. A phone call: the
@@ -14,9 +19,9 @@
 
 Declared as facts:
 
-- <a id="made_of"></a>A thing X is made of a thing Y
-- <a id="on_the_plan"></a>A product X is on the plan
-- <a id="in_stock"></a>A part P is in stock
+- A thing X is made of a thing Y
+- A product X is on the plan
+- A part P is in stock
 
 What things are made of:
 
@@ -50,22 +55,40 @@ Today's stock:
 - `mirror` is in stock.
 - `frame` is in stock.
 
-<a id="lacks"></a>A thing S lacks a part P if S is made of P, unless P is in stock.
+A thing S lacks a part P if S is made of P, unless P is in stock.
 
-<a id="ready"></a>A thing S is ready if S is made of some thing, unless S lacks some part.
+A thing S is ready if S is made of some thing, unless S lacks some part.
 
-<a id="short"></a>A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
+A product X is short of a thing Y if X is made of Y, unless Y is in stock, unless Y is ready.
 
-<a id="leaves"></a>A product X leaves the line if X is on the plan, unless X is short of some thing.
+A product X leaves the line if X is on the plan, unless X is short of some thing.
+
+## The picture
+
+> The products that leave the line and the parts in stock, each drawn as
+> the icon of its name, with a line from a product to each part in stock
+> it uses. Drawn in the same cell as an `excise`, the picture is the factory
+> before and after at once: what the excised fact takes with it is drawn
+> faded and dashed, `gone`.
+
+A mark X is a node if X leaves the line.
+
+A mark P is a node if P is in stock.
+
+A mark X is drawn as the icon X if X is a node.
+
+A mark X links to a mark P if X leaves the line, X uses P and P is in stock.
 
 ## Your move
 
 > Add an `excise` line under the question in this cell, taking out the fact
 > that the doors are in stock (copy it from *Today's stock*, without the
-> dash and the full stop). Run, and read what changes.
+> dash and the full stop). Run, and read what changes, in the answers
+> and in the picture.
 
 ```rofl
 ? X leaves the line
+draw graph
 ```
 
 > Then write down every product that stops, one line each, like the list in
@@ -73,7 +96,7 @@ Today's stock:
 
 Declared as facts:
 
-- <a id="on_your_list"></a>A product X is on your list
+- A product X is on your list
 
 Your list:
 
@@ -87,20 +110,20 @@ Your list:
 
 Declared as facts:
 
-- <a id="playing"></a>A level L is being played
+- A level L is being played
 
 Now playing:
 
 - `level4` is being played.
 
-<a id="uses"></a>A thing X uses a part P either:
+A thing X uses a part P either:
 
 1. if X is made of P;
 2. if X is made of a thing Y and Y uses P.
 
-<a id="missing"></a>A level L is missing an answer if L is being played, X is on the plan, X uses `door`, unless X is on your list.
+A level L is missing an answer if L is being played, X is on the plan, X uses `door`, unless X is on your list.
 
-<a id="by_mistake"></a>A product X is on your list by mistake if X is on your list, unless X uses `door`.
+A product X is on your list by mistake if X is on your list, unless X uses `door`.
 
 ```rofl
 never L is missing an answer

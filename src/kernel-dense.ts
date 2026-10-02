@@ -331,6 +331,7 @@ shrug_reason(conflict, s("two answers were given for one key, or two books disag
 shrug_reason(federation, s("the answer lives in a volume or book that is not loaded")).
 shrug_reason(widened, s("a declared widening enclosed the value: the least value lies within it, and is not known")).
 shrug_reason(inherited, s("the answer reads another answer that is a shrug")).
+shrug_reason(given, s("a book states that it is not known")).
 shrug_cause(budget_exhausted, budget, s("the step budget ran out")).
 shrug_cause(space_exhausted, budget, s("the row budget ran out")).
 shrug_cause(arith_overflow, fault, s("arithmetic left the integer range of plus or minus 2^60")).
@@ -351,6 +352,8 @@ shrug_cause(improving_cycle, divergence, s("a lattice value came back through it
 shrug_cause(dominance_cycle, conflict, s("a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided")).
 shrug_cause(dominance_intransitive, conflict, s("a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided")).
 shrug_cause(undefined, paradox, s("the alternating fixpoint left it undefined")).
+shrug_cause(stated, given, s("the book asserted unknown of it as a fact; the alternating fixpoint did not leave it undefined")).
+shrug_cause(concluded, given, s("a rule of the book concluded unknown of it; the alternating fixpoint did not leave it undefined")).
 shrug_cause(support_withdrawn, inherited, s("a premise it read is a shrug")).
 shrug_cause(fault_left_out, inherited, s("a shrug at the tick before kept it from being staged")).
 shrug_cause(left_out_below, inherited, s("the world below has no answer for it")).

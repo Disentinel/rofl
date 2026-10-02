@@ -528,6 +528,27 @@ brk("shrug_whynot_as_failure"). brk_kind("shrug_whynot_as_failure", switch).
 brk_expects("shrug_whynot_as_failure", "agg_cell_shrug_why").
 brk("below_drops_shrugs"). brk_kind("below_drops_shrugs", switch).
 brk_expects("below_drops_shrugs", "agg_cell_wfs").
+brk("shrug_given_off"). brk_kind("shrug_given_off", switch).
+brk_expects("shrug_given_off", "agg_cell_shrug_given").
+brk_expects("shrug_given_off", "agg_cell_shrug_given_agg").
+brk("shrug_given_base_only"). brk_kind("shrug_given_base_only", switch).
+brk_expects("shrug_given_base_only", "agg_cell_shrug_given").
+brk_expects("shrug_given_base_only", "agg_cell_shrug_given_agg").
+brk("shrug_given_wfs_unread"). brk_kind("shrug_given_wfs_unread", switch).
+brk_expects("shrug_given_wfs_unread", "agg_cell_shrug_given").
+brk("shrug_late_cut_refused"). brk_kind("shrug_late_cut_refused", switch).
+brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut").
+brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
+brk("ts_shrug_late_cut_refused"). brk_kind("ts_shrug_late_cut_refused", ts).
+brk_expects("ts_shrug_late_cut_refused", "agg_cell_shrug_given_cut").
+brk("ts_agg_shrug_late_cut_refused"). brk_kind("ts_agg_shrug_late_cut_refused", ts).
+brk_expects("ts_agg_shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
+brk("ts_shrug_given_off"). brk_kind("ts_shrug_given_off", ts).
+brk_expects("ts_shrug_given_off", "agg_cell_shrug_given").
+brk("ts_shrug_given_wfs_unread"). brk_kind("ts_shrug_given_wfs_unread", ts).
+brk_expects("ts_shrug_given_wfs_unread", "agg_cell_shrug_given").
+brk("ts_agg_shrug_given_off"). brk_kind("ts_agg_shrug_given_off", ts).
+brk_expects("ts_agg_shrug_given_off", "agg_cell_shrug_given_agg").
 brk("below_paradox_meta_off"). brk_kind("below_paradox_meta_off", switch).
 brk_expects("below_paradox_meta_off", "agg_cell_wfs").
 brk("ts_shrug_paradox_root_off"). brk_kind("ts_shrug_paradox_root_off", ts).
@@ -1335,6 +1356,10 @@ switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").
 switch_site("shrug_conflict_parties_off", "rust/rofl/src/engine.rs").
 switch_site("shrug_cycle_merged", "rust/rofl/src/engine.rs").
 switch_site("shrug_edges_off", "rust/rofl/src/engine.rs").
+switch_site("shrug_given_base_only", "rust/rofl/src/engine.rs").
+switch_site("shrug_given_off", "rust/rofl/src/engine.rs").
+switch_site("shrug_given_wfs_unread", "rust/rofl/src/engine.rs").
+switch_site("shrug_late_cut_refused", "rust/rofl/src/engine.rs").
 switch_site("shrug_late_unrefused", "rust/rofl/src/engine.rs").
 switch_site("shrug_meta_late_unrefused", "rust/rofl/src/engine.rs").
 switch_site("shrug_meta_off", "rust/rofl/src/engine.rs").
@@ -1435,6 +1460,10 @@ proof_world("agg_cell_holes_wfs").
 proof_world("agg_cell_reflect").
 proof_world("agg_cell_safety").
 proof_world("agg_cell_shrug").
+proof_world("agg_cell_shrug_given").
+proof_world("agg_cell_shrug_given_agg").
+proof_world("agg_cell_shrug_given_cut").
+proof_world("agg_cell_shrug_given_cut_agg").
 proof_world("agg_cell_shrug_strata").
 proof_world("agg_cell_shrug_ticks").
 proof_world("agg_cell_shrug_wfs").
