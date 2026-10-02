@@ -2987,22 +2987,41 @@ Invariants:
 ## Ready for the incremental engine, as built
 
 The next engine maintains a world by deltas, and aggregates must not need a
-format change for it. `w_agg_incremental_ready` owns the column; each line
-says where it stands, and the first retraction path is built, so that what
-the format promises is used and held to a fresh evaluation.
+format change for it. `w_agg_incremental_ready` owns the column and closes it
+in every row; each line says where it stands, and the retraction path is
+built, so that what the format promises is used and held to a fresh
+evaluation. Decisions in `f_a_retraction_updates_the_cells_it_supports`,
+`f_a_lattice_contribution_is_named_by_its_firing`,
+`f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again` and
+`f_a_delta_has_no_promise_over_a_history_the_schedule_wrote`.
 
-- **The algebra is recorded with the cell**: `CellRec::alg`, set from
-  `AggOp::algebra` as flags (idempotent, invertible, holistic, lattice; `tag`
-  for a semiring tag's cell), and the strategy the flags give
-  (`Algebra::strategy`: an invertible cell subtracts, a holistic one
-  recomputes its group, anything else is derived again). Both are printed on
-  the cell's line of `canonical_state`: `alg=idempotent,lattice use=rederive`.
+- **The algebra is recorded**: with a cell (`CellRec::alg`, set from
+  `AggOp::algebra` as flags: idempotent, invertible, holistic, lattice, and `tag`
+  for the cell of a counting tag), and with a lattice relation, whose facts are
+  its cells and so have no record of their own: every lattice, tag and
+  subsumptive relation, a join's contributions (`L@join`) and a counting tag's
+  derivations (`p@count`) are registered when the program is prepared
+  (`Store::lat_regs`, `Store::tag_rules`; both persisted by a snapshot) and printed as
+  `lat REL OP alg=FLAGS use=STRATEGY` (`min`, `union`, `tag:tropical`,
+  `tag:counting`, `subsumption`). The strategy is what the flags give
+  (`Algebra::strategy`): an invertible cell subtracts, a holistic one
+  recomputes its group, anything else is derived again, and a **widened** join
+  (`widening` among the flags) is `full`: what a widening holds depends on the
+  number and the order of the iterations that made it, so no delta promises it.
 - **A member has an id that survives a re-seal**: `Store::member_id`, FNV-1a
   over `rule@at|key|identity`, where the identity is a Group's distinct
   projection tuple and a Best's distinct derivation (its premises, sorted).
-  Never the record's id, the tick, the position or the height, so the same
-  contribution is the same id in every seal of its cell, later ticks and the
-  other engine. Printed on the member's line: `mem K #2 id=af25... (5,2)`.
+  Never the record's id, the tick, the position or the height. Printed on the
+  member's line: `mem K #2 id=af25... (5,2)`.
+- **A lattice contribution is a firing, and has one too**: `Store::firing_id`,
+  FNV-1a over `rule@tick|premise; premise`, premises as `canonical_state` spells
+  them and sorted, so it is a function of what made the firing and of nothing
+  the schedule decides, the same in both engines. Every firing of a fact of a
+  registered relation is printed, in canonical order, whether its fact holds or
+  was superseded (a value kept as the history another was reached through):
+  `fir FACT id=H RULE@TICK [PREMISES] live|superseded`. The member id leaves
+  the tick out on purpose (a cell is sealed once per tick and its members are
+  the same across them); a firing is a fact of its tick.
 - **The height is kept**, per cell and per member; a cell's identity is
   (owner, key, tick), without the value; `PremRef::Cell` names an immutable
   record, so it records the value at use, within a tick and across ticks.
@@ -3015,63 +3034,99 @@ the format promises is used and held to a fresh evaluation.
   evaluation runs. A member cites the facts of its representative derivation
   only, which is all a retraction needs: a derivation that is not the
   representative decides nothing about the member while it stands or falls.
-  The other direction, a cell -> the firings that cite it, is the readers of
-  its rule's head relation (`drop_readers`).
+  For a lattice the back-index is the citer index the lattice close already
+  keeps (`Store::citers_of`), and a value no fact holds (a dominated one) is
+  remembered with the premises of the firing that gave it (`sub_prems`).
 
 ### The retraction path
 
-`Session::retract_delta(fact)` (rofl-load `--retract`) takes a base fact out
-of an evaluated world and brings the cells it supported to what a fresh
-evaluation holds, without evaluating the world again:
+`Session::retract_delta(fact)` (rofl-load `--retract`) takes a base fact out of
+an evaluated world and brings what it supported to what a fresh evaluation
+holds, without evaluating the world again:
 
-| Cell | What happens | Uses |
+| What rests on the fact | What happens | Uses |
 | --- | --- | --- |
 | count, sum (Group, invertible) | the members whose representative cites the fact are derived again, each alone (the inner body with the group and the member's projection bound); one with no derivation left is dropped and its value taken from the total, one with another derivation keeps its place under the least signature left; the survivors are ordered again by height and projection | `AggOp::subtract` |
-| min, max, or, and (Best, idempotent) | no inverse, and only the members that reach the value are kept, so the one cell is derived again with its key bound | `seal_cells` |
-| what read the cell | the firings that cited the old record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record | `solve_body`, `conclude` |
+| counting tag | the derivations (`p@count`) whose only firings cite the fact go, and the tag's sum subtracts them: nothing is derived again | `withdraw_firings`, `AggOp::subtract` |
+| min, max, or, and, median, quantile (constant percent) | no inverse (or a value that is a function of the whole group): the one cell is derived again with its key bound | `seal_cells` |
+| at_least | the group asked again over the facts; where it still reaches N the cell is reached and closed as a Quorum is, the first N members by height and projection, and reflected; below N it has no cell | `thr_reach`, `close_thresholds_below` |
+| an order lattice, an idempotent tag | the CONE: the lattice facts whose firings cite the fact, those whose firings cite them, and so on, are taken out with their firings and provenance (a cycle supports itself, so a fact is not kept for a firing inside the cone); the rules into the cone's relations are fired again over what stands, which is how the evaluation concluded them, and the relations close again: a key holds the best value its rules reach and every firing of that value over final facts | `activate`, `close_lattices_below` |
+| a subsumptive relation | the cone by KEY: the front of a key one of whose values rests on the fact, and every key a value was given to from the fact, are taken out whole and derived again, since what each value dominated is decided against every value the key was given | the same, with the state a key keeps of its values (`sub_seen`, `sub_memo`, `sub_by`, `sub_prems`) forgotten with it |
+| what read a cell, or a lattice | the firings that cited the old cell record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record; the facts of PLAIN RULES that rested on a replaced cell's conclusion or on the cone, through each other and around a cycle, are taken out whatever else they have, and the rules fired again once the cells are replaced and the lattices closed | `solve_body`, `conclude`, `consumer_facts`, `activate` |
 
 It answers `Delta` (what it did) or `Full(reason)`: the world as a full
-evaluation takes it, evaluated again at the next question. It refuses, by
-name, a world or a fact it is not worked out for: a later tick, a lattice,
-tag, subsumption, hole, wall or the well-founded mode; a fact a plain rule
-reads, or a negation, or a rule that concludes its relation too; a rule that
-reads the ledgers (`asserted_by`, `agg_*`, `derived_by`, `hole`); a cell of
-another algebra (holistic cells share members across percents; a threshold's
-Quorum is the first N); a cell holding a hole; a cell whose rule concludes
-into a relation another rule reads (its readers would have to be
-retracted too, and a retraction can add conclusions through a negation).
-Each is a bounded job for the delta engine proper, and none changes what a
-full evaluation answers.
+evaluation takes it, evaluated again at the next question. The reasons are
+named: a later tick, a hole, a wall or the well-founded mode; a fact a plain
+rule reads outside an aggregate (a lattice's rule and a counting tag's
+derivation read their facts so, and are the path's own), or a negation, or a
+rule that concludes its relation too; a rule that reads the ledgers
+(`asserted_by`, `agg_*`, `derived_by`, `hole`, `lattice_member`,
+`dominated_by`); a cell holding a hole; **a join or a widening** (its
+contributions are the history of the schedule that read them, which a fresh
+evaluation writes and a delta cannot promise); **a value kept as history** (a
+fact no firing over final values founds: the close of its relation decides
+again which superseded values are still needed, so the whole relation is
+decided again); a rank, or a quantile whose percent a rule hands it (the
+group is stored once and shared across its parameter); a rule whose second
+aggregate is asked for what its first reached (a result, a group, or only the
+groups it had a value for: the cells there are depend on the first); a rule
+that negates, aggregates or stages what rests on the fact; a dominance rule
+that reads it; and a delta that would write a hole, seal a cell nothing
+indexes or meet a wall (a hole is written with its shrugs after a whole
+pass). Each is a named reason; none changes what a full evaluation answers.
 
-It is held three ways. `rust/rofl/tests/incremental.rs` is a differential:
-random asserts and retracts over four input relations, each step compared with
-a world built from the same facts and evaluated from nothing, byte for byte in
-`canonical_state` (the refusals counted by name, so a path that quietly
-stopped taking the delta fails as much as one that took it wrongly). The
-worlds `agg_incr_sum`, `agg_incr_minmax`, `agg_incr_gate` and
-`agg_incr_holistic` retract facts after the evaluation (`check_opt(W,
-retract, "fact")`: Rust by the path, TypeScript by evaluating again) and
-state the rows that must hold after, so both engines' hash is the same state.
-And twelve planted faults (`retract_*`, `member_id_position`,
-`alg_flags_off`) turn them red.
+It is held three ways. `rust/rofl/tests/incremental.rs` is a differential over
+sixteen sweeps (the body aggregates; the median, quantile and threshold; a
+counting tag; order lattices and an idempotent tag with a saturating chain that
+keeps a history; a Pareto front and total-order dominance; plain rules over
+cells and over lattices; cells, lattices and tags in one world; a world with a
+rule per refusal): random asserts and retracts, loaded facts and asserted
+ones, each step compared with a world built from the same facts and evaluated
+from nothing, byte for byte in `canonical_state`, and the explanations (`why
+all` of every fact that holds, `whynot` of the facts that held) compared too,
+because they read what an evaluation left in the engine. 4 680 edits, 2 739
+retractions, 2 028 by delta and 711 evaluated again for a named reason, none
+of them a different state, over 180 000 explanations. The worlds
+`agg_incr_sum`, `agg_incr_minmax`, `agg_incr_holistic`, `agg_incr_lattice`,
+`agg_incr_tag`, `agg_incr_tagc`, `agg_incr_join`, `agg_incr_widen`,
+`agg_incr_sub`, `agg_incr_readers` and the gate worlds retract facts after
+the evaluation (`check_opt(W, retract, "fact")`: Rust by the path, TypeScript
+by evaluating again) and state the rows that must hold after, so both engines'
+hash is the same state. The registry lists retractions in text order, and a
+retraction that is evaluated again evaluates the world whole, so the ones that
+are evaluated again sort first in a world that proves a delta. And
+thirty planted faults (`retract_*`, `firing_id_tickless`, `fir_superseded_live`,
+`tag_flags_off`, `widening_flag_off`, `member_id_position`, `alg_flags_off`,
+`stale_holes_kept`, ...) turn them red.
 
 The TypeScript engine stays a full recompute: its `retract` marks the store
 dirty and the next evaluation is the whole one, and its `canonicalState` prints
-the same flags and ids, so parity is checked on the result of both.
+the same flags, ids and lattice lines, so parity is checked on the result of
+both.
 
-Both risks this section once named are closed ("Well-founded worlds and ticks,
-as built"): a cell staged `@next` keeps its tick and its members' premises of
-that tick, and `retain_ticks` keeps the provenance a live cell cites. A fact
-staged again takes the new tick's firings and drops the old, so neither its
-firings nor the cells they cite accumulate across ticks.
+A world evaluated again must be a fresh one. It was not: a hole is a base,
+frozen row, which the cleaning of derived facts keeps, so a retraction that
+removed the member that made a hole left the hole, and with it every later
+retraction refused (the world holds a hole). The hole rows an evaluation
+writes are now its own (`Store::eval_holes`): they go when the next evaluation
+of the tick starts, and stay for good once the tick ends. In both engines.
 
-What stays open in this column: the lattice kinds (order and join lattices,
-widening, the semiring tags, subsumption). Their contribution is a firing of a
-fact, not a member of a record, so its id is a firing's signature
-(`rule|premises`), which needs the citer index promoted from the lattice close
-(`Store::track_citers`) to the retraction path and a printed form both engines
-agree on for the firings a superseded value keeps; the algebra flags of their
-declarations are already `AggOp::algebra`.
+Both risks the first draft of this section named are closed ("Well-founded
+worlds and ticks, as built"): a cell staged `@next` keeps its tick and its
+members' premises of that tick, and `retain_ticks` keeps the provenance a live
+cell cites. A fact staged again takes the new tick's firings and drops the
+old, so neither its firings nor the cells they cite accumulate across ticks.
+
+What stays evaluated again, and why: a join or a widening (the history is the
+schedule's); a value kept as history (the close of its relation decides which
+superseded values are needed); a rank or a quantile with a percent from
+outside (the group is shared across its parameter, and a delta would have to
+re-derive the family); chained aggregates; a delta that writes a hole; the
+tick of a world that is not the first; and a consumer that negates or
+aggregates what changed (its cells, or the facts a negation would add, are a
+second delta stacked on the first). The first three are decisions: the
+reason is the state a fresh evaluation writes and no delta can reproduce, not
+the work.
 
 ## Where it lands in the engine
 
@@ -3348,7 +3403,7 @@ passed on the finished tree:
 - Cells: 238 (14 kinds by 17 obligations). 143 modelled, each closed by a proof
   world; 16 waived; 79 not modelled.
 - `next_work` returns `w_agg_phrase`, the takeable item something else waits
-  on. Also takeable: `w_agg_incremental_ready`, the demos
+  on. Also takeable: the demos
   `w_agg_demo_critical_path`, `w_agg_demo_interval`, `w_agg_demo_life`,
   `w_agg_demo_linter`, `w_agg_demo_minimax`, `w_agg_demo_slo` and
   `w_agg_demo_voting`, then `w_agg_reconcile_docs` and
@@ -3359,7 +3414,8 @@ passed on the finished tree:
   tags and subsumption alone; `holes` and `shrug` are modelled for every kind
   built and claimed by the item of the one not (the sugar, whose `eval_rust`,
   `safety`, `why`, `holes` and `shrug` wait on `w_agg_phrase`);
-  `incremental_ready`, `phrase` and `retire` are open wherever not waived. Not
+  `phrase` and `retire` are open wherever not waived, and `incremental_ready` is closed in every row
+  (w_agg_incremental_ready, 2026-10-02). Not
   modelled on any column: `sugar`, apart from its waivers.
 
 ## Contradictions still in the tree

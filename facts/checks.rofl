@@ -2323,3 +2323,98 @@ check_opt("agg_incr_holistic", retract, "ah_v(2, a, 9)").
 check_opt("agg_incr_holistic", retract, "ah_v(4, b, 2)").
 proves("agg_incr_holistic", agg, holistic, incremental_ready).
 proves("agg_incr_holistic", agg, threshold, incremental_ready).
+
+-- the order lattices under retraction: the cone of the fact taken out and the rules into it fired again; a cycle that rested on it alone, a value that falls back to a worse path; a history is evaluated again, so its fact sorts first (the registry lists retractions in text order)
+check_world("agg_incr_lattice").
+check_file("agg_incr_lattice", "examples/checks/agg-incr-lattice.rofl").
+check_opt("agg_incr_lattice", together, 1).
+check_opt("agg_incr_lattice", retract, "il_0sat(m, n, 3)").
+check_opt("agg_incr_lattice", retract, "il_cap(s, t, 4)").
+check_opt("agg_incr_lattice", retract, "il_e(b, c, 2)").
+check_opt("agg_incr_lattice", retract, "il_lk(x, p)").
+check_opt("agg_incr_lattice", retract, "il_s(a, 0)").
+proves("agg_incr_lattice", agg, order_lattice, incremental_ready).
+
+-- the idempotent semiring tags: the order lattices of their ⊕, recorded as tags
+check_world("agg_incr_tag").
+check_file("agg_incr_tag", "examples/checks/agg-incr-tag.rofl").
+check_opt("agg_incr_tag", together, 1).
+check_opt("agg_incr_tag", retract, "it_e(b, c, 4)").
+check_opt("agg_incr_tag", retract, "it_p(a, b, 500000)").
+check_opt("agg_incr_tag", retract, "it_p(c, a, 900000)").
+proves("agg_incr_tag", agg, tag_idempotent, incremental_ready).
+
+-- the counting tag: the derivations a fact made go with it and the sum subtracts them
+check_world("agg_incr_tagc").
+check_file("agg_incr_tagc", "examples/checks/agg-incr-tagc.rofl").
+check_opt("agg_incr_tagc", together, 1).
+check_opt("agg_incr_tagc", retract, "ic_e(b, c)").
+check_opt("agg_incr_tagc", retract, "ic_w(a, b, 2)").
+check_opt("agg_incr_tagc", retract, "ic_e(a, c)").
+proves("agg_incr_tagc", agg, tag_counting, incremental_ready).
+
+-- a join lattice keeps the history of the schedule that read its contributions: evaluated again, flags and firing ids recorded
+check_world("agg_incr_join").
+check_file("agg_incr_join", "examples/checks/agg-incr-join.rofl").
+check_opt("agg_incr_join", together, 1).
+check_opt("agg_incr_join", retract, "ij_link(c, a)").
+check_opt("agg_incr_join", retract, "ij_e(b, c)").
+proves("agg_incr_join", agg, join_lattice, incremental_ready).
+
+-- a widening depends on the order of its iterations: strategy full
+check_world("agg_incr_widen").
+check_file("agg_incr_widen", "examples/checks/agg-incr-widen.rofl").
+check_opt("agg_incr_widen", together, 1).
+check_opt("agg_incr_widen", retract, "iw_step(h, 1)").
+proves("agg_incr_widen", agg, widening, incremental_ready).
+
+-- a subsumptive relation is judged against every value it was given: the keys the fact reached, the front and the values dominated, derived again
+check_world("agg_incr_sub").
+check_file("agg_incr_sub", "examples/checks/agg-incr-sub.rofl").
+check_opt("agg_incr_sub", together, 1).
+check_opt("agg_incr_sub", retract, "is_e(a, c, 3, 3)").
+check_opt("agg_incr_sub", retract, "is_e(b, c, 1, 5)").
+proves("agg_incr_sub", agg, subsumption, incremental_ready).
+
+-- the cells a rule seals for what another aggregate of it reached
+check_world("agg_incr_chain").
+check_file("agg_incr_chain", "examples/checks/agg-incr-chain.rofl").
+check_opt("agg_incr_chain", together, 1).
+check_opt("agg_incr_chain", retract, "ac_q(2)").
+proves_work("agg_incr_chain", w_agg_incremental_ready).
+
+-- the cells a rule seals for the groups its first aggregate has a value for
+check_world("agg_incr_partial").
+check_file("agg_incr_partial", "examples/checks/agg-incr-partial.rofl").
+check_opt("agg_incr_partial", together, 1).
+check_opt("agg_incr_partial", retract, "ap_v(3, b, 2)").
+proves_work("agg_incr_partial", w_agg_incremental_ready).
+
+-- a retraction under a lattice that makes a hole is evaluated again
+check_world("agg_incr_latticehole").
+check_file("agg_incr_latticehole", "examples/checks/agg-incr-latticehole.rofl").
+check_opt("agg_incr_latticehole", together, 1).
+check_opt("agg_incr_latticehole", retract, "ih_bg(h, i, 1)").
+proves_work("agg_incr_latticehole", w_agg_incremental_ready).
+
+-- what reads a cell or a lattice: its facts taken out with the old record and the rules fired again
+check_world("agg_incr_readers").
+check_file("agg_incr_readers", "examples/checks/agg-incr-readers.rofl").
+check_opt("agg_incr_readers", together, 1).
+check_opt("agg_incr_readers", retract, "ir_e(a, b, 1)").
+check_opt("agg_incr_readers", retract, "ir_sale(1, a, 10)").
+proves_work("agg_incr_readers", w_agg_incremental_ready).
+
+-- a retraction that makes a hole is evaluated again, with its shrugs
+check_world("agg_incr_overflow").
+check_file("agg_incr_overflow", "examples/checks/agg-incr-overflow.rofl").
+check_opt("agg_incr_overflow", together, 1).
+check_opt("agg_incr_overflow", retract, "ao_v(3, -5)").
+proves_work("agg_incr_overflow", w_agg_incremental_ready).
+
+-- a hole the retracted fact made is gone with it
+check_world("agg_incr_stale").
+check_file("agg_incr_stale", "examples/checks/agg-incr-stale.rofl").
+check_opt("agg_incr_stale", together, 1).
+check_opt("agg_incr_stale", retract, "ast_u(2, x)").
+proves_work("agg_incr_stale", w_agg_incremental_ready).

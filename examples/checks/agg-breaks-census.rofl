@@ -1274,6 +1274,7 @@ brk("ts_agg_reach_unmemo"). brk_kind("ts_agg_reach_unmemo", ts).
 brk_expects("ts_agg_reach_unmemo", "agg_precise_scale").
 brk("retract_no_subtract"). brk_kind("retract_no_subtract", switch).
 brk_expects("retract_no_subtract", "agg_incr_sum").
+brk_expects("retract_no_subtract", "agg_incr_tagc").
 brk("retract_stale_rep"). brk_kind("retract_stale_rep", switch).
 brk_expects("retract_stale_rep", "agg_incr_sum").
 brk("retract_no_readers"). brk_kind("retract_no_readers", switch).
@@ -1282,6 +1283,7 @@ brk("retract_no_refire"). brk_kind("retract_no_refire", switch).
 brk_expects("retract_no_refire", "agg_incr_sum").
 brk("retract_no_rederive"). brk_kind("retract_no_rederive", switch).
 brk_expects("retract_no_rederive", "agg_incr_minmax").
+brk_expects("retract_no_rederive", "agg_incr_holistic").
 brk("retract_index_off"). brk_kind("retract_index_off", switch).
 brk_expects("retract_index_off", "agg_incr_sum").
 brk("retract_gate_plain"). brk_kind("retract_gate_plain", switch).
@@ -1298,6 +1300,39 @@ brk("alg_flags_off"). brk_kind("alg_flags_off", switch).
 brk_expects("alg_flags_off", "agg_incr_sum").
 brk_expects("alg_flags_off", "agg_incr_minmax").
 brk_expects("alg_flags_off", "agg_incr_holistic").
+brk_expects("alg_flags_off", "agg_incr_lattice").
+brk_expects("alg_flags_off", "agg_incr_join").
+brk_expects("alg_flags_off", "agg_incr_sub").
+brk("firing_id_tickless"). brk_kind("firing_id_tickless", switch).
+brk_expects("firing_id_tickless", "agg_incr_lattice").
+brk_expects("firing_id_tickless", "agg_incr_tagc").
+brk("fir_superseded_live"). brk_kind("fir_superseded_live", switch).
+brk_expects("fir_superseded_live", "agg_incr_lattice").
+brk("tag_flags_off"). brk_kind("tag_flags_off", switch).
+brk_expects("tag_flags_off", "agg_incr_tag").
+brk_expects("tag_flags_off", "agg_incr_tagc").
+brk("tag_cell_flag_off"). brk_kind("tag_cell_flag_off", switch).
+brk_expects("tag_cell_flag_off", "agg_incr_tagc").
+brk("widening_flag_off"). brk_kind("widening_flag_off", switch).
+brk_expects("widening_flag_off", "agg_incr_widen").
+brk("retract_lattice_precise"). brk_kind("retract_lattice_precise", switch).
+brk_expects("retract_lattice_precise", "agg_incr_lattice").
+brk("retract_tag_derivations_kept"). brk_kind("retract_tag_derivations_kept", switch).
+brk_expects("retract_tag_derivations_kept", "agg_incr_tagc").
+brk("retract_thr_no_close"). brk_kind("retract_thr_no_close", switch).
+brk_expects("retract_thr_no_close", "agg_incr_holistic").
+brk("retract_chain_gate_off"). brk_kind("retract_chain_gate_off", switch).
+brk_expects("retract_chain_gate_off", "agg_incr_chain").
+brk("retract_partial_gate_off"). brk_kind("retract_partial_gate_off", switch).
+brk_expects("retract_partial_gate_off", "agg_incr_partial").
+brk("retract_hole_kept"). brk_kind("retract_hole_kept", switch).
+brk_expects("retract_hole_kept", "agg_incr_overflow").
+brk("retract_lattice_hole_kept"). brk_kind("retract_lattice_hole_kept", switch).
+brk_expects("retract_lattice_hole_kept", "agg_incr_latticehole").
+brk("retract_consumers_kept"). brk_kind("retract_consumers_kept", switch).
+brk_expects("retract_consumers_kept", "agg_incr_readers").
+brk("stale_holes_kept"). brk_kind("stale_holes_kept", switch).
+brk_expects("stale_holes_kept", "agg_incr_stale").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1381,6 +1416,8 @@ switch_site("empty_text", "rust/rofl/src/engine.rs").
 switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("facts_decl_as_fact", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("facts_dom_unwritten", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("fir_superseded_live", "rust/rofl/src/store.rs").
+switch_site("firing_id_tickless", "rust/rofl/src/store.rs").
 switch_site("first_rep", "rust/rofl/src/engine.rs").
 switch_site("height_min", "rust/rofl/src/store.rs").
 switch_site("hol_best_only", "rust/rofl/src/engine.rs").
@@ -1527,16 +1564,24 @@ switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
 switch_site("restaged_keeps_old_firing", "rust/rofl/src/engine.rs").
 switch_site("retain_prunes_cited", "rust/rofl/src/engine.rs").
+switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_hole_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_index_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_lattice_hole_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_lattice_precise", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_memo_stale", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_readers", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stale_rep", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_tag_derivations_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").
@@ -1573,6 +1618,7 @@ switch_site("solutions", "rust/rofl/src/engine.rs").
 switch_site("space_uncut_world", "rust/rofl/src/engine.rs").
 switch_site("staged_keeps_withdrawn", "rust/rofl/src/engine.rs").
 switch_site("staged_neg_arrival", "rust/rofl/src/engine.rs").
+switch_site("stale_holes_kept", "rust/rofl/src/engine.rs").
 switch_site("strata_untabled", "rust/rofl/src/engine.rs").
 switch_site("subset_iv_low_only", "rust/rofl/src/engine.rs").
 switch_site("sum_by_value", "rust/rofl/src/engine.rs").
@@ -1581,7 +1627,9 @@ switch_site("tag_alg_unknown_skipped", "rust/rofl/src/tag.rs").
 switch_site("tag_arity_short", "rust/rofl/src/program.rs").
 switch_site("tag_asserted", "rust/rofl/src/engine.rs").
 switch_site("tag_carrier_open", "rust/rofl/src/cell.rs").
+switch_site("tag_cell_flag_off", "rust/rofl/src/store.rs").
 switch_site("tag_counting_idempotent", "rust/rofl/src/cell.rs").
+switch_site("tag_flags_off", "rust/rofl/src/cell.rs").
 switch_site("tag_judged_as_written", "rust/rofl/src/engine.rs").
 switch_site("tag_label_lattice", "rust/rofl/src/engine.rs").
 switch_site("tag_lattice_admitted", "rust/rofl/src/tag.rs").
@@ -1633,6 +1681,7 @@ switch_site("widen_unread", "rust/rofl/src/rofl_parse.rs").
 switch_site("widen_why_one_step", "rust/rofl/src/engine.rs").
 switch_site("widen_why_root_bare", "rust/rofl/src/engine.rs").
 switch_site("widen_whynot_bare", "rust/rofl/src/engine.rs").
+switch_site("widening_flag_off", "rust/rofl/src/engine.rs").
 switch_site("withdrawn_cell_stale_src", "rust/rofl/src/engine.rs").
 switch_site("word_ops_is_only", "rust/rofl/src/rofl_parse.rs").
 switch_site("wrap", "rust/rofl/src/cell.rs").
@@ -1702,8 +1751,14 @@ proof_world("agg_holistic_wfs").
 proof_world("agg_holistic_why").
 proof_world("agg_holistic_witness").
 proof_world("agg_incr_holistic").
+proof_world("agg_incr_join").
+proof_world("agg_incr_lattice").
 proof_world("agg_incr_minmax").
+proof_world("agg_incr_sub").
 proof_world("agg_incr_sum").
+proof_world("agg_incr_tag").
+proof_world("agg_incr_tagc").
+proof_world("agg_incr_widen").
 proof_world("agg_interval_demo").
 proof_world("agg_join_budget").
 proof_world("agg_join_eval").

@@ -26,10 +26,10 @@ import {
   type AggOp, type Val, type Sorted, type TagAlg, Refused, OffCarrier, IvFailed, TagFailed, opFromName, opClass, isJoin,
   dedupByProjection, opParams, opIdentity, lift, insert, finish, lower, holisticSorted, sortedOf, joinCanon, join,
   joinLeq, joinCarrierOf, setElems, setContains, ivBounds, mkIv, ivApply, type IvFn, IV_FNS, widenIv, narrowIv, NINF, PINF,
-  tagFromTimesName, tagTimes, tagIdempotent, quorum, AGG_OPS, AGG_OVERFLOW,
+  tagFromTimesName, tagTimes, tagIdempotent, latAlg, quorum, AGG_OPS, AGG_OVERFLOW,
 } from './cell.ts';
 import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.ts';
-import { Store, type FactStore, type FactRec, type PremRef, type Witness, type CellRec, type CellMember, factKey, premText,
+import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
 import { canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
@@ -797,6 +797,26 @@ export class AggEval {
     for (const d of fresh) if (!this.diags.includes(d)) this.diags.push(d);
   }
 
+  /** The relations whose facts are lattice cells, with their algebra, for the store to print (`Store.latRegs`): every lattice, tag
+   *  and subsumptive relation, a join's contributions (`L@join`), and the derivations of a counting tag (`p@count`). */
+  private registerLattices(rules: DRule[]): void {
+    const regs: LatReg[] = [];
+    for (const [rel, [, op]] of this.lattices) {
+      const tag = this.tags.byRel.get(rel);
+      const { alg, use } = latAlg(op, tag ? (tagIdempotent(tag[1]) ? 'idempotent' : 'counting') : null, isJoin(op) && this.widen.has(rel));
+      const name = tag ? `tag:${tag[1]}` : op;
+      const c = this.joinRels.get(rel);
+      if (c !== undefined) regs.push({ rel: c, op: name, alg, use });
+      regs.push({ rel, op: name, alg, use });
+    }
+    for (const [rel, c] of this.tags.countRel) {
+      const tag = this.tags.byRel.get(rel);
+      if (tag) regs.push({ rel: c, op: `tag:${tag[1]}`, ...latAlg('count', 'counting', false) });
+    }
+    this.store.latRegs = regs;
+    this.store.tagRules = new Set(rules.filter((r) => this.tags.countRel.has(r.clause.head.rel)).map((r) => r.id));
+  }
+
   private prepare(): void {
     this.wellFounded = wellFoundedDeclared(this.store);
     this.noProvenance = sealedBodies(this.store).has(SEALED_PROVENANCE);
@@ -843,6 +863,7 @@ export class AggEval {
       this.joinRels.set(l, `${l}@join`);
       this.joinOf.set(`${l}@join`, l);
     }
+    this.registerLattices(rules);
     this.diags.push(...decoded.diagnostics);
     this.answer = this.safetyAnswer(rules);
     if (this.noProvenance && this.answer.readsProvenance) {
@@ -1101,6 +1122,7 @@ export class AggEval {
 
   /** An evaluation, and for a world whose widened cells settled, the descending pass that narrows them and the evaluation again with what it found. */
   run(): Outcome {
+    this.store.dropEvalHoles();
     this.narrowOut.clear();
     let out = this.runPass();
     if (out.partial || this.wellFounded || this.widenedX.size === 0) return out;
@@ -1641,7 +1663,7 @@ export class AggEval {
   private wallHole(reason: string): void {
     const why = reason === BUDGET_REASON ? BUDGET_REASON : SPACE_REASON;
     this.holeMet(this.holeId, why);
-    if (this.store.add(V.hole, KERNEL_PERSP, [this.holeId, mka(why)], F_BASE_FROZEN)) this.chargeRow(null, false);
+    if (this.evalHole([this.holeId, mka(why)])) this.chargeRow(null, false);
   }
 
   /** A RULE WHOSE AGGREGATE safety.rofl REFUSED IS A PROGRAM REJECTED. */
@@ -5218,8 +5240,16 @@ export class AggEval {
   /** `hole($cell(...), Reason)`, written the way `arithHole` writes one. */
   private cellHole(marker: Term, reason: string): void {
     if (this.holeMet(marker, reason)) this.chargeHoleRow();
-    const [isNew, id] = this.put(V.hole, KERNEL_PERSP, [marker, mka(reason)], F_BASE_FROZEN);
+    const [isNew, id] = this.evalHolePut([marker, mka(reason)]);
     if (isNew) noteFront(this.curFront, V.hole, id);
+  }
+
+  /** A hole row of this evaluation (`Store.evalHoles`); true if it was new. */
+  private evalHole(args: Term[]): boolean { return this.evalHolePut(args)[0]; }
+  private evalHolePut(args: Term[]): [boolean, string] {
+    const r = this.put(V.hole, KERNEL_PERSP, args, F_BASE_FROZEN);
+    if (r[0]) this.store.evalHoles.push(r[1]);
+    return r;
   }
 
   /** THE CELL AS FACTS, for rules to read. */
@@ -5535,7 +5565,7 @@ export class AggEval {
   private arithHole(ruleId: string, reason: string): void {
     const marker = this.ruleMarker(ruleId);
     if (this.holeMet(marker, reason)) this.chargeHoleRow();
-    const [isNew, id] = this.put(V.hole, KERNEL_PERSP, [marker, mka(reason)], F_BASE_FROZEN);
+    const [isNew, id] = this.evalHolePut([marker, mka(reason)]);
     if (isNew) noteFront(this.curFront, V.hole, id);
   }
 

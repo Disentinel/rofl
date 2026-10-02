@@ -1,0 +1,62 @@
+-- examples/checks/agg-incr-sub.rofl — agg_incr_sub: a SUBSUMPTIVE relation under
+-- RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A
+-- Pareto front keeps the values no other dominates, and a value dominated is
+-- not held: it is only remembered as given, with the firing that gave it, so
+-- what a retraction brings back (the values the fact's route dominated) is
+-- decided against every value the key was given. The relation records
+-- `alg=idempotent use=rederive`, its firings are named by id, and a retraction
+-- takes the whole key out (the front, and every key a value given from the
+-- fact was given to) and fires the rules into it again, to the state of a
+-- world without the fact.
+--
+--   is_e(a, c, 3, 3)   the route that stood between two others is gone
+--   is_e(b, c, 1, 5)   and the way round through b: a to c is left with two routes
+edb(is_e).
+is_e(a, b, 1, 5).
+is_e(b, c, 1, 5).
+is_e(a, c, 5, 1).
+is_e(c, a, 1, 1).
+is_e(a, c, 3, 3).
+is_route(A, B, C, T) :- is_e(A, B, C, T).
+is_route(A, C, C1, T1) :- is_route(A, B, C0, T0), is_e(B, C, C2, T2), C1 is C0 + C2, T1 is T0 + T2.
+is_route(A, B, C1, T1) <= is_route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, C2 < C1.
+is_route(A, B, C1, T1) <= is_route(A, B, C2, T2) :- C2 <= C1, T2 <= T1, T2 < T1.
+
+-- the state after the retractions, row by row
+-- expect-row: is_e[main](a,b,1,5) tick base support=0
+-- expect-row: is_e[main](a,c,5,1) tick base support=0
+-- expect-row: is_e[main](c,a,1,1) tick base support=0
+-- expect-row: is_route[main](a,a,6,2) tick drv support=1
+-- expect-row: is_route[main](a,b,1,5) tick drv support=1
+-- expect-row: is_route[main](a,c,5,1) tick drv support=1
+-- expect-row: is_route[main](c,a,1,1) tick drv support=1
+-- expect-row: is_route[main](c,b,2,6) tick drv support=1
+-- expect-row: is_route[main](c,c,6,2) tick drv support=1
+-- expect-row: lat is_route subsumption alg=idempotent use=rederive
+-- expect-row: fir is_route[main](a,a,6,2) id=5068245b278110a8 rc09bf798@0 [bi:2 is +(1,1); bi:6 is +(5,1); fact:is_e[main](c,a,1,1); fact:is_route[main](a,c,5,1)] live
+-- expect-row: fir is_route[main](a,b,1,5) id=0bf6b29575e7e596 rca3716fe@0 [fact:is_e[main](a,b,1,5)] live
+-- expect-row: fir is_route[main](a,c,5,1) id=7c81040a9f36f243 rca3716fe@0 [fact:is_e[main](a,c,5,1)] live
+-- expect-row: fir is_route[main](c,a,1,1) id=fccfb6b5e1b22a37 rca3716fe@0 [fact:is_e[main](c,a,1,1)] live
+-- expect-row: fir is_route[main](c,b,2,6) id=657cc5be0f63d349 rc09bf798@0 [bi:2 is +(1,1); bi:6 is +(1,5); fact:is_e[main](a,b,1,5); fact:is_route[main](c,a,1,1)] live
+-- expect-row: fir is_route[main](c,c,6,2) id=910e1a8347a98ad0 rc09bf798@0 [bi:2 is +(1,1); bi:6 is +(1,5); fact:is_e[main](a,c,5,1); fact:is_route[main](c,a,1,1)] live
+-- and nothing of what they supported before
+-- expect-no-row: is_e[main](a,c,3,3) tick base support=0
+-- expect-no-row: is_e[main](b,c,1,5) tick base support=0
+-- expect-no-row: is_route[main](a,a,3,11) tick drv support=1
+-- expect-no-row: is_route[main](a,a,4,4) tick drv support=1
+-- expect-no-row: is_route[main](a,c,2,10) tick drv support=1
+-- expect-no-row: is_route[main](a,c,3,3) tick drv support=1
+-- expect-no-row: is_route[main](b,a,2,6) tick drv support=1
+-- expect-no-row: is_route[main](b,b,3,11) tick drv support=1
+-- expect-no-row: is_route[main](b,c,1,5) tick drv support=1
+-- expect-no-row: is_route[main](c,c,3,11) tick drv support=1
+-- expect-no-row: is_route[main](c,c,4,4) tick drv support=1
+-- expect-no-row: fir is_route[main](a,a,3,11) id=8ed8aecb93d32d8f rc09bf798@0 [bi:11 is +(10,1); bi:3 is +(2,1); fact:is_e[main](c,a,1,1); fact:is_route[main](a,c,2,10)] live
+-- expect-no-row: fir is_route[main](a,a,4,4) id=0f133cc3da010ad4 rc09bf798@0 [bi:4 is +(3,1); bi:4 is +(3,1); fact:is_e[main](c,a,1,1); fact:is_route[main](a,c,3,3)] live
+-- expect-no-row: fir is_route[main](a,c,2,10) id=9fb6253254a76179 rc09bf798@0 [bi:10 is +(5,5); bi:2 is +(1,1); fact:is_e[main](b,c,1,5); fact:is_route[main](a,b,1,5)] live
+-- expect-no-row: fir is_route[main](a,c,3,3) id=5771c7f8e005abd7 rca3716fe@0 [fact:is_e[main](a,c,3,3)] live
+-- expect-no-row: fir is_route[main](b,a,2,6) id=15eda2b0234c6963 rc09bf798@0 [bi:2 is +(1,1); bi:6 is +(5,1); fact:is_e[main](c,a,1,1); fact:is_route[main](b,c,1,5)] live
+-- expect-no-row: fir is_route[main](b,b,3,11) id=116836664f525967 rc09bf798@0 [bi:11 is +(6,5); bi:3 is +(2,1); fact:is_e[main](a,b,1,5); fact:is_route[main](b,a,2,6)] live
+-- expect-no-row: fir is_route[main](b,c,1,5) id=427be57340dee3e8 rca3716fe@0 [fact:is_e[main](b,c,1,5)] live
+-- expect-no-row: fir is_route[main](c,c,3,11) id=3482a351722b971b rc09bf798@0 [bi:11 is +(6,5); bi:3 is +(2,1); fact:is_e[main](b,c,1,5); fact:is_route[main](c,b,2,6)] live
+-- expect-no-row: fir is_route[main](c,c,4,4) id=559c245b66cca0a4 rc09bf798@0 [bi:4 is +(1,3); bi:4 is +(1,3); fact:is_e[main](a,c,3,3); fact:is_route[main](c,a,1,1)] live

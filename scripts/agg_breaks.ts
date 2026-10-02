@@ -4791,7 +4791,8 @@ export const BREAKS: Break[] = [
   "id": "retract_no_subtract",
   "what": "a dropped member's value is not subtracted from the total of a count or sum",
   "expect": {
-   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
+   "agg_incr_sum": "lacks the row ai_total[main](a,5)",
+   "agg_incr_tagc": "lacks the row ic_"
   }
  },
  {
@@ -4819,7 +4820,8 @@ export const BREAKS: Break[] = [
   "id": "retract_no_rederive",
   "what": "an idempotent cell is not derived again after one of its supports is retracted",
   "expect": {
-   "agg_incr_minmax": "lacks the row am_lo[main](a,3)"
+   "agg_incr_minmax": "lacks the row am_lo[main](a,3)",
+   "agg_incr_holistic": "lacks the row ah_med[main](a,4)"
   }
  },
  {
@@ -4870,7 +4872,110 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_incr_sum": "alg=invertible use=subtract",
    "agg_incr_minmax": "alg=idempotent,lattice use=rederive",
-   "agg_incr_holistic": "alg=holistic use=recompute"
+   "agg_incr_holistic": "alg=holistic use=recompute",
+   "agg_incr_lattice": "lacks the row lat il_dist min alg=idempotent,lattice use=rederive",
+   "agg_incr_join": "lacks the row lat ij_comp union alg=idempotent,lattice use=rederive",
+   "agg_incr_sub": "lacks the row lat is_route subsumption alg=idempotent use=rederive"
+  }
+ },
+ {
+  "id": "firing_id_tickless",
+  "what": "a firing's id leaves out its tick",
+  "expect": {
+   "agg_incr_lattice": "lacks the row fir il_dist",
+   "agg_incr_tagc": "lacks the row fir ic_walks@count"
+  }
+ },
+ {
+  "id": "fir_superseded_live",
+  "what": "a firing of a superseded value is printed as live",
+  "expect": {
+   "agg_incr_lattice": "lacks the row fir il_dec"
+  }
+ },
+ {
+  "id": "tag_flags_off",
+  "what": "a semiring tag's relation records no algebra flags",
+  "expect": {
+   "agg_incr_tag": "lacks the row lat it_cost",
+   "agg_incr_tagc": "lacks the row lat ic_walks@count"
+  }
+ },
+ {
+  "id": "tag_cell_flag_off",
+  "what": "the cell of a counting tag is not marked as a tag's",
+  "expect": {
+   "agg_incr_tagc": "alg=invertible,tag use=subtract"
+  }
+ },
+ {
+  "id": "widening_flag_off",
+  "what": "a widened join relation is not marked widening, and its strategy is not full",
+  "expect": {
+   "agg_incr_widen": "lacks the row lat iw_o"
+  }
+ },
+ {
+  "id": "retract_lattice_precise",
+  "what": "a lattice fact is in the cone only if every firing of it rests on the cone, so a cycle that rested on the fact alone stands",
+  "expect": {
+   "agg_incr_lattice": "holds the row il_hop[main](d,2)"
+  }
+ },
+ {
+  "id": "retract_tag_derivations_kept",
+  "what": "the derivations of a counting tag that cited a retracted fact stay",
+  "expect": {
+   "agg_incr_tagc": "holds the row ic_"
+  }
+ },
+ {
+  "id": "retract_thr_no_close",
+  "what": "a threshold cell derived again keeps the provisional quorum of its first members",
+  "expect": {
+   "agg_incr_holistic": "the state lacks the row"
+  }
+ },
+ {
+  "id": "retract_chain_gate_off",
+  "what": "an aggregate that reads what another of its rule binds is retracted from as if its cells were all indexed",
+  "expect": {
+   "agg_incr_chain": "holds the row cell"
+  }
+ },
+ {
+  "id": "retract_partial_gate_off",
+  "what": "an aggregate after one that may leave no solution is retracted from as if it were sealed for every group",
+  "expect": {
+   "agg_incr_partial": "holds the row cell"
+  }
+ },
+ {
+  "id": "retract_hole_kept",
+  "what": "a retraction that makes a hole is taken by the delta, which writes none of its shrugs",
+  "expect": {
+   "agg_incr_overflow": "lacks the row shrug"
+  }
+ },
+ {
+  "id": "retract_lattice_hole_kept",
+  "what": "a retraction under a lattice that makes a hole is taken by the delta, which writes none of its shrugs",
+  "expect": {
+   "agg_incr_latticehole": "lacks the row shrug"
+  }
+ },
+ {
+  "id": "retract_consumers_kept",
+  "what": "the facts of plain rules that rested on a replaced cell or a retracted lattice value stay beside the ones derived again",
+  "expect": {
+   "agg_incr_readers": "holds the row ir_"
+  }
+ },
+ {
+  "id": "stale_holes_kept",
+  "what": "the hole rows an evaluation wrote stand when the world is evaluated again",
+  "expect": {
+   "agg_incr_stale": "holds the row hole"
   }
  },
 ];

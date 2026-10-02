@@ -87,6 +87,15 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
             .filter_map(|x| x.as_str().map(|y| y.to_string()))
             .collect();
     }
+    for l in d.get("lattices").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
+        let (Some(rel), Some(op), Some(alg)) = (l["rel"].as_str(), l["op"].as_str(), l["alg"].as_str()) else {
+            return Err("snapshot refused: bad lattice relation".into());
+        };
+        s.lat_regs.push(crate::store::LatReg { rel: h.intern(rel), op: op.to_string(), alg: crate::cell::Algebra::from_text(alg) });
+    }
+    for r in d.get("tagRules").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
+        s.tag_rules.insert(h.intern(r.as_str().ok_or("snapshot refused: bad tag rule")?));
+    }
     let mut by_key: HashMap<String, u32> = HashMap::new();
     for f in d["facts"].as_array().ok_or("no facts")? {
         let rel = h.intern(f["rel"].as_str().ok_or("bad rel")?);
@@ -440,6 +449,19 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
     let cells = cells_json(h, s);
     if !cells.is_empty() {
         out["cells"] = Value::Array(cells);
+    }
+    if !s.lat_regs.is_empty() {
+        out["lattices"] = Value::Array(
+            s.lat_regs
+                .iter()
+                .map(|r| json!({ "rel": h.name(r.rel), "op": r.op, "alg": r.alg.text(), "use": r.alg.strategy().name() }))
+                .collect(),
+        );
+    }
+    if !s.tag_rules.is_empty() {
+        let mut ts: Vec<&str> = s.tag_rules.iter().map(|r| h.name(*r)).collect();
+        ts.sort();
+        out["tagRules"] = json!(ts);
     }
     out.to_string()
 }

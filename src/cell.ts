@@ -75,6 +75,15 @@ export function algText(op: AggOp): string {
 /** What a delta engine does with a retracted contribution: subtract it, recompute the group, or derive the cell again. */
 export const algStrategy = (op: AggOp): string => (opClass(op) === 'invertible' ? 'subtract' : opClass(op) === 'holistic' ? 'recompute' : 'rederive');
 
+/** THE ALGEBRA OF A LATTICE RELATION'S FACTS, as `canonicalState` prints it (rust/rofl/src/cell.rs `Algebra`): the flags of the
+ *  operation, `tag` and the tag's own for a semiring tag, `widening` for a widened join, and the strategy they give
+ *  (widening: `full`, an invertible counting tag: `subtract`, anything else `rederive`). */
+export function latAlg(op: AggOp, tag: 'idempotent' | 'counting' | null, widening: boolean): { alg: string; use: string } {
+  const flags = tag === 'counting' ? ['invertible', 'tag'] : tag === 'idempotent' ? ['idempotent', 'lattice', 'tag'] : algText(op).split(',');
+  if (widening) flags.push('widening');
+  return { alg: flags.join(','), use: widening ? 'full' : flags.includes('invertible') ? 'subtract' : 'rederive' };
+}
+
 /** FNV-1a (64 bit) over the UTF-8 of `text`, as 16 hex digits: the id of a member (`Store.memberId`). */
 export function fnv64(text: string): string {
   let x = 0xcbf29ce484222325n;

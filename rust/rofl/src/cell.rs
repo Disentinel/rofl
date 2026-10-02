@@ -65,6 +65,9 @@ pub enum Strategy {
     Rederive,
     /// the value is a function of the whole group: recompute the group
     Recompute,
+    /// no delta can promise the value a fresh evaluation reaches (a widening
+    /// depends on the order its iterations ran in): evaluate again
+    Full,
 }
 
 impl Algebra {
@@ -73,19 +76,22 @@ impl Algebra {
     pub const HOLISTIC: u8 = 4;
     pub const LATTICE: u8 = 8;
     pub const TAG: u8 = 16;
+    pub const WIDENING: u8 = 32;
     pub fn has(self, f: u8) -> bool {
         self.0 & f != 0
     }
     /// A semiring tag's cell: its ⊕ is idempotent (boolean, tropical) or
     /// invertible (counting).
     pub fn tag(idempotent: bool) -> Algebra {
-        Algebra(Self::TAG | if idempotent { Self::IDEMPOTENT | Self::LATTICE } else { Self::INVERTIBLE })
+        Algebra(brk!("tag_flags_off" => 0; Self::TAG | if idempotent { Self::IDEMPOTENT | Self::LATTICE } else { Self::INVERTIBLE }))
     }
     /// The strategy the flags give, in the order a delta engine prefers: an
     /// invertible cell subtracts, a holistic one recomputes its group, and
     /// anything else (an idempotent cell has no inverse) derives again.
     pub fn strategy(self) -> Strategy {
-        if self.has(Self::INVERTIBLE) {
+        if self.has(Self::WIDENING) {
+            Strategy::Full
+        } else if self.has(Self::INVERTIBLE) {
             Strategy::Subtract
         } else if self.has(Self::HOLISTIC) {
             Strategy::Recompute
@@ -93,9 +99,14 @@ impl Algebra {
             Strategy::Rederive
         }
     }
+    /// The flags `text` spells; a name that is none of them is dropped.
+    pub fn from_text(t: &str) -> Algebra {
+        let all = [(Self::IDEMPOTENT, "idempotent"), (Self::INVERTIBLE, "invertible"), (Self::HOLISTIC, "holistic"), (Self::LATTICE, "lattice"), (Self::TAG, "tag"), (Self::WIDENING, "widening")];
+        Algebra(t.split(',').filter_map(|n| all.iter().find(|(_, x)| *x == n).map(|(b, _)| *b)).fold(0, |a, b| a | b))
+    }
     /// `idempotent,lattice`, in a fixed order; `-` for none.
     pub fn text(self) -> String {
-        let names = [(Self::IDEMPOTENT, "idempotent"), (Self::INVERTIBLE, "invertible"), (Self::HOLISTIC, "holistic"), (Self::LATTICE, "lattice"), (Self::TAG, "tag")];
+        let names = [(Self::IDEMPOTENT, "idempotent"), (Self::INVERTIBLE, "invertible"), (Self::HOLISTIC, "holistic"), (Self::LATTICE, "lattice"), (Self::TAG, "tag"), (Self::WIDENING, "widening")];
         let v: Vec<&str> = names.iter().filter(|(b, _)| self.has(*b)).map(|(_, n)| *n).collect();
         if v.is_empty() { "-".into() } else { v.join(",") }
     }
@@ -107,6 +118,7 @@ impl Strategy {
             Strategy::Subtract => "subtract",
             Strategy::Rederive => "rederive",
             Strategy::Recompute => "recompute",
+            Strategy::Full => "full",
         }
     }
 }

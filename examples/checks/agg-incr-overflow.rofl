@@ -1,0 +1,30 @@
+-- examples/checks/agg-incr-overflow.rofl — agg_incr_overflow: A RETRACTION THAT
+-- MAKES A HOLE. A sum that leaves the term range is a hole (`agg_overflow`) and
+-- no value, written with its shrugs after a whole pass; a delta cannot write
+-- them, so a retraction that would is evaluated again, and the state is the
+-- one of a world without the fact: the hole, its rule's shrug and the reading
+-- rule's inherited one.
+--
+--   ao_v(3, -5)   the sum was 1152921504606846975 and is now 1152921504606846980
+edb(ao_v).
+ao_v(1, 1152921504606846975).
+ao_v(2, 5).
+ao_v(3, -5).
+ao_t(S) :- S is sum(X ; K : ao_v(K, X)).
+
+-- the state after the retractions, row by row
+-- expect-row: ao_v[main](1,1152921504606846975) tick base support=0
+-- expect-row: ao_v[main](2,5) tick base support=0
+-- expect-row: hole[$kernel]($cell(rcd23266b,1,0,$nil),agg_overflow) timeless base frozen support=0
+-- expect-row: shrug[$kernel]($cell(rcd23266b,1,0,$nil),fault,agg_overflow) tick base support=0
+-- expect-row: shrug[$kernel](ao_t($unknown_value),inherited,from($cons($cell(rcd23266b,1,0,$nil),$nil))) tick base support=0
+-- expect-row: cell $cell(rcd23266b,1,0,$nil) sum = hole(agg_overflow) h=1 tick=0 sealed=[ao_v@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rcd23266b,1,0,$nil) #1 id=0e4d4fd83ef7eec7 (1152921504606846975,1) h=1 [fact:ao_v[main](1,1152921504606846975)]
+-- expect-row: mem $cell(rcd23266b,1,0,$nil) #2 id=f808be74bb3a985e (5,2) h=1 [fact:ao_v[main](2,5)]
+-- and nothing of what they supported before
+-- expect-no-row: ao_t[main](1152921504606846975) tick drv support=1
+-- expect-no-row: ao_v[main](3,-5) tick base support=0
+-- expect-no-row: cell $cell(rcd23266b,1,0,$nil) sum = 1152921504606846975 h=1 tick=0 sealed=[ao_v@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(rcd23266b,1,0,$nil) #1 id=6745c24d700bf394 (-5,3) h=1 [fact:ao_v[main](3,-5)]
+-- expect-no-row: mem $cell(rcd23266b,1,0,$nil) #2 id=0e4d4fd83ef7eec7 (1152921504606846975,1) h=1 [fact:ao_v[main](1,1152921504606846975)]
+-- expect-no-row: mem $cell(rcd23266b,1,0,$nil) #3 id=f808be74bb3a985e (5,2) h=1 [fact:ao_v[main](2,5)]

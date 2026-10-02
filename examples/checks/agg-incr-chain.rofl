@@ -1,0 +1,38 @@
+-- examples/checks/agg-incr-chain.rofl — agg_incr_chain: THE CELLS A RULE SEALS FOR
+-- WHAT ANOTHER AGGREGATE OF IT REACHED, under RETRACTION. A second aggregate
+-- is asked for the correlation the first left it: the count it made. A
+-- retraction that changes what the first reaches leaves cells nothing reads
+-- any more (ac_w asked for 2 and not for 1) and cells a fresh evaluation
+-- seals that no one has (ac_w for 1), so such a rule is evaluated again
+-- (`an aggregate reads what another aggregate of its rule binds`) and the cells
+-- it leaves are the cells of a world without the fact.
+--
+--   ac_q(2)   the count of ac_q is 1, and ac_w is asked for 1 and no longer for 2
+edb(ac_q). edb(ac_w).
+ac_q(1).
+ac_q(2).
+ac_w(0, 5).
+ac_w(1, 20).
+ac_w(2, 10).
+ac_w(2, 11).
+ac_r(N, S) :- N is count(Y : ac_q(Y)), S is count(V : ac_w(N, V)).
+
+-- the state after the retractions, row by row
+-- expect-row: ac_q[main](1) tick base support=0
+-- expect-row: ac_r[main](1,1) tick drv support=1
+-- expect-row: ac_w[main](0,5) tick base support=0
+-- expect-row: ac_w[main](1,20) tick base support=0
+-- expect-row: ac_w[main](2,10) tick base support=0
+-- expect-row: ac_w[main](2,11) tick base support=0
+-- expect-row: cell $cell(r1149057c,1,0,$nil) count = 1 h=1 tick=0 sealed=[ac_q@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r1149057c,1,0,$nil) #1 id=4f7f6046a43b11f8 (1) h=1 [fact:ac_q[main](1)]
+-- expect-row: cell $cell(r1149057c,2,0,$cons(1,$nil)) count = 1 h=1 tick=0 sealed=[ac_w@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r1149057c,2,0,$cons(1,$nil)) #1 id=1e7dd599b4f94b51 (20) h=1 [fact:ac_w[main](1,20)]
+-- and nothing of what they supported before
+-- expect-no-row: ac_q[main](2) tick base support=0
+-- expect-no-row: ac_r[main](2,2) tick drv support=1
+-- expect-no-row: cell $cell(r1149057c,1,0,$nil) count = 2 h=1 tick=0 sealed=[ac_q@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r1149057c,1,0,$nil) #2 id=4f74e046a431e3f3 (2) h=1 [fact:ac_q[main](2)]
+-- expect-no-row: cell $cell(r1149057c,2,0,$cons(2,$nil)) count = 2 h=1 tick=0 sealed=[ac_w@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r1149057c,2,0,$cons(2,$nil)) #1 id=384af9c053d5417b (10) h=1 [fact:ac_w[main](2,10)]
+-- expect-no-row: mem $cell(r1149057c,2,0,$cons(2,$nil)) #2 id=384e5dc053d8213e (11) h=1 [fact:ac_w[main](2,11)]

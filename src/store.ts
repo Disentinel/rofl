@@ -54,6 +54,14 @@ export const cellValueText = (v: CellVal): string => (v.k === 'value' ? canonTer
 
 export interface Witness { ruleId: string; tick: number; prems: PremRef[]; }
 
+/** A relation whose facts are lattice cells, registered by the engine when it prepares a program: its operation as a name, its
+ *  algebra flags and the strategy they give, as `canonicalState` prints them (rust/rofl/src/store.rs `LatReg`). */
+export interface LatReg { rel: string; op: string; alg: string; use: string }
+
+/** THE STABLE ID OF A FIRING: a lattice contribution is a firing of a fact, named by what made it and nothing the evaluation's
+ *  schedule decides: the rule, the tick and the premises it was bound to, sorted (rust/rofl/src/store.rs `firing_id`). */
+export const firingId = (w: Witness): string => fnv64(`${w.ruleId}@${w.tick}|${w.prems.map(premText).sort().join('; ')}`);
+
 /** What one tick's standing evaluation cost and was allowed. `partial` is the
  *  same answer `partialEval` gives about the last evaluation; `budget` and
  *  `steps` are what a replay needs in order to reproduce a past tick rather
@@ -344,6 +352,19 @@ export class Store implements FactStore {
   facts = new Map<string, FactRec>();
   firings = new Map<string, Map<string, Witness>>(); // fact key -> firing signature -> witness
   tickLog: string[] = [];
+  /** The relations whose facts are lattice cells (set by the engine's `prepare`). */
+  latRegs: LatReg[] = [];
+  /** The rules whose cells are a counting tag's: their cells carry the `tag` flag (rust/rofl/src/store.rs `tag_rules`). */
+  tagRules = new Set<string>();
+  /** The hole rows the evaluation of this tick wrote (rust/rofl/src/store.rs `eval_holes`): a hole is a base, frozen row, which
+   *  `clearDerived` keeps, so an evaluation of the same tick again would keep the ones the world no longer earns. They go when the
+   *  next evaluation starts, and stay for good once the tick ends. */
+  evalHoles: string[] = [];
+  dropEvalHoles(): void {
+    const keys = this.evalHoles.filter((k) => this.facts.has(k));
+    this.evalHoles = [];
+    this.removeMany(keys);
+  }
   dirty = true;          // derived layer out of date w.r.t. base facts
   partialEval = false;   // last evaluation hit its budget
 
@@ -820,6 +841,7 @@ export class Store implements FactStore {
    *  lives in `src/api.ts` beside the evaluator predicate it depends on. */
   advanceTick(staged: { rel: string; persp: string; args: Term[] }[],
               keepFrozen?: (rec: FactRec) => boolean): void {
+    this.evalHoles = [];
     // a superseded lattice value's history ends with its tick
     for (const k of this.ghosts.keys()) this.firings.delete(k);
     this.ghosts.clear();
@@ -911,14 +933,35 @@ export class Store implements FactStore {
     // THE CELLS, after the witnesses and only when there are any, so a state
     // without an aggregate is byte for byte what it was
     for (const [c, like] of this.cellsInOrder()) {
-      lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}] alg=${algText(c.op as AggOp)} use=${algStrategy(c.op as AggOp)}`);
+      lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}] alg=${algText(c.op as AggOp)}${this.tagRules.has(c.rule) ? ',tag' : ''} use=${algStrategy(c.op as AggOp)}`);
       if (like) { lines.push(`mem ${c.key} = ${like.key}`); continue; }
       c.members.forEach((m, i) => {
         lines.push(`mem ${c.key} #${i + 1} id=${memberId(c, m)} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]`);
       });
     }
+    lines.push(...this.latticeLines());
     lines.push(...this.tickLog);
     return lines.join('\n');
+  }
+
+  /** The `lat` line of each registered relation and the `fir` line of each firing of its facts, live or superseded, in canonical order. */
+  private latticeLines(): string[] {
+    if (this.latRegs.length === 0) return [];
+    const regs = [...this.latRegs].sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+    const out = regs.map((r) => `lat ${r.rel} ${r.op} alg=${r.alg} use=${r.use}`);
+    const rels = new Set(regs.map((r) => r.rel));
+    const rows: [string, string, string][] = [];
+    for (const [key, sigs] of this.firings) {
+      const live = this.facts.get(key);
+      const rec = live ?? this.ghosts.get(key);
+      if (rec === undefined || !rels.has(rec.rel)) continue;
+      for (const w of sigs.values()) {
+        const id = firingId(w);
+        rows.push([key, id, `fir ${key} id=${id} ${w.ruleId}@${w.tick} [${w.prems.map(premText).sort().join('; ')}] ${live ? 'live' : 'superseded'}`]);
+      }
+    }
+    rows.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+    return [...out, ...rows.map((r) => r[2])];
   }
 
   snapshot(): string {
@@ -957,12 +1000,22 @@ export class Store implements FactStore {
         ...(like ? { membersOf: like.key } : {}),
       }));
     }
+    if (this.tagRules.size > 0) out.tagRules = [...this.tagRules].sort();
+    if (this.latRegs.length > 0) out.lattices = this.latRegs.map((r) => ({ rel: r.rel, op: r.op, alg: r.alg, use: r.use }));
     return toJson(out);
   }
 
   static restore(json: string): Store {
     const d = fromJson(json);
     const s = new Store();
+    for (const r of Array.isArray(d.tagRules) ? d.tagRules : []) {
+      if (typeof r !== 'string') throw new Error('snapshot refused: bad tag rule');
+      s.tagRules.add(r);
+    }
+    for (const l of Array.isArray(d.lattices) ? d.lattices : []) {
+      if (typeof l.rel !== 'string' || typeof l.op !== 'string' || typeof l.alg !== 'string' || typeof l.use !== 'string') throw new Error('snapshot refused: bad lattice relation');
+      s.latRegs.push({ rel: l.rel, op: l.op, alg: l.alg, use: l.use });
+    }
     // A CELL IS READ WHOLE OR THE SNAPSHOT IS REFUSED: a height, a tick or a
     // round filled in with 0 is a witness that says something nobody sealed
     const count = (x: unknown, what: string): number => {
@@ -1042,6 +1095,9 @@ export class Store implements FactStore {
     const s = new Store();
     s.tick = this.tick;
     s.tickLog = [...this.tickLog];
+    s.latRegs = this.latRegs;
+    s.tagRules = this.tagRules;
+    s.evalHoles = [...this.evalHoles];
     for (const [k, sigs] of this.firings) s.firings.set(k, new Map(sigs));
     for (const [t, e] of this.evalLog) s.evalLog.set(t, { ...e });
     for (const [k, c] of this.cells) s.cells.set(k, { ...c });

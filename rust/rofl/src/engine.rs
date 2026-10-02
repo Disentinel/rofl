@@ -9,11 +9,11 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::cell::{iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
+use crate::cell::{Algebra, iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
 use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
-    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, NewCell,
+    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
@@ -486,6 +486,10 @@ pub struct Eval {
     /// Each value given, its place in `sub_seen`.
     sub_seen_set: HashMap<SubVal, u32>,
     sub_beaten: HashMap<SubVal, Box<[Term]>>,
+    /// The premises of every firing that gave a cell a value, a value no fact
+    /// holds included (it was dominated when it came): what a retraction asks
+    /// which values of a cell rested on a fact.
+    sub_prems: HashMap<SubVal, Vec<Vec<PremRef>>>,
     /// Every dominance question an insert asked, by the places of the two
     /// values in their cell's `sub_seen`: the close asks none twice.
     sub_memo: HashMap<LatKey, HashMap<(u32, u32), DomV>>,
@@ -915,6 +919,7 @@ impl Eval {
             sub_seen: HashMap::new(),
             sub_seen_set: HashMap::new(),
             sub_beaten: HashMap::new(),
+            sub_prems: HashMap::new(),
             sub_memo: HashMap::new(),
             sub_gone: HashSet::new(),
             sub_by_of: HashMap::new(),
@@ -1050,6 +1055,39 @@ impl Eval {
         }
     }
 
+    /// THE RELATIONS WHOSE FACTS ARE LATTICE CELLS, with their algebra, for
+    /// the store to print (`Store::lat_regs`): every lattice, tag and
+    /// subsumptive relation, a join's contributions (`L@join`), and the
+    /// derivations of a counting tag (`p@count`).
+    fn register_lattices(&mut self, rules: &[DRule]) {
+        let mut regs: Vec<LatReg> = Vec::new();
+        for (rel, (_, op)) in &self.lattices {
+            let (opname, mut alg) = match self.tags.by_rel.get(rel) {
+                Some((_, a)) => (format!("tag:{}", a.name()), Algebra::tag(a.idempotent())),
+                None => (op.name().to_string(), op.algebra()),
+            };
+            if op.is_join() && brk!("widening_flag_off" => false; self.widen.contains_key(rel)) {
+                alg = Algebra(alg.0 | Algebra::WIDENING);
+            }
+            if let Some(c) = self.join_rels.get(rel) {
+                regs.push(LatReg { rel: *c, op: opname.clone(), alg });
+            }
+            regs.push(LatReg { rel: *rel, op: opname, alg });
+        }
+        for (rel, c) in &self.tags.count_rel {
+            if let Some((_, a)) = self.tags.by_rel.get(rel) {
+                regs.push(LatReg { rel: *c, op: format!("tag:{}", a.name()), alg: Algebra::tag(false) });
+            }
+        }
+        regs.sort_by_key(|r| r.rel);
+        self.store.lat_regs = regs;
+        self.store.tag_rules = rules
+            .iter()
+            .filter(|r| self.tags.count_rel.contains_key(&r.clause.head.rel))
+            .map(|r| r.id)
+            .collect();
+    }
+
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
         self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
@@ -1122,6 +1160,7 @@ impl Eval {
             self.join_rels.insert(l, c);
             self.join_of.insert(c, l);
         }
+        self.register_lattices(&rules);
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         if self.no_provenance && self.answer.reads_provenance {
@@ -1730,6 +1769,7 @@ impl Eval {
     /// descending pass that narrows them (`narrow_descend`) and the
     /// evaluation again with what it found.
     pub fn run(&mut self) -> Result<Outcome, Halt> {
+        brk!("stale_holes_kept" => (); self.store.drop_eval_holes());
         self.narrow_out.clear();
         let out = self.run_pass()?;
         if out.partial || self.well_founded || self.widened_x.is_empty() {
@@ -1805,6 +1845,7 @@ impl Eval {
         self.sub_seen.clear();
         self.sub_seen_set.clear();
         self.sub_beaten.clear();
+        self.sub_prems.clear();
         self.sub_memo.clear();
         self.sub_gone.clear();
         self.sub_by.clear();
@@ -2709,7 +2750,7 @@ impl Eval {
     fn wall_hole(&mut self, reason: &str) -> Result<(), Halt> {
         let why = Term::atom(if reason == "budget_exhausted" { self.v.budget_reason } else { self.v.space_reason });
         self.hole_met(self.hole_id, why.as_atom().unwrap());
-        if self.store.add(&self.h, self.v.hole, self.v.kernel_persp, &[self.hole_id, why], F_BASE | F_FROZEN) {
+        if self.eval_hole(&[self.hole_id, why]) {
             self.charge_row(None, false)?;
         }
         Ok(())
@@ -3340,7 +3381,14 @@ impl Eval {
             return self.conclude_join(r.id, head.rel, persp, args, op, sol.prems, out);
         }
         let cell = match self.lattices.get(&head.rel).copied() {
-            Some((n, AggOp::Dominance)) if args.len() == n => match self.sub_admit(head.rel, persp, &args, r.id)? {
+            Some((n, AggOp::Dominance)) if args.len() == n => match {
+                let k = self.subs[&head.rel].keylen;
+                let given = self.sub_prems.entry(((head.rel, persp, args[..k].into()), args[k..].into())).or_default();
+                if !given.contains(&sol.prems) {
+                    given.push(sol.prems.clone());
+                }
+                self.sub_admit(head.rel, persp, &args, r.id)?
+            } {
                 Some(ck) => Some(ck),
                 None => return Ok(()),
             },
@@ -8481,10 +8529,20 @@ impl Eval {
             self.charge_hole_row();
         }
         let args = [marker, Term::atom(reason)];
-        if self.store.add(&self.h, self.v.hole, self.v.kernel_persp, &args, F_BASE | F_FROZEN) {
+        if self.eval_hole(&args) {
             let id = self.store.get(self.v.hole, self.v.kernel_persp, &args).unwrap();
             self.cur_front.note(self.v.hole, id);
         }
+    }
+
+    /// A hole row of this evaluation; true if it was new.
+    fn eval_hole(&mut self, args: &[Term]) -> bool {
+        if !self.store.add(&self.h, self.v.hole, self.v.kernel_persp, args, F_BASE | F_FROZEN) {
+            return false;
+        }
+        let id = self.store.get(self.v.hole, self.v.kernel_persp, args).unwrap();
+        self.store.eval_holes.push(id);
+        true
     }
 
     /// THE CELL AS FACTS, for rules to read: `agg_cell` for a value,
@@ -9179,13 +9237,7 @@ impl Eval {
             self.charge_hole_row();
         }
         let args = [marker, Term::atom(reason)];
-        if self.store.add(
-            &self.h,
-            self.v.hole,
-            self.v.kernel_persp,
-            &args,
-            F_BASE | F_FROZEN,
-        ) {
+        if self.eval_hole(&args) {
             let id = self
                 .store
                 .get(self.v.hole, self.v.kernel_persp, &args)

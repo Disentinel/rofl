@@ -449,6 +449,26 @@ impl Facts {
     }
 }
 
+/// A relation whose facts are lattice cells (an order or join lattice, a
+/// widened one, a semiring tag, a subsumptive relation, the derivations of a
+/// counting tag): its operation as a name and its algebra as flags.
+#[derive(Clone, Debug)]
+pub struct LatReg {
+    pub rel: Sym,
+    pub op: String,
+    pub alg: Algebra,
+}
+
+/// FNV-1a (64 bit) over the UTF-8 of `text`, as 16 hex digits.
+pub fn fnv64(text: &str) -> String {
+    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in text.as_bytes() {
+        x ^= *b as u64;
+        x = x.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{x:016x}")
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Store {
@@ -456,6 +476,19 @@ pub struct Store {
     pub dirty: bool,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
+    /// THE RELATIONS WHOSE FACTS ARE LATTICE CELLS, registered by the engine
+    /// when it prepares a program (`Eval::prepare`): what `canonical_state`
+    /// prints their algebra and every firing of their facts from.
+    pub lat_regs: Vec<LatReg>,
+    /// The rules whose cells are a counting tag's (the engine's sum over the
+    /// derivations `p@count`): their cells carry the `tag` flag.
+    pub tag_rules: HashSet<Sym>,
+    /// THE HOLE ROWS THE EVALUATION OF THIS TICK WROTE. A hole is a base,
+    /// frozen row, which `clear_derived` keeps; an evaluation of the same tick
+    /// again (after a retraction, an assertion) would keep the ones the world
+    /// no longer earns. They go when the next evaluation starts, and stay for
+    /// good once the tick ends (`advance_tick`): history.
+    pub eval_holes: Vec<FactId>,
     /// WHAT EACH TICK'S STANDING EVALUATION WAS ALLOWED AND WHAT IT SPENT.
     ///
     /// `partial_eval` above answers the same question about the LAST
@@ -1281,12 +1314,19 @@ impl Store {
     /// age out — and everything it rejects is dropped instead of kept. The
     /// store knows what none of those records mean: the policy is the
     /// caller's, and it lives beside the evaluator predicate it depends on.
+    /// Take out the hole rows the last evaluation of this tick wrote.
+    pub fn drop_eval_holes(&mut self) {
+        let ids: Vec<FactId> = std::mem::take(&mut self.eval_holes).into_iter().filter(|i| self.alive(*i)).collect();
+        self.remove_many(&ids);
+    }
+
     pub fn advance_tick(
         &mut self,
         h: &Heap,
         staged: &[StagedHead<'_>],
         keep_frozen: Option<KeepFrozen<'_>>,
     ) {
+        self.eval_holes.clear();
         // a superseded lattice value's history ends with its tick
         for id in 0..self.facts.recs.len() as FactId {
             if self.facts.recs[id as usize].dead() {
@@ -1847,7 +1887,8 @@ impl Store {
             let seals: Vec<String> = self.cell_seals(c).iter().map(|x| format!("{}@{}", h.name(x.rel), x.round)).collect();
             out.push_str(&seals.join(", "));
             out.push(']');
-            out.push_str(&format!(" alg={} use={}", r.alg.text(), r.alg.strategy().name()));
+            let alg = self.cell_alg(c);
+            out.push_str(&format!(" alg={} use={}", alg.text(), alg.strategy().name()));
             if let Some(x) = like {
                 out.push_str(&format!("\nmem {key} = "));
                 self.write_cell_key(h, x, &mut out);
@@ -1863,6 +1904,7 @@ impl Store {
                 out.push(']');
             }
         }
+        self.write_lattice(h, &mut out);
         for l in &self.tick_log {
             out.push('\n');
             out.push_str(l);
@@ -2005,6 +2047,18 @@ impl Store {
         id
     }
 
+    /// The algebra of a cell: its operation's flags, and `tag` where its rule
+    /// is a counting tag's.
+    pub fn cell_alg(&self, c: CellId) -> Algebra {
+        let r = &self.cells.recs[c as usize];
+        let CellOwner::Body { rule, .. } = r.owner;
+        if brk!("tag_cell_flag_off" => false; self.tag_rules.contains(&rule)) {
+            Algebra(r.alg.0 | Algebra::TAG)
+        } else {
+            r.alg
+        }
+    }
+
     pub fn cell(&self, c: CellId) -> &CellRec {
         &self.cells.recs[c as usize]
     }
@@ -2062,12 +2116,51 @@ impl Store {
         let key: Vec<String> = r.key.iter().map(|k| h.canon(*k)).collect();
         let ident = brk!("member_id_position" => format!("{}#{}", self.member_ident(h, c, m), self.cell_members(c).iter().position(|x| std::ptr::eq(x, m)).unwrap_or(0)); self.member_ident(h, c, m));
         let text = format!("{}@{}|{}|{}", h.name(rule), at, key.join(","), ident);
-        let mut x: u64 = 0xcbf2_9ce4_8422_2325;
-        for b in text.as_bytes() {
-            x ^= *b as u64;
-            x = x.wrapping_mul(0x0000_0100_0000_01b3);
+        fnv64(&text)
+    }
+
+    /// THE STABLE ID OF A FIRING: a lattice contribution is a firing of a
+    /// fact, so it is named by what made it and nothing the evaluation's
+    /// schedule decides: the rule, the tick, and the premises it was bound to,
+    /// sorted (FNV-1a over `rule@tick|prem; prem`; src/store.ts `firingId`).
+    /// A firing a superseded value keeps has one too.
+    pub fn firing_id(&self, h: &Heap, rule: Sym, tick: u32, prems: &[PremRef]) -> String {
+        let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
+        ps.sort_by(|a, b| cmp_js(a, b));
+        let text = brk!("firing_id_tickless" => format!("{}|{}", h.name(rule), ps.join("; ")); format!("{}@{}|{}", h.name(rule), tick, ps.join("; ")));
+        fnv64(&text)
+    }
+
+    /// The `lat` line of each registered relation and the `fir` line of each
+    /// firing of its facts, live or superseded, in canonical order.
+    fn write_lattice(&self, h: &Heap, out: &mut String) {
+        if self.lat_regs.is_empty() {
+            return;
         }
-        format!("{x:016x}")
+        let mut regs: Vec<&LatReg> = self.lat_regs.iter().collect();
+        regs.sort_by(|a, b| cmp_js(h.name(a.rel), h.name(b.rel)));
+        for r in &regs {
+            out.push_str(&format!("\nlat {} {} alg={} use={}", h.name(r.rel), r.op, r.alg.text(), r.alg.strategy().name()));
+        }
+        let rels: HashSet<Sym> = regs.iter().map(|r| r.rel).collect();
+        let mut rows: Vec<(String, String, String)> = Vec::new();
+        for id in self.firing_keys() {
+            if !rels.contains(&self.facts.recs[id as usize].rel) {
+                continue;
+            }
+            let key = self.key(h, id);
+            let state = if brk!("fir_superseded_live" => true; self.alive(id)) { "live" } else { "superseded" };
+            for (rule, tick, prems) in self.firings(id) {
+                let fid = self.firing_id(h, rule, tick, &prems);
+                let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
+                ps.sort_by(|a, b| cmp_js(a, b));
+                rows.push((key.clone(), fid.clone(), format!("\nfir {key} id={fid} {}@{tick} [{}] {state}", h.name(rule), ps.join("; "))));
+            }
+        }
+        rows.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| a.1.cmp(&b.1)));
+        for (_, _, l) in rows {
+            out.push_str(&l);
+        }
     }
 
     pub fn cell_seals(&self, c: CellId) -> &[Seal] {

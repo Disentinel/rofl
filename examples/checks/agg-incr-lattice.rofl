@@ -1,0 +1,182 @@
+-- examples/checks/agg-incr-lattice.rofl — agg_incr_lattice: the ORDER LATTICES
+-- under RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A
+-- lattice contribution is a firing of a fact, not a member of a record, so its
+-- stable id is the firing: `fir FACT id=H RULE@TICK [PREMISES] live|superseded`,
+-- H over `rule@tick|premises, sorted`, and the algebra of the relation is its
+-- `lat` line. A retraction takes the cone of the fact (the lattice facts that
+-- rested on it, through each other) out and fires the rules into it again over
+-- what stands, so the state must be the one of a world without the facts. The
+-- retractions that are evaluated again come first: each evaluates the world
+-- whole, so one that came last would answer for the deltas before it.
+--
+--   il_0sat(m, n, 3)  a value reached only through its own earlier values (a decrement
+--                    that floors at 0) keeps them as its history, superseded and
+--                    named by firing, and a retraction under it is evaluated again
+--   il_e(b, c, 2)    the cheap path to c is gone: a to c is the direct edge, 5
+--   il_cap(s, t, 4)  the widest path to u is the direct edge, 3, and t is gone
+--   il_lk(x, p)      p and q held each other up around a cycle, with no seed: gone
+--   il_s(a, 0)       the seed of il_hop: d was reached two ways, one a hop longer than the
+--                    other, both resting on it, and all of it goes with the seed
+edb(il_e). edb(il_cap). edb(il_sd). edb(il_lk). edb(il_0sat). edb(il_s). edb(il_h).
+il_e(a, b, 1).
+il_e(b, c, 2).
+il_e(a, c, 5).
+il_e(c, a, 3).
+il_e(c, d, 0).
+il_e(d, c, 0).
+il_cap(s, t, 4).
+il_cap(t, u, 7).
+il_cap(s, u, 3).
+il_sd(x, true).
+il_sd(y, false).
+il_sd(z, true).
+il_lk(x, p).
+il_lk(p, q).
+il_lk(q, p).
+il_lk(y, r).
+il_lk(z, y).
+il_0sat(m, n, 3).
+il_0sat(p, q, 4).
+il_s(a, 0).
+il_h(a, b, 1).
+il_h(a, c, 1).
+il_h(b, d, 1).
+il_h(a, d, 2).
+lattice il_hop(X, min W).
+il_hop(X, W) :- il_s(X, W).
+il_hop(Y, W) :- il_hop(X, W1), il_h(X, Y, W2), W is W1 + W2.
+lattice il_dec(A, C, min D).
+il_dec(A, C, D) :- il_0sat(A, C, D).
+il_dec(A, C, D) :- il_dec(A, C, D1), X is D1 - 1, D is max(X, 0).
+lattice il_dist(A, C, min D).
+il_dist(A, C, D) :- il_e(A, C, D).
+il_dist(A, C, D) :- il_dist(A, B, D1), il_e(B, C, W), D is D1 + W.
+lattice il_wide(A, C, max W).
+il_wide(A, C, W) :- il_cap(A, C, W).
+il_wide(A, C, W) :- il_wide(A, B, W1), il_cap(B, C, W2), W is min(W1, W2).
+lattice il_taint(X, or B).
+il_taint(X, B) :- il_sd(X, B).
+il_taint(Y, B) :- il_taint(X, B), il_lk(X, Y).
+lattice il_all(X, and B).
+il_all(X, B) :- il_sd(X, B).
+il_all(Y, B) :- il_all(X, B), il_lk(X, Y), B = false.
+
+-- the state after the retractions, row by row
+-- expect-row: il_0sat[main](p,q,4) tick base support=0
+-- expect-row: il_all[main](r,false) tick drv support=1
+-- expect-row: il_all[main](x,true) tick drv support=1
+-- expect-row: il_all[main](y,false) tick drv support=1
+-- expect-row: il_all[main](z,true) tick drv support=1
+-- expect-row: il_cap[main](s,u,3) tick base support=0
+-- expect-row: il_cap[main](t,u,7) tick base support=0
+-- expect-row: il_dec[main](p,q,0) tick drv support=1
+-- expect-row: il_dist[main](a,a,8) tick drv support=1
+-- expect-row: il_dist[main](a,b,1) tick drv support=1
+-- expect-row: il_dist[main](a,c,5) tick drv support=1
+-- expect-row: il_dist[main](a,d,5) tick drv support=1
+-- expect-row: il_dist[main](c,a,3) tick drv support=2
+-- expect-row: il_dist[main](c,b,4) tick drv support=1
+-- expect-row: il_dist[main](c,c,0) tick drv support=1
+-- expect-row: il_dist[main](c,d,0) tick drv support=1
+-- expect-row: il_dist[main](d,a,3) tick drv support=1
+-- expect-row: il_dist[main](d,b,4) tick drv support=1
+-- expect-row: il_dist[main](d,c,0) tick drv support=1
+-- expect-row: il_dist[main](d,d,0) tick drv support=1
+-- expect-row: il_e[main](a,b,1) tick base support=0
+-- expect-row: il_e[main](a,c,5) tick base support=0
+-- expect-row: il_e[main](c,a,3) tick base support=0
+-- expect-row: il_e[main](c,d,0) tick base support=0
+-- expect-row: il_e[main](d,c,0) tick base support=0
+-- expect-row: il_h[main](a,b,1) tick base support=0
+-- expect-row: il_h[main](a,c,1) tick base support=0
+-- expect-row: il_h[main](a,d,2) tick base support=0
+-- expect-row: il_h[main](b,d,1) tick base support=0
+-- expect-row: il_lk[main](p,q) tick base support=0
+-- expect-row: il_lk[main](q,p) tick base support=0
+-- expect-row: il_lk[main](y,r) tick base support=0
+-- expect-row: il_lk[main](z,y) tick base support=0
+-- expect-row: il_sd[main](x,true) tick base support=0
+-- expect-row: il_sd[main](y,false) tick base support=0
+-- expect-row: il_sd[main](z,true) tick base support=0
+-- expect-row: il_taint[main](r,true) tick drv support=1
+-- expect-row: il_taint[main](x,true) tick drv support=1
+-- expect-row: il_taint[main](y,true) tick drv support=1
+-- expect-row: il_taint[main](z,true) tick drv support=1
+-- expect-row: il_wide[main](s,u,3) tick drv support=1
+-- expect-row: il_wide[main](t,u,7) tick drv support=1
+-- expect-row: lat il_all and alg=idempotent,lattice use=rederive
+-- expect-row: lat il_dec min alg=idempotent,lattice use=rederive
+-- expect-row: lat il_dist min alg=idempotent,lattice use=rederive
+-- expect-row: lat il_hop min alg=idempotent,lattice use=rederive
+-- expect-row: lat il_taint or alg=idempotent,lattice use=rederive
+-- expect-row: lat il_wide max alg=idempotent,lattice use=rederive
+-- expect-row: fir il_all[main](r,false) id=ad38b24f49ae9673 rbcacc0c2@0 [bi:false = false; fact:il_all[main](y,false); fact:il_lk[main](y,r)] live
+-- expect-row: fir il_all[main](x,true) id=577d9d786e80ade6 r79a2c170@0 [fact:il_sd[main](x,true)] live
+-- expect-row: fir il_all[main](y,false) id=527a2aa00e45aaac r79a2c170@0 [fact:il_sd[main](y,false)] live
+-- expect-row: fir il_all[main](z,true) id=04143101b38cc2d4 r79a2c170@0 [fact:il_sd[main](z,true)] live
+-- expect-row: fir il_dec[main](p,q,0) id=ceebf5e42284ecd1 rbf406630@0 [bi:0 is -(1,1); bi:0 is max(0,0); fact:il_dec[main](p,q,1)] live
+-- expect-row: fir il_dec[main](p,q,1) id=df281766a9286464 rbf406630@0 [bi:1 is -(2,1); bi:1 is max(1,0); fact:il_dec[main](p,q,2)] superseded
+-- expect-row: fir il_dec[main](p,q,2) id=447990e949eae4ab rbf406630@0 [bi:2 is -(3,1); bi:2 is max(2,0); fact:il_dec[main](p,q,3)] superseded
+-- expect-row: fir il_dec[main](p,q,3) id=a16a5f262ff33a36 rbf406630@0 [bi:3 is -(4,1); bi:3 is max(3,0); fact:il_dec[main](p,q,4)] superseded
+-- expect-row: fir il_dec[main](p,q,4) id=e39c4b6a449147d3 r32ee2a98@0 [fact:il_0sat[main](p,q,4)] superseded
+-- expect-row: fir il_dist[main](a,a,8) id=0f3835629cb094a8 r423617c1@0 [bi:8 is +(5,3); fact:il_dist[main](a,c,5); fact:il_e[main](c,a,3)] live
+-- expect-row: fir il_dist[main](a,b,1) id=029d402c440dd321 r8ac300c3@0 [fact:il_e[main](a,b,1)] live
+-- expect-row: fir il_dist[main](a,c,5) id=93fe6e2379278100 r8ac300c3@0 [fact:il_e[main](a,c,5)] live
+-- expect-row: fir il_dist[main](a,d,5) id=08eef263b5960862 r423617c1@0 [bi:5 is +(5,0); fact:il_dist[main](a,c,5); fact:il_e[main](c,d,0)] live
+-- expect-row: fir il_dist[main](c,a,3) id=068de394b698bdd2 r8ac300c3@0 [fact:il_e[main](c,a,3)] live
+-- expect-row: fir il_dist[main](c,a,3) id=6a220d2c89656d5b r423617c1@0 [bi:3 is +(0,3); fact:il_dist[main](c,c,0); fact:il_e[main](c,a,3)] live
+-- expect-row: fir il_dist[main](c,b,4) id=fef7aad73e955229 r423617c1@0 [bi:4 is +(3,1); fact:il_dist[main](c,a,3); fact:il_e[main](a,b,1)] live
+-- expect-row: fir il_dist[main](c,c,0) id=b29aa386458d13f0 r423617c1@0 [bi:0 is +(0,0); fact:il_dist[main](c,d,0); fact:il_e[main](d,c,0)] live
+-- expect-row: fir il_dist[main](c,d,0) id=2609a5be654b7df0 r8ac300c3@0 [fact:il_e[main](c,d,0)] live
+-- expect-row: fir il_dist[main](d,a,3) id=d664d1dc6d6d7518 r423617c1@0 [bi:3 is +(0,3); fact:il_dist[main](d,c,0); fact:il_e[main](c,a,3)] live
+-- expect-row: fir il_dist[main](d,b,4) id=79b2c2fb991cc832 r423617c1@0 [bi:4 is +(3,1); fact:il_dist[main](d,a,3); fact:il_e[main](a,b,1)] live
+-- expect-row: fir il_dist[main](d,c,0) id=14660f3052bfe988 r8ac300c3@0 [fact:il_e[main](d,c,0)] live
+-- expect-row: fir il_dist[main](d,d,0) id=3a2e48a2d74b0428 r423617c1@0 [bi:0 is +(0,0); fact:il_dist[main](d,c,0); fact:il_e[main](c,d,0)] live
+-- expect-row: fir il_taint[main](r,true) id=420f68e5443a67b6 r1dfb6101@0 [fact:il_lk[main](y,r); fact:il_taint[main](y,true)] live
+-- expect-row: fir il_taint[main](x,true) id=6df3015a4937db5f r07e6f575@0 [fact:il_sd[main](x,true)] live
+-- expect-row: fir il_taint[main](y,true) id=b5d45312c7fed42f r1dfb6101@0 [fact:il_lk[main](z,y); fact:il_taint[main](z,true)] live
+-- expect-row: fir il_taint[main](z,true) id=e2cbf6932fcb16a9 r07e6f575@0 [fact:il_sd[main](z,true)] live
+-- expect-row: fir il_wide[main](s,u,3) id=d11ec8fa69818892 r6c98a70b@0 [fact:il_cap[main](s,u,3)] live
+-- expect-row: fir il_wide[main](t,u,7) id=5ea6701603570ed9 r6c98a70b@0 [fact:il_cap[main](t,u,7)] live
+-- and nothing of what they supported before
+-- expect-no-row: il_0sat[main](m,n,3) tick base support=0
+-- expect-no-row: il_cap[main](s,t,4) tick base support=0
+-- expect-no-row: il_dec[main](m,n,0) tick drv support=1
+-- expect-no-row: il_dist[main](a,a,6) tick drv support=1
+-- expect-no-row: il_dist[main](a,c,3) tick drv support=1
+-- expect-no-row: il_dist[main](a,d,3) tick drv support=1
+-- expect-no-row: il_dist[main](b,a,5) tick drv support=1
+-- expect-no-row: il_dist[main](b,b,6) tick drv support=1
+-- expect-no-row: il_dist[main](b,c,2) tick drv support=1
+-- expect-no-row: il_dist[main](b,d,2) tick drv support=1
+-- expect-no-row: il_e[main](b,c,2) tick base support=0
+-- expect-no-row: il_hop[main](a,0) tick drv support=1
+-- expect-no-row: il_hop[main](b,1) tick drv support=1
+-- expect-no-row: il_hop[main](c,1) tick drv support=1
+-- expect-no-row: il_hop[main](d,2) tick drv support=2
+-- expect-no-row: il_lk[main](x,p) tick base support=0
+-- expect-no-row: il_s[main](a,0) tick base support=0
+-- expect-no-row: il_taint[main](p,true) tick drv support=1
+-- expect-no-row: il_taint[main](q,true) tick drv support=1
+-- expect-no-row: il_wide[main](s,t,4) tick drv support=1
+-- expect-no-row: il_wide[main](s,u,4) tick drv support=1
+-- expect-no-row: fir il_dec[main](m,n,0) id=24135cb5d8c54edf rbf406630@0 [bi:0 is -(1,1); bi:0 is max(0,0); fact:il_dec[main](m,n,1)] live
+-- expect-no-row: fir il_dec[main](m,n,1) id=230bed187da51f6a rbf406630@0 [bi:1 is -(2,1); bi:1 is max(1,0); fact:il_dec[main](m,n,2)] superseded
+-- expect-no-row: fir il_dec[main](m,n,2) id=36b9564e9ab6a5cd rbf406630@0 [bi:2 is -(3,1); bi:2 is max(2,0); fact:il_dec[main](m,n,3)] superseded
+-- expect-no-row: fir il_dec[main](m,n,3) id=2176d72bcdf8217a r32ee2a98@0 [fact:il_0sat[main](m,n,3)] superseded
+-- expect-no-row: fir il_dist[main](a,a,6) id=ecbd19baaf323526 r423617c1@0 [bi:6 is +(3,3); fact:il_dist[main](a,c,3); fact:il_e[main](c,a,3)] live
+-- expect-no-row: fir il_dist[main](a,c,3) id=0e7eaadbabdd7cab r423617c1@0 [bi:3 is +(1,2); fact:il_dist[main](a,b,1); fact:il_e[main](b,c,2)] live
+-- expect-no-row: fir il_dist[main](a,d,3) id=5abc1d336dead6d8 r423617c1@0 [bi:3 is +(3,0); fact:il_dist[main](a,c,3); fact:il_e[main](c,d,0)] live
+-- expect-no-row: fir il_dist[main](b,a,5) id=30f4960bd0534d10 r423617c1@0 [bi:5 is +(2,3); fact:il_dist[main](b,c,2); fact:il_e[main](c,a,3)] live
+-- expect-no-row: fir il_dist[main](b,b,6) id=e1d5fee0d26ecafa r423617c1@0 [bi:6 is +(5,1); fact:il_dist[main](b,a,5); fact:il_e[main](a,b,1)] live
+-- expect-no-row: fir il_dist[main](b,c,2) id=7b29ac4066b63f74 r8ac300c3@0 [fact:il_e[main](b,c,2)] live
+-- expect-no-row: fir il_dist[main](b,d,2) id=0e09a395965af2c8 r423617c1@0 [bi:2 is +(2,0); fact:il_dist[main](b,c,2); fact:il_e[main](c,d,0)] live
+-- expect-no-row: fir il_hop[main](a,0) id=7c44aa78f9e617bc r719a6a7a@0 [fact:il_s[main](a,0)] live
+-- expect-no-row: fir il_hop[main](b,1) id=8040aa389ec22cac r63e4c072@0 [bi:1 is +(0,1); fact:il_h[main](a,b,1); fact:il_hop[main](a,0)] live
+-- expect-no-row: fir il_hop[main](c,1) id=460b0f1ac74a2b55 r63e4c072@0 [bi:1 is +(0,1); fact:il_h[main](a,c,1); fact:il_hop[main](a,0)] live
+-- expect-no-row: fir il_hop[main](d,2) id=0f997d3359f86b07 r63e4c072@0 [bi:2 is +(1,1); fact:il_h[main](b,d,1); fact:il_hop[main](b,1)] live
+-- expect-no-row: fir il_hop[main](d,2) id=4513f0314a557dc3 r63e4c072@0 [bi:2 is +(0,2); fact:il_h[main](a,d,2); fact:il_hop[main](a,0)] live
+-- expect-no-row: fir il_taint[main](p,true) id=822490840827fa54 r1dfb6101@0 [fact:il_lk[main](x,p); fact:il_taint[main](x,true)] live
+-- expect-no-row: fir il_taint[main](q,true) id=88598548da5d4633 r1dfb6101@0 [fact:il_lk[main](p,q); fact:il_taint[main](p,true)] live
+-- expect-no-row: fir il_wide[main](s,t,4) id=3fac8b0334594c50 r6c98a70b@0 [fact:il_cap[main](s,t,4)] live
+-- expect-no-row: fir il_wide[main](s,u,4) id=d75cc5e8c7ab87d7 r9e99ff09@0 [bi:4 is min(4,7); fact:il_cap[main](t,u,7); fact:il_wide[main](s,t,4)] live

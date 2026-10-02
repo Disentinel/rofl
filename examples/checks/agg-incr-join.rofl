@@ -1,0 +1,109 @@
+-- examples/checks/agg-incr-join.rofl — agg_incr_join: the JOIN LATTICES under
+-- RETRACTION (docs/aggregates.md, "Ready for the incremental engine"). A join
+-- cell keeps the contributions that were read from a value it has since grown
+-- past, as the history its Cover is founded on; which values were read is a
+-- matter of the schedule, so no delta promises the history a fresh evaluation
+-- holds. The relation records `alg=idempotent,lattice use=rederive` and its
+-- contributions (`L@join`) are named by firing; the retraction is evaluated
+-- again and must be the state of a world without the fact.
+--
+--   ij_link(c, a)   the interval no longer comes round the cycle to a
+--   ij_e(b, c)      c leaves the component of a and b: a plain rule reads the edge
+edb(ij_e). edb(ij_node). edb(ij_val). edb(ij_link).
+ij_e(a, b).
+ij_e(b, c).
+ij_node(a).
+ij_node(b).
+ij_node(c).
+ij_node(d).
+ij_val(a, 3).
+ij_val(b, 7).
+ij_link(a, b).
+ij_link(b, c).
+ij_link(c, a).
+ij_u(X, Y) :- ij_e(X, Y).
+ij_u(Y, X) :- ij_e(X, Y).
+lattice ij_comp(X, union S).
+ij_comp(X, set(X)) :- ij_node(X).
+ij_comp(X, S) :- ij_u(X, Y), ij_comp(Y, S).
+lattice ij_hull(X, hull I).
+ij_hull(X, iv(V, V)) :- ij_val(X, V).
+ij_hull(Y, I) :- ij_link(X, Y), ij_hull(X, I).
+
+-- the state after the retractions, row by row
+-- expect-row: ij_comp@join[main](a,set(a)) tick drv support=1
+-- expect-row: ij_comp@join[main](a,set(b)) tick drv support=1
+-- expect-row: ij_comp@join[main](b,set(a,b)) tick drv support=1
+-- expect-row: ij_comp@join[main](b,set(b)) tick drv support=1
+-- expect-row: ij_comp@join[main](c,set(c)) tick drv support=1
+-- expect-row: ij_comp@join[main](d,set(d)) tick drv support=1
+-- expect-row: ij_comp[main](a,set(a,b)) tick drv support=1
+-- expect-row: ij_comp[main](b,set(a,b)) tick drv support=1
+-- expect-row: ij_comp[main](c,set(c)) tick drv support=1
+-- expect-row: ij_comp[main](d,set(d)) tick drv support=1
+-- expect-row: ij_e[main](a,b) tick base support=0
+-- expect-row: ij_hull@join[main](a,iv(3,3)) tick drv support=1
+-- expect-row: ij_hull@join[main](b,iv(3,3)) tick drv support=1
+-- expect-row: ij_hull@join[main](b,iv(7,7)) tick drv support=1
+-- expect-row: ij_hull@join[main](c,iv(3,7)) tick drv support=1
+-- expect-row: ij_hull[main](a,iv(3,3)) tick drv support=1
+-- expect-row: ij_hull[main](b,iv(3,7)) tick drv support=1
+-- expect-row: ij_hull[main](c,iv(3,7)) tick drv support=1
+-- expect-row: ij_link[main](a,b) tick base support=0
+-- expect-row: ij_link[main](b,c) tick base support=0
+-- expect-row: ij_node[main](a) tick base support=0
+-- expect-row: ij_node[main](b) tick base support=0
+-- expect-row: ij_node[main](c) tick base support=0
+-- expect-row: ij_node[main](d) tick base support=0
+-- expect-row: ij_u[main](a,b) tick drv support=1
+-- expect-row: ij_u[main](b,a) tick drv support=1
+-- expect-row: ij_val[main](a,3) tick base support=0
+-- expect-row: ij_val[main](b,7) tick base support=0
+-- expect-row: lat ij_comp union alg=idempotent,lattice use=rederive
+-- expect-row: lat ij_comp@join union alg=idempotent,lattice use=rederive
+-- expect-row: lat ij_hull hull alg=idempotent,lattice use=rederive
+-- expect-row: lat ij_hull@join hull alg=idempotent,lattice use=rederive
+-- expect-row: fir ij_comp@join[main](a,set(a)) id=2941f08e77582f60 r9cbcdb05@0 [fact:ij_node[main](a)] live
+-- expect-row: fir ij_comp@join[main](a,set(b)) id=424978b468fec296 r432c42c9@0 [fact:ij_comp[main](b,set(b)); fact:ij_u[main](a,b)] live
+-- expect-row: fir ij_comp@join[main](b,set(a,b)) id=2163fbb8801dd66c r432c42c9@0 [fact:ij_comp[main](a,set(a,b)); fact:ij_u[main](b,a)] live
+-- expect-row: fir ij_comp@join[main](b,set(b)) id=2937908e774f37bb r9cbcdb05@0 [fact:ij_node[main](b)] live
+-- expect-row: fir ij_comp@join[main](c,set(c)) id=293af48e7752177e r9cbcdb05@0 [fact:ij_node[main](c)] live
+-- expect-row: fir ij_comp@join[main](d,set(d)) id=294bf48e77608ab1 r9cbcdb05@0 [fact:ij_node[main](d)] live
+-- expect-row: fir ij_comp[main](a,set(a,b)) id=38e42e2c2c1a7074 ij_comp@join@0 [fact:ij_comp@join[main](a,set(a)); fact:ij_comp@join[main](a,set(b))] live
+-- expect-row: fir ij_comp[main](b,set(a,b)) id=8b29cf23c0f76b4b ij_comp@join@0 [fact:ij_comp@join[main](b,set(a,b))] live
+-- expect-row: fir ij_comp[main](b,set(b)) id=5c65ee0721380b80 ij_comp@join@0 [fact:ij_comp@join[main](b,set(b))] superseded
+-- expect-row: fir ij_comp[main](c,set(c)) id=563274b0f47aaea4 ij_comp@join@0 [fact:ij_comp@join[main](c,set(c))] live
+-- expect-row: fir ij_comp[main](d,set(d)) id=57f9363e183fafdc ij_comp@join@0 [fact:ij_comp@join[main](d,set(d))] live
+-- expect-row: fir ij_hull@join[main](a,iv(3,3)) id=018a951c8e0199fe r3fdbc7f1@0 [fact:ij_val[main](a,3)] live
+-- expect-row: fir ij_hull@join[main](b,iv(3,3)) id=a9b4f9428f910d8d r09e36940@0 [fact:ij_hull[main](a,iv(3,3)); fact:ij_link[main](a,b)] live
+-- expect-row: fir ij_hull@join[main](b,iv(7,7)) id=d1bbe7159979a5c1 r3fdbc7f1@0 [fact:ij_val[main](b,7)] live
+-- expect-row: fir ij_hull@join[main](c,iv(3,7)) id=617272d2c64b6446 r09e36940@0 [fact:ij_hull[main](b,iv(3,7)); fact:ij_link[main](b,c)] live
+-- expect-row: fir ij_hull[main](a,iv(3,3)) id=25860638a48562aa ij_hull@join@0 [fact:ij_hull@join[main](a,iv(3,3))] live
+-- expect-row: fir ij_hull[main](b,iv(3,7)) id=1cad3077ee4450ff ij_hull@join@0 [fact:ij_hull@join[main](b,iv(3,3)); fact:ij_hull@join[main](b,iv(7,7))] live
+-- expect-row: fir ij_hull[main](c,iv(3,7)) id=bcc08402f0ad5350 ij_hull@join@0 [fact:ij_hull@join[main](c,iv(3,7))] live
+-- and nothing of what they supported before
+-- expect-no-row: ij_comp@join[main](a,set(b,c)) tick drv support=1
+-- expect-no-row: ij_comp@join[main](b,set(a,b,c)) tick drv support=1
+-- expect-no-row: ij_comp@join[main](b,set(c)) tick drv support=1
+-- expect-no-row: ij_comp@join[main](c,set(a,b,c)) tick drv support=1
+-- expect-no-row: ij_comp[main](a,set(a,b,c)) tick drv support=1
+-- expect-no-row: ij_comp[main](b,set(a,b,c)) tick drv support=1
+-- expect-no-row: ij_comp[main](c,set(a,b,c)) tick drv support=1
+-- expect-no-row: ij_e[main](b,c) tick base support=0
+-- expect-no-row: ij_hull@join[main](a,iv(3,7)) tick drv support=1
+-- expect-no-row: ij_hull[main](a,iv(3,7)) tick drv support=1
+-- expect-no-row: ij_link[main](c,a) tick base support=0
+-- expect-no-row: ij_u[main](b,c) tick drv support=1
+-- expect-no-row: ij_u[main](c,b) tick drv support=1
+-- expect-no-row: fir ij_comp@join[main](a,set(b,c)) id=0df578a074113ac7 r432c42c9@0 [fact:ij_comp[main](b,set(b,c)); fact:ij_u[main](a,b)] live
+-- expect-no-row: fir ij_comp@join[main](b,set(a,b,c)) id=d3b1a8635aab78b9 r432c42c9@0 [fact:ij_comp[main](a,set(a,b,c)); fact:ij_u[main](b,a)] live
+-- expect-no-row: fir ij_comp@join[main](b,set(c)) id=0daad4745e4feaac r432c42c9@0 [fact:ij_comp[main](c,set(c)); fact:ij_u[main](b,c)] live
+-- expect-no-row: fir ij_comp@join[main](c,set(a,b,c)) id=8bde2185108bf016 r432c42c9@0 [fact:ij_comp[main](b,set(a,b,c)); fact:ij_u[main](c,b)] live
+-- expect-no-row: fir ij_comp[main](a,set(a,b,c)) id=6d7aff3ac6d09381 ij_comp@join@0 [fact:ij_comp@join[main](a,set(a)); fact:ij_comp@join[main](a,set(b,c))] live
+-- expect-no-row: fir ij_comp[main](b,set(a,b,c)) id=ddaa59f00a439dea ij_comp@join@0 [fact:ij_comp@join[main](b,set(a,b,c))] live
+-- expect-no-row: fir ij_comp[main](b,set(b,c)) id=e462047dfee2a80e ij_comp@join@0 [fact:ij_comp@join[main](b,set(c)); fact:ij_comp[main](b,set(b))] superseded
+-- expect-no-row: fir ij_comp[main](c,set(a,b,c)) id=1c0825aa7a527af5 ij_comp@join@0 [fact:ij_comp@join[main](c,set(a,b,c))] live
+-- expect-no-row: fir ij_comp[main](c,set(c)) id=563274b0f47aaea4 ij_comp@join@0 [fact:ij_comp@join[main](c,set(c))] superseded
+-- expect-no-row: fir ij_hull@join[main](a,iv(3,7)) id=7f741ab78853a0d6 r09e36940@0 [fact:ij_hull[main](c,iv(3,7)); fact:ij_link[main](c,a)] live
+-- expect-no-row: fir ij_hull[main](a,iv(3,3)) id=25860638a48562aa ij_hull@join@0 [fact:ij_hull@join[main](a,iv(3,3))] superseded
+-- expect-no-row: fir ij_hull[main](a,iv(3,7)) id=02a97a3890b6c8ae ij_hull@join@0 [fact:ij_hull@join[main](a,iv(3,7))] live

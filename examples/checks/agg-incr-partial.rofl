@@ -1,0 +1,42 @@
+-- examples/checks/agg-incr-partial.rofl — agg_incr_partial: THE CELLS A RULE SEALS
+-- FOR THE GROUPS ITS FIRST AGGREGATE HAS A VALUE FOR, under RETRACTION. A
+-- median is no solution over a group with no member, so the count after it is
+-- asked only for the groups that have one: a retraction that empties a group
+-- must not leave the count of it, so such a rule is evaluated again
+-- (`an aggregate follows one that may leave no solution`) and the cells are
+-- those of a world without the fact.
+--
+--   ap_v(3, b, 2)   b has no median, so no count of its own
+edb(ap_g). edb(ap_v).
+ap_g(a).
+ap_g(b).
+ap_g(c).
+ap_v(1, a, 4).
+ap_v(2, a, 9).
+ap_v(3, b, 2).
+ap_gm(G, M, N) :- ap_g(G), M is median(V ; K : ap_v(K, G, V)), N is count(J : ap_v(J, G, _)).
+
+-- the state after the retractions, row by row
+-- expect-row: ap_g[main](a) tick base support=0
+-- expect-row: ap_g[main](b) tick base support=0
+-- expect-row: ap_g[main](c) tick base support=0
+-- expect-row: ap_gm[main](a,4,2) tick drv support=1
+-- expect-row: ap_v[main](1,a,4) tick base support=0
+-- expect-row: ap_v[main](2,a,9) tick base support=0
+-- expect-row: cell $cell(r1e1f5e0b,2,0,$cons(a,$nil)) median = 4 h=1 tick=0 sealed=[ap_v@0] alg=holistic use=recompute
+-- expect-row: mem $cell(r1e1f5e0b,2,0,$cons(a,$nil)) #1 id=39dc250fae444743 (4,1) h=1 [fact:ap_v[main](1,a,4)]
+-- expect-row: mem $cell(r1e1f5e0b,2,0,$cons(a,$nil)) #2 id=3609b3279f43a069 (9,2) h=1 [fact:ap_v[main](2,a,9)]
+-- expect-row: cell $cell(r1e1f5e0b,2,0,$cons(b,$nil)) median = none h=0 tick=0 sealed=[ap_v@0] alg=holistic use=recompute
+-- expect-row: cell $cell(r1e1f5e0b,2,0,$cons(c,$nil)) median = none h=0 tick=0 sealed=[ap_v@0] alg=holistic use=recompute
+-- expect-row: cell $cell(r1e1f5e0b,3,0,$cons(a,$nil)) count = 2 h=1 tick=0 sealed=[ap_v@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r1e1f5e0b,3,0,$cons(a,$nil)) #1 id=c82df6f158076a0c (1) h=1 [fact:ap_v[main](1,a,4)]
+-- expect-row: mem $cell(r1e1f5e0b,3,0,$cons(a,$nil)) #2 id=c82416f157ff4be7 (2) h=1 [fact:ap_v[main](2,a,9)]
+-- and nothing of what they supported before
+-- expect-no-row: ap_gm[main](b,2,1) tick drv support=1
+-- expect-no-row: ap_v[main](3,b,2) tick base support=0
+-- expect-no-row: cell $cell(r1e1f5e0b,2,0,$cons(b,$nil)) median = 2 h=1 tick=0 sealed=[ap_v@0] alg=holistic use=recompute
+-- expect-no-row: mem $cell(r1e1f5e0b,2,0,$cons(b,$nil)) #1 id=7020e4a495bdfe2a (2,3) h=1 [fact:ap_v[main](3,b,2)]
+-- expect-no-row: cell $cell(r1e1f5e0b,3,0,$cons(b,$nil)) count = 1 h=1 tick=0 sealed=[ap_v@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r1e1f5e0b,3,0,$cons(b,$nil)) #1 id=e3a6612b1a8128d3 (3) h=1 [fact:ap_v[main](3,b,2)]
+-- a group with no median has no count of its own (a count of 0 would be a cell a fresh evaluation never seals)
+-- expect-no-row: cell $cell(r1e1f5e0b,3,0,$cons(b,$nil))
