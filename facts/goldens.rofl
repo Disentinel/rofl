@@ -409,27 +409,27 @@ golden_state("staged_neg_why_plain", "4f212ec197b0c42c", 583).
 golden_state("unstratifiable", "f2e4b1185519b8dc", 589).
 golden_state("wfs_unknown_negated", "c3ba285c88e16d43", 673).
 
-golden_host("huh", "0a3bb41c1fc24351", 0, 116).
-golden_host("heck", "0ad760fccc4ace36", 0, 215).
-golden_host("aka", "184356b0eeb03fcd", 0, 341).
+golden_host("aka", "7a19633fcc55dd31", 0, 341).
 golden_host("blam", "240bc0d48075cb61", 0, 251).
-golden_host("rip", "328a5dee727abd7e", 0, 377).
-golden_host("bleep", "3826f91c28bcf7fe", 0, 183).
-golden_host("goof", "409f9c77e599293c", 0, 328).
-golden_host("loot", "52c0cdbd2c94aabd", 0, 456).
-golden_host("oops", "5641da82e7afcbeb", 0, 214).
-golden_host("ditto", "75b8ccfacc6d7f3f", 0, 255).
-golden_host("nope", "9ff09e7531c95de9", 0, 175).
-golden_host("reach", "aa98ec9777ec7764", 0, 37).
-golden_host("iffy", "addf8ff03b856850", 0, 254).
-golden_host("sus", "b881dc1809dc8053", 0, 335).
-golden_host("yak", "d412bdf5dbd728e3", 0, 209).
-golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
-golden_host("cram", "e4dedf7907289319", 0, 212).
-golden_host("wtf", "e6d06ceeb45bdc90", 0, 586).
+golden_host("bleep", "f7f138729853bfe0", 0, 183).
+golden_host("cram", "c36d6c20e2b697ea", 0, 212).
+golden_host("ditto", "8d7a9827fddcc623", 0, 255).
 golden_host("drip", "f11351af50339bb2", 0, 332).
-golden_host("jopa", "fffd45d57ee4de63", 0, 311).
+golden_host("goof", "1e6b4c496ac0ade1", 0, 328).
+golden_host("heck", "0ad760fccc4ace36", 0, 215).
+golden_host("huh", "0a3bb41c1fc24351", 0, 116).
+golden_host("iffy", "591db3174adb060b", 0, 254).
+golden_host("jopa", "8656fb8cf0b7abc0", 0, 311).
+golden_host("loot", "52c0cdbd2c94aabd", 0, 456).
 golden_host("moot", "4d1dc99805fba31f", 1, 369).
+golden_host("nope", "51ed85bf9ae281a4", 0, 175).
+golden_host("oops", "5641da82e7afcbeb", 0, 214).
+golden_host("reach", "aa98ec9777ec7764", 0, 37).
+golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
+golden_host("rip", "2bd1a2d1f8697c9e", 0, 377).
+golden_host("sus", "e88fe11005e28231", 0, 335).
+golden_host("wtf", "e6d06ceeb45bdc90", 0, 586).
+golden_host("yak", "d412bdf5dbd728e3", 0, 209).
 
 golden_rel("aka", "@other", 1).
 golden_rel("aka", "@wit", 990).
