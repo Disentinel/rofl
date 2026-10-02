@@ -1,0 +1,19 @@
+-- examples/rip/trace/trace.rofl — the shortest play to every reachable state.
+--
+-- `dist` is a lattice: one row per state, the fewest moves that reach it, and
+-- the play that did is what `why` prints. `leg` keeps the moves that lie on a
+-- shortest play, so walking back from a state by `leg` is the script of
+-- failures, and every step of it lowers `dist` by one.
+--
+-- rip.rofl runs under `semantics(well_founded)`, where a lattice is refused,
+-- so this lives in a directory of its own, which no world loads beside
+-- rip.rofl, and the demo loads it over the machine alone.
+edb(initial).
+edb(respond).
+
+lattice dist(S, min D).
+
+dist(S, 0)  :- initial(S).
+dist(S2, E) :- dist(S, D), respond(S, _, _, S2), E is D + 1.
+
+leg(S2, S, A, R) :- respond(S, A, R, S2), dist(S, D), dist(S2, E), F is D + 1, F = E.

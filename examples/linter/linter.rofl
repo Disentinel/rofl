@@ -1,0 +1,76 @@
+-- examples/linter/linter.rofl — "probably needs a name", as rules over the reflection.
+--
+-- The linter reads what a load writes about the rules (`concludes`, `premise_pos`,
+-- `premise_neg`, `has_premise`), which is base and complete before anything fires,
+-- so a count over it is sealed (f_aggregates_over_live_kernel_relations_are_refused
+-- refuses only what the kernel writes while evaluating). A threshold is a fact
+-- and a finding is one rule over a count.
+--
+-- The counts are over DISTINCT RULES: `concludes` and `premise_pos` hold a pair
+-- (rule, relation) once, however many times the rule says it.
+edb(lint_min).
+edb(foreign_head).
+lint_min(table, 5).
+lint_min(pair, 5).
+lint_min(long, 7).
+
+-- the linter's own heads are not findings about the file it reads; the heads of
+-- boot.rofl come from the host (scripts/lint.ts) or examples/linter/corpus-boot-heads.rofl
+foreign_head(lint_arity). foreign_head(lint_base). foreign_head(lint_bodies). foreign_head(lint_body_rel).
+foreign_head(lint_carrier). foreign_head(lint_differs). foreign_head(lint_differs_off_heads). foreign_head(lint_long_place).
+foreign_head(lint_mirror_cand). foreign_head(lint_mirror_head). foreign_head(lint_no_carrier). foreign_head(lint_pair).
+foreign_head(lint_place). foreign_head(lint_said). foreign_head(lint_same_head). foreign_head(lint_shares).
+foreign_head(lint_split). foreign_head(lint_table_place). foreign_head(lint_twin). foreign_head(lint_ways).
+foreign_head(probably_a_pair_or_a_case_table). foreign_head(probably_a_table). foreign_head(probably_hides_a_concept).
+foreign_head(probably_needs_a_name). foreign_head(probably_one_rule_with_an_or). foreign_head(probably_several_routes).
+
+lint_bodies(Rel, N)  :- N is count(R : concludes(R, Rel)).
+lint_arity(R, N)     :- N is count(K : has_premise(R, K)).
+lint_pair(A, B, N)   :- N is count(R : premise_pos(R, A), premise_pos(R, B), A != B).
+
+probably_a_table(Rel, N)            :- lint_min(table, M), lint_bodies(Rel, N), N >= M, not foreign_head(Rel).
+probably_needs_a_name(A, B, N)      :- lint_min(pair, M), lint_pair(A, B, N), N >= M.
+probably_hides_a_concept(R, Rel, N) :- lint_min(long, M), lint_arity(R, N), N >= M, concludes(R, Rel), not foreign_head(Rel).
+
+-- what a body reads that something loaded derives: its carriers
+lint_base(Rel)             :- premise_pos(_, Rel), not concludes(_, Rel).
+lint_body_rel(R, Rel)      :- premise_pos(R, Rel).
+lint_body_rel(R, neg(Rel)) :- premise_neg(R, Rel).
+lint_carrier(R, Rel)  :- concludes(R, H), premise_pos(R, Rel), not lint_base(Rel), Rel != H.
+lint_carrier(R, Rel)  :- concludes(R, H), premise_neg(R, Rel), not lint_base(Rel), Rel != H.
+lint_no_carrier(R)    :- concludes(R, _), not lint_carrier(R, _).
+
+-- one head, two bodies with no carrier in common: several routes under one name
+lint_shares(R1, R2)   :- lint_carrier(R1, X), lint_carrier(R2, X), R1 != R2.
+lint_split(H, R1, R2) :- concludes(R1, H), concludes(R2, H), R1 != R2, lint_carrier(R1, _), lint_carrier(R2, _), not lint_shares(R1, R2).
+lint_split(H, R1, R2) :- concludes(R1, H), concludes(R2, H), lint_carrier(R1, _), lint_no_carrier(R2).
+probably_several_routes(H, N) :- lint_split(H, _, _), lint_min(table, M), lint_bodies(H, N), N >= M, not foreign_head(H).
+
+-- twins: two bodies of one head reading the same relations with the same polarity
+lint_same_head(R1, R2) :- concludes(R1, H), concludes(R2, H), R1 != R2.
+lint_differs(R1, R2)   :- lint_same_head(R1, R2), lint_body_rel(R1, X), not lint_body_rel(R2, X).
+lint_twin(H, R1, R2)   :- lint_same_head(R1, R2), concludes(R1, H), not lint_differs(R1, R2), not lint_differs(R2, R1).
+probably_one_rule_with_an_or(H) :- lint_twin(H, _, _), not foreign_head(H).
+
+-- mirrors: two heads whose bodies agree except for the heads themselves
+lint_mirror_cand(R1, R2)       :- lint_carrier(R1, X), lint_carrier(R2, X), concludes(R1, H1), concludes(R2, H2), H1 != H2.
+lint_mirror_head(R, neg(H))    :- concludes(R, H).
+lint_differs_off_heads(R1, R2) :- lint_mirror_cand(R1, R2), lint_body_rel(R1, X), not lint_body_rel(R2, X),
+                                  not concludes(R1, X), not concludes(R2, X), not lint_mirror_head(R1, X), not lint_mirror_head(R2, X).
+probably_a_pair_or_a_case_table(H1, H2) :- lint_mirror_cand(R1, R2), concludes(R1, H1), concludes(R2, H2),
+                                  not lint_differs_off_heads(R1, R2), not lint_differs_off_heads(R2, R1),
+                                  not foreign_head(H1), not foreign_head(H2).
+
+-- RANKS. A place counts distinct values from the top, so two tables of 20 bodies share place 1.
+lint_table_place(Rel, P) :- probably_a_table(Rel, N), S is 0 - N, P is rank(S, V : probably_a_table(_, K), V is 0 - K).
+lint_long_place(R, P)    :- probably_hides_a_concept(R, _, N), S is 0 - N, P is rank(S, V : probably_hides_a_concept(_, _, K), V is 0 - K).
+
+-- what is said about one head, in how many ways, and the places by that
+lint_said(table, Rel)   :- probably_a_table(Rel, _).
+lint_said(long, Rel)    :- probably_hides_a_concept(_, Rel, _).
+lint_said(routes, Rel)  :- probably_several_routes(Rel, _).
+lint_said(or, Rel)      :- probably_one_rule_with_an_or(Rel).
+lint_said(mirror, Rel)  :- probably_a_pair_or_a_case_table(Rel, _).
+lint_said(mirror, Rel)  :- probably_a_pair_or_a_case_table(_, Rel).
+lint_ways(Rel, N)       :- N is count(K : lint_said(K, Rel)).
+lint_place(Rel, P)      :- lint_ways(Rel, N), S is 0 - N, P is rank(S, V : lint_ways(_, K), V is 0 - K).

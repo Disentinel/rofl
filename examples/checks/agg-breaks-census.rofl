@@ -14,6 +14,7 @@ brk_expects("mono", "agg_life_demo").
 brk_expects("mono", "agg_critpath_demo").
 brk_expects("mono", "agg_minimax_demo").
 brk_expects("mono", "agg_quorum_demo").
+brk_expects("mono", "agg_linter_demo").
 brk("memo"). brk_kind("memo", switch).
 brk_expects("memo", "agg_cell_eval").
 brk("max"). brk_kind("max", switch).
@@ -124,6 +125,8 @@ brk_expects("empty_none", "agg_voting_demo").
 brk_expects("empty_none", "agg_empty_eval").
 brk_expects("empty_none", "agg_minimax_demo").
 brk_expects("empty_none", "agg_quorum_demo").
+brk_expects("empty_none", "agg_linter_demo").
+brk_expects("empty_none", "agg_prose").
 brk("phantom"). brk_kind("phantom", switch).
 brk_expects("phantom", "agg_empty_witness").
 brk("empty_text"). brk_kind("empty_text", switch).
@@ -1816,6 +1819,7 @@ proof_world("agg_lattice_wfs").
 proof_world("agg_lattice_why").
 proof_world("agg_lattice_witness").
 proof_world("agg_life_demo").
+proof_world("agg_linter_demo").
 proof_world("agg_minimax_demo").
 proof_world("agg_minmax_budget").
 proof_world("agg_minmax_eval").
@@ -1832,6 +1836,7 @@ proof_world("agg_minmax_why").
 proof_world("agg_minmax_witness").
 proof_world("agg_precise_holes").
 proof_world("agg_precise_oracle").
+proof_world("agg_prose").
 proof_world("agg_quorum_demo").
 proof_world("agg_slo_demo").
 proof_world("agg_sub_budget").

@@ -298,10 +298,8 @@ slack(P, D, E1, E2, M) :-
     span(_, E1, P, Pl1, D, _, End1), span(_, E2, P, Pl2, D, _, _),
     latest_start(E2, D, L), tt(Pl1, Pl2, TT), M is L - End1 - TT.
 
--- One derivation per chain, so the tropical semiring folded over this gives
--- the MINIMUM slack of the day — an aggregation the kernel deliberately does
--- not have (START.md section 8) and the semiring supplies exactly.
-day_tight(P, D) :- slack(P, D, _, _, _).
+-- The tightest handover of a person's day.
+day_tight(P, D, M) :- slack(P, D, _, _, _), M is min(X : slack(P, D, _, _, X)).
 
 zero_slack(P, D, E1, E2)     :- slack(P, D, E1, E2, 0).
 negative_slack(P, D, E1, E2) :- slack(P, D, E1, E2, M), M < 0.
@@ -392,12 +390,32 @@ free_slot(P, D, S) :- raw_gap(P, D, S), not sole(P, D, S), not in_tight_gap(P, D
 on_call(P, D, S)   :- raw_gap(P, D, S), sole(P, D, S).
 
 -- =========================================================================
+-- 7b. WINDOWS: adjacent slots as intervals
+-- =========================================================================
+-- A run of grid slots read as [from, to). `win_from` walks a run forward and
+-- keeps the least start; the hull of its slots is the interval.
+
+win_slot(uncovered, Ch, D, S) :- uncovered(Ch, D, S).
+win_slot(free, P, D, S)       :- free_slot(P, D, S).
+win_slot(raw, P, D, S)        :- raw_gap(P, D, S).
+win_slot(on_call, P, D, S)    :- on_call(P, D, S).
+win_slot(place, A, D, S)      :- admissible(A, D, S).
+
+lattice win_from(K, W, D, S, min F).
+win_from(K, W, D, S, S) :- win_slot(K, W, D, S).
+win_from(K, W, D, S2, F) :- win_from(K, W, D, S, F), grid(G), S2 is S + G, win_slot(K, W, D, S2).
+
+lattice win_hull(K, W, D, F, hull I).
+win_hull(K, W, D, F, iv(S, E)) :- win_from(K, W, D, S, F), grid(G), E is S + G.
+window(K, W, D, F, T) :- win_hull(K, W, D, F, iv(_, T)).
+win_total(K, W, M) :- win_slot(K, W, _, _), grid(G), N is count(D, S : win_slot(K, W, D, S)), M is N * G.
+
+-- =========================================================================
 -- 8. WORKING HOURS, NOMINAL AND EFFECTIVE
 -- =========================================================================
--- The kernel has no aggregation (START.md section 8), so the SUM is host-side
--- in spat.ts. What the rules decide is WHICH minutes count, and that is the
--- part with content in it: an hour of work while you are the only person a
--- child can turn to is not an hour of work.
+-- What the rules decide is WHICH minutes count, and that is the part with
+-- content in it: an hour of work while you are the only person a child can
+-- turn to is not an hour of work.
 
 work_slot(P, D, S) :- deep(slots), span(_, Ev, P, _, D, F, T), kind(Ev, work),
                       slot(D, S), S >= F, S < T.
@@ -408,42 +426,21 @@ diluted(P, D, S)   :- work_slot(P, D, S), sole(P, D, S).
 -- house needing somebody, whether or not the other adult is also around.
 shared_work(P, D, S) :- work_slot(P, D, S), on_duty(P, D, S).
 
--- THE DAILY TOTAL, IN RULES. The paragraph above says the sum is host-side
--- because the kernel has no aggregation. That is true of AGGREGATION and
--- FALSE OF SUMMING A SET: examples/slop folds a spreadsheet range with two
--- rules over a CHAIN --
---
---     total(I, V) :- sum_last(I, C), addend(C, V).
---     total(I, V) :- sum_item(I, C, J), addend(C, X), total(J, Y), V is X + Y.
---
--- -- and the same fold works here. One difference, in our favour: SLOP's HOST
--- has to lay the chain out, because a spreadsheet range is given by the text
--- of a formula and nothing in the sheet orders it. Here the order is
--- DERIVABLE, because blocks carry times, so the chain is rules too.
---
--- Only with the total inside the model can "не менее 7.5 часов в день" be a
--- constraint the week is CHECKED against, instead of a number a person reads
--- off a report and compares in their head.
+-- THE DAILY TOTALS. Only with the total inside the model can "не менее 7.5
+-- часов в день" be a constraint the week is CHECKED against, instead of a
+-- number a person reads off a report and compares in their head.
 
 work_blk(P, D, E, F, T) :- span(_, E, P, _, D, F, T), kind(E, work).
+work_len(P, D, E, V)    :- work_blk(P, D, E, F, T), V is T - F.
+day_work(P, D, M)       :- work_blk(P, D, _, _, _), M is sum(V ; E : work_len(P, D, E, V)).
 
--- IMMEDIATE SUCCESSOR: E2 starts at or after E1 ends, and no third block sits
--- between them. `work_gap` is the two-hop composition, and negating it is
--- what turns a partial order into a chain.
-work_after(P, D, E1, E2) :- work_blk(P, D, E1, _, T1), work_blk(P, D, E2, F2, _), F2 >= T1.
-work_gap(P, D, E1, E2)   :- work_after(P, D, E1, E3), work_after(P, D, E3, E2).
-work_next(P, D, E1, E2)  :- work_after(P, D, E1, E2), not work_gap(P, D, E1, E2).
-
-work_has_next(P, D, E) :- work_next(P, D, E, _).
-work_has_prev(P, D, E) :- work_next(P, D, _, E).
-work_first(P, D, E)    :- work_blk(P, D, E, _, _), not work_has_prev(P, D, E).
-
--- the fold itself, the same two rules SLOP uses
-work_run(P, D, E, M) :- work_blk(P, D, E, F, T), not work_has_next(P, D, E), M is T - F.
-work_run(P, D, E, M) :- work_next(P, D, E, E2), work_blk(P, D, E, F, T),
-                        work_run(P, D, E2, Y), M is T - F + Y.
-
-day_work(P, D, M) :- work_first(P, D, E), work_run(P, D, E, M).
+-- minutes on the grid, per reading of "work"
+nominal_min(P, D, M)   :- work_slot(P, D, _), grid(G), N is count(S : work_slot(P, D, S)), M is N * G.
+effective_min(P, D, M) :- work_slot(P, D, _), grid(G), N is count(S : eff_work(P, D, S)), M is N * G.
+shared_min(P, D, M)    :- work_slot(P, D, _), grid(G), N is count(S : shared_work(P, D, S)), M is N * G.
+work_week(P, N, E, H)  :- nominal_min(P, _, _), N is sum(M1 ; D1 : nominal_min(P, D1, M1)),
+                          E is sum(M2 ; D2 : effective_min(P, D2, M2)),
+                          H is sum(M3 ; D3 : shared_min(P, D3, M3)).
 
 -- The requirement is a FACT in the week file, so a household that has no such
 -- rule pays nothing: with no `work_needed` there is no `short_day` and the

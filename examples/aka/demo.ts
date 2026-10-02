@@ -9,7 +9,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, viterbiSemiring, logProbOf, probabilityOf, clearsThreshold,
@@ -183,7 +182,7 @@ export const millions = (n: number): string =>
 
 /** Domain facts only: what a person reading these books can see. Kernel
  *  reflection, boot's audits and provenance are excluded. */
-const DOMAIN = /^(account|entity|invoice|inv_no|rows|customer|cust_no|booked|maps|withdrawn|bridge|retracted|target|mapped_acct|unmapped_acct|corroborated|split|disputed|link|live_link|route|paths|carried|ambiguous|in_quarter|unmapped|attributed|loose|tag|counts|tagged|at|scan|total|gap|reconciles|short|over|would_close|proposed|sharpen|add_bridge|residual|refuted_bridge|conclusion|crossed|crossing|within_one_book|declared_amb|declared_attr|rests_on|leaf|gone|standing|at_risk|shaken|quarter)\[/;
+const DOMAIN = /^(account|entity|invoice|customer|cust_no|booked|maps|withdrawn|bridge|retracted|target|mapped_acct|unmapped_acct|corroborated|split|disputed|link|live_link|route|paths|carried|ambiguous|in_quarter|unmapped|attributed|loose|tag|counts|tagged|total|gap|reconciles|short|over|would_close|proposed|sharpen|add_bridge|residual|refuted_bridge|conclusion|crossed|crossing|within_one_book|declared_amb|declared_attr|rests_on|leaf|gone|standing|at_risk|shaken|quarter)\[/;
 export const domainFacts = (r: Rofl): string[] =>
   r.factKeys().filter((k) => DOMAIN.test(k)).sort();
 
@@ -630,9 +629,6 @@ function main(): void {
     'undefined_premise[audit](R, Rel)', 'widened[audit](Rel, P)']) {
     console.log(`  ? ${audit.padEnd(34)} -> ${r.query(audit).rows.length} rows`);
   }
-  const ev = new Evaluation(r.store);
-  console.log(`  rules not range-restricted: ${ev.rules.filter((x) => !x.safe).length}`);
-  console.log(`  relations evaluated top-down: ${ev.demandRels.size}`);
   console.log(`  facts in the store: ${r.factKeys().length}`);
   console.log(`  ledgers: ${list(col(r, 'perspective(P)', 'P').filter((p) => p !== 'main'))}`);
 

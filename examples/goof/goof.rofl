@@ -272,12 +272,8 @@ contrary(knots_exist, every_knot_unties).
 -- =========================================================================
 -- 2. the corpus: proof steps, shared by every book
 -- =========================================================================
--- `step(S, P)` concludes P; `needs(S, K, Q)` is its K-th premise, 1-based;
--- `need_count(S, N)` says how many. The indexing is moot.rofl's device and
--- it is here for the same reason: "every premise of S holds" is a universal
--- over an open set, the obvious spelling puts the rule in a negative cycle
--- with itself, and walking the premises by index turns it into a positive
--- recursion the engine stratifies without complaint.
+-- `step(S, P)` concludes P; `needs(S, Q)` is a premise of it. "Every premise
+-- of S holds" is a quorum as large as the premises are many (section 4.1).
 --
 -- A premise may be an axiom or another proposition; nothing distinguishes
 -- them, because `thm[G](A) :- axiom[G](A)` makes an axiom a theorem with an
@@ -291,19 +287,16 @@ contrary(knots_exist, every_knot_unties).
 -- I.4 side-angle-side, and I.5 pons asinorum. The two theorems that survive
 -- every foundation in this file, including the exploding one.
 step(s_sas, sas_congruence).
-needs(s_sas, 1, post1_two_points).
-needs(s_sas, 2, post4_right_angles).
-need_count(s_sas, 2).
+needs(s_sas, post1_two_points).
+needs(s_sas, post4_right_angles).
 
 step(s_pons, pons_asinorum).
-needs(s_pons, 1, post1_two_points).
-needs(s_pons, 2, post4_right_angles).
-need_count(s_pons, 2).
+needs(s_pons, post1_two_points).
+needs(s_pons, post4_right_angles).
 
 step(s_tri_ineq, triangle_inequality).
-needs(s_tri_ineq, 1, post1_two_points).
-needs(s_tri_ineq, 2, sas_congruence).
-need_count(s_tri_ineq, 2).
+needs(s_tri_ineq, post1_two_points).
+needs(s_tri_ineq, sas_congruence).
 
 -- I.16, the exterior angle theorem: an exterior angle exceeds either remote
 -- interior angle. The proof doubles a median and needs the doubled segment
@@ -311,24 +304,21 @@ need_count(s_tri_ineq, 2).
 -- below it in this corpus falls with it. This one step is why elliptic
 -- geometry is not "Euclid minus the fifth".
 step(s_exterior, exterior_angle).
-needs(s_exterior, 1, post1_two_points).
-needs(s_exterior, 2, post2_extend).
-needs(s_exterior, 3, post4_right_angles).
-need_count(s_exterior, 3).
+needs(s_exterior, post1_two_points).
+needs(s_exterior, post2_extend).
+needs(s_exterior, post4_right_angles).
 
 -- I.27: alternate angles equal implies the lines never meet. Neutral.
 step(s_i27, alternate_angles_parallel).
-needs(s_i27, 1, exterior_angle).
-need_count(s_i27, 1).
+needs(s_i27, exterior_angle).
 
 -- I.31: through a point off a line there is AT LEAST one parallel. Neutral,
 -- and the fifth postulate is only about how many. Two millennia of readers
 -- have taken existence and uniqueness for one statement; here they are two
 -- facts with different supports, and section 4 counts the second.
 step(s_i31, parallel_exists).
-needs(s_i31, 1, alternate_angles_parallel).
-needs(s_i31, 2, post3_circle).
-need_count(s_i31, 2).
+needs(s_i31, alternate_angles_parallel).
+needs(s_i31, post3_circle).
 
 -- Saccheri-Legendre: the angle sum of a triangle is at most 180 degrees.
 -- Neutral, and the first step in the corpus that argues by contradiction:
@@ -336,69 +326,58 @@ need_count(s_i31, 2).
 -- accumulates past two right angles. Needs Archimedes for the halving to
 -- terminate and excluded middle for the reductio.
 step(s_sacc_leg, angle_sum_at_most_180).
-needs(s_sacc_leg, 1, exterior_angle).
-needs(s_sacc_leg, 2, archimedes).
-needs(s_sacc_leg, 3, excluded_middle).
-need_count(s_sacc_leg, 3).
+needs(s_sacc_leg, exterior_angle).
+needs(s_sacc_leg, archimedes).
+needs(s_sacc_leg, excluded_middle).
 
 -- The defect of a triangle is additive under subdivision by a cevian. This
 -- is the theorem section 7 turns into arithmetic; it is neutral, and it is
 -- what makes an angle sum a function of area rather than of shape.
 step(s_defect_add, defect_additive).
-needs(s_defect_add, 1, post1_two_points).
-need_count(s_defect_add, 1).
+needs(s_defect_add, post1_two_points).
 
 -- Legendre's second theorem: if ONE triangle has angle sum 180, every
 -- triangle does. Also a reductio.
 step(s_legendre2, all_or_none).
-needs(s_legendre2, 1, angle_sum_at_most_180).
-needs(s_legendre2, 2, defect_additive).
-needs(s_legendre2, 3, excluded_middle).
-need_count(s_legendre2, 3).
+needs(s_legendre2, angle_sum_at_most_180).
+needs(s_legendre2, defect_additive).
+needs(s_legendre2, excluded_middle).
 
 -- ---- the euclidean branch ----------------------------------------------
 
 step(s_playfair, angle_sum_180).
-needs(s_playfair, 1, post5_unique).
-needs(s_playfair, 2, alternate_angles_parallel).
-need_count(s_playfair, 2).
+needs(s_playfair, post5_unique).
+needs(s_playfair, alternate_angles_parallel).
 
 step(s_pythagoras, pythagoras).
-needs(s_pythagoras, 1, angle_sum_180).
-needs(s_pythagoras, 2, sas_congruence).
-need_count(s_pythagoras, 2).
+needs(s_pythagoras, angle_sum_180).
+needs(s_pythagoras, sas_congruence).
 
 step(s_thales, thales_semicircle).
-needs(s_thales, 1, angle_sum_180).
-needs(s_thales, 2, pons_asinorum).
-need_count(s_thales, 2).
+needs(s_thales, angle_sum_180).
+needs(s_thales, pons_asinorum).
 
 step(s_rectangle, rectangle_exists).
-needs(s_rectangle, 1, angle_sum_180).
-need_count(s_rectangle, 1).
+needs(s_rectangle, angle_sum_180).
 
 step(s_similar, similar_triangles_exist).
-needs(s_similar, 1, angle_sum_180).
-needs(s_similar, 2, post3_circle).
-need_count(s_similar, 2).
+needs(s_similar, angle_sum_180).
+needs(s_similar, post3_circle).
 
 -- ---- the hyperbolic branch ---------------------------------------------
 
 step(s_defect_pos, defect_positive).
-needs(s_defect_pos, 1, post5_many).
-needs(s_defect_pos, 2, angle_sum_at_most_180).
-needs(s_defect_pos, 3, all_or_none).
-need_count(s_defect_pos, 3).
+needs(s_defect_pos, post5_many).
+needs(s_defect_pos, angle_sum_at_most_180).
+needs(s_defect_pos, all_or_none).
 
 step(s_defect_prop, defect_proportional_to_area).
-needs(s_defect_prop, 1, defect_positive).
-needs(s_defect_prop, 2, defect_additive).
-needs(s_defect_prop, 3, archimedes).
-need_count(s_defect_prop, 3).
+needs(s_defect_prop, defect_positive).
+needs(s_defect_prop, defect_additive).
+needs(s_defect_prop, archimedes).
 
 step(s_no_rect, no_rectangle).
-needs(s_no_rect, 1, defect_positive).
-need_count(s_no_rect, 1).
+needs(s_no_rect, defect_positive).
 
 -- ---- the elliptic branch -----------------------------------------------
 -- The excess is positive, and the proof does NOT go through I.16: on a
@@ -407,28 +386,24 @@ need_count(s_no_rect, 1).
 -- lines directly. Which is exactly why riemann's provenance polynomial in
 -- section 6 has a different shape from lobachevsky's.
 step(s_excess_pos, excess_positive).
-needs(s_excess_pos, 1, post5_none).
-needs(s_excess_pos, 2, post2_finite).
-needs(s_excess_pos, 3, defect_additive).
-need_count(s_excess_pos, 3).
+needs(s_excess_pos, post5_none).
+needs(s_excess_pos, post2_finite).
+needs(s_excess_pos, defect_additive).
 
 step(s_excess_prop, excess_proportional_to_area).
-needs(s_excess_prop, 1, excess_positive).
-needs(s_excess_prop, 2, defect_additive).
-needs(s_excess_prop, 3, archimedes).
-need_count(s_excess_prop, 3).
+needs(s_excess_prop, excess_positive).
+needs(s_excess_prop, defect_additive).
+needs(s_excess_prop, archimedes).
 
 -- Angle-angle-angle congruence: equal angles force equal size, so there is
 -- no similarity. TWO steps conclude it, one per non-euclidean branch, and
 -- no book holds both. A proposition with several proofs is ordinary; the
 -- counting semiring is what tells them apart.
 step(s_aaa_hyp, aaa_congruence).
-needs(s_aaa_hyp, 1, defect_proportional_to_area).
-need_count(s_aaa_hyp, 1).
+needs(s_aaa_hyp, defect_proportional_to_area).
 
 step(s_aaa_ell, aaa_congruence).
-needs(s_aaa_ell, 1, excess_proportional_to_area).
-need_count(s_aaa_ell, 1).
+needs(s_aaa_ell, excess_proportional_to_area).
 
 -- ---- dimension ---------------------------------------------------------
 -- The one line the spec asks for from the dimension axis, because it is
@@ -437,16 +412,13 @@ need_count(s_aaa_ell, 1).
 -- dimensions (Wu 1958, Zeeman 1960 — an isotopy exists in codimension 3).
 -- "Obvious" is a property of the model you grew up in.
 step(s_flat_curve, no_knots_at_all).
-needs(s_flat_curve, 1, dim_plane).
-need_count(s_flat_curve, 1).
+needs(s_flat_curve, dim_plane).
 
 step(s_knots, knots_exist).
-needs(s_knots, 1, dim_space).
-need_count(s_knots, 1).
+needs(s_knots, dim_space).
 
 step(s_unknotting, every_knot_unties).
-needs(s_unknotting, 1, dim_four).
-need_count(s_unknotting, 1).
+needs(s_unknotting, dim_four).
 
 -- Which steps argue by contradiction. Reporting only: the logical principle
 -- is already a premise, so nothing derives from this table. It exists so a
@@ -522,14 +494,15 @@ exports(main, anyone).
 
 thm[G](P) :- axiom[G](P).
 
--- "every premise of S holds in G", walked by index. The base case is the
--- position past the last premise, and it needs `foundation[G]` to bind the
--- ledger: without it the rule would be true of every book that does not
--- exist. The recursive case reads premise K, demands it, and moves on.
-holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
-holds_from[G](S, K)  :- needs(S, K, P), thm[G](P), K1 is K + 1, holds_from[G](S, K1).
-
-thm[G](P) :- step(S, P), holds_from[G](S, 1).
+-- "every premise of S holds in G" is a threshold: as many theorems among the
+-- premises as there are premises, counted. A step with none is a quorum of 0.
+-- `foundation[G]` binds the ledger: without it the rule would be true of every
+-- book that does not exist. A quorum's witness is its N members, so a fold
+-- over it counts a lower bound when more than N support; here N is every
+-- premise and the count is exact.
+premises(S, N) :- step(S, _), N is count(Q : needs(S, Q)).
+thm[G](P) :- step(S, P), premises(S, N), foundation[G](_, _),
+             at_least(N, Q : needs(S, Q), thm[G](Q)).
 
 -- The vocabulary of the whole inquiry: everything any book talks about.
 -- Explicitly `[main]`, which is what keeps it out of `leak`.

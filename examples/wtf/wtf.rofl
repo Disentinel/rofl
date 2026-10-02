@@ -499,16 +499,13 @@ anc4(A, B)      :- edep4(A, X), anc4(X, B).
 -- timestamp order. That is: walk the effects in timestamp order, skipping
 -- any whose dependencies are still unapplied.
 --
--- The kernel has no aggregation, so that walk is not written as a loop. It
--- is written as a KEY: eta(E) is the largest timestamp among E and its
--- dependency ancestors, and sorting by (eta, timestamp) reproduces the walk
--- exactly. `max` over a transitive closure is expressible because the
--- closure (anc4) is computed positively FIRST and the max is one negation
--- over the finished set -- no negation inside the recursion.
+-- That walk is not written as a loop. It is written as a KEY: eta(E) is the
+-- largest timestamp among E and its dependency ancestors, and sorting by
+-- (eta, timestamp) reproduces the walk exactly. The `max` sits above the
+-- closure (anc4), which is computed first, so it is stratified.
 cts4(E, T)      :- lay4(E), eff_ts(E, T).
 cts4(E, T)      :- anc4(E, B), eff_ts(B, T).
-low4(E, T)      :- cts4(E, T), cts4(E, T2), T2 > T.
-eta4(E, T)      :- cts4(E, T), not low4(E, T).
+eta4(E, T)      :- lay4(E), T is max(T2 : cts4(E, T2)).
 
 bef4(A, B)      :- eta4(A, X), eta4(B, Y), X < Y.
 bef4(A, B)      :- eta4(A, X), eta4(B, X), anc4(B, A).
@@ -600,20 +597,8 @@ ab6(O, A)       :- src6(O, A, E), not gone6(O, A, E).
 -- input. Change the layer 4 ORDER and this number changes; that is the
 -- dependency system reaching all the way into the creature's size.
 --
--- v0 has no aggregation, so the count is a FOLD over a declared enumeration
--- of the lands. The fold's order is declared data, and it is arithmetic, so
--- the answer does not depend on it; the counting mode in demo.ts checks that.
-cnt_ord(forest1, 1).      cnt_ord(swamp1, 2).      cnt_ord(steam_vents, 3).
-cnt_ord(urborg, 4).       cnt_ord(yavimaya, 5).
-nland(5).
-
 swamp_of(Pl, O)  :- ty4(O, swamp), ct2(O, Pl).
-cnt(Pl, 0, 0)    :- player(Pl).
-cnt(Pl, K, N)    :- cnt(Pl, K1, N0), K is K1 + 1, nland(NL), K <= NL,
-                    cnt_ord(O, K), swamp_of(Pl, O), N is N0 + 1.
-cnt(Pl, K, N)    :- cnt(Pl, K1, N), K is K1 + 1, nland(NL), K <= NL,
-                    cnt_ord(O, K), not swamp_of(Pl, O).
-swamps(Pl, N)    :- nland(NL), cnt(Pl, NL, N).
+swamps(Pl, N)    :- player(Pl), N is count(O : swamp_of(Pl, O)).
 
 live71(E)       :- lay71(E), eff_live(E).
 cda_pt(O, N, N) :- live71(E), sel(E, self(O)), does(E, cda_swamps),
@@ -653,44 +638,16 @@ mod73(O, E, DP, DT) :- hits73(E, O), does(E, mod_pt(DP, DT)).
 mod73(O, E, DP, DT) :- hits73(E, O), lord_eff(E, S), ab6(S, lord(_, DP, DT)).
 mod73(O, E, DP, DT) :- hits73(E, O), anthem_eff(E, S), ab6(S, anthem(_, DP, DT)).
 
--- The sum, as a fold over a declared enumeration. Integer addition is
--- commutative, so this order is arithmetic bookkeeping and not a rules
--- decision -- which is exactly what the counting mode measures.
-eord(e_archdruid, 1).     eord(e_oracle_p01, 2).    eord(e_honor, 3).
-eord(e_oracle_p50, 4).    eord(e_hammer_pt, 5).     eord(e_ogre_counter, 6).
-eord(e_ogre_pump, 7).     eord(e_ogre_ench, 8).
--- Room in the fold for effects a scenario adds later (demo.ts resolves two
--- removal spells on top of this battlefield to drive the state-based-action
--- fixpoint). A slot with no effect in it is skipped, so the bound may exceed
--- the enumeration.
-nmod(10).
-eord_at(K)      :- eord(_, K).
-
-acc(O, 0, P, T) :- pt7b(O, P, T).
-acc(O, K, P, T) :- acc(O, K1, P0, T0), K is K1 + 1, nmod(NM), K <= NM,
-                   eord(E, K), mod73(O, E, DP, DT), P is P0 + DP, T is T0 + DT.
-acc(O, K, P, T) :- acc(O, K1, P, T), K is K1 + 1, nmod(NM), K <= NM,
-                   eord(E, K), not mod73(O, E, _, _).
-acc(O, K, P, T) :- acc(O, K1, P, T), K is K1 + 1, nmod(NM), K <= NM,
-                   not eord_at(K).
-pt7c(O, P, T)   :- nmod(NM), acc(O, NM, P, T).
+pt7c(O, P, T)   :- pt7b(O, P0, T0), DP is sum(D ; E : mod73(O, E, D, _)),
+                   DT is sum(D2 ; E2 : mod73(O, E2, _, D2)), P is P0 + DP, T is T0 + DT.
 
 -- 10.4 layer 7d: switch (613.4d) -------------------------------------------
--- An even number of switches cancels, so the state carried through the fold
--- is one parity bit.
+-- An even number of switches cancels.
 live74(E)       :- lay74(E), eff_live(E).
 hits74(E, O)    :- live74(E), sel(E, only(O)), on_bf(O).
 sw74(O, E)      :- hits74(E, O), does(E, switch_pt).
-
-sord(e_twisted, 1).
-nsw(1).
-
-swacc(O, 0, 0)  :- pt7c(O, _, _).
-swacc(O, K, R)  :- swacc(O, K1, R0), K is K1 + 1, nsw(NS), K <= NS,
-                   sord(E, K), sw74(O, E), R is (R0 + 1) mod 2.
-swacc(O, K, R)  :- swacc(O, K1, R), K is K1 + 1, nsw(NS), K <= NS,
-                   sord(E, K), not sw74(O, E).
-switched(O)     :- nsw(NS), swacc(O, NS, 1).
+nsw(O, N)       :- pt7c(O, _, _), N is count(E : sw74(O, E)).
+switched(O)     :- nsw(O, N), 1 is N mod 2.
 
 pt7d(O, P, T)   :- pt7c(O, P, T), not switched(O).
 pt7d(O, T, P)   :- pt7c(O, P, T), switched(O).
@@ -730,12 +687,7 @@ ty4n(O, T)      :- adder4n(O, T, E), not clob4n(O, E).
 ty4n(O, T)      :- setter4n(O, T, E), not clob4n(O, E).
 
 swamp_of_n(Pl, O) :- ty4n(O, swamp), ct2(O, Pl).
-cntn(Pl, 0, 0)  :- player(Pl).
-cntn(Pl, K, N)  :- cntn(Pl, K1, N0), K is K1 + 1, nland(NL), K <= NL,
-                   cnt_ord(O, K), swamp_of_n(Pl, O), N is N0 + 1.
-cntn(Pl, K, N)  :- cntn(Pl, K1, N), K is K1 + 1, nland(NL), K <= NL,
-                   cnt_ord(O, K), not swamp_of_n(Pl, O).
-swamps_n(Pl, N) :- nland(NL), cntn(Pl, NL, N).
+swamps_n(Pl, N) :- player(Pl), N is count(O : swamp_of_n(Pl, O)).
 
 -- =========================================================================
 -- 13. audits -- the encoding's assumptions, as relations that must be empty

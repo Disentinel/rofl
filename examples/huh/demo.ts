@@ -147,18 +147,26 @@ const uniqKey = (p: string): string => `s_uniq[main](${JSON.stringify(p)})`;
 
 export interface Bucket { path: string; count: Count; }
 
-/** `uniq -c`, as the number of derivations of each bucket fact. */
+/** `uniq -c | sort -rn`: the kernel's `s_count`, in the order of its `s_place`.
+ *  Equal places are the pipe's `-k2,2` tie, broken by path. */
 export function bucketCounts(r: Rofl): Bucket[] {
-  const fold = evaluateSemiring(r.store, countingSemiring);
-  const out: Bucket[] = [];
-  for (const [key, count] of fold.value) {
-    const m = /^s_uniq\[main\]\((".*")\)$/.exec(key);
-    if (m) out.push({ path: JSON.parse(m[1]) as string, count });
-  }
-  // `sort -rn`, plus a tie-break on the path so the ranking is a function of
-  // the data alone. Ranking is presentation: v0 has no aggregation.
-  const num = (c: Count): number => (typeof c === 'bigint' ? Number(c) : Infinity);
-  return out.sort((a, b) => num(b.count) - num(a.count) || (a.path < b.path ? -1 : 1));
+  const place = new Map<string, number>();
+  for (const b of rows(r, 's_place(P, R)')) place.set(JSON.parse(b.P) as string, Number(b.R));
+  const out = rows(r, 's_count(P, N)')
+    .map((b): Bucket => ({ path: JSON.parse(b.P) as string, count: BigInt(b.N) }));
+  return out.sort((a, b) => place.get(a.path)! - place.get(b.path)! || (a.path < b.path ? -1 : 1));
+}
+
+/** The counting semiring over the support hypergraph: the derivations of a
+ *  bucket fact, which `why` and provenance read. */
+export function derivationCount(r: Rofl, p: string): Count {
+  return evaluateSemiring(r.store, countingSemiring).value.get(uniqKey(p)) ?? 0n;
+}
+
+function rows(r: Rofl, q: string): Record<string, string>[] {
+  const res = r.query(q);
+  if (res.error) throw new Error(`huh: query ${q}: ${res.error}`);
+  return res.rows.map((x) => x.bindings);
 }
 
 export function countOf(buckets: Bucket[], p: string): Count {
@@ -314,9 +322,8 @@ function main(): void {
 
   // -- 1 -------------------------------------------------------------------
   rule('1. the counted result');
-  say('counting semiring folded over the support hypergraph: the value of a bucket');
-  say('fact is the number of derivations of it, i.e. the number of lines that got');
-  say('there. `uniq -c` is not a rule and does not need to be.');
+  say('`uniq -c | sort -rn` is two rules: s_count is a kernel count over the lines that');
+  say('reached the bucket, s_place its rank. The host reads them and sorts nothing.');
   say();
   const engine = bucketCounts(world);
   say(renderBuckets(engine));
@@ -335,6 +342,8 @@ function main(): void {
   say();
   say('one derivation of the bucket, down to axioms. There are '
     + `${renderCount(focusCount)} of them; the tree renders the canonical one.`);
+  check('the counting semiring finds as many derivations as the count aggregate',
+    derivationCount(world, FOCUS) === focusCount);
   say();
 
   // -- 3 -------------------------------------------------------------------

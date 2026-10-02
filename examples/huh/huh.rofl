@@ -35,12 +35,12 @@ s_awk(N, P)  :- s_grep(N), field(N, 7, P).
 -- "which stage ate my row" needs every stage to exist as a nameable step.
 s_sort(N, P) :- s_awk(N, P).
 
--- stage 4 — uniq -c: the BUCKET is what this rule concludes; the COUNT is
--- not in this layer at all. Each surviving line is one distinct firing of
--- this rule, so 47 is the number of DERIVATIONS of s_uniq("/api/v2/checkout")
--- — the counting semiring folded over the support hypergraph the kernel
--- already recorded. The trailing `sort -rn | head` ranks those annotations
--- and is presentation, not inference: v0 has no aggregation (LIMITS.md).
+-- stage 4 — uniq -c: the bucket, its count, and its place in `sort -rn`.
+-- The count is a kernel aggregate over the lines that reached the bucket.
+-- It equals the number of DERIVATIONS of s_uniq(P) (each line is one firing
+-- of the rule below), which demo.ts checks against the counting semiring
+-- folded over the support hypergraph; the semiring is how `why` and
+-- provenance see the same number, the aggregate is how a rule reads it.
 --
 -- WHAT THE COUNT MEANS HERE (f_counting_reads_oppositely_by_domain demands
 -- every example say this, because the same metric reads in opposite
@@ -52,12 +52,19 @@ s_sort(N, P) :- s_awk(N, P).
 -- the same thing. Excising one line therefore moves the count by exactly
 -- one, which is the property demo.ts checks against the real pipe.
 s_uniq(P)    :- s_sort(_, P).
+s_count(P, N) :- s_uniq(P), N is count(L : s_sort(L, P)).
+
+-- `sort -k1,1nr`: the place of a bucket is the rank of its negated count among
+-- the distinct negated counts, so the largest count is place 1. Equal counts
+-- share a place; `-k2,2` breaks that tie by path and is left to the reader.
+s_place(P, R) :- s_count(P, N), M is 0 - N,
+                 R is rank(M, X : s_count(_, K), X is 0 - K).
 
 -- Acceptance scenario. demo.ts runs all of it and compares every number
 -- against the real pipe over the same file:
---   count      s_uniq("/api/v2/checkout")   -> 47, and so does uniq -c
+--   count      s_count("/api/v2/checkout", N) -> 47, and so does uniq -c
 --   why        s_uniq("/api/v2/checkout")   -> one derivation, down to axioms
 --   provenance s_uniq("/api/v2/refund")     -> the 23 line numbers grep -n gives
 --   whynot     s_sort(102, "/api/v2/checkout") -> 500 <= 499: stage 1 ate it
 --   whynot     s_sort(2, "/api/v2/checkout")   -> field(2,7,…): stage 2 sent it elsewhere
---   excise     line(96)                     -> 4 facts fall, the bucket goes 47 -> 46
+--   excise     line(96)                     -> 5 facts fall, the bucket goes 47 -> 46

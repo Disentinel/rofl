@@ -9,7 +9,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, depthBoundedCountingSemiring, provenanceSemiring, provenanceOf,
@@ -93,7 +92,7 @@ const indent = (s: string, n: number) => s.split('\n').map((l) => ' '.repeat(n) 
 
 /** Domain facts only: what a reader of these nine books can see. Kernel
  *  reflection and boot's own audits are excluded. */
-const DOMAIN = /^(foundation|axiom|thm|holds_from|proposition|opposes|contrary|clash|explodes|parallel|law|angle_sum|disagree|similar_possible|size_shows|knot_state|reductio_needed|only_in|step|needs|need_count|leaf|cut|pair|knot|by_reductio)\[/;
+const DOMAIN = /^(foundation|axiom|thm|premises|proposition|opposes|contrary|clash|explodes|parallel|law|angle_sum|disagree|similar_possible|size_shows|knot_state|reductio_needed|only_in|step|needs|leaf|cut|pair|knot|by_reductio)\[/;
 export const domainFacts = (r: Rofl): string[] =>
   r.factKeys().filter((k) => DOMAIN.test(k)).sort();
 
@@ -339,15 +338,15 @@ export interface Corpus {
 export function corpusOf(r: Rofl): Corpus {
   const bs = books(r);
   const axioms = new Map(bs.map((b) => [b.name, new Set(axiomsOf(r, b.name))]));
-  const needs = new Map<string, [number, string][]>();
-  for (const row of r.query('needs[main](S, K, P)').rows) {
+  const needs = new Map<string, string[]>();
+  for (const row of r.query('needs[main](S, P)').rows) {
     const s = row.bindings.S;
-    (needs.get(s) ?? needs.set(s, []).get(s)!).push([Number(row.bindings.K), row.bindings.P]);
+    (needs.get(s) ?? needs.set(s, []).get(s)!).push(row.bindings.P);
   }
   const steps = r.query('step[main](S, P)').rows.map((row) => ({
     id: row.bindings.S,
     concl: row.bindings.P,
-    needs: (needs.get(row.bindings.S) ?? []).sort((a, b) => a[0] - b[0]).map((x) => x[1]),
+    needs: needs.get(row.bindings.S) ?? [],
   }));
   return {
     books: bs,
@@ -577,9 +576,8 @@ function main(): void {
     console.log(`  ? ${audit.padEnd(34)} -> ${rows.length} row${rows.length === 1 ? '' : 's'}`
       + (rows.length > 0 ? `   ${rows.map((x) => x.text).join(' ')}` : ''));
   }
-  const ev = new Evaluation(r.store);
-  console.log(`  rules not range-restricted: ${ev.rules.filter((x) => !x.safe).length}`);
-  console.log(`  relations evaluated top-down: ${ev.demandRels.size}`);
+  console.log(`  rules not range-restricted: ${r.query('unsafe_rule(R)').rows.length}`);
+  console.log(`  relations evaluated top-down: ${r.query('demand_rel(R)').rows.length}`);
   console.log(`  facts in the store: ${r.factKeys().length}`);
   console.log(`  ledgers: ${list(col(r, 'perspective(P)', 'P').filter((p) => p !== 'main'))}`);
   console.log('');
@@ -643,7 +641,7 @@ function main(): void {
   console.log(`    leak[audit] rows — polymorphic: ${r.query('leak[audit](A, B)').rows.length}   `
     + `expanded: ${ex.query('leak[audit](A, B)').rows.length}`);
   console.log(`    rules not range-restricted, expanded: `
-    + `${new Evaluation(ex.store).rules.filter((x) => !x.safe).length}`);
+    + `${ex.query('unsafe_rule(R)').rows.length}`);
   console.log('  That is the trade, measured: one audit row against nine copies of every rule');
   console.log('  and a thesis that no longer holds, because the rules would then change when');
   console.log('  the foundation does.');
@@ -684,9 +682,9 @@ function main(): void {
   console.log('  a ledger with the four postulates and no parallel axiom at all.\n');
   console.log('  $ whynot thm[saccheri](angle_sum_180)');
   console.log(indent(r.whynot('thm[saccheri](angle_sum_180)', { depth: 1 }).text, 4));
-  console.log('\n  three ways to conclude it, three failures. Drill into the third:\n');
-  console.log('  $ whynot holds_from[saccheri](s_playfair, 1)');
-  console.log(indent(r.whynot('holds_from[saccheri](s_playfair, 1)', { depth: 3, nodes: 24 }).text, 4));
+  console.log('\n  three ways to conclude it, three failures. Drill into the premise the third lacks:\n');
+  console.log('  $ whynot thm[saccheri](post5_unique)');
+  console.log(indent(r.whynot('thm[saccheri](post5_unique)', { depth: 1 }).text, 4));
   console.log('\n  post5_unique. That is the answer, and no amount of neutral geometry supplies');
   console.log('  it — which is what Beltrami finally settled in 1868 and what the provenance');
   console.log('  polynomial says mechanically in the next section.');
@@ -796,10 +794,12 @@ function main(): void {
   for (const [p, s] of pairs(r, 'reductio_needed[main](P, S)', 'P', 'S')) {
     console.log(`    ${p.padEnd(24)} ${s}`);
   }
-  console.log('\n  $ whynot holds_from[brouwer](s_sacc_leg, 1)');
-  console.log(indent(r.whynot('holds_from[brouwer](s_sacc_leg, 1)', { depth: 4, nodes: 20 }).text, 4));
-  console.log('\n  the walk down the premise chain ends on thm[brouwer](excluded_middle), which');
-  console.log('  is premise 3 of Saccheri-Legendre. No rule in this program knows what a');
+  console.log('\n  $ whynot thm[brouwer](angle_sum_at_most_180)');
+  console.log(indent(r.whynot('thm[brouwer](angle_sum_at_most_180)', { depth: 1 }).text, 4));
+  console.log('\n  the quorum of Saccheri-Legendre reaches 2 of its 3 premises; the one it lacks:\n');
+  console.log('  $ whynot thm[brouwer](excluded_middle)');
+  console.log(indent(r.whynot('thm[brouwer](excluded_middle)', { depth: 1 }).text, 4));
+  console.log('\n  excluded_middle is premise 3 of Saccheri-Legendre. No rule in this program knows what a');
   console.log('  logical principle is: it is an axiom like the others, and a step that argues');
   console.log('  by contradiction names it among its premises.');
 

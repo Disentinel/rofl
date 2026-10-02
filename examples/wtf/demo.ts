@@ -9,10 +9,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
-import { peelRounds, reachable, type Peel } from '../../src/rounds.ts';
-import { evaluateSemiring } from '../../src/semiring.ts';
+import { decodeRules } from '../../src/reflect.ts';
+import type { BodyElem } from '../../src/unify.ts';
 import { provenanceSemiring, provenanceOf, type Polynomial } from '../../runtime/semirings.ts';
+import { evaluateSemiring } from '../../src/semiring.ts';
+import { peelRounds, reachable, type Peel } from '../../src/rounds.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.resolve(HERE, '..', '..');
@@ -31,11 +32,11 @@ export const MODEL = read('examples', 'wtf', 'wtf.rofl');
 export const SBA_PATCH = `
 eff(e_grasp).      eff_layer(e_grasp, 73).      eff_ts(e_grasp, 1100).
 eff_free(e_grasp). sel(e_grasp, only(archdruid)). does(e_grasp, mod_pt(-4, -4)).
-eff_name(e_grasp, "Grasp of Darkness: -4/-4").   eord(e_grasp, 9).
+eff_name(e_grasp, "Grasp of Darkness: -4/-4").
 
 eff(e_disfigure).  eff_layer(e_disfigure, 73).  eff_ts(e_disfigure, 1150).
 eff_free(e_disfigure). sel(e_disfigure, only(grizzly)). does(e_disfigure, mod_pt(-2, -2)).
-eff_name(e_disfigure, "Disfigure: -2/-2").       eord(e_disfigure, 10).
+eff_name(e_disfigure, "Disfigure: -2/-2").
 `;
 
 /** The order the layers are applied in, as the CR numbers them. Nothing in
@@ -70,6 +71,7 @@ export function world(): Rofl {
 export function stockWorld(): Rofl {
   const r = new Rofl({ evaluator: 'strata' });
   must(r.load(BOOT), 'boot.rofl');
+  must(r.load(read('rules/strata.rofl')), 'strata.rofl');
   must(r.load(MODEL), 'wtf.rofl');
   return r;
 }
@@ -78,10 +80,9 @@ export function stockWorld(): Rofl {
  *  is where the two part company: rounds still form the fourteen layers, the
  *  stratum table has nothing to read and every negation rule falls into one
  *  final pass. */
-export function bareWorld(evaluator: 'rounds' | 'strata'): Rofl {
+export function bareWorld(evaluator: 'rounds' | 'strata'): { r: Rofl; res: { ok: boolean; diagnostics: string[] } } {
   const r = new Rofl({ evaluator });
-  must(r.load(MODEL), 'wtf.rofl');
-  return r;
+  return { r, res: r.load(MODEL) };
 }
 
 let leanSnap: string | null = null;
@@ -192,7 +193,17 @@ const peelCache = new WeakMap<Rofl, Peel>();
 export function peelOf(r: Rofl): Peel {
   let p = peelCache.get(r);
   if (p === undefined) {
-    p = peelRounds(new Evaluation(r.store, {}).rules);
+    const rules = decodeRules(r.store).rules;
+    const asNeg = (e: BodyElem): BodyElem[] =>
+      e.t === 'agg' ? e.body.flatMap((i) => i.t === 'pos' ? [{ t: 'neg' as const, lit: i.lit }] : []) : [e];
+    p = peelRounds(rules.map((x) => ({ ...x, clause: { ...x.clause, body: x.clause.body.flatMap(asNeg) } })) as never);
+    // an aggregate waits for its input like a negation does, but removes nothing from it
+    for (const x of rules) for (const e of x.clause.body) if (e.t === 'agg') {
+      for (const i of e.body) if (i.t === 'pos' && !x.clause.body.some((n) => n.t === 'neg' && n.lit.rel === i.lit.rel)) {
+        p.deps.neg.get(x.clause.head.rel)?.delete(i.lit.rel);
+        p.deps.pos.get(x.clause.head.rel)?.add(i.lit.rel);
+      }
+    }
     peelCache.set(r, p);
   }
   return p;
@@ -701,7 +712,7 @@ export function readBoard(r: Rofl) {
     anthemOf: anthemOf.get(id) ?? null,
   }));
   return { onBf, printedType, printedColor, printedAbility, printedPt, printedCtrl,
-    landTypes, effs, cntOrd: tuples(r, 'cnt_ord', 2).map((t) => t[0]) };
+    landTypes, effs };
 }
 
 type Board = ReturnType<typeof readBoard>;
@@ -774,7 +785,7 @@ export function simulate(b: Board, tsOverride: Map<string, number> = new Map()):
   };
 
   const swampsOf = (pl: string, w: Map<string, OObj>): number =>
-    b.cntOrd.filter((o) => w.get(o)?.types.has('swamp') && w.get(o)!.ctrl === pl).length;
+    [...w.values()].filter((o) => o.types.has('swamp') && o.ctrl === pl).length;
 
   const apply = (e: OEff, w: Map<string, OObj>, clr: Set<string>): void => {
     const kind = fnName(e.act);
@@ -992,9 +1003,8 @@ function main(): void {
     'p5_dep(A, B)', 'p6_dep(A, B)', 'p72_dep(A, B)', 'ts_tie(A, B)']) {
     say(`    ${pad(a, 34)}${r.query(a).rows.length}`);
   }
-  const ev = new Evaluation(r.store);
-  say(`    ${pad('rules not range-restricted', 34)}${ev.rules.filter((x) => !x.safe).length}`);
-  say(`    ${pad('demand-evaluated relations', 34)}${ev.demandRels.size}`);
+  say(`    ${pad('rules not range-restricted', 34)}${r.query('unsafe_rule(R)').rows.length}`);
+  say(`    ${pad('demand-evaluated relations', 34)}${r.query('demand_rel(R)').rows.length}`);
 
   say('');
   say('  the two schedulers, on the deepest model in the corpus:');
@@ -1003,7 +1013,8 @@ function main(): void {
     + `${r.store.canonicalState() === stock.store.canonicalState()}`);
   say('  and with boot.rofl taken away, which is where they part:');
   for (const which of ['rounds', 'strata'] as const) {
-    const b2 = bareWorld(which);
+    const { r: b2, res } = bareWorld(which);
+    if (!res.ok) { say(`    ${pad(which, 40)}refused: ${res.diagnostics[0].split(': ').slice(0, 3).join(': ')}`); continue; }
     say(`    ${pad(which, 40)}live4(e_urborg)=${b2.holds('live4(e_urborg)')}  `
       + `eta4(e_urborg,700)=${b2.holds('eta4(e_urborg, 700)')}  `
       + `stratum rows=${b2.query('stratum(Rel, N)').rows.length}`);
@@ -1069,16 +1080,7 @@ function main(): void {
   if (poly) {
     say(`  minimal source sets: ${poly.length}, the smallest with ${poly[0].length} base facts.`);
     say('  the ones that name a permanent or an effect:');
-    for (const k of poly[0].filter((x) => /^(eff_|sel|does|printed_|on_bf)/.test(x)).sort()) {
-      say(`    ${k}`);
-    }
-    const book = poly[0].filter((x) => /^(eord|nmod)/.test(x));
-    say('');
-    say(`  and ${book.length} bookkeeping facts (eord/nmod). Those are honest: v0 has no`);
-    say('  aggregation, so layer 7c\'s sum is a fold that walks every slot of a');
-    say('  declared enumeration, and a slot it walked past really is part of the');
-    say('  derivation. The size of a provenance term is a property of how the');
-    say('  question had to be asked, not only of the answer.');
+    for (const k of poly[0].filter((x) => /^(eff_|sel|does|printed_|on_bf)/.test(x)).sort()) say(`    ${k}`);
   }
 
   // ---- 6. counting ----------------------------------------------------

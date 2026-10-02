@@ -347,11 +347,18 @@ never on_call(P, D, S)
 > of this invariant is not that on-call time should not exist (it plainly
 > must, for a two-adult household with one car and one nanny window a
 > week) — it is that the 29 rows exist and are not the same 29 rows a
-> "free time" report that only reads `raw_gap` would show. The stronger
-> question a parent would actually ask — "is on-call time roughly even
-> between the two adults" — is a `sum` over these rows, and this kernel has
-> no aggregation (`spat.rofl`'s own note, section 8): answerable the way
-> `day_work` is, by a chain fold written as rules, not attempted here.
+> "free time" report that only reads `raw_gap` would show.
+>
+> The stronger question a parent would actually ask — "is on-call time
+> roughly even between the two adults" — is a `count` over these rows:
+
+```datalog
+on_call_min(P, M) :- on_call(P, _, _), grid(G), N is count(D, S : on_call(P, D, S)), M is N * G.
+
+? on_call_min(P, M)
+```
+
+> No: Alex is on call 180 minutes of the week, Robin 400.
 
 ## Where this leaves the week
 
@@ -367,9 +374,9 @@ never on_call(P, D, S)
 > four weekday school-run legs have no fallback if the bus or the one
 > driver falls through. R3 and R4 are clean: nobody is double-booked, and
 > every hole the model finds does name its cause. R7 separates real rest
-> from on-call time (411 against 29 slot-rows) without answering the
-> fairness question a parent would ask next, for a stated reason (no
-> aggregation in the kernel).
+> from on-call time (411 against 29 slot-rows) and answers
+> the fairness question a parent would ask next with a `count`
+> (`on_call_min`).
 >
 > This file's own run does not exit 0: R1's first attempt is a deliberately
 > unread `rofl` cell (kept, not deleted, per the convention

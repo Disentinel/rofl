@@ -289,9 +289,9 @@ answers(track, silence).
 -- 2.2 the reachable state space
 --
 -- `reached` carries the move that got there IN ITS SUPPORT, which is what
--- makes a shortest-path fold over it readable back as a script of failures.
--- `state` is the same set without the reading; §8 of demo.ts walks the one
--- and §6 explains from the other.
+-- §6 of demo.ts explains from. `state` is the same set without the reading.
+-- The shortest play to each state is trace.rofl, loaded over the machine
+-- alone (§8 of demo.ts).
 
 initial(w(reserve, 0, 0, 0, 0, 0, F)) :- slack(F).
 

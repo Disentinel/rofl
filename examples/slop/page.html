@@ -596,8 +596,10 @@ val(N, V) :- sum_head(N, I), total(I, V).                          <i>-- SUM ove
 val(N, V) :- find(N, K, T, Col), val(K, Key), tkey(T, Row, Key),
              tcell(T, Row, Col, C), value(C, V).                   <i>-- VLOOKUP</i></pre>
   <p>
-    <code>SUM</code> is a chain rather than an aggregate because the kernel has
-    no aggregation: the host lays a range out as
+    <code>SUM</code> is a chain rather than a kernel <code>sum</code> because the
+    kernel refuses an aggregate that reads its own recursive component, and
+    <code>val</code>, <code>value</code> and <code>addend</code> are one: the
+    host lays a range out as
     <code>sum_item(I, Cell, Next)</code> and the fold is two rules.
     <code>VLOOKUP</code> reaches the <em>cell</em>, not a value, which is what
     makes the tree walk on into the rate table.

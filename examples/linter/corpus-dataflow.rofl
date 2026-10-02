@@ -1,3 +1,6 @@
+-- examples/linter/corpus-dataflow.rofl — rules/js-dataflow.rofl as it stood at 4f997a6, FROZEN: the file the linter
+-- world reads, so that an edit to the model does not move the answers held in agg-linter-demo-check.rofl.
+--
 -- js-dataflow.rofl — THE VALUE LAYER: what an expression may evaluate to.
 --
 -- Two carriers and no third. `may_be_lit(E, Text)`: E may evaluate to this
@@ -1011,9 +1014,7 @@ may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
 
 -- =========================================================================
 -- 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
--- the absence of a later one. `max(J : ast_child(...))` says it directly and
--- stratifies, but it costs the self notebook (the slowest shard) about 10 s
--- of model time, so the maximum stays written as an absence. A
+-- the absence of a later one because the kernel has no aggregation. A
 -- conditional and a logical operator (`||`, `&&`, `??`) are both operands.
 -- `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
 -- promise constructed and awaited later reaches the Promise class, which no

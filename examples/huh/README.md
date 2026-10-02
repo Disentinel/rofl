@@ -18,15 +18,17 @@ chopping one stage off the end each time. HUH answers it in one call, and the
 answer is not "somewhere in grep" but the exact comparison that failed on the
 exact value.
 
-HUH is not a system. It is `examples/huh/huh.rofl` — four rules — plus a
+HUH is not a system. It is `examples/huh/huh.rofl` — four pipe rules and a count and a rank — plus a
 tokenizer. The provenance is the kernel's; nothing here computes any.
 
 ## What the demo shows
 
-1. **The counted result.** `uniq -c` is not a rule. The bucket fact is the
-   rule; the *count* is the counting semiring folded over the support
-   hypergraph the kernel already recorded, so 47 is the number of derivations
-   of `s_uniq("/api/v2/checkout")`.
+1. **The counted result.** `uniq -c | sort -rn` is two rules: `s_count` is a
+   kernel `count` over the lines that reached the bucket, `s_place` its rank.
+   47 is also the number of derivations of `s_uniq("/api/v2/checkout")`,
+   and the counting semiring folded over the support hypergraph agrees; that
+   semiring is what `why` and provenance read, the aggregate is what a rule
+   reads.
 2. **why**: one derivation of that bucket, down to the axioms the host
    tokenized.
 3. **Which lines**: the provenance semiring, with the base annotation set to
@@ -67,6 +69,9 @@ s_grep(N)    :- line(N), status(N, C), C >= 400, C <= 499.
 s_awk(N, P)  :- s_grep(N), field(N, 7, P).
 s_sort(N, P) :- s_awk(N, P).
 s_uniq(P)    :- s_sort(_, P).
+s_count(P, N) :- s_uniq(P), N is count(L : s_sort(L, P)).
+s_place(P, R) :- s_count(P, N), M is 0 - N,
+                 R is rank(M, X : s_count(_, K), X is 0 - K).
 ```
 
 The host emits three facts per log line — `line(N)`, `status(N, C)`,
@@ -89,9 +94,8 @@ rules   examples/huh/huh.rofl — grep, awk, sort, uniq as four rules
 pipe    cat /var/folders/k9/dst30b8n5rs6x6nny6__7s6w0000gn/T/rofl-huh-demo/access.log | grep -E '" 4[0-9][0-9] ' | awk '{print $7}' | sort | uniq -c | sort -k1,1nr -k2,2
 
 == 1. the counted result ===================================================
-counting semiring folded over the support hypergraph: the value of a bucket
-fact is the number of derivations of it, i.e. the number of lines that got
-there. `uniq -c` is not a rule and does not need to be.
+`uniq -c | sort -rn` is two rules: s_count is a kernel count over the lines that
+reached the bucket, s_place its rank. The host reads them and sorts nothing.
 
       47  /api/v2/checkout
       27  /api/v2/cart
@@ -122,6 +126,7 @@ s_uniq[main]("/api/v2/checkout")  <= r682af6c8 @tick 0
       field[main](1057,7,"/api/v2/checkout") [axiom]
 
 one derivation of the bucket, down to axioms. There are 47 of them; the tree renders the canonical one.
+  oracle: AGREE — the counting semiring finds as many derivations as the count aggregate
 
 == 3. WHICH lines? =========================================================
 provenance semiring, base annotation = the line fact, so a monomial is a
@@ -180,7 +185,8 @@ $ excise line(96)   -- 10.0.3.90 - - [30/Aug/2026:12:01:35 +0000] "GET /api/v2/c
   - s_awk[main](96,"/api/v2/checkout")
   - s_grep[main](96)
   - s_sort[main](96,"/api/v2/checkout")
-  4 facts fall; s_uniq[main]("/api/v2/checkout") is not among them —
+  - s_count[main]("/api/v2/checkout",47)
+  5 facts fall; s_uniq[main]("/api/v2/checkout") is not among them —
   the bucket has 47 supports and only lost one.
 
   count on the excised world: 47 -> 46
@@ -188,8 +194,9 @@ $ excise line(96)   -- 10.0.3.90 - - [30/Aug/2026:12:01:35 +0000] "GET /api/v2/c
   oracle: AGREE — the blast radius of deleting line 96
 
 == oracle summary ==========================================================
-3 comparisons against the real pipe over 2000 log lines:
+4 comparisons against the real pipe over 2000 log lines:
   AGREE     all 6 buckets over 2000 lines
+  AGREE     the counting semiring finds as many derivations as the count aggregate
   AGREE     the 23 source lines behind /api/v2/refund
   AGREE     the blast radius of deleting line 96
 
@@ -224,7 +231,7 @@ announces itself: a literal already being explained higher up is marked
 changes a fact's *value*, never whether it holds — so the engine runs first,
 unchanged, and the fold reads the support the store already recorded:
 
-- `countingSemiring` (⊕ = +, ⊗ = ×) → *how many* derivations → `uniq -c`.
+- `countingSemiring` (⊕ = +, ⊗ = ×) → *how many* derivations, the number `why` lists and the count aggregate agrees with.
 - `provenanceSemiring` (⊕ = ∪, ⊗ = pairwise ∪, with superset absorption) →
   *which sources* → which lines.
 
@@ -262,8 +269,10 @@ the pipe is 4 rules.
 the demo — engine and oracle alike — uses `grep -E '" 4[0-9][0-9] '`, which
 anchors on the quote closing the request and can only match the status field.
 
-**`sort -rn | head` is presentation, not inference.** v0 has no aggregation
-(LIMITS.md), so ranking the buckets is host-side sorting of the annotations.
+**`sort -rn` is a rank, and its tie-break is the host's.** `s_place` ranks
+the distinct counts, so two buckets with the same count share a place. The
+pipe's `-k2,2` orders them by path, and the demo does the same; the kernel's
+`rank` takes one integer and has no string order to break a tie with.
 `sort` itself is in the rules only as a nameable stage: order is not a fact
 here, so it is the identity on the multiset.
 

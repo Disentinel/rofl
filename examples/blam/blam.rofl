@@ -14,8 +14,9 @@
 -- Layout of this file:
 --   1. the packages, and what each depends on
 --   2. the file -> target ownership map
---   3. the declared cost of each target (data; no rule reads it)
+--   3. the declared cost of each target
 --   4. the rules — two build the target graph, three are the inquiry
+--   5. the money — kernel sums, counts and ranks over the cost and the cuts
 --
 -- The diff is NOT in this file. It is one relation, `changed/1`, asserted per
 -- run, because a build graph outlives any particular diff. In the REPL:
@@ -106,11 +107,9 @@ owns(t(ui,     build), "shared/schema/events.json").
 -- =========================================================================
 -- 3. what each target costs to run, in minutes
 -- =========================================================================
--- Declared data, from CI history. NO RULE READS THIS: v0 has no aggregation
--- (LIMITS.md), so the ranking that uses it is host-side arithmetic over an
--- engine-computed provenance fold, and demo.ts says so where it prints it.
--- It lives here rather than in demo.ts because it is a property of the
--- repository, not of the script that asks about it.
+-- Declared data, from CI history; section 5 sums it. It lives here rather
+-- than in demo.ts because it is a property of the repository, not of the
+-- script that asks about it.
 
 minutes(config,   1,   1).
 minutes(core,    40,  55).
@@ -199,3 +198,37 @@ reaches(F, T)  :- needs(T, U), reaches(F, U).
 -- each (changed file, route) pair that arrives at it, and that multiplicity
 -- is what the counting semiring folds.
 affected(T)    :- changed(F), reaches(F, T).
+
+-- =========================================================================
+-- 5. the money
+-- =========================================================================
+-- The rebuild bill is a kernel sum, over the targets the diff reaches.
+
+cost(t(P, build), B) :- minutes(P, B, _).
+cost(t(P, test),  T) :- minutes(P, _, T).
+
+affected_cost(S) :- S is sum(M ; T : affected(T), cost(T, M)).
+repo_cost(S)     :- S is sum(M ; T : cost(T, M)).
+
+-- demo.ts asserts `wave(D, T)` (the tropical depth of an affected target) and
+-- `cuts(P, Q, F, T)` (the edge P -> Q lies on every route from file F to T,
+-- the intersection of the provenance polynomial). Provenance stays host-side;
+-- what the cuts are worth is read here.
+wave_cost(D, S) :- wave(D, _), S is sum(M ; T : wave(D, T), cost(T, M)).
+
+-- over every single-file diff: couplings cut, minutes no longer triggered
+cut_pairs(P, Q, N)   :- pkg_dep(P, Q), N is count(F, T : cuts(P, Q, F, T)).
+cut_minutes(P, Q, S) :- pkg_dep(P, Q), S is sum(M ; F, T : cuts(P, Q, F, T), cost(T, M)).
+max_pairs(N)         :- N is max(K : cut_pairs(_, _, K)).
+
+-- minutes first, then pairs: pairs is under 1000, so one integer orders both.
+cut_score(P, Q, V)   :- cut_pairs(P, Q, N), cut_minutes(P, Q, S), V is S * 1000 + N.
+cut_place(P, Q, R)   :- cut_score(P, Q, V), W is 0 - V,
+                        R is rank(W, X : cut_score(_, _, K), X is 0 - K).
+
+-- for the diff at hand: the edges that decouple a target from EVERY changed file
+uncut(P, Q, T)       :- changed(F), affected(T), pkg_dep(P, Q), not cuts(P, Q, F, T).
+frees(P, Q, T)       :- affected(T), pkg_dep(P, Q), not uncut(P, Q, T).
+free_minutes(P, Q, S) :- frees(P, Q, _), S is sum(M ; T : frees(P, Q, T), cost(T, M)).
+free_place(P, Q, R)  :- free_minutes(P, Q, S), W is 0 - S,
+                        R is rank(W, X : free_minutes(_, _, K), X is 0 - K).

@@ -3438,3 +3438,20 @@ host semiring folds (`runtime/semirings.ts`, `examples/huh`, `examples/spat`),
 and the rankings in `examples/huh` and `examples/blam`.
 `examples/notebook/gen_ledger_facts.ts` is not one: it measures a string's
 length and asks the filesystem, neither an aggregate.
+
+As built, 2026-10-02 (`w_agg_retire_workarounds`, proved by the world
+`agg_prose`, whose census is red while a `workaround_marker` still matches a
+site the ledger does not keep): the sites above are retired except two, kept
+with their reason as `workaround_kept` rows. `examples/slop` keeps its `SUM`
+chain, because a sum is refused where the relations it reads are in the same
+recursive component as its conclusion, and a sheet's formulas read each other
+(`f_an_aggregate_is_refused_by_relation_and_not_by_data`); and
+`runtime/semirings.ts` stays, because it is the fold of a support with its
+declared discipline, which a kernel tag does not replace. The host folds
+follow a sealed cell now (`src/semiring.ts`: a group cell is the product of
+its members, a best cell the sum of those that reach the value, a quorum the
+product of its N members), which is what let `aka`, `wtf`, `goof` and `moot`
+keep their provenance and counts through an aggregate
+(`f_the_semiring_fold_followed_a_cell_as_one`). A quorum has N members, so a
+fold over a threshold is a lower bound when more than N support
+(`f_a_deduplicated_member_keeps_one_derivation`).

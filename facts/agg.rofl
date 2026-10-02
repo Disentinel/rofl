@@ -175,6 +175,32 @@ workaround_site(tag_counting, "runtime/semirings.ts").
 workaround_site(tag_counting, "examples/huh/huh.rofl").
 workaround_site(holistic, "examples/huh/demo.ts").
 workaround_site(holistic, "examples/blam/demo.ts").
+-- what stood in for an aggregate at each site, as a regex over the file: the
+-- world agg_prose raises `retire_stands` while one still matches a site that
+-- is not kept, and `retire_unmarked` for a site no marker describes
+workaround_marker("scripts/lint.ts", "countingSemiring|evaluateSemiring").
+workaround_marker("examples/wtf/wtf.rofl", "low4|cnt_ord|eord|swacc|is a fold").
+workaround_marker("examples/slop/slop.rofl", "sum_head|sum_item|sum_last|a range is a CHAIN").
+workaround_marker("examples/spat/spat.rofl", "work_after|work_gap|work_next|work_run|chain fold").
+workaround_marker("examples/spat/spat.ts", "function merge|tropicalSemiring|OFFSET|plain arithmetic").
+workaround_marker("examples/aka/aka.rofl", "inv_no|a sum is a scan").
+workaround_marker("examples/blam/demo.ts", "costOf|host-side sum|money arithmetic").
+workaround_marker("rules/js-dataflow.rofl", "seq_later").
+workaround_marker("examples/moot/moot.rofl", "ok_from|on_here|req_at|req_count").
+workaround_marker("examples/goof/goof.rofl", "holds_from|need_count").
+workaround_marker("examples/rip/demo.ts", "tropicalSemiring|unitFiringCost").
+workaround_marker("examples/moot/demo.ts", "every set it intersects|acc = new Set").
+workaround_marker("runtime/semirings.ts", "tropicalSemiring|countingSemiring").
+workaround_marker("examples/huh/huh.rofl", "counting-semiring fold and sort|sort -rn [|] head").
+workaround_marker("examples/huh/demo.ts", "Ranking is presentation|sort[(][(]a, b[)] => num").
+
+-- a site that stays, with the reason (a kernel limit, or a library that is not
+-- the workaround); the cell closes with it recorded
+workaround_kept(sum, "examples/slop/slop.rofl", "f_an_aggregate_is_refused_by_relation_and_not_by_data: the sum of a range is refused where the sheet's formulas read each other, as relations").
+workaround_kept(min_max_strat, "rules/js-dataflow.rofl", "f_a_max_over_base_data_costs_the_self_shard: max(J : ast_child(...)) stratifies and every JS answer is byte-identical, but the model phase of the self notebook grows by about 11 s of a 120 s wall shard at 98 s").
+workaround_kept(tag_idempotent, "runtime/semirings.ts", "the shared library of the host folds over a support (provenance, trust, chaos, viterbi, and the discipline of a diverging fold); a kernel tag computes the value in the engine, it does not replace the fold's reading of the support").
+workaround_kept(tag_counting, "runtime/semirings.ts", "the same library: counting here is a fold with a declared discipline (infinite on a cycle, depth-bounded), which the stratified kernel tag refuses by design").
+
 -- examples/notebook/gen_ledger_facts.ts is not a site: it measures a string's
 -- length and asks the filesystem, neither of which is an aggregate.
 
@@ -1050,8 +1076,9 @@ work_needs(w_agg_incremental_ready, w_agg_tags).
 work_needs(w_agg_incremental_ready, w_agg_holistic).
 work_needs(w_agg_incremental_ready, w_agg_subsumption).
 
-work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows").
-work_state(w_agg_retire_workarounds, open).
+work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; KEPT with a reason (`workaround_kept`): rules/js-dataflow.rofl seq_later (identical answers, +11 s on a 98 s shard, f_a_max_over_base_data_costs_the_self_shard), examples/slop (a sum refused where the sheet's formulas read each other, f_an_aggregate_is_refused_by_relation_and_not_by_data) and runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
+work_state(w_agg_retire_workarounds, done).
+work_proof(w_agg_retire_workarounds, "agg_prose").
 work_sweeps(w_agg_retire_workarounds, retire).
 work_needs(w_agg_retire_workarounds, w_agg_body_strat).
 work_needs(w_agg_retire_workarounds, w_agg_threshold).
@@ -1059,6 +1086,15 @@ work_needs(w_agg_retire_workarounds, w_agg_order_lattice).
 work_needs(w_agg_retire_workarounds, w_agg_tags).
 work_needs(w_agg_retire_workarounds, w_agg_join_lattice).
 work_needs(w_agg_retire_workarounds, w_agg_holistic).
+handled(agg, count, retire, "agg_prose").
+handled(agg, sum, retire, "agg_prose").
+handled(agg, min_max_strat, retire, "agg_prose").
+handled(agg, threshold, retire, "agg_prose").
+handled(agg, order_lattice, retire, "agg_prose").
+handled(agg, join_lattice, retire, "agg_prose").
+handled(agg, tag_idempotent, retire, "agg_prose").
+handled(agg, tag_counting, retire, "agg_prose").
+handled(agg, holistic, retire, "agg_prose").
 
 work(w_agg_reconcile_docs, "rewrite every `contradiction_site` it owns against docs/aggregates.md; done only with a work_proof world that fails while any of them still says there is no aggregation").
 work_state(w_agg_reconcile_docs, done).
@@ -1081,10 +1117,11 @@ work_needs(w_agg_demo_critical_path, w_agg_order_lattice).
 claim(queued, agg, order_lattice, none, demo, w_agg_demo_critical_path).
 handled(agg, order_lattice, demo, "agg_critpath_demo").
 
-work(w_agg_demo_linter, "the linter as rules: `probably_a_table(Rel) :- N is count(R : concludes(R, Rel)), N >= 5.` replaces the counting-semiring hack in scripts/lint.ts").
-work_state(w_agg_demo_linter, open).
+work(w_agg_demo_linter, "the linter as rules over the reflection (examples/linter/linter.rofl): `probably_a_table(Rel, N) :- lint_bodies(Rel, N), N >= 5` over a count of `concludes`, the pair, the long body, routes, twins, mirrors and their ranks (`rank`), replacing the counting-semiring fold in scripts/lint.ts; the world holds the answers the old fold printed over a frozen js-dataflow, and a fixture on every threshold").
+work_state(w_agg_demo_linter, done).
 work_needs(w_agg_demo_linter, w_agg_body_strat).
 claim(queued, agg, count, none, demo, w_agg_demo_linter).
+handled(agg, count, demo, "agg_linter_demo").
 
 work(w_agg_demo_voting, "voting with pivotality: excise one ballot and the winner moves; a candidate with no votes reads 0 because the candidate is bound from outside").
 work_state(w_agg_demo_voting, done).
@@ -1092,7 +1129,7 @@ work_needs(w_agg_demo_voting, w_agg_body_strat).
 claim(queued, agg, empty_group, none, demo, w_agg_demo_voting).
 handled(agg, empty_group, demo, "agg_voting_demo").
 
-work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; shows that the req_count/need_count walk of examples/moot and examples/goof is an at_least over the premises (the rewrite of those examples is w_agg_retire_workarounds)").
+work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; shows that the req_count/need_count walk of examples/moot and examples/goof is an at_least over the premises (the rewrite of those examples was w_agg_retire_workarounds: moot and goof are one at_least now)").
 work_state(w_agg_demo_quorum, done).
 work_needs(w_agg_demo_quorum, w_agg_threshold).
 work_needs(w_agg_demo_quorum, w_agg_phrase).

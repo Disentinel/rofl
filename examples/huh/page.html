@@ -349,25 +349,24 @@ s_uniq(P)    :- s_sort(_, P).</pre>
 
   <div class="kid">
     <p>
-      Notice the last rule does not count anything. It only says a bucket
-      <em>exists</em>. The counting happens somewhere else, and this is the
-      trick worth understanding:
+      Notice the bucket rule does not count anything. It only says a bucket
+      <em>exists</em>. A second rule, <code>s_count</code>, counts the lines
+      that reached it, and the engine's notes say the same number another way:
     </p>
     <p>
       Every time a rule fires, the engine writes down a note: which rule, and
       which facts it used. So the bucket for <code>/api/v2/checkout</code> ends
       up with 47 separate notes attached to it — one per line that got there.
-      <strong>The count is just how many notes there are.</strong> Nobody had
-      to write a counting machine.
+      <strong>The count is just how many notes there are.</strong>
     </p>
   </div>
   <div class="eng">
     <p>
-      <code>uniq -c</code> is not a rule and does not need to be. Every firing
+      <code>uniq -c</code> is one rule, <code>s_count</code>, a kernel <code>count</code> over the lines that reached the bucket. Under it, every firing
       is recorded as a witness — rule id plus the premise references it
       consumed (fact, negated, or builtin) — so the derived fact
       <code>s_uniq("/api/v2/checkout")</code> carries 47 witnesses in the
-      support hypergraph, not one.
+      support hypergraph, not one, and the counting semiring over that hypergraph gives the same 47.
     </p>
     <p>
       A semiring is then folded over that hypergraph. The Boolean fixpoint is
@@ -680,9 +679,10 @@ the engine and /bin/sh compute the same numbers.</pre>
         closes the request so it can only match the status field.
       </li>
       <li>
-        <strong><code>sort -rn | head</code> is presentation.</strong> v0 has
-        no aggregation, so ranking the buckets is host-side sorting of the
-        annotations. <code>sort</code> appears in the rules only as a nameable
+        <strong><code>sort -rn</code> is a rank, and its tie-break is the host's.</strong>
+        <code>s_place</code> ranks the distinct counts, so equal counts share a
+        place; the pipe's <code>-k2,2</code> orders them by path, which the
+        kernel's <code>rank</code> (one integer) cannot. <code>sort</code> appears in the rules only as a nameable
         stage: order is not a fact here, so it is the identity on the multiset.
       </li>
       <li>
@@ -703,7 +703,7 @@ the engine and /bin/sh compute the same numbers.</pre>
 
 <footer>
   <p>
-    <code>examples/huh/</code> — <code>huh.rofl</code> (the four rules),
+    <code>examples/huh/</code> — <code>huh.rofl</code> (the four pipe rules, a count and a rank),
     <code>demo.ts</code> (run it: <code>node --experimental-strip-types
     examples/huh/demo.ts</code>), <code>README.md</code>, this page, and
     <code>test/example-huh.test.ts</code>. Every transcript above is pasted

@@ -1458,7 +1458,9 @@ A [super](#noun-super) points to a node SD if all of:
 
 ## 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
 
-> the absence of a later one because the kernel has no aggregation. A
+> the absence of a later one. `max(J : ast_child(...))` says it directly and
+> stratifies, but it costs the self notebook (the slowest shard) about 10 s
+> of model time, so the maximum stays written as an absence. A
 > conditional and a logical operator (`||`, `&&`, `??`) are both operands.
 > `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
 > promise constructed and awaited later reaches the Promise class, which no

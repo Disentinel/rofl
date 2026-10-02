@@ -115,19 +115,25 @@ export function allTargets(r: Rofl): string[] {
 export const allFiles = (r: Rofl): string[] =>
   [...new Set(col(r, 'owns(T, F)', 'F'))].sort();
 
-/** Declared CI cost per target, from the `minutes/3` table in blam.rofl. No
- *  rule reads it — v0 has no aggregation, so the money arithmetic is here. */
+/** Declared CI cost per target: the kernel's `cost/2`, from `minutes/3`. */
 export function costTable(r: Rofl): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const b of rows(r, 'minutes(P, B, T)')) {
-    out.set(`t(${b.P},build)`, Number(b.B));
-    out.set(`t(${b.P},test)`, Number(b.T));
-  }
-  return out;
+  return new Map(rows(r, 'cost(T, M)').map((b) => [b.T, Number(b.M)]));
 }
 
-export const costOf = (cost: Map<string, number>, targets: string[]): number =>
-  targets.reduce((s, t) => s + (cost.get(t) ?? 0), 0);
+/** The one number a sum, count or max rule of blam.rofl concludes. */
+export function scalar(r: Rofl, q: string): number {
+  const [row] = rows(r, q);
+  return row ? Number(row.S ?? row.N) : 0;
+}
+
+/** A scratch copy of the world with facts asserted: what the host computed
+ *  (provenance, tropical depth) handed back for the rules to aggregate. */
+export function withFacts(r: Rofl, facts: string[]): Rofl {
+  const scratch = Rofl.fromSnapshot(r.save());
+  const res = scratch.load(facts.join('\n'));
+  if (!res.ok) throw new Error('blam: facts load failed\n' + res.diagnostics.join('\n'));
+  return scratch;
+}
 
 /** Word-wrap a list for the transcript, so no line of it needs a sideways
  *  scroll bar. Presentation only. */
@@ -240,47 +246,66 @@ export function cutsFor(prov: Map<string, Polynomial>, file: string, target: str
   return acc.sort();
 }
 
+const edgeArgs = (key: string): string => key.slice(EDGE_PREFIX.length, -1);
+
+/** `cuts(P, Q, F, T)` for every single-file diff and every target: the edges
+ *  on all routes, from the provenance fold. */
+export function cutFacts(r: Rofl): string[] {
+  const prov = edgeProvenance(r);
+  const out: string[] = [];
+  for (const f of allFiles(r)) {
+    for (const t of allTargets(r)) {
+      for (const e of cutsFor(prov, f, t)) out.push(`cuts(${edgeArgs(e)}, ${f}, ${t}).`);
+    }
+  }
+  return out;
+}
+
+const withCutsMemo = new WeakMap<Rofl, Rofl>();
+const withCuts = (r: Rofl): Rofl => {
+  if (!withCutsMemo.has(r)) withCutsMemo.set(r, withFacts(r, cutFacts(r)));
+  return withCutsMemo.get(r)!;
+};
+
 export interface CutRow {
   edge: string;
   pairs: number;     // (changed file, target) couplings the cut removes
   minutes: number;   // CI minutes those couplings cost, summed over all files
 }
 
+const edgeOf = (b: Record<string, string>): string => edgeKey(b.P, b.Q);
+const byPlace = <T extends { edge: string }>(place: Map<string, number>) =>
+  (a: T, b: T): number => place.get(a.edge)! - place.get(b.edge)! || (a.edge < b.edge ? -1 : 1);
+const placeOf = (r: Rofl, q: string): Map<string, number> =>
+  new Map(rows(r, q).map((b) => [edgeOf(b), Number(b.R)]));
+
 /** Every cuttable edge, scored over EVERY single-file diff the repository
- *  admits. `minutes` is the total rebuild time that stops being triggered;
- *  divide by the number of files for the per-diff expectation. */
+ *  admits, in the order of the kernel's `cut_place`. `minutes` is the total
+ *  rebuild time that stops being triggered. */
 export function cutRanking(r: Rofl): CutRow[] {
-  const prov = edgeProvenance(r);
-  const cost = costTable(r);
-  const files = allFiles(r);
-  const targets = allTargets(r);
-  const rows: CutRow[] = [];
-  for (const edge of allEdges(r)) {
-    let pairs = 0, minutes = 0;
-    for (const f of files) {
-      for (const t of targets) {
-        if (cutsFor(prov, f, t).includes(edge)) { pairs++; minutes += cost.get(t) ?? 0; }
-      }
-    }
-    rows.push({ edge, pairs, minutes });
-  }
-  return rows.sort((a, b) => b.minutes - a.minutes || b.pairs - a.pairs
-    || (a.edge < b.edge ? -1 : 1));
+  const w = withCuts(r);
+  const pairs = new Map(rows(w, 'cut_pairs(P, Q, N)').map((b) => [edgeOf(b), Number(b.N)]));
+  const minutes = new Map(rows(w, 'cut_minutes(P, Q, S)').map((b) => [edgeOf(b), Number(b.S)]));
+  return allEdges(r)
+    .map((edge) => ({ edge, pairs: pairs.get(edge) ?? 0, minutes: minutes.get(edge) ?? 0 }))
+    .sort(byPlace(placeOf(w, 'cut_place(P, Q, R)')));
 }
 
-/** For one diff: which targets each edge would decouple, and what that saves.
- *  Sorted by minutes saved. */
-export function cutForDiff(r: Rofl, diff: string[]): { edge: string; frees: string[]; minutes: number }[] {
-  const prov = edgeProvenance(r);
-  const cost = costTable(r);
-  const affected = affectedOf(r);
-  const out: { edge: string; frees: string[]; minutes: number }[] = [];
-  for (const edge of allEdges(r)) {
-    const frees = affected.filter((t) =>
-      diff.every((f) => cutsFor(prov, JSON.stringify(f), t).includes(edge)));
-    if (frees.length > 0) out.push({ edge, frees, minutes: costOf(cost, frees) });
+/** The most couplings any single cut removes: the kernel's `max_pairs`. */
+export const maxPairs = (r: Rofl): number =>
+  scalar(withCuts(r), 'max_pairs(N)');
+
+/** For the diff the world holds: which targets each edge would decouple from
+ *  every changed file, and what that saves, in the order of `free_place`. */
+export function cutForDiff(r: Rofl): { edge: string; frees: string[]; minutes: number }[] {
+  const w = withCuts(r);
+  const frees = new Map<string, string[]>();
+  for (const b of rows(w, 'frees(P, Q, T)')) {
+    frees.set(edgeOf(b), [...(frees.get(edgeOf(b)) ?? []), b.T].sort());
   }
-  return out.sort((a, b) => b.minutes - a.minutes || (a.edge < b.edge ? -1 : 1));
+  const minutes = new Map(rows(w, 'free_minutes(P, Q, S)').map((b) => [edgeOf(b), Number(b.S)]));
+  return [...frees].map(([edge, f]) => ({ edge, frees: f, minutes: minutes.get(edge)! }))
+    .sort(byPlace(placeOf(w, 'free_place(P, Q, R)')));
 }
 
 // ---------------------------------------------------------------------------
@@ -443,7 +468,7 @@ function main(): void {
   say(`one file changed. ${affected.length} of ${targets.length} targets are affected:`);
   for (const l of wrap(affected.map(show), '  ')) say(l);
   say(`spared: ${spared.map(show).join(' ')}`);
-  say(`cost:   ${costOf(cost, affected)} minutes of the repository's ${costOf(cost, targets)}`);
+  say(`cost:   ${scalar(r, 'affected_cost(S)')} minutes of the repository's ${scalar(r, 'repo_cost(S)')}`);
   say();
   say('Bazel, Nx and Turborepo print this set too, and it is the same set.');
   say('Everything below is what they do not print.');
@@ -500,9 +525,10 @@ function main(): void {
   rule('5. in what order? (tropical)');
   const depth = buildDepth(r);
   const ws = waves(depth);
+  const waveCost = withFacts(r, [...depth].map(([t, d]) => `wave(${d}, ${t}).`));
   ws.forEach((w, d) => {
     say(`  wave ${d}   ${w.map(show).join(' ').padEnd(40)} `
-      + `${String(costOf(cost, w)).padStart(4)} min`);
+      + `${String(scalar(waveCost, `wave_cost(${d}, S)`)).padStart(4)} min`);
   });
   say();
   say(`${ws.length} waves. Wave 0 can start the moment CI has the diff; everything else`);
@@ -524,7 +550,7 @@ function main(): void {
       + `${String(row.minutes).padStart(9)}`);
   }
   const top = ranking[0];
-  const mostPairs = [...ranking].sort((a, b) => b.pairs - a.pairs)[0];
+  const mostPairs = ranking.find((x) => x.pairs === maxPairs(r))!;
   say();
   say(`cut ${edgeName(top.edge)} and ${top.minutes} minutes of rebuild stop being triggered`);
   say(`across the ${files.length} single-file diffs — more than any other single edge. It is`);
@@ -535,7 +561,7 @@ function main(): void {
   say('decouples nothing at all, because every route they carry has an alternative.');
   say();
   say(`for the diff at hand (${DIFF_UTILS}):`);
-  const perDiff = cutForDiff(r, [DIFF_UTILS]);
+  const perDiff = cutForDiff(r);
   for (const row of perDiff) {
     say(`  cut ${edgeName(row.edge).padEnd(16)} frees ${row.frees.map(show).join(' ').padEnd(34)} `
       + `${String(row.minutes).padStart(4)} min`);
@@ -551,8 +577,8 @@ function main(): void {
   say(`  $ retract pkg_dep(${bf}, ${bt})   -- and re-run the fixpoint`);
   const cutWorld = withoutEdge(r, bf, bt);
   const cutAffected = affectedOf(cutWorld);
-  say(`  affected: ${affected.length} targets / ${costOf(cost, affected)} min  ->  `
-    + `${cutAffected.length} targets / ${costOf(cost, cutAffected)} min`);
+  say(`  affected: ${affected.length} targets / ${scalar(r, 'affected_cost(S)')} min  ->  `
+    + `${cutAffected.length} targets / ${scalar(cutWorld, 'affected_cost(S)')} min`);
   for (const l of wrap(cutAffected.map(show), '  ')) say(l);
   const predicted = affected.filter((t) => !best.frees.includes(t));
   check(`the predicted blast radius of cutting ${edgeName(best.edge)}`,
@@ -569,7 +595,7 @@ function main(): void {
   const cfgCount = routeCounts(cfg).count;
   say(`$ changed(${JSON.stringify(DIFF_CONFIG)})`);
   say(`affected: ${cfgAffected.length} of ${targets.length} targets — the whole repository, `
-    + `${costOf(cost, cfgAffected)} minutes.`);
+    + `${scalar(cfg, 'affected_cost(S)')} minutes.`);
   say('routes from that one file to each target:');
   for (const t of cfgAffected) say(`  ${show(t).padEnd(14)} ${renderCount(cfgCount.get(t)!)}`);
   say();

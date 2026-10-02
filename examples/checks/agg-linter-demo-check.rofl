@@ -1,0 +1,230 @@
+-- examples/checks/agg-linter-demo-check.rofl — agg_linter_demo, THE LINTER AS
+-- RULES (examples/linter/README.md; docs/aggregates.md, "Acceptance demos").
+-- The rules are examples/linter/linter.rofl, reading the reflection of two
+-- rule files loaded with them: corpus-dataflow.rofl, a frozen copy of
+-- rules/js-dataflow.rofl, and corpus-fixture.rofl, rules written to sit on
+-- the thresholds.
+--
+-- Held by three oracles. The `lw_` rows are what scripts/lint.ts printed over
+-- the frozen copy BEFORE it was rewritten, when the counts were a fold of the
+-- counting semiring over the support (4f997a6, `npm run lint`): the new rules
+-- must answer the same rows, and did. The `lx_` rows are the fixture by hand:
+--   fx_four   4 bodies, fx_p & fx_q read by 4 rules          no table, no pair
+--   fx_five   5 bodies, fx_r & fx_s read by 5 rules          a table, a pair
+--   fx_six 6 premises, fx_seven 7                            no body that long, one
+--   fx_one    reads fx_ghost, which nothing concludes        an empty group: no row
+--   fx_route 5 bodies through 5 derived relations, fx_route4 4    routes, a table, a mirror
+--   fx_twin   two bodies that differ in a constant           twins
+--   fx_m1, fx_m2  equal but for the head                     a mirror
+-- The ranks are dense: the tables of 5 bodies share one place, the next after 6.
+--
+-- A pair is a symmetric row (both orders are concluded and the host prints it
+-- once), so a row is held in either order and a pair seen in one order is an
+-- alarm. The lint finds nothing in the check file's own rules, which is also
+-- held: every finding not in an oracle is an alarm.
+--
+-- THE FROZEN ROWS. Generated once from the old output and not kept.
+-- table: 7
+lw_table(may_be_node, 57).
+lw_table(may_be_lit, 20).
+lw_table(member_value, 9).
+lw_table(external_value, 7).
+lw_table(exports_name, 6).
+lw_table(binds_name, 5).
+lw_table(scoped_binder, 5).
+-- pair: 31
+lw_pair(ast_child, ast_node, 81).
+lw_pair(ast_child, may_be_node, 31).
+lw_pair(ast_child, ast_name, 27).
+lw_pair(ast_name, ast_node, 26).
+lw_pair(ast_node, may_be_node, 18).
+lw_pair(ast_child, may_be_lit, 12).
+lw_pair(ast_attr, ast_node, 9).
+lw_pair(ast_child, key_name, 9).
+lw_pair(ast_child, member_node_v, 9).
+lw_pair(ast_child, obj_like, 9).
+lw_pair(ast_node, key_name, 9).
+lw_pair(ast_node, may_be_lit, 9).
+lw_pair(ast_node, obj_like, 9).
+lw_pair(ident_in, sees_binder, 9).
+lw_pair(ast_attr, ast_child, 8).
+lw_pair(ast_child, external_value, 8).
+lw_pair(external_value, may_be_node, 8).
+lw_pair(ast_within, binder_region, 7).
+lw_pair(ast_child, fn_node, 6).
+lw_pair(ast_child, selects, 6).
+lw_pair(ast_within, binds_name, 6).
+lw_pair(binder_region, binds_name, 6).
+lw_pair(may_be_node, member_node_v, 6).
+lw_pair(ast_child, call_like_v, 5).
+lw_pair(ast_child, ident_in, 5).
+lw_pair(ast_node, call_like_v, 5).
+lw_pair(ast_node, fn_node, 5).
+lw_pair(ast_within, param_of, 5).
+lw_pair(ident_in, may_be_node, 5).
+lw_pair(may_be_node, sees_binder, 5).
+lw_pair(may_be_node, selects, 5).
+-- long: 13
+lw_long(r17ce996f, shadowed_by, 7).
+lw_long(r196654f5, field_of, 8).
+lw_long(r5365a516, destructures, 8).
+lw_long(r57bee388, private_member, 7).
+lw_long(r5b8ad1b9, next_send, 7).
+lw_long(r90902189, external_destructured, 8).
+lw_long(rb321ea6d, may_be_node, 7).
+lw_long(rbc03c3ec, export_local, 9).
+lw_long(rc2096a26, tdz_cand, 8).
+lw_long(rd9a6158a, may_be_node, 7).
+lw_long(rda9168ac, external_import, 7).
+lw_long(re4dbc906, may_be_node, 7).
+lw_long(re7357fc2, callback_param, 10).
+-- route: 7
+lw_route(binds_name, 5).
+lw_route(exports_name, 6).
+lw_route(external_value, 7).
+lw_route(may_be_lit, 20).
+lw_route(may_be_node, 57).
+lw_route(member_value, 9).
+lw_route(scoped_binder, 5).
+-- twin: 7
+lw_twin(class_method_of).
+lw_twin(lexical_decl).
+lw_twin(may_be_lit).
+lw_twin(may_be_node).
+lw_twin(member_value).
+lw_twin(module_source).
+lw_twin(obj_like).
+-- mirror: 20
+lw_mirror(assign_param, may_be_lit).
+lw_mirror(assign_param, may_be_node).
+lw_mirror(binds_name, scoped_binder).
+lw_mirror(class_field_this, member_value).
+lw_mirror(class_field_this, own_key).
+lw_mirror(class_member_proto, class_member_static).
+lw_mirror(class_method_of, static_block_of).
+lw_mirror(class_named, super_of).
+lw_mirror(class_receiver, may_be_node).
+lw_mirror(ctor_of, has_own_ctor).
+lw_mirror(decl_binds, decl_reads).
+lw_mirror(elem_at, iter_elem).
+lw_mirror(elem_at, member_value).
+lw_mirror(external_value, may_be_node).
+lw_mirror(inherited_field, member_value).
+lw_mirror(iter_elem, member_value).
+lw_mirror(may_be_lit, may_be_node).
+lw_mirror(member_value, own_key).
+lw_mirror(private_binds, private_inner).
+lw_mirror(returns, yields).
+
+-- THE FIXTURE, BY HAND
+lw_table(fx_five, 5). lw_table(fx_route, 5).
+lw_pair(fx_r, fx_s, 5).
+lx_long(fx_seven, 7).
+lw_route(fx_route, 5).
+lw_twin(fx_twin).
+lw_mirror(fx_route, fx_route4). lw_mirror(fx_m1, fx_m2).
+
+-- THE RANKS: tables by bodies, long bodies by premises, heads by how many ways they are named
+lw_tplace(may_be_node, 1). lw_tplace(may_be_lit, 2). lw_tplace(member_value, 3). lw_tplace(external_value, 4).
+lw_tplace(exports_name, 5). lw_tplace(binds_name, 6). lw_tplace(scoped_binder, 6). lw_tplace(fx_five, 6). lw_tplace(fx_route, 6).
+lw_tplace_last(6).
+lw_lplace(re7357fc2, 1). lw_lplace(rbc03c3ec, 2). lw_lplace(r196654f5, 3). lw_lplace(rbaa3306f, 4). lw_lplace(r17ce996f, 4).
+lw_ways(may_be_node, 5, 1). lw_ways(may_be_lit, 4, 2). lw_ways(member_value, 4, 2).
+lw_ways(binds_name, 3, 3). lw_ways(scoped_binder, 3, 3). lw_ways(external_value, 3, 3). lw_ways(fx_route, 3, 3).
+lw_ways(class_method_of, 2, 4). lw_ways(exports_name, 2, 4).
+lw_ways(shadowed_by, 1, 5). lw_ways(fx_twin, 1, 5). lw_ways(fx_seven, 1, 5).
+
+lw_table_missing(R)  :- lw_table(R, N), not probably_a_table(R, N).
+lw_table_extra(R)    :- probably_a_table(R, N), not lw_table(R, N).
+lw_pair_missing(A, B) :- lw_pair(A, B, N), not probably_needs_a_name(A, B, N), not probably_needs_a_name(B, A, N).
+lw_pair_extra(A, B)   :- probably_needs_a_name(A, B, N), not lw_pair(A, B, N), not lw_pair(B, A, N).
+lw_pair_one_sided(A, B) :- probably_needs_a_name(A, B, N), not probably_needs_a_name(B, A, N).
+lw_long_missing(R)   :- lw_long(R, Rel, N), not probably_hides_a_concept(R, Rel, N).
+lw_long_missing(Rel) :- lx_long(Rel, N), not probably_hides_a_concept(_, Rel, N).
+lw_long_extra(R)     :- probably_hides_a_concept(R, Rel, N), not lw_long(R, Rel, N), not lx_long(Rel, N).
+lw_route_missing(H)  :- lw_route(H, N), not probably_several_routes(H, N).
+lw_route_extra(H)    :- probably_several_routes(H, N), not lw_route(H, N).
+lw_twin_missing(H)   :- lw_twin(H), not probably_one_rule_with_an_or(H).
+lw_twin_extra(H)     :- probably_one_rule_with_an_or(H), not lw_twin(H).
+lw_mirror_missing(A, B) :- lw_mirror(A, B), not probably_a_pair_or_a_case_table(A, B), not probably_a_pair_or_a_case_table(B, A).
+lw_mirror_extra(A, B)   :- probably_a_pair_or_a_case_table(A, B), not lw_mirror(A, B), not lw_mirror(B, A).
+lw_mirror_one_sided(A, B) :- probably_a_pair_or_a_case_table(A, B), not probably_a_pair_or_a_case_table(B, A).
+alarm(lw_table_missing).
+alarm(lw_table_extra).
+alarm(lw_pair_missing).
+alarm(lw_pair_extra).
+alarm(lw_pair_one_sided).
+alarm(lw_long_missing).
+alarm(lw_long_extra).
+alarm(lw_route_missing).
+alarm(lw_route_extra).
+alarm(lw_twin_missing).
+alarm(lw_twin_extra).
+alarm(lw_mirror_missing).
+alarm(lw_mirror_extra).
+alarm(lw_mirror_one_sided).
+
+lw_tplace_wrong(R)  :- lw_tplace(R, P), not lint_table_place(R, P).
+lw_tplace_over(R)   :- lint_table_place(R, P), lw_tplace_last(L), P > L.
+lw_lplace_wrong(R)  :- lw_lplace(R, P), not lint_long_place(R, P).
+lw_ways_wrong(R)    :- lw_ways(R, N, P), not lint_ways(R, N).
+lw_ways_wrong(R)    :- lw_ways(R, N, P), not lint_place(R, P).
+alarm(lw_tplace_wrong).
+alarm(lw_tplace_over).
+alarm(lw_lplace_wrong).
+alarm(lw_ways_wrong).
+
+-- THE THRESHOLDS, ON THE EDGE: counts of distinct rules, exactly
+lx_bodies(fx_four, 4). lx_bodies(fx_five, 5). lx_bodies(fx_one, 1). lx_bodies(fx_route, 5). lx_bodies(fx_route4, 4). lx_bodies(fx_twin, 2).
+lx_pair(fx_p, fx_q, 4). lx_pair(fx_r, fx_s, 5). lx_pair(fx_p, fx_ghost, 1).
+lx_arity(fx_six, 6). lx_arity(fx_seven, 7). lx_arity(fx_one, 2).
+lx_bodies_wrong(Rel)  :- lx_bodies(Rel, N), not lint_bodies(Rel, N).
+lx_pair_wrong(A, B)   :- lx_pair(A, B, N), not lint_pair(A, B, N).
+lx_arity_wrong(Rel)   :- lx_arity(Rel, N), concludes(R, Rel), not lint_arity(R, N).
+alarm(lx_bodies_wrong).
+alarm(lx_pair_wrong).
+alarm(lx_arity_wrong).
+
+-- AN EMPTY GROUP IS NO ROW: fx_ghost is read and nothing concludes it, and no relation has a count of 0
+lx_ghost(fx_ghost).
+lx_ghost_unread(G)  :- lx_ghost(G), not premise_pos(_, G).
+lx_ghost_row(G)     :- lx_ghost(G), lint_bodies(G, _).
+lx_zero_row(Rel)    :- lint_bodies(Rel, 0).
+alarm(lx_ghost_unread).
+alarm(lx_ghost_row).
+alarm(lx_zero_row).
+
+-- no section may be empty, which a threshold out of reach would pass in silence
+lw_vacuous(tables)  :- not probably_a_table(_, _).
+lw_vacuous(pairs)   :- not probably_needs_a_name(_, _, _).
+lw_vacuous(long)    :- not probably_hides_a_concept(_, _, _).
+lw_empty(routes)  :- not probably_several_routes(_, _).
+lw_empty(twins)   :- not probably_one_rule_with_an_or(_).
+lw_empty(mirrors) :- not probably_a_pair_or_a_case_table(_, _).
+lw_empty(ranks)   :- not lint_place(_, _).
+alarm(lw_vacuous).
+alarm(lw_empty).
+lw_shrug(T, R) :- shrug[$kernel](T, R, _).
+alarm(lw_shrug).
+
+-- THE PROOF ROWS. `why all` of a table names the five rules that conclude it, as
+-- rule ids, and none that conclude another head (rb321ea6d concludes may_be_node)
+explain_request(why_all, probably_a_table(binds_name, 5)).
+lw_line(L) :- explained[$explain](why_all, probably_a_table(binds_name, 5), _, L).
+lw_named(R) :- lw_line(L), lw_member(R, T), N is str_segs(L, T), N > 1.
+lw_member(r26fda629, "concludes[$kernel](r26fda629,binds_name)"). lw_member(r9823a4a9, "concludes[$kernel](r9823a4a9,binds_name)").
+lw_member(r9b7fafcd, "concludes[$kernel](r9b7fafcd,binds_name)"). lw_member(rbb990dd7, "concludes[$kernel](rbb990dd7,binds_name)").
+lw_member(re397e0d6, "concludes[$kernel](re397e0d6,binds_name)").
+lw_unnamed(R) :- lw_member(R, _), not lw_named(R).
+lw_outside(R) :- lw_line(L), lw_stranger(R, T), N is str_segs(L, T), N > 1.
+lw_stranger(rb321ea6d, "(rb321ea6d,"). lw_stranger(binds_name_twice, "concludes[$kernel](r26fda629,scoped_binder)").
+lw_proof_empty(rows) :- not lw_line(_).
+alarm(lw_unnamed).
+alarm(lw_outside).
+alarm(lw_proof_empty).
+
+-- A count asked per relation, with the relation bound before it, reads 0 for an empty group; the
+-- same count grouped by the relation has no row for it (lx_ghost_row above)
+lx_ghost_zero(G)    :- lx_ghost(G), N is count(R : concludes(R, G)), N < 1.
+lx_ghost_not_zero(G) :- lx_ghost(G), not lx_ghost_zero(G).
+alarm(lx_ghost_not_zero).

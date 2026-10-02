@@ -22,18 +22,25 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const AGG = 'facts/agg.rofl', CHECKS = 'facts/checks.rofl';
 const CENSUS = 'examples/checks/agg-breaks-census.rofl', CENSUS_CHECK = 'examples/checks/agg-breaks-census-check.rofl';
 const PROSE = 'examples/checks/agg-prose-census.rofl', PROSE_CHECK = 'examples/checks/agg-prose-check.rofl';
+const LINTER = 'examples/linter/linter.rofl', FIXTURE = 'examples/linter/corpus-fixture.rofl', LINTER_CHECK = 'examples/checks/agg-linter-demo-check.rofl';
+/** The rows of the prose census a pattern matches, for a mutant that removes every one. */
+const censusRows = (re: RegExp): string[] => fs.readFileSync(path.join(ROOT, PROSE), 'utf8').match(re) ?? [];
 const WORLDS: Record<string, string[]> = {
   rules_agg: [AGG, 'rules/agg.rofl'],
   agg_proofs: [CHECKS, 'facts/findings.rofl', AGG, 'rules/agg.rofl'],
   agg_breaks_census: [CENSUS, CENSUS_CHECK],
   agg_prose: [PROSE, PROSE_CHECK],
+  agg_linter_demo: [...['corpus-boot-heads', 'corpus-dataflow', 'corpus-fixture', 'linter'].map((f) => `examples/linter/${f}.rofl`), LINTER_CHECK],
 };
+// the options the registry declares for a world: its files load together, and `explain_request` is answered
+const OPTS: Record<string, { together?: boolean; explain?: boolean }> = { agg_linter_demo: { together: true, explain: true } };
 type Edit = { file: string; append?: string; replace?: [string, string] };
 type Mutant = { expect: string | null; world: keyof typeof WORLDS; edits: Edit[] };
 const add = (append: string, file = AGG): Edit => ({ file, append });
 const swap = (from: string, to: string): Edit => ({ file: AGG, replace: [from, to] });
 const done = (w: string): Edit => swap(`work_state(${w}, open).`, `work_state(${w}, done).`);
 // a proof world registered for one cell, as the registry would declare it
+const lin = (from: string, to: string, file = LINTER): Edit => ({ file, replace: [from, to] });
 const reg = (k: string, l: string, extra = ''): Edit => add(
   `check_world("agg_t"). check_file("agg_t", "examples/checks/agg-t.rofl"). proves("agg_t", agg, ${k}, ${l}). ${extra}`, CHECKS);
 
@@ -75,19 +82,19 @@ const M: Mutant[] = [
   // for the mutant, closed with a recursion world and no refusal
   { expect: 'strata_without_refusal', world: 'agg_proofs', edits: [reg('order_lattice', 'strata', 'proves_recursion("agg_t", order_lattice).'), add('stratified_form(order_lattice). handled(agg, order_lattice, strata, "agg_t").')] },
   { expect: 'stratified_form_unknown', world: 'rules_agg', edits: [add('stratified_form(nosuch).')] },
-  { expect: 'undecided_not_work', world: 'rules_agg', edits: [add('unknown_because(agg, count, demo, budget_exhausted).')] },
-  { expect: 'undecided_not_work', world: 'rules_agg', edits: [add('unknown_because(agg, join_lattice, retire, out_of_scope).')] },
+  { expect: 'undecided_not_work', world: 'rules_agg', edits: [swap('handled(agg, count, demo, "agg_linter_demo").', ''), add('unknown_because(agg, count, demo, budget_exhausted).')] },
+  { expect: 'undecided_not_work', world: 'rules_agg', edits: [swap('handled(agg, join_lattice, retire, "agg_prose").', ''), add('unknown_because(agg, join_lattice, retire, out_of_scope).')] },
   { expect: 'decision_stale', world: 'rules_agg', edits: [add('decided_not_work(agg, count, syntax, f_x).')] },
-  { expect: 'decision_not_a_finding', world: 'agg_proofs', edits: [add('unknown_because(agg, join_lattice, retire, out_of_scope). decided_not_work(agg, join_lattice, retire, f_nope).')] },
+  { expect: 'decision_not_a_finding', world: 'agg_proofs', edits: [swap('handled(agg, join_lattice, retire, "agg_prose").', ''), add('unknown_because(agg, join_lattice, retire, out_of_scope). decided_not_work(agg, join_lattice, retire, f_nope).')] },
   { expect: 'reason_unclassified', world: 'rules_agg', edits: [add('unknown_type(stuck, ours).')] },
   { expect: 'unqueued', world: 'rules_agg', edits: [add('obligation(newcol).')] },
   // a column opens a cell in every row, so only the owner opens one
   { expect: 'obligation_unauthorised', world: 'rules_agg', edits: [add('obligation(newcol).')] },
-  { expect: 'queue_stale', world: 'rules_agg', edits: [add('claim(queued, agg, cell, none, syntax, w_agg_retire_workarounds).')] },
+  { expect: 'queue_stale', world: 'rules_agg', edits: [add('work(w_agg_mut, "m"). work_state(w_agg_mut, open). claim(queued, agg, cell, none, syntax, w_agg_mut).')] },
   { expect: 'double_owned', world: 'rules_agg', edits: [add('claim(queued, agg, count, none, syntax, w_agg_threshold).')] },
-  { expect: 'false_done', world: 'rules_agg', edits: [done('w_agg_demo_linter')] },
-  { expect: 'false_done', world: 'rules_agg', edits: [done('w_agg_demo_linter'), add('unknown_because(agg, count, demo, budget_exhausted). decided_not_work(agg, count, demo, f_x).')] },
-  { expect: 'false_done', world: 'rules_agg', edits: [done('w_agg_retire_workarounds')] },
+  { expect: 'false_done', world: 'rules_agg', edits: [swap('handled(agg, count, demo, "agg_linter_demo").', '')] },
+  { expect: 'false_done', world: 'rules_agg', edits: [swap('handled(agg, count, demo, "agg_linter_demo").', ''), add('unknown_because(agg, count, demo, budget_exhausted). decided_not_work(agg, count, demo, f_x).')] },
+  { expect: 'false_done', world: 'rules_agg', edits: [swap('handled(agg, join_lattice, incremental_ready, "agg_incr_join").', '')] },
   { expect: 'done_by_assertion', world: 'rules_agg', edits: [swap('work_proof(w_agg_baseline, "agg_rederived_provenance").', '')] },
   { expect: 'work_proof_unbound', world: 'agg_proofs', edits: [{ file: CHECKS, replace: ['proves_work("agg_rederived_provenance", w_agg_session_tests).', ''] }] },
   { expect: 'done_by_assertion', world: 'rules_agg', edits: [swap('work_proof(w_agg_reconcile_docs, "agg_prose").', '')] },
@@ -113,11 +120,52 @@ const M: Mutant[] = [
   // the body form of min closes its strata cell with a refusal and no recursion
   { expect: null, world: 'agg_proofs', edits: [reg('min_max_strat', 'strata', 'proves_refusal("agg_t", min_max_strat).'), add('handled(agg, min_max_strat, strata, "agg_t").')] },
   { expect: null, world: 'agg_proofs', edits: [reg('count', 'syntax', 'proves_work("agg_t", w_x).'), add('handled(agg, count, syntax, "agg_t"). work(w_x, "x"). work_state(w_x, done). work_proof(w_x, "agg_t"). contradiction_site(w_x, "README.md", "x").')] },
-  { expect: null, world: 'agg_proofs', edits: [add('unknown_because(agg, join_lattice, retire, out_of_scope). decided_not_work(agg, join_lattice, retire, f_aggregation_is_one_cell_engine_with_two_syntaxes).')] },
+  { expect: null, world: 'agg_proofs', edits: [swap('handled(agg, join_lattice, retire, "agg_prose").', ''), add('unknown_because(agg, join_lattice, retire, out_of_scope). decided_not_work(agg, join_lattice, retire, f_aggregation_is_one_cell_engine_with_two_syntaxes).')] },
   // the prose of w_agg_reconcile_docs (agg_prose): a claim nothing points past, a census that found nothing
   { expect: 'prose_stale', world: 'agg_prose', edits: [add('prose_claim("LIMITS.md", "a block that says there is no aggregation").', PROSE)] },
   { expect: 'prose_stale', world: 'agg_prose', edits: [{ file: PROSE, replace: ['prose_pointer("START.md", "Incremental maintenance (DRed/counting beyond support counte").', ''] }] },
-  { expect: 'prose_vacuous', world: 'agg_prose', edits: [{ file: PROSE, replace: ['prose_site("LIMITS.md").', ''] }, ...['START.md', 'docs/roadmap.md', 'facts/deviations.rofl', 'facts/spec.rofl', 'rules/worklist.rofl'].map((p): Edit => ({ file: PROSE, replace: [`prose_site("${p}").`, ''] }))] },
+  { expect: 'prose_vacuous', world: 'agg_prose', edits: censusRows(/^prose_site\("[^"]+"\)\./gm).map((r): Edit => ({ file: PROSE, replace: [r, ''] })) },
+  // the retire column (agg_prose): a marker that stands, a kept site that lost its reason, a site no pattern describes, a census with no site
+  { expect: 'retire_stands', world: 'agg_prose', edits: [add('retire_marker(count, "scripts/lint.ts").', PROSE)] },
+  { expect: 'retire_stands', world: 'agg_prose', edits: [{ file: PROSE, replace: ['retire_kept(sum, "examples/slop/slop.rofl").', ''] }] },
+  { expect: 'retire_unsaid', world: 'agg_prose', edits: [{ file: PROSE_CHECK, replace: ['N is count(P : retire_marker(K, P), not retire_kept(K, P))', 'N is count(P : retire_kind(K), retire_marker(K, P), not retire_kept(K, P))'] }, { file: PROSE_CHECK, replace: ['retire_standing(K, N)   :- retire_kind(K), N is', 'retire_standing(K, N)   :- N is'] }] },
+  { expect: 'retire_unmarked', world: 'agg_prose', edits: [{ file: PROSE, replace: ['retire_pattern("examples/wtf/wtf.rofl").', ''] }] },
+  { expect: 'retire_vacuous', world: 'agg_prose', edits: censusRows(/^retire_site\([a-z_]+, "[^"]+"\)\./gm).map((r): Edit => ({ file: PROSE, replace: [r, ''] })) },
+  // the linter as rules (agg_linter_demo): a threshold on each side of the edge, a count of the wrong thing, an empty group read as 0
+  { expect: 'lw_table_missing', world: 'agg_linter_demo', edits: [lin('lint_min(table, 5).', 'lint_min(table, 6).')] },
+  { expect: 'lw_table_extra', world: 'agg_linter_demo', edits: [lin('lint_min(table, 5).', 'lint_min(table, 4).')] },
+  { expect: 'lw_table_extra', world: 'agg_linter_demo', edits: [lin('foreign_head(lint_said). ', '')] },
+  { expect: 'lw_pair_missing', world: 'agg_linter_demo', edits: [lin('lint_min(pair, 5).', 'lint_min(pair, 6).')] },
+  { expect: 'lw_pair_extra', world: 'agg_linter_demo', edits: [lin('lint_min(pair, 5).', 'lint_min(pair, 4).')] },
+  { expect: 'lw_pair_one_sided', world: 'agg_linter_demo', edits: [lin('premise_pos(R, B), A != B).', 'premise_pos(R, B), A != B, B != ast_node).')] },
+  { expect: 'lw_long_missing', world: 'agg_linter_demo', edits: [lin('lint_min(long, 7).', 'lint_min(long, 8).')] },
+  { expect: 'lw_long_extra', world: 'agg_linter_demo', edits: [lin('lint_min(long, 7).', 'lint_min(long, 6).')] },
+  { expect: 'lw_route_missing', world: 'agg_linter_demo', edits: [lin('lint_split(H, _, _), lint_min(table, M)', 'lint_split(H, _, _), lint_min(route, M)')] },
+  { expect: 'lw_route_extra', world: 'agg_linter_demo', edits: [lin('lint_split(H, _, _), lint_min(table, M), lint_bodies(H, N), N >= M, not foreign_head(H).', 'lint_split(H, _, _), lint_bodies(H, N), not foreign_head(H).')] },
+  { expect: 'lw_twin_missing', world: 'agg_linter_demo', edits: [lin('concludes(R1, H), not lint_differs(R1, R2), not lint_differs(R2, R1).', 'concludes(R1, H), lint_differs(R1, R2), not lint_differs(R2, R1).')] },
+  { expect: 'lw_twin_extra', world: 'agg_linter_demo', edits: [lin('concludes(R1, H), not lint_differs(R1, R2), not lint_differs(R2, R1).', 'concludes(R1, H).')] },
+  { expect: 'lw_mirror_missing', world: 'agg_linter_demo', edits: [lin('not foreign_head(H1), not foreign_head(H2).', 'lint_min(nothing, _).')] },
+  { expect: 'lw_mirror_extra', world: 'agg_linter_demo', edits: [lin('not lint_differs_off_heads(R1, R2), not lint_differs_off_heads(R2, R1),', 'lint_mirror_cand(R1, R2),')] },
+  { expect: 'lw_mirror_one_sided', world: 'agg_linter_demo', edits: [lin('not lint_differs_off_heads(R1, R2), not lint_differs_off_heads(R2, R1),', 'not lint_differs_off_heads(R1, R2),')] },
+  { expect: 'lw_tplace_wrong', world: 'agg_linter_demo', edits: [lin('S is 0 - N, P is rank(S, V : probably_a_table(_, K), V is 0 - K).', 'P is rank(N, V : probably_a_table(_, V)).')] },
+  { expect: 'lw_tplace_over', world: 'agg_linter_demo', edits: [lin('S is 0 - N, P is rank(S, V : probably_a_table(_, K), V is 0 - K).', 'P is N.')] },
+  { expect: 'lw_lplace_wrong', world: 'agg_linter_demo', edits: [lin('S is 0 - N, P is rank(S, V : probably_hides_a_concept(_, _, K), V is 0 - K).', 'P is rank(N, V : probably_hides_a_concept(_, _, V)).')] },
+  { expect: 'lw_ways_wrong', world: 'agg_linter_demo', edits: [lin('lint_said(or, Rel)      :- probably_one_rule_with_an_or(Rel).\n', '')] },
+  { expect: 'lw_ways_wrong', world: 'agg_linter_demo', edits: [lin('S is 0 - N, P is rank(S, V : lint_ways(_, K), V is 0 - K).', 'P is rank(N, V : lint_ways(_, V)).')] },
+  { expect: 'lw_vacuous', world: 'agg_linter_demo', edits: [lin('lint_min(table, 5).', 'lint_min(table, 99).')] },
+  { expect: 'lw_empty', world: 'agg_linter_demo', edits: [lin('not foreign_head(H1), not foreign_head(H2).', 'lint_min(nothing, _).')] },
+  { expect: 'lx_bodies_wrong', world: 'agg_linter_demo', edits: [lin('N is count(R : concludes(R, Rel)).', 'N is count(K : has_premise(R, K), concludes(R, Rel)).')] },
+  { expect: 'lx_pair_wrong', world: 'agg_linter_demo', edits: [lin('premise_pos(R, B), A != B).', 'premise_pos(R, B), A != B, has_premise(R, 4)).')] },
+  { expect: 'lx_arity_wrong', world: 'agg_linter_demo', edits: [lin('N is count(K : has_premise(R, K)).', 'N is count(K : has_premise(R, K), K > 1).')] },
+  { expect: 'lx_ghost_row', world: 'agg_linter_demo', edits: [lin('lint_bodies(Rel, N)  :- N is count', 'lint_bodies(Rel, N)  :- premise_pos(_, Rel), N is count')] },
+  { expect: 'lx_zero_row', world: 'agg_linter_demo', edits: [lin('lint_bodies(Rel, N)  :- N is count', 'lint_bodies(Rel, N)  :- premise_pos(_, Rel), N is count')] },
+  { expect: 'lx_ghost_not_zero', world: 'agg_linter_demo', edits: [lin('concludes(R, G)), N < 1.', 'concludes(R, G)), N < 0.', LINTER_CHECK)] },
+  { expect: 'lx_ghost_unread', world: 'agg_linter_demo', edits: [lin('fx_one(X) :- fx_p(X), fx_ghost(X).', 'fx_one(X) :- fx_p(X), fx_q(X).', FIXTURE)] },
+  { expect: 'lw_shrug', world: 'agg_linter_demo', edits: [lin('lint_min(long, 7).', 'lint_min(long, oops).')] },
+  { expect: 'lw_unnamed', world: 'agg_linter_demo', edits: [lin('N is count(R : concludes(R, Rel)).', 'N is count(K : has_premise(R, K), concludes(R, Rel)).')] },
+  { expect: 'lw_proof_empty', world: 'agg_linter_demo', edits: [lin('explained[$explain](why_all,', 'explained[$explain](why_none,', LINTER_CHECK)] },
+  { expect: 'lw_outside', world: 'agg_linter_demo', edits: [lin('lw_stranger(rb321ea6d, "(rb321ea6d,").', 'lw_stranger(r26fda629, "(r26fda629,").', LINTER_CHECK)] },
+  { expect: null, world: 'agg_linter_demo', edits: [] },
   { expect: null, world: 'agg_breaks_census', edits: [] },
   { expect: null, world: 'agg_prose', edits: [] },
 ];
@@ -127,9 +175,9 @@ const fired = (census: Map<string, number>, rel: string): number =>
   (census.get(`${rel}[audit]`) ?? 0) + (census.get(`${rel}[main]`) ?? 0);
 
 /** One mutant or control, its files already written: what it got wrong. */
-export function judge(i: number, expect: string | null, files: string[], alarms: string[]): string[] {
+export function judge(i: number, expect: string | null, files: string[], alarms: string[], opts: { together?: boolean; explain?: boolean } = {}): string[] {
   const bad: string[] = [];
-  const w = { name: `mutant_${i}`, files };
+  const w = { name: `mutant_${i}`, files, ...opts };
   for (const [who, a] of [['ts', answerTS(w)], ['rust', answerRust(w)]] as const) {
     if (!a) continue;
     if (a.dropped.length) { bad.push(`${i} ${who}: refused ${a.dropped.join('; ')}`); continue; }
@@ -153,7 +201,7 @@ if (isMain) {
     }
     process.exit(code);
   }
-  const rules = ['rules/agg.rofl', CENSUS_CHECK, PROSE_CHECK].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const rules = ['rules/agg.rofl', CENSUS_CHECK, PROSE_CHECK, LINTER_CHECK].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   const ALARMS = [...rules.matchAll(/^alarm\(([a-z_]+)\)\./gm)].map((m) => m[1]);
   const covered = new Set(M.map((m) => m.expect).filter((x): x is string => x !== null));
   const uncovered = ALARMS.filter((a) => !covered.has(a));
@@ -179,7 +227,7 @@ if (isMain) {
       return files;
     });
     const self = path.resolve(import.meta.filename);
-    const got = await runPool<string[]>(M.map((m, i) => ({ mod: self, fn: 'judge', args: [i, m.expect, worlds[i], ALARMS] })));
+    const got = await runPool<string[]>(M.map((m, i) => ({ mod: self, fn: 'judge', args: [i, m.expect, worlds[i], ALARMS, OPTS[m.world]] })));
     for (const g of got) bad.push(...g);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

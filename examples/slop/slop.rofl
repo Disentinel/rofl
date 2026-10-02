@@ -150,8 +150,11 @@ val(N, 0)         :- cmp(N, ge, A, B), val(A, X), val(B, Y), X <  Y.
 val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).
 val(N, V) :- pick(N, C, _, E), val(C, 0), val(E, V).
 
--- SUM. v0 has no aggregation (LIMITS.md), so a range is a CHAIN the host
--- lays out and the fold is these two rules. A text cell inside a range
+-- SUM. The kernel has `sum`, but it reads a closed relation, and val, value
+-- and addend are one recursive component (a cell's value is a sum of cells'
+-- values), cyclic in the rules though acyclic in the data: the aggregate is
+-- refused. So a range is a CHAIN the host lays out and the fold is these two
+-- rules. A text cell inside a range
 -- contributes zero, as it does in Excel.
 val(N, V)   :- sum_head(N, I), total(I, V).
 total(I, V) :- sum_last(I, C), addend(C, V).
