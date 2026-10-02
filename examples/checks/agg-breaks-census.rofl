@@ -801,6 +801,10 @@ brk("ts_descent_closes_other"). brk_kind("ts_descent_closes_other", ts).
 brk_expects("ts_descent_closes_other", "agg_narrow_eval").
 brk("ts_descent_fatal"). brk_kind("ts_descent_fatal", ts).
 brk_expects("ts_descent_fatal", "agg_narrow_eval").
+brk("roots_of_cycle_off"). brk_kind("roots_of_cycle_off", switch).
+brk_expects("roots_of_cycle_off", "agg_widen_holes").
+brk("ts_roots_of_cycle_off"). brk_kind("ts_roots_of_cycle_off", ts).
+brk_expects("ts_roots_of_cycle_off", "agg_widen_holes").
 brk("ts_narrow_off"). brk_kind("ts_narrow_off", ts).
 brk_expects("ts_narrow_off", "agg_interval_demo").
 brk_expects("ts_narrow_off", "agg_narrow_eval").
@@ -1597,6 +1601,7 @@ switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stale_rep", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tag_derivations_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").
+switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").

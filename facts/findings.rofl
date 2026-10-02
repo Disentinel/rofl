@@ -9598,3 +9598,12 @@ addressed_by(f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again, "rus
 addressed_by(f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again, "rust/rofl/src/store.rs").
 addressed_by(f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again, "src/aggeval.ts").
 addressed_by(f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again, "rust/rofl/tests/incremental.rs").
+addressed_by(f_a_descending_pass_that_fails_fails_the_run, "rust/rofl/src/engine.rs").
+addressed_by(f_a_descending_pass_that_fails_fails_the_run, "src/aggeval.ts").
+addressed_by(f_a_descending_pass_that_fails_fails_the_run, "examples/checks/agg-widen-holes-check.rofl").
+
+finding(f_a_fault_beyond_the_widened_guard_is_held_by_no_check, defect).
+recorded(f_a_fault_beyond_the_widened_guard_is_held_by_no_check, "2026-10-02").
+demands(f_a_fault_beyond_the_widened_guard_is_held_by_no_check, test).
+finding_note(f_a_fault_beyond_the_widened_guard_is_held_by_no_check,
+  "Left open from f_a_descending_pass_that_fails_fails_the_run, whose first and third halves are closed (a failed descent keeps the widened result, descent_wall, descent_closes_other and descent_fatal; a cycle through an overflowing rule names the fault that began it, roots_of_cycle_off). The second half stands: narrow_gathered sees faults only through lat_pending, and a plain rule's fault reaching a widened recursion after its close is in every probe already a fault hole on the cell, so nothing was widened to narrow; that is a guard and no check of its own. And a thing found writing the repro for the third half: an integer written in a rule of a widened recursion is a widening threshold, so a multiplier written as a literal (`F is E * 250000000000000000`) is a threshold of the cell that feeds it, the widened interval ends there, and `E in I` enumerates 2.5e17 members until the budget wall; the repro keeps the factor in a fact. By design, and not announced to the author of the rule.").

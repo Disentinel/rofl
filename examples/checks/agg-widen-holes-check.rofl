@@ -64,6 +64,18 @@ lattice awh_tq(P, hull I) widen 1.
 awh_tq(head, iv(0, 0)) :- awh_s(a).
 awh_tm(head, E)       :- awh_tq(head, I), E in I.
 awh_tq(head, J)       :- awh_tq(head, I), awh_tm(head, _), J is ivadd(I, 1).
+-- A CYCLE THROUGH AN OVERFLOWING RULE: the cell, its members and the product that
+-- overflows rest on each other, so nothing outside the cycle reached it; its roots
+-- are the fault that began it, never none
+edb(awh_sc).
+awh_sc(250000000000000000).
+lattice awh_cp(P, hull I) widen 1.
+awh_cp(head, iv(0, 0)) :- awh_s(a).
+awh_cp(head, J)       :- awh_cp(head, I), K is ivmeet(I, iv(ninf, 8)), J is ivadd(K, 1).
+awh_cq(E)             :- awh_cp(head, I), E in I, E < 10.
+awh_cs(F)             :- awh_cq(E), awh_sc(M), F is E * M.
+awh_cp(head, iv(0, 0)) :- awh_cs(_).
+awh_rootless(T)       :- shrug[$kernel](T, inherited, from($nil)).
 -- A WIDENED CELL THAT ALSO TAKES A FAULT has no value to enclose: the fault
 -- is its one reason. A contribution off the carrier...
 lattice awh_wo(P, hull I) widen 0.
@@ -87,11 +99,13 @@ awh_want_fault(awh_ni, unbounded_members).
 awh_want_fault(awh_min, arith_overflow).
 awh_want_fault(awh_tm, unbounded_members).
 awh_want_fault(awh_wf, arith_overflow).
+awh_want_fault(awh_cs, arith_overflow).
 awh_unfaulted(Rel, C) :- awh_want_fault(Rel, C), not awh_fault(Rel, C).
 awh_decided()         :- awh_lacks(head).
 awh_decided()         :- awh_n(_).
 alarm(awh_unfaulted).
 alarm(awh_decided).
+alarm(awh_rootless).
 -- expect-row: hole[$kernel]($lattice(awh_w,main,0,$cons(head,$nil)),widening_forced)
 -- expect-row: hole[$kernel]($lattice(awh_o,main,0,$cons(head,$nil)),arith_overflow)
 -- expect-row: awh_w[main](tail,iv(5,5))
@@ -122,3 +136,6 @@ alarm(awh_decided).
 -- expect-row: hole[$kernel]($lattice(awh_wf,main,0,$cons(head,$nil)),arith_overflow)
 -- expect-no-row: hole[$kernel]($lattice(awh_wf,main,0,$cons(head,$nil)),widening_forced)
 -- expect-no-row: awh_wf[main](head,
+-- expect-row: shrug[$kernel]($lattice(awh_cp,main,0,$cons(head,$nil)),inherited,from($cons($rule(
+-- expect-row: shrug[$kernel](awh_cq(3),inherited,from($cons($rule(
+-- expect-no-row: awh_cp[main](head,

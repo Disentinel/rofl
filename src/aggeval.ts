@@ -1594,6 +1594,7 @@ export class AggEval {
     const ncomp = comp.length === 0 ? 0 : Math.max(...comp) + 1;
     const members: number[][] = Array.from({ length: ncomp }, () => []);
     comp.forEach((c, v) => members[c].push(v));
+    const begun = new Set(this.holesNow.filter(([, c]) => c !== 'support_withdrawn').map(([t]) => canonTerm(t)));
     const sets: number[][] = [];
     members.forEach((ms, c) => {
       let roots: number[] = [];
@@ -1602,6 +1603,12 @@ export class AggEval {
       } else {
         for (const m of ms) for (const q of parents[m]) if (comp[q] !== c) roots.push(...sets[comp[q]]);
         roots = [...new Set(roots)].sort((a, b) => a - b);
+        // a cycle nothing outside reached is self-supporting: its roots are the holes that began it (a fault), or failing those every hole it holds
+        if (roots.length === 0) {
+          const holes = ms.filter((m) => nodes[m].k === 'hole');
+          const began = holes.filter((m) => begun.has(canonTerm((nodes[m] as { t: Term }).t)));
+          roots = began.length > 0 ? began : holes;
+        }
       }
       sets.push(roots);
     });

@@ -2804,6 +2804,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "roots_of_cycle_off",
+  "what": "the roots of a cycle nothing outside reached are none, where they are the faults that began it",
+  "expect": {
+   "agg_widen_holes": "awh_rootless"
+  }
+ },
+ {
+  "id": "ts_roots_of_cycle_off",
+  "what": "the TypeScript roots of a cycle nothing outside reached are none",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "        if (roots.length === 0) {\n          const holes",
+    "        if (roots.length === 0 && false) {\n          const holes"
+   ]
+  ],
+  "expect": {
+   "agg_widen_holes": "awh_rootless"
+  }
+ },
+ {
   "id": "ts_narrow_off",
   "what": "the TypeScript engine makes no descending pass",
   "edits": [

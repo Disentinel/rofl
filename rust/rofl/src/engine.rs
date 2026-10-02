@@ -2632,6 +2632,7 @@ impl Eval {
         // parent's roots are known before its children's
         let comp = tarjan(&parents);
         let ncomp = comp.iter().copied().max().map_or(0, |c| c + 1);
+        let begun: HashSet<Term> = self.holes_now.iter().filter(|(_, c)| self.h.name(*c) != "support_withdrawn").map(|(t, _)| *t).collect();
         let mut members: Vec<Vec<usize>> = vec![Vec::new(); ncomp];
         for (v, c) in comp.iter().enumerate() {
             members[*c].push(v);
@@ -2653,6 +2654,13 @@ impl Eval {
                 }
                 roots.sort_unstable();
                 roots.dedup();
+                // a cycle nothing outside reached is self-supporting: its roots are the holes that
+                // began it (a fault), or failing those every hole it holds
+                if roots.is_empty() && brk!("roots_of_cycle_off" => false; true) {
+                    let holes: Vec<usize> = ms.iter().copied().filter(|&m| matches!(nodes[m], Node::Hole(_))).collect();
+                    let began: Vec<usize> = holes.iter().copied().filter(|&m| matches!(&nodes[m], Node::Hole(t) if begun.contains(t))).collect();
+                    roots = if began.is_empty() { holes } else { began };
+                }
             }
             sets.push(roots);
         }
