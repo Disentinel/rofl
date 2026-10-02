@@ -610,13 +610,18 @@ impl IvFn {
 }
 
 /// THE DECLARED WIDENING of an interval (`lattice p(K, hull I) widen N.`):
-/// each end the join moved past the old value's goes to its infinity, the
-/// others stay. Above both `old` and `joined`, and a value widened twice has
-/// no end left to move, so a cell improves at most twice after its widening
-/// starts: the termination argument, whatever its contributions compute.
-pub fn widen_iv(old: (i64, i64), joined: (i64, i64)) -> (i64, i64) {
+/// each end the join moved past the old value's goes to the next of the
+/// thresholds `th` beyond it (the integers the widened relation's recursion
+/// is written with, ascending) or else to its infinity; the others stay.
+/// Above both `old` and `joined`, and an end only ever moves to a further
+/// threshold or its infinity, so a cell improves at most `th.len() + 1`
+/// times per end after its widening starts: the termination argument,
+/// whatever its contributions compute.
+pub fn widen_iv(old: (i64, i64), joined: (i64, i64), th: &[i64]) -> (i64, i64) {
+    let up = |x: i64| th.iter().copied().find(|&t| t >= x).unwrap_or(PINF);
+    let down = |x: i64| th.iter().rev().copied().find(|&t| t <= x).unwrap_or(NINF);
     brk!("widen_both_ends" => (NINF, PINF);
-        (if joined.0 < old.0 { NINF } else { old.0 }, if joined.1 > old.1 { PINF } else { old.1 }))
+        (if joined.0 < old.0 { down(joined.0) } else { old.0 }, if joined.1 > old.1 { up(joined.1) } else { old.1 }))
 }
 
 /// A SEMIRING TAG (docs/aggregates.md, "Tags, as built"): `tag p(K..., alg
@@ -1167,21 +1172,29 @@ mod laws {
                 }
             }
             let j = (a.0.min(b.0), a.1.max(b.1));
-            let w = widen_iv(a, j);
-            assert!(leq(a, w) && leq(j, w), "the widening of {a:?} by {j:?} is above both: {w:?}");
-            assert_eq!(w.0 == a.0, j.0 == a.0, "the low end moves only where the join moved it");
-            assert_eq!(w.1 == a.1, j.1 == a.1, "the high end moves only where the join moved it");
-            // widened on every improvement, whatever comes next
-            let (mut cur, mut changes) = (a, 0);
-            for _ in 0..6 {
-                let c = iv(&mut r);
-                let joined = (cur.0.min(c.0), cur.1.max(c.1));
-                if joined != cur {
-                    cur = widen_iv(cur, joined);
-                    changes += 1;
+            // no thresholds, and a few drawn from the same range
+            let mut th: Vec<i64> = (0..r.next() % 4).map(|_| r.int(30)).collect();
+            th.sort();
+            th.dedup();
+            for th in [&[][..], &th[..]] {
+                let w = widen_iv(a, j, th);
+                assert!(leq(a, w) && leq(j, w), "the widening of {a:?} by {j:?} is above both: {w:?}");
+                assert_eq!(w.0 == a.0, j.0 == a.0, "the low end moves only where the join moved it");
+                assert_eq!(w.1 == a.1, j.1 == a.1, "the high end moves only where the join moved it");
+                assert!(w.0 == a.0 || w.0 == NINF || th.contains(&w.0), "a low end moves to a threshold or its infinity");
+                assert!(w.1 == a.1 || w.1 == PINF || th.contains(&w.1), "a high end moves to a threshold or its infinity");
+                // widened on every improvement, whatever comes next
+                let (mut cur, mut changes) = (a, 0);
+                for _ in 0..12 {
+                    let c = iv(&mut r);
+                    let joined = (cur.0.min(c.0), cur.1.max(c.1));
+                    if joined != cur {
+                        cur = widen_iv(cur, joined, th);
+                        changes += 1;
+                    }
                 }
+                assert!(changes <= 2 * (th.len() + 1), "a widened cell changed {changes} times over {} thresholds", th.len());
             }
-            assert!(changes <= 2, "a widened cell changed {changes} times");
         }
         let big = INT_MAX - 1;
         assert_eq!(IvFn::Add.apply((0, big), (0, 5)), Err(IvFault::Overflow), "past the range is no value");

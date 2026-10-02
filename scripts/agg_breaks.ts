@@ -3721,7 +3721,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/cell.ts",
-    "  return [joined[0] < old[0] ? NINF : old[0], joined[1] > old[1] ? PINF : old[1]];",
+    "  return [joined[0] < old[0] ? down(joined[0]) : old[0], joined[1] > old[1] ? up(joined[1]) : old[1]];",
     "  return [NINF, PINF];"
    ]
   ],

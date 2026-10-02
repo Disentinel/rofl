@@ -650,6 +650,7 @@ export class AggEval {
   private latPending: LatFault[] = [];
   private widen = new Map<string, number>();
   private widenRec = new Set<string>();
+  private widenTh = new Map<string, bigint[]>();
   private latSteps = new Map<string, number>();
   private latWidened = new Map<string, Term[][]>();
   private widenedMarks = new Map<string, [Term, Term[][]]>();
@@ -877,6 +878,7 @@ export class AggEval {
     this.rules = kept;
     this.ruleAt = new Map(kept.map((r, i) => [r.id, i]));
     this.widenRec = this.widenBackEdges();
+    this.widenTh = this.widenThresholds();
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
   }
 
@@ -2913,7 +2915,7 @@ export class AggEval {
     if (!due) return joined;
     const o = ivBounds(old), j = ivBounds(joined);
     if (o === null || j === null) throw new Bug('a value outside the hull carrier reached the join');
-    const w = widenIv(o, j);
+    const w = widenIv(o, j, this.widenTh.get(ck.rel));
     const wt = mkIv(w[0], w[1]);
     if (teq(wt, joined)) return joined;
     const first = !this.latWidened.has(ck.id);
@@ -2925,7 +2927,7 @@ export class AggEval {
   }
 
   /** THE BACK EDGES OF A WIDENING: rules into a widened relation that read its own recursion. */
-  private widenBackEdges(): Set<string> {
+  private relDeps(): Map<string, Set<string>> {
     const deps = new Map<string, Set<string>>();
     for (const r of this.rules) {
       if (r.clause.head.temporal === 'next') continue;
@@ -2933,16 +2935,33 @@ export class AggEval {
       if (!e) { e = new Set(); deps.set(r.clause.head.rel, e); }
       for (const b of r.clause.body) for (const l of litsDeep(b)) e.add(l.rel);
     }
-    const reachesTo = (from: string, to: string): boolean => {
-      const seen = new Set<string>();
-      const stack = [from];
-      while (stack.length > 0) {
-        const x = stack.pop()!;
-        if (x === to) return true;
-        if (!seen.has(x)) { seen.add(x); stack.push(...(deps.get(x) ?? [])); }
-      }
-      return false;
+    return deps;
+  }
+
+  /** THE THRESHOLDS OF A WIDENING: every integer written in a rule of the widened relation's recursion, ascending. */
+  private widenThresholds(): Map<string, bigint[]> {
+    const deps = this.relDeps(), out = new Map<string, bigint[]>();
+    const walk = (t: Term, into: Set<bigint>): void => { if (t.k === 'i') into.add(BigInt(t.v)); else if (t.k === 'f') for (const a of t.args) walk(a, into); };
+    const elem = (b: BodyElem, into: Set<bigint>): void => {
+      if (b.t === 'pos' || b.t === 'neg') for (const a of b.lit.args) walk(a, into);
+      else if (b.t === 'bi') { walk(b.l, into); walk(b.r, into); }
+      else for (const x of b.body) elem(x, into);
     };
+    for (const h of this.widen.keys()) {
+      const ints = new Set<bigint>();
+      for (const r of this.rules) {
+        const g = r.clause.head.rel;
+        if (r.clause.head.temporal === 'next' || !(g === h || (reachesIn(deps, g, h) && reachesIn(deps, h, g)))) continue;
+        for (const b of r.clause.body) elem(b, ints);
+      }
+      out.set(h, [...ints].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+    }
+    return out;
+  }
+
+  private widenBackEdges(): Set<string> {
+    const deps = this.relDeps();
+    const reachesTo = (from: string, to: string): boolean => reachesIn(deps, from, to);
     const out = new Set<string>();
     for (const r of this.rules) {
       const h = r.clause.head.rel;
@@ -5936,7 +5955,7 @@ export class AggEval {
     if (w === undefined) return [];
     const [val, steps] = w;
     const n = marker.k === 'f' && marker.args[0]?.k === 'a' ? this.widen.get(marker.args[0].name) ?? 0 : 0;
-    const out = [`${pad}[widened: after ${n} improvement${n === 1 ? '' : 's'} each end the join moved went to its infinity; the least value lies within ${this.shown(val)}, which is an over-approximation of it]`];
+    const out = [`${pad}[widened: after ${n} improvement${n === 1 ? '' : 's'} each end the join moved went to the next bound its rules write, or to its infinity; the least value lies within ${this.shown(val)}, which is an over-approximation of it]`];
     for (const [old, c, joined, wide] of steps) out.push(`${pad}  ${this.shown(old)} joined with ${this.shown(c)} is ${this.shown(joined)}, widened to ${this.shown(wide)}`);
     return out;
   }
@@ -6739,4 +6758,15 @@ function canonClauseSetsBody(body: BodyElem[]): BodyElem[] {
     if (b.t === 'bi') return { ...b, l: canonSetsT(b.l), r: canonSetsT(b.r) };
     return { ...b, vals: b.vals.map(canonSetsT), keys: b.keys.map(canonSetsT), body: canonClauseSetsBody(b.body) };
   });
+}
+
+/** Whether `to` is reached from `from` over `deps`. */
+function reachesIn(deps: Map<string, Set<string>>, from: string, to: string): boolean {
+  const seen = new Set<string>(), stack = [from];
+  while (stack.length > 0) {
+    const x = stack.pop()!;
+    if (x === to) return true;
+    if (!seen.has(x)) { seen.add(x); stack.push(...(deps.get(x) ?? [])); }
+  }
+  return false;
 }

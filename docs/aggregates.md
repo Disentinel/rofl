@@ -1881,7 +1881,12 @@ operand (`iv(ninf, 9)`); an interval built from variables is named first,
 **Evaluation** (`Eval::widened`, `widen_iv` in rust/rofl/src/cell.rs). A cell
 of a relation declared `widen N` joins its first N improvements in a tick as
 any hull does; from then on each end the join moved past the old value's goes
-to its infinity, the others stay (`[0,2] ⊔ [1,3]` is `[0,inf)`). **Only an
+to the next **threshold** beyond it, or to its infinity when there is none; the
+others stay. The thresholds are the integers written in the rules of the
+widened relation's recursion (its own rules and those of the relations it
+reaches and is reached from), so a loop widens to the bounds it is written
+with: `i < 10` as `ivmeet(I, iv(ninf, 9))` with an exit at `iv(10, inf)`
+settles within `[0,10]` instead of `[0,inf)`. **Only an
 improvement along the recursion counts** (`Eval::widen_back_edges`): one made
 by a rule that reads a relation of the widened relation's own recursion, as
 standard widening applies at a loop's back edges. A contribution from below
@@ -1892,9 +1897,10 @@ entry values arrive one by one is not widened for their number. Every cycle an
 interval function lies on passes a widened relation (below), so an unbounded
 chain of improvements is a chain along a cycle, and it is counted. N is the
 number declared: the engine counts to it with no cap. An end
-widened is infinite for good, so a cell improves at most twice after its
-widening starts: **termination is per cell and does not depend on what its
-rules compute**. A recursion terminates when every new end it can compute
+only ever moves to a further threshold or to its infinity, and the thresholds
+are finitely many, so a cell improves at most one more time per threshold and
+end after its widening starts: **termination is per cell and does not depend
+on what its rules compute**. A recursion terminates when every new end it can compute
 passes a widened head, which is what safety requires of the interval
 functions; a recursion that invents values by membership and plain
 arithmetic (`N in I, M is N + 1`) is no interval step and diverges as any
@@ -1906,9 +1912,11 @@ infinity) is no widening.
 
 **A widened value is an enclosure, and a shrug.** Widening trades the value
 for termination: the cell settles on a value above its least value, and
-nothing the engine knows says by how much (`i < 10` settles on `[0,inf)`
-where the least value is `[0,10]`; `i < 3` with `widen 2` on `[0,inf)` where
-`[0,3]` would itself have settled). The recursion runs on the widened values
+nothing the engine knows says by how much, or whether at all (`i < 10`
+settles on `[0,10]`, which is its least value, yet only the thresholds put it
+there and nothing proves it least; `i < 3` with `widen 2` on `[0,inf)`, its
+only written bound below the value the join reached, where `[0,3]` would
+itself have settled). The recursion runs on the widened values
 until it settles — a post-fixpoint, so each of its cells is above its own
 least value — and at the close of its lattice each widened cell is a hole,
 `hole($lattice(Rel, Book, Tick, Key), widening_forced)`, its value withdrawn
@@ -1923,16 +1931,17 @@ widened, within(iv(Lo, Hi)))`), where an infinite end is an atom and `Lo >=
 with the causes `widening_forced` and `unbounded_members`.
 
 **Witness: Widened.** A widened value is joined by no set of contributions
-(none reaches an infinite end), so it has no Cover. Its witness is the record
+(none reaches the end it was widened to), so it has no Cover. Its witness is the record
 of how it was reached: N, and each widening in order — the value before, the
 contribution, their join, the value widened to — with the enclosure it closed
 on. `why` of the cell, or of anything resting on it, shows it under the root:
 
     aw_loop(head, _) is a shrug: inherited, ...; from([$lattice(aw_loop, main, 0, [head])])
-      root $lattice(aw_loop, main, 0, [head]) is a shrug: widened, ...; within(iv(0, inf))
-        [widened: after 2 improvements each end the join moved went to its infinity; the least
-         value lies within iv(0, inf), which is an over-approximation of it]
-          iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)
+      root $lattice(aw_loop, main, 0, [head]) is a shrug: widened, ...; within(iv(0, 10))
+        [widened: after 2 improvements each end the join moved went to the next bound its rules
+         write, or to its infinity; the least value lies within iv(0, 10), which is an
+         over-approximation of it]
+          iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, 9)
 
 `whynot` of a value of the cell says it has no value, `hole(widening_forced)`,
 and the same record; of a point that read it, the path back to it. A cell of

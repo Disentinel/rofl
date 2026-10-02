@@ -5,25 +5,28 @@
 --
 --   aw_loop head, widen 2: [0,0]; body [0,0] gives [1,1], joined [0,1] (1);
 --     [0,1] gives [1,2], [0,2] (2); [0,2] gives [1,3], [0,3], the third
---     improvement, widened: its high end moved, [0,inf). Body is then the
---     meet with (-inf,9], [0,9], which gives [1,10], within [0,inf): settled.
---     The least value is [0,10]; [0,inf) is an enclosure of it, so the cell
---     is a shrug, `widened`, within(iv(0,inf)); body and exit read it and
---     are shrugs inherited from it; entry, which reads nothing widened, is
---     exactly [0,0].
+--     improvement, widened: its high end moved, to the next bound the
+--     recursion writes (its thresholds are 1, 9 and 10): [0,9]. Body is then
+--     the meet with (-inf,9], [0,9], which gives [1,10], joined [0,10]; the
+--     high end moves again, to the threshold 10, which is the join itself,
+--     so no widening: [0,10] settles. It is the least value, but nothing the
+--     engine knows proves that, so the cell is still a shrug, `widened`,
+--     within(iv(0,10)); body and exit read it and are shrugs inherited from
+--     it; entry, which reads nothing widened, is exactly [0,0].
 --   aw_up, widen 0: [0,0], then [1,1], joined [0,1], widened at once: [0,inf).
 --   aw_walk, widen 1: [0,0]; [1,1] joined [0,1] (1); [1,2] joined [0,2],
 --     widened: [0,inf); [-1,inf) joined [-1,inf), widened: (-inf,inf).
 --   aw_dbl, widen 3: [1,1], [1,2], [1,4], [1,8]; [2,16] joined [1,16] is the
---     fourth, widened: [1,inf); the meet with (-inf,99] doubled is [2,198],
---     within it. The least value is [1,128].
+--     fourth, widened to the threshold 99: [1,99]; the meet with (-inf,99]
+--     doubled is [2,198], joined [1,198], widened again past every
+--     threshold: [1,inf). The least value is [1,128].
 --   aw_tight, widen 2: [0,0], [0,1], [0,2]; [1,3] joined [0,3], the third,
 --     widened: [0,inf), though [0,3] would have settled.
 --   aw_short, widen 5: [0,0], [0,1], [0,2], [0,3], and [1,3] within it:
 --     three improvements, none widened, so [0,3] holds, the least value.
 awe_holds(aw_at, entry, iv(0, 0)).
 awe_holds(aw_short, head, iv(0, 3)).
-awe_widened(aw_loop, head, iv(0, inf)).
+awe_widened(aw_loop, head, iv(0, 10)).
 awe_widened(aw_up, head, iv(0, inf)).
 awe_widened(aw_walk, head, iv(ninf, inf)).
 awe_widened(aw_dbl, head, iv(1, inf)).
@@ -86,7 +89,7 @@ alarm(awe_fn_wrong).
 -- answer` goes quiet over a shrug (f_a_missing_row_check_goes_quiet_over_a_hole)
 -- expect-row: aw_short[main](head,iv(0,3))
 -- expect-row: aw_at[main](entry,iv(0,0))
--- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,10)))
 -- expect-row: shrug[$kernel]($lattice(aw_walk,main,0,$cons(head,$nil)),widened,within(iv(ninf,inf)))
 -- expect-row: shrug[$kernel]($lattice(aw_dbl,main,0,$cons(head,$nil)),widened,within(iv(1,inf)))
 -- expect-row: shrug[$kernel]($lattice(aw_tight,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))

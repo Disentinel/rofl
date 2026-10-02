@@ -20,7 +20,7 @@ awg_zero(P)           :- aw_at(P, I), 0 in I.
 awg_quiet(P)          :- awg_pt(P), not awg_zero(P).
 alarm(awg_nonneg_wrong).
 alarm(awg_one_row).
--- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,inf)))
+-- expect-row: shrug[$kernel]($lattice(aw_loop,main,0,$cons(head,$nil)),widened,within(iv(0,10)))
 -- expect-row: shrug[$kernel](aw_loop(head,$unknown_value),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
 -- expect-row: shrug[$kernel](awg_zero(body),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))
 -- expect-row: shrug[$kernel](awg_quiet(body),inherited,from($cons($lattice(aw_loop,main,0,$cons(head,$nil)),$nil)))

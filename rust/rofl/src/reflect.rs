@@ -95,6 +95,21 @@ impl BodyElem {
             BodyElem::Agg(a) => a.body.iter().flat_map(|b| b.lits_deep()).collect(),
         }
     }
+    /// Every integer written in the element, at any depth.
+    pub fn ints(&self, h: &Heap, out: &mut std::collections::BTreeSet<i64>) {
+        fn walk(h: &Heap, t: Term, out: &mut std::collections::BTreeSet<i64>) {
+            match t.kind() {
+                TermK::Int(n) => { out.insert(n); }
+                TermK::Func(i) => for a in h.fargs(i) { walk(h, *a, out) },
+                _ => {}
+            }
+        }
+        match self {
+            BodyElem::Pos(l) | BodyElem::Neg(l) => for a in &l.args { walk(h, *a, out) },
+            BodyElem::Bi { l, r, .. } => { walk(h, *l, out); walk(h, *r, out) }
+            BodyElem::Agg(a) => for b in &a.body { b.ints(h, out) },
+        }
+    }
     /// The variables of the element, in the order they are written.
     pub fn vars(&self, h: &Heap, out: &mut Vec<Sym>) {
         match self {

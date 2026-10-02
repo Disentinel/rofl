@@ -6,7 +6,7 @@
 //! reproduces here; `Mode::Strata` is the stock path, and it is not decoration
 //! — the kernel's own `safety.rofl` sub-evaluation runs under it.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::cell::{iv_bounds, mk_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
@@ -522,6 +522,8 @@ pub struct Eval {
     /// widening: those concluding into a widened relation from a relation of
     /// its own recursion (`widen_back_edges`).
     widen_rec: HashSet<Sym>,
+    /// the thresholds of each widened relation: the integers its recursion is written with, ascending
+    widen_th: HashMap<Sym, Vec<i64>>,
     lat_steps: HashMap<LatKey, u64>,
     lat_widened: HashMap<LatKey, Vec<[Term; 4]>>,
     /// The hole of each widened cell, with the value it closed on (the
@@ -899,6 +901,7 @@ impl Eval {
             lat_pending: Vec::new(),
             widen: HashMap::new(),
             widen_rec: HashSet::new(),
+            widen_th: HashMap::new(),
             lat_steps: HashMap::new(),
             lat_widened: HashMap::new(),
             widened_marks: HashMap::new(),
@@ -1161,6 +1164,7 @@ impl Eval {
         self.rules = kept.into_iter().map(Rc::new).collect();
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.widen_rec = self.widen_back_edges();
+        self.widen_th = self.widen_thresholds();
         self.demand_rels = demand
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
@@ -4755,7 +4759,7 @@ impl Eval {
         let (Some(o), Some(j)) = (iv_bounds(&self.h, &self.v, old), iv_bounds(&self.h, &self.v, joined)) else {
             return Err(off_carrier(AggOp::Hull));
         };
-        let w = widen_iv(o, j);
+        let w = widen_iv(o, j, self.widen_th.get(&ck.0).map_or(&[][..], |v| &v[..]));
         let wt = mk_iv(&mut self.h, &self.v, w.0, w.1);
         if wt == joined {
             return Ok(joined);
@@ -4777,6 +4781,23 @@ impl Eval {
     /// improvements along it (safety.rofl: every cycle an interval function
     /// lies on passes a widened relation).
     fn widen_back_edges(&self) -> HashSet<Sym> {
+        let deps = self.rel_deps();
+        let reaches = |from: Sym, to: Sym| reaches_in(&deps, from, to);
+        let mut out = HashSet::new();
+        for r in &self.rules {
+            let h = r.clause.head.rel;
+            if r.clause.head.temporal == Temporal::Next || !self.widen.contains_key(&h) {
+                continue;
+            }
+            if r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| reaches(l.rel, h))) {
+                out.insert(r.id);
+            }
+        }
+        out
+    }
+
+    /// What each relation's rules read within a tick (a `@next` head reads nothing now).
+    fn rel_deps(&self) -> HashMap<Sym, HashSet<Sym>> {
         let mut deps: HashMap<Sym, HashSet<Sym>> = HashMap::new();
         for r in &self.rules {
             if r.clause.head.temporal == Temporal::Next {
@@ -4787,27 +4808,29 @@ impl Eval {
                 e.extend(b.lits_deep().iter().map(|l| l.rel));
             }
         }
-        let reaches = |from: Sym, to: Sym| -> bool {
-            let (mut seen, mut stack) = (HashSet::new(), vec![from]);
-            while let Some(x) = stack.pop() {
-                if x == to {
-                    return true;
+        deps
+    }
+
+    /// THE THRESHOLDS OF A WIDENING: every integer written in a rule of the
+    /// widened relation's recursion (its own rules and those of the relations
+    /// it reaches and is reached from), ascending. Finitely many, so widening
+    /// to the next one still terminates; they are where a loop's bounds are
+    /// written, so an enclosure stops at `iv(0, 10)` rather than `iv(0, inf)`.
+    fn widen_thresholds(&self) -> HashMap<Sym, Vec<i64>> {
+        let deps = self.rel_deps();
+        let mut out = HashMap::new();
+        for &h in self.widen.keys() {
+            let mut ints = BTreeSet::new();
+            for r in &self.rules {
+                let g = r.clause.head.rel;
+                if r.clause.head.temporal == Temporal::Next || !(g == h || (reaches_in(&deps, g, h) && reaches_in(&deps, h, g))) {
+                    continue;
                 }
-                if seen.insert(x) {
-                    stack.extend(deps.get(&x).into_iter().flatten().copied());
+                for b in &r.clause.body {
+                    b.ints(&self.h, &mut ints);
                 }
             }
-            false
-        };
-        let mut out = HashSet::new();
-        for r in &self.rules {
-            let h = r.clause.head.rel;
-            if r.clause.head.temporal == Temporal::Next || !self.widen.contains_key(&h) {
-                continue;
-            }
-            if r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| reaches(l.rel, h))) {
-                out.insert(r.id);
-            }
+            out.insert(h, ints.into_iter().collect());
         }
         out
     }
@@ -11624,7 +11647,7 @@ impl Eval {
             _ => 0,
         };
         let mut out = vec![format!(
-            "{pad}[widened: after {n} improvement{} each end the join moved went to its infinity; the least value lies within {}, which is an over-approximation of it]",
+            "{pad}[widened: after {n} improvement{} each end the join moved went to the next bound its rules write, or to its infinity; the least value lies within {}, which is an over-approximation of it]",
             if n == 1 { "" } else { "s" },
             self.shown(*val)
         )];
@@ -12524,4 +12547,18 @@ impl Eval {
             _ => t,
         }
     }
+}
+
+/// Whether `to` is reached from `from` over `deps`.
+fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
+    let (mut seen, mut stack) = (HashSet::new(), vec![from]);
+    while let Some(x) = stack.pop() {
+        if x == to {
+            return true;
+        }
+        if seen.insert(x) {
+            stack.extend(deps.get(&x).into_iter().flatten().copied());
+        }
+    }
+    false
 }

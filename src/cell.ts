@@ -365,8 +365,9 @@ export function ivApply(f: IvFn, a: [bigint, bigint], b: [bigint, bigint]): [big
 }
 
 /** THE DECLARED WIDENING of an interval: each end the join moved goes to its infinity. */
-export function widenIv(old: [bigint, bigint], joined: [bigint, bigint]): [bigint, bigint] {
-  return [joined[0] < old[0] ? NINF : old[0], joined[1] > old[1] ? PINF : old[1]];
+export function widenIv(old: [bigint, bigint], joined: [bigint, bigint], th: bigint[] = []): [bigint, bigint] {
+  const up = (x: bigint) => th.find((t) => t >= x) ?? PINF, down = (x: bigint) => [...th].reverse().find((t) => t <= x) ?? NINF;
+  return [joined[0] < old[0] ? down(joined[0]) : old[0], joined[1] > old[1] ? up(joined[1]) : old[1]];
 }
 
 // ------------------------------------------------------------ semiring tags
