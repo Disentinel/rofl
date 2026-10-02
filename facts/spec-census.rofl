@@ -51,6 +51,10 @@ check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_cens
 check[checks]("rust/rofl/tests/session.rs", "a_bound_ask_finds_exactly_its_fact", test).
 check[checks]("rust/rofl/tests/session.rs", "a_repeated_variable_constrains_and_wildcards_are_columns", test).
 check[checks]("rust/rofl/tests/session.rs", "assert_refuses_a_rule_and_a_variable", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_the_answers_in_flag_order_instead_of_the_state", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_keeps_the_state_without_a_question_and_with_state", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_a_refusal_as_the_answer_and_exits_four", test).
 check[checks]("facts/goldens.rofl", "aka", world).
 check[checks]("facts/goldens.rofl", "atlas-launch", world).
 check[checks]("facts/goldens.rofl", "blam", world).
@@ -161,6 +165,7 @@ test_file[checks]("rust/rofl/tests/cool.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
+test_file[checks]("rust/rofl/tests/why_bins.rs").
 citation_ok[checks](d_veto_belongs_inside).
 citation_ok[checks](l_budget_counts_firings).
 citation_ok[checks](s7_no_clause_objects).

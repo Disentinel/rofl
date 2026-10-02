@@ -62,3 +62,6 @@ command_note("playground", "the JS playground as static files in playground/dist
 
 command_shown("conform", 15).
 command_note("conform", "`-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail").
+
+command_shown("whycheck", 16).
+command_note("whycheck", "`-- [world ...]`   `why`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte, over every world `npm test` loads — 1 939 questions over 97 worlds, 46 s; needs `cargo build --release` in rust/").

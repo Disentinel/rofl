@@ -34,9 +34,14 @@
 //!   {"op":"assert","session":2,"rofl":"p(a)."}
 //!   {"op":"evaluate","session":2}
 //!   {"op":"ask","session":2,"query":"p(X)"}
+//!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
+//!   {"op":"whynot","session":2,"query":"p(b)","depth":6,"nodes":64}
+//!                                                     -> {"holds":false,"text":...}
+//!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"close","session":2}
+use rofl::engine::WhynotBounds;
 use rofl::session::Session;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -184,6 +189,27 @@ impl Server {
                     "vars": a.vars, "rows": a.rows, "keys": keys,
                     "scanned": a.scanned, "probed": a.probed, "micros": a.micros,
                 }))
+            }
+            // The explanation verbs, answering in the reference's own text
+            // (rust/rofl/tests/explain.rs, scripts/whycheck.ts). A `why` of a
+            // fact that does not hold is an error carrying that text, as the
+            // reference's `ok: false` is; a `whynot` of one that holds is not.
+            "why" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("why needs `query`")?.to_string();
+                Ok(json!({ "text": self.get(r)?.why(&q)? }))
+            }
+            "whynot" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("whynot needs `query`")?.to_string();
+                let mut b = WhynotBounds::default();
+                if let Some(d) = r.get("depth").and_then(|v| v.as_u64()) { b.max_depth = d as usize; }
+                if let Some(n) = r.get("nodes").and_then(|v| v.as_u64()) { b.max_nodes = n as usize; }
+                let (holds, text) = self.get(r)?.whynot(&q, &b)?;
+                Ok(json!({ "holds": holds, "text": text }))
+            }
+            "excise" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("excise needs `query`")?.to_string();
+                let (removed, added) = self.get(r)?.excise(&q)?;
+                Ok(json!({ "removed": removed, "added": added }))
             }
             // Written to a path unless the caller insists. See the module note:
             // the whole state is exactly the thing a pipe should not carry.

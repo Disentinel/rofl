@@ -304,3 +304,40 @@ refusals in it is COMPLETE is a decision rather than a measurement, and
 `examples/rofl-release/` records both polarities so that it reads as contested
 instead of being settled by whoever wrote the last line.
 
+### Explanation reaches the binaries
+
+`Session` could explain and no binary asked it to, so a proof still needed the
+TypeScript engine. Since 2026-10-01:
+
+- `rofl-serve`: `{"op":"why","session":S,"query":L}` → `{text}`;
+  `{"op":"whynot",...,"depth"?:N,"nodes"?:N}` → `{holds, text}` (defaults 6
+  and 64, the reference's); `{"op":"excise",...}` → `{removed, added}`. A `why`
+  of a fact that does not hold, and a refused excise, are `ok:false` with the
+  reference's text as the `error`. `RoflSession.why/whynot/excise` in
+  `runtime/port.ts`.
+- `rofl-load --why L --whynot L --excise F` (each repeatable): answers in flag
+  order, each followed by an empty line, instead of the state; `--state` keeps
+  the state, printed first. A refusal is printed as the answer and the exit
+  code is 4.
+
+The gate is `npm run whycheck`: questions drawn from every world `npm test`
+loads (the deepest derivation, a spread of derived facts, the same with the last
+argument changed, undefined atoms where the world is three-valued, one excise),
+put to BOTH binaries and compared with `src/api.ts` — 1 939 questions over 97
+worlds, 0 differing. `rust/rofl/tests/why_bins.rs` holds the contracts.
+
+It found five differences that the sixteen strings in `explain.rs` could not,
+because they need a world bigger than one program to show:
+the query echoed as written in `does not hold; try: whynot …` and in
+`… holds; nothing to demonstrate` (the pinned strings had the key); renaming
+suffixes counting from zero per question (the reference explains on a fresh
+evaluation; the port's counter ran on across questions); a live fact with no
+firing (`derived_by`) marked `[axiom]`, not `[past tick]`; `[undefined]` and
+`unfounded set:` under the well-founded semantics, not ported; and the
+cross-product hold of `planBody`, which the reference gained and `plan_body`
+had not — it orders a witness's premises and `whynot`'s exploration, and
+changes no state (98/98 worlds, and a 343 554-fact JS-model world byte for
+byte). A walled evaluation also left the session dirty, so every question
+re-ran the evaluation (2.4 s each on that world); it is now settled, as the
+reference's is.
+

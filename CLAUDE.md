@@ -23,6 +23,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
     npm run view        -- <dir | file.rofl.md ...>   one HTML page over the files, tabs, colors and links; opens in a browser, nothing to install
     npm run playground  the JS playground as static files in playground/dist: code on one side, a ROFL notebook of invariants over it on the other; `-- --standalone` for any web server
     npm run conform     `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
+    npm run whycheck    `-- [world ...]`   `why`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte, over every world `npm test` loads — 1 939 questions over 97 worlds, 46 s; needs `cargo build --release` in rust/
 
 <!-- END commands -->
 

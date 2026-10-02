@@ -525,6 +525,25 @@ negated anywhere cannot be answered from a part of the corpus.
 - `runtime/port.ts` is the JS-side client; `npm run portcorpus` builds the
   corpus both engines are diffed over, and the oracle is a byte-identical
   `canonicalState()`.
+- **A proof without the TypeScript engine.** `rofl-serve` answers `why`,
+  `whynot` and `excise` over its JSON protocol (`RoflSession.why/whynot/excise`
+  in `runtime/port.ts`), and `rofl-load` answers them on the command line:
+
+  ```sh
+  rust/target/release/rofl-load boot.rofl facts/js-dataflow.rofl rules/js-dataflow.rofl \
+    --why 'flows_to(code, audit)' --whynot 'flows_to(audit, code)'
+  ```
+
+  A question replaces the state dump (`--state` puts it back, first); the
+  answers come in flag order, each followed by an empty line; a `why` of a fact
+  that does not hold, or a refused `excise`, prints its message as the answer
+  and exits 4. `--budget` and `--ticks` apply as they do to the dump. The text
+  is the reference's own, byte for byte: `npm run whycheck` puts 1 939
+  questions over 97 worlds to both binaries and compares each with
+  `src/api.ts`. On the JS model over three kernel files (343 554 facts), a
+  56-line transitive `why` of a `may_be_node[flow]` fact is 3.3–3.6 s and
+  130 MB end to end in `rofl-load`, against 12.4–12.9 s and 740–800 MB for the
+  TypeScript engine; the `why` itself is about 11 ms in either.
 
 The engine is checked with `cargo test` under `rust/`. **It is not in
 `.github/workflows/ci.yml`** — the CI jobs are node and bun only.

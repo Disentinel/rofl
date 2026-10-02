@@ -1836,9 +1836,10 @@ fn rename_lit(h: &mut Heap, l: &mut Lit, n: u64) {
 
 // ------------------------------------------------------------------ planBody
 
-/// `planBody` (src/engine.ts:273). Positive premises and builtins keep the
-/// order they were written in; a negation is held back until every variable it
-/// shares with the rest of the rule is bound.
+/// `planBody` (src/engine.ts:273). Builtins keep the order they were written
+/// in, and so do positive premises except a cross product, held until bound; a
+/// negation is held back until every variable it shares with the rest of the
+/// rule is bound.
 /// `planBody` (src/api.ts). Returns the plan, the index of the first negation
 /// that never became ready, whether the head is ground under the plan, and
 /// WHAT WAS BOUND when it stalled.
@@ -1906,52 +1907,81 @@ pub fn plan_body(h: &Heap, c: &Clause) -> (Vec<BodyElem>, Option<usize>, bool, V
         })
     };
 
+    let pos = |i: usize| -> &Lit {
+        let BodyElem::Pos(l) = &c.body[i] else { unreachable!() };
+        l
+    };
+    let flush = |plan: &mut Vec<BodyElem>, pending: &mut Vec<usize>, bound: &Vec<Sym>| loop {
+        let at = pending.iter().position(|&j| {
+            let BodyElem::Neg(l) = &c.body[j] else { return false };
+            neg_ready(l, j as i64, bound, &seen_in)
+        });
+        let Some(a) = at else { break };
+        plan.push(c.body[pending.remove(a)].clone());
+    };
+    // `planBody`'s one moving positive: a literal sharing no variable with
+    // anything bound before it is a cross product where it stands, and is held
+    // until something binds one of its variables. A negation or a builtin is
+    // the barrier: everything held goes in ahead of it, in written order.
+    let shares = |i: usize, bound: &Vec<Sym>| -> bool {
+        let l = pos(i);
+        let mut vs = Vec::new();
+        for a in &l.args {
+            h.vars_of(*a, &mut vs);
+        }
+        h.vars_of(l.persp, &mut vs);
+        vs.iter().any(|v| bound.contains(v))
+    };
+    let take_pos = |i: usize, plan: &mut Vec<BodyElem>, pending: &mut Vec<usize>, bound: &mut Vec<Sym>| {
+        let l = pos(i);
+        for a in &l.args {
+            bind_all(*a, bound);
+        }
+        bind_all(l.persp, bound);
+        plan.push(c.body[i].clone());
+        flush(plan, pending, bound);
+    };
+
     let mut plan: Vec<BodyElem> = Vec::new();
     let mut pending: Vec<usize> = Vec::new();
+    let mut held: Vec<usize> = Vec::new();
     let is_eq = |op: Sym| h.name(op) == "=";
     let is_is = |op: Sym| h.name(op) == "is";
     for (i, b) in c.body.iter().enumerate() {
-        if let BodyElem::Neg(_) = b {
-            pending.push(i);
-        } else {
-            match b {
-                BodyElem::Pos(l) => {
-                    for a in &l.args {
-                        bind_all(*a, &mut bound);
-                    }
-                    bind_all(l.persp, &mut bound);
-                }
-                BodyElem::Bi { op, l, r } => {
-                    if is_eq(*op) {
-                        if ground_in(*l, &bound) {
-                            bind_all(*r, &mut bound);
-                        } else if ground_in(*r, &bound) {
-                            bind_all(*l, &mut bound);
-                        }
-                    } else if is_is(*op) && ground_in(*r, &bound) {
+        if let BodyElem::Pos(_) = b {
+            if !bound.is_empty() && !shares(i, &bound) {
+                held.push(i);
+                continue;
+            }
+            take_pos(i, &mut plan, &mut pending, &mut bound);
+            while let Some(at) = held.iter().position(|&j| shares(j, &bound)) {
+                take_pos(held.remove(at), &mut plan, &mut pending, &mut bound);
+            }
+            continue;
+        }
+        for j in std::mem::take(&mut held) {
+            take_pos(j, &mut plan, &mut pending, &mut bound);
+        }
+        match b {
+            BodyElem::Neg(_) => pending.push(i),
+            BodyElem::Bi { op, l, r } => {
+                if is_eq(*op) {
+                    if ground_in(*l, &bound) {
+                        bind_all(*r, &mut bound);
+                    } else if ground_in(*r, &bound) {
                         bind_all(*l, &mut bound);
                     }
+                } else if is_is(*op) && ground_in(*r, &bound) {
+                    bind_all(*l, &mut bound);
                 }
-                _ => {}
+                plan.push(b.clone());
             }
-            plan.push(b.clone());
+            BodyElem::Pos(_) => unreachable!(),
         }
-        // flush
-        loop {
-            let at = pending.iter().position(|&j| {
-                let BodyElem::Neg(l) = &c.body[j] else {
-                    return false;
-                };
-                neg_ready(l, j as i64, &bound, &seen_in)
-            });
-            match at {
-                Some(a) => {
-                    plan.push(c.body[pending[a]].clone());
-                    pending.remove(a);
-                }
-                None => break,
-            }
-        }
+        flush(&mut plan, &mut pending, &bound);
+    }
+    for j in held {
+        take_pos(j, &mut plan, &mut pending, &mut bound);
     }
     let head_ground =
         c.head.args.iter().all(|a| ground_in(*a, &bound)) && ground_in(c.head.persp, &bound);
@@ -2489,8 +2519,13 @@ pub struct WhynotBounds {
 
 impl Default for WhynotBounds {
     fn default() -> Self {
-        WhynotBounds { max_depth: 3, max_nodes: 64 }
+        WhynotBounds { max_depth: 6, max_nodes: 64 }
     }
+}
+
+struct UnkCtx {
+    index: HashMap<String, FactId>,
+    hit: HashSet<String>,
 }
 
 struct WnCtx {
@@ -2502,7 +2537,20 @@ struct WnCtx {
 
 impl Eval {
     /// `Rofl.why` (src/api.ts:841): the derivation tree of a fact that holds.
-    pub fn why_text(&mut self, lit: &Lit) -> Result<String, String> {
+    /// `shown` is the question as the caller wrote it; the reference echoes it
+    /// back verbatim in its refusal, so this does too.
+    ///
+    /// The reference explains on a fresh evaluation, so its renaming suffixes
+    /// (`?B#1`) count from zero for every question; so do these, and the
+    /// engine's own counter is put back afterwards.
+    pub fn why_text(&mut self, lit: &Lit, shown: &str) -> Result<String, String> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let r = self.why_at(lit, shown);
+        self.rename_counter = saved;
+        r
+    }
+
+    fn why_at(&mut self, lit: &Lit, shown: &str) -> Result<String, String> {
         let Some(p) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else {
             return Err("why needs a ground literal".into());
         };
@@ -2512,13 +2560,54 @@ impl Eval {
         let mut key = String::new();
         write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
         let Some(id) = self.store.get(lit.rel, p, &lit.args) else {
-            return Err(format!("{key} does not hold; try: whynot {key}"));
+            return Err(format!("{key} does not hold; try: whynot {shown}"));
         };
         let mut seen = HashSet::new();
-        Ok(self.render_why(id, 0, &mut seen))
+        let mut unk = self.unknown_ctx();
+        let tree = self.render_why(id, 0, &mut seen, &mut unk);
+        // A `why` on an undefined atom answers with the tree AND the set the
+        // tree walked: the circular dependency that left it undefined, named.
+        if let Some(u) = unk.filter(|u| lit.rel == self.v.unknown && !u.hit.is_empty()) {
+            let mut hit: Vec<String> = u.hit.into_iter().collect();
+            hit.sort_by(|a, b| cmp_js(a, b));
+            return Ok(format!("{tree}\nunfounded set: {}", hit.join(", ")));
+        }
+        Ok(tree)
     }
 
-    fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>) -> String {
+    /// The `unknown` rows, keyed by the atom each stands for; `None` in every
+    /// two-valued world. `hit` collects the atoms a walk went through.
+    fn unknown_ctx(&mut self) -> Option<UnkCtx> {
+        let rows = self.store.rel_all(&self.h, self.v.unknown);
+        if rows.is_empty() {
+            return None;
+        }
+        let mut index = HashMap::new();
+        for f in rows {
+            if let Some(k) = self.unknown_atom_key(f) {
+                index.insert(k, f);
+            }
+        }
+        Some(UnkCtx { index, hit: HashSet::new() })
+    }
+
+    /// The key of the atom an `unknown` row is about, in the row's own book.
+    fn unknown_atom_key(&self, f: FactId) -> Option<String> {
+        let args = self.store.args(f);
+        if args.len() != 1 {
+            return None;
+        }
+        let (rel, at): (Sym, &[Term]) = match args[0].kind() {
+            TermK::Atom(a) => (a, &[]),
+            TermK::Func(i) => (self.h.fname(i), self.h.fargs(i)),
+            _ => return None,
+        };
+        let mut k = String::new();
+        write_fact_key(&self.h, rel, self.store.rec(f).persp, at, &mut k);
+        Some(k)
+    }
+
+    fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, unk: &mut Option<UnkCtx>) -> String {
         let mut key = String::new();
         let r = self.store.rec(id);
         write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
@@ -2534,12 +2623,12 @@ impl Eval {
             .witness_of(&self.h, id)
             .map(|w| (w.rule, w.tick, w.prems.to_vec()));
         let out = match w {
-            // A LIVE FACT WITH NO FIRING IS ONE OF TWO THINGS, and the store
-            // cannot tell them apart from the witness alone: a base assertion,
-            // or a fact carried across a boundary whose witness table belongs
-            // to a tick that is gone.
+            // A LIVE FACT WITH NO FIRING is an axiom to the reference — a base
+            // assertion, a kernel-emitted row such as `derived_by`, or a fact
+            // carried across a boundary. A premise whose record is dead is
+            // from a tick that is gone.
             None => {
-                let mark = if self.store.alive(id) && self.store.rec(id).base() {
+                let mark = if self.store.alive(id) {
                     "[axiom]"
                 } else {
                     "[past tick]"
@@ -2548,11 +2637,23 @@ impl Eval {
             }
             Some((rule, tick, prems)) => {
                 let mut lines = vec![format!("{pad}{key}  <= {} @tick {tick}", self.h.name(rule))];
+                if unk.is_some() && self.store.rec(id).rel == self.v.unknown {
+                    if let Some(k) = self.unknown_atom_key(id) {
+                        unk.as_mut().unwrap().hit.insert(k);
+                    }
+                }
                 for pr in prems {
                     match pr {
-                        PremRef::Fact(f) => lines.push(self.render_why(f, indent + 1, seen)),
+                        PremRef::Fact(f) => lines.push(self.render_why(f, indent + 1, seen, unk)),
                         PremRef::Neg(k) => {
                             let key = self.h.name(k).to_string();
+                            // `not p` over an undefined p did not fail, it
+                            // never settled: p's own row is the explanation.
+                            if let Some(&u) = unk.as_ref().and_then(|c| c.index.get(&key)) {
+                                lines.push(format!("{}not {key} [undefined]", "  ".repeat(indent + 1)));
+                                lines.push(self.render_why(u, indent + 2, seen, unk));
+                                continue;
+                            }
                             lines.push(format!("{}not {key} [finite failure]", "  ".repeat(indent + 1)));
                             // WHY INLINES THE SINGLE-STEP whynot, because a
                             // negation that held is a claim and `[finite
@@ -2589,12 +2690,18 @@ impl Eval {
     fn neg_demo(&mut self, key: &str) -> Option<String> {
         let lit = self.parse_lit(key).ok()?;
         let b = WhynotBounds { max_depth: 1, max_nodes: 64 };
-        self.whynot_text(&lit, &b).ok().map(|(_, t)| t)
+        self.whynot_at(&lit, &b, key).ok().map(|(_, t)| t)
     }
 
     /// One literal, written as ROFL, lowered to what the evaluator runs.
+    ///
+    /// AT MOST ONE CLOSING DOT, as `parseLiteral` (src/parser.ts:259) takes
+    /// it: one is supplied only when the TOKENS do not already end in one, and
+    /// on a line of its own so a trailing `-- comment` cannot swallow it. So
+    /// `p(a)..` is refused rather than read as `p(a)`.
     pub fn parse_lit(&mut self, query: &str) -> Result<Lit, String> {
-        let src = format!("{}.", query.trim().trim_end_matches('.'));
+        let dotted = matches!(crate::rofl_lex::tokens(query).last(), Some(t) if t.tok == crate::rofl_lex::Tok::Punct("dot"));
+        let src = if dotted { query.to_string() } else { format!("{query}\n.") };
         let cs = crate::rofl_parse::parse(&mut self.h, &src)?;
         if cs.len() != 1 || !cs[0].body.is_empty() {
             return Err("this takes exactly one literal".into());
@@ -2608,7 +2715,14 @@ impl Eval {
     /// `Rofl.whynot` (src/api.ts:927): the demonstration that a literal fails.
     /// Returns `(holds, text)` — a literal that HOLDS is not an error, it is
     /// the answer, and the caller is told so in the same shape.
-    pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds) -> Result<(bool, String), Halt> {
+    pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: &str) -> Result<(bool, String), Halt> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let r = self.whynot_at(lit, b, shown);
+        self.rename_counter = saved;
+        r
+    }
+
+    fn whynot_at(&mut self, lit: &Lit, b: &WhynotBounds, shown: &str) -> Result<(bool, String), Halt> {
         let mut ctx = WnCtx {
             max_depth: b.max_depth.max(1),
             max_nodes: b.max_nodes.max(1),
@@ -2617,9 +2731,7 @@ impl Eval {
         };
         let s = Subst::default();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
-            let mut k = String::new();
-            resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
-            return Ok((true, format!("{k} holds; nothing to demonstrate")));
+            return Ok((true, format!("{shown} holds; nothing to demonstrate")));
         }
         let mut k = String::new();
         resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);

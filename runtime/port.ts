@@ -132,6 +132,26 @@ export class RoflSession {
     return r as unknown as Answer;
   }
 
+  /** `Rofl.why`, in the reference's text. A fact that does not hold rejects
+   *  with the text the reference returns under `ok: false`. */
+  async why(query: string): Promise<string> {
+    const r = await this.port.send({ op: 'why', session: this.id, query });
+    return r.text as string;
+  }
+
+  /** `Rofl.whynot`. A literal that holds is an answer, not a rejection. */
+  async whynot(query: string, opts: { depth?: number; nodes?: number } = {}): Promise<{ holds: boolean; text: string }> {
+    const r = await this.port.send({ op: 'whynot', session: this.id, query, ...opts });
+    return { holds: r.holds as boolean, text: r.text as string };
+  }
+
+  /** `Rofl.excise`: what this base fact holds up, on a fork; this world is
+   *  not touched. */
+  async excise(query: string): Promise<{ removed: string[]; added: string[] }> {
+    const r = await this.port.send({ op: 'excise', session: this.id, query });
+    return { removed: r.removed as string[], added: r.added as string[] };
+  }
+
   /** COOL A VOLUME TO DISK: write its base facts out as ROFL and drop them.
    *
    *  A volume is a KEY PREFIX minted by the scanner — `scanners/js_ast.ts`

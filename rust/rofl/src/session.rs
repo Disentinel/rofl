@@ -210,6 +210,10 @@ impl Session {
                 // written here: a tick that ran out is exactly the one whose
                 // budget a replay must be given.
                 self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
+                // As the reference's run does after either wall: the hole is
+                // the answer, and asking again must not pay for the run again.
+                self.eval.store.dirty = false;
+                self.eval.store.partial_eval = true;
                 return Ok(Evaluated {
                     partial: true,
                     staged: 0,
@@ -747,7 +751,7 @@ impl Session {
     /// it would leave the rule that concluded it still concluding it — the
     /// caller wants `excise` and is told so.
     pub fn retract(&mut self, query: &str) -> Result<(), String> {
-        let (id, key) = self.ground_fact(query)?;
+        let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
@@ -772,12 +776,12 @@ impl Session {
     /// and an instrument that answers it by damaging its subject has only one
     /// use.
     pub fn excise(&mut self, query: &str) -> Result<(Vec<String>, Vec<String>), String> {
-        let (id, key) = self.ground_fact(query)?;
+        let (id, key) = self.ground_fact(query, "excise")?;
         let Some(id) = id else { return Err(format!("{key} is not a base fact")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is not a base fact"));
         }
-        self.evaluate().map_err(|h| describe(&h))?;
+        self.settle()?;
         let before = self.visible();
         let mut scratch = self.fork();
         scratch.retract(query)?;
@@ -811,14 +815,14 @@ impl Session {
 
     /// One ground literal, as the fact it names: the id when the store holds
     /// it, and the key either way so the caller is told WHICH fact was meant.
-    fn ground_fact(&mut self, query: &str) -> Result<(Option<FactId>, String), String> {
+    /// A refusal names the verb, as the reference's does ("excise needs a
+    /// ground fact", src/api.ts:1103).
+    fn ground_fact(&mut self, query: &str, verb: &str) -> Result<(Option<FactId>, String), String> {
         let lit = self.one_lit(query)?;
-        let Some(p) = lit.persp.as_atom() else {
-            return Err("this needs a ground fact".into());
+        let ground = lit.persp.as_atom().is_some() && lit.args.iter().all(|a| self.eval.h.is_ground(*a));
+        let Some(p) = lit.persp.as_atom().filter(|_| ground) else {
+            return Err(format!("{verb} needs a ground fact"));
         };
-        if !lit.args.iter().all(|a| self.eval.h.is_ground(*a)) {
-            return Err("this needs a ground fact".into());
-        }
         let mut key = String::new();
         write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
         Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
@@ -836,28 +840,32 @@ impl Session {
     /// language, as `ask` is: a caller who can write a rule can write a why.
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.one_lit(query)?;
-        self.eval.why_text(&lit)
+        self.settle()?;
+        self.eval.why_text(&lit, query.trim())
     }
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
     /// is the answer, not an error, and says so in the same shape.
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
         let lit = self.one_lit(query)?;
-        self.eval.whynot_text(&lit, b).map_err(|h| describe(&h))
+        self.settle()?;
+        self.eval.whynot_text(&lit, b, query.trim()).map_err(|h| describe(&h))
+    }
+
+    /// `Rofl.ensure`: an explanation is of the settled world, so a world with
+    /// unjudged facts in it is evaluated first.
+    fn settle(&mut self) -> Result<(), String> {
+        if self.eval.store.dirty {
+            self.evaluate().map_err(|h| describe(&h))?;
+        }
+        Ok(())
     }
 
     /// One literal, parsed and lowered. `ask` open-codes the same first three
     /// lines because it goes on to read the columns; these two want the
     /// evaluator's `Lit` and nothing else.
     fn one_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {
-        let src = format!("{}.", query.trim().trim_end_matches('.'));
-        let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
-        if cs.len() != 1 || !cs[0].body.is_empty() {
-            return Err("this takes exactly one literal".into());
-        }
-        let mut c = program::to_clause(&mut self.eval.h, &self.eval.v, &cs[0])?;
-        reflect::resolve_clause_books(&self.eval.v, &mut c);
-        Ok(c.head)
+        self.eval.parse_lit(query)
     }
 
     fn lit_terms(&mut self, l: &rofl_parse::Lit) -> Result<(Sym, Sym, Vec<Term>), String> {

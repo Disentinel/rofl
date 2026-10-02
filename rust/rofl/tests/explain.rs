@@ -67,7 +67,7 @@ fn a_builtin_premise_keeps_its_own_spelling() {
 fn why_refuses_a_fact_that_does_not_hold_and_names_the_other_question() {
     assert_eq!(
         world().why("reaches(c, a)").unwrap_err(),
-        "reaches[main](c,a) does not hold; try: whynot reaches[main](c,a)"
+        "reaches[main](c,a) does not hold; try: whynot reaches(c, a)"
     );
 }
 
@@ -122,12 +122,13 @@ fn whynot_over_a_relation_no_rule_concludes() {
     );
 }
 
-/// A LITERAL THAT HOLDS IS THE ANSWER, NOT AN ERROR.
+/// A LITERAL THAT HOLDS IS THE ANSWER, NOT AN ERROR. The reference echoes
+/// the question as it was written, here and in `why`'s refusal above.
 #[test]
 fn whynot_on_something_that_holds_says_so() {
     let (holds, text) = world().whynot("reaches(a, c)", &WhynotBounds::default()).unwrap();
     assert!(holds);
-    assert_eq!(text, "reaches[main](a,c) holds; nothing to demonstrate");
+    assert_eq!(text, "reaches(a, c) holds; nothing to demonstrate");
 }
 
 // -------------------------------------------------- the counterfactual half
