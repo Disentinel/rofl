@@ -294,8 +294,8 @@ A node
   - unless K [has a known completion](#completion_known).
 - <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
   - it [carries the completion](#completion_outer) of S;
-  - a [function](js-callgraph.rofl.md#fn_node) G [is within](js-structure.rofl.md#ast_within) it;
-  - S [is within](js-structure.rofl.md#ast_within) G.
+  - S [is within](js-structure.rofl.md#ast_within) a [function](js-callgraph.rofl.md#fn_node) G;
+  - G [is within](js-structure.rofl.md#ast_within) it.
 
 In the audit:
 

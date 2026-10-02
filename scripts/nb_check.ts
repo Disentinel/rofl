@@ -3,6 +3,7 @@
 import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as vm from 'node:vm';
 import type { NbLine } from '../notebook/kernel.ts';
 import { check, cli, fake, good, has, is, linked, mutate, NB, planted, put, report, REVIEW, ROOT, smallJs, spinning, spy, tmp, verdict, withCell, withNatural, type Out } from './nb_lib.ts';
 
@@ -134,6 +135,21 @@ const RUNS: Record<string, () => Promise<Out>> = {
   xdirFails: () => cli([xdirRed]),
   cjs: () => cli([path.join(NB, 'cjs.rofl.md')]),
   cjsBlind: () => cli([cjsLost]),
+  external: () => cli([path.join(NB, 'external.rofl.md')]),
+  scoped: () => cli([path.join(NB, 'scoped.rofl.md')]),
+  scopedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'scoped.rofl.md'), '--json', '--all']);
+    const model: Record<string, Set<string>> = {};
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("(\w+)", "\w+", (.+)\)$/.exec(a.literal);
+      if (m) (model[m[1]] ??= new Set()).add(m[2]);
+    }
+    const observed: string[] = [];
+    const record = (v: unknown, stack: string) => observed.push(`${/at (\w+) /.exec(stack.split('\n')[2])?.[1]}:${typeof v === 'string' ? JSON.stringify(v) : String(v)}`);
+    vm.runInNewContext(readFileSync(path.join(NB, 'scoped/assign.js'), 'utf8'), { __seen: record });
+    const missing = [...new Set(observed)].filter((o) => !model[o.slice(0, o.indexOf(':'))]?.has(o.slice(o.indexOf(':') + 1)));
+    return { code: 0, out: `V8 observed ${new Set(observed).size} values over ${Object.keys(model).length} functions the model answers for; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
   climb: () => cli([runaway], { ROFL_NB_LIMIT: '3' }),
   heavy: () => cli([runaway], { ROFL_NB_LIMIT: '100', ROFL_NB_MEMORY: '0.3' }),
   nmWorld: () => cli([misspelt]),
@@ -142,7 +158,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   part: () => cli(['translate', partial], { ROFL_NB_CLAUDE: once, ROFL_NB_MODEL_TIMEOUT: '3' }),
   nothing: () => cli(['translate', none]),
 };
-let review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out;
+let review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, scoped!: Out, scopedV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -183,6 +199,9 @@ test('I1 an untranslated natural cell is named, not dropped', ['nat'], () => is(
 test('xdir: a call reaches across directories, through a barrel and a TypeScript `.js` specifier', ['xdir'], () => is(xdir, 0) && has(xdir, '? handler(F, N)  ->  3 answers') && has(xdir, 'never undispatched(N)  ->  holds') && has(xdir, 'calls [function keys() at xdir/lib/store.ts:3]'), () => xdir);
 test('  and a handler the barrel stops re-exporting is named', ['xdirFails'], () => is(xdirFails, 1) && has(xdirFails, 'never undispatched(N)  ->  FAILS · 1') && has(xdirFails, 'undispatched("handleList")'), () => xdirFails);
 test('cjs: calls and depends cross files through require, module.exports and exports.a', ['cjs'], () => is(cjs, 0) && has(cjs, 'never unreached(N)  ->  holds') && has(cjs, '"cjs/index.js" depends on "cjs/format.js"') && has(cjs, '"cjs/index.js" depends on "cjs/package.json"') && !has(cjs, 'not resolved'), () => cjs);
+test('external: a value from a module outside the corpus is one object, written through one file and read back through another', ['external'], () => is(external, 0) && has(external, 'read_back([http.get() at external/svc/bat/bat_wbm.js:10], 8080)') && has(external, 'never read_back(C, 9090)  ->  holds') && has(external, 'never resolved_external(F)  ->  holds') && has(external, 'never local_made_external(N)  ->  holds') && has(external, '"node:fs" is an external module'), () => external);
+test('scoped: an assignment reaches the readers of its own binding and what no binder owns is a queue', ['scoped'], () => is(scoped, 0) && has(scoped, 'never seen("sibOne", "v", 4)  ->  holds') && has(scoped, 'never seen("shadowing", "shared", 0)  ->  holds') && has(scoped, 'never seen("sum", "t", "b")  ->  holds') && has(scoped, 'seen("bare", "b", 8)') && has(scoped, '? assign_unscoped[flow](A)  ->  2 answers'), () => scoped);
+test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('I3 a relative require that resolves to no file makes a holding never blind, exit 3, and the head names it', ['cjsBlind'], () => is(cjsBlind, 3) && has(cjsBlind, 'note: 1 relative import or require was not resolved') && /cjs\/cart\.js:\d+ "\.\/missing"/.test(cjsBlind.out) && has(cjsBlind, 'never unreached(N)  ->  holds as far as it sees · 1 relative import or require was not resolved'), () => cjsBlind);
 test('I1 every directive line of review is answered', ['reviewJson'], () => (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), () => reviewJson);
 test('I4 a run writes nothing into the file', ['review', 'self', 'nat'], () => before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);
@@ -256,7 +275,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, climb, heavy, nmWorld, out, three, part, nothing } = got);
+({ review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, scoped, scopedV8, climb, heavy, nmWorld, out, three, part, nothing } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

@@ -563,3 +563,48 @@ unknown_because(js, meta_property, import_meta, dataflow, no_source_target).
 -- `new f()`. A call-mode relation would have nothing to be measured against
 -- until a fixture provides one, and that is a different item's fixture.
 unknown_because(js, meta_property, new_target, dataflow, runtime_dependent).
+
+-- EXTERNAL VALUES AND SCOPED ASSIGNMENT, 2026-10-02. Two findings from one
+-- real run (Express across util/http.js and svc/bat/bat_wbm.js).
+--
+-- `r_external_value` (rules/js-dataflow.rofl section 11b): a value the corpus
+-- does not build is still an object with an identity and an origin. It ticks
+-- the kinds that PRODUCE one — a call or `new` of an external value, a member
+-- read of one, the import forms that bind one, the patterns that pull one
+-- apart, and the function handed to an external call, whose parameters it
+-- fills. NOT ticked, and still `runtime_dependent` in facts/js-kinds.rofl:
+-- `import_expression`, because `import(path)` with a computed path names a
+-- module that does not exist until the expression runs; the literal-source
+-- form is read by the same rule and the cell keeps its reason.
+handled(js, call_expression,            dataflow, r_external_value).
+handled(js, optional_call_expression,   dataflow, r_external_value).
+handled(js, new_expression,             dataflow, r_external_value).
+handled(js, member_expression,          dataflow, r_external_value).
+handled(js, optional_member_expression, dataflow, r_external_value).
+handled(js, import_declaration,         dataflow, r_external_value).
+handled(js, import_specifier,           dataflow, r_external_value).
+handled(js, import_default_specifier,   dataflow, r_external_value).
+handled(js, import_namespace_specifier, dataflow, r_external_value).
+handled(js, object_pattern,             dataflow, r_external_value).
+handled(js, rest_element,               dataflow, r_external_value).
+handled(js, function_expression,        dataflow, r_external_value).
+handled(js, arrow_function_expression,  dataflow, r_external_value).
+
+-- `r_assign_scoped` (section 4): `x = v` reaches the readers of the binding
+-- the target names — a declarator in scope, or a parameter — and where no
+-- binding can be found (an implicit global, a function or class name, a catch
+-- parameter) it reaches the unclaimed readers of the name and says so in
+-- `assign_reaches_unscoped`. `r_bare_binder` is what makes `let r; r = v`
+-- decidable: a declarator with no initialiser binds the name and hides an outer
+-- one. A for-in/for-of head is one, and its region is the loop.
+handled(js, assignment_expression, dataflow, r_assign_scoped).
+handled(js, variable_declarator,   dataflow, r_bare_binder).
+
+-- EVIDENCE for r_assign_scoped: examples/notebook/scoped/assign.js is EXECUTED
+-- under V8 (scripts/nb_check.ts, `scopedV8`) and every value observed at a read
+-- is looked up in the model's may-set for it. Every value is covered but one:
+-- the concatenation `t += "b"` is a value the kernel cannot build, and it is
+-- asserted as THE miss, so a second one turns the check red.
+-- r_external_value has no oracle: nothing in the tree executes a corpus that
+-- requires a package, and its cells stay unverified.
+checked(js, assignment_expression, dataflow, r_assign_scoped, o_run_with_values, 1).

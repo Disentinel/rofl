@@ -34,7 +34,7 @@ Reads:
 - from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [module_target](js-modules.rofl.md#module_target)
+- from js-modules, in the code: [module_target](js-modules.rofl.md#module_target), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_source](js-modules.rofl.md#site_source)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -616,8 +616,8 @@ A node
 ## 5c. AN IMPORT EVALUATES A MODULE
 
 > `import './m.js'` runs m's top level, so an import's effect is the target's
-> module effect — a missing EDGE, not a missing surface. The dynamic form is
-> the one kind `module_source` does not carry. Erasure needs both markers:
+> module effect — a missing EDGE, not a missing surface. The dynamic form and
+> `require` are the kinds `module_source` does not carry. Erasure needs both markers:
 > `import type {X}` marks the declaration, `import {type X}` the specifier; a
 > declaration ALL of whose specifiers are erased evaluates nothing and one
 > with NO specifier evaluates everything, hence `eff_has_spec`.
@@ -630,7 +630,11 @@ In the code:
 2. if all of:
    - N is a [dynamic import](#noun-dynamic_import);
    - N is in file F;
-   - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src.
+   - the `source` of N [is written as](js-structure.rofl.md#ast_value) Src;
+3. if all of:
+   - N [is a require site](js-modules.rofl.md#require_site);
+   - [the source text](js-modules.rofl.md#site_source) of N is Src;
+   - N [sits in](js-modules.rofl.md#site_file) F.
 
 A node
 
