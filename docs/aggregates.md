@@ -1827,9 +1827,12 @@ are in "Widening, as built".
 
 ## Widening, as built
 
-w_agg_widening, in the Rust engine; decisions in
+w_agg_widening and w_agg_widening_tail (narrowing), in both engines; decisions in
 f_a_widened_value_is_an_enclosure_and_a_shrug,
-f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take and
+f_a_widening_stops_at_the_bounds_its_loop_is_written_with,
+f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take,
+f_narrowing_is_a_descending_pass_that_holds_the_widened_cells,
+f_a_rule_that_faulted_in_the_descent_leaves_its_recursion_widened and
 f_the_loop_counter_is_answered_by_an_enclosure_not_a_value.
 
 **Why it exists.** A join converges when what is contributed to it is finite
@@ -1916,7 +1919,8 @@ nothing the engine knows says by how much, or whether at all (`i < 10`
 settles on `[0,10]`, which is its least value, yet only the thresholds put it
 there and nothing proves it least; `i < 3` with `widen 2` on `[0,inf)`, its
 only written bound below the value the join reached, where `[0,3]` would
-itself have settled). The recursion runs on the widened values
+itself have settled, and which the descending pass below then brings to
+`[0,3]`: it is still not proved least). The recursion runs on the widened values
 until it settles — a post-fixpoint, so each of its cells is above its own
 least value — and at the close of its lattice each widened cell is a hole,
 `hole($lattice(Rel, Book, Tick, Key), widening_forced)`, its value withdrawn
@@ -1975,15 +1979,85 @@ hull is refused like every lattice, and it reads a well-founded world fed from
 below. A cell widened at a tick is a hole there, and what it staged is not
 known at the next (`earlier(T)`).
 
-**Narrowing is not built** (f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take).
-A narrowing step replaces an infinite end with the join of what the rules
-contribute from the widened values, which is a DESCENT: the cell's value
-shrinks, and every fact derived from the larger value must be withdrawn and
-derived again from the smaller. The fixpoint here only ever grows a value
-within an evaluation; a descent is a second evaluation mode, not a step of
-this one. The enclosure is kept as what it is, and no answer claims more.
+**Narrowing** (`narrow_descend`, `seed_narrowing`, `narrow_gathered`; `narrowDescend` in
+src/aggeval.ts; `narrow_iv`, `narrowIv`). The widening settles each widened
+cell on a post-fixpoint x, above the least value by an amount nothing says. A
+narrowing step replaces an end the widening raised with what the rules
+contribute from x, which is a descent: the cell's value shrinks, and what
+rests on it must be derived again from the smaller. The store never shrinks a
+value (f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take), so the
+descent is not made in it: **the world is evaluated again, with the widened
+cells held.** A descending pass is a run of the whole evaluation, from base
+facts as every run is, in which each widened cell is seeded as a fact at its
+value and takes no contribution: a rule concluding into it joins what it
+concludes into a `fresh` value and folds nothing. Everything else, the plain
+relations of the recursion and its unwidened hulls, is computed from the
+held values alone, the cycles cut at the widened relations, so `fresh` is F(x),
+the join of what the rules contribute from x, base contributions included.
+The pass stops when the lattices of the widened relations come to close,
+every contribution made, and the evaluation is thrown away.
 
-**Proofs.** Eleven cells, thirteen worlds, each red under a planted fault:
+An end the widening **raised** (one a recorded widening step moved past the
+join: an infinity, or a threshold) comes down to `fresh`'s end where that is
+inside it (`narrow_iv`: never below `fresh`, every other end stays). x is a
+post-fixpoint and F monotone, so F(x) is inside x and above the least value,
+and the narrowed x is still above F(x): a post-fixpoint, so still an
+enclosure. The cell stays what it was, a hole `widening_forced` and a shrug
+`widened`, now within(V) with the narrowed V; no value is held, readers
+inherit as before, and the shrug row is what a rule reads. Passes repeat
+until no cell moves, **at most four** (`NARROW_PASSES`, a fixed default and
+not syntax: f_narrowing_is_a_descending_pass_that_holds_the_widened_cells).
+A pass narrows one cell further along a dependency among widened cells, one
+that reads another's range, so a chain of five (agg-narrow-data.rofl,
+`an_chain`) stops with its last two as the widening left them, still
+enclosures; a program that wants more cuts the chain. The loop of the example
+below needs one pass and a second to see that nothing moves.
+
+    i = 0; while (i < N) i = i + 1        N a fact, 7
+
+is `[0,inf)` after the widening, no integer written in its rules reaching it,
+and `[0,7]` after: body is the meet with `(-inf,6]`, [0,6], plus one [1,7],
+joined with the entry [0,0]. The bound as an expression (`i <= N * 2`, [0,15]),
+a widening that landed on a threshold the loop does not stop at (10 where it
+stops at 3, `an_thr`) and the doubling counter of agg-widen-data.rofl ([1,198])
+come down the same way.
+
+**A rule that faulted in the pass leaves its recursion widened.** A rule
+whose premise is `E in [0,inf)` faults on the widened value and contributes
+nothing, what it would have is unknown, so the join of what is left (`an_fault`:
+[0,0]) is below the least value. Every relation of the widened cell's
+recursion that met a fault in the pass is left as the widening closed it; the
+others narrow (f_a_rule_that_faulted_in_the_descent_leaves_its_recursion_widened).
+A wall met in a pass leaves what narrowed so far. The evaluation that follows
+is the first again with the narrowed values handed to the marks: the shrug rows
+are written from the marks and rules read the rows, so patching them after
+would leave readers on the old value; that it closes on the same value is
+checked (`Halt::Bug`). A world with no widened cell makes no pass; one that has
+them makes 1 + P + 1 evaluations of the world, each of the P passes stopping at
+the close of the widened lattices.
+
+**Witness.** The record gains one line per narrowing step after the
+widenings, the value before, the value it came down to and the join of what the
+rules contribute from it that it came down by:
+
+          iv(0, 2) joined with iv(1, 3) is iv(0, 3), widened to iv(0, inf)
+          narrowed iv(0, inf) to iv(0, 7) by iv(0, 7), the join of what its rules contribute from it
+
+and the header's enclosure is the narrowed one. A cell narrowing left alone
+has the widenings and no such line.
+
+**Proofs of narrowing.** `agg_narrow_eval` and `agg_narrow_why`, the work_proof
+worlds of w_agg_widening_tail, over examples/checks/agg-narrow-data.rofl:
+every widened cell closes within the enclosure derived by hand in
+agg-narrow-eval-check.rofl, none lies inside its least value, and the why of a
+narrowed cell, its `whynot` and what rests on it say each step. Each is red
+under a planted fault: `narrow_off`, `narrow_once`, `narrow_more` (the bound),
+`narrow_overshoot` (below the fresh join), `narrow_fresh_first` (not their
+join), `narrow_meta_stale`, `narrow_why_bare`, `narrow_fault_ignored`, and the
+TypeScript `ts_narrow_*` of each; `rust/rofl/src/cell.rs` holds the law that
+`narrow_iv` stays between the value and the fresh join and moves only raised ends.
+
+**Proofs of widening.** Eleven cells, thirteen worlds, each red under a planted fault:
 `agg_widen_syntax`, `_reflect`, `_strata` (`proves_recursion`), `_safety`,
 `_eval`, `_witness`, `_why`, `_wfs`, `_ticks`, `_holes`, `_budget`, `_cut`,
 `_shrug`,
@@ -2011,13 +2085,13 @@ agg_widen_cut's budget (115 steps, boot.rofl's included) falls in a window
 of a few steps between the widening and the settle; a change to boot.rofl's
 cost moves the window, and the world goes red rather than passing vacuously.
 
-**Not built, or not yet.** Narrowing (above). A point that reads a widened
-cell is an inherited shrug and keeps no enclosure of its own, though its
-value at the close is one (a post-fixpoint's every cell is above its least
-value); only the widened cells' rows carry `within(V)`. The widening is
-per relation: a program that wants only its loop heads widened writes them
-as a relation of their own. Thresholds (widening to the next program
-constant rather than to an infinity) are not built.
+**Not built, or not yet.** A point that reads a widened cell is an inherited
+shrug and keeps no enclosure of its own, though its value at the close is
+one (a post-fixpoint's every cell is above its least value); only the widened
+cells' rows carry `within(V)`. The widening is per relation: a program that
+wants only its loop heads widened writes them as a relation of their own.
+Narrowing is bounded at four passes, so a chain of widened cells longer than
+that keeps the widening's enclosure for the tail.
 
 ## Tags, as built
 

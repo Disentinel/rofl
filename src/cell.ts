@@ -370,6 +370,11 @@ export function widenIv(old: [bigint, bigint], joined: [bigint, bigint], th: big
   return [joined[0] < old[0] ? down(joined[0]) : old[0], joined[1] > old[1] ? up(joined[1]) : old[1]];
 }
 
+/** THE NARROWING of a widened interval x by the join `fresh` of what its rules contribute from x: an end the widening raised comes down to the fresh join's end where that is inside it, and every other end stays. Never below `fresh`, so x being a post-fixpoint the result is one too. */
+export function narrowIv(x: [bigint, bigint], fresh: [bigint, bigint], raised: [boolean, boolean]): [bigint, bigint] {
+  return [raised[0] && fresh[0] > x[0] ? fresh[0] : x[0], raised[1] && fresh[1] < x[1] ? fresh[1] : x[1]];
+}
+
 // ------------------------------------------------------------ semiring tags
 
 export type TagAlg = 'tropical' | 'viterbi' | 'trust' | 'counting';

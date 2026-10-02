@@ -470,6 +470,18 @@ handled(agg, widening, holes, "agg_widen_holes").
 handled(agg, widening, holes, "agg_widen_budget").
 handled(agg, widening, shrug, "agg_widen_shrug").
 
+-- NARROWING, the rest of widening (f_narrowing_is_a_descent_the_monotone_fixpoint_cannot_take
+-- said it was a second evaluation mode; f_narrowing_is_a_descending_pass_that_holds_the_widened_cells
+-- builds it). The item owns no cell: it strengthens the widening row's, and
+-- closes by its work_proof worlds.
+work(w_agg_widening_tail, "narrowing: after a widened recursion settles, a bounded descending pass brings the ends the widening raised down to the join of what the rules contribute from the widened values; the cell stays a widened shrug with a tighter within(V) and a witness that says each step, both engines; done only with the work_proof worlds").
+work_state(w_agg_widening_tail, done).
+work_needs(w_agg_widening_tail, w_agg_widening).
+work_proof(w_agg_widening_tail, "agg_narrow_eval").
+work_proof(w_agg_widening_tail, "agg_narrow_why").
+work_spawned(w_agg_widening_tail, f_narrowing_is_a_descending_pass_that_holds_the_widened_cells).
+work_spawned(w_agg_widening_tail, f_a_rule_that_faulted_in_the_descent_leaves_its_recursion_widened).
+
 work(w_agg_tags, "semiring tags move into the kernel: the cell keyed by the whole head, ⊗ through the body; an idempotent ⊕ (boolean, tropical) may recurse, the counting one is stratified and refused inside recursion; the demo is a tagged world equal to the host fold on the same store").
 work_state(w_agg_tags, done).
 work_needs(w_agg_tags, w_agg_order_lattice).

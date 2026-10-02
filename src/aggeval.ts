@@ -25,7 +25,7 @@ import {
 import {
   type AggOp, type Val, type Sorted, type TagAlg, Refused, OffCarrier, IvFailed, TagFailed, opFromName, opClass, isJoin,
   dedupByProjection, opParams, opIdentity, lift, insert, finish, lower, holisticSorted, sortedOf, joinCanon, join,
-  joinLeq, joinCarrierOf, setElems, setContains, ivBounds, mkIv, ivApply, type IvFn, IV_FNS, widenIv, NINF, PINF,
+  joinLeq, joinCarrierOf, setElems, setContains, ivBounds, mkIv, ivApply, type IvFn, IV_FNS, widenIv, narrowIv, NINF, PINF,
   tagFromTimesName, tagTimes, tagIdempotent, quorum, AGG_OPS, AGG_OVERFLOW,
 } from './cell.ts';
 import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.ts';
@@ -59,6 +59,10 @@ export class Rejected extends Error {
 }
 /** A defect of this engine: never an answer. */
 export class Bug extends Error {}
+/** A descending pass has gathered what it came for (`narrowDescend`). */
+export class Narrowed extends Error {}
+/** the most descending passes narrowing makes after a widening */
+const NARROW_PASSES = 4;
 
 const MAX_DEPTH = 512;
 const MAX_ALTERNATIONS = 256;
@@ -654,7 +658,13 @@ export class AggEval {
   private widenTh = new Map<string, bigint[]>();
   private latSteps = new Map<string, number>();
   private latWidened = new Map<string, Term[][]>();
-  private widenedMarks = new Map<string, [Term, Term[][]]>();
+  private widenedMarks = new Map<string, [Term, Term[][], Term[][]]>();
+  /** each widened cell with the value its widening closed on, before any narrowing */
+  private widenedX = new Map<string, [LatKey, Term]>();
+  /** A DESCENDING PASS in progress: the widened cells held at the values given, what the rules contribute from them, and the relations not closed yet. */
+  private narrowing: { frozen: Map<string, Term>; fresh: Map<string, Term>; left: Set<string>; keys: Map<string, LatKey>; faulted: Set<string> } | null = null;
+  /** what narrowing found for the widened cells of this evaluation: the value they closed on, the value narrowed to, and each step (before, the join of what the rules contribute from it, after) */
+  private narrowOut = new Map<string, [Term, Term, Term[][]]>();
   private latUnknown = new Map<string, [Unknown, [Unknown, string] | null]>();
   private latWithdrawn: [string, string[], [string, string] | null][] = [];
   private latSpread = new Set<string>();
@@ -1089,7 +1099,21 @@ export class AggEval {
 
   // ----------------------------------------------------------------- run
 
+  /** An evaluation, and for a world whose widened cells settled, the descending pass that narrows them and the evaluation again with what it found. */
   run(): Outcome {
+    this.narrowOut.clear();
+    let out = this.runPass();
+    if (out.partial || this.wellFounded || this.widenedX.size === 0) return out;
+    this.narrowDescend();
+    out = this.runPass();
+    for (const [id, [x]] of this.narrowOut) {
+      const w = this.widenedX.get(id);
+      if (w === undefined || !teq(w[1], x)) throw new Bug(`the widened cell ${id} closed on another value when evaluated again`);
+    }
+    return out;
+  }
+
+  private runPass(): Outcome {
     this.clearDerived();
     this.shrugReset();
     this.active = [];
@@ -1133,13 +1157,14 @@ export class AggEval {
     this.latHistory.clear(); this.latStale.clear();
     this.citers = this.lattices.size > 0 ? new Map() : null;
     this.latImproved = []; this.latDropped = []; this.latClosed.clear(); this.latPending = [];
-    this.latSteps.clear(); this.latWidened.clear(); this.widenedMarks.clear();
+    this.latSteps.clear(); this.latWidened.clear(); this.widenedMarks.clear(); this.widenedX.clear();
     this.latUnknown.clear(); this.latWithdrawn = []; this.latSpread.clear(); this.latUnknownRel.clear();
     this.latUnknownAt.clear(); this.unknownAt.clear(); this.unknownAny.clear(); this.latUndecided = [];
     this.latPlain.clear();
     this.plainPending = this.carriedUnknowns(this.store.tick);
     this.plainUndecided = []; this.aggOpened.clear(); this.plainClosed.clear();
     this.latticeImprovements = 0;
+    this.seedNarrowing();
     const safeRules = this.rules.filter((r) => r.safe);
     const readers = new Set(this.shrugReaders);
     const compared = new Set([...this.subs].filter(([, x]) => x.reads.length > 0).map(([p]) => p));
@@ -2893,6 +2918,14 @@ export class AggEval {
       return;
     }
     args[n - 1] = c;
+    const nr = this.narrowing;
+    if (nr !== null && nr.frozen.has(ck.id)) {
+      const held = nr.fresh.get(ck.id);
+      let f = c;
+      if (held !== undefined) { try { f = join(op, held, c); } catch { throw new Bug(`a value outside the ${op} carrier reached the join`); } }
+      nr.fresh.set(ck.id, f);
+      return;
+    }
     const crel = this.joinRels.get(rel)!;
     const [fresh, cid] = this.put(crel, persp, args, F_TICK);
     this.recordFiring(cid, rid, rid, prems, out);
@@ -2994,6 +3027,81 @@ export class AggEval {
       if (r.clause.body.some((b) => litsDeep(b).some((l) => reachesTo(l.rel, h)))) out.add(r.id);
     }
     return out;
+  }
+
+  /** THE DESCENDING PASS. The widening settled each widened cell on a post-fixpoint x. Each pass evaluates the world again with those cells held at their values and taking no contribution, so what every rule contributes to them is computed from x alone, and stops when their lattices come to close. An end the widening raised comes down to the join of those contributions where that is inside it, never below it; the others stay. The result is still a post-fixpoint, so still an enclosure of the least value. Passes repeat until nothing moves, at most NARROW_PASSES. */
+  private narrowDescend(): void {
+    type Cell = { ck: LatKey; x: Term; cur: [bigint, bigint]; raised: [boolean, boolean]; steps: Term[][] };
+    const cells: Cell[] = [];
+    for (const [ck, x] of this.widenedX.values()) {
+      const cur = ivBounds(x);
+      if (cur === null) continue;
+      let raised: [boolean, boolean] = [false, false];
+      for (const [, , joined, wide] of this.latWidened.get(ck.id) ?? []) {
+        const j = ivBounds(joined), w = ivBounds(wide);
+        if (j !== null && w !== null) raised = [raised[0] || w[0] !== j[0], raised[1] || w[1] !== j[1]];
+      }
+      cells.push({ ck, x, cur, raised, steps: [] });
+    }
+    for (let pass = 0; pass < NARROW_PASSES; pass++) {
+      const frozen = new Map(cells.map((c): [string, Term] => [c.ck.id, mkIv(c.cur[0], c.cur[1])]));
+      this.narrowing = { frozen, fresh: new Map(), left: new Set(cells.map((c) => c.ck.rel)), keys: new Map(cells.map((c): [string, LatKey] => [c.ck.id, c.ck])), faulted: new Set() };
+      let gathered = false;
+      try { this.runPass(); } catch (e) {
+        if (!(e instanceof Narrowed)) { this.narrowing = null; throw e; }
+        gathered = true;
+      }
+      const got = this.narrowing;
+      this.narrowing = null;
+      // a wall cut the pass: what was narrowed so far stands
+      if (!gathered || got === null) break;
+      let moved = false;
+      for (const c of cells) {
+        const f = got.fresh.get(c.ck.id);
+        if (f === undefined || got.faulted.has(c.ck.rel)) continue;
+        const fresh = ivBounds(f);
+        if (fresh === null) continue;
+        const next = narrowIv(c.cur, fresh, c.raised);
+        if (next[0] !== c.cur[0] || next[1] !== c.cur[1]) {
+          c.steps.push([mkIv(c.cur[0], c.cur[1]), f, mkIv(next[0], next[1])]);
+          c.cur = next;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+    }
+    for (const c of cells) if (c.steps.length > 0) this.narrowOut.set(c.ck.id, [c.x, mkIv(c.cur[0], c.cur[1]), c.steps]);
+  }
+
+  /** The widened cells of a descending pass stand in the store at their values, as the cells of a lattice do, so that the rules read them. */
+  private seedNarrowing(): void {
+    const nr = this.narrowing;
+    if (nr === null) return;
+    const out = newFront();
+    for (const [id, x] of nr.frozen) {
+      const ck = nr.keys.get(id)!;
+      const [, fid] = this.put(ck.rel, ck.persp, [...ck.key, x], F_TICK);
+      this.latCur.set(ck.id, fid);
+      this.latCurKey.set(ck.id, ck);
+      const crel = this.joinRels.get(ck.rel)!;
+      this.recordFiring(fid, crel, crel, [], out);
+    }
+  }
+
+  /** A descending pass has what it came for when every relation it holds a cell of is about to close: the contributions to them are all made. A rule that faulted on the way (`E in I` over a widened `[0,inf)`) contributed nothing, and what it would have is unknown: the cells of every relation in its recursion are left as they were. */
+  private narrowGathered(due: string[]): void {
+    const nr = this.narrowing;
+    if (nr === null) return;
+    for (const p of due) nr.left.delete(p);
+    if (nr.left.size > 0) return;
+    const met = this.latPending.filter((x) => x.reason !== 'widening_forced').map((x) => x.close);
+    if (met.length > 0) {
+      const deps = this.relDeps();
+      for (const p of new Set([...nr.keys.values()].map((k) => k.rel))) {
+        if (met.some((c) => c === p || (reachesIn(deps, c, p) && reachesIn(deps, p, c)))) nr.faulted.add(p);
+      }
+    }
+    throw new Narrowed();
   }
 
   /** One firing of `id` by `rule`, with its step, its row and its `derived_by`. */
@@ -3382,7 +3490,11 @@ export class AggEval {
     this.withdrawHistory(ck);
     this.withdrawContributions(ck);
     const marker = mkf('$lattice', [mka(ck.rel), mka(ck.persp), mki(this.store.tick), list(ck.key)]);
-    if (reason === 'widening_forced' && value !== null) this.widenedMarks.set(canonTerm(marker), [value, this.latWidened.get(ck.id) ?? []]);
+    if (reason === 'widening_forced' && value !== null) {
+      this.widenedX.set(ck.id, [ck, value]);
+      const no = this.narrowOut.get(ck.id);
+      this.widenedMarks.set(canonTerm(marker), [no !== undefined ? no[1] : value, this.latWidened.get(ck.id) ?? [], no !== undefined ? no[2] : []]);
+    }
     const ps = this.subParties.get(ck.id);
     if (ps !== undefined) { this.subParties.delete(ck.id); this.conflictMarks.set(canonTerm(marker), ps); }
     this.cellHole(marker, reason);
@@ -3677,6 +3789,7 @@ export class AggEval {
       return r !== undefined ? r < lv : lv === Infinity;
     }).sort(cmpStr);
     if (due.length === 0) return;
+    this.narrowGathered(due);
     this.subCheck(due);
     this.applyLatticeHoles(due);
     this.joinCovers(due);
@@ -5980,10 +6093,11 @@ export class AggEval {
   private widenedLines(marker: Term, pad: string): string[] {
     const w = this.widenedMarks.get(canonTerm(marker));
     if (w === undefined) return [];
-    const [val, steps] = w;
+    const [val, steps, narrowed] = w;
     const n = marker.k === 'f' && marker.args[0]?.k === 'a' ? this.widen.get(marker.args[0].name) ?? 0 : 0;
     const out = [`${pad}[widened: after ${n} improvement${n === 1 ? '' : 's'} each end the join moved went to the next bound its rules write, or to its infinity; the least value lies within ${this.shown(val)}, which is an over-approximation of it]`];
     for (const [old, c, joined, wide] of steps) out.push(`${pad}  ${this.shown(old)} joined with ${this.shown(c)} is ${this.shown(joined)}, widened to ${this.shown(wide)}`);
+    for (const [before, fresh, after] of narrowed) out.push(`${pad}  narrowed ${this.shown(before)} to ${this.shown(after)} by ${this.shown(fresh)}, the join of what its rules contribute from it`);
     return out;
   }
 

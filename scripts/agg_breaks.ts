@@ -2629,6 +2629,176 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_widen_syntax": "ring1_missing"
   }
+ },
+ {
+  "id": "narrow_off",
+  "what": "no descending pass is made: a widened cell closes on the value the widening left",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong",
+   "agg_narrow_why": "anw_missing",
+   "agg_widen_eval": "awe_unwidened"
+  }
+ },
+ {
+  "id": "narrow_once",
+  "what": "a single descending pass is made, not up to four",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "narrow_more",
+  "what": "five descending passes are made, not four",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "narrow_overshoot",
+  "what": "a narrowed high end comes down one below the join of what the rules contribute",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "narrow_fresh_first",
+  "what": "what the rules contribute to a widened cell from its value is the first contribution, not their join",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "narrow_meta_stale",
+  "what": "a narrowed cell's shrug names the value the widening closed on, not the narrowed one",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "narrow_why_bare",
+  "what": "why and whynot of a narrowed cell show its widenings and not its narrowing",
+  "expect": {
+   "agg_narrow_why": "anw_missing"
+  }
+ },
+ {
+  "id": "narrow_fault_ignored",
+  "what": "a rule that faulted in the descent is no reason to leave its recursion's cells as they were",
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_off",
+  "what": "the TypeScript engine makes no descending pass",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (let pass = 0; pass < NARROW_PASSES; pass++) {",
+    "for (let pass = 0; pass < 0; pass++) {"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_once",
+  "what": "the TypeScript engine makes a single descending pass",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (let pass = 0; pass < NARROW_PASSES; pass++) {",
+    "for (let pass = 0; pass < 1; pass++) {"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_more",
+  "what": "the TypeScript engine makes five descending passes",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const NARROW_PASSES = 4;",
+    "const NARROW_PASSES = 5;"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_overshoot",
+  "what": "the TypeScript engine narrows a high end one below the join of what the rules contribute",
+  "edits": [
+   [
+    "src/cell.ts",
+    "fresh[1] < x[1] ? fresh[1] : x[1]]",
+    "fresh[1] < x[1] ? fresh[1] - 1n : x[1]]"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_fresh_first",
+  "what": "the TypeScript engine takes the first contribution for what the rules contribute to a widened cell",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "nr.fresh.set(ck.id, f);",
+    "nr.fresh.set(ck.id, held ?? f);"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_meta_stale",
+  "what": "the TypeScript engine's narrowed shrug names the value the widening closed on",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "[no !== undefined ? no[1] : value, this.latWidened",
+    "[value, this.latWidened"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
+ },
+ {
+  "id": "ts_narrow_why_bare",
+  "what": "the TypeScript engine's why shows no narrowing step",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const [before, fresh, after] of narrowed) out.push(",
+    "for (const [before, fresh, after] of [] as Term[][]) out.push("
+   ]
+  ],
+  "expect": {
+   "agg_narrow_why": "anw_missing"
+  }
+ },
+ {
+  "id": "ts_narrow_fault_ignored",
+  "what": "the TypeScript engine narrows the cells of a recursion a rule faulted in",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (met.length > 0) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_wrong"
+  }
  }
 ,
  {

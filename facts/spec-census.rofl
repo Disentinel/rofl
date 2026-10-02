@@ -362,6 +362,8 @@ check[checks]("facts/goldens.rofl", "agg_minmax_ticks", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_why", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_witness", world).
+check[checks]("facts/goldens.rofl", "agg_narrow_eval", world).
+check[checks]("facts/goldens.rofl", "agg_narrow_why", world).
 check[checks]("facts/goldens.rofl", "agg_precise_holes", world).
 check[checks]("facts/goldens.rofl", "agg_precise_oracle", world).
 check[checks]("facts/goldens.rofl", "agg_precise_scale", world).

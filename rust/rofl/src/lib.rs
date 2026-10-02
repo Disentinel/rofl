@@ -80,5 +80,6 @@ pub fn describe(e: &Halt) -> String {
         Halt::Budget(r, _) => format!("wall: {r}"),
         Halt::Strat(m, _) => m.clone(),
         Halt::Bug(m) => format!("defect: {m}"),
+        Halt::Narrowed => "defect: a descending pass escaped its evaluation".into(),
     }
 }
