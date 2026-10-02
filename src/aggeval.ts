@@ -1126,13 +1126,22 @@ export class AggEval {
     this.narrowOut.clear();
     let out = this.runPass();
     if (out.partial || this.wellFounded || this.widenedX.size === 0) return out;
-    this.narrowDescend();
-    out = this.runPass();
-    for (const [id, [x]] of this.narrowOut) {
-      const w = this.widenedX.get(id);
-      if (w === undefined || !teq(w[1], x)) throw new Bug(`the widened cell ${id} closed on another value when evaluated again`);
+    // the widened result is an answer, narrowing only a tighter one: a descent that fails or an evaluation that closes a cell on another value leaves the first pass standing
+    try {
+      this.narrowDescend();
+      out = this.runPass();
+      if (out.partial) throw new Wall('budget_exhausted');
+      for (const [id, [x]] of this.narrowOut) {
+        const w = this.widenedX.get(id);
+        if (w === undefined || !teq(w[1], x)) throw new Bug(`the widened cell ${id} closed on another value when evaluated again`);
+      }
+      return out;
+    } catch (e) {
+      if (!(e instanceof Wall || e instanceof Bug || e instanceof Rejected)) throw e;
+      this.narrowing = null;
+      this.narrowOut.clear();
+      return this.runPass();
     }
-    return out;
   }
 
   private runPass(): Outcome {

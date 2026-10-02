@@ -789,6 +789,18 @@ brk("narrow_why_bare"). brk_kind("narrow_why_bare", switch).
 brk_expects("narrow_why_bare", "agg_narrow_why").
 brk("narrow_fault_ignored"). brk_kind("narrow_fault_ignored", switch).
 brk_expects("narrow_fault_ignored", "agg_narrow_eval").
+brk("descent_wall"). brk_kind("descent_wall", switch).
+brk_expects("descent_wall", "agg_narrow_eval").
+brk("descent_closes_other"). brk_kind("descent_closes_other", switch).
+brk_expects("descent_closes_other", "agg_narrow_eval").
+brk("descent_fatal"). brk_kind("descent_fatal", switch).
+brk_expects("descent_fatal", "agg_narrow_eval").
+brk("ts_descent_wall"). brk_kind("ts_descent_wall", ts).
+brk_expects("ts_descent_wall", "agg_narrow_eval").
+brk("ts_descent_closes_other"). brk_kind("ts_descent_closes_other", ts).
+brk_expects("ts_descent_closes_other", "agg_narrow_eval").
+brk("ts_descent_fatal"). brk_kind("ts_descent_fatal", ts).
+brk_expects("ts_descent_fatal", "agg_narrow_eval").
 brk("ts_narrow_off"). brk_kind("ts_narrow_off", ts).
 brk_expects("ts_narrow_off", "agg_interval_demo").
 brk_expects("ts_narrow_off", "agg_narrow_eval").
@@ -1384,6 +1396,9 @@ switch_site("cut_carry_unrenewed", "rust/rofl/src/engine.rs").
 switch_site("cut_fallback_off", "rust/rofl/src/engine.rs").
 switch_site("decl_row_skipped", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
+switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
+switch_site("descent_fatal", "rust/rofl/src/engine.rs").
+switch_site("descent_wall", "rust/rofl/src/engine.rs").
 switch_site("digest_off", "rust/rofl/src/engine.rs").
 switch_site("div_floor", "rust/rofl/src/engine.rs").
 switch_site("dominance_as_rule", "rust/rofl/src/reflect.rs").

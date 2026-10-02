@@ -1775,10 +1775,26 @@ impl Eval {
         if out.partial || self.well_founded || self.widened_x.is_empty() {
             return Ok(out);
         }
+        // THE WIDENED RESULT IS AN ANSWER, narrowing only a tighter one: a descent that fails
+        // or an evaluation that closes a cell on another value leaves the first pass standing
+        match self.run_narrowed() {
+            Ok(out) => Ok(out),
+            Err(_e) => brk!("descent_fatal" => Err(_e); {
+                self.narrowing = None;
+                self.narrow_out.clear();
+                self.run_pass()
+            }),
+        }
+    }
+
+    fn run_narrowed(&mut self) -> Result<Outcome, Halt> {
         self.narrow_descend()?;
         let out = self.run_pass()?;
+        if out.partial {
+            return Err(Halt::Budget("budget_exhausted", None));
+        }
         for (ck, (x, _, _)) in &self.narrow_out {
-            if self.widened_x.get(ck) != Some(x) {
+            if self.widened_x.get(ck) != Some(x) || brk!("descent_closes_other" => true; false) {
                 return Err(Halt::Bug(format!("the widened cell {} closed on another value when evaluated again", self.h.name(ck.0))));
             }
         }
@@ -5030,7 +5046,7 @@ impl Eval {
             raised: (bool, bool),
             steps: Vec<[Term; 3]>,
         }
-        brk!("narrow_off" => return Ok(()); ());
+        brk!("narrow_off" => return Ok(()), "descent_wall" => return Err(Halt::Budget("budget_exhausted", None)), "descent_fatal" => return Err(Halt::Bug("descent".into())); ());
         let mut cells: Vec<Cell> = Vec::new();
         for (ck, &x) in &self.widened_x {
             let Some(cur) = iv_bounds(&self.h, &self.v, x) else { continue };

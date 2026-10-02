@@ -2736,6 +2736,74 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "descent_wall",
+  "what": "a wall in the descending pass, which the first pass did not meet: the widened result stands, un-narrowed",
+  "expect": {
+   "agg_narrow_eval": "ann_extra"
+  }
+ },
+ {
+  "id": "descent_closes_other",
+  "what": "the evaluation after the descent closes a widened cell on another value: the widened result stands, un-narrowed",
+  "expect": {
+   "agg_narrow_eval": "ann_extra"
+  }
+ },
+ {
+  "id": "descent_fatal",
+  "what": "a defect in the descending pass fails the run instead of leaving the widened result",
+  "expect": {
+   "agg_narrow_eval": "does not evaluate"
+  }
+ },
+ {
+  "id": "ts_descent_wall",
+  "what": "a wall in the TypeScript descending pass: the widened result stands, un-narrowed",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      this.narrowDescend();\n      out = this.runPass();",
+    "      throw new Wall('budget_exhausted');\n      out = this.runPass();"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_extra"
+  }
+ },
+ {
+  "id": "ts_descent_closes_other",
+  "what": "the TypeScript evaluation after the descent closes a widened cell on another value: the widened result stands",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "w === undefined || !teq(w[1], x)",
+    "true"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "ann_extra"
+  }
+ },
+ {
+  "id": "ts_descent_fatal",
+  "what": "a defect in the TypeScript descending pass fails the run",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      this.narrowDescend();\n      out = this.runPass();",
+    "      throw new Bug('descent');\n      out = this.runPass();"
+   ],
+   [
+    "src/aggeval.ts",
+    "if (!(e instanceof Wall || e instanceof Bug || e instanceof Rejected)) throw e;",
+    "throw e;"
+   ]
+  ],
+  "expect": {
+   "agg_narrow_eval": "does not evaluate"
+  }
+ },
+ {
   "id": "ts_narrow_off",
   "what": "the TypeScript engine makes no descending pass",
   "edits": [
