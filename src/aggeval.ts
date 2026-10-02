@@ -5584,8 +5584,16 @@ export class AggEval {
 
   // ------------------------------------------------------------- why
 
-  /** `why`: the derivation tree of a fact that holds; `members` of an aggregate's printed. */
+  /** `why`: the derivation tree of a fact that holds; `members` of an aggregate's printed. EVERY QUESTION RENAMES
+   *  FROM ZERO, as src/api.ts explains a plain program on a fresh evaluation: the `#N` suffixes do not depend on
+   *  what was asked before or what the evaluation renamed, and the counter is put back. */
   whyText(lit: Lit, members = WHY_MEMBERS): string {
+    const saved = this.renameCounter;
+    this.renameCounter = 0;
+    try { return this.whyAt(lit, members); } finally { this.renameCounter = saved; }
+  }
+
+  private whyAt(lit: Lit, members: number): string {
     const p = walk(lit.persp, new Map());
     if (p.k !== 'a' || !lit.args.every(isGround)) throw new Error('why needs a ground literal');
     const key = factKey(lit.rel, p.name, lit.args);
@@ -5841,7 +5849,7 @@ export class AggEval {
   private negDemo(key: string): string | null {
     let lit: Lit;
     try { lit = this.parseLit(key); } catch { return null; }
-    try { return this.whynotText(lit, { maxDepth: 1, maxNodes: 64 })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
+    try { return this.whynotAt(lit, { maxDepth: 1, maxNodes: 64 })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
   }
 
   /** One literal, written as ROFL, lowered to what the evaluator runs. */
@@ -5935,8 +5943,14 @@ export class AggEval {
 
   // ----------------------------------------------------------- whynot
 
-  /** `whynot`: the demonstration that a literal fails; `[holds, text]`. */
+  /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
   whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }): [boolean, string] {
+    const saved = this.renameCounter;
+    this.renameCounter = 0;
+    try { return this.whynotAt(lit, b); } finally { this.renameCounter = saved; }
+  }
+
+  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }): [boolean, string] {
     const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set() };
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);

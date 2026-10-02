@@ -88,7 +88,7 @@ export interface World {
 /** A declared world as it is loaded: each `.rofl.md` file read into rules, and under `sentences` each file headed
  *  so written as sentences and read back (scripts/sentences.ts). Done where the world is answered, so a fault
  *  planted in the reader or the renderer reaches it. */
-const placed = (w: World): World => ({ ...w, files: w.files.map((f) => materialize(f, !!w.sentences)) });
+export const placed = (w: World): World => ({ ...w, files: w.files.map((f) => materialize(f, !!w.sentences)) });
 
 /** Every world buildable from `.rofl` text alone. A demo whose world is
  *  assembled in TypeScript is not here — the check must be reachable from the
@@ -356,7 +356,7 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
 const belowArgs = (files: string[]): string[] => belowFiles(files).flatMap((f) => ['--below', f]);
 
 /** The first line of a refusal fixture: `-- expect-refusal: <substring>`. */
-function expectedRefusal(f: string): string | null {
+export function expectedRefusal(f: string): string | null {
   const first = fs.readFileSync(f, 'utf8').split('\n', 1)[0];
   const m = /^-- expect-refusal: (.+)$/.exec(first);
   return m ? m[1].trim() : null;
@@ -367,8 +367,11 @@ function expectedRefusal(f: string): string | null {
  *  it fed, and refused at the door (`load`) or by the evaluation (`eval`);
  *  every other file goes into the world, whose files all load before it is
  *  evaluated once, then ticked, explained, and read. */
-function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
-  const w = placed(w0);
+/** The steps of a together world in the TypeScript engine, as rofl-load
+ *  takes them: a fresh engine under the world's walls with boot loaded, the
+ *  world below fed, and the evaluation (ticked and explained as declared),
+ *  with its exit class for a refusal. */
+function together(w: World, Engine: typeof Rofl) {
   const budget = w.budget ?? 200_000_000;
   const fresh = (): Rofl => {
     const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), ...(w.space ? { space: w.space } : {}),
@@ -401,6 +404,28 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
     } catch (e) { return { cls: 'eval', msg: (e as Error).message }; }
     return null;
   };
+  return { fresh, feed, run };
+}
+
+/** A together world's files, which `answerTSTogether` has already told from
+ *  the fixtures it refuses, built into one world: the engine, and why it did
+ *  not evaluate if it did not. scripts/whycheck.ts asks its questions of it. */
+export function togetherWorld(w: World, keep: string[], Engine: typeof Rofl = Rofl): { r: Rofl; failed: string | null } {
+  const { fresh, feed, run } = together(w, Engine);
+  const r = fresh();
+  let failed: string | null = null;
+  for (const f of keep) {
+    const res = r.load(fs.readFileSync(f, 'utf8'), { defer: true });
+    if (!res.ok) { failed = `${f} refused: ${res.diagnostics.join(' / ')}`; break; }
+  }
+  if (failed === null) failed = feed(r, keep);
+  if (failed === null) { const e = run(r, !!w.explain); if (e) failed = e.msg; }
+  return { r, failed };
+}
+
+function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
+  const w = placed(w0);
+  const { fresh, feed, run } = together(w, Engine);
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
   for (const f of w.files) {
     const want = expectedRefusal(f), unread = unreadOf(f);
@@ -428,14 +453,7 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
     if (!want) problems.push(`${base} refused: ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
     else if (!msg.includes(want)) problems.push(`${base} refused, but not for '${want}': ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
   }
-  const r = fresh();
-  let failed: string | null = null;
-  for (const f of keep) {
-    const res = r.load(fs.readFileSync(f, 'utf8'), { defer: true });
-    if (!res.ok) { failed = `${f} refused: ${res.diagnostics.join(' / ')}`; break; }
-  }
-  if (failed === null) failed = feed(r, keep);
-  if (failed === null) { const e = run(r, !!w.explain); if (e) failed = e.msg; }
+  const { r, failed } = togetherWorld(w, keep, Engine);
   if (failed !== null) problems.push(`the world does not evaluate: ${failed.trim().split('\n').slice(0, 3).join(' / ')}`);
   const state = r.store.canonicalState();
   if (!w.budget && !w.space && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');

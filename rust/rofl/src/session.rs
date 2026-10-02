@@ -41,8 +41,7 @@
 use std::collections::HashMap;
 
 use crate::describe;
-use crate::engine::{Eval, Halt, Mode, TickOutcome, WhyOpts, WhynotBounds};
-use crate::program;
+use crate::engine::{Eval, Halt, Mode, TickOutcome, WhyOpts, WhynotBounds, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{write_fact_key, FactId, Store, F_BASE, F_TICK};
@@ -311,6 +310,10 @@ impl Session {
                 // written here: a tick that ran out is exactly the one whose
                 // budget a replay must be given.
                 self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
+                // as the reference's run does after either wall: the hole is
+                // the answer, and asking again must not pay for the run again
+                self.eval.store.dirty = false;
+                self.eval.store.partial_eval = true;
                 return Ok(Evaluated {
                     partial: true,
                     staged: 0,
@@ -880,7 +883,7 @@ impl Session {
     /// it would leave the rule that concluded it still concluding it — the
     /// caller wants `excise` and is told so.
     pub fn retract(&mut self, query: &str) -> Result<(), String> {
-        let (id, key) = self.ground_fact(query)?;
+        let (id, key) = self.ground_fact(query, "retract")?;
         let Some(id) = id else { return Err(format!("no such fact: {key}")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is derived; retract its supports instead"));
@@ -905,12 +908,12 @@ impl Session {
     /// and an instrument that answers it by damaging its subject has only one
     /// use.
     pub fn excise(&mut self, query: &str) -> Result<(Vec<String>, Vec<String>), String> {
-        let (id, key) = self.ground_fact(query)?;
+        let (id, key) = self.ground_fact(query, "excise")?;
         let Some(id) = id else { return Err(format!("{key} is not a base fact")) };
         if !self.eval.store.rec(id).base() {
             return Err(format!("{key} is not a base fact"));
         }
-        self.evaluate().map_err(|h| describe(&h))?;
+        self.settle()?;
         let before = self.visible();
         let mut scratch = self.fork();
         scratch.retract(query)?;
@@ -944,14 +947,12 @@ impl Session {
 
     /// One ground literal, as the fact it names: the id when the store holds
     /// it, and the key either way so the caller is told WHICH fact was meant.
-    fn ground_fact(&mut self, query: &str) -> Result<(Option<FactId>, String), String> {
+    /// A refusal names the verb, as the reference's does ("excise needs a
+    /// ground fact", src/api.ts).
+    fn ground_fact(&mut self, query: &str, verb: &str) -> Result<(Option<FactId>, String), String> {
         let lit = self.one_lit(query)?;
-        let Some(p) = lit.persp.as_atom() else {
-            return Err("this needs a ground fact".into());
-        };
-        if !lit.args.iter().all(|a| self.eval.h.is_ground(*a)) {
-            return Err("this needs a ground fact".into());
-        }
+        // the ground check is `why`'s; only the refusal names this verb
+        let p = self.eval.why_ground(&lit).map_err(|_| format!("{verb} needs a ground fact"))?;
         let mut key = String::new();
         write_fact_key(&self.eval.h, lit.rel, p, &lit.args, &mut key);
         Ok((self.eval.store.get(lit.rel, p, &lit.args), key))
@@ -969,14 +970,18 @@ impl Session {
     /// language, as `ask` is: a caller who can write a rule can write a why.
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.one_lit(query)?;
-        self.eval.why_text(&lit)
+        self.ground_lit(&lit)?;
+        self.settle()?;
+        self.eval.why_text(&lit, Some(query))
     }
 
     /// `why`, with every member of every aggregate cell it passes through,
     /// where `why` prints a digest of the first `WHY_MEMBERS`.
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
         let lit = self.one_lit(query)?;
-        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() })
+        self.ground_lit(&lit)?;
+        self.settle()?;
+        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
     }
 
     /// THE EXPLAIN BRIDGE, and why it exists: `why` and `whynot` are host
@@ -991,6 +996,23 @@ impl Session {
     /// tick-scoped; the caller evaluates again so rules can read them.
     /// Returns how many requests were answered.
     pub fn explain_requests(&mut self) -> Result<usize, String> {
+        // a plain program is evaluated again by the aggregate evaluator, whose
+        // planner and explanations the reference answers these with
+        if self.eval.plain {
+            self.eval.agg_forced = true;
+            self.eval.reprepare();
+            self.eval.store.dirty = true;
+            let r = self.eval.ensure();
+            let r = r.map_err(|h| describe(&h)).and_then(|_| self.answer_explain_requests());
+            self.eval.agg_forced = false;
+            self.eval.reprepare();
+            self.eval.store.dirty = true;
+            return r;
+        }
+        self.answer_explain_requests()
+    }
+
+    fn answer_explain_requests(&mut self) -> Result<usize, String> {
         let (req, main) = (self.eval.v.explain_request, self.eval.v.main);
         let mut asks: Vec<(String, Term, Term)> = Vec::new();
         for f in self.eval.store.rel_persp(&self.eval.h, req, main) {
@@ -1017,10 +1039,10 @@ impl Session {
                 _ => Err("an explain request names an atom: rel(args...)".to_string()),
             };
             let text = lit.and_then(|l| match kind.as_atom() {
-                Some(k) if k == why => self.eval.why_text(&l),
-                Some(k) if k == why_all => brk!("why_all_digest" => self.eval.why_text(&l);
-                    self.eval.why_text_with(&l, &WhyOpts { members: usize::MAX, query: String::new() })),
-                Some(k) if k == whynot => self.eval.whynot_text(&l, &WhynotBounds::default()).map(|(_, t)| t).map_err(|h| describe(&h)),
+                Some(k) if k == why => self.eval.why_text(&l, None),
+                Some(k) if k == why_all => brk!("why_all_digest" => self.eval.why_text(&l, None);
+                    self.eval.why_text_with(&l, &WhyOpts { members: usize::MAX, query: String::new() }, None)),
+                Some(k) if k == whynot => self.eval.whynot_text(&l, &EXPLAIN_WHYNOT_BOUNDS, None).map(|(_, t)| t).map_err(|h| describe(&h)),
                 _ => Err("the kinds of explanation are why, why_all and whynot".to_string()),
             });
             match text {
@@ -1043,24 +1065,48 @@ impl Session {
 
     /// `Rofl.whynot` (src/api.ts:927). `(holds, text)` — a literal that HOLDS
     /// is the answer, not an error, and says so in the same shape.
+    ///
+    /// THE WORLD IS SETTLED BEFORE THE QUESTION IS PARSED, in the reference's
+    /// order (`ensure`, then `asked`), so a world that halts says so before a
+    /// malformed question is refused — in both engines.
+    ///
+    /// A WALL MET WHILE DEMONSTRATING IS THE ANSWER: `holds: false` with the
+    /// wall named (`wall: budget_exhausted`), as both of the reference's
+    /// whynots give it (src/api.ts `whynot`, `describeHalt`) — a demand that
+    /// unfolds without end has no demonstration, and saying which wall stopped
+    /// it is the demonstration there is. The aggregate path answers every halt
+    /// so; the plain one answers a wall and refuses the rest, as its evaluator
+    /// throws them.
     pub fn whynot(&mut self, query: &str, b: &WhynotBounds) -> Result<(bool, String), String> {
+        self.settle()?;
         let lit = self.one_lit(query)?;
-        self.eval.whynot_text(&lit, b).map_err(|h| describe(&h))
+        match self.eval.whynot_text(&lit, b, Some(query.trim())) {
+            Ok(r) => Ok(r),
+            Err(h @ Halt::Budget(..)) => Ok((false, describe(&h))),
+            Err(h) if !self.eval.plain => Ok((false, describe(&h))),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// A `why` is of a ground literal, and is told so before the world is
+    /// evaluated for it (src/api.ts `why` checks before `ensure`). The check
+    /// is `Eval::why_ground`'s, the one `why_text` makes again on its own.
+    fn ground_lit(&self, lit: &reflect::Lit) -> Result<(), String> {
+        self.eval.why_ground(lit).map(|_| ())
+    }
+
+    /// `Rofl.ensure`: an explanation is of the settled world, so a world with
+    /// unjudged facts in it is evaluated first, and a settled one is not
+    /// evaluated again.
+    fn settle(&mut self) -> Result<(), String> {
+        self.eval.ensure().map(|_| ()).map_err(|h| describe(&h))
     }
 
     /// One literal, parsed and lowered. `ask` open-codes the same first three
     /// lines because it goes on to read the columns; these two want the
     /// evaluator's `Lit` and nothing else.
     fn one_lit(&mut self, query: &str) -> Result<reflect::Lit, String> {
-        let src = format!("{}.", query.trim().trim_end_matches('.'));
-        let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
-        if cs.len() != 1 || !cs[0].body.is_empty() {
-            return Err("this takes exactly one literal".into());
-        }
-        let mut c = program::to_clause(&mut self.eval.h, &self.eval.v, &cs[0])?;
-        program::check_query_sets(&self.eval.h, &self.eval.v, &c.head.args)?;
-        reflect::resolve_clause_books(&self.eval.v, &mut c);
-        Ok(c.head)
+        self.eval.parse_lit(query)
     }
 
     fn lit_terms(&mut self, l: &rofl_parse::Lit) -> Result<(Sym, Sym, Vec<Term>), String> {

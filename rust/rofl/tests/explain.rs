@@ -67,7 +67,7 @@ fn a_builtin_premise_keeps_its_own_spelling() {
 fn why_refuses_a_fact_that_does_not_hold_and_names_the_other_question() {
     assert_eq!(
         world().why("reaches(c, a)").unwrap_err(),
-        "reaches[main](c,a) does not hold; try: whynot reaches[main](c,a)"
+        "reaches[main](c,a) does not hold; try: whynot reaches(c, a)"
     );
 }
 
@@ -122,12 +122,13 @@ fn whynot_over_a_relation_no_rule_concludes() {
     );
 }
 
-/// A LITERAL THAT HOLDS IS THE ANSWER, NOT AN ERROR.
+/// A LITERAL THAT HOLDS IS THE ANSWER, NOT AN ERROR. The reference echoes
+/// the question as it was written, here and in `why`'s refusal above.
 #[test]
 fn whynot_on_something_that_holds_says_so() {
     let (holds, text) = world().whynot("reaches(a, c)", &WhynotBounds::default()).unwrap();
     assert!(holds);
-    assert_eq!(text, "reaches[main](a,c) holds; nothing to demonstrate");
+    assert_eq!(text, "reaches(a, c) holds; nothing to demonstrate");
 }
 
 // -------------------------------------------------- the counterfactual half
@@ -506,4 +507,207 @@ fn a_derivation_thousands_deep_is_explained_to_its_bottom() {
     let (holds, whynot) = s.whynot(&format!("w({n})"), &WhynotBounds { max_depth: n + 10, max_nodes: 10 * n }).unwrap();
     assert!(!holds);
     assert_eq!((whynot.len(), whynot.lines().count()), (36_585_121, 6021));
+}
+
+// ------------------------------------------- the reference's fresh evaluation
+
+/// THE ANSWER DOES NOT DEPEND ON WHAT WAS ASKED BEFORE IT. The reference
+/// explains on a fresh evaluation, so its renaming suffixes count from zero
+/// for every question; a counter that ran on across questions matched only
+/// the first `whynot` of a session.
+#[test]
+fn a_second_whynot_renames_as_the_first_did() {
+    let want = "whynot reaches[main](c,a):\n  \
+        rule r7a090e48: reaches[main](?A,?B)@now :- calls[main](?A,?B)@now\n    \
+          failed premise: calls[main](c,a)\n      \
+            no rule concludes 'calls' and no matching base fact exists\n  \
+        rule rb0ab574d: reaches[main](?A,?C)@now :- reaches[main](?A,?B)@now, calls[main](?B,?C)@now\n    \
+          failed premise: reaches[main](c,?B#1)\n      \
+            rule r7a090e48: reaches[main](?A,?B)@now :- calls[main](?A,?B)@now\n        \
+              failed premise: calls[main](c,?B#1)\n          \
+                no rule concludes 'calls' and no matching base fact exists\n      \
+            rule rb0ab574d: reaches[main](?A,?C)@now :- reaches[main](?A,?B)@now, calls[main](?B,?C)@now\n        \
+              failed premise: reaches[main](c,?B#3)\n          \
+                reaches[main](c,?B#3) [cycle]";
+    let mut s = world();
+    for _ in 0..2 {
+        assert_eq!(s.whynot("reaches(c, a)", &WhynotBounds::default()).unwrap().1, want);
+    }
+}
+
+/// THE CROSS-PRODUCT HOLD (src/engine.ts planBody): `down(Y)` shares no
+/// variable with what `calls(X, B)` bound, so it waits until the end, and the
+/// witness cites its premises in the order the evaluator solved them.
+#[test]
+fn a_cross_product_premise_is_solved_last_and_cited_last() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(&format!("{W}far(X, Y) :- calls(X, B), down(Y), calls(B, Z).\n"), None).expect("load");
+    assert_eq!(
+        s.why("far(a, c)").unwrap(),
+        "far[main](a,c)  <= r6b33dfaa @tick 0\n  \
+           calls[main](a,b) [axiom]\n  \
+           calls[main](b,c) [axiom]\n  \
+           down[main](c) [axiom]"
+    );
+}
+
+/// A FACT THE STORE HOLDS WITH NO FIRING is an axiom to the reference — a
+/// kernel-emitted `derived_by` row as much as a base assertion.
+#[test]
+fn a_kernel_emitted_premise_is_an_axiom() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(&format!("{W}fired(R) :- derived_by[$kernel](F, R, T).\n"), None).expect("load");
+    assert_eq!(
+        s.why("fired(r7a090e48)").unwrap(),
+        "fired[main](r7a090e48)  <= r0d05c2b5 @tick 0\n  \
+           derived_by[$kernel]($fact(reaches,main,$cons(a,$cons(b,$nil))),r7a090e48,0) [axiom]"
+    );
+}
+
+/// UNDER THE WELL-FOUNDED SEMANTICS a negation over an undefined atom did not
+/// fail, it never settled: `why` walks into the atom's own row, and a `why`
+/// of an undefined atom names the set it rests on.
+#[test]
+fn an_undefined_premise_is_walked_and_its_unfounded_set_named() {
+    let mut s = Session::fresh(1_000_000);
+    s.load("semantics(well_founded).\nmove(a, b).\nmove(b, a).\nmove(b, c).\nmove(d, d).\n\
+            win(X) :- move(X, Y), not win(Y).\nstuck(X) :- move(X, _), not win(X).\n", None).expect("load");
+    assert_eq!(
+        s.why("unknown[main](stuck(d))").unwrap(),
+        "unknown[main](stuck(d))  <= rb7e2fb0b @tick 0\n  \
+           move[main](d,d) [axiom]\n  \
+           not win[main](d) [undefined]\n    \
+             unknown[main](win(d))  <= rc5bf35ca @tick 0\n      \
+               move[main](d,d) [axiom]\n      \
+               not win[main](d) [undefined]\n        \
+                 unknown[main](win(d)) [cycle]\n\
+         unfounded set: stuck[main](d), win[main](d)"
+    );
+}
+
+/// A row put in behind the session's back: a world that is evaluated again
+/// derives from it, a settled one does not.
+fn plant(s: &mut Session) {
+    let (calls, main) = (s.eval.h.intern("calls"), s.eval.v.main);
+    let (c, d) = (s.eval.h.atom("c"), s.eval.h.atom("d"));
+    s.eval.store.add(&s.eval.h, calls, main, &[c, d], rofl::store::F_BASE);
+}
+
+/// AN EXPLANATION IS OF THE SETTLED WORLD: a question asked of a world with
+/// unjudged facts evaluates it first, and asking again does not evaluate it
+/// again.
+#[test]
+fn a_question_settles_the_world_once() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(W, None).expect("load");
+    assert!(s.eval.store.dirty);
+    assert!(s.why("reaches(a, c)").is_ok());
+    assert!(!s.eval.store.dirty);
+    plant(&mut s);
+    s.whynot("reaches(a, d)", &WhynotBounds::default()).unwrap();
+    assert!(s.why("reaches(a, d)").is_err(), "a settled world is not evaluated again");
+}
+
+/// A WORLD CUT BY A WALL IS SETTLED TOO: the hole is the answer, and a
+/// question after it does not pay for the run again.
+#[test]
+fn a_walled_world_is_not_evaluated_again_for_a_question() {
+    let mut s = Session::fresh(1_000_000);
+    s.eval.space = 3;
+    s.load(W, None).expect("load");
+    assert!(s.evaluate().expect("evaluate").partial);
+    assert!(!s.eval.store.dirty && s.eval.store.partial_eval);
+    plant(&mut s);
+    let _ = s.whynot("calls(c, d)", &WhynotBounds::default());
+    let _ = s.why("calls(a, b)");
+    assert!(!s.eval.store.dirty && s.eval.store.partial_eval, "still the walled evaluation");
+    assert!(s.fact_keys(Some("reaches")).iter().all(|k| !k.contains(",d)")));
+}
+
+/// A REFUSAL NAMES ITS VERB, in the reference's words.
+#[test]
+fn excise_and_retract_refuse_a_literal_that_is_not_ground_by_name() {
+    let mut s = world();
+    for q in ["reaches(X, c)", "path(_, _)", "calls[P](a, b)"] {
+        assert_eq!(s.excise(q).unwrap_err(), "excise needs a ground fact", "{q}");
+        assert_eq!(s.retract(q).unwrap_err(), "retract needs a ground fact", "{q}");
+    }
+}
+
+/// NO QUESTION IS ANSWERED ABOUT A DIFFERENT FACT: an integer past the range
+/// and a character outside the alphabet are refused, not read as `p(0)` or
+/// `p()`.
+#[test]
+fn a_question_the_parser_cannot_read_exactly_is_refused() {
+    let mut s = Session::fresh(1_000_000);
+    s.load("p(0).\n", None).expect("load");
+    for q in ["p(9999999999999999999999)", "p(18446744073709551616)", "pä(ü)", "p(0)..", "p(0). p(0)."] {
+        assert!(s.why(q).is_err(), "why {q}");
+        assert!(s.whynot(q, &WhynotBounds::default()).is_err(), "whynot {q}");
+        assert!(s.excise(q).is_err(), "excise {q}");
+    }
+    assert_eq!(s.why("p(0) -- a comment").unwrap(), "p[main](0) [axiom]");
+}
+
+/// THE BOUNDS AS THE REFERENCE TAKES THEM: absent is the default, below 1 is 1.
+#[test]
+fn whynot_bounds_clamp_as_the_reference_does() {
+    let b = WhynotBounds::clamped(None, None);
+    assert_eq!((b.max_depth, b.max_nodes), (6, 64));
+    let b = WhynotBounds::clamped(Some(-3), Some(0));
+    assert_eq!((b.max_depth, b.max_nodes), (1, 1));
+    let b = WhynotBounds::clamped(Some(2), Some(7));
+    assert_eq!((b.max_depth, b.max_nodes), (2, 7));
+}
+
+/// A WALL MET WHILE DEMONSTRATING IS THE ANSWER: `up` unfolds by demand
+/// without end, so `whynot r(a)` has no demonstration, and both of the
+/// reference's whynots answer `holds: false` naming the wall (src/api.ts
+/// `whynot`, `describeHalt`) — the aggregate one always did, the plain one
+/// since its evaluator's `budget exhausted` stopped escaping as a throw.
+#[test]
+fn a_whynot_that_meets_a_wall_answers_with_the_wall() {
+    const DEMAND: &str = "up(X) :- Y is X + 1, up(Y).\nq(a).\nq(b).\nr(X) :- q(X), up(1).\ns(X) :- q(X).\n";
+    for extra in ["", "nq(N) :- N is count(X : s(X)).\n"] {
+        let mut s = Session::fresh(200_000_000);
+        s.load(&format!("{DEMAND}{extra}"), None).expect("load");
+        assert_eq!(s.eval.plain, extra.is_empty());
+        assert_eq!(
+            s.whynot("r(a)", &WhynotBounds::default()),
+            Ok((false, "wall: budget_exhausted".to_string())),
+            "plain: {}",
+            extra.is_empty()
+        );
+    }
+}
+
+/// A PLAIN WORLD'S REFUSAL ECHOES THE QUESTION EXACTLY AS TYPED, padding and
+/// all (src/api.ts `try: whynot ${text}`); `whynot`'s holds line is the one
+/// the reference trims.
+#[test]
+fn a_refusal_echoes_the_question_untrimmed() {
+    let mut s = world();
+    assert_eq!(
+        s.why(" reaches(c, a)").unwrap_err(),
+        "reaches[main](c,a) does not hold; try: whynot  reaches(c, a)"
+    );
+    assert_eq!(
+        s.why_all("reaches(c, a) ").unwrap_err(),
+        "reaches[main](c,a) does not hold; try: whynot reaches(c, a) "
+    );
+    assert_eq!(
+        s.whynot(" reaches(a, c) ", &WhynotBounds::default()).unwrap().1,
+        "reaches(a, c) holds; nothing to demonstrate"
+    );
+}
+
+/// ONE GROUND CHECK: `why`'s refusal and excise's are the same test, worded
+/// for the verb.
+#[test]
+fn why_and_excise_refuse_the_same_literals() {
+    let mut s = world();
+    for q in ["reaches(X, c)", "path(_, _)", "calls[P](a, b)"] {
+        assert_eq!(s.why(q).unwrap_err(), "why needs a ground literal", "{q}");
+        assert_eq!(s.excise(q).unwrap_err(), "excise needs a ground fact", "{q}");
+    }
 }

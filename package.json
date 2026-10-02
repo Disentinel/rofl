@@ -121,6 +121,7 @@
     "test:library": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/side_files.ts library)",
     "test:mutants": "NODE_OPTIONS=--expose-gc node --experimental-strip-types --test --test-concurrency=$(node -p \"require('os').availableParallelism()\") --test-reporter=spec $(node --experimental-strip-types scanners/mutant_files.ts)",
     "textcheck": "node --experimental-strip-types scripts/text_check.ts",
+    "whycheck": "node --experimental-strip-types scripts/whycheck.ts",
     "whyfloor": "node --experimental-strip-types runtime/report.ts facts/floor-census.rofl rules/floor-census.rofl",
     "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl",

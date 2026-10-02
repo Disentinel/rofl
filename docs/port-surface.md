@@ -304,3 +304,70 @@ refusals in it is COMPLETE is a decision rather than a measurement, and
 `examples/rofl-release/` records both polarities so that it reads as contested
 instead of being settled by whoever wrote the last line.
 
+### Explanation reaches the binaries
+
+`Session` could explain and no binary asked it to, so a proof still needed the
+TypeScript engine. Since 2026-10-01:
+
+- `rofl-serve`: `{"op":"why","session":S,"query":L,"all"?:true}` → `{text}`
+  (`all` is `why all`: every member of every cell; a value that is not a
+  boolean is refused);
+  `{"op":"whynot",...,"depth"?:N,"nodes"?:N}` → `{holds, text}`; `{"op":"excise",...}`
+  → `{removed, added}`. A `why` of a fact that does not hold, and any refused
+  question, are `ok:false` with the reference's text as the `error`.
+  `RoflSession.why/whynot/excise` in `runtime/port.ts`.
+- `rofl-load --why L --why-all L --whynot L --excise F` (each repeatable):
+  answers in flag order, each followed by an empty line, instead of the state;
+  `--state` keeps the state, printed first. `--depth N --nodes N` bound every
+  `--whynot` of the run. A refusal is printed as the answer and the exit code
+  is 4. A numeric flag (`--ticks`, `--budget`, `--space`, `--retain`,
+  `--depth`, `--nodes`) whose value does not parse as what it takes exits 1
+  naming the flag.
+
+**The bounds** are the reference's: absent is 6 and 64, below 1 is 1
+(`Math.max(1, ...)` in src/api.ts, `WhynotBounds::clamped`). A bound that is
+not an integer is refused — the protocol's `"3"`, `2.5` or `true`, the CLI's
+`2.5` (exit 1) — where the reference would take a float and print it; the
+default is never put in its place silently. JSON has one number type, as JS
+does, so the protocol's `3.0` and `1e3` are the integers 3 and 1000, and a
+whole number past i64 saturates.
+
+**A wall met while demonstrating is a `whynot`'s answer**, `holds: false`
+with the text `wall: budget_exhausted` (or `space_exhausted`): a demand that
+unfolds without end has no demonstration, and the wall that stopped it is the
+one there is. Both of the reference's whynots answer so (the plain one since
+2026-10-02; before, its evaluator's `budget exhausted` escaped as a throw).
+
+**A malformed question is refused by both engines, in each parser's own
+words.** `line 1: expected a term, got 'eof'` from src/parser.ts is
+`term: not the start of one` here; the goldens hold a refused file to the same
+contract. Every refusal that is not the parser's — `why needs a ground
+literal`, `excise needs a ground fact`, `... is not a base fact`, `... does not
+hold; try: whynot ...` — is the reference's text. An integer past ±2^60 or a
+character outside the alphabet is a parse refusal in both, never an answer
+about a neighbouring fact; at most one closing dot is read (`p(a)..` is
+refused, `p(a) -- note` is answered).
+
+**THE REFERENCE HAS TWO EXPLAINERS and this engine follows the one it would
+have used** (`Eval::plain`, src/aggeval.ts `storeHasAggregates` read off the
+same reflected rows). A program with no aggregate construct is evaluated by
+src/engine.ts and explained by src/api.ts: the planner holds a cross-product
+premise until something binds it, a refusal echoes the question as written
+(padding and all — `whynot`'s `holds` line is the one that trims it), a
+live fact with no firing is `[axiom]`, a negation over an undefined atom is
+`[undefined]` and walked, a `why` of an undefined atom names its `unfounded
+set:`, and a negation's single-step demonstration is written when its firing is
+reached. Any other program is src/aggeval.ts's, and so is every explain
+request in every world (the reference evaluates a plain program again by the
+aggregate evaluator to answer them, and so does `Session::explain_requests`).
+In both, every question renames from zero, so an answer does not depend on what
+was asked before it.
+
+The gate is `npm run whycheck`: questions drawn from every world `npm test`
+loads, aggregate worlds included (the deepest derivation, a spread of derived
+facts, cells and their `why all`, shrug targets, the same with the last
+argument changed, undefined atoms, small and out-of-range bounds, two excises,
+and a malformed set), put to BOTH binaries and compared with `src/api.ts`,
+refusals included. `rust/rofl/tests/why_bins.rs` holds the binaries'
+contracts and `rust/rofl/tests/explain.rs` the engine's, each fix with a test
+that fails without it.

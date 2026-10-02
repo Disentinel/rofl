@@ -422,6 +422,8 @@ pub struct Eval {
     /// `why`'s past premises, the frozen `derived_by` rows by (fact, tick):
     /// built once per explanation.
     past_rows: Option<HashMap<(Term, i64), Vec<Sym>>>,
+    /// The `unknown` rows a plain `why` walks, while it walks (`UnkCtx`).
+    why_unk: Option<UnkCtx>,
     /// Cell members `cited_past` walked at the last boundary: each cell once.
     pub past_walks: u64,
     /// `derived_by` rows `why` read for past premises since its last call.
@@ -663,6 +665,17 @@ pub struct Eval {
     /// not a member that failed to exist.
     fault: Option<Sym>,
     rename_counter: u64,
+    /// THE REFERENCE HAS TWO EVALUATORS and picks one per store: a program
+    /// with no aggregate construct is src/engine.ts's, explained by src/api.ts;
+    /// any other is src/aggeval.ts's (`storeHasAggregates`). This one engine
+    /// answers both, and where the two differ — the planner's cross-product
+    /// hold, and how `why` and `whynot` write — it follows the one the
+    /// reference would have used. Set by `prepare`.
+    pub plain: bool,
+    /// Holds `plain` false whatever the program: the reference answers
+    /// explain requests with its aggregate evaluator in every world
+    /// (src/api.ts `explainRequests`), so `Session::explain_requests` does too.
+    pub agg_forced: bool,
     cur_front: Front,
     /// WHERE A WALL CAN FALL, for what it leaves unsettled: the rules of the
     /// batch `activate` is firing and how many have fired, and the relations
@@ -846,6 +859,7 @@ impl Eval {
             staged_alts: HashMap::new(),
             staged_unknown: HashMap::new(),
             past_rows: None,
+            why_unk: None,
             past_walks: 0,
             why_scans: 0,
             agg_plans: HashMap::new(),
@@ -945,6 +959,8 @@ impl Eval {
             derived_rels: HashSet::new(),
             fault: None,
             rename_counter: 0,
+            plain: false,
+            agg_forced: false,
             cur_front: Front::default(),
             batch: Rc::from(Vec::new()),
             batch_at: 0,
@@ -997,6 +1013,7 @@ impl Eval {
         self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
             .contains(&self.v.sealed_provenance);
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
+        self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
         let decls = lattice_decls(&mut self.h, &self.v, &mut self.store, &mut self.decl_refused);
         self.tags = crate::tag::Tags::read(&mut self.h, &self.v, &mut self.store, &decls);
@@ -1186,6 +1203,7 @@ impl Eval {
 
     fn classify(&mut self, r: DRule) -> ERule {
         let (plan, stuck, _, _) = plan_body(&self.h, &r.clause);
+        let plan = if self.plain { plan_body_plain(&self.h, &r.clause) } else { plan };
         let safe = stuck.is_none() && !self.answer.unsafe_rules.contains(&r.id);
         let mut has_neg = false;
         let mut has_agg = false;
@@ -9548,6 +9566,66 @@ pub fn sink_builtins(h: &Heap, v: &Vocab, plan: Vec<BodyElem>) -> Vec<BodyElem> 
     out
 }
 
+/// `storeHasAggregates` (src/aggeval.ts): whether the reference asks this
+/// store's program of its aggregate evaluator — a lattice, tag or dominance
+/// declaration, an aggregate premise, an `in`, a `subset` or an interval
+/// function in a body, a head that writes an open set, or a cell already in
+/// the store. Read off the reflected rows, as the reference reads them.
+pub fn store_has_aggregates(h: &Heap, v: &Vocab, store: &mut Store) -> bool {
+    if [v.lattice_decl, v.tag_decl, v.dominance, v.premise_agg].iter().any(|r| store.rel_count(*r) > 0) {
+        return true;
+    }
+    let lit_of = |store: &Store, f: FactId| -> Option<Term> {
+        let a = store.args(f);
+        if a.len() == 3 { Some(a[2]) } else { None }
+    };
+    for f in store.rel_all(h, v.premise_lit) {
+        let Some(t) = lit_of(store, f) else { continue };
+        let TermK::Func(i) = t.kind() else { continue };
+        if h.fname(i) == v.s_agg {
+            return true;
+        }
+        if h.fname(i) == v.s_builtin {
+            let a = h.fargs(i);
+            let TermK::Str(op) = a[0].kind() else { continue };
+            if op == v.op_in || op == v.op_subset {
+                return true;
+            }
+            let items = h.unlist(a[1]);
+            if h.name(op) == "is" && items.len() == 2 {
+                if let TermK::Func(j) = items[1].kind() {
+                    if crate::cell::IvFn::from_name(h.name(h.fname(j))).is_some() {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    let reified_ground = |t: Term| -> bool {
+        fn go(h: &Heap, v: &Vocab, t: Term) -> bool {
+            match t.kind() {
+                TermK::Func(i) => h.fname(i) != v.s_var && h.fargs(i).iter().all(|a| go(h, v, *a)),
+                _ => true,
+            }
+        }
+        go(h, v, t)
+    };
+    for f in store.rel_all(h, v.conclusion_lit) {
+        let Some(t) = lit_of(store, f) else { continue };
+        let TermK::Func(i) = t.kind() else { continue };
+        if h.fname(i) != v.s_lit || h.fargs(i).len() < 3 {
+            continue;
+        }
+        let args = h.unlist(h.fargs(i)[2]);
+        if let Some(TermK::Func(j)) = args.last().map(|t| t.kind()) {
+            if h.fname(j) == v.f_set && h.fargs(j).len() > 1 && !reified_ground(*args.last().unwrap()) {
+                return true;
+            }
+        }
+    }
+    store.cell_count() > 0
+}
+
 // ------------------------------------------------------------------ planBody
 
 /// `planBody` (src/engine.ts:273). Positive premises and builtins keep the
@@ -9598,6 +9676,36 @@ pub fn plan_order(
     body: &[BodyElem],
     pre_bound: &[Sym],
     outside: &[Sym],
+) -> (Vec<usize>, Option<usize>, bool, Vec<Sym>) {
+    plan_order_with(h, must_bind, body, pre_bound, outside, false)
+}
+
+/// `plan_body` as src/engine.ts `planBody` runs a program WITHOUT
+/// aggregates (`Eval::plain`): the same planner, and ONE POSITIVE MOVES — a
+/// literal sharing no variable with anything bound before it is a cross
+/// product where it stands, and is held until something binds one of its
+/// variables. A negation or a builtin is the barrier: everything held goes in
+/// ahead of it in written order, so neither moves relative to what binds it.
+/// The aggregate evaluator (src/aggeval.ts `planOrder`) holds nothing, and
+/// neither does `plan_body`.
+pub fn plan_body_plain(h: &Heap, c: &Clause) -> Vec<BodyElem> {
+    let mut must: Vec<Term> = c.head.args.clone();
+    must.push(c.head.persp);
+    let mut outside = Vec::new();
+    for t in &must {
+        h.vars_of(*t, &mut outside);
+    }
+    let (order, _, _, _) = plan_order_with(h, &must, &c.body, &[], &outside, true);
+    order.into_iter().map(|i| c.body[i].clone()).collect()
+}
+
+fn plan_order_with(
+    h: &Heap,
+    must_bind: &[Term],
+    body: &[BodyElem],
+    pre_bound: &[Sym],
+    outside: &[Sym],
+    hold: bool,
 ) -> (Vec<usize>, Option<usize>, bool, Vec<Sym>) {
     let mut seen_in: HashMap<Sym, Vec<i64>> = HashMap::new();
     for v in outside {
@@ -9659,18 +9767,52 @@ pub fn plan_order(
 
     let mut plan: Vec<usize> = Vec::new();
     let mut pending: Vec<usize> = Vec::new();
+    let mut held: Vec<usize> = Vec::new();
     let is_eq = |op: Sym| h.name(op) == "=";
     let is_is = |op: Sym| matches!(h.name(op), "is" | "in");
+    let flush = |plan: &mut Vec<usize>, pending: &mut Vec<usize>, bound: &Vec<Sym>| loop {
+        let at = pending.iter().position(|&j| {
+            let BodyElem::Neg(l) = &body[j] else { return false };
+            neg_ready(l, j as i64, bound, &seen_in)
+        });
+        let Some(a) = at else { break };
+        plan.push(pending.remove(a));
+    };
+    let shares = |i: usize, bound: &Vec<Sym>| -> bool {
+        let BodyElem::Pos(l) = &body[i] else { return true };
+        let mut vs = Vec::new();
+        for a in &l.args {
+            h.vars_of(*a, &mut vs);
+        }
+        h.vars_of(l.persp, &mut vs);
+        vs.iter().any(|v| bound.contains(v))
+    };
+    let take_pos = |i: usize, plan: &mut Vec<usize>, pending: &mut Vec<usize>, bound: &mut Vec<Sym>| {
+        let BodyElem::Pos(l) = &body[i] else { unreachable!() };
+        for a in &l.args {
+            bind_all(*a, bound);
+        }
+        bind_all(l.persp, bound);
+        plan.push(i);
+        flush(plan, pending, bound);
+    };
     for (i, b) in body.iter().enumerate() {
+        if let BodyElem::Pos(_) = b {
+            if hold && !bound.is_empty() && !shares(i, &bound) {
+                held.push(i);
+                continue;
+            }
+            take_pos(i, &mut plan, &mut pending, &mut bound);
+            while let Some(at) = held.iter().position(|&j| shares(j, &bound)) {
+                take_pos(held.remove(at), &mut plan, &mut pending, &mut bound);
+            }
+            continue;
+        }
+        for j in std::mem::take(&mut held) {
+            take_pos(j, &mut plan, &mut pending, &mut bound);
+        }
         match b {
             BodyElem::Neg(_) => pending.push(i),
-            BodyElem::Pos(l) => {
-                for a in &l.args {
-                    bind_all(*a, &mut bound);
-                }
-                bind_all(l.persp, &mut bound);
-                plan.push(i);
-            }
             BodyElem::Bi { op, l, r } => {
                 if is_eq(*op) {
                     if ground_in(*l, &bound) {
@@ -9692,23 +9834,12 @@ pub fn plan_order(
                 }
                 plan.push(i);
             }
+            BodyElem::Pos(_) => unreachable!(),
         }
-        // flush
-        loop {
-            let at = pending.iter().position(|&j| {
-                let BodyElem::Neg(l) = &body[j] else {
-                    return false;
-                };
-                neg_ready(l, j as i64, &bound, &seen_in)
-            });
-            match at {
-                Some(a) => {
-                    plan.push(pending[a]);
-                    pending.remove(a);
-                }
-                None => break,
-            }
-        }
+        flush(&mut plan, &mut pending, &bound);
+    }
+    for j in held {
+        take_pos(j, &mut plan, &mut pending, &mut bound);
     }
     let head_ground = must_bind.iter().all(|a| ground_in(*a, &bound));
     (plan, pending.first().copied(), head_ground, bound)
@@ -10710,9 +10841,34 @@ pub struct WhynotBounds {
 }
 
 impl Default for WhynotBounds {
+    /// src/api.ts `DEFAULT_WHYNOT_DEPTH` and `DEFAULT_WHYNOT_NODES`.
     fn default() -> Self {
-        WhynotBounds { max_depth: 3, max_nodes: 64 }
+        WhynotBounds { max_depth: 6, max_nodes: 64 }
     }
+}
+
+/// The bounds an `explain_request(whynot, A)` is demonstrated under:
+/// src/api.ts `explainRequests` passes `{ maxDepth: 3, maxNodes: 64 }`, not
+/// the protocol's default depth of 6, and the bridge's rows are compared with
+/// its.
+pub const EXPLAIN_WHYNOT_BOUNDS: WhynotBounds = WhynotBounds { max_depth: 3, max_nodes: 64 };
+
+impl WhynotBounds {
+    /// The bounds a caller asked for, the default where one is absent and 1
+    /// where one is below 1, as src/api.ts `Math.max(1, opts.depth ?? 6)`.
+    pub fn clamped(depth: Option<i64>, nodes: Option<i64>) -> Self {
+        let d = WhynotBounds::default();
+        let at_least_one = |v: Option<i64>, or: usize| v.map_or(or, |n| n.max(1) as usize);
+        WhynotBounds { max_depth: at_least_one(depth, d.max_depth), max_nodes: at_least_one(nodes, d.max_nodes) }
+    }
+}
+
+/// The `unknown` rows of a three-valued world, keyed by the atom each stands
+/// for, and the atoms a `why` walked through (src/api.ts `UnknownCtx`).
+#[derive(Clone)]
+struct UnkCtx {
+    index: HashMap<String, FactId>,
+    hit: HashSet<String>,
 }
 
 /// One step of `whynot`'s walk (`explain_tree`).
@@ -10733,34 +10889,98 @@ struct WnCtx {
 
 impl Eval {
     /// `Rofl.why` (src/api.ts:841): the derivation tree of a fact that holds.
-    pub fn why_text(&mut self, lit: &Lit) -> Result<String, String> {
-        self.why_text_with(lit, &WhyOpts::default())
+    /// `shown` is the question as the caller wrote it, which a plain world's
+    /// refusal echoes; `None` names the fact by its key.
+    pub fn why_text(&mut self, lit: &Lit, shown: Option<&str>) -> Result<String, String> {
+        self.why_text_with(lit, &WhyOpts::default(), shown)
     }
 
     /// `why`, with the number of an aggregate's members it prints: a digest of
     /// `WHY_MEMBERS` by default, and every one of them for `why all`.
-    pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts) -> Result<String, String> {
-        let Some(p) = walk(&self.h, lit.persp, &Subst::default()).as_atom() else {
-            return Err("why needs a ground literal".into());
-        };
-        if !lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            return Err("why needs a ground literal".into());
+    ///
+    /// EVERY QUESTION RENAMES FROM ZERO, as src/api.ts explains a plain world
+    /// on a fresh evaluation and src/aggeval.ts resets its counter: the
+    /// suffixes (`?B#1`) do not depend on what was asked before, nor on what
+    /// the evaluation renamed, and the engine's own counter is put back.
+    pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let r = self.why_at(lit, o, shown);
+        self.rename_counter = saved;
+        r
+    }
+
+    /// A `why` is of a ground literal: its book, when it is one, and the
+    /// refusal the reference gives (src/api.ts `why`) when it is not. The one
+    /// check, made by `Session::why` before the world is evaluated and by
+    /// `why_text` for a caller that comes straight here.
+    pub fn why_ground(&self, lit: &Lit) -> Result<Sym, String> {
+        match walk(&self.h, lit.persp, &Subst::default()).as_atom() {
+            Some(p) if lit.args.iter().all(|a| self.h.is_ground(*a)) => Ok(p),
+            _ => Err("why needs a ground literal".into()),
         }
+    }
+
+    fn why_at(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
+        let p = self.why_ground(lit)?;
         let mut key = String::new();
         write_fact_key(&self.h, lit.rel, p, &lit.args, &mut key);
         let Some(id) = self.store.get(lit.rel, p, &lit.args) else {
             let sh = self.shrugs_of(lit);
             if !sh.is_empty() {
-                return Ok(sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n"));
+                // a shrug is the answer to the aggregate evaluator, and the
+                // reason the plain one gives for not answering
+                let text = sh.into_iter().map(|(f, _)| self.shrug_why(f)).collect::<Vec<_>>().join("\n");
+                return if self.plain { Err(text) } else { Ok(text) };
             }
-            return Err(format!("{key} does not hold; try: whynot {key}"));
+            let asked = if self.plain { shown.unwrap_or(&key) } else { &key };
+            return Err(format!("{key} does not hold; try: whynot {asked}"));
         };
         let o = WhyOpts { members: o.members, query: key };
         self.past_rows = None;
         self.why_scans = 0;
+        self.why_unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(id, &o);
         self.past_rows = None;
+        // A `why` on an undefined atom answers with the tree AND the set the
+        // tree walked: the circular dependency that left it undefined, named.
+        if let Some(u) = self.why_unk.take().filter(|u| lit.rel == self.v.unknown && !u.hit.is_empty()) {
+            let mut hit: Vec<String> = u.hit.into_iter().collect();
+            hit.sort_by(|a, b| cmp_js(a, b));
+            return Ok(format!("{out}\nunfounded set: {}", hit.join(", ")));
+        }
         Ok(out)
+    }
+
+    /// The `unknown` rows, keyed by the atom each stands for; `None` in every
+    /// two-valued world.
+    fn unknown_ctx(&mut self) -> Option<UnkCtx> {
+        let rows = self.store.rel_all(&self.h, self.v.unknown);
+        if rows.is_empty() {
+            return None;
+        }
+        let mut index = HashMap::new();
+        for f in rows {
+            if let Some(k) = self.unknown_atom_key(f) {
+                index.insert(k, f);
+            }
+        }
+        Some(UnkCtx { index, hit: HashSet::new() })
+    }
+
+    /// The key of the atom an `unknown` row is about, in the row's own book.
+    fn unknown_atom_key(&self, f: FactId) -> Option<String> {
+        let args = self.store.args(f);
+        if args.len() != 1 {
+            return None;
+        }
+        let (rel, at): (Sym, &[Term]) = match args[0].kind() {
+            TermK::Atom(a) => (a, &[]),
+            TermK::Func(i) => (self.h.fname(i), self.h.fargs(i)),
+            _ => return None,
+        };
+        let mut k = String::new();
+        write_fact_key(&self.h, rel, self.store.rec(f).persp, at, &mut k);
+        Some(k)
     }
 
     /// THE TREE, WALKED WITH A STACK OF ITS OWN: a derivation as deep as the
@@ -10824,8 +11044,10 @@ impl Eval {
             // cannot tell them apart from the witness alone: a base assertion,
             // or a fact carried across a boundary whose witness table belongs
             // to a tick that is gone.
+            // To the plain explainer any fact the store holds is an axiom —
+            // a kernel-emitted row such as `derived_by` among them.
             None => {
-                let mark = if self.store.alive(id) && self.store.rec(id).base() {
+                let mark = if self.store.alive(id) && (self.plain || self.store.rec(id).base()) {
                     "[axiom]"
                 } else {
                     "[past tick]"
@@ -10834,12 +11056,25 @@ impl Eval {
             }
             Some((rule, tick, prems)) => {
                 next.push(WhyTask::Line(format!("{pad}{key}  <= {} @tick {tick}", self.h.name(rule))));
+                if self.why_unk.is_some() && self.store.rec(id).rel == self.v.unknown {
+                    if let Some(k) = self.unknown_atom_key(id) {
+                        self.why_unk.as_mut().unwrap().hit.insert(k);
+                    }
+                }
                 // a staged firing is stamped with the tick it arrived in and
                 // read the tick before it: one that concludes a carried
                 // lattice value, or cites a cell sealed before its tick
                 let past = brk!("carry_why_present" => false; self.staged_firing(self.store.rec(id).rel, rule, tick, &prems));
                 for pr in prems {
-                    next.push(if past { WhyTask::Past(pr, tick.saturating_sub(1), indent + 1) } else { WhyTask::Prem(pr, indent + 1) });
+                    match pr {
+                        // THE PLAIN EXPLAINER WRITES A NEGATION'S DEMONSTRATION
+                        // WHEN IT REACHES THE FIRING, before the premises above
+                        // it are walked, and its renaming suffixes count in
+                        // that order (src/api.ts renderWhy)
+                        PremRef::Neg(_) | PremRef::Bi(_) if self.plain => self.render_prem(pr, indent + 1, o, next),
+                        _ if past => next.push(WhyTask::Past(pr, tick.saturating_sub(1), indent + 1)),
+                        _ => next.push(WhyTask::Prem(pr, indent + 1)),
+                    }
                 }
             }
         }
@@ -11122,6 +11357,13 @@ impl Eval {
             PremRef::Fact(f) => next.push(WhyTask::Fact(f, indent)),
             PremRef::Neg(k) => {
                 let key = self.h.name(k).to_string();
+                // `not p` over an undefined p did not fail, it never settled:
+                // p's own row is the explanation.
+                if let Some(&u) = self.why_unk.as_ref().and_then(|c| c.index.get(&key)) {
+                    next.line(format!("{}not {key} [undefined]", "  ".repeat(indent)));
+                    next.push(WhyTask::Fact(u, indent + 1));
+                    return;
+                }
                 next.line(format!("{}not {key} [finite failure]", "  ".repeat(indent)));
                 // WHY INLINES THE SINGLE-STEP whynot, because a negation that
                 // held is a claim and `[finite failure]` alone is the claim
@@ -11216,12 +11458,19 @@ impl Eval {
     fn neg_demo(&mut self, key: &str) -> Option<String> {
         let lit = self.parse_lit(key).ok()?;
         let b = WhynotBounds { max_depth: 1, max_nodes: 64 };
-        self.whynot_text(&lit, &b).ok().map(|(_, t)| t)
+        self.whynot_at(&lit, &b, None).ok().map(|(_, t)| t)
     }
 
     /// One literal, written as ROFL, lowered to what the evaluator runs.
+    ///
+    /// AT MOST ONE CLOSING DOT, as `parseLiteral` (src/parser.ts) takes it:
+    /// one is supplied only when the TOKENS do not already end in one, and on
+    /// a line of its own so a trailing `-- comment` cannot swallow it. So
+    /// `p(a)..` is refused rather than read as `p(a)`.
     pub fn parse_lit(&mut self, query: &str) -> Result<Lit, String> {
-        let src = format!("{}.", query.trim().trim_end_matches('.'));
+        use crate::rofl_lex::{tokens, Tok};
+        let dotted = matches!(tokens(query).last(), Some(t) if t.tok == Tok::Punct("dot"));
+        let src = if dotted { query.to_string() } else { format!("{query}\n.") };
         let cs = crate::rofl_parse::parse(&mut self.h, &src)?;
         if cs.len() != 1 || !cs[0].body.is_empty() {
             return Err("this takes exactly one literal".into());
@@ -11395,7 +11644,17 @@ impl Eval {
     /// `Rofl.whynot` (src/api.ts:927): the demonstration that a literal fails.
     /// Returns `(holds, text)` — a literal that HOLDS is not an error, it is
     /// the answer, and the caller is told so in the same shape.
-    pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds) -> Result<(bool, String), Halt> {
+    ///
+    /// `shown` as in `why_text`: a plain world says the literal holds in the
+    /// caller's own words. Renaming counts from zero, as there.
+    pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
+        let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let r = self.whynot_at(lit, b, shown);
+        self.rename_counter = saved;
+        r
+    }
+
+    fn whynot_at(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let mut ctx = WnCtx {
             max_depth: b.max_depth.max(1),
             max_nodes: b.max_nodes.max(1),
@@ -11406,11 +11665,20 @@ impl Eval {
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
             let mut k = String::new();
             resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
+            let k = match shown {
+                Some(q) if self.plain => q.to_string(),
+                _ => k,
+            };
             return Ok((true, format!("{k} holds; nothing to demonstrate")));
         }
         let mut k = String::new();
         resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
         let mut lines = vec![format!("whynot {k}:")];
+        // the plain explainer knows no lattice, counting or unknown tuple
+        if self.plain {
+            ctx.path.insert(self.cycle_key(lit));
+            return self.whynot_plain(lit, k, lines, &mut ctx);
+        }
         if let Some(more) = brk!("lattice_whynot_plain" => None::<Vec<String>>; self.whynot_lattice(lit)?) {
             lines.extend(more);
             return Ok((false, lines.join("\n")));
@@ -11716,6 +11984,20 @@ impl Eval {
         Ok(Some(lines))
     }
 
+    /// src/api.ts `whynotStruct` past the literal that holds: a shrug, then
+    /// the demonstration.
+    fn whynot_plain(&mut self, lit: &Lit, k: String, mut lines: Vec<String>, ctx: &mut WnCtx) -> Result<(bool, String), Halt> {
+        let sh = self.shrugs_of(lit);
+        if !sh.is_empty() {
+            lines[0] = format!("whynot {k}: no answer, a shrug");
+            for (f, _) in sh {
+                lines.push(self.shrug_why(f));
+            }
+        }
+        lines.extend(self.explain_tree(lit, ctx)?);
+        Ok((false, lines.join("\n")))
+    }
+
     /// WHYNOT OF A TUPLE A HOLE LEFT UNKNOWN: not known to hold, and the
     /// path back to the fault. `None` when nothing unknown matches it, or
     /// when a plain hole's own conclusion does: its hole says why.
@@ -11963,7 +12245,7 @@ impl Eval {
     /// bound, where the bottom-up run read the same negation with them free.
     fn failing_premises(&mut self, rn: &Clause, s0: &Subst, rid: Sym) -> Result<HashMap<String, Option<Lit>>, Halt> {
         let mut out: HashMap<String, Option<Lit>> = HashMap::new();
-        let body = plan_body(&self.h, rn).0;
+        let body = if self.plain { plan_body_plain(&self.h, rn) } else { plan_body(&self.h, rn).0 };
         let mut nodes = 0usize;
         self.explore_body(&body, 0, s0, &mut out, &mut nodes, Some(rid))?;
         Ok(out)

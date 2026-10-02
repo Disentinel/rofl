@@ -78,3 +78,6 @@ command_note("conform", "`-- [--break sign|escape|rank|book|refusal] [files]`   
 
 command_shown("nb", 19).
 command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook; runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use").
+
+command_shown("whycheck", 20).
+command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/").

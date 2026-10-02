@@ -36,9 +36,15 @@
 //!   {"op":"assert","session":2,"rofl":"p(a)."}
 //!   {"op":"evaluate","session":2}
 //!   {"op":"ask","session":2,"query":"p(X)"}
+//!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
+//!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
+//!   {"op":"whynot","session":2,"query":"p(b)","depth":6,"nodes":64}
+//!                                                     -> {"holds":false,"text":...}
+//!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"close","session":2}
+use rofl::engine::WhynotBounds;
 use rofl::session::Session;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -209,6 +215,50 @@ impl Server {
                     "scanned": a.scanned, "probed": a.probed, "micros": a.micros,
                     "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
                 }))
+            }
+            // The explanation verbs, answering in the reference's own text
+            // (rust/rofl/tests/explain.rs, scripts/whycheck.ts). A `why` of a
+            // fact that does not hold is an error carrying that text, as the
+            // reference's `ok: false` is; a `whynot` of one that holds is not.
+            "why" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("why needs `query`")?.to_string();
+                // absent or null is a plain `why`; anything but a boolean is
+                // refused, as a whynot bound that is not an integer is
+                let all = match r.get("all") {
+                    None | Some(Value::Null) => false,
+                    Some(Value::Bool(b)) => *b,
+                    Some(v) => return Err(format!("why `all` takes true or false, not {v}")),
+                };
+                let s = self.get(r)?;
+                Ok(json!({ "text": if all { s.why_all(&q)? } else { s.why(&q)? } }))
+            }
+            "whynot" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("whynot needs `query`")?.to_string();
+                // A bound below 1 counts as 1, as the reference's `Math.max`
+                // makes it; one that is not an integer is refused rather than
+                // replaced by the default. JSON has one number type, as JS
+                // does: a whole number written `3.0` or `1e3` IS the integer
+                // the reference reads, and one past i64 is as large a bound
+                // as can be asked, so it saturates.
+                let bound = |k: &str| -> Result<Option<i64>, String> {
+                    match r.get(k) {
+                        None | Some(Value::Null) => Ok(None),
+                        Some(v) => v
+                            .as_i64()
+                            .or_else(|| v.as_u64().map(|_| i64::MAX))
+                            .or_else(|| v.as_f64().filter(|f| f.is_finite() && f.fract() == 0.0).map(|f| f as i64))
+                            .map(Some)
+                            .ok_or_else(|| format!("whynot `{k}` takes an integer, not {v}")),
+                    }
+                };
+                let b = WhynotBounds::clamped(bound("depth")?, bound("nodes")?);
+                let (holds, text) = self.get(r)?.whynot(&q, &b)?;
+                Ok(json!({ "holds": holds, "text": text }))
+            }
+            "excise" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("excise needs `query`")?.to_string();
+                let (removed, added) = self.get(r)?.excise(&q)?;
+                Ok(json!({ "removed": removed, "added": added }))
             }
             // Written to a path unless the caller insists. See the module note:
             // the whole state is exactly the thing a pipe should not carry.

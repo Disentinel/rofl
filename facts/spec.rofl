@@ -222,6 +222,8 @@ duty[boot](b_stratifiable_by_loading, guaranteed, "boot.rofl", "answered by the 
 duty[decided](d_port_owes_why, guaranteed, "docs/port-surface.md", "`why` and `whynot` are REQUIRED of the port").
 cited_check[map](c_port_explains, "rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms").
 guards[map](c_port_explains, d_port_owes_why).
+cited_check[map](c_port_explains_bins, "rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text").
+guards[map](c_port_explains_bins, d_port_owes_why).
 
 duty[decided](d_not_p_is_this_tick, guaranteed, "docs/time-and-continuity.md", "is not derivable in the CURRENT TICK").
 duty[decided](d_dep_graph_is_one_tick, guaranteed, "docs/time-and-continuity.md", "the dependency graph is about ONE tick").

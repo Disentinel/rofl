@@ -211,7 +211,7 @@ function storeRuleIds(store: FactStore): string[] {
 
 /** A halt of the aggregate evaluator as a sentence (rust/rofl `describe`). */
 function describeHalt(e: unknown): string {
-  if (e instanceof Wall) return `wall: ${e.reason}`;
+  if (e instanceof Wall || e instanceof BudgetExhausted) return `wall: ${e.reason}`;
   if (e instanceof Rejected) return e.message;
   return `defect: ${(e as Error).message}`;
 }
@@ -1195,13 +1195,23 @@ export class Rofl {
       } catch (e) { return { holds: false, text: describeHalt(e) }; }
     }
     const ev = this.plain(budget);
-    const r = this.whynotStruct(text, ev, {
-      maxDepth: Math.max(1, opts.depth ?? DEFAULT_WHYNOT_DEPTH),
-      maxNodes: Math.max(1, opts.nodes ?? DEFAULT_WHYNOT_NODES),
-      nodes: 0,
-      path: new Set(),
-    });
-    return { holds: r.holds, text: r.text };
+    // A WALL MET WHILE DEMONSTRATING IS THE ANSWER, as the aggregate path
+    // above gives it: a demand that unfolds without end has no demonstration,
+    // and the wall that stopped it is named (rust/rofl `Session::whynot`).
+    // Anything else the plain evaluator throws — a malformed question among
+    // them — is still a refusal.
+    try {
+      const r = this.whynotStruct(text, ev, {
+        maxDepth: Math.max(1, opts.depth ?? DEFAULT_WHYNOT_DEPTH),
+        maxNodes: Math.max(1, opts.nodes ?? DEFAULT_WHYNOT_NODES),
+        nodes: 0,
+        path: new Set(),
+      });
+      return { holds: r.holds, text: r.text };
+    } catch (e) {
+      if (e instanceof BudgetExhausted) return { holds: false, text: describeHalt(e) };
+      throw e;
+    }
   }
 
   private whynotStruct(text: Ask, ev: Evaluation, ctx: WhynotCtx): { holds: boolean; text: string } {

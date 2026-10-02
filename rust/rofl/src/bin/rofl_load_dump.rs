@@ -1,7 +1,9 @@
 // Build a world from .rofl TEXT and print canonicalState — the load path's
 // counterpart to `rofl-eval`, so a divergence can be diffed rather than read
 // out of a test panic.
-//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] boot.rofl file.rofl...
+//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N]
+//             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
+//             boot.rofl file.rofl...
 // `--strata` runs the stock evaluator, which reads `stratum/2`; `--explain`
 // answers the world's `explain_request` rows after the first evaluation and
 // evaluates again (`Session::explain_requests`); `--save` writes the world's
@@ -11,6 +13,27 @@
 // this one before it evaluates (`Session::feed_below`), under the same
 // `--budget`, `--space` and `--strata`; `--retain N` keeps the
 // provenance of the last N completed ticks (`retain_ticks`).
+//
+// A QUESTION REPLACES THE DUMP. With any `--why`, `--why-all`, `--whynot` or
+// `--excise` the answers are printed, in the order the flags were given, each
+// followed by one empty line; `--state` puts the dump back, before them. The
+// answers are the reference's text (src/api.ts, and the REPL's `- `/`+ ` lines
+// for excise). `--depth` and `--nodes` bound every `--whynot` as the
+// protocol's fields do (`WhynotBounds::clamped`). A why of a fact that does
+// not hold, or a refused question, prints its message as the answer and the
+// exit code is 4.
+use rofl::engine::WhynotBounds;
+
+enum Q { Why(String), WhyAll(String), Whynot(String), Excise(String) }
+
+/// A numeric flag's value. Every one of them fails the same way: a message
+/// naming the flag and what it takes, and exit 1 — a value that does not
+/// parse as the flag's type (a word, `1e6`, a negative count, a count past
+/// its range) is never a panic and never silently a default.
+fn number<T: std::str::FromStr>(flag: &str, v: String, takes: &str) -> T {
+    v.parse::<T>().unwrap_or_else(|_| { eprintln!("{flag} takes {takes}, not {v:?}"); std::process::exit(1) })
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut ticks = 0u32;
@@ -24,19 +47,41 @@ fn main() {
     let mut space: Option<i64> = None;
     let mut below: Vec<String> = Vec::new();
     let mut retain: Option<u32> = None;
+    let mut qs: Vec<Q> = Vec::new();
+    let mut state = false;
+    let (mut depth, mut nodes): (Option<i64>, Option<i64>) = (None, None);
     let mut i = 0;
     while i < args.len() {
-        if args[i] == "--ticks" { i += 1; ticks = args[i].parse().unwrap(); }
-        else if args[i] == "--budget" { i += 1; budget = args[i].parse().unwrap(); }
-        else if args[i] == "--space" { i += 1; space = Some(args[i].parse().unwrap()); }
-        else if args[i] == "--strata" { strata = true; }
-        else if args[i] == "--explain" { explain = true; }
-        else if args[i] == "--save" { i += 1; save = Some(args[i].clone()); }
-        else if args[i] == "--below" { i += 1; below.push(args[i].clone()); }
-        else if args[i] == "--retain" { i += 1; retain = Some(args[i].parse().unwrap()); }
-        else { files.push(args[i].clone()); }
+        let value = |i: &mut usize| {
+            *i += 1;
+            args.get(*i).cloned().unwrap_or_else(|| { eprintln!("{} needs a value", args[*i - 1]); std::process::exit(1) })
+        };
+        match args[i].as_str() {
+            "--ticks" => ticks = number("--ticks", value(&mut i), "a count of ticks"),
+            "--budget" => budget = number("--budget", value(&mut i), "an integer"),
+            "--space" => {
+                let v = value(&mut i);
+                let n: i64 = number("--space", v.clone(), "a positive number of rows");
+                if n <= 0 { eprintln!("--space takes a positive number of rows, not {v:?}"); std::process::exit(1) }
+                space = Some(n)
+            }
+            "--strata" => strata = true,
+            "--explain" => explain = true,
+            "--save" => save = Some(value(&mut i)),
+            "--below" => below.push(value(&mut i)),
+            "--retain" => retain = Some(number("--retain", value(&mut i), "a count of ticks")),
+            "--why" => qs.push(Q::Why(value(&mut i))),
+            "--why-all" => qs.push(Q::WhyAll(value(&mut i))),
+            "--whynot" => qs.push(Q::Whynot(value(&mut i))),
+            "--excise" => qs.push(Q::Excise(value(&mut i))),
+            "--depth" => depth = Some(number("--depth", value(&mut i), "an integer")),
+            "--nodes" => nodes = Some(number("--nodes", value(&mut i), "an integer")),
+            "--state" => state = true,
+            _ => files.push(args[i].clone()),
+        }
         i += 1;
     }
+    let bounds = WhynotBounds::clamped(depth, nodes);
     let read = |f: &String| std::fs::read_to_string(f).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     let mut s = rofl::session::Session::fresh(budget);
     if strata { s.eval.mode = rofl::engine::Mode::Strata; }
@@ -86,5 +131,26 @@ fn main() {
     if let Some(f) = save {
         std::fs::write(&f, s.save()).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     }
-    print!("{}", s.eval.store.canonical_state(&s.eval.h));
+    if qs.is_empty() || state {
+        print!("{}", s.eval.store.canonical_state(&s.eval.h));
+    }
+    let mut refused = false;
+    for q in &qs {
+        let text = match q {
+            Q::Why(l) => s.why(l).unwrap_or_else(|e| { refused = true; e }),
+            Q::WhyAll(l) => s.why_all(l).unwrap_or_else(|e| { refused = true; e }),
+            Q::Whynot(l) => match s.whynot(l, &bounds) {
+                Ok((_, t)) => t,
+                Err(e) => { refused = true; e }
+            },
+            Q::Excise(l) => match s.excise(l) {
+                Ok((removed, added)) if removed.is_empty() && added.is_empty() => "(no change)".into(),
+                Ok((removed, added)) => removed.iter().map(|k| format!("- {k}"))
+                    .chain(added.iter().map(|k| format!("+ {k}"))).collect::<Vec<_>>().join("\n"),
+                Err(e) => { refused = true; format!("error: {e}") }
+            },
+        };
+        println!("{text}\n");
+    }
+    if refused { std::process::exit(4); }
 }

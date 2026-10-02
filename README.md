@@ -539,6 +539,24 @@ negated anywhere cannot be answered from a part of the corpus.
 - `runtime/port.ts` is the JS-side client; `npm run portcorpus` builds the
   corpus both engines are diffed over, and the oracle is a byte-identical
   `canonicalState()`.
+- **A proof without the TypeScript engine.** `rofl-serve` answers `why`,
+  `whynot` and `excise` over its JSON protocol (`RoflSession.why/whynot/excise`
+  in `runtime/port.ts`), and `rofl-load` answers them on the command line:
+
+  ```sh
+  rust/target/release/rofl-load boot.rofl facts/js-dataflow.rofl rules/js-dataflow.rofl \
+    --why 'flows_to(code, audit)' --whynot 'flows_to(audit, code)'
+  ```
+
+  A question replaces the state dump (`--state` puts it back, first); the
+  answers come in flag order, each followed by an empty line; a refused
+  question prints its message as the answer and exits 4. `--why-all` is
+  `why all`, and `--depth N --nodes N` bound every `--whynot` (below 1 is 1);
+  `--budget`, `--ticks`, `--space`, `--strata` apply as they do to the dump.
+  The text is the reference's own, byte for byte: `npm run whycheck` puts its
+  questions, refusals included, from every world `npm test` loads to both
+  binaries and compares each with `src/api.ts` (docs/port-surface.md,
+  "Explanation reaches the binaries").
 
 The engine is checked with `cargo test` under `rust/`. **It is not in
 `.github/workflows/ci.yml`** — the CI jobs are node and bun only.

@@ -50,6 +50,18 @@ check[checks]("rust/rofl/tests/explain.rs", "excise_recomputes_rather_than_readi
 check[checks]("rust/rofl/tests/explain.rs", "the_settled_world_is_the_same_whichever_order_the_facts_arrived_in", test).
 check[checks]("rust/rofl/tests/explain.rs", "the_audits_are_a_loaded_pack_and_not_a_property_of_the_engine", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_derivation_thousands_deep_is_explained_to_its_bottom", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_second_whynot_renames_as_the_first_did", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_cross_product_premise_is_solved_last_and_cited_last", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_kernel_emitted_premise_is_an_axiom", test).
+check[checks]("rust/rofl/tests/explain.rs", "an_undefined_premise_is_walked_and_its_unfounded_set_named", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_question_settles_the_world_once", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_walled_world_is_not_evaluated_again_for_a_question", test).
+check[checks]("rust/rofl/tests/explain.rs", "excise_and_retract_refuse_a_literal_that_is_not_ground_by_name", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_question_the_parser_cannot_read_exactly_is_refused", test).
+check[checks]("rust/rofl/tests/explain.rs", "whynot_bounds_clamp_as_the_reference_does", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_whynot_that_meets_a_wall_answers_with_the_wall", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_refusal_echoes_the_question_untrimmed", test).
+check[checks]("rust/rofl/tests/explain.rs", "why_and_excise_refuse_the_same_literals", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "union_components_are_a_searchs_components", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "live_variables_are_the_iterative_solvers", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "a_hull_and_a_bitset_are_the_fold_over_what_reaches", test).
@@ -94,6 +106,13 @@ check[checks]("rust/rofl/tests/threshold.rs", "a_member_founded_by_its_other_der
 check[checks]("rust/rofl/tests/threshold.rs", "a_deep_recursive_quorum_costs_steps_linear_in_its_depth", test).
 check[checks]("rust/rofl/tests/tick_scale.rs", "a_cell_cited_by_many_firings_is_walked_once_at_the_boundary", test).
 check[checks]("rust/rofl/tests/tick_scale.rs", "why_of_a_carried_cell_reads_the_past_rows_once", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "serve_answers_in_the_sessions_own_text", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_the_answers_in_flag_order_instead_of_the_state", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_keeps_the_state_without_a_question_and_with_state", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_prints_a_refusal_as_the_answer_and_exits_four", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "serve_clamps_whynot_bounds_and_refuses_a_bound_that_is_not_an_integer", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_bounds_every_whynot_and_refuses_a_bound_that_is_not_an_integer", test).
+check[checks]("rust/rofl/tests/why_bins.rs", "load_refuses_a_numeric_flag_that_does_not_parse", test).
 check[checks]("facts/goldens.rofl", "aka", world).
 check[checks]("facts/goldens.rofl", "atlas-launch", world).
 check[checks]("facts/goldens.rofl", "blam", world).
@@ -480,6 +499,7 @@ test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").
 test_file[checks]("rust/rofl/tests/tick_scale.rs").
+test_file[checks]("rust/rofl/tests/why_bins.rs").
 citation_ok[checks](d_veto_belongs_inside).
 citation_ok[checks](l_budget_counts_firings).
 citation_ok[checks](s7_no_clause_objects).
