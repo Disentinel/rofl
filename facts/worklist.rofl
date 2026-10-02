@@ -3458,3 +3458,47 @@ work(w_a_rule_should_know_its_unit,
 work(w_js_entry_through_rust,
   "MAKE THE ENTRY INTO JS ANALYSIS THROUGH THE RUST ENGINE ONE DOCUMENTED, RUNNABLE PATH. An outside agent asked for a transitive why over JS code from rust/ and got it wrong three ways: it judged rust/ unable to read .rofl (rofl-load parses it with rofl_parse.rs), it judged the fs_* emitter lost (it is hostFacts in playground/host.ts, unexported, which also writes the str_* specifier cuts rules/js-modules.rofl needs and the root dir \".\"), and it could not tell scanners/js_ast.ts (the model's scanner) from scanners/js.ts (the coarser self-analysis one). The mechanism is spread over scanners/cli.ts (npm run scan), scanners/js_ast.ts and js_resolve.ts, playground/host.ts hostFacts, notebook/front.ts MODEL_FILES and PHRASE_FILES, notebook/kernel.ts and serve.ts (the kept model), and rofl-load / rofl-serve on the Rust side, which on main answer state only (why/whynot/excise: branch rust-why-ops). WHAT THIS WORK IS: (1) one command, a directory of JS in, facts out -- the scanner AND the host facts, exported from one place, with the format of every relation the model reads written down; (2) one command that runs MODEL_FILES plus those facts in the Rust engine and answers ? / why / whynot; (3) a page under docs/js/ that names every stage, its input and output relations, and which engine runs it; (4) ACCEPTANCE: on a grafema package the Rust path gives the same answers and the same why text as the notebook host on the TS engine, byte for byte, with both timings recorded.").
 work_state(w_js_entry_through_rust, open).
+
+-- ===========================================================================
+-- RUST FIRST (f_rofl_moves_to_rust_first, f_two_parsers_are_the_occasion_for_a_language_neutral_model)
+-- ===========================================================================
+
+work(w_rust_cli,
+  "ONE NATIVE `rofl` BINARY WITH SUBCOMMANDS: load, ask, why, whynot, excise, scan, nb run, serve; plain text by default and --json on every subcommand; exit codes that say refused / partial / defect. It replaces the scatter of rofl-load, rofl-serve, rofl-eval and npm scripts as the surface an agent drives. ACCEPTANCE: every operation a notebook author or an agent does today has a subcommand, and its answers equal the TS engine's to the byte over the golden worlds.").
+work_state(w_rust_cli, open).
+
+work(w_rust_default_backend,
+  "RUST AS THE DEFAULT BACKEND of the notebook kernel (notebook/kernel.ts, playground/host.ts Host) and of the VS Code extension, over rofl serve with fork reuse; the TS evaluator stays selectable. Builds on the pluggable-backend seam of the demo item kernel-backend. ACCEPTANCE: the two-file corpus that took 30 s+ in the TS kernel answers cold in the Rust timings and warm in milliseconds, with the rendered answers and witnesses unchanged; test:nb and test:vscode green on both backends.").
+work_state(w_rust_default_backend, open).
+work_needs(w_rust_default_backend, w_rust_cli).
+
+work(w_rust_rofl_md,
+  "`.rofl.md` NOTEBOOKS AND THE SENTENCE FORM IN RUST: the cell reader, the directives (? never unsure why whynot excise extends), the phrase layer that facts/phrases.rofl and facts/js-phrases.rofl feed, and the rendering of answers in sentences. ACCEPTANCE: every notebook world gives the same verdicts and the same text in both engines.").
+work_state(w_rust_rofl_md, open).
+work_needs(w_rust_rofl_md, w_rust_cli).
+
+work(w_l2_roles,
+  "A LANGUAGE-NEUTRAL ROLE LAYER UNDER THE JS MODEL (f_two_parsers_are_the_occasion_for_a_language_neutral_model). The JS model reads roles, not AST kinds; a rule that genuinely needs AST detail is named and becomes a JS-only role or the normalizer's duty. One normalizer per parser, written as rules: Babel facts to roles first. Vocabulary governance from day one: every role relation declared, an unclaimed one an alarm. Reflective sites (Proxy, eval, computed access the model cannot follow) are shrugs with reason opaque_boundary, never guessed edges. Polyglot survey before the shared roles are frozen. ACCEPTANCE LADDER: (1) the JS model over roles through the Babel normalizer gives today's answers -- goldens and the V8 oracle; (2) see w_rust_scanner_oxc; (3) a second language.").
+work_state(w_l2_roles, open).
+
+work(w_rust_scanner_oxc,
+  "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").
+work_state(w_rust_scanner_oxc, open).
+work_needs(w_rust_scanner_oxc, w_l2_roles).
+work_needs(w_rust_scanner_oxc, w_rust_cli).
+
+work(w_vscode_thin_client,
+  "THE VS CODE EXTENSION AS A THIN CLIENT over rofl serve (or the lsp/ server): no engine in the extension, the editor features speaking the protocol. ACCEPTANCE: test:vscode green with the engine out of process; the extension's own code shrinks to editor glue.").
+work_state(w_vscode_thin_client, open).
+work_needs(w_vscode_thin_client, w_rust_default_backend).
+work_needs(w_vscode_thin_client, w_rust_rofl_md).
+
+work(w_wasm_playground,
+  "THE BROWSER PLAYGROUND ON A WASM BUILD OF THE RUST ENGINE, so the browser needs no TS engine either; the TS engine remains a valid engine elsewhere. ACCEPTANCE: npm run playground builds and the playground's notebook answers equal the CLI's.").
+work_state(w_wasm_playground, open).
+work_needs(w_wasm_playground, w_rust_rofl_md).
+
+work(w_amend_runtime_duties,
+  "AMEND, DO NOT BREAK, the START.md duties s_zero_deps (zero runtime dependencies) and s_two_runtimes (runs under Bun or Node): Rust first with crates such as oxc contradicts both. Record the amendment in the decided book with its citation, state what each duty now means for each engine, and let speccheck show the pair as an amendment rather than a defect.").
+work_state(w_amend_runtime_duties, open).
+work_needs(w_rust_scanner_oxc, w_amend_runtime_duties).
