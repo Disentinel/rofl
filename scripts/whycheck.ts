@@ -177,6 +177,31 @@ function expected(r: Rofl, q: Q, budget?: number): A {
   } catch (e) { return { ok: false, text: (e as Error).message }; }
 }
 
+/** THE ORACLE OF A RETRACTION: the world a retraction leaves is the world
+ *  without the fact. The same files with the retracted fact's line taken out,
+ *  evaluated from nothing (the retraction is no part of it): every question
+ *  is answered by it as by the retracted session. A fact that is not a line
+ *  of its own in a file is a world this oracle cannot build, and says so. */
+function withoutRetracted(w: World): { r: Rofl; w: World } | string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'whycheck-fresh-'));
+  const gone = new Set<string>();
+  const files = w.files.map((f, i) => {
+    const text = fs.readFileSync(f, 'utf8').split('\n').filter((l) => {
+      const hit = (w.retract ?? []).find((x) => l.trim() === `${x}.`);
+      if (hit) gone.add(hit);
+      return !hit;
+    }).join('\n');
+    const out = path.join(dir, `${i}-${path.basename(f)}`);
+    fs.writeFileSync(out, text);
+    return out;
+  });
+  const lost = (w.retract ?? []).filter((x) => !gone.has(x));
+  if (lost.length) return `no line of its own for ${lost.join(', ')}`;
+  const fresh = { ...w, files, retract: [] };
+  const { r, failed } = togetherWorld(fresh, files);
+  return failed !== null ? `the world without the fact does not evaluate: ${failed}` : { r, w: fresh };
+}
+
 /** A refusal by the reference's parser: compared by kind, not by text. */
 const parseRefusal = (a: A): boolean => !a.ok && /^(error: )?line \d+: /.test(a.text);
 
@@ -192,7 +217,7 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
   try {
     for (const f of [BOOT, ...w.files]) await s.loadFile(f);
     if (w.ticks) for (let i = 0; i < w.ticks; i++) await s.tick();
-    else await s.evaluate();
+    else { await s.evaluate(); for (const f of w.retract ?? []) await s.retract(f); }
     const out: A[] = [];
     for (const q of qs) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   serve ${q.op} ${q.query}\n`);
@@ -226,7 +251,7 @@ function cli(w: World, qs: Q[], want: A[]): { texts: (string | undefined)[]; exi
   qs.forEach((_, i) => { const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
     ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
-    ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.explain ? ['--explain'] : []),
+    ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
     ...belowFiles(w.files).flatMap((f) => ['--below', f])];
   const flag = (op: Op) => (op === 'whyall' ? '--why-all' : `--${op}`);
   for (const [g, idx] of groups) {
@@ -267,6 +292,16 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       const o = own.get(w.name);
       const qs = [...questions(r, budget, w.name === firstName, o?.excise ?? true), ...(o?.qs ?? [])];
       const want = qs.map((q) => expected(r, q, budget));
+      if (w.retract?.length) {
+        const f = withoutRetracted(w);
+        if (typeof f === 'string') rep.bad.push(`${w.name}: ${f}`);
+        else qs.forEach((q, i) => {
+          const d = expected(f.r, q, budget);
+          if (parseRefusal(want[i])) return;
+          if (d.ok !== want[i].ok || d.text !== want[i].text || d.holds !== want[i].holds)
+            rep.bad.push(`${w.name} retracted session vs a world without the fact, ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(d.text, want[i].text)}`);
+        });
+      }
       const same = (q: Q, a: A, b: A | undefined): string | null => {
         if (b === undefined) return 'no answer';
         if (parseRefusal(a)) return b.ok ? `the reference refuses it (${a.text}) and this answered` : null;

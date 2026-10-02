@@ -121,6 +121,13 @@ export class RoflSession {
     return r as unknown as Evaluated;
   }
 
+  /** Take a base fact out of an evaluated world, by the delta where there is
+   *  one; `full` says why the world was evaluated again instead. */
+  async retract(query: string): Promise<{ full: string | null }> {
+    const r = await this.port.send({ op: 'retract', session: this.id, query });
+    return { full: r.full as string | null };
+  }
+
   /** The boundary. Staged `@next` facts install here, and here is the only
    *  place a volume may be lifted. */
   async tick(): Promise<Ticked> {
