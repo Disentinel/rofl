@@ -3117,7 +3117,7 @@ export class AggEval {
     if (met.length > 0) {
       const deps = this.relDeps();
       for (const p of new Set([...nr.keys.values()].map((k) => k.rel))) {
-        if (met.some((c) => c === p || (reachesIn(deps, c, p) && reachesIn(deps, p, c)))) nr.faulted.add(p);
+        if (met.some((c) => c === p || reachesIn(deps, p, c))) nr.faulted.add(p);
       }
     }
     throw new Narrowed();
@@ -4429,9 +4429,18 @@ export class AggEval {
     if (r.clause.head.temporal === 'next') { this.stageUnknown(r, s, true); return; }
     const u = this.conclusionUnknown(r, s);
     if (u !== null) {
+      this.narrowFeederFault(r.clause.head.rel);
       this.unkEdges.push([nUnk(u), nHole(this.ruleMarker(r.id))]);
       this.plainPending.push([u, true]);
     }
+  }
+
+  /** A PLAIN RULE THAT FAULTS IN A DESCENT: every widened cell that reads its conclusion's relation (through anything) is left as it was, for what the rule would have contributed is unknown; a rule that only reads what the cell concludes, from outside its recursion, is no reason. */
+  private narrowFeederFault(head: string): void {
+    const nr = this.narrowing;
+    if (nr === null) return;
+    const deps = this.relDeps();
+    for (const p of new Set([...nr.keys.values()].map((k) => k.rel))) if (reachesIn(deps, p, head)) nr.faulted.add(p);
   }
 
   /** A FAULT BELOW A CALL ANSWERED ON DEMAND, in a firing. */

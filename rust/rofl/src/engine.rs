@@ -5146,11 +5146,20 @@ impl Eval {
         let met: Vec<Sym> = self.lat_pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
         if !met.is_empty() {
             let frozen: HashSet<Sym> = nr.frozen.keys().map(|k| k.0).collect();
+            let nr_cells: Vec<Sym> = frozen.iter().copied().collect();
             let deps = self.rel_deps();
             let faulted: Vec<Sym> = frozen
                 .into_iter()
-                .filter(|&p| met.iter().any(|&c| brk!("narrow_fault_ignored" => false; c == p || (reaches_in(&deps, c, p) && reaches_in(&deps, p, c)))))
+                .filter(|&p| met.iter().any(|&c| brk!("narrow_fault_ignored" => false; c == p || reaches_in(&deps, p, c))))
                 .collect();
+            // A FAULT THAT FEEDS A WIDENED CELL FROM OUTSIDE ITS RECURSION never meets a descent: the first pass
+            // left the cell a hole (what a hole's rule reads is unknown, so the cell inherits it) and it is not
+            // widened to narrow, and a descent fires on the inputs the first pass ended with. The cell is left as
+            // it was all the same, and the case is asserted away in a debug build.
+            debug_assert!(
+                !met.iter().any(|&c| nr_cells.iter().any(|&p| c != p && reaches_in(&deps, p, c) && !reaches_in(&deps, c, p))),
+                "a fault outside the recursion of a widened cell reached it in a descent, which the first pass left a hole"
+            );
             if let Some(nr) = self.narrowing.as_mut() {
                 nr.faulted.extend(faulted);
             }
@@ -7324,9 +7333,25 @@ impl Eval {
             return self.stage_unknown(&r, s, true);
         }
         if let Some(u) = self.conclusion_unknown(&r, s) {
+            self.narrow_feeder_fault(r.clause.head.rel);
             let marker = self.rule_marker(r.id);
             self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
             self.plain_pending.push((u, true));
+        }
+    }
+
+    /// A PLAIN RULE THAT FAULTS IN A DESCENT, `head` its conclusion's relation: every widened cell that reads
+    /// `head` (through anything) is left as it was, for what the rule would have contributed is unknown
+    /// (`narrow_gathered` sees the faults of the rules a lattice closes, and this is the other kind). A rule that
+    /// only reads what the cell concludes, from outside its recursion, is no reason.
+    fn narrow_feeder_fault(&mut self, head: Sym) {
+        let Some(nr) = self.narrowing.as_ref() else { return };
+        let cells: Vec<Sym> = nr.frozen.keys().map(|k| k.0).collect();
+        let deps = self.rel_deps();
+        let hit: Vec<Sym> = cells.into_iter().filter(|&p| reaches_in(&deps, p, head)).collect();
+        debug_assert!(hit.is_empty(), "a plain rule's fault reached a widened cell in a descent, which the first pass left a hole");
+        if let Some(nr) = self.narrowing.as_mut() {
+            nr.faulted.extend(hit);
         }
     }
 
