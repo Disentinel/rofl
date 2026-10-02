@@ -353,10 +353,10 @@ parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
     <em>n</em> &mdash; different semantics, declared on the instance.</p>
 
   <pre>    derivations of height at most      lobachevsky/interior        euclid/sole
-      10                                       0                  1
-      15                                     682                  1
-      20                                  699050                  1
-      25                               715827882                  1</pre>
+      10                                     682                  1
+      15                                  699050                  1
+      20                               715827882                  1
+      25                            733007751850                  1</pre>
 
   <p>One column grows without settling; the other is fixed by depth 10. The
     <code>CLOSED</code> instance is not hiding a failure to converge &mdash; it is naming one.</p>
@@ -389,28 +389,22 @@ parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
     failed premise: axiom[saccheri](angle_sum_180)
   rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
     failed premise: explodes[saccheri](angle_sum_180)
-  rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
-    failed premise: holds_from[saccheri](s_playfair,1)</pre>
+  rule rb3f54c28: thm[?G](?P)@now :- step[main](?S,?P)@now, premises[main](?S,?N)@now, foundation[?G](?_$0,?_$1)@now, at_least(?N, ?Q : needs[main](?S,?Q)@now, thm[?G](?Q)@now)
+    failed premise: at_least(2, ?Q#2 : needs[main](s_playfair,?Q#2), thm[saccheri](?Q#2)) reached 1 of 2 [threshold]: #1 (alternate_angles_parallel) h=6</pre>
 
   <p class="kid">Three ways it could have been proved, three dead ends. Follow the third one
     down and the program names the missing piece:</p>
   <p class="eng">Three rules conclude <code>thm</code>; each is tried, each fails, and each
-    failure names the premise instance that blocked it. Drill into the third:</p>
+    failure names the premise instance that blocked it. The third is a quorum that reached 1 of
+    its 2 premises; ask about the one it lacks:</p>
 
-  <pre class="tight">whynot holds_from[saccheri](s_playfair,1):
-  rule r1cadcdda: holds_from[?G](?S,?K)@now :- needs[main](?S,?K,?P)@now, thm[?G](?P)@now, ?K1 is +(?K,1), holds_from[?G](?S,?K1)@now
-    failed premise: thm[saccheri](post5_unique)
-      rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
-        failed premise: axiom[saccheri](post5_unique)
-          no rule concludes 'axiom' and no matching base fact exists
-      rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
-        failed premise: explodes[saccheri](post5_unique)
-          rule r6f42d5ca: explodes[?G](?P)@now :- clash[?G](?_$0,?_$1)@now, axiom[?G](ex_falso)@now, proposition[main](?P)@now
-            failed premise: clash[saccheri](?_$0#3,?_$1#3)
-              [depth limit 3 reached]
-      rule r9749238b: thm[?G](?P)@now :- step[main](?S,?P)@now, holds_from[?G](?S,1)@now
-        failed premise: step[main](?S#4,post5_unique)
-          no rule concludes 'step' and no matching base fact exists</pre>
+  <pre class="tight">whynot thm[saccheri](post5_unique):
+  rule rac159495: thm[?G](?P)@now :- axiom[?G](?P)@now
+    failed premise: axiom[saccheri](post5_unique)
+  rule r7cb3920d: thm[?G](?P)@now :- explodes[?G](?P)@now
+    failed premise: explodes[saccheri](post5_unique)
+  rule rb3f54c28: thm[?G](?P)@now :- step[main](?S,?P)@now, premises[main](?S,?N)@now, foundation[?G](?_$0,?_$1)@now, at_least(?N, ?Q : needs[main](?S,?Q)@now, thm[?G](?Q)@now)
+    failed premise: step[main](?S#2,post5_unique)</pre>
 
   <p class="kid"><code>post5_unique</code> &mdash; the fifth rule itself. It is not in his
     book, nothing else produces it, and that is the end of it.</p>
@@ -443,7 +437,7 @@ parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
     <code>asserted_by(fact, who)</code> and <code>in_perspective(fact, ledger)</code>, and
     <code>boot.rofl</code>'s audit is one rule:</p>
   <pre>forged[audit](F) :- asserted_by(F, Who), in_perspective(F, P), not authority(P, Who).</pre>
-  <p class="eng">5351 facts land in the store, of which 1716 are domain facts; the rest are
+  <p class="eng">3920 facts land in the store, of which 1186 are domain facts; the rest are
     reflection &mdash; every rule of the program is itself stored as facts
     (<code>rule</code>, <code>premise_lit</code>, <code>concludes</code>,
     <code>reads_from</code>, <code>writes_to</code>), which is what makes the audits below
@@ -473,14 +467,14 @@ parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
     because the second question involves the word <em>not</em>. The program sorts its rules
     into layers so that never goes in a circle.</p>
   <p class="eng">Negation forces a stratum boundary: a rule reading <code>not p</code> may
-    only run once <code>p</code> is complete. Of GOOF's 28 clauses, <strong>exactly one</strong>
+    only run once <code>p</code> is complete. Of GOOF's 27 clauses, <strong>exactly one</strong>
     uses negation.</p>
   <div class="scroll">
     <table>
       <tr><th>stratum</th><th>relations</th><th class="wrap-cell">why</th></tr>
       <tr>
         <td class="mono">0</td>
-        <td class="mono">thm, holds_from, proposition, opposes, clash, explodes, parallel, law, angle_sum, disagree, similar_possible, size_shows, knot_state, reductio_needed</td>
+        <td class="mono">thm, premises, proposition, opposes, clash, explodes, parallel, law, angle_sum, disagree, similar_possible, size_shows, knot_state, reductio_needed</td>
         <td class="wrap-cell">the entire deduction layer, one monotone fixpoint</td>
       </tr>
       <tr>
@@ -509,25 +503,24 @@ parallel[G](interior) :- parallel[G](X), parallel[G](Y), X != Y.</pre>
     nothing new. Three rules do almost all of the work:</p>
   <pre>thm[G](P) :- axiom[G](P).                                        <span class="dim">-- an axiom is a theorem</span>
 
-holds_from[G](S, K1) :- foundation[G](_, _), need_count(S, N), K1 is N + 1.
-holds_from[G](S, K)  :- needs(S, K, P), thm[G](P), K1 is K + 1, holds_from[G](S, K1).
+premises(S, N) :- step(S, _), N is count(Q : needs(S, Q)).
 
-thm[G](P) :- step(S, P), holds_from[G](S, 1).                    <span class="dim">-- a step whose premises all hold</span></pre>
-  <p class="kid">The middle pair is a counting trick. "All of this step's requirements are
-    satisfied" is a statement about a list, and the direct way of writing it makes the program
-    chase its own tail. So the rules walk the list one position at a time instead, which the
-    engine can do safely.</p>
+thm[G](P) :- step(S, P), premises(S, N), foundation[G](_, _),
+             at_least(N, Q : needs(S, Q), thm[G](Q)).    <span class="dim">-- a step whose premises all hold</span></pre>
+  <p class="kid">The last rule is a head count. "All of this step's requirements are
+    satisfied" is a statement about a list, so the program counts the requirements and asks
+    for that many of them to hold.</p>
   <p class="eng">"Every premise of S holds in G" is a universal over an open set, and the
-    obvious spelling (<code>blocked(S) :- needs(S,_,P), not thm[G](P)</code>) puts
+    obvious spelling (<code>blocked(S) :- needs(S,P), not thm[G](P)</code>) puts
     <code>thm</code> and <code>blocked</code> in a negative cycle, which the kernel rejects as
-    unstratifiable &mdash; correctly. Indexing the premises turns the universal into a positive
-    recursion: <code>holds_from(S, K)</code> means "premises K..N of S all hold", the base case
-    is the position past the last one, and no negation is left. The same device carries
-    <code>examples/moot</code>'s flag requirements, and it is a real cost of relation-level
-    stratification, paid deliberately.</p>
+    unstratifiable &mdash; correctly. A threshold is monotone, so it may recurse:
+    <code>at_least(N, ...)</code> with N the counted premises, no negation left, and a step
+    with no premises is a quorum of 0. A quorum's witness is its N members, so a fold over it
+    counts a lower bound when more than N support; here N is every premise, so the folds are
+    exact. The same rule carries <code>examples/moot</code>'s flag requirements.</p>
   <p class="eng">Note what the ledger variable <code>[G]</code> does to the search: the rule
     is one rule, and it fires once per (book, step) pair for which the premises hold. Nine
-    books over 24 steps, with the premise walk in between, is the bulk of the 5351 facts.</p>
+    books over 24 steps, with the premise quorums in between, is the bulk of the 3920 facts.</p>
 
   <h3 class="kid">Step 5 &mdash; the proof tree, which was kept the whole time</h3>
   <h3 class="eng">5. why: the recorded support, rendered</h3>
@@ -541,37 +534,41 @@ thm[G](P) :- step(S, P), holds_from[G](S, 1).                    <span class="di
     <code>[axiom]</code> on the leaves (base facts, no support) and <code>[builtin]</code> on
     the arithmetic:</p>
 
-  <pre class="tight">thm[euclid](angle_sum_180)  &lt;= r9749238b @tick 0
+  <pre class="tight">thm[euclid](angle_sum_180)  &lt;= rb3f54c28 @tick 0
   step[main](s_playfair,angle_sum_180) [axiom]
-  holds_from[euclid](s_playfair,1)  &lt;= r1cadcdda @tick 0
-    needs[main](s_playfair,1,post5_unique) [axiom]
-    thm[euclid](post5_unique)  &lt;= rac159495 @tick 0
-      axiom[euclid](post5_unique) [axiom]
-    2 is +(1,1) [builtin]
-    holds_from[euclid](s_playfair,2)  &lt;= r1cadcdda @tick 0
-      needs[main](s_playfair,2,alternate_angles_parallel) [axiom]
-      thm[euclid](alternate_angles_parallel)  &lt;= r9749238b @tick 0
+  premises[main](s_playfair,2)  &lt;= r08567a89 @tick 0
+    step[main](s_playfair,angle_sum_180) [axiom]
+    count(?Q : needs[main](s_playfair,?Q)) = 2 [aggregate: 2 members, sealed needs@0]
+      #1 (alternate_angles_parallel) h=1
+        needs[main](s_playfair,alternate_angles_parallel) [axiom]
+      #2 (post5_unique) h=1
+        needs[main](s_playfair,post5_unique) [axiom]
+  foundation[euclid](elements,-300) [axiom]
+  at_least(2, ?Q : needs[main](s_playfair,?Q), thm[euclid](?Q)) [quorum: the first 2 members]
+    #1 (post5_unique) h=2
+      needs[main](s_playfair,post5_unique) [axiom]
+      thm[euclid](post5_unique)  &lt;= rac159495 @tick 0
+        axiom[euclid](post5_unique) [axiom]
+    #2 (alternate_angles_parallel) h=6
+      needs[main](s_playfair,alternate_angles_parallel) [axiom]
+      thm[euclid](alternate_angles_parallel)  &lt;= rb3f54c28 @tick 0
         step[main](s_i27,alternate_angles_parallel) [axiom]
-        holds_from[euclid](s_i27,1)  &lt;= r1cadcdda @tick 0
-          needs[main](s_i27,1,exterior_angle) [axiom]
-          thm[euclid](exterior_angle)  &lt;= r9749238b @tick 0
-            step[main](s_exterior,exterior_angle) [axiom]
-            holds_from[euclid](s_exterior,1)  &lt;= r1cadcdda @tick 0
-              needs[main](s_exterior,1,post1_two_points) [axiom]
-              thm[euclid](post1_two_points)  &lt;= rac159495 @tick 0
-                axiom[euclid](post1_two_points) [axiom]
-              2 is +(1,1) [builtin]
-              holds_from[euclid](s_exterior,2)  &lt;= r1cadcdda @tick 0
-                needs[main](s_exterior,2,post2_extend) [axiom]
-                thm[euclid](post2_extend)  &lt;= rac159495 @tick 0
-                  axiom[euclid](post2_extend) [axiom]
-                3 is +(2,1) [builtin]
+        premises[main](s_i27,1)  &lt;= r08567a89 @tick 0
+          step[main](s_i27,alternate_angles_parallel) [axiom]
+          count(?Q : needs[main](s_i27,?Q)) = 1 [aggregate: 1 member, sealed needs@0]
+            #1 (exterior_angle) h=1
+              needs[main](s_i27,exterior_angle) [axiom]
+        foundation[euclid](elements,-300) [axiom]
+        at_least(1, ?Q : needs[main](s_i27,?Q), thm[euclid](?Q)) [quorum: the first 1 member]
+          #1 (exterior_angle) h=4
+            needs[main](s_i27,exterior_angle) [axiom]
+            thm[euclid](exterior_angle)  &lt;= rb3f54c28 @tick 0
                 ...</pre>
 
-  <p class="eng">Four rule ids appear in the whole tree &mdash; <code>rac159495</code>
-    (axiom&rarr;theorem), <code>r1cadcdda</code> and <code>r1c420810</code> (the premise walk
-    and its base case) and <code>r9749238b</code> (step&rarr;theorem) &mdash; because the
-    deduction layer is four clauses and that is all of them. The
+  <p class="eng">Three rule ids appear in the whole tree &mdash; <code>rac159495</code>
+    (axiom&rarr;theorem), <code>r08567a89</code> (the premise count) and <code>rb3f54c28</code>
+    (step&rarr;theorem) &mdash; because the deduction layer is three clauses and that is all
+    of them. The
     ids are content hashes of the clauses, so editing a rule changes them and forces the
     pinned expectations in <code>test/example-goof.test.ts</code> to be redone deliberately.</p>
 
@@ -655,7 +652,7 @@ excise axiom[euclid](post5_unique)
    pythagoras                  euclid        post1_two_points post2_extend post4_right_angles post5_unique
    aaa_congruence              lobachevsky   archimedes excluded_middle post1_two_points post2_extend post4_right_angles post5_many
    aaa_congruence              riemann       archimedes post1_two_points post2_finite post5_none
-   every_knot_unties           frege         ex_falso post5_many post5_unique</pre>
+   every_knot_unties           frege         ex_falso post5_many post5_unique   (3 independent derivations)</pre>
 
   <p class="kid">Five of Euclid's fifteen results genuinely need the fifth rule. Ten do not,
     and those ten survive in every one of the other geometries. The last row is the
@@ -767,9 +764,9 @@ angle_sum[G](T, S) :- cut(T, T1, T2), angle_sum[G](T1, S1), angle_sum[G](T2, S2)
     by contradiction names it among its premises. Nothing in the rules knows what logic is.</p>
 
   <pre>step(s_sacc_leg, angle_sum_at_most_180).
-needs(s_sacc_leg, 1, exterior_angle).
-needs(s_sacc_leg, 2, archimedes).
-needs(s_sacc_leg, 3, excluded_middle).      <span class="dim">-- the reductio, as a premise</span></pre>
+needs(s_sacc_leg, exterior_angle).
+needs(s_sacc_leg, archimedes).
+needs(s_sacc_leg, excluded_middle).      <span class="dim">-- the reductio, as a premise</span></pre>
 
   <p class="kid"><strong>Brouwer's book</strong> forbids proving something by showing its
     opposite is impossible. Take that one line away and exactly two results disappear &mdash;
@@ -777,9 +774,9 @@ needs(s_sacc_leg, 3, excluded_middle).      <span class="dim">-- the reductio, a
     untouched: Pythagoras still holds.</p>
   <p class="eng">Removing <code>excluded_middle</code> loses exactly
     <code>all_or_none</code> and <code>angle_sum_at_most_180</code>, which are exactly the two
-    steps the corpus marks <code>by_reductio</code>. <code>whynot</code> walks the premise
-    chain and stops on <code>thm[brouwer](excluded_middle)</code> &mdash; premise 3 of
-    Saccheri&ndash;Legendre, named.</p>
+    steps the corpus marks <code>by_reductio</code>. <code>whynot</code> says the quorum of
+    <code>s_sacc_leg</code> reached 2 of its 3 premises and names the one it lacks,
+    <code>thm[brouwer](excluded_middle)</code> &mdash; premise 3 of Saccheri&ndash;Legendre.</p>
 
   <p class="kid"><strong>Frege's and da Costa's books</strong> both contain a flat
     contradiction: they claim there is exactly one parallel <em>and</em> that there are many.
@@ -835,7 +832,7 @@ thm[G](P)      :- explodes[G](P).</pre>
 
   <pre>    derivability decisions:        333   disagreements: 0
     axiom-necessity decisions:    1942   disagreements: 14  (14 of them conservative)
-    axiom-sufficiency checks:      282   disagreements: 0
+    axiom-sufficiency checks:      331   disagreements: 0
     minimal axiom sets, found / existing: 236 / 242
     angle-sum comparisons:          45   disagreements: 0
     parallel-witness decisions:     36   disagreements: 0</pre>
@@ -851,7 +848,7 @@ thm[G](P)      :- explodes[G](P).</pre>
       the direction so it cannot quietly grow.</p>
     <p class="eng"><strong>Sound everywhere, incomplete in one place, and the size is
       measured.</strong> Every axiom set the polynomial names really does prove the theorem
-      &mdash; 282 for 282. It is incomplete for 6 theorems, all in <code>frege</code>, where 6
+      &mdash; 331 for 331. It is incomplete for 6 theorems, all in <code>frege</code>, where 6
       minimal axiom sets exist that no monomial names.
       <code>provenanceSemiring</code> keeps at most <code>PROVENANCE_MAX_TERMS</code> = 32
       monomials and applies that cap <em>before</em> pruning supersets, so a short proof from
@@ -901,9 +898,9 @@ thm[G](P)      :- explodes[G](P).</pre>
   <p class="eng">The demo still expands the rule set one copy per book, because the comparison
     is the thesis; what it measures now is only the rule count:</p>
 
-  <pre>    polymorphic: 1716 facts     expanded: 1716 facts     IDENTICAL
+  <pre>    polymorphic: 1186 facts     expanded: 1186 facts     IDENTICAL
     leak[audit] rows — polymorphic: 0   expanded: 0
-    28 clauses become 292 — and one of them, the rule that compares two books,
+    27 clauses become 275 — and one of them, the rule that compares two books,
     becomes 81, because it ranges over PAIRS of ledgers.</pre>
 
   <p class="eng">Two smaller scars, both still visible in the file's shape. A head written

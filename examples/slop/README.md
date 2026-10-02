@@ -393,9 +393,13 @@ val(N, V) :- find(N, K, T, Col), val(K, Key), tkey(T, Row, Key),
              tcell(T, Row, Col, C), value(C, V).                   -- VLOOKUP, exact match
 ```
 
-`SUM` is a chain and not an aggregate because v0 has no aggregation
-(`LIMITS.md`): the host lays a range out as `sum_item(I, Cell, Next)` and the
-fold is two rules. `VLOOKUP` reaches the **cell**, not a value, which is what
+`SUM` is a chain and not a kernel `sum` because the kernel refuses an
+aggregate that reads its own recursive component: `val`, `value` and `addend`
+are one, cyclic in the rules though acyclic in the data (tried:
+`V is sum(X ; C : in_range(I, C), addend(C, X))` is refused, "an aggregate
+reads a closed relation"). So the host lays a range out as
+`sum_item(I, Cell, Next)` and the fold is two rules; `itotal` and `feeds`
+walk the same chain. `VLOOKUP` reaches the **cell**, not a value, which is what
 makes the tree walk on into the rate table.
 
 ## What this does NOT do

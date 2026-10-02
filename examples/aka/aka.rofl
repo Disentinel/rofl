@@ -109,19 +109,6 @@ invoice[billing](inv_13, acct_nw_prod,   200000, q2).
 invoice[billing](inv_14, acct_contoso,   150000, q2).
 invoice[billing](inv_15, acct_tailspin,   90000, q2).
 
--- The index exists for the same reason SUS indexes its players: the kernel
--- has no aggregation, so a sum is a SCAN (section 6), and a scan needs a
--- position to step through.
-inv_no[billing](inv_01,  1).   inv_no[billing](inv_02,  2).
-inv_no[billing](inv_03,  3).   inv_no[billing](inv_04,  4).
-inv_no[billing](inv_05,  5).   inv_no[billing](inv_06,  6).
-inv_no[billing](inv_07,  7).   inv_no[billing](inv_08,  8).
-inv_no[billing](inv_09,  9).   inv_no[billing](inv_10, 10).
-inv_no[billing](inv_11, 11).   inv_no[billing](inv_12, 12).
-inv_no[billing](inv_13, 13).   inv_no[billing](inv_14, 14).
-inv_no[billing](inv_15, 15).
-rows[billing](15).
-
 -- =========================================================================
 -- 2. the CRM book -- [crm], written by the CRM export
 -- =========================================================================
@@ -266,12 +253,9 @@ loose[recon](Inv)           :- ambiguous[recon](Inv).
 loose[recon](Inv)           :- unmapped[recon](Inv).
 
 -- =========================================================================
--- 7. the totals -- a sum is a scan
+-- 7. the totals
 -- =========================================================================
--- The kernel has no aggregation, and this is what that costs: to add up a
--- set of invoices you index them and walk the index, carrying the running
--- total, skipping the positions that are not in the pot. One chain serves
--- every pot at once, because the pot is a term.
+-- A pot is a term, so one sum serves every pot at once.
 --
 --   billing        every invoice in the quarter
 --   attributed     every invoice that landed on exactly one customer
@@ -298,18 +282,11 @@ counts[recon](unmapped, Inv)   :- unmapped[recon](Inv).
 counts[recon](cust(C), Inv)    :- attributed[recon](Inv, C).
 counts[recon](loose(A), Inv)   :- loose[recon](Inv), invoice[billing](Inv, A, _, _).
 
-tagged[recon](T, N, Amt)          :- counts[recon](T, Inv), inv_no[billing](Inv, N),
-                                     invoice[billing](Inv, _, Amt, _).
--- the CRM's own total walks the CUSTOMER index instead; the two index
--- spaces never meet, because a tag never mixes them.
-tagged[recon](crm_booked, I, Amt) :- booked[crm](C, Amt, Q), quarter[main](Q), cust_no[crm](C, I).
+tagged[recon](T, Inv, Amt)        :- counts[recon](T, Inv), invoice[billing](Inv, _, Amt, _).
+-- the CRM's own total is keyed by customer; a tag never mixes the two.
+tagged[recon](crm_booked, C, Amt) :- booked[crm](C, Amt, Q), quarter[main](Q).
 
-at[recon](T, N)    :- tagged[recon](T, N, _).
-scan[recon](T, 0, 0) :- tag[recon](T).
-scan[recon](T, N, S) :- scan[recon](T, M, S0), N is M + 1, tagged[recon](T, N, Amt), S is S0 + Amt.
-scan[recon](T, N, S) :- scan[recon](T, M, S), N is M + 1, rows[billing](L), N <= L,
-                        not at[recon](T, N).
-total[recon](T, S)   :- scan[recon](T, L, S), rows[billing](L).
+total[recon](T, S)   :- tag[recon](T), S is sum(Amt ; K : tagged[recon](T, K, Amt)).
 
 -- =========================================================================
 -- 8. does it close, and if not, what mapping would close it

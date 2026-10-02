@@ -78,10 +78,14 @@ own build. Test targets own files too — `packages/utils/test/str.spec.ts`
 belongs to `utils:test` — and nothing depends on a test target, so changing
 that file rebuilds exactly one thing.
 
-`minutes/3` is a declared cost table from CI history. **No rule reads it**:
-v0 has no aggregation (LIMITS.md), so the money arithmetic in section 6 of the
-transcript is host-side, over an engine-computed provenance fold. It lives in
-`blam.rofl` because it is a property of the repository, not of the script.
+`minutes/3` is a declared cost table from CI history, and section 5 of
+`blam.rofl` reads it with kernel aggregates: `affected_cost` and `repo_cost`
+are sums over the targets, and the cut table of section 6 is `count`, `sum`,
+`max` and `rank` rules (`cut_pairs`, `cut_minutes`, `max_pairs`, `cut_place`).
+The host still folds provenance and tropical depth, which no rule computes,
+and asserts the results as `cuts/4` and `wave/2` facts for those rules to
+aggregate. The table lives in `blam.rofl` because it is a property of the
+repository, not of the script.
 
 ## The rules
 
@@ -567,7 +571,7 @@ one tick, so a carried fact is a given in the tick that reads it.
 
 ## Files
 
-- `blam.rofl` — the graph as facts, plus the five rules.
+- `blam.rofl` — the graph as facts, the five rules, and the money rules.
 - `demo.ts` — the runnable transcript above, and every helper the test uses.
 - `page.html` — the same story for a reader who is not going to run it, at two
   levels: plain and engineer.

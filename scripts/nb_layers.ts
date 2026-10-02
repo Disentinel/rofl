@@ -13,12 +13,14 @@ const PROBES: Record<string, string> = {
   asked: 'mine(N) :- fn_node[code](N).\n? mine(N)\n? has_return[code](F)',
   kernel: 'mine(N) :- fn_node[code](N).\nflat(R) :- edb(R).\n? flat(fn_node)',
   why: 'why unawaited(ndb0114bc_25)\nwhynot recurses(ndb0114bc_25)',
+  agg: 'item(a).\nitem(b).\ntotal(N) :- N is count(X : item(X)).\nwhy total(2)\nwhynot total(3)',
 };
 const BREAK: Record<string, [string, string]> = {
   model: ['&& ![...heads].some((r) => this.modelRels.has(r) || sc.rels.has(r))', ''],
   asked: ['(base && !heads.has(relOf(a.lit)) ? base : f).query', 'f.query'],
   kernel: ['&& !over.some((r) => this.kernelRels.has(r))', ''],
   why: ['const one = (rel: string) => heads.has(rel) ? cells : model;', 'const one = (rel: string) => cells;'],
+  agg: ['    recAny: (key: string) => byKey(key, (s) => s.recAny(key)),\n', ''],
 };
 
 /** The kernel, or a copy of it over a host with one guard spoilt. */

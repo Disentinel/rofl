@@ -48,8 +48,6 @@ edb(cond_of).     -- cond_of(C, L).      clause C carries condition L
 edb(cond).        -- cond(L, D, Op, K).  L constrains dimension D: Op K
 edb(cond_alt).    -- cond_alt(L, V).     a member of L's value set (oneof/noneof)
 edb(requires).    -- requires(C, G).     clause C needs flag G to be on
-edb(req_at).      -- req_at(C, K, G).    C's K-th requirement, 1-based
-edb(req_count).   -- req_count(C, N).    how many requirements C has
 edb(dim).         -- dim(D).             a context dimension
 edb(dom).         -- dom(D, V).          V is a value of dimension D
 edb(exclusive).   -- exclusive(F, G).    F and G are declared mutually exclusive
@@ -113,24 +111,31 @@ conflict(C, D, L1, L2) :- empty(C, D), cond_of(C, L1), cond_of(C, L2),
                           cond(L1, D, _, _), cond(L2, D, _, _), L1 != L2,
                           not share(L1, L2).
 
+-- The single deletions that revive an emptied dimension: dropping L leaves a
+-- value every OTHER condition of C on D admits. The intersection is the same
+-- double negation as `admits`, so no aggregate is wanted and none is used.
+
+blocks(C, D, L, V) :- empty(C, D), cond_of(C, L), cond_of(C, M), L != M,
+                      cond(M, D, _, _), dom(D, V), not cond_admits(M, V).
+repair(C, D, L)    :- empty(C, D), cond_of(C, L), cond(L, D, _, _), dom(D, V),
+                      not blocks(C, D, L, V).
+
 -- ---------------------------------------------------------------------------
 -- layer 4 — liveness through flag requirements.
 --
 -- "Every requirement of C is live" is a universal over a set, and the obvious
 -- spelling (`blocked(C) :- requires(C,G), not live(G)`) puts `live` and
 -- `blocked` in a NEGATIVE CYCLE, which boot.rofl rejects as unstratifiable and
--- is right to. Indexing the requirements and walking them turns the universal
--- into a positive recursion: `ok_from(C,K)` means "requirements K..N of C are
--- all live", the base case is the position past the last one, and the only
--- negation left in this layer is `not dead_clause`, which sits below.
---
--- This is a real cost of relation-level stratification, paid deliberately and
--- once. It is also the reason `live/1` recurses positively and therefore
--- carries a counting annotation that means something (see README).
+-- is right to. It is a threshold instead: as many live requirements as C has
+-- requirements, the number counted. `at_least` is monotone, so it may stand
+-- inside the recursion of `live` with no negation, and a clause that needs
+-- nothing is a quorum of 0. A quorum's witness is its N members, so a fold
+-- over it counts a lower bound when more than N support; here N is every
+-- requirement, so the folds of the demo are exact.
 
-ok_from(C, N1)   :- req_count(C, N), N1 is N + 1.
-ok_from(C, K)    :- req_at(C, K, G), live(G), K1 is K + 1, ok_from(C, K1).
-usable(C)        :- clause_known(C), not dead_clause(C), ok_from(C, 1).
+premises(C, N)   :- clause_known(C), N is count(G : requires(C, G)).
+usable(C)        :- clause_known(C), not dead_clause(C), premises(C, N),
+                    at_least(N, G : requires(C, G), live(G)).
 live(F)          :- ordered(F, C, _), usable(C).
 
 -- ===========================================================================
@@ -192,7 +197,7 @@ shadowed[audit](F, C2, C1) :- ordered(F, C2, _), sibling(C1, C2), contains(C1, C
 narrows(C, D)   :- rejects(C, D, _).
 total_clause(C) :- clause_known(C), not narrows(C, _).
 
-tautological[audit](F, C) :- ordered(F, C, _), total_clause(C), req_count(C, 0).
+tautological[audit](F, C) :- ordered(F, C, _), total_clause(C), premises(C, 0).
 
 -- 4. CONTRADICTORY — two flags the config declares mutually exclusive, whose
 -- clauses admit a common context. On that overlap BOTH are on, so which branch
@@ -240,9 +245,8 @@ ctx_dim_ok(C, D) :- ctx(D, V), admits(C, D, V).
 ctx_bad(C)       :- clause_known(C), dim(D), not ctx_dim_ok(C, D).
 ctx_ok(C)        :- clause_known(C), not ctx_bad(C).
 
-on_here(C, N1)   :- req_count(C, N), N1 is N + 1.
-on_here(C, K)    :- req_at(C, K, G), flag_on(G), K1 is K + 1, on_here(C, K1).
-flag_on(F)       :- ordered(F, C, _), ctx_ok(C), on_here(C, 1).
+flag_on(F)       :- ordered(F, C, _), ctx_ok(C), premises(C, N),
+                    at_least(N, G : requires(C, G), flag_on(G)).
 
 -- Required results on a healthy config, all checked in test/example-moot.test.ts:
 --   ? unstratified(X)            -> empty   (boot.rofl computes stratum/2 over these)

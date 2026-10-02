@@ -11,7 +11,7 @@ import { scan } from '../scanners/js_ast.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, type Question } from '../scripts/read_md.ts';
 import { varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
-import type { FactRec, FactStore, Store } from '../src/store.ts';
+import type { FactRec, Store } from '../src/store.ts';
 
 const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
@@ -152,20 +152,23 @@ function relsOf(program: Clause[], into = new Set<string>()): Set<string> {
 
 /** The kept model and the cells' world read as one, for why, whynot and a proof: a relation the cells conclude from their world, the kernel's own
  *  from both, every other from the model, of which the cells' world holds only copies (and marks them extensional, which the model does not). */
-function proofs(model: FactStore, cells: FactStore, heads: Set<string>, kernel: Set<string>, copied: Set<string>): Rofl {
+function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<string>, copied: Set<string>): Rofl {
   const one = (rel: string) => heads.has(rel) ? cells : model;
-  const both = (rel: string, read: (s: FactStore) => FactRec[] | null): FactRec[] | null => {
+  const both = (rel: string, read: (s: Store) => FactRec[] | null): FactRec[] | null => {
     const a = read(model), b = read(cells);
     if (!a || !b) return null;
     const seen = new Set(a.map((f) => f.key));
     return [...a, ...b.filter((f) => !seen.has(f.key) && !(f.rel === 'edb' && f.args[0].k === 'a' && copied.has(f.args[0].name)))];
   };
-  const rows = (rel: string, read: (s: FactStore) => FactRec[] | null) => kernel.has(rel) ? both(rel, read) : read(one(rel));
-  const byKey = <T>(key: string, read: (s: FactStore) => T): T => { const rel = relOf(key); return kernel.has(rel) ? (read(cells) ?? read(model)) : read(one(rel)); };
+  const rows = (rel: string, read: (s: Store) => FactRec[] | null) => kernel.has(rel) ? both(rel, read) : read(one(rel));
+  const byKey = <T>(key: string, read: (s: Store) => T): T => { const rel = relOf(key); return kernel.has(rel) ? (read(cells) ?? read(model)) : read(one(rel)); };
   const store = {
     tick: cells.tick, dirty: false, partialEval: model.partialEval || cells.partialEval,
     has: (key: string) => byKey(key, (s) => s.has(key) || undefined) ?? false,
     get: (key: string) => byKey(key, (s) => s.get(key)),
+    recAny: (key: string) => byKey(key, (s) => s.recAny(key)),
+    ghosts: new Map([...model.ghosts, ...cells.ghosts]), dead: new Map([...model.dead, ...cells.dead]), cells: new Map([...model.cells, ...cells.cells]), keepDead: true,
+    firingList: (key: string) => byKey(key, (s) => s.firingList(key)), firings: new Map([...model.firings, ...cells.firings]),
     witnessOf: (key: string) => byKey(key, (s) => s.witnessOf(key)),
     witnessesOf: (key: string) => byKey(key, (s) => s.witnessesOf(key)),
     supportCount: (key: string) => byKey(key, (s) => s.supportCount(key)),

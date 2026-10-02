@@ -16,6 +16,8 @@ edb(ignored).          -- ignored(agg, K, L, Reason)       does not apply, and w
 edb(unknown_because).  -- unknown_because(agg, K, L, Reason)
 edb(decided_not_work). -- decided_not_work(agg, K, L, Finding)  the owner took it off the queue
 edb(workaround_site).  -- workaround_site(K, Path)
+edb(workaround_marker). -- workaround_marker(Path, Regex)  what stood in for an aggregate there
+edb(workaround_kept).   -- workaround_kept(K, Path, Reason)  a site that stays, said why
 edb(contradiction_site). -- contradiction_site(Item, Path, What)  prose the programme falsifies
 -- the registry: facts/checks.rofl and facts/findings.rofl own these, and only
 -- the world that loads them (agg_proofs) has rows in them

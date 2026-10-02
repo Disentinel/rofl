@@ -12,7 +12,7 @@ import { Rofl } from '../../src/api.ts';
 import { Evaluation } from '../../src/engine.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
-  countingSemiring, depthBoundedCountingSemiring, tropicalSemiring, unitFiringCost,
+  countingSemiring, depthBoundedCountingSemiring,
   renderCount, INFINITE, type Count,
 } from '../../runtime/semirings.ts';
 import type { FoldResult } from '../../src/semiring.ts';
@@ -27,6 +27,7 @@ const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 export const BOOT = read('boot.rofl')
   + '\n' + read('rules/self-audit.rofl');
 export const MODEL = read('examples', 'rip', 'rip.rofl');
+export const TRACE = read('examples', 'rip', 'trace', 'trace.rofl');
 
 /** The three markers rip.rofl separates itself on. `@policy` opens the block
  *  §9 rewrites; `@machine` opens the transition system; `@game` opens the
@@ -708,39 +709,30 @@ export function sweep(p: Policy, env: EnvName, runs: number, seed = 1,
 // ---------------------------------------------------------------------------
 // BEST DERIVATION: the shortest sequence of failures that produces a state
 //
-// The tropical fold over `reached/1` already computed the length of the
-// cheapest derivation of every state. Walking down it, choosing at each step
-// the firing whose cost IS that number, reads the argmin back out of the
-// support the engine recorded — not a story told about the answer afterwards,
-// and not a search this file ran. What comes out is a script: an action and
-// an answer per step, which `replay` below hands to the simulator.
+// `dist` of trace.rofl is the fewest moves to every state, a lattice the
+// kernel closes. `leg` keeps the moves on a shortest play, so the script is
+// read back from the engine by following it to the start. What comes out is
+// an action and an answer per step, which `replay` below hands to the
+// simulator.
 
 export interface Step { from: string; move: Move; answer: Answer; to: string }
 
-export function shortest(a: Rofl): FoldResult<number> {
-  return evaluateSemiring(a.store, tropicalSemiring, { weight: unitFiringCost });
+export function traceWorld(a: Rofl): Rofl {
+  const r = new Rofl();
+  const facts = ['initial', 'respond'].flatMap((rel) => a.factKeys(rel))
+    .map((k) => k.replace('[main]', '') + '.');
+  must(r.load(BOOT), 'boot.rofl');
+  must(r.load(TRACE + '\n' + facts.join('\n'), { who: 'rip', budget: BUDGET }), 'trace.rofl');
+  return r;
 }
 
-export function script(a: Rofl, trop: FoldResult<number>, target: string): Step[] {
+export function script(t: Rofl, target: string): Step[] {
   const out: Step[] = [];
-  const seen = new Set<string>();
-  let k = `reached[main](${target})`;
-  for (;;) {
-    if (seen.has(k)) throw new Error(`cycle in the shortest derivation at ${k}`);
-    seen.add(k);
-    const ws = a.store.witnessesOf(k);
-    let best: { prev: string; resp: string; cost: number } | null = null;
-    for (const w of ws) {
-      const prev = w.prems.find((pr) => pr.t === 'fact' && pr.key.startsWith('reached[main]('));
-      const resp = w.prems.find((pr) => pr.t === 'fact' && pr.key.startsWith('respond[main]('));
-      if (!prev || !resp || prev.t !== 'fact' || resp.t !== 'fact') continue;
-      const cost = (trop.value.get(prev.key) ?? Infinity) + (trop.value.get(resp.key) ?? Infinity) + 1;
-      if (best === null || cost < best.cost) best = { prev: prev.key, resp: resp.key, cost };
-    }
-    if (best === null) break;                 // the initial state: derived from `initial/1`
-    const ra = args(best.resp);
-    out.push({ from: ra[0], move: ra[1] as Move, answer: ra[2] as Answer, to: ra[3] });
-    k = best.prev;
+  for (let k = target; ;) {
+    const leg = t.query(`leg(${k}, S, A, R)`).rows[0]?.bindings;
+    if (!leg) break;                          // the initial state has no leg
+    out.push({ from: leg.S, move: leg.A as Move, answer: leg.R as Answer, to: k });
+    k = leg.S;
   }
   return out.reverse();
 }
@@ -1019,12 +1011,12 @@ function main(): void {
 
   // -- 8 --------------------------------------------------------------------
   rule('8. best derivation: a reproducing trace, and it executes');
-  const trop = shortest(a);
-  const sc = script(a, trop, DOUBLE_CHARGE);
+  const tw = traceWorld(a);
+  const sc = script(tw, DOUBLE_CHARGE);
   console.log(`  The shortest way to reach ${DOUBLE_CHARGE},`);
-  console.log('  which is a fulfilled order that was charged twice. The tropical fold priced');
-  console.log('  every derivation of `reached/1`; this is the argmin read back out of the');
-  console.log('  support the engine already recorded, not a search this file ran.\n');
+  console.log('  which is a fulfilled order that was charged twice. `dist` is a lattice the');
+  console.log('  kernel closes (examples/rip/trace/trace.rofl), the fewest moves to every state;');
+  console.log('  this is the walk back along `leg`, the moves on a shortest play.\n');
   console.log('    step  where                        the workflow   the provider');
   sc.forEach((s, i) => {
     console.log(`    ${n(i + 1, 4)}  ${s.from.padEnd(28)} ${s.move.padEnd(14)} ${s.answer}`);
@@ -1036,7 +1028,7 @@ function main(): void {
   console.log(`    settled? ${isSettled(parseTask(rep.at))}. Two charges, one parcel: the money is`);
   console.log('    gone twice and nothing in the machine can bring it back, because the');
   console.log('    workflow never learned that the first charge landed.');
-  const dl = script(a, trop, QUIET_CARRIER);
+  const dl = script(tw, QUIET_CARRIER);
   console.log(`\n  and the same for a dead letter, ${QUIET_CARRIER}:`);
   console.log(`    ${dl.map((s) => `${s.move}/${s.answer}`).join('  ->  ')}`);
   console.log(`    replay -> ${replay(p, dl).at}   (${replay(p, dl).ok ? 'reproduced' : 'diverged'})`);

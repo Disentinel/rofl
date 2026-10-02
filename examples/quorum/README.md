@@ -107,7 +107,7 @@ On seven steps, one that needs nothing, one resting on a premise nobody
 establishes and one resting on that one, the two prove the same propositions,
 and the stated `need_count` equals the counted `premises` (a step that needs
 nothing is a quorum of 0). An alarm holds both. This is the evidence that the
-index walk is expressible; rewriting moot and goof is `w_agg_retire_workarounds`.
+index walk is expressible; moot and goof were rewritten that way by `w_agg_retire_workarounds`, and each now states a theorem or a flag as one `at_least` over its counted premises.
 
 ## 3. Raft: a commit that the logs do not support
 

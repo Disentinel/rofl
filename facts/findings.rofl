@@ -9562,3 +9562,115 @@ addressed_by(f_a_round_costs_every_rule_its_prefix, "rules/js-dataflow.rofl").
 
 addressed_by(f_a_scope_kind_no_declarator_reaches, "rules/js-dataflow.rofl").
 addressed_by(f_shadowing_stops_where_binds_name_stops, "rules/js-dataflow.rofl").
+
+-- ===========================================================================
+-- w_agg_retire_workarounds and w_agg_demo_linter (2026-10-02)
+
+finding(f_the_host_goldens_went_stale_when_the_reflection_grew, pitfall).
+recorded(f_the_host_goldens_went_stale_when_the_reflection_grew, "2026-10-02").
+demands(f_the_host_goldens_went_stale_when_the_reflection_grew, none).
+addressed_by(f_the_host_goldens_went_stale_when_the_reflection_grew, "facts/goldens.rofl").
+finding_note(f_the_host_goldens_went_stale_when_the_reflection_grew,
+  "npm run test:hosts failed 10 of 21 demos on core-aggregations (aka bleep cram ditto goof iffy jopa nope rip sus), and an earlier agent took it for an environment fault. It was not: `npm run bless` WITHOUT --hosts carries the demo rows of the golden forward (hostRows = hostsBefore), so a commit that changes what a demo prints and blesses only the worlds leaves the host rows stale. 0dd3ffb (declared orders for subsumption) added two reflection facts, nine demos print their store's fact count (`facts in the store: 3714` became 3716), and cram prints the digest of boot.rofl and src/, which moves with any src edit. Found by running the demos at 985ec34, 720fb67 and 4f997a6 in a scratch worktree: at 720fb67, where the golden was blessed, the output is the output of today and did not match its golden; every difference to 985ec34, where it did, was the count and the digest. Re-blessed with `npm run bless -- --hosts` (10 demos moved, no world) before any demo was edited, so test:hosts then verifies the edits. Not fixed, and worth a gate: a bless that moves a world a demo prints from should say the demo is stale, because test:hosts is the only thing that tells and it takes four minutes.").
+
+finding(f_the_semiring_fold_followed_a_cell_as_one, defect).
+recorded(f_the_semiring_fold_followed_a_cell_as_one, "2026-10-02").
+demands(f_the_semiring_fold_followed_a_cell_as_one, code).
+addressed_by(f_the_semiring_fold_followed_a_cell_as_one, "src/semiring.ts").
+addressed_by(f_the_semiring_fold_followed_a_cell_as_one, "test/semiring-cells.test.ts").
+finding_note(f_the_semiring_fold_followed_a_cell_as_one,
+  "evaluateSemiring knew the premises fact, neg and bi, and read a sealed aggregate cell as `one`: a fact derived through a sum, count, max or at_least lost its members in every host fold. Four demo agents met it separately: wtf's provenance of pt(grizzly,3,3) fell from 24 base facts to 3, aka's Viterbi certainty through a sum became 1.000 (a Proxy, throughCells, opened each cell by hand), goof's oracle disagreements went 14 to 389 once thm was an at_least, and moot could not fold the support of live. The fold now opens a cell: a Group cell (count, sum, median, quantile, rank) is the product over all its members, a Best cell (min, max, or, and, the joins) the sum over the members that reach the value, a Quorum cell the product over its N members, an empty or hole cell `one`; a cell is its own node of the support graph, so a threshold inside a cycle still reaches the cycle analysis and a cell adds no depth. An adversarial review found a quadratic blowup (a 3000-member cell cited by 3000 facts: counting 159 ms to 1180 ms, provenance 30 s; counting is linear again, 172 ms, provenance is inherently the product), a silent zero for a store that cannot open a cell (now a throw) and weak tests (22 mutants, the four survivors are equivalent or performance-only). aka's throughCells is deleted and its output is unchanged.").
+
+finding(f_a_cell_is_opened_through_a_cast_and_not_the_port, defect).
+recorded(f_a_cell_is_opened_through_a_cast_and_not_the_port, "2026-10-02").
+demands(f_a_cell_is_opened_through_a_cast_and_not_the_port, code).
+finding_note(f_a_cell_is_opened_through_a_cast_and_not_the_port,
+  "src/semiring.ts reads `store.cells` through a cast because the FactStore port (src/store.ts) has no accessor for a cell; the fold throws on a store without one (the sqlite adapter would), where it first read every aggregate-derived fact as underivable. The right shape is `cellOf(key)` on the port, implemented by Store: a three-line change left undone because the aggregate kernel's retraction work is editing src/store.ts, src/cell.ts and src/aggeval.ts at the same time. Deferred out loud: whoever lands that work adds the accessor and the cast goes.").
+
+finding(f_a_deduplicated_member_keeps_one_derivation, pitfall).
+recorded(f_a_deduplicated_member_keeps_one_derivation, "2026-10-02").
+demands(f_a_deduplicated_member_keeps_one_derivation, kernel_change).
+finding_note(f_a_deduplicated_member_keeps_one_derivation,
+  "A cell records one member per projection value, so `it(g,a,2). it(g,b,2). cnt(G,N) :- grp(G), N is count(V : it(G,X,V)).` records one member, and the provenance of anything derived from cnt cites only it(g,a,2): retracting it(g,a,2) leaves the total standing (it(g,b,2) carries the value), so a trust or Viterbi fold would use a premise that is not needed. rank and at_least have it too (the quorum is the first N by text). The fold cannot recover what the engine did not record; an exact count of the derivations of a threshold is the sum over the N-subsets of its supporters of the product of their values, which needs the full supporter set in the cell. Open, engine side (rust/rofl/src/cell.rs, src/aggeval.ts).").
+
+finding(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts, insight).
+recorded(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts, "2026-10-02").
+demands(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts, none).
+finding_note(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts,
+  "goof's thm and moot's usable and flag_on were a walk of an index (need_count, holds_from, req_at, ok_from) and are now one at_least over the premises, counted. Every verdict is the same (goof: the necessity line keeps its 14 conservative disagreements, sufficiency 0, axiom-sufficiency checks 282 to 331 with 0 disagreements; moot: every counting row, depth row and verdict identical), and the numbers that measured the walk moved because the walk is gone: goof's firings per theorem (16 to 10, 26 to 16, 6 to 4), its height-n counts shift one level (the quorum is one hop), its facts in the store 4813 to 3920; moot's configuration facts 553 to 477, its dead rules 11 to 10 (the audit rule undefined_premise reads premise_agg, which now has facts). One line is NOT explained: goof's every_knot_unties in frege now shows 3 independent derivations where the walk showed 1; the demo's agreement oracle still holds, and a guess (the 32-monomial cap applied before pruning) was not run down. Open: a quorum witness has N members, so a counting fold is a lower bound whenever more than N support (f_a_deduplicated_member_keeps_one_derivation); neither demo reaches it, because N is every premise there.").
+
+finding(f_an_aggregate_is_refused_by_relation_and_not_by_data, pitfall).
+recorded(f_an_aggregate_is_refused_by_relation_and_not_by_data, "2026-10-02").
+demands(f_an_aggregate_is_refused_by_relation_and_not_by_data, kernel_change).
+finding_note(f_an_aggregate_is_refused_by_relation_and_not_by_data,
+  "examples/slop keeps its SUM as a chain. `val(N,V) :- sum_head(N,I), V is sum(X ; C : in_range(I,C), addend(C,X)).` is refused by both engines (sum reads addend, which depends on the rule's own conclusion val): val, value and addend form one recursive component as RELATIONS, although the sheet's cells form no cycle. The stratification is by relation, so a spreadsheet, where a formula reads other formulas, cannot use the aggregate for a range sum without the host handing it a topological layering of the cells. itotal (the interval sum) stays for the same reason, as does the chain relation feeds. A data-level stratification (layer the cells by their depth in the acyclic data, refuse only a true cycle) is a kernel change and the one thing that retires this site. Kept, with its row.").
+
+finding(f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, pitfall).
+recorded(f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, "2026-10-02").
+demands(f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, code).
+finding_note(f_the_stock_evaluator_and_the_peel_refuse_an_aggregate,
+  "Retiring a fold by an aggregate met four host facilities that predate aggregates: the plain Evaluation throws on a program with an aggregate (aka lost two printed lines, rules not range-restricted and relations evaluated top-down, which Rofl no longer exposes; goof and moot read them through unsafe_rule and demand_rel queries now), the strata scheduler rejects an aggregate whose relation has no stratum row (wtf's rounds-versus-strata contrast shows a refusal where it showed wrong answers), and the plain rounds.peelRounds ignores aggregate premises. A host peel must read at_least as a positive dependency and a plain count as negation-like (moot's local peel does; wtf's marks both as negation and would read a recursive threshold as unstratifiable); aggeval.peelRounds has the aggEdges. Open: one peel for every caller, and the demos' stats lines back on the AggEval path.").
+
+finding(f_rank_orders_one_integer_so_ties_stay_in_the_host, pitfall).
+recorded(f_rank_orders_one_integer_so_ties_stay_in_the_host, "2026-10-02").
+demands(f_rank_orders_one_integer_so_ties_stay_in_the_host, none).
+finding_note(f_rank_orders_one_integer_so_ties_stay_in_the_host,
+  "rank takes one Int, so a multi-key order is a packed score (blam: minutes*1000 + pairs, pairs at most 192 in that data) and a string tie-break cannot be a rule: huh breaks ties by path in the host as the pipe's -k2,2 does, blam by edge name. Both demos say so in their prose. A rank over a tuple, or over a string, is the next aggregate and not a retirement.").
+
+finding(f_adjacent_runs_are_a_min_lattice_plus_hull, insight).
+recorded(f_adjacent_runs_are_a_min_lattice_plus_hull, "2026-10-02").
+demands(f_adjacent_runs_are_a_min_lattice_plus_hull, none).
+finding_note(f_adjacent_runs_are_a_min_lattice_plus_hull,
+  "examples/spat merged adjacent grid slots into intervals in the host (merge(), a fold over sorted slots). It is `lattice win_from(K,W,D,S,min F)`, which walks a run forward, and `lattice win_hull(K,W,D,F,hull I)` over the run's slots: no host code, one generic win_slot(Kind,W,D,S) relation serving five kinds of slot, and a lattice value read as a key by a relation of a higher stratum was accepted by both engines. The successor chain that summed a day's work (twelve lines, work_after and work_gap negated into work_next) is exactly sum(V ; E : work_len(...)) with the block as the projection key; and the tropical fold with its OFFSET for negative slack was just min over the slack rows (tropical wants non-negative weights, min does not). The place buffer, a Math.min over neighbouring gaps that depends on the duration asked about, stays in the host.").
+
+finding(f_a_deletion_search_is_a_double_negation, insight).
+recorded(f_a_deletion_search_is_a_double_negation, "2026-10-02").
+demands(f_a_deletion_search_is_a_double_negation, none).
+finding_note(f_a_deletion_search_is_a_double_negation,
+  "moot's host loop that intersected derived sets to find which single condition to drop was listed as a join-lattice workaround. It is not: intersection is `not cond_admits` per value, the double negation admits already uses, and the loop became two rules, blocks/4 and repair/3, with no aggregate; the printed `to revive it, delete one of` lines are identical. A host loop over derived sets is usually a missing rule and not a missing lattice.").
+
+finding(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file, pitfall).
+recorded(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file, "2026-10-02").
+demands(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file, none).
+finding_note(f_a_lattice_is_refused_under_wfs_so_it_gets_its_own_file,
+  "examples/rip's tropical fold and host argmin became `lattice dist(S, min D)` and leg/4 (the script follows leg back to the start). rip.rofl declares semantics(well_founded), under which a lattice is refused, and every .rofl directly in examples/<dir>/ joins that directory's one world; so the lattice lives in examples/rip/trace/trace.rofl, which the demo loads over the machine alone and which is a world of no check (the demo's hash covers it). Registered nowhere on purpose: a check_world for it is the way to put it under npm test if its answers should be pinned.").
+
+finding(f_provenance_results_fed_back_as_facts, insight).
+recorded(f_provenance_results_fed_back_as_facts, "2026-10-02").
+demands(f_provenance_results_fed_back_as_facts, none).
+finding_note(f_provenance_results_fed_back_as_facts,
+  "blam's provenance and tropical folds stay in the host (no rule computes them), and the demo asserts their results as cuts/4 and wave/2 facts; the rules aggregate those (cost, repo_cost, wave_cost, cut_minutes sums, cut_pairs count, max_pairs max, cut_place rank). The bare rule file carries undefined_premise audit rows for those two fact relations, which is true of any rule file that reads what its host writes. And excise of a line of huh now lists the stale count cell as well (s_count of the bucket, 47): the blast radius is right and moved the demo's printed count, 4 facts to 5.").
+
+finding(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter, decision).
+recorded(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter, "2026-10-02").
+demands(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter, demo).
+addressed_by(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter, "examples/linter/linter.rofl").
+addressed_by(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter, "scripts/lint.ts").
+finding_note(f_a_count_over_the_reflection_replaces_the_semiring_fold_in_the_linter,
+  "scripts/lint.ts folded the counting semiring over the support of has_body(Rel), pair_read and long_body; it now loads boot.rofl, the target and examples/linter/linter.rofl and prints what the rules conclude (118 lines to 60, the evaluateSemiring and countingSemiring imports gone). The thresholds are facts (lint_min), the counts are `N is count(R : concludes(R, Rel))` and kin, the ranks are the kernel rank. THE REFLECTION IS READ LIVE: f_aggregates_over_live_kernel_relations_are_refused refuses an aggregate over a relation the kernel writes WHILE evaluating, and concludes, premise_pos and has_premise are base and complete at load, so the count is sound. The proof world agg_linter_demo checks the answers over js-dataflow as frozen at 4f997a6 (examples/linter/corpus-dataflow.rofl) against the old lint output, 91 lines in six sections, identical (7 tables, 31 pairs, 13 long bodies, 7 routes, 7 twins, 20 mirrors), a fixture sitting on each threshold (4 and 5 bodies, 4 and 5 readers, 6 and 7 premises, a relation read and never concluded counting 0 when bound beforehand), and 35 rofl-level mutants in scripts/agg_mutants.ts that each turn the alarm they name red; the engine breaks mono and empty_none turn it red as well, solutions does not, because no count in the linter joins on a free variable.").
+
+finding(f_the_reflection_does_not_say_which_file_a_rule_came_from, question).
+recorded(f_the_reflection_does_not_say_which_file_a_rule_came_from, "2026-10-02").
+demands(f_the_reflection_does_not_say_which_file_a_rule_came_from, rule_and_test).
+finding_note(f_the_reflection_does_not_say_which_file_a_rule_came_from,
+  "A linter in rules cannot tell the target's rules from boot's or its own: foreign_head is host-fed for boot (npm run lint -- --boot-heads writes corpus-boot-heads.rofl) and hand-listed for the linter. A rule_source(R, File) row in the reflection would delete the list and let the ranks run per file, as the ledger note for w_agg_demo_linter asked; today they run per head and per rule. Open.").
+
+finding(f_a_check_file_is_linted_like_any_rule_file, pitfall).
+recorded(f_a_check_file_is_linted_like_any_rule_file, "2026-10-02").
+demands(f_a_check_file_is_linted_like_any_rule_file, none).
+finding_note(f_a_check_file_is_linted_like_any_rule_file,
+  "A check file loaded with the linter is part of the reflection it counts: a seven-premise alarm head was reported as a table and as several routes until it was split. Every finding outside the oracle is an alarm in agg_linter_demo, so the cost is a red world and not noise.").
+
+finding(f_a_max_over_base_data_costs_the_self_shard, pitfall).
+recorded(f_a_max_over_base_data_costs_the_self_shard, "2026-10-02").
+demands(f_a_max_over_base_data_costs_the_self_shard, code).
+finding_note(f_a_max_over_base_data_costs_the_self_shard,
+  "rules/js-dataflow.rofl writes the latest element of a sequence as the absence of a later one (seq_later). The kernel max says it directly, `I is max(J : ast_child[code](E, expressions, J, _))` in the two sequence rules, and it stratifies (ast_child is base data below the recursive may_be_node and may_be_lit), both engines agree, and every JS answer is byte-identical over small, cjs, xdir, scoped, external, mcp and self (all cells, mcp cell 4's why tree included). It is KEPT: interleaved A/B runs on a loaded machine put the self notebook at 97.8 s with the absence and 108.7 s with the aggregate (+10.9 s; mcp 69.0 to 75.2), the extra time in the model phase (small 1.0 to 2.2 s), and the self shard has about 100 s of a 120 s wall. The prose that said the kernel has no aggregation is rewritten with this reason. Retire it when an aggregate over base data costs less in the model phase or the shard budget grows; the notebook why facade it needed is fixed (playground/host.ts, probe agg in scripts/nb_layers.ts, whose break removes recAny and turns it red). Also found: docs/js is generated by `npm run render:js` and is not covered by `npm run docs -- --check`, so a rule or phrase edit leaves it stale without any gate going red (open, a render:js plus git diff check in docs -- --check closes it); and notebook walls varied by up to 20 s between identical runs when the machine was shared, so only interleaved A/B pairs gave a trustworthy delta.").
+
+finding(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads, defect).
+recorded(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads, "2026-10-02").
+demands(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads, code).
+addressed_by(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads, "playground/host.ts").
+addressed_by(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads, "scripts/nb_layers.ts").
+finding_note(f_the_notebook_why_facade_lacked_the_store_an_aggregate_reads,
+  "proofs() in playground/host.ts hands a notebook's why and whynot a duck-typed FactStore of the kept model and the cells' world read as one, with no recAny, ghosts, dead, cells or keepDead: over any loaded program with a body aggregate a cell `why X` threw `this.store.recAny is not a function` (found when seq_later was tried as a max: examples/notebook/mcp.rofl.md cell 4). The facade is typed over Store now and carries recAny, ghosts, dead, cells, keepDead, firingList and firings routed or merged as get and witnessOf are; the maps are snapshots taken when the facade is built. A probe in scripts/nb_layers.ts (a count aggregate, why and whynot) answers over it, and its break, which removes recAny, turns the layers check red.").

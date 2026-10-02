@@ -249,7 +249,7 @@ exactly that bridge.
 to the bridge set**: withdraw b2 and it moves from $110,000 to $335,000.
 
 It rests on the *absence* of a bridge, finite failure carries no annotation, so
-no mark can reach it. Its provenance names six base facts and zero bridges.
+no mark can reach it. Its provenance names three base facts and zero bridges.
 That is honest — there genuinely is no positive source — and it is why the
 tool has to say it in words. (Known: `f_provenance_blind_to_negation`, recorded
 independently by the MOOT demo; this is a second domain where a verdict phrased
@@ -285,7 +285,7 @@ Excision is the other operation and the tool needs both:
 
 ```
   $ excise maps[integration](b2, acct_nw_eu, northwind, 80)
-    105 facts removed, 78 added
+    49 facts removed, 22 added
     removed: gap[recon](northwind,0), total[recon](cust(northwind),645000)
     added:   gap[recon](northwind,-225000), total[recon](cust(northwind),420000),
              unmapped[recon](inv_03), unmapped[recon](inv_04), unmapped_acct[recon](acct_nw_eu)
@@ -358,24 +358,19 @@ of the reason `examples/sus` gives for its eight carry rules.
 
 ## The model in one page
 
-The kernel has no aggregation, so **a sum is a scan**, and this is what that
-costs:
+A total is a kernel aggregate over a pot, and a pot is a term:
 
 ```prolog
 tag[recon](cust(C))      :- customer[crm](C, _).
 counts[recon](cust(C), Inv) :- attributed[recon](Inv, C).
-tagged[recon](T, N, Amt) :- counts[recon](T, Inv), inv_no[billing](Inv, N),
-                            invoice[billing](Inv, _, Amt, _).
+tagged[recon](T, Inv, Amt) :- counts[recon](T, Inv), invoice[billing](Inv, _, Amt, _).
 
-scan[recon](T, 0, 0) :- tag[recon](T).
-scan[recon](T, N, S) :- scan[recon](T, M, S0), N is M + 1, tagged[recon](T, N, Amt), S is S0 + Amt.
-scan[recon](T, N, S) :- scan[recon](T, M, S), N is M + 1, rows[billing](L), N <= L,
-                        not at[recon](T, N).
-total[recon](T, S)   :- scan[recon](T, L, S), rows[billing](L).
+total[recon](T, S) :- tag[recon](T), S is sum(Amt ; K : tagged[recon](T, K, Amt)).
 ```
 
-One chain serves every pot at once because the pot is a term — `billing`,
+One rule serves every pot at once because the pot is a term — `billing`,
 `attributed`, `ambiguous`, `unmapped`, `cust(C)`, `loose(A)`, `crm_booked`.
+An empty pot sums to 0 because `tag` binds it from outside.
 Doing it in the rules rather than in TypeScript is not decoration: **it is what
 makes the oracle mean anything.** A sum computed in `demo.ts` and checked
 against a sum computed in `demo.ts` checks nothing.
@@ -595,11 +590,11 @@ AKA — two ontologies over one stream of money, and the seam between them.
     total(cust(tailspin))     $135,000     0.7500  b9                   [billing] [crm] [main] [sales]
     total(cust(contoso))      $365,000     0.8100  b3 b8                [billing] [crm] [finance] [integration] [main]
     total(billing)          $1,420,000      1.000  nothing              [billing] [main]
-    total(crm_booked)       $1,338,000      1.000  nothing              [billing] [crm] [main]
-    total(cust(adventure))          $0      1.000  nothing              [billing] [crm]
-    total(cust(fabrikam))           $0      1.000  nothing              [billing] [crm]
-    total(cust(litware))            $0      1.000  nothing              [billing] [crm]
-    total(cust(wingtip))            $0      1.000  nothing              [billing] [crm]
+    total(crm_booked)       $1,338,000      1.000  nothing              [crm] [main]
+    total(cust(adventure))          $0      1.000  nothing              [crm]
+    total(cust(fabrikam))           $0      1.000  nothing              [crm]
+    total(cust(litware))            $0      1.000  nothing              [crm]
+    total(cust(wingtip))            $0      1.000  nothing              [crm]
     total(unmapped)           $110,000      1.000  nothing              [billing] [main]
 
   The "crossed" column is written by a rule in aka.rofl §9; the certainty is
@@ -622,13 +617,13 @@ AKA — two ontologies over one stream of money, and the seam between them.
   THE TRAP IN THIS TABLE. total(unmapped) scores 1.000 and crosses nothing,
   and it is the number in the whole report most sensitive to the bridge set:
     provenance of total[recon](unmapped,110000):
-      6 base facts, of which 0 are bridges.
+      3 base facts, of which 0 are bridges.
     It rests on the ABSENCE of a bridge, finite failure carries no annotation,
     so no mark can reach it. The tool has to say this in words. (Known:
     f_provenance_blind_to_negation.)
 
 ── 6. counting: the same number, read in opposite directions ─────────────
-  counting semiring over the support hypergraph: 27 rounds, converged=true, discipline held=true
+  counting semiring over the support hypergraph: 13 rounds, converged=true, discipline held=true
   facts on a support cycle: 43, and every one of them is boot.rofl's
   own relation-reachability closure — this program has recursive relations.
   domain facts counted INFINITE: 0. No ticks are run here.
@@ -676,7 +671,7 @@ AKA — two ontologies over one stream of money, and the seam between them.
 
   and the same withdrawal as an EXCISION, which erases instead of marking:
     $ excise maps[integration](b2, acct_nw_eu, northwind, 80)
-      105 facts removed, 78 added
+      49 facts removed, 22 added
       removed: gap[recon](northwind,0), total[recon](cust(northwind),645000)
       added:   gap[recon](northwind,-225000), total[recon](cust(northwind),420000), unmapped[recon](inv_03), unmapped[recon](inv_04), unmapped_acct[recon](acct_nw_eu)
     Excision is the counterfactual: what would we believe if this mapping had

@@ -54,20 +54,23 @@ from *took 25 minutes*.
 ## A required total, summed in rules
 
 "At least seven and a half hours a day" is a requirement, not a number in a
-report. The kernel has no aggregation, so the sum is a **chain fold** — the
-same two rules `examples/slop` uses over a spreadsheet range:
+report. The day's total is a `sum` aggregate over the work blocks, one term
+per block:
 
 ```
-work_run(P, D, E, M) :- work_blk(P, D, E, F, T), not work_has_next(P, D, E), M is T - F.
-work_run(P, D, E, M) :- work_next(P, D, E, E2), work_blk(P, D, E, F, T),
-                        work_run(P, D, E2, Y), M is T - F + Y.
+work_len(P, D, E, V) :- work_blk(P, D, E, F, T), V is T - F.
+day_work(P, D, M)    :- work_blk(P, D, _, _, _), M is sum(V ; E : work_len(P, D, E, V)).
 ```
 
-One difference in our favour: SLOP's host has to lay the chain out, because a
-range is given by the text of a formula. Here blocks carry times, so the chain
-is derived too. Put `work_needed(alex, 450).` in the week file and a short day
-becomes a reason the week does not add up; leave it out and the machinery
-costs nothing.
+Put `work_needed(alex, 450).` in the week file and a short day becomes a
+reason the week does not add up; leave it out and the machinery costs
+nothing. The other totals are aggregates too: `spat hours` reads
+`nominal_min`, `effective_min` and `shared_min` (`count` of slots times the
+grid) and `work_week` (`sum` of those over the days), `spat fragile` reads
+`day_tight` (`min` of the slack rows), and the runs of adjacent slots that
+`spat check`, `free` and `place` print as `17:40–18:20` are `window/5`, a
+`min` lattice walking each run forward and a `hull` join lattice over its
+slots.
 
 ## Two clocks, on purpose
 

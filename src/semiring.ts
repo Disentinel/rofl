@@ -45,6 +45,25 @@
 //   * A negated premise contributes `one`. It held vacuously, by finite
 //     failure, and finite failure carries no annotation of its own.
 //   * A builtin premise contributes `one`, for the same reason.
+//   * An aggregate premise (a sealed cell) is a hyperedge over its members,
+//     each member a firing's worth of premises (facts or nested cells): a
+//     Group cell (count, sum, median, quantile, rank) is the ⊗ of all its
+//     members, a Quorum cell (at_least) the ⊗ of its N members, and any other
+//     cell (min, max, or, and, lattice, cover, antichain) the ⊕ over its
+//     members, the alternative derivations of the value. An empty or hole
+//     cell is `one`, like a negation. A quorum is ONE N-member witness, not
+//     every N-subset of the supporters, so a count over it is a lower bound
+//     of the derivation trees a walk would count. A cell with a premise the
+//     store lacks is dead like a firing: Group and Quorum need every member
+//     live, any other cell one. A cell is a node of the support graph
+//     of its own: its value is computed once per round and adds no depth, and
+//     the cycle analysis runs through it. A store that cannot open a cell
+//     makes the fold throw rather than read every cell as dead.
+//   * A cell member is ONE derivation per distinct projection (count, sum,
+//     rank, at_least): with it(g,a,2) and it(g,b,2) under count, the total's
+//     provenance cites one of them. The engine records no more; a fold cannot
+//     recover the rest. The provenance product over a large cell is large by
+//     nature, the other semirings stay linear in members.
 //   * A support with a premise key absent from the store is dropped as dead.
 //     The fold sees only the support recorded for the CURRENT store state, so
 //     a frozen fact whose tick-scoped premises are gone reads as underivable.
@@ -86,9 +105,10 @@
 // The caller is responsible for having evaluated the store first; `load` and
 // `query` do that.
 
-import type { FactStore, Witness } from './store.ts';
+import type { FactStore, Witness, PremRef, CellRec } from './store.ts';
 import { V } from './reflect.ts';
 import { tarjan, indexer } from './scc.ts';
+import { opWitness, type AggOp } from './cell.ts';
 
 /** Convergence disciplines. Numeric so the kernel stays free of
  *  identifier-shaped string literals; names for reports live outside src/. */
@@ -146,6 +166,25 @@ export function evaluateSemiring<T>(
   const support = new Map<string, Witness[]>();
   const edges = new Map<string, string[]>();
   const staged = nextTenseRules(store);
+  const cells = new Map<string, CellNode | null>();
+  const cellOf = (key: string): CellNode | null => {
+    if (!cells.has(key)) cells.set(key, openCell(store, key));
+    return cells.get(key)!;
+  };
+  const alive = (p: PremRef): boolean =>
+    p.t === 'fact' ? store.has(p.key) : p.t !== 'cell' || cellOf(p.key) !== null;
+  // a cell is a node of its own: citers point at it, it points at its members
+  const nodes = [...keys];
+  const edgesOf = (prems: PremRef[]): string[] => prems.flatMap((p) => {
+    if (p.t === 'fact') return [p.key];
+    if (p.t !== 'cell') return [];
+    if (!edges.has(p.key)) {
+      edges.set(p.key, []);
+      nodes.push(p.key);
+      edges.set(p.key, cellOf(p.key)!.members.flatMap(edgesOf));
+    }
+    return [p.key];
+  });
   for (const k of keys) {
     seed.set(k, store.get(k)!.base ? (opts.base ? opts.base(k) : sr.one) : sr.zero);
     // a support with a premise the store no longer holds multiplies in `zero`
@@ -153,17 +192,14 @@ export function evaluateSemiring<T>(
     // a support recorded at the tick boundary reaches into the tick that has
     // ended, which this fold is not about, so it goes the same way
     const live = store.witnessesOf(k).filter(
-      (w) => !staged.has(w.ruleId)
-        && w.prems.every((p) => p.t !== 'fact' || store.has(p.key)));
+      (w) => !staged.has(w.ruleId) && w.prems.every(alive));
     support.set(k, live);
-    const out: string[] = [];
-    for (const w of live) for (const p of w.prems) if (p.t === 'fact') out.push(p.key);
-    edges.set(k, out);
+    edges.set(k, live.flatMap((w) => edgesOf(w.prems)));
   }
 
   // computed for every discipline: a convergence claim tested on acyclic data
   // is a claim tested on nothing, so the caller gets to see the cycle count
-  const onCycle = cyclicKeys(keys, edges);
+  const onCycle = cyclicKeys(nodes, edges);
   const closeCycles = sr.discipline === CLOSED;
   const loop = closeCycles ? sr.star(sr.one) : sr.one;
   const maxRounds = opts.maxRounds ?? DEFAULT_MAX_ROUNDS;
@@ -175,16 +211,29 @@ export function evaluateSemiring<T>(
   while (rounds < cap) {
     rounds++;
     const next = new Map<string, T>();
+    const cellValue = new Map<string, T>();
+    const premValue = (p: PremRef): T => {
+      if (p.t === 'fact') return cur.get(p.key) ?? sr.zero;
+      if (p.t !== 'cell') return sr.one;
+      const memo = cellValue.get(p.key);
+      if (memo !== undefined) return memo;
+      const c = cellOf(p.key)!;
+      cellValue.set(p.key, sr.one);
+      let v: T = c.best ? sr.zero : sr.one;
+      for (const m of c.members) {
+        const prod = timesAll(sr, m, premValue);
+        v = c.best ? sr.plus(v, prod) : sr.times(v, prod);
+        if (!c.best && sr.eq(v, sr.zero)) break;
+      }
+      if (c.members.length === 0) v = sr.one;
+      cellValue.set(p.key, v);
+      return v;
+    };
     let changed = false;
     for (const k of keys) {
       let acc: T = seed.get(k)!;
       for (const w of support.get(k)!) {
-        let prod = opts.weight ? opts.weight(k, w) : sr.one;
-        for (const p of w.prems) {
-          if (sr.eq(prod, sr.zero)) break;   // annihilation: this branch is dead
-          prod = sr.times(prod, p.t === 'fact' ? (cur.get(p.key) ?? sr.zero) : sr.one);
-        }
-        acc = sr.plus(acc, prod);
+        acc = sr.plus(acc, timesAll(sr, w.prems, premValue, opts.weight ? opts.weight(k, w) : sr.one));
       }
       // going round the cycle again is another derivation, any number of times
       if (closeCycles && onCycle.has(k)) acc = sr.times(loop, acc);
@@ -197,7 +246,35 @@ export function evaluateSemiring<T>(
   const disciplineHeld = sr.discipline === BOUNDED_UNFOLDING
     ? (converged || rounds >= sr.depth)
     : converged;
-  return { value: cur, rounds, converged, disciplineHeld, cyclic: onCycle.size };
+  return { value: cur, rounds, converged, disciplineHeld, cyclic: keys.filter((k) => onCycle.has(k)).length };
+}
+
+/** ⊗ over premises, stopping at `zero`: this branch is dead. */
+function timesAll<T>(sr: Ops<T>, prems: PremRef[], val: (p: PremRef) => T, start: T = sr.one): T {
+  let prod = start;
+  for (const p of prems) {
+    if (sr.eq(prod, sr.zero)) break;
+    prod = sr.times(prod, val(p));
+  }
+  return prod;
+}
+
+/** A sealed cell as the fold reads it: its live members' premises, ⊕'d when
+ *  `best` and ⊗'d otherwise. */
+interface CellNode { best: boolean; members: PremRef[][] }
+const ONE_CELL: CellNode = { best: false, members: [] };
+
+/** null when the cell is dead: absent, or citing what the store lacks. */
+function openCell(store: FactStore, key: string): CellNode | null {
+  const all = (store as { cells?: Map<string, CellRec> }).cells;
+  if (!all) throw new Error('semiring fold: this store cannot open a sealed cell');
+  const rec = all.get(key);
+  if (!rec) return null;
+  if (rec.value.k !== 'value') return ONE_CELL;
+  const best = opWitness(rec.op as AggOp) !== 'group' && opWitness(rec.op as AggOp) !== 'quorum';
+  const live = rec.members.filter((m) => m.prems.every((p) => p.t !== 'fact' || store.has(p.key)));
+  if (best ? live.length === 0 && rec.members.length > 0 : live.length < rec.members.length) return null;
+  return { best, members: live.map((m) => m.prems) };
 }
 
 /** The rules whose conclusion is written '@next'. A witness naming one was

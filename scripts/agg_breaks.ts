@@ -62,7 +62,8 @@ export const BREAKS: Break[] = [
    "agg_life_demo": "lf_wrong",
    "agg_critpath_demo": "cpc_miss",
    "agg_minimax_demo": "mmc_miss",
-   "agg_quorum_demo": "qc_said"
+   "agg_quorum_demo": "qc_said",
+   "agg_linter_demo": "lw_ways_wrong"
   }
  },
  {
@@ -359,7 +360,9 @@ export const BREAKS: Break[] = [
    "agg_voting_demo": "vc_miss",
    "agg_empty_eval": "ae_zero_missing",
    "agg_minimax_demo": "mmc_miss",
-   "agg_quorum_demo": "qc_miss"
+   "agg_quorum_demo": "qc_miss",
+   "agg_linter_demo": "lx_ghost_not_zero",
+   "agg_prose": "retire_unsaid"
   }
  },
  {

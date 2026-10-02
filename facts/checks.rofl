@@ -207,11 +207,24 @@ proves_work("agg_breaks_census", w_agg_fast_loop).
 -- so scripts/agg_prose.ts writes down, for each path w_agg_reconcile_docs owns
 -- as a `contradiction_site`, every block that still says so and whether it
 -- points at docs/aggregates.md; `npm test` fails when the census is stale, and
--- the check is red for a claim with no pointer.
+-- the check is red for a claim with no pointer. The same world holds the retire
+-- column: the census says, for each workaround_site, whether the text that stood
+-- in for an aggregate is still in the file (a workaround_marker of facts/agg.rofl),
+-- and the check is red while one stands that the ledger does not keep.
 check_world("agg_prose").
 check_file("agg_prose", "examples/checks/agg-prose-census.rofl").
 check_file("agg_prose", "examples/checks/agg-prose-check.rofl").
 proves_work("agg_prose", w_agg_reconcile_docs).
+proves_work("agg_prose", w_agg_retire_workarounds).
+proves("agg_prose", agg, count, retire).
+proves("agg_prose", agg, sum, retire).
+proves("agg_prose", agg, min_max_strat, retire).
+proves("agg_prose", agg, threshold, retire).
+proves("agg_prose", agg, order_lattice, retire).
+proves("agg_prose", agg, join_lattice, retire).
+proves("agg_prose", agg, tag_idempotent, retire).
+proves("agg_prose", agg, tag_counting, retire).
+proves("agg_prose", agg, holistic, retire).
 
 -- =============================================== THE AGGREGATE PROOF WORLDS
 -- One world per cell of facts/agg.rofl that w_agg_cell_store and
@@ -2277,3 +2290,14 @@ check_world("staged_neg_why_plain").
 check_file("staged_neg_why_plain", "examples/checks/staged-neg-why-data.rofl").
 check_opt("staged_neg_why_plain", together, 1).
 check_opt("staged_neg_why_plain", ticks, 1).
+
+-- w_agg_demo_linter: the linter as rules over the reflection, examples/linter/
+check_world("agg_linter_demo").
+check_file("agg_linter_demo", "examples/linter/corpus-boot-heads.rofl").
+check_file("agg_linter_demo", "examples/linter/corpus-dataflow.rofl").
+check_file("agg_linter_demo", "examples/linter/corpus-fixture.rofl").
+check_file("agg_linter_demo", "examples/linter/linter.rofl").
+check_file("agg_linter_demo", "examples/checks/agg-linter-demo-check.rofl").
+check_opt("agg_linter_demo", together, 1).
+check_opt("agg_linter_demo", explain, 1).
+proves("agg_linter_demo", agg, count, demo).

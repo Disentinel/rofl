@@ -431,8 +431,8 @@ export function compile(wb: Workbook, opts: LoadOptions = {}): Emitted {
       case 'cmp': lines.push(`cmp(${id}, ${n.op}, ${emit(n.l)}, ${emit(n.r)}).`); break;
       case 'if': lines.push(`pick(${id}, ${emit(n.c)}, ${emit(n.t)}, ${emit(n.e)}).`); break;
       case 'sum': {
-        // a range becomes a chain, one item per cell: the kernel has no
-        // aggregation, so a total is a fold the rules can walk
+        // a range becomes a chain, one item per cell: a kernel sum cannot
+        // read val, which is recursive, so a total is a fold the rules can walk
         const cells = n.cells;
         const head = ++nodeId;
         lines.push(`sum_head(${id}, ${head}).`);
