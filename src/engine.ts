@@ -687,6 +687,8 @@ export class Evaluation {
    *  the loaded program is demonstrably unstratifiable. */
   run(): EvalOutcome {
     const plan = this.planReuse();
+    // the hole rows the last evaluation of this tick wrote go with it (a hole is a base, frozen row, which clearDerived keeps)
+    if (plan.hits.size === 0) this.store.dropEvalHoles();
     this.store.clearDerived(plan.hits.size === 0 ? undefined : (rec) => this.reused(plan.hits, rec), provenanceRow);
     this.active = [];
     this.staged.clear();
@@ -1983,6 +1985,13 @@ export class Evaluation {
     if (ruleId !== null) this.arithHole(ruleId, holeReasonOf(code));
   }
 
+  /** A hole row a rule's fault wrote in this evaluation (`Store.evalHoles`); true if it was new. A wall's hole is not one: the host that evaluates on every load names each load's wall (`$load(1)`, `$load(2)`), and the earlier stands. */
+  protected evalHole(args: Term[]): boolean {
+    if (!this.store.add(V.hole, KERNEL_PERSP, args, { scope: 'timeless', base: true, frozen: true })) return false;
+    this.store.evalHoles.push(factKey(V.hole, KERNEL_PERSP, args));
+    return true;
+  }
+
   private arithHole(ruleId: string, reason: string): void {
     // The name is `arith` because arithmetic was the first inability to reach
     // it; the string destructors report through the same emitter and their
@@ -1996,7 +2005,7 @@ export class Evaluation {
     // charged once an evaluation meets it, written then or before: what one
     // evaluation holds is its own count, not the store's history
     if (this.holeMet(args[0], reason)) this.chargeRow(ruleId, false);
-    if (this.store.add(V.hole, KERNEL_PERSP, args, { scope: 'timeless', base: true, frozen: true })) {
+    if (this.evalHole(args)) {
       // onto the front, so a rule reading `hole` sees it in THIS fixpoint and
       // not only in the next evaluation
       noteFront(this.curFront, V.hole, factKey(V.hole, KERNEL_PERSP, args));

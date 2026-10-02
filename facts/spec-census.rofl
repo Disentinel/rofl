@@ -354,6 +354,7 @@ check[checks]("facts/goldens.rofl", "agg_incr_partial", world).
 check[checks]("facts/goldens.rofl", "agg_incr_readers", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stacked", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stale", world).
+check[checks]("facts/goldens.rofl", "agg_incr_stockholes", world).
 check[checks]("facts/goldens.rofl", "agg_incr_sub", world).
 check[checks]("facts/goldens.rofl", "agg_incr_sum", world).
 check[checks]("facts/goldens.rofl", "agg_incr_tag", world).

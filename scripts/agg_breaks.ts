@@ -5054,6 +5054,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ts_stock_stale_holes_kept",
+  "what": "the TypeScript engine's stock evaluator keeps the hole rows of the evaluation before when a world is evaluated again",
+  "edits": [
+   [
+    "src/rounds.ts",
+    "if (plan.hits.size === 0) this.store.dropEvalHoles();",
+    "if (plan.hits.size === 0) { /* kept */ }"
+   ]
+  ],
+  "expect": {
+   "agg_incr_stockholes": "holds the row hr_"
+  }
+ },
+ {
   "id": "retract_stacked_plain",
   "what": "a rule that negates or aggregates what changed is treated as a plain reader: only the facts that cite what went are taken out",
   "expect": {

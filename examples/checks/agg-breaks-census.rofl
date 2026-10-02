@@ -1345,6 +1345,8 @@ brk("retract_hole_kept"). brk_kind("retract_hole_kept", switch).
 brk_expects("retract_hole_kept", "agg_incr_overflow").
 brk("retract_lattice_hole_kept"). brk_kind("retract_lattice_hole_kept", switch).
 brk_expects("retract_lattice_hole_kept", "agg_incr_latticehole").
+brk("ts_stock_stale_holes_kept"). brk_kind("ts_stock_stale_holes_kept", ts).
+brk_expects("ts_stock_stale_holes_kept", "agg_incr_stockholes").
 brk("retract_stacked_plain"). brk_kind("retract_stacked_plain", switch).
 brk_expects("retract_stacked_plain", "agg_incr_stacked").
 brk("retract_stacked_facts_kept"). brk_kind("retract_stacked_facts_kept", switch).

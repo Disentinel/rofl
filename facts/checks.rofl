@@ -2415,6 +2415,13 @@ check_opt("agg_incr_stacked", retract, "st_sale(6, d, -5)").
 check_opt("agg_incr_stacked", retract, "st_e(b, c, 2)").
 proves_work("agg_incr_stacked", w_agg_incremental_ready).
 
+-- the holes of a world with no aggregate go with the fault that made them, in the stock evaluator too
+check_world("agg_incr_stockholes").
+check_file("agg_incr_stockholes", "examples/checks/agg-incr-stockholes.rofl").
+check_opt("agg_incr_stockholes", together, 1).
+check_opt("agg_incr_stockholes", retract, "hr_k(b, oops)").
+proves_work("agg_incr_stockholes", w_agg_incremental_ready).
+
 -- a retraction that makes a hole is evaluated again, with its shrugs
 check_world("agg_incr_overflow").
 check_file("agg_incr_overflow", "examples/checks/agg-incr-overflow.rofl").

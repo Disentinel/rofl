@@ -246,6 +246,7 @@ export class RoundEvaluation extends Evaluation {
     };
 
     const plan = E.planReuse();
+    if (plan.hits.size === 0) this.store.dropEvalHoles();
     this.store.clearDerived(plan.hits.size === 0
       ? undefined
       : (rec) => E.reused(plan.hits, rec), provenanceRow);
