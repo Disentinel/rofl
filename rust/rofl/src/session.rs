@@ -56,6 +56,14 @@ pub struct Session {
     pub dangling: usize,
 }
 
+/// What [`Session::retract_delta`] did: the cells brought to their new state,
+/// or why the world is evaluated again instead.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Retraction {
+    Delta(crate::engine::Delta),
+    Full(&'static str),
+}
+
 /// What [`Session::evaluate`] answers. Measurement 4: the answer AND the margin.
 pub struct Evaluated {
     /// A wall was hit and a `hole` names the unfinished part in the store.
@@ -899,6 +907,38 @@ impl Session {
         self.eval.store.remove_many(&doomed);
         self.eval.store.dirty = true;
         Ok(())
+    }
+
+    /// `retract`, bringing the aggregate cells the fact supported to the state
+    /// a fresh evaluation would hold without evaluating the world again
+    /// (`Eval::retract_delta`). The world is evaluated first if it is not. A
+    /// world or a fact the path is not worked out for is retracted as
+    /// `retract` does, and `Full` says why: the next evaluation answers.
+    pub fn retract_delta(&mut self, query: &str) -> Result<Retraction, String> {
+        let (id, key) = self.ground_fact(query, "retract")?;
+        let Some(id) = id else { return Err(format!("no such fact: {key}")) };
+        if !self.eval.store.rec(id).base() {
+            return Err(format!("{key} is derived; retract its supports instead"));
+        }
+        self.settle()?;
+        let mut doomed = vec![id];
+        let ft = self.fact_term(id);
+        let ab = self.eval.v.asserted_by;
+        for f in self.eval.store.rel_all(&self.eval.h, ab) {
+            if self.eval.store.args(f).first() == Some(&ft) {
+                doomed.push(f);
+            }
+        }
+        match self.eval.retract_delta(&doomed) {
+            Ok(d) => Ok(Retraction::Delta(d)),
+            Err(why) => {
+                if self.eval.store.alive(id) {
+                    self.eval.store.remove_many(&doomed);
+                }
+                self.eval.store.dirty = true;
+                Ok(Retraction::Full(why))
+            }
+        }
     }
 
     /// `Rofl.excise` (src/api.ts:1070): what this base fact is holding up.

@@ -49,6 +49,68 @@ pub enum Class { Invertible, IdempotentOrder, IdempotentJoin, Threshold, Holisti
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum WitnessKind { Group, Best, Quorum, Cover, Antichain }
 
+/// The algebra of a cell as flags: what a delta engine needs to know to
+/// maintain it, never what `class` alone says (a join lattice is idempotent and
+/// a lattice; a quantile is neither). `tag` is a semiring tag's own cell, set
+/// by `Algebra::tag`, since a tag is no `AggOp`.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+pub struct Algebra(pub u8);
+
+/// How a delta engine updates a cell when one contribution is retracted.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Strategy {
+    /// `AggOp::subtract` the member's value from the total
+    Subtract,
+    /// derive the cell again from the facts that support it
+    Rederive,
+    /// the value is a function of the whole group: recompute the group
+    Recompute,
+}
+
+impl Algebra {
+    pub const IDEMPOTENT: u8 = 1;
+    pub const INVERTIBLE: u8 = 2;
+    pub const HOLISTIC: u8 = 4;
+    pub const LATTICE: u8 = 8;
+    pub const TAG: u8 = 16;
+    pub fn has(self, f: u8) -> bool {
+        self.0 & f != 0
+    }
+    /// A semiring tag's cell: its ⊕ is idempotent (boolean, tropical) or
+    /// invertible (counting).
+    pub fn tag(idempotent: bool) -> Algebra {
+        Algebra(Self::TAG | if idempotent { Self::IDEMPOTENT | Self::LATTICE } else { Self::INVERTIBLE })
+    }
+    /// The strategy the flags give, in the order a delta engine prefers: an
+    /// invertible cell subtracts, a holistic one recomputes its group, and
+    /// anything else (an idempotent cell has no inverse) derives again.
+    pub fn strategy(self) -> Strategy {
+        if self.has(Self::INVERTIBLE) {
+            Strategy::Subtract
+        } else if self.has(Self::HOLISTIC) {
+            Strategy::Recompute
+        } else {
+            Strategy::Rederive
+        }
+    }
+    /// `idempotent,lattice`, in a fixed order; `-` for none.
+    pub fn text(self) -> String {
+        let names = [(Self::IDEMPOTENT, "idempotent"), (Self::INVERTIBLE, "invertible"), (Self::HOLISTIC, "holistic"), (Self::LATTICE, "lattice"), (Self::TAG, "tag")];
+        let v: Vec<&str> = names.iter().filter(|(b, _)| self.has(*b)).map(|(_, n)| *n).collect();
+        if v.is_empty() { "-".into() } else { v.join(",") }
+    }
+}
+
+impl Strategy {
+    pub fn name(self) -> &'static str {
+        match self {
+            Strategy::Subtract => "subtract",
+            Strategy::Rederive => "rederive",
+            Strategy::Recompute => "recompute",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Val { Int(i128), Bool(bool) }
 
@@ -186,6 +248,19 @@ impl AggOp {
                 Ok(order(b.cmp(&a), x))),
             _ => Err(v.agg_type_reason),
         }
+    }
+
+    /// THE ALGEBRA FLAGS a delta engine picks its strategy from, mechanically
+    /// (docs/aggregates.md, "Ready for the incremental engine"). Recorded with
+    /// every cell (`CellRec::alg`), and printed in `canonical_state`.
+    pub fn algebra(self) -> Algebra {
+        let bits = match self.class() {
+            Class::Invertible => Algebra::INVERTIBLE,
+            Class::IdempotentOrder | Class::IdempotentJoin | Class::Threshold => Algebra::IDEMPOTENT | Algebra::LATTICE,
+            Class::Holistic => Algebra::HOLISTIC,
+            Class::PartialOrder => Algebra::IDEMPOTENT,
+        };
+        Algebra(brk!("alg_flags_off" => 0; bits))
     }
 
     /// The inverse of `insert` for the invertible class: what a retraction

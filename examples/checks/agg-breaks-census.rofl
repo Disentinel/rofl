@@ -1265,6 +1265,32 @@ brk("agg_reach_unmemo"). brk_kind("agg_reach_unmemo", switch).
 brk_expects("agg_reach_unmemo", "agg_precise_scale").
 brk("ts_agg_reach_unmemo"). brk_kind("ts_agg_reach_unmemo", ts).
 brk_expects("ts_agg_reach_unmemo", "agg_precise_scale").
+brk("retract_no_subtract"). brk_kind("retract_no_subtract", switch).
+brk_expects("retract_no_subtract", "agg_incr_sum").
+brk("retract_stale_rep"). brk_kind("retract_stale_rep", switch).
+brk_expects("retract_stale_rep", "agg_incr_sum").
+brk("retract_no_readers"). brk_kind("retract_no_readers", switch).
+brk_expects("retract_no_readers", "agg_incr_sum").
+brk("retract_no_refire"). brk_kind("retract_no_refire", switch).
+brk_expects("retract_no_refire", "agg_incr_sum").
+brk("retract_no_rederive"). brk_kind("retract_no_rederive", switch).
+brk_expects("retract_no_rederive", "agg_incr_minmax").
+brk("retract_index_off"). brk_kind("retract_index_off", switch).
+brk_expects("retract_index_off", "agg_incr_sum").
+brk("retract_gate_plain"). brk_kind("retract_gate_plain", switch).
+brk_expects("retract_gate_plain", "agg_incr_gate").
+brk("retract_gate_neg"). brk_kind("retract_gate_neg", switch).
+brk_expects("retract_gate_neg", "agg_incr_neg").
+brk("retract_empty_gone"). brk_kind("retract_empty_gone", switch).
+brk_expects("retract_empty_gone", "agg_incr_sum").
+brk("retract_memo_stale"). brk_kind("retract_memo_stale", switch).
+brk_expects("retract_memo_stale", "agg_incr_sum").
+brk("member_id_position"). brk_kind("member_id_position", switch).
+brk_expects("member_id_position", "agg_incr_sum").
+brk("alg_flags_off"). brk_kind("alg_flags_off", switch).
+brk_expects("alg_flags_off", "agg_incr_sum").
+brk_expects("alg_flags_off", "agg_incr_minmax").
+brk_expects("alg_flags_off", "agg_incr_holistic").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1282,6 +1308,7 @@ switch_site("agg_reach_sum_zero", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_unmemo", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_whole", "rust/rofl/src/engine.rs").
 switch_site("agg_seal_at_wall", "rust/rofl/src/engine.rs").
+switch_site("alg_flags_off", "rust/rofl/src/cell.rs").
 switch_site("and_tie_last", "rust/rofl/src/cell.rs").
 switch_site("args_are_expressions", "rust/rofl/src/rofl_parse.rs").
 switch_site("arith_wraps", "rust/rofl/src/engine.rs").
@@ -1425,6 +1452,7 @@ switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
 switch_site("median_upper", "rust/rofl/src/cell.rs").
+switch_site("member_id_position", "rust/rofl/src/store.rs").
 switch_site("memo", "rust/rofl/src/engine.rs").
 switch_site("min_by_value", "rust/rofl/src/engine.rs").
 switch_site("mod_floor", "rust/rofl/src/engine.rs").
@@ -1492,6 +1520,16 @@ switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
 switch_site("restaged_keeps_old_firing", "rust/rofl/src/engine.rs").
 switch_site("retain_prunes_cited", "rust/rofl/src/engine.rs").
+switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_index_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_memo_stale", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_no_readers", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_stale_rep", "rust/rofl/src/engine/delta.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").
@@ -1655,6 +1693,9 @@ proof_world("agg_holistic_ticks").
 proof_world("agg_holistic_wfs").
 proof_world("agg_holistic_why").
 proof_world("agg_holistic_witness").
+proof_world("agg_incr_holistic").
+proof_world("agg_incr_minmax").
+proof_world("agg_incr_sum").
 proof_world("agg_join_budget").
 proof_world("agg_join_eval").
 proof_world("agg_join_holes").

@@ -2984,30 +2984,94 @@ Invariants:
   member range ("The holistic aggregates, as built"); compaction keeps it
   shared.
 
-## Ready for the incremental engine
+## Ready for the incremental engine, as built
 
-A check on the current work, not work to build now; each line says where it
-stands (w_agg_incremental_ready owns the column, still open):
+The next engine maintains a world by deltas, and aggregates must not need a
+format change for it. `w_agg_incremental_ready` owns the column; each line
+says where it stands, and the first retraction path is built, so that what
+the format promises is used and held to a fresh evaluation.
 
-- the algebra class lives in the cell record (`op`, whose class is
-  invertible or idempotent order) — built;
-- Group keeps every member, so an invertible aggregate could retract by
-  subtracting (`AggOp::subtract`) — built, unused;
-- the height is kept, per cell and per member — built;
-- a cell's identity is (owner, key, tick), without the value — built;
-- `PremRef::Cell` names an immutable record, so it records the value at use —
-  built within a tick and across ticks (the tick is in the name);
-- members have stable positions inside a record, but no id that survives a
-  re-seal — not built;
-- the seal is a field of the record, not a premise of its own
-  (`PremRef::Sealed` in the first draft of this design) — a deliberate
-  difference: a retraction would invalidate the record, and with it the seal.
+- **The algebra is recorded with the cell**: `CellRec::alg`, set from
+  `AggOp::algebra` as flags (idempotent, invertible, holistic, lattice; `tag`
+  for a semiring tag's cell), and the strategy the flags give
+  (`Algebra::strategy`: an invertible cell subtracts, a holistic one
+  recomputes its group, anything else is derived again). Both are printed on
+  the cell's line of `canonical_state`: `alg=idempotent,lattice use=rederive`.
+- **A member has an id that survives a re-seal**: `Store::member_id`, FNV-1a
+  over `rule@at|key|identity`, where the identity is a Group's distinct
+  projection tuple and a Best's distinct derivation (its premises, sorted).
+  Never the record's id, the tick, the position or the height, so the same
+  contribution is the same id in every seal of its cell, later ticks and the
+  other engine. Printed on the member's line: `mem K #2 id=af25... (5,2)`.
+- **The height is kept**, per cell and per member; a cell's identity is
+  (owner, key, tick), without the value; `PremRef::Cell` names an immutable
+  record, so it records the value at use, within a tick and across ticks.
+- **The seal is a field of the record, not a premise of its own** (a
+  deliberate difference from the first draft's `PremRef::Sealed`): a
+  retraction replaces the record, and with it the seal.
+- **The support index** (`Eval::support_index`, engine/delta.rs): fact -> the
+  cells some member of which cites it, built from the sealed cells the first
+  time a retraction asks and kept as cells are replaced; dropped when an
+  evaluation runs. A member cites the facts of its representative derivation
+  only, which is all a retraction needs: a derivation that is not the
+  representative decides nothing about the member while it stands or falls.
+  The other direction, a cell -> the firings that cite it, is the readers of
+  its rule's head relation (`drop_readers`).
+
+### The retraction path
+
+`Session::retract_delta(fact)` (rofl-load `--retract`) takes a base fact out
+of an evaluated world and brings the cells it supported to what a fresh
+evaluation holds, without evaluating the world again:
+
+| Cell | What happens | Uses |
+| --- | --- | --- |
+| count, sum (Group, invertible) | the members whose representative cites the fact are derived again, each alone (the inner body with the group and the member's projection bound); one with no derivation left is dropped and its value taken from the total, one with another derivation keeps its place under the least signature left; the survivors are ordered again by height and projection | `AggOp::subtract` |
+| min, max, or, and (Best, idempotent) | no inverse, and only the members that reach the value are kept, so the one cell is derived again with its key bound | `seal_cells` |
+| what read the cell | the firings that cited the old record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record | `solve_body`, `conclude` |
+
+It answers `Delta` (what it did) or `Full(reason)`: the world as a full
+evaluation takes it, evaluated again at the next question. It refuses, by
+name, a world or a fact it is not worked out for: a later tick, a lattice,
+tag, subsumption, hole, wall or the well-founded mode; a fact a plain rule
+reads, or a negation, or a rule that concludes its relation too; a rule that
+reads the ledgers (`asserted_by`, `agg_*`, `derived_by`, `hole`); a cell of
+another algebra (holistic cells share members across percents; a threshold's
+Quorum is the first N); a cell holding a hole; a cell whose rule concludes
+into a relation another rule reads (its readers would have to be
+retracted too, and a retraction can add conclusions through a negation).
+Each is a bounded job for the delta engine proper, and none changes what a
+full evaluation answers.
+
+It is held three ways. `rust/rofl/tests/incremental.rs` is a differential:
+random asserts and retracts over four input relations, each step compared with
+a world built from the same facts and evaluated from nothing, byte for byte in
+`canonical_state` (the refusals counted by name, so a path that quietly
+stopped taking the delta fails as much as one that took it wrongly). The
+worlds `agg_incr_sum`, `agg_incr_minmax`, `agg_incr_gate` and
+`agg_incr_holistic` retract facts after the evaluation (`check_opt(W,
+retract, "fact")`: Rust by the path, TypeScript by evaluating again) and
+state the rows that must hold after, so both engines' hash is the same state.
+And twelve planted faults (`retract_*`, `member_id_position`,
+`alg_flags_off`) turn them red.
+
+The TypeScript engine stays a full recompute: its `retract` marks the store
+dirty and the next evaluation is the whole one, and its `canonicalState` prints
+the same flags and ids, so parity is checked on the result of both.
 
 Both risks this section once named are closed ("Well-founded worlds and ticks,
 as built"): a cell staged `@next` keeps its tick and its members' premises of
 that tick, and `retain_ticks` keeps the provenance a live cell cites. A fact
 staged again takes the new tick's firings and drops the old, so neither its
 firings nor the cells they cite accumulate across ticks.
+
+What stays open in this column: the lattice kinds (order and join lattices,
+widening, the semiring tags, subsumption). Their contribution is a firing of a
+fact, not a member of a record, so its id is a firing's signature
+(`rule|premises`), which needs the citer index promoted from the lattice close
+(`Store::track_citers`) to the retraction path and a printed form both engines
+agree on for the firings a superseded value keeps; the algebra flags of their
+declarations are already `AggOp::algebra`.
 
 ## Where it lands in the engine
 

@@ -18,6 +18,9 @@ use crate::store::{
 };
 use crate::term::*;
 
+mod delta;
+pub use delta::Delta;
+
 const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
 const DEFAULT_SPACE: i64 = 500_000;
@@ -667,6 +670,9 @@ pub struct Eval {
     fault_count: u64,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
+    /// The back-index of the retraction path: fact -> the cells a member of
+    /// which cites it (`delta.rs`). None until a retraction asks.
+    support_ix: Option<HashMap<FactId, Vec<CellId>>>,
     /// A holistic group read under many percents or subjects, sealed once:
     /// by the correlation less the percent or subject (`hol_share_key`).
     hol_shared: HashMap<(Sym, u32, Box<[Term]>), HolShared>,
@@ -982,6 +988,7 @@ impl Eval {
             fault_count: 0,
             last_fault: None,
             agg_memo: HashMap::new(),
+            support_ix: None,
             hol_shared: HashMap::new(),
             thr_cells: HashMap::new(),
             thr_open: Vec::new(),
@@ -1770,6 +1777,7 @@ impl Eval {
             });
         }
         self.forget_cells();
+        self.support_ix = None;
         self.fault = None;
         self.derived_rels = self
             .rules

@@ -4762,7 +4762,93 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_precise_scale": "shrug[$kernel](sc_two(0,g0,$unknown_value)"
   }
- }
+ },
+ {
+  "id": "retract_no_subtract",
+  "what": "a dropped member's value is not subtracted from the total of a count or sum",
+  "expect": {
+   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
+  }
+ },
+ {
+  "id": "retract_stale_rep",
+  "what": "a member that rests on a retracted fact keeps that derivation instead of the one that is left",
+  "expect": {
+   "agg_incr_sum": "lacks the row mem $cell(r9f34c003,2,0,$cons(b,$nil)) #1"
+  }
+ },
+ {
+  "id": "retract_no_readers",
+  "what": "the facts a cell's reader concluded from its old record stay when the cell is replaced",
+  "expect": {
+   "agg_incr_sum": "holds the row ai_total[main](a,15)"
+  }
+ },
+ {
+  "id": "retract_no_refire",
+  "what": "what read a replaced cell does not read the new one",
+  "expect": {
+   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
+  }
+ },
+ {
+  "id": "retract_no_rederive",
+  "what": "an idempotent cell is not derived again after one of its supports is retracted",
+  "expect": {
+   "agg_incr_minmax": "lacks the row am_lo[main](a,3)"
+  }
+ },
+ {
+  "id": "retract_index_off",
+  "what": "the back-index finds no cell for a retracted fact",
+  "expect": {
+   "agg_incr_sum": "holds the row ai_total[main](a,15)"
+  }
+ },
+ {
+  "id": "retract_gate_plain",
+  "what": "a fact a plain rule reads is retracted as if only aggregates read it",
+  "expect": {
+   "agg_incr_gate": "holds the row ag_big[main](1)"
+  }
+ },
+ {
+  "id": "retract_gate_neg",
+  "what": "a fact a negation reads is retracted as if only aggregates read it",
+  "expect": {
+   "agg_incr_neg": "lacks the row ag_quiet[main](b)"
+  }
+ },
+ {
+  "id": "retract_empty_gone",
+  "what": "a count of a bound key with no member left is gone instead of 0",
+  "expect": {
+   "agg_incr_sum": "lacks the row ai_n[main](c,0)"
+  }
+ },
+ {
+  "id": "retract_memo_stale",
+  "what": "the correlation's cells are not updated, so what reads them reads the old record",
+  "expect": {
+   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
+  }
+ },
+ {
+  "id": "member_id_position",
+  "what": "a member's id is a function of its place in the cell, which a re-seal changes",
+  "expect": {
+   "agg_incr_sum": "lacks the row mem $cell(r77e892da,1,0,$cons(a,$nil)) #1 id=af25"
+  }
+ },
+ {
+  "id": "alg_flags_off",
+  "what": "a cell records no algebra flags",
+  "expect": {
+   "agg_incr_sum": "alg=invertible use=subtract",
+   "agg_incr_minmax": "alg=idempotent,lattice use=rederive",
+   "agg_incr_holistic": "alg=holistic use=recompute"
+  }
+ },
 ];
 
 // ------------------------------------------------------------ the switches

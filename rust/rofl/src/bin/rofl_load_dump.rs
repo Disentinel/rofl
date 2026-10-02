@@ -1,7 +1,7 @@
 // Build a world from .rofl TEXT and print canonicalState — the load path's
 // counterpart to `rofl-eval`, so a divergence can be diffed rather than read
 // out of a test panic.
-//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N]
+//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
 //             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
 //             boot.rofl file.rofl...
 // `--strata` runs the stock evaluator, which reads `stratum/2`; `--explain`
@@ -12,7 +12,10 @@
 // boot.rofl and those files, evaluates it, and feeds what it concludes to
 // this one before it evaluates (`Session::feed_below`), under the same
 // `--budget`, `--space` and `--strata`; `--retain N` keeps the
-// provenance of the last N completed ticks (`retain_ticks`).
+// provenance of the last N completed ticks (`retain_ticks`). `--retract L`, repeated,
+// retracts the base fact L after the first evaluation, in order, by `Session::retract_delta`
+// (the cells it supported are updated, the world is not evaluated again) and prints the
+// state the world is left in; tick 0 only.
 //
 // A QUESTION REPLACES THE DUMP. With any `--why`, `--why-all`, `--whynot` or
 // `--excise` the answers are printed, in the order the flags were given, each
@@ -47,6 +50,7 @@ fn main() {
     let mut space: Option<i64> = None;
     let mut below: Vec<String> = Vec::new();
     let mut retain: Option<u32> = None;
+    let mut retracts: Vec<String> = Vec::new();
     let mut qs: Vec<Q> = Vec::new();
     let mut state = false;
     let (mut depth, mut nodes): (Option<i64>, Option<i64>) = (None, None);
@@ -70,6 +74,7 @@ fn main() {
             "--save" => save = Some(value(&mut i)),
             "--below" => below.push(value(&mut i)),
             "--retain" => retain = Some(number("--retain", value(&mut i), "a count of ticks")),
+            "--retract" => retracts.push(value(&mut i)),
             "--why" => qs.push(Q::Why(value(&mut i))),
             "--why-all" => qs.push(Q::WhyAll(value(&mut i))),
             "--whynot" => qs.push(Q::Whynot(value(&mut i))),
@@ -111,6 +116,16 @@ fn main() {
     }
     if ticks == 0 {
         if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+        for f in &retracts {
+            match s.retract_delta(f) {
+                Ok(rofl::session::Retraction::Delta(d)) => eprintln!("retract {f}: {d:?}"),
+                Ok(rofl::session::Retraction::Full(why)) => eprintln!("retract {f}: evaluated again, {why}"),
+                Err(e) => { eprintln!("retract {f}: {e}"); std::process::exit(3); }
+            }
+            if s.eval.store.dirty {
+                if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
+            }
+        }
         if explain {
             if let Err(e) = s.explain_requests() { eprintln!("explain: {e}"); std::process::exit(3); }
             if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
