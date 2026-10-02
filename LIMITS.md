@@ -161,6 +161,10 @@ the rest are v0 implementation boundaries.
 
 - **No aggregation, no optimization passes, no syntax sugar, no GPU anything**
   (spec §8). Resisted.
+  **Amended 2026-10-02: only the last clause holds.** Aggregation was built
+  (docs/aggregates.md), optimization passes exist (the eight lines above, and
+  `r_optimizations_exist` in the README register) and so does syntax sugar
+  (docs/sentence-form.md). GPU alone is still out, as its own duty.
 
 ## Appended 2026-09-07 — what `sealed(provenance)` changes
 

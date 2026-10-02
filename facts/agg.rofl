@@ -1027,7 +1027,8 @@ work_needs(w_agg_retire_workarounds, w_agg_join_lattice).
 work_needs(w_agg_retire_workarounds, w_agg_holistic).
 
 work(w_agg_reconcile_docs, "rewrite every `contradiction_site` it owns against docs/aggregates.md; done only with a work_proof world that fails while any of them still says there is no aggregation").
-work_state(w_agg_reconcile_docs, open).
+work_state(w_agg_reconcile_docs, done).
+work_proof(w_agg_reconcile_docs, "agg_prose").
 work_needs(w_agg_reconcile_docs, w_agg_body_strat).
 
 -- the acceptance demos, one item each, each proving its property by alarms

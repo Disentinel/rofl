@@ -362,6 +362,7 @@ check[checks]("facts/goldens.rofl", "agg_precise_holes", world).
 check[checks]("facts/goldens.rofl", "agg_precise_oracle", world).
 check[checks]("facts/goldens.rofl", "agg_precise_scale", world).
 check[checks]("facts/goldens.rofl", "agg_proofs", world).
+check[checks]("facts/goldens.rofl", "agg_prose", world).
 check[checks]("facts/goldens.rofl", "agg_rederived_provenance", world).
 check[checks]("facts/goldens.rofl", "agg_sub_budget", world).
 check[checks]("facts/goldens.rofl", "agg_sub_demo", world).
@@ -509,6 +510,7 @@ test_file[checks]("rust/rofl/tests/tick_scale.rs").
 test_file[checks]("rust/rofl/tests/why_bins.rs").
 citation_ok[checks](d_veto_belongs_inside).
 citation_ok[checks](l_budget_counts_firings).
+citation_ok[checks](d_aggregates_in_the_kernel).
 citation_ok[checks](s7_no_clause_objects).
 citation_ok[checks](l_no_multi_fact_abduction).
 citation_ok[checks](s7_no_witness_excise).
@@ -569,6 +571,7 @@ citation_ok[checks](s_sees_computed_by_boot).
 citation_ok[checks](s_a_counter).
 citation_ok[checks](s_done_ci_green).
 citation_ok[checks](s_appendix_dep_edges).
+citation_ok[checks](r_aggregates_exist).
 citation_ok[checks](r_collects).
 citation_ok[checks](r_conclusion_tense).
 citation_ok[checks](r_edb_for_reserved).
@@ -610,6 +613,7 @@ citation_ok[checks](s_reads_only_what_it_sees).
 citation_ok[checks](s_excise_not_from_witness).
 citation_ok[checks](s_a_stratum_order).
 citation_ok[checks](l_unchecked_without_boot).
+citation_ok[checks](l_no_gpu).
 citation_ok[checks](s_a_kernel_grep).
 citation_ok[checks](s_no_silent_crossing).
 citation_ok[checks](l_undefined_silent_on_negation).

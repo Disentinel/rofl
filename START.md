@@ -143,6 +143,20 @@ Critical structural requirement (`reflect.ts`): after parsing, every rule is sto
 
 Incremental maintenance (DRed/counting beyond support counters), @async effects executor, multi-fact abduction, aggregation, GPU anything, persistence layers, optimization passes, syntax sugar. Resist.
 
+> **Amended 2026-10-02.** This section is the contract as written and stays as
+> written; the tree has since moved past it, and the amendments are recorded in
+> `facts/spec.rofl` and `LIMITS.md`. **Aggregation is built**: the owner decided
+> on 2026-09-28 that it is all aggregate classes in one cell engine, and
+> `docs/aggregates.md` is the account (body aggregates `count`, `sum`, `min`,
+> `max`, `or`, `and`, the holistic `median`, `quantile` and `rank`, the
+> threshold `at_least`, lattice declarations with widening, semiring tags,
+> subsumption under declared orders, and the answer model's shrug). Optimization
+> passes exist (`facts/deviations.rofl`, `r_optimizations_exist`) and so does
+> syntax sugar (`docs/sentence-form.md`; the sentence phrases of the aggregates).
+> Incremental maintenance, the `@async` executor, multi-fact abduction and
+> persistence beyond store serialization were each retired by their own
+> `LIMITS.md` line. Still out: GPU anything.
+
 ---
 
 ## Appendix A — boot.rofl (primary acceptance test)

@@ -851,10 +851,27 @@ bit-identical state, tick log, and provenance regardless of insertion order
   `l_reuse_switchable`, `l_demand_premise_order`, `l_demand_depth_512`,
   `l_demand_no_enumeration`. So the prohibition was not quietly broken; it was
   replaced, in detail, by eight sentences in the document that came after it,
-  and `l_no_aggregation` is the one line that never caught up: it still reads
+  and `l_no_aggregation` was the one line that never caught up: it read
   `No aggregation, no optimization passes, no syntax sugar, no GPU anything` in
-  the same file as those eight. Aggregation, GPU and sugar hold; the middle
-  clause does not.
+  the same file as those eight. It is amended in place (2026-10-02): GPU alone
+  holds, as its own limit `l_no_gpu`; aggregation is the next entry (docs/aggregates.md), and the
+  sentence form and the aggregate phrases are the sugar (docs/sentence-form.md).
+- **Aggregation exists, and START.md section 8 said not to build it.**
+  Decided 2026-09-28 by the owner: not one stratified `count` but every
+  aggregate class, as ONE CELL ENGINE with two syntaxes. A body aggregate
+  (`N is count(R : body)`, `sum`, `min`, `max`, `or`, `and`, the holistic
+  `median`, `quantile` and `rank`, and the threshold `at_least`) reads a
+  relation closed below it, as a negation does; a relation declaration
+  (`lattice dist(A, C, min D)`, with a declared widening where the height is
+  infinite), a semiring tag and subsumption under a declared order are cells
+  keyed by the head. The algebra of the kind decides what may recurse. A cell
+  an overflow, a type error or a budget cut touched is a hole and never a
+  value, and its witness is its contributions, so `why` prints every row a
+  value stood on. Rust first, the TypeScript engine best-effort at small
+  scale. The account, the matrix of what is proved and what is open, and the
+  design reasons are docs/aggregates.md, facts/agg.rofl and rules/agg.rofl.
+  The amendment is `d_aggregates_in_the_kernel` in facts/spec.rofl, which
+  retires `l_no_aggregation`.
 
 <!-- END deviations -->
 

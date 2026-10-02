@@ -922,8 +922,10 @@ if (isMain) {
   // the generated packs are checked beside the worlds that read them: all of
   // them at once in a whole run, and under a selection once it is known
   const SPEC_PACK = 'facts/spec-census.rofl', BREAKS_PACK = 'examples/checks/agg-breaks-census.rofl';
-  const packCheck = (f: string) => f === SPEC_PACK ? beside('scanners/spec.ts') : beside('scripts/agg_breaks.ts', '--census');
-  const early = plain && !sel ? new Map([SPEC_PACK, BREAKS_PACK].map((f) => [f, packCheck(f)])) : null;
+  const PROSE_PACK = 'examples/checks/agg-prose-census.rofl';
+  const packCheck = (f: string) => f === SPEC_PACK ? beside('scanners/spec.ts')
+    : f === PROSE_PACK ? beside('scripts/agg_prose.ts') : beside('scripts/agg_breaks.ts', '--census');
+  const early = plain && !sel ? new Map([SPEC_PACK, BREAKS_PACK, PROSE_PACK].map((f) => [f, packCheck(f)])) : null;
   // a selection of declared worlds needs no walk, and the walk reads every
   // Markdown world; anything else is looked for among all of them
   let picked: World[] | null = null, why: string[] = [];
@@ -942,7 +944,7 @@ if (isMain) {
   // (f_a_golden_over_a_generated_census_pins_the_photograph_against_itself).
   const check = (f: string) => early ? early.get(f)!
     : plain && ws.some((w) => w.files.includes(path.join(ROOT, f))) ? packCheck(f) : null;
-  const specCheck = check(SPEC_PACK), breaksCheck = check(BREAKS_PACK);
+  const specCheck = check(SPEC_PACK), breaksCheck = check(BREAKS_PACK), proseCheck = check(PROSE_PACK);
   if (blessing) {
     // BLESSING SAYS WHAT IT CHANGES. The one real hazard of a committed golden
     // is blessing over a defect, and it was paid for within an hour of this
@@ -1061,6 +1063,9 @@ if (isMain) {
   // AND THE CENSUS OF PLANTED FAULTS, which the world agg_breaks_census
   // reads: the table of scripts/agg_breaks.ts and the brk! sites in the source
   if (breaksCheck) failed(await breaksCheck, /STALE|Error/, 'scripts/agg_breaks.ts --census --check');
+  // AND THE CENSUS OF PROSE, which the world agg_prose reads: the documents
+  // w_agg_reconcile_docs owns and what they still say about aggregation
+  if (proseCheck) failed(await proseCheck, /STALE|Error/, 'scripts/agg_prose.ts --check');
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   process.exit(fail.length === 0 ? 0 : 1);

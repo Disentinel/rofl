@@ -203,6 +203,16 @@ check_file("agg_breaks_census", "examples/checks/agg-breaks-census.rofl").
 check_file("agg_breaks_census", "examples/checks/agg-breaks-census-check.rofl").
 proves_work("agg_breaks_census", w_agg_fast_loop).
 
+-- THE PROSE THAT SAID THERE IS NO AGGREGATION. A world cannot read a document,
+-- so scripts/agg_prose.ts writes down, for each path w_agg_reconcile_docs owns
+-- as a `contradiction_site`, every block that still says so and whether it
+-- points at docs/aggregates.md; `npm test` fails when the census is stale, and
+-- the check is red for a claim with no pointer.
+check_world("agg_prose").
+check_file("agg_prose", "examples/checks/agg-prose-census.rofl").
+check_file("agg_prose", "examples/checks/agg-prose-check.rofl").
+proves_work("agg_prose", w_agg_reconcile_docs).
+
 -- =============================================== THE AGGREGATE PROOF WORLDS
 -- One world per cell of facts/agg.rofl that w_agg_cell_store and
 -- w_agg_body_strat close, named `agg_<kind>_<column>`, each bound to its cell

@@ -21,10 +21,12 @@ import { parseSelector } from './agg_select.ts';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const AGG = 'facts/agg.rofl', CHECKS = 'facts/checks.rofl';
 const CENSUS = 'examples/checks/agg-breaks-census.rofl', CENSUS_CHECK = 'examples/checks/agg-breaks-census-check.rofl';
+const PROSE = 'examples/checks/agg-prose-census.rofl', PROSE_CHECK = 'examples/checks/agg-prose-check.rofl';
 const WORLDS: Record<string, string[]> = {
   rules_agg: [AGG, 'rules/agg.rofl'],
   agg_proofs: [CHECKS, 'facts/findings.rofl', AGG, 'rules/agg.rofl'],
   agg_breaks_census: [CENSUS, CENSUS_CHECK],
+  agg_prose: [PROSE, PROSE_CHECK],
 };
 type Edit = { file: string; append?: string; replace?: [string, string] };
 type Mutant = { expect: string | null; world: keyof typeof WORLDS; edits: Edit[] };
@@ -88,7 +90,7 @@ const M: Mutant[] = [
   { expect: 'false_done', world: 'rules_agg', edits: [done('w_agg_incremental_ready')] },
   { expect: 'done_by_assertion', world: 'rules_agg', edits: [swap('work_proof(w_agg_baseline, "agg_rederived_provenance").', '')] },
   { expect: 'work_proof_unbound', world: 'agg_proofs', edits: [{ file: CHECKS, replace: ['proves_work("agg_rederived_provenance", w_agg_session_tests).', ''] }] },
-  { expect: 'done_by_assertion', world: 'rules_agg', edits: [done('w_agg_reconcile_docs')] },
+  { expect: 'done_by_assertion', world: 'rules_agg', edits: [swap('work_proof(w_agg_reconcile_docs, "agg_prose").', '')] },
   { expect: 'blocker_unknown', world: 'rules_agg', edits: [add('cell_blocked(agg, count, syntax, weird).')] },
   { expect: 'blocker_stale', world: 'rules_agg', edits: [add('cell_blocked(agg, cell, syntax, external).')] },
   { expect: 'needs_unknown', world: 'rules_agg', edits: [add('work_needs(w_agg_ts, w_nope).')] },
@@ -110,9 +112,14 @@ const M: Mutant[] = [
   { expect: null, world: 'agg_proofs', edits: [reg('order_lattice', 'strata', 'proves_recursion("agg_t", order_lattice).'), add('handled(agg, order_lattice, strata, "agg_t").')] },
   // the body form of min closes its strata cell with a refusal and no recursion
   { expect: null, world: 'agg_proofs', edits: [reg('min_max_strat', 'strata', 'proves_refusal("agg_t", min_max_strat).'), add('handled(agg, min_max_strat, strata, "agg_t").')] },
-  { expect: null, world: 'agg_proofs', edits: [reg('count', 'syntax', 'proves_work("agg_t", w_agg_reconcile_docs).'), add('handled(agg, count, syntax, "agg_t"). work_proof(w_agg_reconcile_docs, "agg_t").'), done('w_agg_reconcile_docs')] },
+  { expect: null, world: 'agg_proofs', edits: [reg('count', 'syntax', 'proves_work("agg_t", w_x).'), add('handled(agg, count, syntax, "agg_t"). work(w_x, "x"). work_state(w_x, done). work_proof(w_x, "agg_t"). contradiction_site(w_x, "README.md", "x").')] },
   { expect: null, world: 'agg_proofs', edits: [add('unknown_because(agg, count, incremental_ready, out_of_scope). decided_not_work(agg, count, incremental_ready, f_aggregation_is_one_cell_engine_with_two_syntaxes).')] },
+  // the prose of w_agg_reconcile_docs (agg_prose): a claim nothing points past, a census that found nothing
+  { expect: 'prose_stale', world: 'agg_prose', edits: [add('prose_claim("LIMITS.md", "a block that says there is no aggregation").', PROSE)] },
+  { expect: 'prose_stale', world: 'agg_prose', edits: [{ file: PROSE, replace: ['prose_pointer("START.md", "Incremental maintenance (DRed/counting beyond support counte").', ''] }] },
+  { expect: 'prose_vacuous', world: 'agg_prose', edits: [{ file: PROSE, replace: ['prose_site("LIMITS.md").', ''] }, ...['START.md', 'docs/roadmap.md', 'facts/deviations.rofl', 'facts/spec.rofl', 'rules/worklist.rofl'].map((p): Edit => ({ file: PROSE, replace: [`prose_site("${p}").`, ''] }))] },
   { expect: null, world: 'agg_breaks_census', edits: [] },
+  { expect: null, world: 'agg_prose', edits: [] },
 ];
 
 // the ledger's alarms are in [audit], a check file's in [main]
@@ -146,7 +153,7 @@ if (isMain) {
     }
     process.exit(code);
   }
-  const rules = ['rules/agg.rofl', CENSUS_CHECK].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+  const rules = ['rules/agg.rofl', CENSUS_CHECK, PROSE_CHECK].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
   const ALARMS = [...rules.matchAll(/^alarm\(([a-z_]+)\)\./gm)].map((m) => m[1]);
   const covered = new Set(M.map((m) => m.expect).filter((x): x is string => x !== null));
   const uncovered = ALARMS.filter((a) => !covered.has(a));
