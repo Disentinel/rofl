@@ -14,7 +14,7 @@ default: main
 
 Declared as facts:
 
-- <a id="phrase"></a>`phrase` — rows in this file
+- `phrase` — rows in this file
 - <a id="kind_noun"></a>`kind_noun` — rows in this file
 - <a id="sig"></a>`sig` — rows in this file
 
@@ -88,6 +88,23 @@ Declared as facts:
 | `tdz_deferred` | "is_deferred_for(node E, declarator D)" |
 | `tdz_at` | "is_in_the_dead_zone_of(node E, declarator D)" |
 | `assigns` | "is_assigned(name Name, node Src, in file File)" |
+| `assigned` | "is_written_by(assignment A, target T:2, name Name:3, value node Src:4, in file File:5)" |
+| `assign_binder` | "is_written_into(assignment A, declarator D)" |
+| `assign_param` | "is_written_into_a_parameter_of(assignment A, function F)" |
+| `assign_dead` | "is_written_in_the_dead_zone(assignment A)" |
+| `assign_decided` | "has_a_decided_target(assignment A)" |
+| `assign_unscoped` | "has_no_decided_target(assignment A)" |
+| `assign_reaches_unscoped` | "may_hold_by_name_alone(node E, what node Src holds)" |
+| `bound_read` | "is_claimed_by_a_binder_or_parameter(node E)" |
+| `bare_binder` | "declares_without_a_value(declarator D, name Name, in file File)" |
+| `has_init` | "has_an_initialiser(declarator D)" |
+| `type_import` | "imports_types_only(node X)" |
+| `external_site` | "is_an_external_site(node I, of module Spec)" |
+| `external_module` | "is_an_external_module(module Spec)" |
+| `external_value` | "comes_out_of(node N, module Spec)" |
+| `external_import` | "imports_from_outside(node Sp, name Local, from module Spec, in file File)" |
+| `external_destructured` | "destructures_from_outside(declarator D, at node Prop, name Local, in file File)" |
+| `callback_param` | "is_called_back_with(node P, in function F, from module Spec)" |
 | `spread_arg` | "has_a_spread(invocation C, at index I)" |
 | `after_spread` | "is_past_a_spread(invocation C, at index I)" |
 | `arg_at` | "passes(invocation C, node A:2, at index I:1)" |
@@ -152,6 +169,8 @@ Declared as facts:
 | `imports_ns` | "imports_the_namespace(name Local, at site D, in file File)" |
 | `imports_default` | "imports_the_default(name Local, at site D, in file File)" |
 | `module_object` | "is_the_module_object_of(node P, file Target)" |
+| `cjs_module_exports` | "is_module_exports_in(node M, file File)" |
+| `cjs_exports` | "exports_by_commonjs(file File, node V)" |
 | `reexport_decl` | "re_exports(named export E)" |
 | `export_list_erased` | "exports_types_only(named export E)" |
 | `export_item_erased` | "is_a_type_only_specifier(node Sp)" |
@@ -956,6 +975,7 @@ Declared as facts:
 | `import_site` | "is_an_import_site(node I, of form N)" |
 | `reexport_site` | "is_a_reexport_site(node E, of form N)" |
 | `module_site` | "is_a_module_site(node N, of form K)" |
+| `require_site` | "is_a_require_site(node C)" |
 | `site_kind` | "the_site_kind(of node I, is kind N)" |
 | `site_line` | "sits_at_line(site I, line L)" |
 | `site_source_node` | "the_source_node(of site I, is node Src)" |
@@ -969,6 +989,8 @@ Declared as facts:
 | `resolved_import` | "resolves_to_the_file(site I, file T)" |
 | `builtin_canonical` | "the_canonical_builtin(of text S, is spec N)" |
 | `dangling_import` | "is_a_dangling_import(site I, of text S)" |
+| `has_module_target` | "names_a_file_of_the_code(site I)" |
+| `unresolved_relative` | "leaves_unresolved(file F, text S:2, at line L:1)" |
 | `module_target` | "means_the_file(site I, file T)" |
 | `ts_resolved` | "names_under_typescript(site I, file T)" |
 | `site_last_seg` | "reaches(site I, directory D, before segment Seg)" |

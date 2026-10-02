@@ -26,7 +26,7 @@ Reads:
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
+- from js-modules, in the code: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source)
 - from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [ast_within](js-structure.rofl.md#ast_within), [key_name](js-structure.rofl.md#key_name)
 - from outside these files, in the code:
   - <a id="ast_file"></a>`ast_file`
@@ -45,7 +45,7 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-await"></a>an await | a node of kind `await_expression` |
-| <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement` (`block_scope_kind`) |
+| <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement`, `for_in_statement`, `for_of_statement` (`block_scope_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
@@ -56,15 +56,19 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
 | <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
 | <a id="noun-default_import"></a>a default import | a node of kind `import_default_specifier` |
+| <a id="noun-dynamic_import"></a>a dynamic import | a node of kind `import_expression` |
 | <a id="noun-export_specifier"></a>an export specifier | a node of kind `export_specifier` |
 | <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
+| <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
 | <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-import"></a>an import | a node of kind `import_declaration` |
+| <a id="noun-import_specifier"></a>an import specifier | a node of kind `import_specifier` |
 | <a id="noun-invocation"></a>an invocation | a node of one of the kinds `call_expression`, `optional_call_expression`, `new_expression` (`call_like_v`) |
 | <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
+| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-method"></a>a method | a node of kind `class_method` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-namespace_export"></a>a namespace export | a node of kind `export_namespace_specifier` |
@@ -90,6 +94,7 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
 | <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
+| <a id="noun-value_assignment_operator"></a>a value assignment operator | a node of one of the kinds "=", "||=", "&&=", "??=" (`assign_value_op`) |
 | <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
 | <a id="noun-wrapper"></a>a wrapper | a node of one of the kinds `parenthesized_expression`, `tsas_expression`, `tsnon_null_expression` (`value_transparent`) |
 | <a id="noun-yield"></a>a yield | a node of kind `yield_expression` |
@@ -102,6 +107,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="ident"></a>An [identifier](#noun-identifier) reads Name if it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
+- <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
 - <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.rofl.md#ast_node) `program` in file File.
 - <a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
@@ -110,6 +116,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="module_object"></a>A [program](#noun-program) is the module object of File if it is in file File.
 - <a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if a [default export](#noun-default_export) E is in file File and the `declaration` of E is it.
 - <a id="obj_method_of"></a>An [object literal](#noun-object_literal) has the object method M if M [is among the](#ast_child) `properties` of it and M is an [object method](#noun-object_method).
+- <a id="type_import"></a>A node imports types only if [the attribute](#ast_attr) `import_kind` of it is "type".
+- <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
 - <a id="for_of_src"></a>A [for-of](#noun-for-of) iterates a node X if the `right` of it is X.
 - <a id="plain_assign"></a>An [assignment](#noun-assignment) is plain if [the attribute](#ast_attr) `operator` of it is "=".
@@ -191,12 +199,26 @@ In the code:
 
 <a id="scoped_binder"></a>D is scoped in File if D [binds](#binder) some name to some node in File.
 
+> A declarator with a plain name and NO initialiser (`let r;`, `var r;`, the
+> head of a for-of) binds the name and says nothing about a value. It is a
+> scope fact all the same: an assignment is scoped through it (section 4), and
+> it hides an outer binder of the name in its region.
+
+<a id="bare_binder"></a>A [declarator](#noun-declarator) declares without a value Name in File if all of:
+  - it is in file File;
+  - the `id` of it is an [identifier](#noun-identifier) I;
+  - I [is named](js-structure.rofl.md#ast_name) Name;
+  - unless it [has an initialiser](#has_init).
+
+D is scoped in File if D [declares without a value](#bare_binder) some name in File.
+
 > A binder's region: the nearest block for `let`/`const`, the nearest function
 > for `var` (function-scoped, hoisted), none at the top of a file. Block
 > regions are what makes shadowing statable. `sees_binder` carries
-> `not hidden_at` on both arms so every consumer inherits shadowing;
-> `ident_in(E, _, _)` there is a cost literal only — without it the body built
-> a (node × binder) product nothing reads.
+> `not hidden_at` on both arms so every consumer inherits shadowing. It is a
+> relation between a binder and the reads of ITS NAME: every consumer joins the
+> name, and a read of any other name in the region was a (node × binder)
+> product nothing read, 333 649 rows of the self notebook's 2 M join width.
 
 <a id="binder_region"></a>The region of D is a node R either:
 
@@ -211,21 +233,23 @@ In the code:
 <a id="sees_binder"></a>A node E sees D either:
 
 1. if all of:
+   - D [introduces](#binds_name) Name in File;
+   - E [reads](#ident_in) Name in File;
    - [the region](#binder_region) of D is a node R;
    - E [is within](js-structure.rofl.md#ast_within) R;
-   - E [reads](#ident_in) some name in some file;
    - unless E [is hidden from](#hidden_at) D;
 2. if all of:
    - D [is at the top](#binder_at_top);
-   - D [is scoped](#scoped_binder) in File;
-   - E [reads](#ident_in) some name in File;
+   - D [introduces](#binds_name) Name in File;
+   - E [reads](#ident_in) Name in File;
    - unless E [is hidden from](#hidden_at) D.
 
 > Scope kinds are only those a declarator can be nearest to AND a fixture
 > reaches. `catch_clause`/`switch_case` never are (grammar); a for-of/for-in
-> head has no initialiser and is not a `binder`; `switch_statement`/
+> head is a `bare_binder` whose region is the loop; `switch_statement`/
 > `static_block` hold no declaration in this corpus. Leaving one out widens a
-> region, the safe direction.
+> region: the safe direction for what a binder SEES, the unsafe one for what it
+> HIDES, which is why the loop heads are here.
 
 <a id="scope_node"></a>R is a scope either:
 
@@ -261,9 +285,10 @@ Declared as facts:
 <a id="binds_name"></a>D introduces Name in File either:
 
 1. if D [binds](#binder) Name to some node in File;
-2. if D [destructures](#destructures) Name from some key in File;
-3. if D [destructures](#destructures_at) Name at some index in File;
-4. if D [binds](#rest_binds) Name through the rest some node in File.
+2. if D [declares without a value](#bare_binder) Name in File;
+3. if D [destructures](#destructures) Name from some key in File;
+4. if D [destructures](#destructures_at) Name at some index in File;
+5. if D [binds](#rest_binds) Name through the rest some node in File.
 
 > Shadowing is containment between REGIONS, not distance in the source: the
 > outer binder's region strictly contains the inner's, or the outer has no
@@ -328,10 +353,10 @@ A node
 
 - <a id="tdz_cand"></a>is a dead zone candidate of a node D if all of:
   - D [is lexical](#lexical_binder);
-  - D [introduces](#binds_name) Name in some file;
+  - D [introduces](#binds_name) Name in File;
+  - it [reads](#ident_in) Name in File;
   - [the region](#binder_region) of D is a node R;
   - it [is within](js-structure.rofl.md#ast_within) R;
-  - it [reads](#ident_in) Name in some file;
   - D [is at line](js-model.rofl.md#ast_node) LD;
   - it [is at line](js-model.rofl.md#ast_node) LE;
   - LE < LD.
@@ -358,9 +383,22 @@ A node
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 
-## 4. ASSIGNMENT, FLOW-INSENSITIVELY: `x = "a"` makes `x` may-be "a" wherever
+## 4. ASSIGNMENT, FLOW-INSENSITIVELY: `x = "a"` makes the BINDING `x` names
 
-> x appears in the file. This layer has no before and after.
+> may-be "a" wherever that binding is read. This layer has no before and
+> after, but it has scope: an assignment reaches the readers of the binding its
+> target names, found with the machinery section 3 states for a declarator.
+> 
+> Only an operator whose result IS the right-hand side counts: `=` and the
+> three logical ones (`x ||= v` is x or v, a superset of v). `x += v` is a sum
+> and used to be read as v.
+
+Declared as facts:
+
+- <a id="assign_value_op"></a>`assign_value_op` — rows in Words
+
+> `assigns` is every write of a name, whatever the operator: what is MUTATED
+> (rules/js-effects.rofl), not what a name may hold.
 
 In the code:
 
@@ -369,18 +407,97 @@ In the code:
   - the `left` of X [is named](js-structure.rofl.md#ast_name) Name;
   - the `right` of X is Src.
 
+<a id="assigned"></a>`assigned`(an [assignment](#noun-assignment) X, L, Name, Src, File) if all of:
+  - X is in file File;
+  - [the attribute](#ast_attr) `operator` of X is Op;
+  - [`assign_value_op`](#assign_value_op)(Op);
+  - the `left` of X is a node L;
+  - L [is named](js-structure.rofl.md#ast_name) Name;
+  - the `right` of X is a node Src.
+
+> THE TARGET, decided three ways. (a) a declarator in scope at the target:
+> closures, `var` hoisting and top-of-file binders are all `sees_binder`.
+> (b) a parameter of the function that owns the target. (c) a read of a
+> `let`/`const` above its declaration: it throws, nothing is assigned.
+
+<a id="assign_binder"></a>X is written into D if all of:
+  - [`assigned`](#assigned)(X, L, Name, something, File);
+  - D [introduces](#binds_name) Name in File;
+  - a node L [sees](#sees_binder) D.
+
 In the flow:
+
+<a id="assign_param"></a>X is written into a parameter of F if [`assigned`](#assigned)(X, L, Name, something, something) and F [uses](#param_use) Name at a node L.
+
+In the code:
+
+<a id="assign_dead"></a>X is written in the dead zone if [`assigned`](#assigned)(X, L, something, something, something) and a node L [is in the dead zone of](#tdz_at) some declarator.
+
+In the flow:
+
+<a id="assign_decided"></a>X has a decided target either:
+
+1. if X [is written into](#assign_binder) some declarator;
+2. if X [is written into a parameter of](#assign_param) some function;
+3. if X [is written in the dead zone](#assign_dead).
 
 A node
 
 - may be the literal V if all of:
-  - Name [is assigned](#assigns) a node Src in File;
-  - Src [may be the literal](#may_be_lit) V;
-  - it [reads](#ident_in) Name in File.
+  - X [is written into](#assign_binder) D;
+  - [`assigned`](#assigned)(X, something, Name, Src, File);
+  - a node Src [may be the literal](#may_be_lit) V;
+  - it [reads](#ident_in) Name in File;
+  - it [sees](#sees_binder) D.
 - points to a node N if all of:
-  - Name [is assigned](#assigns) a node Src in File;
-  - Src [points to](#may_be_node) N;
-  - it [reads](#ident_in) Name in File.
+  - X [is written into](#assign_binder) D;
+  - [`assigned`](#assigned)(X, something, Name, Src, File);
+  - a node Src [points to](#may_be_node) N;
+  - it [reads](#ident_in) Name in File;
+  - it [sees](#sees_binder) D.
+- may be the literal V if all of:
+  - X [is written into a parameter of](#assign_param) F;
+  - [`assigned`](#assigned)(X, something, Name, Src, something);
+  - a node Src [may be the literal](#may_be_lit) V;
+  - F [uses](#param_use) Name at it.
+- points to a node N if all of:
+  - X [is written into a parameter of](#assign_param) F;
+  - [`assigned`](#assigned)(X, something, Name, Src, something);
+  - a node Src [points to](#may_be_node) N;
+  - F [uses](#param_use) Name at it.
+
+> WHERE SCOPE CANNOT BE DECIDED the over-approximation stays, and is a row.
+> A target no declarator or parameter owns is an implicit global, a function or
+> class name, an import, a catch parameter or a form this layer has no binder
+> for. It reaches every read of the name in the file that no binder or
+> parameter claims. `assign_reaches_unscoped(E, Src)` is the whole of it: E may
+> hold what Src holds, by name alone. `assign_unscoped` is the queue.
+
+<a id="unscoped_name"></a>`unscoped_name`(Name, File) if X [has no decided target](#assign_unscoped) and [`assigned`](#assigned)(X, something, Name, something, File).
+
+<a id="bound_read"></a>A node E is claimed by a binder or parameter either:
+
+1. if all of:
+   - [`unscoped_name`](#unscoped_name)(Name, File);
+   - D [introduces](#binds_name) Name in File;
+   - E [reads](#ident_in) Name in File;
+   - E [sees](#sees_binder) D;
+2. if all of:
+   - [`unscoped_name`](#unscoped_name)(Name, File);
+   - E [reads](#ident_in) Name in File;
+   - some function [uses](#param_use) Name at E.
+
+<a id="assign_unscoped"></a>X has no decided target if [`assigned`](#assigned)(X, something, something, something, something), unless X [has a decided target](#assign_decided).
+
+A node
+
+- <a id="assign_reaches_unscoped"></a>may hold by name alone what node a Src Src if all of:
+  - X [has no decided target](#assign_unscoped);
+  - [`assigned`](#assigned)(X, something, Name, Src, File);
+  - it [reads](#ident_in) Name in File;
+  - unless it [is claimed by a binder or parameter](#bound_read).
+- may be the literal V if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [may be the literal](#may_be_lit) V.
+- points to a node N if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [points to](#may_be_node) N.
 
 > A parenthesis, a TS cast and a non-null assertion change nothing about the
 > value; the call graph lists them as shapes and this layer does not.
@@ -602,7 +719,9 @@ A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P 
 > (`function f(x) { var x }` is the same binding: region F itself, not hidden)
 > and a nested function with its own parameter of the name. `ast_within(F, G)`
 > before `fn_node(G)`: the other order read all of `fn_node` once per
-> parameter, 58.7 % of a world.
+> parameter, 58.7 % of a world. The nested function is found by its
+> parameter's name before it is looked for under F: every descendant of F
+> was read once per parameter, 16.3 s of the self notebook against 5.1 s.
 
 <a id="param_hidden"></a>A node F hides Name at a node U either:
 
@@ -614,9 +733,10 @@ A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P 
    - U [is within](js-structure.rofl.md#ast_within) R;
    - U [reads](#ident) Name;
 2. if all of:
+   - a node G [takes](#param_of) Name at some index;
+   - G [is within](js-structure.rofl.md#ast_within) F;
+   - F is a [function](js-callgraph.rofl.md#fn_node);
    - F [takes](#param_of) Name at some index;
-   - a [function](js-callgraph.rofl.md#fn_node) G [is within](js-structure.rofl.md#ast_within) F;
-   - G [takes](#param_of) Name at some index;
    - U [is within](js-structure.rofl.md#ast_within) G;
    - U [reads](#ident) Name.
 
@@ -1048,6 +1168,45 @@ A node points to a node F if all of:
   - F [is the default export of](#exports_default) Target;
   - it [reads](#ident_in) Local in File.
 
+> CommonJS. `require(S)` is what the target's `module.exports` may be: first
+> the module's own object — its `program` node, as for a namespace — then
+> whatever `module.exports = X` puts there. Both stay in the may-set, so
+> `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
+> is an ordinary member write (section 8) on the first.
+
+In the code:
+
+<a id="cjs_module_exports"></a>A [member expression](#noun-member_expression) is module exports in File if all of:
+  - a node O [reads](#ident_in) "module" in File;
+  - the `object` of it is O;
+  - [the attribute](#ast_attr) `computed` of it is `false`;
+  - the `property` of it [is named](js-structure.rofl.md#ast_name) "exports".
+
+<a id="cjs_key"></a>`cjs_key`(E) if the `property` of a node M is a node E and [the attribute](#ast_attr) `computed` of M is `false`.
+
+In the flow:
+
+<a id="cjs_exports"></a>File exports by commonjs a node P either:
+
+1. if P [is the module object of](#module_object) File;
+2. if all of:
+   - a node L [is module exports in](#cjs_module_exports) File;
+   - the `left` of a node X is L;
+   - X [is plain](#plain_assign);
+   - the `right` of X [points to](#may_be_node) P.
+
+A node M points to a node V either:
+
+1. if M [is module exports in](#cjs_module_exports) File and File [exports by commonjs](#cjs_exports) V;
+2. if all of:
+   - M [reads](#ident_in) "exports" in File;
+   - V [is the module object of](#module_object) File;
+   - unless [`cjs_key`](#cjs_key)(M);
+3. if all of:
+   - M [is a require site](js-modules.rofl.md#require_site);
+   - M [means the file](js-modules.rofl.md#module_target) T;
+   - T [exports by commonjs](#cjs_exports) V.
+
 > The frontier: a module this corpus does not contain, one row per module.
 
 In the audit:
@@ -1059,6 +1218,183 @@ In the audit:
 In the flow:
 
 A node points to a node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
+
+## 11b. EXTERNAL VALUES: a value with no source in the corpus is still an
+
+> object. `express()`, anything an npm package or a builtin module hands back,
+> has no node here to be the identity `may_be_node` names — and without an
+> identity there is no member write to read back, no `.set`/`.get` on the
+> SAME object, no receiver two functions can share. So the model gives such a
+> value an identity of its own, and says where it came from.
+> 
+> `external_value(N, Spec)`: N is a value that came out of module Spec, which
+> the corpus does not contain; N is also what `may_be_node` points at.
+>   the module itself   N is the specifier text. One module, one object — the
+>                       require cache — whoever asks and from whichever file.
+>   a call or `new`     N is the call SITE, as a literal in a loop is its own
+>   of an external      object each time round.
+>   a member read of    N is the access site. Two reads of `app.locals` are
+>   an external         two values: a member write through one is not read
+>                       back through the other, which loses a row and never
+>                       invents one.
+>   an import binding   `import { Router } from 'm'` is the specifier node;
+>   or a pattern        `const { Router } = require('m')` the pattern property.
+>   a callback's        a function handed to an external call is called by
+>   parameter           code the corpus cannot see, with values it cannot see.
+> 
+> FOUNDED ON A STRUCTURAL SIGNAL, NOT ON THE CALL GRAPH. A site is external
+> when its specifier is bare or a builtin and `module_target` is empty, which
+> is a fact about the file system and the string. `unresolved_call` would be
+> the obvious source and cannot be: it is `not resolved_site`, `resolved_site`
+> is `resolves`, and `resolves` reads `may_be_node` — an external value would
+> be defined by its own absence, a negation cycle the program is refused for.
+> Everything below is positive recursion through `may_be_node`.
+> 
+> A MAY-SET, like its neighbours: what the module hands back may be a string
+> or a function, and a row says "an object may be here". It claims no member.
+
+In the code:
+
+<a id="external_site"></a>A node I is an external site of a module Spec either:
+
+1. if all of:
+   - I [is a require site](js-modules.rofl.md#require_site);
+   - [the source text](js-modules.rofl.md#site_source) of I is Spec;
+   - [the site shape](js-modules.rofl.md#site_shape) of I is a shape Sh;
+   - [`external_shape`](#external_shape)(Sh);
+   - unless I [means the file](js-modules.rofl.md#module_target) some file;
+2. if all of:
+   - I [is an import site](js-modules.rofl.md#import_site) of some form;
+   - [the source text](js-modules.rofl.md#site_source) of I is Spec;
+   - [the site shape](js-modules.rofl.md#site_shape) of I is a shape Sh;
+   - [`external_shape`](#external_shape)(Sh);
+   - I neither [means the file](js-modules.rofl.md#module_target) some file nor [imports types only](#type_import).
+
+In the flow:
+
+<a id="external_value"></a>A node comes out of it if it [is an external module](#external_module).
+
+Declared as facts:
+
+- <a id="external_shape"></a>`external_shape` — rows in Words
+
+> `require('m')` and `import('m')` evaluate to the module; so do the names a
+> default or namespace import binds.
+
+A node I points to a node Spec either:
+
+1. if I [is an external site](#external_site) of Spec and I [is a require site](js-modules.rofl.md#require_site);
+2. if I [is an external site](#external_site) of Spec and I is a [dynamic import](#noun-dynamic_import);
+3. if all of:
+   - Local [imports the default](#imports_default) at a site D in File;
+   - D [is an external site](#external_site) of Spec;
+   - I [reads](#ident_in) Local in File;
+4. if all of:
+   - Local [imports the namespace](#imports_ns) at a site D in File;
+   - D [is an external site](#external_site) of Spec;
+   - I [reads](#ident_in) Local in File.
+
+In the code:
+
+<a id="external_import"></a>An [import specifier](#noun-import_specifier) imports from outside Local from a module Spec in File if all of:
+  - an [import](#noun-import) D is in file File;
+  - D [is an external site](#external_site) of Spec;
+  - it [is among the](#ast_child) `specifiers` of D;
+  - the `local` of it [is named](js-structure.rofl.md#ast_name) Local;
+  - unless it [imports types only](#type_import).
+
+In the flow:
+
+A node
+
+- comes out of a module Spec if it [imports from outside](#external_import) some name from Spec in some file.
+- points to a node Sp if Sp [imports from outside](#external_import) Local from some module in File and it [reads](#ident_in) Local in File.
+
+> Calling, constructing or reading a member off an external value gives
+> another one. A callee that is also a corpus function keeps both rows. The
+> external value leads each body: it is the small relation, and the site is
+> found from it rather than the other way round. Each hop is ONE round of the
+> fixpoint, so both heads carry the whole body instead of one reading the
+> other: every round re-scans every member node, and an intermediate relation
+> made a chain of calls cost three rounds a call (46 rounds became 70).
+
+An [invocation](#noun-invocation)
+
+- comes out of a module Spec if all of:
+  - a node X [comes out of](#external_value) Spec;
+  - a node F [points to](#may_be_node) X;
+  - the `callee` of it is F.
+- points to it if all of:
+  - a node X [comes out of](#external_value) some module;
+  - a node F [points to](#may_be_node) X;
+  - the `callee` of it is F.
+
+A [member access](#member_node_v)
+
+- comes out of a module Spec if all of:
+  - a node X [comes out of](#external_value) Spec;
+  - a node O [points to](#may_be_node) X;
+  - the `object` of it is O.
+- points to it if all of:
+  - a node X [comes out of](#external_value) some module;
+  - a node O [points to](#may_be_node) X;
+  - the `object` of it is O.
+
+> The corpus writes members onto an external value (`app.handler = f`) and
+> reads them back like any plain object's.
+
+The plain member Key of a node X is a node V if X [comes out of](#external_value) some module and [the member](#member_value) Key of X holds V.
+
+> A pattern off an external value: each name is a member of it, the rest is
+> another object of the same origin.
+
+In the code:
+
+<a id="external_destructured"></a>A [declarator](#noun-declarator) destructures from outside at a node Prop Local in File if all of:
+  - it is in file File;
+  - the `id` of it is an [object pattern](#noun-object_pattern) P;
+  - Prop [is among the](#ast_child) `properties` of P;
+  - the `key` of Prop [spells](js-structure.rofl.md#key_name) some key;
+  - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+
+In the flow:
+
+A node
+
+- comes out of a module Spec if all of:
+  - a node D [destructures from outside](#external_destructured) at it some name in some file;
+  - the `init` of D [points to](#may_be_node) a node X;
+  - X [comes out of](#external_value) Spec.
+- points to a node Prop if all of:
+  - a node D [destructures from outside](#external_destructured) at Prop Local in File;
+  - the `init` of D [points to](#may_be_node) a node X;
+  - X [comes out of](#external_value) some module;
+  - it [reads](#ident_in) Local in File;
+  - it [sees](#sees_binder) D.
+- comes out of a module Spec if all of:
+  - a node D [holds a rest](#rest_in_pattern) it in some file;
+  - the `init` of D [points to](#may_be_node) a node X;
+  - X [comes out of](#external_value) Spec.
+
+> A function handed to an external call as an argument is called back with
+> values the corpus does not build: each plain parameter is an external value
+> of the callee's origin, read wherever the parameter is.
+
+<a id="callback_param"></a>An [identifier](#noun-identifier) is called back with in a [function](js-callgraph.rofl.md#fn_node) F from a module Spec if all of:
+  - a node X [comes out of](#external_value) Spec;
+  - a node G [points to](#may_be_node) X;
+  - the `callee` of an [invocation](#noun-invocation) C is G;
+  - a node Y [is among the](#ast_child) `arguments` of C;
+  - Y [points to](#may_be_node) F;
+  - it [is among the](#ast_child) `params` of F.
+
+A node
+
+- comes out of a module Spec if it [is called back with](#callback_param) in some function from Spec.
+- points to a node P if all of:
+  - P [is called back with](#callback_param) in F from some module;
+  - P [is named](js-structure.rofl.md#ast_name) Name;
+  - F [uses](#param_use) Name at it.
 
 ## 12. Construction
 
