@@ -61,6 +61,27 @@ export const opRecursive = (op: AggOp): boolean => opClass(op) === 'threshold';
 export const isJoin = (op: AggOp): boolean => opClass(op) === 'idempotent_join';
 export const opIdentity = (op: AggOp): Val | null => (op === 'count' || op === 'sum' ? { k: 'int', v: 0n } : null);
 
+/** THE ALGEBRA FLAGS a delta engine picks its strategy from (rust/rofl/src/cell.rs
+ *  `AggOp::algebra`), as `canonicalState` prints them: idempotent, invertible,
+ *  holistic, lattice, in that order, or `-`. */
+export function algText(op: AggOp): string {
+  switch (opClass(op)) {
+    case 'invertible': return 'invertible';
+    case 'holistic': return 'holistic';
+    case 'partial_order': return 'idempotent';
+    default: return 'idempotent,lattice';
+  }
+}
+/** What a delta engine does with a retracted contribution: subtract it, recompute the group, or derive the cell again. */
+export const algStrategy = (op: AggOp): string => (opClass(op) === 'invertible' ? 'subtract' : opClass(op) === 'holistic' ? 'recompute' : 'rederive');
+
+/** FNV-1a (64 bit) over the UTF-8 of `text`, as 16 hex digits: the id of a member (`Store.memberId`). */
+export function fnv64(text: string): string {
+  let x = 0xcbf29ce484222325n;
+  for (const b of new TextEncoder().encode(text)) x = ((x ^ BigInt(b)) * 0x100000001b3n) & 0xffffffffffffffffn;
+  return x.toString(16).padStart(16, '0');
+}
+
 const inRange = (n: bigint): boolean => n >= INT_MIN && n <= INT_MAX;
 export const bigOf = (t: Term): bigint | null => (t.k === 'i' ? BigInt(t.v) : null);
 

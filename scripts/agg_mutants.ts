@@ -76,9 +76,9 @@ const M: Mutant[] = [
   { expect: 'strata_without_refusal', world: 'agg_proofs', edits: [reg('order_lattice', 'strata', 'proves_recursion("agg_t", order_lattice).'), add('stratified_form(order_lattice). handled(agg, order_lattice, strata, "agg_t").')] },
   { expect: 'stratified_form_unknown', world: 'rules_agg', edits: [add('stratified_form(nosuch).')] },
   { expect: 'undecided_not_work', world: 'rules_agg', edits: [add('unknown_because(agg, count, demo, budget_exhausted).')] },
-  { expect: 'undecided_not_work', world: 'rules_agg', edits: [add('unknown_because(agg, count, incremental_ready, out_of_scope).')] },
+  { expect: 'undecided_not_work', world: 'rules_agg', edits: [add('unknown_because(agg, join_lattice, incremental_ready, out_of_scope).')] },
   { expect: 'decision_stale', world: 'rules_agg', edits: [add('decided_not_work(agg, count, syntax, f_x).')] },
-  { expect: 'decision_not_a_finding', world: 'agg_proofs', edits: [add('unknown_because(agg, count, incremental_ready, out_of_scope). decided_not_work(agg, count, incremental_ready, f_nope).')] },
+  { expect: 'decision_not_a_finding', world: 'agg_proofs', edits: [add('unknown_because(agg, join_lattice, incremental_ready, out_of_scope). decided_not_work(agg, join_lattice, incremental_ready, f_nope).')] },
   { expect: 'reason_unclassified', world: 'rules_agg', edits: [add('unknown_type(stuck, ours).')] },
   { expect: 'unqueued', world: 'rules_agg', edits: [add('obligation(newcol).')] },
   // a column opens a cell in every row, so only the owner opens one
@@ -113,7 +113,7 @@ const M: Mutant[] = [
   // the body form of min closes its strata cell with a refusal and no recursion
   { expect: null, world: 'agg_proofs', edits: [reg('min_max_strat', 'strata', 'proves_refusal("agg_t", min_max_strat).'), add('handled(agg, min_max_strat, strata, "agg_t").')] },
   { expect: null, world: 'agg_proofs', edits: [reg('count', 'syntax', 'proves_work("agg_t", w_x).'), add('handled(agg, count, syntax, "agg_t"). work(w_x, "x"). work_state(w_x, done). work_proof(w_x, "agg_t"). contradiction_site(w_x, "README.md", "x").')] },
-  { expect: null, world: 'agg_proofs', edits: [add('unknown_because(agg, count, incremental_ready, out_of_scope). decided_not_work(agg, count, incremental_ready, f_aggregation_is_one_cell_engine_with_two_syntaxes).')] },
+  { expect: null, world: 'agg_proofs', edits: [add('unknown_because(agg, join_lattice, incremental_ready, out_of_scope). decided_not_work(agg, join_lattice, incremental_ready, f_aggregation_is_one_cell_engine_with_two_syntaxes).')] },
   // the prose of w_agg_reconcile_docs (agg_prose): a claim nothing points past, a census that found nothing
   { expect: 'prose_stale', world: 'agg_prose', edits: [add('prose_claim("LIMITS.md", "a block that says there is no aggregation").', PROSE)] },
   { expect: 'prose_stale', world: 'agg_prose', edits: [{ file: PROSE, replace: ['prose_pointer("START.md", "Incremental maintenance (DRed/counting beyond support counte").', ''] }] },

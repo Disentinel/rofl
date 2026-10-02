@@ -17,6 +17,13 @@ the rest are v0 implementation boundaries.
   is no DRed, no counting, and none of the 4–22× memory the field pays for
   those. `excise` is likewise a clean re-evaluation on the subtracted EDB plus
   a diff — sound under multiple support by construction.
+  ONE NARROW EXCEPTION, since 2026-10-02 (docs/aggregates.md, "Ready for
+  the incremental engine, as built"): `Session::retract_delta` updates the
+  aggregate cells a retracted base fact supported, by subtraction or by deriving
+  the cell again, and the facts the cell's rule concluded from them, in a world
+  and for a fact it names as ones it is worked out for; any other is evaluated
+  again as before. It is held equal to a fresh evaluation byte for byte
+  (rust/rofl/tests/incremental.rs); `excise` is unchanged.
 - **The derived layer is reused per relation, under an exact fingerprint.**
   What an evaluation *skips* is a relation whose dependency cone — the rules
   its conclusions pass through and the asserted facts those rules read — is

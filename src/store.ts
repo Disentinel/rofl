@@ -1,6 +1,7 @@
 // store.ts — fact store. Map-based, perspective-tagged, deterministic.
 // The store is generic: it knows no relation names at all.
 
+import { type AggOp, algText, algStrategy, opClass, fnv64 } from './cell.ts';
 import { type Term, canonTerm, isGround, termToJson, termFromJson, toJson, fromJson } from './unify.ts';
 
 export type Scope = 'timeless' | 'tick';
@@ -34,6 +35,15 @@ export type CellVal = { k: 'value'; t: Term } | { k: 'empty' } | { k: 'hole'; re
 export interface CellRec {
   key: string; rule: string; at: number; tick: number; keyTerms: Term[]; op: string;
   value: CellVal; height: number; desc: string; members: CellMember[]; seals: CellSeal[];
+}
+
+/** THE STABLE ID OF A MEMBER: a function of the cell's rule, premise and key and of the member's identity (a Group's distinct
+ *  projection tuple, a Best's distinct derivation), and of nothing a re-seal changes: not the tick, the position or the height
+ *  (rust/rofl/src/store.rs `member_id`). */
+export function memberId(c: CellRec, m: CellMember): string {
+  const dedup = ['invertible', 'threshold', 'holistic'].includes(opClass(c.op as AggOp));
+  const ident = dedup ? `(${m.proj.map(canonTerm).join(',')})` : m.prems.map(premText).sort().join('; ');
+  return fnv64(`${c.rule}@${c.at}|${c.keyTerms.map(canonTerm).join(',')}|${ident}`);
 }
 
 /** `$cell(Rule, At, Tick, Key)` spelled as canonTerm spells that term. */
@@ -901,10 +911,10 @@ export class Store implements FactStore {
     // THE CELLS, after the witnesses and only when there are any, so a state
     // without an aggregate is byte for byte what it was
     for (const [c, like] of this.cellsInOrder()) {
-      lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]`);
+      lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}] alg=${algText(c.op as AggOp)} use=${algStrategy(c.op as AggOp)}`);
       if (like) { lines.push(`mem ${c.key} = ${like.key}`); continue; }
       c.members.forEach((m, i) => {
-        lines.push(`mem ${c.key} #${i + 1} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]`);
+        lines.push(`mem ${c.key} #${i + 1} id=${memberId(c, m)} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]`);
       });
     }
     lines.push(...this.tickLog);

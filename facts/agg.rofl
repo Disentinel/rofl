@@ -1019,6 +1019,16 @@ work_spawned(w_agg_precise_holes, f_a_undecided_was_decided_again_at_every_firin
 work(w_agg_incremental_ready, "stable contribution and member ids, algebra flags in the cell record, value-at-use premises, Sealed as its own premise, identity without the value; checked, not built").
 work_state(w_agg_incremental_ready, open).
 work_sweeps(w_agg_incremental_ready, incremental_ready).
+handled(agg, cell, incremental_ready, "agg_incr_sum").
+handled(agg, count, incremental_ready, "agg_incr_sum").
+handled(agg, sum, incremental_ready, "agg_incr_sum").
+handled(agg, empty_group, incremental_ready, "agg_incr_sum").
+handled(agg, min_max_strat, incremental_ready, "agg_incr_minmax").
+handled(agg, holistic, incremental_ready, "agg_incr_holistic").
+handled(agg, threshold, incremental_ready, "agg_incr_holistic").
+work_proof(w_agg_incremental_ready, "agg_incr_gate").
+work_proof(w_agg_incremental_ready, "agg_incr_neg").
+work_spawned(w_agg_incremental_ready, f_a_retraction_updates_the_cells_it_supports).
 work_needs(w_agg_incremental_ready, w_agg_body_strat).
 work_needs(w_agg_incremental_ready, w_agg_threshold).
 work_needs(w_agg_incremental_ready, w_agg_order_lattice).

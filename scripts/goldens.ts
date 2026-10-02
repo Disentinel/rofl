@@ -78,6 +78,9 @@ const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
 export interface World {
   name: string; files: string[]; ticks?: number; budget?: number; space?: number;
   oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
+  /** base facts retracted one by one after the evaluation (rofl-load `--retract`: the Rust engine updates the cells they
+   *  supported, the TypeScript engine evaluates again); both must hold the state a world without them holds */
+  retract?: string[];
   /** its files load together and are evaluated once, a fixture offered alone
    *  (as rofl-load runs a world), in both engines: the aggregate proof worlds */
   together?: boolean;
@@ -151,7 +154,7 @@ export function declared(text?: string): World[] {
   // EVERY OPTION IS ONE THIS HARNESS READS. `one_engine` was read as the
   // literal `1` and meant "TypeScript only", so any other value was silently
   // ignored and the world ran on both engines (f_one_engine_meant_ts_only).
-  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together']);
+  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract']);
   for (const [n, k] of col(r, 'check_opt(N, K, V)', 'N', 'K')) {
     if (!KNOWN.has(k)) throw new Error(`check_opt("${n}", ${k}, _): no such option; the options are ${[...KNOWN].join(', ')}`);
     if (!out.has(n)) throw new Error(`check_opt("${n}", ${k}, _): no check_world("${n}")`);
@@ -187,6 +190,13 @@ export function declared(text?: string): World[] {
     const w = out.get(n);
     if (w && w.oneEngine !== 'rust' && !w.together) throw new Error(`check_opt("${n}", retain, ${v}): retain_ticks is set on a world not loaded together`);
     if (w) w.retain = Number(v);
+  }
+  // the facts retracted after the evaluation, in the order the registry lists them (rofl-load --retract)
+  for (const [n, v] of col(r, 'check_opt(N, retract, V)', 'N', 'V')) {
+    const w = out.get(n);
+    if (w && !w.together) throw new Error(`check_opt("${n}", retract, "${v}"): a retraction is made in a world loaded together`);
+    if (w && w.ticks) throw new Error(`check_opt("${n}", retract, "${v}"): a retraction is made at tick 0`);
+    if (w) (w.retract ??= []).push(v);
   }
   // the space wall, in rows (rofl-load --space); Rust only
   for (const [n, v] of col(r, 'check_opt(N, space, V)', 'N', 'V')) {
@@ -396,6 +406,11 @@ function together(w: World, Engine: typeof Rofl) {
     try {
       if (!w.ticks) {
         r.evaluate(budget);
+        for (const f of w.retract ?? []) {
+          const x = r.retract(f);
+          if (!x.ok) return { cls: 'eval', msg: `retract ${f}: ${x.diagnostics.join('; ')}` };
+          r.evaluate(budget);
+        }
         if (explain) { r.explainRequests({ budget }); r.evaluate(budget); }
       } else {
         for (let i = 0; i < w.ticks; i++) r.tickAdvance({ budget });
@@ -520,7 +535,7 @@ function answerRustOnly(w: World): Answer {
   const boot = path.join(ROOT, 'boot.rofl');
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
     ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
-    ...(w.retain !== undefined ? ['--retain', String(w.retain)] : [])];
+    ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
   for (const f of w.files) {
     const want = expectedRefusal(f), unread = unreadOf(f);

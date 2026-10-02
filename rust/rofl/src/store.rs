@@ -44,7 +44,7 @@
 //! a held `PremRef::Fact` spells exactly the string it spelled before, and the
 //! fact identity becomes what the JS kernel's key already is — injective.
 
-use crate::cell::AggOp;
+use crate::cell::{AggOp, Algebra};
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
@@ -195,6 +195,12 @@ pub struct CellRec {
     /// The aggregate as written, with the correlation substituted: what `why`
     /// names the cell by.
     pub desc: Sym,
+    /// The algebra flags a delta engine picks its strategy from, recorded
+    /// with the cell (`AggOp::algebra`).
+    pub alg: Algebra,
+    /// Withdrawn by an incremental retraction: no reader sees it, and its id
+    /// stays valid for the firings that still cite it until they go.
+    dead: bool,
     members: (u32, u32),
     seals: (u32, u32),
 }
@@ -1841,13 +1847,14 @@ impl Store {
             let seals: Vec<String> = self.cell_seals(c).iter().map(|x| format!("{}@{}", h.name(x.rel), x.round)).collect();
             out.push_str(&seals.join(", "));
             out.push(']');
+            out.push_str(&format!(" alg={} use={}", r.alg.text(), r.alg.strategy().name()));
             if let Some(x) = like {
                 out.push_str(&format!("\nmem {key} = "));
                 self.write_cell_key(h, x, &mut out);
                 continue;
             }
             for (i, m) in self.cell_members(c).iter().enumerate() {
-                out.push_str(&format!("\nmem {key} #{} ", i + 1));
+                out.push_str(&format!("\nmem {key} #{} id={} ", i + 1, self.member_id(h, c, m)));
                 out.push_str(&tuple_text(h, &m.proj));
                 out.push_str(&format!(" h={} [", m.height));
                 let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
@@ -1981,6 +1988,8 @@ impl Store {
             height: c.height,
             tick: c.tick,
             desc: c.desc,
+            alg: c.op.algebra(),
+            dead: false,
             members: (m_at, m_len),
             seals: (s_at, c.seals.len() as u32),
         });
@@ -2009,6 +2018,58 @@ impl Store {
     pub fn member_prems(&self, m: &Member) -> &[PremRef] {
         &self.cells.prems[m.prems.0 as usize..(m.prems.0 + m.prems.1) as usize]
     }
+    /// Withdraw a cell: it leaves `by_key` and every listing, and the next seal
+    /// of its key is a new record. Its members stay in the arena.
+    pub fn kill_cell(&mut self, c: CellId) {
+        let r = &mut self.cells.recs[c as usize];
+        r.dead = true;
+        let k = (r.owner, r.key.clone(), r.tick);
+        if self.cells.by_key.get(&k) == Some(&c) {
+            self.cells.by_key.remove(&k);
+        }
+    }
+
+    pub fn cell_dead(&self, c: CellId) -> bool {
+        self.cells.recs[c as usize].dead
+    }
+
+    /// Every live cell's id, in the order they were sealed.
+    pub fn live_cells(&self) -> Vec<CellId> {
+        (0..self.cells.recs.len() as CellId).filter(|c| !self.cells.recs[*c as usize].dead).collect()
+    }
+
+    /// A member's identity inside its cell, as text: a Group's distinct
+    /// projection tuple, a Best's distinct derivation (its premises sorted).
+    /// Never its position, which a re-seal changes.
+    fn member_ident(&self, h: &Heap, c: CellId, m: &Member) -> String {
+        if self.cells.recs[c as usize].op.dedup_by_projection() {
+            return tuple_text(h, &m.proj);
+        }
+        let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
+        prems.sort_by(|a, b| cmp_js(a, b));
+        prems.join("; ")
+    }
+
+    /// THE STABLE ID OF A MEMBER: a function of (rule, premise, key of the
+    /// cell, identity of the member) and of nothing a re-seal changes: not the
+    /// record's id, not its tick, not the member's position or height. The
+    /// same contribution is the same id in every seal of its cell, in a later
+    /// tick and in the other engine (FNV-1a over the UTF-8 of
+    /// `rule@at|key|identity`; src/store.ts `memberId`).
+    pub fn member_id(&self, h: &Heap, c: CellId, m: &Member) -> String {
+        let r = &self.cells.recs[c as usize];
+        let CellOwner::Body { rule, at } = r.owner;
+        let key: Vec<String> = r.key.iter().map(|k| h.canon(*k)).collect();
+        let ident = brk!("member_id_position" => format!("{}#{}", self.member_ident(h, c, m), self.cell_members(c).iter().position(|x| std::ptr::eq(x, m)).unwrap_or(0)); self.member_ident(h, c, m));
+        let text = format!("{}@{}|{}|{}", h.name(rule), at, key.join(","), ident);
+        let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+        for b in text.as_bytes() {
+            x ^= *b as u64;
+            x = x.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        format!("{x:016x}")
+    }
+
     pub fn cell_seals(&self, c: CellId) -> &[Seal] {
         let (a, n) = self.cells.recs[c as usize].seals;
         &self.cells.seals[a as usize..(a + n) as usize]
@@ -2064,6 +2125,7 @@ impl Store {
     /// Every cell, in key order; the key names the tick it was sealed at.
     pub fn cell_ids_sorted(&self, h: &Heap) -> Vec<CellId> {
         let mut v: Vec<(String, u32, CellId)> = (0..self.cells.recs.len() as CellId)
+            .filter(|c| !self.cells.recs[*c as usize].dead)
             .map(|c| {
                 let mut k = String::new();
                 self.write_cell_key(h, c, &mut k);
@@ -2110,6 +2172,11 @@ impl Store {
                     }
                 }
                 c = n.next;
+            }
+        }
+        for (i, r) in self.cells.recs.iter().enumerate() {
+            if r.dead {
+                live[i] = false;
             }
         }
         if live.iter().all(|x| *x) {

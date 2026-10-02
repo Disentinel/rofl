@@ -50,6 +50,8 @@ struct World {
     retain: Option<u32>,
     /// `check_opt(W, sentences, 1)`: its files go round the sentence form first
     sentences: bool,
+    /// `check_opt(W, retract, F)`: base facts retracted after the evaluation, by the cell path
+    retract: Vec<String>,
 }
 
 /// The worlds loaded together, read from the registry by this engine.
@@ -61,7 +63,7 @@ fn registry() -> Vec<World> {
     let rows = |s: &mut Session, q: &str| s.ask(q).unwrap().rows;
     let mut out: Vec<World> = Vec::new();
     for r in rows(&mut s, "check_opt(N, together, 1)") {
-        out.push(World { name: unquote(&r[0]), files: Vec::new(), strata: false, explain: false, ticks: 0, budget: None, space: None, retain: None, sentences: false });
+        out.push(World { name: unquote(&r[0]), files: Vec::new(), strata: false, explain: false, ticks: 0, budget: None, space: None, retain: None, sentences: false, retract: Vec::new() });
     }
     for w in out.iter_mut() {
         let n = &w.name;
@@ -73,6 +75,7 @@ fn registry() -> Vec<World> {
         w.space = rows(&mut s, &format!("check_opt(\"{n}\", space, T)")).first().map(|r| r[0].parse().unwrap());
         w.retain = rows(&mut s, &format!("check_opt(\"{n}\", retain, T)")).first().map(|r| r[0].parse().unwrap());
         w.sentences = !rows(&mut s, &format!("check_opt(\"{n}\", sentences, 1)")).is_empty();
+        w.retract = rows(&mut s, &format!("check_opt(\"{n}\", retract, F)")).iter().map(|r| unquote(&r[0])).collect();
     }
     out.sort_by(|a, b| a.name.cmp(&b.name));
     out
@@ -189,6 +192,18 @@ fn check_world(w: &World) -> Vec<String> {
     if let Err(e) = run {
         bad.push(format!("{}: does not evaluate: {}", w.name, rofl::describe(&e)));
         return bad;
+    }
+    // as `rofl-load --retract` runs it: each fact out by the cell path, and the
+    // world evaluated again only where the path refused; the second evaluation
+    // below is then the check that the path left the world a fresh one
+    for f in &w.retract {
+        if let Err(e) = s.retract_delta(f) {
+            bad.push(format!("{}: retract {f}: {e}", w.name));
+            return bad;
+        }
+        if s.eval.store.dirty {
+            s.evaluate().unwrap();
+        }
     }
     // the explain bridge answers once the world is evaluated, as
     // `rofl-load --explain` does, and its rows are read with the rest

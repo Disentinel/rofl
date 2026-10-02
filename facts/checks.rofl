@@ -2277,3 +2277,49 @@ check_world("staged_neg_why_plain").
 check_file("staged_neg_why_plain", "examples/checks/staged-neg-why-data.rofl").
 check_opt("staged_neg_why_plain", together, 1).
 check_opt("staged_neg_why_plain", ticks, 1).
+
+-- w_agg_incremental_ready: the cells of count and sum under retraction (subtraction, a member that stays under another derivation, a group that is gone, an empty count), examples/checks/agg-incr-sum.rofl
+check_world("agg_incr_sum").
+check_file("agg_incr_sum", "examples/checks/agg-incr-sum.rofl").
+check_opt("agg_incr_sum", together, 1).
+check_opt("agg_incr_sum", retract, "ai_sale(1, a, 10)").
+check_opt("agg_incr_sum", retract, "ai_chan(3, x)").
+check_opt("agg_incr_sum", retract, "ai_sale(5, c, 2)").
+proves("agg_incr_sum", agg, cell, incremental_ready).
+proves("agg_incr_sum", agg, count, incremental_ready).
+proves("agg_incr_sum", agg, sum, incremental_ready).
+proves("agg_incr_sum", agg, empty_group, incremental_ready).
+
+-- the idempotent cells under retraction: min, max, or, and derived again from the facts
+check_world("agg_incr_minmax").
+check_file("agg_incr_minmax", "examples/checks/agg-incr-minmax.rofl").
+check_opt("agg_incr_minmax", together, 1).
+check_opt("agg_incr_minmax", retract, "am_v(a, 3, k1)").
+check_opt("agg_incr_minmax", retract, "am_v(b, 9, k3)").
+check_opt("agg_incr_minmax", retract, "am_flag(a, true)").
+check_opt("agg_incr_minmax", retract, "am_flag(c, false)").
+proves("agg_incr_minmax", agg, min_max_strat, incremental_ready).
+
+-- a retraction the cell path is not worked out for: a fact a plain rule reads, and one a negation reads
+check_world("agg_incr_gate").
+check_file("agg_incr_gate", "examples/checks/agg-incr-gate.rofl").
+check_opt("agg_incr_gate", together, 1).
+check_opt("agg_incr_gate", retract, "ag_sale(1, a, 10)").
+check_opt("agg_incr_gate", retract, "ag_sale(3, b, 7)").
+proves_work("agg_incr_gate", w_agg_incremental_ready).
+
+check_world("agg_incr_neg").
+check_file("agg_incr_neg", "examples/checks/agg-incr-neg.rofl").
+check_opt("agg_incr_neg", together, 1).
+check_opt("agg_incr_neg", retract, "ag_sale(1, a, 10)").
+check_opt("agg_incr_neg", retract, "ag_sale(3, b, 7)").
+proves_work("agg_incr_neg", w_agg_incremental_ready).
+
+-- the cells with no delta yet under retraction: an order statistic and a threshold, evaluated again
+check_world("agg_incr_holistic").
+check_file("agg_incr_holistic", "examples/checks/agg-incr-holistic.rofl").
+check_opt("agg_incr_holistic", together, 1).
+check_opt("agg_incr_holistic", retract, "ah_v(2, a, 9)").
+check_opt("agg_incr_holistic", retract, "ah_v(4, b, 2)").
+proves("agg_incr_holistic", agg, holistic, incremental_ready).
+proves("agg_incr_holistic", agg, threshold, incremental_ready).
