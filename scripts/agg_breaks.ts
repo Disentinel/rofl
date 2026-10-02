@@ -5054,6 +5054,34 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "retract_stacked_plain",
+  "what": "a rule that negates or aggregates what changed is treated as a plain reader: only the facts that cite what went are taken out",
+  "expect": {
+   "agg_incr_stacked": "lacks the row st_"
+  }
+ },
+ {
+  "id": "retract_stacked_facts_kept",
+  "what": "the facts of a rule read again whole stay beside the ones it concludes again",
+  "expect": {
+   "agg_incr_stacked": "holds the row st_"
+  }
+ },
+ {
+  "id": "retract_stacked_cells_kept",
+  "what": "the cells of a rule read again whole stay, and the rule reads the old record",
+  "expect": {
+   "agg_incr_stacked": "holds the row cell"
+  }
+ },
+ {
+  "id": "retract_stacked_one_level",
+  "what": "the rules read again fire in one wave, whatever the level of what they read",
+  "expect": {
+   "agg_incr_stacked": "st_"
+  }
+ },
+ {
   "id": "retract_consumers_kept",
   "what": "the facts of plain rules that rested on a replaced cell or a retracted lattice value stay beside the ones derived again",
   "expect": {

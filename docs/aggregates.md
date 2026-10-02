@@ -3053,13 +3053,12 @@ holds, without evaluating the world again:
 | an order lattice, an idempotent tag | the CONE: the lattice facts whose firings cite the fact, those whose firings cite them, and so on, are taken out with their firings and provenance (a cycle supports itself, so a fact is not kept for a firing inside the cone); the rules into the cone's relations are fired again over what stands, which is how the evaluation concluded them, and the relations close again: a key holds the best value its rules reach and every firing of that value over final facts | `activate`, `close_lattices_below` |
 | a subsumptive relation | the cone by KEY: the front of a key one of whose values rests on the fact, and every key a value was given to from the fact, are taken out whole and derived again, since what each value dominated is decided against every value the key was given | the same, with the state a key keeps of its values (`sub_seen`, `sub_memo`, `sub_by`, `sub_prems`) forgotten with it |
 | what read a cell, or a lattice | the firings that cited the old cell record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record; the facts of PLAIN RULES that rested on a replaced cell's conclusion or on the cone, through each other and around a cycle, are taken out whatever else they have, and the rules fired again once the cells are replaced and the lattices closed | `solve_body`, `conclude`, `consumer_facts`, `activate` |
+| a rule that NEGATES or AGGREGATES what changed (a cell's conclusion, the cone, or the retracted fact itself, read outside an aggregate) | a retraction can make a `not` newly true and a count gain a member, which no subtraction does, so the rule is read again WHOLE: every fact of its head relation goes (with whatever rests on them), its cells go with their reflection, and it is fired again with the rules that conclude the same relation, in a full evaluation's order, the plain ones at once and the others level by level (`round_of`), each over what the levels below concluded; the back-index is dropped and rebuilt at the next retraction. The reader's own algebra is not used: a sum over a changed cell could subtract what went, but not add the member a new conclusion makes | `reset_facts`, `reset_cells`, `refire`, `rule_level` |
 
 It answers `Delta` (what it did) or `Full(reason)`: the world as a full
 evaluation takes it, evaluated again at the next question. The reasons are
-named: a later tick, a hole, a wall or the well-founded mode; a fact a plain
-rule reads outside an aggregate (a lattice's rule and a counting tag's
-derivation read their facts so, and are the path's own), or a negation, or a
-rule that concludes its relation too; a rule that reads the ledgers
+named: a later tick, a hole, a wall or the well-founded mode; a rule that
+concludes the fact's relation too; a rule that reads the ledgers
 (`asserted_by`, `agg_*`, `derived_by`, `hole`, `lattice_member`,
 `dominated_by`); a cell holding a hole; **a join or a widening** (its
 contributions are the history of the schedule that read them, which a fresh
@@ -3069,14 +3068,15 @@ again which superseded values are still needed, so the whole relation is
 decided again); a rank, or a quantile whose percent a rule hands it (the
 group is stored once and shared across its parameter); a rule whose second
 aggregate is asked for what its first reached (a result, a group, or only the
-groups it had a value for: the cells there are depend on the first); a rule
-that negates, aggregates or stages what rests on the fact; a dominance rule
-that reads it; and a delta that would write a hole, seal a cell nothing
+groups it had a value for: the cells there are depend on the first); a threshold or a
+rule that stages what rests on the fact; a cell the fact supports that a rule
+reading what changed also owns (it is read again whole, and cannot be
+subtracted too); a dominance rule that reads it; and a delta that would write a hole, seal a cell nothing
 indexes or meet a wall (a hole is written with its shrugs after a whole
 pass). Each is a named reason; none changes what a full evaluation answers.
 
 It is held three ways. `rust/rofl/tests/incremental.rs` is a differential over
-sixteen sweeps (the body aggregates; the median, quantile and threshold; a
+twenty-one sweeps (the body aggregates; the median, quantile and threshold; a
 counting tag; order lattices and an idempotent tag with a saturating chain that
 keeps a history; a Pareto front and total-order dominance; plain rules over
 cells and over lattices; cells, lattices and tags in one world; a world with a
@@ -3084,18 +3084,18 @@ rule per refusal): random asserts and retracts, loaded facts and asserted
 ones, each step compared with a world built from the same facts and evaluated
 from nothing, byte for byte in `canonical_state`, and the explanations (`why
 all` of every fact that holds, `whynot` of the facts that held) compared too,
-because they read what an evaluation left in the engine. 4 680 edits, 2 739
-retractions, 2 028 by delta and 711 evaluated again for a named reason, none
-of them a different state, over 180 000 explanations. The worlds
+because they read what an evaluation left in the engine. 7 440 edits, 4 328
+retractions, 3 410 by delta and 918 evaluated again for a named reason, none
+of them a different state, over 296 000 explanations. The worlds
 `agg_incr_sum`, `agg_incr_minmax`, `agg_incr_holistic`, `agg_incr_lattice`,
 `agg_incr_tag`, `agg_incr_tagc`, `agg_incr_join`, `agg_incr_widen`,
-`agg_incr_sub`, `agg_incr_readers` and the gate worlds retract facts after
+`agg_incr_sub`, `agg_incr_readers`, `agg_incr_stacked` and the gate worlds retract facts after
 the evaluation (`check_opt(W, retract, "fact")`: Rust by the path, TypeScript
 by evaluating again) and state the rows that must hold after, so both engines'
 hash is the same state. The registry lists retractions in text order, and a
 retraction that is evaluated again evaluates the world whole, so the ones that
 are evaluated again sort first in a world that proves a delta. And
-thirty planted faults (`retract_*`, `firing_id_tickless`, `fir_superseded_live`,
+thirty planted faults (`retract_*`, `retract_stacked_*`, `firing_id_tickless`, `fir_superseded_live`,
 `tag_flags_off`, `widening_flag_off`, `member_id_position`, `alg_flags_off`,
 `stale_holes_kept`, ...) turn them red.
 

@@ -44,7 +44,7 @@ cold(G, B) :- grp(G), B is and(X : flag(G, X)).
 both(G, S, N) :- grp(G), S is sum(V ; K : sale(K, G, V)), N is count(J : sale(J, G, _)).
 ";
 
-/// A world no delta is worked out for: a rule reads `sale` outside an aggregate.
+/// A world whose retracted fact is read by a plain rule: its facts go and the rule is fired again.
 const PLAIN_READER: &str = "
 edb(sale).
 grp(a). grp(b).
@@ -174,6 +174,72 @@ n(G, N) :- grp(G), N is count(J : sale(J, G, _)).
 rich(G) :- n(G, N), N >= 3.
 ";
 
+/// Rules that NEGATE what a cell concludes, directly and through plain rules, and one that negates what a
+/// negation concluded: their facts are taken out whole and the rules fired again, level by level.
+const NEG_READERS: &str = "
+edb(sale). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+has(G) :- total(G, _).
+big(G) :- total(G, S), S > 5.
+idle(G) :- grp(G), not has(G).
+small(G) :- grp(G), not big(G).
+quiet(G) :- idle(G), small(G).
+loud(G) :- grp(G), not small(G), not idle(G).
+";
+
+/// Rules that AGGREGATE what a cell concludes: ungrouped and grouped, correlated on the cell's value, over the
+/// conclusion of another aggregating rule, and over what a negation concluded.
+const AGG_READERS: &str = "
+edb(sale). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+lo(G, M) :- grp(G), M is min(V : sale(_, G, V)).
+nbig(N) :- N is count(G : total(G, S), S > 5).
+top(M) :- M is max(S : total(G, S)).
+grand(T) :- T is sum(S ; G : total(G, S)).
+lvl(G, N) :- total(G, S), N is count(H : total(H, T), T < S).
+spread(D) :- top(M), lo(G, L), D is M - L, L < 0.
+nlow(N) :- N is count(G : lo(G, M), M < 2).
+small(G) :- grp(G), not nbigger(G).
+nbigger(G) :- total(G, S), S > 5.
+nsmall(N) :- N is count(G : small(G)).
+";
+
+/// Plain rules over a lattice, and rules that negate or aggregate what they conclude. What reads the lattice
+/// itself from outside its recursion stays evaluated again.
+const LATTICE_STACKED: &str = "
+edb(e).
+node(a). node(b). node(c). node(d). node(e). node(f).
+lattice d(A, B, min W).
+d(A, B, W) :- e(A, B, W).
+d(A, C, W) :- d(A, B, W1), e(B, C, W2), W is W1 + W2.
+near(A, B) :- d(A, B, W), W < 4.
+far(A, B) :- node(A), node(B), not near(A, B).
+deg(A, N) :- node(A), N is count(B : near(A, B)).
+lonely(A) :- node(A), not linked(A).
+linked(A) :- near(A, _).
+reach(A, N) :- node(A), N is count(B : d(A, B, _)).
+apart(A, B) :- node(A), node(B), not d(A, B, _).
+";
+
+/// Rules that read what a counting tag and the holistic cells conclude, negating and aggregating; a
+/// threshold that reads them is evaluated again by name.
+const TAG_STACKED: &str = "
+edb(e). edb(v).
+node(a). node(b). node(c). node(d). node(e). node(f).
+tag walks(A, C, counting N).
+walks(A, C, N) :- e(A, C).
+walks(A, C, N) :- e(A, B), e(B, C).
+many(A, C) :- walks(A, C, N), N > 1.
+single(A, C) :- walks(A, C, N), N < 2.
+plain(A, C) :- node(A), node(C), not many(A, C), not single(A, C).
+fan(A, K) :- node(A), K is count(C : many(A, C)).
+med(M) :- M is median(X ; K : v(K, X)).
+above(K) :- v(K, X), med(M), X > M.
+nabove(N) :- N is count(K : above(K)).
+";
+
 /// Cells, lattices and their readers in one world: a retraction goes the way of
 /// what the fact supports.
 const MIXED: &str = "
@@ -192,6 +258,36 @@ dec(A, C, D) :- dec(A, C, D1), X is D1 - 1, D is max(X, 0).
 tag walks(A, C, counting N).
 walks(A, C, N) :- w(A, C).
 walks(A, C, N) :- w(A, B), w(B, C).
+";
+
+/// Everything above in one world: cells, lattices and a tag, read plainly, negated and aggregated, by rules
+/// that read each other, and a base fact negated.
+const STACKED_MIXED: &str = "
+edb(sale). edb(grp). edb(e). edb(w). edb(sat).
+grp(a). grp(b). grp(c). grp(d).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+big(G) :- total(G, S), S > 5.
+lo(G, M) :- grp(G), M is min(V : sale(_, G, V)).
+lattice d(A, B, min W).
+d(A, B, W) :- e(A, B, W).
+d(A, C, W) :- d(A, B, W1), e(B, C, W2), W is W1 + W2.
+near(A, B) :- d(A, B, W), W < 4.
+lattice dec(A, C, min D).
+dec(A, C, D) :- sat(A, C, D).
+dec(A, C, D) :- dec(A, C, D1), X is D1 - 1, D is max(X, 0).
+tag walks(A, C, counting N).
+walks(A, C, N) :- w(A, C).
+walks(A, C, N) :- w(A, B), w(B, C).
+none(G) :- grp(G), not sale(_, G, _).
+calm(G) :- grp(G), not big(G), not none(G).
+nbigs(N) :- N is count(G : big(G)).
+apart(A, B) :- grp(A), grp(B), not near(A, B).
+napart(A, N) :- grp(A), N is count(B : apart(A, B)).
+twin(A, B) :- walks(A, B, 2), not near(A, B).
+rec(A) :- grp(A), dec(A, _, D), D < 2.
+nrec(N) :- N is count(A : rec(A)).
+lowest(M) :- M is min(X : lo(_, X)).
+mid(G) :- lo(G, M), lowest(L), M > L, not big(G).
 ";
 
 struct Rng(u64);
@@ -397,6 +493,8 @@ impl Sum for Delta {
         self.withdrawn += o.withdrawn;
         self.cone += o.cone;
         self.consumers += o.consumers;
+        self.stacked_rules += o.stacked_rules;
+        self.stacked_cells += o.stacked_cells;
     }
 }
 
@@ -471,9 +569,11 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
             log.push(format!("retract {f}"));
             let before = member_ids(&state(&mut s));
             let mut by_delta = false;
+            let mut stacked = false;
             match s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}")) {
                 Retraction::Delta(d) => {
                     by_delta = true;
+                    stacked = d.stacked_rules > 0;
                     st.delta += 1;
                     st.sum.take(&d);
                 }
@@ -488,7 +588,8 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
             // a member that survives a retraction is the same id, wherever it sits now; an evaluation again may seal cells of its own
             let after = member_ids(&state(&mut s));
             let new: Vec<&String> = after.difference(&before).collect();
-            assert!(!by_delta || new.is_empty(), "seed {seed} step {step}: a retraction of {f} gave a member an id it did not have: {new:?}");
+            // (a rule that reads what changed is sealed again: a cell it reads may have risen into a group it did not have)
+            assert!(!by_delta || stacked || new.is_empty(), "seed {seed} step {step}: a retraction of {f} gave a member an id it did not have: {new:?}");
         }
         if (step + 1) % every != 0 {
             continue;
@@ -563,11 +664,31 @@ fn a_larger_world_takes_the_same_path() {
 }
 
 #[test]
-fn a_world_the_path_is_not_worked_out_for_is_evaluated_again_and_is_the_same() {
+fn a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same() {
     let st = differential(PLAIN_READER, fact_plain, 31337, 8, 40, 1);
     eprintln!("{st:?}");
-    assert!(st.full_n > 5, "{st:?}");
-    assert!(st.full.contains("a rule reads the relation outside an aggregate, or negated"), "{:?}", st.full);
+    assert_eq!(st.full_n, 0, "{:?}", st.full);
+    assert!(st.sum.consumers > 0 && st.sum.subtracted > 5, "{st:?}");
+}
+
+/// Rules the stacked path is not worked out for: a threshold that reads a cell, and a rule that reads the
+/// retracted relation outside its aggregate and inside it, so that its own cell is both retracted from and read again.
+const STACKED_THRESHOLD: &str = "
+edb(sale).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+many(1) :- at_least(2, G : total(G, S), S > 3).
+";
+const STACKED_TWICE: &str = "
+edb(sale).
+twice(G, N) :- sale(_, G, _), N is count(K : sale(K, G, _)).
+";
+
+#[test]
+fn a_threshold_over_a_cell_and_a_cell_read_again_beside_its_own_retraction_are_evaluated_again_by_name() {
+    let all = sweep(STACKED_THRESHOLD, fact_plain, 1..=6, 8, 30);
+    assert!(all.full.contains("a threshold reads what rests on the fact"), "{:?}", all.full);
+    let all = sweep(STACKED_TWICE, fact_plain, 1..=6, 8, 30);
+    assert!(all.full.contains("a cell the fact supports is read again by a rule that reads what changed"), "{:?}", all.full);
 }
 
 #[test]
@@ -653,6 +774,51 @@ fn the_rules_that_read_a_cell_are_fired_again_over_what_changed() {
 }
 
 #[test]
+fn the_rules_that_negate_what_a_cell_concludes_are_fired_again_over_what_changed() {
+    let all = sweep(NEG_READERS, fact_plain, 1..=12, 10, 40);
+    assert!(all.sum.stacked_rules > 50, "no rule that negates what changed was read again: {all:?}");
+    assert!(all.sum.consumers > 50 && all.delta > 100, "{all:?}");
+    assert!(all.full.is_empty(), "{:?}", all.full);
+}
+
+#[test]
+fn the_rules_that_aggregate_what_a_cell_concludes_are_sealed_again_over_what_changed() {
+    let all = sweep(AGG_READERS, fact_plain, 1..=12, 10, 40);
+    assert!(all.sum.stacked_rules > 50 && all.sum.stacked_cells > 50, "no cell of an aggregating reader was sealed again: {all:?}");
+    assert!(all.delta > 100, "{all:?}");
+    assert!(all.full.is_empty(), "{:?}", all.full);
+}
+
+#[test]
+fn the_rules_that_negate_or_aggregate_what_rests_on_a_lattice_are_fired_again_over_what_changed() {
+    let all = sweep(LATTICE_STACKED, fact_edge, 1..=8, 10, 30);
+    assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20, "{all:?}");
+    assert!(all.delta > 80, "{all:?}");
+}
+
+fn fact_tag_stacked(r: &mut Rng) -> String {
+    if r.below(4) == 0 {
+        format!("v({}, {})", 1 + r.below(6), r.below(9))
+    } else {
+        format!("e({}, {})", pick(r, &NODES), pick(r, &NODES))
+    }
+}
+
+#[test]
+fn the_rules_that_read_a_tag_or_a_median_are_read_again_over_what_changed() {
+    let all = sweep(TAG_STACKED, fact_tag_stacked, 1..=10, 12, 40);
+    assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20, "{all:?}");
+    assert!(all.delta > 100, "{all:?}");
+}
+
+#[test]
+fn rules_that_read_cells_lattices_and_tags_every_way_are_the_same_as_a_fresh_evaluation() {
+    let all = sweep(STACKED_MIXED, fact_mixed, 1..=16, 18, 50);
+    assert!(all.sum.stacked_rules > 100 && all.sum.stacked_cells > 100 && all.sum.consumers > 100 && all.sum.cone > 20, "{all:?}");
+    assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
+}
+
+#[test]
 fn cells_lattices_and_tags_in_one_world_each_take_their_own_path() {
     let all = sweep(MIXED, fact_mixed, 1..=10, 16, 40);
     assert!(all.sum.cone > 20 && all.sum.subtracted > 20 && all.sum.withdrawn > 20 && all.sum.consumers > 20, "{all:?}");
@@ -660,10 +826,10 @@ fn cells_lattices_and_tags_in_one_world_each_take_their_own_path() {
 }
 
 #[test]
-fn a_fact_a_rule_reads_outside_the_aggregate_is_refused_by_name() {
+fn a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule() {
     let mut s = fresh(PROGRAM, &["grp(a)", "sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());
     match s.retract_delta("grp(a)").unwrap() {
-        Retraction::Full(why) => assert_eq!(why, "a rule reads the relation outside an aggregate, or negated"),
+        Retraction::Delta(d) => assert!(d.stacked_rules > 0 && d.stacked_cells > 0 && d.cells == 0, "{d:?}"),
         other => panic!("{other:?}"),
     }
     let mut s = fresh(PROGRAM, &["sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());

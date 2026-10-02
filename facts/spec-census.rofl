@@ -64,7 +64,8 @@ check[checks]("rust/rofl/tests/explain.rs", "a_refusal_echoes_the_question_untri
 check[checks]("rust/rofl/tests/explain.rs", "why_and_excise_refuse_the_same_literals", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_retraction_is_a_fresh_evaluation_over_random_edits", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_larger_world_takes_the_same_path", test).
-check[checks]("rust/rofl/tests/incremental.rs", "a_world_the_path_is_not_worked_out_for_is_evaluated_again_and_is_the_same", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_threshold_over_a_cell_and_a_cell_read_again_beside_its_own_retraction_are_evaluated_again_by_name", test).
 check[checks]("rust/rofl/tests/incremental.rs", "the_median_the_quantile_and_the_threshold_are_derived_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "an_aggregate_after_one_that_may_leave_no_solution_is_evaluated_again_and_is_the_same", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_shared_group_is_evaluated_again_by_name", test).
@@ -76,8 +77,13 @@ check[checks]("rust/rofl/tests/incremental.rs", "a_lattice_that_keeps_a_history_
 check[checks]("rust/rofl/tests/incremental.rs", "a_subsumptive_relation_is_derived_again_key_by_key", test).
 check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_read_a_lattice_are_fired_again_over_what_changed", test).
 check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_read_a_cell_are_fired_again_over_what_changed", test).
+check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_negate_what_a_cell_concludes_are_fired_again_over_what_changed", test).
+check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_aggregate_what_a_cell_concludes_are_sealed_again_over_what_changed", test).
+check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_negate_or_aggregate_what_rests_on_a_lattice_are_fired_again_over_what_changed", test).
+check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_read_a_tag_or_a_median_are_read_again_over_what_changed", test).
+check[checks]("rust/rofl/tests/incremental.rs", "rules_that_read_cells_lattices_and_tags_every_way_are_the_same_as_a_fresh_evaluation", test).
 check[checks]("rust/rofl/tests/incremental.rs", "cells_lattices_and_tags_in_one_world_each_take_their_own_path", test).
-check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_rule_reads_outside_the_aggregate_is_refused_by_name", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "union_components_are_a_searchs_components", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "live_variables_are_the_iterative_solvers", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "a_hull_and_a_bitset_are_the_fold_over_what_reaches", test).
@@ -346,6 +352,7 @@ check[checks]("facts/goldens.rofl", "agg_incr_neg", world).
 check[checks]("facts/goldens.rofl", "agg_incr_overflow", world).
 check[checks]("facts/goldens.rofl", "agg_incr_partial", world).
 check[checks]("facts/goldens.rofl", "agg_incr_readers", world).
+check[checks]("facts/goldens.rofl", "agg_incr_stacked", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stale", world).
 check[checks]("facts/goldens.rofl", "agg_incr_sub", world).
 check[checks]("facts/goldens.rofl", "agg_incr_sum", world).

@@ -35,16 +35,22 @@
 //! - what PLAIN RULES concluded from what changed (`consumer_rules`,
 //!   `consumer_facts`): the facts that rest on a replaced cell's old record or
 //!   on the cone, through each other, are taken out, and the rules fired again
-//!   once the cells are replaced and the lattices closed.
+//!   once the cells are replaced and the lattices closed;
+//! - what NEGATES or AGGREGATES what changed (`Readers::reset`: a changed cell's
+//!   conclusion, the cone, or the retracted fact itself read outside an
+//!   aggregate) is read again WHOLE, for a `not` can become true and a count
+//!   gain a member, which nothing here subtracts: every fact of its head goes
+//!   (`reset_facts`), its cells go (`reset_cells`), and it fires again in a full
+//!   evaluation's order, level by level (`refire`).
 //!
 //! WHAT IT REFUSES, and says why, leaving the world as a full evaluation
 //! would take it (`Err(reason)`; the caller evaluates again): a world a delta
 //! is not worked out for (a later tick, a hole, a wall, the well-founded
-//! mode), a fact a plain rule or a negation reads, a join or a widening (its
+//! mode), a join or a widening (its
 //! contributions are the history of the schedule that read them, so no delta
 //! promises it), a value kept as history, a rank or a quantile whose group is
 //! shared across its parameter, a rule whose second aggregate depends on what
-//! its first reached, a rule that negates or aggregates what changed, and a
+//! its first reached, a threshold or a staged rule that reads what changed, and a
 //! delta that would write a hole (written with its shrugs after a whole
 //! pass). Each is named; none is a reason to answer differently than a full
 //! evaluation does.
@@ -81,6 +87,21 @@ pub struct Delta {
     /// facts of plain rules that rested on what changed, taken out and
     /// derived again
     pub consumers: usize,
+    /// rules that negate or aggregate what changed, read again whole
+    pub stacked_rules: usize,
+    /// cells of those rules, sealed again
+    pub stacked_cells: usize,
+}
+
+/// The rules that read what a retraction changes (`consumer_rules`).
+struct Readers {
+    /// the relations whose facts may rest on it
+    rels: HashSet<Sym>,
+    /// every rule that concludes one of them, to be fired again
+    rules: Vec<Rc<ERule>>,
+    /// the rules that negate or aggregate what changed (or aggregate at all while reading it): their facts
+    /// all go and their cells are sealed again, for which key a cell is read at is the rule's own business
+    reset: HashSet<Sym>,
 }
 
 type Support = HashMap<FactId, Vec<CellId>>;
@@ -185,18 +206,13 @@ impl Eval {
         ];
         let mut why: Option<&'static str> = None;
         for r in &self.rules {
-            // a counting tag's derivation reads the fact outside an aggregate, directly (it is what the sum counts), and so does a rule into a lattice (its firing is the contribution)
-            let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lattices.contains_key(&r.clause.head.rel);
             if r.clause.head.rel == rel {
                 why = Some("the relation is concluded by a rule too");
             }
             for b in &r.clause.body {
-                walk(b, false, &mut |l, neg, inner| {
+                walk(b, false, &mut |l, _, _| {
                     if ledgers.contains(&l.rel) {
                         why = Some("a rule reads the ledger of cells, provenance or assertions");
-                    }
-                    if l.rel == rel && brk!("retract_gate_plain" => neg, "retract_gate_neg" => !neg && !inner; neg || !inner && !counts) {
-                        why = Some("a rule reads the relation outside an aggregate, or negated");
                     }
                 });
             }
@@ -266,11 +282,12 @@ impl Eval {
     /// fired again over what stands. `own` are the relations whose rules are
     /// not readers but the thing that changed (a lattice's own).
     #[allow(clippy::type_complexity)]
-    fn consumer_rules(&self, from: &HashSet<Sym>, own: &HashSet<Sym>) -> Result<(HashSet<Sym>, Vec<Rc<ERule>>), &'static str> {
+    fn consumer_rules(&self, from: &HashSet<Sym>, own: &HashSet<Sym>, base: Sym) -> Result<Readers, &'static str> {
         let mut seen: HashSet<Sym> = from.clone();
         let mut rels: HashSet<Sym> = HashSet::new();
         let mut rules: Vec<Rc<ERule>> = Vec::new();
         let mut taken: HashSet<Sym> = HashSet::new();
+        let mut reset: HashSet<Sym> = HashSet::new();
         loop {
             let mut grew = false;
             for r in &self.rules {
@@ -278,19 +295,25 @@ impl Eval {
                     continue;
                 }
                 let (mut reads, mut inner) = (false, false);
+                // a counting tag's derivation reads the retracted fact outside an aggregate, directly (it is what the sum counts), and so does a rule into a lattice (its firing is the contribution): the path's own
+                let counts = self.tags.count_of.contains_key(&r.clause.head.rel) || self.lattices.contains_key(&r.clause.head.rel);
                 for b in &r.clause.body {
                     walk(b, false, &mut |l, neg, deep| {
                         if seen.contains(&l.rel) {
                             reads = true;
                             inner |= neg || deep;
+                        } else if l.rel == base && !deep && !counts && brk!("retract_gate_plain" => neg, "retract_gate_neg" => !neg; true) {
+                            // the fact itself, read plainly or negated: what rests on it goes, and a negation of it may now hold
+                            reads = true;
+                            inner |= neg;
                         }
                     });
                 }
                 if !reads {
                     continue;
                 }
-                if inner || r.has_neg || r.has_agg || r.has_thr {
-                    return Err("a negation or an aggregate reads what rests on the fact");
+                if r.has_thr {
+                    return Err("a threshold reads what rests on the fact");
                 }
                 let head = r.clause.head.rel;
                 if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {
@@ -298,6 +321,9 @@ impl Eval {
                 }
                 if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) || self.demand_rels.iter().any(|(x, _)| *x == head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
+                }
+                if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
+                    reset.insert(r.id);
                 }
                 rules.push(r.clone());
                 taken.insert(r.id);
@@ -316,15 +342,80 @@ impl Eval {
             if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
-            if r.has_neg || r.has_agg || r.has_thr || r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {
-                return Err("a rule that negates, aggregates or stages concludes what rests on the fact");
+            if r.has_thr || r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {
+                return Err("a rule that stages or counts concludes what rests on the fact");
             }
             rules.push(r.clone());
         }
         if self.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
-        Ok((rels, rules))
+        Ok(Readers { rels, rules, reset })
+    }
+
+    /// Every fact of the relations the rules that are read again whole conclude.
+    fn reset_facts(&mut self, rd: &Readers) -> Result<Vec<FactId>, &'static str> {
+        let mut out: Vec<FactId> = Vec::new();
+        for r in rd.rules.iter().filter(|r| rd.reset.contains(&r.id)) {
+            for id in self.store.rel_all(&self.h, r.clause.head.rel) {
+                if self.store.rec(id).base() {
+                    return Err("a rule that negates or aggregates what changed concludes a base fact");
+                }
+                if !out.contains(&id) {
+                    out.push(id);
+                }
+            }
+        }
+        Ok(brk!("retract_stacked_facts_kept" => Vec::new(); out))
+    }
+
+    /// The cells of the rules read again whole, gone with their reflection.
+    fn reset_cells(&mut self, reset: &HashSet<Sym>) -> usize {
+        if brk!("retract_stacked_cells_kept" => true; false) {
+            return 0;
+        }
+        let mut n = 0;
+        for c in self.store.live_cells() {
+            let CellOwner::Body { rule, .. } = self.store.cell(c).owner;
+            if !reset.contains(&rule) {
+                continue;
+            }
+            let key = self.store.cell_key_term(&mut self.h, c);
+            self.forget_reflection(key);
+            if let Some(ix) = self.support_ix.as_mut() {
+                Self::unindex_cell(&self.store, c, ix);
+            }
+            self.store.kill_cell(c);
+            n += 1;
+        }
+        self.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
+        self.agg_opened.retain(|(r, _, _)| !reset.contains(r));
+        self.hol_shared.retain(|(r, _, _), _| !reset.contains(r));
+        self.height_memo.clear();
+        n
+    }
+
+    /// THE RULES THAT READ WHAT CHANGED, FIRED AGAIN AS A FULL EVALUATION FIRES
+    /// THEM: those that neither negate nor aggregate at once, the others by
+    /// level, each level over what the levels below concluded.
+    fn refire(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
+        let (strat, mono): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rules.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty());
+        let mut levels: std::collections::BTreeMap<i64, Vec<Rc<ERule>>> = std::collections::BTreeMap::new();
+        for r in strat {
+            let lv = brk!("retract_stacked_one_level" => 0; self.rule_level(&r));
+            levels.entry(lv).or_default().push(r);
+        }
+        let active = std::mem::take(&mut self.active);
+        let r = (|| -> Result<(), Halt> {
+            self.activate(&mono)?;
+            for (_, rs) in levels {
+                self.activate(&rs)?;
+            }
+            Ok(())
+        })();
+        self.active = active;
+        r
     }
 
     /// Premise -> the live derived facts with a firing that cites it.
@@ -352,12 +443,17 @@ impl Eval {
     /// of them (a cycle supports itself, so a fact is not kept for a firing
     /// inside the closure), none of them base or cited by a cell, all of a
     /// relation `consumer_rules` found. `stop` are facts already taken out.
-    fn consumer_facts(&mut self, seeds: &[FactId], rels: &HashSet<Sym>, stop: &HashSet<FactId>) -> Result<Vec<FactId>, &'static str> {
+    fn consumer_facts(&mut self, seeds: &[FactId], forced: &[FactId], rels: &HashSet<Sym>, stop: &HashSet<FactId>, reset: &HashSet<Sym>) -> Result<Vec<FactId>, &'static str> {
         let cm = self.citer_map();
         let mut inside: HashSet<FactId> = stop.clone();
         inside.extend(seeds.iter().copied());
         let mut out: Vec<FactId> = Vec::new();
-        let mut frontier: Vec<FactId> = seeds.to_vec();
+        for g in forced {
+            if inside.insert(*g) {
+                out.push(*g);
+            }
+        }
+        let mut frontier: Vec<FactId> = seeds.iter().chain(forced.iter()).copied().collect();
         while !frontier.is_empty() {
             let mut next: Vec<FactId> = Vec::new();
             for g in &frontier {
@@ -366,10 +462,13 @@ impl Eval {
                         continue;
                     }
                     let rec = *self.store.rec(*x);
+                    if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
+                        continue;
+                    }
                     if rec.base() || !rels.contains(&rec.rel) {
                         return Err("a fact that is no plain rule's rests on what changed");
                     }
-                    if !self.supported_cells(*x).is_empty() {
+                    if !self.cells_all_reset(*x, reset) {
                         return Err("a cell rests on what rests on the fact");
                     }
                     inside.insert(*x);
@@ -380,6 +479,14 @@ impl Eval {
             frontier = next;
         }
         Ok(out)
+    }
+
+    /// Every cell that rests on `x` belongs to a rule that is read again whole.
+    fn cells_all_reset(&mut self, x: FactId, reset: &HashSet<Sym>) -> bool {
+        self.supported_cells(x).iter().all(|c| {
+            let CellOwner::Body { rule, .. } = self.store.cell(*c).owner;
+            reset.contains(&rule)
+        })
     }
 
     /// The facts of a counting tag's derivations (`p@count`) with a firing
@@ -449,8 +556,16 @@ impl Eval {
         // WHAT READS THE CELLS' CONCLUSIONS: the facts that rest on one a cell's old record made go, and
         // their rules are fired again once the cells are replaced
         let from: HashSet<Sym> = owners.iter().map(|o| o.0.clause.head.rel).collect();
-        let (crels, crules) = self.consumer_rules(&from, &HashSet::new())?;
-        let mut seeds: Vec<FactId> = Vec::new();
+        let rd = self.consumer_rules(&from, &HashSet::new(), self.store.rec(f).rel)?;
+        let Readers { rels: crels, rules: crules, reset } = rd;
+        if owners.iter().any(|o| reset.contains(&o.0.id)) {
+            return Err("a cell the fact supports is read again by a rule that reads what changed");
+        }
+        if crules.iter().any(|r| reset.contains(&r.id) && from.contains(&r.clause.head.rel)) {
+            return Err("a rule that negates or aggregates what changed concludes what a changed cell concludes");
+        }
+        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone() })?;
+        let mut seeds: Vec<FactId> = vec![f];
         for (c, o) in cells.iter().zip(owners.iter()) {
             for id in self.store.rel_all(&self.h, o.0.clause.head.rel) {
                 if self.store.firings(id).iter().any(|(_, _, ps)| ps.contains(&PremRef::Cell(*c))) {
@@ -458,17 +573,18 @@ impl Eval {
                 }
             }
         }
-        let consumers = if crules.is_empty() { Vec::new() } else { self.consumer_facts(&seeds, &crels, &HashSet::new())? };
+        let consumers = if crules.is_empty() { Vec::new() } else { self.consumer_facts(&seeds, &forced, &crels, &HashSet::new(), &reset)? };
         self.store.remove_many(doomed);
         if let Some(ix) = self.support_ix.as_mut() {
             ix.remove(&f);
         }
-        let mut d = Delta { cells: cells.len(), consumers: consumers.len(), ..Delta::default() };
+        let mut d = Delta { cells: cells.len(), consumers: consumers.len(), stacked_rules: reset.len(), ..Delta::default() };
         brk!("retract_consumers_kept" => (); {
             self.withdraw_firings(&consumers, |_, _| true);
             self.store.remove_many(&consumers);
             self.store.sweep();
         });
+        d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
         if let Some(ix) = self.support_ix.as_mut() {
             for g in &consumers {
                 ix.remove(g);
@@ -489,11 +605,9 @@ impl Eval {
             for (c, (er, agg, plan)) in cells.iter().zip(owners.iter()) {
                 self.delta_cell(*c, &gone, er, agg, plan, &mut d)?;
             }
-            if !crules.is_empty() {
-                let active = std::mem::take(&mut self.active);
-                let r = self.activate(&crules);
-                self.active = active;
-                r?;
+            self.refire(&crules)?;
+            if !reset.is_empty() {
+                self.support_ix = None;
             }
             // a hole is written with its shrugs after a whole pass, so a delta that made one is not one
             if brk!("retract_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0) {
@@ -532,6 +646,8 @@ impl Eval {
         let f = doomed[0];
         let mut cone: Vec<FactId> = Vec::new();
         let mut cone_keys: HashSet<LatKey> = HashSet::new();
+        // cone facts a cell rests on: the rule of the cell is read again whole, or the world is
+        let mut cell_cited: Vec<FactId> = Vec::new();
         let mut inside: HashSet<FactId> = HashSet::new();
         let mut frontier: HashSet<FactId> = HashSet::from([f]);
         const JOIN: &str = "a join or a widening rests on it: its contributions are the history of the schedule that read them";
@@ -562,7 +678,7 @@ impl Eval {
                     return Err("a lattice keeps the history of a superseded value");
                 }
                 if !self.supported_cells(x).is_empty() {
-                    return Err("a cell rests on a lattice fact");
+                    cell_cited.push(x);
                 }
                 inside.insert(x);
                 cone.push(x);
@@ -597,7 +713,7 @@ impl Eval {
                         continue;
                     }
                     if !self.supported_cells(y).is_empty() {
-                        return Err("a cell rests on a lattice fact");
+                        cell_cited.push(y);
                     }
                     inside.insert(y);
                     cone.push(y);
@@ -612,12 +728,18 @@ impl Eval {
         if self.store.firing_keys().into_iter().any(|g| !self.store.alive(g) && rels.contains(&self.store.rec(g).rel)) {
             return Err("a lattice keeps the history of a superseded value");
         }
-        let (crels, crules) = self.consumer_rules(&rels, &rels)?;
+        let rd = self.consumer_rules(&rels, &rels, self.store.rec(f).rel)?;
+        let Readers { rels: crels, rules: crules, reset } = rd;
+        if !cell_cited.iter().all(|x| self.cells_all_reset(*x, &reset)) {
+            return Err("a cell rests on a lattice fact");
+        }
+        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone() })?;
         let consumers = if crules.is_empty() {
             Vec::new()
         } else {
             let stop: HashSet<FactId> = cone.iter().copied().chain([f]).collect();
-            self.consumer_facts(&cone, &crels, &stop)?
+            let seeds: Vec<FactId> = cone.iter().copied().chain([f]).collect();
+            self.consumer_facts(&seeds, &forced, &crels, &stop, &reset)?
         };
         let direct: Vec<FactId> = self.store.citers_of(&HashSet::from([f]));
         if direct.iter().any(|x| self.store.alive(*x) && !inside.contains(x) && !consumers.contains(x) && !self.lattices.contains_key(&self.store.rec(*x).rel)) {
@@ -641,7 +763,7 @@ impl Eval {
             }
             rules.push(r.clone());
         }
-        let d = Delta { cone: cone.len(), consumers: consumers.len(), ..Delta::default() };
+        let mut d = Delta { cone: cone.len(), consumers: consumers.len(), stacked_rules: reset.len(), ..Delta::default() };
         self.store.remove_many(doomed);
         if let Some(ix) = self.support_ix.as_mut() {
             ix.remove(&f);
@@ -653,6 +775,7 @@ impl Eval {
             self.store.remove_many(&consumers);
         });
         self.store.sweep();
+        d.stacked_cells = if reset.is_empty() { 0 } else { self.reset_cells(&reset) };
         // what the evaluation kept of the values a cone key was given goes with its facts; the other
         // keys of the relation are not judged again at the close
         for ck in &cone_keys {
@@ -682,9 +805,10 @@ impl Eval {
         let r = (|| -> Result<(), Halt> {
             self.activate(&rules)?;
             self.close_lattices_below(i64::MAX)?;
-            if !crules.is_empty() {
-                self.active.clear();
-                self.activate(&crules)?;
+            self.active.clear();
+            self.refire(&crules)?;
+            if !reset.is_empty() {
+                self.support_ix = None;
             }
             if brk!("retract_lattice_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0 || !self.lat_pending.is_empty()) {
                 return Err(Halt::Bug("a lattice delta made a hole".into()));
