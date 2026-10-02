@@ -1,0 +1,47 @@
+-- examples/life/life.rofl — Conway's Game of Life on a 10 by 10 board.
+--
+-- One pair of @next rules moves the board a tick. What a cell does is decided
+-- by how many of its eight neighbours are alive, and that count is a body
+-- aggregate over the board of the tick it is asked in: a cell with none is a
+-- row at 0, because the cell is bound from outside the count. Alive next
+-- tick is exactly: three neighbours, or alive now with two. (There is no
+-- negation to write, and none for `why` to explain.)
+--
+-- A glider crosses the board from the top left and a blinker flips at the
+-- bottom right. The board and the eight offsets are carried a tick at a
+-- time, as every fact is, and so is seen(T, X, Y), the history of the board.
+-- cone(X, Y, T) is the cause cone of a cell: the live cells of the tick
+-- before it that it was counted from or was itself, and theirs before them,
+-- back to the first tick, over that history.
+edb(coord).
+edb(off).
+edb(live).
+edb(target).
+
+coord(0). coord(1). coord(2). coord(3). coord(4). coord(5). coord(6). coord(7). coord(8). coord(9).
+off(-1, -1). off(-1, 0). off(-1, 1). off(0, -1). off(0, 1). off(1, -1). off(1, 0). off(1, 1).
+coord(X)@next :- coord(X).
+off(DX, DY)@next :- off(DX, DY).
+cell(X, Y) :- coord(X), coord(Y).
+
+-- the glider, moving down and to the right, and the blinker, lying down
+live(1, 0). live(2, 1). live(0, 2). live(1, 2). live(2, 2).
+live(6, 8). live(7, 8). live(8, 8).
+
+neighbours(X, Y, N) :- cell(X, Y), N is count(DX, DY : off(DX, DY), AX is X + DX, AY is Y + DY, live(AX, AY)).
+
+live(X, Y)@next :- cell(X, Y), neighbours(X, Y, 3).
+live(X, Y)@next :- live(X, Y), neighbours(X, Y, 2).
+
+clock(0).
+clock(T)@next :- clock(S), T is S + 1.
+seen(T, X, Y) :- clock(T), live(X, Y).
+seen(T, X, Y)@next :- seen(T, X, Y).
+population(T, N) :- clock(T), N is count(X, Y : live(X, Y)).
+
+-- the cone of the glider's head at tick 8
+target(4, 4, 8).
+target(X, Y, T)@next :- target(X, Y, T).
+cone(X, Y, T) :- target(X, Y, T).
+cone(X, Y, S) :- cone(X, Y, T), T > 0, S is T - 1, seen(S, X, Y).
+cone(AX, AY, S) :- cone(X, Y, T), T > 0, S is T - 1, off(DX, DY), AX is X + DX, AY is Y + DY, seen(S, AX, AY).

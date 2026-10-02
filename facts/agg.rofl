@@ -1032,11 +1032,13 @@ work_needs(w_agg_reconcile_docs, w_agg_body_strat).
 
 -- the acceptance demos, one item each, each proving its property by alarms
 work(w_agg_demo_slo, "SLO multi-window burn rate with proof rows, a p99 latency window, and `excise` of the budget").
-work_state(w_agg_demo_slo, open).
+work_state(w_agg_demo_slo, done).
 work_needs(w_agg_demo_slo, w_agg_body_strat).
 work_needs(w_agg_demo_slo, w_agg_holistic).
 claim(queued, agg, sum,      none, demo, w_agg_demo_slo).
 claim(queued, agg, holistic, none, demo, w_agg_demo_slo).
+handled(agg, sum, demo, "agg_slo_demo").
+handled(agg, holistic, demo, "agg_slo_demo").
 
 work(w_agg_demo_critical_path, "critical path and shortest taint path as recursive min over a lattice relation").
 work_state(w_agg_demo_critical_path, open).
@@ -1049,9 +1051,10 @@ work_needs(w_agg_demo_linter, w_agg_body_strat).
 claim(queued, agg, count, none, demo, w_agg_demo_linter).
 
 work(w_agg_demo_voting, "voting with pivotality: excise one ballot and the winner moves; a candidate with no votes reads 0 because the candidate is bound from outside").
-work_state(w_agg_demo_voting, open).
+work_state(w_agg_demo_voting, done).
 work_needs(w_agg_demo_voting, w_agg_body_strat).
 claim(queued, agg, empty_group, none, demo, w_agg_demo_voting).
+handled(agg, empty_group, demo, "agg_voting_demo").
 
 work(w_agg_demo_quorum, "quorum, at least two independent witnesses, in rules and in sentences; retires req_count/need_count in examples/moot and examples/goof").
 work_state(w_agg_demo_quorum, open).
@@ -1061,10 +1064,11 @@ claim(queued, agg, threshold, none, demo, w_agg_demo_quorum).
 claim(queued, agg, sugar,     none, demo, w_agg_demo_quorum).
 
 work(w_agg_demo_life, "Game of Life: a neighbour count per cell per tick, the cell engine across @next").
-work_state(w_agg_demo_life, open).
+work_state(w_agg_demo_life, done).
 work_needs(w_agg_demo_life, w_agg_body_strat).
 work_needs(w_agg_demo_life, w_agg_wfs_ticks).
 claim(queued, agg, cell, none, demo, w_agg_demo_life).
+handled(agg, cell, demo, "agg_life_demo").
 
 work(w_agg_demo_minimax, "minimax tic-tac-toe: min and max over a finished stratum, the draws computed by a well-founded world and read by the aggregating world through the composition w_agg_wfs_ticks owns").
 work_state(w_agg_demo_minimax, open).

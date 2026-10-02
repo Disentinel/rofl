@@ -1,0 +1,473 @@
+-- examples/checks/agg-life-demo-check.rofl — agg_life_demo, THE BOARD ACROSS
+-- TICKS, THE NEIGHBOUR COUNT AS A CELL (examples/life/README.md). The rules
+-- are examples/life/life.rofl, run 8 ticks deep with --explain, so the last
+-- tick is evaluated: a glider from the top left and a blinker at the bottom
+-- right on a 10 by 10 board. Every tick checks itself against an oracle
+-- written by a script that plays the game apart from these rules (a plain
+-- JavaScript loop over a set of cells): the live cells, the population,
+-- how many cells have 0 to 8 live neighbours, the count of every cell at
+-- ticks 0 and 3, and the cause cone of the glider's head at tick 8. A
+-- disagreement is a row of lf_wrong, carried to the last tick so that an
+-- earlier one is not lost with its tick.
+--
+-- BY HAND: the glider (1,0) (2,1) (0,2) (1,2) (2,2) is back in the same
+-- shape, two cells down and two to the right, at tick 8: (3,2) (4,3) (2,4)
+-- (3,4) (4,4). The blinker lies down (6,8) (7,8) (8,8) at the even ticks and
+-- stands (7,7) (7,8) (7,9) at the odd. The population is 8 at every tick,
+-- and the blinker is no cause of the glider's head.
+lf_live(0, 0, 2).
+lf_live(0, 1, 0).
+lf_live(0, 1, 2).
+lf_live(0, 2, 1).
+lf_live(0, 2, 2).
+lf_live(0, 6, 8).
+lf_live(0, 7, 8).
+lf_live(0, 8, 8).
+lf_pop(0, 8).
+lf_hist(0, 0, 69).
+lf_hist(0, 1, 13).
+lf_hist(0, 2, 11).
+lf_hist(0, 3, 6).
+lf_hist(0, 4, 0).
+lf_hist(0, 5, 1).
+lf_hist(0, 6, 0).
+lf_hist(0, 7, 0).
+lf_hist(0, 8, 0).
+lf_cellcount(0, 0, 0, 1).
+lf_cellcount(0, 0, 1, 3).
+lf_cellcount(0, 0, 2, 1).
+lf_cellcount(0, 0, 3, 2).
+lf_cellcount(0, 0, 4, 0).
+lf_cellcount(0, 0, 5, 0).
+lf_cellcount(0, 0, 6, 0).
+lf_cellcount(0, 0, 7, 0).
+lf_cellcount(0, 0, 8, 0).
+lf_cellcount(0, 0, 9, 0).
+lf_cellcount(0, 1, 0, 1).
+lf_cellcount(0, 1, 1, 5).
+lf_cellcount(0, 1, 2, 3).
+lf_cellcount(0, 1, 3, 3).
+lf_cellcount(0, 1, 4, 0).
+lf_cellcount(0, 1, 5, 0).
+lf_cellcount(0, 1, 6, 0).
+lf_cellcount(0, 1, 7, 0).
+lf_cellcount(0, 1, 8, 0).
+lf_cellcount(0, 1, 9, 0).
+lf_cellcount(0, 2, 0, 2).
+lf_cellcount(0, 2, 1, 3).
+lf_cellcount(0, 2, 2, 2).
+lf_cellcount(0, 2, 3, 2).
+lf_cellcount(0, 2, 4, 0).
+lf_cellcount(0, 2, 5, 0).
+lf_cellcount(0, 2, 6, 0).
+lf_cellcount(0, 2, 7, 0).
+lf_cellcount(0, 2, 8, 0).
+lf_cellcount(0, 2, 9, 0).
+lf_cellcount(0, 3, 0, 1).
+lf_cellcount(0, 3, 1, 2).
+lf_cellcount(0, 3, 2, 2).
+lf_cellcount(0, 3, 3, 1).
+lf_cellcount(0, 3, 4, 0).
+lf_cellcount(0, 3, 5, 0).
+lf_cellcount(0, 3, 6, 0).
+lf_cellcount(0, 3, 7, 0).
+lf_cellcount(0, 3, 8, 0).
+lf_cellcount(0, 3, 9, 0).
+lf_cellcount(0, 4, 0, 0).
+lf_cellcount(0, 4, 1, 0).
+lf_cellcount(0, 4, 2, 0).
+lf_cellcount(0, 4, 3, 0).
+lf_cellcount(0, 4, 4, 0).
+lf_cellcount(0, 4, 5, 0).
+lf_cellcount(0, 4, 6, 0).
+lf_cellcount(0, 4, 7, 0).
+lf_cellcount(0, 4, 8, 0).
+lf_cellcount(0, 4, 9, 0).
+lf_cellcount(0, 5, 0, 0).
+lf_cellcount(0, 5, 1, 0).
+lf_cellcount(0, 5, 2, 0).
+lf_cellcount(0, 5, 3, 0).
+lf_cellcount(0, 5, 4, 0).
+lf_cellcount(0, 5, 5, 0).
+lf_cellcount(0, 5, 6, 0).
+lf_cellcount(0, 5, 7, 1).
+lf_cellcount(0, 5, 8, 1).
+lf_cellcount(0, 5, 9, 1).
+lf_cellcount(0, 6, 0, 0).
+lf_cellcount(0, 6, 1, 0).
+lf_cellcount(0, 6, 2, 0).
+lf_cellcount(0, 6, 3, 0).
+lf_cellcount(0, 6, 4, 0).
+lf_cellcount(0, 6, 5, 0).
+lf_cellcount(0, 6, 6, 0).
+lf_cellcount(0, 6, 7, 2).
+lf_cellcount(0, 6, 8, 1).
+lf_cellcount(0, 6, 9, 2).
+lf_cellcount(0, 7, 0, 0).
+lf_cellcount(0, 7, 1, 0).
+lf_cellcount(0, 7, 2, 0).
+lf_cellcount(0, 7, 3, 0).
+lf_cellcount(0, 7, 4, 0).
+lf_cellcount(0, 7, 5, 0).
+lf_cellcount(0, 7, 6, 0).
+lf_cellcount(0, 7, 7, 3).
+lf_cellcount(0, 7, 8, 2).
+lf_cellcount(0, 7, 9, 3).
+lf_cellcount(0, 8, 0, 0).
+lf_cellcount(0, 8, 1, 0).
+lf_cellcount(0, 8, 2, 0).
+lf_cellcount(0, 8, 3, 0).
+lf_cellcount(0, 8, 4, 0).
+lf_cellcount(0, 8, 5, 0).
+lf_cellcount(0, 8, 6, 0).
+lf_cellcount(0, 8, 7, 2).
+lf_cellcount(0, 8, 8, 1).
+lf_cellcount(0, 8, 9, 2).
+lf_cellcount(0, 9, 0, 0).
+lf_cellcount(0, 9, 1, 0).
+lf_cellcount(0, 9, 2, 0).
+lf_cellcount(0, 9, 3, 0).
+lf_cellcount(0, 9, 4, 0).
+lf_cellcount(0, 9, 5, 0).
+lf_cellcount(0, 9, 6, 0).
+lf_cellcount(0, 9, 7, 1).
+lf_cellcount(0, 9, 8, 1).
+lf_cellcount(0, 9, 9, 1).
+lf_live(1, 0, 1).
+lf_live(1, 1, 2).
+lf_live(1, 1, 3).
+lf_live(1, 2, 1).
+lf_live(1, 2, 2).
+lf_live(1, 7, 7).
+lf_live(1, 7, 8).
+lf_live(1, 7, 9).
+lf_pop(1, 8).
+lf_hist(1, 0, 69).
+lf_hist(1, 1, 13).
+lf_hist(1, 2, 11).
+lf_hist(1, 3, 5).
+lf_hist(1, 4, 2).
+lf_hist(1, 5, 0).
+lf_hist(1, 6, 0).
+lf_hist(1, 7, 0).
+lf_hist(1, 8, 0).
+lf_live(2, 0, 2).
+lf_live(2, 1, 3).
+lf_live(2, 2, 1).
+lf_live(2, 2, 2).
+lf_live(2, 2, 3).
+lf_live(2, 6, 8).
+lf_live(2, 7, 8).
+lf_live(2, 8, 8).
+lf_pop(2, 8).
+lf_hist(2, 0, 66).
+lf_hist(2, 1, 16).
+lf_hist(2, 2, 11).
+lf_hist(2, 3, 6).
+lf_hist(2, 4, 0).
+lf_hist(2, 5, 1).
+lf_hist(2, 6, 0).
+lf_hist(2, 7, 0).
+lf_hist(2, 8, 0).
+lf_live(3, 1, 1).
+lf_live(3, 1, 3).
+lf_live(3, 2, 2).
+lf_live(3, 2, 3).
+lf_live(3, 3, 2).
+lf_live(3, 7, 7).
+lf_live(3, 7, 8).
+lf_live(3, 7, 9).
+lf_pop(3, 8).
+lf_hist(3, 0, 66).
+lf_hist(3, 1, 16).
+lf_hist(3, 2, 11).
+lf_hist(3, 3, 5).
+lf_hist(3, 4, 2).
+lf_hist(3, 5, 0).
+lf_hist(3, 6, 0).
+lf_hist(3, 7, 0).
+lf_hist(3, 8, 0).
+lf_cellcount(3, 0, 0, 1).
+lf_cellcount(3, 0, 1, 1).
+lf_cellcount(3, 0, 2, 2).
+lf_cellcount(3, 0, 3, 1).
+lf_cellcount(3, 0, 4, 1).
+lf_cellcount(3, 0, 5, 0).
+lf_cellcount(3, 0, 6, 0).
+lf_cellcount(3, 0, 7, 0).
+lf_cellcount(3, 0, 8, 0).
+lf_cellcount(3, 0, 9, 0).
+lf_cellcount(3, 1, 0, 1).
+lf_cellcount(3, 1, 1, 1).
+lf_cellcount(3, 1, 2, 4).
+lf_cellcount(3, 1, 3, 2).
+lf_cellcount(3, 1, 4, 2).
+lf_cellcount(3, 1, 5, 0).
+lf_cellcount(3, 1, 6, 0).
+lf_cellcount(3, 1, 7, 0).
+lf_cellcount(3, 1, 8, 0).
+lf_cellcount(3, 1, 9, 0).
+lf_cellcount(3, 2, 0, 1).
+lf_cellcount(3, 2, 1, 3).
+lf_cellcount(3, 2, 2, 4).
+lf_cellcount(3, 2, 3, 3).
+lf_cellcount(3, 2, 4, 2).
+lf_cellcount(3, 2, 5, 0).
+lf_cellcount(3, 2, 6, 0).
+lf_cellcount(3, 2, 7, 0).
+lf_cellcount(3, 2, 8, 0).
+lf_cellcount(3, 2, 9, 0).
+lf_cellcount(3, 3, 0, 0).
+lf_cellcount(3, 3, 1, 2).
+lf_cellcount(3, 3, 2, 2).
+lf_cellcount(3, 3, 3, 3).
+lf_cellcount(3, 3, 4, 1).
+lf_cellcount(3, 3, 5, 0).
+lf_cellcount(3, 3, 6, 0).
+lf_cellcount(3, 3, 7, 0).
+lf_cellcount(3, 3, 8, 0).
+lf_cellcount(3, 3, 9, 0).
+lf_cellcount(3, 4, 0, 0).
+lf_cellcount(3, 4, 1, 1).
+lf_cellcount(3, 4, 2, 1).
+lf_cellcount(3, 4, 3, 1).
+lf_cellcount(3, 4, 4, 0).
+lf_cellcount(3, 4, 5, 0).
+lf_cellcount(3, 4, 6, 0).
+lf_cellcount(3, 4, 7, 0).
+lf_cellcount(3, 4, 8, 0).
+lf_cellcount(3, 4, 9, 0).
+lf_cellcount(3, 5, 0, 0).
+lf_cellcount(3, 5, 1, 0).
+lf_cellcount(3, 5, 2, 0).
+lf_cellcount(3, 5, 3, 0).
+lf_cellcount(3, 5, 4, 0).
+lf_cellcount(3, 5, 5, 0).
+lf_cellcount(3, 5, 6, 0).
+lf_cellcount(3, 5, 7, 0).
+lf_cellcount(3, 5, 8, 0).
+lf_cellcount(3, 5, 9, 0).
+lf_cellcount(3, 6, 0, 0).
+lf_cellcount(3, 6, 1, 0).
+lf_cellcount(3, 6, 2, 0).
+lf_cellcount(3, 6, 3, 0).
+lf_cellcount(3, 6, 4, 0).
+lf_cellcount(3, 6, 5, 0).
+lf_cellcount(3, 6, 6, 1).
+lf_cellcount(3, 6, 7, 2).
+lf_cellcount(3, 6, 8, 3).
+lf_cellcount(3, 6, 9, 2).
+lf_cellcount(3, 7, 0, 0).
+lf_cellcount(3, 7, 1, 0).
+lf_cellcount(3, 7, 2, 0).
+lf_cellcount(3, 7, 3, 0).
+lf_cellcount(3, 7, 4, 0).
+lf_cellcount(3, 7, 5, 0).
+lf_cellcount(3, 7, 6, 1).
+lf_cellcount(3, 7, 7, 1).
+lf_cellcount(3, 7, 8, 2).
+lf_cellcount(3, 7, 9, 1).
+lf_cellcount(3, 8, 0, 0).
+lf_cellcount(3, 8, 1, 0).
+lf_cellcount(3, 8, 2, 0).
+lf_cellcount(3, 8, 3, 0).
+lf_cellcount(3, 8, 4, 0).
+lf_cellcount(3, 8, 5, 0).
+lf_cellcount(3, 8, 6, 1).
+lf_cellcount(3, 8, 7, 2).
+lf_cellcount(3, 8, 8, 3).
+lf_cellcount(3, 8, 9, 2).
+lf_cellcount(3, 9, 0, 0).
+lf_cellcount(3, 9, 1, 0).
+lf_cellcount(3, 9, 2, 0).
+lf_cellcount(3, 9, 3, 0).
+lf_cellcount(3, 9, 4, 0).
+lf_cellcount(3, 9, 5, 0).
+lf_cellcount(3, 9, 6, 0).
+lf_cellcount(3, 9, 7, 0).
+lf_cellcount(3, 9, 8, 0).
+lf_cellcount(3, 9, 9, 0).
+lf_live(4, 1, 3).
+lf_live(4, 2, 1).
+lf_live(4, 2, 3).
+lf_live(4, 3, 2).
+lf_live(4, 3, 3).
+lf_live(4, 6, 8).
+lf_live(4, 7, 8).
+lf_live(4, 8, 8).
+lf_pop(4, 8).
+lf_hist(4, 0, 63).
+lf_hist(4, 1, 19).
+lf_hist(4, 2, 11).
+lf_hist(4, 3, 6).
+lf_hist(4, 4, 0).
+lf_hist(4, 5, 1).
+lf_hist(4, 6, 0).
+lf_hist(4, 7, 0).
+lf_hist(4, 8, 0).
+lf_live(5, 1, 2).
+lf_live(5, 2, 3).
+lf_live(5, 2, 4).
+lf_live(5, 3, 2).
+lf_live(5, 3, 3).
+lf_live(5, 7, 7).
+lf_live(5, 7, 8).
+lf_live(5, 7, 9).
+lf_pop(5, 8).
+lf_hist(5, 0, 66).
+lf_hist(5, 1, 16).
+lf_hist(5, 2, 11).
+lf_hist(5, 3, 5).
+lf_hist(5, 4, 2).
+lf_hist(5, 5, 0).
+lf_hist(5, 6, 0).
+lf_hist(5, 7, 0).
+lf_hist(5, 8, 0).
+lf_live(6, 1, 3).
+lf_live(6, 2, 4).
+lf_live(6, 3, 2).
+lf_live(6, 3, 3).
+lf_live(6, 3, 4).
+lf_live(6, 6, 8).
+lf_live(6, 7, 8).
+lf_live(6, 8, 8).
+lf_pop(6, 8).
+lf_hist(6, 0, 63).
+lf_hist(6, 1, 19).
+lf_hist(6, 2, 11).
+lf_hist(6, 3, 6).
+lf_hist(6, 4, 0).
+lf_hist(6, 5, 1).
+lf_hist(6, 6, 0).
+lf_hist(6, 7, 0).
+lf_hist(6, 8, 0).
+lf_live(7, 2, 2).
+lf_live(7, 2, 4).
+lf_live(7, 3, 3).
+lf_live(7, 3, 4).
+lf_live(7, 4, 3).
+lf_live(7, 7, 7).
+lf_live(7, 7, 8).
+lf_live(7, 7, 9).
+lf_pop(7, 8).
+lf_hist(7, 0, 66).
+lf_hist(7, 1, 16).
+lf_hist(7, 2, 11).
+lf_hist(7, 3, 5).
+lf_hist(7, 4, 2).
+lf_hist(7, 5, 0).
+lf_hist(7, 6, 0).
+lf_hist(7, 7, 0).
+lf_hist(7, 8, 0).
+lf_live(8, 2, 4).
+lf_live(8, 3, 2).
+lf_live(8, 3, 4).
+lf_live(8, 4, 3).
+lf_live(8, 4, 4).
+lf_live(8, 6, 8).
+lf_live(8, 7, 8).
+lf_live(8, 8, 8).
+lf_pop(8, 8).
+lf_hist(8, 0, 63).
+lf_hist(8, 1, 19).
+lf_hist(8, 2, 11).
+lf_hist(8, 3, 6).
+lf_hist(8, 4, 0).
+lf_hist(8, 5, 1).
+lf_hist(8, 6, 0).
+lf_hist(8, 7, 0).
+lf_hist(8, 8, 0).
+lf_cone(0, 1, 1).
+lf_cone(0, 2, 0).
+lf_cone(0, 2, 2).
+lf_cone(1, 0, 0).
+lf_cone(1, 1, 3).
+lf_cone(1, 2, 0).
+lf_cone(1, 2, 1).
+lf_cone(1, 3, 1).
+lf_cone(1, 3, 2).
+lf_cone(1, 3, 3).
+lf_cone(1, 3, 4).
+lf_cone(2, 1, 0).
+lf_cone(2, 1, 1).
+lf_cone(2, 1, 2).
+lf_cone(2, 1, 4).
+lf_cone(2, 2, 0).
+lf_cone(2, 2, 1).
+lf_cone(2, 2, 2).
+lf_cone(2, 2, 3).
+lf_cone(2, 3, 2).
+lf_cone(2, 3, 3).
+lf_cone(2, 3, 4).
+lf_cone(2, 3, 5).
+lf_cone(2, 4, 5).
+lf_cone(2, 4, 6).
+lf_cone(3, 2, 3).
+lf_cone(3, 2, 4).
+lf_cone(3, 2, 5).
+lf_cone(3, 2, 6).
+lf_cone(3, 3, 4).
+lf_cone(3, 3, 5).
+lf_cone(3, 3, 6).
+lf_cone(3, 3, 7).
+lf_cone(3, 4, 6).
+lf_cone(3, 4, 7).
+lf_cone(4, 3, 7).
+lf_cone(4, 4, 8).
+edb(lf_nsel).
+lf_nsel(0). lf_nsel(1). lf_nsel(2). lf_nsel(3). lf_nsel(4). lf_nsel(5). lf_nsel(6). lf_nsel(7). lf_nsel(8).
+lf_live(T, X, Y)@next :- lf_live(T, X, Y).
+lf_pop(T, N)@next :- lf_pop(T, N).
+lf_hist(T, N, K)@next :- lf_hist(T, N, K).
+lf_cellcount(T, X, Y, N)@next :- lf_cellcount(T, X, Y, N).
+lf_cone(X, Y, T)@next :- lf_cone(X, Y, T).
+lf_nsel(N)@next :- lf_nsel(N).
+explain_request(K, A)@next :- explain_request(K, A).
+
+lf_wrong(live_missing, T, X) :- clock(T), lf_live(T, X, Y), not live(X, Y).
+lf_wrong(live_extra, T, X)   :- clock(T), live(X, Y), not lf_live(T, X, Y).
+lf_wrong(population, T, N)   :- clock(T), lf_pop(T, N), not population(T, N).
+lf_wrong(population, T, N)   :- population(T, N), not lf_pop(T, N).
+lf_count(T, N, K) :- clock(T), lf_nsel(N), K is count(X, Y : neighbours(X, Y, N)).
+lf_wrong(histogram, T, N)    :- lf_hist(T, N, K), lf_count(T, N, J), K != J.
+lf_wrong(histogram, T, N)    :- clock(T), lf_hist(T, N, K), not lf_count(T, N, K).
+lf_wrong(cell_count, T, X)   :- clock(T), lf_cellcount(T, X, Y, N), not neighbours(X, Y, N).
+lf_wrong(cell_count, T, X)   :- clock(T), lf_cellcount(T, X, Y, N), neighbours(X, Y, M), N != M.
+lf_wrong(cone_missing, X, Y) :- clock(8), lf_cone(X, Y, T), not cone(X, Y, T).
+lf_wrong(cone_extra, X, Y)   :- clock(8), cone(X, Y, T), not lf_cone(X, Y, T).
+-- the world ran as far as it is checked
+lf_short(ticks) :- not lf_ran().
+lf_ran() :- clock(8).
+lf_wrong(K, A, B)@next :- lf_wrong(K, A, B).
+alarm(R)@next :- alarm(R).
+alarm(lf_short).
+alarm(lf_proof).
+alarm(lf_wrong).
+
+-- the neighbour counts are live: a cell with no live neighbour is a row at 0,
+-- and the population never moves, so both of these hold at every tick
+lf_zero(T) :- clock(T), neighbours(0, 9, 0).
+lf_wrong(zero_missing, T, 0) :- clock(T), not lf_zero(T).
+
+-- THE PROOF ROWS. `why` of the glider's head at the last tick: counted, born,
+-- from the tick before, which `why` names as a past tick
+explain_request(why, live(4, 4)).
+explain_request(why_all, cone(1, 0, 0)).
+lf_head(L) :- explained[$explain](why, live(4, 4), _, L).
+lf_born(T) :- lf_head(L), lf_born_text(T, S), N is str_segs(L, S), N > 1.
+lf_born_text(counted, "neighbours[main](4,4,3)"). lf_born_text(from, "@tick 7 [past tick]").
+lf_born_text(cell, "cell[main](4,4)").
+lf_born_want(counted). lf_born_want(from). lf_born_want(cell).
+lf_proof(why_born) :- lf_born_want(T), not lf_born(T).
+lf_cone_line(L) :- explained[$explain](why_all, cone(1, 0, 0), _, L).
+lf_chain(T) :- lf_cone_line(L), lf_chain_text(T, S), N is str_segs(L, S), N > 1.
+lf_chain_text(head, "cone[main](4,4,8)"). lf_chain_text(first, "cone[main](0,1,1)").
+lf_chain_text(target, "target[main](4,4,8)"). lf_chain_text(history, "seen[main](7,3,4)").
+lf_chain_want(head). lf_chain_want(first). lf_chain_want(target). lf_chain_want(history).
+lf_proof(why_chain) :- lf_chain_want(T), not lf_chain(T).
+-- and no cell of the blinker is among its causes
+lf_stranger(S) :- lf_cone_line(L), lf_stranger_text(S), N is str_segs(L, S), N > 1.
+lf_stranger_text("cone[main](7,"). lf_stranger_text("cone[main](6,"). lf_stranger_text("cone[main](8,").
+lf_proof(why_stranger) :- lf_stranger(_).
+lf_proof(why_empty) :- not lf_head(_).
+lf_proof(shrug) :- shrug[$kernel](_, _, _).

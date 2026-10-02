@@ -2165,3 +2165,31 @@ proves("agg_sugar_eval", agg, sugar, eval_ts).
 proves("agg_sugar_why", agg, sugar, parity).
 proves("agg_empty_eval", agg, empty_group, eval_ts).
 proves("agg_empty_why", agg, empty_group, parity).
+
+-- w_agg_demo_slo: the burn-rate page, examples/slo/
+check_world("agg_slo_demo").
+check_file("agg_slo_demo", "examples/slo/slo.rofl").
+check_file("agg_slo_demo", "examples/slo/slo-requests.rofl").
+check_file("agg_slo_demo", "examples/checks/agg-slo-demo-check.rofl").
+check_opt("agg_slo_demo", together, 1).
+check_opt("agg_slo_demo", explain, 1).
+proves("agg_slo_demo", agg, sum, demo).
+proves("agg_slo_demo", agg, holistic, demo).
+
+-- w_agg_demo_voting: three counts of one election and the pivotal ballot, examples/voting/
+check_world("agg_voting_demo").
+check_file("agg_voting_demo", "examples/voting/voting.rofl").
+check_file("agg_voting_demo", "examples/voting/voting-ballots.rofl").
+check_file("agg_voting_demo", "examples/checks/agg-voting-demo-check.rofl").
+check_opt("agg_voting_demo", together, 1).
+check_opt("agg_voting_demo", explain, 1).
+proves("agg_voting_demo", agg, empty_group, demo).
+
+-- w_agg_demo_life: the board across ticks, the neighbour count as a cell, examples/life/
+check_world("agg_life_demo").
+check_file("agg_life_demo", "examples/life/life.rofl").
+check_file("agg_life_demo", "examples/checks/agg-life-demo-check.rofl").
+check_opt("agg_life_demo", together, 1).
+check_opt("agg_life_demo", ticks, 8).
+check_opt("agg_life_demo", explain, 1).
+proves("agg_life_demo", agg, cell, demo).

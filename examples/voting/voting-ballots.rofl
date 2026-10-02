@@ -1,0 +1,29 @@
+-- examples/voting/voting-ballots.rofl — THE BALLOTS, written by hand from README.md.
+-- ballot(Election, Voter, First, Second, Third, Fourth). Election e1 is three blocs of voters
+-- (8 + 7 + 6) over four candidates, d first for nobody. Election e2 is the Condorcet cycle
+-- (three voters, each ranking the others one place round) with d last everywhere.
+edb(ballot).
+ballot(e1, v1, b, c, a, d).
+ballot(e1, v2, b, c, a, d).
+ballot(e1, v3, b, c, a, d).
+ballot(e1, v4, b, c, a, d).
+ballot(e1, v5, b, c, a, d).
+ballot(e1, v6, b, c, a, d).
+ballot(e1, v7, b, c, a, d).
+ballot(e1, v8, c, b, a, d).
+ballot(e1, v9, c, b, a, d).
+ballot(e1, v10, a, c, b, d).
+ballot(e1, v11, a, c, b, d).
+ballot(e1, v12, a, c, b, d).
+ballot(e1, v13, a, c, b, d).
+ballot(e1, v14, a, c, b, d).
+ballot(e1, v15, a, c, b, d).
+ballot(e1, v16, a, c, b, d).
+ballot(e1, v17, a, c, b, d).
+ballot(e1, v18, c, b, a, d).
+ballot(e1, v19, c, b, a, d).
+ballot(e1, v20, c, b, a, d).
+ballot(e1, v21, c, b, a, d).
+ballot(e2, w1, a, b, c, d).
+ballot(e2, w2, b, c, a, d).
+ballot(e2, w3, c, a, b, d).

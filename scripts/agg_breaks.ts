@@ -58,7 +58,8 @@ export const BREAKS: Break[] = [
   "id": "mono",
   "what": "aggregate rules run as monotone rules, in phase A, before what they read is closed",
   "expect": {
-   "agg_cell_eval": "acl_wrong"
+   "agg_cell_eval": "acl_wrong",
+   "agg_life_demo": "lf_wrong"
   }
  },
  {
@@ -174,6 +175,7 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_sugar_safety": "was to be refused",
    "agg_holistic_strata": "ahr_accepted",
+   "agg_life_demo": "lf_wrong",
    "agg_count_eval": "ac_count_wrong",
    "agg_sum_eval": "as_sum_wrong",
    "agg_minmax_eval": "am_min_missing",
@@ -253,6 +255,8 @@ export const BREAKS: Break[] = [
   "what": "a sum member is its value alone, not (value, key)",
   "expect": {
    "agg_holistic_eval": "q_wrong",
+   "agg_slo_demo": "slc_sums_missing",
+   "agg_voting_demo": "vc_miss",
    "agg_sum_eval": "as_sum_wrong",
    "agg_sum_witness": "member_missing"
   }
@@ -341,6 +345,8 @@ export const BREAKS: Break[] = [
   "id": "empty_none",
   "what": "an empty group of count or sum seals no value",
   "expect": {
+   "agg_life_demo": "lf_wrong",
+   "agg_voting_demo": "vc_miss",
    "agg_empty_eval": "ae_zero_missing"
   }
  },
@@ -929,7 +935,8 @@ export const BREAKS: Break[] = [
   "id": "quantile_floor",
   "what": "quantile takes the floor of P*n/100 as its rank, not the ceiling",
   "expect": {
-   "agg_holistic_eval": "q_wrong"
+   "agg_holistic_eval": "q_wrong",
+   "agg_slo_demo": "slc_p99_missing"
   }
  },
  {
