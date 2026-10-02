@@ -1524,6 +1524,22 @@ check_file("agg_widen_shrug", "examples/checks/agg-widen-shrug.rofl").
 check_opt("agg_widen_shrug", together, 1).
 proves("agg_widen_shrug", agg, widening, shrug).
 
+-- NARROWING (w_agg_widening_tail): after the widened fixpoint a descending
+-- pass brings the ends the widening raised down to what the rules contribute
+-- from the widened values (docs/aggregates.md, "Widening, as built").
+check_world("agg_narrow_eval").
+check_file("agg_narrow_eval", "examples/checks/agg-narrow-data.rofl").
+check_file("agg_narrow_eval", "examples/checks/agg-narrow-eval-check.rofl").
+check_opt("agg_narrow_eval", together, 1).
+proves_work("agg_narrow_eval", w_agg_widening_tail).
+
+check_world("agg_narrow_why").
+check_file("agg_narrow_why", "examples/checks/agg-narrow-data.rofl").
+check_file("agg_narrow_why", "examples/checks/agg-narrow-why-check.rofl").
+check_opt("agg_narrow_why", together, 1).
+check_opt("agg_narrow_why", explain, 1).
+proves_work("agg_narrow_why", w_agg_widening_tail).
+
 -- SEMIRING TAGS (w_agg_tags): `tag p(K..., alg T).`, a cell keyed by the whole
 -- head, ⊗ through the body; tropical, viterbi and trust are idempotent and
 -- recurse as the order lattice of their ⊕, counting is stratified and refused

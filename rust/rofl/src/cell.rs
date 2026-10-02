@@ -624,6 +624,18 @@ pub fn widen_iv(old: (i64, i64), joined: (i64, i64), th: &[i64]) -> (i64, i64) {
         (if joined.0 < old.0 { down(joined.0) } else { old.0 }, if joined.1 > old.1 { up(joined.1) } else { old.1 }))
 }
 
+/// THE NARROWING of a widened interval `x` by the join `fresh` of what its
+/// rules contribute from `x` (docs/aggregates.md, "Widening, as built"): an
+/// end the widening raised (`raised` = low, high) comes down to the fresh
+/// join's end where that is inside it, and every other end stays. Never
+/// below `fresh`, so `x` being a post-fixpoint (`fresh` inside `x`) the
+/// result is one too, and an enclosure of the least value still.
+pub fn narrow_iv(x: (i64, i64), fresh: (i64, i64), raised: (bool, bool)) -> (i64, i64) {
+    let lo = if raised.0 && fresh.0 > x.0 { fresh.0 } else { x.0 };
+    let hi = if raised.1 && fresh.1 < x.1 { brk!("narrow_overshoot" => fresh.1.saturating_sub(1); fresh.1) } else { x.1 };
+    (lo, hi)
+}
+
 /// A SEMIRING TAG (docs/aggregates.md, "Tags, as built"): `tag p(K..., alg
 /// T).` keys a cell by the whole head, T its tag, and ⊗ runs through the
 /// body: a firing's tag is its weight ⊗ the tags of the premises of the same
@@ -1194,6 +1206,24 @@ mod laws {
                     }
                 }
                 assert!(changes <= 2 * (th.len() + 1), "a widened cell changed {changes} times over {} thresholds", th.len());
+            }
+        }
+        // narrowing: inside the value, never below the fresh join, only raised ends move
+        for _ in 0..3000 {
+            let x = iv(&mut r);
+            let inner = (
+                if x.0 == NINF { r.int(6) } else { x.0 + (r.next() % 3) as i64 },
+                if x.1 == PINF { r.int(6) + 8 } else { x.1 - (r.next() % 3) as i64 },
+            );
+            if inner.0 > inner.1 || !leq(inner, x) {
+                continue;
+            }
+            for raised in [(false, false), (true, false), (false, true), (true, true)] {
+                let n = narrow_iv(x, inner, raised);
+                assert!(leq(n, x) && leq(inner, n), "narrowing {x:?} by {inner:?} stays between them: {n:?}");
+                assert!(n.0 == x.0 || raised.0, "the low end moves only where it was raised");
+                assert!(n.1 == x.1 || raised.1, "the high end moves only where it was raised");
+                assert_eq!(narrow_iv(n, inner, raised), n, "narrowing by the same join again changes nothing");
             }
         }
         let big = INT_MAX - 1;

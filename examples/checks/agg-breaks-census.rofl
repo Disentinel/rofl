@@ -734,6 +734,40 @@ brk("iv_mul_either"). brk_kind("iv_mul_either", kernel).
 brk_expects("iv_mul_either", "agg_widen_safety").
 brk("ring1_widen_unread"). brk_kind("ring1_widen_unread", file).
 brk_expects("ring1_widen_unread", "agg_widen_syntax").
+brk("narrow_off"). brk_kind("narrow_off", switch).
+brk_expects("narrow_off", "agg_narrow_eval").
+brk_expects("narrow_off", "agg_narrow_why").
+brk_expects("narrow_off", "agg_widen_eval").
+brk("narrow_once"). brk_kind("narrow_once", switch).
+brk_expects("narrow_once", "agg_narrow_eval").
+brk("narrow_more"). brk_kind("narrow_more", switch).
+brk_expects("narrow_more", "agg_narrow_eval").
+brk("narrow_overshoot"). brk_kind("narrow_overshoot", switch).
+brk_expects("narrow_overshoot", "agg_narrow_eval").
+brk("narrow_fresh_first"). brk_kind("narrow_fresh_first", switch).
+brk_expects("narrow_fresh_first", "agg_narrow_eval").
+brk("narrow_meta_stale"). brk_kind("narrow_meta_stale", switch).
+brk_expects("narrow_meta_stale", "agg_narrow_eval").
+brk("narrow_why_bare"). brk_kind("narrow_why_bare", switch).
+brk_expects("narrow_why_bare", "agg_narrow_why").
+brk("narrow_fault_ignored"). brk_kind("narrow_fault_ignored", switch).
+brk_expects("narrow_fault_ignored", "agg_narrow_eval").
+brk("ts_narrow_off"). brk_kind("ts_narrow_off", ts).
+brk_expects("ts_narrow_off", "agg_narrow_eval").
+brk("ts_narrow_once"). brk_kind("ts_narrow_once", ts).
+brk_expects("ts_narrow_once", "agg_narrow_eval").
+brk("ts_narrow_more"). brk_kind("ts_narrow_more", ts).
+brk_expects("ts_narrow_more", "agg_narrow_eval").
+brk("ts_narrow_overshoot"). brk_kind("ts_narrow_overshoot", ts).
+brk_expects("ts_narrow_overshoot", "agg_narrow_eval").
+brk("ts_narrow_fresh_first"). brk_kind("ts_narrow_fresh_first", ts).
+brk_expects("ts_narrow_fresh_first", "agg_narrow_eval").
+brk("ts_narrow_meta_stale"). brk_kind("ts_narrow_meta_stale", ts).
+brk_expects("ts_narrow_meta_stale", "agg_narrow_eval").
+brk("ts_narrow_why_bare"). brk_kind("ts_narrow_why_bare", ts).
+brk_expects("ts_narrow_why_bare", "agg_narrow_why").
+brk("ts_narrow_fault_ignored"). brk_kind("ts_narrow_fault_ignored", ts).
+brk_expects("ts_narrow_fault_ignored", "agg_narrow_eval").
 brk("tag_counting_idempotent"). brk_kind("tag_counting_idempotent", switch).
 brk_expects("tag_counting_idempotent", "agg_tagc_strata").
 brk("tropical_max"). brk_kind("tropical_max", switch).
@@ -1355,6 +1389,14 @@ switch_site("memo", "rust/rofl/src/engine.rs").
 switch_site("min_by_value", "rust/rofl/src/engine.rs").
 switch_site("mod_floor", "rust/rofl/src/engine.rs").
 switch_site("mono", "rust/rofl/src/engine.rs").
+switch_site("narrow_fault_ignored", "rust/rofl/src/engine.rs").
+switch_site("narrow_fresh_first", "rust/rofl/src/engine.rs").
+switch_site("narrow_meta_stale", "rust/rofl/src/engine.rs").
+switch_site("narrow_more", "rust/rofl/src/engine.rs").
+switch_site("narrow_off", "rust/rofl/src/engine.rs").
+switch_site("narrow_once", "rust/rofl/src/engine.rs").
+switch_site("narrow_overshoot", "rust/rofl/src/cell.rs").
+switch_site("narrow_why_bare", "rust/rofl/src/engine.rs").
 switch_site("neg_unknown_unbound", "rust/rofl/src/engine.rs").
 switch_site("next_cells_reflected_early", "rust/rofl/src/engine.rs").
 switch_site("no_agg_edge", "rust/rofl/src/engine.rs").

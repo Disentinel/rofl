@@ -9,7 +9,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::cell::{iv_bounds, mk_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
+use crate::cell::{iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
 use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
@@ -22,6 +22,8 @@ const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
 const DEFAULT_SPACE: i64 = 500_000;
 const POLICY_BUDGET: i64 = 20_000_000;
+/// the most descending passes narrowing makes after a widening
+const NARROW_PASSES: usize = 4;
 
 #[derive(Debug)]
 pub enum Halt {
@@ -30,6 +32,8 @@ pub enum Halt {
     Budget(&'static str, Option<Sym>),
     Strat(String, String),
     Bug(String),
+    /// A descending pass has gathered what it came for (`narrow_descend`).
+    Narrowed,
 }
 
 pub struct ERule {
@@ -115,6 +119,20 @@ enum DomV {
 /// A threshold group under a substitution: its members for certain, how
 /// many it could have at most (`None`: not known), and N.
 type ThrVerdict = (Subst, HashSet<Vec<Term>>, Option<usize>, usize);
+
+/// ONE DESCENDING PASS over the widened cells (`narrow_descend`): each cell
+/// of `frozen` stands at its value and takes no contribution, `fresh` is the
+/// join of the contributions its rules make from those values, and `left`
+/// the relations of `frozen` that have not closed yet.
+#[derive(Clone)]
+struct Narrowing {
+    frozen: HashMap<LatKey, Term>,
+    fresh: HashMap<LatKey, Term>,
+    left: HashSet<Sym>,
+    /// relations of `frozen` whose recursion met a fault: what a rule would
+    /// have contributed past it is unknown, so `fresh` is no enclosure there
+    faulted: HashSet<Sym>,
+}
 
 /// A builtin that failed for an error in a rule a lattice decides, held until
 /// that lattice (`close`) closes: applied then if every fact the failed
@@ -529,7 +547,17 @@ pub struct Eval {
     lat_widened: HashMap<LatKey, Vec<[Term; 4]>>,
     /// The hole of each widened cell, with the value it closed on (the
     /// enclosure a `widened` shrug's meta names) and its widenings.
-    widened_marks: HashMap<Term, (Term, Vec<[Term; 4]>)>,
+    widened_marks: HashMap<Term, (Term, Vec<[Term; 4]>, Vec<[Term; 3]>)>,
+    /// Each widened cell with the value its widening closed on, before any
+    /// narrowing.
+    widened_x: HashMap<LatKey, Term>,
+    /// A DESCENDING PASS in progress (`narrow_descend`): the widened cells
+    /// held at the values given, and what the rules contribute from them.
+    narrowing: Option<Narrowing>,
+    /// What narrowing found for the widened cells of this evaluation: the
+    /// value they closed on, the value narrowed to, and each step
+    /// `(before, the join of what the rules contribute from it, after)`.
+    narrow_out: HashMap<LatKey, (Term, Term, Vec<[Term; 3]>)>,
     /// What the holes of this evaluation left unknown, each with what it was
     /// reached from and by which rule (none for a hole's own cell): whynot's
     /// path from a withdrawn cell to the fault behind it.
@@ -906,6 +934,9 @@ impl Eval {
             lat_steps: HashMap::new(),
             lat_widened: HashMap::new(),
             widened_marks: HashMap::new(),
+            widened_x: HashMap::new(),
+            narrowing: None,
+            narrow_out: HashMap::new(),
             lat_unknown: HashMap::new(),
             lat_withdrawn: Vec::new(),
             lat_spread: HashSet::new(),
@@ -1688,7 +1719,26 @@ impl Eval {
         self.clone()
     }
 
+    /// An evaluation, and for a world whose widened cells settled, the
+    /// descending pass that narrows them (`narrow_descend`) and the
+    /// evaluation again with what it found.
     pub fn run(&mut self) -> Result<Outcome, Halt> {
+        self.narrow_out.clear();
+        let out = self.run_pass()?;
+        if out.partial || self.well_founded || self.widened_x.is_empty() {
+            return Ok(out);
+        }
+        self.narrow_descend()?;
+        let out = self.run_pass()?;
+        for (ck, (x, _, _)) in &self.narrow_out {
+            if self.widened_x.get(ck) != Some(x) {
+                return Err(Halt::Bug(format!("the widened cell {} closed on another value when evaluated again", self.h.name(ck.0))));
+            }
+        }
+        Ok(out)
+    }
+
+    fn run_pass(&mut self) -> Result<Outcome, Halt> {
         self.clear_derived();
         self.shrug_reset();
         self.active.clear();
@@ -1768,6 +1818,7 @@ impl Eval {
         brk!("widen_steps_carried" => (); self.lat_steps.clear());
         self.lat_widened.clear();
         self.widened_marks.clear();
+        self.widened_x.clear();
         self.lat_unknown.clear();
         self.lat_withdrawn.clear();
         self.lat_spread.clear();
@@ -1782,6 +1833,7 @@ impl Eval {
         self.agg_opened.clear();
         self.plain_closed.clear();
         self.lattice_improvements = 0;
+        self.seed_narrowing()?;
         let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
@@ -2388,7 +2440,7 @@ impl Eval {
                 "widened" => {
                     // the value the cell closed on: its least value lies within it
                     let val = match self.widened_marks.get(&target) {
-                        Some((v, _)) => brk!("widen_meta_first" => self.widened_marks[&target].1.first().map_or(*v, |w| w[3]); *v),
+                        Some((v, _, _)) => brk!("widen_meta_first" => self.widened_marks[&target].1.first().map_or(*v, |w| w[3]); *v),
                         None => return Err(Halt::Bug(format!("the widened hole {} kept no value", self.shown(target)))),
                     };
                     let f = self.h.intern("within");
@@ -4747,6 +4799,17 @@ impl Eval {
             }
         };
         args[n - 1] = c;
+        if self.narrowing.as_ref().is_some_and(|nr| nr.frozen.contains_key(&ck)) {
+            let held = self.narrowing.as_ref().and_then(|nr| nr.fresh.get(&ck)).copied();
+            let f = match held {
+                None => c,
+                Some(f) => op.join(&mut self.h, &self.v, &mut self.join_keys, f, c).map_err(|_| off_carrier(op))?,
+            };
+            if let Some(nr) = self.narrowing.as_mut() {
+                nr.fresh.insert(ck, brk!("narrow_fresh_first" => held.unwrap_or(f); f));
+            }
+            return Ok(());
+        }
         let crel = self.join_rels[&rel];
         let fresh = self.store.add(&self.h, crel, persp, &args, F_TICK);
         let cid = self.store.get(crel, persp, &args).unwrap();
@@ -4891,6 +4954,118 @@ impl Eval {
             out.insert(h, ints.into_iter().collect());
         }
         out
+    }
+
+    /// THE DESCENDING PASS (docs/aggregates.md, "Widening, as built"). The
+    /// widening settled each widened cell on a post-fixpoint x. Each pass
+    /// evaluates the world again with those cells held at their values and
+    /// taking no contribution, so what every rule contributes to them is
+    /// computed from x alone (`seed_narrowing`, `conclude_join`), and stops
+    /// when their lattices come to close (`narrow_gathered`). An end the
+    /// widening raised comes down to the join of those contributions where
+    /// that is inside it (`narrow_iv`), never below it; the others stay. The
+    /// result is still a post-fixpoint, so still an enclosure of the least
+    /// value. Passes repeat until nothing moves, at most `NARROW_PASSES`.
+    fn narrow_descend(&mut self) -> Result<(), Halt> {
+        struct Cell {
+            ck: LatKey,
+            x: Term,
+            cur: (i64, i64),
+            raised: (bool, bool),
+            steps: Vec<[Term; 3]>,
+        }
+        brk!("narrow_off" => return Ok(()); ());
+        let mut cells: Vec<Cell> = Vec::new();
+        for (ck, &x) in &self.widened_x {
+            let Some(cur) = iv_bounds(&self.h, &self.v, x) else { continue };
+            let mut raised = (false, false);
+            for [_, _, joined, wide] in self.lat_widened.get(ck).into_iter().flatten() {
+                if let (Some(j), Some(w)) = (iv_bounds(&self.h, &self.v, *joined), iv_bounds(&self.h, &self.v, *wide)) {
+                    raised = (raised.0 || w.0 != j.0, raised.1 || w.1 != j.1);
+                }
+            }
+            cells.push(Cell { ck: ck.clone(), x, cur, raised, steps: Vec::new() });
+        }
+        for _ in 0..brk!("narrow_once" => 1, "narrow_more" => NARROW_PASSES + 1; NARROW_PASSES) {
+            let frozen: HashMap<LatKey, Term> = cells.iter().map(|c| (c.ck.clone(), mk_iv(&mut self.h, &self.v, c.cur.0, c.cur.1))).collect();
+            let left: HashSet<Sym> = cells.iter().map(|c| c.ck.0).collect();
+            self.narrowing = Some(Narrowing { frozen, fresh: HashMap::new(), left, faulted: HashSet::new() });
+            let ran = self.run_pass();
+            let pass = self.narrowing.take();
+            match (ran, pass) {
+                (Err(Halt::Narrowed), Some(pass)) => {
+                    let mut moved = false;
+                    for c in cells.iter_mut() {
+                        let Some(f) = pass.fresh.get(&c.ck).copied().filter(|_| !pass.faulted.contains(&c.ck.0)) else { continue };
+                        let Some(fresh) = iv_bounds(&self.h, &self.v, f) else { continue };
+                        let next = narrow_iv(c.cur, fresh, c.raised);
+                        if next != c.cur {
+                            let (before, after) = (mk_iv(&mut self.h, &self.v, c.cur.0, c.cur.1), mk_iv(&mut self.h, &self.v, next.0, next.1));
+                            c.steps.push([before, f, after]);
+                            c.cur = next;
+                            moved = true;
+                        }
+                    }
+                    if !moved {
+                        break;
+                    }
+                }
+                (Err(e), _) => return Err(e),
+                // a wall cut the pass: what was narrowed so far stands
+                (Ok(_), _) | (_, None) => break,
+            }
+        }
+        for c in cells {
+            if !c.steps.is_empty() {
+                let to = mk_iv(&mut self.h, &self.v, c.cur.0, c.cur.1);
+                self.narrow_out.insert(c.ck, (c.x, to, c.steps));
+            }
+        }
+        Ok(())
+    }
+
+    /// The widened cells of a descending pass stand in the store at their
+    /// values, as the cells of a lattice do, so that the rules read them.
+    fn seed_narrowing(&mut self) -> Result<(), Halt> {
+        let Some(nr) = self.narrowing.take() else { return Ok(()) };
+        let mut front = Front::default();
+        for (ck, x) in &nr.frozen {
+            let mut args: Vec<Term> = ck.2.to_vec();
+            args.push(*x);
+            self.store.add(&self.h, ck.0, ck.1, &args, F_TICK);
+            let id = self.store.get(ck.0, ck.1, &args).unwrap();
+            self.lat_cur.insert(ck.clone(), id);
+            let crel = self.join_rels[&ck.0];
+            self.record_firing(id, crel, crel, Vec::new(), &mut front)?;
+        }
+        self.narrowing = Some(nr);
+        Ok(())
+    }
+
+    /// A descending pass has what it came for when every relation it holds a
+    /// cell of is about to close: the contributions to them are all made. A
+    /// rule that faulted on the way (`E in I` over a widened `[0,inf)`)
+    /// contributed nothing, and what it would have is unknown: the cells of
+    /// every relation in its recursion are left as they were.
+    fn narrow_gathered(&mut self, due: &[Sym]) -> Result<(), Halt> {
+        let deps = if self.narrowing.is_some() { self.rel_deps() } else { return Ok(()) };
+        let met: Vec<Sym> = self.lat_pending.iter().filter(|x| x.reason != self.v.widened_reason).map(|x| x.close).collect();
+        let Some(nr) = self.narrowing.as_mut() else { return Ok(()) };
+        for p in due {
+            nr.left.remove(p);
+        }
+        if !nr.left.is_empty() {
+            return Ok(());
+        }
+        if !met.is_empty() {
+            let frozen: HashSet<Sym> = nr.frozen.keys().map(|k| k.0).collect();
+            for p in frozen {
+                if met.iter().any(|&c| brk!("narrow_fault_ignored" => false; c == p || (reaches_in(&deps, c, p) && reaches_in(&deps, p, c)))) {
+                    nr.faulted.insert(p);
+                }
+            }
+        }
+        Err(Halt::Narrowed)
     }
 
     /// One firing of `id` by `rule`, with its step, its row (charged to the
@@ -5549,7 +5724,12 @@ impl Eval {
         if reason == self.v.widened_reason {
             if let Some(val) = value {
                 let steps = self.lat_widened.get(&ck).cloned().unwrap_or_default();
-                self.widened_marks.insert(marker, (val, steps));
+                self.widened_x.insert(ck.clone(), val);
+                let (shown, narrowed) = match self.narrow_out.get(&ck) {
+                    Some((_, to, ns)) => (brk!("narrow_meta_stale" => val; *to), ns.clone()),
+                    None => (val, Vec::new()),
+                };
+                self.widened_marks.insert(marker, (shown, steps, narrowed));
             }
         }
         if let Some(ps) = self.sub_parties.remove(&ck) {
@@ -6009,6 +6189,7 @@ impl Eval {
             return Ok(());
         }
         due.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
+        self.narrow_gathered(&due)?;
         self.sub_check(&due)?;
         self.apply_lattice_holes(&due)?;
         self.join_covers(&due)?;
@@ -11701,7 +11882,7 @@ impl Eval {
     /// was widened to, and the value it closed on, an enclosure of the least
     /// value and nothing more. Empty for any other target.
     fn widened_lines(&self, marker: Term, pad: &str) -> Vec<String> {
-        let Some((val, steps)) = self.widened_marks.get(&marker) else { return Vec::new() };
+        let Some((val, steps, narrowed)) = self.widened_marks.get(&marker) else { return Vec::new() };
         let n = match marker.kind() {
             TermK::Func(i) => self.h.fargs(i)[0].as_atom().and_then(|r| self.widen.get(&r).copied()).unwrap_or(0),
             _ => 0,
@@ -11719,6 +11900,15 @@ impl Eval {
                 self.shown(*c),
                 self.shown(*joined),
                 self.shown(*wide)
+            ));
+        }
+        let shown: Vec<&[Term; 3]> = brk!("narrow_why_bare" => Vec::new(); narrowed.iter().collect());
+        for [before, fresh, after] in shown {
+            out.push(format!(
+                "{pad}  narrowed {} to {} by {}, the join of what its rules contribute from it",
+                self.shown(*before),
+                self.shown(*after),
+                self.shown(*fresh)
             ));
         }
         out
