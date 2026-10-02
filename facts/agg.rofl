@@ -1063,6 +1063,8 @@ work_proof(w_agg_incremental_ready, "agg_incr_neg").
 work_proof(w_agg_incremental_ready, "agg_incr_chain").
 work_proof(w_agg_incremental_ready, "agg_incr_partial").
 work_proof(w_agg_incremental_ready, "agg_incr_readers").
+work_proof(w_agg_incremental_ready, "agg_incr_stacked").
+work_proof(w_agg_incremental_ready, "agg_incr_stockholes").
 work_proof(w_agg_incremental_ready, "agg_incr_latticehole").
 work_proof(w_agg_incremental_ready, "agg_incr_overflow").
 work_proof(w_agg_incremental_ready, "agg_incr_stale").

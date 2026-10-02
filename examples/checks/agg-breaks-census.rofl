@@ -1348,6 +1348,16 @@ brk("retract_hole_kept"). brk_kind("retract_hole_kept", switch).
 brk_expects("retract_hole_kept", "agg_incr_overflow").
 brk("retract_lattice_hole_kept"). brk_kind("retract_lattice_hole_kept", switch).
 brk_expects("retract_lattice_hole_kept", "agg_incr_latticehole").
+brk("ts_stock_stale_holes_kept"). brk_kind("ts_stock_stale_holes_kept", ts).
+brk_expects("ts_stock_stale_holes_kept", "agg_incr_stockholes").
+brk("retract_stacked_plain"). brk_kind("retract_stacked_plain", switch).
+brk_expects("retract_stacked_plain", "agg_incr_stacked").
+brk("retract_stacked_facts_kept"). brk_kind("retract_stacked_facts_kept", switch).
+brk_expects("retract_stacked_facts_kept", "agg_incr_stacked").
+brk("retract_stacked_cells_kept"). brk_kind("retract_stacked_cells_kept", switch).
+brk_expects("retract_stacked_cells_kept", "agg_incr_stacked").
+brk("retract_stacked_one_level"). brk_kind("retract_stacked_one_level", switch).
+brk_expects("retract_stacked_one_level", "agg_incr_stacked").
 brk("retract_consumers_kept"). brk_kind("retract_consumers_kept", switch).
 brk_expects("retract_consumers_kept", "agg_incr_readers").
 brk("stale_holes_kept"). brk_kind("stale_holes_kept", switch).
@@ -1601,6 +1611,10 @@ switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_stacked_cells_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_stacked_facts_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_stacked_one_level", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_stacked_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stale_rep", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tag_derivations_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").

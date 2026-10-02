@@ -41,6 +41,8 @@
 //!   {"op":"whynot","session":2,"query":"p(b)","depth":6,"nodes":64}
 //!                                                     -> {"holds":false,"text":...}
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
+//!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
+//!                                                        cells updated by delta, evaluated again if not
 //!   {"op":"tick","session":2}
 //!   {"op":"state","session":2,"path":"out.txt"}
 //!   {"op":"close","session":2}
@@ -196,6 +198,16 @@ impl Server {
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
                     "peakRows": o.peak_rows, "space": o.space,
                 }))
+            }
+            "retract" => {
+                let q = r.get("query").and_then(|v| v.as_str()).ok_or("retract needs `query`")?.to_string();
+                let s = self.get(r)?;
+                let full = match s.retract_delta(&q)? {
+                    rofl::session::Retraction::Delta(_) => None,
+                    rofl::session::Retraction::Full(why) => Some(why),
+                };
+                if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
+                Ok(json!({ "full": full }))
             }
             "tick" => {
                 let s = self.get(r)?;

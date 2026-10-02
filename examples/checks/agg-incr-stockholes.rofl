@@ -1,0 +1,24 @@
+-- examples/checks/agg-incr-stockholes.rofl — agg_incr_stockholes: THE HOLES OF A
+-- WORLD WITH NO AGGREGATE, under RETRACTION. A hole is a base, frozen row, which
+-- clearing the derived layer keeps; the stock evaluator of the TypeScript engine
+-- wrote its holes without noting them, so a world evaluated again after a
+-- retraction (or an excision) kept the hole of a fault the world no longer has,
+-- and `hr_any` went on holding while the Rust engine, which drops them, did not.
+-- The state must be the one of a world without the fact.
+--
+--   hr_k(b, oops)   1 + oops is no number: the rule is holed, and so is what negates it
+edb(hr_k).
+hr_k(a, 1).
+hr_k(b, oops).
+hr_x(C, Y) :- hr_k(C, K), Y is K + 1.
+hr_n(C) :- hr_k(C, _), not hr_x(C, _).
+hr_any(1) :- hole[$kernel]($rule(_), arith_type_error).
+hr_withdrawn(1) :- hole[$kernel]($rule(_), support_withdrawn).
+
+-- the state after the retraction, row by row
+-- expect-row: hr_k[main](a,1) tick base support=0
+-- expect-row: hr_x[main](a,2) tick drv support=1
+-- and nothing of what the fact supported before
+-- expect-no-row: hr_any[main](1) tick drv support=1
+-- expect-no-row: hr_withdrawn[main](1) tick drv support=1
+-- expect-no-row: hr_k[main](b,oops) tick base support=0

@@ -1,0 +1,165 @@
+-- examples/checks/agg-incr-stacked.rofl — agg_incr_stacked: RULES THAT NEGATE OR
+-- AGGREGATE WHAT CHANGED, under RETRACTION. A retraction can make a `not` newly
+-- true, which no subtraction does, and a count over what a cell concludes gains
+-- and loses members: the rules that read what changed (a cell's conclusion,
+-- what a lattice holds, the retracted fact itself) are read again whole, their
+-- facts and cells taken out and the rules fired again level by level, over what
+-- the levels below concluded. The state must be the one of a world without
+-- the fact.
+--
+--   st_sale(1, a, 10)   a's total 15 -> 5: st_big(a) goes, st_calm(a) is NEW, the count of the big goes down
+--   st_sale(3, b, 7)    b has no sale left: st_none(b) is NEW (a base fact, negated)
+--   st_sale(6, d, -5)   d's total 4 -> 9: st_big(d) is NEW, st_calm(d) GOES (a negation that held no longer does), st_a_quiet(d) is NEW
+--   st_e(b, c, 2)       the near pairs through the edge go: st_apart gains them, and its count with it
+edb(st_sale). edb(st_e). edb(st_grp).
+st_grp(a). st_grp(b). st_grp(c). st_grp(d).
+st_sale(1, a, 10).
+st_sale(2, a, 5).
+st_sale(3, b, 7).
+st_sale(4, c, 2).
+st_sale(5, d, 9).
+st_sale(6, d, -5).
+st_e(a, b, 1).
+st_e(b, c, 2).
+st_e(c, d, 1).
+st_total(G, S) :- S is sum(V ; K : st_sale(K, G, V)).
+st_big(G) :- st_total(G, S), S > 5.
+st_calm(G) :- st_grp(G), not st_big(G).
+st_a_count_big(N) :- N is count(G : st_big(G)).
+st_lvl(G, N) :- st_total(G, S), N is count(H : st_total(H, T), T < S).
+st_none(G) :- st_grp(G), not st_sale(_, G, _).
+lattice st_d(A, B, min W).
+st_d(A, B, W) :- st_e(A, B, W).
+st_d(A, C, W) :- st_d(A, B, W1), st_e(B, C, W2), W is W1 + W2.
+st_near(A, B) :- st_d(A, B, W), W < 4.
+st_apart(A, B) :- st_grp(A), st_grp(B), not st_near(A, B).
+st_a_count_apart(A, N) :- st_grp(A), N is count(B : st_apart(A, B)).
+st_a_quiet(G) :- st_grp(G), not st_calm(G).
+
+-- the state after the retractions, row by row
+-- expect-row: st_a_count_apart[main](a,3) tick drv support=1
+-- expect-row: st_a_count_apart[main](b,4) tick drv support=1
+-- expect-row: st_a_count_apart[main](c,3) tick drv support=1
+-- expect-row: st_a_count_apart[main](d,4) tick drv support=1
+-- expect-row: st_a_count_big[main](1) tick drv support=1
+-- expect-row: st_a_quiet[main](d) tick drv support=1
+-- expect-row: st_apart[main](a,a) tick drv support=1
+-- expect-row: st_apart[main](a,c) tick drv support=1
+-- expect-row: st_apart[main](a,d) tick drv support=1
+-- expect-row: st_apart[main](b,a) tick drv support=1
+-- expect-row: st_apart[main](b,b) tick drv support=1
+-- expect-row: st_apart[main](b,c) tick drv support=1
+-- expect-row: st_apart[main](b,d) tick drv support=1
+-- expect-row: st_apart[main](c,a) tick drv support=1
+-- expect-row: st_apart[main](c,b) tick drv support=1
+-- expect-row: st_apart[main](c,c) tick drv support=1
+-- expect-row: st_apart[main](d,a) tick drv support=1
+-- expect-row: st_apart[main](d,b) tick drv support=1
+-- expect-row: st_apart[main](d,c) tick drv support=1
+-- expect-row: st_apart[main](d,d) tick drv support=1
+-- expect-row: st_big[main](d) tick drv support=1
+-- expect-row: st_calm[main](a) tick drv support=1
+-- expect-row: st_calm[main](b) tick drv support=1
+-- expect-row: st_calm[main](c) tick drv support=1
+-- expect-row: st_d[main](a,b,1) tick drv support=1
+-- expect-row: st_d[main](c,d,1) tick drv support=1
+-- expect-row: st_e[main](a,b,1) tick base support=0
+-- expect-row: st_e[main](c,d,1) tick base support=0
+-- expect-row: st_grp[main](a) tick base support=0
+-- expect-row: st_grp[main](b) tick base support=0
+-- expect-row: st_grp[main](c) tick base support=0
+-- expect-row: st_grp[main](d) tick base support=0
+-- expect-row: st_lvl[main](a,1) tick drv support=1
+-- expect-row: st_lvl[main](c,0) tick drv support=1
+-- expect-row: st_lvl[main](d,2) tick drv support=1
+-- expect-row: st_near[main](a,b) tick drv support=1
+-- expect-row: st_near[main](c,d) tick drv support=1
+-- expect-row: st_none[main](b) tick drv support=1
+-- expect-row: st_sale[main](2,a,5) tick base support=0
+-- expect-row: st_sale[main](4,c,2) tick base support=0
+-- expect-row: st_sale[main](5,d,9) tick base support=0
+-- expect-row: st_total[main](a,5) tick drv support=1
+-- expect-row: st_total[main](c,2) tick drv support=1
+-- expect-row: st_total[main](d,9) tick drv support=1
+-- expect-row: cell $cell(r34046a60,1,0,$cons(a,$nil)) sum = 5 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r34046a60,1,0,$cons(a,$nil)) #1 id=f35a014709d6b819 (5,2) h=1 [fact:st_sale[main](2,a,5)]
+-- expect-row: cell $cell(r34046a60,1,0,$cons(c,$nil)) sum = 2 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r34046a60,1,0,$cons(c,$nil)) #1 id=a8f4115cbe78594a (2,4) h=1 [fact:st_sale[main](4,c,2)]
+-- expect-row: cell $cell(r34046a60,1,0,$cons(d,$nil)) sum = 9 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-row: mem $cell(r34046a60,1,0,$cons(d,$nil)) #1 id=eaf9de074a1dac39 (9,5) h=1 [fact:st_sale[main](5,d,9)]
+-- expect-row: cell $cell(r39274ad8,1,0,$nil) count = 1 h=4 tick=0 sealed=[st_big@1] alg=invertible use=subtract
+-- expect-row: mem $cell(r39274ad8,1,0,$nil) #1 id=28a3fef883f25b0d (d) h=4 [fact:st_big[main](d)]
+-- expect-row: cell $cell(r525a8b4e,2,0,$cons(2,$nil)) count = 0 h=0 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-row: cell $cell(r525a8b4e,2,0,$cons(5,$nil)) count = 1 h=3 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-row: mem $cell(r525a8b4e,2,0,$cons(5,$nil)) #1 id=ea53232cd3f9ca14 (c) h=3 [bi:2 < 5; fact:st_total[main](c,2)]
+-- expect-row: cell $cell(r525a8b4e,2,0,$cons(9,$nil)) count = 2 h=3 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-row: mem $cell(r525a8b4e,2,0,$cons(9,$nil)) #1 id=259626a84478a4ee (a) h=3 [bi:5 < 9; fact:st_total[main](a,5)]
+-- expect-row: mem $cell(r525a8b4e,2,0,$cons(9,$nil)) #2 id=259d22a8447ebcd0 (c) h=3 [bi:2 < 9; fact:st_total[main](c,2)]
+-- expect-row: cell $cell(ra5df679b,2,0,$cons(a,$nil)) count = 3 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(a,$nil)) #1 id=243215d5eac8edfa (a) h=2 [fact:st_apart[main](a,a)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(a,$nil)) #2 id=243911d5eacf05dc (c) h=2 [fact:st_apart[main](a,c)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(a,$nil)) #3 id=242109d5eaba6663 (d) h=2 [fact:st_apart[main](a,d)]
+-- expect-row: cell $cell(ra5df679b,2,0,$cons(b,$nil)) count = 4 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(b,$nil)) #1 id=fe7b63c6bfac7cb7 (a) h=2 [fact:st_apart[main](b,a)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(b,$nil)) #2 id=fe8583c6bfb5079c (b) h=2 [fact:st_apart[main](b,b)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(b,$nil)) #3 id=fe81dfc6bfb1bb19 (c) h=2 [fact:st_apart[main](b,c)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(b,$nil)) #4 id=fe70dfc6bfa347e6 (d) h=2 [fact:st_apart[main](b,d)]
+-- expect-row: cell $cell(ra5df679b,2,0,$cons(c,$nil)) count = 3 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(c,$nil)) #1 id=cc5165a7d9ecc8e8 (a) h=2 [fact:st_apart[main](c,a)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(c,$nil)) #2 id=cc46e5a7d9e39ae3 (b) h=2 [fact:st_apart[main](c,b)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(c,$nil)) #3 id=cc4a49a7d9e67aa6 (c) h=2 [fact:st_apart[main](c,c)]
+-- expect-row: cell $cell(ra5df679b,2,0,$cons(d,$nil)) count = 4 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(d,$nil)) #1 id=1861bbee977e0a85 (a) h=2 [fact:st_apart[main](d,a)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(d,$nil)) #2 id=185e53ee977b23f6 (b) h=2 [fact:st_apart[main](d,b)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(d,$nil)) #3 id=185aafee9777d773 (c) h=2 [fact:st_apart[main](d,c)]
+-- expect-row: mem $cell(ra5df679b,2,0,$cons(d,$nil)) #4 id=1872b7ee978c76ec (d) h=2 [fact:st_apart[main](d,d)]
+-- expect-row: lat st_d min alg=idempotent,lattice use=rederive
+-- and nothing of what they supported before
+-- expect-no-row: st_a_count_apart[main](a,2) tick drv support=1
+-- expect-no-row: st_a_count_apart[main](b,2) tick drv support=1
+-- expect-no-row: st_a_count_big[main](2) tick drv support=1
+-- expect-no-row: st_a_quiet[main](a) tick drv support=1
+-- expect-no-row: st_a_quiet[main](b) tick drv support=1
+-- expect-no-row: st_big[main](a) tick drv support=1
+-- expect-no-row: st_big[main](b) tick drv support=1
+-- expect-no-row: st_calm[main](d) tick drv support=1
+-- expect-no-row: st_d[main](a,c,3) tick drv support=1
+-- expect-no-row: st_d[main](a,d,4) tick drv support=1
+-- expect-no-row: st_d[main](b,c,2) tick drv support=1
+-- expect-no-row: st_d[main](b,d,3) tick drv support=1
+-- expect-no-row: st_e[main](b,c,2) tick base support=0
+-- expect-no-row: st_lvl[main](a,3) tick drv support=1
+-- expect-no-row: st_lvl[main](b,2) tick drv support=1
+-- expect-no-row: st_lvl[main](d,1) tick drv support=1
+-- expect-no-row: st_near[main](a,c) tick drv support=1
+-- expect-no-row: st_near[main](b,c) tick drv support=1
+-- expect-no-row: st_near[main](b,d) tick drv support=1
+-- expect-no-row: st_sale[main](1,a,10) tick base support=0
+-- expect-no-row: st_sale[main](3,b,7) tick base support=0
+-- expect-no-row: st_sale[main](6,d,-5) tick base support=0
+-- expect-no-row: st_total[main](a,15) tick drv support=1
+-- expect-no-row: st_total[main](b,7) tick drv support=1
+-- expect-no-row: st_total[main](d,4) tick drv support=1
+-- expect-no-row: cell $cell(r34046a60,1,0,$cons(a,$nil)) sum = 15 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r34046a60,1,0,$cons(a,$nil)) #1 id=f3272cefab9521ee (10,1) h=1 [fact:st_sale[main](1,a,10)]
+-- expect-no-row: mem $cell(r34046a60,1,0,$cons(a,$nil)) #2 id=f35a014709d6b819 (5,2) h=1 [fact:st_sale[main](2,a,5)]
+-- expect-no-row: cell $cell(r34046a60,1,0,$cons(b,$nil)) sum = 7 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r34046a60,1,0,$cons(b,$nil)) #1 id=1526c7ad4a5f584f (7,3) h=1 [fact:st_sale[main](3,b,7)]
+-- expect-no-row: cell $cell(r34046a60,1,0,$cons(d,$nil)) sum = 4 h=1 tick=0 sealed=[st_sale@0] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r34046a60,1,0,$cons(d,$nil)) #1 id=5a282583c004cd19 (-5,6) h=1 [fact:st_sale[main](6,d,-5)]
+-- expect-no-row: mem $cell(r34046a60,1,0,$cons(d,$nil)) #2 id=eaf9de074a1dac39 (9,5) h=1 [fact:st_sale[main](5,d,9)]
+-- expect-no-row: cell $cell(r39274ad8,1,0,$nil) count = 2 h=4 tick=0 sealed=[st_big@1] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r39274ad8,1,0,$nil) #1 id=28b4faf88400c774 (a) h=4 [fact:st_big[main](a)]
+-- expect-no-row: mem $cell(r39274ad8,1,0,$nil) #2 id=28aa7af883f7996f (b) h=4 [fact:st_big[main](b)]
+-- expect-no-row: cell $cell(r525a8b4e,2,0,$cons(15,$nil)) count = 3 h=3 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(15,$nil)) #1 id=2b53eb1bc86a8f32 (b) h=3 [bi:7 < 15; fact:st_total[main](b,7)]
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(15,$nil)) #2 id=2b50871bc867af6f (c) h=3 [bi:2 < 15; fact:st_total[main](c,2)]
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(15,$nil)) #3 id=2b4d5f1bc86535a0 (d) h=3 [bi:4 < 15; fact:st_total[main](d,4)]
+-- expect-no-row: cell $cell(r525a8b4e,2,0,$cons(4,$nil)) count = 1 h=3 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(4,$nil)) #1 id=6d7bf136add87997 (c) h=3 [bi:2 < 4; fact:st_total[main](c,2)]
+-- expect-no-row: cell $cell(r525a8b4e,2,0,$cons(7,$nil)) count = 2 h=3 tick=0 sealed=[st_total@1] alg=invertible use=subtract
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(7,$nil)) #1 id=7c5bbafe25590bfe (c) h=3 [bi:2 < 7; fact:st_total[main](c,2)]
+-- expect-no-row: mem $cell(r525a8b4e,2,0,$cons(7,$nil)) #2 id=7c6cbafe25677f31 (d) h=3 [bi:4 < 7; fact:st_total[main](d,4)]
+-- expect-no-row: cell $cell(ra5df679b,2,0,$cons(a,$nil)) count = 2 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
+-- expect-no-row: mem $cell(ra5df679b,2,0,$cons(a,$nil)) #2 id=242109d5eaba6663 (d) h=2 [fact:st_apart[main](a,d)]
+-- expect-no-row: cell $cell(ra5df679b,2,0,$cons(b,$nil)) count = 2 h=2 tick=0 sealed=[st_apart@3] alg=invertible use=subtract
