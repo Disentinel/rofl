@@ -1,0 +1,300 @@
+-- examples/slo/slo-requests.rofl — THE REQUESTS, generated once by a script from the timeline in
+-- examples/slo/README.md. The script is not kept: the expected sums in
+-- examples/checks/agg-slo-demo-check.rofl were computed by it, apart from the rules, so they
+-- are an independent oracle. Time is minutes. req(Id, Service, T, Weight): a read weighs 1, a write 4.
+-- failed(Id) and lat(Id, Milliseconds) are the outcome.
+edb(req).
+edb(failed).
+edb(lat).
+req(a1a, api, 1, 1).
+req(a1b, api, 1, 4).
+req(a2a, api, 2, 1).
+req(a2b, api, 2, 4).
+req(a3a, api, 3, 1).
+req(a3b, api, 3, 4).
+req(a4a, api, 4, 1).
+req(a4b, api, 4, 4).
+req(a5a, api, 5, 1).
+req(a5b, api, 5, 4).
+req(a6a, api, 6, 1).
+req(a6b, api, 6, 4).
+req(a7a, api, 7, 1).
+req(a7b, api, 7, 4).
+req(a8a, api, 8, 1).
+req(a8b, api, 8, 4).
+req(a9a, api, 9, 1).
+req(a9b, api, 9, 4).
+req(a10a, api, 10, 1).
+req(a10b, api, 10, 4).
+req(a11a, api, 11, 1).
+req(a11b, api, 11, 4).
+req(a12a, api, 12, 1).
+req(a12b, api, 12, 4).
+req(a13a, api, 13, 1).
+req(a13b, api, 13, 4).
+req(a14a, api, 14, 1).
+req(a14b, api, 14, 4).
+req(a15a, api, 15, 1).
+req(a15b, api, 15, 4).
+req(a16a, api, 16, 1).
+req(a16b, api, 16, 4).
+req(a17a, api, 17, 1).
+req(a17b, api, 17, 4).
+req(a18a, api, 18, 1).
+req(a18b, api, 18, 4).
+req(a19a, api, 19, 1).
+req(a19b, api, 19, 4).
+req(a20a, api, 20, 1).
+req(a20b, api, 20, 4).
+req(a21a, api, 21, 1).
+req(a21b, api, 21, 4).
+req(a22a, api, 22, 1).
+req(a22b, api, 22, 4).
+req(a23a, api, 23, 1).
+req(a23b, api, 23, 4).
+req(a24a, api, 24, 1).
+req(a24b, api, 24, 4).
+req(p13, pay, 13, 4).
+req(p14, pay, 14, 4).
+req(p15, pay, 15, 4).
+req(p16, pay, 16, 4).
+req(p17, pay, 17, 4).
+req(p18, pay, 18, 4).
+req(p19, pay, 19, 4).
+req(p20, pay, 20, 4).
+req(p21, pay, 21, 4).
+req(p22, pay, 22, 4).
+req(p23, pay, 23, 4).
+req(p24, pay, 24, 4).
+req(s1a, search, 1, 1).
+req(s1b, search, 1, 1).
+req(s1c, search, 1, 1).
+req(s2a, search, 2, 1).
+req(s2b, search, 2, 1).
+req(s2c, search, 2, 1).
+req(s3a, search, 3, 1).
+req(s3b, search, 3, 1).
+req(s3c, search, 3, 1).
+req(s4a, search, 4, 1).
+req(s4b, search, 4, 1).
+req(s4c, search, 4, 1).
+req(s5a, search, 5, 1).
+req(s5b, search, 5, 1).
+req(s5c, search, 5, 1).
+req(s6a, search, 6, 1).
+req(s6b, search, 6, 1).
+req(s6c, search, 6, 1).
+req(s7a, search, 7, 1).
+req(s7b, search, 7, 1).
+req(s7c, search, 7, 1).
+req(s8a, search, 8, 1).
+req(s8b, search, 8, 1).
+req(s8c, search, 8, 1).
+req(s9a, search, 9, 1).
+req(s9b, search, 9, 1).
+req(s9c, search, 9, 1).
+req(s10a, search, 10, 1).
+req(s10b, search, 10, 1).
+req(s10c, search, 10, 1).
+req(s11a, search, 11, 1).
+req(s11b, search, 11, 1).
+req(s11c, search, 11, 1).
+req(s12a, search, 12, 1).
+req(s12b, search, 12, 1).
+req(s12c, search, 12, 1).
+req(s13a, search, 13, 1).
+req(s13b, search, 13, 1).
+req(s13c, search, 13, 1).
+req(s14a, search, 14, 1).
+req(s14b, search, 14, 1).
+req(s14c, search, 14, 1).
+req(s15a, search, 15, 1).
+req(s15b, search, 15, 1).
+req(s15c, search, 15, 1).
+req(s16a, search, 16, 1).
+req(s16b, search, 16, 1).
+req(s16c, search, 16, 1).
+req(s17a, search, 17, 1).
+req(s17b, search, 17, 1).
+req(s17c, search, 17, 1).
+req(s18a, search, 18, 1).
+req(s18b, search, 18, 1).
+req(s18c, search, 18, 1).
+req(s19a, search, 19, 1).
+req(s19b, search, 19, 1).
+req(s19c, search, 19, 1).
+req(s20a, search, 20, 1).
+req(s20b, search, 20, 1).
+req(s20c, search, 20, 1).
+req(s21a, search, 21, 1).
+req(s21b, search, 21, 1).
+req(s21c, search, 21, 1).
+req(s22a, search, 22, 1).
+req(s22b, search, 22, 1).
+req(s22c, search, 22, 1).
+req(s23a, search, 23, 1).
+req(s23b, search, 23, 1).
+req(s23c, search, 23, 1).
+req(s24a, search, 24, 1).
+req(s24b, search, 24, 1).
+req(s24c, search, 24, 1).
+failed(a9a).
+failed(a9b).
+failed(a10a).
+failed(a10b).
+failed(a11a).
+failed(a11b).
+failed(a12a).
+failed(a12b).
+failed(a18b).
+failed(a21a).
+failed(a21b).
+failed(a22a).
+failed(a22b).
+failed(a23a).
+failed(a23b).
+failed(a24a).
+failed(a24b).
+failed(p15).
+failed(p16).
+failed(p17).
+failed(p18).
+failed(p19).
+failed(p20).
+failed(p21).
+failed(p22).
+failed(p23).
+failed(p24).
+failed(s24c).
+lat(a1a, 120).
+lat(a1b, 300).
+lat(a2a, 120).
+lat(a2b, 300).
+lat(a3a, 120).
+lat(a3b, 300).
+lat(a4a, 120).
+lat(a4b, 300).
+lat(a5a, 120).
+lat(a5b, 300).
+lat(a6a, 120).
+lat(a6b, 300).
+lat(a7a, 120).
+lat(a7b, 300).
+lat(a8a, 120).
+lat(a8b, 300).
+lat(a9a, 1500).
+lat(a9b, 1500).
+lat(a10a, 1500).
+lat(a10b, 1500).
+lat(a11a, 1500).
+lat(a11b, 1500).
+lat(a12a, 1500).
+lat(a12b, 1500).
+lat(a13a, 120).
+lat(a13b, 300).
+lat(a14a, 120).
+lat(a14b, 300).
+lat(a15a, 120).
+lat(a15b, 300).
+lat(a16a, 120).
+lat(a16b, 300).
+lat(a17a, 120).
+lat(a17b, 300).
+lat(a18a, 120).
+lat(a18b, 900).
+lat(a19a, 120).
+lat(a19b, 300).
+lat(a20a, 120).
+lat(a20b, 300).
+lat(a21a, 2000).
+lat(a21b, 2000).
+lat(a22a, 2000).
+lat(a22b, 2000).
+lat(a23a, 2000).
+lat(a23b, 2000).
+lat(a24a, 2000).
+lat(a24b, 2000).
+lat(p13, 200).
+lat(p14, 200).
+lat(p15, 2500).
+lat(p16, 2500).
+lat(p17, 2500).
+lat(p18, 2500).
+lat(p19, 2500).
+lat(p20, 2500).
+lat(p21, 2500).
+lat(p22, 2500).
+lat(p23, 2500).
+lat(p24, 2500).
+lat(s1a, 60).
+lat(s1b, 70).
+lat(s1c, 80).
+lat(s2a, 60).
+lat(s2b, 70).
+lat(s2c, 80).
+lat(s3a, 60).
+lat(s3b, 70).
+lat(s3c, 80).
+lat(s4a, 60).
+lat(s4b, 70).
+lat(s4c, 80).
+lat(s5a, 60).
+lat(s5b, 70).
+lat(s5c, 80).
+lat(s6a, 60).
+lat(s6b, 70).
+lat(s6c, 80).
+lat(s7a, 60).
+lat(s7b, 70).
+lat(s7c, 80).
+lat(s8a, 60).
+lat(s8b, 70).
+lat(s8c, 80).
+lat(s9a, 60).
+lat(s9b, 70).
+lat(s9c, 80).
+lat(s10a, 60).
+lat(s10b, 70).
+lat(s10c, 80).
+lat(s11a, 60).
+lat(s11b, 70).
+lat(s11c, 80).
+lat(s12a, 60).
+lat(s12b, 70).
+lat(s12c, 80).
+lat(s13a, 60).
+lat(s13b, 70).
+lat(s13c, 80).
+lat(s14a, 60).
+lat(s14b, 70).
+lat(s14c, 80).
+lat(s15a, 60).
+lat(s15b, 70).
+lat(s15c, 80).
+lat(s16a, 60).
+lat(s16b, 70).
+lat(s16c, 80).
+lat(s17a, 60).
+lat(s17b, 70).
+lat(s17c, 80).
+lat(s18a, 60).
+lat(s18b, 70).
+lat(s18c, 80).
+lat(s19a, 60).
+lat(s19b, 70).
+lat(s19c, 80).
+lat(s20a, 60).
+lat(s20b, 70).
+lat(s20c, 80).
+lat(s21a, 60).
+lat(s21b, 70).
+lat(s21c, 80).
+lat(s22a, 60).
+lat(s22b, 70).
+lat(s22c, 80).
+lat(s23a, 60).
+lat(s23b, 70).
+lat(s23c, 80).
+lat(s24a, 60).
+lat(s24b, 70).
+lat(s24c, 3000).

@@ -10,6 +10,7 @@ edb(proof_world).
 
 brk("mono"). brk_kind("mono", switch).
 brk_expects("mono", "agg_cell_eval").
+brk_expects("mono", "agg_life_demo").
 brk("memo"). brk_kind("memo", switch).
 brk_expects("memo", "agg_cell_eval").
 brk("max"). brk_kind("max", switch).
@@ -55,6 +56,7 @@ brk_expects("book", "agg_minmax_reflect").
 brk("no_agg_edge"). brk_kind("no_agg_edge", switch).
 brk_expects("no_agg_edge", "agg_sugar_safety").
 brk_expects("no_agg_edge", "agg_holistic_strata").
+brk_expects("no_agg_edge", "agg_life_demo").
 brk_expects("no_agg_edge", "agg_count_eval").
 brk_expects("no_agg_edge", "agg_sum_eval").
 brk_expects("no_agg_edge", "agg_minmax_eval").
@@ -85,6 +87,8 @@ brk_expects("no_sealed_text", "agg_minmax_why").
 brk_expects("no_sealed_text", "agg_empty_why").
 brk("sum_by_value"). brk_kind("sum_by_value", switch).
 brk_expects("sum_by_value", "agg_holistic_eval").
+brk_expects("sum_by_value", "agg_slo_demo").
+brk_expects("sum_by_value", "agg_voting_demo").
 brk_expects("sum_by_value", "agg_sum_eval").
 brk_expects("sum_by_value", "agg_sum_witness").
 brk("wrap"). brk_kind("wrap", switch).
@@ -105,6 +109,8 @@ brk_expects("no_empty_zero", "agg_empty_eval").
 brk("zero_ignores_groups"). brk_kind("zero_ignores_groups", kernel).
 brk_expects("zero_ignores_groups", "agg_empty_safety").
 brk("empty_none"). brk_kind("empty_none", switch).
+brk_expects("empty_none", "agg_life_demo").
+brk_expects("empty_none", "agg_voting_demo").
 brk_expects("empty_none", "agg_empty_eval").
 brk("phantom"). brk_kind("phantom", switch).
 brk_expects("phantom", "agg_empty_witness").
@@ -269,6 +275,7 @@ brk("median_upper"). brk_kind("median_upper", switch).
 brk_expects("median_upper", "agg_holistic_eval").
 brk("quantile_floor"). brk_kind("quantile_floor", switch).
 brk_expects("quantile_floor", "agg_holistic_eval").
+brk_expects("quantile_floor", "agg_slo_demo").
 brk("quantile_domain"). brk_kind("quantile_domain", switch).
 brk_expects("quantile_domain", "agg_holistic_eval").
 brk_expects("quantile_domain", "agg_holistic_why").
@@ -1607,6 +1614,7 @@ proof_world("agg_lattice_wall").
 proof_world("agg_lattice_wfs").
 proof_world("agg_lattice_why").
 proof_world("agg_lattice_witness").
+proof_world("agg_life_demo").
 proof_world("agg_minmax_budget").
 proof_world("agg_minmax_eval").
 proof_world("agg_minmax_holes").
@@ -1622,6 +1630,7 @@ proof_world("agg_minmax_why").
 proof_world("agg_minmax_witness").
 proof_world("agg_precise_holes").
 proof_world("agg_precise_oracle").
+proof_world("agg_slo_demo").
 proof_world("agg_sub_budget").
 proof_world("agg_sub_demo").
 proof_world("agg_sub_eval").
@@ -1707,6 +1716,7 @@ proof_world("agg_threshold_why").
 proof_world("agg_threshold_witness").
 proof_world("agg_unknown_beside_hole").
 proof_world("agg_unknown_beside_hole_strata").
+proof_world("agg_voting_demo").
 proof_world("agg_widen_budget").
 proof_world("agg_widen_eval").
 proof_world("agg_widen_holes").
