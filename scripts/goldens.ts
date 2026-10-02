@@ -76,7 +76,8 @@ const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
  *  only the Rust engine can answer. `strata` runs the stock evaluator, `explain` the
  *  `explain_request` bridge of rofl-load. */
 export interface World {
-  name: string; files: string[]; ticks?: number; budget?: number; space?: number;
+  /** a budget no world needs, which a planted fault that runs away is cut by sooner (scripts/agg_breaks.ts); a cut it makes is still a problem */
+  name: string; files: string[]; ticks?: number; budget?: number; cap?: number; space?: number;
   oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
   /** base facts retracted one by one after the evaluation (rofl-load `--retract`: the Rust engine updates the cells they
    *  supported, the TypeScript engine evaluates again); both must hold the state a world without them holds */
@@ -330,7 +331,7 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
   // everywhere is what makes the two comparable — measured: with the budget on
   // `evaluate` only, TypeScript completed a world Rust walled on, and that
   // looked exactly like an engine divergence until the instrument was checked.
-  const opt = w.budget ? { budget: w.budget } : undefined;
+  const opt = w.budget ?? w.cap ? { budget: w.budget ?? w.cap } : undefined;
   r.load(BOOT, opt);
   // A REFUSAL IS AN ANSWER AND IT BELONGS IN THE GOLDEN. Until now a file that
   // would not load was dropped and the world carried on — which hid `ring1`
@@ -357,7 +358,7 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
     diags.push(`refused ${path.basename(f)}`);
   }
   if (w.ticks) for (let i = 0; i < w.ticks; i++) r.tickAdvance();
-  else r.evaluate(w.budget);
+  else r.evaluate(w.budget ?? w.cap);
   const state = diags.sort().join('\n') + (diags.length ? '\n' : '') + r.store.canonicalState();
   return { hash: digest(state), facts: r.store.allFactKeys().length, census: census(state),
            dropped, alarms: alarmsRaised(r, state), problems: [...problems, ...rowProblems(loaded, state)] };
@@ -382,7 +383,7 @@ export function expectedRefusal(f: string): string | null {
  *  world below fed, and the evaluation (ticked and explained as declared),
  *  with its exit class for a refusal. */
 function together(w: World, Engine: typeof Rofl) {
-  const budget = w.budget ?? 200_000_000;
+  const budget = w.budget ?? w.cap ?? 200_000_000;
   const fresh = (): Rofl => {
     const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), ...(w.space ? { space: w.space } : {}),
       ...(w.retain !== undefined ? { retainTicks: w.retain } : {}) });
@@ -471,7 +472,7 @@ function answerTSTogether(w0: World, Engine: typeof Rofl): Answer {
   const { r, failed } = togetherWorld(w, keep, Engine);
   if (failed !== null) problems.push(`the world does not evaluate: ${failed.trim().split('\n').slice(0, 3).join(' / ')}`);
   const state = r.store.canonicalState();
-  if (!w.budget && !w.space && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
+  if ((!w.budget && !w.space || w.cap) && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
   problems.push(...rowProblems(keep, state));
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   return { hash: digest(full), facts: r.store.allFactKeys().length, census: census(full), dropped, alarms: raised(alarmRels(state), state), problems };
@@ -515,7 +516,7 @@ export function answerRust(w0: World): Answer | null {
     if (want && !p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n')[0]}`);
   }
   const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
-    ...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.strata ? ['--strata'] : []), ...keep]);
+    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...keep]);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state),
            problems: [...problems, ...rowProblems(keep, state)] };
@@ -533,7 +534,7 @@ export function answerRust(w0: World): Answer | null {
  *  stock evaluator, and rightly. */
 function answerRustOnly(w: World): Answer {
   const boot = path.join(ROOT, 'boot.rofl');
-  const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
+  const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []),
     ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
@@ -563,7 +564,7 @@ function answerRustOnly(w: World): Answer {
   // reached. Only a world that asks for a wall may be cut by it, and what
   // its alarms cannot say after the cut, its files say as rows the cut state
   // must hold and must not (`-- expect-row:`, `-- expect-no-row:`).
-  if (!w.budget && !w.space && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
+  if ((!w.budget && !w.space || w.cap) && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
   problems.push(...rowProblems(keep, state));
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   const facts = state.split('\n').filter((l) => / support=\d+$/.test(l)).length;

@@ -5235,7 +5235,7 @@ export async function runBreak(b: Break, ws: World[], p: Plant): Promise<Verdict
     const Engine: typeof Rofl = p.ts ? (await import(pathToFileURL(p.ts).href)).Rofl : Rofl;
     for (const [name, sign] of Object.entries(b.expect)) {
       const w0 = ws.find((x) => x.name === name)!;
-      const w = { ...w0, files: w0.files.map((f) => subs.get(f) ?? f) };
+      const w = { ...w0, files: w0.files.map((f) => subs.get(f) ?? f), ...(sign === CUT ? { cap: CAP } : {}) };
       if (p.ts && w.oneEngine) throw new Error(`${name} is answered by one engine, and a TypeScript fault can red only a world both answer`);
       // a switch reaches only rofl-load, so the TypeScript answer of its world is the control's
       const rs = answerRust(w)!, ts = p.env.ROFL_BREAK ? null : answerTS(w, Engine);
@@ -5253,6 +5253,10 @@ export async function runBreak(b: Break, ws: World[], p: Plant): Promise<Verdict
   }
   return { lines, bad };
 }
+
+/** A break that runs away is shown by the wall cutting it, and a budget of CAP steps cuts it in a second where the
+ *  default takes minutes; a world that sign reads is also run with no break under the same cap, which must not cut it. */
+const CUT = 'cut by the budget', CAP = 1_000_000;
 
 /** `runBreak` or a control, with how long it took. */
 export async function timedBreak(b: Break, ws: World[], p: Plant): Promise<{ v: Verdict; ms: number }> {
@@ -5450,6 +5454,9 @@ if (isMain) {
       // break that runs a world to its budget is most of the wall time
       type Job = { key: string; task: Task };
       const jobs: Job[] = controls.map((w) => ({ key: `control/${w.name}`, task: { mod: self, fn: 'timedControl', args: [w, want.get(w.name), false] } }));
+      for (const w of new Set(chosen.flatMap((b) => wsOf(b).filter((x) => b.expect[x.name] === CUT)))) {
+        jobs.push({ key: `capped/${w.name}`, task: { mod: self, fn: 'timedControl', args: [{ ...w, cap: CAP }, want.get(w.name), false] } });
+      }
       chosen.forEach((b, i) => {
         const p = plants[i];
         if (p instanceof Error) return;
@@ -5465,6 +5472,7 @@ if (isMain) {
       order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
       saveTimes(past);
       for (const w of controls) { const r = res.get(`control/${w.name}`); if (r !== null) bad.push(`control, no break planted: ${r}`); }
+      for (const [k, r] of res) if (k.startsWith('capped/') && r !== null) bad.push(`control under the cap of ${CAP} steps: ${r}`);
       chosen.forEach((b, i) => {
         const p = plants[i];
         if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
