@@ -2249,3 +2249,31 @@ check_opt("agg_quorum_demo", together, 1).
 check_opt("agg_quorum_demo", explain, 1).
 proves("agg_quorum_demo", agg, threshold, demo).
 proves("agg_quorum_demo", agg, sugar, demo).
+-- w_agg_demo_interval: interval analysis of loop counters, widening and narrowing, examples/interval/
+check_world("agg_interval_demo").
+check_file("agg_interval_demo", "examples/interval/interval.rofl").
+check_file("agg_interval_demo", "examples/checks/agg-interval-demo-check.rofl").
+check_opt("agg_interval_demo", together, 1).
+check_opt("agg_interval_demo", explain, 1).
+proves("agg_interval_demo", agg, join_lattice, demo).
+proves("agg_interval_demo", agg, widening, demo).
+
+-- f_why_reads_a_staged_negation_on_the_arrival_tick: `why` of a @next firing's negated premise, plain and aggregate explainer
+check_world("staged_neg_why").
+check_file("staged_neg_why", "examples/checks/staged-neg-why-data.rofl").
+check_file("staged_neg_why", "examples/checks/staged-neg-why-check.rofl").
+check_opt("staged_neg_why", together, 1).
+check_opt("staged_neg_why", ticks, 1).
+check_opt("staged_neg_why", explain, 1).
+check_world("staged_neg_why_agg").
+check_file("staged_neg_why_agg", "examples/checks/staged-neg-why-agg-data.rofl").
+check_file("staged_neg_why_agg", "examples/checks/staged-neg-why-check.rofl").
+check_opt("staged_neg_why_agg", together, 1).
+check_opt("staged_neg_why_agg", ticks, 1).
+check_opt("staged_neg_why_agg", explain, 1).
+-- the same plain world with no explain bridge: `why` is asked of every fact by scripts/whycheck.ts through
+-- src/api.ts's own explainer (the bridge above explains a plain world with the aggregate evaluator)
+check_world("staged_neg_why_plain").
+check_file("staged_neg_why_plain", "examples/checks/staged-neg-why-data.rofl").
+check_opt("staged_neg_why_plain", together, 1).
+check_opt("staged_neg_why_plain", ticks, 1).

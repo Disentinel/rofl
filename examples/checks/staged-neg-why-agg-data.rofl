@@ -1,0 +1,10 @@
+-- examples/checks/staged-neg-why-agg-data.rofl — staged-neg-why-data.rofl with
+-- an aggregate in the world, which sends `why` through the aggregate engine's
+-- explainer instead of the plain one.
+edb(sn_q).
+sn_q(a).
+-- carried, so the premise is still a record in the tick it is asked in (see f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone)
+sn_q(X)@next :- sn_q(X).
+sn_p(X)@next :- sn_q(X), not sn_r(X).
+sn_r(a)@next :- sn_q(a).
+sn_n(N) :- N is count(X : sn_q(X)).

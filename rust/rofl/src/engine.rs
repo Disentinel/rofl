@@ -11335,6 +11335,7 @@ impl Eval {
                         // WHEN IT REACHES THE FIRING, before the premises above
                         // it are walked, and its renaming suffixes count in
                         // that order (src/api.ts renderWhy)
+                        PremRef::Neg(_) if self.plain && past => self.render_past(pr, tick.saturating_sub(1), indent + 1, o, next),
                         PremRef::Neg(_) | PremRef::Bi(_) if self.plain => self.render_prem(pr, indent + 1, o, next),
                         _ if past => next.push(WhyTask::Past(pr, tick.saturating_sub(1), indent + 1)),
                         _ => next.push(WhyTask::Prem(pr, indent + 1)),
@@ -11585,6 +11586,15 @@ impl Eval {
     /// it) and not explained further: a tick's firings go with the tick.
     fn render_past(&mut self, pr: PremRef, t: u32, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let PremRef::Fact(f) = pr else {
+            // A NEGATED PREMISE of a staged firing held in the tick it was
+            // read: the arrival tick's store (an undefined row, a whynot) says
+            // nothing about it, so it is the bare claim, no demonstration.
+            if let PremRef::Neg(k) = pr {
+                if brk!("staged_neg_arrival" => false; true) {
+                    let key = self.h.name(k).to_string();
+                    return next.line(format!("{}not {key} [finite failure]", "  ".repeat(indent)));
+                }
+            }
             return self.render_prem(pr, indent, o, next);
         };
         let mut key = String::new();

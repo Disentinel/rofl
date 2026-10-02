@@ -23,7 +23,7 @@ That is the game: alive next tick with exactly three live neighbours, or alive
 now with two. `cell` is the 10 by 10 board and is bound from outside the count,
 so a cell with no live neighbour reads `neighbours(X, Y, 0)`, a row at zero.
 `@next` stages a fact into the next tick. There is no negation, which is why
-both rules are this short, and which matters below.
+both rules are this short.
 
 `examples/life/life.rofl` has the whole thing, 40 lines with comments: a
 glider at the top left, moving down and to the right, and a blinker at the
@@ -100,11 +100,12 @@ The first version of the birth rule was the textbook one,
 of a born cell said `not live(4,4) [finite failure]` followed by
 `live(4,4) holds; nothing to demonstrate`: it explained the negated premise
 against the board the fact arrived on, where the cell is alive, and not
-against the board it was read on, where it was not. The same happens in a
-two-rule world (`p(X)@next :- q(X), not r(X)`, with `r(a)@next :- q(a)`).
-It is recorded as an open finding in `facts/findings.rofl`
-(`f_why_reads_a_staged_negation_on_the_arrival_tick`); the rules here are
-the same game without the negation, and say nothing false.
+against the board it was read on, where it was not. That was an engine defect
+(`f_why_reads_a_staged_negation_on_the_arrival_tick`), found here and fixed in
+both engines: the negated premise of a firing staged `@next` is now the bare
+`not live(4,4) [finite failure]`, as it stood in the tick the rule fired in
+(`staged_neg_why` holds the line). The rules above are the game without the
+negation all the same: two rules, and nothing for the reader to take on trust.
 
 ## What the engine is made to get right
 

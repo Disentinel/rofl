@@ -127,6 +127,7 @@ check[checks]("facts/goldens.rofl", "goof", world).
 check[checks]("facts/goldens.rofl", "heck", world).
 check[checks]("facts/goldens.rofl", "huh", world).
 check[checks]("facts/goldens.rofl", "iffy", world).
+check[checks]("facts/goldens.rofl", "interval", world).
 check[checks]("facts/goldens.rofl", "jopa", world).
 check[checks]("facts/goldens.rofl", "life", world).
 check[checks]("facts/goldens.rofl", "loot", world).
@@ -317,6 +318,7 @@ check[checks]("facts/goldens.rofl", "agg_holistic_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_holistic_why", world).
 check[checks]("facts/goldens.rofl", "agg_holistic_witness", world).
 check[checks]("facts/goldens.rofl", "agg_int_range", world).
+check[checks]("facts/goldens.rofl", "agg_interval_demo", world).
 check[checks]("facts/goldens.rofl", "agg_join_budget", world).
 check[checks]("facts/goldens.rofl", "agg_join_eval", world).
 check[checks]("facts/goldens.rofl", "agg_join_holes", world).
@@ -500,6 +502,9 @@ check[checks]("facts/goldens.rofl", "refused", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
 check[checks]("facts/goldens.rofl", "set_spelling", world).
 check[checks]("facts/goldens.rofl", "spec_coverage", world).
+check[checks]("facts/goldens.rofl", "staged_neg_why", world).
+check[checks]("facts/goldens.rofl", "staged_neg_why_agg", world).
+check[checks]("facts/goldens.rofl", "staged_neg_why_plain", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).

@@ -1094,8 +1094,10 @@ claim(queued, agg, min_max_strat, none, demo, w_agg_demo_minimax).
 handled(agg, min_max_strat, demo, "agg_minimax_demo").
 
 work(w_agg_demo_interval, "interval analysis of a loop counter: hull join, widening forced, the widened bound a hole (f_the_aggregate_is_needed_only_where_an_infinite_set_must_be_compressed)").
-work_state(w_agg_demo_interval, open).
+work_state(w_agg_demo_interval, done).
 work_needs(w_agg_demo_interval, w_agg_join_lattice).
 work_needs(w_agg_demo_interval, w_agg_widening).
 claim(queued, agg, join_lattice, none, demo, w_agg_demo_interval).
 claim(queued, agg, widening,     none, demo, w_agg_demo_interval).
+handled(agg, join_lattice, demo, "agg_interval_demo").
+handled(agg, widening, demo, "agg_interval_demo").
