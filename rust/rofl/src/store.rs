@@ -809,12 +809,17 @@ impl Store {
     /// record's firing chain and purged it from every run vector, so the revival
     /// is exactly the fresh-record path with the record supplied.
     pub fn add(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> bool {
+        self.put(h, rel, persp, args, flags).1
+    }
+
+    /// `add`, and the fact's id whether it was new or not.
+    pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
                 if flags & F_BASE != 0 && !self.facts.recs[id as usize].base() {
                     self.facts.recs[id as usize].add_flags(F_BASE);
                 }
-                return false;
+                return (id, false);
             }
             Some(id) => {
                 // a superseded lattice value keeps its firings as history
@@ -844,7 +849,7 @@ impl Store {
         } else if run.by_pat.is_some() {
             run.staged.push(id);
         }
-        true
+        (id, true)
     }
 
     // ------------------------------------------------------------- ordering
