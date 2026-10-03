@@ -123,9 +123,8 @@ eff_here[flow](N, alloc, none) :- eff_alloc_kind(K), ast_node[code](N, K, _, _).
 -- an assignment target is a read (`console.log` really is `read<global>`; the
 -- unknown is what the function DOES). `eff_member_both` is the never-both half
 -- of that partition; the never-neither half is a sum in the test.
-eff_obj_traced[flow](M) :- member_node_v[flow](M), ast_child[code](M, object, 0, O),
-                           may_be_node[flow](O, _).
-eff_heap_of[flow](M, local)  :- member_node_v[flow](M), eff_obj_traced[flow](M).
+eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
+eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
 eff_assign[code](A)           :- ast_node[code](A, assignment_expression, _, _).
@@ -140,7 +139,7 @@ eff_here[flow](L, read, H)  :- eff_compound[code](A), ast_child[code](A, left, 0
 eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
 
 eff_read_site[flow](M) :- member_node_v[flow](M), not eff_member_target[code](M).
-eff_here[flow](M, read, H) :- eff_read_site[flow](M), eff_heap_of[flow](M, H).
+eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
 
 eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
 
@@ -321,10 +320,10 @@ eff_conv_key("valueOf").
 eff_conv_key("toString").
 
 eff_conv_object[flow](N, X)     :- eff_coerced[flow](N, X), may_be_node[flow](X, _).
-eff_conv_call[flow](N, M)       :- eff_coerced[flow](N, X), may_be_node[flow](X, O),
-                                   eff_conv_key(Key), member_value[flow](O, Key, M).
-eff_conv_overridden[flow](N, X) :- eff_coerced[flow](N, X), may_be_node[flow](X, O),
-                                   eff_conv_key(Key), member_value[flow](O, Key, _).
+eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key, M), may_be_node[flow](X, O),
+                                   eff_coerced[flow](N, X).
+eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), may_be_node[flow](X, O),
+                                   eff_coerced[flow](N, X).
 eff_conv_default[flow](N, X)    :- eff_conv_object[flow](N, X), not eff_conv_overridden[flow](N, X).
 eff_conv_primitive[flow](N, X)  :- eff_coerced[flow](N, X), may_be_lit[flow](X, _),
                                    not eff_conv_object[flow](N, X).

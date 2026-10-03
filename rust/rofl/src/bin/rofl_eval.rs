@@ -185,8 +185,8 @@ fn main() {
         l.eval.no_provenance = true;
         l.eval.no_witness = true;
     }
-    l.eval.store.unordered = unordered;
-    l.eval.closure_on = closure;
+    l.eval.store.unordered = unordered || l.eval.store.unordered;
+    l.eval.closure_on = closure || l.eval.closure_on;
     if closure && !no_provenance {
         eprintln!("--closure needs --no-provenance; ignored");
     }

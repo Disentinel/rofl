@@ -269,7 +269,8 @@ edb(not_a_construct).
 
 edb(frame_deferred).
 
-vocabulary_gap[audit](Lang, K) :- ast_node[code](_, K, _, _),
+kind_seen[code](K) :- ast_node[code](_, K, _, _).
+vocabulary_gap[audit](Lang, K) :- kind_seen[code](K),
                                   lang_of_corpus(Lang), not node_kind(Lang, K),
                                   not not_a_construct(K), not frame_deferred(K, _).
 

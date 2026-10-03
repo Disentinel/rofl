@@ -16,8 +16,8 @@ edb(call_kind).
 call_kind(call_expression).
 call_kind(optional_call_expression).
 
-call_site[code](C, File)      :- ast_node[code](C, K, File, _), call_kind(K).
-call_site_kind[code](C, K)    :- ast_node[code](C, K, _, _), call_kind(K).
+call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File, _).
+call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _, _).
 call_line[code](C, Line)      :- call_site[code](C, _), ast_node[code](C, _, _, Line).
 
 callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
@@ -31,7 +31,7 @@ transfer_kind(new_expression).
 transfer_kind(tagged_template_expression).
 transfer_kind(for_of_statement).
 transfer_kind(decorator).
-transfer_site[code](X, K) :- ast_node[code](X, K, _, _), transfer_kind(K).
+transfer_site[code](X, K) :- transfer_kind(K), ast_node[code](X, K, _, _).
 
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
@@ -186,7 +186,7 @@ fn_kind(object_method).
 fn_kind(class_method).
 fn_kind(class_private_method).
 
-fn_node[code](F)     :- ast_node[code](F, K, _, _), fn_kind(K).
+fn_node[code](F)     :- fn_kind(K), ast_node[code](F, K, _, _).
 fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File, _).
 
 -- A function's name is whatever binds it — several arms, and a node may hold
@@ -294,7 +294,7 @@ class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, CD), class_ctor[code](CD, M).
 
-resolves[code](C, M) :- callee_of[code](C, N), ast_node[code](N, super, _, _),
+resolves[code](C, M) :- ast_node[code](N, super, _, _), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
 
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
@@ -327,7 +327,7 @@ calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Calle
 -- THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 -- the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 -- `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
-resolves[code](C, F) :- callee_of[code](C, N), may_be_node[flow](N, F), fn_node[code](F).
+resolves[code](C, F) :- may_be_node[flow](N, F), fn_node[code](F), callee_of[code](C, N).
 
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
 
@@ -347,15 +347,15 @@ calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File, _)
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
                                 fn_name[code](Y, B).
 
-passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), ast_name[code](A, Name),
-                                        may_be_node[flow](A, F), fn_node[code](F).
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F),
+                                        ast_name[code](A, Name).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 -- arguments to the callee's parameters and its return to the call's value, and
 -- a callback gets neither (`map` passes elements and returns an array).
-callback_site[code](C, P, Key)        :- callee_of[code](C, N), ast_child[code](N, object, 0, O),
-                                         prototype_of[flow](O, P), builtin_prototype(P), selects[flow](N, Key).
+callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), ast_child[code](N, object, 0, O),
+                                         callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
 callback_site[code](C, thenable, Key) :- unresolved_call[code](C, _), callee_of[code](C, N), selects[flow](N, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),

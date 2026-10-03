@@ -1,0 +1,60 @@
+-- hints.rofl — rewrites a run suggests, derived from the run's own statistics and the rules' reflection.
+-- Reads: width/yield/fires/conc/head/slot/rows (stats.ts, rules/eval-cost.rofl's vocabulary) and the
+-- kernel's premise_lit/premise_pos/concludes. Concludes nothing about the program; names where to look.
+
+edb(width). edb(yield). edb(fires). edb(conc). edb(fresh). edb(head). edb(slot). edb(rows). edb(total_width). edb(total_rules).
+
+-- 1. the dependency graph over relations and its cycles
+dep(A, B)       :- concludes(R, A), premise_pos(R, B).
+reach(A, B)     :- dep(A, B).
+reach(A, C)     :- reach(A, B), dep(B, C).
+cyclic(A, B)    :- reach(A, B), reach(B, A).
+
+-- a rule is recursive when a positive premise is in a cycle with its head; `slot` is the PLAN's order, the one paid for
+recursive_at(R, I) :- head(R, H), slot(R, I, pos, P), cyclic(H, P).
+recursive_rule(R)  :- recursive_at(R, _).
+earlier_rec(R, I)  :- recursive_at(R, I), recursive_at(R, J), J < I.
+first_rec(R, I)    :- recursive_at(R, I), not earlier_rec(R, I).
+
+rule_width(R, W)      :- head(R, _), W is sum(N ; J : width(R, J, N)).
+prefix_width(R, I, W) :- first_rec(R, I), W is sum(N ; J : width(R, J, N), J < I).
+
+-- HINT A: a recursive rule whose work is mostly BEFORE its first recursive premise walks the corpus every round;
+-- lead with the recursive premise, or fold the prefix into one relation (hint C)
+lead_with_delta(R, Lead, N, Prefix, Whole) :- prefix_width(R, I, Prefix), I > 0, rule_width(R, Whole),
+                                              Prefix * 2 > Whole, slot(R, 0, pos, Lead), rows(Lead, N).
+
+-- 2. two rules that start with the same premises, in the written order (premise_lit, from 1)
+same_at(R1, R2, K)   :- premise_lit(R1, K, L), premise_lit(R2, K, L), R1 != R2.
+pfx(R1, R2, 1)       :- same_at(R1, R2, 1).
+pfx(R1, R2, K1)      :- pfx(R1, R2, K), K1 is K + 1, same_at(R1, R2, K1).
+longer(R1, R2, K)    :- pfx(R1, R2, K), pfx(R1, R2, K1), K1 > K.
+longest_pfx(R1, R2, K) :- pfx(R1, R2, K), not longer(R1, R2, K).
+
+-- HINT C: a shared prefix of two or more premises, paid once per rule; one relation of the prefix's variables pays it once
+shares_prefix(R1, K, W) :- longest_pfx(R1, _, K), K >= 2, rule_width(R1, W).
+wide_prefix(R1, K, W)   :- shares_prefix(R1, K, W), not wider_prefix(R1, K).
+wider_prefix(R1, K)     :- shares_prefix(R1, K2, _), shares_prefix(R1, K, _), K2 > K.
+prefix_group(K, N)      :- N is count(R : wide_prefix(R, K, _)), N > 1.
+
+-- HINT B: a rule that is not recursive and still fired many times concluded little each time: it is woken by
+-- every round of a cycle it only reads; the engine should fire it once after the cycle closes
+refired(R, F, C) :- fires(R, F), not recursive_rule(R), F > 3, conc(R, C).
+
+-- 3. a premise sharing no variable with the premises before it is a product (written order; wildcards never share)
+h_body_lit(L)       :- premise_lit(_, _, L), L = $lit(_, _, _, _).
+h_body_lit(L)       :- premise_lit(_, _, $not(L)).
+h_args(L, 1, Args)  :- h_body_lit(L), L = $lit(_, _, Args, _).
+h_args(L, J, T)     :- h_args(L, I, $cons(_, T)), J is I + 1.
+h_arg(L, I, A)      :- h_args(L, I, $cons(A, _)).
+lit_var(L, V)       :- h_arg(L, _, $var(V)).
+shares_earlier(R, I) :- premise_lit(R, I, L), lit_var(L, V), premise_lit(R, J, L2), J < I, lit_var(L2, V).
+product_at(R, I, Rel, N) :- premise_lit(R, I, L), L = $lit(Rel, _, _, _), I > 1, not shares_earlier(R, I), rows(Rel, N), N > 50.
+
+-- HINT D: a closure materialised many times over its base
+two_premises(R)       :- N is count(K : has_premise(R, K)), N = 2.
+closure_of(Rel, Base) :- concludes(R, Rel), two_premises(R), premise_pos(R, Rel), premise_pos(R, Base), Base != Rel.
+closure_blowup(Rel, N, Base, B) :- closure_of(Rel, Base), rows(Rel, N), rows(Base, B), N > B * 4.
+
+-- the share of the run each hint explains
+share(R, P) :- rule_width(R, W), total_width(T), P is W * 100 / T.

@@ -374,10 +374,16 @@ A kind K
 
 `lang_of_corpus` includes `js`.
 
+In the code:
+
+<a id="kind_seen"></a>`kind_seen`(K) if some node [is of kind](#ast_node) K.
+
+In the audit:
+
 A kind K
 
 - <a id="vocabulary_gap"></a>is a vocabulary gap in a language Lang if all of:
-  - some node [is of kind](#ast_node) K;
+  - [`kind_seen`](#kind_seen)(K);
   - Lang [is the corpus language](#lang_of_corpus);
   - K neither [is not a construct](#not_a_construct) nor [is deferred to the frame](#frame_deferred) because some reason;
   - unless Lang [has the node kind](#node_kind) K.

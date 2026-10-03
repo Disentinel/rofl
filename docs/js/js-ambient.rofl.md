@@ -353,9 +353,9 @@ In the main:
 In the flow:
 
 <a id="amb_proto_recv"></a>A [member access](js-dataflow.rofl.md#member_node_v) has the receiver prototype P if all of:
-  - the `object` of it is a node O;
-  - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
-  - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype).
+  - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
+  - [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is P;
+  - the `object` of it is O.
 
 In the audit:
 

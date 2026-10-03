@@ -59,7 +59,9 @@ pub struct Interner {
 
 /// FxHash's mixing step over 8-byte chunks, with the length folded in at the
 /// end so that a name and the same name padded with NULs cannot collide
-/// through the tail buffer.
+/// through the tail buffer. Rotated last because a product's low bits, which
+/// the table masks, depend only on its operands' low bits: unrotated, names
+/// sharing the first byte of each chunk crowd into one run of slots.
 fn name_hash(b: &[u8]) -> u64 {
     const K: u64 = 0x51_7c_c1_b7_27_22_0a_95;
     let mut h: u64 = 0;
@@ -74,7 +76,7 @@ fn name_hash(b: &[u8]) -> u64 {
         t[..rem.len()].copy_from_slice(rem);
         h = (h.rotate_left(5) ^ u64::from_le_bytes(t)).wrapping_mul(K);
     }
-    (h.rotate_left(5) ^ b.len() as u64).wrapping_mul(K)
+    (h.rotate_left(5) ^ b.len() as u64).wrapping_mul(K).rotate_left(26)
 }
 
 impl Interner {

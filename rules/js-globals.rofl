@@ -56,10 +56,9 @@ declares_name[code](Name, File) :- declaring_position(K, Field),
 
 -- the names a pattern introduces, keys and defaults included: widening
 -- `declares_name` narrows the globals, the safe direction again
-declares_name[code](Name, File) :- declaring_position(K, Field),
-                                   ast_node[code](D, K, File, _),
-                                   ast_child[code](D, Field, 0, I),
-                                   ast_within[code](I, X), ast_name[code](X, Name).
+pattern_root[code](I, File) :- declaring_position(K, Field), ast_node[code](D, K, File, _),
+                               ast_child[code](D, Field, 0, I).
+declares_name[code](Name, File) :- pattern_root[code](I, File), ast_within[code](I, X), ast_name[code](X, Name).
 
 -- a parameter is a position, not a declaration kind
 declares_name[code](Name, File) :- fn_node[code](F), fn_file[code](F, File),
