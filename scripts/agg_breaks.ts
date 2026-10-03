@@ -4394,15 +4394,16 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_lattice_why_one_member",
-  "what": "TypeScript why of a lattice fact prints its canonical member alone",
+  "what": "TypeScript why of a lattice fact or a member of a front prints its first member alone",
   "edits": [
    [
     "src/aggeval.ts",
-    "improved on since'}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "improved on since'}]`));\n    const limit = indent === 0 ? 1 : 1;"
+    "n = members.length, limit = indent === 0 ? o.members : 1;",
+    "n = members.length, limit = 1;"
    ]
   ],
   "expect": {
+   "agg_sub_why": "asy_text_missing",
    "agg_lattice_why": "why_text_missing",
    "agg_tag_why": "tgy_text_missing",
    "agg_critpath_demo": "cpc_unnamed"
@@ -4518,20 +4519,6 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_tagc_why": "tcy_text_missing"
-  }
- },
- {
-  "id": "ts_dominance_why_one_member",
-  "what": "TypeScript why of a member of a front prints its first member alone",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? 1 : 1;"
-   ]
-  ],
-  "expect": {
-   "agg_sub_why": "asy_text_missing"
   }
  },
  {
