@@ -1,0 +1,3 @@
+-- expect-refusal: needs at least one term
+-- a semicolon with no subject before it
+sxtr_empty_subject(R) :- R is rank(; W : sxt_l(_, _, W, _)).

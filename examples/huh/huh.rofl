@@ -54,11 +54,10 @@ s_sort(N, P) :- s_awk(N, P).
 s_uniq(P)    :- s_sort(_, P).
 s_count(P, N) :- s_uniq(P), N is count(L : s_sort(L, P)).
 
--- `sort -k1,1nr`: the place of a bucket is the rank of its negated count among
--- the distinct negated counts, so the largest count is place 1. Equal counts
--- share a place; `-k2,2` breaks that tie by path and is left to the reader.
-s_place(P, R) :- s_count(P, N), M is 0 - N,
-                 R is rank(M, X : s_count(_, K), X is 0 - K).
+-- `sort -k1,1nr -k2,2`: the place of a bucket is its rank among the buckets
+-- by count, the largest first, and by path where counts are equal.
+s_place(P, R) :- s_count(P, N),
+                 R is rank(N, P ; desc(N2), P2 : s_count(P2, N2)).
 
 -- Acceptance scenario. demo.ts runs all of it and compares every number
 -- against the real pipe over the same file:

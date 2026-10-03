@@ -9,7 +9,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::cell::{Algebra, iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
+use crate::cell::{key_atoms, rank_cmp, KeyAtom, Algebra, iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
 use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
@@ -256,6 +256,13 @@ impl RootSets {
     }
 }
 
+/// A rank over a tuple: each key's direction and the subject asked, or the
+/// fault reading it was.
+struct RankKey {
+    desc: Vec<bool>,
+    subject: Result<Vec<KeyAtom>, Sym>,
+}
+
 /// A holistic group sealed once and shared (`Eval::hol_shared`): the
 /// inner body's fault, or each group's first cell, whose members every later
 /// cell of the group shares, and its values sorted, or why they have none.
@@ -330,7 +337,7 @@ pub fn agg_refusal_text(reason: &str, rel: Option<&str>) -> String {
         "holistic_needs_key" => "median and quantile need their projection key: median(V ; K : body), quantile(P, V ; K : body); \
             without K two equal values would be one member".into(),
         "param_and_value" => "quantile and rank take two terms before their body: quantile(P, V ; K : body), rank(S, V : body)".into(),
-        "key_on_rank" => "rank takes no key: it ranks among the distinct values, rank(S, V : body)".into(),
+        "rank_key_arity" => "a rank over a tuple takes a key for every subject: rank(S1, S2 ; K1, desc(K2) : body)".into(),
         "threshold_lattice" => "a threshold may count only what no open lattice can still supersede or withdraw: it neither \
             reads a lattice (or what rests on one) before that lattice closes, nor concludes one, nor sits inside one's recursion; \
             read the lattice through a rule of its own, above it".into(),
@@ -436,6 +443,9 @@ pub struct Eval {
     /// The other firings that staged a fact, kept while a lattice could
     /// still withdraw what the first one read (`settle_staged`).
     staged_alts: HashMap<FKey, Vec<(Sym, Vec<PremRef>)>>,
+    /// While a retraction fires the rules that stage again: whether a second firing reached a staged key
+    /// (the evaluation kept the first one, by its schedule).
+    staged_watch: Option<bool>,
     /// WHAT A HOLE LEFT UNSTAGED: a conclusion `@next` an unknown reached,
     /// as the unknown it is in the tick it would arrive in, and whether only
     /// plain holes reached it. The boundary writes each as a hole
@@ -447,6 +457,9 @@ pub struct Eval {
     past_rows: Option<HashMap<(Term, i64), Vec<Sym>>>,
     /// The `unknown` rows a plain `why` walks, while it walks (`UnkCtx`).
     why_unk: Option<UnkCtx>,
+    /// What this `why` has written out in full, a fact or a cell (`true`): a second
+    /// reach is a reference, `[above]`.
+    why_done: HashSet<(bool, u32)>,
     /// Cell members `cited_past` walked at the last boundary: each cell once.
     pub past_walks: u64,
     /// `derived_by` rows `why` read for past premises since its last call.
@@ -909,9 +922,11 @@ impl Eval {
             active: Vec::new(),
             staged: HashMap::new(),
             staged_alts: HashMap::new(),
+            staged_watch: None,
             staged_unknown: HashMap::new(),
             past_rows: None,
             why_unk: None,
+            why_done: HashSet::new(),
             past_walks: 0,
             why_scans: 0,
             agg_plans: HashMap::new(),
@@ -2866,6 +2881,22 @@ impl Eval {
         Ok(self.run()?.partial)
     }
 
+    /// Whether a relation of the program is answered on demand, a fact made for each call.
+    pub fn answers_on_demand(&self) -> bool {
+        !self.demand_rels.is_empty()
+    }
+
+    /// The staged facts, each with the rule and the premises of the firing that staged it, one a line.
+    pub fn staged_text(&self) -> String {
+        let mut out = String::new();
+        for (k, f) in self.staged_sorted() {
+            let mut prems: Vec<String> = f.prems.iter().map(|p| self.store.prem_text(&self.h, *p)).collect();
+            prems.sort_by(|a, b| cmp_js(a, b));
+            out.push_str(&format!("{k} <- {} [{}]\n", self.h.name(f.rule), prems.join("; ")));
+        }
+        out
+    }
+
     /// The staged next-tick facts in canonical KEY order, each with its key
     /// spelled exactly once.
     ///
@@ -3430,6 +3461,9 @@ impl Eval {
                     self.charge_row(Some(r.id), true)?;
                 }
                 std::collections::hash_map::Entry::Occupied(slot) => {
+                    if let Some(many) = self.staged_watch.as_mut() {
+                        *many |= brk!("restage_first_wins" => false; slot.get().rule != r.id || slot.get().prems != sol.prems);
+                    }
                     // a lattice can withdraw what a firing read; another may stand
                     if !self.lattices.is_empty() {
                         let alts = self.staged_alts.entry(slot.key().clone()).or_default();
@@ -4366,8 +4400,9 @@ impl Eval {
             }
             let group: Vec<Term> = plan.group.iter().map(|i| resolve(&mut self.h, Term::var(a.shared[*i]), &sol.s)).collect();
             // quantile's percent and rank's subject are read, not projected
-            let mut proj: Vec<Term> = a.vals[brk!("hol_param_projected" => 0; a.op.params())..].iter().map(|t| resolve(&mut self.h, *t, &sol.s)).collect();
+            let mut proj: Vec<Term> = a.vals[brk!("hol_param_projected" => 0; a.params())..].iter().map(|t| resolve(&mut self.h, *t, &sol.s)).collect();
             proj.extend(a.keys.iter().map(|t| resolve(&mut self.h, *t, &sol.s)).collect::<Vec<_>>());
+            let proj = a.plain_keys(&self.h, proj);
             if !group.iter().chain(proj.iter()).all(|t| self.h.is_ground(*t)) {
                 fault.get_or_insert(self.v.agg_open_reason);
                 if hole {
@@ -4491,7 +4526,7 @@ impl Eval {
         depth: usize,
         keep: bool,
     ) -> Result<Sealed, Halt> {
-        if a.vals.len() <= a.op.params() {
+        if (!a.rank_tuple() && a.vals.len() <= a.params()) || (a.rank_tuple() && a.keys.len() != a.vals.len()) {
             return Err(Halt::Bug(format!("safety.rofl let {} through with no value after its first term", a.op.name())));
         }
         // what unknowns might add to or take from the groups: a group sealed
@@ -4585,6 +4620,19 @@ impl Eval {
             let mut order: Vec<usize> = (0..reps.len()).collect();
             brk!("order_proj" => order.sort_by(|x, y| cmp_js(&keys[*x], &keys[*y]));
                  order.sort_by(|x, y| hs[*x].cmp(&hs[*y]).then_with(|| cmp_js(&keys[*x], &keys[*y]))));
+            // A RANK OVER A TUPLE lists its members in the tuple's own order
+            let rdesc = a.rank_desc(&self.h);
+            let katoms: Vec<Result<Vec<KeyAtom>, Sym>> = if a.rank_tuple() {
+                reps.iter().map(|i| key_atoms(&self.h, &self.v, &cands[*i].proj)).collect()
+            } else {
+                Vec::new()
+            };
+            if a.rank_tuple() && brk!("rank_members_unordered" => false; katoms.iter().all(|k| k.is_ok())) {
+                order.sort_by(|x, y| {
+                    let (kx, ky) = (katoms[*x].as_ref().unwrap(), katoms[*y].as_ref().unwrap());
+                    rank_cmp(&rdesc, kx, ky).then_with(|| hs[*x].cmp(&hs[*y])).then_with(|| cmp_js(&keys[*x], &keys[*y]))
+                });
+            }
             // THE FOLD, checked. A wrong type or an overflow poisons the group:
             // a hole, and no value.
             let mut acc = None;
@@ -4594,7 +4642,21 @@ impl Eval {
             // the value is a function of their sorted values (`AggOp::holistic`),
             // with quantile's percent or rank's subject read under `s`.
             let holistic = plan.op.class() == Class::Holistic;
-            if holistic {
+            if holistic && a.rank_tuple() {
+                let subject: Vec<Term> = a.vals.iter().map(|t| resolve(&mut self.h, *t, s)).collect();
+                let subject = key_atoms(&self.h, &self.v, &subject);
+                let sorted = katoms.iter().cloned().collect::<Result<Vec<_>, Sym>>().map(|ks| Sorted::of_keys(rdesc.clone(), ks));
+                let value = match (&sorted, &subject) {
+                    (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
+                    (Ok(g), Ok(sj)) => Ok(g.rank_of(sj)),
+                };
+                match value {
+                    Ok(x) => acc = x,
+                    Err(r) => poison = Some(r),
+                }
+                sorts.push((gkey.clone().into_boxed_slice(), sorted));
+                kept = order.clone();
+            } else if holistic {
                 let param = if plan.op.params() == 0 {
                     Ok(None)
                 } else {
@@ -4665,8 +4727,9 @@ impl Eval {
                 let projs: Vec<&[Term]> = reps.iter().map(|i| cands[*i].proj.as_slice()).collect();
                 let vals: Vec<Term> = reps.iter().map(|i| values[*i]).collect();
                 let param = self.agg_param(a, s);
+                let rk = self.rank_key(a, s);
                 let mine = index.at(&reach, &gkey);
-                let us = self.reach_of(plan.op, param, &projs, &vals, value, &mine);
+                let us = self.reach_of(plan.op, param, rk.as_ref(), &projs, &vals, value, &mine);
                 if !us.is_empty() {
                     value = CellValue::Hole(withdrawn);
                     kept = order.clone();
@@ -4789,19 +4852,26 @@ impl Eval {
         if brk!("hol_unshared" => true; plan.op.class() != Class::Holistic || plan.op.params() == 0) {
             return None;
         }
-        let TermK::Var(p) = a.vals[0].kind() else { return None };
+        let mut subject: Vec<Sym> = Vec::new();
+        for t in &a.vals[..a.params()] {
+            let TermK::Var(p) = t.kind() else { return None };
+            subject.push(p);
+        }
         let mut inner: Vec<Sym> = Vec::new();
-        for t in a.vals[1..].iter().chain(a.keys.iter()) {
+        for t in a.vals[a.params()..].iter().chain(a.keys.iter()) {
             self.h.vars_of(*t, &mut inner);
         }
         for b in &a.body {
             b.vars(&self.h, &mut inner);
         }
-        if brk!("hol_share_body" => false; inner.contains(&p)) {
+        if brk!("hol_share_body" => false; subject.iter().any(|p| inner.contains(p))) {
             return None;
         }
-        let at = plan.corr.iter().position(|i| a.shared[*i] == p)?;
-        let base: Vec<Term> = corr.iter().enumerate().filter(|(n, _)| *n != at).map(|(_, t)| *t).collect();
+        let mut ats: Vec<usize> = Vec::new();
+        for p in &subject {
+            ats.push(plan.corr.iter().position(|i| a.shared[*i] == *p)?);
+        }
+        let base: Vec<Term> = corr.iter().enumerate().filter(|(n, _)| brk!("rank_share_coarse" => false; !ats.contains(n))).map(|(_, t)| *t).collect();
         Some((rid, a.at, base.into_boxed_slice()))
     }
 
@@ -4817,17 +4887,16 @@ impl Eval {
         corr: &[Term],
         gs: &[(Box<[Term]>, CellId, Result<Sorted, Sym>)],
     ) -> Result<Sealed, Halt> {
-        let param = match resolve(&mut self.h, a.vals[0], s).kind() {
-            TermK::Int(n) => Ok(Some(Val::Int(n as i128))),
-            _ => Err(self.v.agg_type_reason),
-        };
+        let param = self.agg_param(a, s);
+        let rk = self.rank_key(a, s);
         let desc = self.agg_desc(a, s);
         let mut ids = Vec::with_capacity(gs.len());
         for (gkey, like, sorted) in gs {
             self.bump_steps()?;
-            let value = match (sorted, &param) {
-                (Err(r), _) | (Ok(_), Err(r)) => Err(*r),
-                (Ok(g), Ok(p)) => plan.op.holistic_sorted(&self.v, *p, g),
+            let value = match (sorted, &param, &rk) {
+                (Err(r), _, _) | (Ok(_), Err(r), _) => Err(*r),
+                (Ok(g), _, Some(k)) => k.subject.as_ref().map(|sj| g.rank_of(sj)).map_err(|r| *r),
+                (Ok(g), Ok(p), None) => plan.op.holistic_sorted(&self.v, *p, g),
             };
             let value = match value {
                 Err(r) => CellValue::Hole(r),
@@ -7098,9 +7167,10 @@ impl Eval {
                         pat.push(brk!("agg_reach_whole" => None; known.then_some(t)));
                     }
                     let mut proj = Vec::with_capacity(a.vals.len() + a.keys.len());
-                    for t in a.vals[a.op.params()..].iter().chain(a.keys.iter()) {
+                    for t in a.vals[a.params()..].iter().chain(a.keys.iter()) {
                         proj.push(resolve(&mut self.h, *t, &ps));
                     }
+                    let proj = a.plain_keys(&self.h, proj);
                     let known = proj.iter().all(|t| self.h.is_ground(*t) && !self.holds_unknown(*t));
                     let p = Possible { pat, proj: known.then_some(proj), neg: brk!("agg_reach_neg_certain" => false; neg), u: u.clone() };
                     if seen.insert(p.clone()) {
@@ -7153,7 +7223,11 @@ impl Eval {
     /// member, so these are its extremes), a rank by all of them added (it
     /// only grows). A projection several unknowns could add rests on each of
     /// them: the group moves if any one holds.
-    fn reach_of(&self, op: AggOp, param: Result<Option<Val>, Sym>, projs: &[&[Term]], vals: &[Term], value: CellValue, ps: &[&Possible]) -> Vec<Unknown> {
+    #[allow(clippy::too_many_arguments)]
+    fn reach_of(&self, op: AggOp, param: Result<Option<Val>, Sym>, rk: Option<&RankKey>, projs: &[&[Term]], vals: &[Term], value: CellValue, ps: &[&Possible]) -> Vec<Unknown> {
+        if let Some(k) = rk {
+            return self.reach_of_rank(k, projs, value, ps);
+        }
         let mut us: Vec<Unknown> = Vec::new();
         if brk!("agg_reach_fault_relabel" => false; self.fault_certain(op, &param, vals, value, ps)) {
             return us;
@@ -7274,9 +7348,88 @@ impl Eval {
         hi < INT_MIN as i128 || lo > INT_MAX as i128
     }
 
+    /// A rank over a tuple's directions and subject under `s`; none for any
+    /// other aggregate.
+    fn rank_key(&mut self, a: &Agg, s: &Subst) -> Option<RankKey> {
+        if !a.rank_tuple() {
+            return None;
+        }
+        let ts: Vec<Term> = a.vals.iter().map(|t| resolve(&mut self.h, *t, s)).collect();
+        Some(RankKey { desc: a.rank_desc(&self.h), subject: key_atoms(&self.h, &self.v, &ts) })
+    }
+
+    /// `reach_of` for a rank over a tuple: the group moves when adding every
+    /// projection the possibles could add changes the subject's rank (a rank
+    /// only grows as members are added, and a subject none of them is can
+    /// only gain its place by being added itself).
+    fn reach_of_rank(&self, k: &RankKey, projs: &[&[Term]], value: CellValue, ps: &[&Possible]) -> Vec<Unknown> {
+        let mut us: Vec<Unknown> = Vec::new();
+        let known: Result<Vec<Vec<KeyAtom>>, Sym> = projs.iter().map(|p| key_atoms(&self.h, &self.v, p)).collect();
+        if let CellValue::Hole(r) = value {
+            if brk!("agg_reach_fault_relabel" => false; r == self.v.agg_type_reason && (known.is_err() || k.subject.is_err())) {
+                return us;
+            }
+        }
+        let held: HashSet<&[Term]> = projs.iter().copied().collect();
+        let mut fresh: Vec<(Result<Vec<KeyAtom>, Sym>, Vec<&Unknown>)> = Vec::new();
+        let mut at_proj: HashMap<&[Term], usize> = HashMap::new();
+        for p in ps {
+            match &p.proj {
+                Some(proj) if !p.neg => {
+                    if brk!("agg_reach_dedup_any" => true; held.contains(proj.as_slice())) {
+                        continue;
+                    }
+                    if let Some(i) = at_proj.get(proj.as_slice()) {
+                        brk!("agg_reach_alias_first" => (); fresh[*i].1.push(&p.u));
+                        continue;
+                    }
+                    at_proj.insert(proj.as_slice(), fresh.len());
+                    fresh.push((key_atoms(&self.h, &self.v, proj), vec![&p.u]));
+                }
+                _ => {
+                    if !us.contains(&p.u) {
+                        us.push(p.u.clone());
+                    }
+                }
+            }
+        }
+        let at = |extra: &[Vec<KeyAtom>]| -> Result<Option<Val>, Sym> {
+            let mut xs = known.clone()?;
+            xs.extend_from_slice(extra);
+            Ok(Sorted::of_keys(k.desc.clone(), xs).rank_of(k.subject.as_ref().map_err(|r| *r)?))
+        };
+        let adds: Result<Vec<Vec<KeyAtom>>, Sym> = fresh.iter().map(|f| f.0.clone()).collect();
+        let now = match value {
+            CellValue::Value(t) => self.v_int(t),
+            _ => None,
+        };
+        let stays = match (adds, now) {
+            (Ok(adds), Some(v)) => at(&adds) == Ok(Some(Val::Int(v))),
+            (Ok(adds), None) if matches!(value, CellValue::Empty) => at(&adds) == Ok(None),
+            _ => false,
+        };
+        if brk!("rank_reach_blind" => false; !stays) {
+            for f in &fresh {
+                for u in &f.1 {
+                    if !us.contains(u) {
+                        us.push((*u).clone());
+                    }
+                }
+            }
+        }
+        us
+    }
+
+    fn v_int(&self, t: Term) -> Option<i128> {
+        match t.kind() {
+            TermK::Int(n) => Some(n as i128),
+            _ => None,
+        }
+    }
+
     /// Quantile's percent or rank's subject under `s`, as the fold reads it.
     fn agg_param(&mut self, a: &Agg, s: &Subst) -> Result<Option<Val>, Sym> {
-        if a.op.params() == 0 {
+        if a.op.params() == 0 || a.rank_tuple() {
             return Ok(None);
         }
         match resolve(&mut self.h, a.vals[0], s).kind() {
@@ -7315,8 +7468,9 @@ impl Eval {
                     let (projs, vals): (Vec<Box<[Term]>>, Vec<Term>) = self.store.cell_members(c).iter().map(|m| (m.proj.clone(), m.value)).unzip();
                     let projs: Vec<&[Term]> = projs.iter().map(|p| &p[..]).collect();
                     let param = self.agg_param(a, s);
+                    let rk = self.rank_key(a, s);
                     let mine = index.at(&ps, &g);
-                    self.reach_of(op, param, &projs, &vals, value, &mine).into()
+                    self.reach_of(op, param, rk.as_ref(), &projs, &vals, value, &mine).into()
                 }
             };
             if !us.is_empty() {
@@ -11359,6 +11513,9 @@ struct WnCtx {
     max_nodes: usize,
     nodes: usize,
     path: HashSet<String>,
+    /// The ground literals demonstrated in full, with the shallowest level each
+    /// was written at: one reached again at that level or deeper is referred to.
+    done: HashMap<String, usize>,
 }
 
 impl Eval {
@@ -11412,6 +11569,7 @@ impl Eval {
         let o = WhyOpts { members: o.members, query: key };
         self.past_rows = None;
         self.why_scans = 0;
+        self.why_done.clear();
         self.why_unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(id, &o);
         self.past_rows = None;
@@ -11488,6 +11646,16 @@ impl Eval {
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
             next.push(WhyTask::Line(format!("{pad}{key} [cycle]")));
+            return;
+        }
+        // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and
+        // what a leaf says is as short as a reference
+        let leaf = !self.subs.contains_key(&r.rel)
+            && !self.lattices.contains_key(&r.rel)
+            && !brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel))
+            && self.store.witness_of(&self.h, id).is_none();
+        if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
+            next.push(WhyTask::Line(format!("{pad}{key} [above]")));
             return;
         }
         seen.insert(id);
@@ -11868,6 +12036,9 @@ impl Eval {
             // a threshold reached stays reached however its input grows.
             PremRef::Cell(c) if self.store.cell(c).op == AggOp::AtLeast => {
                 let r = self.store.cell(c).clone();
+                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                    return next.line(format!("{}{} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                }
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
                 next.line(format!(
@@ -11889,6 +12060,10 @@ impl Eval {
             }
             PremRef::Cell(c) => {
                 let r = self.store.cell(c).clone();
+                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                    let value = self.store.cell_value_text(&self.h, c);
+                    return next.line(format!("{}{} = {value} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                }
                 let seals: Vec<String> =
                     self.store.cell_seals(c).iter().map(|x| format!("{}@{}", self.h.name(x.rel), x.round)).collect();
                 let members = self.store.cell_members(c).to_vec();
@@ -12153,6 +12328,7 @@ impl Eval {
             max_nodes: b.max_nodes.max(1),
             nodes: 0,
             path: HashSet::new(),
+            done: HashMap::new(),
         };
         let s = Subst::default();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
@@ -12703,6 +12879,16 @@ impl Eval {
             next.push(WnTask::Line(format!("{pad}{k} [cycle]")));
             return;
         }
+        if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
+            let seen_at = ctx.done.get(&ck).copied();
+            if brk!("whynot_dag_off" => false; seen_at.is_some_and(|l| l <= level)) {
+                let mut k = String::new();
+                resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+                next.push(WnTask::Line(format!("{pad}{k} [above]")));
+                return;
+            }
+            ctx.done.insert(ck.clone(), level);
+        }
         ctx.path.insert(ck.clone());
         next.push(WnTask::Failure(lit.clone(), level));
         next.push(WnTask::Unpath(ck));
@@ -12840,9 +13026,14 @@ impl Eval {
                     } else if let Some(r) = brk!("whynot_hole_empty" => holed.filter(|_| false); holed) {
                         out.entry(format!("{desc} has no value: hole({}) [aggregate]", self.h.name(r))).or_insert(None);
                     } else if let Some(n) = brk!("whynot_unranked_empty" => unranked.filter(|_| false); unranked) {
-                        let subject = resolve(&mut self.h, a.vals[0], s);
                         let mut st = String::new();
-                        self.h.canon_term(subject, &mut st);
+                        for (i, t) in a.vals[..a.params()].iter().enumerate() {
+                            let subject = resolve(&mut self.h, *t, s);
+                            if i > 0 {
+                                st.push_str(", ");
+                            }
+                            self.h.canon_term(subject, &mut st);
+                        }
                         out.entry(format!("{desc} has no value: {st} is not one of its {n} distinct values [aggregate]")).or_insert(None);
                     } else {
                         let sub = match a.body.as_slice() {

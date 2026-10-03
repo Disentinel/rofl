@@ -15,7 +15,8 @@
 // provenance of the last N completed ticks (`retain_ticks`). `--retract L`, repeated,
 // retracts the base fact L after the first evaluation, in order, by `Session::retract_delta`
 // (the cells it supported are updated, the world is not evaluated again) and prints the
-// state the world is left in; tick 0 only.
+// state the world is left in; with `--ticks N` the ticks run after the last retraction, so what
+// the retractions left staged `@next` is seen at the boundary.
 //
 // A QUESTION REPLACES THE DUMP. With any `--why`, `--why-all`, `--whynot` or
 // `--excise` the answers are printed, in the order the flags were given, each
@@ -114,7 +115,7 @@ fn main() {
         if let Err(e) = b.evaluate() { eprintln!("below: {}", rofl::describe(&e)); std::process::exit(3); }
         if let Err(e) = s.feed_below(&mut b) { eprintln!("below: {e}"); std::process::exit(3); }
     }
-    if ticks == 0 {
+    if ticks == 0 || !retracts.is_empty() {
         if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
         for f in &retracts {
             match s.retract_delta(f) {
@@ -126,11 +127,12 @@ fn main() {
                 if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
             }
         }
-        if explain {
+        if explain && ticks == 0 {
             if let Err(e) = s.explain_requests() { eprintln!("explain: {e}"); std::process::exit(3); }
             if let Err(e) = s.evaluate() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
         }
-    } else {
+    }
+    if ticks > 0 {
         for _ in 0..ticks {
             if let Err(e) = s.tick() { eprintln!("{}", rofl::describe(&e)); std::process::exit(3); }
         }

@@ -105,17 +105,17 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
   const agg = storeHasAggregates(r.store);
   const spread = (xs: string[], n: number): string[] =>
     xs.length <= n ? xs : Array.from({ length: n }, (_, i) => xs[Math.floor((i * xs.length) / n)]);
-  // A `why` writes a DAG out as a tree, and on a world like ring1 one answer
-  // is hundreds of megabytes (f_why_writes_a_shared_derivation_out_in_full):
-  // a fact is asked only once its answer is known to be small, and the scan
-  // stops at the first huge one or after twenty seconds.
+  // A `why` is a DAG, written once per distinct sub-goal
+  // (f_why_writes_a_shared_derivation_out_in_full), so an answer is no larger
+  // than the derivation graph; a fact is still asked only once its answer is
+  // known to be small, and the scan stops at the first huge one or after
+  // twenty seconds.
   const small = new Set<string>();
   // an undefined atom, where the world has any: its `why` names the unfounded set
   const unknown = derived.filter((k) => k.startsWith('unknown[')).slice(0, 2);
   let deepest = ''; let lines = 0;
-  // `why all` where the digest held members back, and the answer stays small:
-  // every member of every cell below the top is not bounded by anything
-  // (f_why_all_is_unbounded_below_the_top)
+  // `why all` where the digest held members back: every member of every cell is
+  // written, once, so it is bounded by the DAG (f_why_all_is_unbounded_below_the_top)
   const digested = new Set<string>();
   const t0 = Date.now();
   for (const k of new Set([...unknown, ...spread(derived, 4), ...spread(derived, 200)])) {
@@ -125,7 +125,7 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
     small.add(k);
     const n = t.split('\n').length;
     if (n > lines) { lines = n; deepest = k; }
-    if (agg && n <= 60 && t.includes(' more members: why all ') && digested.size < 3) digested.add(k);
+    if (agg && t.includes(' more members: why all ') && digested.size < 3 && r.why(k, { budget, all: true }).text.length <= 2_000_000) digested.add(k);
   }
   const qs: Q[] = [];
   // and one that rests on one, through a negation that never settled
@@ -216,8 +216,8 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
   const s = await port.fresh(w.budget, walls(w));
   try {
     for (const f of [BOOT, ...w.files]) await s.loadFile(f);
-    if (w.ticks) for (let i = 0; i < w.ticks; i++) await s.tick();
-    else { await s.evaluate(); for (const f of w.retract ?? []) await s.retract(f); }
+    if (!w.ticks || w.retract?.length) { await s.evaluate(); for (const f of w.retract ?? []) await s.retract(f); }
+    for (let i = 0; i < (w.ticks ?? 0); i++) await s.tick();
     const out: A[] = [];
     for (const q of qs) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   serve ${q.op} ${q.query}\n`);

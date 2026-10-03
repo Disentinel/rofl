@@ -1180,3 +1180,28 @@ work_proof(w_agg_data_strat, "agg_datastrat_why").
 work_proof(w_agg_data_strat, "agg_datastrat_tick").
 work_proof(w_agg_data_strat, "agg_datastrat_budget").
 work_proof(w_agg_data_strat, "agg_datastrat_retract").
+work(w_agg_retract_fallback_tail, "the retraction's named fallbacks (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold that reads what changed, a staged (@next) or demanded rule, a supported cell a reset rule also owns, a reset rule that concludes what a changed cell concludes, and an aggregate component stratified by its data each get a delta that is a fresh evaluation without the fact, or stay evaluated again with the reason recorded; done only with the work_proof worlds").
+work_state(w_agg_retract_fallback_tail, done).
+work_proof(w_agg_retract_fallback_tail, "agg_datastrat_retract").
+work_proof(w_agg_retract_fallback_tail, "agg_incr_thr").
+work_proof(w_agg_retract_fallback_tail, "agg_incr_owner").
+work_proof(w_agg_retract_fallback_tail, "agg_incr_twice").
+work_proof(w_agg_retract_fallback_tail, "agg_incr_staged").
+work_proof(w_agg_retract_fallback_tail, "agg_incr_demand").
+
+-- RANK OVER A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host, decided in
+-- f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): `rank(S1, S2 ; K1, desc(K2) : body)`
+-- is the position of the subject tuple among the distinct key tuples, ordered lexicographically with a
+-- direction for each key; the cell is the holistic one (Group witness, recomputed whole). It owns no cell
+-- of the matrix and closes by these worlds.
+work(w_agg_rank_by_tuple, "rank over a tuple: a lexicographic order of keys with a direction for each, Int before atom before string, both engines and the three parsers and the sentence form; the packed scores and host sorting of blam and huh retired; done only with the work_proof worlds").
+work_state(w_agg_rank_by_tuple, done).
+work_needs(w_agg_rank_by_tuple, w_agg_holistic).
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_syntax").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_safety").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_eval").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_witness").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_why").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_holes").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_phrase").
+work_spawned(w_agg_rank_by_tuple, f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples).
