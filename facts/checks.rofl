@@ -2609,6 +2609,7 @@ check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-6-refused
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-8-refused-negated-body.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-9-refused-group.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-10-refused-wide.rofl").
 check_opt("agg_datastrat_cycle", together, 1).
 proves_work("agg_datastrat_cycle", w_agg_data_strat).
 proves_work("agg_datastrat_cycle", w_agg_group_is_a_cell).
@@ -2665,6 +2666,34 @@ check_file("agg_datastrat_groups", "examples/checks/agg-datastrat-groups-check.r
 check_opt("agg_datastrat_groups", together, 1).
 check_opt("agg_datastrat_groups", explain, 1).
 proves_work("agg_datastrat_groups", w_agg_group_is_a_cell).
+
+-- the whole correlation of a grouped element lists the groups a narrower one sealed, so what reads it again reads every group
+check_world("agg_datastrat_wide").
+check_file("agg_datastrat_wide", "examples/checks/agg-datastrat-wide.rofl").
+check_file("agg_datastrat_wide", "examples/checks/agg-datastrat-wide-check.rofl").
+check_opt("agg_datastrat_wide", together, 1).
+proves_work("agg_datastrat_wide", w_agg_group_is_a_cell).
+
+-- the layers of a grouped element are in one order whatever its keys are written as
+check_world("agg_datastrat_wide_int").
+check_file("agg_datastrat_wide_int", "examples/checks/agg-datastrat-wide_int.rofl").
+check_file("agg_datastrat_wide_int", "examples/checks/agg-datastrat-wide_int-check.rofl").
+check_opt("agg_datastrat_wide_int", together, 1).
+proves_work("agg_datastrat_wide_int", w_agg_group_is_a_cell).
+
+-- a rule of two elements, one grouped: each element fires the instances it reads and none is left unfired
+check_world("agg_datastrat_elems").
+check_file("agg_datastrat_elems", "examples/checks/agg-datastrat-elems.rofl").
+check_file("agg_datastrat_elems", "examples/checks/agg-datastrat-elems-check.rofl").
+check_opt("agg_datastrat_elems", together, 1).
+proves_work("agg_datastrat_elems", w_agg_layer_fires_the_new).
+
+-- the same where a threshold reaches nothing
+check_world("agg_datastrat_elems_gated").
+check_file("agg_datastrat_elems_gated", "examples/checks/agg-datastrat-elems_gated.rofl").
+check_file("agg_datastrat_elems_gated", "examples/checks/agg-datastrat-elems_gated-check.rofl").
+check_opt("agg_datastrat_elems_gated", together, 1).
+proves_work("agg_datastrat_elems_gated", w_agg_layer_fires_the_new).
 
 -- a chain of sums fires once per sum: a layer that fires an instance again is a step, the budget is the chain's own, whole firing is far over it
 check_world("agg_datastrat_chain").

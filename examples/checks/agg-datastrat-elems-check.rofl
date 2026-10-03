@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-elems-check.rofl — agg_datastrat_elems: the both rows of agg-datastrat-elems.rofl are the hand-derived ones, and no other.
+dx_want(a, 14, a, 3).
+dx_want(a, 14, b1, 2).
+dx_want(a, 14, c1, 1).
+dx_want(c1, 1, a, 3).
+dx_want(c1, 1, b1, 2).
+dx_want(c1, 1, c1, 1).
+dx_wrong(T, S, B, N) :- dx_want(T, S, B, N), not both(T, S, B, N).
+dx_extra(T, S, B, N) :- both(T, S, B, N), not dx_want(T, S, B, N).
+alarm(dx_wrong).
+alarm(dx_extra).

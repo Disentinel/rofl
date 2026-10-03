@@ -1,0 +1,10 @@
+-- examples/checks/agg-datastrat-elems_gated.rofl — the same with a threshold nothing reaches, so the groups are the direct reports alone: every instance is read,
+-- b1's count (1) included.
+
+edb(reports). edb(w). edb(top).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(d1, c1).
+w(b1, 5). w(b2, 7). w(c1, 2). w(d1, 1).
+top(c1). top(a).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), both(c1, _, M, N), N >= 100, reports(E, M).
+both(T, S, B, N) :- top(T), S is sum(V ; F : under(T, F), w(F, V)), N is count(E : under(B, E)).

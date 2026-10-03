@@ -5363,13 +5363,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ds_verify_own_cells",
-  "what": "the recheck of a correlation holds the groups it finds against its own cells alone, not those of the narrower correlations that sealed them",
-  "expect": {
-   "agg_datastrat_groups": "changed after it sealed"
-  }
- },
- {
   "id": "ds_ground_unreleased",
   "what": "a group the rule binds is never released on its own: only the whole correlation is",
   "expect": {
@@ -5388,6 +5381,41 @@ export const BREAKS: Break[] = [
   "what": "a layer fires an instance again for each of its elements a layer releases, not once for the first",
   "expect": {
    "agg_datastrat_budget": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "ds_wide_unlisted",
+  "what": "the whole correlation of a grouped element drops the groups a narrower one sealed instead of listing their cells",
+  "expect": {
+   "agg_datastrat_wide": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_hold_grouped",
+  "what": "an element a layer released is held while a later one is fired even where the later one is grouped, and the instance is read by neither",
+  "expect": {
+   "agg_datastrat_elems": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_text_raw",
+  "what": "a correlation's key is sorted as its raw text, the mark of a group no rule bound a character of its own",
+  "expect": {
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ds_any_writable",
+  "what": "the mark of a group no rule bound is an atom the source can write",
+  "expect": {
+   "agg_datastrat_wide": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ds_layer_unfired",
+  "what": "a layer fires nothing, so the final firing of the component makes every conclusion",
+  "expect": {
+   "agg_datastrat_eval": "missed an instance"
   }
  },
  {
@@ -5606,20 +5634,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ts_ds_verify_own_cells",
-  "what": "the TypeScript recheck holds the groups it finds against its own cells alone",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "        if (plan.group.length > 0) held = byCorr.get(",
-    "        if (plan.group.length < 0) held = byCorr.get("
-   ]
-  ],
-  "expect": {
-   "agg_datastrat_groups": "changed after it sealed"
-  }
- },
- {
   "id": "ts_ds_ground_unreleased",
   "what": "the TypeScript walk releases no group the rule binds on its own",
   "edits": [
@@ -5659,6 +5673,76 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_budget": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "ts_ds_wide_unlisted",
+  "what": "the TypeScript whole correlation drops the groups a narrower one sealed",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    ids.push(...reuse);\n",
+    "    if (reuse.length < 0) ids.push(...reuse);\n"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_wide": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_hold_grouped",
+  "what": "the TypeScript layer holds an earlier element while a grouped one is fired",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.dsFiring = whole ? [k.rid, k.at] : null;",
+    "this.dsFiring = [k.rid, k.at];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_elems": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_text_raw",
+  "what": "the TypeScript order of the layers reads the mark of a group no rule bound as a character",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "(t === DS_ANY ? '_' : canonTerm(t))",
+    "(false ? '_' : canonTerm(t))"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_ds_any_writable",
+  "what": "the TypeScript mark of a group no rule bound is an atom the source can write",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const DS_ANY = mka('\\u0001any');",
+    "const DS_ANY = mka('$ds_any');"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_wide": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_layer_unfired",
+  "what": "the TypeScript layer fires nothing",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (keys.length === 0) return;\n    const owners: ERule[] = [];",
+    "    if (keys.length >= 0) return;\n    const owners: ERule[] = [];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "missed an instance"
   }
  },
  {

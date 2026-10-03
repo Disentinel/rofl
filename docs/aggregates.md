@@ -2977,7 +2977,9 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   bound by a closed relation) is the correlation of group a alone, and the rule's own
   `_` is every group the walk did not name. A group is sealed by its own correlation,
   the inner body solved with the group bound (`seal_cells`, `ds_bind`), and the `_`
-  seals the groups no narrower correlation sealed (a group is one cell, sealed once).
+  seals the groups no narrower correlation sealed and lists the cells of the others (a group is one cell,
+  sealed once, and every correlation that covers it reads it). The `_` is a name no source can write, one text
+  (`_`) in both engines and in the order of the layers.
 - The EDGES of a pattern are what the premises of each rule that could conclude it
   read; those of a correlation, what its inner body reads. The premises are read a
   premise outside the component first (it binds what the patterns after it name), then
@@ -3073,10 +3075,14 @@ threshold, a counting tag or a demand-backed relation in them are not taken. A l
 fires the instances new to it, so a chain of n sums is n firings, and not n x n/2
 (`f_a_stratified_layer_fires_its_rules_whole`: 2000 sums in a chain took 5.7 s of whole
 firings and take 0.18 s; the instances of a rule with a count and a sum are released
-independently, each by its own correlation, and an instance two of them release together is fired by the first alone). The firings are counted by the
+independently, each by its own correlation, and an instance two of them release together is fired by the first alone: only in a rule none of whose elements is grouped, for a grouped element is read under the group its own firing binds and under the whole by another's, so the instance is no one's to hold). The firings are counted by the
 budget: a firing a layer makes that concludes nothing new is a step (`ds_charge`), which is none here and
 the square of the chain for a layer that fires whole (`agg_datastrat_chain`). The rules of the component are fired
-whole once more after its last layer, which is the pass `ds_done` guards. Proofs: `agg_datastrat_*` in
+whole once more after its last layer, which is the pass `ds_done` guards and a check of the layers: a firing
+that concludes anything new is an instance they missed, a Bug (`ds_check`), never a silent gap. The walk
+reads a negation of the component inside a grouped aggregate over a key the component binds as the whole
+(`count(E : under(B, E), not big(E))` with `big` over the counts is refused as a cycle, `count@team(_)`):
+sound, and a false cycle, as every key a premise of the component binds. Proofs: `agg_datastrat_*` in
 `facts/checks.rofl`, each planted fault in `scripts/agg_breaks.ts`
 (`ds_*`, and `ts_ds_*` for the TypeScript engine).
 

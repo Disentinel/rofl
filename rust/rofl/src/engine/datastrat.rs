@@ -213,13 +213,37 @@ impl Eval {
         // from here to the end of the evaluation every correlation the rules meet was released: the walk
         // reached them all, or it is a defect
         self.ds_done.extend(comp.elems.iter().copied());
-        self.fire_all(rs.to_vec())?;
+        self.ds_check = true;
+        let fired = self.fire_all(rs.to_vec());
+        self.ds_check = false;
+        fired?;
         self.ds_verify(comp)
+    }
+
+    /// A correlation's key as text, `_` for a group no rule bound: the same text in both engines, and the order
+    /// of the layers.
+    fn ds_text(&self, key: &[Term]) -> String {
+        if brk!("ds_text_raw" => true; false) {
+            return tuple_text(&self.h, key);
+        }
+        let mut o = String::from("(");
+        for (i, t) in key.iter().enumerate() {
+            if i > 0 {
+                o.push(',');
+            }
+            if t.as_atom().is_some_and(|a| self.h.name(a) == ds_any_name()) {
+                o.push('_');
+            } else {
+                self.h.canon_term(*t, &mut o);
+            }
+        }
+        o.push(')');
+        o
     }
 
     /// Whether the correlation `k` leaves every group of its element open.
     fn ds_whole(&mut self, k: &AggKey) -> bool {
-        let any = Term::atom(self.h.intern(DS_ANY));
+        let any = Term::atom(self.h.intern(ds_any_name()));
         let groups = self.agg_plans.get(&(k.0, k.1)).map_or(0, |p| p.group.len());
         k.2[k.2.len() - groups..].iter().all(|t| *t == any)
     }
@@ -227,7 +251,7 @@ impl Eval {
     /// `s` with the shared variables of `a` bound as the key `key` of a correlation says: the correlation, then
     /// each group a rule bound (`ds_any` for one it did not).
     fn ds_bind(&mut self, a: &Agg, plan: &AggPlan, key: &[Term]) -> Option<Subst> {
-        let any = Term::atom(self.h.intern(DS_ANY));
+        let any = Term::atom(self.h.intern(ds_any_name()));
         let mut s = Subst::new();
         for (n, i) in plan.corr.iter().enumerate() {
             s = unify(&self.h, Term::var(a.shared[*i]), key[n], &s)?;
@@ -244,7 +268,7 @@ impl Eval {
     /// The rules of `keys` fired over the instances that read each correlation, the news propagated after: a group
     /// the rule binds is read by no firing that leaves the group open, so it is fired with the group bound.
     fn fire_keys(&mut self, keys: &[AggKey]) -> Result<(), Halt> {
-        if keys.is_empty() {
+        if brk!("ds_layer_unfired" => true; false) || keys.is_empty() {
             return Ok(());
         }
         let mut owners: Vec<Rc<ERule>> = Vec::new();
@@ -281,8 +305,10 @@ impl Eval {
     fn fire_owners(&mut self, owners: &[Rc<ERule>], keys: &[AggKey]) -> Result<(), Halt> {
         for (i, r) in owners.iter().enumerate() {
             self.batch_at = i;
+            // an element fired with its earlier ones held is read by the earlier one's firing only when no element is grouped
+            let whole = self.ds_elems.iter().filter(|e| e.0 == r.id).all(|e| self.agg_plans.get(e).is_some_and(|p| p.group.is_empty()));
             for k in keys.iter().filter(|k| k.0 == r.id) {
-                self.ds_firing = Some((k.0, k.1));
+                self.ds_firing = brk!("ds_hold_grouped" => Some((k.0, k.1)); whole.then_some((k.0, k.1)));
                 let a = r.plan.iter().find_map(|b| match b {
                     BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
                     _ => None,
@@ -303,15 +329,9 @@ impl Eval {
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
         let mut keys: Vec<AggKey> = self.ds_released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
-        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
+        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&self.ds_text(&a.2), &self.ds_text(&b.2))));
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let mut bad: Option<String> = None;
-        let mut by_corr: HashMap<(Sym, u32, Vec<Term>), Vec<CellId>> = HashMap::new();
-        for k in &keys {
-            if let (Some(cs), Some(plan)) = (self.agg_memo.get(k), self.agg_plans.get(&(k.0, k.1))) {
-                by_corr.entry((k.0, k.1, k.2[..plan.corr.len()].to_vec())).or_default().extend(cs.iter().copied());
-            }
-        }
         for k in keys {
             let Some(cells) = self.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
@@ -322,8 +342,6 @@ impl Eval {
             let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else { continue };
             let Some(s) = self.ds_bind(&a, &plan, &k.2) else { continue };
             let Sealed::Ephemeral(now) = self.seal_cells(k.0, &a, &plan, &s, &k.2, 0, false)? else { continue };
-            // a group sealed by a narrower correlation of the element is held there
-            let cells: Vec<CellId> = if plan.group.is_empty() || brk!("ds_verify_own_cells" => true; false) { cells.to_vec() } else { by_corr.get(&(k.0, k.1, k.2[..plan.corr.len()].to_vec())).cloned().unwrap_or_default() };
             for (key, value, _) in now {
                 let held = cells.iter().map(|c| self.store.cell(*c)).find(|c| *c.key == *key);
                 let ok = match held {
@@ -410,7 +428,7 @@ impl Eval {
                     Some(r) => (self.h.name(r.clause.head.rel).to_string(), self.ds_op(&r, *at), String::new()),
                     None => (String::new(), "an aggregate", String::new()),
                 };
-                format!("{op}@{head}{}", tuple_text(&self.h, corr))
+                format!("{op}@{head}{}", self.ds_text(corr))
             }
         }
     }
@@ -527,7 +545,7 @@ impl Eval {
         }
         for l in layers.iter_mut() {
             l.sort_by(|a, b| {
-                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
+                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&self.ds_text(&a.2), &self.ds_text(&b.2)))
             });
         }
         Ok(layers)
@@ -649,7 +667,7 @@ impl Eval {
                         corr.push(t);
                     }
                     // a group the rule binds is a correlation of its own, any other is the whole
-                    let any = Term::atom(self.h.intern(DS_ANY));
+                    let any = Term::atom(self.h.intern(ds_any_name()));
                     for i in &plan.group {
                         let t = resolve(&mut self.h, Term::var(a.shared[*i]), &s);
                         corr.push(brk!("ds_group_whole" => any; if self.h.is_ground(t) { t } else { any }));

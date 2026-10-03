@@ -712,7 +712,8 @@ const F_FROZEN = { scope: 'timeless', base: false, frozen: true } as const;
 
 const HOLE_ID_DEFAULT = mka('$adhoc');
 /** What stands in a correlation's key for a group variable nothing bound (`dsBind`). */
-const DS_ANY = mka('_');
+const DS_ANY = mka('\u0001any');
+const dsText = (ts: Term[]): string => `(${ts.map((t) => (t === DS_ANY ? '_' : canonTerm(t))).join(',')})`;
 const rowKey = (r: Term[]): string => r.map(canonTerm).join('\u0000');
 /** A premise as a firing's signature spells it (rust/rofl `write_sig`). */
 export const sigOfPrem = (p: PremRef): string => (p.t === 'bi' ? 'b:' + p.desc : p.t + ':' + p.key);
@@ -768,6 +769,8 @@ export class AggEval {
   private dsDone = new Set<string>();
   /** A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fireKeys`). */
   private dsCharge = false;
+  /** The final firing of a data-stratified component concludes nothing the layers did not (`runDataLevel`). */
+  private dsCheck = false;
   /** The correlations a layer released, and the element `fireKeys` is firing: an instance two of them release is fired by the first alone (`dsGate`). */
   private dsLayer = new Set<string>();
   private dsFiring: [string, number] | null = null;
@@ -1576,7 +1579,8 @@ export class AggEval {
     this.dsCarry(comp);
     // from here to the end of the evaluation every correlation the rules meet was released: the walk reached them all, or it is a defect
     for (const [rid, at] of comp.elems) this.dsDone.add(`${rid}|${at}`);
-    this.fireAll(rs);
+    this.dsCheck = true;
+    try { this.fireAll(rs); } finally { this.dsCheck = false; }
     this.dsVerify(comp);
   }
 
@@ -1607,12 +1611,13 @@ export class AggEval {
     try {
       owners.forEach((r, i) => {
         this.batchAt = i;
+        const whole = [...this.dsElems].filter((e) => e.startsWith(`${r.id}|`)).every((e) => (this.aggPlans.get(e)?.group.length ?? 0) === 0);
         for (const k of keys.filter((x) => x.rid === r.id)) {
           const a = r.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
           const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
           if (!a || !plan) throw new Bug('a correlation of no element');
           const s0 = this.dsBind(a, plan, k.corr);
-          this.dsFiring = [k.rid, k.at];
+          this.dsFiring = whole ? [k.rid, k.at] : null;
           if (s0 !== null) this.fireRule(r, null, s0);
         }
       });
@@ -1635,21 +1640,13 @@ export class AggEval {
    *  store as it stands, and must give the value the cell holds (a hole stands). */
   private dsVerify(comp: DsComp): void {
     const keys = [...this.dsKeys.entries()].filter(([, k]) => comp.elems.some((e) => e[0] === k.rid && e[1] === k.at))
-      .sort((x, y) => cmpStr(x[1].rid, y[1].rid) || x[1].at - y[1].at || cmpStr(tupleText(x[1].corr), tupleText(y[1].corr)));
+      .sort((x, y) => cmpStr(x[1].rid, y[1].rid) || x[1].at - y[1].at || cmpStr(dsText(x[1].corr), dsText(y[1].corr)));
     const saved: [number, number, number, string | null, number, string | null, string | null] =
       [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
     let bad: string | null = null;
-    // a group sealed by a narrower correlation of the element is held there
-    const byCorr = new Map<string, string[]>();
-    for (const [mk, k] of keys) {
-      const plan = this.aggPlans.get(`${k.rid}|${k.at}`), cs = this.aggMemo.get(mk);
-      if (plan === undefined || cs === undefined) continue;
-      const ck = `${k.rid}|${k.at}|${listKey(k.corr.slice(0, plan.corr.length))}`;
-      byCorr.set(ck, [...(byCorr.get(ck) ?? []), ...cs]);
-    }
     try {
       for (const [mk, k] of keys) {
-        let held = this.aggMemo.get(mk);
+        const held = this.aggMemo.get(mk);
         const r = this.ruleOf(k.rid);
         const a = r?.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
         const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
@@ -1658,7 +1655,6 @@ export class AggEval {
         if (s === null) continue;
         const now = this.sealCells(k.rid, a, plan, s, k.corr, 0, false);
         if (now.k !== 'ephemeral') continue;
-        if (plan.group.length > 0) held = byCorr.get(`${k.rid}|${k.at}|${listKey(k.corr.slice(0, plan.corr.length))}`) ?? [];
         for (const [key, value] of now.cells) {
           const text = key.map(canonTerm).join(',');
           const cell = held.map((c) => this.store.cells.get(c)!).find((c) => c.keyTerms.map(canonTerm).join(',') === text);
@@ -1692,7 +1688,7 @@ export class AggEval {
     if (n.k === 'p') return `${n.rel}(${n.args.map((t) => (t === null ? '_' : canonTerm(t))).join(',')})`;
     const r = this.ruleOf(n.rid);
     const a = r?.clause.body.find((b) => b.t === 'agg' && b.at === n.at) as AggElem | undefined;
-    return `${a ? a.op : 'an aggregate'}@${r ? r.clause.head.rel : ''}${tupleText(n.corr)}`;
+    return `${a ? a.op : 'an aggregate'}@${r ? r.clause.head.rel : ''}${dsText(n.corr)}`;
   }
 
   private dsLayers(comp: DsComp): { rid: string; at: number; corr: Term[]; mk: string }[][] {
@@ -1782,7 +1778,7 @@ export class AggEval {
       while (layers.length <= d) layers.push([]);
       layers[d].push({ rid: nd.rid, at: nd.at, corr: nd.corr, mk: `${nd.rid}|${nd.at}|${listKey(nd.corr)}` });
     }
-    for (const l of layers) l.sort((x, y) => cmpStr(x.rid, y.rid) || x.at - y.at || cmpStr(tupleText(x.corr), tupleText(y.corr)));
+    for (const l of layers) l.sort((x, y) => cmpStr(x.rid, y.rid) || x.at - y.at || cmpStr(dsText(x.corr), dsText(y.corr)));
     return layers;
   }
 
@@ -2618,6 +2614,7 @@ export class AggEval {
     }
     const tick = this.store.tick;
     if (this.support(id, { ruleId: r.id, tick, prems: sol.prems })) {
+      if (this.dsCheck) throw new Bug(`the layers of a component stratified by its data missed an instance of rule ${r.id}: it concludes ${head.rel} again, new`);
       this.bumpSteps();
       this.chargeRow(r.id, true);
       if (!this.noProvenance) {
@@ -3243,10 +3240,12 @@ export class AggEval {
     }
     fresh.sort((x, y) => cmpStr(tupleText(x), tupleText(y)));
     for (const g of fresh) groups.push([g, []]);
-    // a group a narrower correlation of the element sealed already is its cell (`dsBind`)
+    // a group a narrower correlation of the element sealed already is its cell, listed here and not sealed again (`dsBind`)
+    const reuse: string[] = [];
     if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`)) {
       for (let j = groups.length - 1; j >= 0; j--) {
-        if (this.store.cells.has(cellKeyOf(rid, a.at!, this.store.tick, this.thrShared(a, plan, corr, groups[j][0])))) groups.splice(j, 1);
+        const ck = cellKeyOf(rid, a.at!, this.store.tick, this.thrShared(a, plan, corr, groups[j][0]));
+        if (this.store.cells.has(ck)) { reuse.push(ck); groups.splice(j, 1); }
       }
     }
     const reached = new Map<number, Unknown[]>();
@@ -3375,6 +3374,7 @@ export class AggEval {
     }
     [this.carrySrc, this.carryMore] = carried;
     if (share !== null) this.holShared.set(share, { k: 'groups', groups: sorts.map(([g, x], i): [Term[], string, Sorted | string] => [g, ids[i], x]) });
+    ids.push(...reuse);
     return this.keyedCells(ids);
   }
 

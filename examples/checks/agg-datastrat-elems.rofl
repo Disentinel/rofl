@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-elems.rofl — A RULE OF TWO ELEMENTS, the second grouped: both(T, S, B, N) has a sum keyed by T and a count whose group B no
+-- premise binds. An instance the sum releases is read by the count under the rule's own reading, not under the
+-- group the count's own firing binds, so each element fires the instances it reads and none is left to another.
+
+edb(reports). edb(w). edb(top).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(d1, c1).
+w(b1, 5). w(b2, 7). w(c1, 2). w(d1, 1).
+top(c1). top(a).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), both(c1, _, M, N), N >= 1, reports(E, M).
+both(T, S, B, N) :- top(T), S is sum(V ; F : under(T, F), w(F, V)), N is count(E : under(B, E)).

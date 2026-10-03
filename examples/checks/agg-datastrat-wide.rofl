@@ -1,0 +1,15 @@
+-- examples/checks/agg-datastrat-wide.rofl — THE WHOLE CORRELATION OF A GROUPED ELEMENT keeps the groups a narrower one sealed. team's groups are read
+-- by the rule that fires on the news (flag(late)) under the rule's own reading, which must hold every group, and
+-- b1 and c1 are sealed by the correlations of the rows that name them, so the wide one lists them without sealing them again.
+--
+--   a 4 (b1, b2, c1, $ds_any)   b1 2 (c1, d1)   b2 2 ($ds_any, z1)   c1 1 (d1)   $ds_any 1 (z1)   each with start and with late (a reaches 3)
+-- $ds_any is an employee, and a group: the mark of a group no rule bound is a name no source can write, so it is a group like another.
+
+edb(reports).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(d1, c1).
+reports($ds_any, b2). reports(z1, $ds_any).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), team(M, N, start), N >= 1, reports(E, M).
+team(B, N, X) :- N is count(E : under(B, E)), flag(X).
+flag(start).
+flag(late) :- team(a, N, start), N >= 3.
