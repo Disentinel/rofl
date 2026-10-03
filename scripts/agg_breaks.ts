@@ -4997,6 +4997,34 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "retract_deep_neg_unread",
+  "what": "a fact read negated inside an aggregate body is retracted as if only the back-index read it: the cell keeps the members it had",
+  "expect": {
+   "agg_incr_neginner": "lacks the row ni_n[main](g,2)"
+  }
+ },
+ {
+  "id": "cited_past_canonical_only",
+  "what": "the past-tick premises a live cell cites are walked in each member's canonical derivation only: the derived_by row a member's other derivation alone cites is pruned",
+  "expect": {
+   "agg_member_derivs_ticks": "mty_text_missing"
+  }
+ },
+ {
+  "id": "ts_cited_past_canonical_only",
+  "what": "the TypeScript evaluator walks the past-tick premises of a member's canonical derivation only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const q of [m.prems, ...m.others].flat()) if (q.t === 'fact')",
+    "for (const q of m.prems) if (q.t === 'fact')"
+   ]
+  ],
+  "expect": {
+   "agg_member_derivs_ticks": "mty_text_missing"
+  }
+ },
+ {
   "id": "retract_no_readers",
   "what": "the facts a cell's reader concluded from its old record stay when the cell is replaced",
   "expect": {

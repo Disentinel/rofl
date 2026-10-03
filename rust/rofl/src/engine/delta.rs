@@ -329,8 +329,8 @@ impl Eval {
                         if seen.contains(&l.rel) {
                             reads = true;
                             inner |= neg || deep;
-                        } else if l.rel == base && !deep && !counts && brk!("retract_gate_plain" => neg, "retract_gate_neg" => !neg; true) {
-                            // the fact itself, read plainly or negated: what rests on it goes, and a negation of it may now hold
+                        } else if l.rel == base && (!deep || neg && brk!("retract_deep_neg_unread" => false; true)) && !counts && brk!("retract_gate_plain" => neg, "retract_gate_neg" => !neg; true) {
+                            // the fact itself, read plainly or negated (an aggregate's own body too: the back-index holds no negated premise, and a count may gain a member): what rests on it goes, and a negation of it may now hold
                             reads = true;
                             inner |= neg;
                         }

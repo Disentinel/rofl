@@ -1193,6 +1193,10 @@ work_state(w_agg_member_keeps_its_derivations, done).
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_state").
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_retract").
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_why").
+work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_ticks").
+work(w_agg_retract_deep_neg, "a fact read negated inside an aggregate body, retracted (f_a_negation_inside_an_aggregate_was_not_read_by_the_retraction): the cell gains the member the negation now lets in, so the rule is read again whole in the Rust retraction, equal to a fresh evaluation; done only with the work_proof worlds").
+work_state(w_agg_retract_deep_neg, done).
+work_proof(w_agg_retract_deep_neg, "agg_incr_neginner").
 
 -- RANK OVER A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host, decided in
 -- f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): `rank(S1, S2 ; K1, desc(K2) : body)`

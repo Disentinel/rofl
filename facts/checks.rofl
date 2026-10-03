@@ -2526,6 +2526,21 @@ check_opt("agg_member_derivs_why", together, 1).
 check_opt("agg_member_derivs_why", explain, 1).
 proves_work("agg_member_derivs_why", w_agg_member_keeps_its_derivations).
 
+check_world("agg_member_derivs_ticks").
+check_file("agg_member_derivs_ticks", "examples/checks/agg-member-derivs-ticks.rofl").
+check_opt("agg_member_derivs_ticks", together, 1).
+check_opt("agg_member_derivs_ticks", ticks, 1).
+check_opt("agg_member_derivs_ticks", explain, 1).
+check_opt("agg_member_derivs_ticks", retain, 0).
+proves_work("agg_member_derivs_ticks", w_agg_member_keeps_its_derivations).
+
+-- A NEGATION INSIDE AN AGGREGATE (w_agg_retract_deep_neg): retracting the negated fact makes the cell gain a member
+check_world("agg_incr_neginner").
+check_file("agg_incr_neginner", "examples/checks/agg-incr-neginner.rofl").
+check_opt("agg_incr_neginner", together, 1).
+check_opt("agg_incr_neginner", retract, "ni_bad(3)").
+proves_work("agg_incr_neginner", w_agg_retract_deep_neg).
+
 -- the holes of a world with no aggregate go with the fault that made them, in the stock evaluator too
 check_world("agg_incr_stockholes").
 check_file("agg_incr_stockholes", "examples/checks/agg-incr-stockholes.rofl").
