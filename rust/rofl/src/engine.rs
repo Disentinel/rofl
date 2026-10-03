@@ -142,6 +142,65 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
     out
 }
 
+/// The rules grouped by the strongly connected components of their head
+/// relations over the positive premises among them, a component after
+/// everything it reads: the order in which each closes before its readers fire.
+fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
+    let heads: HashSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
+    let mut dep: HashMap<Sym, Vec<Sym>> = HashMap::new();
+    for r in rules {
+        let e = dep.entry(r.clause.head.rel).or_default();
+        for p in &r.pos_rels {
+            if heads.contains(p) && !e.contains(p) {
+                e.push(*p);
+            }
+        }
+    }
+    let mut order: Vec<Sym> = heads.iter().copied().collect();
+    order.sort();
+    let (mut index, mut low, mut comp) = (HashMap::new(), HashMap::new(), HashMap::new());
+    let mut stack: Vec<Sym> = Vec::new();
+    let mut n_comp = 0usize;
+    fn strong(v: Sym, dep: &HashMap<Sym, Vec<Sym>>, index: &mut HashMap<Sym, usize>, low: &mut HashMap<Sym, usize>, stack: &mut Vec<Sym>, comp: &mut HashMap<Sym, usize>, n_comp: &mut usize) {
+        let i = index.len();
+        index.insert(v, i);
+        low.insert(v, i);
+        stack.push(v);
+        for &w in dep.get(&v).map(|d| d.as_slice()).unwrap_or(&[]) {
+            if !index.contains_key(&w) {
+                strong(w, dep, index, low, stack, comp, n_comp);
+                let lw = low[&w];
+                let lv = low.get_mut(&v).unwrap();
+                *lv = (*lv).min(lw);
+            } else if !comp.contains_key(&w) {
+                let iw = index[&w];
+                let lv = low.get_mut(&v).unwrap();
+                *lv = (*lv).min(iw);
+            }
+        }
+        if low[&v] == index[&v] {
+            while let Some(w) = stack.pop() {
+                comp.insert(w, *n_comp);
+                if w == v {
+                    break;
+                }
+            }
+            *n_comp += 1;
+        }
+    }
+    for v in order {
+        if !index.contains_key(&v) {
+            strong(v, &dep, &mut index, &mut low, &mut stack, &mut comp, &mut n_comp);
+        }
+    }
+    let mut out: Vec<Vec<Rc<ERule>>> = vec![Vec::new(); n_comp];
+    for r in rules {
+        out[comp[&r.clause.head.rel]].push(r.clone());
+    }
+    out.retain(|c| !c.is_empty());
+    out
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Front {
@@ -506,6 +565,10 @@ pub struct Eval {
     pub closures: Vec<Closure>,
     closure_of: HashMap<Sym, (usize, bool)>,
     pub closure_on: bool,
+    /// Monotone rules activated by strongly connected component, bottom-up.
+    pub scc: bool,
+    /// Under `no_witness` with provenance kept: the (fact, rule, tick) rows already written.
+    fired: HashSet<(FactId, Sym, u32)>,
     pub closure_rows: u64,
     pub closure_runs: u64,
     pub closure_walk_ns: u64,
@@ -1007,6 +1070,8 @@ impl Eval {
             closures: Vec::new(),
             closure_of: HashMap::new(),
             closure_on: false,
+            scc: false,
+            fired: HashSet::new(),
             closure_rows: 0,
             closure_runs: 0,
             closure_walk_ns: 0,
@@ -1228,8 +1293,17 @@ impl Eval {
 
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
-        self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
-            .contains(&self.v.sealed_provenance);
+        let sealed = sealed_bodies(&mut self.h, &self.v, &mut self.store);
+        self.no_provenance = sealed.contains(&self.v.sealed_provenance);
+        // `sealed(witness)`: any support will do. No witness is kept where
+        // nothing withdraws, the order of groups, candidates and activation
+        // is the engine's own, and a closure is walked.
+        if sealed.contains(&self.v.sealed_witness) {
+            self.no_witness = true;
+            self.store.unordered = true;
+            self.closure_on = true;
+            self.scc = true;
+        }
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
         self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
@@ -3392,6 +3466,16 @@ impl Eval {
         if rules.is_empty() {
             return Ok(());
         }
+        if self.scc && rules.len() > 1 {
+            for component in components(rules) {
+                self.activate_batch(&component)?;
+            }
+            return Ok(());
+        }
+        self.activate_batch(rules)
+    }
+
+    fn activate_batch(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
         let mut sorted: Vec<Rc<ERule>> = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         self.active.extend(sorted.iter().cloned());
@@ -3577,13 +3661,22 @@ impl Eval {
             adj[fill[x as usize] as usize] = y;
             fill[x as usize] += 1;
         }
+        // with provenance kept, a row's rules: the base rule for an edge, the
+        // step rule where a predecessor of the end is reached from the start too
+        let mut pred: Vec<Vec<u32>> = vec![Vec::new(); if self.no_provenance { 0 } else { n }];
+        for &(x, y) in &edges {
+            if !self.no_provenance {
+                pred[y as usize].push(x);
+            }
+        }
         let mut mark = vec![u32::MAX; n];
         let mut queue: Vec<u32> = Vec::new();
-        let mut rows: Vec<(u32, u32)> = Vec::new();
+        let mut rows: Vec<(u32, u32, bool, bool)> = Vec::new();
         let t = std::time::Instant::now();
         for s in 0..n as u32 {
             queue.clear();
             queue.extend_from_slice(&adj[start[s as usize] as usize..start[s as usize + 1] as usize]);
+            let first = rows.len();
             let mut i = 0;
             while i < queue.len() {
                 let v = queue[i];
@@ -3593,13 +3686,21 @@ impl Eval {
                 }
                 mark[v as usize] = s;
                 queue.extend_from_slice(&adj[start[v as usize] as usize..start[v as usize + 1] as usize]);
-                rows.push((s, v));
+                rows.push((s, v, false, false));
+            }
+            if !self.no_provenance {
+                for k in first..rows.len() {
+                    let v = rows[k].1;
+                    rows[k].2 = adj[start[s as usize] as usize..start[s as usize + 1] as usize].contains(&v);
+                    rows[k].3 = pred[v as usize].iter().any(|&u| mark[u as usize] == s);
+                }
             }
         }
         self.closure_walk_ns += t.elapsed().as_nanos() as u64;
         let t = std::time::Instant::now();
         let mut out = Front::default();
-        for (s, v) in rows {
+        let tick = self.store.tick;
+        for (s, v, direct, longer) in rows {
             let args = [nodes[s as usize], nodes[v as usize]];
             if self.store.add(&self.h, c.rel, c.persp, &args, F_TICK) {
                 let id = self.store.get(c.rel, c.persp, &args).unwrap();
@@ -3607,6 +3708,18 @@ impl Eval {
                 self.closure_rows += 1;
                 self.bump_steps()?;
                 self.charge_row(Some(c.step), true)?;
+            }
+            if !self.no_provenance {
+                for (rule, holds) in [(c.base, direct), (c.step, longer)] {
+                    if holds {
+                        let ft = fact_term(&mut self.h, &self.v, c.rel, c.persp, &args);
+                        let db_args = [ft, Term::atom(rule), Term::int(tick as i64)];
+                        if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
+                            let dbid = self.store.get(self.v.derived_by, self.v.kernel_persp, &db_args).unwrap();
+                            out.note(self.v.derived_by, dbid);
+                        }
+                    }
+                }
             }
         }
         self.closure_add_ns += t.elapsed().as_nanos() as u64;
@@ -3719,7 +3832,7 @@ impl Eval {
         }
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
-            is_new
+            is_new || (!self.no_provenance && self.fired.insert((id, r.id, tick)))
         } else {
             self.store.support(
                 id,

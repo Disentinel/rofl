@@ -325,6 +325,7 @@ pub struct Vocab {
     pub sealed_provenance: Sym,
     pub sealed_rules: Sym,
     pub sealed_assertions: Sym,
+    pub sealed_witness: Sym,
     pub s_fact: Sym,
     pub s_lit: Sym,
     pub s_not: Sym,
@@ -589,6 +590,7 @@ impl Vocab {
             sealed_provenance: i("provenance"),
             sealed_rules: i("rules"),
             sealed_assertions: i("assertions"),
+            sealed_witness: i("witness"),
             s_fact: i("$fact"),
             s_lit: i("$lit"),
             s_not: i("$not"),
@@ -1464,7 +1466,7 @@ pub fn well_founded_declared(h: &mut Heap, v: &Vocab, store: &mut Store) -> bool
 }
 
 pub fn sealed_bodies(h: &mut Heap, v: &Vocab, store: &mut Store) -> Vec<Sym> {
-    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance];
+    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance, v.sealed_witness];
     let mut out = Vec::new();
     for f in store.rel_all(h, v.sealed) {
         let args = store.args(f);
