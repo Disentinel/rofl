@@ -3610,3 +3610,36 @@ work_state(w_df_external_oracle, open).
 work(w_engine_fire_nonrecursive_rules_once,
   "THE ENGINE FIRES A RULE ONCE PER ROUND OF A RECURSIVE RELATION IT MERELY READS (f_a_rule_that_is_not_recursive_fires_on_every_round_of_a_recursive_one, f_a_round_costs_every_rule_its_prefix): a rule with k positive literals over relations that have a delta fires k times a round and walks the literals BEFORE the delta over their whole relations, so the join width of rules/js-dataflow.rofl's member rules is rounds x delta positions x member nodes (700 892 member-node matches in one rule of the self notebook; 77 firings in the base, 139 with external values), and every new recursive chain in the model raises it for every rule. The front-premise-first plan was tried and ran out of heap on a cartesian front, so it is NOT the way. CANDIDATES from the first finding: evaluate strata by strongly connected component so a rule that is not recursive fires once after the closure it reads is complete, or version plans behind the cost guard that finding names. ACCEPTANCE: total join width of examples/notebook/self.rofl.md (scanners/eval_cost.ts measureWith around Kernel.run) falls with byte-identical canonicalState on every golden world; the self notebook's 120 s wall gets margin (98 s of 120 on a quiet machine at the base, 22.2 M width).").
 work_state(w_engine_fire_nonrecursive_rules_once, open).
+
+-- ===========================================================================
+-- THE AGGREGATE TAIL, recorded 2026-10-03 after every w_agg_* item closed: the open findings of the
+-- aggregate area that demand code, each bounded. Owner's go 2026-10-03 for the first two.
+-- ===========================================================================
+
+work(w_agg_data_strat,
+  "STRATIFY AN AGGREGATE BY DATA, NOT BY RELATION (f_an_aggregate_is_refused_by_relation_and_not_by_data): a sum or count whose relations form a cycle while its data does not (a spreadsheet formula over cells that are formulas, examples/slop) is refused today. Layer the cells by their depth in the acyclic data (local/modular stratification) and refuse only a true cycle in the data, naming it; both engines, byte parity. ACCEPTANCE: slop's SUM and itotal are kernel aggregates and its host layering is deleted; a data cycle is refused with the cycle named; proof worlds and planted breaks; one semantic review.").
+work_state(w_agg_data_strat, open).
+
+work(w_ts_one_evaluator,
+  "ONE TYPESCRIPT EVALUATOR (f_the_two_typescript_evaluators_copy_each_others_methods, f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, f_a_demo_that_casts_into_the_evaluator_breaks_when_its_shape_grows, f_a_cell_is_opened_through_a_cast_and_not_the_port): src/engine.ts Evaluation and src/rounds.ts RoundEvaluation retire onto src/aggeval.ts AggEval, which mirrors rust engine.rs. AggEval gains what only the stock one has (reuse across evaluations, the `stop` callback, naive mode); src/api.ts runs AggEval for every program; one peel for every caller; the demos read an exported schedule and the port, not a cast. ACCEPTANCE: the stock evaluator is deleted, goldens and whycheck unchanged, test:hosts and test:nb green.").
+work_state(w_ts_one_evaluator, open).
+
+work(w_agg_member_keeps_its_derivations,
+  "A DEDUPLICATED MEMBER KEEPS EVERY DERIVATION (f_a_deduplicated_member_keeps_one_derivation): a cell records one member per projection value and drops the other derivations, so why, excise and retraction see one support. Keep them (canonical first), both engines.").
+work_state(w_agg_member_keeps_its_derivations, open).
+
+work(w_agg_rank_by_tuple,
+  "RANK BY A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host): rank takes one Int, so a multi-key order is a packed score or host sorting (blam). Rank by a lexicographic tuple with per-key direction, both engines; retire the packed scores.").
+work_state(w_agg_rank_by_tuple, open).
+
+work(w_ts_bridge_names_a_past_premise,
+  "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise.").
+work_state(w_ts_bridge_names_a_past_premise, open).
+
+work(w_agg_retract_fallback_tail,
+  "THE RETRACTION'S NAMED FALLBACKS (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold reading what changed, a staged or demanded rule, a supported cell a reset rule also owns, a reset rule concluding what a changed cell concludes. Each gets a delta where bounded or a recorded reason; differential test extended.").
+work_state(w_agg_retract_fallback_tail, open).
+
+work(w_explain_debug_stack,
+  "cargo test --test explain overflows the stack in the debug profile (passes in release): make the explain recursion iterative or bounded so debug builds run the suite.").
+work_state(w_explain_debug_stack, open).
