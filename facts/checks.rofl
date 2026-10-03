@@ -490,6 +490,13 @@ check_opt("agg_cell_why", together, 1).
 check_opt("agg_cell_why", explain, 1).
 proves("agg_cell_why", agg, cell, why).
 
+-- w_why_is_a_dag: a fact or a cell written out once is referred to after (`K [above]`), and a failing literal demonstrated once
+check_world("agg_why_dag").
+check_file("agg_why_dag", "examples/checks/agg-why-dag.rofl").
+check_opt("agg_why_dag", together, 1).
+check_opt("agg_why_dag", explain, 1).
+proves("agg_why_dag", agg, cell, why).
+
 -- WELL-FOUNDED WORLDS AND TICKS (w_agg_wfs_ticks; docs/aggregates.md,
 -- "Well-founded worlds and ticks, as built"). The wfs column: a cell under
 -- semantics(well_founded) is refused (each world's `-refused-` fixtures),

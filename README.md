@@ -801,7 +801,9 @@ bit-identical state, tick log, and provenance regardless of insertion order
   `whynot` explains each failing premise in turn, so the answer to "which
   stage dropped this row" is the chain down to the builtin that failed on
   real values. A literal already being explained above is marked `[cycle]`
-  and not re-entered; `depth` (default 6) shapes the tree; `nodes`
+  and not re-entered; one already explained in full earlier in the answer is
+  `K [above]` (`why` too: a fact or an aggregate's cell is written once, so
+  an answer is the size of its derivation graph); `depth` (default 6) shapes the tree; `nodes`
   (default 64) bounds it outright — the node cap alone is what guarantees
   termination, since it caps how many literals the whole tree may explain.
   Both announce themselves in the output when they fire.

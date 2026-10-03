@@ -3514,8 +3514,8 @@ work(w_dataflow_pruning,
 work_state(w_dataflow_pruning, open).
 
 work(w_why_is_a_dag,
-  "WHY AND WHYNOT PRINT A DAG, NOT A TREE (f_why_writes_a_shared_derivation_out_in_full, f_provenance_is_a_dag_not_a_tree): a sub-goal shared by sibling branches is written once and referred to after, in both engines, so output grows with the derivation graph and not with its unfolding; [cycle] stays per path. ACCEPTANCE: the 9.3 MB whynot of the demo shrinks to the size of its distinct sub-goals, whycheck stays at 0 differences.").
-work_state(w_why_is_a_dag, open).
+  "WHY AND WHYNOT PRINT A DAG, NOT A TREE (f_why_writes_a_shared_derivation_out_in_full, f_provenance_is_a_dag_not_a_tree): a sub-goal shared by sibling branches is written once and referred to after, in both engines, so output grows with the derivation graph and not with its unfolding; [cycle] stays per path. ACCEPTANCE: the 9.3 MB whynot of the demo shrinks to the size of its distinct sub-goals, whycheck stays at 0 differences. DONE 2026-10-03: f_why_is_a_dag_and_a_proof_is_its_distinct_positions; `K [above]`, minimax `why game(0)` 1 117 936 lines to 19 460, why all bounded, whycheck 0 differ.").
+work_state(w_why_is_a_dag, done).
 
 work(w_whynot_stays_near_its_target,
   "A WHYNOT WITH AN UNBOUND VARIABLE enumerates the whole corpus instead of the target's neighbourhood. Bind what the question's own constants and the failing premise's join can bind first, and say how many candidates were left unexplored rather than walking them. ACCEPTANCE: whynot of a literal with one open variable over a 5k-file world answers in the size of the target's cone.").

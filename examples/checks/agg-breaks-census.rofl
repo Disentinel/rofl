@@ -876,6 +876,12 @@ brk("counting_recursion_admitted"). brk_kind("counting_recursion_admitted", swit
 brk_expects("counting_recursion_admitted", "agg_tagc_strata").
 brk("wfs_admits_tag"). brk_kind("wfs_admits_tag", switch).
 brk_expects("wfs_admits_tag", "agg_tag_wfs").
+brk("why_dag_off"). brk_kind("why_dag_off", switch).
+brk_expects("why_dag_off", "agg_why_dag").
+brk("why_dag_cell_off"). brk_kind("why_dag_cell_off", switch).
+brk_expects("why_dag_cell_off", "agg_why_dag").
+brk("whynot_dag_off"). brk_kind("whynot_dag_off", switch).
+brk_expects("whynot_dag_off", "agg_why_dag").
 brk("count_why_plain"). brk_kind("count_why_plain", switch).
 brk_expects("count_why_plain", "agg_tagc_why").
 brk("count_whynot_plain"). brk_kind("count_whynot_plain", switch).
@@ -1197,6 +1203,12 @@ brk("ts_widen_whynot_bare"). brk_kind("ts_widen_whynot_bare", ts).
 brk_expects("ts_widen_whynot_bare", "agg_widen_why").
 brk("ts_tag_label_lattice"). brk_kind("ts_tag_label_lattice", ts).
 brk_expects("ts_tag_label_lattice", "agg_tag_why").
+brk("ts_why_dag_off"). brk_kind("ts_why_dag_off", ts).
+brk_expects("ts_why_dag_off", "agg_why_dag").
+brk("ts_why_dag_cell_off"). brk_kind("ts_why_dag_cell_off", ts).
+brk_expects("ts_why_dag_cell_off", "agg_why_dag").
+brk("ts_whynot_dag_off"). brk_kind("ts_whynot_dag_off", ts).
+brk_expects("ts_whynot_dag_off", "agg_why_dag").
 brk("ts_count_why_plain"). brk_kind("ts_count_why_plain", ts).
 brk_expects("ts_count_why_plain", "agg_tagc_why").
 brk("ts_dominance_why_one_member"). brk_kind("ts_dominance_why_one_member", ts).
@@ -1771,7 +1783,10 @@ switch_site("wfs_admits_tag", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_threshold", "rust/rofl/src/engine.rs").
 switch_site("wfs_unknowns_decide", "rust/rofl/src/engine.rs").
 switch_site("why_all_digest", "rust/rofl/src/session.rs").
+switch_site("why_dag_cell_off", "rust/rofl/src/engine.rs").
+switch_site("why_dag_off", "rust/rofl/src/engine.rs").
 switch_site("why_depth_cut", "rust/rofl/src/engine.rs").
+switch_site("whynot_dag_off", "rust/rofl/src/engine.rs").
 switch_site("whynot_hole_empty", "rust/rofl/src/engine.rs").
 switch_site("whynot_unranked_empty", "rust/rofl/src/engine.rs").
 switch_site("widen_both_ends", "rust/rofl/src/cell.rs").
