@@ -34,7 +34,7 @@ expect_does[jodit](tree, "write", put, once, main).
 expect_does[jodit](tree, "write", rename, once, main).
 expect_does[jodit](tree, "write", delete, once, handler).
 expect_does[jodit](tree, "read", read, once, main).
-expect_does[jodit](tree, "read", session, once, main).
+expect_does[jodit](tree, "read", session, once, deferred).
 expect_does[jodit](tree, "move_file", mkdir, repeated, main).
 expect_does[jodit](tree, "move_file", rename, once, main).
 expect_does[jodit](hasty, "write", put, once, main).

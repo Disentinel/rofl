@@ -9,6 +9,7 @@ GCS JSON API, an operating-system call. The facts written are
 
   observed[jodit](Adapter, Duty, Wire, TestClass).
   observed_via[jodit](Adapter, Duty, Call, Wire).
+  observed_call[jodit](Adapter, Duty, Call).
 
 `Call` is the outermost library call the message went out under (`putfo`,
 `copyfile`, `storbinary`): what one call in the code expands into on the wire.
@@ -41,6 +42,7 @@ ADAPTERS = {"jcpy.storage.s3": "S3StorageAdapter", "jcpy.storage.azure": "AzureS
             "jcpy.storage.local": "LocalStorageAdapter"}
 seen: set[tuple[str, str, str, str]] = set()
 via: set[tuple[str, str, str, str]] = set()
+calls: set[tuple[str, str, str]] = set()
 variant = ["none"]
 
 
@@ -59,13 +61,32 @@ def entry(owner, name: str) -> None:
     @functools.wraps(fn)
     def inner(*args, **kwargs):
         # an entry is a call the adapter's code makes, not one a library makes inside
-        caller = sys._getframe(1).f_globals.get("__name__", "")
-        token = ENTRY.set(ENTRY.get() or (name if caller.startswith("jcpy.") else None))
+        mine = ENTRY.get() is None and called_from_jcpy()
+        duty = DUTY.get()
+        if mine and duty is not None:
+            calls.add((duty[0], duty[1], name))
+        token = ENTRY.set(ENTRY.get() or (name if mine else None))
         try:
             return fn(*args, **kwargs)
         finally:
             ENTRY.reset(token)
     setattr(owner, name, inner)
+
+
+PLUMBING = ("anyio", "asyncio", "threading", "concurrent", "functools", "contextvars", "trace")
+
+
+def called_from_jcpy() -> bool:
+    """The first caller that is not plumbing running a handed callable is jodit's
+    code. A worker thread's stack holds only plumbing: what it runs was handed to
+    it from a context the duty mark came with, so that counts as jodit's."""
+    frame = sys._getframe(2)
+    while frame is not None:
+        module = frame.f_globals.get("__name__", "")
+        if not module.startswith(PLUMBING):
+            return module.startswith("jcpy.")
+        frame = frame.f_back
+    return True
 
 
 def entries(owner) -> None:
@@ -198,6 +219,16 @@ def pytest_configure(config):
     except ImportError:
         pass
     entries(ftplib.FTP)
+    import httpx as httpx_entries
+    entries(httpx_entries.Response)
+    entries(ftplib.FTP_TLS)
+    import ssl
+    entries(ssl.SSLContext)
+    try:
+        from paramiko.client import SSHClient
+        entries(SSHClient)
+    except ImportError:
+        pass
     entries(pathlib.Path)
     for name in ("rename", "replace", "unlink", "remove", "rmdir", "mkdir", "stat", "scandir"):
         entry(os, name)
@@ -209,7 +240,8 @@ def pytest_configure(config):
         from google.cloud.storage.blob import Blob
         from google.cloud.storage.bucket import Bucket
         from google.cloud.storage.fileio import BlobReader
-        for owner in (Blob, Bucket, BlobReader):
+        from google.cloud.storage.client import Client
+        for owner in (Blob, Bucket, BlobReader, Client):
             entries(owner)
     except ImportError:
         pass
@@ -229,3 +261,5 @@ def pytest_sessionfinish(session):
             f.write(f'observed[jodit]("{a}", "{d}", "{w}", "{v}").\n')
         for a, d, c, w in sorted(via):
             f.write(f'observed_via[jodit]("{a}", "{d}", "{c}", "{w}").\n')
+        for a, d, c in sorted(calls):
+            f.write(f'observed_call[jodit]("{a}", "{d}", "{c}").\n')

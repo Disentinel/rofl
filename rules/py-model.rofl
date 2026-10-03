@@ -12,7 +12,8 @@
 --                 named through `self`, a lambda written inside it, a def named
 --   py_reaches    py_invokes, closed
 --   py_step_call  a call a unit makes, through which step of its body, how
---                 often (once, repeated) and on which path (main, always, handler)
+--                 often (once, repeated) and on which path (main, always, handler,
+--                 deferred)
 --   py_exclusive  two steps of one body that never both run
 --
 -- APPROXIMATION, DECLARED: naming `self.m` without calling it counts as
@@ -96,17 +97,23 @@ py_join[code](once, once, once).         py_join[code](once, repeated, repeated)
 py_join[code](repeated, once, repeated). py_join[code](repeated, repeated, repeated).
 py_join[code](main, main, main).         py_join[code](main, always, always).
 py_join[code](always, main, always).     py_join[code](always, always, always).
+py_join[code](main, deferred, deferred).   py_join[code](deferred, main, deferred).
+py_join[code](always, deferred, deferred). py_join[code](deferred, always, deferred).
+py_join[code](deferred, deferred, deferred).
 py_join[code](handler, X, handler) :- py_path_name[code](X).
 py_join[code](X, handler, handler) :- py_path_name[code](X).
-py_path_name[code](main). py_path_name[code](always). py_path_name[code](handler).
+py_path_name[code](main). py_path_name[code](always). py_path_name[code](handler). py_path_name[code](deferred).
+-- the path of one invocation: its node's, made deferred when the edge is
+py_edge_path[code](U, W, N, P) :- py_invokes[code](U, W, N), not py_deferred_edge[code](U, W, N), py_path[code](N, P).
+py_edge_path[code](U, W, N, P) :- py_deferred_edge[code](U, W, N), py_path[code](N, P0), py_join[code](P0, deferred, P).
 
 -- py_reaches, keeping the STEP of U it went through (the node in U's own body
 -- where the way to W starts, so steps of U can be put in order), and
 -- `repeated` and the worst path met on the way
-py_trace[code](U, W, N, F, P) :- py_invokes[code](U, W, N), py_often[code](N, F), py_path[code](N, P).
+py_trace[code](U, W, N, F, P) :- py_invokes[code](U, W, N), py_often[code](N, F), py_edge_path[code](U, W, N, P).
 py_trace[code](U, X, S, F, P) :- py_trace[code](U, V, S, F0, P0), py_invokes[code](V, X, N),
                                  py_often[code](N, F1), py_join[code](F0, F1, F),
-                                 py_path[code](N, P1), py_join[code](P0, P1, P).
+                                 py_edge_path[code](V, X, N, P1), py_join[code](P0, P1, P).
 
 -- a call made by U, through the step it is reached by, with how often and on which path
 py_step_call[code](U, K, K, F, P) :- py_call[code](K, U, _), py_often[code](K, F), py_path[code](K, P).
@@ -173,7 +180,7 @@ py_stored[code](C, F, D) :- ast_node[code](A, assign, _, _), ast_child[code](A, 
                            ast_child[code](A, value, 0, K), ast_node[code](K, call, _, _), py_handed[code](C, K, D).
 py_field_call[code](U, F, K) :- py_call[code](K, U, _), ast_child[code](K, func, 0, G), ast_child[code](G, value, 0, H),
                                 py_self_attr[code](H, F, U, _).
-py_invokes[code](U, D, K) :- py_field_call[code](U, F, K), py_class_of[code](U, C), py_stored[code](C, F, D).
+py_deferred_edge[code](U, D, K) :- py_field_call[code](U, F, K), py_class_of[code](U, C), py_stored[code](C, F, D).
 
 -- A METHOD A LIBRARY CALLS BACK: a public method of a class whose base is not
 -- a class scanned here (`class _TLSReusingSession(ftplib.FTP_TLS)`) may be
@@ -183,4 +190,9 @@ py_scanned_base[code](C) :- ast_child[code](C, bases, _, B), ast_attr[code](B, i
 py_foreign_base[code](C) :- py_class[code](C, _), ast_child[code](C, bases, _, _), not py_scanned_base[code](C), not py_protocol[code](C).
 py_callback[code](C, D) :- py_foreign_base[code](C), py_method[code](C, M, D), not py_private[code](M).
 py_private[code](M) :- py_method[code](_, M, _), M = "__init__".
-py_invokes[code](U, D, K) :- py_name_call[code](K, U, N, _), py_class[code](C, N), py_callback[code](C, D).
+py_deferred_edge[code](U, D, K) :- py_name_call[code](K, U, N, _), py_class[code](C, N), py_callback[code](C, D).
+
+-- BOTH ARE DEFERRED: they run when their holder decides (a pool with no live
+-- connection, a library starting a transfer), so a step through one is on the
+-- path `deferred`, apart from what the duty does itself.
+py_invokes[code](U, D, K) :- py_deferred_edge[code](U, D, K).

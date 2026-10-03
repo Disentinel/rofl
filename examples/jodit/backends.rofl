@@ -84,6 +84,7 @@ op_str[jodit](ftp, "run", 1, "RETR ", read).
 op_str[jodit](ftp, "voidcmd", 0, "TYPE I", session).
 op_str[jodit](ftp, "voidcmd", 0, "OPTS UTF8 ON", session).
 op_str[jodit](ftp, "voidcmd", 0, "NOOP", session).
+op_str[jodit](ftp, "sendcmd", 0, "FEAT", session).
 -- httpx; the pause before a temporary file's removal is tried again
 op_kind[jodit](webdav, "sleep", backoff).
 op_str[jodit](webdav, "stream", 0, "GET", read).

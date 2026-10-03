@@ -43,6 +43,8 @@ step[jodit](B, M, Kind, S) :- does[jodit](B, M, Kind, S, _, P), succeeds[jodit](
 repeated[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, repeated, P), succeeds[jodit](P).
 -- what a duty does only when something on its way failed: cleanup, or the fallback of an attempt
 on_failure[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, handler), not kind_of[jodit](B, M, Kind).
+-- what runs only when its holder decides: a pool opening a connection, a library calling back
+on_demand[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, deferred), not kind_of[jodit](B, M, Kind).
 
 -- EVERY CALL IS ACCOUNTED FOR: a kind, a carrier of a command string, or not a request with a reason
 classified[jodit](B, Op) :- op_kind[jodit](B, Op, _).

@@ -65,8 +65,9 @@ modelled_any[jodit](B, D, K) :- does[jodit](B, D, K, _, _, _).
 -- a message nothing above says the kind of
 unknown_wire[audit](B, W) :- observed[jodit](A, _, W, _), backend[jodit](A, B), protocol[jodit](B, P),
                              not wire_kind[jodit](P, W, _), not connector_own[jodit](B, W).
--- WHAT THE TESTS DID THAT THE MODEL DOES NOT SAY, on any path
-observed_not_modelled[audit](B, D, K) :- observed_kind[jodit](B, D, K, _), not modelled_any[jodit](B, D, K).
+-- what the tests did that the model's own calls do not say, before expansion:
+-- a library call sends more than its own kind, so this is not empty
+observed_not_modelled[jodit](B, D, K) :- observed_kind[jodit](B, D, K, _), not modelled_any[jodit](B, D, K).
 -- what the model says a duty does when nothing fails that no test was seen doing
 modelled_not_observed[jodit](B, D, K) :- kind_of[jodit](B, D, K), observed_backend[jodit](B),
                                          not observed_kind[jodit](B, D, K, _).
@@ -74,6 +75,7 @@ modelled_not_observed[jodit](B, D, K) :- kind_of[jodit](B, D, K), observed_backe
 -- WHAT ONE CALL EXPANDS INTO ON THE WIRE, MEASURED: putfo is open, write,
 -- fstat and close; copyfile opens two files. Read off the trace, not written.
 edb(observed_via).
+edb(observed_call).
 expands[jodit](B, Op, K) :- observed_via[jodit](A, _, Op, W), backend[jodit](A, B), protocol[jodit](B, P),
                             wire_kind[jodit](P, W, K).
 -- a call that is a kind expands into what it was measured to send; any call
@@ -92,3 +94,13 @@ observed_not_predicted[audit](B, D, K) :- observed_kind[jodit](B, D, K, _), not 
 reached_op[jodit](B, D, Op) :- call_in[jodit](B, D, C, _, _, _), py_attr_call[code](C, _, Op).
 unreached_call[audit](B, D, Op) :- observed_via[jodit](A, D, Op, _), Op != "none", backend[jodit](A, B),
                                    not reached_op[jodit](B, D, Op).
+
+-- THE OTHER DIRECTION, PRECISION: a request-kind call the model puts on a
+-- duty's main path that the tests never made under it. Not an audit: a path
+-- no test takes is not an error. What remains over jodit is calls on file
+-- handles and directory entries, written in C, which trace.py does not see.
+traced[jodit](B, D) :- observed_kind[jodit](B, D, _, _).
+called[jodit](B, D, Op) :- observed_call[jodit](A, D, Op), backend[jodit](A, B).
+reached_main[jodit](B, D, Op) :- call_in[jodit](B, D, C, _, _, P), succeeds[jodit](P),
+                                 py_attr_call[code](C, _, Op), op_kind[jodit](B, Op, _).
+main_not_called[jodit](B, D, Op) :- traced[jodit](B, D), reached_main[jodit](B, D, Op), not called[jodit](B, D, Op).
