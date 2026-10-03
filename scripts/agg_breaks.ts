@@ -3064,6 +3064,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "why_dag_off",
+  "what": "why writes a fact it has written out already in full again, as a tree and not a DAG",
+  "expect": {
+   "agg_why_dag": "dg_twice"
+  }
+ },
+ {
+  "id": "why_dag_cell_off",
+  "what": "why writes an aggregate's cell it has written out already in full again",
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
+  "id": "whynot_dag_off",
+  "what": "whynot demonstrates a ground literal it has demonstrated already again",
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
   "id": "count_why_plain",
   "what": "why renders a counting tag's fact as a plain one, not as the sum of its derivations",
   "expect": {
@@ -4434,6 +4455,48 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_tag_why": "tgy_text_missing"
+  }
+ },
+ {
+  "id": "ts_why_dag_off",
+  "what": "TypeScript why writes a fact it has written out already in full again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.whyDone.has(`f|${id}`)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_twice"
+  }
+ },
+ {
+  "id": "ts_why_dag_cell_off",
+  "what": "TypeScript why writes an aggregate's cell it has written out already in full again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.whyDone.has(`c|${pr.key}`)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
+  "id": "ts_whynot_dag_off",
+  "what": "TypeScript whynot demonstrates a ground literal it has demonstrated already again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (at !== undefined && at <= level) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
   }
  },
  {

@@ -734,6 +734,8 @@ export class AggEval {
   private stagedAlts = new Map<string, [string, PremRef[]][]>();
   stagedUnknown = new Map<string, [Unknown, boolean]>();
   private pastRows: Map<string, string[]> | null = null;
+  /** What this `why` has written out in full, a fact (`f|`) or a cell (`c|`): a second reach is a reference, `[above]`. */
+  private whyDone = new Set<string>();
   pastWalks = 0;
   whyScans = 0;
   private aggPlans = new Map<string, AggPlan>();
@@ -6362,6 +6364,7 @@ export class AggEval {
     }
     this.pastRows = null;
     this.whyScans = 0;
+    this.whyDone.clear();
     this.whyUnk = this.plain ? this.unknownCtx() : null;
     const out = this.renderTree(key, { members, query: key });
     this.pastRows = null;
@@ -6406,8 +6409,14 @@ export class AggEval {
     const key = id;
     const pad = '  '.repeat(indent);
     if (seen.has(id)) { next.push(line(`${pad}${key} [cycle]`)); return; }
-    seen.add(id);
+    // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and what a leaf says is as short as a reference
     const lat = this.lattices.get(r.rel);
+    const leaf = !this.subs.has(r.rel) && lat === undefined && !this.tags.countRel.has(r.rel) && this.store.witnessOf(id) === undefined;
+    if (!leaf) {
+      if (this.whyDone.has(`f|${id}`)) { next.push(line(`${pad}${key} [above]`)); return; }
+      this.whyDone.add(`f|${id}`);
+    }
+    seen.add(id);
     if (this.subs.has(r.rel)) this.renderSub(id, key, indent, o, next);
     else if (lat !== undefined) this.renderLattice(id, key, lat[1], indent, o, next);
     else if (this.tags.countRel.has(r.rel)) this.renderCounting(id, key, indent, o, next);
@@ -6574,15 +6583,15 @@ export class AggEval {
       return;
     }
     if (pr.t !== 'fact') { this.renderPrem(pr, indent, o, next); return; }
-    const r = this.rec(pr.key);
-    const ft = canonTerm(factTerm(r.rel, r.persp, r.args));
+    // NAMED FROM ITS KEY: a fact of a tick that is over has no record here, the frozen derived_by rows are keyed by it
     if (this.pastRows === null) {
       const by = new Map<string, string[]>();
       for (const d of this.store.relAll(V.derived_by)) {
         this.whyScans++;
         const a = d.args;
-        if (a[1]?.k === 'a' && a[2]?.k === 'i') {
-          const k = canonTerm(a[0]) + '@' + a[2].v;
+        const f = a[0];
+        if (a[1]?.k === 'a' && a[2]?.k === 'i' && f.k === 'f' && f.name === '$fact' && f.args.length === 3 && f.args[0].k === 'a' && f.args[1].k === 'a') {
+          const k = factKey(f.args[0].name, f.args[1].name, unlist(f.args[2])) + '@' + a[2].v;
           let e = by.get(k);
           if (!e) { e = []; by.set(k, e); }
           e.push(a[1].name);
@@ -6590,7 +6599,7 @@ export class AggEval {
       }
       this.pastRows = by;
     }
-    const rules = [...(this.pastRows.get(ft + '@' + t) ?? [])].sort(cmpStr);
+    const rules = [...(this.pastRows.get(pr.key + '@' + t) ?? [])].sort(cmpStr);
     const pad = '  '.repeat(indent);
     next.push(line(rules.length === 0 ? `${pad}${pr.key} [past tick]` : `${pad}${pr.key}  <= ${rules.join(', ')} @tick ${t} [past tick]`));
   }
@@ -6617,6 +6626,11 @@ export class AggEval {
     const r = this.store.cells.get(pr.key)!;
     const members = r.members;
     const n = members.length;
+    if (this.whyDone.has(`c|${pr.key}`)) {
+      next.push(line(r.op === 'at_least' ? `${pad}${r.desc} [above]` : `${pad}${r.desc} = ${cellValueText(r.value)} [above]`));
+      return;
+    }
+    this.whyDone.add(`c|${pr.key}`);
     if (r.op === 'at_least') {
       next.push(line(`${pad}${r.desc} [quorum: the first ${n} member${n === 1 ? '' : 's'}]`));
       for (let i = 0; i < n; i++) {
@@ -6750,7 +6764,7 @@ export class AggEval {
   }
 
   private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set() };
+    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map() };
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
     if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${this.plain ? shown ?? k : k} holds; nothing to demonstrate`];
@@ -7025,6 +7039,11 @@ export class AggEval {
     if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]` }); return; }
     const ck = this.cycleKey(lit);
     if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]` }); return; }
+    if (isGround(lit.persp) && lit.args.every(isGround)) {
+      const at = ctx.done.get(ck);
+      if (at !== undefined && at <= level) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]` }); return; }
+      ctx.done.set(ck, level);
+    }
     ctx.path.add(ck);
     next.push({ t: 'failure', lit, level }, { t: 'unpath', ck });
   }
@@ -7147,7 +7166,11 @@ export class AggEval {
 
 export const WHY_MEMBERS = 5;
 interface WhyOpts { members: number; query: string }
-interface WnCtx { maxDepth: number; maxNodes: number; nodes: number; path: Set<string> }
+interface WnCtx {
+  maxDepth: number; maxNodes: number; nodes: number; path: Set<string>;
+  /** The ground literals demonstrated in full, with the shallowest level each was written at: one reached again at that level or deeper is referred to. */
+  done: Map<string, number>;
+}
 /** One step of `whynot`'s walk (`explainTree`). */
 type WnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: ERule; level: number }
   | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string } | { t: 'unpath'; ck: string };

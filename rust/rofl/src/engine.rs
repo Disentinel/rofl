@@ -450,6 +450,9 @@ pub struct Eval {
     past_rows: Option<HashMap<(Term, i64), Vec<Sym>>>,
     /// The `unknown` rows a plain `why` walks, while it walks (`UnkCtx`).
     why_unk: Option<UnkCtx>,
+    /// What this `why` has written out in full, a fact or a cell (`true`): a second
+    /// reach is a reference, `[above]`.
+    why_done: HashSet<(bool, u32)>,
     /// Cell members `cited_past` walked at the last boundary: each cell once.
     pub past_walks: u64,
     /// `derived_by` rows `why` read for past premises since its last call.
@@ -916,6 +919,7 @@ impl Eval {
             staged_unknown: HashMap::new(),
             past_rows: None,
             why_unk: None,
+            why_done: HashSet::new(),
             past_walks: 0,
             why_scans: 0,
             agg_plans: HashMap::new(),
@@ -11382,6 +11386,9 @@ struct WnCtx {
     max_nodes: usize,
     nodes: usize,
     path: HashSet<String>,
+    /// The ground literals demonstrated in full, with the shallowest level each
+    /// was written at: one reached again at that level or deeper is referred to.
+    done: HashMap<String, usize>,
 }
 
 impl Eval {
@@ -11435,6 +11442,7 @@ impl Eval {
         let o = WhyOpts { members: o.members, query: key };
         self.past_rows = None;
         self.why_scans = 0;
+        self.why_done.clear();
         self.why_unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(id, &o);
         self.past_rows = None;
@@ -11511,6 +11519,16 @@ impl Eval {
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
             next.push(WhyTask::Line(format!("{pad}{key} [cycle]")));
+            return;
+        }
+        // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and
+        // what a leaf says is as short as a reference
+        let leaf = !self.subs.contains_key(&r.rel)
+            && !self.lattices.contains_key(&r.rel)
+            && !brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel))
+            && self.store.witness_of(&self.h, id).is_none();
+        if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
+            next.push(WhyTask::Line(format!("{pad}{key} [above]")));
             return;
         }
         seen.insert(id);
@@ -11891,6 +11909,9 @@ impl Eval {
             // a threshold reached stays reached however its input grows.
             PremRef::Cell(c) if self.store.cell(c).op == AggOp::AtLeast => {
                 let r = self.store.cell(c).clone();
+                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                    return next.line(format!("{}{} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                }
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
                 next.line(format!(
@@ -11912,6 +11933,10 @@ impl Eval {
             }
             PremRef::Cell(c) => {
                 let r = self.store.cell(c).clone();
+                if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
+                    let value = self.store.cell_value_text(&self.h, c);
+                    return next.line(format!("{}{} = {value} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                }
                 let seals: Vec<String> =
                     self.store.cell_seals(c).iter().map(|x| format!("{}@{}", self.h.name(x.rel), x.round)).collect();
                 let members = self.store.cell_members(c).to_vec();
@@ -12176,6 +12201,7 @@ impl Eval {
             max_nodes: b.max_nodes.max(1),
             nodes: 0,
             path: HashSet::new(),
+            done: HashMap::new(),
         };
         let s = Subst::default();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
@@ -12725,6 +12751,16 @@ impl Eval {
             resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
             next.push(WnTask::Line(format!("{pad}{k} [cycle]")));
             return;
+        }
+        if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
+            let seen_at = ctx.done.get(&ck).copied();
+            if brk!("whynot_dag_off" => false; seen_at.is_some_and(|l| l <= level)) {
+                let mut k = String::new();
+                resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
+                next.push(WnTask::Line(format!("{pad}{k} [above]")));
+                return;
+            }
+            ctx.done.insert(ck.clone(), level);
         }
         ctx.path.insert(ck.clone());
         next.push(WnTask::Failure(lit.clone(), level));

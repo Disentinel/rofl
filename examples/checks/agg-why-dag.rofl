@@ -1,0 +1,55 @@
+-- examples/checks/agg-why-dag.rofl — agg_why_dag, run with `rofl-load --explain`.
+-- A derivation is a DAG, and `why` prints it as one (f_why_writes_a_shared_derivation_out_in_full):
+-- a fact or a cell written out once is referred to after, as `K [above]`, and
+-- the lines under the reference are not written again. `dg_top(x)` rests on
+-- `dg_p(x)` and `dg_q(x)`, both of which rest on `dg_s(x)`, which rests on the
+-- one cell `max(V : dg_v(V))`; `whynot dg_top2(x)` meets the failing `dg_m(x)`
+-- from two rules and demonstrates it once.
+edb(explain_request).
+edb(explained).
+edb(dg_a).
+edb(dg_v).
+edb(dg_k).
+edb(dg_n).
+dg_n(1).
+dg_n(2).
+dg_a(x).
+dg_v(3).
+dg_v(7).
+dg_s(x) :- dg_a(x), M is max(V : dg_v(V)), M > 0.
+dg_p(x) :- dg_s(x).
+dg_q(x) :- dg_s(x).
+dg_top(x) :- dg_p(x), dg_q(x).
+-- one rule, one ungrouped cell, two firings
+dg_c(Y) :- dg_n(Y), M is max(V : dg_v(V)), M > 0.
+dg_cells(x) :- dg_c(1), dg_c(2).
+dg_m(x) :- dg_k(x).
+dg_t(x) :- dg_m(x).
+dg_u(x) :- dg_m(x).
+dg_top2(x) :- dg_t(x).
+dg_top2(x) :- dg_u(x).
+explain_request(why, dg_top(x)).
+explain_request(why, dg_cells(x)).
+explain_request(why_all, dg_top(x)).
+explain_request(whynot, dg_top2(x)).
+dg_holds(K, A, T) :- explained[$explain](K, A, _, L), dg_want(K, A, T), N is str_segs(L, T), N > 1.
+-- the shared fact: written out under dg_p, referred to under dg_q
+dg_want(why, dg_top(x), "  dg_p[main](x)  <= ").
+dg_want(why, dg_top(x), "    dg_s[main](x)  <= ").
+dg_want(why, dg_top(x), "  dg_q[main](x)  <= ").
+dg_want(why, dg_top(x), "    dg_s[main](x) [above]").
+-- and the cell under dg_s, written once
+dg_want(why, dg_top(x), "max(?V : dg_v[main](?V)) = 7 [aggregate: 1 member, sealed dg_v@0]").
+-- two firings of one cell: its second reach is a reference
+dg_want(why, dg_cells(x), "max(?V : dg_v[main](?V)) = 7 [aggregate: 1 member, sealed dg_v@0]").
+dg_want(why, dg_cells(x), "max(?V : dg_v[main](?V)) = 7 [above]").
+dg_want(why_all, dg_top(x), "    dg_s[main](x) [above]").
+-- the failing fact, demonstrated once and referred to after
+dg_want(whynot, dg_top2(x), "dg_m[main](x) [above]").
+dg_text_missing(K, A, T) :- dg_want(K, A, T), not dg_holds(K, A, T).
+-- the shared fact is not written under both: its rule line is there once
+dg_twice(K, A) :- explained[$explain](K, A, I, L), explained[$explain](K, A, J, M), I < J, N is str_segs(L, "dg_s[main](x)  <= "), N > 1, O is str_segs(M, "dg_s[main](x)  <= "), O > 1.
+dg_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(dg_text_missing).
+alarm(dg_twice).
+alarm(dg_refused).

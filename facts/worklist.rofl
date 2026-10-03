@@ -3514,8 +3514,8 @@ work(w_dataflow_pruning,
 work_state(w_dataflow_pruning, open).
 
 work(w_why_is_a_dag,
-  "WHY AND WHYNOT PRINT A DAG, NOT A TREE (f_why_writes_a_shared_derivation_out_in_full, f_provenance_is_a_dag_not_a_tree): a sub-goal shared by sibling branches is written once and referred to after, in both engines, so output grows with the derivation graph and not with its unfolding; [cycle] stays per path. ACCEPTANCE: the 9.3 MB whynot of the demo shrinks to the size of its distinct sub-goals, whycheck stays at 0 differences.").
-work_state(w_why_is_a_dag, open).
+  "WHY AND WHYNOT PRINT A DAG, NOT A TREE (f_why_writes_a_shared_derivation_out_in_full, f_provenance_is_a_dag_not_a_tree): a sub-goal shared by sibling branches is written once and referred to after, in both engines, so output grows with the derivation graph and not with its unfolding; [cycle] stays per path. ACCEPTANCE: the 9.3 MB whynot of the demo shrinks to the size of its distinct sub-goals, whycheck stays at 0 differences. DONE 2026-10-03: f_why_is_a_dag_and_a_proof_is_its_distinct_positions; `K [above]`, minimax `why game(0)` 1 117 936 lines to 19 460, why all bounded, whycheck 0 differ.").
+work_state(w_why_is_a_dag, done).
 
 work(w_whynot_stays_near_its_target,
   "A WHYNOT WITH AN UNBOUND VARIABLE enumerates the whole corpus instead of the target's neighbourhood. Bind what the question's own constants and the failing premise's join can bind first, and say how many candidates were left unexplored rather than walking them. ACCEPTANCE: whynot of a literal with one open variable over a 5k-file world answers in the size of the target's cone.").
@@ -3633,8 +3633,8 @@ work(w_agg_rank_by_tuple,
 work_state(w_agg_rank_by_tuple, open).
 
 work(w_ts_bridge_names_a_past_premise,
-  "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise.").
-work_state(w_ts_bridge_names_a_past_premise, open).
+  "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise. DONE 2026-10-03: the premise is named from its key and the frozen derived_by rows, world staged_neg_why_nocarry; the `no record` of the finding no longer reproduces (the one evaluator keeps dead records), see the note.").
+work_state(w_ts_bridge_names_a_past_premise, done).
 
 work(w_agg_retract_fallback_tail,
   "DONE 2026-10-03 (Rust only; the TypeScript engine stays a documented full recompute). THE RETRACTION'S NAMED FALLBACKS (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold reading what changed, a staged (@next) or demanded rule, a supported cell a reset rule also owns, a reset rule concluding what a changed cell concludes, and an aggregate component stratified by its data are DELTAS now, each equal to a fresh evaluation without the fact (canonical_state, the staged facts, why and whynot), proved by the differential (rust/rofl/tests/incremental.rs) and the worlds agg_incr_thr, agg_incr_twice, agg_incr_owner, agg_incr_staged, agg_incr_demand and agg_datastrat_retract, with planted faults. KEPT FULL, with the reason recorded: a staged fact two firings reach (f_a_staged_fact_is_kept_with_the_first_firing_the_schedule_met: the first firing is the schedule's, and a refiring meets them in another order); a lattice beside a rule answered on demand, a staged rule or a data-stratified component (the lattice path was not worked out for them, and a call made at a value a lattice has passed leaves a fact no fresh evaluation makes); a late or unsafe rule that reads what changed; a fact asserted into a relation answered on demand. Findings: f_a_fact_a_call_made_is_no_fact_of_the_evaluation (a demand relation makes a fact for every call, and a question makes one too).").
