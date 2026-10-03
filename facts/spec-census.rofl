@@ -434,6 +434,13 @@ check[checks]("facts/goldens.rofl", "agg_precise_scale", world).
 check[checks]("facts/goldens.rofl", "agg_proofs", world).
 check[checks]("facts/goldens.rofl", "agg_prose", world).
 check[checks]("facts/goldens.rofl", "agg_quorum_demo", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_eval", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_holes", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_phrase", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_safety", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_syntax", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_why", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_witness", world).
 check[checks]("facts/goldens.rofl", "agg_rederived_provenance", world).
 check[checks]("facts/goldens.rofl", "agg_slo_demo", world).
 check[checks]("facts/goldens.rofl", "agg_sub_budget", world).
@@ -610,6 +617,7 @@ citation_ok[checks](s_persistence_is_a_rule).
 citation_ok[checks](s7_no_log_provenance).
 citation_ok[checks](p_p1_one_witness_per_derivation).
 citation_ok[checks](l_queries_are_god_view).
+citation_ok[checks](d_rank_over_a_tuple).
 citation_ok[checks](l_demand_depth_512).
 citation_ok[checks](l_reflection_in_main).
 citation_ok[checks](d_retention_conditional).

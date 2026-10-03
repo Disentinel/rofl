@@ -1,0 +1,42 @@
+-- examples/checks/agg-rank-tuple-holes-check.rofl — agg_rank_tuple_holes over
+-- agg-rank-tuple-holes-data.rofl: a rank over a tuple is holed on exactly the
+-- cells an unknown could move, and holds where it cannot, in both engines.
+-- By hand, a place only grows as tuples are added before the subject, and a
+-- subject that is no member gains a place only by being added itself.
+--   rkh_d (score desc, name asc), the unknown tuple and the subject:
+--     h1 (7,b) sorts before (5,a): the place 1 might be 2        shrug
+--     h2 (3,b) sorts after (5,a): the place 1 stands             1
+--     h3 (5,a) is held already: it adds nothing                  1
+--     h4 (5,b) is between (5,a) and (5,c): (5,a) stands 1, (5,c) 2 might be 3 shrug
+--     h2 (3,b) is no member and might be: no place, or 2         shrug
+--     h1 (9,z) is no member and no unknown is it: no place       no row
+--   rkh_a (score asc, name asc):
+--     h1 (7,b) sorts after (5,a): 1 stands                        1
+--     h2 (3,b) sorts before (5,a): 1 might be 2                   shrug
+--     h3 1;  h4 (5,a) 1 stands, (5,c) might be 3                  1, shrug
+--     h2 (3,b) shrug;  h1 (9,z) no row
+rkh_rel(R, Rel) :- concludes[$kernel](R, Rel).
+rkh_holed(Rel, G, S, N) :- rkh_rel(R, Rel), hole[$kernel]($cell(R, _, _, $cons(S, $cons(N, $cons(G, $nil)))), support_withdrawn).
+edb(rkh_want).
+rkh_want(rkh_d, h1, 5, a).
+rkh_want(rkh_d, h4, 5, c).
+rkh_want(rkh_d, h2, 3, b).
+rkh_want(rkh_a, h2, 5, a).
+rkh_want(rkh_a, h4, 5, c).
+rkh_want(rkh_a, h2, 3, b).
+hole_missing(Rel, G, S, N) :- rkh_want(Rel, G, S, N), not rkh_holed(Rel, G, S, N).
+hole_extra(Rel, G, S, N)   :- rkh_holed(Rel, G, S, N), not rkh_want(Rel, G, S, N).
+alarm(hole_missing).
+alarm(hole_extra).
+-- expect-row: rkh_d[main](h2,5,a,1)
+-- expect-row: rkh_d[main](h3,5,a,1)
+-- expect-row: rkh_d[main](h4,5,a,1)
+-- expect-row: rkh_a[main](h1,5,a,1)
+-- expect-row: rkh_a[main](h3,5,a,1)
+-- expect-row: rkh_a[main](h4,5,a,1)
+-- expect-no-row: rkh_d[main](h1,9,z,
+-- expect-no-row: rkh_a[main](h1,9,z,
+-- expect-no-row: rkh_d[main](h1,5,a,
+-- expect-no-row: rkh_a[main](h2,5,a,
+-- expect-no-row: hole_extra[main](
+-- expect-no-row: hole_missing[main](

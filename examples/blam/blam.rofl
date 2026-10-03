@@ -221,14 +221,15 @@ cut_pairs(P, Q, N)   :- pkg_dep(P, Q), N is count(F, T : cuts(P, Q, F, T)).
 cut_minutes(P, Q, S) :- pkg_dep(P, Q), S is sum(M ; F, T : cuts(P, Q, F, T), cost(T, M)).
 max_pairs(N)         :- N is max(K : cut_pairs(_, _, K)).
 
--- minutes first, then pairs: pairs is under 1000, so one integer orders both.
-cut_score(P, Q, V)   :- cut_pairs(P, Q, N), cut_minutes(P, Q, S), V is S * 1000 + N.
-cut_place(P, Q, R)   :- cut_score(P, Q, V), W is 0 - V,
-                        R is rank(W, X : cut_score(_, _, K), X is 0 - K).
+-- minutes first, then pairs, the most first, then the edge's name: a rank over
+-- the tuple, so no packed score and no tie left to the host.
+cut_place(P, Q, R)   :- cut_pairs(P, Q, N), cut_minutes(P, Q, S),
+                        R is rank(S, N, P, Q ; desc(S2), desc(N2), P2, Q2 :
+                                  cut_pairs(P2, Q2, N2), cut_minutes(P2, Q2, S2)).
 
 -- for the diff at hand: the edges that decouple a target from EVERY changed file
 uncut(P, Q, T)       :- changed(F), affected(T), pkg_dep(P, Q), not cuts(P, Q, F, T).
 frees(P, Q, T)       :- affected(T), pkg_dep(P, Q), not uncut(P, Q, T).
 free_minutes(P, Q, S) :- frees(P, Q, _), S is sum(M ; T : frees(P, Q, T), cost(T, M)).
-free_place(P, Q, R)  :- free_minutes(P, Q, S), W is 0 - S,
-                        R is rank(W, X : free_minutes(_, _, K), X is 0 - K).
+free_place(P, Q, R)  :- free_minutes(P, Q, S),
+                        R is rank(S, P, Q ; desc(S2), P2, Q2 : free_minutes(P2, Q2, S2)).

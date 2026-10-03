@@ -1,0 +1,4 @@
+-- expect-refusal: rank's subject has no direction, only its keys do
+-- examples/checks/agg-rank-tuple-safety-3-refused-subject-wrapped.rofl — the
+-- direction is a key's: the subject is the tuple asked for.
+rts_wrap(G, V, R) :- rts_line(G, V, _), R is rank(desc(V) ; W : rts_line(G, W, _)).

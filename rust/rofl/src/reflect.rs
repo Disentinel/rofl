@@ -132,6 +132,34 @@ impl BodyElem {
 }
 
 impl Agg {
+    /// A rank over a tuple, `rank(S1, S2 ; K1, desc(K2) : body)`: the subject
+    /// is every value before the `;`, and the members are the keys after it.
+    pub fn rank_tuple(&self) -> bool {
+        self.op == AggOp::Rank && !self.keys.is_empty()
+    }
+    /// How many of the written values come before the projection.
+    pub fn params(&self) -> usize {
+        if self.rank_tuple() { self.vals.len() } else { self.op.params() }
+    }
+    /// A rank key's direction at each position: true for `desc(..)`.
+    pub fn rank_desc(&self, h: &Heap) -> Vec<bool> {
+        self.keys.iter().map(|t| crate::cell::key_dir(h, *t).0).collect()
+    }
+    /// A rank's resolved projection with the `asc(..)` and `desc(..)` the
+    /// source wrote taken off, so a member is its keys and nothing else.
+    pub fn plain_keys(&self, h: &Heap, proj: Vec<Term>) -> Vec<Term> {
+        if !self.rank_tuple() {
+            return proj;
+        }
+        let at = proj.len() - self.keys.len();
+        proj.into_iter()
+            .enumerate()
+            .map(|(i, t)| match (i.checked_sub(at).map(|j| crate::cell::key_dir(h, self.keys[j]).1), t.kind()) {
+                (Some(true), TermK::Func(f)) => h.fargs(f)[0],
+                _ => t,
+            })
+            .collect()
+    }
     /// The variables inside the aggregate: values, keys and inner body.
     pub fn inner_vars(&self, h: &Heap, out: &mut Vec<Sym>) {
         for t in self.vals.iter().chain(self.keys.iter()) {

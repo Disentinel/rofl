@@ -1,0 +1,33 @@
+-- examples/checks/agg-rank-tuple-safety-check.rofl — agg_rank_tuple_safety.
+-- Every accepted form has its rows, and no refused program reached the world.
+-- The input is here rather than beside the rules, so a refused rule leaves it
+-- behind for the checks to read.
+--   g1 lines (value, tag): (4, a) (4, b) (7, a). One key: the values 4, 7.
+--   rts_one: 4 -> 1, 7 -> 2.
+--   rts_two, value desc then tag asc: (7,a) 1, (4,a) 2, (4,b) 3.
+--   rts_lit: (7, b) is no tuple of g1: no row.  rts_str: ("x", 2): none.
+edb(rts_line).
+edb(rts_group).
+rts_line(g1, 4, a).
+rts_line(g1, 4, b).
+rts_line(g1, 7, a).
+rts_group(g1).
+rts_want(rts_one, $cons(g1, $cons(4, $cons(1, $nil)))).
+rts_want(rts_one, $cons(g1, $cons(7, $cons(2, $nil)))).
+rts_want(rts_two, $cons(g1, $cons(7, $cons(a, $cons(1, $nil))))).
+rts_want(rts_two, $cons(g1, $cons(4, $cons(a, $cons(2, $nil))))).
+rts_want(rts_two, $cons(g1, $cons(4, $cons(b, $cons(3, $nil))))).
+rts_got(rts_one, $cons(G, $cons(V, $cons(R, $nil))))            :- rts_one(G, V, R).
+rts_got(rts_two, $cons(G, $cons(V, $cons(N, $cons(R, $nil)))))  :- rts_two(G, V, N, R).
+rts_got(rts_lit, $cons(G, $cons(R, $nil)))                      :- rts_lit(G, R).
+rts_got(rts_str, $cons(G, $cons(R, $nil)))                      :- rts_str(G, R).
+expected_row_missing(Rel, T) :- rts_want(Rel, T), not rts_got(Rel, T).
+unexpected_row(Rel, T)       :- rts_got(Rel, T), not rts_want(Rel, T).
+rts_refused(rts_subj).
+rts_refused(rts_wrap).
+rts_refused(rts_comp).
+rts_refused(rts_free).
+refused_accepted(Rel) :- rts_refused(Rel), concludes[$kernel](_, Rel).
+alarm(expected_row_missing).
+alarm(unexpected_row).
+alarm(refused_accepted).

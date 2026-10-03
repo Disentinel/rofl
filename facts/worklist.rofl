@@ -3630,7 +3630,7 @@ work_state(w_agg_member_keeps_its_derivations, open).
 
 work(w_agg_rank_by_tuple,
   "RANK BY A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host): rank takes one Int, so a multi-key order is a packed score or host sorting (blam). Rank by a lexicographic tuple with per-key direction, both engines; retire the packed scores.").
-work_state(w_agg_rank_by_tuple, open).
+work_state(w_agg_rank_by_tuple, done).
 
 work(w_ts_bridge_names_a_past_premise,
   "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise.").

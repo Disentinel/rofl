@@ -212,7 +212,8 @@ thr_read(R, Q) :- agg_op(R, K, at_least), agg_inner(R, K, I), premise_lit(I, _, 
 -- built"): median and quantile fold a multiset of values, so like sum they
 -- name a key; quantile's percent and rank's subject are a first term read
 -- from outside (the door requires it bound before), so both take exactly two
--- terms; rank ranks among distinct values and takes no key.
+-- terms; rank ranks among distinct values and takes no key, unless it ranks a
+-- tuple: `rank(S1, S2 ; K1, desc(K2) : body)`, with a key for every subject.
 needs_holistic_key(median).
 needs_holistic_key(quantile).
 one_value_op(median).
@@ -220,8 +221,12 @@ param_op(quantile).
 param_op(rank).
 agg_two_terms(R, K) :- premise_lit(R, K, $agg(_, _, $cons(_, $cons(_, $nil)), _, _)).
 agg_refused(R, holistic_needs_key) :- agg_op(R, K, Op), needs_holistic_key(Op), not agg_keyed(R, K).
-agg_refused(R, param_and_value)    :- agg_op(R, K, Op), param_op(Op), not agg_two_terms(R, K).
-agg_refused(R, key_on_rank)        :- agg_op(R, K, rank), agg_keyed(R, K).
+agg_tuple_rank(R, K) :- agg_op(R, K, rank), agg_keyed(R, K).
+agg_refused(R, param_and_value)    :- agg_op(R, K, Op), param_op(Op), not agg_two_terms(R, K), not agg_tuple_rank(R, K).
+rank_pairs(R, K, A, B) :- agg_tuple_rank(R, K), premise_lit(R, K, $agg(_, _, A, B, _)).
+rank_pairs(R, K, A, B) :- rank_pairs(R, K, $cons(_, A), $cons(_, B)).
+rank_arity_ok(R, K)    :- rank_pairs(R, K, $nil, $nil).
+agg_refused(R, rank_key_arity)     :- agg_tuple_rank(R, K), not rank_arity_ok(R, K).
 
 -- THE EMPTY GROUP. A zero is a claim that nothing matched, so it exists only
 -- where the group is asked from outside: every variable the aggregate shares
@@ -590,6 +595,9 @@ stratum(agg_keyed, 1).
 stratum(agg_one_value, 1).
 stratum(agg_no_value, 1).
 stratum(agg_two_terms, 1).
+stratum(agg_tuple_rank, 1).
+stratum(rank_pairs, 1).
+stratum(rank_arity_ok, 1).
 stratum(thr_read, 1).
 stratum(has_agg_rule, 1).
 stratum(member_reader, 1).

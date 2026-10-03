@@ -1,0 +1,41 @@
+-- examples/checks/agg-rank-tuple-syntax-2-expect.rofl — agg_rank_tuple_syntax.
+-- The `$agg` tree each form of agg-rank-tuple-syntax-1-forms.rofl reflects to,
+-- both directions: the subject terms the vals, the keys the keys, each
+-- direction a term round its key, `desc(W)` and `asc(U)`, and a bare key as
+-- written; the one-integer form unchanged, its two terms the vals and no keys;
+-- ring 1 reading a rank over a tuple from `src` (a wildcard is `wild` at its
+-- offset, a compound term `comp(Name, Args)`, so a direction `comp(desc, [W])`); and no refused form
+-- reaching the world.
+sxt_want(sxt_one, $agg(rank,$var("R"),$cons($var("V"),$nil),$cons($var("W"),$nil),$cons($lit(sxt_l,main,$cons($var("_$3"),$cons($var("_$4"),$cons($var("W"),$cons($var("_$5"),$nil)))),$now),$nil))).
+sxt_want(sxt_two, $agg(rank,$var("R"),$cons($var("V"),$cons($var("T"),$nil)),$cons(desc($var("W")),$cons(asc($var("U")),$nil)),$cons($lit(sxt_l,main,$cons($var("_$2"),$cons($var("_$3"),$cons($var("W"),$cons($var("U"),$nil)))),$now),$nil))).
+sxt_want(sxt_lit, $agg(rank,$var("R"),$cons(5,$cons("x",$nil)),$cons($var("W"),$cons(desc($var("U")),$nil)),$cons($lit(sxt_l,main,$cons($var("_$0"),$cons($var("_$1"),$cons($var("W"),$cons($var("U"),$nil)))),$now),$nil))).
+sxt_want(sxt_book, $agg(rank,$var("R"),$cons($var("V"),$nil),$cons(desc($var("W")),$nil),$cons($lit(sxt_l,ledger,$cons($var("_$3"),$cons($var("_$4"),$cons($var("W"),$cons($var("_$5"),$nil)))),$now),$nil))).
+sxt_want(sxt_old, $agg(rank,$var("R"),$cons($var("V"),$cons($var("W"),$nil)),$nil,$cons($lit(sxt_l,main,$cons($var("_$3"),$cons($var("_$4"),$cons($var("W"),$cons($var("_$5"),$nil)))),$now),$nil))).
+sxt_mine(H)        :- sxt_want(H, _).
+sxt_has(H, T)      :- sxt_mine(H), concludes[$kernel](R, H), premise_lit[$kernel](R, _, T), T = $agg(_, _, _, _, _).
+tree_missing(H, T) :- sxt_want(H, T), not sxt_has(H, T).
+tree_extra(H, T)   :- sxt_has(H, T), not sxt_want(H, T).
+alarm(tree_missing).
+alarm(tree_extra).
+
+src("m(V, T, R) :- l(_, _, V, T), R is rank(V, T ; desc(W), U : l(_, _, W, U)).\nn(V, R) :- l(_, _, V), R is rank(V ; W : l(_, _, W)).").
+r1h_want($lit(m, $bare, $cons($var("V"), $cons($var("T"), $cons($var("R"), $nil))), $now),
+  $cons($lit(l, $bare, $cons(wild(16), $cons(wild(19), $cons($var("V"), $cons($var("T"), $nil)))), $now),
+  $cons($agg(rank, $var("R"), $cons($var("V"), $cons($var("T"), $nil)), $cons(comp(desc, $cons($var("W"), $nil)), $cons($var("U"), $nil)),
+    $cons($lit(l, $bare, $cons(wild(61), $cons(wild(64), $cons($var("W"), $cons($var("U"), $nil)))), $now), $nil)), $nil))).
+r1h_want($lit(n, $bare, $cons($var("V"), $cons($var("R"), $nil)), $now),
+  $cons($lit(l, $bare, $cons(wild(88), $cons(wild(91), $cons($var("V"), $nil))), $now),
+  $cons($agg(rank, $var("R"), $cons($var("V"), $nil), $cons($var("W"), $nil),
+    $cons($lit(l, $bare, $cons(wild(118), $cons(wild(121), $cons($var("W"), $nil))), $now), $nil)), $nil))).
+r1h_parsed(H, B)  :- parsed(_, _, H, B).
+ring1_missing(H)  :- r1h_want(H, B), not r1h_parsed(H, B).
+ring1_extra(H)    :- r1h_parsed(H, B), not r1h_want(H, B).
+alarm(ring1_missing).
+alarm(ring1_extra).
+alarm(stray).
+alarm(uncovered).
+alarm(stuck_at).
+
+sxt_bad(sxtr_empty_key).
+sxt_bad(sxtr_empty_subject).
+sxt_bad(sxtr_unclosed).

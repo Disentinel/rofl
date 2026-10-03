@@ -1,0 +1,8 @@
+-- examples/checks/agg-rank-tuple-safety-1-ok.rofl — rank over a tuple that
+-- safety.rofl and the door must accept: one subject and one key; two of each
+-- with a direction on either; a subject a premise binds before it; and
+-- subjects that are literals of every kind.
+rts_one(G, V, R)    :- rts_line(G, V, _), R is rank(V ; W : rts_line(G, W, _)).
+rts_two(G, V, N, R) :- rts_line(G, V, N), R is rank(V, N ; desc(W), asc(M) : rts_line(G, W, M)).
+rts_lit(G, R)       :- rts_group(G), R is rank(7, b ; desc(W), M : rts_line(G, W, M)).
+rts_str(G, R)       :- rts_group(G), R is rank("x", 2 ; M, desc(W) : rts_line(G, W, M)).

@@ -28,6 +28,7 @@ import {
   dedupByProjection, opParams, opIdentity, lift, insert, finish, lower, holisticSorted, sortedOf, joinCanon, join,
   joinLeq, joinCarrierOf, setElems, setContains, ivBounds, mkIv, ivApply, type IvFn, IV_FNS, widenIv, narrowIv, NINF, PINF,
   tagFromTimesName, tagTimes, tagIdempotent, latAlg, quorum, AGG_OVERFLOW,
+  type KeyAtom, rankCmp, keyDir, keyAtoms, sortedOfKeys, rankOf,
 } from './cell.ts';
 import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.ts';
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
@@ -95,6 +96,19 @@ export function holeReasonOfCode(code: number): string {
 // ------------------------------------------------------------------ types
 
 type AggElem = BodyElem & { t: 'agg' };
+
+/** A rank over a tuple, `rank(S1, S2 ; K1, desc(K2) : body)`: the subject is every value before the `;`, the members the keys. */
+const rankTuple = (a: AggElem): boolean => a.op === 'rank' && a.keys.length > 0;
+const aggParams = (a: AggElem): number => (rankTuple(a) ? a.vals.length : opParams(a.op as AggOp));
+/** A rank's resolved projection with the `asc(..)` and `desc(..)` the source wrote taken off. */
+const plainKeys = (a: AggElem, proj: Term[]): Term[] => {
+  if (!rankTuple(a)) return proj;
+  const at = proj.length - a.keys.length;
+  return proj.map((t, i) => (i >= at && keyDir(a.keys[i - at])[1] && t.k === 'f' ? t.args[0] : t));
+};
+/** A rank over a tuple's directions and subject, or the fault reading it was. */
+interface RankKey { desc: boolean[]; subject: KeyAtom[] | string }
+const atomsOr = (ts: Term[]): KeyAtom[] | string => { try { return keyAtoms(ts); } catch (e) { if (!(e instanceof Refused)) throw e; return e.reason; } };
 
 export interface ERule {
   id: string; clause: Clause; canon: string; safe: boolean; hasNeg: boolean;
@@ -266,7 +280,7 @@ export function aggRefusalText(reason: string, rel: string | null): string {
     case 'threshold_needs_a_term': return 'at_least needs the terms it counts';
     case 'holistic_needs_key': return 'median and quantile need their projection key: median(V ; K : body), quantile(P, V ; K : body); without K two equal values would be one member';
     case 'param_and_value': return 'quantile and rank take two terms before their body: quantile(P, V ; K : body), rank(S, V : body)';
-    case 'key_on_rank': return 'rank takes no key: it ranks among the distinct values, rank(S, V : body)';
+    case 'rank_key_arity': return 'a rank over a tuple takes a key for every subject: rank(S1, S2 ; K1, desc(K2) : body)';
     case 'threshold_lattice': return 'a threshold may count only what no open lattice can still supersede or withdraw: it neither reads a lattice (or what rests on one) before that lattice closes, nor concludes one, nor sits inside one\'s recursion; read the lattice through a rule of its own, above it';
     case 'lattice_arity': return "it writes a lattice relation at an arity other than its declaration's";
     case 'lattice_two_algebras': return 'its head is a lattice of one operation and its value a body aggregate of another: a relation has one algebra';
@@ -3028,7 +3042,7 @@ export class AggEval {
     for (const sol of sols) {
       if (keep) { this.bumpSteps(); if (hole) this.chargeRow(rid, true); }
       const group = plan.group.map((i) => resolve(mkv(a.shared![i]), sol.s));
-      const proj = [...a.vals.slice(opParams(a.op as AggOp)).map((t) => resolve(t, sol.s)), ...a.keys.map((t) => resolve(t, sol.s))];
+      const proj = plainKeys(a, [...a.vals.slice(aggParams(a)).map((t) => resolve(t, sol.s)), ...a.keys.map((t) => resolve(t, sol.s))]);
       if (![...group, ...proj].every(isGround)) {
         fault ??= 'agg_open_member';
         if (hole) return [[], fault];
@@ -3103,7 +3117,7 @@ export class AggEval {
   /** Solve the inner body, bucket into groups and members, fold, and seal a cell per group. */
   private sealCells(rid: string, a: AggElem, plan: AggPlan, s: Subst, corr: Term[], depth: number, keep: boolean): Sealed {
     const op = plan.op;
-    if (a.vals.length <= opParams(op)) throw new Bug(`safety.rofl let ${op} through with no value after its first term`);
+    if (rankTuple(a) ? a.keys.length !== a.vals.length : a.vals.length <= opParams(op)) throw new Bug(`safety.rofl let ${op} through with no value after its first term`);
     const reach = keep ? this.aggReach : [];
     this.aggReach = [];
     const share = keep && reach.length === 0 ? this.holShareKey(rid, a, plan, corr) : null;
@@ -3164,11 +3178,27 @@ export class AggEval {
       const hs = reps.map((i) => this.memberHeight(cands[i].prems));
       const keys = reps.map((i) => (dedup ? tupleText(cands[i].proj) : cands[i].sig));
       const order = reps.map((_, i) => i).sort((x, y) => hs[x] - hs[y] || cmpStr(keys[x], keys[y]));
+      // A RANK OVER A TUPLE lists its members in the tuple's own order
+      const rk = rankTuple(a);
+      const rdesc = rk ? a.keys.map((t) => keyDir(t)[0]) : [];
+      const katoms = rk ? reps.map((i) => atomsOr(cands[i].proj)) : [];
+      if (rk && katoms.every((x) => typeof x !== 'string')) {
+        order.sort((x, y) => rankCmp(rdesc, katoms[x] as KeyAtom[], katoms[y] as KeyAtom[]) || hs[x] - hs[y] || cmpStr(keys[x], keys[y]));
+      }
       let acc: Val | null = null;
       let kept: number[] = [];
       let poison: string | null = null;
       const holistic = opClass(op) === 'holistic';
-      if (holistic) {
+      if (holistic && rk) {
+        const subject = atomsOr(a.vals.map((t) => resolve(t, s)));
+        const bad = katoms.find((x) => typeof x === 'string') as string | undefined;
+        const sorted: Sorted | string = bad !== undefined ? bad : sortedOfKeys(rdesc, katoms as KeyAtom[][]);
+        if (typeof sorted === 'string') poison = sorted;
+        else if (typeof subject === 'string') poison = subject;
+        else acc = rankOf(sorted, subject);
+        sorts.push([gkey, sorted]);
+        kept = [...order];
+      } else if (holistic) {
         let param: Val | null | string = null;
         if (opParams(op) !== 0) { const p = resolve(a.vals[0], s); param = p.k === 'i' ? { k: 'int', v: BigInt(p.v) } : 'agg_type_error'; }
         let sorted: Sorted | string;
@@ -3200,7 +3230,7 @@ export class AggEval {
       if (poison !== null) kept = [...order];
       // DECIDED UNDER EVERY COMPLETION, or a hole on this group alone
       if (reach.length > 0) {
-        const us = this.reachOf(op, this.aggParam(a, s), reps.map((i) => cands[i].proj), reps.map((i) => values[i]), value, index.at(gkey));
+        const us = this.reachOf(op, this.aggParam(a, s), this.rankKey(a, s), reps.map((i) => cands[i].proj), reps.map((i) => values[i]), value, index.at(gkey));
         if (us.length > 0) { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; reached.set(sealed.length, us); }
       }
       const members: CellMemberNew[] = [];
@@ -3249,21 +3279,22 @@ export class AggEval {
   /** THE PERCENT OR SUBJECT OF A HOLISTIC AGGREGATE IS NO MEMBER: shared key. */
   private holShareKey(rid: string, a: AggElem, plan: AggPlan, corr: Term[]): string | null {
     if (opClass(plan.op) !== 'holistic' || opParams(plan.op) === 0) return null;
-    const p = a.vals[0];
-    if (p.k !== 'v') return null;
+    const subject = a.vals.slice(0, aggParams(a));
+    const names: string[] = [];
+    for (const p of subject) { if (p.k !== 'v') return null; names.push(p.name); }
     const inner = new Set<string>();
-    for (const t of [...a.vals.slice(1), ...a.keys]) varsOf(t, inner);
+    for (const t of [...a.vals.slice(aggParams(a)), ...a.keys]) varsOf(t, inner);
     for (const b of a.body) elemVars(b, inner);
-    if (inner.has(p.name)) return null;
-    const at = plan.corr.findIndex((i) => a.shared![i] === p.name);
-    if (at < 0) return null;
-    return `${rid}|${a.at}|${listKey(corr.filter((_, n) => n !== at))}`;
+    if (names.some((n) => inner.has(n))) return null;
+    const ats = names.map((n) => plan.corr.findIndex((i) => a.shared![i] === n));
+    if (ats.some((at) => at < 0)) return null;
+    return `${rid}|${a.at}|${listKey(corr.filter((_, n) => !ats.includes(n)))}`;
   }
 
   /** A holistic aggregate under a new percent or subject, over groups already sealed. */
   private sealShared(rid: string, a: AggElem, plan: AggPlan, s: Subst, corr: Term[], gs: [Term[], string, Sorted | string][]): Sealed {
-    const p = resolve(a.vals[0], s);
-    const param: Val | string = p.k === 'i' ? { k: 'int', v: BigInt(p.v) } : 'agg_type_error';
+    const param = this.aggParam(a, s) as Val | string;
+    const rkey = this.rankKey(a, s);
     const desc = this.aggDesc(a, s);
     const ids: string[] = [];
     for (const [gkey, like, sorted] of gs) {
@@ -3271,7 +3302,10 @@ export class AggEval {
       let value: CellValue;
       if (typeof sorted === 'string') value = { k: 'hole', reason: sorted };
       else if (typeof param === 'string') value = { k: 'hole', reason: param };
-      else {
+      else if (rkey !== null) {
+        if (typeof rkey.subject === 'string') value = { k: 'hole', reason: rkey.subject };
+        else { const x = rankOf(sorted, rkey.subject); value = x === null ? { k: 'empty' } : { k: 'value', t: lower(x) }; }
+      } else {
         try { const x = holisticSorted(plan.op, param, sorted); value = x === null ? { k: 'empty' } : { k: 'value', t: lower(x) }; }
         catch (e) { if (!(e instanceof Refused)) throw e; value = { k: 'hole', reason: e.reason }; }
       }
@@ -4803,7 +4837,7 @@ export class AggEval {
         for (const ps of this.poisonSolvePlan(inner, outer, k, s0)) {
           if (b.t === 'neg' && this.negDecided(b.lit, ps, free)) continue;
           const pat = plan.group.map((i) => { const t = resolve(mkv(a.shared![i]), ps); return known(t) ? t : null; });
-          const proj = [...a.vals.slice(opParams(a.op as AggOp)), ...a.keys].map((t) => resolve(t, ps));
+          const proj = plainKeys(a, [...a.vals.slice(aggParams(a)), ...a.keys].map((t) => resolve(t, ps)));
           const p: Possible = { pat, proj: proj.every(known) ? proj : null, neg: b.t === 'neg', u };
           const id = `${pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001')}|${p.proj === null ? '?' : listKey(p.proj)}|${p.neg}|${u.id}`;
           if (!seen.has(id)) { seen.add(id); out.push(p); }
@@ -4834,7 +4868,8 @@ export class AggEval {
    *  A member that might be out, or whose projection is not known, changes it; one whose projection a set already
    *  holds does not; the new ones are decided together by the kind's algebra, a sum by any not 0 (by any at all where
    *  it has no member yet), and a projection several unknowns could add rests on each of them (`reach_of`, Rust). */
-  private reachOf(op: AggOp, param: Val | null | string, projs: Term[][], vals: Term[], value: CellValue, ps: Possible[]): Unknown[] {
+  private reachOf(op: AggOp, param: Val | null | string, rk: RankKey | null, projs: Term[][], vals: Term[], value: CellValue, ps: Possible[]): Unknown[] {
+    if (rk !== null) return this.reachOfRank(rk, projs, value, ps);
     const us: Unknown[] = [];
     const push = (u: Unknown) => { if (!us.some((x) => x.id === u.id)) us.push(u); };
     if (this.faultCertain(op, param, vals, value, ps)) return us;
@@ -4889,6 +4924,46 @@ export class AggEval {
     return us;
   }
 
+  /** `reachOf` for a rank over a tuple: the group moves when adding every projection the possibles could add changes the
+   *  subject's rank (a rank only grows as members are added, and a subject none of them is gains its place only by
+   *  being added itself). */
+  private reachOfRank(k: RankKey, projs: Term[][], value: CellValue, ps: Possible[]): Unknown[] {
+    const us: Unknown[] = [];
+    const push = (u: Unknown) => { if (!us.some((x) => x.id === u.id)) us.push(u); };
+    const known = projs.map(atomsOr);
+    if (value.k === 'hole' && value.reason === 'agg_type_error' && (known.some((x) => typeof x === 'string') || typeof k.subject === 'string')) return us;
+    const fresh: [KeyAtom[] | string, Unknown[]][] = [];
+    const held = new Set<string>(projs.map(listKey));
+    const atProj = new Map<string, number>();
+    for (const p of ps) {
+      if (p.neg || p.proj === null) { push(p.u); continue; }
+      const key = listKey(p.proj);
+      if (held.has(key)) continue;
+      const at = atProj.get(key);
+      if (at !== undefined) {
+        fresh[at][1].push(p.u);
+        continue;
+      }
+      atProj.set(key, fresh.length);
+      fresh.push([atomsOr(p.proj), [p.u]]);
+    }
+    const at = (extra: KeyAtom[][]): Val | null | string => {
+      if (typeof k.subject === 'string') return k.subject;
+      const bad = known.find((x) => typeof x === 'string') as string | undefined;
+      if (bad !== undefined) return bad;
+      return rankOf(sortedOfKeys(k.desc, [...(known as KeyAtom[][]), ...extra]), k.subject);
+    };
+    const adds = fresh.map(([x]) => x);
+    let stays = false;
+    if (!adds.some((x) => typeof x === 'string')) {
+      const r = at(adds as KeyAtom[][]);
+      if (value.k === 'value' && value.t.k === 'i') stays = typeof r !== 'string' && r !== null && r.k === 'int' && r.v === BigInt(value.t.v);
+      else if (value.k === 'empty') stays = r === null;
+    }
+    if (!stays) for (const [, xs] of fresh) for (const u of xs) push(u);
+    return us;
+  }
+
   /** A FAULT EVERY COMPLETION KEEPS: the group's value is a hole no member its possibles add can mend, for the known
    *  members that faulted hold in every completion (`fault_certain`, Rust). */
   private faultCertain(op: AggOp, param: Val | null | string, vals: Term[], value: CellValue, ps: Possible[]): boolean {
@@ -4915,9 +4990,13 @@ export class AggEval {
     return hi < TERM_MIN || lo > TERM_MAX;
   }
 
+  private rankKey(a: AggElem, s: Subst): RankKey | null {
+    return rankTuple(a) ? { desc: a.keys.map((t) => keyDir(t)[0]), subject: atomsOr(a.vals.map((t) => resolve(t, s))) } : null;
+  }
+
   /** Quantile's percent or rank's subject under `s`, as the fold reads it. */
   private aggParam(a: AggElem, s: Subst): Val | null | string {
-    if (opParams(a.op as AggOp) === 0) return null;
+    if (opParams(a.op as AggOp) === 0 || rankTuple(a)) return null;
     const p = resolve(a.vals[0], s);
     return p.k === 'i' ? { k: 'int', v: BigInt(p.v) } : 'agg_type_error';
   }
@@ -4937,7 +5016,7 @@ export class AggEval {
       let us = this.cellReach.get(c);
       if (us === undefined) {
         if (sealedNow) continue;
-        us = this.reachOf(r.op, this.aggParam(a, s), r.members.map((m) => m.proj), r.members.map((m) => m.value), r.value, index.at(g));
+        us = this.reachOf(r.op, this.aggParam(a, s), this.rankKey(a, s), r.members.map((m) => m.proj), r.members.map((m) => m.value), r.value, index.at(g));
       }
       if (us.length > 0) groups.push([r.keyTerms, us]);
     }
@@ -7087,7 +7166,7 @@ export class AggEval {
       const unranked = mine.find(([, v, n]) => v.k === 'empty' && n > 0)?.[2];
       if (valued !== undefined && valued.k === 'value') put(`${desc} = ${canonTerm(valued.t)}, not ${canonTerm(resolve(b.res, s))} [aggregate]`, null);
       else if (holed !== undefined && holed.k === 'hole') put(`${desc} has no value: hole(${holed.reason}) [aggregate]`, null);
-      else if (unranked !== undefined) put(`${desc} has no value: ${canonTerm(resolve(b.vals[0], s))} is not one of its ${unranked} distinct values [aggregate]`, null);
+      else if (unranked !== undefined) put(`${desc} has no value: ${b.vals.slice(0, aggParams(b)).map((t) => canonTerm(resolve(t, s))).join(', ')} is not one of its ${unranked} distinct values [aggregate]`, null);
       else put(`${desc} has no value: empty group [aggregate]`, b.body.length === 1 && b.body[0].t === 'pos' ? this.instantiate(b.body[0].lit, s) : null);
     } else {
       const s2s = this.evalBuiltins(b.op, b.l, b.r, s, null);
@@ -7397,6 +7476,21 @@ export function checkOrderableAgg(c: Clause): string | null {
 }
 
 /** THE DOOR OF AN AGGREGATE. `c` is annotated (`annotateAggs`). */
+/** A rank over a tuple reads its subject from outside, a constant or a variable bound before it, with no direction; each
+ *  key is a variable or a constant, in `asc(..)` or `desc(..)` for its direction. */
+function rankTupleDoor(a: AggElem, before: string[]): string | null {
+  for (const p of a.vals) {
+    if (keyDir(p)[1]) return `rank's subject has no direction, only its keys do: ${canonTerm(p)}`;
+    const boundBefore = p.k === 'v' && before.includes(p.name);
+    if (!boundBefore && p.k !== 'i' && p.k !== 'a' && p.k !== 's') return `rank's subject is a constant or a variable bound before it, not ${canonTerm(p)}`;
+  }
+  for (const k of a.keys) {
+    const inner = keyDir(k)[1] && k.k === 'f' ? k.args[0] : k;
+    if (inner.k === 'f') return `a rank key is a variable or a constant, in asc(..) or desc(..) for its direction, not ${canonTerm(k)}`;
+  }
+  return null;
+}
+
 export function checkAggregatesDoor(c: Clause): string | null {
   for (let k = 0; k < c.body.length; k++) {
     const a = c.body[k];
@@ -7407,7 +7501,10 @@ export function checkAggregatesDoor(c: Clause): string | null {
       if (!boundBefore && a.res.k !== 'i') return `rule ${canonClause(c)}: at_least's threshold is an integer or a variable bound before it, not ${canonTerm(a.res)}`;
     } else if (a.res.k === 'f') return `rule ${canonClause(c)}: an aggregate's result is a variable or a constant`;
     const op = opFromName(a.op);
-    if (op !== null && opParams(op) === 1 && a.vals.length === 2) {
+    if (op === 'rank' && a.keys.length > 0) {
+      const why = rankTupleDoor(a, before);
+      if (why !== null) return `rule ${canonClause(c)}: ${why}`;
+    } else if (op !== null && opParams(op) === 1 && a.vals.length === 2) {
       const p = a.vals[0];
       const boundBefore = p.k === 'v' && before.includes(p.name);
       const what = op === 'quantile' ? "quantile's percent" : "rank's subject";

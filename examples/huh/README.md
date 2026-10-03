@@ -70,8 +70,8 @@ s_awk(N, P)  :- s_grep(N), field(N, 7, P).
 s_sort(N, P) :- s_awk(N, P).
 s_uniq(P)    :- s_sort(_, P).
 s_count(P, N) :- s_uniq(P), N is count(L : s_sort(L, P)).
-s_place(P, R) :- s_count(P, N), M is 0 - N,
-                 R is rank(M, X : s_count(_, K), X is 0 - K).
+s_place(P, R) :- s_count(P, N),
+                 R is rank(N, P ; desc(N2), P2 : s_count(P2, N2)).
 ```
 
 The host emits three facts per log line — `line(N)`, `status(N, C)`,
@@ -269,10 +269,9 @@ the pipe is 4 rules.
 the demo — engine and oracle alike — uses `grep -E '" 4[0-9][0-9] '`, which
 anchors on the quote closing the request and can only match the status field.
 
-**`sort -rn` is a rank, and its tie-break is the host's.** `s_place` ranks
-the distinct counts, so two buckets with the same count share a place. The
-pipe's `-k2,2` orders them by path, and the demo does the same; the kernel's
-`rank` takes one integer and has no string order to break a tie with.
+**`sort -k1,1nr -k2,2` is a rank over a tuple.** `s_place` ranks a bucket
+among the buckets by count, the largest first, and by path where counts are
+equal, so every bucket has a place of its own and the host sorts by it alone.
 `sort` itself is in the rules only as a nameable stage: order is not a fact
 here, so it is the identity on the multiset.
 

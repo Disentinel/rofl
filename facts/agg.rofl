@@ -1180,3 +1180,20 @@ work_proof(w_agg_data_strat, "agg_datastrat_why").
 work_proof(w_agg_data_strat, "agg_datastrat_tick").
 work_proof(w_agg_data_strat, "agg_datastrat_budget").
 work_proof(w_agg_data_strat, "agg_datastrat_retract").
+
+-- RANK OVER A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host, decided in
+-- f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): `rank(S1, S2 ; K1, desc(K2) : body)`
+-- is the position of the subject tuple among the distinct key tuples, ordered lexicographically with a
+-- direction for each key; the cell is the holistic one (Group witness, recomputed whole). It owns no cell
+-- of the matrix and closes by these worlds.
+work(w_agg_rank_by_tuple, "rank over a tuple: a lexicographic order of keys with a direction for each, Int before atom before string, both engines and the three parsers and the sentence form; the packed scores and host sorting of blam and huh retired; done only with the work_proof worlds").
+work_state(w_agg_rank_by_tuple, done).
+work_needs(w_agg_rank_by_tuple, w_agg_holistic).
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_syntax").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_safety").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_eval").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_witness").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_why").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_holes").
+work_proof(w_agg_rank_by_tuple, "agg_rank_tuple_phrase").
+work_spawned(w_agg_rank_by_tuple, f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples).

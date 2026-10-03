@@ -147,14 +147,13 @@ const uniqKey = (p: string): string => `s_uniq[main](${JSON.stringify(p)})`;
 
 export interface Bucket { path: string; count: Count; }
 
-/** `uniq -c | sort -rn`: the kernel's `s_count`, in the order of its `s_place`.
- *  Equal places are the pipe's `-k2,2` tie, broken by path. */
+/** `uniq -c | sort -k1,1nr -k2,2`: the kernel's `s_count`, in the order of its `s_place`. */
 export function bucketCounts(r: Rofl): Bucket[] {
   const place = new Map<string, number>();
   for (const b of rows(r, 's_place(P, R)')) place.set(JSON.parse(b.P) as string, Number(b.R));
   const out = rows(r, 's_count(P, N)')
     .map((b): Bucket => ({ path: JSON.parse(b.P) as string, count: BigInt(b.N) }));
-  return out.sort((a, b) => place.get(a.path)! - place.get(b.path)! || (a.path < b.path ? -1 : 1));
+  return out.sort((a, b) => place.get(a.path)! - place.get(b.path)!);
 }
 
 /** The counting semiring over the support hypergraph: the derivations of a

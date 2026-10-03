@@ -1,0 +1,4 @@
+-- expect-refusal: a rank over a tuple takes a key for every subject
+-- examples/checks/agg-rank-tuple-safety-2-refused-more-subjects.rofl — two
+-- subjects and one key.
+rts_subj(G, V, N, R) :- rts_line(G, V, N), R is rank(V, N ; W : rts_line(G, W, _)).
