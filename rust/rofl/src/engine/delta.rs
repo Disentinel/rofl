@@ -144,9 +144,8 @@ impl Eval {
     /// THE BACK-INDEX: fact -> the cells some member of which cites it. Built
     /// once from the cells a full evaluation sealed (dropped when one runs
     /// again), kept as the delta path replaces cells. A member cites the
-    /// facts of its representative derivation only, which is all a retraction
-    /// needs: a derivation that is not a member's representative decides
-    /// nothing about the member while it stands or falls.
+    /// facts of every derivation it keeps: losing one of them changes the
+    /// member's derivation set, and the canonical one when it was that one.
     fn support_index(&mut self) -> &mut Support {
         if self.support_ix.is_none() {
             let mut ix: Support = HashMap::new();
@@ -160,7 +159,7 @@ impl Eval {
 
     fn index_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
-            for p in store.member_prems(m) {
+            for p in store.member_derivs(m).take(brk!("retract_alts_unindexed" => 1; usize::MAX)).flatten() {
                 if let PremRef::Fact(g) = p {
                     let v = ix.entry(*g).or_default();
                     if !v.contains(&c) {
@@ -173,7 +172,7 @@ impl Eval {
 
     fn unindex_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
-            for p in store.member_prems(m) {
+            for p in store.member_derivs(m).flatten() {
                 if let PremRef::Fact(g) = p {
                     if let Some(v) = ix.get_mut(g) {
                         v.retain(|x| *x != c);
@@ -1040,7 +1039,7 @@ impl Eval {
         // the new record, before anything of the old one is withdrawn
         let (mut fresh, mut gone): (Option<NewCell>, bool) = (None, false);
         if rec.alg.strategy() == Strategy::Subtract {
-            if let Some((nc, dropped, again)) = self.subtract_cell(old, gone_facts, agg, plan, &s)? {
+            if let Some((nc, dropped, again)) = self.subtract_cell(old, gone_facts, plan)? {
                 d.subtracted += 1;
                 d.members_dropped += dropped;
                 d.members_rederived += again;
@@ -1142,66 +1141,52 @@ impl Eval {
     }
 
     /// THE SUBTRACTION: the cell without the members the retracted facts supported, as a
-    /// record. `None` when the cell cannot be subtracted (a projection that
-    /// is no variable, a total that left the range): it is derived again.
+    /// record. `None` when the cell cannot be subtracted (a total that left
+    /// the range): it is derived again.
     /// `Some((None, ..))` is a cell that is gone (a group with no member). The
     /// counts are members dropped and members that kept their place.
     #[allow(clippy::type_complexity)]
-    fn subtract_cell(&mut self, old: CellId, gone: &[FactId], agg: &Agg, plan: &Rc<AggPlan>, s: &Subst) -> Result<Option<(Option<NewCell>, usize, usize)>, Halt> {
+    fn subtract_cell(&mut self, old: CellId, gone: &[FactId], plan: &Rc<AggPlan>) -> Result<Option<(Option<NewCell>, usize, usize)>, Halt> {
         let rec = self.store.cell(old).clone();
-        let CellOwner::Body { rule, .. } = rec.owner;
-        let params = plan.op.params();
-        let mut pvars: Vec<Sym> = Vec::new();
-        for t in agg.vals[params..].iter().chain(agg.keys.iter()) {
-            match t.kind() {
-                TermK::Var(v) => pvars.push(v),
-                _ => return Ok(None),
-            }
-        }
         let CellValue::Value(total) = rec.value else { return Ok(None) };
         let TermK::Int(n) = total.kind() else { return Ok(None) };
         let mut acc = Val::Int(n as i128);
-        let members: Vec<(Box<[Term]>, Term, u32, Vec<PremRef>)> = self
+        type Derivs = Vec<Vec<PremRef>>;
+        let members: Vec<(Box<[Term]>, Term, u32, Derivs)> = self
             .store
             .cell_members(old)
             .iter()
-            .map(|m| (m.proj.clone(), m.value, m.height, self.store.member_prems(m).to_vec()))
+            .map(|m| (m.proj.clone(), m.value, m.height, self.store.member_derivs(m).map(|p| p.to_vec()).collect()))
             .collect();
         let (mut dropped, mut kept_again) = (0usize, 0usize);
         let mut keep: Vec<NewMember> = Vec::with_capacity(members.len());
-        for (proj, value, height, prems) in members {
-            if !gone.iter().any(|g| prems.contains(&PremRef::Fact(*g))) || brk!("retract_stale_rep" => true; false) {
-                keep.push(NewMember { proj, value, height, prems });
+        for (proj, value, height, derivs) in members {
+            // the derivations that stand without the facts that are gone
+            let canonical = derivs[0].clone();
+            let mut left: Derivs = derivs.iter().filter(|d| !gone.iter().any(|g| d.contains(&PremRef::Fact(*g)))).cloned().collect();
+            if left.len() == derivs.len() || brk!("retract_stale_rep" => true; false) {
+                let mut all = derivs;
+                let prems = all.remove(0);
+                keep.push(NewMember { proj, value, height, prems, others: all });
                 continue;
             }
-            // this member alone, derived again
-            let mut sm = s.clone();
-            for (v, t) in pvars.iter().zip(proj.iter()) {
-                sm = match unify(&self.h, Term::var(*v), *t, &sm) {
-                    Some(x) => x,
+            if left.is_empty() || brk!("retract_alt_member_dropped" => left.len() < derivs.len(); false) {
+                let x = plan.op.lift(&self.v, value).map_err(|_| Halt::Bug("a member's value no longer lifts".into()))?;
+                match brk!("retract_no_subtract" => Some(acc); plan.op.subtract(acc, x)) {
+                    Some(a) => acc = a,
                     None => return Ok(None),
-                };
-            }
-            let (found, fault) = self.inner_cands(rule, agg, plan, &sm, 0, true, None, true)?;
-            if fault.is_some() {
-                return Ok(None);
-            }
-            let best = found.into_iter().flat_map(|(_, cs)| cs).min_by(|a, b| cmp_js(&a.sig, &b.sig));
-            match best {
-                Some(c) => {
-                    let height = self.member_height(&c.prems)?;
-                    keep.push(NewMember { proj, value, height, prems: c.prems });
-                    kept_again += 1;
                 }
-                None => {
-                    let x = plan.op.lift(&self.v, value).map_err(|_| Halt::Bug("a member's value no longer lifts".into()))?;
-                    match brk!("retract_no_subtract" => Some(acc); plan.op.subtract(acc, x)) {
-                        Some(a) => acc = a,
-                        None => return Ok(None),
-                    }
-                    dropped += 1;
-                }
+                dropped += 1;
+                continue;
             }
+            let prems = left.remove(0);
+            let height = if prems == canonical {
+                height
+            } else {
+                kept_again += 1;
+                self.member_height(&prems)?
+            };
+            keep.push(NewMember { proj, value, height, prems, others: left });
         }
         let mut keyed: Vec<(String, u32, usize)> = keep.iter().enumerate().map(|(i, m)| (tuple_text(&self.h, &m.proj), m.height, i)).collect();
         keyed.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| cmp_js(&a.0, &b.0)));

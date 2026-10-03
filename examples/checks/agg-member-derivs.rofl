@@ -1,0 +1,49 @@
+-- examples/checks/agg-member-derivs.rofl — A MEMBER KEEPS EVERY DERIVATION
+-- (w_agg_member_keeps_its_derivations; docs/aggregates.md, "A member's
+-- derivations"). A cell records one member per projection value, and the
+-- member holds the premises of EVERY derivation of that value: the text-least
+-- first (the canonical one, which `why` shows), the rest in text order, where
+-- it held only the least. Which is canonical is the least signature (the
+-- premises' keys, sorted and joined), never the height or the order they
+-- arrived in.
+--
+--   md_sale(1, a, 10)  one derivation, through md_ok(1, x)
+--   md_sale(2, a, 5)   four through md_ok (x, y, w, and z, which rests on md_src(2) a level higher), three through md_chan itself (w, x, y)
+--   md_sale(3, b, 7)   two: md_ok(3, x), md_ok(3, y)
+--   md_sale(4, b, 7)   one: the same value under another key is another member
+--
+-- Every cell counts, sums, takes the median, or asks for a quorum of the same
+-- members; each member's other derivations are in the state as `alt`. The
+-- md_* cells read md_ok, a derived relation, so a retraction reads them again
+-- whole; the md_d* cells read md_chan itself, the retracted relation, so a
+-- retraction is a delta on them, and each is the state of a world without
+-- the fact (the retractions of facts/checks.rofl: md_chan(2, y) is an
+-- alternative of a member, md_chan(3, x) its canonical derivation, which the
+-- next one replaces, md_chan(1, x) the only derivation of its member).
+edb(md_sale). edb(md_chan). edb(md_grp). edb(md_src).
+md_grp(a). md_grp(b).
+md_sale(1, a, 10).
+md_sale(2, a, 5).
+md_sale(3, b, 7).
+md_sale(4, b, 7).
+md_chan(1, x).
+md_chan(2, x).
+md_chan(2, y).
+md_chan(2, w).
+md_chan(3, x).
+md_chan(3, y).
+md_chan(4, x).
+md_src(2).
+md_up(K) :- md_src(K).
+md_ok(K, C) :- md_chan(K, C).
+md_ok(K, z) :- md_up(K).
+
+md_n(G, N)    :- md_grp(G), N is count(K : md_sale(K, G, _), md_ok(K, _)).
+md_tot(G, S)  :- md_grp(G), S is sum(V ; K : md_sale(K, G, V), md_ok(K, _)).
+md_med(G, M)  :- md_grp(G), M is median(V ; K : md_sale(K, G, V), md_ok(K, _)).
+md_two(G)     :- md_grp(G), at_least(2, K : md_sale(K, G, _), md_ok(K, _)).
+
+md_dn(G, N)   :- md_grp(G), N is count(K : md_sale(K, G, _), md_chan(K, _)).
+md_ds(G, S)   :- md_grp(G), S is sum(V ; K : md_sale(K, G, V), md_chan(K, _)).
+md_dm(G, M)   :- md_grp(G), M is median(V ; K : md_sale(K, G, V), md_chan(K, _)).
+md_dq(G)      :- md_grp(G), at_least(2, K : md_sale(K, G, _), md_chan(K, _)).

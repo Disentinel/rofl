@@ -3625,8 +3625,8 @@ work(w_ts_one_evaluator,
 work_state(w_ts_one_evaluator, done).
 
 work(w_agg_member_keeps_its_derivations,
-  "A DEDUPLICATED MEMBER KEEPS EVERY DERIVATION (f_a_deduplicated_member_keeps_one_derivation): a cell records one member per projection value and drops the other derivations, so why, excise and retraction see one support. Keep them (canonical first), both engines.").
-work_state(w_agg_member_keeps_its_derivations, open).
+  "A DEDUPLICATED MEMBER KEEPS EVERY DERIVATION (f_a_deduplicated_member_keeps_one_derivation): a cell records one member per projection value and drops the other derivations, so why, excise and retraction see one support. Keep them (canonical first), both engines. DONE 2026-10-03: a member holds every derivation (Member.prems the canonical, Member.others the rest in signature order), printed in canonical_state as ` alt [..]`; retraction and so excise keep a member while one derivation stands and move its canonical one; why all shows them; worlds agg_member_derivs_state, _retract, _why with six planted faults. The semiring fold still reads the canonical derivation (f_a_semiring_fold_still_reads_one_derivation_of_a_member).").
+work_state(w_agg_member_keeps_its_derivations, done).
 
 work(w_agg_rank_by_tuple,
   "RANK BY A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host): rank takes one Int, so a multi-key order is a packed score or host sorting (blam). Rank by a lexicographic tuple with per-key direction, both engines; retire the packed scores.").

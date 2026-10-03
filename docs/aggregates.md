@@ -285,7 +285,10 @@ A count or sum cell is a Group: every distinct projection tuple is a member.
 A min, max, or or and cell is a Best: every derivation that reaches the final
 value, and nothing else. Members carry their derivation height and are ordered
 by height, then projection (Group) or premise signature (Best); a member's
-premises are those of its least-signature derivation. Rules read a cell as
+premises are those of its least-signature derivation, and a member of a count,
+sum, holistic or threshold cell (one per projection tuple) keeps the premises
+of every other derivation of that tuple as well ("A member's derivations",
+below). Rules read a cell as
 `agg_cell[$kernel](Cell, Value, Height)` and `agg_sealed[$kernel](Cell, Rel,
 Round)`, and its members as `agg_member` and `agg_member_prem` (written only
 when some rule reads them).
@@ -3198,7 +3201,8 @@ Invariants:
 
 - **Canonical at seal time.** Members are ordered by height, then projection
   text (Group) or the sorted premise signature (Best); within one member
-  identity the representative is the derivation with the least signature.
+  identity the representative is the derivation with the least signature, and
+  the other derivations follow it in signature order (below).
 - **Final values only.** A Best keeps only members that reach the final value.
 - **Well-founded by height.** A member's height is 1 + its highest fact or cell
   premise; a fact's height is its lowest firing.
@@ -3261,6 +3265,49 @@ evaluation. Decisions in `f_a_retraction_updates_the_cells_it_supports`,
   keeps (`Store::citers_of`), and a value no fact holds (a dominated one) is
   remembered with the premises of the firing that gave it (`sub_prems`).
 
+### A member's derivations
+
+A count, sum, median, quantile, rank or at_least cell records one member per
+projection tuple, however many solutions of the inner body give that tuple
+(`it(g,a,2). it(g,b,2).` under `count(V : it(G,X,V))` is one member with two
+derivations, the facts `it(g,a,2)` and `it(g,b,2)`). The member holds **every**
+derivation: `Member.prems` is the canonical one, the text-least signature
+(the premises' keys, sorted and joined; for a quorum the least-signature
+derivation at the member's least height), and `Member.others` the premises of
+each other derivation, deduplicated by signature and in signature order
+(`Store::member_derivs` iterates them, the canonical one first;
+`CellMember.others` in `src/store.ts`). A min, max, or or and member is
+already one derivation, so it has no `others`.
+
+- `canonical_state` prints the canonical derivation as before and each other one
+  after it, ` alt [premises]`; a member with one derivation prints as it
+  always did, so only worlds whose members have several derivations moved when
+  this landed. A snapshot writes them as `others`, only when there are any.
+- The member's **id** is a function of the cell and the projection tuple, never
+  of its derivations: losing one leaves the id.
+- `why` shows the canonical derivation (unchanged); `why all` adds each other
+  one under its own line, `#2.2 (2) [another derivation]`, then its premises,
+  where the DAG's `[above]` references apply as to any premise.
+- A retraction keeps a member while one derivation stands, **moves the
+  canonical derivation** to the least signature left (and takes the height
+  again from it) when the retracted fact was in the canonical one, and drops
+  an alternative that cited the fact; a member none of whose derivations is
+  left is dropped. So an excise of a fact that is one of a member's several
+  derivations leaves the count, the sum or the quorum as it was. The
+  back-index cites every derivation's facts, not the canonical one's only.
+- The reflection (`agg_member`, `agg_member_prem`) and the host folds
+  (`src/semiring.ts`) still read the canonical derivation: a fold that adds
+  the derivations of a member is the next step
+  (`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).
+
+Proofs: the worlds `agg_member_derivs_state`, `agg_member_derivs_retract` and
+`agg_member_derivs_why` (hand-derived rows, `examples/checks/agg-member-derivs*`),
+the differential `a_member_with_several_derivations_keeps_each_until_it_is_retracted`
+(rust/rofl/tests/incremental.rs) and `excise_keeps_a_member_another_derivation_supports`
+(rust/rofl/tests/explain.rs); planted faults `keep_first_derivation`,
+`retract_alts_unindexed`, `retract_alt_member_dropped`, `why_all_one_derivation`
+and the TypeScript `ts_keep_first_derivation`, `ts_why_all_one_derivation`.
+
 ### The retraction path
 
 `Session::retract_delta(fact)` (rofl-load `--retract`) takes a base fact out of
@@ -3269,7 +3316,7 @@ holds, without evaluating the world again:
 
 | What rests on the fact | What happens | Uses |
 | --- | --- | --- |
-| count, sum (Group, invertible) | the members whose representative cites the fact are derived again, each alone (the inner body with the group and the member's projection bound); one with no derivation left is dropped and its value taken from the total, one with another derivation keeps its place under the least signature left; the survivors are ordered again by height and projection | `AggOp::subtract` |
+| count, sum (Group, invertible) | every member's stored derivations (`Store::member_derivs`) are read: those that cite the fact go; a member with none left is dropped and its value taken from the total, one with another keeps its place, its canonical derivation the least signature left (and its height taken from it again) and its alternatives the ones that stand; the survivors are ordered again by height and projection. Nothing is derived again | `AggOp::subtract` |
 | counting tag | the derivations (`p@count`) whose only firings cite the fact go, and the tag's sum subtracts them: nothing is derived again | `withdraw_firings`, `AggOp::subtract` |
 | min, max, or, and, median, quantile (constant percent) | no inverse (or a value that is a function of the whole group): the one cell is derived again with its key bound | `seal_cells` |
 | at_least | the group asked again over the facts; where it still reaches N the cell is reached and closed as a Quorum is, the first N members by height and projection, and reflected; below N it has no cell | `thr_reach`, `close_thresholds_below` |
@@ -3696,4 +3743,6 @@ product of its N members), which is what let `aka`, `wtf`, `goof` and `moot`
 keep their provenance and counts through an aggregate
 (`f_the_semiring_fold_followed_a_cell_as_one`). A quorum has N members, so a
 fold over a threshold is a lower bound when more than N support
-(`f_a_deduplicated_member_keeps_one_derivation`).
+(`f_a_deduplicated_member_keeps_one_derivation`; the cell now records every
+derivation, and the fold still reads the canonical one,
+`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).

@@ -1088,3 +1088,42 @@ fn a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule() {
         other => panic!("{other:?}"),
     }
 }
+
+/// Members with several derivations: a sale counted through every pair of a channel and a tag, so a retracted
+/// fact is often one derivation of a member, sometimes its canonical one, sometimes the last. The delta must
+/// keep the derivation set a fresh evaluation makes (the state prints it), the member while one is left, and
+/// the canonical derivation the least signature left.
+const MULTI: &str = "
+edb(sale). edb(chan). edb(tag). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+mn(G, N) :- grp(G), N is count(K : sale(K, G, _), chan(K, _), tag(K, _)).
+ms(G, S) :- grp(G), S is sum(V ; K : sale(K, G, V), chan(K, _), tag(K, _)).
+mm(G, M) :- grp(G), M is median(V ; K : sale(K, G, V), chan(K, _), tag(K, _)).
+mq(G) :- grp(G), at_least(1, K : sale(K, G, _), chan(K, _), tag(K, _)).
+";
+
+fn fact_multi(r: &mut Rng) -> String {
+    let k = 1 + r.below(5);
+    match r.below(8) {
+        0..=1 => format!("sale({k}, {}, {})", pick(r, &G4), r.below(6) as i64 - 1),
+        2..=4 => format!("chan({k}, {})", 1 + r.below(3)),
+        _ => format!("tag({k}, {})", 1 + r.below(3)),
+    }
+}
+
+#[test]
+fn a_member_with_several_derivations_keeps_each_until_it_is_retracted() {
+    let all = sweep(MULTI, fact_multi, 1..=16, 24, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.members_rederived > 5, "no member moved to another derivation: {all:?}");
+    assert!(all.sum.members_dropped > 5, "no member lost its last derivation: {all:?}");
+    let facts: BTreeSet<String> = ["sale(1, a, 3)", "chan(1, 1)", "chan(1, 2)", "tag(1, 1)", "tag(1, 2)"].iter().map(|s| s.to_string()).collect();
+    let mut s = fresh(MULTI, &BTreeSet::new(), &facts);
+    let before = state(&mut s);
+    assert_eq!(before.matches(" alt [").count(), 4 * 3, "a count, a sum, a median and a quorum hold three alternatives of four: {before}");
+    s.retract("chan(1, 1)").unwrap();
+    let after = state(&mut s);
+    let want = state(&mut fresh(MULTI, &BTreeSet::new(), &facts.iter().filter(|f| *f != "chan(1, 1)").cloned().collect()));
+    assert_eq!(after, want);
+    assert_eq!(after.matches(" alt [").count(), 4, "the member left holds two derivations: {after}");
+}

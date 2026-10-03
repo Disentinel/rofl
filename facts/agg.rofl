@@ -1188,6 +1188,11 @@ work_proof(w_agg_retract_fallback_tail, "agg_incr_owner").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_twice").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_staged").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_demand").
+work(w_agg_member_keeps_its_derivations, "a deduplicated member keeps every derivation (f_a_deduplicated_member_keeps_one_derivation): a count, sum, holistic or threshold member holds the premises of every derivation of its projection value, the text-least first, in both engines; the state prints them, a retraction (and so an excise) keeps a member another derivation supports, and `why all` shows them; done only with the work_proof worlds").
+work_state(w_agg_member_keeps_its_derivations, done).
+work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_state").
+work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_retract").
+work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_why").
 
 -- RANK OVER A TUPLE (f_rank_orders_one_integer_so_ties_stay_in_the_host, decided in
 -- f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): `rank(S1, S2 ; K1, desc(K2) : body)`
