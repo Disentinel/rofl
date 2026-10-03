@@ -115,7 +115,7 @@ points; the whole list is in `package.json`.
 | `src/` | the kernel: parser, store, evaluator, reflection, API, REPL. Zero runtime dependencies, closed vocabulary (below), mechanically checked | `repl` |
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
 | `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
-| `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
+| `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
 | `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |

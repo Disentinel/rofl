@@ -1,0 +1,99 @@
+-- py-model.rofl — Python over the facts scanners/py_ast.py emits, grown from
+-- what a question needed rather than from the grammar. Every relation here is
+-- true of any tree that scanner writes; nothing names a library.
+--
+--   py_unit       a body that runs when called: def, async def, lambda
+--   py_owner      the nearest unit a node sits in
+--   py_class_of   the class a unit's `self` is
+--   py_method     a def written directly in a class body
+--   py_call       a call, the unit it is in, its line
+--   py_attr_call  `R.attr(...)` whose receiver is not `self` itself
+--   py_invokes    a unit may run another, and the node that says so: a method
+--                 named through `self`, a lambda written inside it, a def named
+--   py_reaches    py_invokes, closed
+--
+-- APPROXIMATION, DECLARED: naming `self.m` without calling it counts as
+-- invoking it. A bound method passed on (`run_sync(self.m)`, `partial(self.m)`)
+-- is run by whoever receives it, and nothing here follows the value there. A
+-- lambda counts the same way. Inheritance is not read: `self.m` resolves only
+-- to a method of the class the unit is written in.
+
+py_unit[code](U) :- ast_node[code](U, function_def, _, _).
+py_unit[code](U) :- ast_node[code](U, async_function_def, _, _).
+py_unit[code](U) :- ast_node[code](U, lambda, _, _).
+
+py_def_name[code](D, N) :- py_unit[code](D), ast_attr[code](D, name, N).
+
+py_owner[code](N, P) :- ast_child[code](P, _, _, N), py_unit[code](P).
+py_owner[code](N, U) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_owner[code](P, U).
+
+py_class[code](C, N) :- ast_node[code](C, class_def, _, _), ast_attr[code](C, name, N).
+py_method[code](C, N, D) :- py_class[code](C, _), ast_child[code](C, body, _, D), py_def_name[code](D, N).
+
+py_class_of[code](D, C) :- py_method[code](C, _, D).
+py_class_of[code](L, C) :- py_unit[code](L), py_owner[code](L, U), py_class_of[code](U, C).
+
+py_is_self[code](N) :- ast_node[code](N, name, _, _), ast_attr[code](N, id, "self").
+
+py_call[code](K, U, L) :- ast_node[code](K, call, _, L), py_owner[code](K, U).
+py_attr_call[code](K, R, A) :- ast_node[code](K, call, _, _), ast_child[code](K, func, 0, F),
+                               ast_node[code](F, attribute, _, _), ast_attr[code](F, attr, A),
+                               ast_child[code](F, value, 0, R), not py_is_self[code](R).
+
+py_self_attr[code](N, A, U, L) :- ast_node[code](N, attribute, _, L), ast_attr[code](N, attr, A),
+                                  ast_child[code](N, value, 0, S), py_is_self[code](S), py_owner[code](N, U).
+
+py_invokes[code](U, D, N) :- py_self_attr[code](N, A, U, _), py_class_of[code](U, C), py_method[code](C, A, D).
+py_invokes[code](U, M, M) :- ast_node[code](M, lambda, _, _), py_owner[code](M, U).
+
+-- `f(...)` by name: a def written in the same unit (a nested helper), or a
+-- module-level def of that name anywhere scanned. APPROXIMATION, DECLARED:
+-- imports are not read, so two modules defining `f` both answer.
+py_name_call[code](K, U, N, L) :- py_call[code](K, U, L), ast_child[code](K, func, 0, F),
+                                  ast_node[code](F, name, _, _), ast_attr[code](F, id, N).
+py_toplevel[code](D, N) :- ast_node[code](Mo, module, _, _), ast_child[code](Mo, body, _, D), py_def_name[code](D, N).
+py_invokes[code](U, D, K) :- py_name_call[code](K, U, N, _), py_def_name[code](D, N), py_owner[code](D, U).
+py_invokes[code](U, D, K) :- py_name_call[code](K, U, N, _), py_toplevel[code](D, N).
+py_invokes[code](U, D, F) :- py_call[code](K, U, _), ast_child[code](K, args, _, F), ast_attr[code](F, id, N), py_toplevel[code](D, N).
+py_invokes[code](U, D, F) :- py_call[code](K, U, _), ast_child[code](K, args, _, F), ast_attr[code](F, id, N), py_def_name[code](D, N), py_owner[code](D, U).
+
+py_reaches[code](U, U) :- py_unit[code](U).
+py_reaches[code](U, W) :- py_reaches[code](U, V), py_invokes[code](V, W, _).
+
+-- RUN ONCE PER ITEM: a node inside the body of a loop, or the element of a
+-- comprehension, without leaving its unit. The iterable of a `for` runs once.
+py_loop_part[code](for, body).        py_loop_part[code](async_for, body).
+py_loop_part[code](while, body).      py_loop_part[code](while, test).
+py_loop_part[code](list_comp, elt).   py_loop_part[code](set_comp, elt).
+py_loop_part[code](generator_exp, elt).
+py_loop_part[code](dict_comp, key).   py_loop_part[code](dict_comp, value).
+py_looped[code](N) :- ast_child[code](P, F, _, N), ast_node[code](P, K, _, _), py_loop_part[code](K, F).
+py_looped[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_looped[code](P).
+
+py_invoke_site[code](U, W, N, looped) :- py_invokes[code](U, W, N), py_looped[code](N).
+py_invoke_site[code](U, W, N, once)   :- py_invokes[code](U, W, N), not py_looped[code](N).
+
+-- py_reaches with how often: `many` once any step on the way runs per item
+py_reaches_n[code](U, U, one) :- py_unit[code](U).
+py_reaches_n[code](U, W, many) :- py_reaches_n[code](U, V, _), py_invoke_site[code](V, W, _, looped).
+py_reaches_n[code](U, W, F) :- py_reaches_n[code](U, V, F), py_invoke_site[code](V, W, _, once).
+
+-- what a protocol asks for: the methods of a class whose bases name `Protocol`
+py_protocol[code](C) :- py_class[code](C, _), ast_child[code](C, bases, _, B), ast_attr[code](B, id, "Protocol").
+py_protocol_method[code](P, M) :- py_protocol[code](P), py_method[code](P, M, _).
+
+-- a function named and handed on rather than called (`run_sync(os.rename, a, b)`,
+-- `replace_by_swap(conn.sftp.rename, ...)`): the receiver runs it, so it counts
+-- as a call made where it is handed on, under the same approximation as above
+py_attr_call[code](K, R, A) :- ast_node[code](K, call, _, _), ast_child[code](K, args, _, F),
+                               ast_node[code](F, attribute, _, _), ast_attr[code](F, attr, A),
+                               ast_child[code](F, value, 0, R), not py_is_self[code](R).
+
+-- a string written as an argument: `self._request("MOVE", ...)`, `_send(conn, f"STOR {t}", f)`.
+-- An f-string answers with its first literal piece, which is where a command word sits.
+py_call_str[code](K, I, S) :- ast_child[code](K, args, I, X), ast_node[code](X, constant, _, _),
+                              ast_attr[code](X, value, S), S != none.
+py_call_str[code](K, I, S) :- ast_child[code](K, args, I, X), ast_node[code](X, joined_str, _, _),
+                              ast_child[code](X, values, 0, C), ast_node[code](C, constant, _, _), ast_attr[code](C, value, S).
+py_callee[code](K, M) :- ast_child[code](K, func, 0, F), ast_attr[code](F, attr, M).
+py_callee[code](K, N) :- ast_child[code](K, func, 0, F), ast_attr[code](F, id, N).
