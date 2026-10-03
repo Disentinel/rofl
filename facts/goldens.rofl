@@ -443,27 +443,27 @@ golden_state("staged_neg_why_plain", "4f212ec197b0c42c", 583).
 golden_state("unstratifiable", "f2e4b1185519b8dc", 589).
 golden_state("wfs_unknown_negated", "c3ba285c88e16d43", 673).
 
-golden_host("heck", "0ad760fccc4ace36", 0, 215).
-golden_host("blam", "240bc0d48075cb61", 0, 251).
 golden_host("aka", "50dad605ecd6a5e9", 0, 339).
-golden_host("loot", "52c0cdbd2c94aabd", 0, 456).
-golden_host("oops", "5641da82e7afcbeb", 0, 214).
+golden_host("blam", "f57e87d708a68279", 0, 243).
+golden_host("bleep", "f7f138729853bfe0", 0, 183).
+golden_host("cram", "ae88c8fb4c949230", 0, 212).
+golden_host("ditto", "8d7a9827fddcc623", 0, 255).
+golden_host("drip", "f11351af50339bb2", 0, 332).
+golden_host("goof", "a4d564bb83135677", 0, 314).
+golden_host("heck", "0ad760fccc4ace36", 0, 215).
+golden_host("huh", "ee15194ae8cb352f", 0, 118).
 golden_host("iffy", "591db3174adb060b", 0, 254).
 golden_host("jopa", "8656fb8cf0b7abc0", 0, 311).
+golden_host("loot", "52c0cdbd2c94aabd", 0, 456).
+golden_host("moot", "c7419c0f85ba815f", 1, 363).
 golden_host("nope", "8ac104b8cf07a961", 0, 175).
-golden_host("yak", "8c6779458e257a4c", 0, 209).
-golden_host("ditto", "8d7a9827fddcc623", 0, 255).
-golden_host("wtf", "a01e12853585f7e0", 0, 579).
-golden_host("goof", "a4d564bb83135677", 0, 314).
+golden_host("oops", "dc9aff5ac91bbfd1", 0, 208).
 golden_host("reach", "aa98ec9777ec7764", 0, 37).
-golden_host("cram", "ae88c8fb4c949230", 0, 212).
-golden_host("rip", "c83f893d4e19d974", 0, 377).
 golden_host("ring1", "e3b0c44298fc1c14", 0, 1).
-golden_host("sus", "e88fe11005e28231", 0, 335).
-golden_host("huh", "ee15194ae8cb352f", 0, 118).
-golden_host("drip", "f11351af50339bb2", 0, 332).
-golden_host("bleep", "f7f138729853bfe0", 0, 183).
-golden_host("moot", "40f7c3b0fcf56777", 1, 365).
+golden_host("rip", "c83f893d4e19d974", 0, 377).
+golden_host("sus", "5ce82225b8892618", 0, 332).
+golden_host("wtf", "76edda3e8f9ba025", 0, 495).
+golden_host("yak", "8c6779458e257a4c", 0, 209).
 
 golden_rel("aka", "@cell", 21).
 golden_rel("aka", "@mem", 43).
