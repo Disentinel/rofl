@@ -667,6 +667,20 @@ fn whynot_bounds_clamp_as_the_reference_does() {
 /// since its evaluator's `budget exhausted` stopped escaping as a throw.
 #[test]
 fn a_whynot_that_meets_a_wall_answers_with_the_wall() {
+    // THE DEPTH WALL IS 512 DEMAND CALLS (`MAX_DEPTH`, the reference's too) and
+    // the demand descent is the evaluator's recursion, not the explainer's: a
+    // debug frame of it is ~13 KiB, so reaching the wall takes ~7 MiB, over a
+    // test thread's 2 MiB. The depth is bounded and small; the thread is sized
+    // for it. The explainer's own walk keeps a stack of its own.
+    std::thread::Builder::new()
+        .stack_size(32 << 20)
+        .spawn(walled_whynot)
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+fn walled_whynot() {
     const DEMAND: &str = "up(X) :- Y is X + 1, up(Y).\nq(a).\nq(b).\nr(X) :- q(X), up(1).\ns(X) :- q(X).\n";
     for extra in ["", "nq(N) :- N is count(X : s(X)).\n"] {
         let mut s = Session::fresh(200_000_000);

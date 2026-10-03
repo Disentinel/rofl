@@ -9757,3 +9757,10 @@ finding_note(f_the_stock_evaluator_kept_the_holes_of_the_evaluation_before,
 addressed_by(f_the_stock_evaluator_kept_the_holes_of_the_evaluation_before, "src/engine.ts").
 addressed_by(f_the_stock_evaluator_kept_the_holes_of_the_evaluation_before, "src/rounds.ts").
 addressed_by(f_the_stock_evaluator_kept_the_holes_of_the_evaluation_before, "examples/checks/agg-incr-stockholes.rofl").
+
+finding(f_a_debug_frame_of_the_demand_descent_is_thirteen_kib, insight).
+recorded(f_a_debug_frame_of_the_demand_descent_is_thirteen_kib, "2026-10-03").
+demands(f_a_debug_frame_of_the_demand_descent_is_thirteen_kib, none).
+finding_note(f_a_debug_frame_of_the_demand_descent_is_thirteen_kib,
+  "w_explain_debug_stack named the explainer and it was not: why/whynot render on an explicit stack (render_tree) and the 3000-deep chain test passes in debug. The overflow was a_whynot_that_meets_a_wall_answers_with_the_wall, found by gdb on the aborting test: the evaluator's demand descent (match_premise, solve_body, solve_demand_rule, rename_clause) recursing to MAX_DEPTH = 512, the reference's wall. Measured from the frames' stack pointers: ~13 KiB a level in debug (solve_body alone ~9 KiB, its closure and locals unoptimised), so the wall costs ~7 MiB against a test thread's 2 MiB; release frames are small and an 8 MiB main thread holds it. The depth is bounded and a language fact (byte parity with src/aggeval.ts), so the test runs on a 32 MiB thread rather than the descent being rewritten iteratively, which would be the body solver itself. A new demand test that walks toward the wall needs the same thread; a bigger depth wall would need an explicit stack.").
+addressed_by(f_a_debug_frame_of_the_demand_descent_is_thirteen_kib, "rust/rofl/tests/explain.rs").

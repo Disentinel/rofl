@@ -3641,5 +3641,5 @@ work(w_agg_retract_fallback_tail,
 work_state(w_agg_retract_fallback_tail, open).
 
 work(w_explain_debug_stack,
-  "cargo test --test explain overflows the stack in the debug profile (passes in release): make the explain recursion iterative or bounded so debug builds run the suite.").
-work_state(w_explain_debug_stack, open).
+  "DONE 2026-10-03: not the explainer. render_tree already walks on a stack of its own; the one overflow, a_whynot_that_meets_a_wall_answers_with_the_wall, is the demand descent walking to the 512 depth wall (solve_demand_rule/solve_body, ~13 KiB a level in debug, 7 MiB against a 2 MiB test thread), present at the base. That test runs on a thread sized for the bounded depth; the whole debug suite is otherwise green.").
+work_state(w_explain_debug_stack, done).
