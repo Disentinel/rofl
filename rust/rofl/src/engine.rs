@@ -454,12 +454,12 @@ pub struct Eval {
     agg_plans: HashMap<(Sym, u32), Rc<AggPlan>>,
     /// DATA-LEVEL STRATIFICATION (`datastrat.rs`): the components of the
     /// evaluation, the aggregate elements `(rule, at)` they hold, the
-    /// correlations released so far, and whether a correlation that was never
-    /// released is a defect.
+    /// correlations released so far, and the elements whose component has run
+    /// to its end, where a correlation never released is a defect.
     ds_comps: Vec<Rc<datastrat::DsComp>>,
     ds_elems: HashSet<(Sym, u32)>,
     ds_released: HashSet<datastrat::AggKey>,
-    ds_strict: bool,
+    ds_done: HashSet<(Sym, u32)>,
     /// The lattice relations, from `lattice_decl`: arity and operation; an
     /// idempotent tag's too, as the order lattice it is.
     lattices: HashMap<Sym, (usize, AggOp)>,
@@ -918,7 +918,7 @@ impl Eval {
             ds_comps: Vec::new(),
             ds_elems: HashSet::new(),
             ds_released: HashSet::new(),
-            ds_strict: false,
+            ds_done: HashSet::new(),
             lattices: HashMap::new(),
             lattice_rows: Vec::new(),
             decl_refused: Vec::new(),
@@ -1917,7 +1917,7 @@ impl Eval {
         self.ds_comps.clear();
         self.ds_elems.clear();
         self.ds_released.clear();
-        self.ds_strict = false;
+        self.ds_done.clear();
         self.lattice_improvements = 0;
         self.seed_narrowing()?;
         let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
@@ -2097,7 +2097,7 @@ impl Eval {
         })();
 
         self.ds_elems.clear();
-        self.ds_strict = false;
+        self.ds_done.clear();
         match outcome {
             Ok(()) => {}
             Err(Halt::Budget(reason, _)) => {

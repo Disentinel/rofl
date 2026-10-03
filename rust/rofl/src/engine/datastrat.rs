@@ -37,8 +37,8 @@
 //! is reached from the correlation, sealed before it, and its conclusions
 //! propagated, which is every fact the tree needs: the fact was derived
 //! before the seal, or it has no such tree. A premise the walk cannot decide
-//! (a builtin over a value of the component, a negation) is read as holding,
-//! which only adds edges; an edge too many can make a cycle that is not
+//! (a builtin over a value of the component) is read as holding, which only
+//! adds edges; a negation of the component inside the body is read as a premise; an edge too many can make a cycle that is not
 //! there, and never hides one that is. What the walk cannot key at all, a
 //! correlation bound by a premise of the component, is refused as such.
 //!
@@ -153,7 +153,7 @@ impl Eval {
     /// now: it has been released.
     pub(super) fn ds_gate(&self, mk: &AggKey) -> Result<bool, Halt> {
         if brk!("ds_seal_early" => false; !self.ds_released.contains(mk)) {
-            if self.ds_strict {
+            if self.ds_done.contains(&(mk.0, mk.1)) {
                 return Err(Halt::Bug(format!(
                     "a correlation of {} was met that the data walk never reached",
                     self.h.name(mk.0)
@@ -192,11 +192,51 @@ impl Eval {
             self.poison_readers(&owners)?;
         }
         self.ds_carry(comp)?;
-        // every correlation the rules meet now was released: the walk reached them all
-        self.ds_strict = true;
-        let fired = self.fire_all(rs.to_vec());
-        self.ds_strict = false;
-        fired
+        // from here to the end of the evaluation every correlation the rules meet was released: the walk
+        // reached them all, or it is a defect
+        self.ds_done.extend(comp.elems.iter().copied());
+        self.fire_all(rs.to_vec())?;
+        self.ds_verify(comp)
+    }
+
+    /// EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a
+    /// defect of the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again,
+    /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
+    fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
+        let mut keys: Vec<AggKey> = self.ds_released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
+        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let mut bad: Option<String> = None;
+        for k in keys {
+            let Some(cells) = self.agg_memo.get(&k).cloned() else { continue };
+            let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
+            let a = r.plan.iter().find_map(|b| match b {
+                BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
+                _ => None,
+            });
+            let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else { continue };
+            let mut s = Some(Subst::new());
+            for (n, i) in plan.corr.iter().enumerate() {
+                s = s.and_then(|x| unify(&self.h, Term::var(a.shared[*i]), k.2[n], &x));
+            }
+            let Some(s) = s else { continue };
+            let Sealed::Ephemeral(now) = self.seal_cells(k.0, &a, &plan, &s, &k.2, 0, false)? else { continue };
+            for (key, value, _) in now {
+                let held = cells.iter().map(|c| self.store.cell(*c)).find(|c| *c.key == *key);
+                let ok = match held {
+                    None => false,
+                    Some(c) => matches!(c.value, CellValue::Hole(_)) || c.value == value,
+                };
+                if !ok && bad.is_none() {
+                    bad = Some(format!(
+                        "the cell {} changed after it sealed: the data walk missed an edge into it",
+                        self.node_text(&Node::Agg(k.clone()))
+                    ));
+                }
+            }
+        }
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        bad.map_or(Ok(()), |m| Err(Halt::Bug(m)))
     }
 
     /// What a hole in the component left unknown, carried before the next layer
@@ -426,8 +466,7 @@ impl Eval {
         names.push(self.node_text(&g.nodes[at]));
         format!(
             "program rejected: {op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
-             an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md); \
-             in the data the cell reads itself: {}",
+             an aggregate reads a closed relation; in the data the cell reads itself: {}",
             self.h.name(*rid),
             names.join(" -> ")
         )
@@ -475,11 +514,26 @@ impl Eval {
                 }
                 Ok(())
             }
+            // a negation of what the component concludes reads it as a premise does: the cell waits for it
+            BodyElem::Neg(l) if comp.rels.contains(&l.rel) && brk!("ds_neg_invisible" => false; true) => {
+                let args: Vec<Option<Term>> = l
+                    .args
+                    .iter()
+                    .map(|a| {
+                        let t = resolve(&mut self.h, *a, &s);
+                        self.h.is_ground(t).then_some(t).filter(|_| brk!("ds_wild_keys" => false; true))
+                    })
+                    .collect();
+                out.push(Node::Pat(l.rel, args.into()));
+                self.ds_walk(comp, rid, rest, s, out)
+            }
             BodyElem::Neg(_) => self.ds_walk(comp, rid, rest, s, out),
-            BodyElem::Bi { op, l, r } => match self.ds_builtin(*op, *l, *r, &s) {
-                Some(s2) => self.ds_walk(comp, rid, rest, s2, out),
-                None => Ok(()),
-            },
+            BodyElem::Bi { op, l, r } => {
+                for s2 in self.ds_builtin(*op, *l, *r, &s)? {
+                    self.ds_walk(comp, rid, rest.clone(), s2, out)?;
+                }
+                Ok(())
+            }
             BodyElem::Agg(a) if a.op == AggOp::AtLeast => {
                 self.ds_walk(comp, rid, a.body.iter().collect(), s.clone(), out)?;
                 self.ds_walk(comp, rid, rest, s, out)
@@ -496,6 +550,12 @@ impl Eval {
                         corr.push(t);
                     }
                     out.push(Node::Agg((rid, a.at, corr.into())));
+                } else if !b.lits_deep().iter().any(|l| comp.rels.contains(&l.rel)) {
+                    // an aggregate over closed relations only binds what the rest of the rule is keyed by
+                    for s2 in brk!("ds_closed_agg_unbound" => vec![s.clone()]; self.ds_agg_closed(rid, a, &s)?) {
+                        self.ds_walk(comp, rid, rest.clone(), s2, out)?;
+                    }
+                    return Ok(());
                 }
                 self.ds_walk(comp, rid, rest, s, out)
             }
@@ -505,23 +565,36 @@ impl Eval {
     /// A builtin the walk can decide, decided: what it cannot, because a value
     /// of the component stands in it, holds. A fault it makes is no fault of
     /// the evaluation.
-    fn ds_builtin(&mut self, op: Sym, l: Term, r: Term, s: &Subst) -> Option<Subst> {
+    fn ds_builtin(&mut self, op: Sym, l: Term, r: Term, s: &Subst) -> Result<Vec<Subst>, Halt> {
         if !self.ds_decides(op, l, r, s) {
-            return brk!("ds_builtin_dead" => None; Some(s.clone()));
+            return Ok(brk!("ds_builtin_dead" => Vec::new(); vec![s.clone()]));
         }
-        let saved = (self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
-        let out = self.eval_builtin(op, l, r, s, None);
-        (self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        let saved = (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let out = self.eval_builtins(op, l, r, s, None);
+        (self.steps, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
         out
+    }
+
+    /// The solutions of an aggregate that reads closed relations only, under `s`, none of it kept: what a
+    /// correlation or a key of the rest of the rule is bound to. Nothing when its correlation is not bound yet.
+    fn ds_agg_closed(&mut self, rid: Sym, a: &Agg, s: &Subst) -> Result<Vec<Subst>, Halt> {
+        let plan = self.agg_plans.get(&(rid, a.at)).cloned().ok_or_else(|| Halt::Bug("an aggregate with no plan".into()))?;
+        for i in &plan.corr {
+            let t = resolve(&mut self.h, Term::var(a.shared[*i]), s);
+            if !self.h.is_ground(t) {
+                return Ok(vec![s.clone()]);
+            }
+        }
+        let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
+        let out = self.agg_premise(rid, a, s, 0, false);
+        (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
+        Ok(out?.into_iter().map(|(s2, _)| s2).collect())
     }
 
     /// Whether the operands a builtin needs are known under `s`.
     fn ds_decides(&mut self, op: Sym, l: Term, r: Term, s: &Subst) -> bool {
-        if op == self.v.op_in || op == self.v.op_subset {
-            return false;
-        }
         let (lt, rt) = (resolve(&mut self.h, l, s), resolve(&mut self.h, r, s));
         let (gl, gr) = (self.h.is_ground(lt), self.h.is_ground(rt));
-        if op == self.v.op_is { gr } else if op == self.v.op_eq { true } else { gl && gr }
+        if op == self.v.op_is || (op == self.v.op_in && brk!("ds_in_undecided" => false; true)) { gr } else if op == self.v.op_eq { true } else { gl && gr }
     }
 }

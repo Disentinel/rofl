@@ -665,11 +665,13 @@ export class AggEval {
   whyScans = 0;
   private aggPlans = new Map<string, AggPlan>();
   /** DATA-LEVEL STRATIFICATION: the components of the evaluation, the aggregate elements `rule|at` they hold, the
-   *  correlations released so far, and whether a correlation never released is a defect. */
+   *  correlations released so far (`dsKeys`, by name), and the elements whose component has run to its end, where a
+   *  correlation never released is a defect. */
   private dsComps: DsComp[] = [];
   private dsElems = new Set<string>();
   private dsReleased = new Set<string>();
-  private dsStrict = false;
+  private dsDone = new Set<string>();
+  private dsKeys = new Map<string, { rid: string; at: number; corr: Term[] }>();
   lattices = new Map<string, [number, AggOp]>();
   private latticeRows: [string, number, string][] = [];
   private declRefused: string[] = [];
@@ -1245,7 +1247,7 @@ export class AggEval {
     this.latPlain.clear();
     this.plainPending = this.carriedUnknowns(this.store.tick);
     this.plainUndecided = []; this.aggOpened.clear(); this.plainClosed.clear();
-    this.dsComps = []; this.dsElems.clear(); this.dsReleased.clear(); this.dsStrict = false;
+    this.dsComps = []; this.dsElems.clear(); this.dsReleased.clear(); this.dsKeys.clear(); this.dsDone.clear();
     this.latticeImprovements = 0;
     this.seedNarrowing();
     const safeRules = this.rules.filter((r) => r.safe);
@@ -1330,7 +1332,7 @@ export class AggEval {
         if (this.thrOpen.length === 0) break;
       }
     } catch (e) {
-      this.dsElems.clear(); this.dsStrict = false;
+      this.dsElems.clear(); this.dsDone.clear();
       if (!(e instanceof Wall)) throw e;
       partial = true;
       this.wallHole(e.reason);
@@ -1338,7 +1340,7 @@ export class AggEval {
       this.latticeCut(why);
       this.withWallsLifted(() => this.closeThresholdsBelow(Infinity, false));
     }
-    this.dsElems.clear(); this.dsStrict = false;
+    this.dsElems.clear(); this.dsDone.clear();
     this.settleStaged();
     this.writeShrugs(partial);
     this.store.dirty = false;
@@ -1383,7 +1385,8 @@ export class AggEval {
   /** Whether the correlation `mk` of a data-stratified element may be read now: it has been released. */
   private dsGate(mk: string): boolean {
     if (this.dsReleased.has(mk)) return true;
-    if (this.dsStrict) throw new Bug(`a correlation of ${mk.split('|')[0]} was met that the data walk never reached`);
+    const [rid, at] = mk.split('|');
+    if (this.dsDone.has(`${rid}|${at}`)) throw new Bug(`a correlation of ${rid} was met that the data walk never reached`);
     return false;
   }
 
@@ -1405,14 +1408,49 @@ export class AggEval {
     for (const layer of this.dsLayers(comp)) {
       this.dsCarry(comp);
       const owners = rs.filter((r) => layer.some((k) => k.rid === r.id));
-      for (const k of layer) this.dsReleased.add(k.mk);
+      for (const k of layer) { this.dsReleased.add(k.mk); this.dsKeys.set(k.mk, { rid: k.rid, at: k.at, corr: k.corr }); }
       this.fireAll(owners);
       this.poisonReaders(owners);
     }
     this.dsCarry(comp);
-    // every correlation the rules meet now was released: the walk reached them all
-    this.dsStrict = true;
-    try { this.fireAll(rs); } finally { this.dsStrict = false; }
+    // from here to the end of the evaluation every correlation the rules meet was released: the walk reached them all, or it is a defect
+    for (const [rid, at] of comp.elems) this.dsDone.add(`${rid}|${at}`);
+    this.fireAll(rs);
+    this.dsVerify(comp);
+  }
+
+  /** EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a defect of
+   *  the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again, ephemeral, over the
+   *  store as it stands, and must give the value the cell holds (a hole stands). */
+  private dsVerify(comp: DsComp): void {
+    const keys = [...this.dsKeys.entries()].filter(([, k]) => comp.elems.some((e) => e[0] === k.rid && e[1] === k.at))
+      .sort((x, y) => cmpStr(x[1].rid, y[1].rid) || x[1].at - y[1].at || cmpStr(tupleText(x[1].corr), tupleText(y[1].corr)));
+    const saved: [number, number, number, string | null, number, string | null, string | null] =
+      [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
+    let bad: string | null = null;
+    try {
+      for (const [mk, k] of keys) {
+        const held = this.aggMemo.get(mk);
+        const r = this.ruleOf(k.rid);
+        const a = r?.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
+        const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
+        if (held === undefined || !a || !plan) continue;
+        let s: Subst | null = new Map();
+        plan.corr.forEach((ix, j) => { if (s !== null) s = unify(mkv(a.shared![ix]), k.corr[j], s); });
+        if (s === null) continue;
+        const now = this.sealCells(k.rid, a, plan, s, k.corr, 0, false);
+        if (now.k !== 'ephemeral') continue;
+        for (const [key, value] of now.cells) {
+          const text = key.map(canonTerm).join(',');
+          const cell = held.map((c) => this.store.cells.get(c)!).find((c) => c.keyTerms.map(canonTerm).join(',') === text);
+          const ok = cell !== undefined && (cell.value.k === 'hole' || (cell.value.k === value.k && (value.k !== 'value' || (cell.value as { t: Term }).t === value.t || canonTerm((cell.value as { t: Term }).t) === canonTerm(value.t))));
+          if (!ok && bad === null) bad = `the cell ${this.dsNodeText({ k: 'a', rid: k.rid, at: k.at, corr: k.corr })} changed after it sealed: the data walk missed an edge into it`;
+        }
+      }
+    } finally {
+      [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved;
+    }
+    if (bad !== null) throw new Bug(bad);
   }
 
   /** What a hole in the component left unknown, carried before the next layer reads it: the component is closed as far
@@ -1553,7 +1591,7 @@ export class AggEval {
     path.reverse();
     const names = path.map(text);
     names.push(text(at));
-    return `program rejected: ${op} in rule ${nd.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md); in the data the cell reads itself: ${names.join(' -> ')}`;
+    return `program rejected: ${op} in rule ${nd.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; in the data the cell reads itself: ${names.join(' -> ')}`;
   }
 
   /** Which of `body` is read next under `s`: a premise outside the component first, for it binds what the patterns after
@@ -1578,11 +1616,14 @@ export class AggEval {
       this.dsWalk(comp, rid, rest, s, out);
     } else if (b.t === 'pos') {
       for (const [s2] of this.matchPremise(b.lit, s, 0, null)) this.dsWalk(comp, rid, rest, s2, out);
+    } else if (b.t === 'neg' && comp.rels.has(b.lit.rel)) {
+      // a negation of what the component concludes reads it as a premise does: the cell waits for it
+      out.push({ k: 'p', rel: b.lit.rel, args: b.lit.args.map((a) => { const t = resolve(a, s); return isGround(t) ? t : null; }) });
+      this.dsWalk(comp, rid, rest, s, out);
     } else if (b.t === 'neg') {
       this.dsWalk(comp, rid, rest, s, out);
     } else if (b.t === 'bi') {
-      const s2 = this.dsBuiltin(b.op, b.l, b.r, s);
-      if (s2 !== null) this.dsWalk(comp, rid, rest, s2, out);
+      for (const s2 of this.dsBuiltin(b.op, b.l, b.r, s)) this.dsWalk(comp, rid, rest, s2, out);
     } else if (b.op === 'at_least') {
       this.dsWalk(comp, rid, b.body, s, out);
       this.dsWalk(comp, rid, rest, s, out);
@@ -1597,24 +1638,40 @@ export class AggEval {
           corr.push(t);
         }
         out.push({ k: 'a', rid, at: b.at!, corr });
+      } else if (!litsDeep(b).some((l) => comp.rels.has(l.rel))) {
+        // an aggregate over closed relations only binds what the rest of the rule is keyed by
+        for (const s2 of this.dsAggClosed(rid, b, s)) this.dsWalk(comp, rid, rest, s2, out);
+        return;
       }
       this.dsWalk(comp, rid, rest, s, out);
     }
   }
 
+  /** The solutions of an aggregate that reads closed relations only, under `s`, none of it kept. Nothing is bound when its
+   *  correlation is not yet. */
+  private dsAggClosed(rid: string, a: AggElem, s: Subst): Subst[] {
+    const plan = this.aggPlans.get(`${rid}|${a.at}`);
+    if (!plan) throw new Bug('an aggregate with no plan');
+    for (const i of plan.corr) if (!isGround(resolve(mkv(a.shared![i]), s))) return [s];
+    const saved: [number, number, number, string | null, number, string | null, string | null] =
+      [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
+    try { return this.aggPremise(rid, a, s, 0, false).map(([s2]) => s2); } finally {
+      [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved;
+    }
+  }
+
   /** A builtin the walk can decide, decided: what it cannot, because a value of the component stands in it, holds. A
    *  fault it makes is no fault of the evaluation. */
-  private dsBuiltin(op: string, l: Term, r: Term, s: Subst): Subst | null {
-    if (!this.dsDecides(op, l, r, s)) return s;
-    const saved: [string | null, number, string | null, string | null] = [this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
-    try { return this.evalBuiltin(op, l, r, s, null); } finally { [this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved; }
+  private dsBuiltin(op: string, l: Term, r: Term, s: Subst): Subst[] {
+    if (!this.dsDecides(op, l, r, s)) return [s];
+    const saved: [number, string | null, number, string | null, string | null] = [this.steps, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
+    try { return this.evalBuiltins(op, l, r, s, null); } finally { [this.steps, this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved; }
   }
 
   /** Whether the operands a builtin needs are known under `s`. */
   private dsDecides(op: string, l: Term, r: Term, s: Subst): boolean {
-    if (op === 'in' || op === 'subset') return false;
     const gl = isGround(resolve(l, s)), gr = isGround(resolve(r, s));
-    return op === 'is' ? gr : op === '=' ? true : gl && gr;
+    return op === 'is' || op === 'in' ? gr : op === '=' ? true : gl && gr;
   }
 
   /** THE SHRUG MODEL, set up for one evaluation. */

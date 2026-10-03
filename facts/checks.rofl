@@ -2494,6 +2494,7 @@ check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-4-refused
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-5-refused-negated.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-6-refused-unkeyed.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-8-refused-negated-body.rofl").
 check_opt("agg_datastrat_cycle", together, 1).
 proves_work("agg_datastrat_cycle", w_agg_data_strat).
 
@@ -2503,6 +2504,20 @@ check_file("agg_datastrat_two", "examples/checks/agg-datastrat-two.rofl").
 check_file("agg_datastrat_two", "examples/checks/agg-datastrat-two-check.rofl").
 check_opt("agg_datastrat_two", together, 1).
 proves_work("agg_datastrat_two", w_agg_data_strat).
+
+-- a negation inside the aggregate's body reads the component as a premise does: the count waits for the flags
+check_world("agg_datastrat_neg").
+check_file("agg_datastrat_neg", "examples/checks/agg-datastrat-neg.rofl").
+check_file("agg_datastrat_neg", "examples/checks/agg-datastrat-neg-check.rofl").
+check_opt("agg_datastrat_neg", together, 1).
+proves_work("agg_datastrat_neg", w_agg_data_strat).
+
+-- a key bound by an aggregate over closed relations, and by `in` over a closed interval, names a correlation
+check_world("agg_datastrat_keys").
+check_file("agg_datastrat_keys", "examples/checks/agg-datastrat-keys.rofl").
+check_file("agg_datastrat_keys", "examples/checks/agg-datastrat-keys-check.rofl").
+check_opt("agg_datastrat_keys", together, 1).
+proves_work("agg_datastrat_keys", w_agg_data_strat).
 
 -- a hole in a cell reaches the cells that add it, a layer at a time, and no others
 check_world("agg_datastrat_holes").

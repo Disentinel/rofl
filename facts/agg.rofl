@@ -1172,6 +1172,8 @@ work_state(w_agg_data_strat, done).
 work_proof(w_agg_data_strat, "agg_datastrat_eval").
 work_proof(w_agg_data_strat, "agg_datastrat_tree").
 work_proof(w_agg_data_strat, "agg_datastrat_two").
+work_proof(w_agg_data_strat, "agg_datastrat_neg").
+work_proof(w_agg_data_strat, "agg_datastrat_keys").
 work_proof(w_agg_data_strat, "agg_datastrat_cycle").
 work_proof(w_agg_data_strat, "agg_datastrat_holes").
 work_proof(w_agg_data_strat, "agg_datastrat_why").

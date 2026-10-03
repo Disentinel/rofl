@@ -2862,7 +2862,11 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   relation read on demand is not unfolded, and binds nothing); a
   premise of the component binds nothing and is a pattern; a builtin whose operands
   are known is decided and one that has a value of the component in it is read as
-  holding; a negation is read as holding.
+  holding; a negation inside an aggregate's body over the component is read as a
+  premise is (a pattern, so the cell waits for what it negates), and one over a closed
+  relation as holding; an aggregate over closed relations only is evaluated, its result
+  binding what the rest of the rule is keyed by (`K is count(...)` then `slot(K, E)`),
+  and `E in S` with S known is decided, binding E to each element.
 - A LAYER is one more than the greatest layer among the correlations a correlation
   reaches without passing another, 0 for none. Each layer is released together
   (`Eval::ds_released`), its rules fired whole, and the news propagated to a
@@ -2891,13 +2895,19 @@ conclusions propagated, which is all the tree needs: the fact was derived before
 seal. What the walk cannot decide it reads as holding, which only adds edges: an edge
 too many can make a cycle that is not there (a key a premise of the component binds
 is a `_`, so a lookup keyed by a value of the component reads every row of its
-table), and none hides one that is. After the last layer every correlation the rules
-meet again is checked to have been released (`ds_strict`): the walk missed none, or it
-is a defect, not a silent cell.
+table), and none hides one that is. Two mechanical checks close the argument against a walk that
+missed an edge: every correlation the rules meet after its component ran, to the end of the
+evaluation, must have been released (`ds_done`), and each cell sealed is solved again,
+ephemeral, when the component ends and must give the value it holds (`ds_verify`; a hole
+stands): a member that came after the seal is a defect, not a silent wrong value.
 
-**Negation.** One inside the component (its edge is hard) leaves the component to the
-old refusal. One below it is read as a closed relation. One above reads the whole
-component, which is a round of its own. A strat rule inside the component that
+**Negation.** One in a rule's body over the component is a strict edge of its own and
+leaves the component to the old refusal. One inside an aggregate's body over the component
+is an aggregate's edge and is stratified by data: a member is a solution in which the
+negated fact is absent, so the cell waits for the negated relation like for any it reads (a
+pattern node), and a flag raised by another cell's count is a layer below it; a cycle through
+it is refused naming it. One below the component is a closed relation. One above reads the
+whole component, which is a round of its own. A strat rule inside the component that
 negates what is below fires with the round's other rules, before the layers, and
 again on the news the layers bring, like any rule.
 

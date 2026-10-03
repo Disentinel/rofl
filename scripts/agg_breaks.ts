@@ -5116,25 +5116,25 @@ export const BREAKS: Break[] = [
   "id": "ds_seal_early",
   "what": "a correlation of a component stratified by its data is read before the layer it belongs to is released",
   "expect": {
-   "agg_datastrat_eval": "ads_wrong",
-   "agg_datastrat_tree": "dt_wrong",
-   "agg_datastrat_tick": "the state lacks the row value",
-   "agg_datastrat_holes": "adh_wrong"
+   "agg_datastrat_eval": "changed after it sealed",
+   "agg_datastrat_tree": "changed after it sealed",
+   "agg_datastrat_tick": "changed after it sealed",
+   "agg_datastrat_holes": "changed after it sealed"
   }
  },
  {
   "id": "ds_layer_flat",
   "what": "a layer is the greatest below it, not one more: every correlation is released with the first",
   "expect": {
-   "agg_datastrat_eval": "ads_wrong",
-   "agg_datastrat_tree": "dt_wrong"
+   "agg_datastrat_eval": "changed after it sealed",
+   "agg_datastrat_tree": "changed after it sealed"
   }
  },
  {
   "id": "ds_cycle_unseen",
   "what": "a cycle through a correlation in the data is not refused",
   "expect": {
-   "agg_datastrat_cycle": "was to be refused"
+   "agg_datastrat_cycle": "refused, but not for"
   }
  },
  {
@@ -5164,7 +5164,7 @@ export const BREAKS: Break[] = [
   "id": "ds_builtin_dead",
   "what": "a builtin the data walk cannot decide fails the branch it stands in",
   "expect": {
-   "agg_datastrat_eval": "ads_wrong"
+   "agg_datastrat_eval": "changed after it sealed"
   }
  },
  {
@@ -5189,6 +5189,28 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ds_neg_invisible",
+  "what": "a negation inside an aggregate's body over the component is read as holding: the cell does not wait for it",
+  "expect": {
+   "agg_datastrat_neg": "changed after it sealed",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ds_closed_agg_unbound",
+  "what": "an aggregate over closed relations binds nothing in the data walk",
+  "expect": {
+   "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ds_in_undecided",
+  "what": "the data walk does not decide `E in S` with S known",
+  "expect": {
+   "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
   "id": "ds_delta_allowed",
   "what": "a retraction from a world stratified by its data takes the delta path",
   "expect": {
@@ -5206,8 +5228,8 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_datastrat_eval": "ads_wrong",
-   "agg_datastrat_tree": "dt_wrong"
+   "agg_datastrat_eval": "changed after it sealed",
+   "agg_datastrat_tree": "changed after it sealed"
   }
  },
  {
@@ -5221,7 +5243,7 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_datastrat_cycle": "was to be refused"
+   "agg_datastrat_cycle": "refused, but not for"
   }
  },
  {
@@ -5259,12 +5281,12 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "    if (!this.dsDecides(op, l, r, s)) return s;",
-    "    if (!this.dsDecides(op, l, r, s)) return null;"
+    "    if (!this.dsDecides(op, l, r, s)) return [s];",
+    "    if (!this.dsDecides(op, l, r, s)) return [];"
    ]
   ],
   "expect": {
-   "agg_datastrat_eval": "ads_wrong"
+   "agg_datastrat_eval": "changed after it sealed"
   }
  },
  {
@@ -5278,8 +5300,8 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_datastrat_eval": "ads_wrong",
-   "agg_datastrat_tree": "dt_wrong"
+   "agg_datastrat_eval": "changed after it sealed",
+   "agg_datastrat_tree": "changed after it sealed"
   }
  },
  {
@@ -5294,6 +5316,49 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_two": "d2_wrong"
+  }
+ },
+ {
+  "id": "ts_ds_neg_invisible",
+  "what": "the TypeScript walk reads a negation inside an aggregate's body over the component as holding",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    } else if (b.t === 'neg' && comp.rels.has(b.lit.rel)) {",
+    "    } else if (b.t === 'neg' && comp.rels.has(b.lit.rel) && b.lit.rel.length < 0) {"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_neg": "changed after it sealed",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_ds_closed_agg_unbound",
+  "what": "the TypeScript walk binds nothing by an aggregate over closed relations",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const s2 of this.dsAggClosed(rid, b, s)) this.dsWalk(",
+    "for (const s2 of [s]) this.dsWalk("
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_in_undecided",
+  "what": "the TypeScript walk does not decide `E in S` with S known",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "return op === 'is' || op === 'in' ? gr : op === '=' ? true : gl && gr;",
+    "return op === 'is' ? gr : op === '=' ? true : gl && gr;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_keys": "the world does not evaluate"
   }
  },
 ];

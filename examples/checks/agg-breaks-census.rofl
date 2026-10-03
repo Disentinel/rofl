@@ -1388,6 +1388,13 @@ brk("ds_root_dropped"). brk_kind("ds_root_dropped", switch).
 brk_expects("ds_root_dropped", "agg_datastrat_eval").
 brk("ds_comps_unordered"). brk_kind("ds_comps_unordered", switch).
 brk_expects("ds_comps_unordered", "agg_datastrat_two").
+brk("ds_neg_invisible"). brk_kind("ds_neg_invisible", switch).
+brk_expects("ds_neg_invisible", "agg_datastrat_neg").
+brk_expects("ds_neg_invisible", "agg_datastrat_cycle").
+brk("ds_closed_agg_unbound"). brk_kind("ds_closed_agg_unbound", switch).
+brk_expects("ds_closed_agg_unbound", "agg_datastrat_keys").
+brk("ds_in_undecided"). brk_kind("ds_in_undecided", switch).
+brk_expects("ds_in_undecided", "agg_datastrat_keys").
 brk("ds_delta_allowed"). brk_kind("ds_delta_allowed", switch).
 brk_expects("ds_delta_allowed", "agg_datastrat_retract").
 brk("ts_ds_seal_early"). brk_kind("ts_ds_seal_early", ts).
@@ -1407,6 +1414,13 @@ brk_expects("ts_ds_layer_flat", "agg_datastrat_eval").
 brk_expects("ts_ds_layer_flat", "agg_datastrat_tree").
 brk("ts_ds_comps_unordered"). brk_kind("ts_ds_comps_unordered", ts).
 brk_expects("ts_ds_comps_unordered", "agg_datastrat_two").
+brk("ts_ds_neg_invisible"). brk_kind("ts_ds_neg_invisible", ts).
+brk_expects("ts_ds_neg_invisible", "agg_datastrat_neg").
+brk_expects("ts_ds_neg_invisible", "agg_datastrat_cycle").
+brk("ts_ds_closed_agg_unbound"). brk_kind("ts_ds_closed_agg_unbound", ts).
+brk_expects("ts_ds_closed_agg_unbound", "agg_datastrat_keys").
+brk("ts_ds_in_undecided"). brk_kind("ts_ds_in_undecided", ts).
+brk_expects("ts_ds_in_undecided", "agg_datastrat_keys").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1490,11 +1504,14 @@ switch_site("dominance_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("dominance_whynot_unasked", "rust/rofl/src/engine.rs").
 switch_site("ds_barred_ignored", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_builtin_dead", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_closed_agg_unbound", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_comps_unordered", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_cycle_unseen", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_delta_allowed", "rust/rofl/src/engine/delta.rs").
 switch_site("ds_hole_uncarried", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_in_undecided", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_layer_flat", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_neg_invisible", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_no_demote", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_root_dropped", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_seal_early", "rust/rofl/src/engine/datastrat.rs").
