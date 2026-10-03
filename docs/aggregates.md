@@ -2854,9 +2854,12 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   nothing bound a position), or a CORRELATION of one aggregate element, the cell it
   seals: `(rule, at, the values of its shared variables bound before it)`.
 - The EDGES of a pattern are what the premises of each rule that could conclude it
-  read, in the rule's plan; those of a correlation, what its inner body reads. A
+  read; those of a correlation, what its inner body reads. The premises are read a
+  premise outside the component first (it binds what the patterns after it name), then
+  a builtin that can be decided, then the rest in the rule's plan. A
   premise of a relation outside the component is matched against the store (it
-  never changes in this round), so a key a closed relation binds is a constant; a
+  never changes in this round), so a key a closed relation binds is a constant (a
+  relation read on demand is not unfolded, and binds nothing); a
   premise of the component binds nothing and is a pattern; a builtin whose operands
   are known is decided and one that has a value of the component in it is read as
   holding; a negation is read as holding.
@@ -2929,7 +2932,10 @@ it after the round, like any rule above it.
 **What it does not do.** The walk is exact where a closed relation keys the cells,
 which is every spreadsheet; a premise whose key a value of the component binds reads
 everything the relation could give. Components with a lattice, a subsumption, a
-threshold, a counting tag or a demand-backed relation in them are not taken. A cell
+threshold, a counting tag or a demand-backed relation in them are not taken. Each
+layer fires the rules that own its correlations whole, so a component d layers deep
+with c correlations costs d x c firings (`f_a_stratified_layer_fires_its_rules_whole`:
+300 sums in a chain 0.26 s, 2000 in 15 s). A cell
 sealed once per rule and correlation is the unit: a grouped aggregate (no
 correlation) is one cell for all its groups, so a group that reads another group of
 its own relation is a cycle at that grain. Proofs: `agg_datastrat_*` in

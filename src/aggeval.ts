@@ -1573,6 +1573,9 @@ export class AggEval {
     if (b.t === 'pos' && comp.rels.has(b.lit.rel)) {
       out.push({ k: 'p', rel: b.lit.rel, args: b.lit.args.map((a) => { const t = resolve(a, s); return isGround(t) ? t : null; }) });
       this.dsWalk(comp, rid, rest, s, out);
+    } else if (b.t === 'pos' && this.demandRels.some(([d]) => d === b.lit.rel)) {
+      // a relation read on demand is unfolded at the call, which the walk must not do: it binds nothing
+      this.dsWalk(comp, rid, rest, s, out);
     } else if (b.t === 'pos') {
       for (const [s2] of this.matchPremise(b.lit, s, 0, null)) this.dsWalk(comp, rid, rest, s2, out);
     } else if (b.t === 'neg') {

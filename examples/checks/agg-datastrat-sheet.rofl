@@ -38,7 +38,10 @@ edb(cnt_head).   -- cnt_head(Node, Range): how many of them have a value
 edb(max_head).   -- max_head(Node, Range): the greatest value among them
 edb(in_range).   -- in_range(Range, Cell)
 
-input(a1, 2). input(a2, 3). input(a3, 5). input(a4, 7).
+input(a1, 2).
+input(a2, 3).
+input(a3, 5).
+input(a4, 7).
 
 formula(b1, n_b1). sum_head(n_b1, r_b1). in_range(r_b1, a1). in_range(r_b1, a2).
 formula(b2, n_b2). sum_head(n_b2, r_b2). in_range(r_b2, a1). in_range(r_b2, b1).

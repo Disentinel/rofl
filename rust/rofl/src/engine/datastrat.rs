@@ -14,11 +14,11 @@
 //!   element, the cell it seals: `(rule, at, the values of the shared
 //!   variables bound before it)`. Its edges are what it reads of the
 //!   component: a pattern's are the premises of each rule that could conclude
-//!   it, read left to right in the rule's plan, with every premise of a
-//!   relation OUTSIDE the component matched against the store (closed), so a
-//!   key a closed relation binds is a constant, and with a premise of the
-//!   component binding nothing (`_`); a correlation's are the premises of its
-//!   inner body, read the same way;
+//!   it, with every premise of a relation OUTSIDE the component matched
+//!   against the store (closed) and read first, so a key a closed relation
+//!   binds is a constant, and with a premise of the component binding nothing
+//!   (`_`); a correlation's are the premises of its inner body, read the same
+//!   way;
 //! - a correlation seals only after every correlation it reaches has: its
 //!   LAYER is one more than the greatest among those it reaches without
 //!   passing another, 0 for none, and each layer is released together
@@ -467,6 +467,8 @@ impl Eval {
                 out.push(Node::Pat(l.rel, args.into()));
                 self.ds_walk(comp, rid, rest, s, out)
             }
+            // a relation read on demand is unfolded at the call, which the walk must not do: it binds nothing
+            BodyElem::Pos(l) if self.demand_rels.iter().any(|(d, _)| *d == l.rel) => self.ds_walk(comp, rid, rest, s, out),
             BodyElem::Pos(l) => {
                 for (s2, _) in self.match_premise(l, &s, 0, None)? {
                     self.ds_walk(comp, rid, rest.clone(), s2, out)?;

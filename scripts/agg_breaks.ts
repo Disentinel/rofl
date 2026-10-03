@@ -4186,8 +4186,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "for (const h of [hrel, ...reflected]) { heads.add(h); P(h); N(h).add(l.rel); }",
-    "for (const h of [] as string[]) { heads.add(h); P(h); N(h).add(l.rel); }"
+    "for (const h of [hrel, ...reflected]) {\n            heads.add(h); P(h);",
+    "for (const h of [] as string[]) {\n            heads.add(h); P(h);"
    ]
   ],
   "expect": {
