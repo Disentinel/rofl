@@ -646,15 +646,14 @@ impl Eval {
                 .cloned()
                 .collect();
             // a fact a question made is no fact of the evaluation: a fresh world has none, so every retraction
-            // from a world with a demand relation and no lattice makes them again
-            let touched = rd.demand || cell_rules.iter().any(|r| self.calls_on_demand(r));
-            let call = !called && !demanded.is_empty() && (touched || self.lattices.is_empty());
+            // from a world with a demand relation makes them again, and a world with a lattice as well is evaluated again
+            let call = !called && !demanded.is_empty();
             if (hit.is_empty() || brk!("ds_comp_not_reread" => true; false)) && !call {
                 break rd;
             }
             if call {
                 if !self.lattices.is_empty() {
-                    return Err("a rule answered on demand reads what changed in a world with a lattice");
+                    return Err("a world with a lattice holds a relation answered on demand");
                 }
                 called = true;
                 from.extend(demanded.iter().copied());

@@ -9868,3 +9868,11 @@ addressed_by(f_a_cell_is_opened_through_a_cast_and_not_the_port, "src/semiring.t
 addressed_by(f_a_cell_is_opened_through_a_cast_and_not_the_port, "src/store.ts").
 finding_note(f_a_cell_is_opened_through_a_cast_and_not_the_port,
   "SETTLED by w_ts_one_evaluator: `FactStore.cellOf(key)` is on the port (src/store.ts), implemented by Store and, as a refusal that says so, by the sqlite adapter; src/semiring.ts opens a cell through it and the cast is gone. test/semiring-cells.test.ts holds that a store that cannot open a cell makes the fold throw.").
+
+finding(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction, defect).
+recorded(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction, "2026-10-03").
+demands(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction, code).
+addressed_by(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction, "rust/rofl/src/engine/delta.rs").
+addressed_by(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction, "rust/rofl/tests/incremental.rs").
+finding_note(f_a_fact_a_question_made_beside_a_lattice_survived_a_retraction,
+  "Found by the read-only review of the retraction's fallback tail (w_agg_retract_fallback_tail). In a world with BOTH a lattice and a relation answered on demand, a fact a `why`/`whynot` call made (big(8) after `whynot big(8)`) survived a retraction that touched no demand rule: the gate made the facts of calls again only when a demand rule was touched or the world had no lattice, and the lattice path's refusal was never reached, so the answer was a Delta holding a fact a fresh world has not. Older than the tail (the same retraction was a Delta that kept it before), but the tail claimed to drop the facts of calls. FIXED by the strictly conservative gate: every retraction from a world with a demand relation makes the calls' facts again, and one with a lattice beside it is evaluated again by name (`a world with a lattice holds a relation answered on demand`). Regression a_fact_a_question_made_beside_a_lattice_is_evaluated_again (Session: question, retraction, state equal to a fresh world). The differential asks its questions on forks in demand worlds, so it could not see this; that gap is why.").

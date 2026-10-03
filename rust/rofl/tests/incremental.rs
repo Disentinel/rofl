@@ -913,6 +913,21 @@ fn a_fact_a_question_made_goes_with_any_retraction() {
 }
 
 #[test]
+fn a_fact_a_question_made_beside_a_lattice_is_evaluated_again() {
+    let program = format!("{DEMAND}\nedb(z). edb(ed).\nlattice d(A, B, min W).\nd(A, B, W) :- ed(A, B, W).\n");
+    let facts = |xs: &[&str]| xs.iter().map(|x| x.to_string()).collect::<BTreeSet<String>>();
+    let mut s = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)", "z(1)", "ed(p,q,1)"]), &BTreeSet::new());
+    let _ = s.whynot("big(8)", &rofl::engine::WhynotBounds::default());
+    assert!(s.holds("big(8)").unwrap(), "the question makes the fact");
+    match s.retract_delta("z(1)").unwrap() {
+        Retraction::Full(_) => {}
+        other => panic!("{other:?}"),
+    }
+    let mut f = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)", "ed(p,q,1)"]), &BTreeSet::new());
+    assert_eq!(state(&mut s), state(&mut f));
+}
+
+#[test]
 fn a_cell_read_again_beside_its_own_retraction_is_read_again_whole() {
     let all = sweep(TWICE, fact_plain, 1..=8, 8, 40);
     assert!(all.full.is_empty(), "{:?}", all.full);
