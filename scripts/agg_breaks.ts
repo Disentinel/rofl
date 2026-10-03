@@ -5744,7 +5744,10 @@ export function sitesIn(file: string, text: string): Site[] {
   const out: Site[] = [];
   const skip = (i: number): number => {
     const c = text[i];
-    if (c === '"') { for (i++; text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
+    // a raw string reads no escape: r"…", r#"…"#, its end the quote and as many #
+    const raw = c === 'r' && !/[A-Za-z0-9_]/.test(text[i - 1] ?? '') ? /^r(#*)"/.exec(text.slice(i, i + 8)) : null;
+    if (raw) { const end = text.indexOf(`"${raw[1]}`, i + raw[0].length); return end < 0 ? text.length : end + raw[1].length; }
+    if (c === '"') { for (i++; i < text.length && text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
     if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') i++; return i; }
     if (c === "'" && text[i + 2] === "'") return i + 2;
     if (c === "'" && text[i + 1] === '\\' && text[i + 3] === "'") return i + 3;
