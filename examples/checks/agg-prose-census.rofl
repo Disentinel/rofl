@@ -55,9 +55,7 @@ retire_pattern("scripts/lint.ts").
 retire_site(count, "examples/wtf/wtf.rofl").
 retire_pattern("examples/wtf/wtf.rofl").
 retire_site(sum, "examples/slop/slop.rofl").
-retire_kept(sum, "examples/slop/slop.rofl").
 retire_pattern("examples/slop/slop.rofl").
-retire_marker(sum, "examples/slop/slop.rofl").
 retire_site(sum, "examples/spat/spat.rofl").
 retire_pattern("examples/spat/spat.rofl").
 retire_site(sum, "examples/spat/spat.ts").

@@ -1,0 +1,79 @@
+-- examples/checks/agg-datastrat-sheet.rofl — a spreadsheet, the case the
+-- relations refuse and the data does not (f_an_aggregate_is_refused_by_relation_and_not_by_data).
+--
+-- value, val and the three aggregates of val are one recursive component as
+-- RELATIONS: a cell is a formula over cells, and a range sum reads value. As
+-- DATA the cells form no cycle, so the kernel stratifies the component by the
+-- depth of the cells (docs/aggregates.md, "Data-level stratification, as
+-- built") and the program runs. The sheet:
+--
+--   a1 = 2  a2 = 3  a3 = 5  a4 = 7            typed in
+--   b1 = SUM(a1:a2)            = 5            depth 0
+--   b2 = SUM(a1, b1)           = 7            depth 1
+--   b3 = b2 + b1               = 12           a formula, between two sums
+--   b4 = SUM(b2, b3)           = 19           depth 2, over a sum and a formula over a sum
+--   c1 = SUM(b1:b4)            = 43           depth 3, over all four
+--   c2 = COUNT(b1:b4)          = 4            a count over the same range
+--   c3 = MAX(b1:b4)            = 19           a max over it
+--   d1 = SUM(a3:a4)            = 12           independent of the rest
+--   d2 = SUM(a3:a4)            = 12           the same cells in a range of its own
+--   e1 = c1 + d1               = 55           a formula over two deep cells
+--   e2 = SUM(c1, d1)           = 55           a diamond: c1 and d1 below both e1 and e2
+--   f1 = SUM(a1, a2) = 5, f2 = SUM(f1, a1) = 7, f3 = 9, f4 = 11, f5 = 13, f6 = 15
+--                                             a chain six sums deep
+--   h1 = IF(a1, f6, 0)         = 15           the branch taken reads the chain: a dependency a value
+--                                             of the condition decides, and the data cannot skip
+--   h2 = SUM(h1, a2)           = 18           a sum over it
+--   g1 = SUM(a1, z9)           no value       z9 is no cell: a range with a cell that has
+--                                             no value has no total, and nothing above it
+--   g2 = g1 + a1               no value
+edb(input).      -- input(Cell, V)
+edb(formula).    -- formula(Cell, Node)
+edb(ref).        -- ref(Node, Cell)
+edb(plus).       -- plus(Node, A, B)
+edb(num).        -- num(Node, V)
+edb(pick).       -- pick(Node, Cond, Then, Else): IF(Cond, Then, Else)
+edb(sum_head).   -- sum_head(Node, Range): the sum of the cells of Range
+edb(cnt_head).   -- cnt_head(Node, Range): how many of them have a value
+edb(max_head).   -- max_head(Node, Range): the greatest value among them
+edb(in_range).   -- in_range(Range, Cell)
+
+input(a1, 2).
+input(a2, 3).
+input(a3, 5).
+input(a4, 7).
+
+formula(b1, n_b1). sum_head(n_b1, r_b1). in_range(r_b1, a1). in_range(r_b1, a2).
+formula(b2, n_b2). sum_head(n_b2, r_b2). in_range(r_b2, a1). in_range(r_b2, b1).
+formula(b3, n_b3). plus(n_b3, n_b3x, n_b3y). ref(n_b3x, b2). ref(n_b3y, b1).
+formula(b4, n_b4). sum_head(n_b4, r_b4). in_range(r_b4, b2). in_range(r_b4, b3).
+formula(c1, n_c1). sum_head(n_c1, r_c). in_range(r_c, b1). in_range(r_c, b2). in_range(r_c, b3). in_range(r_c, b4).
+formula(c2, n_c2). cnt_head(n_c2, r_c).
+formula(c3, n_c3). max_head(n_c3, r_c).
+formula(d1, n_d1). sum_head(n_d1, r_d1). in_range(r_d1, a3). in_range(r_d1, a4).
+formula(d2, n_d2). sum_head(n_d2, r_d2). in_range(r_d2, a3). in_range(r_d2, a4).
+formula(e1, n_e1). plus(n_e1, n_e1x, n_e1y). ref(n_e1x, c1). ref(n_e1y, d1).
+formula(e2, n_e2). sum_head(n_e2, r_e2). in_range(r_e2, c1). in_range(r_e2, d1).
+formula(f1, n_f1). sum_head(n_f1, r_f1). in_range(r_f1, a1). in_range(r_f1, a2).
+formula(f2, n_f2). sum_head(n_f2, r_f2). in_range(r_f2, f1). in_range(r_f2, a1).
+formula(f3, n_f3). sum_head(n_f3, r_f3). in_range(r_f3, f2). in_range(r_f3, a1).
+formula(f4, n_f4). sum_head(n_f4, r_f4). in_range(r_f4, f3). in_range(r_f4, a1).
+formula(f5, n_f5). sum_head(n_f5, r_f5). in_range(r_f5, f4). in_range(r_f5, a1).
+formula(f6, n_f6). sum_head(n_f6, r_f6). in_range(r_f6, f5). in_range(r_f6, a1).
+formula(h1, n_h1). pick(n_h1, n_h1c, n_h1t, n_h1e). ref(n_h1c, a1). ref(n_h1t, f6). num(n_h1e, 0).
+formula(h2, n_h2). sum_head(n_h2, r_h2). in_range(r_h2, h1). in_range(r_h2, a2).
+formula(g1, n_g1). sum_head(n_g1, r_g1). in_range(r_g1, a1). in_range(r_g1, z9).
+formula(g2, n_g2). plus(n_g2, n_g2x, n_g2y). ref(n_g2x, g1). ref(n_g2y, a1).
+
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- num(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).
+val(N, V) :- pick(N, C, _, E), val(C, 0), val(E, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- sum_head(N, I), K is count(C : in_range(I, C)),
+             K is count(D : in_range(I, D), value(D, _)),
+             V is sum(X ; E : in_range(I, E), value(E, X)).
+val(N, V) :- cnt_head(N, I), V is count(C : in_range(I, C), value(C, _)).
+val(N, V) :- max_head(N, I), V is max(X : in_range(I, C), value(C, X)).

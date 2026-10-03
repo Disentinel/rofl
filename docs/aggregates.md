@@ -153,8 +153,8 @@ class alone decides recursion and deduplication, with no case-by-case judgement.
 | --- | --- | --- | --- | --- |
 | idempotent total order | min, max, or, and | yes | none | Best |
 | idempotent join | set union, interval hull, bitset or | yes; infinite height needs a declared widening, forced after N improvements | none | Cover / Widened |
-| invertible | count, sum | stratified only | by the projection tuple | Group |
-| holistic | quantile, median, rank | stratified only | by the projection tuple; the group is recomputed | Group |
+| invertible | count, sum | stratified only, by relation or by data | by the projection tuple | Group |
+| holistic | quantile, median, rank | stratified only, by relation or by data | by the projection tuple; the group is recomputed | Group |
 | threshold | `at_least(N, X : body)` | yes (it is monotone) | none | Quorum (exactly N) |
 | idempotent semiring tag | tropical, viterbi, trust (boolean is a plain relation) | yes | none | Best of its order lattice |
 | counting semiring tag | counting | stratified only | a derivation per firing | Group of its derivations |
@@ -168,8 +168,9 @@ class alone decides recursion and deduplication, with no case-by-case judgement.
   the sugar row keeps its `eval_rust`, `eval_ts` and `safety` cells: *avg* is
   sum over count with a declared rounding and no row for an empty group (never
   a division by zero); *every* is count-equality over a domain bound from
-  outside; *at most* and *exactly N* are not monotone and are refused inside
-  recursion.
+  outside; *at most* and *exactly N* are not monotone, so inside recursion they
+  are stratified like any count and refused only where the data cycles
+  ("Data-level stratification, as built").
 - **or / and** are the idempotent total order on {false < true}; the
   `min_max_strat` and `order_lattice` rows cover them.
 
@@ -221,8 +222,10 @@ Two independent aggregates name their variables apart.
 **Stratified.** An aggregate reads its inner relations the way a negation
 does: `premise_agg(R, Rel)` in the reflection, no `premise_pos`, a strict edge in
 `peel_rounds` and in `rules/strata.rofl`. A relation read through its own
-aggregate is refused (`... reads a closed relation; a recursive min/max is a
-lattice declaration`). The stock evaluator (`--strata`, `Mode::Strata`) orders
+aggregate is stratified by its data where only aggregates' edges make the
+cycle, and refused where the data cycles too, or where anything else does
+(`... reads a closed relation; a recursive min/max is a lattice declaration`;
+"Data-level stratification, as built"). The stock evaluator (`--strata`, `Mode::Strata`) orders
 its passes by the `stratum` table instead, so it seals an aggregate only when
 the table ranks the aggregate's head and every derived relation it reads
 strictly below it; otherwise, and so without `rules/strata.rofl` or a table of
@@ -2819,6 +2822,125 @@ rounds one way, toward zero; rounding down or half to even is not a sentence.
 A head with no argument is not read (`The ballots are valid`). The round trip
 compares rules by id with variables renamed in the order they are written,
 so a sentence that reorders conditions is a different rule.
+
+## Data-level stratification, as built
+
+w_agg_data_strat, 2026-10-03, a kernel change decided in
+`f_a_component_whose_only_strict_edges_are_aggregates_is_stratified_by_its_data`
+(it settles `f_an_aggregate_is_refused_by_relation_and_not_by_data`). A
+spreadsheet is the case: `val(N, V) :- sum_head(N, I), V is sum(X ; C :
+in_range(I, C), value(C, X))` over `value(C, V) :- formula(C, N), val(N, V)` is
+one recursive component as RELATIONS and was refused, though no cell adds
+itself. `examples/slop` kept its `SUM` as a chain the host laid out for exactly
+that reason; its `SUM` and its interval `itotal` are kernel aggregates now, and
+the chain is gone. Local (modular) stratification in Ross's sense, by the depth of
+the cells in the data.
+
+**The fast path stays.** `peel_rounds` runs as before and a program it ranks never
+sees any of this. Only a program it stalls on is looked at again
+(`data_demotable`): a strongly connected component of the relations it left
+whose every strict edge is a body aggregate's (`Peel::soft`; a negation, a lattice
+read from outside, a dominance, a threshold, a tag, a demand-backed relation or
+anything the kernel writes is `Peel::hard` or barred) has its aggregate edges made
+positive, `peel_rounds` runs again, and the component is ONE round. If it still
+stalls, or any strict edge in the component is not an aggregate's, the refusal is
+the old one, word for word. Only `Mode::Rounds`; the stock evaluator reads its
+table and refuses as before.
+
+**What it does at that round.** Every relation below is closed when the round is
+reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
+
+- A NODE is a pattern over a relation of the component (`val(n3, _)`, `_` where
+  nothing bound a position), or a CORRELATION of one aggregate element, the cell it
+  seals: `(rule, at, the values of its shared variables bound before it)`.
+- The EDGES of a pattern are what the premises of each rule that could conclude it
+  read; those of a correlation, what its inner body reads. The premises are read a
+  premise outside the component first (it binds what the patterns after it name), then
+  a builtin that can be decided, then the rest in the rule's plan. A
+  premise of a relation outside the component is matched against the store (it
+  never changes in this round), so a key a closed relation binds is a constant (a
+  relation read on demand is not unfolded, and binds nothing); a
+  premise of the component binds nothing and is a pattern; a builtin whose operands
+  are known is decided and one that has a value of the component in it is read as
+  holding; a negation is read as holding.
+- A LAYER is one more than the greatest layer among the correlations a correlation
+  reaches without passing another, 0 for none. Each layer is released together
+  (`Eval::ds_released`), its rules fired whole, and the news propagated to a
+  fixpoint before the next is: the gate in `solve_body`'s aggregate arm lets a rule
+  read a correlation only once it is released, and the rules are live
+  (`activate`) from the start, so what a sealed cell concludes reaches the next layer
+  by the ordinary semi-naive propagation.
+- A CYCLE through a correlation is a cycle in the data, and refused. The message is
+  the old sentence and then the cycle, node by node, from the least correlation, by
+  the shortest way back: `sum@val(r1) -> value(b2,_) -> val(n2,_) -> sum@val(r2) ->
+  value(b1,_) -> val(n1,_) -> sum@val(r1)`. A cycle through a plain positive
+  recursion (`reach`) is no cycle: only a correlation in a cycle is refused.
+- A correlation the walk cannot name, because a premise of the component binds a
+  shared variable (the range itself is chosen by a value of the component), is
+  refused as such.
+
+**Why a sealed cell never gains or loses a member.** A member is a solution of the
+inner body over the final store, and a store only grows within a round, so no member
+is lost. Suppose a fact the body reads were derived after the cell sealed. Its
+derivation tree has leaves in closed relations, and the only steps that are not
+monotone are cells of the component. Every rule instance in the tree is covered by
+an edge: a premise outside the component is matched against facts that do not
+change, one inside is a `_`, which is wider than any value, and the cells in the
+tree are reached from the correlation, so each was released earlier and its
+conclusions propagated, which is all the tree needs: the fact was derived before the
+seal. What the walk cannot decide it reads as holding, which only adds edges: an edge
+too many can make a cycle that is not there (a key a premise of the component binds
+is a `_`, so a lookup keyed by a value of the component reads every row of its
+table), and none hides one that is. After the last layer every correlation the rules
+meet again is checked to have been released (`ds_strict`): the walk missed none, or it
+is a defect, not a silent cell.
+
+**Negation.** One inside the component (its edge is hard) leaves the component to the
+old refusal. One below it is read as a closed relation. One above reads the whole
+component, which is a round of its own. A strat rule inside the component that
+negates what is below fires with the round's other rules, before the layers, and
+again on the news the layers bring, like any rule.
+
+**Holes and shrugs.** Between layers, and before the first, the unknowns the plain
+rules and the cells holed so far left are carried through the component as if it
+were closed (`ds_carry`: `close_plain_rules` and `plain_flush` at the round after
+it), which can only leave more unknown, never less; so a correlation sealed after
+reads them through the carry the levels already do (`agg_possibles`), and a range with
+a cell not known is a hole on its cell (`support_withdrawn`) and no sum, and what
+reads it a shrug inherited from the fault. A correlation of the component is not read
+by that carry as a rule fired too early (`reached_from`): its cells are sealed in the
+order of the data, after the carry of each layer.
+
+**Budgets and walls.** The layers run inside the evaluation's walls, a wall falls
+between or inside one, and the evaluation is cut as always: a layer released and not
+fired seals nothing, a cell is never sealed over a part of its members (the Halt
+leaves before anything is stored), and the world holes with the wall's reason. Every
+cell that exists has the sheet's value.
+
+**why and whynot.** A cell is sealed by `seal_cells` as any other: `why` shows its
+members and goes down into theirs, which are cells of an earlier layer; `whynot`
+says the count that was short.
+
+**Retraction.** The delta path is not worked out for such a world and says why:
+`Full`, "an aggregate component stratified by its data" (`delta_gate`); the world is
+evaluated again and is the world without the fact.
+
+**Ticks.** A `@next` rule is no edge of the round, as before. Each tick runs its own
+walk over its own data; a rule that stages what a cell of the component holds reads
+it after the round, like any rule above it.
+
+**What it does not do.** The walk is exact where a closed relation keys the cells,
+which is every spreadsheet; a premise whose key a value of the component binds reads
+everything the relation could give. Components with a lattice, a subsumption, a
+threshold, a counting tag or a demand-backed relation in them are not taken. Each
+layer fires the rules that own its correlations whole, so a component d layers deep
+with c correlations costs d x c firings (`f_a_stratified_layer_fires_its_rules_whole`:
+300 sums in a chain 0.26 s, 2000 in 15 s). A cell
+sealed once per rule and correlation is the unit: a grouped aggregate (no
+correlation) is one cell for all its groups, so a group that reads another group of
+its own relation is a cycle at that grain. Proofs: `agg_datastrat_*` in
+`facts/checks.rofl`, each planted fault in `scripts/agg_breaks.ts`
+(`ds_*`, and `ts_ds_*` for the TypeScript engine).
 
 ## The TypeScript engine, as built
 

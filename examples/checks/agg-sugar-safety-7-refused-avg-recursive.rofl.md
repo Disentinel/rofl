@@ -14,3 +14,10 @@ Declared as facts:
 <a id="sgr_level"></a>The level of a group G is Y if G lists some member at Y.
 
 The level of G is Y if G lists some member at some number, and Y is the average of Z over H such that (the level of H is Z) rounded toward zero.
+
+Two groups list members, so the average is taken over levels that include the one it concludes:
+
+```datalog
+sg_raw(g1, m1, 30).
+sg_raw(g2, m3, -7).
+```

@@ -1,0 +1,31 @@
+-- examples/checks/agg-datastrat-eval-check.rofl — agg_datastrat_eval: the
+-- sheet of agg-datastrat-sheet.rofl, evaluated by its data. Every value is
+-- derived by hand in that file; the alarms are a cell with another value than
+-- the sheet's, a value for a cell the sheet gives none, and a cell with two.
+-- A sum sealed before a cell it adds had its value would come out short and
+-- raise ads_wrong; the cells above the component read it, by a negation too.
+ads_wrong(C) :- ads_expect(C, V), not value(C, V).
+ads_extra(C) :- value(C, V), not ads_expect(C, V).
+ads_two(C)   :- value(C, V), value(C, W), V != W.
+
+-- the cells that no value was given for stay without one, and so does what reads them
+ads_starved(C) :- formula(C, _), not ads_expect(C, _).
+ads_starved_has(C) :- ads_starved(C), value(C, _).
+
+-- a rule above the component, by negation: the big cells and the small
+ads_big(C)   :- value(C, V), V > 40.
+ads_small(C) :- formula(C, _), not ads_big(C).
+ads_want_big(c1). ads_want_big(e1). ads_want_big(e2).
+ads_big_wrong(C)    :- ads_big(C), not ads_want_big(C).
+ads_big_missing(C)  :- ads_want_big(C), not ads_big(C).
+ads_small_wrong(C)  :- ads_small(C), ads_want_big(C).
+ads_small_missing(C) :- formula(C, _), not ads_want_big(C), not ads_small(C).
+
+alarm(ads_wrong).
+alarm(ads_extra).
+alarm(ads_two).
+alarm(ads_starved_has).
+alarm(ads_big_wrong).
+alarm(ads_big_missing).
+alarm(ads_small_wrong).
+alarm(ads_small_missing).

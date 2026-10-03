@@ -1,0 +1,16 @@
+-- expect-refusal: reads value, which depends on the rule's own conclusion val: an aggregate reads a closed relation
+-- examples/checks/agg-datastrat-cycle-5-refused-negated.rofl — a component
+-- the data cannot stratify, because one of its strict edges is a negation: a
+-- cell whose value is only known when it is not marked, and marked when it has
+-- a value. Only an aggregate's edge may be read by the data.
+edb(input). edb(formula). edb(ref). edb(plus). edb(sum_head). edb(in_range).
+edb(marked).
+input(a1, 2).
+formula(b1, n1). sum_head(n1, r1). in_range(r1, a1).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).
+marked(C) :- value(C, _).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y, not marked(A).

@@ -1,0 +1,30 @@
+-- examples/checks/agg-datastrat-why-check.rofl — agg_datastrat_why, a world
+-- run with `rofl-load --explain` over the sheet of agg-datastrat-sheet.rofl:
+-- the `why` of a cell sealed in the order of the data is the `why` of any
+-- sealed cell. It names the aggregate and what it sealed, lists the cells it
+-- added as members, and goes on into each member's own derivation, which is
+-- another sealed cell a layer below; a `whynot` of a range with a cell that has
+-- no value says the count that was short (1 of 2 cells had a value).
+edb(explain_request).
+edb(explained).
+explain_request(why, val(n_c1, 43)).
+explain_request(whynot, val(n_g1, 2)).
+adw_want(why, val(n_c1, 43), "[aggregate: 4 members").
+adw_want(why, val(n_c1, 43), "value[main](b4,19)").
+adw_want(why, val(n_c1, 43), "value[main](b1,5)").
+adw_want(why, val(n_c1, 43), "[aggregate: 2 members").
+adw_want(why, val(n_c1, 43), "in_range@0").
+adw_want(whynot, val(n_g1, 2), "= 1, not 2 [aggregate]").
+adw_holds(K, A, T) :- explained[$explain](K, A, _, L), adw_want(K, A, T), N is str_segs(L, T), N > 1.
+adw_missing(T) :- adw_want(K, A, T), not adw_holds(K, A, T).
+-- each of the four cells c1 adds is a member of its sum, with the height of its own derivation
+adw_member(1, "(5,b1) h=").
+adw_member(2, "(7,b2) h=").
+adw_member(3, "(12,b3) h=").
+adw_member(4, "(19,b4) h=").
+adw_listed(B) :- explained[$explain](why, val(n_c1, 43), _, L), adw_member(B, T), N is str_segs(L, T), N > 1.
+adw_unlisted(B) :- adw_member(B, _), not adw_listed(B).
+adw_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(adw_missing).
+alarm(adw_unlisted).
+alarm(adw_refused).

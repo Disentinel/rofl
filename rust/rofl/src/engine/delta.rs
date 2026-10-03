@@ -177,6 +177,9 @@ impl Eval {
         if self.store.partial_eval {
             return Err("a wall cut the evaluation");
         }
+        if brk!("ds_delta_allowed" => false; !self.ds_comps.is_empty()) {
+            return Err("an aggregate component stratified by its data");
+        }
         if self.store.tick != 0 {
             return Err("a later tick");
         }

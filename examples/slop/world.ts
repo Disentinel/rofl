@@ -15,6 +15,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../../src/api.ts';
+import type { PremRef } from '../../src/store.ts';
 import type { Workbook } from './xlsx.ts';
 import { readWorkbook } from './xlsx.ts';
 import { SCALE, unscale } from './formula.ts';
@@ -82,6 +83,18 @@ export interface TreeOpts { depth?: number; children?: number; }
 
 interface Leaf { kind: 'constant' | 'lookup'; text: string }
 
+/** `Sheet!C12` as the row and then the column it stands at. */
+const addressOf = (cellKey: string): [string, number, string] => {
+  const id = JSON.parse(CELL_RE.exec(cellKey)![1]) as string;
+  const bang = id.lastIndexOf('!');
+  const m = /^\$?([A-Z]+)\$?(\d+)$/.exec(id.slice(bang + 1));
+  return m ? [id.slice(0, bang + 1), Number(m[2]), m[1].padStart(3, ' ')] : [id, 0, ''];
+};
+const byRow = (a: string, b: string): number => {
+  const [sa, ra, ca] = addressOf(a), [sb, rb, cb] = addressOf(b);
+  return sa < sb ? -1 : sa > sb ? 1 : ra - rb || (ca < cb ? -1 : ca > cb ? 1 : 0);
+};
+
 /** One step of the projection: from a `val` fact, the cells its derivation
  *  actually used and the leaves worth naming. Only the CHOSEN branch of an
  *  IF is here, because the store recorded the firing that happened — which
@@ -99,15 +112,23 @@ function frontier(r: Rofl, key: string, seen: Set<string>): { cells: string[]; l
     if (n) { leaves.push({ kind: 'constant', text: show(Number(n[2])) }); return; }
     const f = FIND_RE.exec(k);
     if (f) leaves.push({ kind: 'lookup', text: JSON.parse(f[1]) as string });
-    for (const w of r.store.witnessesOf(k)) {
-      for (const p of w.prems) if (p.t === 'fact') walk(p.key);
-    }
+    for (const w of r.store.witnessesOf(k)) premises(w.prems);
     // a `find` fact is base, so its own premises are empty; the lookup's
     // source cell arrives through the rule's `value` premise above
   };
-  for (const w of r.store.witnessesOf(key)) {
-    for (const p of w.prems) if (p.t === 'fact') walk(p.key);
-  }
+  // a SUM is a kernel cell, whose members are the cells it added: listed in the
+  // order of the sheet, row by row, where the cell lists them by height
+  const premises = (prems: PremRef[]): void => {
+    for (const p of prems) {
+      if (p.t === 'fact') walk(p.key);
+      else if (p.t === 'cell') {
+        const from = cells.length;
+        for (const m of r.store.cells.get(p.key)?.members ?? []) premises(m.prems);
+        cells.splice(from, cells.length - from, ...cells.slice(from).sort(byRow));
+      }
+    }
+  };
+  for (const w of r.store.witnessesOf(key)) premises(w.prems);
   return { cells, leaves };
 }
 
