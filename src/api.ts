@@ -58,7 +58,7 @@ export interface EvalReport { partial: boolean; peakRows: number; space: number;
  *  stop), 2 also explains each of those premises, and so on. `nodes` caps
  *  how many literals the whole tree may explain. Both are hard stops and
  *  both announce themselves in the output when they fire. */
-export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; }
+export interface WhynotOpts { budget?: number; depth?: number; nodes?: number; /** write the tree, not the DAG (scripts/why_dag.ts) */ tree?: boolean; }
 
 const DEFAULT_BUDGET = 100_000;
 /** How large a relation `query` will enumerate to learn its arity. Small
@@ -910,7 +910,7 @@ export class Rofl {
   // -------------------------------------------------------------------------
   // why / whynot / excise
 
-  why(text: Ask, opts: { budget?: number; all?: boolean } = {}): { ok: boolean; text: string } {
+  why(text: Ask, opts: { budget?: number; all?: boolean; tree?: boolean } = {}): { ok: boolean; text: string } {
     const budget = opts.budget ?? DEFAULT_BUDGET;
     let lit: Lit;
     try { lit = this.asked(text); } catch (e) { return { ok: false, text: (e as Error).message }; }
@@ -919,7 +919,9 @@ export class Rofl {
       if (e instanceof Rejected) return { ok: false, text: e.message + '\n' + e.demo };
       throw e;
     }
-    try { return { ok: true, text: this.standing(budget).whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined) }; } catch (e) { return { ok: false, text: (e as Error).message }; }
+    const ev = this.standing(budget);
+    ev.dag = !opts.tree;
+    try { return { ok: true, text: ev.whyText(lit, opts.all ? Infinity : undefined, typeof text === 'string' ? text : undefined) }; } catch (e) { return { ok: false, text: (e as Error).message }; } finally { ev.dag = true; }
   }
 
   whynot(text: Ask, opts: WhynotOpts = {}): { holds: boolean; text: string } {
@@ -938,6 +940,7 @@ export class Rofl {
     // A WALL MET WHILE DEMONSTRATING IS THE ANSWER: a demand that unfolds without end has no demonstration, and the wall
     // that stopped it is named (rust/rofl `Session::whynot`). Any other halt is the aggregate evaluator's to answer; a plain
     // program's is a refusal.
+    ev.dag = !opts.tree;
     try {
       const [holds, t] = ev.whynotText(lit, { maxDepth: opts.depth ?? DEFAULT_WHYNOT_DEPTH, maxNodes: opts.nodes ?? DEFAULT_WHYNOT_NODES },
         typeof text === 'string' ? text.trim() : undefined);
@@ -945,7 +948,7 @@ export class Rofl {
     } catch (e) {
       if (e instanceof Wall || !ev.plain) return { holds: false, text: describeHalt(e) };
       throw e;
-    }
+    } finally { ev.dag = true; }
   }
 
   /** excise: clean re-evaluation on EDB \ {fact}; the diff IS the blast radius. */
