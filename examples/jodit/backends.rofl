@@ -49,6 +49,7 @@ op_kind[jodit](sftp, "getfo", read).          op_kind[jodit](sftp, "stat", meta)
 op_kind[jodit](sftp, "listdir_attr", list).   op_kind[jodit](sftp, "read", read).
 op_kind[jodit](sftp, "prefetch", read).
 op_str[jodit](sftp, "open", 1, "rb", read).
+op_kind[jodit](sftp, "close", session).
 op_kind[jodit](sftp, "normalize", session).
 -- ftplib; STOR goes through the module's own `_send`
 op_kind[jodit](ftp, "rename", rename).        op_kind[jodit](ftp, "delete", delete).
@@ -123,3 +124,51 @@ ftp_wire[jodit]("sendall"). ftp_wire[jodit]("recv"). ftp_wire[jodit]("voidresp")
 not_a_request[jodit](ftp, Op, "an exception built from a reply") :- ftp_error[jodit](Op).
 ftp_error[jodit]("error_perm"). ftp_error[jodit]("error_reply").
 not_a_request[jodit](webdav, "request", "the HTTP call under _request; its method is read where _request is called").
+
+-- DECIDED PER BACKEND, where bucketed_on_client found a bucketed name called
+-- on something requests are sent to. sftp's close is a request (SSH_FXP_CLOSE)
+-- and is a kind above.
+not_a_request[jodit](azure, "get_blob_client", "builds a client for one blob locally").
+not_a_request[jodit](azure, "url", "a property of a blob client").
+not_a_request[jodit](azure, "monotonic", "the poll's deadline; time.sleep is the poll").
+not_a_request[jodit](gcs, "blob", "builds a blob object locally").
+not_a_request[jodit](gcs, "close", "releases a blob reader").
+not_a_request[jodit](gcs, "updated", "a property of a blob already fetched").
+not_a_request[jodit](local, "close", "closes a local file").
+not_a_request[jodit](local, "with_name", "a path built").
+not_a_request[jodit](s3, "close", "releases a response body's connection").
+not_a_request[jodit](s3, "get_paginator", "builds a paginator locally; paginate is the listing").
+not_a_request[jodit](webdav, "findtext", "reads a PROPFIND reply already received").
+not_a_request[jodit](webdav, "iter", "reads a PROPFIND reply already received").
+
+-- CALLED BY NAME AND NOT A DEF: what each is
+plain_function[jodit](N, "a class or an exception built; its __init__ is not followed") :- built_by_name[jodit](N).
+built_by_name[jodit]("AzureStorageError"). built_by_name[jodit]("BytesIO"). built_by_name[jodit]("CancelScope").
+built_by_name[jodit]("ContentSettings"). built_by_name[jodit]("CorruptedPathError"). built_by_name[jodit]("DavEntry").
+built_by_name[jodit]("FileExistsError"). built_by_name[jodit]("FileNotFoundError"). built_by_name[jodit]("FileWasNotFoundError").
+built_by_name[jodit]("FullReader"). built_by_name[jodit]("GcsStorageError"). built_by_name[jodit]("IsADirectoryError").
+built_by_name[jodit]("ListedEntry"). built_by_name[jodit]("NotADirectoryError"). built_by_name[jodit]("OSError").
+built_by_name[jodit]("Path"). built_by_name[jodit]("PathTraversalError"). built_by_name[jodit]("StatEntry").
+built_by_name[jodit]("StorageError"). built_by_name[jodit]("WebdavError"). built_by_name[jodit]("datetime").
+plain_function[jodit](N, "a builtin or typing helper") :- builtin_fn[jodit](N).
+builtin_fn[jodit]("any"). builtin_fn[jodit]("cast"). builtin_fn[jodit]("dict"). builtin_fn[jodit]("enumerate").
+builtin_fn[jodit]("getattr"). builtin_fn[jodit]("int"). builtin_fn[jodit]("isinstance"). builtin_fn[jodit]("len").
+builtin_fn[jodit]("next"). builtin_fn[jodit]("range"). builtin_fn[jodit]("set"). builtin_fn[jodit]("sorted").
+builtin_fn[jodit]("str"). builtin_fn[jodit]("partial").
+plain_function[jodit](N, "a stdlib text or URL function") :- text_fn[jodit](N).
+text_fn[jodit]("quote"). text_fn[jodit]("unquote"). text_fn[jodit]("urlsplit"). text_fn[jodit]("parsedate_to_datetime").
+plain_function[jodit](N, "a module-level alias of a keys.py helper (s3.py:34-36); aliases are not read") :- key_alias[jodit](N).
+key_alias[jodit]("build_object_key"). key_alias[jodit]("normalize_s3_path"). key_alias[jodit]("strip_object_prefix").
+
+-- WHAT THE PROTOCOL OFFERS that the code may not use: kind, scope (object,
+-- file or folder), the condition under which it exists, and where that is said.
+offers[jodit](s3, rename, object, "directory buckets in S3 Express One Zone only (RenameObject); not a key ending in /",
+              "https://docs.aws.amazon.com/AmazonS3/latest/userguide/directory-buckets-objects-rename.html").
+offers[jodit](azure, rename, folder, "storage accounts with a hierarchical namespace (Data Lake Storage Gen2)",
+              "https://learn.microsoft.com/azure/storage/data-lake-storage/namespace").
+offers[jodit](gcs, rename, folder, "buckets with a hierarchical namespace",
+              "https://docs.cloud.google.com/storage/docs/rename-hns-folders").
+offers[jodit](sftp, copy, file, "servers with the copy-data extension (OpenSSH 9.0 and later)",
+              "https://lists.mindrot.org/pipermail/openssh-unix-dev/2022-February/040068.html").
+offers[jodit](ftp, copy, file, "ProFTPD with mod_copy (SITE CPFR, SITE CPTO), not standard FTP",
+              "https://doc.duckcorp.org/cgi-bin/dwww/usr/share/doc/proftpd-doc/contrib/mod_copy.html").

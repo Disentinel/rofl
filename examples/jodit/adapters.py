@@ -2,7 +2,8 @@
 
 The fixture rules/py-model.rofl and examples/jodit/ are checked against: every
 way that code reaches its backend appears here once. HastyAdapter is a planted
-fault: its move deletes before it copies, and delete_before_copy must say so.
+fault: for a folder its move deletes before it copies, after a branch for a
+file that copies first, and delete_before_copy must name the folder's delete.
 Scanned into facts/py-model.rofl by
 `python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
 """
@@ -28,7 +29,10 @@ async def gather_limited(jobs):
 
 class BucketAdapter:
     async def write(self, path: str, contents: bytes) -> None:
-        await to_thread.run_sync(lambda: self.client.put_object(Key=path, Body=contents))
+        try:
+            await to_thread.run_sync(lambda: self.client.put_object(Key=path, Body=contents))
+        finally:
+            self.client.list_objects_v2(Prefix=path)
 
     async def read(self, path: str) -> bytes:
         def get() -> bytes:
@@ -86,5 +90,9 @@ class HastyAdapter:
         return self.client.get_object(Key=path)
 
     async def move_file(self, source: str, destination: str) -> None:
+        if not source.endswith("/"):
+            self.client.copy(Key=source, Target=destination)
+            self.client.delete_objects(Prefix=source)
+            return
         self.client.delete_objects(Prefix=source)
         self.client.copy(Key=source, Target=destination)

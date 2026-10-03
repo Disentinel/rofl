@@ -12,7 +12,8 @@
 --                 named through `self`, a lambda written inside it, a def named
 --   py_reaches    py_invokes, closed
 --   py_step_call  a call a unit makes, through which step of its body, how
---                 often (one, many) and on which path (main, handler)
+--                 often (once, repeated) and on which path (main, always, handler)
+--   py_exclusive  two steps of one body that never both run
 --
 -- APPROXIMATION, DECLARED: naming `self.m` without calling it counts as
 -- invoking it. A bound method passed on (`run_sync(self.m)`, `partial(self.m)`)
@@ -62,8 +63,10 @@ py_invokes[code](U, D, F) :- py_call[code](K, U, _), ast_child[code](K, args, _,
 py_reaches[code](U, U) :- py_unit[code](U).
 py_reaches[code](U, W) :- py_reaches[code](U, V), py_invokes[code](V, W, _).
 
--- RUN ONCE PER ITEM: a node inside the body of a loop, or the element of a
+-- RUN REPEATEDLY: a node inside the body of a loop, or the element of a
 -- comprehension, without leaving its unit. The iterable of a `for` runs once.
+-- A loop over a folder, over pages, over retries and over polls are all one
+-- thing here: `repeated` says the code loops, not what it loops over.
 py_loop_part[code](for, body).        py_loop_part[code](async_for, body).
 py_loop_part[code](while, body).      py_loop_part[code](while, test).
 py_loop_part[code](list_comp, elt).   py_loop_part[code](set_comp, elt).
@@ -72,36 +75,60 @@ py_loop_part[code](dict_comp, key).   py_loop_part[code](dict_comp, value).
 py_looped[code](N) :- ast_child[code](P, F, _, N), ast_node[code](P, K, _, _), py_loop_part[code](K, F).
 py_looped[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_looped[code](P).
 
--- RUN WHEN SOMETHING FAILED: a node in an `except` body or a `finally`, without
--- leaving its unit. Cleanup and the fallback of a failed attempt both sit here.
-py_handled[code](N) :- ast_child[code](H, body, _, N), ast_node[code](H, except_handler, _, _).
-py_handled[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try, _, _).
-py_handled[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try_star, _, _).
-py_handled[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_handled[code](P).
+-- ON WHICH PATH: `handler` in an `except` body, which runs only after something
+-- failed; `always` in a `finally`, which runs whether or not it did; `main`
+-- otherwise. A fallback chosen by an `if` on a reply is `main` here.
+py_in_handler[code](N) :- ast_child[code](H, body, _, N), ast_node[code](H, except_handler, _, _).
+py_in_handler[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_in_handler[code](P).
+py_in_finally[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try, _, _).
+py_in_finally[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try_star, _, _).
+py_in_finally[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_in_finally[code](P).
 
--- how often and on which path the node at a step runs
-py_many[code](N, many) :- py_looped[code](N).
-py_many[code](N, one)  :- ast_node[code](N, _, _, _), not py_looped[code](N).
-py_path[code](N, handler) :- py_handled[code](N).
-py_path[code](N, main)    :- ast_node[code](N, _, _, _), not py_handled[code](N).
-py_join[code](one, one, one).   py_join[code](one, many, many).
-py_join[code](many, one, many). py_join[code](many, many, many).
-py_join[code](main, main, main).       py_join[code](main, handler, handler).
-py_join[code](handler, main, handler). py_join[code](handler, handler, handler).
+-- the nodes a step can be: where a unit invokes another, and every call
+py_site[code](N) :- py_invokes[code](_, _, N).
+py_site[code](K) :- py_call[code](K, _, _).
+py_often[code](N, repeated) :- py_site[code](N), py_looped[code](N).
+py_often[code](N, once)     :- py_site[code](N), not py_looped[code](N).
+py_path[code](N, handler) :- py_site[code](N), py_in_handler[code](N).
+py_path[code](N, always)  :- py_site[code](N), py_in_finally[code](N), not py_in_handler[code](N).
+py_path[code](N, main)    :- py_site[code](N), not py_in_handler[code](N), not py_in_finally[code](N).
+py_join[code](once, once, once).         py_join[code](once, repeated, repeated).
+py_join[code](repeated, once, repeated). py_join[code](repeated, repeated, repeated).
+py_join[code](main, main, main).         py_join[code](main, always, always).
+py_join[code](always, main, always).     py_join[code](always, always, always).
+py_join[code](handler, X, handler) :- py_path_name[code](X).
+py_join[code](X, handler, handler) :- py_path_name[code](X).
+py_path_name[code](main). py_path_name[code](always). py_path_name[code](handler).
 
 -- py_reaches, keeping the STEP of U it went through (the node in U's own body
--- where the way to W starts, so steps of U can be put in order by line), and
--- `many` and `handler` once any node on the way is so
-py_trace[code](U, W, N, F, P) :- py_invokes[code](U, W, N), py_many[code](N, F), py_path[code](N, P).
+-- where the way to W starts, so steps of U can be put in order), and
+-- `repeated` and the worst path met on the way
+py_trace[code](U, W, N, F, P) :- py_invokes[code](U, W, N), py_often[code](N, F), py_path[code](N, P).
 py_trace[code](U, X, S, F, P) :- py_trace[code](U, V, S, F0, P0), py_invokes[code](V, X, N),
-                                 py_many[code](N, F1), py_join[code](F0, F1, F),
+                                 py_often[code](N, F1), py_join[code](F0, F1, F),
                                  py_path[code](N, P1), py_join[code](P0, P1, P).
 
 -- a call made by U, through the step it is reached by, with how often and on which path
-py_step_call[code](U, K, K, F, P) :- py_call[code](K, U, _), py_many[code](K, F), py_path[code](K, P).
+py_step_call[code](U, K, K, F, P) :- py_call[code](K, U, _), py_often[code](K, F), py_path[code](K, P).
 py_step_call[code](U, K, S, F, P) :- py_trace[code](U, W, S, F0, P0), py_call[code](K, W, _),
-                                     py_many[code](K, F1), py_join[code](F0, F1, F),
+                                     py_often[code](K, F1), py_join[code](F0, F1, F),
                                      py_path[code](K, P1), py_join[code](P0, P1, P).
+
+-- TWO STEPS THAT NEVER BOTH RUN: one in the body of an `if`, the other in its
+-- `else`, or after an `if` whose body ends in `return` or `raise`.
+py_up[code](N, N) :- py_site[code](N).
+py_up[code](N, P) :- py_up[code](N, C), ast_child[code](P, _, _, C), not py_unit[code](P).
+py_arm[code](N, I, body)   :- py_up[code](N, C), ast_child[code](I, body, _, C), ast_node[code](I, if, _, _).
+py_arm[code](N, I, orelse) :- py_up[code](N, C), ast_child[code](I, orelse, _, C), ast_node[code](I, if, _, _).
+py_arm[code](N, I, orelse) :- py_leaves[code](I), ast_child[code](P, F, J, I), ast_child[code](P, F, J2, C),
+                              J2 > J, py_up[code](N, C).
+py_leaves[code](I) :- ast_node[code](I, if, _, _), ast_child[code](I, body, J, R), py_exit[code](R),
+                      not py_later[code](I, J).
+py_later[code](I, J) :- ast_child[code](I, body, J, _), ast_child[code](I, body, J2, _), J2 > J.
+py_exit[code](R) :- ast_node[code](R, return, _, _).
+py_exit[code](R) :- ast_node[code](R, raise, _, _).
+py_exclusive[code](A, B) :- py_arm[code](A, I, body), py_arm[code](B, I, orelse).
+py_exclusive[code](A, B) :- py_arm[code](A, I, orelse), py_arm[code](B, I, body).
 
 -- what a protocol asks for: the methods of a class whose bases name `Protocol`
 py_protocol[code](C) :- py_class[code](C, _), ast_child[code](C, bases, _, B), ast_attr[code](B, id, "Protocol").
@@ -122,3 +149,15 @@ py_call_str[code](K, I, S) :- ast_child[code](K, args, I, X), ast_node[code](X, 
                               ast_child[code](X, values, 0, C), ast_node[code](C, constant, _, _), ast_attr[code](C, value, S).
 py_callee[code](K, M) :- ast_child[code](K, func, 0, F), ast_attr[code](F, attr, M).
 py_callee[code](K, N) :- ast_child[code](K, func, 0, F), ast_attr[code](F, id, N).
+
+-- the name a receiver goes by: `self.client` is client, `conn.sftp` sftp,
+-- `blob` blob, `self._http()` _http
+py_receiver[code](R) :- py_attr_call[code](_, R, _).
+py_node_name[code](R, A) :- py_receiver[code](R), ast_node[code](R, attribute, _, _), ast_attr[code](R, attr, A).
+py_node_name[code](R, N) :- py_receiver[code](R), ast_node[code](R, name, _, _), ast_attr[code](R, id, N).
+py_node_name[code](R, C) :- py_receiver[code](R), ast_node[code](R, call, _, _), py_callee[code](R, C).
+
+-- names a unit binds itself: its parameters and what it assigns or loops over.
+-- Calling one runs whatever was handed in, which is counted where it was handed.
+py_binds[code](U, N) :- py_name_call[code](_, U, N, _), ast_child[code](U, args, 0, A), ast_child[code](A, _, _, X), ast_attr[code](X, arg, N).
+py_binds[code](U, N) :- py_name_call[code](_, U, N, _), ast_attr[code](X, id, N), ast_attr[code](X, ctx, store), py_owner[code](X, U).

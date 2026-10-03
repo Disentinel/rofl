@@ -19,22 +19,24 @@ op_str[jodit](tree, "_request", 0, "DELETE", delete).
 op_str[jodit](tree, "_request", 0, "GET", read).
 op_str[jodit](tree, "_request", 0, "MKCOL", mkdir).
 not_a_request[jodit](tree, "request", "the HTTP call under _request").
+offers[jodit](bucket, rename, folder, "a fixture bucket with folders", "examples/jodit/adapters.py").
 
-expect_does[jodit](bucket, "write", put, one, main).
-expect_does[jodit](bucket, "read", read, one, main).
-expect_does[jodit](bucket, "move_file", copy, many, main).
-expect_does[jodit](bucket, "move_file", list, one, main).
-expect_does[jodit](bucket, "move_file", delete, one, main).
-expect_does[jodit](tree, "write", put, one, main).
-expect_does[jodit](tree, "write", rename, one, main).
-expect_does[jodit](tree, "write", delete, one, handler).
-expect_does[jodit](tree, "read", read, one, main).
-expect_does[jodit](tree, "move_file", mkdir, many, main).
-expect_does[jodit](tree, "move_file", rename, one, main).
-expect_does[jodit](hasty, "write", put, one, main).
-expect_does[jodit](hasty, "read", read, one, main).
-expect_does[jodit](hasty, "move_file", delete, one, main).
-expect_does[jodit](hasty, "move_file", copy, one, main).
+expect_does[jodit](bucket, "write", put, once, main).
+expect_does[jodit](bucket, "write", list, once, always).
+expect_does[jodit](bucket, "read", read, once, main).
+expect_does[jodit](bucket, "move_file", copy, repeated, main).
+expect_does[jodit](bucket, "move_file", list, once, main).
+expect_does[jodit](bucket, "move_file", delete, once, main).
+expect_does[jodit](tree, "write", put, once, main).
+expect_does[jodit](tree, "write", rename, once, main).
+expect_does[jodit](tree, "write", delete, once, handler).
+expect_does[jodit](tree, "read", read, once, main).
+expect_does[jodit](tree, "move_file", mkdir, repeated, main).
+expect_does[jodit](tree, "move_file", rename, once, main).
+expect_does[jodit](hasty, "write", put, once, main).
+expect_does[jodit](hasty, "read", read, once, main).
+expect_does[jodit](hasty, "move_file", delete, once, main).
+expect_does[jodit](hasty, "move_file", copy, once, main).
 
 does_shape[jodit](B, M, K, F, P) :- does[jodit](B, M, K, _, F, P).
 fixture_miss[audit](B, M, K, F, P) :- expect_does[jodit](B, M, K, F, P), not does_shape[jodit](B, M, K, F, P).
@@ -42,13 +44,24 @@ fixture_extra[audit](B, M, K, F, P) :- does_shape[jodit](B, M, K, F, P), not exp
 
 expect_holds[jodit](move_by_copy, bucket). expect_holds[jodit](move_by_copy, hasty).
 expect_holds[jodit](delete_before_copy, hasty).
+-- the folder's delete only: the file branch copies first and returns
+expect_delete_before_copy_line[jodit](hasty, 97).
 expect_holds[jodit](write_single_put, bucket). expect_holds[jodit](write_single_put, hasty).
 expect_holds[jodit](write_via_rename, tree).
 expect_holds[jodit](on_failure_delete, tree).
+expect_holds[jodit](move_fixable, bucket). expect_holds[jodit](move_inherent, hasty).
 holds[audit](move_by_copy, B) :- move_by_copy[jodit](B).
 holds[audit](delete_before_copy, B) :- delete_before_copy[audit](B, _, _).
+fixture_miss[audit](delete_before_copy, B, L, none, none) :- expect_delete_before_copy_line[jodit](B, L), not delete_before_copy[audit](B, "move_file", L).
+fixture_extra[audit](delete_before_copy, B, L, none, none) :- delete_before_copy[audit](B, "move_file", L), not expect_delete_before_copy_line[jodit](B, L).
 holds[audit](write_single_put, B) :- write_single_put[jodit](B, "write").
 holds[audit](write_via_rename, B) :- write_via_rename[jodit](B, "write").
 holds[audit](on_failure_delete, B) :- on_failure[jodit](B, "write", delete).
+holds[audit](move_fixable, B) :- move_fixable[jodit](B, _).
+holds[audit](move_inherent, B) :- move_inherent[jodit](B).
+-- the audits that read the layer are empty over the fixture
+fixture_extra[audit](unclassified, B, O, none, none) :- unclassified[audit](B, O).
+fixture_extra[audit](bucketed_on_client, B, O, L, S) :- bucketed_on_client[audit](B, O, S, L).
+fixture_extra[audit](unresolved_name, A, N, none, none) :- unresolved_name[audit](A, N).
 fixture_miss[audit](P, B, none, none, none) :- expect_holds[jodit](P, B), not holds[audit](P, B).
 fixture_extra[audit](P, B, none, none, none) :- holds[audit](P, B), not expect_holds[jodit](P, B).

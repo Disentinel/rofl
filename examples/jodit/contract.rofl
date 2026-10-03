@@ -27,18 +27,20 @@ call_str[jodit](A, M, Callee, I, S, L) :- adapter[jodit](C, A), duty[jodit](M), 
                                           py_reaches[code](D, U), py_call[code](K, U, L), py_call_str[code](K, I, S),
                                           py_callee[code](K, Callee).
 
--- WHAT A DUTY DOES TO THE STORE: each request it reaches, at the line of the
--- step of the duty's body it goes through, `many` when it runs per item, and
--- `handler` when it runs only after something failed
-call_in[jodit](B, M, K, L, F, P) :- backend[jodit](A, B), adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
-                                    py_step_call[code](D, K, S, F, P), ast_node[code](S, _, _, L).
-does[jodit](B, M, Kind, L, F, P) :- call_in[jodit](B, M, K, L, F, P), py_attr_call[code](K, _, Op), op_kind[jodit](B, Op, Kind).
-does[jodit](B, M, Kind, L, F, P) :- call_in[jodit](B, M, K, L, F, P), py_callee[code](K, Callee),
-                                    op_str[jodit](B, Callee, I, S, Kind), py_call_str[code](K, I, S).
+-- WHAT A DUTY DOES TO THE STORE: each request it reaches, through which step
+-- of the duty's body (a node, so steps can be ordered and told apart by
+-- branch), `repeated` when it runs in a loop, and on which path
+call_in[jodit](B, M, K, S, F, P) :- backend[jodit](A, B), adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
+                                    py_step_call[code](D, K, S, F, P).
+does[jodit](B, M, Kind, S, F, P) :- call_in[jodit](B, M, K, S, F, P), py_attr_call[code](K, _, Op), op_kind[jodit](B, Op, Kind).
+does[jodit](B, M, Kind, S, F, P) :- call_in[jodit](B, M, K, S, F, P), py_callee[code](K, Callee),
+                                    op_str[jodit](B, Callee, I, Str, Kind), py_call_str[code](K, I, Str).
 
-kind_of[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, main).
-step[jodit](B, M, Kind, L) :- does[jodit](B, M, Kind, L, _, main).
-per_item[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, many, main).
+-- what a duty does when nothing fails: the main path and what runs always
+succeeds[jodit](main).  succeeds[jodit](always).
+kind_of[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, P), succeeds[jodit](P).
+step[jodit](B, M, Kind, S) :- does[jodit](B, M, Kind, S, _, P), succeeds[jodit](P).
+repeated[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, repeated, P), succeeds[jodit](P).
 -- what a duty does only when something on its way failed: cleanup, or the fallback of an attempt
 on_failure[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, handler), not kind_of[jodit](B, M, Kind).
 
@@ -51,3 +53,16 @@ unclassified[audit](B, Op) :- backend[jodit](A, B), outside_call[jodit](A, _, Op
 -- a command string sent through a carrier that no op_str names
 unread_command[audit](B, Callee, S) :- backend[jodit](A, B), call_str[jodit](A, _, Callee, I, S, _),
                                        op_str[jodit](B, Callee, I, _, _), not op_str[jodit](B, Callee, I, S, _).
+-- A NAME FILED AS NOT A REQUEST, CALLED ON SOMETHING REQUESTS ARE SENT TO:
+-- `self.client.get(...)` would be a request whatever bucket holds `get`
+request_receiver[jodit](B, Sig) :- call_in[jodit](B, _, K, _, _, _), py_attr_call[code](K, R, Op), op_kind[jodit](B, Op, _),
+                                   py_node_name[code](R, Sig).
+bucketed_on_client[audit](B, Op, Sig, L) :- call_in[jodit](B, _, K, _, _, _), py_attr_call[code](K, R, Op),
+                                            not_a_request[jodit](any, Op, _), not op_kind[jodit](B, Op, _),
+                                            not not_a_request[jodit](B, Op, _),
+                                            py_node_name[code](R, Sig), request_receiver[jodit](B, Sig), ast_node[code](K, _, _, L).
+-- A CALL BY NAME THAT GOES NOWHERE: no def of that name was scanned, the unit
+-- does not bind it, and no plain_function says what it is
+unresolved_name[audit](A, N) :- adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D), py_reaches[code](D, U),
+                                py_name_call[code](_, U, N, _), not py_def_name[code](_, N), not py_binds[code](U, N),
+                                not plain_function[jodit](N, _).

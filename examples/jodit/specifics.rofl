@@ -1,20 +1,24 @@
--- specifics.rofl — where one contract becomes different behaviour. Every rule
--- reads the main path: what a duty does when nothing fails.
+-- specifics.rofl — where one contract becomes different behaviour. kind_of is
+-- what a duty does when nothing fails; backs_off reads every path.
 
 -- a move with no rename under it: it copies, then deletes the source
 move_by_copy[jodit](B) :- kind_of[jodit](B, "move_file", copy), kind_of[jodit](B, "move_file", delete),
                           not kind_of[jodit](B, "move_file", rename).
 -- THE ORDER THAT CLAIM RESTS ON: a delete of a move by copy with no copy at or
--- before its step. Within one step the order is not read.
-copied_by[jodit](B, M, L) :- step[jodit](B, M, delete, L), step[jodit](B, M, copy, C), C <= L.
+-- before its line on a branch that can run with it. Within one step, and
+-- inside what a step reaches, the order is not read.
+line_of[jodit](S, L) :- step[jodit](_, _, _, S), ast_node[code](S, _, _, L).
+copied_by[jodit](B, M, D) :- step[jodit](B, M, delete, D), step[jodit](B, M, copy, C),
+                             line_of[jodit](C, LC), line_of[jodit](D, LD), LC <= LD, not py_exclusive[code](C, D).
 delete_before_copy[audit](B, M, L) :- move_by_copy[jodit](B), M = "move_file",
-                                      step[jodit](B, M, delete, L), not copied_by[jodit](B, M, L).
+                                      step[jodit](B, M, delete, D), not copied_by[jodit](B, M, D), line_of[jodit](D, L).
 
 -- a copy with no copy request under it: the bytes come down to the connector and go back up
 copy_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", read), kind_of[jodit](B, "copy_file", put),
                                     not kind_of[jodit](B, "copy_file", copy).
-copy_fallback_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", copy), kind_of[jodit](B, "copy_file", read),
-                                             kind_of[jodit](B, "copy_file", put).
+-- a server-side copy whose failure is answered by downloading and uploading
+copy_falls_back_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", copy),
+                                               on_failure[jodit](B, "copy_file", read), on_failure[jodit](B, "copy_file", put).
 
 -- a write that lands somewhere else first and is renamed over the target
 write_via_rename[jodit](B, M) :- kind_of[jodit](B, M, put), kind_of[jodit](B, M, rename), M = "write".
@@ -26,3 +30,11 @@ write_single_put[jodit](B, M) :- kind_of[jodit](B, M, put), not kind_of[jodit](B
 -- a duty that waits on the store by asking again, and one that waits before trying again
 waits[jodit](B, M) :- kind_of[jodit](B, M, poll).
 backs_off[jodit](B, M) :- does[jodit](B, M, backoff, _, _, _).
+
+-- FIXABLE OR INHERENT: the protocol offers what the code emulates, under a
+-- condition, or it does not. A folder move is fixed only by a folder rename.
+move_fixable[jodit](B, Cond) :- move_by_copy[jodit](B), offers[jodit](B, rename, folder, Cond, _).
+move_inherent[jodit](B) :- move_by_copy[jodit](B), not move_fixable[jodit](B, _).
+move_file_fixable[jodit](B, Cond) :- move_by_copy[jodit](B), offers[jodit](B, rename, object, Cond, _).
+copy_fixable[jodit](B, Cond) :- copy_through_connector[jodit](B), offers[jodit](B, copy, file, Cond, _).
+copy_inherent[jodit](B) :- copy_through_connector[jodit](B), not copy_fixable[jodit](B, _).
