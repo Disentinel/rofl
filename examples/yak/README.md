@@ -1,5 +1,7 @@
 # YAK — model as a by-product: scanners written mid-task
 
+**Count reading:** domain — the fold is the object of the scanners, not a verdict; no domain reading beyond the number of derivations.
+
 Every other example here demonstrates the engine. This one demonstrates
 **working with it** — what happens inside an ordinary task when a question
 comes up, and what sediment is left behind afterwards.

@@ -1,5 +1,7 @@
 # DRIP — what goes dark if you delete this metric
 
+**Count reading:** fragility — one derivation is a single point of failure.
+
 *Data lineage in observability: dashboards, alerts and the series they stand on.*
 
 A metric is renamed or deleted. Panels quietly empty and alerts stop firing.

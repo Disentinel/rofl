@@ -1,5 +1,7 @@
 # BLAM — what a diff hits, and why
 
+**Count reading:** domain — coupling: a high count is a defect, the target is wired into everything.
+
 Affected targets in a monorepo build graph, **with the derivation**.
 
 Bazel, Nx and Turborepo compute the affected set correctly and fast. This

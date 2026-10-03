@@ -194,3 +194,39 @@ tot2(G) :- tot(G, _).
   assert.equal(f.value.get('tot2[main](g7)'), 1n);
   assert.equal(prov(r).value.get('tot2[main](g7)')![0].length, 3);
 });
+
+// A MEMBER IS THE SUM OF EVERY DERIVATION OF ITS TUPLE (f_a_semiring_fold_still_reads_one_derivation_of_a_member):
+// it(g,a,2) and it(g,b,2) are one member of the count, with two derivations
+const MEMBERS = `
+grp(g). grp(h).
+it(g, a, 2). it(g, b, 2). it(g, c, 5).
+it(h, a, 1).
+cnt(G, N) :- grp(G), N is count(V : it(G, _, V)).
+tot(G, S) :- grp(G), S is sum(V ; V : it(G, _, V)).
+big(G) :- grp(G), at_least(2, V : it(G, _, V)).
+cnt2(G) :- cnt(G, _).
+tot2(G) :- tot(G, _).
+big2(G) :- big(G).
+`;
+
+test('counting: a member counts every derivation of its tuple, a cell the product of its members', () => {
+  const f = count(world(MEMBERS)).value;
+  // members (2), with two derivations, and (5), with one: 2 * 1
+  assert.equal(f.get('cnt2[main](g)'), 2n);
+  assert.equal(f.get('tot2[main](g)'), 2n);
+  assert.equal(f.get('big2[main](g)'), 2n);
+  assert.equal(f.get('cnt2[main](h)'), 1n);
+});
+
+test('provenance: the facts of every derivation of a member are in the fold', () => {
+  const f = prov(world(MEMBERS)).value;
+  const poly = f.get('cnt2[main](g)')!;
+  assert.equal(poly.length, 2);
+  assert.ok(poly.some((m) => m.includes('it[main](g,a,2)')) && poly.some((m) => m.includes('it[main](g,b,2)')));
+  assert.ok(poly.every((m) => m.includes('it[main](g,c,5)')));
+});
+
+test('tropical: the cheapest derivation of a member is the one used', () => {
+  const f = trop(world(MEMBERS)).value;
+  assert.equal(f.get('cnt2[main](g)'), 2);   // cnt2 + cnt, the members' facts are base
+});

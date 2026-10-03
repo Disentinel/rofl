@@ -2388,6 +2388,29 @@ finding above). Viterbi rounds each product down; the log-scale reading of
 runtime/semirings.ts, exact and tropical with max, is not a tag. A tag cannot
 be asserted into; its input is weighed in by a rule.
 
+**What a count reads as.** The number is a number of derivations and nothing
+more; which way it points is domain knowledge, and it belongs to the instance
+that folds it, not to the counting semiring (`f_counting_reads_oppositely_by_domain`).
+The same count has been read five ways in this tree:
+
+| reading | many derivations mean | one means | zero means | examples |
+| --- | --- | --- | --- | --- |
+| robustness | the conclusion survives losing a support | one support is a single point of failure | not concluded | nope, oops, moot |
+| ambiguity | a defect: more than one way to get the answer | the answer is unambiguous | no answer | aka, slop |
+| launderability | many independent clean routes wash a dirty derivation | one route to confirm | nothing in the model can wash it | bleep |
+| fragility | the belief has spare routes | one way to happen is a single point of failure | no route at all | drip, rip, loot, spat |
+| the instance's own domain | whatever the example says it measures: coupling in blam, reserve in ditto, a share of worlds in sus, a magnitude in huh | stated by the example | stated by the example | blam, ditto, goof, huh, iffy, npc, sus, wtf, yak |
+
+A tool that ships a bare count invites the reader to take robustness where
+the domain means ambiguity. So every example that folds a count says which
+reading it takes, in its README, on a line of the form
+
+    **Count reading:** robustness | ambiguity | launderability | fragility | domain — one sentence.
+
+`npm run docs -- --check` fails for an example whose sources fold a count
+(`countingSemiring` or a `counting` tag, outside `examples/checks`) and whose
+README has no such line, or names a reading that is not one of the five.
+
 ## Subsumption, as built
 
 w_agg_subsumption, in the Rust engine; decisions in
@@ -3305,10 +3328,14 @@ already one derivation, so it has no `others`.
   left is dropped. So an excise of a fact that is one of a member's several
   derivations leaves the count, the sum or the quorum as it was. The
   back-index cites every derivation's facts, not the canonical one's only.
-- The reflection (`agg_member`, `agg_member_prem`) and the host folds
-  (`src/semiring.ts`) still read the canonical derivation: a fold that adds
-  the derivations of a member is the next step
-  (`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).
+- The host folds (`src/semiring.ts`) read every derivation: a member is the
+  semiring sum of its derivations, a Group or Quorum cell the product of its
+  members, so a counting fold counts each derivation and a provenance fold
+  cites each fact (`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).
+  The reflection (`agg_member`, `agg_member_prem`) stays canonical: its only
+  readers are the witness checks, which ask whether a member cites a fact
+  that holds its tuple, and a three-column `agg_member_prem` cannot say which
+  derivation a premise belongs to.
 
 Proofs: the worlds `agg_member_derivs_state`, `agg_member_derivs_retract` and
 `agg_member_derivs_why` (hand-derived rows, `examples/checks/agg-member-derivs*`),
@@ -3752,7 +3779,8 @@ its members, a best cell the sum of those that reach the value, a quorum the
 product of its N members), which is what let `aka`, `wtf`, `goof` and `moot`
 keep their provenance and counts through an aggregate
 (`f_the_semiring_fold_followed_a_cell_as_one`). A quorum has N members, so a
-fold over a threshold is a lower bound when more than N support
-(`f_a_deduplicated_member_keeps_one_derivation`; the cell now records every
-derivation, and the fold still reads the canonical one,
+fold over a threshold is a lower bound when more than N distinct tuples
+support it (the cell holds the N it witnesses); a member of any cell is the
+sum of every derivation of its tuple
+(`f_a_deduplicated_member_keeps_one_derivation`,
 `f_a_semiring_fold_still_reads_one_derivation_of_a_member`).

@@ -24,6 +24,7 @@ import { canonTerm } from '../src/unify.ts';
 import { evaluateSemiring, BOUNDED, type Semiring } from '../src/semiring.ts';
 import { tropicalSemiring, countingSemiring } from '../runtime/semirings.ts';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -217,6 +218,62 @@ function danglingSettlements(): { dangling: string[]; unverifiable: string[] } {
   return { dangling: out, unverifiable };
 }
 
+/** docs/js IS NOT A BLOCK IN A FILE but a whole tree written by `npm run
+ *  render:js`; a rule or phrase edit left it stale with every gate green.
+ *  (docs/rings is not covered: its committed files already differ from what
+ *  render:rings writes, which is its own finding.) The script is run from
+ *  package.json with its `--out` pointed at a scratch directory, and the two
+ *  trees are compared file for file. */
+function renderedTrees(): { stale: string[]; unverifiable: string[] } {
+  const scripts = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts as Record<string, string>;
+  const stale: string[] = [];
+  const unverifiable: string[] = [];
+  for (const name of Object.keys(scripts).filter((k) => k === 'render:js')) {
+    const words = scripts[name].split(/\s+/);
+    const at = words.indexOf('--out');
+    if (at < 0) continue;
+    const dir = words[at + 1];
+    const bin = path.join(ROOT, words[0]);
+    if (!fs.existsSync(bin)) { unverifiable.push(`${name}: ${words[0]} is not built`); continue; }
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-render-'));
+    try {
+      words[at + 1] = tmp;
+      const r = spawnSync('sh', ['-c', words.join(' ')], { cwd: ROOT, encoding: 'utf8' });
+      if (r.status !== 0) { stale.push(`${name}: ${r.stderr.trim().split('\n')[0] || 'render failed'}`); continue; }
+      const have = new Set(fs.readdirSync(path.join(ROOT, dir)));
+      for (const f of fs.readdirSync(tmp)) {
+        have.delete(f);
+        const old = path.join(ROOT, dir, f);
+        if (!fs.existsSync(old) || fs.readFileSync(old, 'utf8') !== fs.readFileSync(path.join(tmp, f), 'utf8')) stale.push(`${dir}/${f}`);
+      }
+      for (const f of have) stale.push(`${dir}/${f} (no longer rendered)`);
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }
+  return { stale, unverifiable };
+}
+
+/** A COUNT HAS NO READING OF ITS OWN (f_counting_reads_oppositely_by_domain,
+ *  docs/aggregates.md "What a count reads as"). An example whose sources fold a
+ *  count, by `countingSemiring` or a `counting` tag, must say in its README which
+ *  of the five readings it takes, on a `**Count reading:** <word> ` line. */
+const READINGS = ['robustness', 'ambiguity', 'launderability', 'fragility', 'domain'];
+function countReadings(): string[] {
+  const out: string[] = [];
+  const fold = /countingSemiring|\btag\s+\w+\s*\([^)]*\bcounting\b/;
+  const files = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? files(path.join(dir, e.name)) : /\.(ts|rofl|rofl\.md)$/.test(e.name) ? [path.join(dir, e.name)] : []);
+  for (const d of fs.readdirSync(path.join(ROOT, 'examples'), { withFileTypes: true })) {
+    if (!d.isDirectory() || d.name === 'checks') continue;
+    const dir = path.join(ROOT, 'examples', d.name);
+    if (!files(dir).some((f) => fold.test(fs.readFileSync(f, 'utf8')))) continue;
+    const readme = path.join(dir, 'README.md');
+    const m = fs.existsSync(readme) && /^\*\*Count reading:\*\* (\w+)\b/m.exec(fs.readFileSync(readme, 'utf8'));
+    if (!m) out.push(`examples/${d.name}/README.md folds a count and names no reading`);
+    else if (!READINGS.includes(m[1])) out.push(`examples/${d.name}/README.md names the reading "${m[1]}", not one of ${READINGS.join(', ')}`);
+  }
+  return out;
+}
+
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'render_docs.ts';
 if (isMain) {
   const check = process.argv.includes('--check');
@@ -235,6 +292,15 @@ if (isMain) {
     fs.writeFileSync(p, out);
     console.log(`  wrote ${b.file} ${b.name}`);
   }
+  const unread = countReadings();
+  for (const u of unread) console.error(`  COUNT ${u}`);
+  bad += unread.length;
+  const trees = renderedTrees();
+  for (const f of trees.stale) {
+    if (check) { console.error(`  STALE ${f} — run \`npm run render:js\``); bad++; }
+  }
+  for (const u of trees.unverifiable) console.error(`  UNVERIFIABLE ${u} — needs cargo build --release in rust/`);
+  if (!check && trees.stale.length) console.error(`  STALE ${trees.stale.length} rendered file(s) — run \`npm run render:js\``);
   const graves = danglingSettlements();
   const paths = danglingPaths();
   const dangling = [...paths.dangling, ...graves.dangling];

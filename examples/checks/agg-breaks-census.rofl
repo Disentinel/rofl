@@ -1322,6 +1322,12 @@ brk("ts_keep_first_derivation"). brk_kind("ts_keep_first_derivation", ts).
 brk_expects("ts_keep_first_derivation", "agg_member_derivs_state").
 brk("ts_why_all_one_derivation"). brk_kind("ts_why_all_one_derivation", ts).
 brk_expects("ts_why_all_one_derivation", "agg_member_derivs_why").
+brk("retract_deep_neg_unread"). brk_kind("retract_deep_neg_unread", switch).
+brk_expects("retract_deep_neg_unread", "agg_incr_neginner").
+brk("cited_past_canonical_only"). brk_kind("cited_past_canonical_only", switch).
+brk_expects("cited_past_canonical_only", "agg_member_derivs_ticks").
+brk("ts_cited_past_canonical_only"). brk_kind("ts_cited_past_canonical_only", ts).
+brk_expects("ts_cited_past_canonical_only", "agg_member_derivs_ticks").
 brk("retract_no_readers"). brk_kind("retract_no_readers", switch).
 brk_expects("retract_no_readers", "agg_incr_sum").
 brk("retract_no_refire"). brk_kind("retract_no_refire", switch).
@@ -1567,6 +1573,7 @@ switch_site("carry_why_present", "rust/rofl/src/engine.rs").
 switch_site("cell_untimed", "rust/rofl/src/engine.rs").
 switch_site("cell_untimed", "rust/rofl/src/store.rs").
 switch_site("cell_why_present", "rust/rofl/src/engine.rs").
+switch_site("cited_past_canonical_only", "rust/rofl/src/engine.rs").
 switch_site("count_carrier_open", "rust/rofl/src/cell.rs").
 switch_site("count_demand_admitted", "rust/rofl/src/engine.rs").
 switch_site("count_firing_premises_only", "rust/rofl/src/tag.rs").
@@ -1801,6 +1808,7 @@ switch_site("retract_alt_member_dropped", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_alts_unindexed", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_deep_neg_unread", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_demand_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").

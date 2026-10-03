@@ -69,6 +69,81 @@ pub struct ERule {
     pub plan: Vec<BodyElem>,
 }
 
+#[derive(Clone, Debug)]
+pub struct Closure {
+    pub rel: Sym,
+    pub persp: Sym,
+    pub edge: Sym,
+    pub edge_persp: Sym,
+    /// `E(X, Y)` is the path X to Y; false when the rules read it the other way.
+    pub edge_fwd: bool,
+    pub base: Sym,
+    pub step: Sym,
+}
+
+/// Each relation concluded by exactly two rules of the closure shape.
+fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
+    let vars = |ts: &[Term]| ts.len() == 2 && ts[0].is_var() && ts[1].is_var() && ts[0] != ts[1];
+    let plain = |l: &Lit| l.temporal == Temporal::Now && l.persp.is_atom() && vars(&l.args);
+    fn pos(b: &BodyElem) -> Option<&Lit> {
+        match b {
+            BodyElem::Pos(l) => Some(l),
+            _ => None,
+        }
+    }
+    let mut by_head: HashMap<Sym, Vec<&Rc<ERule>>> = HashMap::new();
+    for r in rules {
+        by_head.entry(r.clause.head.rel).or_default().push(r);
+    }
+    let mut out = Vec::new();
+    for (rel, rs) in by_head {
+        if rs.len() != 2 || refused.contains(&rel) {
+            continue;
+        }
+        let (a, b) = (rs[0], rs[1]);
+        let (base, step) = if a.clause.body.len() == 1 { (a, b) } else { (b, a) };
+        if base.clause.body.len() != 1 || step.clause.body.len() != 2 || base.has_demand_prem || step.has_demand_prem {
+            continue;
+        }
+        let (bh, sh) = (&base.clause.head, &step.clause.head);
+        let Some(e) = pos(&base.clause.body[0]) else { continue };
+        if !plain(bh) || !plain(sh) || !plain(e) || e.rel == rel || bh.persp != sh.persp || refused.contains(&e.rel) {
+            continue;
+        }
+        let edge_fwd = if e.args[0] == bh.args[0] && e.args[1] == bh.args[1] {
+            true
+        } else if e.args[1] == bh.args[0] && e.args[0] == bh.args[1] {
+            false
+        } else {
+            continue;
+        };
+        let orient = |l: &Lit| if edge_fwd { (l.args[0], l.args[1]) } else { (l.args[1], l.args[0]) };
+        let (Some(p), Some(q)) = (pos(&step.clause.body[0]), pos(&step.clause.body[1])) else { continue };
+        let (rp, ep) = if p.rel == rel && q.rel == e.rel { (p, q) } else if q.rel == rel && p.rel == e.rel { (q, p) } else { continue };
+        if !plain(rp) || !plain(ep) || rp.persp != bh.persp || ep.persp != e.persp {
+            continue;
+        }
+        let (h0, h1) = (sh.args[0], sh.args[1]);
+        let (e0, e1) = orient(ep);
+        let left = rp.args[0] == h0 && e1 == h1 && rp.args[1] == e0 && e0 != h0 && e0 != h1;
+        let right = e0 == h0 && rp.args[1] == h1 && e1 == rp.args[0] && e1 != h0 && e1 != h1;
+        if !(left || right) {
+            continue;
+        }
+        out.push(Closure {
+            rel,
+            persp: bh.persp.as_atom().unwrap(),
+            edge: e.rel,
+            edge_persp: e.persp.as_atom().unwrap(),
+            edge_fwd,
+            base: base.id,
+            step: step.id,
+        });
+    }
+    out.sort_by_key(|c| c.rel);
+    out
+}
+
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Front {
@@ -426,6 +501,17 @@ pub struct Eval {
     /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
     pub ns_by_rule: HashMap<Sym, u64>,
     pub rounds: Vec<(u64, u64)>,
+    /// The relations read off the program as a transitive closure: a base rule
+    /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
+    /// concluding R. With `closure_on` (and no witnesses to write) the pair is
+    /// one walk over E where E is news, not rounds.
+    pub closures: Vec<Closure>,
+    closure_of: HashMap<Sym, (usize, bool)>,
+    pub closure_on: bool,
+    pub closure_rows: u64,
+    pub closure_runs: u64,
+    pub closure_walk_ns: u64,
+    pub closure_add_ns: u64,
     pub naive: bool,
     pub mode: Mode,
     pub steps: i64,
@@ -926,6 +1012,13 @@ impl Eval {
             argm_by_rule: HashMap::new(),
             ns_by_rule: HashMap::new(),
             rounds: Vec::new(),
+            closures: Vec::new(),
+            closure_of: HashMap::new(),
+            closure_on: false,
+            closure_rows: 0,
+            closure_runs: 0,
+            closure_walk_ns: 0,
+            closure_add_ns: 0,
             naive: false,
             mode,
             steps: 0,
@@ -1296,6 +1389,9 @@ impl Eval {
             }
         }
         self.rules = kept.into_iter().map(Rc::new).collect();
+        let refused: HashSet<Sym> = self.lattices.keys().copied().chain(demand.iter().map(|(r, _)| *r)).collect();
+        self.closures = find_closures(&self.rules, &refused);
+        self.closure_of = self.closures.iter().enumerate().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
         self.widen_rec = self.widen_back_edges();
         self.widen_th = self.widen_thresholds();
@@ -3013,7 +3109,7 @@ impl Eval {
                         let tick = self.store.cell(c).tick;
                         for m in self.store.cell_members(c) {
                             self.past_walks += 1;
-                            for q in self.store.member_prems(m) {
+                            for q in self.store.member_derivs(m).take(brk!("cited_past_canonical_only" => 1; usize::MAX)).flatten() {
                                 if let PremRef::Fact(f) = q {
                                     read.insert((*f, tick));
                                 }
@@ -3432,6 +3528,11 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &HashSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        if self.closure_on && self.no_witness && self.lattices.is_empty() {
+            if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
+                return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
+            }
+        }
         self.fire_rule_from(r, Subst::new(), front_at)
     }
 
@@ -3463,6 +3564,74 @@ impl Eval {
             }
             self.conclude(r, sol, &mut out)?;
         }
+        Ok(out)
+    }
+
+    /// Every path through E, as rows of R: a breadth-first walk from each node
+    /// over the edges as they stand. Rows already there are not news.
+    fn fire_closure(&mut self, ci: usize) -> Result<Front, Halt> {
+        let c = self.closures[ci].clone();
+        let mut index: HashMap<Term, u32> = HashMap::new();
+        let mut nodes: Vec<Term> = Vec::new();
+        let mut edges: Vec<(u32, u32)> = Vec::new();
+        for id in self.store.rel_persp(&self.h, c.edge, c.edge_persp) {
+            let a = self.store.args(id);
+            if a.len() != 2 {
+                continue;
+            }
+            let (x, y) = if c.edge_fwd { (a[0], a[1]) } else { (a[1], a[0]) };
+            let mut dense = |t: Term| *index.entry(t).or_insert_with(|| { nodes.push(t); nodes.len() as u32 - 1 });
+            let e = (dense(x), dense(y));
+            edges.push(e);
+        }
+        let n = nodes.len();
+        let mut start = vec![0u32; n + 1];
+        for &(x, _) in &edges {
+            start[x as usize + 1] += 1;
+        }
+        for i in 0..n {
+            start[i + 1] += start[i];
+        }
+        let mut adj = vec![0u32; edges.len()];
+        let mut fill = start.clone();
+        for &(x, y) in &edges {
+            adj[fill[x as usize] as usize] = y;
+            fill[x as usize] += 1;
+        }
+        let mut mark = vec![u32::MAX; n];
+        let mut queue: Vec<u32> = Vec::new();
+        let mut rows: Vec<(u32, u32)> = Vec::new();
+        let t = std::time::Instant::now();
+        for s in 0..n as u32 {
+            queue.clear();
+            queue.extend_from_slice(&adj[start[s as usize] as usize..start[s as usize + 1] as usize]);
+            let mut i = 0;
+            while i < queue.len() {
+                let v = queue[i];
+                i += 1;
+                if mark[v as usize] == s {
+                    continue;
+                }
+                mark[v as usize] = s;
+                queue.extend_from_slice(&adj[start[v as usize] as usize..start[v as usize + 1] as usize]);
+                rows.push((s, v));
+            }
+        }
+        self.closure_walk_ns += t.elapsed().as_nanos() as u64;
+        let t = std::time::Instant::now();
+        let mut out = Front::default();
+        for (s, v) in rows {
+            let args = [nodes[s as usize], nodes[v as usize]];
+            if self.store.add(&self.h, c.rel, c.persp, &args, F_TICK) {
+                let id = self.store.get(c.rel, c.persp, &args).unwrap();
+                out.note(c.rel, id);
+                self.closure_rows += 1;
+                self.bump_steps()?;
+                self.charge_row(Some(c.step), true)?;
+            }
+        }
+        self.closure_add_ns += t.elapsed().as_nanos() as u64;
+        self.closure_runs += 1;
         Ok(out)
     }
 

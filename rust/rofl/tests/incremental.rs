@@ -1127,3 +1127,29 @@ fn a_member_with_several_derivations_keeps_each_until_it_is_retracted() {
     assert_eq!(after, want);
     assert_eq!(after.matches(" alt [").count(), 4, "the member left holds two derivations: {after}");
 }
+
+/// A negation inside an aggregate body: retracting the negated fact can make it newly true, and a cell gain
+/// a member, which no subtraction does and the back-index (it holds no negated premise) cannot find. The rule
+/// is read again whole.
+const NEG_INNER: &str = "
+edb(sale). edb(bad). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+nn(G, N) :- grp(G), N is count(K : sale(K, G, _), not bad(K)).
+ns(G, S) :- grp(G), S is sum(V ; K : sale(K, G, V), not bad(K)).
+nm(G, M) :- grp(G), M is median(V ; K : sale(K, G, V), not bad(K)).
+nq(G) :- grp(G), at_least(2, K : sale(K, G, _), not bad(K)).
+";
+
+fn fact_neg_inner(r: &mut Rng) -> String {
+    match r.below(5) {
+        0..=2 => format!("sale({}, {}, {})", 1 + r.below(6), pick(r, &G4), r.below(7) as i64 - 1),
+        _ => format!("bad({})", 1 + r.below(6)),
+    }
+}
+
+#[test]
+fn a_negation_inside_an_aggregate_is_read_again_whole() {
+    let all = sweep(NEG_INNER, fact_neg_inner, 1..=16, 20, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20, "{all:?}");
+}

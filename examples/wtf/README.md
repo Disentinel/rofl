@@ -1,5 +1,7 @@
 # WTF — What The Fixpoint
 
+**Count reading:** domain — how many orders give one answer; it is not a count of derivations.
+
 Magic: the Gathering's layer system (Comprehensive Rules 613), as rules.
 
 The domain needs no argument. Continuous effects are applied in **seven

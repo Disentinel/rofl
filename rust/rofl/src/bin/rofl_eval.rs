@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--unordered] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--unordered] [--closure] [--budget N] [--space N] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -76,6 +76,8 @@ struct Args {
     no_provenance: bool,
     /// Facts in a group by tuple id, matches in candidate order: no rendered keys on the hot path.
     unordered: bool,
+    /// A relation read as a transitive closure is one walk, not rounds; needs --no-provenance.
+    closure: bool,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -88,6 +90,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         derivations: false,
         no_provenance: false,
         unordered: false,
+        closure: false,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -122,6 +125,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--derivations" => a.derivations = true,
             "--no-provenance" => a.no_provenance = true,
             "--unordered" => a.unordered = true,
+            "--closure" => a.closure = true,
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -149,6 +153,7 @@ fn main() {
         derivations,
         no_provenance,
         unordered,
+        closure,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -181,6 +186,10 @@ fn main() {
         l.eval.no_witness = true;
     }
     l.eval.store.unordered = unordered;
+    l.eval.closure_on = closure;
+    if closure && !no_provenance {
+        eprintln!("--closure needs --no-provenance; ignored");
+    }
     let t_load = t0.elapsed();
     if l.dangling > 0 {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
@@ -277,6 +286,11 @@ fn main() {
         }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
         let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
+        for c in &l.eval.closures {
+            eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
+        }
+        eprintln!("closure_rows\t{}", l.eval.closure_rows);
+        eprintln!("closure_runs\t{}\tclosure_walk_ms\t{:.1}\tclosure_add_ms\t{:.1}", l.eval.closure_runs, l.eval.closure_walk_ns as f64 / 1e6, l.eval.closure_add_ns as f64 / 1e6);
         eprintln!("rounds\t{}", l.eval.rounds.len());
         eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
         eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);

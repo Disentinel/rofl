@@ -1,0 +1,31 @@
+-- examples/checks/agg-incr-neginner.rofl — agg_incr_neginner: A NEGATION INSIDE
+-- AN AGGREGATE, retracted. bad(3) is read negated in the body of a count, a
+-- sum, a median and a quorum; retracting it makes `not bad(3)` newly true, so
+-- sale 3 becomes a member of every cell, which no subtraction does. The back-
+-- index holds facts a member cites and no negated premise, so it cannot find
+-- the cells: the rules are read again whole. The state must be the one of a
+-- world without bad(3): ni_n(g, 2), ni_s(g, 5), ni_m(g, 2), and the quorum
+-- of two reached by the second member (it was one member short before).
+--
+--   ni_sale(2, g, 2)  a member throughout
+--   ni_sale(3, g, 3)  a member only once bad(3) is gone
+edb(ni_sale). edb(ni_bad). edb(ni_grp).
+ni_grp(g).
+ni_sale(2, g, 2).
+ni_sale(3, g, 3).
+ni_bad(3).
+ni_n(G, N)   :- ni_grp(G), N is count(K : ni_sale(K, G, _), not ni_bad(K)).
+ni_s(G, S)   :- ni_grp(G), S is sum(V ; K : ni_sale(K, G, V), not ni_bad(K)).
+ni_m(G, M)   :- ni_grp(G), M is median(V ; K : ni_sale(K, G, V), not ni_bad(K)).
+ni_q(G)      :- ni_grp(G), at_least(2, K : ni_sale(K, G, _), not ni_bad(K)).
+
+-- the state after the retraction
+-- expect-row: ni_n[main](g,2) tick drv support=1
+-- expect-row: ni_s[main](g,5) tick drv support=1
+-- expect-row: ni_m[main](g,2) tick drv support=1
+-- expect-row: ni_q[main](g) tick drv support=1
+-- expect-no-row: ni_n[main](g,1)
+-- expect-no-row: ni_s[main](g,2)
+-- expect-no-row: ni_m[main](g,3)
+-- the member that came in cites the negation that holds now
+-- expect-row: mem $cell(r4b8c25f2,2,0,$cons(g,$nil)) #2 id=48358104bf7b4598 (3) h=1 [fact:ni_sale[main](3,g,3); neg:ni_bad[main](3)]
