@@ -1393,8 +1393,20 @@ brk("ds_closed_agg_unbound"). brk_kind("ds_closed_agg_unbound", switch).
 brk_expects("ds_closed_agg_unbound", "agg_datastrat_keys").
 brk("ds_in_undecided"). brk_kind("ds_in_undecided", switch).
 brk_expects("ds_in_undecided", "agg_datastrat_keys").
-brk("ds_delta_allowed"). brk_kind("ds_delta_allowed", switch).
-brk_expects("ds_delta_allowed", "agg_datastrat_retract").
+brk("ds_comp_not_reread"). brk_kind("ds_comp_not_reread", switch).
+brk_expects("ds_comp_not_reread", "agg_datastrat_retract").
+brk("retract_thr_cells_kept"). brk_kind("retract_thr_cells_kept", switch).
+brk_expects("retract_thr_cells_kept", "agg_incr_thr").
+brk("retract_thr_unclosed"). brk_kind("retract_thr_unclosed", switch).
+brk_expects("retract_thr_unclosed", "agg_incr_thr").
+brk("retract_swept_cell_subtracted"). brk_kind("retract_swept_cell_subtracted", switch).
+brk_expects("retract_swept_cell_subtracted", "agg_incr_twice").
+brk("retract_demand_kept"). brk_kind("retract_demand_kept", switch).
+brk_expects("retract_demand_kept", "agg_incr_demand").
+brk("restage_dead_kept"). brk_kind("restage_dead_kept", switch).
+brk_expects("restage_dead_kept", "agg_incr_staged").
+brk("restage_first_wins"). brk_kind("restage_first_wins", switch).
+brk_expects("restage_first_wins", "agg_incr_staged").
 brk("ts_ds_seal_early"). brk_kind("ts_ds_seal_early", ts).
 brk_expects("ts_ds_seal_early", "agg_datastrat_eval").
 brk_expects("ts_ds_seal_early", "agg_datastrat_tree").
@@ -1503,9 +1515,9 @@ switch_site("dominance_whynot_unasked", "rust/rofl/src/engine.rs").
 switch_site("ds_barred_ignored", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_builtin_dead", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_closed_agg_unbound", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_comp_not_reread", "rust/rofl/src/engine/delta.rs").
 switch_site("ds_comps_unordered", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_cycle_unseen", "rust/rofl/src/engine/datastrat.rs").
-switch_site("ds_delta_allowed", "rust/rofl/src/engine/delta.rs").
 switch_site("ds_hole_uncarried", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_in_undecided", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_layer_flat", "rust/rofl/src/engine/datastrat.rs").
@@ -1665,10 +1677,13 @@ switch_site("quantile_floor", "rust/rofl/src/cell.rs").
 switch_site("rank_insertion", "rust/rofl/src/cell.rs").
 switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
+switch_site("restage_dead_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("restage_first_wins", "rust/rofl/src/engine.rs").
 switch_site("restaged_keeps_old_firing", "rust/rofl/src/engine.rs").
 switch_site("retain_prunes_cited", "rust/rofl/src/engine.rs").
 switch_site("retract_chain_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_consumers_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_demand_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_empty_gone", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_neg", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_gate_plain", "rust/rofl/src/engine/delta.rs").
@@ -1687,8 +1702,11 @@ switch_site("retract_stacked_facts_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_one_level", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stacked_plain", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_stale_rep", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_swept_cell_subtracted", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_tag_derivations_kept", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_thr_cells_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_thr_no_close", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_thr_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("set_literal_as_written", "rust/rofl/src/cell.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").

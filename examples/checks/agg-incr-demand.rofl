@@ -1,0 +1,31 @@
+-- examples/checks/agg-incr-demand.rofl — agg_incr_demand: A RELATION ANSWERED ON
+-- DEMAND, under RETRACTION. dm_big has no range, so it is unfolded at each call
+-- and a fact is made for every call, whether or not the rest of the rule holds
+-- (dm_big(7) is made for dm_a(7) although no dm_b(7) makes a dm_c(7)). A world
+-- without the fact makes only the calls its rules still make, so what a
+-- retraction takes out is the facts made at the calls that no longer happen,
+-- which no firing cites: every fact made at a call goes, and every rule that
+-- reads the relation fires again. The state must be the one of a world without
+-- the fact.
+--
+--   dm_z(1)    no rule that calls dm_big reads it: the calls are made again and are the same
+--   dm_a(7)    dm_big(7) goes with the only call that made it, and the count of what calls it is one less
+edb(dm_a). edb(dm_b). edb(dm_z).
+dm_a(1).
+dm_a(5).
+dm_a(7).
+dm_b(5).
+dm_z(1).
+dm_big(X) :- X > 3.
+dm_c(X) :- dm_a(X), dm_big(X), dm_b(X).
+dm_cnt(N) :- N is count(X : dm_a(X), dm_big(X)).
+dm_zz(X) :- dm_z(X).
+
+-- the state after the retractions, row by row
+-- expect-row: dm_big[main](5) tick drv support=1
+-- expect-row: dm_c[main](5) tick drv support=1
+-- expect-row: dm_cnt[main](1) tick drv support=1
+-- and nothing of what they supported before
+-- expect-no-row: dm_big[main](7)
+-- expect-no-row: dm_cnt[main](2)
+-- expect-no-row: dm_zz[main](

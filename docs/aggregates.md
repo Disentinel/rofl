@@ -3185,6 +3185,11 @@ holds, without evaluating the world again:
 | a subsumptive relation | the cone by KEY: the front of a key one of whose values rests on the fact, and every key a value was given to from the fact, are taken out whole and derived again, since what each value dominated is decided against every value the key was given | the same, with the state a key keeps of its values (`sub_seen`, `sub_memo`, `sub_by`, `sub_prems`) forgotten with it |
 | what read a cell, or a lattice | the firings that cited the old cell record go, the facts they concluded with their last firing, and the rule is solved with the cell's key bound against the new record; the facts of PLAIN RULES that rested on a replaced cell's conclusion or on the cone, through each other and around a cycle, are taken out whatever else they have, and the rules fired again once the cells are replaced and the lattices closed | `solve_body`, `conclude`, `consumer_facts`, `activate` |
 | a rule that NEGATES or AGGREGATES what changed (a cell's conclusion, the cone, or the retracted fact itself, read outside an aggregate) | a retraction can make a `not` newly true and a count gain a member, which no subtraction does, so the rule is read again WHOLE: every fact of its head relation goes (with whatever rests on them), its cells go with their reflection, and it is fired again with the rules that conclude the same relation, in a full evaluation's order, the plain ones at once and the others level by level (`round_of`), each over what the levels below concluded; the back-index is dropped and rebuilt at the next retraction. The reader's own algebra is not used: a sum over a changed cell could subtract what went, but not add the member a new conclusion makes | `reset_facts`, `reset_cells`, `refire`, `rule_level` |
+| a THRESHOLD that reads what changed (a cell's conclusion, what a plain rule concluded from the fact, another threshold) | it is such a rule, and its quorums are not subtracted from: its facts go, its cells go with the state the evaluation keeps of a threshold (`thr_cells`, `thr_open`, `thr_acc`), and it fires again with the plain rules at once (the full evaluation fires it there), the quorums it reaches closing as the evaluation closes them, before each level and at the end | `reset_cells`, `refire`, `close_thresholds_below` |
+| a rule READ AGAIN WHOLE that owns a cell the fact supports (it reads the relation outside its aggregate too), or that concludes what a changed cell's rule concludes | the cell is not subtracted from, for a cell subtracted first is one a fresh evaluation does not hold (the group it counts has no row left to ask); the rule's cells go with the rule's facts and it fires again. A rule that merely shares a head with a changed cell needs nothing more: the facts of the relation go, the cell is replaced and both rules fire again | `retract_delta` (`cells` without the rules read again whole) |
+| a rule that concludes `@next` from what changed (a cell's conclusion, the fact, a negation the retraction makes true) | the staged fact is a row of the next tick and no fact of this one, kept with the premises of the firing that staged it: those whose firing cites a fact or a cell that is gone are taken out, and every rule staging into their relations (or reading what changed) fires again over the world as it now stands, a staged aggregate with its cells sealed again. **A staged fact is kept with its FIRST firing, which is the schedule's**, so a fact two firings reach is answered Full | `restage`, `staged_watch` |
+| a relation ANSWERED ON DEMAND (a rule no premise range-restricts, unfolded at each call) | a fact is made for every call, whether or not the rest of the rule holds, and no firing cites it, so which facts a fresh evaluation holds is the calls its rules still make: every fact of those relations goes (and what rests on them), every rule that reads one fires again, and the calls are made over the world as it stands. This is the least fixpoint of the calls, which is the same in any schedule while no lattice can leave a call made at a value it has since passed. A fact a question made (`why`, `whynot`) is no fact of the evaluation, and goes with the first retraction | `calls_on_demand`, `consumer_rules` (`demand`) |
+| a COMPONENT STRATIFIED BY ITS DATA (the relations of a spreadsheet, `datastrat.rs`) that the fact reaches | its cells are sealed in the order of its data, which a rule fired again at once does not know: the component is read again whole (its facts and cells go, with what rests on them) and run as the evaluation runs it, its correlations held and released a layer at a time over the data that is left (`run_data_comps`), the walk's own check (`ds_verify`) standing. A component the fact does not reach is not touched | `retract_delta` (`comps`), `refire`, `run_data_comps` |
 
 It answers `Delta` (what it did) or `Full(reason)`: the world as a full
 evaluation takes it, evaluated again at the next question. The reasons are
@@ -3199,28 +3204,33 @@ again which superseded values are still needed, so the whole relation is
 decided again); a rank, or a quantile whose percent a rule hands it (the
 group is stored once and shared across its parameter); a rule whose second
 aggregate is asked for what its first reached (a result, a group, or only the
-groups it had a value for: the cells there are depend on the first); a threshold or a
-rule that stages what rests on the fact; a cell the fact supports that a rule
-reading what changed also owns (it is read again whole, and cannot be
-subtracted too); a dominance rule that reads it; and a delta that would write a hole, seal a cell nothing
-indexes or meet a wall (a hole is written with its shrugs after a whole
+groups it had a value for: the cells there are depend on the first); **a staged fact two firings reach**
+(which of them the evaluation kept is the schedule's: the first to arrive); a staged rule, a rule
+answered on demand, or a component stratified by its data in a world with a lattice, where a delta is not
+worked out (a lattice withdraws what a firing read, and a call made at a value it has since passed leaves
+a fact no fresh evaluation makes); a fact asserted into a relation answered on demand; a rule that is
+late or unsafe and reads what rests on the fact; a dominance rule that reads it; and a delta that would
+write a hole, seal a cell nothing indexes or meet a wall (a hole is written with its shrugs after a whole
 pass). Each is a named reason; none changes what a full evaluation answers.
 
 It is held three ways. `rust/rofl/tests/incremental.rs` is a differential over
-twenty-one sweeps (the body aggregates; the median, quantile and threshold; a
+twenty-eight sweeps (the body aggregates; the median, quantile and threshold; a
 counting tag; order lattices and an idempotent tag with a saturating chain that
 keeps a history; a Pareto front and total-order dominance; plain rules over
 cells and over lattices; cells, lattices and tags in one world; a world with a
-rule per refusal): random asserts and retracts, loaded facts and asserted
+rule per refusal; thresholds over what changed; staged rules; a relation answered on demand; two
+spreadsheets read by plain rules, a negation, a count and a threshold): random asserts and retracts, loaded facts and asserted
 ones, each step compared with a world built from the same facts and evaluated
 from nothing, byte for byte in `canonical_state`, and the explanations (`why
 all` of every fact that holds, `whynot` of the facts that held) compared too,
-because they read what an evaluation left in the engine. 7 440 edits, 4 328
-retractions, 3 410 by delta and 918 evaluated again for a named reason, none
-of them a different state, over 296 000 explanations. The worlds
+because they read what an evaluation left in the engine. 10 360 edits, 5 996
+retractions, 5 165 by delta and 831 evaluated again for a named reason, none
+of them a different state, over 415 000 explanations (the staged facts of the world are compared too). The worlds
 `agg_incr_sum`, `agg_incr_minmax`, `agg_incr_holistic`, `agg_incr_lattice`,
 `agg_incr_tag`, `agg_incr_tagc`, `agg_incr_join`, `agg_incr_widen`,
-`agg_incr_sub`, `agg_incr_readers`, `agg_incr_stacked` and the gate worlds retract facts after
+`agg_incr_sub`, `agg_incr_readers`, `agg_incr_stacked`, `agg_incr_thr`, `agg_incr_owner`,
+`agg_incr_twice`, `agg_incr_staged` (retracted, then one tick, so that what is staged is seen), `agg_incr_demand`,
+`agg_datastrat_retract` and the gate worlds retract facts after
 the evaluation (`check_opt(W, retract, "fact")`: Rust by the path, TypeScript
 by evaluating again) and state the rows that must hold after, so both engines'
 hash is the same state. The registry lists retractions in text order, and a
@@ -3253,11 +3263,20 @@ schedule's); a value kept as history (the close of its relation decides which
 superseded values are needed); a rank or a quantile with a percent from
 outside (the group is shared across its parameter, and a delta would have to
 re-derive the family); chained aggregates; a delta that writes a hole; the
-tick of a world that is not the first; and a consumer that negates or
-aggregates what changed (its cells, or the facts a negation would add, are a
-second delta stacked on the first). The first three are decisions: the
-reason is the state a fresh evaluation writes and no delta can reproduce, not
-the work.
+tick of a world that is not the first; a staged fact that two firings reach
+(the first one the evaluation met is kept, and it is the schedule's: with
+`q(a, 2)` derived in the first pass and `q(a, 1)` in the second, and a rule
+`p(G)@next :- q(G, _)`, the world without a third firing keeps `q(a, 2)`, and a
+refiring over the final facts meets them in key order and would keep
+`q(a, 1)`, which `why` and the next tick show); and the worlds that join a
+lattice to a demand relation or a staged rule or a data-stratified component.
+The first three and the staged fact are decisions: the reason is the state a
+fresh evaluation writes and no delta can reproduce, not the work. What the
+retraction used to answer by name and answers by a delta now
+(`w_agg_retract_fallback_tail`): a threshold that reads what changed, a
+cell a rule read again whole also owns, a rule read again whole that concludes
+what a changed cell concludes, what is staged `@next`, what a relation
+answered on demand made, and a component stratified by its data.
 
 ## Where it lands in the engine
 

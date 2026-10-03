@@ -436,6 +436,9 @@ pub struct Eval {
     /// The other firings that staged a fact, kept while a lattice could
     /// still withdraw what the first one read (`settle_staged`).
     staged_alts: HashMap<FKey, Vec<(Sym, Vec<PremRef>)>>,
+    /// While a retraction fires the rules that stage again: whether a second firing reached a staged key
+    /// (the evaluation kept the first one, by its schedule).
+    staged_watch: Option<bool>,
     /// WHAT A HOLE LEFT UNSTAGED: a conclusion `@next` an unknown reached,
     /// as the unknown it is in the tick it would arrive in, and whether only
     /// plain holes reached it. The boundary writes each as a hole
@@ -909,6 +912,7 @@ impl Eval {
             active: Vec::new(),
             staged: HashMap::new(),
             staged_alts: HashMap::new(),
+            staged_watch: None,
             staged_unknown: HashMap::new(),
             past_rows: None,
             why_unk: None,
@@ -2866,6 +2870,22 @@ impl Eval {
         Ok(self.run()?.partial)
     }
 
+    /// Whether a relation of the program is answered on demand, a fact made for each call.
+    pub fn answers_on_demand(&self) -> bool {
+        !self.demand_rels.is_empty()
+    }
+
+    /// The staged facts, each with the rule and the premises of the firing that staged it, one a line.
+    pub fn staged_text(&self) -> String {
+        let mut out = String::new();
+        for (k, f) in self.staged_sorted() {
+            let mut prems: Vec<String> = f.prems.iter().map(|p| self.store.prem_text(&self.h, *p)).collect();
+            prems.sort_by(|a, b| cmp_js(a, b));
+            out.push_str(&format!("{k} <- {} [{}]\n", self.h.name(f.rule), prems.join("; ")));
+        }
+        out
+    }
+
     /// The staged next-tick facts in canonical KEY order, each with its key
     /// spelled exactly once.
     ///
@@ -3430,6 +3450,9 @@ impl Eval {
                     self.charge_row(Some(r.id), true)?;
                 }
                 std::collections::hash_map::Entry::Occupied(slot) => {
+                    if let Some(many) = self.staged_watch.as_mut() {
+                        *many |= brk!("restage_first_wins" => false; slot.get().rule != r.id || slot.get().prems != sol.prems);
+                    }
                     // a lattice can withdraw what a firing read; another may stand
                     if !self.lattices.is_empty() {
                         let alts = self.staged_alts.entry(slot.key().clone()).or_default();
