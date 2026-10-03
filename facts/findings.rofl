@@ -9837,6 +9837,8 @@ finding_note(f_a_sum_over_the_cells_that_have_a_value_is_a_wrong_number,
 finding(f_a_stratified_layer_fires_its_rules_whole, pitfall).
 recorded(f_a_stratified_layer_fires_its_rules_whole, "2026-10-03").
 demands(f_a_stratified_layer_fires_its_rules_whole, code).
+addressed_by(f_a_stratified_layer_fires_its_rules_whole, "rust/rofl/src/engine/datastrat.rs").
+addressed_by(f_a_stratified_layer_fires_its_rules_whole, "rust/rofl/tests/datastrat_scale.rs").
 finding_note(f_a_stratified_layer_fires_its_rules_whole,
   "OPEN, OWNED BY NOBODY, A MEASUREMENT: each layer of a component stratified by its data fires the rules that own its correlations whole (`fire_all`), so a component d layers deep with c correlations costs d x c rule firings (a chain of 300 sums 0.26 s, of 2000 15 s; the 17 sums of the FCFF workbook are not measurable). A rule with several aggregate elements (slop's val has a count and a sum) cannot be restricted to the correlations released this layer without a per-instance memory, because the elements are released independently. Bounded when it matters: fire only the instances whose correlations are new, per rule, with the elements of the instance as the key. Not done: no workload in the tree is near it, and a deep chain of sums is not what a spreadsheet is.").
 
@@ -10030,6 +10032,8 @@ finding_note(f_the_stock_evaluator_runs_unranked_negations_in_one_final_pass,
 finding_note(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts,
   "TRIAGE 2026-10-03: left open on ONE line only. The `quorum witness has N members, a counting fold is a lower bound` half is closed by w_agg_member_keeps_its_derivations (a member holds every derivation) and, for the fold, by f_a_semiring_fold_still_reads_one_derivation_of_a_member. What stays unexplained and unrun is goof's every_knot_unties in frege (3 independent derivations where the walk showed 1; the guess is the 32-monomial cap applied before pruning). Bounded, one investigation, no owner decision; unowned because no verdict moves.").
 
+finding_note(f_a_stratified_layer_fires_its_rules_whole,
+  "SETTLED 2026-10-03 by w_agg_layer_fires_the_new: a layer fires the instances of the correlations it releases (fire_keys), a chain of 2000 sums 5.7 s to 0.18 s on this machine; the one whole firing after the last layer stays, for ds_done to guard.").
 finding_note(f_a_stratified_layer_fires_its_rules_whole,
   "TRIAGE 2026-10-03: a real, bounded defect of cost, now owned by w_agg_layer_fires_the_new.").
 finding_note(f_a_grouped_aggregate_is_one_cell_for_the_data_walk,

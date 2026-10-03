@@ -2651,6 +2651,14 @@ check_opt("agg_datastrat_groups", together, 1).
 check_opt("agg_datastrat_groups", explain, 1).
 proves_work("agg_datastrat_groups", w_agg_group_is_a_cell).
 
+-- a chain of sums fires once per sum: a layer that fires an instance again is a step, the budget is the chain's own, whole firing is far over it
+check_world("agg_datastrat_chain").
+check_file("agg_datastrat_chain", "examples/checks/agg-datastrat-chain.rofl").
+check_file("agg_datastrat_chain", "examples/checks/agg-datastrat-chain-check.rofl").
+check_opt("agg_datastrat_chain", together, 1).
+check_opt("agg_datastrat_chain", budget, 310).
+proves_work("agg_datastrat_chain", w_agg_layer_fires_the_new).
+
 -- the budget cuts between two layers: every value there is the sheet's, no cell above the wall has one
 check_world("agg_datastrat_budget").
 check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-sheet.rofl").

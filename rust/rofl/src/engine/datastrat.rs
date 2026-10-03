@@ -152,6 +152,9 @@ impl Eval {
     /// Whether the correlation `mk` of a data-stratified element may be read
     /// now: it has been released.
     pub(super) fn ds_gate(&self, mk: &AggKey) -> Result<bool, Halt> {
+        if self.ds_firing.is_some_and(|(r, at)| mk.0 == r && mk.1 < at) && self.ds_layer.contains(mk) && brk!("ds_layer_refires" => false; true) {
+            return Ok(false);
+        }
         if brk!("ds_seal_early" => false; !self.ds_released.contains(mk)) {
             if self.ds_done.contains(&(mk.0, mk.1)) {
                 return Err(Halt::Bug(format!(
@@ -193,14 +196,17 @@ impl Eval {
         for layer in layers {
             self.ds_carry(comp)?;
             let owners: Vec<Rc<ERule>> = rs.iter().filter(|r| layer.iter().any(|k| k.0 == r.id)).cloned().collect();
-            let grouped = |e: &Eval, k: &AggKey| e.agg_plans.get(&(k.0, k.1)).is_some_and(|p| !p.group.is_empty());
-            let (by_group, whole): (Vec<AggKey>, Vec<AggKey>) = layer.iter().cloned().partition(|k| grouped(self, k));
-            self.ds_released.extend(layer);
-            if !whole.is_empty() {
-                let mine: Vec<Rc<ERule>> = owners.iter().filter(|r| whole.iter().any(|k| k.0 == r.id)).cloned().collect();
-                self.fire_all(mine)?;
+            self.ds_released.extend(layer.iter().cloned());
+            self.ds_layer = layer.iter().cloned().collect();
+            if brk!("ds_layer_fires_whole" => true; false) {
+                self.ds_charge = true;
+                let fired = self.fire_all(owners.clone());
+                self.ds_charge = false;
+                fired?;
+            } else {
+                self.fire_keys(&layer)?;
             }
-            self.fire_keys(&by_group)?;
+            self.ds_layer.clear();
             self.poison_readers(&owners)?;
         }
         self.ds_carry(comp)?;
@@ -254,9 +260,29 @@ impl Eval {
         self.cur_front = Front::default();
         let batch: Rc<[Rc<ERule>]> = Rc::from(owners.clone());
         let outer = (std::mem::replace(&mut self.batch, batch), self.batch_at);
+        self.ds_charge = true;
+        let fired = self.fire_owners(&owners, keys);
+        self.ds_charge = false;
+        self.ds_firing = None;
+        fired?;
+        (self.batch, self.batch_at) = outer;
+        let front = std::mem::take(&mut self.cur_front);
+        self.propagate(front)?;
+        self.lattice_settle(false)?;
+        let more = std::mem::take(&mut self.cur_front);
+        if !more.keys.is_empty() {
+            self.propagate(more)?;
+            self.lattice_settle(false)?;
+        }
+        Ok(())
+    }
+
+    /// Each owner fired over the instances that extend the key of each correlation of it in `keys`.
+    fn fire_owners(&mut self, owners: &[Rc<ERule>], keys: &[AggKey]) -> Result<(), Halt> {
         for (i, r) in owners.iter().enumerate() {
             self.batch_at = i;
             for k in keys.iter().filter(|k| k.0 == r.id) {
+                self.ds_firing = Some((k.0, k.1));
                 let a = r.plan.iter().find_map(|b| match b {
                     BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
                     _ => None,
@@ -268,15 +294,6 @@ impl Eval {
                 let f = self.fire_rule_from(r, s0, None)?;
                 merge_front(&mut self.cur_front, f);
             }
-        }
-        (self.batch, self.batch_at) = outer;
-        let front = std::mem::take(&mut self.cur_front);
-        self.propagate(front)?;
-        self.lattice_settle(false)?;
-        let more = std::mem::take(&mut self.cur_front);
-        if !more.keys.is_empty() {
-            self.propagate(more)?;
-            self.lattice_settle(false)?;
         }
         Ok(())
     }

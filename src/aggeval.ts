@@ -766,6 +766,11 @@ export class AggEval {
   private dsElems = new Set<string>();
   private dsReleased = new Set<string>();
   private dsDone = new Set<string>();
+  /** A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fireKeys`). */
+  private dsCharge = false;
+  /** The correlations a layer released, and the element `fireKeys` is firing: an instance two of them release is fired by the first alone (`dsGate`). */
+  private dsLayer = new Set<string>();
+  private dsFiring: [string, number] | null = null;
   private dsKeys = new Map<string, { rid: string; at: number; corr: Term[] }>();
   lattices = new Map<string, [number, AggOp]>();
   private latticeRows: [string, number, string][] = [];
@@ -1534,6 +1539,10 @@ export class AggEval {
 
   /** Whether the correlation `mk` of a data-stratified element may be read now: it has been released. */
   private dsGate(mk: string): boolean {
+    if (this.dsFiring !== null && this.dsLayer.has(mk)) {
+      const [r, a] = mk.split('|');
+      if (r === this.dsFiring[0] && Number(a) < this.dsFiring[1]) return false;
+    }
     if (this.dsReleased.has(mk)) return true;
     const [rid, at] = mk.split('|');
     if (this.dsDone.has(`${rid}|${at}`)) throw new Bug(`a correlation of ${rid} was met that the data walk never reached`);
@@ -1558,11 +1567,10 @@ export class AggEval {
     for (const layer of this.dsLayers(comp)) {
       this.dsCarry(comp);
       const owners = rs.filter((r) => layer.some((k) => k.rid === r.id));
-      const grouped = (k: { rid: string; at: number }): boolean => (this.aggPlans.get(`${k.rid}|${k.at}`)?.group.length ?? 0) > 0;
       for (const k of layer) { this.dsReleased.add(k.mk); this.dsKeys.set(k.mk, { rid: k.rid, at: k.at, corr: k.corr }); }
-      const whole = layer.filter((k) => !grouped(k));
-      if (whole.length > 0) this.fireAll(owners.filter((r) => whole.some((k) => k.rid === r.id)));
-      this.fireKeys(layer.filter(grouped));
+      this.dsLayer = new Set(layer.map((k) => k.mk));
+      this.fireKeys(layer);
+      this.dsLayer.clear();
       this.poisonReaders(owners);
     }
     this.dsCarry(comp);
@@ -1595,16 +1603,20 @@ export class AggEval {
     this.curFront = newFront();
     const outer: [ERule[], number] = [this.batch, this.batchAt];
     this.batch = owners;
-    owners.forEach((r, i) => {
-      this.batchAt = i;
-      for (const k of keys.filter((x) => x.rid === r.id)) {
-        const a = r.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
-        const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
-        if (!a || !plan) throw new Bug('a correlation of no element');
-        const s0 = this.dsBind(a, plan, k.corr);
-        if (s0 !== null) this.fireRule(r, null, s0);
-      }
-    });
+    this.dsCharge = true;
+    try {
+      owners.forEach((r, i) => {
+        this.batchAt = i;
+        for (const k of keys.filter((x) => x.rid === r.id)) {
+          const a = r.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
+          const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
+          if (!a || !plan) throw new Bug('a correlation of no element');
+          const s0 = this.dsBind(a, plan, k.corr);
+          this.dsFiring = [k.rid, k.at];
+          if (s0 !== null) this.fireRule(r, null, s0);
+        }
+      });
+    } finally { this.dsCharge = false; this.dsFiring = null; }
     [this.batch, this.batchAt] = outer;
     const front = this.curFront;
     this.curFront = newFront();
@@ -2612,7 +2624,7 @@ export class AggEval {
         const [dbNew, dbid] = this.put(V.derived_by, KERNEL_PERSP, [factTerm(head.rel, persp, args), mka(r.id), mki(tick)], F_DRV);
         if (dbNew) noteFront(out, V.derived_by, dbid);
       }
-    }
+    } else if (this.dsCharge) this.bumpSteps();
     if (isNew) noteFront(out, head.rel, id);
   }
 

@@ -22,6 +22,8 @@ check[checks]("rust/rofl/tests/cool.rs", "a_volume_this_engine_did_not_write_is_
 check[checks]("rust/rofl/tests/cool.rs", "an_unknown_volume_cools_nothing", test).
 check[checks]("rust/rofl/tests/cool.rs", "the_trail_cools_and_comes_back_whole", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_trail_this_engine_did_not_write_is_refused", test).
+check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_chain_of_sums_is_fired_once_per_sum", test).
+check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_layer_that_fires_an_instance_again_spends_the_budget", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -332,6 +334,7 @@ check[checks]("facts/goldens.rofl", "agg_count_why", world).
 check[checks]("facts/goldens.rofl", "agg_count_witness", world).
 check[checks]("facts/goldens.rofl", "agg_critpath_demo", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_budget", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_chain", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_cycle", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_eval", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_groups", world).
@@ -608,6 +611,7 @@ check[checks](".github/workflows/ci.yml", "install dependencies (the scanner nee
 check[checks](".github/workflows/ci.yml", "goldens (bun)", ci).
 test_file[checks]("rust/rofl/tests/agg_worlds.rs").
 test_file[checks]("rust/rofl/tests/cool.rs").
+test_file[checks]("rust/rofl/tests/datastrat_scale.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").

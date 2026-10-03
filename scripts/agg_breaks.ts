@@ -5349,6 +5349,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ds_layer_fires_whole",
+  "what": "a layer of a stratified component fires every instance of the rules that own its correlations, not only the instances new to it",
+  "expect": {
+   "agg_datastrat_chain": "the state holds the row hole"
+  }
+ },
+ {
+  "id": "ds_layer_refires",
+  "what": "a layer fires an instance again for each of its elements a layer releases, not once for the first",
+  "expect": {
+   "agg_datastrat_budget": "the state lacks the row value"
+  }
+ },
+ {
   "id": "retract_thr_cells_kept",
   "what": "the thresholds of a rule read again whole stay known to the evaluation: a quorum cell that is gone is found where it was",
   "expect": {
@@ -5589,6 +5603,34 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_layer_fires_whole",
+  "what": "the TypeScript layer fires every instance of the rules that own its correlations",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      this.fireKeys(layer);",
+    "      this.dsCharge = true;\n      try { this.fireAll(owners); } finally { this.dsCharge = false; }"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_chain": "the state holds the row hole"
+  }
+ },
+ {
+  "id": "ts_ds_layer_refires",
+  "what": "the TypeScript layer fires an instance again for each of its elements a layer releases",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (this.dsFiring !== null && this.dsLayer.has(mk)) {",
+    "    if (this.dsFiring !== null && this.dsLayer.has(mk) && false) {"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_budget": "the state lacks the row value"
   }
  },
  {

@@ -1,0 +1,69 @@
+-- examples/checks/agg-datastrat-chain-check.rofl — agg_datastrat_chain: every cell of
+-- the chain of agg-datastrat-chain.rofl has its value, c(k) = k, inside a budget
+-- the chain's own 60 firings fit and a layer firing its rules whole (1830) does not.
+dc_wrong(C, V) :- dc_want(C, V), not val(C, V).
+dc_extra(C) :- val(C, _), not dc_want(C, _).
+alarm(dc_wrong).
+alarm(dc_extra).
+dc_want(c0, 1).
+dc_want(c1, 1).
+dc_want(c2, 2).
+dc_want(c3, 3).
+dc_want(c4, 4).
+dc_want(c5, 5).
+dc_want(c6, 6).
+dc_want(c7, 7).
+dc_want(c8, 8).
+dc_want(c9, 9).
+dc_want(c10, 10).
+dc_want(c11, 11).
+dc_want(c12, 12).
+dc_want(c13, 13).
+dc_want(c14, 14).
+dc_want(c15, 15).
+dc_want(c16, 16).
+dc_want(c17, 17).
+dc_want(c18, 18).
+dc_want(c19, 19).
+dc_want(c20, 20).
+dc_want(c21, 21).
+dc_want(c22, 22).
+dc_want(c23, 23).
+dc_want(c24, 24).
+dc_want(c25, 25).
+dc_want(c26, 26).
+dc_want(c27, 27).
+dc_want(c28, 28).
+dc_want(c29, 29).
+dc_want(c30, 30).
+dc_want(c31, 31).
+dc_want(c32, 32).
+dc_want(c33, 33).
+dc_want(c34, 34).
+dc_want(c35, 35).
+dc_want(c36, 36).
+dc_want(c37, 37).
+dc_want(c38, 38).
+dc_want(c39, 39).
+dc_want(c40, 40).
+dc_want(c41, 41).
+dc_want(c42, 42).
+dc_want(c43, 43).
+dc_want(c44, 44).
+dc_want(c45, 45).
+dc_want(c46, 46).
+dc_want(c47, 47).
+dc_want(c48, 48).
+dc_want(c49, 49).
+dc_want(c50, 50).
+dc_want(c51, 51).
+dc_want(c52, 52).
+dc_want(c53, 53).
+dc_want(c54, 54).
+dc_want(c55, 55).
+dc_want(c56, 56).
+dc_want(c57, 57).
+dc_want(c58, 58).
+dc_want(c59, 59).
+dc_want(c60, 60).
+-- expect-no-row: hole[$kernel]($adhoc,budget_exhausted)

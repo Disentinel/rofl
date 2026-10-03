@@ -1432,6 +1432,10 @@ brk("ds_verify_own_cells"). brk_kind("ds_verify_own_cells", switch).
 brk_expects("ds_verify_own_cells", "agg_datastrat_groups").
 brk("ds_ground_unreleased"). brk_kind("ds_ground_unreleased", switch).
 brk_expects("ds_ground_unreleased", "agg_datastrat_groups").
+brk("ds_layer_fires_whole"). brk_kind("ds_layer_fires_whole", switch).
+brk_expects("ds_layer_fires_whole", "agg_datastrat_chain").
+brk("ds_layer_refires"). brk_kind("ds_layer_refires", switch).
+brk_expects("ds_layer_refires", "agg_datastrat_budget").
 brk("retract_thr_cells_kept"). brk_kind("retract_thr_cells_kept", switch).
 brk_expects("retract_thr_cells_kept", "agg_incr_thr").
 brk("retract_thr_unclosed"). brk_kind("retract_thr_unclosed", switch).
@@ -1477,6 +1481,10 @@ brk("ts_ds_verify_own_cells"). brk_kind("ts_ds_verify_own_cells", ts).
 brk_expects("ts_ds_verify_own_cells", "agg_datastrat_groups").
 brk("ts_ds_ground_unreleased"). brk_kind("ts_ds_ground_unreleased", ts).
 brk_expects("ts_ds_ground_unreleased", "agg_datastrat_groups").
+brk("ts_ds_layer_fires_whole"). brk_kind("ts_ds_layer_fires_whole", ts).
+brk_expects("ts_ds_layer_fires_whole", "agg_datastrat_chain").
+brk("ts_ds_layer_refires"). brk_kind("ts_ds_layer_refires", ts).
+brk_expects("ts_ds_layer_refires", "agg_datastrat_budget").
 brk("rank_dir_ignored"). brk_kind("rank_dir_ignored", switch).
 brk_expects("rank_dir_ignored", "agg_rank_tuple_eval").
 brk_expects("rank_dir_ignored", "agg_rank_tuple_witness").
@@ -1613,7 +1621,9 @@ switch_site("ds_group_resealed", "rust/rofl/src/engine.rs").
 switch_site("ds_group_whole", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_hole_uncarried", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_in_undecided", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_layer_fires_whole", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_layer_flat", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_layer_refires", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_neg_invisible", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_no_demote", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_root_dropped", "rust/rofl/src/engine/datastrat.rs").

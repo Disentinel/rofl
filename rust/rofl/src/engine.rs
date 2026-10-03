@@ -482,6 +482,12 @@ pub struct Eval {
     ds_elems: HashSet<(Sym, u32)>,
     ds_released: HashSet<datastrat::AggKey>,
     ds_done: HashSet<(Sym, u32)>,
+    /// A firing a layer of a data-stratified component makes again, that concludes nothing new, is a step (`fire_keys`).
+    ds_charge: bool,
+    /// The correlations a layer released, and the element `fire_keys` is firing: an instance two of them release
+    /// is fired by the first alone (`ds_gate`).
+    ds_layer: HashSet<datastrat::AggKey>,
+    ds_firing: Option<(Sym, u32)>,
     /// The lattice relations, from `lattice_decl`: arity and operation; an
     /// idempotent tag's too, as the order lattice it is.
     lattices: HashMap<Sym, (usize, AggOp)>,
@@ -949,6 +955,9 @@ impl Eval {
             ds_elems: HashSet::new(),
             ds_released: HashSet::new(),
             ds_done: HashSet::new(),
+            ds_charge: false,
+            ds_layer: HashSet::new(),
+            ds_firing: None,
             lattices: HashMap::new(),
             lattice_rows: Vec::new(),
             decl_refused: Vec::new(),
@@ -3591,6 +3600,8 @@ impl Eval {
                     out.note(self.v.derived_by, dbid);
                 }
             }
+        } else if self.ds_charge {
+            self.bump_steps()?;
         }
         if is_new {
             out.note(head.rel, id);

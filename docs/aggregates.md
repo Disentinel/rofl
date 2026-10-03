@@ -2971,8 +2971,10 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   and `E in S` with S known is decided, binding E to each element.
 - A LAYER is one more than the greatest layer among the correlations a correlation
   reaches without passing another, 0 for none. Each layer is released together
-  (`Eval::ds_released`), its rules fired whole, and the news propagated to a
-  fixpoint before the next is: the gate in `solve_body`'s aggregate arm lets a rule
+  (`Eval::ds_released`), the rule of each correlation fired over the instances that
+  read it and no others (`fire_keys`: the rule's body solved from the correlation's
+  shared values, and its groups where a rule binds them), and the news propagated to
+  a fixpoint before the next is: the gate in `solve_body`'s aggregate arm lets a rule
   read a correlation only once it is released, and the rules are live
   (`activate`) from the start, so what a sealed cell concludes reaches the next layer
   by the ordinary semi-naive propagation.
@@ -3044,10 +3046,14 @@ it after the round, like any rule above it.
 **What it does not do.** The walk is exact where a closed relation keys the cells,
 which is every spreadsheet; a premise whose key a value of the component binds reads
 everything the relation could give. Components with a lattice, a subsumption, a
-threshold, a counting tag or a demand-backed relation in them are not taken. Each
-layer fires the rules that own its correlations whole, so a component d layers deep
-with c correlations costs d x c firings (`f_a_stratified_layer_fires_its_rules_whole`:
-300 sums in a chain 0.26 s, 2000 in 15 s). Proofs: `agg_datastrat_*` in
+threshold, a counting tag or a demand-backed relation in them are not taken. A layer
+fires the instances new to it, so a chain of n sums is n firings, and not n x n/2
+(`f_a_stratified_layer_fires_its_rules_whole`: 2000 sums in a chain took 5.7 s of whole
+firings and take 0.18 s; the instances of a rule with a count and a sum are released
+independently, each by its own correlation, and an instance two of them release together is fired by the first alone). The firings are counted by the
+budget: a firing a layer makes that concludes nothing new is a step (`ds_charge`), which is none here and
+the square of the chain for a layer that fires whole (`agg_datastrat_chain`). The rules of the component are fired
+whole once more after its last layer, which is the pass `ds_done` guards. Proofs: `agg_datastrat_*` in
 `facts/checks.rofl`, each planted fault in `scripts/agg_breaks.ts`
 (`ds_*`, and `ts_ds_*` for the TypeScript engine).
 

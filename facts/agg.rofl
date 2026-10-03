@@ -1192,6 +1192,9 @@ work(w_agg_group_is_a_cell, "each group of a grouped aggregate is a cell of its 
 work_state(w_agg_group_is_a_cell, done).
 work_proof(w_agg_group_is_a_cell, "agg_datastrat_groups").
 work_proof(w_agg_group_is_a_cell, "agg_datastrat_cycle").
+work(w_agg_layer_fires_the_new, "a layer of a data-stratified component fires only the instances that are new to it (f_a_stratified_layer_fires_its_rules_whole): the rule over each correlation the layer releases, not every instance of the rule; a chain of n sums fires n times, a chain of 2000 runs in under a second, both engines, byte parity; done only with the work_proof worlds").
+work_state(w_agg_layer_fires_the_new, done).
+work_proof(w_agg_layer_fires_the_new, "agg_datastrat_chain").
 work(w_agg_member_keeps_its_derivations, "a deduplicated member keeps every derivation (f_a_deduplicated_member_keeps_one_derivation): a count, sum, holistic or threshold member holds the premises of every derivation of its projection value, the text-least first, in both engines; the state prints them, a retraction (and so an excise) keeps a member another derivation supports, and `why all` shows them; done only with the work_proof worlds").
 work_state(w_agg_member_keeps_its_derivations, done).
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_state").
