@@ -3633,8 +3633,8 @@ work(w_agg_rank_by_tuple,
 work_state(w_agg_rank_by_tuple, open).
 
 work(w_ts_bridge_names_a_past_premise,
-  "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise.").
-work_state(w_ts_bridge_names_a_past_premise, open).
+  "THE TS EXPLAIN BRIDGE NAMES A PAST PREMISE THAT IS GONE (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): `no record for K` where Rust prints `K [past tick]`; name it from its key and the frozen derived_by rows. whycheck on a world that does not carry the premise. DONE 2026-10-03: the premise is named from its key and the frozen derived_by rows, world staged_neg_why_nocarry; the `no record` of the finding no longer reproduces (the one evaluator keeps dead records), see the note.").
+work_state(w_ts_bridge_names_a_past_premise, done).
 
 work(w_agg_retract_fallback_tail,
   "THE RETRACTION'S NAMED FALLBACKS (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold reading what changed, a staged or demanded rule, a supported cell a reset rule also owns, a reset rule concluding what a changed cell concludes. Each gets a delta where bounded or a recorded reason; differential test extended.").

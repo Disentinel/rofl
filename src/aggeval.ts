@@ -6583,15 +6583,15 @@ export class AggEval {
       return;
     }
     if (pr.t !== 'fact') { this.renderPrem(pr, indent, o, next); return; }
-    const r = this.rec(pr.key);
-    const ft = canonTerm(factTerm(r.rel, r.persp, r.args));
+    // NAMED FROM ITS KEY: a fact of a tick that is over has no record here, the frozen derived_by rows are keyed by it
     if (this.pastRows === null) {
       const by = new Map<string, string[]>();
       for (const d of this.store.relAll(V.derived_by)) {
         this.whyScans++;
         const a = d.args;
-        if (a[1]?.k === 'a' && a[2]?.k === 'i') {
-          const k = canonTerm(a[0]) + '@' + a[2].v;
+        const f = a[0];
+        if (a[1]?.k === 'a' && a[2]?.k === 'i' && f.k === 'f' && f.name === '$fact' && f.args.length === 3 && f.args[0].k === 'a' && f.args[1].k === 'a') {
+          const k = factKey(f.args[0].name, f.args[1].name, unlist(f.args[2])) + '@' + a[2].v;
           let e = by.get(k);
           if (!e) { e = []; by.set(k, e); }
           e.push(a[1].name);
@@ -6599,7 +6599,7 @@ export class AggEval {
       }
       this.pastRows = by;
     }
-    const rules = [...(this.pastRows.get(ft + '@' + t) ?? [])].sort(cmpStr);
+    const rules = [...(this.pastRows.get(pr.key + '@' + t) ?? [])].sort(cmpStr);
     const pad = '  '.repeat(indent);
     next.push(line(rules.length === 0 ? `${pad}${pr.key} [past tick]` : `${pad}${pr.key}  <= ${rules.join(', ')} @tick ${t} [past tick]`));
   }
