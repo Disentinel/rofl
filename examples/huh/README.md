@@ -1,5 +1,7 @@
 # HUH — How'd yoU get Here
 
+**Count reading:** domain — a magnitude: how many log lines reached a bucket.
+
 Provenance on the object every engineer touches daily: a shell pipe.
 
 ```

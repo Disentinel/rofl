@@ -1,5 +1,7 @@
 # SPAT — Scheduling Plans And Tradeoffs
 
+**Count reading:** fragility — one way for a trip to happen is a single point of failure; zero without a named person rests the branch on them.
+
 A household week, modelled: who is where minute by minute, who is covering
 which child, how much slack every handover has — and, for every hole, **the
 constraint that caused it and whose constraint it is**.

@@ -1,5 +1,7 @@
 # LOOT — rules as plunder
 
+**Count reading:** fragility — one derivation, and that one foreign, is a fragile belief.
+
 An NPC walks a swamp road, takes books off corpses, and reads them. **A book is
 a rulepack.** Reading it puts its rules in the NPC's head, and the head is a
 ROFL store — so "reading a book" is `load`, and nothing else.

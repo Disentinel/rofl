@@ -1,5 +1,7 @@
 # DITTO — prove the refactoring preserved what it promised
 
+**Count reading:** domain — reserve: how many independent routes still reach an effect; one means the spare is gone.
+
 *Pin the model, make the edit, and check the invariants the edit said it would
 not touch.*
 

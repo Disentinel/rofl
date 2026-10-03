@@ -2388,6 +2388,29 @@ finding above). Viterbi rounds each product down; the log-scale reading of
 runtime/semirings.ts, exact and tropical with max, is not a tag. A tag cannot
 be asserted into; its input is weighed in by a rule.
 
+**What a count reads as.** The number is a number of derivations and nothing
+more; which way it points is domain knowledge, and it belongs to the instance
+that folds it, not to the counting semiring (`f_counting_reads_oppositely_by_domain`).
+The same count has been read five ways in this tree:
+
+| reading | many derivations mean | one means | zero means | examples |
+| --- | --- | --- | --- | --- |
+| robustness | the conclusion survives losing a support | one support is a single point of failure | not concluded | nope, oops, moot |
+| ambiguity | a defect: more than one way to get the answer | the answer is unambiguous | no answer | aka, slop |
+| launderability | many independent clean routes wash a dirty derivation | one route to confirm | nothing in the model can wash it | bleep |
+| fragility | the belief has spare routes | one way to happen is a single point of failure | no route at all | drip, rip, loot, spat |
+| the instance's own domain | whatever the example says it measures: coupling in blam, reserve in ditto, a share of worlds in sus, a magnitude in huh | stated by the example | stated by the example | blam, ditto, goof, huh, iffy, npc, sus, wtf, yak |
+
+A tool that ships a bare count invites the reader to take robustness where
+the domain means ambiguity. So every example that folds a count says which
+reading it takes, in its README, on a line of the form
+
+    **Count reading:** robustness | ambiguity | launderability | fragility | domain — one sentence.
+
+`npm run docs -- --check` fails for an example whose sources fold a count
+(`countingSemiring` or a `counting` tag, outside `examples/checks`) and whose
+README has no such line, or names a reading that is not one of the five.
+
 ## Subsumption, as built
 
 w_agg_subsumption, in the Rust engine; decisions in

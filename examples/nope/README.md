@@ -1,5 +1,7 @@
 # NOPE — `whynot` for access control
 
+**Count reading:** robustness — many independent routes to a privilege survive the removal of one.
+
 Not *"Access Denied"*, but **which policy, at which level of the hierarchy,
 on which condition**. And then the question no IAM tool answers at all:
 **how many independent paths grant this access** — because if there are six,

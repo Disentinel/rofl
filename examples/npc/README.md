@@ -1,5 +1,7 @@
 # NPC — Non-Player Cognition
 
+**Count reading:** domain — a census of finite and infinite counts across ticks; the number is the subject, not a verdict.
+
 Ten agents in a walled yard at night. The engine is not asked a question about
 them. **It runs them.** Every tick it derives what each one intends, decomposes
 that into subgoals, proposes concrete acts, arbitrates the conflict with a

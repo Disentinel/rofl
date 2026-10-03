@@ -1,5 +1,7 @@
 # SUS — suspicion under semirings
 
+**Count reading:** domain — the share of consistent worlds in which a player is guilty, model counting.
+
 Eight players. Two of them are traitors. Everybody says things, and **some of
 them are lying**.
 
