@@ -2481,6 +2481,31 @@ check_opt("agg_incr_demand", retract, "dm_z(1)").
 check_opt("agg_incr_demand", retract, "dm_a(7)").
 proves_work("agg_incr_demand", w_agg_retract_fallback_tail).
 
+-- A MEMBER KEEPS EVERY DERIVATION (w_agg_member_keeps_its_derivations): a cell's member holds the premises of every
+-- derivation of its projection value, the text-least first; the state prints them, a retraction keeps a member another
+-- derivation supports and moves its canonical derivation when the retracted fact was that one, `why all` shows them
+check_world("agg_member_derivs_state").
+check_file("agg_member_derivs_state", "examples/checks/agg-member-derivs.rofl").
+check_file("agg_member_derivs_state", "examples/checks/agg-member-derivs-state-check.rofl").
+check_opt("agg_member_derivs_state", together, 1).
+proves_work("agg_member_derivs_state", w_agg_member_keeps_its_derivations).
+
+check_world("agg_member_derivs_retract").
+check_file("agg_member_derivs_retract", "examples/checks/agg-member-derivs.rofl").
+check_file("agg_member_derivs_retract", "examples/checks/agg-member-derivs-retract-check.rofl").
+check_opt("agg_member_derivs_retract", together, 1).
+check_opt("agg_member_derivs_retract", retract, "md_chan(2, y)").
+check_opt("agg_member_derivs_retract", retract, "md_chan(3, x)").
+check_opt("agg_member_derivs_retract", retract, "md_chan(1, x)").
+proves_work("agg_member_derivs_retract", w_agg_member_keeps_its_derivations).
+
+check_world("agg_member_derivs_why").
+check_file("agg_member_derivs_why", "examples/checks/agg-member-derivs.rofl").
+check_file("agg_member_derivs_why", "examples/checks/agg-member-derivs-why-check.rofl").
+check_opt("agg_member_derivs_why", together, 1).
+check_opt("agg_member_derivs_why", explain, 1).
+proves_work("agg_member_derivs_why", w_agg_member_keeps_its_derivations).
+
 -- the holes of a world with no aggregate go with the fault that made them, in the stock evaluator too
 check_world("agg_incr_stockholes").
 check_file("agg_incr_stockholes", "examples/checks/agg-incr-stockholes.rofl").

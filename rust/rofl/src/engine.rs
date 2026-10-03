@@ -13,6 +13,7 @@ use crate::cell::{key_atoms, rank_cmp, KeyAtom, Algebra, iv_bounds, mk_iv, narro
 use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
+    Member,
     resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
@@ -4046,11 +4047,10 @@ impl Eval {
         let provisional = members
             .into_iter()
             .take(need)
-            .map(|m| NewMember {
-                proj: m.proj.into_boxed_slice(),
-                value: Term::int(1),
-                height: 0,
-                prems: m.derivs.into_iter().next().map(|d| d.1).unwrap_or_default(),
+            .map(|m| {
+                let mut ds = m.derivs.into_iter().map(|d| d.1);
+                let prems = ds.next().unwrap_or_default();
+                NewMember { proj: m.proj.into_boxed_slice(), value: Term::int(1), height: 0, prems, others: ds.collect() }
             })
             .collect();
         let c = self.store.add_cell(NewCell {
@@ -4495,7 +4495,9 @@ impl Eval {
                     // the least derivation at the member's least height
                     let (j, h, d) = found[*k];
                     let m = &all[i][j];
-                    NewMember { proj: m.proj.clone().into_boxed_slice(), value: Term::int(1), height: h, prems: m.derivs[d].1.clone() }
+                    let others = brk!("keep_first_derivation" => Vec::new();
+                        m.derivs.iter().enumerate().filter(|(e, _)| *e != d).map(|(_, x)| x.1.clone()).collect());
+                    NewMember { proj: m.proj.clone().into_boxed_slice(), value: Term::int(1), height: h, prems: m.derivs[d].1.clone(), others }
                 })
                 .collect();
             let height = members.iter().map(|m| m.height).max().unwrap_or(0);
@@ -4588,16 +4590,26 @@ impl Eval {
         for (gkey, idxs) in groups {
             // one representative per identity: the least signature wins
             let least = |j: usize, i: usize| brk!("first_rep" => true; cmp_js(&cands[j].sig, &cands[i].sig) != std::cmp::Ordering::Greater);
+            // the other derivations of a representative's identity, by signature
+            let mut alts: HashMap<usize, Vec<usize>> = HashMap::new();
             let reps: Vec<usize> = if dedup {
                 let mut by_proj: HashMap<Vec<Term>, usize> = HashMap::new();
+                let mut all: HashMap<Vec<Term>, Vec<usize>> = HashMap::new();
                 for i in idxs {
                     let id = brk!("sum_by_value" => cands[i].proj[..1].to_vec(); cands[i].proj.clone());
+                    all.entry(id.clone()).or_default().push(i);
                     match by_proj.get(&id) {
                         Some(&j) if least(j, i) => {}
                         _ => {
                             by_proj.insert(id, i);
                         }
                     }
+                }
+                for (id, rep) in &by_proj {
+                    let mut rest: Vec<usize> = all[id].iter().copied().filter(|i| cands[*i].sig != cands[*rep].sig).collect();
+                    rest.sort_by(|x, y| cmp_js(&cands[*x].sig, &cands[*y].sig));
+                    rest.dedup_by(|x, y| cands[*x].sig == cands[*y].sig);
+                    alts.insert(*rep, rest);
                 }
                 by_proj.into_values().collect()
             } else {
@@ -4738,7 +4750,7 @@ impl Eval {
             }
             let mut members: Vec<NewMember> = Vec::with_capacity(kept.len());
             brk!("phantom" => if kept.is_empty() && matches!(value, CellValue::Value(_)) {
-                members.push(NewMember { proj: vec![Term::int(0)].into_boxed_slice(), value: Term::int(0), height: 0, prems: Vec::new() });
+                members.push(NewMember { proj: vec![Term::int(0)].into_boxed_slice(), value: Term::int(0), height: 0, prems: Vec::new(), others: Vec::new() });
             }; ());
             let mut height = 0u32;
             let kept: Vec<usize> = brk!("trunc5" => kept.into_iter().take(5).collect(),
@@ -4751,6 +4763,8 @@ impl Eval {
                     value: values[reps[o]],
                     height: hs[o],
                     prems: c.prems.clone(),
+                    others: brk!("keep_first_derivation" => Vec::new();
+                        alts.get(&reps[o]).map(|v| v.iter().map(|i| cands[*i].prems.clone()).collect()).unwrap_or_default()),
                 });
             }
             // the key: every shared variable's value, in `shared` order
@@ -12056,6 +12070,7 @@ impl Eval {
                     for p in self.store.member_prems(m).to_vec() {
                         self.render_member_prem(c, p, indent + 2, next);
                     }
+                    self.render_alt_derivations(c, m, i, indent + 1, o, next);
                 }
             }
             PremRef::Cell(c) => {
@@ -12094,7 +12109,23 @@ impl Eval {
                     for p in self.store.member_prems(m).to_vec() {
                         self.render_member_prem(c, p, indent + 2, next);
                     }
+                    self.render_alt_derivations(c, m, i, indent + 1, o, next);
                 }
+            }
+        }
+    }
+
+    /// `why all`: the member's other derivations, each under its own line,
+    /// after the canonical one `why` shows alone.
+    fn render_alt_derivations(&mut self, c: CellId, m: &Member, i: usize, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        if o.members != usize::MAX || brk!("why_all_one_derivation" => true; false) {
+            return;
+        }
+        let alts: Vec<Vec<PremRef>> = self.store.member_derivs(m).skip(1).map(|d| d.to_vec()).collect();
+        for (k, ps) in alts.into_iter().enumerate() {
+            next.line(format!("{}#{}.{} {} [another derivation]", "  ".repeat(indent), i + 1, k + 2, tuple_text(&self.h, &m.proj)));
+            for p in ps {
+                self.render_member_prem(c, p, indent + 1, next);
             }
         }
     }

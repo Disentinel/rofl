@@ -206,14 +206,17 @@ pub struct CellRec {
 }
 
 /// One member: for count and sum a distinct projection tuple, for the
-/// idempotent orders a distinct derivation. `prems` are its representative
-/// derivation's premises, one per inner body element.
+/// idempotent orders a distinct derivation. `prems` are its canonical
+/// derivation's premises, one per inner body element; `others` are the
+/// premises of every other derivation of the same tuple, in signature order
+/// (`Store::member_derivs`).
 #[derive(Clone)]
 pub struct Member {
     pub proj: Box<[Term]>,
     pub value: Term,
     pub height: u32,
     prems: (u32, u32),
+    others: (u32, u32),
 }
 
 /// A relation the cell read, and the round it was closed in.
@@ -241,6 +244,7 @@ pub struct NewMember {
     pub value: Term,
     pub height: u32,
     pub prems: Vec<PremRef>,
+    pub others: Vec<Vec<PremRef>>,
 }
 
 #[derive(Default, Clone)]
@@ -248,9 +252,29 @@ pub struct Cells {
     recs: Vec<CellRec>,
     members: Vec<Member>,
     prems: Vec<PremRef>,
+    /// the ranges of `prems` that are a member's other derivations
+    alts: Vec<(u32, u32)>,
     seals: Vec<Seal>,
     /// `(owner, key, tick)`: a cell is sealed once per evaluation of a tick.
     by_key: HashMap<(CellOwner, Box<[Term]>, u32), CellId>,
+}
+
+impl Cells {
+    fn push_prems(&mut self, prems: &[PremRef]) -> (u32, u32) {
+        let at = self.prems.len() as u32;
+        self.prems.extend_from_slice(prems);
+        (at, prems.len() as u32)
+    }
+
+    fn member_of(&mut self, m: NewMember) -> Member {
+        let prems = self.push_prems(&m.prems);
+        let first = self.alts.len() as u32;
+        for o in &m.others {
+            let r = self.push_prems(o);
+            self.alts.push(r);
+        }
+        Member { proj: m.proj, value: m.value, height: m.height, prems, others: (first, m.others.len() as u32) }
+    }
 }
 
 #[derive(Clone)]
@@ -1902,6 +1926,11 @@ impl Store {
                 prems.sort_by(|a, b| cmp_js(a, b));
                 out.push_str(&prems.join("; "));
                 out.push(']');
+                for o in self.member_derivs(m).skip(1) {
+                    let mut ps: Vec<String> = o.iter().map(|p| self.prem_text(h, *p)).collect();
+                    ps.sort_by(|a, b| cmp_js(a, b));
+                    out.push_str(&format!(" alt [{}]", ps.join("; ")));
+                }
             }
         }
         self.write_lattice(h, &mut out);
@@ -2010,14 +2039,8 @@ impl Store {
         self.cells.by_key.insert((c.owner, c.key.clone(), c.tick), id);
         let m_at = self.cells.members.len() as u32;
         for m in c.members {
-            let p_at = self.cells.prems.len() as u32;
-            self.cells.prems.extend_from_slice(&m.prems);
-            self.cells.members.push(Member {
-                proj: m.proj,
-                value: m.value,
-                height: m.height,
-                prems: (p_at, m.prems.len() as u32),
-            });
+            let member = self.cells.member_of(m);
+            self.cells.members.push(member);
         }
         let m_len = self.cells.members.len() as u32 - m_at;
         let s_at = self.cells.seals.len() as u32;
@@ -2069,6 +2092,13 @@ impl Store {
         let (a, n) = self.cells.recs[c as usize].members;
         &self.cells.members[a as usize..(a + n) as usize]
     }
+    /// EVERY DERIVATION OF A MEMBER, the canonical one first, then the rest in
+    /// signature order.
+    pub fn member_derivs<'a>(&'a self, m: &'a Member) -> impl Iterator<Item = &'a [PremRef]> {
+        let alts = &self.cells.alts[m.others.0 as usize..(m.others.0 + m.others.1) as usize];
+        std::iter::once(self.member_prems(m)).chain(alts.iter().map(|(a, n)| &self.cells.prems[*a as usize..(a + n) as usize]))
+    }
+
     pub fn member_prems(&self, m: &Member) -> &[PremRef] {
         &self.cells.prems[m.prems.0 as usize..(m.prems.0 + m.prems.1) as usize]
     }
@@ -2307,6 +2337,10 @@ impl Store {
                         value: m.value,
                         height: m.height,
                         prems: old.prems[m.prems.0 as usize..(m.prems.0 + m.prems.1) as usize].to_vec(),
+                        others: old.alts[m.others.0 as usize..(m.others.0 + m.others.1) as usize]
+                            .iter()
+                            .map(|(a, n)| old.prems[*a as usize..(a + n) as usize].to_vec())
+                            .collect(),
                     })
                     .collect(),
                 ..bare
@@ -2607,9 +2641,8 @@ impl Store {
     pub fn reseal_cell(&mut self, id: CellId, members: Vec<NewMember>, height: u32) {
         let m_at = self.cells.members.len() as u32;
         for m in members {
-            let p_at = self.cells.prems.len() as u32;
-            self.cells.prems.extend_from_slice(&m.prems);
-            self.cells.members.push(Member { proj: m.proj, value: m.value, height: m.height, prems: (p_at, m.prems.len() as u32) });
+            let member = self.cells.member_of(m);
+            self.cells.members.push(member);
         }
         let r = &mut self.cells.recs[id as usize];
         r.members = (m_at, self.cells.members.len() as u32 - m_at);

@@ -4918,6 +4918,64 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "keep_first_derivation",
+  "what": "a member keeps only its canonical derivation: the others are dropped when the cell is sealed",
+  "expect": {
+   "agg_member_derivs_state": "lacks the row mem $cell(r71cb3651,2,0,$cons(a,$nil)) #2",
+   "agg_member_derivs_retract": "lacks the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1",
+   "agg_member_derivs_why": "why_text_missing"
+  }
+ },
+ {
+  "id": "retract_alts_unindexed",
+  "what": "the back-index cites a member's canonical derivation only: a retracted fact that is another derivation leaves the member's derivation set as it was",
+  "expect": {
+   "agg_member_derivs_retract": "holds the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1 id=2253268ea44d73e0"
+  }
+ },
+ {
+  "id": "retract_alt_member_dropped",
+  "what": "a retraction drops a member that another derivation still supports (an excise of one of its facts removes the member's row with it)",
+  "expect": {
+   "agg_member_derivs_retract": "lacks the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1"
+  }
+ },
+ {
+  "id": "why_all_one_derivation",
+  "what": "`why all` prints a member's canonical derivation only",
+  "expect": {
+   "agg_member_derivs_why": "why_text_missing"
+  }
+ },
+ {
+  "id": "ts_keep_first_derivation",
+  "what": "the TypeScript evaluator seals a member with its canonical derivation only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "others: (alts.get(reps[o]) ?? []).map((i) => cands[i].prems) });",
+    "others: [] });"
+   ]
+  ],
+  "expect": {
+   "agg_member_derivs_state": "lacks the row mem $cell(r71cb3651,2,0,$cons(a,$nil)) #2"
+  }
+ },
+ {
+  "id": "ts_why_all_one_derivation",
+  "what": "the TypeScript explainer prints a member's canonical derivation only under `why all`",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (o.members !== Infinity) return;",
+    "return;"
+   ]
+  ],
+  "expect": {
+   "agg_member_derivs_why": "why_text_missing"
+  }
+ },
+ {
   "id": "retract_no_readers",
   "what": "the facts a cell's reader concluded from its old record stay when the cell is replaced",
   "expect": {

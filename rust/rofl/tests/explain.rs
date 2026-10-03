@@ -725,3 +725,25 @@ fn why_and_excise_refuse_the_same_literals() {
         assert_eq!(s.excise(q).unwrap_err(), "excise needs a ground fact", "{q}");
     }
 }
+
+/// A member another derivation supports survives the excise of one of its facts: the count stays what it was,
+/// and only the member's own derivation goes. Excising the last one removes the member and the count with it.
+#[test]
+fn excise_keeps_a_member_another_derivation_supports() {
+    let w = "
+edb(sale).
+edb(chan).
+sale(1). sale(2).
+chan(1, x). chan(1, y). chan(2, x).
+n(N) :- N is count(K : sale(K), chan(K, _)).
+";
+    let mut s = Session::fresh(1_000_000);
+    s.load(w, None).expect("load");
+    s.evaluate().expect("evaluate");
+    assert_eq!(s.excise("chan(1, x)").unwrap(), (vec!["chan[main](1,x)".to_string()], Vec::new()));
+    assert_eq!(s.excise("chan(1, y)").unwrap(), (vec!["chan[main](1,y)".to_string()], Vec::new()));
+    let (removed, added) = s.excise("chan(2, x)").unwrap();
+    assert_eq!(removed, ["chan[main](2,x)", "n[main](2)"]);
+    assert_eq!(added, ["n[main](1)"]);
+    assert!(s.holds("n(2)").unwrap());
+}

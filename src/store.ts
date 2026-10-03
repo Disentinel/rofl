@@ -29,7 +29,8 @@ export type PremRef =
  *  immutable record named by `$cell(Rule, At, Tick, Key)`, with its members
  *  (a count's distinct tuples, a min's derivations reaching the value) and
  *  the round each relation it read was closed in. */
-export interface CellMember { proj: Term[]; value: Term; height: number; prems: PremRef[] }
+/** `prems` is the member's canonical derivation, `others` every other one of the same tuple, in signature order. */
+export interface CellMember { proj: Term[]; value: Term; height: number; prems: PremRef[]; others: PremRef[][] }
 export interface CellSeal { rel: string; round: number }
 export type CellVal = { k: 'value'; t: Term } | { k: 'empty' } | { k: 'hole'; reason: string };
 export interface CellRec {
@@ -939,7 +940,7 @@ export class Store implements FactStore {
       lines.push(`cell ${c.key} ${c.op} = ${cellValueText(c.value)} h=${c.height} tick=${c.tick} sealed=[${c.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}] alg=${algText(c.op as AggOp)}${this.tagRules.has(c.rule) ? ',tag' : ''} use=${algStrategy(c.op as AggOp)}`);
       if (like) { lines.push(`mem ${c.key} = ${like.key}`); continue; }
       c.members.forEach((m, i) => {
-        lines.push(`mem ${c.key} #${i + 1} id=${memberId(c, m)} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]`);
+        lines.push(`mem ${c.key} #${i + 1} id=${memberId(c, m)} (${m.proj.map(canonTerm).join(',')}) h=${m.height} [${m.prems.map(premText).sort().join('; ')}]${m.others.map((o) => ` alt [${o.map(premText).sort().join('; ')}]`).join('')}`);
       });
     }
     lines.push(...this.latticeLines());
@@ -998,7 +999,7 @@ export class Store implements FactStore {
         key: c.key, rule: c.rule, at: c.at, op: c.op, keyTerms: c.keyTerms.map(termToJson),
         value: c.value.k === 'value' ? termToJson(c.value.t) : null, hole: c.value.k === 'hole' ? c.value.reason : null,
         height: c.height, tick: c.tick, desc: c.desc,
-        members: like ? [] : c.members.map((m) => ({ proj: m.proj.map(termToJson), value: termToJson(m.value), height: m.height, prems: m.prems })),
+        members: like ? [] : c.members.map((m) => ({ proj: m.proj.map(termToJson), value: termToJson(m.value), height: m.height, prems: m.prems, ...(m.others.length > 0 ? { others: m.others } : {}) })),
         sealed: c.seals.map((x) => ({ rel: x.rel, round: x.round })),
         ...(like ? { membersOf: like.key } : {}),
       }));
@@ -1032,7 +1033,7 @@ export class Store implements FactStore {
       const value: CellVal = typeof c.hole === 'string' ? { k: 'hole', reason: c.hole } : c.value !== null && c.value !== undefined
         ? { k: 'value', t: termFromJson(c.value) } : { k: 'empty' };
       const members: CellMember[] = (c.members ?? []).map((m: any) => ({ proj: m.proj.map(termFromJson), value: termFromJson(m.value),
-        height: count(m.height, 'member height'), prems: m.prems }));
+        height: count(m.height, 'member height'), prems: m.prems, others: m.others ?? [] }));
       const seals: CellSeal[] = (c.sealed ?? []).map((x: any) => {
         if (typeof x.rel !== 'string' || x.rel === '') throw new Error('snapshot refused: bad cell seal');
         return { rel: x.rel, round: count(x.round, 'seal round') };

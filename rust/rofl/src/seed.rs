@@ -179,11 +179,19 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
                 m["proj"].as_array().ok_or("bad member")?.iter().map(|a| term_from_json(h, a)).collect();
             let prems = read_prems(h, &by_key, &HashMap::new(), m["prems"].as_array().ok_or("bad member premises")?, &mut dangling)
                 .ok_or("a cell member names a fact the snapshot does not hold")?;
+            let mut others = Vec::new();
+            for o in m["others"].as_array().into_iter().flatten() {
+                others.push(
+                    read_prems(h, &by_key, &HashMap::new(), o.as_array().ok_or("bad member derivation")?, &mut dangling)
+                        .ok_or("a cell member names a fact the snapshot does not hold")?,
+                );
+            }
             members.push(NewMember {
                 proj: proj?.into(),
                 value: term_from_json(h, &m["value"])?,
                 height: count(&m["height"], "member height")?,
                 prems,
+                others,
             });
         }
         let mut seals = Vec::new();
@@ -330,9 +338,14 @@ fn cells_json(h: &Heap, s: &Store) -> Vec<Value> {
                 .iter()
                 .filter(|_| like.is_none())
                 .map(|m| {
-                    json!({ "proj": m.proj.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
+                    let mut j = json!({ "proj": m.proj.iter().map(|t| term_to_json(h, *t)).collect::<Vec<_>>(),
                             "value": term_to_json(h, m.value), "height": m.height,
-                            "prems": prems_json(h, s, s.member_prems(m)) })
+                            "prems": prems_json(h, s, s.member_prems(m)) });
+                    let others: Vec<Value> = s.member_derivs(m).skip(1).map(|o| Value::Array(prems_json(h, s, o))).collect();
+                    if !others.is_empty() {
+                        j["others"] = Value::Array(others);
+                    }
+                    j
                 })
                 .collect();
             let sealed: Vec<Value> =
