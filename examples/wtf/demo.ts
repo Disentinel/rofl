@@ -10,10 +10,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
 import { decodeRules } from '../../src/reflect.ts';
-import type { BodyElem } from '../../src/unify.ts';
 import { provenanceSemiring, provenanceOf, type Polynomial } from '../../runtime/semirings.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
-import { peelRounds, reachable, type Peel } from '../../src/rounds.ts';
+import { schedule, reachable, type Peel } from '../../src/aggeval.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.resolve(HERE, '..', '..');
@@ -194,15 +193,13 @@ export function peelOf(r: Rofl): Peel {
   let p = peelCache.get(r);
   if (p === undefined) {
     const rules = decodeRules(r.store).rules;
-    const asNeg = (e: BodyElem): BodyElem[] =>
-      e.t === 'agg' ? e.body.flatMap((i) => i.t === 'pos' ? [{ t: 'neg' as const, lit: i.lit }] : []) : [e];
-    p = peelRounds(rules.map((x) => ({ ...x, clause: { ...x.clause, body: x.clause.body.flatMap(asNeg) } })) as never);
+    p = schedule(rules);
     // an aggregate waits for its input like a negation does, but removes nothing from it
-    for (const x of rules) for (const e of x.clause.body) if (e.t === 'agg') {
-      for (const i of e.body) if (i.t === 'pos' && !x.clause.body.some((n) => n.t === 'neg' && n.lit.rel === i.lit.rel)) {
-        p.deps.neg.get(x.clause.head.rel)?.delete(i.lit.rel);
-        p.deps.pos.get(x.clause.head.rel)?.add(i.lit.rel);
-      }
+    for (const [rid, head, inner] of p.aggEdges) {
+      const rule = rules.find((x) => x.id === rid);
+      if (rule?.clause.body.some((n) => n.t === 'neg' && n.lit.rel === inner)) continue;
+      p.deps.neg.get(head)?.delete(inner);
+      p.deps.pos.get(head)?.add(inner);
     }
     peelCache.set(r, p);
   }

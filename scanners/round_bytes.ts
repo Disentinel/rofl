@@ -11,7 +11,7 @@
 // evaluation, and the thing that crosses is the FRONT — the delta, per
 // relation — going down, and the derived tuples coming back. Both are countable
 // without changing any of it: the evaluator installs a NEW `FrontInfo` object
-// per round (engine.ts:1217), so object identity is the round number, and
+// per round (`AggEval.curFront`), so object identity is the round number, and
 // `FrontInfo.byRel` is the delta already grouped the way a pushdown would ship
 // it.
 //
@@ -23,7 +23,7 @@
 //
 // usage: node --experimental-strip-types scanners/round_bytes.ts [world ...]
 import { Rofl } from '../src/api.ts';
-import { Evaluation } from '../src/engine.ts';
+import { AggEval } from '../src/aggeval.ts';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -49,10 +49,10 @@ function tight(key: string): number {
 }
 
 function measure(name: string, files: string[]) {
-  const proto = Evaluation.prototype as unknown as Record<string, any>;
+  const proto = AggEval.prototype as unknown as Record<string, any>;
   const orig = { fireRule: proto.fireRule, matchPremise: proto.matchPremise, conclude: proto.conclude };
   // Every front object the evaluator installs, in the order it installs them.
-  // Round N's INPUT is the object installed by round N-1 (engine.ts:1217).
+  // Round N's INPUT is the object installed by round N-1 (`AggEval.curFront`).
   const fronts: FrontLike[] = [];
   const seen = new Set<unknown>();
   const rowsRead: number[] = [];   // candidate rows the store handed back, per round

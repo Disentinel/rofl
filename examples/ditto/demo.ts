@@ -12,7 +12,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import { extractFacts, SCANNER_PERSP } from '../../scanners/js.ts';
 import {
@@ -59,7 +59,7 @@ export const TIER_CONFIDENCE: Record<string, number> = {
 export const BOOT_RULES: number = (() => {
   const r = new Rofl();
   ok(r.load(BOOT), 'boot.rofl');
-  return new Evaluation(r.store, {}).rules.length;
+  return new AggEval(r.store, 0, 'rounds').rules.length;
 })();
 
 function ok(res: { ok: boolean; diagnostics: string[] }, what: string): void {
@@ -215,7 +215,7 @@ export interface Hygiene {
  *  does not, so every number below would then describe a different fact set
  *  than the verdicts do. Checked, not assumed. */
 export function hygiene(r: Rofl): Hygiene {
-  const ev = new Evaluation(r.store, {});
+  const ev = new AggEval(r.store, 0, 'rounds');
   const audits: Record<string, number> = {};
   for (const [name, q] of [
     ['malformed', 'malformed[audit](R)'], ['breach', 'breach[audit](R)'],
@@ -225,7 +225,7 @@ export function hygiene(r: Rofl): Hygiene {
   return {
     rules: ev.rules.length,
     unsafe: ev.rules.filter((x) => !x.safe).map((x) => x.canon),
-    demandRels: ev.demandRels.size,
+    demandRels: ev.demandRels.length,
     unstratified: col(r, 'unstratified(X)', 'X'),
     audits,
     holes: r.query('hole(H, W)').rows.length,

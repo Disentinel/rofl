@@ -8,7 +8,7 @@
 // one rule firing.
 //
 // This scanner measures from inside, and it does so WITHOUT INSTRUMENTING THE
-// KERNEL. `Evaluation`'s methods are wrapped on the prototype for the length
+// KERNEL. `AggEval`'s methods are wrapped on the prototype for the length
 // of one run and restored afterwards, so src/ carries no counter and no flag
 // — the same reason scanners/necessity.ts uses V8 coverage rather than a
 // probe. What the wrappers can see is exactly the join's shape:
@@ -31,7 +31,7 @@
 // `planBody` exists to choose and (measured over the corpus) never changes.
 
 import * as fs from 'node:fs';
-import { Evaluation, type ERule } from '../src/engine.ts';
+import { AggEval, type ERule } from '../src/aggeval.ts';
 import type { Lit } from '../src/unify.ts';
 import { image, fromImage, parse } from '../examples/ring1/demo.ts';
 
@@ -98,7 +98,7 @@ export function measure(src: string): void {
  *  attributed to the run. */
 export function measureWith(body: () => void): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const proto = Evaluation.prototype as unknown as Record<string, any>;
+  const proto = AggEval.prototype as unknown as Record<string, any>;
   const orig = {
     fireRule: proto.fireRule, matchPremise: proto.matchPremise,
     negHolds: proto.negHolds, conclude: proto.conclude,

@@ -8,8 +8,9 @@
 // engines agree byte for byte on every aggregate proof world: the goldens pin
 // one hash per world and both must reach it. `Rofl` runs it for a store that
 // declares a lattice, a tag or a dominance rule, or reflects a rule with an
-// aggregate or a join read (`storeHasAggregates`); every other program runs
-// on `src/engine.ts` / `src/rounds.ts` exactly as before.
+// aggregate or a join read (`storeHasAggregates`); every other program is run
+// as a plain one (`plain`): planned with the cross-product hold and explained as
+// the plain explainer always has, as the Rust engine does (`Eval::plain`).
 //
 // WHERE THE TWO DIFFER IN SHAPE AND NOT IN ANSWER: a fact's identity is its
 // key string here and a `FactId` there, and wherever the Rust engine orders by
@@ -37,11 +38,11 @@ import {
   V, IFACE, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
-  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME,
+  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm,
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText } from './shrug.ts';
 import { tarjan } from './scc.ts';
-import { policyStore } from './engine.ts';
+import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
 
 // ---------------------------------------------------------------- halting
@@ -207,6 +208,9 @@ interface RuleAnswer {
   latticeRefused: [string, string][]; latticeOuter: Map<string, string[]>; readsLatticeMembers: boolean;
   readsDominated: boolean;
 }
+/** What safety.rofl said of a program, by a digest of everything it was asked (`safetyAnswer`). */
+const safetyMemo = new Map<string, RuleAnswer>();
+const SAFETY_MEMO_CAP = 64;
 const emptyAnswer = (): RuleAnswer => ({
   unsafeRules: new Set(), demandRels: [], trigger: new Map(), late: new Set(), readsProvenance: false, aggRefused: [],
   emptyZero: new Set(), readsMembers: false, latticeRefused: [], latticeOuter: new Map(), readsLatticeMembers: false,
@@ -302,7 +306,7 @@ function planVars(b: BodyElem): string[] {
  *  held back until every variable it shares with the rest is bound. Returns
  *  the order, the first negation that never became ready, whether `mustBind`
  *  is ground under the plan, and what was bound. */
-export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[]):
+export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[], hold = false):
   { order: number[]; stuck: number | null; ground: boolean; bound: string[] } {
   const seenIn = new Map<string, number[]>();
   const note = (vs: string[], where: number) => {
@@ -325,9 +329,38 @@ export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[]
   };
   const plan: number[] = [];
   const pending: number[] = [];
+  const flush = () => {
+    for (;;) {
+      const at = pending.findIndex((j) => { const x = body[j]; return x.t === 'neg' && negReady(x.lit, j); });
+      if (at < 0) break;
+      plan.push(pending[at]);
+      pending.splice(at, 1);
+    }
+  };
+  // WITH `hold`, ONE POSITIVE MOVES: a literal sharing no variable with what is bound is a cross product where it stands,
+  // and waits for something that binds one of its variables. A negation or a builtin is the barrier: what is held goes
+  // in ahead of it in written order. A program with no aggregate is planned so (`AggEval.plain`).
+  const held: number[] = [];
+  const shares = (i: number): boolean => {
+    const b = body[i];
+    return b.t !== 'pos' || [...b.lit.args, b.lit.persp].some((t) => tVars(t).some((v) => bound.includes(v)));
+  };
+  const takePos = (i: number) => {
+    const b = body[i] as BodyElem & { t: 'pos' };
+    for (const a of b.lit.args) bindAll(a);
+    bindAll(b.lit.persp);
+    plan.push(i);
+    flush();
+  };
   body.forEach((b, i) => {
+    if (b.t === 'pos') {
+      if (hold && bound.length > 0 && !shares(i)) { held.push(i); return; }
+      takePos(i);
+      for (let at = held.findIndex(shares); at >= 0; at = held.findIndex(shares)) takePos(held.splice(at, 1)[0]);
+      return;
+    }
+    while (held.length > 0) takePos(held.shift()!);
     if (b.t === 'neg') pending.push(i);
-    else if (b.t === 'pos') { for (const a of b.lit.args) bindAll(a); bindAll(b.lit.persp); plan.push(i); }
     else if (b.t === 'bi') {
       if (b.op === '=') { if (groundIn(b.l)) bindAll(b.r); else if (groundIn(b.r)) bindAll(b.l); }
       else if ((b.op === 'is' || b.op === 'in') && groundIn(b.r)) bindAll(b.l);
@@ -337,27 +370,23 @@ export function planOrder(mustBind: Term[], body: BodyElem[], preBound: string[]
       for (const v of b.shared ?? []) if (!bound.includes(v)) bound.push(v);
       plan.push(i);
     }
-    for (;;) {
-      const at = pending.findIndex((j) => { const x = body[j]; return x.t === 'neg' && negReady(x.lit, j); });
-      if (at < 0) break;
-      plan.push(pending[at]);
-      pending.splice(at, 1);
-    }
+    flush();
   });
+  while (held.length > 0) takePos(held.shift()!);
   return { order: plan, stuck: pending.length > 0 ? pending[0] : null, ground: mustBind.every(groundIn), bound };
 }
 
-export function planElems(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[]):
+export function planElems(mustBind: Term[], body: BodyElem[], preBound: string[], outside: string[], hold = false):
   { plan: BodyElem[]; stuck: number | null; ground: boolean; bound: string[] } {
-  const r = planOrder(mustBind, body, preBound, outside);
+  const r = planOrder(mustBind, body, preBound, outside, hold);
   return { plan: r.order.map((i) => body[i]), stuck: r.stuck, ground: r.ground, bound: r.bound };
 }
 
-export function planBodyAgg(c: Clause): { plan: BodyElem[]; stuck: number | null; ground: boolean; bound: string[] } {
+export function planBodyAgg(c: Clause, hold = false): { plan: BodyElem[]; stuck: number | null; ground: boolean; bound: string[] } {
   const must = [...c.head.args, c.head.persp];
   const outside: string[] = [];
   for (const t of must) for (const v of varsOf(t)) if (!outside.includes(v)) outside.push(v);
-  return planElems(must, c.body, [], outside);
+  return planElems(must, c.body, [], outside, hold);
 }
 
 /** A RULE WHOSE FAULTS A LATTICE DECIDES runs each builtin that can fail after
@@ -398,14 +427,46 @@ export interface Peel {
   /** What each relation reads, positively and strictly; the strict edges a body aggregate wrote (`soft`), as
    *  `head\u0001read`; and `[rule, at]` of every element whose edge `demote` made positive. */
   pos: Map<string, Set<string>>; neg: Map<string, Set<string>>; soft: Set<string>; demoted: [string, number][];
+  /** Per round, the relations that settled in it. */
+  layers: string[][];
+  /** The one-hop relation dependency graph the peel was taken over, keyed on the head. */
+  deps: { pos: Map<string, Set<string>>; neg: Map<string, Set<string>> };
 }
+
+/** What a peel reads of a rule. */
+export type PeelRule = Pick<ERule, 'id' | 'clause' | 'latticeOuter'>;
+
+/** THE SCHEDULE of decoded rules, for every caller that asks which round a relation settles in or whether a program
+ *  stratifies: the evaluator's own peel, with the aggregate edges and the lattices of the rules it is given. */
+export function schedule(rules: { id: string; clause: Clause }[]): Peel {
+  return peelRounds(rules.map((r) => ({ id: r.id, clause: r.clause, latticeOuter: [] })), [], []);
+}
+
+/** `dep`'s transitive closure: `reachable(peel).get(A)` holds every relation A depends on, at any number of hops. */
+export function reachable(peel: Peel): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  const oneHop = (rel: string): string[] => [...(peel.deps.pos.get(rel) ?? []), ...(peel.deps.neg.get(rel) ?? [])];
+  for (const rel of peel.round.keys()) {
+    const seen = new Set<string>();
+    const stack = oneHop(rel);
+    while (stack.length > 0) {
+      const x = stack.pop()!;
+      if (seen.has(x)) continue;
+      seen.add(x);
+      stack.push(...oneHop(x));
+    }
+    out.set(rel, seen);
+  }
+  return out;
+}
+
 const edgeKey = (a: string, b: string): string => `${a}\u0001${b}`;
 
 /** `peel_rounds`: the round number IS the stratum number, and a stall is the
  *  rejection. An aggregate's edge is a negation's; a lattice read from outside
  *  its recursion is strict; what the kernel writes at a close sits above. `demote` holds the `head\u0001inner` pairs whose
  *  aggregate edge is positive instead: a component a data-level stratification takes (`dataDemotable`). */
-export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set()): Peel {
+export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set()): Peel {
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
@@ -481,6 +542,8 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
   const round = new Map<string, number>();
   const settled = new Set<string>();
   for (const rel of all) if (!heads.has(rel)) { settled.add(rel); round.set(rel, 0); }
+  const layers: string[][] = [[...settled].sort()];
+  const deps = { pos, neg };
   let n = 0;
   while (settled.size < all.size) {
     n++;
@@ -492,11 +555,12 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       if (cand.size === before) break;
     }
     if (cand.size === 0) {
-      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, pos, neg, soft, demoted };
+      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, pos, neg, soft, demoted, layers, deps };
     }
     for (const rel of cand) { settled.add(rel); round.set(rel, n); }
+    layers.push([...cand].sort());
   }
-  return { round, rounds: n, stalled: false, stuck: [], aggEdges, pos, neg, soft, demoted };
+  return { round, rounds: n, stalled: false, stuck: [], aggEdges, pos, neg, soft, demoted, layers, deps };
 }
 
 /** THE COMPONENTS A DATA-LEVEL STRATIFICATION MAY TAKE, from a peel that stalled (`data_demotable`): a strongly connected
@@ -646,6 +710,15 @@ export class AggEval {
   space = DEFAULT_SPACE;
   mode: Mode;
   naive = false;
+  /** A PROGRAM WITH NO AGGREGATE CONSTRUCT is planned with the cross-product hold and explained as the plain explainer
+   *  always has (rust/rofl `Eval::plain`); `forceAgg` holds it false whatever the program. */
+  plain = false;
+  forceAgg = false;
+  private whyUnk: { index: Map<string, string>; hit: Set<string> } | null = null;
+  /** Whether a later evaluation of the same world may keep the derived relations whose cone did not move (src/reuse.ts). */
+  reuse = true;
+  /** Asked every 4096 steps; true stops the evaluation as if its budget ran out. */
+  stop: (() => boolean) | undefined = undefined;
   steps = 0;
   rows = 0;
   peakRows = 0;
@@ -655,7 +728,7 @@ export class AggEval {
   wellFounded = false;
   latticeImprovements = 0;
   holeId: Term = HOLE_ID_DEFAULT;
-  private demandRels: [string, ERule[]][] = [];
+  demandRels: [string, ERule[]][] = [];
   private active: ERule[] = [];
   staged = new Map<string, StagedFact>();
   private stagedAlts = new Map<string, [string, PremRef[]][]>();
@@ -872,6 +945,7 @@ export class AggEval {
 
   private prepare(): void {
     this.wellFounded = wellFoundedDeclared(this.store);
+    this.plain = !this.forceAgg && !this.bootstrap && !storeHasAggregates(this.store);
     this.noProvenance = sealedBodies(this.store).has(SEALED_PROVENANCE);
     const decoded = decodeRules(this.store);
     this.declRefused = [];
@@ -981,7 +1055,7 @@ export class AggEval {
   }
 
   private classify(r: DRule): ERule {
-    const pb = planBodyAgg(r.clause);
+    const pb = planBodyAgg(r.clause, this.plain);
     const safe = pb.stuck === null && !this.answer.unsafeRules.has(r.id);
     let hasNeg = false, hasAgg = false, hasThr = false;
     const thrRels: string[] = [], posRels: string[] = [];
@@ -1022,6 +1096,27 @@ export class AggEval {
   /** ASK safety.rofl, in a store of its own, under the stock evaluator. */
   private safetyAnswer(rules: DRule[]): RuleAnswer {
     if (this.bootstrap || (rules.length === 0 && this.latticeRows.length === 0 && this.domRels.size === 0)) return emptyAnswer();
+    // WHAT safety.rofl IS ASKED is a function of the reflected program alone: one program, asked once
+    const keyed = [V.rule, V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg,
+      V.premise_agg, V.reserved, V.lattice_decl, V.tag_decl, V.lattice_widen, V.dominance, V.order_comp];
+    const parts = [...rules.map((r) => r.id), JSON.stringify(this.latticeRows), ...this.tagRefused.flat()];
+    for (const rel of keyed) for (const f of this.store.relAll(rel)) parts.push(f.key);
+    const memoKey = digest53(parts.join('\n'));
+    let answer = safetyMemo.get(memoKey);
+    if (answer === undefined) {
+      const asked = this.askSafety(rules);
+      answer = asked.answer;
+      if (asked.settled) {
+        if (safetyMemo.size >= SAFETY_MEMO_CAP) safetyMemo.clear();
+        safetyMemo.set(memoKey, answer);
+      }
+    }
+    const byPair = (a: [string, string], b: [string, string]) => cmpStr(a[0], b[0]) || cmpStr(a[1], b[1]);
+    return { ...answer, aggRefused: [...answer.aggRefused, ...setSpellingRefusals(rules, [...this.latticeRows]), ...this.tagRefused].sort(byPair) };
+  }
+
+  /** safety.rofl run over the reflection in a store of its own. */
+  private askSafety(rules: DRule[]): { answer: RuleAnswer; settled: boolean } {
     const pol = policyStore(SAFETY_DENSE);
     const add = (rel: string, persp: string, args: Term[]) => pol.add(rel, persp, args, F_BASE);
     for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos,
@@ -1143,7 +1238,8 @@ export class AggEval {
       }
     }
     const sub = new AggEval(pol, POLICY_BUDGET, 'strata', true);
-    try { sub.run(); } catch (e) { this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
+    let settled = true;
+    try { sub.run(); } catch (e) { settled = false; this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
     const atoms = (rel: string): string[] => {
       const out: string[] = [];
       for (const f of pol.relAll(rel)) if (f.args[0]?.k === 'a' && !out.includes(f.args[0].name)) out.push(f.args[0].name);
@@ -1157,27 +1253,30 @@ export class AggEval {
     const trigger = new Map<string, string[]>();
     for (const [a, b] of pairs(IFACE.trigger_of)) { let e = trigger.get(a); if (!e) { e = []; trigger.set(a, e); } if (!e.includes(b)) e.push(b); }
     const byPair = (a: [string, string], b: [string, string]) => cmpStr(a[0], b[0]) || cmpStr(a[1], b[1]);
-    const aggRefused = [...pairs('agg_refused'), ...setSpellingRefusals(rules, lattices), ...this.tagRefused].sort(byPair);
+    const aggRefused = pairs('agg_refused');
     const latticeRefused = pairs('lattice_refused').sort(byPair);
     const latticeOuter = new Map<string, string[]>();
     for (const [r, p] of pairs('lattice_outer')) { let e = latticeOuter.get(r); if (!e) { e = []; latticeOuter.set(r, e); } if (!e.includes(p)) e.push(p); }
     const emptyZero = new Set<string>();
     for (const f of pol.relAll('empty_zero')) if (f.args[0]?.k === 'a' && f.args[1]?.k === 'i') emptyZero.add(`${f.args[0].name}|${f.args[1].v}`);
-    return {
+    return { settled, answer: {
       unsafeRules: new Set(atoms(IFACE.unsafe_rule)), demandRels: atoms(IFACE.demand_rel), trigger, late: new Set(atoms(IFACE.late_rule)),
       readsProvenance: pol.relCount(IFACE.provenance_reader) > 0, aggRefused, emptyZero, readsMembers: pol.relCount('member_reader') > 0,
       latticeRefused, latticeOuter, readsLatticeMembers: pol.relCount('lattice_member_reader') > 0,
       readsDominated: pol.relCount('dominated_reader') > 0,
-    };
+    } };
   }
 
   // ----------------------------------------------------------------- run
 
   /** An evaluation, and for a world whose widened cells settled, the descending pass that narrows them and the evaluation again with what it found. */
   run(): Outcome {
-    this.store.dropEvalHoles();
+    this.peelCache = null;
+    const plan = this.planReuse();
+    // the hole rows the last evaluation of this tick wrote go with it (a hole is a base, frozen row, which clearDerived keeps)
+    if (plan.hits.size === 0) this.store.dropEvalHoles();
     this.narrowOut.clear();
-    let out = this.runPass();
+    let out = this.runPass(plan);
     if (out.partial || this.wellFounded || this.widenedX.size === 0) return out;
     // the widened result is an answer, narrowing only a tighter one: a descent that fails or an evaluation that closes a cell on another value leaves the first pass standing
     try {
@@ -1197,8 +1296,31 @@ export class AggEval {
     }
   }
 
-  private runPass(): Outcome {
-    this.clearDerived();
+  /** The relations a later evaluation may keep: only a plain program's, whose rules a fingerprint of the cone can speak for. */
+  private planReuse(): ReusePlan {
+    if (!this.reuse || this.bootstrap || this.wellFounded || this.answer.readsProvenance || this.store.relCount(V.hole) > 0
+      || storeHasAggregates(this.store)) return noReuse();
+    return planReuse(this.store, this.rules, this.scheduleToken(), (pol) => { new AggEval(pol, POLICY_BUDGET, 'strata', true).run(); });
+  }
+
+  /** The schedule this evaluation orders its negation phases by, written to the store for the next one's reuse gate to compare. */
+  private scheduleToken(): string {
+    const table = this.mode === 'rounds' ? this.peelOnce().round : this.readStrata();
+    return [...table.keys()].sort().map((k) => k + ':' + table.get(k)).join('|');
+  }
+
+  private peelCache: Peel | null = null;
+  private peelOnce(): Peel {
+    if (this.peelCache === null) {
+      const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
+      this.peelCache = peelRounds(this.rules, [...this.lattices.keys()], domEdges);
+    }
+    return this.peelCache;
+  }
+
+  private runPass(plan: ReusePlan = noReuse()): Outcome {
+    this.clearDerived(plan);
+    this.store.derivedSchedule = '';
     this.shrugReset();
     this.active = [];
     this.staged.clear();
@@ -1250,7 +1372,8 @@ export class AggEval {
     this.dsComps = []; this.dsElems.clear(); this.dsReleased.clear(); this.dsKeys.clear(); this.dsDone.clear();
     this.latticeImprovements = 0;
     this.seedNarrowing();
-    const safeRules = this.rules.filter((r) => r.safe);
+    // a relation served from the previous evaluation must not also be derived in this one: a second firing of the same rule would add a support the scratch run never had
+    const safeRules = this.rules.filter((r) => r.safe && !plan.hits.has(r.clause.head.rel));
     const readers = new Set(this.shrugReaders);
     const compared = new Set([...this.subs].filter(([, x]) => x.reads.length > 0).map(([p]) => p));
     const stratified = (r: ERule) => readers.has(r.id) || (compared.has(r.clause.head.rel) && r.clause.head.temporal !== 'next')
@@ -1346,6 +1469,11 @@ export class AggEval {
     this.store.dirty = false;
     this.store.partialEval = partial;
     this.store.noteEval(this.budget, this.steps, partial);
+    // a partial layer is not a layer, and nothing derived while something was left unknown is one the next evaluation may keep
+    if (!partial && plan.keys.size > 0 && this.stagedUnknown.size === 0 && this.store.relCount('shrug') === 0) {
+      this.store.derivedKeys = plan.keys;
+      this.store.derivedSchedule = this.scheduleToken();
+    }
     return { partial, staged: this.staged.size };
   }
 
@@ -2066,7 +2194,10 @@ export class AggEval {
   private wallHole(reason: string): void {
     const why = reason === BUDGET_REASON ? BUDGET_REASON : SPACE_REASON;
     this.holeMet(this.holeId, why);
-    if (this.evalHole([this.holeId, mka(why)])) this.chargeRow(null, false);
+    // A PLAIN PROGRAM'S WALL HOLE IS DELIBERATELY NOT NOTED: this host evaluates on every load and names each load's wall
+    // (hole($load(1), ...), hole($load(2), ...)), and budget_wall pins both
+    const isNew = this.plain ? this.put(V.hole, KERNEL_PERSP, [this.holeId, mka(why)], F_BASE_FROZEN)[0] : this.evalHole([this.holeId, mka(why)]);
+    if (isNew) this.chargeRow(null, false);
   }
 
   /** A RULE WHOSE AGGREGATE safety.rofl REFUSED IS A PROGRAM REJECTED. */
@@ -2104,8 +2235,8 @@ export class AggEval {
     return [...this.staged.values()].map((f): [string, StagedFact] => [factKey(f.rel, f.persp, f.args), f]).sort((a, b) => cmpStr(a[0], b[0]));
   }
 
-  private clearDerived(): void {
-    this.store.clearDerived(undefined, (rec, w) => factKey(V.derived_by, KERNEL_PERSP, [factTerm(rec.rel, rec.persp, rec.args), mka(w.ruleId), mki(w.tick)]));
+  private clearDerived(plan: ReusePlan = noReuse()): void {
+    this.store.clearDerived(plan.hits.size === 0 ? undefined : (rec) => reusedRec(plan.hits, rec), (rec, w) => factKey(V.derived_by, KERNEL_PERSP, [factTerm(rec.rel, rec.persp, rec.args), mka(w.ruleId), mki(w.tick)]));
   }
 
   /** The predicate `advanceTick` prunes the frozen layer with, or none. */
@@ -2265,7 +2396,7 @@ export class AggEval {
     this.batch = sorted;
     sorted.forEach((r, i) => {
       this.batchAt = i;
-      mergeFront(this.curFront, this.fireRule(r, null));
+      this.fireRule(r, null);
     });
     [this.batch, this.batchAt] = outer;
     const front = this.curFront;
@@ -2299,18 +2430,18 @@ export class AggEval {
         this.thrRound++;
         this.thrFresh.clear();
         for (const r of [...this.active]) {
-          if (this.naive) { mergeFront(this.curFront, this.fireRule(r, null)); continue; }
+          if (this.naive) { this.fireRule(r, null); continue; }
           if (!r.triggerRels.some((rel) => cur.byRel.has(rel))) continue;
-          if (r.hasDemandPrem) { mergeFront(this.curFront, this.fireRule(r, null)); continue; }
+          if (r.hasDemandPrem) { this.fireRule(r, null); continue; }
           r.plan.forEach((b, i) => {
             if (b.t !== 'pos') return;
             const keys = cur.byRel.get(b.lit.rel);
             if (!keys) return;
-            mergeFront(this.curFront, this.fireRule(r, [i, keys]));
+            this.fireRule(r, [i, keys]);
           });
           if (r.thrRels.some((rel) => cur.byRel.has(rel))) {
             this.thrFocus = this.thrFocusOf(r, cur);
-            try { mergeFront(this.curFront, this.fireRule(r, null)); } finally { this.thrFocus = null; }
+            try { this.fireRule(r, null); } finally { this.thrFocus = null; }
           }
         }
         front = this.curFront;
@@ -2320,17 +2451,16 @@ export class AggEval {
     this.liveFront = outer;
   }
 
-  private fireRule(r: ERule, frontAt: [number, Set<string>] | null): Front {
+  /** One firing of a rule: its conclusions join the round's front, `curFront`. */
+  private fireRule(r: ERule, frontAt: [number, Set<string>] | null): void {
     const wasFiring = this.firing;
     this.firing = true;
     let sols: Sol[];
     try { sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id); } finally { this.firing = wasFiring; }
-    const out = newFront();
     for (const sol of sols) {
       if (this.lattices.size > 0 && sol.prems.some((p) => p.t === 'fact' && !this.alive(p.key))) continue;
-      this.conclude(r, sol, out);
+      this.conclude(r, sol, this.curFront);
     }
-    return out;
   }
 
   private conclude(r: ERule, sol: Sol, out: Front): void {
@@ -2405,7 +2535,7 @@ export class AggEval {
 
   private bumpSteps(): void {
     this.steps++;
-    if (this.steps > this.budget) {
+    if (this.steps > this.budget || (this.steps & 4095) === 0 && this.stop?.()) {
       this.wallSpent = ['steps', this.steps, this.budget];
       throw new Wall(BUDGET_REASON);
     }
@@ -2513,6 +2643,8 @@ export class AggEval {
     } finally {
       this.rows -= held;
     }
+    // a body of positive premises all met in the store has nothing to record: its premises are the facts themselves
+    if (body.every((b) => b.t === 'pos') && acc.every((a) => a.prems.every((p) => p.t === 'fact'))) return acc;
     return acc.map((a) => ({ s: a.s, prems: a.prems.map((p, i) => this.recordPrem(body[i], p, a.s)) }));
   }
 
@@ -5715,13 +5847,17 @@ export class AggEval {
     return `${l.rel}[${canonTerm(cv[0])}](${cv.slice(1).map(canonTerm).join(',')})`;
   }
 
-  private indexProbe(l: Lit, s: Subst, persp: string | null): string[] | null {
+  /** The facts of a premise's relation that agree with what is ground in it, when the store indexes it. */
+  private indexProbe(l: Lit, s: Subst, persp: string | null): FactRec[] | null {
     if (!this.store.indexed(l.rel, persp)) return null;
     const pos: number[] = [], vals: string[] = [];
     l.args.forEach((a, i) => { const t = resolve(a, s); if (isGround(t)) { pos.push(i); vals.push(canonTerm(t)); } });
     if (pos.length === 0) return null;
-    const r = this.store.argMatches(l.rel, persp, l.args.length, pos, vals);
-    return r === null ? null : r.map((x) => x.key);
+    return this.store.argMatches(l.rel, persp, l.args.length, pos, vals);
+  }
+
+  private scanRel(rel: string, persp: string | null): FactRec[] {
+    return persp !== null ? this.store.relPersp(rel, persp) : this.store.relAll(rel);
   }
 
   /** Matches for one positive premise: store facts plus demand unfolding. */
@@ -5729,38 +5865,45 @@ export class AggEval {
     if (l.temporal === 'init' && this.store.tick !== 0) return [];
     const perspT = walk(l.persp, s);
     const persp = perspT.k === 'a' ? perspT.name : null;
-    let cands: string[];
+    let cands: FactRec[];
     if (only !== null) {
       const narrow = this.indexProbe(l, s, persp);
-      if (narrow !== null && narrow.length < only.size) cands = narrow.filter((f) => only.has(f));
-      else cands = [...only].filter((f) => { if (!this.alive(f)) return false; const r = this.rec(f); return r.rel === l.rel && (persp === null || r.persp === persp); });
+      if (narrow !== null && narrow.length < only.size) cands = narrow.filter((f) => only.has(f.key));
+      else {
+        cands = [];
+        for (const k of only) {
+          const r = this.store.get(k);
+          if (r !== undefined && r.rel === l.rel && (persp === null || r.persp === persp)) cands.push(r);
+        }
+      }
     } else {
-      cands = this.indexProbe(l, s, persp) ?? (persp !== null ? this.relPersp(l.rel, persp) : this.relAll(l.rel));
+      cands = this.indexProbe(l, s, persp) ?? this.scanRel(l.rel, persp);
     }
-    const out: [string, Subst, PremRef][] = [];
+    const out: [Subst, PremRef][] = [];
+    const keys: string[] = [];
     const seen = new Set<string>();
-    for (const f of cands) {
-      const fr = this.store.get(f);
-      if (fr === undefined) continue;
+    for (const fr of cands) {
       if (persp === null && isKernelLedger(fr.persp)) continue;
       const s2 = persp !== null ? s : unify(perspT, mka(fr.persp), s);
       if (s2 === null) continue;
       const s3 = unifyAll(l.args, fr.args, s2);
       if (s3 === null) continue;
-      if (!seen.has(f)) { seen.add(f); out.push([f, s3, { t: 'fact', key: f }]); }
+      if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
     if (drs !== undefined) {
-      const seenKeys = new Set(out.map(([k]) => k));
       for (const dr of drs[1]) {
         for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
           const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-          if (!seenKeys.has(dk)) { seenKeys.add(dk); out.push([dk, ms, mref]); }
+          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
         }
       }
     }
-    out.sort((a, b) => cmpStr(a[0], b[0]));
-    return out.map(([, s2, r]) => [s2, r]);
+    // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
+    let ordered = true;
+    for (let i = 1; i < keys.length; i++) if (keys[i - 1] > keys[i]) { ordered = false; break; }
+    if (ordered) return out;
+    return keys.map((_, i) => i).sort((a, b) => (keys[a] < keys[b] ? -1 : keys[a] > keys[b] ? 1 : 0)).map((i) => out[i]);
   }
 
   /** Top-down unfolding of a moded rule at a call site. */
@@ -5826,10 +5969,8 @@ export class AggEval {
     if (l.temporal === 'init' && this.store.tick !== 0) return true;
     const perspT = walk(l.persp, s);
     const persp = perspT.k === 'a' ? perspT.name : null;
-    const cands = this.indexProbe(l, s, persp) ?? (persp !== null ? this.relPersp(l.rel, persp) : this.relAll(l.rel));
-    for (const f of cands) {
-      const fr = this.store.get(f);
-      if (fr === undefined) continue;
+    const cands = this.indexProbe(l, s, persp) ?? this.scanRel(l.rel, persp);
+    for (const fr of cands) {
       if (persp === null && isKernelLedger(fr.persp)) continue;
       const s2 = persp !== null ? s : unify(perspT, mka(fr.persp), s);
       if (s2 === null) continue;
@@ -6199,26 +6340,48 @@ export class AggEval {
   /** `why`: the derivation tree of a fact that holds; `members` of an aggregate's printed. EVERY QUESTION RENAMES
    *  FROM ZERO, as src/api.ts explains a plain program on a fresh evaluation: the `#N` suffixes do not depend on
    *  what was asked before or what the evaluation renamed, and the counter is put back. */
-  whyText(lit: Lit, members = WHY_MEMBERS): string {
+  whyText(lit: Lit, members = WHY_MEMBERS, shown?: string): string {
     const saved = this.renameCounter;
     this.renameCounter = 0;
-    try { return this.whyAt(lit, members); } finally { this.renameCounter = saved; }
+    try { return this.whyAt(lit, members, shown); } finally { this.renameCounter = saved; }
   }
 
-  private whyAt(lit: Lit, members: number): string {
+  private whyAt(lit: Lit, members: number, shown?: string): string {
     const p = walk(lit.persp, new Map());
     if (p.k !== 'a' || !lit.args.every(isGround)) throw new Error('why needs a ground literal');
     const key = factKey(lit.rel, p.name, lit.args);
     if (!this.alive(key)) {
       const sh = this.shrugsOf(lit);
-      if (sh.length > 0) return sh.map(([f]) => this.shrugWhy(f)).join('\n');
-      throw new Error(`${key} does not hold; try: whynot ${key}`);
+      if (sh.length > 0) {
+        // a shrug is the answer to the aggregate evaluator, and the reason the plain one gives for not answering
+        const text = sh.map(([f]) => this.shrugWhy(f)).join('\n');
+        if (this.plain) throw new Error(text);
+        return text;
+      }
+      throw new Error(`${key} does not hold; try: whynot ${this.plain ? shown ?? key : key}`);
     }
     this.pastRows = null;
     this.whyScans = 0;
+    this.whyUnk = this.plain ? this.unknownCtx() : null;
     const out = this.renderTree(key, { members, query: key });
     this.pastRows = null;
-    return out;
+    // A `why` on an undefined atom answers with the tree AND the set the tree walked: the circular dependency that left it undefined, named.
+    const u = this.whyUnk;
+    this.whyUnk = null;
+    return u !== null && lit.rel === IFACE.unknown && u.hit.size > 0 ? `${out}\nunfounded set: ${[...u.hit].sort().join(', ')}` : out;
+  }
+
+  /** The `unknown` rows the store holds, keyed by the atom each stands for; null in every two-valued world. */
+  private unknownCtx(): { index: Map<string, string>; hit: Set<string> } | null {
+    const rows = this.store.relAll(IFACE.unknown);
+    if (rows.length === 0) return null;
+    const index = new Map<string, string>();
+    for (const f of rows) {
+      if (f.args.length !== 1) continue;
+      const at = unAtomTerm(f.args[0]);
+      if (at) index.set(factKey(at.rel, f.persp, at.args), f.key);
+    }
+    return { index, hit: new Set() };
   }
 
   /** THE TREE, WALKED WITH A STACK OF ITS OWN: a derivation as deep as the store holds renders without a frame per
@@ -6251,11 +6414,21 @@ export class AggEval {
     else {
       const w = this.store.witnessOf(id);
       if (w === undefined) {
-        next.push(line(`${pad}${key} ${this.alive(id) && r.base ? '[axiom]' : '[past tick]'}`));
+        next.push(line(`${pad}${key} ${this.alive(id) && (this.plain || r.base) ? '[axiom]' : '[past tick]'}`));
       } else {
         next.push(line(`${pad}${key}  <= ${w.ruleId} @tick ${w.tick}`));
+        if (this.whyUnk !== null && r.rel === IFACE.unknown && r.args.length === 1) {
+          const at = unAtomTerm(r.args[0]);
+          if (at) this.whyUnk.hit.add(factKey(at.rel, r.persp, at.args));
+        }
         const past = this.stagedFiring(r.rel, w.ruleId, w.tick, w.prems);
-        for (const pr of w.prems) next.push(past ? { t: 'past', pr, at: Math.max(0, w.tick - 1), indent: indent + 1 } : { t: 'prem', pr, indent: indent + 1 });
+        for (const pr of w.prems) {
+          const at = Math.max(0, w.tick - 1);
+          // the plain explainer writes a negation's demonstration when it reaches the firing, and its renaming suffixes count in that order
+          if (this.plain && pr.t === 'neg') { if (past) this.renderPast(pr, at, indent + 1, o, next); else this.renderPrem(pr, indent + 1, o, next); }
+          else if (this.plain && pr.t === 'bi') this.renderPrem(pr, indent + 1, o, next);
+          else next.push(past ? { t: 'past', pr, at, indent: indent + 1 } : { t: 'prem', pr, indent: indent + 1 });
+        }
       }
     }
     // what it rests on is rendered before it leaves the path
@@ -6427,6 +6600,12 @@ export class AggEval {
     const pad = '  '.repeat(indent);
     if (pr.t === 'fact') { next.push({ t: 'fact', id: pr.key, indent }); return; }
     if (pr.t === 'neg') {
+      // `not p` over an undefined p did not fail, it never settled: p's own row is the explanation
+      const und = this.whyUnk?.index.get(pr.key);
+      if (und !== undefined) {
+        next.push(line(`${pad}not ${pr.key} [undefined]`), { t: 'fact', id: und, indent: indent + 1 });
+        return;
+      }
       next.push(line(`${pad}not ${pr.key} [finite failure]`));
       if (!pr.key.includes('?')) {
         const sub = this.negDemo(pr.key);
@@ -6564,18 +6743,29 @@ export class AggEval {
   // ----------------------------------------------------------- whynot
 
   /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
-  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }): [boolean, string] {
+  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
     const saved = this.renameCounter;
     this.renameCounter = 0;
-    try { return this.whynotAt(lit, b); } finally { this.renameCounter = saved; }
+    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; }
   }
 
-  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }): [boolean, string] {
+  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
     const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set() };
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
-    if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${k} holds; nothing to demonstrate`];
+    if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${this.plain ? shown ?? k : k} holds; nothing to demonstrate`];
     const lines = [`whynot ${k}:`];
+    if (this.plain) {
+      // the plain explainer knows no lattice, counting or unknown tuple
+      const sh = this.shrugsOf(lit);
+      if (sh.length > 0) {
+        lines[0] = `whynot ${k}: no answer, a shrug`;
+        for (const [f] of sh) lines.push(this.shrugWhy(f));
+      }
+      ctx.path.add(this.cycleKey(lit));
+      lines.push(...this.explainTree(lit, ctx));
+      return [false, lines.join('\n')];
+    }
     const lat = this.whynotLattice(lit);
     if (lat !== null) { lines.push(...lat); return [false, lines.join('\n')]; }
     const cnt = this.whynotCounting(lit);
@@ -6777,7 +6967,7 @@ export class AggEval {
       let s: Subst | null = unify(rn.head.persp, mka(persp), new Map());
       for (let i = 0; s && i < key.length; i++) s = unify(rn.head.args[i], key[i], s);
       if (s === null) continue;
-      for (const sol of this.solveBody(planBodyAgg(rn).plan, s, 0, null, null)) {
+      for (const sol of this.solveBody(planBodyAgg(rn, this.plain).plan, s, 0, null, null)) {
         const v = resolve(rn.head.args[key.length], sol.s);
         const vs = rn.head.args.slice(key.length).map((a) => canonTerm(resolve(a, sol.s))).join(', ');
         const prems = sol.prems.flatMap((p) => (p.t === 'fact' ? [p.key] : p.t === 'bi' ? [p.desc] : p.t === 'neg' ? [`not ${p.key}`] : []));
@@ -6857,7 +7047,7 @@ export class AggEval {
 
   private failingPremises(rn: Clause, s0: Subst, rid: string): Map<string, Lit | null> {
     const out = new Map<string, Lit | null>();
-    this.exploreBody(planBodyAgg(rn).plan, 0, s0, out, { n: 0 }, rid);
+    this.exploreBody(planBodyAgg(rn, this.plain).plan, 0, s0, out, { n: 0 }, rid);
     return out;
   }
 

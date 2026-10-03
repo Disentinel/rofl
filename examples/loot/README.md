@@ -352,7 +352,7 @@ change the id, so the "no leak" half is not vacuous.
 `loot.rofl` §5 reads `derived_by` in a rule body, and it is the first *model* in
 this repository to do so. The kernel already anticipated it — a rule triggered by
 derivations anywhere in the program is outside the cone argument reuse rests on,
-so `src/engine.ts` declines to fingerprint anything rather than reuse something
+so the reuse plan (`src/reuse.ts`) declines to fingerprint anything rather than reuse something
 it cannot promise, and `test/derived-reuse.test.ts` pins that behaviour. What is
 new here is **paying for it**, and the price is visible in one number:
 
@@ -832,7 +832,7 @@ what the author wrote on the title page.
   loot.rofl §5 reads `derived_by` in a rule body, and it is the first MODEL in
   this repository to do so. The kernel already knew that would happen: a rule
   triggered by derivations anywhere in the program is outside the cone
-  argument that derived-relation reuse rests on, so src/engine.ts declines to
+  argument that derived-relation reuse rests on, so src/reuse.ts declines to
   reuse anything at all rather than reuse something it cannot promise. The
   behaviour is pinned by test/derived-reuse.test.ts, "a rule that reads
   provenance turns reuse off entirely"; what is new here is paying for it.

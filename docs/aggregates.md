@@ -1108,7 +1108,7 @@ a call to a relation answered on demand (the call's head under the solution it
 was met in, and one call up at a time each call that read it: `demand_fault`,
 `demandFault`), a body aggregate's cell holed, and a conclusion a hole kept
 from being staged at the tick before. One algorithm, in `rust/rofl/src/engine.rs`
-and `src/engine.ts`:
+and `src/aggeval.ts`:
 
 - A pending unknown is carried once its relation is closed (`plain_flush`,
   `plainFlush`), unless the tuple holds as a fact.
@@ -2993,8 +2993,9 @@ since each line is indented by its level.
 **Where it runs.** `Rofl` hands a store to `AggEval` when it declares a
 lattice, a tag or a dominance rule, reflects an aggregate, a join read, an
 interval function or a head writing a set with a variable, or holds a cell
-(`storeHasAggregates`); every other program runs on `src/engine.ts` and
-`src/rounds.ts` exactly as before. The evaluator is kept past its run, since
+(`storeHasAggregates`); every other program runs on it too, as a *plain* program
+(`AggEval.plain`): planned with the cross-product hold and explained as the plain
+explainer always did. The evaluator is kept past its run, since
 the tick boundary, `why`, `whynot` and the explain bridge read what it met
 (its unknowns, the widenings, a conflict's parties). `load`, `assert` and
 `assertClauses` admit every construct: a declaration is its kernel row
@@ -3054,20 +3055,18 @@ the TypeScript engine alone: `ts_max`, `ts_no_agg_edge`, `ts_no_empty_zero`,
 `ts_dominance_why_one_member`, `ts_whynot_hole_empty`,
 `ts_withdrawn_cell_stale_src`, `ts_why_depth_cut`. `Rofl.strataPlan` of an
 aggregate program is the plan `AggEval` ran (`AggEval.strataPlan`: the
-peel's round, or the ranked stratum), held by `aggregateDoors`; `prepared()`
-gives `query` only what both evaluators have (`Asked`), and a plain-only verb
-asks `plain()`, which refuses an aggregate program.
+peel's round, or the ranked stratum), held by `aggregateDoors`.
 
-**Not built, or not yet.** Two evaluators in one engine: `AggEval` answers
-every program `src/engine.ts` does (it is the Rust engine's own), so the
-plain evaluator could be retired onto it, with its reuse across evaluations,
-its `stop` callback and its naive mode, which `AggEval` does not have. The
-pure helpers of the unknown value (`holdsUnknown`, `bindUnknown`,
-`unifyUnknown`, in src/unify.ts) and `sameKeys` (src/store.ts) are one copy
-for both and for src/shrug.ts; seventy-two methods of the two evaluators are
-still named alike in both and largely copies of each other, open until the
-plain one retires
-(f_the_two_typescript_evaluators_copy_each_others_methods). Small
+**One evaluator.** `AggEval` answers every program, as the Rust engine does: the
+stock evaluator (`engine.ts` and `rounds.ts`) is deleted, and its reuse
+across evaluations (`src/reuse.ts`), its `stop` callback, its naive mode and its
+plain explainer are `AggEval`'s own
+(f_the_two_typescript_evaluators_copy_each_others_methods). The pure helpers of
+the unknown value (`holdsUnknown`, `bindUnknown`, `unifyUnknown`, in
+src/unify.ts) and `sameKeys` (src/store.ts) are one copy for it and for
+src/shrug.ts.
+
+**Not built, or not yet.** Small
 scale: a world the Rust engine answers in seconds at its walls can take the
 TypeScript engine far longer. The Rust `compact_wits` reverses a firing
 list when it compacts, which no world here reaches; an answer that depended

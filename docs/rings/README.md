@@ -78,7 +78,7 @@ into a table cell, which ended the row.
 
 ## What is not here
 
-- The evaluator. `src/engine.ts` and the Rust engine are the part of ring 0
+- The evaluator. `src/aggeval.ts` and the Rust engine are the part of ring 0
   that is code, not rules.
 - `examples/ring1/l1.rofl` and `l1.dense.rofl`: the first is `ring1.rofl`
   less five features its own source does not use, the second the same rules

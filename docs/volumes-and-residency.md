@@ -149,7 +149,7 @@ was in a volume nobody lifted.
 
 ## Lifting a volume: the tick boundary is required, not convenient
 
-`src/engine.ts` holds an `Assumption` — the frozen record of what `not p` is
+`src/aggeval.ts` holds an `Assumption` — the frozen record of what `not p` is
 judged against — **for the duration of a round**. Lifting a volume mid-round
 would answer some negations against a world without it and others against a
 world with it: two assumptions inside one round, and the well-founded semantics

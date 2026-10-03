@@ -578,15 +578,13 @@ brk_expects("shrug_given_wfs_unread", "agg_cell_shrug_given").
 brk("shrug_late_cut_refused"). brk_kind("shrug_late_cut_refused", switch).
 brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut").
 brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
-brk("ts_shrug_late_cut_refused"). brk_kind("ts_shrug_late_cut_refused", ts).
-brk_expects("ts_shrug_late_cut_refused", "agg_cell_shrug_given_cut").
 brk("ts_agg_shrug_late_cut_refused"). brk_kind("ts_agg_shrug_late_cut_refused", ts).
+brk_expects("ts_agg_shrug_late_cut_refused", "agg_cell_shrug_given_cut").
 brk_expects("ts_agg_shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
-brk("ts_shrug_given_off"). brk_kind("ts_shrug_given_off", ts).
-brk_expects("ts_shrug_given_off", "agg_cell_shrug_given").
 brk("ts_shrug_given_wfs_unread"). brk_kind("ts_shrug_given_wfs_unread", ts).
 brk_expects("ts_shrug_given_wfs_unread", "agg_cell_shrug_given").
 brk("ts_agg_shrug_given_off"). brk_kind("ts_agg_shrug_given_off", ts).
+brk_expects("ts_agg_shrug_given_off", "agg_cell_shrug_given").
 brk_expects("ts_agg_shrug_given_off", "agg_cell_shrug_given_agg").
 brk("below_paradox_meta_off"). brk_kind("below_paradox_meta_off", switch).
 brk_expects("below_paradox_meta_off", "agg_cell_wfs").

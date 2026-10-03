@@ -50,8 +50,11 @@ path_exists("examples/checks/agg-count-strata-3-refused-untabled.rofl").
 path_exists("examples/checks/agg-holistic-holes-check.rofl").
 path_exists("examples/checks/agg-holistic-holes-data.rofl").
 path_exists("examples/checks/agg-holistic-scale.rofl").
+path_exists("examples/checks/agg-incr-stacked.rofl").
+path_exists("examples/checks/agg-incr-stockholes.rofl").
 path_exists("examples/checks/agg-int-range-literal.rofl").
 path_exists("examples/checks/agg-int-range.rofl").
+path_exists("examples/checks/agg-interval-demo-check.rofl").
 path_exists("examples/checks/agg-join-budget.rofl").
 path_exists("examples/checks/agg-join-eval-check.rofl").
 path_exists("examples/checks/agg-join-holes-check.rofl").
@@ -73,6 +76,7 @@ path_exists("examples/checks/agg-lattice-wall-space.rofl").
 path_exists("examples/checks/agg-lattice-why-deep.rofl").
 path_exists("examples/checks/agg-minmax-why-check.rofl").
 path_exists("examples/checks/agg-minmax-witness-check.rofl").
+path_exists("examples/checks/agg-narrow-data.rofl").
 path_exists("examples/checks/agg-phrase-check.rofl").
 path_exists("examples/checks/agg-phrase-sugar-check.rofl").
 path_exists("examples/checks/agg-phrase-sugar.rofl.md").
@@ -147,6 +151,7 @@ path_exists("examples/checks/not-as-a-name.rofl").
 path_exists("examples/checks/operators.rofl").
 path_exists("examples/checks/premise-arity.rofl").
 path_exists("examples/checks/set-spelling.rofl").
+path_exists("examples/checks/staged-neg-why-check.rofl").
 path_exists("examples/checks/unstratifiable.rofl").
 path_exists("examples/checks/wfs-unknown-negated.rofl").
 path_exists("examples/cram/").
@@ -160,9 +165,12 @@ path_exists("examples/heck/").
 path_exists("examples/heck/demo.ts").
 path_exists("examples/iffy/").
 path_exists("examples/iffy/statute.rofl").
+path_exists("examples/interval/interval.rofl").
 path_exists("examples/jopa/").
+path_exists("examples/linter/linter.rofl").
 path_exists("examples/loot/").
 path_exists("examples/loot/demo.ts").
+path_exists("examples/moot/demo.ts").
 path_exists("examples/moot/moot.rofl").
 path_exists("examples/notebook/cjs.rofl.md").
 path_exists("examples/notebook/self.rofl.md").
@@ -191,7 +199,9 @@ path_exists("examples/sus/").
 path_exists("examples/sus/sus.rofl").
 path_exists("examples/tutorial/README.md").
 path_exists("examples/wtf/").
+path_exists("examples/wtf/demo.ts").
 path_exists("examples/yak/").
+path_exists("examples/yak/fragments/08-golden-accident.ts").
 path_exists("facts/agg.rofl").
 path_exists("facts/checks.rofl").
 path_exists("facts/commands.rofl").
@@ -286,7 +296,6 @@ path_exists("runtime/ingest.ts").
 path_exists("runtime/pair.ts").
 path_exists("runtime/port.ts").
 path_exists("runtime/report.ts").
-path_exists("runtime/round_eval.ts").
 path_exists("runtime/semirings.ts").
 path_exists("rust/colbench").
 path_exists("rust/mutants.sh").
@@ -300,6 +309,7 @@ path_exists("rust/rofl/src/breaks.rs").
 path_exists("rust/rofl/src/cell.rs").
 path_exists("rust/rofl/src/corpus.rs").
 path_exists("rust/rofl/src/engine.rs").
+path_exists("rust/rofl/src/engine/delta.rs").
 path_exists("rust/rofl/src/kernel.rs").
 path_exists("rust/rofl/src/program.rs").
 path_exists("rust/rofl/src/reflect.rs").
@@ -313,6 +323,7 @@ path_exists("rust/rofl/src/tag.rs").
 path_exists("rust/rofl/src/term.rs").
 path_exists("rust/rofl/tests/agg_worlds.rs").
 path_exists("rust/rofl/tests/explain.rs").
+path_exists("rust/rofl/tests/incremental.rs").
 path_exists("rust/rofl/tests/join_scale.rs").
 path_exists("rust/rofl/tests/lattice_scale.rs").
 path_exists("rust/rofl/tests/program.rs").
@@ -320,6 +331,7 @@ path_exists("rust/rofl/tests/session.rs").
 path_exists("rust/rofl/tests/tag_scale.rs").
 path_exists("rust/rofl/tests/threshold.rs").
 path_exists("rust/rofl/tests/tick_scale.rs").
+path_exists("rust/rofl/tests/why_bins.rs").
 path_exists("rust/run_corpus.sh").
 path_exists("rust/share_curve.sh").
 path_exists("rust/storebench").
@@ -327,9 +339,7 @@ path_exists("rust/storebench/src/colfile.rs").
 path_exists("rust/storebench/src/column.rs").
 path_exists("rust/storebench/src/scale.rs").
 path_exists("safety.rofl").
-path_exists("scanners/ablate.ts").
 path_exists("scanners/book_locality.ts").
-path_exists("scanners/engine_split.ts").
 path_exists("scanners/eval_cost.ts").
 path_exists("scanners/features.ts").
 path_exists("scanners/floor_census.ts").
@@ -338,7 +348,6 @@ path_exists("scanners/js_ast.ts").
 path_exists("scanners/js_resolve.ts").
 path_exists("scanners/necessity.ts").
 path_exists("scanners/parse_cost.ts").
-path_exists("scanners/policy_ladder.ts").
 path_exists("scanners/ring1_lexgen.ts").
 path_exists("scanners/round_bytes.ts").
 path_exists("scanners/rule_shape.ts").
@@ -348,6 +357,7 @@ path_exists("scanners/store_trace.ts").
 path_exists("scanners/ts_lib.ts").
 path_exists("scripts/agg_breaks.ts").
 path_exists("scripts/agg_mutants.ts").
+path_exists("scripts/agg_prose.ts").
 path_exists("scripts/agg_select.ts").
 path_exists("scripts/cut_check.ts").
 path_exists("scripts/declared_check.ts").
@@ -376,6 +386,8 @@ path_exists("scripts/render_docs.ts").
 path_exists("scripts/sentences.ts").
 path_exists("scripts/text_check.ts").
 path_exists("scripts/view.ts").
+path_exists("scripts/whycheck-worlds/demand-wall.rofl").
+path_exists("scripts/whycheck.ts").
 path_exists("scripts/witness_check.ts").
 path_exists("scripts/workbench_browser.ts").
 path_exists("scripts/workbench_check.ts").
@@ -385,11 +397,10 @@ path_exists("src/aggeval.ts").
 path_exists("src/api.ts").
 path_exists("src/cell.ts").
 path_exists("src/dense.ts").
-path_exists("src/engine.ts").
 path_exists("src/kernel-dense.ts").
 path_exists("src/parser.ts").
 path_exists("src/reflect.ts").
-path_exists("src/rounds.ts").
+path_exists("src/reuse.ts").
 path_exists("src/say.ts").
 path_exists("src/scc.ts").
 path_exists("src/semiring.ts").
@@ -398,6 +409,7 @@ path_exists("src/store.ts").
 path_exists("src/tag.ts").
 path_exists("src/tokens.ts").
 path_exists("src/unify.ts").
+path_exists("test/semiring-cells.test.ts").
 path_exists("tsconfig.build.json").
 path_exists("visual/vscode-coverage.rofl.md").
 path_exists("vscode/extension.ts").
@@ -423,8 +435,10 @@ reason_len(f_a_query_side_gate_cannot_exist, 19).
 reason_len(f_completed_tick_provenance_is_the_cost_curve, 31).
 reason_len(f_no_string_builtins_moves_why_boundary, 22).
 reason_len(f_an_impossible_brief_deletes_its_own_requirement_silently, 18).
+reason_len(f_the_bootstrap_cut_may_be_a_chain_not_a_point, 44).
 reason_len(f_the_monotone_phase_spins_without_deriving, 31).
 reason_len(f_pairs_cut_the_cycle_then_numbers_are_safe, 30).
+reason_len(f_line_ranged_scanners_tax_every_kernel_edit, 44).
 reason_len(f_reserved_should_forbid_the_fact_not_only_the_rule, 34).
 reason_len(f_one_edge_of_the_cycle_lives_in_the_host_and_stratification_cannot_see_it, 39).
 reason_len(f_the_budget_counts_steps_and_memory_goes_first, 36).
@@ -437,6 +451,8 @@ reason_len(f_carrying_policy_with_the_kernel_works_and_reprices_every_count, 39)
 reason_len(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, 30).
 reason_len(f_ring_zero_under_the_irreducibility_criterion_is_sixty_lines, 42).
 reason_len(f_the_seed_pass_is_the_constant_and_the_delta_loop_is_the_work, 24).
+reason_len(f_a_brief_requirement_must_bind_its_author_same_session, 44).
+reason_len(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, 44).
 reason_len(f_a_store_size_veto_is_blind_to_the_very_explosion_it_was_proposed_for, 43).
 reason_len(f_admission_test_near_its_own_timeout, 39).
 reason_len(f_expressible_is_not_portable_the_discriminator_is_when, 36).
@@ -444,6 +460,7 @@ reason_len(f_fixing_a_limit_breaks_its_documentation, 43).
 reason_len(f_fork_copies_the_whole_store, 31).
 reason_len(f_i_briefed_before_reading_my_own_backlog, 43).
 reason_len(f_normalised_goldens_must_be_compared_as_sets, 43).
+reason_len(f_stratum_is_negation_depth_not_the_dependency_ladder, 44).
 reason_len(f_the_budget_alarm_was_load_not_cost, 43).
 reason_len(f_the_budget_marker_lags_the_frame_that_earns_it, 43).
 reason_len(f_the_matrix_collapses_threefold_and_the_tail_does_not, 40).
@@ -463,8 +480,10 @@ reason_shape(f_a_query_side_gate_cannot_exist, atom).
 reason_shape(f_completed_tick_provenance_is_the_cost_curve, atom).
 reason_shape(f_no_string_builtins_moves_why_boundary, atom).
 reason_shape(f_an_impossible_brief_deletes_its_own_requirement_silently, atom).
+reason_shape(f_the_bootstrap_cut_may_be_a_chain_not_a_point, atom).
 reason_shape(f_the_monotone_phase_spins_without_deriving, atom).
 reason_shape(f_pairs_cut_the_cycle_then_numbers_are_safe, atom).
+reason_shape(f_line_ranged_scanners_tax_every_kernel_edit, atom).
 reason_shape(f_reserved_should_forbid_the_fact_not_only_the_rule, atom).
 reason_shape(f_one_edge_of_the_cycle_lives_in_the_host_and_stratification_cannot_see_it, atom).
 reason_shape(f_the_budget_counts_steps_and_memory_goes_first, atom).
@@ -477,6 +496,8 @@ reason_shape(f_carrying_policy_with_the_kernel_works_and_reprices_every_count, a
 reason_shape(f_quiescence_compares_a_sorted_list_against_an_unsorted_one, atom).
 reason_shape(f_ring_zero_under_the_irreducibility_criterion_is_sixty_lines, atom).
 reason_shape(f_the_seed_pass_is_the_constant_and_the_delta_loop_is_the_work, atom).
+reason_shape(f_a_brief_requirement_must_bind_its_author_same_session, atom).
+reason_shape(f_a_gate_that_fires_on_movement_is_aimed_at_the_wrong_event, atom).
 reason_shape(f_a_store_size_veto_is_blind_to_the_very_explosion_it_was_proposed_for, atom).
 reason_shape(f_admission_test_near_its_own_timeout, atom).
 reason_shape(f_expressible_is_not_portable_the_discriminator_is_when, atom).
@@ -484,6 +505,7 @@ reason_shape(f_fixing_a_limit_breaks_its_documentation, atom).
 reason_shape(f_fork_copies_the_whole_store, atom).
 reason_shape(f_i_briefed_before_reading_my_own_backlog, atom).
 reason_shape(f_normalised_goldens_must_be_compared_as_sets, atom).
+reason_shape(f_stratum_is_negation_depth_not_the_dependency_ladder, atom).
 reason_shape(f_the_budget_alarm_was_load_not_cost, atom).
 reason_shape(f_the_budget_marker_lags_the_frame_that_earns_it, atom).
 reason_shape(f_the_matrix_collapses_threefold_and_the_tail_does_not, atom).

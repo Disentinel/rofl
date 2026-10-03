@@ -88,13 +88,13 @@ export const RESERVED: ReadonlySet<string> = new Set(Object.values(V));
  *  load of every program here, which is a gate that gets switched off.
  *
  *  `derived_by` and `hole` are on the list by the same test, and they were the
- *  last two to arrive: they are written from src/engine.ts and src/rounds.ts,
+ *  last two to arrive: they are written from src/aggeval.ts and src/aggeval.ts,
  *  and until those files were free the provenance trail and the refusal record
  *  stayed in `[main]`, where `$anon` has standing and `derived_by(x, r_never,
  *  0).` was accepted with `forged[audit]` at 0. Same hole as the rest of the
  *  trail, one file away from the fix.
  *
- *  `edb` did NOT follow them out of src/engine.ts, and that is the line, not an
+ *  `edb` did NOT follow them out of src/aggeval.ts, and that is the line, not an
  *  oversight: `edb(unknown)` is written there by the kernel, and 233 `edb(...)`
  *  facts in the corpus are written by hand. A co-written table cannot be split
  *  across two books — boot.rofl's `undefined_premise[audit]` reads `not
@@ -118,7 +118,7 @@ export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
  *  ONE definition, exported, because the test is a PREFIX and a prefix test
  *  copied into four files is four chances to write `=== '$kernel'` in one of
  *  them and reopen the ring for the next kernel ledger. src/api.ts refuses a
- *  clause that writes one, and src/engine.ts refuses to instantiate a
+ *  clause that writes one, and src/aggeval.ts refuses to instantiate a
  *  perspective VARIABLE to one — two different questions with one answer. */
 export function isKernelLedger(p: string): boolean {
   return p.startsWith('$');
@@ -177,7 +177,7 @@ export const IFACE = {
  *  (reading 'k')` rather than refusing the program. `premise_lit/1` does it
  *  under EVERY configuration (`decodeRules` below, which tests `f.args[1].k`
  *  before anything has established there is an `args[1]`), and `stratum/1`
- *  does it under the `strata` evaluator (`readStrata` in src/engine.ts, same
+ *  does it under the `strata` evaluator (`readStrata` in src/aggeval.ts, same
  *  shape: `const [rel, n] = f.args` then `n.k`). The other 23 are inert at the
  *  wrong width, which is luck about where each reader happens to look, not a
  *  property anything enforces.
@@ -353,7 +353,7 @@ export const SEALED_HOLE = '$sealed';
  *  every arithmetic premise un-ground, every rule using one unsafe, and the
  *  ring 1 parse exhaust its budget; `concludes`, `premise_pos`, `premise_neg`
  *  and `conclusion_tense` are copied into the kernel's own policy stores
- *  (src/engine.ts:628, :982). A floor cannot seal what the floor it runs on
+ *  (src/aggeval.ts:628, :982). A floor cannot seal what the floor it runs on
  *  reads.
  *
  *  `assertions` is the per-FACT half, which scales with the data rather than
@@ -1188,7 +1188,7 @@ export function bootstrapKernel(store: FactStore): void {
   // so an operation that arrives without one turns the kernel's own audit red.
   // `[out, in, ...]` states the truth about the form `Out is op(In, ...)` --
   // the inputs must already be bound where the premise stands, which is
-  // exactly what `classify` in src/engine.ts requires of the right-hand side
+  // exactly what `classify` in src/aggeval.ts requires of the right-hand side
   // of `is`, and the output is what the premise binds.
   for (const op of [...STR_ARITY.keys()].sort()) {
     const ins = Array.from({ length: STR_ARITY.get(op)! }, () => mka('in'));

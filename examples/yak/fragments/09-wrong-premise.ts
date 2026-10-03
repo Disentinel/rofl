@@ -19,7 +19,7 @@
 // That second probe was kept — it is test/firing-signature.test.ts now, same
 // two fixtures. Replayed here, both sides return 1: the repair landed.
 import { Rofl } from '../../../src/api.ts';
-import { Evaluation } from '../../../src/engine.ts';
+import { AggEval } from '../../../src/aggeval.ts';
 import { evaluateSemiring } from '../../../src/semiring.ts';
 import { countingSemiring } from '../../../runtime/semirings.ts';
 import * as fs from 'node:fs';
@@ -49,10 +49,10 @@ export function run(): string[] {
   const load = (prog: string) => { const r = new Rofl(); r.load(BOOT); r.load(prog); r.evaluate(); return r; };
 
   const r = load(DEMAND);
-  const ev = new Evaluation(r.store, {});
+  const ev = new AggEval(r.store, 0, 'rounds');
   out.push('the shape the report described is real:');
   out.push(`  non-range-restricted rules : ${ev.rules.filter((x) => !x.safe).map((x) => x.clause.head.rel).join(', ') || '(none)'}`);
-  out.push(`  demand-backed relations    : ${[...ev.demandRels.keys()].join(', ') || '(none)'}`);
+  out.push(`  demand-backed relations    : ${ev.demandRels.map(([rel]) => rel).join(', ') || '(none)'}`);
   out.push('');
   out.push('the claimed consequence is not:');
   const answers = r.query('risky(X,Y)').rows.length;

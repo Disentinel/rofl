@@ -3622,7 +3622,7 @@ work_state(w_agg_data_strat, done).
 
 work(w_ts_one_evaluator,
   "ONE TYPESCRIPT EVALUATOR (f_the_two_typescript_evaluators_copy_each_others_methods, f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, f_a_demo_that_casts_into_the_evaluator_breaks_when_its_shape_grows, f_a_cell_is_opened_through_a_cast_and_not_the_port): src/engine.ts Evaluation and src/rounds.ts RoundEvaluation retire onto src/aggeval.ts AggEval, which mirrors rust engine.rs. AggEval gains what only the stock one has (reuse across evaluations, the `stop` callback, naive mode); src/api.ts runs AggEval for every program; one peel for every caller; the demos read an exported schedule and the port, not a cast. ACCEPTANCE: the stock evaluator is deleted, goldens and whycheck unchanged, test:hosts and test:nb green.").
-work_state(w_ts_one_evaluator, open).
+work_state(w_ts_one_evaluator, done).
 
 work(w_agg_member_keeps_its_derivations,
   "A DEDUPLICATED MEMBER KEEPS EVERY DERIVATION (f_a_deduplicated_member_keeps_one_derivation): a cell records one member per projection value and drops the other derivations, so why, excise and retraction see one support. Keep them (canonical first), both engines.").

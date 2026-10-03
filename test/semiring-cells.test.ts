@@ -161,7 +161,8 @@ test('a cell adds no depth to a depth-bounded fold', () => {
 
 test('a store that cannot open a cell makes the fold throw, not read it as dead', () => {
   const r = world(BASE);
-  const blind = new Proxy(r.store, { get: (t, k) => k === 'cells' ? undefined : (t as any)[k]?.bind?.(t) ?? (t as any)[k] });
+  const refuse = () => { throw new Error('this store cannot open a sealed cell'); };
+  const blind = new Proxy(r.store, { get: (t, k) => k === 'cellOf' ? refuse : (t as any)[k]?.bind?.(t) ?? (t as any)[k] });
   assert.throws(() => evaluateSemiring(blind, countingSemiring), /cannot open a sealed cell/);
   assert.equal(count(world('p(1). q(X) :- p(X).')).value.get('q[main](1)'), 1n);
 });
