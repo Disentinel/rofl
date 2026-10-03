@@ -161,3 +161,26 @@ py_node_name[code](R, C) :- py_receiver[code](R), ast_node[code](R, call, _, _),
 -- Calling one runs whatever was handed in, which is counted where it was handed.
 py_binds[code](U, N) :- py_name_call[code](_, U, N, _), ast_child[code](U, args, 0, A), ast_child[code](A, _, _, X), ast_attr[code](X, arg, N).
 py_binds[code](U, N) :- py_name_call[code](_, U, N, _), ast_attr[code](X, id, N), ast_attr[code](X, ctx, store), py_owner[code](X, U).
+
+-- A CALLABLE HANDED TO A CONSTRUCTOR AND KEPT: `self._pool = Pool(self._connect)`.
+-- The object runs it later, from its own methods, which are not followed;
+-- APPROXIMATION, DECLARED: every call on `self._pool` in the class may run it.
+py_arg[code](K, X) :- ast_child[code](K, args, _, X).
+py_arg[code](K, X) :- ast_child[code](K, keywords, _, W), ast_child[code](W, value, 0, X).
+py_handed[code](C, K, D) :- py_arg[code](K, X), py_self_attr[code](X, M, U, _), py_class_of[code](U, C), py_method[code](C, M, D).
+py_handed[code](C, K, D) :- py_arg[code](K, X), ast_attr[code](X, id, N), py_toplevel[code](D, N), py_owner[code](K, U), py_class_of[code](U, C).
+py_stored[code](C, F, D) :- ast_node[code](A, assign, _, _), ast_child[code](A, targets, 0, T), py_self_attr[code](T, F, _, _),
+                           ast_child[code](A, value, 0, K), ast_node[code](K, call, _, _), py_handed[code](C, K, D).
+py_field_call[code](U, F, K) :- py_call[code](K, U, _), ast_child[code](K, func, 0, G), ast_child[code](G, value, 0, H),
+                                py_self_attr[code](H, F, U, _).
+py_invokes[code](U, D, K) :- py_field_call[code](U, F, K), py_class_of[code](U, C), py_stored[code](C, F, D).
+
+-- A METHOD A LIBRARY CALLS BACK: a public method of a class whose base is not
+-- a class scanned here (`class _TLSReusingSession(ftplib.FTP_TLS)`) may be
+-- called by the library's own code. APPROXIMATION, DECLARED: building the
+-- object counts as running each such method.
+py_scanned_base[code](C) :- ast_child[code](C, bases, _, B), ast_attr[code](B, id, N), py_class[code](_, N).
+py_foreign_base[code](C) :- py_class[code](C, _), ast_child[code](C, bases, _, _), not py_scanned_base[code](C), not py_protocol[code](C).
+py_callback[code](C, D) :- py_foreign_base[code](C), py_method[code](C, M, D), not py_private[code](M).
+py_private[code](M) :- py_method[code](_, M, _), M = "__init__".
+py_invokes[code](U, D, K) :- py_name_call[code](K, U, N, _), py_class[code](C, N), py_callback[code](C, D).

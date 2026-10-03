@@ -2681,4 +2681,5 @@ check_file("jodit_fixture", "rules/py-model.rofl").
 check_file("jodit_fixture", "examples/jodit/backends.rofl").
 check_file("jodit_fixture", "examples/jodit/contract.rofl").
 check_file("jodit_fixture", "examples/jodit/specifics.rofl").
+check_file("jodit_fixture", "examples/jodit/oracle.rofl").
 check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").

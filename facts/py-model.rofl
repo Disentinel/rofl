@@ -12,1282 +12,1457 @@ fault: for a folder its move deletes before it copies, after a branch for a
 file that copies first, and delete_before_copy must name the folder's delete.
 Scanned into facts/py-model.rofl by
 `python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
+TreeAdapter's pool runs the connect it was handed, and the connection's
+handshake is a method its library may call: both reach read.
 ").
 ast_child[code](n5b7671fd_2, value, 0, n5b7671fd_3).
 ast_child[code](n5b7671fd_1, body, 0, n5b7671fd_2).
-ast_node[code](n5b7671fd_4, import_from, "adapters.py", 11).
-ast_attr[code](n5b7671fd_4, module, "functools").
-ast_node[code](n5b7671fd_5, alias, "adapters.py", 11).
-ast_attr[code](n5b7671fd_5, name, "partial").
+ast_node[code](n5b7671fd_4, import, "adapters.py", 13).
+ast_node[code](n5b7671fd_5, alias, "adapters.py", 13).
+ast_attr[code](n5b7671fd_5, name, "socket").
 ast_child[code](n5b7671fd_4, names, 0, n5b7671fd_5).
-ast_attr[code](n5b7671fd_4, level, 0).
 ast_child[code](n5b7671fd_1, body, 1, n5b7671fd_4).
-ast_node[code](n5b7671fd_6, import_from, "adapters.py", 12).
-ast_attr[code](n5b7671fd_6, module, "typing").
-ast_node[code](n5b7671fd_7, alias, "adapters.py", 12).
-ast_attr[code](n5b7671fd_7, name, "Protocol").
+ast_node[code](n5b7671fd_6, import_from, "adapters.py", 14).
+ast_attr[code](n5b7671fd_6, module, "functools").
+ast_node[code](n5b7671fd_7, alias, "adapters.py", 14).
+ast_attr[code](n5b7671fd_7, name, "partial").
 ast_child[code](n5b7671fd_6, names, 0, n5b7671fd_7).
 ast_attr[code](n5b7671fd_6, level, 0).
 ast_child[code](n5b7671fd_1, body, 2, n5b7671fd_6).
-ast_node[code](n5b7671fd_8, import_from, "adapters.py", 14).
-ast_attr[code](n5b7671fd_8, module, "anyio").
-ast_node[code](n5b7671fd_9, alias, "adapters.py", 14).
-ast_attr[code](n5b7671fd_9, name, "to_thread").
+ast_node[code](n5b7671fd_8, import_from, "adapters.py", 15).
+ast_attr[code](n5b7671fd_8, module, "typing").
+ast_node[code](n5b7671fd_9, alias, "adapters.py", 15).
+ast_attr[code](n5b7671fd_9, name, "Protocol").
 ast_child[code](n5b7671fd_8, names, 0, n5b7671fd_9).
 ast_attr[code](n5b7671fd_8, level, 0).
 ast_child[code](n5b7671fd_1, body, 3, n5b7671fd_8).
-ast_node[code](n5b7671fd_10, class_def, "adapters.py", 17).
-ast_attr[code](n5b7671fd_10, name, "StorageAdapter").
-ast_node[code](n5b7671fd_11, name, "adapters.py", 17).
-ast_attr[code](n5b7671fd_11, id, "Protocol").
-ast_attr[code](n5b7671fd_11, ctx, load).
-ast_child[code](n5b7671fd_10, bases, 0, n5b7671fd_11).
-ast_node[code](n5b7671fd_12, async_function_def, "adapters.py", 18).
-ast_attr[code](n5b7671fd_12, name, "write").
-ast_node[code](n5b7671fd_13, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_14, arg, "adapters.py", 18).
-ast_attr[code](n5b7671fd_14, arg, "self").
-ast_child[code](n5b7671fd_13, args, 0, n5b7671fd_14).
-ast_node[code](n5b7671fd_15, arg, "adapters.py", 18).
-ast_attr[code](n5b7671fd_15, arg, "path").
-ast_node[code](n5b7671fd_16, name, "adapters.py", 18).
-ast_attr[code](n5b7671fd_16, id, "str").
-ast_attr[code](n5b7671fd_16, ctx, load).
-ast_child[code](n5b7671fd_15, annotation, 0, n5b7671fd_16).
-ast_child[code](n5b7671fd_13, args, 1, n5b7671fd_15).
-ast_node[code](n5b7671fd_17, arg, "adapters.py", 18).
-ast_attr[code](n5b7671fd_17, arg, "contents").
-ast_node[code](n5b7671fd_18, name, "adapters.py", 18).
-ast_attr[code](n5b7671fd_18, id, "bytes").
+ast_node[code](n5b7671fd_10, import_from, "adapters.py", 17).
+ast_attr[code](n5b7671fd_10, module, "anyio").
+ast_node[code](n5b7671fd_11, alias, "adapters.py", 17).
+ast_attr[code](n5b7671fd_11, name, "to_thread").
+ast_child[code](n5b7671fd_10, names, 0, n5b7671fd_11).
+ast_attr[code](n5b7671fd_10, level, 0).
+ast_child[code](n5b7671fd_1, body, 4, n5b7671fd_10).
+ast_node[code](n5b7671fd_12, class_def, "adapters.py", 20).
+ast_attr[code](n5b7671fd_12, name, "StorageAdapter").
+ast_node[code](n5b7671fd_13, name, "adapters.py", 20).
+ast_attr[code](n5b7671fd_13, id, "Protocol").
+ast_attr[code](n5b7671fd_13, ctx, load).
+ast_child[code](n5b7671fd_12, bases, 0, n5b7671fd_13).
+ast_node[code](n5b7671fd_14, async_function_def, "adapters.py", 21).
+ast_attr[code](n5b7671fd_14, name, "write").
+ast_node[code](n5b7671fd_15, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_16, arg, "adapters.py", 21).
+ast_attr[code](n5b7671fd_16, arg, "self").
+ast_child[code](n5b7671fd_15, args, 0, n5b7671fd_16).
+ast_node[code](n5b7671fd_17, arg, "adapters.py", 21).
+ast_attr[code](n5b7671fd_17, arg, "path").
+ast_node[code](n5b7671fd_18, name, "adapters.py", 21).
+ast_attr[code](n5b7671fd_18, id, "str").
 ast_attr[code](n5b7671fd_18, ctx, load).
 ast_child[code](n5b7671fd_17, annotation, 0, n5b7671fd_18).
-ast_child[code](n5b7671fd_13, args, 2, n5b7671fd_17).
-ast_child[code](n5b7671fd_12, args, 0, n5b7671fd_13).
-ast_node[code](n5b7671fd_19, expr, "adapters.py", 18).
-ast_node[code](n5b7671fd_20, constant, "adapters.py", 18).
-ast_child[code](n5b7671fd_19, value, 0, n5b7671fd_20).
-ast_child[code](n5b7671fd_12, body, 0, n5b7671fd_19).
-ast_node[code](n5b7671fd_21, constant, "adapters.py", 18).
-ast_attr[code](n5b7671fd_21, value, none).
-ast_child[code](n5b7671fd_12, returns, 0, n5b7671fd_21).
-ast_child[code](n5b7671fd_10, body, 0, n5b7671fd_12).
-ast_node[code](n5b7671fd_22, async_function_def, "adapters.py", 20).
-ast_attr[code](n5b7671fd_22, name, "read").
-ast_node[code](n5b7671fd_23, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_24, arg, "adapters.py", 20).
-ast_attr[code](n5b7671fd_24, arg, "self").
-ast_child[code](n5b7671fd_23, args, 0, n5b7671fd_24).
-ast_node[code](n5b7671fd_25, arg, "adapters.py", 20).
-ast_attr[code](n5b7671fd_25, arg, "path").
-ast_node[code](n5b7671fd_26, name, "adapters.py", 20).
-ast_attr[code](n5b7671fd_26, id, "str").
-ast_attr[code](n5b7671fd_26, ctx, load).
-ast_child[code](n5b7671fd_25, annotation, 0, n5b7671fd_26).
-ast_child[code](n5b7671fd_23, args, 1, n5b7671fd_25).
-ast_child[code](n5b7671fd_22, args, 0, n5b7671fd_23).
-ast_node[code](n5b7671fd_27, expr, "adapters.py", 20).
-ast_node[code](n5b7671fd_28, constant, "adapters.py", 20).
-ast_child[code](n5b7671fd_27, value, 0, n5b7671fd_28).
-ast_child[code](n5b7671fd_22, body, 0, n5b7671fd_27).
-ast_node[code](n5b7671fd_29, name, "adapters.py", 20).
-ast_attr[code](n5b7671fd_29, id, "bytes").
-ast_attr[code](n5b7671fd_29, ctx, load).
-ast_child[code](n5b7671fd_22, returns, 0, n5b7671fd_29).
-ast_child[code](n5b7671fd_10, body, 1, n5b7671fd_22).
-ast_node[code](n5b7671fd_30, async_function_def, "adapters.py", 22).
-ast_attr[code](n5b7671fd_30, name, "move_file").
-ast_node[code](n5b7671fd_31, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_32, arg, "adapters.py", 22).
-ast_attr[code](n5b7671fd_32, arg, "self").
-ast_child[code](n5b7671fd_31, args, 0, n5b7671fd_32).
-ast_node[code](n5b7671fd_33, arg, "adapters.py", 22).
-ast_attr[code](n5b7671fd_33, arg, "source").
-ast_node[code](n5b7671fd_34, name, "adapters.py", 22).
-ast_attr[code](n5b7671fd_34, id, "str").
-ast_attr[code](n5b7671fd_34, ctx, load).
-ast_child[code](n5b7671fd_33, annotation, 0, n5b7671fd_34).
-ast_child[code](n5b7671fd_31, args, 1, n5b7671fd_33).
-ast_node[code](n5b7671fd_35, arg, "adapters.py", 22).
-ast_attr[code](n5b7671fd_35, arg, "destination").
-ast_node[code](n5b7671fd_36, name, "adapters.py", 22).
+ast_child[code](n5b7671fd_15, args, 1, n5b7671fd_17).
+ast_node[code](n5b7671fd_19, arg, "adapters.py", 21).
+ast_attr[code](n5b7671fd_19, arg, "contents").
+ast_node[code](n5b7671fd_20, name, "adapters.py", 21).
+ast_attr[code](n5b7671fd_20, id, "bytes").
+ast_attr[code](n5b7671fd_20, ctx, load).
+ast_child[code](n5b7671fd_19, annotation, 0, n5b7671fd_20).
+ast_child[code](n5b7671fd_15, args, 2, n5b7671fd_19).
+ast_child[code](n5b7671fd_14, args, 0, n5b7671fd_15).
+ast_node[code](n5b7671fd_21, expr, "adapters.py", 21).
+ast_node[code](n5b7671fd_22, constant, "adapters.py", 21).
+ast_child[code](n5b7671fd_21, value, 0, n5b7671fd_22).
+ast_child[code](n5b7671fd_14, body, 0, n5b7671fd_21).
+ast_node[code](n5b7671fd_23, constant, "adapters.py", 21).
+ast_attr[code](n5b7671fd_23, value, none).
+ast_child[code](n5b7671fd_14, returns, 0, n5b7671fd_23).
+ast_child[code](n5b7671fd_12, body, 0, n5b7671fd_14).
+ast_node[code](n5b7671fd_24, async_function_def, "adapters.py", 23).
+ast_attr[code](n5b7671fd_24, name, "read").
+ast_node[code](n5b7671fd_25, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_26, arg, "adapters.py", 23).
+ast_attr[code](n5b7671fd_26, arg, "self").
+ast_child[code](n5b7671fd_25, args, 0, n5b7671fd_26).
+ast_node[code](n5b7671fd_27, arg, "adapters.py", 23).
+ast_attr[code](n5b7671fd_27, arg, "path").
+ast_node[code](n5b7671fd_28, name, "adapters.py", 23).
+ast_attr[code](n5b7671fd_28, id, "str").
+ast_attr[code](n5b7671fd_28, ctx, load).
+ast_child[code](n5b7671fd_27, annotation, 0, n5b7671fd_28).
+ast_child[code](n5b7671fd_25, args, 1, n5b7671fd_27).
+ast_child[code](n5b7671fd_24, args, 0, n5b7671fd_25).
+ast_node[code](n5b7671fd_29, expr, "adapters.py", 23).
+ast_node[code](n5b7671fd_30, constant, "adapters.py", 23).
+ast_child[code](n5b7671fd_29, value, 0, n5b7671fd_30).
+ast_child[code](n5b7671fd_24, body, 0, n5b7671fd_29).
+ast_node[code](n5b7671fd_31, name, "adapters.py", 23).
+ast_attr[code](n5b7671fd_31, id, "bytes").
+ast_attr[code](n5b7671fd_31, ctx, load).
+ast_child[code](n5b7671fd_24, returns, 0, n5b7671fd_31).
+ast_child[code](n5b7671fd_12, body, 1, n5b7671fd_24).
+ast_node[code](n5b7671fd_32, async_function_def, "adapters.py", 25).
+ast_attr[code](n5b7671fd_32, name, "move_file").
+ast_node[code](n5b7671fd_33, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_34, arg, "adapters.py", 25).
+ast_attr[code](n5b7671fd_34, arg, "self").
+ast_child[code](n5b7671fd_33, args, 0, n5b7671fd_34).
+ast_node[code](n5b7671fd_35, arg, "adapters.py", 25).
+ast_attr[code](n5b7671fd_35, arg, "source").
+ast_node[code](n5b7671fd_36, name, "adapters.py", 25).
 ast_attr[code](n5b7671fd_36, id, "str").
 ast_attr[code](n5b7671fd_36, ctx, load).
 ast_child[code](n5b7671fd_35, annotation, 0, n5b7671fd_36).
-ast_child[code](n5b7671fd_31, args, 2, n5b7671fd_35).
-ast_child[code](n5b7671fd_30, args, 0, n5b7671fd_31).
-ast_node[code](n5b7671fd_37, expr, "adapters.py", 22).
-ast_node[code](n5b7671fd_38, constant, "adapters.py", 22).
-ast_child[code](n5b7671fd_37, value, 0, n5b7671fd_38).
-ast_child[code](n5b7671fd_30, body, 0, n5b7671fd_37).
-ast_node[code](n5b7671fd_39, constant, "adapters.py", 22).
-ast_attr[code](n5b7671fd_39, value, none).
-ast_child[code](n5b7671fd_30, returns, 0, n5b7671fd_39).
-ast_child[code](n5b7671fd_10, body, 2, n5b7671fd_30).
-ast_child[code](n5b7671fd_1, body, 4, n5b7671fd_10).
-ast_node[code](n5b7671fd_40, async_function_def, "adapters.py", 25).
-ast_attr[code](n5b7671fd_40, name, "gather_limited").
-ast_node[code](n5b7671fd_41, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_42, arg, "adapters.py", 25).
-ast_attr[code](n5b7671fd_42, arg, "jobs").
-ast_child[code](n5b7671fd_41, args, 0, n5b7671fd_42).
-ast_child[code](n5b7671fd_40, args, 0, n5b7671fd_41).
-ast_node[code](n5b7671fd_43, for, "adapters.py", 26).
-ast_node[code](n5b7671fd_44, name, "adapters.py", 26).
-ast_attr[code](n5b7671fd_44, id, "job").
-ast_attr[code](n5b7671fd_44, ctx, store).
-ast_child[code](n5b7671fd_43, target, 0, n5b7671fd_44).
-ast_node[code](n5b7671fd_45, name, "adapters.py", 26).
-ast_attr[code](n5b7671fd_45, id, "jobs").
-ast_attr[code](n5b7671fd_45, ctx, load).
-ast_child[code](n5b7671fd_43, iter, 0, n5b7671fd_45).
-ast_node[code](n5b7671fd_46, expr, "adapters.py", 27).
-ast_node[code](n5b7671fd_47, await, "adapters.py", 27).
-ast_node[code](n5b7671fd_48, call, "adapters.py", 27).
-ast_node[code](n5b7671fd_49, name, "adapters.py", 27).
-ast_attr[code](n5b7671fd_49, id, "job").
-ast_attr[code](n5b7671fd_49, ctx, load).
-ast_child[code](n5b7671fd_48, func, 0, n5b7671fd_49).
-ast_child[code](n5b7671fd_47, value, 0, n5b7671fd_48).
-ast_child[code](n5b7671fd_46, value, 0, n5b7671fd_47).
-ast_child[code](n5b7671fd_43, body, 0, n5b7671fd_46).
-ast_child[code](n5b7671fd_40, body, 0, n5b7671fd_43).
-ast_child[code](n5b7671fd_1, body, 5, n5b7671fd_40).
-ast_node[code](n5b7671fd_50, class_def, "adapters.py", 30).
-ast_attr[code](n5b7671fd_50, name, "BucketAdapter").
-ast_node[code](n5b7671fd_51, async_function_def, "adapters.py", 31).
-ast_attr[code](n5b7671fd_51, name, "write").
-ast_node[code](n5b7671fd_52, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_53, arg, "adapters.py", 31).
-ast_attr[code](n5b7671fd_53, arg, "self").
-ast_child[code](n5b7671fd_52, args, 0, n5b7671fd_53).
-ast_node[code](n5b7671fd_54, arg, "adapters.py", 31).
-ast_attr[code](n5b7671fd_54, arg, "path").
-ast_node[code](n5b7671fd_55, name, "adapters.py", 31).
-ast_attr[code](n5b7671fd_55, id, "str").
-ast_attr[code](n5b7671fd_55, ctx, load).
-ast_child[code](n5b7671fd_54, annotation, 0, n5b7671fd_55).
-ast_child[code](n5b7671fd_52, args, 1, n5b7671fd_54).
-ast_node[code](n5b7671fd_56, arg, "adapters.py", 31).
-ast_attr[code](n5b7671fd_56, arg, "contents").
-ast_node[code](n5b7671fd_57, name, "adapters.py", 31).
-ast_attr[code](n5b7671fd_57, id, "bytes").
+ast_child[code](n5b7671fd_33, args, 1, n5b7671fd_35).
+ast_node[code](n5b7671fd_37, arg, "adapters.py", 25).
+ast_attr[code](n5b7671fd_37, arg, "destination").
+ast_node[code](n5b7671fd_38, name, "adapters.py", 25).
+ast_attr[code](n5b7671fd_38, id, "str").
+ast_attr[code](n5b7671fd_38, ctx, load).
+ast_child[code](n5b7671fd_37, annotation, 0, n5b7671fd_38).
+ast_child[code](n5b7671fd_33, args, 2, n5b7671fd_37).
+ast_child[code](n5b7671fd_32, args, 0, n5b7671fd_33).
+ast_node[code](n5b7671fd_39, expr, "adapters.py", 25).
+ast_node[code](n5b7671fd_40, constant, "adapters.py", 25).
+ast_child[code](n5b7671fd_39, value, 0, n5b7671fd_40).
+ast_child[code](n5b7671fd_32, body, 0, n5b7671fd_39).
+ast_node[code](n5b7671fd_41, constant, "adapters.py", 25).
+ast_attr[code](n5b7671fd_41, value, none).
+ast_child[code](n5b7671fd_32, returns, 0, n5b7671fd_41).
+ast_child[code](n5b7671fd_12, body, 2, n5b7671fd_32).
+ast_child[code](n5b7671fd_1, body, 5, n5b7671fd_12).
+ast_node[code](n5b7671fd_42, async_function_def, "adapters.py", 28).
+ast_attr[code](n5b7671fd_42, name, "gather_limited").
+ast_node[code](n5b7671fd_43, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_44, arg, "adapters.py", 28).
+ast_attr[code](n5b7671fd_44, arg, "jobs").
+ast_child[code](n5b7671fd_43, args, 0, n5b7671fd_44).
+ast_child[code](n5b7671fd_42, args, 0, n5b7671fd_43).
+ast_node[code](n5b7671fd_45, for, "adapters.py", 29).
+ast_node[code](n5b7671fd_46, name, "adapters.py", 29).
+ast_attr[code](n5b7671fd_46, id, "job").
+ast_attr[code](n5b7671fd_46, ctx, store).
+ast_child[code](n5b7671fd_45, target, 0, n5b7671fd_46).
+ast_node[code](n5b7671fd_47, name, "adapters.py", 29).
+ast_attr[code](n5b7671fd_47, id, "jobs").
+ast_attr[code](n5b7671fd_47, ctx, load).
+ast_child[code](n5b7671fd_45, iter, 0, n5b7671fd_47).
+ast_node[code](n5b7671fd_48, expr, "adapters.py", 30).
+ast_node[code](n5b7671fd_49, await, "adapters.py", 30).
+ast_node[code](n5b7671fd_50, call, "adapters.py", 30).
+ast_node[code](n5b7671fd_51, name, "adapters.py", 30).
+ast_attr[code](n5b7671fd_51, id, "job").
+ast_attr[code](n5b7671fd_51, ctx, load).
+ast_child[code](n5b7671fd_50, func, 0, n5b7671fd_51).
+ast_child[code](n5b7671fd_49, value, 0, n5b7671fd_50).
+ast_child[code](n5b7671fd_48, value, 0, n5b7671fd_49).
+ast_child[code](n5b7671fd_45, body, 0, n5b7671fd_48).
+ast_child[code](n5b7671fd_42, body, 0, n5b7671fd_45).
+ast_child[code](n5b7671fd_1, body, 6, n5b7671fd_42).
+ast_node[code](n5b7671fd_52, class_def, "adapters.py", 33).
+ast_attr[code](n5b7671fd_52, name, "BucketAdapter").
+ast_node[code](n5b7671fd_53, async_function_def, "adapters.py", 34).
+ast_attr[code](n5b7671fd_53, name, "write").
+ast_node[code](n5b7671fd_54, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_55, arg, "adapters.py", 34).
+ast_attr[code](n5b7671fd_55, arg, "self").
+ast_child[code](n5b7671fd_54, args, 0, n5b7671fd_55).
+ast_node[code](n5b7671fd_56, arg, "adapters.py", 34).
+ast_attr[code](n5b7671fd_56, arg, "path").
+ast_node[code](n5b7671fd_57, name, "adapters.py", 34).
+ast_attr[code](n5b7671fd_57, id, "str").
 ast_attr[code](n5b7671fd_57, ctx, load).
 ast_child[code](n5b7671fd_56, annotation, 0, n5b7671fd_57).
-ast_child[code](n5b7671fd_52, args, 2, n5b7671fd_56).
-ast_child[code](n5b7671fd_51, args, 0, n5b7671fd_52).
-ast_node[code](n5b7671fd_58, try, "adapters.py", 32).
-ast_node[code](n5b7671fd_59, expr, "adapters.py", 33).
-ast_node[code](n5b7671fd_60, await, "adapters.py", 33).
-ast_node[code](n5b7671fd_61, call, "adapters.py", 33).
-ast_node[code](n5b7671fd_62, attribute, "adapters.py", 33).
-ast_node[code](n5b7671fd_63, name, "adapters.py", 33).
-ast_attr[code](n5b7671fd_63, id, "to_thread").
-ast_attr[code](n5b7671fd_63, ctx, load).
-ast_child[code](n5b7671fd_62, value, 0, n5b7671fd_63).
-ast_attr[code](n5b7671fd_62, attr, "run_sync").
-ast_attr[code](n5b7671fd_62, ctx, load).
-ast_child[code](n5b7671fd_61, func, 0, n5b7671fd_62).
-ast_node[code](n5b7671fd_64, lambda, "adapters.py", 33).
-ast_node[code](n5b7671fd_65, arguments, "adapters.py", 0).
-ast_child[code](n5b7671fd_64, args, 0, n5b7671fd_65).
-ast_node[code](n5b7671fd_66, call, "adapters.py", 33).
-ast_node[code](n5b7671fd_67, attribute, "adapters.py", 33).
-ast_node[code](n5b7671fd_68, attribute, "adapters.py", 33).
-ast_node[code](n5b7671fd_69, name, "adapters.py", 33).
-ast_attr[code](n5b7671fd_69, id, "self").
-ast_attr[code](n5b7671fd_69, ctx, load).
-ast_child[code](n5b7671fd_68, value, 0, n5b7671fd_69).
-ast_attr[code](n5b7671fd_68, attr, "client").
-ast_attr[code](n5b7671fd_68, ctx, load).
-ast_child[code](n5b7671fd_67, value, 0, n5b7671fd_68).
-ast_attr[code](n5b7671fd_67, attr, "put_object").
-ast_attr[code](n5b7671fd_67, ctx, load).
-ast_child[code](n5b7671fd_66, func, 0, n5b7671fd_67).
-ast_node[code](n5b7671fd_70, keyword, "adapters.py", 33).
-ast_attr[code](n5b7671fd_70, arg, "Key").
-ast_node[code](n5b7671fd_71, name, "adapters.py", 33).
-ast_attr[code](n5b7671fd_71, id, "path").
+ast_child[code](n5b7671fd_54, args, 1, n5b7671fd_56).
+ast_node[code](n5b7671fd_58, arg, "adapters.py", 34).
+ast_attr[code](n5b7671fd_58, arg, "contents").
+ast_node[code](n5b7671fd_59, name, "adapters.py", 34).
+ast_attr[code](n5b7671fd_59, id, "bytes").
+ast_attr[code](n5b7671fd_59, ctx, load).
+ast_child[code](n5b7671fd_58, annotation, 0, n5b7671fd_59).
+ast_child[code](n5b7671fd_54, args, 2, n5b7671fd_58).
+ast_child[code](n5b7671fd_53, args, 0, n5b7671fd_54).
+ast_node[code](n5b7671fd_60, try, "adapters.py", 35).
+ast_node[code](n5b7671fd_61, expr, "adapters.py", 36).
+ast_node[code](n5b7671fd_62, await, "adapters.py", 36).
+ast_node[code](n5b7671fd_63, call, "adapters.py", 36).
+ast_node[code](n5b7671fd_64, attribute, "adapters.py", 36).
+ast_node[code](n5b7671fd_65, name, "adapters.py", 36).
+ast_attr[code](n5b7671fd_65, id, "to_thread").
+ast_attr[code](n5b7671fd_65, ctx, load).
+ast_child[code](n5b7671fd_64, value, 0, n5b7671fd_65).
+ast_attr[code](n5b7671fd_64, attr, "run_sync").
+ast_attr[code](n5b7671fd_64, ctx, load).
+ast_child[code](n5b7671fd_63, func, 0, n5b7671fd_64).
+ast_node[code](n5b7671fd_66, lambda, "adapters.py", 36).
+ast_node[code](n5b7671fd_67, arguments, "adapters.py", 0).
+ast_child[code](n5b7671fd_66, args, 0, n5b7671fd_67).
+ast_node[code](n5b7671fd_68, call, "adapters.py", 36).
+ast_node[code](n5b7671fd_69, attribute, "adapters.py", 36).
+ast_node[code](n5b7671fd_70, attribute, "adapters.py", 36).
+ast_node[code](n5b7671fd_71, name, "adapters.py", 36).
+ast_attr[code](n5b7671fd_71, id, "self").
 ast_attr[code](n5b7671fd_71, ctx, load).
 ast_child[code](n5b7671fd_70, value, 0, n5b7671fd_71).
-ast_child[code](n5b7671fd_66, keywords, 0, n5b7671fd_70).
-ast_node[code](n5b7671fd_72, keyword, "adapters.py", 33).
-ast_attr[code](n5b7671fd_72, arg, "Body").
-ast_node[code](n5b7671fd_73, name, "adapters.py", 33).
-ast_attr[code](n5b7671fd_73, id, "contents").
+ast_attr[code](n5b7671fd_70, attr, "client").
+ast_attr[code](n5b7671fd_70, ctx, load).
+ast_child[code](n5b7671fd_69, value, 0, n5b7671fd_70).
+ast_attr[code](n5b7671fd_69, attr, "put_object").
+ast_attr[code](n5b7671fd_69, ctx, load).
+ast_child[code](n5b7671fd_68, func, 0, n5b7671fd_69).
+ast_node[code](n5b7671fd_72, keyword, "adapters.py", 36).
+ast_attr[code](n5b7671fd_72, arg, "Key").
+ast_node[code](n5b7671fd_73, name, "adapters.py", 36).
+ast_attr[code](n5b7671fd_73, id, "path").
 ast_attr[code](n5b7671fd_73, ctx, load).
 ast_child[code](n5b7671fd_72, value, 0, n5b7671fd_73).
-ast_child[code](n5b7671fd_66, keywords, 1, n5b7671fd_72).
-ast_child[code](n5b7671fd_64, body, 0, n5b7671fd_66).
-ast_child[code](n5b7671fd_61, args, 0, n5b7671fd_64).
-ast_child[code](n5b7671fd_60, value, 0, n5b7671fd_61).
-ast_child[code](n5b7671fd_59, value, 0, n5b7671fd_60).
-ast_child[code](n5b7671fd_58, body, 0, n5b7671fd_59).
-ast_node[code](n5b7671fd_74, expr, "adapters.py", 35).
-ast_node[code](n5b7671fd_75, call, "adapters.py", 35).
-ast_node[code](n5b7671fd_76, attribute, "adapters.py", 35).
-ast_node[code](n5b7671fd_77, attribute, "adapters.py", 35).
-ast_node[code](n5b7671fd_78, name, "adapters.py", 35).
-ast_attr[code](n5b7671fd_78, id, "self").
-ast_attr[code](n5b7671fd_78, ctx, load).
-ast_child[code](n5b7671fd_77, value, 0, n5b7671fd_78).
-ast_attr[code](n5b7671fd_77, attr, "client").
-ast_attr[code](n5b7671fd_77, ctx, load).
-ast_child[code](n5b7671fd_76, value, 0, n5b7671fd_77).
-ast_attr[code](n5b7671fd_76, attr, "list_objects_v2").
-ast_attr[code](n5b7671fd_76, ctx, load).
-ast_child[code](n5b7671fd_75, func, 0, n5b7671fd_76).
-ast_node[code](n5b7671fd_79, keyword, "adapters.py", 35).
-ast_attr[code](n5b7671fd_79, arg, "Prefix").
-ast_node[code](n5b7671fd_80, name, "adapters.py", 35).
-ast_attr[code](n5b7671fd_80, id, "path").
+ast_child[code](n5b7671fd_68, keywords, 0, n5b7671fd_72).
+ast_node[code](n5b7671fd_74, keyword, "adapters.py", 36).
+ast_attr[code](n5b7671fd_74, arg, "Body").
+ast_node[code](n5b7671fd_75, name, "adapters.py", 36).
+ast_attr[code](n5b7671fd_75, id, "contents").
+ast_attr[code](n5b7671fd_75, ctx, load).
+ast_child[code](n5b7671fd_74, value, 0, n5b7671fd_75).
+ast_child[code](n5b7671fd_68, keywords, 1, n5b7671fd_74).
+ast_child[code](n5b7671fd_66, body, 0, n5b7671fd_68).
+ast_child[code](n5b7671fd_63, args, 0, n5b7671fd_66).
+ast_child[code](n5b7671fd_62, value, 0, n5b7671fd_63).
+ast_child[code](n5b7671fd_61, value, 0, n5b7671fd_62).
+ast_child[code](n5b7671fd_60, body, 0, n5b7671fd_61).
+ast_node[code](n5b7671fd_76, expr, "adapters.py", 38).
+ast_node[code](n5b7671fd_77, call, "adapters.py", 38).
+ast_node[code](n5b7671fd_78, attribute, "adapters.py", 38).
+ast_node[code](n5b7671fd_79, attribute, "adapters.py", 38).
+ast_node[code](n5b7671fd_80, name, "adapters.py", 38).
+ast_attr[code](n5b7671fd_80, id, "self").
 ast_attr[code](n5b7671fd_80, ctx, load).
 ast_child[code](n5b7671fd_79, value, 0, n5b7671fd_80).
-ast_child[code](n5b7671fd_75, keywords, 0, n5b7671fd_79).
-ast_child[code](n5b7671fd_74, value, 0, n5b7671fd_75).
-ast_child[code](n5b7671fd_58, finalbody, 0, n5b7671fd_74).
-ast_child[code](n5b7671fd_51, body, 0, n5b7671fd_58).
-ast_node[code](n5b7671fd_81, constant, "adapters.py", 31).
-ast_attr[code](n5b7671fd_81, value, none).
-ast_child[code](n5b7671fd_51, returns, 0, n5b7671fd_81).
-ast_child[code](n5b7671fd_50, body, 0, n5b7671fd_51).
-ast_node[code](n5b7671fd_82, async_function_def, "adapters.py", 37).
-ast_attr[code](n5b7671fd_82, name, "read").
-ast_node[code](n5b7671fd_83, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_84, arg, "adapters.py", 37).
-ast_attr[code](n5b7671fd_84, arg, "self").
-ast_child[code](n5b7671fd_83, args, 0, n5b7671fd_84).
-ast_node[code](n5b7671fd_85, arg, "adapters.py", 37).
-ast_attr[code](n5b7671fd_85, arg, "path").
-ast_node[code](n5b7671fd_86, name, "adapters.py", 37).
-ast_attr[code](n5b7671fd_86, id, "str").
-ast_attr[code](n5b7671fd_86, ctx, load).
-ast_child[code](n5b7671fd_85, annotation, 0, n5b7671fd_86).
-ast_child[code](n5b7671fd_83, args, 1, n5b7671fd_85).
-ast_child[code](n5b7671fd_82, args, 0, n5b7671fd_83).
-ast_node[code](n5b7671fd_87, function_def, "adapters.py", 38).
-ast_attr[code](n5b7671fd_87, name, "get").
-ast_node[code](n5b7671fd_88, arguments, "adapters.py", 0).
-ast_child[code](n5b7671fd_87, args, 0, n5b7671fd_88).
-ast_node[code](n5b7671fd_89, return, "adapters.py", 39).
-ast_node[code](n5b7671fd_90, call, "adapters.py", 39).
-ast_node[code](n5b7671fd_91, attribute, "adapters.py", 39).
-ast_node[code](n5b7671fd_92, subscript, "adapters.py", 39).
-ast_node[code](n5b7671fd_93, call, "adapters.py", 39).
-ast_node[code](n5b7671fd_94, attribute, "adapters.py", 39).
-ast_node[code](n5b7671fd_95, attribute, "adapters.py", 39).
-ast_node[code](n5b7671fd_96, name, "adapters.py", 39).
-ast_attr[code](n5b7671fd_96, id, "self").
-ast_attr[code](n5b7671fd_96, ctx, load).
-ast_child[code](n5b7671fd_95, value, 0, n5b7671fd_96).
-ast_attr[code](n5b7671fd_95, attr, "client").
-ast_attr[code](n5b7671fd_95, ctx, load).
-ast_child[code](n5b7671fd_94, value, 0, n5b7671fd_95).
-ast_attr[code](n5b7671fd_94, attr, "get_object").
-ast_attr[code](n5b7671fd_94, ctx, load).
-ast_child[code](n5b7671fd_93, func, 0, n5b7671fd_94).
-ast_node[code](n5b7671fd_97, keyword, "adapters.py", 39).
-ast_attr[code](n5b7671fd_97, arg, "Key").
-ast_node[code](n5b7671fd_98, name, "adapters.py", 39).
-ast_attr[code](n5b7671fd_98, id, "path").
+ast_attr[code](n5b7671fd_79, attr, "client").
+ast_attr[code](n5b7671fd_79, ctx, load).
+ast_child[code](n5b7671fd_78, value, 0, n5b7671fd_79).
+ast_attr[code](n5b7671fd_78, attr, "list_objects_v2").
+ast_attr[code](n5b7671fd_78, ctx, load).
+ast_child[code](n5b7671fd_77, func, 0, n5b7671fd_78).
+ast_node[code](n5b7671fd_81, keyword, "adapters.py", 38).
+ast_attr[code](n5b7671fd_81, arg, "Prefix").
+ast_node[code](n5b7671fd_82, name, "adapters.py", 38).
+ast_attr[code](n5b7671fd_82, id, "path").
+ast_attr[code](n5b7671fd_82, ctx, load).
+ast_child[code](n5b7671fd_81, value, 0, n5b7671fd_82).
+ast_child[code](n5b7671fd_77, keywords, 0, n5b7671fd_81).
+ast_child[code](n5b7671fd_76, value, 0, n5b7671fd_77).
+ast_child[code](n5b7671fd_60, finalbody, 0, n5b7671fd_76).
+ast_child[code](n5b7671fd_53, body, 0, n5b7671fd_60).
+ast_node[code](n5b7671fd_83, constant, "adapters.py", 34).
+ast_attr[code](n5b7671fd_83, value, none).
+ast_child[code](n5b7671fd_53, returns, 0, n5b7671fd_83).
+ast_child[code](n5b7671fd_52, body, 0, n5b7671fd_53).
+ast_node[code](n5b7671fd_84, async_function_def, "adapters.py", 40).
+ast_attr[code](n5b7671fd_84, name, "read").
+ast_node[code](n5b7671fd_85, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_86, arg, "adapters.py", 40).
+ast_attr[code](n5b7671fd_86, arg, "self").
+ast_child[code](n5b7671fd_85, args, 0, n5b7671fd_86).
+ast_node[code](n5b7671fd_87, arg, "adapters.py", 40).
+ast_attr[code](n5b7671fd_87, arg, "path").
+ast_node[code](n5b7671fd_88, name, "adapters.py", 40).
+ast_attr[code](n5b7671fd_88, id, "str").
+ast_attr[code](n5b7671fd_88, ctx, load).
+ast_child[code](n5b7671fd_87, annotation, 0, n5b7671fd_88).
+ast_child[code](n5b7671fd_85, args, 1, n5b7671fd_87).
+ast_child[code](n5b7671fd_84, args, 0, n5b7671fd_85).
+ast_node[code](n5b7671fd_89, function_def, "adapters.py", 41).
+ast_attr[code](n5b7671fd_89, name, "get").
+ast_node[code](n5b7671fd_90, arguments, "adapters.py", 0).
+ast_child[code](n5b7671fd_89, args, 0, n5b7671fd_90).
+ast_node[code](n5b7671fd_91, return, "adapters.py", 42).
+ast_node[code](n5b7671fd_92, call, "adapters.py", 42).
+ast_node[code](n5b7671fd_93, attribute, "adapters.py", 42).
+ast_node[code](n5b7671fd_94, subscript, "adapters.py", 42).
+ast_node[code](n5b7671fd_95, call, "adapters.py", 42).
+ast_node[code](n5b7671fd_96, attribute, "adapters.py", 42).
+ast_node[code](n5b7671fd_97, attribute, "adapters.py", 42).
+ast_node[code](n5b7671fd_98, name, "adapters.py", 42).
+ast_attr[code](n5b7671fd_98, id, "self").
 ast_attr[code](n5b7671fd_98, ctx, load).
 ast_child[code](n5b7671fd_97, value, 0, n5b7671fd_98).
-ast_child[code](n5b7671fd_93, keywords, 0, n5b7671fd_97).
-ast_child[code](n5b7671fd_92, value, 0, n5b7671fd_93).
-ast_node[code](n5b7671fd_99, constant, "adapters.py", 39).
-ast_attr[code](n5b7671fd_99, value, "Body").
-ast_child[code](n5b7671fd_92, slice, 0, n5b7671fd_99).
-ast_attr[code](n5b7671fd_92, ctx, load).
-ast_child[code](n5b7671fd_91, value, 0, n5b7671fd_92).
-ast_attr[code](n5b7671fd_91, attr, "read").
-ast_attr[code](n5b7671fd_91, ctx, load).
-ast_child[code](n5b7671fd_90, func, 0, n5b7671fd_91).
-ast_child[code](n5b7671fd_89, value, 0, n5b7671fd_90).
-ast_child[code](n5b7671fd_87, body, 0, n5b7671fd_89).
-ast_node[code](n5b7671fd_100, name, "adapters.py", 38).
-ast_attr[code](n5b7671fd_100, id, "bytes").
+ast_attr[code](n5b7671fd_97, attr, "client").
+ast_attr[code](n5b7671fd_97, ctx, load).
+ast_child[code](n5b7671fd_96, value, 0, n5b7671fd_97).
+ast_attr[code](n5b7671fd_96, attr, "get_object").
+ast_attr[code](n5b7671fd_96, ctx, load).
+ast_child[code](n5b7671fd_95, func, 0, n5b7671fd_96).
+ast_node[code](n5b7671fd_99, keyword, "adapters.py", 42).
+ast_attr[code](n5b7671fd_99, arg, "Key").
+ast_node[code](n5b7671fd_100, name, "adapters.py", 42).
+ast_attr[code](n5b7671fd_100, id, "path").
 ast_attr[code](n5b7671fd_100, ctx, load).
-ast_child[code](n5b7671fd_87, returns, 0, n5b7671fd_100).
-ast_child[code](n5b7671fd_82, body, 0, n5b7671fd_87).
-ast_node[code](n5b7671fd_101, return, "adapters.py", 41).
-ast_node[code](n5b7671fd_102, await, "adapters.py", 41).
-ast_node[code](n5b7671fd_103, call, "adapters.py", 41).
-ast_node[code](n5b7671fd_104, attribute, "adapters.py", 41).
-ast_node[code](n5b7671fd_105, name, "adapters.py", 41).
-ast_attr[code](n5b7671fd_105, id, "self").
-ast_attr[code](n5b7671fd_105, ctx, load).
-ast_child[code](n5b7671fd_104, value, 0, n5b7671fd_105).
-ast_attr[code](n5b7671fd_104, attr, "_run").
-ast_attr[code](n5b7671fd_104, ctx, load).
-ast_child[code](n5b7671fd_103, func, 0, n5b7671fd_104).
-ast_node[code](n5b7671fd_106, name, "adapters.py", 41).
-ast_attr[code](n5b7671fd_106, id, "get").
-ast_attr[code](n5b7671fd_106, ctx, load).
-ast_child[code](n5b7671fd_103, args, 0, n5b7671fd_106).
-ast_child[code](n5b7671fd_102, value, 0, n5b7671fd_103).
-ast_child[code](n5b7671fd_101, value, 0, n5b7671fd_102).
-ast_child[code](n5b7671fd_82, body, 1, n5b7671fd_101).
-ast_node[code](n5b7671fd_107, name, "adapters.py", 37).
-ast_attr[code](n5b7671fd_107, id, "bytes").
+ast_child[code](n5b7671fd_99, value, 0, n5b7671fd_100).
+ast_child[code](n5b7671fd_95, keywords, 0, n5b7671fd_99).
+ast_child[code](n5b7671fd_94, value, 0, n5b7671fd_95).
+ast_node[code](n5b7671fd_101, constant, "adapters.py", 42).
+ast_attr[code](n5b7671fd_101, value, "Body").
+ast_child[code](n5b7671fd_94, slice, 0, n5b7671fd_101).
+ast_attr[code](n5b7671fd_94, ctx, load).
+ast_child[code](n5b7671fd_93, value, 0, n5b7671fd_94).
+ast_attr[code](n5b7671fd_93, attr, "read").
+ast_attr[code](n5b7671fd_93, ctx, load).
+ast_child[code](n5b7671fd_92, func, 0, n5b7671fd_93).
+ast_child[code](n5b7671fd_91, value, 0, n5b7671fd_92).
+ast_child[code](n5b7671fd_89, body, 0, n5b7671fd_91).
+ast_node[code](n5b7671fd_102, name, "adapters.py", 41).
+ast_attr[code](n5b7671fd_102, id, "bytes").
+ast_attr[code](n5b7671fd_102, ctx, load).
+ast_child[code](n5b7671fd_89, returns, 0, n5b7671fd_102).
+ast_child[code](n5b7671fd_84, body, 0, n5b7671fd_89).
+ast_node[code](n5b7671fd_103, return, "adapters.py", 44).
+ast_node[code](n5b7671fd_104, await, "adapters.py", 44).
+ast_node[code](n5b7671fd_105, call, "adapters.py", 44).
+ast_node[code](n5b7671fd_106, attribute, "adapters.py", 44).
+ast_node[code](n5b7671fd_107, name, "adapters.py", 44).
+ast_attr[code](n5b7671fd_107, id, "self").
 ast_attr[code](n5b7671fd_107, ctx, load).
-ast_child[code](n5b7671fd_82, returns, 0, n5b7671fd_107).
-ast_child[code](n5b7671fd_50, body, 1, n5b7671fd_82).
-ast_node[code](n5b7671fd_108, async_function_def, "adapters.py", 43).
-ast_attr[code](n5b7671fd_108, name, "move_file").
-ast_node[code](n5b7671fd_109, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_110, arg, "adapters.py", 43).
-ast_attr[code](n5b7671fd_110, arg, "self").
-ast_child[code](n5b7671fd_109, args, 0, n5b7671fd_110).
-ast_node[code](n5b7671fd_111, arg, "adapters.py", 43).
-ast_attr[code](n5b7671fd_111, arg, "source").
-ast_node[code](n5b7671fd_112, name, "adapters.py", 43).
-ast_attr[code](n5b7671fd_112, id, "str").
-ast_attr[code](n5b7671fd_112, ctx, load).
-ast_child[code](n5b7671fd_111, annotation, 0, n5b7671fd_112).
-ast_child[code](n5b7671fd_109, args, 1, n5b7671fd_111).
-ast_node[code](n5b7671fd_113, arg, "adapters.py", 43).
-ast_attr[code](n5b7671fd_113, arg, "destination").
-ast_node[code](n5b7671fd_114, name, "adapters.py", 43).
+ast_child[code](n5b7671fd_106, value, 0, n5b7671fd_107).
+ast_attr[code](n5b7671fd_106, attr, "_run").
+ast_attr[code](n5b7671fd_106, ctx, load).
+ast_child[code](n5b7671fd_105, func, 0, n5b7671fd_106).
+ast_node[code](n5b7671fd_108, name, "adapters.py", 44).
+ast_attr[code](n5b7671fd_108, id, "get").
+ast_attr[code](n5b7671fd_108, ctx, load).
+ast_child[code](n5b7671fd_105, args, 0, n5b7671fd_108).
+ast_child[code](n5b7671fd_104, value, 0, n5b7671fd_105).
+ast_child[code](n5b7671fd_103, value, 0, n5b7671fd_104).
+ast_child[code](n5b7671fd_84, body, 1, n5b7671fd_103).
+ast_node[code](n5b7671fd_109, name, "adapters.py", 40).
+ast_attr[code](n5b7671fd_109, id, "bytes").
+ast_attr[code](n5b7671fd_109, ctx, load).
+ast_child[code](n5b7671fd_84, returns, 0, n5b7671fd_109).
+ast_child[code](n5b7671fd_52, body, 1, n5b7671fd_84).
+ast_node[code](n5b7671fd_110, async_function_def, "adapters.py", 46).
+ast_attr[code](n5b7671fd_110, name, "move_file").
+ast_node[code](n5b7671fd_111, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_112, arg, "adapters.py", 46).
+ast_attr[code](n5b7671fd_112, arg, "self").
+ast_child[code](n5b7671fd_111, args, 0, n5b7671fd_112).
+ast_node[code](n5b7671fd_113, arg, "adapters.py", 46).
+ast_attr[code](n5b7671fd_113, arg, "source").
+ast_node[code](n5b7671fd_114, name, "adapters.py", 46).
 ast_attr[code](n5b7671fd_114, id, "str").
 ast_attr[code](n5b7671fd_114, ctx, load).
 ast_child[code](n5b7671fd_113, annotation, 0, n5b7671fd_114).
-ast_child[code](n5b7671fd_109, args, 2, n5b7671fd_113).
-ast_child[code](n5b7671fd_108, args, 0, n5b7671fd_109).
-ast_node[code](n5b7671fd_115, assign, "adapters.py", 44).
-ast_node[code](n5b7671fd_116, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_116, id, "jobs").
-ast_attr[code](n5b7671fd_116, ctx, store).
-ast_child[code](n5b7671fd_115, targets, 0, n5b7671fd_116).
-ast_node[code](n5b7671fd_117, list_comp, "adapters.py", 44).
-ast_node[code](n5b7671fd_118, call, "adapters.py", 44).
-ast_node[code](n5b7671fd_119, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_119, id, "partial").
-ast_attr[code](n5b7671fd_119, ctx, load).
-ast_child[code](n5b7671fd_118, func, 0, n5b7671fd_119).
-ast_node[code](n5b7671fd_120, attribute, "adapters.py", 44).
-ast_node[code](n5b7671fd_121, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_121, id, "self").
+ast_child[code](n5b7671fd_111, args, 1, n5b7671fd_113).
+ast_node[code](n5b7671fd_115, arg, "adapters.py", 46).
+ast_attr[code](n5b7671fd_115, arg, "destination").
+ast_node[code](n5b7671fd_116, name, "adapters.py", 46).
+ast_attr[code](n5b7671fd_116, id, "str").
+ast_attr[code](n5b7671fd_116, ctx, load).
+ast_child[code](n5b7671fd_115, annotation, 0, n5b7671fd_116).
+ast_child[code](n5b7671fd_111, args, 2, n5b7671fd_115).
+ast_child[code](n5b7671fd_110, args, 0, n5b7671fd_111).
+ast_node[code](n5b7671fd_117, assign, "adapters.py", 47).
+ast_node[code](n5b7671fd_118, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_118, id, "jobs").
+ast_attr[code](n5b7671fd_118, ctx, store).
+ast_child[code](n5b7671fd_117, targets, 0, n5b7671fd_118).
+ast_node[code](n5b7671fd_119, list_comp, "adapters.py", 47).
+ast_node[code](n5b7671fd_120, call, "adapters.py", 47).
+ast_node[code](n5b7671fd_121, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_121, id, "partial").
 ast_attr[code](n5b7671fd_121, ctx, load).
-ast_child[code](n5b7671fd_120, value, 0, n5b7671fd_121).
-ast_attr[code](n5b7671fd_120, attr, "_copy").
-ast_attr[code](n5b7671fd_120, ctx, load).
-ast_child[code](n5b7671fd_118, args, 0, n5b7671fd_120).
-ast_node[code](n5b7671fd_122, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_122, id, "key").
+ast_child[code](n5b7671fd_120, func, 0, n5b7671fd_121).
+ast_node[code](n5b7671fd_122, attribute, "adapters.py", 47).
+ast_node[code](n5b7671fd_123, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_123, id, "self").
+ast_attr[code](n5b7671fd_123, ctx, load).
+ast_child[code](n5b7671fd_122, value, 0, n5b7671fd_123).
+ast_attr[code](n5b7671fd_122, attr, "_copy").
 ast_attr[code](n5b7671fd_122, ctx, load).
-ast_child[code](n5b7671fd_118, args, 1, n5b7671fd_122).
-ast_node[code](n5b7671fd_123, bin_op, "adapters.py", 44).
-ast_node[code](n5b7671fd_124, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_124, id, "destination").
+ast_child[code](n5b7671fd_120, args, 0, n5b7671fd_122).
+ast_node[code](n5b7671fd_124, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_124, id, "key").
 ast_attr[code](n5b7671fd_124, ctx, load).
-ast_child[code](n5b7671fd_123, left, 0, n5b7671fd_124).
-ast_attr[code](n5b7671fd_123, op, add).
-ast_node[code](n5b7671fd_125, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_125, id, "key").
-ast_attr[code](n5b7671fd_125, ctx, load).
-ast_child[code](n5b7671fd_123, right, 0, n5b7671fd_125).
-ast_child[code](n5b7671fd_118, args, 2, n5b7671fd_123).
-ast_child[code](n5b7671fd_117, elt, 0, n5b7671fd_118).
-ast_node[code](n5b7671fd_126, comprehension, "adapters.py", 0).
-ast_node[code](n5b7671fd_127, name, "adapters.py", 44).
+ast_child[code](n5b7671fd_120, args, 1, n5b7671fd_124).
+ast_node[code](n5b7671fd_125, bin_op, "adapters.py", 47).
+ast_node[code](n5b7671fd_126, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_126, id, "destination").
+ast_attr[code](n5b7671fd_126, ctx, load).
+ast_child[code](n5b7671fd_125, left, 0, n5b7671fd_126).
+ast_attr[code](n5b7671fd_125, op, add).
+ast_node[code](n5b7671fd_127, name, "adapters.py", 47).
 ast_attr[code](n5b7671fd_127, id, "key").
-ast_attr[code](n5b7671fd_127, ctx, store).
-ast_child[code](n5b7671fd_126, target, 0, n5b7671fd_127).
-ast_node[code](n5b7671fd_128, call, "adapters.py", 44).
-ast_node[code](n5b7671fd_129, attribute, "adapters.py", 44).
-ast_node[code](n5b7671fd_130, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_130, id, "self").
-ast_attr[code](n5b7671fd_130, ctx, load).
-ast_child[code](n5b7671fd_129, value, 0, n5b7671fd_130).
-ast_attr[code](n5b7671fd_129, attr, "_keys").
-ast_attr[code](n5b7671fd_129, ctx, load).
-ast_child[code](n5b7671fd_128, func, 0, n5b7671fd_129).
-ast_node[code](n5b7671fd_131, name, "adapters.py", 44).
-ast_attr[code](n5b7671fd_131, id, "source").
+ast_attr[code](n5b7671fd_127, ctx, load).
+ast_child[code](n5b7671fd_125, right, 0, n5b7671fd_127).
+ast_child[code](n5b7671fd_120, args, 2, n5b7671fd_125).
+ast_child[code](n5b7671fd_119, elt, 0, n5b7671fd_120).
+ast_node[code](n5b7671fd_128, comprehension, "adapters.py", 0).
+ast_node[code](n5b7671fd_129, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_129, id, "key").
+ast_attr[code](n5b7671fd_129, ctx, store).
+ast_child[code](n5b7671fd_128, target, 0, n5b7671fd_129).
+ast_node[code](n5b7671fd_130, call, "adapters.py", 47).
+ast_node[code](n5b7671fd_131, attribute, "adapters.py", 47).
+ast_node[code](n5b7671fd_132, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_132, id, "self").
+ast_attr[code](n5b7671fd_132, ctx, load).
+ast_child[code](n5b7671fd_131, value, 0, n5b7671fd_132).
+ast_attr[code](n5b7671fd_131, attr, "_keys").
 ast_attr[code](n5b7671fd_131, ctx, load).
-ast_child[code](n5b7671fd_128, args, 0, n5b7671fd_131).
-ast_child[code](n5b7671fd_126, iter, 0, n5b7671fd_128).
-ast_attr[code](n5b7671fd_126, is_async, 0).
-ast_child[code](n5b7671fd_117, generators, 0, n5b7671fd_126).
-ast_child[code](n5b7671fd_115, value, 0, n5b7671fd_117).
-ast_child[code](n5b7671fd_108, body, 0, n5b7671fd_115).
-ast_node[code](n5b7671fd_132, expr, "adapters.py", 45).
-ast_node[code](n5b7671fd_133, await, "adapters.py", 45).
-ast_node[code](n5b7671fd_134, call, "adapters.py", 45).
-ast_node[code](n5b7671fd_135, name, "adapters.py", 45).
-ast_attr[code](n5b7671fd_135, id, "gather_limited").
-ast_attr[code](n5b7671fd_135, ctx, load).
-ast_child[code](n5b7671fd_134, func, 0, n5b7671fd_135).
-ast_node[code](n5b7671fd_136, name, "adapters.py", 45).
-ast_attr[code](n5b7671fd_136, id, "jobs").
-ast_attr[code](n5b7671fd_136, ctx, load).
-ast_child[code](n5b7671fd_134, args, 0, n5b7671fd_136).
-ast_child[code](n5b7671fd_133, value, 0, n5b7671fd_134).
-ast_child[code](n5b7671fd_132, value, 0, n5b7671fd_133).
-ast_child[code](n5b7671fd_108, body, 1, n5b7671fd_132).
-ast_node[code](n5b7671fd_137, expr, "adapters.py", 46).
-ast_node[code](n5b7671fd_138, await, "adapters.py", 46).
-ast_node[code](n5b7671fd_139, call, "adapters.py", 46).
-ast_node[code](n5b7671fd_140, attribute, "adapters.py", 46).
-ast_node[code](n5b7671fd_141, name, "adapters.py", 46).
-ast_attr[code](n5b7671fd_141, id, "self").
-ast_attr[code](n5b7671fd_141, ctx, load).
-ast_child[code](n5b7671fd_140, value, 0, n5b7671fd_141).
-ast_attr[code](n5b7671fd_140, attr, "_call").
-ast_attr[code](n5b7671fd_140, ctx, load).
-ast_child[code](n5b7671fd_139, func, 0, n5b7671fd_140).
-ast_node[code](n5b7671fd_142, constant, "adapters.py", 46).
-ast_attr[code](n5b7671fd_142, value, "delete").
-ast_child[code](n5b7671fd_139, args, 0, n5b7671fd_142).
-ast_node[code](n5b7671fd_143, name, "adapters.py", 46).
-ast_attr[code](n5b7671fd_143, id, "source").
+ast_child[code](n5b7671fd_130, func, 0, n5b7671fd_131).
+ast_node[code](n5b7671fd_133, name, "adapters.py", 47).
+ast_attr[code](n5b7671fd_133, id, "source").
+ast_attr[code](n5b7671fd_133, ctx, load).
+ast_child[code](n5b7671fd_130, args, 0, n5b7671fd_133).
+ast_child[code](n5b7671fd_128, iter, 0, n5b7671fd_130).
+ast_attr[code](n5b7671fd_128, is_async, 0).
+ast_child[code](n5b7671fd_119, generators, 0, n5b7671fd_128).
+ast_child[code](n5b7671fd_117, value, 0, n5b7671fd_119).
+ast_child[code](n5b7671fd_110, body, 0, n5b7671fd_117).
+ast_node[code](n5b7671fd_134, expr, "adapters.py", 48).
+ast_node[code](n5b7671fd_135, await, "adapters.py", 48).
+ast_node[code](n5b7671fd_136, call, "adapters.py", 48).
+ast_node[code](n5b7671fd_137, name, "adapters.py", 48).
+ast_attr[code](n5b7671fd_137, id, "gather_limited").
+ast_attr[code](n5b7671fd_137, ctx, load).
+ast_child[code](n5b7671fd_136, func, 0, n5b7671fd_137).
+ast_node[code](n5b7671fd_138, name, "adapters.py", 48).
+ast_attr[code](n5b7671fd_138, id, "jobs").
+ast_attr[code](n5b7671fd_138, ctx, load).
+ast_child[code](n5b7671fd_136, args, 0, n5b7671fd_138).
+ast_child[code](n5b7671fd_135, value, 0, n5b7671fd_136).
+ast_child[code](n5b7671fd_134, value, 0, n5b7671fd_135).
+ast_child[code](n5b7671fd_110, body, 1, n5b7671fd_134).
+ast_node[code](n5b7671fd_139, expr, "adapters.py", 49).
+ast_node[code](n5b7671fd_140, await, "adapters.py", 49).
+ast_node[code](n5b7671fd_141, call, "adapters.py", 49).
+ast_node[code](n5b7671fd_142, attribute, "adapters.py", 49).
+ast_node[code](n5b7671fd_143, name, "adapters.py", 49).
+ast_attr[code](n5b7671fd_143, id, "self").
 ast_attr[code](n5b7671fd_143, ctx, load).
-ast_child[code](n5b7671fd_139, args, 1, n5b7671fd_143).
-ast_node[code](n5b7671fd_144, lambda, "adapters.py", 46).
-ast_node[code](n5b7671fd_145, arguments, "adapters.py", 0).
-ast_child[code](n5b7671fd_144, args, 0, n5b7671fd_145).
-ast_node[code](n5b7671fd_146, call, "adapters.py", 46).
-ast_node[code](n5b7671fd_147, attribute, "adapters.py", 46).
-ast_node[code](n5b7671fd_148, attribute, "adapters.py", 46).
-ast_node[code](n5b7671fd_149, name, "adapters.py", 46).
-ast_attr[code](n5b7671fd_149, id, "self").
-ast_attr[code](n5b7671fd_149, ctx, load).
-ast_child[code](n5b7671fd_148, value, 0, n5b7671fd_149).
-ast_attr[code](n5b7671fd_148, attr, "client").
-ast_attr[code](n5b7671fd_148, ctx, load).
-ast_child[code](n5b7671fd_147, value, 0, n5b7671fd_148).
-ast_attr[code](n5b7671fd_147, attr, "delete_objects").
-ast_attr[code](n5b7671fd_147, ctx, load).
-ast_child[code](n5b7671fd_146, func, 0, n5b7671fd_147).
-ast_node[code](n5b7671fd_150, keyword, "adapters.py", 46).
-ast_attr[code](n5b7671fd_150, arg, "Prefix").
-ast_node[code](n5b7671fd_151, name, "adapters.py", 46).
-ast_attr[code](n5b7671fd_151, id, "source").
+ast_child[code](n5b7671fd_142, value, 0, n5b7671fd_143).
+ast_attr[code](n5b7671fd_142, attr, "_call").
+ast_attr[code](n5b7671fd_142, ctx, load).
+ast_child[code](n5b7671fd_141, func, 0, n5b7671fd_142).
+ast_node[code](n5b7671fd_144, constant, "adapters.py", 49).
+ast_attr[code](n5b7671fd_144, value, "delete").
+ast_child[code](n5b7671fd_141, args, 0, n5b7671fd_144).
+ast_node[code](n5b7671fd_145, name, "adapters.py", 49).
+ast_attr[code](n5b7671fd_145, id, "source").
+ast_attr[code](n5b7671fd_145, ctx, load).
+ast_child[code](n5b7671fd_141, args, 1, n5b7671fd_145).
+ast_node[code](n5b7671fd_146, lambda, "adapters.py", 49).
+ast_node[code](n5b7671fd_147, arguments, "adapters.py", 0).
+ast_child[code](n5b7671fd_146, args, 0, n5b7671fd_147).
+ast_node[code](n5b7671fd_148, call, "adapters.py", 49).
+ast_node[code](n5b7671fd_149, attribute, "adapters.py", 49).
+ast_node[code](n5b7671fd_150, attribute, "adapters.py", 49).
+ast_node[code](n5b7671fd_151, name, "adapters.py", 49).
+ast_attr[code](n5b7671fd_151, id, "self").
 ast_attr[code](n5b7671fd_151, ctx, load).
 ast_child[code](n5b7671fd_150, value, 0, n5b7671fd_151).
-ast_child[code](n5b7671fd_146, keywords, 0, n5b7671fd_150).
-ast_child[code](n5b7671fd_144, body, 0, n5b7671fd_146).
-ast_child[code](n5b7671fd_139, args, 2, n5b7671fd_144).
-ast_child[code](n5b7671fd_138, value, 0, n5b7671fd_139).
-ast_child[code](n5b7671fd_137, value, 0, n5b7671fd_138).
-ast_child[code](n5b7671fd_108, body, 2, n5b7671fd_137).
-ast_node[code](n5b7671fd_152, constant, "adapters.py", 43).
-ast_attr[code](n5b7671fd_152, value, none).
-ast_child[code](n5b7671fd_108, returns, 0, n5b7671fd_152).
-ast_child[code](n5b7671fd_50, body, 2, n5b7671fd_108).
-ast_node[code](n5b7671fd_153, function_def, "adapters.py", 48).
-ast_attr[code](n5b7671fd_153, name, "_copy").
-ast_node[code](n5b7671fd_154, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_155, arg, "adapters.py", 48).
-ast_attr[code](n5b7671fd_155, arg, "self").
-ast_child[code](n5b7671fd_154, args, 0, n5b7671fd_155).
-ast_node[code](n5b7671fd_156, arg, "adapters.py", 48).
-ast_attr[code](n5b7671fd_156, arg, "key").
-ast_node[code](n5b7671fd_157, name, "adapters.py", 48).
-ast_attr[code](n5b7671fd_157, id, "str").
-ast_attr[code](n5b7671fd_157, ctx, load).
-ast_child[code](n5b7671fd_156, annotation, 0, n5b7671fd_157).
-ast_child[code](n5b7671fd_154, args, 1, n5b7671fd_156).
-ast_node[code](n5b7671fd_158, arg, "adapters.py", 48).
-ast_attr[code](n5b7671fd_158, arg, "target").
-ast_node[code](n5b7671fd_159, name, "adapters.py", 48).
+ast_attr[code](n5b7671fd_150, attr, "client").
+ast_attr[code](n5b7671fd_150, ctx, load).
+ast_child[code](n5b7671fd_149, value, 0, n5b7671fd_150).
+ast_attr[code](n5b7671fd_149, attr, "delete_objects").
+ast_attr[code](n5b7671fd_149, ctx, load).
+ast_child[code](n5b7671fd_148, func, 0, n5b7671fd_149).
+ast_node[code](n5b7671fd_152, keyword, "adapters.py", 49).
+ast_attr[code](n5b7671fd_152, arg, "Prefix").
+ast_node[code](n5b7671fd_153, name, "adapters.py", 49).
+ast_attr[code](n5b7671fd_153, id, "source").
+ast_attr[code](n5b7671fd_153, ctx, load).
+ast_child[code](n5b7671fd_152, value, 0, n5b7671fd_153).
+ast_child[code](n5b7671fd_148, keywords, 0, n5b7671fd_152).
+ast_child[code](n5b7671fd_146, body, 0, n5b7671fd_148).
+ast_child[code](n5b7671fd_141, args, 2, n5b7671fd_146).
+ast_child[code](n5b7671fd_140, value, 0, n5b7671fd_141).
+ast_child[code](n5b7671fd_139, value, 0, n5b7671fd_140).
+ast_child[code](n5b7671fd_110, body, 2, n5b7671fd_139).
+ast_node[code](n5b7671fd_154, constant, "adapters.py", 46).
+ast_attr[code](n5b7671fd_154, value, none).
+ast_child[code](n5b7671fd_110, returns, 0, n5b7671fd_154).
+ast_child[code](n5b7671fd_52, body, 2, n5b7671fd_110).
+ast_node[code](n5b7671fd_155, function_def, "adapters.py", 51).
+ast_attr[code](n5b7671fd_155, name, "_copy").
+ast_node[code](n5b7671fd_156, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_157, arg, "adapters.py", 51).
+ast_attr[code](n5b7671fd_157, arg, "self").
+ast_child[code](n5b7671fd_156, args, 0, n5b7671fd_157).
+ast_node[code](n5b7671fd_158, arg, "adapters.py", 51).
+ast_attr[code](n5b7671fd_158, arg, "key").
+ast_node[code](n5b7671fd_159, name, "adapters.py", 51).
 ast_attr[code](n5b7671fd_159, id, "str").
 ast_attr[code](n5b7671fd_159, ctx, load).
 ast_child[code](n5b7671fd_158, annotation, 0, n5b7671fd_159).
-ast_child[code](n5b7671fd_154, args, 2, n5b7671fd_158).
-ast_child[code](n5b7671fd_153, args, 0, n5b7671fd_154).
-ast_node[code](n5b7671fd_160, expr, "adapters.py", 49).
-ast_node[code](n5b7671fd_161, call, "adapters.py", 49).
-ast_node[code](n5b7671fd_162, attribute, "adapters.py", 49).
-ast_node[code](n5b7671fd_163, attribute, "adapters.py", 49).
-ast_node[code](n5b7671fd_164, name, "adapters.py", 49).
-ast_attr[code](n5b7671fd_164, id, "self").
-ast_attr[code](n5b7671fd_164, ctx, load).
-ast_child[code](n5b7671fd_163, value, 0, n5b7671fd_164).
-ast_attr[code](n5b7671fd_163, attr, "client").
-ast_attr[code](n5b7671fd_163, ctx, load).
-ast_child[code](n5b7671fd_162, value, 0, n5b7671fd_163).
-ast_attr[code](n5b7671fd_162, attr, "copy").
-ast_attr[code](n5b7671fd_162, ctx, load).
-ast_child[code](n5b7671fd_161, func, 0, n5b7671fd_162).
-ast_node[code](n5b7671fd_165, keyword, "adapters.py", 49).
-ast_attr[code](n5b7671fd_165, arg, "Key").
-ast_node[code](n5b7671fd_166, name, "adapters.py", 49).
-ast_attr[code](n5b7671fd_166, id, "key").
+ast_child[code](n5b7671fd_156, args, 1, n5b7671fd_158).
+ast_node[code](n5b7671fd_160, arg, "adapters.py", 51).
+ast_attr[code](n5b7671fd_160, arg, "target").
+ast_node[code](n5b7671fd_161, name, "adapters.py", 51).
+ast_attr[code](n5b7671fd_161, id, "str").
+ast_attr[code](n5b7671fd_161, ctx, load).
+ast_child[code](n5b7671fd_160, annotation, 0, n5b7671fd_161).
+ast_child[code](n5b7671fd_156, args, 2, n5b7671fd_160).
+ast_child[code](n5b7671fd_155, args, 0, n5b7671fd_156).
+ast_node[code](n5b7671fd_162, expr, "adapters.py", 52).
+ast_node[code](n5b7671fd_163, call, "adapters.py", 52).
+ast_node[code](n5b7671fd_164, attribute, "adapters.py", 52).
+ast_node[code](n5b7671fd_165, attribute, "adapters.py", 52).
+ast_node[code](n5b7671fd_166, name, "adapters.py", 52).
+ast_attr[code](n5b7671fd_166, id, "self").
 ast_attr[code](n5b7671fd_166, ctx, load).
 ast_child[code](n5b7671fd_165, value, 0, n5b7671fd_166).
-ast_child[code](n5b7671fd_161, keywords, 0, n5b7671fd_165).
-ast_node[code](n5b7671fd_167, keyword, "adapters.py", 49).
-ast_attr[code](n5b7671fd_167, arg, "Target").
-ast_node[code](n5b7671fd_168, name, "adapters.py", 49).
-ast_attr[code](n5b7671fd_168, id, "target").
+ast_attr[code](n5b7671fd_165, attr, "client").
+ast_attr[code](n5b7671fd_165, ctx, load).
+ast_child[code](n5b7671fd_164, value, 0, n5b7671fd_165).
+ast_attr[code](n5b7671fd_164, attr, "copy").
+ast_attr[code](n5b7671fd_164, ctx, load).
+ast_child[code](n5b7671fd_163, func, 0, n5b7671fd_164).
+ast_node[code](n5b7671fd_167, keyword, "adapters.py", 52).
+ast_attr[code](n5b7671fd_167, arg, "Key").
+ast_node[code](n5b7671fd_168, name, "adapters.py", 52).
+ast_attr[code](n5b7671fd_168, id, "key").
 ast_attr[code](n5b7671fd_168, ctx, load).
 ast_child[code](n5b7671fd_167, value, 0, n5b7671fd_168).
-ast_child[code](n5b7671fd_161, keywords, 1, n5b7671fd_167).
-ast_child[code](n5b7671fd_160, value, 0, n5b7671fd_161).
-ast_child[code](n5b7671fd_153, body, 0, n5b7671fd_160).
-ast_node[code](n5b7671fd_169, constant, "adapters.py", 48).
-ast_attr[code](n5b7671fd_169, value, none).
-ast_child[code](n5b7671fd_153, returns, 0, n5b7671fd_169).
-ast_child[code](n5b7671fd_50, body, 3, n5b7671fd_153).
-ast_node[code](n5b7671fd_170, function_def, "adapters.py", 51).
-ast_attr[code](n5b7671fd_170, name, "_keys").
-ast_node[code](n5b7671fd_171, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_172, arg, "adapters.py", 51).
-ast_attr[code](n5b7671fd_172, arg, "self").
-ast_child[code](n5b7671fd_171, args, 0, n5b7671fd_172).
-ast_node[code](n5b7671fd_173, arg, "adapters.py", 51).
-ast_attr[code](n5b7671fd_173, arg, "prefix").
-ast_node[code](n5b7671fd_174, name, "adapters.py", 51).
-ast_attr[code](n5b7671fd_174, id, "str").
-ast_attr[code](n5b7671fd_174, ctx, load).
-ast_child[code](n5b7671fd_173, annotation, 0, n5b7671fd_174).
-ast_child[code](n5b7671fd_171, args, 1, n5b7671fd_173).
-ast_child[code](n5b7671fd_170, args, 0, n5b7671fd_171).
-ast_node[code](n5b7671fd_175, return, "adapters.py", 52).
-ast_node[code](n5b7671fd_176, list_comp, "adapters.py", 52).
-ast_node[code](n5b7671fd_177, subscript, "adapters.py", 52).
-ast_node[code](n5b7671fd_178, name, "adapters.py", 52).
-ast_attr[code](n5b7671fd_178, id, "o").
-ast_attr[code](n5b7671fd_178, ctx, load).
-ast_child[code](n5b7671fd_177, value, 0, n5b7671fd_178).
-ast_node[code](n5b7671fd_179, constant, "adapters.py", 52).
-ast_attr[code](n5b7671fd_179, value, "Key").
-ast_child[code](n5b7671fd_177, slice, 0, n5b7671fd_179).
-ast_attr[code](n5b7671fd_177, ctx, load).
-ast_child[code](n5b7671fd_176, elt, 0, n5b7671fd_177).
-ast_node[code](n5b7671fd_180, comprehension, "adapters.py", 0).
-ast_node[code](n5b7671fd_181, name, "adapters.py", 52).
-ast_attr[code](n5b7671fd_181, id, "o").
-ast_attr[code](n5b7671fd_181, ctx, store).
-ast_child[code](n5b7671fd_180, target, 0, n5b7671fd_181).
-ast_node[code](n5b7671fd_182, subscript, "adapters.py", 52).
-ast_node[code](n5b7671fd_183, call, "adapters.py", 52).
-ast_node[code](n5b7671fd_184, attribute, "adapters.py", 52).
-ast_node[code](n5b7671fd_185, attribute, "adapters.py", 52).
-ast_node[code](n5b7671fd_186, name, "adapters.py", 52).
-ast_attr[code](n5b7671fd_186, id, "self").
-ast_attr[code](n5b7671fd_186, ctx, load).
-ast_child[code](n5b7671fd_185, value, 0, n5b7671fd_186).
-ast_attr[code](n5b7671fd_185, attr, "client").
-ast_attr[code](n5b7671fd_185, ctx, load).
-ast_child[code](n5b7671fd_184, value, 0, n5b7671fd_185).
-ast_attr[code](n5b7671fd_184, attr, "list_objects_v2").
-ast_attr[code](n5b7671fd_184, ctx, load).
-ast_child[code](n5b7671fd_183, func, 0, n5b7671fd_184).
-ast_node[code](n5b7671fd_187, keyword, "adapters.py", 52).
-ast_attr[code](n5b7671fd_187, arg, "Prefix").
-ast_node[code](n5b7671fd_188, name, "adapters.py", 52).
-ast_attr[code](n5b7671fd_188, id, "prefix").
+ast_child[code](n5b7671fd_163, keywords, 0, n5b7671fd_167).
+ast_node[code](n5b7671fd_169, keyword, "adapters.py", 52).
+ast_attr[code](n5b7671fd_169, arg, "Target").
+ast_node[code](n5b7671fd_170, name, "adapters.py", 52).
+ast_attr[code](n5b7671fd_170, id, "target").
+ast_attr[code](n5b7671fd_170, ctx, load).
+ast_child[code](n5b7671fd_169, value, 0, n5b7671fd_170).
+ast_child[code](n5b7671fd_163, keywords, 1, n5b7671fd_169).
+ast_child[code](n5b7671fd_162, value, 0, n5b7671fd_163).
+ast_child[code](n5b7671fd_155, body, 0, n5b7671fd_162).
+ast_node[code](n5b7671fd_171, constant, "adapters.py", 51).
+ast_attr[code](n5b7671fd_171, value, none).
+ast_child[code](n5b7671fd_155, returns, 0, n5b7671fd_171).
+ast_child[code](n5b7671fd_52, body, 3, n5b7671fd_155).
+ast_node[code](n5b7671fd_172, function_def, "adapters.py", 54).
+ast_attr[code](n5b7671fd_172, name, "_keys").
+ast_node[code](n5b7671fd_173, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_174, arg, "adapters.py", 54).
+ast_attr[code](n5b7671fd_174, arg, "self").
+ast_child[code](n5b7671fd_173, args, 0, n5b7671fd_174).
+ast_node[code](n5b7671fd_175, arg, "adapters.py", 54).
+ast_attr[code](n5b7671fd_175, arg, "prefix").
+ast_node[code](n5b7671fd_176, name, "adapters.py", 54).
+ast_attr[code](n5b7671fd_176, id, "str").
+ast_attr[code](n5b7671fd_176, ctx, load).
+ast_child[code](n5b7671fd_175, annotation, 0, n5b7671fd_176).
+ast_child[code](n5b7671fd_173, args, 1, n5b7671fd_175).
+ast_child[code](n5b7671fd_172, args, 0, n5b7671fd_173).
+ast_node[code](n5b7671fd_177, return, "adapters.py", 55).
+ast_node[code](n5b7671fd_178, list_comp, "adapters.py", 55).
+ast_node[code](n5b7671fd_179, subscript, "adapters.py", 55).
+ast_node[code](n5b7671fd_180, name, "adapters.py", 55).
+ast_attr[code](n5b7671fd_180, id, "o").
+ast_attr[code](n5b7671fd_180, ctx, load).
+ast_child[code](n5b7671fd_179, value, 0, n5b7671fd_180).
+ast_node[code](n5b7671fd_181, constant, "adapters.py", 55).
+ast_attr[code](n5b7671fd_181, value, "Key").
+ast_child[code](n5b7671fd_179, slice, 0, n5b7671fd_181).
+ast_attr[code](n5b7671fd_179, ctx, load).
+ast_child[code](n5b7671fd_178, elt, 0, n5b7671fd_179).
+ast_node[code](n5b7671fd_182, comprehension, "adapters.py", 0).
+ast_node[code](n5b7671fd_183, name, "adapters.py", 55).
+ast_attr[code](n5b7671fd_183, id, "o").
+ast_attr[code](n5b7671fd_183, ctx, store).
+ast_child[code](n5b7671fd_182, target, 0, n5b7671fd_183).
+ast_node[code](n5b7671fd_184, subscript, "adapters.py", 55).
+ast_node[code](n5b7671fd_185, call, "adapters.py", 55).
+ast_node[code](n5b7671fd_186, attribute, "adapters.py", 55).
+ast_node[code](n5b7671fd_187, attribute, "adapters.py", 55).
+ast_node[code](n5b7671fd_188, name, "adapters.py", 55).
+ast_attr[code](n5b7671fd_188, id, "self").
 ast_attr[code](n5b7671fd_188, ctx, load).
 ast_child[code](n5b7671fd_187, value, 0, n5b7671fd_188).
-ast_child[code](n5b7671fd_183, keywords, 0, n5b7671fd_187).
-ast_child[code](n5b7671fd_182, value, 0, n5b7671fd_183).
-ast_node[code](n5b7671fd_189, constant, "adapters.py", 52).
-ast_attr[code](n5b7671fd_189, value, "Contents").
-ast_child[code](n5b7671fd_182, slice, 0, n5b7671fd_189).
-ast_attr[code](n5b7671fd_182, ctx, load).
-ast_child[code](n5b7671fd_180, iter, 0, n5b7671fd_182).
-ast_attr[code](n5b7671fd_180, is_async, 0).
-ast_child[code](n5b7671fd_176, generators, 0, n5b7671fd_180).
-ast_child[code](n5b7671fd_175, value, 0, n5b7671fd_176).
-ast_child[code](n5b7671fd_170, body, 0, n5b7671fd_175).
-ast_node[code](n5b7671fd_190, subscript, "adapters.py", 51).
-ast_node[code](n5b7671fd_191, name, "adapters.py", 51).
-ast_attr[code](n5b7671fd_191, id, "list").
-ast_attr[code](n5b7671fd_191, ctx, load).
-ast_child[code](n5b7671fd_190, value, 0, n5b7671fd_191).
-ast_node[code](n5b7671fd_192, name, "adapters.py", 51).
-ast_attr[code](n5b7671fd_192, id, "str").
-ast_attr[code](n5b7671fd_192, ctx, load).
-ast_child[code](n5b7671fd_190, slice, 0, n5b7671fd_192).
+ast_attr[code](n5b7671fd_187, attr, "client").
+ast_attr[code](n5b7671fd_187, ctx, load).
+ast_child[code](n5b7671fd_186, value, 0, n5b7671fd_187).
+ast_attr[code](n5b7671fd_186, attr, "list_objects_v2").
+ast_attr[code](n5b7671fd_186, ctx, load).
+ast_child[code](n5b7671fd_185, func, 0, n5b7671fd_186).
+ast_node[code](n5b7671fd_189, keyword, "adapters.py", 55).
+ast_attr[code](n5b7671fd_189, arg, "Prefix").
+ast_node[code](n5b7671fd_190, name, "adapters.py", 55).
+ast_attr[code](n5b7671fd_190, id, "prefix").
 ast_attr[code](n5b7671fd_190, ctx, load).
-ast_child[code](n5b7671fd_170, returns, 0, n5b7671fd_190).
-ast_child[code](n5b7671fd_50, body, 4, n5b7671fd_170).
-ast_node[code](n5b7671fd_193, async_function_def, "adapters.py", 54).
-ast_attr[code](n5b7671fd_193, name, "_call").
-ast_node[code](n5b7671fd_194, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_195, arg, "adapters.py", 54).
-ast_attr[code](n5b7671fd_195, arg, "self").
-ast_child[code](n5b7671fd_194, args, 0, n5b7671fd_195).
-ast_node[code](n5b7671fd_196, arg, "adapters.py", 54).
-ast_attr[code](n5b7671fd_196, arg, "operation").
-ast_node[code](n5b7671fd_197, name, "adapters.py", 54).
-ast_attr[code](n5b7671fd_197, id, "str").
-ast_attr[code](n5b7671fd_197, ctx, load).
-ast_child[code](n5b7671fd_196, annotation, 0, n5b7671fd_197).
-ast_child[code](n5b7671fd_194, args, 1, n5b7671fd_196).
-ast_node[code](n5b7671fd_198, arg, "adapters.py", 54).
-ast_attr[code](n5b7671fd_198, arg, "path").
-ast_node[code](n5b7671fd_199, name, "adapters.py", 54).
+ast_child[code](n5b7671fd_189, value, 0, n5b7671fd_190).
+ast_child[code](n5b7671fd_185, keywords, 0, n5b7671fd_189).
+ast_child[code](n5b7671fd_184, value, 0, n5b7671fd_185).
+ast_node[code](n5b7671fd_191, constant, "adapters.py", 55).
+ast_attr[code](n5b7671fd_191, value, "Contents").
+ast_child[code](n5b7671fd_184, slice, 0, n5b7671fd_191).
+ast_attr[code](n5b7671fd_184, ctx, load).
+ast_child[code](n5b7671fd_182, iter, 0, n5b7671fd_184).
+ast_attr[code](n5b7671fd_182, is_async, 0).
+ast_child[code](n5b7671fd_178, generators, 0, n5b7671fd_182).
+ast_child[code](n5b7671fd_177, value, 0, n5b7671fd_178).
+ast_child[code](n5b7671fd_172, body, 0, n5b7671fd_177).
+ast_node[code](n5b7671fd_192, subscript, "adapters.py", 54).
+ast_node[code](n5b7671fd_193, name, "adapters.py", 54).
+ast_attr[code](n5b7671fd_193, id, "list").
+ast_attr[code](n5b7671fd_193, ctx, load).
+ast_child[code](n5b7671fd_192, value, 0, n5b7671fd_193).
+ast_node[code](n5b7671fd_194, name, "adapters.py", 54).
+ast_attr[code](n5b7671fd_194, id, "str").
+ast_attr[code](n5b7671fd_194, ctx, load).
+ast_child[code](n5b7671fd_192, slice, 0, n5b7671fd_194).
+ast_attr[code](n5b7671fd_192, ctx, load).
+ast_child[code](n5b7671fd_172, returns, 0, n5b7671fd_192).
+ast_child[code](n5b7671fd_52, body, 4, n5b7671fd_172).
+ast_node[code](n5b7671fd_195, async_function_def, "adapters.py", 57).
+ast_attr[code](n5b7671fd_195, name, "_call").
+ast_node[code](n5b7671fd_196, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_197, arg, "adapters.py", 57).
+ast_attr[code](n5b7671fd_197, arg, "self").
+ast_child[code](n5b7671fd_196, args, 0, n5b7671fd_197).
+ast_node[code](n5b7671fd_198, arg, "adapters.py", 57).
+ast_attr[code](n5b7671fd_198, arg, "operation").
+ast_node[code](n5b7671fd_199, name, "adapters.py", 57).
 ast_attr[code](n5b7671fd_199, id, "str").
 ast_attr[code](n5b7671fd_199, ctx, load).
 ast_child[code](n5b7671fd_198, annotation, 0, n5b7671fd_199).
-ast_child[code](n5b7671fd_194, args, 2, n5b7671fd_198).
-ast_node[code](n5b7671fd_200, arg, "adapters.py", 54).
-ast_attr[code](n5b7671fd_200, arg, "func").
-ast_child[code](n5b7671fd_194, args, 3, n5b7671fd_200).
-ast_child[code](n5b7671fd_193, args, 0, n5b7671fd_194).
-ast_node[code](n5b7671fd_201, return, "adapters.py", 55).
-ast_node[code](n5b7671fd_202, await, "adapters.py", 55).
-ast_node[code](n5b7671fd_203, call, "adapters.py", 55).
-ast_node[code](n5b7671fd_204, attribute, "adapters.py", 55).
-ast_node[code](n5b7671fd_205, name, "adapters.py", 55).
-ast_attr[code](n5b7671fd_205, id, "to_thread").
-ast_attr[code](n5b7671fd_205, ctx, load).
-ast_child[code](n5b7671fd_204, value, 0, n5b7671fd_205).
-ast_attr[code](n5b7671fd_204, attr, "run_sync").
-ast_attr[code](n5b7671fd_204, ctx, load).
-ast_child[code](n5b7671fd_203, func, 0, n5b7671fd_204).
-ast_node[code](n5b7671fd_206, name, "adapters.py", 55).
-ast_attr[code](n5b7671fd_206, id, "func").
+ast_child[code](n5b7671fd_196, args, 1, n5b7671fd_198).
+ast_node[code](n5b7671fd_200, arg, "adapters.py", 57).
+ast_attr[code](n5b7671fd_200, arg, "path").
+ast_node[code](n5b7671fd_201, name, "adapters.py", 57).
+ast_attr[code](n5b7671fd_201, id, "str").
+ast_attr[code](n5b7671fd_201, ctx, load).
+ast_child[code](n5b7671fd_200, annotation, 0, n5b7671fd_201).
+ast_child[code](n5b7671fd_196, args, 2, n5b7671fd_200).
+ast_node[code](n5b7671fd_202, arg, "adapters.py", 57).
+ast_attr[code](n5b7671fd_202, arg, "func").
+ast_child[code](n5b7671fd_196, args, 3, n5b7671fd_202).
+ast_child[code](n5b7671fd_195, args, 0, n5b7671fd_196).
+ast_node[code](n5b7671fd_203, return, "adapters.py", 58).
+ast_node[code](n5b7671fd_204, await, "adapters.py", 58).
+ast_node[code](n5b7671fd_205, call, "adapters.py", 58).
+ast_node[code](n5b7671fd_206, attribute, "adapters.py", 58).
+ast_node[code](n5b7671fd_207, name, "adapters.py", 58).
+ast_attr[code](n5b7671fd_207, id, "to_thread").
+ast_attr[code](n5b7671fd_207, ctx, load).
+ast_child[code](n5b7671fd_206, value, 0, n5b7671fd_207).
+ast_attr[code](n5b7671fd_206, attr, "run_sync").
 ast_attr[code](n5b7671fd_206, ctx, load).
-ast_child[code](n5b7671fd_203, args, 0, n5b7671fd_206).
-ast_child[code](n5b7671fd_202, value, 0, n5b7671fd_203).
-ast_child[code](n5b7671fd_201, value, 0, n5b7671fd_202).
-ast_child[code](n5b7671fd_193, body, 0, n5b7671fd_201).
-ast_child[code](n5b7671fd_50, body, 5, n5b7671fd_193).
-ast_node[code](n5b7671fd_207, async_function_def, "adapters.py", 57).
-ast_attr[code](n5b7671fd_207, name, "_run").
-ast_node[code](n5b7671fd_208, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_209, arg, "adapters.py", 57).
-ast_attr[code](n5b7671fd_209, arg, "self").
-ast_child[code](n5b7671fd_208, args, 0, n5b7671fd_209).
-ast_node[code](n5b7671fd_210, arg, "adapters.py", 57).
-ast_attr[code](n5b7671fd_210, arg, "func").
-ast_child[code](n5b7671fd_208, args, 1, n5b7671fd_210).
-ast_child[code](n5b7671fd_207, args, 0, n5b7671fd_208).
-ast_node[code](n5b7671fd_211, return, "adapters.py", 58).
-ast_node[code](n5b7671fd_212, await, "adapters.py", 58).
-ast_node[code](n5b7671fd_213, call, "adapters.py", 58).
-ast_node[code](n5b7671fd_214, attribute, "adapters.py", 58).
-ast_node[code](n5b7671fd_215, name, "adapters.py", 58).
-ast_attr[code](n5b7671fd_215, id, "to_thread").
-ast_attr[code](n5b7671fd_215, ctx, load).
-ast_child[code](n5b7671fd_214, value, 0, n5b7671fd_215).
-ast_attr[code](n5b7671fd_214, attr, "run_sync").
-ast_attr[code](n5b7671fd_214, ctx, load).
-ast_child[code](n5b7671fd_213, func, 0, n5b7671fd_214).
-ast_node[code](n5b7671fd_216, name, "adapters.py", 58).
-ast_attr[code](n5b7671fd_216, id, "func").
+ast_child[code](n5b7671fd_205, func, 0, n5b7671fd_206).
+ast_node[code](n5b7671fd_208, name, "adapters.py", 58).
+ast_attr[code](n5b7671fd_208, id, "func").
+ast_attr[code](n5b7671fd_208, ctx, load).
+ast_child[code](n5b7671fd_205, args, 0, n5b7671fd_208).
+ast_child[code](n5b7671fd_204, value, 0, n5b7671fd_205).
+ast_child[code](n5b7671fd_203, value, 0, n5b7671fd_204).
+ast_child[code](n5b7671fd_195, body, 0, n5b7671fd_203).
+ast_child[code](n5b7671fd_52, body, 5, n5b7671fd_195).
+ast_node[code](n5b7671fd_209, async_function_def, "adapters.py", 60).
+ast_attr[code](n5b7671fd_209, name, "_run").
+ast_node[code](n5b7671fd_210, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_211, arg, "adapters.py", 60).
+ast_attr[code](n5b7671fd_211, arg, "self").
+ast_child[code](n5b7671fd_210, args, 0, n5b7671fd_211).
+ast_node[code](n5b7671fd_212, arg, "adapters.py", 60).
+ast_attr[code](n5b7671fd_212, arg, "func").
+ast_child[code](n5b7671fd_210, args, 1, n5b7671fd_212).
+ast_child[code](n5b7671fd_209, args, 0, n5b7671fd_210).
+ast_node[code](n5b7671fd_213, return, "adapters.py", 61).
+ast_node[code](n5b7671fd_214, await, "adapters.py", 61).
+ast_node[code](n5b7671fd_215, call, "adapters.py", 61).
+ast_node[code](n5b7671fd_216, attribute, "adapters.py", 61).
+ast_node[code](n5b7671fd_217, name, "adapters.py", 61).
+ast_attr[code](n5b7671fd_217, id, "to_thread").
+ast_attr[code](n5b7671fd_217, ctx, load).
+ast_child[code](n5b7671fd_216, value, 0, n5b7671fd_217).
+ast_attr[code](n5b7671fd_216, attr, "run_sync").
 ast_attr[code](n5b7671fd_216, ctx, load).
-ast_child[code](n5b7671fd_213, args, 0, n5b7671fd_216).
-ast_child[code](n5b7671fd_212, value, 0, n5b7671fd_213).
-ast_child[code](n5b7671fd_211, value, 0, n5b7671fd_212).
-ast_child[code](n5b7671fd_207, body, 0, n5b7671fd_211).
-ast_child[code](n5b7671fd_50, body, 6, n5b7671fd_207).
-ast_child[code](n5b7671fd_1, body, 6, n5b7671fd_50).
-ast_node[code](n5b7671fd_217, class_def, "adapters.py", 61).
-ast_attr[code](n5b7671fd_217, name, "TreeAdapter").
-ast_node[code](n5b7671fd_218, async_function_def, "adapters.py", 62).
-ast_attr[code](n5b7671fd_218, name, "write").
-ast_node[code](n5b7671fd_219, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_220, arg, "adapters.py", 62).
-ast_attr[code](n5b7671fd_220, arg, "self").
-ast_child[code](n5b7671fd_219, args, 0, n5b7671fd_220).
-ast_node[code](n5b7671fd_221, arg, "adapters.py", 62).
-ast_attr[code](n5b7671fd_221, arg, "path").
-ast_node[code](n5b7671fd_222, name, "adapters.py", 62).
-ast_attr[code](n5b7671fd_222, id, "str").
-ast_attr[code](n5b7671fd_222, ctx, load).
-ast_child[code](n5b7671fd_221, annotation, 0, n5b7671fd_222).
-ast_child[code](n5b7671fd_219, args, 1, n5b7671fd_221).
-ast_node[code](n5b7671fd_223, arg, "adapters.py", 62).
-ast_attr[code](n5b7671fd_223, arg, "contents").
-ast_node[code](n5b7671fd_224, name, "adapters.py", 62).
-ast_attr[code](n5b7671fd_224, id, "bytes").
-ast_attr[code](n5b7671fd_224, ctx, load).
-ast_child[code](n5b7671fd_223, annotation, 0, n5b7671fd_224).
-ast_child[code](n5b7671fd_219, args, 2, n5b7671fd_223).
-ast_child[code](n5b7671fd_218, args, 0, n5b7671fd_219).
-ast_node[code](n5b7671fd_225, assign, "adapters.py", 63).
-ast_node[code](n5b7671fd_226, name, "adapters.py", 63).
-ast_attr[code](n5b7671fd_226, id, "temporary").
-ast_attr[code](n5b7671fd_226, ctx, store).
-ast_child[code](n5b7671fd_225, targets, 0, n5b7671fd_226).
-ast_node[code](n5b7671fd_227, joined_str, "adapters.py", 63).
-ast_node[code](n5b7671fd_228, formatted_value, "adapters.py", 63).
-ast_node[code](n5b7671fd_229, name, "adapters.py", 63).
-ast_attr[code](n5b7671fd_229, id, "path").
-ast_attr[code](n5b7671fd_229, ctx, load).
-ast_child[code](n5b7671fd_228, value, 0, n5b7671fd_229).
-ast_attr[code](n5b7671fd_228, conversion, -1).
-ast_child[code](n5b7671fd_227, values, 0, n5b7671fd_228).
-ast_node[code](n5b7671fd_230, constant, "adapters.py", 63).
-ast_attr[code](n5b7671fd_230, value, ".tmp").
-ast_child[code](n5b7671fd_227, values, 1, n5b7671fd_230).
-ast_child[code](n5b7671fd_225, value, 0, n5b7671fd_227).
-ast_child[code](n5b7671fd_218, body, 0, n5b7671fd_225).
-ast_node[code](n5b7671fd_231, try, "adapters.py", 64).
-ast_node[code](n5b7671fd_232, expr, "adapters.py", 65).
-ast_node[code](n5b7671fd_233, await, "adapters.py", 65).
-ast_node[code](n5b7671fd_234, call, "adapters.py", 65).
-ast_node[code](n5b7671fd_235, attribute, "adapters.py", 65).
-ast_node[code](n5b7671fd_236, name, "adapters.py", 65).
-ast_attr[code](n5b7671fd_236, id, "self").
+ast_child[code](n5b7671fd_215, func, 0, n5b7671fd_216).
+ast_node[code](n5b7671fd_218, name, "adapters.py", 61).
+ast_attr[code](n5b7671fd_218, id, "func").
+ast_attr[code](n5b7671fd_218, ctx, load).
+ast_child[code](n5b7671fd_215, args, 0, n5b7671fd_218).
+ast_child[code](n5b7671fd_214, value, 0, n5b7671fd_215).
+ast_child[code](n5b7671fd_213, value, 0, n5b7671fd_214).
+ast_child[code](n5b7671fd_209, body, 0, n5b7671fd_213).
+ast_child[code](n5b7671fd_52, body, 6, n5b7671fd_209).
+ast_child[code](n5b7671fd_1, body, 7, n5b7671fd_52).
+ast_node[code](n5b7671fd_219, class_def, "adapters.py", 64).
+ast_attr[code](n5b7671fd_219, name, "Pool").
+ast_node[code](n5b7671fd_220, function_def, "adapters.py", 65).
+ast_attr[code](n5b7671fd_220, name, "__init__").
+ast_node[code](n5b7671fd_221, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_222, arg, "adapters.py", 65).
+ast_attr[code](n5b7671fd_222, arg, "self").
+ast_child[code](n5b7671fd_221, args, 0, n5b7671fd_222).
+ast_node[code](n5b7671fd_223, arg, "adapters.py", 65).
+ast_attr[code](n5b7671fd_223, arg, "connect").
+ast_child[code](n5b7671fd_221, args, 1, n5b7671fd_223).
+ast_child[code](n5b7671fd_220, args, 0, n5b7671fd_221).
+ast_node[code](n5b7671fd_224, assign, "adapters.py", 66).
+ast_node[code](n5b7671fd_225, attribute, "adapters.py", 66).
+ast_node[code](n5b7671fd_226, name, "adapters.py", 66).
+ast_attr[code](n5b7671fd_226, id, "self").
+ast_attr[code](n5b7671fd_226, ctx, load).
+ast_child[code](n5b7671fd_225, value, 0, n5b7671fd_226).
+ast_attr[code](n5b7671fd_225, attr, "_connect").
+ast_attr[code](n5b7671fd_225, ctx, store).
+ast_child[code](n5b7671fd_224, targets, 0, n5b7671fd_225).
+ast_node[code](n5b7671fd_227, name, "adapters.py", 66).
+ast_attr[code](n5b7671fd_227, id, "connect").
+ast_attr[code](n5b7671fd_227, ctx, load).
+ast_child[code](n5b7671fd_224, value, 0, n5b7671fd_227).
+ast_child[code](n5b7671fd_220, body, 0, n5b7671fd_224).
+ast_child[code](n5b7671fd_219, body, 0, n5b7671fd_220).
+ast_node[code](n5b7671fd_228, function_def, "adapters.py", 68).
+ast_attr[code](n5b7671fd_228, name, "run").
+ast_node[code](n5b7671fd_229, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_230, arg, "adapters.py", 68).
+ast_attr[code](n5b7671fd_230, arg, "self").
+ast_child[code](n5b7671fd_229, args, 0, n5b7671fd_230).
+ast_node[code](n5b7671fd_231, arg, "adapters.py", 68).
+ast_attr[code](n5b7671fd_231, arg, "func").
+ast_child[code](n5b7671fd_229, args, 1, n5b7671fd_231).
+ast_child[code](n5b7671fd_228, args, 0, n5b7671fd_229).
+ast_node[code](n5b7671fd_232, return, "adapters.py", 69).
+ast_node[code](n5b7671fd_233, call, "adapters.py", 69).
+ast_node[code](n5b7671fd_234, name, "adapters.py", 69).
+ast_attr[code](n5b7671fd_234, id, "func").
+ast_attr[code](n5b7671fd_234, ctx, load).
+ast_child[code](n5b7671fd_233, func, 0, n5b7671fd_234).
+ast_node[code](n5b7671fd_235, call, "adapters.py", 69).
+ast_node[code](n5b7671fd_236, attribute, "adapters.py", 69).
+ast_node[code](n5b7671fd_237, name, "adapters.py", 69).
+ast_attr[code](n5b7671fd_237, id, "self").
+ast_attr[code](n5b7671fd_237, ctx, load).
+ast_child[code](n5b7671fd_236, value, 0, n5b7671fd_237).
+ast_attr[code](n5b7671fd_236, attr, "_connect").
 ast_attr[code](n5b7671fd_236, ctx, load).
-ast_child[code](n5b7671fd_235, value, 0, n5b7671fd_236).
-ast_attr[code](n5b7671fd_235, attr, "_request").
-ast_attr[code](n5b7671fd_235, ctx, load).
-ast_child[code](n5b7671fd_234, func, 0, n5b7671fd_235).
-ast_node[code](n5b7671fd_237, constant, "adapters.py", 65).
-ast_attr[code](n5b7671fd_237, value, "PUT").
-ast_child[code](n5b7671fd_234, args, 0, n5b7671fd_237).
-ast_node[code](n5b7671fd_238, name, "adapters.py", 65).
-ast_attr[code](n5b7671fd_238, id, "temporary").
-ast_attr[code](n5b7671fd_238, ctx, load).
-ast_child[code](n5b7671fd_234, args, 1, n5b7671fd_238).
-ast_node[code](n5b7671fd_239, name, "adapters.py", 65).
-ast_attr[code](n5b7671fd_239, id, "contents").
-ast_attr[code](n5b7671fd_239, ctx, load).
-ast_child[code](n5b7671fd_234, args, 2, n5b7671fd_239).
-ast_child[code](n5b7671fd_233, value, 0, n5b7671fd_234).
+ast_child[code](n5b7671fd_235, func, 0, n5b7671fd_236).
+ast_child[code](n5b7671fd_233, args, 0, n5b7671fd_235).
 ast_child[code](n5b7671fd_232, value, 0, n5b7671fd_233).
-ast_child[code](n5b7671fd_231, body, 0, n5b7671fd_232).
-ast_node[code](n5b7671fd_240, expr, "adapters.py", 66).
-ast_node[code](n5b7671fd_241, await, "adapters.py", 66).
-ast_node[code](n5b7671fd_242, call, "adapters.py", 66).
-ast_node[code](n5b7671fd_243, attribute, "adapters.py", 66).
-ast_node[code](n5b7671fd_244, name, "adapters.py", 66).
-ast_attr[code](n5b7671fd_244, id, "self").
-ast_attr[code](n5b7671fd_244, ctx, load).
-ast_child[code](n5b7671fd_243, value, 0, n5b7671fd_244).
-ast_attr[code](n5b7671fd_243, attr, "_request").
-ast_attr[code](n5b7671fd_243, ctx, load).
-ast_child[code](n5b7671fd_242, func, 0, n5b7671fd_243).
-ast_node[code](n5b7671fd_245, constant, "adapters.py", 66).
-ast_attr[code](n5b7671fd_245, value, "MOVE").
-ast_child[code](n5b7671fd_242, args, 0, n5b7671fd_245).
-ast_node[code](n5b7671fd_246, name, "adapters.py", 66).
-ast_attr[code](n5b7671fd_246, id, "temporary").
+ast_child[code](n5b7671fd_228, body, 0, n5b7671fd_232).
+ast_child[code](n5b7671fd_219, body, 1, n5b7671fd_228).
+ast_child[code](n5b7671fd_1, body, 8, n5b7671fd_219).
+ast_node[code](n5b7671fd_238, class_def, "adapters.py", 72).
+ast_attr[code](n5b7671fd_238, name, "Wire").
+ast_node[code](n5b7671fd_239, attribute, "adapters.py", 72).
+ast_node[code](n5b7671fd_240, name, "adapters.py", 72).
+ast_attr[code](n5b7671fd_240, id, "socket").
+ast_attr[code](n5b7671fd_240, ctx, load).
+ast_child[code](n5b7671fd_239, value, 0, n5b7671fd_240).
+ast_attr[code](n5b7671fd_239, attr, "socket").
+ast_attr[code](n5b7671fd_239, ctx, load).
+ast_child[code](n5b7671fd_238, bases, 0, n5b7671fd_239).
+ast_node[code](n5b7671fd_241, function_def, "adapters.py", 73).
+ast_attr[code](n5b7671fd_241, name, "handshake").
+ast_node[code](n5b7671fd_242, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_243, arg, "adapters.py", 73).
+ast_attr[code](n5b7671fd_243, arg, "self").
+ast_child[code](n5b7671fd_242, args, 0, n5b7671fd_243).
+ast_child[code](n5b7671fd_241, args, 0, n5b7671fd_242).
+ast_node[code](n5b7671fd_244, expr, "adapters.py", 74).
+ast_node[code](n5b7671fd_245, call, "adapters.py", 74).
+ast_node[code](n5b7671fd_246, attribute, "adapters.py", 74).
+ast_node[code](n5b7671fd_247, call, "adapters.py", 74).
+ast_node[code](n5b7671fd_248, name, "adapters.py", 74).
+ast_attr[code](n5b7671fd_248, id, "super").
+ast_attr[code](n5b7671fd_248, ctx, load).
+ast_child[code](n5b7671fd_247, func, 0, n5b7671fd_248).
+ast_child[code](n5b7671fd_246, value, 0, n5b7671fd_247).
+ast_attr[code](n5b7671fd_246, attr, "sendall").
 ast_attr[code](n5b7671fd_246, ctx, load).
-ast_child[code](n5b7671fd_242, args, 1, n5b7671fd_246).
-ast_node[code](n5b7671fd_247, name, "adapters.py", 66).
-ast_attr[code](n5b7671fd_247, id, "path").
-ast_attr[code](n5b7671fd_247, ctx, load).
-ast_child[code](n5b7671fd_242, args, 2, n5b7671fd_247).
-ast_child[code](n5b7671fd_241, value, 0, n5b7671fd_242).
-ast_child[code](n5b7671fd_240, value, 0, n5b7671fd_241).
-ast_child[code](n5b7671fd_231, body, 1, n5b7671fd_240).
-ast_node[code](n5b7671fd_248, except_handler, "adapters.py", 67).
-ast_node[code](n5b7671fd_249, name, "adapters.py", 67).
-ast_attr[code](n5b7671fd_249, id, "OSError").
-ast_attr[code](n5b7671fd_249, ctx, load).
-ast_child[code](n5b7671fd_248, type, 0, n5b7671fd_249).
-ast_node[code](n5b7671fd_250, expr, "adapters.py", 68).
-ast_node[code](n5b7671fd_251, await, "adapters.py", 68).
-ast_node[code](n5b7671fd_252, call, "adapters.py", 68).
-ast_node[code](n5b7671fd_253, attribute, "adapters.py", 68).
-ast_node[code](n5b7671fd_254, name, "adapters.py", 68).
-ast_attr[code](n5b7671fd_254, id, "self").
-ast_attr[code](n5b7671fd_254, ctx, load).
-ast_child[code](n5b7671fd_253, value, 0, n5b7671fd_254).
-ast_attr[code](n5b7671fd_253, attr, "_request").
-ast_attr[code](n5b7671fd_253, ctx, load).
-ast_child[code](n5b7671fd_252, func, 0, n5b7671fd_253).
-ast_node[code](n5b7671fd_255, constant, "adapters.py", 68).
-ast_attr[code](n5b7671fd_255, value, "DELETE").
-ast_child[code](n5b7671fd_252, args, 0, n5b7671fd_255).
-ast_node[code](n5b7671fd_256, name, "adapters.py", 68).
-ast_attr[code](n5b7671fd_256, id, "temporary").
-ast_attr[code](n5b7671fd_256, ctx, load).
-ast_child[code](n5b7671fd_252, args, 1, n5b7671fd_256).
-ast_node[code](n5b7671fd_257, constant, "adapters.py", 68).
-ast_attr[code](n5b7671fd_257, value, "").
-ast_child[code](n5b7671fd_252, args, 2, n5b7671fd_257).
-ast_child[code](n5b7671fd_251, value, 0, n5b7671fd_252).
-ast_child[code](n5b7671fd_250, value, 0, n5b7671fd_251).
-ast_child[code](n5b7671fd_248, body, 0, n5b7671fd_250).
-ast_node[code](n5b7671fd_258, raise, "adapters.py", 69).
-ast_child[code](n5b7671fd_248, body, 1, n5b7671fd_258).
-ast_child[code](n5b7671fd_231, handlers, 0, n5b7671fd_248).
-ast_child[code](n5b7671fd_218, body, 1, n5b7671fd_231).
-ast_node[code](n5b7671fd_259, constant, "adapters.py", 62).
-ast_attr[code](n5b7671fd_259, value, none).
-ast_child[code](n5b7671fd_218, returns, 0, n5b7671fd_259).
-ast_child[code](n5b7671fd_217, body, 0, n5b7671fd_218).
-ast_node[code](n5b7671fd_260, async_function_def, "adapters.py", 71).
-ast_attr[code](n5b7671fd_260, name, "read").
-ast_node[code](n5b7671fd_261, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_262, arg, "adapters.py", 71).
-ast_attr[code](n5b7671fd_262, arg, "self").
-ast_child[code](n5b7671fd_261, args, 0, n5b7671fd_262).
-ast_node[code](n5b7671fd_263, arg, "adapters.py", 71).
-ast_attr[code](n5b7671fd_263, arg, "path").
-ast_node[code](n5b7671fd_264, name, "adapters.py", 71).
-ast_attr[code](n5b7671fd_264, id, "str").
-ast_attr[code](n5b7671fd_264, ctx, load).
-ast_child[code](n5b7671fd_263, annotation, 0, n5b7671fd_264).
-ast_child[code](n5b7671fd_261, args, 1, n5b7671fd_263).
-ast_child[code](n5b7671fd_260, args, 0, n5b7671fd_261).
-ast_node[code](n5b7671fd_265, return, "adapters.py", 72).
-ast_node[code](n5b7671fd_266, await, "adapters.py", 72).
-ast_node[code](n5b7671fd_267, call, "adapters.py", 72).
-ast_node[code](n5b7671fd_268, attribute, "adapters.py", 72).
-ast_node[code](n5b7671fd_269, name, "adapters.py", 72).
-ast_attr[code](n5b7671fd_269, id, "self").
-ast_attr[code](n5b7671fd_269, ctx, load).
-ast_child[code](n5b7671fd_268, value, 0, n5b7671fd_269).
-ast_attr[code](n5b7671fd_268, attr, "_request").
+ast_child[code](n5b7671fd_245, func, 0, n5b7671fd_246).
+ast_node[code](n5b7671fd_249, constant, "adapters.py", 74).
+ast_attr[code](n5b7671fd_249, value, "HELLO").
+ast_child[code](n5b7671fd_245, args, 0, n5b7671fd_249).
+ast_child[code](n5b7671fd_244, value, 0, n5b7671fd_245).
+ast_child[code](n5b7671fd_241, body, 0, n5b7671fd_244).
+ast_node[code](n5b7671fd_250, constant, "adapters.py", 73).
+ast_attr[code](n5b7671fd_250, value, none).
+ast_child[code](n5b7671fd_241, returns, 0, n5b7671fd_250).
+ast_child[code](n5b7671fd_238, body, 0, n5b7671fd_241).
+ast_child[code](n5b7671fd_1, body, 9, n5b7671fd_238).
+ast_node[code](n5b7671fd_251, class_def, "adapters.py", 77).
+ast_attr[code](n5b7671fd_251, name, "TreeAdapter").
+ast_node[code](n5b7671fd_252, function_def, "adapters.py", 78).
+ast_attr[code](n5b7671fd_252, name, "__init__").
+ast_node[code](n5b7671fd_253, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_254, arg, "adapters.py", 78).
+ast_attr[code](n5b7671fd_254, arg, "self").
+ast_child[code](n5b7671fd_253, args, 0, n5b7671fd_254).
+ast_child[code](n5b7671fd_252, args, 0, n5b7671fd_253).
+ast_node[code](n5b7671fd_255, assign, "adapters.py", 79).
+ast_node[code](n5b7671fd_256, attribute, "adapters.py", 79).
+ast_node[code](n5b7671fd_257, name, "adapters.py", 79).
+ast_attr[code](n5b7671fd_257, id, "self").
+ast_attr[code](n5b7671fd_257, ctx, load).
+ast_child[code](n5b7671fd_256, value, 0, n5b7671fd_257).
+ast_attr[code](n5b7671fd_256, attr, "_pool").
+ast_attr[code](n5b7671fd_256, ctx, store).
+ast_child[code](n5b7671fd_255, targets, 0, n5b7671fd_256).
+ast_node[code](n5b7671fd_258, call, "adapters.py", 79).
+ast_node[code](n5b7671fd_259, name, "adapters.py", 79).
+ast_attr[code](n5b7671fd_259, id, "Pool").
+ast_attr[code](n5b7671fd_259, ctx, load).
+ast_child[code](n5b7671fd_258, func, 0, n5b7671fd_259).
+ast_node[code](n5b7671fd_260, attribute, "adapters.py", 79).
+ast_node[code](n5b7671fd_261, name, "adapters.py", 79).
+ast_attr[code](n5b7671fd_261, id, "self").
+ast_attr[code](n5b7671fd_261, ctx, load).
+ast_child[code](n5b7671fd_260, value, 0, n5b7671fd_261).
+ast_attr[code](n5b7671fd_260, attr, "_connect").
+ast_attr[code](n5b7671fd_260, ctx, load).
+ast_child[code](n5b7671fd_258, args, 0, n5b7671fd_260).
+ast_child[code](n5b7671fd_255, value, 0, n5b7671fd_258).
+ast_child[code](n5b7671fd_252, body, 0, n5b7671fd_255).
+ast_node[code](n5b7671fd_262, constant, "adapters.py", 78).
+ast_attr[code](n5b7671fd_262, value, none).
+ast_child[code](n5b7671fd_252, returns, 0, n5b7671fd_262).
+ast_child[code](n5b7671fd_251, body, 0, n5b7671fd_252).
+ast_node[code](n5b7671fd_263, function_def, "adapters.py", 81).
+ast_attr[code](n5b7671fd_263, name, "_connect").
+ast_node[code](n5b7671fd_264, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_265, arg, "adapters.py", 81).
+ast_attr[code](n5b7671fd_265, arg, "self").
+ast_child[code](n5b7671fd_264, args, 0, n5b7671fd_265).
+ast_child[code](n5b7671fd_263, args, 0, n5b7671fd_264).
+ast_node[code](n5b7671fd_266, return, "adapters.py", 82).
+ast_node[code](n5b7671fd_267, call, "adapters.py", 82).
+ast_node[code](n5b7671fd_268, name, "adapters.py", 82).
+ast_attr[code](n5b7671fd_268, id, "Wire").
 ast_attr[code](n5b7671fd_268, ctx, load).
 ast_child[code](n5b7671fd_267, func, 0, n5b7671fd_268).
-ast_node[code](n5b7671fd_270, constant, "adapters.py", 72).
-ast_attr[code](n5b7671fd_270, value, "GET").
-ast_child[code](n5b7671fd_267, args, 0, n5b7671fd_270).
-ast_node[code](n5b7671fd_271, name, "adapters.py", 72).
-ast_attr[code](n5b7671fd_271, id, "path").
-ast_attr[code](n5b7671fd_271, ctx, load).
-ast_child[code](n5b7671fd_267, args, 1, n5b7671fd_271).
-ast_node[code](n5b7671fd_272, constant, "adapters.py", 72).
-ast_attr[code](n5b7671fd_272, value, "").
-ast_child[code](n5b7671fd_267, args, 2, n5b7671fd_272).
 ast_child[code](n5b7671fd_266, value, 0, n5b7671fd_267).
-ast_child[code](n5b7671fd_265, value, 0, n5b7671fd_266).
-ast_child[code](n5b7671fd_260, body, 0, n5b7671fd_265).
-ast_node[code](n5b7671fd_273, name, "adapters.py", 71).
-ast_attr[code](n5b7671fd_273, id, "bytes").
+ast_child[code](n5b7671fd_263, body, 0, n5b7671fd_266).
+ast_child[code](n5b7671fd_251, body, 1, n5b7671fd_263).
+ast_node[code](n5b7671fd_269, async_function_def, "adapters.py", 84).
+ast_attr[code](n5b7671fd_269, name, "write").
+ast_node[code](n5b7671fd_270, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_271, arg, "adapters.py", 84).
+ast_attr[code](n5b7671fd_271, arg, "self").
+ast_child[code](n5b7671fd_270, args, 0, n5b7671fd_271).
+ast_node[code](n5b7671fd_272, arg, "adapters.py", 84).
+ast_attr[code](n5b7671fd_272, arg, "path").
+ast_node[code](n5b7671fd_273, name, "adapters.py", 84).
+ast_attr[code](n5b7671fd_273, id, "str").
 ast_attr[code](n5b7671fd_273, ctx, load).
-ast_child[code](n5b7671fd_260, returns, 0, n5b7671fd_273).
-ast_child[code](n5b7671fd_217, body, 1, n5b7671fd_260).
-ast_node[code](n5b7671fd_274, async_function_def, "adapters.py", 74).
-ast_attr[code](n5b7671fd_274, name, "move_file").
-ast_node[code](n5b7671fd_275, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_276, arg, "adapters.py", 74).
-ast_attr[code](n5b7671fd_276, arg, "self").
-ast_child[code](n5b7671fd_275, args, 0, n5b7671fd_276).
-ast_node[code](n5b7671fd_277, arg, "adapters.py", 74).
-ast_attr[code](n5b7671fd_277, arg, "source").
-ast_node[code](n5b7671fd_278, name, "adapters.py", 74).
-ast_attr[code](n5b7671fd_278, id, "str").
-ast_attr[code](n5b7671fd_278, ctx, load).
-ast_child[code](n5b7671fd_277, annotation, 0, n5b7671fd_278).
-ast_child[code](n5b7671fd_275, args, 1, n5b7671fd_277).
-ast_node[code](n5b7671fd_279, arg, "adapters.py", 74).
-ast_attr[code](n5b7671fd_279, arg, "destination").
-ast_node[code](n5b7671fd_280, name, "adapters.py", 74).
-ast_attr[code](n5b7671fd_280, id, "str").
+ast_child[code](n5b7671fd_272, annotation, 0, n5b7671fd_273).
+ast_child[code](n5b7671fd_270, args, 1, n5b7671fd_272).
+ast_node[code](n5b7671fd_274, arg, "adapters.py", 84).
+ast_attr[code](n5b7671fd_274, arg, "contents").
+ast_node[code](n5b7671fd_275, name, "adapters.py", 84).
+ast_attr[code](n5b7671fd_275, id, "bytes").
+ast_attr[code](n5b7671fd_275, ctx, load).
+ast_child[code](n5b7671fd_274, annotation, 0, n5b7671fd_275).
+ast_child[code](n5b7671fd_270, args, 2, n5b7671fd_274).
+ast_child[code](n5b7671fd_269, args, 0, n5b7671fd_270).
+ast_node[code](n5b7671fd_276, assign, "adapters.py", 85).
+ast_node[code](n5b7671fd_277, name, "adapters.py", 85).
+ast_attr[code](n5b7671fd_277, id, "temporary").
+ast_attr[code](n5b7671fd_277, ctx, store).
+ast_child[code](n5b7671fd_276, targets, 0, n5b7671fd_277).
+ast_node[code](n5b7671fd_278, joined_str, "adapters.py", 85).
+ast_node[code](n5b7671fd_279, formatted_value, "adapters.py", 85).
+ast_node[code](n5b7671fd_280, name, "adapters.py", 85).
+ast_attr[code](n5b7671fd_280, id, "path").
 ast_attr[code](n5b7671fd_280, ctx, load).
-ast_child[code](n5b7671fd_279, annotation, 0, n5b7671fd_280).
-ast_child[code](n5b7671fd_275, args, 2, n5b7671fd_279).
-ast_child[code](n5b7671fd_274, args, 0, n5b7671fd_275).
-ast_node[code](n5b7671fd_281, for, "adapters.py", 75).
-ast_node[code](n5b7671fd_282, name, "adapters.py", 75).
-ast_attr[code](n5b7671fd_282, id, "parent").
-ast_attr[code](n5b7671fd_282, ctx, store).
-ast_child[code](n5b7671fd_281, target, 0, n5b7671fd_282).
-ast_node[code](n5b7671fd_283, subscript, "adapters.py", 75).
-ast_node[code](n5b7671fd_284, call, "adapters.py", 75).
-ast_node[code](n5b7671fd_285, attribute, "adapters.py", 75).
-ast_node[code](n5b7671fd_286, name, "adapters.py", 75).
-ast_attr[code](n5b7671fd_286, id, "destination").
+ast_child[code](n5b7671fd_279, value, 0, n5b7671fd_280).
+ast_attr[code](n5b7671fd_279, conversion, -1).
+ast_child[code](n5b7671fd_278, values, 0, n5b7671fd_279).
+ast_node[code](n5b7671fd_281, constant, "adapters.py", 85).
+ast_attr[code](n5b7671fd_281, value, ".tmp").
+ast_child[code](n5b7671fd_278, values, 1, n5b7671fd_281).
+ast_child[code](n5b7671fd_276, value, 0, n5b7671fd_278).
+ast_child[code](n5b7671fd_269, body, 0, n5b7671fd_276).
+ast_node[code](n5b7671fd_282, try, "adapters.py", 86).
+ast_node[code](n5b7671fd_283, expr, "adapters.py", 87).
+ast_node[code](n5b7671fd_284, await, "adapters.py", 87).
+ast_node[code](n5b7671fd_285, call, "adapters.py", 87).
+ast_node[code](n5b7671fd_286, attribute, "adapters.py", 87).
+ast_node[code](n5b7671fd_287, name, "adapters.py", 87).
+ast_attr[code](n5b7671fd_287, id, "self").
+ast_attr[code](n5b7671fd_287, ctx, load).
+ast_child[code](n5b7671fd_286, value, 0, n5b7671fd_287).
+ast_attr[code](n5b7671fd_286, attr, "_request").
 ast_attr[code](n5b7671fd_286, ctx, load).
-ast_child[code](n5b7671fd_285, value, 0, n5b7671fd_286).
-ast_attr[code](n5b7671fd_285, attr, "split").
-ast_attr[code](n5b7671fd_285, ctx, load).
-ast_child[code](n5b7671fd_284, func, 0, n5b7671fd_285).
-ast_node[code](n5b7671fd_287, constant, "adapters.py", 75).
-ast_attr[code](n5b7671fd_287, value, "/").
-ast_child[code](n5b7671fd_284, args, 0, n5b7671fd_287).
+ast_child[code](n5b7671fd_285, func, 0, n5b7671fd_286).
+ast_node[code](n5b7671fd_288, constant, "adapters.py", 87).
+ast_attr[code](n5b7671fd_288, value, "PUT").
+ast_child[code](n5b7671fd_285, args, 0, n5b7671fd_288).
+ast_node[code](n5b7671fd_289, name, "adapters.py", 87).
+ast_attr[code](n5b7671fd_289, id, "temporary").
+ast_attr[code](n5b7671fd_289, ctx, load).
+ast_child[code](n5b7671fd_285, args, 1, n5b7671fd_289).
+ast_node[code](n5b7671fd_290, name, "adapters.py", 87).
+ast_attr[code](n5b7671fd_290, id, "contents").
+ast_attr[code](n5b7671fd_290, ctx, load).
+ast_child[code](n5b7671fd_285, args, 2, n5b7671fd_290).
+ast_child[code](n5b7671fd_284, value, 0, n5b7671fd_285).
 ast_child[code](n5b7671fd_283, value, 0, n5b7671fd_284).
-ast_node[code](n5b7671fd_288, slice, "adapters.py", 75).
-ast_node[code](n5b7671fd_289, unary_op, "adapters.py", 75).
-ast_attr[code](n5b7671fd_289, op, usub).
-ast_node[code](n5b7671fd_290, constant, "adapters.py", 75).
-ast_attr[code](n5b7671fd_290, value, 1).
-ast_child[code](n5b7671fd_289, operand, 0, n5b7671fd_290).
-ast_child[code](n5b7671fd_288, upper, 0, n5b7671fd_289).
-ast_child[code](n5b7671fd_283, slice, 0, n5b7671fd_288).
-ast_attr[code](n5b7671fd_283, ctx, load).
-ast_child[code](n5b7671fd_281, iter, 0, n5b7671fd_283).
-ast_node[code](n5b7671fd_291, if, "adapters.py", 76).
-ast_node[code](n5b7671fd_292, unary_op, "adapters.py", 76).
-ast_attr[code](n5b7671fd_292, op, not).
-ast_node[code](n5b7671fd_293, name, "adapters.py", 76).
-ast_attr[code](n5b7671fd_293, id, "parent").
-ast_attr[code](n5b7671fd_293, ctx, load).
-ast_child[code](n5b7671fd_292, operand, 0, n5b7671fd_293).
-ast_child[code](n5b7671fd_291, test, 0, n5b7671fd_292).
-ast_node[code](n5b7671fd_294, break, "adapters.py", 77).
-ast_child[code](n5b7671fd_291, body, 0, n5b7671fd_294).
-ast_child[code](n5b7671fd_281, body, 0, n5b7671fd_291).
-ast_node[code](n5b7671fd_295, expr, "adapters.py", 78).
-ast_node[code](n5b7671fd_296, await, "adapters.py", 78).
-ast_node[code](n5b7671fd_297, call, "adapters.py", 78).
-ast_node[code](n5b7671fd_298, attribute, "adapters.py", 78).
-ast_node[code](n5b7671fd_299, name, "adapters.py", 78).
-ast_attr[code](n5b7671fd_299, id, "self").
-ast_attr[code](n5b7671fd_299, ctx, load).
-ast_child[code](n5b7671fd_298, value, 0, n5b7671fd_299).
-ast_attr[code](n5b7671fd_298, attr, "_request").
+ast_child[code](n5b7671fd_282, body, 0, n5b7671fd_283).
+ast_node[code](n5b7671fd_291, expr, "adapters.py", 88).
+ast_node[code](n5b7671fd_292, await, "adapters.py", 88).
+ast_node[code](n5b7671fd_293, call, "adapters.py", 88).
+ast_node[code](n5b7671fd_294, attribute, "adapters.py", 88).
+ast_node[code](n5b7671fd_295, name, "adapters.py", 88).
+ast_attr[code](n5b7671fd_295, id, "self").
+ast_attr[code](n5b7671fd_295, ctx, load).
+ast_child[code](n5b7671fd_294, value, 0, n5b7671fd_295).
+ast_attr[code](n5b7671fd_294, attr, "_request").
+ast_attr[code](n5b7671fd_294, ctx, load).
+ast_child[code](n5b7671fd_293, func, 0, n5b7671fd_294).
+ast_node[code](n5b7671fd_296, constant, "adapters.py", 88).
+ast_attr[code](n5b7671fd_296, value, "MOVE").
+ast_child[code](n5b7671fd_293, args, 0, n5b7671fd_296).
+ast_node[code](n5b7671fd_297, name, "adapters.py", 88).
+ast_attr[code](n5b7671fd_297, id, "temporary").
+ast_attr[code](n5b7671fd_297, ctx, load).
+ast_child[code](n5b7671fd_293, args, 1, n5b7671fd_297).
+ast_node[code](n5b7671fd_298, name, "adapters.py", 88).
+ast_attr[code](n5b7671fd_298, id, "path").
 ast_attr[code](n5b7671fd_298, ctx, load).
-ast_child[code](n5b7671fd_297, func, 0, n5b7671fd_298).
-ast_node[code](n5b7671fd_300, constant, "adapters.py", 78).
-ast_attr[code](n5b7671fd_300, value, "MKCOL").
-ast_child[code](n5b7671fd_297, args, 0, n5b7671fd_300).
-ast_node[code](n5b7671fd_301, name, "adapters.py", 78).
-ast_attr[code](n5b7671fd_301, id, "parent").
-ast_attr[code](n5b7671fd_301, ctx, load).
-ast_child[code](n5b7671fd_297, args, 1, n5b7671fd_301).
-ast_node[code](n5b7671fd_302, constant, "adapters.py", 78).
-ast_attr[code](n5b7671fd_302, value, "").
-ast_child[code](n5b7671fd_297, args, 2, n5b7671fd_302).
-ast_child[code](n5b7671fd_296, value, 0, n5b7671fd_297).
-ast_child[code](n5b7671fd_295, value, 0, n5b7671fd_296).
-ast_child[code](n5b7671fd_281, body, 1, n5b7671fd_295).
-ast_child[code](n5b7671fd_274, body, 0, n5b7671fd_281).
-ast_node[code](n5b7671fd_303, expr, "adapters.py", 79).
-ast_node[code](n5b7671fd_304, await, "adapters.py", 79).
-ast_node[code](n5b7671fd_305, call, "adapters.py", 79).
-ast_node[code](n5b7671fd_306, attribute, "adapters.py", 79).
-ast_node[code](n5b7671fd_307, name, "adapters.py", 79).
-ast_attr[code](n5b7671fd_307, id, "to_thread").
-ast_attr[code](n5b7671fd_307, ctx, load).
-ast_child[code](n5b7671fd_306, value, 0, n5b7671fd_307).
-ast_attr[code](n5b7671fd_306, attr, "run_sync").
-ast_attr[code](n5b7671fd_306, ctx, load).
-ast_child[code](n5b7671fd_305, func, 0, n5b7671fd_306).
-ast_node[code](n5b7671fd_308, attribute, "adapters.py", 79).
-ast_node[code](n5b7671fd_309, attribute, "adapters.py", 79).
-ast_node[code](n5b7671fd_310, name, "adapters.py", 79).
-ast_attr[code](n5b7671fd_310, id, "self").
-ast_attr[code](n5b7671fd_310, ctx, load).
-ast_child[code](n5b7671fd_309, value, 0, n5b7671fd_310).
-ast_attr[code](n5b7671fd_309, attr, "conn").
-ast_attr[code](n5b7671fd_309, ctx, load).
-ast_child[code](n5b7671fd_308, value, 0, n5b7671fd_309).
-ast_attr[code](n5b7671fd_308, attr, "rename").
-ast_attr[code](n5b7671fd_308, ctx, load).
-ast_child[code](n5b7671fd_305, args, 0, n5b7671fd_308).
-ast_node[code](n5b7671fd_311, name, "adapters.py", 79).
-ast_attr[code](n5b7671fd_311, id, "source").
-ast_attr[code](n5b7671fd_311, ctx, load).
-ast_child[code](n5b7671fd_305, args, 1, n5b7671fd_311).
-ast_node[code](n5b7671fd_312, name, "adapters.py", 79).
-ast_attr[code](n5b7671fd_312, id, "destination").
-ast_attr[code](n5b7671fd_312, ctx, load).
-ast_child[code](n5b7671fd_305, args, 2, n5b7671fd_312).
+ast_child[code](n5b7671fd_293, args, 2, n5b7671fd_298).
+ast_child[code](n5b7671fd_292, value, 0, n5b7671fd_293).
+ast_child[code](n5b7671fd_291, value, 0, n5b7671fd_292).
+ast_child[code](n5b7671fd_282, body, 1, n5b7671fd_291).
+ast_node[code](n5b7671fd_299, except_handler, "adapters.py", 89).
+ast_node[code](n5b7671fd_300, name, "adapters.py", 89).
+ast_attr[code](n5b7671fd_300, id, "OSError").
+ast_attr[code](n5b7671fd_300, ctx, load).
+ast_child[code](n5b7671fd_299, type, 0, n5b7671fd_300).
+ast_node[code](n5b7671fd_301, expr, "adapters.py", 90).
+ast_node[code](n5b7671fd_302, await, "adapters.py", 90).
+ast_node[code](n5b7671fd_303, call, "adapters.py", 90).
+ast_node[code](n5b7671fd_304, attribute, "adapters.py", 90).
+ast_node[code](n5b7671fd_305, name, "adapters.py", 90).
+ast_attr[code](n5b7671fd_305, id, "self").
+ast_attr[code](n5b7671fd_305, ctx, load).
 ast_child[code](n5b7671fd_304, value, 0, n5b7671fd_305).
-ast_child[code](n5b7671fd_303, value, 0, n5b7671fd_304).
-ast_child[code](n5b7671fd_274, body, 1, n5b7671fd_303).
-ast_node[code](n5b7671fd_313, constant, "adapters.py", 74).
-ast_attr[code](n5b7671fd_313, value, none).
-ast_child[code](n5b7671fd_274, returns, 0, n5b7671fd_313).
-ast_child[code](n5b7671fd_217, body, 2, n5b7671fd_274).
-ast_node[code](n5b7671fd_314, async_function_def, "adapters.py", 81).
-ast_attr[code](n5b7671fd_314, name, "_request").
-ast_node[code](n5b7671fd_315, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_316, arg, "adapters.py", 81).
-ast_attr[code](n5b7671fd_316, arg, "self").
-ast_child[code](n5b7671fd_315, args, 0, n5b7671fd_316).
-ast_node[code](n5b7671fd_317, arg, "adapters.py", 81).
-ast_attr[code](n5b7671fd_317, arg, "method").
-ast_node[code](n5b7671fd_318, name, "adapters.py", 81).
-ast_attr[code](n5b7671fd_318, id, "str").
-ast_attr[code](n5b7671fd_318, ctx, load).
-ast_child[code](n5b7671fd_317, annotation, 0, n5b7671fd_318).
-ast_child[code](n5b7671fd_315, args, 1, n5b7671fd_317).
-ast_node[code](n5b7671fd_319, arg, "adapters.py", 81).
-ast_attr[code](n5b7671fd_319, arg, "path").
-ast_node[code](n5b7671fd_320, name, "adapters.py", 81).
-ast_attr[code](n5b7671fd_320, id, "str").
+ast_attr[code](n5b7671fd_304, attr, "_request").
+ast_attr[code](n5b7671fd_304, ctx, load).
+ast_child[code](n5b7671fd_303, func, 0, n5b7671fd_304).
+ast_node[code](n5b7671fd_306, constant, "adapters.py", 90).
+ast_attr[code](n5b7671fd_306, value, "DELETE").
+ast_child[code](n5b7671fd_303, args, 0, n5b7671fd_306).
+ast_node[code](n5b7671fd_307, name, "adapters.py", 90).
+ast_attr[code](n5b7671fd_307, id, "temporary").
+ast_attr[code](n5b7671fd_307, ctx, load).
+ast_child[code](n5b7671fd_303, args, 1, n5b7671fd_307).
+ast_node[code](n5b7671fd_308, constant, "adapters.py", 90).
+ast_attr[code](n5b7671fd_308, value, "").
+ast_child[code](n5b7671fd_303, args, 2, n5b7671fd_308).
+ast_child[code](n5b7671fd_302, value, 0, n5b7671fd_303).
+ast_child[code](n5b7671fd_301, value, 0, n5b7671fd_302).
+ast_child[code](n5b7671fd_299, body, 0, n5b7671fd_301).
+ast_node[code](n5b7671fd_309, raise, "adapters.py", 91).
+ast_child[code](n5b7671fd_299, body, 1, n5b7671fd_309).
+ast_child[code](n5b7671fd_282, handlers, 0, n5b7671fd_299).
+ast_child[code](n5b7671fd_269, body, 1, n5b7671fd_282).
+ast_node[code](n5b7671fd_310, constant, "adapters.py", 84).
+ast_attr[code](n5b7671fd_310, value, none).
+ast_child[code](n5b7671fd_269, returns, 0, n5b7671fd_310).
+ast_child[code](n5b7671fd_251, body, 2, n5b7671fd_269).
+ast_node[code](n5b7671fd_311, async_function_def, "adapters.py", 93).
+ast_attr[code](n5b7671fd_311, name, "read").
+ast_node[code](n5b7671fd_312, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_313, arg, "adapters.py", 93).
+ast_attr[code](n5b7671fd_313, arg, "self").
+ast_child[code](n5b7671fd_312, args, 0, n5b7671fd_313).
+ast_node[code](n5b7671fd_314, arg, "adapters.py", 93).
+ast_attr[code](n5b7671fd_314, arg, "path").
+ast_node[code](n5b7671fd_315, name, "adapters.py", 93).
+ast_attr[code](n5b7671fd_315, id, "str").
+ast_attr[code](n5b7671fd_315, ctx, load).
+ast_child[code](n5b7671fd_314, annotation, 0, n5b7671fd_315).
+ast_child[code](n5b7671fd_312, args, 1, n5b7671fd_314).
+ast_child[code](n5b7671fd_311, args, 0, n5b7671fd_312).
+ast_node[code](n5b7671fd_316, return, "adapters.py", 94).
+ast_node[code](n5b7671fd_317, await, "adapters.py", 94).
+ast_node[code](n5b7671fd_318, call, "adapters.py", 94).
+ast_node[code](n5b7671fd_319, attribute, "adapters.py", 94).
+ast_node[code](n5b7671fd_320, attribute, "adapters.py", 94).
+ast_node[code](n5b7671fd_321, name, "adapters.py", 94).
+ast_attr[code](n5b7671fd_321, id, "self").
+ast_attr[code](n5b7671fd_321, ctx, load).
+ast_child[code](n5b7671fd_320, value, 0, n5b7671fd_321).
+ast_attr[code](n5b7671fd_320, attr, "_pool").
 ast_attr[code](n5b7671fd_320, ctx, load).
-ast_child[code](n5b7671fd_319, annotation, 0, n5b7671fd_320).
-ast_child[code](n5b7671fd_315, args, 2, n5b7671fd_319).
-ast_node[code](n5b7671fd_321, arg, "adapters.py", 81).
-ast_attr[code](n5b7671fd_321, arg, "body").
-ast_node[code](n5b7671fd_322, name, "adapters.py", 81).
-ast_attr[code](n5b7671fd_322, id, "bytes").
-ast_attr[code](n5b7671fd_322, ctx, load).
-ast_child[code](n5b7671fd_321, annotation, 0, n5b7671fd_322).
-ast_child[code](n5b7671fd_315, args, 3, n5b7671fd_321).
-ast_child[code](n5b7671fd_314, args, 0, n5b7671fd_315).
-ast_node[code](n5b7671fd_323, return, "adapters.py", 82).
-ast_node[code](n5b7671fd_324, await, "adapters.py", 82).
-ast_node[code](n5b7671fd_325, call, "adapters.py", 82).
-ast_node[code](n5b7671fd_326, attribute, "adapters.py", 82).
-ast_node[code](n5b7671fd_327, attribute, "adapters.py", 82).
-ast_node[code](n5b7671fd_328, name, "adapters.py", 82).
-ast_attr[code](n5b7671fd_328, id, "self").
-ast_attr[code](n5b7671fd_328, ctx, load).
-ast_child[code](n5b7671fd_327, value, 0, n5b7671fd_328).
-ast_attr[code](n5b7671fd_327, attr, "http").
+ast_child[code](n5b7671fd_319, value, 0, n5b7671fd_320).
+ast_attr[code](n5b7671fd_319, attr, "run").
+ast_attr[code](n5b7671fd_319, ctx, load).
+ast_child[code](n5b7671fd_318, func, 0, n5b7671fd_319).
+ast_node[code](n5b7671fd_322, lambda, "adapters.py", 94).
+ast_node[code](n5b7671fd_323, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_324, arg, "adapters.py", 94).
+ast_attr[code](n5b7671fd_324, arg, "conn").
+ast_child[code](n5b7671fd_323, args, 0, n5b7671fd_324).
+ast_child[code](n5b7671fd_322, args, 0, n5b7671fd_323).
+ast_node[code](n5b7671fd_325, call, "adapters.py", 94).
+ast_node[code](n5b7671fd_326, attribute, "adapters.py", 94).
+ast_node[code](n5b7671fd_327, name, "adapters.py", 94).
+ast_attr[code](n5b7671fd_327, id, "self").
 ast_attr[code](n5b7671fd_327, ctx, load).
 ast_child[code](n5b7671fd_326, value, 0, n5b7671fd_327).
-ast_attr[code](n5b7671fd_326, attr, "request").
+ast_attr[code](n5b7671fd_326, attr, "_request").
 ast_attr[code](n5b7671fd_326, ctx, load).
 ast_child[code](n5b7671fd_325, func, 0, n5b7671fd_326).
-ast_node[code](n5b7671fd_329, name, "adapters.py", 82).
-ast_attr[code](n5b7671fd_329, id, "method").
+ast_node[code](n5b7671fd_328, constant, "adapters.py", 94).
+ast_attr[code](n5b7671fd_328, value, "GET").
+ast_child[code](n5b7671fd_325, args, 0, n5b7671fd_328).
+ast_node[code](n5b7671fd_329, name, "adapters.py", 94).
+ast_attr[code](n5b7671fd_329, id, "path").
 ast_attr[code](n5b7671fd_329, ctx, load).
-ast_child[code](n5b7671fd_325, args, 0, n5b7671fd_329).
-ast_node[code](n5b7671fd_330, name, "adapters.py", 82).
-ast_attr[code](n5b7671fd_330, id, "path").
-ast_attr[code](n5b7671fd_330, ctx, load).
-ast_child[code](n5b7671fd_325, args, 1, n5b7671fd_330).
-ast_node[code](n5b7671fd_331, keyword, "adapters.py", 82).
-ast_attr[code](n5b7671fd_331, arg, "content").
-ast_node[code](n5b7671fd_332, name, "adapters.py", 82).
-ast_attr[code](n5b7671fd_332, id, "body").
-ast_attr[code](n5b7671fd_332, ctx, load).
-ast_child[code](n5b7671fd_331, value, 0, n5b7671fd_332).
-ast_child[code](n5b7671fd_325, keywords, 0, n5b7671fd_331).
-ast_child[code](n5b7671fd_324, value, 0, n5b7671fd_325).
-ast_child[code](n5b7671fd_323, value, 0, n5b7671fd_324).
-ast_child[code](n5b7671fd_314, body, 0, n5b7671fd_323).
-ast_node[code](n5b7671fd_333, name, "adapters.py", 81).
-ast_attr[code](n5b7671fd_333, id, "bytes").
-ast_attr[code](n5b7671fd_333, ctx, load).
-ast_child[code](n5b7671fd_314, returns, 0, n5b7671fd_333).
-ast_child[code](n5b7671fd_217, body, 3, n5b7671fd_314).
-ast_child[code](n5b7671fd_1, body, 7, n5b7671fd_217).
-ast_node[code](n5b7671fd_334, class_def, "adapters.py", 85).
-ast_attr[code](n5b7671fd_334, name, "HastyAdapter").
-ast_node[code](n5b7671fd_335, async_function_def, "adapters.py", 86).
-ast_attr[code](n5b7671fd_335, name, "write").
-ast_node[code](n5b7671fd_336, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_337, arg, "adapters.py", 86).
-ast_attr[code](n5b7671fd_337, arg, "self").
-ast_child[code](n5b7671fd_336, args, 0, n5b7671fd_337).
-ast_node[code](n5b7671fd_338, arg, "adapters.py", 86).
-ast_attr[code](n5b7671fd_338, arg, "path").
-ast_node[code](n5b7671fd_339, name, "adapters.py", 86).
-ast_attr[code](n5b7671fd_339, id, "str").
-ast_attr[code](n5b7671fd_339, ctx, load).
-ast_child[code](n5b7671fd_338, annotation, 0, n5b7671fd_339).
-ast_child[code](n5b7671fd_336, args, 1, n5b7671fd_338).
-ast_node[code](n5b7671fd_340, arg, "adapters.py", 86).
-ast_attr[code](n5b7671fd_340, arg, "contents").
-ast_node[code](n5b7671fd_341, name, "adapters.py", 86).
-ast_attr[code](n5b7671fd_341, id, "bytes").
-ast_attr[code](n5b7671fd_341, ctx, load).
-ast_child[code](n5b7671fd_340, annotation, 0, n5b7671fd_341).
-ast_child[code](n5b7671fd_336, args, 2, n5b7671fd_340).
-ast_child[code](n5b7671fd_335, args, 0, n5b7671fd_336).
-ast_node[code](n5b7671fd_342, expr, "adapters.py", 87).
-ast_node[code](n5b7671fd_343, call, "adapters.py", 87).
-ast_node[code](n5b7671fd_344, attribute, "adapters.py", 87).
-ast_node[code](n5b7671fd_345, attribute, "adapters.py", 87).
-ast_node[code](n5b7671fd_346, name, "adapters.py", 87).
-ast_attr[code](n5b7671fd_346, id, "self").
-ast_attr[code](n5b7671fd_346, ctx, load).
-ast_child[code](n5b7671fd_345, value, 0, n5b7671fd_346).
-ast_attr[code](n5b7671fd_345, attr, "client").
-ast_attr[code](n5b7671fd_345, ctx, load).
-ast_child[code](n5b7671fd_344, value, 0, n5b7671fd_345).
-ast_attr[code](n5b7671fd_344, attr, "put_object").
+ast_child[code](n5b7671fd_325, args, 1, n5b7671fd_329).
+ast_node[code](n5b7671fd_330, constant, "adapters.py", 94).
+ast_attr[code](n5b7671fd_330, value, "").
+ast_child[code](n5b7671fd_325, args, 2, n5b7671fd_330).
+ast_child[code](n5b7671fd_322, body, 0, n5b7671fd_325).
+ast_child[code](n5b7671fd_318, args, 0, n5b7671fd_322).
+ast_child[code](n5b7671fd_317, value, 0, n5b7671fd_318).
+ast_child[code](n5b7671fd_316, value, 0, n5b7671fd_317).
+ast_child[code](n5b7671fd_311, body, 0, n5b7671fd_316).
+ast_node[code](n5b7671fd_331, name, "adapters.py", 93).
+ast_attr[code](n5b7671fd_331, id, "bytes").
+ast_attr[code](n5b7671fd_331, ctx, load).
+ast_child[code](n5b7671fd_311, returns, 0, n5b7671fd_331).
+ast_child[code](n5b7671fd_251, body, 3, n5b7671fd_311).
+ast_node[code](n5b7671fd_332, async_function_def, "adapters.py", 96).
+ast_attr[code](n5b7671fd_332, name, "move_file").
+ast_node[code](n5b7671fd_333, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_334, arg, "adapters.py", 96).
+ast_attr[code](n5b7671fd_334, arg, "self").
+ast_child[code](n5b7671fd_333, args, 0, n5b7671fd_334).
+ast_node[code](n5b7671fd_335, arg, "adapters.py", 96).
+ast_attr[code](n5b7671fd_335, arg, "source").
+ast_node[code](n5b7671fd_336, name, "adapters.py", 96).
+ast_attr[code](n5b7671fd_336, id, "str").
+ast_attr[code](n5b7671fd_336, ctx, load).
+ast_child[code](n5b7671fd_335, annotation, 0, n5b7671fd_336).
+ast_child[code](n5b7671fd_333, args, 1, n5b7671fd_335).
+ast_node[code](n5b7671fd_337, arg, "adapters.py", 96).
+ast_attr[code](n5b7671fd_337, arg, "destination").
+ast_node[code](n5b7671fd_338, name, "adapters.py", 96).
+ast_attr[code](n5b7671fd_338, id, "str").
+ast_attr[code](n5b7671fd_338, ctx, load).
+ast_child[code](n5b7671fd_337, annotation, 0, n5b7671fd_338).
+ast_child[code](n5b7671fd_333, args, 2, n5b7671fd_337).
+ast_child[code](n5b7671fd_332, args, 0, n5b7671fd_333).
+ast_node[code](n5b7671fd_339, for, "adapters.py", 97).
+ast_node[code](n5b7671fd_340, name, "adapters.py", 97).
+ast_attr[code](n5b7671fd_340, id, "parent").
+ast_attr[code](n5b7671fd_340, ctx, store).
+ast_child[code](n5b7671fd_339, target, 0, n5b7671fd_340).
+ast_node[code](n5b7671fd_341, subscript, "adapters.py", 97).
+ast_node[code](n5b7671fd_342, call, "adapters.py", 97).
+ast_node[code](n5b7671fd_343, attribute, "adapters.py", 97).
+ast_node[code](n5b7671fd_344, name, "adapters.py", 97).
+ast_attr[code](n5b7671fd_344, id, "destination").
 ast_attr[code](n5b7671fd_344, ctx, load).
-ast_child[code](n5b7671fd_343, func, 0, n5b7671fd_344).
-ast_node[code](n5b7671fd_347, keyword, "adapters.py", 87).
-ast_attr[code](n5b7671fd_347, arg, "Key").
-ast_node[code](n5b7671fd_348, name, "adapters.py", 87).
-ast_attr[code](n5b7671fd_348, id, "path").
-ast_attr[code](n5b7671fd_348, ctx, load).
-ast_child[code](n5b7671fd_347, value, 0, n5b7671fd_348).
-ast_child[code](n5b7671fd_343, keywords, 0, n5b7671fd_347).
-ast_node[code](n5b7671fd_349, keyword, "adapters.py", 87).
-ast_attr[code](n5b7671fd_349, arg, "Body").
-ast_node[code](n5b7671fd_350, name, "adapters.py", 87).
-ast_attr[code](n5b7671fd_350, id, "contents").
-ast_attr[code](n5b7671fd_350, ctx, load).
-ast_child[code](n5b7671fd_349, value, 0, n5b7671fd_350).
-ast_child[code](n5b7671fd_343, keywords, 1, n5b7671fd_349).
-ast_child[code](n5b7671fd_342, value, 0, n5b7671fd_343).
-ast_child[code](n5b7671fd_335, body, 0, n5b7671fd_342).
-ast_node[code](n5b7671fd_351, constant, "adapters.py", 86).
-ast_attr[code](n5b7671fd_351, value, none).
-ast_child[code](n5b7671fd_335, returns, 0, n5b7671fd_351).
-ast_child[code](n5b7671fd_334, body, 0, n5b7671fd_335).
-ast_node[code](n5b7671fd_352, async_function_def, "adapters.py", 89).
-ast_attr[code](n5b7671fd_352, name, "read").
-ast_node[code](n5b7671fd_353, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_354, arg, "adapters.py", 89).
-ast_attr[code](n5b7671fd_354, arg, "self").
-ast_child[code](n5b7671fd_353, args, 0, n5b7671fd_354).
-ast_node[code](n5b7671fd_355, arg, "adapters.py", 89).
-ast_attr[code](n5b7671fd_355, arg, "path").
-ast_node[code](n5b7671fd_356, name, "adapters.py", 89).
-ast_attr[code](n5b7671fd_356, id, "str").
+ast_child[code](n5b7671fd_343, value, 0, n5b7671fd_344).
+ast_attr[code](n5b7671fd_343, attr, "split").
+ast_attr[code](n5b7671fd_343, ctx, load).
+ast_child[code](n5b7671fd_342, func, 0, n5b7671fd_343).
+ast_node[code](n5b7671fd_345, constant, "adapters.py", 97).
+ast_attr[code](n5b7671fd_345, value, "/").
+ast_child[code](n5b7671fd_342, args, 0, n5b7671fd_345).
+ast_child[code](n5b7671fd_341, value, 0, n5b7671fd_342).
+ast_node[code](n5b7671fd_346, slice, "adapters.py", 97).
+ast_node[code](n5b7671fd_347, unary_op, "adapters.py", 97).
+ast_attr[code](n5b7671fd_347, op, usub).
+ast_node[code](n5b7671fd_348, constant, "adapters.py", 97).
+ast_attr[code](n5b7671fd_348, value, 1).
+ast_child[code](n5b7671fd_347, operand, 0, n5b7671fd_348).
+ast_child[code](n5b7671fd_346, upper, 0, n5b7671fd_347).
+ast_child[code](n5b7671fd_341, slice, 0, n5b7671fd_346).
+ast_attr[code](n5b7671fd_341, ctx, load).
+ast_child[code](n5b7671fd_339, iter, 0, n5b7671fd_341).
+ast_node[code](n5b7671fd_349, if, "adapters.py", 98).
+ast_node[code](n5b7671fd_350, unary_op, "adapters.py", 98).
+ast_attr[code](n5b7671fd_350, op, not).
+ast_node[code](n5b7671fd_351, name, "adapters.py", 98).
+ast_attr[code](n5b7671fd_351, id, "parent").
+ast_attr[code](n5b7671fd_351, ctx, load).
+ast_child[code](n5b7671fd_350, operand, 0, n5b7671fd_351).
+ast_child[code](n5b7671fd_349, test, 0, n5b7671fd_350).
+ast_node[code](n5b7671fd_352, break, "adapters.py", 99).
+ast_child[code](n5b7671fd_349, body, 0, n5b7671fd_352).
+ast_child[code](n5b7671fd_339, body, 0, n5b7671fd_349).
+ast_node[code](n5b7671fd_353, expr, "adapters.py", 100).
+ast_node[code](n5b7671fd_354, await, "adapters.py", 100).
+ast_node[code](n5b7671fd_355, call, "adapters.py", 100).
+ast_node[code](n5b7671fd_356, attribute, "adapters.py", 100).
+ast_node[code](n5b7671fd_357, name, "adapters.py", 100).
+ast_attr[code](n5b7671fd_357, id, "self").
+ast_attr[code](n5b7671fd_357, ctx, load).
+ast_child[code](n5b7671fd_356, value, 0, n5b7671fd_357).
+ast_attr[code](n5b7671fd_356, attr, "_request").
 ast_attr[code](n5b7671fd_356, ctx, load).
-ast_child[code](n5b7671fd_355, annotation, 0, n5b7671fd_356).
-ast_child[code](n5b7671fd_353, args, 1, n5b7671fd_355).
-ast_child[code](n5b7671fd_352, args, 0, n5b7671fd_353).
-ast_node[code](n5b7671fd_357, return, "adapters.py", 90).
-ast_node[code](n5b7671fd_358, call, "adapters.py", 90).
-ast_node[code](n5b7671fd_359, attribute, "adapters.py", 90).
-ast_node[code](n5b7671fd_360, attribute, "adapters.py", 90).
-ast_node[code](n5b7671fd_361, name, "adapters.py", 90).
-ast_attr[code](n5b7671fd_361, id, "self").
-ast_attr[code](n5b7671fd_361, ctx, load).
-ast_child[code](n5b7671fd_360, value, 0, n5b7671fd_361).
-ast_attr[code](n5b7671fd_360, attr, "client").
-ast_attr[code](n5b7671fd_360, ctx, load).
-ast_child[code](n5b7671fd_359, value, 0, n5b7671fd_360).
-ast_attr[code](n5b7671fd_359, attr, "get_object").
+ast_child[code](n5b7671fd_355, func, 0, n5b7671fd_356).
+ast_node[code](n5b7671fd_358, constant, "adapters.py", 100).
+ast_attr[code](n5b7671fd_358, value, "MKCOL").
+ast_child[code](n5b7671fd_355, args, 0, n5b7671fd_358).
+ast_node[code](n5b7671fd_359, name, "adapters.py", 100).
+ast_attr[code](n5b7671fd_359, id, "parent").
 ast_attr[code](n5b7671fd_359, ctx, load).
-ast_child[code](n5b7671fd_358, func, 0, n5b7671fd_359).
-ast_node[code](n5b7671fd_362, keyword, "adapters.py", 90).
-ast_attr[code](n5b7671fd_362, arg, "Key").
-ast_node[code](n5b7671fd_363, name, "adapters.py", 90).
-ast_attr[code](n5b7671fd_363, id, "path").
-ast_attr[code](n5b7671fd_363, ctx, load).
-ast_child[code](n5b7671fd_362, value, 0, n5b7671fd_363).
-ast_child[code](n5b7671fd_358, keywords, 0, n5b7671fd_362).
-ast_child[code](n5b7671fd_357, value, 0, n5b7671fd_358).
-ast_child[code](n5b7671fd_352, body, 0, n5b7671fd_357).
-ast_node[code](n5b7671fd_364, name, "adapters.py", 89).
-ast_attr[code](n5b7671fd_364, id, "bytes").
+ast_child[code](n5b7671fd_355, args, 1, n5b7671fd_359).
+ast_node[code](n5b7671fd_360, constant, "adapters.py", 100).
+ast_attr[code](n5b7671fd_360, value, "").
+ast_child[code](n5b7671fd_355, args, 2, n5b7671fd_360).
+ast_child[code](n5b7671fd_354, value, 0, n5b7671fd_355).
+ast_child[code](n5b7671fd_353, value, 0, n5b7671fd_354).
+ast_child[code](n5b7671fd_339, body, 1, n5b7671fd_353).
+ast_child[code](n5b7671fd_332, body, 0, n5b7671fd_339).
+ast_node[code](n5b7671fd_361, expr, "adapters.py", 101).
+ast_node[code](n5b7671fd_362, await, "adapters.py", 101).
+ast_node[code](n5b7671fd_363, call, "adapters.py", 101).
+ast_node[code](n5b7671fd_364, attribute, "adapters.py", 101).
+ast_node[code](n5b7671fd_365, name, "adapters.py", 101).
+ast_attr[code](n5b7671fd_365, id, "to_thread").
+ast_attr[code](n5b7671fd_365, ctx, load).
+ast_child[code](n5b7671fd_364, value, 0, n5b7671fd_365).
+ast_attr[code](n5b7671fd_364, attr, "run_sync").
 ast_attr[code](n5b7671fd_364, ctx, load).
-ast_child[code](n5b7671fd_352, returns, 0, n5b7671fd_364).
-ast_child[code](n5b7671fd_334, body, 1, n5b7671fd_352).
-ast_node[code](n5b7671fd_365, async_function_def, "adapters.py", 92).
-ast_attr[code](n5b7671fd_365, name, "move_file").
-ast_node[code](n5b7671fd_366, arguments, "adapters.py", 0).
-ast_node[code](n5b7671fd_367, arg, "adapters.py", 92).
-ast_attr[code](n5b7671fd_367, arg, "self").
-ast_child[code](n5b7671fd_366, args, 0, n5b7671fd_367).
-ast_node[code](n5b7671fd_368, arg, "adapters.py", 92).
-ast_attr[code](n5b7671fd_368, arg, "source").
-ast_node[code](n5b7671fd_369, name, "adapters.py", 92).
-ast_attr[code](n5b7671fd_369, id, "str").
+ast_child[code](n5b7671fd_363, func, 0, n5b7671fd_364).
+ast_node[code](n5b7671fd_366, attribute, "adapters.py", 101).
+ast_node[code](n5b7671fd_367, attribute, "adapters.py", 101).
+ast_node[code](n5b7671fd_368, name, "adapters.py", 101).
+ast_attr[code](n5b7671fd_368, id, "self").
+ast_attr[code](n5b7671fd_368, ctx, load).
+ast_child[code](n5b7671fd_367, value, 0, n5b7671fd_368).
+ast_attr[code](n5b7671fd_367, attr, "conn").
+ast_attr[code](n5b7671fd_367, ctx, load).
+ast_child[code](n5b7671fd_366, value, 0, n5b7671fd_367).
+ast_attr[code](n5b7671fd_366, attr, "rename").
+ast_attr[code](n5b7671fd_366, ctx, load).
+ast_child[code](n5b7671fd_363, args, 0, n5b7671fd_366).
+ast_node[code](n5b7671fd_369, name, "adapters.py", 101).
+ast_attr[code](n5b7671fd_369, id, "source").
 ast_attr[code](n5b7671fd_369, ctx, load).
-ast_child[code](n5b7671fd_368, annotation, 0, n5b7671fd_369).
-ast_child[code](n5b7671fd_366, args, 1, n5b7671fd_368).
-ast_node[code](n5b7671fd_370, arg, "adapters.py", 92).
-ast_attr[code](n5b7671fd_370, arg, "destination").
-ast_node[code](n5b7671fd_371, name, "adapters.py", 92).
-ast_attr[code](n5b7671fd_371, id, "str").
-ast_attr[code](n5b7671fd_371, ctx, load).
-ast_child[code](n5b7671fd_370, annotation, 0, n5b7671fd_371).
-ast_child[code](n5b7671fd_366, args, 2, n5b7671fd_370).
-ast_child[code](n5b7671fd_365, args, 0, n5b7671fd_366).
-ast_node[code](n5b7671fd_372, if, "adapters.py", 93).
-ast_node[code](n5b7671fd_373, unary_op, "adapters.py", 93).
-ast_attr[code](n5b7671fd_373, op, not).
-ast_node[code](n5b7671fd_374, call, "adapters.py", 93).
-ast_node[code](n5b7671fd_375, attribute, "adapters.py", 93).
-ast_node[code](n5b7671fd_376, name, "adapters.py", 93).
-ast_attr[code](n5b7671fd_376, id, "source").
+ast_child[code](n5b7671fd_363, args, 1, n5b7671fd_369).
+ast_node[code](n5b7671fd_370, name, "adapters.py", 101).
+ast_attr[code](n5b7671fd_370, id, "destination").
+ast_attr[code](n5b7671fd_370, ctx, load).
+ast_child[code](n5b7671fd_363, args, 2, n5b7671fd_370).
+ast_child[code](n5b7671fd_362, value, 0, n5b7671fd_363).
+ast_child[code](n5b7671fd_361, value, 0, n5b7671fd_362).
+ast_child[code](n5b7671fd_332, body, 1, n5b7671fd_361).
+ast_node[code](n5b7671fd_371, constant, "adapters.py", 96).
+ast_attr[code](n5b7671fd_371, value, none).
+ast_child[code](n5b7671fd_332, returns, 0, n5b7671fd_371).
+ast_child[code](n5b7671fd_251, body, 4, n5b7671fd_332).
+ast_node[code](n5b7671fd_372, async_function_def, "adapters.py", 103).
+ast_attr[code](n5b7671fd_372, name, "_request").
+ast_node[code](n5b7671fd_373, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_374, arg, "adapters.py", 103).
+ast_attr[code](n5b7671fd_374, arg, "self").
+ast_child[code](n5b7671fd_373, args, 0, n5b7671fd_374).
+ast_node[code](n5b7671fd_375, arg, "adapters.py", 103).
+ast_attr[code](n5b7671fd_375, arg, "method").
+ast_node[code](n5b7671fd_376, name, "adapters.py", 103).
+ast_attr[code](n5b7671fd_376, id, "str").
 ast_attr[code](n5b7671fd_376, ctx, load).
-ast_child[code](n5b7671fd_375, value, 0, n5b7671fd_376).
-ast_attr[code](n5b7671fd_375, attr, "endswith").
-ast_attr[code](n5b7671fd_375, ctx, load).
-ast_child[code](n5b7671fd_374, func, 0, n5b7671fd_375).
-ast_node[code](n5b7671fd_377, constant, "adapters.py", 93).
-ast_attr[code](n5b7671fd_377, value, "/").
-ast_child[code](n5b7671fd_374, args, 0, n5b7671fd_377).
-ast_child[code](n5b7671fd_373, operand, 0, n5b7671fd_374).
-ast_child[code](n5b7671fd_372, test, 0, n5b7671fd_373).
-ast_node[code](n5b7671fd_378, expr, "adapters.py", 94).
-ast_node[code](n5b7671fd_379, call, "adapters.py", 94).
-ast_node[code](n5b7671fd_380, attribute, "adapters.py", 94).
-ast_node[code](n5b7671fd_381, attribute, "adapters.py", 94).
-ast_node[code](n5b7671fd_382, name, "adapters.py", 94).
-ast_attr[code](n5b7671fd_382, id, "self").
-ast_attr[code](n5b7671fd_382, ctx, load).
-ast_child[code](n5b7671fd_381, value, 0, n5b7671fd_382).
-ast_attr[code](n5b7671fd_381, attr, "client").
-ast_attr[code](n5b7671fd_381, ctx, load).
-ast_child[code](n5b7671fd_380, value, 0, n5b7671fd_381).
-ast_attr[code](n5b7671fd_380, attr, "copy").
+ast_child[code](n5b7671fd_375, annotation, 0, n5b7671fd_376).
+ast_child[code](n5b7671fd_373, args, 1, n5b7671fd_375).
+ast_node[code](n5b7671fd_377, arg, "adapters.py", 103).
+ast_attr[code](n5b7671fd_377, arg, "path").
+ast_node[code](n5b7671fd_378, name, "adapters.py", 103).
+ast_attr[code](n5b7671fd_378, id, "str").
+ast_attr[code](n5b7671fd_378, ctx, load).
+ast_child[code](n5b7671fd_377, annotation, 0, n5b7671fd_378).
+ast_child[code](n5b7671fd_373, args, 2, n5b7671fd_377).
+ast_node[code](n5b7671fd_379, arg, "adapters.py", 103).
+ast_attr[code](n5b7671fd_379, arg, "body").
+ast_node[code](n5b7671fd_380, name, "adapters.py", 103).
+ast_attr[code](n5b7671fd_380, id, "bytes").
 ast_attr[code](n5b7671fd_380, ctx, load).
-ast_child[code](n5b7671fd_379, func, 0, n5b7671fd_380).
-ast_node[code](n5b7671fd_383, keyword, "adapters.py", 94).
-ast_attr[code](n5b7671fd_383, arg, "Key").
-ast_node[code](n5b7671fd_384, name, "adapters.py", 94).
-ast_attr[code](n5b7671fd_384, id, "source").
-ast_attr[code](n5b7671fd_384, ctx, load).
-ast_child[code](n5b7671fd_383, value, 0, n5b7671fd_384).
-ast_child[code](n5b7671fd_379, keywords, 0, n5b7671fd_383).
-ast_node[code](n5b7671fd_385, keyword, "adapters.py", 94).
-ast_attr[code](n5b7671fd_385, arg, "Target").
-ast_node[code](n5b7671fd_386, name, "adapters.py", 94).
-ast_attr[code](n5b7671fd_386, id, "destination").
+ast_child[code](n5b7671fd_379, annotation, 0, n5b7671fd_380).
+ast_child[code](n5b7671fd_373, args, 3, n5b7671fd_379).
+ast_child[code](n5b7671fd_372, args, 0, n5b7671fd_373).
+ast_node[code](n5b7671fd_381, return, "adapters.py", 104).
+ast_node[code](n5b7671fd_382, await, "adapters.py", 104).
+ast_node[code](n5b7671fd_383, call, "adapters.py", 104).
+ast_node[code](n5b7671fd_384, attribute, "adapters.py", 104).
+ast_node[code](n5b7671fd_385, attribute, "adapters.py", 104).
+ast_node[code](n5b7671fd_386, name, "adapters.py", 104).
+ast_attr[code](n5b7671fd_386, id, "self").
 ast_attr[code](n5b7671fd_386, ctx, load).
 ast_child[code](n5b7671fd_385, value, 0, n5b7671fd_386).
-ast_child[code](n5b7671fd_379, keywords, 1, n5b7671fd_385).
-ast_child[code](n5b7671fd_378, value, 0, n5b7671fd_379).
-ast_child[code](n5b7671fd_372, body, 0, n5b7671fd_378).
-ast_node[code](n5b7671fd_387, expr, "adapters.py", 95).
-ast_node[code](n5b7671fd_388, call, "adapters.py", 95).
-ast_node[code](n5b7671fd_389, attribute, "adapters.py", 95).
-ast_node[code](n5b7671fd_390, attribute, "adapters.py", 95).
-ast_node[code](n5b7671fd_391, name, "adapters.py", 95).
-ast_attr[code](n5b7671fd_391, id, "self").
-ast_attr[code](n5b7671fd_391, ctx, load).
-ast_child[code](n5b7671fd_390, value, 0, n5b7671fd_391).
-ast_attr[code](n5b7671fd_390, attr, "client").
+ast_attr[code](n5b7671fd_385, attr, "http").
+ast_attr[code](n5b7671fd_385, ctx, load).
+ast_child[code](n5b7671fd_384, value, 0, n5b7671fd_385).
+ast_attr[code](n5b7671fd_384, attr, "request").
+ast_attr[code](n5b7671fd_384, ctx, load).
+ast_child[code](n5b7671fd_383, func, 0, n5b7671fd_384).
+ast_node[code](n5b7671fd_387, name, "adapters.py", 104).
+ast_attr[code](n5b7671fd_387, id, "method").
+ast_attr[code](n5b7671fd_387, ctx, load).
+ast_child[code](n5b7671fd_383, args, 0, n5b7671fd_387).
+ast_node[code](n5b7671fd_388, name, "adapters.py", 104).
+ast_attr[code](n5b7671fd_388, id, "path").
+ast_attr[code](n5b7671fd_388, ctx, load).
+ast_child[code](n5b7671fd_383, args, 1, n5b7671fd_388).
+ast_node[code](n5b7671fd_389, keyword, "adapters.py", 104).
+ast_attr[code](n5b7671fd_389, arg, "content").
+ast_node[code](n5b7671fd_390, name, "adapters.py", 104).
+ast_attr[code](n5b7671fd_390, id, "body").
 ast_attr[code](n5b7671fd_390, ctx, load).
 ast_child[code](n5b7671fd_389, value, 0, n5b7671fd_390).
-ast_attr[code](n5b7671fd_389, attr, "delete_objects").
-ast_attr[code](n5b7671fd_389, ctx, load).
-ast_child[code](n5b7671fd_388, func, 0, n5b7671fd_389).
-ast_node[code](n5b7671fd_392, keyword, "adapters.py", 95).
-ast_attr[code](n5b7671fd_392, arg, "Prefix").
-ast_node[code](n5b7671fd_393, name, "adapters.py", 95).
-ast_attr[code](n5b7671fd_393, id, "source").
-ast_attr[code](n5b7671fd_393, ctx, load).
-ast_child[code](n5b7671fd_392, value, 0, n5b7671fd_393).
-ast_child[code](n5b7671fd_388, keywords, 0, n5b7671fd_392).
-ast_child[code](n5b7671fd_387, value, 0, n5b7671fd_388).
-ast_child[code](n5b7671fd_372, body, 1, n5b7671fd_387).
-ast_node[code](n5b7671fd_394, return, "adapters.py", 96).
-ast_child[code](n5b7671fd_372, body, 2, n5b7671fd_394).
-ast_child[code](n5b7671fd_365, body, 0, n5b7671fd_372).
-ast_node[code](n5b7671fd_395, expr, "adapters.py", 97).
-ast_node[code](n5b7671fd_396, call, "adapters.py", 97).
-ast_node[code](n5b7671fd_397, attribute, "adapters.py", 97).
-ast_node[code](n5b7671fd_398, attribute, "adapters.py", 97).
-ast_node[code](n5b7671fd_399, name, "adapters.py", 97).
-ast_attr[code](n5b7671fd_399, id, "self").
-ast_attr[code](n5b7671fd_399, ctx, load).
-ast_child[code](n5b7671fd_398, value, 0, n5b7671fd_399).
-ast_attr[code](n5b7671fd_398, attr, "client").
-ast_attr[code](n5b7671fd_398, ctx, load).
-ast_child[code](n5b7671fd_397, value, 0, n5b7671fd_398).
-ast_attr[code](n5b7671fd_397, attr, "delete_objects").
+ast_child[code](n5b7671fd_383, keywords, 0, n5b7671fd_389).
+ast_child[code](n5b7671fd_382, value, 0, n5b7671fd_383).
+ast_child[code](n5b7671fd_381, value, 0, n5b7671fd_382).
+ast_child[code](n5b7671fd_372, body, 0, n5b7671fd_381).
+ast_node[code](n5b7671fd_391, name, "adapters.py", 103).
+ast_attr[code](n5b7671fd_391, id, "bytes").
+ast_attr[code](n5b7671fd_391, ctx, load).
+ast_child[code](n5b7671fd_372, returns, 0, n5b7671fd_391).
+ast_child[code](n5b7671fd_251, body, 5, n5b7671fd_372).
+ast_child[code](n5b7671fd_1, body, 10, n5b7671fd_251).
+ast_node[code](n5b7671fd_392, class_def, "adapters.py", 107).
+ast_attr[code](n5b7671fd_392, name, "HastyAdapter").
+ast_node[code](n5b7671fd_393, async_function_def, "adapters.py", 108).
+ast_attr[code](n5b7671fd_393, name, "write").
+ast_node[code](n5b7671fd_394, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_395, arg, "adapters.py", 108).
+ast_attr[code](n5b7671fd_395, arg, "self").
+ast_child[code](n5b7671fd_394, args, 0, n5b7671fd_395).
+ast_node[code](n5b7671fd_396, arg, "adapters.py", 108).
+ast_attr[code](n5b7671fd_396, arg, "path").
+ast_node[code](n5b7671fd_397, name, "adapters.py", 108).
+ast_attr[code](n5b7671fd_397, id, "str").
 ast_attr[code](n5b7671fd_397, ctx, load).
-ast_child[code](n5b7671fd_396, func, 0, n5b7671fd_397).
-ast_node[code](n5b7671fd_400, keyword, "adapters.py", 97).
-ast_attr[code](n5b7671fd_400, arg, "Prefix").
-ast_node[code](n5b7671fd_401, name, "adapters.py", 97).
-ast_attr[code](n5b7671fd_401, id, "source").
-ast_attr[code](n5b7671fd_401, ctx, load).
-ast_child[code](n5b7671fd_400, value, 0, n5b7671fd_401).
-ast_child[code](n5b7671fd_396, keywords, 0, n5b7671fd_400).
-ast_child[code](n5b7671fd_395, value, 0, n5b7671fd_396).
-ast_child[code](n5b7671fd_365, body, 1, n5b7671fd_395).
-ast_node[code](n5b7671fd_402, expr, "adapters.py", 98).
-ast_node[code](n5b7671fd_403, call, "adapters.py", 98).
-ast_node[code](n5b7671fd_404, attribute, "adapters.py", 98).
-ast_node[code](n5b7671fd_405, attribute, "adapters.py", 98).
-ast_node[code](n5b7671fd_406, name, "adapters.py", 98).
-ast_attr[code](n5b7671fd_406, id, "self").
+ast_child[code](n5b7671fd_396, annotation, 0, n5b7671fd_397).
+ast_child[code](n5b7671fd_394, args, 1, n5b7671fd_396).
+ast_node[code](n5b7671fd_398, arg, "adapters.py", 108).
+ast_attr[code](n5b7671fd_398, arg, "contents").
+ast_node[code](n5b7671fd_399, name, "adapters.py", 108).
+ast_attr[code](n5b7671fd_399, id, "bytes").
+ast_attr[code](n5b7671fd_399, ctx, load).
+ast_child[code](n5b7671fd_398, annotation, 0, n5b7671fd_399).
+ast_child[code](n5b7671fd_394, args, 2, n5b7671fd_398).
+ast_child[code](n5b7671fd_393, args, 0, n5b7671fd_394).
+ast_node[code](n5b7671fd_400, expr, "adapters.py", 109).
+ast_node[code](n5b7671fd_401, call, "adapters.py", 109).
+ast_node[code](n5b7671fd_402, attribute, "adapters.py", 109).
+ast_node[code](n5b7671fd_403, attribute, "adapters.py", 109).
+ast_node[code](n5b7671fd_404, name, "adapters.py", 109).
+ast_attr[code](n5b7671fd_404, id, "self").
+ast_attr[code](n5b7671fd_404, ctx, load).
+ast_child[code](n5b7671fd_403, value, 0, n5b7671fd_404).
+ast_attr[code](n5b7671fd_403, attr, "client").
+ast_attr[code](n5b7671fd_403, ctx, load).
+ast_child[code](n5b7671fd_402, value, 0, n5b7671fd_403).
+ast_attr[code](n5b7671fd_402, attr, "put_object").
+ast_attr[code](n5b7671fd_402, ctx, load).
+ast_child[code](n5b7671fd_401, func, 0, n5b7671fd_402).
+ast_node[code](n5b7671fd_405, keyword, "adapters.py", 109).
+ast_attr[code](n5b7671fd_405, arg, "Key").
+ast_node[code](n5b7671fd_406, name, "adapters.py", 109).
+ast_attr[code](n5b7671fd_406, id, "path").
 ast_attr[code](n5b7671fd_406, ctx, load).
 ast_child[code](n5b7671fd_405, value, 0, n5b7671fd_406).
-ast_attr[code](n5b7671fd_405, attr, "client").
-ast_attr[code](n5b7671fd_405, ctx, load).
-ast_child[code](n5b7671fd_404, value, 0, n5b7671fd_405).
-ast_attr[code](n5b7671fd_404, attr, "copy").
-ast_attr[code](n5b7671fd_404, ctx, load).
-ast_child[code](n5b7671fd_403, func, 0, n5b7671fd_404).
-ast_node[code](n5b7671fd_407, keyword, "adapters.py", 98).
-ast_attr[code](n5b7671fd_407, arg, "Key").
-ast_node[code](n5b7671fd_408, name, "adapters.py", 98).
-ast_attr[code](n5b7671fd_408, id, "source").
+ast_child[code](n5b7671fd_401, keywords, 0, n5b7671fd_405).
+ast_node[code](n5b7671fd_407, keyword, "adapters.py", 109).
+ast_attr[code](n5b7671fd_407, arg, "Body").
+ast_node[code](n5b7671fd_408, name, "adapters.py", 109).
+ast_attr[code](n5b7671fd_408, id, "contents").
 ast_attr[code](n5b7671fd_408, ctx, load).
 ast_child[code](n5b7671fd_407, value, 0, n5b7671fd_408).
-ast_child[code](n5b7671fd_403, keywords, 0, n5b7671fd_407).
-ast_node[code](n5b7671fd_409, keyword, "adapters.py", 98).
-ast_attr[code](n5b7671fd_409, arg, "Target").
-ast_node[code](n5b7671fd_410, name, "adapters.py", 98).
-ast_attr[code](n5b7671fd_410, id, "destination").
-ast_attr[code](n5b7671fd_410, ctx, load).
-ast_child[code](n5b7671fd_409, value, 0, n5b7671fd_410).
-ast_child[code](n5b7671fd_403, keywords, 1, n5b7671fd_409).
-ast_child[code](n5b7671fd_402, value, 0, n5b7671fd_403).
-ast_child[code](n5b7671fd_365, body, 2, n5b7671fd_402).
-ast_node[code](n5b7671fd_411, constant, "adapters.py", 92).
-ast_attr[code](n5b7671fd_411, value, none).
-ast_child[code](n5b7671fd_365, returns, 0, n5b7671fd_411).
-ast_child[code](n5b7671fd_334, body, 2, n5b7671fd_365).
-ast_child[code](n5b7671fd_1, body, 8, n5b7671fd_334).
+ast_child[code](n5b7671fd_401, keywords, 1, n5b7671fd_407).
+ast_child[code](n5b7671fd_400, value, 0, n5b7671fd_401).
+ast_child[code](n5b7671fd_393, body, 0, n5b7671fd_400).
+ast_node[code](n5b7671fd_409, constant, "adapters.py", 108).
+ast_attr[code](n5b7671fd_409, value, none).
+ast_child[code](n5b7671fd_393, returns, 0, n5b7671fd_409).
+ast_child[code](n5b7671fd_392, body, 0, n5b7671fd_393).
+ast_node[code](n5b7671fd_410, async_function_def, "adapters.py", 111).
+ast_attr[code](n5b7671fd_410, name, "read").
+ast_node[code](n5b7671fd_411, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_412, arg, "adapters.py", 111).
+ast_attr[code](n5b7671fd_412, arg, "self").
+ast_child[code](n5b7671fd_411, args, 0, n5b7671fd_412).
+ast_node[code](n5b7671fd_413, arg, "adapters.py", 111).
+ast_attr[code](n5b7671fd_413, arg, "path").
+ast_node[code](n5b7671fd_414, name, "adapters.py", 111).
+ast_attr[code](n5b7671fd_414, id, "str").
+ast_attr[code](n5b7671fd_414, ctx, load).
+ast_child[code](n5b7671fd_413, annotation, 0, n5b7671fd_414).
+ast_child[code](n5b7671fd_411, args, 1, n5b7671fd_413).
+ast_child[code](n5b7671fd_410, args, 0, n5b7671fd_411).
+ast_node[code](n5b7671fd_415, return, "adapters.py", 112).
+ast_node[code](n5b7671fd_416, call, "adapters.py", 112).
+ast_node[code](n5b7671fd_417, attribute, "adapters.py", 112).
+ast_node[code](n5b7671fd_418, attribute, "adapters.py", 112).
+ast_node[code](n5b7671fd_419, name, "adapters.py", 112).
+ast_attr[code](n5b7671fd_419, id, "self").
+ast_attr[code](n5b7671fd_419, ctx, load).
+ast_child[code](n5b7671fd_418, value, 0, n5b7671fd_419).
+ast_attr[code](n5b7671fd_418, attr, "client").
+ast_attr[code](n5b7671fd_418, ctx, load).
+ast_child[code](n5b7671fd_417, value, 0, n5b7671fd_418).
+ast_attr[code](n5b7671fd_417, attr, "get_object").
+ast_attr[code](n5b7671fd_417, ctx, load).
+ast_child[code](n5b7671fd_416, func, 0, n5b7671fd_417).
+ast_node[code](n5b7671fd_420, keyword, "adapters.py", 112).
+ast_attr[code](n5b7671fd_420, arg, "Key").
+ast_node[code](n5b7671fd_421, name, "adapters.py", 112).
+ast_attr[code](n5b7671fd_421, id, "path").
+ast_attr[code](n5b7671fd_421, ctx, load).
+ast_child[code](n5b7671fd_420, value, 0, n5b7671fd_421).
+ast_child[code](n5b7671fd_416, keywords, 0, n5b7671fd_420).
+ast_child[code](n5b7671fd_415, value, 0, n5b7671fd_416).
+ast_child[code](n5b7671fd_410, body, 0, n5b7671fd_415).
+ast_node[code](n5b7671fd_422, name, "adapters.py", 111).
+ast_attr[code](n5b7671fd_422, id, "bytes").
+ast_attr[code](n5b7671fd_422, ctx, load).
+ast_child[code](n5b7671fd_410, returns, 0, n5b7671fd_422).
+ast_child[code](n5b7671fd_392, body, 1, n5b7671fd_410).
+ast_node[code](n5b7671fd_423, async_function_def, "adapters.py", 114).
+ast_attr[code](n5b7671fd_423, name, "move_file").
+ast_node[code](n5b7671fd_424, arguments, "adapters.py", 0).
+ast_node[code](n5b7671fd_425, arg, "adapters.py", 114).
+ast_attr[code](n5b7671fd_425, arg, "self").
+ast_child[code](n5b7671fd_424, args, 0, n5b7671fd_425).
+ast_node[code](n5b7671fd_426, arg, "adapters.py", 114).
+ast_attr[code](n5b7671fd_426, arg, "source").
+ast_node[code](n5b7671fd_427, name, "adapters.py", 114).
+ast_attr[code](n5b7671fd_427, id, "str").
+ast_attr[code](n5b7671fd_427, ctx, load).
+ast_child[code](n5b7671fd_426, annotation, 0, n5b7671fd_427).
+ast_child[code](n5b7671fd_424, args, 1, n5b7671fd_426).
+ast_node[code](n5b7671fd_428, arg, "adapters.py", 114).
+ast_attr[code](n5b7671fd_428, arg, "destination").
+ast_node[code](n5b7671fd_429, name, "adapters.py", 114).
+ast_attr[code](n5b7671fd_429, id, "str").
+ast_attr[code](n5b7671fd_429, ctx, load).
+ast_child[code](n5b7671fd_428, annotation, 0, n5b7671fd_429).
+ast_child[code](n5b7671fd_424, args, 2, n5b7671fd_428).
+ast_child[code](n5b7671fd_423, args, 0, n5b7671fd_424).
+ast_node[code](n5b7671fd_430, if, "adapters.py", 115).
+ast_node[code](n5b7671fd_431, unary_op, "adapters.py", 115).
+ast_attr[code](n5b7671fd_431, op, not).
+ast_node[code](n5b7671fd_432, call, "adapters.py", 115).
+ast_node[code](n5b7671fd_433, attribute, "adapters.py", 115).
+ast_node[code](n5b7671fd_434, name, "adapters.py", 115).
+ast_attr[code](n5b7671fd_434, id, "source").
+ast_attr[code](n5b7671fd_434, ctx, load).
+ast_child[code](n5b7671fd_433, value, 0, n5b7671fd_434).
+ast_attr[code](n5b7671fd_433, attr, "endswith").
+ast_attr[code](n5b7671fd_433, ctx, load).
+ast_child[code](n5b7671fd_432, func, 0, n5b7671fd_433).
+ast_node[code](n5b7671fd_435, constant, "adapters.py", 115).
+ast_attr[code](n5b7671fd_435, value, "/").
+ast_child[code](n5b7671fd_432, args, 0, n5b7671fd_435).
+ast_child[code](n5b7671fd_431, operand, 0, n5b7671fd_432).
+ast_child[code](n5b7671fd_430, test, 0, n5b7671fd_431).
+ast_node[code](n5b7671fd_436, expr, "adapters.py", 116).
+ast_node[code](n5b7671fd_437, call, "adapters.py", 116).
+ast_node[code](n5b7671fd_438, attribute, "adapters.py", 116).
+ast_node[code](n5b7671fd_439, attribute, "adapters.py", 116).
+ast_node[code](n5b7671fd_440, name, "adapters.py", 116).
+ast_attr[code](n5b7671fd_440, id, "self").
+ast_attr[code](n5b7671fd_440, ctx, load).
+ast_child[code](n5b7671fd_439, value, 0, n5b7671fd_440).
+ast_attr[code](n5b7671fd_439, attr, "client").
+ast_attr[code](n5b7671fd_439, ctx, load).
+ast_child[code](n5b7671fd_438, value, 0, n5b7671fd_439).
+ast_attr[code](n5b7671fd_438, attr, "copy").
+ast_attr[code](n5b7671fd_438, ctx, load).
+ast_child[code](n5b7671fd_437, func, 0, n5b7671fd_438).
+ast_node[code](n5b7671fd_441, keyword, "adapters.py", 116).
+ast_attr[code](n5b7671fd_441, arg, "Key").
+ast_node[code](n5b7671fd_442, name, "adapters.py", 116).
+ast_attr[code](n5b7671fd_442, id, "source").
+ast_attr[code](n5b7671fd_442, ctx, load).
+ast_child[code](n5b7671fd_441, value, 0, n5b7671fd_442).
+ast_child[code](n5b7671fd_437, keywords, 0, n5b7671fd_441).
+ast_node[code](n5b7671fd_443, keyword, "adapters.py", 116).
+ast_attr[code](n5b7671fd_443, arg, "Target").
+ast_node[code](n5b7671fd_444, name, "adapters.py", 116).
+ast_attr[code](n5b7671fd_444, id, "destination").
+ast_attr[code](n5b7671fd_444, ctx, load).
+ast_child[code](n5b7671fd_443, value, 0, n5b7671fd_444).
+ast_child[code](n5b7671fd_437, keywords, 1, n5b7671fd_443).
+ast_child[code](n5b7671fd_436, value, 0, n5b7671fd_437).
+ast_child[code](n5b7671fd_430, body, 0, n5b7671fd_436).
+ast_node[code](n5b7671fd_445, expr, "adapters.py", 117).
+ast_node[code](n5b7671fd_446, call, "adapters.py", 117).
+ast_node[code](n5b7671fd_447, attribute, "adapters.py", 117).
+ast_node[code](n5b7671fd_448, attribute, "adapters.py", 117).
+ast_node[code](n5b7671fd_449, name, "adapters.py", 117).
+ast_attr[code](n5b7671fd_449, id, "self").
+ast_attr[code](n5b7671fd_449, ctx, load).
+ast_child[code](n5b7671fd_448, value, 0, n5b7671fd_449).
+ast_attr[code](n5b7671fd_448, attr, "client").
+ast_attr[code](n5b7671fd_448, ctx, load).
+ast_child[code](n5b7671fd_447, value, 0, n5b7671fd_448).
+ast_attr[code](n5b7671fd_447, attr, "delete_objects").
+ast_attr[code](n5b7671fd_447, ctx, load).
+ast_child[code](n5b7671fd_446, func, 0, n5b7671fd_447).
+ast_node[code](n5b7671fd_450, keyword, "adapters.py", 117).
+ast_attr[code](n5b7671fd_450, arg, "Prefix").
+ast_node[code](n5b7671fd_451, name, "adapters.py", 117).
+ast_attr[code](n5b7671fd_451, id, "source").
+ast_attr[code](n5b7671fd_451, ctx, load).
+ast_child[code](n5b7671fd_450, value, 0, n5b7671fd_451).
+ast_child[code](n5b7671fd_446, keywords, 0, n5b7671fd_450).
+ast_child[code](n5b7671fd_445, value, 0, n5b7671fd_446).
+ast_child[code](n5b7671fd_430, body, 1, n5b7671fd_445).
+ast_node[code](n5b7671fd_452, return, "adapters.py", 118).
+ast_child[code](n5b7671fd_430, body, 2, n5b7671fd_452).
+ast_child[code](n5b7671fd_423, body, 0, n5b7671fd_430).
+ast_node[code](n5b7671fd_453, expr, "adapters.py", 119).
+ast_node[code](n5b7671fd_454, call, "adapters.py", 119).
+ast_node[code](n5b7671fd_455, attribute, "adapters.py", 119).
+ast_node[code](n5b7671fd_456, attribute, "adapters.py", 119).
+ast_node[code](n5b7671fd_457, name, "adapters.py", 119).
+ast_attr[code](n5b7671fd_457, id, "self").
+ast_attr[code](n5b7671fd_457, ctx, load).
+ast_child[code](n5b7671fd_456, value, 0, n5b7671fd_457).
+ast_attr[code](n5b7671fd_456, attr, "client").
+ast_attr[code](n5b7671fd_456, ctx, load).
+ast_child[code](n5b7671fd_455, value, 0, n5b7671fd_456).
+ast_attr[code](n5b7671fd_455, attr, "delete_objects").
+ast_attr[code](n5b7671fd_455, ctx, load).
+ast_child[code](n5b7671fd_454, func, 0, n5b7671fd_455).
+ast_node[code](n5b7671fd_458, keyword, "adapters.py", 119).
+ast_attr[code](n5b7671fd_458, arg, "Prefix").
+ast_node[code](n5b7671fd_459, name, "adapters.py", 119).
+ast_attr[code](n5b7671fd_459, id, "source").
+ast_attr[code](n5b7671fd_459, ctx, load).
+ast_child[code](n5b7671fd_458, value, 0, n5b7671fd_459).
+ast_child[code](n5b7671fd_454, keywords, 0, n5b7671fd_458).
+ast_child[code](n5b7671fd_453, value, 0, n5b7671fd_454).
+ast_child[code](n5b7671fd_423, body, 1, n5b7671fd_453).
+ast_node[code](n5b7671fd_460, expr, "adapters.py", 120).
+ast_node[code](n5b7671fd_461, call, "adapters.py", 120).
+ast_node[code](n5b7671fd_462, attribute, "adapters.py", 120).
+ast_node[code](n5b7671fd_463, attribute, "adapters.py", 120).
+ast_node[code](n5b7671fd_464, name, "adapters.py", 120).
+ast_attr[code](n5b7671fd_464, id, "self").
+ast_attr[code](n5b7671fd_464, ctx, load).
+ast_child[code](n5b7671fd_463, value, 0, n5b7671fd_464).
+ast_attr[code](n5b7671fd_463, attr, "client").
+ast_attr[code](n5b7671fd_463, ctx, load).
+ast_child[code](n5b7671fd_462, value, 0, n5b7671fd_463).
+ast_attr[code](n5b7671fd_462, attr, "copy").
+ast_attr[code](n5b7671fd_462, ctx, load).
+ast_child[code](n5b7671fd_461, func, 0, n5b7671fd_462).
+ast_node[code](n5b7671fd_465, keyword, "adapters.py", 120).
+ast_attr[code](n5b7671fd_465, arg, "Key").
+ast_node[code](n5b7671fd_466, name, "adapters.py", 120).
+ast_attr[code](n5b7671fd_466, id, "source").
+ast_attr[code](n5b7671fd_466, ctx, load).
+ast_child[code](n5b7671fd_465, value, 0, n5b7671fd_466).
+ast_child[code](n5b7671fd_461, keywords, 0, n5b7671fd_465).
+ast_node[code](n5b7671fd_467, keyword, "adapters.py", 120).
+ast_attr[code](n5b7671fd_467, arg, "Target").
+ast_node[code](n5b7671fd_468, name, "adapters.py", 120).
+ast_attr[code](n5b7671fd_468, id, "destination").
+ast_attr[code](n5b7671fd_468, ctx, load).
+ast_child[code](n5b7671fd_467, value, 0, n5b7671fd_468).
+ast_child[code](n5b7671fd_461, keywords, 1, n5b7671fd_467).
+ast_child[code](n5b7671fd_460, value, 0, n5b7671fd_461).
+ast_child[code](n5b7671fd_423, body, 2, n5b7671fd_460).
+ast_node[code](n5b7671fd_469, constant, "adapters.py", 114).
+ast_attr[code](n5b7671fd_469, value, none).
+ast_child[code](n5b7671fd_423, returns, 0, n5b7671fd_469).
+ast_child[code](n5b7671fd_392, body, 2, n5b7671fd_423).
+ast_child[code](n5b7671fd_1, body, 11, n5b7671fd_392).
 ast_file[code](n5b7671fd_1, "adapters.py").

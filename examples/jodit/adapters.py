@@ -6,8 +6,11 @@ fault: for a folder its move deletes before it copies, after a branch for a
 file that copies first, and delete_before_copy must name the folder's delete.
 Scanned into facts/py-model.rofl by
 `python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
+TreeAdapter's pool runs the connect it was handed, and the connection's
+handshake is a method its library may call: both reach read.
 """
 
+import socket
 from functools import partial
 from typing import Protocol
 
@@ -58,7 +61,26 @@ class BucketAdapter:
         return await to_thread.run_sync(func)
 
 
+class Pool:
+    def __init__(self, connect):
+        self._connect = connect
+
+    def run(self, func):
+        return func(self._connect())
+
+
+class Wire(socket.socket):
+    def handshake(self) -> None:
+        super().sendall(b"HELLO")
+
+
 class TreeAdapter:
+    def __init__(self) -> None:
+        self._pool = Pool(self._connect)
+
+    def _connect(self):
+        return Wire()
+
     async def write(self, path: str, contents: bytes) -> None:
         temporary = f"{path}.tmp"
         try:
@@ -69,7 +91,7 @@ class TreeAdapter:
             raise
 
     async def read(self, path: str) -> bytes:
-        return await self._request("GET", path, b"")
+        return await self._pool.run(lambda conn: self._request("GET", path, b""))
 
     async def move_file(self, source: str, destination: str) -> None:
         for parent in destination.split("/")[:-1]:

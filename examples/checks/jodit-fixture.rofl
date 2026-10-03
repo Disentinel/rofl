@@ -13,6 +13,9 @@ op_kind[jodit](B, "delete_objects", delete) :- bucketlike[jodit](B).
 op_kind[jodit](B, "list_objects_v2", list) :- bucketlike[jodit](B).
 bucketlike[jodit](bucket). bucketlike[jodit](hasty).
 op_kind[jodit](tree, "rename", rename).
+op_kind[jodit](tree, "sendall", session).
+not_a_request[jodit](tree, "Wire", "a connection built; its handshake sends").
+protocol[jodit](tree, http). protocol[jodit](bucket, s3). protocol[jodit](hasty, s3).
 op_str[jodit](tree, "_request", 0, "PUT", put).
 op_str[jodit](tree, "_request", 0, "MOVE", rename).
 op_str[jodit](tree, "_request", 0, "DELETE", delete).
@@ -31,6 +34,7 @@ expect_does[jodit](tree, "write", put, once, main).
 expect_does[jodit](tree, "write", rename, once, main).
 expect_does[jodit](tree, "write", delete, once, handler).
 expect_does[jodit](tree, "read", read, once, main).
+expect_does[jodit](tree, "read", session, once, main).
 expect_does[jodit](tree, "move_file", mkdir, repeated, main).
 expect_does[jodit](tree, "move_file", rename, once, main).
 expect_does[jodit](hasty, "write", put, once, main).
@@ -45,7 +49,7 @@ fixture_extra[audit](B, M, K, F, P) :- does_shape[jodit](B, M, K, F, P), not exp
 expect_holds[jodit](move_by_copy, bucket). expect_holds[jodit](move_by_copy, hasty).
 expect_holds[jodit](delete_before_copy, hasty).
 -- the folder's delete only: the file branch copies first and returns
-expect_delete_before_copy_line[jodit](hasty, 97).
+expect_delete_before_copy_line[jodit](hasty, 119).
 expect_holds[jodit](write_single_put, bucket). expect_holds[jodit](write_single_put, hasty).
 expect_holds[jodit](write_via_rename, tree).
 expect_holds[jodit](on_failure_delete, tree).
@@ -65,3 +69,15 @@ fixture_extra[audit](bucketed_on_client, B, O, L, S) :- bucketed_on_client[audit
 fixture_extra[audit](unresolved_name, A, N, none, none) :- unresolved_name[audit](A, N).
 fixture_miss[audit](P, B, none, none, none) :- expect_holds[jodit](P, B), not holds[audit](P, B).
 fixture_extra[audit](P, B, none, none, none) :- holds[audit](P, B), not expect_holds[jodit](P, B).
+
+-- THE ORACLE'S AUDITS, each made to fire once by a planted observation: a
+-- DELETE the model does not predict for read, and a library call it does not reach
+observed[jodit]("TreeAdapter", "read", "http:GET", "fixture").
+observed[jodit]("TreeAdapter", "read", "http:DELETE", "fixture").
+observed_via[jodit]("TreeAdapter", "read", "rmtree", "http:GET").
+expect_holds[jodit](observed_not_predicted, tree). expect_holds[jodit](unreached_call, tree).
+holds[audit](observed_not_predicted, B) :- observed_not_predicted[audit](B, "read", delete).
+holds[audit](unreached_call, B) :- unreached_call[audit](B, "read", "rmtree").
+fixture_extra[audit](observed_not_predicted, B, D, K, none) :- observed_not_predicted[audit](B, D, K), not planted_kind[jodit](B, D, K).
+planted_kind[jodit](tree, "read", delete).
+fixture_extra[audit](unresolved_self, A, N, none, none) :- unresolved_self[audit](A, N).

@@ -22,15 +22,34 @@ send to the store.
 - `backends.rofl` — the one hand-written file: what each client call is,
   matched by name, or why it is not a request; and what each protocol offers,
   with the page that says so.
+- `oracle.rofl` and `trace.py` — the check against a run: `trace.py` is a
+  pytest plugin that records, under each duty, what jodit's own contract tests
+  put on the wire (SFTP messages, FTP commands, HTTP methods, GCS JSON API
+  requests, system calls) and through which library call. `oracle.rofl` gives
+  each message its kind from the protocol, not from the code's names, measures
+  what each library call expands into, and audits both ways:
+  `observed_not_predicted` (a kind on the wire the model does not predict) and
+  `unreached_call` (a library call made under a duty that the model does not
+  reach from it).
 - `adapters.py` — a fixture in jodit's shapes, with a planted fault
   (HastyAdapter deletes before it copies), scanned into `facts/py-model.rofl`.
   The world `jodit_fixture` runs these rules over it against the expected rows
   in `examples/checks/jodit-fixture.rofl`.
 
-Over the real code, as a check and not a test (checked at jodit-python 05c1012):
+Over the real code, as a check and not a test (checked at jodit-python 05c1012).
+The real world is large for the TypeScript engine; the Rust engine answers it
+in seconds:
 
     git clone --depth 1 https://github.com/TimurSeyidov/jodit-python /tmp/jodit
-    uv run -p 3.14 scanners/py_ast.py /tmp/jodit/src /tmp/jodit/src/jcpy/storage > facts/generated/jodit-storage.rofl
-    node --experimental-strip-types scripts/ask.ts --facts facts/generated/jodit-storage.rofl \
-      --rules rules/py-model.rofl examples/jodit/backends.rofl examples/jodit/contract.rofl examples/jodit/specifics.rofl \
-      -- 'move_by_copy[jodit](B)' 'kind_of[jodit](B, "move_file", K)' 'why move_by_copy[jodit](s3)'
+    uv run -p 3.14 scanners/py_ast.py /tmp/jodit/src /tmp/jodit/src/jcpy/storage /tmp/jodit/src/jcpy/helpers/concurrency.py \
+      > facts/generated/jodit-storage.rofl
+    (cd /tmp/jodit && uv sync --all-extras -p 3.14 && TRACE_OUT=/tmp/observed.rofl PYTHONPATH=<rofl>/examples/jodit \
+      uv run pytest -p trace -q tests/unit/test_sftp.py tests/unit/test_webdav.py tests/unit/test_ftp.py tests/unit/test_gcs.py)
+    rust/target/release/rofl-load boot.rofl facts/generated/jodit-storage.rofl rules/py-model.rofl \
+      examples/jodit/backends.rofl examples/jodit/contract.rofl examples/jodit/specifics.rofl examples/jodit/oracle.rofl \
+      /tmp/observed.rofl | grep -E '\[audit\]|^(move_|copy_|write_)'
+
+Python 3.14 must be a release: 3.14.0rc2 breaks pydantic, and jodit's tests with it.
+The run covers sftp, ftp, webdav, gcs and local, whose tests run in process; s3
+and azure need Docker (MinIO, Azurite) and were not traced. `why` and `whynot`
+over the real world: `scripts/ask.ts` (TypeScript, slow) or `rofl-load --why`.

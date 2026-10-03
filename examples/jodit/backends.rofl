@@ -154,7 +154,7 @@ plain_function[jodit](N, "a builtin or typing helper") :- builtin_fn[jodit](N).
 builtin_fn[jodit]("any"). builtin_fn[jodit]("cast"). builtin_fn[jodit]("dict"). builtin_fn[jodit]("enumerate").
 builtin_fn[jodit]("getattr"). builtin_fn[jodit]("int"). builtin_fn[jodit]("isinstance"). builtin_fn[jodit]("len").
 builtin_fn[jodit]("next"). builtin_fn[jodit]("range"). builtin_fn[jodit]("set"). builtin_fn[jodit]("sorted").
-builtin_fn[jodit]("str"). builtin_fn[jodit]("partial").
+builtin_fn[jodit]("str"). builtin_fn[jodit]("partial"). builtin_fn[jodit]("frozenset"). builtin_fn[jodit]("super").
 plain_function[jodit](N, "a stdlib text or URL function") :- text_fn[jodit](N).
 text_fn[jodit]("quote"). text_fn[jodit]("unquote"). text_fn[jodit]("urlsplit"). text_fn[jodit]("parsedate_to_datetime").
 plain_function[jodit](N, "a module-level alias of a keys.py helper (s3.py:34-36); aliases are not read") :- key_alias[jodit](N).
@@ -172,3 +172,26 @@ offers[jodit](sftp, copy, file, "servers with the copy-data extension (OpenSSH 9
               "https://lists.mindrot.org/pipermail/openssh-unix-dev/2022-February/040068.html").
 offers[jodit](ftp, copy, file, "ProFTPD with mod_copy (SITE CPFR, SITE CPTO), not standard FTP",
               "https://doc.duckcorp.org/cgi-bin/dwww/usr/share/doc/proftpd-doc/contrib/mod_copy.html").
+
+-- OPENING A CONNECTION, reached since a callable handed to the pool counts as
+-- run by its users: what each call of the way in is
+op_kind[jodit](ftp, "connect", session).  op_kind[jodit](ftp, "login", session).
+op_kind[jodit](ftp, "prot_p", session).   op_kind[jodit](ftp, "pwd", session).
+op_kind[jodit](ftp, "wrap_socket", session).
+op_kind[jodit](ftp, "ntransfercmd", session).
+not_a_request[jodit](ftp, "close", "closes the control socket; ftplib's close sends nothing (quit would)").
+not_a_request[jodit](ftp, "FTP", "builds a client; connect sends").
+not_a_request[jodit](ftp, "FTP_TLS", "builds a client; connect sends").
+not_a_request[jodit](ftp, "create_default_context", "builds a TLS context").
+not_a_request[jodit](ftp, "Error", "an exception built").
+not_a_request[jodit](ftp, "upper", "text work").
+not_a_request[jodit](B, Op, "an option handed on as an argument") :- option_attr[jodit](Op), backend[jodit](_, B).
+option_attr[jodit]("host"). option_attr[jodit]("port"). option_attr[jodit]("username"). option_attr[jodit]("password").
+option_attr[jodit]("known_hosts_file"). option_attr[jodit]("timeout").
+op_kind[jodit](sftp, "connect", session). op_kind[jodit](sftp, "open_sftp", session).
+not_a_request[jodit](sftp, Op, "SSH client setup in the connector, nothing sent") :- ssh_local[jodit](Op).
+ssh_local[jodit]("SSHClient"). ssh_local[jodit]("RejectPolicy"). ssh_local[jodit]("set_missing_host_key_policy").
+ssh_local[jodit]("load_system_host_keys"). ssh_local[jodit]("load_host_keys"). ssh_local[jodit]("get_host_keys").
+ssh_local[jodit]("get_channel"). ssh_local[jodit]("settimeout"). ssh_local[jodit]("get_name").
+not_a_request[jodit](sftp, "error_perm", "an ftplib exception class named in a classifier").
+not_a_request[jodit](sftp, "error_temp", "an ftplib exception class named in a classifier").

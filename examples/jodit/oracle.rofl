@@ -1,0 +1,94 @@
+-- oracle.rofl — what the adapters put on the wire under jodit's own contract
+-- tests (examples/jodit/trace.py writes the `observed` facts), held against
+-- what the model reads from the code.
+--
+-- The kind of a protocol message is protocol knowledge: SFTP (draft-ietf-
+-- secsh-filexfer-02), FTP (RFC 959, 2389, 3659, 4217), WebDAV (RFC 4918), the
+-- GCS JSON API, POSIX. It does not use the code's names, so it can disagree
+-- with backends.rofl.
+
+edb(observed).
+
+protocol[jodit](sftp, sftp). protocol[jodit](ftp, ftp). protocol[jodit](webdav, http).
+protocol[jodit](gcs, gcs).   protocol[jodit](local, local).
+protocol[jodit](s3, s3).     protocol[jodit](azure, azure).
+
+wire_kind[jodit](sftp, "sftp:open:write", put).  wire_kind[jodit](sftp, "sftp:write", put).
+wire_kind[jodit](sftp, "sftp:open:read", read).  wire_kind[jodit](sftp, "sftp:read", read).
+wire_kind[jodit](sftp, "sftp:rename", rename).
+wire_kind[jodit](sftp, "sftp:extended:posix-rename@openssh.com", rename).
+wire_kind[jodit](sftp, "sftp:remove", delete).   wire_kind[jodit](sftp, "sftp:rmdir", delete).
+wire_kind[jodit](sftp, "sftp:mkdir", mkdir).
+wire_kind[jodit](sftp, "sftp:stat", meta).       wire_kind[jodit](sftp, "sftp:lstat", meta).
+wire_kind[jodit](sftp, "sftp:fstat", meta).
+wire_kind[jodit](sftp, "sftp:opendir", list).    wire_kind[jodit](sftp, "sftp:readdir", list).
+wire_kind[jodit](sftp, "sftp:close", session).   wire_kind[jodit](sftp, "sftp:realpath", session).
+
+wire_kind[jodit](ftp, "ftp:STOR", put).   wire_kind[jodit](ftp, "ftp:RETR", read).
+wire_kind[jodit](ftp, "ftp:RNFR", rename). wire_kind[jodit](ftp, "ftp:RNTO", rename).
+wire_kind[jodit](ftp, "ftp:DELE", delete). wire_kind[jodit](ftp, "ftp:RMD", delete).
+wire_kind[jodit](ftp, "ftp:MKD", mkdir).
+wire_kind[jodit](ftp, "ftp:SIZE", meta).  wire_kind[jodit](ftp, "ftp:MDTM", meta).
+wire_kind[jodit](ftp, "ftp:MLST", meta).  wire_kind[jodit](ftp, "ftp:CWD", meta).
+wire_kind[jodit](ftp, "ftp:LIST", list).  wire_kind[jodit](ftp, "ftp:MLSD", list).
+wire_kind[jodit](ftp, "ftp:NLST", list).
+wire_kind[jodit](ftp, W, session) :- ftp_session[jodit](W).
+ftp_session[jodit]("ftp:USER"). ftp_session[jodit]("ftp:PASS"). ftp_session[jodit]("ftp:AUTH").
+ftp_session[jodit]("ftp:PBSZ"). ftp_session[jodit]("ftp:PROT"). ftp_session[jodit]("ftp:FEAT").
+ftp_session[jodit]("ftp:OPTS"). ftp_session[jodit]("ftp:TYPE"). ftp_session[jodit]("ftp:PASV").
+ftp_session[jodit]("ftp:EPSV"). ftp_session[jodit]("ftp:PWD").  ftp_session[jodit]("ftp:NOOP").
+ftp_session[jodit]("ftp:QUIT").
+
+wire_kind[jodit](http, "http:PUT", put).       wire_kind[jodit](http, "http:GET", read).
+wire_kind[jodit](http, "http:MOVE", rename).   wire_kind[jodit](http, "http:COPY", copy).
+wire_kind[jodit](http, "http:DELETE", delete). wire_kind[jodit](http, "http:MKCOL", mkdir).
+wire_kind[jodit](http, "http:PROPFIND", meta).
+
+wire_kind[jodit](gcs, "gcs:POST:upload", put).   wire_kind[jodit](gcs, "gcs:PUT:upload", put).
+wire_kind[jodit](gcs, "gcs:GET:media", read).    wire_kind[jodit](gcs, "gcs:GET:object", meta).
+wire_kind[jodit](gcs, "gcs:GET:objects", list).  wire_kind[jodit](gcs, "gcs:POST:rewrite", copy).
+wire_kind[jodit](gcs, "gcs:DELETE:object", delete).
+
+wire_kind[jodit](local, "local:open:write", put). wire_kind[jodit](local, "local:open:read", read).
+wire_kind[jodit](local, "local:rename", rename).  wire_kind[jodit](local, "local:delete", delete).
+wire_kind[jodit](local, "local:mkdir", mkdir).    wire_kind[jodit](local, "local:stat", meta).
+wire_kind[jodit](local, "local:scandir", list).   wire_kind[jodit](local, "local:copy", copy).
+
+-- a remote backend's own local files (known hosts, a spooled temporary file) are not its store
+connector_own[jodit](B, W) :- protocol[jodit](B, P), P != local, wire_kind[jodit](local, W, _).
+
+observed_kind[jodit](B, D, K, V) :- observed[jodit](A, D, W, V), backend[jodit](A, B), protocol[jodit](B, P),
+                                    wire_kind[jodit](P, W, K).
+observed_backend[jodit](B) :- observed_kind[jodit](B, _, _, _).
+modelled_any[jodit](B, D, K) :- does[jodit](B, D, K, _, _, _).
+
+-- a message nothing above says the kind of
+unknown_wire[audit](B, W) :- observed[jodit](A, _, W, _), backend[jodit](A, B), protocol[jodit](B, P),
+                             not wire_kind[jodit](P, W, _), not connector_own[jodit](B, W).
+-- WHAT THE TESTS DID THAT THE MODEL DOES NOT SAY, on any path
+observed_not_modelled[audit](B, D, K) :- observed_kind[jodit](B, D, K, _), not modelled_any[jodit](B, D, K).
+-- what the model says a duty does when nothing fails that no test was seen doing
+modelled_not_observed[jodit](B, D, K) :- kind_of[jodit](B, D, K), observed_backend[jodit](B),
+                                         not observed_kind[jodit](B, D, K, _).
+
+-- WHAT ONE CALL EXPANDS INTO ON THE WIRE, MEASURED: putfo is open, write,
+-- fstat and close; copyfile opens two files. Read off the trace, not written.
+edb(observed_via).
+expands[jodit](B, Op, K) :- observed_via[jodit](A, _, Op, W), backend[jodit](A, B), protocol[jodit](B, P),
+                            wire_kind[jodit](P, W, K).
+-- a call that is a kind expands into what it was measured to send; any call
+-- (a carrier too) may add the overhead of a session or a check
+expansion_counts[jodit](B, Op, K) :- expands[jodit](B, Op, K), op_kind[jodit](B, Op, _).
+expansion_counts[jodit](B, Op, session) :- expands[jodit](B, Op, session).
+expansion_counts[jodit](B, Op, meta) :- expands[jodit](B, Op, meta).
+predicted[jodit](B, D, K) :- modelled_any[jodit](B, D, K).
+predicted[jodit](B, D, K) :- call_in[jodit](B, D, C, _, _, _), py_attr_call[code](C, _, Op), expansion_counts[jodit](B, Op, K).
+-- WHAT THE TESTS PUT ON THE WIRE THAT NEITHER THE CODE NOR THE MEASURED EXPANSION OF ITS CALLS SAYS
+observed_not_predicted[audit](B, D, K) :- observed_kind[jodit](B, D, K, _), not predicted[jodit](B, D, K).
+
+-- THE CALL GRAPH HELD TO THE RUN: a library call made under a duty that the
+-- model does not reach from that duty. Kinds are too coarse to see this; a
+-- connection opened by a pool through a function it was handed is the case.
+reached_op[jodit](B, D, Op) :- call_in[jodit](B, D, C, _, _, _), py_attr_call[code](C, _, Op).
+unreached_call[audit](B, D, Op) :- observed_via[jodit](A, D, Op, _), Op != "none", backend[jodit](A, B),
+                                   not reached_op[jodit](B, D, Op).
