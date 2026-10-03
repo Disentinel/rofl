@@ -1162,3 +1162,12 @@ claim(queued, agg, join_lattice, none, demo, w_agg_demo_interval).
 claim(queued, agg, widening,     none, demo, w_agg_demo_interval).
 handled(agg, join_lattice, demo, "agg_interval_demo").
 handled(agg, widening, demo, "agg_interval_demo").
+
+-- DATA-LEVEL STRATIFICATION (f_an_aggregate_is_refused_by_relation_and_not_by_data, decided in
+-- f_a_component_whose_only_strict_edges_are_aggregates_is_stratified_by_its_data): a component of
+-- relations whose only strict edges are body aggregates' is ranked as one round and its correlations
+-- seal in the order of the data; a cycle through one is refused, naming it. It owns no cell of the
+-- matrix and closes by these worlds.
+work(w_agg_data_strat, "stratify an aggregate by data, not by relation: a sum or count whose relations form a cycle while its data does not (a spreadsheet formula over cells that are formulas, examples/slop) is evaluated, the cells layered by their depth in the data, both engines, byte parity; a true cycle in the data is refused, naming it; done only with the work_proof worlds").
+work_state(w_agg_data_strat, done).
+work_proof(w_agg_data_strat, "agg_datastrat_eval").

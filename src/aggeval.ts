@@ -223,6 +223,18 @@ export interface StagedFact { rel: string; persp: string; args: Term[]; rule: st
 export interface TickOutcome { advanced: boolean; quiescent: boolean; partial: boolean }
 export interface Outcome { partial: boolean; staged: number }
 
+/** A component of relations taken by data: the relations, the round they are ranked in, and the aggregate elements
+ *  `[rule, at]` whose correlations are released by layer. */
+interface DsComp { rels: Set<string>; round: number; elems: [string, number][] }
+/** A node of the data walk: a pattern over a relation of the component (`null` where nothing bound a position), or a
+ *  correlation of one aggregate element. */
+type DsNode = { k: 'p'; rel: string; args: (Term | null)[] } | { k: 'a'; rid: string; at: number; corr: Term[] };
+/** A correlation the walk cannot key: a premise of the component binds it. */
+class DsUnkeyed extends Error {
+  rid: string;
+  at: number;
+  constructor(rid: string, at: number) { super('unkeyed'); this.rid = rid; this.at = at; }
+}
 /** One member of a threshold: a distinct projection tuple and every derivation of it. */
 interface ThrMember { proj: Term[]; text: string; derivs: [string, PremRef[]][] }
 /** One solution of an aggregate's inner body. */
@@ -381,15 +393,24 @@ export function sinkBuiltins(plan: BodyElem[]): BodyElem[] {
   return out;
 }
 
-export interface Peel { round: Map<string, number>; rounds: number; stalled: boolean; stuck: string[]; aggEdges: [string, string, string][] }
+export interface Peel {
+  round: Map<string, number>; rounds: number; stalled: boolean; stuck: string[]; aggEdges: [string, string, string][];
+  /** What each relation reads, positively and strictly; the strict edges only a body aggregate wrote (`soft`) and those
+   *  anything else did (`hard`), as `head\u0001read`; and `[rule, at]` of every element whose edge `demote` made positive. */
+  pos: Map<string, Set<string>>; neg: Map<string, Set<string>>; soft: Set<string>; hard: Set<string>; demoted: [string, number][];
+}
+const edgeKey = (a: string, b: string): string => `${a}\u0001${b}`;
 
 /** `peel_rounds`: the round number IS the stratum number, and a stall is the
  *  rejection. An aggregate's edge is a negation's; a lattice read from outside
- *  its recursion is strict; what the kernel writes at a close sits above. */
-export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string, string][]): Peel {
+ *  its recursion is strict; what the kernel writes at a close sits above. `demote` holds the `head\u0001inner` pairs whose
+ *  aggregate edge is positive instead: a component a data-level stratification takes (`dataDemotable`). */
+export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set()): Peel {
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
+  const soft = new Set<string>(), hard = new Set<string>();
+  const demoted: [string, number][] = [];
   const P = (h: string) => { let s = pos.get(h); if (!s) { s = new Set(); pos.set(h, s); } return s; };
   const N = (h: string) => { let s = neg.get(h); if (!s) { s = new Set(); neg.set(h, s); } return s; };
   const reflected = [V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.hole];
@@ -398,27 +419,36 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
     const hrel = r.clause.head.rel;
     heads.add(hrel); P(hrel); N(hrel);
     for (const b of r.clause.body) {
-      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) N(hrel).add(b.lit.rel);
+      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) { N(hrel).add(b.lit.rel); hard.add(edgeKey(hrel, b.lit.rel)); }
       else if (b.t === 'pos') P(hrel).add(b.lit.rel);
-      else if (b.t === 'neg') N(hrel).add(b.lit.rel);
+      else if (b.t === 'neg') { N(hrel).add(b.lit.rel); hard.add(edgeKey(hrel, b.lit.rel)); }
       else if (b.t === 'agg' && b.op === 'at_least') {
         for (const x of b.body) {
           if (x.t === 'pos') P(hrel).add(x.lit.rel);
-          else if (x.t === 'neg') N(hrel).add(x.lit.rel);
+          else if (x.t === 'neg') { N(hrel).add(x.lit.rel); hard.add(edgeKey(hrel, x.lit.rel)); }
         }
-        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
+        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); hard.add(edgeKey(h, hrel)); }
       } else if (b.t === 'agg') {
         for (const l of litsDeep(b)) {
-          for (const h of [hrel, ...reflected]) { heads.add(h); P(h); N(h).add(l.rel); }
+          for (const h of [hrel, ...reflected]) {
+            heads.add(h); P(h);
+            if (h === hrel && demote.has(edgeKey(hrel, l.rel))) {
+              P(h).add(l.rel);
+              if (!demoted.some((d) => d[0] === r.id && d[1] === b.at)) demoted.push([r.id, b.at!]);
+              continue;
+            }
+            N(h).add(l.rel);
+            (h === hrel ? soft : hard).add(edgeKey(h, l.rel));
+          }
           aggEdges.push([r.id, hrel, l.rel]);
         }
       }
     }
   }
-  for (const [p, b] of domEdges) { heads.add(p); P(p); N(p).add(b); }
+  for (const [p, b] of domEdges) { heads.add(p); P(p); N(p).add(b); hard.add(edgeKey(p, b)); }
   if (lattices.length > 0) {
     for (const m of [V.lattice_member, V.lattice_member_prem, V.hole, V.dominated_by]) {
-      heads.add(m); P(m); for (const l of lattices) N(m).add(l);
+      heads.add(m); P(m); for (const l of lattices) { N(m).add(l); hard.add(edgeKey(m, l)); }
     }
     const reads = (h: string): string[] => [...(pos.get(h) ?? []), ...(neg.get(h) ?? [])];
     const grow = (seed: Set<string>, from: (h: string, set: Set<string>) => boolean): Set<string> => {
@@ -431,7 +461,7 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
     };
     const holeReaders = grow(new Set([V.hole]), (h, set) => reads(h).some((x) => set.has(x)));
     const reached = grow(new Set(lattices), (h, set) => !holeReaders.has(h) && reads(h).some((x) => set.has(x)));
-    for (const h of reached) if (!holeReaders.has(h)) N(V.hole).add(h);
+    for (const h of reached) if (!holeReaders.has(h)) { N(V.hole).add(h); hard.add(edgeKey(V.hole, h)); }
   }
   const un = IFACE.unknown, sh = 'shrug';
   const readsIn = (h: string, set: Set<string>) => [...(pos.get(h) ?? []), ...(neg.get(h) ?? [])].some((x) => set.has(x));
@@ -443,7 +473,7 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       for (const m of more) cone.add(m);
     }
     const below = [...heads].filter((h) => !cone.has(h));
-    for (const m of [un, sh]) { heads.add(m); P(m); for (const b of below) N(m).add(b); }
+    for (const m of [un, sh]) { heads.add(m); P(m); for (const b of below) { N(m).add(b); hard.add(edgeKey(m, b)); } }
   }
   const all = new Set<string>(heads);
   for (const s of pos.values()) for (const x of s) all.add(x);
@@ -462,11 +492,44 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       if (cand.size === before) break;
     }
     if (cand.size === 0) {
-      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges };
+      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, pos, neg, soft, hard, demoted };
     }
     for (const rel of cand) { settled.add(rel); round.set(rel, n); }
   }
-  return { round, rounds: n, stalled: false, stuck: [], aggEdges };
+  return { round, rounds: n, stalled: false, stuck: [], aggEdges, pos, neg, soft, hard, demoted };
+}
+
+/** THE COMPONENTS A DATA-LEVEL STRATIFICATION MAY TAKE, from a peel that stalled (`data_demotable`): a strongly connected
+ *  component of the relations it left whose every strict edge is a body aggregate's and which no relation `barred` names.
+ *  The aggregate edges inside such a component, and the components as sets of relations. */
+export function dataDemotable(p: Peel, barred: (rel: string) => boolean): [Set<string>, Set<string>[]] {
+  const at = new Map(p.stuck.map((r, i) => [r, i]));
+  const succ: number[][] = p.stuck.map(() => []);
+  for (const [h, i] of at) {
+    for (const set of [p.pos.get(h), p.neg.get(h)]) {
+      if (set) for (const x of set) { const j = at.get(x); if (j !== undefined) succ[i].push(j); }
+    }
+  }
+  const comp = tarjan(succ);
+  const unclean = new Set<number>();
+  for (const r of p.stuck) if (barred(r)) unclean.add(comp[at.get(r)!]);
+  const inside = (e: string): number | null => {
+    const [a, b] = e.split('\u0001');
+    const x = at.get(a), y = at.get(b);
+    return x !== undefined && y !== undefined && comp[x] === comp[y] ? comp[x] : null;
+  };
+  for (const e of p.hard) { const c = inside(e); if (c !== null) unclean.add(c); }
+  const out = new Set<string>();
+  const comps = new Map<number, Set<string>>();
+  for (const e of p.soft) {
+    const c = inside(e);
+    if (c === null || unclean.has(c)) continue;
+    out.add(e);
+    let m = comps.get(c);
+    if (!m) { m = new Set(); comps.set(c, m); }
+    for (const r of p.stuck) if (comp[at.get(r)!] === c) m.add(r);
+  }
+  return [out, [...comps.entries()].sort((x, y) => x[0] - y[0]).map((x) => x[1])];
 }
 
 function levelSplit(rules: ERule[], levelOf: (r: ERule) => number): [number, ERule[]][] {
@@ -600,6 +663,12 @@ export class AggEval {
   pastWalks = 0;
   whyScans = 0;
   private aggPlans = new Map<string, AggPlan>();
+  /** DATA-LEVEL STRATIFICATION: the components of the evaluation, the aggregate elements `rule|at` they hold, the
+   *  correlations released so far, and whether a correlation never released is a defect. */
+  private dsComps: DsComp[] = [];
+  private dsElems = new Set<string>();
+  private dsReleased = new Set<string>();
+  private dsStrict = false;
   lattices = new Map<string, [number, AggOp]>();
   private latticeRows: [string, number, string][] = [];
   private declRefused: string[] = [];
@@ -1175,6 +1244,7 @@ export class AggEval {
     this.latPlain.clear();
     this.plainPending = this.carriedUnknowns(this.store.tick);
     this.plainUndecided = []; this.aggOpened.clear(); this.plainClosed.clear();
+    this.dsComps = []; this.dsElems.clear(); this.dsReleased.clear(); this.dsStrict = false;
     this.latticeImprovements = 0;
     this.seedNarrowing();
     const safeRules = this.rules.filter((r) => r.safe);
@@ -1189,7 +1259,9 @@ export class AggEval {
       if (this.mode === 'rounds') {
         const lats = [...this.lattices.keys()];
         const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-        const peel = peelRounds(this.rules, lats, domEdges);
+        let peel = peelRounds(this.rules, lats, domEdges);
+        // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be stratified by its data: ranked as one round
+        if (peel.stalled) peel = this.takeDataComponents(peel, lats, domEdges) ?? peel;
         if (peel.stalled) {
           const stuck = new Set(peel.stuck), deps = this.relDeps();
           for (const [rid, head, inner] of peel.aggEdges) {
@@ -1228,11 +1300,13 @@ export class AggEval {
         this.planned = true;
         levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : strat.get(r.clause.head.rel) ?? Infinity));
       }
-      for (const [lv, rs] of levels) {
+      for (const [lv, all] of levels) {
         this.closePlainRules(lv);
         this.plainFlush(lv);
         this.closeThresholdsBelow(lv, true);
         this.closeLatticesBelow(lv);
+        // the rules that own an element a stratification by data took run last at their level, a layer at a time
+        const ds = all.filter((r) => this.dsOwner(r)), rs = all.filter((r) => !this.dsOwner(r));
         if (this.shrugSnap === null && rs.some((r) => this.shrugReaders.has(r.id))) {
           const lateR = rs.filter((r) => this.shrugReaders.has(r.id)), early = rs.filter((r) => !this.shrugReaders.has(r.id));
           this.activate(early);
@@ -1240,10 +1314,12 @@ export class AggEval {
           this.shrugSnapshot();
           this.activate(lateR);
           this.poisonReaders(lateR);
+          this.runDataLevels(lv, ds);
           continue;
         }
         this.activate(rs);
         this.poisonReaders(rs);
+        this.runDataLevels(lv, ds);
       }
       this.closePlainRules(Infinity);
       this.plainFlush(Infinity);
@@ -1253,6 +1329,7 @@ export class AggEval {
         if (this.thrOpen.length === 0) break;
       }
     } catch (e) {
+      this.dsElems.clear(); this.dsStrict = false;
       if (!(e instanceof Wall)) throw e;
       partial = true;
       this.wallHole(e.reason);
@@ -1260,12 +1337,257 @@ export class AggEval {
       this.latticeCut(why);
       this.withWallsLifted(() => this.closeThresholdsBelow(Infinity, false));
     }
+    this.dsElems.clear(); this.dsStrict = false;
     this.settleStaged();
     this.writeShrugs(partial);
     this.store.dirty = false;
     this.store.partialEval = partial;
     this.store.noteEval(this.budget, this.steps, partial);
     return { partial, staged: this.staged.size };
+  }
+
+  // ------------------------------------------ data-level stratification
+
+  /** The peel that ranks each component of a stalled one `dataDemotable` finds as a round, with the components recorded
+   *  for the evaluation; null when there is no such component or the program stalls anyway. */
+  private takeDataComponents(stalled: Peel, lats: string[], domEdges: [string, string][]): Peel | null {
+    const barred = (rel: string): boolean => this.lattices.has(rel) || this.subs.has(rel) || this.carried.has(rel)
+      || this.demandRels.some(([d]) => d === rel) || this.tags.countRel.has(rel) || [...this.tags.countRel.values()].includes(rel)
+      || this.rules.some((r) => r.clause.head.rel === rel && (r.hasThr || r.latClose !== null || r.latticeOuter.length > 0));
+    const [demote, comps] = dataDemotable(stalled, barred);
+    if (demote.size === 0) return null;
+    const again = peelRounds(this.rules, lats, domEdges, demote);
+    if (again.stalled) return null;
+    const least = (set: Set<string>): string => [...set].sort(cmpStr)[0];
+    comps.sort((a, b) => cmpStr(least(a), least(b)));
+    for (const rels of comps) {
+      let round = 0;
+      for (const r of rels) { const n = again.round.get(r); if (n !== undefined) { round = n; break; } }
+      const elems = again.demoted.filter(([rid]) => rels.has(this.ruleOf(rid)!.clause.head.rel));
+      for (const [rid, at] of elems) this.dsElems.add(`${rid}|${at}`);
+      this.dsComps.push({ rels, round, elems });
+    }
+    return again;
+  }
+
+  /** Whether the correlation `mk` of a data-stratified element may be read now: it has been released. */
+  private dsGate(mk: string): boolean {
+    if (this.dsReleased.has(mk)) return true;
+    if (this.dsStrict) throw new Bug(`a correlation of ${mk.split('|')[0]} was met that the data walk never reached`);
+    return false;
+  }
+
+  /** Whether `r` owns an element a data-level stratification took. */
+  private dsOwner(r: ERule): boolean {
+    return this.dsElems.size > 0 && r.clause.body.some((b) => b.t === 'agg' && this.dsElems.has(`${r.id}|${b.at}`));
+  }
+
+  /** The components ranked at `lv`, each run: the rules `rs` own their elements. */
+  private runDataLevels(lv: number, rs: ERule[]): void {
+    for (const c of this.dsComps.filter((x) => x.round === lv)) {
+      this.runDataLevel(c, rs.filter((r) => c.rels.has(r.clause.head.rel)));
+    }
+  }
+
+  private runDataLevel(comp: DsComp, rs: ERule[]): void {
+    // fired with every correlation held: nothing seals, the rules are live
+    this.activate(rs);
+    for (const layer of this.dsLayers(comp)) {
+      this.dsCarry(comp);
+      const owners = rs.filter((r) => layer.some((k) => k.rid === r.id));
+      for (const k of layer) this.dsReleased.add(k.mk);
+      this.fireAll(owners);
+      this.poisonReaders(owners);
+    }
+    this.dsCarry(comp);
+    // every correlation the rules meet now was released: the walk reached them all
+    this.dsStrict = true;
+    try { this.fireAll(rs); } finally { this.dsStrict = false; }
+  }
+
+  /** What a hole in the component left unknown, carried before the next layer reads it: the component is closed as far
+   *  as the carry is concerned. */
+  private dsCarry(comp: DsComp): void {
+    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0) return;
+    this.closePlainRules(comp.round + 1);
+    this.plainFlush(comp.round + 1);
+  }
+
+  /** The element of a rule as the refusals name it: its head, its operation, and the first relation of the component it reads. */
+  private dsElement(rid: string, at: number, comp: DsComp): [string, string, string] {
+    const r = this.ruleOf(rid)!;
+    const a = r.clause.body.find((b) => b.t === 'agg' && b.at === at) as AggElem | undefined;
+    const inner = a ? (a.body.flatMap(litsDeep).map((l) => l.rel).find((x) => comp.rels.has(x)) ?? '') : '';
+    return [r.clause.head.rel, a ? a.op : 'an aggregate', inner];
+  }
+
+  private dsNodeText(n: DsNode): string {
+    if (n.k === 'p') return `${n.rel}(${n.args.map((t) => (t === null ? '_' : canonTerm(t))).join(',')})`;
+    const r = this.ruleOf(n.rid);
+    const a = r?.clause.body.find((b) => b.t === 'agg' && b.at === n.at) as AggElem | undefined;
+    return `${a ? a.op : 'an aggregate'}@${r ? r.clause.head.rel : ''}${tupleText(n.corr)}`;
+  }
+
+  private dsLayers(comp: DsComp): { rid: string; at: number; corr: Term[]; mk: string }[][] {
+    try { return this.dsGraph(comp); } catch (e) {
+      if (!(e instanceof DsUnkeyed)) throw e;
+      const [head, op, inner] = this.dsElement(e.rid, e.at, comp);
+      throw new Rejected(`program rejected: ${op} in rule ${e.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation, and its correlation is bound by ${inner}'s own component, so no cell of it can be named before the data is known (docs/aggregates.md, "Data-level stratification, as built")`);
+    }
+  }
+
+  private dsGraph(comp: DsComp): { rid: string; at: number; corr: Term[]; mk: string }[][] {
+    const rules = this.rules.filter((r) => r.safe && r.clause.head.temporal !== 'next' && comp.rels.has(r.clause.head.rel));
+    const owners = rules.filter((r) => comp.elems.some((e) => e[0] === r.id));
+    const nodes: DsNode[] = [], ids = new Map<string, number>(), succ: number[][] = [];
+    const todo: number[] = [];
+    const keyOf = (n: DsNode): string => (n.k === 'p'
+      ? JSON.stringify([n.rel, ...n.args.map((t) => (t === null ? null : canonTerm(t)))])
+      : `a|${n.rid}|${n.at}|${listKey(n.corr)}`);
+    const idOf = (n: DsNode): number => {
+      const k = keyOf(n);
+      let i = ids.get(k);
+      if (i === undefined) { i = nodes.length; ids.set(k, i); nodes.push(n); succ.push([]); todo.push(i); }
+      return i;
+    };
+    const roots: number[] = [];
+    for (const r of owners) {
+      const out: DsNode[] = [];
+      this.dsWalk(comp, r.id, r.plan, new Map(), out);
+      for (const n of out) if (n.k === 'a') roots.push(idOf(n));
+    }
+    while (todo.length > 0) {
+      const i = todo.pop()!;
+      const n = nodes[i];
+      const out: DsNode[] = [];
+      if (n.k === 'p') {
+        for (const r of rules.filter((x) => x.clause.head.rel === n.rel)) {
+          if (r.clause.head.args.length !== n.args.length) continue;
+          let s: Subst | null = new Map();
+          r.clause.head.args.forEach((a, j) => { const t = n.args[j]; if (t !== null && s !== null) s = unify(a, t, s); });
+          if (s !== null) this.dsWalk(comp, r.id, r.plan, s, out);
+        }
+      } else {
+        const r = this.ruleOf(n.rid);
+        const a = r?.plan.find((b) => b.t === 'agg' && b.at === n.at) as AggElem | undefined;
+        if (!a) throw new Bug('a correlation of no element');
+        const plan = this.aggPlans.get(`${n.rid}|${n.at}`);
+        if (!plan) throw new Bug('a correlation with no plan');
+        let s: Subst | null = new Map();
+        plan.corr.forEach((ix, j) => { if (s !== null) s = unify(mkv(a.shared![ix]), n.corr[j], s); });
+        const inner = plan.innerOrder.map((ix) => a.body[ix]);
+        if (s !== null) this.dsWalk(comp, n.rid, inner, s, out);
+      }
+      const row: number[] = [];
+      for (const m of out) { const j = idOf(m); if (!row.includes(j)) row.push(j); }
+      succ[i] = row;
+    }
+    const n = nodes.length;
+    const compOf = tarjan(succ);
+    const size = new Map<number, number>();
+    for (const c of compOf) size.set(c, (size.get(c) ?? 0) + 1);
+    const isAgg = (i: number): boolean => nodes[i].k === 'a';
+    // a cycle through a correlation is a cycle in the data
+    const bad: number[] = [];
+    for (let i = 0; i < n; i++) if (isAgg(i) && (size.get(compOf[i])! > 1 || succ[i].includes(i))) bad.push(i);
+    if (bad.length > 0) {
+      const text = (i: number): string => this.dsNodeText(nodes[i]);
+      bad.sort((x, y) => cmpStr(text(x), text(y)));
+      throw new Rejected(this.dsCycle(comp, nodes, succ, compOf, bad[0]));
+    }
+    // a layer is one more than the greatest reached without passing another correlation
+    const ncomp = n === 0 ? 0 : Math.max(...compOf) + 1;
+    const members: number[][] = Array.from({ length: ncomp }, () => []);
+    for (let i = 0; i < n; i++) members[compOf[i]].push(i);
+    const depth: number[] = new Array(ncomp).fill(0);
+    for (let c = 0; c < ncomp; c++) {
+      let d = 0;
+      for (const i of members[c]) for (const j of succ[i]) {
+        const k = compOf[j];
+        if (k !== c) d = Math.max(d, depth[k] + (isAgg(j) ? 1 : 0));
+      }
+      depth[c] = d;
+    }
+    const layers: { rid: string; at: number; corr: Term[]; mk: string }[][] = [];
+    for (const i of [...new Set(roots)].sort((x, y) => x - y)) {
+      const nd = nodes[i];
+      if (nd.k !== 'a') continue;
+      const d = depth[compOf[i]];
+      while (layers.length <= d) layers.push([]);
+      layers[d].push({ rid: nd.rid, at: nd.at, corr: nd.corr, mk: `${nd.rid}|${nd.at}|${listKey(nd.corr)}` });
+    }
+    for (const l of layers) l.sort((x, y) => cmpStr(x.rid, y.rid) || x.at - y.at || cmpStr(tupleText(x.corr), tupleText(y.corr)));
+    return layers;
+  }
+
+  /** The refusal of a cycle: the old sentence, then the cycle as the data makes it, from the correlation named. */
+  private dsCycle(comp: DsComp, nodes: DsNode[], succ: number[][], compOf: number[], at: number): string {
+    const nd = nodes[at];
+    if (nd.k !== 'a') throw new Bug('a cycle named by a pattern');
+    const [head, op, inner] = this.dsElement(nd.rid, nd.at, comp);
+    const text = (i: number): string => this.dsNodeText(nodes[i]);
+    // the shortest way back, by edges in canonical order
+    const prev = new Map<number, number>();
+    const queue: number[] = [at];
+    let last = at;
+    bfs: while (queue.length > 0) {
+      const x = queue.shift()!;
+      const next = succ[x].filter((y) => compOf[y] === compOf[at]).sort((p, q) => cmpStr(text(p), text(q)));
+      for (const y of next) {
+        if (y === at) { last = x; break bfs; }
+        if (!prev.has(y)) { prev.set(y, x); queue.push(y); }
+      }
+    }
+    const path = [last];
+    while (prev.has(path[path.length - 1])) path.push(prev.get(path[path.length - 1])!);
+    path.reverse();
+    const names = path.map(text);
+    names.push(text(at));
+    return `program rejected: ${op} in rule ${nd.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md); in the data the cell reads itself: ${names.join(' -> ')}`;
+  }
+
+  /** The nodes the rest of `body` reads under `s`, pushed to `out`. */
+  private dsWalk(comp: DsComp, rid: string, body: BodyElem[], s: Subst, out: DsNode[]): void {
+    if (body.length === 0) return;
+    const b = body[0], rest = body.slice(1);
+    if (b.t === 'pos' && comp.rels.has(b.lit.rel)) {
+      out.push({ k: 'p', rel: b.lit.rel, args: b.lit.args.map((a) => { const t = resolve(a, s); return isGround(t) ? t : null; }) });
+      this.dsWalk(comp, rid, rest, s, out);
+    } else if (b.t === 'pos') {
+      for (const [s2] of this.matchPremise(b.lit, s, 0, null)) this.dsWalk(comp, rid, rest, s2, out);
+    } else if (b.t === 'neg') {
+      this.dsWalk(comp, rid, rest, s, out);
+    } else if (b.t === 'bi') {
+      const s2 = this.dsBuiltin(b.op, b.l, b.r, s);
+      if (s2 !== null) this.dsWalk(comp, rid, rest, s2, out);
+    } else if (b.op === 'at_least') {
+      this.dsWalk(comp, rid, b.body, s, out);
+      this.dsWalk(comp, rid, rest, s, out);
+    } else {
+      if (this.dsElems.has(`${rid}|${b.at}`)) {
+        const plan = this.aggPlans.get(`${rid}|${b.at}`);
+        if (!plan) throw new Bug('an aggregate with no plan');
+        const corr: Term[] = [];
+        for (const i of plan.corr) {
+          const t = resolve(mkv(b.shared![i]), s);
+          if (!isGround(t)) throw new DsUnkeyed(rid, b.at!);
+          corr.push(t);
+        }
+        out.push({ k: 'a', rid, at: b.at!, corr });
+      }
+      this.dsWalk(comp, rid, rest, s, out);
+    }
+  }
+
+  /** A builtin the walk can decide, decided: what it cannot, because a value of the component stands in it, holds. A
+   *  fault it makes is no fault of the evaluation. */
+  private dsBuiltin(op: string, l: Term, r: Term, s: Subst): Subst | null {
+    if (op === 'in' || op === 'subset') return s;
+    const gl = isGround(resolve(l, s)), gr = isGround(resolve(r, s));
+    const decides = op === 'is' ? gr : op === '=' ? true : gl && gr;
+    if (!decides) return s;
+    const saved: [string | null, number, string | null, string | null] = [this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
+    try { return this.evalBuiltin(op, l, r, s, null); } finally { [this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved; }
   }
 
   /** THE SHRUG MODEL, set up for one evaluation. */
@@ -1847,6 +2169,12 @@ export class AggEval {
     const sorted = [...rules].sort((a, b) => cmpStr(a.canon, b.canon));
     this.active.push(...sorted);
     this.active.sort((a, b) => cmpStr(a.canon, b.canon));
+    this.fireAll(sorted);
+  }
+
+  /** `rules` fired once, whole, in canonical order, and the news propagated. */
+  private fireAll(rules: ERule[]): void {
+    const sorted = [...rules].sort((a, b) => cmpStr(a.canon, b.canon));
     this.curFront = newFront();
     // on a wall the batch in progress is left standing: the cut reads what it had not fired
     const outer: [ERule[], number] = [this.batch, this.batchAt];
@@ -2073,6 +2401,8 @@ export class AggEval {
               // what the aggregate leaves undecided is decided once per correlation, at the firing that first reads it
               // (`ReachMemo`), and read by every firing after
               const mk = `${rid}|${b.at}|${listKey(this.aggCorr(rid, b, a.s)[1])}`;
+              // a correlation of a component stratified by data is read once the layer before it has sealed
+              if (this.dsElems.size > 0 && this.dsElems.has(`${rid}|${b.at}`) && !this.dsGate(mk)) continue;
               const reads = this.undecidedRead(depth, ruleId, () => true) === true;
               const memo = reads ? this.reachMemo.get(mk) : undefined;
               const ps = reads && memo === undefined ? this.aggPossibles(rid, b, a.s) : [];
@@ -4101,6 +4431,8 @@ export class AggEval {
           continue;
         } else if (b.t === 'neg' && this.latPlain.has(u.id)) s0 = null;
         else if ((b.t === 'neg' || b.t === 'agg') && rel === IFACE.unknown) s0 = null;
+        // its correlations seal in the order of the data, after the carry of each layer
+        else if (b.t === 'agg' && this.dsElems.has(`${r.id}|${b.at}`)) s0 = null;
         else if ((b.t === 'neg' || b.t === 'agg') && only === null && litsDeep(b).some((l) => l.rel === rel)) {
           throw new Bug(`rule ${r.id} fired before ${this.unknownText(u)} was closed: a negation or an aggregate read it while a hole could still reach it`);
         }

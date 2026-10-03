@@ -431,16 +431,10 @@ export function compile(wb: Workbook, opts: LoadOptions = {}): Emitted {
       case 'cmp': lines.push(`cmp(${id}, ${n.op}, ${emit(n.l)}, ${emit(n.r)}).`); break;
       case 'if': lines.push(`pick(${id}, ${emit(n.c)}, ${emit(n.t)}, ${emit(n.e)}).`); break;
       case 'sum': {
-        // a range becomes a chain, one item per cell: a kernel sum cannot
-        // read val, which is recursive, so a total is a fold the rules can walk
-        const cells = n.cells;
-        const head = ++nodeId;
-        lines.push(`sum_head(${id}, ${head}).`);
-        for (let i = 0; i < cells.length; i++) {
-          const item = i === 0 ? head : ++nodeId;
-          if (i === cells.length - 1) lines.push(`sum_last(${item}, ${q(cells[i])}).`);
-          else lines.push(`sum_item(${item}, ${q(cells[i])}, ${nodeId + 1}).`);
-        }
+        // a range is the cells it names, and the rules' kernel `sum` adds them
+        const range = ++nodeId;
+        lines.push(`sum_head(${id}, ${range}).`);
+        for (const c of n.cells) lines.push(`in_range(${range}, ${q(c)}).`);
         break;
       }
       case 'vlookup': {

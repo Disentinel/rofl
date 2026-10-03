@@ -2458,3 +2458,15 @@ check_file("agg_linter_demo", "examples/checks/agg-linter-demo-check.rofl").
 check_opt("agg_linter_demo", together, 1).
 check_opt("agg_linter_demo", explain, 1).
 proves("agg_linter_demo", agg, count, demo).
+
+-- ===================================== w_agg_data_strat: STRATIFIED BY DATA
+-- (docs/aggregates.md, "Data-level stratification, as built"). A component of
+-- relations whose only strict edges are aggregates' is ranked as one round and
+-- its correlations seal in the order of the data: a spreadsheet, where a
+-- formula sums cells that are formulas, runs; a cycle in the data is refused,
+-- naming it. The item owns no cell of the matrix and closes by these worlds.
+check_world("agg_datastrat_eval").
+check_file("agg_datastrat_eval", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_eval", "examples/checks/agg-datastrat-eval-check.rofl").
+check_opt("agg_datastrat_eval", together, 1).
+proves_work("agg_datastrat_eval", w_agg_data_strat).
