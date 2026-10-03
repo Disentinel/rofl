@@ -1,0 +1,17 @@
+-- examples/checks/sealed-witness.rofl — ANY SUPPORT WILL DO. A world that
+-- declares sealed(witness) asks for the set of facts and not for the first
+-- witness in canonical order: the Rust engine then keeps no witness, orders
+-- groups and candidates its own way, activates rules by component and walks
+-- a closure (f_the_set_of_facts_is_the_contract_and_any_support_will_do_for_facts_about_code).
+-- The reference engine reads the declaration as data. Both must conclude the
+-- same rows, derived_by included: reach is a closure with a cycle (c, d) and
+-- a diamond (a to d by two paths), so a row is an edge and a longer path at
+-- once, and a reader of derived_by sees both rules on it.
+sealed(witness).
+edb(edge).
+edge(a, b). edge(b, d). edge(a, c). edge(c, d). edge(d, c). edge(d, e).
+reach(X, Y) :- edge(X, Y).
+reach(X, Z) :- reach(X, Y), edge(Y, Z).
+loops(X) :- reach(X, X).
+far(X, Y) :- reach(X, Y), not edge(X, Y).
+twice(F) :- derived_by(F, R1, _), derived_by(F, R2, _), R1 != R2.

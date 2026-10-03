@@ -186,8 +186,8 @@ top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_node[code](S, throw_statement, _, _).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F).
 
-throwing_call[code](C) :- call_site[code](C, _), resolves[code](C, F),
-                          always_throws[code](F).
+throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
+                          call_site[code](C, _).
 
 -- AN ACCESSOR IS A CALL WEARING A READ'S SYNTAX: `o.p` on a getter transfers
 -- control; what the getter returns is a different question, not answered here.
@@ -230,18 +230,16 @@ pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _, _),
                                  ast_child[code](D, id, 0, P),
                                  ast_child[code](D, init, 0, Init).
 
-pattern_accessor[code](P, M) :- ast_node[code](P, object_pattern, _, _),
-                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
-                                pattern_takes[code](P, Key), accessor_of[flow](Obj, Key, M).
+pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
+                                pattern_source[code](P, Init), ast_node[code](P, object_pattern, _, _),
+                                pattern_takes[code](P, Key).
 pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
                                 ast_child[code](D, id, 0, P),
                                 ast_child[code](D, init, 0, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
-pattern_accessor[code](S, M) :- ast_node[code](O, object_expression, _, _),
-                                ast_child[code](O, properties, _, S),
-                                ast_node[code](S, spread_element, _, _),
-                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
-                                accessor_of[flow](Obj, Key, M).
+pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
+                                ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _, _),
+                                ast_child[code](O, properties, _, S), ast_node[code](O, object_expression, _, _).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.

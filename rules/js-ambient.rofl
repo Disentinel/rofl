@@ -192,8 +192,8 @@ amb_proto_untraced(P) :- kind_prototype(K, P), not node_value_kind(K).
 amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).
 
 -- the structural argument as a row: heap-decided here, `global` in js-effects
-amb_proto_recv[flow](M, P) :- member_node_v[flow](M), ast_child[code](M, object, 0, O),
-                              prototype_of[flow](O, P), builtin_prototype(P).
+amb_proto_recv[flow](M, P) :- builtin_prototype(P), prototype_of[flow](O, P),
+                              ast_child[code](M, object, 0, O), member_node_v[flow](M).
 amb_proto_heap_split[audit](P, M) :- amb_proto_heap(P, local), amb_proto_recv[flow](M, P),
                                      eff_heap_of[flow](M, global).
 
