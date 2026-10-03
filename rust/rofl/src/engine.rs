@@ -14,7 +14,7 @@ use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
     Member,
-    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, LatReg, NewCell,
+    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
@@ -204,8 +204,8 @@ fn components(rules: &[Rc<ERule>]) -> Vec<Vec<Rc<ERule>>> {
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Front {
-    pub keys: HashSet<FactId>,
-    pub by_rel: HashMap<Sym, HashSet<FactId>>,
+    pub keys: FxSet<FactId>,
+    pub by_rel: FxMap<Sym, FxSet<FactId>>,
 }
 
 impl Front {
@@ -1028,7 +1028,7 @@ struct ReachMemo {
 /// one the positive literals do not bind, and `wild` a correlation they do
 /// not: both are solved in full.
 struct ThrFocus {
-    news: Vec<(usize, HashSet<FactId>)>,
+    news: Vec<(usize, FxSet<FactId>)>,
     by_corr: HashMap<Vec<Term>, Vec<Option<Vec<Term>>>>,
     wild: bool,
 }
@@ -3599,7 +3599,7 @@ impl Eval {
     fn fire_rule(
         &mut self,
         r: &Rc<ERule>,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
         if self.closure_on && self.no_witness && self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
@@ -3702,8 +3702,8 @@ impl Eval {
         let tick = self.store.tick;
         for (s, v, direct, longer) in rows {
             let args = [nodes[s as usize], nodes[v as usize]];
-            if self.store.add(&self.h, c.rel, c.persp, &args, F_TICK) {
-                let id = self.store.get(c.rel, c.persp, &args).unwrap();
+            let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
+            if new {
                 out.note(c.rel, id);
                 self.closure_rows += 1;
                 self.bump_steps()?;
@@ -3818,8 +3818,7 @@ impl Eval {
             },
             _ => None,
         };
-        let is_new = self.store.add(&self.h, head.rel, persp, &args, F_TICK);
-        let id = self.store.get(head.rel, persp, &args).unwrap();
+        let (id, is_new) = self.store.put(&self.h, head.rel, persp, &args, F_TICK);
         if let Some(ck) = cell {
             if self.subs.contains_key(&head.rel) {
                 let front = self.sub_cur.entry(ck).or_default();
@@ -3897,7 +3896,7 @@ impl Eval {
         body: &[BodyElem],
         s0: Subst,
         depth: usize,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
         rule_id: Option<Sym>,
     ) -> Result<Vec<Sol>, Halt> {
         let mut acc: Vec<Sol> = vec![Sol {
@@ -4645,7 +4644,7 @@ impl Eval {
         s: &Subst,
         depth: usize,
         keep: bool,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<(Vec<(Vec<Term>, Vec<ThrMember>)>, Option<Sym>), Halt> {
         let (cands, dropped) = self.inner_cands(rid, a, plan, s, depth, keep, front_at, false)?;
         let mut groups: Vec<(Vec<Term>, Vec<ThrMember>)> = Vec::with_capacity(cands.len());
@@ -4694,7 +4693,7 @@ impl Eval {
         s: &Subst,
         depth: usize,
         keep: bool,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
         hole: bool,
     ) -> Result<(Vec<(Vec<Term>, Vec<Cand>)>, Option<Sym>), Halt> {
         let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
@@ -5344,8 +5343,7 @@ impl Eval {
             return Ok(());
         }
         let crel = self.join_rels[&rel];
-        let fresh = self.store.add(&self.h, crel, persp, &args, F_TICK);
-        let cid = self.store.get(crel, persp, &args).unwrap();
+        let (cid, fresh) = self.store.put(&self.h, crel, persp, &args, F_TICK);
         self.record_firing(cid, rid, rid, prems, out)?;
         if !fresh {
             return Ok(());
@@ -5382,8 +5380,7 @@ impl Eval {
         };
         let mut args: Vec<Term> = ck.2.to_vec();
         args.push(new);
-        let is_new = self.store.add(&self.h, rel, persp, &args, F_TICK);
-        let id = self.store.get(rel, persp, &args).unwrap();
+        let (id, is_new) = self.store.put(&self.h, rel, persp, &args, F_TICK);
         self.lat_cur.insert(ck, id);
         self.record_firing(id, crel, rid, prems, out)?;
         if is_new {
@@ -5568,8 +5565,7 @@ impl Eval {
         for (ck, x) in &nr.frozen {
             let mut args: Vec<Term> = ck.2.to_vec();
             args.push(*x);
-            self.store.add(&self.h, ck.0, ck.1, &args, F_TICK);
-            let id = self.store.get(ck.0, ck.1, &args).unwrap();
+            let (id, _) = self.store.put(&self.h, ck.0, ck.1, &args, F_TICK);
             self.lat_cur.insert(ck.clone(), id);
             let crel = self.join_rels[&ck.0];
             self.record_firing(id, crel, crel, Vec::new(), &mut front)?;
@@ -5637,8 +5633,8 @@ impl Eval {
         let args = self.store.args(id).to_vec();
         let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
         let db_args = [ft, Term::atom(rule), Term::int(self.store.tick as i64)];
-        if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
-            let dbid = self.store.get(self.v.derived_by, self.v.kernel_persp, &db_args).unwrap();
+        let (dbid, new) = self.store.put(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
+        if new {
             out.note(self.v.derived_by, dbid);
         }
     }
@@ -8446,9 +8442,9 @@ impl Eval {
                     }
                 }
                 for (rel, args) in rows {
-                    if self.store.add(&self.h, rel, self.v.kernel_persp, &args, F_TICK) {
+                    let (id, new) = self.store.put(&self.h, rel, self.v.kernel_persp, &args, F_TICK);
+                    if new {
                         self.charge_row(None, false)?;
-                        let id = self.store.get(rel, self.v.kernel_persp, &args).unwrap();
                         front.note(rel, id);
                     }
                 }
@@ -8472,9 +8468,9 @@ impl Eval {
             rows.sort_by(|a, b| cmp_js(&a.0, &b.0));
             for (_, args) in rows {
                 let rel = self.v.dominated_by;
-                if self.store.add(&self.h, rel, self.v.kernel_persp, &args, F_TICK) {
+                let (id, new) = self.store.put(&self.h, rel, self.v.kernel_persp, &args, F_TICK);
+                if new {
                     self.charge_row(None, false)?;
-                    let id = self.store.get(rel, self.v.kernel_persp, &args).unwrap();
                     front.note(rel, id);
                 }
             }
@@ -9132,10 +9128,10 @@ impl Eval {
 
     /// A hole row of this evaluation; true if it was new.
     fn eval_hole(&mut self, args: &[Term]) -> bool {
-        if !self.store.add(&self.h, self.v.hole, self.v.kernel_persp, args, F_BASE | F_FROZEN) {
+        let (id, new) = self.store.put(&self.h, self.v.hole, self.v.kernel_persp, args, F_BASE | F_FROZEN);
+        if !new {
             return false;
         }
-        let id = self.store.get(self.v.hole, self.v.kernel_persp, args).unwrap();
         self.store.eval_holes.push(id);
         true
     }
@@ -9178,9 +9174,9 @@ impl Eval {
             }
         }
         for (rel, args) in rows {
-            if self.store.add(&self.h, rel, self.v.kernel_persp, &args, F_TICK) {
+            let (id, new) = self.store.put(&self.h, rel, self.v.kernel_persp, &args, F_TICK);
+            if new {
                 self.charge_row(None, false)?;
-                let id = self.store.get(rel, self.v.kernel_persp, &args).unwrap();
                 self.cur_front.note(rel, id);
             }
         }
@@ -9286,7 +9282,7 @@ impl Eval {
         l: &Lit,
         s: &Subst,
         depth: usize,
-        only: Option<&HashSet<FactId>>,
+        only: Option<&FxSet<FactId>>,
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(Vec::new());
@@ -9429,8 +9425,7 @@ impl Eval {
                 .collect();
             if persp.is_atom() && args.iter().all(|a| self.h.is_ground(*a)) {
                 let p = persp.as_atom().unwrap();
-                let is_new = self.store.add(&self.h, call.rel, p, &args, F_TICK);
-                let id = self.store.get(call.rel, p, &args).unwrap();
+                let (id, is_new) = self.store.put(&self.h, call.rel, p, &args, F_TICK);
                 let tick = self.store.tick;
                 let new_firing = self.store.support(
                     id,

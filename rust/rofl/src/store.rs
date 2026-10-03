@@ -48,6 +48,7 @@ use crate::cell::{AggOp, Algebra};
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 
 pub type FactId = u32;
 pub type CellId = u32;
@@ -146,7 +147,7 @@ pub struct EvalRecord {
     pub partial: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PremRef {
     /// A fact that was matched: the identity, not the spelling.
     Fact(FactId),
@@ -299,7 +300,7 @@ struct KeyRun {
 /// positions a premise had already bound when it asked — then by the tuple of
 /// canonical VALUES at those positions. Terms are hash-consed, so the tuple is
 /// the value and no rendering is stored (`KeyRun.byPat`, src/store.ts:75).
-type ArgIndex = HashMap<u32, HashMap<Box<[Term]>, Vec<FactId>>>;
+type ArgIndex = FxMap<u32, FxMap<Box<[Term]>, Vec<FactId>>>;
 
 const MIN_INDEXED: usize = 16;
 const MAX_PATTERNS: usize = 8;
@@ -587,7 +588,7 @@ pub struct Store {
     /// of a string key and a bucket vector.
     keys: Vec<u32>,
     keys_n: usize,
-    idx: HashMap<Sym, Vec<(Sym, KeyRun)>>,
+    idx: FxMap<Sym, Vec<(Sym, KeyRun)>>,
     /// Provenance, flattened. One `u32` per fact id for the head of its firing
     /// chain, one 20-byte node per firing, and every premise in one arena —
     /// against a `Map<key, Map<sig, Witness>>` of two hash tables and two
@@ -595,6 +596,9 @@ pub struct Store {
     wit_head: Vec<u32>,
     wits: Vec<WitNode>,
     prem_arena: Vec<PremRef>,
+    /// `firing_hash` of every node on a chain, and of some that left one: a
+    /// firing whose hash is absent is new without walking its fact's chain.
+    fired: FxSet<u64>,
     wits_live: usize,
     n_live: usize,
     cells: Cells,
@@ -808,12 +812,17 @@ impl Store {
     /// record's firing chain and purged it from every run vector, so the revival
     /// is exactly the fresh-record path with the record supplied.
     pub fn add(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> bool {
+        self.put(h, rel, persp, args, flags).1
+    }
+
+    /// `add`, and the fact's id whether it was new or not.
+    pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
                 if flags & F_BASE != 0 && !self.facts.recs[id as usize].base() {
                     self.facts.recs[id as usize].add_flags(F_BASE);
                 }
-                return false;
+                return (id, false);
             }
             Some(id) => {
                 // a superseded lattice value keeps its firings as history
@@ -843,7 +852,7 @@ impl Store {
         } else if run.by_pat.is_some() {
             run.staged.push(id);
         }
-        true
+        (id, true)
     }
 
     // ------------------------------------------------------------- ordering
@@ -1033,15 +1042,9 @@ impl Store {
         }
         if pos.len() == arity {
             let hit = self.find(rel, p, vals);
-            let loose = self.loose_of(rel, p);
-            if loose.is_empty() {
-                return Some(hit.into_iter().collect());
-            }
             let mut out: Vec<FactId> = hit.into_iter().collect();
-            for k in loose {
-                if self.alive(k) && Some(k) != hit {
-                    out.push(k);
-                }
+            if let Some(run) = self.run(rel, p) {
+                out.extend(run.loose.iter().copied().filter(|&k| self.alive(k) && Some(k) != hit));
             }
             return Some(out);
         }
@@ -1066,120 +1069,64 @@ impl Store {
         // could was that one premise match is ONE step to `steps` and O(group
         // size) to the allocator: over 8 to 64 files, facts grew 15.9x, steps
         // 16.6x, and this 497.6x.
-        let canon_len = self
-            .idx
-            .get(&rel)
-            .and_then(|v| v.iter().find(|(q, _)| *q == p))
-            .map(|(_, r)| r.canon.len())
-            .unwrap_or(0);
         self.argm_calls += 1;
-        {
-            let run = self.run_mut(rel, p);
-            if run.by_pat.is_none() {
-                if canon_len < MIN_INDEXED {
-                    return None;
-                }
-                run.by_pat = Some(HashMap::new());
-            }
-            let known = run.by_pat.as_ref().unwrap().contains_key(&mask);
-            if !known && run.by_pat.as_ref().unwrap().len() >= MAX_PATTERNS {
+        let run = self.run_mut(rel, p);
+        if run.by_pat.is_none() {
+            if run.canon.len() < MIN_INDEXED {
                 return None;
             }
+            run.by_pat = Some(FxMap::default());
         }
-        self.fold_staged(h, rel, p, mask);
-        let need_build = {
-            let run = self.run_mut(rel, p);
-            !run.by_pat.as_ref().unwrap().contains_key(&mask)
+        let by_pat = run.by_pat.as_ref().unwrap();
+        if !by_pat.contains_key(&mask) && by_pat.len() >= MAX_PATTERNS {
+            return None;
+        }
+        self.fold_staged(h, rel, p);
+        let facts = &self.facts;
+        let run = run_in(&mut self.idx, rel, p);
+        let by_pat = run.by_pat.as_mut().unwrap();
+        if !by_pat.contains_key(&mask) {
+            self.argm_cloned += run.canon.len() as u64;
+            let mut by_val = FxMap::default();
+            let mut sig = Vec::new();
+            for &k in &run.canon {
+                if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
+                    put_sig(&mut by_val, &sig, k);
+                }
+            }
+            by_pat.insert(mask, by_val);
+        }
+        let mut out: Vec<FactId> = match by_pat[&mask].get(vals) {
+            Some(hit) => hit.iter().copied().filter(|&i| facts.alive(i)).collect(),
+            None => Vec::new(),
         };
-        if need_build {
-            // The one path that actually walks the run, and the only one that
-            // now pays to copy it. Cloned rather than borrowed because
-            // `self.alive` and `self.args` take `&self` while `run_mut` below
-            // takes `&mut self`; the copy is once per (group, pattern) instead
-            // of once per call.
-            let canon_ids: Vec<FactId> = self
-                .idx
-                .get(&rel)
-                .and_then(|v| {
-                    v.iter()
-                        .find(|(q, _)| *q == p)
-                        .map(|(_, r)| r.canon.clone())
-                })
-                .unwrap_or_default();
-            self.argm_cloned += canon_ids.len() as u64;
-            let mut by_val: HashMap<Box<[Term]>, Vec<FactId>> = HashMap::new();
-            for k in &canon_ids {
-                if !self.alive(*k) {
-                    continue;
-                }
-                if let Some(sig) = pat_sig(h, pos, self.args(*k)) {
-                    by_val.entry(sig).or_default().push(*k);
-                }
-            }
-            self.run_mut(rel, p)
-                .by_pat
-                .as_mut()
-                .unwrap()
-                .insert(mask, by_val);
-        }
-        let probe: Box<[Term]> = vals.into();
-        let hit = self
-            .idx
-            .get(&rel)
-            .and_then(|v| v.iter().find(|(q, _)| *q == p))
-            .and_then(|(_, r)| r.by_pat.as_ref().unwrap().get(&mask))
-            .and_then(|m| m.get(&probe))
-            .cloned();
-        let loose = self.loose_of(rel, p);
-        let mut out: Vec<FactId> = hit.unwrap_or_default();
-        out.retain(|&i| self.alive(i));
-        for k in loose {
-            if self.alive(k) {
-                out.push(k);
-            }
-        }
+        out.extend(run.loose.iter().copied().filter(|&k| facts.alive(k)));
         Some(out)
     }
 
-    fn loose_of(&self, rel: Sym, persp: Sym) -> Vec<FactId> {
-        self.idx
-            .get(&rel)
-            .and_then(|v| v.iter().find(|(q, _)| *q == persp))
-            .map(|(_, r)| r.loose.clone())
-            .unwrap_or_default()
+    fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
+        self.idx.get(&rel)?.iter().find(|(q, _)| *q == persp).map(|(_, r)| r)
     }
 
-    fn fold_staged(&mut self, h: &Heap, rel: Sym, persp: Sym, _mask: u32) {
-        let staged: Vec<FactId> = {
-            let run = self.run_mut(rel, persp);
-            if run.staged.is_empty() || run.by_pat.is_none() {
-                return;
-            }
-            std::mem::take(&mut run.staged)
+    fn fold_staged(&mut self, h: &Heap, rel: Sym, persp: Sym) {
+        let facts = &self.facts;
+        let run = run_in(&mut self.idx, rel, persp);
+        let Some(by_pat) = run.by_pat.as_mut() else {
+            return;
         };
-        let masks: Vec<u32> = self
-            .idx
-            .get(&rel)
-            .and_then(|v| v.iter().find(|(q, _)| *q == persp))
-            .and_then(|(_, r)| r.by_pat.as_ref().map(|m| m.keys().copied().collect()))
-            .unwrap_or_default();
-        for m in masks {
+        if run.staged.is_empty() {
+            return;
+        }
+        let mut sig = Vec::new();
+        for (&m, by_val) in by_pat.iter_mut() {
             let pos = mask_pos(m);
-            let mut adds: Vec<(Box<[Term]>, FactId)> = Vec::new();
-            for k in &staged {
-                if !self.alive(*k) {
-                    continue;
+            for &k in &run.staged {
+                if facts.alive(k) && pat_sig(h, &pos, facts.args(k), &mut sig) {
+                    put_sig(by_val, &sig, k);
                 }
-                if let Some(sig) = pat_sig(h, &pos, self.args(*k)) {
-                    adds.push((sig, *k));
-                }
-            }
-            let run = self.run_mut(rel, persp);
-            let by_val = run.by_pat.as_mut().unwrap().get_mut(&m).unwrap();
-            for (sig, k) in adds {
-                by_val.entry(sig).or_default().push(k);
             }
         }
+        run.staged.clear();
     }
 
     // ------------------------------------------------------------ removals
@@ -1445,15 +1392,16 @@ impl Store {
         }
         let mut wits = Vec::with_capacity(self.wits_live);
         let mut prems = Vec::new();
-        for h in self.wit_head.iter_mut() {
+        self.fired.clear();
+        for (id, h) in self.wit_head.iter_mut().enumerate() {
             let mut c = *h;
             let mut new_head = EMPTY;
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 let at = prems.len() as u32;
-                prems.extend_from_slice(
-                    &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize],
-                );
+                let ps = &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize];
+                self.fired.insert(firing_hash(id as FactId, n.rule, ps));
+                prems.extend_from_slice(ps);
                 wits.push(WitNode {
                     prems_at: at,
                     next: new_head,
@@ -1477,7 +1425,11 @@ impl Store {
     /// candidates of a fact that has more than one (measured at 1.0 to 1.9 per
     /// fact on the JS side, src/store.ts:693).
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
-        let mut c = self.wit_head[id as usize];
+        let mut c = if self.fired.insert(firing_hash(id, w.rule, &w.prems)) {
+            EMPTY
+        } else {
+            self.wit_head[id as usize]
+        };
         while c != EMPTY {
             let n = self.wits[c as usize];
             if n.rule == w.rule
@@ -2964,7 +2916,8 @@ impl Store {
             + self.idx.capacity() * 48;
         let wit: usize = self.wit_head.capacity() * 4
             + self.wits.capacity() * std::mem::size_of::<WitNode>()
-            + self.prem_arena.capacity() * std::mem::size_of::<PremRef>();
+            + self.prem_arena.capacity() * std::mem::size_of::<PremRef>()
+            + self.fired.capacity() * 9;
         let (tends, tsks, tcons, targs) = self.facts.tups.bytes();
         vec![
             (
@@ -2986,17 +2939,64 @@ fn mask_pos(mask: u32) -> Vec<usize> {
     (0..31).filter(|i| (mask >> i) & 1 == 1).collect()
 }
 
-fn pat_sig(h: &Heap, pos: &[usize], args: &[Term]) -> Option<Box<[Term]>> {
-    let mut out = Vec::with_capacity(pos.len());
+fn pat_sig(h: &Heap, pos: &[usize], args: &[Term], out: &mut Vec<Term>) -> bool {
+    out.clear();
     for &p in pos {
-        let a = *args.get(p)?;
-        if !h.is_ground(a) {
-            return None;
+        match args.get(p) {
+            Some(&a) if h.is_ground(a) => out.push(a),
+            _ => return false,
         }
-        out.push(a);
     }
-    Some(out.into())
+    true
 }
+
+fn put_sig(by_val: &mut FxMap<Box<[Term]>, Vec<FactId>>, sig: &[Term], k: FactId) {
+    match by_val.get_mut(sig) {
+        Some(v) => v.push(k),
+        None => {
+            by_val.insert(sig.into(), vec![k]);
+        }
+    }
+}
+
+fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
+    let mut f = Fx::default();
+    (id, rule, prems).hash(&mut f);
+    f.finish()
+}
+
+fn run_in(idx: &mut FxMap<Sym, Vec<(Sym, KeyRun)>>, rel: Sym, persp: Sym) -> &mut KeyRun {
+    &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
+}
+
+/// FxHash's step. Terms, symbols and fact ids are already numbers, so
+/// SipHash's resistance buys nothing on the hot tables; the final rotation
+/// brings the well-mixed high bits down to where the table takes its index.
+#[derive(Default, Clone, Copy)]
+pub struct Fx(u64);
+
+impl Hasher for Fx {
+    fn finish(&self) -> u64 {
+        self.0.rotate_left(26)
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.write_u64(b as u64);
+        }
+    }
+    fn write_u64(&mut self, n: u64) {
+        self.0 = (self.0.rotate_left(5) ^ n).wrapping_mul(0xf135_7aea_2e62_a9c5);
+    }
+    fn write_u32(&mut self, n: u32) {
+        self.write_u64(n as u64);
+    }
+    fn write_usize(&mut self, n: usize) {
+        self.write_u64(n as u64);
+    }
+}
+
+pub type FxMap<K, V> = HashMap<K, V, BuildHasherDefault<Fx>>;
+pub type FxSet<K> = HashSet<K, BuildHasherDefault<Fx>>;
 
 /// `factKey` (src/store.ts:47) for a head that may not be a record yet.
 ///
