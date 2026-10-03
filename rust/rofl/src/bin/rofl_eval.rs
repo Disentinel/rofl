@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--unordered] [--budget N] [--space N] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -72,6 +72,10 @@ struct Args {
     /// second engine owes and the strict one is kept beside it, because a
     /// contract is loosened by measuring what the loosening costs.
     derivations: bool,
+    /// No `derived_by` rows and no witnesses: the facts alone.
+    no_provenance: bool,
+    /// Facts in a group by tuple id, matches in candidate order: no rendered keys on the hot path.
+    unordered: bool,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -82,6 +86,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         ticks: 0,
         want_bytes: false,
         derivations: false,
+        no_provenance: false,
+        unordered: false,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -114,6 +120,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             }
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
+            "--no-provenance" => a.no_provenance = true,
+            "--unordered" => a.unordered = true,
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -139,6 +147,8 @@ fn main() {
         ticks,
         want_bytes,
         derivations,
+        no_provenance,
+        unordered,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -166,6 +176,11 @@ fn main() {
     // with the default; the field is public and this is the one caller that has
     // a reason to move it, so the library signature stays as it is.
     l.eval.space = space;
+    if no_provenance {
+        l.eval.no_provenance = true;
+        l.eval.no_witness = true;
+    }
+    l.eval.store.unordered = unordered;
     let t_load = t0.elapsed();
     if l.dangling > 0 {
         eprintln!("warning: {} dangling witness reference(s)", l.dangling);
@@ -252,6 +267,22 @@ fn main() {
                 .unwrap_or_else(|| "?".to_string());
             eprintln!("argm_rule\t{}\t{}\t{}", l.eval.h.name(*rid), head, n);
         }
+        // THE SAME TABLE IN TIME, and what firing the rules of a round side by
+        // side could save: every round waits for its longest rule.
+        let mut by: Vec<(rofl::term::Sym, u64)> = l.eval.ns_by_rule.iter().map(|(k, v)| (*k, *v)).collect();
+        by.sort_by(|a, b| b.1.cmp(&a.1));
+        for (rid, ns) in by.iter().take(20) {
+            let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
+            eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
+        }
+        let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
+        let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
+        eprintln!("rounds\t{}", l.eval.rounds.len());
+        eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
+        eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
+        eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));
+        eprintln!("parallel_bound_4_ms\t{:.1}", bound(4));
+        eprintln!("parallel_bound_inf_ms\t{:.1}", mx as f64 / 1e6);
     }
 }
 

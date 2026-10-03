@@ -472,6 +472,9 @@ pub fn fnv64(text: &str) -> String {
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Store {
+    /// Facts in a group ordered by tuple id instead of by rendered key: the same
+    /// facts, a cheaper comparator, candidate order observable. Set by the harness.
+    pub unordered: bool,
     pub tick: u32,
     pub dirty: bool,
     pub partial_eval: bool,
@@ -825,6 +828,9 @@ impl Store {
     /// stored. Facts here are always from the same `(rel, persp)` group when
     /// this is used as a run comparator; the group-level part is `cmp_group`.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
+        if self.unordered {
+            return self.facts.rec(a).tup().cmp(&self.facts.rec(b).tup());
+        }
         self.facts.cmp_args(h, a, b)
     }
 
@@ -846,7 +852,9 @@ impl Store {
         self.absorb_canon += canon.len() as u64;
         // The records are borrowed immutably while the run is taken mutably:
         // disjoint fields, no unsafe.
+        let unordered = self.unordered;
         let me = &self.facts;
+        let cmp_args = |h: &Heap, a: FactId, b: FactId| if unordered { me.rec(a).tup().cmp(&me.rec(b).tup()) } else { me.cmp_args(h, a, b) };
         // A dead id is left in the runs until `sweep` (see `retire`), and a
         // join cell retires its old value on every widening: within one
         // fixpoint the run filled with superseded values of the same key,
@@ -856,7 +864,7 @@ impl Store {
         // it is dropped here, where the run is being rewritten regardless.
         canon.retain(|&i| !me.rec(i).dead());
         fresh.retain(|&i| !me.rec(i).dead());
-        fresh.sort_by(|x, y| me.cmp_args(h, *x, *y));
+        fresh.sort_by(|x, y| cmp_args(h, *x, *y));
         if canon.is_empty() {
             canon = fresh;
         } else {
@@ -868,7 +876,7 @@ impl Store {
             let mut i0 = 0usize;
             for &f in &fresh {
                 let k = i0
-                    + canon[i0..].partition_point(|&c| me.cmp_args(h, c, f) != Ordering::Greater);
+                    + canon[i0..].partition_point(|&c| cmp_args(h, c, f) != Ordering::Greater);
                 out.extend_from_slice(&canon[i0..k]);
                 out.push(f);
                 i0 = k;
@@ -1803,7 +1811,7 @@ impl Store {
     pub fn cmp_key(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
         let (ra, rb) = (&self.facts.recs[a as usize], &self.facts.recs[b as usize]);
         if (ra.rel, ra.persp) == (rb.rel, rb.persp) {
-            return self.facts.cmp_args(h, a, b);
+            return self.cmp_args(h, a, b);
         }
         let pre = |r: &FactRec| format!("{}[{}](", h.name(r.rel), h.name(r.persp));
         cmp_js(&pre(ra), &pre(rb))

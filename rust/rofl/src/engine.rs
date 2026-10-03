@@ -420,6 +420,9 @@ pub struct Eval {
     /// being solved, including through demand unfolding.
     pub cur_rule: Option<Sym>,
     pub argm_by_rule: HashMap<Sym, u64>,
+    /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
+    pub ns_by_rule: HashMap<Sym, u64>,
+    pub rounds: Vec<(u64, u64)>,
     pub naive: bool,
     pub mode: Mode,
     pub steps: i64,
@@ -756,7 +759,10 @@ pub struct Eval {
     assume: Option<Rc<Assumption>>,
     bootstrap: bool,
     answer: RuleAnswer,
-    no_provenance: bool,
+    pub no_provenance: bool,
+    /// No witnesses either: a firing on a fact already there is no news. Only
+    /// where nothing withdraws (no lattices); set from the harness, never by a program.
+    pub no_witness: bool,
     /// `Rofl.retainTicks` (src/api.ts:165): how many COMPLETED ticks of frozen
     /// provenance to keep, or none set — which keeps everything and is what
     /// the corpus runs under.
@@ -909,6 +915,8 @@ impl Eval {
             space: DEFAULT_SPACE,
             cur_rule: None,
             argm_by_rule: HashMap::new(),
+            ns_by_rule: HashMap::new(),
+            rounds: Vec::new(),
             naive: false,
             mode,
             steps: 0,
@@ -1052,6 +1060,7 @@ impl Eval {
             bootstrap,
             answer: RuleAnswer::default(),
             no_provenance: false,
+            no_witness: false,
             retain_ticks: None,
             kernel_claimed: false,
         };
@@ -3301,11 +3310,18 @@ impl Eval {
         self.cur_front = Front::default();
         let batch: Rc<[Rc<ERule>]> = Rc::from(sorted);
         let outer = (std::mem::replace(&mut self.batch, batch.clone()), self.batch_at);
+        let (mut sum, mut mx) = (0u64, 0u64);
         for (i, r) in batch.iter().enumerate() {
             self.batch_at = i;
+            let t = std::time::Instant::now();
             let f = self.fire_rule(r, None)?;
             merge_front(&mut self.cur_front, f);
+            let d = t.elapsed().as_nanos() as u64;
+            *self.ns_by_rule.entry(r.id).or_insert(0) += d;
+            sum += d;
+            mx = mx.max(d);
         }
+        self.rounds.push((sum, mx));
         (self.batch, self.batch_at) = outer;
         let front = std::mem::take(&mut self.cur_front);
         self.propagate(front)?;
@@ -3340,23 +3356,42 @@ impl Eval {
             self.thr_round += 1;
             self.thr_fresh.clear();
             let active = self.active.clone();
+            let (mut sum, mut mx) = (0u64, 0u64);
             for r in &active {
+                let t = std::time::Instant::now();
+                let done = self.fire_in_round(r, &cur);
+                let d = t.elapsed().as_nanos() as u64;
+                *self.ns_by_rule.entry(r.id).or_insert(0) += d;
+                sum += d;
+                mx = mx.max(d);
+                done?;
+            }
+            self.rounds.push((sum, mx));
+            front = std::mem::take(&mut self.cur_front);
+        }
+        self.live_front = outer;
+        Ok(())
+    }
+
+    fn fire_in_round(&mut self, r: &Rc<ERule>, cur: &Front) -> Result<(), Halt> {
+        {
+            {
                 if self.naive {
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
-                    continue;
+                    return Ok(());
                 }
                 if !r
                     .trigger_rels
                     .iter()
                     .any(|rel| cur.by_rel.contains_key(rel))
                 {
-                    continue;
+                    return Ok(());
                 }
                 if r.has_demand_prem {
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
-                    continue;
+                    return Ok(());
                 }
                 for (i, b) in r.plan.iter().enumerate() {
                     let BodyElem::Pos(l) = b else { continue };
@@ -3376,9 +3411,7 @@ impl Eval {
                     merge_front(&mut self.cur_front, f?);
                 }
             }
-            front = std::mem::take(&mut self.cur_front);
         }
-        self.live_front = outer;
         Ok(())
     }
 
@@ -3515,14 +3548,18 @@ impl Eval {
             }
         }
         let tick = self.store.tick;
-        let new_firing = self.store.support(
-            id,
-            Witness {
-                rule: r.id,
-                tick,
-                prems: sol.prems.clone(),
-            },
-        );
+        let new_firing = if self.no_witness && self.lattices.is_empty() {
+            is_new
+        } else {
+            self.store.support(
+                id,
+                Witness {
+                    rule: r.id,
+                    tick,
+                    prems: sol.prems.clone(),
+                },
+            )
+        };
         if new_firing {
             self.bump_steps()?;
             self.charge_row(Some(r.id), true)?;
@@ -8995,15 +9032,15 @@ impl Eval {
             if persp.is_none() && is_kernel_ledger(&self.h, fp) {
                 continue;
             }
-            let s2 = match persp {
-                Some(_) => Some(s.clone()),
-                None => unify(&self.h, persp_t, Term::atom(fp), s),
+            let fargs = self.store.args(f);
+            let s3 = match persp {
+                Some(_) => unify_all(&self.h, &l.args, fargs, s),
+                None => match unify(&self.h, persp_t, Term::atom(fp), s) {
+                    Some(s2) => unify_all(&self.h, &l.args, fargs, &s2),
+                    None => None,
+                },
             };
-            let Some(s2) = s2 else { continue };
-            let fargs = self.store.args(f).to_vec();
-            let Some(s3) = unify_all(&self.h, &l.args, &fargs, &s2) else {
-                continue;
-            };
+            let Some(s3) = s3 else { continue };
             if seen.insert(f) {
                 out.push((s3, PremRef::Fact(f)));
             }
@@ -9033,6 +9070,10 @@ impl Eval {
                     }
                 }
             }
+        }
+        if self.store.unordered {
+            out.extend(open.into_iter().map(|(s, r, _)| (s, r)));
+            return Ok(out);
         }
         // The total sort that makes candidate order unobservable. `seen` above
         // admits at most one match per key, so no two entries share a sort key.
