@@ -1,0 +1,13 @@
+-- expect-refusal: in the data the cell reads itself: sum@val(r1) -> value(b2,_) -> val(n2,_) -> sum@val(r2) -> value(b1,_) -> val(n1,_) -> sum@val(r1)
+-- examples/checks/agg-datastrat-cycle-1-refused-pair.rofl — two cells that add
+-- each other: b1 = SUM(a1, b2) and b2 = SUM(a1, b1). A cycle in the data, and the
+-- refusal names it, cell by cell.
+edb(input). edb(formula). edb(ref). edb(plus). edb(sum_head). edb(in_range).
+input(a1, 2).
+formula(b1, n1). sum_head(n1, r1). in_range(r1, a1). in_range(r1, b2).
+formula(b2, n2). sum_head(n2, r2). in_range(r2, a1). in_range(r2, b1).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
+val(N, V) :- sum_head(N, I), V is sum(X ; C : in_range(I, C), value(C, X)).

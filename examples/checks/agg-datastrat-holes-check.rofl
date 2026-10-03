@@ -1,0 +1,28 @@
+-- examples/checks/agg-datastrat-holes-check.rofl — agg_datastrat_holes: a sum
+-- over a cell not known is a hole on its cell and no value, never the sum of
+-- the cells that survived, and so is every cell that reads it, a layer at a
+-- time (agg-datastrat-holes.rofl). What the hole does not reach is known.
+adh_want(a1, 2).  adh_want(a2, 3).  adh_want(b1, 5).  adh_want(b8, 5).  adh_want(b9, 7).
+adh_unknown(b5). adh_unknown(b6). adh_unknown(b7).
+adh_wrong(C)   :- adh_want(C, V), not value(C, V).
+adh_leak(C)    :- adh_unknown(C), value(C, _).
+adh_stray(C)   :- value(C, V), not adh_want(C, V), not adh_unknown(C).
+alarm(adh_wrong).
+alarm(adh_leak).
+alarm(adh_stray).
+-- b6's sum is a hole on its cell, for no member is known, and b1's is not
+adh_holed(R) :- hole[$kernel]($cell(Rule, _, _, $cons(R, $nil)), support_withdrawn), concludes[$kernel](Rule, val).
+adh_unholed() :- not adh_holed(r4).
+adh_overholed(R) :- adh_holed(R), R != r4.
+alarm(adh_unholed).
+alarm(adh_overholed).
+-- the unknown reaches b7 through b6's sum and the formula over it, a shrug inherited from the overflow
+-- expect-row: shrug[$kernel](val(n9,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- expect-row: shrug[$kernel](value(b6,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- expect-row: shrug[$kernel](val(n10,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- expect-row: shrug[$kernel](value(b7,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- and nothing about the sums it does not reach
+-- expect-no-row: shrug[$kernel](val(n13,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- expect-no-row: shrug[$kernel](val(n14,$unknown_value),inherited,from($cons($rule(rb604cba2),$nil))) tick base support=0
+-- expect-row: val[main](n1,5) tick drv support=1
+-- expect-row: val[main](n14,7) tick drv support=1

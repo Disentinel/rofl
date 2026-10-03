@@ -21,6 +21,9 @@
 --   e2 = SUM(c1, d1)           = 55           a diamond: c1 and d1 below both e1 and e2
 --   f1 = SUM(a1, a2) = 5, f2 = SUM(f1, a1) = 7, f3 = 9, f4 = 11, f5 = 13, f6 = 15
 --                                             a chain six sums deep
+--   h1 = IF(a1, f6, 0)         = 15           the branch taken reads the chain: a dependency a value
+--                                             of the condition decides, and the data cannot skip
+--   h2 = SUM(h1, a2)           = 18           a sum over it
 --   g1 = SUM(a1, z9)           no value       z9 is no cell: a range with a cell that has
 --                                             no value has no total, and nothing above it
 --   g2 = g1 + a1               no value
@@ -28,6 +31,8 @@ edb(input).      -- input(Cell, V)
 edb(formula).    -- formula(Cell, Node)
 edb(ref).        -- ref(Node, Cell)
 edb(plus).       -- plus(Node, A, B)
+edb(num).        -- num(Node, V)
+edb(pick).       -- pick(Node, Cond, Then, Else): IF(Cond, Then, Else)
 edb(sum_head).   -- sum_head(Node, Range): the sum of the cells of Range
 edb(cnt_head).   -- cnt_head(Node, Range): how many of them have a value
 edb(max_head).   -- max_head(Node, Range): the greatest value among them
@@ -52,12 +57,17 @@ formula(f3, n_f3). sum_head(n_f3, r_f3). in_range(r_f3, f2). in_range(r_f3, a1).
 formula(f4, n_f4). sum_head(n_f4, r_f4). in_range(r_f4, f3). in_range(r_f4, a1).
 formula(f5, n_f5). sum_head(n_f5, r_f5). in_range(r_f5, f4). in_range(r_f5, a1).
 formula(f6, n_f6). sum_head(n_f6, r_f6). in_range(r_f6, f5). in_range(r_f6, a1).
+formula(h1, n_h1). pick(n_h1, n_h1c, n_h1t, n_h1e). ref(n_h1c, a1). ref(n_h1t, f6). num(n_h1e, 0).
+formula(h2, n_h2). sum_head(n_h2, r_h2). in_range(r_h2, h1). in_range(r_h2, a2).
 formula(g1, n_g1). sum_head(n_g1, r_g1). in_range(r_g1, a1). in_range(r_g1, z9).
 formula(g2, n_g2). plus(n_g2, n_g2x, n_g2y). ref(n_g2x, g1). ref(n_g2y, a1).
 
 value(C, V) :- input(C, V).
 value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- num(N, V).
 val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- pick(N, C, T, _), val(C, X), X != 0, val(T, V).
+val(N, V) :- pick(N, C, _, E), val(C, 0), val(E, V).
 val(N, V) :- plus(N, A, B), val(A, X), val(B, Y), V is X + Y.
 val(N, V) :- sum_head(N, I), K is count(C : in_range(I, C)),
              K is count(D : in_range(I, D), value(D, _)),

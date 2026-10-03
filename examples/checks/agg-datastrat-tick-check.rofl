@@ -1,0 +1,12 @@
+-- examples/checks/agg-datastrat-tick-check.rofl — agg_datastrat_tick: tick 2 of
+-- agg-datastrat-tick.rofl holds the balance two quarters on, and none of the
+-- values of the ticks before it.
+-- expect-row: value[main](p,11) tick drv support=1
+-- expect-row: value[main](b3,13) tick drv support=1
+-- expect-row: value[main](b5,16) tick drv support=1
+-- expect-no-row: value[main](b5,11)
+-- expect-no-row: value[main](b5,6)
+-- expect-no-row: value[main](p,6)
+-- expect-no-row: value[main](p,1)
+-- the balance this tick was entered with is the last tick's b5
+-- expect-row: carried[main](11) tick base support=1

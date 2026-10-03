@@ -1,0 +1,20 @@
+-- examples/checks/agg-datastrat-tree-check.rofl — agg_datastrat_tree: the
+-- sizes and the child counts of agg-datastrat-tree.rofl are the tree's, and a
+-- rule above the component reads them by negation.
+dt_size(a, 9). dt_size(b, 4). dt_size(c, 4). dt_size(d, 1). dt_size(e, 2). dt_size(f, 1). dt_size(g, 1).
+dt_kids(a, 2). dt_kids(b, 2). dt_kids(c, 2). dt_kids(d, 0). dt_kids(e, 1). dt_kids(f, 0). dt_kids(g, 0).
+dt_wrong(size, T) :- dt_size(T, N), not size(T, N).
+dt_wrong(kids, T) :- dt_kids(T, K), not kids(T, K).
+dt_extra(size, T) :- size(T, N), not dt_size(T, N).
+dt_extra(kids, T) :- kids(T, K), not dt_kids(T, K).
+-- the big subtrees, and the rest by negation
+dt_big(T)   :- size(T, N), N > 3.
+dt_small(T) :- node(T), not dt_big(T).
+dt_small_wrong(T) :- dt_small(T), dt_size(T, N), N > 3.
+dt_big_wrong(T)   :- dt_big(T), dt_size(T, N), N <= 3.
+dt_small_missing(T) :- dt_size(T, N), N <= 3, not dt_small(T).
+alarm(dt_wrong).
+alarm(dt_extra).
+alarm(dt_small_wrong).
+alarm(dt_big_wrong).
+alarm(dt_small_missing).

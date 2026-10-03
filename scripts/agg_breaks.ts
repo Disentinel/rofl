@@ -5112,6 +5112,190 @@ export const BREAKS: Break[] = [
    "agg_incr_stale": "holds the row hole"
   }
  },
+ {
+  "id": "ds_seal_early",
+  "what": "a correlation of a component stratified by its data is read before the layer it belongs to is released",
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong",
+   "agg_datastrat_tree": "dt_wrong",
+   "agg_datastrat_tick": "the state lacks the row value",
+   "agg_datastrat_holes": "adh_wrong"
+  }
+ },
+ {
+  "id": "ds_layer_flat",
+  "what": "a layer is the greatest below it, not one more: every correlation is released with the first",
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong",
+   "agg_datastrat_tree": "dt_wrong"
+  }
+ },
+ {
+  "id": "ds_cycle_unseen",
+  "what": "a cycle through a correlation in the data is not refused",
+  "expect": {
+   "agg_datastrat_cycle": "was to be refused"
+  }
+ },
+ {
+  "id": "ds_no_demote",
+  "what": "no component is ranked by its data: the program is refused as it was by its relations",
+  "expect": {
+   "agg_datastrat_eval": "the world does not evaluate",
+   "agg_datastrat_tree": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ds_barred_ignored",
+  "what": "a component with a lattice in it is ranked by its data too",
+  "expect": {
+   "agg_datastrat_cycle": "was to be refused"
+  }
+ },
+ {
+  "id": "ds_wild_keys",
+  "what": "every position of a pattern the data walk reads is a wildcard: a cell reads every cell",
+  "expect": {
+   "agg_datastrat_eval": "the world does not evaluate",
+   "agg_datastrat_tree": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ds_builtin_dead",
+  "what": "a builtin the data walk cannot decide fails the branch it stands in",
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong"
+  }
+ },
+ {
+  "id": "ds_hole_uncarried",
+  "what": "what a hole left unknown is not carried before the next layer of a stratified component is read",
+  "expect": {
+   "agg_datastrat_holes": "adh_leak"
+  }
+ },
+ {
+  "id": "ds_root_dropped",
+  "what": "the last correlation the walk finds is never released",
+  "expect": {
+   "agg_datastrat_eval": "never reached"
+  }
+ },
+ {
+  "id": "ds_comps_unordered",
+  "what": "two components of one round are run in the order of their names, not the one that reads the other last",
+  "expect": {
+   "agg_datastrat_two": "d2_wrong"
+  }
+ },
+ {
+  "id": "ds_delta_allowed",
+  "what": "a retraction from a world stratified by its data takes the delta path",
+  "expect": {
+   "agg_datastrat_retract": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "ts_ds_seal_early",
+  "what": "the TypeScript gate reads a correlation of a stratified component before its layer is released",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (this.dsReleased.has(mk)) return true;",
+    "    if (this.dsReleased.has(mk) || mk.length > 0) return true;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong",
+   "agg_datastrat_tree": "dt_wrong"
+  }
+ },
+ {
+  "id": "ts_ds_cycle_unseen",
+  "what": "the TypeScript walk does not refuse a cycle through a correlation",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (bad.length > 0) {\n      const text = (i: number): string => this.dsNodeText(nodes[i]);",
+    "    if (bad.length > 0 && bad.length < 0) {\n      const text = (i: number): string => this.dsNodeText(nodes[i]);"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_cycle": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_ds_no_demote",
+  "what": "the TypeScript peel takes no component by its data",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (demote.size === 0) return null;",
+    "    if (demote.size >= 0) return null;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "the world does not evaluate",
+   "agg_datastrat_tree": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_hole_uncarried",
+  "what": "the TypeScript engine does not carry what a hole left unknown between the layers of a stratified component",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0) return;\n    this.closePlainRules(comp.round + 1);",
+    "    if (true as boolean) return;\n    this.closePlainRules(comp.round + 1);"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_holes": "adh_leak"
+  }
+ },
+ {
+  "id": "ts_ds_builtin_dead",
+  "what": "the TypeScript walk fails the branch of a builtin it cannot decide",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (!this.dsDecides(op, l, r, s)) return s;",
+    "    if (!this.dsDecides(op, l, r, s)) return null;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong"
+  }
+ },
+ {
+  "id": "ts_ds_layer_flat",
+  "what": "the TypeScript layer is the greatest below it, not one more",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "d = Math.max(d, depth[k] + (isAgg(j) ? 1 : 0));",
+    "d = Math.max(d, depth[k]);"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_eval": "ads_wrong",
+   "agg_datastrat_tree": "dt_wrong"
+  }
+ },
+ {
+  "id": "ts_ds_comps_unordered",
+  "what": "the TypeScript engine runs two components of one round in the order of their names",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      let first = comps.findIndex((_, i) => !readsAnother(i));",
+    "      let first = 0 * comps.findIndex((_, i) => !readsAnother(i));"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_two": "d2_wrong"
+  }
+ },
 ];
 
 // ------------------------------------------------------------ the switches

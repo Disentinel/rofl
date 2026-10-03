@@ -361,7 +361,7 @@ function main(): void {
   // -- 3 ---------------------------------------------------------------------
   rule('3. the same tree, unprojected: the kernel\'s own why');
   say('`huh` above is a PROJECTION onto cells. The kernel\'s tree goes through the');
-  say('inside of the formula, and this is it for one cell of the chain, so the');
+  say('inside of the formula, and this is it for one cell of the model, so the');
   say('projection can be checked rather than believed.');
   say();
   const small = 'Cost of capital worksheet!I6';

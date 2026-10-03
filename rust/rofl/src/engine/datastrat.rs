@@ -107,15 +107,15 @@ impl Eval {
     /// when there is no such component or the program stalls anyway.
     pub(super) fn take_data_components(&mut self, stalled: &Peel, lats: &[Sym], dom_edges: &[(Sym, Sym)]) -> Option<Peel> {
         let barred = |rel: Sym| {
-            self.lattices.contains_key(&rel)
+            brk!("ds_barred_ignored" => false; self.lattices.contains_key(&rel)
                 || self.subs.contains_key(&rel)
                 || self.carried.contains_key(&rel)
                 || self.demand_rels.iter().any(|(d, _)| *d == rel)
                 || self.tags.count_rel.iter().any(|(p, c)| *p == rel || *c == rel)
-                || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty()))
+                || self.rules.iter().any(|r| r.clause.head.rel == rel && (r.has_thr || r.lat_close.is_some() || !r.lattice_outer.is_empty())))
         };
         let (demote, mut comps) = data_demotable(stalled, &barred);
-        if demote.is_empty() {
+        if brk!("ds_no_demote" => true; demote.is_empty()) {
             return None;
         }
         let again = peel_rounds(&self.rules, &self.v, lats, dom_edges, &demote);
@@ -126,7 +126,16 @@ impl Eval {
             let least = |s: &HashSet<Sym>| s.iter().map(|r| self.h.name(*r).to_string()).min_by(|x, y| cmp_js(x, y)).unwrap_or_default();
             cmp_js(&least(a), &least(b))
         });
-        for rels in comps {
+        // two components of one round are run the one that reads the other last: what it reads is
+        // closed only when that one has run
+        let deps = self.rel_deps();
+        let mut ordered: Vec<HashSet<Sym>> = Vec::new();
+        while !comps.is_empty() {
+            let reads_another = |i: usize| (0..comps.len()).any(|j| j != i && comps[i].iter().any(|a| comps[j].iter().any(|b| reaches_in(&deps, *a, *b))));
+            let first = brk!("ds_comps_unordered" => 0; (0..comps.len()).find(|i| !reads_another(*i)).unwrap_or(0));
+            ordered.push(comps.remove(first));
+        }
+        for rels in ordered {
             let round = rels.iter().filter_map(|r| again.round.get(r)).copied().next().unwrap_or(0);
             let elems: Vec<(Sym, u32)> = again
                 .demoted
@@ -143,7 +152,7 @@ impl Eval {
     /// Whether the correlation `mk` of a data-stratified element may be read
     /// now: it has been released.
     pub(super) fn ds_gate(&self, mk: &AggKey) -> Result<bool, Halt> {
-        if !self.ds_released.contains(mk) {
+        if brk!("ds_seal_early" => false; !self.ds_released.contains(mk)) {
             if self.ds_strict {
                 return Err(Halt::Bug(format!(
                     "a correlation of {} was met that the data walk never reached",
@@ -193,7 +202,7 @@ impl Eval {
     /// What a hole in the component left unknown, carried before the next layer
     /// reads it: the component is closed as far as the carry is concerned.
     fn ds_carry(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        if self.plain_pending.is_empty() && self.plain_undecided.is_empty() && self.lat_undecided.is_empty() {
+        if brk!("ds_hole_uncarried" => true; self.plain_pending.is_empty() && self.plain_undecided.is_empty() && self.lat_undecided.is_empty()) {
             return Ok(());
         }
         self.close_plain_rules(comp.round + 1)?;
@@ -211,7 +220,7 @@ impl Eval {
                 Err(Halt::Strat(
                     format!(
                         "program rejected: {op} in rule {} reads {inner}, which depends on the rule's own conclusion {head}: \
-                         an aggregate reads a closed relation, and its correlation is bound by {inner}'s own component, \
+                         an aggregate reads a closed relation, and its correlation is bound by a relation of the component, \
                          so no cell of it can be named before the data is known (docs/aggregates.md, \"Data-level stratification, as built\")",
                         self.h.name(rid)
                     ),
@@ -285,13 +294,14 @@ impl Eval {
         let mut roots: Vec<usize> = Vec::new();
         for r in &owners {
             let mut out = Vec::new();
-            self.ds_walk(comp, r.id, &r.plan, Subst::new(), &mut out)?;
+            self.ds_walk(comp, r.id, r.plan.iter().collect(), Subst::new(), &mut out)?;
             for n in out {
                 if matches!(n, Node::Agg(_)) {
                     roots.push(g.id(n, &mut todo));
                 }
             }
         }
+        brk!("ds_root_dropped" => { roots.pop(); }; ());
         while let Some(i) = todo.pop() {
             let mut out = Vec::new();
             match g.nodes[i].clone() {
@@ -304,7 +314,7 @@ impl Eval {
                             }
                         }
                         if let Some(s) = s.filter(|_| r.clause.head.args.len() == args.len()) {
-                            self.ds_walk(comp, r.id, &r.plan, s, &mut out)?;
+                            self.ds_walk(comp, r.id, r.plan.iter().collect(), s, &mut out)?;
                         }
                     }
                 }
@@ -320,9 +330,8 @@ impl Eval {
                     for (n, i) in plan.corr.iter().enumerate() {
                         s = s.and_then(|x| unify(&self.h, Term::var(a.shared[*i]), corr[n], &x));
                     }
-                    let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
                     if let Some(s) = s {
-                        self.ds_walk(comp, rid, &inner, s, &mut out)?;
+                        self.ds_walk(comp, rid, plan.inner_order.iter().map(|i| &a.body[*i]).collect(), s, &mut out)?;
                     }
                 }
             }
@@ -344,6 +353,7 @@ impl Eval {
         let is_agg = |i: usize| matches!(g.nodes[i], Node::Agg(_));
         // a cycle through a correlation is a cycle in the data
         let mut bad: Vec<usize> = (0..n).filter(|i| is_agg(*i) && (size[&comp_of[*i]] > 1 || g.succ[*i].contains(i))).collect();
+        brk!("ds_cycle_unseen" => bad.clear(); ());
         if !bad.is_empty() {
             bad.sort_by(|a, b| cmp_js(&self.node_text(&g.nodes[*a]), &self.node_text(&g.nodes[*b])));
             return Err(Halt::Strat(self.ds_cycle(comp, &g, &comp_of, bad[0]), String::new()).into());
@@ -361,7 +371,7 @@ impl Eval {
                 for j in &g.succ[*i] {
                     let k = comp_of[*j];
                     if k != c {
-                        d = d.max(depth[k] + usize::from(is_agg(*j)));
+                        d = d.max(depth[k] + brk!("ds_layer_flat" => 0; usize::from(is_agg(*j))));
                     }
                 }
             }
@@ -423,9 +433,27 @@ impl Eval {
         )
     }
 
+    /// Which of `body` is read next under `s`: a premise outside the component
+    /// first, for it binds what the patterns after it name; then a builtin that
+    /// can be decided; then the first, in the rule's plan.
+    fn ds_pick(&mut self, comp: &DsComp, body: &[&BodyElem], s: &Subst) -> usize {
+        if let Some(i) = body.iter().position(|b| matches!(b, BodyElem::Pos(l) if !comp.rels.contains(&l.rel))) {
+            return i;
+        }
+        for (i, b) in body.iter().enumerate() {
+            if matches!(b, BodyElem::Bi { op, l, r } if self.ds_decides(*op, *l, *r, s)) {
+                return i;
+            }
+        }
+        0
+    }
+
     /// The nodes the rest of `body` reads under `s`, pushed to `out`.
-    fn ds_walk(&mut self, comp: &DsComp, rid: Sym, body: &[BodyElem], s: Subst, out: &mut Vec<Node>) -> Result<(), Fail> {
-        let Some((b, rest)) = body.split_first() else { return Ok(()) };
+    fn ds_walk(&mut self, comp: &DsComp, rid: Sym, mut rest: Vec<&BodyElem>, s: Subst, out: &mut Vec<Node>) -> Result<(), Fail> {
+        if rest.is_empty() {
+            return Ok(());
+        }
+        let b = rest.remove(self.ds_pick(comp, &rest, &s));
         match b {
             BodyElem::Pos(l) if comp.rels.contains(&l.rel) => {
                 let args: Vec<Option<Term>> = l
@@ -433,7 +461,7 @@ impl Eval {
                     .iter()
                     .map(|a| {
                         let t = resolve(&mut self.h, *a, &s);
-                        self.h.is_ground(t).then_some(t)
+                        self.h.is_ground(t).then_some(t).filter(|_| brk!("ds_wild_keys" => false; true))
                     })
                     .collect();
                 out.push(Node::Pat(l.rel, args.into()));
@@ -441,7 +469,7 @@ impl Eval {
             }
             BodyElem::Pos(l) => {
                 for (s2, _) in self.match_premise(l, &s, 0, None)? {
-                    self.ds_walk(comp, rid, rest, s2, out)?;
+                    self.ds_walk(comp, rid, rest.clone(), s2, out)?;
                 }
                 Ok(())
             }
@@ -451,7 +479,7 @@ impl Eval {
                 None => Ok(()),
             },
             BodyElem::Agg(a) if a.op == AggOp::AtLeast => {
-                self.ds_walk(comp, rid, &a.body, s.clone(), out)?;
+                self.ds_walk(comp, rid, a.body.iter().collect(), s.clone(), out)?;
                 self.ds_walk(comp, rid, rest, s, out)
             }
             BodyElem::Agg(a) => {
@@ -476,18 +504,22 @@ impl Eval {
     /// of the component stands in it, holds. A fault it makes is no fault of
     /// the evaluation.
     fn ds_builtin(&mut self, op: Sym, l: Term, r: Term, s: &Subst) -> Option<Subst> {
-        if op == self.v.op_in || op == self.v.op_subset {
-            return Some(s.clone());
-        }
-        let (lt, rt) = (resolve(&mut self.h, l, s), resolve(&mut self.h, r, s));
-        let (gl, gr) = (self.h.is_ground(lt), self.h.is_ground(rt));
-        let decides = if op == self.v.op_is { gr } else if op == self.v.op_eq { true } else { gl && gr };
-        if !decides {
-            return Some(s.clone());
+        if !self.ds_decides(op, l, r, s) {
+            return brk!("ds_builtin_dead" => None; Some(s.clone()));
         }
         let saved = (self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let out = self.eval_builtin(op, l, r, s, None);
         (self.fault, self.fault_count, self.last_fault, self.last_fault_rule) = saved;
         out
+    }
+
+    /// Whether the operands a builtin needs are known under `s`.
+    fn ds_decides(&mut self, op: Sym, l: Term, r: Term, s: &Subst) -> bool {
+        if op == self.v.op_in || op == self.v.op_subset {
+            return false;
+        }
+        let (lt, rt) = (resolve(&mut self.h, l, s), resolve(&mut self.h, r, s));
+        let (gl, gr) = (self.h.is_ground(lt), self.h.is_ground(rt));
+        if op == self.v.op_is { gr } else if op == self.v.op_eq { true } else { gl && gr }
     }
 }

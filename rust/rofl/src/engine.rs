@@ -10297,15 +10297,13 @@ pub struct Peel {
     /// `(rule, head, inner)`: an aggregate in `rule` concluding `head` reads
     /// `inner`. Strict, like a negation.
     pub agg_edges: Vec<(Sym, Sym, Sym)>,
-    /// What each relation reads, positively and strictly; the strict edges only
-    /// a body aggregate wrote (`soft`) and those anything else did (`hard`);
-    /// and `(rule, at)` of every aggregate element whose edge `demote` made
-    /// positive. `data_demotable` reads them (docs/aggregates.md, "Data-level
-    /// stratification, as built").
+    /// What each relation reads, positively and strictly; the strict edges a
+    /// body aggregate wrote (`soft`); and `(rule, at)` of every aggregate
+    /// element whose edge `demote` made positive. `data_demotable` reads them
+    /// (docs/aggregates.md, "Data-level stratification, as built").
     pub pos: HashMap<Sym, HashSet<Sym>>,
     pub neg: HashMap<Sym, HashSet<Sym>>,
     pub soft: HashSet<(Sym, Sym)>,
-    pub hard: HashSet<(Sym, Sym)>,
     pub demoted: Vec<(Sym, u32)>,
 }
 
@@ -10335,7 +10333,7 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
     let mut neg: HashMap<Sym, HashSet<Sym>> = HashMap::new();
     let mut heads: HashSet<Sym> = HashSet::new();
     let mut agg_edges: Vec<(Sym, Sym, Sym)> = Vec::new();
-    let (mut soft, mut hard): (HashSet<(Sym, Sym)>, HashSet<(Sym, Sym)>) = (HashSet::new(), HashSet::new());
+    let mut soft: HashSet<(Sym, Sym)> = HashSet::new();
     let mut demoted: Vec<(Sym, u32)> = Vec::new();
     let reflected = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.hole];
     for r in rules {
@@ -10350,14 +10348,12 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
             match b {
                 BodyElem::Pos(l) if r.lattice_outer.contains(&l.rel) => {
                     neg.get_mut(&hrel).unwrap().insert(l.rel);
-                    hard.insert((hrel, l.rel));
                 }
                 BodyElem::Pos(l) => {
                     pos.get_mut(&hrel).unwrap().insert(l.rel);
                 }
                 BodyElem::Neg(l) => {
                     neg.get_mut(&hrel).unwrap().insert(l.rel);
-                    hard.insert((hrel, l.rel));
                 }
                 // A THRESHOLD reads its inner body as premises: positive
                 // edges (recursion allowed) and strict negations. Its cells
@@ -10370,7 +10366,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
                             }
                             BodyElem::Neg(l) => {
                                 neg.get_mut(&hrel).unwrap().insert(l.rel);
-                                hard.insert((hrel, l.rel));
                             }
                             _ => {}
                         }
@@ -10378,7 +10373,7 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
                     for h in reflected {
                         heads.insert(h);
                         pos.entry(h).or_default();
-                        brk!("thr_peel_cells" => { neg.entry(h).or_default(); }; { neg.entry(h).or_default().insert(hrel); hard.insert((h, hrel)); });
+                        brk!("thr_peel_cells" => { neg.entry(h).or_default(); }; { neg.entry(h).or_default().insert(hrel); });
                     }
                 }
                 BodyElem::Agg(_) => {
@@ -10398,8 +10393,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
                             neg.entry(h).or_default().insert(l.rel);
                             if h == hrel {
                                 soft.insert((h, l.rel));
-                            } else {
-                                hard.insert((h, l.rel));
                             }
                         });
                         agg_edges.push((r.id, hrel, l.rel));
@@ -10412,7 +10405,7 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
     for (p, b) in dom_edges {
         heads.insert(*p);
         pos.entry(*p).or_default();
-        brk!("dominance_edge_positive" => { pos.entry(*p).or_default().insert(*b); }; { neg.entry(*p).or_default().insert(*b); hard.insert((*p, *b)); });
+        brk!("dominance_edge_positive" => { pos.entry(*p).or_default().insert(*b); }; { neg.entry(*p).or_default().insert(*b); });
     }
     for m in [v.lattice_member, v.lattice_member_prem, v.hole, v.dominated_by] {
         if lattices.is_empty() {
@@ -10421,7 +10414,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
         heads.insert(m);
         pos.entry(m).or_default();
         neg.entry(m).or_default().extend(lattices.iter().copied());
-        hard.extend(lattices.iter().map(|l| (m, *l)));
     }
     if !lattices.is_empty() && brk!("lattice_hole_unranked" => false; true) {
         let reads = |h: &Sym| pos[h].iter().chain(neg[h].iter()).copied().collect::<Vec<Sym>>();
@@ -10439,9 +10431,7 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
         let reached = grow(lattices.iter().copied().collect(), &|h, set| {
             !hole_readers.contains(h) && reads(h).iter().any(|x| set.contains(x))
         });
-        let reached: Vec<Sym> = reached.into_iter().filter(|h| !hole_readers.contains(h)).collect();
-        hard.extend(reached.iter().map(|h| (v.hole, *h)));
-        neg.get_mut(&v.hole).unwrap().extend(reached);
+        neg.get_mut(&v.hole).unwrap().extend(reached.into_iter().filter(|h| !hole_readers.contains(h)));
     }
     // WHAT READS `unknown` SITS ABOVE EVERYTHING ELSE (docs/aggregates.md,
     // "Shrugs, as built"): `unknown(A)` of an A a hole left out is a shrug,
@@ -10465,7 +10455,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
             heads.insert(m);
             pos.entry(m).or_default();
             neg.entry(m).or_default().extend(below.iter().copied());
-            hard.extend(below.iter().map(|b| (m, *b)));
         }
     }
     let mut all: HashSet<Sym> = heads.clone();
@@ -10528,7 +10517,6 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
                 pos,
                 neg,
                 soft,
-                hard,
                 demoted,
             };
         }
@@ -10546,18 +10534,17 @@ pub fn peel_rounds(rules: &[Rc<ERule>], v: &Vocab, lattices: &[Sym], dom_edges: 
         pos,
         neg,
         soft,
-        hard,
         demoted,
     }
 }
 
 /// THE COMPONENTS A DATA-LEVEL STRATIFICATION MAY TAKE, from a peel that
-/// stalled: a strongly connected component of the relations it left whose
-/// every strict edge is a body aggregate's (`soft`, and `hard` has none of
-/// its own) and which no relation `barred` names. The answer is the aggregate
-/// edges inside such a component, `(head, inner)`; `peel_rounds` run again
-/// with them demoted ranks the component as one round. The components come
-/// with it, as sets of relations, in the order of their least relation.
+/// stalled: a strongly connected component of the relations it left with an
+/// aggregate's edge in it (`soft`) and no relation `barred` names. The answer is
+/// the aggregate edges inside such a component, `(head, inner)`; `peel_rounds`
+/// run again with them demoted ranks the component as one round, unless another
+/// strict edge of it (a negation, a dominance) keeps it stalled, and then the
+/// program is refused as it was. The components come with it, as sets of relations.
 pub fn data_demotable(p: &Peel, barred: &dyn Fn(Sym) -> bool) -> (HashSet<(Sym, Sym)>, Vec<HashSet<Sym>>) {
     let at: HashMap<Sym, usize> = p.stuck.iter().enumerate().map(|(i, r)| (*r, i)).collect();
     let mut succ: Vec<Vec<usize>> = vec![Vec::new(); p.stuck.len()];
@@ -10567,9 +10554,8 @@ pub fn data_demotable(p: &Peel, barred: &dyn Fn(Sym) -> bool) -> (HashSet<(Sym, 
         }
     }
     let comp = tarjan(&succ);
-    let mut unclean: HashSet<usize> = p.stuck.iter().filter(|r| barred(**r)).map(|r| comp[at[r]]).collect();
+    let unclean: HashSet<usize> = p.stuck.iter().filter(|r| barred(**r)).map(|r| comp[at[r]]).collect();
     let inside = |(a, b): &(Sym, Sym)| at.get(a).zip(at.get(b)).filter(|(x, y)| comp[**x] == comp[**y]).map(|(x, _)| comp[*x]);
-    unclean.extend(p.hard.iter().filter_map(inside));
     let mut out: HashSet<(Sym, Sym)> = HashSet::new();
     let mut comps: std::collections::BTreeMap<usize, HashSet<Sym>> = std::collections::BTreeMap::new();
     for e in &p.soft {

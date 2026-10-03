@@ -1362,6 +1362,51 @@ brk("retract_consumers_kept"). brk_kind("retract_consumers_kept", switch).
 brk_expects("retract_consumers_kept", "agg_incr_readers").
 brk("stale_holes_kept"). brk_kind("stale_holes_kept", switch).
 brk_expects("stale_holes_kept", "agg_incr_stale").
+brk("ds_seal_early"). brk_kind("ds_seal_early", switch).
+brk_expects("ds_seal_early", "agg_datastrat_eval").
+brk_expects("ds_seal_early", "agg_datastrat_tree").
+brk_expects("ds_seal_early", "agg_datastrat_tick").
+brk_expects("ds_seal_early", "agg_datastrat_holes").
+brk("ds_layer_flat"). brk_kind("ds_layer_flat", switch).
+brk_expects("ds_layer_flat", "agg_datastrat_eval").
+brk_expects("ds_layer_flat", "agg_datastrat_tree").
+brk("ds_cycle_unseen"). brk_kind("ds_cycle_unseen", switch).
+brk_expects("ds_cycle_unseen", "agg_datastrat_cycle").
+brk("ds_no_demote"). brk_kind("ds_no_demote", switch).
+brk_expects("ds_no_demote", "agg_datastrat_eval").
+brk_expects("ds_no_demote", "agg_datastrat_tree").
+brk("ds_barred_ignored"). brk_kind("ds_barred_ignored", switch).
+brk_expects("ds_barred_ignored", "agg_datastrat_cycle").
+brk("ds_wild_keys"). brk_kind("ds_wild_keys", switch).
+brk_expects("ds_wild_keys", "agg_datastrat_eval").
+brk_expects("ds_wild_keys", "agg_datastrat_tree").
+brk("ds_builtin_dead"). brk_kind("ds_builtin_dead", switch).
+brk_expects("ds_builtin_dead", "agg_datastrat_eval").
+brk("ds_hole_uncarried"). brk_kind("ds_hole_uncarried", switch).
+brk_expects("ds_hole_uncarried", "agg_datastrat_holes").
+brk("ds_root_dropped"). brk_kind("ds_root_dropped", switch).
+brk_expects("ds_root_dropped", "agg_datastrat_eval").
+brk("ds_comps_unordered"). brk_kind("ds_comps_unordered", switch).
+brk_expects("ds_comps_unordered", "agg_datastrat_two").
+brk("ds_delta_allowed"). brk_kind("ds_delta_allowed", switch).
+brk_expects("ds_delta_allowed", "agg_datastrat_retract").
+brk("ts_ds_seal_early"). brk_kind("ts_ds_seal_early", ts).
+brk_expects("ts_ds_seal_early", "agg_datastrat_eval").
+brk_expects("ts_ds_seal_early", "agg_datastrat_tree").
+brk("ts_ds_cycle_unseen"). brk_kind("ts_ds_cycle_unseen", ts).
+brk_expects("ts_ds_cycle_unseen", "agg_datastrat_cycle").
+brk("ts_ds_no_demote"). brk_kind("ts_ds_no_demote", ts).
+brk_expects("ts_ds_no_demote", "agg_datastrat_eval").
+brk_expects("ts_ds_no_demote", "agg_datastrat_tree").
+brk("ts_ds_hole_uncarried"). brk_kind("ts_ds_hole_uncarried", ts).
+brk_expects("ts_ds_hole_uncarried", "agg_datastrat_holes").
+brk("ts_ds_builtin_dead"). brk_kind("ts_ds_builtin_dead", ts).
+brk_expects("ts_ds_builtin_dead", "agg_datastrat_eval").
+brk("ts_ds_layer_flat"). brk_kind("ts_ds_layer_flat", ts).
+brk_expects("ts_ds_layer_flat", "agg_datastrat_eval").
+brk_expects("ts_ds_layer_flat", "agg_datastrat_tree").
+brk("ts_ds_comps_unordered"). brk_kind("ts_ds_comps_unordered", ts).
+brk_expects("ts_ds_comps_unordered", "agg_datastrat_two").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1443,6 +1488,17 @@ switch_site("dominance_why_ghost_unmarked", "rust/rofl/src/engine.rs").
 switch_site("dominance_why_one_member", "rust/rofl/src/engine.rs").
 switch_site("dominance_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("dominance_whynot_unasked", "rust/rofl/src/engine.rs").
+switch_site("ds_barred_ignored", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_builtin_dead", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_comps_unordered", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_cycle_unseen", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_delta_allowed", "rust/rofl/src/engine/delta.rs").
+switch_site("ds_hole_uncarried", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_layer_flat", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_no_demote", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_root_dropped", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_seal_early", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
 switch_site("facts_agg_unwritten", "rust/rofl/src/bin/rofl_render.rs").

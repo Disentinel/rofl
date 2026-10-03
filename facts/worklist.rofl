@@ -3618,7 +3618,7 @@ work_state(w_engine_fire_nonrecursive_rules_once, open).
 
 work(w_agg_data_strat,
   "STRATIFY AN AGGREGATE BY DATA, NOT BY RELATION (f_an_aggregate_is_refused_by_relation_and_not_by_data): a sum or count whose relations form a cycle while its data does not (a spreadsheet formula over cells that are formulas, examples/slop) is refused today. Layer the cells by their depth in the acyclic data (local/modular stratification) and refuse only a true cycle in the data, naming it; both engines, byte parity. ACCEPTANCE: slop's SUM and itotal are kernel aggregates and its host layering is deleted; a data cycle is refused with the cycle named; proof worlds and planted breaks; one semantic review.").
-work_state(w_agg_data_strat, open).
+work_state(w_agg_data_strat, done).
 
 work(w_ts_one_evaluator,
   "ONE TYPESCRIPT EVALUATOR (f_the_two_typescript_evaluators_copy_each_others_methods, f_the_stock_evaluator_and_the_peel_refuse_an_aggregate, f_a_demo_that_casts_into_the_evaluator_breaks_when_its_shape_grows, f_a_cell_is_opened_through_a_cast_and_not_the_port): src/engine.ts Evaluation and src/rounds.ts RoundEvaluation retire onto src/aggeval.ts AggEval, which mirrors rust engine.rs. AggEval gains what only the stock one has (reuse across evaluations, the `stop` callback, naive mode); src/api.ts runs AggEval for every program; one peel for every caller; the demos read an exported schedule and the port, not a cast. ACCEPTANCE: the stock evaluator is deleted, goldens and whycheck unchanged, test:hosts and test:nb green.").

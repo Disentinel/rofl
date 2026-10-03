@@ -1,0 +1,11 @@
+-- examples/checks/agg-datastrat-expect.rofl — the value of every cell of
+-- agg-datastrat-sheet.rofl that has one, derived by hand in that file's header.
+-- The sheet's worlds each ask a different question of it and share this answer.
+ads_expect(a1, 2).  ads_expect(a2, 3).  ads_expect(a3, 5).  ads_expect(a4, 7).
+ads_expect(b1, 5).  ads_expect(b2, 7).  ads_expect(b3, 12). ads_expect(b4, 19).
+ads_expect(c1, 43). ads_expect(c2, 4).  ads_expect(c3, 19).
+ads_expect(d1, 12). ads_expect(d2, 12).
+ads_expect(e1, 55). ads_expect(e2, 55).
+ads_expect(f1, 5).  ads_expect(f2, 7).  ads_expect(f3, 9).
+ads_expect(f4, 11). ads_expect(f5, 13). ads_expect(f6, 15).
+ads_expect(h1, 15). ads_expect(h2, 18).

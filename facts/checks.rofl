@@ -2467,6 +2467,80 @@ proves("agg_linter_demo", agg, count, demo).
 -- naming it. The item owns no cell of the matrix and closes by these worlds.
 check_world("agg_datastrat_eval").
 check_file("agg_datastrat_eval", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_eval", "examples/checks/agg-datastrat-expect.rofl").
 check_file("agg_datastrat_eval", "examples/checks/agg-datastrat-eval-check.rofl").
 check_opt("agg_datastrat_eval", together, 1).
 proves_work("agg_datastrat_eval", w_agg_data_strat).
+
+-- the size of a subtree: a sum and a count over the relation they conclude, a DAG, the empty group of a leaf
+check_world("agg_datastrat_tree").
+check_file("agg_datastrat_tree", "examples/checks/agg-datastrat-tree.rofl").
+check_file("agg_datastrat_tree", "examples/checks/agg-datastrat-tree-check.rofl").
+check_opt("agg_datastrat_tree", together, 1).
+proves_work("agg_datastrat_tree", w_agg_data_strat).
+
+-- a cycle in the data is refused, naming the cells; the sheet beside the six fixtures is not: a cycle through a
+-- sum, through itself, through a formula, through a count of a tree, one the data cannot stratify because a
+-- negation is in it, one it cannot name because a value of the component chooses the range, and one with a
+-- lattice in the component
+check_world("agg_datastrat_cycle").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-expect.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-eval-check.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-1-refused-pair.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-2-refused-self.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-3-refused-long.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-4-refused-tree.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-5-refused-negated.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-6-refused-unkeyed.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl").
+check_opt("agg_datastrat_cycle", together, 1).
+proves_work("agg_datastrat_cycle", w_agg_data_strat).
+
+-- two components of one round: the one that reads the other is run after it, though its name sorts first
+check_world("agg_datastrat_two").
+check_file("agg_datastrat_two", "examples/checks/agg-datastrat-two.rofl").
+check_file("agg_datastrat_two", "examples/checks/agg-datastrat-two-check.rofl").
+check_opt("agg_datastrat_two", together, 1).
+proves_work("agg_datastrat_two", w_agg_data_strat).
+
+-- a hole in a cell reaches the cells that add it, a layer at a time, and no others
+check_world("agg_datastrat_holes").
+check_file("agg_datastrat_holes", "examples/checks/agg-datastrat-holes.rofl").
+check_file("agg_datastrat_holes", "examples/checks/agg-datastrat-holes-check.rofl").
+check_opt("agg_datastrat_holes", together, 1).
+proves_work("agg_datastrat_holes", w_agg_data_strat).
+
+-- why of a sum sealed in the order of the data lists its cells and goes into theirs; whynot says the count that was short
+check_world("agg_datastrat_why").
+check_file("agg_datastrat_why", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_why", "examples/checks/agg-datastrat-why-check.rofl").
+check_opt("agg_datastrat_why", together, 1).
+check_opt("agg_datastrat_why", explain, 1).
+proves_work("agg_datastrat_why", w_agg_data_strat).
+
+-- a running balance, three ticks deep: the cells are stratified again every tick, and a rule stages what one holds
+check_world("agg_datastrat_tick").
+check_file("agg_datastrat_tick", "examples/checks/agg-datastrat-tick.rofl").
+check_file("agg_datastrat_tick", "examples/checks/agg-datastrat-tick-check.rofl").
+check_opt("agg_datastrat_tick", together, 1).
+check_opt("agg_datastrat_tick", ticks, 2).
+check_opt("agg_datastrat_tick", explain, 1).
+proves_work("agg_datastrat_tick", w_agg_data_strat).
+
+-- the budget cuts between two layers: every value there is the sheet's, no cell above the wall has one
+check_world("agg_datastrat_budget").
+check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-expect.rofl").
+check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-budget-check.rofl").
+check_opt("agg_datastrat_budget", together, 1).
+check_opt("agg_datastrat_budget", budget, 230).
+proves_work("agg_datastrat_budget", w_agg_data_strat).
+
+-- a base fact retracted from such a world: the world is evaluated again and is the world without the fact
+check_world("agg_datastrat_retract").
+check_file("agg_datastrat_retract", "examples/checks/agg-datastrat-sheet.rofl").
+check_file("agg_datastrat_retract", "examples/checks/agg-datastrat-retract-check.rofl").
+check_opt("agg_datastrat_retract", together, 1).
+check_opt("agg_datastrat_retract", retract, "input(a4, 7)").
+proves_work("agg_datastrat_retract", w_agg_data_strat).

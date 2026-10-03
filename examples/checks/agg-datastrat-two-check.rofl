@@ -1,0 +1,8 @@
+-- examples/checks/agg-datastrat-two-check.rofl — agg_datastrat_two: the sheet that
+-- reads the other is run after it, whatever the names say: its cells have the
+-- values of the sheets it reads and adds (agg-datastrat-two.rofl).
+d2_want(a1, 8). d2_want(a2, 10). d2_want(a3, 18).
+d2_wrong(C) :- d2_want(C, V), not avalue(C, V).
+d2_extra(C) :- avalue(C, V), not d2_want(C, V), not zvalue(C, V).
+alarm(d2_wrong).
+alarm(d2_extra).

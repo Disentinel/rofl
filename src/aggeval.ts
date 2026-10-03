@@ -395,9 +395,9 @@ export function sinkBuiltins(plan: BodyElem[]): BodyElem[] {
 
 export interface Peel {
   round: Map<string, number>; rounds: number; stalled: boolean; stuck: string[]; aggEdges: [string, string, string][];
-  /** What each relation reads, positively and strictly; the strict edges only a body aggregate wrote (`soft`) and those
-   *  anything else did (`hard`), as `head\u0001read`; and `[rule, at]` of every element whose edge `demote` made positive. */
-  pos: Map<string, Set<string>>; neg: Map<string, Set<string>>; soft: Set<string>; hard: Set<string>; demoted: [string, number][];
+  /** What each relation reads, positively and strictly; the strict edges a body aggregate wrote (`soft`), as
+   *  `head\u0001read`; and `[rule, at]` of every element whose edge `demote` made positive. */
+  pos: Map<string, Set<string>>; neg: Map<string, Set<string>>; soft: Set<string>; demoted: [string, number][];
 }
 const edgeKey = (a: string, b: string): string => `${a}\u0001${b}`;
 
@@ -409,7 +409,7 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
-  const soft = new Set<string>(), hard = new Set<string>();
+  const soft = new Set<string>();
   const demoted: [string, number][] = [];
   const P = (h: string) => { let s = pos.get(h); if (!s) { s = new Set(); pos.set(h, s); } return s; };
   const N = (h: string) => { let s = neg.get(h); if (!s) { s = new Set(); neg.set(h, s); } return s; };
@@ -419,15 +419,15 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
     const hrel = r.clause.head.rel;
     heads.add(hrel); P(hrel); N(hrel);
     for (const b of r.clause.body) {
-      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) { N(hrel).add(b.lit.rel); hard.add(edgeKey(hrel, b.lit.rel)); }
+      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) N(hrel).add(b.lit.rel);
       else if (b.t === 'pos') P(hrel).add(b.lit.rel);
-      else if (b.t === 'neg') { N(hrel).add(b.lit.rel); hard.add(edgeKey(hrel, b.lit.rel)); }
+      else if (b.t === 'neg') N(hrel).add(b.lit.rel);
       else if (b.t === 'agg' && b.op === 'at_least') {
         for (const x of b.body) {
           if (x.t === 'pos') P(hrel).add(x.lit.rel);
-          else if (x.t === 'neg') { N(hrel).add(x.lit.rel); hard.add(edgeKey(hrel, x.lit.rel)); }
+          else if (x.t === 'neg') N(hrel).add(x.lit.rel);
         }
-        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); hard.add(edgeKey(h, hrel)); }
+        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
       } else if (b.t === 'agg') {
         for (const l of litsDeep(b)) {
           for (const h of [hrel, ...reflected]) {
@@ -438,17 +438,17 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
               continue;
             }
             N(h).add(l.rel);
-            (h === hrel ? soft : hard).add(edgeKey(h, l.rel));
+            if (h === hrel) soft.add(edgeKey(h, l.rel));
           }
           aggEdges.push([r.id, hrel, l.rel]);
         }
       }
     }
   }
-  for (const [p, b] of domEdges) { heads.add(p); P(p); N(p).add(b); hard.add(edgeKey(p, b)); }
+  for (const [p, b] of domEdges) { heads.add(p); P(p); N(p).add(b); }
   if (lattices.length > 0) {
     for (const m of [V.lattice_member, V.lattice_member_prem, V.hole, V.dominated_by]) {
-      heads.add(m); P(m); for (const l of lattices) { N(m).add(l); hard.add(edgeKey(m, l)); }
+      heads.add(m); P(m); for (const l of lattices) N(m).add(l);
     }
     const reads = (h: string): string[] => [...(pos.get(h) ?? []), ...(neg.get(h) ?? [])];
     const grow = (seed: Set<string>, from: (h: string, set: Set<string>) => boolean): Set<string> => {
@@ -461,7 +461,7 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
     };
     const holeReaders = grow(new Set([V.hole]), (h, set) => reads(h).some((x) => set.has(x)));
     const reached = grow(new Set(lattices), (h, set) => !holeReaders.has(h) && reads(h).some((x) => set.has(x)));
-    for (const h of reached) if (!holeReaders.has(h)) { N(V.hole).add(h); hard.add(edgeKey(V.hole, h)); }
+    for (const h of reached) if (!holeReaders.has(h)) N(V.hole).add(h);
   }
   const un = IFACE.unknown, sh = 'shrug';
   const readsIn = (h: string, set: Set<string>) => [...(pos.get(h) ?? []), ...(neg.get(h) ?? [])].some((x) => set.has(x));
@@ -473,7 +473,7 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       for (const m of more) cone.add(m);
     }
     const below = [...heads].filter((h) => !cone.has(h));
-    for (const m of [un, sh]) { heads.add(m); P(m); for (const b of below) { N(m).add(b); hard.add(edgeKey(m, b)); } }
+    for (const m of [un, sh]) { heads.add(m); P(m); for (const b of below) N(m).add(b); }
   }
   const all = new Set<string>(heads);
   for (const s of pos.values()) for (const x of s) all.add(x);
@@ -492,16 +492,18 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       if (cand.size === before) break;
     }
     if (cand.size === 0) {
-      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, pos, neg, soft, hard, demoted };
+      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, pos, neg, soft, demoted };
     }
     for (const rel of cand) { settled.add(rel); round.set(rel, n); }
   }
-  return { round, rounds: n, stalled: false, stuck: [], aggEdges, pos, neg, soft, hard, demoted };
+  return { round, rounds: n, stalled: false, stuck: [], aggEdges, pos, neg, soft, demoted };
 }
 
 /** THE COMPONENTS A DATA-LEVEL STRATIFICATION MAY TAKE, from a peel that stalled (`data_demotable`): a strongly connected
- *  component of the relations it left whose every strict edge is a body aggregate's and which no relation `barred` names.
- *  The aggregate edges inside such a component, and the components as sets of relations. */
+ *  component of the relations it left with an aggregate's edge in it and no relation `barred` names. The aggregate edges
+ *  inside such a component, and the components as sets of relations; peeled again with them demoted the component is one
+ *  round, unless another strict edge of it (a negation, a dominance) keeps it stalled, and then the program is refused as
+ *  it was. */
 export function dataDemotable(p: Peel, barred: (rel: string) => boolean): [Set<string>, Set<string>[]] {
   const at = new Map(p.stuck.map((r, i) => [r, i]));
   const succ: number[][] = p.stuck.map(() => []);
@@ -518,7 +520,6 @@ export function dataDemotable(p: Peel, barred: (rel: string) => boolean): [Set<s
     const x = at.get(a), y = at.get(b);
     return x !== undefined && y !== undefined && comp[x] === comp[y] ? comp[x] : null;
   };
-  for (const e of p.hard) { const c = inside(e); if (c !== null) unclean.add(c); }
   const out = new Set<string>();
   const comps = new Map<number, Set<string>>();
   for (const e of p.soft) {
@@ -1360,7 +1361,16 @@ export class AggEval {
     if (again.stalled) return null;
     const least = (set: Set<string>): string => [...set].sort(cmpStr)[0];
     comps.sort((a, b) => cmpStr(least(a), least(b)));
-    for (const rels of comps) {
+    // two components of one round are run the one that reads the other last: what it reads is closed only when that one has run
+    const deps = this.relDeps();
+    const ordered: Set<string>[] = [];
+    while (comps.length > 0) {
+      const readsAnother = (i: number): boolean => comps.some((d, j) => j !== i && [...comps[i]].some((a) => [...d].some((b) => reachesIn(deps, a, b))));
+      let first = comps.findIndex((_, i) => !readsAnother(i));
+      if (first < 0) first = 0;
+      ordered.push(...comps.splice(first, 1));
+    }
+    for (const rels of ordered) {
       let round = 0;
       for (const r of rels) { const n = again.round.get(r); if (n !== undefined) { round = n; break; } }
       const elems = again.demoted.filter(([rid]) => rels.has(this.ruleOf(rid)!.clause.head.rel));
@@ -1432,7 +1442,7 @@ export class AggEval {
     try { return this.dsGraph(comp); } catch (e) {
       if (!(e instanceof DsUnkeyed)) throw e;
       const [head, op, inner] = this.dsElement(e.rid, e.at, comp);
-      throw new Rejected(`program rejected: ${op} in rule ${e.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation, and its correlation is bound by ${inner}'s own component, so no cell of it can be named before the data is known (docs/aggregates.md, "Data-level stratification, as built")`);
+      throw new Rejected(`program rejected: ${op} in rule ${e.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation, and its correlation is bound by a relation of the component, so no cell of it can be named before the data is known (docs/aggregates.md, "Data-level stratification, as built")`);
     }
   }
 
@@ -1546,10 +1556,20 @@ export class AggEval {
     return `program rejected: ${op} in rule ${nd.rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md); in the data the cell reads itself: ${names.join(' -> ')}`;
   }
 
+  /** Which of `body` is read next under `s`: a premise outside the component first, for it binds what the patterns after
+   *  it name; then a builtin that can be decided; then the first, in the rule's plan. */
+  private dsPick(comp: DsComp, body: BodyElem[], s: Subst): number {
+    const closed = body.findIndex((b) => b.t === 'pos' && !comp.rels.has(b.lit.rel));
+    if (closed >= 0) return closed;
+    const bi = body.findIndex((b) => b.t === 'bi' && this.dsDecides(b.op, b.l, b.r, s));
+    return bi >= 0 ? bi : 0;
+  }
+
   /** The nodes the rest of `body` reads under `s`, pushed to `out`. */
   private dsWalk(comp: DsComp, rid: string, body: BodyElem[], s: Subst, out: DsNode[]): void {
     if (body.length === 0) return;
-    const b = body[0], rest = body.slice(1);
+    const at = this.dsPick(comp, body, s);
+    const b = body[at], rest = [...body.slice(0, at), ...body.slice(at + 1)];
     if (b.t === 'pos' && comp.rels.has(b.lit.rel)) {
       out.push({ k: 'p', rel: b.lit.rel, args: b.lit.args.map((a) => { const t = resolve(a, s); return isGround(t) ? t : null; }) });
       this.dsWalk(comp, rid, rest, s, out);
@@ -1582,12 +1602,16 @@ export class AggEval {
   /** A builtin the walk can decide, decided: what it cannot, because a value of the component stands in it, holds. A
    *  fault it makes is no fault of the evaluation. */
   private dsBuiltin(op: string, l: Term, r: Term, s: Subst): Subst | null {
-    if (op === 'in' || op === 'subset') return s;
-    const gl = isGround(resolve(l, s)), gr = isGround(resolve(r, s));
-    const decides = op === 'is' ? gr : op === '=' ? true : gl && gr;
-    if (!decides) return s;
+    if (!this.dsDecides(op, l, r, s)) return s;
     const saved: [string | null, number, string | null, string | null] = [this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
     try { return this.evalBuiltin(op, l, r, s, null); } finally { [this.fault, this.faultCount, this.lastFault, this.lastFaultRule] = saved; }
+  }
+
+  /** Whether the operands a builtin needs are known under `s`. */
+  private dsDecides(op: string, l: Term, r: Term, s: Subst): boolean {
+    if (op === 'in' || op === 'subset') return false;
+    const gl = isGround(resolve(l, s)), gr = isGround(resolve(r, s));
+    return op === 'is' ? gr : op === '=' ? true : gl && gr;
   }
 
   /** THE SHRUG MODEL, set up for one evaluation. */
