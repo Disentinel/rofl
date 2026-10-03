@@ -3295,10 +3295,14 @@ already one derivation, so it has no `others`.
   left is dropped. So an excise of a fact that is one of a member's several
   derivations leaves the count, the sum or the quorum as it was. The
   back-index cites every derivation's facts, not the canonical one's only.
-- The reflection (`agg_member`, `agg_member_prem`) and the host folds
-  (`src/semiring.ts`) still read the canonical derivation: a fold that adds
-  the derivations of a member is the next step
-  (`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).
+- The host folds (`src/semiring.ts`) read every derivation: a member is the
+  semiring sum of its derivations, a Group or Quorum cell the product of its
+  members, so a counting fold counts each derivation and a provenance fold
+  cites each fact (`f_a_semiring_fold_still_reads_one_derivation_of_a_member`).
+  The reflection (`agg_member`, `agg_member_prem`) stays canonical: its only
+  readers are the witness checks, which ask whether a member cites a fact
+  that holds its tuple, and a three-column `agg_member_prem` cannot say which
+  derivation a premise belongs to.
 
 Proofs: the worlds `agg_member_derivs_state`, `agg_member_derivs_retract` and
 `agg_member_derivs_why` (hand-derived rows, `examples/checks/agg-member-derivs*`),
@@ -3742,7 +3746,8 @@ its members, a best cell the sum of those that reach the value, a quorum the
 product of its N members), which is what let `aka`, `wtf`, `goof` and `moot`
 keep their provenance and counts through an aggregate
 (`f_the_semiring_fold_followed_a_cell_as_one`). A quorum has N members, so a
-fold over a threshold is a lower bound when more than N support
-(`f_a_deduplicated_member_keeps_one_derivation`; the cell now records every
-derivation, and the fold still reads the canonical one,
+fold over a threshold is a lower bound when more than N distinct tuples
+support it (the cell holds the N it witnesses); a member of any cell is the
+sum of every derivation of its tuple
+(`f_a_deduplicated_member_keeps_one_derivation`,
 `f_a_semiring_fold_still_reads_one_derivation_of_a_member`).

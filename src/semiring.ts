@@ -55,15 +55,18 @@
 //     every N-subset of the supporters, so a count over it is a lower bound
 //     of the derivation trees a walk would count. A cell with a premise the
 //     store lacks is dead like a firing: Group and Quorum need every member
-//     live, any other cell one. A cell is a node of the support graph
+//     to have a live derivation, any other cell one. A cell is a node of the support graph
 //     of its own: its value is computed once per round and adds no depth, and
 //     the cycle analysis runs through it. A store that cannot open a cell
 //     makes the fold throw rather than read every cell as dead.
-//   * A cell member is ONE derivation per distinct projection (count, sum,
-//     rank, at_least): with it(g,a,2) and it(g,b,2) under count, the total's
-//     provenance cites one of them. The engine records no more; a fold cannot
-//     recover the rest. The provenance product over a large cell is large by
-//     nature, the other semirings stay linear in members.
+//   * A cell member is ONE tuple, and the sum of EVERY derivation of it
+//     (the premises of each, ⊗'d, the derivations ⊕'d): with it(g,a,2) and
+//     it(g,b,2) under count, the total's provenance cites both and a counting
+//     fold counts the two. A member of a quorum is the same, but the cell holds
+//     only the N members it witnesses, so a fold over a threshold stays a lower
+//     bound when more than N distinct tuples support it. The provenance
+//     product over a large cell is large by nature, the other semirings stay
+//     linear in members.
 //   * A support with a premise key absent from the store is dropped as dead.
 //     The fold sees only the support recorded for the CURRENT store state, so
 //     a frozen fact whose tick-scoped premises are gone reads as underivable.
@@ -181,7 +184,7 @@ export function evaluateSemiring<T>(
     if (!edges.has(p.key)) {
       edges.set(p.key, []);
       nodes.push(p.key);
-      edges.set(p.key, cellOf(p.key)!.members.flatMap(edgesOf));
+      edges.set(p.key, cellOf(p.key)!.members.flatMap((m) => m.flatMap(edgesOf)));
     }
     return [p.key];
   });
@@ -221,7 +224,9 @@ export function evaluateSemiring<T>(
       cellValue.set(p.key, sr.one);
       let v: T = c.best ? sr.zero : sr.one;
       for (const m of c.members) {
-        const prod = timesAll(sr, m, premValue);
+        // a member is the sum of every derivation it has, however many solutions of the body gave its tuple
+        let prod: T = sr.zero;
+        for (const d of m) prod = sr.plus(prod, timesAll(sr, d, premValue));
         v = c.best ? sr.plus(v, prod) : sr.times(v, prod);
         if (!c.best && sr.eq(v, sr.zero)) break;
       }
@@ -259,9 +264,10 @@ function timesAll<T>(sr: Ops<T>, prems: PremRef[], val: (p: PremRef) => T, start
   return prod;
 }
 
-/** A sealed cell as the fold reads it: its live members' premises, ⊕'d when
- *  `best` and ⊗'d otherwise. */
-interface CellNode { best: boolean; members: PremRef[][] }
+/** A sealed cell as the fold reads it: its live members, each the premises of
+ *  every derivation it has (⊕'d), the members ⊕'d when `best` and ⊗'d
+ *  otherwise. */
+interface CellNode { best: boolean; members: PremRef[][][] }
 const ONE_CELL: CellNode = { best: false, members: [] };
 
 /** null when the cell is dead: absent, or citing what the store lacks. */
@@ -270,9 +276,10 @@ function openCell(store: FactStore, key: string): CellNode | null {
   if (!rec) return null;
   if (rec.value.k !== 'value') return ONE_CELL;
   const best = opWitness(rec.op as AggOp) !== 'group' && opWitness(rec.op as AggOp) !== 'quorum';
-  const live = rec.members.filter((m) => m.prems.every((p) => p.t !== 'fact' || store.has(p.key)));
+  const standing = (d: PremRef[]): boolean => d.every((p) => p.t !== 'fact' || store.has(p.key));
+  const live = rec.members.map((m) => [m.prems, ...m.others].filter(standing)).filter((m) => m.length > 0);
   if (best ? live.length === 0 && rec.members.length > 0 : live.length < rec.members.length) return null;
-  return { best, members: live.map((m) => m.prems) };
+  return { best, members: live };
 }
 
 /** The rules whose conclusion is written '@next'. A witness naming one was
