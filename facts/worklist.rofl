@@ -3643,3 +3643,28 @@ work_state(w_agg_retract_fallback_tail, done).
 work(w_explain_debug_stack,
   "DONE 2026-10-03: not the explainer. render_tree already walks on a stack of its own; the one overflow, a_whynot_that_meets_a_wall_answers_with_the_wall, is the demand descent walking to the 512 depth wall (solve_demand_rule/solve_body, ~13 KiB a level in debug, 7 MiB against a 2 MiB test thread), present at the base. That test runs on a thread sized for the bounded depth; the whole debug suite is otherwise green.").
 work_state(w_explain_debug_stack, done).
+
+work(w_agg_group_is_a_cell,
+  "EACH GROUP OF A GROUPED AGGREGATE IS A CELL OF ITS OWN (f_a_grouped_aggregate_is_one_cell_for_the_data_walk): seal_cells seals a rule's group variables together, so data-level stratification orders cells only at the grain of the rule and a count over a relation that reads other groups' counts is refused as a cycle (the finding's two-rule world over parent(a,b), parent(b,c)). Seal per group (the group bound in the inner solve) and key the reach memo by group, both engines, byte parity. ACCEPTANCE: that world is accepted and answers what a fresh evaluation by hand gives, a true cycle at the group grain is still refused with the cycle named; the tree and slop worlds and every golden unchanged; a proof world and planted breaks (a group sealed with its neighbours turns it red); one semantic review.").
+work_state(w_agg_group_is_a_cell, open).
+work_spawned(w_agg_group_is_a_cell, f_a_grouped_aggregate_is_one_cell_for_the_data_walk).
+
+work(w_agg_layer_fires_the_new,
+  "A STRATIFIED LAYER FIRES ONLY THE INSTANCES THAT ARE NEW (f_a_stratified_layer_fires_its_rules_whole): each layer of a data-stratified component fires the rules owning its correlations whole (fire_all), d layers by c correlations costs d x c firings (a chain of 300 sums 0.26 s, 2000 15 s). Key a per-rule memory by the elements of an instance (a rule with a count and a sum releases them independently) and fire the instances whose correlations are released this layer, both engines. ACCEPTANCE: a proof world counts the firings of a chain of N sums and they are N, not N x N/2 (census of firings, byte parity between engines), a chain of 2000 sums under one second in release, every golden and why/whynot/excise/retraction output unchanged, a planted break (fire_all back) turns the count red.").
+work_state(w_agg_layer_fires_the_new, open).
+work_spawned(w_agg_layer_fires_the_new, f_a_stratified_layer_fires_its_rules_whole).
+
+work(w_store_compact_wits_keeps_order,
+  "COMPACTING THE WITNESS ARENA KEEPS THE ORDER OF A FACT'S FIRINGS (f_compact_wits_reverses_a_firing_list): rust/rofl/src/store.rs compact_wits rebuilds each list reversed, so the first firing a walk meets changes at a compaction. Rebuild in order. ACCEPTANCE: a store unit test that forces a compaction (wits above 2 x wits_live + 1024) over facts with several firings and asserts the same witnesses_of order and canonical_state before and after, red against the reversed rebuild (a planted break); goldens unchanged.").
+work_state(w_store_compact_wits_keeps_order, open).
+work_spawned(w_store_compact_wits_keeps_order, f_compact_wits_reverses_a_firing_list).
+
+work(w_docs_check_covers_render_js,
+  "docs/js IS GENERATED AND NO GATE SEES IT STALE (second finding of f_a_max_over_base_data_costs_the_self_shard): a rule or phrase edit leaves docs/js out of date with every gate green. Make `npm run docs -- --check` run render:js into a scratch directory and fail on any difference from docs/js (or an equivalent diff). ACCEPTANCE: docs -- --check is green on the tree and red after a one-word edit of a phrase in facts/js-phrases.rofl with docs/js not regenerated; the command list in README/CLAUDE.md regenerates.").
+work_state(w_docs_check_covers_render_js, open).
+work_spawned(w_docs_check_covers_render_js, f_a_max_over_base_data_costs_the_self_shard).
+
+work(w_semiring_names_the_reading,
+  "THE SEMIRING INSTANCE DOCUMENTATION STATES THAT A COUNT HAS NO READING OF ITS OWN (f_counting_reads_oppositely_by_domain): add to src/semiring.ts's header (or docs/aggregates.md's semiring tag section) the five readings (robustness, ambiguity, launderability, fragility, and the reading of the instance's own domain) and the rule that the interpretation belongs to the instance. ACCEPTANCE: the five are named in one place that every counting instance's README links to or repeats, and every examples/*/README.md that folds a count names which reading it takes (grep-checkable).").
+work_state(w_semiring_names_the_reading, open).
+work_spawned(w_semiring_names_the_reading, f_counting_reads_oppositely_by_domain).
