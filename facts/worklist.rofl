@@ -3656,15 +3656,15 @@ work_spawned(w_agg_layer_fires_the_new, f_a_stratified_layer_fires_its_rules_who
 
 work(w_store_compact_wits_keeps_order,
   "COMPACTING THE WITNESS ARENA KEEPS THE ORDER OF A FACT'S FIRINGS (f_compact_wits_reverses_a_firing_list): rust/rofl/src/store.rs compact_wits rebuilds each list reversed, so the first firing a walk meets changes at a compaction. Rebuild in order. ACCEPTANCE: a store unit test that forces a compaction (wits above 2 x wits_live + 1024) over facts with several firings and asserts the same witnesses_of order and canonical_state before and after, red against the reversed rebuild (a planted break); goldens unchanged.").
-work_state(w_store_compact_wits_keeps_order, open).
+work_state(w_store_compact_wits_keeps_order, done).
 work_spawned(w_store_compact_wits_keeps_order, f_compact_wits_reverses_a_firing_list).
 
 work(w_docs_check_covers_render_js,
   "docs/js IS GENERATED AND NO GATE SEES IT STALE (second finding of f_a_max_over_base_data_costs_the_self_shard): a rule or phrase edit leaves docs/js out of date with every gate green. Make `npm run docs -- --check` run render:js into a scratch directory and fail on any difference from docs/js (or an equivalent diff). ACCEPTANCE: docs -- --check is green on the tree and red after a one-word edit of a phrase in facts/js-phrases.rofl with docs/js not regenerated; the command list in README/CLAUDE.md regenerates.").
-work_state(w_docs_check_covers_render_js, open).
+work_state(w_docs_check_covers_render_js, done).
 work_spawned(w_docs_check_covers_render_js, f_a_max_over_base_data_costs_the_self_shard).
 
 work(w_semiring_names_the_reading,
   "THE SEMIRING INSTANCE DOCUMENTATION STATES THAT A COUNT HAS NO READING OF ITS OWN (f_counting_reads_oppositely_by_domain): add to src/semiring.ts's header (or docs/aggregates.md's semiring tag section) the five readings (robustness, ambiguity, launderability, fragility, and the reading of the instance's own domain) and the rule that the interpretation belongs to the instance. ACCEPTANCE: the five are named in one place that every counting instance's README links to or repeats, and every examples/*/README.md that folds a count names which reading it takes (grep-checkable).").
-work_state(w_semiring_names_the_reading, open).
+work_state(w_semiring_names_the_reading, done).
 work_spawned(w_semiring_names_the_reading, f_counting_reads_oppositely_by_domain).

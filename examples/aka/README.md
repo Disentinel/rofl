@@ -1,5 +1,7 @@
 # AKA — bridges between perspectives
 
+**Count reading:** ambiguity — more than one mapping path to the same target is a defect.
+
 Two systems describe the same money. Billing knows **accounts** and the legal
 entities it invoices; the CRM knows **customers**. Neither is a renaming of the
 other: one customer has several accounts, one account covers several legal

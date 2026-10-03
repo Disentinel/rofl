@@ -1,5 +1,7 @@
 # GOOF — Grothendieck Or Other Foundations
 
+**Count reading:** domain — how many ways a law is proved (and so how many proofs must agree), not a measure of robustness.
+
 **One rule set. Nine books. The rules never name a foundation.**
 
 The best advertisement for "rules separate, semantics separate" is not an

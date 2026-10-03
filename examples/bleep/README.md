@@ -1,5 +1,7 @@
 # BLEEP — the parts nobody checked, blacked out
 
+**Count reading:** launderability — how many independent clean routes exist to wash a dirty derivation; zero means nothing can.
+
 A quarterly report whose numbers arrive through channels of differing
 trustworthiness. Some conclusions print as numbers. Some print as `████`.
 

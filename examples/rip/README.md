@@ -1,5 +1,7 @@
 # RIP — Rest In Peace
 
+**Count reading:** fragility — one way home is luck, not strategy.
+
 **Why tasks die in a dead letter queue, and which ones will be next.**
 
 A DLQ is a graveyard. Every system that talks to unreliable providers has one,
