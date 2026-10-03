@@ -57,7 +57,6 @@ export const dedupByProjection = (op: AggOp): boolean =>
   ['invertible', 'threshold', 'holistic'].includes(opClass(op));
 /** Quantile's percent and rank's subject come before the projection. */
 export const opParams = (op: AggOp): number => (op === 'quantile' || op === 'rank' ? 1 : 0);
-export const opRecursive = (op: AggOp): boolean => opClass(op) === 'threshold';
 export const isJoin = (op: AggOp): boolean => opClass(op) === 'idempotent_join';
 export const opIdentity = (op: AggOp): Val | null => (op === 'count' || op === 'sum' ? { k: 'int', v: 0n } : null);
 
@@ -92,7 +91,6 @@ export function fnv64(text: string): string {
 }
 
 const inRange = (n: bigint): boolean => n >= INT_MIN && n <= INT_MAX;
-export const bigOf = (t: Term): bigint | null => (t.k === 'i' ? BigInt(t.v) : null);
 
 /** A member's value as the fold reads it; anything else is `agg_type_error`. */
 export function lift(op: AggOp, t: Term): Val {
@@ -411,14 +409,6 @@ export function openSet(t: Term): Term | null {
   return null;
 }
 
-/** `openSet` of a term the kernel canonicalises as it reads it. */
-export function openSetBelow(t: Term): Term | null {
-  const xs = setElems(t);
-  if (xs === null) return openSet(t);
-  for (const x of xs) { const o = openSet(x); if (o) return o; }
-  return null;
-}
-
 // ------------------------------------------------------ interval functions
 
 export type IvFn = 'ivadd' | 'ivsub' | 'ivmul' | 'ivmeet';
@@ -487,7 +477,6 @@ export function tagTimes(a: TagAlg, x: bigint, y: bigint): bigint {
   if (!inRange(r)) throw new TagFailed('overflow');
   return r;
 }
-export const tagPlus = (a: TagAlg): AggOp => tagOrder(a) ?? 'sum';
 
 // ------------------------------------------------------------------ quorum
 
