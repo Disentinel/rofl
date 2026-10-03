@@ -3050,6 +3050,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "why_cell_id_off",
+  "what": "why writes two different cells under one header with nothing to tell them apart",
+  "expect": {
+   "agg_why_dag_cells": "dgc_missing"
+  }
+ },
+ {
   "id": "why_dag_off",
   "what": "why writes a fact it has written out already in full again, as a tree and not a DAG",
   "expect": {
@@ -4343,8 +4350,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "[aggregate: ${what}, sealed ${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]",
-    "[aggregate: ${what}]${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}"
+    "[aggregate: ${what}, sealed ${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]${id}`));",
+    "[aggregate: ${what}]${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}${id}`));"
    ]
   ],
   "expect": {
@@ -4444,6 +4451,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ts_why_cell_id_off",
+  "what": "TypeScript why writes two different cells under one header with nothing to tell them apart",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "return at === 0 ? '' : ` (cell ${at + 1})`;",
+    "return '';"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag_cells": "dgc_missing"
+  }
+ },
+ {
   "id": "ts_why_dag_off",
   "what": "TypeScript why writes a fact it has written out already in full again",
   "edits": [
@@ -4477,7 +4498,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (at !== undefined && at <= level) {",
+    "if (at !== undefined && at.has(level)) {",
     "if (false) {"
    ]
   ],

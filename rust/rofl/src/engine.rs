@@ -460,6 +460,9 @@ pub struct Eval {
     /// What this `why` has written out in full, a fact or a cell (`true`): a second
     /// reach is a reference, `[above]`.
     why_done: HashSet<(bool, u32)>,
+    /// The cells this `why` has met under each header text (`desc = value`), in
+    /// order: a second cell under one header is told apart by `(cell 2)`.
+    why_heads: HashMap<String, Vec<u32>>,
     /// Cell members `cited_past` walked at the last boundary: each cell once.
     pub past_walks: u64,
     /// `derived_by` rows `why` read for past premises since its last call.
@@ -927,6 +930,7 @@ impl Eval {
             past_rows: None,
             why_unk: None,
             why_done: HashSet::new(),
+            why_heads: HashMap::new(),
             past_walks: 0,
             why_scans: 0,
             agg_plans: HashMap::new(),
@@ -11513,9 +11517,10 @@ struct WnCtx {
     max_nodes: usize,
     nodes: usize,
     path: HashSet<String>,
-    /// The ground literals demonstrated in full, with the shallowest level each
-    /// was written at: one reached again at that level or deeper is referred to.
-    done: HashMap<String, usize>,
+    /// The ground literals demonstrated, with the levels each was written at:
+    /// the depth below a level is what the demonstration shows, so one reached
+    /// again at a level it was written at is referred to, at another written again.
+    done: HashMap<String, HashSet<usize>>,
 }
 
 impl Eval {
@@ -11570,6 +11575,7 @@ impl Eval {
         self.past_rows = None;
         self.why_scans = 0;
         self.why_done.clear();
+        self.why_heads.clear();
         self.why_unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(id, &o);
         self.past_rows = None;
@@ -12036,15 +12042,16 @@ impl Eval {
             // a threshold reached stays reached however its input grows.
             PremRef::Cell(c) if self.store.cell(c).op == AggOp::AtLeast => {
                 let r = self.store.cell(c).clone();
+                let head = self.h.name(r.desc).to_string();
+                let id = self.why_cell_id(&head, c);
                 if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
-                    return next.line(format!("{}{} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                    return next.line(format!("{}{head} [above]{id}", "  ".repeat(indent)));
                 }
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
                 next.line(format!(
-                    "{}{} [quorum: the first {n} member{}]",
+                    "{}{head} [quorum: the first {n} member{}]{id}",
                     "  ".repeat(indent),
-                    self.h.name(r.desc),
                     if n == 1 { "" } else { "s" }
                 ));
                 for (i, m) in members.iter().enumerate() {
@@ -12060,9 +12067,11 @@ impl Eval {
             }
             PremRef::Cell(c) => {
                 let r = self.store.cell(c).clone();
+                let value = self.store.cell_value_text(&self.h, c);
+                let head = format!("{} = {value}", self.h.name(r.desc));
+                let id = self.why_cell_id(&head, c);
                 if !brk!("why_dag_cell_off" => true; self.why_done.insert((true, c))) {
-                    let value = self.store.cell_value_text(&self.h, c);
-                    return next.line(format!("{}{} = {value} [above]", "  ".repeat(indent), self.h.name(r.desc)));
+                    return next.line(format!("{}{head} [above]{id}", "  ".repeat(indent)));
                 }
                 let seals: Vec<String> =
                     self.store.cell_seals(c).iter().map(|x| format!("{}@{}", self.h.name(x.rel), x.round)).collect();
@@ -12073,16 +12082,13 @@ impl Eval {
                 } else {
                     format!("{n} member{}", if n == 1 { "" } else { "s" })
                 };
-                let value = self.store.cell_value_text(&self.h, c);
                 next.line(brk!("no_sealed_text" => format!(
-                    "{}{} = {value} [aggregate: {what}]{}",
+                    "{}{head} [aggregate: {what}]{}{id}",
                     "  ".repeat(indent),
-                    self.h.name(r.desc),
                     seals.join(", ")
                 ); format!(
-                    "{}{} = {value} [aggregate: {what}, sealed {}]",
+                    "{}{head} [aggregate: {what}, sealed {}]{id}",
                     "  ".repeat(indent),
-                    self.h.name(r.desc),
                     seals.join(", ")
                 )));
                 for (i, m) in members.iter().enumerate() {
@@ -12097,6 +12103,18 @@ impl Eval {
                 }
             }
         }
+    }
+
+    /// TWO CELLS CAN WRITE ONE HEADER (a description and a value name neither the
+    /// tick it was sealed in nor the rule): the first met under a header is
+    /// unmarked, a later one ends its lines `(cell N)`, and a reference to it too.
+    fn why_cell_id(&mut self, head: &str, c: CellId) -> String {
+        let ids = self.why_heads.entry(head.to_string()).or_default();
+        let at = ids.iter().position(|x| *x == c).unwrap_or_else(|| {
+            ids.push(c);
+            ids.len() - 1
+        });
+        if at == 0 || brk!("why_cell_id_off" => true; false) { String::new() } else { format!(" (cell {})", at + 1) }
     }
 
     /// A member's premise: of the present tick, or of the tick the cell was
@@ -12880,14 +12898,13 @@ impl Eval {
             return;
         }
         if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
-            let seen_at = ctx.done.get(&ck).copied();
-            if brk!("whynot_dag_off" => false; seen_at.is_some_and(|l| l <= level)) {
+            if brk!("whynot_dag_off" => false; ctx.done.get(&ck).is_some_and(|ls| ls.contains(&level))) {
                 let mut k = String::new();
                 resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &Subst::default(), &mut k);
                 next.push(WnTask::Line(format!("{pad}{k} [above]")));
                 return;
             }
-            ctx.done.insert(ck.clone(), level);
+            ctx.done.entry(ck.clone()).or_default().insert(level);
         }
         ctx.path.insert(ck.clone());
         next.push(WnTask::Failure(lit.clone(), level));

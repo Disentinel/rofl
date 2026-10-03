@@ -546,6 +546,9 @@ check[checks]("facts/goldens.rofl", "agg_unknown_beside_hole_strata", world).
 check[checks]("facts/goldens.rofl", "agg_voting_demo", world).
 check[checks]("facts/goldens.rofl", "agg_wfs_game", world).
 check[checks]("facts/goldens.rofl", "agg_why_dag", world).
+check[checks]("facts/goldens.rofl", "agg_why_dag_cells", world).
+check[checks]("facts/goldens.rofl", "agg_why_dag_cut", world).
+check[checks]("facts/goldens.rofl", "agg_why_dag_past", world).
 check[checks]("facts/goldens.rofl", "agg_widen_budget", world).
 check[checks]("facts/goldens.rofl", "agg_widen_cut", world).
 check[checks]("facts/goldens.rofl", "agg_widen_eval", world).

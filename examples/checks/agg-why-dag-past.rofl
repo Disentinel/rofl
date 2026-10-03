@@ -1,0 +1,28 @@
+-- examples/checks/agg-why-dag-past.rofl — agg_why_dag_past, run with `rofl-load --ticks 1 --explain`.
+-- `p(a,c)` is written as a past-tick premise (`p[main](a,c)  <= r @tick 0 [past tick]`, under `was`) before its
+-- derivation of tick 1. That line begins with the key and carries a firing, and is not a block: a reference
+-- `p[main](a,c) [above]` stands for the first line with the key that is not a leaf (`[past tick]`, `[axiom]`).
+edb(explain_request).
+edb(explained).
+edb(dgp_want).
+edb(e).
+e(a, b).
+e(b, c).
+explain_request(why, two(a, c)).
+explain_request(K, A)@next :- explain_request(K, A).
+p(X, Y) :- e(X, Y).
+p(X, Z) :- p(X, Y), e(Y, Z).
+e(X, Y)@next :- e(X, Y).
+was(X, Y)@next :- p(X, Y).
+top(X, Y) :- was(X, Y), p(X, Y), p(X, Y).
+two(X, Y) :- top(X, Y), p(X, Y).
+dgp_holds(T) :- explained[$explain](why, two(a, c), _, L), dgp_want(T), N is str_segs(L, T), N > 1.
+dgp_want("@tick 0 [past tick]").
+dgp_want("p[main](a,c)  <= r6d6adb01 @tick 1").
+dgp_want("p[main](a,c) [above]").
+dgp_want(T)@next :- dgp_want(T).
+dgp_missing(T) :- dgp_want(T), not dgp_holds(T).
+dgp_refused() :- explained[$explain](_, _, 0, _).
+alarm(dgp_missing).
+alarm(dgp_refused).
+alarm(R)@next :- alarm(R).
