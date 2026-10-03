@@ -737,8 +737,10 @@ function maskTimings(out: string): string {
   // WHITESPACE COLLAPSES ON A MASKED LINE TOO: `153` and `1` mask to the same
   // `#` but leave different column padding behind, so the alignment carried the
   // timing the number no longer did.
+  // A SOURCE DIGEST IS AN ENVIRONMENT READING TOO: `cram` prints a hash of src/, which moves on every edit to src/
+  // whatever the edit (f_a_demo_that_casts_into_the_evaluator_breaks_when_its_shape_grows).
   return out.split('\n')
-    .map((l) => (TIMED.test(l) ? l.replace(NUMS, '#').replace(/ +/g, ' ') : l))
+    .map((l) => (TIMED.test(l) ? l.replace(NUMS, '#').replace(/ +/g, ' ') : l.replace(/\bat digest [0-9a-f]{12}\b/, 'at digest #')))
     .join('\n');
 }
 

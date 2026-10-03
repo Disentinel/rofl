@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, depthBoundedCountingSemiring,
@@ -834,9 +834,9 @@ function main(): void {
   console.log('    cycle is INFORMATION about the program rather than a verdict on it: the two');
   console.log('    relations named are the AND and the OR of the game, and they are supposed to');
   console.log('    depend on each other through negation.');
-  const ev = new Evaluation(r.store);
+  const ev = new AggEval(r.store, 0, 'rounds');
   console.log(`  rules not range-restricted: ${ev.rules.filter((x) => !x.safe).length}`);
-  console.log(`  relations evaluated top-down: ${ev.demandRels.size}`);
+  console.log(`  relations evaluated top-down: ${ev.demandRels.length}`);
   console.log(`  facts in the store: ${r.factKeys().length}`);
   console.log(`  ledgers: ${list(col(r, 'perspective(P)', 'P').filter((x) => x !== 'main'))}`);
   console.log('\n  Two crossings are declared here and both are exercised, so the empty row above');

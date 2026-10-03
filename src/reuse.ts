@@ -73,15 +73,36 @@ export function reusedRec(hits: Set<string>, rec: FactRec): boolean {
   return about !== null && hits.has(about);
 }
 
+/** A 53-bit string hash (cyrb53): wide enough that two programs asked of safety.rofl do not share an answer by accident. */
+export function digest53(str: string): string {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return `${str.length}:${(h2 >>> 0).toString(16)}${(h1 >>> 0).toString(16)}`;
+}
 /** ASK THE KERNEL'S OWN PROGRAM. policy.rofl derives `rule_reads`,
  *  `rule_relation`, `cone` and `opaque_closed`; this copies the caller's
  *  reflection into a store of its own, runs the program there and unpacks the
  *  answer. It decides NOTHING. A store of its own, because the kernel's
  *  program costs in proportion to the program it describes, so a program's
  *  budget would pay for the kernel's questions about it. */
-function policyAnswer(store: FactStore, seed: ReadonlySet<string> | null, solve: (pol: Store) => void): {
-  rels: Set<string>; cone: Map<string, Set<string>>; opaqueClosed: Set<string>;
-} {
+type PolicyAnswer = { rels: Set<string>; cone: Map<string, Set<string>>; opaqueClosed: Set<string> };
+/** What policy.rofl said of a program, by a digest of what it was asked: the same rules asked again (every tick of a world,
+ *  every evaluation after a fact) are answered from here. */
+const policyMemo = new Map<string, PolicyAnswer>();
+const POLICY_MEMO_CAP = 32;
+
+function policyAnswer(store: FactStore, seed: ReadonlySet<string> | null, solve: (pol: Store) => void): PolicyAnswer {
+  const parts: string[] = seed === null ? ['-'] : ['+', ...[...seed].sort()];
+  for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) for (const f of store.relAll(rel)) parts.push(f.key);
+  const memoKey = digest53(parts.join('\n'));
+  const hit = policyMemo.get(memoKey);
+  if (hit !== undefined) return hit;
   const pol = policyStore(POLICY_DENSE);
   for (const rel of [V.concludes, V.premise_pos, V.premise_neg]) {
     for (const f of store.relAll(rel)) pol.add(rel, f.persp, f.args, { scope: 'timeless', base: true });
@@ -104,7 +125,10 @@ function policyAnswer(store: FactStore, seed: ReadonlySet<string> | null, solve:
     for (const f of pol.relAll(rel)) if (f.args[0].k === 'a') out.add(f.args[0].name);
     return out;
   };
-  return { rels: names(IFACE.rule_relation), cone: pairs(IFACE.cone), opaqueClosed: names(IFACE.opaque_closed) };
+  const answer = { rels: names(IFACE.rule_relation), cone: pairs(IFACE.cone), opaqueClosed: names(IFACE.opaque_closed) };
+  if (policyMemo.size >= POLICY_MEMO_CAP) policyMemo.clear();
+  policyMemo.set(memoKey, answer);
+  return answer;
 }
 
 /** THE PLAN. `schedule` is what this evaluation orders its negation phases by:
@@ -157,7 +181,7 @@ export function planReuse(store: FactStore, rules: { id: string; clause: Clause 
   for (const rel of policyAnswer(store, opaque, solve).opaqueClosed) opaque.add(rel);
 
   // (2) the dependency cone of every relation, opaque ones too
-  const cone = first.cone;
+  const cone = new Map(first.cone);
   for (const rel of rels) if (!cone.has(rel)) cone.set(rel, new Set([rel]));
 
   // (3) the fingerprint: the inputs, the rules that transform them, the clock

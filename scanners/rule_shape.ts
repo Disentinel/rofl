@@ -7,7 +7,7 @@
 //   whether a book can stay on disk (see below).
 //   POSITIVE PREMISES — whether each one shares a variable with anything bound
 //   before it. One that shares nothing is a CROSS PRODUCT by construction: the
-//   engine consumes positive premises in the order written (`planBody`,
+//   engine consumes positive premises in the order written (`planBodyAgg`,
 //   src/engine.ts:298, "ONLY NEGATIONS MOVE"), so `fn_node(F), ast_node(R, ...)`
 //   lays every R beside every F and only then filters. Measured on the JS model
 //   of branch modeljs: 272 functions against 291 return statements is 79152
@@ -23,7 +23,7 @@
 // nothing is negated under it", and `main` is negated in every program — so
 // nothing moves. That verdict was derived for the REMOTE case, where a point
 // query is a network round trip. It is too strong for a COLD LOCAL one, and
-// the reason is in `planBody` (src/engine.ts:294): a negation is admitted only
+// the reason is in `planBodyAgg` (src/engine.ts:294): a negation is admitted only
 // when every variable of it is already BOUND or is EXISTENTIAL to that literal,
 // and `addClause` refuses a body that cannot be so ordered. Measured over 3555
 // rules, that refusal never fires — so every negation this kernel will ever
@@ -38,16 +38,16 @@
 // `rules/rule-shape.rofl` classifies; `npm run ruleshape` renders.
 //
 // THE FOLD IS A SECOND IMPLEMENTATION AND IS TREATED AS ONE. Binding order is
-// `planBody`'s judgement, and this file re-walks it to learn what was bound
-// WHERE, which `planBody` does not report. A second implementation of a rule
+// `planBodyAgg`'s judgement, and this file re-walks it to learn what was bound
+// WHERE, which `planBodyAgg` does not report. A second implementation of a rule
 // this repository already owns is the classic way to get a disagreement instead
-// of an answer, so the fold is checked against `planBody`'s own `headGround`
+// of an answer, so the fold is checked against `planBodyAgg`'s own `headGround`
 // and `stuck` on every clause it walks, and any disagreement is printed and
 // counted rather than absorbed.
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parseProgram } from '../src/parser.ts';
-import { planBody } from '../src/engine.ts';
+import { planBodyAgg } from '../src/aggeval.ts';
 import { resolveBook } from '../src/reflect.ts';
 import { varsOf } from '../src/unify.ts';
 import type { BodyElem, Clause, Lit, Term } from '../src/unify.ts';
@@ -101,7 +101,7 @@ export interface Analysis {
   rules: number;
   negSites: number;
   posSites: number;
-  /** disagreements between this fold and `planBody`'s own `headGround` */
+  /** disagreements between this fold and `planBodyAgg`'s own `headGround` */
   disagreements: number;
   /** rules with an aggregate, counted and not shaped (the Rust engine's) */
   aggregates: number;
@@ -150,9 +150,9 @@ for (const { group, path } of programs()) {
       }
     }
 
-    const { plan, stuck, headGround } = planBody(c);
+    const { plan, stuck, ground: headGround } = planBodyAgg(c, true);
 
-    // Which body element each variable occurs in — `planBody`'s own notion of
+    // Which body element each variable occurs in — `planBodyAgg`'s own notion of
     // existential: a variable confined to ONE negative literal.
     const seenIn = new Map<string, Set<number>>();
     const note = (t: Term, where: number) => {
@@ -240,7 +240,7 @@ for (const { group, path } of programs()) {
       else if (b.op === 'is') { if (groundIn(b.r)) bindAll(b.l); }
     }
 
-    // THE CONTROL. `planBody` computes `headGround` with the same fold over the
+    // THE CONTROL. `planBodyAgg` computes `headGround` with the same fold over the
     // same order; if this walk disagrees, this file's binding notion has
     // drifted from the kernel's and every number above is suspect.
     const mine = c.head.args.every(groundIn) && groundIn(c.head.persp);

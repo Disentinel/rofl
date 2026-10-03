@@ -1,6 +1,6 @@
 // api.ts — load, assert, retract, ?, why, whynot, excise, ticks, snapshots.
 
-import { type Term, mka, mkv, mkf, mki, mks, canonTerm, resolve, walk, isGround, varsOf, type Subst, annotateAggs,
+import { type Term, mka, mkf, mki, mks, canonTerm, resolve, isGround, varsOf, type Subst, annotateAggs,
   canonClauseSets, canonLitSets, clauseOpenSet, openSet, setPatternReason, litsOf } from './unify.ts';
 import { parseProgram, parseLiteral } from './parser.ts';
 import type { Clause, Lit } from './unify.ts';
@@ -8,14 +8,14 @@ const KERNEL_CLAIM = '$kernel_authority';
 /** How many rows a store holds with the kernel's bootstrap tables and nothing else: the only store a kernel claim may enter. */
 let bootRows: number | undefined;
 const bootstrapRows = (): number => bootRows ??= (() => { const s = new Store(); bootstrapKernel(s); return s.factCount(); })();
-import { Store, factKey, type FactRec, type FactStore } from './store.ts';
+import { Store, factKey, type FactStore } from './store.ts';
 import {
   V, RESERVED, IFACE, MAIN, ANON_WHO, KERNEL_WHO, ARITY, encodeRule, bootstrapKernel, registerPersp,
-  factMetaFacts, factTerm, canonClause, BUDGET_REASON, unAtomTerm,
+  factMetaFacts, factTerm, canonClause, BUDGET_REASON,
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
-  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, unlist, list as listT,
+  SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, list as listT,
 } from './reflect.ts';
-import { SHRUG, shrugsOf, shrugLine, shrugWhy, shrugAtom } from './shrug.ts';
+import { SHRUG, shrugsOf, shrugLine, shrugAtom } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
@@ -48,10 +48,9 @@ export interface QueryResult { rows: QueryRow[]; partial: boolean; error?: strin
  *  control-flow world 0.614 — so a caller reading this wall as a fact count is
  *  wrong by a factor that happens to be safe, which is how it went unnoticed.
  *
- *  NAMED `EvalReport` AND NOT `EvalOutcome`, because `src/engine.ts` already
- *  exports an `EvalOutcome` of a different shape. Two interfaces of one name in
- *  one kernel is a collision the merge of 2026-09-09 caught and the branch that
- *  introduced it did not. */
+ *  NAMED `EvalReport` AND NOT `EvalOutcome`, because the evaluator has
+ *  its own `Outcome`. Two interfaces of one name in one kernel is a collision
+ *  the merge of 2026-09-09 caught and the branch that introduced it did not. */
 export interface EvalReport { partial: boolean; peakRows: number; space: number; }
 
 /** whynot's demonstration bounds. `depth` counts levels of literal
@@ -86,7 +85,7 @@ export interface EvalOpts {
    *  patience, asked per call. A space is what the machine can hold, which is
    *  a property of the session and not of the question.
    *
-   *  IT WAS UNREACHABLE UNTIL NOW. `Evaluation` has read `opts.space` since it
+   *  IT WAS UNREACHABLE UNTIL NOW. The evaluator has read `space` since it
    *  was written, and nothing ever put it there — so the wall was a hard
    *  500 000 for every caller, and the advice the kernel gives about it could
    *  not be acted on in either direction. Measured on the JS model over a real
@@ -133,11 +132,11 @@ function aggConstructs(c: Clause): boolean {
 
 export class Rofl {
   // The default implementation, and the reference one: mode `memory`.
-  // The declared type stays concrete because `Evaluation` is declared over
-  // `Store` and twenty example programs construct one from `r.store`; what
+  // The declared type stays concrete because `AggEval` is declared over
+  // `Store` and the example programs construct one from `r.store`; what
   // makes the port real here is that NO line in this file reaches past the
   // `FactStore` surface any more, so retyping this field is a one-word
-  // change once src/engine.ts:73 and :94 take the interface.
+  // change once `AggEval` takes the interface.
   store: Store;
   naive: boolean;
   /** Reuse a derived relation across evaluations when nothing it is a
@@ -457,7 +456,7 @@ export class Rofl {
    *  the 23 names that happen to be inert today because of where their reader
    *  looks, and it covers readers not yet written. It is not a substitute for
    *  the guards in `decodeRules` — `Rofl.fromSnapshot` never comes through
-   *  here — and `readStrata` in src/engine.ts is still unguarded at its own
+   *  here — and `readStrata` in src/aggeval.ts is still unguarded at its own
    *  end, so a hand-edited snapshot carrying `stratum/1` can still reach it.
    *  That residue is named rather than papered over. */
   private checkArity(c: Clause): string | null {

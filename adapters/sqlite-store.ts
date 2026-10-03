@@ -519,6 +519,9 @@ export class SqliteStore implements FactStore {
     return r.n;
   }
 
+  /** A fact store held in a database has no aggregate cells (the aggregate evaluator needs the in-memory `Store`), so a fold asked to open one is told so. */
+  cellOf(_key: string): never { throw new Error('semiring fold: this store cannot open a sealed cell'); }
+
   witnessesOf(key: string): Witness[] {
     const rows = this.prep('SELECT sig, ruleId, tick, prems FROM fi WHERE key = ?')
       .all(key) as unknown as { sig: string; ruleId: string; tick: number; prems: string }[];

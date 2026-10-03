@@ -406,7 +406,7 @@ golden_state("agg_widen_why", "85e99210de5551ac", 1150).
 golden_state("agg_widen_witness", "fdc2df61d311267d", 1339).
 golden_state("args_are_terms", "748febefe3c0b5bd", 676).
 golden_state("async_refused", "0946f0a147405a04", 589).
-golden_state("budget_wall", "5e60a2a0d85351a0", 525).
+golden_state("budget_wall", "bb92e1aa0edee2dc", 526).
 golden_state("destructor_hole", "fc3adc8e799f7532", 611).
 golden_state("holes_negation", "a0c6da498354780d", 1681).
 golden_state("holes_negation_scale", "1617a7334c3b749e", 8759).
@@ -20498,7 +20498,7 @@ golden_rel("budget_wall", "flow[main]", 4).
 golden_rel("budget_wall", "flows_to[main]", 4).
 golden_rel("budget_wall", "has_conclusion[$kernel]", 31).
 golden_rel("budget_wall", "has_premise[$kernel]", 55).
-golden_rel("budget_wall", "hole[$kernel]", 1).
+golden_rel("budget_wall", "hole[$kernel]", 2).
 golden_rel("budget_wall", "imports[main]", 3).
 golden_rel("budget_wall", "mode[main]", 16).
 golden_rel("budget_wall", "negated_under[main]", 2).

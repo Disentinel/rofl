@@ -10,8 +10,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { peelRounds } from '../../src/rounds.ts';
-import type { BodyElem } from '../../src/unify.ts';
+import { schedule } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, tropicalSemiring, unitFiringCost, renderCount,
@@ -973,12 +972,8 @@ export function hygiene(r: Rofl, watch: string[]): Hygiene {
   // decoded rules instead. The round a relation settles in IS its level, and a
   // relation still standing when a round settles nothing IS unstratifiable —
   // the same two answers, now read from the schedule that was actually used.
-  // a count waits for its input like a negation; a threshold is monotone and recurses
-  const asRound = (e: BodyElem): BodyElem[] => e.t === 'agg'
-    ? e.body.flatMap((i) => i.t !== 'pos' ? [] : e.op === 'at_least' ? [i] : [{ t: 'neg' as const, lit: i.lit }])
-    : [e];
   const rules = decodeRules(r.store).rules;
-  const peel = peelRounds(rules.map((x) => ({ ...x, clause: { ...x.clause, body: x.clause.body.flatMap(asRound) } })) as never);
+  const peel = schedule(rules);
   const strata = peel.round;
   return {
     rules: rules.length,

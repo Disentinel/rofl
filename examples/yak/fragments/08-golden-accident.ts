@@ -21,7 +21,7 @@
 // replays is the measurement that explains them.
 import { Rofl } from '../../../src/api.ts';
 import { decodeRules } from '../../../src/reflect.ts';
-import { peelRounds } from '../../../src/aggeval.ts';
+import { schedule } from '../../../src/aggeval.ts';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -70,7 +70,7 @@ export function run(): string[] {
     // the schedule that was actually used instead of from a table describing it
     // (the aggregate-aware peel: wtf.rofl has aggregates now, which the plain
     // one refuses).
-    const peel = peelRounds(decodeRules(r.store).rules.map((x) => ({ ...x, latticeOuter: [] })) as never, [], []);
+    const peel = schedule(decodeRules(r.store).rules);
     const levels = [...peel.round.values()];
     out.push(
       `${name.padEnd(19)}${(inGolden ? 'yes' : 'NO').padEnd(20)}${String(peel.round.size).padStart(9)}` +

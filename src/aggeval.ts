@@ -8,8 +8,9 @@
 // engines agree byte for byte on every aggregate proof world: the goldens pin
 // one hash per world and both must reach it. `Rofl` runs it for a store that
 // declares a lattice, a tag or a dominance rule, or reflects a rule with an
-// aggregate or a join read (`storeHasAggregates`); every other program runs
-// on `src/engine.ts` / `src/rounds.ts` exactly as before.
+// aggregate or a join read (`storeHasAggregates`); every other program is run
+// as a plain one (`plain`): planned with the cross-product hold and explained as
+// the plain explainer always has, as the Rust engine does (`Eval::plain`).
 //
 // WHERE THE TWO DIFFER IN SHAPE AND NOT IN ANSWER: a fact's identity is its
 // key string here and a `FactId` there, and wherever the Rust engine orders by
@@ -41,7 +42,7 @@ import {
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText } from './shrug.ts';
 import { tarjan } from './scc.ts';
-import { policyStore, planReuse, noReuse, reusedRec, type ReusePlan } from './reuse.ts';
+import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
 
 // ---------------------------------------------------------------- halting
@@ -210,18 +211,6 @@ interface RuleAnswer {
 /** What safety.rofl said of a program, by a digest of everything it was asked (`safetyAnswer`). */
 const safetyMemo = new Map<string, RuleAnswer>();
 const SAFETY_MEMO_CAP = 64;
-/** A 53-bit string hash (cyrb53): wide enough that two programs asked of safety.rofl do not share an answer by accident. */
-function digest53(str: string): string {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-  for (let i = 0; i < str.length; i++) {
-    const c = str.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761);
-    h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return `${str.length}:${(h2 >>> 0).toString(16)}${(h1 >>> 0).toString(16)}`;
-}
 const emptyAnswer = (): RuleAnswer => ({
   unsafeRules: new Set(), demandRels: [], trigger: new Map(), late: new Set(), readsProvenance: false, aggRefused: [],
   emptyZero: new Set(), readsMembers: false, latticeRefused: [], latticeOuter: new Map(), readsLatticeMembers: false,
@@ -421,12 +410,45 @@ export function sinkBuiltins(plan: BodyElem[]): BodyElem[] {
   return out;
 }
 
-export interface Peel { round: Map<string, number>; rounds: number; stalled: boolean; stuck: string[]; aggEdges: [string, string, string][] }
+export interface Peel {
+  round: Map<string, number>; rounds: number; stalled: boolean; stuck: string[]; aggEdges: [string, string, string][];
+  /** Per round, the relations that settled in it. */
+  layers: string[][];
+  /** The one-hop relation dependency graph the peel was taken over, keyed on the head. */
+  deps: { pos: Map<string, Set<string>>; neg: Map<string, Set<string>> };
+}
+
+/** What a peel reads of a rule. */
+export type PeelRule = Pick<ERule, 'id' | 'clause' | 'latticeOuter'>;
+
+/** THE SCHEDULE of decoded rules, for every caller that asks which round a relation settles in or whether a program
+ *  stratifies: the evaluator's own peel, with the aggregate edges and the lattices of the rules it is given. */
+export function schedule(rules: { id: string; clause: Clause }[]): Peel {
+  return peelRounds(rules.map((r) => ({ id: r.id, clause: r.clause, latticeOuter: [] })), [], []);
+}
+
+/** `dep`'s transitive closure: `reachable(peel).get(A)` holds every relation A depends on, at any number of hops. */
+export function reachable(peel: Peel): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  const oneHop = (rel: string): string[] => [...(peel.deps.pos.get(rel) ?? []), ...(peel.deps.neg.get(rel) ?? [])];
+  for (const rel of peel.round.keys()) {
+    const seen = new Set<string>();
+    const stack = oneHop(rel);
+    while (stack.length > 0) {
+      const x = stack.pop()!;
+      if (seen.has(x)) continue;
+      seen.add(x);
+      stack.push(...oneHop(x));
+    }
+    out.set(rel, seen);
+  }
+  return out;
+}
 
 /** `peel_rounds`: the round number IS the stratum number, and a stall is the
  *  rejection. An aggregate's edge is a negation's; a lattice read from outside
  *  its recursion is strict; what the kernel writes at a close sits above. */
-export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string, string][]): Peel {
+export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][]): Peel {
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
@@ -491,6 +513,8 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
   const round = new Map<string, number>();
   const settled = new Set<string>();
   for (const rel of all) if (!heads.has(rel)) { settled.add(rel); round.set(rel, 0); }
+  const layers: string[][] = [[...settled].sort()];
+  const deps = { pos, neg };
   let n = 0;
   while (settled.size < all.size) {
     n++;
@@ -502,11 +526,12 @@ export function peelRounds(rules: ERule[], lattices: string[], domEdges: [string
       if (cand.size === before) break;
     }
     if (cand.size === 0) {
-      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges };
+      return { round, rounds: n - 1, stalled: true, stuck: [...all].filter((r) => !settled.has(r)).sort(), aggEdges, layers, deps };
     }
     for (const rel of cand) { settled.add(rel); round.set(rel, n); }
+    layers.push([...cand].sort());
   }
-  return { round, rounds: n, stalled: false, stuck: [], aggEdges };
+  return { round, rounds: n, stalled: false, stuck: [], aggEdges, layers, deps };
 }
 
 function levelSplit(rules: ERule[], levelOf: (r: ERule) => number): [number, ERule[]][] {
@@ -640,7 +665,7 @@ export class AggEval {
   wellFounded = false;
   latticeImprovements = 0;
   holeId: Term = HOLE_ID_DEFAULT;
-  private demandRels: [string, ERule[]][] = [];
+  demandRels: [string, ERule[]][] = [];
   private active: ERule[] = [];
   staged = new Map<string, StagedFact>();
   private stagedAlts = new Map<string, [string, PremRef[]][]>();
@@ -1762,7 +1787,10 @@ export class AggEval {
   private wallHole(reason: string): void {
     const why = reason === BUDGET_REASON ? BUDGET_REASON : SPACE_REASON;
     this.holeMet(this.holeId, why);
-    if (this.evalHole([this.holeId, mka(why)])) this.chargeRow(null, false);
+    // A PLAIN PROGRAM'S WALL HOLE IS DELIBERATELY NOT NOTED: this host evaluates on every load and names each load's wall
+    // (hole($load(1), ...), hole($load(2), ...)), and budget_wall pins both
+    const isNew = this.plain ? this.put(V.hole, KERNEL_PERSP, [this.holeId, mka(why)], F_BASE_FROZEN)[0] : this.evalHole([this.holeId, mka(why)]);
+    if (isNew) this.chargeRow(null, false);
   }
 
   /** A RULE WHOSE AGGREGATE safety.rofl REFUSED IS A PROGRAM REJECTED. */

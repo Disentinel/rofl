@@ -29,7 +29,7 @@
 // usage: node --experimental-strip-types scripts/derivations.ts <seed.json> [--ticks N]
 
 import type { FactStore } from '../src/store.ts';
-import { sigOf } from '../src/engine.ts';
+import { firingSig } from '../src/aggeval.ts';
 
 /** Every consequence of deriving this store, as text a second engine can be
  *  held to. Sorted at export; the store's own order is not read. */
@@ -41,7 +41,7 @@ export function derivations(store: FactStore): string {
     // THE WHOLE HYPERGRAPH, one line per firing, sorted by signature. A rule
     // id and a premise list is what a derivation IS; the order they arrived in
     // is what it is not.
-    const sigs = store.witnessesOf(k).map((w) => `${w.ruleId}|${w.prems.map(sigOf).join('|')}`);
+    const sigs = store.witnessesOf(k).map((w) => firingSig(w.ruleId, w.prems));
     for (const s of sigs.sort()) lines.push(`  d ${s}`);
   }
   for (const t of [...store.tickLog].sort()) lines.push(`t ${t}`);

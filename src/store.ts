@@ -331,6 +331,8 @@ export interface FactStore {
   support(key: string, sig: string, w: Witness): boolean;
   supportCount(key: string): number;
   witnessesOf(key: string): Witness[];
+  /** The sealed aggregate cell of this key, if the store holds one (src/aggeval.ts). */
+  cellOf(key: string): CellRec | undefined;
   noteEval(budget: number, steps: number, partial: boolean): void;
   evalOf(tick: number): EvalRecord | undefined;
   advanceTick(staged: { rel: string; persp: string; args: Term[] }[],
@@ -407,6 +409,7 @@ export class Store implements FactStore {
 
   /** The aggregate cells (src/aggeval.ts), by key text. */
   cells = new Map<string, CellRec>();
+  cellOf(key: string): CellRec | undefined { return this.cells.get(key); }
   /** Records a lattice superseded and whose firings are kept as the cell's
    *  history (`retireKeepingFirings`), by key: dead, and still cited. */
   ghosts = new Map<string, FactRec>();
@@ -767,8 +770,8 @@ export class Store implements FactStore {
     // nothing said. `advanceTick` sets the flag and `restore` sets it; this was
     // the one place that dropped facts without it.
     //
-    // Safe inside an evaluation: every internal caller (src/engine.ts:554,
-    // 1046, 1098 and src/rounds.ts:229) runs before that evaluation's own
+    // Safe inside an evaluation: every internal caller (`AggEval.clearDerived`)
+    // runs before that evaluation's own
     // `dirty = false`, so the flag it sets here is cleared by the run that set
     // it. Found by an instrument that returned the expected shape while
     // measuring nothing — see
@@ -776,7 +779,7 @@ export class Store implements FactStore {
     this.dirty = true;
     // AND THE REUSE FINGERPRINTS ARE NOW LIES. `derivedKeys` maps a relation to
     // the fingerprint of the cone that produced it, and `planReuse`
-    // (src/engine.ts:810) reads it as "this relation is already served, do not
+    // (src/reuse.ts) reads it as "this relation is already served, do not
     // run its rules". Dropping the layer without dropping the map leaves the
     // claim standing over facts that are gone, so the next evaluation skips
     // exactly the rules whose output was just deleted — which is the SECOND

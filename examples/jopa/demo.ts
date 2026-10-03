@@ -12,7 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import type { Witness } from '../../src/store.ts';
 import {
@@ -398,7 +398,7 @@ export function mechanicalChecks(r: Rofl, values: Map<string, LogProb>): Checks 
     'undefined_premise[audit](R, Rel)']
     .map((name) => ({ name, rows: r.query(name).rows.length }));
 
-  const ev = new Evaluation(r.store);
+  const ev = new AggEval(r.store, 0, 'rounds');
   const unsafeRules = ev.rules.filter((x) => !x.safe).map((x) => x.canon);
 
   const standardReadByRules: string[] = [];
@@ -433,7 +433,7 @@ export function mechanicalChecks(r: Rofl, values: Map<string, LogProb>): Checks 
     }
   }
   return {
-    audits, unsafeRules, demandRels: ev.demandRels.size, standardReadByRules,
+    audits, unsafeRules, demandRels: ev.demandRels.length, standardReadByRules,
     monotonicityBreaks, uncitedConclusions, operative,
   };
 }

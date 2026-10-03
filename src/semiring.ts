@@ -105,7 +105,7 @@
 // The caller is responsible for having evaluated the store first; `load` and
 // `query` do that.
 
-import type { FactStore, Witness, PremRef, CellRec } from './store.ts';
+import type { FactStore, Witness, PremRef } from './store.ts';
 import { V } from './reflect.ts';
 import { tarjan, indexer } from './scc.ts';
 import { opWitness, type AggOp } from './cell.ts';
@@ -266,9 +266,7 @@ const ONE_CELL: CellNode = { best: false, members: [] };
 
 /** null when the cell is dead: absent, or citing what the store lacks. */
 function openCell(store: FactStore, key: string): CellNode | null {
-  const all = (store as { cells?: Map<string, CellRec> }).cells;
-  if (!all) throw new Error('semiring fold: this store cannot open a sealed cell');
-  const rec = all.get(key);
+  const rec = store.cellOf(key);
   if (!rec) return null;
   if (rec.value.k !== 'value') return ONE_CELL;
   const best = opWitness(rec.op as AggOp) !== 'group' && opWitness(rec.op as AggOp) !== 'quorum';

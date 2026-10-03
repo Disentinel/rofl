@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { Evaluation } from '../../src/engine.ts';
+import { AggEval } from '../../src/aggeval.ts';
 import { evaluateSemiring } from '../../src/semiring.ts';
 import {
   countingSemiring, provenanceSemiring, provenanceOf, renderProvenance,
@@ -41,7 +41,7 @@ export const TIER_CONFIDENCE: Record<string, number> = {
 export const BOOT_RULES: number = (() => {
   const r = new Rofl();
   ok(r.load(BOOT), 'boot.rofl');
-  return new Evaluation(r.store, {}).rules.length;
+  return new AggEval(r.store, 0, 'rounds').rules.length;
 })();
 
 /** The world: boot's meta-kernel plus the two ledgers and the rules. */
@@ -81,7 +81,7 @@ export interface Hygiene {
  *  than the verdicts do. Checked, not assumed (finding
  *  f_rename_leaks_into_the_firing_signature). */
 export function hygiene(r: Rofl): Hygiene {
-  const ev = new Evaluation(r.store, {});
+  const ev = new AggEval(r.store, 0, 'rounds');
   const audits: Record<string, number> = {};
   for (const [name, q] of [
     ['malformed', 'malformed[audit](R)'], ['breach', 'breach[audit](R)'],
@@ -91,7 +91,7 @@ export function hygiene(r: Rofl): Hygiene {
   return {
     rules: ev.rules.length,
     unsafe: ev.rules.filter((x) => !x.safe).map((x) => x.canon),
-    demandRels: ev.demandRels.size,
+    demandRels: ev.demandRels.length,
     unstratified: col(r, 'unstratified(X)', 'X'),
     audits,
     holes: r.query('hole(H, W)').rows.length,
