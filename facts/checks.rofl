@@ -497,6 +497,26 @@ check_opt("agg_why_dag", together, 1).
 check_opt("agg_why_dag", explain, 1).
 proves("agg_why_dag", agg, cell, why).
 
+check_world("agg_why_dag_cells").
+check_file("agg_why_dag_cells", "examples/checks/agg-why-dag-cells.rofl").
+check_opt("agg_why_dag_cells", together, 1).
+check_opt("agg_why_dag_cells", ticks, 1).
+check_opt("agg_why_dag_cells", explain, 1).
+proves("agg_why_dag_cells", agg, cell, why).
+
+check_world("agg_why_dag_past").
+check_file("agg_why_dag_past", "examples/checks/agg-why-dag-past.rofl").
+check_opt("agg_why_dag_past", together, 1).
+check_opt("agg_why_dag_past", ticks, 1).
+check_opt("agg_why_dag_past", explain, 1).
+proves("agg_why_dag_past", agg, cell, why).
+
+check_world("agg_why_dag_cut").
+check_file("agg_why_dag_cut", "examples/checks/agg-why-dag-cut.rofl").
+check_opt("agg_why_dag_cut", together, 1).
+check_opt("agg_why_dag_cut", explain, 1).
+proves("agg_why_dag_cut", agg, cell, why).
+
 -- WELL-FOUNDED WORLDS AND TICKS (w_agg_wfs_ticks; docs/aggregates.md,
 -- "Well-founded worlds and ticks, as built"). The wfs column: a cell under
 -- semantics(well_founded) is refused (each world's `-refused-` fixtures),

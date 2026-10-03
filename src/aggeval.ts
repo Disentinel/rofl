@@ -749,7 +749,11 @@ export class AggEval {
   stagedUnknown = new Map<string, [Unknown, boolean]>();
   private pastRows: Map<string, string[]> | null = null;
   /** What this `why` has written out in full, a fact (`f|`) or a cell (`c|`): a second reach is a reference, `[above]`. */
-  private whyDone = new Set<string>();
+  private whyDone: { has(k: string): boolean; add(k: string): unknown; clear(): void } = new Set<string>();
+  /** False writes the tree, every shared sub-goal in full: what scripts/why_dag.ts expands the references of an answer back to. */
+  dag = true;
+  /** The cells this `why` has met under each header text (`desc = value`), in order: a second cell under one header is told apart by `(cell 2)`. */
+  private whyHeads = new Map<string, string[]>();
   pastWalks = 0;
   whyScans = 0;
   private aggPlans = new Map<string, AggPlan>();
@@ -6443,7 +6447,8 @@ export class AggEval {
     }
     this.pastRows = null;
     this.whyScans = 0;
-    this.whyDone.clear();
+    this.whyDone = this.dag ? new Set<string>() : { has: () => false, add: () => null, clear: () => undefined };
+    this.whyHeads.clear();
     this.whyUnk = this.plain ? this.unknownCtx() : null;
     const out = this.renderTree(key, { members, query: key });
     this.pastRows = null;
@@ -6705,13 +6710,15 @@ export class AggEval {
     const r = this.store.cells.get(pr.key)!;
     const members = r.members;
     const n = members.length;
+    const head = r.op === 'at_least' ? r.desc : `${r.desc} = ${cellValueText(r.value)}`;
+    const id = this.whyCellId(head, pr.key);
     if (this.whyDone.has(`c|${pr.key}`)) {
-      next.push(line(r.op === 'at_least' ? `${pad}${r.desc} [above]` : `${pad}${r.desc} = ${cellValueText(r.value)} [above]`));
+      next.push(line(`${pad}${head} [above]${id}`));
       return;
     }
     this.whyDone.add(`c|${pr.key}`);
     if (r.op === 'at_least') {
-      next.push(line(`${pad}${r.desc} [quorum: the first ${n} member${n === 1 ? '' : 's'}]`));
+      next.push(line(`${pad}${head} [quorum: the first ${n} member${n === 1 ? '' : 's'}]${id}`));
       for (let i = 0; i < n; i++) {
         if (i === o.members) { next.push(line(`${'  '.repeat(indent + 1)}[${n - o.members} more members: why all ${o.query}]`)); break; }
         const m = members[i];
@@ -6721,13 +6728,22 @@ export class AggEval {
       return;
     }
     const what = n === 0 ? 'empty group' : `${n} member${n === 1 ? '' : 's'}`;
-    next.push(line(`${pad}${r.desc} = ${cellValueText(r.value)} [aggregate: ${what}, sealed ${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]`));
+    next.push(line(`${pad}${head} [aggregate: ${what}, sealed ${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]${id}`));
     for (let i = 0; i < n; i++) {
       if (i >= o.members) { next.push(line(`${'  '.repeat(indent + 1)}[${n - o.members} more members: why all ${o.query}]`)); break; }
       const m = members[i];
       next.push(line(`${'  '.repeat(indent + 1)}#${i + 1} ${tupleText(m.proj)} h=${m.height}`));
       for (const p of m.prems) this.renderMemberPrem(pr.key, p, indent + 2, next);
     }
+  }
+
+  /** TWO CELLS CAN WRITE ONE HEADER (a description and a value name neither the tick it was sealed in nor the rule): the first met under a header is unmarked, a later one ends its lines `(cell N)`, and a reference to it too. */
+  private whyCellId(head: string, c: string): string {
+    let ids = this.whyHeads.get(head);
+    if (ids === undefined) { ids = []; this.whyHeads.set(head, ids); }
+    let at = ids.indexOf(c);
+    if (at < 0) { ids.push(c); at = ids.length - 1; }
+    return at === 0 ? '' : ` (cell ${at + 1})`;
   }
 
   /** A member's premise: of the present tick, or of the tick the cell was sealed in. */
@@ -6843,7 +6859,8 @@ export class AggEval {
   }
 
   private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map() };
+    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map<string, Set<number>>() };
+    if (!this.dag) ctx.done.set = () => ctx.done;
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
     if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${this.plain ? shown ?? k : k} holds; nothing to demonstrate`];
@@ -7119,9 +7136,10 @@ export class AggEval {
     const ck = this.cycleKey(lit);
     if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]` }); return; }
     if (isGround(lit.persp) && lit.args.every(isGround)) {
-      const at = ctx.done.get(ck);
-      if (at !== undefined && at <= level) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]` }); return; }
-      ctx.done.set(ck, level);
+      let at = ctx.done.get(ck);
+      if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]` }); return; }
+      if (at === undefined) { at = new Set(); ctx.done.set(ck, at); }
+      at.add(level);
     }
     ctx.path.add(ck);
     next.push({ t: 'failure', lit, level }, { t: 'unpath', ck });
@@ -7247,8 +7265,8 @@ export const WHY_MEMBERS = 5;
 interface WhyOpts { members: number; query: string }
 interface WnCtx {
   maxDepth: number; maxNodes: number; nodes: number; path: Set<string>;
-  /** The ground literals demonstrated in full, with the shallowest level each was written at: one reached again at that level or deeper is referred to. */
-  done: Map<string, number>;
+  /** The ground literals demonstrated, with the levels each was written at: the depth below a level is what the demonstration shows, so one reached again at a level it was written at is referred to, at another it is written again. */
+  done: Map<string, Set<number>>;
 }
 /** One step of `whynot`'s walk (`explainTree`). */
 type WnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: ERule; level: number }

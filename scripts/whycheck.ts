@@ -38,6 +38,7 @@ import { canonTerm } from '../src/unify.ts';
 import { RoflPort, type Walls } from '../runtime/port.ts';
 import { worlds, placed, togetherWorld, expectedRefusal, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
+import { dagProblem } from './why_dag.ts';
 import { unreadOf } from './sentences.ts';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -166,11 +167,17 @@ const exciseText = (removed: string[], added: string[]): string => {
 function expected(r: Rofl, q: Q, budget?: number): A {
   if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   ts ${q.op} ${q.query}\n`);
   try {
-    if (q.op === 'why' || q.op === 'whyall') return r.why(q.query, { budget, all: q.op === 'whyall' });
+    // EVERY `[above]` MUST STAND FOR WHAT IT SAYS: the answer expanded by the rule of scripts/why_dag.ts is the tree the
+    // engine writes with the DAG off; an answer that does not is made to differ from the other engine's
+    const dag = (a: A, tree: () => string): A => { const bad = a.ok ? dagProblem(a.text, tree) : null; return bad === null ? a : { ...a, text: `DAG: ${bad}\n${a.text}` }; };
+    if (q.op === 'why' || q.op === 'whyall') {
+      const a = r.why(q.query, { budget, all: q.op === 'whyall' });
+      return dag(a, () => r.why(q.query, { budget, all: q.op === 'whyall', tree: true }).text);
+    }
     if (q.op === 'whynot') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
       const { holds, text: t } = r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes });
-      return { ok: !/^line \d+: /.test(t), text: t, holds };
+      return dag({ ok: !/^line \d+: /.test(t), text: t, holds }, () => r.whynot(q.query, { budget, depth: q.depth, nodes: q.nodes, tree: true }).text);
     }
     const x = r.excise(q.query, { budget });
     return x.ok ? { ok: true, text: exciseText(x.removed, x.added) } : { ok: false, text: `error: ${x.error}` };
