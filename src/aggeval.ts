@@ -1983,7 +1983,7 @@ export class AggEval {
     this.batch = sorted;
     sorted.forEach((r, i) => {
       this.batchAt = i;
-      mergeFront(this.curFront, this.fireRule(r, null));
+      this.fireRule(r, null);
     });
     [this.batch, this.batchAt] = outer;
     const front = this.curFront;
@@ -2017,18 +2017,18 @@ export class AggEval {
         this.thrRound++;
         this.thrFresh.clear();
         for (const r of [...this.active]) {
-          if (this.naive) { mergeFront(this.curFront, this.fireRule(r, null)); continue; }
+          if (this.naive) { this.fireRule(r, null); continue; }
           if (!r.triggerRels.some((rel) => cur.byRel.has(rel))) continue;
-          if (r.hasDemandPrem) { mergeFront(this.curFront, this.fireRule(r, null)); continue; }
+          if (r.hasDemandPrem) { this.fireRule(r, null); continue; }
           r.plan.forEach((b, i) => {
             if (b.t !== 'pos') return;
             const keys = cur.byRel.get(b.lit.rel);
             if (!keys) return;
-            mergeFront(this.curFront, this.fireRule(r, [i, keys]));
+            this.fireRule(r, [i, keys]);
           });
           if (r.thrRels.some((rel) => cur.byRel.has(rel))) {
             this.thrFocus = this.thrFocusOf(r, cur);
-            try { mergeFront(this.curFront, this.fireRule(r, null)); } finally { this.thrFocus = null; }
+            try { this.fireRule(r, null); } finally { this.thrFocus = null; }
           }
         }
         front = this.curFront;
@@ -2038,17 +2038,16 @@ export class AggEval {
     this.liveFront = outer;
   }
 
-  private fireRule(r: ERule, frontAt: [number, Set<string>] | null): Front {
+  /** One firing of a rule: its conclusions join the round's front, `curFront`. */
+  private fireRule(r: ERule, frontAt: [number, Set<string>] | null): void {
     const wasFiring = this.firing;
     this.firing = true;
     let sols: Sol[];
     try { sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id); } finally { this.firing = wasFiring; }
-    const out = newFront();
     for (const sol of sols) {
       if (this.lattices.size > 0 && sol.prems.some((p) => p.t === 'fact' && !this.alive(p.key))) continue;
-      this.conclude(r, sol, out);
+      this.conclude(r, sol, this.curFront);
     }
-    return out;
   }
 
   private conclude(r: ERule, sol: Sol, out: Front): void {
@@ -2229,6 +2228,8 @@ export class AggEval {
     } finally {
       this.rows -= held;
     }
+    // a body of positive premises all met in the store has nothing to record: its premises are the facts themselves
+    if (body.every((b) => b.t === 'pos') && acc.every((a) => a.prems.every((p) => p.t === 'fact'))) return acc;
     return acc.map((a) => ({ s: a.s, prems: a.prems.map((p, i) => this.recordPrem(body[i], p, a.s)) }));
   }
 
@@ -5429,13 +5430,17 @@ export class AggEval {
     return `${l.rel}[${canonTerm(cv[0])}](${cv.slice(1).map(canonTerm).join(',')})`;
   }
 
-  private indexProbe(l: Lit, s: Subst, persp: string | null): string[] | null {
+  /** The facts of a premise's relation that agree with what is ground in it, when the store indexes it. */
+  private indexProbe(l: Lit, s: Subst, persp: string | null): FactRec[] | null {
     if (!this.store.indexed(l.rel, persp)) return null;
     const pos: number[] = [], vals: string[] = [];
     l.args.forEach((a, i) => { const t = resolve(a, s); if (isGround(t)) { pos.push(i); vals.push(canonTerm(t)); } });
     if (pos.length === 0) return null;
-    const r = this.store.argMatches(l.rel, persp, l.args.length, pos, vals);
-    return r === null ? null : r.map((x) => x.key);
+    return this.store.argMatches(l.rel, persp, l.args.length, pos, vals);
+  }
+
+  private scanRel(rel: string, persp: string | null): FactRec[] {
+    return persp !== null ? this.store.relPersp(rel, persp) : this.store.relAll(rel);
   }
 
   /** Matches for one positive premise: store facts plus demand unfolding. */
@@ -5443,38 +5448,45 @@ export class AggEval {
     if (l.temporal === 'init' && this.store.tick !== 0) return [];
     const perspT = walk(l.persp, s);
     const persp = perspT.k === 'a' ? perspT.name : null;
-    let cands: string[];
+    let cands: FactRec[];
     if (only !== null) {
       const narrow = this.indexProbe(l, s, persp);
-      if (narrow !== null && narrow.length < only.size) cands = narrow.filter((f) => only.has(f));
-      else cands = [...only].filter((f) => { if (!this.alive(f)) return false; const r = this.rec(f); return r.rel === l.rel && (persp === null || r.persp === persp); });
+      if (narrow !== null && narrow.length < only.size) cands = narrow.filter((f) => only.has(f.key));
+      else {
+        cands = [];
+        for (const k of only) {
+          const r = this.store.get(k);
+          if (r !== undefined && r.rel === l.rel && (persp === null || r.persp === persp)) cands.push(r);
+        }
+      }
     } else {
-      cands = this.indexProbe(l, s, persp) ?? (persp !== null ? this.relPersp(l.rel, persp) : this.relAll(l.rel));
+      cands = this.indexProbe(l, s, persp) ?? this.scanRel(l.rel, persp);
     }
-    const out: [string, Subst, PremRef][] = [];
+    const out: [Subst, PremRef][] = [];
+    const keys: string[] = [];
     const seen = new Set<string>();
-    for (const f of cands) {
-      const fr = this.store.get(f);
-      if (fr === undefined) continue;
+    for (const fr of cands) {
       if (persp === null && isKernelLedger(fr.persp)) continue;
       const s2 = persp !== null ? s : unify(perspT, mka(fr.persp), s);
       if (s2 === null) continue;
       const s3 = unifyAll(l.args, fr.args, s2);
       if (s3 === null) continue;
-      if (!seen.has(f)) { seen.add(f); out.push([f, s3, { t: 'fact', key: f }]); }
+      if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
     if (drs !== undefined) {
-      const seenKeys = new Set(out.map(([k]) => k));
       for (const dr of drs[1]) {
         for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
           const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-          if (!seenKeys.has(dk)) { seenKeys.add(dk); out.push([dk, ms, mref]); }
+          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
         }
       }
     }
-    out.sort((a, b) => cmpStr(a[0], b[0]));
-    return out.map(([, s2, r]) => [s2, r]);
+    // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
+    let ordered = true;
+    for (let i = 1; i < keys.length; i++) if (keys[i - 1] > keys[i]) { ordered = false; break; }
+    if (ordered) return out;
+    return keys.map((_, i) => i).sort((a, b) => (keys[a] < keys[b] ? -1 : keys[a] > keys[b] ? 1 : 0)).map((i) => out[i]);
   }
 
   /** Top-down unfolding of a moded rule at a call site. */
@@ -5540,10 +5552,8 @@ export class AggEval {
     if (l.temporal === 'init' && this.store.tick !== 0) return true;
     const perspT = walk(l.persp, s);
     const persp = perspT.k === 'a' ? perspT.name : null;
-    const cands = this.indexProbe(l, s, persp) ?? (persp !== null ? this.relPersp(l.rel, persp) : this.relAll(l.rel));
-    for (const f of cands) {
-      const fr = this.store.get(f);
-      if (fr === undefined) continue;
+    const cands = this.indexProbe(l, s, persp) ?? this.scanRel(l.rel, persp);
+    for (const fr of cands) {
       if (persp === null && isKernelLedger(fr.persp)) continue;
       const s2 = persp !== null ? s : unify(perspT, mka(fr.persp), s);
       if (s2 === null) continue;
