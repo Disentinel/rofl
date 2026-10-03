@@ -954,10 +954,6 @@ impl Store {
         out
     }
 
-    pub fn perspectives_of(&self, h: &Heap, rel: Sym) -> Vec<Sym> {
-        self.persps_sorted(h, rel)
-    }
-
     pub fn rel_count(&self, rel: Sym) -> usize {
         self.idx
             .get(&rel)
@@ -3306,14 +3302,6 @@ pub fn resolved_lit_key(
         h.canon_term(*a, out);
     }
     out.push(')');
-}
-
-/// Is this term a non-variable atom? Used where the kernel asks `k === 'a'`.
-pub fn atom_name(t: Term) -> Option<Sym> {
-    match t.kind() {
-        TermK::Atom(s) => Some(s),
-        _ => None,
-    }
 }
 
 #[cfg(test)]
