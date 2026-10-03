@@ -48,7 +48,7 @@ use crate::cell::{AggOp, Algebra};
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
-use std::hash::{BuildHasherDefault, Hasher};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 
 pub type FactId = u32;
 pub type CellId = u32;
@@ -147,7 +147,7 @@ pub struct EvalRecord {
     pub partial: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum PremRef {
     /// A fact that was matched: the identity, not the spelling.
     Fact(FactId),
@@ -596,6 +596,9 @@ pub struct Store {
     wit_head: Vec<u32>,
     wits: Vec<WitNode>,
     prem_arena: Vec<PremRef>,
+    /// `firing_hash` of every node on a chain, and of some that left one: a
+    /// firing whose hash is absent is new without walking its fact's chain.
+    fired: FxSet<u64>,
     wits_live: usize,
     n_live: usize,
     cells: Cells,
@@ -1389,15 +1392,16 @@ impl Store {
         }
         let mut wits = Vec::with_capacity(self.wits_live);
         let mut prems = Vec::new();
-        for h in self.wit_head.iter_mut() {
+        self.fired.clear();
+        for (id, h) in self.wit_head.iter_mut().enumerate() {
             let mut c = *h;
             let mut new_head = EMPTY;
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 let at = prems.len() as u32;
-                prems.extend_from_slice(
-                    &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize],
-                );
+                let ps = &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize];
+                self.fired.insert(firing_hash(id as FactId, n.rule, ps));
+                prems.extend_from_slice(ps);
                 wits.push(WitNode {
                     prems_at: at,
                     next: new_head,
@@ -1421,7 +1425,11 @@ impl Store {
     /// candidates of a fact that has more than one (measured at 1.0 to 1.9 per
     /// fact on the JS side, src/store.ts:693).
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
-        let mut c = self.wit_head[id as usize];
+        let mut c = if self.fired.insert(firing_hash(id, w.rule, &w.prems)) {
+            EMPTY
+        } else {
+            self.wit_head[id as usize]
+        };
         while c != EMPTY {
             let n = self.wits[c as usize];
             if n.rule == w.rule
@@ -2908,7 +2916,8 @@ impl Store {
             + self.idx.capacity() * 48;
         let wit: usize = self.wit_head.capacity() * 4
             + self.wits.capacity() * std::mem::size_of::<WitNode>()
-            + self.prem_arena.capacity() * std::mem::size_of::<PremRef>();
+            + self.prem_arena.capacity() * std::mem::size_of::<PremRef>()
+            + self.fired.capacity() * 9;
         let (tends, tsks, tcons, targs) = self.facts.tups.bytes();
         vec![
             (
@@ -2948,6 +2957,12 @@ fn put_sig(by_val: &mut FxMap<Box<[Term]>, Vec<FactId>>, sig: &[Term], k: FactId
             by_val.insert(sig.into(), vec![k]);
         }
     }
+}
+
+fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
+    let mut f = Fx::default();
+    (id, rule, prems).hash(&mut f);
+    f.finish()
 }
 
 fn run_in(idx: &mut FxMap<Sym, Vec<(Sym, KeyRun)>>, rel: Sym, persp: Sym) -> &mut KeyRun {
