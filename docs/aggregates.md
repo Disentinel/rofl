@@ -3170,7 +3170,7 @@ the TypeScript engine alone: `ts_max`, `ts_no_agg_edge`, `ts_no_empty_zero`,
 `ts_no_sealed_text`, `ts_empty_text`, `ts_thr_text_order`,
 `ts_lattice_why_one_member`, `ts_join_why_one_member`,
 `ts_widen_whynot_bare`, `ts_tag_label_lattice`, `ts_count_why_plain`,
-`ts_dominance_why_one_member`, `ts_whynot_hole_empty`,
+`ts_whynot_hole_empty`,
 `ts_withdrawn_cell_stale_src`, `ts_why_depth_cut`. `Rofl.strataPlan` of an
 aggregate program is the plan `AggEval` ran (`AggEval.strataPlan`: the
 peel's round, or the ranked stratum), held by `aggregateDoors`.

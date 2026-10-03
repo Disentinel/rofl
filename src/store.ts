@@ -126,7 +126,7 @@ interface KeyRun {
   /** Argument indexes, keyed by BINDING PATTERN — the bitmask of argument
    *  positions a premise had already bound when it asked. Null until some
    *  premise asks for one, and dropped whole by any removal. */
-  byPat: Map<number, Map<string, string[]>> | null;
+  byPat: Map<number, Map<string, FactRec[]>> | null;
   /** Keys added since the last fold into `byPat`. Only accumulated while
    *  `byPat` is live, so a store nobody indexes carries no cost at all. */
   staged: string[];
@@ -177,12 +177,12 @@ function patSig(pos: number[], args: Term[]): string | null {
   return joinSig(parts);
 }
 
-function bucketAdd(byVal: Map<string, string[]>, pos: number[], args: Term[], key: string): void {
-  const sig = patSig(pos, args);
+function bucketAdd(byVal: Map<string, FactRec[]>, pos: number[], rec: FactRec): void {
+  const sig = patSig(pos, rec.args);
   if (sig === null) return;
   const bucket = byVal.get(sig);
-  if (bucket) bucket.push(key);
-  else byVal.set(sig, [key]);
+  if (bucket) bucket.push(rec);
+  else byVal.set(sig, [rec]);
 }
 
 /** The argument positions a pattern mask names, ascending. */
@@ -679,7 +679,7 @@ export class Store implements FactStore {
       run.byPat = byPat;
     }
     const known = byPat.get(mask);
-    let byVal: Map<string, string[]>;
+    let byVal: Map<string, FactRec[]>;
     if (known) {
       byVal = known;
       this.foldStaged(run);
@@ -691,7 +691,7 @@ export class Store implements FactStore {
       // order — one less way for two runs of the same program to differ
       for (const k of absorb(run)) {
         const rec = this.facts.get(k);
-        if (rec) bucketAdd(byVal, pos, rec.args, k);
+        if (rec) bucketAdd(byVal, pos, rec);
       }
       byPat.set(mask, byVal);
     }
@@ -700,7 +700,7 @@ export class Store implements FactStore {
       if (run.loose.length === 0) return [];
       return run.loose.map((k) => this.facts.get(k)!).filter(Boolean);
     }
-    const out = hit.map((k) => this.facts.get(k)!).filter(Boolean);
+    const out = hit.slice();
     if (run.loose.length > 0) {
       for (const k of run.loose) { const r = this.facts.get(k); if (r) out.push(r); }
     }
@@ -717,7 +717,7 @@ export class Store implements FactStore {
       const pos = maskPos(mask);
       for (const k of st) {
         const rec = this.facts.get(k);
-        if (rec) bucketAdd(byVal, pos, rec.args, k);
+        if (rec) bucketAdd(byVal, pos, rec);
       }
     }
     st.length = 0;

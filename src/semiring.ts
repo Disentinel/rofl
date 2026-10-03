@@ -118,7 +118,6 @@ import { opWitness, type AggOp } from './cell.ts';
 export const BOUNDED = 0;
 export const CLOSED = 1;
 export const BOUNDED_UNFOLDING = 2;
-export type Discipline = typeof BOUNDED | typeof CLOSED | typeof BOUNDED_UNFOLDING;
 
 interface Ops<T> {
   zero: T;                    // additive identity — not derivable
