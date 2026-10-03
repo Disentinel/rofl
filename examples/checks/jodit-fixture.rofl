@@ -1,12 +1,54 @@
--- jodit-fixture.rofl — what the two fixture adapters' calls are, for the
--- world that runs examples/jodit over facts/py-model.rofl.
+-- jodit-fixture.rofl — the world that runs examples/jodit over facts/py-model.rofl:
+-- what the fixture adapters' calls are, and what the rules must conclude, row
+-- for row. A miss either way is fixture_miss[audit] or fixture_extra[audit];
+-- both are empty when the layer reads the fixture as written.
 backend[jodit]("BucketAdapter", bucket).
 backend[jodit]("TreeAdapter", tree).
-op_kind[jodit](bucket, "put_object", put).      op_kind[jodit](bucket, "get_object", read).
-op_kind[jodit](bucket, "copy", copy).           op_kind[jodit](bucket, "delete_objects", delete).
-op_kind[jodit](bucket, "list_objects_v2", list).
+backend[jodit]("HastyAdapter", hasty).
+op_kind[jodit](B, "put_object", put) :- bucketlike[jodit](B).
+op_kind[jodit](B, "get_object", read) :- bucketlike[jodit](B).
+op_kind[jodit](B, "read", read) :- bucketlike[jodit](B).
+op_kind[jodit](B, "copy", copy) :- bucketlike[jodit](B).
+op_kind[jodit](B, "delete_objects", delete) :- bucketlike[jodit](B).
+op_kind[jodit](B, "list_objects_v2", list) :- bucketlike[jodit](B).
+bucketlike[jodit](bucket). bucketlike[jodit](hasty).
 op_kind[jodit](tree, "rename", rename).
 op_str[jodit](tree, "_request", 0, "PUT", put).
 op_str[jodit](tree, "_request", 0, "MOVE", rename).
+op_str[jodit](tree, "_request", 0, "DELETE", delete).
 op_str[jodit](tree, "_request", 0, "GET", read).
 op_str[jodit](tree, "_request", 0, "MKCOL", mkdir).
+not_a_request[jodit](tree, "request", "the HTTP call under _request").
+
+expect_does[jodit](bucket, "write", put, one, main).
+expect_does[jodit](bucket, "read", read, one, main).
+expect_does[jodit](bucket, "move_file", copy, many, main).
+expect_does[jodit](bucket, "move_file", list, one, main).
+expect_does[jodit](bucket, "move_file", delete, one, main).
+expect_does[jodit](tree, "write", put, one, main).
+expect_does[jodit](tree, "write", rename, one, main).
+expect_does[jodit](tree, "write", delete, one, handler).
+expect_does[jodit](tree, "read", read, one, main).
+expect_does[jodit](tree, "move_file", mkdir, many, main).
+expect_does[jodit](tree, "move_file", rename, one, main).
+expect_does[jodit](hasty, "write", put, one, main).
+expect_does[jodit](hasty, "read", read, one, main).
+expect_does[jodit](hasty, "move_file", delete, one, main).
+expect_does[jodit](hasty, "move_file", copy, one, main).
+
+does_shape[jodit](B, M, K, F, P) :- does[jodit](B, M, K, _, F, P).
+fixture_miss[audit](B, M, K, F, P) :- expect_does[jodit](B, M, K, F, P), not does_shape[jodit](B, M, K, F, P).
+fixture_extra[audit](B, M, K, F, P) :- does_shape[jodit](B, M, K, F, P), not expect_does[jodit](B, M, K, F, P).
+
+expect_holds[jodit](move_by_copy, bucket). expect_holds[jodit](move_by_copy, hasty).
+expect_holds[jodit](delete_before_copy, hasty).
+expect_holds[jodit](write_single_put, bucket). expect_holds[jodit](write_single_put, hasty).
+expect_holds[jodit](write_via_rename, tree).
+expect_holds[jodit](on_failure_delete, tree).
+holds[audit](move_by_copy, B) :- move_by_copy[jodit](B).
+holds[audit](delete_before_copy, B) :- delete_before_copy[audit](B, _, _).
+holds[audit](write_single_put, B) :- write_single_put[jodit](B, "write").
+holds[audit](write_via_rename, B) :- write_via_rename[jodit](B, "write").
+holds[audit](on_failure_delete, B) :- on_failure[jodit](B, "write", delete).
+fixture_miss[audit](P, B, none, none, none) :- expect_holds[jodit](P, B), not holds[audit](P, B).
+fixture_extra[audit](P, B, none, none, none) :- holds[audit](P, B), not expect_holds[jodit](P, B).

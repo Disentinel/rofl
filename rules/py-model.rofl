@@ -11,6 +11,8 @@
 --   py_invokes    a unit may run another, and the node that says so: a method
 --                 named through `self`, a lambda written inside it, a def named
 --   py_reaches    py_invokes, closed
+--   py_step_call  a call a unit makes, through which step of its body, how
+--                 often (one, many) and on which path (main, handler)
 --
 -- APPROXIMATION, DECLARED: naming `self.m` without calling it counts as
 -- invoking it. A bound method passed on (`run_sync(self.m)`, `partial(self.m)`)
@@ -70,13 +72,36 @@ py_loop_part[code](dict_comp, key).   py_loop_part[code](dict_comp, value).
 py_looped[code](N) :- ast_child[code](P, F, _, N), ast_node[code](P, K, _, _), py_loop_part[code](K, F).
 py_looped[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_looped[code](P).
 
-py_invoke_site[code](U, W, N, looped) :- py_invokes[code](U, W, N), py_looped[code](N).
-py_invoke_site[code](U, W, N, once)   :- py_invokes[code](U, W, N), not py_looped[code](N).
+-- RUN WHEN SOMETHING FAILED: a node in an `except` body or a `finally`, without
+-- leaving its unit. Cleanup and the fallback of a failed attempt both sit here.
+py_handled[code](N) :- ast_child[code](H, body, _, N), ast_node[code](H, except_handler, _, _).
+py_handled[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try, _, _).
+py_handled[code](N) :- ast_child[code](T, finalbody, _, N), ast_node[code](T, try_star, _, _).
+py_handled[code](N) :- ast_child[code](P, _, _, N), not py_unit[code](P), py_handled[code](P).
 
--- py_reaches with how often: `many` once any step on the way runs per item
-py_reaches_n[code](U, U, one) :- py_unit[code](U).
-py_reaches_n[code](U, W, many) :- py_reaches_n[code](U, V, _), py_invoke_site[code](V, W, _, looped).
-py_reaches_n[code](U, W, F) :- py_reaches_n[code](U, V, F), py_invoke_site[code](V, W, _, once).
+-- how often and on which path the node at a step runs
+py_many[code](N, many) :- py_looped[code](N).
+py_many[code](N, one)  :- ast_node[code](N, _, _, _), not py_looped[code](N).
+py_path[code](N, handler) :- py_handled[code](N).
+py_path[code](N, main)    :- ast_node[code](N, _, _, _), not py_handled[code](N).
+py_join[code](one, one, one).   py_join[code](one, many, many).
+py_join[code](many, one, many). py_join[code](many, many, many).
+py_join[code](main, main, main).       py_join[code](main, handler, handler).
+py_join[code](handler, main, handler). py_join[code](handler, handler, handler).
+
+-- py_reaches, keeping the STEP of U it went through (the node in U's own body
+-- where the way to W starts, so steps of U can be put in order by line), and
+-- `many` and `handler` once any node on the way is so
+py_trace[code](U, W, N, F, P) :- py_invokes[code](U, W, N), py_many[code](N, F), py_path[code](N, P).
+py_trace[code](U, X, S, F, P) :- py_trace[code](U, V, S, F0, P0), py_invokes[code](V, X, N),
+                                 py_many[code](N, F1), py_join[code](F0, F1, F),
+                                 py_path[code](N, P1), py_join[code](P0, P1, P).
+
+-- a call made by U, through the step it is reached by, with how often and on which path
+py_step_call[code](U, K, K, F, P) :- py_call[code](K, U, _), py_many[code](K, F), py_path[code](K, P).
+py_step_call[code](U, K, S, F, P) :- py_trace[code](U, W, S, F0, P0), py_call[code](K, W, _),
+                                     py_many[code](K, F1), py_join[code](F0, F1, F),
+                                     py_path[code](K, P1), py_join[code](P0, P1, P).
 
 -- what a protocol asks for: the methods of a class whose bases name `Protocol`
 py_protocol[code](C) :- py_class[code](C, _), ast_child[code](C, bases, _, B), ast_attr[code](B, id, "Protocol").

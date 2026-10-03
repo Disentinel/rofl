@@ -1,9 +1,14 @@
--- specifics.rofl — where one contract becomes different behaviour.
+-- specifics.rofl — where one contract becomes different behaviour. Every rule
+-- reads the main path: what a duty does when nothing fails.
 
--- a move with no rename under it: copy everything, then delete the source.
--- Between the two, a failure leaves the data in both places.
+-- a move with no rename under it: it copies, then deletes the source
 move_by_copy[jodit](B) :- kind_of[jodit](B, "move_file", copy), kind_of[jodit](B, "move_file", delete),
                           not kind_of[jodit](B, "move_file", rename).
+-- THE ORDER THAT CLAIM RESTS ON: a delete of a move by copy with no copy at or
+-- before its step. Within one step the order is not read.
+copied_by[jodit](B, M, L) :- step[jodit](B, M, delete, L), step[jodit](B, M, copy, C), C <= L.
+delete_before_copy[audit](B, M, L) :- move_by_copy[jodit](B), M = "move_file",
+                                      step[jodit](B, M, delete, L), not copied_by[jodit](B, M, L).
 
 -- a copy with no copy request under it: the bytes come down to the connector and go back up
 copy_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", read), kind_of[jodit](B, "copy_file", put),
@@ -12,12 +17,12 @@ copy_fallback_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", copy
                                              kind_of[jodit](B, "copy_file", put).
 
 -- a write that lands somewhere else first and is renamed over the target
-write_via_rename[jodit](B) :- kind_of[jodit](B, "write", put), kind_of[jodit](B, "write", rename).
+write_via_rename[jodit](B, M) :- kind_of[jodit](B, M, put), kind_of[jodit](B, M, rename), M = "write".
+write_via_rename[jodit](B, M) :- kind_of[jodit](B, M, put), kind_of[jodit](B, M, rename), M = "write_file".
 -- a write that is one upload, visible whole when it completes (the store's promise, not the code's)
-write_single_put[jodit](B) :- kind_of[jodit](B, "write", put), not kind_of[jodit](B, "write", rename).
+write_single_put[jodit](B, M) :- kind_of[jodit](B, M, put), not kind_of[jodit](B, M, rename), M = "write".
+write_single_put[jodit](B, M) :- kind_of[jodit](B, M, put), not kind_of[jodit](B, M, rename), M = "write_file".
 
--- a duty that waits on the store by asking again
+-- a duty that waits on the store by asking again, and one that waits before trying again
 waits[jodit](B, M) :- kind_of[jodit](B, M, poll).
-
--- one request per item of a folder, for a duty that names one path
-per_item_of[jodit](B, M, K) :- per_item[jodit](B, M, K), K != meta, K != poll.
+backs_off[jodit](B, M) :- does[jodit](B, M, backoff, _, _, _).

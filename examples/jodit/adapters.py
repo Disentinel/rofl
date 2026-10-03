@@ -1,8 +1,10 @@
-"""A storage contract and two adapters, written in jodit-python's shapes.
+"""A storage contract and three adapters, written in jodit-python's shapes.
 
 The fixture rules/py-model.rofl and examples/jodit/ are checked against: every
-way that code reaches its backend appears here once. Scanned into
-facts/py-model.rofl by `python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
+way that code reaches its backend appears here once. HastyAdapter is a planted
+fault: its move deletes before it copies, and delete_before_copy must say so.
+Scanned into facts/py-model.rofl by
+`python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
 """
 
 from functools import partial
@@ -55,16 +57,34 @@ class BucketAdapter:
 class TreeAdapter:
     async def write(self, path: str, contents: bytes) -> None:
         temporary = f"{path}.tmp"
-        await self._request("PUT", temporary, contents)
-        await self._request("MOVE", temporary, path)
+        try:
+            await self._request("PUT", temporary, contents)
+            await self._request("MOVE", temporary, path)
+        except OSError:
+            await self._request("DELETE", temporary, b"")
+            raise
 
     async def read(self, path: str) -> bytes:
         return await self._request("GET", path, b"")
 
     async def move_file(self, source: str, destination: str) -> None:
         for parent in destination.split("/")[:-1]:
+            if not parent:
+                break
             await self._request("MKCOL", parent, b"")
         await to_thread.run_sync(self.conn.rename, source, destination)
 
     async def _request(self, method: str, path: str, body: bytes) -> bytes:
         return await self.http.request(method, path, content=body)
+
+
+class HastyAdapter:
+    async def write(self, path: str, contents: bytes) -> None:
+        self.client.put_object(Key=path, Body=contents)
+
+    async def read(self, path: str) -> bytes:
+        return self.client.get_object(Key=path)
+
+    async def move_file(self, source: str, destination: str) -> None:
+        self.client.delete_objects(Prefix=source)
+        self.client.copy(Key=source, Target=destination)

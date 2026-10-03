@@ -1,33 +1,53 @@
 -- contract.rofl — who implements jodit-python's storage contract, and what
--- each implementation calls outside itself.
+-- each implementation does to its store. Read from the code through
+-- rules/py-model.rofl; the only knowledge it takes is backends.rofl.
+
+-- the books this layer reads: the scanned code, and its audits read the layer
+imports(jodit, code).
+imports(jodit, main).
+imports(jodit, $kernel).
+imports(audit, jodit).
 
 contract[jodit](P) :- py_class[code](P, "StorageAdapter"), py_protocol[code](P).
-duty[jodit](M) :- contract[jodit](P), py_protocol_method[code](P, M).
+-- a protocol that extends the contract (StreamingStorageAdapter) adds duties an adapter may take on
+extension[jodit](Q) :- py_protocol[code](Q), ast_child[code](Q, bases, _, B), ast_attr[code](B, id, "StorageAdapter").
 
-candidate[jodit](C) :- py_method[code](C, M, _), duty[jodit](M), not py_protocol[code](C).
-lacks[jodit](C, M) :- candidate[jodit](C), duty[jodit](M), not py_method[code](C, M, _).
+required[jodit](M) :- contract[jodit](P), py_protocol_method[code](P, M).
+duty[jodit](M) :- required[jodit](M).
+duty[jodit](M) :- extension[jodit](Q), py_protocol_method[code](Q, M).
+
+candidate[jodit](C) :- py_method[code](C, M, _), required[jodit](M), not py_protocol[code](C).
+lacks[jodit](C, M) :- candidate[jodit](C), required[jodit](M), not py_method[code](C, M, _).
 adapter[jodit](C, N) :- candidate[jodit](C), not lacks[jodit](C, _), py_class[code](C, N).
 
 -- a call on anything but `self`, made by the method or by what it reaches
 outside_call[jodit](A, M, Op, L) :- adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
                                     py_reaches[code](D, U), py_call[code](K, U, L), py_attr_call[code](K, _, Op).
-
-outside_op[jodit](A, Op) :- outside_call[jodit](A, _, Op, _).
 call_str[jodit](A, M, Callee, I, S, L) :- adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
                                           py_reaches[code](D, U), py_call[code](K, U, L), py_call_str[code](K, I, S),
                                           py_callee[code](K, Callee).
 
--- WHAT A DUTY DOES TO THE STORE: the kinds of request each backend's method
--- reaches, `many` when one runs per item of a folder
-call_in[jodit](B, M, K, F) :- backend[jodit](A, B), adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
-                              py_reaches_n[code](D, U, F0), py_call[code](K, U, _), call_many[jodit](K, F0, F).
-call_many[jodit](K, many, many) :- py_call[code](K, _, _).
-call_many[jodit](K, one, many)  :- py_call[code](K, _, _), py_looped[code](K).
-call_many[jodit](K, one, one)   :- py_call[code](K, _, _), not py_looped[code](K).
+-- WHAT A DUTY DOES TO THE STORE: each request it reaches, at the line of the
+-- step of the duty's body it goes through, `many` when it runs per item, and
+-- `handler` when it runs only after something failed
+call_in[jodit](B, M, K, L, F, P) :- backend[jodit](A, B), adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
+                                    py_step_call[code](D, K, S, F, P), ast_node[code](S, _, _, L).
+does[jodit](B, M, Kind, L, F, P) :- call_in[jodit](B, M, K, L, F, P), py_attr_call[code](K, _, Op), op_kind[jodit](B, Op, Kind).
+does[jodit](B, M, Kind, L, F, P) :- call_in[jodit](B, M, K, L, F, P), py_callee[code](K, Callee),
+                                    op_str[jodit](B, Callee, I, S, Kind), py_call_str[code](K, I, S).
 
-does[jodit](B, M, Kind, F) :- call_in[jodit](B, M, K, F), py_attr_call[code](K, _, Op), op_kind[jodit](B, Op, Kind).
-does[jodit](B, M, Kind, F) :- call_in[jodit](B, M, K, F), py_callee[code](K, Callee),
-                              op_str[jodit](B, Callee, I, S, Kind), py_call_str[code](K, I, S).
+kind_of[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, main).
+step[jodit](B, M, Kind, L) :- does[jodit](B, M, Kind, L, _, main).
+per_item[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, many, main).
+-- what a duty does only when something on its way failed: cleanup, or the fallback of an attempt
+on_failure[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _, _, handler), not kind_of[jodit](B, M, Kind).
 
-kind_of[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _).
-per_item[jodit](B, M, Kind) :- does[jodit](B, M, Kind, many).
+-- EVERY CALL IS ACCOUNTED FOR: a kind, a carrier of a command string, or not a request with a reason
+classified[jodit](B, Op) :- op_kind[jodit](B, Op, _).
+classified[jodit](B, Op) :- op_str[jodit](B, Op, _, _, _).
+classified[jodit](B, Op) :- not_a_request[jodit](B, Op, _).
+classified[jodit](B, Op) :- not_a_request[jodit](any, Op, _), backend[jodit](_, B).
+unclassified[audit](B, Op) :- backend[jodit](A, B), outside_call[jodit](A, _, Op, _), not classified[jodit](B, Op).
+-- a command string sent through a carrier that no op_str names
+unread_command[audit](B, Callee, S) :- backend[jodit](A, B), call_str[jodit](A, _, Callee, I, S, _),
+                                       op_str[jodit](B, Callee, I, _, _), not op_str[jodit](B, Callee, I, S, _).

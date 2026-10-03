@@ -8,10 +8,13 @@ The same contract as scanners/js_ast.ts, into the [code] ledger:
   ast_file[code](RootId, File)                  one per parsed file
 
 or, for a file the running Python cannot parse, `ast_parse_error[code](File, Msg)`.
-Kinds and fields are the `ast` module's own names in lower_snake. A node with
-no fields (`Load`, `Add`, `Eq`) is a tag rather than a tree, so it is written as
-an attribute of its parent: `ast_attr(Id, ctx, load)`, `ops_0`, `ops_1` for a
-list. `None` in a field is absent; `Constant(None)` is `ast_attr(Id, value, none)`.
+Kinds and fields are the `ast` module's own names in lower_snake. A context or
+an operator (`Load`, `Add`, `And`, `Eq`, `Not`) is a tag rather than a tree, so it
+is written as an attribute of its parent: `ast_attr(Id, ctx, load)`, `ops_0`,
+`ops_1` for a list. Every other node is a node, `pass`, `break` and `continue`
+included. `None` in a field is absent; `Constant(None)` is
+`ast_attr(Id, value, none)`. Bytes are written as latin-1 text and a bytes
+value that is not ASCII is counted in `bytes_widened(File, N)`.
 
 The parser is the one running this file, so the grammar is its version's:
 `except A, B:` needs 3.14. Run it with that interpreter (`uv run -p 3.14`).
@@ -35,6 +38,7 @@ def atomise(name: str) -> str:
 
 
 lost = 0
+widened = 0
 
 
 def q(s: str) -> str:
@@ -59,17 +63,22 @@ def scalar(v: object) -> str | None:
     if isinstance(v, (str, int, float, complex)):
         return q(str(v))
     if isinstance(v, bytes):
+        global widened
+        widened += not v.isascii()
         return q(v.decode("latin-1"))
     return None
 
 
+TAGS = (ast.expr_context, ast.operator, ast.boolop, ast.cmpop, ast.unaryop)
+
+
 def is_tag(v: object) -> bool:
-    return isinstance(v, ast.AST) and not v._fields
+    return isinstance(v, TAGS)
 
 
 def scan(src: str, file: str) -> list[str]:
-    global lost
-    lost = 0
+    global lost, widened
+    lost = widened = 0
     qf = q(file)
     try:
         tree = ast.parse(src, filename=file)
@@ -107,6 +116,8 @@ def scan(src: str, file: str) -> list[str]:
     facts.append(f"ast_file[{PERSP}]({emit(tree)}, {qf}).")
     if lost:
         facts.append(f"surrogate_replaced[{PERSP}]({qf}, {lost}).")
+    if widened:
+        facts.append(f"bytes_widened[{PERSP}]({qf}, {widened}).")
     return facts
 
 

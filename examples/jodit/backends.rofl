@@ -3,7 +3,13 @@
 -- is: everything else is read from the code.
 --
 -- A kind is what a request does to the store: put, copy, rename, delete,
--- mkdir, read, meta (stat, head, exists), list, poll (wait and ask again).
+-- mkdir, read, meta (stat, head, exists), list, poll (wait and ask again),
+-- backoff (wait, then try again), session (keep a connection usable).
+--
+-- MATCHED BY NAME: a call is its method's name on whatever receiver; the
+-- receiver's type is not read. Every outside call a duty reaches is a kind
+-- here, a carrier of a command string (op_str), or not_a_request with the
+-- reason, and unclassified[audit] lists what is none of the three.
 
 backend[jodit]("S3StorageAdapter", s3).
 backend[jodit]("AzureStorageAdapter", azure).
@@ -19,34 +25,47 @@ op_kind[jodit](s3, "copy", copy).             op_kind[jodit](s3, "delete_object"
 op_kind[jodit](s3, "delete_objects", delete). op_kind[jodit](s3, "head_object", meta).
 op_kind[jodit](s3, "list_objects_v2", list).  op_kind[jodit](s3, "paginate", list).
 op_kind[jodit](s3, "get_object", read).       op_kind[jodit](s3, "download_fileobj", read).
+op_kind[jodit](s3, "read", read).
 -- azure-storage-blob
 op_kind[jodit](azure, "upload_blob", put).    op_kind[jodit](azure, "start_copy_from_url", copy).
 op_kind[jodit](azure, "delete_blob", delete). op_kind[jodit](azure, "delete_blobs", delete).
 op_kind[jodit](azure, "download_blob", read). op_kind[jodit](azure, "get_blob_properties", meta).
 op_kind[jodit](azure, "exists", meta).        op_kind[jodit](azure, "list_blobs", list).
 op_kind[jodit](azure, "walk_blobs", list).    op_kind[jodit](azure, "sleep", poll).
+op_kind[jodit](azure, "readall", read).       op_kind[jodit](azure, "chunks", read).
+op_kind[jodit](azure, "by_page", list).       op_kind[jodit](azure, "read", read).
 -- google-cloud-storage
 op_kind[jodit](gcs, "upload_from_file", put). op_kind[jodit](gcs, "upload_from_string", put).
 op_kind[jodit](gcs, "rewrite", copy).         op_kind[jodit](gcs, "delete", delete).
 op_kind[jodit](gcs, "download_as_bytes", read). op_kind[jodit](gcs, "get_blob", meta).
 op_kind[jodit](gcs, "exists", meta).          op_kind[jodit](gcs, "list_blobs", list).
+op_kind[jodit](gcs, "read", read).
+op_str[jodit](gcs, "open", 0, "rb", read).
 -- paramiko
 op_kind[jodit](sftp, "putfo", put).           op_kind[jodit](sftp, "posix_rename", rename).
 op_kind[jodit](sftp, "rename", rename).       op_kind[jodit](sftp, "remove", delete).
 op_kind[jodit](sftp, "rmdir", delete).        op_kind[jodit](sftp, "mkdir", mkdir).
 op_kind[jodit](sftp, "getfo", read).          op_kind[jodit](sftp, "stat", meta).
-op_kind[jodit](sftp, "listdir_attr", list).
+op_kind[jodit](sftp, "listdir_attr", list).   op_kind[jodit](sftp, "read", read).
+op_kind[jodit](sftp, "prefetch", read).
+op_str[jodit](sftp, "open", 1, "rb", read).
+op_kind[jodit](sftp, "normalize", session).
 -- ftplib; STOR goes through the module's own `_send`
 op_kind[jodit](ftp, "rename", rename).        op_kind[jodit](ftp, "delete", delete).
 op_kind[jodit](ftp, "rmd", delete).           op_kind[jodit](ftp, "mkd", mkdir).
 op_kind[jodit](ftp, "retrbinary", read).      op_kind[jodit](ftp, "size", meta).
 op_kind[jodit](ftp, "mlsd", list).            op_kind[jodit](ftp, "retrlines", list).
+op_kind[jodit](ftp, "cwd", meta).
 -- os, pathlib, shutil
 op_kind[jodit](local, "rename", rename).      op_kind[jodit](local, "replace", rename).
 op_kind[jodit](local, "unlink", delete).      op_kind[jodit](local, "rmtree", delete).
 op_kind[jodit](local, "mkdir", mkdir).        op_kind[jodit](local, "copyfile", copy).
 op_kind[jodit](local, "read_bytes", read).    op_kind[jodit](local, "stat", meta).
-op_kind[jodit](local, "scandir", list).      op_kind[jodit](local, "open", put).
+op_kind[jodit](local, "scandir", list).      op_kind[jodit](local, "is_dir", meta).
+op_kind[jodit](local, "is_file", meta).       op_kind[jodit](local, "is_symlink", meta).
+op_kind[jodit](local, "read", read).          op_kind[jodit](local, "write", put).
+op_kind[jodit](local, "copyfileobj", put).
+op_str[jodit](local, "open", 0, "xb", put).
 
 -- a command carried as a string argument: an HTTP method, an FTP verb
 op_str[jodit](webdav, "_request", 0, "PUT", put).
@@ -58,3 +77,49 @@ op_str[jodit](webdav, "_request", 0, "MKCOL", mkdir).
 op_str[jodit](webdav, "_request", 0, "GET", read).
 op_str[jodit](webdav, "_request", 0, "PROPFIND", meta).
 op_str[jodit](ftp, "_send", 1, "STOR ", put).
+op_str[jodit](ftp, "sendcmd", 0, "MLST ", meta).
+op_str[jodit](ftp, "sendcmd", 0, "MDTM ", meta).
+op_str[jodit](ftp, "run", 1, "RETR ", read).
+op_str[jodit](ftp, "voidcmd", 0, "TYPE I", session).
+op_str[jodit](ftp, "voidcmd", 0, "OPTS UTF8 ON", session).
+op_str[jodit](ftp, "voidcmd", 0, "NOOP", session).
+-- httpx; the pause before a temporary file's removal is tried again
+op_kind[jodit](webdav, "sleep", backoff).
+op_str[jodit](webdav, "stream", 0, "GET", read).
+op_kind[jodit](webdav, "aiter_bytes", read).
+
+-- NOT A REQUEST, and why. `any` holds for every backend.
+not_a_request[jodit](any, Op, "text, bytes, path or collection work") :- text_op[jodit](Op).
+text_op[jodit]("append"). text_op[jodit]("add"). text_op[jodit]("count"). text_op[jodit]("endswith").
+text_op[jodit]("get"). text_op[jodit]("isdigit"). text_op[jodit]("join"). text_op[jodit]("lower").
+text_op[jodit]("match"). text_op[jodit]("partition"). text_op[jodit]("pop"). text_op[jodit]("rpartition").
+text_op[jodit]("rstrip"). text_op[jodit]("split"). text_op[jodit]("splitlines"). text_op[jodit]("startswith").
+text_op[jodit]("strip"). text_op[jodit]("strptime"). text_op[jodit]("timestamp"). text_op[jodit]("now").
+text_op[jodit]("with_name"). text_op[jodit]("find"). text_op[jodit]("findtext"). text_op[jodit]("fromstring").
+text_op[jodit]("iter"). text_op[jodit]("S_ISDIR"). text_op[jodit]("S_ISREG").
+not_a_request[jodit](any, Op, "runs what it is handed; what it is handed is counted") :- plumbing[jodit](Op).
+plumbing[jodit]("run"). plumbing[jodit]("run_sync"). plumbing[jodit]("create_task_group").
+plumbing[jodit]("start_soon"). plumbing[jodit]("CapacityLimiter"). plumbing[jodit]("hold"). plumbing[jodit]("suppress").
+not_a_request[jodit](any, Op, "bookkeeping in the connector") :- bookkeeping[jodit](Op).
+bookkeeping[jodit]("uuid4"). bookkeeping[jodit]("warning"). bookkeeping[jodit]("guess_type").
+bookkeeping[jodit]("monotonic"). bookkeeping[jodit]("SpooledTemporaryFile"). bookkeeping[jodit]("seek").
+bookkeeping[jodit]("tell"). bookkeeping[jodit]("getvalue"). bookkeeping[jodit]("close").
+not_a_request[jodit](any, Op, "an attribute read handed on as an argument, which py_attr_call over-counts as a call") :- handed_attr[jodit](Op).
+handed_attr[jodit]("path"). handed_attr[jodit]("directory"). handed_attr[jodit]("home"). handed_attr[jodit]("url").
+handed_attr[jodit]("last_modified"). handed_attr[jodit]("updated"). handed_attr[jodit]("prefixes").
+handed_attr[jodit]("st_mode"). handed_attr[jodit]("year").
+not_a_request[jodit](any, Op, "a client, handle or socket built; nothing is sent") :- builds[jodit](Op).
+builds[jodit]("AsyncClient"). builds[jodit]("AsyncHTTPTransport"). builds[jodit]("BasicAuth").
+builds[jodit]("DigestAuth"). builds[jodit]("Limits"). builds[jodit]("get_blob_client"). builds[jodit]("blob").
+builds[jodit]("get_paginator"). builds[jodit]("SSLSocket"). builds[jodit]("unwrap").
+not_a_request[jodit](azure, "replace", "str.replace in a key helper, reached because imports are not read").
+not_a_request[jodit](gcs, "replace", "str.replace in a key helper, reached because imports are not read").
+not_a_request[jodit](ftp, "replace", "datetime.replace on a listing's time").
+not_a_request[jodit](ftp, "read", "reads the local source of an upload").
+not_a_request[jodit](ftp, "write", "writes into the local sink of a download").
+not_a_request[jodit](ftp, "transfercmd", "opens the data channel for a command counted at its carrier (STOR at _send, RETR where it is handed on)").
+not_a_request[jodit](ftp, Op, "the data channel or the reply of a command already counted") :- ftp_wire[jodit](Op).
+ftp_wire[jodit]("sendall"). ftp_wire[jodit]("recv"). ftp_wire[jodit]("voidresp"). ftp_wire[jodit]("getresp").
+not_a_request[jodit](ftp, Op, "an exception built from a reply") :- ftp_error[jodit](Op).
+ftp_error[jodit]("error_perm"). ftp_error[jodit]("error_reply").
+not_a_request[jodit](webdav, "request", "the HTTP call under _request; its method is read where _request is called").
