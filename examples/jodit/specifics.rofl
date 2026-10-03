@@ -1,0 +1,23 @@
+-- specifics.rofl — where one contract becomes different behaviour.
+
+-- a move with no rename under it: copy everything, then delete the source.
+-- Between the two, a failure leaves the data in both places.
+move_by_copy[jodit](B) :- kind_of[jodit](B, "move_file", copy), kind_of[jodit](B, "move_file", delete),
+                          not kind_of[jodit](B, "move_file", rename).
+
+-- a copy with no copy request under it: the bytes come down to the connector and go back up
+copy_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", read), kind_of[jodit](B, "copy_file", put),
+                                    not kind_of[jodit](B, "copy_file", copy).
+copy_fallback_through_connector[jodit](B) :- kind_of[jodit](B, "copy_file", copy), kind_of[jodit](B, "copy_file", read),
+                                             kind_of[jodit](B, "copy_file", put).
+
+-- a write that lands somewhere else first and is renamed over the target
+write_via_rename[jodit](B) :- kind_of[jodit](B, "write", put), kind_of[jodit](B, "write", rename).
+-- a write that is one upload, visible whole when it completes (the store's promise, not the code's)
+write_single_put[jodit](B) :- kind_of[jodit](B, "write", put), not kind_of[jodit](B, "write", rename).
+
+-- a duty that waits on the store by asking again
+waits[jodit](B, M) :- kind_of[jodit](B, M, poll).
+
+-- one request per item of a folder, for a duty that names one path
+per_item_of[jodit](B, M, K) :- per_item[jodit](B, M, K), K != meta, K != poll.

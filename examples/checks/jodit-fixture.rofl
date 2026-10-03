@@ -1,0 +1,12 @@
+-- jodit-fixture.rofl — what the two fixture adapters' calls are, for the
+-- world that runs examples/jodit over facts/py-model.rofl.
+backend[jodit]("BucketAdapter", bucket).
+backend[jodit]("TreeAdapter", tree).
+op_kind[jodit](bucket, "put_object", put).      op_kind[jodit](bucket, "get_object", read).
+op_kind[jodit](bucket, "copy", copy).           op_kind[jodit](bucket, "delete_objects", delete).
+op_kind[jodit](bucket, "list_objects_v2", list).
+op_kind[jodit](tree, "rename", rename).
+op_str[jodit](tree, "_request", 0, "PUT", put).
+op_str[jodit](tree, "_request", 0, "MOVE", rename).
+op_str[jodit](tree, "_request", 0, "GET", read).
+op_str[jodit](tree, "_request", 0, "MKCOL", mkdir).

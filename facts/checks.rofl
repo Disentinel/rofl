@@ -2671,3 +2671,14 @@ check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-3-ref
 check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-3-refused-unclosed.rofl").
 check_opt("agg_rank_tuple_syntax", together, 1).
 proves_work("agg_rank_tuple_syntax", w_agg_rank_by_tuple).
+
+-- THE PYTHON MODEL AND THE QUESTION IT WAS GROWN FOR, together. The walk loads
+-- rules/py-model.rofl over its fixture and examples/jodit/ with no model under
+-- it; this world is the storage-contract layer over the fixture adapters.
+check_world("jodit_fixture").
+check_file("jodit_fixture", "facts/py-model.rofl").
+check_file("jodit_fixture", "rules/py-model.rofl").
+check_file("jodit_fixture", "examples/jodit/backends.rofl").
+check_file("jodit_fixture", "examples/jodit/contract.rofl").
+check_file("jodit_fixture", "examples/jodit/specifics.rofl").
+check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
