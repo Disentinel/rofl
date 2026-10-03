@@ -1,0 +1,8 @@
+-- examples/checks/staged-neg-why-nocarry-data.rofl — staged-neg-why-data.rofl
+-- with the premise NOT carried: sn_q(a) is a fact of tick 0 only, so in the tick
+-- the question is asked in the firing's premise is a fact of a tick that is over
+-- and the evaluation holds no record of it (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone).
+edb(sn_q).
+sn_q(a).
+sn_p(X)@next :- sn_q(X), not sn_r(X).
+sn_r(a)@next :- sn_q(a).

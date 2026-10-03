@@ -1,0 +1,5 @@
+-- examples/checks/staged-neg-why-nocarry-check.rofl — read after
+-- staged-neg-why-check.rofl: the premise the firing read in tick 0 is named in
+-- the answer, as a fact of a past tick, though nothing of it is left in tick 1.
+snw_named() :- snw_line(L), N is str_segs(L, "sn_q[main](a) [past tick]"), N > 1.
+snw_bad(premise_unnamed) :- not snw_named().

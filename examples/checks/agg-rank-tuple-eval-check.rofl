@@ -1,0 +1,135 @@
+-- examples/checks/agg-rank-tuple-eval-check.rofl — agg_rank_tuple_eval: a rank
+-- over a tuple evaluated against places derived BY HAND from
+-- agg-rank-tuple-data.rofl, in both directions, in both engines (the world
+-- runs `together`, so a place the engines disagree on is a red of its own).
+--
+-- The place of a tuple is its position from 1 among the distinct key tuples,
+-- ordered lexicographically, each key in its own direction.
+--   ga by score desc, name asc:  cy 9 / ann 7, bob 7, eve 7 (by name) / dee 4
+--       -> cy 1, ann 2, bob 3, eve 4, dee 5
+--   ga by score asc, name asc (bare keys are asc): dee 1, ann 2, bob 3, eve 4, cy 5
+--   ga by score desc, name desc: cy 1, eve 2, bob 3, ann 4, dee 5
+--   gz by score desc, name asc: q 0 / p -3, r -3 -> q 1, p 2, r 3
+--   gz by score asc, name asc: p 1, r 2, q 3;  desc, desc: q 1, r 2, p 3
+-- Keys of every kind in one position: Int before atom before string, Ints
+-- by value, atoms and strings by their text.
+--   gm asc, asc:  (1,2) 1, (1,a) 2, (1,"b") 3, (2,1) 4, (2,"a") 5
+--   gm asc, desc: (1,"b") 1, (1,a) 2, (1,2) 3, (2,"a") 4, (2,1) 5
+--   gs (the second key is 0 throughout): the atom foo is 1; the strings by
+--       their UTF-16 text: "" 2, "B" 3, "ab" 4, "b" 5, "foo" 6, then the
+--       pair of U+1F600 (a surrogate, D83D) 7 before U+FF5E 8
+-- One tuple from two members is one place: gd keys 3, 3, 5 -> n1 1, n2 1, n3 2.
+-- A subject that is none of the tuples has no row, nor has a group with no
+-- member; a subject or a key that is no Int, atom or string is a hole.
+rte_place(ga, cy, 1).
+rte_place(ga, ann, 2).
+rte_place(ga, bob, 3).
+rte_place(ga, eve, 4).
+rte_place(ga, dee, 5).
+rte_place(gz, q, 1).
+rte_place(gz, p, 2).
+rte_place(gz, r, 3).
+rte_asc(ga, dee, 1).
+rte_asc(ga, ann, 2).
+rte_asc(ga, bob, 3).
+rte_asc(ga, eve, 4).
+rte_asc(ga, cy, 5).
+rte_asc(gz, p, 1).
+rte_asc(gz, r, 2).
+rte_asc(gz, q, 3).
+rte_desc(ga, cy, 1).
+rte_desc(ga, eve, 2).
+rte_desc(ga, bob, 3).
+rte_desc(ga, ann, 4).
+rte_desc(ga, dee, 5).
+rte_desc(gz, q, 1).
+rte_desc(gz, r, 2).
+rte_desc(gz, p, 3).
+rte_mixaa(gm, 1, 2, 1).
+rte_mixaa(gm, 1, a, 2).
+rte_mixaa(gm, 1, "b", 3).
+rte_mixaa(gm, 2, 1, 4).
+rte_mixaa(gm, 2, "a", 5).
+rte_mixaa(gs, foo, 0, 1).
+rte_mixaa(gs, "", 0, 2).
+rte_mixaa(gs, "B", 0, 3).
+rte_mixaa(gs, "ab", 0, 4).
+rte_mixaa(gs, "b", 0, 5).
+rte_mixaa(gs, "foo", 0, 6).
+rte_mixaa(gs, "😀", 0, 7).
+rte_mixaa(gs, "～", 0, 8).
+rte_mixad(gm, 1, "b", 1).
+rte_mixad(gm, 1, a, 2).
+rte_mixad(gm, 1, 2, 3).
+rte_mixad(gm, 2, "a", 4).
+rte_mixad(gm, 2, 1, 5).
+rte_mixad(gs, foo, 0, 1).
+rte_mixad(gs, "", 0, 2).
+rte_mixad(gs, "B", 0, 3).
+rte_mixad(gs, "ab", 0, 4).
+rte_mixad(gs, "b", 0, 5).
+rte_mixad(gs, "foo", 0, 6).
+rte_mixad(gs, "😀", 0, 7).
+rte_mixad(gs, "～", 0, 8).
+rte_dup(gd, n1, 1).
+rte_dup(gd, n2, 1).
+rte_dup(gd, n3, 2).
+-- (7, bob) of ga is the third; (7, zed), (8, bob) and the empty group's (1, x) are none
+rte_ask(ga, 7, bob, 3).
+
+place_wrong(G, N, R)     :- rt_place(G, N, R), not rte_place(G, N, R).
+place_missing(G, N, R)   :- rte_place(G, N, R), not rt_place(G, N, R).
+asc_wrong(G, N, R)       :- rt_asc(G, N, R), not rte_asc(G, N, R).
+asc_missing(G, N, R)     :- rte_asc(G, N, R), not rt_asc(G, N, R).
+bare_wrong(G, N, R)      :- rt_bare(G, N, R), not rte_asc(G, N, R).
+bare_missing(G, N, R)    :- rte_asc(G, N, R), not rt_bare(G, N, R).
+desc_wrong(G, N, R)      :- rt_desc(G, N, R), not rte_desc(G, N, R).
+desc_missing(G, N, R)    :- rte_desc(G, N, R), not rt_desc(G, N, R).
+mixaa_wrong(G, A, B, R)  :- rt_mixaa(G, A, B, R), not rte_mixaa(G, A, B, R).
+mixaa_missing(G, A, B, R) :- rte_mixaa(G, A, B, R), not rt_mixaa(G, A, B, R).
+mixad_wrong(G, A, B, R)  :- rt_mixad(G, A, B, R), not rte_mixad(G, A, B, R).
+mixad_missing(G, A, B, R) :- rte_mixad(G, A, B, R), not rt_mixad(G, A, B, R).
+dup_wrong(G, N, R)       :- rt_dup(G, N, R), not rte_dup(G, N, R).
+dup_missing(G, N, R)     :- rte_dup(G, N, R), not rt_dup(G, N, R).
+ask_wrong(G, S, N, R)    :- rt_ask(G, S, N, R), not rte_ask(G, S, N, R).
+ask_missing(G, S, N, R)  :- rte_ask(G, S, N, R), not rt_ask(G, S, N, R).
+rte_two(G, N)            :- rt_place(G, N, A), rt_place(G, N, B), A != B.
+-- the places of a group are 1..n with no gap: a tie breaks no place
+rte_gap(G, R)            :- rt_place(G, _, R), R > 1, Q is R - 1, not rt_place(G, _, Q).
+alarm(place_wrong).
+alarm(place_missing).
+alarm(asc_wrong).
+alarm(asc_missing).
+alarm(bare_wrong).
+alarm(bare_missing).
+alarm(desc_wrong).
+alarm(desc_missing).
+alarm(mixaa_wrong).
+alarm(mixaa_missing).
+alarm(mixad_wrong).
+alarm(mixad_missing).
+alarm(dup_wrong).
+alarm(dup_missing).
+alarm(ask_wrong).
+alarm(ask_missing).
+alarm(rte_two).
+alarm(rte_gap).
+
+-- A KEY OR A SUBJECT THAT IS NO TERM OF A KEY is a hole, never a place. The
+-- key of a hole is every shared variable in the order the aggregate reads
+-- them: the subject's, then the group's.
+rte_hole(rt_bad, $cons(gx, $nil), agg_type_error).
+rte_hole(rt_ask, $cons(f(1), $cons(bob, $cons(ga, $nil))), agg_type_error).
+rte_marked(Rel, Key, Why) :- rte_hole(Rel, Key, Why), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), Why).
+hole_unmarked(Rel, Key, Why) :- rte_hole(Rel, Key, Why), not rte_marked(Rel, Key, Why).
+rte_holed_rel(rt_bad).
+rte_holed_rel(rt_ask).
+hole_extra(Rel, Key, Why) :- rte_holed_rel(Rel), concludes[$kernel](R, Rel), hole[$kernel]($cell(R, _, _, Key), Why),
+                             not rte_hole(Rel, Key, Why).
+rte_row(G)               :- rt_bad(G, _).
+rte_row(G)               :- rt_ask(G, 7, zed, _).
+rte_row(G)               :- rt_ask(G, 8, bob, _).
+rte_row(G)               :- rt_ask(gnone, _, _, G).
+alarm(hole_unmarked).
+alarm(hole_extra).
+alarm(rte_row).

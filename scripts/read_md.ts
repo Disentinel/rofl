@@ -391,7 +391,15 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     if ((m = new RegExp(`^(${T}) is the number of (${X})$`).exec(pre))) return read('count', term(m[1], intros), takes(m[2], intros), []);
     if ((m = new RegExp(`^(${T}) is the (sum|median) of (${T}) over (${X})$`).exec(pre))) return read(m[2], term(m[1], intros), [term(m[3], intros)], takes(m[4], intros));
     if ((m = new RegExp(`^(${T}) is the quantile (${T}) of (${T}) over (${X})$`).exec(pre))) return read('quantile', term(m[1], intros), [term(m[2], intros), term(m[3], intros)], takes(m[4], intros));
-    if ((m = new RegExp(`^(${T}) is the rank of (${T}) among (${T})$`).exec(pre))) return read('rank', term(m[1], intros), [term(m[2], intros), term(m[3], intros)], []);
+    if ((m = new RegExp(`^(${T}) is the rank of (${X}) among (${X})$`).exec(pre))) {
+      if (!m[2].startsWith('(') && !m[3].startsWith('(')) return read('rank', term(m[1], intros), [term(m[2], intros), term(m[3], intros)], []);
+      const keys = (m[3].startsWith('(') ? splitTop(m[3].slice(1, -1)) : [m[3]]).map((x): Term => {
+        const d = /^(.*) (ascending|descending)$/.exec(x.trim());
+        const t = term(d ? d[1] : x, intros);
+        return d ? { f: d[2] === 'descending' ? 'desc' : 'asc', args: [t] } : t;
+      });
+      return read('rank', term(m[1], intros), takes(m[2], intros), keys);
+    }
     if ((m = new RegExp(`^(${T}) is the (least|greatest) (${T})$`).exec(pre))) return read(m[2] === 'least' ? 'min' : 'max', term(m[1], intros), [term(m[3], intros)], []);
     if ((m = new RegExp(`^(${T}) is the (disjunction|conjunction) of (${T})$`).exec(pre))) return read(m[2] === 'disjunction' ? 'or' : 'and', term(m[1], intros), [term(m[3], intros)], []);
     if ((m = new RegExp(`^at least (${T}) of (${X})$`).exec(pre))) return read('at_least', term(m[1], intros), takes(m[2], intros), []);

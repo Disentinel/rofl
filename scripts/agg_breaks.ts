@@ -1157,26 +1157,12 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "safety.rofl",
-    "agg_refused(R, param_and_value)    :- agg_op(R, K, Op), param_op(Op), not agg_two_terms(R, K).\n",
+    "agg_refused(R, param_and_value)    :- agg_op(R, K, Op), param_op(Op), not agg_two_terms(R, K), not agg_tuple_rank(R, K).\n",
     ""
    ]
   ],
   "expect": {
    "agg_holistic_safety": "was to be refused"
-  }
- },
- {
-  "id": "hol_rank_key",
-  "what": "safety.rofl takes a key on rank",
-  "edits": [
-   [
-    "safety.rofl",
-    "agg_refused(R, key_on_rank)        :- agg_op(R, K, rank), agg_keyed(R, K).\n",
-    ""
-   ]
-  ],
-  "expect": {
-   "agg_holistic_safety": "refused_accepted"
   }
  },
  {
@@ -3064,6 +3050,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "why_dag_off",
+  "what": "why writes a fact it has written out already in full again, as a tree and not a DAG",
+  "expect": {
+   "agg_why_dag": "dg_twice"
+  }
+ },
+ {
+  "id": "why_dag_cell_off",
+  "what": "why writes an aggregate's cell it has written out already in full again",
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
+  "id": "whynot_dag_off",
+  "what": "whynot demonstrates a ground literal it has demonstrated already again",
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
   "id": "count_why_plain",
   "what": "why renders a counting tag's fact as a plain one, not as the sum of its derivations",
   "expect": {
@@ -4437,6 +4444,48 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ts_why_dag_off",
+  "what": "TypeScript why writes a fact it has written out already in full again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.whyDone.has(`f|${id}`)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_twice"
+  }
+ },
+ {
+  "id": "ts_why_dag_cell_off",
+  "what": "TypeScript why writes an aggregate's cell it has written out already in full again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (this.whyDone.has(`c|${pr.key}`)) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
+  "id": "ts_whynot_dag_off",
+  "what": "TypeScript whynot demonstrates a ground literal it has demonstrated already again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (at !== undefined && at <= level) {",
+    "if (false) {"
+   ]
+  ],
+  "expect": {
+   "agg_why_dag": "dg_text_missing"
+  }
+ },
+ {
   "id": "ts_count_why_plain",
   "what": "TypeScript why renders a counting tag's fact as a plain one",
   "edits": [
@@ -5375,6 +5424,213 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "rank_dir_ignored",
+  "what": "a rank key's direction is read as ascending, whatever the key is wrapped in",
+  "expect": {
+   "agg_rank_tuple_eval": "place_wrong",
+   "agg_rank_tuple_witness": "member_wrong_at",
+   "agg_rank_tuple_holes": "hole_missing"
+  }
+ },
+ {
+  "id": "rank_first_key_only",
+  "what": "a rank over a tuple compares the first key and calls the rest equal",
+  "expect": {
+   "agg_rank_tuple_eval": "place_wrong"
+  }
+ },
+ {
+  "id": "rank_kind_order",
+  "what": "a rank key's atoms sort after its strings, not before",
+  "expect": {
+   "agg_rank_tuple_eval": "mixaa_wrong"
+  }
+ },
+ {
+  "id": "rank_tuple_insertion",
+  "what": "a rank over a tuple of a subject that is none of the tuples is where it would stand",
+  "expect": {
+   "agg_rank_tuple_eval": "ask_wrong",
+   "agg_rank_tuple_witness": "unranked_valued"
+  }
+ },
+ {
+  "id": "rank_members_unordered",
+  "what": "the members of a rank over a tuple are listed by height and text, not in the tuple's order",
+  "expect": {
+   "agg_rank_tuple_witness": "member_wrong_at"
+  }
+ },
+ {
+  "id": "rank_share_coarse",
+  "what": "cells over one shared group are shared across the groups too",
+  "expect": {
+   "agg_rank_tuple_eval": "asc_missing"
+  }
+ },
+ {
+  "id": "rank_reach_blind",
+  "what": "no unknown moves a rank over a tuple",
+  "expect": {
+   "agg_rank_tuple_holes": "hole_missing"
+  }
+ },
+ {
+  "id": "rank_compound_key",
+  "what": "a compound term is read as a key, the atom with no name",
+  "expect": {
+   "agg_rank_tuple_eval": "hole_unmarked"
+  }
+ },
+ {
+  "id": "rank_door_subject_wrapped",
+  "what": "the load door takes a rank's subject written in asc(..) or desc(..)",
+  "expect": {
+   "agg_rank_tuple_safety": "refused, but not for"
+  }
+ },
+ {
+  "id": "rank_door_key_compound",
+  "what": "the load door takes a rank key that is a compound term",
+  "expect": {
+   "agg_rank_tuple_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "phrase_rank_dir_dropped",
+  "what": "rofl-render writes a rank key without its direction",
+  "expect": {
+   "agg_rank_tuple_phrase": "pt_wrong"
+  }
+ },
+ {
+  "id": "rank_arity_unchecked",
+  "what": "safety.rofl takes a rank over a tuple with a different number of keys and subjects",
+  "edits": [
+   [
+    "safety.rofl",
+    "agg_refused(R, rank_key_arity)     :- agg_tuple_rank(R, K), not rank_arity_ok(R, K).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_safety": "was to be refused",
+   "agg_holistic_safety": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_rank_dir_ignored",
+  "what": "the TypeScript rank key's direction is read as ascending",
+  "edits": [
+   [
+    "src/cell.ts",
+    "    if (c !== 0) return desc[i] ? -c : c;",
+    "    if (c !== 0) return c;"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_eval": "place_wrong"
+  }
+ },
+ {
+  "id": "ts_rank_kind_order",
+  "what": "the TypeScript rank key sorts atoms after strings",
+  "edits": [
+   [
+    "src/cell.ts",
+    "const kindRank = (x: KeyAtom): number => (x.k === 'i' ? 0 : x.k === 'a' ? 1 : 2);",
+    "const kindRank = (x: KeyAtom): number => (x.k === 'i' ? 0 : x.k === 'a' ? 2 : 1);"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_eval": "mixaa_wrong"
+  }
+ },
+ {
+  "id": "ts_rank_members_unordered",
+  "what": "the TypeScript members of a rank over a tuple are listed by height and text",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      if (rk && katoms.every((x) => typeof x !== 'string')) {",
+    "      if (false && katoms.every((x) => typeof x !== 'string')) {"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_witness": "member_wrong_at"
+  }
+ },
+ {
+  "id": "ts_rank_reach_blind",
+  "what": "no unknown moves a rank over a tuple in the TypeScript engine",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (!stays) for (const [, xs] of fresh) for (const u of xs) push(u);\n    return us;\n  }\n\n  /** A FAULT EVERY",
+    "    if (false) for (const [, xs] of fresh) for (const u of xs) push(u);\n    return us;\n  }\n\n  /** A FAULT EVERY"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_holes": "hole_missing"
+  }
+ },
+ {
+  "id": "ts_rank_door_subject_wrapped",
+  "what": "the TypeScript load door takes a rank's subject written in asc(..) or desc(..)",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "    if (keyDir(p)[1]) return `rank's subject has no direction",
+    "    if (false) return `rank's subject has no direction"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_safety": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_rank_compound_key",
+  "what": "the TypeScript rank reads a compound term as a key, the atom with no name",
+  "edits": [
+   [
+    "src/cell.ts",
+    "    if (t.k === 's') return { k: 's', v: t.v };\n    throw new Refused(AGG_TYPE);",
+    "    if (t.k === 's') return { k: 's', v: t.v };\n    return { k: 'a', v: '' };"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_eval": "hole_unmarked"
+  }
+ },
+ {
+  "id": "ts_rank_share_coarse",
+  "what": "the TypeScript cells over one shared group are shared across the groups too",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "listKey(corr.filter((_, n) => !ats.includes(n)))",
+    "listKey(corr.filter(() => false))"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_eval": "asc_missing"
+  }
+ },
+ {
+  "id": "reader_rank_dir_dropped",
+  "what": "the reader reads a rank key's direction and drops it",
+  "edits": [
+   [
+    "scripts/read_md.ts",
+    "        return d ? { f: d[2] === 'descending' ? 'desc' : 'asc', args: [t] } : t;",
+    "        return t;"
+   ]
+  ],
+  "expect": {
+   "agg_rank_tuple_phrase": "pt_wrong"
   }
  },
 ];

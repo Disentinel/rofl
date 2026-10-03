@@ -490,6 +490,13 @@ check_opt("agg_cell_why", together, 1).
 check_opt("agg_cell_why", explain, 1).
 proves("agg_cell_why", agg, cell, why).
 
+-- w_why_is_a_dag: a fact or a cell written out once is referred to after (`K [above]`), and a failing literal demonstrated once
+check_world("agg_why_dag").
+check_file("agg_why_dag", "examples/checks/agg-why-dag.rofl").
+check_opt("agg_why_dag", together, 1).
+check_opt("agg_why_dag", explain, 1).
+proves("agg_why_dag", agg, cell, why).
+
 -- WELL-FOUNDED WORLDS AND TICKS (w_agg_wfs_ticks; docs/aggregates.md,
 -- "Well-founded worlds and ticks, as built"). The wfs column: a cell under
 -- semantics(well_founded) is refused (each world's `-refused-` fixtures),
@@ -2290,6 +2297,14 @@ check_world("staged_neg_why_plain").
 check_file("staged_neg_why_plain", "examples/checks/staged-neg-why-data.rofl").
 check_opt("staged_neg_why_plain", together, 1).
 check_opt("staged_neg_why_plain", ticks, 1).
+-- the premise NOT carried (f_the_ts_explain_bridge_cannot_name_a_past_premise_that_is_gone): named, as a fact of a past tick, by both bridges
+check_world("staged_neg_why_nocarry").
+check_file("staged_neg_why_nocarry", "examples/checks/staged-neg-why-nocarry-data.rofl").
+check_file("staged_neg_why_nocarry", "examples/checks/staged-neg-why-check.rofl").
+check_file("staged_neg_why_nocarry", "examples/checks/staged-neg-why-nocarry-check.rofl").
+check_opt("staged_neg_why_nocarry", together, 1).
+check_opt("staged_neg_why_nocarry", ticks, 1).
+check_opt("staged_neg_why_nocarry", explain, 1).
 
 -- w_agg_incremental_ready: the cells of count and sum under retraction (subtraction, a member that stays under another derivation, a group that is gone, an empty count), examples/checks/agg-incr-sum.rofl
 check_world("agg_incr_sum").
@@ -2598,3 +2613,61 @@ check_opt("agg_datastrat_retract", together, 1).
 check_opt("agg_datastrat_retract", retract, "input(a4, 7)").
 proves_work("agg_datastrat_retract", w_agg_data_strat).
 proves_work("agg_datastrat_retract", w_agg_retract_fallback_tail).
+
+-- RANK OVER A TUPLE (w_agg_rank_by_tuple): `rank(S1, S2 ; K1, desc(K2) : body)`,
+-- the place of a tuple among the distinct key tuples in a lexicographic order
+-- with a direction for each key (docs/aggregates.md, "Rank over a tuple, as built").
+check_world("agg_rank_tuple_eval").
+check_file("agg_rank_tuple_eval", "examples/checks/agg-rank-tuple-data.rofl").
+check_file("agg_rank_tuple_eval", "examples/checks/agg-rank-tuple-eval-check.rofl").
+check_opt("agg_rank_tuple_eval", together, 1).
+proves_work("agg_rank_tuple_eval", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_safety").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-1-ok.rofl").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-check.rofl").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-2-refused-more-subjects.rofl").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-3-refused-subject-wrapped.rofl").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-4-refused-key-compound.rofl").
+check_file("agg_rank_tuple_safety", "examples/checks/agg-rank-tuple-safety-5-refused-subject-unbound.rofl").
+check_opt("agg_rank_tuple_safety", together, 1).
+proves_work("agg_rank_tuple_safety", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_witness").
+check_file("agg_rank_tuple_witness", "examples/checks/agg-rank-tuple-data.rofl").
+check_file("agg_rank_tuple_witness", "examples/checks/agg-rank-tuple-witness-check.rofl").
+check_opt("agg_rank_tuple_witness", together, 1).
+proves_work("agg_rank_tuple_witness", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_why").
+check_file("agg_rank_tuple_why", "examples/checks/agg-rank-tuple-data.rofl").
+check_file("agg_rank_tuple_why", "examples/checks/agg-rank-tuple-why-check.rofl").
+check_opt("agg_rank_tuple_why", together, 1).
+check_opt("agg_rank_tuple_why", explain, 1).
+proves_work("agg_rank_tuple_why", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_holes").
+check_file("agg_rank_tuple_holes", "examples/checks/agg-rank-tuple-holes-data.rofl").
+check_file("agg_rank_tuple_holes", "examples/checks/agg-rank-tuple-holes-check.rofl").
+check_opt("agg_rank_tuple_holes", together, 1).
+proves_work("agg_rank_tuple_holes", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_phrase").
+check_file("agg_rank_tuple_phrase", "examples/checks/agg-phrase-data.rofl").
+check_file("agg_rank_tuple_phrase", "examples/checks/agg-phrase-rank-tuple.rofl.md").
+check_file("agg_rank_tuple_phrase", "examples/checks/agg-phrase-check.rofl").
+check_file("agg_rank_tuple_phrase", "examples/checks/agg-phrase-rank-tuple-check.rofl").
+check_opt("agg_rank_tuple_phrase", together, 1).
+check_opt("agg_rank_tuple_phrase", sentences, 1).
+proves_work("agg_rank_tuple_phrase", w_agg_rank_by_tuple).
+
+check_world("agg_rank_tuple_syntax").
+check_file("agg_rank_tuple_syntax", "examples/ring1/charclass.rofl").
+check_file("agg_rank_tuple_syntax", "examples/ring1/ring1.rofl").
+check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-1-forms.rofl").
+check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-2-expect.rofl").
+check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-3-refused-empty-key.rofl").
+check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-3-refused-empty-subject.rofl").
+check_file("agg_rank_tuple_syntax", "examples/checks/agg-rank-tuple-syntax-3-refused-unclosed.rofl").
+check_opt("agg_rank_tuple_syntax", together, 1).
+proves_work("agg_rank_tuple_syntax", w_agg_rank_by_tuple).

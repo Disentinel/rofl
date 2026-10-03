@@ -63,7 +63,10 @@ hole left out reaches exactly the groups of a body aggregate and the keys of
 a counting tag whose value it could change, decided under every completion
 elsewhere, in both engines, the holes and shrug cells of six kinds reopened
 and closed again against a completions oracle (w_agg_precise_holes, twelve
-cells; "Precise holes, as built"). The rest of the matrix is not built.
+cells; "Precise holes, as built"). Then rank over a tuple, a lexicographic
+order of keys with a direction for each, in both engines and the sentence form,
+owning no cell of the matrix and closed by its seven worlds (w_agg_rank_by_tuple;
+"Rank over a tuple, as built"). The rest of the matrix is not built.
 
 Reviewed the same day: four of the thirty proofs were found wanting (sum
 `eval_rust` and `why`, min_max_strat `witness` and `why`) and those cells are
@@ -799,8 +802,8 @@ spelled canonically `?Q is quantile(90,?V ; ?K : ...)` in both engines.
 (`holistic_needs_key`: the values are a multiset, so two equal values under two
 keys are two members); median takes exactly one value (`one_value`); quantile
 and rank exactly two terms, the percent or subject and the value
-(`param_and_value`); rank no key (`key_on_rank`: it ranks among distinct
-values). The body binds what the aggregate projects (`member_unbound`), as for
+(`param_and_value`); rank no key, unless it ranks a tuple (`rank_key_arity`:
+then a key for every subject; "Rank over a tuple, as built"). The body binds what the aggregate projects (`member_unbound`), as for
 count.
 
 **Values, exactly.** Over the members' values sorted ascending, n of them, with
@@ -813,8 +816,8 @@ duplicates kept (they are distinct projection tuples):
   is even (`[10,20,30,40]` gives 20). That is the tie rule.
 - `rank(S)` is S's position, from 1, among the **distinct** values in
   ascending order (`[2,2,9]`: rank 1 for 2, 2 for 9); a subject that is none of
-  them has no row. A descending rank ranks the negations:
-  `N is 0 - S, R is rank(N, M : score(_, V), M is 0 - V)`.
+  them has no row. A descending rank, or one by several keys, is a rank over
+  a tuple ("Rank over a tuple, as built").
 
 The value is computed from the sorted values (`AggOp::holistic`), so it is a
 function of the member set and not of the order members arrive in; a law
@@ -897,7 +900,96 @@ re-solved and stored the whole group, O(n²) in both, and one group of about
 `agg_cell` and `agg_sealed`, and `agg_member` when a rule reads it, which a
 rule asking the members of every per-member rank cell pays n² for.
 
-**Not built.** Interpolated quantiles, and any carrier but Int.
+**Not built.** Interpolated quantiles, and any carrier but Int (a rank takes
+Int, atom and string keys: "Rank over a tuple, as built").
+
+## Rank over a tuple, as built
+
+w_agg_rank_by_tuple, in both engines; decision in
+f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples. `rank` ordered
+one integer, so an order by several keys was a packed score (blam's
+`minutes * 1000 + pairs`) or a sort and a tie-break in the host (huh's path,
+blam's edge name). It orders a tuple now.
+
+**Syntax.** The `;` a body aggregate already had for a projection key:
+
+    R is rank(S, V : body)                        -- one integer, unchanged
+    R is rank(S1, S2 ; K1, desc(K2) : body)       -- the place of (S1, S2)
+    P is rank(N, Path ; desc(C), Path2 : ...)     -- count desc, then path asc
+
+The terms before the `;` are the subject, read from outside as the one
+integer's is (a constant, or a variable bound before the aggregate; no
+direction); those after it are the members' keys, one for each subject. A key
+is a variable or a constant, in `asc(..)` or `desc(..)` for its direction, and
+`asc` is what a bare key means. No parser changed: the Rust parser,
+`src/parser.ts` and ring 1 read it as they read a key, and a direction is a term
+like any other (ring 1 reads `desc(K)` as `comp(desc, [K])`). The sentence is
+`R is the rank of (S1, S2) among (K1, K2 descending) such that (...)`, read in
+`scripts/read_md.ts` and written by rofl-render; a single subject and key are
+`the rank of S among (K descending)`.
+
+**The order.** A key is an Int, an atom or a string: an Int before an atom
+before a string; Ints by value; atoms and strings by their text in the
+kernel's order, the order of UTF-16 code units (so U+1F600, a surrogate pair,
+sorts before U+FF5E, as a JS string compare has it, and the Rust side uses
+`cmp_js`). An atom and a string spelled alike are two keys, the atom first.
+Keys of different kinds in one position are ordered, not refused. A compound
+term is no key: the door refuses one written so, and one that data makes is
+`hole(agg_type_error)`, as for any member that is no value. The tuples are
+ordered lexicographically, the first key first, each key in its direction.
+
+**The value.** The position from 1 of the subject tuple among the DISTINCT key
+tuples of the body; none when it is not one of them, a row-less cell that
+keeps its members, exactly as the one-integer form. Two members of one tuple
+are one member (every holistic kind deduplicates by its projection), so they
+share a place; two different tuples never do. A key list that ends in a unique
+key, a name or a path, is a total order and its places are 1..n with no gap.
+The ties are therefore canonical and deterministic by construction: there is
+no tie to break that the keys do not break.
+
+**What does not change.** The algebra is the holistic one (`Algebra::HOLISTIC`,
+a Group witness, the group recomputed whole), and the incremental engine's
+strategy with it: `delta.rs` refuses a rank and the cell is recomputed.
+The one group is still shared across subjects (`hol_share_key`), by every
+subject variable now, so a rank per member over a tuple costs one group.
+
+**Witness.** The members of a rank over a tuple are kept in the tuple's own
+order, each as its key tuple without its direction (height and text come
+after the tuple, and no two distinct tuples agree on it), so `why` lists them
+the way the rank counts them: `#1 (9,cy)`, `#2 (7,ann)`. The one-integer
+form keeps the canonical order, height first.
+
+**Shape and door.** safety.rofl refuses a rank with a key and a different
+number of subjects (`rank_key_arity`, which replaces `key_on_rank`); the door
+(`program.rs`, `checkAggregatesDoor`) a subject that is not a constant or a
+variable bound before the rank, a subject written in `asc` or `desc`, and a key
+that is a compound term.
+
+**Holes.** Decided under every completion, as for the one-integer rank: the
+group moves when adding every tuple the possible members could add changes the
+subject's place (a place only grows as tuples are added, and a subject that is
+none of the tuples gains its place only by being added itself). So a possible
+tuple that sorts after the subject in its direction moves nothing, and the
+direction decides which: the same unknown holes `rank(S, N ; desc(V), N2 : ..)`
+and holds `rank(S, N ; V, N2 : ..)`.
+
+**Retired.** blam's `cut_score` and the host's `||` tie-break on the edge
+name (`cut_place` ranks minutes, pairs, then the edge; `free_place` minutes,
+then the edge); huh's tie-break by path (`s_place` ranks count, then path).
+Both demos sort by the place alone and print what they printed.
+
+**Proofs.** Seven worlds, each seen red under planted faults of
+scripts/agg_breaks.ts (`rank_dir_ignored`, `rank_first_key_only`,
+`rank_kind_order`, `rank_not_distinct`, `rank_tuple_insertion`,
+`rank_members_unordered`, `rank_share_coarse`, `rank_reach_blind`,
+`rank_compound_key`, `rank_door_*`, `rank_arity_unchecked`,
+`phrase_rank_dir_dropped`, the TypeScript twins `ts_rank_*` and
+`reader_rank_dir_dropped`): `agg_rank_tuple_syntax` (three parsers),
+`_safety`, `_eval` (places derived by hand over ties, mixed directions, Ints,
+atoms and strings in one key, an astral string, one tuple twice, a subject
+none of them, a key that is no key), `_witness` (the members in tuple order,
+their premises), `_why`, `_holes` (both directions over the same unknowns) and
+`_phrase` (the sentences, round trip and wording).
 
 ## Well-founded worlds and ticks, as built
 
@@ -2653,7 +2745,7 @@ the right, and rofl-render writes that rofl back as the sentence on the left.
 | sum | `S is the sum of V over K such that (K scores V)` | `S is sum(V ; K : score(K, V))` |
 | min, max | `M is the least V such that (...)`, `the greatest` | `M is min(V : ...)`, `max` |
 | or, and | `F is the disjunction of X such that (...)`, `the conjunction` | `F is or(X : ...)`, `and` |
-| holistic | `the median of V over K`, `the quantile P of V over K`, `the rank of S among V` | `median(V ; K : ...)`, `quantile(P, V ; K : ...)`, `rank(S, V : ...)` |
+| holistic | `the median of V over K`, `the quantile P of V over K`, `the rank of S among V`, `the rank of (S, T) among (V descending, W)` | `median(V ; K : ...)`, `quantile(P, V ; K : ...)`, `rank(S, V : ...)`, `rank(S, T ; desc(V), W : ...)` |
 | threshold | `at least N of B such that (...)` | `at_least(N, B : ...)` |
 | order, join lattice | `` `dist` keeps the least D for each X and Y. `` (greatest, disjunction, conjunction, union, hull, bitwise or) | `lattice dist(X, Y, min D).` |
 | widening | `` `loop` keeps the hull I for each P, widened after 2 improvements. `` | `lattice loop(P, hull I) widen 2.` |

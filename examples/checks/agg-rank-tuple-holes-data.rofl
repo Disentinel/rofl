@@ -1,0 +1,33 @@
+-- examples/checks/agg-rank-tuple-holes-data.rofl — A RANK OVER A TUPLE OVER
+-- MEMBERS A HOLE LEFT OUT (docs/aggregates.md, "Rank over a tuple, as built").
+-- An unknown is a tuple a rule would conclude but for an overflow, so what it
+-- is, is known and whether it holds is not. A place it could change is a
+-- shrug on its own cell; one it cannot change holds, and its direction decides
+-- which: a tuple that sorts after the subject moves nothing.
+--   rkh_m(G, Name, Score): h1 (a,5), and (b,7) not known
+--     h2 (a,5), and (b,3) not known          h3 (a,5), and (a,5) not known
+--     h4 (a,5) (c,5), and (b,5) not known
+edb(rkh_big).
+edb(rkh_m0).
+edb(rkh_ask).
+rkh_big(1152921504606846975).
+rkh_m0(h1, a, 5).
+rkh_m0(h2, a, 5).
+rkh_m0(h3, a, 5).
+rkh_m0(h4, a, 5).
+rkh_m0(h4, c, 5).
+rkh_m(G, N, S)  :- rkh_m0(G, N, S).
+rkh_m(h1, b, 7) :- rkh_big(B), Z is B + 1, Z > 0.
+rkh_m(h2, b, 3) :- rkh_big(B), Z is B + 1, Z > 0.
+rkh_m(h3, a, 5) :- rkh_big(B), Z is B + 1, Z > 0.
+rkh_m(h4, b, 5) :- rkh_big(B), Z is B + 1, Z > 0.
+rkh_ask(h1, 5, a).
+rkh_ask(h2, 5, a).
+rkh_ask(h3, 5, a).
+rkh_ask(h4, 5, a).
+rkh_ask(h4, 5, c).
+rkh_ask(h2, 3, b).
+rkh_ask(h1, 9, z).
+-- by score, the most first, then name; and by score, the least first, then name
+rkh_d(G, S, N, R) :- rkh_ask(G, S, N), R is rank(S, N ; desc(S2), N2 : rkh_m(G, N2, S2)).
+rkh_a(G, S, N, R) :- rkh_ask(G, S, N), R is rank(S, N ; S2, N2 : rkh_m(G, N2, S2)).

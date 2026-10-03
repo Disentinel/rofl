@@ -353,11 +353,78 @@ impl AggOp {
     }
 }
 
-/// A holistic group's values sorted ascending, and its distinct values.
+/// A holistic group's values sorted ascending, and its distinct values. A
+/// rank over a tuple (`rank(S1, S2 ; K1, desc(K2) : body)`) has no integers:
+/// `tup` holds its distinct key tuples in the order `rank_cmp` gives them.
 #[derive(Clone, Debug)]
 pub struct Sorted {
     pub values: Vec<i128>,
     pub distinct: Vec<i128>,
+    pub tup: Vec<Vec<KeyAtom>>,
+    pub desc: Vec<bool>,
+}
+
+/// One element of a rank key. Int sorts before Atom and Atom before Str; Ints
+/// by value, Atoms and Strs by their text in the kernel's order (`cmp_js`).
+/// Anything else (a compound term) is no key: `agg_type_error`.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum KeyAtom { Int(i128), Atom(String), Str(String) }
+
+impl KeyAtom {
+    pub fn of(h: &Heap, t: Term) -> Option<KeyAtom> {
+        match t.kind() {
+            TermK::Int(n) => Some(KeyAtom::Int(n as i128)),
+            TermK::Atom(s) => Some(KeyAtom::Atom(h.name(s).to_string())),
+            TermK::Str(s) => Some(KeyAtom::Str(h.name(s).to_string())),
+            _ => brk!("rank_compound_key" => Some(KeyAtom::Atom(String::new())); None),
+        }
+    }
+    fn kind_rank(&self) -> u8 {
+        match self {
+            KeyAtom::Int(_) => 0,
+            KeyAtom::Atom(_) => brk!("rank_kind_order" => 2; 1),
+            KeyAtom::Str(_) => brk!("rank_kind_order" => 1; 2),
+        }
+    }
+    pub fn cmp_to(&self, o: &KeyAtom) -> std::cmp::Ordering {
+        match (self, o) {
+            (KeyAtom::Int(a), KeyAtom::Int(b)) => a.cmp(b),
+            (KeyAtom::Atom(a), KeyAtom::Atom(b)) | (KeyAtom::Str(a), KeyAtom::Str(b)) => cmp_js(a, b),
+            _ => self.kind_rank().cmp(&o.kind_rank()),
+        }
+    }
+}
+
+/// The lexicographic order of two rank keys, each position in its direction.
+pub fn rank_cmp(desc: &[bool], a: &[KeyAtom], b: &[KeyAtom]) -> std::cmp::Ordering {
+    for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
+        let c = x.cmp_to(y);
+        let c = if brk!("rank_dir_ignored" => false; desc[i]) { c.reverse() } else { c };
+        if c != std::cmp::Ordering::Equal || brk!("rank_first_key_only" => true; false) {
+            return c;
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
+/// A rank key element as the source writes it: `(descending, wrapped)` for
+/// `desc(T)`, `asc(T)` and a bare `T`.
+pub fn key_dir(h: &Heap, t: Term) -> (bool, bool) {
+    if let TermK::Func(i) = t.kind() {
+        if h.fargs(i).len() == 1 {
+            match h.name(h.fname(i)) {
+                "desc" => return (true, true),
+                "asc" => return (false, true),
+                _ => {}
+            }
+        }
+    }
+    (false, false)
+}
+
+/// A rank key's elements, resolved and with no direction wrapper on them.
+pub fn key_atoms(h: &Heap, v: &Vocab, ts: &[Term]) -> Result<Vec<KeyAtom>, Sym> {
+    ts.iter().map(|t| KeyAtom::of(h, *t).ok_or(v.agg_type_reason)).collect()
 }
 
 impl Sorted {
@@ -374,7 +441,24 @@ impl Sorted {
         brk!("holistic_unsorted" => (); values.sort_unstable());
         let mut distinct = values.clone();
         distinct.dedup();
-        Ok(Sorted { values, distinct })
+        Ok(Sorted { values, distinct, tup: Vec::new(), desc: Vec::new() })
+    }
+
+    /// The key tuples of a rank over a tuple, sorted in `rank_cmp` order,
+    /// each distinct tuple once.
+    pub fn of_keys(desc: Vec<bool>, mut tup: Vec<Vec<KeyAtom>>) -> Sorted {
+        tup.sort_by(|a, b| rank_cmp(&desc, a, b));
+        tup.dedup();
+        Sorted { values: Vec::new(), distinct: Vec::new(), tup, desc }
+    }
+
+    /// The rank of a subject tuple: its position from 1 among the distinct
+    /// tuples, none when it is not one of them (nor when the group is empty).
+    pub fn rank_of(&self, subject: &[KeyAtom]) -> Option<Val> {
+        match self.tup.binary_search_by(|t| rank_cmp(&self.desc, t, subject)) {
+            Ok(i) => Some(Val::Int(i as i128 + 1)),
+            Err(i) => brk!("rank_tuple_insertion" => Some(Val::Int(i as i128 + 1)); { let _ = i; None }),
+        }
     }
 }
 
@@ -1450,6 +1534,71 @@ mod laws {
         let v2 = Vocab::new(&mut h);
         let a = h.atom("x");
         assert_eq!(AggOp::Median.lift(&v2, a), Err(v2.agg_type_reason));
+    }
+
+    /// The rank over a tuple against a place counted here by hand: the number
+    /// of distinct tuples that sort strictly before the subject, plus one, over
+    /// random tuples of an Int, an atom and a string under every direction.
+    /// Independent of the order the members arrive in, a subject that is none
+    /// of them has no place, and a compound term is no key.
+    #[test]
+    fn a_rank_over_a_tuple_is_a_position_among_distinct_tuples() {
+        let mut h = Heap::default();
+        let v = Vocab::new(&mut h);
+        let mut r = Rng(0x7a9_1e5_5eed);
+        let words = ["", "B", "ab", "b", "foo"];
+        let atoms: Vec<Term> = words.iter().map(|w| h.atom(w)).collect();
+        let strs: Vec<Term> = words.iter().map(|w| h.string(w)).collect();
+        let key = |r: &mut Rng| -> (u8, i64, usize) {
+            match r.next() % 3 {
+                0 => (0, r.int(2), 0),
+                1 => (1, 0, (r.next() % 5) as usize),
+                _ => (2, 0, (r.next() % 5) as usize),
+            }
+        };
+        let term = |k: (u8, i64, usize)| match k.0 {
+            0 => Term::int(k.1),
+            1 => atoms[k.2],
+            _ => strs[k.2],
+        };
+        for _ in 0..300 {
+            let desc: Vec<bool> = (0..2).map(|_| r.next() % 2 == 0).collect();
+            let mut raw: Vec<[(u8, i64, usize); 2]> = (0..(r.next() % 9) as usize).map(|_| [key(&mut r), key(&mut r)]).collect();
+            let atoms_of = |t: &[(u8, i64, usize); 2]| key_atoms(&h, &v, &[term(t[0]), term(t[1])]).unwrap();
+            let sorted = Sorted::of_keys(desc.clone(), raw.iter().map(atoms_of).collect());
+            let text = |k: &(u8, i64, usize)| if k.0 == 1 { words[k.2] } else if k.0 == 2 { words[k.2] } else { "" };
+            let before = |a: &[(u8, i64, usize); 2], b: &[(u8, i64, usize); 2]| {
+                for i in 0..2 {
+                    let c = (a[i].0, a[i].1, text(&a[i]).encode_utf16().collect::<Vec<_>>()).cmp(&(b[i].0, b[i].1, text(&b[i]).encode_utf16().collect::<Vec<_>>()));
+                    let c = if desc[i] { c.reverse() } else { c };
+                    if c != std::cmp::Ordering::Equal {
+                        return c == std::cmp::Ordering::Less;
+                    }
+                }
+                false
+            };
+            for s in &raw {
+                let mut distinct: Vec<&[(u8, i64, usize); 2]> = Vec::new();
+                for t in &raw {
+                    if !distinct.iter().any(|d| !before(d, t) && !before(t, d)) {
+                        distinct.push(t);
+                    }
+                }
+                let want = 1 + distinct.iter().filter(|d| before(d, s)).count() as i128;
+                assert_eq!(sorted.rank_of(&atoms_of(s)), Some(Val::Int(want)), "{desc:?} {s:?} among {raw:?}");
+            }
+            let probe = [(0u8, 99i64, 0usize), (0, 0, 0)];
+            assert_eq!(sorted.rank_of(&atoms_of(&probe)), None, "a tuple that is none of them has no place");
+            raw.reverse();
+            let again = Sorted::of_keys(desc.clone(), raw.iter().map(atoms_of).collect());
+            assert_eq!(again.tup, sorted.tup, "the order the members come in decides nothing");
+        }
+        let fname = h.intern("f");
+        let f = h.mkf(fname, &[Term::int(1)]);
+        assert_eq!(key_atoms(&h, &v, &[Term::int(1), f]), Err(v.agg_type_reason));
+        let (dname, aname) = (h.intern("desc"), h.intern("asc"));
+        let (ds, dw) = (h.mkf(dname, &[Term::int(3)]), h.mkf(aname, &[Term::int(3)]));
+        assert_eq!((key_dir(&h, ds), key_dir(&h, dw), key_dir(&h, Term::int(3))), ((true, true), (false, true), (false, false)));
     }
 
     /// THE TAG BATTERY, grafema's derive/tag.rs in this carrier: the markers

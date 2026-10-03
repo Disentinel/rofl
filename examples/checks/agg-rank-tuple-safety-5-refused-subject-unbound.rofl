@@ -1,0 +1,4 @@
+-- expect-refusal: rank's subject is a constant or a variable bound before it
+-- examples/checks/agg-rank-tuple-safety-5-refused-subject-unbound.rofl — a
+-- subject nothing binds before the rank.
+rts_free(G, S, R) :- rts_group(G), R is rank(S ; W : rts_line(G, W, _)), rts_line(G, S, _).

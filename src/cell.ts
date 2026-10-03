@@ -152,8 +152,64 @@ export function fold(op: AggOp, xs: Val[]): Val | null {
   return finish(acc);
 }
 
-/** A holistic group's values sorted ascending, and its distinct values. */
-export interface Sorted { values: bigint[]; distinct: bigint[] }
+/** A holistic group's values sorted ascending, and its distinct values. A rank over a tuple has no integers: `tup`
+ *  holds its distinct key tuples in the order `rankCmp` gives them. */
+export interface Sorted { values: bigint[]; distinct: bigint[]; tup?: KeyAtom[][]; desc?: boolean[] }
+
+/** One element of a rank key. Int sorts before Atom and Atom before Str; Ints by value, Atoms and Strs by their text
+ *  (a string's own order, the kernel's). Anything else is no key: `agg_type_error`. */
+export type KeyAtom = { k: 'i'; v: bigint } | { k: 'a'; v: string } | { k: 's'; v: string };
+const kindRank = (x: KeyAtom): number => (x.k === 'i' ? 0 : x.k === 'a' ? 1 : 2);
+const cmpAtom = (x: KeyAtom, y: KeyAtom): number => {
+  if (x.k === 'i' && y.k === 'i') return x.v < y.v ? -1 : x.v > y.v ? 1 : 0;
+  if (x.k !== 'i' && x.k === y.k) return x.v < (y as typeof x).v ? -1 : x.v > (y as typeof x).v ? 1 : 0;
+  return kindRank(x) - kindRank(y);
+};
+
+/** The lexicographic order of two rank keys, each position in its direction. */
+export function rankCmp(desc: boolean[], a: KeyAtom[], b: KeyAtom[]): number {
+  for (let i = 0; i < a.length; i++) {
+    const c = cmpAtom(a[i], b[i]);
+    if (c !== 0) return desc[i] ? -c : c;
+  }
+  return 0;
+}
+
+/** A rank key element as the source writes it: [descending, wrapped] for `desc(T)`, `asc(T)` and a bare `T`. */
+export function keyDir(t: Term): [boolean, boolean] {
+  if (t.k === 'f' && t.args.length === 1) {
+    if (t.name === 'desc') return [true, true];
+    if (t.name === 'asc') return [false, true];
+  }
+  return [false, false];
+}
+
+/** A rank key's elements, resolved and with no direction wrapper on them. */
+export function keyAtoms(ts: Term[]): KeyAtom[] {
+  return ts.map((t): KeyAtom => {
+    if (t.k === 'i') return { k: 'i', v: BigInt(t.v) };
+    if (t.k === 'a') return { k: 'a', v: t.name };
+    if (t.k === 's') return { k: 's', v: t.v };
+    throw new Refused(AGG_TYPE);
+  });
+}
+
+/** The key tuples of a rank over a tuple, sorted in `rankCmp` order, each distinct tuple once. */
+export function sortedOfKeys(desc: boolean[], xs: KeyAtom[][]): Sorted {
+  const tup = [...xs].sort((a, b) => rankCmp(desc, a, b));
+  const out = tup.filter((x, i) => i === 0 || rankCmp(desc, tup[i - 1], x) !== 0);
+  return { values: [], distinct: [], tup: out, desc };
+}
+
+/** The rank of a subject tuple: its position from 1 among the distinct tuples, none when it is not one of them. */
+export function rankOf(g: Sorted, subject: KeyAtom[]): Val | null {
+  let lo = 0, hi = g.tup!.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (rankCmp(g.desc!, g.tup![mid], subject) < 0) lo = mid + 1; else hi = mid;
+  }
+  return lo < g.tup!.length && rankCmp(g.desc!, g.tup![lo], subject) === 0 ? { k: 'int', v: BigInt(lo + 1) } : null;
+}
 
 export function sortedOf(xs: Val[]): Sorted {
   const values: bigint[] = [];

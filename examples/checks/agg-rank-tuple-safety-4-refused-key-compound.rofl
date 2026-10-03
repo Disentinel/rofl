@@ -1,0 +1,4 @@
+-- expect-refusal: a rank key is a variable or a constant
+-- examples/checks/agg-rank-tuple-safety-4-refused-key-compound.rofl — a key
+-- is no compound term, with or without a direction.
+rts_comp(G, V, R) :- rts_line(G, V, _), R is rank(V ; desc(f(W)) : rts_line(G, W, _)).

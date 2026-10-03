@@ -1,0 +1,3 @@
+-- expect-refusal: needs at least one term
+-- a semicolon with no key after it
+sxtr_empty_key(R) :- R is rank(5 ; : sxt_l(_, _, W, _)).

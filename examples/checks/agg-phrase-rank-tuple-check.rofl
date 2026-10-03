@@ -1,0 +1,22 @@
+-- examples/checks/agg-phrase-rank-tuple-check.rofl — agg_rank_tuple_phrase: a rank over a tuple, from
+-- sentences and from rofl, each after a round trip. The data is agg-phrase-data.rofl's pv_rank:
+--   g1: (m1, 3) (m1, 1) (m2, 5)     g2: (m3, 3) (m4, 5)
+-- Place, by member ascending then rank descending: g1 (m1,3) 1, (m1,1) 2, (m2,5) 3; g2 (m3,3) 1, (m4,5) 2.
+-- Standing, by rank descending among the ranks the group gives: g1 5 is 1, 3 is 2, 1 is 3; g2 5 is 1, 3 is 2.
+-- (the standing is one key and its direction: a tuple of one.)
+pt_place(g1, m1, 3, 1). pt_place(g1, m1, 1, 2). pt_place(g1, m2, 5, 3).
+pt_place(g2, m3, 3, 1). pt_place(g2, m4, 5, 2).
+pt_by(g1, m1, 3, 2). pt_by(g1, m1, 1, 3). pt_by(g1, m2, 5, 1).
+pt_by(g2, m3, 3, 2). pt_by(g2, m4, 5, 1).
+pt_wrong(place, G, M, R) :- pt_place(G, M, R, P), not phs_place(G, M, R, P).
+pt_wrong(place, G, M, R) :- pt_place(G, M, R, P), not phr_place(G, M, R, P).
+pt_wrong(place, G, M, R) :- phs_place(G, M, R, P), not pt_place(G, M, R, P).
+pt_wrong(place, G, M, R) :- phr_place(G, M, R, P), not pt_place(G, M, R, P).
+pt_wrong(by, G, M, R)    :- pt_by(G, M, R, P), not phs_by_rank(G, M, R, P).
+pt_wrong(by, G, M, R)    :- pt_by(G, M, R, P), not phr_by_rank(G, M, R, P).
+pt_wrong(by, G, M, R)    :- phs_by_rank(G, M, R, P), not pt_by(G, M, R, P).
+pt_wrong(by, G, M, R)    :- phr_by_rank(G, M, R, P), not pt_by(G, M, R, P).
+alarm(pt_wrong).
+-- written in its own words (agg-phrase-check.rofl)
+sentence_word(phr_place, "is the rank of (M, R) among (N, S descending) such that").
+sentence_word(phr_by_rank, "is the rank of R among (S descending) such that").

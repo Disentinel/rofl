@@ -1,0 +1,67 @@
+-- examples/checks/agg-rank-tuple-witness-check.rofl — agg_rank_tuple_witness:
+-- the cell of a rank over a tuple is a Group, the whole group it was recomputed
+-- from, and its members LIST IN THE TUPLE'S OWN ORDER: each key in its
+-- direction, the first key first (height and text only break a tie that no
+-- two distinct tuples have). A member is the key tuple, without the asc or
+-- desc written around a key; two members of one tuple are one member; the
+-- cell of a subject that is none of the tuples keeps them all and holds no
+-- value; every member cites the real rk_score or rk_dup row with that tuple.
+-- (rt_*, from the eval check: rank over ga by score desc, name asc.)
+--   ga: (9,cy) (7,ann) (7,bob) (7,eve) (4,dee)      gz: (0,q) (-3,p) (-3,r)
+--   gd keys 3 3 5: (3) (5)
+--   gm by A asc, B desc: (1,"b") (1,a) (1,2) (2,"a") (2,1)
+rkw_order(rt_place, ga, 1, $cons(9, $cons(cy, $nil))).
+rkw_order(rt_place, ga, 2, $cons(7, $cons(ann, $nil))).
+rkw_order(rt_place, ga, 3, $cons(7, $cons(bob, $nil))).
+rkw_order(rt_place, ga, 4, $cons(7, $cons(eve, $nil))).
+rkw_order(rt_place, ga, 5, $cons(4, $cons(dee, $nil))).
+rkw_order(rt_place, gz, 1, $cons(0, $cons(q, $nil))).
+rkw_order(rt_place, gz, 2, $cons(-3, $cons(p, $nil))).
+rkw_order(rt_place, gz, 3, $cons(-3, $cons(r, $nil))).
+rkw_order(rt_ask, ga, 1, $cons(9, $cons(cy, $nil))).
+rkw_order(rt_ask, ga, 2, $cons(7, $cons(ann, $nil))).
+rkw_order(rt_ask, ga, 3, $cons(7, $cons(bob, $nil))).
+rkw_order(rt_ask, ga, 4, $cons(7, $cons(eve, $nil))).
+rkw_order(rt_ask, ga, 5, $cons(4, $cons(dee, $nil))).
+rkw_order(rt_dup, gd, 1, $cons(3, $nil)).
+rkw_order(rt_dup, gd, 2, $cons(5, $nil)).
+rkw_order(rt_mixad, gm, 1, $cons(1, $cons("b", $nil))).
+rkw_order(rt_mixad, gm, 2, $cons(1, $cons(a, $nil))).
+rkw_order(rt_mixad, gm, 3, $cons(1, $cons(2, $nil))).
+rkw_order(rt_mixad, gm, 4, $cons(2, $cons("a", $nil))).
+rkw_order(rt_mixad, gm, 5, $cons(2, $cons(1, $nil))).
+
+-- the cells: rt_place and rt_ask over the scores, keyed (subject..., group)
+rkw_cell(rt_place, C, G)  :- concludes[$kernel](R, rt_place), agg_sealed[$kernel](C, _, _),
+                             C = $cell(R, _, _, $cons(_, $cons(_, $cons(G, $nil)))).
+rkw_cell(rt_ask, C, G)    :- concludes[$kernel](R, rt_ask), agg_sealed[$kernel](C, _, _),
+                             C = $cell(R, _, _, $cons(_, $cons(_, $cons(G, $nil)))).
+rkw_cell(rt_dup, C, G)    :- concludes[$kernel](R, rt_dup), agg_sealed[$kernel](C, _, _),
+                             C = $cell(R, _, _, $cons(_, $cons(G, $nil))).
+rkw_cell(rt_mixad, C, gm) :- concludes[$kernel](R, rt_mixad), agg_sealed[$kernel](C, _, _),
+                             C = $cell(R, _, _, $cons(_, $cons(_, $cons(gm, $nil)))).
+member_wrong_at(Rel, C, I, T)   :- rkw_cell(Rel, C, G), agg_member[$kernel](C, I, T, _), not rkw_order(Rel, G, I, T).
+member_missing_at(Rel, C, I, T) :- rkw_cell(Rel, C, G), rkw_order(Rel, G, I, T), not agg_member[$kernel](C, I, T, _).
+-- one member to a tuple, and every member cites its row
+member_dup(C, T)     :- rkw_cell(_, C, _), agg_member[$kernel](C, I, T, _), agg_member[$kernel](C, J, T, _), I != J.
+rkw_prem_ok(C, I)    :- rkw_cell(rt_place, C, G), agg_member[$kernel](C, I, $cons(S, $cons(N, $nil)), _),
+                        agg_member_prem[$kernel](C, I, P),
+                        P = $fact(rk_score, main, $cons(G, $cons(N, $cons(S, $nil)))), rk_score(G, N, S).
+rkw_prem_ok(C, I)    :- rkw_cell(rt_ask, C, G), agg_member[$kernel](C, I, $cons(S, $cons(N, $nil)), _),
+                        agg_member_prem[$kernel](C, I, P),
+                        P = $fact(rk_score, main, $cons(G, $cons(N, $cons(S, $nil)))), rk_score(G, N, S).
+prem_mismatch(C, I)  :- rkw_cell(Rel, C, _), Rel != rt_dup, Rel != rt_mixad, agg_member[$kernel](C, I, _, _), not rkw_prem_ok(C, I).
+-- the cell of a subject that is none of the tuples: (7, zed) of ga holds no value and keeps its five
+rkw_unranked(C)      :- rkw_cell(rt_ask, C, ga), C = $cell(_, _, _, $cons(7, $cons(zed, _))).
+unranked_valued(C)   :- rkw_unranked(C), agg_cell[$kernel](C, _, _).
+rkw_unranked_kept(C) :- rkw_unranked(C), agg_member[$kernel](C, 5, _, _).
+unranked_bare(C)     :- rkw_unranked(C), not rkw_unranked_kept(C).
+rkw_has_unranked()   :- rkw_unranked(_).
+unranked_absent()    :- not rkw_has_unranked().
+alarm(member_wrong_at).
+alarm(member_missing_at).
+alarm(member_dup).
+alarm(prem_mismatch).
+alarm(unranked_valued).
+alarm(unranked_bare).
+alarm(unranked_absent).
