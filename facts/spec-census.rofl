@@ -150,6 +150,7 @@ check[checks]("facts/goldens.rofl", "heck", world).
 check[checks]("facts/goldens.rofl", "huh", world).
 check[checks]("facts/goldens.rofl", "iffy", world).
 check[checks]("facts/goldens.rofl", "interval", world).
+check[checks]("facts/goldens.rofl", "jodit", world).
 check[checks]("facts/goldens.rofl", "jopa", world).
 check[checks]("facts/goldens.rofl", "life", world).
 check[checks]("facts/goldens.rofl", "linter", world).
@@ -263,6 +264,7 @@ check[checks]("facts/goldens.rofl", "rules_permission-model", world).
 check[checks]("facts/goldens.rofl", "rules_policies_authority", world).
 check[checks]("facts/goldens.rofl", "rules_policies_evidence", world).
 check[checks]("facts/goldens.rofl", "rules_profile", world).
+check[checks]("facts/goldens.rofl", "rules_py-model", world).
 check[checks]("facts/goldens.rofl", "rules_rofl-lint", world).
 check[checks]("facts/goldens.rofl", "rules_rule-shape", world).
 check[checks]("facts/goldens.rofl", "rules_self-audit", world).
@@ -546,6 +548,7 @@ check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
 check[checks]("facts/goldens.rofl", "holes_negation_wfs", world).
+check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).

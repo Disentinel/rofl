@@ -1,0 +1,60 @@
+-- backends.rofl — what each backend's client calls ARE. This is knowledge
+-- about the protocols, written by hand, and the only file of the three that
+-- is: everything else is read from the code.
+--
+-- A kind is what a request does to the store: put, copy, rename, delete,
+-- mkdir, read, meta (stat, head, exists), list, poll (wait and ask again).
+
+backend[jodit]("S3StorageAdapter", s3).
+backend[jodit]("AzureStorageAdapter", azure).
+backend[jodit]("GcsStorageAdapter", gcs).
+backend[jodit]("SftpStorageAdapter", sftp).
+backend[jodit]("FtpStorageAdapter", ftp).
+backend[jodit]("WebdavStorageAdapter", webdav).
+backend[jodit]("LocalStorageAdapter", local).
+
+-- boto3
+op_kind[jodit](s3, "put_object", put).        op_kind[jodit](s3, "upload_fileobj", put).
+op_kind[jodit](s3, "copy", copy).             op_kind[jodit](s3, "delete_object", delete).
+op_kind[jodit](s3, "delete_objects", delete). op_kind[jodit](s3, "head_object", meta).
+op_kind[jodit](s3, "list_objects_v2", list).  op_kind[jodit](s3, "paginate", list).
+op_kind[jodit](s3, "get_object", read).       op_kind[jodit](s3, "download_fileobj", read).
+-- azure-storage-blob
+op_kind[jodit](azure, "upload_blob", put).    op_kind[jodit](azure, "start_copy_from_url", copy).
+op_kind[jodit](azure, "delete_blob", delete). op_kind[jodit](azure, "delete_blobs", delete).
+op_kind[jodit](azure, "download_blob", read). op_kind[jodit](azure, "get_blob_properties", meta).
+op_kind[jodit](azure, "exists", meta).        op_kind[jodit](azure, "list_blobs", list).
+op_kind[jodit](azure, "walk_blobs", list).    op_kind[jodit](azure, "sleep", poll).
+-- google-cloud-storage
+op_kind[jodit](gcs, "upload_from_file", put). op_kind[jodit](gcs, "upload_from_string", put).
+op_kind[jodit](gcs, "rewrite", copy).         op_kind[jodit](gcs, "delete", delete).
+op_kind[jodit](gcs, "download_as_bytes", read). op_kind[jodit](gcs, "get_blob", meta).
+op_kind[jodit](gcs, "exists", meta).          op_kind[jodit](gcs, "list_blobs", list).
+-- paramiko
+op_kind[jodit](sftp, "putfo", put).           op_kind[jodit](sftp, "posix_rename", rename).
+op_kind[jodit](sftp, "rename", rename).       op_kind[jodit](sftp, "remove", delete).
+op_kind[jodit](sftp, "rmdir", delete).        op_kind[jodit](sftp, "mkdir", mkdir).
+op_kind[jodit](sftp, "getfo", read).          op_kind[jodit](sftp, "stat", meta).
+op_kind[jodit](sftp, "listdir_attr", list).
+-- ftplib; STOR goes through the module's own `_send`
+op_kind[jodit](ftp, "rename", rename).        op_kind[jodit](ftp, "delete", delete).
+op_kind[jodit](ftp, "rmd", delete).           op_kind[jodit](ftp, "mkd", mkdir).
+op_kind[jodit](ftp, "retrbinary", read).      op_kind[jodit](ftp, "size", meta).
+op_kind[jodit](ftp, "mlsd", list).            op_kind[jodit](ftp, "retrlines", list).
+-- os, pathlib, shutil
+op_kind[jodit](local, "rename", rename).      op_kind[jodit](local, "replace", rename).
+op_kind[jodit](local, "unlink", delete).      op_kind[jodit](local, "rmtree", delete).
+op_kind[jodit](local, "mkdir", mkdir).        op_kind[jodit](local, "copyfile", copy).
+op_kind[jodit](local, "read_bytes", read).    op_kind[jodit](local, "stat", meta).
+op_kind[jodit](local, "scandir", list).      op_kind[jodit](local, "open", put).
+
+-- a command carried as a string argument: an HTTP method, an FTP verb
+op_str[jodit](webdav, "_request", 0, "PUT", put).
+op_str[jodit](webdav, "_request", 0, "MOVE", rename).
+op_str[jodit](webdav, "_relocate", 0, "MOVE", rename).
+op_str[jodit](webdav, "_relocate", 0, "COPY", copy).
+op_str[jodit](webdav, "_request", 0, "DELETE", delete).
+op_str[jodit](webdav, "_request", 0, "MKCOL", mkdir).
+op_str[jodit](webdav, "_request", 0, "GET", read).
+op_str[jodit](webdav, "_request", 0, "PROPFIND", meta).
+op_str[jodit](ftp, "_send", 1, "STOR ", put).

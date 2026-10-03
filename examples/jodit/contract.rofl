@@ -1,0 +1,33 @@
+-- contract.rofl — who implements jodit-python's storage contract, and what
+-- each implementation calls outside itself.
+
+contract[jodit](P) :- py_class[code](P, "StorageAdapter"), py_protocol[code](P).
+duty[jodit](M) :- contract[jodit](P), py_protocol_method[code](P, M).
+
+candidate[jodit](C) :- py_method[code](C, M, _), duty[jodit](M), not py_protocol[code](C).
+lacks[jodit](C, M) :- candidate[jodit](C), duty[jodit](M), not py_method[code](C, M, _).
+adapter[jodit](C, N) :- candidate[jodit](C), not lacks[jodit](C, _), py_class[code](C, N).
+
+-- a call on anything but `self`, made by the method or by what it reaches
+outside_call[jodit](A, M, Op, L) :- adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
+                                    py_reaches[code](D, U), py_call[code](K, U, L), py_attr_call[code](K, _, Op).
+
+outside_op[jodit](A, Op) :- outside_call[jodit](A, _, Op, _).
+call_str[jodit](A, M, Callee, I, S, L) :- adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
+                                          py_reaches[code](D, U), py_call[code](K, U, L), py_call_str[code](K, I, S),
+                                          py_callee[code](K, Callee).
+
+-- WHAT A DUTY DOES TO THE STORE: the kinds of request each backend's method
+-- reaches, `many` when one runs per item of a folder
+call_in[jodit](B, M, K, F) :- backend[jodit](A, B), adapter[jodit](C, A), duty[jodit](M), py_method[code](C, M, D),
+                              py_reaches_n[code](D, U, F0), py_call[code](K, U, _), call_many[jodit](K, F0, F).
+call_many[jodit](K, many, many) :- py_call[code](K, _, _).
+call_many[jodit](K, one, many)  :- py_call[code](K, _, _), py_looped[code](K).
+call_many[jodit](K, one, one)   :- py_call[code](K, _, _), not py_looped[code](K).
+
+does[jodit](B, M, Kind, F) :- call_in[jodit](B, M, K, F), py_attr_call[code](K, _, Op), op_kind[jodit](B, Op, Kind).
+does[jodit](B, M, Kind, F) :- call_in[jodit](B, M, K, F), py_callee[code](K, Callee),
+                              op_str[jodit](B, Callee, I, S, Kind), py_call_str[code](K, I, S).
+
+kind_of[jodit](B, M, Kind) :- does[jodit](B, M, Kind, _).
+per_item[jodit](B, M, Kind) :- does[jodit](B, M, Kind, many).

@@ -1,0 +1,70 @@
+"""A storage contract and two adapters, written in jodit-python's shapes.
+
+The fixture rules/py-model.rofl and examples/jodit/ are checked against: every
+way that code reaches its backend appears here once. Scanned into
+facts/py-model.rofl by `python3 scanners/py_ast.py examples/jodit examples/jodit/adapters.py`.
+"""
+
+from functools import partial
+from typing import Protocol
+
+from anyio import to_thread
+
+
+class StorageAdapter(Protocol):
+    async def write(self, path: str, contents: bytes) -> None: ...
+
+    async def read(self, path: str) -> bytes: ...
+
+    async def move_file(self, source: str, destination: str) -> None: ...
+
+
+async def gather_limited(jobs):
+    for job in jobs:
+        await job()
+
+
+class BucketAdapter:
+    async def write(self, path: str, contents: bytes) -> None:
+        await to_thread.run_sync(lambda: self.client.put_object(Key=path, Body=contents))
+
+    async def read(self, path: str) -> bytes:
+        def get() -> bytes:
+            return self.client.get_object(Key=path)["Body"].read()
+
+        return await self._run(get)
+
+    async def move_file(self, source: str, destination: str) -> None:
+        jobs = [partial(self._copy, key, destination + key) for key in self._keys(source)]
+        await gather_limited(jobs)
+        await self._call("delete", source, lambda: self.client.delete_objects(Prefix=source))
+
+    def _copy(self, key: str, target: str) -> None:
+        self.client.copy(Key=key, Target=target)
+
+    def _keys(self, prefix: str) -> list[str]:
+        return [o["Key"] for o in self.client.list_objects_v2(Prefix=prefix)["Contents"]]
+
+    async def _call(self, operation: str, path: str, func):
+        return await to_thread.run_sync(func)
+
+    async def _run(self, func):
+        return await to_thread.run_sync(func)
+
+
+class TreeAdapter:
+    async def write(self, path: str, contents: bytes) -> None:
+        temporary = f"{path}.tmp"
+        await self._request("PUT", temporary, contents)
+        await self._request("MOVE", temporary, path)
+
+    async def read(self, path: str) -> bytes:
+        return await self._request("GET", path, b"")
+
+    async def move_file(self, source: str, destination: str) -> None:
+        for parent in destination.split("/")[:-1]:
+            await self._request("MKCOL", parent, b"")
+        await to_thread.run_sync(self.conn.rename, source, destination)
+
+    async def _request(self, method: str, path: str, body: bytes) -> bytes:
+        return await self.http.request(method, path, content=body)
