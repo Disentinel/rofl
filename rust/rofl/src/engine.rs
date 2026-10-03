@@ -14,7 +14,7 @@ use crate::dense::dense_clauses;
 use crate::reflect::*;
 use crate::store::{
     Member,
-    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, LatReg, NewCell,
+    resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
     NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
@@ -145,8 +145,8 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
 #[derive(Default)]
 #[derive(Clone)]
 pub struct Front {
-    pub keys: HashSet<FactId>,
-    pub by_rel: HashMap<Sym, HashSet<FactId>>,
+    pub keys: FxSet<FactId>,
+    pub by_rel: FxMap<Sym, FxSet<FactId>>,
 }
 
 impl Front {
@@ -965,7 +965,7 @@ struct ReachMemo {
 /// one the positive literals do not bind, and `wild` a correlation they do
 /// not: both are solved in full.
 struct ThrFocus {
-    news: Vec<(usize, HashSet<FactId>)>,
+    news: Vec<(usize, FxSet<FactId>)>,
     by_corr: HashMap<Vec<Term>, Vec<Option<Vec<Term>>>>,
     wild: bool,
 }
@@ -3515,7 +3515,7 @@ impl Eval {
     fn fire_rule(
         &mut self,
         r: &Rc<ERule>,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
         if self.closure_on && self.no_witness && self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
@@ -3783,7 +3783,7 @@ impl Eval {
         body: &[BodyElem],
         s0: Subst,
         depth: usize,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
         rule_id: Option<Sym>,
     ) -> Result<Vec<Sol>, Halt> {
         let mut acc: Vec<Sol> = vec![Sol {
@@ -4531,7 +4531,7 @@ impl Eval {
         s: &Subst,
         depth: usize,
         keep: bool,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<(Vec<(Vec<Term>, Vec<ThrMember>)>, Option<Sym>), Halt> {
         let (cands, dropped) = self.inner_cands(rid, a, plan, s, depth, keep, front_at, false)?;
         let mut groups: Vec<(Vec<Term>, Vec<ThrMember>)> = Vec::with_capacity(cands.len());
@@ -4580,7 +4580,7 @@ impl Eval {
         s: &Subst,
         depth: usize,
         keep: bool,
-        front_at: Option<(usize, &HashSet<FactId>)>,
+        front_at: Option<(usize, &FxSet<FactId>)>,
         hole: bool,
     ) -> Result<(Vec<(Vec<Term>, Vec<Cand>)>, Option<Sym>), Halt> {
         let inner: Vec<BodyElem> = plan.inner_order.iter().map(|i| a.body[*i].clone()).collect();
@@ -9169,7 +9169,7 @@ impl Eval {
         l: &Lit,
         s: &Subst,
         depth: usize,
-        only: Option<&HashSet<FactId>>,
+        only: Option<&FxSet<FactId>>,
     ) -> Result<Vec<(Subst, PremRef)>, Halt> {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(Vec::new());
