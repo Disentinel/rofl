@@ -1,0 +1,15 @@
+-- examples/checks/agg-rank-tuple-syntax-1-forms.rofl — every form of a rank
+-- over a tuple the grammar reads: the subject before the `;` and a key for each
+-- after it, a direction written round a key as asc(..) or desc(..) and none
+-- (ascending) when a key is bare; one key and two; a literal subject of every
+-- kind; a book; and the one-integer form beside them, unchanged. Read and
+-- refused by the TypeScript engine, whose rule ids must be the Rust store's.
+edb(sxt_l).
+sxt_l(g, 1, 5, a).
+sxt_l(g, 2, 6, b).
+sxt_l[ledger](g, 3, 7, a).
+sxt_one(V, R)    :- sxt_l(_, _, V, _), R is rank(V ; W : sxt_l(_, _, W, _)).
+sxt_two(V, T, R) :- sxt_l(_, _, V, T), R is rank(V, T ; desc(W), asc(U) : sxt_l(_, _, W, U)).
+sxt_lit(R)       :- R is rank(5, "x" ; W, desc(U) : sxt_l(_, _, W, U)).
+sxt_book(V, R)   :- sxt_l[ledger](_, _, V, _), R is rank(V ; desc(W) : sxt_l[ledger](_, _, W, _)).
+sxt_old(V, R)    :- sxt_l(_, _, V, _), R is rank(V, W : sxt_l(_, _, W, _)).

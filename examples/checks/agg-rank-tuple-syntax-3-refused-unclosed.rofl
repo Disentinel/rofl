@@ -1,0 +1,3 @@
+-- expect-refusal: is not closed
+-- a rank over a tuple with no closing parenthesis
+sxtr_unclosed(R) :- R is rank(5 ; desc(W) : sxt_l(_, _, W, _).

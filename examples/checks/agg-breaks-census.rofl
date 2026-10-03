@@ -363,8 +363,6 @@ brk("hol_no_key"). brk_kind("hol_no_key", kernel).
 brk_expects("hol_no_key", "agg_holistic_safety").
 brk("hol_no_param"). brk_kind("hol_no_param", kernel).
 brk_expects("hol_no_param", "agg_holistic_safety").
-brk("hol_rank_key"). brk_kind("hol_rank_key", kernel).
-brk_expects("hol_rank_key", "agg_holistic_safety").
 brk("hol_ring1_words"). brk_kind("hol_ring1_words", file).
 brk_expects("hol_ring1_words", "agg_holistic_syntax").
 brk("strata_agg_edge"). brk_kind("strata_agg_edge", file).
@@ -1443,6 +1441,50 @@ brk("ts_ds_closed_agg_unbound"). brk_kind("ts_ds_closed_agg_unbound", ts).
 brk_expects("ts_ds_closed_agg_unbound", "agg_datastrat_keys").
 brk("ts_ds_in_undecided"). brk_kind("ts_ds_in_undecided", ts).
 brk_expects("ts_ds_in_undecided", "agg_datastrat_keys").
+brk("rank_dir_ignored"). brk_kind("rank_dir_ignored", switch).
+brk_expects("rank_dir_ignored", "agg_rank_tuple_eval").
+brk_expects("rank_dir_ignored", "agg_rank_tuple_witness").
+brk_expects("rank_dir_ignored", "agg_rank_tuple_holes").
+brk("rank_first_key_only"). brk_kind("rank_first_key_only", switch).
+brk_expects("rank_first_key_only", "agg_rank_tuple_eval").
+brk("rank_kind_order"). brk_kind("rank_kind_order", switch).
+brk_expects("rank_kind_order", "agg_rank_tuple_eval").
+brk("rank_tuple_insertion"). brk_kind("rank_tuple_insertion", switch).
+brk_expects("rank_tuple_insertion", "agg_rank_tuple_eval").
+brk_expects("rank_tuple_insertion", "agg_rank_tuple_witness").
+brk("rank_members_unordered"). brk_kind("rank_members_unordered", switch).
+brk_expects("rank_members_unordered", "agg_rank_tuple_witness").
+brk("rank_share_coarse"). brk_kind("rank_share_coarse", switch).
+brk_expects("rank_share_coarse", "agg_rank_tuple_eval").
+brk("rank_reach_blind"). brk_kind("rank_reach_blind", switch).
+brk_expects("rank_reach_blind", "agg_rank_tuple_holes").
+brk("rank_compound_key"). brk_kind("rank_compound_key", switch).
+brk_expects("rank_compound_key", "agg_rank_tuple_eval").
+brk("rank_door_subject_wrapped"). brk_kind("rank_door_subject_wrapped", switch).
+brk_expects("rank_door_subject_wrapped", "agg_rank_tuple_safety").
+brk("rank_door_key_compound"). brk_kind("rank_door_key_compound", switch).
+brk_expects("rank_door_key_compound", "agg_rank_tuple_safety").
+brk("phrase_rank_dir_dropped"). brk_kind("phrase_rank_dir_dropped", switch).
+brk_expects("phrase_rank_dir_dropped", "agg_rank_tuple_phrase").
+brk("rank_arity_unchecked"). brk_kind("rank_arity_unchecked", kernel).
+brk_expects("rank_arity_unchecked", "agg_rank_tuple_safety").
+brk_expects("rank_arity_unchecked", "agg_holistic_safety").
+brk("ts_rank_dir_ignored"). brk_kind("ts_rank_dir_ignored", ts).
+brk_expects("ts_rank_dir_ignored", "agg_rank_tuple_eval").
+brk("ts_rank_kind_order"). brk_kind("ts_rank_kind_order", ts).
+brk_expects("ts_rank_kind_order", "agg_rank_tuple_eval").
+brk("ts_rank_members_unordered"). brk_kind("ts_rank_members_unordered", ts).
+brk_expects("ts_rank_members_unordered", "agg_rank_tuple_witness").
+brk("ts_rank_reach_blind"). brk_kind("ts_rank_reach_blind", ts).
+brk_expects("ts_rank_reach_blind", "agg_rank_tuple_holes").
+brk("ts_rank_door_subject_wrapped"). brk_kind("ts_rank_door_subject_wrapped", ts).
+brk_expects("ts_rank_door_subject_wrapped", "agg_rank_tuple_safety").
+brk("ts_rank_compound_key"). brk_kind("ts_rank_compound_key", ts).
+brk_expects("ts_rank_compound_key", "agg_rank_tuple_eval").
+brk("ts_rank_share_coarse"). brk_kind("ts_rank_share_coarse", ts).
+brk_expects("ts_rank_share_coarse", "agg_rank_tuple_eval").
+brk("reader_rank_dir_dropped"). brk_kind("reader_rank_dir_dropped", file).
+brk_expects("reader_rank_dir_dropped", "agg_rank_tuple_phrase").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1668,6 +1710,7 @@ switch_site("phrase_inner_unread", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_lattice_op_lost", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_max_as_min", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_quantile_swapped", "rust/rofl/src/bin/rofl_render.rs").
+switch_site("phrase_rank_dir_dropped", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_subset_as_member", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_sugar_unseen", "rust/rofl/src/bin/rofl_render.rs").
 switch_site("phrase_sum_as_median", "rust/rofl/src/bin/rofl_render.rs").
@@ -1686,7 +1729,17 @@ switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
 switch_site("quantile_domain", "rust/rofl/src/cell.rs").
 switch_site("quantile_floor", "rust/rofl/src/cell.rs").
+switch_site("rank_compound_key", "rust/rofl/src/cell.rs").
+switch_site("rank_dir_ignored", "rust/rofl/src/cell.rs").
+switch_site("rank_door_key_compound", "rust/rofl/src/program.rs").
+switch_site("rank_door_subject_wrapped", "rust/rofl/src/program.rs").
+switch_site("rank_first_key_only", "rust/rofl/src/cell.rs").
 switch_site("rank_insertion", "rust/rofl/src/cell.rs").
+switch_site("rank_kind_order", "rust/rofl/src/cell.rs").
+switch_site("rank_members_unordered", "rust/rofl/src/engine.rs").
+switch_site("rank_reach_blind", "rust/rofl/src/engine.rs").
+switch_site("rank_share_coarse", "rust/rofl/src/engine.rs").
+switch_site("rank_tuple_insertion", "rust/rofl/src/cell.rs").
 switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").
 switch_site("restage_dead_kept", "rust/rofl/src/engine/delta.rs").

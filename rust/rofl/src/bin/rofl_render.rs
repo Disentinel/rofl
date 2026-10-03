@@ -646,6 +646,17 @@ impl<'a> R<'a> {
             ("sum" | "median", 1) => { let v = self.bare(a.vals[0], ctx); let k = self.tuple(&a.keys, ctx); format!("the {} of {v} over {k}", brk!("phrase_sum_as_median" => if op == "sum" { "median" } else { op }; op)) }
             ("quantile", 2) => { let p = self.term(a.vals[0], None, ctx); let v = self.bare(a.vals[1], ctx); let k = self.tuple(&a.keys, ctx); brk!("phrase_quantile_swapped" => format!("the quantile {v} of {p} over {k}"); format!("the quantile {p} of {v} over {k}")) }
             ("rank", 2) if a.keys.is_empty() => { let s = self.term(a.vals[0], None, ctx); let v = self.bare(a.vals[1], ctx); format!("the rank of {s} among {v}") }
+            ("rank", n) if n >= 1 && a.keys.len() == n => {
+                let ss: Vec<String> = a.vals.iter().map(|t| self.term(*t, None, ctx)).collect();
+                let s = if n == 1 { ss[0].clone() } else { format!("({})", ss.join(", ")) };
+                let ks: Vec<String> = a.keys.iter().map(|t| {
+                    let (desc, wrapped) = rofl::cell::key_dir(self.h, *t);
+                    let inner = match (wrapped, t.kind()) { (true, TermK::Func(f)) => self.h.fargs(f)[0], _ => *t };
+                    let b = self.bare(inner, ctx);
+                    if wrapped && brk!("phrase_rank_dir_dropped" => false; true) { format!("{b} {}", if desc { "descending" } else { "ascending" }) } else { b }
+                }).collect();
+                format!("the rank of {s} among ({})", ks.join(", "))
+            }
             ("min" | "max", 1) if a.keys.is_empty() => format!("the {} {}", if op == "min" { "least" } else { brk!("phrase_max_as_min" => "least"; "greatest") }, self.bare(a.vals[0], ctx)),
             ("or" | "and", 1) if a.keys.is_empty() => format!("the {} of {}", if op == "or" { "disjunction" } else { "conjunction" }, self.bare(a.vals[0], ctx)),
             // a shape safety refuses has no sentence: it reads as written

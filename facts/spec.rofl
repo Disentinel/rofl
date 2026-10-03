@@ -249,6 +249,10 @@ duty[decided](d_tick_records_budget, guaranteed, "docs/time-and-continuity.md", 
 -- carried is kept alive as its own duty, `l_no_gpu`, so retiring the line
 -- retires no prohibition the owner still holds.
 duty[decided](d_aggregates_in_the_kernel, guaranteed, "docs/aggregates.md", "Decided 2026-09-28 by the owner (f_aggregation_is_one_cell_engine_with_two_syntaxes).").
+-- A rank over a tuple (f_a_rank_over_a_tuple_is_a_position_among_distinct_key_tuples): a lexicographic
+-- order of keys with a direction for each, in both engines, held by the world whose places are derived by
+-- hand and by the Rust loop over every aggregate world.
+duty[decided](d_rank_over_a_tuple, guaranteed, "docs/aggregates.md", "R is rank(S1, S2 ; K1, desc(K2) : body)").
 
 -- ==================== docs/performance-invariants.md [perf] ================
 -- Only the invariants that are about THIS kernel. I3, I5 and I6 in that
@@ -381,6 +385,11 @@ cited_check[map](c_w_provenance, "facts/goldens.rofl", "provenance_relational").
 
 guards[map](c_w_provenance, s_provenance_per_firing).
 guards[map](c_w_provenance, p_p1_one_witness_per_derivation).
+
+cited_check[map](c_rank_tuple_eval, "facts/goldens.rofl", "agg_rank_tuple_eval").
+cited_check[map](c_agg_worlds_loop, "rust/rofl/tests/agg_worlds.rs", "every_world_loaded_together_holds_its_properties_and_its_state").
+guards[map](c_rank_tuple_eval, d_rank_over_a_tuple).
+guards[map](c_agg_worlds_loop, d_rank_over_a_tuple).
 
 -- ---- accepted by name, because the observance is structural ---------------
 -- THE LAST OF THE ELEVEN, AND THE OWNER'S CALL RATHER THAN A MEASUREMENT.

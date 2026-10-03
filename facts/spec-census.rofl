@@ -72,6 +72,7 @@ check[checks]("rust/rofl/tests/incremental.rs", "a_component_stratified_by_its_d
 check[checks]("rust/rofl/tests/incremental.rs", "two_components_and_what_reads_them_are_run_again_where_they_changed", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_answered_on_demand_and_its_callers_are_made_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_goes_with_any_retraction", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_beside_a_lattice_is_evaluated_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_cell_read_again_beside_its_own_retraction_is_read_again_whole", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same", test).
 check[checks]("rust/rofl/tests/incremental.rs", "the_median_the_quantile_and_the_threshold_are_derived_again", test).
@@ -447,6 +448,13 @@ check[checks]("facts/goldens.rofl", "agg_precise_scale", world).
 check[checks]("facts/goldens.rofl", "agg_proofs", world).
 check[checks]("facts/goldens.rofl", "agg_prose", world).
 check[checks]("facts/goldens.rofl", "agg_quorum_demo", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_eval", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_holes", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_phrase", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_safety", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_syntax", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_why", world).
+check[checks]("facts/goldens.rofl", "agg_rank_tuple_witness", world).
 check[checks]("facts/goldens.rofl", "agg_rederived_provenance", world).
 check[checks]("facts/goldens.rofl", "agg_slo_demo", world).
 check[checks]("facts/goldens.rofl", "agg_sub_budget", world).
@@ -625,6 +633,7 @@ citation_ok[checks](s_persistence_is_a_rule).
 citation_ok[checks](s7_no_log_provenance).
 citation_ok[checks](p_p1_one_witness_per_derivation).
 citation_ok[checks](l_queries_are_god_view).
+citation_ok[checks](d_rank_over_a_tuple).
 citation_ok[checks](l_demand_depth_512).
 citation_ok[checks](l_reflection_in_main).
 citation_ok[checks](d_retention_conditional).

@@ -230,6 +230,31 @@ fn check_next_in_body(h: &Heap, c: &Clause) -> Option<String> {
     nexted.then(|| format!("rule {}: '@next' is not allowed in rule bodies", canon_clause(h, c)))
 }
 
+/// A rank over a tuple reads its subject from outside, a constant or a
+/// variable bound before it, with no direction; each key is a variable or a
+/// constant, in `asc(..)` or `desc(..)` for its direction.
+fn check_rank_tuple(h: &Heap, a: &Agg, before: &[Sym]) -> Option<String> {
+    for p in &a.vals {
+        let bound_before = matches!(p.kind(), TermK::Var(n) if before.contains(&n));
+        if brk!("rank_door_subject_wrapped" => false; crate::cell::key_dir(h, *p).1) {
+            return Some(format!("rank's subject has no direction, only its keys do: {}", h.canon(*p)));
+        }
+        if !bound_before && !matches!(p.kind(), TermK::Int(_) | TermK::Atom(_) | TermK::Str(_)) {
+            return Some(format!("rank's subject is a constant or a variable bound before it, not {}", h.canon(*p)));
+        }
+    }
+    for k in &a.keys {
+        let inner = match (crate::cell::key_dir(h, *k).1, k.kind()) {
+            (true, TermK::Func(f)) => h.fargs(f)[0],
+            _ => *k,
+        };
+        if brk!("rank_door_key_compound" => false; inner.is_func()) {
+            return Some(format!("a rank key is a variable or a constant, in asc(..) or desc(..) for its direction, not {}", h.canon(*k)));
+        }
+    }
+    None
+}
+
 /// THE DOOR OF AN AGGREGATE: pure functions of the clause, run before any
 /// write. The per-operation shape (a key on sum, none on count, one value on
 /// min) is NOT here: it is safety.rofl's judgement, so that file is what a
@@ -256,7 +281,11 @@ fn check_aggregates(h: &Heap, c: &Clause) -> Option<String> {
         // QUANTILE'S PERCENT AND RANK'S SUBJECT are read from outside, like
         // a threshold's N: an integer, or a variable bound before it. The
         // count of terms is safety.rofl's (`param_and_value`).
-        if a.op.params() == 1 && a.vals.len() == 2 {
+        if a.rank_tuple() {
+            if let Some(why) = check_rank_tuple(h, a, &before) {
+                return Some(format!("rule {}: {why}", canon()));
+            }
+        } else if a.op.params() == 1 && a.vals.len() == 2 {
             let p = a.vals[0];
             let bound_before = matches!(p.kind(), TermK::Var(n) if before.contains(&n));
             let what = if a.op == AggOp::Quantile { "quantile's percent" } else { "rank's subject" };

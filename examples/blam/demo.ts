@@ -275,7 +275,7 @@ export interface CutRow {
 
 const edgeOf = (b: Record<string, string>): string => edgeKey(b.P, b.Q);
 const byPlace = <T extends { edge: string }>(place: Map<string, number>) =>
-  (a: T, b: T): number => place.get(a.edge)! - place.get(b.edge)! || (a.edge < b.edge ? -1 : 1);
+  (a: T, b: T): number => place.get(a.edge)! - place.get(b.edge)!;
 const placeOf = (r: Rofl, q: string): Map<string, number> =>
   new Map(rows(r, q).map((b) => [edgeOf(b), Number(b.R)]));
 
