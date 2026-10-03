@@ -2293,7 +2293,7 @@ export class AggEval {
           const c = this.store.cells.get(p.key)!;
           for (const m of c.members) {
             this.pastWalks++;
-            for (const q of m.prems) if (q.t === 'fact') read.set(q.key + '@' + c.tick, [q.key, c.tick]);
+            for (const q of [m.prems, ...m.others].flat()) if (q.t === 'fact') read.set(q.key + '@' + c.tick, [q.key, c.tick]);
           }
         } else if (p.t === 'fact' && stagedF) read.set(p.key + '@' + Math.max(0, t - 1), [p.key, Math.max(0, t - 1)]);
       }

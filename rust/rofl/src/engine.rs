@@ -2993,7 +2993,7 @@ impl Eval {
                         let tick = self.store.cell(c).tick;
                         for m in self.store.cell_members(c) {
                             self.past_walks += 1;
-                            for q in self.store.member_prems(m) {
+                            for q in self.store.member_derivs(m).take(brk!("cited_past_canonical_only" => 1; usize::MAX)).flatten() {
                                 if let PremRef::Fact(f) = q {
                                     read.insert((*f, tick));
                                 }
