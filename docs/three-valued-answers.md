@@ -87,8 +87,7 @@ It survives, untouched, on the evaluator that reads it — and the alternating
 fixpoint is an additional path rather than a replacement either way. When this
 was written the phase-ordered run WAS the default and read `stratum/2` out of
 the store; the default now peels its phase order off the decoded rules
-(`src/rounds.ts`), and `semantics(well_founded)` is delegated to the
-phase-ordered code unchanged, because an alternating fixpoint orders no phases
+(`src/aggeval.ts`), and `semantics(well_founded)` runs the alternation, because an alternating fixpoint orders no phases
 and so has nothing for rounds to replace. Both statements have the same
 content: this document's subject is the third value, and nothing here depends
 on where the schedule came from.

@@ -348,16 +348,16 @@ character outside the alphabet is a parse refusal in both, never an answer
 about a neighbouring fact; at most one closing dot is read (`p(a)..` is
 refused, `p(a) -- note` is answered).
 
-**THE REFERENCE HAS TWO EXPLAINERS and this engine follows the one it would
-have used** (`Eval::plain`, src/aggeval.ts `storeHasAggregates` read off the
-same reflected rows). A program with no aggregate construct is evaluated by
-src/engine.ts and explained by src/api.ts: the planner holds a cross-product
+**THE REFERENCE EXPLAINS A PLAIN PROGRAM ITS OWN WAY and this engine follows it**
+(`Eval::plain`, `AggEval.plain` in src/aggeval.ts, `storeHasAggregates` read off
+the same reflected rows). A program with no aggregate construct is evaluated and
+explained as a plain one: the planner holds a cross-product
 premise until something binds it, a refusal echoes the question as written
 (padding and all — `whynot`'s `holds` line is the one that trims it), a
 live fact with no firing is `[axiom]`, a negation over an undefined atom is
 `[undefined]` and walked, a `why` of an undefined atom names its `unfounded
 set:`, and a negation's single-step demonstration is written when its firing is
-reached. Any other program is src/aggeval.ts's, and so is every explain
+reached. Any other program is explained as an aggregate one, and so is every explain
 request in every world (the reference evaluates a plain program again by the
 aggregate evaluator to answer them, and so does `Session::explain_requests`).
 In both, every question renames from zero, so an answer does not depend on what

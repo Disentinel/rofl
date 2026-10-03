@@ -228,7 +228,7 @@ that a rule pack then argues with, so every row has a `why`:
 | `npm run perminv` + `npm run whyperm` | who may write what |
 | `npm run ruleshape` | which rule bodies pay a cross product |
 | `npm run keycoupling` `npm run booklocality` `npm run boundary` | how coupled the store's key spelling, books and port surface are |
-| `npm run ablate` `npm run necessity` `npm run splitcheck` `npm run dagcheck` | what is load-bearing and what is not |
+| `npm run necessity` | what is load-bearing and what is not |
 
 REPL commands: `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`,
 `load FILE`, `who NAME`, `retract F`, `tick`, `run [N]`, `save FILE`,
@@ -432,7 +432,7 @@ accepted in silence). An UNBOUND operand is not a refusal, for the same reason
 it is not one in arithmetic.
 
 **They are no longer on the primary path.** The default evaluator peels its
-phase order off the decoded rules before a single rule fires (`src/rounds.ts`,
+phase order off the decoded rules before a single rule fires (`src/aggeval.ts`,
 `peelRounds`): round 0 is every relation no `@now` rule concludes, round *N* is
 every unsettled relation whose *negative* dependencies all settled earlier,
 closed under positive dependency. The round number is the stratum number, and a
@@ -842,7 +842,7 @@ bit-identical state, tick log, and provenance regardless of insertion order
   compiling with `tsc` would restore Node 20 support at the cost of a build
   step; zero-toolchain execution was judged closer to the spec's intent.
 - **Optimization passes exist, and START.md section 8 said not to build them.**
-  The engine is a SEMINAIVE fixpoint (`src/engine.ts` line 1), the derived
+  The engine is a SEMINAIVE fixpoint (`src/aggeval.ts`), the derived
   layer is REUSED per relation under an exact fingerprint with the switch
   defaulting to on, and premises against a demand-backed relation are solved
   TOP-DOWN with the recursion capped at 512. Each was a deliberate decision

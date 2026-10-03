@@ -162,7 +162,7 @@ Declared as facts:
 > WHAT RESTS ON THE VERDICT.
 > 
 > Everything below reads `unsafe_rule`, and every one of them was a fold, a
-> `for(;;)` or a memoised recursion in src/engine.ts. They are not new: they
+> `for(;;)` or a memoised recursion in the evaluator. They are not new: they
 > are stated in rules/kernel-policy.rofl, where they were measured against the
 > host rule for rule by scanners/policy_ladder.ts, which carries a `--break`
 > control so the comparison is known to be capable of moving. The one

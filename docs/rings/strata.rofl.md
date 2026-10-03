@@ -16,7 +16,7 @@ default: main
 > phases.
 > 
 > The primary evaluator peels that schedule off the DECODED RULES before a
-> single rule fires (`src/rounds.ts`, `peelRounds`), so a program no longer has
+> single rule fires (`src/aggeval.ts`, `peelRounds`), so a program no longer has
 > to derive a description of itself in order to be run, and boot.rofl no longer
 > carries these. `stratum/2` and `unstratified/1` remain the kernel's declared
 > READ INTERFACE (README.md), and `new Rofl({ evaluator: 'strata' })` still

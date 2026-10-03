@@ -1769,20 +1769,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ts_shrug_late_cut_refused",
-  "what": "the plain TypeScript engine refuses a program a wall cut after a reader of shrug fired",
-  "edits": [
-   [
-    "src/engine.ts",
-    "const snap = cut ? null : this.shrugSnap;",
-    "const snap = this.shrugSnap;"
-   ]
-  ],
-  "expect": {
-   "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
-  }
- },
- {
   "id": "ts_agg_shrug_late_cut_refused",
   "what": "the TypeScript aggregate evaluator refuses a program a wall cut after a reader of shrug fired",
   "edits": [
@@ -1793,29 +1779,16 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
+   "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer",
    "agg_cell_shrug_given_cut_agg": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
   }
  },
  {
-  "id": "ts_shrug_given_off",
-  "what": "the plain TypeScript engine makes an unknown row a book writes itself a paradox",
-  "edits": [
-   [
-    "src/engine.ts",
-    "if (!fed && !this.wfsWritten.has(f.key)) {",
-    "if (false) {"
-   ]
-  ],
-  "expect": {
-   "agg_cell_shrug_given": "shrug[$kernel](sg_said,given,stated)"
-  }
- },
- {
   "id": "ts_shrug_given_wfs_unread",
-  "what": "the plain TypeScript engine calls an undefined atom given when a book also asserted its unknown row",
+  "what": "the TypeScript evaluator calls an undefined atom given when a book also asserted its unknown row",
   "edits": [
    [
-    "src/engine.ts",
+    "src/aggeval.ts",
     "if (!fed && !this.wfsWritten.has(f.key)) {",
     "if (!fed) {"
    ]
@@ -1835,6 +1808,7 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
+   "agg_cell_shrug_given": "shrug[$kernel](sg_said,given,stated)",
    "agg_cell_shrug_given_agg": "shrug[$kernel](sgc_said,given,stated)"
   }
  },
@@ -1847,11 +1821,11 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_paradox_root_off",
-  "what": "the TypeScript engine names no paradox among the roots of what a hole left out",
+  "what": "the TypeScript evaluator names no paradox among the roots of what a hole left out",
   "edits": [
    [
-    "src/engine.ts",
-    "    if (this.unk.size === 0) return;\n    const targetOf",
+    "src/aggeval.ts",
+    "    if (this.latUnknown.size === 0) return;\n    const targetOf",
     "    return;\n    const targetOf"
    ]
   ],
@@ -1861,12 +1835,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_paradox_neg_off",
-  "what": "the TypeScript engine reads no paradox under not among the roots of what a hole left out",
+  "what": "the TypeScript evaluator reads no paradox under not among the roots of what a hole left out",
   "edits": [
    [
-    "src/engine.ts",
-    "    const us = this.undefAtoms?.get(l.rel);\n    if (!us) return false;",
-    "    const us = this.undefAtoms?.get(l.rel);\n    if (us || !us) return false;"
+    "src/aggeval.ts",
+    "    if (this.undefAtoms === null || !this.undefAtoms.has(l.rel)) return false;",
+    "    if (this.undefAtoms === null || !this.undefAtoms.has(l.rel) || true) return false;"
    ]
   ],
   "expect": {
@@ -1875,12 +1849,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_meta_off",
-  "what": "the TypeScript engine reads `unknown(A)` of what a hole left out as no row",
+  "what": "the TypeScript evaluator reads `unknown(A)` of what a hole left out as no row",
   "edits": [
    [
-    "src/engine.ts",
-    "if (this.readsUnknown && u.rel !== IFACE.unknown) this.metaQueue.push",
-    "if (false && this.readsUnknown && u.rel !== IFACE.unknown) this.metaQueue.push"
+    "src/aggeval.ts",
+    "if (this.readsUnknown && uRelOf(u) !== IFACE.unknown) this.metaQueue.push",
+    "if (false && this.readsUnknown && uRelOf(u) !== IFACE.unknown) this.metaQueue.push"
    ]
   ],
   "expect": {
@@ -1891,12 +1865,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_rows_off",
-  "what": "the TypeScript engine writes no shrug row",
+  "what": "the TypeScript evaluator writes no shrug row",
   "edits": [
    [
-    "src/engine.ts",
-    "for (const r of rows) this.store.add(SHRUG, KERNEL_PERSP, r, { scope: 'tick', base: true });",
-    "void rows;"
+    "src/aggeval.ts",
+    "    for (const args of rows) this.store.add('shrug', KERNEL_PERSP, args, F_BASE_TICK);",
+    "    void rows;"
    ]
   ],
   "expect": {
@@ -1906,11 +1880,11 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_unknown_unranked",
-  "what": "the TypeScript round evaluator ranks what reads `unknown` among the rest",
+  "what": "the TypeScript evaluator ranks what reads `unknown` among the rest",
   "edits": [
    [
-    "src/rounds.ts",
-    "if ([...heads].some((h) => reads(h, new Set([IFACE.unknown, SHRUG])))) {",
+    "src/aggeval.ts",
+    "if ([...heads].some((h) => readsIn(h, new Set([un, sh])))) {",
     "if (false) {"
    ]
   ],
@@ -1920,12 +1894,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_rank_off",
-  "what": "the TypeScript stock evaluator ranks what reads `unknown` by the table alone, below what it reads",
+  "what": "the TypeScript evaluator ranks what reads `unknown` by the table alone, below what it reads",
   "edits": [
    [
-    "src/engine.ts",
-    "    if (this.unknownCone.size === 0) return strat;",
-    "    return strat;"
+    "src/aggeval.ts",
+    "    if (this.unknownCone.size === 0) return;",
+    "    return;"
    ]
   ],
   "expect": {
@@ -1951,7 +1925,7 @@ export const BREAKS: Break[] = [
   "what": "the TypeScript alternation runs a rule reading `unknown` in its one level",
   "edits": [
    [
-    "src/engine.ts",
+    "src/aggeval.ts",
     "const twoLevels = this.unknownCone.size > 0;",
     "const twoLevels = false;"
    ]
@@ -1966,13 +1940,13 @@ export const BREAKS: Break[] = [
   "what": "the TypeScript alternation forgets what holes left out at every round",
   "edits": [
    [
-    "src/engine.ts",
-    "      this.pending = [...carried];\n      const noted = this.unk.size;",
-    "      this.pending = [...carried];\n      this.wfsCarryReset();\n      const noted = this.unk.size;"
+    "src/aggeval.ts",
+    "      this.plainPending = [...carried];\n      const noted = this.latUnknown.size;",
+    "      this.plainPending = [...carried];\n      this.wfsCarryReset();\n      const noted = this.latUnknown.size;"
    ],
    [
-    "src/engine.ts",
-    "const settled = sameKeys(next.recs, mean.recs) && this.unk.size === noted;",
+    "src/aggeval.ts",
+    "const settled = sameKeys(next.recs, mean.recs) && this.latUnknown.size === noted;",
     "const settled = sameKeys(next.recs, mean.recs);"
    ]
   ],
@@ -1982,12 +1956,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_paradox_any_cycle",
-  "what": "the TypeScript engine's paradox meta names every relation below it on any cycle, a positive recursion included",
+  "what": "the TypeScript evaluator's paradox meta names every relation below it on any cycle, a positive recursion included",
   "edits": [
    [
-    "src/engine.ts",
-    "        if (b.t === 'neg') neg.push([h, t]);",
-    "        neg.push([h, t]);"
+    "src/aggeval.ts",
+    "          if (n || strict) neg.push([h, t]);",
+    "          neg.push([h, t]);"
    ]
   ],
   "expect": {
@@ -1999,8 +1973,8 @@ export const BREAKS: Break[] = [
   "what": "the TypeScript alternation keeps carrying a fault met only under an over-estimate it has left behind",
   "edits": [
    [
-    "src/engine.ts",
-    "      if (this.unk.size === 0 || !moved) {",
+    "src/aggeval.ts",
+    "      if (this.latUnknown.size === 0 || !moved) {",
     "      if (true || !moved) {"
    ]
   ],
@@ -2010,12 +1984,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_late_unrefused",
-  "what": "the TypeScript engine leaves a late shrug unread instead of refused",
+  "what": "the TypeScript evaluator leaves a late shrug unread instead of refused",
   "edits": [
    [
-    "src/engine.ts",
-    "        if (readable(row)) {",
-    "        if (false && readable(row)) {"
+    "src/aggeval.ts",
+    "        if (readable) {",
+    "        if (false && readable) {"
    ]
   ],
   "expect": {
@@ -2024,12 +1998,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_withdrawn_unrefused",
-  "what": "the TypeScript engine lets a shrug row stand that a rule reading shrug read and then withdrew",
+  "what": "the TypeScript evaluator lets a shrug row stand that a rule reading shrug read and then withdrew",
   "edits": [
    [
-    "src/engine.ts",
-    "      for (const k of [...snap.keys()].filter((k) => !now.has(k)).sort()) moved.push([snap.get(k)!, false]);",
-    "      void now;"
+    "src/aggeval.ts",
+    "      moved.push(...gone);",
+    "      void gone;"
    ]
   ],
   "expect": {
@@ -2038,10 +2012,10 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_meta_late_unrefused",
-  "what": "the TypeScript engine leaves a late `unknown(A)` unread instead of refused",
+  "what": "the TypeScript evaluator leaves a late `unknown(A)` unread instead of refused",
   "edits": [
    [
-    "src/engine.ts",
+    "src/aggeval.ts",
     "    if (this.metaLate !== null) {",
     "    if (false && this.metaLate !== null) {"
    ]
@@ -2055,7 +2029,7 @@ export const BREAKS: Break[] = [
   "what": "the TypeScript alternation reads `unknown(A)` of what its upper level leaves undefined",
   "edits": [
    [
-    "src/engine.ts",
+    "src/aggeval.ts",
     "        if (lits.some((l) => this.unknownBinds(l, u, new Map()) !== null)) {",
     "        if (false) {"
    ]
@@ -2066,12 +2040,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_edges_off",
-  "what": "the TypeScript engine keeps no edge from an unknown to what reached it",
+  "what": "the TypeScript evaluator keeps no edge from an unknown to what reached it",
   "edits": [
    [
-    "src/engine.ts",
-    "    this.unkEdges.push(['u:' + v.key, 'u:' + from.key]);\n    if (!this.noteUnknown(v)) return false;",
-    "    if (!this.noteUnknown(v)) return false;"
+    "src/aggeval.ts",
+    "    this.unkEdges.push([nUnk(v), nUnk(from)]);",
+    ""
    ]
   ],
   "expect": {
@@ -2080,12 +2054,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_snapshot_off",
-  "what": "the TypeScript engine fires a rule reading shrug before the rows are written",
+  "what": "the TypeScript evaluator fires a rule reading shrug before the rows are written",
   "edits": [
    [
-    "src/engine.ts",
-    "    if (this.shrugSnap !== null || !rs.some((r) => this.shrugReaders.has(r.id))) return [rs];",
-    "    return [rs];"
+    "src/aggeval.ts",
+    "        if (this.shrugSnap === null && rs.some((r) => this.shrugReaders.has(r.id))) {",
+    "        if (false) {"
    ]
   ],
   "expect": {
@@ -2109,12 +2083,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_shrug_standing_off",
-  "what": "the TypeScript engine reads no standing federation hole",
+  "what": "the TypeScript evaluator reads no standing federation hole",
   "edits": [
    [
-    "src/engine.ts",
-    "      .filter((f) => f.args[1].k === 'a' && reasonOf(f.args[1].name) === 'federation')",
-    "      .filter(() => false)"
+    "src/aggeval.ts",
+    "      if (reasonOf(c.name) === 'federation' && !seenHoles.has(k)) {",
+    "      if (false && reasonOf(c.name) === 'federation' && !seenHoles.has(k)) {"
    ]
   ],
   "expect": {
@@ -5058,12 +5032,12 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_stock_stale_holes_kept",
-  "what": "the TypeScript engine's stock evaluator keeps the hole rows of the evaluation before when a world is evaluated again",
+  "what": "the TypeScript evaluator keeps the hole rows of the evaluation before when a world is evaluated again",
   "edits": [
    [
-    "src/rounds.ts",
-    "if (plan.hits.size === 0) this.store.dropEvalHoles();",
-    "if (plan.hits.size === 0) { /* kept */ }"
+    "src/aggeval.ts",
+    "    if (plan.hits.size === 0) this.store.dropEvalHoles();",
+    "    if (plan.hits.size === 0) { /* kept */ }"
    ]
   ],
   "expect": {

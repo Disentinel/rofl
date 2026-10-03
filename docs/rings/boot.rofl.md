@@ -66,7 +66,7 @@ Declared as facts:
 > `unstratified/1`, `stratum/2` four times. They computed, as data, the
 > schedule the evaluator then read back out of the store. The evaluator now
 > peels that schedule off the DECODED RULES before a single rule fires
-> (`src/rounds.ts`, `peelRounds`), so the program no longer has to derive a
+> (`src/aggeval.ts`, `peelRounds`), so the program no longer has to derive a
 > description of itself in order to be run.
 > 
 > Unstratifiability stopped being a property that has to be DETECTED. It is a

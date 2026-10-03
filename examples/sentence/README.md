@@ -54,7 +54,7 @@ is not`, `neither … nor`), guards, and a string with a space in it.
 
 Measured 2026-09-24: with the template rules in the sentence's world every
 sentence cost 840 ms, because the evaluator re-derives whatever a re-derived
-relation reads (the reuse plan in `src/engine.ts`: nothing an evaluation
+relation reads (the reuse plan in `src/reuse.ts`: nothing an evaluation
 re-derives may read anything it reuses), and the chart reads the tokens.
 Compiled once into facts by `vocabulary.rofl`, the same sentence costs 30 ms
 with 23 templates and 186 ms with 870. It is the parser's own arrangement,
