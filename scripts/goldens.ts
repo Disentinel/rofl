@@ -196,7 +196,6 @@ export function declared(text?: string): World[] {
   for (const [n, v] of col(r, 'check_opt(N, retract, V)', 'N', 'V')) {
     const w = out.get(n);
     if (w && !w.together) throw new Error(`check_opt("${n}", retract, "${v}"): a retraction is made in a world loaded together`);
-    if (w && w.ticks) throw new Error(`check_opt("${n}", retract, "${v}"): a retraction is made at tick 0`);
     if (w) (w.retract ??= []).push(v);
   }
   // the space wall, in rows (rofl-load --space); Rust only
@@ -405,15 +404,16 @@ function together(w: World, Engine: typeof Rofl) {
   // the evaluation: rofl-load's, with its exit class for a refusal
   const run = (r: Rofl, explain: boolean): { cls: 'eval'; msg: string } | null => {
     try {
-      if (!w.ticks) {
+      if (!w.ticks || w.retract?.length) {
         r.evaluate(budget);
         for (const f of w.retract ?? []) {
           const x = r.retract(f);
           if (!x.ok) return { cls: 'eval', msg: `retract ${f}: ${x.diagnostics.join('; ')}` };
           r.evaluate(budget);
         }
-        if (explain) { r.explainRequests({ budget }); r.evaluate(budget); }
-      } else {
+        if (explain && !w.ticks) { r.explainRequests({ budget }); r.evaluate(budget); }
+      }
+      if (w.ticks) {
         for (let i = 0; i < w.ticks; i++) r.tickAdvance({ budget });
         if (explain) { r.evaluate(budget); r.explainRequests({ budget }); r.evaluate(budget); }
       }

@@ -1,0 +1,20 @@
+-- examples/checks/agg-incr-twice.rofl — agg_incr_twice: A CELL THE FACT SUPPORTS
+-- THAT A RULE READ AGAIN WHOLE OWNS. A rule that reads the retracted relation
+-- outside its aggregate as well as inside it is read again whole (its facts and
+-- cells gone, the rule fired again), so its own cell is not subtracted from: a
+-- cell subtracted first would be a count of nothing for a group that has no sale
+-- left, which a fresh evaluation does not hold (the rule has no group to ask).
+--
+--   tw_sale(1, b, 5)   b has no sale left: tw_twice(b, 1) goes, and its cell with it
+edb(tw_sale).
+tw_sale(1, b, 5).
+tw_sale(2, a, 3).
+tw_sale(3, a, 4).
+tw_twice(G, N) :- tw_sale(_, G, _), N is count(K : tw_sale(K, G, _)).
+
+-- the state after the retraction, row by row
+-- expect-row: tw_twice[main](a,2) tick drv support=2
+-- and nothing of what it supported before
+-- expect-no-row: tw_twice[main](b,
+-- expect-no-row: agg_cell[$kernel]($cell(rc82b8553,2,0,$cons(b,
+-- expect-no-row: cell $cell(rc82b8553,2,0,$cons(b,

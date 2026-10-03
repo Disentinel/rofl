@@ -216,8 +216,8 @@ async function served(port: RoflPort, w: World, qs: Q[]): Promise<A[]> {
   const s = await port.fresh(w.budget, walls(w));
   try {
     for (const f of [BOOT, ...w.files]) await s.loadFile(f);
-    if (w.ticks) for (let i = 0; i < w.ticks; i++) await s.tick();
-    else { await s.evaluate(); for (const f of w.retract ?? []) await s.retract(f); }
+    if (!w.ticks || w.retract?.length) { await s.evaluate(); for (const f of w.retract ?? []) await s.retract(f); }
+    for (let i = 0; i < (w.ticks ?? 0); i++) await s.tick();
     const out: A[] = [];
     for (const q of qs) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   serve ${q.op} ${q.query}\n`);
