@@ -193,8 +193,14 @@ impl Eval {
         for layer in layers {
             self.ds_carry(comp)?;
             let owners: Vec<Rc<ERule>> = rs.iter().filter(|r| layer.iter().any(|k| k.0 == r.id)).cloned().collect();
+            let grouped = |e: &Eval, k: &AggKey| e.agg_plans.get(&(k.0, k.1)).is_some_and(|p| !p.group.is_empty());
+            let (by_group, whole): (Vec<AggKey>, Vec<AggKey>) = layer.iter().cloned().partition(|k| grouped(self, k));
             self.ds_released.extend(layer);
-            self.fire_all(owners.clone())?;
+            if !whole.is_empty() {
+                let mine: Vec<Rc<ERule>> = owners.iter().filter(|r| whole.iter().any(|k| k.0 == r.id)).cloned().collect();
+                self.fire_all(mine)?;
+            }
+            self.fire_keys(&by_group)?;
             self.poison_readers(&owners)?;
         }
         self.ds_carry(comp)?;
@@ -205,6 +211,76 @@ impl Eval {
         self.ds_verify(comp)
     }
 
+    /// Whether the correlation `k` leaves every group of its element open.
+    fn ds_whole(&mut self, k: &AggKey) -> bool {
+        let any = Term::atom(self.h.intern(DS_ANY));
+        let groups = self.agg_plans.get(&(k.0, k.1)).map_or(0, |p| p.group.len());
+        k.2[k.2.len() - groups..].iter().all(|t| *t == any)
+    }
+
+    /// `s` with the shared variables of `a` bound as the key `key` of a correlation says: the correlation, then
+    /// each group a rule bound (`ds_any` for one it did not).
+    fn ds_bind(&mut self, a: &Agg, plan: &AggPlan, key: &[Term]) -> Option<Subst> {
+        let any = Term::atom(self.h.intern(DS_ANY));
+        let mut s = Subst::new();
+        for (n, i) in plan.corr.iter().enumerate() {
+            s = unify(&self.h, Term::var(a.shared[*i]), key[n], &s)?;
+        }
+        for (n, i) in plan.group.iter().enumerate() {
+            let t = key[plan.corr.len() + n];
+            if t != any {
+                s = unify(&self.h, Term::var(a.shared[*i]), t, &s)?;
+            }
+        }
+        Some(s)
+    }
+
+    /// The rules of `keys` fired over the instances that read each correlation, the news propagated after: a group
+    /// the rule binds is read by no firing that leaves the group open, so it is fired with the group bound.
+    fn fire_keys(&mut self, keys: &[AggKey]) -> Result<(), Halt> {
+        if keys.is_empty() {
+            return Ok(());
+        }
+        let mut owners: Vec<Rc<ERule>> = Vec::new();
+        for k in keys {
+            let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
+            if !owners.iter().any(|o| o.id == r.id) {
+                owners.push(r);
+            }
+        }
+        owners.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+        let mut front = Front::default();
+        std::mem::swap(&mut self.cur_front, &mut front);
+        self.cur_front = Front::default();
+        let batch: Rc<[Rc<ERule>]> = Rc::from(owners.clone());
+        let outer = (std::mem::replace(&mut self.batch, batch), self.batch_at);
+        for (i, r) in owners.iter().enumerate() {
+            self.batch_at = i;
+            for k in keys.iter().filter(|k| k.0 == r.id) {
+                let a = r.plan.iter().find_map(|b| match b {
+                    BodyElem::Agg(a) if a.at == k.1 => Some(a.clone()),
+                    _ => None,
+                });
+                let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else {
+                    return Err(Halt::Bug("a correlation of no element".into()));
+                };
+                let Some(s0) = self.ds_bind(&a, &plan, &k.2) else { continue };
+                let f = self.fire_rule_from(r, s0, None)?;
+                merge_front(&mut self.cur_front, f);
+            }
+        }
+        (self.batch, self.batch_at) = outer;
+        let front = std::mem::take(&mut self.cur_front);
+        self.propagate(front)?;
+        self.lattice_settle(false)?;
+        let more = std::mem::take(&mut self.cur_front);
+        if !more.keys.is_empty() {
+            self.propagate(more)?;
+            self.lattice_settle(false)?;
+        }
+        Ok(())
+    }
+
     /// EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a
     /// defect of the walk (an edge it did not see), never a quiet wrong value: each correlation is solved again,
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
@@ -213,6 +289,12 @@ impl Eval {
         keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let mut bad: Option<String> = None;
+        let mut by_corr: HashMap<(Sym, u32, Vec<Term>), Vec<CellId>> = HashMap::new();
+        for k in &keys {
+            if let (Some(cs), Some(plan)) = (self.agg_memo.get(k), self.agg_plans.get(&(k.0, k.1))) {
+                by_corr.entry((k.0, k.1, k.2[..plan.corr.len()].to_vec())).or_default().extend(cs.iter().copied());
+            }
+        }
         for k in keys {
             let Some(cells) = self.agg_memo.get(&k).cloned() else { continue };
             let r = self.rule_of(k.0).ok_or_else(|| Halt::Bug("a correlation of no rule".into()))?;
@@ -221,12 +303,10 @@ impl Eval {
                 _ => None,
             });
             let (Some(a), Some(plan)) = (a, self.agg_plans.get(&(k.0, k.1)).cloned()) else { continue };
-            let mut s = Some(Subst::new());
-            for (n, i) in plan.corr.iter().enumerate() {
-                s = s.and_then(|x| unify(&self.h, Term::var(a.shared[*i]), k.2[n], &x));
-            }
-            let Some(s) = s else { continue };
+            let Some(s) = self.ds_bind(&a, &plan, &k.2) else { continue };
             let Sealed::Ephemeral(now) = self.seal_cells(k.0, &a, &plan, &s, &k.2, 0, false)? else { continue };
+            // a group sealed by a narrower correlation of the element is held there
+            let cells: Vec<CellId> = if plan.group.is_empty() || brk!("ds_verify_own_cells" => true; false) { cells.to_vec() } else { by_corr.get(&(k.0, k.1, k.2[..plan.corr.len()].to_vec())).cloned().unwrap_or_default() };
             for (key, value, _) in now {
                 let held = cells.iter().map(|c| self.store.cell(*c)).find(|c| *c.key == *key);
                 let ok = match held {
@@ -337,17 +417,13 @@ impl Eval {
         let mut g = Graph::default();
         let mut todo: Vec<usize> = Vec::new();
         // the correlations the owners' rules make, as the rules themselves would
-        let mut roots: Vec<usize> = Vec::new();
         for r in &owners {
             let mut out = Vec::new();
             self.ds_walk(comp, r.id, r.plan.iter().collect(), Subst::new(), &mut out)?;
             for n in out {
-                if matches!(n, Node::Agg(_)) {
-                    roots.push(g.id(n, &mut todo));
-                }
+                g.id(n, &mut todo);
             }
         }
-        brk!("ds_root_dropped" => { roots.pop(); }; ());
         while let Some(i) = todo.pop() {
             let mut out = Vec::new();
             match g.nodes[i].clone() {
@@ -372,11 +448,7 @@ impl Eval {
                     });
                     let (a, plan) = (a.ok_or_else(|| Halt::Bug("a correlation of no element".into()))?, self.agg_plans.get(&(rid, at)).cloned());
                     let plan = plan.ok_or_else(|| Halt::Bug("a correlation with no plan".into()))?;
-                    let mut s = Some(Subst::new());
-                    for (n, i) in plan.corr.iter().enumerate() {
-                        s = s.and_then(|x| unify(&self.h, Term::var(a.shared[*i]), corr[n], &x));
-                    }
-                    if let Some(s) = s {
+                    if let Some(s) = self.ds_bind(&a, &plan, &corr) {
                         self.ds_walk(comp, rid, plan.inner_order.iter().map(|i| &a.body[*i]).collect(), s, &mut out)?;
                     }
                 }
@@ -423,8 +495,12 @@ impl Eval {
             }
             depth[c] = d;
         }
+        // every correlation the walk met is released, a group the rule binds as well as the rule's own
+        let mut aggs: Vec<usize> = (0..n).filter(|i| is_agg(*i)).collect();
+        brk!("ds_root_dropped" => { aggs.pop(); }; ());
+        brk!("ds_ground_unreleased" => aggs.retain(|i| matches!(&g.nodes[*i], Node::Agg(k) if self.ds_whole(k))); ());
         let mut layers: Vec<Vec<AggKey>> = Vec::new();
-        for i in roots.iter().copied().collect::<std::collections::BTreeSet<usize>>() {
+        for i in aggs {
             let Node::Agg(k) = &g.nodes[i] else { continue };
             let d = depth[comp_of[i]];
             while layers.len() <= d {
@@ -554,6 +630,12 @@ impl Eval {
                             return Err(Fail::Unkeyed(rid, a.at));
                         }
                         corr.push(t);
+                    }
+                    // a group the rule binds is a correlation of its own, any other is the whole
+                    let any = Term::atom(self.h.intern(DS_ANY));
+                    for i in &plan.group {
+                        let t = resolve(&mut self.h, Term::var(a.shared[*i]), &s);
+                        corr.push(brk!("ds_group_whole" => any; if self.h.is_ground(t) { t } else { any }));
                     }
                     out.push(Node::Agg((rid, a.at, corr.into())));
                 } else if !b.lits_deep().iter().any(|l| comp.rels.contains(&l.rel)) {

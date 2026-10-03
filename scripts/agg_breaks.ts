@@ -5320,6 +5320,35 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "ds_group_whole",
+  "what": "a group the rule binds is read as the whole correlation: a group that reads another group of its own relation is a cycle",
+  "expect": {
+   "agg_datastrat_groups": "the world does not evaluate",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ds_group_resealed",
+  "what": "the whole correlation of a grouped element seals again the groups a narrower one sealed",
+  "expect": {
+   "agg_datastrat_groups": "sealed twice"
+  }
+ },
+ {
+  "id": "ds_verify_own_cells",
+  "what": "the recheck of a correlation holds the groups it finds against its own cells alone, not those of the narrower correlations that sealed them",
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ds_ground_unreleased",
+  "what": "a group the rule binds is never released on its own: only the whole correlation is",
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
   "id": "retract_thr_cells_kept",
   "what": "the thresholds of a rule read again whole stay known to the evaluation: a quorum cell that is gone is found where it was",
   "expect": {
@@ -5503,6 +5532,63 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_keys": "the world does not evaluate"
+  }
+ },
+ {
+  "id": "ts_ds_group_whole",
+  "what": "the TypeScript walk reads a group the rule binds as the whole correlation",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "        for (const i of plan.group) {\n          const t = resolve(mkv(b.shared![i]), s);\n          corr.push(isGround(t) ? t : DS_ANY);",
+    "        for (const i of plan.group) {\n          const t = resolve(mkv(b.shared![i]), s);\n          corr.push(DS_ANY);"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "the world does not evaluate",
+   "agg_datastrat_cycle": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_ds_group_resealed",
+  "what": "the TypeScript whole correlation of a grouped element seals again the groups a narrower one sealed",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`)) {\n      for (let j",
+    "if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`) && false) {\n      for (let j"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "sealed twice"
+  }
+ },
+ {
+  "id": "ts_ds_verify_own_cells",
+  "what": "the TypeScript recheck holds the groups it finds against its own cells alone",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "        if (plan.group.length > 0) held = byCorr.get(",
+    "        if (plan.group.length < 0) held = byCorr.get("
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
+  }
+ },
+ {
+  "id": "ts_ds_ground_unreleased",
+  "what": "the TypeScript walk releases no group the rule binds on its own",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "      if (nd.k !== 'a') continue;\n      const d = depth[compOf[i]];",
+    "      if (nd.k !== 'a' || nd.corr.slice(nd.corr.length - (this.aggPlans.get(`${nd.rid}|${nd.at}`)?.group.length ?? 0)).some((t) => t !== DS_ANY)) continue;\n      const d = depth[compOf[i]];"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_groups": "changed after it sealed"
   }
  },
  {

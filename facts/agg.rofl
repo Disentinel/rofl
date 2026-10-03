@@ -1188,6 +1188,10 @@ work_proof(w_agg_retract_fallback_tail, "agg_incr_owner").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_twice").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_staged").
 work_proof(w_agg_retract_fallback_tail, "agg_incr_demand").
+work(w_agg_group_is_a_cell, "each group of a grouped aggregate is a cell of its own for the data walk (f_a_grouped_aggregate_is_one_cell_for_the_data_walk): a group reading another group of its own relation is ordered, not refused as a cycle, and a true cycle between groups is still refused, naming it; both engines, byte parity; done only with the work_proof worlds").
+work_state(w_agg_group_is_a_cell, done).
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_groups").
+work_proof(w_agg_group_is_a_cell, "agg_datastrat_cycle").
 work(w_agg_member_keeps_its_derivations, "a deduplicated member keeps every derivation (f_a_deduplicated_member_keeps_one_derivation): a count, sum, holistic or threshold member holds the premises of every derivation of its projection value, the text-least first, in both engines; the state prints them, a retraction (and so an excise) keeps a member another derivation supports, and `why all` shows them; done only with the work_proof worlds").
 work_state(w_agg_member_keeps_its_derivations, done).
 work_proof(w_agg_member_keeps_its_derivations, "agg_member_derivs_state").

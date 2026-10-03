@@ -334,6 +334,7 @@ check[checks]("facts/goldens.rofl", "agg_critpath_demo", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_budget", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_cycle", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_eval", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_groups", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_holes", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_keys", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_neg", world).

@@ -9843,6 +9843,8 @@ finding_note(f_a_stratified_layer_fires_its_rules_whole,
 finding(f_a_grouped_aggregate_is_one_cell_for_the_data_walk, pitfall).
 recorded(f_a_grouped_aggregate_is_one_cell_for_the_data_walk, "2026-10-03").
 demands(f_a_grouped_aggregate_is_one_cell_for_the_data_walk, kernel_change).
+addressed_by(f_a_grouped_aggregate_is_one_cell_for_the_data_walk, "rust/rofl/src/engine/datastrat.rs").
+addressed_by(f_a_grouped_aggregate_is_one_cell_for_the_data_walk, "examples/checks/agg-datastrat-groups.rofl").
 finding_note(f_a_grouped_aggregate_is_one_cell_for_the_data_walk,
   "OPEN, A LIMIT OF THE GRAIN, not of the walk: a cell is sealed once per rule and correlation, every group of a grouped aggregate (a group variable no premise binds before it) together, so a data-level stratification can order cells only at that grain. A grouped count of a relation that reads its own groups is a cycle at that grain, though no group reads itself; bind the group variable by a premise before the aggregate (`size(T, N) :- node(T), S is sum(...)`) and every group is a correlation of its own, which is how the tree world is written. Making each group a cell of its own is a change to seal_cells (the group bound in the inner solve) and to the reach memo, not to the walk. The same grain makes a key bound by a value of the component, and the walk's wildcard for it, read everything the relation could give (a lookup keyed by a computed value reads every row of its table): sound, and a false cycle only where the table reads the lookup back.").
 
@@ -10030,6 +10032,8 @@ finding_note(f_a_quorum_cut_the_firings_of_goof_and_not_its_verdicts,
 
 finding_note(f_a_stratified_layer_fires_its_rules_whole,
   "TRIAGE 2026-10-03: a real, bounded defect of cost, now owned by w_agg_layer_fires_the_new.").
+finding_note(f_a_grouped_aggregate_is_one_cell_for_the_data_walk,
+  "SETTLED 2026-10-03 by w_agg_group_is_a_cell: each group is a correlation of its own (the key carries the groups a rule binds, `_` for the rest); the key bound by a value of the component and its wildcard (the second half of the note) is unchanged, a false cycle only where the table reads the lookup back.").
 finding_note(f_a_grouped_aggregate_is_one_cell_for_the_data_walk,
   "TRIAGE 2026-10-03: reproduced on the current build (`sz(T, N) :- N is count(K : kid(T, K))` with `kid(P, K) :- sz(K, 0), parent(P, K)` over parent(a,b), parent(b,c) is refused: the cell reads itself, though no group reads its own count). A real, bounded limit, now owned by w_agg_group_is_a_cell.").
 finding_note(f_compact_wits_reverses_a_firing_list,

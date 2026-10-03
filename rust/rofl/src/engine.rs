@@ -29,6 +29,8 @@ const DEFAULT_SPACE: i64 = 500_000;
 const POLICY_BUDGET: i64 = 20_000_000;
 /// the most descending passes narrowing makes after a widening
 const NARROW_PASSES: usize = 4;
+/// What stands in a correlation's key for a group variable nothing bound (datastrat.rs).
+const DS_ANY: &str = "$ds_any";
 
 #[derive(Debug)]
 pub enum Halt {
@@ -3421,9 +3423,19 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &HashSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        self.fire_rule_from(r, Subst::new(), front_at)
+    }
+
+    /// `r` fired over the instances that extend `s0`.
+    fn fire_rule_from(
+        &mut self,
+        r: &Rc<ERule>,
+        s0: Subst,
+        front_at: Option<(usize, &HashSet<FactId>)>,
+    ) -> Result<Front, Halt> {
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
-        let sols = self.solve_body(&r.plan, Subst::new(), 0, front_at, Some(r.id));
+        let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
         let sols = sols?;
@@ -3903,6 +3915,15 @@ impl Eval {
                 return Err(Halt::Bug(format!("a correlation variable of {} is not bound", self.h.name(rid))));
             }
             corr.push(t);
+        }
+        // A GROUP IS A CORRELATION OF ITS OWN in a component stratified by its data: a group variable `s` binds
+        // is part of the key, one it does not is `ds_any` (datastrat.rs, `ds_bind`)
+        if !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) {
+            let any = Term::atom(self.h.intern(DS_ANY));
+            for i in &plan.group {
+                let t = resolve(&mut self.h, Term::var(a.shared[*i]), s);
+                corr.push(if self.h.is_ground(t) { t } else { any });
+            }
         }
         Ok((plan, corr))
     }
@@ -4619,6 +4640,20 @@ impl Eval {
         }
         fresh.sort_by(|x, y| cmp_js(&tuple_text(&self.h, x), &tuple_text(&self.h, y)));
         groups.extend(fresh.into_iter().map(|g| (g, Vec::new())));
+        // a group a narrower correlation of the element sealed already is its cell (`ds_bind`)
+        if keep && !plan.group.is_empty() && self.ds_elems.contains(&(rid, a.at)) && brk!("ds_group_resealed" => false; true) {
+            let owner = CellOwner::Body { rule: rid, at: a.at };
+            let mut key: Vec<Term> = vec![Term::int(0); a.shared.len()];
+            for (n, i) in plan.corr.iter().enumerate() {
+                key[*i] = corr[n];
+            }
+            groups.retain(|(g, _)| {
+                for (n, i) in plan.group.iter().enumerate() {
+                    key[*i] = g[n];
+                }
+                self.store.find_cell(owner, &key, self.store.tick).is_none()
+            });
+        }
         let withdrawn = self.h.intern("support_withdrawn");
         let mut reached: HashMap<usize, Vec<Unknown>> = HashMap::new();
         let index = PossIndex::of(&reach);

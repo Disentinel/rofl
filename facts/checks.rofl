@@ -2593,8 +2593,10 @@ check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-5-refused
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-6-refused-unkeyed.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-7-refused-lattice.rofl").
 check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-8-refused-negated-body.rofl").
+check_file("agg_datastrat_cycle", "examples/checks/agg-datastrat-cycle-9-refused-group.rofl").
 check_opt("agg_datastrat_cycle", together, 1).
 proves_work("agg_datastrat_cycle", w_agg_data_strat).
+proves_work("agg_datastrat_cycle", w_agg_group_is_a_cell).
 
 -- two components of one round: the one that reads the other is run after it, though its name sorts first
 check_world("agg_datastrat_two").
@@ -2640,6 +2642,14 @@ check_opt("agg_datastrat_tick", together, 1).
 check_opt("agg_datastrat_tick", ticks, 2).
 check_opt("agg_datastrat_tick", explain, 1).
 proves_work("agg_datastrat_tick", w_agg_data_strat).
+
+-- each group of a grouped aggregate is a cell of its own: a group reads another group of its own relation
+check_world("agg_datastrat_groups").
+check_file("agg_datastrat_groups", "examples/checks/agg-datastrat-groups.rofl").
+check_file("agg_datastrat_groups", "examples/checks/agg-datastrat-groups-check.rofl").
+check_opt("agg_datastrat_groups", together, 1).
+check_opt("agg_datastrat_groups", explain, 1).
+proves_work("agg_datastrat_groups", w_agg_group_is_a_cell).
 
 -- the budget cuts between two layers: every value there is the sheet's, no cell above the wall has one
 check_world("agg_datastrat_budget").

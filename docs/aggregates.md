@@ -2947,7 +2947,14 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
 
 - A NODE is a pattern over a relation of the component (`val(n3, _)`, `_` where
   nothing bound a position), or a CORRELATION of one aggregate element, the cell it
-  seals: `(rule, at, the values of its shared variables bound before it)`.
+  seals: `(rule, at, the values of its shared variables bound before it, then each group
+  variable the rule binds there, `_` for one it does not)`. A grouped aggregate (a group
+  variable no premise binds before it) is a correlation for each group the walk
+  names and one for the rest: `team(a, N)` read by a premise (`team(M, N)` with M
+  bound by a closed relation) is the correlation of group a alone, and the rule's own
+  `_` is every group the walk did not name. A group is sealed by its own correlation,
+  the inner body solved with the group bound (`seal_cells`, `ds_bind`), and the `_`
+  seals the groups no narrower correlation sealed (a group is one cell, sealed once).
 - The EDGES of a pattern are what the premises of each rule that could conclude it
   read; those of a correlation, what its inner body reads. The premises are read a
   premise outside the component first (it binds what the patterns after it name), then
@@ -3040,10 +3047,7 @@ everything the relation could give. Components with a lattice, a subsumption, a
 threshold, a counting tag or a demand-backed relation in them are not taken. Each
 layer fires the rules that own its correlations whole, so a component d layers deep
 with c correlations costs d x c firings (`f_a_stratified_layer_fires_its_rules_whole`:
-300 sums in a chain 0.26 s, 2000 in 15 s). A cell
-sealed once per rule and correlation is the unit: a grouped aggregate (no
-correlation) is one cell for all its groups, so a group that reads another group of
-its own relation is a cycle at that grain. Proofs: `agg_datastrat_*` in
+300 sums in a chain 0.26 s, 2000 in 15 s). Proofs: `agg_datastrat_*` in
 `facts/checks.rofl`, each planted fault in `scripts/agg_breaks.ts`
 (`ds_*`, and `ts_ds_*` for the TypeScript engine).
 

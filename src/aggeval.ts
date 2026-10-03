@@ -711,6 +711,8 @@ const F_DRV = { scope: 'timeless', base: false } as const;
 const F_FROZEN = { scope: 'timeless', base: false, frozen: true } as const;
 
 const HOLE_ID_DEFAULT = mka('$adhoc');
+/** What stands in a correlation's key for a group variable nothing bound (`dsBind`). */
+const DS_ANY = mka('_');
 const rowKey = (r: Term[]): string => r.map(canonTerm).join('\u0000');
 /** A premise as a firing's signature spells it (rust/rofl `write_sig`). */
 export const sigOfPrem = (p: PremRef): string => (p.t === 'bi' ? 'b:' + p.desc : p.t + ':' + p.key);
@@ -1556,8 +1558,11 @@ export class AggEval {
     for (const layer of this.dsLayers(comp)) {
       this.dsCarry(comp);
       const owners = rs.filter((r) => layer.some((k) => k.rid === r.id));
+      const grouped = (k: { rid: string; at: number }): boolean => (this.aggPlans.get(`${k.rid}|${k.at}`)?.group.length ?? 0) > 0;
       for (const k of layer) { this.dsReleased.add(k.mk); this.dsKeys.set(k.mk, { rid: k.rid, at: k.at, corr: k.corr }); }
-      this.fireAll(owners);
+      const whole = layer.filter((k) => !grouped(k));
+      if (whole.length > 0) this.fireAll(owners.filter((r) => whole.some((k) => k.rid === r.id)));
+      this.fireKeys(layer.filter(grouped));
       this.poisonReaders(owners);
     }
     this.dsCarry(comp);
@@ -1565,6 +1570,52 @@ export class AggEval {
     for (const [rid, at] of comp.elems) this.dsDone.add(`${rid}|${at}`);
     this.fireAll(rs);
     this.dsVerify(comp);
+  }
+
+  /** The shared variables of `a` bound as the key `key` of a correlation says: the correlation, then each group a rule
+   *  bound (`_` for one it did not). */
+  private dsBind(a: AggElem, plan: AggPlan, key: Term[]): Subst | null {
+    let s: Subst | null = new Map();
+    plan.corr.forEach((ix, n) => { if (s !== null) s = unify(mkv(a.shared![ix]), key[n], s); });
+    plan.group.forEach((ix, n) => { const t = key[plan.corr.length + n]; if (s !== null && t !== DS_ANY) s = unify(mkv(a.shared![ix]), t, s); });
+    return s;
+  }
+
+  /** The rules of `keys` fired over the instances that read each correlation, the news propagated after: a group the
+   *  rule binds is read by no firing that leaves the group open, so it is fired with the group bound. */
+  private fireKeys(keys: { rid: string; at: number; corr: Term[] }[]): void {
+    if (keys.length === 0) return;
+    const owners: ERule[] = [];
+    for (const k of keys) {
+      const r = this.ruleOf(k.rid);
+      if (!r) throw new Bug('a correlation of no rule');
+      if (!owners.some((o) => o.id === r.id)) owners.push(r);
+    }
+    owners.sort((a, b) => cmpStr(a.canon, b.canon));
+    this.curFront = newFront();
+    const outer: [ERule[], number] = [this.batch, this.batchAt];
+    this.batch = owners;
+    owners.forEach((r, i) => {
+      this.batchAt = i;
+      for (const k of keys.filter((x) => x.rid === r.id)) {
+        const a = r.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
+        const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
+        if (!a || !plan) throw new Bug('a correlation of no element');
+        const s0 = this.dsBind(a, plan, k.corr);
+        if (s0 !== null) this.fireRule(r, null, s0);
+      }
+    });
+    [this.batch, this.batchAt] = outer;
+    const front = this.curFront;
+    this.curFront = newFront();
+    this.propagate(front);
+    this.latticeSettle(false);
+    const more = this.curFront;
+    this.curFront = newFront();
+    if (more.keys.size > 0) {
+      this.propagate(more);
+      this.latticeSettle(false);
+    }
   }
 
   /** EVERY CELL SEALED IS THE CELL ITS INNER BODY GIVES NOW. A member that came after the seal, or a group, is a defect of
@@ -1576,18 +1627,26 @@ export class AggEval {
     const saved: [number, number, number, string | null, number, string | null, string | null] =
       [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
     let bad: string | null = null;
+    // a group sealed by a narrower correlation of the element is held there
+    const byCorr = new Map<string, string[]>();
+    for (const [mk, k] of keys) {
+      const plan = this.aggPlans.get(`${k.rid}|${k.at}`), cs = this.aggMemo.get(mk);
+      if (plan === undefined || cs === undefined) continue;
+      const ck = `${k.rid}|${k.at}|${listKey(k.corr.slice(0, plan.corr.length))}`;
+      byCorr.set(ck, [...(byCorr.get(ck) ?? []), ...cs]);
+    }
     try {
       for (const [mk, k] of keys) {
-        const held = this.aggMemo.get(mk);
+        let held = this.aggMemo.get(mk);
         const r = this.ruleOf(k.rid);
         const a = r?.plan.find((b) => b.t === 'agg' && b.at === k.at) as AggElem | undefined;
         const plan = this.aggPlans.get(`${k.rid}|${k.at}`);
         if (held === undefined || !a || !plan) continue;
-        let s: Subst | null = new Map();
-        plan.corr.forEach((ix, j) => { if (s !== null) s = unify(mkv(a.shared![ix]), k.corr[j], s); });
+        const s = this.dsBind(a, plan, k.corr);
         if (s === null) continue;
         const now = this.sealCells(k.rid, a, plan, s, k.corr, 0, false);
         if (now.k !== 'ephemeral') continue;
+        if (plan.group.length > 0) held = byCorr.get(`${k.rid}|${k.at}|${listKey(k.corr.slice(0, plan.corr.length))}`) ?? [];
         for (const [key, value] of now.cells) {
           const text = key.map(canonTerm).join(',');
           const cell = held.map((c) => this.store.cells.get(c)!).find((c) => c.keyTerms.map(canonTerm).join(',') === text);
@@ -1646,11 +1705,10 @@ export class AggEval {
       if (i === undefined) { i = nodes.length; ids.set(k, i); nodes.push(n); succ.push([]); todo.push(i); }
       return i;
     };
-    const roots: number[] = [];
     for (const r of owners) {
       const out: DsNode[] = [];
       this.dsWalk(comp, r.id, r.plan, new Map(), out);
-      for (const n of out) if (n.k === 'a') roots.push(idOf(n));
+      for (const n of out) idOf(n);
     }
     while (todo.length > 0) {
       const i = todo.pop()!;
@@ -1669,8 +1727,7 @@ export class AggEval {
         if (!a) throw new Bug('a correlation of no element');
         const plan = this.aggPlans.get(`${n.rid}|${n.at}`);
         if (!plan) throw new Bug('a correlation with no plan');
-        let s: Subst | null = new Map();
-        plan.corr.forEach((ix, j) => { if (s !== null) s = unify(mkv(a.shared![ix]), n.corr[j], s); });
+        const s = this.dsBind(a, plan, n.corr);
         const inner = plan.innerOrder.map((ix) => a.body[ix]);
         if (s !== null) this.dsWalk(comp, n.rid, inner, s, out);
       }
@@ -1705,7 +1762,8 @@ export class AggEval {
       depth[c] = d;
     }
     const layers: { rid: string; at: number; corr: Term[]; mk: string }[][] = [];
-    for (const i of [...new Set(roots)].sort((x, y) => x - y)) {
+    // every correlation the walk met is released, a group the rule binds as well as the rule's own
+    for (let i = 0; i < n; i++) {
       const nd = nodes[i];
       if (nd.k !== 'a') continue;
       const d = depth[compOf[i]];
@@ -1784,6 +1842,11 @@ export class AggEval {
           const t = resolve(mkv(b.shared![i]), s);
           if (!isGround(t)) throw new DsUnkeyed(rid, b.at!);
           corr.push(t);
+        }
+        // a group the rule binds is a correlation of its own, any other is the whole
+        for (const i of plan.group) {
+          const t = resolve(mkv(b.shared![i]), s);
+          corr.push(isGround(t) ? t : DS_ANY);
         }
         out.push({ k: 'a', rid, at: b.at!, corr });
       } else if (!litsDeep(b).some((l) => comp.rels.has(l.rel))) {
@@ -2472,11 +2535,11 @@ export class AggEval {
   }
 
   /** One firing of a rule: its conclusions join the round's front, `curFront`. */
-  private fireRule(r: ERule, frontAt: [number, Set<string>] | null): void {
+  private fireRule(r: ERule, frontAt: [number, Set<string>] | null, s0: Subst = new Map()): void {
     const wasFiring = this.firing;
     this.firing = true;
     let sols: Sol[];
-    try { sols = this.solveBody(r.plan, new Map(), 0, frontAt, r.id); } finally { this.firing = wasFiring; }
+    try { sols = this.solveBody(r.plan, s0, 0, frontAt, r.id); } finally { this.firing = wasFiring; }
     for (const sol of sols) {
       if (this.lattices.size > 0 && sol.prems.some((p) => p.t === 'fact' && !this.alive(p.key))) continue;
       this.conclude(r, sol, this.curFront);
@@ -2719,6 +2782,14 @@ export class AggEval {
       const t = resolve(mkv(a.shared![i]), s);
       if (!isGround(t)) throw new Bug(`a correlation variable of ${rid} is not bound`);
       corr.push(t);
+    }
+    // A GROUP IS A CORRELATION OF ITS OWN in a component stratified by its data: a group variable `s` binds is part of
+    // the key, one it does not is `_` (`dsBind`)
+    if (plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`)) {
+      for (const i of plan.group) {
+        const t = resolve(mkv(a.shared![i]), s);
+        corr.push(isGround(t) ? t : DS_ANY);
+      }
     }
     return [plan, corr];
   }
@@ -3160,6 +3231,12 @@ export class AggEval {
     }
     fresh.sort((x, y) => cmpStr(tupleText(x), tupleText(y)));
     for (const g of fresh) groups.push([g, []]);
+    // a group a narrower correlation of the element sealed already is its cell (`dsBind`)
+    if (keep && plan.group.length > 0 && this.dsElems.has(`${rid}|${a.at}`)) {
+      for (let j = groups.length - 1; j >= 0; j--) {
+        if (this.store.cells.has(cellKeyOf(rid, a.at!, this.store.tick, this.thrShared(a, plan, corr, groups[j][0])))) groups.splice(j, 1);
+      }
+    }
     const reached = new Map<number, Unknown[]>();
     const index = new PossIndex(reach);
     if (plan.emptyZero && plan.group.length > 0) throw new Bug('safety.rofl says empty-zero for a grouping aggregate');

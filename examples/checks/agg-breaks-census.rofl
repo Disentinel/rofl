@@ -1423,6 +1423,15 @@ brk("ds_in_undecided"). brk_kind("ds_in_undecided", switch).
 brk_expects("ds_in_undecided", "agg_datastrat_keys").
 brk("ds_comp_not_reread"). brk_kind("ds_comp_not_reread", switch).
 brk_expects("ds_comp_not_reread", "agg_datastrat_retract").
+brk("ds_group_whole"). brk_kind("ds_group_whole", switch).
+brk_expects("ds_group_whole", "agg_datastrat_groups").
+brk_expects("ds_group_whole", "agg_datastrat_cycle").
+brk("ds_group_resealed"). brk_kind("ds_group_resealed", switch).
+brk_expects("ds_group_resealed", "agg_datastrat_groups").
+brk("ds_verify_own_cells"). brk_kind("ds_verify_own_cells", switch).
+brk_expects("ds_verify_own_cells", "agg_datastrat_groups").
+brk("ds_ground_unreleased"). brk_kind("ds_ground_unreleased", switch).
+brk_expects("ds_ground_unreleased", "agg_datastrat_groups").
 brk("retract_thr_cells_kept"). brk_kind("retract_thr_cells_kept", switch).
 brk_expects("retract_thr_cells_kept", "agg_incr_thr").
 brk("retract_thr_unclosed"). brk_kind("retract_thr_unclosed", switch).
@@ -1459,6 +1468,15 @@ brk("ts_ds_closed_agg_unbound"). brk_kind("ts_ds_closed_agg_unbound", ts).
 brk_expects("ts_ds_closed_agg_unbound", "agg_datastrat_keys").
 brk("ts_ds_in_undecided"). brk_kind("ts_ds_in_undecided", ts).
 brk_expects("ts_ds_in_undecided", "agg_datastrat_keys").
+brk("ts_ds_group_whole"). brk_kind("ts_ds_group_whole", ts).
+brk_expects("ts_ds_group_whole", "agg_datastrat_groups").
+brk_expects("ts_ds_group_whole", "agg_datastrat_cycle").
+brk("ts_ds_group_resealed"). brk_kind("ts_ds_group_resealed", ts).
+brk_expects("ts_ds_group_resealed", "agg_datastrat_groups").
+brk("ts_ds_verify_own_cells"). brk_kind("ts_ds_verify_own_cells", ts).
+brk_expects("ts_ds_verify_own_cells", "agg_datastrat_groups").
+brk("ts_ds_ground_unreleased"). brk_kind("ts_ds_ground_unreleased", ts).
+brk_expects("ts_ds_ground_unreleased", "agg_datastrat_groups").
 brk("rank_dir_ignored"). brk_kind("rank_dir_ignored", switch).
 brk_expects("rank_dir_ignored", "agg_rank_tuple_eval").
 brk_expects("rank_dir_ignored", "agg_rank_tuple_witness").
@@ -1590,6 +1608,9 @@ switch_site("ds_closed_agg_unbound", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_comp_not_reread", "rust/rofl/src/engine/delta.rs").
 switch_site("ds_comps_unordered", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_cycle_unseen", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_ground_unreleased", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_group_resealed", "rust/rofl/src/engine.rs").
+switch_site("ds_group_whole", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_hole_uncarried", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_in_undecided", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_layer_flat", "rust/rofl/src/engine/datastrat.rs").
@@ -1597,6 +1618,7 @@ switch_site("ds_neg_invisible", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_no_demote", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_root_dropped", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_seal_early", "rust/rofl/src/engine/datastrat.rs").
+switch_site("ds_verify_own_cells", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
