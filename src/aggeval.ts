@@ -2831,7 +2831,7 @@ export class AggEval {
     for (let i = 0; i < need; i++) this.chargeRow(rid, true);
     const named = this.bindGroup(a, plan, s, key) ?? s;
     const desc = this.aggDesc(a, named);
-    const provisional = members.slice(0, need).map((m) => ({ proj: m.proj, value: mki(1), height: 0, prems: m.derivs[0]?.[1] ?? [] }));
+    const provisional = members.slice(0, need).map((m) => ({ proj: m.proj, value: mki(1), height: 0, prems: m.derivs[0]?.[1] ?? [], others: m.derivs.slice(1).map((d) => d[1]) }));
     this.store.addCell({ key: ckey, rule: rid, at: a.at!, tick, keyTerms: key, op: 'at_least', value: { k: 'value', t: mka('true') },
       height: 0, desc, members: provisional, seals: [] });
     this.thrCells.set(`${rid}|${a.at}|${listKey(key)}`, ckey);
@@ -3104,7 +3104,7 @@ export class AggEval {
       const members = pick.map((k) => {
         const [j, h, d] = found[k];
         const m = all[i][j];
-        return { proj: m.proj, value: mki(1), height: h, prems: m.derivs[d][1] };
+        return { proj: m.proj, value: mki(1), height: h, prems: m.derivs[d][1], others: m.derivs.filter((_, e) => e !== d).map((x) => x[1]) };
       });
       const height = members.reduce((x, m) => Math.max(x, m.height), 0);
       const cr = this.store.cells.get(c)!;
@@ -3168,12 +3168,19 @@ export class AggEval {
     const sorts: [Term[], Sorted | string][] = [];
     for (const [gkey, idxs] of groups) {
       let reps: number[];
+      const alts = new Map<number, number[]>();
       if (dedup) {
         const byProj = new Map<string, number>();
+        const all = new Map<string, number[]>();
         for (const i of idxs) {
           const id = listKey(cands[i].proj);
           const j = byProj.get(id);
           if (j === undefined || cands[j].sig > cands[i].sig) byProj.set(id, i);
+          (all.get(id) ?? all.set(id, []).get(id)!).push(i);
+        }
+        for (const [id, rep] of byProj) {
+          const rest = all.get(id)!.filter((i) => cands[i].sig !== cands[rep].sig).sort((x, y) => cmpStr(cands[x].sig, cands[y].sig));
+          alts.set(rep, rest.filter((i, e) => e === 0 || cands[i].sig !== cands[rest[e - 1]].sig));
         }
         reps = [...byProj.values()];
       } else {
@@ -3244,7 +3251,7 @@ export class AggEval {
       for (const o of kept) {
         const c = cands[reps[o]];
         height = Math.max(height, hs[o]);
-        members.push({ proj: c.proj, value: values[reps[o]], height: hs[o], prems: c.prems });
+        members.push({ proj: c.proj, value: values[reps[o]], height: hs[o], prems: c.prems, others: (alts.get(reps[o]) ?? []).map((i) => cands[i].prems) });
       }
       const key = this.thrShared(a, plan, corr, gkey);
       const seals: { rel: string; round: number }[] = [];
@@ -6724,6 +6731,7 @@ export class AggEval {
         const m = members[i];
         next.push(line(`${'  '.repeat(indent + 1)}#${i + 1} ${tupleText(m.proj)} h=${m.height}`));
         for (const p of m.prems) this.renderMemberPrem(pr.key, p, indent + 2, next);
+        this.renderAltDerivations(pr.key, m, i, indent + 1, o, next);
       }
       return;
     }
@@ -6734,6 +6742,7 @@ export class AggEval {
       const m = members[i];
       next.push(line(`${'  '.repeat(indent + 1)}#${i + 1} ${tupleText(m.proj)} h=${m.height}`));
       for (const p of m.prems) this.renderMemberPrem(pr.key, p, indent + 2, next);
+      this.renderAltDerivations(pr.key, m, i, indent + 1, o, next);
     }
   }
 
@@ -6744,6 +6753,15 @@ export class AggEval {
     let at = ids.indexOf(c);
     if (at < 0) { ids.push(c); at = ids.length - 1; }
     return at === 0 ? '' : ` (cell ${at + 1})`;
+  }
+
+  /** `why all`: the member's other derivations, each under its own line, after the canonical one `why` shows alone. */
+  private renderAltDerivations(c: string, m: CellMember, i: number, indent: number, o: WhyOpts, next: WhyTask[]): void {
+    if (o.members !== Infinity) return;
+    m.others.forEach((ps, k) => {
+      next.push(line(`${'  '.repeat(indent)}#${i + 1}.${k + 2} ${tupleText(m.proj)} [another derivation]`));
+      for (const p of ps) this.renderMemberPrem(c, p, indent + 1, next);
+    });
   }
 
   /** A member's premise: of the present tick, or of the tick the cell was sealed in. */

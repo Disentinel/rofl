@@ -62,6 +62,7 @@ check[checks]("rust/rofl/tests/explain.rs", "whynot_bounds_clamp_as_the_referenc
 check[checks]("rust/rofl/tests/explain.rs", "a_whynot_that_meets_a_wall_answers_with_the_wall", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_refusal_echoes_the_question_untrimmed", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_and_excise_refuse_the_same_literals", test).
+check[checks]("rust/rofl/tests/explain.rs", "excise_keeps_a_member_another_derivation_supports", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_retraction_is_a_fresh_evaluation_over_random_edits", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_larger_world_takes_the_same_path", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same", test).
@@ -93,6 +94,7 @@ check[checks]("rust/rofl/tests/incremental.rs", "the_rules_that_read_a_tag_or_a_
 check[checks]("rust/rofl/tests/incremental.rs", "rules_that_read_cells_lattices_and_tags_every_way_are_the_same_as_a_fresh_evaluation", test).
 check[checks]("rust/rofl/tests/incremental.rs", "cells_lattices_and_tags_in_one_world_each_take_their_own_path", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule", test).
+check[checks]("rust/rofl/tests/incremental.rs", "a_member_with_several_derivations_keeps_each_until_it_is_retracted", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "union_components_are_a_searchs_components", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "live_variables_are_the_iterative_solvers", test).
 check[checks]("rust/rofl/tests/join_scale.rs", "a_hull_and_a_bitset_are_the_fold_over_what_reaches", test).
@@ -428,6 +430,9 @@ check[checks]("facts/goldens.rofl", "agg_lattice_why", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_witness", world).
 check[checks]("facts/goldens.rofl", "agg_life_demo", world).
 check[checks]("facts/goldens.rofl", "agg_linter_demo", world).
+check[checks]("facts/goldens.rofl", "agg_member_derivs_retract", world).
+check[checks]("facts/goldens.rofl", "agg_member_derivs_state", world).
+check[checks]("facts/goldens.rofl", "agg_member_derivs_why", world).
 check[checks]("facts/goldens.rofl", "agg_minimax_demo", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_budget", world).
 check[checks]("facts/goldens.rofl", "agg_minmax_eval", world).

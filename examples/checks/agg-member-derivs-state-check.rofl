@@ -1,0 +1,89 @@
+-- examples/checks/agg-member-derivs-state-check.rofl — agg_member_derivs_state:
+-- the cells of agg-member-derivs.rofl as sealed, no fact retracted. Each member
+-- lists its canonical derivation first and every other one after it as `alt`,
+-- in text order: sale 2 of a is counted four ways through md_ok (the canonical
+-- is the text-least, w, though z rests on a level more) and three through
+-- md_chan, sale 3 of b two ways, and sales 1 and 4 one way each, with no `alt`. The ids are
+-- the members' own: they do not depend on how many derivations a member has.
+-- expect-row: cell $cell(r71cb3651,2,0,$cons(a,$nil)) median = 5 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=holistic use=recompute
+-- expect-row: mem $cell(r71cb3651,2,0,$cons(a,$nil)) #1 id=3d01e0788910195b (10,1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(r71cb3651,2,0,$cons(a,$nil)) #2 id=a58a6e49fc95c4d2 (5,2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(r71cb3651,2,0,$cons(b,$nil)) median = 7 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=holistic use=recompute
+-- expect-row: mem $cell(r71cb3651,2,0,$cons(b,$nil)) #1 id=b793cd9186439be8 (7,3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(r71cb3651,2,0,$cons(b,$nil)) #2 id=b797359186468277 (7,4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(ra4efae18,2,0,$cons(a,$nil)) median = 5 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=holistic use=recompute
+-- expect-row: mem $cell(ra4efae18,2,0,$cons(a,$nil)) #1 id=46262dc0796313b2 (10,1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(ra4efae18,2,0,$cons(a,$nil)) #2 id=1719ab6c050214dd (5,2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(ra4efae18,2,0,$cons(b,$nil)) median = 7 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=holistic use=recompute
+-- expect-row: mem $cell(ra4efae18,2,0,$cons(b,$nil)) #1 id=0be71732f09a6503 (7,3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(ra4efae18,2,0,$cons(b,$nil)) #2 id=0bfe9f32f0ae2afc (7,4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(raf083c42,2,0,$cons(a,$nil)) sum = 15 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=invertible use=subtract
+-- expect-row: mem $cell(raf083c42,2,0,$cons(a,$nil)) #1 id=b30934ec627f4698 (10,1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(raf083c42,2,0,$cons(a,$nil)) #2 id=1cf4e0406a2d9323 (5,2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(raf083c42,2,0,$cons(b,$nil)) sum = 14 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=invertible use=subtract
+-- expect-row: mem $cell(raf083c42,2,0,$cons(b,$nil)) #1 id=b07be125fe6c15e9 (7,3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(raf083c42,2,0,$cons(b,$nil)) #2 id=b06ae125fe5da2b6 (7,4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(rb0b597a3,2,0,$cons(a,$nil)) count = 2 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=invertible use=subtract
+-- expect-row: mem $cell(rb0b597a3,2,0,$cons(a,$nil)) #1 id=e2938189ac176fa1 (1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(rb0b597a3,2,0,$cons(a,$nil)) #2 id=e2900989ac146de2 (2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(rb0b597a3,2,0,$cons(b,$nil)) count = 2 h=2 tick=0 sealed=[md_sale@0, md_ok@1] alg=invertible use=subtract
+-- expect-row: mem $cell(rb0b597a3,2,0,$cons(b,$nil)) #1 id=c70def4fe992e286 (3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(rb0b597a3,2,0,$cons(b,$nil)) #2 id=c71eef4fe9a155b9 (4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(rdb83edf9,2,0,$cons(a,$cons(2,$nil))) at_least = true h=2 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rdb83edf9,2,0,$cons(a,$cons(2,$nil))) #1 id=6e6f92985fd6ecef (1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(rdb83edf9,2,0,$cons(a,$cons(2,$nil))) #2 id=6e7a12985fe01af4 (2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(rdb83edf9,2,0,$cons(b,$cons(2,$nil))) at_least = true h=2 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(rdb83edf9,2,0,$cons(b,$cons(2,$nil))) #1 id=3d630ced739ded64 (3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(rdb83edf9,2,0,$cons(b,$cons(2,$nil))) #2 id=3d4b84ed738a276b (4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(re326df8e,2,0,$cons(a,$cons(2,$nil))) at_least = true h=1 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(re326df8e,2,0,$cons(a,$cons(2,$nil))) #1 id=359fd2954938b5b9 (1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(re326df8e,2,0,$cons(a,$cons(2,$nil))) #2 id=359c7a954935ea5a (2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(re326df8e,2,0,$cons(b,$cons(2,$nil))) at_least = true h=1 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- expect-row: mem $cell(re326df8e,2,0,$cons(b,$cons(2,$nil))) #1 id=2f88df37f1afbd16 (3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(re326df8e,2,0,$cons(b,$cons(2,$nil))) #2 id=2f99df37f1be3049 (4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(rea3e7ccf,2,0,$cons(a,$nil)) count = 2 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1 id=2248c68ea4447c3b (1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #2 id=2253268ea44d73e0 (2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(rea3e7ccf,2,0,$cons(b,$nil)) count = 2 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rea3e7ccf,2,0,$cons(b,$nil)) #1 id=9b1134a041f53320 (3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(rea3e7ccf,2,0,$cons(b,$nil)) #2 id=9b145ca041f7acef (4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)]
+-- expect-row: cell $cell(rfafa0a48,2,0,$cons(a,$nil)) sum = 15 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rfafa0a48,2,0,$cons(a,$nil)) #1 id=a7c2287144d914ac (10,1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)]
+-- expect-row: mem $cell(rfafa0a48,2,0,$cons(a,$nil)) #2 id=ea63af8d85023847 (5,2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)]
+-- expect-row: cell $cell(rfafa0a48,2,0,$cons(b,$nil)) sum = 14 h=1 tick=0 sealed=[md_sale@0, md_chan@0] alg=invertible use=subtract
+-- expect-row: mem $cell(rfafa0a48,2,0,$cons(b,$nil)) #1 id=121088a9ddf8199d (7,3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)]
+-- expect-row: mem $cell(rfafa0a48,2,0,$cons(b,$nil)) #2 id=121aa8a9de00a482 (7,4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)]
+-- an expect-row is read as the start of a line, so a member that kept a derivation it should have lost would
+-- still pass it: no member of this state holds a derivation beyond the ones listed
+-- expect-no-row: mem $cell(r71cb3651,2,0,$cons(a,$nil)) #1 id=3d01e0788910195b (10,1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(r71cb3651,2,0,$cons(a,$nil)) #2 id=a58a6e49fc95c4d2 (5,2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(r71cb3651,2,0,$cons(b,$nil)) #1 id=b793cd9186439be8 (7,3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(r71cb3651,2,0,$cons(b,$nil)) #2 id=b797359186468277 (7,4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(ra4efae18,2,0,$cons(a,$nil)) #1 id=46262dc0796313b2 (10,1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(ra4efae18,2,0,$cons(a,$nil)) #2 id=1719ab6c050214dd (5,2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(ra4efae18,2,0,$cons(b,$nil)) #1 id=0be71732f09a6503 (7,3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(ra4efae18,2,0,$cons(b,$nil)) #2 id=0bfe9f32f0ae2afc (7,4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(raf083c42,2,0,$cons(a,$nil)) #1 id=b30934ec627f4698 (10,1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(raf083c42,2,0,$cons(a,$nil)) #2 id=1cf4e0406a2d9323 (5,2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(raf083c42,2,0,$cons(b,$nil)) #1 id=b07be125fe6c15e9 (7,3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(raf083c42,2,0,$cons(b,$nil)) #2 id=b06ae125fe5da2b6 (7,4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(rb0b597a3,2,0,$cons(a,$nil)) #1 id=e2938189ac176fa1 (1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(rb0b597a3,2,0,$cons(a,$nil)) #2 id=e2900989ac146de2 (2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(rb0b597a3,2,0,$cons(b,$nil)) #1 id=c70def4fe992e286 (3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(rb0b597a3,2,0,$cons(b,$nil)) #2 id=c71eef4fe9a155b9 (4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(rdb83edf9,2,0,$cons(a,$cons(2,$nil))) #1 id=6e6f92985fd6ecef (1) h=2 [fact:md_ok[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(rdb83edf9,2,0,$cons(a,$cons(2,$nil))) #2 id=6e7a12985fe01af4 (2) h=2 [fact:md_ok[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,y); fact:md_sale[main](2,a,5)] alt [fact:md_ok[main](2,z); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(rdb83edf9,2,0,$cons(b,$cons(2,$nil))) #1 id=3d630ced739ded64 (3) h=2 [fact:md_ok[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_ok[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(rdb83edf9,2,0,$cons(b,$cons(2,$nil))) #2 id=3d4b84ed738a276b (4) h=2 [fact:md_ok[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(re326df8e,2,0,$cons(a,$cons(2,$nil))) #1 id=359fd2954938b5b9 (1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(re326df8e,2,0,$cons(a,$cons(2,$nil))) #2 id=359c7a954935ea5a (2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(re326df8e,2,0,$cons(b,$cons(2,$nil))) #1 id=2f88df37f1afbd16 (3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(re326df8e,2,0,$cons(b,$cons(2,$nil))) #2 id=2f99df37f1be3049 (4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1 id=2248c68ea4447c3b (1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #2 id=2253268ea44d73e0 (2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(rea3e7ccf,2,0,$cons(b,$nil)) #1 id=9b1134a041f53320 (3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(rea3e7ccf,2,0,$cons(b,$nil)) #2 id=9b145ca041f7acef (4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)] alt [
+-- expect-no-row: mem $cell(rfafa0a48,2,0,$cons(a,$nil)) #1 id=a7c2287144d914ac (10,1) h=1 [fact:md_chan[main](1,x); fact:md_sale[main](1,a,10)] alt [
+-- expect-no-row: mem $cell(rfafa0a48,2,0,$cons(a,$nil)) #2 id=ea63af8d85023847 (5,2) h=1 [fact:md_chan[main](2,w); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,x); fact:md_sale[main](2,a,5)] alt [fact:md_chan[main](2,y); fact:md_sale[main](2,a,5)] alt [
+-- expect-no-row: mem $cell(rfafa0a48,2,0,$cons(b,$nil)) #1 id=121088a9ddf8199d (7,3) h=1 [fact:md_chan[main](3,x); fact:md_sale[main](3,b,7)] alt [fact:md_chan[main](3,y); fact:md_sale[main](3,b,7)] alt [
+-- expect-no-row: mem $cell(rfafa0a48,2,0,$cons(b,$nil)) #2 id=121aa8a9de00a482 (7,4) h=1 [fact:md_chan[main](4,x); fact:md_sale[main](4,b,7)] alt [
