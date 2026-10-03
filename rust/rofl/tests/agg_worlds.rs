@@ -183,12 +183,9 @@ fn check_world(w: &World) -> Vec<String> {
         bad.push(format!("{}: {e}", w.name));
         return bad;
     }
-    // as `rofl-load --ticks N` runs it: N boundaries, each evaluating first
-    let run = if w.ticks > 0 {
-        (0..w.ticks).try_for_each(|_| s.tick().map(|_| ()))
-    } else {
-        s.evaluate().map(|_| ())
-    };
+    // as `rofl-load --ticks N` runs it: N boundaries, each evaluating first, after the retractions where there are any
+    let ticks = |s: &mut rofl::session::Session| (0..w.ticks).try_for_each(|_| s.tick().map(|_| ()));
+    let run = if w.ticks > 0 && w.retract.is_empty() { ticks(&mut s) } else { s.evaluate().map(|_| ()) };
     if let Err(e) = run {
         bad.push(format!("{}: does not evaluate: {}", w.name, rofl::describe(&e)));
         return bad;
@@ -203,6 +200,12 @@ fn check_world(w: &World) -> Vec<String> {
         }
         if s.eval.store.dirty {
             s.evaluate().unwrap();
+        }
+    }
+    if w.ticks > 0 && !w.retract.is_empty() {
+        if let Err(e) = ticks(&mut s) {
+            bad.push(format!("{}: does not tick after the retractions: {}", w.name, rofl::describe(&e)));
+            return bad;
         }
     }
     // the explain bridge answers once the world is evaluated, as

@@ -450,7 +450,10 @@ fn state(s: &mut Session) -> String {
     if s.eval.store.dirty {
         s.evaluate().expect("evaluates");
     }
-    s.eval.store.canonical_state(&s.eval.h)
+    let mut out = s.eval.store.canonical_state(&s.eval.h);
+    out.push_str("\nstaged\n");
+    out.push_str(&s.eval.staged_text());
+    out
 }
 
 #[derive(Default, Debug)]
@@ -495,6 +498,9 @@ impl Sum for Delta {
         self.consumers += o.consumers;
         self.stacked_rules += o.stacked_rules;
         self.stacked_cells += o.stacked_cells;
+        self.restaged += o.restaged;
+        self.components += o.components;
+        self.demanded += o.demanded;
     }
 }
 
@@ -516,6 +522,16 @@ fn derived(state: &str) -> Vec<String> {
 /// from nothing: the explanations read what an evaluation left in the engine,
 /// which the delta path must leave as a full one does.
 fn same_answers(delta: &mut Session, fresh: &mut Session, was: &[String], now: &[String]) -> Result<usize, String> {
+    // asking a relation answered on demand makes a fact for the call: a world that is asked is not the world
+    // that took the edits, so the questions go to copies
+    let (mut d2, mut f2);
+    let (delta, fresh) = if delta.eval.answers_on_demand() {
+        d2 = delta.fork();
+        f2 = fresh.fork();
+        (&mut d2, &mut f2)
+    } else {
+        (delta, fresh)
+    };
     let mut n = 0;
     for q in now.iter().take(40) {
         let (a, b) = (delta.why_all(q), fresh.why_all(q));
@@ -671,24 +687,243 @@ fn a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same() {
     assert!(st.sum.consumers > 0 && st.sum.subtracted > 5, "{st:?}");
 }
 
-/// Rules the stacked path is not worked out for: a threshold that reads a cell, and a rule that reads the
-/// retracted relation outside its aggregate and inside it, so that its own cell is both retracted from and read again.
-const STACKED_THRESHOLD: &str = "
-edb(sale).
-total(G, S) :- S is sum(V ; K : sale(K, G, V)).
-many(1) :- at_least(2, G : total(G, S), S > 3).
-";
-const STACKED_TWICE: &str = "
+/// A rule that reads the retracted relation outside its aggregate and inside it: its own cell is both
+/// retracted from and read again, so the rule is read again whole.
+const TWICE: &str = "
 edb(sale).
 twice(G, N) :- sale(_, G, _), N is count(K : sale(K, G, _)).
 ";
 
+/// A rule read again whole that concludes what a cell the fact supports concludes: the facts of the relation
+/// go, the cell is replaced (subtracted from, or derived again) and both rules fire again.
+const CLASH: &str = "
+edb(sale). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+cnt(G, N) :- grp(G), N is count(K : sale(K, G, _)).
+cnt(G, 0) :- grp(G), not sale(_, G, _).
+sum(G, S) :- S is sum(V ; K : sale(K, G, V)).
+sum(G, S) :- grp(G), not sale(_, G, _), S is 0.
+lo(G, M) :- grp(G), M is min(V : sale(_, G, V)).
+lo(G, 0) :- grp(G), not sale(_, G, 1).
+med(G, M) :- grp(G), M is median(V ; K : sale(K, G, V)).
+med(G, 0) :- grp(G), not sale(_, G, 2).
+pair(G) :- grp(G), at_least(2, K : sale(K, G, _)).
+pair(G) :- grp(G), not sale(_, G, 3).
+";
+
+/// Thresholds that read what changed: a cell's conclusion, what a plain rule derived from the fact, and what
+/// another threshold concluded, each also read by a negation.
+const THRESHOLDS: &str = "
+edb(sale). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+many(1) :- at_least(2, G : total(G, S), S > 3).
+big(K, G) :- sale(K, G, V), V > 3.
+busy(G) :- grp(G), at_least(2, K : big(K, G)).
+calm(G) :- grp(G), not busy(G).
+crowd(1) :- at_least(2, G : busy(G)).
+quiet(1) :- not crowd(1).
+steady(G) :- grp(G), at_least(2, K : sale(K, G, _)), not sale(_, G, 0).
+pair(G) :- grp(G), at_least(2, K : sale(K, G, _)).
+pair(G) :- grp(G), not sale(_, G, 1).
+";
+
 #[test]
-fn a_threshold_over_a_cell_and_a_cell_read_again_beside_its_own_retraction_are_evaluated_again_by_name() {
-    let all = sweep(STACKED_THRESHOLD, fact_plain, 1..=6, 8, 30);
-    assert!(all.full.contains("a threshold reads what rests on the fact"), "{:?}", all.full);
-    let all = sweep(STACKED_TWICE, fact_plain, 1..=6, 8, 30);
-    assert!(all.full.contains("a cell the fact supports is read again by a rule that reads what changed"), "{:?}", all.full);
+fn a_threshold_that_reads_what_changed_is_read_again_whole() {
+    let all = sweep(THRESHOLDS, fact_plain, 1..=12, 10, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.stacked_rules > 50 && all.sum.stacked_cells > 50, "{all:?}");
+}
+
+/// Facts staged `@next` from what changed: a cell's conclusion, the fact itself, a count of it, a negation that
+/// the retraction makes true, and a staged aggregate that reads a plain rule's facts.
+const STAGED: &str = "
+edb(sale). edb(grp).
+grp(a). grp(b). grp(c). grp(d).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+big(K, G) :- sale(K, G, V), V > 3.
+carry(G, S)@next :- total(G, S).
+seen(K, G, V)@next :- sale(K, G, V).
+top(G, N)@next :- grp(G), N is count(K : sale(K, G, _)).
+fresh(G)@next :- grp(G), not sale(_, G, _).
+bigs(G, N)@next :- grp(G), N is count(K : big(K, G)).
+";
+
+/// A staged fact two firings reach: which the evaluation kept is the schedule's.
+const STAGED_TWICE: &str = "
+edb(sale).
+total(G, S) :- S is sum(V ; K : sale(K, G, V)).
+seen(G)@next :- sale(_, G, _).
+";
+
+#[test]
+fn what_is_staged_from_what_changed_is_staged_again() {
+    let all = sweep(STAGED, fact_plain, 1..=12, 10, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.restaged > 100, "{all:?}");
+}
+
+#[test]
+fn a_staged_fact_with_two_firings_is_evaluated_again_by_name() {
+    let all = sweep(STAGED_TWICE, fact_plain, 1..=8, 8, 40);
+    assert!(all.full.contains("a staged fact has more than one firing, and the evaluation kept the first, by its schedule"), "{:?}", all.full);
+    assert!(all.delta > 0, "{all:?}");
+}
+
+/// A spreadsheet, a component the relations refuse and the data does not: ranges only over the cells before
+/// them, so the data has no cycle, and the cells are sealed in the order of their depth. A cell is typed in or
+/// a formula over a range, a count over one, or a reference, and the facts edited are the typed values and the
+/// members of the ranges.
+const SHEET: &str = "
+edb(input). edb(in_range).
+formula(x3, n3). sum_head(n3, r3).
+formula(x4, n4). cnt_head(n4, r4).
+formula(x5, n5). sum_head(n5, r5).
+formula(x6, n6). ref(n6, x5).
+formula(x7, n7). sum_head(n7, r7).
+formula(x8, n8). max_head(n8, r7).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- sum_head(N, I), V is sum(X ; E : in_range(I, E), value(E, X)).
+val(N, V) :- cnt_head(N, I), V is count(C : in_range(I, C), value(C, _)).
+val(N, V) :- max_head(N, I), V is max(X : in_range(I, C), value(C, X)).
+";
+
+fn fact_sheet(r: &mut Rng) -> String {
+    if r.below(10) < 4 {
+        return format!("input(x{}, {})", 1 + r.below(7), r.below(9) as i64 - 2);
+    }
+    let (range, below) = match r.below(4) {
+        0 => ("r3", 3),
+        1 => ("r4", 4),
+        2 => ("r5", 5),
+        _ => ("r7", 7),
+    };
+    format!("in_range({range}, x{})", 1 + r.below(below - 1))
+}
+
+#[test]
+fn a_component_stratified_by_its_data_is_run_again_whole() {
+    let all = sweep(SHEET, fact_sheet, 1..=10, 12, 40);
+    assert!(all.sum.components > 50, "{all:?}");
+    assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
+}
+
+/// Two sheets that read each other's results (the second reads the first's, so it runs after it), and what
+/// reads the sheets from outside: a plain rule, a negation, a count and a threshold.
+const SHEETS: &str = "
+edb(input). edb(in_range). edb(input2). edb(in_range2).
+cellname(x1). cellname(x2). cellname(x3). cellname(x4). cellname(x5). cellname(x6). cellname(x7).
+formula(x3, n3). sum_head(n3, r3).
+formula(x4, n4). cnt_head(n4, r4).
+formula(x5, n5). sum_head(n5, r5).
+formula(x6, n6). ref(n6, x5).
+formula(x7, n7). sum_head(n7, r7).
+value(C, V) :- input(C, V).
+value(C, V) :- formula(C, N), val(N, V).
+val(N, V) :- ref(N, C), value(C, V).
+val(N, V) :- sum_head(N, I), V is sum(X ; E : in_range(I, E), value(E, X)).
+val(N, V) :- cnt_head(N, I), V is count(C : in_range(I, C), value(C, _)).
+formula2(x3, m3). sum_head2(m3, q3).
+formula2(x4, m4). sum_head2(m4, q4).
+formula2(x5, m5). ref2(m5, x4).
+value2(C, V) :- input2(C, V).
+value2(C, V) :- value(C, V), C = x1.
+value2(C, V) :- formula2(C, N), val2(N, V).
+val2(N, V) :- ref2(N, C), value2(C, V).
+val2(N, V) :- sum_head2(N, I), V is sum(X ; E : in_range2(I, E), value2(E, X)).
+big(C) :- value(C, V), V > 5.
+blank(C) :- cellname(C), not value(C, _).
+nbig(N) :- N is count(C : big(C)).
+sev(1) :- at_least(2, C : big(C)).
+grand(T) :- T is sum(V ; C : input(C, V)).
+";
+
+fn fact_sheets(r: &mut Rng) -> String {
+    match r.below(10) {
+        0..=2 => format!("input(x{}, {})", 1 + r.below(7), r.below(9) as i64 - 2),
+        3..=4 => format!("input2(x{}, {})", 1 + r.below(2), r.below(9) as i64 - 2),
+        5 => format!("in_range2(q{}, x{})", 3 + r.below(2), 1 + r.below(2)),
+        _ => {
+            let (range, below) = match r.below(4) {
+                0 => ("r3", 3),
+                1 => ("r4", 4),
+                2 => ("r5", 5),
+                _ => ("r7", 7),
+            };
+            format!("in_range({range}, x{})", 1 + r.below(below - 1))
+        }
+    }
+}
+
+#[test]
+fn two_components_and_what_reads_them_are_run_again_where_they_changed() {
+    let all = sweep(SHEETS, fact_sheets, 1..=12, 14, 40);
+    assert!(all.sum.components > 100, "{all:?}");
+    assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
+}
+
+/// Rules answered on demand (a relation no premise range-restricts is unfolded at each call, and a fact is made
+/// for every call): called before the rest of a rule holds, inside an aggregate, under a negation, from a rule
+/// that reads them in turn, and through another demand relation.
+const DEMAND: &str = "
+edb(a). edb(b). edb(sale).
+big(X) :- X > 3.
+mid(X) :- big(X), X < 7.
+twice(X, Y) :- Y is X * 2.
+c(X) :- a(X), big(X), b(X).
+e(X, Y) :- a(X), twice(X, Y).
+m(X) :- a(X), mid(X).
+total(S) :- S is sum(V ; K : sale(K, V)).
+cnt(N) :- N is count(X : a(X), big(X)).
+sbig(S) :- S is sum(V ; K : sale(K, V), big(V)).
+small(X) :- a(X), not big(X).
+both(X) :- c(X), m(X).
+";
+
+fn fact_demand(r: &mut Rng) -> String {
+    match r.below(6) {
+        0..=2 => format!("a({})", 1 + r.below(9)),
+        3 => format!("b({})", 1 + r.below(9)),
+        _ => format!("sale({}, {})", 1 + r.below(6), r.below(10)),
+    }
+}
+
+#[test]
+fn a_rule_answered_on_demand_and_its_callers_are_made_again() {
+    let all = sweep(DEMAND, fact_demand, 1..=10, 10, 40);
+    assert!(all.sum.demanded > 50, "{all:?}");
+    assert!(all.delta * 10 > all.retracts * 8, "{all:?}");
+}
+
+#[test]
+fn a_fact_a_question_made_goes_with_any_retraction() {
+    let program = format!("{DEMAND}\nedb(z).\nzz(X) :- z(X).\n");
+    let facts = |xs: &[&str]| xs.iter().map(|x| x.to_string()).collect::<BTreeSet<String>>();
+    let mut s = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)", "z(1)"]), &BTreeSet::new());
+    let _ = s.whynot("big(8)", &rofl::engine::WhynotBounds::default());
+    assert!(s.holds("big(8)").unwrap(), "the question makes the fact");
+    match s.retract_delta("z(1)").unwrap() {
+        Retraction::Delta(d) => assert!(d.demanded > 0, "{d:?}"),
+        other => panic!("{other:?}"),
+    }
+    let mut f = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)"]), &BTreeSet::new());
+    assert_eq!(state(&mut s), state(&mut f));
+}
+
+#[test]
+fn a_cell_read_again_beside_its_own_retraction_is_read_again_whole() {
+    let all = sweep(TWICE, fact_plain, 1..=8, 8, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20, "{all:?}");
+}
+
+#[test]
+fn a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same() {
+    let all = sweep(CLASH, fact_plain, 1..=10, 8, 40);
+    assert!(all.full.is_empty(), "{:?}", all.full);
+    assert!(all.sum.stacked_rules > 20 && all.sum.subtracted > 20 && all.sum.rederived > 20 && all.sum.consumers > 20, "{all:?}");
 }
 
 #[test]

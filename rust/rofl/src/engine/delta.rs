@@ -40,8 +40,20 @@
 //!   conclusion, the cone, or the retracted fact itself read outside an
 //!   aggregate) is read again WHOLE, for a `not` can become true and a count
 //!   gain a member, which nothing here subtracts: every fact of its head goes
-//!   (`reset_facts`), its cells go (`reset_cells`), and it fires again in a full
-//!   evaluation's order, level by level (`refire`).
+//!   (`reset_facts`), its cells go (`reset_cells`, a threshold's state with
+//!   them), and it fires again in a full evaluation's order, the plain rules at
+//!   once and the others level by level, the quorums closing as they close
+//!   (`refire`); a cell of such a rule that the fact supports is not
+//!   subtracted from;
+//! - a rule that concludes `@next` makes no fact of the tick: the staged facts
+//!   whose firing cites what is gone are taken out and the rules that stage
+//!   into their relations fire again (`restage`);
+//! - a relation ANSWERED ON DEMAND makes a fact for every call, which no
+//!   firing cites: every fact of such a relation goes and every rule that reads
+//!   one fires again, so the calls are made again over what stands (`called`);
+//! - a COMPONENT STRATIFIED BY ITS DATA that a rule concluding into it reads
+//!   what changed is read again whole and run as the evaluation runs it, its
+//!   correlations released a layer at a time (`comps`, `run_data_comps`).
 //!
 //! WHAT IT REFUSES, and says why, leaving the world as a full evaluation
 //! would take it (`Err(reason)`; the caller evaluates again): a world a delta
@@ -50,14 +62,16 @@
 //! contributions are the history of the schedule that read them, so no delta
 //! promises it), a value kept as history, a rank or a quantile whose group is
 //! shared across its parameter, a rule whose second aggregate depends on what
-//! its first reached, a threshold or a staged rule that reads what changed, and a
-//! delta that would write a hole (written with its shrugs after a whole
-//! pass). Each is named; none is a reason to answer differently than a full
-//! evaluation does.
+//! its first reached, a staged fact two firings reach (the first is the
+//! schedule's), a lattice beside a staged rule, a rule answered on demand or a
+//! component stratified by its data, and a delta that would write a hole
+//! (written with its shrugs after a whole pass). Each is named; none is a
+//! reason to answer differently than a full evaluation does.
 //!
 //! The result is the one a full evaluation gives, byte for byte in
 //! `canonical_state`, and its explanations are the same (rust/rofl/tests/
 //! incremental.rs holds both over random edits).
+use super::datastrat::DsComp;
 use super::*;
 use crate::cell::Strategy;
 
@@ -91,6 +105,12 @@ pub struct Delta {
     pub stacked_rules: usize,
     /// cells of those rules, sealed again
     pub stacked_cells: usize,
+    /// staged facts (`@next`) that rested on what changed, taken out
+    pub restaged: usize,
+    /// components stratified by their data, read again whole (`ds_walk` and all)
+    pub components: usize,
+    /// facts a rule answered on demand concluded at a call, taken out with the calls that made them
+    pub demanded: usize,
 }
 
 /// The rules that read what a retraction changes (`consumer_rules`).
@@ -102,6 +122,11 @@ struct Readers {
     /// the rules that negate or aggregate what changed (or aggregate at all while reading it): their facts
     /// all go and their cells are sealed again, for which key a cell is read at is the rule's own business
     reset: HashSet<Sym>,
+    /// the rules that conclude `@next` from what changed: their staged facts that rested on it go and they fire
+    /// again (`restage`)
+    staged: Vec<Rc<ERule>>,
+    /// a rule answered on demand reads what changed, or a rule that calls one does
+    demand: bool,
 }
 
 type Support = HashMap<FactId, Vec<CellId>>;
@@ -177,9 +202,6 @@ impl Eval {
         if self.store.partial_eval {
             return Err("a wall cut the evaluation");
         }
-        if brk!("ds_delta_allowed" => false; !self.ds_comps.is_empty()) {
-            return Err("an aggregate component stratified by its data");
-        }
         if self.store.tick != 0 {
             return Err("a later tick");
         }
@@ -239,8 +261,8 @@ impl Eval {
             })
             .ok_or("an aggregate inside an aggregate")?;
         let plan = self.agg_plans.get(&(rule, at)).cloned().ok_or("the aggregate has no plan")?;
-        if er.clause.head.temporal == Temporal::Next {
-            return Err("a conclusion @next");
+        if er.clause.head.temporal == Temporal::Next && !self.lattices.is_empty() {
+            return Err("a conclusion @next in a world with a lattice");
         }
         // an aggregate that reads what another of its rule binds (a result, a
         // group) is sealed for the values the other reached: a cell the
@@ -291,6 +313,9 @@ impl Eval {
         let mut rules: Vec<Rc<ERule>> = Vec::new();
         let mut taken: HashSet<Sym> = HashSet::new();
         let mut reset: HashSet<Sym> = HashSet::new();
+        let mut staged: Vec<Rc<ERule>> = Vec::new();
+        let mut demand = false;
+        let staging = self.lattices.is_empty();
         loop {
             let mut grew = false;
             for r in &self.rules {
@@ -315,14 +340,28 @@ impl Eval {
                 if !reads {
                     continue;
                 }
-                if r.has_thr {
-                    return Err("a threshold reads what rests on the fact");
-                }
                 let head = r.clause.head.rel;
-                if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {
-                    return Err("a rule staged, late or on demand reads what rests on the fact");
+                // answered at the call sites and never fired: its conclusions are the calls' (`demand`)
+                if !r.safe && self.demand_rels.iter().any(|(x, _)| *x == head) {
+                    demand = true;
+                    continue;
                 }
-                if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) || self.demand_rels.iter().any(|(x, _)| *x == head) {
+                if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
+                    return Err("a rule late or unsafe reads what rests on the fact");
+                }
+                if r.clause.head.temporal == Temporal::Next {
+                    if !staging {
+                        return Err("a rule staged in a world with a lattice reads what rests on the fact");
+                    }
+                    // it concludes no fact of this tick: what it staged is read again at the end
+                    if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
+                        reset.insert(r.id);
+                    }
+                    staged.push(r.clone());
+                    taken.insert(r.id);
+                    continue;
+                }
+                if self.lattices.contains_key(&head) || self.tags.count_of.contains_key(&head) || self.v.is_reserved(head) {
                     return Err("a lattice, a tag or a ledger is concluded from what rests on the fact");
                 }
                 if brk!("retract_stacked_plain" => false; inner || r.has_agg) {
@@ -345,7 +384,10 @@ impl Eval {
             if !rels.contains(&head) || taken.contains(&r.id) || own.contains(&head) {
                 continue;
             }
-            if r.has_thr || r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe || r.has_demand_prem {
+            if (r.clause.head.temporal == Temporal::Next && staging) || (!r.safe && self.demand_rels.iter().any(|(x, _)| *x == head)) {
+                continue;
+            }
+            if r.clause.head.temporal == Temporal::Next || self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
                 return Err("a rule that stages or counts concludes what rests on the fact");
             }
             rules.push(r.clone());
@@ -353,7 +395,17 @@ impl Eval {
         if self.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
-        Ok(Readers { rels, rules, reset })
+        demand |= rules.iter().chain(staged.iter()).any(|r| self.calls_on_demand(r));
+        Ok(Readers { rels, rules, reset, staged, demand })
+    }
+
+    /// Whether `r` reads a relation answered on demand, anywhere in its body.
+    fn calls_on_demand(&self, r: &ERule) -> bool {
+        let mut yes = false;
+        for b in &r.clause.body {
+            walk(b, false, &mut |l, _, _| yes |= self.demand_rels.iter().any(|(x, _)| *x == l.rel));
+        }
+        yes
     }
 
     /// Every fact of the relations the rules that are read again whole conclude.
@@ -379,7 +431,7 @@ impl Eval {
         }
         let mut n = 0;
         for c in self.store.live_cells() {
-            let CellOwner::Body { rule, .. } = self.store.cell(c).owner;
+            let CellOwner::Body { rule, at } = self.store.cell(c).owner;
             if !reset.contains(&rule) {
                 continue;
             }
@@ -388,9 +440,16 @@ impl Eval {
             if let Some(ix) = self.support_ix.as_mut() {
                 Self::unindex_cell(&self.store, c, ix);
             }
+            if self.store.cell(c).op == AggOp::AtLeast && brk!("retract_thr_cells_kept" => false; true) {
+                let rec = self.store.cell(c);
+                self.thr_cells.remove(&(rule, at, rec.key.clone()));
+                self.thr_fresh.remove(&c);
+            }
             self.store.kill_cell(c);
             n += 1;
         }
+        self.thr_open.retain(|(c, _)| !self.store.cell_dead(*c));
+        self.thr_acc.retain(|(r, _, _), _| !reset.contains(r));
         self.agg_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.reach_memo.retain(|(r, _, _), _| !reset.contains(r));
         self.agg_opened.retain(|(r, _, _)| !reset.contains(r));
@@ -402,22 +461,37 @@ impl Eval {
     /// THE RULES THAT READ WHAT CHANGED, FIRED AGAIN AS A FULL EVALUATION FIRES
     /// THEM: those that neither negate nor aggregate at once, the others by
     /// level, each level over what the levels below concluded.
-    fn refire(&mut self, rules: &[Rc<ERule>]) -> Result<(), Halt> {
+    fn refire(&mut self, rules: &[Rc<ERule>], comps: &[Rc<DsComp>]) -> Result<(), Halt> {
         let (strat, mono): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rules.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty());
         let mut levels: std::collections::BTreeMap<i64, Vec<Rc<ERule>>> = std::collections::BTreeMap::new();
         for r in strat {
             let lv = brk!("retract_stacked_one_level" => 0; self.rule_level(&r));
             levels.entry(lv).or_default().push(r);
         }
+        // a component stratified by its data is run as the evaluation runs it: its correlations held, then
+        // released a layer at a time
+        for c in comps {
+            self.ds_elems.extend(c.elems.iter().copied());
+            self.ds_released.retain(|k| !c.elems.contains(&(k.0, k.1)));
+            self.ds_done.retain(|e| !c.elems.contains(e));
+        }
         let active = std::mem::take(&mut self.active);
         let r = (|| -> Result<(), Halt> {
             self.activate(&mono)?;
-            for (_, rs) in levels {
+            for (lv, rs) in levels {
+                brk!("retract_thr_unclosed" => (); self.close_thresholds_below(lv, true)?);
+                let (ds, rs): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rs.into_iter().partition(|r| self.ds_owner(r));
                 self.activate(&rs)?;
+                self.run_data_comps(comps, lv, &ds)?;
+            }
+            while !rules.is_empty() && !self.thr_open.is_empty() {
+                brk!("retract_thr_unclosed" => break; self.close_thresholds_below(i64::MAX, true)?);
             }
             Ok(())
         })();
         self.active = active;
+        self.ds_elems.clear();
+        self.ds_done.clear();
         r
     }
 
@@ -542,34 +616,91 @@ impl Eval {
             return self.retract_lattice(doomed);
         }
         // every cell is checked before anything is touched
-        let mut owners = Vec::with_capacity(cells.len());
+        let mut cell_rules: Vec<Rc<ERule>> = Vec::with_capacity(cells.len());
         for c in &cells {
             let rec = self.store.cell(*c);
             if matches!(rec.value, CellValue::Hole(_)) {
                 return Err("a cell holding a hole");
             }
+            let CellOwner::Body { rule, .. } = rec.owner;
+            cell_rules.push(self.rule_of(rule).ok_or("the cell's rule is gone")?);
+        }
+        // WHAT READS THE CELLS' CONCLUSIONS: the facts that rest on one a cell's old record made go, and
+        // their rules are fired again once the cells are replaced
+        let mut from: HashSet<Sym> = cell_rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        // A COMPONENT STRATIFIED BY ITS DATA that a rule concluding into it reads what changed: its cells are
+        // sealed in the order of its data, which a rule fired again at once does not know, so the component is read
+        // again whole, its facts and cells gone, and run as it was
+        let mut comps: Vec<Rc<DsComp>> = Vec::new();
+        // A RULE ANSWERED ON DEMAND that reads what changed, or a rule that calls one: what its calls made is
+        // the calls' own (a fact is made for every call whether or not the rest of the rule holds), so every
+        // fact made at a call goes, and every rule that reads a relation answered on demand fires again
+        let demanded: Vec<Sym> = self.demand_rels.iter().map(|(r, _)| *r).collect();
+        let mut called = false;
+        let rd = loop {
+            let rd = self.consumer_rules(&from, &HashSet::new(), self.store.rec(f).rel)?;
+            let hit: Vec<Rc<DsComp>> = self
+                .ds_comps
+                .iter()
+                .filter(|c| !comps.iter().any(|x| Rc::ptr_eq(x, c)) && rd.rules.iter().chain(cell_rules.iter()).any(|r| c.rels.contains(&r.clause.head.rel)))
+                .cloned()
+                .collect();
+            // a fact a question made is no fact of the evaluation: a fresh world has none, so every retraction
+            // from a world with a demand relation and no lattice makes them again
+            let touched = rd.demand || cell_rules.iter().any(|r| self.calls_on_demand(r));
+            let call = !called && !demanded.is_empty() && (touched || self.lattices.is_empty());
+            if (hit.is_empty() || brk!("ds_comp_not_reread" => true; false)) && !call {
+                break rd;
+            }
+            if call {
+                if !self.lattices.is_empty() {
+                    return Err("a rule answered on demand reads what changed in a world with a lattice");
+                }
+                called = true;
+                from.extend(demanded.iter().copied());
+            }
+            for c in hit {
+                from.extend(c.rels.iter().copied());
+                comps.push(c);
+            }
+        };
+        let Readers { rels: crels, rules: crules, reset, staged: mut restage, .. } = rd;
+        // A RULE READ AGAIN WHOLE THAT OWNS A CELL THE FACT SUPPORTS has no use for the subtraction: its cells are
+        // sealed again with the rule, and a cell subtracted from first would be one a fresh evaluation does not
+        // hold. (A rule read again whole that concludes what a changed cell's rule concludes needs nothing more:
+        // the facts of the relation go, the cell is replaced and the rules fire again.)
+        let cells: Vec<CellId> = cells.iter().zip(&cell_rules).filter(|(_, r)| brk!("retract_swept_cell_subtracted" => true; !reset.contains(&r.id))).map(|(c, _)| *c).collect();
+        let mut owners = Vec::with_capacity(cells.len());
+        for c in &cells {
+            let rec = self.store.cell(*c);
             let owner = self.delta_owner(*c)?;
             match rec.op {
                 AggOp::Rank => return Err("a rank, whose group is shared across its subjects"),
                 AggOp::Quantile if matches!(owner.1.vals[0].kind(), TermK::Var(_)) => return Err("a quantile whose percent is read from outside"),
                 _ => {}
             }
+            if owner.0.clause.head.temporal == Temporal::Next && !restage.iter().any(|r| r.id == owner.0.id) {
+                restage.push(owner.0.clone());
+            }
             owners.push(owner);
         }
-        // WHAT READS THE CELLS' CONCLUSIONS: the facts that rest on one a cell's old record made go, and
-        // their rules are fired again once the cells are replaced
-        let from: HashSet<Sym> = owners.iter().map(|o| o.0.clause.head.rel).collect();
-        let rd = self.consumer_rules(&from, &HashSet::new(), self.store.rec(f).rel)?;
-        let Readers { rels: crels, rules: crules, reset } = rd;
-        if owners.iter().any(|o| reset.contains(&o.0.id)) {
-            return Err("a cell the fact supports is read again by a rule that reads what changed");
+        let mut forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new(), demand: false })?;
+        let mut made = 0;
+        if called {
+            for rel in &demanded {
+                for id in self.store.rel_all(&self.h, *rel) {
+                    if self.store.rec(id).base() {
+                        return Err("a fact is asserted into a relation answered on demand");
+                    }
+                    if !forced.contains(&id) && brk!("retract_demand_kept" => false; true) {
+                        forced.push(id);
+                        made += 1;
+                    }
+                }
+            }
         }
-        if crules.iter().any(|r| reset.contains(&r.id) && from.contains(&r.clause.head.rel)) {
-            return Err("a rule that negates or aggregates what changed concludes what a changed cell concludes");
-        }
-        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone() })?;
         let mut seeds: Vec<FactId> = vec![f];
-        for (c, o) in cells.iter().zip(owners.iter()) {
+        for (c, o) in cells.iter().zip(owners.iter()).filter(|(_, o)| o.0.clause.head.temporal != Temporal::Next) {
             for id in self.store.rel_all(&self.h, o.0.clause.head.rel) {
                 if self.store.firings(id).iter().any(|(_, _, ps)| ps.contains(&PremRef::Cell(*c))) {
                     seeds.push(id);
@@ -581,7 +712,7 @@ impl Eval {
         if let Some(ix) = self.support_ix.as_mut() {
             ix.remove(&f);
         }
-        let mut d = Delta { cells: cells.len(), consumers: consumers.len(), stacked_rules: reset.len(), ..Delta::default() };
+        let mut d = Delta { cells: cells.len(), consumers: consumers.len(), stacked_rules: reset.len(), components: comps.len(), demanded: made, ..Delta::default() };
         brk!("retract_consumers_kept" => (); {
             self.withdraw_firings(&consumers, |_, _| true);
             self.store.remove_many(&consumers);
@@ -604,14 +735,16 @@ impl Eval {
         self.steps = 0;
         let holes0 = self.store.rel_count(self.v.hole);
         let gone: Vec<FactId> = std::iter::once(f).chain(withdrawn.iter().copied()).collect();
+        let mut ambiguous = false;
         let r = (|| -> Result<(), Halt> {
             for (c, (er, agg, plan)) in cells.iter().zip(owners.iter()) {
                 self.delta_cell(*c, &gone, er, agg, plan, &mut d)?;
             }
-            self.refire(&crules)?;
+            self.refire(&crules, &comps)?;
             if !reset.is_empty() {
                 self.support_ix = None;
             }
+            ambiguous = self.restage(&restage, &mut d)?;
             // a hole is written with its shrugs after a whole pass, so a delta that made one is not one
             if brk!("retract_hole_kept" => false; self.store.rel_count(self.v.hole) > holes0) {
                 return Err(Halt::Bug("a delta wrote a hole".into()));
@@ -621,12 +754,63 @@ impl Eval {
         self.cur_front = Front::default();
         (self.steps, self.rows) = outer;
         match r {
+            Ok(()) if ambiguous => {
+                self.store.dirty = true;
+                Err("a staged fact has more than one firing, and the evaluation kept the first, by its schedule")
+            }
             Ok(()) => Ok(d),
             Err(_) => {
                 self.store.dirty = true;
                 Err("the delta would write a hole, seal a cell nothing indexes or meet a wall; the world is evaluated again")
             }
         }
+    }
+
+    /// THE FACTS STAGED `@next` THAT RESTED ON WHAT CHANGED: those whose firing cites a fact or a cell that is gone
+    /// are taken out, and every rule that stages into their relations (or that read what changed) fires again over
+    /// the world as it now stands. A staged fact is kept with its FIRST firing, which is the schedule's, so a
+    /// fact a second firing reaches (`staged_watch`) is the one case a delta cannot promise: it is answered
+    /// `true` and the world is evaluated again.
+    fn restage(&mut self, affected: &[Rc<ERule>], d: &mut Delta) -> Result<bool, Halt> {
+        if affected.is_empty() {
+            return Ok(false);
+        }
+        let store = &self.store;
+        let dead: Vec<FKey> = self
+            .staged
+            .iter()
+            .filter(|(_, f)| {
+                f.prems.iter().any(|p| match p {
+                    PremRef::Fact(g) => !store.alive(*g),
+                    PremRef::Cell(c) => store.cell_dead(*c),
+                    _ => false,
+                })
+            })
+            .map(|(k, _)| k.clone())
+            .collect();
+        let mut rels: HashSet<Sym> = affected.iter().map(|r| r.clause.head.rel).collect();
+        rels.extend(dead.iter().map(|k| k.0));
+        if brk!("restage_dead_kept" => false; true) {
+            for k in &dead {
+                self.staged.remove(k);
+            }
+        }
+        d.restaged += dead.len();
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.clause.head.temporal == Temporal::Next && rels.contains(&r.clause.head.rel)).cloned().collect();
+        let cells0 = self.store.cell_count();
+        let active = std::mem::take(&mut self.active);
+        self.staged_watch = Some(false);
+        let r = self.fire_all(rules);
+        let many = self.staged_watch.take().unwrap_or(false);
+        self.active = active;
+        r?;
+        while !self.thr_open.is_empty() {
+            self.close_thresholds_below(i64::MAX, true)?;
+        }
+        if self.store.cell_count() != cells0 {
+            self.support_ix = None;
+        }
+        Ok(many)
     }
 
     /// A FACT AN ORDER LATTICE RESTS ON. The lattice facts whose firings cite
@@ -646,6 +830,12 @@ impl Eval {
     /// recursion (it fires once its input closes, in a stratum of its own), a
     /// join, a widening, and a hole or a fault made on the way.
     fn retract_lattice(&mut self, doomed: &[FactId]) -> Result<Delta, &'static str> {
+        if !self.ds_comps.is_empty() {
+            return Err("a lattice in a world with an aggregate component stratified by its data");
+        }
+        if !self.demand_rels.is_empty() {
+            return Err("a lattice in a world with a rule answered on demand");
+        }
         let f = doomed[0];
         let mut cone: Vec<FactId> = Vec::new();
         let mut cone_keys: HashSet<LatKey> = HashSet::new();
@@ -732,11 +922,11 @@ impl Eval {
             return Err("a lattice keeps the history of a superseded value");
         }
         let rd = self.consumer_rules(&rels, &rels, self.store.rec(f).rel)?;
-        let Readers { rels: crels, rules: crules, reset } = rd;
+        let Readers { rels: crels, rules: crules, reset, .. } = rd;
         if !cell_cited.iter().all(|x| self.cells_all_reset(*x, &reset)) {
             return Err("a cell rests on a lattice fact");
         }
-        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone() })?;
+        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new(), demand: false })?;
         let consumers = if crules.is_empty() {
             Vec::new()
         } else {
@@ -809,7 +999,7 @@ impl Eval {
             self.activate(&rules)?;
             self.close_lattices_below(i64::MAX)?;
             self.active.clear();
-            self.refire(&crules)?;
+            self.refire(&crules, &[])?;
             if !reset.is_empty() {
                 self.support_ix = None;
             }
@@ -910,7 +1100,7 @@ impl Eval {
             self.agg_memo.insert(mk, keyed.into_iter().map(|(_, c)| c).collect::<Vec<_>>().into());
         });
         // what read the cell reads it again, for this key alone
-        if !new.is_empty() && brk!("retract_no_refire" => false; true) {
+        if !new.is_empty() && er.clause.head.temporal != Temporal::Next && brk!("retract_no_refire" => false; true) {
             let outer = self.cur_rule.replace(er.id);
             let was = std::mem::replace(&mut self.firing, true);
             let cells0 = self.store.cell_count();
@@ -941,6 +1131,7 @@ impl Eval {
             _ => return Err(Halt::Bug("a threshold cell key does not end in its N".into())),
         };
         self.thr_cells.remove(&(rule, at, key.to_vec().into_boxed_slice()));
+        self.thr_acc.retain(|(r, _, _), _| *r != rule);
         let (groups, _) = self.thr_groups(rule, agg, plan, s, 0, true, None)?;
         let members = groups.into_iter().next().map(|g| g.1).unwrap_or_default();
         if members.len() < need {

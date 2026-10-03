@@ -172,7 +172,13 @@ impl Eval {
     /// The components ranked at `lv`, each run: the rules `rs` own their
     /// elements.
     pub(super) fn run_data_levels(&mut self, lv: i64, rs: &[Rc<ERule>]) -> Result<(), Halt> {
-        let comps: Vec<Rc<DsComp>> = self.ds_comps.iter().filter(|c| c.round == lv).cloned().collect();
+        let comps = self.ds_comps.clone();
+        self.run_data_comps(&comps, lv, rs)
+    }
+
+    /// Those of `comps` ranked at `lv`, each run.
+    pub(super) fn run_data_comps(&mut self, comps: &[Rc<DsComp>], lv: i64, rs: &[Rc<ERule>]) -> Result<(), Halt> {
+        let comps: Vec<Rc<DsComp>> = comps.iter().filter(|c| c.round == lv).cloned().collect();
         for c in comps {
             let mine: Vec<Rc<ERule>> = rs.iter().filter(|r| c.rels.contains(&r.clause.head.rel)).cloned().collect();
             self.run_data_level(&c, &mine)?;

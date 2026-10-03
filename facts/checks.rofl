@@ -2428,6 +2428,44 @@ check_opt("agg_incr_stacked", retract, "st_sale(6, d, -5)").
 check_opt("agg_incr_stacked", retract, "st_e(b, c, 2)").
 proves_work("agg_incr_stacked", w_agg_incremental_ready).
 
+-- what the retraction used to answer by evaluating the world again (w_agg_retract_fallback_tail): a threshold that reads what
+-- changed, a rule read again whole that owns or shares a changed cell, what is staged `@next`, what is answered on demand
+check_world("agg_incr_thr").
+check_file("agg_incr_thr", "examples/checks/agg-incr-thr.rofl").
+check_opt("agg_incr_thr", together, 1).
+check_opt("agg_incr_thr", retract, "th_sale(1, a, 5)").
+check_opt("agg_incr_thr", retract, "th_sale(4, b, 7)").
+proves_work("agg_incr_thr", w_agg_retract_fallback_tail).
+
+check_world("agg_incr_owner").
+check_file("agg_incr_owner", "examples/checks/agg-incr-owner.rofl").
+check_opt("agg_incr_owner", together, 1).
+check_opt("agg_incr_owner", retract, "ow_sale(3, b, 5)").
+check_opt("agg_incr_owner", retract, "ow_sale(1, a, 3)").
+proves_work("agg_incr_owner", w_agg_retract_fallback_tail).
+
+check_world("agg_incr_twice").
+check_file("agg_incr_twice", "examples/checks/agg-incr-twice.rofl").
+check_opt("agg_incr_twice", together, 1).
+check_opt("agg_incr_twice", retract, "tw_sale(1, b, 5)").
+proves_work("agg_incr_twice", w_agg_retract_fallback_tail).
+
+check_world("agg_incr_staged").
+check_file("agg_incr_staged", "examples/checks/agg-incr-staged.rofl").
+check_opt("agg_incr_staged", together, 1).
+check_opt("agg_incr_staged", ticks, 1).
+check_opt("agg_incr_staged", retract, "sg_base0(a)").
+check_opt("agg_incr_staged", retract, "sg_sale(3, b, 9)").
+check_opt("agg_incr_staged", retract, "sg_sale(1, a, 4)").
+proves_work("agg_incr_staged", w_agg_retract_fallback_tail).
+
+check_world("agg_incr_demand").
+check_file("agg_incr_demand", "examples/checks/agg-incr-demand.rofl").
+check_opt("agg_incr_demand", together, 1).
+check_opt("agg_incr_demand", retract, "dm_z(1)").
+check_opt("agg_incr_demand", retract, "dm_a(7)").
+proves_work("agg_incr_demand", w_agg_retract_fallback_tail).
+
 -- the holes of a world with no aggregate go with the fault that made them, in the stock evaluator too
 check_world("agg_incr_stockholes").
 check_file("agg_incr_stockholes", "examples/checks/agg-incr-stockholes.rofl").
@@ -2559,3 +2597,4 @@ check_file("agg_datastrat_retract", "examples/checks/agg-datastrat-retract-check
 check_opt("agg_datastrat_retract", together, 1).
 check_opt("agg_datastrat_retract", retract, "input(a4, 7)").
 proves_work("agg_datastrat_retract", w_agg_data_strat).
+proves_work("agg_datastrat_retract", w_agg_retract_fallback_tail).

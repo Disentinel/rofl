@@ -1,0 +1,41 @@
+-- examples/checks/agg-incr-thr.rofl — agg_incr_thr: A THRESHOLD THAT READS WHAT
+-- CHANGED, under RETRACTION. at_least keeps a Quorum (the first N members by
+-- height), reached while its rule fires and closed when what it reads is, so a
+-- threshold over what a plain rule concluded from the retracted fact is not
+-- subtracted from: its cells go with their threshold state, the rule fires
+-- again over what the rules below concluded, and its quorums close as the
+-- evaluation closes them. What reads a threshold (a negation, a threshold over a
+-- threshold, a negation of that) is read again with it. The state must be the
+-- one of a world without the fact.
+--
+--   th_sale(1, a, 5)   a keeps two big sales: th_busy(a) holds, its quorum over the two left, th_crowd(1) still holds
+--   th_sale(4, b, 7)   b has one: th_busy(b) goes, th_crowd(1) goes with it, th_calm(b) and th_quiet(1) are NEW
+edb(th_sale). edb(th_grp).
+th_grp(a). th_grp(b). th_grp(c).
+th_sale(1, a, 5).
+th_sale(2, a, 6).
+th_sale(3, b, 4).
+th_sale(4, b, 7).
+th_sale(5, c, 2).
+th_sale(6, a, 8).
+th_big(K, G) :- th_sale(K, G, V), V > 3.
+th_busy(G) :- th_grp(G), at_least(2, K : th_big(K, G)).
+th_calm(G) :- th_grp(G), not th_busy(G).
+th_crowd(1) :- at_least(2, G : th_busy(G)).
+th_quiet(1) :- not th_crowd(1).
+
+-- the state after the retractions, row by row
+-- expect-row: th_busy[main](a) tick drv support=1
+-- expect-row: th_calm[main](b) tick drv support=1
+-- expect-row: th_calm[main](c) tick drv support=1
+-- expect-row: th_quiet[main](1) tick drv support=1
+-- expect-row: th_big[main](2,a) tick drv support=1
+-- expect-row: th_big[main](6,a) tick drv support=1
+-- expect-row: th_big[main](3,b) tick drv support=1
+-- expect-row: cell $cell(r809635ff,2,0,$cons(a,$cons(2,$nil))) at_least = true h=2 tick=0 sealed=[] alg=idempotent,lattice use=rederive
+-- and nothing of what they supported before
+-- expect-no-row: th_busy[main](b)
+-- expect-no-row: th_calm[main](a)
+-- expect-no-row: th_crowd[main](
+-- expect-no-row: th_big[main](1,a)
+-- expect-no-row: th_big[main](4,b)

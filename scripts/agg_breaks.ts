@@ -5211,10 +5211,52 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ds_delta_allowed",
-  "what": "a retraction from a world stratified by its data takes the delta path",
+  "id": "ds_comp_not_reread",
+  "what": "a retraction that reaches a component stratified by its data fires its rules again at once, with no walk of its data",
   "expect": {
    "agg_datastrat_retract": "the state lacks the row value"
+  }
+ },
+ {
+  "id": "retract_thr_cells_kept",
+  "what": "the thresholds of a rule read again whole stay known to the evaluation: a quorum cell that is gone is found where it was",
+  "expect": {
+   "agg_incr_thr": "lacks the row th_"
+  }
+ },
+ {
+  "id": "retract_thr_unclosed",
+  "what": "the quorums a retraction reaches again are not closed",
+  "expect": {
+   "agg_incr_thr": "lacks the row cell"
+  }
+ },
+ {
+  "id": "retract_swept_cell_subtracted",
+  "what": "a cell of a rule read again whole is subtracted from as well",
+  "expect": {
+   "agg_incr_twice": "holds the row agg_cell"
+  }
+ },
+ {
+  "id": "retract_demand_kept",
+  "what": "the facts made at the calls of a relation answered on demand stay when the rules that call it fire again",
+  "expect": {
+   "agg_incr_demand": "the state holds the row dm_big"
+  }
+ },
+ {
+  "id": "restage_dead_kept",
+  "what": "a staged fact whose firing cited what is gone stays staged",
+  "expect": {
+   "agg_incr_staged": "does not evaluate"
+  }
+ },
+ {
+  "id": "restage_first_wins",
+  "what": "a staged fact two firings reach is kept with the first one the refiring finds, and the world is not evaluated again",
+  "expect": {
+   "agg_incr_staged": "lacks the row wit sg_pick"
   }
  },
  {
