@@ -1,0 +1,57 @@
+-- examples/checks/ast-within-readers-check.rofl — WHAT THE READERS OF THE ANCESTOR RELATION ASK OF THE TREE.
+-- facts/ast-within-readers.rofl read by a few summary rules (w_data_structures,
+-- f_the_readers_of_the_ancestor_relation_ask_four_operations): the census is what a declared
+-- `tree` has to answer. An alarm is a premise the closed vocabulary does not cover, a question asked in
+-- a pattern it cannot be asked in, or a clause with no premise.
+alarm(awr_unknown_question).
+alarm(awr_bad_pattern).
+alarm(awr_orphan).
+
+awr_question(is_ancestor, bb).
+awr_question(ancestors_of, fb).
+awr_question(descendants_of, bf).
+awr_question(scoped_ascent, fb).
+awr_question(scoped_descent, bf).
+awr_question(nearest_with_property, fb).
+awr_question(children_of, bf).
+awr_question(parent_of, fb).
+
+awr_unknown_question(S, Q) :- reader(S, _, Q, _), not awr_question(Q, _).
+awr_bad_pattern(S, Q, P)   :- reader(S, _, Q, P), awr_question(Q, _), not awr_question(Q, P).
+awr_orphan(S)              :- reader(S, _, _, _), not reader_head(S, _, _).
+
+awr_per_question(Q, N)          :- awr_question(Q, _), N is count(S : reader(S, _, Q, _)).
+awr_per_pattern(P, N)           :- awr_pattern(P), N is count(S : reader(S, _, _, P)).
+awr_pattern(bb).
+awr_pattern(bf).
+awr_pattern(fb).
+awr_pattern(ff).
+awr_per_relation(R, N)          :- awr_rel(R), N is count(S : reader_reads(S, R)).
+awr_rel(ast_within).
+awr_rel(ast_in).
+awr_per_file(F, N)              :- awr_file(F), N is count(S : reader(S, F, _, _)).
+awr_file(F)                     :- reader(_, F, _, _).
+
+-- a clause reads the tree once or several times; the sites of a clause share Head and Line
+awr_clause(H, L)                :- reader_head(_, H, L).
+awr_clauses(N)                  :- N is count(H, L : awr_clause(H, L)).
+awr_sites(N)                    :- N is count(S : reader(S, _, _, _)).
+
+-- the tree operations that serve every reader, and how many readers each serves
+awr_op(is_ancestor, ancestry_interval).
+awr_op(ancestors_of, walk_up).
+awr_op(scoped_ascent, walk_up).
+awr_op(nearest_with_property, walk_up).
+awr_op(parent_of, walk_up).
+awr_op(descendants_of, preorder_range).
+awr_op(scoped_descent, preorder_range).
+awr_op(children_of, child_list).
+awr_served_by(Op, N)            :- awr_opname(Op), N is count(S : reader(S, _, Q, _), awr_op(Q, Op)).
+awr_opname(ancestry_interval).
+awr_opname(walk_up).
+awr_opname(preorder_range).
+awr_opname(child_list).
+
+-- readers that ask both ends free would need the pairs themselves: there are none
+awr_needs_pairs(S)              :- reader(S, _, _, ff).
+alarm(awr_needs_pairs).
