@@ -15,7 +15,7 @@ use crate::reflect::*;
 use crate::store::{
     Member,
     resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
-    NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
+    NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
 
@@ -82,6 +82,10 @@ pub struct Closure {
     pub edge_fwd: bool,
     pub base: Sym,
     pub step: Sym,
+    /// The step's plan reads R before E.
+    pub r_first: bool,
+    /// The step is right-linear, `R(X, Z) :- E(X, Y), R(Y, Z)`.
+    pub right: bool,
 }
 
 /// Each relation concluded by exactly two rules of the closure shape.
@@ -133,6 +137,7 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
         if !(left || right) {
             continue;
         }
+        let r_first = step.plan.iter().find_map(|b| pos(b).map(|l| l.rel == rel)).unwrap_or(true);
         out.push(Closure {
             rel,
             persp: bh.persp.as_atom().unwrap(),
@@ -141,6 +146,8 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
             edge_fwd,
             base: base.id,
             step: step.id,
+            r_first,
+            right,
         });
     }
     out.sort_by_key(|c| c.rel);
@@ -565,19 +572,12 @@ pub struct Eval {
     pub rounds: Vec<(u64, u64)>,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
-    /// concluding R. With `closure_on` (and no witnesses to write) the pair is
-    /// one walk over E where E is news, not rounds.
+    /// concluding R. Where no lattice can withdraw, the pair is one walk over
+    /// E whenever E is news, with the firings the two rules would have made.
     pub closures: Vec<Closure>,
     closure_of: HashMap<Sym, (usize, bool)>,
-    pub closure_on: bool,
-    /// Monotone rules activated by strongly connected component, bottom-up.
-    pub scc: bool,
-    /// Under `no_witness` with provenance kept: the (fact, rule, tick) rows already written.
-    fired: HashSet<(FactId, Sym, u32)>,
     pub closure_rows: u64,
     pub closure_runs: u64,
-    pub closure_walk_ns: u64,
-    pub closure_add_ns: u64,
     pub naive: bool,
     pub mode: Mode,
     pub steps: i64,
@@ -923,8 +923,8 @@ pub struct Eval {
     bootstrap: bool,
     answer: RuleAnswer,
     pub no_provenance: bool,
-    /// No witnesses either: a firing on a fact already there is no news. Only
-    /// where nothing withdraws (no lattices); set from the harness, never by a program.
+    /// `sealed(provenance)`: no witnesses either, where nothing withdraws. A
+    /// firing on a fact already there is then no news, and a step is a new fact.
     pub no_witness: bool,
     /// `Rofl.retainTicks` (src/api.ts:165): how many COMPLETED ticks of frozen
     /// provenance to keep, or none set — which keeps everything and is what
@@ -1082,13 +1082,8 @@ impl Eval {
             rounds: Vec::new(),
             closures: Vec::new(),
             closure_of: HashMap::new(),
-            closure_on: false,
-            scc: false,
-            fired: HashSet::new(),
             closure_rows: 0,
             closure_runs: 0,
-            closure_walk_ns: 0,
-            closure_add_ns: 0,
             naive: false,
             mode,
             steps: 0,
@@ -1310,17 +1305,9 @@ impl Eval {
 
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
-        let sealed = sealed_bodies(&mut self.h, &self.v, &mut self.store);
-        self.no_provenance = sealed.contains(&self.v.sealed_provenance);
-        // `sealed(witness)`: any support will do. No witness is kept where
-        // nothing withdraws, the order of groups, candidates and activation
-        // is the engine's own, and a closure is walked.
-        if sealed.contains(&self.v.sealed_witness) {
-            self.no_witness = true;
-            self.store.unordered = true;
-            self.closure_on = true;
-            self.scc = true;
-        }
+        self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
+            .contains(&self.v.sealed_provenance);
+        self.no_witness = self.no_provenance;
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
         self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
@@ -1390,6 +1377,10 @@ impl Eval {
             self.join_of.insert(c, l);
         }
         self.register_lattices(&rules);
+        // under the seal the set of facts is the contract: where nothing
+        // withdraws, groups and candidates are then in the engine's own order
+        // and rules are activated by component; a closure is walked either way
+        self.store.unordered = self.no_witness && self.lattices.is_empty();
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         if self.no_provenance && self.answer.reads_provenance {
@@ -1408,6 +1399,31 @@ impl Eval {
                 continue;
             }
             kept.push(self.classify(r));
+        }
+        // `asks(Rel)`: only the rules whose heads reach an asked relation are
+        // activated, backwards through every premise; no asks means everything
+        let mut cone: HashSet<Sym> = HashSet::new();
+        for f in self.store.rel_all(&self.h, self.v.asks) {
+            let a = self.store.args(f);
+            if a.len() == 1 {
+                if let Some(rel) = a[0].as_atom() {
+                    cone.insert(rel);
+                }
+            }
+        }
+        if !cone.is_empty() {
+            loop {
+                let n = cone.len();
+                for r in &kept {
+                    if cone.contains(&r.clause.head.rel) {
+                        cone.extend(r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel));
+                    }
+                }
+                if cone.len() == n {
+                    break;
+                }
+            }
+            kept.retain(|r| cone.contains(&r.clause.head.rel));
         }
         self.next_rules = kept.iter().filter(|r| r.clause.head.temporal == Temporal::Next).map(|r| r.id).collect();
         self.carried.clear();
@@ -1979,9 +1995,11 @@ impl Eval {
 
     // ----------------------------------------------------------------- run
 
-    /// A COPY OF THE WHOLE WORLD, at 3 ms against 383 for a rebuild.
+    /// A COPY OF THE WORLD, at 3 ms against 383 for a rebuild — and of almost
+    /// nothing once the heap and the store are frozen (`Session::fork`), when
+    /// their clones share the frozen base and copy only what lies above it.
     ///
-    /// Every field is copied — the heap, the store, the prepared rules, the
+    /// Every other field is copied — the prepared rules, the
     /// counters. `prepare` is NOT re-run, and that is the whole saving: the
     /// 383 ms is peeling the strata and planning the bodies of the packs, and
     /// a fork inherits the answer rather than recomputing it.
@@ -3207,7 +3225,7 @@ impl Eval {
         }
         let mut out = HashSet::new();
         for (f, t) in read {
-            let r = *self.store.rec(f);
+            let r = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             out.insert((fact_term(&mut self.h, &self.v, r.rel, r.persp, &args), t as i64));
         }
@@ -3534,7 +3552,7 @@ impl Eval {
         if rules.is_empty() {
             return Ok(());
         }
-        if self.scc && rules.len() > 1 {
+        if self.no_witness && self.lattices.is_empty() && rules.len() > 1 {
             for component in components(rules) {
                 self.activate_batch(&component)?;
             }
@@ -3669,7 +3687,7 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
-        if self.closure_on && self.no_witness && self.lattices.is_empty() {
+        if self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
             }
@@ -3714,7 +3732,7 @@ impl Eval {
         let c = self.closures[ci].clone();
         let mut index: HashMap<Term, u32> = HashMap::new();
         let mut nodes: Vec<Term> = Vec::new();
-        let mut edges: Vec<(u32, u32)> = Vec::new();
+        let mut edges: Vec<(u32, u32, FactId)> = Vec::new();
         for id in self.store.rel_persp(&self.h, c.edge, c.edge_persp) {
             let a = self.store.args(id);
             if a.len() != 2 {
@@ -3722,39 +3740,40 @@ impl Eval {
             }
             let (x, y) = if c.edge_fwd { (a[0], a[1]) } else { (a[1], a[0]) };
             let mut dense = |t: Term| *index.entry(t).or_insert_with(|| { nodes.push(t); nodes.len() as u32 - 1 });
-            let e = (dense(x), dense(y));
+            let e = (dense(x), dense(y), id);
             edges.push(e);
         }
         let n = nodes.len();
-        let mut start = vec![0u32; n + 1];
-        for &(x, _) in &edges {
-            start[x as usize + 1] += 1;
-        }
-        for i in 0..n {
-            start[i + 1] += start[i];
-        }
-        let mut adj = vec![0u32; edges.len()];
-        let mut fill = start.clone();
-        for &(x, y) in &edges {
-            adj[fill[x as usize] as usize] = y;
-            fill[x as usize] += 1;
-        }
-        // with provenance kept, a row's rules: the base rule for an edge, the
-        // step rule where a predecessor of the end is reached from the start too
-        let mut pred: Vec<Vec<u32>> = vec![Vec::new(); if self.no_provenance { 0 } else { n }];
-        for &(x, y) in &edges {
-            if !self.no_provenance {
-                pred[y as usize].push(x);
+        // the edges by start, and by end: (other node, edge fact)
+        fn csr(n: usize, edges: &[(u32, u32, FactId)], rev: bool) -> (Vec<u32>, Vec<(u32, FactId)>) {
+            let key = |e: &(u32, u32, FactId)| if rev { e.1 } else { e.0 };
+            let mut start = vec![0u32; n + 1];
+            for e in edges {
+                start[key(e) as usize + 1] += 1;
             }
+            for i in 0..n {
+                start[i + 1] += start[i];
+            }
+            let mut adj = vec![(0u32, 0 as FactId); edges.len()];
+            let mut fill = start.clone();
+            for e in edges {
+                let k = key(e) as usize;
+                adj[fill[k] as usize] = (if rev { e.0 } else { e.1 }, e.2);
+                fill[k] += 1;
+            }
+            (start, adj)
         }
+        let keep = !self.no_witness;
+        let (start, adj) = csr(n, &edges, false);
+        let (pstart, pred) = if keep { csr(n, &edges, true) } else { (Vec::new(), Vec::new()) };
+        let span = |st: &[u32], v: u32| st[v as usize] as usize..st[v as usize + 1] as usize;
         let mut mark = vec![u32::MAX; n];
         let mut queue: Vec<u32> = Vec::new();
-        let mut rows: Vec<(u32, u32, bool, bool)> = Vec::new();
-        let t = std::time::Instant::now();
+        let mut rows: Vec<(u32, u32)> = Vec::new();
+        let mut out = Front::default();
         for s in 0..n as u32 {
             queue.clear();
-            queue.extend_from_slice(&adj[start[s as usize] as usize..start[s as usize + 1] as usize]);
-            let first = rows.len();
+            queue.extend(adj[span(&start, s)].iter().map(|&(v, _)| v));
             let mut i = 0;
             while i < queue.len() {
                 let v = queue[i];
@@ -3763,44 +3782,60 @@ impl Eval {
                     continue;
                 }
                 mark[v as usize] = s;
-                queue.extend_from_slice(&adj[start[v as usize] as usize..start[v as usize + 1] as usize]);
-                rows.push((s, v, false, false));
-            }
-            if !self.no_provenance {
-                for k in first..rows.len() {
-                    let v = rows[k].1;
-                    rows[k].2 = adj[start[s as usize] as usize..start[s as usize + 1] as usize].contains(&v);
-                    rows[k].3 = pred[v as usize].iter().any(|&u| mark[u as usize] == s);
+                queue.extend(adj[span(&start, v)].iter().map(|&(w, _)| w));
+                rows.push((s, v));
+                let args = [nodes[s as usize], nodes[v as usize]];
+                let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
+                if new {
+                    out.note(c.rel, id);
+                    self.closure_rows += 1;
+                    if !keep {
+                        self.bump_steps()?;
+                        self.charge_row(Some(c.step), true)?;
+                    }
                 }
             }
         }
-        self.closure_walk_ns += t.elapsed().as_nanos() as u64;
-        let t = std::time::Instant::now();
-        let mut out = Front::default();
-        let tick = self.store.tick;
-        for (s, v, direct, longer) in rows {
-            let args = [nodes[s as usize], nodes[v as usize]];
-            let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
-            if new {
-                out.note(c.rel, id);
-                self.closure_rows += 1;
-                self.bump_steps()?;
-                self.charge_row(Some(c.step), true)?;
-            }
-            if !self.no_provenance {
-                for (rule, holds) in [(c.base, direct), (c.step, longer)] {
-                    if holds {
+        if keep {
+            // the firings the two rules would have made, over the closure now
+            // complete: the base rule on the edge; the step rule on every
+            // predecessor u of the end with R(start, u), or, right-linear, on
+            // every successor u of the start with R(u, end)
+            let tick = self.store.tick;
+            for &(s, v) in &rows {
+                let args = [nodes[s as usize], nodes[v as usize]];
+                let id = self.store.get(c.rel, c.persp, &args).unwrap();
+                let mut firings: Vec<(Sym, Vec<PremRef>)> = Vec::new();
+                for &(x, eid) in &adj[span(&start, s)] {
+                    if x == v {
+                        firings.push((c.base, vec![PremRef::Fact(eid)]));
+                    }
+                }
+                let through: Vec<(u32, FactId, [Term; 2])> = if c.right {
+                    adj[span(&start, s)].iter().map(|&(u, eid)| (u, eid, [nodes[u as usize], nodes[v as usize]])).collect()
+                } else {
+                    pred[span(&pstart, v)].iter().map(|&(u, eid)| (u, eid, [nodes[s as usize], nodes[u as usize]])).collect()
+                };
+                for (_, eid, rargs) in through {
+                    if let Some(rid) = self.store.get(c.rel, c.persp, &rargs) {
+                        let (r, e) = (PremRef::Fact(rid), PremRef::Fact(eid));
+                        firings.push((c.step, if c.r_first { vec![r, e] } else { vec![e, r] }));
+                    }
+                }
+                for (rule, prems) in firings {
+                    if self.store.support(id, Witness { rule, tick, prems }) {
+                        self.bump_steps()?;
+                        self.charge_row(Some(rule), true)?;
                         let ft = fact_term(&mut self.h, &self.v, c.rel, c.persp, &args);
                         let db_args = [ft, Term::atom(rule), Term::int(tick as i64)];
-                        if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
-                            let dbid = self.store.get(self.v.derived_by, self.v.kernel_persp, &db_args).unwrap();
+                        let (dbid, dbnew) = self.store.put(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
+                        if dbnew {
                             out.note(self.v.derived_by, dbid);
                         }
                     }
                 }
             }
         }
-        self.closure_add_ns += t.elapsed().as_nanos() as u64;
         self.closure_runs += 1;
         Ok(out)
     }
@@ -3846,6 +3881,7 @@ impl Eval {
             let rel = self.carried.iter().find(|(_, l)| **l == head.rel).map_or(head.rel, |(c, _)| *c);
             let rel = brk!("carry_into_lattice" => head.rel; rel);
             let k = self.fkey(rel, persp, &args);
+            let staged_key = k.clone();
             match self.staged.entry(k) {
                 std::collections::hash_map::Entry::Vacant(slot) => {
                     slot.insert(StagedFact {
@@ -3869,6 +3905,25 @@ impl Eval {
                             alts.push((r.id, sol.prems.clone()));
                             self.bump_steps()?;
                         }
+                    }
+                }
+            }
+            // in the engine's own order the first firing to stage is the
+            // order's; the staged firing is then the least signature instead
+            if self.store.unordered {
+                let tick = self.store.tick;
+                let (cur_rule, cur_prems) = {
+                    let st = &self.staged[&staged_key];
+                    (st.rule, st.prems.clone())
+                };
+                if cur_rule != r.id || cur_prems != sol.prems {
+                    let (mut a, mut b) = (String::new(), String::new());
+                    self.store.write_sig(&self.h, &WitView { rule: cur_rule, tick, prems: &cur_prems }, &mut a);
+                    self.store.write_sig(&self.h, &WitView { rule: r.id, tick, prems: &sol.prems }, &mut b);
+                    if cmp_js(&b, &a) == std::cmp::Ordering::Less {
+                        let st = self.staged.get_mut(&staged_key).unwrap();
+                        st.rule = r.id;
+                        st.prems = sol.prems.clone();
                     }
                 }
             }
@@ -3909,7 +3964,7 @@ impl Eval {
         }
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
-            is_new || (!self.no_provenance && self.fired.insert((id, r.id, tick)))
+            is_new
         } else {
             self.store.support(
                 id,
@@ -5749,7 +5804,7 @@ impl Eval {
         if self.no_provenance {
             return;
         }
-        let rec = *self.store.rec(id);
+        let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
         let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
         let db_args = [ft, Term::atom(rule), Term::int(self.store.tick as i64)];
@@ -5766,7 +5821,7 @@ impl Eval {
         if self.join_checked.contains(&x) {
             return Ok(true);
         }
-        let rec = *self.store.rec(x);
+        let rec = self.store.rec(x);
         let args = self.store.args(x).to_vec();
         let n = args.len();
         let (op, cx) = (self.lattices[&l].1, args[n - 1]);
@@ -5916,7 +5971,7 @@ impl Eval {
         let mut plan: Vec<(FactId, Sym, Vec<FactId>)> = Vec::new();
         for (p, f) in cells {
             let (op, crel) = (self.lattices[&p].1, self.join_rels[&p]);
-            let rec = *self.store.rec(f);
+            let rec = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             let n = args.len();
             let v = args[n - 1];
@@ -6731,7 +6786,7 @@ impl Eval {
     /// The values that dominated `g`, a value of a subsumptive cell: what
     /// beat it, what beat that, and so on.
     fn sub_dominators(&self, g: FactId) -> HashSet<FactId> {
-        let rec = *self.store.rec(g);
+        let rec = self.store.rec(g);
         let args = self.store.args(g);
         let k = self.subs[&rec.rel].keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -6763,7 +6818,7 @@ impl Eval {
         for (rule, _, prems) in self.store.firings(x) {
             for p in prems {
                 let PremRef::Fact(g) = p else { continue };
-                let rec = *self.store.rec(g);
+                let rec = self.store.rec(g);
                 if !self.lat_superseded.contains(&g) || !self.subs.contains_key(&rec.rel) {
                     continue;
                 }
@@ -6801,7 +6856,7 @@ impl Eval {
         if !self.store.alive(f) || self.store.rec(f).base() {
             return;
         }
-        let rec = *self.store.rec(f);
+        let rec = self.store.rec(f);
         let args = self.store.args(f).to_vec();
         if let Some(k) = self.cell_keylen(rec.rel, args.len()) {
             let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -7260,7 +7315,7 @@ impl Eval {
 
     /// A fact as the unknown it is once withdrawn: its lattice cell, or its tuple.
     fn unknown_of(&self, f: FactId) -> Unknown {
-        let rec = *self.store.rec(f);
+        let rec = self.store.rec(f);
         let args = self.store.args(f);
         if let Some(&l) = self.join_of.get(&rec.rel) {
             return Unknown::Cell((l, rec.persp, args[..args.len() - 1].into()));
@@ -8549,7 +8604,7 @@ impl Eval {
                 }
             }
             if self.answer.reads_lattice_members && !self.no_provenance {
-                let rec = *self.store.rec(f);
+                let rec = self.store.rec(f);
                 let args = self.store.args(f).to_vec();
                 let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
                 let mut rows: Vec<(Sym, Vec<Term>)> = Vec::new();
@@ -8578,7 +8633,7 @@ impl Eval {
             for ((ck, d), (f, rule)) in by {
                 let args = Self::sub_args(&ck, &d);
                 let dt = self.sub_fact(p, ck.1, &args);
-                let rec = *self.store.rec(f);
+                let rec = self.store.rec(f);
                 let fargs = self.store.args(f).to_vec();
                 let ft = self.sub_fact(rec.rel, rec.persp, &fargs);
                 let mut key = String::new();
@@ -9483,7 +9538,7 @@ impl Eval {
                 }
             }
         }
-        if self.store.unordered {
+        if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));
             return Ok(out);
         }
@@ -11731,7 +11786,7 @@ mod tests {
                 }
                 for p in prems {
                     if let PremRef::Fact(f) = p {
-                        let r = *l.eval.store.rec(f);
+                        let r = l.eval.store.rec(f);
                         let args = l.eval.store.args(f).to_vec();
                         read.insert(fact_term(&mut l.eval.h, &l.eval.v, r.rel, r.persp, &args));
                     }
@@ -12108,10 +12163,11 @@ impl Eval {
         }
         // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and
         // what a leaf says is as short as a reference
-        let leaf = !self.subs.contains_key(&r.rel)
-            && !self.lattices.contains_key(&r.rel)
-            && !brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel))
-            && self.store.witness_of(&self.h, id).is_none();
+        let special = self.subs.contains_key(&r.rel)
+            || self.lattices.contains_key(&r.rel)
+            || brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel));
+        let w = if special { None } else { self.witness(id) };
+        let leaf = !special && w.is_none();
         if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
             next.push(WhyTask::Line(format!("{pad}{key} [above]")));
             return;
@@ -12133,12 +12189,6 @@ impl Eval {
             next.push(WhyTask::Unsee(id));
             return;
         }
-        // The witness is copied out before anything else borrows the store:
-        // `WitView` holds the arena's own slice and the recursion writes.
-        let w = self
-            .store
-            .witness_of(&self.h, id)
-            .map(|w| (w.rule, w.tick, w.prems.to_vec()));
         match w {
             // A LIVE FACT WITH NO FIRING IS ONE OF TWO THINGS, and the store
             // cannot tell them apart from the witness alone: a base assertion,
@@ -12180,6 +12230,92 @@ impl Eval {
             }
         }
         next.push(WhyTask::Unsee(id));
+    }
+
+    /// The firing `witness_of` picks, copied out of the store. Under
+    /// `sealed(witness)` none was kept where nothing withdraws, so the
+    /// firings are found again: in a monotone world every derivation that
+    /// holds at the fixpoint was fired, and is a solution of a rule with its
+    /// head bound to the fact.
+    fn witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
+        let mut best = self.store.witness_of(&self.h, id).map(|w| (w.rule, w.tick, w.prems.to_vec()));
+        if !self.no_witness || !self.lattices.is_empty() {
+            return best;
+        }
+        let sig = |e: &Self, w: &(Sym, u32, Vec<PremRef>)| {
+            let mut s = String::new();
+            e.store.write_sig(&e.h, &WitView { rule: w.0, tick: w.1, prems: &w.2 }, &mut s);
+            s
+        };
+        let mut least = best.as_ref().map(|w| sig(self, w));
+        for w in self.firings_again(id) {
+            let s = sig(self, &w);
+            if least.as_ref().is_none_or(|l| cmp_js(&s, l) == std::cmp::Ordering::Less) {
+                least = Some(s);
+                best = Some(w);
+            }
+        }
+        best
+    }
+
+    fn firings_again(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let rec = self.store.rec(id);
+        if is_kernel_ledger(&self.h, rec.persp) {
+            return Vec::new();
+        }
+        let args = self.store.args(id).to_vec();
+        let rules: Vec<Rc<ERule>> = self
+            .rules
+            .iter()
+            .filter(|r| r.safe && r.clause.head.rel == rec.rel && r.clause.head.temporal != Temporal::Next)
+            .cloned()
+            .collect();
+        let saved = (self.steps, self.rows, self.peak_rows, self.budget, self.space);
+        (self.budget, self.space) = (i64::MAX, i64::MAX);
+        let tick = self.store.tick;
+        let mut out = Vec::new();
+        for r in rules {
+            let head = &r.clause.head;
+            let Some(s) = unify(&self.h, head.persp, Term::atom(rec.persp), &Subst::default())
+                .and_then(|s| unify_all(&self.h, &head.args, &args, &s))
+            else {
+                continue;
+            };
+            // the plan was made for nothing bound; with the head bound another
+            // order is cheaper, and the premises go back to the plan's order
+            let mut bound = Vec::new();
+            for t in head.args.iter().chain([&head.persp]) {
+                self.h.vars_of(*t, &mut bound);
+            }
+            let touches = |b: &BodyElem, bound: &[Sym]| {
+                let mut vs = Vec::new();
+                b.vars(&self.h, &mut vs);
+                matches!(b, BodyElem::Pos(_)) && vs.iter().any(|v| bound.contains(v))
+            };
+            let mut rest: Vec<usize> = (0..r.plan.len()).collect();
+            let mut order = Vec::new();
+            while !rest.is_empty() {
+                let k = rest
+                    .iter()
+                    .take_while(|&&i| !matches!(r.plan[i], BodyElem::Agg(_)))
+                    .position(|&i| touches(&r.plan[i], &bound));
+                let i = rest.remove(k.unwrap_or(0));
+                r.plan[i].vars(&self.h, &mut bound);
+                order.push(i);
+            }
+            let body: Vec<BodyElem> = order.iter().map(|i| r.plan[*i].clone()).collect();
+            if let Ok(sols) = self.solve_body(&body, s, 0, None, Some(r.id)) {
+                for sol in sols {
+                    let mut prems = sol.prems.clone();
+                    for (k, i) in order.iter().enumerate() {
+                        prems[*i] = sol.prems[k];
+                    }
+                    out.push((r.id, tick, prems));
+                }
+            }
+        }
+        (self.steps, self.rows, self.peak_rows, self.budget, self.space) = saved;
+        out
     }
 
     /// A LATTICE FACT IS ITS CELL: the value, and its members — every firing
@@ -12242,7 +12378,7 @@ impl Eval {
     /// so. A value dominated since, read as history by a member, says so.
     fn render_sub(&mut self, id: FactId, key: &str, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let pad = "  ".repeat(indent);
-        let rec = *self.store.rec(id);
+        let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
         let k = self.subs[&rec.rel].keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -12434,7 +12570,7 @@ impl Eval {
             return self.render_prem(pr, indent, o, next);
         };
         let mut key = String::new();
-        let r = *self.store.rec(f);
+        let r = self.store.rec(f);
         let args = self.store.args(f).to_vec();
         write_fact_key(&self.h, r.rel, r.persp, &args, &mut key);
         let ft = fact_term(&mut self.h, &self.v, r.rel, r.persp, &args);

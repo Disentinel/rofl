@@ -37,7 +37,7 @@ import { Store, type FactStore, type FactRec, type PremRef, type Witness, type L
 import { parseLiteral } from './parser.ts';
 import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
 import {
-  V, IFACE, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
+  V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
   SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm,
@@ -1033,6 +1033,13 @@ export class AggEval {
         continue;
       }
       kept.push(this.classify(r));
+    }
+    // `asks(Rel)`: only the rules whose heads reach an asked relation are activated, backwards through every premise; no asks means everything
+    const cone = new Set<string>();
+    for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
+    if (cone.size) {
+      for (let n = -1; n !== cone.size;) { n = cone.size; for (const r of kept) if (cone.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsOf)) cone.add(l.rel); }
+      kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
     }
     this.nextRules = new Set(kept.filter((r) => r.clause.head.temporal === 'next').map((r) => r.id));
     this.carried.clear();

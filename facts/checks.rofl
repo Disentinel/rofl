@@ -2824,7 +2824,11 @@ check_file("jodit_fixture", "examples/jodit/contract.rofl").
 check_file("jodit_fixture", "examples/jodit/specifics.rofl").
 check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
 
--- sealed(witness): the set of facts is the contract and any support will do; the Rust engine keeps no witness,
--- orders and activates its own way and walks the closure, and both engines conclude the same rows, derived_by included
-check_world("sealed_witness").
-check_file("sealed_witness", "examples/checks/sealed-witness.rofl").
+-- sealed(provenance), the one knob: the set of facts is the contract; the Rust engine keeps no derived_by and no
+-- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
+check_world("sealed_provenance").
+check_file("sealed_provenance", "examples/checks/sealed-provenance.rofl").
+
+-- asks(Rel): the relation cone as data; only the rules whose heads reach an asked relation are activated, in both engines
+check_world("asks").
+check_file("asks", "examples/checks/asks.rofl").

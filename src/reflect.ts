@@ -165,6 +165,7 @@ export const IFACE = {
   // about it is no longer published. See SEALED_BODY below for what each names
   // and for the ablation that decided which rows may be in it.
   sealed: 'sealed',
+  asks: 'asks',
 } as const;
 
 /** The arity every kernel-read relation is READ AT. Not decoration: the
@@ -204,6 +205,7 @@ export const ARITY: Readonly<Record<string, number>> = {
   // read by `sealedBodies` below, which destructures `args[0]` — the same
   // crash gate every other row of this table is here for.
   sealed: 1,
+  asks: 1,
   premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
   lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
   tag_decl: 3, order_comp: 5,

@@ -879,11 +879,15 @@ export function checkWorld(w: World, g: { hash: string; census: Map<string, numb
     for (const a of rs.alarms) bad.push(`ALARM ${a}`);
     return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
   }
+  // under sealed(provenance) the Rust engine records no witness, so its witness count is not compared
+  const sealsProvenance = w.files.some((f) => f.endsWith('.rofl') && fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8').includes('sealed(provenance)'));
   for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
     if (!a || a.hash === g.hash) continue;
+    const skip = who === 'rust' && sealsProvenance ? '@wit' : '';
     const moved = [...new Set([...g.census.keys(), ...a.census.keys()])]
-      .filter((k) => (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
+      .filter((k) => k !== skip && (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
       .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);
+    if (skip && moved.length === 0) continue;
     bad.push(`${who}: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
   }
   // AN ALARM IS RED WHATEVER THE GOLDEN SAYS. Blessing records a number;

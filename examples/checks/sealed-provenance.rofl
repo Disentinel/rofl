@@ -1,0 +1,15 @@
+-- examples/checks/sealed-provenance.rofl — THE ONE KNOB. A world that declares
+-- sealed(provenance) asks for the set of facts and nothing about how they were
+-- reached: no derived_by, and in the Rust engine no witness either, so a step
+-- is a new fact rather than a firing (f_the_set_of_facts_is_the_contract_and_any_support_will_do_for_facts_about_code).
+-- The engine's own order of groups, candidates and activation and its walk of
+-- a closure are defaults wherever nothing withdraws, seal or no seal. Both
+-- engines must conclude the same rows: reach is a closure with a cycle (c, d)
+-- and a diamond (a to d by two paths).
+sealed(provenance).
+edb(edge).
+edge(a, b). edge(b, d). edge(a, c). edge(c, d). edge(d, c). edge(d, e).
+reach(X, Y) :- edge(X, Y).
+reach(X, Z) :- reach(X, Y), edge(Y, Z).
+loops(X) :- reach(X, X).
+far(X, Y) :- reach(X, Y), not edge(X, Y).
