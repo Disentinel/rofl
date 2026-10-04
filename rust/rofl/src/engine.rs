@@ -79,6 +79,8 @@ pub struct Closure {
     pub step: Sym,
     /// The step's plan reads R before E.
     pub r_first: bool,
+    /// The step is right-linear, `R(X, Z) :- E(X, Y), R(Y, Z)`.
+    pub right: bool,
 }
 
 /// Each relation concluded by exactly two rules of the closure shape.
@@ -140,6 +142,7 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
             base: base.id,
             step: step.id,
             r_first,
+            right,
         });
     }
     out.sort_by_key(|c| c.rel);
@@ -3688,12 +3691,10 @@ impl Eval {
         let span = |st: &[u32], v: u32| st[v as usize] as usize..st[v as usize + 1] as usize;
         let mut mark = vec![u32::MAX; n];
         let mut queue: Vec<u32> = Vec::new();
-        let mut reached: Vec<u32> = Vec::new();
+        let mut rows: Vec<(u32, u32)> = Vec::new();
         let mut out = Front::default();
-        let tick = self.store.tick;
         for s in 0..n as u32 {
             queue.clear();
-            reached.clear();
             queue.extend(adj[span(&start, s)].iter().map(|&(v, _)| v));
             let mut i = 0;
             while i < queue.len() {
@@ -3704,7 +3705,7 @@ impl Eval {
                 }
                 mark[v as usize] = s;
                 queue.extend(adj[span(&start, v)].iter().map(|&(w, _)| w));
-                reached.push(v);
+                rows.push((s, v));
                 let args = [nodes[s as usize], nodes[v as usize]];
                 let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
                 if new {
@@ -3716,12 +3717,14 @@ impl Eval {
                     }
                 }
             }
-            if !keep {
-                continue;
-            }
-            // the firings the two rules would have made: the base rule on the
-            // edge, the step rule on every reached predecessor of the end
-            for &v in &reached {
+        }
+        if keep {
+            // the firings the two rules would have made, over the closure now
+            // complete: the base rule on the edge; the step rule on every
+            // predecessor u of the end with R(start, u), or, right-linear, on
+            // every successor u of the start with R(u, end)
+            let tick = self.store.tick;
+            for &(s, v) in &rows {
                 let args = [nodes[s as usize], nodes[v as usize]];
                 let id = self.store.get(c.rel, c.persp, &args).unwrap();
                 let mut firings: Vec<(Sym, Vec<PremRef>)> = Vec::new();
@@ -3730,10 +3733,14 @@ impl Eval {
                         firings.push((c.base, vec![PremRef::Fact(eid)]));
                     }
                 }
-                for &(u, eid) in &pred[span(&pstart, v)] {
-                    if mark[u as usize] == s {
-                        let ru = self.store.get(c.rel, c.persp, &[nodes[s as usize], nodes[u as usize]]).unwrap();
-                        let (r, e) = (PremRef::Fact(ru), PremRef::Fact(eid));
+                let through: Vec<(u32, FactId, [Term; 2])> = if c.right {
+                    adj[span(&start, s)].iter().map(|&(u, eid)| (u, eid, [nodes[u as usize], nodes[v as usize]])).collect()
+                } else {
+                    pred[span(&pstart, v)].iter().map(|&(u, eid)| (u, eid, [nodes[s as usize], nodes[u as usize]])).collect()
+                };
+                for (_, eid, rargs) in through {
+                    if let Some(rid) = self.store.get(c.rel, c.persp, &rargs) {
+                        let (r, e) = (PremRef::Fact(rid), PremRef::Fact(eid));
                         firings.push((c.step, if c.r_first { vec![r, e] } else { vec![e, r] }));
                     }
                 }
