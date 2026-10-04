@@ -48,6 +48,8 @@ pub mod seed;
 pub mod session;
 pub mod shrug;
 pub mod store;
+/// The read-only detection report: declarations the engine could propose (docs/data-structures.md).
+pub mod structures;
 /// Semiring tags: the declarations, and the clauses the engine runs for them.
 pub mod tag;
 pub mod term;

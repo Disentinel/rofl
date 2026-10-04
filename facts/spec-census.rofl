@@ -130,6 +130,9 @@ check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_cens
 check[checks]("rust/rofl/tests/session.rs", "a_bound_ask_finds_exactly_its_fact", test).
 check[checks]("rust/rofl/tests/session.rs", "a_repeated_variable_constrains_and_wildcards_are_columns", test).
 check[checks]("rust/rofl/tests/session.rs", "assert_refuses_a_rule_and_a_variable", test).
+check[checks]("rust/rofl/tests/structures.rs", "proposes_exactly_the_right_declarations", test).
+check[checks]("rust/rofl/tests/structures.rs", "lists_the_near_misses_with_their_facts", test).
+check[checks]("rust/rofl/tests/structures.rs", "the_text_is_the_committed_report", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "pareto_fronts_are_the_fronts_of_every_simple_path", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_on_a_total_order_is_the_min_lattice", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_through_plain_relations_is_the_min_lattice", test).
@@ -658,6 +661,7 @@ test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
+test_file[checks]("rust/rofl/tests/structures.rs").
 test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").

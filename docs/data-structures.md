@@ -229,7 +229,12 @@ it.
 0. **The detection report, read-only, for function, tree and alias.** It
    touches no read path of the engine, so it can land before
    `w_cmp_delta_first`, and it settles by measurement that the promises hold
-   on the four corpora before anything stores them.
+   on the four corpora before anything stores them. **Built 2026-10-04**
+   (`rust/rofl/src/structures.rs`; `rofl-load` and `rofl-eval
+   --propose-structures`, `npm run structures`): on self, mcp, cli_exits and
+   util it proposes `tree ast_in(P, C) closure ast_within.` (the closure is
+   exact), the ast_in and in_fn aliases, and 169 functions that hold on all
+   four (`f_the_engine_proposes_a_forest_a_closure_and_aliases_on_all_four_corpora`).
 1. **The plumbing with `function`.** The declaration in the three parsers and
    the sentence, the reflection rows, the refusal with its place, the TS check
    and the proof world with a planted break. `function` has the smallest
