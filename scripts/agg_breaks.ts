@@ -4257,8 +4257,7 @@ export const BREAKS: Break[] = [
    "agg_cell_eval": "acl_wrong",
    "agg_minmax_eval": "am_max_wrong",
    "agg_lattice_eval": "al_missing",
-   "agg_critpath_demo": "cpc_miss",
-   "agg_minimax_demo": "mmc_miss"
+   "agg_critpath_demo": "cpc_miss"
   }
  },
  {
@@ -4274,8 +4273,7 @@ export const BREAKS: Break[] = [
   "expect": {
    "agg_count_eval": "ac_count_wrong",
    "agg_sum_eval": "as_sum_wrong",
-   "agg_minmax_eval": "am_min_missing",
-   "agg_minimax_demo": "mmc_miss"
+   "agg_minmax_eval": "am_min_missing"
   }
  },
  {
@@ -4290,7 +4288,6 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_empty_eval": "ae_zero_missing",
-   "agg_minimax_demo": "mmc_miss",
    "agg_quorum_demo": "qc_miss"
   }
  },
@@ -4745,7 +4742,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_extra"
   }
  },
@@ -4760,7 +4756,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -4775,7 +4770,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -4790,7 +4784,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -4805,7 +4798,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -4820,7 +4812,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -4871,7 +4862,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_extra"
   }
  },
@@ -4936,7 +4926,6 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_precise_oracle": "po_bad",
    "agg_precise_holes": "ph_hole_missing"
   }
  },
@@ -6415,7 +6404,7 @@ export async function runBreak(b: Break, ws: World[], p: Plant): Promise<Verdict
       const w = { ...w0, files: w0.files.map((f) => subs.get(f) ?? f), ...(sign === CUT ? { cap: CAP } : {}) };
       if (p.ts && w.oneEngine) throw new Error(`${name} is answered by one engine, and a TypeScript fault can red only a world both answer`);
       // a switch reaches only rofl-load, so the TypeScript answer of its world is the control's
-      const rs = answerRust(w)!, ts = p.env.ROFL_BREAK ? null : answerTS(w, Engine);
+      const rs = answerRust(w)!, ts = p.env.ROFL_BREAK || w.oneEngine === 'rust' ? null : answerTS(w, Engine);
       // a world both engines answer says its alarms and rows through either
       const both = w.oneEngine || !ts ? [] : [...ts.problems, ...ts.alarms];
       const said = [...rs.problems, ...rs.alarms, ...both];

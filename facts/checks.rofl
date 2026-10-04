@@ -8,6 +8,13 @@
 -- This is where a test whose subject is host behaviour stops being a
 -- TypeScript string literal and becomes a world two engines can be held to.
 
+-- OPTIONS (check_opt(World, Option, Value)), all read by scripts/goldens.ts: ticks, budget, space, retain,
+-- retract, evaluator, explain, sentences, together, and one_engine. `one_engine, ts` checks a world on the
+-- TypeScript engine alone (a host contract the two answer differently); `one_engine, rust` checks it on
+-- the Rust engine alone: the TypeScript engine is never run on it, its golden is the Rust golden, and
+-- whycheck asks its questions of rofl-serve and rofl-load only and holds them to each other. It may name a
+-- world the tree is walked to as well as a declared one. See "RUST ONLY" at the end of this file.
+
 edb(check_world).
 edb(check_file).
 edb(check_opt).
@@ -2842,6 +2849,25 @@ check_file("jodit_fixture", "examples/jodit/contract.rofl").
 check_file("jodit_fixture", "examples/jodit/specifics.rofl").
 check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
 
+-- ================================================================== RUST ONLY
+-- Rust is the engine and TypeScript is the parity reference only up to a bounded scale, and not for what only Rust
+-- does (CLAUDE.md, "Rust is the engine"; f_rust_is_the_engine_ts_is_the_reference). A world is checked on Rust alone,
+-- `check_opt(W, one_engine, rust)`, for the reason named below.
+--
+-- THE SCALE CAP: a world whose TypeScript answer took over 5 s in the pooled `npm test` run (ROFL_TIMES=<file>
+-- appends each world's name, TS ms, Rust ms, facts and engines), or holds over 100,000 facts, is not given to
+-- TypeScript. Measured 2026-10-04 (TS s / Rust s / facts): agg_precise_oracle 17.6 / 6.8 / 319023,
+-- agg_minimax_demo 10.7 / 2.5 / 102735, minimax 6.9 / 3.9 / 96601, linter 6.6 / 1.5 / 50238,
+-- agg_linter_demo 5.7 / 2.2 / 52999, notebook_spat 5.1 / 1.5 / 22058. The next slowest (rip, 4.5 s) stays on both.
+-- After engine-fast (re-measured alone, TS s): agg_precise_oracle 12.9, agg_minimax_demo 6.3, minimax 3.1, linter 2.7,
+-- agg_linter_demo 2.8, notebook_spat 3.2 -- 3 to 6 s of TS beside the 1.5 to 4 s of Rust, and 20 to 100 s of pooled CPU over the corpus; the
+-- pooled figures above stand for the rule. A world that crosses the cap later is added here with its numbers; none is capped silently.
+check_opt("agg_precise_oracle", one_engine, rust).
+check_opt("agg_minimax_demo", one_engine, rust).
+check_opt("minimax", one_engine, rust).
+check_opt("linter", one_engine, rust).
+check_opt("agg_linter_demo", one_engine, rust).
+check_opt("notebook_spat", one_engine, rust).
 -- sealed(provenance), the one knob: the set of facts is the contract; the Rust engine keeps no derived_by and no
 -- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
 check_world("sealed_provenance").

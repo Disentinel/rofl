@@ -33,7 +33,8 @@ const WORLDS: Record<string, string[]> = {
   agg_linter_demo: [...['corpus-boot-heads', 'corpus-dataflow', 'corpus-fixture', 'linter'].map((f) => `examples/linter/${f}.rofl`), LINTER_CHECK],
 };
 // the options the registry declares for a world: its files load together, and `explain_request` is answered
-const OPTS: Record<string, { together?: boolean; explain?: boolean }> = { agg_linter_demo: { together: true, explain: true } };
+// agg_linter_demo is Rust only (facts/checks.rofl, "RUST ONLY"): its mutants are not given to the TypeScript engine either
+const OPTS: Record<string, { together?: boolean; explain?: boolean; oneEngine?: 'rust' }> = { agg_linter_demo: { together: true, explain: true, oneEngine: 'rust' } };
 type Edit = { file: string; append?: string; replace?: [string, string] };
 type Mutant = { expect: string | null; world: keyof typeof WORLDS; edits: Edit[] };
 const add = (append: string, file = AGG): Edit => ({ file, append });
@@ -175,10 +176,10 @@ const fired = (census: Map<string, number>, rel: string): number =>
   (census.get(`${rel}[audit]`) ?? 0) + (census.get(`${rel}[main]`) ?? 0);
 
 /** One mutant or control, its files already written: what it got wrong. */
-export function judge(i: number, expect: string | null, files: string[], alarms: string[], opts: { together?: boolean; explain?: boolean } = {}): string[] {
+export function judge(i: number, expect: string | null, files: string[], alarms: string[], opts: { together?: boolean; explain?: boolean; oneEngine?: 'rust' } = {}): string[] {
   const bad: string[] = [];
   const w = { name: `mutant_${i}`, files, ...opts };
-  for (const [who, a] of [['ts', answerTS(w)], ['rust', answerRust(w)]] as const) {
+  for (const [who, a] of [['ts', w.oneEngine === 'rust' ? null : answerTS(w)], ['rust', answerRust(w)]] as const) {
     if (!a) continue;
     if (a.dropped.length) { bad.push(`${i} ${who}: refused ${a.dropped.join('; ')}`); continue; }
     if (expect === null) {

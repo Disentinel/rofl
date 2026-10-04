@@ -71,12 +71,15 @@ function pack(file: string, text?: string): Rofl | null {
   r.evaluate();
   return r;
 }
+const loaded = pack;
 const col = (r: Rofl, lit: string, ...vs: string[]): string[][] =>
   r.query(lit).rows.map((x) => vs.map((v) => String(x.bindings[v]).replace(/^"|"$/g, '')));
 
 /** `oneEngine` names the engine that answers a world alone: `ts` for a host
  *  contract the two answer differently (budget_wall), `rust` for a world
- *  only the Rust engine can answer. `strata` runs the stock evaluator, `explain` the
+ *  only the Rust engine can answer, or one too big for TypeScript to be asked
+ *  (the TypeScript engine is not run on it at all: not by npm test, bless, whycheck
+ *  or test:agg; facts/checks.rofl, "RUST ONLY", states the rule and each world's reason). `strata` runs the stock evaluator, `explain` the
  *  `explain_request` bridge of rofl-load. */
 export interface World {
   /** a budget no world needs, which a planted fault that runs away is cut by sooner (scripts/agg_breaks.ts); a cut it makes is still a problem */
@@ -133,7 +136,18 @@ export function worlds(): World[] {
   };
   pack(rl, '');
   out.push({ name: 'boot_only', files: [] });
-  return [...out, ...declared()];
+  // A WALKED WORLD DECLARED ONE-ENGINE (check_opt(W, one_engine, rust)): a world found by walking has no check_world
+  // block, so the option alone is read for it, and a name that is no world is refused rather than ignored
+  const r = loaded('facts/checks.rofl');
+  const dec = declared();
+  for (const [n, e] of r ? col(r, 'check_opt(N, one_engine, E)', 'N', 'E') : []) {
+    if (dec.some((w) => w.name === n)) continue;
+    const w = out.find((x) => x.name === n);
+    if (e !== 'ts' && e !== 'rust') throw new Error(`check_opt("${n}", one_engine, ${e}): the engine is ts or rust`);
+    if (!w) throw new Error(`check_opt("${n}", one_engine, ${e}): no such world`);
+    w.oneEngine = e as 'ts' | 'rust';
+  }
+  return [...out, ...dec];
 }
 
 /** `problems` are reds that are neither a hash nor an alarm: a refusal
@@ -161,11 +175,12 @@ export function declared(text?: string): World[] {
   const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract']);
   for (const [n, k] of col(r, 'check_opt(N, K, V)', 'N', 'K')) {
     if (!KNOWN.has(k)) throw new Error(`check_opt("${n}", ${k}, _): no such option; the options are ${[...KNOWN].join(', ')}`);
-    if (!out.has(n)) throw new Error(`check_opt("${n}", ${k}, _): no check_world("${n}")`);
+    // a world the tree is walked to may be declared one-engine, the one option that needs no files (see worlds())
+    if (!out.has(n) && k !== 'one_engine') throw new Error(`check_opt("${n}", ${k}, _): no check_world("${n}")`);
   }
   for (const [n, e] of col(r, 'check_opt(N, one_engine, E)', 'N', 'E')) {
     if (e !== 'ts' && e !== 'rust') throw new Error(`check_opt("${n}", one_engine, ${e}): the engine is ts or rust`);
-    out.get(n)!.oneEngine = e;
+    if (out.has(n)) out.get(n)!.oneEngine = e;
   }
   for (const [n, e] of col(r, 'check_opt(N, evaluator, E)', 'N', 'E')) {
     if (e !== 'strata') throw new Error(`check_opt("${n}", evaluator, ${e}): the one evaluator to choose is strata`);
@@ -864,8 +879,12 @@ let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
 export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean): string | null {
   if (!g) return `${w.name}: no golden — bless it or delete the world`;
-  const ts = answerTS(w);
+  const t0 = Date.now();
+  // a Rust-only world is never given to the TypeScript engine
+  const ts = w.oneEngine === 'rust' ? null : answerTS(w);
+  const t1 = Date.now();
   const rs = rustMissing ? null : answerRust(w);
+  if (process.env.ROFL_TIMES) fs.appendFileSync(process.env.ROFL_TIMES, `${w.name}\t${t1 - t0}\t${Date.now() - t1}\t${(ts ?? rs)?.facts ?? 0}\t${w.oneEngine ?? 'both'}\n`);
   const bad: string[] = [];
   // a file the world refuses and is not declared to refuse (check_refuses in facts/checks.rofl)
   const blessed = w.oneEngine === 'rust' ? rs : ts;
@@ -882,6 +901,7 @@ export function checkWorld(w: World, g: { hash: string; census: Map<string, numb
     for (const a of rs.alarms) bad.push(`ALARM ${a}`);
     return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
   }
+  if (!ts) return `${w.name.padEnd(28)} no TypeScript answer`;
   // under sealed(provenance) the Rust engine records no witness, so its witness count is not compared
   const sealsProvenance = w.files.some((f) => f.endsWith('.rofl') && fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8').includes('sealed(provenance)'));
   for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
@@ -1099,5 +1119,9 @@ if (isMain) {
   if (proseCheck) failed(await proseCheck, /STALE|Error/, 'scripts/agg_prose.ts --check');
   for (const f of fail) console.log(`FAIL ${f}`);
   console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  for (const e of ['rust', 'ts'] as const) {
+    const one = ws.filter((w) => w.oneEngine === e).map((w) => w.name);
+    if (one.length) console.log(`${one.length} checked on ${e === 'rust' ? 'Rust' : 'TypeScript'} only: ${one.join(' ')}`);
+  }
   process.exit(fail.length === 0 ? 0 : 1);
 }

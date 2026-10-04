@@ -1163,15 +1163,12 @@ brk_expects("ts_max", "agg_cell_eval").
 brk_expects("ts_max", "agg_minmax_eval").
 brk_expects("ts_max", "agg_lattice_eval").
 brk_expects("ts_max", "agg_critpath_demo").
-brk_expects("ts_max", "agg_minimax_demo").
 brk("ts_no_agg_edge"). brk_kind("ts_no_agg_edge", ts).
 brk_expects("ts_no_agg_edge", "agg_count_eval").
 brk_expects("ts_no_agg_edge", "agg_sum_eval").
 brk_expects("ts_no_agg_edge", "agg_minmax_eval").
-brk_expects("ts_no_agg_edge", "agg_minimax_demo").
 brk("ts_no_empty_zero"). brk_kind("ts_no_empty_zero", ts).
 brk_expects("ts_no_empty_zero", "agg_empty_eval").
-brk_expects("ts_no_empty_zero", "agg_minimax_demo").
 brk_expects("ts_no_empty_zero", "agg_quorum_demo").
 brk("ts_median_upper"). brk_kind("ts_median_upper", ts).
 brk_expects("ts_median_upper", "agg_holistic_eval").
@@ -1264,22 +1261,16 @@ brk_expects("agg_reach_fresh_off", "agg_precise_holes").
 brk("agg_reach_first_only"). brk_kind("agg_reach_first_only", switch).
 brk_expects("agg_reach_first_only", "agg_precise_holes").
 brk("ts_agg_reach_whole"). brk_kind("ts_agg_reach_whole", ts).
-brk_expects("ts_agg_reach_whole", "agg_precise_oracle").
 brk_expects("ts_agg_reach_whole", "agg_precise_holes").
 brk("ts_agg_reach_neg_certain"). brk_kind("ts_agg_reach_neg_certain", ts).
-brk_expects("ts_agg_reach_neg_certain", "agg_precise_oracle").
 brk_expects("ts_agg_reach_neg_certain", "agg_precise_holes").
 brk("ts_agg_reach_dedup_any"). brk_kind("ts_agg_reach_dedup_any", ts).
-brk_expects("ts_agg_reach_dedup_any", "agg_precise_oracle").
 brk_expects("ts_agg_reach_dedup_any", "agg_precise_holes").
 brk("ts_agg_reach_bound_any"). brk_kind("ts_agg_reach_bound_any", ts).
-brk_expects("ts_agg_reach_bound_any", "agg_precise_oracle").
 brk_expects("ts_agg_reach_bound_any", "agg_precise_holes").
 brk("ts_agg_reach_sum_zero"). brk_kind("ts_agg_reach_sum_zero", ts).
-brk_expects("ts_agg_reach_sum_zero", "agg_precise_oracle").
 brk_expects("ts_agg_reach_sum_zero", "agg_precise_holes").
 brk("ts_agg_reach_holistic_low_only"). brk_kind("ts_agg_reach_holistic_low_only", ts).
-brk_expects("ts_agg_reach_holistic_low_only", "agg_precise_oracle").
 brk_expects("ts_agg_reach_holistic_low_only", "agg_precise_holes").
 brk("ts_agg_reach_fresh_off"). brk_kind("ts_agg_reach_fresh_off", ts).
 brk_expects("ts_agg_reach_fresh_off", "agg_precise_holes").
@@ -1289,7 +1280,6 @@ brk("agg_reach_neg_fact_ignored"). brk_kind("agg_reach_neg_fact_ignored", switch
 brk_expects("agg_reach_neg_fact_ignored", "agg_precise_oracle").
 brk_expects("agg_reach_neg_fact_ignored", "agg_precise_holes").
 brk("ts_agg_reach_neg_fact_ignored"). brk_kind("ts_agg_reach_neg_fact_ignored", ts).
-brk_expects("ts_agg_reach_neg_fact_ignored", "agg_precise_oracle").
 brk_expects("ts_agg_reach_neg_fact_ignored", "agg_precise_holes").
 brk("agg_reach_fault_relabel"). brk_kind("agg_reach_fault_relabel", switch).
 brk_expects("agg_reach_fault_relabel", "agg_precise_holes").
@@ -1303,7 +1293,6 @@ brk("agg_reach_sum_empty"). brk_kind("agg_reach_sum_empty", switch).
 brk_expects("agg_reach_sum_empty", "agg_precise_oracle").
 brk_expects("agg_reach_sum_empty", "agg_precise_holes").
 brk("ts_agg_reach_sum_empty"). brk_kind("ts_agg_reach_sum_empty", ts).
-brk_expects("ts_agg_reach_sum_empty", "agg_precise_oracle").
 brk_expects("ts_agg_reach_sum_empty", "agg_precise_holes").
 brk("agg_reach_alias_first"). brk_kind("agg_reach_alias_first", switch).
 brk_expects("agg_reach_alias_first", "agg_precise_holes").
