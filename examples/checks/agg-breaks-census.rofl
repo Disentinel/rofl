@@ -1306,6 +1306,47 @@ brk("agg_reach_unmemo"). brk_kind("agg_reach_unmemo", switch).
 brk_expects("agg_reach_unmemo", "agg_precise_scale").
 brk("ts_agg_reach_unmemo"). brk_kind("ts_agg_reach_unmemo", ts).
 brk_expects("ts_agg_reach_unmemo", "agg_precise_scale").
+brk("label_off"). brk_kind("label_off", switch).
+brk_expects("label_off", "agg_label_holes").
+brk_expects("label_off", "agg_precise_holes").
+brk("label_ex_ignored"). brk_kind("label_ex_ignored", switch).
+brk_expects("label_ex_ignored", "agg_label_holes").
+brk("label_regions_off"). brk_kind("label_regions_off", switch).
+brk_expects("label_regions_off", "agg_label_holes").
+brk("label_correlation_lost"). brk_kind("label_correlation_lost", switch).
+brk_expects("label_correlation_lost", "agg_label_holes").
+brk("label_cap_ignored"). brk_kind("label_cap_ignored", switch).
+brk_expects("label_cap_ignored", "agg_label_cap").
+brk("label_open_correlation"). brk_kind("label_open_correlation", switch).
+brk_expects("label_open_correlation", "agg_precise_holes").
+brk("label_new_anonymous"). brk_kind("label_new_anonymous", switch).
+brk_expects("label_new_anonymous", "agg_precise_holes").
+brk("label_sure_always"). brk_kind("label_sure_always", switch).
+brk_expects("label_sure_always", "agg_label_holes").
+brk("ts_label_off"). brk_kind("ts_label_off", ts).
+brk_expects("ts_label_off", "agg_label_holes").
+brk("ts_label_ex_ignored"). brk_kind("ts_label_ex_ignored", ts).
+brk_expects("ts_label_ex_ignored", "agg_label_holes").
+brk("ts_label_regions_off"). brk_kind("ts_label_regions_off", ts).
+brk_expects("ts_label_regions_off", "agg_label_holes").
+brk("ts_label_correlation_lost"). brk_kind("ts_label_correlation_lost", ts).
+brk_expects("ts_label_correlation_lost", "agg_label_holes").
+brk("ts_label_cap_ignored"). brk_kind("ts_label_cap_ignored", ts).
+brk_expects("ts_label_cap_ignored", "agg_label_cap").
+brk("ts_label_open_correlation"). brk_kind("ts_label_open_correlation", ts).
+brk_expects("ts_label_open_correlation", "agg_precise_holes").
+brk("ts_label_new_anonymous"). brk_kind("ts_label_new_anonymous", ts).
+brk_expects("ts_label_new_anonymous", "agg_precise_holes").
+brk("ts_label_sure_always"). brk_kind("ts_label_sure_always", ts).
+brk_expects("ts_label_sure_always", "agg_label_holes").
+brk("label_by_values_ignored"). brk_kind("label_by_values_ignored", switch).
+brk_expects("label_by_values_ignored", "agg_label_holes").
+brk("ts_label_by_values_ignored"). brk_kind("ts_label_by_values_ignored", ts).
+brk_expects("ts_label_by_values_ignored", "agg_label_holes").
+brk("label_match_unconditional"). brk_kind("label_match_unconditional", switch).
+brk_expects("label_match_unconditional", "agg_label_oracle").
+brk("ts_label_match_unconditional"). brk_kind("ts_label_match_unconditional", ts).
+brk_expects("ts_label_match_unconditional", "agg_label_oracle").
 brk("retract_no_subtract"). brk_kind("retract_no_subtract", switch).
 brk_expects("retract_no_subtract", "agg_incr_sum").
 brk_expects("retract_no_subtract", "agg_incr_tagc").
@@ -1735,6 +1776,16 @@ switch_site("join_why_ghost_unmarked", "rust/rofl/src/engine.rs").
 switch_site("join_why_one_member", "rust/rofl/src/engine.rs").
 switch_site("join_whynot_below", "rust/rofl/src/engine.rs").
 switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
+switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
+switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
+switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").
+switch_site("label_ex_ignored", "rust/rofl/src/engine.rs").
+switch_site("label_match_unconditional", "rust/rofl/src/engine.rs").
+switch_site("label_new_anonymous", "rust/rofl/src/engine.rs").
+switch_site("label_off", "rust/rofl/src/engine.rs").
+switch_site("label_open_correlation", "rust/rofl/src/engine.rs").
+switch_site("label_regions_off", "rust/rofl/src/engine.rs").
+switch_site("label_sure_always", "rust/rofl/src/engine.rs").
 switch_site("lattice_agg_decides", "rust/rofl/src/engine.rs").
 switch_site("lattice_alive_unchecked", "rust/rofl/src/engine.rs").
 switch_site("lattice_arity_short", "rust/rofl/src/program.rs").

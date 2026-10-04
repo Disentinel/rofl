@@ -130,3 +130,60 @@ alarm(lo_split_missing).
 -- expect-row: lo_n_qn[main](g3,4)
 -- expect-row: lo_vals_utot[main](2)
 -- expect-row: lo_vals_utot[main](3)
+
+-- THE ORDER KINDS over all groups (lm, lk, lf of agg-label-data.rofl), one question to a completion
+edb(lo_q).
+lo_q(lminall). lo_q(lmaxall). lo_q(lkminall). lo_q(lkmaxall). lo_q(lfany). lo_q(lfall).
+lo_lm(V, G, W) :- lo_v(V), lm0(G, _, W).
+lo_lm(V, V, 4) :- lo_v(V).
+lo_lk(V, G, W) :- lo_v(V), lm0(G, _, W).
+lo_lk(V, V, 2) :- lo_v(V).
+lo_lf(V, G, W) :- lo_v(V), lf0(G, _, W).
+lo_lf(V, V, true) :- lo_v(V).
+lo_lmn(V, G, M) :- M is min(W : lo_lm(V, G, W)).
+lo_lmx(V, G, M) :- M is max(W : lo_lm(V, G, W)).
+lo_lkn(V, G, M) :- M is min(W : lo_lk(V, G, W)).
+lo_lkx(V, G, M) :- M is max(W : lo_lk(V, G, W)).
+lo_lfo(V, G, M) :- M is or(W : lo_lf(V, G, W)).
+lo_a(lminall, V, M) :- lo_v(V), M is min(W : lo_lmn(V, _, W)).
+lo_a(lmaxall, V, M) :- lo_v(V), M is max(W : lo_lmx(V, _, W)).
+lo_a(lkminall, V, M) :- lo_v(V), M is min(W : lo_lkn(V, _, W)).
+lo_a(lkmaxall, V, M) :- lo_v(V), M is max(W : lo_lkx(V, _, W)).
+lo_a(lfany, V, M) :- lo_v(V), M is or(W : lo_lfo(V, _, W)).
+lo_a(lfall, V, M) :- lo_v(V), M is and(W : lo_lfo(V, _, W)).
+lo_ans(Q, M) :- lo_a(Q, _, M).
+lo_nans(Q, N) :- lo_q(Q), N is count(M : lo_ans(Q, M)).
+lo_eng(lminall, M) :- lminall(M).
+lo_eng(lmaxall, M) :- lmaxall(M).
+lo_eng(lkminall, M) :- lkminall(M).
+lo_eng(lkmaxall, M) :- lkmaxall(M).
+lo_eng(lfany, M) :- lfany(M).
+lo_eng(lfall, M) :- lfall(M).
+lo_has(Q) :- lo_eng(Q, _).
+lo_sh(lminall) :- shrug(lminall(_), _, _).
+lo_sh(lmaxall) :- shrug(lmaxall(_), _, _).
+lo_sh(lkminall) :- shrug(lkminall(_), _, _).
+lo_sh(lkmaxall) :- shrug(lkmaxall(_), _, _).
+lo_sh(lfany) :- shrug(lfany(_), _, _).
+lo_sh(lfall) :- shrug(lfall(_), _, _).
+lo_bad(Q, M) :- lo_eng(Q, M), lo_a(Q, _, X), M != X.
+lo_agreed_missing(Q, none) :- lo_nans(Q, 1), not lo_has(Q).
+lo_split_decided(Q, none) :- lo_has(Q), lo_nans(Q, N), N > 1.
+lo_shrug_wrong(Q, none) :- lo_sh(Q), lo_nans(Q, 1).
+lo_split_missing(Q, none) :- lo_nans(Q, N), N > 1, not lo_sh(Q).
+-- expect-row: lo_nans[main](lminall,1)
+-- expect-row: lo_nans[main](lmaxall,1)
+-- expect-row: lo_nans[main](lkminall,1)
+-- expect-row: lo_nans[main](lkmaxall,1)
+-- expect-row: lo_nans[main](lfany,1)
+-- expect-row: lo_nans[main](lfall,2)
+
+-- lzg: the members of a group read through lw(g2, X) and lw(G, _), per completion: g1 and g2 count 1, and 2 where
+-- the unknown is g2's; g3 is a group only where the unknown is g3's, and counts 1 there
+lo_zg(V, G, S) :- lo_v(V), S is count(X : lo_w(V, g2, X), lo_w(V, G, _)).
+lo_zgn(G, S, M) :- lo_zg(_, G, S), M is count(V : lo_zg(V, G, S)).
+lo_bad(lzg, G) :- lzg(G, S), lo_comps(N), lo_zgn(G, S, M), M != N.
+-- expect-row: lo_zgn[main](g1,1,3)
+-- expect-row: lo_zgn[main](g1,2,1)
+-- expect-row: lo_zgn[main](g3,1,1)
+-- expect-no-row: lzg[main](

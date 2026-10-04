@@ -19,7 +19,7 @@ pub(super) const LABEL_REGIONS: i64 = 64;
 /// What the regions said of a group an unknown moves.
 pub(super) enum Regions {
     No,
-    Decided(Val, String),
+    Decided(Term, String),
     Cond(Term),
     Capped(i64),
 }
@@ -184,13 +184,13 @@ impl Eval {
     /// The group's member count or total in one region, over its known
     /// members and the possibles present there; `None` where it has no member.
     #[allow(clippy::too_many_arguments)]
-    fn region_value(&mut self, op: AggOp, labels: &[Term], rg: &[Rv], gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Option<i128> {
+    fn region_value(&mut self, op: AggOp, labels: &[Term], rg: &[Rv], gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Option<Term> {
         let count = op == AggOp::Count;
         let mut seen: Vec<Vec<Term>> = Vec::new();
-        let mut total: i128 = 0;
+        let mut xs: Vec<Term> = Vec::new();
         for (m, p) in projs.iter().enumerate() {
             seen.push(p.to_vec());
-            total += if count { 1 } else { vals[m].as_int()? as i128 };
+            xs.push(if count { Term::int(1) } else { vals[m] });
         }
         'p: for p in mine {
             for (i, g) in gkey.iter().enumerate() {
@@ -215,10 +215,38 @@ impl Eval {
             if seen.contains(&pr) {
                 continue;
             }
-            total += if count { 1 } else { pr.first()?.as_int()? as i128 };
+            xs.push(if count { Term::int(1) } else { *pr.first()? });
             seen.push(pr);
         }
-        (!seen.is_empty() && (INT_MIN as i128..=INT_MAX as i128).contains(&total)).then_some(total)
+        if seen.is_empty() {
+            return None;
+        }
+        self.fold_values(op, &xs)
+    }
+
+    /// The value of a group over its members' values: a count, a total, the least or greatest, any or all.
+    fn fold_values(&self, op: AggOp, xs: &[Term]) -> Option<Term> {
+        let ints = || xs.iter().map(|t| t.as_int().map(|n| n as i128)).collect::<Option<Vec<i128>>>();
+        let int = |n: i128| (INT_MIN as i128..=INT_MAX as i128).contains(&n).then(|| Term::int(n as i64));
+        match op {
+            AggOp::Count => int(xs.len() as i128),
+            AggOp::Sum => int(ints()?.iter().sum()),
+            AggOp::Min => int(*ints()?.iter().min()?),
+            AggOp::Max => int(*ints()?.iter().max()?),
+            AggOp::Or | AggOp::And => {
+                let bs = xs
+                    .iter()
+                    .map(|t| match t.as_atom() {
+                        Some(a) if a == self.v.a_true => Some(true),
+                        Some(a) if a == self.v.a_false => Some(false),
+                        _ => None,
+                    })
+                    .collect::<Option<Vec<bool>>>()?;
+                let b = if op == AggOp::Or { bs.iter().any(|b| *b) } else { bs.iter().all(|b| *b) };
+                Some(Term::atom(if b { self.v.a_true } else { self.v.a_false }))
+            }
+            _ => None,
+        }
     }
 
     /// THE GROUP `gkey` BY REGIONS (docs/aggregates.md, "Labeled unknowns"),
@@ -226,7 +254,7 @@ impl Eval {
     /// completion and rest on labels alone.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn region_decide(&mut self, op: AggOp, a: &Agg, gkey: &[Term], projs: &[&[Term]], vals: &[Term], mine: &[&Possible]) -> Regions {
-        if !matches!(op, AggOp::Count | AggOp::Sum) || a.params() != 0 || mine.is_empty() || !mine.iter().all(|p| self.region_ok(p)) {
+        if !matches!(op, AggOp::Count | AggOp::Sum | AggOp::Min | AggOp::Max | AggOp::Or | AggOp::And) || a.params() != 0 || mine.is_empty() || !mine.iter().all(|p| self.region_ok(p)) {
             return Regions::No;
         }
         let mut labels: Vec<Term> = Vec::new();
@@ -250,14 +278,14 @@ impl Eval {
             return Regions::Capped(n);
         }
         let regs = Self::region_list(labels.len(), &consts);
-        let mut vs: Vec<i128> = Vec::with_capacity(regs.len());
+        let mut vs: Vec<Term> = Vec::with_capacity(regs.len());
         for rg in &regs {
             let Some(v) = self.region_value(op, &labels, rg, gkey, projs, vals, mine) else { return Regions::No };
             vs.push(v);
         }
         if vs.iter().all(|v| *v == vs[0]) {
             let by: Vec<String> = labels.iter().map(|l| format!("_[{}]", self.label_text(*l))).collect();
-            return Regions::Decided(Val::Int(vs[0]), by.join(", "));
+            return Regions::Decided(vs[0], by.join(", "));
         }
         let idx: Vec<usize> = (0..regs.len()).collect();
         Regions::Cond(self.by_node(&labels, &regs, &vs, &consts, 0, &idx))
@@ -266,9 +294,9 @@ impl Eval {
     /// The value of the group as a table over the labels, `labels[i..]` still to be told, `idx` the regions the
     /// labels before them are the same in: a case for each constant the label could be and for each earlier
     /// label it could be equal to, the rest where it is none of them; a case no different from the rest is left out.
-    fn by_node(&mut self, labels: &[Term], regs: &[Vec<Rv>], vs: &[i128], consts: &[Term], i: usize, idx: &[usize]) -> Term {
+    fn by_node(&mut self, labels: &[Term], regs: &[Vec<Rv>], vs: &[Term], consts: &[Term], i: usize, idx: &[usize]) -> Term {
         if i == labels.len() {
-            return Term::int(vs[idx[0]] as i64);
+            return vs[idx[0]];
         }
         let mut cases: Vec<(Term, Term)> = Vec::new();
         for c in consts {
@@ -306,7 +334,7 @@ impl Eval {
     /// own, and those of each other label that is this one's value too, a
     /// table over those labels (`$by` with this label as the key of its case).
     pub(super) fn new_group_value(&mut self, a: &Agg, ps: &[Possible], pat: &[Option<Term>], labs: &[Option<Term>]) -> Option<Term> {
-        if !matches!(a.op, AggOp::Count | AggOp::Sum) || a.params() != 0 || pat.iter().filter(|t| t.is_none()).count() != 1 {
+        if !matches!(a.op, AggOp::Count | AggOp::Sum | AggOp::Min | AggOp::Max | AggOp::Or | AggOp::And) || a.params() != 0 || pat.iter().filter(|t| t.is_none()).count() != 1 {
             return None;
         }
         let at = pat.iter().position(|t| t.is_none())?;
@@ -334,27 +362,30 @@ impl Eval {
             if !into.contains(&pr) {
                 into.push(pr);
             }
+            if others.len() > 6 {
+                return None;
+            }
         }
-        if own.is_empty() || others.len() > 6 {
+        if own.is_empty() {
             return None;
         }
         others.sort_by(|x, y| cmp_js(&tuple_text(&self.h, &[x.0]), &tuple_text(&self.h, &[y.0])));
-        self.new_group_node(a.op == AggOp::Count, label, &others, 0, own)
+        self.new_group_node(a.op, label, &others, 0, own)
     }
 
-    fn new_group_node(&mut self, count: bool, own: Term, others: &[(Term, Vec<Vec<Term>>)], j: usize, acc: Vec<Vec<Term>>) -> Option<Term> {
+    fn new_group_node(&mut self, op: AggOp, own: Term, others: &[(Term, Vec<Vec<Term>>)], j: usize, acc: Vec<Vec<Term>>) -> Option<Term> {
         if j == others.len() {
-            let total: i128 = if count { acc.len() as i128 } else { acc.iter().map(|p| p.first().and_then(|t| t.as_int()).map(|n| n as i128)).sum::<Option<i128>>()? };
-            return (INT_MIN as i128..=INT_MAX as i128).contains(&total).then(|| Term::int(total as i64));
+            let xs: Option<Vec<Term>> = acc.iter().map(|p| if op == AggOp::Count { Some(Term::int(1)) } else { p.first().copied() }).collect();
+            return self.fold_values(op, &xs?);
         }
-        let without = self.new_group_node(count, own, others, j + 1, acc.clone())?;
+        let without = self.new_group_node(op, own, others, j + 1, acc.clone())?;
         let mut with = acc;
         for p in &others[j].1 {
             if !with.contains(p) {
                 with.push(p.clone());
             }
         }
-        let with = self.new_group_node(count, own, others, j + 1, with)?;
+        let with = self.new_group_node(op, own, others, j + 1, with)?;
         if with == without {
             return Some(without);
         }

@@ -1713,7 +1713,7 @@ may match them, `$unk(_, _, _)`):
 | --- | --- |
 | `$unk(L, Ex, Sure)` | one occurrence of the unknown value L, known not to be any of the list `Ex`; `Sure` is 1 when the tuple that holds it exists in every completion |
 | `$by(L, D, Cases, Sure)` | a value that is `D`, and `V` where L is `K` for `c(K, V)` in `Cases`: a count or sum that depends on L; `K` is a constant or another label (L is equal to it), `V` may be a `$by` of another label, so a table over several |
-| `$lbl(Head, Pos, Firing)` | the label: the missing fact it came from (the head of the rule that faulted with `_` where it is not known, and the position) and the firing (the rule and what its variables were), so two firings of one rule are two unknowns and one firing twice is one |
+| `$lbl(Head, Pos, Firing)` | the label: the missing fact it came from (the head of the rule that faulted with `_` where it is not known, and the position) and the firing: for a tuple that exists, the rule and what its variables were, so two firings of one rule are two unknowns (two members, not one) and one firing twice is one; for a tuple that may not exist, the rule alone, and the firings that left the same head are one, as an unknown tuple always was |
 
 `$unknown_value` stays: an unknown with no label (an unbound variable of a
 literal over a whole relation, the padding of a cell's value, an `unknown(v(_))`
@@ -1755,13 +1755,13 @@ correlation is no longer held a hole whole beside its groups
 labeled, in `ph_wc` and `ph_pair`). A pattern with more than one open position,
 or with an open position that is not labeled, is as it was.
 
-**The correlation** (`region_decide`, `regionDecide`). A group of a count or a
-sum whose possibles all exist in every completion and rest on labels is decided
+**The correlation** (`region_decide`, `regionDecide`). A group of a count, a
+sum, a min, a max, an or or an and whose possibles all exist in every completion and rest on labels is decided
 by regions: the values a label can be told apart by are the constants the
 terms mention (the group key, the exclusion lists, the cases of a `$by`) and
 one class for all the rest, and two labels may share a class, so a REGION is an
 assignment of every label to a constant or to a class (Bell over the classes).
-Each region gives the group its members, a count or a sum folded over the known
+Each region gives the group its members, its value folded over the known
 members and the possibles present there (a possible whose label is a value its
 occurrence is known not to be is not there). All regions the same: the cell is
 sealed with that value, not a hole, and `why` says so: `[aggregate: no member
@@ -1772,8 +1772,8 @@ one unknown and not one per group. This is how the sum and the count over all
 groups are exact when one member's group is unknown, and when two are: each
 member adds one to the group it joins or makes a group of its own, whatever it
 is. A group with a possible that may not exist, one that is not labeled, one
-that is not a count or a sum, or a comparison over a table, is decided as
-before (the algebra of "Precise holes, as built").
+of a holistic kind (median, quantile, rank), or a comparison over a table,
+is decided as before (the algebra of "Precise holes, as built").
 
 **The cap** (`LABEL_REGIONS` = 64). One label is linear (its constants plus
 one). Regions are counted before they are made (`count_regions`); more than 64
@@ -1803,6 +1803,9 @@ moves are these and the new text of a fault's target, nothing else):
 | `not ph_pair(g1, h3, 2)`, the same for a pair | shrug | holds |
 | the total of all groups, one member (`ltot`) | shrug | 3 |
 | the total of all groups, two members (`lc2tot`) | shrug | 3 |
+| the least of all groups' least, a member of 2 (`lkminall`) | shrug | 2 |
+| the greatest of all groups' greatest, a member of 4 (`lmaxall`) | shrug | 5 |
+| any group true, a member true (`lfany`) | shrug | true |
 | a count no completion gives (`lwc(g1, 3)`) | shrug | no |
 | a group no unknown moves, `not lqc(g5, 1)` | shrug | holds |
 
@@ -1812,9 +1815,10 @@ projection is held by a group already (`lvtot`, `$by(L, 3, [g1 -> 2])`), the
 total over a member that may not exist (`lutot`).
 
 **Not decided** (sound, not complete): the group the labeled unknown makes
-when several positions of the group are open; a min, max or holistic kind over
-a labeled member (the algebra of "Precise holes, as built" decides them, a
-labeled unknown only names them); a comparison over a `$by` value; an unknown
+when several positions of the group are open; a holistic kind (median,
+quantile, rank) over a labeled member (the algebra of "Precise holes, as
+built" decides it, a labeled unknown only names it); a comparison over a `$by`
+value; an unknown
 in the key of a lattice cell (`Unknown::Rel`); a `$by` over more than six
 labels for the count of a new group. These keep the anonymous unknown and its
 shrug.
@@ -1824,7 +1828,8 @@ and `agg_label_cap_oracle` (every completion of one unknown, of two unknowns
 sharing a group or not, each aggregate recomputed in each, the engine held to
 them: a value held is every completion's, one value is a row, two are a
 shrug), `agg_label_cap` (the cap), the extensions of `agg_precise_holes`, and
-the TypeScript surfaces of `scripts/goldens.ts`. The faults: `label_off`,
+the TypeScript surfaces of `scripts/goldens.ts`; the order kinds (min, max, or, and
+over all groups) in the same two worlds. The faults: `label_off`,
 `label_ex_ignored`, `label_by_values_ignored`, `label_regions_off`,
 `label_correlation_lost`, `label_cap_ignored`, `label_open_correlation`,
 `label_new_anonymous`, `label_sure_always` and their `ts_label_*` twins.

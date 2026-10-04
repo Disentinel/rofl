@@ -70,3 +70,21 @@ lb_sh3(G) :- shrug(lthree(G), _, _).
 -- expect-no-row: lb_sh3[main](g1)
 -- expect-no-row: lb_sh3[main](g2)
 -- expect-no-row: lb_sh3[main](g3)
+
+-- the order kinds over all groups, by hand. lm: a member of 4 makes g1's least 4 or 5 and g2's greatest
+-- 3 or 4, and a group of 4; g2's 3 is the least whatever, g1's 5 the greatest. lk: a member of 2 is the
+-- least of the group it joins or makes, so 2 is the least over all groups. lf: g1 is true; g2 is false
+-- unless the member is g2's, so some group is true (decided) and every group is true only there.
+-- expect-row: lminall[main](3)
+-- expect-row: lmaxall[main](5)
+-- expect-row: lkminall[main](2)
+-- expect-row: lkmaxall[main](5)
+-- expect-row: lfany[main](true)
+-- expect-no-row: lfall[main](
+-- expect-no-row: lkn[main](g1,
+-- expect-no-row: lkn[main](g2,
+lb_ord(lfall) :- shrug(lfall(_), _, _).
+lb_ord(lkn(G)) :- shrug(lkn(G, _), _, _).
+-- expect-row: lb_ord[main](lfall)
+-- expect-row: lb_ord[main](lkn(g1))
+-- expect-row: lb_ord[main](lkn(g2))

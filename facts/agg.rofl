@@ -1230,7 +1230,7 @@ work_spawned(w_agg_rank_by_tuple, f_a_rank_over_a_tuple_is_a_position_among_dist
 -- owner 2026-10-04; docs/aggregates.md, "Labeled unknowns"): an unknown value with a label and a condition,
 -- in both engines. It owns no cell of the matrix and closes by these worlds.
 work(w_labeled_unknowns, "labeled unknowns: an unknown value carries a label (the missing fact it came from) and an excluded set, a group an unknown makes is none of the sealed ones, a count or total over groups whose members rest on one such unknown is decided by what each value it could be gives, a shrug names the label and the condition, a cap on the regions; in both engines, byte for byte").
-work_state(w_labeled_unknowns, open).
+work_state(w_labeled_unknowns, done).
 work_needs(w_labeled_unknowns, w_agg_precise_holes).
 work_needs(w_labeled_unknowns, w_agg_ts).
 work_proof(w_labeled_unknowns, "agg_label_holes").

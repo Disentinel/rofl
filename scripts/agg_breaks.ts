@@ -4458,8 +4458,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "const what = n === 0 ? 'empty group' :",
-    "const what = n === 0 ? `${n} members` :"
+    ": n === 0 ? 'empty group' :",
+    ": n === 0 ? `${n} members` :"
    ]
   ],
   "expect": {
@@ -4737,8 +4737,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "return known(t) ? t : null; });",
-    "return null; });"
+    "const pat = gt.map((t) => (known(t) ? t : null));",
+    "const pat = gt.map(() => null);"
    ]
   ],
   "expect": {
@@ -5097,8 +5097,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/labeled.ts",
-    "return b.cases.find(([k]) => canonTerm(k) === canonTerm(r.c))?.[1] ?? b.dflt;",
-    "return b.dflt;"
+    "const hit = b.cases.find(([k]) => caseMatches(k, labels, rg, at));",
+    "const hit = undefined;"
    ]
   ],
   "expect": {
@@ -5180,6 +5180,27 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_label_holes": "lb_sh3[main]"
+  }
+ },
+ {
+  "id": "label_match_unconditional",
+  "what": "a value matched against a labeled unknown is read as holding in every completion: a member read only where the unknown is a value is always there",
+  "expect": {
+   "agg_label_oracle": "lo_bad"
+  }
+ },
+ {
+  "id": "ts_label_match_unconditional",
+  "what": "the TypeScript engine reads a value matched against a labeled unknown as holding in every completion",
+  "edits": [
+   [
+    "src/unify.ts",
+    "return bindUnknown([ra], same ? s : unsure(s));",
+    "return bindUnknown([ra], s);"
+   ]
+  ],
+  "expect": {
+   "agg_label_oracle": "lo_bad"
   }
  },
  {

@@ -205,6 +205,11 @@ export function byParts(t: Term): { label: Term; dflt: Term; cases: [Term, Term]
   return { label: t.args[0], dflt: t.args[1], cases, sure: t.args[3].k === 'i' && Number(t.args[3].v) === 1 };
 }
 
+const MARK = '$unsure';
+/** The solution passed an undecided step, so what it gives may not exist. */
+export const unsure = (s: Subst): Subst => (s.has(MARK) ? s : new Map(s).set(MARK, mki(1)));
+export const isUnsure = (s: Subst): boolean => s.has(MARK);
+
 /** The values a `$by` can have, the leaves of its table; `null` for what is no table. */
 export function byValues(t: Term): Term[] | null {
   const b = byParts(t);
@@ -240,7 +245,12 @@ export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
     if (p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some((x) => canonTerm(x) === canonTerm(ra))) return null;
     // a value that depends on a label is one of the values it has, and no other
     if (isGround(ra) && !holdsUnknown(ra)) { const vs = byValues(t); if (vs !== null && !vs.some((x) => canonTerm(x) === canonTerm(ra))) return null; }
-    return ra.k === 'v' ? unify(ra, t, s) : bindUnknown([ra], s);
+    if (ra.k === 'v') return unify(ra, t, s);
+    // a value, or another unknown, against this one: it is that value, or it is that unknown, in the completions the
+    // tuple that reads it exists in, and in no other (unless it is this very one)
+    const pa = unkParts(ra), pt = unkParts(t);
+    const same = canonTerm(ra) === canonTerm(t) || (pa !== null && pt !== null && canonTerm(pa.label) === canonTerm(pt.label));
+    return bindUnknown([ra], same ? s : unsure(s));
   }
   if (!holdsUnknown(t)) return unify(a, t, s);
   const ra = resolve(a, s);

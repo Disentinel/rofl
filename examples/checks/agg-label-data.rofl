@@ -49,3 +49,33 @@ lqn(G) :- lg(G), not lqc(G, 1).
 lone(G) :- lg(G), lg3(G), lwc(G, 2).
 -- a count no value of the unknown gives: 3, which g1 and g2 reach at most 2 of
 lthree(G) :- lg(G), lg3(G), lwc(G, 3).
+
+-- the order kinds: a member of value 4 (above g2's least, below g1's), and one of value 2 (below every
+-- group's least), and booleans: the unknown member joins one group, so the least or greatest over
+-- all groups is what it makes of the group it joins
+edb(lm0).
+edb(lf0).
+lm0(g1, a, 5). lm0(g2, b, 3).
+lf0(g1, a, true). lf0(g2, b, false).
+lm(G, X, V) :- lm0(G, X, V).
+lm(G, c, 4) :- lbig(B), G is B + 1.
+lk(G, X, V) :- lm0(G, X, V).
+lk(G, d, 2) :- lbig(B), G is B + 1.
+lf(G, X, V) :- lf0(G, X, V).
+lf(G, c, true) :- lbig(B), G is B + 1.
+lmn(G, V) :- V is min(W : lm(G, _, W)).
+lmx(G, V) :- V is max(W : lm(G, _, W)).
+lkn(G, V) :- V is min(W : lk(G, _, W)).
+lkx(G, V) :- V is max(W : lk(G, _, W)).
+lfo(G, V) :- V is or(W : lf(G, _, W)).
+lminall(V) :- V is min(W : lmn(_, W)).
+lmaxall(V) :- V is max(W : lmx(_, W)).
+lkminall(V) :- V is min(W : lkn(_, W)).
+lkmaxall(V) :- V is max(W : lkx(_, W)).
+lfany(V) :- V is or(W : lfo(_, W)).
+lfall(V) :- V is and(W : lfo(_, W)).
+
+-- a group read through the unknown member only where its group is a value: lw(g2, X) reads the member
+-- only where its group is g2, so the second member lw(G, Z) of g1's count is there in one completion of the
+-- three and not the others: g1 counts 1, and 2 where the unknown is g2's
+lzg(G, S) :- S is count(X : lw(g2, X), lw(G, _)).

@@ -3387,7 +3387,7 @@ export class AggEval {
           // where every unknown it rests on is a label and exists for certain, the group is decided by what each
           // value the labels could be gives it ("Labeled unknowns")
           const rg = this.rankKey(a, s) === null && (value.k === 'value' || value.k === 'empty') ? regionDecide(op, aggParams(a), gkey, reps.map((i) => cands[i].proj), reps.map((i) => values[i]), mine) : { k: 'no' as const };
-          if (rg.k === 'decided') { value = { k: 'value', t: lower({ k: 'int', v: rg.v }) }; decided.set(sealed.length, rg.by); }
+          if (rg.k === 'decided') { value = { k: 'value', t: rg.v }; decided.set(sealed.length, rg.by); }
           else if (rg.k === 'cond') { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; conds.set(sealed.length, rg.t); reached.set(sealed.length, us); }
           else if (rg.k === 'capped') { value = { k: 'hole', reason: 'regions_capped' }; kept = [...order]; capped.set(sealed.length, rg.n); }
           else { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; reached.set(sealed.length, us); }
@@ -5255,9 +5255,11 @@ export class AggEval {
     const ra = head.args.map((a) => resolve(a, s));
     if (!ra.some((t) => t.k === 'v')) return s;
     const hd = mkf(head.rel, ra.map((t) => (t.k === 'v' ? UNKNOWN_VALUE : t)));
-    const bs = [...s].map(([v, t]) => [v, resolve(t, s)] as [string, Term]).sort((a, b) => cmpStr(a[0], b[0]));
-    const firing = mkList([mka(r.id), ...bs.map(([n, t]) => mkf('$b', [mka(n), t]))]);
     const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s);
+    // a tuple that exists is one unknown value for each firing; one that may not is judged as a possible, as every
+    // unknown tuple is, and the firings that left the same head are one
+    const bs = sure ? [...s].map(([v, t]) => [v, resolve(t, s)] as [string, Term]).sort((a, b) => cmpStr(a[0], b[0])) : [];
+    const firing = mkList([mka(r.id), ...bs.map(([n, t]) => mkf('$b', [mka(n), t]))]);
     const out = new Map(s);
     ra.forEach((t, pos) => { if (t.k === 'v') out.set(t.name, mkUnk(mkf('$lbl', [hd, mki(pos), firing]), [], sure)); });
     return out;

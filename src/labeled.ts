@@ -9,7 +9,8 @@
 // region, is a `$by`. More regions than `LABEL_REGIONS` and the group is not decided.
 
 import { labelText } from './shrug.ts';
-import { type Term, canonTerm, mki, mkf, unkParts, byParts, mkUnk, mkList, holdsUnknown, TERM_MIN, TERM_MAX } from './unify.ts';
+import { unsure, isUnsure } from './unify.ts';
+import { type Term, canonTerm, mki, mka, mkf, unkParts, byParts, mkUnk, mkList, holdsUnknown, TERM_MIN, TERM_MAX } from './unify.ts';
 
 export const LABEL_REGIONS = 64;
 
@@ -23,7 +24,7 @@ export interface Poss {
   neg: boolean;
 }
 
-export type Regions = { k: 'no' } | { k: 'decided'; v: bigint; by: string } | { k: 'cond'; t: Term } | { k: 'capped'; n: number };
+export type Regions = { k: 'no' } | { k: 'decided'; v: Term; by: string } | { k: 'cond'; t: Term } | { k: 'capped'; n: number };
 
 type Rv = { c: Term } | { class: number };
 
@@ -32,10 +33,7 @@ const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 const asInt = (t: Term | undefined): bigint | null => (t !== undefined && t.k === 'i' ? BigInt(t.v) : null);
 const inRange = (n: bigint): boolean => n >= TERM_MIN && n <= TERM_MAX;
 
-const MARK = '$unsure';
-/** The solution passed an undecided step, so what it gives may not exist. */
-export const unsure = (s: Map<string, Term>): Map<string, Term> => (s.has(MARK) ? s : new Map(s).set(MARK, mki(1)));
-export const isUnsure = (s: Map<string, Term>): boolean => s.has(MARK);
+export { unsure, isUnsure };
 
 export function mkBy(label: Term, dflt: Term, cases: [Term, Term][], sure: boolean): Term {
   return mkf('$by', [label, dflt, mkList(cases.map(([c, v]) => mkf('c', [c, v]))), mki(sure ? 1 : 0)]);
@@ -138,8 +136,8 @@ function namesIn(t: Term, labels: Map<string, Term>, consts: Map<string, Term>):
 
 /** The value of the group as a table over the labels, `labels[i..]` still to be told, `idx` the regions the labels before
  *  them are the same in (`by_node`, Rust). */
-function byNode(labels: Term[], regs: Rv[][], vs: bigint[], consts: Term[], i: number, idx: number[]): Term {
-  if (i === labels.length) return mki(vs[idx[0]]);
+function byNode(labels: Term[], regs: Rv[][], vs: Term[], consts: Term[], i: number, idx: number[]): Term {
+  if (i === labels.length) return vs[idx[0]];
   const cases: [Term, Term][] = [];
   for (const c of consts) {
     const sub = idx.filter((r) => sameRv(regs[r][i], { c }));
@@ -159,14 +157,15 @@ function byNode(labels: Term[], regs: Rv[][], vs: bigint[], consts: Term[], i: n
   return kept.length === 0 ? dflt : mkBy(labels[i], dflt, kept, true);
 }
 
-/** The group's member count or total in one region, over its known members and the possibles present there; `null`
- *  where it has no member. */
-function regionValue(count: boolean, labels: Term[], rg: Rv[], gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): bigint | null {
+/** The group's value in one region, over its known members and the possibles present there; `null` where it has no
+ *  member. */
+function regionValue(op: string, labels: Term[], rg: Rv[], gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Term | null {
+  const count = op === 'count';
   const seen = new Set<string>();
-  let total = 0n;
+  const xs: Term[] = [];
   for (let m = 0; m < projs.length; m++) {
     seen.add(projs[m].map(canonTerm).join('\u0001'));
-    if (count) total += 1n; else { const v = asInt(vals[m]); if (v === null) return null; total += v; }
+    xs.push(count ? mki(1) : vals[m]);
   }
   outer: for (const p of mine) {
     for (let i = 0; i < gkey.length; i++) {
@@ -186,17 +185,34 @@ function regionValue(count: boolean, labels: Term[], rg: Rv[], gkey: Term[], pro
     }
     const k = pr.map(canonTerm).join('\u0001');
     if (seen.has(k)) continue;
-    if (count) total += 1n; else { const v = asInt(pr[0]); if (v === null) return null; total += v; }
+    if (count) xs.push(mki(1)); else { if (pr[0] === undefined) return null; xs.push(pr[0]); }
     seen.add(k);
   }
-  return seen.size > 0 && inRange(total) ? total : null;
+  return seen.size > 0 ? foldValues(op, xs) : null;
+}
+
+/** The value of a group over its members' values: a count, a total, the least or greatest, any or all. */
+function foldValues(op: string, xs: Term[]): Term | null {
+  const ints: bigint[] = [];
+  if (op !== 'or' && op !== 'and') for (const t of xs) { const v = asInt(t); if (v === null) return null; ints.push(v); }
+  const int = (n: bigint): Term | null => (inRange(n) ? mki(n) : null);
+  if (op === 'count') return int(BigInt(xs.length));
+  if (op === 'sum') return int(ints.reduce((a, b) => a + b, 0n));
+  if (op === 'min') return int(ints.reduce((a, b) => (b < a ? b : a)));
+  if (op === 'max') return int(ints.reduce((a, b) => (b > a ? b : a)));
+  if (op === 'or' || op === 'and') {
+    const bs: boolean[] = [];
+    for (const t of xs) { if (t.k !== 'a' || (t.name !== 'true' && t.name !== 'false')) return null; bs.push(t.name === 'true'); }
+    return mka(op === 'or' ? (bs.some((b) => b) ? 'true' : 'false') : (bs.every((b) => b) ? 'true' : 'false'));
+  }
+  return null;
 }
 
 /** THE GROUP `gkey` BY REGIONS, of a count or a sum whose possibles `mine` all exist in every completion and rest on
  *  labels alone (`region_decide`, Rust). */
 export function regionDecide(op: string, params: number, gkey: Term[], projs: Term[][], vals: Term[], mine: Poss[]): Regions {
   const no: Regions = { k: 'no' };
-  if ((op !== 'count' && op !== 'sum') || params !== 0 || mine.length === 0 || !mine.every(regionOk)) return no;
+  if (!['count', 'sum', 'min', 'max', 'or', 'and'].includes(op) || params !== 0 || mine.length === 0 || !mine.every(regionOk)) return no;
   const labelsAt = new Map<string, Term>();
   const constAt = new Map<string, Term>();
   for (const c of gkey) constAt.set(key(c), c);
@@ -210,13 +226,13 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
   const n = countRegions(labels.length, consts.length);
   if (n > LABEL_REGIONS) return { k: 'capped', n };
   const regs = regionList(labels.length, consts);
-  const vs: bigint[] = [];
+  const vs: Term[] = [];
   for (const rg of regs) {
-    const v = regionValue(op === 'count', labels, rg, gkey, projs, vals, mine);
+    const v = regionValue(op, labels, rg, gkey, projs, vals, mine);
     if (v === null) return no;
     vs.push(v);
   }
-  if (vs.every((v) => v === vs[0])) return { k: 'decided', v: vs[0], by: labels.map((l) => `_[${labelText(l)}]`).join(', ') };
+  if (vs.every((v) => canonTerm(v) === canonTerm(vs[0]))) return { k: 'decided', v: vs[0], by: labels.map((l) => `_[${labelText(l)}]`).join(', ') };
   return { k: 'cond', t: byNode(labels, regs, vs, consts, 0, regs.map((_, i) => i)) };
 }
 
@@ -224,7 +240,7 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
  *  group names exists in every completion and has its projection known: the members of this label's own, and those of
  *  each other label that is this one's value too, a table over those labels (`new_group_value`, Rust). */
 export function newGroupValue(op: string, params: number, ps: Poss[], pat: (Term | null)[], labs: (Term | null)[]): Term | null {
-  if ((op !== 'count' && op !== 'sum') || params !== 0 || pat.filter((t) => t === null).length !== 1) return null;
+  if (!['count', 'sum', 'min', 'max', 'or', 'and'].includes(op) || params !== 0 || pat.filter((t) => t === null).length !== 1) return null;
   const at = pat.findIndex((t) => t === null);
   const own = labs[at] === null ? null : unkParts(labs[at]!);
   if (own === null) return null;
@@ -248,16 +264,12 @@ export function newGroupValue(op: string, params: number, ps: Poss[], pat: (Term
       into = others.get(k)!.projs;
     }
     if (!has(into, p.proj)) into.push(p.proj);
+    if (others.size > 6) return null;
   }
-  if (ownProjs.length === 0 || others.size > 6) return null;
+  if (ownProjs.length === 0) return null;
   const sorted = [...others.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, v]) => v);
   const node = (j: number, acc: Term[][]): Term | null => {
-    if (j === sorted.length) {
-      let total = 0n;
-      if (op === 'count') total = BigInt(acc.length);
-      else for (const p of acc) { const v = asInt(p[0]); if (v === null) return null; total += v; }
-      return inRange(total) ? mki(total) : null;
-    }
+    if (j === sorted.length) return foldValues(op, acc.map((p) => (op === 'count' ? mki(1) : p[0])));
     const without = node(j + 1, acc);
     if (without === null) return null;
     const withP = [...acc];

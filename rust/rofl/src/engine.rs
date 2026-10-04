@@ -5283,7 +5283,7 @@ impl Eval {
                     };
                     match regions {
                         labeled::Regions::Decided(x, by) => {
-                            value = CellValue::Value(plan.op.lower(&mut self.h, &self.v, x));
+                            value = CellValue::Value(x);
                             decided.insert(sealed.len(), by);
                         }
                         labeled::Regions::Cond(c) => {
@@ -8155,17 +8155,21 @@ impl Eval {
         }
         let args: Vec<Term> = ra.iter().map(|t| if matches!(t.kind(), TermK::Var(_)) { self.unknown_value } else { *t }).collect();
         let hd = self.h.mkf(head.rel, &args);
-        let mut bs: Vec<(String, Term)> = s.iter().map(|(v, t)| (self.h.name(*v).to_string(), *t)).collect();
-        bs.sort_by(|a, b| cmp_js(&a.0, &b.0));
-        let bf = self.h.intern("$b");
+        let sure = brk!("label_sure_always" => true; self.last_fault == Some(self.v.arith_overflow_reason) && self.fault_sure(r, s));
+        // a tuple that exists is one unknown value for each firing; one that may not is judged as a possible, as
+        // every unknown tuple is, and the firings that left the same head are one
         let mut firing: Vec<Term> = vec![Term::atom(r.id)];
-        for (n, t) in bs {
-            let t = resolve(&mut self.h, t, s);
-            let n = self.h.atom(&n);
-            firing.push(self.h.mkf(bf, &[n, t]));
+        if sure {
+            let mut bs: Vec<(String, Term)> = s.iter().map(|(v, t)| (self.h.name(*v).to_string(), *t)).collect();
+            bs.sort_by(|a, b| cmp_js(&a.0, &b.0));
+            let bf = self.h.intern("$b");
+            for (n, t) in bs {
+                let t = resolve(&mut self.h, t, s);
+                let n = self.h.atom(&n);
+                firing.push(self.h.mkf(bf, &[n, t]));
+            }
         }
         let firing = self.h.list(&firing);
-        let sure = brk!("label_sure_always" => true; self.last_fault == Some(self.v.arith_overflow_reason) && self.fault_sure(r, s));
         let mut out = s.clone();
         for (pos, t) in ra.iter().enumerate() {
             if let TermK::Var(v) = t.kind() {
@@ -8409,7 +8413,13 @@ impl Eval {
             }
             return match ra.kind() {
                 TermK::Var(_) => unify(&self.h, ra, t, &s),
-                _ => self.bind_unknown(&[ra], s),
+                _ => {
+                    // a value, or another unknown, against this one: it is that value, or it is that unknown, in the
+                    // completions the tuple that reads it exists in, and in no other (unless it is this very one)
+                    let same = ra == t || matches!((self.unk_parts(ra), self.unk_parts(t)), (Some((x, _, _)), Some((y, _, _))) if x == y);
+                    let s = if same || !brk!("label_match_unconditional" => false; true) { s } else { self.unsure(s) };
+                    self.bind_unknown(&[ra], s)
+                }
             };
         }
         if !self.holds_unknown(t) {
