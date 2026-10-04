@@ -3803,6 +3803,7 @@ impl Eval {
             let rel = self.carried.iter().find(|(_, l)| **l == head.rel).map_or(head.rel, |(c, _)| *c);
             let rel = brk!("carry_into_lattice" => head.rel; rel);
             let k = self.fkey(rel, persp, &args);
+            let staged_key = k.clone();
             match self.staged.entry(k) {
                 std::collections::hash_map::Entry::Vacant(slot) => {
                     slot.insert(StagedFact {
@@ -3826,6 +3827,25 @@ impl Eval {
                             alts.push((r.id, sol.prems.clone()));
                             self.bump_steps()?;
                         }
+                    }
+                }
+            }
+            // in the engine's own order the first firing to stage is the
+            // order's; the staged firing is then the least signature instead
+            if self.store.unordered {
+                let tick = self.store.tick;
+                let (cur_rule, cur_prems) = {
+                    let st = &self.staged[&staged_key];
+                    (st.rule, st.prems.clone())
+                };
+                if cur_rule != r.id || cur_prems != sol.prems {
+                    let (mut a, mut b) = (String::new(), String::new());
+                    self.store.write_sig(&self.h, &WitView { rule: cur_rule, tick, prems: &cur_prems }, &mut a);
+                    self.store.write_sig(&self.h, &WitView { rule: r.id, tick, prems: &sol.prems }, &mut b);
+                    if cmp_js(&b, &a) == std::cmp::Ordering::Less {
+                        let st = self.staged.get_mut(&staged_key).unwrap();
+                        st.rule = r.id;
+                        st.prems = sol.prems.clone();
                     }
                 }
             }
