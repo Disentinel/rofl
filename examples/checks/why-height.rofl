@@ -1,0 +1,10 @@
+-- examples/checks/why-height.rofl — THE SUPPORT `why` SHOWS IS THE ONE OF LEAST
+-- DERIVATION HEIGHT (f_why_can_cite_a_witness_that_rests_on_itself).
+-- wh_reach(c, c) has two firings: the direct one, from wh_edge(c, c) (height 1),
+-- and one that rests on wh_reach(c, c) itself (height 2, a circle). The variable
+-- names are chosen so that the circular firing has the LEAST signature: its rule
+-- sorts before the direct one's, so a choice by signature would show the circle.
+edb(wh_edge).
+wh_edge(c, c).
+wh_reach(X, Y) :- wh_edge(X, Y).
+wh_reach(X, U) :- wh_reach(X, A), wh_edge(A, U).

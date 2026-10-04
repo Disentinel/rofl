@@ -39,6 +39,7 @@ import { RoflPort, type Walls } from '../runtime/port.ts';
 import { worlds, placed, togetherWorld, expectedRefusal, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
+import { derivationHeights, type DerivationSource } from '../src/store.ts';
 import { unreadOf } from './sentences.ts';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -171,7 +172,9 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     // engine writes with the DAG off; an answer that does not is made to differ from the other engine's
     const dag = (a: A, tree: () => string): A => { const bad = a.ok ? dagProblem(a.text, tree) : null; return bad === null ? a : { ...a, text: `DAG: ${bad}\n${a.text}` }; };
     if (q.op === 'why' || q.op === 'whyall') {
-      const a = r.why(q.query, { budget, all: q.op === 'whyall' });
+      const a0 = r.why(q.query, { budget, all: q.op === 'whyall' });
+      const cyc = a0.ok && q.op === 'why' ? cycleProblem(r, a0.text) : null;
+      const a = cyc === null ? a0 : { ...a0, text: `CYCLE: ${cyc}\n${a0.text}` };
       return dag(a, () => r.why(q.query, { budget, all: q.op === 'whyall', tree: true }).text);
     }
     if (q.op === 'whynot') {
@@ -182,6 +185,30 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     const x = r.excise(q.query, { budget });
     return x.ok ? { ok: true, text: exciseText(x.removed, x.added) } : { ok: false, text: `error: ${x.error}` };
   } catch (e) { return { ok: false, text: (e as Error).message }; }
+}
+
+const heightsOf = new WeakMap<Rofl, Map<string, number>>();
+
+/** NO `[cycle]` OF A PLAIN `why` MAY BE OF A FACT THAT HAS AN ACYCLIC DERIVATION (f_why_can_cite_a_witness_that_rests_on_itself): the
+ *  support `why` shows is the firing of least derivation height, which rests only on facts of lower height, so a fact with a height at
+ *  at all never closes a cycle. A base fact whose firing rests on itself is shown as its assertion. NOT ASKED: `why all`, which shows the circular firings too; an
+ *  answer that walks an undefined atom (`[undefined]`), whose circle runs through a negation and is the answer; a cell's members,
+ *  a lattice, subsumption or counting fact (no `<=` line of its own), which list every firing that reaches a value. */
+function cycleProblem(r: Rofl, text: string): string | null {
+  const memo = heightsOf.get(r) ?? new Map<string, number>();
+  heightsOf.set(r, memo);
+  const src: DerivationSource = {
+    firings: (k) => r.store.witnessesOf(k).map((w): [string, typeof w] => ['', w]),
+    base: (k) => r.store.get(k)?.base === true,
+    cellHeight: (k) => r.store.cellOf(k)?.height ?? 0,
+  };
+  if (text.includes('[undefined]')) return null;
+  for (const m of text.matchAll(/^ *(\S.*?) \[cycle\]$/gm)) {
+    if (!text.includes(`${m[1]}  <= `)) continue;
+    derivationHeights(src, [m[1]], memo);
+    if (memo.has(m[1])) return `${m[1]} [cycle], and it has a derivation of height ${memo.get(m[1])}`;
+  }
+  return null;
 }
 
 /** THE ORACLE OF A RETRACTION: the world a retraction leaves is the world

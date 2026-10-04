@@ -684,10 +684,11 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
     // `wits` is DERIVED from `firings` and `restore` ignores it — it is in the
     // format because the reference host puts it there, and a snapshot that
     // differs from the reference's by a key is a second format.
+    let mut memo = std::collections::HashMap::new();
     let wits: Vec<Value> = fkeyed
         .iter()
         .map(|(k, id)| {
-            let w = s.witness_of(h, *id).unwrap();
+            let w = s.witness_of(h, *id, &mut memo).unwrap();
             json!({ "key": k, "ruleId": h.name(w.rule), "tick": w.tick,
                     "prems": prems_json(h, s, w.prems) })
         })

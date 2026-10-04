@@ -10,6 +10,10 @@
 -- of a term outside the carrier, that it is no value; of a holed cell, the
 -- hole and not an exploration; of a key no rule reaches, the exploration,
 -- with no cell to name.
+-- THE SELF-LOOP IS READ FROM THE STATE, NOT FROM THE TEXT: a contribution is a fact `why` shows by its firing of least
+-- derivation height, which is never the one that rests on the cell, so a cover that kept the self-loop would print the same
+-- words. The fact holds one firing.
+-- expect-row: aj_comp@join[main](s,set(s)) tick drv support=1
 edb(explain_request).
 edb(explained).
 explain_request(why, aj_comp(s, set(s))).

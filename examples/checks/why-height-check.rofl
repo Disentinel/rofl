@@ -1,0 +1,30 @@
+-- examples/checks/why-height-check.rofl — why_height, run with `rofl-load
+-- --explain`: the whole text of `why` and `why all` of wh_reach(c, c), derived by
+-- hand and compared line for line.
+--
+--   firings of wh_reach(c, c)       height   signature
+--     rc4d19dea  wh_edge(c, c)         1      rc4d...   <- shown by `why`
+--     r62e0cbb5  wh_reach(c, c), wh_edge(c, c)   2   r62e... (least signature, higher)
+--
+-- `why` shows the direct firing and says there is one more; `why all` adds the
+-- circular one under `#2`, its premise on the fact itself a `[cycle]`.
+edb(explain_request).
+edb(explained).
+explain_request(why, wh_reach(c, c)).
+explain_request(why_all, wh_reach(c, c)).
+wh_line(why, 1, "wh_reach[main](c,c)  <= rc4d19dea @tick 0").
+wh_line(why, 2, "  wh_edge[main](c,c) [axiom]").
+wh_line(why, 3, "  [1 more derivation: why all wh_reach[main](c,c)]").
+wh_line(why_all, 1, "wh_reach[main](c,c)  <= rc4d19dea @tick 0").
+wh_line(why_all, 2, "  wh_edge[main](c,c) [axiom]").
+wh_line(why_all, 3, "  #2 <= r62e0cbb5 @tick 0 [another derivation]").
+wh_line(why_all, 4, "    wh_reach[main](c,c) [cycle]").
+wh_line(why_all, 5, "    wh_edge[main](c,c) [axiom]").
+wh_known(K, I) :- wh_line(K, I, _).
+wh_has(K, I, T) :- explained[$explain](K, wh_reach(c, c), I, T).
+wh_missing(K, I) :- wh_line(K, I, T), not wh_has(K, I, T).
+wh_extra(K, I) :- wh_has(K, I, _), not wh_known(K, I).
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(wh_missing).
+alarm(wh_extra).
+alarm(explain_refused).

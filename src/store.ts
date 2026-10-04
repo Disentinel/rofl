@@ -55,6 +55,99 @@ export const cellValueText = (v: CellVal): string => (v.k === 'value' ? canonTer
 
 export interface Witness { ruleId: string; tick: number; prems: PremRef[]; }
 
+/** WHAT THE FIRING OF LEAST HEIGHT IS READ FROM: a store's firings of a fact with their signatures, whether a record is base,
+ *  and a sealed cell's height. */
+export interface DerivationSource { firings(key: string): [string, Witness][]; base(key: string): boolean; cellHeight(key: string): number }
+
+/** DERIVATION HEIGHT, Knuth's generalisation of Dijkstra over the firing graph reachable from `roots`: a base fact or one with no
+ *  firing is 0, a firing 1 + its highest premise (a cell counts its own height, a negation and a builtin 0), a fact its LOWEST
+ *  firing. A height is final when it leaves the queue, so a derivation resting on itself never lowers one. `memo` carries finished
+ *  heights between calls; a fact that never became final is not in it. rust/rofl `Store::heights`. */
+export function derivationHeights(src: DerivationSource, roots: string[], memo: Map<string, number>): void {
+  const seen = new Set<string>(), order: string[] = [];
+  const stack = roots.filter((f) => !memo.has(f));
+  while (stack.length > 0) {
+    const f = stack.pop()!;
+    if (seen.has(f)) continue;
+    seen.add(f);
+    order.push(f);
+    for (const [, w] of src.firings(f)) for (const p of w.prems) if (p.t === 'fact' && !memo.has(p.key) && !seen.has(p.key)) stack.push(p.key);
+  }
+  if (order.length === 0) return;
+  const firings: { head: string; open: number; best: number }[] = [];
+  const users = new Map<string, number[]>();
+  const heap: [number, string][] = [];
+  const push = (h: number, f: string): void => {
+    heap.push([h, f]);
+    for (let i = heap.length - 1; i > 0;) { const q = (i - 1) >> 1; if (heap[i][0] >= heap[q][0]) break; [heap[i], heap[q]] = [heap[q], heap[i]]; i = q; }
+  };
+  const pop = (): [number, string] | undefined => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length > 0 && last !== undefined) {
+      heap[0] = last;
+      for (let i = 0;;) {
+        const l = 2 * i + 1, r = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        if (m === i) break;
+        [heap[i], heap[m]] = [heap[m], heap[i]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  for (const f of order) {
+    const ws = src.firings(f);
+    if (src.base(f) || ws.length === 0) { push(0, f); continue; }
+    for (const [, w] of ws) {
+      let open = 0, best = 0;
+      const idx = firings.length;
+      for (const p of w.prems) {
+        if (p.t === 'fact') {
+          const hg = memo.get(p.key);
+          if (hg !== undefined) best = Math.max(best, hg);
+          else { open++; let u = users.get(p.key); if (!u) { u = []; users.set(p.key, u); } u.push(idx); }
+        } else if (p.t === 'cell') best = Math.max(best, src.cellHeight(p.key));
+      }
+      firings.push({ head: f, open, best });
+      if (open === 0) push(best + 1, f);
+    }
+  }
+  for (let top = pop(); top !== undefined; top = pop()) {
+    const [hgt, f] = top;
+    if (memo.has(f)) continue;
+    memo.set(f, hgt);
+    const us = users.get(f);
+    if (us) {
+      users.delete(f);
+      for (const i of us) {
+        const fi = firings[i];
+        fi.open--;
+        fi.best = Math.max(fi.best, hgt);
+        if (fi.open === 0 && !memo.has(fi.head)) push(fi.best + 1, fi.head);
+      }
+    }
+  }
+}
+
+/** THE FIRINGS OF A FACT IN THE ORDER `why` SHOWS THEM: least derivation height first, then signature. A firing that rests on its own
+ *  fact is higher than a direct one, so the first is acyclic whenever an acyclic derivation exists, and the shortest. A premise whose
+ *  height never became final is the top. */
+export function rankFirings(src: DerivationSource, key: string, memo: Map<string, number>): Witness[] {
+  const ws = src.firings(key);
+  if (ws.length < 2) return ws.map(([, w]) => w);
+  derivationHeights(src, ws.flatMap(([, w]) => w.prems.flatMap((p) => (p.t === 'fact' ? [p.key] : []))), memo);
+  const height = (w: Witness): number => {
+    let h = 0;
+    for (const p of w.prems) h = Math.max(h, p.t === 'fact' ? memo.get(p.key) ?? Infinity : p.t === 'cell' ? src.cellHeight(p.key) : 0);
+    return h + 1;
+  };
+  return ws.map(([sig, w]): [number, string, Witness] => [height(w), sig, w])
+    .sort((a, b) => (a[0] !== b[0] ? (a[0] < b[0] ? -1 : 1) : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0))
+    .map((x) => x[2]);
+}
+
 /** A relation whose facts are lattice cells, registered by the engine when it prepares a program: its operation as a name, its
  *  algebra flags and the strategy they give, as `canonicalState` prints them (rust/rofl/src/store.rs `LatReg`). */
 export interface LatReg { rel: string; op: string; alg: string; use: string }
@@ -346,7 +439,9 @@ export interface FactStore {
   allFactKeys(): string[];
   allFacts(): FactRec[];
   factCount(): number;
-  witnessOf(key: string): Witness | undefined;
+  witnessOf(key: string, memo?: Map<string, number>): Witness | undefined;
+  /** Every firing of a fact in the order `witnessOf` ranks them. */
+  firingsRanked(key: string, memo?: Map<string, number>): Witness[];
   allWitnesses(): Map<string, Witness>;
 }
 
@@ -888,17 +983,28 @@ export class Store implements FactStore {
 
   factCount(): number { return this.facts.size; }
 
-  /** The canonical (first) witness of a fact, or none. */
-  /** The canonical witness: the firing with the least signature. Linear, and
-   *  the length it walks is the number of DERIVATIONS of one fact -- measured
-   *  at 1.0 to 1.9 across this repository's programs, so a scan is the right
-   *  shape and a second map would be a cache of a one-element answer. */
-  witnessOf(key: string): Witness | undefined {
+  private get source(): DerivationSource {
+    return {
+      firings: (k) => [...(this.firings.get(k) ?? [])],
+      base: (k) => this.recAny(k)?.base === true,
+      cellHeight: (k) => this.cells.get(k)!.height,
+    };
+  }
+
+  /** The canonical witness: the firing of least derivation height, ties by
+   *  signature (`rankFirings`). `memo` carries the heights between calls, for
+   *  a caller that asks for many facts. A fact has 1.0 to 1.9 firings across
+   *  this repository's programs, and one is returned as it stands. */
+  witnessOf(key: string, memo: Map<string, number> = new Map()): Witness | undefined {
     const sigs = this.firings.get(key);
-    if (sigs === undefined) return undefined;
-    let best: string | undefined;
-    for (const sig of sigs.keys()) if (best === undefined || sig < best) best = sig;
-    return best === undefined ? undefined : sigs.get(best);
+    if (sigs === undefined || sigs.size === 0) return undefined;
+    if (sigs.size === 1) return sigs.values().next().value;
+    return this.firingsRanked(key, memo)[0];
+  }
+
+  /** Every firing of a fact, the one `witnessOf` returns first. */
+  firingsRanked(key: string, memo: Map<string, number> = new Map()): Witness[] {
+    return rankFirings(this.source, key, memo);
   }
 
   /** A detached copy of the whole witness table. A copy rather than the map
@@ -906,8 +1012,9 @@ export class Store implements FactStore {
    *  the live one. */
   allWitnesses(): Map<string, Witness> {
     const out = new Map<string, Witness>();
+    const memo = new Map<string, number>();
     for (const key of this.firings.keys()) {
-      const w = this.witnessOf(key);
+      const w = this.witnessOf(key, memo);
       if (w !== undefined) out.set(key, w);
     }
     return out;
@@ -922,8 +1029,9 @@ export class Store implements FactStore {
       lines.push(`${k} ${r.scope} ${r.base ? 'base' : 'drv'}${r.frozen ? ' frozen' : ''} support=${this.supportCount(k)}`);
     }
     const wkeys = [...this.firings.keys()].sort();
+    const memo = new Map<string, number>();
     for (const k of wkeys) {
-      const w = this.witnessOf(k)!;
+      const w = this.witnessOf(k, memo)!;
       // SORTED, for the same reason the fact list is: order never depends on
       // insertion. A body's premises are solved in whatever order the planner
       // chose, and the semantics does not fix that choice — two engines that
@@ -976,8 +1084,9 @@ export class Store implements FactStore {
     // The `wits` block is kept in the format and DERIVED on the way out --
     // `firings` below carries every signature, so it is the source and this is
     // a rendering of it. `restore` ignores it for the same reason.
+    const memo = new Map<string, number>();
     const wits = [...this.firings.keys()].sort().map((k) => {
-      const w = this.witnessOf(k)!;
+      const w = this.witnessOf(k, memo)!;
       return { key: k, ruleId: w.ruleId, tick: w.tick, prems: w.prems };
     });
     const firings = [...this.firings.keys()].sort().map((k) => {

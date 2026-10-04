@@ -560,7 +560,8 @@ fn a_kernel_emitted_premise_is_an_axiom() {
     assert_eq!(
         s.why("fired(r7a090e48)").unwrap(),
         "fired[main](r7a090e48)  <= r0d05c2b5 @tick 0\n  \
-           derived_by[$kernel]($fact(reaches,main,$cons(a,$cons(b,$nil))),r7a090e48,0) [axiom]"
+           derived_by[$kernel]($fact(reaches,main,$cons(a,$cons(b,$nil))),r7a090e48,0) [axiom]\n  \
+           [1 more derivation: why all fired[main](r7a090e48)]"
     );
 }
 
@@ -746,4 +747,58 @@ n(N) :- N is count(K : sale(K), chan(K, _)).
     assert_eq!(removed, ["chan[main](2,x)", "n[main](2)"]);
     assert_eq!(added, ["n[main](1)"]);
     assert!(s.holds("n(2)").unwrap());
+}
+
+/// THE SUPPORT `why` SHOWS IS THE FIRING OF LEAST DERIVATION HEIGHT, not of least
+/// signature (examples/checks/why-height.rofl: the circular firing's rule sorts
+/// first). `why` says there is one more; `why all` writes it, its premise on the
+/// fact itself a `[cycle]`.
+#[test]
+fn why_shows_the_shortest_firing_and_why_all_the_circle() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/checks/why-height.rofl")).unwrap(), None).expect("load");
+    assert_eq!(
+        s.why("wh_reach(c, c)").unwrap(),
+        "wh_reach[main](c,c)  <= rc4d19dea @tick 0\n  \
+           wh_edge[main](c,c) [axiom]\n  \
+           [1 more derivation: why all wh_reach[main](c,c)]"
+    );
+    assert_eq!(
+        s.why_all("wh_reach(c, c)").unwrap(),
+        "wh_reach[main](c,c)  <= rc4d19dea @tick 0\n  \
+           wh_edge[main](c,c) [axiom]\n  \
+           #2 <= r62e0cbb5 @tick 0 [another derivation]\n    \
+             wh_reach[main](c,c) [cycle]\n    \
+             wh_edge[main](c,c) [axiom]"
+    );
+}
+
+/// THREE FIRINGS, ONE SHORT: height 2, 2 and 3, the first two tied and ordered
+/// by signature; the shared subtrees are written once and referred to after.
+#[test]
+fn why_all_writes_every_firing_with_shared_subtrees_as_references() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/checks/why-forest.rofl")).unwrap(), None).expect("load");
+    assert_eq!(
+        s.why_all("wf_t(1)").unwrap(),
+        "wf_t[main](1)  <= r7c5853c5 @tick 0\n  \
+           wf_q[main](1)  <= r60fff0cb @tick 0\n    \
+             wf_b[main](1) [axiom]\n  \
+           #2 <= r8b32616e @tick 0 [another derivation]\n    \
+             wf_p[main](1)  <= r73fbe811 @tick 0\n      \
+               wf_a[main](1) [axiom]\n    \
+             wf_q[main](1) [above]\n  \
+           #3 <= r584964d9 @tick 0 [another derivation]\n    \
+             wf_m[main](1)  <= r85681d01 @tick 0\n      \
+               wf_p[main](1) [above]"
+    );
+}
+
+/// A BASE FACT WHOSE FIRING RESTS ON IT is its assertion (examples/checks/why-base.rofl).
+#[test]
+fn a_base_fact_whose_firing_rests_on_itself_is_its_assertion() {
+    let mut s = Session::fresh(1_000_000);
+    s.load(&std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/checks/why-base.rofl")).unwrap(), None).expect("load");
+    assert_eq!(s.why("wb_c(a)").unwrap(), "wb_c[main](a)  <= r398c2343 @tick 0\n  wb_h[main](a) [axiom]");
+    assert_eq!(s.why("wb_h(a)").unwrap(), "wb_h[main](a) [axiom]\n  [1 more derivation: why all wb_h[main](a)]");
 }

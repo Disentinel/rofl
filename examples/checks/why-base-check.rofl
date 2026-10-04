@@ -1,0 +1,28 @@
+-- examples/checks/why-base-check.rofl — why_base, run with `rofl-load --explain`: the
+-- text of `why` and `why all`, derived by hand.
+--
+--   wb_h(a) is asserted (height 0) and derived from wb_c(a), derived from it (height 2).
+--   `why wb_c(a)`: its one firing, from wb_h(a), which is its assertion, not the firing
+--   that rests on wb_c(a). `why wb_h(a)`: the assertion, and a hint that there is a firing.
+--   `why all wb_h(a)`: the firing as `#2`, circular, its premise on wb_h(a) a `[cycle]`.
+edb(explain_request).
+edb(explained).
+explain_request(why, wb_c(a)).
+explain_request(why, wb_h(a)).
+explain_request(why_all, wb_h(a)).
+wb_line(why, wb_c(a), 1, "wb_c[main](a)  <= r398c2343 @tick 0").
+wb_line(why, wb_c(a), 2, "  wb_h[main](a) [axiom]").
+wb_line(why, wb_h(a), 1, "wb_h[main](a) [axiom]").
+wb_line(why, wb_h(a), 2, "  [1 more derivation: why all wb_h[main](a)]").
+wb_line(why_all, wb_h(a), 1, "wb_h[main](a) [axiom]").
+wb_line(why_all, wb_h(a), 2, "  #2 <= rb4c47a4f @tick 0 [another derivation]").
+wb_line(why_all, wb_h(a), 3, "    wb_c[main](a)  <= r398c2343 @tick 0").
+wb_line(why_all, wb_h(a), 4, "      wb_h[main](a) [cycle]").
+wb_known(K, A, I) :- wb_line(K, A, I, _).
+wb_has(K, A, I, T) :- explained[$explain](K, A, I, T).
+wb_missing(K, A, I) :- wb_line(K, A, I, T), not wb_has(K, A, I, T).
+wb_extra(K, A, I) :- wb_has(K, A, I, _), I > 0, not wb_known(K, A, I).
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(wb_missing).
+alarm(wb_extra).
+alarm(explain_refused).

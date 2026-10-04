@@ -1556,6 +1556,28 @@ brk("ts_rank_share_coarse"). brk_kind("ts_rank_share_coarse", ts).
 brk_expects("ts_rank_share_coarse", "agg_rank_tuple_eval").
 brk("reader_rank_dir_dropped"). brk_kind("reader_rank_dir_dropped", file).
 brk_expects("reader_rank_dir_dropped", "agg_rank_tuple_phrase").
+brk("witness_by_signature"). brk_kind("witness_by_signature", switch).
+brk_expects("witness_by_signature", "why_height").
+brk_expects("witness_by_signature", "why_forest").
+brk("ts_witness_by_signature"). brk_kind("ts_witness_by_signature", ts).
+brk_expects("ts_witness_by_signature", "why_height").
+brk_expects("ts_witness_by_signature", "why_forest").
+brk("why_all_one_tree"). brk_kind("why_all_one_tree", switch).
+brk_expects("why_all_one_tree", "why_height").
+brk_expects("why_all_one_tree", "why_forest").
+brk("ts_why_all_one_tree"). brk_kind("ts_why_all_one_tree", ts).
+brk_expects("ts_why_all_one_tree", "why_height").
+brk_expects("ts_why_all_one_tree", "why_forest").
+brk("why_hint_missing"). brk_kind("why_hint_missing", switch).
+brk_expects("why_hint_missing", "why_height").
+brk_expects("why_hint_missing", "why_forest").
+brk("ts_why_hint_missing"). brk_kind("ts_why_hint_missing", ts).
+brk_expects("ts_why_hint_missing", "why_height").
+brk_expects("ts_why_hint_missing", "why_forest").
+brk("why_base_circle"). brk_kind("why_base_circle", switch).
+brk_expects("why_base_circle", "why_base").
+brk("ts_why_base_circle"). brk_kind("ts_why_base_circle", ts).
+brk_expects("ts_why_base_circle", "why_base").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1942,10 +1964,13 @@ switch_site("wfs_admits_threshold", "rust/rofl/src/engine.rs").
 switch_site("wfs_unknowns_decide", "rust/rofl/src/engine.rs").
 switch_site("why_all_digest", "rust/rofl/src/session.rs").
 switch_site("why_all_one_derivation", "rust/rofl/src/engine.rs").
+switch_site("why_all_one_tree", "rust/rofl/src/engine.rs").
+switch_site("why_base_circle", "rust/rofl/src/engine.rs").
 switch_site("why_cell_id_off", "rust/rofl/src/engine.rs").
 switch_site("why_dag_cell_off", "rust/rofl/src/engine.rs").
 switch_site("why_dag_off", "rust/rofl/src/engine.rs").
 switch_site("why_depth_cut", "rust/rofl/src/engine.rs").
+switch_site("why_hint_missing", "rust/rofl/src/engine.rs").
 switch_site("whynot_dag_off", "rust/rofl/src/engine.rs").
 switch_site("whynot_hole_empty", "rust/rofl/src/engine.rs").
 switch_site("whynot_unranked_empty", "rust/rofl/src/engine.rs").
@@ -1966,6 +1991,7 @@ switch_site("widen_why_root_bare", "rust/rofl/src/engine.rs").
 switch_site("widen_whynot_bare", "rust/rofl/src/engine.rs").
 switch_site("widening_flag_off", "rust/rofl/src/engine.rs").
 switch_site("withdrawn_cell_stale_src", "rust/rofl/src/engine.rs").
+switch_site("witness_by_signature", "rust/rofl/src/store.rs").
 switch_site("word_ops_is_only", "rust/rofl/src/rofl_parse.rs").
 switch_site("wrap", "rust/rofl/src/cell.rs").
 

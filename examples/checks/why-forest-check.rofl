@@ -1,0 +1,36 @@
+-- examples/checks/why-forest-check.rofl — why_forest, run with `rofl-load
+-- --explain`: `why` and `why all` of wf_t(1), derived by hand.
+--
+--   wf_a(1), wf_b(1) are base (height 0); wf_p(1) and wf_q(1) 1; wf_m(1) 2.
+--   wf_t(1) has three firings:
+--     r7c5853c5  wf_q                 height 2   shown by `why` (least height, then least signature)
+--     r8b32616e  wf_p, wf_q           height 2   (ties with the first; its rule sorts after)
+--     r584964d9  wf_m                 height 3   (the least signature of the three, and the highest)
+--   `why all` writes the other two under `#2` and `#3`; wf_q (in the first and the second) and wf_p
+--   (in the second and the third) are written once, in full, and referred to after.
+edb(explain_request).
+edb(explained).
+explain_request(why, wf_t(1)).
+explain_request(why_all, wf_t(1)).
+wf_line(why, 1, "wf_t[main](1)  <= r7c5853c5 @tick 0").
+wf_line(why, 2, "  wf_q[main](1)  <= r60fff0cb @tick 0").
+wf_line(why, 3, "    wf_b[main](1) [axiom]").
+wf_line(why, 4, "  [2 more derivations: why all wf_t[main](1)]").
+wf_line(why_all, 1, "wf_t[main](1)  <= r7c5853c5 @tick 0").
+wf_line(why_all, 2, "  wf_q[main](1)  <= r60fff0cb @tick 0").
+wf_line(why_all, 3, "    wf_b[main](1) [axiom]").
+wf_line(why_all, 4, "  #2 <= r8b32616e @tick 0 [another derivation]").
+wf_line(why_all, 5, "    wf_p[main](1)  <= r73fbe811 @tick 0").
+wf_line(why_all, 6, "      wf_a[main](1) [axiom]").
+wf_line(why_all, 7, "    wf_q[main](1) [above]").
+wf_line(why_all, 8, "  #3 <= r584964d9 @tick 0 [another derivation]").
+wf_line(why_all, 9, "    wf_m[main](1)  <= r85681d01 @tick 0").
+wf_line(why_all, 10, "      wf_p[main](1) [above]").
+wf_known(K, I) :- wf_line(K, I, _).
+wf_has(K, I, T) :- explained[$explain](K, wf_t(1), I, T).
+wf_missing(K, I) :- wf_line(K, I, T), not wf_has(K, I, T).
+wf_extra(K, I) :- wf_has(K, I, _), not wf_known(K, I).
+explain_refused(K, A) :- explained[$explain](K, A, 0, _).
+alarm(wf_missing).
+alarm(wf_extra).
+alarm(explain_refused).

@@ -2190,7 +2190,7 @@ export const BREAKS: Break[] = [
   "id": "join_self_firing_kept",
   "what": "a Cover's contribution keeps the firing that reads the cell itself",
   "expect": {
-   "agg_join_why": "ajy_cycle"
+   "agg_join_why": "lacks the row aj_comp@join[main](s,set(s)) tick drv support=1"
   }
  },
  {
@@ -5960,6 +5960,96 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_rank_tuple_phrase": "pt_wrong"
+  }
+ },
+ {
+  "id": "witness_by_signature",
+  "what": "`why` shows the firing of least signature, not of least derivation height: the circle where a direct firing exists",
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "ts_witness_by_signature",
+  "what": "the TypeScript store picks the canonical firing by signature alone",
+  "edits": [
+   [
+    "src/store.ts",
+    "return this.firingsRanked(key, memo)[0];",
+    "return [...sigs.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))[0][1];"
+   ]
+  ],
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "why_all_one_tree",
+  "what": "`why all` of an ordinary fact writes its shortest firing only",
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "ts_why_all_one_tree",
+  "what": "the TypeScript explainer writes an ordinary fact's shortest firing only under `why all`",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "rest.forEach((x, k) => {",
+    "rest.slice(0, 0).forEach((x, k) => {"
+   ]
+  ],
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "why_hint_missing",
+  "what": "`why` of a fact with other firings does not say how many",
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "ts_why_hint_missing",
+  "what": "the TypeScript explainer does not say how many other firings a fact has",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "} else if (rest.length > 0) next.push(line(`${pad}  [${rest.length} more derivation",
+    "} else if (rest.length > 99999) next.push(line(`${pad}  [${rest.length} more derivation"
+   ]
+  ],
+  "expect": {
+   "why_height": "wh_missing",
+   "why_forest": "wf_missing"
+  }
+ },
+ {
+  "id": "why_base_circle",
+  "what": "a base fact is shown by its firing even where that firing rests on the fact itself",
+  "expect": {
+   "why_base": "wb_missing"
+  }
+ },
+ {
+  "id": "ts_why_base_circle",
+  "what": "the TypeScript explainer shows a base fact by its firing even where that firing rests on the fact itself",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (g === id) return undefined;",
+    "if (g === id) return w;"
+   ]
+  ],
+  "expect": {
+   "why_base": "wb_missing"
   }
  },
 ];

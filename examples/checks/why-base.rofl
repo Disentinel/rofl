@@ -1,0 +1,7 @@
+-- examples/checks/why-base.rofl — A BASE FACT WHOSE FIRING RESTS ON IT IS ITS ASSERTION.
+-- wb_h(a) is asserted and also derived, from wb_c(a), which is derived from it
+-- (rules/agg.rofl's `handled` and `claim` are the same shape). The shortest proof of
+-- wb_c(a) is the assertion of wb_h(a), height 0, and not the circle through wb_c(a).
+wb_h(a).
+wb_c(X) :- wb_h(X).
+wb_h(X) :- wb_c(X).
