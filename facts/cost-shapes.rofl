@@ -56,7 +56,7 @@ shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; th
 shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 
 shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
-shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (its second arm reads nearest_v), 26 ms sealed / 81 default (both arms)").
+shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
