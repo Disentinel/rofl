@@ -498,8 +498,6 @@ Declared as facts:
 | `class_has_id` | "has_an_id(class expression CD)" |
 | `anon_class` | "is_anonymous(class expression CD)" |
 | `in_own_decorator` | "has_its_decorator_at(function F, node C)" |
-| `encloses` | "encloses_the_site(function F, node C)" |
-| `closer` | "is_outranked_at(function F, node C)" |
 | `nearest_fn` | "is_the_nearest_function_of(function F, node C)" |
 | `enclosed` | "is_enclosed(node C)" |
 | `top_call` | "runs_at_the_top_of(node C, node R)" |

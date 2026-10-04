@@ -241,8 +241,10 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
 -- A decorator is INSIDE the thing it decorates and does not run there:
 -- `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
 -- evaluates it at class definition. Two arms because the decorator node is
--- itself a site and `ast_within` is irreflexive. `F != G` in `closer` is
--- carried so the rule does not silently depend on that irreflexivity.
+-- itself a site and `ast_within` is irreflexive. `nearest_fn` is `nearest_v`,
+-- which is already the nearest function of every node, with the functions that
+-- hold the site in their own decorator stepped over (`dec_up`): the pairwise
+-- `F != G` nearest-of-all it replaces joined every encloser with every other.
 -- `top_call` reads `site` and not `call_site`: a transfer site at module top
 -- level reaches `calls` only through here. (`top_site` was its twin, written
 -- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
@@ -251,13 +253,12 @@ decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
                                  ast_node[code](D, decorator, _, _).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
-encloses[code](F, C)   :- fn_node[code](F), ast_within[code](F, C), site[code](C),
-                          not in_own_decorator[code](F, C).
-closer[code](F, C)     :- encloses[code](F, C), encloses[code](G, C),
-                          ast_within[code](F, G), F != G.
-nearest_fn[code](F, C) :- encloses[code](F, C), not closer[code](F, C).
+dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
+dec_up[code](C, H)     :- dec_up[code](C, G), nearest_v[flow](H, G), in_own_decorator[code](H, C).
+nearest_fn[code](F, C) :- site[code](C), nearest_v[flow](F, C), not in_own_decorator[code](F, C).
+nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_decorator[code](F, C).
 
-enclosed[code](C)      :- encloses[code](_, C).
+enclosed[code](C)      :- nearest_fn[code](_, C).
 top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File, _),
                           ast_file[code](R, File), not enclosed[code](C).
 
@@ -490,7 +491,7 @@ await_no_call[code](A)        :- await_value_known[code](A), not awaited_then[co
 await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[code](A).
 
 -- The gate: a performed call must never become an ordinary edge. It cannot use
--- `nearest_fn`, because `encloses` demands `site(C)` and an await is not a site
+-- `nearest_fn`, because it demands `site(C)` and an await is not a site
 -- — written that way it was permanently silent.
 awaiting_fn[code](Fn, A) :- performed_call[code](A, _), fn_node[code](Fn),
                             ast_within[code](Fn, A).

@@ -502,8 +502,6 @@ sig(ctor_method, "is_a_constructor(method F)").
 sig(class_has_id, "has_an_id(class expression CD)").
 sig(anon_class, "is_anonymous(class expression CD)").
 sig(in_own_decorator, "has_its_decorator_at(function F, node C)").
-sig(encloses, "encloses_the_site(function F, node C)").
-sig(closer, "is_outranked_at(function F, node C)").
 sig(nearest_fn, "is_the_nearest_function_of(function F, node C)").
 sig(enclosed, "is_enclosed(node C)").
 sig(top_call, "runs_at_the_top_of(node C, node R)").

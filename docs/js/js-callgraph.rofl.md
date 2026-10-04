@@ -26,7 +26,7 @@ Reads:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from facts/js-lib-surface.rofl, in the main:
   - <a id="lib_member"></a>A prototype P has the member Key since a release Rel (`lib_member`)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind)
 - from js-host: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
@@ -74,7 +74,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="ctor_method"></a>A [method](#noun-method) is a constructor if [the attribute](#ast_attr) `kind` of it is "constructor".
 - <a id="class_has_id"></a>A [class expression](#noun-class_expression) has an id if the `id` of it is some node.
 - <a id="decorates"></a>A node is decorated by a [decorator](#noun-decorator) D if D [is among the](#ast_child) `decorators` of it.
-- <a id="enclosed"></a>A node is enclosed if some function [encloses the site](#encloses) it.
+- <a id="enclosed"></a>A node is enclosed if some function [is the nearest function of](#nearest_fn) it.
 - <a id="resolved_site"></a>A node is resolved if it [resolves to](#resolves) some function.
 - <a id="unresolved_shape"></a>A shape has residue if some call [is unresolved](#unresolved_call) with it.
 - <a id="shape_seen"></a>A shape is seen if some call [has the shape](#shape) it.
@@ -376,8 +376,10 @@ A [method](#noun-method) answers to a name N if all of:
 > A decorator is INSIDE the thing it decorates and does not run there:
 > `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
 > evaluates it at class definition. Two arms because the decorator node is
-> itself a site and `ast_within` is irreflexive. `F != G` in `closer` is
-> carried so the rule does not silently depend on that irreflexivity.
+> itself a site and `ast_within` is irreflexive. `nearest_fn` is `nearest_v`,
+> which is already the nearest function of every node, with the functions that
+> hold the site in their own decorator stepped over (`dec_up`): the pairwise
+> `F != G` nearest-of-all it replaces joined every encloser with every other.
 > `top_call` reads `site` and not `call_site`: a transfer site at module top
 > level reaches `calls` only through here. (`top_site` was its twin, written
 > for transfer sites while `top_call` still read `call_site`; the 2026-09-08
@@ -388,18 +390,26 @@ A [method](#noun-method) answers to a name N if all of:
 1. if F [is decorated by](#decorates) a node D and C [is within](js-structure.rofl.md#ast_within) D;
 2. if F [is decorated by](#decorates) C.
 
-<a id="encloses"></a>A [function](#fn_node) encloses the site C if all of:
-  - C [is within](js-structure.rofl.md#ast_within) it;
+<a id="dec_up"></a>`dec_up`(C, G) if all of:
+  - G [has its decorator at](#in_own_decorator) a node C;
   - C [is a site](#site);
-  - unless it [has its decorator at](#in_own_decorator) C.
+  - G [is nearest to](js-dataflow.rofl.md#nearest_v) C.
 
-<a id="closer"></a>A node is outranked at a node C if all of:
-  - it [encloses the site](#encloses) C;
-  - a node G [encloses the site](#encloses) C;
-  - G [is within](js-structure.rofl.md#ast_within) it;
-  - it differs from G.
+`dec_up`(C, H) if all of:
+  - [`dec_up`](#dec_up)(C, G);
+  - H [is nearest to](js-dataflow.rofl.md#nearest_v) a node G;
+  - H [has its decorator at](#in_own_decorator) a node C.
 
-<a id="nearest_fn"></a>F is the nearest function of a node C if F [encloses the site](#encloses) C, unless F [is outranked at](#closer) C.
+<a id="nearest_fn"></a>F is the nearest function of a node C either:
+
+1. if all of:
+   - C [is a site](#site);
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - unless F [has its decorator at](#in_own_decorator) C;
+2. if all of:
+   - [`dec_up`](#dec_up)(C, G);
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node G;
+   - unless F [has its decorator at](#in_own_decorator) C.
 
 <a id="top_call"></a>A node runs at the top of a node R if all of:
   - it [is a site](#site);
@@ -756,7 +766,7 @@ In the audit:
 <a id="await_value_unknown"></a>X awaits an unknown value if X [awaits](#await_arg) some node, unless X [awaits a known value](#await_value_known).
 
 > The gate: a performed call must never become an ordinary edge. It cannot use
-> `nearest_fn`, because `encloses` demands `site(C)` and an await is not a site
+> `nearest_fn`, because it demands `site(C)` and an await is not a site
 > — written that way it was permanently silent.
 
 In the code:

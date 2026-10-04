@@ -3,10 +3,10 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1031 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1029 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 218 | 94 | 85 | 0 | 45 | 237 | 22 | 4 | 6 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 219 | 93 | 83 | 1 | 44 | 241 | 23 | 4 | 6 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 229 | 87 | 74 | 0 | 46 | 227 | 15 | 5 | 2 | 0 |
 | [js-dataflow](js-dataflow.rofl.md) | 353 | 148 | 127 | 7 | 141 | 537 | 29 | 2 | 3 | 0 |
 | [js-effects](js-effects.rofl.md) | 207 | 124 | 116 | 0 | 22 | 301 | 19 | 2 | 7 | 0 |
@@ -21,7 +21,7 @@
 | [js-structure](js-structure.rofl.md) | 11 | 8 | 8 | 0 | 4 | 11 | 3 | 0 | 2 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-12 heads without a phrase across these files.
+13 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -186,7 +186,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `class_method_of` | `has_the_method` |
 | `class_named` | `is_named` |
 | `class_receiver` | `denotes_a_class` |
-| `closer` | `is_outranked_at` |
 | `closer_s` | `is_outranked_for` |
 | `coarse_of` | `has_a_shaped_cell` |
 | `coarser_claim` | `has_a_coarser_claim` |
@@ -358,7 +357,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `effects_claimed` | `claims_its_effects` |
 | `elem_at` | `the_element` |
 | `enclosed` | `is_enclosed` |
-| `encloses` | `encloses_the_site` |
 | `encloses_s` | `encloses` |
 | `entry_point` | `is_an_entry_point` |
 | `env_declared` | `is_declared` |
