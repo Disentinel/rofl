@@ -224,6 +224,27 @@ function bodyElem(t: J, wild: Map<number, number>): BodyElem {
   return { t: 'pos', lit: lit(t, wild) };
 }
 
+/** A DECLARATION is a clause whose head is wrapped by what it declares: `$lattice(Op, Lit)`, `$widen(N, $lattice(..))`,
+ *  `$tag(Alg, Lit)`, `$order(Kind, Dirs, Lit)`, `$structure(Kind, Roles, Lit)` (a role `key` where none is written), and
+ *  `$dominance(Lit, Lit)` with its body. The host builds the clause src/parser.ts builds for the same text. */
+function declaration(t: J, bodyT: J, wild: Map<number, number>): Clause | null {
+  const name = (x: J): string => (x as { name: string }).name;
+  let a: J[] | null;
+  if ((a = fn(t, '$lattice'))) return { head: lit(a[1], wild), body: [], lattice: name(a[0]) };
+  if ((a = fn(t, '$widen'))) {
+    const inner = fn(a[1], '$lattice');
+    if (!inner) throw new Unsupported('widen of a non-lattice');
+    return { head: lit(inner[1], wild), body: [], lattice: name(inner[0]), widen: (term(a[0], wild) as { v: number }).v };
+  }
+  if ((a = fn(t, '$tag'))) return { head: lit(a[1], wild), body: [], lattice: name(a[0]), tag: true };
+  if ((a = fn(t, '$order'))) return { head: lit(a[2], wild), body: [], lattice: name(a[0]), ord: unlistK(a[1]).map(name) };
+  if ((a = fn(t, '$structure'))) {
+    return { head: lit(a[2], wild), body: [], structure: { kind: name(a[0]), roles: unlistK(a[1]).map((r) => (name(r) === 'key' ? '' : name(r))) } };
+  }
+  if ((a = fn(t, '$dominance'))) return { head: lit(a[0], wild), body: unlistK(bodyT).map((b) => bodyElem(b, wild)), dominator: lit(a[1], wild) };
+  return null;
+}
+
 export interface ParseResult {
   clauses: Clause[];
   /** sub-parses the top-level chain rejected — ambiguity as a counted number */
@@ -405,7 +426,7 @@ export function parse(src: string, r: Rofl = world()): ParseResult {
   for (const f of rows.sort((x, y) => x.args[0].v - y.args[0].v)) {
     const [, , headT, bodyT] = f.args;
     try {
-      out.push({ head: lit(headT, wild), body: unlistK(bodyT).map((b) => bodyElem(b, wild)) });
+      out.push(declaration(headT, bodyT, wild) ?? { head: lit(headT, wild), body: unlistK(bodyT).map((b) => bodyElem(b, wild)) });
     } catch (e) {
       if (e instanceof Unsupported) unsupported.push(e.message);
       else throw e;
