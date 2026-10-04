@@ -10142,3 +10142,13 @@ demands(f_the_break_census_looped_forever_on_a_raw_string, code).
 addressed_by(f_the_break_census_looped_forever_on_a_raw_string, "scripts/agg_breaks.ts").
 finding_note(f_the_break_census_looped_forever_on_a_raw_string,
   "After the engine-fast merge `npm test` never finished: its first step, `agg_breaks.ts --census --check`, hung. sitesIn reads Rust source to find brk! sites and skipped a string literal with a loop that stopped only at a quote, with no bound and no raw strings; a test in rust/rofl/src/seed.rs (6dfff59) holds `r#\"{...\\\"q\\\"...}\"#`, where the escape-reading took the raw string's `\\\"` for escapes, lost the end and ran past the end of the file forever (text[i] undefined is never a quote). FIXED: a raw string r#*\"…\"#* reads no escape, and the loop is bounded by the text; census back to ~1 s, unchanged. A tool that parses source by hand is one new literal away from this; the parse now handles every Rust string form the tree uses.").
+addressed_by(f_a_max_over_base_data_costs_the_self_shard, "rules/js-dataflow.rofl").
+finding_note(f_a_max_over_base_data_costs_the_self_shard,
+  "DECIDED by the owner 2026-10-04: the sequence's last element is the kernel max. Re-measured on a quiet machine (load ~1) after engine-fast, three interleaved A/B pairs of the self notebook: seq_later 62.3/62.7/64.2 s, max 62.6/62.9/62.3 s, model phase 50.6 vs 48.8 s in the last pair; the notebook's answers byte-identical (only timings and paths differ). The +11 s of the first measurement was a loaded machine before engine-fast. seq_later, its phrase and its kept-workaround rows are gone. The owner's remark recorded with it: the absence is a negation and the max a body aggregate, both stratified over base data here, so neither is safer in this rule; the max is the one that says what it means and costs one pass where the absence joins every pair.").
+
+finding(f_an_environment_reading_in_a_demo_is_masked_like_a_timing, decision).
+recorded(f_an_environment_reading_in_a_demo_is_masked_like_a_timing, "2026-10-04").
+demands(f_an_environment_reading_in_a_demo_is_masked_like_a_timing, none).
+addressed_by(f_an_environment_reading_in_a_demo_is_masked_like_a_timing, "scripts/goldens.ts").
+finding_note(f_an_environment_reading_in_a_demo_is_masked_like_a_timing,
+  "DECIDED by the owner 2026-10-04: cram's `at digest H` line, a hash of src/, is masked in its host golden (`at digest #`), as the timings and the load average already are: a reading of the environment is not part of what the demo demonstrates, and a golden that moves on every edit to src/ teaches blessing without looking.").

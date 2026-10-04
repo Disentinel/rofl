@@ -64,10 +64,6 @@ retire_site(sum, "examples/aka/aka.rofl").
 retire_pattern("examples/aka/aka.rofl").
 retire_site(sum, "examples/blam/demo.ts").
 retire_pattern("examples/blam/demo.ts").
-retire_site(min_max_strat, "rules/js-dataflow.rofl").
-retire_kept(min_max_strat, "rules/js-dataflow.rofl").
-retire_pattern("rules/js-dataflow.rofl").
-retire_marker(min_max_strat, "rules/js-dataflow.rofl").
 retire_site(min_max_strat, "examples/wtf/wtf.rofl").
 retire_site(threshold, "examples/moot/moot.rofl").
 retire_pattern("examples/moot/moot.rofl").

@@ -1460,11 +1460,9 @@ A [super](#noun-super) points to a node SD if all of:
   - it [is within](js-structure.rofl.md#ast_within) M;
   - [the super](#super_of) of CD is SD.
 
-## 13. EXPRESSION FORMS. A sequence is its LAST element — a maximum, written as
+## 13. EXPRESSION FORMS. A sequence is its LAST element: the maximum index of
 
-> the absence of a later one. `max(J : ast_child(...))` says it directly and
-> stratifies, but it costs the self notebook (the slowest shard) about 10 s
-> of model time, so the maximum stays written as an absence. A
+> its expressions, over base data, so it stratifies below the flow. A
 > conditional and a logical operator (`||`, `&&`, `??`) are both operands.
 > `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
 > promise constructed and awaited later reaches the Promise class, which no
@@ -1472,18 +1470,14 @@ A [super](#noun-super) points to a node SD if all of:
 
 A [sequence](#noun-sequence)
 
-- <a id="seq_later"></a>has a later expression than an index I if all of:
-  - some node is the I-th of the `expressions` of it;
-  - some node is the J-th of the `expressions` of it;
-  - I < J.
 - points to a node N if all of:
+  - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
   - a node X is the I-th of the `expressions` of it;
-  - X [points to](#may_be_node) N;
-  - unless it [has a later expression than](#seq_later) I.
+  - X [points to](#may_be_node) N.
 - may be the literal V if all of:
+  - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
   - a node X is the I-th of the `expressions` of it;
-  - X [may be the literal](#may_be_lit) V;
-  - unless it [has a later expression than](#seq_later) I.
+  - X [may be the literal](#may_be_lit) V.
 
 E points to a node N if all of:
   - a node X [points to](#may_be_node) N;

@@ -3,12 +3,12 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1033 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1032 | 3 | 0 | 0 | 0 | 0 | 0 | 32 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 69 | 42 | 39 | 0 | 1 | 90 | 5 | 1 | 13 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 49 | 37 | 37 | 0 | 0 | 101 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 218 | 94 | 85 | 0 | 45 | 237 | 22 | 4 | 6 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 229 | 87 | 74 | 0 | 46 | 227 | 15 | 5 | 2 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 354 | 149 | 128 | 7 | 144 | 539 | 29 | 2 | 3 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 353 | 148 | 127 | 7 | 143 | 537 | 29 | 2 | 3 | 0 |
 | [js-effects](js-effects.rofl.md) | 208 | 125 | 117 | 0 | 22 | 302 | 19 | 2 | 7 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 6 | 0 | 0 | 4 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 48 | 5 | 1 | 17 | 0 |
@@ -774,7 +774,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `scoped_binder` | `is_scoped` |
 | `sees_binder` | `sees` |
 | `self_referential_module` | `is_self_referential` |
-| `seq_later` | `has_a_later_expression_than` |
 | `shadowed_by` | `is_shadowed_by` |
 | `shadowed_by_param` | `is_shadowed_by_the_function` |
 | `shape` | `has_the_shape` |

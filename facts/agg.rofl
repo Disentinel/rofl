@@ -162,7 +162,6 @@ workaround_site(sum, "examples/spat/spat.rofl").
 workaround_site(sum, "examples/spat/spat.ts").
 workaround_site(sum, "examples/aka/aka.rofl").
 workaround_site(sum, "examples/blam/demo.ts").
-workaround_site(min_max_strat, "rules/js-dataflow.rofl").
 workaround_site(min_max_strat, "examples/wtf/wtf.rofl").
 workaround_site(threshold, "examples/moot/moot.rofl").
 workaround_site(threshold, "examples/goof/goof.rofl").
@@ -185,7 +184,6 @@ workaround_marker("examples/spat/spat.rofl", "work_after|work_gap|work_next|work
 workaround_marker("examples/spat/spat.ts", "function merge|tropicalSemiring|OFFSET|plain arithmetic").
 workaround_marker("examples/aka/aka.rofl", "inv_no|a sum is a scan").
 workaround_marker("examples/blam/demo.ts", "costOf|host-side sum|money arithmetic").
-workaround_marker("rules/js-dataflow.rofl", "seq_later").
 workaround_marker("examples/moot/moot.rofl", "ok_from|on_here|req_at|req_count").
 workaround_marker("examples/goof/goof.rofl", "holds_from|need_count").
 workaround_marker("examples/rip/demo.ts", "tropicalSemiring|unitFiringCost").
@@ -196,7 +194,6 @@ workaround_marker("examples/huh/demo.ts", "Ranking is presentation|sort[(][(]a, 
 
 -- a site that stays, with the reason (a kernel limit, or a library that is not
 -- the workaround); the cell closes with it recorded
-workaround_kept(min_max_strat, "rules/js-dataflow.rofl", "f_a_max_over_base_data_costs_the_self_shard: max(J : ast_child(...)) stratifies and every JS answer is byte-identical, but the model phase of the self notebook grows by about 11 s of a 120 s wall shard at 98 s").
 workaround_kept(tag_idempotent, "runtime/semirings.ts", "the shared library of the host folds over a support (provenance, trust, chaos, viterbi, and the discipline of a diverging fold); a kernel tag computes the value in the engine, it does not replace the fold's reading of the support").
 workaround_kept(tag_counting, "runtime/semirings.ts", "the same library: counting here is a fold with a declared discipline (infinite on a cycle, depth-bounded), which the stratified kernel tag refuses by design").
 
@@ -1077,7 +1074,7 @@ work_needs(w_agg_incremental_ready, w_agg_tags).
 work_needs(w_agg_incremental_ready, w_agg_holistic).
 work_needs(w_agg_incremental_ready, w_agg_subsumption).
 
-work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; KEPT with a reason (`workaround_kept`): rules/js-dataflow.rofl seq_later (identical answers, +11 s on a 98 s shard, f_a_max_over_base_data_costs_the_self_shard), runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
+work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; rules/js-dataflow.rofl seq_later RETIRED 2026-10-04 by the owner's decision (re-measured on a quiet machine after engine-fast: identical answers and time, f_a_max_over_base_data_costs_the_self_shard); KEPT with a reason (`workaround_kept`): runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
 work_state(w_agg_retire_workarounds, done).
 work_proof(w_agg_retire_workarounds, "agg_prose").
 work_sweeps(w_agg_retire_workarounds, retire).

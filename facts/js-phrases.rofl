@@ -269,7 +269,6 @@ sig(delegates, "delegates_to(function Outer, function Inner)").
 sig(nearest_v, "is_nearest_to(function F, node R)").
 sig(returns, "returns(function F, node E)").
 sig(yields, "yields(function F, node E)").
-sig(seq_later, "has_a_later_expression_than(sequence E, index I)").
 sig(resolves, "resolves_to(call C, function F)").
 sig(decorates, "is_decorated_by(node Owner, node D)").
 sig(sees_binder, "sees(node E, declarator D)").

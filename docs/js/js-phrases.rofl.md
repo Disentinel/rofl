@@ -195,7 +195,6 @@ Declared as facts:
 | `nearest_v` | "is_nearest_to(function F, node R)" |
 | `returns` | "returns(function F, node E)" |
 | `yields` | "yields(function F, node E)" |
-| `seq_later` | "has_a_later_expression_than(sequence E, index I)" |
 | `resolves` | "resolves_to(call C, function F)" |
 | `decorates` | "is_decorated_by(node Owner, node D)" |
 | `sees_binder` | "sees(node E, declarator D)" |
