@@ -537,7 +537,7 @@ impl Eval {
                     if inside.contains(x) {
                         continue;
                     }
-                    let rec = *self.store.rec(*x);
+                    let rec = self.store.rec(*x);
                     if !rec.base() && (self.tags.count_rel.values().any(|r| *r == rec.rel) || self.lattices.contains_key(&rec.rel)) && !rels.contains(&rec.rel) {
                         continue;
                     }
@@ -887,7 +887,7 @@ impl Eval {
                 }
             }
             for x in &added {
-                let rec = *self.store.rec(*x);
+                let rec = self.store.rec(*x);
                 if let Some(sub) = self.subs.get(&rec.rel) {
                     let ck: LatKey = (rec.rel, rec.persp, self.store.args(*x)[..sub.keylen].into());
                     if !keys.contains(&ck) {

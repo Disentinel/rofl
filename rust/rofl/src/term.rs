@@ -17,7 +17,67 @@
 //! object per node with a `k` string tag, plus a `name` or `v` field, plus an
 //! args array for a functor.
 
+use std::rc::Rc;
+
 pub type Sym = u32;
+
+/// THE NAMES OF A LAYERED WORLD. Ids below `n0` are `base`'s: the names of a
+/// world frozen when it was first forked (`Heap::freeze`), shared by every
+/// fork and never written. A name is in exactly one of the two, so ids keep
+/// counting from the base, and a fork costs the `Rc`.
+#[derive(Default, Clone)]
+pub struct Interner {
+    n0: Sym,
+    base: Rc<Names>,
+    top: Names,
+}
+
+impl Interner {
+    pub fn intern(&mut self, s: &str) -> Sym {
+        let h = name_hash(s.as_bytes());
+        if self.n0 > 0 {
+            if let Some(id) = self.base.find(s, h) {
+                return id;
+            }
+        }
+        self.n0 + self.top.intern(s, h)
+    }
+    #[inline]
+    pub fn name(&self, id: Sym) -> &str {
+        if id < self.n0 {
+            self.base.name(id)
+        } else {
+            self.top.name(id - self.n0)
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.n0 as usize + self.top.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    pub fn bytes(&self) -> usize {
+        self.base.bytes() + self.top.bytes()
+    }
+    /// Everything above the mark goes under it. It copies only in a fork that
+    /// has names of its own and shares its base.
+    fn freeze(&mut self) {
+        if self.top.is_empty() {
+            return;
+        }
+        if self.n0 == 0 {
+            self.base = Rc::new(std::mem::take(&mut self.top));
+        } else {
+            let b = Rc::make_mut(&mut self.base);
+            for i in 0..self.top.len() as Sym {
+                let s = self.top.name(i);
+                b.intern(s, name_hash(s.as_bytes()));
+            }
+            self.top = Names::default();
+        }
+        self.n0 = self.base.len() as Sym;
+    }
+}
 
 /// Interned names. One table for every kind of name — relation, perspective,
 /// atom, functor, variable — because the same string is all of those in
@@ -40,7 +100,7 @@ pub type Sym = u32;
 /// what is new is a 4 GiB ceiling on the TOTAL TEXT of distinct names, which
 /// `intern` refuses rather than truncating. See LIMITS.md.
 #[derive(Default, Clone)]
-pub struct Interner {
+struct Names {
     /// Every name's bytes, concatenated, never moved and never freed.
     ///
     /// A `String` and not a `Vec<u8>` deliberately: `&self.buf[a..b]` is then a
@@ -79,12 +139,18 @@ fn name_hash(b: &[u8]) -> u64 {
     (h.rotate_left(5) ^ b.len() as u64).wrapping_mul(K).rotate_left(26)
 }
 
-impl Interner {
-    pub fn intern(&mut self, s: &str) -> Sym {
+impl Names {
+    fn find(&self, s: &str, h: u64) -> Option<Sym> {
+        if self.slots.is_empty() {
+            return None;
+        }
+        let v = self.slots[self.probe(s, h)];
+        (v != 0).then(|| v - 1)
+    }
+    fn intern(&mut self, s: &str, h: u64) -> Sym {
         if self.slots.is_empty() {
             self.rehash(64);
         }
-        let h = name_hash(s.as_bytes());
         let i = self.probe(s, h);
         if self.slots[i] != 0 {
             return self.slots[i] - 1;
@@ -130,22 +196,22 @@ impl Interner {
         self.slots = slots;
     }
     #[inline]
-    pub fn name(&self, id: Sym) -> &str {
+    fn name(&self, id: Sym) -> &str {
         let i = id as usize;
         let start = if i == 0 { 0 } else { self.ends[i - 1] as usize };
         &self.buf[start..self.ends[i] as usize]
     }
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.ends.len()
     }
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.ends.is_empty()
     }
     /// Bytes the table itself holds: the arena, the offsets, and the slots.
     /// All three are single allocations, so this is the whole of it — unlike
     /// the shape before, where a per-name allocation put the estimate below
     /// the allocator's answer by whatever malloc rounded up.
-    pub fn bytes(&self) -> usize {
+    fn bytes(&self) -> usize {
         self.buf.capacity() + self.ends.capacity() * 4 + self.slots.capacity() * 4
     }
 }
@@ -249,9 +315,19 @@ struct FuncNode {
 /// Where terms live. Functor arguments are slices of one flat vector, so a
 /// three-argument functor costs 12 bytes of node plus 24 of arguments rather
 /// than an object with an array in it.
+///
+/// LAYERED AS THE NAMES ARE: functors below `f0` are `base`'s, frozen by
+/// `freeze` and shared by every fork; a fork adds above them in `top`.
 #[derive(Default, Clone)]
 pub struct Heap {
     pub syms: Interner,
+    f0: u32,
+    base: Rc<Funcs>,
+    top: Funcs,
+}
+
+#[derive(Default, Clone)]
+struct Funcs {
     funcs: Vec<FuncNode>,
     args: Vec<Term>,
     /// Hash-consing for functors. A `$fact(...)` reification is built once per
@@ -281,22 +357,24 @@ fn cons_hash(name: Sym, args: &[Term]) -> u64 {
     h ^ (args.len() as u64)
 }
 
-impl Heap {
-    pub fn intern(&mut self, s: &str) -> Sym {
-        self.syms.intern(s)
+impl Funcs {
+    #[inline]
+    fn args_of(&self, i: u32) -> &[Term] {
+        let f = self.funcs[i as usize];
+        &self.args[f.start as usize..(f.start + f.len) as usize]
     }
-    pub fn atom(&mut self, s: &str) -> Term {
-        Term::atom(self.syms.intern(s))
+
+    fn find(&self, name: Sym, args: &[Term], h: u64) -> Option<u32> {
+        if self.cons.is_empty() {
+            return None;
+        }
+        let s = self.cons[self.slot(name, args, h)];
+        (s != CONS_EMPTY).then_some(s)
     }
-    pub fn string(&mut self, s: &str) -> Term {
-        Term::str(self.syms.intern(s))
-    }
-    pub fn var(&mut self, s: &str) -> Term {
-        Term::var(self.syms.intern(s))
-    }
-    fn cons_slot(&self, name: Sym, args: &[Term]) -> usize {
+
+    fn slot(&self, name: Sym, args: &[Term], h: u64) -> usize {
         let mask = self.cons.len() - 1;
-        let mut i = (cons_hash(name, args) as usize) & mask;
+        let mut i = (h as usize) & mask;
         loop {
             let s = self.cons[i];
             if s == CONS_EMPTY {
@@ -313,7 +391,7 @@ impl Heap {
         }
     }
 
-    fn cons_grow(&mut self) {
+    fn grow(&mut self) {
         let want = ((self.funcs.len() + 1) * 4).next_power_of_two().max(64);
         self.cons = vec![CONS_EMPTY; want];
         let mask = want - 1;
@@ -329,13 +407,13 @@ impl Heap {
         self.cons_n = self.funcs.len();
     }
 
-    pub fn mkf(&mut self, name: Sym, args: &[Term]) -> Term {
+    fn mkf(&mut self, name: Sym, args: &[Term], h: u64) -> u32 {
         if (self.cons_n + 1) * 4 >= self.cons.len() * 3 {
-            self.cons_grow();
+            self.grow();
         }
-        let slot = self.cons_slot(name, args);
+        let slot = self.slot(name, args, h);
         if self.cons[slot] != CONS_EMPTY {
-            return Term::func(self.cons[slot]);
+            return self.cons[slot];
         }
         let start = self.args.len() as u32;
         self.args.extend_from_slice(args);
@@ -347,7 +425,50 @@ impl Heap {
         });
         self.cons[slot] = i;
         self.cons_n += 1;
-        Term::func(i)
+        i
+    }
+}
+
+impl Heap {
+    pub fn intern(&mut self, s: &str) -> Sym {
+        self.syms.intern(s)
+    }
+    pub fn atom(&mut self, s: &str) -> Term {
+        Term::atom(self.syms.intern(s))
+    }
+    pub fn string(&mut self, s: &str) -> Term {
+        Term::str(self.syms.intern(s))
+    }
+    pub fn var(&mut self, s: &str) -> Term {
+        Term::var(self.syms.intern(s))
+    }
+    pub fn mkf(&mut self, name: Sym, args: &[Term]) -> Term {
+        let h = cons_hash(name, args);
+        if self.f0 > 0 {
+            if let Some(i) = self.base.find(name, args, h) {
+                return Term::func(i);
+            }
+        }
+        Term::func(self.f0 + self.top.mkf(name, args, h))
+    }
+    /// Move every name and functor under the mark, so that a clone shares
+    /// them; `Store::freeze` is the other half of a fork.
+    pub fn freeze(&mut self) {
+        self.syms.freeze();
+        if self.top.funcs.is_empty() {
+            return;
+        }
+        if self.f0 == 0 {
+            self.base = Rc::new(std::mem::take(&mut self.top));
+        } else {
+            let b = Rc::make_mut(&mut self.base);
+            for k in 0..self.top.funcs.len() as u32 {
+                let (n, a) = (self.top.funcs[k as usize].name, self.top.args_of(k));
+                b.mkf(n, a, cons_hash(n, a));
+            }
+            self.top = Funcs::default();
+        }
+        self.f0 = self.base.funcs.len() as u32;
     }
     pub fn mkf_named(&mut self, name: &str, args: &[Term]) -> Term {
         let n = self.syms.intern(name);
@@ -355,12 +476,19 @@ impl Heap {
     }
     #[inline]
     pub fn fname(&self, idx: u32) -> Sym {
-        self.funcs[idx as usize].name
+        if idx < self.f0 {
+            self.base.funcs[idx as usize].name
+        } else {
+            self.top.funcs[(idx - self.f0) as usize].name
+        }
     }
     #[inline]
     pub fn fargs(&self, idx: u32) -> &[Term] {
-        let f = self.funcs[idx as usize];
-        &self.args[f.start as usize..(f.start + f.len) as usize]
+        if idx < self.f0 {
+            self.base.args_of(idx)
+        } else {
+            self.top.args_of(idx - self.f0)
+        }
     }
     #[inline]
     pub fn name(&self, s: Sym) -> &str {
@@ -393,10 +521,7 @@ impl Heap {
     pub fn is_ground(&self, t: Term) -> bool {
         match t.kind() {
             TermK::Var(_) => false,
-            TermK::Func(i) => {
-                let f = self.funcs[i as usize];
-                (f.start..f.start + f.len).all(|k| self.is_ground(self.args[k as usize]))
-            }
+            TermK::Func(i) => self.fargs(i).iter().all(|a| self.is_ground(*a)),
             _ => true,
         }
     }
@@ -409,9 +534,8 @@ impl Heap {
                 }
             }
             TermK::Func(i) => {
-                let f = self.funcs[i as usize];
-                for k in f.start..f.start + f.len {
-                    self.vars_of(self.args[k as usize], into);
+                for a in self.fargs(i) {
+                    self.vars_of(*a, into);
                 }
             }
             _ => {}
@@ -426,17 +550,17 @@ impl Heap {
             ("h.syms", self.syms.bytes()),
             (
                 "h.funcs",
-                self.funcs.capacity() * std::mem::size_of::<FuncNode>(),
+                (self.base.funcs.capacity() + self.top.funcs.capacity()) * std::mem::size_of::<FuncNode>(),
             ),
-            ("h.args", self.args.capacity() * 8),
-            ("h.cons", self.cons.capacity() * 4),
+            ("h.args", (self.base.args.capacity() + self.top.args.capacity()) * 8),
+            ("h.cons", (self.base.cons.capacity() + self.top.cons.capacity()) * 4),
         ]
     }
     pub fn sym_count(&self) -> usize {
         self.syms.len()
     }
     pub fn func_count(&self) -> usize {
-        self.funcs.len()
+        self.f0 as usize + self.top.funcs.len()
     }
 
     // ---------------------------------------------------------------- rendering
@@ -460,12 +584,11 @@ impl Heap {
             TermK::Func(i) => {
                 out.push_str(self.name(self.fname(i)));
                 out.push('(');
-                let f = self.funcs[i as usize];
-                for k in 0..f.len {
+                for (k, a) in self.fargs(i).iter().enumerate() {
                     if k > 0 {
                         out.push(',');
                     }
-                    self.canon_term(self.args[(f.start + k) as usize], out);
+                    self.canon_term(*a, out);
                 }
                 out.push(')');
             }
