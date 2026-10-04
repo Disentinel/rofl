@@ -354,8 +354,8 @@ F answers to a name N either:
    - F [is among the](#ast_child) `body` of B;
    - the `id` of CD [is named](js-structure.rofl.md#ast_name) N;
 5. if all of:
-   - F is a [function](#fn_node);
    - the `value` of a [class field](#noun-class_field) P is F;
+   - F is a [function](#fn_node);
    - the `key` of P [spells](js-structure.rofl.md#key_name) N.
 
 > A class expression with no `id` takes its binding's name — the language's own

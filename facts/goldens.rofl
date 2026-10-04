@@ -119,7 +119,7 @@ golden_state("rules_inquiry_perspectives", "bf86fbaa323c65ca", 724).
 golden_state("rules_inquiry_terminology", "eef40b58afa6245e", 754).
 golden_state("rules_js-ambient", "9832931994f78f11", 1816).
 golden_state("rules_js-attrs", "52858de8b6426dfa", 2276).
-golden_state("rules_js-callgraph", "4b95808000e2566a", 3942).
+golden_state("rules_js-callgraph", "f111cb5a66197fa9", 3942).
 golden_state("rules_js-controlflow", "63d0d77cc4484408", 3776).
 golden_state("rules_js-dataflow", "e688555bd470c308", 7211).
 golden_state("rules_js-effects", "69d2f6c1a4346383", 8624).
