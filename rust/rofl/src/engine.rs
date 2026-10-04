@@ -1380,6 +1380,31 @@ impl Eval {
             }
             kept.push(self.classify(r));
         }
+        // `asks(Rel)`: only the rules whose heads reach an asked relation are
+        // activated, backwards through every premise; no asks means everything
+        let mut cone: HashSet<Sym> = HashSet::new();
+        for f in self.store.rel_all(&self.h, self.v.asks) {
+            let a = self.store.args(f);
+            if a.len() == 1 {
+                if let Some(rel) = a[0].as_atom() {
+                    cone.insert(rel);
+                }
+            }
+        }
+        if !cone.is_empty() {
+            loop {
+                let n = cone.len();
+                for r in &kept {
+                    if cone.contains(&r.clause.head.rel) {
+                        cone.extend(r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel));
+                    }
+                }
+                if cone.len() == n {
+                    break;
+                }
+            }
+            kept.retain(|r| cone.contains(&r.clause.head.rel));
+        }
         self.next_rules = kept.iter().filter(|r| r.clause.head.temporal == Temporal::Next).map(|r| r.id).collect();
         self.carried.clear();
         let mut carried: Vec<Sym> = kept

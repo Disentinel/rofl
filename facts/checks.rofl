@@ -2747,3 +2747,7 @@ check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
 -- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
 check_world("sealed_provenance").
 check_file("sealed_provenance", "examples/checks/sealed-provenance.rofl").
+
+-- asks(Rel): the relation cone as data; only the rules whose heads reach an asked relation are activated, in both engines
+check_world("asks").
+check_file("asks", "examples/checks/asks.rofl").
