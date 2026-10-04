@@ -135,6 +135,7 @@ check[checks]("rust/rofl/tests/structure.rs", "a_broken_promise_is_refused_namin
 check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_tick", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_retraction_that_breaks_the_promise_is_refused_not_answered", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_key_in_two_books_is_two_keys", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_budget_wall_does_not_skip_the_promise", test).
 check[checks]("rust/rofl/tests/structures.rs", "proposes_exactly_the_right_declarations", test).
 check[checks]("rust/rofl/tests/structures.rs", "lists_the_near_misses_with_their_facts", test).
 check[checks]("rust/rofl/tests/structures.rs", "the_text_is_the_committed_report", test).
@@ -624,8 +625,10 @@ check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "ds_function_holds", world).
 check[checks]("facts/goldens.rofl", "ds_function_phrase", world).
+check[checks]("facts/goldens.rofl", "ds_function_retract", world).
 check[checks]("facts/goldens.rofl", "ds_function_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_function_tick", world).
+check[checks]("facts/goldens.rofl", "ds_function_wall", world).
 check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).

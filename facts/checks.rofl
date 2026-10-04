@@ -3070,6 +3070,17 @@ check_file("ds_function_tick", "examples/checks/ds-function-tick-2-broken.rofl")
 check_opt("ds_function_tick", together, 1).
 check_opt("ds_function_tick", ticks, 3).
 
+check_world("ds_function_wall").
+check_file("ds_function_wall", "examples/checks/ds-function-wall.rofl").
+check_opt("ds_function_wall", together, 1).
+check_opt("ds_function_wall", budget, 60).
+
+check_world("ds_function_retract").
+check_file("ds_function_retract", "examples/checks/ds-function-retract-1-holds.rofl").
+check_file("ds_function_retract", "examples/checks/ds-function-retract-2-broken.rofl").
+check_opt("ds_function_retract", together, 1).
+check_opt("ds_function_retract", retract, "dsr_blocked(a, 2)").
+
 check_world("ds_function_phrase").
 check_file("ds_function_phrase", "examples/checks/ds-function-phrase.rofl.md").
 check_file("ds_function_phrase", "examples/checks/ds-function-phrase-check.rofl").

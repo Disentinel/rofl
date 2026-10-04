@@ -282,7 +282,11 @@ relation, one book and one key with different values refuse the run:
 (b); 1 more key breaks it too`. The key is shown by its canonical terms; the
 named key is the smallest by canonical text and the two values the smallest two,
 so both engines name the same ones. The world is left dirty: nothing is answered
-from a broken promise. **Per book** (the note's choice): one key with a value in
+from a broken promise, and that holds for every later question (`query`, `why`,
+`whynot`, `excise`, and in Rust `ask`) until the world is fixed and evaluated: the
+judgement is made after the evaluator has cleared the flag, so a refusal puts the
+flag back; the end of an evaluation by a budget wall is judged like any other end
+(f_a_refused_world_stays_refused_and_a_wall_judges_the_promise). **Per book** (the note's choice): one key with a value in
 each of two books holds; a hypothetical world that breaks it (`excise`, an
 assumption's fork) is refused as that run, with the same message, and the world it
 was a what-if of is untouched. This is the conservative reading of open question
