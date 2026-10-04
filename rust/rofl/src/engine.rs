@@ -77,6 +77,8 @@ pub struct Closure {
     pub edge_fwd: bool,
     pub base: Sym,
     pub step: Sym,
+    /// The step's plan reads R before E.
+    pub r_first: bool,
 }
 
 /// Each relation concluded by exactly two rules of the closure shape.
@@ -128,6 +130,7 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
         if !(left || right) {
             continue;
         }
+        let r_first = step.plan.iter().find_map(|b| pos(b).map(|l| l.rel == rel)).unwrap_or(true);
         out.push(Closure {
             rel,
             persp: bh.persp.as_atom().unwrap(),
@@ -136,6 +139,7 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
             edge_fwd,
             base: base.id,
             step: step.id,
+            r_first,
         });
     }
     out.sort_by_key(|c| c.rel);
@@ -560,19 +564,12 @@ pub struct Eval {
     pub rounds: Vec<(u64, u64)>,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
-    /// concluding R. With `closure_on` (and no witnesses to write) the pair is
-    /// one walk over E where E is news, not rounds.
+    /// concluding R. Where no lattice can withdraw, the pair is one walk over
+    /// E whenever E is news, with the firings the two rules would have made.
     pub closures: Vec<Closure>,
     closure_of: HashMap<Sym, (usize, bool)>,
-    pub closure_on: bool,
-    /// Monotone rules activated by strongly connected component, bottom-up.
-    pub scc: bool,
-    /// Under `no_witness` with provenance kept: the (fact, rule, tick) rows already written.
-    fired: HashSet<(FactId, Sym, u32)>,
     pub closure_rows: u64,
     pub closure_runs: u64,
-    pub closure_walk_ns: u64,
-    pub closure_add_ns: u64,
     pub naive: bool,
     pub mode: Mode,
     pub steps: i64,
@@ -910,8 +907,8 @@ pub struct Eval {
     bootstrap: bool,
     answer: RuleAnswer,
     pub no_provenance: bool,
-    /// No witnesses either: a firing on a fact already there is no news. Only
-    /// where nothing withdraws (no lattices); set from the harness, never by a program.
+    /// `sealed(provenance)`: no witnesses either, where nothing withdraws. A
+    /// firing on a fact already there is then no news, and a step is a new fact.
     pub no_witness: bool,
     /// `Rofl.retainTicks` (src/api.ts:165): how many COMPLETED ticks of frozen
     /// provenance to keep, or none set — which keeps everything and is what
@@ -1069,13 +1066,8 @@ impl Eval {
             rounds: Vec::new(),
             closures: Vec::new(),
             closure_of: HashMap::new(),
-            closure_on: false,
-            scc: false,
-            fired: HashSet::new(),
             closure_rows: 0,
             closure_runs: 0,
-            closure_walk_ns: 0,
-            closure_add_ns: 0,
             naive: false,
             mode,
             steps: 0,
@@ -1293,17 +1285,9 @@ impl Eval {
 
     fn prepare(&mut self) {
         self.well_founded = well_founded_declared(&mut self.h, &self.v, &mut self.store);
-        let sealed = sealed_bodies(&mut self.h, &self.v, &mut self.store);
-        self.no_provenance = sealed.contains(&self.v.sealed_provenance);
-        // `sealed(witness)`: any support will do. No witness is kept where
-        // nothing withdraws, the order of groups, candidates and activation
-        // is the engine's own, and a closure is walked.
-        if sealed.contains(&self.v.sealed_witness) {
-            self.no_witness = true;
-            self.store.unordered = true;
-            self.closure_on = true;
-            self.scc = true;
-        }
+        self.no_provenance = sealed_bodies(&mut self.h, &self.v, &mut self.store)
+            .contains(&self.v.sealed_provenance);
+        self.no_witness = self.no_provenance;
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
         self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
@@ -1373,6 +1357,10 @@ impl Eval {
             self.join_of.insert(c, l);
         }
         self.register_lattices(&rules);
+        // the set of facts is the contract: where nothing withdraws, groups and
+        // candidates are in the engine's own order, rules are activated by
+        // component and a closure is walked
+        self.store.unordered = self.lattices.is_empty();
         self.diags.extend(diags);
         self.answer = self.safety_answer(&rules);
         if self.no_provenance && self.answer.reads_provenance {
@@ -3466,7 +3454,7 @@ impl Eval {
         if rules.is_empty() {
             return Ok(());
         }
-        if self.scc && rules.len() > 1 {
+        if self.lattices.is_empty() && rules.len() > 1 {
             for component in components(rules) {
                 self.activate_batch(&component)?;
             }
@@ -3601,7 +3589,7 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
-        if self.closure_on && self.no_witness && self.lattices.is_empty() {
+        if self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
             }
@@ -3636,7 +3624,7 @@ impl Eval {
         let c = self.closures[ci].clone();
         let mut index: HashMap<Term, u32> = HashMap::new();
         let mut nodes: Vec<Term> = Vec::new();
-        let mut edges: Vec<(u32, u32)> = Vec::new();
+        let mut edges: Vec<(u32, u32, FactId)> = Vec::new();
         for id in self.store.rel_persp(&self.h, c.edge, c.edge_persp) {
             let a = self.store.args(id);
             if a.len() != 2 {
@@ -3644,39 +3632,42 @@ impl Eval {
             }
             let (x, y) = if c.edge_fwd { (a[0], a[1]) } else { (a[1], a[0]) };
             let mut dense = |t: Term| *index.entry(t).or_insert_with(|| { nodes.push(t); nodes.len() as u32 - 1 });
-            let e = (dense(x), dense(y));
+            let e = (dense(x), dense(y), id);
             edges.push(e);
         }
         let n = nodes.len();
-        let mut start = vec![0u32; n + 1];
-        for &(x, _) in &edges {
-            start[x as usize + 1] += 1;
-        }
-        for i in 0..n {
-            start[i + 1] += start[i];
-        }
-        let mut adj = vec![0u32; edges.len()];
-        let mut fill = start.clone();
-        for &(x, y) in &edges {
-            adj[fill[x as usize] as usize] = y;
-            fill[x as usize] += 1;
-        }
-        // with provenance kept, a row's rules: the base rule for an edge, the
-        // step rule where a predecessor of the end is reached from the start too
-        let mut pred: Vec<Vec<u32>> = vec![Vec::new(); if self.no_provenance { 0 } else { n }];
-        for &(x, y) in &edges {
-            if !self.no_provenance {
-                pred[y as usize].push(x);
+        // the edges by start, and by end: (other node, edge fact)
+        fn csr(n: usize, edges: &[(u32, u32, FactId)], rev: bool) -> (Vec<u32>, Vec<(u32, FactId)>) {
+            let key = |e: &(u32, u32, FactId)| if rev { e.1 } else { e.0 };
+            let mut start = vec![0u32; n + 1];
+            for e in edges {
+                start[key(e) as usize + 1] += 1;
             }
+            for i in 0..n {
+                start[i + 1] += start[i];
+            }
+            let mut adj = vec![(0u32, 0 as FactId); edges.len()];
+            let mut fill = start.clone();
+            for e in edges {
+                let k = key(e) as usize;
+                adj[fill[k] as usize] = (if rev { e.0 } else { e.1 }, e.2);
+                fill[k] += 1;
+            }
+            (start, adj)
         }
+        let keep = !self.no_witness;
+        let (start, adj) = csr(n, &edges, false);
+        let (pstart, pred) = if keep { csr(n, &edges, true) } else { (Vec::new(), Vec::new()) };
+        let span = |st: &[u32], v: u32| st[v as usize] as usize..st[v as usize + 1] as usize;
         let mut mark = vec![u32::MAX; n];
         let mut queue: Vec<u32> = Vec::new();
-        let mut rows: Vec<(u32, u32, bool, bool)> = Vec::new();
-        let t = std::time::Instant::now();
+        let mut reached: Vec<u32> = Vec::new();
+        let mut out = Front::default();
+        let tick = self.store.tick;
         for s in 0..n as u32 {
             queue.clear();
-            queue.extend_from_slice(&adj[start[s as usize] as usize..start[s as usize + 1] as usize]);
-            let first = rows.len();
+            reached.clear();
+            queue.extend(adj[span(&start, s)].iter().map(|&(v, _)| v));
             let mut i = 0;
             while i < queue.len() {
                 let v = queue[i];
@@ -3685,44 +3676,54 @@ impl Eval {
                     continue;
                 }
                 mark[v as usize] = s;
-                queue.extend_from_slice(&adj[start[v as usize] as usize..start[v as usize + 1] as usize]);
-                rows.push((s, v, false, false));
-            }
-            if !self.no_provenance {
-                for k in first..rows.len() {
-                    let v = rows[k].1;
-                    rows[k].2 = adj[start[s as usize] as usize..start[s as usize + 1] as usize].contains(&v);
-                    rows[k].3 = pred[v as usize].iter().any(|&u| mark[u as usize] == s);
+                queue.extend(adj[span(&start, v)].iter().map(|&(w, _)| w));
+                reached.push(v);
+                let args = [nodes[s as usize], nodes[v as usize]];
+                let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
+                if new {
+                    out.note(c.rel, id);
+                    self.closure_rows += 1;
+                    if !keep {
+                        self.bump_steps()?;
+                        self.charge_row(Some(c.step), true)?;
+                    }
                 }
             }
-        }
-        self.closure_walk_ns += t.elapsed().as_nanos() as u64;
-        let t = std::time::Instant::now();
-        let mut out = Front::default();
-        let tick = self.store.tick;
-        for (s, v, direct, longer) in rows {
-            let args = [nodes[s as usize], nodes[v as usize]];
-            let (id, new) = self.store.put(&self.h, c.rel, c.persp, &args, F_TICK);
-            if new {
-                out.note(c.rel, id);
-                self.closure_rows += 1;
-                self.bump_steps()?;
-                self.charge_row(Some(c.step), true)?;
+            if !keep {
+                continue;
             }
-            if !self.no_provenance {
-                for (rule, holds) in [(c.base, direct), (c.step, longer)] {
-                    if holds {
+            // the firings the two rules would have made: the base rule on the
+            // edge, the step rule on every reached predecessor of the end
+            for &v in &reached {
+                let args = [nodes[s as usize], nodes[v as usize]];
+                let id = self.store.get(c.rel, c.persp, &args).unwrap();
+                let mut firings: Vec<(Sym, Vec<PremRef>)> = Vec::new();
+                for &(x, eid) in &adj[span(&start, s)] {
+                    if x == v {
+                        firings.push((c.base, vec![PremRef::Fact(eid)]));
+                    }
+                }
+                for &(u, eid) in &pred[span(&pstart, v)] {
+                    if mark[u as usize] == s {
+                        let ru = self.store.get(c.rel, c.persp, &[nodes[s as usize], nodes[u as usize]]).unwrap();
+                        let (r, e) = (PremRef::Fact(ru), PremRef::Fact(eid));
+                        firings.push((c.step, if c.r_first { vec![r, e] } else { vec![e, r] }));
+                    }
+                }
+                for (rule, prems) in firings {
+                    if self.store.support(id, Witness { rule, tick, prems }) {
+                        self.bump_steps()?;
+                        self.charge_row(Some(rule), true)?;
                         let ft = fact_term(&mut self.h, &self.v, c.rel, c.persp, &args);
                         let db_args = [ft, Term::atom(rule), Term::int(tick as i64)];
-                        if self.store.add(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0) {
-                            let dbid = self.store.get(self.v.derived_by, self.v.kernel_persp, &db_args).unwrap();
+                        let (dbid, dbnew) = self.store.put(&self.h, self.v.derived_by, self.v.kernel_persp, &db_args, 0);
+                        if dbnew {
                             out.note(self.v.derived_by, dbid);
                         }
                     }
                 }
             }
         }
-        self.closure_add_ns += t.elapsed().as_nanos() as u64;
         self.closure_runs += 1;
         Ok(out)
     }
@@ -3831,7 +3832,7 @@ impl Eval {
         }
         let tick = self.store.tick;
         let new_firing = if self.no_witness && self.lattices.is_empty() {
-            is_new || (!self.no_provenance && self.fired.insert((id, r.id, tick)))
+            is_new
         } else {
             self.store.support(
                 id,
