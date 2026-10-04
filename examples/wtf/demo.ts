@@ -69,8 +69,8 @@ export function world(): Rofl {
  *  the two schedulers can ever disagree, they disagree here first. */
 export function stockWorld(): Rofl {
   const r = new Rofl({ evaluator: 'strata' });
-  must(r.load(BOOT), 'boot.rofl');
-  must(r.load(read('rules/strata.rofl')), 'strata.rofl');
+  must(r.load(BOOT, { defer: true }), 'boot.rofl');
+  must(r.load(read('rules/strata.rofl'), { defer: true }), 'strata.rofl');
   must(r.load(MODEL), 'wtf.rofl');
   return r;
 }

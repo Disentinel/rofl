@@ -2261,9 +2261,11 @@ impl Eval {
                 None => {
                     let mut strat = self.read_strata();
                     self.rank_counting(&mut strat);
+                    let table = strat.clone();
                     self.rank_unknown_cone(&mut strat);
                     brk!("strata_untabled" => (); self.check_agg_strata(&strat, &strat_rules)?);
                     self.check_lattice_strata(&strat, &strat_rules)?;
+                    brk!("unranked_negation_runs" => (); self.check_unranked_negation(&table, &strat_rules, &mono)?);
                     self.round_of = strat.iter().map(|(k, v)| (*k, (*v).max(0) as u32)).collect();
                     level_split(&strat_rules, |r| {
                         if r.clause.head.temporal == Temporal::Next {
@@ -3408,6 +3410,55 @@ impl Eval {
             }
         }
         Ok(())
+    }
+
+    /// THE FINAL PASS HAS NO ORDER. Every rule the table does not rank fires
+    /// there, once, in canonical order, so a negation of a relation another of
+    /// them derives (or a plain rule derives from what they do) reads whatever
+    /// the pass had reached. An unranked aggregate is already refused by
+    /// `check_agg_strata`. Relations complete before the pass stay negatable.
+    fn check_unranked_negation(&self, strat: &HashMap<Sym, i64>, strat_rules: &[Rc<ERule>], mono: &[Rc<ERule>]) -> Result<(), Halt> {
+        let last: Vec<&Rc<ERule>> = strat_rules
+            .iter()
+            .filter(|r| r.clause.head.temporal == Temporal::Next || !strat.contains_key(&r.clause.head.rel))
+            .collect();
+        let mut derived: HashSet<Sym> = last.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        let mut grew = true;
+        while grew {
+            grew = false;
+            for r in mono {
+                if r.clause.head.temporal == Temporal::Next || derived.contains(&r.clause.head.rel) {
+                    continue;
+                }
+                if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| derived.contains(&l.rel)) {
+                    derived.insert(r.clause.head.rel);
+                    grew = true;
+                }
+            }
+        }
+        fn negated(b: &BodyElem, out: &mut Vec<Sym>) {
+            match b {
+                BodyElem::Neg(l) => out.push(l.rel),
+                BodyElem::Agg(a) => a.body.iter().for_each(|x| negated(x, out)),
+                _ => {}
+            }
+        }
+        let mut clashes: Vec<String> = Vec::new();
+        for r in last.iter().filter(|r| r.has_neg) {
+            let mut ns = Vec::new();
+            r.clause.body.iter().for_each(|b| negated(b, &mut ns));
+            for n in ns.into_iter().filter(|n| derived.contains(n)) {
+                clashes.push(format!("{} negates {}", self.h.name(r.clause.head.rel), self.h.name(n)));
+            }
+        }
+        clashes.sort_by(|a, b| cmp_js(a, b));
+        match clashes.first() {
+            None => Ok(()),
+            Some(c) => Err(Halt::Strat(
+                format!("program rejected: {c}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)"),
+                String::new(),
+            )),
+        }
     }
 
     /// WHAT READS `unknown` SITS ABOVE EVERYTHING ELSE under the stock
