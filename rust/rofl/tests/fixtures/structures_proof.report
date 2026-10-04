@@ -1,0 +1,45 @@
+structures: 11 relations of at least 2 rows scanned over 269 live facts, about 142 B per fact (store tables over live facts)
+
+propose function grade(A, B, to C).
+        grade: 7 rows, 7 distinct A,B; at most one C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function name_of(A, to B).
+        name_of: 3 rows, 3 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function ring(A, to B).
+        ring: 4 rows, 4 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function ring(to A, B).
+        ring: 4 rows, 4 distinct B; at most one A for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose tree edge(P, C) closure below.
+        edge: 6 edges over 8 nodes, 2 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)
+        below: 9 rows = the closure of edge
+        saves 9 rows (9 derivations)
+
+propose alias held_by(A, B) is owns(B, A).
+        held_by: 5 rows (0 asserted) equals, arguments permuted, owns: 5 rows
+        saves 5 rows (5 derivations)
+
+propose alias holder(A) is owns(A, _).
+        holder: 4 rows (0 asserted) is the distinct projection of owns: 5 rows
+        the price is a distinct index on the kept columns, unless they are a key of the source
+        saves 4 rows (5 derivations)
+
+near miss alias copy_miss(A, B) is owns(B, A): copy_miss lacks 1 row of owns: owns(p4, i4)
+near miss function copy_miss(A, to B): 1 of 3 keys has more than one B: copy_miss(i1, p1) and copy_miss(i1, p2)
+near miss function copy_miss(to A, B): 1 of 3 keys has more than one A: copy_miss(i1, p1) and copy_miss(i2, p1)
+near miss function grade(A, to B, C): 1 of 6 keys has more than one B: grade(s4, math, 4) and grade(s4, art, 4)
+near miss function link(A, to B): 1 of 3 keys has more than one B: link(a1, b1) and link(a1, c1)
+near miss function link(to A, B): 1 of 3 keys has more than one A: link(b1, d1) and link(c1, d1)
+near miss function owns(A, to B): 1 of 4 keys has more than one B: owns(p1, i1) and owns(p1, i2)
+near miss function owns(to A, B): 1 of 4 keys has more than one A: owns(p1, i1) and owns(p2, i1)
+near miss function tag_of(A, to B): 1 of 4 keys has more than one B: tag_of(k3, t2) and tag_of(k3, t3)
+near miss tree link(P, C). 1 child with two parents: d1 has parents b1 and c1
+near miss tree ring(P, C). 1 cycle, the first through x1, x3, x2
+
+7 proposals (function 4, tree 1, alias 2), 11 near misses; the rows they stop storing: 18 (19 derivations), about 2.5 KiB at the mean cost per fact

@@ -1695,6 +1695,12 @@ brk_expects("ts_function_twice_admitted", "ds_function_syntax").
 brk("ts_function_roles_unread"). brk_kind("ts_function_roles_unread", ts).
 brk_expects("ts_function_roles_unread", "ds_function_syntax").
 brk_expects("ts_function_roles_unread", "ds_function_holds").
+brk("structures_function_conflict_ignored"). brk_kind("structures_function_conflict_ignored", switch).
+brk_expects("structures_function_conflict_ignored", "structures_proof").
+brk("structures_tree_two_parents_ignored"). brk_kind("structures_tree_two_parents_ignored", switch).
+brk_expects("structures_tree_two_parents_ignored", "structures_proof").
+brk("structures_alias_subset_accepted"). brk_kind("structures_alias_subset_accepted", switch).
+brk_expects("structures_alias_subset_accepted", "structures_proof").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -2068,6 +2074,9 @@ switch_site("staged_keeps_withdrawn", "rust/rofl/src/engine.rs").
 switch_site("staged_neg_arrival", "rust/rofl/src/engine.rs").
 switch_site("stale_holes_kept", "rust/rofl/src/engine.rs").
 switch_site("strata_untabled", "rust/rofl/src/engine.rs").
+switch_site("structures_alias_subset_accepted", "rust/rofl/src/structures.rs").
+switch_site("structures_function_conflict_ignored", "rust/rofl/src/structures.rs").
+switch_site("structures_tree_two_parents_ignored", "rust/rofl/src/structures.rs").
 switch_site("subset_iv_low_only", "rust/rofl/src/engine.rs").
 switch_site("sum_by_value", "rust/rofl/src/engine.rs").
 switch_site("swap", "rust/rofl/src/rofl_parse.rs").

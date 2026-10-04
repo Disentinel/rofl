@@ -135,6 +135,9 @@ check[checks]("rust/rofl/tests/structure.rs", "a_broken_promise_is_refused_namin
 check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_tick", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_retraction_that_breaks_the_promise_is_refused_not_answered", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_key_in_two_books_is_two_keys", test).
+check[checks]("rust/rofl/tests/structures.rs", "proposes_exactly_the_right_declarations", test).
+check[checks]("rust/rofl/tests/structures.rs", "lists_the_near_misses_with_their_facts", test).
+check[checks]("rust/rofl/tests/structures.rs", "the_text_is_the_committed_report", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "pareto_fronts_are_the_fronts_of_every_simple_path", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_on_a_total_order_is_the_min_lattice", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_through_plain_relations_is_the_min_lattice", test).
@@ -668,6 +671,7 @@ test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").
+test_file[checks]("rust/rofl/tests/structures.rs").
 test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").

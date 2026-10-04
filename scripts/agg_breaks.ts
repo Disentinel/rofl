@@ -6666,7 +6666,52 @@ export const BREAKS: Break[] = [
    "ds_function_holds": "was to be refused"
   }
  },
+ {
+  "id": "structures_function_conflict_ignored",
+  "what": "the detection report takes a key with one conflicting value for a function",
+  "expect": {
+   "structures_proof": "function tag_of"
+  }
+ },
+ {
+  "id": "structures_tree_two_parents_ignored",
+  "what": "the detection report does not see the second parent of a node, so a DAG is a tree",
+  "expect": {
+   "structures_proof": "tree link"
+  }
+ },
+ {
+  "id": "structures_alias_subset_accepted",
+  "what": "the detection report takes a permuted copy that lacks a row for an alias",
+  "expect": {
+   "structures_proof": "alias copy_miss"
+  }
+ },
 ];
+
+/** A proof that is no world: the report `rofl-load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),
+ *  which is its committed text with no fault and must move, on a line that holds the sign, with one planted. */
+const REPORTS: Record<string, { fixture: string; golden: string }> = {
+  structures_proof: { fixture: 'rust/rofl/tests/fixtures/structures_proof.facts', golden: 'rust/rofl/tests/fixtures/structures_proof.report' },
+};
+
+function proofReports(b: Break, bin: string, control: boolean): Verdict {
+  const lines: string[] = [], bad: string[] = [];
+  for (const [name, sign] of Object.entries(b.expect)) {
+    const r = REPORTS[name];
+    if (!r) continue;
+    const run = (id: string): string => execFileSync(bin, ['--propose-structures', path.join(ROOT, r.fixture)],
+      { encoding: 'utf8', env: { ...process.env, ROFL_BREAK: id } });
+    const golden = read(r.golden);
+    if (control && run('') !== golden) { bad.push(`control, no break planted: ${name} is not its committed report`); continue; }
+    const was = golden.split('\n'), now = run(control ? b.id : '').split('\n');
+    const moved = [...was.filter((l) => !now.includes(l)), ...now.filter((l) => !was.includes(l))];
+    const killed = moved.some((l) => l.includes(sign));
+    lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
+    if (!killed) bad.push(`${b.id}: ${name} did not move a line holding ${sign} (${moved.slice(0, 2).join(' | ') || 'nothing'})`);
+  }
+  return { lines, bad };
+}
 
 // ------------------------------------------------------------ the switches
 
@@ -7082,7 +7127,7 @@ if (isMain) {
   let all = declared();
   if ([...expected].some((n) => !all.some((w) => w.name === n)) || sel?.files.length) all = worlds();
   const bad: string[] = [];
-  for (const n of expected) if (!all.some((w) => w.name === n)) bad.push(`a break expects ${n}, which is no world`);
+  for (const n of expected) if (!all.some((w) => w.name === n) && !REPORTS[n]) bad.push(`a break expects ${n}, which is no world`);
 
   let chosen = BREAKS;
   const why: string[] = [];
@@ -7174,6 +7219,7 @@ if (isMain) {
       chosen.forEach((b, i) => {
         const p = plants[i];
         if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
+        if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl-load'), true));
         const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
         out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
       });
@@ -7202,6 +7248,7 @@ if (isMain) {
         if (kernel) sh('npm run build:dense');
         build();
         out.push(await runBreak(b, wsOf(b), { env: {}, subs: [] }));
+        if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, `rust/target/${profile}/rofl-load`), false));
       } catch (e) {
         out.push({ lines: [], bad: [`${b.id}: ${(e as Error).message.split('\n')[0]}`] });
       } finally {
