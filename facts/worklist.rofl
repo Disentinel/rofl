@@ -3733,9 +3733,8 @@ work_state(w_cmp_delta_first, open).
 
 work(w_cmp_shape_rewrites,
   "MODEL (from f_costly_rules_are_shapes): eleven measured rule rewrites, one representative per costly shape (s1-s11: helpers for static joins, growing premise first, constant-bound first, reorder a cross product, enter a closure from the narrow end, a shared helper for twin bodies, walk down and stop at a function, project the key before per-row negations, drop the eff_in_fn twin and read in_fn, existence without scanning, nearest_fn off nearest_v), together sealed eval -9 to -13%, default -12 to -22%; s12 (an anti-join as two counts) refuted. rules/js-*.rofl are the owner's: diffs in scratchpad shapes/diffs/, nothing merged. Then: the shape detectors as a lint over the rule reflection, so new rules are caught.").
-work_state(w_cmp_shape_rewrites, open).
 
--- ===========================================================================
+-- ====================================================================
 -- DATA STRUCTURES, recorded 2026-10-04 with the owner (f_a_structure_is_declared_and_does_not_change_the_meaning).
 -- ===========================================================================
 
@@ -3748,3 +3747,9 @@ work(w_world_optimisation_cookbook,
   "A COOKBOOK OF WORLD OPTIMISATION (owner, 2026-10-04: 'a whole cookbook has appeared'): one document (docs/optimising-a-world.md) that gathers, as recipes with a symptom, a measurement, a cure and the measured gain on Rust release: the seal (sealed(provenance), and provenance on demand for explanation), the costly rule SHAPES and their rewrites (f_costly_rules_are_shapes: delta behind a prefix, cross products, closures entered from the wide end, twin bodies, per-row negations, copies under two names, existence by scanning, pairwise not-closer as a min), aggregates instead of negation-by-absence (seq_later -> max), declared DATA STRUCTURES (tree, alias, key, span, equivalence, sequence, ordered, dag) and the engine's proposals of them, demand (asks cones), runtime assumptions, and how to measure (rofl-eval --bytes per-rule profile, npm test --engine rust, the exp0 seed tooling). Written after delta-first, the shape rewrites and the first structures land, from their findings; each recipe points at its finding and proof world. The shape detectors and the structure detection are the cookbook's tools.").
 work_state(w_world_optimisation_cookbook, open).
 work_needs(w_world_optimisation_cookbook, w_cmp_shape_rewrites).
+work_state(w_cmp_shape_rewrites, done).
+
+work(w_cmp_shape_rewrites_after_delta_first,
+  "REMAINDER of w_cmp_shape_rewrites (f_costly_rules_are_shapes): s1-s3 (static joins before a recursive premise, live premise first, selective constant first) and the s9 helper for the call and member twins of external_value / may_be_node, which raises the model's probes 2.5 % today because the extra round re-fires callback_param. Re-measure after the engine fires the delta first (w_cmp_delta_first), then apply what still pays and drop the register rows (facts/cost-shapes.rofl, helper_adds_a_round) that stop being needed.").
+work_state(w_cmp_shape_rewrites_after_delta_first, open).
+work_needs(w_cmp_shape_rewrites_after_delta_first, w_cmp_delta_first).

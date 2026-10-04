@@ -1,0 +1,50 @@
+-- examples/shapes/fixture.rofl — one planted instance of each costly shape, and beside it the
+-- rewrite that is not one. Nothing runs: the rules are read about. The expected findings are
+-- in examples/shapes/check.rofl.
+
+-- cross_product: fx_big2(Y) shares nothing with fx_big(X)
+fx_cp(X, Y)    :- fx_big[data](X), fx_big2[data](Y), fx_link[data](X, Y).
+fx_cp_ok(X, Y) :- fx_big[data](X), fx_link[data](X, Y), fx_big2[data](Y).
+
+-- closure_wide_end: every descendant of B, then the throw statements among them
+fx_cw(T, V)    :- fx_try[data](T, B), ast_within[code](B, Th), ast_node[code](Th, throw_statement, _, _),
+                  ast_child[code](Th, argument, 0, V).
+fx_cw_ok(T, V) :- ast_node[code](Th, throw_statement, _, _), ast_within[code](B, Th), fx_try[data](T, B),
+                  ast_child[code](Th, argument, 0, V).
+
+-- project_then_negate: once per attribute row, not per key
+fx_pn(K)       :- ast_attr[code](_, K, _), not fx_read[data](K).
+fx_key[data](K) :- ast_attr[code](_, K, _).
+fx_pn_ok(K)    :- fx_key[data](K), not fx_read[data](K).
+
+-- existence_scan: one solution per node
+fx_ex()        :- ast_node[code](_, _, _, _).
+fx_ex_ok()     :- fx_seen[data](_).
+
+-- not_closer: every encloser against every other
+fx_enc(F, C)    :- fx_site[data](F, C).
+fx_closer(F, C) :- fx_enc(F, C), fx_enc(G, C), ast_within[code](F, G), F != G.
+fx_near(F, C)   :- fx_enc(F, C), not fx_closer(F, C).
+fx_near_ok(F, C) :- fx_site2[data](C), nearest_v[flow](F, C).
+
+-- scoped_descent: the subtree of the block, joined back to its function
+fx_sd(N)       :- fx_try[data](T, B), ast_within[code](B, N), nearest_v[flow](F, N), fx_fn[data](T, F).
+fx_sd_ok(N)    :- fx_site2[data](N), nearest_v[flow](F, N), ast_within[code](B, N), fx_try[data](T, B), fx_fn[data](T, F).
+
+-- twin_bodies: one body under two heads (and a copy, the head arguments agreeing)
+fx_t1(X, Y)    :- fx_a[data](X, Z), fx_b[data](Z, Y), fx_c[data](Y).
+fx_t2(X, Y)    :- fx_a[data](X, Z), fx_b[data](Z, Y), fx_c[data](Y).
+fx_t3(X)       :- fx_a[data](X, Z), fx_b[data](Z, W), fx_c[data](W).
+fx_t4(X, Y)    :- fx_a[data](X, Z), fx_b[data](Y, Z), fx_c[data](Y).
+
+-- cross_product through a small table: the table binds K, the node is still crossed with the function
+fx_cpt(F, N)    :- fx_fn[data](F), fx_kinds(K), fx_node[data](P, K), fx_child[data](P, F), fx_name[data](P, N).
+fx_cpt_ok(F, N) :- fx_kinds(K), fx_node[data](P, K), fx_child[data](P, F), fx_fn[data](F), fx_name[data](P, N).
+
+-- a copy of one derived premise: two names for one relation (the head arguments agree); the same
+-- over scanned data is an alias, a name that says why, and is not a finding
+fx_nv[data](A, N) :- fx_raw[data](A, N, _).
+fx_cc1(N)       :- fx_nv[data](_, N).
+fx_cc2(N)       :- fx_nv[data](_, N).
+fx_al1(N)       :- fx_raw[data](_, N, _).
+fx_al2(N)       :- fx_raw[data](_, N, _).

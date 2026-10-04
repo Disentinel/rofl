@@ -1,0 +1,164 @@
+-- examples/linter/shapes.rofl — THE COSTLY SHAPES OF A RULE, as rules over the reflection.
+--
+-- f_costly_rules_are_shapes measured that the time of the JS model is spent in a
+-- dozen ways of WRITING a rule, each with a rewrite that was measured. This file
+-- states six of them as queries over what a load writes about the rules
+-- (`premise_lit`, `conclusion_lit`, `concludes`, `premise_pos`, `premise_neg`,
+-- `uses_builtin`), so a new rule that is written the costly way is a row, with
+-- the shape's name and the reason it costs, before anyone profiles it.
+--
+--   cross_product        a positive premise that shares no variable with what precedes it
+--   closure_wide_end     a closure entered with the top bound and the bottom free, then filtered
+--   project_then_negate  one positive premise with wildcards, then negations: once per ROW
+--   existence_scan       a nullary head over one wide premise: a solution per row
+--   not_closer           the same relation twice and `!=`, read under `not`: nearest-of-all
+--   scoped_descent       a descendant set joined back to `nearest_v` to stay in one function
+--   twin_bodies          one body under two heads (a copy, when the head arguments agree too)
+--
+-- The ones that are not here are the engine's: a premise that receives news
+-- standing behind others (DELTA_BEHIND_PREFIX, 49 % of sealed rule time) is
+-- fixed by firing the delta first, not by a rule, and the materialised closure
+-- itself (`ast_within`) is a model decision.
+--
+-- A finding is `shape_hit(Shape, Rule, Head)`; an ALARM is a finding the register
+-- (`shape_ok(Head, Shape, Why)`, facts/cost-shapes.rofl) does not excuse, and a
+-- register row for a finding that is gone is an alarm too. Thresholds are facts.
+
+edb(lint_closure).   -- lint_closure(Rel): a relation the engine reads as a transitive closure
+edb(shape_reason).   -- shape_reason(Shape, Text): why the shape costs and what the rewrite is
+edb(shape_ok).       -- shape_ok(Head, Shape, Why): a finding someone decided to keep, with the measurement
+edb(lint_kernel).    -- lint_kernel(Head): a head of boot.rofl, the kernel program every world loads and reflects
+
+lint_kernel(boot_rank). lint_kernel(imports). lint_kernel(sees). lint_kernel(stratum).
+
+lint_closure(ast_within).
+
+shape_reason(cross_product, "a premise that shares no variable with what precedes it is read once per row of what precedes it: move it after what binds it").
+shape_reason(closure_wide_end, "the closure is entered at its top and enumerates every descendant before a filter on the descendant is asked: enter from the filtered end, the ancestors of X").
+shape_reason(project_then_negate, "the negations run once per row of a premise with wildcards, not once per key: project the key into a helper and negate per key").
+shape_reason(existence_scan, "a nullary head over one wide premise concludes once per row: ask a distinct projection that already exists").
+shape_reason(not_closer, "the nearest is the one no other is closer to, read pairwise over every pair: read the nearest that already exists (nearest_v)").
+shape_reason(scoped_descent, "a closure-sized descendant set is joined back to nearest_v to keep what is in one function: walk down and stop at a function").
+shape_reason(twin_bodies, "one body joined under two heads is joined twice a round: one helper both heads read, or one relation when the head arguments agree too").
+
+-- ---------------------------------------------------------------- reflection --
+cs_lit(R, K, pos, Rel, As) :- premise_lit(R, K, L), L = $lit(Rel, _, As, _).
+cs_lit(R, K, neg, Rel, As) :- premise_lit(R, K, $not(L)), L = $lit(Rel, _, As, _).
+cs_tail(R, K, 1, As) :- cs_lit(R, K, _, _, As).
+cs_tail(R, K, J, T)  :- cs_tail(R, K, I, $cons(_, T)), J is I + 1.
+cs_slot(R, K, J, A)  :- cs_tail(R, K, J, $cons(A, _)).
+cs_arity(R, K, N)    :- cs_tail(R, K, J, $nil), N is J - 1.
+cs_term(A)           :- cs_slot(_, _, _, A).
+cs_isvar(A)          :- cs_term(A), A = $var(_).
+cs_pos(R, K, Rel)    :- cs_lit(R, K, pos, Rel, _).
+
+cs_meta(V)           :- cs_slot(_, _, _, $var(V)), V = $var(_).
+cs_slotvar(R, K, J, V) :- cs_slot(R, K, J, $var(V)), not cs_meta(V).
+cs_slotvar(R, K, J, V) :- cs_slot(R, K, J, A), A = $var(B), B = $var(V).
+cs_wildname(V)       :- cs_slotvar(_, _, _, V), N is str_segs(V, "_$"), N > 1.
+cs_occ(R, K, V)      :- cs_slotvar(R, K, _, V), not cs_wildname(V).
+cs_wild(R, K, J)     :- cs_slotvar(R, K, J, V), cs_wildname(V).
+cs_const(R, K, J)    :- cs_slot(R, K, J, A), not cs_isvar(A).
+
+cs_head_tail(R, 1, As) :- conclusion_lit(R, 1, $lit(_, _, As, _)).
+cs_head_tail(R, J, T)  :- cs_head_tail(R, I, $cons(_, T)), J is I + 1.
+cs_hslot(R, J, A)      :- cs_head_tail(R, J, $cons(A, _)).
+cs_hocc(R, V)          :- cs_hslot(R, _, $var(V)).
+cs_head_nullary(R)     :- conclusion_lit(R, 1, $lit(_, _, $nil, _)).
+
+-- the order the engine joins in is the written order of the positive premises
+cs_pos_before(R, K)    :- cs_pos(R, K, _), cs_pos(R, K0, _), K0 < K.
+cs_bound_by(R, K, V)   :- cs_pos(R, K0, _), cs_occ(R, K0, V), cs_pos(R, K, _), K0 < K.
+cs_bound_by(R, K, V)   :- cs_eq_binds(R, K0, V), cs_pos(R, K, _), K0 < K.
+cs_bi_tail(R, K, As)   :- premise_lit(R, K, $builtin(Op, As)), cs_bi_op(Op).
+cs_bi_tail(R, K, T)    :- cs_bi_tail(R, K, $cons(_, T)).
+cs_eq_binds(R, K, V)   :- cs_bi_tail(R, K, $cons($var(V), _)).
+cs_bi_op("=").
+cs_bi_op("is").
+
+-- a small declaration table, unbooked and concluded by no rule: crossing it multiplies by a handful.
+-- It still does not join what it does not share a variable with: `cs_conn` leaves its variables out.
+cs_main_rel(Rel) :- premise_lit(_, _, L), L = $lit(Rel, main, _, _).
+cs_main_rel(Rel) :- premise_lit(_, _, $not(L)), L = $lit(Rel, main, _, _).
+cs_bounded(Rel)  :- cs_main_rel(Rel), not concludes(_, Rel).
+
+-- ----------------------------------------------------------------- the shapes --
+cs_conn(R, K)        :- cs_pos(R, K, _), not cs_pos_before(R, K).
+cs_conn(R, K)        :- cs_occ(R, K, V), cs_cbound(R, K, V).
+cs_cbound(R, K, V)   :- cs_conn(R, K0), cs_occ(R, K0, V), cs_pos(R, K, _), K0 < K.
+cs_cbound(R, K, V)   :- cs_eq_binds(R, K0, V), cs_pos(R, K, _), K0 < K.
+hit_cross_product(R) :- cs_pos(R, K, Rel), not cs_conn(R, K), cs_occ(R, K, _), not cs_bounded(Rel).
+
+cs_other_new(R, K, K2, X) :- cs_pos(R, K2, _), cs_occ(R, K2, V), V != X, cs_occ(R, K, X),
+                             not cs_bound_by(R, K, V), not cs_occ(R, K, V).
+cs_narrow_later(R, K, X)  :- cs_pos(R, K2, _), cs_occ(R, K2, X), K2 > K, cs_occ(R, K, X),
+                             cs_const(R, K2, _).
+cs_narrow_later(R, K, X)  :- cs_pos(R, K2, _), cs_occ(R, K2, X), K2 > K, cs_occ(R, K, X),
+                             not cs_other_new(R, K, K2, X).
+hit_closure_wide_end(R) :- cs_pos(R, K, Rel), lint_closure(Rel),
+                               cs_slot(R, K, 1, $var(A)), cs_slot(R, K, 2, $var(X)),
+                               cs_bound_by(R, K, A), not cs_bound_by(R, K, X), A != X,
+                               cs_narrow_later(R, K, X).
+
+cs_one_pos(R, K)   :- cs_pos(R, K, _), not cs_pos_before(R, K), not cs_pos_after(R, K).
+cs_pos_after(R, K) :- cs_pos(R, K, _), cs_pos(R, K2, _), K2 > K.
+cs_head_lacks(R, K) :- cs_hocc(R, V), cs_pos(R, K, _), not cs_occ(R, K, V).
+hit_project_then_negate(R) :- cs_one_pos(R, K), cs_wild(R, K, 1), cs_lit(R, _, neg, _, _),
+                                  not cs_head_lacks(R, K).
+
+hit_existence_scan(R) :- cs_head_nullary(R), cs_pos(R, 1, _), not has_premise(R, 2),
+                             cs_arity(R, 1, N), N > 1.
+
+cs_ord(R, A, B) :- cs_pos(R, K, C), lint_closure(C), cs_slot(R, K, 1, $var(A)), cs_slot(R, K, 2, $var(B)).
+hit_not_closer(R) :- cs_pos(R, K1, Rel), cs_pos(R, K2, Rel), K1 < K2, not lint_closure(Rel),
+                         cs_slot(R, K1, J, $var(F)), cs_slot(R, K2, J, $var(G)), F != G,
+                         cs_ord(R, F, G), concludes(R, H), premise_neg(_, H).
+
+cs_closure_derived(Rel) :- lint_closure(Rel).
+cs_closure_derived(Rel) :- concludes(R, Rel), premise_pos(R, C), lint_closure(C).
+cs_low_var(R, K, X)     :- cs_pos(R, K, Rel), cs_closure_derived(Rel), cs_occ(R, K, X), not cs_bound_by(R, K, X).
+hit_scoped_descent(R) :- cs_low_var(R, K, X), cs_pos(R, K2, nearest_v), K2 > K, cs_slot(R, K2, 2, $var(X)).
+
+-- a signature of the body, in the written order: polarity, relation, arity. Bodies with a builtin or
+-- an aggregate are left to a reader. A twin is a finding from three premises on; a COPY (the head
+-- arguments agree too) from two, or from one when that premise is derived (an alias of scanned data is a name).
+cs_item(R, K, s(Pol, Rel, N)) :- cs_lit(R, K, Pol, Rel, _), cs_arity(R, K, N).
+cs_sig(R, 1, sq(I, none)) :- cs_item(R, 1, I).
+cs_sig(R, K, sq(I, S))    :- cs_sig(R, J, S), K is J + 1, cs_item(R, K, I).
+cs_plain(R)    :- has_premise(R, 1), not uses_builtin(R, _), not premise_agg(R, _).
+cs_final(R, S) :- cs_sig(R, K, S), K1 is K + 1, not has_premise(R, K1), cs_plain(R).
+cs_same_shape(A, B) :- cs_final(A, S), cs_final(B, S), A != B.
+
+cs_pair(R, K, J, K2, J2) :- cs_slot(R, K, J, $var(V)), cs_slot(R, K2, J2, $var(V)), K < K2.
+cs_pair(R, K, J, K2, J2) :- cs_slot(R, K, J, $var(V)), cs_slot(R, K, J2, $var(V)), J < J2, K2 is K.
+cs_differs(A, B) :- cs_same_shape(A, B), cs_pair(A, K, J, K2, J2), not cs_pair(B, K, J, K2, J2).
+cs_differs(A, B) :- cs_same_shape(A, B), cs_const(A, K, J), cs_slot(A, K, J, X), cs_slot(B, K, J, Y), X != Y.
+cs_differs(A, B) :- cs_same_shape(A, B), cs_const(A, K, J), cs_slot(B, K, J, Y), cs_isvar(Y).
+cs_differs(A, B) :- cs_same_shape(A, B), cs_const(B, K, J), cs_slot(A, K, J, X), cs_isvar(X).
+
+cs_twin(A, B) :- cs_same_shape(A, B), not cs_differs(A, B), not cs_differs(B, A),
+                 concludes(A, HA), concludes(B, HB), HA != HB.
+hit_twin_bodies(R) :- cs_twin(R, _), has_premise(R, 3).
+hit_twin_bodies(R) :- copy_across(R, _), has_premise(R, 2).
+hit_twin_bodies(R) :- copy_across(R, _), cs_pos(R, 1, Rel), concludes(_, Rel).
+
+cs_hpos(R, HJ, K, J)  :- cs_hslot(R, HJ, $var(V)), cs_slot(R, K, J, $var(V)).
+cs_hdiffers(A, B)     :- cs_twin(A, B), cs_hpos(A, HJ, K, J), not cs_hpos(B, HJ, K, J).
+cs_hdiffers(A, B)     :- cs_twin(A, B), cs_hslot(A, HJ, X), not cs_hslot(B, HJ, _).
+cs_hdiffers(A, B)     :- cs_twin(A, B), cs_hslot(A, HJ, X), not cs_isvar(X), cs_hslot(B, HJ, Y), X != Y.
+copy_across(A, B)     :- cs_twin(A, B), not cs_hdiffers(A, B), not cs_hdiffers(B, A).
+
+shape_hit(cross_product, R) :- hit_cross_product(R).
+shape_hit(closure_wide_end, R) :- hit_closure_wide_end(R).
+shape_hit(project_then_negate, R) :- hit_project_then_negate(R).
+shape_hit(existence_scan, R) :- hit_existence_scan(R).
+shape_hit(not_closer, R) :- hit_not_closer(R).
+shape_hit(scoped_descent, R) :- hit_scoped_descent(R).
+shape_hit(twin_bodies, R) :- hit_twin_bodies(R).
+
+-- ---------------------------------------------------------------- the verdict --
+shape_hit_head(Shape, R, H) :- shape_hit(Shape, R), concludes(R, H), not lint_kernel(H).
+shape_excused(H, Shape)  :- shape_ok(H, Shape, _).
+shape_alarm(Shape, H)    :- shape_hit_head(Shape, _, H), not shape_excused(H, Shape).
+shape_ok_stale(H, Shape) :- shape_ok(H, Shape, _), not shape_hit_head(Shape, _, H).
+

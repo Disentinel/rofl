@@ -19,8 +19,8 @@
 -- `ident_in` carries the file so a rule can lead with (Name, File), which the
 -- store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 -- identifier in the corpus — 39 % of a fixpoint.
-ident[code](N, Name)        :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name).
 ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
+ident[code](N, Name)        :- ident_in[code](N, Name, _).
 
 -- Name-to-name flow through a declarator initialiser: the first cell, kept.
 decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
@@ -192,7 +192,7 @@ tdz_cand[code](E, D)     :- lexical_binder[code](D), binder_region[code](D, R),
                             ast_node[code](D, _, _, LD), ast_node[code](E, _, _, LE),
                             LE < LD.
 tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
-                            fn_node[code](G), ast_within[code](R, G), ast_within[code](G, E).
+                            nearest_v[flow](G, E), ast_within[code](R, G).
 tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
 hidden_at[code](E, D)    :- tdz_at[code](E, D).
 
@@ -303,8 +303,8 @@ kind_prototype(reg_exp_literal,           regexp).
 kind_prototype(big_int_literal,           bigint).
 
 prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
-prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
-                            ast_node[code](N, K, _, _).
+prototype_of[flow](E, P) :- may_be_node[flow](E, N), ast_node[code](N, K, _, _),
+                            kind_prototype(K, P).
 
 edb(builtin_prototype).
 builtin_prototype(array).
@@ -321,12 +321,13 @@ builtin_prototype(bigint).
 -- POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
 -- arm for array patterns: nothing exercises it and an arm nothing exercises
 -- cannot go red.
-destructures[code](D, Local, Key, File) :- ast_node[code](D, variable_declarator, File, _),
-                                           ast_child[code](D, id, 0, P),
-                                           ast_node[code](P, object_pattern, _, _),
-                                           ast_child[code](P, properties, _, Prop),
-                                           ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
-                                           ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+destr_prop[code](D, Prop, K, Local, File) :- ast_node[code](D, variable_declarator, File, _),
+                                             ast_child[code](D, id, 0, P),
+                                             ast_node[code](P, object_pattern, _, _),
+                                             ast_child[code](P, properties, _, Prop),
+                                             ast_child[code](Prop, key, 0, K),
+                                             ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+destructures[code](D, Local, Key, File) :- destr_prop[code](D, _, K, Local, File), key_name[code](K, Key).
 scoped_binder[code](D, File) :- destructures[code](D, _, _, File).
 
 may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
@@ -609,7 +610,7 @@ class_field_kind(class_accessor_property).
 
 field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                   ast_child[code](B, body, _, P),
-                                  class_field_kind(K), ast_node[code](P, K, _, _),
+                                  ast_node[code](P, K, _, _), class_field_kind(K),
                                   ast_child[code](P, key, 0, KN), key_name[code](KN, Key),
                                   ast_child[code](P, value, 0, V).
 member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).
@@ -904,7 +905,10 @@ may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
 -- found from it rather than the other way round. Each hop is ONE round of the
 -- fixpoint, so both heads carry the whole body instead of one reading the
 -- other: every round re-scans every member node, and an intermediate relation
--- made a chain of calls cost three rounds a call (46 rounds became 70).
+-- made a chain of calls cost three rounds a call (46 rounds became 70). Measured
+-- again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
+-- ms but the extra round re-fires callback_param, and the model's probes ROSE
+-- 2.5 %; it waits for an engine that fires a delta first.
 external_value[flow](C, Spec) :- external_value[flow](X, Spec), may_be_node[flow](F, X),
                                  ast_child[code](C, callee, 0, F),
                                  ast_node[code](C, K, _, _), call_like_v(K).
@@ -923,10 +927,7 @@ member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](
 -- A pattern off an external value: each name is a member of it, the rest is
 -- another object of the same origin.
 external_destructured[code](D, Prop, Local, File) :-
-    ast_node[code](D, variable_declarator, File, _), ast_child[code](D, id, 0, P),
-    ast_node[code](P, object_pattern, _, _), ast_child[code](P, properties, _, Prop),
-    ast_child[code](Prop, key, 0, K), key_name[code](K, _),
-    ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+    destr_prop[code](D, Prop, K, Local, File), key_name[code](K, _).
 external_value[flow](Prop, Spec) :- external_destructured[code](D, Prop, _, _),
                                     ast_child[code](D, init, 0, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).
@@ -994,7 +995,7 @@ ctor_of[flow](CD, M)   :- super_of[flow](CD, SD), not has_own_ctor[flow](CD),
                           ctor_of[flow](SD, M).
 
 may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
-                            class_method_of[flow](CD, M), ast_within[code](M, S),
+                            ast_within[code](M, S), class_method_of[flow](CD, M),
                             super_of[flow](CD, SD).
 
 -- =========================================================================
@@ -1069,8 +1070,7 @@ for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
                                 ast_child[code](S, body, 0, B), ast_within[code](B, U),
                                 ident[code](U, Name).
 
-iter_elem[flow](X, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
-                         ast_child[code](A, elements, _, E).
+iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
 
 may_be_node[flow](U, N) :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),
@@ -1109,8 +1109,8 @@ catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _, _),
                             ast_child[code](H, param, 0, P).
 try_block[flow](T, B)    :- ast_node[code](T, try_statement, _, _),
                             ast_child[code](T, block, 0, B).
-thrown_in[flow](T, V)    :- try_block[flow](T, B), ast_within[code](B, Th),
-                            ast_node[code](Th, throw_statement, _, _),
+thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
+                            ast_within[code](B, Th), try_block[flow](T, B),
                             ast_child[code](Th, argument, 0, V).
 
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),

@@ -2895,3 +2895,24 @@ check_opt("strata_boot_canon", together, 1).
 -- the first character of a string is its first code point, never a lone surrogate (f_a_first_character_is_cut_inside_a_surrogate_pair)
 check_world("str_first_code_point").
 check_file("str_first_code_point", "examples/checks/str-first-code-point.rofl").
+
+-- w_cmp_shape_rewrites: the costly-shape lint over the JS model, examples/shapes/shapes.rofl
+check_world("cost_shapes_model").
+check_file("cost_shapes_model", "examples/shapes/shapes.rofl").
+check_file("cost_shapes_model", "facts/cost-shapes.rofl").
+check_file("cost_shapes_model", "rules/js-structure.rofl").
+check_file("cost_shapes_model", "rules/js-dataflow.rofl").
+check_file("cost_shapes_model", "rules/js-model.rofl").
+check_file("cost_shapes_model", "rules/js-callgraph.rofl").
+check_file("cost_shapes_model", "rules/js-controlflow.rofl").
+check_file("cost_shapes_model", "rules/js-effects.rofl").
+check_file("cost_shapes_model", "rules/js-globals.rofl").
+check_file("cost_shapes_model", "rules/js-host.rofl").
+check_file("cost_shapes_model", "rules/js-ambient.rofl").
+check_file("cost_shapes_model", "rules/js-attrs.rofl").
+check_file("cost_shapes_model", "rules/js-modules.rofl").
+check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
+-- ONE ENGINE: the reflection of the model nests `$var` three deep (js-attrs reads rules about rules); the
+-- TypeScript engine answers `str_segs` on those with a hole and a different cs_conn, the Rust engine does not.
+-- The planted world (examples/shapes) is held on both.
+check_opt("cost_shapes_model", one_engine, rust).

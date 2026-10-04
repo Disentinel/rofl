@@ -70,9 +70,9 @@ after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), 
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
 suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
-                             nearest_v[flow](G, X), ast_within[code](G, S),
-                             ast_within[code](S, X),
-                             stmt_seq_field(F), ast_child[code](B, F, I, S).
+                             nearest_v[flow](G, X), ast_within[code](S, X),
+                             ast_within[code](G, S),
+                             ast_child[code](B, F, I, S), stmt_seq_field(F).
 after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
 
 -- a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
@@ -94,9 +94,9 @@ label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
                              ast_within[code](LS, X).
 
-abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
-                             ast_within[code](S, X), stmt_seq_field(F),
-                             ast_child[code](B, F, I, S).
+abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](S, X),
+                             ast_within[code](LS, S), ast_child[code](B, F, I, S),
+                             stmt_seq_field(F).
 
 -- =========================================================================
 -- COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
@@ -129,8 +129,8 @@ completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS,
 
 -- the consumer: it replaces the old four-kind arm rather than sitting beside
 -- it, since the base case IS that arm
-abrupt_at[code](B, F, I) :- completes_abruptly[code](S), stmt_seq_field(F),
-                            ast_child[code](B, F, I, S).
+abrupt_at[code](B, F, I) :- completes_abruptly[code](S), ast_child[code](B, F, I, S),
+                            stmt_seq_field(F).
 
 -- a kind this closure claims and never decides — misspelled, deleted or
 -- unexercised all read as "the closure is smaller than it says"
@@ -166,7 +166,7 @@ completion_known(K) :- abrupt_kind(K).
 completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
                                      ast_node[code](P, K, _, _), not completion_known(K),
                                      not fn_node[code](P),
-                                     stmt_seq_field(F), ast_child[code](_, F, _, P).
+                                     ast_child[code](_, F, _, P), stmt_seq_field(F).
 completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](G, S),
                                      fn_node[code](G), ast_within[code](P, G).
 completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _, _),
@@ -203,13 +203,13 @@ accessor_kind("get").
 accessor_kind("set").
 
 accessor_of[flow](Obj, Key, M) :- member_value[flow](Obj, Key, M),
-                                  accessor_kind(K), ast_attr[code](M, kind, K).
+                                  ast_attr[code](M, kind, K), accessor_kind(K).
 accessor_read[code](N, M) :- accessor_of[flow](Obj, Key, M),
                              selects[flow](N, Key), member_node_v[flow](N),
                              ast_child[code](N, object, 0, O),
                              may_be_node[flow](O, Obj).
 accessor_read[code](N, M) :- private_binds[code](N, M),
-                             accessor_kind(K), ast_attr[code](M, kind, K).
+                             ast_attr[code](M, kind, K), accessor_kind(K).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
 
@@ -291,8 +291,8 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- edges instead.
 hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).
 hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _, _),
-                                           ast_node[code](P, object_pattern, _, _),
-                                           ast_child[code](P, properties, _, R).
+                                           ast_child[code](P, properties, _, R),
+                                           ast_node[code](P, object_pattern, _, _).
 hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _, _),
                                            ast_child[code](O, properties, _, S),
                                            ast_node[code](S, spread_element, _, _).
@@ -361,8 +361,12 @@ edb(catches_via).
 catches_via(try_statement, handler).
 try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _, _),
                               ast_child[code](TS, Field, 0, _).
-caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
-                              nearest_v[flow](F, N), try_catches[code](TS).
+-- The block walked down to the first function boundary, as `nearest_v` walks:
+-- the whole subtree joined back to its function was 1.4 M probes.
+try_walk[code](TS, X)      :- try_catches[code](TS), try_of[code](TS, _),
+                              ast_child[code](TS, block, 0, B), ast_in[code](B, X).
+try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), ast_in[code](P, X).
+caught_here[code](N)       :- try_walk[code](_, N).
 
 throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
                             nearest_v[flow](F, T), not caught_here[code](T).
@@ -386,13 +390,13 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
 -- and out to the FUNCTION boundary: without `ast_within(G, S)` the walk
 -- reached the module's own list and everything after `class Lit` was
 -- unreachable (`after_abrupt` 3 -> 37).
-try_stops[code](C, T) :- throwing_call[code](C), ast_node[code](T, try_statement, _, _),
-                         ast_within[code](T, C).
+try_stops[code](C, T) :- throwing_call[code](C), ast_within[code](T, C),
+                         ast_node[code](T, try_statement, _, _).
 try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
 
 abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                            ast_within[code](G, S), ast_within[code](S, C),
-                            stmt_seq_field(F), ast_child[code](B, F, I, S),
+                            ast_within[code](S, C), ast_within[code](G, S),
+                            ast_child[code](B, F, I, S), stmt_seq_field(F),
                             not try_stops[code](C, S).
 
 -- After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
@@ -425,8 +429,8 @@ export_kind(export_default_declaration).
 fn_node[code](F) :- fn_name[code](F, _).
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
-exported_fn[code](F) :- export_kind(K), ast_node[code](E, K, _, _),
-                        ast_within[code](E, F), fn_node[code](F), not in_fn[code](F).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
+                        ast_node[code](E, K, _, _), export_kind(K).
 
 exported_fn[code](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
                         fn_node[code](F), not in_fn[code](F).

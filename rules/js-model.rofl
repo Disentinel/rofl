@@ -288,7 +288,7 @@ edb(kind_absent_ok).
 -- `scanned`, a proposition: the first draft used `lang_of_corpus(Lang)`, a
 -- constant that guarded nothing. A `kind_absent_ok` row belongs in the pack
 -- that declares its kind.
-corpus_scanned[audit]() :- ast_node[code](_, _, _, _).
+corpus_scanned[audit]() :- kind_seen[code](_).
 scanned[audit](Lang)    :- lang_of_corpus(Lang), corpus_scanned[audit]().
 
 kind_unexercised[audit](Lang, K) :- node_kind(Lang, K), scanned[audit](Lang),

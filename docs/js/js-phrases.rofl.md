@@ -498,8 +498,6 @@ Declared as facts:
 | `class_has_id` | "has_an_id(class expression CD)" |
 | `anon_class` | "is_anonymous(class expression CD)" |
 | `in_own_decorator` | "has_its_decorator_at(function F, node C)" |
-| `encloses` | "encloses_the_site(function F, node C)" |
-| `closer` | "is_outranked_at(function F, node C)" |
 | `nearest_fn` | "is_the_nearest_function_of(function F, node C)" |
 | `enclosed` | "is_enclosed(node C)" |
 | `top_call` | "runs_at_the_top_of(node C, node R)" |
@@ -741,7 +739,6 @@ Declared as facts:
 | `eff_erased` | "is_erased(node I)" |
 | `eff_evaluates_at` | "evaluates(node I, file T)" |
 | `eff_import_outside` | "imports_outside_the_corpus(node I, text Src)" |
-| `eff_in_fn` | "lies_inside_a_function(node N)" |
 | `eff_module` | "has_the_module_effect(file F, effect label L, at host H)" |
 | `eff_import_invented` | "invents_the_effect(node I, effect label L, at host H)" |
 | `eff_mod_subject` | "is_a_module_subject(file F)" |

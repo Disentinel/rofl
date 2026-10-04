@@ -30,9 +30,11 @@ edb(attr_unread_ok).       -- attr_unread_ok(Key, Reason)
 edb(attr_deferred).        -- attr_deferred(Key, WorkItem)
 edb(attr_value_unread_ok). -- attr_value_unread_ok(Key, Value, Reason)
 
-unconsumed_attr[audit](K) :- ast_attr[code](_, K, _), not attr_key_read(K),
+attr_pair_seen(K, V) :- ast_attr[code](_, K, V).
+attr_key_seen(K) :- attr_pair_seen(K, _).
+unconsumed_attr[audit](K) :- attr_key_seen(K), not attr_key_read(K),
                              not attr_unread_ok(K, _), not attr_deferred(K, _).
-unconsumed_value[audit](K, V) :- ast_attr[code](_, K, V), attr_key_read(K),
+unconsumed_value[audit](K, V) :- attr_pair_seen(K, V), attr_key_read(K),
                                  not attr_key_read_free(K), not attr_pair_read(K, V),
                                  not attr_value_unread_ok(K, V, _).
 
@@ -81,7 +83,7 @@ attr_key_read(K)     :- attr_pair_read(K, _).
 -- only that kind is the population. The mirror reading, a guard on the CHILD
 -- of an `ast_child` premise, is not seen: the two clauses with that shape pin
 -- their kind and the kind arm covers them.
-rule_prem(R, L)            :- premise_lit(R, _, L), L = $lit(_, _, _, _).
+rule_prem(R, L)            :- pos_prem(R, L).
 rule_prem(R, L)            :- premise_lit(R, _, $not(L)).
 attr_test_lit(L, S, K)     :- attr_lit(L, K, V), lit_arg(L, 1, S),
                               not attr_lit_kvar(L, K), not attr_lit_vvar(L, V).

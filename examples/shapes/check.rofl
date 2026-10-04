@@ -1,0 +1,42 @@
+-- examples/shapes/check.rofl — THE COSTLY-SHAPE LINT, HELD ON A PLANTED FILE.
+-- examples/shapes/shapes.rofl reads the reflection of examples/shapes/fixture.rofl, which plants one
+-- instance of each costly shape and, beside it, the rewrite that is not one. The register is not
+-- loaded here, so every planted instance is a `shape_alarm`: this is the red the lint shows on a
+-- bad rule. A finding not planted is an alarm of this world, and so is a planted one missed, a
+-- control that is hit, and a shape with no plant at all.
+exp(cross_product, fx_cp).
+exp(cross_product, fx_cpt).
+exp(closure_wide_end, fx_cw).
+exp(project_then_negate, fx_pn).
+exp(existence_scan, fx_ex).
+exp(not_closer, fx_closer).
+exp(scoped_descent, fx_sd).
+exp(twin_bodies, fx_t1).
+exp(twin_bodies, fx_t2).
+exp(twin_bodies, fx_t3).
+exp(twin_bodies, fx_cc1).
+exp(twin_bodies, fx_cc2).
+exp_copy(fx_t1, fx_t2).
+exp_copy(fx_t2, fx_t1).
+exp_copy(fx_cc1, fx_cc2).
+exp_copy(fx_cc2, fx_cc1).
+control(fx_cp_ok). control(fx_cw_ok). control(fx_pn_ok). control(fx_ex_ok).
+control(fx_cpt_ok). control(fx_al1). control(fx_al2). control(fx_nv). control(fx_near_ok). control(fx_sd_ok). control(fx_t4). control(fx_key).
+shape_name(cross_product). shape_name(closure_wide_end). shape_name(project_then_negate).
+shape_name(existence_scan). shape_name(not_closer). shape_name(scoped_descent). shape_name(twin_bodies).
+
+lx_missed(Shape, H)   :- exp(Shape, H), not shape_alarm(Shape, H).
+lx_unplanted(Shape, H) :- shape_hit_head(Shape, _, H), not exp(Shape, H).
+lx_control_hit(H)     :- control(H), shape_hit_head(_, _, H).
+lx_no_plant(Shape)    :- shape_name(Shape), not exp(Shape, _).
+lx_no_reason(Shape)   :- shape_name(Shape), not shape_reason(Shape, _).
+lx_copy_missed(A, B)  :- exp_copy(A, B), not copy_heads(A, B).
+lx_copy_extra(A, B)   :- copy_heads(A, B), not exp_copy(A, B).
+copy_heads(HA, HB)    :- copy_across(A, B), shape_hit_head(twin_bodies, A, HA), shape_hit_head(twin_bodies, B, HB).
+alarm(lx_missed).
+alarm(lx_unplanted).
+alarm(lx_control_hit).
+alarm(lx_no_plant).
+alarm(lx_no_reason).
+alarm(lx_copy_missed).
+alarm(lx_copy_extra).
