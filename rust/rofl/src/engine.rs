@@ -903,6 +903,19 @@ pub struct Eval {
     /// lattice cell the rule concludes into.
     firing: bool,
     fault_count: u64,
+    /// Solutions below a call answered on demand that an unknown left
+    /// undecided: each call up holes its head under them, as for a fault
+    /// (`demand_fault`).
+    demand_unknown: u64,
+    /// The head `demand_unknown` last left unknown: what the call above it rests on.
+    demand_last: Option<Unknown>,
+    /// The calls answered on demand being unfolded, as variant keys: a call
+    /// met again inside its own unfolding would unfold forever.
+    demand_calls: Vec<String>,
+    /// The relations answered on demand whose every answer is ground and
+    /// whose every rule fires bottom-up: a recursive call to one reads the
+    /// store (`demand_closed_rels`).
+    demand_closed: HashSet<Sym>,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
     /// The back-index of the retraction path: fact -> the cells a member of
@@ -1275,6 +1288,10 @@ impl Eval {
             carry_broken: false,
             firing: false,
             fault_count: 0,
+            demand_unknown: 0,
+            demand_last: None,
+            demand_calls: Vec::new(),
+            demand_closed: HashSet::new(),
             last_fault: None,
             agg_memo: HashMap::new(),
             support_ix: None,
@@ -1584,6 +1601,84 @@ impl Eval {
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
+        self.demand_closed = self.demand_closed_rels();
+    }
+
+    /// THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all
+    /// fire bottom-up: every answer one has is in the store once its rules
+    /// settle, so a call met again inside its own unfolding reads the store
+    /// instead of unfolding forever. An answer position is ground when every
+    /// variable of each rule's head there is bound by a positive premise at a
+    /// ground position (any of a relation not answered on demand), or by `is`
+    /// or `=` from ground ones; assumed of all and withdrawn where a rule
+    /// falls short, so a recursion is ground when nothing in it opens a
+    /// position.
+    fn demand_closed_rels(&mut self) -> HashSet<Sym> {
+        let mut ground: HashMap<Sym, Vec<bool>> = HashMap::new();
+        for (rel, rs) in &self.demand_rels {
+            let n = rs[0].clause.head.args.len();
+            let ok = rs.iter().all(|r| r.clause.head.args.len() == n && r.clause.head.persp.is_atom());
+            ground.insert(*rel, vec![ok; n]);
+        }
+        loop {
+            let mut changed = false;
+            for (rel, rs) in &self.demand_rels {
+                for r in rs {
+                    if !ground[rel].iter().any(|g| *g) {
+                        break;
+                    }
+                    let mut bound: Vec<Sym> = Vec::new();
+                    loop {
+                        let before = bound.len();
+                        for b in &r.clause.body {
+                            match b {
+                                BodyElem::Pos(l) => {
+                                    let g = ground.get(&l.rel);
+                                    for (i, a) in l.args.iter().enumerate() {
+                                        if g.is_none_or(|g| g.len() == l.args.len() && g[i]) {
+                                            self.h.vars_of(*a, &mut bound);
+                                        }
+                                    }
+                                    if g.is_none() {
+                                        self.h.vars_of(l.persp, &mut bound);
+                                    }
+                                }
+                                BodyElem::Bi { op, l, r } if *op == self.v.op_is || *op == self.v.op_eq => {
+                                    let mut vs = Vec::new();
+                                    for (from, to) in [(*r, *l), (*l, *r)] {
+                                        vs.clear();
+                                        self.h.vars_of(from, &mut vs);
+                                        if vs.iter().all(|v| bound.contains(v)) {
+                                            self.h.vars_of(to, &mut bound);
+                                        }
+                                        if *op == self.v.op_is {
+                                            break;
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        if bound.len() == before {
+                            break;
+                        }
+                    }
+                    for (j, a) in r.clause.head.args.iter().enumerate() {
+                        let mut vs = Vec::new();
+                        self.h.vars_of(*a, &mut vs);
+                        if ground[rel][j] && !vs.iter().all(|v| bound.contains(v)) {
+                            ground.get_mut(rel).unwrap()[j] = false;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let safe: HashSet<Sym> = self.demand_rels.iter().filter(|(_, rs)| rs.iter().all(|r| r.safe)).map(|(rel, _)| *rel).collect();
+        ground.into_iter().filter(|(rel, g)| safe.contains(rel) && g.iter().all(|x| *x)).map(|(rel, _)| rel).collect()
     }
 
     /// THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).`,
@@ -2491,10 +2586,27 @@ impl Eval {
         self.shrug_snap = None;
         self.cycle_groups.clear();
         self.cycle_of.clear();
+        // a relation answered on demand whose rules read shrug, directly or
+        // through another, unfolds that read into each rule that reads it
+        let mut via: HashSet<Sym> = HashSet::from([sh]);
+        if brk!("shrug_demand_unread" => false; true) {
+            loop {
+                let more: Vec<Sym> = self
+                    .demand_rels
+                    .iter()
+                    .filter(|(rel, rs)| !via.contains(rel) && rs.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel))))
+                    .map(|(rel, _)| *rel)
+                    .collect();
+                if more.is_empty() {
+                    break;
+                }
+                via.extend(more);
+            }
+        }
         self.shrug_readers = self
             .rules
             .iter()
-            .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.rel == sh))
+            .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel)))
             .map(|r| r.id)
             .collect();
         let mut cone: HashSet<Sym> = HashSet::new();
@@ -4181,11 +4293,9 @@ impl Eval {
                                 Some((p, keys)) if p == i => Some(keys),
                                 _ => None,
                             };
-                            let faults = self.fault_count;
+                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
                             let found = self.match_premise(l, &a.s, depth, only)?;
-                            if self.fault_count > faults {
-                                self.demand_fault(depth, &a.s);
-                            }
+                            self.demand_below(depth, &a.s, faults, unknowns);
                             for (s2, r) in found {
                                 let mut prems = a.prems.clone();
                                 prems.push(r);
@@ -4193,22 +4303,34 @@ impl Eval {
                             }
                         }
                         BodyElem::Neg(l) => {
-                            let faults = self.fault_count;
+                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
                             let holds = self.neg_holds(l, &a.s, depth)?;
-                            if self.fault_count > faults && depth > 0 && self.firing {
+                            let below = self.fault_count > faults || self.demand_unknown > unknowns;
+                            if below && depth > 0 && self.firing {
                                 // below a call: the solution is not known, nor the head it would give
-                                self.demand_fault(depth, &a.s);
+                                self.demand_below(depth, &a.s, faults, unknowns);
                                 continue;
                             }
                             if holds && self.strict_neg && !self.lat_spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
                                 continue;
                             }
+                            // UNFOLDED AT A CALL, a negation what a hole left unknown could
+                            // decide leaves the call's head under it unknown, as a fault would
+                            if holds && depth > 0 && self.firing && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+                                if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
+                                    self.demand_unknown_at(depth, &a.s, Some(u));
+                                    continue;
+                                }
+                            }
                             if holds {
                                 // nothing matched; but what a fault below the negation's own
                                 // call left out could have, or what a hole left unknown
-                                if depth == 0 && self.firing && rule_id.is_some() && self.fault_count > faults && brk!("plain_neg_decides" => false; true) {
+                                if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
                                     let u = self.lit_unknown(l, &a.s);
-                                    self.fault_edge(&u);
+                                    match self.demand_last.clone().filter(|_| self.fault_count == faults) {
+                                        Some(from) => self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(from))),
+                                        None => self.fault_edge(&u),
+                                    }
                                     self.lat_plain.insert(u.clone());
                                     self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
                                     continue;
@@ -8328,6 +8450,33 @@ impl Eval {
         self.plain_pending.push((u, true));
     }
 
+    /// A fault (`faults`) or an unknown (`unknowns`) met below a premise
+    /// answered on demand leaves the call above it unknown under `s`.
+    fn demand_below(&mut self, depth: usize, s: &Subst, faults: u64, unknowns: u64) {
+        if self.fault_count > faults {
+            self.demand_fault(depth, s);
+        } else if self.demand_unknown > unknowns {
+            let from = self.demand_last.clone();
+            self.demand_unknown_at(depth, s, from);
+        }
+    }
+
+    /// AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head
+    /// under `s` is unknown, reached from `from`, and so is each call up.
+    fn demand_unknown_at(&mut self, depth: usize, s: &Subst, from: Option<Unknown>) {
+        if depth == 0 || !self.firing {
+            return;
+        }
+        let Some(head) = self.demand_heads.last().cloned() else { return };
+        let u = self.lit_unknown(&head, s);
+        if let Some(f) = from {
+            self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+        }
+        self.plain_pending.push((u.clone(), true));
+        self.demand_last = Some(u);
+        self.demand_unknown += 1;
+    }
+
     /// The cells the body aggregate at element `i` holed under `s`, each with
     /// no value: the rest of the body is solved around them at the flush.
     fn plain_agg_holes(&mut self, rid: Sym, a: &Agg, s: &Subst, i: usize) -> Result<(), Halt> {
@@ -9910,6 +10059,11 @@ impl Eval {
             .find(|(r, _)| *r == l.rel)
             .map(|(_, rs)| rs.clone());
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
+        // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a
+        // relation whose answers are all in the store it reads only those
+        let call = drs.as_ref().filter(|_| self.demand_closed.contains(&l.rel)).map(|_| self.anon_lit_key(l, s));
+        let again = call.as_ref().is_some_and(|k| self.demand_calls.contains(k));
+        let drs = drs.filter(|_| !brk!("demand_recursion_unfolds" => false; again));
         if let Some(drs) = drs {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for (sb, r) in out.iter() {
@@ -9918,17 +10072,26 @@ impl Eval {
                     seen_keys.insert(self.store.key(&self.h, *f));
                 }
             }
-            for dr in drs {
-                for (ms, mref) in self.solve_demand_rule(&dr, l, s, depth)? {
-                    let dk = match mref {
-                        PremRef::Fact(f) => self.store.key(&self.h, f),
-                        _ => self.resolved_lit_key(l, &ms),
-                    };
-                    if seen_keys.insert(dk.clone()) {
-                        open.push((ms, mref, dk));
+            let pushed = call.is_some();
+            self.demand_calls.extend(call);
+            let unfolded = (|| -> Result<(), Halt> {
+                for dr in drs {
+                    for (ms, mref) in self.solve_demand_rule(&dr, l, s, depth)? {
+                        let dk = match mref {
+                            PremRef::Fact(f) => self.store.key(&self.h, f),
+                            _ => self.resolved_lit_key(l, &ms),
+                        };
+                        if seen_keys.insert(dk.clone()) {
+                            open.push((ms, mref, dk));
+                        }
                     }
                 }
+                Ok(())
+            })();
+            if pushed {
+                self.demand_calls.pop();
             }
+            unfolded?;
         }
         if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));

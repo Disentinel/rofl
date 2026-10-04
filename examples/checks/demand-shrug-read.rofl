@@ -1,0 +1,36 @@
+-- examples/checks/demand-shrug-read.rofl — demand_shrug_read: A SHRUG READ THROUGH A
+-- RELATION ANSWERED ON DEMAND waits for the shrugs, as a direct read does
+-- (f_a_shrug_read_through_demand_fired_before_the_shrugs).
+--
+-- ds_d and ds_d2 leave Y free, so they are answered on demand, and every rule
+-- that reads them unfolds their `shrug(ds_a(X), _, _)` at the call. ds_w(c)
+-- overflows, so ds_a(c) is a shrug and ds_d(c, c), ds_r(c), ds_r2(c) hold.
+-- ds_r (monotone) fired in phase A and ds_r2 (stratified by its unfolded
+-- negation) fired before the shrugs were written: both lost c, and ds_nr(c),
+-- ds_nd(c) were concluded from the loss.
+edb(ds_big). edb(ds_never).
+ds_big(1152921504606846975).
+ds_pos(a). ds_pos(c).
+ds_w(c)     :- ds_big(B), Z is B + 1, Z > 0.
+ds_a(X)     :- ds_pos(X), not ds_w(X).
+ds_d(X, Y)  :- ds_pos(X), shrug(ds_a(X), _, _).
+ds_d2(X, Y) :- ds_pos(X), shrug(ds_a(X), _, _), not ds_never(X).
+ds_r(X)     :- ds_pos(X), ds_d(X, X).
+ds_r2(X)    :- ds_pos(X), ds_d2(X, X).
+ds_nr(X)    :- ds_pos(X), not ds_r(X).
+ds_nd(X)    :- ds_pos(X), not ds_d(X, X).
+
+-- c is the position whose ds_a is a shrug
+ds_shrugged(c).
+ds_missed(X) :- ds_shrugged(X), not ds_r(X).
+ds_missed(X) :- ds_shrugged(X), not ds_r2(X).
+ds_wrong(X)  :- ds_shrugged(X), ds_nr(X).
+ds_wrong(X)  :- ds_shrugged(X), ds_nd(X).
+ds_wrong(X)  :- ds_r(X), not ds_shrugged(X).
+alarm(ds_missed).
+alarm(ds_wrong).
+
+-- expect-row: ds_r[main](c) tick drv support=1
+-- expect-row: ds_r2[main](c) tick drv support=1
+-- expect-row: ds_nr[main](a) tick drv support=1
+-- expect-no-row: ds_nd[main](c)

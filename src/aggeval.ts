@@ -907,6 +907,14 @@ export class AggEval {
   private batchAt = 0;
   private liveFront: string[] = [];
   private demandHeads: Lit[] = [];
+  /** The calls answered on demand being unfolded, as variant keys: a call met again inside its own unfolding would unfold forever. */
+  private demandCalls: string[] = [];
+  /** The relations answered on demand whose every answer is ground and whose every rule fires bottom-up (`demandClosedRels`). */
+  private demandClosed = new Set<string>();
+  /** Solutions below a call answered on demand that an unknown left undecided: each call up holes its head under them, as for a fault. */
+  private demandUnknown = 0;
+  /** The head `demandUnknown` last left unknown: what the call above it rests on. */
+  private demandLast: Unknown | null = null;
   private assume: Assumption | null = null;
   private bootstrap: boolean;
   answer: RuleAnswer = emptyAnswer();
@@ -1104,6 +1112,48 @@ export class AggEval {
     this.widenRec = this.widenBackEdges();
     this.widenTh = this.widenThresholds();
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
+    this.demandClosed = this.demandClosedRels();
+  }
+
+  /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call met again inside its own
+   *  unfolding reads the store. A position is ground when every variable of each rule's head there is bound by a positive
+   *  premise at a ground position (any of a relation not answered on demand), or by `is` or `=` from ground ones; assumed
+   *  of all and withdrawn where a rule falls short. */
+  private demandClosedRels(): Set<string> {
+    const ground = new Map<string, boolean[]>();
+    for (const [rel, rs] of this.demandRels) {
+      const n = rs[0].clause.head.args.length;
+      const ok = rs.every((r) => r.clause.head.args.length === n && r.clause.head.persp.k === 'a');
+      ground.set(rel, new Array<boolean>(n).fill(ok));
+    }
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const [rel, rs] of this.demandRels) {
+        const gr = ground.get(rel)!;
+        for (const r of rs) {
+          if (!gr.some((g) => g)) break;
+          const bound = new Set<string>();
+          for (let before = -1; bound.size !== before;) {
+            before = bound.size;
+            for (const b of r.clause.body) {
+              if (b.t === 'pos') {
+                const g = ground.get(b.lit.rel);
+                b.lit.args.forEach((a, i) => { if (g === undefined || (g.length === b.lit.args.length && g[i])) varsOf(a, bound); });
+                if (g === undefined) varsOf(b.lit.persp, bound);
+              } else if (b.t === 'bi' && (b.op === 'is' || b.op === '=')) {
+                for (const [from, to] of b.op === 'is' ? [[b.r, b.l]] : [[b.r, b.l], [b.l, b.r]]) {
+                  if ([...varsOf(from)].every((v) => bound.has(v))) varsOf(to, bound);
+                }
+              }
+            }
+          }
+          r.clause.head.args.forEach((a, j) => {
+            if (gr[j] && ![...varsOf(a)].every((v) => bound.has(v))) { gr[j] = false; changed = true; }
+          });
+        }
+      }
+    }
+    return new Set(this.demandRels.filter(([rel, rs]) => rs.every((r) => r.safe) && ground.get(rel)!.every((g) => g)).map(([rel]) => rel));
   }
 
   /** THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).` */
@@ -1947,7 +1997,15 @@ export class AggEval {
     this.shrugSnap = null;
     this.cycleGroups = [];
     this.cycleOf.clear();
-    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsOf).some((l) => l.rel === sh)).map((r) => r.id));
+    // a relation answered on demand whose rules read shrug, directly or through another, unfolds that read into each rule that reads it
+    const via = new Set([sh]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [rel, rs] of this.demandRels) {
+        if (!via.has(rel) && rs.some((r) => r.clause.body.flatMap(litsOf).some((l) => via.has(l.rel)))) { via.add(rel); grew = true; }
+      }
+    }
+    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsOf).some((l) => via.has(l.rel))).map((r) => r.id));
     const cone = new Set<string>();
     for (const r of this.rules) {
       if (this.shrugReaders.has(r.id)) cone.add(r.clause.head.rel);
@@ -2724,19 +2782,26 @@ export class AggEval {
           }
           if (b.t === 'pos') {
             const only = frontAt !== null && frontAt[0] === i ? frontAt[1] : null;
-            const faults = this.faultCount;
+            const faults = this.faultCount, unknowns = this.demandUnknown;
             const found = this.matchPremise(b.lit, a.s, depth, only);
-            if (this.faultCount > faults) this.demandFault(depth, a.s);
+            this.demandBelow(depth, a.s, faults, unknowns);
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
-            const faults = this.faultCount;
+            const faults = this.faultCount, unknowns = this.demandUnknown;
             const holds = this.negHolds(b.lit, a.s, depth);
-            if (this.faultCount > faults && depth > 0 && this.firing) { this.demandFault(depth, a.s); continue; }
+            const below = this.faultCount > faults || this.demandUnknown > unknowns;
+            if (below && depth > 0 && this.firing) { this.demandBelow(depth, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
+            // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would
+            if (holds && depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+              const u = this.readUnknown(b.lit, a.s, true);
+              if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }
+            }
             if (holds) {
-              if (depth === 0 && this.firing && ruleId !== null && this.faultCount > faults) {
+              if (depth === 0 && this.firing && ruleId !== null && below) {
                 const u = this.litUnknown(b.lit, a.s);
-                this.faultEdge(u);
+                if (this.faultCount === faults && this.demandLast !== null) this.unkEdges.push([nUnk(u), nUnk(this.demandLast)]);
+                else this.faultEdge(u);
                 this.latPlain.add(u.id);
                 this.latUndecided.push([ruleId, i, a.s, [u]]);
                 continue;
@@ -5320,6 +5385,24 @@ export class AggEval {
     this.plainPending.push([u, true]);
   }
 
+  /** A fault (`faults`) or an unknown (`unknowns`) met below a premise answered on demand leaves the call above it unknown under `s`. */
+  private demandBelow(depth: number, s: Subst, faults: number, unknowns: number): void {
+    if (this.faultCount > faults) this.demandFault(depth, s);
+    else if (this.demandUnknown > unknowns) this.demandUnknownAt(depth, s, this.demandLast);
+  }
+
+  /** AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head under `s` is unknown, reached from `from`, and so is each call up. */
+  private demandUnknownAt(depth: number, s: Subst, from: Unknown | null): void {
+    if (depth === 0 || !this.firing) return;
+    const head = this.demandHeads[this.demandHeads.length - 1];
+    if (head === undefined) return;
+    const u = this.litUnknown(head, s);
+    if (from !== null) this.unkEdges.push([nUnk(u), nUnk(from)]);
+    this.plainPending.push([u, true]);
+    this.demandLast = u;
+    this.demandUnknown++;
+  }
+
   /** The cells the body aggregate at element `i` holed under `s`. */
   private plainAggHoles(rid: string, a: AggElem, s: Subst, i: number): void {
     const [plan, corr] = this.aggCorr(rid, a, s);
@@ -6217,13 +6300,18 @@ export class AggEval {
       if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
-    if (drs !== undefined) {
-      for (const dr of drs[1]) {
-        for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
-          const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
-          if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a relation whose answers are all in the store it reads only those
+    const call = drs !== undefined && this.demandClosed.has(l.rel) ? this.anonLitKey(l, s) : null;
+    if (drs !== undefined && !(call !== null && this.demandCalls.includes(call))) {
+      if (call !== null) this.demandCalls.push(call);
+      try {
+        for (const dr of drs[1]) {
+          for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
+            const dk = mref.t === 'fact' ? mref.key : this.resolvedLitKey(l, ms);
+            if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
+          }
         }
-      }
+      } finally { if (call !== null) this.demandCalls.pop(); }
     }
     // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
     let ordered = true;
