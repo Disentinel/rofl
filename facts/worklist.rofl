@@ -3672,3 +3672,57 @@ work_spawned(w_semiring_names_the_reading, f_counting_reads_oppositely_by_domain
 work(w_labeled_unknowns,
   "AN UNKNOWN WITH A NAME AND A CONDITION (level 2 of f_a_member_whose_group_is_not_known_reads_as_every_group, decided by the owner 2026-10-04). Today an unknown value is anonymous: each place it reaches gets its own shrug, so the shrugs lose that they are ONE unknown (a member whose group is unknown joins exactly one group, yet every group it could change and the group it could make are independent `maybe`s, and the total over all groups, which is known exactly, is a shrug too) and lose what it is known NOT to be (the group it could make is none of the sealed ones, yet `ph_wc(?, ?)` matches g1 and `not ph_wc(g1, 2)` is a shrug). Model it as a LABELED NULL with a CONDITION (conditional tables, Imielinski-Lipski): an unknown carries a label (the missing fact it came from) and a constraint (an excluded set, an equality to another label); a row that depends on it carries the condition (`count(g2) = 1 + [v = g2]`, the new group's row exists only if v is not in {g1, g2}); a question is answered as what holds under every admissible value (certain answers), a shrug only where the completions disagree, and the shrug's meta names the label and the condition. Also separate the two uncertainties now glued in one hole: the fact exists and a value in it is unknown, and the fact may not exist at all. ACCEPTANCE: in both engines with byte parity: the precise_holes world answers `not ph_wc(g1, 2)` no and the sum over all groups exactly; a label shared by two cells is shown as one in why; the written form of a labeled unknown and its condition in the answer model (shrug meta) decided and documented; proof worlds with hand-derived certain answers, planted breaks; no answer that today holds or fails changes, only shrugs become answers. Scope beyond aggregates: an unknown in a join key or a key of any kind. Bounded per construct; the size of the condition set is the open question (one label is linear, many labels can be exponential: decide the cap and what a capped answer says).").
 work_state(w_labeled_unknowns, open).
+
+-- ===========================================================================
+-- THE COMPRESSION PROGRAMME, recorded 2026-10-04 with the owner as OPEN AND VERY IMPORTANT work:
+-- hypotheses and experiments for collapsing and pruning the world, from
+-- f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure. FIRST: re-measure after engine-fast lands.
+-- ===========================================================================
+
+work(w_compression_programme,
+  "VERY IMPORTANT (owner, 2026-10-04): make the world small enough that a real repository evaluates with bounded growth, by collapsing what is a closure, pruning what nobody asks, and not materialising bookkeeping nobody reads; soundly (every answer of the unpruned world is still given, or is a shrug with a reason), undoably (derived by rules, so retraction/excise restore it), measured before and after on self, mcp, cli_exits and a grafema package. Hub of the w_cmp_* items; supersedes the plan text of w_dataflow_pruning, which it carries out. Premises and the first measurements: f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure.").
+work_state(w_compression_programme, open).
+work_needs(w_compression_programme, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_remeasure_after_engine_fast,
+  "EXPERIMENT 0, first: take the fact and work distribution again (per relation, per rule) after engine-fast is merged, on BOTH engines (Rust with and without sealed(witness)), same three corpora plus a grafema package; record the table beside the 2026-10-04 one. Every hypothesis below is re-ranked by it.").
+work_state(w_cmp_remeasure_after_engine_fast, open).
+
+work(w_cmp_provenance_on_demand,
+  "HYPOTHESIS 1 (largest lever, ~44% of facts): derived_by rows need not be materialised for every derived fact; they are needed only where a rule reads derived_by (or asserted_by) or a why/excise asks. EXPERIMENT: materialise derived_by lazily (a demand relation over the stored witnesses, or only for the relations some rule reads it of) and measure facts, time and memory; ACCEPTANCE: every world that reads derived_by answers the same, why/whynot/excise byte-identical, whycheck 0 differences, both engines; decide with sealed(witness) how a world declares it needs no provenance at all.").
+work_state(w_cmp_provenance_on_demand, open).
+work_needs(w_cmp_provenance_on_demand, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_ancestor_closure,
+  "HYPOTHESIS 2 (~20% of facts): ast_within (node x every ancestor) need not be stored as pairs: a pre-order numbering gives each node an interval [enter, exit] and `P is an ancestor of D` becomes one comparison, or the closure is walked on demand (engine-fast's BFS/closure kernel). EXPERIMENT: after engine-fast, measure what remains of ast_within; if still materialised, try the interval encoding as derived facts over the scan; ACCEPTANCE: every reader of ast_within answers the same, both engines, facts and time before/after.").
+work_state(w_cmp_ancestor_closure, open).
+work_needs(w_cmp_ancestor_closure, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_costly_rules,
+  "HYPOTHESIS 3: single rules spend more than they conclude: callback_param (14% of all join work on cli_exits for 230 conclusions), param_hidden (8% on self for 10), caught_here (7-12%). EXPERIMENT: per rule, find the product it builds (body order, a missing bound key, a pairwise `not closer` that is a min), fix by order, demand or an aggregate; ACCEPTANCE: identical facts, work before/after per rule.").
+work_state(w_cmp_costly_rules, open).
+work_needs(w_cmp_costly_rules, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_flow_node_merge,
+  "HYPOTHESIS 4 (small, ~44% of flow nodes, <1% of facts today): merge flow nodes the code guarantees equivalent (copy cycles; unseeded nodes whose predecessors all collapse to one: a binder or argument copied to each use), DERIVED by rules (a representative relation), values computed for representatives only, why expanding the merged edges back; heap reads/writes stay junctions, observed nodes are never merged. ACCEPTANCE: identical answers, why unchanged in content, facts/time before/after; only worth doing if experiment 0 shows the flow grown on a real repository.").
+work_state(w_cmp_flow_node_merge, open).
+work_needs(w_cmp_flow_node_merge, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_store_load_forwarding,
+  "HYPOTHESIS 5: a store/load pair through a heap cell becomes copy edges where the written object is known (one edge per object it may write into, a single edge under must-alias), so member flows compress like plain copies; an unknown object stays a junction. EXPERIMENT: measure how many member_value cells have a single known object, then derive the forwarded edges and compare answers and size.").
+work_state(w_cmp_store_load_forwarding, open).
+work_needs(w_cmp_store_load_forwarding, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_runtime_assumptions,
+  "HYPOTHESIS 6: runtime assumptions prune dead branches (conditional constant propagation): `runtime_env(NODE_ENV, production)` and the like as base facts in their own book; a branch dead under them contributes no edges; excising the assumption brings them back by retraction; whynot names the assumption a missing flow was bought with; an unknown assumption keeps both branches (w_labeled_unknowns). EXPERIMENT: one real corpus with environment checks, size and answers with and without the assumption, and the excise round trip identical to a fresh evaluation.").
+work_state(w_cmp_runtime_assumptions, open).
+work_needs(w_cmp_runtime_assumptions, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_demand_cones,
+  "HYPOTHESIS 7: most of the world is never asked: 97% of may_be_lit content is read only as `has a value`, 90-96% of may_be_node by nothing outside the flow book. EXPERIMENT: in the asks mode (magic sets), measure the cone of the notebooks' real questions against the full world; then a NEW ask on a hot world: the cone grows by incremental addition (pending on engine-fast), and a value-level sharing needs no unpacking while a structural merge may split; prove that growing one cone never changes an answer of another (the cones are closed for their demanded atoms).").
+work_state(w_cmp_demand_cones, open).
+work_needs(w_cmp_demand_cones, w_cmp_remeasure_after_engine_fast).
+
+work(w_cmp_model_aggregates,
+  "HYPOTHESIS 8: relations of the JS model that are aggregates in disguise read and cost better as aggregates: nearest_fn (`not closer` over every enclosing pair) as a min of depth, the effects (eff_here) as a lattice, the audit verdicts as a max over their strength, coverage audits as counts; and a census of the model's ~200 `not` for those that are a min/max/count. Value sets as a union lattice are NOT among them (refuted: sets are size 1). ACCEPTANCE per rewrite: identical answers, work before/after; with the owner, since the rules are his.").
+work_state(w_cmp_model_aggregates, open).
