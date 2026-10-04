@@ -1,0 +1,65 @@
+-- examples/checks/agg-join-delta-first-steps.rofl — A STEPS WALL CUTS WHERE THE WRITTEN ORDER CUTS.
+--
+-- p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q) over 40 + 40 + 10 rows. Under a budget that runs
+-- out inside the firing, which conclusions came before the cut depends on the order the
+-- solutions are concluded in. Two worlds read this file under the same budget: one in
+-- written order, as every firing is under a wall a caller set (agg_breaks
+-- `delta_first_walls`), one opted into the plans (check_opt delta_first), where a firing
+-- whose conclusions could reach the wall is solved again in written order (agg_breaks
+-- `delta_first_cut_unchecked`). Both cut where the TypeScript engine cuts.
+-- expect-row: p[main](q,y1) tick
+-- expect-row: p[main](q,y6) tick
+-- expect-no-row: p[main](q,y2) tick
+-- expect-no-row: p[main](q,y5) tick
+edb(h). edb(l). edb(trig).
+p(Q, Y) :- h(X, Z), l(X, Y), trig(Y, Z, Q).
+h(c, z1). l(c, y1).
+h(c, z2). l(c, y2).
+h(c, z3). l(c, y3).
+h(c, z4). l(c, y4).
+h(c, z5). l(c, y5).
+h(c, z6). l(c, y6).
+h(c, z7). l(c, y7).
+h(c, z8). l(c, y8).
+h(c, z9). l(c, y9).
+h(c, z10). l(c, y10).
+h(c, z11). l(c, y11).
+h(c, z12). l(c, y12).
+h(c, z13). l(c, y13).
+h(c, z14). l(c, y14).
+h(c, z15). l(c, y15).
+h(c, z16). l(c, y16).
+h(c, z17). l(c, y17).
+h(c, z18). l(c, y18).
+h(c, z19). l(c, y19).
+h(c, z20). l(c, y20).
+h(c, z21). l(c, y21).
+h(c, z22). l(c, y22).
+h(c, z23). l(c, y23).
+h(c, z24). l(c, y24).
+h(c, z25). l(c, y25).
+h(c, z26). l(c, y26).
+h(c, z27). l(c, y27).
+h(c, z28). l(c, y28).
+h(c, z29). l(c, y29).
+h(c, z30). l(c, y30).
+h(c, z31). l(c, y31).
+h(c, z32). l(c, y32).
+h(c, z33). l(c, y33).
+h(c, z34). l(c, y34).
+h(c, z35). l(c, y35).
+h(c, z36). l(c, y36).
+h(c, z37). l(c, y37).
+h(c, z38). l(c, y38).
+h(c, z39). l(c, y39).
+h(c, z40). l(c, y40).
+trig(y10, z1, q).
+trig(y9, z2, q).
+trig(y8, z3, q).
+trig(y7, z4, q).
+trig(y6, z5, q).
+trig(y5, z6, q).
+trig(y4, z7, q).
+trig(y3, z8, q).
+trig(y2, z9, q).
+trig(y1, z10, q).

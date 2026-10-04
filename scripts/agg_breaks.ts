@@ -56,6 +56,48 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 type Break = { id: string; what: string; edits?: [string, string, string][]; expect: Record<string, string> };
 export const BREAKS: Break[] = [
  {
+  "id": "delta_first_off",
+  "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
+  "expect": {
+   "agg_join_delta_first": "the state holds the row hole"
+  }
+ },
+ {
+  "id": "delta_first_spread",
+  "what": "a firing is solved delta-first while an unknown spreads: the negation it leaves undecided is recorded at the plan's position, with the plan's bindings",
+  "expect": {
+   "agg_join_delta_first_hole": "the state lacks the row hole[$kernel]($rule(ra0d53dbb),support_withdrawn)"
+  }
+ },
+ {
+  "id": "delta_first_persp",
+  "what": "a premise with a perspective variable is placed after a premise that binds it, where the written order read it unbound",
+  "expect": {
+   "agg_join_delta_first_persp": "jdp_kernel"
+  }
+ },
+ {
+  "id": "delta_first_walls",
+  "what": "a firing is solved delta-first under a budget or space the caller set, without the world opting in",
+  "expect": {
+   "agg_join_delta_first_walled": "the state lacks the row hole[$kernel]($adhoc,space_exhausted)"
+  }
+ },
+ {
+  "id": "delta_first_cut_unchecked",
+  "what": "a delta-first firing whose conclusions reach the steps wall concludes in the plan's order",
+  "expect": {
+   "agg_join_delta_first_steps_planned": "the state lacks the row p[main](q,y6) tick"
+  }
+ },
+ {
+  "id": "delta_first_overrun_holes",
+  "what": "a delta-first plan that outgrows the space holes the rule, where the written order fits",
+  "expect": {
+   "agg_join_delta_first_space_planned": "the state holds the row hole[$kernel]($rule("
+  }
+ },
+ {
   "id": "mono",
   "what": "aggregate rules run as monotone rules, in phase A, before what they read is closed",
   "expect": {

@@ -70,8 +70,9 @@ export interface Answer {
 export interface Ticked { advanced: boolean; quiescent: boolean; partial: boolean }
 
 /** One world. Obtained from `open` or, far more cheaply, from `fork`. */
-/** The walls a snapshot does not carry: the row limit, the ticks of provenance kept, the evaluator. */
-export type Walls = { space?: number; retainTicks?: number; mode?: 'rounds' | 'strata' };
+/** The walls a snapshot does not carry: the row limit, the ticks of provenance kept, the evaluator, and join plans
+ *  under a budget or a row limit (`deltaFirst`; without it a wall keeps every firing in written order). */
+export type Walls = { space?: number; retainTicks?: number; mode?: 'rounds' | 'strata'; deltaFirst?: boolean };
 
 export class RoflSession {
   readonly port: RoflPort;
