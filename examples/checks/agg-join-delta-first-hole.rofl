@@ -1,0 +1,56 @@
+-- examples/checks/agg-join-delta-first-hole.rofl — A HOLE A NEGATION MEETS, UNDER A JOIN THE PLAN WOULD REORDER.
+--
+-- hx(y1, _) faults (oops + 1), so `not hx(Y, _)` is undecided for Y = y1 and the rule's
+-- conclusion there is withdrawn: hit is holed (support_withdrawn) and inherits the shrug.
+-- The negation records the body position it was met at and the bindings it was met with,
+-- and the rest of the body is solved around them in written order (poison_solve). A
+-- delta-first plan (engine/joinplan.rs) met it at another position with other bindings, and
+-- the hole was lost; while an unknown spreads every firing is in written order
+-- (agg_breaks `delta_first_spread`). Both engines.
+-- expect-row: hole[$kernel]($rule(ra0d53dbb),support_withdrawn)
+-- expect-row: shrug[$kernel]($rule(ra0d53dbb),inherited
+edb(h). edb(l). edb(trig). edb(kk).
+hx(Y, V) :- kk(Y, K), V is K + 1.
+hit(Y, Z) :- h(X, Z), l(X, Y), trig(Y, Z), not hx(Y, _).
+h(c, z1). l(c, y1).
+h(c, z2). l(c, y2).
+h(c, z3). l(c, y3).
+h(c, z4). l(c, y4).
+h(c, z5). l(c, y5).
+h(c, z6). l(c, y6).
+h(c, z7). l(c, y7).
+h(c, z8). l(c, y8).
+h(c, z9). l(c, y9).
+h(c, z10). l(c, y10).
+h(c, z11). l(c, y11).
+h(c, z12). l(c, y12).
+h(c, z13). l(c, y13).
+h(c, z14). l(c, y14).
+h(c, z15). l(c, y15).
+h(c, z16). l(c, y16).
+h(c, z17). l(c, y17).
+h(c, z18). l(c, y18).
+h(c, z19). l(c, y19).
+h(c, z20). l(c, y20).
+h(c, z21). l(c, y21).
+h(c, z22). l(c, y22).
+h(c, z23). l(c, y23).
+h(c, z24). l(c, y24).
+h(c, z25). l(c, y25).
+h(c, z26). l(c, y26).
+h(c, z27). l(c, y27).
+h(c, z28). l(c, y28).
+h(c, z29). l(c, y29).
+h(c, z30). l(c, y30).
+h(c, z31). l(c, y31).
+h(c, z32). l(c, y32).
+h(c, z33). l(c, y33).
+h(c, z34). l(c, y34).
+h(c, z35). l(c, y35).
+h(c, z36). l(c, y36).
+h(c, z37). l(c, y37).
+h(c, z38). l(c, y38).
+h(c, z39). l(c, y39).
+h(c, z40). l(c, y40).
+trig(y1, z1). trig(y2, z2). trig(y3, z3).
+kk(y1, oops). kk(y2, 5).

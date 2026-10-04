@@ -81,5 +81,6 @@ pub fn describe(e: &Halt) -> String {
         Halt::Strat(m, _) => m.clone(),
         Halt::Bug(m) => format!("defect: {m}"),
         Halt::Narrowed => "defect: a descending pass escaped its evaluation".into(),
+        Halt::Overrun => "defect: a delta-first firing's overrun escaped it".into(),
     }
 }

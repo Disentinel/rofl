@@ -1,4 +1,4 @@
--- examples/checks/join-delta-first-check.rofl — join-delta-first.rofl: the three hits, and nothing else.
+-- examples/checks/agg-join-delta-first-check.rofl — agg-join-delta-first.rofl: the three hits, and nothing else.
 jd_wrong(Y, Z) :- jd_want(Y, Z), not hit(Y, Z).
 jd_extra(Y, Z) :- hit(Y, Z), not jd_want(Y, Z).
 alarm(jd_wrong).

@@ -1,4 +1,4 @@
--- examples/checks/join-delta-first.rofl — A JOIN THAT ONLY A DELTA-FIRST PLAN FITS IN THE SPACE.
+-- examples/checks/agg-join-delta-first.rofl — A JOIN THAT ONLY A DELTA-FIRST PLAN FITS IN THE SPACE.
 --
 -- hit(Y, Z) :- h(X, Z), l(X, Y), trig(Y, Z). h and l are 100 rows each, all with X = c, so
 -- h joined to l is 10000 rows, which is more than the space of its check (250), while trig is

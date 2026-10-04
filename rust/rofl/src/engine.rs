@@ -45,6 +45,9 @@ pub enum Halt {
     Bug(String),
     /// A descending pass has gathered what it came for (`narrow_descend`).
     Narrowed,
+    /// A delta-first firing outgrew the space; it is solved again in written
+    /// order, which holes or not as it always did (`joinplan.rs`).
+    Overrun,
 }
 
 pub struct ERule {
@@ -580,6 +583,12 @@ pub struct Eval {
     /// the premise statistics their estimates read. `ROFL_NO_DELTA_FIRST` keeps
     /// every firing in written order.
     delta_first: bool,
+    /// A caller set a steps or space wall (`--budget`, `--space`): where a
+    /// wall cuts must not depend on the plan, so firings stay in written
+    /// order unless `delta_first_under_walls` opts in.
+    pub walls_set: bool,
+    pub delta_first_under_walls: bool,
+    plan_trial: bool,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -1102,6 +1111,9 @@ impl Eval {
             delta_by_rule: HashMap::new(),
             delta_ns: 0,
             delta_first: std::env::var_os("ROFL_NO_DELTA_FIRST").is_none(),
+            walls_set: false,
+            delta_first_under_walls: false,
+            plan_trial: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
             rounds: Vec::new(),
@@ -4096,6 +4108,9 @@ impl Eval {
                         self.peak_rows = now;
                     }
                     if now > self.space {
+                        if brk!("delta_first_overrun_holes" => false; self.plan_trial) {
+                            return Err(Halt::Overrun);
+                        }
                         self.wall_spent.set(Some(("rows", now, self.space)));
                         if let Some(rid) = rule_id {
                             self.arith_hole(rid, self.v.space_reason);

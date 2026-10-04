@@ -1,7 +1,7 @@
 // Build a world from .rofl TEXT and print canonicalState — the load path's
 // counterpart to `rofl-eval`, so a divergence can be diffed rather than read
 // out of a test panic.
-//   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
+//   rofl-load [--ticks N] [--budget N] [--space N] [--delta-first] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
 //             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
 //             boot.rofl file.rofl...
 // `--strata` runs the stock evaluator, which reads `stratum/2`; `--explain`
@@ -11,7 +11,9 @@
 // store only this engine can build. `--below F`, repeated, builds a world of
 // boot.rofl and those files, evaluates it, and feeds what it concludes to
 // this one before it evaluates (`Session::feed_below`), under the same
-// `--budget`, `--space` and `--strata`; `--retain N` keeps the
+// `--budget`, `--space` and `--strata`; a firing is solved in written order
+// under a `--budget` or `--space` (where a wall cuts is not the planner's),
+// unless `--delta-first` says the world asks for its plans; `--retain N` keeps the
 // provenance of the last N completed ticks (`retain_ticks`). `--retract L`, repeated,
 // retracts the base fact L after the first evaluation, in order, by `Session::retract_delta`
 // (the cells it supported are updated, the world is not evaluated again) and prints the
@@ -45,6 +47,7 @@ fn main() {
     // and so could not answer about a world that runs out. A world with a
     // budget was checked by ONE engine for exactly that reason.
     let mut budget: i64 = 200_000_000;
+    let (mut walls, mut delta_first) = (false, false);
     let mut files: Vec<String> = Vec::new();
     let (mut strata, mut explain) = (false, false);
     let mut save: Option<String> = None;
@@ -63,12 +66,14 @@ fn main() {
         };
         match args[i].as_str() {
             "--ticks" => ticks = number("--ticks", value(&mut i), "a count of ticks"),
-            "--budget" => budget = number("--budget", value(&mut i), "an integer"),
+            "--budget" => { budget = number("--budget", value(&mut i), "an integer"); walls = true }
+            "--delta-first" => delta_first = true,
             "--space" => {
                 let v = value(&mut i);
                 let n: i64 = number("--space", v.clone(), "a positive number of rows");
                 if n <= 0 { eprintln!("--space takes a positive number of rows, not {v:?}"); std::process::exit(1) }
-                space = Some(n)
+                space = Some(n);
+                walls = true
             }
             "--strata" => strata = true,
             "--explain" => explain = true,
@@ -92,6 +97,7 @@ fn main() {
     let mut s = rofl::session::Session::fresh(budget);
     if strata { s.eval.mode = rofl::engine::Mode::Strata; }
     if let Some(n) = space { s.eval.space = n; }
+    (s.eval.walls_set, s.eval.delta_first_under_walls) = (walls, delta_first);
     s.eval.retain_ticks = retain;
     for f in &files {
         if let Err(d) = s.load(&read(f), None) {
@@ -105,6 +111,7 @@ fn main() {
         let mut b = rofl::session::Session::fresh(budget);
         if strata { b.eval.mode = rofl::engine::Mode::Strata; }
         if let Some(n) = space { b.eval.space = n; }
+        (b.eval.walls_set, b.eval.delta_first_under_walls) = (walls, delta_first);
         for f in files.iter().take(1).chain(below.iter()) {
             if let Err(d) = b.load(&read(f), None) {
                 eprintln!("below: {f} refused:");

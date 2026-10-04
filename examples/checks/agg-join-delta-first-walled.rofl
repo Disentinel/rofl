@@ -1,0 +1,7 @@
+-- examples/checks/agg-join-delta-first-walled.rofl — agg-join-delta-first.rofl under its space, not opted into the plans.
+--
+-- A space a caller set keeps every firing in written order, so the join that only a plan fits
+-- is the wall it is in the written order and in the TypeScript engine (agg_breaks
+-- `delta_first_walls`).
+-- expect-row: hole[$kernel]($adhoc,space_exhausted)
+-- expect-row: hole[$kernel]($rule(ra46f0066),space_exhausted)

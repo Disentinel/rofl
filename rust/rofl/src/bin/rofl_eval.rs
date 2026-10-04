@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--delta-first] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -74,6 +74,10 @@ struct Args {
     derivations: bool,
     /// No `derived_by` rows and no witnesses: the facts alone.
     no_provenance: bool,
+    /// `--budget` or `--space` given: firings in written order, unless
+    /// `--delta-first` (`Eval::walls_set`).
+    walls: bool,
+    delta_first: bool,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -85,6 +89,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         want_bytes: false,
         derivations: false,
         no_provenance: false,
+        walls: false,
+        delta_first: false,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -102,12 +108,14 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
                 a.budget = v
                     .parse()
                     .map_err(|_| format!("--budget: not an integer: {v}"))?;
+                a.walls = true;
             }
             "--space" => {
                 let v = value(args, &mut i, "--space")?;
                 a.space = v
                     .parse()
                     .map_err(|_| format!("--space: not an integer: {v}"))?;
+                a.walls = true;
             }
             "--ticks" => {
                 let v = value(args, &mut i, "--ticks")?;
@@ -118,6 +126,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
             "--no-provenance" => a.no_provenance = true,
+            "--delta-first" => a.delta_first = true,
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -144,6 +153,8 @@ fn main() {
         want_bytes,
         derivations,
         no_provenance,
+        walls,
+        delta_first,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -171,6 +182,7 @@ fn main() {
     // with the default; the field is public and this is the one caller that has
     // a reason to move it, so the library signature stays as it is.
     l.eval.space = space;
+    (l.eval.walls_set, l.eval.delta_first_under_walls) = (walls, delta_first);
     // the harness's spelling of `sealed(provenance)`: no derived_by, no
     // witnesses, and a step is a new fact rather than a firing
     if no_provenance {

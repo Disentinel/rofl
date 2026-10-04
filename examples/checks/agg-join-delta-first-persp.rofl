@@ -1,0 +1,10 @@
+-- examples/checks/agg-join-delta-first-persp.rofl — A PERSPECTIVE VARIABLE READ UNBOUND STAYS UNBOUND.
+--
+-- concludes[P](R, Rel) with P unbound does not range over the kernel's books, and in written
+-- order nothing has bound P when it is read, so negated_under(concludes, P) (P = $kernel)
+-- meets no row and r is empty. A plan from the news of negated_under binds P = $kernel first
+-- and then reads the kernel's concludes: 33 rows. A premise with a perspective variable is
+-- placed where that variable is bound, or not, as written (agg_breaks `delta_first_persp`).
+r(R, Rel, P) :- concludes[P](R, Rel), negated_under(concludes, P).
+jdp_kernel(R, Rel) :- r(R, Rel, _).
+alarm(jdp_kernel).

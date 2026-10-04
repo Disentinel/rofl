@@ -38,6 +38,22 @@
 //! store is unordered: in the engine's order the first firing to stage a fact
 //! is its witness, and the solutions' order is the written one.
 //!
+//! Nor while an unknown spreads: a negation an unknown leaves undecided
+//! records where it was met and the bindings it was met with, and the rest
+//! of the body is solved around them in written order (`poison_solve`); from
+//! a reordered prefix that is another set of solutions. A premise whose
+//! perspective is a variable stays where that variable is bound, or not, as
+//! written: unbound, it does not range over the kernel's books.
+//!
+//! WALLS. Under a budget or space a caller set (`Eval::walls_set`) every
+//! firing is in written order, unless the caller opts in
+//! (`delta_first_under_walls`, rofl-load `--delta-first`): where a wall cuts is
+//! not the planner's. Under the default walls a plan that outgrows the space,
+//! or a firing whose conclusions could reach a wall, is solved again in
+//! written order (`fire_planned`), so a plan never cuts where the written
+//! order does not; it can finish a firing whose written join would have
+//! outgrown the default space.
+//!
 //! The premises of a solution are put back in written order before it is
 //! concluded, so a witness is the one the written order would have built.
 
@@ -87,7 +103,11 @@ impl Eval {
     /// store, no news) when it is cheaper than the written order for `n` news
     /// rows; None keeps the written order.
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
-        if !self.delta_first || brk!("delta_first_off" => true; false) {
+        if !self.delta_first
+            || brk!("delta_first_off" => true; false)
+            || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
+            || brk!("delta_first_walls" => false; self.walls_set && !self.delta_first_under_walls)
+        {
             return None;
         }
         let key = (r.id, at.unwrap_or(usize::MAX));
@@ -241,20 +261,53 @@ impl Eval {
                 bound.contains(v) || (!head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || !vs.contains(v)))
             })
         };
+        // A PERSPECTIVE VARIABLE does not range over the kernel's books while
+        // it is unbound (`match_premise`): a premise with one is placed where
+        // its variable is bound, or not, as in the written order, and nothing
+        // binds it ahead of a premise that read it unbound.
+        let mut vp: Vec<Option<(Sym, bool)>> = Vec::with_capacity(plan.len());
+        let mut wb: Vec<Sym> = Vec::new();
+        for (j, b) in plan.iter().enumerate() {
+            let mut e = None;
+            if let BodyElem::Pos(l) | BodyElem::Neg(l) = b {
+                if !l.persp.is_atom() {
+                    let mut v = Vec::new();
+                    self.h.vars_of(l.persp, &mut v);
+                    let &[p] = v.as_slice() else { return None };
+                    e = Some((p, wb.contains(&p)));
+                }
+            }
+            vp.push(e);
+            if matches!(b, BodyElem::Pos(_)) {
+                wb.extend(all_vars[j].iter().copied());
+            }
+        }
+        let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
+            if let Some((p, was)) = vp[j] {
+                if bound.contains(&p) != was && brk!("delta_first_persp" => false; true) {
+                    return false;
+                }
+            }
+            matches!(plan[j], BodyElem::Neg(_))
+                || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)) && brk!("delta_first_persp" => false; true))
+        };
         let mut bound: Vec<Sym> = Vec::new();
         let mut order: Vec<usize> = Vec::new();
         let mut rest: Vec<usize> = (0..plan.len()).collect();
         let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
         if let Some(l) = news {
+            rest.remove(i);
+            if !placeable(i, &[], &rest) {
+                return None;
+            }
             bound = all_vars[i].clone();
             order.push(i);
-            rest.remove(i);
             let st0 = self.delta_stat(l, &[]);
             let sel = if st0.rows == 0.0 { 0.0 } else { (st0.rows / size_i).min(1.0) };
             (unit, cur_d) = (1.0, sel);
         }
         loop {
-            while let Some(at) = rest.iter().position(|&j| matches!(plan[j], BodyElem::Neg(_)) && ready(j, &bound)) {
+            while let Some(at) = rest.iter().position(|&j| matches!(plan[j], BodyElem::Neg(_)) && ready(j, &bound) && placeable(j, &bound, &rest)) {
                 let j = rest.remove(at);
                 unit += cur_d;
                 order.push(j);
@@ -262,6 +315,9 @@ impl Eval {
             let mut best: Option<(usize, f64)> = None;
             for (at, &j) in rest.iter().enumerate() {
                 let BodyElem::Pos(l) = &plan[j] else { continue };
+                if !placeable(j, &bound, &rest) {
+                    continue;
+                }
                 let st = self.delta_stat(l, &bound);
                 if best.is_none_or(|(_, f)| st.fan < f) {
                     best = Some((at, st.fan));
@@ -288,16 +344,38 @@ impl Eval {
     /// `r` fired by `p`: on the news `keys` of the premise the plan starts
     /// from, or over the whole store when there are none. The premises of
     /// each solution are put back in written order before it is concluded.
+    ///
+    /// A WALL FALLS WHERE THE WRITTEN ORDER PUTS IT. A plan that outgrows the
+    /// space (the estimate undercounts a skewed key), or a firing whose
+    /// conclusions could reach the steps or space wall (each concludes at
+    /// most one step and one row, and the set is the written order's), is
+    /// solved again in written order, which cuts where it always did.
     pub(super) fn fire_planned(&mut self, r: &Rc<ERule>, p: &DeltaPlan, keys: Option<&FxSet<FactId>>) -> Result<Front, Halt> {
-        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
+        let written = |e: &mut Eval, peak: i64| {
+            e.peak_rows = peak;
+            e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
+        };
+        let (peak, undecided) = (self.peak_rows, self.lat_undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
+        self.plan_trial = true;
         let sols = self.solve_body(&p.body, Subst::new(), 0, keys.map(|k| (0, k)), Some(r.id));
+        self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
-        let sols = sols?;
-        *self.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
+        // a negation records the position it was undecided at; none is while no unknown spreads
+        debug_assert_eq!(self.lat_undecided.len(), undecided);
+        let sols = match sols {
+            Err(Halt::Overrun) => return written(self, peak),
+            s => s?,
+        };
+        let n = sols.len() as i64;
+        if brk!("delta_first_cut_unchecked" => false; self.steps + n > self.budget || self.rows + n > self.space) {
+            return written(self, peak);
+        }
+        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
         let mut out = Front::default();
         for mut sol in sols {
             let mut prems = sol.prems.clone();

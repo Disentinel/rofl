@@ -90,6 +90,8 @@ export interface World {
   /** a budget no world needs, which a planted fault that runs away is cut by sooner (scripts/agg_breaks.ts); a cut it makes is still a problem */
   name: string; files: string[]; ticks?: number; budget?: number; cap?: number; space?: number;
   oneEngine?: 'ts' | 'rust'; strata?: boolean; explain?: boolean; retain?: number;
+  /** join plans under the world's budget or space (rofl-load `--delta-first`): a wall otherwise keeps every firing in written order */
+  deltaFirst?: boolean;
   /** base facts retracted one by one after the evaluation (rofl-load `--retract`: the Rust engine updates the cells they
    *  supported, the TypeScript engine evaluates again); both must hold the state a world without them holds */
   retract?: string[];
@@ -177,7 +179,7 @@ export function declared(text?: string): World[] {
   // EVERY OPTION IS ONE THIS HARNESS READS. `one_engine` was read as the
   // literal `1` and meant "TypeScript only", so any other value was silently
   // ignored and the world ran on both engines (f_one_engine_meant_ts_only).
-  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract']);
+  const KNOWN = new Set(['ticks', 'budget', 'space', 'one_engine', 'evaluator', 'explain', 'retain', 'sentences', 'together', 'retract', 'delta_first']);
   for (const [n, k] of col(r, 'check_opt(N, K, V)', 'N', 'K')) {
     if (!KNOWN.has(k)) throw new Error(`check_opt("${n}", ${k}, _): no such option; the options are ${[...KNOWN].join(', ')}`);
     // a world the tree is walked to may be declared one-engine, the one option that needs no files (see worlds())
@@ -194,6 +196,10 @@ export function declared(text?: string): World[] {
   for (const [n, e] of col(r, 'check_opt(N, explain, E)', 'N', 'E')) {
     if (e !== '1') throw new Error(`check_opt("${n}", explain, ${e}): explain takes 1`);
     out.get(n)!.explain = true;
+  }
+  for (const [n, e] of col(r, 'check_opt(N, delta_first, E)', 'N', 'E')) {
+    if (e !== '1') throw new Error(`check_opt("${n}", delta_first, ${e}): delta_first takes 1`);
+    out.get(n)!.deltaFirst = true;
   }
   for (const [n, e] of col(r, 'check_opt(N, together, E)', 'N', 'E')) {
     if (e !== '1') throw new Error(`check_opt("${n}", together, ${e}): together takes 1`);
@@ -545,7 +551,7 @@ export function answerRust(w0: World): Answer | null {
     if (want && !p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n')[0]}`);
   }
   const state = run([boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
-    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...keep]);
+    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []), ...keep]);
   const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
   return { hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state),
            problems: [...problems, ...rowProblems(keep, state)] };
@@ -564,7 +570,7 @@ export function answerRust(w0: World): Answer | null {
 function answerRustOnly(w: World): Answer {
   const boot = bootPath();
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []),
-    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
+    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
   for (const f of w.files) {
