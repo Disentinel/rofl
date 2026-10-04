@@ -1,0 +1,9 @@
+-- expect-refusal: function dsr_p: key (a) has two values in the book main: (1) and (2)
+-- a retraction that breaks the promise (it lifts the block on a second value) is refused, and the world it leaves is asked again: it refuses again, it never answers
+edb(dsr_src).
+edb(dsr_blocked).
+function dsr_p(K, to V).
+dsr_src(a, 1).
+dsr_src(a, 2).
+dsr_blocked(a, 2).
+dsr_p(K, V) :- dsr_src(K, V), not dsr_blocked(K, V).

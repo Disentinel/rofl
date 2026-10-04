@@ -761,7 +761,10 @@ export class Rofl {
       this.store.noteEval(budget, ev.steps, true);
       partial = true;
     }
-    checkFunctions(this.store);
+    try { checkFunctions(this.store); } catch (e) {
+      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed
+      throw e;
+    }
     this.lastSteps = ev.steps;
     this.lastPeakRows = ev.peakRows;
     this.lastSpace = ev.space;

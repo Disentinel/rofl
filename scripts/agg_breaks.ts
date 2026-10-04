@@ -6622,6 +6622,36 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "function_dirty_cleared_first",
+  "what": "an evaluation marks the world clean before the promises are judged, so a refused world is answered by the next question",
+  "expect": {
+   "ds_function_holds": "refused, but not for"
+  }
+ },
+ {
+  "id": "function_retract_clean",
+  "what": "a retraction refused for the promise it breaks leaves the world marked clean, so the next question answers",
+  "expect": {
+   "ds_function_retract": "refused, but not for"
+  }
+ },
+ {
+  "id": "ts_function_dirty_cleared",
+  "what": "the TypeScript engine leaves a world it refused for a broken promise marked clean, so the next question answers",
+  "edits": [
+   [
+    "src/api.ts",
+    "      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "ds_function_holds": "refused, but not for",
+   "ds_function_tick": "refused, but not for",
+   "ds_function_retract": "refused, but not for"
+  }
+ },
+ {
   "id": "function_twice_admitted",
   "what": "a relation declared a function twice is admitted",
   "expect": {
@@ -6684,7 +6714,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/api.ts",
-    "    checkFunctions(this.store);\n    this.lastSteps = ev.steps;",
+    "    try { checkFunctions(this.store); } catch (e) {\n      this.store.dirty = true; // a broken world is never settled: every later question refuses until it is fixed\n      throw e;\n    }\n    this.lastSteps = ev.steps;",
     "    this.lastSteps = ev.steps;"
    ]
   ],

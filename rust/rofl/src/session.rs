@@ -321,6 +321,9 @@ impl Session {
                 // written here: a tick that ran out is exactly the one whose
                 // budget a replay must be given.
                 self.eval.store.note_eval(self.eval.budget, self.eval.steps, true);
+                // a wall judges the promises like any other exit, and a world
+                // that breaks one stays dirty
+                self.eval.check_promises()?;
                 // as the reference's run does after either wall: the hole is
                 // the answer, and asking again must not pay for the run again
                 self.eval.store.dirty = false;
@@ -709,6 +712,9 @@ impl Session {
     /// constrains, as it does in a body.
     pub fn ask(&mut self, query: &str) -> Result<Answer, String> {
         let t0 = std::time::Instant::now();
+        if let Some(m) = &self.eval.promise_broken {
+            return Err(m.clone());
+        }
         let src = format!("{}.", query.trim().trim_end_matches('.'));
         let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
         if cs.len() != 1 || !cs[0].body.is_empty() || cs[0].lattice.is_some() {
@@ -954,7 +960,10 @@ impl Session {
         }
         match self.eval.retract_delta(&doomed) {
             Ok(d) => {
-                self.eval.check_promises().map_err(|e| crate::describe(&e))?;
+                if let Err(e) = self.eval.check_promises() {
+                    brk!("function_retract_clean" => (); self.eval.store.dirty = true);
+                    return Err(crate::describe(&e));
+                }
                 Ok(Retraction::Delta(d))
             }
             Err(why) => {

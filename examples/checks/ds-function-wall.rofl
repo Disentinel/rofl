@@ -1,0 +1,10 @@
+-- expect-refusal: function wf_v: key (k) has two values in the book main: (1) and (2)
+-- a budget wall judges the promise like any other end of an evaluation: a world the wall cut that breaks a declared function is refused, not answered as partial
+edb(wf_e).
+edb(wf_v).
+function wf_v(K, to V).
+wf_v(k, 1).
+wf_v(k, 2).
+wf_e(0, 1). wf_e(1, 2). wf_e(2, 3). wf_e(3, 4). wf_e(4, 5). wf_e(5, 6). wf_e(6, 7). wf_e(7, 8). wf_e(8, 9).
+wf_r(X, Y) :- wf_e(X, Y).
+wf_r(X, Z) :- wf_r(X, Y), wf_e(Y, Z).

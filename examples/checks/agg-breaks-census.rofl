@@ -1686,6 +1686,14 @@ brk("function_book_ignored"). brk_kind("function_book_ignored", switch).
 brk_expects("function_book_ignored", "ds_function_holds").
 brk("function_tick_unchecked"). brk_kind("function_tick_unchecked", switch).
 brk_expects("function_tick_unchecked", "ds_function_tick").
+brk("function_dirty_cleared_first"). brk_kind("function_dirty_cleared_first", switch).
+brk_expects("function_dirty_cleared_first", "ds_function_holds").
+brk("function_retract_clean"). brk_kind("function_retract_clean", switch).
+brk_expects("function_retract_clean", "ds_function_retract").
+brk("ts_function_dirty_cleared"). brk_kind("ts_function_dirty_cleared", ts).
+brk_expects("ts_function_dirty_cleared", "ds_function_holds").
+brk_expects("ts_function_dirty_cleared", "ds_function_tick").
+brk_expects("ts_function_dirty_cleared", "ds_function_retract").
 brk("function_twice_admitted"). brk_kind("function_twice_admitted", switch).
 brk_expects("function_twice_admitted", "ds_function_syntax").
 brk("function_roles_unread"). brk_kind("function_roles_unread", switch).
@@ -1843,6 +1851,8 @@ switch_site("first_rep", "rust/rofl/src/engine.rs").
 switch_site("function_arity_short", "rust/rofl/src/program.rs").
 switch_site("function_book_ignored", "rust/rofl/src/structure.rs").
 switch_site("function_check_off", "rust/rofl/src/structure.rs").
+switch_site("function_dirty_cleared_first", "rust/rofl/src/engine.rs").
+switch_site("function_retract_clean", "rust/rofl/src/session.rs").
 switch_site("function_roles_unread", "rust/rofl/src/program.rs").
 switch_site("function_tick_unchecked", "rust/rofl/src/engine.rs").
 switch_site("function_twice_admitted", "rust/rofl/src/structure.rs").

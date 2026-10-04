@@ -602,6 +602,9 @@ pub struct Eval {
     /// every evaluation, and for the planner the key positions of each relation.
     functions: Vec<crate::structure::Function>,
     function_keys: HashMap<Sym, Vec<usize>>,
+    /// The refusal of the last judgement of the promises, while the world breaks one: nothing is answered until an
+    /// evaluation passes (`Session::ask`; `ensure` re-evaluates a dirty world).
+    pub promise_broken: Option<String>,
     /// Premises the planner estimated from a promise instead of counting rows.
     pub promise_stats: u64,
     pub rounds: Vec<(u64, u64)>,
@@ -1166,6 +1169,7 @@ impl Eval {
             delta_stats: HashMap::new(),
             functions: Vec::new(),
             function_keys: HashMap::new(),
+            promise_broken: None,
             promise_stats: 0,
             rounds: Vec::new(),
             closures: Vec::new(),
@@ -2559,6 +2563,7 @@ impl Eval {
         }
         self.settle_staged();
         self.write_shrugs(partial)?;
+        brk!("function_dirty_cleared_first" => self.store.dirty = false; ());
         self.check_promises()?;
         self.store.dirty = false;
         self.store.partial_eval = partial;
@@ -2575,11 +2580,15 @@ impl Eval {
     /// THE DECLARED STRUCTURES' PROMISES (docs/data-structures.md), judged over
     /// what the evaluation left: a refusal names the place and leaves the world
     /// dirty, never answered.
-    pub fn check_promises(&self) -> Result<(), Halt> {
+    pub fn check_promises(&mut self) -> Result<(), Halt> {
+        self.promise_broken = None;
         if self.functions.is_empty() || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
-        crate::structure::check_functions(&self.h, &self.store, &self.functions).map_err(|m| Halt::Strat(m, String::new()))
+        crate::structure::check_functions(&self.h, &self.store, &self.functions).map_err(|m| {
+            self.promise_broken = Some(m.clone());
+            Halt::Strat(m, String::new())
+        })
     }
 
     /// THE SHRUG MODEL, set up for one evaluation (docs/aggregates.md,

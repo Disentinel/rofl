@@ -99,6 +99,15 @@ p(K, V) :- src(K, V), not blocked(K, V).
             assert!(m.contains("function p: key (a) has two values"), "{m}");
         }
     }
+    // THE WORLD STAYS BROKEN: nothing is answered from it until it is fixed
+    for _ in 0..2 {
+        let m = s.why("p(a, 2)").expect_err("why answered from a broken world");
+        assert!(m.contains("function p: key (a) has two values"), "{m}");
+        let m = s.ask("p(a, X)").err().expect("ask answered from a broken world");
+        assert!(m.contains("function p: key (a) has two values"), "{m}");
+        let m = refusal(s.evaluate());
+        assert!(m.contains("function p: key (a) has two values"), "{m}");
+    }
 }
 
 #[test]
@@ -109,4 +118,22 @@ function bk(K, to V).
 bk[w1](k, 1). bk[w2](k, 2). bk[w1](j, 1).
 ");
     s.evaluate().unwrap();
+}
+
+#[test]
+fn a_budget_wall_does_not_skip_the_promise() {
+    let mut s = Session::fresh(60);
+    s.load(&boot(), None).expect("boot");
+    s.load("
+edb(wf_e). edb(wf_v).
+function wf_v(K, to V).
+wf_v(k, 1). wf_v(k, 2).
+wf_e(0, 1). wf_e(1, 2). wf_e(2, 3). wf_e(3, 4). wf_e(4, 5). wf_e(5, 6). wf_e(6, 7). wf_e(7, 8). wf_e(8, 9).
+wf_r(X, Y) :- wf_e(X, Y).
+wf_r(X, Z) :- wf_r(X, Y), wf_e(Y, Z).
+", None).unwrap_or_else(|d| panic!("{d:?}"));
+    let m = refusal(s.evaluate());
+    assert!(m.contains("function wf_v: key (k) has two values"), "{m}");
+    assert!(s.eval.store.dirty, "a refused world stays dirty");
+    assert!(s.ask("wf_v(k, X)").is_err(), "a broken world answered");
 }
