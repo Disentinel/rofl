@@ -1,0 +1,59 @@
+-- examples/checks/ds-function-holds.rofl — DECLARED FUNCTIONS THAT HOLD, the
+-- data of the ds_function_holds world (docs/data-structures.md). A
+-- declaration changes no fact: each declared relation here has a twin written
+-- by the same rules and declared nothing (`_u`), and the check file holds the
+-- two to the same rows. The promise is per book, so one key may have two
+-- values in two books; it is judged over what the rules conclude and what is
+-- asserted alike.
+
+-- 1. A TABLE OF ATTRIBUTES, key (node, attribute): asserted, then concluded
+-- from it, and a fact asserted that a rule concludes again
+edb(dsf_e).
+dsf_e(n1, kind, ident). dsf_e(n2, kind, call). dsf_e(n3, kind, ident).
+dsf_e(n3, name, foo). dsf_e(n1, name, bar).
+function dsf_attr(N, K, to V).
+dsf_attr(N, K, V) :- dsf_e(N, K, V).
+dsf_attr(n1, kind, ident).
+dsf_attr_u(N, K, V) :- dsf_e(N, K, V).
+dsf_attr_u(n1, kind, ident).
+
+-- 2. A FUNCTION OF ONE KEY, read off the first, and joined to a relation that has many rows for each value: the
+-- planner may count one row for each bound key, the rows are the same
+edb(dsf_w).
+dsf_w(ident, w1). dsf_w(ident, w2). dsf_w(ident, w3). dsf_w(call, w4).
+function dsf_name(N, to S).
+dsf_name(N, S) :- dsf_attr(N, name, S).
+dsf_name_u(N, S) :- dsf_attr_u(N, name, S).
+dsf_use(N, V, W) :- dsf_name(N, _), dsf_attr(N, kind, V), dsf_w(V, W).
+dsf_use_u(N, V, W) :- dsf_name_u(N, _), dsf_attr_u(N, kind, V), dsf_w(V, W).
+
+-- 3. NO KEY: one value for the whole relation; and TWO VALUES for one key
+function dsf_top(to W).
+dsf_top(n3) :- dsf_e(n3, name, _).
+dsf_top_u(n3) :- dsf_e(n3, name, _).
+edb(dsf_pairs).
+dsf_pairs(k1, 1, 2). dsf_pairs(k2, 1, 2). dsf_pairs(k3, 3, 4).
+function dsf_pair(K, to A, to B).
+dsf_pair(K, A, B) :- dsf_pairs(K, A, B).
+dsf_pair_u(K, A, B) :- dsf_pairs(K, A, B).
+
+-- 4. FACTS ASSERTED IN THE RELATION ITSELF, and a relation with no fact at all
+edb(dsf_dir).
+function dsf_dir(K, to V).
+dsf_dir(a, 1). dsf_dir(b, 1). dsf_dir(c, 2).
+function dsf_empty(K, to V).
+
+-- 5. PER BOOK: one key, two values, in two books; each book keeps its one
+edb(dsf_bk).
+function dsf_bk(K, to V).
+dsf_bk[w1](k, 1). dsf_bk[w1](j, 1). dsf_bk[w2](k, 2).
+
+-- 6. A FUNCTION OVER A RECURSION: the root of the chain each node is on, one value for each node, though the recursion
+-- has many rows
+edb(dsf_parent).
+dsf_parent(c1, c0). dsf_parent(c2, c1). dsf_parent(c3, c2).
+function dsf_root(N, to R).
+dsf_root(N, P) :- dsf_parent(N, P), not dsf_parent(P, _).
+dsf_root(N, R) :- dsf_parent(N, P), dsf_root(P, R).
+dsf_root_u(N, P) :- dsf_parent(N, P), not dsf_parent(P, _).
+dsf_root_u(N, R) :- dsf_parent(N, P), dsf_root_u(P, R).

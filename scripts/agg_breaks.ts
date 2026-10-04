@@ -6513,6 +6513,159 @@ export const BREAKS: Break[] = [
    "agg_label_sound": "ls_ftot[main]"
   }
  },
+ {
+  "id": "function_unread",
+  "what": "the Rust parser reads no declared function: `function p(K, to V).` is a clause it refuses",
+  "expect": {
+   "ds_function_syntax": "does not evaluate",
+   "ds_function_holds": "does not evaluate"
+  }
+ },
+ {
+  "id": "function_value_unread",
+  "what": "the promise of a declared function compares no value: two values for a key are one",
+  "expect": {
+   "ds_function_holds": "was to be refused",
+   "ds_function_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "function_check_off",
+  "what": "no declared function is judged after an evaluation",
+  "expect": {
+   "ds_function_holds": "was to be refused",
+   "ds_function_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "function_book_ignored",
+  "what": "a declared function is judged over every book at once: a key with a value in each of two books is broken",
+  "expect": {
+   "ds_function_holds": "does not evaluate"
+  }
+ },
+ {
+  "id": "function_tick_unchecked",
+  "what": "a declared function is judged at tick 0 and never after",
+  "expect": {
+   "ds_function_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "function_twice_admitted",
+  "what": "a relation declared a function twice is admitted",
+  "expect": {
+   "ds_function_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "function_roles_unread",
+  "what": "the `structure_role` rows of a declaration are not written, so every argument is a key and nothing is promised",
+  "expect": {
+   "ds_function_syntax": "dsxs_role_missing",
+   "ds_function_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "function_arity_short",
+  "what": "the `structure_decl` row of a declaration names an arity one short",
+  "expect": {
+   "ds_function_syntax": "dsxs_missing"
+  }
+ },
+ {
+  "id": "phrase_function_key_lost",
+  "what": "rofl-render writes a function without its key: `has one V.` for `has one V for each N`",
+  "expect": {
+   "ds_function_phrase": "decl_lost"
+  }
+ },
+ {
+  "id": "ring1_function_unread",
+  "what": "ring 1 reads no declared function",
+  "edits": [
+   [
+    "examples/ring1/ring1.rofl",
+    "clause_at(I, D, $structure(Kind, Rs, $lit(R, $bare, A, $now)), $nil) :-\n  identtok(I, I2), tok_name(I, I2, Kind), struct_kind(Kind), nexttok(I2, K), identtok(K, K2), not keyword(K),\n  tok_name(K, K2, R), nexttok(K2, L), p(L, lpar), nexttok(L, S), strargs(S, E, Rs, A),\n  nexttok(E, C), p(C, rpar), nexttok(C, D), p(D, dot).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "ds_function_syntax": "ring1_missing"
+  }
+ },
+ {
+  "id": "ts_function_unread",
+  "what": "the TypeScript parser reads no declared function",
+  "edits": [
+   [
+    "src/parser.ts",
+    "if (this.peek().t === 'ident' && STRUCTURE_ROLES.has(this.peek().v) &&",
+    "if (false && STRUCTURE_ROLES.has(this.peek().v) &&"
+   ]
+  ],
+  "expect": {
+   "ds_function_syntax": "does not evaluate"
+  }
+ },
+ {
+  "id": "ts_function_check_off",
+  "what": "the TypeScript engine judges no declared function after an evaluation",
+  "edits": [
+   [
+    "src/api.ts",
+    "    checkFunctions(this.store);\n    this.lastSteps = ev.steps;",
+    "    this.lastSteps = ev.steps;"
+   ]
+  ],
+  "expect": {
+   "ds_function_holds": "was to be refused",
+   "ds_function_tick": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_function_value_unread",
+  "what": "the TypeScript engine's promise of a declared function compares no value",
+  "edits": [
+   [
+    "src/structure.ts",
+    ".filter(([, vs]) => vs.size > 1)",
+    ".filter(([, vs]) => vs.size > 99)"
+   ]
+  ],
+  "expect": {
+   "ds_function_holds": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_function_twice_admitted",
+  "what": "the TypeScript door admits a relation declared a function twice",
+  "edits": [
+   [
+    "src/structure.ts",
+    "if (declared.has(rel)) return",
+    "if (false && declared.has(rel)) return"
+   ]
+  ],
+  "expect": {
+   "ds_function_syntax": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_function_roles_unread",
+  "what": "the TypeScript door writes no `structure_role` row",
+  "edits": [
+   [
+    "src/api.ts",
+    "for (const [rel, args] of structureRows(c)) this.store.add(",
+    "for (const [rel, args] of structureRows(c).slice(0, 1)) this.store.add("
+   ]
+  ],
+  "expect": {
+   "ds_function_syntax": "dsxs_role_missing",
+   "ds_function_holds": "was to be refused"
+  }
+ },
 ];
 
 // ------------------------------------------------------------ the switches

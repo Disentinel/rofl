@@ -953,7 +953,10 @@ impl Session {
             }
         }
         match self.eval.retract_delta(&doomed) {
-            Ok(d) => Ok(Retraction::Delta(d)),
+            Ok(d) => {
+                self.eval.check_promises().map_err(|e| crate::describe(&e))?;
+                Ok(Retraction::Delta(d))
+            }
             Err(why) => {
                 if self.eval.store.alive(id) {
                     self.eval.store.remove_many(&doomed);

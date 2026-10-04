@@ -130,6 +130,11 @@ check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_cens
 check[checks]("rust/rofl/tests/session.rs", "a_bound_ask_finds_exactly_its_fact", test).
 check[checks]("rust/rofl/tests/session.rs", "a_repeated_variable_constrains_and_wildcards_are_columns", test).
 check[checks]("rust/rofl/tests/session.rs", "assert_refuses_a_rule_and_a_variable", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_declaration_changes_no_fact_and_the_planner_reads_its_promise", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_broken_promise_is_refused_naming_the_key_and_both_values", test).
+check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_tick", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_retraction_that_breaks_the_promise_is_refused_not_answered", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_key_in_two_books_is_two_keys", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "pareto_fronts_are_the_fronts_of_every_simple_path", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_on_a_total_order_is_the_min_lattice", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_through_plain_relations_is_the_min_lattice", test).
@@ -609,6 +614,10 @@ check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
+check[checks]("facts/goldens.rofl", "ds_function_holds", world).
+check[checks]("facts/goldens.rofl", "ds_function_phrase", world).
+check[checks]("facts/goldens.rofl", "ds_function_syntax", world).
+check[checks]("facts/goldens.rofl", "ds_function_tick", world).
 check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).
@@ -658,6 +667,7 @@ test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
+test_file[checks]("rust/rofl/tests/structure.rs").
 test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").

@@ -1,0 +1,6 @@
+-- expect-refusal: function dsr_two: key (n2) has two values in the book main: (x) and (y); 1 more key breaks it too
+-- two keys broken by what a rule concludes, none by what is asserted: the smallest key is named, and the others counted
+edb(dsr_src).
+dsr_src(n1, x). dsr_src(n2, x). dsr_src(n2, y). dsr_src(n3, x). dsr_src(n3, y). dsr_src(n3, z).
+function dsr_two(N, to V).
+dsr_two(N, V) :- dsr_src(N, V), N != n1.

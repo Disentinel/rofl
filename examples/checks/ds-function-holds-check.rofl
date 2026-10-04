@@ -1,0 +1,45 @@
+-- examples/checks/ds-function-holds-check.rofl — ds_function_holds. A
+-- declaration changes no fact: each declared relation holds exactly the rows
+-- of its undeclared twin (`_u`), in each book, and the rows are the ones the
+-- rules and the facts make. A check that compared two empty relations would
+-- pass whatever the engine did, so each relation is also named by a row it
+-- must hold and a count it must have.
+dsfc_diff(attr, N, K, V) :- dsf_attr(N, K, V), not dsf_attr_u(N, K, V).
+dsfc_diff(attr, N, K, V) :- dsf_attr_u(N, K, V), not dsf_attr(N, K, V).
+dsfc_diff(name, N, S, x) :- dsf_name(N, S), not dsf_name_u(N, S).
+dsfc_diff(name, N, S, x) :- dsf_name_u(N, S), not dsf_name(N, S).
+dsfc_diff(use, N, V, W) :- dsf_use(N, V, W), not dsf_use_u(N, V, W).
+dsfc_diff(use, N, V, W) :- dsf_use_u(N, V, W), not dsf_use(N, V, W).
+dsfc_diff(top, N, x, x) :- dsf_top(N), not dsf_top_u(N).
+dsfc_diff(top, N, x, x) :- dsf_top_u(N), not dsf_top(N).
+dsfc_diff(pair, K, A, B) :- dsf_pair(K, A, B), not dsf_pair_u(K, A, B).
+dsfc_diff(pair, K, A, B) :- dsf_pair_u(K, A, B), not dsf_pair(K, A, B).
+dsfc_diff(root, N, R, x) :- dsf_root(N, R), not dsf_root_u(N, R).
+dsfc_diff(root, N, R, x) :- dsf_root_u(N, R), not dsf_root(N, R).
+alarm(dsfc_diff).
+-- the rows each must hold
+dsfc_lost(attr)  :- not dsf_attr(n1, kind, ident).
+dsfc_lost(attr)  :- not dsf_attr(n3, name, foo).
+dsfc_lost(name)  :- not dsf_name(n1, bar).
+dsfc_lost(use)   :- not dsf_use(n1, ident, w3).
+dsfc_lost(top)   :- not dsf_top(n3).
+dsfc_lost(pair)  :- not dsf_pair(k3, 3, 4).
+dsfc_lost(dir)   :- not dsf_dir(c, 2).
+dsfc_lost(book)  :- not dsf_bk[w1](k, 1).
+dsfc_lost(book)  :- not dsf_bk[w2](k, 2).
+dsfc_lost(root)  :- not dsf_root(c3, c0).
+alarm(dsfc_lost).
+-- and a book holds no row of the other
+dsfc_leak() :- dsf_bk[w1](k, 2).
+dsfc_leak() :- dsf_bk[w2](k, 1).
+alarm(dsfc_leak).
+-- counts: five attributes asserted or concluded (one fact asserted twice is one), six
+-- use rows (n1 and n3 are named and ident, which has three rows in dsf_w)
+dsfc_attrs(N) :- N is count(K, V, X : dsf_attr(X, K, V)).
+dsfc_attrs_wrong() :- dsfc_attrs(N), N != 5.
+dsfc_attrs_wrong() :- not dsfc_attrs(_).
+dsfc_uses(N) :- N is count(X, V, W : dsf_use(X, V, W)).
+dsfc_uses_wrong() :- dsfc_uses(N), N != 6.
+dsfc_uses_wrong() :- not dsfc_uses(_).
+alarm(dsfc_attrs_wrong).
+alarm(dsfc_uses_wrong).

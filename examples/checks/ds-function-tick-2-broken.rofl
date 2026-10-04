@@ -1,0 +1,9 @@
+-- expect-refusal: function dst_v: key (k) has two values in the book main: (1) and (2)
+-- a table that carries itself to the next tick and is given another value there: the promise is judged at the tick the second arrives, not only at the first
+edb(dst_v).
+edb(dst_go).
+function dst_v(K, to V).
+dst_v(k, 1).
+dst_v(K, V)@next :- dst_v(K, V).
+dst_go(x).
+dst_v(k, 2)@next :- dst_go(x).

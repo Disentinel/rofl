@@ -623,7 +623,7 @@ impl<'a> R<'a> {
     /// An aggregate's own body, as the conditions of a rule, inline and in
     /// parentheses; the positions it absorbs and pairs are its own.
     fn inner(&self, c: &Clause, body: &[Elem], ctx: &mut Ctx, stats: &mut Stats) -> String {
-        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None, ord: None };
+        let tmp = Clause { head: c.head.clone(), body: body.to_vec(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None };
         let saved = (std::mem::take(&mut ctx.absorbed), std::mem::take(&mut ctx.residual), std::mem::take(&mut ctx.kind_conds), std::mem::take(&mut ctx.rel_pairs), std::mem::take(&mut ctx.consumed), ctx.or_at.take(), ctx.cur_k, std::mem::take(&mut ctx.deferred));
         let (pos, neg) = brk!("phrase_inner_unread" => (Vec::new(), Vec::new()); self.conditions(&tmp, &[], ctx, stats));
         (ctx.absorbed, ctx.residual, ctx.kind_conds, ctx.rel_pairs, ctx.consumed, ctx.or_at, ctx.cur_k, ctx.deferred) = saved;
@@ -769,6 +769,12 @@ impl<'a> R<'a> {
         let keys = match keys.len() { 0 => String::new(), 1 => keys[0].clone(), k => format!("{} and {}", keys[..k - 1].join(", "), keys[k - 1]) };
         let v = c.head.args.last().map(|t| name(*t)).unwrap_or_default();
         let rel = match c.head.book { Book::Bare => h.name(c.head.rel).to_string(), b => format!("{}` in the `{}", h.name(c.head.rel), self.book_name(b)) };
+        if let Some(st) = &c.structure {
+            let m = st.roles.iter().filter(|r| r.is_some()).count();
+            let list = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 1 => v[0].clone(), k => format!("{} and {}", v[..k - 1].join(", "), v[k - 1]) } };
+            let each = if n == m || brk!("phrase_function_key_lost" => true; false) { String::new() } else { format!(" for each {}", list(&c.head.args[..n - m])) };
+            return format!("`{rel}` has one {}{each}.\n\n", list(&c.head.args[n - m..]));
+        }
         let op = h.name(c.lattice.expect("a declaration"));
         if let Some(dirs) = &c.ord {
             let m = dirs.len();
@@ -1010,6 +1016,7 @@ impl<'a> R<'a> {
             tag: c.tag,
             dom: c.dom.as_ref().map(l),
             ord: c.ord.clone(),
+            structure: c.structure.clone(),
         }
     }
 
@@ -1484,7 +1491,7 @@ impl<'a> R<'a> {
         for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if !c.body.is_empty() && c.dom.is_none() { *rule_count.entry(c.head.rel).or_default() += 1; } } } }
         let single: HashSet<Sym> = rule_count.iter().filter(|(_, n)| **n == 1).map(|(r, _)| *r).collect();
         let mut own_rows: HashSet<Sym> = HashSet::new();
-        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.lattice.is_none() && c.head.rel != self.edb { own_rows.insert(c.head.rel); } } } }
+        for seg in &doc.segs { if let Seg::Code(cs) = seg { for c in cs { if c.body.is_empty() && c.lattice.is_none() && c.structure.is_none() && c.head.rel != self.edb { own_rows.insert(c.head.rel); } } } }
         let mut glossary: Vec<String> = Vec::new();
         let mut set_members: BTreeMap<Sym, Vec<String>> = BTreeMap::new();
         // the file's own opening comment, before any heading or clause, is its lead and comes first
@@ -1525,7 +1532,7 @@ impl<'a> R<'a> {
                             i += 1;
                             continue;
                         }
-                        if c.lattice.is_some() {
+                        if c.lattice.is_some() || c.structure.is_some() {
                             let t = self.declaration(c);
                             items.push(brk!("phrase_decl_twinned" => Item::Block(t.clone()); Item::Whole(t)));
                             i += 1;
@@ -1533,7 +1540,7 @@ impl<'a> R<'a> {
                         }
                         let fact = c.body.is_empty();
                         let mut j = i + 1;
-                        while j < clauses.len() && clauses[j].dom.is_none() && clauses[j].lattice.is_none() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() && clauses[j].head.tense == c.head.tense { j += 1; }
+                        while j < clauses.len() && clauses[j].dom.is_none() && clauses[j].lattice.is_none() && clauses[j].structure.is_none() && clauses[j].head.rel == c.head.rel && clauses[j].head.book == c.head.book && clauses[j].body.is_empty() == fact && clauses[j].head.args.len() == c.head.args.len() && clauses[j].head.tense == c.head.tense { j += 1; }
                         if fact { self.facts(&clauses[i..j], file, &mut items, &mut stats, &mut declared, &mut anchored, &mut set_members); }
                         else {
                             let b = self.book_name(c.head.book);
@@ -1858,6 +1865,7 @@ fn dump_facts(h: &Heap, docs: &[FileDoc]) {
                         let _ = writeln!(out, "decl(r{n}, {}, {}).", if c.tag { "tag" } else { "lattice" }, h.name(op));
                         if let Some(w) = c.widen { let _ = writeln!(out, "decl_widen(r{n}, {w})."); }
                     }
+                    if let Some(st) = &c.structure { let _ = writeln!(out, "decl(r{n}, structure, {}).", std::iter::once(h.name(st.kind)).chain(st.roles.iter().map(|r| r.map_or("key", |r| h.name(r)))).collect::<Vec<_>>().join("_")); }
                     let _ = writeln!(out, "nargs(r{n}, 0, {}).", c.head.args.len());
                     let e = arity.entry(h.name(c.head.rel).to_string()).or_insert(0);
                     *e = (*e).max(c.head.args.len());

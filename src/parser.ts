@@ -42,6 +42,10 @@ export const TAG_ALGS = new Set(['tropical', 'viterbi', 'trust', 'counting']);
  *  built") and the directions of the values they compare: words, names
  *  elsewhere. */
 export const ORDER_KINDS = new Set(['pareto', 'lex']);
+/** The declared data structures (docs/data-structures.md) and the role words
+ *  each one marks its arguments with: words where a role stands, names
+ *  elsewhere. `function` marks the values a key determines with `to`. */
+export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']]]);
 
 class P {
   toks: Tok[];
@@ -442,6 +446,35 @@ class P {
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], lattice: kind, ord };
   }
 
+  /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' '.'
+   *    kind       := 'function'
+   *    role       := 'to'
+   *  Words, not keywords: one declares only when a second name follows. An
+   *  argument without a role is part of the key. */
+  structureDecl(): Clause {
+    const kind = this.next().v;
+    const rel = this.expect('ident').v;
+    const what = `${kind} ${rel}`;
+    const words = STRUCTURE_ROLES.get(kind)!;
+    if (rel === 'not') this.err(`'not' is negation, not a relation name`);
+    if (this.peek().t === '[') this.err(`${what}: a declaration names the relation, not a book`);
+    if (this.peek().t !== '(') this.err(`${what}: expected '('`);
+    this.next();
+    const isRole = () => { const t = this.peek(), n = this.toks[this.pos + 1].t; return t.t === 'ident' && words.includes(t.v) && n !== ',' && n !== ')' && n !== '('; };
+    const args: Term[] = [], roles: string[] = [];
+    for (;;) {
+      roles.push(isRole() ? this.next().v : '');
+      args.push(this.term());
+      if (this.peek().t !== ',') break;
+      this.next();
+    }
+    if (this.peek().t !== ')') this.err(`${what}: \`(\` is not closed`);
+    this.next();
+    if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
+    this.next();
+    return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: { kind, roles } };
+  }
+
   clause(): Clause {
     this.freshCounter = 0; // wildcard names are clause-local => content-addressed
     if (this.peek().t === 'ident' && this.peek().v === 'lattice' && this.toks[this.pos + 1].t === 'ident') {
@@ -452,6 +485,9 @@ class P {
     }
     if (this.peek().t === 'ident' && ORDER_KINDS.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
       return this.orderDecl();
+    }
+    if (this.peek().t === 'ident' && STRUCTURE_ROLES.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
+      return this.structureDecl();
     }
     const head = this.literal();
     // `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,

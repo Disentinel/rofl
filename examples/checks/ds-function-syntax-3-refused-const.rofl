@@ -1,0 +1,3 @@
+-- expect-refusal: a declaration's arguments are variables
+-- a key is a variable, never a constant
+function dss_const(a, to V).

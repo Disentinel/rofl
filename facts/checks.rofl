@@ -3013,3 +3013,45 @@ check_opt("cost_shapes_model", one_engine, rust).
 check_world("ast_within_readers").
 check_file("ast_within_readers", "facts/ast-within-readers.rofl").
 check_file("ast_within_readers", "examples/checks/ast-within-readers-check.rofl").
+
+-- w_data_structures, step 1, `function` (docs/data-structures.md; f_a_structure_is_declared_and_does_not_change_the_meaning):
+-- `function ast_name(N, to Name).` promises one Name for each N, in each book. The declaration is two kernel rows
+-- (`structure_decl`, `structure_role`) and a promise checked after every evaluation and every tick; it changes no fact.
+check_world("ds_function_syntax").
+check_file("ds_function_syntax", "examples/ring1/charclass.rofl").
+check_file("ds_function_syntax", "examples/ring1/ring1.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-1-forms.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-2-expect.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-none.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-first.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-twice.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-book.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-kernel.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-const.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-repeat.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-dot.rofl").
+check_file("ds_function_syntax", "examples/checks/ds-function-syntax-3-refused-open.rofl").
+check_opt("ds_function_syntax", together, 1).
+
+check_world("ds_function_holds").
+check_file("ds_function_holds", "examples/checks/ds-function-holds.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-holds-check.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-1-facts.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-2-rules.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-3-book.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-4-values.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-5-mixed.rofl").
+check_file("ds_function_holds", "examples/checks/ds-function-broken-6-zero.rofl").
+check_opt("ds_function_holds", together, 1).
+
+check_world("ds_function_tick").
+check_file("ds_function_tick", "examples/checks/ds-function-tick-1-holds.rofl").
+check_file("ds_function_tick", "examples/checks/ds-function-tick-2-broken.rofl").
+check_opt("ds_function_tick", together, 1).
+check_opt("ds_function_tick", ticks, 3).
+
+check_world("ds_function_phrase").
+check_file("ds_function_phrase", "examples/checks/ds-function-phrase.rofl.md").
+check_file("ds_function_phrase", "examples/checks/ds-function-phrase-check.rofl").
+check_opt("ds_function_phrase", together, 1).
+check_opt("ds_function_phrase", sentences, 1).

@@ -960,8 +960,8 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // stop it. After that the door is shut for the life of the store.
     let mut who_owned = who.map(|s| s.to_string());
     let claim = e.h.intern(KERNEL_CLAIM);
-    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none();
-    if !clauses.is_empty() && clauses[0].lattice.is_none() && clauses[0].dom.is_none() {
+    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none() && c.structure.is_none();
+    if !clauses.is_empty() && clauses[0].lattice.is_none() && clauses[0].dom.is_none() && clauses[0].structure.is_none() {
         let first = match to_clause(&mut e.h, &e.v, &clauses[0]) {
             Ok(c) => c,
             Err(d) => return Loaded { ok: false, diagnostics: vec![d], admitted: 0 },
@@ -1017,7 +1017,19 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     let mut tags: Vec<(Sym, usize, Sym)> = Vec::new();
     let mut doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)> = Vec::new();
     let mut ords: Vec<(Sym, Sym, Vec<Sym>, usize)> = Vec::new();
+    let mut structs: Vec<&rofl_parse::Clause> = Vec::new();
+    let mut declared = crate::structure::declared(&e.h, &e.v, &mut e.store);
     for pc in &clauses {
+        if pc.structure.is_some() {
+            match crate::structure::check_decl(&e.h, &e.v, pc, &declared) {
+                Ok(()) => {
+                    declared.insert(pc.head.rel);
+                    structs.push(pc);
+                }
+                Err(d) => diags.push(d),
+            }
+            continue;
+        }
         if pc.ord.is_some() {
             match lower_order(&e.h, &e.v, pc) {
                 Ok(texts) => {
@@ -1124,5 +1136,19 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         e.store.dirty = true;
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + decls.len() + tags.len() + doms.len() }
+    // A DECLARED STRUCTURE is its kernel rows, timeless: `structure_decl(Rel, Arity, Kind)` and a
+    // `structure_role(Rel, Pos, Role)` for each marked argument (docs/data-structures.md)
+    for c in &structs {
+        let st = c.structure.as_ref().unwrap();
+        let kp = e.v.kernel_persp;
+        let row = [Term::atom(c.head.rel), Term::int(brk!("function_arity_short" => c.head.args.len() as i64 - 1; c.head.args.len() as i64)), Term::atom(st.kind)];
+        e.store.add(&e.h, e.v.structure_decl, kp, &row, F_BASE);
+        for (i, r) in st.roles.iter().enumerate() {
+            if let Some(r) = r.filter(|_| !brk!("function_roles_unread" => true; false)) {
+                e.store.add(&e.h, e.v.structure_role, kp, &[Term::atom(c.head.rel), Term::int(i as i64 + 1), Term::atom(r)], F_BASE);
+            }
+        }
+        e.store.dirty = true;
+    }
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + decls.len() + tags.len() + doms.len() + structs.len() }
 }

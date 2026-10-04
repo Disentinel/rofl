@@ -1,0 +1,5 @@
+-- expect-refusal: function dsr_bk: key (k) has two values in the book w2: (1) and (2)
+-- the promise is per book: one key with two values in two books is fine (w1), and in one book is not (w2)
+edb(dsr_bk).
+function dsr_bk(K, to V).
+dsr_bk[w1](k, 1). dsr_bk[w3](k, 2). dsr_bk[w2](k, 1). dsr_bk[w2](k, 2).

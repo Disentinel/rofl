@@ -1,0 +1,3 @@
+-- expect-refusal: names the relation, not a book
+-- a promise is of the relation, and holds in each book
+function dss_book[w](K, to V).

@@ -598,6 +598,12 @@ pub struct Eval {
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
+    /// The declared functions (`function p(K, to V).`): promises checked after
+    /// every evaluation, and for the planner the key positions of each relation.
+    functions: Vec<crate::structure::Function>,
+    function_keys: HashMap<Sym, Vec<usize>>,
+    /// Premises the planner estimated from a promise instead of counting rows.
+    pub promise_stats: u64,
     pub rounds: Vec<(u64, u64)>,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
@@ -1145,6 +1151,9 @@ impl Eval {
             plan_trial: false,
             delta_plans: HashMap::new(),
             delta_stats: HashMap::new(),
+            functions: Vec::new(),
+            function_keys: HashMap::new(),
+            promise_stats: 0,
             rounds: Vec::new(),
             closures: Vec::new(),
             closure_of: HashMap::new(),
@@ -1381,6 +1390,8 @@ impl Eval {
         let (rules, diags) = decode_rules(&mut self.h, &self.v, &mut self.store);
         self.plain = !self.agg_forced && !store_has_aggregates(&self.h, &self.v, &mut self.store);
         self.decl_refused.clear();
+        self.functions = crate::structure::functions(&self.h, &self.v, &mut self.store);
+        self.function_keys = self.functions.iter().map(|f| (f.rel, f.key.clone())).collect();
         let decls = lattice_decls(&mut self.h, &self.v, &mut self.store, &mut self.decl_refused);
         self.tags = crate::tag::Tags::read(&mut self.h, &self.v, &mut self.store, &decls);
         let low = crate::tag::lower(&mut self.h, &self.v, &self.tags, rules);
@@ -2165,6 +2176,7 @@ impl Eval {
                 Err(e) => return Err(e),
             };
             self.write_shrugs(partial)?;
+            self.check_promises()?;
             self.store.dirty = false;
             self.store.partial_eval = partial;
             self.store.note_eval(self.budget, self.steps, partial);
@@ -2452,6 +2464,7 @@ impl Eval {
         }
         self.settle_staged();
         self.write_shrugs(partial)?;
+        self.check_promises()?;
         self.store.dirty = false;
         self.store.partial_eval = partial;
         // EVERY EXIT NOTES, including this one, because the record is what a
@@ -2462,6 +2475,16 @@ impl Eval {
             partial,
             staged: self.staged.len(),
         })
+    }
+
+    /// THE DECLARED STRUCTURES' PROMISES (docs/data-structures.md), judged over
+    /// what the evaluation left: a refusal names the place and leaves the world
+    /// dirty, never answered.
+    pub fn check_promises(&self) -> Result<(), Halt> {
+        if self.functions.is_empty() || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
+            return Ok(());
+        }
+        crate::structure::check_functions(&self.h, &self.store, &self.functions).map_err(|m| Halt::Strat(m, String::new()))
     }
 
     /// THE SHRUG MODEL, set up for one evaluation (docs/aggregates.md,
