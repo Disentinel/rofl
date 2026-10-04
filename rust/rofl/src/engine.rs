@@ -4296,6 +4296,13 @@ impl Eval {
                             let (faults, unknowns) = (self.fault_count, self.demand_unknown);
                             let found = self.match_premise(l, &a.s, depth, only)?;
                             self.demand_below(depth, &a.s, faults, unknowns);
+                            // UNFOLDED AT A CALL, a premise that could read what a hole left
+                            // unknown leaves the call's head under it unknown beside what it found
+                            if depth > 0 && self.firing && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+                                if let Some(u) = brk!("demand_pos_unholed" => None; self.read_unknown(l, &a.s, true)) {
+                                    self.demand_unknown_at(depth, &a.s, Some(u));
+                                }
+                            }
                             for (s2, r) in found {
                                 let mut prems = a.prems.clone();
                                 prems.push(r);

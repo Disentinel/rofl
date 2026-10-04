@@ -2785,6 +2785,11 @@ export class AggEval {
             const faults = this.faultCount, unknowns = this.demandUnknown;
             const found = this.matchPremise(b.lit, a.s, depth, only);
             this.demandBelow(depth, a.s, faults, unknowns);
+            // UNFOLDED AT A CALL, a premise that could read what a hole left unknown leaves the call's head under it unknown beside what it found
+            if (depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+              const u = this.readUnknown(b.lit, a.s, true);
+              if (u !== null) this.demandUnknownAt(depth, a.s, u);
+            }
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
             const faults = this.faultCount, unknowns = this.demandUnknown;

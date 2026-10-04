@@ -323,6 +323,10 @@ check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
 check_world("demand_neg_hole").
 check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
 
+-- a positive premise unfolded at a call reads the holes (f_a_premise_unfolded_at_a_call_read_a_shrugged_cell_as_absent)
+check_world("demand_pos_hole").
+check_file("demand_pos_hole", "examples/checks/demand-pos-hole.rofl").
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

@@ -3513,6 +3513,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_pos_unholed",
+  "what": "a positive premise unfolded at a call reads what a hole left unknown as absent",
+  "expect": {
+   "demand_pos_hole": "dp_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_pos_unholed",
+  "what": "the TypeScript engine reads what a hole left unknown as absent in a positive premise unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (u !== null) this.demandUnknownAt(depth, a.s, u);",
+    "if (u === undefined) this.demandUnknownAt(depth, a.s, u);"
+   ]
+  ],
+  "expect": {
+   "demand_pos_hole": "dp_wrong"
+  }
+ },
+ {
   "id": "demand_recursion_unfolds",
   "what": "a call met again inside its own unfolding unfolds again, to the depth wall",
   "expect": {

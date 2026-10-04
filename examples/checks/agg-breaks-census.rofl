@@ -990,6 +990,10 @@ brk("demand_neg_unholed"). brk_kind("demand_neg_unholed", switch).
 brk_expects("demand_neg_unholed", "demand_neg_hole").
 brk("ts_demand_neg_unholed"). brk_kind("ts_demand_neg_unholed", ts).
 brk_expects("ts_demand_neg_unholed", "demand_neg_hole").
+brk("demand_pos_unholed"). brk_kind("demand_pos_unholed", switch).
+brk_expects("demand_pos_unholed", "demand_pos_hole").
+brk("ts_demand_pos_unholed"). brk_kind("ts_demand_pos_unholed", ts).
+brk_expects("ts_demand_pos_unholed", "demand_pos_hole").
 brk("demand_recursion_unfolds"). brk_kind("demand_recursion_unfolds", switch).
 brk_expects("demand_recursion_unfolds", "demand_recursion").
 brk("ts_demand_recursion_unfolds"). brk_kind("ts_demand_recursion_unfolds", ts).
@@ -1738,6 +1742,7 @@ switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
+switch_site("demand_pos_unholed", "rust/rofl/src/engine.rs").
 switch_site("demand_recursion_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_mono", "rust/rofl/src/engine.rs").
 switch_site("demand_strict_refire", "rust/rofl/src/engine/delta.rs").
