@@ -1,6 +1,11 @@
 // scripts/goldens.ts — THE WHOLE-REPOSITORY CHECK.
 //
 //   npm test              check both engines against facts/goldens.rofl
+//   npm test -- --engine rust|ts   check one engine only (the golden is shared); a world
+//                         the other engine alone answers is skipped, and the TypeScript host
+//                         contracts (doors, shrug surfaces, deep explain) run only with ts
+//   npm test -- --changed[=REF]    choose by the tree's changes since REF (HEAD): only rust/
+//                         -> rust, only src/ -> ts, anything else (or nothing) -> both
 //   npm run bless         rewrite facts/goldens.rofl from the current tree
 //
 // A world is a set of `.rofl` files: an example, a directory of them, or a rule
@@ -875,15 +880,30 @@ function mdWorldPaths(): string[] {
   return out;
 }
 
+export type EngineChoice = 'both' | 'ts' | 'rust';
+
+/** The engine(s) the working tree's changes since `ref` call for: only rust/ -> Rust, only src/ -> TypeScript, anything else, or nothing, both. */
+function engineFromChanges(ref: string): { engine: EngineChoice; why: string } {
+  const run = (args: string[]) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+  const files = [...new Set([...run(['diff', '--name-only', ref]), ...run(['ls-files', '-o', '--exclude-standard'])])];
+  if (files.length === 0) return { engine: 'both', why: `no change since ${ref}` };
+  if (files.every((f) => f.startsWith('rust/'))) return { engine: 'rust', why: `${files.length} changed file(s) since ${ref}, all under rust/` };
+  if (files.every((f) => f.startsWith('src/'))) return { engine: 'ts', why: `${files.length} changed file(s) since ${ref}, all under src/` };
+  const other = files.find((f) => !f.startsWith('rust/') && !f.startsWith('src/'))!;
+  return { engine: 'both', why: `${other} changed since ${ref}` };
+}
+
 let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
-export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean): string | null {
+export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean, engine: EngineChoice = 'both'): string | null {
   if (!g) return `${w.name}: no golden — bless it or delete the world`;
+  // a world only the other engine answers is not asked of this one
+  if (w.oneEngine && engine !== 'both' && w.oneEngine !== engine) return null;
   const t0 = Date.now();
   // a Rust-only world is never given to the TypeScript engine
-  const ts = w.oneEngine === 'rust' ? null : answerTS(w);
+  const ts = w.oneEngine === 'rust' || engine === 'rust' ? null : answerTS(w);
   const t1 = Date.now();
-  const rs = rustMissing ? null : answerRust(w);
+  const rs = rustMissing || engine === 'ts' ? null : answerRust(w);
   if (process.env.ROFL_TIMES) fs.appendFileSync(process.env.ROFL_TIMES, `${w.name}\t${t1 - t0}\t${Date.now() - t1}\t${(ts ?? rs)?.facts ?? 0}\t${w.oneEngine ?? 'both'}\n`);
   const bad: string[] = [];
   // a file the world refuses and is not declared to refuse (check_refuses in facts/checks.rofl)
@@ -899,6 +919,20 @@ export function checkWorld(w: World, g: { hash: string; census: Map<string, numb
     }
     for (const p of rs.problems) bad.push(p);
     for (const a of rs.alarms) bad.push(`ALARM ${a}`);
+    return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
+  }
+  if (engine === 'rust') {
+    if (!rs) return `${w.name.padEnd(28)} no Rust binary`;
+    const sealsProv = w.files.some((f) => f.endsWith('.rofl') && fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8').includes('sealed(provenance)'));
+    if (rs.hash !== g.hash) {
+      const skip = sealsProv ? '@wit' : '';
+      const moved = [...new Set([...g.census.keys(), ...rs.census.keys()])]
+        .filter((k) => k !== skip && (g.census.get(k) ?? 0) !== (rs.census.get(k) ?? 0))
+        .map((k) => `${k} ${g.census.get(k) ?? 0}->${rs.census.get(k) ?? 0}`);
+      if (!skip || moved.length) bad.push(`rust: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
+    }
+    for (const p of rs.problems) bad.push(`rust: ${p}`);
+    for (const a of rs.alarms) bad.push(`ALARM rust: ${a}`);
     return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
   }
   if (!ts) return `${w.name.padEnd(28)} no TypeScript answer`;
@@ -956,6 +990,18 @@ const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts
 if (isMain) {
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
+  let engine: EngineChoice = 'both', engineWhy = '';
+  for (const a of rest) {
+    const [flag, inline] = a.split('=', 2);
+    if (flag === '--changed') ({ engine, why: engineWhy } = engineFromChanges(inline ?? 'HEAD'));
+  }
+  const ei = rest.findIndex((a) => a === '--engine' || a.startsWith('--engine='));
+  if (ei >= 0) {
+    const v = rest[ei].includes('=') ? rest[ei].split('=')[1] : rest[ei + 1];
+    if (v !== 'rust' && v !== 'ts' && v !== 'both') refuse(new Error(`--engine ${v ?? ''}: rust, ts or both`));
+    engine = v as EngineChoice; engineWhy = '--engine';
+  }
+  if (engine !== 'both' && (blessing || hosts)) refuse(new Error('a golden is blessed from, and the demos run on, their own engines: no --engine or --changed with --bless or --hosts'));
   if (sel && (blessing || hosts)) throw new Error('a selection checks worlds; it neither blesses nor runs the demos');
   // NO GOLDEN IS TAKEN, AND NO RUN IS JUDGED, WITH A FAULT SWITCHED ON. The
   // breaks build obeys ROFL_BREAK and ROFL_KERNEL_OVERRIDE, and either one
@@ -1068,16 +1114,20 @@ if (isMain) {
   const want = parse();
   const t0 = Date.now();
   const rustMissing = !fs.existsSync(RUST);
-  const tasks: Task[] = ws.map((w) => ({ mod: SELF, fn: 'checkWorld', args: [w, want.get(w.name), rustMissing] }));
-  tasks.push({ mod: SELF, fn: 'aggregateDoors', args: [] });
-  tasks.push({ mod: SELF, fn: 'shrugSurfaces', args: [] });
-  tasks.push({ mod: SELF, fn: 'deepExplain', args: [] });
+  const tasks: Task[] = ws.map((w) => ({ mod: SELF, fn: 'checkWorld', args: [w, want.get(w.name), rustMissing, engine] }));
+  const host = engine !== 'rust';
+  if (host) {
+    tasks.push({ mod: SELF, fn: 'aggregateDoors', args: [] });
+    tasks.push({ mod: SELF, fn: 'shrugSurfaces', args: [] });
+    tasks.push({ mod: SELF, fn: 'deepExplain', args: [] });
+  }
   const results = await runPool<string | null | string[]>(tasks);
-  const deep = results.pop() as string[];
-  const surfaces = results.pop() as string[];
-  const doors = results.pop() as string[];
+  const deep = host ? results.pop() as string[] : [];
+  const surfaces = host ? results.pop() as string[] : [];
+  const doors = host ? results.pop() as string[] : [];
   const fail = (results as (string | null)[]).filter((x): x is string => x !== null);
-  const pass = results.length - fail.length;
+  const skipped = engine === 'both' ? 0 : ws.filter((w) => w.oneEngine && w.oneEngine !== engine).length;
+  const pass = results.length - fail.length - skipped;
   for (const p of doors) fail.push(`aggregate door: ${p}`);
   for (const p of surfaces) fail.push(`shrug surface: ${p}`);
   for (const p of deep) fail.push(`deep explain: ${p}`);
@@ -1118,7 +1168,9 @@ if (isMain) {
   // w_agg_reconcile_docs owns and what they still say about aggregation
   if (proseCheck) failed(await proseCheck, /STALE|Error/, 'scripts/agg_prose.ts --check');
   for (const f of fail) console.log(`FAIL ${f}`);
-  console.log(`\n${pass}/${ws.length} worlds, ${rustMissing ? 'ts only' : 'both engines'}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  const ran = engine === 'rust' ? 'Rust only' : engine === 'ts' ? 'TypeScript only' : rustMissing ? 'ts only' : 'both engines';
+  console.log(`\n${pass}/${ws.length - skipped} worlds${skipped ? ` (${skipped} skipped: answered by the other engine alone)` : ''}, ${ran}${engineWhy ? ` (${engineWhy})` : ''}, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  if (engine !== 'both') console.log(`!! ${engine === 'rust' ? 'TypeScript' : 'Rust'} skipped: the full gate before a push is \`npm test\` (both engines)`);
   for (const e of ['rust', 'ts'] as const) {
     const one = ws.filter((w) => w.oneEngine === e).map((w) => w.name);
     if (one.length) console.log(`${one.length} checked on ${e === 'rust' ? 'Rust' : 'TypeScript'} only: ${one.join(' ')}`);

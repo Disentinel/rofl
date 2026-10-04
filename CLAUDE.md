@@ -7,7 +7,7 @@ in `docs/`. Everything ever learned here is in `facts/findings.rofl`.
 
 <!-- BEGIN commands: generated from package.json + facts/commands.rofl -->
 
-    npm test                 every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build
+    npm test                 every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many, which engine(s) ran and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build. `-- --engine rust` (or `ts`) checks one engine only against the shared golden, and `-- --changed[=REF]` picks it from the tree's changes since REF (HEAD): only rust/ runs Rust alone, only src/ TypeScript alone, anything else both. The full gate before a push is plain `npm test`, both engines
     npm run bless            rewrite the golden, printing every world and demo it moves
     npm run test:fast        rebuild rofl-load and rofl-render with the `fast` cargo profile (release semantics, no LTO: a code edit in engine.rs rebuilds in a quarter of the release time) and run npm test on it; release stays the default for goldens and gates
     npm run test:agg         the ledger's mutants and controls, pooled; `-- --item I` (or --world, --cell, --file) runs instead that item's proof worlds and the planted faults that must turn them red

@@ -19,7 +19,7 @@ edb(command_shown).   -- (name, ordinal) — the order the block is written in
 edb(command_note).
 
 command_shown("test", 0).
-command_note("test", "every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build").
+command_note("test", "every world, both engines, one committed golden, over a pool of ROFL_JOBS workers; it prints how many, which engine(s) ran and how long. THIS IS THE LOOP. `-- --item I`, `--world W`, `--cell K:L`, `--file F` check only those worlds; ROFL_PROFILE=fast reads the fast build. `-- --engine rust` (or `ts`) checks one engine only against the shared golden, and `-- --changed[=REF]` picks it from the tree's changes since REF (HEAD): only rust/ runs Rust alone, only src/ TypeScript alone, anything else both. The full gate before a push is plain `npm test`, both engines").
 
 command_shown("bless", 1).
 command_note("bless", "rewrite the golden, printing every world and demo it moves").
