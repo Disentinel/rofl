@@ -599,6 +599,7 @@ check[checks]("facts/goldens.rofl", "readiness_atlas", world).
 check[checks]("facts/goldens.rofl", "readiness_rofl", world).
 check[checks]("facts/goldens.rofl", "refactoring_queue", world).
 check[checks]("facts/goldens.rofl", "refused", world).
+check[checks]("facts/goldens.rofl", "sealed_witness", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
 check[checks]("facts/goldens.rofl", "set_spelling", world).
 check[checks]("facts/goldens.rofl", "spec_coverage", world).

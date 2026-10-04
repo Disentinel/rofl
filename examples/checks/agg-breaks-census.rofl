@@ -1194,6 +1194,7 @@ brk_expects("ts_thr_text_order", "agg_threshold_why").
 brk_expects("ts_thr_text_order", "agg_threshold_witness").
 brk_expects("ts_thr_text_order", "agg_quorum_demo").
 brk("ts_lattice_why_one_member"). brk_kind("ts_lattice_why_one_member", ts).
+brk_expects("ts_lattice_why_one_member", "agg_sub_why").
 brk_expects("ts_lattice_why_one_member", "agg_lattice_why").
 brk_expects("ts_lattice_why_one_member", "agg_tag_why").
 brk_expects("ts_lattice_why_one_member", "agg_critpath_demo").
@@ -1213,8 +1214,6 @@ brk("ts_whynot_dag_off"). brk_kind("ts_whynot_dag_off", ts).
 brk_expects("ts_whynot_dag_off", "agg_why_dag").
 brk("ts_count_why_plain"). brk_kind("ts_count_why_plain", ts).
 brk_expects("ts_count_why_plain", "agg_tagc_why").
-brk("ts_dominance_why_one_member"). brk_kind("ts_dominance_why_one_member", ts).
-brk_expects("ts_dominance_why_one_member", "agg_sub_why").
 brk("ts_whynot_hole_empty"). brk_kind("ts_whynot_hole_empty", ts).
 brk_expects("ts_whynot_hole_empty", "agg_sugar_why").
 brk_expects("ts_whynot_hole_empty", "agg_sum_why").

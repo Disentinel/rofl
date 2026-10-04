@@ -108,6 +108,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
+- <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
 - <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.rofl.md#ast_node) `program` in file File.
 - <a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
@@ -270,15 +271,16 @@ Declared as facts:
 > bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
 > product, −11.5 % of a world.
 
+<a id="up_s"></a>`up_s`(D, P) if a node D [is scoped](#scoped_binder) in some file and D [is under](js-structure.rofl.md#ast_in) a node P.
+
+`up_s`(D, P2) if all of:
+  - [`up_s`](#up_s)(D, P);
+  - a node P [is under](js-structure.rofl.md#ast_in) a node P2;
+  - unless P is a [scope](#scope_node).
+
 <a id="encloses_s"></a>A [scope](#scope_node) encloses a node D if D [is scoped](#scoped_binder) in some file and D [is within](js-structure.rofl.md#ast_within) it.
 
-<a id="closer_s"></a>A node is outranked for D if all of:
-  - it [encloses](#encloses_s) D;
-  - a node S [encloses](#encloses_s) D;
-  - S [is within](js-structure.rofl.md#ast_within) it;
-  - it differs from S.
-
-<a id="nearest_s"></a>R is the nearest scope of D if R [encloses](#encloses_s) D, unless R [is outranked for](#closer_s) D.
+<a id="closer_s"></a>R is outranked for D if R [encloses](#encloses_s) D, S [is the nearest scope of](#nearest_s) D, and R differs from S.
 
 > Shadowing is a question about a NAME; this is the projection that carries one.
 
@@ -353,9 +355,9 @@ A node
 
 - <a id="tdz_cand"></a>is a dead zone candidate of a node D if all of:
   - D [is lexical](#lexical_binder);
+  - [the region](#binder_region) of D is a node R;
   - D [introduces](#binds_name) Name in File;
   - it [reads](#ident_in) Name in File;
-  - [the region](#binder_region) of D is a node R;
   - it [is within](js-structure.rofl.md#ast_within) R;
   - D [is at line](js-model.rofl.md#ast_node) LD;
   - it [is at line](js-model.rofl.md#ast_node) LE;
@@ -373,13 +375,13 @@ In the flow:
 A node
 
 - may be the literal V if all of:
-  - D [binds](#binder) Name to a node Init in File;
-  - Init [may be the literal](#may_be_lit) V;
+  - a node Init [may be the literal](#may_be_lit) V;
+  - D [binds](#binder) Name to Init in File;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 - points to a node N if all of:
-  - D [binds](#binder) Name to a node Init in File;
-  - Init [points to](#may_be_node) N;
+  - a node Init [points to](#may_be_node) N;
+  - D [binds](#binder) Name to Init in File;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 
@@ -653,9 +655,15 @@ A node points to a node R if all of:
 > Spread copies the source's keys. `{ ...o, k: v }` keeps both `k`s — the safe
 > direction; narrowing needs an order this layer has not got.
 
-The member Key of an [object literal](#noun-object_literal) O holds a node V if all of:
-  - a [spread](#noun-spread) S [is among the](#ast_child) `properties` of O;
-  - the `argument` of S [points to](#may_be_node) a node Src;
+In the code:
+
+<a id="spread_of"></a>`spread_of`(an [object literal](#noun-object_literal) O, X) if a [spread](#noun-spread) S [is among the](#ast_child) `properties` of O and the `argument` of S is a node X.
+
+In the flow:
+
+The member Key of a node O holds a node V if all of:
+  - [`spread_of`](#spread_of)(O, X);
+  - a node X [points to](#may_be_node) a node Src;
   - [the member](#member_value) Key of Src holds V.
 
 <a id="valued"></a>A node E is valued either:
@@ -726,10 +734,10 @@ A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if a node P 
 <a id="param_hidden"></a>A node F hides Name at a node U either:
 
 1. if all of:
-   - F [takes](#param_of) Name at some index;
-   - D [introduces](#binds_name) Name in some file;
    - [the region](#binder_region) of D is a node R;
+   - D [introduces](#binds_name) Name in some file;
    - R [is within](js-structure.rofl.md#ast_within) F;
+   - F [takes](#param_of) Name at some index;
    - U [is within](js-structure.rofl.md#ast_within) R;
    - U [reads](#ident) Name;
 2. if all of:
@@ -806,10 +814,11 @@ The member Key of O holds a node V either:
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum.
 
 The member Key of a node O holds a node V if all of:
-  - a node X [is plain](#plain_assign);
-  - the `left` of X is a node L;
+  - a node Obj [points to](#may_be_node) O;
+  - the `object` of a node L is Obj;
   - L [selects](#selects) Key;
-  - the `object` of L [points to](#may_be_node) O;
+  - the `left` of a node X is L;
+  - X [is plain](#plain_assign);
   - the `right` of X is V.
 
 > Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
@@ -837,18 +846,17 @@ The member Key of a node CD holds a node V if all of:
 
 <a id="member_kind_v"></a>`member_kind_v` includes `member_expression`, `optional_member_expression`.
 
-<a id="member_node_v"></a>A node is a member access if it [is of kind](js-model.rofl.md#ast_node) K and K [is a member kind](#member_kind_v).
+<a id="member_node_v"></a>A node is a member access if a kind K [is a member kind](#member_kind_v) and it [is of kind](js-model.rofl.md#ast_node) K.
 
-<a id="selects"></a>N selects Key either:
+<a id="selects"></a>A [member access](#member_node_v) selects Key if [the attribute](#ast_attr) `computed` of it is `false` and the `property` of it [is named](js-structure.rofl.md#ast_name) Key.
 
-1. if all of:
-   - N is a [member access](#member_node_v);
-   - [the attribute](#ast_attr) `computed` of N is `false`;
-   - the `property` of N [is named](js-structure.rofl.md#ast_name) Key;
-2. if all of:
-   - N is a [member access](#member_node_v);
-   - [the attribute](#ast_attr) `computed` of N is `true`;
-   - the `property` of N [may be the literal](#may_be_lit) Key.
+In the code:
+
+<a id="computed_key"></a>`computed_key`(a [member access](#member_node_v) N, P) if [the attribute](#ast_attr) `computed` of N is `true` and the `property` of N is a node P.
+
+In the flow:
+
+N selects Key if a node P [may be the literal](#may_be_lit) Key and [`computed_key`](#computed_key)(N, P).
 
 Declared as facts:
 
@@ -873,32 +881,25 @@ The plain member Key of O is a node V either:
 
 <a id="class_receiver"></a>A node denotes a class if some class [is named](#class_named) Name in File and it [reads](#ident_in) Name in File.
 
-N points to a node V2 either:
+<a id="member_obj"></a>`member_obj`(a [member access](#member_node_v) N, O, Obj) if a node O [points to](#may_be_node) a node Obj and the `object` of N is O.
+
+<a id="member_at"></a>`member_at`(N, O, Obj, Key) if [`member_obj`](#member_obj)(N, O, Obj) and N [selects](#selects) Key.
+
+A node N points to a node V2 either:
 
 1. if all of:
-   - N is a [member access](#member_node_v);
-   - the `object` of N is a node O;
-   - O [denotes a class](#class_receiver);
-   - O [points to](#may_be_node) a node Obj;
-   - N [selects](#selects) Key;
-   - [the static member](#class_member_static) Key of Obj [points to](#may_be_node) V2;
+   - [`member_at`](#member_at)(N, O, Obj, Key);
+   - a node O [denotes a class](#class_receiver);
+   - [the static member](#class_member_static) Key of a class Obj [points to](#may_be_node) V2;
 2. if all of:
-   - N is a [member access](#member_node_v);
-   - the `object` of N is a node O;
-   - O [points to](#may_be_node) a node Obj;
-   - N [selects](#selects) Key;
-   - [the instance member](#class_member_proto) Key of Obj [points to](#may_be_node) V2;
-   - unless O [denotes a class](#class_receiver);
-3. if all of:
-   - N is a [member access](#member_node_v);
-   - the `object` of N [points to](#may_be_node) a node Obj;
-   - N [selects](#selects) Key;
-   - [the plain member](#member_plain) Key of Obj [points to](#may_be_node) V2.
+   - [`member_at`](#member_at)(N, O, Obj, Key);
+   - [the instance member](#class_member_proto) Key of a class Obj [points to](#may_be_node) V2;
+   - unless a node O [denotes a class](#class_receiver);
+3. if [`member_at`](#member_at)(N, something, Obj, Key) and [the plain member](#member_plain) Key of a node Obj [points to](#may_be_node) V2.
 
-A [member access](#member_node_v) may be the literal L if all of:
-  - the `object` of it [points to](#may_be_node) a node Obj;
-  - it [selects](#selects) Key;
-  - [the member](#member_value) Key of Obj holds a node V;
+A node may be the literal L if all of:
+  - [`member_at`](#member_at)(it, something, Obj, Key);
+  - [the member](#member_value) Key of a node Obj holds a node V;
   - V [may be the literal](#may_be_lit) L.
 
 > A method is a value; a declared function is reached by its name with no
@@ -912,9 +913,12 @@ M points to a node Y either:
    - Y is in file File;
    - the `id` of Y [is named](js-structure.rofl.md#ast_name) Name;
    - M [reads](#ident_in) Name in File;
-3. if M is a [property](#noun-property) and the `value` of M [points to](#may_be_node) Y.
+3. if all of:
+   - a node X [points to](#may_be_node) Y;
+   - the `value` of M is X;
+   - M is a [property](#noun-property).
 
-A [property](#noun-property) may be the literal V if the `value` of it [may be the literal](#may_be_lit) V.
+A [property](#noun-property) may be the literal V if a node X [may be the literal](#may_be_lit) V and the `value` of it is X.
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -1482,19 +1486,19 @@ A [sequence](#noun-sequence)
   - unless it [has a later expression than](#seq_later) I.
 
 E points to a node N if all of:
-  - E is a [conditional](#noun-conditional);
-  - the `consequent` or `alternate` of E is a node X;
-  - X [points to](#may_be_node) N.
+  - a node X [points to](#may_be_node) N;
+  - the `consequent` or `alternate` of E is X;
+  - E is a [conditional](#noun-conditional).
 
 E may be the literal V if all of:
-  - E is a [conditional](#noun-conditional);
-  - the `consequent` or `alternate` of E is a node X;
-  - X [may be the literal](#may_be_lit) V.
+  - a node X [may be the literal](#may_be_lit) V;
+  - the `consequent` or `alternate` of E is X;
+  - E is a [conditional](#noun-conditional).
 
 An [await](#noun-await)
 
-- points to a node N if the `argument` of it [points to](#may_be_node) N.
-- may be the literal V if the `argument` of it [may be the literal](#may_be_lit) V.
+- points to a node N if a node X [points to](#may_be_node) N and the `argument` of it is X.
+- may be the literal V if a node X [may be the literal](#may_be_lit) V and the `argument` of it is X.
 
 ## 14. GENERATORS. What a generator YIELDS is not what it returns: `for-of`
 
@@ -1507,14 +1511,13 @@ An [await](#noun-await)
 <a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a [yield](#noun-yield) Y and the `argument` of Y is E.
 
 <a id="bound_to_call"></a>A node is bound to the call C if all of:
-  - it [reads](#ident_in) Name in File;
   - some declarator [binds](#binder) Name to C in File;
+  - it [reads](#ident_in) Name in File;
   - C is a [call expression](#noun-call_expression).
 
 <a id="next_send"></a>G is sent a node V if all of:
-  - a node C [is a call site](js-callgraph.rofl.md#call_site) in some file;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - N [selects](#selects) "next";
+  - a node N [selects](#selects) "next";
+  - [the callee](js-callgraph.rofl.md#callee_of) of a node C is N;
   - the `object` of N [is bound to the call](#bound_to_call) GC;
   - GC [resolves to](js-callgraph.rofl.md#resolves) G;
   - the `arguments` of C is V.
@@ -1575,19 +1578,22 @@ A node
   - E [may be the literal](#may_be_lit) V.
 
 E points to a node N if all of:
-  - E is a [logical](#noun-logical);
-  - the `left` or `right` of E is a node X;
-  - X [points to](#may_be_node) N.
+  - a node X [points to](#may_be_node) N;
+  - the `left` or `right` of E is X;
+  - E is a [logical](#noun-logical).
 
 E may be the literal V if all of:
-  - E is a [logical](#noun-logical);
-  - the `left` or `right` of E is a node X;
-  - X [may be the literal](#may_be_lit) V.
+  - a node X [may be the literal](#may_be_lit) V;
+  - the `left` or `right` of E is X;
+  - E is a [logical](#noun-logical).
 
 A node
 
-- points to a node N if it [is plain](#plain_assign) and the `right` of it [points to](#may_be_node) N.
-- may be the literal V if it [is plain](#plain_assign) and the `right` of it [may be the literal](#may_be_lit) V.
+- points to a node N if a node X [points to](#may_be_node) N, the `right` of it is X, and it [is plain](#plain_assign).
+- may be the literal V if all of:
+  - a node X [may be the literal](#may_be_lit) V;
+  - the `right` of it is X;
+  - it [is plain](#plain_assign).
 
 > The crossings this layer performs: the scanner's tree, the unperspectived
 > kind tables, and the kernel's `edb` reflection.

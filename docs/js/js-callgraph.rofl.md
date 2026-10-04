@@ -65,7 +65,7 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="call_site"></a>A [call](#noun-call) is a call site in File if it is in file File.
-- <a id="call_site_kind"></a>The call kind of a node C is K if C [is of kind](js-model.rofl.md#ast_node) K and K [is a call kind](#call_kind).
+- <a id="call_site_kind"></a>The call kind of a node C is K if K [is a call kind](#call_kind) and C [is of kind](js-model.rofl.md#ast_node) K.
 - <a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an [optional member expression](#noun-optional_member_expression) N.
 - <a id="obj_kind_known"></a>A kind K is a classed kind if [`obj_kind_class`](#obj_kind_class)(K, something).
 - <a id="has_shape"></a>C has a shape if C [has the known shape](#shape_known) some shape.
@@ -99,7 +99,7 @@ Declared as facts:
 
 `transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
 
-<a id="transfer_site"></a>A node is a transfer site of a kind K if it [is of kind](js-model.rofl.md#ast_node) K and [`transfer_kind`](#transfer_kind)(K).
+<a id="transfer_site"></a>A node is a transfer site of a kind K if [`transfer_kind`](#transfer_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
 
 <a id="site"></a>A node X is a site either:
 
@@ -311,7 +311,7 @@ In the audit:
 
 In the code:
 
-<a id="fn_node"></a>A node is a function if it [is of kind](js-model.rofl.md#ast_node) K and K [is a function kind](#fn_kind).
+<a id="fn_node"></a>A node is a function if a kind K [is a function kind](#fn_kind) and it [is of kind](js-model.rofl.md#ast_node) K.
 
 Declared as facts:
 
@@ -493,7 +493,7 @@ X resolves to M if X [iterates through](#for_of_iterates) M.
 > the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 > `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
 
-C resolves to a [function](#fn_node) F if [the callee](#callee_of) of C [points to](js-dataflow.rofl.md#may_be_node) F.
+C resolves to a [function](#fn_node) F if a node N [points to](js-dataflow.rofl.md#may_be_node) F and [the callee](#callee_of) of C is N.
 
 In the audit:
 
@@ -532,8 +532,8 @@ Caller calls Callee either:
 
 <a id="passes_function"></a>C passes the function F named Name at an index I if all of:
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
-  - X [is named](js-structure.rofl.md#ast_name) Name;
   - X [points to](js-dataflow.rofl.md#may_be_node) F;
+  - X [is named](js-structure.rofl.md#ast_name) Name;
   - F is a [function](#fn_node).
 
 > A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
@@ -544,10 +544,10 @@ Caller calls Callee either:
 <a id="callback_site"></a>C is a callback site of an origin P at Key either:
 
 1. if all of:
-   - [the callee](#callee_of) of C is a node N;
-   - the `object` of N is a node O;
-   - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
    - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
+   - [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is P;
+   - the `object` of a node N is O;
+   - [the callee](#callee_of) of C is N;
    - N [selects](js-dataflow.rofl.md#selects) Key;
 2. if C [is a host site](js-host.rofl.md#host_site) of some host from P at Key;
 3. if all of:

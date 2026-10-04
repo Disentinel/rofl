@@ -9,6 +9,7 @@ use crate::store::{
 };
 use crate::term::{cmp_js, Heap, Term, TermK};
 use serde_json::{json, Value};
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 fn term_from_json(h: &mut Heap, j: &Value) -> Result<Term, String> {
@@ -77,8 +78,66 @@ pub struct Restored {
     pub dangling: usize,
 }
 
+enum Fail {
+    /// the facts are not in the shape `Raw` reads; `serde_json` reads them instead
+    Unread,
+    Bad(String),
+}
+
+impl From<String> for Fail {
+    fn from(e: String) -> Fail {
+        Fail::Bad(e)
+    }
+}
+
+impl From<&str> for Fail {
+    fn from(e: &str) -> Fail {
+        Fail::Bad(e.into())
+    }
+}
+
 pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> {
+    let _ = v;
+    let fresh = h.clone();
+    if let Some((d, facts, ghosts)) = split(json) {
+        match restore_from(h, &d, Some((facts, ghosts))) {
+            Ok(r) => return Ok(r),
+            Err(Fail::Bad(e)) => return Err(e),
+            Err(Fail::Unread) => *h = fresh,
+        }
+    }
     let d: Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+    restore_from(h, &d, None).map_err(|e| match e {
+        Fail::Bad(e) => e,
+        Fail::Unread => unreachable!(),
+    })
+}
+
+/// The top-level object with `facts` and `ghosts` left as text for `Raw`, and
+/// every other field parsed.
+fn split(json: &str) -> Option<(Value, &str, &str)> {
+    let mut r = Raw::new(json, 0);
+    let mut rest = serde_json::Map::new();
+    let (mut facts, mut ghosts) = (None, "[]");
+    r.obj(|r, k| {
+        let at = r.ws();
+        r.skip()?;
+        let text = &json[at..r.i];
+        match &*k {
+            "facts" => facts = Some(text),
+            "ghosts" => ghosts = text,
+            _ => {
+                rest.insert(k.into_owned(), serde_json::from_str(text).ok()?);
+            }
+        }
+        Some(())
+    })?;
+    r.ws();
+    (r.i == json.len()).then_some(())?;
+    Some((Value::Object(rest), facts?, ghosts))
+}
+
+fn restore_from(h: &mut Heap, d: &Value, raw: Option<(&str, &str)>) -> Result<Restored, Fail> {
     let mut s = Store::new();
     s.tick = d["tick"].as_u64().unwrap_or(0) as u32;
     if let Some(tl) = d.get("tickLog").and_then(|x| x.as_array()) {
@@ -96,62 +155,27 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
     for r in d.get("tagRules").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
         s.tag_rules.insert(h.intern(r.as_str().ok_or("snapshot refused: bad tag rule")?));
     }
-    let mut by_key: HashMap<String, u32> = HashMap::new();
-    for f in d["facts"].as_array().ok_or("no facts")? {
-        let rel = h.intern(f["rel"].as_str().ok_or("bad rel")?);
-        let persp = h.intern(f["persp"].as_str().ok_or("bad persp")?);
-        let args: Result<Vec<Term>, String> = f["args"]
-            .as_array()
-            .ok_or("bad args")?
-            .iter()
-            .map(|a| term_from_json(h, a))
-            .collect();
-        let args = args?;
-        let mut flags = 0u8;
-        if f["scope"].as_str() == Some("tick") {
-            flags |= F_TICK;
-        }
-        if f["base"].as_bool().unwrap_or(false) {
-            flags |= F_BASE;
-        }
-        if f["frozen"].as_bool().unwrap_or(false) {
-            flags |= F_FROZEN;
-        }
-        s.add(h, rel, persp, &args, flags);
-        if let Some(id) = s.get(rel, persp, &args) {
-            by_key.insert(s.key(h, id), id);
-        }
-    }
+    let mut fact_ids = Vec::new();
     // The ghosts, re-entered and killed again: a witness may name one, and no
     // answer ever will. Added before `firings` so the keys are in the index.
-    let mut ghost_ids: Vec<u32> = Vec::new();
-    for f in d.get("ghosts").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
-        let rel = h.intern(f["rel"].as_str().ok_or("bad rel")?);
-        let persp = h.intern(f["persp"].as_str().ok_or("bad persp")?);
-        let args: Result<Vec<Term>, String> = f["args"]
-            .as_array()
-            .ok_or("bad args")?
-            .iter()
-            .map(|a| term_from_json(h, a))
-            .collect();
-        let args = args?;
-        let mut flags = 0u8;
-        if f["scope"].as_str() == Some("tick") {
-            flags |= F_TICK;
+    let mut ghost_ids = Vec::new();
+    match raw {
+        Some((facts, ghosts)) => {
+            Raw::new(facts, 1).facts(h, &mut s, &mut fact_ids).ok_or(Fail::Unread)?;
+            Raw::new(ghosts, 1).facts(h, &mut s, &mut ghost_ids).ok_or(Fail::Unread)?;
         }
-        if f["base"].as_bool().unwrap_or(false) {
-            flags |= F_BASE;
-        }
-        if f["frozen"].as_bool().unwrap_or(false) {
-            flags |= F_FROZEN;
-        }
-        s.add(h, rel, persp, &args, flags);
-        if let Some(id) = s.get(rel, persp, &args) {
-            by_key.insert(s.key(h, id), id);
-            ghost_ids.push(id);
+        None => {
+            add_facts(h, &mut s, d["facts"].as_array().ok_or("no facts")?, &mut fact_ids)?;
+            add_facts(h, &mut s, d.get("ghosts").and_then(|x| x.as_array()).unwrap_or(&vec![]), &mut ghost_ids)?;
         }
     }
-
+    let cited = |k: &str| d.get(k).and_then(|x| x.as_array()).is_some_and(|x| !x.is_empty());
+    let mut by_key: HashMap<String, u32> = HashMap::new();
+    if cited("cells") || cited("firings") {
+        for &id in fact_ids.iter().chain(&ghost_ids) {
+            by_key.insert(s.key(h, id), id);
+        }
+    }
     let mut dangling = 0usize;
     // THE CELLS, before the firings that cite them: a firing names a cell by
     // its key, and a member names its facts by theirs, ghosts included.
@@ -231,7 +255,7 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
         let mut spelled = String::new();
         s.write_cell_key(h, id, &mut spelled);
         if c["key"].as_str() != Some(spelled.as_str()) {
-            return Err(format!("a cell's key does not spell its fields: {spelled}"));
+            return Err(format!("a cell's key does not spell its fields: {spelled}").into());
         }
         cells_by_key.insert(spelled, id);
     }
@@ -271,8 +295,277 @@ pub fn restore(h: &mut Heap, v: &Vocab, json: &str) -> Result<Restored, String> 
     }
     s.sweep();
     s.dirty = true;
-    let _ = v;
     Ok(Restored { store: s, dangling })
+}
+
+fn add_facts(h: &mut Heap, s: &mut Store, list: &[Value], ids: &mut Vec<u32>) -> Result<(), String> {
+    for f in list {
+        let rel = h.intern(f["rel"].as_str().ok_or("bad rel")?);
+        let persp = h.intern(f["persp"].as_str().ok_or("bad persp")?);
+        let args: Result<Vec<Term>, String> = f["args"]
+            .as_array()
+            .ok_or("bad args")?
+            .iter()
+            .map(|a| term_from_json(h, a))
+            .collect();
+        let args = args?;
+        let mut flags = 0u8;
+        if f["scope"].as_str() == Some("tick") {
+            flags |= F_TICK;
+        }
+        if f["base"].as_bool().unwrap_or(false) {
+            flags |= F_BASE;
+        }
+        if f["frozen"].as_bool().unwrap_or(false) {
+            flags |= F_FROZEN;
+        }
+        s.add(h, rel, persp, &args, flags);
+        ids.extend(s.get(rel, persp, &args));
+    }
+    Ok(())
+}
+
+/// A reader over the text of a seed's `facts` and `ghosts` that interns as it
+/// goes, in the order `add_facts` does. `None` is anything it does not read
+/// exactly as `serde_json` would, and sends the whole seed to `serde_json`.
+struct Raw<'a> {
+    s: &'a str,
+    i: usize,
+    depth: u32,
+}
+
+impl<'a> Raw<'a> {
+    fn new(s: &'a str, depth: u32) -> Self {
+        Raw { s, i: 0, depth }
+    }
+
+    fn ws(&mut self) -> usize {
+        let b = self.s.as_bytes();
+        while self.i < b.len() && matches!(b[self.i], b' ' | b'\n' | b'\r' | b'\t') {
+            self.i += 1;
+        }
+        self.i
+    }
+
+    fn peek(&mut self) -> Option<u8> {
+        let i = self.ws();
+        self.s.as_bytes().get(i).copied()
+    }
+
+    fn eat(&mut self, c: u8) -> bool {
+        let hit = self.peek() == Some(c);
+        self.i += hit as usize;
+        hit
+    }
+
+    /// `serde_json`'s nesting limit, so that what it refuses is refused here too
+    fn nest(&mut self, open: u8) -> Option<()> {
+        self.depth += 1;
+        (self.depth < 128 && self.eat(open)).then_some(())
+    }
+
+    fn obj(&mut self, mut f: impl FnMut(&mut Self, Cow<'a, str>) -> Option<()>) -> Option<()> {
+        self.nest(b'{')?;
+        if !self.eat(b'}') {
+            loop {
+                let k = self.str()?;
+                self.eat(b':').then_some(())?;
+                f(self, k)?;
+                if !self.eat(b',') {
+                    self.eat(b'}').then_some(())?;
+                    break;
+                }
+            }
+        }
+        self.depth -= 1;
+        Some(())
+    }
+
+    fn arr(&mut self, mut f: impl FnMut(&mut Self) -> Option<()>) -> Option<()> {
+        self.nest(b'[')?;
+        if !self.eat(b']') {
+            loop {
+                f(self)?;
+                if !self.eat(b',') {
+                    self.eat(b']').then_some(())?;
+                    break;
+                }
+            }
+        }
+        self.depth -= 1;
+        Some(())
+    }
+
+    /// Past the closing quote of a string whose opening one is behind; whether
+    /// it holds an escape.
+    fn past_str(&mut self) -> Option<bool> {
+        let b = self.s.as_bytes();
+        let mut escaped = false;
+        loop {
+            self.i += b.get(self.i..)?.iter().position(|&c| c == b'"' || c == b'\\' || c < 0x20)?;
+            match b[self.i] {
+                b'"' => {
+                    self.i += 1;
+                    return Some(escaped);
+                }
+                b'\\' => {
+                    escaped = true;
+                    self.i += 2;
+                }
+                _ => return None,
+            }
+        }
+    }
+
+    fn str(&mut self) -> Option<Cow<'a, str>> {
+        self.eat(b'"').then_some(())?;
+        let start = self.i;
+        if self.past_str()? {
+            serde_json::from_str(&self.s[start - 1..self.i]).ok().map(Cow::Owned)
+        } else {
+            Some(Cow::Borrowed(&self.s[start..self.i - 1]))
+        }
+    }
+
+    fn int(&mut self) -> Option<i64> {
+        let start = self.ws();
+        let b = self.s.as_bytes();
+        self.i += (b.get(self.i) == Some(&b'-')) as usize;
+        let lead = b.get(self.i).copied();
+        while b.get(self.i).is_some_and(|c| c.is_ascii_digit()) {
+            self.i += 1;
+        }
+        let text = &self.s[start..self.i];
+        if lead == Some(b'0') && text.len() > 1 || matches!(b.get(self.i), Some(b'.' | b'e' | b'E')) {
+            return None;
+        }
+        text.parse().ok()
+    }
+
+    fn bool(&mut self) -> Option<bool> {
+        self.ws();
+        for (word, v) in [("true", true), ("false", false)] {
+            if self.s[self.i..].starts_with(word) {
+                self.i += word.len();
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    /// Past one value by its brackets alone, up to the comma or bracket that
+    /// ends it. What is skipped is read again, by `facts` or by `serde_json`,
+    /// and they see whatever is malformed in it.
+    fn skip(&mut self) -> Option<()> {
+        let b = self.s.as_bytes();
+        let mut depth = 0u32;
+        loop {
+            match *b.get(self.i)? {
+                b'"' => {
+                    self.i += 1;
+                    self.past_str()?;
+                    continue;
+                }
+                b'[' | b'{' => depth += 1,
+                b']' | b'}' | b',' if depth == 0 => return Some(()),
+                b']' | b'}' => depth -= 1,
+                _ => {}
+            }
+            self.i += 1;
+        }
+    }
+
+    fn facts(&mut self, h: &mut Heap, s: &mut Store, ids: &mut Vec<u32>) -> Option<()> {
+        let mut args = Vec::new();
+        self.arr(|r| {
+            let (mut rel, mut persp, mut syms) = (None, None, None);
+            let (mut flags, mut seen) = (0u8, 0u8);
+            args.clear();
+            r.obj(|r, k| {
+                let bit = match &*k {
+                    "rel" => {
+                        rel = Some(r.str()?);
+                        1
+                    }
+                    "persp" => {
+                        persp = Some(r.str()?);
+                        2
+                    }
+                    "args" => {
+                        syms = Some((h.intern(rel.as_deref()?), h.intern(persp.as_deref()?)));
+                        r.arr(|r| {
+                            let t = r.term(h, &mut args)?;
+                            args.push(t);
+                            Some(())
+                        })?;
+                        4
+                    }
+                    "scope" => {
+                        if r.str()? == "tick" {
+                            flags |= F_TICK;
+                        }
+                        8
+                    }
+                    "base" => {
+                        flags |= F_BASE * r.bool()? as u8;
+                        16
+                    }
+                    "frozen" => {
+                        flags |= F_FROZEN * r.bool()? as u8;
+                        32
+                    }
+                    _ => return None,
+                };
+                (seen & bit == 0).then(|| seen |= bit)
+            })?;
+            let (rel, persp) = syms?;
+            s.add(h, rel, persp, &args, flags);
+            ids.extend(s.get(rel, persp, &args));
+            Some(())
+        })?;
+        (self.ws() == self.s.len()).then_some(())
+    }
+
+    /// One term, its arguments built on `stack` above what is there already.
+    fn term(&mut self, h: &mut Heap, stack: &mut Vec<Term>) -> Option<Term> {
+        let (mut k, mut name, mut text, mut int, mut args) = (None, None, None, None, None);
+        self.obj(|r, key| {
+            let fresh = match &*key {
+                "k" => k.replace(r.str()?).is_none(),
+                "name" => name.replace(r.str()?).is_none(),
+                "v" if r.peek()? == b'"' => text.replace(r.str()?).is_none() && int.is_none(),
+                "v" => int.replace(r.int()?).is_none() && text.is_none(),
+                "args" => {
+                    let base = stack.len();
+                    r.arr(|r| {
+                        let t = r.term(h, stack)?;
+                        stack.push(t);
+                        Some(())
+                    })?;
+                    args.replace(base).is_none()
+                }
+                _ => return None,
+            };
+            fresh.then_some(())
+        })?;
+        let k = k?;
+        if k != "f" && args.is_some() {
+            return None;
+        }
+        match &*k {
+            "v" => Some(h.var(&name?)),
+            "a" => Some(h.atom(&name?)),
+            "s" => Some(h.string(&text?)),
+            "i" => int.map(Term::int),
+            "f" => {
+                let base = args?;
+                let t = h.mkf_named(&name?, &stack[base..]);
+                stack.truncate(base);
+                Some(t)
+            }
+            _ => None,
+        }
+    }
 }
 
 // --------------------------------------------------------------- the way out
@@ -477,4 +770,37 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
         out["tagRules"] = json!(ts);
     }
     out.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SEED: &str = r#"{"tick":3,"facts":[{"rel":"p","persp":"main","args":[{"k":"s","v":"a \"q\"\né"},{"k":"i","v":-7},{"k":"f","name":"g","args":[{"k":"a","name":"x"},{"k":"v","name":"Y"}]}],"scope":"tick","base":true,"frozen":false}],"evals":[],"ghosts":[{"rel":"q","persp":"main","args":[{"k":"i","v":0}],"scope":"timeless","base":false,"frozen":true}]}"#;
+
+    fn read(json: &str, raw: bool) -> (String, Vec<String>) {
+        let mut h = Heap::default();
+        let r = if raw {
+            let (d, facts, ghosts) = split(json).unwrap();
+            restore_from(&mut h, &d, Some((facts, ghosts)))
+        } else {
+            restore_from(&mut h, &serde_json::from_str(json).unwrap(), None)
+        };
+        let Ok(r) = r else { panic!("not restored") };
+        (snapshot(&h, &r.store), (0..h.sym_count() as u32).map(|i| h.name(i).to_string()).collect())
+    }
+
+    #[test]
+    fn the_raw_reader_interns_and_stores_what_serde_json_does() {
+        assert_eq!(read(SEED, true), read(SEED, false));
+    }
+
+    #[test]
+    fn a_fact_the_raw_reader_does_not_read_is_read_by_serde_json() {
+        let odd = SEED.replacen(r#"{"rel":"p""#, r#"{"note":1,"rel":"p""#, 1);
+        let mut h = Heap::default();
+        let v = Vocab::new(&mut h);
+        let r = restore(&mut h, &v, &odd).unwrap();
+        assert_eq!(snapshot(&h, &r.store), read(SEED, false).0);
+    }
 }

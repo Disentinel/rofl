@@ -125,8 +125,6 @@ struct Readers {
     /// the rules that conclude `@next` from what changed: their staged facts that rested on it go and they fire
     /// again (`restage`)
     staged: Vec<Rc<ERule>>,
-    /// a rule answered on demand reads what changed, or a rule that calls one does
-    demand: bool,
 }
 
 type Support = HashMap<FactId, Vec<CellId>>;
@@ -313,7 +311,6 @@ impl Eval {
         let mut taken: HashSet<Sym> = HashSet::new();
         let mut reset: HashSet<Sym> = HashSet::new();
         let mut staged: Vec<Rc<ERule>> = Vec::new();
-        let mut demand = false;
         let staging = self.lattices.is_empty();
         loop {
             let mut grew = false;
@@ -340,9 +337,8 @@ impl Eval {
                     continue;
                 }
                 let head = r.clause.head.rel;
-                // answered at the call sites and never fired: its conclusions are the calls' (`demand`)
+                // answered at the call sites and never fired: its conclusions are the calls'
                 if !r.safe && self.demand_rels.iter().any(|(x, _)| *x == head) {
-                    demand = true;
                     continue;
                 }
                 if self.shrug_readers.contains(&r.id) || self.answer.late.contains(&r.id) || !r.safe {
@@ -394,17 +390,7 @@ impl Eval {
         if self.subs.values().any(|x| x.reads.iter().any(|b| seen.contains(b))) {
             return Err("a dominance rule reads what rests on the fact");
         }
-        demand |= rules.iter().chain(staged.iter()).any(|r| self.calls_on_demand(r));
-        Ok(Readers { rels, rules, reset, staged, demand })
-    }
-
-    /// Whether `r` reads a relation answered on demand, anywhere in its body.
-    fn calls_on_demand(&self, r: &ERule) -> bool {
-        let mut yes = false;
-        for b in &r.clause.body {
-            walk(b, false, &mut |l, _, _| yes |= self.demand_rels.iter().any(|(x, _)| *x == l.rel));
-        }
-        yes
+        Ok(Readers { rels, rules, reset, staged })
     }
 
     /// Every fact of the relations the rules that are read again whole conclude.
@@ -682,7 +668,7 @@ impl Eval {
             }
             owners.push(owner);
         }
-        let mut forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new(), demand: false })?;
+        let mut forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new() })?;
         let mut made = 0;
         if called {
             for rel in &demanded {
@@ -924,7 +910,7 @@ impl Eval {
         if !cell_cited.iter().all(|x| self.cells_all_reset(*x, &reset)) {
             return Err("a cell rests on a lattice fact");
         }
-        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new(), demand: false })?;
+        let forced = self.reset_facts(&Readers { rels: crels.clone(), rules: crules.clone(), reset: reset.clone(), staged: Vec::new() })?;
         let consumers = if crules.is_empty() {
             Vec::new()
         } else {

@@ -4394,15 +4394,16 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "ts_lattice_why_one_member",
-  "what": "TypeScript why of a lattice fact prints its canonical member alone",
+  "what": "TypeScript why of a lattice fact or a member of a front prints its first member alone",
   "edits": [
    [
     "src/aggeval.ts",
-    "improved on since'}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "improved on since'}]`));\n    const limit = indent === 0 ? 1 : 1;"
+    "n = members.length, limit = indent === 0 ? o.members : 1;",
+    "n = members.length, limit = 1;"
    ]
   ],
   "expect": {
+   "agg_sub_why": "asy_text_missing",
    "agg_lattice_why": "why_text_missing",
    "agg_tag_why": "tgy_text_missing",
    "agg_critpath_demo": "cpc_unnamed"
@@ -4518,20 +4519,6 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_tagc_why": "tcy_text_missing"
-  }
- },
- {
-  "id": "ts_dominance_why_one_member",
-  "what": "TypeScript why of a member of a front prints its first member alone",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? o.members : 1;",
-    "${n === 1 ? '' : 's'}; ${place}]`));\n    const limit = indent === 0 ? 1 : 1;"
-   ]
-  ],
-  "expect": {
-   "agg_sub_why": "asy_text_missing"
   }
  },
  {
@@ -5969,7 +5956,10 @@ export function sitesIn(file: string, text: string): Site[] {
   const out: Site[] = [];
   const skip = (i: number): number => {
     const c = text[i];
-    if (c === '"') { for (i++; text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
+    // a raw string reads no escape: r"…", r#"…"#, its end the quote and as many #
+    const raw = c === 'r' && !/[A-Za-z0-9_]/.test(text[i - 1] ?? '') ? /^r(#*)"/.exec(text.slice(i, i + 8)) : null;
+    if (raw) { const end = text.indexOf(`"${raw[1]}`, i + raw[0].length); return end < 0 ? text.length : end + raw[1].length; }
+    if (c === '"') { for (i++; i < text.length && text[i] !== '"'; i++) if (text[i] === '\\') i++; return i; }
     if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') i++; return i; }
     if (c === "'" && text[i + 2] === "'") return i + 2;
     if (c === "'" && text[i + 1] === '\\' && text[i + 3] === "'") return i + 3;

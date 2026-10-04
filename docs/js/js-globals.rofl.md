@@ -115,11 +115,14 @@ Declared as facts:
 > the names a pattern introduces, keys and defaults included: widening
 > `declares_name` narrows the globals, the safe direction again
 
-Name is declared in File if all of:
+<a id="pattern_root"></a>`pattern_root`(I, File) if all of:
   - a kind K [declares at](#declaring_position) a field Field;
   - a node D [is of kind](js-model.rofl.md#ast_node) K in file File;
-  - the Field of D is a node I;
-  - a node X [is within](js-structure.rofl.md#ast_within) I;
+  - the Field of D is a node I.
+
+Name is declared in File if all of:
+  - [`pattern_root`](#pattern_root)(I, File);
+  - a node X [is within](js-structure.rofl.md#ast_within) a node I;
   - X [is named](js-structure.rofl.md#ast_name) Name.
 
 > a parameter is a position, not a declaration kind

@@ -1,0 +1,12 @@
+-- A THIRD CARRIER FOR THE DEMO: a value the corpus cannot see, named by the host global it was read off.
+host_read[flow](E, Name) :- free_global[code](E, Name, _).
+host_read[flow](M, Name) :- host_read[flow](O, Name), ast_child[code](M, object, 0, O), member_node_v[flow](M).
+
+may_be_host[flow](E, Name) :- host_read[flow](E, Name).
+may_be_host[flow](E, Name) :- ast_node[code](E, logical_expression, _, _), ast_child[code](E, left, 0, X), may_be_host[flow](X, Name).
+may_be_host[flow](E, Name) :- ast_node[code](E, logical_expression, _, _), ast_child[code](E, right, 0, X), may_be_host[flow](X, Name).
+may_be_host[flow](E, Name) :- binder[code](D, N, Init, File), may_be_host[flow](Init, Name), ident_in[code](E, N, File), sees_binder[code](E, D).
+may_be_host[flow](N, Name) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), may_be_node[flow](O, Obj),
+                              selects[flow](N, Key), member_value[flow](Obj, Key, V), may_be_host[flow](V, Name).
+may_be_host[flow](U, Name) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_host[flow](A, Name),
+                              param_of[flow](F, I, N), param_use[flow](F, N, U).

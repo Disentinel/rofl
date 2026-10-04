@@ -325,6 +325,7 @@ pub struct Vocab {
     pub sealed_provenance: Sym,
     pub sealed_rules: Sym,
     pub sealed_assertions: Sym,
+    pub sealed_witness: Sym,
     pub s_fact: Sym,
     pub s_lit: Sym,
     pub s_not: Sym,
@@ -589,6 +590,7 @@ impl Vocab {
             sealed_provenance: i("provenance"),
             sealed_rules: i("rules"),
             sealed_assertions: i("assertions"),
+            sealed_witness: i("witness"),
             s_fact: i("$fact"),
             s_lit: i("$lit"),
             s_not: i("$not"),
@@ -952,13 +954,6 @@ fn resolve_body_books(v: &Vocab, body: &mut [BodyElem]) {
             BodyElem::Bi { .. } => {}
         }
     }
-}
-
-/// The id is taken of the RESOLVED clause (src/reflect.ts, `ruleIdOf`).
-pub fn rule_id_of(h: &mut Heap, v: &Vocab, c: &Clause) -> String {
-    let mut c2 = c.clone();
-    resolve_clause_books(v, &mut c2);
-    format!("r{}", fnv1a(&canon_clause(h, &c2)))
 }
 
 fn persp_audit(h: &mut Heap, v: &Vocab, p: Term) -> Term {
@@ -1464,7 +1459,7 @@ pub fn well_founded_declared(h: &mut Heap, v: &Vocab, store: &mut Store) -> bool
 }
 
 pub fn sealed_bodies(h: &mut Heap, v: &Vocab, store: &mut Store) -> Vec<Sym> {
-    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance];
+    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance, v.sealed_witness];
     let mut out = Vec::new();
     for f in store.rel_all(h, v.sealed) {
         let args = store.args(f);
@@ -1498,16 +1493,6 @@ pub fn provenance_row(h: &Heap, v: &Vocab, r: &FactRec, args: &[Term]) -> Option
         rule: args[1].as_atom()?,
         tick: u32::try_from(args[2].as_int()?).ok()?,
     })
-}
-
-/// The relation a `$fact` term names (`relOfFactTerm`).
-pub fn rel_of_fact_term(h: &Heap, v: &Vocab, t: Term) -> Option<Sym> {
-    match t.kind() {
-        TermK::Func(i) if h.fname(i) == v.s_fact && h.fargs(i).len() == 3 => {
-            h.fargs(i)[0].as_atom()
-        }
-        _ => None,
-    }
 }
 
 /// Convenience for readers that want a relation's rows as `(FactId, args)`.

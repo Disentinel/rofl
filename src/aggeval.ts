@@ -34,7 +34,7 @@ import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
-import { canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
+import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
 import {
   V, IFACE, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
@@ -303,8 +303,8 @@ export function setPatternReason(set: string): string {
 
 // --------------------------------------------------------------- planning
 
-const litsDeep = (b: BodyElem): Lit[] => (b.t === 'pos' || b.t === 'neg' ? [b.lit] : b.t === 'agg' ? b.body.flatMap(litsDeep) : []);
 const tVars = (t: Term): string[] => [...varsOf(t)];
+
 /** An aggregate's result and shared variables, or any other element's variables. */
 function planVars(b: BodyElem): string[] {
   if (b.t === 'agg') {
@@ -504,7 +504,7 @@ export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [str
         }
         for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
       } else if (b.t === 'agg') {
-        for (const l of litsDeep(b)) {
+        for (const l of litsOf(b)) {
           for (const h of [hrel, ...reflected]) {
             heads.add(h); P(h);
             if (h === hrel && demote.has(edgeKey(hrel, l.rel))) {
@@ -670,7 +670,7 @@ function setSpellingRefusals(rules: DRule[], lattices: [string, number, string][
       const open = setElems(t) !== null && t.args !== undefined && openSetAt(t) === t;
       if (open && joinOf(head.rel) === null) out.push([r.id, 'set_pattern']);
     }
-    for (const l of r.clause.body.flatMap(litsDeep)) {
+    for (const l of r.clause.body.flatMap(litsOf)) {
       const op = joinOf(l.rel), last = l.args[l.args.length - 1];
       if (op === null || last === undefined) continue;
       if (!joinSlotOk(op, last)) { out.push([r.id, 'join_value_off_carrier']); break; }
@@ -1006,7 +1006,7 @@ export class AggEval {
         for (const t of [...d.lo.args, ...d.hi.args]) for (const v of varsOf(t)) if (!bound.includes(v)) bound.push(v);
         const { order } = planOrder([], d.body, bound, []);
         const plan = order.map((i) => d.body[i]);
-        for (const l of d.body.flatMap(litsDeep)) if (!reads.includes(l.rel)) reads.push(l.rel);
+        for (const l of d.body.flatMap(litsOf)) if (!reads.includes(l.rel)) reads.push(l.rel);
         planned.push([d, plan]);
       }
       this.lattices.set(rel, [arity, 'subsumption']);
@@ -1119,7 +1119,7 @@ export class AggEval {
     shared.forEach((v, i) => (before.includes(v) ? corr : group).push(i));
     const innerOrder = planOrder([], a.body, before, []).order;
     const rels: string[] = [];
-    for (const l of a.body.flatMap(litsDeep)) if (!rels.includes(l.rel)) rels.push(l.rel);
+    for (const l of a.body.flatMap(litsOf)) if (!rels.includes(l.rel)) rels.push(l.rel);
     return { op: a.op as AggOp, innerOrder, corr, group, rels, emptyZero: this.answer.emptyZero.has(`${rid}|${a.at}`) };
   }
 
@@ -1423,7 +1423,7 @@ export class AggEval {
           for (const [rid, head, inner] of peel.aggEdges) {
             if (stuck.has(head) && stuck.has(inner) && reachesIn(deps, inner, head)) {
               const r = this.rules.find((x) => x.id === rid);
-              const b = r?.clause.body.find((x) => x.t === 'agg' && litsDeep(x).some((l) => l.rel === inner));
+              const b = r?.clause.body.find((x) => x.t === 'agg' && litsOf(x).some((l) => l.rel === inner));
               const op = b && b.t === 'agg' ? b.op : 'an aggregate';
               throw new Rejected(`program rejected: ${op} in rule ${rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md)`);
             }
@@ -1680,7 +1680,7 @@ export class AggEval {
   private dsElement(rid: string, at: number, comp: DsComp): [string, string, string] {
     const r = this.ruleOf(rid)!;
     const a = r.clause.body.find((b) => b.t === 'agg' && b.at === at) as AggElem | undefined;
-    const inner = a ? (a.body.flatMap(litsDeep).map((l) => l.rel).find((x) => comp.rels.has(x)) ?? '') : '';
+    const inner = a ? (a.body.flatMap(litsOf).map((l) => l.rel).find((x) => comp.rels.has(x)) ?? '') : '';
     return [r.clause.head.rel, a ? a.op : 'an aggregate', inner];
   }
 
@@ -1857,7 +1857,7 @@ export class AggEval {
           corr.push(isGround(t) ? t : DS_ANY);
         }
         out.push({ k: 'a', rid, at: b.at!, corr });
-      } else if (!litsDeep(b).some((l) => comp.rels.has(l.rel))) {
+      } else if (!litsOf(b).some((l) => comp.rels.has(l.rel))) {
         // an aggregate over closed relations only binds what the rest of the rule is keyed by
         for (const s2 of this.dsAggClosed(rid, b, s)) this.dsWalk(comp, rid, rest, s2, out);
         return;
@@ -1910,13 +1910,13 @@ export class AggEval {
     this.shrugSnap = null;
     this.cycleGroups = [];
     this.cycleOf.clear();
-    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsDeep).some((l) => l.rel === sh)).map((r) => r.id));
+    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsOf).some((l) => l.rel === sh)).map((r) => r.id));
     const cone = new Set<string>();
     for (const r of this.rules) {
       if (this.shrugReaders.has(r.id)) cone.add(r.clause.head.rel);
       for (const b of r.clause.body) {
         const strict = b.t === 'neg' || (b.t === 'agg' && b.op !== 'at_least');
-        for (const l of litsDeep(b)) {
+        for (const l of litsOf(b)) {
           if (l.rel === un) {
             cone.add(r.clause.head.rel);
             if (strict) this.unknownStrict.push(l);
@@ -1924,11 +1924,11 @@ export class AggEval {
         }
       }
     }
-    this.readsUnknown = this.rules.some((r) => r.clause.body.flatMap(litsDeep).some((l) => l.rel === un));
+    this.readsUnknown = this.rules.some((r) => r.clause.body.flatMap(litsOf).some((l) => l.rel === un));
     if (this.shrugReaders.size > 0 && this.store.add(V.edb, MAIN, [mka(sh)], F_BASE)) this.rows++;
     if (this.readsUnknown && this.store.add(V.edb, MAIN, [mka(un)], F_BASE)) this.rows++;
     for (;;) {
-      const more = this.rules.filter((r) => !cone.has(r.clause.head.rel)).filter((r) => r.clause.body.flatMap(litsDeep).some((l) => cone.has(l.rel)))
+      const more = this.rules.filter((r) => !cone.has(r.clause.head.rel)).filter((r) => r.clause.body.flatMap(litsOf).some((l) => cone.has(l.rel)))
         .map((r) => r.clause.head.rel);
       if (more.length === 0) break;
       for (const m of more) cone.add(m);
@@ -2266,7 +2266,7 @@ export class AggEval {
         else if (b.t === 'bi') continue;
         else {
           strict = b.op !== 'at_least';
-          lits = b.body.flatMap((e) => litsDeep(e).map((l): [Lit, boolean] => [l, e.t === 'neg']));
+          lits = b.body.flatMap((e) => litsOf(e).map((l): [Lit, boolean] => [l, e.t === 'neg']));
         }
         for (const [l, n] of lits) {
           const t = id(l.rel);
@@ -2300,7 +2300,7 @@ export class AggEval {
       if (why === 'reads_live_kernel') {
         const r = this.ruleOf(rid);
         if (r) {
-          for (const l of r.clause.body.filter((b) => b.t === 'agg').flatMap(litsDeep)) {
+          for (const l of r.clause.body.filter((b) => b.t === 'agg').flatMap(litsOf)) {
             if (['derived_by', 'hole', 'agg_cell', 'agg_member', 'agg_member_prem', 'agg_sealed'].includes(l.rel)) { rel = l.rel; break; }
           }
         }
@@ -2425,7 +2425,7 @@ export class AggEval {
     for (const r of stratRules.filter((r) => r.hasAgg)) {
       const head = r.clause.head.rel;
       const at = r.clause.head.temporal === 'next' ? undefined : strat.get(head);
-      for (const l of r.clause.body.filter((b) => b.t === 'agg').flatMap(litsDeep)) {
+      for (const l of r.clause.body.filter((b) => b.t === 'agg').flatMap(litsOf)) {
         if (!this.derivedRels.has(l.rel)) continue;
         const i = strat.get(l.rel);
         const ok = at !== undefined && i !== undefined ? i < at : at === undefined && i !== undefined ? r.clause.head.temporal === 'next' : false;
@@ -3686,13 +3686,13 @@ export class AggEval {
   }
 
   /** THE BACK EDGES OF A WIDENING: rules into a widened relation that read its own recursion. */
-  private relDeps(): Map<string, Set<string>> {
+  private relDeps(reads: (r: ERule) => Iterable<string> = (r) => r.clause.body.flatMap((b) => litsOf(b).map((l) => l.rel))): Map<string, Set<string>> {
     const deps = new Map<string, Set<string>>();
     for (const r of this.rules) {
       if (r.clause.head.temporal === 'next') continue;
       let e = deps.get(r.clause.head.rel);
       if (!e) { e = new Set(); deps.set(r.clause.head.rel, e); }
-      for (const b of r.clause.body) for (const l of litsDeep(b)) e.add(l.rel);
+      for (const x of reads(r)) e.add(x);
     }
     return deps;
   }
@@ -3725,7 +3725,7 @@ export class AggEval {
     for (const r of this.rules) {
       const h = r.clause.head.rel;
       if (r.clause.head.temporal === 'next' || !this.widen.has(h)) continue;
-      if (r.clause.body.some((b) => litsDeep(b).some((l) => reachesTo(l.rel, h)))) out.add(r.id);
+      if (r.clause.body.some((b) => litsOf(b).some((l) => reachesTo(l.rel, h)))) out.add(r.id);
     }
     return out;
   }
@@ -4038,7 +4038,7 @@ export class AggEval {
       if (this.latSpread.size > 0 || this.latPlain.size > 0) {
         for (const b of plan) {
           const neg = b.t === 'neg';
-          for (const l of litsDeep(b)) {
+          for (const l of litsOf(b)) {
             const u = this.readUnknown(l, s, true);
             if (u !== null) {
               if (neg) return { k: 'unknown', u, rule: d.id };
@@ -4785,7 +4785,7 @@ export class AggEval {
         else if ((b.t === 'neg' || b.t === 'agg') && rel === IFACE.unknown) s0 = null;
         // its correlations seal in the order of the data, after the carry of each layer
         else if (b.t === 'agg' && this.dsElems.has(`${r.id}|${b.at}`)) s0 = null;
-        else if ((b.t === 'neg' || b.t === 'agg') && only === null && litsDeep(b).some((l) => l.rel === rel)) {
+        else if ((b.t === 'neg' || b.t === 'agg') && only === null && litsOf(b).some((l) => l.rel === rel)) {
           throw new Bug(`rule ${r.id} fired before ${this.unknownText(u)} was closed: a negation or an aggregate read it while a hole could still reach it`);
         }
         if (s0 === null) continue;
@@ -5426,13 +5426,7 @@ export class AggEval {
 
   /** The dominators of the derivation graph of `p`'s recursion. */
   private recursionDominators(p: string, facts: string[]): Dominators | null {
-    const deps = new Map<string, Set<string>>();
-    for (const r of this.rules) {
-      if (r.clause.head.temporal === 'next') continue;
-      let e = deps.get(r.clause.head.rel);
-      if (!e) { e = new Set(); deps.set(r.clause.head.rel, e); }
-      for (const x of r.posRels) e.add(x);
-    }
+    const deps = this.relDeps((r) => r.posRels);
     const closure = (from: string): Set<string> => {
       const seen = new Set<string>();
       const stack = [from];
@@ -5748,7 +5742,7 @@ export class AggEval {
       if (!active.has(r.id)) unsettled.add(r.clause.head.rel);
       let e = reads.get(r.clause.head.rel);
       if (!e) { e = []; reads.set(r.clause.head.rel, e); }
-      for (const b of r.plan) for (const l of litsDeep(b)) e.push(l.rel);
+      for (const b of r.plan) for (const l of litsOf(b)) e.push(l.rel);
     }
     const settled: string[] = [];
     for (const p of [...this.lattices.keys()].filter((p) => !this.latClosed.has(p))) {
@@ -5887,7 +5881,7 @@ export class AggEval {
     }
     const deps = this.relDeps();
     const inRecursion = (p: string) => this.rules.some((r) => r.clause.head.rel === p && r.clause.head.temporal !== 'next'
-      && r.clause.body.flatMap(litsDeep).some((l) => reachesIn(deps, l.rel, p)));
+      && r.clause.body.flatMap(litsOf).some((l) => reachesIn(deps, l.rel, p)));
     const counting = names.find((p) => !tagIdempotent(this.tags.byRel.get(p)![1]) && inRecursion(p));
     if (counting !== undefined) {
       throw reject(`tag ${counting} (counting) is inside its own recursion: counting's ⊕ is not idempotent, so a count of derivations through a recursion need not settle (it is not p-stable); count over a relation closed below it, or tag it tropical, viterbi or trust`);
@@ -5931,9 +5925,9 @@ export class AggEval {
       }
       if (this.answer.demandRels.includes(p)) throw reject(`${this.latWord(p)} ${p}: a rule concluding it is not range-restricted, so its cells would be unfolded at a call site`);
     }
-    const r = this.rules.find((r) => this.answer.demandRels.includes(r.clause.head.rel) && r.clause.body.flatMap(litsDeep).some((l) => this.lattices.has(l.rel)));
+    const r = this.rules.find((r) => this.answer.demandRels.includes(r.clause.head.rel) && r.clause.body.flatMap(litsOf).some((l) => this.lattices.has(l.rel)));
     if (r !== undefined) {
-      const lat = r.clause.body.flatMap(litsDeep).find((l) => this.lattices.has(l.rel))!.rel;
+      const lat = r.clause.body.flatMap(litsOf).find((l) => this.lattices.has(l.rel))!.rel;
       throw reject(`rule ${r.id} reads the ${this.latWord(lat)} ${lat} and concludes ${r.clause.head.rel}, which is answered on demand (a rule concluding it is not range-restricted): it would be unfolded while the ${this.latWord(lat)} is still improving`);
     }
     if (this.answer.readsProvenance) {
@@ -6401,7 +6395,7 @@ export class AggEval {
       const more = this.wfsGap(g2, m2).filter((x) => !known.has(x[1]) && x[2].rel !== IFACE.unknown);
       for (const [, , rec] of more) {
         const u = uTuple(IFACE.unknown, rec.persp, [atomTerm(rec.rel, rec.args)]);
-        const lits = this.rules.flatMap((r) => r.clause.body.flatMap(litsDeep)).filter((l) => l.rel === IFACE.unknown);
+        const lits = this.rules.flatMap((r) => r.clause.body.flatMap(litsOf)).filter((l) => l.rel === IFACE.unknown);
         if (lits.some((l) => this.unknownBinds(l, u, new Map()) !== null)) {
           this.wfsFixed = [];
           throw new Rejected(`program rejected: unknown is read of ${rec.key}, which the level that reads unknown leaves undefined`,
@@ -6632,8 +6626,13 @@ export class AggEval {
     try { members = this.bestMembers(id); } catch (e) { next.push(line(`${pad}${key} [${this.latLabel(this.rec(id).rel, op)}: Bug(${JSON.stringify((e as Error).message)})]`)); return; }
     const n = members.length;
     next.push(line(`${pad}${key} [${this.latLabel(this.rec(id).rel, op)}: ${n} member${n === 1 ? '' : 's'}${this.alive(id) ? '' : '; an earlier value, improved on since'}]`));
-    const limit = indent === 0 ? o.members : 1;
-    for (let i = 0; i < members.length; i++) {
+    this.renderMembers(members, indent, o, next);
+  }
+
+  /** A cell's members, as many as the query shows, each with its premises. */
+  private renderMembers(members: [number, string, number, PremRef[]][], indent: number, o: WhyOpts, next: WhyTask[]): void {
+    const pad = '  '.repeat(indent), n = members.length, limit = indent === 0 ? o.members : 1;
+    for (let i = 0; i < n; i++) {
       if (i >= limit) { if (indent === 0) next.push(line(`${pad}  [${n - limit} more members: why all ${o.query}]`)); break; }
       const [hgt, rule, tick, prems] = members[i];
       next.push(line(`${pad}  #${i + 1} h=${hgt} <= ${rule} @tick ${tick}`));
@@ -6666,13 +6665,7 @@ export class AggEval {
       place = by !== undefined ? `an earlier value, dominated since by ${factKey(rec.rel, rec.persp, this.subArgs(ck, by))}` : 'an earlier value, dominated since';
     }
     next.push(line(`${pad}${key} [subsumption: ${n} member${n === 1 ? '' : 's'}; ${place}]`));
-    const limit = indent === 0 ? o.members : 1;
-    for (let i = 0; i < members.length; i++) {
-      if (i >= limit) { if (indent === 0) next.push(line(`${pad}  [${n - limit} more members: why all ${o.query}]`)); break; }
-      const [hgt, rule, tick, prems] = members[i];
-      next.push(line(`${pad}  #${i + 1} h=${hgt} <= ${rule} @tick ${tick}`));
-      for (const pr of prems) next.push({ t: 'prem', pr, indent: indent + 2 });
-    }
+    this.renderMembers(members, indent, o, next);
     if (indent === 0 && live) {
       const beat: [string, string][] = [];
       for (const v of this.subByOf.get(id) ?? []) {
@@ -7586,7 +7579,7 @@ export function declText(c: Clause): string {
 
 /** `'@next' is not allowed in rule bodies`, for the outer body and an aggregate's alike. */
 export function checkNextInBody(c: Clause): string | null {
-  return c.body.flatMap(litsDeep).some((l) => l.temporal === 'next') ? `rule ${canonClause(c)}: '@next' is not allowed in rule bodies` : null;
+  return c.body.flatMap(litsOf).some((l) => l.temporal === 'next') ? `rule ${canonClause(c)}: '@next' is not allowed in rule bodies` : null;
 }
 
 /** What would bind `v` in a later element. */
@@ -7786,8 +7779,8 @@ export function checkDominance(c: Clause, arityOf: (rel: string) => number | und
   }
   const body = canonClauseSetsBody(c.body);
   if (body.some((b) => b.t === 'agg')) return `${what}: a dominance body folds no aggregate; conclude the count or the min in a rule of its own and read it`;
-  if (body.flatMap(litsDeep).some((l) => l.temporal !== 'now')) return `${what}: a dominance body reads facts that hold now; '@next' and '@init' are not read there`;
-  if (body.flatMap(litsDeep).some((l) => l.rel === rel)) return `${what}: its body reads ${rel} itself; which of two facts dominates is decided before either is kept, from the two facts and what lies below`;
+  if (body.flatMap(litsOf).some((l) => l.temporal !== 'now')) return `${what}: a dominance body reads facts that hold now; '@next' and '@init' are not read there`;
+  if (body.flatMap(litsOf).some((l) => l.rel === rel)) return `${what}: its body reads ${rel} itself; which of two facts dominates is decided before either is kept, from the two facts and what lies below`;
   const sp = checkSetPatternsDoor({ head: lo, body });
   if (sp !== null) return sp;
   const { order, stuck } = planOrder([], body, seen, []);
@@ -7815,7 +7808,7 @@ export function checkDominance(c: Clause, arityOf: (rel: string) => number | und
   }
   if (free === null && stuck !== null) {
     const vs = new Set<string>();
-    for (const l of litsDeep(body[stuck])) for (const a of l.args) varsOf(a, vs);
+    for (const l of litsOf(body[stuck])) for (const a of l.args) varsOf(a, vs);
     free = [...vs].filter((x) => !x.startsWith('_$'));
   }
   if (free !== null) {

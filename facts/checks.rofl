@@ -2789,3 +2789,8 @@ check_file("jodit_fixture", "examples/jodit/backends.rofl").
 check_file("jodit_fixture", "examples/jodit/contract.rofl").
 check_file("jodit_fixture", "examples/jodit/specifics.rofl").
 check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
+
+-- sealed(witness): the set of facts is the contract and any support will do; the Rust engine keeps no witness,
+-- orders and activates its own way and walks the closure, and both engines conclude the same rows, derived_by included
+check_world("sealed_witness").
+check_file("sealed_witness", "examples/checks/sealed-witness.rofl").
