@@ -17,7 +17,7 @@ use super::*;
 impl Eval {
     /// Is a firing of `rel` noted and not written? Not where a rule reads its rows.
     pub(super) fn defers(&self, rel: Sym) -> bool {
-        self.lazy_prov && !self.prov_eager.contains(&rel)
+        brk!("prov_reader_deferred" => self.lazy_prov; self.lazy_prov && !self.prov_eager.contains(&rel))
     }
 
     /// The relations the `derived_by` premises of `rules` name, `$fact(Rel, ..)`
@@ -31,7 +31,7 @@ impl Eval {
                 if l.rel != self.v.derived_by {
                     continue;
                 }
-                let TermK::Func(i) = l.args.first()?.kind() else { return None };
+                let TermK::Func(i) = l.args.first()?.kind() else { return brk!("prov_variable_reader_lazy" => Some(HashSet::new()); None) };
                 if self.h.fname(i) != self.v.s_fact {
                     return None;
                 }
@@ -62,7 +62,7 @@ impl Eval {
         notes.sort_unstable();
         notes.dedup();
         for (id, rule, tick) in notes {
-            if !self.store.alive(id) || !self.store.fired_by(id, rule) {
+            if brk!("prov_settle_keeps_dead" => false; !self.store.alive(id) || !self.store.fired_by(id, rule)) {
                 continue;
             }
             let rec = self.store.rec(id);
@@ -88,7 +88,7 @@ impl Eval {
     /// rows of the firings noted and not yet written among them, so the state of
     /// a lazy world is the state of the eager one.
     pub fn canonical_state(&mut self) -> String {
-        self.settle_provenance();
+        brk!("prov_state_unsettled" => (); self.settle_provenance());
         self.store.canonical_state(&self.h)
     }
 

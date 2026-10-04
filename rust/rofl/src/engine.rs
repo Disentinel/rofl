@@ -3513,7 +3513,7 @@ impl Eval {
                 partial: true,
             });
         }
-        self.settle_provenance();
+        brk!("prov_tick_unsettled" => (); self.settle_provenance());
         let staged = self.staged_sorted();
         // a tuple staged for certain is no unknown of the next tick, whatever else reached it
         let certain: HashSet<(Sym, Sym, &[Term])> = staged.iter().map(|(_, f)| (f.rel, f.persp, &f.args[..])).collect();

@@ -3040,13 +3040,27 @@ check_file("ast_within_readers", "examples/checks/ast-within-readers-check.rofl"
 -- the one that reads derived_by of a single relation sees its rows while the others stay unwritten.
 check_world("prov_lazy").
 check_file("prov_lazy", "examples/checks/prov-lazy.rofl").
+check_file("prov_lazy", "examples/checks/prov-lazy-ticks-check.rofl").
 check_opt("prov_lazy", together, 1).
 check_opt("prov_lazy", ticks, 2).
 check_opt("prov_lazy", explain, 1).
-check_opt("prov_lazy", retain, 0).
+
+-- the same ticks with retain_ticks 0: the rows nothing live cites are dropped, of the rows the boundary wrote
+check_world("prov_lazy_retain").
+check_file("prov_lazy_retain", "examples/checks/prov-lazy.rofl").
+check_opt("prov_lazy_retain", together, 1).
+check_opt("prov_lazy_retain", ticks, 2).
+check_opt("prov_lazy_retain", explain, 1).
+check_opt("prov_lazy_retain", retain, 0).
+
+-- a cell that improves: the row of its superseded value is not in the state
+check_world("prov_lazy_lattice").
+check_file("prov_lazy_lattice", "examples/checks/prov-lazy-lattice.rofl").
+check_opt("prov_lazy_lattice", together, 1).
+check_opt("prov_lazy_lattice", explain, 1).
 
 check_world("prov_lazy_retract").
-check_file("prov_lazy_retract", "examples/checks/prov-lazy.rofl").
+check_file("prov_lazy_retract", "examples/checks/prov-lazy-retract.rofl").
 check_opt("prov_lazy_retract", together, 1).
 check_opt("prov_lazy_retract", explain, 1).
 check_opt("prov_lazy_retract", retract, "pl_edge(x, d)").

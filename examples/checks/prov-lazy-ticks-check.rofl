@@ -1,0 +1,3 @@
+-- examples/checks/prov-lazy-ticks-check.rofl — THE ROWS OF THE TICK THAT ENDED ARE FROZEN, NOT LOST.
+-- The firings of tick 0 were noted and not written when the boundary came: it writes them first.
+-- expect-row: derived_by[$kernel]($fact(pl_hit,main,$cons(a,$nil)),r8b12b0f6,0)
