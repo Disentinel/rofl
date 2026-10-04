@@ -8,6 +8,8 @@ edb(brk_expects).
 edb(switch_site).
 edb(proof_world).
 
+brk("delta_first_off"). brk_kind("delta_first_off", switch).
+brk_expects("delta_first_off", "agg_join_delta_first").
 brk("mono"). brk_kind("mono", switch).
 brk_expects("mono", "agg_cell_eval").
 brk_expects("mono", "agg_life_demo").
@@ -1633,6 +1635,7 @@ switch_site("counting_recursion_admitted", "rust/rofl/src/engine.rs").
 switch_site("cut_carry_unrenewed", "rust/rofl/src/engine.rs").
 switch_site("cut_fallback_off", "rust/rofl/src/engine.rs").
 switch_site("decl_row_skipped", "rust/rofl/src/engine.rs").
+switch_site("delta_first_off", "rust/rofl/src/engine/joinplan.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").

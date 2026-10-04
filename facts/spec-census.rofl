@@ -409,6 +409,7 @@ check[checks]("facts/goldens.rofl", "agg_incr_widen", world).
 check[checks]("facts/goldens.rofl", "agg_int_range", world).
 check[checks]("facts/goldens.rofl", "agg_interval_demo", world).
 check[checks]("facts/goldens.rofl", "agg_join_budget", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first", world).
 check[checks]("facts/goldens.rofl", "agg_join_eval", world).
 check[checks]("facts/goldens.rofl", "agg_join_holes", world).
 check[checks]("facts/goldens.rofl", "agg_join_phrase", world).

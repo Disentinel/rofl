@@ -21,6 +21,7 @@ use crate::term::*;
 
 mod datastrat;
 mod delta;
+mod joinplan;
 pub use delta::Delta;
 
 const MAX_DEPTH: usize = 512;
@@ -573,6 +574,15 @@ pub struct Eval {
     pub fires_by_rule: HashMap<Sym, u64>,
     pub sols_by_rule: HashMap<Sym, u64>,
     pub new_by_rule: HashMap<Sym, u64>,
+    /// Firings solved delta-first.
+    pub delta_by_rule: HashMap<Sym, u64>,
+    /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
+    /// the premise statistics their estimates read. `ROFL_NO_DELTA_FIRST` keeps
+    /// every firing in written order.
+    delta_first: bool,
+    pub delta_ns: u64,
+    delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
+    delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
     pub rounds: Vec<(u64, u64)>,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
@@ -1089,6 +1099,11 @@ impl Eval {
             fires_by_rule: HashMap::new(),
             sols_by_rule: HashMap::new(),
             new_by_rule: HashMap::new(),
+            delta_by_rule: HashMap::new(),
+            delta_ns: 0,
+            delta_first: std::env::var_os("ROFL_NO_DELTA_FIRST").is_none(),
+            delta_plans: HashMap::new(),
+            delta_stats: HashMap::new(),
             rounds: Vec::new(),
             closures: Vec::new(),
             closure_of: HashMap::new(),
@@ -3676,6 +3691,11 @@ impl Eval {
                     let Some(keys) = cur.by_rel.get(&l.rel) else {
                         continue;
                     };
+                    if let Some(p) = self.delta_pick(r, Some(i), keys.len()) {
+                        let f = self.fire_planned(r, &p, Some(keys))?;
+                        merge_front(&mut self.cur_front, f);
+                        continue;
+                    }
                     let f = self.fire_rule(r, Some((i, keys)))?;
                     merge_front(&mut self.cur_front, f);
                 }
@@ -3701,6 +3721,11 @@ impl Eval {
         if self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
+            }
+        }
+        if front_at.is_none() {
+            if let Some(p) = self.delta_pick(r, None, 1) {
+                return self.fire_planned(r, &p, None);
             }
         }
         self.fire_rule_from(r, Subst::new(), front_at)

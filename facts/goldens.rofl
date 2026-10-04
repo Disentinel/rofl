@@ -6,7 +6,7 @@
 -- this replaced regenerated its expectation before every run, so no change
 -- to any `.rofl` could turn it red.
 --
--- 471 worlds.
+-- 472 worlds.
 
 edb(golden_state).
 edb(golden_rel).
@@ -153,7 +153,7 @@ golden_state("rules_untyped", "77d8afc2d0d3dc59", 1026).
 golden_state("rules_worklist", "063b763cc78a4d28", 4431).
 golden_state("rules_worlds", "9495e844d452a2d4", 1360).
 golden_state("boot_only", "08c636272befdd6a", 655).
-golden_state("agg_breaks_census", "14ef0f353b0c29e7", 9108).
+golden_state("agg_breaks_census", "97d15d7cdc8dd37b", 9122).
 golden_state("agg_carry_budget", "146bff50e5ec434b", 758).
 golden_state("agg_carry_plain_budget", "142e5f7d7f15a5ec", 760).
 golden_state("agg_carry_plain_budget_ts", "ebf5c04e24627670", 760).
@@ -269,6 +269,7 @@ golden_state("agg_incr_widen", "c5939d8e81c2b9a2", 705).
 golden_state("agg_int_range", "1bd4414e1744c329", 1155).
 golden_state("agg_interval_demo", "6872bcea0420d5fc", 1813).
 golden_state("agg_join_budget", "fc78638d2fd8d665", 778).
+golden_state("agg_join_delta_first", "75e01fc941180eac", 1137).
 golden_state("agg_join_eval", "31575e95dc136236", 2897).
 golden_state("agg_join_holes", "83fb4908be3e4ece", 1245).
 golden_state("agg_join_phrase", "c0fc3afe405800e4", 1505).
@@ -329,7 +330,7 @@ golden_state("agg_narrow_why", "666ebb041633b78d", 1572).
 golden_state("agg_precise_holes", "47867c022ce3b03f", 2639).
 golden_state("agg_precise_oracle", "f60e68a793fbf6d3", 319089).
 golden_state("agg_precise_scale", "d3c9da91911392cd", 3163).
-golden_state("agg_proofs", "e6902850dcfb5638", 30634).
+golden_state("agg_proofs", "475b1b2566e2f202", 30648).
 golden_state("agg_prose", "312716302211905f", 1145).
 golden_state("agg_quorum_demo", "ca068bc460fa87f6", 3425).
 golden_state("agg_rank_tuple_eval", "47748addceae1887", 1741).
@@ -469,7 +470,7 @@ golden_state("refused", "f2c1c18622fa5f64", 655).
 golden_state("sealed_provenance", "b4aec9e6a0205fe8", 673).
 golden_state("sensors_t3", "5c33dda780f48c01", 1009).
 golden_state("set_spelling", "705ae1ae92d47303", 799).
-golden_state("spec_coverage", "06ae50f66637799f", 4275).
+golden_state("spec_coverage", "25c6869e0500be0d", 4277).
 golden_state("staged_neg_why", "b0d7758dd8df9163", 990).
 golden_state("staged_neg_why_agg", "cb849d76e15f2b20", 1014).
 golden_state("staged_neg_why_nocarry", "8eb5805a8ea463f9", 1014).
@@ -6959,26 +6960,26 @@ golden_rel("boot_only", "stratum[main]", 10).
 golden_rel("boot_only", "uses_builtin[$kernel]", 3).
 golden_rel("boot_only", "writes_to[$kernel]", 32).
 golden_rel("agg_breaks_census", "@other", 1).
-golden_rel("agg_breaks_census", "@wit", 1399).
+golden_rel("agg_breaks_census", "@wit", 1402).
 golden_rel("agg_breaks_census", "alarm[main]", 5).
-golden_rel("agg_breaks_census", "asserted_by[$kernel]", 2862).
+golden_rel("agg_breaks_census", "asserted_by[$kernel]", 2866).
 golden_rel("agg_breaks_census", "authority[main]", 5).
 golden_rel("agg_breaks_census", "boot_rank[main]", 10).
-golden_rel("agg_breaks_census", "brk[main]", 616).
-golden_rel("agg_breaks_census", "brk_expects[main]", 958).
-golden_rel("agg_breaks_census", "brk_kind[main]", 616).
-golden_rel("agg_breaks_census", "broken[main]", 290).
+golden_rel("agg_breaks_census", "brk[main]", 617).
+golden_rel("agg_breaks_census", "brk_expects[main]", 959).
+golden_rel("agg_breaks_census", "brk_kind[main]", 617).
+golden_rel("agg_breaks_census", "broken[main]", 291).
 golden_rel("agg_breaks_census", "concludes[$kernel]", 40).
 golden_rel("agg_breaks_census", "conclusion_lit[$kernel]", 40).
 golden_rel("agg_breaks_census", "conclusion_tense[$kernel]", 40).
-golden_rel("agg_breaks_census", "derived_by[$kernel]", 1406).
+golden_rel("agg_breaks_census", "derived_by[$kernel]", 1409).
 golden_rel("agg_breaks_census", "edb[main]", 44).
-golden_rel("agg_breaks_census", "expects[main]", 616).
+golden_rel("agg_breaks_census", "expects[main]", 617).
 golden_rel("agg_breaks_census", "flow[main]", 4).
 golden_rel("agg_breaks_census", "flows_to[main]", 4).
 golden_rel("agg_breaks_census", "has_conclusion[$kernel]", 40).
 golden_rel("agg_breaks_census", "has_premise[$kernel]", 68).
-golden_rel("agg_breaks_census", "has_site[main]", 414).
+golden_rel("agg_breaks_census", "has_site[main]", 415).
 golden_rel("agg_breaks_census", "imports[main]", 3).
 golden_rel("agg_breaks_census", "mode[main]", 16).
 golden_rel("agg_breaks_census", "negated_under[main]", 12).
@@ -6993,7 +6994,7 @@ golden_rel("agg_breaks_census", "rule[$kernel]", 40).
 golden_rel("agg_breaks_census", "rule_known[main]", 40).
 golden_rel("agg_breaks_census", "sees[main]", 6).
 golden_rel("agg_breaks_census", "stratum[main]", 10).
-golden_rel("agg_breaks_census", "switch_site[main]", 416).
+golden_rel("agg_breaks_census", "switch_site[main]", 417).
 golden_rel("agg_breaks_census", "uses_builtin[$kernel]", 4).
 golden_rel("agg_breaks_census", "writes_to[$kernel]", 40).
 golden_rel("agg_carry_budget", "@cell", 1).
@@ -12638,6 +12639,41 @@ golden_rel("agg_join_budget", "sees[main]", 6).
 golden_rel("agg_join_budget", "shrug[$kernel]", 2).
 golden_rel("agg_join_budget", "uses_builtin[$kernel]", 5).
 golden_rel("agg_join_budget", "writes_to[$kernel]", 36).
+golden_rel("agg_join_delta_first", "@other", 1).
+golden_rel("agg_join_delta_first", "@wit", 75).
+golden_rel("agg_join_delta_first", "alarm[main]", 2).
+golden_rel("agg_join_delta_first", "asserted_by[$kernel]", 228).
+golden_rel("agg_join_delta_first", "authority[main]", 5).
+golden_rel("agg_join_delta_first", "boot_rank[main]", 10).
+golden_rel("agg_join_delta_first", "concludes[$kernel]", 35).
+golden_rel("agg_join_delta_first", "conclusion_lit[$kernel]", 35).
+golden_rel("agg_join_delta_first", "conclusion_tense[$kernel]", 35).
+golden_rel("agg_join_delta_first", "derived_by[$kernel]", 82).
+golden_rel("agg_join_delta_first", "edb[main]", 43).
+golden_rel("agg_join_delta_first", "flow[main]", 4).
+golden_rel("agg_join_delta_first", "flows_to[main]", 4).
+golden_rel("agg_join_delta_first", "h[main]", 100).
+golden_rel("agg_join_delta_first", "has_conclusion[$kernel]", 35).
+golden_rel("agg_join_delta_first", "has_premise[$kernel]", 61).
+golden_rel("agg_join_delta_first", "hit[main]", 3).
+golden_rel("agg_join_delta_first", "imports[main]", 3).
+golden_rel("agg_join_delta_first", "jd_want[main]", 3).
+golden_rel("agg_join_delta_first", "l[main]", 100).
+golden_rel("agg_join_delta_first", "mode[main]", 16).
+golden_rel("agg_join_delta_first", "negated_under[main]", 10).
+golden_rel("agg_join_delta_first", "perspective[main]", 3).
+golden_rel("agg_join_delta_first", "premise_lit[$kernel]", 61).
+golden_rel("agg_join_delta_first", "premise_neg[$kernel]", 13).
+golden_rel("agg_join_delta_first", "premise_pos[$kernel]", 45).
+golden_rel("agg_join_delta_first", "reads_from[$kernel]", 40).
+golden_rel("agg_join_delta_first", "reserved[main]", 34).
+golden_rel("agg_join_delta_first", "rule[$kernel]", 35).
+golden_rel("agg_join_delta_first", "rule_known[main]", 35).
+golden_rel("agg_join_delta_first", "sees[main]", 6).
+golden_rel("agg_join_delta_first", "stratum[main]", 10).
+golden_rel("agg_join_delta_first", "trig[main]", 3).
+golden_rel("agg_join_delta_first", "uses_builtin[$kernel]", 3).
+golden_rel("agg_join_delta_first", "writes_to[$kernel]", 35).
 golden_rel("agg_join_eval", "@cell", 2).
 golden_rel("agg_join_eval", "@mem", 6).
 golden_rel("agg_join_eval", "@other", 200).
@@ -16269,7 +16305,7 @@ golden_rel("agg_precise_scale", "stratum[main]", 10).
 golden_rel("agg_precise_scale", "uses_builtin[$kernel]", 7).
 golden_rel("agg_precise_scale", "writes_to[$kernel]", 37).
 golden_rel("agg_proofs", "@other", 1).
-golden_rel("agg_proofs", "@wit", 3487).
+golden_rel("agg_proofs", "@wit", 3488).
 golden_rel("agg_proofs", "addressed_by[main]", 1562).
 golden_rel("agg_proofs", "agg_check_file[main]", 293).
 golden_rel("agg_proofs", "agg_kind[main]", 14).
@@ -16281,16 +16317,16 @@ golden_rel("agg_proofs", "algebra_known[main]", 9).
 golden_rel("agg_proofs", "algebra_note[main]", 9).
 golden_rel("agg_proofs", "algebra_permits_recursion[main]", 6).
 golden_rel("agg_proofs", "artifact_removed[main]", 259).
-golden_rel("agg_proofs", "asserted_by[$kernel]", 10843).
+golden_rel("agg_proofs", "asserted_by[$kernel]", 10849).
 golden_rel("agg_proofs", "authority[main]", 5).
 golden_rel("agg_proofs", "blocker_kind[main]", 2).
 golden_rel("agg_proofs", "blocks[main]", 10).
 golden_rel("agg_proofs", "boot_rank[main]", 10).
 golden_rel("agg_proofs", "cell[audit]", 476).
-golden_rel("agg_proofs", "check_file[main]", 1004).
-golden_rel("agg_proofs", "check_opt[main]", 512).
+golden_rel("agg_proofs", "check_file[main]", 1006).
+golden_rel("agg_proofs", "check_opt[main]", 515).
 golden_rel("agg_proofs", "check_refuses[main]", 7).
-golden_rel("agg_proofs", "check_world[main]", 330).
+golden_rel("agg_proofs", "check_world[main]", 331).
 golden_rel("agg_proofs", "claim[main]", 445).
 golden_rel("agg_proofs", "claim_kind[main]", 4).
 golden_rel("agg_proofs", "claimed[main]", 140).
@@ -16301,7 +16337,7 @@ golden_rel("agg_proofs", "conclusion_tense[$kernel]", 163).
 golden_rel("agg_proofs", "contradiction_site[main]", 24).
 golden_rel("agg_proofs", "demands[main]", 1172).
 golden_rel("agg_proofs", "demo_unhashable[main]", 2).
-golden_rel("agg_proofs", "derived_by[$kernel]", 3525).
+golden_rel("agg_proofs", "derived_by[$kernel]", 3526).
 golden_rel("agg_proofs", "dismissed[main]", 52).
 golden_rel("agg_proofs", "edb[main]", 104).
 golden_rel("agg_proofs", "finding[main]", 1364).
@@ -16313,7 +16349,7 @@ golden_rel("agg_proofs", "guards[main]", 16).
 golden_rel("agg_proofs", "handled[main]", 289).
 golden_rel("agg_proofs", "has_algebra[main]", 14).
 golden_rel("agg_proofs", "has_conclusion[$kernel]", 163).
-golden_rel("agg_proofs", "has_file[main]", 330).
+golden_rel("agg_proofs", "has_file[main]", 331).
 golden_rel("agg_proofs", "has_premise[$kernel]", 325).
 golden_rel("agg_proofs", "has_work_proof[main]", 18).
 golden_rel("agg_proofs", "ignored[main]", 16).
@@ -24182,10 +24218,10 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 17).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 1035).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 1036).
 golden_rel("spec_coverage", "authority[main]", 35).
 golden_rel("spec_coverage", "boot_rank[main]", 10).
-golden_rel("spec_coverage", "check[checks]", 624).
+golden_rel("spec_coverage", "check[checks]", 625).
 golden_rel("spec_coverage", "check_stands[coverage]", 16).
 golden_rel("spec_coverage", "citation_ok[checks]", 136).
 golden_rel("spec_coverage", "cited_check[map]", 16).

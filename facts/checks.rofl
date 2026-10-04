@@ -2868,6 +2868,16 @@ check_opt("minimax", one_engine, rust).
 check_opt("linter", one_engine, rust).
 check_opt("agg_linter_demo", one_engine, rust).
 check_opt("notebook_spat", one_engine, rust).
+-- A JOIN ONLY A DELTA-FIRST PLAN FITS (w_cmp_delta_first, engine/joinplan.rs). hit(Y, Z) :- h(X, Z), l(X, Y), trig(Y, Z)
+-- over 100 + 100 + 3 rows: written order holds h joined to l, 10 000 rows, in a space of 250; the plan that starts from
+-- the news and takes trig second holds a handful. The TypeScript engine solves in written order and hits the wall, so
+-- the world is Rust's alone.
+check_world("agg_join_delta_first").
+check_file("agg_join_delta_first", "examples/checks/join-delta-first.rofl").
+check_file("agg_join_delta_first", "examples/checks/join-delta-first-check.rofl").
+check_opt("agg_join_delta_first", together, 1).
+check_opt("agg_join_delta_first", space, 250).
+check_opt("agg_join_delta_first", one_engine, rust).
 -- sealed(provenance), the one knob: the set of facts is the contract; the Rust engine keeps no derived_by and no
 -- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
 check_world("sealed_provenance").

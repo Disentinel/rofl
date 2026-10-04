@@ -56,6 +56,13 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 type Break = { id: string; what: string; edits?: [string, string, string][]; expect: Record<string, string> };
 export const BREAKS: Break[] = [
  {
+  "id": "delta_first_off",
+  "what": "a firing is solved in written order, never from its news: the join before the news premise is held in full",
+  "expect": {
+   "agg_join_delta_first": "the state holds the row hole"
+  }
+ },
+ {
   "id": "mono",
   "what": "aggregate rules run as monotone rules, in phase A, before what they read is closed",
   "expect": {

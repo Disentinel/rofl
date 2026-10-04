@@ -276,8 +276,8 @@ fn main() {
             let n = |m: &std::collections::HashMap<rofl::term::Sym, u64>, id| m.get(&id).copied().unwrap_or(0);
             for r in l.eval.rules.iter() {
                 let id = r.id;
-                eprintln!("prof\t{}\t{}\t{:.3}\t{}\t{}\t{}\t{}", l.eval.h.name(id), l.eval.h.name(r.clause.head.rel), n(&l.eval.ns_by_rule, id) as f64 / 1e6,
-                    n(&l.eval.argm_by_rule, id), n(&l.eval.sols_by_rule, id), n(&l.eval.new_by_rule, id), n(&l.eval.fires_by_rule, id));
+                eprintln!("prof\t{}\t{}\t{:.3}\t{}\t{}\t{}\t{}\t{}", l.eval.h.name(id), l.eval.h.name(r.clause.head.rel), n(&l.eval.ns_by_rule, id) as f64 / 1e6,
+                    n(&l.eval.argm_by_rule, id), n(&l.eval.sols_by_rule, id), n(&l.eval.new_by_rule, id), n(&l.eval.fires_by_rule, id), n(&l.eval.delta_by_rule, id));
             }
         }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
@@ -288,6 +288,7 @@ fn main() {
         eprintln!("closure_rows\t{}", l.eval.closure_rows);
         eprintln!("closure_runs\t{}", l.eval.closure_runs);
         eprintln!("rounds\t{}", l.eval.rounds.len());
+        eprintln!("joinplan_stats_ms\t{:.1}", l.eval.delta_ns as f64 / 1e6);
         eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
         eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);
         eprintln!("parallel_bound_2_ms\t{:.1}", bound(2));
