@@ -10256,6 +10256,13 @@ finding_note(f_no_provenance_flag_is_not_the_seal,
 finding(f_a_first_character_is_cut_inside_a_surrogate_pair, defect).
 recorded(f_a_first_character_is_cut_inside_a_surrogate_pair, "2026-10-04").
 demands(f_a_first_character_is_cut_inside_a_surrogate_pair, code).
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "playground/host.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "scripts/witness_check.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "scripts/js_lab/stats.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "scripts/js_lab/magic.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "scripts/js_lab/sccexp.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "scripts/js_lab/optloop.ts").
+addressed_by(f_a_first_character_is_cut_inside_a_surrogate_pair, "examples/checks/str-first-code-point.rofl").
 finding_note(f_a_first_character_is_cut_inside_a_surrogate_pair,
   "Found by w_cmp_remeasure_after_engine_fast: playground/host.ts writes str_char0 as `s[0]`, one UTF-16 code unit, so a string that opens with an astral character (cli_exits: \"📊 Project Overview\") yields a lone surrogate `\\ud83d`, and the Rust seed reader refuses the whole world (`unexpected end of hex escape`). The same `s[0]` pattern is in scripts/witness_check.ts and the scripts/js_lab copies. Fix: the first code point (`[...s][0]` or codePointAt), and a corpus string with an emoji in a check world.").
 finding(f_boot_carries_the_canon_of_its_own_stratification, decision).

@@ -2891,3 +2891,7 @@ check_world("strata_boot_canon").
 check_file("strata_boot_canon", "rules/strata.rofl").
 check_file("strata_boot_canon", "examples/checks/strata-boot-canon-check.rofl").
 check_opt("strata_boot_canon", together, 1).
+
+-- the first character of a string is its first code point, never a lone surrogate (f_a_first_character_is_cut_inside_a_surrogate_pair)
+check_world("str_first_code_point").
+check_file("str_first_code_point", "examples/checks/str-first-code-point.rofl").

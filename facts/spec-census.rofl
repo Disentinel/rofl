@@ -614,6 +614,7 @@ check[checks]("facts/goldens.rofl", "staged_neg_why", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_agg", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_nocarry", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_plain", world).
+check[checks]("facts/goldens.rofl", "str_first_code_point", world).
 check[checks]("facts/goldens.rofl", "strata_boot_alone", world).
 check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
