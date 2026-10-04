@@ -796,6 +796,7 @@ impl Session {
 
         let lit = self.one_lit(query)?;
         let mut shrugs: Vec<(Vec<String>, String)> = Vec::new();
+        let mut order: Vec<String> = Vec::new();
         for (f, s) in self.eval.shrugs_of(&lit) {
             let row: Vec<String> = vars
                 .iter()
@@ -806,10 +807,29 @@ impl Session {
                 })
                 .collect();
             let line = self.eval.shrug_line(f);
-            if !shrugs.iter().any(|x| x.0 == row && x.1 == line) {
-                shrugs.push((row, line));
+            {
+                // one per reading and reason, the least line where several say it, ordered as the bindings read,
+                // then by the reason (`query`, src/api.ts)
+                let reason = self.eval.store.args(f)[1];
+                let mut key = if vars.is_empty() { "true".to_string() } else { vars.iter().zip(&row).map(|(v, x)| format!("{v} = {x}")).collect::<Vec<_>>().join(", ") };
+                key.push('\u{0}');
+                match reason.kind() {
+                    TermK::Atom(s) => key.push_str(self.eval.h.name(s)),
+                    _ => self.eval.h.canon_term(reason, &mut key),
+                }
+                match order.iter().position(|k| *k == key) {
+                    Some(i) if crate::term::cmp_js(&line, &shrugs[i].1).is_lt() => shrugs[i] = (row, line),
+                    Some(_) => {}
+                    None => {
+                        order.push(key);
+                        shrugs.push((row, line));
+                    }
+                }
             }
         }
+        let mut by: Vec<usize> = (0..shrugs.len()).collect();
+        by.sort_by(|a, b| crate::term::cmp_js(&order[*a], &order[*b]));
+        let mut shrugs: Vec<(Vec<String>, String)> = by.into_iter().map(|i| std::mem::take(&mut shrugs[i])).collect();
         // A WALL CUT THE WORLD: every answer that does not hold is no answer
         if self.eval.store.partial_eval {
             let budget = self.eval.h.atom("budget");

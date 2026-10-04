@@ -22,6 +22,7 @@ export interface Poss {
   sproj: Term[];
   sure: boolean;
   neg: boolean;
+  u: { k: string; args?: Term[] };
 }
 
 export type Regions = { k: 'no' } | { k: 'decided'; v: Term; by: string } | { k: 'cond'; t: Term } | { k: 'capped'; n: number };
@@ -60,6 +61,36 @@ export function sureArgs(args: Term[]): boolean {
     any = true;
   }
   return any;
+}
+
+/** The labeled unknowns the tuple a possible came from holds, wherever they are: the tuple is there only where each is
+ *  none of the values it is known not to be (`tuple_unks`, Rust). */
+function tupleUnks(p: Poss): Term[] {
+  const out: Term[] = [];
+  const go = (t: Term): void => {
+    if (unkParts(t) !== null) out.push(t);
+    else if (t.k === 'f' && byParts(t) === null) t.args.forEach(go);
+  };
+  if (p.u.k === 'tuple') (p.u.args ?? []).forEach(go);
+  return out;
+}
+
+/** The values a member's projection has where a possible's is a labeled unknown, of each member it could be (a known
+ *  one, or another possible): the label may be that value, and the two one member there (`proj_consts`, Rust). */
+function projConsts(p: Poss, members: Term[][], consts: Map<string, Term>): void {
+  for (const m of members) {
+    if (m.length !== p.sproj.length) continue;
+    const at: Term[] = [];
+    const fits = p.sproj.every((t, j) => {
+      const x = m[j];
+      if (holdsUnknown(x)) return true;
+      const u = unkParts(t);
+      if (u !== null) { at.push(x); return !u.ex.some((e) => canonTerm(e) === canonTerm(x)); }
+      if (byParts(t) !== null) return true;
+      return canonTerm(t) === canonTerm(x);
+    });
+    if (fits) for (const x of at) consts.set(key(x), x);
+  }
 }
 
 const regionOk = (p: Poss): boolean =>
@@ -176,6 +207,8 @@ function regionValue(op: string, labels: Term[], rg: Rv[], gkey: Term[], projs: 
       const x = inst(l.t, labels, rg);
       if (x === undefined || x === null || canonTerm(x) !== canonTerm(gkey[i])) continue outer;
     }
+    // a labeled unknown anywhere in the tuple: it is not there where the label is a value it is known not to be
+    for (const u of tupleUnks(p)) if (inst(u, labels, rg) === null) continue outer;
     const pr: Term[] = [];
     for (const t of p.sproj) {
       const x = inst(t, labels, rg);
@@ -216,13 +249,17 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
   const labelsAt = new Map<string, Term>();
   const constAt = new Map<string, Term>();
   for (const c of gkey) constAt.set(key(c), c);
+  const others = mine.map((p) => p.sproj);
   for (const p of mine) {
     const occs = [...p.lab.flatMap((l) => (l === null ? [] : [l.t])), ...p.sproj];
     for (const t of occs) namesIn(t, labelsAt, constAt);
+    projConsts(p, projs, constAt);
+    projConsts(p, others, constAt);
   }
+  if (labelsAt.size === 0) return no;
+  for (const p of mine) for (const t of tupleUnks(p)) namesIn(t, labelsAt, constAt);
   const labels = [...labelsAt.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, t]) => t);
   const consts = [...constAt.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, t]) => t);
-  if (labels.length === 0) return no;
   const n = countRegions(labels.length, consts.length);
   if (n > LABEL_REGIONS) return { k: 'capped', n };
   const regs = regionList(labels.length, consts);
@@ -255,6 +292,8 @@ export function newGroupValue(op: string, params: number, ps: Poss[], pat: (Term
     const ou = unkParts(occ.t);
     if (ou === null) return null;
     if (p.pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001') !== patKey || !p.sure || p.neg) return null;
+    // a condition on the tuple elsewhere than the group it makes
+    if (tupleUnks(p).some((x) => canonTerm(x) !== canonTerm(occ.t) && unkParts(x)!.ex.length > 0)) return null;
     if (p.proj === null) return null;
     let into: Term[][];
     if (canonTerm(ou.label) === canonTerm(own.label)) into = ownProjs;

@@ -5153,7 +5153,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s);",
+    "const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s, at);",
     "const sure = true;"
    ]
   ],
@@ -6343,6 +6343,111 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "why_base": "wb_missing"
+  }
+ },
+ {
+  "id": "label_known_apart",
+  "what": "a labeled member is told apart from every known member: where the label is a known member's value the two are counted twice",
+  "expect": {
+   "agg_label_sound": "ls_w2c[main]"
+  }
+ },
+ {
+  "id": "label_join_certain",
+  "what": "a join on a labeled value is read as certain: whatever fact it meets, the solution exists in every completion",
+  "expect": {
+   "agg_label_sound": "ls_jc[main]"
+  }
+ },
+ {
+  "id": "label_join_ex_ignored",
+  "what": "a labeled value meets an occurrence of its label with more exclusions as if it were the same, and the solution is sure",
+  "expect": {
+   "agg_label_sound": "ls_yc[main]"
+  }
+ },
+ {
+  "id": "label_ex_elsewhere_ignored",
+  "what": "a label's exclusion is read only where it is the group or the projection: a tuple that is not there where the label is excluded counts",
+  "expect": {
+   "agg_label_sound": "ls_minsv[main]"
+  }
+ },
+ {
+  "id": "label_fault_anywhere",
+  "what": "a fault anywhere in a body whose last element is an `is` leaves a tuple that exists in every completion",
+  "expect": {
+   "agg_label_sound": "ls_ftot[main]"
+  }
+ },
+ {
+  "id": "ts_label_known_apart",
+  "what": "the TypeScript engine tells a labeled member apart from every known member",
+  "edits": [
+   [
+    "src/labeled.ts",
+    "    projConsts(p, projs, constAt);\n    projConsts(p, others, constAt);\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_label_sound": "ls_w2c[main]"
+  }
+ },
+ {
+  "id": "ts_label_join_certain",
+  "what": "the TypeScript engine reads a join on a labeled value as certain",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const joined = wild.length > 0;",
+    "const joined = false;"
+   ]
+  ],
+  "expect": {
+   "agg_label_sound": "ls_jc[main]"
+  }
+ },
+ {
+  "id": "ts_label_join_ex_ignored",
+  "what": "the TypeScript engine reads two occurrences of one label as the same whatever their exclusions",
+  "edits": [
+   [
+    "src/unify.ts",
+    " && pt.ex.every((e) => pa.ex.some((x) => canonTerm(x) === canonTerm(e)));",
+    ";"
+   ]
+  ],
+  "expect": {
+   "agg_label_sound": "ls_yc[main]"
+  }
+ },
+ {
+  "id": "ts_label_ex_elsewhere_ignored",
+  "what": "the TypeScript engine reads a label's exclusion only at the group and the projection",
+  "edits": [
+   [
+    "src/labeled.ts",
+    "for (const u of tupleUnks(p)) if (inst(u, labels, rg) === null) continue outer;",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_label_sound": "ls_minsv[main]"
+  }
+ },
+ {
+  "id": "ts_label_fault_anywhere",
+  "what": "the TypeScript engine reads a fault anywhere in a body ending in an `is` as the last thing it asks",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (last !== at || last === undefined",
+    "if (last === undefined"
+   ]
+  ],
+  "expect": {
+   "agg_label_sound": "ls_ftot[main]"
   }
  },
 ];

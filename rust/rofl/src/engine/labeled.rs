@@ -90,6 +90,58 @@ impl Eval {
         unify(&self.h, a.result, v, &s).unwrap_or(s)
     }
 
+    /// The labeled unknowns the tuple a possible came from holds, wherever they
+    /// are: the tuple is there only where each is none of the values it is
+    /// known not to be.
+    fn tuple_unks(&self, p: &Possible) -> Vec<Term> {
+        fn go(e: &Eval, t: Term, out: &mut Vec<Term>) {
+            if e.unk_parts(t).is_some() {
+                out.push(t);
+            } else if let TermK::Func(i) = t.kind() {
+                if e.by_parts(t).is_none() {
+                    for a in e.h.fargs(i).to_vec() {
+                        go(e, a, out);
+                    }
+                }
+            }
+        }
+        let mut out = Vec::new();
+        if let Unknown::Tuple(_, _, args) = &p.u {
+            for a in args.iter() {
+                go(self, *a, &mut out);
+            }
+        }
+        out
+    }
+
+    /// The values a member's projection has where a possible's is a labeled
+    /// unknown, of each member it could be (a known one, or another possible):
+    /// the label may be that value, and the two one member there.
+    fn proj_consts(&self, p: &Possible, members: &[&[Term]], consts: &mut Vec<Term>) {
+        for m in members {
+            if m.len() != p.sproj.len() {
+                continue;
+            }
+            let mut at: Vec<Term> = Vec::new();
+            let fits = p.sproj.iter().zip(m.iter()).all(|(t, x)| {
+                if self.holds_unknown(*x) {
+                    return true;
+                }
+                match (self.unk_parts(*t), self.by_parts(*t)) {
+                    (Some((_, ex, _)), _) => {
+                        at.push(*x);
+                        !ex.contains(x)
+                    }
+                    (_, Some(_)) => true,
+                    _ => t == x,
+                }
+            });
+            if fits {
+                consts.extend(at);
+            }
+        }
+    }
+
     /// Whether a possible can be told by regions: it exists in every
     /// completion, its group and its projection are known or labeled.
     fn region_ok(&self, p: &Possible) -> bool {
@@ -205,6 +257,14 @@ impl Eval {
                     (None, None) => return None,
                 }
             }
+            // a labeled unknown anywhere in the tuple: it is not there where the label is a value it is known not to be
+            if brk!("label_ex_elsewhere_ignored" => false; true) {
+                for u in self.tuple_unks(p) {
+                    if self.inst(u, labels, rg).is_none() {
+                        continue 'p;
+                    }
+                }
+            }
             let mut pr: Vec<Term> = Vec::with_capacity(p.sproj.len());
             for t in &p.sproj {
                 match self.inst(*t, labels, rg) {
@@ -259,9 +319,22 @@ impl Eval {
         }
         let mut labels: Vec<Term> = Vec::new();
         let mut consts: Vec<Term> = gkey.to_vec();
+        let others: Vec<&[Term]> = mine.iter().map(|p| p.sproj.as_slice()).collect();
         for p in mine {
-            let occs = p.lab.iter().flatten().map(|(t, _)| *t).chain(p.sproj.iter().copied());
+            let occs: Vec<Term> = p.lab.iter().flatten().map(|(t, _)| *t).chain(p.sproj.iter().copied()).collect();
             for t in occs {
+                self.names_in(t, &mut labels, &mut consts);
+            }
+            if brk!("label_known_apart" => false; true) {
+                self.proj_consts(p, projs, &mut consts);
+                self.proj_consts(p, &others, &mut consts);
+            }
+        }
+        if labels.is_empty() {
+            return Regions::No;
+        }
+        for p in mine {
+            for t in self.tuple_unks(p) {
                 self.names_in(t, &mut labels, &mut consts);
             }
         }
@@ -345,6 +418,10 @@ impl Eval {
             let occ = p.lab[at].as_ref().map(|(t, _)| *t)?;
             let (l, _, _) = self.unk_parts(occ)?;
             if p.pat != pat || !p.sure || p.neg {
+                return None;
+            }
+            // a condition on the tuple elsewhere than the group it makes
+            if self.tuple_unks(p).into_iter().any(|u| u != occ && self.unk_parts(u).is_some_and(|(_, ex, _)| !ex.is_empty())) {
                 return None;
             }
             let pr = p.proj.clone()?;

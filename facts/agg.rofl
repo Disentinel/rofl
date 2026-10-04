@@ -1237,4 +1237,5 @@ work_proof(w_labeled_unknowns, "agg_label_holes").
 work_proof(w_labeled_unknowns, "agg_label_oracle").
 work_proof(w_labeled_unknowns, "agg_label_cap").
 work_proof(w_labeled_unknowns, "agg_label_cap_oracle").
+work_proof(w_labeled_unknowns, "agg_label_sound").
 

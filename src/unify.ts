@@ -237,6 +237,13 @@ export function bindUnknown(ts: Term[], s: Subst): Subst | null {
 /** A literal's argument `a` against an unknown's `t`: where `t` holds the
  *  unknown value, whatever `a` has there stands for it; a structure around it
  *  must be `a`'s too. */
+/** Whether `a` is the unknown `t` is, in every completion: the same label, and every value `t` is known not to be `a`
+ *  is known not to be too (`same_label`, Rust). */
+export function sameLabel(a: Term, t: Term): boolean {
+  const pa = unkParts(a), pt = unkParts(t);
+  return pa !== null && pt !== null && canonTerm(pa.label) === canonTerm(pt.label) && pt.ex.every((e) => pa.ex.some((x) => canonTerm(x) === canonTerm(e)));
+}
+
 export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
   if (t.k === 'a' && t.name === '$unknown_value') return bindUnknown([a], s);
   if (isLabeled(t)) {
@@ -248,8 +255,7 @@ export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
     if (ra.k === 'v') return unify(ra, t, s);
     // a value, or another unknown, against this one: it is that value, or it is that unknown, in the completions the
     // tuple that reads it exists in, and in no other (unless it is this very one)
-    const pa = unkParts(ra), pt = unkParts(t);
-    const same = canonTerm(ra) === canonTerm(t) || (pa !== null && pt !== null && canonTerm(pa.label) === canonTerm(pt.label));
+    const same = canonTerm(ra) === canonTerm(t) || sameLabel(ra, t);
     return bindUnknown([ra], same ? s : unsure(s));
   }
   if (!holdsUnknown(t)) return unify(a, t, s);

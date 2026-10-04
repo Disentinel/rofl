@@ -2923,3 +2923,11 @@ check_file("agg_label_cap_oracle", "examples/checks/agg-label-cap-data.rofl").
 check_file("agg_label_cap_oracle", "examples/checks/agg-label-cap-oracle.rofl").
 check_opt("agg_label_cap_oracle", together, 1).
 proves_work("agg_label_cap_oracle", w_labeled_unknowns).
+
+-- the four answers a completions oracle found a labeled unknown decided where
+-- some completion contradicts them (f_labeled_unknowns_four_unsound_answers)
+check_world("agg_label_sound").
+check_file("agg_label_sound", "examples/checks/agg-label-sound-data.rofl").
+check_file("agg_label_sound", "examples/checks/agg-label-sound-check.rofl").
+check_opt("agg_label_sound", together, 1).
+proves_work("agg_label_sound", w_labeled_unknowns).

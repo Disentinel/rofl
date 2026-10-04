@@ -1726,7 +1726,8 @@ that variable is bound to `$unk(L, [], Sure)`, so the tuple `ph_w(L, k9)` is
 the missing fact and L the unknown in it. Two uncertainties are kept apart:
 
 - *exists, value unknown*: `Sure` 1. The fault is an **overflow** (the value
-  there is, out of the term range) and the last thing the body asks: nothing
+  there is, out of the term range) in the last thing the body asks (the
+  element that faulted is that last `is`): nothing
   after it can fail, so the rule concludes in every completion;
 - *may not exist*: `Sure` 0. A type error or a zero divisor leaves no value, a
   comparison may follow the fault, and whatever is derived from a tuple through
@@ -1741,7 +1742,12 @@ carried: one label shared by two cells is the same text twice. Against a
 `$by` it fails when it is a known value none of the table's cases has (a count
 of 4 where the cases give 1 to 3). Two labels may be equal (never assumed
 apart). `unknown_at` indexes a labeled position under the wild key and the
-test is made by unification.
+test is made by unification. Two occurrences of one label are the same only
+where the one met is known not to be nothing the other is not known not to be
+(`same_label`). In the carry, a premise argument that holds an unknown matches
+every fact through a fresh variable, and what it meets is that value in some
+completions only: the solution is unsure, unless the unknown tuple it meets
+holds the same label there (`same_unknowns`), whichever premise comes first.
 
 **The group a possible could make.** A possible member whose group is the
 labeled L falls in a sealed group g unless g is in L's exclusion; or it makes
@@ -1758,12 +1764,15 @@ or with an open position that is not labeled, is as it was.
 **The correlation** (`region_decide`, `regionDecide`). A group of a count, a
 sum, a min, a max, an or or an and whose possibles all exist in every completion and rest on labels is decided
 by regions: the values a label can be told apart by are the constants the
-terms mention (the group key, the exclusion lists, the cases of a `$by`) and
+terms mention (the group key, the exclusion lists, the cases of a `$by`, and
+the projection of every known member or other possible a labeled projection
+could be, so the two are one member where the label is that value) and
 one class for all the rest, and two labels may share a class, so a REGION is an
 assignment of every label to a constant or to a class (Bell over the classes).
 Each region gives the group its members, its value folded over the known
 members and the possibles present there (a possible whose label is a value its
-occurrence is known not to be is not there). All regions the same: the cell is
+occurrence is known not to be is not there, wherever in its tuple that
+occurrence stands). All regions the same: the cell is
 sealed with that value, not a hole, and `why` says so: `[aggregate: no member
 known, the same under every value of _[lw(_, k7).0], sealed lwc@2]`. Otherwise
 the cell is a hole whose conclusion carries the value as a table over the
@@ -1833,6 +1842,11 @@ over all groups) in the same two worlds. The faults: `label_off`,
 `label_ex_ignored`, `label_by_values_ignored`, `label_regions_off`,
 `label_correlation_lost`, `label_cap_ignored`, `label_open_correlation`,
 `label_new_anonymous`, `label_sure_always` and their `ts_label_*` twins.
+`agg_label_sound` holds the four answers a brute-force completion oracle found
+decided where a completion contradicts them, each a shrug now
+(f_labeled_unknowns_four_unsound_answers; `label_known_apart`,
+`label_join_certain`, `label_join_ex_ignored`, `label_ex_elsewhere_ignored`,
+`label_fault_anywhere` and their twins).
 
 ## The join lattice, as built
 

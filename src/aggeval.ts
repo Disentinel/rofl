@@ -35,7 +35,7 @@ import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
-import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled } from './unify.ts';
+import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled, sameLabel } from './unify.ts';
 import { regionDecide, newGroupValue, sureArgs, unsure, isUnsure, desure, LABEL_REGIONS } from './labeled.ts';
 import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
@@ -2737,7 +2737,7 @@ export class AggEval {
             for (const s2 of s2s) next.push({ s: s2, prems: [...a.prems, { t: 'bi', desc: '' }] });
             if (s2s.length === 0 && this.faultCount > faults && this.firing) {
               if (this.lattices.size > 0) this.latticeFault(ruleId, a.s, a.prems);
-              if (depth === 0) this.plainFault(ruleId, a.s);
+              if (depth === 0) this.plainFault(ruleId, a.s, b);
               this.demandFault(depth, a.s);
             }
           } else {
@@ -5250,12 +5250,12 @@ export class AggEval {
   /** A FAULT LEAVES A HEAD VARIABLE UNKNOWN, AND NAMES IT (`label_fault`, Rust): each head variable the failed solution
    *  left unbound is bound to a labeled unknown, the label the head with `_` where it is not known, the position and the
    *  firing (the rule and what its variables were). The tuple is Sure when the fault is the last thing the body asks. */
-  private labelFault(r: ERule, s: Subst): Subst {
+  private labelFault(r: ERule, s: Subst, at: BodyElem): Subst {
     const head = r.clause.head;
     const ra = head.args.map((a) => resolve(a, s));
     if (!ra.some((t) => t.k === 'v')) return s;
     const hd = mkf(head.rel, ra.map((t) => (t.k === 'v' ? UNKNOWN_VALUE : t)));
-    const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s);
+    const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s, at);
     // a tuple that exists is one unknown value for each firing; one that may not is judged as a possible, as every
     // unknown tuple is, and the firings that left the same head are one
     const bs = sure ? [...s].map(([v, t]) => [v, resolve(t, s)] as [string, Term]).sort((a, b) => cmpStr(a[0], b[0])) : [];
@@ -5265,21 +5265,21 @@ export class AggEval {
     return out;
   }
 
-  /** Whether the fault is the last thing the body asks: its last element is the `is` that failed, and every other
+  /** Whether the fault is the last thing the body asks: its last element is the `is` that failed (`at`), and every other
    *  element's variables are bound, so nothing after the fault can fail (`fault_sure`, Rust). */
-  private faultSure(r: ERule, s: Subst): boolean {
+  private faultSure(r: ERule, s: Subst, at: BodyElem): boolean {
     const last = r.plan[r.plan.length - 1];
-    if (last === undefined || last.t !== 'bi' || last.op !== 'is') return false;
+    if (last !== at || last === undefined || last.t !== 'bi' || last.op !== 'is') return false;
     if (resolve(last.l, s).k !== 'v' || !isGround(resolve(last.r, s))) return false;
     return r.plan.slice(0, -1).every((e) => [...elemVars(e)].every((v) => walk(mkv(v), s).k !== 'v'));
   }
 
   /** A builtin failed for an error in a rule no lattice decides: its conclusion under the failed solution is unknown. */
-  private plainFault(ruleId: string | null, s: Subst): void {
+  private plainFault(ruleId: string | null, s: Subst, at: BodyElem): void {
     const r = ruleId === null ? undefined : this.ruleOf(ruleId);
     if (!r || r.latClose !== null) return;
     if (r.clause.head.temporal === 'next') { this.stageUnknown(r, s, true); return; }
-    const u = this.conclusionUnknown(r, this.labelFault(r, s));
+    const u = this.conclusionUnknown(r, this.labelFault(r, s, at));
     if (u !== null) {
       this.narrowFeederFault(r.clause.head.rel);
       this.unkEdges.push([nUnk(u), nHole(this.ruleMarker(r.id))]);
@@ -5434,14 +5434,18 @@ export class AggEval {
         if (b.t === 'pos') {
           const lattice = this.isLatticeLit(b.lit.rel, b.lit.args.length) && !outer.includes(b.lit.rel);
           const whole = this.latUnknown.has(uRel(b.lit.rel).id);
-          const l: Lit = { ...b.lit, args: b.lit.args.map((a, i) => (holdsUnknown(resolve(a, s)) ? mkv(`?unknown${j}_${i}`) : a)) };
+          // an argument that holds the unknown matches anything, and what it matches is that value only in some
+          // completions: a join on an unknown is not sure
+          const wild: [number, Term][] = [];
+          const l: Lit = { ...b.lit, args: b.lit.args.map((a, i) => { const t = resolve(a, s); if (!holdsUnknown(t)) return a; wild.push([i, t]); return mkv(`?unknown${j}_${i}`); }) };
+          const joined = wild.length > 0;
           for (const [s2] of this.matchPremise(l, s, 0, null)) {
             if (lattice) {
               if (whole) continue;
               const ck = this.litCell(l, s2);
               if (ck !== null && this.latUnknown.has(uCell(ck).id)) continue;
             }
-            next.push(s2);
+            next.push(joined ? unsure(s2) : s2);
           }
           let bound: [number, Term] | null = null;
           if (lattice) {
@@ -5459,7 +5463,8 @@ export class AggEval {
             if (!lattice && !this.latSpread.has(u.id)) continue;
             if (lattice && u.k === 'tuple') continue;
             const s2 = this.unknownBinds(l, u, s);
-            if (s2 !== null) next.push(this.sureUnknown(u) ? s2 : unsure(s2));
+            const same = !joined || (u.k === 'tuple' && wild.every(([i, t]) => i < u.args.length && (canonTerm(u.args[i]) === canonTerm(t) || sameLabel(t, u.args[i]))));
+            if (s2 !== null) next.push(same && this.sureUnknown(u) ? s2 : unsure(s2));
           }
           for (const u of this.undefAtoms?.get(l.rel) ?? []) {
             const s2 = this.unknownBinds(l, u, s);

@@ -4163,7 +4163,7 @@ impl Eval {
                                     self.lattice_fault(rule_id, &a.s, &a.prems)?;
                                 }
                                 if depth == 0 {
-                                    brk!("plain_rule_hole_unspread" => (); self.plain_fault(rule_id, &a.s));
+                                    brk!("plain_rule_hole_unspread" => (); self.plain_fault(rule_id, &a.s, b));
                                 }
                                 self.demand_fault(depth, &a.s);
                             }
@@ -8147,7 +8147,7 @@ impl Eval {
     /// where it is not known, the position and the firing (the rule and what
     /// its variables were), so one firing is one label and two are two. The
     /// tuple is Sure when the fault is an overflow and the last thing the body asks.
-    fn label_fault(&mut self, r: &ERule, s: &Subst) -> Subst {
+    fn label_fault(&mut self, r: &ERule, s: &Subst, at: &BodyElem) -> Subst {
         let head = &r.clause.head;
         let ra: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
         if !ra.iter().any(|t| matches!(t.kind(), TermK::Var(_))) || brk!("label_off" => true; false) {
@@ -8155,7 +8155,7 @@ impl Eval {
         }
         let args: Vec<Term> = ra.iter().map(|t| if matches!(t.kind(), TermK::Var(_)) { self.unknown_value } else { *t }).collect();
         let hd = self.h.mkf(head.rel, &args);
-        let sure = brk!("label_sure_always" => true; self.last_fault == Some(self.v.arith_overflow_reason) && self.fault_sure(r, s));
+        let sure = brk!("label_sure_always" => true; self.last_fault == Some(self.v.arith_overflow_reason) && self.fault_sure(r, s, at));
         // a tuple that exists is one unknown value for each firing; one that may not is judged as a possible, as
         // every unknown tuple is, and the firings that left the same head are one
         let mut firing: Vec<Term> = vec![Term::atom(r.id)];
@@ -8182,12 +8182,15 @@ impl Eval {
     }
 
     /// Whether the fault is the last thing the body asks: its last element is
-    /// the `is` that failed, and every other element's variables are bound, so
+    /// the `is` that failed (`at`, the element that faulted), and every other element's variables are bound, so
     /// nothing after the fault can fail and the rule concludes in every completion.
     /// Only an overflow is a value there is, out of range (`label_fault`); a
     /// type error or a zero divisor has none, and the tuple may not exist.
-    fn fault_sure(&mut self, r: &ERule, s: &Subst) -> bool {
+    fn fault_sure(&mut self, r: &ERule, s: &Subst, at: &BodyElem) -> bool {
         let Some((last, rest)) = r.plan.split_last() else { return false };
+        if !std::ptr::eq(last, at) && brk!("label_fault_anywhere" => false; true) {
+            return false;
+        }
         let BodyElem::Bi { op, l, r: rt } = last else { return false };
         let (lv, rv) = (resolve(&mut self.h, *l, s), resolve(&mut self.h, *rt, s));
         if *op != self.v.op_is || !matches!(lv.kind(), TermK::Var(_)) || !self.h.is_ground(rv) {
@@ -8202,7 +8205,7 @@ impl Eval {
 
     /// A builtin failed for an error in a rule no lattice decides: the rule's
     /// conclusion under the failed solution is unknown (`lat_plain`).
-    fn plain_fault(&mut self, rule_id: Option<Sym>, s: &Subst) {
+    fn plain_fault(&mut self, rule_id: Option<Sym>, s: &Subst, at: &BodyElem) {
         let Some(r) = rule_id.and_then(|rid| self.rule_of(rid)) else { return };
         if r.lat_close.is_some() {
             return;
@@ -8210,7 +8213,7 @@ impl Eval {
         if r.clause.head.temporal == Temporal::Next {
             return self.stage_unknown(&r, s, true);
         }
-        let s = &self.label_fault(&r, s);
+        let s = &self.label_fault(&r, s, at);
         if let Some(u) = self.conclusion_unknown(&r, s) {
             self.narrow_feeder_fault(r.clause.head.rel);
             let marker = self.rule_marker(r.id);
@@ -8416,7 +8419,7 @@ impl Eval {
                 _ => {
                     // a value, or another unknown, against this one: it is that value, or it is that unknown, in the
                     // completions the tuple that reads it exists in, and in no other (unless it is this very one)
-                    let same = ra == t || matches!((self.unk_parts(ra), self.unk_parts(t)), (Some((x, _, _)), Some((y, _, _))) if x == y);
+                    let same = ra == t || self.same_label(ra, t);
                     let s = if same || !brk!("label_match_unconditional" => false; true) { s } else { self.unsure(s) };
                     self.bind_unknown(&[ra], s)
                 }
@@ -8531,6 +8534,22 @@ impl Eval {
         }
     }
 
+    /// Whether `a` is the unknown `t` is, in every completion: the same label, and
+    /// every value `t` is known not to be `a` is known not to be too.
+    fn same_label(&self, a: Term, t: Term) -> bool {
+        match (self.unk_parts(a), self.unk_parts(t)) {
+            (Some((x, xe, _)), Some((y, ye, _))) => x == y && (ye.iter().all(|e| xe.contains(e)) || brk!("label_join_ex_ignored" => true; false)),
+            _ => false,
+        }
+    }
+
+    /// Whether the tuple `u`, at each position `wild` holds an unknown, holds the
+    /// same unknown: the join on it is no condition.
+    fn same_unknowns(&self, u: &Unknown, wild: &[(usize, Term)]) -> bool {
+        let Unknown::Tuple(_, _, args) = u else { return false };
+        wild.iter().all(|(i, t)| args.get(*i).is_some_and(|x| *x == *t || self.same_label(*t, *x)))
+    }
+
     /// The lattice cell a literal names under `s`, when its key is bound.
     fn lit_cell(&mut self, l: &Lit, s: &Subst) -> Option<LatKey> {
         let k = self.cell_keylen(l.rel, l.args.len())?;
@@ -8566,14 +8585,18 @@ impl Eval {
                     BodyElem::Pos(l) => {
                         let lattice = self.is_lattice_lit(l.rel, l.args.len()) && !outer.contains(&l.rel);
                         let whole = self.lat_unknown.contains_key(&Unknown::Rel(l.rel));
-                        // an argument that holds the unknown matches anything
+                        // an argument that holds the unknown matches anything, and what it matches is that value only
+                        // in some completions: a join on an unknown is not sure
                         let mut lw = l.clone();
+                        let mut wild: Vec<(usize, Term)> = Vec::new();
                         for (i, a) in lw.args.iter_mut().enumerate() {
                             let t = resolve(&mut self.h, *a, s);
                             if self.holds_unknown(t) {
                                 *a = Term::var(self.h.intern(&format!("?unknown{j}_{i}")));
+                                wild.push((i, t));
                             }
                         }
+                        let joined = !wild.is_empty() && brk!("label_join_certain" => false; true);
                         let l = &lw;
                         for (s2, _) in self.match_premise(l, s, 0, None)? {
                             if lattice {
@@ -8586,7 +8609,7 @@ impl Eval {
                                     }
                                 }
                             }
-                            next.push(s2);
+                            next.push(if joined { self.unsure(s2) } else { s2 });
                         }
                         let bound = if lattice {
                             let n = self.cell_keylen(l.rel, l.args.len()).unwrap();
@@ -8618,7 +8641,8 @@ impl Eval {
                                 continue;
                             }
                             if let Some(s2) = self.unknown_binds(l, &u, s) {
-                                next.push(if self.sure_unknown(&u) { s2 } else { self.unsure(s2) });
+                                let same = !joined || self.same_unknowns(&u, &wild);
+                                next.push(if same && self.sure_unknown(&u) { s2 } else { self.unsure(s2) });
                             }
                         }
                         let undef = self.undef_atoms.as_ref().and_then(|m| m.get(&l.rel)).cloned().unwrap_or_default();

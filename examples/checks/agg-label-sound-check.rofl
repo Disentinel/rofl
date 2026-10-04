@@ -1,0 +1,37 @@
+-- examples/checks/agg-label-sound-check.rofl — agg_label_sound over
+-- agg-label-sound-data.rofl: every answer below is one completions disagree
+-- on, so each is a shrug and no row; the total over all groups stays 3.
+-- expect-row: ls_tot[main](3)
+-- expect-no-row: ls_w2c[main](
+-- expect-no-row: ls_qc[main](
+-- expect-no-row: ls_tany[main](
+-- expect-no-row: ls_jc[main](
+-- expect-no-row: ls_jrc[main](
+-- expect-no-row: ls_jb[main](
+-- expect-no-row: ls_ec[main](
+-- expect-no-row: ls_ee[main](
+-- expect-no-row: ls_minsv[main](
+-- expect-no-row: ls_yc[main](
+-- expect-no-row: ls_ftot[main](
+ls_sh(w2c) :- shrug(ls_w2c(_), _, _).
+ls_sh(qc) :- shrug(ls_qc(_), _, _).
+ls_sh(tany) :- shrug(ls_tany(_), _, _).
+ls_sh(jc) :- shrug(ls_jc(_), _, _).
+ls_sh(jrc) :- shrug(ls_jrc(_), _, _).
+ls_sh(jb) :- shrug(ls_jb(_), _, _).
+ls_sh(ec) :- shrug(ls_ec(_), _, _).
+ls_sh(ee) :- shrug(ls_ee(_), _, _).
+ls_sh(minsv) :- shrug(ls_minsv(_), _, _).
+ls_sh(yc) :- shrug(ls_yc(_), _, _).
+ls_sh(ftot) :- shrug(ls_ftot(_), _, _).
+-- expect-row: ls_sh[main](w2c)
+-- expect-row: ls_sh[main](qc)
+-- expect-row: ls_sh[main](tany)
+-- expect-row: ls_sh[main](jc)
+-- expect-row: ls_sh[main](jrc)
+-- expect-row: ls_sh[main](jb)
+-- expect-row: ls_sh[main](ec)
+-- expect-row: ls_sh[main](ee)
+-- expect-row: ls_sh[main](minsv)
+-- expect-row: ls_sh[main](yc)
+-- expect-row: ls_sh[main](ftot)

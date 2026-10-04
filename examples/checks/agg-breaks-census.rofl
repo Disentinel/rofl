@@ -1623,6 +1623,26 @@ brk("why_base_circle"). brk_kind("why_base_circle", switch).
 brk_expects("why_base_circle", "why_base").
 brk("ts_why_base_circle"). brk_kind("ts_why_base_circle", ts).
 brk_expects("ts_why_base_circle", "why_base").
+brk("label_known_apart"). brk_kind("label_known_apart", switch).
+brk_expects("label_known_apart", "agg_label_sound").
+brk("label_join_certain"). brk_kind("label_join_certain", switch).
+brk_expects("label_join_certain", "agg_label_sound").
+brk("label_join_ex_ignored"). brk_kind("label_join_ex_ignored", switch).
+brk_expects("label_join_ex_ignored", "agg_label_sound").
+brk("label_ex_elsewhere_ignored"). brk_kind("label_ex_elsewhere_ignored", switch).
+brk_expects("label_ex_elsewhere_ignored", "agg_label_sound").
+brk("label_fault_anywhere"). brk_kind("label_fault_anywhere", switch).
+brk_expects("label_fault_anywhere", "agg_label_sound").
+brk("ts_label_known_apart"). brk_kind("ts_label_known_apart", ts).
+brk_expects("ts_label_known_apart", "agg_label_sound").
+brk("ts_label_join_certain"). brk_kind("ts_label_join_certain", ts).
+brk_expects("ts_label_join_certain", "agg_label_sound").
+brk("ts_label_join_ex_ignored"). brk_kind("ts_label_join_ex_ignored", ts).
+brk_expects("ts_label_join_ex_ignored", "agg_label_sound").
+brk("ts_label_ex_elsewhere_ignored"). brk_kind("ts_label_ex_elsewhere_ignored", ts).
+brk_expects("ts_label_ex_elsewhere_ignored", "agg_label_sound").
+brk("ts_label_fault_anywhere"). brk_kind("ts_label_fault_anywhere", ts).
+brk_expects("ts_label_fault_anywhere", "agg_label_sound").
 
 switch_site("agg_reach_alias_first", "rust/rofl/src/engine.rs").
 switch_site("agg_reach_bound_any", "rust/rofl/src/engine.rs").
@@ -1779,7 +1799,12 @@ switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
 switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
 switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").
+switch_site("label_ex_elsewhere_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_ex_ignored", "rust/rofl/src/engine.rs").
+switch_site("label_fault_anywhere", "rust/rofl/src/engine.rs").
+switch_site("label_join_certain", "rust/rofl/src/engine.rs").
+switch_site("label_join_ex_ignored", "rust/rofl/src/engine.rs").
+switch_site("label_known_apart", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_match_unconditional", "rust/rofl/src/engine.rs").
 switch_site("label_new_anonymous", "rust/rofl/src/engine.rs").
 switch_site("label_off", "rust/rofl/src/engine.rs").

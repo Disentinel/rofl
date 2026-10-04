@@ -887,7 +887,9 @@ export class Rofl {
       }
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       const reason = row.args[1].k === 'a' ? row.args[1].name : canonTerm(row.args[1]);
-      if (!shrugs.has(rtext + '\u0000' + reason)) shrugs.set(rtext + '\u0000' + reason, { text: rtext, bindings, reason, line: shrugLine(row) });
+      // one per reading and reason, the least line where several say it (`query`, rust/rofl/src/session.rs)
+      const line = shrugLine(row), prev = shrugs.get(rtext + '\u0000' + reason);
+      if (prev === undefined || line < prev.line) shrugs.set(rtext + '\u0000' + reason, { text: rtext, bindings, reason, line });
     }
     // A WALL CUT THE WORLD: every answer that does not hold is no answer
     if (this.store.partialEval) {

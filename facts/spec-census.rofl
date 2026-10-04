@@ -427,6 +427,7 @@ check[checks]("facts/goldens.rofl", "agg_label_cap", world).
 check[checks]("facts/goldens.rofl", "agg_label_cap_oracle", world).
 check[checks]("facts/goldens.rofl", "agg_label_holes", world).
 check[checks]("facts/goldens.rofl", "agg_label_oracle", world).
+check[checks]("facts/goldens.rofl", "agg_label_sound", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_budget", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_carry_cut", world).
 check[checks]("facts/goldens.rofl", "agg_lattice_cut_fallback", world).
