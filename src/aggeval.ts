@@ -911,10 +911,20 @@ export class AggEval {
   private demandCalls: string[] = [];
   /** The relations answered on demand whose every answer is ground and whose every rule fires bottom-up (`demandClosedRels`). */
   private demandClosed = new Set<string>();
-  /** Solutions below a call answered on demand that an unknown left undecided: each call up holes its head under them, as for a fault. */
-  private demandUnknown = 0;
-  /** The head `demandUnknown` last left unknown: what the call above it rests on. */
-  private demandLast: Unknown | null = null;
+  /** The heads of calls answered on demand that an unknown below left undecided, in the order met: each call up holes its head under those of the relation it called, as for a fault. */
+  private demandTrail: Unknown[] = [];
+  /** A question is being answered (whynot, query): below a call, what a hole left unknown is read as unknown, as in a firing, and noted in `asked`. */
+  private asking = false;
+  /** What a question's unfolding read that a hole left unknown. */
+  private asked: Unknown[] = [];
+
+  /** `f` answering a question, with what its unfoldings read that a hole left unknown. */
+  answering<T>(f: () => T): [T, Unknown[]] {
+    const was = this.asking;
+    this.asking = true;
+    this.asked = [];
+    try { return [f(), this.asked]; } finally { this.asking = was; this.asked = []; this.demandTrail = []; }
+  }
   private assume: Assumption | null = null;
   private bootstrap: boolean;
   answer: RuleAnswer = emptyAnswer();
@@ -2782,30 +2792,25 @@ export class AggEval {
           }
           if (b.t === 'pos') {
             const only = frontAt !== null && frontAt[0] === i ? frontAt[1] : null;
-            const faults = this.faultCount, unknowns = this.demandUnknown;
+            const faults = this.faultCount, unknowns = this.demandTrail.length;
             const found = this.matchPremise(b.lit, a.s, depth, only);
-            this.demandBelow(depth, a.s, faults, unknowns);
-            // UNFOLDED AT A CALL, a premise that could read what a hole left unknown leaves the call's head under it unknown beside what it found
-            if (depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
-              const u = this.readUnknown(b.lit, a.s, true);
-              if (u !== null) this.demandUnknownAt(depth, a.s, u);
-            }
+            this.demandBelow(depth, b.lit, a.s, faults, unknowns);
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
-            const faults = this.faultCount, unknowns = this.demandUnknown;
+            const faults = this.faultCount, unknowns = this.demandTrail.length;
             const holds = this.negHolds(b.lit, a.s, depth);
-            const below = this.faultCount > faults || this.demandUnknown > unknowns;
-            if (below && depth > 0 && this.firing) { this.demandBelow(depth, a.s, faults, unknowns); continue; }
+            const below = this.faultCount > faults || this.demandTrail.length > unknowns;
+            if (below && depth > 0 && (this.firing || this.asking)) { this.demandBelow(depth, b.lit, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
             // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would
-            if (holds && depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+            if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0 && this.latSpread.size > 0) {
               const u = this.readUnknown(b.lit, a.s, true);
-              if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }
+              if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }
             }
             if (holds) {
               if (depth === 0 && this.firing && ruleId !== null && below) {
                 const u = this.litUnknown(b.lit, a.s);
-                if (this.faultCount === faults && this.demandLast !== null) this.unkEdges.push([nUnk(u), nUnk(this.demandLast)]);
+                if (this.faultCount === faults) for (const f of this.demandCalled(b.lit.rel, unknowns)) this.unkEdges.push([nUnk(u), nUnk(f)]);
                 else this.faultEdge(u);
                 this.latPlain.add(u.id);
                 this.latUndecided.push([ruleId, i, a.s, [u]]);
@@ -4948,6 +4953,25 @@ export class AggEval {
         }
       }
     }
+    // A RULE ANSWERED ON DEMAND fires at no level: an unknown reaches its head through a positive premise as through a
+    // bottom-up rule's, and its readers from there (a negation in it reads holes at each call)
+    if (only === null) {
+      for (const [drel, rs] of this.demandRels) {
+        if (this.demandClosed.has(drel)) continue;
+        for (const r of rs) {
+          for (let i = 0; i < r.plan.length; i++) {
+            const b = r.plan[i];
+            if (b.t !== 'pos' || b.lit.rel !== rel) continue;
+            const s0 = this.unknownBinds(b.lit, u, new Map());
+            if (s0 === null) continue;
+            for (const s of this.poisonSolve(r, i, s0)) {
+              const v = this.reachedConclusion(r, s, plain);
+              if (v !== null) out.push([v, r.id, u]);
+            }
+          }
+        }
+      }
+    }
     return out;
   }
 
@@ -5391,21 +5415,57 @@ export class AggEval {
   }
 
   /** A fault (`faults`) or an unknown (`unknowns`) met below a premise answered on demand leaves the call above it unknown under `s`. */
-  private demandBelow(depth: number, s: Subst, faults: number, unknowns: number): void {
-    if (this.faultCount > faults) this.demandFault(depth, s);
-    else if (this.demandUnknown > unknowns) this.demandUnknownAt(depth, s, this.demandLast);
+  private demandBelow(depth: number, l: Lit, s: Subst, faults: number, unknowns: number): void {
+    if (this.faultCount > faults) { this.demandFault(depth, s); return; }
+    if (this.demandTrail.length === unknowns) return;
+    let bound = false;
+    for (const u of this.demandCalled(l.rel, unknowns)) {
+      const s2 = this.unknownBinds(l, u, s);
+      if (s2 === null) continue;
+      this.demandUnknownAt(depth, this.knownPart(l, s, s2), [u]);
+      bound = true;
+    }
+    if (!bound) this.demandUnknownAt(depth, s, this.demandTrail.slice(unknowns));
+  }
+
+  /** The heads of calls to `rel` left unknown past `unknowns` on the trail, each once; every one past it when none is of `rel`. */
+  private demandCalled(rel: string, unknowns: number): Unknown[] {
+    const past = this.demandTrail.slice(unknowns);
+    const once = (us: Unknown[]): Unknown[] => { const seen = new Set<string>(); return us.filter((u) => !seen.has(u.id) && !!seen.add(u.id)); };
+    const mine = once(past.filter((u) => uRelOf(u) === rel));
+    return mine.length > 0 ? mine : once(past);
+  }
+
+  /** `s` and what `s2` binds of `l`'s variables to a known ground value. */
+  private knownPart(l: Lit, s: Subst, s2: Subst): Subst {
+    const vs = new Set<string>();
+    for (const a of l.args) varsOf(a, vs);
+    const out: Subst = new Map(s);
+    for (const v of vs) {
+      if (isGround(resolve(mkv(v), out))) continue;
+      const t = resolve(mkv(v), s2);
+      if (isGround(t) && !holdsUnknown(t)) out.set(v, t);
+    }
+    return out;
+  }
+
+  /** `u`, a hole left unknown, read below a call: in a firing the call's head is unknown; answering a question, `u` is noted. */
+  private demandUnknownRead(depth: number, s: Subst, u: Unknown): void {
+    if (!this.firing && !this.asked.some((x) => x.id === u.id)) this.asked.push(u);
+    this.demandUnknownAt(depth, s, [u]);
   }
 
   /** AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head under `s` is unknown, reached from `from`, and so is each call up. */
-  private demandUnknownAt(depth: number, s: Subst, from: Unknown | null): void {
-    if (depth === 0 || !this.firing) return;
+  private demandUnknownAt(depth: number, s: Subst, from: Unknown[]): void {
+    if (depth === 0 || !(this.firing || this.asking)) return;
     const head = this.demandHeads[this.demandHeads.length - 1];
     if (head === undefined) return;
     const u = this.litUnknown(head, s);
-    if (from !== null) this.unkEdges.push([nUnk(u), nUnk(from)]);
-    this.plainPending.push([u, true]);
-    this.demandLast = u;
-    this.demandUnknown++;
+    if (this.firing) {
+      for (const f of from) this.unkEdges.push([nUnk(u), nUnk(f)]);
+      this.plainPending.push([u, true]);
+    }
+    this.demandTrail.push(u);
   }
 
   /** The cells the body aggregate at element `i` holed under `s`. */
@@ -7223,9 +7283,10 @@ export class AggEval {
 
   /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
   whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const saved = this.renameCounter;
+    const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
-    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; }
+    this.asking = true;
+    try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; }
   }
 
   private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
@@ -7233,15 +7294,18 @@ export class AggEval {
     if (!this.dag) ctx.done.set = () => ctx.done;
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
+    this.asked = [];
     if (this.matchPremise(lit, s, 0, null).length > 0) return [true, `${this.plain ? shown ?? k : k} holds; nothing to demonstrate`];
     const lines = [`whynot ${k}:`];
+    const asked = this.asked;
+    this.asked = [];
     if (this.plain) {
       // the plain explainer knows no lattice, counting or unknown tuple
       const sh = this.shrugsOf(lit);
       if (sh.length > 0) {
         lines[0] = `whynot ${k}: no answer, a shrug`;
         for (const [f] of sh) lines.push(this.shrugWhy(f));
-      }
+      } else this.askedLines(k, asked, lines);
       ctx.path.add(this.cycleKey(lit));
       lines.push(...this.explainTree(lit, ctx));
       return [false, lines.join('\n')];
@@ -7255,11 +7319,20 @@ export class AggEval {
     if (sh.length > 0) {
       lines[0] = `whynot ${k}: no answer, a shrug`;
       for (const [f] of sh) lines.push(this.shrugWhy(f));
-    }
+    } else this.askedLines(k, asked, lines);
     if (path !== null) { lines.push(...path); return [false, lines.join('\n')]; }
     ctx.path.add(this.cycleKey(lit));
     for (const l of this.explainTree(lit, ctx)) lines.push(l);
     return [false, lines.join('\n')];
+  }
+
+  /** A LITERAL WHOSE UNFOLDING READ WHAT A HOLE LEFT UNKNOWN, and no shrug row names it: no answer, and each unknown it read with its path. */
+  private askedLines(k: string, asked: Unknown[], lines: string[]): void {
+    if (asked.length === 0) return;
+    lines[0] = `whynot ${k}: no answer, a shrug`;
+    const shown: [string, Unknown][] = asked.map((u) => [this.unknownShown(u), u]);
+    shown.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    for (const [text, u] of shown) lines.push(`  it reads ${text}, which is not known`, ...this.unknownPath(u));
   }
 
   private whynotLattice(lit: Lit): string[] | null {
@@ -7543,12 +7616,16 @@ export class AggEval {
     const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
     const b = body[k];
     if (b.t === 'pos') {
+      const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
-      if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
+      if (mm.length === 0 && this.demandTrail.length > unknowns) put(`${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
+      else if (mm.length === 0) put(this.resolvedLitKey(b.lit, s), this.instantiate(b.lit, s));
       else for (const [s2] of mm.slice(0, 16)) this.exploreBody(body, k + 1, s2, out, nodes, rule);
     } else if (b.t === 'neg') {
+      const unknowns = this.demandTrail.length;
       const mm = this.matchPremise(b.lit, s, 0, null);
-      if (mm.length > 0) {
+      if (mm.length === 0 && (this.demandTrail.length > unknowns || this.latSpread.size > 0 && this.readUnknown(b.lit, s, true) !== null)) put(`not ${this.resolvedLitKey(b.lit, s)} -- not known: it reads what a hole left unknown`, null);
+      else if (mm.length > 0) {
         const [s2, r] = mm[0];
         const wit = r.t === 'fact' ? r.key : this.resolvedLitKey(b.lit, s2);
         put(`not ${this.resolvedLitKey(b.lit, s)} -- blocked: ${wit} holds`, null);

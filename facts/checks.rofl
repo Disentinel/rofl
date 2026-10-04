@@ -327,6 +327,13 @@ check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
 check_world("demand_pos_hole").
 check_file("demand_pos_hole", "examples/checks/demand-pos-hole.rofl").
 
+-- an answer outside a firing reads the holes below a call; a call left unknown rests on every unknown below it
+-- (f_an_answer_unfolded_at_a_call_read_a_hole_as_absence, f_a_call_left_unknown_kept_one_cause)
+check_world("demand_asked_hole").
+check_file("demand_asked_hole", "examples/checks/demand-asked-hole.rofl").
+check_opt("demand_asked_hole", together, 1).
+check_opt("demand_asked_hole", explain, 1).
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

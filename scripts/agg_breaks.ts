@@ -3504,7 +3504,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }",
+    "if (u !== null) { this.demandUnknownRead(depth, a.s, u); continue; }",
     "if (u === undefined) continue;"
    ]
   ],
@@ -3513,24 +3513,66 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "demand_pos_unholed",
-  "what": "a positive premise unfolded at a call reads what a hole left unknown as absent",
+  "id": "asked_unholed",
+  "what": "a question's negation unfolded at a call reads what a hole left unknown as absent",
   "expect": {
-   "demand_pos_hole": "dp_wrong"
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_r(c),1,"
   }
  },
  {
-  "id": "ts_demand_pos_unholed",
-  "what": "the TypeScript engine reads what a hole left unknown as absent in a positive premise unfolded at a call",
+  "id": "ts_asked_unholed",
+  "what": "the TypeScript engine reads what a hole left unknown as absent in a question's negation unfolded at a call",
   "edits": [
    [
     "src/aggeval.ts",
-    "if (u !== null) this.demandUnknownAt(depth, a.s, u);",
-    "if (u === undefined) this.demandUnknownAt(depth, a.s, u);"
+    "if (holds && depth > 0 && (this.firing || this.asking) && this.demandHeads.length > 0",
+    "if (holds && depth > 0 && this.firing && this.demandHeads.length > 0"
    ]
   ],
   "expect": {
-   "demand_pos_hole": "dp_wrong"
+   "demand_asked_hole": "lacks the row explained[$explain](whynot,da_r(c),1,"
+  }
+ },
+ {
+  "id": "demand_trail_last",
+  "what": "a call left unknown by several unknowns below it rests on the last one only",
+  "expect": {
+   "demand_asked_hole": "lacks the row shrug[$kernel](da_ng(b)"
+  }
+ },
+ {
+  "id": "ts_demand_trail_last",
+  "what": "the TypeScript engine rests a call left unknown on the last unknown below it only",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const past = this.demandTrail.slice(unknowns);",
+    "const past = this.demandTrail.slice(-1);"
+   ]
+  ],
+  "expect": {
+   "demand_asked_hole": "lacks the row shrug[$kernel](da_ng(b)"
+  }
+ },
+ {
+  "id": "demand_poison_skipped",
+  "what": "a hole is not carried through a rule answered on demand to its readers",
+  "expect": {
+   "demand_pos_hole": "lacks the row shrug[$kernel](dp_q2(k)"
+  }
+ },
+ {
+  "id": "ts_demand_poison_skipped",
+  "what": "the TypeScript engine does not carry a hole through a rule answered on demand to its readers",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "for (const [drel, rs] of this.demandRels) {",
+    "for (const [drel, rs] of [] as [string, ERule[]][]) {"
+   ]
+  ],
+  "expect": {
+   "demand_pos_hole": "lacks the row shrug[$kernel](dp_q2(k)"
   }
  },
  {

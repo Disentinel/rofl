@@ -821,8 +821,11 @@ export class Rofl {
     const ev = this.standing(budget);
     const vars = [...varsOf(lit.persp, varsOf(mkf('$t', lit.args)))].sort();
     let ms: { s: Subst }[] = [];
+    // below a call, what a hole left unknown is no answer
+    let asked = false;
     try {
-      const got = ev.matchPremise(lit, new Map(), 0, null) as unknown[];
+      const [got, us] = ev.answering(() => ev.matchPremise(lit, new Map(), 0, null) as unknown[]);
+      asked = us.length > 0;
       ms = got.map((m) => (Array.isArray(m) ? { s: m[0] as Subst } : m as { s: Subst }));
     } catch (e) {
       if (e instanceof Wall) {
@@ -901,6 +904,8 @@ export class Rofl {
         break;
       }
     }
+    // an answer left unknown that no shrug row names: the rows may be short of it
+    if (asked && shrugs.size === 0) partial = true;
     return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial, unpopulatable,
              ...(shrugs.size > 0 ? { shrugs: [...shrugs.keys()].sort().map((k) => shrugs.get(k)!) } : {}) };
   }

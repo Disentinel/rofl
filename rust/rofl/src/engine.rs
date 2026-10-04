@@ -903,12 +903,15 @@ pub struct Eval {
     /// lattice cell the rule concludes into.
     firing: bool,
     fault_count: u64,
-    /// Solutions below a call answered on demand that an unknown left
-    /// undecided: each call up holes its head under them, as for a fault
-    /// (`demand_fault`).
-    demand_unknown: u64,
-    /// The head `demand_unknown` last left unknown: what the call above it rests on.
-    demand_last: Option<Unknown>,
+    /// The heads of calls answered on demand that an unknown below left
+    /// undecided, in the order met: each call up holes its head under those
+    /// of the relation it called, as for a fault (`demand_fault`).
+    demand_trail: Vec<Unknown>,
+    /// A question is being answered (why, whynot): below a call, what a hole
+    /// left unknown is read as unknown, as in a firing, and noted in `asked`.
+    pub asking: bool,
+    /// What a question's unfolding read that a hole left unknown.
+    asked: Vec<Unknown>,
     /// The calls answered on demand being unfolded, as variant keys: a call
     /// met again inside its own unfolding would unfold forever.
     demand_calls: Vec<String>,
@@ -1288,8 +1291,9 @@ impl Eval {
             carry_broken: false,
             firing: false,
             fault_count: 0,
-            demand_unknown: 0,
-            demand_last: None,
+            demand_trail: Vec::new(),
+            asking: false,
+            asked: Vec::new(),
             demand_calls: Vec::new(),
             demand_closed: HashSet::new(),
             last_fault: None,
@@ -4293,16 +4297,9 @@ impl Eval {
                                 Some((p, keys)) if p == i => Some(keys),
                                 _ => None,
                             };
-                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
+                            let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
                             let found = self.match_premise(l, &a.s, depth, only)?;
-                            self.demand_below(depth, &a.s, faults, unknowns);
-                            // UNFOLDED AT A CALL, a premise that could read what a hole left
-                            // unknown leaves the call's head under it unknown beside what it found
-                            if depth > 0 && self.firing && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
-                                if let Some(u) = brk!("demand_pos_unholed" => None; self.read_unknown(l, &a.s, true)) {
-                                    self.demand_unknown_at(depth, &a.s, Some(u));
-                                }
-                            }
+                            self.demand_below(depth, l, &a.s, faults, unknowns);
                             for (s2, r) in found {
                                 let mut prems = a.prems.clone();
                                 prems.push(r);
@@ -4310,12 +4307,12 @@ impl Eval {
                             }
                         }
                         BodyElem::Neg(l) => {
-                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
+                            let (faults, unknowns) = (self.fault_count, self.demand_trail.len());
                             let holds = self.neg_holds(l, &a.s, depth)?;
-                            let below = self.fault_count > faults || self.demand_unknown > unknowns;
-                            if below && depth > 0 && self.firing {
+                            let below = self.fault_count > faults || self.demand_trail.len() > unknowns;
+                            if below && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) {
                                 // below a call: the solution is not known, nor the head it would give
-                                self.demand_below(depth, &a.s, faults, unknowns);
+                                self.demand_below(depth, l, &a.s, faults, unknowns);
                                 continue;
                             }
                             if holds && self.strict_neg && !self.lat_spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
@@ -4323,9 +4320,9 @@ impl Eval {
                             }
                             // UNFOLDED AT A CALL, a negation what a hole left unknown could
                             // decide leaves the call's head under it unknown, as a fault would
-                            if holds && depth > 0 && self.firing && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+                            if holds && depth > 0 && (self.firing || brk!("asked_unholed" => false; self.asking)) && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
                                 if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
-                                    self.demand_unknown_at(depth, &a.s, Some(u));
+                                    self.demand_unknown_read(depth, &a.s, u);
                                     continue;
                                 }
                             }
@@ -4334,9 +4331,12 @@ impl Eval {
                                 // call left out could have, or what a hole left unknown
                                 if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
                                     let u = self.lit_unknown(l, &a.s);
-                                    match self.demand_last.clone().filter(|_| self.fault_count == faults) {
-                                        Some(from) => self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(from))),
-                                        None => self.fault_edge(&u),
+                                    if self.fault_count == faults {
+                                        for f in self.demand_called(l.rel, unknowns) {
+                                            self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+                                        }
+                                    } else {
+                                        self.fault_edge(&u);
                                     }
                                     self.lat_plain.insert(u.clone());
                                     self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
@@ -7653,6 +7653,40 @@ impl Eval {
             if plain && only.is_none() && !self.plain_closed.contains(&r.id) {
                 continue;
             }
+            self.reached_through(&r, u, only.is_none(), &mut out)?;
+        }
+        // A RULE ANSWERED ON DEMAND fires at no level: an unknown reaches its
+        // head through a positive premise as through a bottom-up rule's, and its
+        // readers from there (a negation in it reads holes at each call)
+        if only.is_none() && brk!("demand_poison_skipped" => false; true) {
+            let open: Vec<Rc<ERule>> = self
+                .demand_rels
+                .iter()
+                .filter(|(rel, _)| !self.demand_closed.contains(rel))
+                .flat_map(|(_, rs)| rs.iter().filter(|r| r.plan.iter().any(|b| matches!(b, BodyElem::Pos(l) if l.rel == rel))).cloned())
+                .collect();
+            for r in open {
+                let pos: Vec<usize> = (0..r.plan.len()).filter(|&i| matches!(&r.plan[i], BodyElem::Pos(l) if l.rel == rel)).collect();
+                for i in pos {
+                    let BodyElem::Pos(l) = &r.plan[i] else { continue };
+                    let Some(s0) = self.unknown_binds(l, u, &Subst::new()) else { continue };
+                    for s in self.poison_solve(&r, i, s0)? {
+                        if let Some(v) = self.reached_conclusion(&r, &s, plain) {
+                            out.push((v, r.id, u.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// `reached_from` over one rule `r`; `all`, the walk of every active rule.
+    fn reached_through(&mut self, r: &Rc<ERule>, u: &Unknown, all: bool, out: &mut Vec<(Unknown, Sym, Unknown)>) -> Result<(), Halt> {
+        let rel = u.rel();
+        let plain = self.lat_plain.contains(u);
+        let only: Option<()> = (!all).then_some(());
+        {
             for i in 0..r.plan.len() {
                 let s0 = match &r.plan[i] {
                     BodyElem::Pos(l) if l.rel == rel => self.unknown_binds(l, u, &Subst::new()),
@@ -7709,7 +7743,7 @@ impl Eval {
                 }
             }
         }
-        Ok(out)
+        Ok(())
     }
 
     /// What `r` concludes under `s`, reached from something unknown (`plain`
@@ -8459,29 +8493,94 @@ impl Eval {
 
     /// A fault (`faults`) or an unknown (`unknowns`) met below a premise
     /// answered on demand leaves the call above it unknown under `s`.
-    fn demand_below(&mut self, depth: usize, s: &Subst, faults: u64, unknowns: u64) {
+    /// `l` called under `s`: each head of `l`'s call left unknown (past
+    /// `unknowns` on the trail) leaves the call above unknown under the
+    /// solution it binds, its known arguments only.
+    fn demand_below(&mut self, depth: usize, l: &Lit, s: &Subst, faults: u64, unknowns: usize) {
         if self.fault_count > faults {
             self.demand_fault(depth, s);
-        } else if self.demand_unknown > unknowns {
-            let from = self.demand_last.clone();
+            return;
+        }
+        if self.demand_trail.len() == unknowns {
+            return;
+        }
+        let mut bound = false;
+        for u in self.demand_called(l.rel, unknowns) {
+            let Some(s2) = self.unknown_binds(l, &u, s) else { continue };
+            let s3 = self.known_part(l, s, &s2);
+            self.demand_unknown_at(depth, &s3, vec![u]);
+            bound = true;
+        }
+        if !bound {
+            let from = self.demand_trail[unknowns..].to_vec();
             self.demand_unknown_at(depth, s, from);
         }
     }
 
+    /// The heads of calls to `rel` left unknown past `unknowns` on the trail,
+    /// each once; every one past it when none is of `rel`.
+    fn demand_called(&self, rel: Sym, unknowns: usize) -> Vec<Unknown> {
+        let past = brk!("demand_trail_last" => &self.demand_trail[self.demand_trail.len() - 1..]; &self.demand_trail[unknowns..]);
+        let mut out: Vec<Unknown> = Vec::new();
+        for u in past.iter().filter(|u| u.rel() == rel) {
+            if !out.contains(u) {
+                out.push(u.clone());
+            }
+        }
+        if out.is_empty() {
+            for u in past {
+                if !out.contains(u) {
+                    out.push(u.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// `s` and what `s2` binds of `l`'s variables to a known ground value.
+    fn known_part(&mut self, l: &Lit, s: &Subst, s2: &Subst) -> Subst {
+        let mut vs: Vec<Sym> = Vec::new();
+        for a in &l.args {
+            self.h.vars_of(*a, &mut vs);
+        }
+        let mut out = s.clone();
+        for v in vs {
+            let t0 = resolve(&mut self.h, Term::var(v), &out);
+            if self.h.is_ground(t0) {
+                continue;
+            }
+            let t = resolve(&mut self.h, Term::var(v), s2);
+            if self.h.is_ground(t) && !self.holds_unknown(t) {
+                out.push((v, t));
+            }
+        }
+        out
+    }
+
+    /// `u`, a hole left unknown, read below a call: in a firing the call's
+    /// head is unknown; answering a question, `u` is noted.
+    fn demand_unknown_read(&mut self, depth: usize, s: &Subst, u: Unknown) {
+        if !self.firing && !self.asked.contains(&u) {
+            self.asked.push(u.clone());
+        }
+        self.demand_unknown_at(depth, s, vec![u]);
+    }
+
     /// AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head
     /// under `s` is unknown, reached from `from`, and so is each call up.
-    fn demand_unknown_at(&mut self, depth: usize, s: &Subst, from: Option<Unknown>) {
-        if depth == 0 || !self.firing {
+    fn demand_unknown_at(&mut self, depth: usize, s: &Subst, from: Vec<Unknown>) {
+        if depth == 0 || !(self.firing || self.asking) {
             return;
         }
         let Some(head) = self.demand_heads.last().cloned() else { return };
         let u = self.lit_unknown(&head, s);
-        if let Some(f) = from {
-            self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+        if self.firing {
+            for f in from {
+                self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+            }
+            self.plain_pending.push((u.clone(), true));
         }
-        self.plain_pending.push((u.clone(), true));
-        self.demand_last = Some(u);
-        self.demand_unknown += 1;
+        self.demand_trail.push(u);
     }
 
     /// The cells the body aggregate at element `i` holed under `s`, each with
@@ -13585,7 +13684,11 @@ impl Eval {
     /// caller's own words. Renaming counts from zero, as there.
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
+        let asking = std::mem::replace(&mut self.asking, true);
         let r = self.whynot_at(lit, b, shown);
+        self.asking = asking;
+        self.asked.clear();
+        self.demand_trail.clear();
         self.rename_counter = saved;
         r
     }
@@ -13599,6 +13702,7 @@ impl Eval {
             done: HashMap::new(),
         };
         let s = Subst::default();
+        self.asked.clear();
         if !self.match_premise(lit, &s, 0, None)?.is_empty() {
             let mut k = String::new();
             resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
@@ -13611,10 +13715,11 @@ impl Eval {
         let mut k = String::new();
         resolved_lit_key(&mut self.h, lit.rel, lit.persp, &lit.args, &s, &mut k);
         let mut lines = vec![format!("whynot {k}:")];
+        let asked = std::mem::take(&mut self.asked);
         // the plain explainer knows no lattice, counting or unknown tuple
         if self.plain {
             ctx.path.insert(self.cycle_key(lit));
-            return self.whynot_plain(lit, k, lines, &mut ctx);
+            return self.whynot_plain(lit, k, lines, asked, &mut ctx);
         }
         if let Some(more) = brk!("lattice_whynot_plain" => None::<Vec<String>>; self.whynot_lattice(lit)?) {
             lines.extend(more);
@@ -13633,6 +13738,8 @@ impl Eval {
             for (f, _) in sh {
                 lines.push(self.shrug_why(f));
             }
+        } else {
+            self.asked_lines(&k, asked, &mut lines)?;
         }
         if let Some(more) = path {
             lines.extend(more);
@@ -13923,16 +14030,34 @@ impl Eval {
 
     /// src/api.ts `whynotStruct` past the literal that holds: a shrug, then
     /// the demonstration.
-    fn whynot_plain(&mut self, lit: &Lit, k: String, mut lines: Vec<String>, ctx: &mut WnCtx) -> Result<(bool, String), Halt> {
+    fn whynot_plain(&mut self, lit: &Lit, k: String, mut lines: Vec<String>, asked: Vec<Unknown>, ctx: &mut WnCtx) -> Result<(bool, String), Halt> {
         let sh = self.shrugs_of(lit);
         if !sh.is_empty() {
             lines[0] = format!("whynot {k}: no answer, a shrug");
             for (f, _) in sh {
                 lines.push(self.shrug_why(f));
             }
+        } else {
+            self.asked_lines(&k, asked, &mut lines)?;
         }
         lines.extend(self.explain_tree(lit, ctx)?);
         Ok((false, lines.join("\n")))
+    }
+
+    /// A LITERAL WHOSE UNFOLDING READ WHAT A HOLE LEFT UNKNOWN, and no shrug
+    /// row names it: no answer, and each unknown it read with its path.
+    fn asked_lines(&mut self, k: &str, asked: Vec<Unknown>, lines: &mut Vec<String>) -> Result<(), Halt> {
+        if asked.is_empty() {
+            return Ok(());
+        }
+        lines[0] = format!("whynot {k}: no answer, a shrug");
+        let mut shown: Vec<(String, Unknown)> = asked.into_iter().map(|u| (self.unknown_shown(&u), u)).collect();
+        shown.sort_by(|a, b| cmp_js(&a.0, &b.0));
+        for (text, u) in shown {
+            lines.push(format!("  it reads {text}, which is not known"));
+            lines.extend(self.unknown_path(&u)?);
+        }
+        Ok(())
     }
 
     /// WHYNOT OF A TUPLE A HOLE LEFT UNKNOWN: not known to hold, and the
@@ -14212,8 +14337,13 @@ impl Eval {
         }
         match &body[k] {
             BodyElem::Pos(l) => {
+                let unknowns = self.demand_trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
-                if mm.is_empty() {
+                if mm.is_empty() && self.demand_trail.len() > unknowns {
+                    let mut key = String::new();
+                    resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                    out.entry(format!("{key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                } else if mm.is_empty() {
                     let mut key = String::new();
                     resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
                     let inst = self.instantiate(l, s);
@@ -14225,8 +14355,13 @@ impl Eval {
                 }
             }
             BodyElem::Neg(l) => {
+                let unknowns = self.demand_trail.len();
                 let mm = self.match_premise(l, s, 0, None)?;
-                if let Some((s2, r)) = mm.into_iter().next() {
+                if mm.is_empty() && (self.demand_trail.len() > unknowns || !self.lat_spread.is_empty() && self.read_unknown(l, s, true).is_some()) {
+                    let mut key = String::new();
+                    resolved_lit_key(&mut self.h, l.rel, l.persp, &l.args, s, &mut key);
+                    out.entry(format!("not {key} -- not known: it reads what a hole left unknown")).or_insert(None);
+                } else if let Some((s2, r)) = mm.into_iter().next() {
                     let wit = match r {
                         PremRef::Fact(f) => {
                             let rec = self.store.rec(f);
