@@ -3686,7 +3686,7 @@ work_needs(w_compression_programme, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_remeasure_after_engine_fast,
   "EXPERIMENT 0, first: take the fact and work distribution again (per relation, per rule) after engine-fast is merged, on the RUST engine, release build (with and without sealed(witness)), same three corpora plus a grafema package; the 2026-10-04 table was taken on the TS engine and is indicative only; record the table beside the 2026-10-04 one. Every hypothesis below is re-ranked by it.").
-work_state(w_cmp_remeasure_after_engine_fast, open).
+work_state(w_cmp_remeasure_after_engine_fast, done).
 
 work(w_cmp_provenance_on_demand,
   "HYPOTHESIS 1 (largest lever, ~44% of facts): derived_by rows need not be materialised for every derived fact; they are needed only where a rule reads derived_by (or asserted_by) or a why/excise asks. EXPERIMENT: materialise derived_by lazily (a demand relation over the stored witnesses, or only for the relations some rule reads it of) and measure facts, time and memory; ACCEPTANCE: every world that reads derived_by answers the same, why/whynot/excise byte-identical, whycheck 0 differences, both engines; decide with sealed(witness) how a world declares it needs no provenance at all.").
