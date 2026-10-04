@@ -30,7 +30,6 @@ const POLICY_BUDGET: i64 = 20_000_000;
 /// the most descending passes narrowing makes after a widening
 const NARROW_PASSES: usize = 4;
 /// What stands in a correlation's key for a group variable nothing bound (datastrat.rs).
-const DS_ANY: &str = "\u{1}any";
 
 fn ds_any_name() -> &'static str {
     brk!("ds_any_writable" => "$ds_any"; DS_ANY)

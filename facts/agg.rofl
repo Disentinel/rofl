@@ -1180,6 +1180,9 @@ work_proof(w_agg_data_strat, "agg_datastrat_why").
 work_proof(w_agg_data_strat, "agg_datastrat_tick").
 work_proof(w_agg_data_strat, "agg_datastrat_budget").
 work_proof(w_agg_data_strat, "agg_datastrat_retract").
+work_proof(w_agg_data_strat, "agg_datastrat_below").
+work_proof(w_agg_data_strat, "agg_datastrat_below_sum").
+work_proof(w_agg_data_strat, "agg_datastrat_mark").
 work(w_agg_retract_fallback_tail, "the retraction's named fallbacks (f_a_retraction_is_a_fresh_evaluation_or_it_is_evaluated_again): a threshold that reads what changed, a staged (@next) or demanded rule, a supported cell a reset rule also owns, a reset rule that concludes what a changed cell concludes, and an aggregate component stratified by its data each get a delta that is a fresh evaluation without the fact, or stay evaluated again with the reason recorded; done only with the work_proof worlds").
 work_state(w_agg_retract_fallback_tail, done).
 work_proof(w_agg_retract_fallback_tail, "agg_datastrat_retract").

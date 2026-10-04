@@ -1,0 +1,12 @@
+-- examples/checks/agg-datastrat-below_sum.rofl — the same with a sum: inv(c2, _) is a member whose value is unknown, so b1's sum is a hole, and a, which would add
+-- b1's members through the rule that reads tot(b1, _), is a hole; c1, whose members are all known, has its sum.
+--
+--   tot(c1) 5; tot(b1), tot(a): holes
+
+edb(reports). edb(w).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(c2, b1). reports(d1, c1).
+w(b1, 1). w(b2, 1). w(c1, 1). w(c2, 0). w(d1, 2).
+inv(E, X) :- w(E, V), X is 10 / V.
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), tot(M, N), N >= 1, reports(E, M).
+tot(B, N) :- N is sum(X ; E : under(B, E), inv(E, X)).

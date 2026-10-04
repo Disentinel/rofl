@@ -220,27 +220,6 @@ impl Eval {
         self.ds_verify(comp)
     }
 
-    /// A correlation's key as text, `_` for a group no rule bound: the same text in both engines, and the order
-    /// of the layers.
-    fn ds_text(&self, key: &[Term]) -> String {
-        if brk!("ds_text_raw" => true; false) {
-            return tuple_text(&self.h, key);
-        }
-        let mut o = String::from("(");
-        for (i, t) in key.iter().enumerate() {
-            if i > 0 {
-                o.push(',');
-            }
-            if t.as_atom().is_some_and(|a| self.h.name(a) == ds_any_name()) {
-                o.push('_');
-            } else {
-                self.h.canon_term(*t, &mut o);
-            }
-        }
-        o.push(')');
-        o
-    }
-
     /// Whether the correlation `k` leaves every group of its element open.
     fn ds_whole(&mut self, k: &AggKey) -> bool {
         let any = Term::atom(self.h.intern(ds_any_name()));
@@ -329,7 +308,7 @@ impl Eval {
     /// ephemeral, over the store as it stands, and must give the value the cell holds (a hole stands).
     fn ds_verify(&mut self, comp: &DsComp) -> Result<(), Halt> {
         let mut keys: Vec<AggKey> = self.ds_released.iter().filter(|k| comp.elems.contains(&(k.0, k.1))).cloned().collect();
-        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&self.ds_text(&a.2), &self.ds_text(&b.2))));
+        keys.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2))));
         let saved = (self.steps, self.rows, self.peak_rows, self.fault, self.fault_count, self.last_fault, self.last_fault_rule);
         let mut bad: Option<String> = None;
         for k in keys {
@@ -363,7 +342,7 @@ impl Eval {
     /// What a hole in the component left unknown, carried before the next layer
     /// reads it: the component is closed as far as the carry is concerned.
     fn ds_carry(&mut self, comp: &DsComp) -> Result<(), Halt> {
-        if brk!("ds_hole_uncarried" => true; self.plain_pending.is_empty() && self.plain_undecided.is_empty() && self.lat_undecided.is_empty()) {
+        if brk!("ds_hole_uncarried" => true; self.plain_pending.is_empty() && self.plain_undecided.is_empty() && self.lat_undecided.is_empty() && brk!("ds_spread_uncarried" => true; self.lat_spread.is_empty())) {
             return Ok(());
         }
         self.close_plain_rules(comp.round + 1)?;
@@ -428,7 +407,7 @@ impl Eval {
                     Some(r) => (self.h.name(r.clause.head.rel).to_string(), self.ds_op(&r, *at), String::new()),
                     None => (String::new(), "an aggregate", String::new()),
                 };
-                format!("{op}@{head}{}", self.ds_text(corr))
+                format!("{op}@{head}{}", tuple_text(&self.h, corr))
             }
         }
     }
@@ -545,7 +524,7 @@ impl Eval {
         }
         for l in layers.iter_mut() {
             l.sort_by(|a, b| {
-                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&self.ds_text(&a.2), &self.ds_text(&b.2)))
+                cmp_js(self.h.name(a.0), self.h.name(b.0)).then(a.1.cmp(&b.1)).then(cmp_js(&tuple_text(&self.h, &a.2), &tuple_text(&self.h, &b.2)))
             });
         }
         Ok(layers)

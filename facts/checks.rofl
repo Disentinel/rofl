@@ -2695,6 +2695,28 @@ check_file("agg_datastrat_elems_gated", "examples/checks/agg-datastrat-elems_gat
 check_opt("agg_datastrat_elems_gated", together, 1).
 proves_work("agg_datastrat_elems_gated", w_agg_layer_fires_the_new).
 
+-- a fault below the component holes the count that reads it, and the count above
+check_world("agg_datastrat_below").
+check_file("agg_datastrat_below", "examples/checks/agg-datastrat-below.rofl").
+check_file("agg_datastrat_below", "examples/checks/agg-datastrat-below-check.rofl").
+check_opt("agg_datastrat_below", together, 1).
+proves_work("agg_datastrat_below", w_agg_data_strat).
+
+-- a sum with a member unknown is a hole, the sum whose members are known stands
+check_world("agg_datastrat_below_sum").
+check_file("agg_datastrat_below_sum", "examples/checks/agg-datastrat-below_sum.rofl").
+check_file("agg_datastrat_below_sum", "examples/checks/agg-datastrat-below_sum-check.rofl").
+check_opt("agg_datastrat_below_sum", together, 1).
+proves_work("agg_datastrat_below_sum", w_agg_data_strat).
+
+-- a group no rule bound is `_` in every row, and no control byte reaches the state
+check_world("agg_datastrat_mark").
+check_file("agg_datastrat_mark", "examples/checks/agg-datastrat-mark.rofl").
+check_file("agg_datastrat_mark", "examples/checks/agg-datastrat-mark-check.rofl").
+check_opt("agg_datastrat_mark", together, 1).
+check_opt("agg_datastrat_mark", explain, 1).
+proves_work("agg_datastrat_mark", w_agg_data_strat).
+
 -- a chain of sums fires once per sum: a layer that fires an instance again is a step, the budget is the chain's own, whole firing is far over it
 check_world("agg_datastrat_chain").
 check_file("agg_datastrat_chain", "examples/checks/agg-datastrat-chain.rofl").

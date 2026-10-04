@@ -304,6 +304,9 @@ function alarmRels(state: string): string[] {
  *  it (f_a_missing_row_check_goes_quiet_over_a_hole), and a row does not. */
 function rowProblems(files: string[], state: string): string[] {
   const out: string[] = [], lines = state.split('\n');
+  // no byte of control reaches the state: a mark the engine keeps for itself (a group no rule bound) prints as `_`
+  const ctl = /[\x00-\x08\x0b-\x1f]/.exec(state);
+  if (ctl) out.push(`a control byte 0x${ctl[0].charCodeAt(0).toString(16).padStart(2, '0')} reached the state: ${JSON.stringify(state.slice(Math.max(0, ctl.index - 40), ctl.index + 20))}`);
   for (const f of files) {
     for (const m of fs.readFileSync(f, 'utf8').matchAll(/^-- expect-(no-)?row: (.+)$/gm)) {
       const want = m[2].trim(), has = lines.some((l) => l.startsWith(want));

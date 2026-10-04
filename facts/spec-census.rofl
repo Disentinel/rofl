@@ -334,6 +334,8 @@ check[checks]("facts/goldens.rofl", "agg_count_wfs", world).
 check[checks]("facts/goldens.rofl", "agg_count_why", world).
 check[checks]("facts/goldens.rofl", "agg_count_witness", world).
 check[checks]("facts/goldens.rofl", "agg_critpath_demo", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_below", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_below_sum", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_budget", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_chain", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_cycle", world).
@@ -343,6 +345,7 @@ check[checks]("facts/goldens.rofl", "agg_datastrat_eval", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_groups", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_holes", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_keys", world).
+check[checks]("facts/goldens.rofl", "agg_datastrat_mark", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_neg", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_retract", world).
 check[checks]("facts/goldens.rofl", "agg_datastrat_tick", world).

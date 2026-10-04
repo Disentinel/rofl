@@ -1,0 +1,10 @@
+-- examples/checks/agg-datastrat-mark.rofl — A GROUP NO RULE BOUND is named `_` wherever a hole or a shrug names the correlation that holed. The sum of
+-- tot divides by w(E, V) inside its body, which faults for c2: the whole correlation and the group b1 are holes, and no
+-- control byte reaches the state (the harness refuses one).
+
+edb(reports). edb(w).
+reports(b1, a). reports(b2, a). reports(c1, b1). reports(c2, b1). reports(d1, c1).
+w(b1, 1). w(b2, 1). w(c1, 1). w(c2, 0). w(d1, 2).
+under(B, E) :- reports(E, B).
+under(B, E) :- reports(M, B), tot(M, N), N >= 1, reports(E, M).
+tot(B, N) :- N is sum(X ; E : under(B, E), w(E, V), X is 10 / V).

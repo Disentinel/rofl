@@ -1,0 +1,5 @@
+-- examples/checks/agg-datastrat-mark-check.rofl — agg_datastrat_mark: the whole correlation that faulted is the cell `_` in the hole and shrug rows.
+-- expect-row: hole[$kernel]($cell(ra6f67ac0,1,0,$cons(_,$nil)),arith_zero_divisor)
+-- expect-row: hole[$kernel]($cell(ra6f67ac0,1,0,$cons(b1,$nil)),arith_zero_divisor)
+-- expect-row: tot[main](c1,5) tick drv support=1
+-- expect-no-row: tot[main](b1,

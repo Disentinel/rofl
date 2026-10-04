@@ -2978,8 +2978,10 @@ reached, so the data can be read (`datastrat.rs`, `src/aggeval.ts` `dsGraph`):
   `_` is every group the walk did not name. A group is sealed by its own correlation,
   the inner body solved with the group bound (`seal_cells`, `ds_bind`), and the `_`
   seals the groups no narrower correlation sealed and lists the cells of the others (a group is one cell,
-  sealed once, and every correlation that covers it reads it). The `_` is a name no source can write, one text
-  (`_`) in both engines and in the order of the layers.
+  sealed once, and every correlation that covers it reads it). The `_` is a name no source can write, spelled `_`
+  wherever a term is printed (`Heap::canon_term`, `canonTerm`): a hole or a shrug that names a correlation, the
+  refusals, the order of the layers; a rule that reads such a row holds the mark and shows it as `_`, and the
+  harness refuses a control byte in any state (`agg_datastrat_mark`).
 - The EDGES of a pattern are what the premises of each rule that could conclude it
   read; those of a correlation, what its inner body reads. The premises are read a
   premise outside the component first (it binds what the patterns after it name), then
@@ -3041,7 +3043,9 @@ negates what is below fires with the round's other rules, before the layers, and
 again on the news the layers bring, like any rule.
 
 **Holes and shrugs.** Between layers, and before the first, the unknowns the plain
-rules and the cells holed so far left are carried through the component as if it
+rules and the cells holed so far left, and every unknown a fault below the component spread (`lat_spread`: the
+component's own rules are closed to the carry only here, so what they conclude from it is unknown before a cell
+seals, `agg_datastrat_below`), are carried through the component as if it
 were closed (`ds_carry`: `close_plain_rules` and `plain_flush` at the round after
 it), which can only leave more unknown, never less; so a correlation sealed after
 reads them through the carry the levels already do (`agg_possibles`), and a range with

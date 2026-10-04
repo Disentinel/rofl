@@ -5385,13 +5385,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ds_text_raw",
-  "what": "a correlation's key is sorted as its raw text, the mark of a group no rule bound a character of its own",
-  "expect": {
-   "agg_datastrat_cycle": "refused, but not for"
-  }
- },
- {
   "id": "ds_any_writable",
   "what": "the mark of a group no rule bound is an atom the source can write",
   "expect": {
@@ -5403,6 +5396,21 @@ export const BREAKS: Break[] = [
   "what": "a layer fires nothing, so the final firing of the component makes every conclusion",
   "expect": {
    "agg_datastrat_eval": "missed an instance"
+  }
+ },
+ {
+  "id": "ds_any_printed_raw",
+  "what": "the mark of a group no rule bound is printed as the byte it is, in a hole or a shrug that names the correlation",
+  "expect": {
+   "agg_datastrat_mark": "the state lacks the row hole"
+  }
+ },
+ {
+  "id": "ds_spread_uncarried",
+  "what": "an unknown a fault below the component carried is not carried through the component's own rules before its layers seal",
+  "expect": {
+   "agg_datastrat_below": "dz_missing",
+   "agg_datastrat_below_sum": "dz_missing"
   }
  },
  {
@@ -5497,7 +5505,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0) return;\n    this.closePlainRules(comp.round + 1);",
+    "    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0 && this.latSpread.size === 0) return;\n    this.closePlainRules(comp.round + 1);",
     "    if (true as boolean) return;\n    this.closePlainRules(comp.round + 1);"
    ]
   ],
@@ -5691,26 +5699,12 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ts_ds_text_raw",
-  "what": "the TypeScript order of the layers reads the mark of a group no rule bound as a character",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "(t === DS_ANY ? '_' : canonTerm(t))",
-    "(false ? '_' : canonTerm(t))"
-   ]
-  ],
-  "expect": {
-   "agg_datastrat_cycle": "refused, but not for"
-  }
- },
- {
   "id": "ts_ds_any_writable",
   "what": "the TypeScript mark of a group no rule bound is an atom the source can write",
   "edits": [
    [
     "src/aggeval.ts",
-    "const DS_ANY = mka('\\u0001any');",
+    "const DS_ANY = mka(DS_ANY_NAME);",
     "const DS_ANY = mka('$ds_any');"
    ]
   ],
@@ -5730,6 +5724,35 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "agg_datastrat_eval": "missed an instance"
+  }
+ },
+ {
+  "id": "ts_ds_any_printed_raw",
+  "what": "the TypeScript printing of a term writes the mark of a group no rule bound as the byte it is",
+  "edits": [
+   [
+    "src/unify.ts",
+    "    case 'a': return t.name === DS_ANY_NAME ? '_' : t.name;",
+    "    case 'a': return t.name;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_mark": "the state lacks the row hole"
+  }
+ },
+ {
+  "id": "ts_ds_spread_uncarried",
+  "what": "the TypeScript engine does not carry what a fault below the component left unknown through its rules before the layers seal",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.latUndecided.length === 0 && this.latSpread.size === 0) return;",
+    "this.latUndecided.length === 0 && true) return;"
+   ]
+  ],
+  "expect": {
+   "agg_datastrat_below": "dz_missing",
+   "agg_datastrat_below_sum": "dz_missing"
   }
  },
  {

@@ -22,6 +22,7 @@ import {
   type Term, type Subst, type Lit, type BodyElem, type Clause, mka, mkf, mki, mks, mkv, canonTerm, canonVars,
   resolve, unify, unifyAll, walk, isGround, varsOf, elemVars, aggInnerVars, evalArith,
   type ArithFail, ARITH_UNBOUND, ARITH_TYPE, ARITH_ZERO, ARITH_OVERFLOW, TERM_MIN, TERM_MAX, type Int,
+  DS_ANY_NAME,
 } from './unify.ts';
 import {
   type AggOp, type Val, type Sorted, Refused, IvFailed, TagFailed, opFromName, opClass, isJoin,
@@ -712,8 +713,7 @@ const F_FROZEN = { scope: 'timeless', base: false, frozen: true } as const;
 
 const HOLE_ID_DEFAULT = mka('$adhoc');
 /** What stands in a correlation's key for a group variable nothing bound (`dsBind`). */
-const DS_ANY = mka('\u0001any');
-const dsText = (ts: Term[]): string => `(${ts.map((t) => (t === DS_ANY ? '_' : canonTerm(t))).join(',')})`;
+const DS_ANY = mka(DS_ANY_NAME);
 const rowKey = (r: Term[]): string => r.map(canonTerm).join('\u0000');
 /** A premise as a firing's signature spells it (rust/rofl `write_sig`). */
 export const sigOfPrem = (p: PremRef): string => (p.t === 'bi' ? 'b:' + p.desc : p.t + ':' + p.key);
@@ -1640,7 +1640,7 @@ export class AggEval {
    *  store as it stands, and must give the value the cell holds (a hole stands). */
   private dsVerify(comp: DsComp): void {
     const keys = [...this.dsKeys.entries()].filter(([, k]) => comp.elems.some((e) => e[0] === k.rid && e[1] === k.at))
-      .sort((x, y) => cmpStr(x[1].rid, y[1].rid) || x[1].at - y[1].at || cmpStr(dsText(x[1].corr), dsText(y[1].corr)));
+      .sort((x, y) => cmpStr(x[1].rid, y[1].rid) || x[1].at - y[1].at || cmpStr(tupleText(x[1].corr), tupleText(y[1].corr)));
     const saved: [number, number, number, string | null, number, string | null, string | null] =
       [this.steps, this.rows, this.peakRows, this.fault, this.faultCount, this.lastFault, this.lastFaultRule];
     let bad: string | null = null;
@@ -1671,7 +1671,7 @@ export class AggEval {
   /** What a hole in the component left unknown, carried before the next layer reads it: the component is closed as far
    *  as the carry is concerned. */
   private dsCarry(comp: DsComp): void {
-    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0) return;
+    if (this.plainPending.length === 0 && this.plainUndecided.length === 0 && this.latUndecided.length === 0 && this.latSpread.size === 0) return;
     this.closePlainRules(comp.round + 1);
     this.plainFlush(comp.round + 1);
   }
@@ -1688,7 +1688,7 @@ export class AggEval {
     if (n.k === 'p') return `${n.rel}(${n.args.map((t) => (t === null ? '_' : canonTerm(t))).join(',')})`;
     const r = this.ruleOf(n.rid);
     const a = r?.clause.body.find((b) => b.t === 'agg' && b.at === n.at) as AggElem | undefined;
-    return `${a ? a.op : 'an aggregate'}@${r ? r.clause.head.rel : ''}${dsText(n.corr)}`;
+    return `${a ? a.op : 'an aggregate'}@${r ? r.clause.head.rel : ''}${tupleText(n.corr)}`;
   }
 
   private dsLayers(comp: DsComp): { rid: string; at: number; corr: Term[]; mk: string }[][] {
@@ -1778,7 +1778,7 @@ export class AggEval {
       while (layers.length <= d) layers.push([]);
       layers[d].push({ rid: nd.rid, at: nd.at, corr: nd.corr, mk: `${nd.rid}|${nd.at}|${listKey(nd.corr)}` });
     }
-    for (const l of layers) l.sort((x, y) => cmpStr(x.rid, y.rid) || x.at - y.at || cmpStr(dsText(x.corr), dsText(y.corr)));
+    for (const l of layers) l.sort((x, y) => cmpStr(x.rid, y.rid) || x.at - y.at || cmpStr(tupleText(x.corr), tupleText(y.corr)));
     return layers;
   }
 
