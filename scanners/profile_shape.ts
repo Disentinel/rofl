@@ -35,7 +35,7 @@ import type { Term } from '../src/unify.ts';
  *  that named one would stop being about the domain and start being about
  *  storage. So residency is read HERE, from the id, and reaches the rules only
  *  as `in_group` — host data, like `imports` and `collects`. */
-const VOLUME = /^n[0-9a-f]{8}_/;
+const VOLUME = /^n[0-9a-f]{16}_/;
 export const groupOf = (t: string): string | null => VOLUME.exec(t)?.[0] ?? null;
 
 export interface Shape {
