@@ -886,6 +886,13 @@ pub struct Eval {
     demand_unknown: u64,
     /// The head `demand_unknown` last left unknown: what the call above it rests on.
     demand_last: Option<Unknown>,
+    /// The calls answered on demand being unfolded, as variant keys: a call
+    /// met again inside its own unfolding would unfold forever.
+    demand_calls: Vec<String>,
+    /// The relations answered on demand whose every answer is ground and
+    /// whose every rule fires bottom-up: a recursive call to one reads the
+    /// store (`demand_closed_rels`).
+    demand_closed: HashSet<Sym>,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
     /// The back-index of the retraction path: fact -> the cells a member of
@@ -1249,6 +1256,8 @@ impl Eval {
             fault_count: 0,
             demand_unknown: 0,
             demand_last: None,
+            demand_calls: Vec::new(),
+            demand_closed: HashSet::new(),
             last_fault: None,
             agg_memo: HashMap::new(),
             support_ix: None,
@@ -1558,6 +1567,84 @@ impl Eval {
             .into_iter()
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
+        self.demand_closed = self.demand_closed_rels();
+    }
+
+    /// THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all
+    /// fire bottom-up: every answer one has is in the store once its rules
+    /// settle, so a call met again inside its own unfolding reads the store
+    /// instead of unfolding forever. An answer position is ground when every
+    /// variable of each rule's head there is bound by a positive premise at a
+    /// ground position (any of a relation not answered on demand), or by `is`
+    /// or `=` from ground ones; assumed of all and withdrawn where a rule
+    /// falls short, so a recursion is ground when nothing in it opens a
+    /// position.
+    fn demand_closed_rels(&mut self) -> HashSet<Sym> {
+        let mut ground: HashMap<Sym, Vec<bool>> = HashMap::new();
+        for (rel, rs) in &self.demand_rels {
+            let n = rs[0].clause.head.args.len();
+            let ok = rs.iter().all(|r| r.clause.head.args.len() == n && r.clause.head.persp.is_atom());
+            ground.insert(*rel, vec![ok; n]);
+        }
+        loop {
+            let mut changed = false;
+            for (rel, rs) in &self.demand_rels {
+                for r in rs {
+                    if !ground[rel].iter().any(|g| *g) {
+                        break;
+                    }
+                    let mut bound: Vec<Sym> = Vec::new();
+                    loop {
+                        let before = bound.len();
+                        for b in &r.clause.body {
+                            match b {
+                                BodyElem::Pos(l) => {
+                                    let g = ground.get(&l.rel);
+                                    for (i, a) in l.args.iter().enumerate() {
+                                        if g.is_none_or(|g| g.len() == l.args.len() && g[i]) {
+                                            self.h.vars_of(*a, &mut bound);
+                                        }
+                                    }
+                                    if g.is_none() {
+                                        self.h.vars_of(l.persp, &mut bound);
+                                    }
+                                }
+                                BodyElem::Bi { op, l, r } if *op == self.v.op_is || *op == self.v.op_eq => {
+                                    let mut vs = Vec::new();
+                                    for (from, to) in [(*r, *l), (*l, *r)] {
+                                        vs.clear();
+                                        self.h.vars_of(from, &mut vs);
+                                        if vs.iter().all(|v| bound.contains(v)) {
+                                            self.h.vars_of(to, &mut bound);
+                                        }
+                                        if *op == self.v.op_is {
+                                            break;
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        if bound.len() == before {
+                            break;
+                        }
+                    }
+                    for (j, a) in r.clause.head.args.iter().enumerate() {
+                        let mut vs = Vec::new();
+                        self.h.vars_of(*a, &mut vs);
+                        if ground[rel][j] && !vs.iter().all(|v| bound.contains(v)) {
+                            ground.get_mut(rel).unwrap()[j] = false;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let safe: HashSet<Sym> = self.demand_rels.iter().filter(|(_, rs)| rs.iter().all(|r| r.safe)).map(|(rel, _)| *rel).collect();
+        ground.into_iter().filter(|(rel, g)| safe.contains(rel) && g.iter().all(|x| *x)).map(|(rel, _)| rel).collect()
     }
 
     /// THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).`,
@@ -9920,6 +10007,13 @@ impl Eval {
             .find(|(r, _)| *r == l.rel)
             .map(|(_, rs)| rs.clone());
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
+        // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a
+        // relation whose answers are all in the store it reads only those
+        let call = drs.as_ref().map(|_| self.anon_lit_key(l, s));
+        let drs = drs.filter(|_| {
+            let again = self.demand_calls.contains(call.as_ref().unwrap());
+            !again || !brk!("demand_recursion_unfolds" => false; self.demand_closed.contains(&l.rel))
+        });
         if let Some(drs) = drs {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for (sb, r) in out.iter() {
@@ -9928,17 +10022,23 @@ impl Eval {
                     seen_keys.insert(self.store.key(&self.h, *f));
                 }
             }
-            for dr in drs {
-                for (ms, mref) in self.solve_demand_rule(&dr, l, s, depth)? {
-                    let dk = match mref {
-                        PremRef::Fact(f) => self.store.key(&self.h, f),
-                        _ => self.resolved_lit_key(l, &ms),
-                    };
-                    if seen_keys.insert(dk.clone()) {
-                        open.push((ms, mref, dk));
+            self.demand_calls.push(call.unwrap());
+            let unfolded = (|| -> Result<(), Halt> {
+                for dr in drs {
+                    for (ms, mref) in self.solve_demand_rule(&dr, l, s, depth)? {
+                        let dk = match mref {
+                            PremRef::Fact(f) => self.store.key(&self.h, f),
+                            _ => self.resolved_lit_key(l, &ms),
+                        };
+                        if seen_keys.insert(dk.clone()) {
+                            open.push((ms, mref, dk));
+                        }
                     }
                 }
-            }
+                Ok(())
+            })();
+            self.demand_calls.pop();
+            unfolded?;
         }
         if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));

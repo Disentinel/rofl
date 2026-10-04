@@ -3471,6 +3471,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_recursion_unfolds",
+  "what": "a call met again inside its own unfolding unfolds again, to the depth wall",
+  "expect": {
+   "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
+  "id": "ts_demand_recursion_unfolds",
+  "what": "the TypeScript engine unfolds a call met again inside its own unfolding, to the depth wall",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "!(this.demandCalls.includes(call) && this.demandClosed.has(l.rel))",
+    "true"
+   ]
+  ],
+  "expect": {
+   "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {

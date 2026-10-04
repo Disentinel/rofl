@@ -323,6 +323,11 @@ check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
 check_world("demand_neg_hole").
 check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
 
+-- a recursion through relations answered on demand reaches its fixpoint
+-- (f_a_recursion_through_demand_unfolded_without_end)
+check_world("demand_recursion").
+check_file("demand_recursion", "examples/checks/demand-recursion.rofl").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").
