@@ -5,7 +5,8 @@
 -- at their level; fired first, before dt_g is derived again, they kept dt_h,
 -- dt_r and dt_r2 of 1 and 2.
 edb(dt_z). edb(dt_b). edb(dt_q). edb(dt_c).
-dt_b(1). dt_b(2). dt_b(3). dt_q(3). dt_z(1).
+dt_b(1). dt_b(2). dt_b(3). dt_q(3).
+dt_z(1).
 dt_c(1). dt_c(2). dt_c(3).
 dt_g(X)    :- dt_c(X), not dt_z(X).
 dt_u(X, Y) :- dt_q(X).
