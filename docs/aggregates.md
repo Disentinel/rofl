@@ -2288,6 +2288,22 @@ idempotent tag as a lattice and a counting tag above what its rules read (as
 an aggregate reads), and the stock evaluator puts `p@count` between the two
 (`rank_counting`: every rank doubled, `p@count` one below its tag).
 
+**The host fold's round budget** (`src/semiring.ts`). The host fold of a
+`BOUNDED` instance has three outcomes, not two. `converged`: it stabilised.
+`exhausted`: the round budget (1000 by default) ran out first; that is a
+property of the method, not of the instance, so `disciplineHeld` is `null`
+(undetermined) and the declaration is not refuted. `disciplineHeld: false`
+means refuted, and only a declared height can refute: an instance may declare
+`height` (the length of its longest strictly ascending chain, `ceiling + 1`
+for the chaos carrier), and the fold then caps itself at `height * nodes + 1`
+rounds. That is enough for any monotone operator, because every round that
+changes something raises at least one node by at least one step, a node has
+at most `height` steps, and one round more observes the fixed point; so
+running the whole bound without settling is a proof that the declaration is
+false. A caller's smaller `maxRounds` only ever yields `exhausted`. Measured on
+the HECK codex (`test/semiring-budget.test.ts`): ceiling 4000 converges in 4004
+rounds with the height declared, and reports `exhausted` at 1000 without it.
+
 **One algebra per relation.** A relation tagged twice, in two semirings or at
 two arities, or tagged and declared a lattice, is refused; a tag read or
 written at another arity (`tag_arity`, and the lattice's `lattice_arity`); an

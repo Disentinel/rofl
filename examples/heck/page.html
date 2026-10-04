@@ -450,8 +450,9 @@ para 14   "The provisions of paragraph 13 apply to the present paragraph in
     <li>
       <h3>Take the ceiling away, and check that it breaks</h3>
       <p>Same data, same rules, same weights, ceiling removed. The engine
-        reports <span class="mono">converged: false</span> and stops at the
-        caller's round limit rather than hanging. The highest value is 38 after
+        reports <span class="mono">converged: false, exhausted: true</span> and stops at the
+        caller's round limit rather than hanging; the budget ran out, which is not a
+        finding that the declaration is false. The highest value is 38 after
         40 rounds and 78 after 80 — measured twice, because one number stopped
         at a limit cannot tell you whether it was climbing or merely slow.</p>
     </li>
