@@ -36,8 +36,8 @@ shape_ok(may_not_run, project_then_negate, "one_row_per_key: 4 ms sealed / 6 def
 shape_ok(mechanism_unanswered, project_then_negate, "one_row_per_key: 0 ms").
 shape_ok(shape_without_verdict, project_then_negate, "one_row_per_key: 0 ms sealed / 1 default").
 
-shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms").
-shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default").
+shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms and 0 probes; the walk up from each private reference to the first class that declares the name was written and measured, 8 ms for nothing saved").
+shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default; the walk up from each this to the first binder was written and measured: this_over + this_nearer + this_host 19 ms sealed / 88 default, the walk 67 / 113").
 
 shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed / 3 default").
 shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
