@@ -2893,6 +2893,57 @@ check_opt("minimax", one_engine, rust).
 check_opt("linter", one_engine, rust).
 check_opt("agg_linter_demo", one_engine, rust).
 check_opt("notebook_spat", one_engine, rust).
+-- A JOIN ONLY A DELTA-FIRST PLAN FITS (w_cmp_delta_first, engine/joinplan.rs). hit(Y, Z) :- h(X, Z), l(X, Y), trig(Y, Z)
+-- over 100 + 100 + 3 rows: written order holds h joined to l, 10 000 rows, in a space of 250; the plan that starts from
+-- the news and takes trig second holds a handful. The TypeScript engine solves in written order and hits the wall, so
+-- the world is Rust's alone.
+check_world("agg_join_delta_first").
+check_file("agg_join_delta_first", "examples/checks/agg-join-delta-first.rofl").
+check_file("agg_join_delta_first", "examples/checks/agg-join-delta-first-check.rofl").
+check_opt("agg_join_delta_first", together, 1).
+check_opt("agg_join_delta_first", space, 250).
+-- the world asks for its plans under its wall: a budget or space otherwise keeps every firing in written order
+check_opt("agg_join_delta_first", delta_first, 1).
+-- THE PLAN IS NEVER OBSERVED (the review of w_cmp_delta_first): each world below is answered by both engines,
+-- the Rust engine with its plans on, and holds the written order's state. A hole a negation meets while an
+-- unknown spreads; a perspective variable read unbound; a steps wall and a space wall, each in written order
+-- (a wall a caller set) and opted into the plans (a firing that could cross the wall is solved again as written).
+check_world("agg_join_delta_first_walled").
+check_file("agg_join_delta_first_walled", "examples/checks/agg-join-delta-first.rofl").
+check_file("agg_join_delta_first_walled", "examples/checks/agg-join-delta-first-walled.rofl").
+check_opt("agg_join_delta_first_walled", together, 1).
+check_opt("agg_join_delta_first_walled", space, 250).
+check_world("agg_join_delta_first_hole").
+check_file("agg_join_delta_first_hole", "examples/checks/agg-join-delta-first-hole.rofl").
+check_world("agg_join_delta_first_persp").
+check_file("agg_join_delta_first_persp", "examples/checks/agg-join-delta-first-persp.rofl").
+check_world("agg_join_delta_first_steps").
+check_file("agg_join_delta_first_steps", "examples/checks/agg-join-delta-first-steps.rofl").
+check_opt("agg_join_delta_first_steps", together, 1).
+check_opt("agg_join_delta_first_steps", budget, 75).
+check_world("agg_join_delta_first_steps_planned").
+check_file("agg_join_delta_first_steps_planned", "examples/checks/agg-join-delta-first-steps.rofl").
+check_opt("agg_join_delta_first_steps_planned", together, 1).
+check_opt("agg_join_delta_first_steps_planned", budget, 75).
+check_opt("agg_join_delta_first_steps_planned", delta_first, 1).
+check_world("agg_join_delta_first_space").
+check_file("agg_join_delta_first_space", "examples/checks/agg-join-delta-first-space.rofl").
+check_opt("agg_join_delta_first_space", together, 1).
+check_opt("agg_join_delta_first_space", space, 700).
+check_world("agg_join_delta_first_space_planned").
+check_file("agg_join_delta_first_space_planned", "examples/checks/agg-join-delta-first-space.rofl").
+check_opt("agg_join_delta_first_space_planned", together, 1).
+check_opt("agg_join_delta_first_space_planned", space, 700).
+check_opt("agg_join_delta_first_space_planned", delta_first, 1).
+proves_work("agg_join_delta_first", w_cmp_delta_first).
+proves_work("agg_join_delta_first_walled", w_cmp_delta_first).
+proves_work("agg_join_delta_first_hole", w_cmp_delta_first).
+proves_work("agg_join_delta_first_persp", w_cmp_delta_first).
+proves_work("agg_join_delta_first_steps", w_cmp_delta_first).
+proves_work("agg_join_delta_first_steps_planned", w_cmp_delta_first).
+proves_work("agg_join_delta_first_space", w_cmp_delta_first).
+proves_work("agg_join_delta_first_space_planned", w_cmp_delta_first).
+check_opt("agg_join_delta_first", one_engine, rust).
 -- sealed(provenance), the one knob: the set of facts is the contract; the Rust engine keeps no derived_by and no
 -- witness, and both engines conclude the same rows over a closure with a cycle and a diamond
 check_world("sealed_provenance").
@@ -2977,3 +3028,8 @@ check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- TypeScript engine answers `str_segs` on those with a hole and a different cs_conn, the Rust engine does not.
 -- The planted world (examples/shapes) is held on both.
 check_opt("cost_shapes_model", one_engine, rust).
+
+-- w_data_structures: who reads ast_within / ast_in and what each asks of the tree
+check_world("ast_within_readers").
+check_file("ast_within_readers", "facts/ast-within-readers.rofl").
+check_file("ast_within_readers", "examples/checks/ast-within-readers-check.rofl").

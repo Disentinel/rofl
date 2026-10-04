@@ -48,6 +48,8 @@ pub mod seed;
 pub mod session;
 pub mod shrug;
 pub mod store;
+/// The read-only detection report: declarations the engine could propose (docs/data-structures.md).
+pub mod structures;
 /// Semiring tags: the declarations, and the clauses the engine runs for them.
 pub mod tag;
 pub mod term;
@@ -81,5 +83,6 @@ pub fn describe(e: &Halt) -> String {
         Halt::Strat(m, _) => m.clone(),
         Halt::Bug(m) => format!("defect: {m}"),
         Halt::Narrowed => "defect: a descending pass escaped its evaluation".into(),
+        Halt::Overrun => "defect: a delta-first firing's overrun escaped it".into(),
     }
 }

@@ -1239,3 +1239,17 @@ work_proof(w_labeled_unknowns, "agg_label_cap").
 work_proof(w_labeled_unknowns, "agg_label_cap_oracle").
 work_proof(w_labeled_unknowns, "agg_label_sound").
 
+
+-- the engine's delta-first join plans (facts/worklist.rofl w_cmp_delta_first,
+-- f_delta_first_plans_fire_a_rule_from_its_news) own no cell; they close by these worlds, each of which
+-- holds the written order's state (f_a_join_plan_is_never_observed).
+work(w_cmp_delta_first, "delta-first join plans in the Rust engine: the same facts, witnesses and wall cuts as the written order; done only with the work_proof worlds").
+work_state(w_cmp_delta_first, done).
+work_proof(w_cmp_delta_first, "agg_join_delta_first").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_walled").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_hole").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_persp").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_steps").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_steps_planned").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_space").
+work_proof(w_cmp_delta_first, "agg_join_delta_first_space_planned").

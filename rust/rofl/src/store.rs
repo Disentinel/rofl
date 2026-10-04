@@ -1322,6 +1322,47 @@ impl Store {
         out
     }
 
+    /// Rows held for `rel` (in one book, or all), dead ones included: the size
+    /// the join planner watches to know its estimates have gone stale.
+    pub fn rel_len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
+        self.idx.get(&rel).map_or(0, |v| {
+            v.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)).map(|(_, r)| r.canon.len() + r.arrived.len()).sum()
+        })
+    }
+
+    /// What a join order needs to know of one premise: how many rows hold the
+    /// premise's constants (`cpos`, `cvals`), and how many distinct values the
+    /// positions a join would bind (`vpos`) take among them. Counted over the
+    /// rows themselves, in one pass, without building an index (a probe
+    /// pattern is a scarce slot). A sample's distinct count is not to be
+    /// trusted for a column of many values, and an estimate off by a factor
+    /// of ten here costs a join order ten times worse.
+    pub fn probe_stats(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], cvals: &[Term], vpos: &[usize]) -> (usize, usize) {
+        let Some(groups) = self.idx.get(&rel) else { return (0, 0) };
+        let mut rows = 0usize;
+        let mut seen: FxSet<u64> = FxSet::default();
+        for (_, r) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
+            for &k in r.canon.iter().chain(r.arrived.iter()) {
+                if !self.facts.alive(k) {
+                    continue;
+                }
+                let a = self.facts.args(k);
+                if !cpos.iter().zip(cvals).all(|(&p, &v)| a.get(p) == Some(&v)) {
+                    continue;
+                }
+                rows += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert(x);
+                }
+            }
+        }
+        (rows, seen.len().clamp(1, rows.max(1)))
+    }
+
     pub fn rel_count(&self, rel: Sym) -> usize {
         self.idx
             .get(&rel)

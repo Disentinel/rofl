@@ -81,3 +81,6 @@ command_note("nb", "-- <file.rofl.md> [--json] [--cell N] [--all]   run a notebo
 
 command_shown("whycheck", 20).
 command_note("whycheck", "`-- [world ...]`   `why`, `why all`, `whynot`, `excise` from rofl-serve and rofl-load against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/").
+
+command_shown("structures", 21).
+command_note("structures", "`-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/").

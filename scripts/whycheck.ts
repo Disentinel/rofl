@@ -166,7 +166,7 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
  *  derived facts spread over the store, each asked why and whynot, the same with its last argument changed, one base
  *  fact excised. There is no oracle, so the answers are compared rofl-serve against rofl-load only. */
 function rustQuestions(w: World): Q[] {
-  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
+  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.deltaFirst ? ['--delta-first'] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   const keys = (kind: string): string[] => p.stdout.split('\n').flatMap((l) => {
     const m = /^([a-z]\w*)(?:\[main\])?(\(.*\)) (?:timeless|tick) (\w+) support=\d+$/.exec(l);
@@ -264,7 +264,7 @@ function withoutRetracted(w: World): { r: Rofl; w: World } | string {
 const parseRefusal = (a: A): boolean => !a.ok && /^(error: )?line \d+: /.test(a.text);
 
 const walls = (w: World): Walls => ({ ...(w.space ? { space: w.space } : {}), ...(w.retain !== undefined ? { retainTicks: w.retain } : {}),
-  ...(w.strata ? { mode: 'strata' as const } : {}) });
+  ...(w.strata ? { mode: 'strata' as const } : {}), ...(w.deltaFirst ? { deltaFirst: true } : {}) });
 
 /** The protocol cannot feed a world below or answer explain requests; such a
  *  world is asked of rofl-load alone. */
@@ -308,7 +308,7 @@ function cli(w: World, qs: Q[], want: A[]): { texts: (string | undefined)[]; exi
   const groups = new Map<string, number[]>();
   qs.forEach((_, i) => { const g = groupOf(qs, want, i); groups.set(g, [...(groups.get(g) ?? []), i]); });
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ? ['--budget', String(w.budget)] : []),
-    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
+    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []), ...(w.deltaFirst ? ['--delta-first'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f]), ...(w.explain ? ['--explain'] : []),
     ...belowFiles(w.files).flatMap((f) => ['--below', f])];
   const flag = (op: Op) => (op === 'whyall' ? '--why-all' : `--${op}`);

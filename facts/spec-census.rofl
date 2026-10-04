@@ -130,6 +130,9 @@ check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_cens
 check[checks]("rust/rofl/tests/session.rs", "a_bound_ask_finds_exactly_its_fact", test).
 check[checks]("rust/rofl/tests/session.rs", "a_repeated_variable_constrains_and_wildcards_are_columns", test).
 check[checks]("rust/rofl/tests/session.rs", "assert_refuses_a_rule_and_a_variable", test).
+check[checks]("rust/rofl/tests/structures.rs", "proposes_exactly_the_right_declarations", test).
+check[checks]("rust/rofl/tests/structures.rs", "lists_the_near_misses_with_their_facts", test).
+check[checks]("rust/rofl/tests/structures.rs", "the_text_is_the_committed_report", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "pareto_fronts_are_the_fronts_of_every_simple_path", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_on_a_total_order_is_the_min_lattice", test).
 check[checks]("rust/rofl/tests/sub_scale.rs", "a_dominance_through_plain_relations_is_the_min_lattice", test).
@@ -410,6 +413,14 @@ check[checks]("facts/goldens.rofl", "agg_incr_widen", world).
 check[checks]("facts/goldens.rofl", "agg_int_range", world).
 check[checks]("facts/goldens.rofl", "agg_interval_demo", world).
 check[checks]("facts/goldens.rofl", "agg_join_budget", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_hole", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_persp", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_space", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_space_planned", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_steps", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_steps_planned", world).
+check[checks]("facts/goldens.rofl", "agg_join_delta_first_walled", world).
 check[checks]("facts/goldens.rofl", "agg_join_eval", world).
 check[checks]("facts/goldens.rofl", "agg_join_holes", world).
 check[checks]("facts/goldens.rofl", "agg_join_phrase", world).
@@ -595,6 +606,7 @@ check[checks]("facts/goldens.rofl", "agg_widen_why", world).
 check[checks]("facts/goldens.rofl", "agg_widen_witness", world).
 check[checks]("facts/goldens.rofl", "args_are_terms", world).
 check[checks]("facts/goldens.rofl", "asks", world).
+check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
@@ -653,6 +665,7 @@ test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
+test_file[checks]("rust/rofl/tests/structures.rs").
 test_file[checks]("rust/rofl/tests/sub_scale.rs").
 test_file[checks]("rust/rofl/tests/tag_scale.rs").
 test_file[checks]("rust/rofl/tests/threshold.rs").
