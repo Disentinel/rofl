@@ -530,3 +530,42 @@ gathered(A, B)        :- sees(X, A), exported_to(X, B).
 -- The comments above stay where they are. Each says why THIS rule has THIS
 -- shape and what was measured before it was written, which is the half a
 -- general document cannot carry and the half that rots slowest.
+
+-- ============ this file's own schedule, for the stock evaluator ============
+--
+-- `new Rofl({ evaluator: 'strata' })` orders its negations by the `stratum/2`
+-- rows it reads, and refuses a negation it cannot order (an unranked rule
+-- negating a relation another unranked rule derives). Every world loads this
+-- file, so the file ranks ITS OWN relations the way safety.rofl ranks its own,
+-- and a strata world with boot alone loads and answers. A program's relations
+-- are the program's to rank (rules/strata.rofl derives them); they are refused
+-- still.
+--
+-- WHICH RELATIONS: each one `rules/strata.rofl` ranks above 0 here, which is
+-- every head of a rule with a `not` (`malformed`, `crossing`, `collects_from`,
+-- `leak`, `unmoded`, `undefined_premise`, `exported_to`), `gathered`, which
+-- `leak` negates, and what sits above a negation (`collected`, `exported`).
+-- The rest are complete before any negation runs. No rule here aggregates.
+-- The numbers are that pack's, `leak` above `gathered` above `collects_from`
+-- and `exported_to`. examples/checks/strata-boot-canon-check.rofl re-derives
+-- them over this file and turns red when a rule gains a `not` without a row,
+-- or a row falls below what an edge of the rules needs.
+--
+-- ROWS AND TWO RULES, NOT `stratum` FACTS: a plain fact is tick-scoped, and the
+-- table must hold at every tick. `boot_rank` is carried across the boundary as
+-- `imports` is, and copied into the table the stock evaluator reads. The copy
+-- reads a relation no rule derives, so it is a schedule written as data and is
+-- not the one a program derives (README, the stratification interface).
+edb(boot_rank).
+boot_rank(crossing, 1).
+boot_rank(collects_from, 1).
+boot_rank(collected, 1).
+boot_rank(exported_to, 1).
+boot_rank(exported, 1).
+boot_rank(gathered, 1).
+boot_rank(malformed, 1).
+boot_rank(undefined_premise, 1).
+boot_rank(unmoded, 1).
+boot_rank(leak, 2).
+boot_rank(Rel, N)  @next :- boot_rank(Rel, N).
+stratum(Rel, N)         :- boot_rank(Rel, N).

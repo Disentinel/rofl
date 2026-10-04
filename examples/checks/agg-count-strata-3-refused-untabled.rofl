@@ -13,7 +13,3 @@ acu_r(g2, 4).
 acu_bad(9).
 acu_ok(G, X) :- acu_r(G, X), not acu_bad(X).
 acu_all(C)   :- C is count(G, X : acu_ok(G, X)).
--- boot.rofl, ranked by hand (examples/checks/strata-boot-schedule.rofl), so that only this file is judged
-stratum(collects_from, 1).
-stratum(crossing, 1).
-stratum(leak, 2).

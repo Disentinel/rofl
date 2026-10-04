@@ -2182,7 +2182,7 @@ operands, an interval one term ends and all, the widening above both values
 and moving only the ends the join moved, and a cell widened on every
 improvement changing at most twice.
 
-agg_widen_cut's budget (115 steps, boot.rofl's included) falls in a window
+agg_widen_cut's budget (129 steps, boot.rofl's included) falls in a window
 of a few steps between the widening and the settle; a change to boot.rofl's
 cost moves the window, and the world goes red rather than passing vacuously.
 

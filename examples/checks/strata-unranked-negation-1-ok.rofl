@@ -9,7 +9,3 @@ uc_b(2).
 uc_d(1).
 uc_e(X) :- uc_d(X).
 uc_c(X) :- uc_b(X), not uc_e(X).
--- boot.rofl, ranked by hand (examples/checks/strata-boot-schedule.rofl), so that only this file is judged
-stratum(collects_from, 1).
-stratum(crossing, 1).
-stratum(leak, 2).

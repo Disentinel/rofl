@@ -52,6 +52,9 @@ const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
 export const PROFILE = process.env.ROFL_PROFILE || 'release';
 const RUST = path.join(ROOT, 'rust/target', PROFILE, 'rofl-load');
 const BOOT = fs.readFileSync(path.join(ROOT, 'boot.rofl'), 'utf8');
+/** boot.rofl, or the copy a planted fault of scripts/agg_breaks.ts names in ROFL_BOOT, read where a world is answered */
+const bootPath = (): string => process.env.ROFL_BOOT || path.join(ROOT, 'boot.rofl');
+const bootText = (): string => (process.env.ROFL_BOOT ? fs.readFileSync(process.env.ROFL_BOOT, 'utf8') : BOOT);
 
 /** A FACT PACK IS READ BY LOADING IT, NOT BY MATCHING IT. Every reader here was
  *  a regex over `.rofl` text — a duplicate parser, in a repository whose whole
@@ -334,7 +337,7 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
   // `evaluate` only, TypeScript completed a world Rust walled on, and that
   // looked exactly like an engine divergence until the instrument was checked.
   const opt = w.budget ?? w.cap ? { budget: w.budget ?? w.cap } : undefined;
-  r.load(BOOT, w.strata ? { ...opt, defer: true } : opt); // a table a later file derives is not there yet when boot alone is evaluated
+  r.load(bootText(), w.strata ? { ...opt, defer: true } : opt); // a table a later file derives is not there yet when boot alone is evaluated
   // A REFUSAL IS AN ANSWER AND IT BELONGS IN THE GOLDEN. Until now a file that
   // would not load was dropped and the world carried on — which hid `ring1`
   // for as long as the corpus existed, and left "this program must be refused"
@@ -391,7 +394,7 @@ function together(w: World, Engine: typeof Rofl) {
   const fresh = (): Rofl => {
     const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), ...(w.space ? { space: w.space } : {}),
       ...(w.retain !== undefined ? { retainTicks: w.retain } : {}) });
-    if (!r.load(BOOT, { defer: true }).ok) throw new Error('boot.rofl does not load');
+    if (!r.load(bootText(), { defer: true }).ok) throw new Error('boot.rofl does not load');
     return r;
   };
   // the world below: boot, the first file and the files it names, evaluated, then fed
@@ -506,7 +509,7 @@ export function answerRust(w0: World): Answer | null {
   // part both must agree on.
   const run = (args: string[]): string => execFileSync(RUST, args,
     { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-  const boot = path.join(ROOT, 'boot.rofl');
+  const boot = bootPath();
   const diags: string[] = [], keep: string[] = [], problems: string[] = [];
   for (const f of w.files) {
     const unread = unreadOf(f), want = expectedRefusal(f), base = path.basename(f);
@@ -539,7 +542,7 @@ export function answerRust(w0: World): Answer | null {
  *  its stratum table (agg_count_strata_stock) is refused alone under the
  *  stock evaluator, and rightly. */
 function answerRustOnly(w: World): Answer {
-  const boot = path.join(ROOT, 'boot.rofl');
+  const boot = bootPath();
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []),
     ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
@@ -939,7 +942,7 @@ if (isMain) {
   // left exported in a shell turned a bless into a golden of the fault
   // (`ROFL_PROFILE=breaks ROFL_BREAK=max npm run bless` blessed 23 moves). The
   // pool workers of scripts/agg_breaks.ts set both empty and never run this.
-  const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_READER'].filter((k) => process.env[k]);
+  const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_BOOT', 'ROFL_READER'].filter((k) => process.env[k]);
   if (planted.length) refuse(new Error(`${planted.map((k) => `${k}=${process.env[k]}`).join(', ')} is set: a planted fault is switched on; unset it`));
   if (blessing && PROFILE === 'breaks') refuse(new Error('ROFL_PROFILE=breaks is the build that holds every planted fault; bless with release or fast'));
   if (blessing && fs.existsSync(RUST) && fs.readFileSync(RUST).includes('ROFL_BREAK')) {

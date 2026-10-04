@@ -1,6 +1,6 @@
--- examples/checks/agg-widen-cut.rofl — agg_widen_cut, under a budget (115
+-- examples/checks/agg-widen-cut.rofl — agg_widen_cut, under a budget (129
 -- steps, boot.rofl's included) that stops the recursion after its widening
--- and before it settles. The window is narrow, 113 to 118 steps when this was
+-- and before it settles. The window is narrow, 127 to 132 steps when this was
 -- written: a change to boot.rofl's cost moves it, and the world goes red
 -- (the cell holds a value, or its `widened` shrug appears) rather than
 -- passing vacuously. The walk

@@ -1,9 +1,0 @@
--- examples/checks/strata-boot-schedule.rofl — the schedule boot.rofl needs under
--- the stock evaluator when no rules/strata.rofl derives one: `leak` negates
--- `gathered`, which a plain rule derives from `collects_from`, and `crossing`
--- is read by `leak`; unranked, those would share the final pass with `leak`
--- and the program is refused (strata_unranked_negation). Written by hand, as
--- safety.rofl writes its own; rules, not facts, so that it holds in every tick.
-stratum(collects_from, 1) :- authority(main, user).
-stratum(crossing, 1)      :- authority(main, user).
-stratum(leak, 2)          :- authority(main, user).

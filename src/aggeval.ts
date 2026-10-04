@@ -1337,7 +1337,7 @@ export class AggEval {
   private planReuse(): ReusePlan {
     if (!this.reuse || this.bootstrap || this.wellFounded || this.answer.readsProvenance || this.store.relCount(V.hole) > 0
       || storeHasAggregates(this.store)) return noReuse();
-    return planReuse(this.store, this.rules, this.scheduleToken(), (pol) => { new AggEval(pol, POLICY_BUDGET, 'strata', true).run(); });
+    return planReuse(this.store, this.rules, this.scheduleToken(), (pol) => { new AggEval(pol, POLICY_BUDGET, 'strata', true).run(); }, this.mode === 'strata');
   }
 
   /** The schedule this evaluation orders its negation phases by, written to the store for the next one's reuse gate to compare. */
@@ -6407,7 +6407,9 @@ export class AggEval {
       if (b.t === 'agg') throw new Rejected(`program rejected: ${b.op} is not evaluated under well_founded semantics (rule ${r.id}): a cell sealed under an assumption counts facts that may not hold; ${COMPOSE}`);
     }
     if (this.demandRels.length > 0) throw new Rejected(`program rejected: the alternating fixpoint cannot assume a demand-backed relation (${this.demandRels.map(([r]) => r).join(', ')})`);
-    if (this.rules.some((r) => r.clause.head.rel === IFACE.stratum)) {
+    const concluded = new Set(this.rules.filter((r) => r.clause.head.temporal !== 'next').map((r) => r.clause.head.rel));
+    // a rule reading no derived relation writes the table as data (boot.rofl's own ranks), and is not computing it
+    if (this.rules.some((r) => r.clause.head.rel === IFACE.stratum && r.clause.body.flatMap(litsOf).some((l) => concluded.has(l.rel)))) {
       const msg = 'stratum/2 is not computed under well_founded semantics';
       if (!this.diags.includes(msg)) this.diags.push(msg);
     }
