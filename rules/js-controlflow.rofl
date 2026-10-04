@@ -70,9 +70,9 @@ after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), 
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
 suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _, _),
-                             nearest_v[flow](G, X), ast_within[code](G, S),
-                             ast_within[code](S, X),
-                             stmt_seq_field(F), ast_child[code](B, F, I, S).
+                             nearest_v[flow](G, X), ast_within[code](S, X),
+                             ast_within[code](G, S),
+                             ast_child[code](B, F, I, S), stmt_seq_field(F).
 after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
 
 -- a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
@@ -361,8 +361,12 @@ edb(catches_via).
 catches_via(try_statement, handler).
 try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _, _),
                               ast_child[code](TS, Field, 0, _).
-caught_here[code](N)       :- in_try_block[code](TS, N), try_of[code](TS, F),
-                              nearest_v[flow](F, N), try_catches[code](TS).
+-- The block walked down to the first function boundary, as `nearest_v` walks:
+-- the whole subtree joined back to its function was 1.4 M probes.
+try_walk[code](TS, X)      :- try_catches[code](TS), try_of[code](TS, _),
+                              ast_child[code](TS, block, 0, B), ast_in[code](B, X).
+try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), ast_in[code](P, X).
+caught_here[code](N)       :- try_walk[code](_, N).
 
 throws_outright[code](F) :- ast_node[code](T, throw_statement, _, _),
                             nearest_v[flow](F, T), not caught_here[code](T).
@@ -391,8 +395,8 @@ try_stops[code](C, T) :- throwing_call[code](C), ast_node[code](T, try_statement
 try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
 
 abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                            ast_within[code](G, S), ast_within[code](S, C),
-                            stmt_seq_field(F), ast_child[code](B, F, I, S),
+                            ast_within[code](S, C), ast_within[code](G, S),
+                            ast_child[code](B, F, I, S), stmt_seq_field(F),
                             not try_stops[code](C, S).
 
 -- After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
