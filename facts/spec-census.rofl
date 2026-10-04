@@ -181,6 +181,7 @@ check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "notebook", world).
 check[checks]("facts/goldens.rofl", "notebook_cjs", world).
 check[checks]("facts/goldens.rofl", "notebook_cli_exits", world).
+check[checks]("facts/goldens.rofl", "notebook_decorated", world).
 check[checks]("facts/goldens.rofl", "notebook_external", world).
 check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_mcp", world).

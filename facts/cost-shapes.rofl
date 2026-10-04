@@ -12,8 +12,6 @@
 --   product_is_the_output  the head IS the product of two tables, or the pair space is audited
 --   one_row_per_key        the projected key is the premise's own and the rows are few
 --   no_nearest_relation    the nearest is asked of a nesting no `nearest_*` relation exists for
---   helper_adds_a_round    one helper for twin bodies adds a round inside a positive SCC and the
---                          rule that is behind a prefix re-fires on it (delta-first removes this)
 --   tried_no_net_gain      rewritten and measured: the cost moved to another reader
 --   small_set              the set the shape is feared for is small here
 --   alias_of_a_derived     a second name for a derived relation, kept for what the name says (a book,
@@ -38,11 +36,9 @@ shape_ok(may_not_run, project_then_negate, "one_row_per_key: 4 ms sealed / 6 def
 shape_ok(mechanism_unanswered, project_then_negate, "one_row_per_key: 0 ms").
 shape_ok(shape_without_verdict, project_then_negate, "one_row_per_key: 0 ms sealed / 1 default").
 
-shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms").
-shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default").
+shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms and 0 probes; the walk up from each private reference to the first class that declares the name was written and measured, 8 ms for nothing saved").
+shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default; the walk up from each this to the first binder was written and measured: this_over + this_nearer + this_host 19 ms sealed / 88 default, the walk 67 / 113").
 
-shape_ok(external_value, twin_bodies, "helper_adds_a_round: the call pair fell 510 -> 322 ms but the round re-fires callback_param and the model's probes rose 2.5 % sealed, 3.2 % default").
-shape_ok(may_be_node, twin_bodies, "helper_adds_a_round: the same pair, the other head").
 shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed / 3 default").
 shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
 shape_ok(eff_conv_call, twin_bodies, "small_set: the converting call and its override test, 4 ms sealed / 14 default").
@@ -60,7 +56,7 @@ shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; th
 shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 
 shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
-shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (its second arm reads nearest_v), 26 ms sealed / 81 default (both arms)").
+shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
