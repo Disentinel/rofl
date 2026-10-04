@@ -610,6 +610,7 @@ check[checks]("facts/goldens.rofl", "staged_neg_why", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_agg", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_nocarry", world).
 check[checks]("facts/goldens.rofl", "staged_neg_why_plain", world).
+check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).

@@ -1449,9 +1449,11 @@ export class AggEval {
       if (levels === null) {
         const strat = this.readStrata();
         this.rankCounting(strat);
+        const table = new Map(strat);
         this.rankUnknownCone(strat);
         this.checkAggStrata(strat, stratRules);
         this.checkLatticeStrata(strat, stratRules);
+        this.checkUnrankedNegation(table, stratRules, mono);
         this.roundOf = new Map([...strat].map(([k, v]) => [k, Math.max(v, 0)]));
         this.planned = true;
         levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : strat.get(r.clause.head.rel) ?? Infinity));
@@ -2435,6 +2437,29 @@ export class AggEval {
         }
       }
     }
+  }
+
+  /** THE FINAL PASS HAS NO ORDER. Every rule the table does not rank fires there, once, in
+   *  canonical order, so a negation of a relation another of them derives (or a plain rule
+   *  derives from what they do) reads whatever the pass had reached. An unranked aggregate is
+   *  already refused by `checkAggStrata`. Relations complete before the pass stay negatable. */
+  private checkUnrankedNegation(strat: Map<string, number>, stratRules: ERule[], mono: ERule[]): void {
+    const last = stratRules.filter((r) => r.clause.head.temporal === 'next' || !strat.has(r.clause.head.rel));
+    const derived = new Set(last.filter((r) => r.clause.head.temporal !== 'next').map((r) => r.clause.head.rel));
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const r of mono) {
+        if (r.clause.head.temporal === 'next' || derived.has(r.clause.head.rel)) continue;
+        if (r.clause.body.flatMap(litsOf).some((l) => derived.has(l.rel))) { derived.add(r.clause.head.rel); grew = true; }
+      }
+    }
+    const negated = (b: BodyElem): string[] => b.t === 'neg' ? [b.lit.rel] : b.t === 'agg' ? b.body.flatMap(negated) : [];
+    const clashes: string[] = [];
+    for (const r of last.filter((r) => r.hasNeg)) {
+      for (const n of r.clause.body.flatMap(negated)) if (derived.has(n)) clashes.push(`${r.clause.head.rel} negates ${n}`);
+    }
+    if (clashes.length === 0) return;
+    throw new Rejected(`program rejected: ${clashes.sort(cmpStr)[0]}, and neither is ranked by stratum/2; rank them (load rules/strata.rofl, or run the default evaluator)`);
   }
 
   /** WHAT READS `unknown` SITS ABOVE EVERYTHING ELSE under the stock evaluator too. */

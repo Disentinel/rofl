@@ -1,0 +1,11 @@
+-- examples/checks/strata-unranked-negation-check.rofl — strata_unranked_negation:
+-- the stock evaluator refuses a negation that shares the final pass with the
+-- rule that derives what it negates (directly, or through a plain rule), so
+-- neither program reaches this world; a negation over what is complete
+-- before the pass is accepted, and answers right.
+un_p_ran()  :- concludes[$kernel](_, un_p).
+un_s_ran()  :- concludes[$kernel](_, un_s).
+uc_wrong()  :- uc_c(1).
+alarm(un_p_ran).
+alarm(un_s_ran).
+alarm(uc_wrong).

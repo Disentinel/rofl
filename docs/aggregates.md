@@ -233,7 +233,10 @@ its passes by the `stratum` table instead, so it seals an aggregate only when
 the table ranks the aggregate's head and every derived relation it reads
 strictly below it; otherwise, and so without `rules/strata.rofl` or a table of
 the program's own, the program is refused (`the stock evaluator cannot seal
-its aggregate`), never counted over a relation still being derived. A cell is
+its aggregate`), never counted over a relation still being derived. Negation
+is held to the same end: an unranked negation of what another unranked rule
+derives would fire in either order and give a wrong answer, so it is refused
+(`P negates Q, and neither is ranked by stratum/2`). A cell is
 sealed once per correlation, after its input is closed, and never recomputed;
 a second seal of one key is a defect.
 An aggregate may not read what the kernel writes while evaluating
