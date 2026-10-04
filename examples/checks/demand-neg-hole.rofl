@@ -1,0 +1,35 @@
+-- examples/checks/demand-neg-hole.rofl — demand_neg_hole: A NEGATION UNFOLDED AT A
+-- CALL consults what a hole left unknown, as one in the rule's own body does
+-- (f_a_negation_unfolded_at_a_call_ignored_the_holes).
+--
+-- dh_u leaves Y free, so dh_u, dh_h and dh_h1 are answered on demand and their
+-- `not dh_x(C, _)` is unfolded at each call. dh_x(c, _) is a hole (oops + 1),
+-- so whether dh_h(c, c) holds is not known: it, dh_r(c), dh_h1(c), dh_r1(c)
+-- and dh_nr(c) are shrugs. Unfolded, the negation read the hole as absence and
+-- stored dh_h(c, c), dh_r(c) as facts beside the shrug of dh_h(c, _).
+edb(dh_k). edb(dh_node).
+dh_k(b, 3). dh_k(c, oops).
+dh_node(b). dh_node(c). dh_node(e).
+dh_x(C, Y) :- dh_k(C, K), Y is K + 1.
+dh_u(X, Y) :- dh_node(X).
+dh_h(C, Y) :- dh_u(C, Y), not dh_x(C, _).
+dh_r(C)    :- dh_node(C), dh_h(C, C).
+dh_h1(C)   :- dh_u(C, C), not dh_x(C, _).
+dh_r1(C)   :- dh_node(C), dh_h1(C).
+dh_nr(C)   :- dh_node(C), not dh_r1(C).
+
+dh_holed(C)  :- dh_k(C, oops).
+dh_wrong(C)  :- dh_r(C), dh_k(C, _).
+dh_wrong(C)  :- dh_r1(C), dh_k(C, _).
+dh_wrong(C)  :- dh_nr(C), dh_holed(C).
+dh_missed(C) :- dh_node(C), not dh_k(C, _), not dh_r(C).
+dh_missed(C) :- dh_node(C), not dh_k(C, _), not dh_r1(C).
+dh_missed(C) :- dh_k(C, 3), not dh_nr(C).
+alarm(dh_wrong).
+alarm(dh_missed).
+
+-- expect-row: dh_r[main](e) tick drv support=1
+-- expect-row: dh_nr[main](b) tick drv support=1
+-- expect-no-row: dh_h[main](c,c)
+-- expect-no-row: dh_r[main](c)
+-- expect-no-row: dh_nr[main](c)

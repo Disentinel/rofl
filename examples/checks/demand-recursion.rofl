@@ -1,0 +1,42 @@
+-- examples/checks/demand-recursion.rofl — demand_recursion: A RECURSION THROUGH
+-- RELATIONS ANSWERED ON DEMAND reaches its fixpoint
+-- (f_a_recursion_through_demand_unfolded_without_end).
+--
+-- dr_u leaves Y free, so dr_h, which reads it, is answered on demand, and so is
+-- every relation that reads dr_h: dr_r, dr_p, dr_s, each recursive. A call of
+-- a recursive one unfolded its rules, met the same call inside them, and
+-- unfolded again until the depth wall cut the evaluation: dr_r(3) alone, or
+-- with dr_p beside it not even that. Every answer of these relations is
+-- ground and each of their rules fires bottom-up, so the call met again reads
+-- the store and the bottom-up rounds find the rest, the cycle 3-4-5-6 too.
+edb(dr_z).
+dr_b(1). dr_b(2). dr_b(3). dr_b(4).
+dr_q(3).
+dr_e(3, 4). dr_e(4, 5). dr_e(5, 6). dr_e(6, 3).
+dr_g(X)    :- dr_b(X), not dr_z(X).
+dr_u(X, Y) :- dr_q(X).
+dr_h(X)    :- dr_u(X, X).
+dr_h(X)    :- dr_b(X), not dr_g(X).
+dr_r(X)    :- dr_h(X).
+dr_r(Y)    :- dr_r(X), dr_e(X, Y).
+dr_p(X)    :- dr_q(X).
+dr_p(Y)    :- dr_p(X), dr_e(X, Y), dr_h(X).
+dr_s(X)    :- dr_r(X), dr_h(X).
+dr_s(Y)    :- dr_s(X), dr_e(X, Y), dr_r(Y).
+
+dr_reach(X)  :- dr_q(X).
+dr_reach(Y)  :- dr_reach(X), dr_e(X, Y).
+dr_step(Y)   :- dr_q(X), dr_e(X, Y).
+dr_missed(X) :- dr_reach(X), not dr_r(X).
+dr_missed(X) :- dr_reach(X), not dr_s(X).
+dr_missed(X) :- dr_step(X), not dr_p(X).
+dr_wrong(X)  :- dr_r(X), not dr_reach(X).
+dr_wrong(X)  :- dr_s(X), not dr_reach(X).
+dr_wrong(X)  :- dr_p(X), not dr_q(X), not dr_step(X).
+alarm(dr_missed).
+alarm(dr_wrong).
+
+-- expect-row: dr_r[main](6) tick drv support=1
+-- expect-row: dr_s[main](6) tick drv support=1
+-- expect-row: dr_p[main](4) tick drv support=1
+-- expect-no-row: dr_p[main](5)

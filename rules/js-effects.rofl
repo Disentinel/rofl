@@ -85,7 +85,10 @@ eff_here[flow](T, exn, none) :- ast_node[code](T, throw_statement, _, _),
 -- DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 -- not terminate for the same reason `while (true)` may not, and nothing in the
 -- tree shows it. `eff_calls` leads with `resolves` (binds both ends) so
--- `nearest_v` is probed, not enumerated.
+-- `nearest_fn` is probed, not enumerated. Every reader of a CALL here asks
+-- `nearest_fn`, the call graph's own caller, and not `nearest_v`: a decorator
+-- sits inside the method it decorates and runs when the class is defined, so
+-- `@mark() m() {}` is a call of the function around the class, never of `m`.
 edb(eff_loop_kind).
 eff_loop_kind(while_statement).
 eff_loop_kind(do_while_statement).
@@ -95,11 +98,11 @@ eff_loop_kind(for_of_statement).
 
 eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _, _).
 
-eff_calls[code](F, G)   :- resolves[code](C, G), nearest_v[flow](F, C), fn_node[code](G).
+eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_node[code](G).
 eff_reaches[code](F, G) :- eff_calls[code](F, G).
 eff_reaches[code](F, H) :- eff_reaches[code](F, G), eff_calls[code](G, H).
 
-eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
                                 eff_reaches[code](G, F).
 
 -- ALLOC: a fresh mutable identity. `new_expression` is here although its cell
@@ -176,15 +179,18 @@ eff_label_unseen[flow](L, H) :- eff_label(L, H), not eff_label_seen[flow](L, H).
 -- arm two its callees, minus what a handler discharges PER LABEL. Writing the
 -- discharge as `not eff_catch_here(C)` on the whole arm — correct for
 -- `may_throw`, which carries one label — would make a try around a call
--- swallow the callee's WRITES too.
-eff_latent[flow](F, L, H) :- eff_here[flow](N, L, H), nearest_v[flow](F, N).
+-- swallow the callee's WRITES too. The same reading keeps what a method's
+-- decorator does out of the method's own row (`not in_own_decorator`): it is
+-- the class's, through `eff_define_part`.
+eff_latent[flow](F, L, H) :- eff_here[flow](N, L, H), nearest_v[flow](F, N),
+                             not in_own_decorator[code](F, N).
 
 edb(eff_discharges).
 eff_discharges(catch_clause, exn).
 eff_discharged_at[code](C, L) :- eff_catch_here[code](C), eff_discharges(catch_clause, L).
 
 eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), resolves[code](C, G),
-                             nearest_v[flow](F, C), not eff_discharged_at[code](C, L).
+                             nearest_fn[code](F, C), not eff_discharged_at[code](C, L).
 
 eff_discharge_unknown[audit](M, L) :- eff_discharges(M, L), not eff_label(L, _).
 
@@ -198,7 +204,7 @@ may_throw_only[audit](F) :- may_throw[code](F), not eff_latent[flow](F, exn, non
 
 eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G),
                                     eff_latent[flow](G, L, H), L != exn,
-                                    nearest_v[flow](F, C),
+                                    nearest_fn[code](F, C),
                                     not eff_latent[flow](F, L, H).
 
 -- =========================================================================
@@ -222,12 +228,12 @@ effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow
 eff_unnamed[audit](F)       :- eff_subject[flow](F), not effect_of[flow](F, _).
 eff_two_names[audit](F, A, B) :- effect_of[flow](F, A), effect_of[flow](F, B), A != B.
 
-eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_fn[code](F, C),
                                   not eff_catch_here[code](C),
                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
                                   eff_join(NF, NG, J), J != NF.
 
-eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_v[flow](F, C),
+eff_purer_callee[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
                                    effect_of[flow](F, NF), effect_of[flow](G, NG),
                                    eff_lt(NG, NF).
 
@@ -336,7 +342,7 @@ eff_conv_untraced[flow](N, X)   :- eff_coerced[flow](N, X), not may_be_lit[flow]
 -- A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 -- oracle is V8's stack frames, which know nothing about a conversion.
 eff_latent[flow](F, L, H) :- eff_conv_call[flow](N, M), eff_latent[flow](M, L, H),
-                             nearest_v[flow](F, N).
+                             nearest_v[flow](F, N), not in_own_decorator[code](F, N).
 
 -- Totality: every coerced operand is primitive, object or untraced. And the
 -- operator table must not name a node that is neither binary nor unary —
@@ -425,7 +431,6 @@ eff_hidden_call[flow](N, M) :- pattern_accessor[code](N, M).
 eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).
 
 eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_fn[code](F, C).
-eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_v[flow](F, C).
 
 eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
                                        not eff_edge_closed[flow](F, G),

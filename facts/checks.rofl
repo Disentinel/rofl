@@ -308,6 +308,26 @@ check_opt("strata_unranked_negation", evaluator, strata).
 check_world("demand_neg_round").
 check_file("demand_neg_round", "examples/checks/demand-neg-round.rofl").
 
+-- the same rules fired again by a retraction: at their level (rust/rofl/src/engine/delta.rs, refire)
+check_world("demand_neg_retract").
+check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
+check_opt("demand_neg_retract", together, 1).
+check_opt("demand_neg_retract", retract, "dt_z(1)").
+
+-- a shrug read through a relation answered on demand waits for the shrugs
+-- (f_a_shrug_read_through_demand_fired_before_the_shrugs)
+check_world("demand_shrug_read").
+check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
+
+-- a negation unfolded at a call reads the holes (f_a_negation_unfolded_at_a_call_ignored_the_holes)
+check_world("demand_neg_hole").
+check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
+
+-- a recursion through relations answered on demand reaches its fixpoint
+-- (f_a_recursion_through_demand_unfolded_without_end)
+check_world("demand_recursion").
+check_file("demand_recursion", "examples/checks/demand-recursion.rofl").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").

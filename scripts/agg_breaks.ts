@@ -3464,6 +3464,76 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_strict_refire",
+  "what": "the retraction fires a rule whose demand premise unfolds into a negation with the monotone rules, before what the negation reads is derived again",
+  "expect": {
+   "demand_neg_retract": "dt_wrong"
+  }
+ },
+ {
+  "id": "shrug_demand_unread",
+  "what": "a rule that reads shrug only through a relation answered on demand is not counted a shrug reader and fires before the shrugs",
+  "expect": {
+   "demand_shrug_read": "ds_missed"
+  }
+ },
+ {
+  "id": "ts_shrug_demand_unread",
+  "what": "the TypeScript engine does not count a rule that reads shrug through a relation answered on demand a shrug reader",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!via.has(rel) && rs.some(",
+    "if (false && rs.some("
+   ]
+  ],
+  "expect": {
+   "demand_shrug_read": "ds_missed"
+  }
+ },
+ {
+  "id": "demand_neg_unholed",
+  "what": "a negation unfolded at a call reads what a hole left unknown as absent",
+  "expect": {
+   "demand_neg_hole": "dh_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_neg_unholed",
+  "what": "the TypeScript engine reads what a hole left unknown as absent in a negation unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }",
+    "if (u === undefined) continue;"
+   ]
+  ],
+  "expect": {
+   "demand_neg_hole": "dh_wrong"
+  }
+ },
+ {
+  "id": "demand_recursion_unfolds",
+  "what": "a call met again inside its own unfolding unfolds again, to the depth wall",
+  "expect": {
+   "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
+  "id": "ts_demand_recursion_unfolds",
+  "what": "the TypeScript engine unfolds a call met again inside its own unfolding, to the depth wall",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "!(call !== null && this.demandCalls.includes(call))",
+    "true"
+   ]
+  ],
+  "expect": {
+   "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {

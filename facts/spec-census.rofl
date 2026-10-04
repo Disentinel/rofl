@@ -186,6 +186,7 @@ check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "notebook", world).
 check[checks]("facts/goldens.rofl", "notebook_cjs", world).
 check[checks]("facts/goldens.rofl", "notebook_cli_exits", world).
+check[checks]("facts/goldens.rofl", "notebook_decorated", world).
 check[checks]("facts/goldens.rofl", "notebook_external", world).
 check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_mcp", world).
@@ -615,7 +616,11 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
+check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
+check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
+check[checks]("facts/goldens.rofl", "demand_recursion", world).
+check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "ds_function_holds", world).
 check[checks]("facts/goldens.rofl", "ds_function_phrase", world).

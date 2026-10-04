@@ -903,23 +903,22 @@ may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
 -- Calling, constructing or reading a member off an external value gives
 -- another one. A callee that is also a corpus function keeps both rows. The
 -- external value leads each body: it is the small relation, and the site is
--- found from it rather than the other way round. Each hop is ONE round of the
--- fixpoint, so both heads carry the whole body instead of one reading the
--- other: every round re-scans every member node, and an intermediate relation
--- made a chain of calls cost three rounds a call (46 rounds became 70). Measured
--- again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
--- ms but the extra round re-fires callback_param, and the model's probes ROSE
--- 2.5 %; it waits for an engine that fires a delta first.
-external_value[flow](C, Spec) :- external_value[flow](X, Spec), may_be_node[flow](F, X),
+-- found from it rather than the other way round. The call and the member hop
+-- each find their site ONCE, in `ext_call` and `ext_member`, and both heads
+-- read it. Written as one body per head the pair re-scanned every member node
+-- twice a round; the helper costs a round a hop (rounds +2 %) and, since the
+-- engine fires a rule from its news (w_cmp_delta_first), nothing re-fires on it:
+-- the model's probes fell 1.2 % sealed / 0.8 % default, the heads' time 7-12 %.
+-- Under the engine that fired in written order they ROSE 2.5 %.
+ext_call[flow](C, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](F, X),
                                  ast_child[code](C, callee, 0, F),
                                  ast_node[code](C, K, _, _), call_like_v(K).
-may_be_node[flow](C, C)       :- external_value[flow](X, _), may_be_node[flow](F, X),
-                                 ast_child[code](C, callee, 0, F),
-                                 ast_node[code](C, K, _, _), call_like_v(K).
-external_value[flow](M, Spec) :- external_value[flow](X, Spec), may_be_node[flow](O, X),
+external_value[flow](C, Spec) :- ext_call[flow](C, Spec).
+may_be_node[flow](C, C)       :- ext_call[flow](C, _).
+ext_member[flow](M, Spec)     :- external_value[flow](X, Spec), may_be_node[flow](O, X),
                                  ast_child[code](M, object, 0, O), member_node_v[flow](M).
-may_be_node[flow](M, M)       :- external_value[flow](X, _), may_be_node[flow](O, X),
-                                 ast_child[code](M, object, 0, O), member_node_v[flow](M).
+external_value[flow](M, Spec) :- ext_member[flow](M, Spec).
+may_be_node[flow](M, M)       :- ext_member[flow](M, _).
 
 -- The corpus writes members onto an external value (`app.handler = f`) and
 -- reads them back like any plain object's.
