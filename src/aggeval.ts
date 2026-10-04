@@ -1038,7 +1038,7 @@ export class AggEval {
     const cone = new Set<string>();
     for (const f of this.store.relAll(IFACE.asks)) if (f.args.length === ARITY.asks && f.args[0].k === 'a') cone.add(f.args[0].name);
     if (cone.size) {
-      for (let n = -1; n !== cone.size;) { n = cone.size; for (const r of kept) if (cone.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsDeep)) cone.add(l.rel); }
+      for (let n = -1; n !== cone.size;) { n = cone.size; for (const r of kept) if (cone.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsOf)) cone.add(l.rel); }
       kept.splice(0, kept.length, ...kept.filter((r) => cone.has(r.clause.head.rel)));
     }
     this.nextRules = new Set(kept.filter((r) => r.clause.head.temporal === 'next').map((r) => r.id));
