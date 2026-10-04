@@ -45,6 +45,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 1. if C [is under](#ast_in) P;
 2. if a node X [is within](#ast_within) P and C [is under](#ast_in) X.
 
+`ast_name` has one V for each N.
+
 > THE NAME A KEY STANDS FOR, wherever a key appears, written once. A computed
 > well-known symbol IS a name: `{ [Symbol.iterator]() {} }` puts a
 > `member_expression` where every other key has an identifier, and the
@@ -68,6 +70,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
    - K is a [member expression](#noun-member_expression);
    - the `object` of K [is named](#ast_name) "Symbol";
    - the `property` of K [is named](#ast_name) N.
+
+`ast_value` has one V for each N.
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers

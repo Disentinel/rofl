@@ -1,7 +1,8 @@
 # Declared data structures
 
 Designed 2026-10-04 with the owner (`f_a_structure_is_declared_and_does_not_change_the_meaning`),
-work item `w_data_structures`. Nothing here is built yet; this is the note the
+work item `w_data_structures`. Step 1 of the order, `function`, is built (see
+"Function, as built"); the other structures are not, and this is the note the
 three parsers, the TS check and the Rust engine are built from.
 
 ## The rule
@@ -253,6 +254,54 @@ it.
    (a cycle is common in a call graph; a union-find does not split), so they
    come last, when the labels and the delta enumeration are in use.
 
+## Function, as built
+
+`function ast_name(N, to Name).` in all three readers (`src/parser.ts`,
+`rust/rofl/src/rofl_parse.rs`, `examples/ring1/ring1.rofl`) and as the sentence
+`` `ast_name` has one Name for each N. `` (`` `best` has one W. `` for no key,
+`` has one A and B for each K. `` for two values; `scripts/read_md.ts` reads it,
+rofl-render writes it). A word, not a keyword: it declares only when a second
+name follows, so `function(x).` is a fact. A role word, `to`, marks each value;
+an unmarked argument is the key, and the values come last. The door
+(`src/structure.ts`, `rust/rofl/src/structure.rs`) refuses, with these words in
+both engines: a kernel relation; an argument that is not a variable, or is
+written twice; no `to` (``a function names the value its key determines``); a
+key after a value; a book (`function p[b](...)`: a declaration names the
+relation); a second declaration of one relation.
+
+Reflection, timeless in the kernel's book beside `lattice_decl`:
+`structure_decl(Rel, Arity, function)` and a `structure_role(Rel, Pos, to)` for
+each marked argument (Pos from 1; a key position has no row). `structure_closure`
+is not built (no `closure` yet).
+
+**The check** (`checkFunctions`, `check_functions`): after every evaluation, at
+every tick (every evaluation is one) and after a retraction by `retract_delta`,
+over the facts the evaluation left, base and derived alike. Two facts of one
+relation, one book and one key with different values refuse the run:
+`program rejected: function nm: key (1) has two values in the book main: (a) and
+(b); 1 more key breaks it too`. The key is shown by its canonical terms; the
+named key is the smallest by canonical text and the two values the smallest two,
+so both engines name the same ones. The world is left dirty: nothing is answered
+from a broken promise. **Per book** (the note's choice): one key with a value in
+each of two books holds; a hypothetical world that breaks it (`excise`, an
+assumption's fork) is refused as that run, with the same message, and the world it
+was a what-if of is untouched. This is the conservative reading of open question
+5: a promise is never relaxed for a what-if, because a structure answering from a
+what-if would answer from a broken promise; whether a hypothetical may break
+one and say so instead is the owner's.
+
+**The licence taken**: the delta-first planner (`joinplan.rs`, `delta_stat`)
+estimates a premise whose key is bound, by a constant or by a variable bound
+before it, in a named book, as one match per binding and does not make the
+counting pass over the relation's rows. The counted average already equals one
+for a relation that keeps its promise, so the plan chosen does not change on a
+true function; what changes is the avoided pass. The estimate for a skewed key
+that `f_a_join_plan_is_never_observed` fears is a property of a relation that is
+not a function. No key-to-value map is added: a probe on a bound key is already an
+index lookup, and a second structure for it would store what the index holds.
+Facts, `why` and `whynot` are the same with and without the declaration
+(`tests/structure.rs`, the twin relations of `ds_function_holds`).
+
 ## What serves the readers of the tree
 
 `facts/ast-within-readers.rofl` classifies every premise of `rules/js-*.rofl`
@@ -317,12 +366,14 @@ premises under the same questions and is not counted.
   evaluating them: no model edit, but the licence then rests on a
   recognition, which is the thing the design refuses. Decision needed.
 - **`ordered` as a word** clashes with `pareto` and `lex`, "declared order".
-- **A promise per book or per relation**: stated per book (a cell per book);
+- **A promise per book or per relation**: built per book (a cell per book);
   `ast_in[code]` and a copy of it in another book then each need a promise.
 - **`whynot` text**: the same verdict, or the same words?
 - **A structure over a relation with facts from several sources**: the check
   runs per tick over all of them (a base fact and a rule's conclusion alike).
   Whether a violation in a hypothetical book (`holds` / `assume`) refuses the
-  whole run or only that book.
+  whole run or only that book. Built conservatively: a what-if that breaks the
+  promise is refused like any run (see "Function, as built"); the owner decides
+  whether it may instead break it and say so.
 - **Interval labels under retraction**: gaps and a rebuild of the touched
   root, or an order-maintenance structure.

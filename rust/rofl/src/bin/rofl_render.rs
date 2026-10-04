@@ -1514,7 +1514,7 @@ impl<'a> R<'a> {
                     lead_open = false;
                     stats.clauses += clauses.len();
                     for c in clauses {
-                        books.insert(self.book_name(c.head.book));
+                        if c.structure.is_none() { books.insert(self.book_name(c.head.book)); }
                         for l in c.body.iter().flat_map(|e| e.lits()) {
                             books.insert(self.book_name(l.book));
                             if let Some(&f) = self.defs.get(&l.rel) { if f != file { reads.insert(self.h.name(l.rel).to_string(), f); } }
@@ -1702,6 +1702,8 @@ fn main() {
         for seg in &doc.segs {
             if let Seg::Code(cs) = seg {
                 for c in cs {
+                    // a declared structure defines no relation and lives in no book: it promises of the relation's data
+                    if c.structure.is_some() { continue; }
                     if c.head.rel == phrase_rel && c.head.args.len() == 2 {
                         if let (Some(rel), TermK::Str(t)) = (c.head.args[0].as_atom(), c.head.args[1].kind()) {
                             match parse_phrase(h.name(t)) { Ok(p) => phrases.entry(rel).or_default().push(p), Err(e) => bad_phrases.push(format!("{}: {e}", h.name(rel))) }

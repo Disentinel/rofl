@@ -76,6 +76,7 @@ may_be_node[flow](E, E) :- node_value_kind(K), ast_node[code](E, K, _, _).
 -- `binder` is a declarator whose id is a plain name. Destructuring forms bind
 -- names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
 -- not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
+function binder(D, to Name, to Init, to File).
 binder[code](D, Name, Init, File) :- ast_node[code](D, variable_declarator, File, _),
                                      ast_child[code](D, id, 0, I), ast_name[code](I, Name),
                                      ast_child[code](D, init, 0, Init).

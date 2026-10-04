@@ -191,6 +191,8 @@ Declared as facts:
 > names too (`binds_name`) but evaluate to a MEMBER of the init, so they are
 > not `binder` rows; `scoped_binder` is the union every scope rule ranges over.
 
+`binder` has one Name, Init and File for each D.
+
 In the code:
 
 <a id="binder"></a>A [declarator](#noun-declarator) binds Name to a node Init in File if all of:
