@@ -3700,7 +3700,7 @@ work_needs(w_cmp_ancestor_closure, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_costly_rules,
   "HYPOTHESIS 3 (rewritten 2026-10-04 at the owner's remark): the cost is in PATTERNS of writing rules, not in particular rules. EXPERIMENT on the Rust engine (release, rofl-eval --bytes per-rule profile, sealed and not): (1) rank rules by time and work per conclusion over self, mcp, cli_exits, util; (2) classify the costly ones by SHAPE (pairwise `not closer`/`not later` that is a min/max; a body led by an unbound or weakly bound premise; a join before its filter; a product built and mostly discarded; a closure read as a stored relation; a negation over a large derived relation; a recursion through a relation that could be stratified away); (3) for each shape its cheap equivalent (aggregate, reorder, demand, closure kernel, a helper relation), verified by rewriting ONE representative rule per shape in an experimental branch: identical facts, time and work before/after; (4) record the catalogue in the ledger (shape -> detector -> rewrite -> measured gain) so it can become a lint over rules; rules/js-*.rofl edits stay experimental, unmerged without the owner.").
-work_state(w_cmp_costly_rules, open).
+work_state(w_cmp_costly_rules, done).
 work_needs(w_cmp_costly_rules, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_flow_node_merge,
@@ -3726,3 +3726,11 @@ work_needs(w_cmp_demand_cones, w_cmp_remeasure_after_engine_fast).
 work(w_cmp_model_aggregates,
   "HYPOTHESIS 8: relations of the JS model that are aggregates in disguise read and cost better as aggregates: nearest_fn (`not closer` over every enclosing pair) as a min of depth, the effects (eff_here) as a lattice, the audit verdicts as a max over their strength, coverage audits as counts; and a census of the model's ~200 `not` for those that are a min/max/count. Value sets as a union lattice are NOT among them (refuted: sets are size 1). ACCEPTANCE per rewrite: identical answers, work before/after; with the owner, since the rules are his.").
 work_state(w_cmp_model_aggregates, open).
+
+work(w_cmp_delta_first,
+  "ENGINE (from f_costly_rules_are_shapes, the largest shape: 265 rules, 49% of sealed rule time): new facts arriving at premise i only filter that premise while every premise before i is re-joined in full each round. Prototype ROFL_DELTA_FIRST (put the new-facts premise first when the delta is no larger than the first premise's relation) measured eval -27/-27/-36/-16% sealed on self/mcp/cli_exits/util, with three rules regressing ~90 ms (the guard counts all rows, not the constant-bound ones). Make it sound and general in the Rust engine (delta-first or a proper semi-naive plan per delta position, guard by bound-row estimates), byte-identical facts, then measure. Engine-fast area: the owner decides who builds it. Diff: scratchpad shapes/diffs/engine_profile_counters_and_delta_first.diff (also adds a full per-rule profile with probes, solutions, conclusions, firings).").
+work_state(w_cmp_delta_first, open).
+
+work(w_cmp_shape_rewrites,
+  "MODEL (from f_costly_rules_are_shapes): eleven measured rule rewrites, one representative per costly shape (s1-s11: helpers for static joins, growing premise first, constant-bound first, reorder a cross product, enter a closure from the narrow end, a shared helper for twin bodies, walk down and stop at a function, project the key before per-row negations, drop the eff_in_fn twin and read in_fn, existence without scanning, nearest_fn off nearest_v), together sealed eval -9 to -13%, default -12 to -22%; s12 (an anti-join as two counts) refuted. rules/js-*.rofl are the owner's: diffs in scratchpad shapes/diffs/, nothing merged. Then: the shape detectors as a lint over the rule reflection, so new rules are caught.").
+work_state(w_cmp_shape_rewrites, open).
