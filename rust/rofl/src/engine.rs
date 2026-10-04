@@ -9364,7 +9364,7 @@ impl Eval {
                 }
             }
         }
-        if self.store.unordered {
+        if self.store.unordered && self.firing {
             out.extend(open.into_iter().map(|(s, r, _)| (s, r)));
             return Ok(out);
         }
