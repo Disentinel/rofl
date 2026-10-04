@@ -127,7 +127,7 @@ golden_state("rules_js-env-api", "63cce1cc5a9e56e8", 801).
 golden_state("rules_js-env", "8c961e3578db4f97", 2315).
 golden_state("rules_js-globals", "7108f728f8dfa19f", 2400).
 golden_state("rules_js-host", "0d472ac0869ad366", 2334).
-golden_state("rules_js-model", "e3f338b2226fadcc", 2106).
+golden_state("rules_js-model", "d0cb2074a8965c65", 2106).
 golden_state("rules_js-modules", "d2a1ada6367d6390", 3857).
 golden_state("rules_js-pack-home", "e0e089b618889685", 944).
 golden_state("rules_js-resolve", "698fbd984baef40c", 1564).
