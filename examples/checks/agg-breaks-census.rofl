@@ -154,6 +154,10 @@ brk("cell_untimed"). brk_kind("cell_untimed", switch).
 brk_expects("cell_untimed", "agg_cell_ticks").
 brk("strata_untabled"). brk_kind("strata_untabled", switch).
 brk_expects("strata_untabled", "agg_count_strata_untabled").
+brk("unranked_negation_runs"). brk_kind("unranked_negation_runs", switch).
+brk_expects("unranked_negation_runs", "strata_unranked_negation").
+brk("ts_unranked_negation_runs"). brk_kind("ts_unranked_negation_runs", ts).
+brk_expects("ts_unranked_negation_runs", "strata_unranked_negation").
 brk("lattice_op_min"). brk_kind("lattice_op_min", switch).
 brk_expects("lattice_op_min", "agg_join_syntax").
 brk_expects("lattice_op_min", "agg_lattice_syntax").
@@ -1922,6 +1926,7 @@ switch_site("trust_max", "rust/rofl/src/cell.rs").
 switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
+switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_lattice", "rust/rofl/src/engine.rs").

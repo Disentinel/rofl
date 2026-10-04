@@ -934,3 +934,8 @@ same contract `semantics/1` has. `examples/ring1/ring1.rofl` exercises it: the
 grammar seals its own rule reflection, which is 456 of 2450 facts in the image
 the parser forks once per clause, and boot.rofl's `malformed`, `leak` and
 `unmoded` audits over those 126 rules lose their subject and say so.
+
+Under `sealed(provenance)` the Rust engine keeps no witness either, where
+nothing withdraws, and a budget step is then a new fact rather than a firing:
+the same program reaches a budget at a different place with the seal and
+without it, which is accepted because the seal is the program's own word.

@@ -139,11 +139,14 @@ impl Session {
         Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0 }
     }
 
-    /// A world of one's own, at 3 ms against 383 (measurement 2). The heap and
-    /// the store are copied wholesale, so nothing the fork does is visible to
-    /// the core or to a sibling — which is what makes 64 volumes cost 5.87x a
-    /// single world of the same files instead of 64x.
-    pub fn fork(&self) -> Session {
+    /// A world of one's own, as a LAYER over this one. The first fork freezes
+    /// what the heap and the store hold into a base that this world and every
+    /// fork then share and none of them writes (`Store::freeze`), so a fork
+    /// copies no fact, tuple, name or functor: it appends above the base's
+    /// ids, and nothing it does is visible to the core or to a sibling.
+    pub fn fork(&mut self) -> Session {
+        self.eval.h.freeze();
+        self.eval.store.freeze(&self.eval.h);
         Session { eval: self.eval.fork(), dangling: self.dangling }
     }
 
@@ -245,7 +248,7 @@ impl Session {
         }
         let mut keys: Vec<String> = Vec::new();
         for id in b.store.all_facts() {
-            let r = *b.store.rec(id);
+            let r = b.store.rec(id);
             if !b.store.alive(id) || !fed.contains(&r.rel) || is_kernel_ledger(&b.h, r.persp) || brk!("below_drops_concluded_input" => r.base(); false) {
                 continue;
             }
@@ -384,7 +387,7 @@ impl Session {
         // pretended away.
         let mut text = self.header(prefix);
         for id in &write {
-            let r = *self.eval.store.rec(*id);
+            let r = self.eval.store.rec(*id);
             let args = self.eval.store.args(*id).to_vec();
             write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
             text.push_str(".\n");
@@ -422,7 +425,7 @@ impl Session {
         }
         let mut text = self.header("$trail");
         for id in &ids {
-            let r = *self.eval.store.rec(*id);
+            let r = self.eval.store.rec(*id);
             let args = self.eval.store.args(*id).to_vec();
             write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut text);
             text.push_str(".\n");
@@ -592,7 +595,7 @@ impl Session {
             let hit = self.volume_of(&args, &by_len);
             ns_match += m0.elapsed().as_nanos();
             let Some(k) = hit else { continue };
-            let r = *self.eval.store.rec(id);
+            let r = self.eval.store.rec(id);
             if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
                 let w0 = std::time::Instant::now();
                 write_fact_key(&self.eval.h, r.rel, r.persp, &args, &mut texts[k]);

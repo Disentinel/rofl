@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--unordered] [--closure] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--ticks N] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -74,10 +74,6 @@ struct Args {
     derivations: bool,
     /// No `derived_by` rows and no witnesses: the facts alone.
     no_provenance: bool,
-    /// Facts in a group by tuple id, matches in candidate order: no rendered keys on the hot path.
-    unordered: bool,
-    /// A relation read as a transitive closure is one walk, not rounds; needs --no-provenance.
-    closure: bool,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -89,8 +85,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         want_bytes: false,
         derivations: false,
         no_provenance: false,
-        unordered: false,
-        closure: false,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -124,8 +118,6 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
             "--no-provenance" => a.no_provenance = true,
-            "--unordered" => a.unordered = true,
-            "--closure" => a.closure = true,
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -152,8 +144,6 @@ fn main() {
         want_bytes,
         derivations,
         no_provenance,
-        unordered,
-        closure,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -181,14 +171,12 @@ fn main() {
     // with the default; the field is public and this is the one caller that has
     // a reason to move it, so the library signature stays as it is.
     l.eval.space = space;
+    // the harness's spelling of `sealed(provenance)`: no derived_by, no
+    // witnesses, and a step is a new fact rather than a firing
     if no_provenance {
         l.eval.no_provenance = true;
         l.eval.no_witness = true;
-    }
-    l.eval.store.unordered = unordered || l.eval.store.unordered;
-    l.eval.closure_on = closure || l.eval.closure_on;
-    if closure && !no_provenance {
-        eprintln!("--closure needs --no-provenance; ignored");
+        eprintln!("provenance off: no derived_by, no witnesses, a step is a new fact");
     }
     let t_load = t0.elapsed();
     if l.dangling > 0 {
@@ -290,7 +278,7 @@ fn main() {
             eprintln!("closure\t{}\t{}\t{}", l.eval.h.name(c.rel), l.eval.h.name(c.edge), if c.edge_fwd { "fwd" } else { "rev" });
         }
         eprintln!("closure_rows\t{}", l.eval.closure_rows);
-        eprintln!("closure_runs\t{}\tclosure_walk_ms\t{:.1}\tclosure_add_ms\t{:.1}", l.eval.closure_runs, l.eval.closure_walk_ns as f64 / 1e6, l.eval.closure_add_ns as f64 / 1e6);
+        eprintln!("closure_runs\t{}", l.eval.closure_runs);
         eprintln!("rounds\t{}", l.eval.rounds.len());
         eprintln!("rules_ms\t{:.1}", sum as f64 / 1e6);
         eprintln!("longest_rule_per_round_ms\t{:.1}", mx as f64 / 1e6);

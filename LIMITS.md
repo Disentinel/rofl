@@ -105,15 +105,24 @@ the rest are v0 implementation boundaries.
   does; boot.rofl carried those rules until nothing needed them). A negation
   rule whose head relation gets no stratum fact (its dependency cone contains
   only relations with neither facts nor `edb` marks) runs in a single final pass
-  after all known strata, in canonical order. Programs whose correctness depends
-  on negation ordering *within* that final pass are outside v0 guarantees.
+  after all known strata, in canonical order. A program whose correctness would
+  depend on negation ordering *within* that final pass is refused, in both
+  engines, by one text: when an unranked negation reads a relation another
+  unranked rule derives (or a plain rule derives from what they do), the
+  program is rejected with `P negates Q, and neither is ranked by stratum/2;
+  rank them`. Negation over what is complete before the pass (base data,
+  ranked relations, plain rules over those) stays accepted
+  (`strata_unranked_negation`).
   **The primary path has no such corner**: the peel assigns a round to every
   relation any rule mentions, from the rules alone, so there is no "unknown
   level" case to fall into. A partial answer there would be a stall, and a stall
   is a refusal, not a silent final pass.
-- **Without a `stratum/2` supplier, negation is unchecked on the STOCK
-  evaluator**: no table means all its negation rules run in the final pass, and
-  no `unstratified/1` derivations means it rejects nothing. This was the reason
+- **Without a `stratum/2` supplier, negation is checked only as far as the
+  final pass is concerned on the STOCK evaluator**: no table means all its
+  negation rules run in the final pass, so any that read what another derives are
+  refused (above), boot.rofl's own `leak` among them (a table-less world carries
+  `examples/checks/strata-boot-schedule.rofl`); and no `unstratified/1`
+  derivations means it rejects nothing else. This was the reason
   boot.rofl was not optional. It is no longer true of the default evaluator, and
   the change is measured rather than asserted: the same twelve-level chain and
   the same fourteen-layer `examples/wtf/` model come out RIGHT with no

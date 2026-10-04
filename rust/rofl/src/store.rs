@@ -43,12 +43,24 @@
 //! Reviving is sound BECAUSE the key is a function of `(rel, persp, tuple)`:
 //! a held `PremRef::Fact` spells exactly the string it spelled before, and the
 //! fact identity becomes what the JS kernel's key already is — injective.
+//!
+//! A FORK IS A LAYER (`Store::freeze`, `Session::fork`). Every arena here is
+//! append-only, so a world frozen at a mark is a base: its arenas and tables
+//! go behind an `Rc`, a fork appends above the mark, and ids keep counting
+//! from it, so an id below the mark is always the base's and a lookup that
+//! misses the layer's table asks the base's. The base is never written; the
+//! state a layer does change on a base record — its flags, its firing chain,
+//! a group's run — is copied at the first write (a byte a record, a word a
+//! record, a relation's runs), and named where it is. The base's arenas are
+//! plain vectors, which is what lets one be a file mapped in later.
 
 use crate::cell::{AggOp, Algebra};
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hash, Hasher};
+use std::ops::{Index, IndexMut, Range};
+use std::rc::Rc;
 
 pub type FactId = u32;
 pub type CellId = u32;
@@ -114,10 +126,6 @@ impl FactRec {
     fn set_flags(&mut self, f: u8) {
         debug_assert!(f & 0xf0 == 0);
         self.packed = (self.packed & TUP_MASK) | ((f as u32) << 28);
-    }
-    #[inline]
-    fn add_flags(&mut self, f: u8) {
-        self.set_flags(self.flags() | f);
     }
     #[inline]
     pub fn base(&self) -> bool {
@@ -292,7 +300,7 @@ struct KeyRun {
     /// Facts holding a non-ground argument: they belong to no bucket and to
     /// every answer (`KeyRun.loose`, src/store.ts:68).
     loose: Vec<FactId>,
-    by_pat: Option<ArgIndex>,
+    by_pat: Option<Rc<ArgIndex>>,
     staged: Vec<FactId>,
 }
 
@@ -329,7 +337,7 @@ fn tup_hash(args: &[Term]) -> u64 {
 /// beside a `u64` sortkey pads to sixteen, and the padding is pure loss on a
 /// case where nothing shares.
 #[derive(Default, Clone)]
-pub struct Tuples {
+struct TupSeg {
     /// Where each tuple's arguments END in `args`.
     ends: Vec<u32>,
     /// The eight-byte order prefix — see the module note. It belongs to the
@@ -339,8 +347,8 @@ pub struct Tuples {
     cons: Vec<u32>,
 }
 
-impl Tuples {
-    #[inline]
+impl TupSeg {
+    #[inline(always)]
     fn span(&self, t: TupId) -> (usize, usize) {
         let end = self.ends[t as usize] as usize;
         let start = if t == 0 {
@@ -350,31 +358,26 @@ impl Tuples {
         };
         (start, end)
     }
-    #[inline]
-    pub fn args(&self, t: TupId) -> &[Term] {
+    #[inline(always)]
+    fn args(&self, t: TupId) -> &[Term] {
         let (a, b) = self.span(t);
         &self.args[a..b]
     }
     #[inline]
-    fn arity(&self, t: TupId) -> usize {
-        let (a, b) = self.span(t);
-        b - a
-    }
-    #[inline]
-    fn sortkey(&self, t: TupId) -> u64 {
-        self.sks[t as usize]
-    }
-    #[inline]
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.ends.len()
     }
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.ends.is_empty()
+    fn find(&self, args: &[Term], hash: u64) -> Option<TupId> {
+        if self.cons.is_empty() {
+            return None;
+        }
+        let s = self.cons[self.slot(args, hash)];
+        (s != TUP_EMPTY).then_some(s)
     }
-    fn slot(&self, args: &[Term]) -> usize {
+    #[inline]
+    fn slot(&self, args: &[Term], hash: u64) -> usize {
         let mask = self.cons.len() - 1;
-        let mut i = (tup_hash(args) as usize) & mask;
+        let mut i = (hash as usize) & mask;
         loop {
             let s = self.cons[i];
             if s == TUP_EMPTY || self.args(s) == args {
@@ -399,19 +402,18 @@ impl Tuples {
             self.cons[i] = k as u32;
         }
     }
-    /// The tuple's identity, created if this is the first fact to carry it.
-    fn intern(&mut self, h: &Heap, args: &[Term]) -> TupId {
+    fn intern(&mut self, args: &[Term], hash: u64, sk: impl FnOnce() -> u64) -> TupId {
         if (self.ends.len() + 1) * 4 >= self.cons.len() * 3 {
             self.grow();
         }
-        let slot = self.slot(args);
+        let slot = self.slot(args, hash);
         if self.cons[slot] != TUP_EMPTY {
             return self.cons[slot];
         }
         self.args.extend_from_slice(args);
         let i = self.ends.len() as TupId;
         self.ends.push(self.args.len() as u32);
-        self.sks.push(args_sortkey(h, args));
+        self.sks.push(sk());
         self.cons[slot] = i;
         i
     }
@@ -431,21 +433,213 @@ impl Tuples {
     }
 }
 
+/// The tuple pool of a layered store: tuples below `t0` are `base`'s, frozen
+/// by `Store::freeze` and shared by every fork, and a fork interns above them.
+/// A tuple is in exactly one of the two, so a tuple id means one tuple in the
+/// base and in every layer over it.
+#[derive(Default, Clone)]
+pub struct Tuples {
+    t0: TupId,
+    base: Rc<TupSeg>,
+    top: TupSeg,
+}
+
+impl Tuples {
+    #[inline(always)]
+    fn seg(&self, t: TupId) -> (&TupSeg, TupId) {
+        let j = t.wrapping_sub(self.t0);
+        if (j as usize) < self.top.len() {
+            (&self.top, j)
+        } else {
+            (&self.base, t)
+        }
+    }
+    #[inline(always)]
+    pub fn args(&self, t: TupId) -> &[Term] {
+        let (s, i) = self.seg(t);
+        s.args(i)
+    }
+    #[inline]
+    fn arity(&self, t: TupId) -> usize {
+        self.args(t).len()
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.t0 as usize + self.top.len()
+    }
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// The tuple's identity, created if this is the first fact to carry it.
+    fn intern(&mut self, h: &Heap, args: &[Term]) -> TupId {
+        let hash = tup_hash(args);
+        if self.t0 > 0 {
+            if let Some(t) = self.base.find(args, hash) {
+                return t;
+            }
+        }
+        self.t0 + self.top.intern(args, hash, || args_sortkey(h, args))
+    }
+    fn freeze(&mut self) {
+        if self.top.len() == 0 {
+            return;
+        }
+        if self.t0 == 0 {
+            self.base = Rc::new(std::mem::take(&mut self.top));
+        } else {
+            let b = Rc::make_mut(&mut self.base);
+            for t in 0..self.top.len() as TupId {
+                let a = self.top.args(t);
+                b.intern(a, tup_hash(a), || self.top.sks[t as usize]);
+            }
+            self.top = TupSeg::default();
+        }
+        self.t0 = self.base.len() as TupId;
+    }
+    fn bytes(&self) -> (usize, usize, usize, usize) {
+        let (b, t) = (self.base.bytes(), self.top.bytes());
+        (b.0 + t.0, b.1 + t.1, b.2 + t.2, b.3 + t.3)
+    }
+}
+
+/// ONE COLUMN OF A LAYERED STORE. Ids below `mark` read `base`, which every
+/// fork of one world shares; ids from `mark` up are this layer's `own`, and
+/// `freeze` moves them under the mark. A write below the mark copies `base`
+/// first (`Rc::make_mut`): the append-only arenas never do that, and the
+/// provenance a layer changes on a record it shares (its firing chain head,
+/// a base firing's link) does it once.
+#[derive(Clone)]
+struct Col<T> {
+    mark: usize,
+    base: Rc<Vec<T>>,
+    own: Vec<T>,
+}
+
+impl<T> Default for Col<T> {
+    fn default() -> Self {
+        Col { mark: 0, base: Rc::new(Vec::new()), own: Vec::new() }
+    }
+}
+
+impl<T> From<Vec<T>> for Col<T> {
+    fn from(own: Vec<T>) -> Self {
+        Col { own, ..Col::default() }
+    }
+}
+
+impl<T: Clone> Col<T> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.mark + self.own.len()
+    }
+    #[inline]
+    fn push(&mut self, x: T) {
+        self.own.push(x);
+    }
+    fn extend_from_slice(&mut self, xs: &[T]) {
+        self.own.extend_from_slice(xs);
+    }
+    fn get(&self, i: usize) -> Option<&T> {
+        if i < self.mark {
+            self.base.get(i)
+        } else {
+            self.own.get(i - self.mark)
+        }
+    }
+    fn iter(&self) -> impl Iterator<Item = &T> {
+        self.base.iter().chain(self.own.iter())
+    }
+    fn capacity(&self) -> usize {
+        self.base.capacity() + self.own.capacity()
+    }
+    fn freeze(&mut self) {
+        if self.own.is_empty() {
+            return;
+        }
+        if self.mark == 0 {
+            self.base = Rc::new(std::mem::take(&mut self.own));
+        } else {
+            Rc::make_mut(&mut self.base).append(&mut self.own);
+        }
+        self.mark = self.base.len();
+    }
+}
+
+impl<T> Index<usize> for Col<T> {
+    type Output = T;
+    /// The layer's own first, whose bounds check is then the only test an
+    /// unlayered store pays: below the mark the subtraction wraps and misses.
+    #[inline(always)]
+    fn index(&self, i: usize) -> &T {
+        match self.own.get(i.wrapping_sub(self.mark)) {
+            Some(x) => x,
+            None => &self.base[i],
+        }
+    }
+}
+
+impl<T: Clone> IndexMut<usize> for Col<T> {
+    #[inline]
+    fn index_mut(&mut self, i: usize) -> &mut T {
+        if i < self.mark {
+            &mut Rc::make_mut(&mut self.base)[i]
+        } else {
+            &mut self.own[i - self.mark]
+        }
+    }
+}
+
+/// A span never straddles the mark: it was appended in one piece.
+impl<T> Index<Range<usize>> for Col<T> {
+    type Output = [T];
+    #[inline]
+    fn index(&self, r: Range<usize>) -> &[T] {
+        if r.start < self.mark {
+            &self.base[r]
+        } else {
+            &self.own[r.start - self.mark..r.end - self.mark]
+        }
+    }
+}
+
+impl<T: Clone> IndexMut<Range<usize>> for Col<T> {
+    fn index_mut(&mut self, r: Range<usize>) -> &mut [T] {
+        if r.start < self.mark {
+            &mut Rc::make_mut(&mut self.base)[r]
+        } else {
+            &mut self.own[r.start - self.mark..r.end - self.mark]
+        }
+    }
+}
+
 /// The record vector and the tuple pool a fact lives in, kept apart from the
 /// indexes so that sorting a key run can borrow the records immutably while the
 /// run is taken mutably. No unsafe, and the split is the reason there is none.
+///
+/// The flag bits of a record below the mark are `bflags`', not the record's:
+/// they are the one part of a record a layer changes, so the records stay
+/// shared and the flags are copied, a byte a record, on the first change.
 #[derive(Default, Clone)]
 pub struct Facts {
-    recs: Vec<FactRec>,
+    recs: Col<FactRec>,
+    bflags: Rc<Vec<u8>>,
     tups: Tuples,
 }
 
 impl Facts {
-    #[inline]
-    pub fn rec(&self, id: FactId) -> &FactRec {
-        &self.recs[id as usize]
+    #[inline(always)]
+    pub fn rec(&self, id: FactId) -> FactRec {
+        let i = id as usize;
+        match self.recs.own.get(i.wrapping_sub(self.recs.mark)) {
+            Some(r) => *r,
+            None => {
+                let r = self.recs.base[i];
+                FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
+            }
+        }
     }
-    #[inline]
+    #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
         self.tups.args(self.recs[id as usize].tup())
     }
@@ -455,7 +649,36 @@ impl Facts {
     }
     #[inline]
     pub fn alive(&self, id: FactId) -> bool {
-        !self.recs[id as usize].dead()
+        !self.rec(id).dead()
+    }
+    #[inline]
+    fn len(&self) -> usize {
+        self.recs.len()
+    }
+    fn push(&mut self, r: FactRec) {
+        self.recs.push(r);
+    }
+    #[inline]
+    fn set_flags(&mut self, id: FactId, f: u8) {
+        let i = id as usize;
+        if i < self.recs.mark {
+            Rc::make_mut(&mut self.bflags)[i] = f;
+        } else {
+            self.recs.own[i - self.recs.mark].set_flags(f);
+        }
+    }
+    #[inline]
+    fn add_flags(&mut self, id: FactId, f: u8) {
+        self.set_flags(id, self.rec(id).flags() | f);
+    }
+    fn freeze(&mut self) {
+        let m = self.recs.mark;
+        self.recs.freeze();
+        if self.recs.mark > m {
+            let fresh = self.recs.base[m..].iter().map(|r| r.flags());
+            Rc::make_mut(&mut self.bflags).extend(fresh);
+        }
+        self.tups.freeze();
     }
     /// The order the JS kernel's key strings compare in, inside one
     /// `(relation, perspective)` group where the whole prefix is shared. Tuples
@@ -466,11 +689,12 @@ impl Facts {
         if ta == tb {
             return Ordering::Equal;
         }
-        let (ka, kb) = (self.tups.sortkey(ta), self.tups.sortkey(tb));
+        let ((sa, ia), (sb, ib)) = (self.tups.seg(ta), self.tups.seg(tb));
+        let (ka, kb) = (sa.sks[ia as usize], sb.sks[ib as usize]);
         if ka != 0 && kb != 0 && ka != kb {
             return ka.cmp(&kb);
         }
-        cmp_args_rendered(h, self.tups.args(ta), self.tups.args(tb))
+        cmp_args_rendered(h, sa.args(ia), sb.args(ib))
     }
 }
 
@@ -586,29 +810,125 @@ pub struct Store {
     /// the heap, so a `Term` IS its structure and `(rel, persp, args)` needs no
     /// rendering — which is what lets the table hold four bytes a fact instead
     /// of a string key and a bucket vector.
+    ///
+    /// Layered: `keys_base` holds the ids below the records' mark and is
+    /// shared, `keys` the ids this layer added. A key is in one of the two.
+    keys_base: Rc<Vec<u32>>,
     keys: Vec<u32>,
     keys_n: usize,
-    idx: FxMap<Sym, Vec<(Sym, KeyRun)>>,
+    idx: Runs,
     /// Provenance, flattened. One `u32` per fact id for the head of its firing
     /// chain, one 20-byte node per firing, and every premise in one arena —
     /// against a `Map<key, Map<sig, Witness>>` of two hash tables and two
     /// strings per firing on the JS side.
-    wit_head: Vec<u32>,
-    wits: Vec<WitNode>,
-    prem_arena: Vec<PremRef>,
+    wit_head: Col<u32>,
+    wits: Col<WitNode>,
+    prem_arena: Col<PremRef>,
     /// `firing_hash` of every node on a chain, and of some that left one: a
     /// firing whose hash is absent is new without walking its fact's chain.
-    fired: FxSet<u64>,
+    fired: Fired,
     wits_live: usize,
     n_live: usize,
-    cells: Cells,
+    /// Shared with the base until this layer seals or drops a cell.
+    cells: Rc<Cells>,
     /// Runs holding a record `retire` marked dead and did not yet drop.
     unswept: Vec<(Sym, Sym)>,
     /// Premise -> the facts with a firing that cites it, kept while a program
     /// with a lattice evaluates (`track_citers`), so a withdrawal visits the
     /// firings it touches and not the store. An entry can outlive its firing;
     /// every reader checks the firing itself.
-    citers: Option<HashMap<FactId, Vec<FactId>>>,
+    citers: Option<Rc<HashMap<FactId, Vec<FactId>>>>,
+}
+
+type Groups = FxMap<Sym, Vec<(Sym, KeyRun)>>;
+
+/// The per-group runs of a layered store, copied out of the shared `base` a
+/// relation at a time, the first time this layer writes one of its groups.
+/// The copy shares the groups' pattern indexes until it changes one.
+#[derive(Default, Clone)]
+struct Runs {
+    base: Rc<Groups>,
+    own: Groups,
+}
+
+impl Runs {
+    #[inline]
+    fn get(&self, rel: &Sym) -> Option<&Vec<(Sym, KeyRun)>> {
+        self.own.get(rel).or_else(|| self.base.get(rel))
+    }
+    fn contains_key(&self, rel: &Sym) -> bool {
+        self.get(rel).is_some()
+    }
+    fn copy_up(&mut self, rel: &Sym) {
+        if !self.base.is_empty() && !self.own.contains_key(rel) {
+            if let Some(v) = self.base.get(rel) {
+                self.own.insert(*rel, v.clone());
+            }
+        }
+    }
+    fn get_mut(&mut self, rel: &Sym) -> Option<&mut Vec<(Sym, KeyRun)>> {
+        self.copy_up(rel);
+        self.own.get_mut(rel)
+    }
+    fn entry(&mut self, rel: Sym) -> &mut Vec<(Sym, KeyRun)> {
+        self.copy_up(&rel);
+        self.own.entry(rel).or_default()
+    }
+    fn iter(&self) -> impl Iterator<Item = (&Sym, &Vec<(Sym, KeyRun)>)> {
+        self.own.iter().chain(self.base.iter().filter(|(r, _)| !self.own.contains_key(r)))
+    }
+    fn values(&self) -> impl Iterator<Item = &Vec<(Sym, KeyRun)>> {
+        self.iter().map(|(_, v)| v)
+    }
+    /// The groups with arrivals not yet merged into their run.
+    fn arriving(&self) -> Vec<(Sym, Sym)> {
+        self.iter().flat_map(|(r, v)| v.iter().filter(|(_, k)| !k.arrived.is_empty()).map(|(p, _)| (*r, *p))).collect()
+    }
+    fn capacity(&self) -> usize {
+        self.base.capacity() + self.own.capacity()
+    }
+    fn freeze(&mut self) {
+        if self.own.is_empty() {
+            return;
+        }
+        if self.base.is_empty() {
+            self.base = Rc::new(std::mem::take(&mut self.own));
+        } else {
+            Rc::make_mut(&mut self.base).extend(self.own.drain());
+        }
+    }
+}
+
+/// `Store::fired`, layered as `Runs` is: a hash is in the shared base or in
+/// this layer's own set.
+#[derive(Default, Clone)]
+struct Fired {
+    base: Rc<FxSet<u64>>,
+    own: FxSet<u64>,
+}
+
+impl Fired {
+    #[inline]
+    fn insert(&mut self, h: u64) -> bool {
+        (self.base.is_empty() || !self.base.contains(&h)) && self.own.insert(h)
+    }
+    fn clear(&mut self) {
+        self.base = Rc::default();
+        self.own.clear();
+    }
+    fn capacity(&self) -> usize {
+        self.base.capacity() + self.own.capacity()
+    }
+    fn freeze(&mut self) {
+        if self.own.is_empty() {
+            return;
+        }
+        if self.base.is_empty() {
+            self.base = Rc::new(std::mem::take(&mut self.own));
+        } else {
+            Rc::make_mut(&mut self.base).extend(self.own.drain());
+        }
+    }
 }
 
 const EMPTY: u32 = u32::MAX;
@@ -686,11 +1006,41 @@ impl Store {
         }
     }
 
-    #[inline]
-    pub fn rec(&self, id: FactId) -> &FactRec {
+    /// A FORK'S HALF OF THE WORK (`Session::fork`): everything this store
+    /// holds goes under the mark of every column and table, shared from here
+    /// on by this store and every clone of it, and written by none of them —
+    /// a write below a mark copies first. A clone after this copies nothing
+    /// but the small per-world fields (the logs, the lattice registrations,
+    /// the unswept list). Groups with arrivals are absorbed first, so that a
+    /// layer reading one does not copy it to sort it.
+    ///
+    /// It copies only in a store that is itself a layer and has written:
+    /// its base and its own part become one new base.
+    pub fn freeze(&mut self, h: &Heap) {
+        for (rel, persp) in self.idx.arriving() {
+            self.absorb(h, rel, persp);
+        }
+        let layered = self.facts.recs.mark > 0;
+        self.facts.freeze();
+        if !layered {
+            self.keys_base = Rc::new(std::mem::take(&mut self.keys));
+        } else if !self.keys.is_empty() {
+            self.keys_base = Rc::new(self.key_table(0));
+            self.keys = Vec::new();
+        }
+        self.keys_n = 0;
+        self.idx.freeze();
+        self.wit_head.freeze();
+        self.wits.freeze();
+        self.prem_arena.freeze();
+        self.fired.freeze();
+    }
+
+    #[inline(always)]
+    pub fn rec(&self, id: FactId) -> FactRec {
         self.facts.rec(id)
     }
-    #[inline]
+    #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
         self.facts.args(id)
     }
@@ -704,7 +1054,7 @@ impl Store {
     }
     #[inline]
     pub fn len_ids(&self) -> u32 {
-        self.facts.recs.len() as u32
+        self.facts.len() as u32
     }
     pub fn fact_count(&self) -> usize {
         self.n_live
@@ -715,13 +1065,13 @@ impl Store {
         self.facts.tups.len()
     }
     pub fn all_facts(&self) -> Vec<FactId> {
-        (0..self.facts.recs.len() as FactId)
+        (0..self.facts.len() as FactId)
             .filter(|&i| self.alive(i))
             .collect()
     }
 
     fn run_mut(&mut self, rel: Sym, persp: Sym) -> &mut KeyRun {
-        let v = self.idx.entry(rel).or_default();
+        let v = self.idx.entry(rel);
         if let Some(i) = v.iter().position(|(p, _)| *p == persp) {
             return &mut v[i].1;
         }
@@ -735,13 +1085,24 @@ impl Store {
     /// it finds — so `(rel, persp, args)` and `FactId` are in bijection, which
     /// is the property the JS kernel's string key has and this port did not.
     fn find_rec(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
-        if self.keys.is_empty() {
+        let h = hash_key(rel, persp, args);
+        if !self.keys_base.is_empty() {
+            if let Some(id) = self.probe(&self.keys_base, h, rel, persp, args) {
+                return Some(id);
+            }
+        }
+        self.probe(&self.keys, h, rel, persp, args)
+    }
+
+    #[inline]
+    fn probe(&self, keys: &[u32], h: u64, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        if keys.is_empty() {
             return None;
         }
-        let mask = self.keys.len() - 1;
-        let mut i = (hash_key(rel, persp, args) as usize) & mask;
+        let mask = keys.len() - 1;
+        let mut i = (h as usize) & mask;
         loop {
-            let slot = self.keys[i];
+            let slot = keys[i];
             if slot == EMPTY {
                 return None;
             }
@@ -771,25 +1132,27 @@ impl Store {
         self.keys_n += 1;
     }
 
-    /// Rebuild the table over EVERY record, dead ones included: a dead record
-    /// is what `add` revives, so dropping it from the table would be dropping
-    /// the identity it stands for.
+    /// Rebuild the table over EVERY record from `from` up, dead ones
+    /// included: a dead record is what `add` revives, so dropping it from the
+    /// table would be dropping the identity it stands for.
     fn key_grow(&mut self) {
-        let want = ((self.facts.recs.len() + 1) * 4)
-            .next_power_of_two()
-            .max(64);
-        self.keys = vec![EMPTY; want];
-        self.keys_n = 0;
-        for id in 0..self.facts.recs.len() as FactId {
-            let mask = self.keys.len() - 1;
+        self.keys = self.key_table(self.facts.recs.mark);
+        self.keys_n = self.facts.len() - self.facts.recs.mark;
+    }
+
+    fn key_table(&self, from: usize) -> Vec<u32> {
+        let want = ((self.facts.len() - from + 1) * 4).next_power_of_two().max(64);
+        let mut keys = vec![EMPTY; want];
+        let mask = want - 1;
+        for id in from as FactId..self.facts.len() as FactId {
             let r = self.facts.recs[id as usize];
             let mut i = (hash_key(r.rel, r.persp, self.args(id)) as usize) & mask;
-            while self.keys[i] != EMPTY {
+            while keys[i] != EMPTY {
                 i = (i + 1) & mask;
             }
-            self.keys[i] = id;
-            self.keys_n += 1;
+            keys[i] = id;
         }
+        keys
     }
 
     pub fn get(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
@@ -819,8 +1182,8 @@ impl Store {
     pub fn put(&mut self, h: &Heap, rel: Sym, persp: Sym, args: &[Term], flags: u8) -> (FactId, bool) {
         let id = match self.find_rec(rel, persp, args) {
             Some(id) if self.alive(id) => {
-                if flags & F_BASE != 0 && !self.facts.recs[id as usize].base() {
-                    self.facts.recs[id as usize].add_flags(F_BASE);
+                if flags & F_BASE != 0 && !self.facts.rec(id).base() {
+                    self.facts.add_flags(id, F_BASE);
                 }
                 return (id, false);
             }
@@ -831,13 +1194,13 @@ impl Store {
                 if !self.unswept.is_empty() {
                     self.sweep();
                 }
-                self.facts.recs[id as usize].set_flags(flags);
+                self.facts.set_flags(id, flags);
                 id
             }
             None => {
                 let tup = self.facts.tups.intern(h, args);
-                let id = self.facts.recs.len() as FactId;
-                self.facts.recs.push(FactRec::new(rel, persp, tup, flags));
+                let id = self.facts.len() as FactId;
+                self.facts.push(FactRec::new(rel, persp, tup, flags));
                 self.wit_head.push(EMPTY);
                 self.key_insert(id);
                 id
@@ -862,21 +1225,17 @@ impl Store {
     /// this is used as a run comparator; the group-level part is `cmp_group`.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
         if self.unordered {
-            return self.facts.rec(a).tup().cmp(&self.facts.rec(b).tup());
+            return self.facts.recs[a as usize].tup().cmp(&self.facts.recs[b as usize].tup());
         }
         self.facts.cmp_args(h, a, b)
     }
 
     fn absorb(&mut self, h: &Heap, rel: Sym, persp: Sym) {
-        let Some(v) = self.idx.get_mut(&rel) else {
-            return;
-        };
-        let Some(i) = v.iter().position(|(p, _)| *p == persp) else {
-            return;
-        };
-        if v[i].1.arrived.is_empty() {
+        if self.run(rel, persp).is_none_or(|r| r.arrived.is_empty()) {
             return;
         }
+        let v = self.idx.get_mut(&rel).unwrap();
+        let i = v.iter().position(|(p, _)| *p == persp).unwrap();
         let t_absorb = std::time::Instant::now();
         let mut canon = std::mem::take(&mut v[i].1.canon);
         let mut fresh = std::mem::take(&mut v[i].1.arrived);
@@ -887,7 +1246,7 @@ impl Store {
         // disjoint fields, no unsafe.
         let unordered = self.unordered;
         let me = &self.facts;
-        let cmp_args = |h: &Heap, a: FactId, b: FactId| if unordered { me.rec(a).tup().cmp(&me.rec(b).tup()) } else { me.cmp_args(h, a, b) };
+        let cmp_args = |h: &Heap, a: FactId, b: FactId| if unordered { me.recs[a as usize].tup().cmp(&me.recs[b as usize].tup()) } else { me.cmp_args(h, a, b) };
         // A dead id is left in the runs until `sweep` (see `retire`), and a
         // join cell retires its old value on every widening: within one
         // fixpoint the run filled with superseded values of the same key,
@@ -895,8 +1254,8 @@ impl Store {
         // every merge searched through them. Nothing reads a dead id from a
         // run (every reader skips it) and `sweep` would drop it anyway, so
         // it is dropped here, where the run is being rewritten regardless.
-        canon.retain(|&i| !me.rec(i).dead());
-        fresh.retain(|&i| !me.rec(i).dead());
+        canon.retain(|&i| me.alive(i));
+        fresh.retain(|&i| me.alive(i));
         fresh.sort_by(|x, y| cmp_args(h, *x, *y));
         if canon.is_empty() {
             canon = fresh;
@@ -1066,38 +1425,35 @@ impl Store {
         // size) to the allocator: over 8 to 64 files, facts grew 15.9x, steps
         // 16.6x, and this 497.6x.
         self.argm_calls += 1;
+        // Answered where the run stands when nothing needs writing, so a
+        // layer probes its base's index without copying it.
+        let run = self.run(rel, p).unwrap();
+        match &run.by_pat {
+            None if run.canon.len() < MIN_INDEXED => return None,
+            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => return None,
+            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return Some(hits(&self.facts, &run.loose, &bp[&mask], vals)),
+            _ => {}
+        }
         let run = self.run_mut(rel, p);
         if run.by_pat.is_none() {
-            if run.canon.len() < MIN_INDEXED {
-                return None;
-            }
-            run.by_pat = Some(FxMap::default());
-        }
-        let by_pat = run.by_pat.as_ref().unwrap();
-        if !by_pat.contains_key(&mask) && by_pat.len() >= MAX_PATTERNS {
-            return None;
+            run.by_pat = Some(Rc::default());
         }
         self.fold_staged(h, rel, p);
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
-        let by_pat = run.by_pat.as_mut().unwrap();
-        if !by_pat.contains_key(&mask) {
-            self.argm_cloned += run.canon.len() as u64;
+        let canon = &run.canon;
+        let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
+            self.argm_cloned += canon.len() as u64;
             let mut by_val = FxMap::default();
             let mut sig = Vec::new();
-            for &k in &run.canon {
+            for &k in canon {
                 if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
                     put_sig(&mut by_val, &sig, k);
                 }
             }
-            by_pat.insert(mask, by_val);
-        }
-        let mut out: Vec<FactId> = match by_pat[&mask].get(vals) {
-            Some(hit) => hit.iter().copied().filter(|&i| facts.alive(i)).collect(),
-            None => Vec::new(),
-        };
-        out.extend(run.loose.iter().copied().filter(|&k| facts.alive(k)));
-        Some(out)
+            by_val
+        });
+        Some(hits(facts, &run.loose, by_val, vals))
     }
 
     fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
@@ -1114,7 +1470,7 @@ impl Store {
             return;
         }
         let mut sig = Vec::new();
-        for (&m, by_val) in by_pat.iter_mut() {
+        for (&m, by_val) in Rc::make_mut(by_pat).iter_mut() {
             let pos = mask_pos(m);
             for &k in &run.staged {
                 if facts.alive(k) && pat_sig(h, &pos, facts.args(k), &mut sig) {
@@ -1146,11 +1502,11 @@ impl Store {
     /// until `sweep`: every reader already skips a dead id, and a lattice cell
     /// that improves retires its old fact many times a round.
     pub fn retire(&mut self, id: FactId) {
-        let r = self.facts.recs[id as usize];
+        let r = self.facts.rec(id);
         if r.dead() {
             return;
         }
-        self.facts.recs[id as usize].add_flags(F_DEAD);
+        self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
         if self.wit_head[id as usize] != EMPTY {
             let mut c = self.wit_head[id as usize];
@@ -1169,11 +1525,11 @@ impl Store {
     /// improved on is no answer, and it is how the value that replaced it was
     /// reached (docs/aggregates.md, "The order lattice, as built").
     pub fn retire_keeping_firings(&mut self, id: FactId) {
-        let r = self.facts.recs[id as usize];
+        let r = self.facts.rec(id);
         if r.dead() {
             return;
         }
-        self.facts.recs[id as usize].add_flags(F_DEAD);
+        self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));
@@ -1192,7 +1548,7 @@ impl Store {
 
     /// Start (or restart, empty) the premise -> citing facts index.
     pub fn track_citers(&mut self, on: bool) {
-        self.citers = on.then(HashMap::new);
+        self.citers = on.then(Rc::default);
     }
 
     /// Drop the dead ids `retire` left in the runs. A key is revived only
@@ -1208,15 +1564,15 @@ impl Store {
             Self::drop_patterns(run);
             let alive: Vec<FactId> = dead
                 .into_iter()
-                .filter(|&i| !self.facts.recs[i as usize].dead())
+                .filter(|&i| self.facts.alive(i))
                 .collect();
             let alive2: Vec<FactId> = dead2
                 .into_iter()
-                .filter(|&i| !self.facts.recs[i as usize].dead())
+                .filter(|&i| self.facts.alive(i))
                 .collect();
             let loose: Vec<FactId> = loose
                 .into_iter()
-                .filter(|&i| !self.facts.recs[i as usize].dead())
+                .filter(|&i| self.facts.alive(i))
                 .collect();
             let v = self.idx.get_mut(&rel).unwrap();
             let i = v.iter().position(|(p, _)| *p == persp).unwrap();
@@ -1231,17 +1587,17 @@ impl Store {
     /// provenance row they were recorded with stays too. `row_of` reads a
     /// record as that row; without it no row stands.
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
-        let drop: Vec<FactId> = (0..self.facts.recs.len() as FactId)
+        let drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
-                let r = &self.facts.recs[i as usize];
+                let r = &self.facts.rec(i);
                 !r.dead() && !r.base() && !r.frozen()
             })
             .collect();
         self.remove_many(&drop);
         let mut standing: HashSet<(FactId, Sym)> = HashSet::new();
         if let Some(row_of) = row_of {
-            for id in 0..self.facts.recs.len() as FactId {
-                let r = self.facts.recs[id as usize];
+            for id in 0..self.facts.len() as FactId {
+                let r = self.facts.rec(id);
                 if r.dead() {
                     continue;
                 }
@@ -1303,14 +1659,14 @@ impl Store {
     ) {
         self.eval_holes.clear();
         // a superseded lattice value's history ends with its tick
-        for id in 0..self.facts.recs.len() as FactId {
-            if self.facts.recs[id as usize].dead() {
+        for id in 0..self.facts.len() as FactId {
+            if self.facts.rec(id).dead() {
                 self.drop_firings(id);
             }
         }
         let mut stale: Vec<FactId> = Vec::new();
-        for id in 0..self.facts.recs.len() as FactId {
-            let r = self.facts.recs[id as usize];
+        for id in 0..self.facts.len() as FactId {
+            let r = self.facts.rec(id);
             // `rec.base || rec.scope !== 'timeless'` — the frozen layer is the
             // DERIVED TIMELESS records and nothing else.
             if r.dead() || r.base() || r.tick_scope() {
@@ -1322,11 +1678,11 @@ impl Store {
                     continue;
                 }
             }
-            self.facts.recs[id as usize].add_flags(F_FROZEN);
+            self.facts.add_flags(id, F_FROZEN);
         }
-        let to_drop: Vec<FactId> = (0..self.facts.recs.len() as FactId)
+        let to_drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
-                let r = &self.facts.recs[i as usize];
+                let r = &self.facts.rec(i);
                 !r.dead() && r.tick_scope()
             })
             .collect();
@@ -1342,7 +1698,7 @@ impl Store {
             let Some(id) = self.find(s.rel, s.persp, s.args) else {
                 continue;
             };
-            if !self.facts.recs[id as usize].tick_scope() {
+            if !self.facts.rec(id).tick_scope() {
                 continue;
             }
             let head = self.wit_head[id as usize];
@@ -1388,11 +1744,12 @@ impl Store {
         }
         let mut wits = Vec::with_capacity(self.wits_live);
         let mut prems = Vec::new();
+        let mut heads = Vec::with_capacity(self.wit_head.len());
         self.fired.clear();
-        for (id, h) in self.wit_head.iter_mut().enumerate() {
-            let mut c = *h;
+        for id in 0..self.wit_head.len() {
+            let mut c = self.wit_head[id];
+            let mut new_head = EMPTY;
             let mut tail = EMPTY;
-            *h = EMPTY;
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 let at = prems.len() as u32;
@@ -1404,18 +1761,20 @@ impl Store {
                     next: EMPTY,
                     ..n
                 });
-                let id = wits.len() as u32 - 1;
+                let nid = wits.len() as u32 - 1;
                 if tail == EMPTY {
-                    *h = id;
+                    new_head = nid;
                 } else {
-                    wits[tail as usize].next = id;
+                    wits[tail as usize].next = nid;
                 }
-                tail = id;
+                tail = nid;
                 c = n.next;
             }
+            heads.push(new_head);
         }
-        self.wits = wits;
-        self.prem_arena = prems;
+        self.wit_head = heads.into();
+        self.wits = wits.into();
+        self.prem_arena = prems.into();
     }
 
     // ---------------------------------------------------------- provenance
@@ -1443,7 +1802,7 @@ impl Store {
             }
             c = n.next;
         }
-        if let Some(ix) = self.citers.as_mut() {
+        if let Some(ix) = self.citers.as_mut().map(Rc::make_mut) {
             for p in &w.prems {
                 if let PremRef::Fact(g) = p {
                     ix.entry(*g).or_default().push(id);
@@ -1665,7 +2024,7 @@ impl Store {
     }
 
     pub fn dead_ids(&self) -> Vec<FactId> {
-        (0..self.facts.recs.len() as FactId)
+        (0..self.facts.len() as FactId)
             .filter(|id| !self.alive(*id) && self.wit_head.get(*id as usize).is_some())
             .collect()
     }
@@ -1674,7 +2033,7 @@ impl Store {
     /// inline; this is that walk for the readers who want the facts and not
     /// the rendering.
     pub fn live_ids(&self) -> Vec<FactId> {
-        (0..self.facts.recs.len() as FactId).filter(|id| self.alive(*id)).collect()
+        (0..self.facts.len() as FactId).filter(|id| self.alive(*id)).collect()
     }
 
     pub fn firing_keys(&self) -> Vec<FactId> {
@@ -1778,7 +2137,7 @@ impl Store {
 
     /// `factKey` (src/store.ts:47), written into a buffer the caller owns.
     pub fn write_key(&self, h: &Heap, id: FactId, out: &mut String) {
-        let r = &self.facts.recs[id as usize];
+        let r = &self.facts.rec(id);
         write_fact_key(h, r.rel, r.persp, self.args(id), out);
     }
 
@@ -1787,7 +2146,7 @@ impl Store {
     /// another -- module note), and inside a group by `cmp_args`, which stops
     /// at the first differing byte.
     pub fn cmp_key(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
-        let (ra, rb) = (&self.facts.recs[a as usize], &self.facts.recs[b as usize]);
+        let (ra, rb) = (&self.facts.rec(a), &self.facts.rec(b));
         if (ra.rel, ra.persp) == (rb.rel, rb.persp) {
             return self.cmp_args(h, a, b);
         }
@@ -1807,7 +2166,7 @@ impl Store {
     /// distinguish, and the contract this port is measured against.
     pub fn canonical_state(&self, h: &Heap) -> String {
         let mut keyed: Vec<(String, FactId)> = Vec::with_capacity(self.n_live);
-        for id in 0..self.facts.recs.len() as FactId {
+        for id in 0..self.facts.len() as FactId {
             if self.alive(id) {
                 keyed.push((self.key(h, id), id));
             }
@@ -1817,7 +2176,7 @@ impl Store {
         out.push_str("tick ");
         out.push_str(&self.tick.to_string());
         for (k, id) in &keyed {
-            let r = &self.facts.recs[*id as usize];
+            let r = &self.facts.rec(*id);
             out.push('\n');
             out.push_str(k);
             out.push(' ');
@@ -1922,7 +2281,7 @@ impl Store {
     /// nothing in this function reads any of them.
     pub fn derivations(&self, h: &Heap) -> String {
         let mut keyed: Vec<(String, FactId)> = Vec::with_capacity(self.n_live);
-        for id in 0..self.facts.recs.len() as FactId {
+        for id in 0..self.facts.len() as FactId {
             if self.alive(id) {
                 keyed.push((self.key(h, id), id));
             }
@@ -1933,7 +2292,7 @@ impl Store {
         out.push_str(&self.tick.to_string());
         let mut sigs: Vec<String> = Vec::new();
         for (k, id) in &keyed {
-            let r = &self.facts.recs[*id as usize];
+            let r = &self.facts.rec(*id);
             out.push_str("\nf ");
             out.push_str(k);
             out.push(' ');
@@ -1997,17 +2356,18 @@ impl Store {
     }
 
     pub fn add_cell(&mut self, c: NewCell) -> CellId {
-        let id = self.cells.recs.len() as CellId;
-        self.cells.by_key.insert((c.owner, c.key.clone(), c.tick), id);
-        let m_at = self.cells.members.len() as u32;
+        let cells = Rc::make_mut(&mut self.cells);
+        let id = cells.recs.len() as CellId;
+        cells.by_key.insert((c.owner, c.key.clone(), c.tick), id);
+        let m_at = cells.members.len() as u32;
         for m in c.members {
-            let member = self.cells.member_of(m);
-            self.cells.members.push(member);
+            let member = cells.member_of(m);
+            cells.members.push(member);
         }
-        let m_len = self.cells.members.len() as u32 - m_at;
-        let s_at = self.cells.seals.len() as u32;
-        self.cells.seals.extend_from_slice(&c.seals);
-        self.cells.recs.push(CellRec {
+        let m_len = cells.members.len() as u32 - m_at;
+        let s_at = cells.seals.len() as u32;
+        cells.seals.extend_from_slice(&c.seals);
+        cells.recs.push(CellRec {
             owner: c.owner,
             op: c.op,
             key: c.key,
@@ -2028,7 +2388,7 @@ impl Store {
     pub fn add_cell_sharing(&mut self, c: NewCell, like: CellId) -> CellId {
         let members = self.cells.recs[like as usize].members;
         let id = self.add_cell(NewCell { members: Vec::new(), ..c });
-        self.cells.recs[id as usize].members = members;
+        Rc::make_mut(&mut self.cells).recs[id as usize].members = members;
         id
     }
 
@@ -2067,11 +2427,12 @@ impl Store {
     /// Withdraw a cell: it leaves `by_key` and every listing, and the next seal
     /// of its key is a new record. Its members stay in the arena.
     pub fn kill_cell(&mut self, c: CellId) {
-        let r = &mut self.cells.recs[c as usize];
+        let cells = Rc::make_mut(&mut self.cells);
+        let r = &mut cells.recs[c as usize];
         r.dead = true;
         let k = (r.owner, r.key.clone(), r.tick);
-        if self.cells.by_key.get(&k) == Some(&c) {
-            self.cells.by_key.remove(&k);
+        if cells.by_key.get(&k) == Some(&c) {
+            cells.by_key.remove(&k);
         }
     }
 
@@ -2137,7 +2498,7 @@ impl Store {
         let rels: HashSet<Sym> = regs.iter().map(|r| r.rel).collect();
         let mut rows: Vec<(String, String, String)> = Vec::new();
         for id in self.firing_keys() {
-            if !rels.contains(&self.facts.recs[id as usize].rel) {
+            if !rels.contains(&self.facts.rec(id).rel) {
                 continue;
             }
             let key = self.key(h, id);
@@ -2247,7 +2608,7 @@ impl Store {
             return;
         }
         let mut live = vec![false; self.cells.recs.len()];
-        for h in &self.wit_head {
+        for h in self.wit_head.iter() {
             let mut c = *h;
             while c != EMPTY {
                 let n = self.wits[c as usize];
@@ -2384,7 +2745,7 @@ impl Store {
         let mut users: HashMap<FactId, Vec<usize>> = HashMap::new();
         let mut heap: BinaryHeap<Reverse<(u32, FactId)>> = BinaryHeap::new();
         for &f in &order {
-            let rec = &self.facts.recs[f as usize];
+            let rec = &self.facts.rec(f);
             let mut c = self.wit_head[f as usize];
             if rec.base() || c == EMPTY {
                 heap.push(Reverse((0, f)));
@@ -2536,7 +2897,7 @@ impl Store {
         };
         for &f in &order {
             let mut c = self.wit_head[f as usize];
-            if self.facts.recs[f as usize].base() || c == EMPTY {
+            if self.facts.rec(f).base() || c == EMPTY {
                 heap.push(Reverse((0, Node::Fact(f))));
                 continue;
             }
@@ -2601,13 +2962,15 @@ impl Store {
     /// Replace an open quorum's members and height with the closed ones: the
     /// record keeps its id, which the firings that used it cite.
     pub fn reseal_cell(&mut self, id: CellId, members: Vec<NewMember>, height: u32) {
-        let m_at = self.cells.members.len() as u32;
+        let cells = Rc::make_mut(&mut self.cells);
+        let m_at = cells.members.len() as u32;
         for m in members {
-            let member = self.cells.member_of(m);
-            self.cells.members.push(member);
+            let member = cells.member_of(m);
+            cells.members.push(member);
         }
-        let r = &mut self.cells.recs[id as usize];
-        r.members = (m_at, self.cells.members.len() as u32 - m_at);
+        let n = cells.members.len() as u32 - m_at;
+        let r = &mut cells.recs[id as usize];
+        r.members = (m_at, n);
         r.height = height;
     }
 
@@ -2930,7 +3293,7 @@ impl Store {
             ("tup_sks", tsks),
             ("tup_cons", tcons),
             ("args", targs),
-            ("by_key", self.keys.capacity() * 4),
+            ("by_key", (self.keys_base.capacity() + self.keys.capacity()) * 4),
             ("idx", idx),
             ("wit", wit),
         ]
@@ -2967,8 +3330,17 @@ fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
     f.finish()
 }
 
-fn run_in(idx: &mut FxMap<Sym, Vec<(Sym, KeyRun)>>, rel: Sym, persp: Sym) -> &mut KeyRun {
+fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
+}
+
+fn hits(facts: &Facts, loose: &[FactId], by_val: &FxMap<Box<[Term]>, Vec<FactId>>, vals: &[Term]) -> Vec<FactId> {
+    let mut out: Vec<FactId> = match by_val.get(vals) {
+        Some(hit) => hit.iter().copied().filter(|&i| facts.alive(i)).collect(),
+        None => Vec::new(),
+    };
+    out.extend(loose.iter().copied().filter(|&k| facts.alive(k)));
+    out
 }
 
 /// FxHash's step. Terms, symbols and fact ids are already numbers, so
@@ -3495,6 +3867,51 @@ sks {:>10} B ({:>4.1}% of {})",
         s.add(&h, p, other, &[a], F_BASE);
         assert_eq!(s.fact_count(), 3);
         assert_eq!(s.tuple_count(), 1);
+    }
+
+    /// A LAYER ANSWERS AS A COPY WOULD, and its base answers as it did: the
+    /// same writes on a frozen world's clone and on a plain copy of it give
+    /// the same state, the base is untouched, and so is a sibling layer.
+    #[test]
+    fn a_layer_answers_as_a_copy_would_and_leaves_its_base_alone() {
+        let (mut h, mut s, p, m, _) = world();
+        let (q, rule) = (h.intern("q"), h.intern("r1"));
+        let v: Vec<Term> = (0..40).map(|i| h.atom(&format!("v{i:02}"))).collect();
+        for i in 0..40 {
+            let (e, _) = s.put(&h, p, m, &[v[i], v[(i + 1) % 40]], F_BASE);
+            let (d, _) = s.put(&h, q, m, &[v[i]], 0);
+            s.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(e)] });
+        }
+        s.arg_matches(&h, p, Some(m), 2, &[0], &[v[3]]);
+        let (copy_h, copy) = (h.clone(), s.clone());
+        h.freeze();
+        s.freeze(&h);
+        let base = s.canonical_state(&h);
+        let writes = |h: &mut Heap, s: &mut Store| {
+            s.clear_derived(None);
+            let w: Vec<Term> = (0..20).map(|i| h.atom(&format!("w{i:02}"))).collect();
+            for i in 0..20 {
+                let (e, _) = s.put(h, p, m, &[w[i], v[i]], F_BASE);
+                let (d, _) = s.put(h, q, m, &[v[2 * i]], 0);
+                s.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(e)] });
+            }
+            let gone = s.get(p, m, &[v[5], v[6]]).unwrap();
+            s.remove_many(&[gone]);
+            let hit = s.arg_matches(h, p, Some(m), 2, &[0], &[v[7]]);
+            let all = s.arg_matches(h, p, Some(m), 2, &[1], &[v[7]]);
+            (hit, all, s.rel_persp(h, p, m), s.canonical_state(h))
+        };
+        let (mut lh, mut layer) = (h.clone(), s.clone());
+        let (mut ch, mut copied) = (copy_h, copy);
+        let done = writes(&mut lh, &mut layer);
+        assert_eq!(done, writes(&mut ch, &mut copied));
+        assert_eq!(s.canonical_state(&h), base);
+        let (mut sh, mut sibling) = (h.clone(), s.clone());
+        let x = sh.atom("x");
+        sibling.add(&sh, q, m, &[x], F_BASE);
+        writes(&mut sh, &mut sibling);
+        assert_eq!(s.canonical_state(&h), base);
+        assert_eq!(layer.canonical_state(&lh), done.3);
     }
 
     #[test]

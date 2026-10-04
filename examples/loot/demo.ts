@@ -847,7 +847,7 @@ export function hygiene(r: Rofl, watch: string[]): Hygiene {
 export function firings(r: Rofl, budget: number = BUDGET): number {
   const scratch = Rofl.fromSnapshot(r.save());
   scratch.store.dirty = true;
-  const ev = new AggEval(scratch.store, budget, 'strata');
+  const ev = new AggEval(scratch.store, budget, 'rounds');
   try { ev.run(); } catch { /* the count up to the wall is the answer */ }
   return ev.steps;
 }

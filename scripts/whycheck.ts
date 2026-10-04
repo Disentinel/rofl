@@ -68,8 +68,10 @@ function reference(w0: World): { r: Rofl; w: World } {
   }
   const r = new Rofl(w.strata ? { evaluator: 'strata' } : {});
   const opt = w.budget ? { budget: w.budget } : undefined;
-  r.load(fs.readFileSync(BOOT, 'utf8'), opt);
-  const files = w.files.filter((f) => unreadOf(f).length === 0 && r.load(fs.readFileSync(f, 'utf8'), opt).ok);
+  // as scripts/goldens.ts loads it: under the stock evaluator only a fixture is judged alone, any other file waits for its table
+  const later = w.strata ? { ...opt, defer: true } : opt;
+  r.load(fs.readFileSync(BOOT, 'utf8'), later);
+  const files = w.files.filter((f) => unreadOf(f).length === 0 && r.load(fs.readFileSync(f, 'utf8'), expectedRefusal(f) ? opt : later).ok);
   if (w.ticks) for (let i = 0; i < w.ticks; i++) r.tickAdvance();
   else r.evaluate(w.budget);
   return { r, w: { ...w, files } };

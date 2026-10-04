@@ -250,6 +250,7 @@ pub struct Vocab {
     pub semantics: Sym,
     pub unknown: Sym,
     pub sealed: Sym,
+    pub asks: Sym,
     pub unsafe_rule: Sym,
     pub premise_var: Sym,
     pub slot_arity: Sym,
@@ -325,7 +326,6 @@ pub struct Vocab {
     pub sealed_provenance: Sym,
     pub sealed_rules: Sym,
     pub sealed_assertions: Sym,
-    pub sealed_witness: Sym,
     pub s_fact: Sym,
     pub s_lit: Sym,
     pub s_not: Sym,
@@ -465,6 +465,7 @@ const ARITY_TABLE: &[(&str, usize)] = &[
     ("unknown", 1),
     ("unstratified", 1),
     ("sealed", 1),
+    ("asks", 1),
     ("premise_agg", 2),
     ("agg_cell", 3),
     ("agg_member", 4),
@@ -521,6 +522,7 @@ impl Vocab {
             semantics: i("semantics"),
             unknown: i("unknown"),
             sealed: i("sealed"),
+            asks: i("asks"),
             unsafe_rule: i("unsafe_rule"),
             premise_var: i("premise_var"),
             slot_arity: i("slot_arity"),
@@ -590,7 +592,6 @@ impl Vocab {
             sealed_provenance: i("provenance"),
             sealed_rules: i("rules"),
             sealed_assertions: i("assertions"),
-            sealed_witness: i("witness"),
             s_fact: i("$fact"),
             s_lit: i("$lit"),
             s_not: i("$not"),
@@ -1459,7 +1460,7 @@ pub fn well_founded_declared(h: &mut Heap, v: &Vocab, store: &mut Store) -> bool
 }
 
 pub fn sealed_bodies(h: &mut Heap, v: &Vocab, store: &mut Store) -> Vec<Sym> {
-    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance, v.sealed_witness];
+    let known = [v.sealed_rules, v.sealed_assertions, v.sealed_provenance];
     let mut out = Vec::new();
     for f in store.rel_all(h, v.sealed) {
         let args = store.args(f);
