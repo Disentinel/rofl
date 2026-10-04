@@ -5,7 +5,7 @@
 
 import { denseFacts } from './dense.ts';
 import { SHRUG_DENSE } from './kernel-dense.ts';
-import { type Term, type Subst, type Lit, mka, canonTerm, unify, unifyUnknown } from './unify.ts';
+import { type Term, type Subst, type Lit, mka, canonTerm, unify, unifyUnknown, unkParts, byParts } from './unify.ts';
 import type { FactStore, FactRec } from './store.ts';
 import { MAIN, KERNEL_PERSP } from './reflect.ts';
 
@@ -57,9 +57,18 @@ export function shrugsOf(store: FactStore, lit: Lit): { row: FactRec; s: Subst }
   return out.sort((a, b) => (a.row.key < b.row.key ? -1 : a.row.key > b.row.key ? 1 : 0));
 }
 
+/** A label as it is written: the missing fact, then the position. */
+function labelText(l: Term): string {
+  return l.k === 'f' && l.name === '$lbl' ? `${shown(l.args[0])}.${l.args[1].k === 'i' ? l.args[1].v : 0}` : shown(l);
+}
+
 /** A term as a reader writes it: a list in brackets, `_` where a value is not known. */
 export function shown(t: Term): string {
   if (t.k === 'a' && t.name === '$unknown_value') return '_';
+  const u = unkParts(t);
+  if (u !== null) return `_[${labelText(u.label)}${u.ex.length ? ` != ${u.ex.map(shown).join(', ')}` : ''}]`;
+  const b = byParts(t);
+  if (b !== null) return `[${labelText(b.label)}: ${b.cases.map(([c, v]) => `${shown(c)} -> ${shown(v)}`).join(', ')}, else ${shown(b.dflt)}]`;
   if (t.k === 'a' && t.name === '$nil') return '[]';
   if (t.k === 'f' && t.name === '$cons') {
     const xs: string[] = [];

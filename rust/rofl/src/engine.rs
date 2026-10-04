@@ -21,6 +21,7 @@ use crate::term::*;
 
 mod datastrat;
 mod delta;
+mod labeled;
 pub use delta::Delta;
 
 const MAX_DEPTH: usize = 512;
@@ -809,6 +810,10 @@ pub struct Eval {
     /// `cell_reach` the unknowns each cell sealed a hole under rests on.
     reach_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<ReachMemo>>,
     cell_reach: HashMap<CellId, Rc<[Unknown]>>,
+    /// The value a group an unknown moves has under each value of its label (`$by`), where the regions told it.
+    cell_cond: HashMap<CellId, Term>,
+    /// A group whose regions passed the cap: how many there were, by its hole.
+    regions_capped: HashMap<Term, i64>,
     /// THE SHRUG MODEL. `reads_unknown`: some rule reads `unknown`, anywhere;
     /// `unknown_cone` the relations that read it, transitively, and
     /// `unknown_strict` its literals read under `not` or inside an aggregate.
@@ -986,14 +991,31 @@ fn val_lt(a: &Val, b: &Val) -> bool {
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct Possible {
     pat: Vec<Option<Term>>,
+    /// Where `pat` is open and the position is a labeled unknown: that unknown
+    /// and the values it is known not to be (`$unk`).
+    lab: Vec<Option<(Term, Vec<Term>)>>,
     proj: Option<Vec<Term>>,
+    /// The projection as it resolved, a labeled unknown or a value that
+    /// depends on one in place (`proj` is `None` then), and whether the
+    /// solution exists in every completion (`Possible::sure`).
+    sproj: Vec<Term>,
+    sure: bool,
     neg: bool,
     u: Unknown,
 }
 
 impl Possible {
     fn in_group(&self, g: &[Term]) -> bool {
-        self.pat.iter().zip(g).all(|(p, t)| p.is_none_or(|p| p == *t))
+        self.pat.iter().zip(g).enumerate().all(|(i, (p, t))| match p {
+            Some(p) => p == t,
+            None => self.lab[i].as_ref().is_none_or(|l| !l.1.contains(t)),
+        })
+    }
+    /// A group a labeled unknown leaves open in one position alone: the
+    /// conclusion for a group no sealed group names is that unknown, not one
+    /// that matches every group.
+    fn labeled_open(&self) -> bool {
+        self.pat.iter().filter(|p| p.is_none()).count() == 1 && self.lab.iter().zip(&self.pat).any(|(l, p)| p.is_none() && l.is_some())
     }
     fn exact(&self) -> bool {
         self.pat.iter().all(Option::is_some)
@@ -1035,8 +1057,8 @@ impl PossIndex {
 /// could make, with the unknowns that could make it.
 struct ReachMemo {
     ps: Rc<[Possible]>,
-    groups: Vec<(Box<[Term]>, Rc<[Unknown]>)>,
-    unnamed: Vec<(Vec<Option<Term>>, Rc<[Unknown]>)>,
+    groups: Vec<(Box<[Term]>, Rc<[Unknown]>, Option<Term>)>,
+    unnamed: Vec<(Vec<Option<Term>>, Vec<Option<Term>>, Rc<[Unknown]>, Option<Term>)>,
 }
 
 /// What a round's news touched inside one threshold: the inner positions
@@ -1182,6 +1204,8 @@ impl Eval {
             agg_reach: Vec::new(),
             reach_memo: HashMap::new(),
             cell_reach: HashMap::new(),
+            cell_cond: HashMap::new(),
+            regions_capped: HashMap::new(),
             reads_unknown: false,
             unknown_cone: HashSet::new(),
             unknown_strict: Vec::new(),
@@ -2758,6 +2782,11 @@ impl Eval {
                         TermK::Func(i) if self.h.fname(i) == below => self.h.atom("below"),
                         _ => roots(self, &node),
                     }
+                }
+                "budget" if cname == "regions_capped" => {
+                    let n = self.regions_capped.get(&target).copied().unwrap_or(0);
+                    let (f, k) = (self.h.intern("spent"), self.h.atom("regions"));
+                    self.h.mkf(f, &[k, Term::int(n), Term::int(labeled::LABEL_REGIONS)])
                 }
                 "budget" => {
                     let (kind, spent, limit) = self.wall_spent.get().unwrap_or(if cname == "space_exhausted" {
@@ -5078,6 +5107,7 @@ impl Eval {
         }
         let withdrawn = self.h.intern("support_withdrawn");
         let mut reached: HashMap<usize, Vec<Unknown>> = HashMap::new();
+        let (mut decided, mut conds, mut capped): (HashSet<usize>, HashMap<usize, Term>, HashMap<usize, i64>) = Default::default();
         let index = PossIndex::of(&reach);
         if plan.empty_zero && !plan.group.is_empty() {
             return Err(Halt::Bug("safety.rofl says empty-zero for a grouping aggregate".into()));
@@ -5241,9 +5271,35 @@ impl Eval {
                 let mine = index.at(&reach, &gkey);
                 let us = self.reach_of(plan.op, param, rk.as_ref(), &projs, &vals, value, &mine);
                 if !us.is_empty() {
-                    value = CellValue::Hole(withdrawn);
-                    kept = order.clone();
-                    reached.insert(sealed.len(), us);
+                    // where every unknown it rests on is a label and exists for certain, the group is decided by
+                    // what each value the labels could be gives it ("Labeled unknowns")
+                    let regions = if rk.is_none() && matches!(value, CellValue::Value(_) | CellValue::Empty) && brk!("label_regions_off" => false; true) {
+                        self.region_decide(plan.op, a, &gkey, &projs, &vals, &mine)
+                    } else {
+                        labeled::Regions::No
+                    };
+                    match regions {
+                        labeled::Regions::Decided(x) => {
+                            value = CellValue::Value(plan.op.lower(&mut self.h, &self.v, x));
+                            decided.insert(sealed.len());
+                        }
+                        labeled::Regions::Cond(c) => {
+                            value = CellValue::Hole(withdrawn);
+                            kept = order.clone();
+                            conds.insert(sealed.len(), c);
+                            reached.insert(sealed.len(), us);
+                        }
+                        labeled::Regions::Capped(n) => {
+                            value = CellValue::Hole(self.h.intern("regions_capped"));
+                            kept = order.clone();
+                            capped.insert(sealed.len(), n);
+                        }
+                        labeled::Regions::No => {
+                            value = CellValue::Hole(withdrawn);
+                            kept = order.clone();
+                            reached.insert(sealed.len(), us);
+                        }
+                    }
                 }
             }
             let mut members: Vec<NewMember> = Vec::with_capacity(kept.len());
@@ -5324,19 +5380,27 @@ impl Eval {
             if let CellValue::Hole(r) = value {
                 let marker = self.store.cell_key_term(&mut self.h, id);
                 self.cell_hole(marker, r);
+                if let Some(k) = capped.get(&n) {
+                    self.regions_capped.insert(marker, *k);
+                }
             }
             self.carry_src = None;
             self.carry_more.clear();
             self.reflect_cell(id)?;
             if let Some(us) = us {
                 self.cell_reach.insert(id, us.into());
+            } else if decided.contains(&n) {
+                self.cell_reach.insert(id, Rc::from(Vec::<Unknown>::new()));
+            }
+            if let Some(c) = conds.get(&n) {
+                self.cell_cond.insert(id, *c);
             }
             ids.push(id);
         }
         // a possible whose group is not known could make a group of any key
         // it leaves open: a hole on the correlation, beside its sealed groups
         let mut open: Vec<Unknown> = Vec::new();
-        for p in reach.iter().filter(|p| !p.exact()) {
+        for p in reach.iter().filter(|p| !p.exact() && brk!("label_open_correlation" => true; !p.labeled_open())) {
             if !open.contains(&p.u) {
                 open.push(p.u.clone());
             }
@@ -6565,7 +6629,11 @@ impl Eval {
         if !lattice {
             // a tuple with an argument not known is every tuple it could be
             let s2 = self.bind_unknown(&key, Subst::new())?;
-            let key: Vec<Term> = key.iter().map(|t| resolve(&mut self.h, *t, &s2)).collect();
+            let mut key: Vec<Term> = key.iter().map(|t| resolve(&mut self.h, *t, &s2)).collect();
+            // what an undecided step reached may not exist, whatever its unknowns were
+            if self.is_unsure(s) {
+                key = key.into_iter().map(|t| self.desure(t)).collect();
+            }
             return Some(Unknown::Tuple(head.rel, p, key.into()));
         }
         Some(if key.iter().all(|t| self.h.is_ground(*t) && !self.holds_unknown(*t)) {
@@ -7668,15 +7736,18 @@ impl Eval {
                     continue;
                 }
                 let Some(s0) = self.unknown_binds(l, &u, s) else { continue };
+                let s0 = if !neg && self.sure_unknown(&u) { s0 } else { self.unsure(s0) };
                 for ps in self.poison_solve_plan(&inner, &outer, k, s0)? {
                     if neg && brk!("agg_reach_neg_fact_ignored" => false; self.neg_decided(l, &ps, &free)?) {
                         continue;
                     }
                     let mut pat = Vec::with_capacity(plan.group.len());
+                    let mut lab = Vec::with_capacity(plan.group.len());
                     for i in &plan.group {
                         let t = resolve(&mut self.h, Term::var(a.shared[*i]), &ps);
                         let known = self.h.is_ground(t) && !self.holds_unknown(t);
                         pat.push(brk!("agg_reach_whole" => None; known.then_some(t)));
+                        lab.push(if known { None } else { self.unk_parts(t).map(|(_, ex, _)| (t, ex)) });
                     }
                     let mut proj = Vec::with_capacity(a.vals.len() + a.keys.len());
                     for t in a.vals[a.params()..].iter().chain(a.keys.iter()) {
@@ -7684,7 +7755,8 @@ impl Eval {
                     }
                     let proj = a.plain_keys(&self.h, proj);
                     let known = proj.iter().all(|t| self.h.is_ground(*t) && !self.holds_unknown(*t));
-                    let p = Possible { pat, proj: known.then_some(proj), neg: brk!("agg_reach_neg_certain" => false; neg), u: u.clone() };
+                    let sure = !self.is_unsure(&ps);
+                    let p = Possible { pat, lab, sproj: proj.clone(), sure, proj: known.then_some(proj), neg: brk!("agg_reach_neg_certain" => false; neg), u: u.clone() };
                     if seen.insert(p.clone()) {
                         out.push(p);
                     }
@@ -7963,7 +8035,7 @@ impl Eval {
         let cells: Vec<CellId> = self.agg_memo.get(mk).map(|cs| cs.to_vec()).unwrap_or_default();
         let index = PossIndex::of(&ps);
         let mut named = vec![false; ps.len()];
-        let mut groups: Vec<(Box<[Term]>, Rc<[Unknown]>)> = Vec::new();
+        let mut groups: Vec<(Box<[Term]>, Rc<[Unknown]>, Option<Term>)> = Vec::new();
         for c in cells {
             let (key, value, op) = {
                 let r = self.store.cell(c);
@@ -7986,25 +8058,56 @@ impl Eval {
                 }
             };
             if !us.is_empty() {
-                groups.push((key, us));
+                groups.push((key, us, self.cell_cond.get(&c).copied()));
             }
         }
-        let mut unnamed: Vec<(Vec<Option<Term>>, Vec<Unknown>)> = Vec::new();
-        let mut at_pat: HashMap<&[Option<Term>], usize> = HashMap::new();
+        // the groups sealed under this correlation, which a group an unknown
+        // makes is none of
+        let sealed: Vec<Vec<Term>> = self
+            .agg_memo
+            .get(mk)
+            .map(|cs| cs.to_vec())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|c| {
+                let key = &self.store.cell(c).key;
+                plan.group.iter().map(|i| key[*i]).collect()
+            })
+            .collect();
+        let mut unnamed: Vec<(Vec<Option<Term>>, Vec<Option<Term>>, Vec<Unknown>)> = Vec::new();
+        let mut at_pat: HashMap<(Vec<Option<Term>>, Vec<Option<Term>>), usize> = HashMap::new();
         let mut seen: HashSet<(&[Option<Term>], &Unknown)> = HashSet::new();
         for (n, p) in ps.iter().enumerate() {
             if named[n] || !seen.insert((&p.pat, &p.u)) {
                 continue;
             }
-            match at_pat.get(p.pat.as_slice()) {
-                Some(k) => unnamed[*k].1.push(p.u.clone()),
+            // a labeled position is the unknown, known not to be a group sealed
+            let mut labs: Vec<Option<Term>> = vec![None; p.pat.len()];
+            if p.labeled_open() && brk!("label_new_anonymous" => false; true) {
+                let at = p.pat.iter().position(|t| t.is_none()).unwrap();
+                if let Some((t, own)) = p.lab[at].clone() {
+                    let (label, _, sure) = self.unk_parts(t).unwrap();
+                    let mut ex = own;
+                    ex.extend(sealed.iter().filter(|g| p.pat.iter().zip(g.iter()).all(|(q, x)| q.is_none_or(|q| q == *x))).map(|g| g[at]));
+                    labs[at] = Some(self.mk_unk(label, &ex, sure));
+                }
+            }
+            let k = (p.pat.clone(), labs);
+            match at_pat.get(&k) {
+                Some(i) => unnamed[*i].2.push(p.u.clone()),
                 None => {
-                    at_pat.insert(&p.pat, unnamed.len());
-                    unnamed.push((p.pat.clone(), vec![p.u.clone()]));
+                    at_pat.insert(k.clone(), unnamed.len());
+                    unnamed.push((k.0, k.1, vec![p.u.clone()]));
                 }
             }
         }
-        Ok(ReachMemo { ps: ps.into(), groups, unnamed: unnamed.into_iter().map(|(p, us)| (p, us.into())).collect() })
+        // the member count or total of a group an unknown makes, where it is the same under every completion
+        let mut valued: Vec<Option<Term>> = Vec::with_capacity(unnamed.len());
+        let rk_none = self.rank_key(a, s).is_none();
+        for (pat, labs, _) in &unnamed {
+            valued.push(if rk_none { self.new_group_value(a, &ps, pat, labs) } else { None });
+        }
+        Ok(ReachMemo { ps: ps.into(), groups, unnamed: unnamed.into_iter().zip(valued).map(|((p, l, us), v)| (p, l, us.into(), v)).collect() })
     }
 
     /// WHAT THE AGGREGATE DID NOT DECIDE under `s`, at every firing, from
@@ -8014,22 +8117,79 @@ impl Eval {
     /// from a group the unknown could make is unknown too.
     fn agg_reach_undecided(&mut self, rid: Sym, a: &Agg, s: &Subst, i: usize, m: &ReachMemo) {
         let Some(plan) = self.agg_plans.get(&(rid, a.at)).cloned() else { return };
-        for (key, us) in &m.groups {
+        for (key, us, cond) in &m.groups {
             if let Some(s2) = self.bind_group(a, &plan, s, key) {
+                let s2 = self.bind_result(a, s2, *cond);
                 self.lat_undecided.push((rid, i, s2, us.clone()));
             }
         }
-        for (pat, us) in &m.unnamed {
+        for (pat, labs, us, value) in &m.unnamed {
             let mut s2 = Some(s.clone());
             for (n, gi) in plan.group.iter().enumerate() {
-                if let (Some(t), Some(x)) = (pat[n], s2.as_ref()) {
+                if let (Some(t), Some(x)) = (pat[n].or(labs[n]), s2.as_ref()) {
                     s2 = unify(&self.h, Term::var(a.shared[*gi]), t, x);
                 }
             }
             if let Some(s2) = s2 {
+                let s2 = self.bind_result(a, s2, *value);
                 self.lat_undecided.push((rid, i, s2, us.clone()));
             }
         }
+    }
+
+    /// A FAULT LEAVES A HEAD VARIABLE UNKNOWN, AND NAMES IT: each head variable
+    /// the failed solution left unbound is bound to a labeled unknown
+    /// (docs/aggregates.md, "Labeled unknowns"), the label the head with `_`
+    /// where it is not known, the position and the firing (the rule and what
+    /// its variables were), so one firing is one label and two are two. The
+    /// tuple is Sure when the fault is an overflow and the last thing the body asks.
+    fn label_fault(&mut self, r: &ERule, s: &Subst) -> Subst {
+        let head = &r.clause.head;
+        let ra: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+        if !ra.iter().any(|t| matches!(t.kind(), TermK::Var(_))) || brk!("label_off" => true; false) {
+            return s.clone();
+        }
+        let args: Vec<Term> = ra.iter().map(|t| if matches!(t.kind(), TermK::Var(_)) { self.unknown_value } else { *t }).collect();
+        let hd = self.h.mkf(head.rel, &args);
+        let mut bs: Vec<(String, Term)> = s.iter().map(|(v, t)| (self.h.name(*v).to_string(), *t)).collect();
+        bs.sort_by(|a, b| cmp_js(&a.0, &b.0));
+        let bf = self.h.intern("$b");
+        let mut firing: Vec<Term> = vec![Term::atom(r.id)];
+        for (n, t) in bs {
+            let t = resolve(&mut self.h, t, s);
+            let n = self.h.atom(&n);
+            firing.push(self.h.mkf(bf, &[n, t]));
+        }
+        let firing = self.h.list(&firing);
+        let sure = brk!("label_sure_always" => true; self.last_fault == Some(self.v.arith_overflow_reason) && self.fault_sure(r, s));
+        let mut out = s.clone();
+        for (pos, t) in ra.iter().enumerate() {
+            if let TermK::Var(v) = t.kind() {
+                let label = self.h.mkf(self.v.s_lbl, &[hd, Term::int(pos as i64), firing]);
+                let u = self.mk_unk(label, &[], sure);
+                out.push((v, u));
+            }
+        }
+        out
+    }
+
+    /// Whether the fault is the last thing the body asks: its last element is
+    /// the `is` that failed, and every other element's variables are bound, so
+    /// nothing after the fault can fail and the rule concludes in every completion.
+    /// Only an overflow is a value there is, out of range (`label_fault`); a
+    /// type error or a zero divisor has none, and the tuple may not exist.
+    fn fault_sure(&mut self, r: &ERule, s: &Subst) -> bool {
+        let Some((last, rest)) = r.plan.split_last() else { return false };
+        let BodyElem::Bi { op, l, r: rt } = last else { return false };
+        let (lv, rv) = (resolve(&mut self.h, *l, s), resolve(&mut self.h, *rt, s));
+        if *op != self.v.op_is || !matches!(lv.kind(), TermK::Var(_)) || !self.h.is_ground(rv) {
+            return false;
+        }
+        rest.iter().all(|e| {
+            let mut vs = Vec::new();
+            e.vars(&self.h, &mut vs);
+            vs.into_iter().all(|v| !matches!(walk(&self.h, Term::var(v), s).kind(), TermK::Var(_)))
+        })
     }
 
     /// A builtin failed for an error in a rule no lattice decides: the rule's
@@ -8042,6 +8202,7 @@ impl Eval {
         if r.clause.head.temporal == Temporal::Next {
             return self.stage_unknown(&r, s, true);
         }
+        let s = &self.label_fault(&r, s);
         if let Some(u) = self.conclusion_unknown(&r, s) {
             self.narrow_feeder_fault(r.clause.head.rel);
             let marker = self.rule_marker(r.id);
@@ -8231,6 +8392,18 @@ impl Eval {
         if t == self.unknown_value || brk!("shrug_structure_wild" => self.holds_unknown(t); false) {
             return self.bind_unknown(&[a], s);
         }
+        if self.is_labeled(t) {
+            let ra = resolve(&mut self.h, a, &s);
+            if let Some((_, ex, _)) = self.unk_parts(t) {
+                if brk!("label_ex_ignored" => false; ex.contains(&ra) && self.h.is_ground(ra) && !self.holds_unknown(ra)) {
+                    return None;
+                }
+            }
+            return match ra.kind() {
+                TermK::Var(_) => unify(&self.h, ra, t, &s),
+                _ => self.bind_unknown(&[ra], s),
+            };
+        }
         if !self.holds_unknown(t) {
             return unify(&self.h, a, t, &s);
         }
@@ -8262,12 +8435,68 @@ impl Eval {
         Some(s)
     }
 
+    fn is_labeled(&self, t: Term) -> bool {
+        matches!(t.kind(), TermK::Func(i) if self.h.fname(i) == self.v.s_unk || self.h.fname(i) == self.v.s_by)
+    }
+
     fn holds_unknown(&self, t: Term) -> bool {
         t == self.unknown_value
             || match t.kind() {
-                TermK::Func(i) => self.h.fargs(i).iter().any(|a| self.holds_unknown(*a)),
+                TermK::Func(i) => {
+                    let n = self.h.fname(i);
+                    n == self.v.s_unk || n == self.v.s_by || self.h.fargs(i).iter().any(|a| self.holds_unknown(*a))
+                }
                 _ => false,
             }
+    }
+
+    /// A LABELED UNKNOWN (docs/aggregates.md, "Labeled unknowns"): its label,
+    /// the values it is known not to be, and whether the tuple that holds it
+    /// exists in every completion.
+    fn unk_parts(&self, t: Term) -> Option<(Term, Vec<Term>, bool)> {
+        match t.kind() {
+            TermK::Func(i) if self.h.fname(i) == self.v.s_unk => {
+                let a = self.h.fargs(i);
+                Some((a[0], self.h.unlist(a[1]), a[2].as_int() == Some(1)))
+            }
+            _ => None,
+        }
+    }
+
+    /// A value that depends on a label: its label, its value elsewhere, the
+    /// value at each constant the label could be, and whether the tuple that
+    /// holds it exists in every completion.
+    fn by_parts(&self, t: Term) -> Option<(Term, Term, Vec<(Term, Term)>, bool)> {
+        match t.kind() {
+            TermK::Func(i) if self.h.fname(i) == self.v.s_by => {
+                let a = self.h.fargs(i);
+                let cases = self.h.unlist(a[2]).into_iter().filter_map(|c| match c.kind() {
+                    TermK::Func(j) => Some((self.h.fargs(j)[0], self.h.fargs(j)[1])),
+                    _ => None,
+                });
+                Some((a[0], a[1], cases.collect(), a[3].as_int() == Some(1)))
+            }
+            _ => None,
+        }
+    }
+
+    fn mk_unk(&mut self, label: Term, ex: &[Term], sure: bool) -> Term {
+        let mut ex: Vec<Term> = ex.to_vec();
+        ex.sort_by(|a, b| cmp_js(&tuple_text(&self.h, &[*a]), &tuple_text(&self.h, &[*b])));
+        ex.dedup();
+        let l = self.h.list(&ex);
+        self.h.mkf(self.v.s_unk, &[label, l, Term::int(sure as i64)])
+    }
+
+    /// The label as it is written: the missing fact, then the position.
+    fn label_text(&self, l: Term) -> String {
+        match l.kind() {
+            TermK::Func(i) if self.h.fname(i) == self.v.s_lbl => {
+                let a = self.h.fargs(i);
+                format!("{}.{}", self.shown(a[0]), a[1].as_int().unwrap_or(0))
+            }
+            _ => self.shown(l),
+        }
     }
 
     /// The lattice cell a literal names under `s`, when its key is bound.
@@ -8357,20 +8586,22 @@ impl Eval {
                                 continue;
                             }
                             if let Some(s2) = self.unknown_binds(l, &u, s) {
-                                next.push(s2);
+                                next.push(if self.sure_unknown(&u) { s2 } else { self.unsure(s2) });
                             }
                         }
                         let undef = self.undef_atoms.as_ref().and_then(|m| m.get(&l.rel)).cloned().unwrap_or_default();
                         for u in undef {
                             if let Some(s2) = self.unknown_binds(l, &u, s) {
-                                next.push(s2);
+                                next.push(self.unsure(s2));
                             }
                         }
                     }
                     BodyElem::Neg(l) => {
                         let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
                         let undecided = args.iter().any(|a| self.holds_unknown(*a) || !self.h.is_ground(*a)) || self.reads_undefined(l, s);
-                        if undecided || self.neg_holds(l, s, 0)? {
+                        if undecided {
+                            next.push(self.unsure(s.clone()));
+                        } else if self.neg_holds(l, s, 0)? {
                             next.push(s.clone());
                         }
                     }
@@ -8387,7 +8618,7 @@ impl Eval {
                         brk!("lattice_unknown_decides" => if unknown { continue }; ());
                         if unknown || open {
                             if let Some(s2) = self.bind_unknown(&[*l, *rt], s.clone()) {
-                                next.push(s2);
+                                next.push(self.unsure(s2));
                             }
                             continue;
                         }
@@ -8395,14 +8626,14 @@ impl Eval {
                         let s2s = self.eval_builtins(*op, *l, *rt, s, None)?;
                         if s2s.is_empty() && self.fault_count > faults {
                             if let Some(s2) = self.bind_unknown(&[*l, *rt], s.clone()) {
-                                next.push(s2);
+                                next.push(self.unsure(s2));
                             }
                         }
                         next.extend(s2s);
                     }
                     BodyElem::Agg(a) => {
                         if let Some(s2) = self.bind_unknown(&[a.result], s.clone()) {
-                            next.push(s2);
+                            next.push(self.unsure(s2));
                         }
                     }
                 }
@@ -8423,6 +8654,29 @@ impl Eval {
         } else {
             None
         }
+    }
+
+    /// An unknown, as whynot and why name it: a labeled value as it is written
+    /// (`unknown_text` is the key the unknowns are ordered by).
+    fn unknown_shown(&self, u: &Unknown) -> String {
+        let Unknown::Tuple(rel, p, args) = u else { return self.unknown_text(u) };
+        let unk = self.h.name(self.unknown_value.as_atom().unwrap());
+        let args: Vec<String> = args
+            .iter()
+            .map(|a| {
+                if self.holds_labeled(*a) {
+                    return self.shown(*a);
+                }
+                let mut t = String::new();
+                self.h.canon_term(*a, &mut t);
+                t.replace(unk, "_")
+            })
+            .collect();
+        format!("{}[{}]({})", self.h.name(*rel), self.h.name(*p), args.join(","))
+    }
+
+    fn holds_labeled(&self, t: Term) -> bool {
+        self.is_labeled(t) || matches!(t.kind(), TermK::Func(i) if self.h.fargs(i).iter().any(|a| self.holds_labeled(*a)))
     }
 
     /// An unknown, as whynot names it.
@@ -10060,6 +10314,8 @@ impl Eval {
         self.agg_memo.clear();
         self.reach_memo.clear();
         self.cell_reach.clear();
+        self.cell_cond.clear();
+        self.regions_capped.clear();
         self.hol_shared.clear();
         self.thr_cells.clear();
         self.thr_open.clear();
@@ -12887,6 +13143,14 @@ impl Eval {
         if t == self.unknown_value {
             return "_".into();
         }
+        if let Some((l, ex, _)) = self.unk_parts(t) {
+            let ex = if ex.is_empty() { String::new() } else { format!(" != {}", ex.iter().map(|x| self.shown(*x)).collect::<Vec<_>>().join(", ")) };
+            return format!("_[{}{ex}]", self.label_text(l));
+        }
+        if let Some((l, d, cases, _)) = self.by_parts(t) {
+            let cs: Vec<String> = cases.iter().map(|(c, v)| format!("{} -> {}", self.shown(*c), self.shown(*v))).collect();
+            return format!("[{}: {}, else {}]", self.label_text(l), cs.join(", "), self.shown(d));
+        }
         match t.kind() {
             TermK::Atom(a) if self.h.name(a) == "$nil" => "[]".into(),
             TermK::Func(i) if self.h.name(self.h.fname(i)) == "$cons" => {
@@ -13256,7 +13520,7 @@ impl Eval {
                     return Ok(Some(lines));
                 }
                 DomV::Unknown(u, rule) => {
-                    let ut = self.unknown_text(&u);
+                    let ut = self.unknown_shown(&u);
                     lines.push(format!(
                         "  no rule gives {ws}; given, its cell would not be known: comparing it with {with} in {} reads {ut}, which is not known",
                         self.h.name(rule)
@@ -13370,7 +13634,7 @@ impl Eval {
         if self.lat_plain.contains(&u) && matches!(self.lat_unknown.get(&u), Some(None)) {
             return None;
         }
-        let mut lines = vec![format!("  {} is not known to hold", self.unknown_text(&u))];
+        let mut lines = vec![format!("  {} is not known to hold", self.unknown_shown(&u))];
         lines.extend(self.unknown_path(&u).ok()?);
         Some(lines)
     }
@@ -13415,7 +13679,7 @@ impl Eval {
                 }
                 Unknown::Tuple(..) => "which is not known to hold".to_string(),
             };
-            lines.push(format!("    reached by {} from {}, {what}", self.h.name(rule), self.unknown_text(&from)));
+            lines.push(format!("    reached by {} from {}, {what}", self.h.name(rule), self.unknown_shown(&from)));
             cur = from;
         }
         Ok(lines)

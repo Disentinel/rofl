@@ -4,12 +4,13 @@
 -- rules, as data: an audit over the reasons, and an answer the shrug decides.
 sd_faulty(T) :- shrug(T, fault, _).
 sd_answered(X) :- sd_pos(X), not shrug(sd_lose(X), _, _).
--- the roots: an overflow and a type error, each on its rule
+-- the roots: an overflow and a type error, each on its rule; what the type error left out is a labeled
+-- unknown that may not exist ($unk(Label, Excluded, Sure), docs/aggregates.md, "Labeled unknowns")
 -- expect-row: shrug[$kernel]($rule(r011bb866),fault,arith_overflow)
 -- expect-row: shrug[$kernel]($rule(rca783681),fault,arith_type_error)
 -- what they left out, and what read it, inherit them and name them
 -- expect-row: shrug[$kernel](sd_win(c),inherited,from($cons($rule(r011bb866),$nil)))
--- expect-row: shrug[$kernel](sd_val(b,$unknown_value),inherited,from($cons($rule(rca783681),$nil)))
+-- expect-row: shrug[$kernel](sd_val(b,$unk($lbl(sd_val(b,$unknown_value),1,$cons(rca783681,$cons($b(K,oops),$cons($b(X,b),$nil)))),$nil,0)),inherited,from($cons($rule(rca783681),$nil)))
 -- expect-row: shrug[$kernel](sd_up(b),inherited,from($cons($rule(rca783681),$nil)))
 -- expect-row: shrug[$kernel](sd_lose(c),inherited,from($cons($rule(r011bb866),$nil)))
 -- expect-row: shrug[$kernel](unknown(sd_win(c)),inherited,from($cons($rule(r011bb866),$nil)))

@@ -179,7 +179,36 @@ export function varsOf(t: Term, into: Set<string> = new Set()): Set<string> {
 export const UNKNOWN_VALUE: Term = { k: 'a', name: '$unknown_value' };
 
 export function holdsUnknown(t: Term): boolean {
-  return (t.k === 'a' && t.name === '$unknown_value') || (t.k === 'f' && t.args.some(holdsUnknown));
+  return (t.k === 'a' && t.name === '$unknown_value') || (t.k === 'f' && (t.name === '$unk' || t.name === '$by' || t.args.some(holdsUnknown)));
+}
+
+// A LABELED UNKNOWN (docs/aggregates.md, "Labeled unknowns"): `$unk(L, Ex, Sure)`, one occurrence of the unknown
+// value L, known not to be any of the list `Ex`, `Sure` 1 when the tuple that holds it exists in every completion;
+// `$by(L, D, Cases, Sure)`, a value that is `D` and `V` where L is `C` for `c(C, V)` in `Cases`.
+
+export const isLabeled = (t: Term): boolean => t.k === 'f' && (t.name === '$unk' || t.name === '$by');
+
+export const mkList = (xs: Term[]): Term => xs.reduceRight((tl, h) => mkf('$cons', [h, tl]), mka('$nil'));
+export function unList(t: Term): Term[] {
+  const out: Term[] = [];
+  for (; t.k === 'f' && t.name === '$cons'; t = t.args[1]) out.push(t.args[0]);
+  return out;
+}
+
+export function unkParts(t: Term): { label: Term; ex: Term[]; sure: boolean } | null {
+  return t.k === 'f' && t.name === '$unk' ? { label: t.args[0], ex: unList(t.args[1]), sure: t.args[2].k === 'i' && Number(t.args[2].v) === 1 } : null;
+}
+
+export function byParts(t: Term): { label: Term; dflt: Term; cases: [Term, Term][]; sure: boolean } | null {
+  if (t.k !== 'f' || t.name !== '$by') return null;
+  const cases = unList(t.args[2]).filter((c) => c.k === 'f').map((c) => [(c as { args: Term[] }).args[0], (c as { args: Term[] }).args[1]] as [Term, Term]);
+  return { label: t.args[0], dflt: t.args[1], cases, sure: t.args[3].k === 'i' && Number(t.args[3].v) === 1 };
+}
+
+export function mkUnk(label: Term, ex: Term[], sure: boolean): Term {
+  const seen = new Set<string>();
+  const xs = ex.map((x) => [`(${canonTerm(x)})`, x] as [string, Term]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).filter(([k]) => !seen.has(k) && !!seen.add(k)).map(([, x]) => x);
+  return mkf('$unk', [label, mkList(xs), mki(sure ? 1 : 0)]);
 }
 
 /** Every unbound variable of `ts` stands for an unknown value. */
@@ -196,6 +225,12 @@ export function bindUnknown(ts: Term[], s: Subst): Subst | null {
  *  must be `a`'s too. */
 export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
   if (t.k === 'a' && t.name === '$unknown_value') return bindUnknown([a], s);
+  if (isLabeled(t)) {
+    const ra = resolve(a, s);
+    const p = unkParts(t);
+    if (p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some((x) => canonTerm(x) === canonTerm(ra))) return null;
+    return ra.k === 'v' ? unify(ra, t, s) : bindUnknown([ra], s);
+  }
   if (!holdsUnknown(t)) return unify(a, t, s);
   const ra = resolve(a, s);
   if (ra.k === 'v') return unify(ra, t, s);

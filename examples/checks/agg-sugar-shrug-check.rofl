@@ -21,7 +21,7 @@ alarm(sgk_wrong).
 sgk_root(g5) :- sgq_root(g5, from($cons($rule(R), $nil))), concludes[$kernel](R, sg_age), hole[$kernel]($rule(R), arith_type_error).
 sgk_root(g6) :- sgq_root(g6, from($cons(C, $nil))), C = $cell(R, _, _, $cons(g6, $nil)), concludes[$kernel](R, sgs_mean),
                 shrug[$kernel](C, fault, agg_overflow).
-sgk_root(g7) :- shrug[$kernel](sgs_micro(g7, $unknown_value), inherited, from($cons($rule(R), $nil))),
+sgk_root(g7) :- shrug[$kernel](sgs_micro(g7, $unk(_, _, _)), inherited, from($cons($rule(R), $nil))),
                 concludes[$kernel](R, sgs_micro), hole[$kernel]($rule(R), arith_overflow).
 sgk_rooted(g5). sgk_rooted(g6). sgk_rooted(g7).
 sgk_unrooted(G) :- sgk_rooted(G), not sgk_root(G).

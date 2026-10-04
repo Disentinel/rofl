@@ -35,14 +35,15 @@ import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
-import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown } from './unify.ts';
+import { litsOf, canonLitSets, canonSets as canonSetsT, UNKNOWN_VALUE, holdsUnknown, bindUnknown, unifyUnknown, unkParts, mkUnk, mkList, isLabeled } from './unify.ts';
+import { regionDecide, newGroupValue, sureArgs, unsure, isUnsure, desure, LABEL_REGIONS } from './labeled.ts';
 import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
   SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm,
 } from './reflect.ts';
-import { reasonOf, reasonText, causeText } from './shrug.ts';
+import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
 import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
@@ -178,7 +179,11 @@ type DomV = { k: 'no' } | { k: 'yes'; rule: string } | { k: 'fault'; rule: strin
 
 /** A SOLUTION A BODY AGGREGATE'S INNER BODY MIGHT HAVE over the unknown `u`: its group (`null` where left open), its
  *  projection (`null` where not known), and whether it passes an undecided negation. */
-interface Possible { pat: (Term | null)[]; proj: Term[] | null; neg: boolean; u: Unknown }
+interface Possible { pat: (Term | null)[]; lab: ({ t: Term; ex: Term[] } | null)[]; proj: Term[] | null; sproj: Term[]; sure: boolean; neg: boolean; u: Unknown }
+
+/** A group a labeled unknown leaves open in one position alone: the conclusion for a group no sealed group names is
+ *  that unknown, not one that matches every group. */
+const labeledOpen = (p: Possible): boolean => p.pat.filter((t) => t === null).length === 1 && p.pat.some((t, i) => t === null && p.lab[i] !== null);
 
 /** A possible's group pattern as a key. */
 const patKey = (pat: (Term | null)[]): string => pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001');
@@ -201,7 +206,7 @@ class PossIndex {
   exactAt(g: Term[]): number[] { return this.exact.get(patKey(g)) ?? []; }
   at(g: Term[]): Possible[] {
     const gk = g.map(canonTerm);
-    const ns = [...this.exactAt(g), ...this.open.filter((n) => this.ps[n].pat.every((t, m) => t === null || canonTerm(t) === gk[m]))];
+    const ns = [...this.exactAt(g), ...this.open.filter((n) => this.ps[n].pat.every((t, m) => t === null ? !(this.ps[n].lab[m]?.ex.some((x) => canonTerm(x) === gk[m])) : canonTerm(t) === gk[m]))];
     ns.sort((a, b) => a - b);
     return ns.map((n) => this.ps[n]);
   }
@@ -210,7 +215,7 @@ class PossIndex {
 /** WHAT A BODY AGGREGATE LEFT UNDECIDED under one correlation, decided once (`reachMemoOf`) and read by every firing
  *  (`aggReachUndecided`): the possibles, each sealed group they change (its key terms) with the unknowns it rests on,
  *  and each group pattern a possible no sealed group names could make, with the unknowns that could make it. */
-interface ReachMemo { ps: Possible[]; groups: [Term[], Unknown[]][]; unnamed: [(Term | null)[], Unknown[]][] }
+interface ReachMemo { ps: Possible[]; groups: [Term[], Unknown[], Term | null][]; unnamed: [(Term | null)[], (Term | null)[], Unknown[], Term | null][] }
 
 /** A holistic group sealed once and shared. */
 type HolShared = { k: 'open'; reason: string } | { k: 'groups'; groups: [Term[], string, Sorted | string][] };
@@ -844,6 +849,10 @@ export class AggEval {
    *  unknowns each cell sealed a hole under rests on. */
   private reachMemo = new Map<string, ReachMemo>();
   private cellReach = new Map<string, Unknown[]>();
+  /** The value a group an unknown moves has under each value of its label (`$by`), where the regions told it. */
+  private cellCond = new Map<string, Term>();
+  /** A group whose regions passed the cap: how many there were, by its hole. */
+  private regionsCapped = new Map<string, number>();
   private readsUnknown = false;
   private unknownCone = new Set<string>();
   private unknownStrict: Lit[] = [];
@@ -2142,6 +2151,8 @@ export class AggEval {
           meta = mkf('earlier', [mki(t - 1)]);
         } else if (target.k === 'f' && target.name === '$below') meta = mka('below');
         else meta = roots(node);
+      } else if (reason === 'budget' && cause === 'regions_capped') {
+        meta = mkf('spent', [mka('regions'), mki(this.regionsCapped.get(canonTerm(target)) ?? 0), mki(LABEL_REGIONS)]);
       } else if (reason === 'budget') {
         const [kind, spent, limit] = this.wallSpent ?? (cause === 'space_exhausted' ? ['rows', this.space + 1, this.space] : ['steps', this.budget + 1, this.budget]);
         meta = mkf('spent', [mka(kind), mki(spent), mki(Math.min(limit, 2 ** 59 - 1))]);
@@ -3283,6 +3294,9 @@ export class AggEval {
       }
     }
     const reached = new Map<number, Unknown[]>();
+    const decided = new Set<number>();
+    const conds = new Map<number, Term>();
+    const capped = new Map<number, number>();
     const index = new PossIndex(reach);
     if (plan.emptyZero && plan.group.length > 0) throw new Bug('safety.rofl says empty-zero for a grouping aggregate');
     const dedup = dedupByProjection(op);
@@ -3365,8 +3379,17 @@ export class AggEval {
       if (poison !== null) kept = [...order];
       // DECIDED UNDER EVERY COMPLETION, or a hole on this group alone
       if (reach.length > 0) {
-        const us = this.reachOf(op, this.aggParam(a, s), this.rankKey(a, s), reps.map((i) => cands[i].proj), reps.map((i) => values[i]), value, index.at(gkey));
-        if (us.length > 0) { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; reached.set(sealed.length, us); }
+        const mine = index.at(gkey);
+        const us = this.reachOf(op, this.aggParam(a, s), this.rankKey(a, s), reps.map((i) => cands[i].proj), reps.map((i) => values[i]), value, mine);
+        if (us.length > 0) {
+          // where every unknown it rests on is a label and exists for certain, the group is decided by what each
+          // value the labels could be gives it ("Labeled unknowns")
+          const rg = this.rankKey(a, s) === null && (value.k === 'value' || value.k === 'empty') ? regionDecide(op, aggParams(a), gkey, reps.map((i) => cands[i].proj), reps.map((i) => values[i]), mine) : { k: 'no' as const };
+          if (rg.k === 'decided') { value = { k: 'value', t: lower({ k: 'int', v: rg.v }) }; decided.add(sealed.length); }
+          else if (rg.k === 'cond') { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; conds.set(sealed.length, rg.t); reached.set(sealed.length, us); }
+          else if (rg.k === 'capped') { value = { k: 'hole', reason: 'regions_capped' }; kept = [...order]; capped.set(sealed.length, rg.n); }
+          else { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; reached.set(sealed.length, us); }
+        }
       }
       const members: CellMemberNew[] = [];
       let height = 0;
@@ -3393,15 +3416,23 @@ export class AggEval {
       this.store.addCell({ key: ckey, ...c });
       const us = reached.get(n);
       [this.carrySrc, this.carryMore] = us === undefined ? [null, []] : [nUnk(us[0]), us.slice(1).map(nUnk)];
-      if (c.value.k === 'hole') this.cellHole(cellMarker(c.rule, c.at, c.tick, c.keyTerms), c.value.reason);
+      if (c.value.k === 'hole') {
+        const marker = cellMarker(c.rule, c.at, c.tick, c.keyTerms);
+        this.cellHole(marker, c.value.reason);
+        const k = capped.get(n);
+        if (k !== undefined) this.regionsCapped.set(canonTerm(marker), k);
+      }
       [this.carrySrc, this.carryMore] = [null, []];
       this.reflectCell(ckey);
       if (us !== undefined) this.cellReach.set(ckey, us);
+      else if (decided.has(n)) this.cellReach.set(ckey, []);
+      const cd = conds.get(n);
+      if (cd !== undefined) this.cellCond.set(ckey, cd);
       ids.push(ckey);
     });
     // a possible whose group is not known could make a group of any key it leaves open: a hole on the correlation
     const open: Unknown[] = [];
-    for (const p of reach) if (p.pat.some((t) => t === null) && !open.some((u) => u.id === p.u.id)) open.push(p.u);
+    for (const p of reach) if (p.pat.some((t) => t === null) && !labeledOpen(p) && !open.some((u) => u.id === p.u.id)) open.push(p.u);
     if (open.length > 0) {
       [this.carrySrc, this.carryMore] = [nUnk(open[0]), open.slice(1).map(nUnk)];
       this.openCorrelation(rid, a, corr, true, 'support_withdrawn');
@@ -4309,7 +4340,8 @@ export class AggEval {
     if (kl === null) {
       const s2 = bindUnknown(key, new Map());
       if (s2 === null) return null;
-      return uTuple(head.rel, persp.name, key.map((t) => resolve(t, s2)));
+      // what an undecided step reached may not exist, whatever its unknowns were
+      return uTuple(head.rel, persp.name, key.map((t) => (isUnsure(s) ? desure(resolve(t, s2)) : resolve(t, s2))));
     }
     return key.every((t) => isGround(t) && !holdsUnknown(t)) ? uCell(this.lk(head.rel, persp.name, key)) : uRel(head.rel);
   }
@@ -4947,6 +4979,15 @@ export class AggEval {
     return depth === 0 && this.firing && ruleId !== null && this.latSpread.size > 0 ? f() : undefined;
   }
 
+  /** Whether the tuple an unknown is exists in every completion: it holds a labeled value, and every one it holds is sure. */
+  private sureUnknown(u: Unknown): boolean { return u.k === 'tuple' && sureArgs(u.args); }
+
+  /** The aggregate's result variable bound to what the group's value is, unless it is bound already. */
+  private bindResult(a: AggElem, s: Subst, v: Term | null): Subst {
+    if (v === null || resolve(a.res, s).k !== 'v') return s;
+    return unify(a.res, v, s) ?? s;
+  }
+
   /** EVERY SOLUTION THE AGGREGATE'S INNER BODY MIGHT HAVE over something unknown under `s`, as its group and member. */
   private aggPossibles(rid: string, a: AggElem, s: Subst): Possible[] {
     const plan = this.aggPlans.get(`${rid}|${a.at}`);
@@ -4968,13 +5009,16 @@ export class AggEval {
       }
       for (const u of this.unknownCands(b.lit, s)) {
         if (!this.latSpread.has(u.id)) continue;
-        const s0 = this.unknownBinds(b.lit, u, s);
-        if (s0 === null) continue;
+        const s00 = this.unknownBinds(b.lit, u, s);
+        if (s00 === null) continue;
+        const s0 = b.t !== 'neg' && this.sureUnknown(u) ? s00 : unsure(s00);
         for (const ps of this.poisonSolvePlan(inner, outer, k, s0)) {
           if (b.t === 'neg' && this.negDecided(b.lit, ps, free)) continue;
-          const pat = plan.group.map((i) => { const t = resolve(mkv(a.shared![i]), ps); return known(t) ? t : null; });
+          const gt = plan.group.map((i) => resolve(mkv(a.shared![i]), ps));
+          const pat = gt.map((t) => (known(t) ? t : null));
+          const lab = gt.map((t) => { const up = known(t) ? null : unkParts(t); return up === null ? null : { t, ex: up.ex }; });
           const proj = plainKeys(a, [...a.vals.slice(aggParams(a)), ...a.keys].map((t) => resolve(t, ps)));
-          const p: Possible = { pat, proj: proj.every(known) ? proj : null, neg: b.t === 'neg', u };
+          const p: Possible = { pat, lab, sproj: proj, sure: !isUnsure(ps), proj: proj.every(known) ? proj : null, neg: b.t === 'neg', u };
           const id = `${pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001')}|${p.proj === null ? '?' : listKey(p.proj)}|${p.neg}|${u.id}`;
           if (!seen.has(id)) { seen.add(id); out.push(p); }
         }
@@ -5144,7 +5188,7 @@ export class AggEval {
     const [plan] = this.aggCorr(rid, a, s);
     const index = new PossIndex(ps);
     const named = ps.map(() => false);
-    const groups: [Term[], Unknown[]][] = [];
+    const groups: [Term[], Unknown[], Term | null][] = [];
     for (const c of this.aggMemo.get(mk) ?? []) {
       const r = this.store.cells.get(c)!;
       const g = plan.group.map((j) => r.keyTerms[j]);
@@ -5154,19 +5198,35 @@ export class AggEval {
         if (sealedNow) continue;
         us = this.reachOf(r.op, this.aggParam(a, s), this.rankKey(a, s), r.members.map((m) => m.proj), r.members.map((m) => m.value), r.value, index.at(g));
       }
-      if (us.length > 0) groups.push([r.keyTerms, us]);
+      if (us.length > 0) groups.push([r.keyTerms, us, this.cellCond.get(c) ?? null]);
     }
-    const unnamed: [(Term | null)[], Unknown[]][] = [];
+    // the groups sealed under this correlation, which a group an unknown makes is none of
+    const sealed: Term[][] = (this.aggMemo.get(mk) ?? []).map((c) => { const r = this.store.cells.get(c)!; return plan.group.map((j) => r.keyTerms[j]); });
+    const unnamed: [(Term | null)[], (Term | null)[], Unknown[], Term | null][] = [];
     const atPat = new Map<string, number>();
     const seen = new Set<string>();
     ps.forEach((p, n) => {
       const pk = patKey(p.pat);
       if (named[n] || seen.has(`${pk}|${p.u.id}`)) return;
       seen.add(`${pk}|${p.u.id}`);
-      const at = atPat.get(pk);
-      if (at !== undefined) unnamed[at][1].push(p.u);
-      else { atPat.set(pk, unnamed.length); unnamed.push([p.pat, [p.u]]); }
+      // a labeled position is the unknown, known not to be a group sealed
+      const labs: (Term | null)[] = p.pat.map(() => null);
+      if (labeledOpen(p)) {
+        const at = p.pat.findIndex((t) => t === null);
+        const own = p.lab[at];
+        if (own !== null) {
+          const up = unkParts(own.t)!;
+          const ex = [...own.ex, ...sealed.filter((g) => p.pat.every((q, i) => q === null || canonTerm(q) === canonTerm(g[i]))).map((g) => g[at])];
+          labs[at] = mkUnk(up.label, ex, up.sure);
+        }
+      }
+      const k = `${pk}|${labs.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001')}`;
+      const i = atPat.get(k);
+      if (i !== undefined) unnamed[i][2].push(p.u);
+      else { atPat.set(k, unnamed.length); unnamed.push([p.pat, labs, [p.u], null]); }
     });
+    // the member count or total of a group an unknown makes, where it is the same under every completion
+    if (this.rankKey(a, s) === null) for (const e of unnamed) e[3] = newGroupValue(a.op, aggParams(a), ps, e[0], e[1]);
     return { ps, groups, unnamed };
   }
 
@@ -5174,15 +5234,40 @@ export class AggEval {
   private aggReachUndecided(rid: string, a: AggElem, s: Subst, i: number, m: ReachMemo): void {
     const plan = this.aggPlans.get(`${rid}|${a.at}`);
     if (!plan) return;
-    for (const [key, us] of m.groups) {
+    for (const [key, us, cond] of m.groups) {
       const s2 = this.bindGroup(a, plan, s, key);
-      if (s2 !== null) this.latUndecided.push([rid, i, s2, us]);
+      if (s2 !== null) this.latUndecided.push([rid, i, this.bindResult(a, s2, cond), us]);
     }
-    for (const [pat, us] of m.unnamed) {
+    for (const [pat, labs, us, value] of m.unnamed) {
       let s2: Subst | null = s;
-      plan.group.forEach((gi, n) => { const t = pat[n]; if (t !== null && s2 !== null) s2 = unify(mkv(a.shared![gi]), t, s2); });
-      if (s2 !== null) this.latUndecided.push([rid, i, s2, us]);
+      plan.group.forEach((gi, n) => { const t = pat[n] ?? labs[n]; if (t !== null && s2 !== null) s2 = unify(mkv(a.shared![gi]), t, s2); });
+      if (s2 !== null) this.latUndecided.push([rid, i, this.bindResult(a, s2, value), us]);
     }
+  }
+
+  /** A FAULT LEAVES A HEAD VARIABLE UNKNOWN, AND NAMES IT (`label_fault`, Rust): each head variable the failed solution
+   *  left unbound is bound to a labeled unknown, the label the head with `_` where it is not known, the position and the
+   *  firing (the rule and what its variables were). The tuple is Sure when the fault is the last thing the body asks. */
+  private labelFault(r: ERule, s: Subst): Subst {
+    const head = r.clause.head;
+    const ra = head.args.map((a) => resolve(a, s));
+    if (!ra.some((t) => t.k === 'v')) return s;
+    const hd = mkf(head.rel, ra.map((t) => (t.k === 'v' ? UNKNOWN_VALUE : t)));
+    const bs = [...s].map(([v, t]) => [v, resolve(t, s)] as [string, Term]).sort((a, b) => cmpStr(a[0], b[0]));
+    const firing = mkList([mka(r.id), ...bs.map(([n, t]) => mkf('$b', [mka(n), t]))]);
+    const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s);
+    const out = new Map(s);
+    ra.forEach((t, pos) => { if (t.k === 'v') out.set(t.name, mkUnk(mkf('$lbl', [hd, mki(pos), firing]), [], sure)); });
+    return out;
+  }
+
+  /** Whether the fault is the last thing the body asks: its last element is the `is` that failed, and every other
+   *  element's variables are bound, so nothing after the fault can fail (`fault_sure`, Rust). */
+  private faultSure(r: ERule, s: Subst): boolean {
+    const last = r.plan[r.plan.length - 1];
+    if (last === undefined || last.t !== 'bi' || last.op !== 'is') return false;
+    if (resolve(last.l, s).k !== 'v' || !isGround(resolve(last.r, s))) return false;
+    return r.plan.slice(0, -1).every((e) => [...elemVars(e)].every((v) => walk(mkv(v), s).k !== 'v'));
   }
 
   /** A builtin failed for an error in a rule no lattice decides: its conclusion under the failed solution is unknown. */
@@ -5190,7 +5275,7 @@ export class AggEval {
     const r = ruleId === null ? undefined : this.ruleOf(ruleId);
     if (!r || r.latClose !== null) return;
     if (r.clause.head.temporal === 'next') { this.stageUnknown(r, s, true); return; }
-    const u = this.conclusionUnknown(r, s);
+    const u = this.conclusionUnknown(r, this.labelFault(r, s));
     if (u !== null) {
       this.narrowFeederFault(r.clause.head.rel);
       this.unkEdges.push([nUnk(u), nHole(this.ruleMarker(r.id))]);
@@ -5370,28 +5455,29 @@ export class AggEval {
             if (!lattice && !this.latSpread.has(u.id)) continue;
             if (lattice && u.k === 'tuple') continue;
             const s2 = this.unknownBinds(l, u, s);
-            if (s2 !== null) next.push(s2);
+            if (s2 !== null) next.push(this.sureUnknown(u) ? s2 : unsure(s2));
           }
           for (const u of this.undefAtoms?.get(l.rel) ?? []) {
             const s2 = this.unknownBinds(l, u, s);
-            if (s2 !== null) next.push(s2);
+            if (s2 !== null) next.push(unsure(s2));
           }
         } else if (b.t === 'neg') {
           const args = b.lit.args.map((a) => resolve(a, s));
           const undecided = args.some((a) => holdsUnknown(a) || !isGround(a)) || this.readsUndefined(b.lit, s);
-          if (undecided || this.negHolds(b.lit, s, 0)) next.push(s);
+          if (undecided) next.push(unsure(s));
+          else if (this.negHolds(b.lit, s, 0)) next.push(s);
         } else if (b.t === 'bi') {
           const lv = resolve(b.l, s), rv = resolve(b.r, s);
           const unknown = holdsUnknown(lv) || holdsUnknown(rv);
           const open = b.op === 'is' || b.op === 'in' ? !isGround(rv) : b.op === '=' ? false : !isGround(lv) || !isGround(rv);
-          if (unknown || open) { const s2 = bindUnknown([b.l, b.r], s); if (s2 !== null) next.push(s2); continue; }
+          if (unknown || open) { const s2 = bindUnknown([b.l, b.r], s); if (s2 !== null) next.push(unsure(s2)); continue; }
           const faults = this.faultCount;
           const s2s = this.evalBuiltins(b.op, b.l, b.r, s, null);
-          if (s2s.length === 0 && this.faultCount > faults) { const s2 = bindUnknown([b.l, b.r], s); if (s2 !== null) next.push(s2); }
+          if (s2s.length === 0 && this.faultCount > faults) { const s2 = bindUnknown([b.l, b.r], s); if (s2 !== null) next.push(unsure(s2)); }
           next.push(...s2s);
         } else {
           const s2 = bindUnknown([b.res], s);
-          if (s2 !== null) next.push(s2);
+          if (s2 !== null) next.push(unsure(s2));
         }
       }
       this.carrySteps += next.length;
@@ -5400,6 +5486,13 @@ export class AggEval {
       if (acc.length === 0) break;
     }
     return acc;
+  }
+
+  /** An unknown, as whynot and why name it: a labeled value as it is written (`unknownText` is the key they are ordered by). */
+  unknownShown(u: Unknown): string {
+    if (u.k !== 'tuple') return this.unknownText(u);
+    const labeled = (t: Term): boolean => isLabeled(t) || (t.k === 'f' && t.args.some(labeled));
+    return `${u.rel}[${u.persp}](${u.args.map((a) => (labeled(a) ? shown(a) : canonTerm(a).split('$unknown_value').join('_'))).join(',')})`;
   }
 
   /** An unknown, as whynot names it. */
@@ -6363,7 +6456,7 @@ export class AggEval {
 
   /** What an evaluation knows of the cells it sealed. */
   private forgetCells(): void {
-    this.aggMemo.clear(); this.reachMemo.clear(); this.cellReach.clear(); this.holShared.clear(); this.thrCells.clear(); this.thrOpen = []; this.thrAcc.clear();
+    this.aggMemo.clear(); this.reachMemo.clear(); this.cellReach.clear(); this.cellCond.clear(); this.regionsCapped.clear(); this.holShared.clear(); this.thrCells.clear(); this.thrOpen = []; this.thrAcc.clear();
     this.thrFresh.clear(); this.heightMemo.clear();
   }
 
@@ -7154,7 +7247,7 @@ export class AggEval {
         lines.push(`  no rule gives ${ws}; given, its cell would be a hole, ${v.reason}: comparing it with ${withT} faults in ${v.rule}`);
         return lines;
       } else if (v.k === 'unknown') {
-        lines.push(`  no rule gives ${ws}; given, its cell would not be known: comparing it with ${withT} in ${v.rule} reads ${this.unknownText(v.u)}, which is not known`);
+        lines.push(`  no rule gives ${ws}; given, its cell would not be known: comparing it with ${withT} in ${v.rule} reads ${this.unknownShown(v.u)}, which is not known`);
         return lines;
       }
     }
@@ -7200,7 +7293,7 @@ export class AggEval {
     const u = this.readUnknown(lit, new Map(), true);
     if (u === null) return null;
     if (this.latPlain.has(u.id) && this.latUnknown.get(u.id)?.[1] === null) return null;
-    return [`  ${this.unknownText(u)} is not known to hold`, ...this.unknownPath(u)];
+    return [`  ${this.unknownShown(u)} is not known to hold`, ...this.unknownPath(u)];
   }
 
   /** The reason of the hole on `marker`, if there is one. */
@@ -7229,7 +7322,7 @@ export class AggEval {
         const r = this.holeReason(mkf('$lattice', [mka(from.rel)]));
         what = r !== null ? `hole(${r})` : 'none of them known';
       } else what = 'which is not known to hold';
-      lines.push(`    reached by ${rule} from ${this.unknownText(from)}, ${what}`);
+      lines.push(`    reached by ${rule} from ${this.unknownShown(from)}, ${what}`);
       cur = from;
     }
     return lines;

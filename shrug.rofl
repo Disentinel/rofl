@@ -14,7 +14,7 @@
 -- this file for the text; the engines need nothing else from it.
 --
 -- The meta of each reason:
---   budget      spent(Kind, Spent, Limit), Kind steps, rows, depth or alternations
+--   budget      spent(Kind, Spent, Limit), Kind steps, rows, depth, alternations or regions
 --   fault       the cause, an atom: arith_overflow, agg_type_error, ...
 --   divergence  cycle(Cells): the lattice cells of its own improving cycle;
 --               the target is the lattice cell
@@ -64,6 +64,7 @@ shrug_cause(set_type_error, fault, "a membership or subset test read a value tha
 shrug_cause(tag_off_carrier, fault, "a semiring tag outside its carrier: viterbi and trust hold integers of [0, 1000000], counting integers of at least 1").
 shrug_cause(unbounded_members, fault, "the members of an interval with an infinite end were enumerated").
 shrug_cause(widening_forced, widened, "a lattice cell improved past its declared widening and was widened").
+shrug_cause(regions_capped, budget, "the values a labeled unknown could be told apart by passed the cap, so the group was not decided by them").
 shrug_cause(improving_cycle, divergence, "a lattice value came back through its own improvement").
 shrug_cause(dominance_cycle, conflict, "a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided").
 shrug_cause(dominance_intransitive, conflict, "a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided").

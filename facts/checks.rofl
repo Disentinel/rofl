@@ -2895,3 +2895,25 @@ check_opt("strata_boot_canon", together, 1).
 -- the first character of a string is its first code point, never a lone surrogate (f_a_first_character_is_cut_inside_a_surrogate_pair)
 check_world("str_first_code_point").
 check_file("str_first_code_point", "examples/checks/str-first-code-point.rofl").
+
+-- LABELED UNKNOWNS (w_labeled_unknowns, docs/aggregates.md, "Labeled
+-- unknowns"): an unknown value with a name and a condition. The answers
+-- derived by hand, a completions oracle over the group it could be, and the
+-- cap.
+check_world("agg_label_holes").
+check_file("agg_label_holes", "examples/checks/agg-label-data.rofl").
+check_file("agg_label_holes", "examples/checks/agg-label-check.rofl").
+check_opt("agg_label_holes", together, 1).
+proves_work("agg_label_holes", w_labeled_unknowns).
+
+check_world("agg_label_cap").
+check_file("agg_label_cap", "examples/checks/agg-label-cap-data.rofl").
+check_file("agg_label_cap", "examples/checks/agg-label-cap-check.rofl").
+check_opt("agg_label_cap", together, 1).
+proves_work("agg_label_cap", w_labeled_unknowns).
+
+check_world("agg_label_oracle").
+check_file("agg_label_oracle", "examples/checks/agg-label-data.rofl").
+check_file("agg_label_oracle", "examples/checks/agg-label-oracle.rofl").
+check_opt("agg_label_oracle", together, 1).
+proves_work("agg_label_oracle", w_labeled_unknowns).

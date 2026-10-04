@@ -1,0 +1,38 @@
+-- examples/checks/agg-label-data.rofl — WHAT THE LABELED UNKNOWNS READ
+-- (docs/aggregates.md, "Labeled unknowns"): members whose group is not known,
+-- each a tuple a rule concludes but for an overflow in the last thing its
+-- body asks (`G is B + 1`), so it holds in every completion and the group it
+-- is in is one value, named once.
+--
+-- lw(G, X), the members, by group:
+--   g1  k9        g2  k1        and (?, k7): joins g1, g2, or a group no fact names
+-- lv is the same with k9 as the unknown's member: g1 holds it already.
+-- lu is lw with a member that may not exist: a comparison follows the overflow.
+-- lg(G) names the groups a question is asked of: g3 is one no member is in.
+edb(lbig).
+edb(lw0).
+edb(lg).
+lbig(1152921504606846975).
+lw0(g1, k9). lw0(g2, k1).
+lg(g1). lg(g2). lg(g3).
+
+lw(G, X) :- lw0(G, X).
+lw(G, k7) :- lbig(B), G is B + 1.
+lv(G, X) :- lw0(G, X).
+lv(G, k9) :- lbig(B), G is B + 1.
+lu(G, X) :- lw0(G, X).
+lu(G, k7) :- lbig(B), Z is B + 1, Z > 0, G is Z.
+
+lwc(G, N) :- N is count(X : lw(G, X)).
+lvc(G, N) :- N is count(X : lv(G, X)).
+luc(G, N) :- N is count(X : lu(G, X)).
+
+-- the total over all groups: one member joins exactly one group
+ltot(S) :- S is sum(N ; G : lwc(G, N)).
+lvtot(S) :- S is sum(N ; G : lvc(G, N)).
+lutot(S) :- S is sum(N ; G : luc(G, N)).
+-- the number of groups: the member may make one
+lcnt(S) :- S is count(G : lwc(G, _)).
+-- a question of a group, and a join on it
+lno(G) :- lg(G), not lwc(G, 2).
+lone(G) :- lg(G), lwc(G, 2).

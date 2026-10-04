@@ -15,7 +15,7 @@ import {
   KERNEL_PERSP, resolveBook, resolveClauseBooks, isKernelLedger,
   SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, list as listT,
 } from './reflect.ts';
-import { SHRUG, shrugsOf, shrugLine, shrugAtom } from './shrug.ts';
+import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
 import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
@@ -883,7 +883,7 @@ export class Rofl {
       const bindings: Record<string, string> = {};
       for (const v of vars) {
         const t = resolve({ k: 'v', name: v }, s);
-        bindings[v] = t.k === 'v' ? '_' : canonTerm(t).replace(/\$unknown_value/g, '_');
+        bindings[v] = t.k === 'v' ? '_' : /\$(unk|by)\(/.test(canonTerm(t)) ? shown(t) : canonTerm(t).replace(/\$unknown_value/g, '_');
       }
       const rtext = vars.length === 0 ? 'true' : vars.map((v) => `${v} = ${bindings[v]}`).join(', ');
       const reason = row.args[1].k === 'a' ? row.args[1].name : canonTerm(row.args[1]);

@@ -623,7 +623,7 @@ export function shrugSurfaces(): string[] {
   if (sh !== 'X = c inherited') out.push(`? sd_lose(X) lists the shrugs '${sh}', not 'X = c inherited'`);
   if (!(q.shrugs ?? []).some((x) => x.line.includes('the answer reads another answer that is a shrug'))) out.push('? sd_lose(X) gives a shrug no reason text');
   const v = r.query('sd_val(b, V)');
-  if ((v.shrugs ?? []).map((x) => x.text).join() !== 'V = _') out.push(`? sd_val(b, V) names what it does not know as '${(v.shrugs ?? []).map((x) => x.text).join()}', not 'V = _'`);
+  if ((v.shrugs ?? []).map((x) => x.text).join() !== 'V = _[sd_val(b, _).1]') out.push(`? sd_val(b, V) names what it does not know as '${(v.shrugs ?? []).map((x) => x.text).join()}', not 'V = _[sd_val(b, _).1]'`);
   const w = r.why('sd_lose(c)');
   if (!w.text.includes('root $rule(') || !w.text.includes('arith_overflow, arithmetic left the integer range')) out.push(`why sd_lose(c) does not reach its root: ${w.text.split('\n')[0]}`);
   if (!w.text.includes('sd_win[main](c)@now :- sd_big[main](?B)@now')) out.push('why sd_lose(c) does not show the rule its root is');

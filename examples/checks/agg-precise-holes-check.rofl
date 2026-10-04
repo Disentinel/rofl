@@ -24,8 +24,8 @@ ph_want(ph_q90, g1). ph_want(ph_q90, g2). ph_want(ph_q90, g3). ph_want(ph_q90, g
 ph_want(ph_rk4, g5).
 ph_want(ph_neg2, g1). ph_want(ph_neg2, g3). ph_want(ph_neg2, g5). ph_want(ph_neg2, g7).
 ph_want(ph_neg, g1). ph_want(ph_neg, g3). ph_want(ph_neg, g4). ph_want(ph_neg, g5). ph_want(ph_neg, g7).
-ph_want(ph_pair, gh(g1, h2)). ph_want(ph_pair, whole).
-ph_want(ph_wc, g2). ph_want(ph_wc, whole).
+ph_want(ph_pair, gh(g1, h2)).
+ph_want(ph_wc, g2).
 ph_want(ph_cq, g1). ph_want(ph_cq, g3). ph_want(ph_cq, g5). ph_want(ph_cq, g7).
 ph_want(ph_sq, g1). ph_want(ph_sq, g2). ph_want(ph_sq, g3).
 ph_want(ph_t, b).
@@ -43,7 +43,6 @@ alarm(ph_hole_extra).
 -- expect-row: ph_holed[main](ph_cnt,g3)
 -- expect-row: ph_holed[main](ph_neg,g4)
 -- expect-row: ph_holed[main](ph_pair,gh(g1,h2))
--- expect-row: ph_holed[main](ph_wc,whole)
 -- expect-row: ph_holed[main](ph_t,b)
 -- expect-no-row: ph_hole_extra[main](
 -- expect-no-row: ph_hole_missing[main](
@@ -153,3 +152,21 @@ ph_amin(G, M) :- M is min(V : ph_a(G, _, V)).
 -- expect-row: shrug[$kernel]($cell(ra3d480df,1,0,$cons(a2,$nil)),inherited,from($cons($rule(ra42dda61),$nil)))
 -- expect-row: shrug[$kernel](ph_amin(a2,$unknown_value),inherited,from($cons($rule(ra42dda61),$nil)))
 -- expect-row: shrug[$kernel](ph_acnt(a2,$unknown_value),inherited,from($cons($rule(r786c83b7),$cons($rule(ra42dda61),$nil))))
+
+-- the group a possible could make when its group is not known is none of the groups sealed: a
+-- labeled unknown known not to be g1 or g2, with a count of one, so a negation over the groups
+-- that count 2 is decided for every group but g2 (docs/aggregates.md, "Labeled unknowns")
+edb(ph_hh).
+ph_hh(h1). ph_hh(h2). ph_hh(h3).
+ph_nwc(G) :- ph_g(G), not ph_wc(G, 2).
+ph_nh(H) :- ph_hh(H), not ph_pair(g1, H, 2).
+-- expect-row: ph_nwc[main](g1)
+-- expect-no-row: ph_nwc[main](g2)
+-- expect-row: ph_nwc[main](g3)
+-- expect-row: ph_nwc[main](g4)
+-- expect-row: ph_nwc[main](g5)
+-- expect-row: ph_nwc[main](g6)
+-- expect-row: ph_nwc[main](g7)
+-- expect-row: ph_nh[main](h1)
+-- expect-no-row: ph_nh[main](h2)
+-- expect-row: ph_nh[main](h3)

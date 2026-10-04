@@ -419,6 +419,7 @@ shrug_cause(set_type_error, fault, s("a membership or subset test read a value t
 shrug_cause(tag_off_carrier, fault, s("a semiring tag outside its carrier: viterbi and trust hold integers of [0, 1000000], counting integers of at least 1")).
 shrug_cause(unbounded_members, fault, s("the members of an interval with an infinite end were enumerated")).
 shrug_cause(widening_forced, widened, s("a lattice cell improved past its declared widening and was widened")).
+shrug_cause(regions_capped, budget, s("the values a labeled unknown could be told apart by passed the cap, so the group was not decided by them")).
 shrug_cause(improving_cycle, divergence, s("a lattice value came back through its own improvement")).
 shrug_cause(dominance_cycle, conflict, s("a subsumptive value dominates itself, or two dominate each other, so the dominance is no order and the front is not decided")).
 shrug_cause(dominance_intransitive, conflict, s("a subsumptive value is dominated by one that no member of the front dominates, or dominates a member, so the dominance is not transitive and the front is not decided")).
