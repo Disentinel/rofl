@@ -5,6 +5,12 @@ ours to fix. Every number here is either measured on this machine or carries a
 citation; nothing is estimated. Where a figure is derived arithmetic rather than
 published, it says so.
 
+**From 2026-10-04 every number is taken on the Rust engine, release build**
+(owner's decision, f_rust_is_the_engine_ts_is_the_reference): the TypeScript
+engine is the parity reference, not a performance engine, and a timing taken on
+it decides nothing. Older figures below that were taken on TS are marked as such
+where they matter and are to be re-taken on Rust before they are relied on.
+
 Measurements were taken on one laptop (4 cores) while other work was running, so
 treat the absolute numbers as a **ceiling, not a floor** — the shapes and ratios
 are the durable part.

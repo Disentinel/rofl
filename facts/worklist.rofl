@@ -3680,12 +3680,12 @@ work_state(w_labeled_unknowns, open).
 -- ===========================================================================
 
 work(w_compression_programme,
-  "VERY IMPORTANT (owner, 2026-10-04): make the world small enough that a real repository evaluates with bounded growth, by collapsing what is a closure, pruning what nobody asks, and not materialising bookkeeping nobody reads; soundly (every answer of the unpruned world is still given, or is a shrug with a reason), undoably (derived by rules, so retraction/excise restore it), measured before and after on self, mcp, cli_exits and a grafema package. Hub of the w_cmp_* items; supersedes the plan text of w_dataflow_pruning, which it carries out. Premises and the first measurements: f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure.").
+  "VERY IMPORTANT (owner, 2026-10-04): make the world small enough that a real repository evaluates with bounded growth, by collapsing what is a closure, pruning what nobody asks, and not materialising bookkeeping nobody reads; soundly (every answer of the unpruned world is still given, or is a shrug with a reason), undoably (derived by rules, so retraction/excise restore it), measured before and after ON THE RUST ENGINE (release) on self, mcp, cli_exits and a grafema package; a TS timing decides nothing (f_rust_is_the_engine_ts_is_the_reference). Hub of the w_cmp_* items; supersedes the plan text of w_dataflow_pruning, which it carries out. Premises and the first measurements: f_half_the_world_is_provenance_and_a_fifth_is_the_ancestor_closure.").
 work_state(w_compression_programme, open).
 work_needs(w_compression_programme, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_remeasure_after_engine_fast,
-  "EXPERIMENT 0, first: take the fact and work distribution again (per relation, per rule) after engine-fast is merged, on BOTH engines (Rust with and without sealed(witness)), same three corpora plus a grafema package; record the table beside the 2026-10-04 one. Every hypothesis below is re-ranked by it.").
+  "EXPERIMENT 0, first: take the fact and work distribution again (per relation, per rule) after engine-fast is merged, on the RUST engine, release build (with and without sealed(witness)), same three corpora plus a grafema package; the 2026-10-04 table was taken on the TS engine and is indicative only; record the table beside the 2026-10-04 one. Every hypothesis below is re-ranked by it.").
 work_state(w_cmp_remeasure_after_engine_fast, open).
 
 work(w_cmp_provenance_on_demand,
