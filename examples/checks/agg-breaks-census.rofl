@@ -964,6 +964,10 @@ brk_expects("dominance_edge_positive", "agg_sub_eval").
 brk("dominance_rules_early"). brk_kind("dominance_rules_early", switch).
 brk_expects("dominance_rules_early", "agg_sub_strata").
 brk_expects("dominance_rules_early", "agg_sub_eval").
+brk("demand_strict_mono"). brk_kind("demand_strict_mono", switch).
+brk_expects("demand_strict_mono", "demand_neg_round").
+brk("ts_demand_strict_mono"). brk_kind("ts_demand_strict_mono", ts).
+brk_expects("ts_demand_strict_mono", "demand_neg_round").
 brk("wfs_admits_subsumption"). brk_kind("wfs_admits_subsumption", switch).
 brk_expects("wfs_admits_subsumption", "agg_sub_wfs").
 brk_expects("wfs_admits_subsumption", "agg_sub_ts").
@@ -1695,6 +1699,7 @@ switch_site("cut_carry_unrenewed", "rust/rofl/src/engine.rs").
 switch_site("cut_fallback_off", "rust/rofl/src/engine.rs").
 switch_site("decl_row_skipped", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
+switch_site("demand_strict_mono", "rust/rofl/src/engine.rs").
 switch_site("descent_closes_other", "rust/rofl/src/engine.rs").
 switch_site("descent_fatal", "rust/rofl/src/engine.rs").
 switch_site("descent_wall", "rust/rofl/src/engine.rs").
