@@ -1,0 +1,15 @@
+-- examples/checks/ds-tree-syntax-1-forms.rofl — every form of a declared tree the
+-- grammar reads (docs/data-structures.md): the edges alone, with the closure they
+-- define, a wildcard, and `tree` and `closure` still names where no second name
+-- follows them. Read by both engines and by ring 1, whose rows must agree.
+edb(dtx_e).
+dtx_e(a, b). dtx_e(b, c). dtx_e(a, d).
+tree dtx_plain(P, C).
+dtx_plain(P, C) :- dtx_e(P, C).
+tree dtx_closed(P, C) closure dtx_all.
+dtx_closed(P, C) :- dtx_e(P, C).
+tree dtx_wild(P, _).
+dtx_wild(P, C) :- dtx_e(P, C).
+tree(dtx_name). closure(dtx_name, tree).
+dtx_seen(X) :- tree(X).
+dtx_seen(F) :- closure(_, F).

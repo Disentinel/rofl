@@ -1,0 +1,3 @@
+-- expect-refusal: a tree has two arguments
+-- a tree relates a parent and a child
+tree dts_arity(P).

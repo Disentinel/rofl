@@ -67,6 +67,8 @@ export const V = {
   // argument marked with a role word (Pos from 1); an unmarked argument is the key.
   structure_decl: 'structure_decl',
   structure_role: 'structure_role',
+  // `tree rel(P, C) closure c.`: `structure_closure(Rel, Closure)`, the relation the tree's closure is.
+  structure_closure: 'structure_closure',
   // SUBSUMPTION (docs/aggregates.md, "Subsumption, as built"): a dominance
   // rule `p(K..., V1...) <= p(K..., V2...) :- B.`
   // is `dominance(R, Rel, Arity, KeyLen)` and its two facts
@@ -115,7 +117,7 @@ export const KERNEL_BOOK: ReadonlySet<string> = new Set<string>([
   V.bridge_decl, V.derived_by, V.hole,
   V.premise_agg, V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed,
   V.lattice_decl, V.lattice_widen, V.lattice_member, V.lattice_member_prem, V.tag_decl, V.order_comp,
-  V.structure_decl, V.structure_role,
+  V.structure_decl, V.structure_role, V.structure_closure,
   V.dominance, V.dominance_lit, V.dominated_by,
 ]);
 
@@ -214,7 +216,7 @@ export const ARITY: Readonly<Record<string, number>> = {
   asks: 1,
   premise_agg: 2, agg_cell: 3, agg_member: 4, agg_member_prem: 3, agg_sealed: 3,
   lattice_decl: 3, lattice_widen: 2, lattice_member: 4, lattice_member_prem: 3,
-  tag_decl: 3, order_comp: 5, structure_decl: 3, structure_role: 3,
+  tag_decl: 3, order_comp: 5, structure_decl: 3, structure_role: 3, structure_closure: 2,
   dominance: 4, dominance_lit: 3, dominated_by: 3,
 };
 

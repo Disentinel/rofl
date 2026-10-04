@@ -1,0 +1,4 @@
+-- expect-refusal: is also concluded by a fact
+-- nor a fact written before it
+dts_c(a, b).
+tree dts_t(P, C) closure dts_c.

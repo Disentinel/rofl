@@ -1,0 +1,5 @@
+-- expect-refusal: tree dtb_in: node (k) has two parents in the book main: (p) and (q)
+-- a child with two parents is refused before a cycle is looked for
+edb(dtb_in).
+tree dtb_in(P, C).
+dtb_in(p, k). dtb_in(q, k). dtb_in(a, b). dtb_in(b, a).

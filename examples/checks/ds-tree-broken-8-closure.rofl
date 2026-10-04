@@ -1,0 +1,6 @@
+-- expect-refusal: tree dtb_in: node (c) has two parents in the book main: (a) and (b)
+-- a declared closure does not excuse the edges: the forest is the promise, the closure the definition
+edb(dtb_in).
+tree dtb_in(P, C) closure dtb_within.
+dtb_in(a, c). dtb_in(b, c).
+dtb_x(P, C) :- dtb_within(P, C).

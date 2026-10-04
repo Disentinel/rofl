@@ -24,6 +24,7 @@ pub mod cell;
 pub mod corpus;
 pub mod dense;
 pub mod engine;
+pub mod forest;
 /// The kernel's own program and its hash, as the build baked them.
 pub mod kernel;
 pub mod reflect;

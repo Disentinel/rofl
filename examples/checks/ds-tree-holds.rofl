@@ -1,0 +1,84 @@
+-- examples/checks/ds-tree-holds.rofl — A DECLARED TREE WITH ITS CLOSURE, the data
+-- of the ds_tree_holds and ds_tree_sealed worlds (docs/data-structures.md). A
+-- declaration changes no fact: the closure the Rust engine answers from the
+-- tree (sealed) or by its kernel (not sealed), and the closure the
+-- TypeScript engine derives from the lowered rules, hold the rows of a twin
+-- (`_u`) written by hand, undeclared, by the same readers. The check file
+-- holds the two to the same rows, reader by reader: every pattern a reader
+-- of the real model asks of the ancestor relation (facts/ast-within-readers.rofl).
+
+-- THE FOREST, in two books. Edges asserted, edges derived at the end of a
+-- chain of rules (so the edges arrive in rounds, after the readers first
+-- fire), and edges derived by a recursion of their own.
+edb(dst_link).
+edb(dst_node).
+edb(dst_cand).
+edb(dst_pick).
+edb(dst_bound).
+edb(dst_seed).
+edb(dst_hop).
+tree dst_in(P, C) closure dst_within.
+dst_in[code](r1, a1). dst_in[code](r1, a2). dst_in[code](a1, b1). dst_in[code](a1, b2).
+dst_in[code](b1, c1). dst_in[code](a2, b3).
+dst_in[code](r2, x1). dst_in[code](x1, x2).
+dst_in[other](o1, o2). dst_in[other](o2, o3).
+dst_link(x2, x3). dst_link(c1, d1). dst_link(d1, e1). dst_link(b3, c3).
+dst_lv1(P, C) :- dst_link(P, C).
+dst_lv2(P, C) :- dst_lv1(P, C).
+dst_in[code](P, C) :- dst_lv2(P, C).
+dst_hop(c3, c4). dst_hop(c4, c5).
+dst_in[code](P, C) :- dst_in[code](Q, P), dst_hop(P, C).
+dst_node(r1). dst_node(r2). dst_node(r3). dst_node(a1). dst_node(a2). dst_node(b1). dst_node(b2). dst_node(b3).
+dst_node(c1). dst_node(c3). dst_node(c4). dst_node(c5). dst_node(d1). dst_node(e1). dst_node(x1). dst_node(x2). dst_node(x3).
+dst_cand(r1, c1). dst_cand(a1, c1). dst_cand(b1, c1). dst_cand(c1, c1). dst_cand(a2, c1). dst_cand(r2, c1).
+dst_cand(r1, e1). dst_cand(a1, e1). dst_cand(r1, c5). dst_cand(r2, x3). dst_cand(x1, x3). dst_cand(x3, r2). dst_cand(r3, r3).
+dst_pick(r1). dst_pick(a1). dst_pick(c1). dst_pick(e1). dst_pick(r2). dst_pick(r3). dst_pick(nowhere).
+dst_bound(a1). dst_bound(r1).
+dst_seed(c1, c1). dst_seed(x2, x2).
+
+-- THE READERS, each declared (`dst_*`) and written over the twin (`dst_*_u`)
+dst_bb(A, D)    :- dst_cand(A, D), dst_within[code](A, D).
+dst_bf(A, D)    :- dst_pick(A), dst_within[code](A, D).
+dst_fb(D, A)    :- dst_pick(D), dst_within[code](A, D).
+dst_ff(A, D)    :- dst_within[code](A, D).
+dst_ffb(B, A, D) :- dst_within[B](A, D).
+dst_neg(A, D)   :- dst_cand(A, D), not dst_within[code](A, D).
+dst_cnt(A, N)   :- dst_pick(A), N is count(D : dst_within[code](A, D)).
+dst_up(D, A)    :- dst_pick(D), dst_within[code](A, D), dst_bound(B), dst_within[code](A, B).
+dst_both(A, D)  :- dst_within[code](A, D), dst_in[code](A, X), dst_within[code](X, D).
+dst_feed(A)     :- dst_bf(A, _).
+dst_feed2(D)    :- dst_feed(A), dst_within[code](A, D).
+dst_rec(X, Y)   :- dst_seed(X, Y).
+dst_rec(X, Z)   :- dst_rec(X, Y), dst_within[code](Y, Z).
+dst_deep(N)     :- dst_node(N), dst_within[code](r1, N), dst_within[code](a1, N).
+dst_lone(N)     :- dst_node(N), not dst_within[code](_, N), not dst_within[code](N, _).
+dst_other(A, D) :- dst_within[other](A, D).
+dst_cross(A, D) :- dst_within[code](A, D), dst_in[other](A, _).
+
+dst_in_u[code](r1, a1). dst_in_u[code](r1, a2). dst_in_u[code](a1, b1). dst_in_u[code](a1, b2).
+dst_in_u[code](b1, c1). dst_in_u[code](a2, b3).
+dst_in_u[code](r2, x1). dst_in_u[code](x1, x2).
+dst_in_u[other](o1, o2). dst_in_u[other](o2, o3).
+dst_lv1_u(P, C) :- dst_link(P, C).
+dst_lv2_u(P, C) :- dst_lv1_u(P, C).
+dst_in_u[code](P, C) :- dst_lv2_u(P, C).
+dst_in_u[code](P, C) :- dst_in_u[code](Q, P), dst_hop(P, C).
+dst_within_u[B](P, C) :- dst_in_u[B](P, C).
+dst_within_u[B](P, D) :- dst_within_u[B](P, X), dst_in_u[B](X, D).
+dst_bb_u(A, D)    :- dst_cand(A, D), dst_within_u[code](A, D).
+dst_bf_u(A, D)    :- dst_pick(A), dst_within_u[code](A, D).
+dst_fb_u(D, A)    :- dst_pick(D), dst_within_u[code](A, D).
+dst_ff_u(A, D)    :- dst_within_u[code](A, D).
+dst_ffb_u(B, A, D) :- dst_within_u[B](A, D).
+dst_neg_u(A, D)   :- dst_cand(A, D), not dst_within_u[code](A, D).
+dst_cnt_u(A, N)   :- dst_pick(A), N is count(D : dst_within_u[code](A, D)).
+dst_up_u(D, A)    :- dst_pick(D), dst_within_u[code](A, D), dst_bound(B), dst_within_u[code](A, B).
+dst_both_u(A, D)  :- dst_within_u[code](A, D), dst_in_u[code](A, X), dst_within_u[code](X, D).
+dst_feed_u(A)     :- dst_bf_u(A, _).
+dst_feed2_u(D)    :- dst_feed_u(A), dst_within_u[code](A, D).
+dst_rec_u(X, Y)   :- dst_seed(X, Y).
+dst_rec_u(X, Z)   :- dst_rec_u(X, Y), dst_within_u[code](Y, Z).
+dst_deep_u(N)     :- dst_node(N), dst_within_u[code](r1, N), dst_within_u[code](a1, N).
+dst_lone_u(N)     :- dst_node(N), not dst_within_u[code](_, N), not dst_within_u[code](N, _).
+dst_other_u(A, D) :- dst_within_u[other](A, D).
+dst_cross_u(A, D) :- dst_within_u[code](A, D), dst_in_u[other](A, _).

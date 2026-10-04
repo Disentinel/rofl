@@ -40,6 +40,8 @@ tag cost(X, tropical C).
 pareto best(X, min C, max T).
 function ast_name(N, to V).
 function pair(to A, to B).
+tree ast_in(P, C).
+tree edge(P, C) closure reach.
 a(X) <= a(Y) :- Y < X.
 bad({a}).
 esc("\\q").
@@ -60,8 +62,12 @@ const lit = (l: Lit) => `hlit(${atom(l.rel)}, ${enc(l.persp)}, ${list(l.args.map
 const elem = (b: BodyElem) => b.t === 'pos' ? lit(b.lit) : b.t === 'neg' ? `hnot(${lit(b.lit)})` : `hbi(${escapeString(b.op)}, ${list([enc(b.l), enc(b.r)])})`;
 // A DECLARATION is the head wrapped by what it declares, as the grammar's tree wraps it (ring1.rofl `clause_at`)
 const names = (xs: string[]) => list(xs.map(atom));
+const structureOf = (c: Clause): string => {
+  const s = `hstructure(${atom(c.structure!.kind)}, ${names(c.structure!.roles.map((r) => r || 'key'))}, ${lit(c.head)})`;
+  return c.structure!.closure === undefined ? s : `hclosure(${atom(c.structure!.closure)}, ${s})`;
+};
 const headOf = (c: Clause): string =>
-  c.structure ? `hstructure(${atom(c.structure.kind)}, ${names(c.structure.roles.map((r) => r || 'key'))}, ${lit(c.head)})`
+  c.structure ? structureOf(c)
   : c.ord ? `horder(${atom(c.lattice!)}, ${names(c.ord)}, ${lit(c.head)})`
   : c.tag ? `htag(${atom(c.lattice!)}, ${lit(c.head)})`
   : c.widen !== undefined ? `hwiden(${c.widen}, hlattice(${atom(c.lattice!)}, ${lit(c.head)}))`
@@ -81,7 +87,7 @@ function spoil(c: Clause): Clause {
   const l = (x: Lit): Lit => ({ ...x, persp: term(x.persp), args: x.args.map(term), perspExplicit: broken === 'book' ? true : x.perspExplicit });
   const b = (x: BodyElem): BodyElem => x.t === 'bi' ? { ...x, l: term(x.l), r: term(x.r) } : { ...x, lit: l(x.lit) };
   const d: Partial<Clause> = broken !== 'decl' ? {}
-    : c.structure ? { structure: { ...c.structure, roles: c.structure.roles.map(() => '') } }
+    : c.structure ? { structure: { ...c.structure, roles: c.structure.roles.map(() => ''), ...(c.structure.closure === undefined ? {} : { closure: 'closed' }) } }
     : c.lattice !== undefined && !c.tag && !c.ord ? { lattice: c.lattice === 'min' ? 'max' : 'min' } : {};
   return { ...c, ...d, head: l(c.head), body: c.body.map(b), ...(c.dominator ? { dominator: l(c.dominator) } : {}) };
 }

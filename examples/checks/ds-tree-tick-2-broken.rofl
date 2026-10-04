@@ -1,0 +1,8 @@
+-- expect-refusal: tree dtq_in: node (k) has two parents in the book main: (a) and (b)
+-- a second parent that arrives at the next tick: the promise is judged at the tick it arrives, not only at the first
+edb(dtq_go).
+tree dtq_in(P, C) closure dtq_within.
+dtq_in(a, k).
+dtq_in(P, C)@next :- dtq_in(P, C).
+dtq_go(x).
+dtq_in(b, k)@next :- dtq_go(x).

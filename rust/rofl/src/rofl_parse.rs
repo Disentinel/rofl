@@ -137,6 +137,10 @@ pub fn decl_text(h: &Heap, c: &Clause) -> String {
             src_term(h, *t, &mut o);
         }
         o.push(')');
+        if let Some(cl) = st.closure {
+            o.push_str(" closure ");
+            o.push_str(h.name(cl));
+        }
         return o;
     }
     if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
@@ -262,12 +266,13 @@ fn word_ops() -> &'static [&'static str] {
 
 /// The kinds of declared data structure (docs/data-structures.md) with the
 /// role words each marks its arguments by: words, names elsewhere.
-pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"])];
+pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree", &[])];
 
-/// A declared data structure: its kind and, per head argument, the role word
-/// that marks it (`None` for a key position).
+/// A declared data structure: its kind, per head argument the role word that
+/// marks it (`None` for a key position), and for a tree the relation it is the
+/// closure of.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>> }
+pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: Option<Sym> }
 
 /// A clause, or a lattice declaration: `lattice dist(A, C, min D).` is the
 /// head `dist(A, C, D)` with no body and `lattice` the operation `min`;
@@ -930,10 +935,19 @@ impl<'a> Parser<'a> {
         if !self.eat_punct("rpar") {
             return Err(format!("{what}: `(` is not closed"));
         }
+        let mut closure = None;
+        if self.is_word(0, "closure") {
+            self.bump();
+            if !matches!(self.peek(), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
+                return Err(format!("{what}: `closure` names the relation that holds each node and every ancestor of it"));
+            }
+            let s = self.bump().ok_or("structure: end of input")?;
+            closure = Some(self.sym(&s));
+        }
         if !self.eat_punct("dot") {
             return Err(format!("{what}: the declaration has no closing dot"));
         }
-        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles }) })
+        Ok(Clause { head: Lit { rel, book, args, tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: Some(Structure { kind, roles, closure }) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
@@ -1054,7 +1068,8 @@ pub fn show_elem(h: &Heap, e: &Elem) -> String {
 pub fn show(h: &Heap, c: &Clause) -> String {
     if let Some(st) = &c.structure {
         let roles = st.roles.iter().map(|r| r.map_or("key", |r| h.name(r))).collect::<Vec<_>>().join(" ");
-        return format!("(structure {} [{}] {})", h.name(st.kind), roles, show_lit(h, &c.head));
+        let closure = st.closure.map_or(String::new(), |cl| format!(" closure {}", h.name(cl)));
+        return format!("(structure {} [{}] {}{closure})", h.name(st.kind), roles, show_lit(h, &c.head));
     }
     if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
         let dirs = dirs.iter().map(|d| h.name(*d)).collect::<Vec<_>>().join(" ");
@@ -1112,6 +1127,10 @@ mod tests {
             ("function best(to W). function e(A, B, to C, to D).", "(structure function [to] (lit best main [v:W] now))\n(structure function [key key to to] (lit e main [v:A v:B v:C v:D] now))"),
             ("function(x). p(to, X) :- function(X, to).", "(clause (lit function main [a:x] now))\n(clause (lit p main [a:to v:X] now) (lit function main [v:X a:to] now))"),
             ("function f(to, to X).", "(structure function [key to] (lit f main [a:to v:X] now))"),
+            // a declared tree, with and without its closure, and `tree` and `closure` as names elsewhere
+            ("tree ast_in(P, C).", "(structure tree [key key] (lit ast_in main [v:P v:C] now))"),
+            ("tree ast_in(P, C) closure ast_within.", "(structure tree [key key] (lit ast_in main [v:P v:C] now) closure ast_within)"),
+            ("tree(x). closure(a, b). p(X) :- tree(X).", "(clause (lit tree main [a:x] now))\n(clause (lit closure main [a:a a:b] now))\n(clause (lit p main [v:X] now) (lit tree main [v:X] now))"),
             // a dominance rule, and `<=` still a comparison in a body
             ("p(A, X) <= p(A, Y) :- Y < X, not q(Y).",
              "(dominance (lit p main [v:A v:X] now) (lit p main [v:A v:Y] now) (bi < v:Y v:X) (not (lit q main [v:Y] now)))"),
@@ -1157,6 +1176,9 @@ mod tests {
             ("function d A.", "expected '('"),
             ("function d(A, to D", "is not closed"),
             ("function d(A, to D)", "no closing dot"),
+            ("tree d[b](A, B).", "not a book"),
+            ("tree d(A, B) closure.", "names the relation"),
+            ("tree d(A, B) closure c", "no closing dot"),
             ("lattice d A.", "expected '('"),
             ("t() :- at_least(W : v(W)).", "expected ',' after the threshold"),
             ("t() :- at_least(: v(W)).", "needs its threshold"),

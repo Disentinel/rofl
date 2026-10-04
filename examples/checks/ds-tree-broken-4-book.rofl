@@ -1,0 +1,5 @@
+-- expect-refusal: tree dtb_bk: node (k) has two parents in the book w2: (a) and (b)
+-- the promise is per book: one child with a parent in each of two books is fine (w1, w3), and with two in one is not (w2)
+edb(dtb_bk).
+tree dtb_bk(P, C).
+dtb_bk[w1](a, k). dtb_bk[w3](b, k). dtb_bk[w2](a, k). dtb_bk[w2](b, k).

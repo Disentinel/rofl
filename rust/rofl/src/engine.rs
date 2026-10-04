@@ -23,6 +23,7 @@ mod datastrat;
 mod delta;
 mod labeled;
 mod joinplan;
+mod vclosure;
 pub use delta::Delta;
 
 const MAX_DEPTH: usize = 512;
@@ -88,6 +89,9 @@ pub struct Closure {
     pub persp: Sym,
     pub edge: Sym,
     pub edge_persp: Sym,
+    /// The book is a variable the three literals share (`R[B](X, Y) :- E[B](X, Y)`, what a declared tree lowers to): the
+    /// closure is walked in each book the edges have, and `persp` and `edge_persp` are that book.
+    pub by_book: bool,
     /// `E(X, Y)` is the path X to Y; false when the rules read it the other way.
     pub edge_fwd: bool,
     pub base: Sym,
@@ -101,7 +105,7 @@ pub struct Closure {
 /// Each relation concluded by exactly two rules of the closure shape.
 fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
     let vars = |ts: &[Term]| ts.len() == 2 && ts[0].is_var() && ts[1].is_var() && ts[0] != ts[1];
-    let plain = |l: &Lit| l.temporal == Temporal::Now && l.persp.is_atom() && vars(&l.args);
+    let plain = |l: &Lit| l.temporal == Temporal::Now && (l.persp.is_atom() || l.persp.is_var()) && vars(&l.args);
     fn pos(b: &BodyElem) -> Option<&Lit> {
         match b {
             BodyElem::Pos(l) => Some(l),
@@ -127,6 +131,10 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
         if !plain(bh) || !plain(sh) || !plain(e) || e.rel == rel || bh.persp != sh.persp || refused.contains(&e.rel) {
             continue;
         }
+        let by_book = bh.persp.is_var();
+        if by_book && e.persp != bh.persp || !by_book && !e.persp.is_atom() {
+            continue;
+        }
         let edge_fwd = if e.args[0] == bh.args[0] && e.args[1] == bh.args[1] {
             true
         } else if e.args[1] == bh.args[0] && e.args[0] == bh.args[1] {
@@ -150,9 +158,10 @@ fn find_closures(rules: &[Rc<ERule>], refused: &HashSet<Sym>) -> Vec<Closure> {
         let r_first = step.plan.iter().find_map(|b| pos(b).map(|l| l.rel == rel)).unwrap_or(true);
         out.push(Closure {
             rel,
-            persp: bh.persp.as_atom().unwrap(),
+            persp: bh.persp.as_atom().unwrap_or(0),
             edge: e.rel,
-            edge_persp: e.persp.as_atom().unwrap(),
+            edge_persp: e.persp.as_atom().unwrap_or(0),
+            by_book,
             edge_fwd,
             base: base.id,
             step: step.id,
@@ -602,6 +611,21 @@ pub struct Eval {
     /// every evaluation, and for the planner the key positions of each relation.
     functions: Vec<crate::structure::Function>,
     function_keys: HashMap<Sym, Vec<usize>>,
+    /// The declared trees (`tree p(P, C) closure c.`): a forest each, checked after every evaluation.
+    trees: Vec<crate::structure::Tree>,
+    /// The closures of declared trees answered from their trees, not stored (engine/vclosure.rs): by relation, the
+    /// lowered rules they stand for, the rules that read them, and the edge rows each reader last fired over.
+    vclosures: Vec<vclosure::VClosure>,
+    vclosure_of: HashMap<Sym, usize>,
+    vskip: HashMap<Sym, usize>,
+    vreaders: HashMap<Sym, Vec<usize>>,
+    vreader_seen: HashMap<(Sym, usize), usize>,
+    vclosure_blocked: HashSet<usize>,
+    /// Why a declared closure is not answered from its tree, as the program stands.
+    pub vclosure_reason: Vec<String>,
+    /// Forests built, and rows read from them, by this engine.
+    pub vbuilds: u64,
+    pub vrows_read: u64,
     /// The refusal of the last judgement of the promises, while the world breaks one: nothing is answered until an
     /// evaluation passes (`Session::ask`; `ensure` re-evaluates a dirty world).
     pub promise_broken: Option<String>,
@@ -1169,6 +1193,16 @@ impl Eval {
             delta_stats: HashMap::new(),
             functions: Vec::new(),
             function_keys: HashMap::new(),
+            trees: Vec::new(),
+            vclosures: Vec::new(),
+            vclosure_of: HashMap::new(),
+            vskip: HashMap::new(),
+            vreaders: HashMap::new(),
+            vreader_seen: HashMap::new(),
+            vclosure_blocked: HashSet::new(),
+            vclosure_reason: Vec::new(),
+            vbuilds: 0,
+            vrows_read: 0,
             promise_broken: None,
             promise_stats: 0,
             rounds: Vec::new(),
@@ -1413,6 +1447,7 @@ impl Eval {
         self.decl_refused.clear();
         self.functions = crate::structure::functions(&self.h, &self.v, &mut self.store);
         self.function_keys = self.functions.iter().map(|f| (f.rel, f.key.clone())).collect();
+        self.trees = crate::structure::trees(&self.h, &self.v, &mut self.store);
         let decls = lattice_decls(&mut self.h, &self.v, &mut self.store, &mut self.decl_refused);
         self.tags = crate::tag::Tags::read(&mut self.h, &self.v, &mut self.store, &decls);
         let low = crate::tag::lower(&mut self.h, &self.v, &self.tags, rules);
@@ -1610,6 +1645,7 @@ impl Eval {
         self.closures = find_closures(&self.rules, &refused);
         self.closure_of = self.closures.iter().enumerate().flat_map(|(i, c)| [(c.base, (i, true)), (c.step, (i, false))]).collect();
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+        self.vclosure_setup();
         self.widen_rec = self.widen_back_edges();
         self.widen_th = self.widen_thresholds();
         self.demand_rels = demand
@@ -2254,6 +2290,8 @@ impl Eval {
 
     fn run_pass(&mut self) -> Result<Outcome, Halt> {
         self.clear_derived();
+        self.store.virtuals.clear();
+        self.vclosure_engage();
         self.shrug_reset();
         self.active.clear();
         self.staged.clear();
@@ -2564,6 +2602,7 @@ impl Eval {
         self.settle_staged();
         self.write_shrugs(partial)?;
         brk!("function_dirty_cleared_first" => self.store.dirty = false; ());
+        self.vpublish();
         self.check_promises()?;
         self.store.dirty = false;
         self.store.partial_eval = partial;
@@ -2582,10 +2621,10 @@ impl Eval {
     /// dirty, never answered.
     pub fn check_promises(&mut self) -> Result<(), Halt> {
         self.promise_broken = None;
-        if self.functions.is_empty() || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
+        if (self.functions.is_empty() && self.trees.is_empty()) || brk!("function_tick_unchecked" => self.store.tick > 0; false) {
             return Ok(());
         }
-        crate::structure::check_functions(&self.h, &self.store, &self.functions).map_err(|m| {
+        crate::structure::check_functions(&self.h, &self.store, &self.functions).and_then(|_| crate::structure::check_trees(&self.h, &self.store, &self.trees)).map_err(|m| {
             self.promise_broken = Some(m.clone());
             Halt::Strat(m, String::new())
         })
@@ -3888,6 +3927,14 @@ impl Eval {
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
+                if !self.vskip.is_empty() && self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+                    return Ok(());
+                }
+                // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
+                if !self.vreaders.is_empty() && !brk!("vclosure_reader_stale" => true; false) && self.vreader_due(r, cur) {
+                    let f = self.fire_rule(r, None)?;
+                    merge_front(&mut self.cur_front, f);
+                }
                 if !r
                     .trigger_rels
                     .iter()
@@ -3932,6 +3979,13 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        // the rules a declared closure lowers to are not fired where the closure is answered from its tree
+        if !self.vskip.is_empty() && self.vskip.get(&r.id).is_some_and(|&ci| self.vclosures[ci].active) {
+            return Ok(Front::default());
+        }
+        if front_at.is_none() && !self.vreaders.is_empty() {
+            self.vreader_fired(r);
+        }
         if self.lattices.is_empty() {
             if let Some(&(ci, is_base)) = self.closure_of.get(&r.id) {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
@@ -3982,6 +4036,29 @@ impl Eval {
     /// over the edges as they stand. Rows already there are not news.
     fn fire_closure(&mut self, ci: usize) -> Result<Front, Halt> {
         let c = self.closures[ci].clone();
+        if !c.by_book {
+            return self.fire_closure_book(c);
+        }
+        // a book a variable ranges over: each book the edges have, in the order of its name
+        let mut books: Vec<Sym> = Vec::new();
+        self.store.each_row(c.edge, |p, _| {
+            if !books.contains(&p) {
+                books.push(p);
+            }
+        });
+        books.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
+        let mut out = Front::default();
+        for b in books {
+            if is_kernel_ledger(&self.h, b) {
+                continue;
+            }
+            let f = self.fire_closure_book(Closure { persp: b, edge_persp: b, ..c.clone() })?;
+            merge_front(&mut out, f);
+        }
+        Ok(out)
+    }
+
+    fn fire_closure_book(&mut self, c: Closure) -> Result<Front, Halt> {
         let mut index: HashMap<Term, u32> = HashMap::new();
         let mut nodes: Vec<Term> = Vec::new();
         let mut edges: Vec<(u32, u32, FactId)> = Vec::new();
@@ -10035,6 +10112,9 @@ impl Eval {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(Vec::new());
         }
+        if let Some(ci) = self.vclosure_for(l.rel) {
+            return Ok(self.vmatch(ci, l, s));
+        }
         let persp_t = walk(&self.h, l.persp, s);
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
@@ -10285,6 +10365,9 @@ impl Eval {
     fn match_exists(&mut self, l: &Lit, s: &Subst) -> Result<bool, Halt> {
         if l.temporal == Temporal::Init && self.store.tick != 0 {
             return Ok(true);
+        }
+        if let Some(ci) = self.vclosure_for(l.rel) {
+            return Ok(!self.vexists(ci, l, s));
         }
         let persp_t = walk(&self.h, l.persp, s);
         let persp = persp_t.as_atom();

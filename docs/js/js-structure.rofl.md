@@ -36,14 +36,13 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="ast_name"></a>A node is named V if [the attribute](#ast_attr) `name` of it is V.
 - <a id="ast_value"></a>A node is written as V if [the attribute](#ast_attr) `value` of it is V.
 
-> nodes by depth rows, a few thousand on the fixtures. A 100k-node tree at
-> depth 30 is about 3M rows, the point where an ancestor query should walk
-> `ast_in` rather than materialise the closure.
+> THE EDGES ARE A FOREST (one parent for each node, no cycle), and `ast_within`
+> is their transitive closure, strict: the declaration promises the one and
+> defines the other (docs/data-structures.md). The TypeScript engine derives the
+> closure by the two rules it stands for; the Rust engine answers it from the
+> tree and stores none of its rows where no witness is kept.
 
-<a id="ast_within"></a>A node C is within a node P either:
-
-1. if C [is under](#ast_in) P;
-2. if a node X [is within](#ast_within) P and C [is under](#ast_in) X.
+Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_within` holds of each node and every ancestor of it.
 
 `ast_name` has one V for each N.
 

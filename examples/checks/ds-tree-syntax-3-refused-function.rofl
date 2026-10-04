@@ -1,0 +1,3 @@
+-- expect-refusal: only a tree has a closure
+-- a function has no closure
+function dts_f(K, to V) closure dts_g.

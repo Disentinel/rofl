@@ -34,7 +34,9 @@ Reads:
 - from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
 - from js-env, in the audit: [reaches](js-env.rofl.md#reaches)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_within](js-structure.rofl.md#ast_within)
+- from js-structure: [ast_name](js-structure.rofl.md#ast_name)
+- from outside these files:
+  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from outside these files, in the main:
   - <a id="lib_static_shape"></a>`lib_static_shape`
 - from the scanner:
@@ -122,7 +124,7 @@ Declared as facts:
 
 Name is declared in File if all of:
   - [`pattern_root`](#pattern_root)(I, File);
-  - a node X [is within](js-structure.rofl.md#ast_within) a node I;
+  - a node X [is within](#ast_within) a node I;
   - X [is named](js-structure.rofl.md#ast_name) Name.
 
 > a parameter is a position, not a declaration kind
@@ -136,7 +138,7 @@ Name is declared in File either:
 2. if all of:
    - a [function](js-callgraph.rofl.md#fn_node) F [is defined in](js-callgraph.rofl.md#fn_file) File;
    - a node P [is among the](#ast_child) `params` of F;
-   - a node X [is within](js-structure.rofl.md#ast_within) P;
+   - a node X [is within](#ast_within) P;
    - X [is named](js-structure.rofl.md#ast_name) Name.
 
 ## 3. A GLOBAL AS A FACT, not a spelling — the relation the effect layer joins
