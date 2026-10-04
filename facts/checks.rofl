@@ -314,6 +314,11 @@ check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
 check_opt("demand_neg_retract", together, 1).
 check_opt("demand_neg_retract", retract, "dt_z(1)").
 
+-- a shrug read through a relation answered on demand waits for the shrugs
+-- (f_a_shrug_read_through_demand_fired_before_the_shrugs)
+check_world("demand_shrug_read").
+check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").

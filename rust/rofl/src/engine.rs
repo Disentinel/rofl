@@ -2457,10 +2457,27 @@ impl Eval {
         self.shrug_snap = None;
         self.cycle_groups.clear();
         self.cycle_of.clear();
+        // a relation answered on demand whose rules read shrug, directly or
+        // through another, unfolds that read into each rule that reads it
+        let mut via: HashSet<Sym> = HashSet::from([sh]);
+        if brk!("shrug_demand_unread" => false; true) {
+            loop {
+                let more: Vec<Sym> = self
+                    .demand_rels
+                    .iter()
+                    .filter(|(rel, rs)| !via.contains(rel) && rs.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel))))
+                    .map(|(rel, _)| *rel)
+                    .collect();
+                if more.is_empty() {
+                    break;
+                }
+                via.extend(more);
+            }
+        }
         self.shrug_readers = self
             .rules
             .iter()
-            .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.rel == sh))
+            .filter(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| via.contains(&l.rel)))
             .map(|r| r.id)
             .collect();
         let mut cone: HashSet<Sym> = HashSet::new();

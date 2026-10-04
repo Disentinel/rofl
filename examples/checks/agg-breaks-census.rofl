@@ -970,6 +970,10 @@ brk("ts_demand_strict_mono"). brk_kind("ts_demand_strict_mono", ts).
 brk_expects("ts_demand_strict_mono", "demand_neg_round").
 brk("demand_strict_refire"). brk_kind("demand_strict_refire", switch).
 brk_expects("demand_strict_refire", "demand_neg_retract").
+brk("shrug_demand_unread"). brk_kind("shrug_demand_unread", switch).
+brk_expects("shrug_demand_unread", "demand_shrug_read").
+brk("ts_shrug_demand_unread"). brk_kind("ts_shrug_demand_unread", ts).
+brk_expects("ts_shrug_demand_unread", "demand_shrug_read").
 brk("wfs_admits_subsumption"). brk_kind("wfs_admits_subsumption", switch).
 brk_expects("wfs_admits_subsumption", "agg_sub_wfs").
 brk_expects("wfs_admits_subsumption", "agg_sub_ts").
@@ -1975,6 +1979,7 @@ switch_site("set_pattern_admitted", "rust/rofl/src/engine.rs").
 switch_site("set_pattern_admitted", "rust/rofl/src/program.rs").
 switch_site("shrug_conflict_parties_off", "rust/rofl/src/engine.rs").
 switch_site("shrug_cycle_merged", "rust/rofl/src/engine.rs").
+switch_site("shrug_demand_unread", "rust/rofl/src/engine.rs").
 switch_site("shrug_edges_off", "rust/rofl/src/engine.rs").
 switch_site("shrug_given_base_only", "rust/rofl/src/engine.rs").
 switch_site("shrug_given_off", "rust/rofl/src/engine.rs").

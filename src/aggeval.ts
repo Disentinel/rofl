@@ -1947,7 +1947,15 @@ export class AggEval {
     this.shrugSnap = null;
     this.cycleGroups = [];
     this.cycleOf.clear();
-    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsOf).some((l) => l.rel === sh)).map((r) => r.id));
+    // a relation answered on demand whose rules read shrug, directly or through another, unfolds that read into each rule that reads it
+    const via = new Set([sh]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [rel, rs] of this.demandRels) {
+        if (!via.has(rel) && rs.some((r) => r.clause.body.flatMap(litsOf).some((l) => via.has(l.rel)))) { via.add(rel); grew = true; }
+      }
+    }
+    this.shrugReaders = new Set(this.rules.filter((r) => r.clause.body.flatMap(litsOf).some((l) => via.has(l.rel))).map((r) => r.id));
     const cone = new Set<string>();
     for (const r of this.rules) {
       if (this.shrugReaders.has(r.id)) cone.add(r.clause.head.rel);

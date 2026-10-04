@@ -3429,6 +3429,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "shrug_demand_unread",
+  "what": "a rule that reads shrug only through a relation answered on demand is not counted a shrug reader and fires before the shrugs",
+  "expect": {
+   "demand_shrug_read": "ds_missed"
+  }
+ },
+ {
+  "id": "ts_shrug_demand_unread",
+  "what": "the TypeScript engine does not count a rule that reads shrug through a relation answered on demand a shrug reader",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!via.has(rel) && rs.some(",
+    "if (false && rs.some("
+   ]
+  ],
+  "expect": {
+   "demand_shrug_read": "ds_missed"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {
