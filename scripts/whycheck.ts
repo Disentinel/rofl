@@ -159,6 +159,28 @@ function questions(r: Rofl, budget: number | undefined, first: boolean, excise =
   return qs;
 }
 
+/** The questions of a Rust-only world, taken from the Rust state alone (the reference is not run on it): a few
+ *  derived facts spread over the store, each asked why and whynot, the same with its last argument changed, one base
+ *  fact excised. There is no oracle, so the answers are compared rofl-serve against rofl-load only. */
+function rustQuestions(w: World): Q[] {
+  const p = spawnSync(LOAD, [...(w.budget ? ['--budget', String(w.budget)] : []), ...(w.ticks ? ['--ticks', String(w.ticks)] : []), BOOT, ...w.files],
+    { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+  const keys = (kind: string): string[] => p.stdout.split('\n').flatMap((l) => {
+    const m = /^([a-z]\w*)(?:\[main\])?(\(.*\)) (?:timeless|tick) (\w+) support=\d+$/.exec(l);
+    return m && m[3] === kind && askable(m[1] + m[2]) ? [m[1] + m[2]] : [];
+  }).sort();
+  const derived = keys('drv'), base = keys('base');
+  const spread = Array.from({ length: Math.min(4, derived.length) }, (_, i) => derived[Math.floor((i * derived.length) / Math.min(4, derived.length))]);
+  const qs: Q[] = [];
+  for (const k of spread) {
+    qs.push({ op: 'why', query: k }, { op: 'whynot', query: k });
+    const off = k.includes('"') ? k : k.replace(/([(,])[^,()]+\)$/, '$1zz_nowhere)');
+    if (off !== k) qs.push({ op: 'why', query: off }, { op: 'whynot', query: off });
+  }
+  if (base.length) qs.push({ op: 'excise', query: base[Math.floor(base.length / 2)] });
+  return qs;
+}
+
 const exciseText = (removed: string[], added: string[]): string => {
   const out = [...removed.map((k) => `- ${k}`), ...added.map((k) => `+ ${k}`)];
   return out.length ? out.join('\n') : '(no change)';
@@ -290,6 +312,21 @@ async function check(ws: World[], firstName: string): Promise<Report> {
   try {
     for (const w0 of ws) {
       if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck: ${w0.name}\n`);
+      if (w0.oneEngine === 'rust') {
+        // the reference is not run on a Rust-only world; rofl-serve and rofl-load must still agree
+        const w = placed(w0);
+        const kept = { ...w, files: w.files.filter((f) => !expectedRefusal(f) && unreadOf(f).length === 0) };
+        const qs = rustQuestions(kept);
+        const got = servable(kept) ? await served(port, kept, qs) : null;
+        if (!got) rep.loadOnly.push(kept.name);
+        const { texts, problems } = cli(kept, qs, qs.map(() => ({ ok: true, text: '' })));
+        for (const pr of problems) rep.bad.push(`${kept.name} load: ${pr}`);
+        qs.forEach((q, i) => {
+          if (got && texts[i] !== undefined && texts[i] !== got[i].text) rep.bad.push(`${kept.name} serve vs load ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(got[i].text, texts[i]!)}`);
+        });
+        rep.asked += qs.length;
+        continue;
+      }
       let built;
       try { built = reference(w0); } catch (e) { rep.bad.push(`${w0.name}: ${(e as Error).message}`); continue; }
       const { r, w } = built;
@@ -345,8 +382,8 @@ const argv = process.argv.slice(2);
 const shard = argv.indexOf('--shard');
 const only = argv.filter((a, i) => !a.startsWith('--') && (shard < 0 || i !== shard + 1));
 const all = [...worlds(), ...OWN.map((o) => o.w)].filter((w) => !only.length || only.includes(w.name));
-const asked = all.filter((w) => !w.oneEngine);
-const firstName = asked[0]?.name ?? '';
+const asked = all.filter((w) => w.oneEngine !== 'ts');
+const firstName = asked.find((w) => w.oneEngine !== 'rust')?.name ?? '';
 
 if (shard >= 0) {
   const [i, n] = argv[shard + 1].split('/').map(Number);
@@ -367,12 +404,14 @@ const reps = await Promise.all(Array.from({ length: jobs }, (_, i) => new Promis
   });
   c.on('error', no);
 })));
+const rustOnly = asked.filter((w) => w.oneEngine === 'rust').map((w) => w.name);
 const bad = reps.flatMap((r) => r.bad);
 const n = reps.reduce((s, r) => s + r.asked, 0);
 const loadOnly = reps.flatMap((r) => r.loadOnly).sort();
 for (const b of bad) console.log(`FAIL ${b}`);
-console.log(`\n${n} questions over ${asked.length} worlds, each to rofl-serve and rofl-load, ${bad.length} differ from src/api.ts`
+console.log(`\n${n} questions over ${asked.length} worlds, each to rofl-serve and rofl-load, ${bad.length} differ from src/api.ts (Rust-only worlds: from each other)`
   + `, ${((Date.now() - t0) / 1000).toFixed(1)} s over ${jobs} processes`
   + `\nasked of rofl-load alone (a world below, or explain requests): ${loadOnly.length}`
-  + `\nnot asked (one engine): ${all.filter((w) => w.oneEngine).map((w) => w.name).join(' ') || 'none'}`);
+  + `\nasked of Rust only, serve against load (no reference run): ${rustOnly.length} ${rustOnly.join(' ') || 'none'}`
+  + `\nnot asked (one engine, TypeScript): ${all.filter((w) => w.oneEngine === 'ts').map((w) => w.name).join(' ') || 'none'}`);
 process.exit(bad.length === 0 ? 0 : 1);
