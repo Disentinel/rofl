@@ -579,7 +579,8 @@ export interface Fold {
   ceiling: number;
   rounds: number;
   converged: boolean;
-  disciplineHeld: boolean;
+  exhausted: boolean;
+  disciplineHeld: boolean | null;
   cyclic: number;
   chaos: Map<string, Chaos>;      // ordinance id -> its tainted annotation
   saturated: string[];            // the paragraphs that have reached the ceiling
@@ -597,18 +598,20 @@ export function foldChaos(r: Rofl, ceiling: number, opts: { maxRounds?: number }
   const saturated = [...chaos].filter(([, v]) => v === ceiling).map(([o]) => o).sort();
   return {
     ceiling, rounds: res.rounds, converged: res.converged,
-    disciplineHeld: res.disciplineHeld, cyclic: res.cyclic, chaos, saturated,
+    exhausted: res.exhausted, disciplineHeld: res.disciplineHeld, cyclic: res.cyclic, chaos, saturated,
   };
 }
 
 /** The same fold with the ceiling taken away — the control that says the
  *  ceiling is doing the work and the fixture is not simply easy. */
 export function foldUncapped(r: Rofl, ceiling: number, maxRounds: number): {
-  converged: boolean; disciplineHeld: boolean; rounds: number; top: number;
+  converged: boolean; exhausted: boolean; disciplineHeld: boolean | null; rounds: number; top: number;
 } {
   const capped = chaosSemiring(ceiling);
+  // the uncapped carrier has no finite height: the declaration goes with the clamp
   const res = evaluateSemiring(r.store, {
     ...capped,
+    height: undefined,
     times: (a: Chaos, b: Chaos) =>
       (a === REJECTED || b === REJECTED ? REJECTED : (a as number) + (b as number)),
   }, { weight: chaosWeight, maxRounds });
@@ -617,7 +620,8 @@ export function foldUncapped(r: Rofl, ceiling: number, maxRounds: number): {
     if (k.startsWith('tainted[') && typeof v === 'number' && v > top) top = v;
   }
   return {
-    converged: res.converged, disciplineHeld: res.disciplineHeld, rounds: res.rounds, top,
+    converged: res.converged, exhausted: res.exhausted, disciplineHeld: res.disciplineHeld,
+    rounds: res.rounds, top,
   };
 }
 
@@ -887,7 +891,8 @@ function main(): void {
     + 'data, times no longer clamped — and the citation ring is a pump:', '  ')) say(line);
   say();
   say(`    converged        ${loose.converged}`);
-  say(`    discipline held  ${loose.disciplineHeld}`);
+  say(`    exhausted        ${loose.exhausted}   (the budget ran out; the declaration is not refuted)`);
+  say(`    discipline held  ${loose.disciplineHeld ?? 'undetermined'}`);
   say(`    stopped at       ${loose.rounds} rounds (the caller's cap, not a fixpoint)`);
   say(`    highest value    ${loose.top} at ${CAP} rounds, ${looser.top} at ${CAP * 2}`);
   say(`                     — measured twice, so "still climbing" is not a guess`);
@@ -897,8 +902,8 @@ function main(): void {
     + 'pull the same way, so convergence is bought by finite height alone: the '
     + 'vocabulary is finite, so the distinguishable contradictions are finite, '
     + 'so the carrier is. That is the mechanism, it is the only one available '
-    + 'to this instance, and the fold reports a false declaration rather than '
-    + 'hanging when it is removed.', '  ')) say(line);
+    + 'to this instance, and with it removed the fold reports the round budget '
+    + 'exhausted, not the declaration false, rather than hanging.', '  ')) say(line);
   say();
 }
 

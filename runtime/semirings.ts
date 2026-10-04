@@ -440,8 +440,9 @@ export type Chaos = number | typeof REJECTED;
  *  what that argument does NOT establish — it bounds a SET of contradictions,
  *  and it bounds their SUM only if the sets combined along a derivation are
  *  disjoint, which nothing makes them. Take the ceiling out and the chain
- *  ascends forever; the fold then reports disciplineHeld:false, and
- *  test/semiring.test.ts holds it to that.
+ *  ascends forever; the fold then runs out of its round budget and
+ *  reports exhausted (the declaration is not refuted, and no height bounds it);
+ *  test/semiring-budget.test.ts holds it to that.
  *
  *  WHAT THE CEILING COSTS: ROUNDS. Every other BOUNDED instance here settles
  *  in the depth of the best derivation, because one pass of ⊕ already discards
@@ -449,9 +450,10 @@ export type Chaos = number | typeof REJECTED;
  *  it settles in a number of rounds set by the CARRIER instead of by the data
  *  — measured on the craft cycle in test/semiring.test.ts, ceiling 15 settles
  *  in 10 rounds, 63 in 34, 255 in 130, where boolean, tropical and viterbi all
- *  take 10 whatever happens. A caller whose ceiling approaches the fold's
- *  default round cap must raise `maxRounds` or be told disciplineHeld:false
- *  about an instance that does converge.
+ *  take 10 whatever happens. This instance therefore DECLARES `height`
+ *  (ceiling + 1), and the fold derives its cap from it (height * nodes + 1, a
+ *  proven bound for a monotone operator), so a tall ceiling converges instead of
+ *  running into the flat default of 1000 rounds.
  *
  *  CONDITIONALLY, like tropicalSemiring, but on a different condition and a
  *  graver one. Tropical needs non-negative weights to CONVERGE; this needs
@@ -472,6 +474,9 @@ export function chaosSemiring(ceiling: number): Semiring<Chaos> {
   }
   return {
     discipline: BOUNDED,
+    // REJECTED < 0 < 1 < ... < ceiling: ceiling + 1 strict steps. Declared so
+    // the fold derives its round cap from it instead of the flat default.
+    height: ceiling + 1,
     zero: REJECTED,
     one: 0,
     plus: (a, b) => (a === REJECTED ? b : b === REJECTED ? a : a > b ? a : b),
