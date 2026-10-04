@@ -92,7 +92,7 @@ export function weightOf(_key: string, w: Witness): LogProb {
  *  derivation. ONE fold serves every standard of proof below. */
 export function viterbiValues(r: Rofl): Map<string, LogProb> {
   const res = evaluateSemiring(r.store, viterbiSemiring, { weight: weightOf });
-  if (!res.disciplineHeld) throw new Error('viterbi did not converge on this store');
+  if (!res.disciplineHeld) throw new Error('viterbi did not settle on this store (budget exhausted or refuted)');
   return res.value;
 }
 

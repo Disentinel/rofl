@@ -116,7 +116,7 @@ fn evaluate_matches_the_corpus() {
 fn a_fork_is_the_same_world_and_then_its_own() {
     let mut same = 0;
     for n in &cases() {
-        let core = open(n);
+        let mut core = open(n);
         let mut a = core.fork();
         let mut b = core.fork();
         if settle(&mut a, n).is_err() || settle(&mut b, n).is_err() {
@@ -214,7 +214,7 @@ fn a_bound_ask_finds_exactly_its_fact() {
             if !s.eval.store.alive(*id) {
                 continue;
             }
-            let r = *s.eval.store.rec(*id);
+            let r = s.eval.store.rec(*id);
             let rel = s.eval.h.name(r.rel).to_string();
             let bk = s.eval.h.name(r.persp).to_string();
             if !writable(&rel) || !writable(&bk) {

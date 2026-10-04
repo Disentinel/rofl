@@ -334,7 +334,7 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
   // `evaluate` only, TypeScript completed a world Rust walled on, and that
   // looked exactly like an engine divergence until the instrument was checked.
   const opt = w.budget ?? w.cap ? { budget: w.budget ?? w.cap } : undefined;
-  r.load(BOOT, opt);
+  r.load(BOOT, w.strata ? { ...opt, defer: true } : opt); // a table a later file derives is not there yet when boot alone is evaluated
   // A REFUSAL IS AN ANSWER AND IT BELONGS IN THE GOLDEN. Until now a file that
   // would not load was dropped and the world carried on — which hid `ring1`
   // for as long as the corpus existed, and left "this program must be refused"
@@ -350,9 +350,11 @@ export function answerTS(w0: World, Engine: typeof Rofl = Rofl): Answer {
   const loaded: string[] = [], problems: string[] = [];
   for (const f of w.files) {
     const unread = unreadOf(f);
-    const res = unread.length ? { ok: false, diagnostics: unread } : r.load(fs.readFileSync(f, 'utf8'), opt);
     // a fixture written to be refused says what for, in a world both answer
     const want = w.oneEngine ? null : expectedRefusal(f);
+    // a load evaluates; under the stock evaluator only a fixture is judged alone, and any other file waits for its table
+    const wait = w.strata && !want && !unread.length;
+    const res = unread.length ? { ok: false, diagnostics: unread } : r.load(fs.readFileSync(f, 'utf8'), wait ? { ...opt, defer: true } : opt);
     if (want && res.ok) problems.push(`${path.basename(f)} was to be refused (${want}) and loaded`);
     if (want && !res.ok && !res.diagnostics.join('\n').includes(want)) problems.push(`${path.basename(f)} refused, but not for '${want}': ${res.diagnostics[0] ?? ''}`);
     if (res.ok) { loaded.push(f); continue; }
@@ -507,9 +509,10 @@ export function answerRust(w0: World): Answer | null {
   const boot = path.join(ROOT, 'boot.rofl');
   const diags: string[] = [], keep: string[] = [], problems: string[] = [];
   for (const f of w.files) {
-    const unread = unreadOf(f);
+    const unread = unreadOf(f), want = expectedRefusal(f), base = path.basename(f);
+    // only a fixture is offered alone, as answerRustOnly does: a file that needs its stratum table beside it is refused alone, rightly
+    if (!want && !unread.length && w.strata) { keep.push(f); continue; }
     const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, [boot, ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
-    const want = expectedRefusal(f), base = path.basename(f);
     if (p.status === 0) {
       keep.push(f);
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
@@ -876,11 +879,15 @@ export function checkWorld(w: World, g: { hash: string; census: Map<string, numb
     for (const a of rs.alarms) bad.push(`ALARM ${a}`);
     return bad.length === 0 ? null : `${w.name.padEnd(28)} ${bad.join('  |  ')}`;
   }
+  // under sealed(provenance) the Rust engine records no witness, so its witness count is not compared
+  const sealsProvenance = w.files.some((f) => f.endsWith('.rofl') && fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8').includes('sealed(provenance)'));
   for (const [who, a] of [['ts', ts], ['rust', rs]] as [string, Answer | null][]) {
     if (!a || a.hash === g.hash) continue;
+    const skip = who === 'rust' && sealsProvenance ? '@wit' : '';
     const moved = [...new Set([...g.census.keys(), ...a.census.keys()])]
-      .filter((k) => (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
+      .filter((k) => k !== skip && (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
       .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);
+    if (skip && moved.length === 0) continue;
     bad.push(`${who}: ${moved.length ? moved.slice(0, 3).join(', ') : 'same census, different state'}`);
   }
   // AN ALARM IS RED WHATEVER THE GOLDEN SAYS. Blessing records a number;

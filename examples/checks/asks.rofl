@@ -1,0 +1,15 @@
+-- examples/checks/asks.rofl — THE RELATION CONE AS DATA. `asks(Rel)` names
+-- what is asked, and the kernel activates only the rules whose heads reach an
+-- asked relation, backwards through every premise, positive, negated or inside
+-- an aggregate; no asks means everything (f_asks_is_the_relation_cone_as_data_and_the_flow_component_is_suspected_of_being_modelled_to_flood).
+-- reach is asked, so reach and edge are in the cone; far, color and twins are
+-- not and conclude nothing, in both engines. The rules outside the cone are
+-- still in the store as data: their reflection is whole.
+asks(reach).
+edb(edge).
+edge(a, b). edge(b, c). edge(c, a). edge(c, d).
+reach(X, Y) :- edge(X, Y).
+reach(X, Z) :- reach(X, Y), edge(Y, Z).
+far(X, Y) :- reach(X, Y), not edge(X, Y).
+color(X, red) :- edge(X, _).
+twins(X, Y) :- edge(X, Y), edge(Y, X).

@@ -36,6 +36,19 @@ a hash and a per-relation census against `facts/goldens.rofl`. A red names the
 relation that moved and by how much. Blessing is a decision and shows up as a
 diff.
 
+## Rust is the engine
+
+**Every performance measurement is taken on the Rust engine, release build**
+(`rust/target/release/rofl-load`, `rofl-eval`, `rofl-serve`). The TypeScript
+engine is not a performance engine and its timings decide nothing. New engine
+work (speed, scale, incremental maintenance, compression) is built in Rust
+first; the TS engine stays the parity reference that `npm test` and whycheck
+compare against, **up to a bounded scale** — some Rust capabilities (keeping no
+witness under `sealed(witness)`, the closure kernel, incremental deltas) are not
+mirrored in TS and are not to be attempted there: a world that exercises one is
+checked on Rust only, and TS is not asked to run worlds large enough to be slow
+(f_rust_is_the_engine_ts_is_the_reference).
+
 ## Testing has a hard limit
 
 **No single run longer than two minutes. No more than three turns in a row on

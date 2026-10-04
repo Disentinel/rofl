@@ -443,6 +443,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "unranked_negation_runs",
+  "what": "the stock evaluator runs a negation of what another unranked rule derives in the one final pass",
+  "expect": {
+   "strata_unranked_negation": "was to be refused"
+  }
+ },
+ {
+  "id": "ts_unranked_negation_runs",
+  "what": "the TypeScript stock evaluator runs a negation of what another unranked rule derives in the one final pass",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.checkUnrankedNegation(table, stratRules, mono);",
+    ""
+   ]
+  ],
+  "expect": {
+   "strata_unranked_negation": "was to be refused"
+  }
+ },
+ {
   "id": "lattice_op_min",
   "what": "the door writes every declaration as a min",
   "expect": {
