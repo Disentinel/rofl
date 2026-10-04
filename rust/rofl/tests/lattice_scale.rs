@@ -474,9 +474,10 @@ fn a_hole_reaches_what_reads_it_and_nothing_else() {
     let reached = reach.iter().filter(|r| **r).count();
     assert_eq!(holes.len(), reached, "one hole per node reachable from the hole");
     assert_eq!(holes.iter().filter(|r| r[1] == "arith_type_error").count(), 1);
-    let (s2, _) = run(&rev, 200_000_000);
-    let facts = |s: &Session| s.eval.store.canonical_state(&s.eval.h).lines().filter(|l| l.starts_with("sd[") || l.starts_with("hole[")).map(String::from).collect::<Vec<_>>();
-    assert_eq!(facts(&s), facts(&s2), "the order the edges are written in decided something");
+    let (mut s2, _) = run(&rev, 200_000_000);
+    let facts = |s: &mut Session| s.eval.canonical_state().lines().filter(|l| l.starts_with("sd[") || l.starts_with("hole[")).map(String::from).collect::<Vec<_>>();
+    let (a, b) = (facts(&mut s), facts(&mut s2));
+    assert_eq!(a, b, "the order the edges are written in decided something");
     eprintln!("hole reach: {reached} of {n} nodes unknown in {took:?}");
     assert!(took.as_secs() < 20, "{took:?}");
 }
@@ -502,7 +503,7 @@ fn a_wall_holes_an_improving_cycle_and_what_it_reaches() {
         let ev = s.evaluate().unwrap();
         let took = t.elapsed();
         assert!(ev.partial, "{reason}: the wall was not reached");
-        let st = s.eval.store.canonical_state(&s.eval.h);
+        let st = s.eval.canonical_state();
         let has = |p: &str| st.lines().any(|l| l.starts_with(p));
         assert!(has(&format!("hole[$kernel]($lattice(d),{reason})")), "{reason}: no relation hole");
         for k in ["x,$cons(x", "x,$cons(y", "y,$cons(x", "y,$cons(y"] {
@@ -553,7 +554,7 @@ fn a_wall_names_no_cell_that_improved_only_through_others() {
     s.load(&src, None).unwrap();
     let ev = s.evaluate().unwrap();
     assert!(ev.partial, "the wall was not reached");
-    let st = s.eval.store.canonical_state(&s.eval.h);
+    let st = s.eval.canonical_state();
     let named: Vec<&str> = st.lines().filter(|l| l.contains("improving_cycle")).collect();
     assert_eq!(named.len(), 4, "{named:?}");
     assert!(named.iter().all(|l| l.contains("$cons(x,") || l.contains("$cons(y,")), "{named:?}");
@@ -576,9 +577,9 @@ fn a_wall_before_a_cycle_came_round_names_none_of_it() {
     let src = "edb(e).\ne(x, y, 1).\ne(y, x, -2).\n\
                lattice d(A, C, min D).\nd(A, C, D) :- e(A, C, D).\nd(A, C, D) :- d(A, B, D1), e(B, C, W), D is D1 + W.\n";
     // 14, not 4, since boot.rofl copies its ten stratification ranks (2026-10-04): the window moved by those ten steps
-    let (s, ev) = run(src, 14);
+    let (mut s, ev) = run(src, 14);
     assert!(ev.partial, "the wall was not reached");
-    let st = s.eval.store.canonical_state(&s.eval.h);
+    let st = s.eval.canonical_state();
     let has = |p: &str| st.lines().any(|l| l.starts_with(p));
     assert!(has("hole[$kernel]($lattice(d),budget_exhausted)"));
     assert!(has("d[main](x,y,1)"), "{st}");

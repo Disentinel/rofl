@@ -18,6 +18,7 @@ fn report(file: &str, min_rows: usize) -> rofl::structures::Report {
     let mut s = Session::fresh(200_000_000);
     s.load(&src, None).unwrap();
     s.evaluate().unwrap_or_else(|e| panic!("{}", rofl::describe(&e)));
+    s.eval.settle_provenance();
     propose(&s.eval.store, &s.eval.h, &Options { min_rows })
 }
 

@@ -1,0 +1,11 @@
+-- examples/checks/prov-lazy-reader.rofl — A RULE READS derived_by OF ONE RELATION.
+-- pr_a's rows are written as pr_a fires, for the rule that names them; pr_b, which no rule
+-- reads, is noted and written when the state asks. The reader sees exactly the rows of pr_a,
+-- and the canonical state holds the rows of both, as an engine that writes every row does.
+edb(pr_src).
+pr_src(1). pr_src(2). pr_src(3).
+pr_a(X) :- pr_src(X).
+pr_a(X) :- pr_src(X), X > 1.
+pr_b(X) :- pr_src(X), X < 3.
+pr_fired(R) :- derived_by[$kernel]($fact(pr_a, main, _), R, _).
+pr_fired_for(X, R) :- pr_src(X), derived_by[$kernel]($fact(pr_a, main, $cons(X, $nil)), R, _).

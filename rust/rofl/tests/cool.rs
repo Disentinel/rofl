@@ -57,7 +57,7 @@ fn world() -> Session {
 #[test]
 fn a_cooled_volume_reheats_to_the_same_world() {
     let mut s = world();
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
     let hot = s.eval.store.fact_count();
 
     let out = tmp("cool_a.rofl");
@@ -84,7 +84,7 @@ fn a_cooled_volume_reheats_to_the_same_world() {
         .unwrap_or_else(|d| panic!("reheat refused: {}", d.join("; ")));
     s.evaluate().expect("re-evaluate after reheating");
     assert_eq!(
-        s.eval.store.canonical_state(&s.eval.h),
+        s.eval.canonical_state(),
         before,
         "a volume did not come back the way it left"
     );
@@ -191,12 +191,12 @@ fn a_volume_this_engine_did_not_write_is_refused() {
 #[test]
 fn an_unknown_volume_cools_nothing() {
     let mut s = world();
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
     let out = tmp("cool_c.rofl");
     let c = s.cool("nzzzzzzzz_", out.to_str().unwrap()).expect("cool");
     assert_eq!(c.facts, 0, "an unknown prefix cooled {} facts", c.facts);
     s.evaluate().expect("re-evaluate");
-    assert_eq!(s.eval.store.canonical_state(&s.eval.h), before);
+    assert_eq!(s.eval.canonical_state(), before);
     std::fs::remove_file(&out).ok();
 }
 
@@ -215,7 +215,7 @@ fn an_unknown_volume_cools_nothing() {
 #[test]
 fn the_trail_cools_and_comes_back_whole() {
     let mut s = world();
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
     let hot = s.eval.store.fact_count();
 
     let out = tmp("cool_trail.rofl");
@@ -232,7 +232,7 @@ fn the_trail_cools_and_comes_back_whole() {
     let back = s.reheat_trail(out.to_str().unwrap()).expect("reheat the trail");
     assert_eq!(back, c.facts, "reheating restored {back} of {} rows", c.facts);
     s.evaluate().expect("re-evaluate after reheating");
-    assert_eq!(s.eval.store.canonical_state(&s.eval.h), before,
+    assert_eq!(s.eval.canonical_state(), before,
         "the trail did not come back the way it left");
     std::fs::remove_file(&out).ok();
 }

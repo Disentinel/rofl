@@ -3033,3 +3033,27 @@ check_opt("cost_shapes_model", one_engine, rust).
 check_world("ast_within_readers").
 check_file("ast_within_readers", "facts/ast-within-readers.rofl").
 check_file("ast_within_readers", "examples/checks/ast-within-readers-check.rofl").
+
+-- PROVENANCE ON DEMAND (w_cmp_provenance_on_demand): the Rust engine notes a firing and writes its
+-- derived_by row when something asks, where no rule reads derived_by of the relation. The state, why,
+-- excise, retract and the frozen rows of a past tick are those of an engine that writes every row, and
+-- the one that reads derived_by of a single relation sees its rows while the others stay unwritten.
+check_world("prov_lazy").
+check_file("prov_lazy", "examples/checks/prov-lazy.rofl").
+check_opt("prov_lazy", together, 1).
+check_opt("prov_lazy", ticks, 2).
+check_opt("prov_lazy", explain, 1).
+check_opt("prov_lazy", retain, 0).
+
+check_world("prov_lazy_retract").
+check_file("prov_lazy_retract", "examples/checks/prov-lazy.rofl").
+check_opt("prov_lazy_retract", together, 1).
+check_opt("prov_lazy_retract", explain, 1).
+check_opt("prov_lazy_retract", retract, "pl_edge(x, d)").
+check_opt("prov_lazy_retract", retract, "pl_mark(d)").
+
+check_world("prov_lazy_reader").
+check_file("prov_lazy_reader", "examples/checks/prov-lazy-reader.rofl").
+check_opt("prov_lazy_reader", together, 1).
+check_opt("prov_lazy_reader", explain, 1).
+check_opt("prov_lazy_reader", retract, "pr_src(2)").

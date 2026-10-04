@@ -134,7 +134,7 @@ fn a_program_loaded_in_rust_is_the_world_the_kernel_builds() {
         };
         s.evaluate().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
         let want = read(&rofl::corpus::dir().join(format!("{n}.expected.txt")));
-        let got = s.eval.store.canonical_state(&s.eval.h);
+        let got = s.eval.canonical_state();
         assert_eq!(got.trim_end(), want.trim_end(), "{n}: loaded in Rust differs from the kernel");
         checked += 1;
     }
@@ -155,7 +155,7 @@ fn a_loaded_program_ticks_the_way_the_kernel_ticks() {
         s.eval.ensure().unwrap_or_else(|e| panic!("{n}: {}", rofl::describe(&e)));
         let want = read(&rofl::corpus::dir().join(format!("{n}.expected.txt")));
         assert_eq!(
-            s.eval.store.canonical_state(&s.eval.h).trim_end(),
+            s.eval.canonical_state().trim_end(),
             want.trim_end(),
             "{n}: ticked after a Rust load differs from the kernel"
         );
@@ -280,7 +280,7 @@ fn a_refused_load_is_atomic_and_complete() {
     let mut s = Session::fresh(BUDGET);
     s.load(&boot, None).expect("boot");
     s.evaluate().expect("evaluate");
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
 
     // The good clause is FIRST, so a load that wrote as it went would have
     // written it before meeting the first refusal.
@@ -294,7 +294,7 @@ fn a_refused_load_is_atomic_and_complete() {
 
     s.evaluate().expect("re-evaluate");
     assert_eq!(
-        s.eval.store.canonical_state(&s.eval.h),
+        s.eval.canonical_state(),
         before,
         "a refused load left something behind"
     );

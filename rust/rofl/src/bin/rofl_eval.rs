@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--delta-first] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--eager-provenance] [--unsettled] [--budget N] [--space N] [--delta-first] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -74,6 +74,11 @@ struct Args {
     derivations: bool,
     /// No `derived_by` rows and no witnesses: the facts alone.
     no_provenance: bool,
+    /// Write every `derived_by` row as its firing happens, as before provenance was on demand.
+    eager_provenance: bool,
+    /// Print the state as the world holds it, the `derived_by` rows nothing asked for not yet
+    /// written: a measurement of the evaluation, NOT the canonical state.
+    unsettled: bool,
     /// `--budget` or `--space` given: firings in written order, unless
     /// `--delta-first` (`Eval::walls_set`).
     walls: bool,
@@ -92,6 +97,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         want_bytes: false,
         derivations: false,
         no_provenance: false,
+        eager_provenance: false,
+        unsettled: false,
         walls: false,
         delta_first: false,
         propose: false,
@@ -131,6 +138,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
             "--no-provenance" => a.no_provenance = true,
+            "--eager-provenance" => a.eager_provenance = true,
+            "--unsettled" => a.unsettled = true,
             "--delta-first" => a.delta_first = true,
             "--propose-structures" => a.propose = true,
             "--structures-min-rows" => {
@@ -163,6 +172,8 @@ fn main() {
         want_bytes,
         derivations,
         no_provenance,
+        eager_provenance,
+        unsettled,
         walls,
         delta_first,
         propose,
@@ -194,12 +205,15 @@ fn main() {
     // with the default; the field is public and this is the one caller that has
     // a reason to move it, so the library signature stays as it is.
     l.eval.space = space;
+    if eager_provenance {
+        l.eval.eager_prov = true;
+        l.eval.lazy_prov = false;
+    }
     (l.eval.walls_set, l.eval.delta_first_under_walls) = (walls, delta_first);
     // the harness's spelling of `sealed(provenance)`: no derived_by, no
     // witnesses, and a step is a new fact rather than a firing
     if no_provenance {
-        l.eval.no_provenance = true;
-        l.eval.no_witness = true;
+        l.eval.seal_provenance();
         eprintln!("provenance off: no derived_by, no witnesses, a step is a new fact");
     }
     let t_load = t0.elapsed();
@@ -230,13 +244,18 @@ fn main() {
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
     if propose {
+        l.eval.settle_provenance();
         print!("{}", rofl::structures::propose(&l.eval.store, &l.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
         return;
     }
-    let cs = if derivations {
+    let cs = if unsettled {
+        eprintln!("unsettled: {} firings' derived_by rows not written; this is not the canonical state", l.eval.unsettled_provenance());
+        l.eval.store.canonical_state(&l.eval.h)
+    } else if derivations {
+        l.eval.settle_provenance();
         l.eval.store.derivations(&l.eval.h)
     } else {
-        l.eval.store.canonical_state(&l.eval.h)
+        l.eval.canonical_state()
     };
     print!("{cs}");
     if want_bytes {

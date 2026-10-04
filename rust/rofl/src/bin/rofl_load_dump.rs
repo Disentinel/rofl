@@ -161,12 +161,13 @@ fn main() {
         std::fs::write(&f, s.save()).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
     }
     if propose {
+        s.eval.settle_provenance();
         // read-only: the report replaces the dump, as a question does
         print!("{}", rofl::structures::propose(&s.eval.store, &s.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
         return;
     }
     if qs.is_empty() || state {
-        print!("{}", s.eval.store.canonical_state(&s.eval.h));
+        print!("{}", s.eval.canonical_state());
     }
     let mut refused = false;
     for q in &qs {

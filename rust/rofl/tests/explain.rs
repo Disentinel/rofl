@@ -220,9 +220,9 @@ fn counter() -> Session {
 fn save_round_trips_through_open() {
     let mut s = counter();
     s.tick().expect("tick");
-    let before = s.eval.store.canonical_state(&s.eval.h);
+    let before = s.eval.canonical_state();
     let mut back = Session::open(&s.save(), 1_000_000).expect("open");
-    assert_eq!(back.eval.store.canonical_state(&back.eval.h), before);
+    assert_eq!(back.eval.canonical_state(), before);
 }
 
 /// THE PAUSE, AND IT IS A TICK BOUNDARY AND NOTHING ELSE.
@@ -247,7 +247,7 @@ fn a_world_paused_at_a_boundary_resumes_as_the_same_world() {
         resumed.tick().expect("tick");
     }
 
-    assert_eq!(resumed.eval.store.canonical_state(&resumed.eval.h), straight.eval.store.canonical_state(&straight.eval.h));
+    assert_eq!(resumed.eval.canonical_state(), straight.eval.canonical_state());
 }
 
 #[test]

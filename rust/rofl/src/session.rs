@@ -531,6 +531,7 @@ impl Session {
     /// So: `write` is the program's own facts, `drop` is everything about the
     /// volume including the kernel's account of it.
     pub fn volume(&mut self, prefix: &str) -> (Vec<FactId>, Vec<FactId>) {
+        self.eval.settle_provenance();
         let mut write = Vec::new();
         let mut drop = Vec::new();
         for id in self.eval.store.all_facts() {
@@ -583,6 +584,7 @@ impl Session {
         let t0 = std::time::Instant::now();
         let mut ns_match = 0u128;
         let mut ns_render = 0u128;
+        self.eval.settle_provenance();
         let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
         let mut counts = vec![0usize; vols.len()];
         let mut drop: Vec<FactId> = Vec::new();
@@ -716,6 +718,9 @@ impl Session {
         }
         let lit = &cs[0].head;
         let (rel, persp, args) = self.lit_terms(lit)?;
+        if rel == self.eval.v.derived_by {
+            self.eval.settle_provenance();
+        }
         let persp_opt = match lit.book {
             Book::Bare => None,
             _ => Some(persp),
@@ -862,7 +867,8 @@ impl Session {
     /// ONE FIELD GOES OUT EMPTY AND IT IS NOT A ROUNDING ERROR: `evals`, the
     /// per-tick record of what the standing evaluation was allowed and what it
     /// spent. This store does not keep it; `crate::seed` says why it matters.
-    pub fn save(&self) -> String {
+    pub fn save(&mut self) -> String {
+        self.eval.settle_provenance();
         crate::seed::snapshot(&self.eval.h, &self.eval.store)
     }
 
@@ -896,6 +902,9 @@ impl Session {
     /// `Rofl.factKeys` (src/api.ts:1220), in canonical order. `rel` narrows.
     pub fn fact_keys(&mut self, rel: Option<&str>) -> Vec<String> {
         let want = rel.map(|r| self.eval.h.intern(r));
+        if want.is_none_or(|w| w == self.eval.v.derived_by) {
+            self.eval.settle_provenance();
+        }
         let mut out = Vec::new();
         for id in self.eval.store.live_ids() {
             if want.is_some_and(|w| self.eval.store.rec(id).rel != w) {
