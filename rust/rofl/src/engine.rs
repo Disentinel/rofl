@@ -11867,10 +11867,16 @@ mod tests {
         // `rule_known` firing to every world and none of them stages
         // anything. The CARRIED column did not move.
         //
+        // Re-measured 2026-10-04 after boot.rofl gained its stratification canon
+        // (ten `boot_rank` facts, carried by one `@next` rule, and a copy rule into
+        // `stratum`): +12 at tick 0 and +10 carried in all three worlds, the even
+        // shape: ten copy firings and two new rules' reflection, and the ten ranks
+        // carried across every boundary.
+        //
         // If this goes red after a change to boot.rofl, re-measure — do not
         // adjust one number until it passes. What the test exists to show is
         // the SHAPE of the change: whether it matches the change made.
-        for (name, at_tick_0, carried) in [("tm", 67, 10), ("counter", 58, 4), ("oops", 133, 49)] {
+        for (name, at_tick_0, carried) in [("tm", 79, 20), ("counter", 70, 14), ("oops", 145, 59)] {
             let mut l = crate::load(&seed(name), 1_000_000).unwrap();
             let before = l.eval.store.firing_keys().len();
             assert_eq!(before, 0, "{name}: a restored seed carries no live firing");
@@ -11916,7 +11922,7 @@ mod tests {
             .filter(|&id| l.eval.store.support_count(id) > 1)
             .count();
         assert_eq!(multi, 0, "no ticked case holds a multiply-derived fact");
-        assert_eq!(l.eval.store.firing_keys().len(), 4);
+        assert_eq!(l.eval.store.firing_keys().len(), 14, "the boundary carries boot's ten ranks besides the counter's four");
         // And one evaluation of the entered tick brings the table back, which
         // is what the corpus would gain from asking for it.
         l.eval.ensure().unwrap();

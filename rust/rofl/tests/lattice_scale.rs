@@ -575,7 +575,8 @@ fn a_wall_names_no_cell_that_improved_only_through_others() {
 fn a_wall_before_a_cycle_came_round_names_none_of_it() {
     let src = "edb(e).\ne(x, y, 1).\ne(y, x, -2).\n\
                lattice d(A, C, min D).\nd(A, C, D) :- e(A, C, D).\nd(A, C, D) :- d(A, B, D1), e(B, C, W), D is D1 + W.\n";
-    let (s, ev) = run(src, 4);
+    // 14, not 4, since boot.rofl copies its ten stratification ranks (2026-10-04): the window moved by those ten steps
+    let (s, ev) = run(src, 14);
     assert!(ev.partial, "the wall was not reached");
     let st = s.eval.store.canonical_state(&s.eval.h);
     let has = |p: &str| st.lines().any(|l| l.starts_with(p));
