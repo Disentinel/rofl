@@ -69,6 +69,11 @@ pub struct ERule {
     pub lat_close: Option<Sym>,
     pub pos_rels: Vec<Sym>,
     pub has_demand_prem: bool,
+    /// A premise answered on demand unfolds, through demand-backed relations,
+    /// into a rule that negates, aggregates or reads a lattice from outside:
+    /// the unfolding reads what that rule reads strictly, so this rule is
+    /// stratified like one that does (f_a_demand_premise_unfolds_a_negation_before_its_round).
+    pub demand_strict: bool,
     pub trigger_rels: Vec<Sym>,
     pub plan: Vec<BodyElem>,
 }
@@ -1486,8 +1491,27 @@ impl Eval {
             .filter_map(|rel| by_rel.get(&rel).map(|is| (rel, is.clone())))
             .collect();
         let demand_names: Vec<Sym> = demand.iter().map(|(r, _)| *r).collect();
+        let mut strict: HashSet<Sym> = HashSet::new();
+        loop {
+            let more: Vec<Sym> = demand
+                .iter()
+                .filter(|(rel, is)| {
+                    !strict.contains(rel)
+                        && is.iter().any(|&i| {
+                            let r = &kept[i];
+                            r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || r.pos_rels.iter().any(|x| strict.contains(x))
+                        })
+                })
+                .map(|(rel, _)| *rel)
+                .collect();
+            if more.is_empty() {
+                break;
+            }
+            strict.extend(more);
+        }
         for r in kept.iter_mut() {
             r.has_demand_prem = r.pos_rels.iter().any(|x| demand_names.contains(x));
+            r.demand_strict = brk!("demand_strict_mono" => false; r.pos_rels.iter().any(|x| strict.contains(x)));
             let mut trig: Vec<Sym> = Vec::new();
             for p in &r.pos_rels {
                 match self.answer.trigger.get(p) {
@@ -1556,6 +1580,7 @@ impl Eval {
             lat_close: Some(l),
             pos_rels: vec![c],
             has_demand_prem: false,
+            demand_strict: false,
             trigger_rels: Vec::new(),
             plan,
             clause,
@@ -1614,6 +1639,7 @@ impl Eval {
             lat_close,
             pos_rels,
             has_demand_prem: false,
+            demand_strict: false,
             trigger_rels: Vec::new(),
             plan,
         }
@@ -2193,7 +2219,7 @@ impl Eval {
         let stratified = |r: &Rc<ERule>| {
             readers.contains(&r.id) || brk!("dominance_rules_early" => false; compared.contains(&r.clause.head.rel) && r.clause.head.temporal != Temporal::Next) || brk!("mono" => r.has_neg || !r.lattice_outer.is_empty(),
                  "lattice_outer_mono" => r.has_neg || r.has_agg;
-                 r.has_neg || r.has_agg || !r.lattice_outer.is_empty())
+                 r.has_neg || r.has_agg || !r.lattice_outer.is_empty()) || r.demand_strict
         };
         let mono: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| !stratified(r)).cloned().collect();
         let strat_rules: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| stratified(r)).cloned().collect();
@@ -12020,6 +12046,7 @@ mod tests {
                 lat_close: None,
                 pos_rels: Vec::new(),
                 has_demand_prem: false,
+                demand_strict: false,
                 trigger_rels: Vec::new(),
                 plan: Vec::new(),
                 clause: c,

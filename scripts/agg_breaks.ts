@@ -3401,6 +3401,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_strict_mono",
+  "what": "a monotone rule whose demand premise unfolds into a negation fires in phase A, reading the negated relation before its round",
+  "expect": {
+   "demand_neg_round": "dn_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_strict_mono",
+  "what": "the TypeScript engine fires a monotone rule whose demand premise unfolds into a negation in phase A",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "|| r.latticeOuter.length > 0 || r.demandStrict;",
+    "|| r.latticeOuter.length > 0;"
+   ]
+  ],
+  "expect": {
+   "demand_neg_round": "dn_wrong"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {
