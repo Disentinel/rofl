@@ -120,8 +120,8 @@ the rest are v0 implementation boundaries.
 - **Without a `stratum/2` supplier, negation is checked only as far as the
   final pass is concerned on the STOCK evaluator**: no table means all its
   negation rules run in the final pass, so any that read what another derives are
-  refused (above), boot.rofl's own `leak` among them (a table-less world carries
-  `examples/checks/strata-boot-schedule.rofl`); and no `unstratified/1`
+  refused (above); boot.rofl ranks its own relations (`boot_rank`), so that
+  its `leak` is not, and a program's are the program's to rank; and no `unstratified/1`
   derivations means it rejects nothing else. This was the reason
   boot.rofl was not optional. It is no longer true of the default evaluator, and
   the change is measured rather than asserted: the same twelve-level chain and

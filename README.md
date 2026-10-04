@@ -387,7 +387,7 @@ concluded by *the kernel's own programs* — see the section under this one.
 
 | relation | written by | read by | what it says |
 |---|---|---|---|
-| `stratum(Rel, N)` | the program | the kernel | the phase a relation settles in. Computed on the primary path instead (`peelRounds`), so only the stock evaluator reads it |
+| `stratum(Rel, N)` | the program, and boot.rofl for its own relations (`boot_rank`, copied into it every tick; `examples/checks/strata-boot-canon-check.rofl` holds those ranks to what `rules/strata.rofl` derives over boot) | the kernel | the phase a relation settles in. Computed on the primary path instead (`peelRounds`), so only the stock evaluator reads it |
 | `unstratified(Rel)` | the program | the kernel | the program is unstratifiable — the stock evaluator's refusal |
 | `semantics(Sem)` | the program | the kernel | `semantics(well_founded)` asks for the alternating fixpoint instead of the phase-ordered run |
 | `unknown(Atom)` | the kernel | the program | one row per atom the alternating fixpoint leaves undefined, in the atom's own perspective. `why unknown(win(a))` is answerable |
@@ -440,7 +440,9 @@ round that settles nothing while work remains is the refusal — no table, no
 `unstratified/1`, nothing derived about the program in order to run it. The
 stock evaluator survives as `new Rofl({ evaluator: 'strata' })` and still reads
 both names; `rules/strata.rofl` is the ten rules that supply them, which
-boot.rofl carried until nothing needed them. See the deviation register below.
+boot.rofl carried until nothing needed them. boot.rofl still ranks ITS OWN
+relations, as data (`boot_rank`, ten rows), so a strata world with boot alone
+loads and answers; a program's relations stay the program's to rank. See the deviation register below.
 
 Two more names are on the same footing, and they are the whole
 **three-valued** contract: the PROGRAM writes `semantics(well_founded)` to ask

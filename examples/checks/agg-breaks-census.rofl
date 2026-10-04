@@ -158,6 +158,17 @@ brk("unranked_negation_runs"). brk_kind("unranked_negation_runs", switch).
 brk_expects("unranked_negation_runs", "strata_unranked_negation").
 brk("ts_unranked_negation_runs"). brk_kind("ts_unranked_negation_runs", ts).
 brk_expects("ts_unranked_negation_runs", "strata_unranked_negation").
+brk("boot_rank_deleted"). brk_kind("boot_rank_deleted", file).
+brk_expects("boot_rank_deleted", "strata_boot_canon").
+brk("boot_rank_unmoved"). brk_kind("boot_rank_unmoved", file).
+brk_expects("boot_rank_unmoved", "strata_boot_canon").
+brk("boot_rank_exported_to_deleted"). brk_kind("boot_rank_exported_to_deleted", file).
+brk_expects("boot_rank_exported_to_deleted", "strata_boot_canon").
+brk_expects("boot_rank_exported_to_deleted", "strata_boot_alone").
+brk("boot_rank_unranked_negation"). brk_kind("boot_rank_unranked_negation", file).
+brk_expects("boot_rank_unranked_negation", "strata_boot_canon").
+brk("boot_rank_phantom"). brk_kind("boot_rank_phantom", file).
+brk_expects("boot_rank_phantom", "strata_boot_canon").
 brk("lattice_op_min"). brk_kind("lattice_op_min", switch).
 brk_expects("lattice_op_min", "agg_join_syntax").
 brk_expects("lattice_op_min", "agg_lattice_syntax").

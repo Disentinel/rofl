@@ -13,7 +13,8 @@
 // one on in the `rofl-load` a world runs. A normal build holds none of them.
 // A break with `edits` changes a .rofl text: safety.rofl is compiled into a
 // kernel-dense.ts of its own, which that build reads from
-// ROFL_KERNEL_OVERRIDE, and any other file is copied, edited, and loaded in
+// ROFL_KERNEL_OVERRIDE, boot.rofl is copied, edited, and named in ROFL_BOOT,
+// and any other file is copied, edited, and loaded in
 // its place. A break whose edits are to src/ plants its fault in the
 // TypeScript engine: the files src/api.ts imports are copied beside it, the
 // edits applied, and each world's TypeScript answer is taken from that copy;
@@ -461,6 +462,77 @@ export const BREAKS: Break[] = [
   ],
   "expect": {
    "strata_unranked_negation": "was to be refused"
+  }
+ },
+ {
+  "id": "boot_rank_deleted",
+  "what": "boot.rofl writes no rank for `leak`, the head of its audit negation",
+  "edits": [
+   [
+    "boot.rofl",
+    "boot_rank(leak, 2).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "strata_boot_canon": "boot_rank_missing"
+  }
+ },
+ {
+  "id": "boot_rank_unmoved",
+  "what": "boot.rofl ranks `leak` with what it negates, not above it",
+  "edits": [
+   [
+    "boot.rofl",
+    "boot_rank(leak, 2).\n",
+    "boot_rank(leak, 1).\n"
+   ]
+  ],
+  "expect": {
+   "strata_boot_canon": "boot_rank_below_edge"
+  }
+ },
+ {
+  "id": "boot_rank_exported_to_deleted",
+  "what": "boot.rofl writes no rank for `exported_to`, which feeds what `leak` negates",
+  "edits": [
+   [
+    "boot.rofl",
+    "boot_rank(exported_to, 1).\n",
+    ""
+   ]
+  ],
+  "expect": {
+   "strata_boot_canon": "boot_rank_missing",
+   "strata_boot_alone": "sb_false_leak"
+  }
+ },
+ {
+  "id": "boot_rank_unranked_negation",
+  "what": "boot.rofl gains a rule with a `not` and no rank for its head",
+  "edits": [
+   [
+    "boot.rofl",
+    "boot_rank(Rel, N)  @next :- boot_rank(Rel, N).\n",
+    "boot_rank(Rel, N)  @next :- boot_rank(Rel, N).\nunranked_probe(R) :- rule_known(R), not has_premise(R, _).\n"
+   ]
+  ],
+  "expect": {
+   "strata_boot_canon": "boot_rank_missing"
+  }
+ },
+ {
+  "id": "boot_rank_phantom",
+  "what": "boot.rofl ranks a relation no rule of it concludes",
+  "edits": [
+   [
+    "boot.rofl",
+    "boot_rank(leak, 2).\n",
+    "boot_rank(leak, 2).\nboot_rank(nosuch, 1).\n"
+   ]
+  ],
+  "expect": {
+   "strata_boot_canon": "boot_rank_phantom"
   }
  },
  {
@@ -6215,7 +6287,14 @@ export function plant(b: Break, dir: string): Plant {
     fs.writeFileSync(k, kernelDenseFile(texts.get('policy.rofl') ?? read('policy.rofl'), texts.get('safety.rofl') ?? read('safety.rofl')));
     env.ROFL_KERNEL_OVERRIDE = k;
   }
-  [...texts].filter(([f]) => !KERNEL.includes(f)).forEach(([f, text], i) => {
+  // boot.rofl is not a file of any world: every world loads it, and ROFL_BOOT names the copy to load
+  if (texts.has('boot.rofl')) {
+    const b = path.join(dir, 'boot', 'boot.rofl');
+    fs.mkdirSync(path.dirname(b), { recursive: true });
+    fs.writeFileSync(b, texts.get('boot.rofl')!);
+    env.ROFL_BOOT = b;
+  }
+  [...texts].filter(([f]) => !KERNEL.includes(f) && f !== 'boot.rofl').forEach(([f, text], i) => {
     // the same base name, which is how a refusal names the file it refused
     const p = path.join(dir, String(i), path.basename(f));
     fs.mkdirSync(path.dirname(p), { recursive: true });
@@ -6379,7 +6458,7 @@ if (isMain) {
   }
   // the pool workers are started with both empty; a fault switched on from
   // the shell would be run as the control of every break
-  const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_READER'].filter((k) => process.env[k]);
+  const planted = ['ROFL_BREAK', 'ROFL_KERNEL_OVERRIDE', 'ROFL_BOOT', 'ROFL_READER'].filter((k) => process.env[k]);
   if (planted.length) { console.log(`FAIL ${planted.join(', ')} is set in the environment: unset it; the loop switches each fault on itself`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const legacy = rest.includes('--legacy');
@@ -6475,7 +6554,7 @@ if (isMain) {
       const past = lastTimes();
       const order = jobs.map((_, i) => i).sort((x, y) => (past[jobs[y].key] ?? 1e12) - (past[jobs[x].key] ?? 1e12));
       const ran = await runPool<{ v: unknown; ms: number }>(order.map((i) => jobs[i].task),
-        { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_READER: '', ROFL_TREE: '' } });
+        { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_BOOT: '', ROFL_READER: '', ROFL_TREE: '' } });
       const res = new Map<string, unknown>();
       order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
       saveTimes(past);

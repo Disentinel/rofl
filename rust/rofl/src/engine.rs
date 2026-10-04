@@ -10133,11 +10133,12 @@ impl Eval {
                 String::new(),
             ));
         }
-        if self
-            .rules
-            .iter()
-            .any(|r| r.clause.head.rel == self.v.stratum)
-        {
+        // a rule reading no derived relation writes the table as data (boot.rofl's own ranks), and is not computing it
+        let concluded: HashSet<Sym> = self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
+        if self.rules.iter().any(|r| {
+            r.clause.head.rel == self.v.stratum
+                && r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| concluded.contains(&l.rel))
+        }) {
             let msg = "stratum/2 is not computed under well_founded semantics".to_string();
             if !self.diags.contains(&msg) {
                 self.diags.push(msg);

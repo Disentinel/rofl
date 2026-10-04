@@ -1,0 +1,22 @@
+-- examples/checks/strata-boot-alone.rofl — strata_boot_alone: under the stock
+-- evaluator, with no rules/strata.rofl, boot.rofl's own audits answer as they
+-- do under the default one. Four walks between ledgers, each a different path
+-- through the negations boot ranks for itself: one nothing licenses (a leak),
+-- one an `imports` licenses, one a ledger that `collects` gathers, one a
+-- ledger that `exports` to anyone publishes.
+edb(sb_src).
+edb(sb_lic).
+edb(sb_pub).
+edb(sb_col).
+sb_src[open](1).
+sb_lic[licensor](1).
+sb_pub[publisher](1).
+sb_col[anyone](1).
+imports(licensee, licensor).
+imports(main, audit).
+collects(gatherer).
+exports(publisher, anyone).
+sb_leak[sink](X)    :- sb_src[open](X).
+sb_seen[licensee](X) :- sb_lic[licensor](X).
+sb_out[Q](X)        :- sb_pub[publisher](X).
+sb_in[gatherer](X)  :- sb_col[P](X).

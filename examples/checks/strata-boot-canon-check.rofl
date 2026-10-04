@@ -1,0 +1,33 @@
+-- examples/checks/strata-boot-canon-check.rofl — strata_boot_canon: the ranks
+-- boot.rofl writes for itself (`boot_rank`) agree with the schedule
+-- rules/strata.rofl derives over boot's rules, which this world loads beside
+-- it. Two things turn it red. A relation the stock evaluator must order has no
+-- row: a head of a rule with a `not` or an aggregate, a relation such a rule
+-- negates that ranks above 0, or what sits positively above one. And a row
+-- that a rule's edge puts above: the pack derives, from the rows as written, a
+-- rank higher than the row says (a negation not strictly above what it
+-- negates, a rule below what it reads). A row above what its edges need is
+-- only coarse, and is let be.
+--
+-- The check's own negations are not boot's: `sg_unranked` and `sg_phantom` are
+-- the only relations here that a rule negates for, and the heads below leave
+-- them out by name.
+
+sg_head(H)    :- premise_neg(R, _), concludes(R, H), H != sg_unranked, H != sg_phantom.
+sg_head(H)    :- premise_agg(R, _), concludes(R, H).
+
+sg_need(H)    :- sg_head(H).
+sg_need(A)    :- concludes(R, A), premise_pos(R, B), sg_need(B).
+sg_need(N)    :- premise_neg(R, N), concludes(R, H), sg_head(H), concludes(_, N), stratum(N, M), M > 0.
+sg_need(N)    :- premise_agg(R, N), concludes(R, H), sg_head(H), concludes(_, N), stratum(N, M), M > 0.
+
+sg_unranked(R)  :- sg_need(R), not boot_rank(R, _).
+sg_below(R)     :- boot_rank(R, N), stratum(R, M), M > N.
+sg_phantom(R)   :- boot_rank(R, _), not concludes(_, R).
+
+boot_rank_missing()    :- sg_unranked(_).
+boot_rank_below_edge() :- sg_below(_).
+boot_rank_phantom()    :- sg_phantom(_).
+alarm(boot_rank_missing).
+alarm(boot_rank_below_edge).
+alarm(boot_rank_phantom).

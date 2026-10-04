@@ -10,7 +10,3 @@ un_b(2).
 un_r(2) :- un_b(2).
 un_q(1) :- un_b(1), not un_r(1).
 un_p(X) :- un_b(X), not un_q(X).
--- boot.rofl, ranked by hand (examples/checks/strata-boot-schedule.rofl), so that only this file is judged
-stratum(collects_from, 1).
-stratum(crossing, 1).
-stratum(leak, 2).

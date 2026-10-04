@@ -144,7 +144,7 @@ function policyAnswer(store: FactStore, seed: ReadonlySet<string> | null, solve:
  *  witness (the first firing in canonical order) would differ from a scratch
  *  run's. `hits` is shrunk until that holds. */
 export function planReuse(store: FactStore, rules: { id: string; clause: Clause }[], schedule: string,
-    solve: (pol: Store) => void): ReusePlan {
+    solve: (pol: Store) => void, tableRead = true): ReusePlan {
   const hits = new Set<string>();
   const keys = new Map<string, string>();
   if (rules.length === 0) return { hits, keys };
@@ -208,8 +208,8 @@ export function planReuse(store: FactStore, rules: { id: string; clause: Clause 
 
   // (4) hits
   if (scheduleHeld) for (const [rel, k] of keys) if (store.derivedKeys.get(rel) === k) hits.add(rel);
-  // a `stratum` this evaluation re-derives may not come out the table the reused relations were derived under
-  if (byHead.has(IFACE.stratum) && !hits.has(IFACE.stratum)) hits.clear();
+  // a `stratum` this evaluation re-derives may not come out the table the reused relations were derived under; the rounds evaluator reads no table
+  if (tableRead && byHead.has(IFACE.stratum) && !hits.has(IFACE.stratum)) hits.clear();
   for (;;) {
     let shrank = false;
     for (const x of rels) {

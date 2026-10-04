@@ -1,0 +1,9 @@
+-- examples/checks/strata-boot-alone-check.rofl — strata_boot_alone: the one
+-- leak is reported, and none of the licensed, collected or exported walks is;
+-- a rule of the program negating `leak` is accepted, `leak` being ranked.
+sb_leak_lost()    :- not leak[audit](open, sink).
+sb_false_leak()   :- leak[audit](A, B), B != sink.
+sb_malformed()    :- malformed[audit](_).
+alarm(sb_leak_lost).
+alarm(sb_false_leak).
+alarm(sb_malformed).

@@ -282,7 +282,6 @@ check_opt("agg_count_strata_stock", evaluator, strata).
 check_world("agg_count_strata_untabled").
 check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-3-refused-untabled.rofl").
 check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-4-refused-untabled-recursive.rofl").
-check_file("agg_count_strata_untabled", "examples/checks/strata-boot-schedule.rofl").
 check_file("agg_count_strata_untabled", "examples/checks/agg-count-strata-untabled-check.rofl").
 check_opt("agg_count_strata_untabled", together, 1).
 check_opt("agg_count_strata_untabled", evaluator, strata).
@@ -1197,7 +1196,6 @@ check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unk
 check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unknown-type.rofl").
 check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-unknown-positive.rofl").
 check_file("agg_unknown_beside_hole_strata", "examples/checks/holes-negation-ticks-unknown.rofl").
-check_file("agg_unknown_beside_hole_strata", "examples/checks/strata-boot-schedule.rofl").
 check_opt("agg_unknown_beside_hole_strata", ticks, 2).
 check_opt("agg_unknown_beside_hole_strata", evaluator, strata).
 proves("agg_unknown_beside_hole_strata", agg, cell, holes).
@@ -1295,7 +1293,7 @@ check_world("agg_lattice_plain_budget").
 check_file("agg_lattice_plain_budget", "examples/checks/agg-lattice-plain-data.rofl").
 check_file("agg_lattice_plain_budget", "examples/checks/agg-lattice-plain-budget.rofl").
 check_opt("agg_lattice_plain_budget", together, 1).
-check_opt("agg_lattice_plain_budget", budget, 150).
+check_opt("agg_lattice_plain_budget", budget, 174).
 proves("agg_lattice_plain_budget", agg, order_lattice, holes).
 
 check_world("agg_lattice_plain_space").
@@ -1461,7 +1459,7 @@ proves("agg_join_holes", agg, join_lattice, holes).
 check_world("agg_join_budget").
 check_file("agg_join_budget", "examples/checks/agg-join-budget.rofl").
 check_opt("agg_join_budget", together, 1).
-check_opt("agg_join_budget", budget, 400).
+check_opt("agg_join_budget", budget, 424).
 proves("agg_join_budget", agg, join_lattice, holes).
 
 check_world("agg_join_span_budget").
@@ -1479,7 +1477,7 @@ check_world("agg_join_shrug_wall").
 check_file("agg_join_shrug_wall", "examples/checks/agg-join-budget.rofl").
 check_file("agg_join_shrug_wall", "examples/checks/agg-shrug-join-wall.rofl").
 check_opt("agg_join_shrug_wall", together, 1).
-check_opt("agg_join_shrug_wall", budget, 400).
+check_opt("agg_join_shrug_wall", budget, 424).
 proves("agg_join_shrug_wall", agg, join_lattice, shrug).
 
 -- A DECLARED WIDENING (w_agg_widening): `lattice p(K, hull I) widen N.`, the
@@ -1577,7 +1575,7 @@ proves("agg_widen_budget", agg, widening, holes).
 check_world("agg_widen_cut").
 check_file("agg_widen_cut", "examples/checks/agg-widen-cut.rofl").
 check_opt("agg_widen_cut", together, 1).
-check_opt("agg_widen_cut", budget, 115).
+check_opt("agg_widen_cut", budget, 129).
 proves("agg_widen_cut", agg, widening, holes).
 
 check_world("agg_widen_shrug").
@@ -2734,7 +2732,7 @@ check_world("agg_datastrat_chain").
 check_file("agg_datastrat_chain", "examples/checks/agg-datastrat-chain.rofl").
 check_file("agg_datastrat_chain", "examples/checks/agg-datastrat-chain-check.rofl").
 check_opt("agg_datastrat_chain", together, 1).
-check_opt("agg_datastrat_chain", budget, 310).
+check_opt("agg_datastrat_chain", budget, 334).
 proves_work("agg_datastrat_chain", w_agg_layer_fires_the_new).
 
 -- the budget cuts between two layers: every value there is the sheet's, no cell above the wall has one
@@ -2743,7 +2741,7 @@ check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-sheet.rofl").
 check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-expect.rofl").
 check_file("agg_datastrat_budget", "examples/checks/agg-datastrat-budget-check.rofl").
 check_opt("agg_datastrat_budget", together, 1).
-check_opt("agg_datastrat_budget", budget, 230).
+check_opt("agg_datastrat_budget", budget, 254).
 proves_work("agg_datastrat_budget", w_agg_data_strat).
 
 -- a base fact retracted from such a world: the world is evaluated again and is the world without the fact
@@ -2828,3 +2826,18 @@ check_file("jodit_fixture", "examples/checks/jodit-fixture.rofl").
 -- orders and activates its own way and walks the closure, and both engines conclude the same rows, derived_by included
 check_world("sealed_witness").
 check_file("sealed_witness", "examples/checks/sealed-witness.rofl").
+
+-- boot.rofl ranks its own relations (`boot_rank`), so the stock evaluator with
+-- no rules/strata.rofl loads it and its audits answer as the default's do
+check_world("strata_boot_alone").
+check_file("strata_boot_alone", "examples/checks/strata-boot-alone.rofl").
+check_file("strata_boot_alone", "examples/checks/strata-boot-alone-check.rofl").
+check_opt("strata_boot_alone", together, 1).
+check_opt("strata_boot_alone", evaluator, strata).
+
+-- the ranks boot writes for itself agree with the ones rules/strata.rofl
+-- derives over boot's rules: none missing, none below what an edge needs
+check_world("strata_boot_canon").
+check_file("strata_boot_canon", "rules/strata.rofl").
+check_file("strata_boot_canon", "examples/checks/strata-boot-canon-check.rofl").
+check_opt("strata_boot_canon", together, 1).
