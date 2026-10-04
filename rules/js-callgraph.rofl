@@ -216,7 +216,7 @@ fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        ast_child[code](CD, id, 0, I), ast_name[code](I, N).
 fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F),
@@ -232,7 +232,7 @@ anon_class[code](CD)   :- ast_node[code](CD, class_expression, _, _),
                           not class_has_id[code](CD).
 fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, F),
+                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        anon_class[code](CD),
                        ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, CD),

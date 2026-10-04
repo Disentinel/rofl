@@ -228,8 +228,8 @@ Declared as facts:
 
 A node is abrupt at a field F from an index I if all of:
   - a node S [completes abruptly](#completes_abruptly);
-  - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I-th of the F of it.
+  - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field).
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
@@ -289,8 +289,8 @@ A node
   - S [completes abruptly](#completes_abruptly);
   - S [is within](js-structure.rofl.md#ast_within) it;
   - it [is of kind](js-model.rofl.md#ast_node) K but is not a [function](js-callgraph.rofl.md#fn_node);
-  - a field F [is a statement sequence field](#stmt_seq_field);
   - it [is among the](#ast_child) F of some node;
+  - F [is a statement sequence field](#stmt_seq_field);
   - unless K [has a known completion](#completion_known).
 - <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
   - it [carries the completion](#completion_outer) of S;
@@ -337,10 +337,7 @@ In the code:
 
 In the flow:
 
-<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if all of:
-  - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
-  - a kind K [is an accessor kind](#accessor_kind);
-  - [the attribute](#ast_attr) `kind` of M is K.
+<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
 In the code:
 
@@ -351,10 +348,7 @@ In the code:
    - N [selects](js-dataflow.rofl.md#selects) Key;
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
    - the `object` of N [points to](js-dataflow.rofl.md#may_be_node) Obj;
-2. if all of:
-   - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - a kind K [is an accessor kind](#accessor_kind);
-   - [the attribute](#ast_attr) `kind` of M is K.
+2. if N [binds privately to](js-dataflow.rofl.md#private_binds) M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
 A node
 

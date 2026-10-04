@@ -481,9 +481,9 @@ A node has the effect L at a host H if all of:
   - E [covers](#eff_row) L at H.
 
 <a id="concrete_leq"></a>A surface is purer at an operation O1 than a surface S2 at an operation O2 if all of:
-  - it [denotes](#concrete_denotes) an effect E1 at O1;
-  - S2 [denotes](#concrete_denotes) an effect E2 at O2;
-  - E1 [is at or below](#eff_leq) E2.
+  - an effect E1 [is at or below](#eff_leq) an effect E2;
+  - it [denotes](#concrete_denotes) E1 at O1;
+  - S2 [denotes](#concrete_denotes) E2 at O2.
 
 > The residue, POSITIVE and not an audit: non-empty by design until the
 > surface pack exists. The audits below are about a pack that is WRONG rather

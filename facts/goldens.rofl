@@ -119,10 +119,10 @@ golden_state("rules_inquiry_perspectives", "bf86fbaa323c65ca", 724).
 golden_state("rules_inquiry_terminology", "eef40b58afa6245e", 754).
 golden_state("rules_js-ambient", "9832931994f78f11", 1816).
 golden_state("rules_js-attrs", "52858de8b6426dfa", 2276).
-golden_state("rules_js-callgraph", "f111cb5a66197fa9", 3942).
-golden_state("rules_js-controlflow", "63d0d77cc4484408", 3776).
-golden_state("rules_js-dataflow", "e688555bd470c308", 7211).
-golden_state("rules_js-effects", "69d2f6c1a4346383", 8624).
+golden_state("rules_js-callgraph", "85bbe883ee97d65c", 3942).
+golden_state("rules_js-controlflow", "abe5b8abcc4ff6db", 3776).
+golden_state("rules_js-dataflow", "cbd59c1191a3e531", 7211).
+golden_state("rules_js-effects", "1e28154ddf7b424a", 8624).
 golden_state("rules_js-env-api", "63cce1cc5a9e56e8", 801).
 golden_state("rules_js-env", "8c961e3578db4f97", 2315).
 golden_state("rules_js-globals", "7108f728f8dfa19f", 2400).

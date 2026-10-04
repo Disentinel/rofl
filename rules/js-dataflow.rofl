@@ -303,8 +303,8 @@ kind_prototype(reg_exp_literal,           regexp).
 kind_prototype(big_int_literal,           bigint).
 
 prototype_of[flow](E, P) :- kind_prototype(K, P), ast_node[code](E, K, _, _).
-prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_prototype(K, P),
-                            ast_node[code](N, K, _, _).
+prototype_of[flow](E, P) :- may_be_node[flow](E, N), ast_node[code](N, K, _, _),
+                            kind_prototype(K, P).
 
 edb(builtin_prototype).
 builtin_prototype(array).
@@ -609,7 +609,7 @@ class_field_kind(class_accessor_property).
 
 field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                   ast_child[code](B, body, _, P),
-                                  class_field_kind(K), ast_node[code](P, K, _, _),
+                                  ast_node[code](P, K, _, _), class_field_kind(K),
                                   ast_child[code](P, key, 0, KN), key_name[code](KN, Key),
                                   ast_child[code](P, value, 0, V).
 member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).
@@ -994,7 +994,7 @@ ctor_of[flow](CD, M)   :- super_of[flow](CD, SD), not has_own_ctor[flow](CD),
                           ctor_of[flow](SD, M).
 
 may_be_node[flow](S, SD) :- ast_node[code](S, super, _, _),
-                            class_method_of[flow](CD, M), ast_within[code](M, S),
+                            ast_within[code](M, S), class_method_of[flow](CD, M),
                             super_of[flow](CD, SD).
 
 -- =========================================================================

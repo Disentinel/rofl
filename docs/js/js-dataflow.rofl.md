@@ -541,8 +541,8 @@ Declared as facts:
 1. if a kind K [has prototype](#kind_prototype) P and E [is of kind](js-model.rofl.md#ast_node) K;
 2. if all of:
    - E [points to](#may_be_node) a node N;
-   - a kind K [has prototype](#kind_prototype) P;
-   - N [is of kind](js-model.rofl.md#ast_node) K.
+   - N [is of kind](js-model.rofl.md#ast_node) K;
+   - K [has prototype](#kind_prototype) P.
 
 `builtin_prototype` includes `array`, `string`, `number`, `boolean`, `regexp`, `bigint`.
 
@@ -1456,8 +1456,8 @@ A node E points to a node CD either:
    - unless CD [has its own constructor](#has_own_ctor).
 
 A [super](#noun-super) points to a node SD if all of:
+  - it [is within](js-structure.rofl.md#ast_within) a node M;
   - a class CD [has the method](#class_method_of) M;
-  - it [is within](js-structure.rofl.md#ast_within) M;
   - [the super](#super_of) of CD is SD.
 
 ## 13. EXPRESSION FORMS. A sequence is its LAST element: the maximum index of

@@ -350,8 +350,8 @@ F answers to a name N either:
 4. if all of:
    - F is a [method](#noun-method);
    - [the attribute](#ast_attr) `kind` of F is "constructor";
-   - the `body` of a node CD is a node B;
-   - F [is among the](#ast_child) `body` of B;
+   - F [is among the](#ast_child) `body` of a node B;
+   - the `body` of a node CD is B;
    - the `id` of CD [is named](js-structure.rofl.md#ast_name) N;
 5. if all of:
    - the `value` of a [class field](#noun-class_field) P is F;
@@ -367,8 +367,8 @@ F answers to a name N either:
 
 A [method](#noun-method) answers to a name N if all of:
   - [the attribute](#ast_attr) `kind` of it is "constructor";
-  - the `body` of a node CD is a node B;
-  - it [is among the](#ast_child) `body` of B;
+  - it [is among the](#ast_child) `body` of a node B;
+  - the `body` of a node CD is B;
   - CD [is anonymous](#anon_class);
   - the `init` of a [declarator](#noun-declarator) D is CD;
   - the `id` of D [is named](js-structure.rofl.md#ast_name) N.
