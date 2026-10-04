@@ -205,6 +205,15 @@ export function byParts(t: Term): { label: Term; dflt: Term; cases: [Term, Term]
   return { label: t.args[0], dflt: t.args[1], cases, sure: t.args[3].k === 'i' && Number(t.args[3].v) === 1 };
 }
 
+/** The values a `$by` can have, the leaves of its table; `null` for what is no table. */
+export function byValues(t: Term): Term[] | null {
+  const b = byParts(t);
+  if (b === null) return null;
+  const out = new Map<string, Term>();
+  for (const v of [...b.cases.map(([, x]) => x), b.dflt]) for (const x of byValues(v) ?? [v]) out.set(canonTerm(x), x);
+  return [...out.values()];
+}
+
 export function mkUnk(label: Term, ex: Term[], sure: boolean): Term {
   const seen = new Set<string>();
   const xs = ex.map((x) => [`(${canonTerm(x)})`, x] as [string, Term]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).filter(([k]) => !seen.has(k) && !!seen.add(k)).map(([, x]) => x);
@@ -229,6 +238,8 @@ export function unifyUnknown(a: Term, t: Term, s: Subst): Subst | null {
     const ra = resolve(a, s);
     const p = unkParts(t);
     if (p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some((x) => canonTerm(x) === canonTerm(ra))) return null;
+    // a value that depends on a label is one of the values it has, and no other
+    if (isGround(ra) && !holdsUnknown(ra)) { const vs = byValues(t); if (vs !== null && !vs.some((x) => canonTerm(x) === canonTerm(ra))) return null; }
     return ra.k === 'v' ? unify(ra, t, s) : bindUnknown([ra], s);
   }
   if (!holdsUnknown(t)) return unify(a, t, s);

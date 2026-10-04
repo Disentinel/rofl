@@ -2917,3 +2917,9 @@ check_file("agg_label_oracle", "examples/checks/agg-label-data.rofl").
 check_file("agg_label_oracle", "examples/checks/agg-label-oracle.rofl").
 check_opt("agg_label_oracle", together, 1).
 proves_work("agg_label_oracle", w_labeled_unknowns).
+
+check_world("agg_label_cap_oracle").
+check_file("agg_label_cap_oracle", "examples/checks/agg-label-cap-data.rofl").
+check_file("agg_label_cap_oracle", "examples/checks/agg-label-cap-oracle.rofl").
+check_opt("agg_label_cap_oracle", together, 1).
+proves_work("agg_label_cap_oracle", w_labeled_unknowns).

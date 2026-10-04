@@ -4993,6 +4993,196 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "label_off",
+  "what": "a fault names nothing: the unknown it leaves is anonymous, matches every group and decides no total",
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)",
+   "agg_precise_holes": "lacks the row ph_nwc[main](g1)"
+  }
+ },
+ {
+  "id": "label_ex_ignored",
+  "what": "a labeled unknown is matched against a group it is known not to be: a group no unknown moves is a shrug",
+  "expect": {
+   "agg_label_holes": "lacks the row lqn[main](g5)"
+  }
+ },
+ {
+  "id": "label_regions_off",
+  "what": "a group an unknown moves is never decided by the values the unknown could be",
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)"
+  }
+ },
+ {
+  "id": "label_correlation_lost",
+  "what": "a value that depends on a label is read as the same under every value of it: the cells of one unknown are judged apart",
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)"
+  }
+ },
+ {
+  "id": "label_cap_ignored",
+  "what": "the regions of many labels are all made, however many there are, and the group is decided or a plain hole, never a capped one",
+  "expect": {
+   "agg_label_cap": "lacks the row lcap[main](regions,203,64)"
+  }
+ },
+ {
+  "id": "label_open_correlation",
+  "what": "a group a labeled unknown makes still holes the whole correlation, so it reads as every group",
+  "expect": {
+   "agg_precise_holes": "ph_hole_extra"
+  }
+ },
+ {
+  "id": "label_new_anonymous",
+  "what": "the group a labeled unknown could make is an anonymous one, matching every group and every count",
+  "expect": {
+   "agg_precise_holes": "lacks the row ph_nwc[main](g1)"
+  }
+ },
+ {
+  "id": "label_sure_always",
+  "what": "a tuple that may not exist is read as one that exists in every completion: a total over it is decided",
+  "expect": {
+   "agg_label_holes": "lutot[main]"
+  }
+ },
+ {
+  "id": "ts_label_off",
+  "what": "the TypeScript engine names no fault",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (!ra.some((t) => t.k === 'v')) return s;",
+    "if (!ra.some((t) => t.k === 'v') || true) return s;"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)"
+  }
+ },
+ {
+  "id": "ts_label_ex_ignored",
+  "what": "the TypeScript engine matches a labeled unknown against a group it is known not to be",
+  "edits": [
+   [
+    "src/unify.ts",
+    "if (p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some(",
+    "if (false && p !== null && isGround(ra) && !holdsUnknown(ra) && p.ex.some("
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lacks the row lqn[main](g5)"
+  }
+ },
+ {
+  "id": "ts_label_regions_off",
+  "what": "the TypeScript engine never decides a group by the values an unknown could be",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const rg = this.rankKey(a, s) === null &&",
+    "const rg = false &&"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)"
+  }
+ },
+ {
+  "id": "ts_label_correlation_lost",
+  "what": "the TypeScript engine reads a value that depends on a label as the same under every value of it",
+  "edits": [
+   [
+    "src/labeled.ts",
+    "return b.cases.find(([k]) => canonTerm(k) === canonTerm(r.c))?.[1] ?? b.dflt;",
+    "return b.dflt;"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lacks the row ltot[main](3)"
+  }
+ },
+ {
+  "id": "ts_label_cap_ignored",
+  "what": "the TypeScript engine makes every region, however many",
+  "edits": [
+   [
+    "src/labeled.ts",
+    "if (n > LABEL_REGIONS) return { k: 'capped', n };",
+    ""
+   ]
+  ],
+  "expect": {
+   "agg_label_cap": "lacks the row lcap[main](regions,203,64)"
+  }
+ },
+ {
+  "id": "ts_label_open_correlation",
+  "what": "the TypeScript engine holes the whole correlation for a group a labeled unknown makes",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "p.pat.some((t) => t === null) && !labeledOpen(p) && !open.some(",
+    "p.pat.some((t) => t === null) && !open.some("
+   ]
+  ],
+  "expect": {
+   "agg_precise_holes": "ph_hole_extra"
+  }
+ },
+ {
+  "id": "ts_label_new_anonymous",
+  "what": "the TypeScript engine reads the group a labeled unknown could make as an anonymous one",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (labeledOpen(p)) {",
+    "if (false && labeledOpen(p)) {"
+   ]
+  ],
+  "expect": {
+   "agg_precise_holes": "lacks the row ph_nwc[main](g1)"
+  }
+ },
+ {
+  "id": "ts_label_sure_always",
+  "what": "the TypeScript engine reads a tuple that may not exist as one that exists in every completion",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const sure = this.lastFault === 'arith_overflow' && this.faultSure(r, s);",
+    "const sure = true;"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lutot[main]"
+  }
+ },
+ {
+  "id": "label_by_values_ignored",
+  "what": "a value that depends on a label is matched against a value none of its cases has: a count no completion gives is a shrug",
+  "expect": {
+   "agg_label_holes": "lb_sh3[main]"
+  }
+ },
+ {
+  "id": "ts_label_by_values_ignored",
+  "what": "the TypeScript engine matches a value that depends on a label against a value none of its cases has",
+  "edits": [
+   [
+    "src/unify.ts",
+    "if (isGround(ra) && !holdsUnknown(ra)) { const vs = byValues(t);",
+    "if (false && isGround(ra) && !holdsUnknown(ra)) { const vs = byValues(t);"
+   ]
+  ],
+  "expect": {
+   "agg_label_holes": "lb_sh3[main]"
+  }
+ },
+ {
   "id": "retract_no_subtract",
   "what": "a dropped member's value is not subtracted from the total of a count or sum",
   "expect": {

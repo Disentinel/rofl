@@ -49,3 +49,24 @@ lb_whole(ltot) :- shrug(ltot(_), _, _).
 lb_lbl(G) :- shrug(lwc(G, _), _, _).
 -- expect-row: lb_lbl[main](g1)
 -- expect-row: lb_lbl[main](g2)
+
+-- a group no unknown moves: g5 counts 2 whatever the member's group, so it never counts 1 and
+-- `not lqc(g5, 1)` holds; g1 counts 1, so it does not; g2 and g3 are groups the member could make
+-- expect-row: lqn[main](g5)
+-- expect-no-row: lqn[main](g1)
+-- expect-no-row: lqn[main](g2)
+-- expect-no-row: lqn[main](g3)
+lb_qsh(G) :- shrug(lqn(G), _, _).
+-- expect-row: lb_qsh[main](g2)
+-- expect-row: lb_qsh[main](g3)
+-- expect-no-row: lb_qsh[main](g5)
+-- expect-no-row: lb_qsh[main](g1)
+
+-- a count no value of the unknown gives is no answer and no shrug: g1 and g2 count 1 or 2, g3 1
+-- expect-no-row: lthree[main](g1)
+-- expect-no-row: lthree[main](g2)
+-- expect-no-row: lthree[main](g3)
+lb_sh3(G) :- shrug(lthree(G), _, _).
+-- expect-no-row: lb_sh3[main](g1)
+-- expect-no-row: lb_sh3[main](g2)
+-- expect-no-row: lb_sh3[main](g3)

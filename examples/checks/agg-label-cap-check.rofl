@@ -5,7 +5,9 @@
 -- rest, in any sharing among them: 203 regions of one group, past the cap of
 -- 64, so the count of g1 is not decided by them and its shrug says how many
 -- there were; the two make 5 and are no cap. g1 is a shrug in both, as no
--- completion count agrees (1 to 3 for two, 1 to 6 for five).
+-- completion count agrees (1 to 3 for two, 1 to 6 for five). The total over
+-- all groups is what the members are, 3 for two (the group of each is where
+-- it adds one) and, for five, a shrug: g1's count is the cap's.
 alarm(lcap_wrong).
 lcap(K, N, L) :- shrug(_, budget, spent(K, N, L)).
 lc_sh2(G) :- shrug(lc2c(G, _), _, _).
@@ -16,3 +18,5 @@ lc_sh5(G) :- shrug(lc5c(G, _), _, _).
 -- expect-row: lc_sh5[main](g1)
 -- expect-no-row: lc2c[main](g1,
 -- expect-no-row: lc5c[main](g1,
+-- expect-row: lc2tot[main](3)
+-- expect-no-row: lc5tot[main](

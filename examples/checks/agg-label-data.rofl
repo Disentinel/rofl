@@ -8,24 +8,31 @@
 --   g1  k9        g2  k1        and (?, k7): joins g1, g2, or a group no fact names
 -- lv is the same with k9 as the unknown's member: g1 holds it already.
 -- lu is lw with a member that may not exist: a comparison follows the overflow.
+-- lq holds k9 in g1 and in g5 (with k5): the unknown member is k9, so neither group
+-- is moved and the group it could make has 1, which g5 (2) is not and g1 (1) is.
 -- lg(G) names the groups a question is asked of: g3 is one no member is in.
 edb(lbig).
 edb(lw0).
 edb(lg).
+edb(lq0).
 lbig(1152921504606846975).
 lw0(g1, k9). lw0(g2, k1).
-lg(g1). lg(g2). lg(g3).
+lq0(g1, k9). lq0(g5, k9). lq0(g5, k5).
+lg(g1). lg(g2). lg(g3). lg(g5).
 
 lw(G, X) :- lw0(G, X).
 lw(G, k7) :- lbig(B), G is B + 1.
 lv(G, X) :- lw0(G, X).
 lv(G, k9) :- lbig(B), G is B + 1.
+lq(G, X) :- lq0(G, X).
+lq(G, k9) :- lbig(B), G is B + 1.
 lu(G, X) :- lw0(G, X).
 lu(G, k7) :- lbig(B), Z is B + 1, Z > 0, G is Z.
 
 lwc(G, N) :- N is count(X : lw(G, X)).
 lvc(G, N) :- N is count(X : lv(G, X)).
 luc(G, N) :- N is count(X : lu(G, X)).
+lqc(G, N) :- N is count(X : lq(G, X)).
 
 -- the total over all groups: one member joins exactly one group
 ltot(S) :- S is sum(N ; G : lwc(G, N)).
@@ -34,5 +41,11 @@ lutot(S) :- S is sum(N ; G : luc(G, N)).
 -- the number of groups: the member may make one
 lcnt(S) :- S is count(G : lwc(G, _)).
 -- a question of a group, and a join on it
-lno(G) :- lg(G), not lwc(G, 2).
-lone(G) :- lg(G), lwc(G, 2).
+lno(G) :- lg(G), lg3(G), not lwc(G, 2).
+edb(lg3).
+lg3(g1). lg3(g2). lg3(g3).
+-- a group no unknown moves: g5 counts 2 whatever the member's group, never 1
+lqn(G) :- lg(G), not lqc(G, 1).
+lone(G) :- lg(G), lg3(G), lwc(G, 2).
+-- a count no value of the unknown gives: 3, which g1 and g2 reach at most 2 of
+lthree(G) :- lg(G), lg3(G), lwc(G, 3).

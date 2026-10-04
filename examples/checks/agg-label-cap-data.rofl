@@ -1,7 +1,8 @@
 -- examples/checks/agg-label-cap-data.rofl — MORE LABELS THAN THE CAP
 -- (docs/aggregates.md, "Labeled unknowns"): five members whose groups are
 -- five unknown values (203 regions of one group against the cap of 64), and
--- two (five). lc2 is the two, decided; lc5 the five, not decided.
+-- two (five). lc2 is the two, decided: g1 is a table over both, and the total
+-- over all groups is 3 whatever they are. lc5 is the five, not decided.
 edb(lcb).
 edb(lc0).
 lcb(1152921504606846975).
@@ -19,3 +20,10 @@ lc5(G, k5) :- lcb(B), G is B + 5.
 
 lc2c(G, N) :- N is count(X : lc2(G, X)).
 lc5c(G, N) :- N is count(X : lc5(G, X)).
+
+lc2tot(S) :- S is sum(N ; G : lc2c(G, N)).
+lc5tot(S) :- S is sum(N ; G : lc5c(G, N)).
+lc2cnt(S) :- S is count(G : lc2c(G, _)).
+lc2no(N) :- lcn(N), not lc2c(g1, N).
+edb(lcn).
+lcn(1). lcn(2). lcn(3). lcn(4).

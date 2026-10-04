@@ -851,6 +851,8 @@ export class AggEval {
   private cellReach = new Map<string, Unknown[]>();
   /** The value a group an unknown moves has under each value of its label (`$by`), where the regions told it. */
   private cellCond = new Map<string, Term>();
+  /** A group decided by regions: the labels its value is the same under every value of, as written. */
+  private cellDecided = new Map<string, string>();
   /** A group whose regions passed the cap: how many there were, by its hole. */
   private regionsCapped = new Map<string, number>();
   private readsUnknown = false;
@@ -3294,7 +3296,7 @@ export class AggEval {
       }
     }
     const reached = new Map<number, Unknown[]>();
-    const decided = new Set<number>();
+    const decided = new Map<number, string>();
     const conds = new Map<number, Term>();
     const capped = new Map<number, number>();
     const index = new PossIndex(reach);
@@ -3385,7 +3387,7 @@ export class AggEval {
           // where every unknown it rests on is a label and exists for certain, the group is decided by what each
           // value the labels could be gives it ("Labeled unknowns")
           const rg = this.rankKey(a, s) === null && (value.k === 'value' || value.k === 'empty') ? regionDecide(op, aggParams(a), gkey, reps.map((i) => cands[i].proj), reps.map((i) => values[i]), mine) : { k: 'no' as const };
-          if (rg.k === 'decided') { value = { k: 'value', t: lower({ k: 'int', v: rg.v }) }; decided.add(sealed.length); }
+          if (rg.k === 'decided') { value = { k: 'value', t: lower({ k: 'int', v: rg.v }) }; decided.set(sealed.length, rg.by); }
           else if (rg.k === 'cond') { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; conds.set(sealed.length, rg.t); reached.set(sealed.length, us); }
           else if (rg.k === 'capped') { value = { k: 'hole', reason: 'regions_capped' }; kept = [...order]; capped.set(sealed.length, rg.n); }
           else { value = { k: 'hole', reason: 'support_withdrawn' }; kept = [...order]; reached.set(sealed.length, us); }
@@ -3425,7 +3427,7 @@ export class AggEval {
       [this.carrySrc, this.carryMore] = [null, []];
       this.reflectCell(ckey);
       if (us !== undefined) this.cellReach.set(ckey, us);
-      else if (decided.has(n)) this.cellReach.set(ckey, []);
+      else if (decided.has(n)) { this.cellReach.set(ckey, []); this.cellDecided.set(ckey, decided.get(n)!); }
       const cd = conds.get(n);
       if (cd !== undefined) this.cellCond.set(ckey, cd);
       ids.push(ckey);
@@ -6456,7 +6458,7 @@ export class AggEval {
 
   /** What an evaluation knows of the cells it sealed. */
   private forgetCells(): void {
-    this.aggMemo.clear(); this.reachMemo.clear(); this.cellReach.clear(); this.cellCond.clear(); this.regionsCapped.clear(); this.holShared.clear(); this.thrCells.clear(); this.thrOpen = []; this.thrAcc.clear();
+    this.aggMemo.clear(); this.reachMemo.clear(); this.cellReach.clear(); this.cellCond.clear(); this.cellDecided.clear(); this.regionsCapped.clear(); this.holShared.clear(); this.thrCells.clear(); this.thrOpen = []; this.thrAcc.clear();
     this.thrFresh.clear(); this.heightMemo.clear();
   }
 
@@ -6980,7 +6982,8 @@ export class AggEval {
       }
       return;
     }
-    const what = n === 0 ? 'empty group' : `${n} member${n === 1 ? '' : 's'}`;
+    const by = this.cellDecided.get(pr.key);
+    const what = by !== undefined ? `${n === 0 ? 'no member known' : `${n} known member${n === 1 ? '' : 's'}`}, the same under every value of ${by}` : n === 0 ? 'empty group' : `${n} member${n === 1 ? '' : 's'}`;
     next.push(line(`${pad}${head} [aggregate: ${what}, sealed ${r.seals.map((x) => `${x.rel}@${x.round}`).join(', ')}]${id}`));
     for (let i = 0; i < n; i++) {
       if (i >= o.members) { next.push(line(`${'  '.repeat(indent + 1)}[${n - o.members} more members: why all ${o.query}]`)); break; }
@@ -7055,19 +7058,8 @@ export class AggEval {
     return out.sort((a, b) => cmpStr(a[0], b[0])).map(([, f, s]) => [f, s]);
   }
 
-  /** A term as a reader writes it. */
-  shown(t: Term): string {
-    if (t.k === 'a' && t.name === '$unknown_value') return '_';
-    if (t.k === 'a' && t.name === '$nil') return '[]';
-    if (t.k === 'f' && t.name === '$cons') {
-      const xs: string[] = [];
-      let l: Term = t;
-      while (l.k === 'f' && l.name === '$cons') { xs.push(this.shown(l.args[0])); l = l.args[1]; }
-      return `[${xs.join(', ')}]`;
-    }
-    if (t.k === 'f') return `${t.name}(${t.args.map((a) => this.shown(a)).join(', ')})`;
-    return canonTerm(t);
-  }
+  /** A term as a reader writes it (src/shrug.ts, the same text). */
+  shown(t: Term): string { return shown(t); }
 
   /** One shrug row as a line. */
   shrugLine(id: string): string {

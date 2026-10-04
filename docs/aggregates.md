@@ -63,7 +63,11 @@ hole left out reaches exactly the groups of a body aggregate and the keys of
 a counting tag whose value it could change, decided under every completion
 elsewhere, in both engines, the holes and shrug cells of six kinds reopened
 and closed again against a completions oracle (w_agg_precise_holes, twelve
-cells; "Precise holes, as built"). Then rank over a tuple, a lexicographic
+cells; "Precise holes, as built"). Then labeled unknowns, 2026-10-04: an unknown value
+with a label and a condition, the group a possible member could make none of
+the groups sealed, a count or a total over groups decided by the values the
+labels could be, in both engines (w_labeled_unknowns; "Labeled unknowns, as
+built"). Then rank over a tuple, a lexicographic
 order of keys with a direction for each, in both engines and the sentence form,
 owning no cell of the matrix and closed by its seven worlds (w_agg_rank_by_tuple;
 "Rank over a tuple, as built"). The rest of the matrix is not built.
@@ -1389,7 +1393,7 @@ vocabulary with their text, `shrug.rofl`, compiled into `src/kernel-dense.ts`
 
 | Reason | Meta | From |
 | --- | --- | --- |
-| budget | `spent(Kind, Spent, Limit)`, Kind `steps`, `rows`, `depth` or `alternations` | a wall, on the evaluation (`$adhoc`) and on each lattice it left open |
+| budget | `spent(Kind, Spent, Limit)`, Kind `steps`, `rows`, `depth`, `alternations` or `regions` | a wall, on the evaluation (`$adhoc`) and on each lattice it left open; `regions`, the values a labeled unknown could be told apart by passed the cap, on the group ("Labeled unknowns, as built") |
 | fault | the cause: `arith_overflow`, `arith_type_error`, `agg_overflow`, ... | a builtin's or a fold's error, on its rule, cell or lattice cell |
 | divergence | `cycle(Cells)`, the cells of its own improving cycle: one component of the graph of first firings, never another cycle's | `improving_cycle` |
 | paradox | `cycle(Rels)`, the relations it rests on that lie on a negative cycle (a component of the rules' dependency graph with a negation or a strict aggregate read inside it; a positive recursion is none); `below` when the world below fed its `unknown` row (`asserted_by(F, below, _)`): its cycles are that world's, named by that world's rows | an atom the alternating fixpoint leaves undefined (`unknown`) |
@@ -1666,12 +1670,14 @@ kept, an overflow a possible could mend withdrawn): the oracle's own
 recomputation of it would fault in every completion.
 
 **Not decided** (sound, not complete). A possible member whose group is not
-known makes the conclusion of the group it could make unknown with that group
-open, `wc($unknown_value, $unknown_value)`, which a reader downstream matches
-against every group, a decided one too (f_a_member_whose_group_is_not_known_reads_as_every_group).
-Several possibles resting on one unknown are judged as if independent, which
-may hold open a group no completion moves. A comparison over a count or sum a
-shrug reaches stays a shrug, as before.
+known made the conclusion of the group it could make unknown with that group
+open, `wc($unknown_value, $unknown_value)`, which a reader downstream matched
+against every group, a decided one too; a labeled unknown names it and says
+what it is not (f_a_member_whose_group_is_not_known_reads_as_every_group,
+"Labeled unknowns, as built"). Several possibles resting on one unknown were
+judged as if independent; where they rest on a label and exist in every
+completion they are decided together by its values. A comparison over a count
+or sum a shrug reaches stays a shrug, as before.
 
 **Proofs.** The holes and shrug cells of count, sum, min_max_strat,
 holistic, empty_group and tag_counting are closed again by
@@ -1688,11 +1694,11 @@ and, from the review, `agg_reach_fault_relabel`, `agg_reach_overflow_kept`,
 `agg_reach_sum_empty`, `agg_reach_alias_first`, `agg_reach_redecide`,
 `agg_reach_unmemo` (`agg_precise_scale`), and their `ts_agg_reach_*` twins.
 
-## Labeled unknowns, as designed
+## Labeled unknowns, as built
 
 w_labeled_unknowns, decided by the owner 2026-10-04 (level 2 of
-f_a_member_whose_group_is_not_known_reads_as_every_group). The note is written
-before the code; "as built" replaces it when the item is closed.
+f_a_member_whose_group_is_not_known_reads_as_every_group), in both engines,
+byte for byte (`rust/rofl/src/engine/labeled.rs`, `src/labeled.ts`).
 
 **The model.** Conditional tables with certain-answer semantics. An unknown
 value is no longer anonymous. It is a **labeled null**: a name for one value
@@ -1700,72 +1706,128 @@ that is not known (the label), with a constraint on what it can be (the
 condition). An answer is what holds under every admissible value of every
 label; a shrug is only where admissible values disagree.
 
-**Representation** (terms no source can write, both engines, the same bytes):
+**Representation** (terms no source program can write, though a kernel check
+may match them, `$unk(_, _, _)`):
 
 | Term | Reads |
 | --- | --- |
 | `$unk(L, Ex, Sure)` | one occurrence of the unknown value L, known not to be any of the list `Ex`; `Sure` is 1 when the tuple that holds it exists in every completion |
-| `$by(L, D, Cases, Sure)` | a value that is `D`, and `V` where L is `C` for `c(C, V)` in `Cases`: a count or sum that depends on L |
-| `$lbl(Head, Pos, Firing)` | the label: the missing fact it came from (the head of the rule that faulted, the unbound position) and the firing (rule id and the body's bindings), so two firings of one rule are two labels and one firing twice is one |
+| `$by(L, D, Cases, Sure)` | a value that is `D`, and `V` where L is `K` for `c(K, V)` in `Cases`: a count or sum that depends on L; `K` is a constant or another label (L is equal to it), `V` may be a `$by` of another label, so a table over several |
+| `$lbl(Head, Pos, Firing)` | the label: the missing fact it came from (the head of the rule that faulted with `_` where it is not known, and the position) and the firing (the rule and what its variables were), so two firings of one rule are two unknowns and one firing twice is one |
 
 `$unknown_value` stays: an unknown with no label (an unbound variable of a
 literal over a whole relation, the padding of a cell's value, an `unknown(v(_))`
-text) is anonymous, matches anything, and is never decided. A label is born
-where a fault leaves a head variable unbound (`ph_w(G, k9) :- ph_big(B), G is
-B + 1.`): the tuple `ph_w(L, k9)` is the missing fact, L the unknown in it. A
-rule whose faulting builtin is the last thing its body asks (nothing after it
-can fail) concludes a tuple that exists in every completion with its value not
-known (**Sure**); any other fault concludes a tuple that may not exist at all.
-These are two uncertainties and the model keeps them apart: *exists, value
-unknown* (a label, Sure 1) and *may not exist* (Sure 0). Whatever is derived
-from a tuple through an undecided step (a comparison, a negation, an
-aggregate it cannot decide, another tuple that may not exist) is Sure 0.
+text, an unknown in the key of a lattice cell) is anonymous, matches
+anything, and is never decided.
 
-**Matching respects the condition.** A literal's argument against `$unk(L, Ex)`
-fails when it is a known value in `Ex` and otherwise stands for L, binding to
-the labeled term itself so L is carried. Two occurrences of one label are one
-unknown; two labels may be equal (never assumed apart). `unknown_at` indexes a
-labeled position under the wild key (any value could be it); the test is made
-after, by unification.
+**Where a label is born** (`label_fault`, `labelFault`). A fault in a plain
+rule leaves a head variable unbound (`ph_w(G, k9) :- ph_big(B), G is B + 1.`):
+that variable is bound to `$unk(L, [], Sure)`, so the tuple `ph_w(L, k9)` is
+the missing fact and L the unknown in it. Two uncertainties are kept apart:
+
+- *exists, value unknown*: `Sure` 1. The fault is an **overflow** (the value
+  there is, out of the term range) and the last thing the body asks: nothing
+  after it can fail, so the rule concludes in every completion;
+- *may not exist*: `Sure` 0. A type error or a zero divisor leaves no value, a
+  comparison may follow the fault, and whatever is derived from a tuple through
+  an undecided step (a comparison, a negation, an aggregate it cannot decide,
+  another tuple that may not exist) is not sure either (`unsure`, a marker in
+  the solution the carry solves the rest of a body under; `desure`).
+
+**Matching respects the condition** (`unify_unknown`, `unifyUnknown`). A
+literal's argument against `$unk(L, Ex)` fails when it is a known value in
+`Ex` and otherwise stands for L, bound to the labeled term itself so L is
+carried: one label shared by two cells is the same text twice. Against a
+`$by` it fails when it is a known value none of the table's cases has (a count
+of 4 where the cases give 1 to 3). Two labels may be equal (never assumed
+apart). `unknown_at` indexes a labeled position under the wild key and the
+test is made by unification.
 
 **The group a possible could make.** A possible member whose group is the
-labeled L falls in a sealed group g unless g is in L's exclusion, or in a new
-group: the conclusion for a group no sealed group names is `ph_wc($unk(L, Ex),
-N)` with `Ex` the keys of the groups sealed under that correlation. It matches
-no sealed group, so `not ph_wc(g1, 2)` is no. Where the group is a label of
-several positions, a pattern with more than one open position is as today.
+labeled L falls in a sealed group g unless g is in L's exclusion; or it makes
+a group no sealed group names, whose conclusion is `ph_wc($unk(L, Ex), N)`
+with `Ex` the keys of the groups sealed under that correlation, and N the
+member count or total of that group where it is the same in every completion
+(`new_group_value`: a table over the other labels that could be that group
+too). It matches no sealed group, so `not ph_wc(g1, 2)` is no, and the
+correlation is no longer held a hole whole beside its groups
+(`ph_holed(Rel, whole)` of the precise worlds is gone for a position that is
+labeled, in `ph_wc` and `ph_pair`). A pattern with more than one open position,
+or with an open position that is not labeled, is as it was.
 
-**The correlation.** A group whose possibles are all labeled and Sure is decided
-by regions: the values L can be told apart by are the constants the terms
-mention (the group key, the exclusion lists, the cases of a `$by`) and one
-class for the rest, and two labels may share the rest, so the regions are the
-assignments of every label to a mentioned constant or a class of the rest
-(Bell). Each region gives the group its members, a count or a sum folded over
-them. All regions the same: the cell is sealed with that value, not a hole.
-Otherwise a hole whose value is the `$by` the regions give, so what reads the
-group (a total over all groups) reads one unknown, not one per group. A group
-with a possible that may not exist, or one that is not labeled, is decided as
-before (the algebra of "Precise holes, as built"). Count and sum are decided
-by regions; the other kinds keep their algebra.
+**The correlation** (`region_decide`, `regionDecide`). A group of a count or a
+sum whose possibles all exist in every completion and rest on labels is decided
+by regions: the values a label can be told apart by are the constants the
+terms mention (the group key, the exclusion lists, the cases of a `$by`) and
+one class for all the rest, and two labels may share a class, so a REGION is an
+assignment of every label to a constant or to a class (Bell over the classes).
+Each region gives the group its members, a count or a sum folded over the known
+members and the possibles present there (a possible whose label is a value its
+occurrence is known not to be is not there). All regions the same: the cell is
+sealed with that value, not a hole, and `why` says so: `[aggregate: no member
+known, the same under every value of _[lw(_, k7).0], sealed lwc@2]`. Otherwise
+the cell is a hole whose conclusion carries the value as a table over the
+labels (`$by`, nested), so what reads the group (a total over all groups) reads
+one unknown and not one per group. This is how the sum and the count over all
+groups are exact when one member's group is unknown, and when two are: each
+member adds one to the group it joins or makes a group of its own, whatever it
+is. A group with a possible that may not exist, one that is not labeled, one
+that is not a count or a sum, or a comparison over a table, is decided as
+before (the algebra of "Precise holes, as built").
 
-**The cap.** One label is linear (its constants plus one). Regions are
-counted before they are made: more than `LABEL_REGIONS` = 64 for one decision
-and the group is not decided by regions: it keeps the hole of the algebra, and
-its shrug says so, `budget` with `spent(regions, N, 64)`.
+**The cap** (`LABEL_REGIONS` = 64). One label is linear (its constants plus
+one). Regions are counted before they are made (`count_regions`); more than 64
+for one group and it is not decided by them: its cell is a hole `regions_capped`
+and the shrug on it says how many there were: `shrug(Cell, budget,
+spent(regions, 203, 64))`, five unknown members over one group. The table
+of a new group is built over at most six other labels.
 
-**The written form.** A label is written `_[ph_w(_, k9).0]` (the missing fact
-with `_` for the unknown positions, then the position); with a condition
-`_[ph_w(_, k9).0 != g1, g2]`; a conditional value `[ph_w(_, k9).0: g2 -> 2,
-else 1]`. In a shrug the target is written that way (`ph_wc(g2, [..])`), so
+**The written form.** A label is `_[ph_w(_, k9).0]` (the missing fact with `_`
+for the unknown positions, then the position); with a condition `_[ph_w(_,
+k9).0 != g1, g2]`; a value that depends on it `[ph_w(_, k9).0: g2 -> 2, else
+1]`, with another label as a key `[L2: _[L1] -> 3, else 4]`. In a shrug the
+target and its bindings are written that way (`?` shows `V = _[sd_val(b,
+_).1]`, `why` and `whynot` the line `lwc(g2, [..]) is a shrug`), so
 shrug(Target, Reason, Meta) needs no new reason for the condition: it is in the
-target, and a label two cells share is the same text twice. A capped answer is
-`shrug(T, budget, spent(regions, N, 64))`.
+target, the label two cells share is the same text twice, and the roots are
+the rule that faulted. The stored term is the canonical `$unk`, `$by` and
+`$lbl` above. A capped answer is `shrug(T, budget, spent(regions, N, 64))`.
 
-**What does not change.** A held row, an unentailed literal and every shrug the
-labeled machinery does not reach are byte for byte as before: only a shrug
-becomes an answer, or its target text names the label. Labels are carried only
-for faults in plain rules and for aggregates over them; an unknown in the key
-of a lattice cell (`Unknown::Rel`) stays anonymous.
+**What turned from a shrug into an answer** (on every world, golden census
+moves are these and the new text of a fault's target, nothing else):
+
+| Question | Before | Now |
+| --- | --- | --- |
+| `not ph_wc(g1, 2)` over `ph_w(?, k9)` | shrug | holds (g1 already holds k9) |
+| `not ph_wc(g3, 2)`, g3 no member's group | shrug | holds (the group it could make counts 1) |
+| `not ph_pair(g1, h3, 2)`, the same for a pair | shrug | holds |
+| the total of all groups, one member (`ltot`) | shrug | 3 |
+| the total of all groups, two members (`lc2tot`) | shrug | 3 |
+| a count no completion gives (`lwc(g1, 3)`) | shrug | no |
+| a group no unknown moves, `not lqc(g5, 1)` | shrug | holds |
+
+and the answers that stay shrugs because the completions disagree: the count
+of g1 (a table), the number of groups (a table), the total where the member's
+projection is held by a group already (`lvtot`, `$by(L, 3, [g1 -> 2])`), the
+total over a member that may not exist (`lutot`).
+
+**Not decided** (sound, not complete): the group the labeled unknown makes
+when several positions of the group are open; a min, max or holistic kind over
+a labeled member (the algebra of "Precise holes, as built" decides them, a
+labeled unknown only names them); a comparison over a `$by` value; an unknown
+in the key of a lattice cell (`Unknown::Rel`); a `$by` over more than six
+labels for the count of a new group. These keep the anonymous unknown and its
+shrug.
+
+**Proofs.** `agg_label_holes` (the answers derived by hand), `agg_label_oracle`
+and `agg_label_cap_oracle` (every completion of one unknown, of two unknowns
+sharing a group or not, each aggregate recomputed in each, the engine held to
+them: a value held is every completion's, one value is a row, two are a
+shrug), `agg_label_cap` (the cap), the extensions of `agg_precise_holes`, and
+the TypeScript surfaces of `scripts/goldens.ts`. The faults: `label_off`,
+`label_ex_ignored`, `label_by_values_ignored`, `label_regions_off`,
+`label_correlation_lost`, `label_cap_ignored`, `label_open_correlation`,
+`label_new_anonymous`, `label_sure_always` and their `ts_label_*` twins.
 
 ## The join lattice, as built
 

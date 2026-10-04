@@ -1,0 +1,63 @@
+-- examples/checks/agg-label-cap-oracle.rofl — THE COMPLETIONS OF TWO UNKNOWNS
+-- for agg-label-cap-data.rofl's lc2 (docs/aggregates.md, "Labeled unknowns"):
+-- the groups of k1 and of k2 are each g1, ga, or gb (a group the other may be too,
+-- or not): nine completions, which is the sharing among the unknowns that the
+-- regions of the engine are, each aggregate recomputed in each, and the engine
+-- held to them as agg-label-oracle.rofl holds the one:
+--   the count of g1 is 1 to 3 (a shrug), the number of groups 1 to 3 (a shrug),
+--   the total over all groups 3 in all nine (a row), and `not lc2c(g1, N)`
+--   holds for N = 4 (in every completion) and is a shrug for 1, 2 and 3.
+alarm(lq_bad).
+alarm(lq_agreed_missing).
+alarm(lq_shrug_wrong).
+alarm(lq_split_decided).
+edb(lq_v).
+lq_v(g1). lq_v(ga). lq_v(gb).
+lq_c(V, W) :- lq_v(V), lq_v(W).
+lq_m(V, W, G, X) :- lq_c(V, W), lc0(G, X).
+lq_m(V, W, V, k1) :- lq_c(V, W).
+lq_m(V, W, W, k2) :- lq_c(V, W).
+lq_n(V, W, G, N) :- lq_c(V, W), N is count(X : lq_m(V, W, G, X)).
+lq_tot(V, W, S) :- lq_c(V, W), S is sum(N ; G : lq_n(V, W, G, N)).
+lq_cnt(V, W, S) :- lq_c(V, W), S is count(G : lq_n(V, W, G, _)).
+lq_g1(V, W, N) :- lq_n(V, W, g1, N).
+lq_comps(N) :- N is count(V, W : lq_c(V, W)).
+lq_vals_tot(S) :- lq_tot(_, _, S).
+lq_vals_cnt(S) :- lq_cnt(_, _, S).
+lq_n_tot(N) :- N is count(S : lq_vals_tot(S)).
+lq_n_cnt(N) :- N is count(S : lq_vals_cnt(S)).
+lq_n_g1(K, N) :- lcn(K), N is count(V, W : lq_has(V, W, K)).
+lq_has(V, W, K) :- lq_g1(V, W, K).
+lq_n_not(K, N) :- lcn(K), N is count(V, W : lq_not(V, W, K)).
+lq_not(V, W, K) :- lq_c(V, W), lcn(K), not lq_g1(V, W, K).
+lq_has_tot() :- lc2tot(_).
+lq_has_cnt() :- lc2cnt(_).
+lq_sh_tot() :- shrug(lc2tot(_), _, _).
+lq_sh_cnt() :- shrug(lc2cnt(_), _, _).
+lq_bad(lc2tot, S) :- lc2tot(S), lq_tot(_, _, T), S != T.
+lq_bad(lc2cnt, S) :- lc2cnt(S), lq_cnt(_, _, T), S != T.
+lq_bad(lc2no, K) :- lc2no(K), lq_comps(N), lq_n_not(K, M), M != N.
+lq_agreed_missing(lc2tot, none) :- lq_n_tot(1), not lq_has_tot().
+lq_agreed_missing(lc2cnt, none) :- lq_n_cnt(1), not lq_has_cnt().
+lq_agreed_missing(lc2no, K) :- lq_comps(N), lq_n_not(K, N), not lc2no(K).
+lq_split_decided(lc2tot, none) :- lq_has_tot(), lq_n_tot(N), N > 1.
+lq_split_decided(lc2cnt, none) :- lq_has_cnt(), lq_n_cnt(N), N > 1.
+lq_split_decided(lc2no, K) :- lq_comps(N), lq_n_not(K, M), M > 0, M < N, lc2no(K).
+lq_shrug_wrong(lc2tot, none) :- lq_sh_tot(), lq_n_tot(1).
+lq_shrug_wrong(lc2cnt, none) :- lq_sh_cnt(), lq_n_cnt(1).
+lq_shrug_wrong(lc2no, K) :- shrug(lc2no(K), _, _), lq_n_not(K, 0).
+lq_shrug_wrong(lc2no, K) :- shrug(lc2no(K), _, _), lq_comps(N), lq_n_not(K, N).
+lq_split_missing(lc2tot, none) :- lq_n_tot(N), N > 1, not lq_sh_tot().
+lq_split_missing(lc2cnt, none) :- lq_n_cnt(N), N > 1, not lq_sh_cnt().
+lq_split_missing(lc2no, K) :- lq_comps(N), lq_n_not(K, M), M > 0, M < N, not shrug(lc2no(K), _, _).
+alarm(lq_split_missing).
+-- the hand-derived: 9 completions, one total, three counts, g1's count 1 to 3
+-- expect-row: lq_comps[main](9)
+-- expect-row: lq_n_tot[main](1)
+-- expect-row: lq_n_cnt[main](3)
+-- expect-row: lq_n_not[main](4,9)
+-- expect-row: lq_n_g1[main](1,4)
+-- expect-row: lq_n_g1[main](2,4)
+-- expect-row: lq_n_g1[main](3,1)
+-- expect-row: lc2tot[main](3)
+-- expect-no-row: lc2cnt[main](

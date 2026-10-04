@@ -8,6 +8,7 @@
 // each region; the same in every region and it is the group's value, otherwise the value of the one label, region by
 // region, is a `$by`. More regions than `LABEL_REGIONS` and the group is not decided.
 
+import { labelText } from './shrug.ts';
 import { type Term, canonTerm, mki, mkf, unkParts, byParts, mkUnk, mkList, holdsUnknown, TERM_MIN, TERM_MAX } from './unify.ts';
 
 export const LABEL_REGIONS = 64;
@@ -22,7 +23,7 @@ export interface Poss {
   neg: boolean;
 }
 
-export type Regions = { k: 'no' } | { k: 'decided'; v: bigint } | { k: 'cond'; t: Term } | { k: 'capped'; n: number };
+export type Regions = { k: 'no' } | { k: 'decided'; v: bigint; by: string } | { k: 'cond'; t: Term } | { k: 'capped'; n: number };
 
 type Rv = { c: Term } | { class: number };
 
@@ -103,11 +104,59 @@ function inst(t: Term, labels: Term[], rg: Rv[]): Term | null | undefined {
   if (b !== null) {
     const at = labels.findIndex((x) => canonTerm(x) === canonTerm(b.label));
     if (at < 0) return undefined;
-    const r = rg[at];
-    if ('c' in r) return b.cases.find(([k]) => canonTerm(k) === canonTerm(r.c))?.[1] ?? b.dflt;
-    return b.dflt;
+    const hit = b.cases.find(([k]) => caseMatches(k, labels, rg, at));
+    return inst(hit?.[1] ?? b.dflt, labels, rg);
   }
   return t;
+}
+
+const sameRv = (a: Rv, b: Rv): boolean => ('c' in a ? 'c' in b && canonTerm(a.c) === canonTerm(b.c) : 'class' in b && a.class === b.class);
+
+/** Whether the case keyed `k` of a `$by` on the label at `at` is the region's: a constant the label is, or another
+ *  label it is equal to (the same constant, or the same class). */
+function caseMatches(k: Term, labels: Term[], rg: Rv[], at: number): boolean {
+  if (k.k === 'f' && k.name === '$lbl') {
+    const j = labels.findIndex((x) => canonTerm(x) === canonTerm(k));
+    return j >= 0 && sameRv(rg[j], rg[at]);
+  }
+  return sameRv(rg[at], { c: k });
+}
+
+/** The labels and constants a term names, a `$by` and what it holds too. */
+function namesIn(t: Term, labels: Map<string, Term>, consts: Map<string, Term>): void {
+  const u = unkParts(t);
+  if (u !== null) { labels.set(key(u.label), u.label); for (const c of u.ex) consts.set(key(c), c); return; }
+  const b = byParts(t);
+  if (b === null) return;
+  labels.set(key(b.label), b.label);
+  for (const [k, v] of b.cases) {
+    if (k.k === 'f' && k.name === '$lbl') labels.set(key(k), k); else consts.set(key(k), k);
+    namesIn(v, labels, consts);
+  }
+  namesIn(b.dflt, labels, consts);
+}
+
+/** The value of the group as a table over the labels, `labels[i..]` still to be told, `idx` the regions the labels before
+ *  them are the same in (`by_node`, Rust). */
+function byNode(labels: Term[], regs: Rv[][], vs: bigint[], consts: Term[], i: number, idx: number[]): Term {
+  if (i === labels.length) return mki(vs[idx[0]]);
+  const cases: [Term, Term][] = [];
+  for (const c of consts) {
+    const sub = idx.filter((r) => sameRv(regs[r][i], { c }));
+    if (sub.length > 0) cases.push([c, byNode(labels, regs, vs, consts, i + 1, sub)]);
+  }
+  // the classes the labels before it are in, each by the first label in it
+  const classes: [number, number][] = [];
+  regs[idx[0]].slice(0, i).forEach((rv, j) => { if ('class' in rv && !classes.some(([c]) => c === rv.class)) classes.push([rv.class, j]); });
+  for (const [k, j] of classes) {
+    const sub = idx.filter((r) => sameRv(regs[r][i], { class: k }));
+    cases.push([labels[j], byNode(labels, regs, vs, consts, i + 1, sub)]);
+  }
+  const fresh: Rv = { class: classes.length };
+  const dflt = byNode(labels, regs, vs, consts, i + 1, idx.filter((r) => sameRv(regs[r][i], fresh)));
+  const dk = canonTerm(dflt);
+  const kept = cases.filter(([, v]) => canonTerm(v) !== dk);
+  return kept.length === 0 ? dflt : mkBy(labels[i], dflt, kept, true);
 }
 
 /** The group's member count or total in one region, over its known members and the possibles present there; `null`
@@ -153,12 +202,7 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
   for (const c of gkey) constAt.set(key(c), c);
   for (const p of mine) {
     const occs = [...p.lab.flatMap((l) => (l === null ? [] : [l.t])), ...p.sproj];
-    for (const t of occs) {
-      const u = unkParts(t);
-      const b = u === null ? byParts(t) : null;
-      if (u !== null) { labelsAt.set(key(u.label), u.label); for (const c of u.ex) constAt.set(key(c), c); }
-      else if (b !== null) { labelsAt.set(key(b.label), b.label); for (const [c] of b.cases) constAt.set(key(c), c); }
-    }
+    for (const t of occs) namesIn(t, labelsAt, constAt);
   }
   const labels = [...labelsAt.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, t]) => t);
   const consts = [...constAt.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, t]) => t);
@@ -172,36 +216,56 @@ export function regionDecide(op: string, params: number, gkey: Term[], projs: Te
     if (v === null) return no;
     vs.push(v);
   }
-  if (vs.every((v) => v === vs[0])) return { k: 'decided', v: vs[0] };
-  if (labels.length !== 1) return no;
-  const d = vs[vs.length - 1];
-  const cases: [Term, Term][] = [];
-  regs.forEach((r, i) => { const x = r[0]; if ('c' in x && vs[i] !== d) cases.push([x.c, mki(vs[i])]); });
-  return { k: 'cond', t: mkBy(labels[0], mki(d), cases, true) };
+  if (vs.every((v) => v === vs[0])) return { k: 'decided', v: vs[0], by: labels.map((l) => `_[${labelText(l)}]`).join(', ') };
+  return { k: 'cond', t: byNode(labels, regs, vs, consts, 0, regs.map((_, i) => i)) };
 }
 
 /** The member count or total of the group an unknown makes, where every possible that could make a group no sealed
- *  group names is this one's and exists in every completion, with its projection known (`new_group_value`, Rust). */
+ *  group names exists in every completion and has its projection known: the members of this label's own, and those of
+ *  each other label that is this one's value too, a table over those labels (`new_group_value`, Rust). */
 export function newGroupValue(op: string, params: number, ps: Poss[], pat: (Term | null)[], labs: (Term | null)[]): Term | null {
   if ((op !== 'count' && op !== 'sum') || params !== 0 || pat.filter((t) => t === null).length !== 1) return null;
   const at = pat.findIndex((t) => t === null);
   const own = labs[at] === null ? null : unkParts(labs[at]!);
   if (own === null) return null;
   const patKey = pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001');
-  const seen = new Set<string>();
-  let total = 0n;
+  const ownProjs: Term[][] = [];
+  const others = new Map<string, { label: Term; projs: Term[][] }>();
+  const has = (xs: Term[][], p: Term[]): boolean => xs.some((x) => x.map(canonTerm).join('\u0001') === p.map(canonTerm).join('\u0001'));
   for (const p of ps) {
     if (p.pat.every((t) => t !== null)) continue;
     const occ = p.lab[at];
     if (occ === null) return null;
     const ou = unkParts(occ.t);
-    if (p.pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001') !== patKey || !p.sure || p.neg || ou === null || canonTerm(ou.label) !== canonTerm(own.label)) return null;
+    if (ou === null) return null;
+    if (p.pat.map((t) => (t === null ? '?' : canonTerm(t))).join('\u0001') !== patKey || !p.sure || p.neg) return null;
     if (p.proj === null) return null;
-    const k = p.proj.map(canonTerm).join('\u0001');
-    if (!seen.has(k)) {
-      if (op === 'count') total += 1n; else { const v = asInt(p.proj[0]); if (v === null) return null; total += v; }
-      seen.add(k);
+    let into: Term[][];
+    if (canonTerm(ou.label) === canonTerm(own.label)) into = ownProjs;
+    else {
+      const k = key(ou.label);
+      if (!others.has(k)) others.set(k, { label: ou.label, projs: [] });
+      into = others.get(k)!.projs;
     }
+    if (!has(into, p.proj)) into.push(p.proj);
   }
-  return seen.size > 0 && inRange(total) ? mki(total) : null;
+  if (ownProjs.length === 0 || others.size > 6) return null;
+  const sorted = [...others.entries()].sort((x, y) => cmp(x[0], y[0])).map(([, v]) => v);
+  const node = (j: number, acc: Term[][]): Term | null => {
+    if (j === sorted.length) {
+      let total = 0n;
+      if (op === 'count') total = BigInt(acc.length);
+      else for (const p of acc) { const v = asInt(p[0]); if (v === null) return null; total += v; }
+      return inRange(total) ? mki(total) : null;
+    }
+    const without = node(j + 1, acc);
+    if (without === null) return null;
+    const withP = [...acc];
+    for (const p of sorted[j].projs) if (!has(withP, p)) withP.push(p);
+    const w = node(j + 1, withP);
+    if (w === null) return null;
+    if (canonTerm(w) === canonTerm(without)) return without;
+    return mkBy(sorted[j].label, without, [[own.label, w]], true);
+  };
+  return node(0, ownProjs);
 }

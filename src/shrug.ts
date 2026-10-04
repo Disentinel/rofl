@@ -58,13 +58,14 @@ export function shrugsOf(store: FactStore, lit: Lit): { row: FactRec; s: Subst }
 }
 
 /** A label as it is written: the missing fact, then the position. */
-function labelText(l: Term): string {
+export function labelText(l: Term): string {
   return l.k === 'f' && l.name === '$lbl' ? `${shown(l.args[0])}.${l.args[1].k === 'i' ? l.args[1].v : 0}` : shown(l);
 }
 
 /** A term as a reader writes it: a list in brackets, `_` where a value is not known. */
 export function shown(t: Term): string {
   if (t.k === 'a' && t.name === '$unknown_value') return '_';
+  if (t.k === 'f' && t.name === '$lbl') return `_[${labelText(t)}]`;
   const u = unkParts(t);
   if (u !== null) return `_[${labelText(u.label)}${u.ex.length ? ` != ${u.ex.map(shown).join(', ')}` : ''}]`;
   const b = byParts(t);

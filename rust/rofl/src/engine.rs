@@ -812,6 +812,8 @@ pub struct Eval {
     cell_reach: HashMap<CellId, Rc<[Unknown]>>,
     /// The value a group an unknown moves has under each value of its label (`$by`), where the regions told it.
     cell_cond: HashMap<CellId, Term>,
+    /// A group decided by regions: the labels its value is the same under every value of, as written.
+    cell_decided: HashMap<CellId, String>,
     /// A group whose regions passed the cap: how many there were, by its hole.
     regions_capped: HashMap<Term, i64>,
     /// THE SHRUG MODEL. `reads_unknown`: some rule reads `unknown`, anywhere;
@@ -1205,6 +1207,7 @@ impl Eval {
             reach_memo: HashMap::new(),
             cell_reach: HashMap::new(),
             cell_cond: HashMap::new(),
+            cell_decided: HashMap::new(),
             regions_capped: HashMap::new(),
             reads_unknown: false,
             unknown_cone: HashSet::new(),
@@ -5107,7 +5110,7 @@ impl Eval {
         }
         let withdrawn = self.h.intern("support_withdrawn");
         let mut reached: HashMap<usize, Vec<Unknown>> = HashMap::new();
-        let (mut decided, mut conds, mut capped): (HashSet<usize>, HashMap<usize, Term>, HashMap<usize, i64>) = Default::default();
+        let (mut decided, mut conds, mut capped): (HashMap<usize, String>, HashMap<usize, Term>, HashMap<usize, i64>) = Default::default();
         let index = PossIndex::of(&reach);
         if plan.empty_zero && !plan.group.is_empty() {
             return Err(Halt::Bug("safety.rofl says empty-zero for a grouping aggregate".into()));
@@ -5279,9 +5282,9 @@ impl Eval {
                         labeled::Regions::No
                     };
                     match regions {
-                        labeled::Regions::Decided(x) => {
+                        labeled::Regions::Decided(x, by) => {
                             value = CellValue::Value(plan.op.lower(&mut self.h, &self.v, x));
-                            decided.insert(sealed.len());
+                            decided.insert(sealed.len(), by);
                         }
                         labeled::Regions::Cond(c) => {
                             value = CellValue::Hole(withdrawn);
@@ -5389,8 +5392,9 @@ impl Eval {
             self.reflect_cell(id)?;
             if let Some(us) = us {
                 self.cell_reach.insert(id, us.into());
-            } else if decided.contains(&n) {
+            } else if let Some(by) = decided.remove(&n) {
                 self.cell_reach.insert(id, Rc::from(Vec::<Unknown>::new()));
+                self.cell_decided.insert(id, by);
             }
             if let Some(c) = conds.get(&n) {
                 self.cell_cond.insert(id, *c);
@@ -8399,6 +8403,10 @@ impl Eval {
                     return None;
                 }
             }
+            // a value that depends on a label is one of the values it has, and no other
+            if self.h.is_ground(ra) && !self.holds_unknown(ra) && brk!("label_by_values_ignored" => false; self.by_values(t).is_some_and(|vs| !vs.contains(&ra))) {
+                return None;
+            }
             return match ra.kind() {
                 TermK::Var(_) => unify(&self.h, ra, t, &s),
                 _ => self.bind_unknown(&[ra], s),
@@ -8478,6 +8486,20 @@ impl Eval {
             }
             _ => None,
         }
+    }
+
+    /// The values a `$by` can have, the leaves of its table; `None` for what is no table.
+    fn by_values(&self, t: Term) -> Option<Vec<Term>> {
+        let (_, d, cases, _) = self.by_parts(t)?;
+        let mut out: Vec<Term> = Vec::new();
+        for v in cases.into_iter().map(|(_, v)| v).chain([d]) {
+            for x in self.by_values(v).unwrap_or_else(|| vec![v]) {
+                if !out.contains(&x) {
+                    out.push(x);
+                }
+            }
+        }
+        Some(out)
     }
 
     fn mk_unk(&mut self, label: Term, ex: &[Term], sure: bool) -> Term {
@@ -10315,6 +10337,7 @@ impl Eval {
         self.reach_memo.clear();
         self.cell_reach.clear();
         self.cell_cond.clear();
+        self.cell_decided.clear();
         self.regions_capped.clear();
         self.hol_shared.clear();
         self.thr_cells.clear();
@@ -12991,7 +13014,10 @@ impl Eval {
                     self.store.cell_seals(c).iter().map(|x| format!("{}@{}", self.h.name(x.rel), x.round)).collect();
                 let members = self.store.cell_members(c).to_vec();
                 let n = members.len();
-                let what = if n == 0 {
+                let what = if let Some(by) = self.cell_decided.get(&c) {
+                    let known = if n == 0 { "no member known".to_string() } else { format!("{n} known member{}", if n == 1 { "" } else { "s" }) };
+                    format!("{known}, the same under every value of {by}")
+                } else if n == 0 {
                     brk!("empty_text" => format!("{n} members"); "empty group".to_string())
                 } else {
                     format!("{n} member{}", if n == 1 { "" } else { "s" })
@@ -13142,6 +13168,9 @@ impl Eval {
     pub fn shown(&self, t: Term) -> String {
         if t == self.unknown_value {
             return "_".into();
+        }
+        if matches!(t.kind(), TermK::Func(i) if self.h.fname(i) == self.v.s_lbl) {
+            return format!("_[{}]", self.label_text(t));
         }
         if let Some((l, ex, _)) = self.unk_parts(t) {
             let ex = if ex.is_empty() { String::new() } else { format!(" != {}", ex.iter().map(|x| self.shown(*x)).collect::<Vec<_>>().join(", ")) };

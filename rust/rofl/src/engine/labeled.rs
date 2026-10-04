@@ -19,7 +19,7 @@ pub(super) const LABEL_REGIONS: i64 = 64;
 /// What the regions said of a group an unknown moves.
 pub(super) enum Regions {
     No,
-    Decided(Val),
+    Decided(Val, String),
     Cond(Term),
     Capped(i64),
 }
@@ -132,6 +132,34 @@ impl Eval {
         out
     }
 
+    /// Whether the case keyed `k` of a `$by` on the label at `at` is the region's: a constant the label is,
+    /// or another label it is equal to (the same constant, or the same class).
+    fn case_matches(&self, k: Term, labels: &[Term], rg: &[Rv], at: usize) -> bool {
+        if matches!(k.kind(), TermK::Func(i) if self.h.fname(i) == self.v.s_lbl) {
+            return labels.iter().position(|x| *x == k).is_some_and(|j| rg[j] == rg[at]);
+        }
+        rg[at] == Rv::C(k)
+    }
+
+    /// The labels and constants a term names, a `$by` and what it holds too.
+    fn names_in(&self, t: Term, labels: &mut Vec<Term>, consts: &mut Vec<Term>) {
+        if let Some((l, ex, _)) = self.unk_parts(t) {
+            labels.push(l);
+            consts.extend(ex);
+        } else if let Some((l, d, cases, _)) = self.by_parts(t) {
+            labels.push(l);
+            for (k, v) in cases {
+                if matches!(k.kind(), TermK::Func(i) if self.h.fname(i) == self.v.s_lbl) {
+                    labels.push(k);
+                } else {
+                    consts.push(k);
+                }
+                self.names_in(v, labels, consts);
+            }
+            self.names_in(d, labels, consts);
+        }
+    }
+
     /// A term in a region: a labeled value is the constant or the class its
     /// label has there, a `$by` the case that constant has, and `None` where
     /// the label is a value the occurrence is known not to be (the tuple that
@@ -147,10 +175,8 @@ impl Eval {
         }
         if let Some((l, d, cases, _)) = self.by_parts(t) {
             let at = labels.iter().position(|x| *x == l)?;
-            return Some(match rg[at] {
-                Rv::C(c) => cases.iter().find(|(k, _)| *k == c).map_or(d, |(_, v)| *v),
-                Rv::Class(_) => d,
-            });
+            let hit = cases.iter().find(|(k, _)| brk!("label_correlation_lost" => false; self.case_matches(*k, labels, rg, at)));
+            return self.inst(hit.map_or(d, |(_, v)| *v), labels, rg);
         }
         Some(t)
     }
@@ -208,13 +234,7 @@ impl Eval {
         for p in mine {
             let occs = p.lab.iter().flatten().map(|(t, _)| *t).chain(p.sproj.iter().copied());
             for t in occs {
-                if let Some((l, ex, _)) = self.unk_parts(t) {
-                    labels.push(l);
-                    consts.extend(ex);
-                } else if let Some((l, _, cases, _)) = self.by_parts(t) {
-                    labels.push(l);
-                    consts.extend(cases.into_iter().map(|(c, _)| c));
-                }
+                self.names_in(t, &mut labels, &mut consts);
             }
         }
         let key = |e: &Eval, t: &Term| tuple_text(&e.h, &[*t]);
@@ -235,47 +255,109 @@ impl Eval {
             let Some(v) = self.region_value(op, &labels, rg, gkey, projs, vals, mine) else { return Regions::No };
             vs.push(v);
         }
-        if vs.iter().all(|v| *v == vs[0]) && brk!("label_correlation_lost" => false; true) {
-            return Regions::Decided(Val::Int(vs[0]));
+        if vs.iter().all(|v| *v == vs[0]) {
+            let by: Vec<String> = labels.iter().map(|l| format!("_[{}]", self.label_text(*l))).collect();
+            return Regions::Decided(Val::Int(vs[0]), by.join(", "));
         }
-        if labels.len() != 1 {
-            return Regions::No;
+        let idx: Vec<usize> = (0..regs.len()).collect();
+        Regions::Cond(self.by_node(&labels, &regs, &vs, &consts, 0, &idx))
+    }
+
+    /// The value of the group as a table over the labels, `labels[i..]` still to be told, `idx` the regions the
+    /// labels before them are the same in: a case for each constant the label could be and for each earlier
+    /// label it could be equal to, the rest where it is none of them; a case no different from the rest is left out.
+    fn by_node(&mut self, labels: &[Term], regs: &[Vec<Rv>], vs: &[i128], consts: &[Term], i: usize, idx: &[usize]) -> Term {
+        if i == labels.len() {
+            return Term::int(vs[idx[0]] as i64);
         }
-        let Some(d) = vs.last().copied() else { return Regions::No };
-        let cases: Vec<(Term, Term)> = regs
-            .iter()
-            .zip(&vs)
-            .filter_map(|(r, v)| match r[0] {
-                Rv::C(c) if *v != d => Some((c, Term::int(*v as i64))),
-                _ => None,
-            })
-            .collect();
-        Regions::Cond(self.mk_by(labels[0], Term::int(d as i64), &cases, true))
+        let mut cases: Vec<(Term, Term)> = Vec::new();
+        for c in consts {
+            let sub: Vec<usize> = idx.iter().copied().filter(|r| regs[*r][i] == Rv::C(*c)).collect();
+            if !sub.is_empty() {
+                cases.push((*c, self.by_node(labels, regs, vs, consts, i + 1, &sub)));
+            }
+        }
+        // the classes the labels before it are in, each by the first label in it
+        let mut classes: Vec<(usize, usize)> = Vec::new();
+        for (j, rv) in regs[idx[0]][..i].iter().enumerate() {
+            if let Rv::Class(k) = rv {
+                if !classes.iter().any(|(c, _)| c == k) {
+                    classes.push((*k, j));
+                }
+            }
+        }
+        for (k, j) in &classes {
+            let sub: Vec<usize> = idx.iter().copied().filter(|r| regs[*r][i] == Rv::Class(*k)).collect();
+            cases.push((labels[*j], self.by_node(labels, regs, vs, consts, i + 1, &sub)));
+        }
+        let fresh = Rv::Class(classes.len());
+        let sub: Vec<usize> = idx.iter().copied().filter(|r| regs[*r][i] == fresh).collect();
+        let dflt = self.by_node(labels, regs, vs, consts, i + 1, &sub);
+        cases.retain(|(_, v)| *v != dflt);
+        if cases.is_empty() {
+            return dflt;
+        }
+        self.mk_by(labels[i], dflt, &cases, true)
     }
 
     /// The member count or total of the group an unknown makes, where every
-    /// possible that could make a group no sealed group names is this one's
-    /// and exists in every completion, with its projection known.
+    /// possible that could make a group no sealed group names exists in every
+    /// completion and has its projection known: the members of this label's
+    /// own, and those of each other label that is this one's value too, a
+    /// table over those labels (`$by` with this label as the key of its case).
     pub(super) fn new_group_value(&mut self, a: &Agg, ps: &[Possible], pat: &[Option<Term>], labs: &[Option<Term>]) -> Option<Term> {
         if !matches!(a.op, AggOp::Count | AggOp::Sum) || a.params() != 0 || pat.iter().filter(|t| t.is_none()).count() != 1 {
             return None;
         }
         let at = pat.iter().position(|t| t.is_none())?;
         let (label, _, _) = self.unk_parts(labs[at]?)?;
-        let count = a.op == AggOp::Count;
-        let mut seen: Vec<&Vec<Term>> = Vec::new();
-        let mut total: i128 = 0;
+        let mut own: Vec<Vec<Term>> = Vec::new();
+        let mut others: Vec<(Term, Vec<Vec<Term>>)> = Vec::new();
         for p in ps.iter().filter(|p| !p.exact()) {
             let occ = p.lab[at].as_ref().map(|(t, _)| *t)?;
-            if p.pat != pat || !p.sure || p.neg || self.unk_parts(occ)?.0 != label {
+            let (l, _, _) = self.unk_parts(occ)?;
+            if p.pat != pat || !p.sure || p.neg {
                 return None;
             }
-            let pr = p.proj.as_ref()?;
-            if !seen.contains(&pr) {
-                total += if count { 1 } else { pr.first()?.as_int()? as i128 };
-                seen.push(pr);
+            let pr = p.proj.clone()?;
+            let into = if l == label {
+                &mut own
+            } else {
+                match others.iter().position(|(o, _)| *o == l) {
+                    Some(k) => &mut others[k].1,
+                    None => {
+                        others.push((l, Vec::new()));
+                        &mut others.last_mut().unwrap().1
+                    }
+                }
+            };
+            if !into.contains(&pr) {
+                into.push(pr);
             }
         }
-        (!seen.is_empty() && (INT_MIN as i128..=INT_MAX as i128).contains(&total)).then(|| Term::int(total as i64))
+        if own.is_empty() || others.len() > 6 {
+            return None;
+        }
+        others.sort_by(|x, y| cmp_js(&tuple_text(&self.h, &[x.0]), &tuple_text(&self.h, &[y.0])));
+        self.new_group_node(a.op == AggOp::Count, label, &others, 0, own)
+    }
+
+    fn new_group_node(&mut self, count: bool, own: Term, others: &[(Term, Vec<Vec<Term>>)], j: usize, acc: Vec<Vec<Term>>) -> Option<Term> {
+        if j == others.len() {
+            let total: i128 = if count { acc.len() as i128 } else { acc.iter().map(|p| p.first().and_then(|t| t.as_int()).map(|n| n as i128)).sum::<Option<i128>>()? };
+            return (INT_MIN as i128..=INT_MAX as i128).contains(&total).then(|| Term::int(total as i64));
+        }
+        let without = self.new_group_node(count, own, others, j + 1, acc.clone())?;
+        let mut with = acc;
+        for p in &others[j].1 {
+            if !with.contains(p) {
+                with.push(p.clone());
+            }
+        }
+        let with = self.new_group_node(count, own, others, j + 1, with)?;
+        if with == without {
+            return Some(without);
+        }
+        Some(self.mk_by(others[j].0, without, &[(own, with)], true))
     }
 }

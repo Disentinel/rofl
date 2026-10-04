@@ -15,8 +15,10 @@ alarm(lo_agreed_missing).
 alarm(lo_shrug_wrong).
 alarm(lo_split_decided).
 edb(lo_v).
+edb(lo_v5).
 edb(lo_x).
 lo_v(g1). lo_v(g2). lo_v(g3). lo_v(gx).
+lo_v5(g1). lo_v5(g2). lo_v5(g3). lo_v5(g5). lo_v5(gx).
 lo_x(yes). lo_x(no).
 
 -- the members in each completion
@@ -28,6 +30,18 @@ lo_vv(V, V, k9) :- lo_v(V).
 lo_u(V, E, G, X) :- lo_v(V), lo_x(E), lw0(G, X).
 lo_u(V, yes, V, k7) :- lo_v(V).
 
+lo_q(V, G, X) :- lo_v5(V), lq0(G, X).
+lo_q(V, V, k9) :- lo_v5(V).
+lo_qc(V, G, N) :- N is count(X : lo_q(V, G, X)).
+lo_qn(V, G) :- lo_v5(V), lg(G), not lo_qc(V, G, 1).
+lo_comps5(N) :- N is count(V : lo_v5(V)).
+lo_n_qn(G, N) :- lg(G), N is count(V : lo_qn(V, G)).
+lo_bad(lqn, G) :- lqn(G), lo_comps5(N), lo_n_qn(G, M), M != N.
+lo_agreed_missing(lqn, G) :- lo_comps5(N), lo_n_qn(G, N), not lqn(G).
+lo_shrug_wrong(lqn, G) :- shrug(lqn(G), _, _), lo_n_qn(G, 0).
+lo_shrug_wrong(lqn, G) :- shrug(lqn(G), _, _), lo_comps5(N), lo_n_qn(G, N).
+lo_split_decided(lqn, G) :- lo_comps5(N), lo_n_qn(G, M), M > 0, M < N, lqn(G).
+lo_split_missing(lqn, G) :- lo_comps5(N), lo_n_qn(G, M), M > 0, M < N, not shrug(lqn(G), _, _).
 lo_c(V, G, N) :- N is count(X : lo_w(V, G, X)).
 lo_vc(V, G, N) :- N is count(X : lo_vv(V, G, X)).
 lo_uc(V, E, G, N) :- N is count(X : lo_u(V, E, G, X)).
@@ -36,8 +50,9 @@ lo_tot(V, S) :- lo_v(V), S is sum(N ; G : lo_c(V, G, N)).
 lo_vtot(V, S) :- lo_v(V), S is sum(N ; G : lo_vc(V, G, N)).
 lo_utot(V, E, S) :- lo_v(V), lo_x(E), S is sum(N ; G : lo_uc(V, E, G, N)).
 lo_cnt(V, S) :- lo_v(V), S is count(G : lo_c(V, G, _)).
-lo_no(V, G) :- lo_v(V), lg(G), not lo_c(V, G, 2).
-lo_one(V, G) :- lo_v(V), lg(G), lo_c(V, G, 2).
+lo_no(V, G) :- lo_v(V), lg3(G), not lo_c(V, G, 2).
+lo_one(V, G) :- lo_v(V), lg3(G), lo_c(V, G, 2).
+lo_three(V, G) :- lo_v(V), lg3(G), lo_c(V, G, 3).
 
 -- how many completions answer a question each way
 lo_comps(N) :- N is count(V : lo_v(V)).
@@ -49,8 +64,9 @@ lo_n_tot(N) :- N is count(S : lo_vals_tot(S)).
 lo_n_vtot(N) :- N is count(S : lo_vals_vtot(S)).
 lo_n_utot(N) :- N is count(S : lo_vals_utot(S)).
 lo_n_cnt(N) :- N is count(S : lo_vals_cnt(S)).
-lo_n_no(G, N) :- lg(G), N is count(V : lo_no(V, G)).
-lo_n_one(G, N) :- lg(G), N is count(V : lo_one(V, G)).
+lo_n_no(G, N) :- lg3(G), N is count(V : lo_no(V, G)).
+lo_n_one(G, N) :- lg3(G), N is count(V : lo_one(V, G)).
+lo_n_three(G, N) :- lg3(G), N is count(V : lo_three(V, G)).
 
 -- what the engine says of each: a row, or a shrug
 lo_sh_tot() :- shrug(ltot(_), _, _).
@@ -90,6 +106,9 @@ lo_shrug_wrong(lno, G) :- shrug(lno(G), _, _), lo_n_no(G, 0).
 lo_shrug_wrong(lno, G) :- shrug(lno(G), _, _), lo_comps(N), lo_n_no(G, N).
 lo_shrug_wrong(lone, G) :- shrug(lone(G), _, _), lo_n_one(G, 0).
 lo_shrug_wrong(lone, G) :- shrug(lone(G), _, _), lo_comps(N), lo_n_one(G, N).
+-- a count no completion gives is no row and no shrug
+lo_bad(lthree, G) :- lthree(G).
+lo_shrug_wrong(lthree, G) :- shrug(lthree(G), _, _), lo_n_three(G, 0).
 -- a question the completions split on is a shrug
 lo_split_decided(lno, G) :- lo_comps(N), lo_n_no(G, M), M > 0, M < N, lno(G).
 lo_split_decided(lone, G) :- lo_comps(N), lo_n_one(G, M), M > 0, M < N, lone(G).
@@ -104,5 +123,10 @@ alarm(lo_split_missing).
 -- expect-row: lo_n_no[main](g3,4)
 -- expect-row: lo_n_one[main](g1,1)
 -- expect-row: lo_n_one[main](g3,0)
+-- expect-row: lo_n_three[main](g1,0)
+-- expect-row: lo_n_three[main](g2,0)
+-- expect-row: lo_n_qn[main](g5,5)
+-- expect-row: lo_n_qn[main](g1,0)
+-- expect-row: lo_n_qn[main](g3,4)
 -- expect-row: lo_vals_utot[main](2)
 -- expect-row: lo_vals_utot[main](3)
