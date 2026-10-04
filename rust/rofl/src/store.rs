@@ -43,6 +43,16 @@
 //! Reviving is sound BECAUSE the key is a function of `(rel, persp, tuple)`:
 //! a held `PremRef::Fact` spells exactly the string it spelled before, and the
 //! fact identity becomes what the JS kernel's key already is — injective.
+//!
+//! A FORK IS A LAYER (`Store::freeze`, `Session::fork`). Every arena here is
+//! append-only, so a world frozen at a mark is a base: its arenas and tables
+//! go behind an `Rc`, a fork appends above the mark, and ids keep counting
+//! from it, so an id below the mark is always the base's and a lookup that
+//! misses the layer's table asks the base's. The base is never written; the
+//! state a layer does change on a base record — its flags, its firing chain,
+//! a group's run — is copied at the first write (a byte a record, a word a
+//! record, a relation's runs), and named where it is. The base's arenas are
+//! plain vectors, which is what lets one be a file mapped in later.
 
 use crate::cell::{AggOp, Algebra};
 use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
@@ -111,6 +121,11 @@ impl FactRec {
     #[inline]
     pub fn flags(&self) -> u8 {
         (self.packed >> 28) as u8
+    }
+    #[inline]
+    fn set_flags(&mut self, f: u8) {
+        debug_assert!(f & 0xf0 == 0);
+        self.packed = (self.packed & TUP_MASK) | ((f as u32) << 28);
     }
     #[inline]
     pub fn base(&self) -> bool {
@@ -333,7 +348,7 @@ struct TupSeg {
 }
 
 impl TupSeg {
-    #[inline]
+    #[inline(always)]
     fn span(&self, t: TupId) -> (usize, usize) {
         let end = self.ends[t as usize] as usize;
         let start = if t == 0 {
@@ -343,7 +358,7 @@ impl TupSeg {
         };
         (start, end)
     }
-    #[inline]
+    #[inline(always)]
     fn args(&self, t: TupId) -> &[Term] {
         let (a, b) = self.span(t);
         &self.args[a..b]
@@ -429,7 +444,7 @@ pub struct Tuples {
 }
 
 impl Tuples {
-    #[inline]
+    #[inline(always)]
     fn seg(&self, t: TupId) -> (&TupSeg, TupId) {
         if t < self.t0 {
             (&self.base, t)
@@ -437,7 +452,7 @@ impl Tuples {
             (&self.top, t - self.t0)
         }
     }
-    #[inline]
+    #[inline(always)]
     pub fn args(&self, t: TupId) -> &[Term] {
         let (s, i) = self.seg(t);
         s.args(i)
@@ -495,8 +510,8 @@ impl Tuples {
 /// fork of one world shares; ids from `mark` up are this layer's `own`, and
 /// `freeze` moves them under the mark. A write below the mark copies `base`
 /// first (`Rc::make_mut`): the append-only arenas never do that, and the
-/// per-fact state a layer changes on a record it shares (its flags, its
-/// firing chain head, a base firing's link) does it once.
+/// provenance a layer changes on a record it shares (its firing chain head,
+/// a base firing's link) does it once.
 #[derive(Clone)]
 struct Col<T> {
     mark: usize,
@@ -556,7 +571,7 @@ impl<T: Clone> Col<T> {
 
 impl<T> Index<usize> for Col<T> {
     type Output = T;
-    #[inline]
+    #[inline(always)]
     fn index(&self, i: usize) -> &T {
         if i < self.mark {
             &self.base[i]
@@ -604,23 +619,28 @@ impl<T: Clone> IndexMut<Range<usize>> for Col<T> {
 /// indexes so that sorting a key run can borrow the records immutably while the
 /// run is taken mutably. No unsafe, and the split is the reason there is none.
 ///
-/// A record's flag bits live in `flags` and not in the record: they are the
-/// one part of a record a layer changes, so the records stay shared.
+/// The flag bits of a record below the mark are `bflags`', not the record's:
+/// they are the one part of a record a layer changes, so the records stay
+/// shared and the flags are copied, a byte a record, on the first change.
 #[derive(Default, Clone)]
 pub struct Facts {
     recs: Col<FactRec>,
-    flags: Col<u8>,
+    bflags: Rc<Vec<u8>>,
     tups: Tuples,
 }
 
 impl Facts {
-    #[inline]
+    #[inline(always)]
     pub fn rec(&self, id: FactId) -> FactRec {
-        let mut r = self.recs[id as usize];
-        r.packed |= (self.flags[id as usize] as u32) << 28;
-        r
+        let i = id as usize;
+        if i < self.recs.mark {
+            let r = self.recs.base[i];
+            FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
+        } else {
+            self.recs.own[i - self.recs.mark]
+        }
     }
-    #[inline]
+    #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
         self.tups.args(self.recs[id as usize].tup())
     }
@@ -630,27 +650,35 @@ impl Facts {
     }
     #[inline]
     pub fn alive(&self, id: FactId) -> bool {
-        self.flags[id as usize] & F_DEAD == 0
+        !self.rec(id).dead()
     }
     #[inline]
     fn len(&self) -> usize {
         self.recs.len()
     }
-    fn push(&mut self, r: FactRec, flags: u8) {
+    fn push(&mut self, r: FactRec) {
         self.recs.push(r);
-        self.flags.push(flags);
     }
     #[inline]
     fn set_flags(&mut self, id: FactId, f: u8) {
-        self.flags[id as usize] = f;
+        let i = id as usize;
+        if i < self.recs.mark {
+            Rc::make_mut(&mut self.bflags)[i] = f;
+        } else {
+            self.recs.own[i - self.recs.mark].set_flags(f);
+        }
     }
     #[inline]
     fn add_flags(&mut self, id: FactId, f: u8) {
-        self.flags[id as usize] |= f;
+        self.set_flags(id, self.rec(id).flags() | f);
     }
     fn freeze(&mut self) {
+        let m = self.recs.mark;
         self.recs.freeze();
-        self.flags.freeze();
+        if self.recs.mark > m {
+            let fresh = self.recs.base[m..].iter().map(|r| r.flags());
+            Rc::make_mut(&mut self.bflags).extend(fresh);
+        }
         self.tups.freeze();
     }
     /// The order the JS kernel's key strings compare in, inside one
@@ -824,24 +852,27 @@ struct Runs {
 }
 
 impl Runs {
+    #[inline]
     fn get(&self, rel: &Sym) -> Option<&Vec<(Sym, KeyRun)>> {
         self.own.get(rel).or_else(|| self.base.get(rel))
     }
     fn contains_key(&self, rel: &Sym) -> bool {
         self.get(rel).is_some()
     }
-    fn get_mut(&mut self, rel: &Sym) -> Option<&mut Vec<(Sym, KeyRun)>> {
-        if !self.own.contains_key(rel) {
-            let v = self.base.get(rel)?.clone();
-            self.own.insert(*rel, v);
+    fn copy_up(&mut self, rel: &Sym) {
+        if !self.base.is_empty() && !self.own.contains_key(rel) {
+            if let Some(v) = self.base.get(rel) {
+                self.own.insert(*rel, v.clone());
+            }
         }
+    }
+    fn get_mut(&mut self, rel: &Sym) -> Option<&mut Vec<(Sym, KeyRun)>> {
+        self.copy_up(rel);
         self.own.get_mut(rel)
     }
     fn entry(&mut self, rel: Sym) -> &mut Vec<(Sym, KeyRun)> {
-        if self.get_mut(&rel).is_none() {
-            self.own.insert(rel, Vec::new());
-        }
-        self.own.get_mut(&rel).unwrap()
+        self.copy_up(&rel);
+        self.own.entry(rel).or_default()
     }
     fn iter(&self) -> impl Iterator<Item = (&Sym, &Vec<(Sym, KeyRun)>)> {
         self.own.iter().chain(self.base.iter().filter(|(r, _)| !self.own.contains_key(r)))
@@ -1005,11 +1036,11 @@ impl Store {
         self.fired.freeze();
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn rec(&self, id: FactId) -> FactRec {
         self.facts.rec(id)
     }
-    #[inline]
+    #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
         self.facts.args(id)
     }
@@ -1055,7 +1086,12 @@ impl Store {
     /// is the property the JS kernel's string key has and this port did not.
     fn find_rec(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
         let h = hash_key(rel, persp, args);
-        self.probe(&self.keys_base, h, rel, persp, args).or_else(|| self.probe(&self.keys, h, rel, persp, args))
+        if !self.keys_base.is_empty() {
+            if let Some(id) = self.probe(&self.keys_base, h, rel, persp, args) {
+                return Some(id);
+            }
+        }
+        self.probe(&self.keys, h, rel, persp, args)
     }
 
     #[inline]
@@ -1164,7 +1200,7 @@ impl Store {
             None => {
                 let tup = self.facts.tups.intern(h, args);
                 let id = self.facts.len() as FactId;
-                self.facts.push(FactRec::new(rel, persp, tup, 0), flags);
+                self.facts.push(FactRec::new(rel, persp, tup, flags));
                 self.wit_head.push(EMPTY);
                 self.key_insert(id);
                 id
@@ -1399,7 +1435,7 @@ impl Store {
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => return None,
             Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => return None,
-            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return Some(hits(&self.facts, run, &bp[&mask], vals)),
+            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return Some(hits(&self.facts, &run.loose, &bp[&mask], vals)),
             _ => {}
         }
         let run = self.run_mut(rel, p);
@@ -1409,19 +1445,19 @@ impl Store {
         self.fold_staged(h, rel, p);
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
-        let by_pat = Rc::make_mut(run.by_pat.as_mut().unwrap());
-        if !by_pat.contains_key(&mask) {
-            self.argm_cloned += run.canon.len() as u64;
+        let canon = &run.canon;
+        let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
+            self.argm_cloned += canon.len() as u64;
             let mut by_val = FxMap::default();
             let mut sig = Vec::new();
-            for &k in &run.canon {
+            for &k in canon {
                 if facts.alive(k) && pat_sig(h, pos, facts.args(k), &mut sig) {
                     put_sig(&mut by_val, &sig, k);
                 }
             }
-            by_pat.insert(mask, by_val);
-        }
-        Some(hits(facts, run, &run.by_pat.as_ref().unwrap()[&mask], vals))
+            by_val
+        });
+        Some(hits(facts, &run.loose, by_val, vals))
     }
 
     fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
@@ -3295,12 +3331,12 @@ fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
 }
 
-fn hits(facts: &Facts, run: &KeyRun, by_val: &FxMap<Box<[Term]>, Vec<FactId>>, vals: &[Term]) -> Vec<FactId> {
+fn hits(facts: &Facts, loose: &[FactId], by_val: &FxMap<Box<[Term]>, Vec<FactId>>, vals: &[Term]) -> Vec<FactId> {
     let mut out: Vec<FactId> = match by_val.get(vals) {
         Some(hit) => hit.iter().copied().filter(|&i| facts.alive(i)).collect(),
         None => Vec::new(),
     };
-    out.extend(run.loose.iter().copied().filter(|&k| facts.alive(k)));
+    out.extend(loose.iter().copied().filter(|&k| facts.alive(k)));
     out
 }
 
@@ -3807,6 +3843,51 @@ sks {:>10} B ({:>4.1}% of {})",
         s.add(&h, p, other, &[a], F_BASE);
         assert_eq!(s.fact_count(), 3);
         assert_eq!(s.tuple_count(), 1);
+    }
+
+    /// A LAYER ANSWERS AS A COPY WOULD, and its base answers as it did: the
+    /// same writes on a frozen world's clone and on a plain copy of it give
+    /// the same state, the base is untouched, and so is a sibling layer.
+    #[test]
+    fn a_layer_answers_as_a_copy_would_and_leaves_its_base_alone() {
+        let (mut h, mut s, p, m, _) = world();
+        let (q, rule) = (h.intern("q"), h.intern("r1"));
+        let v: Vec<Term> = (0..40).map(|i| h.atom(&format!("v{i:02}"))).collect();
+        for i in 0..40 {
+            let (e, _) = s.put(&h, p, m, &[v[i], v[(i + 1) % 40]], F_BASE);
+            let (d, _) = s.put(&h, q, m, &[v[i]], 0);
+            s.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(e)] });
+        }
+        s.arg_matches(&h, p, Some(m), 2, &[0], &[v[3]]);
+        let (copy_h, copy) = (h.clone(), s.clone());
+        h.freeze();
+        s.freeze(&h);
+        let base = s.canonical_state(&h);
+        let writes = |h: &mut Heap, s: &mut Store| {
+            s.clear_derived(None);
+            let w: Vec<Term> = (0..20).map(|i| h.atom(&format!("w{i:02}"))).collect();
+            for i in 0..20 {
+                let (e, _) = s.put(h, p, m, &[w[i], v[i]], F_BASE);
+                let (d, _) = s.put(h, q, m, &[v[2 * i]], 0);
+                s.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(e)] });
+            }
+            let gone = s.get(p, m, &[v[5], v[6]]).unwrap();
+            s.remove_many(&[gone]);
+            let hit = s.arg_matches(h, p, Some(m), 2, &[0], &[v[7]]);
+            let all = s.arg_matches(h, p, Some(m), 2, &[1], &[v[7]]);
+            (hit, all, s.rel_persp(h, p, m), s.canonical_state(h))
+        };
+        let (mut lh, mut layer) = (h.clone(), s.clone());
+        let (mut ch, mut copied) = (copy_h, copy);
+        let done = writes(&mut lh, &mut layer);
+        assert_eq!(done, writes(&mut ch, &mut copied));
+        assert_eq!(s.canonical_state(&h), base);
+        let (mut sh, mut sibling) = (h.clone(), s.clone());
+        let x = sh.atom("x");
+        sibling.add(&sh, q, m, &[x], F_BASE);
+        writes(&mut sh, &mut sibling);
+        assert_eq!(s.canonical_state(&h), base);
+        assert_eq!(layer.canonical_state(&lh), done.3);
     }
 
     #[test]

@@ -358,7 +358,7 @@ fn cons_hash(name: Sym, args: &[Term]) -> u64 {
 }
 
 impl Funcs {
-    #[inline]
+    #[inline(always)]
     fn args_of(&self, i: u32) -> &[Term] {
         let f = self.funcs[i as usize];
         &self.args[f.start as usize..(f.start + f.len) as usize]
@@ -474,7 +474,7 @@ impl Heap {
         let n = self.syms.intern(name);
         self.mkf(n, args)
     }
-    #[inline]
+    #[inline(always)]
     pub fn fname(&self, idx: u32) -> Sym {
         if idx < self.f0 {
             self.base.funcs[idx as usize].name
@@ -482,7 +482,7 @@ impl Heap {
             self.top.funcs[(idx - self.f0) as usize].name
         }
     }
-    #[inline]
+    #[inline(always)]
     pub fn fargs(&self, idx: u32) -> &[Term] {
         if idx < self.f0 {
             self.base.args_of(idx)

@@ -64,11 +64,12 @@ fn main() {
     let held: Vec<_> = (0..64).map(|_| cc.eval.fork()).collect();
     println!("(a) clone x64 ms={:.3} live_bytes={}", t.elapsed().as_secs_f64() * 1e3, live() - at);
     drop(held);
-    let at = live();
+    let (at, ns) = (live(), cl.eval.store.absorb_ns);
     let t = Instant::now();
     cl.eval.h.freeze();
     cl.eval.store.freeze(&cl.eval.h);
-    println!("(a) freeze ms={:.3} live_bytes={}", t.elapsed().as_secs_f64() * 1e3, live() - at);
+    let absorbed = (cl.eval.store.absorb_ns - ns) as f64 / 1e6;
+    println!("(a) freeze ms={:.3} (absorbing arrivals: {absorbed:.3}) live_bytes={}", t.elapsed().as_secs_f64() * 1e3, live() - at);
     let at = live();
     let t = Instant::now();
     let held: Vec<_> = (0..64).map(|_| cl.fork()).collect();
