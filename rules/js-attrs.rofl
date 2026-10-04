@@ -30,9 +30,11 @@ edb(attr_unread_ok).       -- attr_unread_ok(Key, Reason)
 edb(attr_deferred).        -- attr_deferred(Key, WorkItem)
 edb(attr_value_unread_ok). -- attr_value_unread_ok(Key, Value, Reason)
 
-unconsumed_attr[audit](K) :- ast_attr[code](_, K, _), not attr_key_read(K),
+attr_pair_seen(K, V) :- ast_attr[code](_, K, V).
+attr_key_seen(K) :- attr_pair_seen(K, _).
+unconsumed_attr[audit](K) :- attr_key_seen(K), not attr_key_read(K),
                              not attr_unread_ok(K, _), not attr_deferred(K, _).
-unconsumed_value[audit](K, V) :- ast_attr[code](_, K, V), attr_key_read(K),
+unconsumed_value[audit](K, V) :- attr_pair_seen(K, V), attr_key_read(K),
                                  not attr_key_read_free(K), not attr_pair_read(K, V),
                                  not attr_value_unread_ok(K, V, _).
 
