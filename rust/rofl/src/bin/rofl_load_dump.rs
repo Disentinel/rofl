@@ -3,6 +3,7 @@
 // out of a test panic.
 //   rofl-load [--ticks N] [--budget N] [--space N] [--strata] [--explain] [--save F] [--below F]... [--retain N] [--retract L]...
 //             [--why L]... [--why-all L]... [--whynot L]... [--excise F]... [--depth N] [--nodes N] [--state]
+//             [--propose-structures [--structures-min-rows N]]
 //             boot.rofl file.rofl...
 // `--strata` runs the stock evaluator, which reads `stratum/2`; `--explain`
 // answers the world's `explain_request` rows after the first evaluation and
@@ -54,6 +55,8 @@ fn main() {
     let mut retracts: Vec<String> = Vec::new();
     let mut qs: Vec<Q> = Vec::new();
     let mut state = false;
+    let mut propose = false;
+    let mut min_rows = 2usize;
     let (mut depth, mut nodes): (Option<i64>, Option<i64>) = (None, None);
     let mut i = 0;
     while i < args.len() {
@@ -83,6 +86,8 @@ fn main() {
             "--depth" => depth = Some(number("--depth", value(&mut i), "an integer")),
             "--nodes" => nodes = Some(number("--nodes", value(&mut i), "an integer")),
             "--state" => state = true,
+            "--propose-structures" => propose = true,
+            "--structures-min-rows" => min_rows = number("--structures-min-rows", value(&mut i), "a count of rows"),
             _ => files.push(args[i].clone()),
         }
         i += 1;
@@ -147,6 +152,11 @@ fn main() {
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     if let Some(f) = save {
         std::fs::write(&f, s.save()).unwrap_or_else(|e| { eprintln!("{f}: {e}"); std::process::exit(1) });
+    }
+    if propose {
+        // read-only: the report replaces the dump, as a question does
+        print!("{}", rofl::structures::propose(&s.eval.store, &s.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
+        return;
     }
     if qs.is_empty() || state {
         print!("{}", s.eval.store.canonical_state(&s.eval.h));

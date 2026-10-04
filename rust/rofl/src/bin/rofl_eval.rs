@@ -33,7 +33,7 @@ unsafe impl GlobalAlloc for Counting {
 static A: Counting = Counting;
 
 const USAGE: &str =
-    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--ticks N] [SEED.json]";
+    "usage: rofl-eval [--bytes] [--derivations] [--no-provenance] [--budget N] [--space N] [--ticks N] [--propose-structures [--structures-min-rows N]] [SEED.json]";
 
 /// WHY THIS REFUSES RATHER THAN IGNORES. The catch-all arm below used to be
 /// `a => path = Some(a)`, so `--ticks 3` set the path to "--ticks", then to
@@ -74,6 +74,9 @@ struct Args {
     derivations: bool,
     /// No `derived_by` rows and no witnesses: the facts alone.
     no_provenance: bool,
+    /// The detection report (docs/data-structures.md) in place of the state, over relations of at least `min_rows` rows.
+    propose: bool,
+    min_rows: usize,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
@@ -85,6 +88,8 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
         want_bytes: false,
         derivations: false,
         no_provenance: false,
+        propose: false,
+        min_rows: 2,
     };
     let mut i = 0;
     // A flag's value is fetched through this, so a trailing `--ticks` with
@@ -118,6 +123,11 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "--bytes" => a.want_bytes = true,
             "--derivations" => a.derivations = true,
             "--no-provenance" => a.no_provenance = true,
+            "--propose-structures" => a.propose = true,
+            "--structures-min-rows" => {
+                let v = value(args, &mut i, "--structures-min-rows")?;
+                a.min_rows = v.parse().map_err(|_| format!("--structures-min-rows: not an integer: {v}"))?;
+            }
             "--help" | "-h" => return Err(USAGE.to_string()),
             f if f.starts_with('-') && f != "-" => {
                 return Err(format!("unknown flag: {f}"));
@@ -144,6 +154,8 @@ fn main() {
         want_bytes,
         derivations,
         no_provenance,
+        propose,
+        min_rows,
     } = match parse_args(&argv) {
         Ok(a) => a,
         Err(e) => {
@@ -205,6 +217,10 @@ fn main() {
     }
     drop(src);
     let live = LIVE.load(Ordering::Relaxed);
+    if propose {
+        print!("{}", rofl::structures::propose(&l.eval.store, &l.eval.h, &rofl::structures::Options { min_rows }).render(min_rows));
+        return;
+    }
     let cs = if derivations {
         l.eval.store.derivations(&l.eval.h)
     } else {
