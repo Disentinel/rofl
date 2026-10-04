@@ -3733,4 +3733,9 @@ work_state(w_cmp_delta_first, open).
 
 work(w_cmp_shape_rewrites,
   "MODEL (from f_costly_rules_are_shapes): eleven measured rule rewrites, one representative per costly shape (s1-s11: helpers for static joins, growing premise first, constant-bound first, reorder a cross product, enter a closure from the narrow end, a shared helper for twin bodies, walk down and stop at a function, project the key before per-row negations, drop the eff_in_fn twin and read in_fn, existence without scanning, nearest_fn off nearest_v), together sealed eval -9 to -13%, default -12 to -22%; s12 (an anti-join as two counts) refuted. rules/js-*.rofl are the owner's: diffs in scratchpad shapes/diffs/, nothing merged. Then: the shape detectors as a lint over the rule reflection, so new rules are caught.").
-work_state(w_cmp_shape_rewrites, open).
+work_state(w_cmp_shape_rewrites, done).
+
+work(w_cmp_shape_rewrites_after_delta_first,
+  "REMAINDER of w_cmp_shape_rewrites (f_costly_rules_are_shapes): s1-s3 (static joins before a recursive premise, live premise first, selective constant first) and the s9 helper for the call and member twins of external_value / may_be_node, which raises the model's probes 2.5 % today because the extra round re-fires callback_param. Re-measure after the engine fires the delta first (w_cmp_delta_first), then apply what still pays and drop the register rows (facts/cost-shapes.rofl, helper_adds_a_round) that stop being needed.").
+work_state(w_cmp_shape_rewrites_after_delta_first, open).
+work_needs(w_cmp_shape_rewrites_after_delta_first, w_cmp_delta_first).

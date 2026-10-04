@@ -198,6 +198,7 @@ check[checks]("facts/goldens.rofl", "rip", world).
 check[checks]("facts/goldens.rofl", "rofl-release", world).
 check[checks]("facts/goldens.rofl", "sensors", world).
 check[checks]("facts/goldens.rofl", "sentence", world).
+check[checks]("facts/goldens.rofl", "shapes", world).
 check[checks]("facts/goldens.rofl", "slo", world).
 check[checks]("facts/goldens.rofl", "slop", world).
 check[checks]("facts/goldens.rofl", "spat", world).
@@ -591,6 +592,7 @@ check[checks]("facts/goldens.rofl", "args_are_terms", world).
 check[checks]("facts/goldens.rofl", "asks", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
+check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "destructor_hole", world).
 check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).

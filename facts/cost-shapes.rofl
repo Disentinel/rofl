@@ -1,0 +1,74 @@
+-- facts/cost-shapes.rofl — THE REGISTER OF COSTLY SHAPES THE JS MODEL KEEPS.
+--
+-- examples/shapes/shapes.rofl finds a rule written the costly way (f_costly_rules_are_shapes);
+-- the rule that is fixed leaves no row, and a finding that stays is a decision. Every row names
+-- the head (all its arms: the register is read per head, not per rule id, which is a hash of the
+-- text), the shape, and WHY IT STAYS WITH THE MEASUREMENT: ms are rule time summed over the four
+-- corpora (self, mcp, cli_exits, util) at the commit that measured them, sealed / default, on the
+-- Rust release engine. A row for a finding that is gone is an alarm (`shape_ok_stale`), so an
+-- excuse does not outlive its rule.
+--
+-- The closed reasons:
+--   product_is_the_output  the head IS the product of two tables, or the pair space is audited
+--   one_row_per_key        the projected key is the premise's own and the rows are few
+--   no_nearest_relation    the nearest is asked of a nesting no `nearest_*` relation exists for
+--   helper_adds_a_round    one helper for twin bodies adds a round inside a positive SCC and the
+--                          rule that is behind a prefix re-fires on it (delta-first removes this)
+--   tried_no_net_gain      rewritten and measured: the cost moved to another reader
+--   small_set              the set the shape is feared for is small here
+--   alias_of_a_derived     a second name for a derived relation, kept for what the name says (a book,
+--                          a reader's vocabulary); the head's total over all its arms is given
+
+shape_ok(axis_earns, cross_product, "product_is_the_output: an audit over axes x layers, 1 ms").
+shape_ok(eff_lacks, cross_product, "product_is_the_output: names x rows of the inclusion order, 3 ms sealed / 4 default").
+shape_ok(ambient_effect, cross_product, "product_is_the_output: the head is names x effects, 0 ms").
+shape_ok(runtime_lib_unsupported, cross_product, "product_is_the_output: releases x library calls is the audited pair, 0 ms").
+
+shape_ok(ambient_surface_unattributed, project_then_negate, "one_row_per_key: 3 ms sealed / 8 default").
+shape_ok(concrete_unmapped, project_then_negate, "one_row_per_key: 6 ms sealed / 11 default").
+shape_ok(eff_heap_unknown, project_then_negate, "one_row_per_key: 0 ms").
+shape_ok(eff_label_unknown, project_then_negate, "one_row_per_key: 0 ms").
+shape_ok(eff_moment_unplaced, project_then_negate, "one_row_per_key: 0 ms").
+shape_ok(eff_plain_key, project_then_negate, "one_row_per_key: 2 ms sealed / 4 default").
+shape_ok(export_binding_missing, project_then_negate, "one_row_per_key: 1 ms").
+shape_ok(export_internal_homeless, project_then_negate, "one_row_per_key: 1 ms").
+shape_ok(host_effect_undeclared, project_then_negate, "one_row_per_key: 0 ms").
+shape_ok(may_not_be_reached, project_then_negate, "one_row_per_key: 3 ms sealed / 6 default").
+shape_ok(may_not_run, project_then_negate, "one_row_per_key: 4 ms sealed / 6 default").
+shape_ok(mechanism_unanswered, project_then_negate, "one_row_per_key: 0 ms").
+shape_ok(shape_without_verdict, project_then_negate, "one_row_per_key: 0 ms sealed / 1 default").
+
+shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms").
+shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default").
+
+shape_ok(external_value, twin_bodies, "helper_adds_a_round: the call pair fell 510 -> 322 ms but the round re-fires callback_param and the model's probes rose 2.5 % sealed, 3.2 % default").
+shape_ok(may_be_node, twin_bodies, "helper_adds_a_round: the same pair, the other head").
+shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed / 3 default").
+shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
+shape_ok(eff_conv_call, twin_bodies, "small_set: the converting call and its override test, 4 ms sealed / 14 default").
+shape_ok(eff_conv_overridden, twin_bodies, "small_set: the other head of the pair, 1 ms sealed / 2 default").
+shape_ok(fn_name, twin_bodies, "small_set: function declarations by name, 5 ms sealed / 14 default").
+shape_ok(name_bound_in, twin_bodies, "small_set: the same body keyed by file, 4 ms sealed / 16 default").
+
+shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_site moved nothing (mcp default 33 -> 62 ms)").
+shape_ok(for_of_use, closure_wide_end, "tried_no_net_gain: ident first took the rule from 653 to 87 ms (mcp default) and put 664 ms on guarded, the next reader of the ast_within index").
+shape_ok(hidden_at, closure_wide_end, "tried_no_net_gain: ident_in first changed nothing measurable, 16 ms sealed").
+shape_ok(param_hidden, closure_wide_end, "tried_no_net_gain: the order is the measured one, its comment names the 16.3 s against 5.1 s").
+shape_ok(param_use, closure_wide_end, "tried_no_net_gain: ident first raised it from 129 to 213 ms (self+mcp sealed), probes 172k -> 209k").
+
+shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
+shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
+
+shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
+shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (its second arm reads nearest_v), 26 ms sealed / 81 default (both arms)").
+shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
+shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
+shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
+shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").
+shape_ok(for_of_src, twin_bodies, "alias_of_a_derived: hidden_call_src is the code book's copy, 3 ms sealed / 8 default").
+shape_ok(hidden_call_src, twin_bodies, "alias_of_a_derived: for_of_src is the flow book's copy, 5 ms sealed / 21 default").
+shape_ok(hidden_call_user, twin_bodies, "alias_of_a_derived: one hidden call fans to the flow book's names, 0 ms").
+shape_ok(eff_hidden_call, twin_bodies, "alias_of_a_derived: the same fan-out, 0 ms").
+shape_ok(resolves, twin_bodies, "alias_of_a_derived: a hidden call is a call edge too, 96 ms sealed / 221 default (all arms; this body is the one-premise arms)").
+shape_ok(has_default_internal, twin_bodies, "alias_of_a_derived: default_accounted is the audit's name, 0 ms").
+shape_ok(default_accounted, twin_bodies, "alias_of_a_derived: has_default_internal is the code book's name, 0 ms").
