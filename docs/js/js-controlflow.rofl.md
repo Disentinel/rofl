@@ -188,10 +188,10 @@ A node
   - it [is within](js-structure.rofl.md#ast_within) LS.
 - <a id="abrupt_at"></a>is abrupt at a field F from an index I if all of:
   - a node X [targets the label](#label_target) LS;
-  - a node S [is within](js-structure.rofl.md#ast_within) LS;
-  - X [is within](js-structure.rofl.md#ast_within) S;
-  - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I-th of the F of it.
+  - X [is within](js-structure.rofl.md#ast_within) a node S;
+  - S [is within](js-structure.rofl.md#ast_within) LS;
+  - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field).
 
 ## COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
 

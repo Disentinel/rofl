@@ -403,10 +403,17 @@ Declared as facts:
 
 In the flow:
 
-<a id="eff_over"></a>F exceeds an effect N if all of:
-  - N [is in the lattice](#eff_name);
-  - F [has the latent effect](#eff_latent) L at a host H;
-  - unless N [covers](#eff_row) L at H.
+<a id="eff_lh"></a>`eff_lh`(L, H) either:
+
+1. if some function [has the latent effect](#eff_latent) L at a host H;
+2. if some file [has the module effect](#eff_module) L at a host H.
+
+<a id="eff_gap"></a>`eff_gap`(L, H, N) if all of:
+  - [`eff_lh`](#eff_lh)(L, H);
+  - an effect N [is in the lattice](#eff_name);
+  - unless N [covers](#eff_row) an effect label L at a host H.
+
+<a id="eff_over"></a>F exceeds an effect N if F [has the latent effect](#eff_latent) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
 
 <a id="eff_bounded"></a>F is bounded by an effect N if all of:
   - F [is an effect subject](#eff_subject);
@@ -692,10 +699,7 @@ In the flow:
 
 A file F
 
-- <a id="eff_mod_over"></a>exceeds as a module N if all of:
-  - N [is in the lattice](#eff_name);
-  - F [has the module effect](#eff_module) L at a host H;
-  - unless N [covers](#eff_row) L at H.
+- <a id="eff_mod_over"></a>exceeds as a module N if F [has the module effect](#eff_module) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
 - <a id="eff_mod_bounded"></a>is bounded as a module by an effect N if all of:
   - F [is a module subject](#eff_mod_subject);
   - N [is in the lattice](#eff_name);

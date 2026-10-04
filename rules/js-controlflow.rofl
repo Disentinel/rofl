@@ -94,9 +94,9 @@ label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _, _),
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
                              ast_within[code](LS, X).
 
-abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](LS, S),
-                             ast_within[code](S, X), stmt_seq_field(F),
-                             ast_child[code](B, F, I, S).
+abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](S, X),
+                             ast_within[code](LS, S), ast_child[code](B, F, I, S),
+                             stmt_seq_field(F).
 
 -- =========================================================================
 -- COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
@@ -291,8 +291,8 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- edges instead.
 hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _, _).
 hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _, _),
-                                           ast_node[code](P, object_pattern, _, _),
-                                           ast_child[code](P, properties, _, R).
+                                           ast_child[code](P, properties, _, R),
+                                           ast_node[code](P, object_pattern, _, _).
 hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _, _),
                                            ast_child[code](O, properties, _, S),
                                            ast_node[code](S, spread_element, _, _).
@@ -390,8 +390,8 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
 -- and out to the FUNCTION boundary: without `ast_within(G, S)` the walk
 -- reached the module's own list and everything after `class Lit` was
 -- unreachable (`after_abrupt` 3 -> 37).
-try_stops[code](C, T) :- throwing_call[code](C), ast_node[code](T, try_statement, _, _),
-                         ast_within[code](T, C).
+try_stops[code](C, T) :- throwing_call[code](C), ast_within[code](T, C),
+                         ast_node[code](T, try_statement, _, _).
 try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
 
 abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),

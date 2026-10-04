@@ -192,7 +192,7 @@ tdz_cand[code](E, D)     :- lexical_binder[code](D), binder_region[code](D, R),
                             ast_node[code](D, _, _, LD), ast_node[code](E, _, _, LE),
                             LE < LD.
 tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
-                            fn_node[code](G), ast_within[code](R, G), ast_within[code](G, E).
+                            nearest_v[flow](G, E), ast_within[code](R, G).
 tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
 hidden_at[code](E, D)    :- tdz_at[code](E, D).
 
@@ -321,12 +321,13 @@ builtin_prototype(bigint).
 -- POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
 -- arm for array patterns: nothing exercises it and an arm nothing exercises
 -- cannot go red.
-destructures[code](D, Local, Key, File) :- ast_node[code](D, variable_declarator, File, _),
-                                           ast_child[code](D, id, 0, P),
-                                           ast_node[code](P, object_pattern, _, _),
-                                           ast_child[code](P, properties, _, Prop),
-                                           ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
-                                           ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+destr_prop[code](D, Prop, K, Local, File) :- ast_node[code](D, variable_declarator, File, _),
+                                             ast_child[code](D, id, 0, P),
+                                             ast_node[code](P, object_pattern, _, _),
+                                             ast_child[code](P, properties, _, Prop),
+                                             ast_child[code](Prop, key, 0, K),
+                                             ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+destructures[code](D, Local, Key, File) :- destr_prop[code](D, _, K, Local, File), key_name[code](K, Key).
 scoped_binder[code](D, File) :- destructures[code](D, _, _, File).
 
 may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
@@ -926,10 +927,7 @@ member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](
 -- A pattern off an external value: each name is a member of it, the rest is
 -- another object of the same origin.
 external_destructured[code](D, Prop, Local, File) :-
-    ast_node[code](D, variable_declarator, File, _), ast_child[code](D, id, 0, P),
-    ast_node[code](P, object_pattern, _, _), ast_child[code](P, properties, _, Prop),
-    ast_child[code](Prop, key, 0, K), key_name[code](K, _),
-    ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
+    destr_prop[code](D, Prop, K, Local, File), key_name[code](K, _).
 external_value[flow](Prop, Spec) :- external_destructured[code](D, Prop, _, _),
                                     ast_child[code](D, init, 0, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).

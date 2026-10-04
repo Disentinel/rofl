@@ -234,8 +234,8 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _, _),
                        ast_attr[code](F, kind, "constructor"),
                        ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
                        anon_class[code](CD),
-                       ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, init, 0, CD),
+                       ast_node[code](D, variable_declarator, _, _),
                        ast_child[code](D, id, 0, I), ast_name[code](I, N).
 
 -- A decorator is INSIDE the thing it decorates and does not run there:
@@ -493,8 +493,8 @@ await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[co
 -- The gate: a performed call must never become an ordinary edge. It cannot use
 -- `nearest_fn`, because it demands `site(C)` and an await is not a site
 -- — written that way it was permanently silent.
-awaiting_fn[code](Fn, A) :- performed_call[code](A, _), fn_node[code](Fn),
-                            ast_within[code](Fn, A).
+awaiting_fn[code](Fn, A) :- performed_call[code](A, _), ast_within[code](Fn, A),
+                            fn_node[code](Fn).
 performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
                                    awaiting_fn[code](Fn, A),
                                    calls[code](Fn, F).

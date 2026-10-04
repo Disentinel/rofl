@@ -365,8 +365,8 @@ A node
 - <a id="tdz_deferred"></a>is deferred for D if all of:
   - it [is a dead zone candidate of](#tdz_cand) D;
   - [the region](#binder_region) of D is a node R;
-  - a [function](js-callgraph.rofl.md#fn_node) G [is within](js-structure.rofl.md#ast_within) R;
-  - it [is within](js-structure.rofl.md#ast_within) G.
+  - a node G [is nearest to](#nearest_v) it;
+  - G [is within](js-structure.rofl.md#ast_within) R.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
 - is hidden from D if it [is in the dead zone of](#tdz_at) D.
 
@@ -561,12 +561,14 @@ Declared as facts:
 
 In the code:
 
-<a id="destructures"></a>A [declarator](#noun-declarator) destructures Local from Key in File if all of:
-  - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
+<a id="destr_prop"></a>`destr_prop`(a [declarator](#noun-declarator) D, Prop, K, Local, File) if all of:
+  - D is in file File;
+  - the `id` of D is an [object pattern](#noun-object_pattern) P;
   - a node Prop [is among the](#ast_child) `properties` of P;
-  - the `key` of Prop [spells](js-structure.rofl.md#key_name) Key;
+  - the `key` of Prop is a node K;
   - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+
+<a id="destructures"></a>D destructures Local from Key in File if [`destr_prop`](#destr_prop)(D, something, K, Local, File) and a node K [spells](js-structure.rofl.md#key_name) Key.
 
 D is scoped in File if D [destructures](#destructures) some name from some key in File.
 
@@ -1357,12 +1359,7 @@ The plain member Key of a node X is a node V if X [comes out of](#external_value
 
 In the code:
 
-<a id="external_destructured"></a>A [declarator](#noun-declarator) destructures from outside at a node Prop Local in File if all of:
-  - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
-  - Prop [is among the](#ast_child) `properties` of P;
-  - the `key` of Prop [spells](js-structure.rofl.md#key_name) some key;
-  - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+<a id="external_destructured"></a>D destructures from outside at a node Prop Local in File if [`destr_prop`](#destr_prop)(D, Prop, K, Local, File) and a node K [spells](js-structure.rofl.md#key_name) some key.
 
 In the flow:
 

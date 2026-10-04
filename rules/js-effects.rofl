@@ -211,7 +211,10 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- with its callee's must give the caller's own back. `eff_purer_callee`
 -- compares names, not rows, so it under-reports incomparable pairs.
 eff_subject[flow](F)        :- fn_node[code](F).
-eff_over[flow](F, N)        :- eff_name(N), eff_latent[flow](F, L, H), not eff_row(N, L, H).
+eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
+eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
+eff_gap[flow](L, H, N)      :- eff_lh[flow](L, H), eff_name(N), not eff_row(N, L, H).
+eff_over[flow](F, N)        :- eff_latent[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_bounded[flow](F, N)     :- eff_subject[flow](F), eff_name(N), not eff_over[flow](F, N).
 eff_bounded_low[flow](F, N) :- eff_bounded[flow](F, M), eff_lt(M, N).
 effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow](F, N).
@@ -393,7 +396,7 @@ eff_import_invented[audit](I, L, H) :- eff_evaluates_at[code](I, T), eff_here[fl
 
 -- The same Moore closure as section 4, over a file.
 eff_mod_subject[flow](F)        :- corpus_file[code](F).
-eff_mod_over[flow](F, N)        :- eff_name(N), eff_module[flow](F, L, H), not eff_row(N, L, H).
+eff_mod_over[flow](F, N)        :- eff_module[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_mod_bounded[flow](F, N)     :- eff_mod_subject[flow](F), eff_name(N), not eff_mod_over[flow](F, N).
 eff_mod_bounded_low[flow](F, N) :- eff_mod_bounded[flow](F, M), eff_lt(M, N).
 effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_bounded_low[flow](F, N).
