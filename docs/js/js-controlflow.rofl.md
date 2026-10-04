@@ -662,8 +662,8 @@ A node
 <a id="exported_fn"></a>F is exported either:
 
 1. if all of:
-   - F [is within](js-structure.rofl.md#ast_within) an [export declaration](#noun-export_declaration) E;
    - F is a [function](js-callgraph.rofl.md#fn_node);
+   - F [is within](js-structure.rofl.md#ast_within) an [export declaration](#noun-export_declaration) E;
    - unless F [is inside a function](#in_fn);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;

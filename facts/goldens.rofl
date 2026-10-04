@@ -120,8 +120,8 @@ golden_state("rules_inquiry_terminology", "eef40b58afa6245e", 754).
 golden_state("rules_js-ambient", "9832931994f78f11", 1816).
 golden_state("rules_js-attrs", "52858de8b6426dfa", 2276).
 golden_state("rules_js-callgraph", "85bbe883ee97d65c", 3942).
-golden_state("rules_js-controlflow", "abe5b8abcc4ff6db", 3776).
-golden_state("rules_js-dataflow", "cbd59c1191a3e531", 7211).
+golden_state("rules_js-controlflow", "23e402915248c7f7", 3776).
+golden_state("rules_js-dataflow", "472eaa870d191d3b", 7211).
 golden_state("rules_js-effects", "1e28154ddf7b424a", 8624).
 golden_state("rules_js-env-api", "63cce1cc5a9e56e8", 801).
 golden_state("rules_js-env", "8c961e3578db4f97", 2315).

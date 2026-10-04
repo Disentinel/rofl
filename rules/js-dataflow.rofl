@@ -1109,8 +1109,8 @@ catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _, _),
                             ast_child[code](H, param, 0, P).
 try_block[flow](T, B)    :- ast_node[code](T, try_statement, _, _),
                             ast_child[code](T, block, 0, B).
-thrown_in[flow](T, V)    :- try_block[flow](T, B), ast_within[code](B, Th),
-                            ast_node[code](Th, throw_statement, _, _),
+thrown_in[flow](T, V)    :- ast_node[code](Th, throw_statement, _, _),
+                            ast_within[code](B, Th), try_block[flow](T, B),
                             ast_child[code](Th, argument, 0, V).
 
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),

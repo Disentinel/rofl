@@ -425,8 +425,8 @@ export_kind(export_default_declaration).
 fn_node[code](F) :- fn_name[code](F, _).
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
-exported_fn[code](F) :- export_kind(K), ast_node[code](E, K, _, _),
-                        ast_within[code](E, F), fn_node[code](F), not in_fn[code](F).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
+                        ast_node[code](E, K, _, _), export_kind(K).
 
 exported_fn[code](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
                         fn_node[code](F), not in_fn[code](F).

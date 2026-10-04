@@ -1610,8 +1610,8 @@ A node
 > one row that is an audit.
 
 <a id="thrown_in"></a>T throws a node V if all of:
-  - [the block](#try_block) of T is a node B;
-  - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) B;
+  - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) a node B;
+  - [the block](#try_block) of T is B;
   - the `argument` of Th is V.
 
 A node
