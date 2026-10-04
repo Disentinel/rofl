@@ -2952,3 +2952,8 @@ check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- TypeScript engine answers `str_segs` on those with a hole and a different cs_conn, the Rust engine does not.
 -- The planted world (examples/shapes) is held on both.
 check_opt("cost_shapes_model", one_engine, rust).
+
+-- w_data_structures: who reads ast_within / ast_in and what each asks of the tree
+check_world("ast_within_readers").
+check_file("ast_within_readers", "facts/ast-within-readers.rofl").
+check_file("ast_within_readers", "examples/checks/ast-within-readers-check.rofl").

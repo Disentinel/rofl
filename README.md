@@ -153,7 +153,9 @@ verdict at all. Failure mode 17 in `failure-modes.md` is the entry they answer.
 is instrumental to), `medium-and-large.md` (two engines, and the line between
 them, which negation decides), `port-surface.md` (what the Rust engine has to
 expose), `performance-invariants.md` (what this kernel costs and what the field
-costs), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
+costs), `data-structures.md` (declared structures: a promise the system checks
+and a licence for the engine to store a relation as a tree, an alias, a key,
+a span), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
 (every aggregate class as one cell engine with two syntaxes, and the matrix
 that holds the work to it).
 
