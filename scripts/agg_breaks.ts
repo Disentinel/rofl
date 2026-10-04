@@ -3422,6 +3422,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_strict_refire",
+  "what": "the retraction fires a rule whose demand premise unfolds into a negation with the monotone rules, before what the negation reads is derived again",
+  "expect": {
+   "demand_neg_retract": "dt_wrong"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {

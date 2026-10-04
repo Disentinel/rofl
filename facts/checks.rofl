@@ -308,6 +308,12 @@ check_opt("strata_unranked_negation", evaluator, strata).
 check_world("demand_neg_round").
 check_file("demand_neg_round", "examples/checks/demand-neg-round.rofl").
 
+-- the same rules fired again by a retraction: at their level (rust/rofl/src/engine/delta.rs, refire)
+check_world("demand_neg_retract").
+check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
+check_opt("demand_neg_retract", together, 1).
+check_opt("demand_neg_retract", retract, "dt_z(1)").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").
