@@ -19,8 +19,8 @@
 -- `ident_in` carries the file so a rule can lead with (Name, File), which the
 -- store indexes; leading with `ast_node(E, identifier, …)` enumerated every
 -- identifier in the corpus — 39 % of a fixpoint.
-ident[code](N, Name)        :- ast_node[code](N, identifier, _, _), ast_name[code](N, Name).
 ident_in[code](N, Name, File) :- ast_node[code](N, identifier, File, _), ast_name[code](N, Name).
+ident[code](N, Name)        :- ident_in[code](N, Name, _).
 
 -- Name-to-name flow through a declarator initialiser: the first cell, kept.
 decl_binds[code](D, Name)   :- ast_node[code](D, variable_declarator, _, _),
@@ -904,7 +904,10 @@ may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
 -- found from it rather than the other way round. Each hop is ONE round of the
 -- fixpoint, so both heads carry the whole body instead of one reading the
 -- other: every round re-scans every member node, and an intermediate relation
--- made a chain of calls cost three rounds a call (46 rounds became 70).
+-- made a chain of calls cost three rounds a call (46 rounds became 70). Measured
+-- again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
+-- ms but the extra round re-fires callback_param, and the model's probes ROSE
+-- 2.5 %; it waits for an engine that fires a delta first.
 external_value[flow](C, Spec) :- external_value[flow](X, Spec), may_be_node[flow](F, X),
                                  ast_child[code](C, callee, 0, F),
                                  ast_node[code](C, K, _, _), call_like_v(K).
@@ -1069,8 +1072,7 @@ for_of_use[flow](S, Name, U) :- for_of_name[flow](S, Name),
                                 ast_child[code](S, body, 0, B), ast_within[code](B, U),
                                 ident[code](U, Name).
 
-iter_elem[flow](X, E) :- may_be_node[flow](X, A), ast_node[code](A, array_expression, _, _),
-                         ast_child[code](A, elements, _, E).
+iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- resolves[code](X, F), yields[flow](F, E).
 
 may_be_node[flow](U, N) :- for_of_use[flow](S, _, U), for_of_src[flow](S, X),

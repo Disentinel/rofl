@@ -104,8 +104,8 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- <a id="ident"></a>An [identifier](#noun-identifier) reads Name if it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
@@ -1320,7 +1320,10 @@ A node
 > found from it rather than the other way round. Each hop is ONE round of the
 > fixpoint, so both heads carry the whole body instead of one reading the
 > other: every round re-scans every member node, and an intermediate relation
-> made a chain of calls cost three rounds a call (46 rounds became 70).
+> made a chain of calls cost three rounds a call (46 rounds became 70). Measured
+> again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
+> ms but the extra round re-fires callback_param, and the model's probes ROSE
+> 2.5 %; it waits for an engine that fires a delta first.
 
 An [invocation](#noun-invocation)
 
@@ -1555,7 +1558,7 @@ Y points to a node X either:
 
 <a id="iter_elem"></a>A node X has an element E either:
 
-1. if X [points to](#may_be_node) an [array literal](#noun-array_literal) Y and E [is among the](#ast_child) `elements` of Y;
+1. if [the element](#elem_at) some index of X is E;
 2. if X [resolves to](js-callgraph.rofl.md#resolves) F and F [yields](#yields) E.
 
 A node
