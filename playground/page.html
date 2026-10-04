@@ -511,7 +511,7 @@ code.addEventListener('keydown', (e) => {
 const kindWord = (k) => k.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
 function chip(id) { const n = nodes[id]; const many = Object.keys(state.files).length > 1; return n ? `<button type="button" class="node" data-file="${esc(n.file)}" data-line="${n.line}" title="${esc(kindWord(n.kind))} in ${esc(n.file)} on line ${n.line}">${esc(n.label || kindWord(n.kind))}<em>${many ? esc(n.file) + ':' : ''}${n.line}</em></button>` : `<code>${esc(id)}</code>`; }
 function rich(text) {
-  return esc(text.replace(/, in the \w+$/gm, '')).replace(/`([^`]+)`|\b(n[0-9a-f]{8}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
+  return esc(text.replace(/, in the \w+$/gm, '')).replace(/`([^`]+)`|\b(n[0-9a-f]{8,16}_\d+)\b/g, (all, quoted, bare) => { const id = quoted ?? bare; return nodes[id] ? chip(id) : `<code>${esc(id)}</code>`; });
 }
 // an explanation, one step per section of the model it passed through; a step opens on its details, the whole proof is one click further
 function renderStep(st) {
@@ -522,7 +522,7 @@ function renderStep(st) {
   return `<div class="step"><div class="step-line">${file ? `<span class="concern" title="the section of the JS model that concluded this"><b>${esc(file)}</b> ${esc(section)}</span>` : ''}<span class="s">${rich(st.sentence)}${st.again ? ' <span class="more">(shown above)</span>' : ''}</span>${st.again ? '' : more}</div>${body}${!st.again && st.steps.length ? `<div class="step-kids">${st.steps.map(renderStep).join('')}</div>` : ''}</div>`;
 }
 const renderProof = (p, literal) => typeof p === 'string' ? `<div class="why-tree">${esc(p)}</div>` : `<div class="proof">${renderStep(p)}<button type="button" class="whole" data-whole="${esc(literal)}">the whole proof</button></div>`;
-const idsIn = (s) => [...s.matchAll(/\bn[0-9a-f]{8}_\d+\b/g)].map((m) => m[0]);
+const idsIn = (s) => [...s.matchAll(/\bn[0-9a-f]{8,16}_\d+\b/g)].map((m) => m[0]);
 
 // ------------------------------------------------------------ the notebook
 const cellsEl = $('cells');
@@ -590,7 +590,7 @@ function outputs(r) {
   return h;
 }
 // a sentence as plain text, each node by its label: `User.emal asks for a missing field`
-const plain = (s) => s.replace(/, in the \w+$/gm, '').replace(/`?\b(n[0-9a-f]{8}_\d+)\b`?/g, (all, id) => nodes[id]?.label ?? id).replace(/`/g, '');
+const plain = (s) => s.replace(/, in the \w+$/gm, '').replace(/`?\b(n[0-9a-f]{8,16}_\d+)\b`?/g, (all, id) => nodes[id]?.label ?? id).replace(/`/g, '');
 function markBad() {
   marked = { bad: new Map(), warn: new Map(), notes: new Map() };
   const put = (kind, id, row, cell) => {
@@ -741,7 +741,7 @@ async function translate(c, answer = null) {
       const r = out.cells.find((x) => x.id === 'try');
       tries.push(1);
       if (out.error) throw new Error(out.error);
-      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].label} in ${out.nodes[id].file} at line ${out.nodes[id].line}]` : id)) })) };
+      return { errors: r.errors, read_as: r.rofl, asks: r.lines.map((l) => ({ line: l.text, answers: l.total, holds: l.kind === 'never' ? l.ok : undefined, note: l.note, first: l.rows.slice(0, 6).map((x) => x.sentence.replace(/`?(n[0-9a-f]{8,16}_\d+)`?/g, (m, id) => out.nodes[id] ? `[${out.nodes[id].label} in ${out.nodes[id].file} at line ${out.nodes[id].line}]` : id)) })) };
     },
   }] : undefined;
   try {

@@ -10473,6 +10473,8 @@ demands(f_a_refused_world_stays_refused_and_a_wall_judges_the_promise, decision)
 
 finding(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, defect).
 recorded(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "2026-10-04").
+finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
+  "AFTER THE MERGE (main session, 2026-10-04): the width was also written into the READERS of an id, which the change did not list: notebook/kernel.ts (the node label `[text at file:line]` and the `at` lines) and playground/page.html (chips, plain text, ids in a line) matched `n[0-9a-f]{8}_` exactly, so with 16-digit ids the notebook printed raw ids and test:nb `external` went red; now `{8,16}`. An id format has readers outside the scanner; a width change is checked by grepping the pattern, not the producer.").
 addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "scanners/js_ast.ts").
 addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "test/scan-ids.test.ts").
 finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
