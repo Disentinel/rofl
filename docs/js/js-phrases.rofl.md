@@ -741,7 +741,6 @@ Declared as facts:
 | `eff_erased` | "is_erased(node I)" |
 | `eff_evaluates_at` | "evaluates(node I, file T)" |
 | `eff_import_outside` | "imports_outside_the_corpus(node I, text Src)" |
-| `eff_in_fn` | "lies_inside_a_function(node N)" |
 | `eff_module` | "has_the_module_effect(file F, effect label L, at host H)" |
 | `eff_import_invented` | "invents_the_effect(node I, effect label L, at host H)" |
 | `eff_mod_subject` | "is_a_module_subject(file F)" |

@@ -170,7 +170,7 @@ A key K is read if K [is read with](#attr_pair_read) some value.
 
 <a id="rule_prem"></a>A rule R has the premise L either:
 
-1. if [`premise_lit`](#premise_lit)(R, something, L) and L is $lit(something, something, something, something);
+1. if R [has the positive premise](#pos_prem) L;
 2. if [`premise_lit`](#premise_lit)(R, something, $not(L)).
 
 A term
