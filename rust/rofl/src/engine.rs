@@ -912,13 +912,17 @@ pub struct Eval {
     pub asking: bool,
     /// What a question's unfolding read that a hole left unknown.
     asked: Vec<Unknown>,
-    /// The calls answered on demand being unfolded, as variant keys: a call
-    /// met again inside its own unfolding would unfold forever.
-    demand_calls: Vec<String>,
     /// The relations answered on demand whose every answer is ground and
-    /// whose every rule fires bottom-up: a recursive call to one reads the
-    /// store (`demand_closed_rels`).
+    /// whose every rule fires bottom-up: a call to one reads the store
+    /// (`demand_closed_rels`).
     demand_closed: HashSet<Sym>,
+    /// The relations answered on demand that may call themselves through
+    /// others not closed: their calls being unfolded are kept as variant keys.
+    demand_cyclic: HashSet<Sym>,
+    /// The calls of `demand_cyclic` relations being unfolded, as variant keys.
+    demand_calls: Vec<String>,
+    /// The rules being unfolded at each depth, beside `demand_heads`.
+    demand_rule_ids: Vec<Sym>,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
     /// The back-index of the retraction path: fact -> the cells a member of
@@ -1292,9 +1296,11 @@ impl Eval {
             firing: false,
             fault_count: 0,
             demand_trail: Vec::new(),
+            demand_cyclic: HashSet::new(),
+            demand_calls: Vec::new(),
+            demand_rule_ids: Vec::new(),
             asking: false,
             asked: Vec::new(),
-            demand_calls: Vec::new(),
             demand_closed: HashSet::new(),
             last_fault: None,
             agg_memo: HashMap::new(),
@@ -1606,12 +1612,41 @@ impl Eval {
             .map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect()))
             .collect();
         self.demand_closed = self.demand_closed_rels();
+        self.demand_cyclic = self.demand_cyclic_rels();
+    }
+
+    /// The demand relations not closed that reach themselves through calls to
+    /// demand relations not closed (a closed one is read from the store).
+    fn demand_cyclic_rels(&self) -> HashSet<Sym> {
+        let unfolded = |rel: &Sym| self.demand_rels.iter().any(|(r, _)| r == rel) && !self.demand_closed.contains(rel);
+        let calls: HashMap<Sym, Vec<Sym>> = self
+            .demand_rels
+            .iter()
+            .filter(|(rel, _)| unfolded(rel))
+            .map(|(rel, rs)| (*rel, rs.iter().flat_map(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).map(|l| l.rel)).filter(unfolded).collect()))
+            .collect();
+        let mut out = HashSet::new();
+        for start in calls.keys() {
+            let mut seen: HashSet<Sym> = HashSet::new();
+            let mut todo: Vec<Sym> = calls[start].clone();
+            while let Some(r) = todo.pop() {
+                if r == *start {
+                    out.insert(*start);
+                    break;
+                }
+                if seen.insert(r) {
+                    todo.extend(calls.get(&r).into_iter().flatten().copied());
+                }
+            }
+        }
+        out
     }
 
     /// THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all
     /// fire bottom-up: every answer one has is in the store once its rules
-    /// settle, so a call met again inside its own unfolding reads the store
-    /// instead of unfolding forever. An answer position is ground when every
+    /// settle, so a call to one, at any depth, reads the store instead of
+    /// unfolding (a recursion on a bound argument unfolded to the depth
+    /// wall). An answer position is ground when every
     /// variable of each rule's head there is bound by a positive premise at a
     /// ground position (any of a relation not answered on demand), or by `is`
     /// or `=` from ground ones; assumed of all and withdrawn where a rule
@@ -2962,6 +2997,8 @@ impl Eval {
                         _ => roots(self, &node),
                     }
                 }
+                // the unfolding stopped where the call came round, not at a wall
+                "budget" if cname == "demand_cycle" => self.h.atom(&cname),
                 "budget" if cname == "regions_capped" => {
                     let n = self.regions_capped.get(&target).copied().unwrap_or(0);
                     let (f, k) = (self.h.intern("spent"), self.h.atom("regions"));
@@ -8557,6 +8594,26 @@ impl Eval {
         out
     }
 
+    /// A CALL MET AGAIN INSIDE ITS OWN UNFOLDING, `l` under `s`, is not
+    /// unfolded: its answers past those found are unknown (a hole on the rule
+    /// it was met in, `demand_cycle`), and the call above rests on them.
+    fn demand_cycle(&mut self, l: &Lit, s: &Subst) {
+        if !(self.firing || self.asking) {
+            return;
+        }
+        let Some(&rid) = self.demand_rule_ids.last() else { return };
+        let u = self.lit_unknown(l, s);
+        if self.firing {
+            self.arith_hole(rid, self.v.demand_cycle);
+            let marker = self.rule_marker(rid);
+            self.unk_edges.push((Node::Unk(u.clone()), Node::Hole(marker)));
+            self.plain_pending.push((u.clone(), true));
+        } else if !self.asked.contains(&u) {
+            self.asked.push(u.clone());
+        }
+        self.demand_trail.push(u);
+    }
+
     /// `u`, a hole left unknown, read below a call: in a firing the call's
     /// head is unknown; answering a question, `u` is noted.
     fn demand_unknown_read(&mut self, depth: usize, s: &Subst, u: Unknown) {
@@ -10165,11 +10222,19 @@ impl Eval {
             .find(|(r, _)| *r == l.rel)
             .map(|(_, rs)| rs.clone());
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
-        // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a
-        // relation whose answers are all in the store it reads only those
-        let call = drs.as_ref().filter(|_| self.demand_closed.contains(&l.rel)).map(|_| self.anon_lit_key(l, s));
+        // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its
+        // rules fire bottom-up and its news refires every reader): read, not unfolded
+        let closed = self.demand_closed.contains(&l.rel);
+        let drs = drs.filter(|_| !closed || brk!("demand_recursion_unfolds" => true, "demand_closed_unfolds" => true; false));
+        // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end: its
+        // answers past those found are unknown, and so is the call it was met in
+        let keyed = if closed { brk!("demand_closed_unfolds" => true; false) } else { self.demand_cyclic.contains(&l.rel) };
+        let call = drs.as_ref().filter(|_| keyed).map(|_| self.anon_lit_key(l, s));
         let again = call.as_ref().is_some_and(|k| self.demand_calls.contains(k));
-        let drs = drs.filter(|_| !brk!("demand_recursion_unfolds" => false; again));
+        if again && !closed && brk!("demand_cycle_unfolds" => false; true) {
+            self.demand_cycle(l, s);
+        }
+        let drs = drs.filter(|_| !again || brk!("demand_cycle_unfolds" => !closed; false));
         if let Some(drs) = drs {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for (sb, r) in out.iter() {
@@ -10248,7 +10313,9 @@ impl Eval {
             return Ok(Vec::new());
         };
         self.demand_heads.push(head.clone());
+        self.demand_rule_ids.push(r.id);
         let sols = self.solve_body(&rn.body, s3, depth + 1, None, Some(r.id));
+        self.demand_rule_ids.pop();
         self.demand_heads.pop();
         let sols = sols?;
         let mut out = Vec::new();

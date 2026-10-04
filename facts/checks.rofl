@@ -334,6 +334,15 @@ check_file("demand_asked_hole", "examples/checks/demand-asked-hole.rofl").
 check_opt("demand_asked_hole", together, 1).
 check_opt("demand_asked_hole", explain, 1).
 
+-- a closed relation answered on demand reads the store at any depth (f_a_closed_recursion_on_a_bound_argument_met_the_depth_wall)
+check_world("demand_chain").
+check_file("demand_chain", "examples/checks/demand-chain.rofl").
+
+-- a call with an open answer met again inside its own unfolding is a shrug, not a cut world
+-- (f_an_open_recursion_through_demand_cut_the_world)
+check_world("demand_cycle").
+check_file("demand_cycle", "examples/checks/demand-cycle.rofl").
+
 -- a recursion through relations answered on demand reaches its fixpoint
 -- (f_a_recursion_through_demand_unfolded_without_end)
 check_world("demand_recursion").

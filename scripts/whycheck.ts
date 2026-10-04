@@ -108,6 +108,8 @@ const ASKED: Record<string, Q[]> = {
   demand_neg_hole: ['dh_r(c)', 'dh_nr(c)', 'dh_h(c,c)', 'dh_r1(c)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
   demand_pos_hole: ['dp_nr(k)', 'dp_r(k)', 'dp_d(k,k)', 'dp_q2(k)'].map((q): Q => ({ op: 'whynot', query: q })),
   demand_asked_hole: ['da_r(c)', 'da_nr(c)', 'da_q(c,z)', 'da_q(b,z)', 'da_d(k,z)', 'da_ng(b)'].map((q): Q => ({ op: 'whynot', query: q })),
+  demand_cycle: ['dy_r(4)', 'dy_n(3)', 'dy_d(9,5)', 'dy_d(4,9)'].flatMap((q): Q[] => [{ op: 'whynot', query: q }, { op: 'why', query: q }]),
+  demand_chain: ['dc_r(700)', 'dc_missed(700)'].map((q): Q => ({ op: 'whynot', query: q })),
 };
 
 function questions(r: Rofl, budget: number | undefined, first: boolean, excise = true): Q[] {

@@ -1006,6 +1006,14 @@ brk("demand_recursion_unfolds"). brk_kind("demand_recursion_unfolds", switch).
 brk_expects("demand_recursion_unfolds", "demand_recursion").
 brk("ts_demand_recursion_unfolds"). brk_kind("ts_demand_recursion_unfolds", ts).
 brk_expects("ts_demand_recursion_unfolds", "demand_recursion").
+brk("demand_closed_unfolds"). brk_kind("demand_closed_unfolds", switch).
+brk_expects("demand_closed_unfolds", "demand_chain").
+brk("ts_demand_closed_unfolds"). brk_kind("ts_demand_closed_unfolds", ts).
+brk_expects("ts_demand_closed_unfolds", "demand_chain").
+brk("demand_cycle_unfolds"). brk_kind("demand_cycle_unfolds", switch).
+brk_expects("demand_cycle_unfolds", "demand_cycle").
+brk("ts_demand_cycle_unfolds"). brk_kind("ts_demand_cycle_unfolds", ts).
+brk_expects("ts_demand_cycle_unfolds", "demand_cycle").
 brk("wfs_admits_subsumption"). brk_kind("wfs_admits_subsumption", switch).
 brk_expects("wfs_admits_subsumption", "agg_sub_wfs").
 brk_expects("wfs_admits_subsumption", "agg_sub_ts").
@@ -1749,6 +1757,8 @@ switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
 switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_walls", "rust/rofl/src/engine/joinplan.rs").
+switch_site("demand_closed_unfolds", "rust/rofl/src/engine.rs").
+switch_site("demand_cycle_unfolds", "rust/rofl/src/engine.rs").
 switch_site("demand_fault_unspread", "rust/rofl/src/engine.rs").
 switch_site("demand_neg_unholed", "rust/rofl/src/engine.rs").
 switch_site("demand_poison_skipped", "rust/rofl/src/engine.rs").

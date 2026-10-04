@@ -3577,23 +3577,70 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "demand_recursion_unfolds",
-  "what": "a call met again inside its own unfolding unfolds again, to the depth wall",
+  "what": "a call to a closed relation answered on demand unfolds its rules, without end",
   "expect": {
    "demand_recursion": "lacks the row dr_r[main](6)"
   }
  },
  {
   "id": "ts_demand_recursion_unfolds",
-  "what": "the TypeScript engine unfolds a call met again inside its own unfolding, to the depth wall",
+  "what": "the TypeScript engine unfolds a call to a closed relation answered on demand, without end",
   "edits": [
    [
     "src/aggeval.ts",
-    "!(call !== null && this.demandCalls.includes(call))",
-    "true"
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
+    "if (drs !== undefined && !again) {"
    ]
   ],
   "expect": {
    "demand_recursion": "lacks the row dr_r[main](6)"
+  }
+ },
+ {
+  "id": "demand_closed_unfolds",
+  "what": "a call to a closed relation answered on demand unfolds its rules, stopping only on a call met again, to the depth wall",
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "ts_demand_closed_unfolds",
+  "what": "the TypeScript engine unfolds a call to a closed relation answered on demand, stopping only on a call met again",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null",
+    "(this.demandCyclic.has(l.rel) || this.demandClosed.has(l.rel)) ? this.anonLitKey(l, s) : null"
+   ],
+   [
+    "src/aggeval.ts",
+    "if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {",
+    "if (drs !== undefined && !again) {"
+   ]
+  ],
+  "expect": {
+   "demand_chain": "lacks the row dc_r[main](700)"
+  }
+ },
+ {
+  "id": "demand_cycle_unfolds",
+  "what": "a call to a relation answered on demand with an open answer, met again inside its own unfolding, unfolds again, to the depth wall",
+  "expect": {
+   "demand_cycle": "lacks the row dy_r[main](4)"
+  }
+ },
+ {
+  "id": "ts_demand_cycle_unfolds",
+  "what": "the TypeScript engine unfolds again a call to a relation answered on demand met inside its own unfolding",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "const again = call !== null && this.demandCalls.includes(call);",
+    "const again = false;"
+   ]
+  ],
+  "expect": {
+   "demand_cycle": "lacks the row dy_r[main](4)"
   }
  },
  {

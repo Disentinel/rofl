@@ -907,10 +907,14 @@ export class AggEval {
   private batchAt = 0;
   private liveFront: string[] = [];
   private demandHeads: Lit[] = [];
-  /** The calls answered on demand being unfolded, as variant keys: a call met again inside its own unfolding would unfold forever. */
-  private demandCalls: string[] = [];
   /** The relations answered on demand whose every answer is ground and whose every rule fires bottom-up (`demandClosedRels`). */
   private demandClosed = new Set<string>();
+  /** The relations answered on demand that may call themselves through others not closed: their calls being unfolded are kept as variant keys. */
+  private demandCyclic = new Set<string>();
+  /** The calls of `demandCyclic` relations being unfolded, as variant keys. */
+  private demandCalls: string[] = [];
+  /** The rules being unfolded at each depth, beside `demandHeads`. */
+  private demandRuleIds: string[] = [];
   /** The heads of calls answered on demand that an unknown below left undecided, in the order met: each call up holes its head under those of the relation it called, as for a fault. */
   private demandTrail: Unknown[] = [];
   /** A question is being answered (whynot, query): below a call, what a hole left unknown is read as unknown, as in a firing, and noted in `asked`. */
@@ -1123,10 +1127,11 @@ export class AggEval {
     this.widenTh = this.widenThresholds();
     this.demandRels = demand.map(([rel, is]) => [rel, is.map((i) => this.rules[i])]);
     this.demandClosed = this.demandClosedRels();
+    this.demandCyclic = this.demandCyclicRels();
   }
 
-  /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call met again inside its own
-   *  unfolding reads the store. A position is ground when every variable of each rule's head there is bound by a positive
+  /** THE DEMAND RELATIONS WHOSE ANSWERS ARE ALL GROUND, and whose rules all fire bottom-up: a call to one, at any depth,
+   *  reads the store. A position is ground when every variable of each rule's head there is bound by a positive
    *  premise at a ground position (any of a relation not answered on demand), or by `is` or `=` from ground ones; assumed
    *  of all and withdrawn where a rule falls short. */
   private demandClosedRels(): Set<string> {
@@ -1164,6 +1169,24 @@ export class AggEval {
       }
     }
     return new Set(this.demandRels.filter(([rel, rs]) => rs.every((r) => r.safe) && ground.get(rel)!.every((g) => g)).map(([rel]) => rel));
+  }
+
+  /** The demand relations not closed that reach themselves through calls to demand relations not closed (a closed one is read from the store). */
+  private demandCyclicRels(): Set<string> {
+    const unfolded = (rel: string) => this.demandRels.some(([r]) => r === rel) && !this.demandClosed.has(rel);
+    const calls = new Map<string, string[]>();
+    for (const [rel, rs] of this.demandRels) {
+      if (unfolded(rel)) calls.set(rel, rs.flatMap((r) => r.clause.body.flatMap((b) => litsOf(b)).map((l) => l.rel)).filter(unfolded));
+    }
+    const out = new Set<string>();
+    for (const [start, first] of calls) {
+      const seen = new Set<string>(), todo = [...first];
+      for (let r = todo.pop(); r !== undefined; r = todo.pop()) {
+        if (r === start) { out.add(start); break; }
+        if (!seen.has(r)) { seen.add(r); todo.push(...(calls.get(r) ?? [])); }
+      }
+    }
+    return out;
   }
 
   /** THE CARRY OF A LATTICE ACROSS A TICK: `L(K..., V) :- L@next(K..., V).` */
@@ -2236,6 +2259,9 @@ export class AggEval {
           meta = mkf('earlier', [mki(t - 1)]);
         } else if (target.k === 'f' && target.name === '$below') meta = mka('below');
         else meta = roots(node);
+      } else if (reason === 'budget' && cause === 'demand_cycle') {
+        // the unfolding stopped where the call came round, not at a wall
+        meta = mka(cause);
       } else if (reason === 'budget' && cause === 'regions_capped') {
         meta = mkf('spent', [mka('regions'), mki(this.regionsCapped.get(canonTerm(target)) ?? 0), mki(LABEL_REGIONS)]);
       } else if (reason === 'budget') {
@@ -5449,6 +5475,20 @@ export class AggEval {
     return out;
   }
 
+  /** A CALL MET AGAIN INSIDE ITS OWN UNFOLDING, `l` under `s`, is not unfolded: its answers past those found are unknown (a hole on the rule it was met in, `demand_cycle`), and the call above rests on them. */
+  private demandCycle(l: Lit, s: Subst): void {
+    if (!(this.firing || this.asking)) return;
+    const rid = this.demandRuleIds[this.demandRuleIds.length - 1];
+    if (rid === undefined) return;
+    const u = this.litUnknown(l, s);
+    if (this.firing) {
+      this.arithHole(rid, 'demand_cycle');
+      this.unkEdges.push([nUnk(u), nHole(this.ruleMarker(rid))]);
+      this.plainPending.push([u, true]);
+    } else if (!this.asked.some((x) => x.id === u.id)) this.asked.push(u);
+    this.demandTrail.push(u);
+  }
+
   /** `u`, a hole left unknown, read below a call: in a firing the call's head is unknown; answering a question, `u` is noted. */
   private demandUnknownRead(depth: number, s: Subst, u: Unknown): void {
     if (!this.firing && !this.asked.some((x) => x.id === u.id)) this.asked.push(u);
@@ -6365,9 +6405,12 @@ export class AggEval {
       if (!seen.has(fr.key)) { seen.add(fr.key); keys.push(fr.key); out.push([s3, { t: 'fact', key: fr.key }]); }
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
-    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a relation whose answers are all in the store it reads only those
-    const call = drs !== undefined && this.demandClosed.has(l.rel) ? this.anonLitKey(l, s) : null;
-    if (drs !== undefined && !(call !== null && this.demandCalls.includes(call))) {
+    // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
+    // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end: its answers past those found are unknown, and so is the call it was met in
+    const call = drs !== undefined && this.demandCyclic.has(l.rel) ? this.anonLitKey(l, s) : null;
+    const again = call !== null && this.demandCalls.includes(call);
+    if (again) this.demandCycle(l, s);
+    if (drs !== undefined && !this.demandClosed.has(l.rel) && !again) {
       if (call !== null) this.demandCalls.push(call);
       try {
         for (const dr of drs[1]) {
@@ -6400,8 +6443,9 @@ export class AggEval {
     const s3 = unifyAll(head.args, call.args, s2);
     if (s3 === null) return [];
     this.demandHeads.push(head);
+    this.demandRuleIds.push(r.id);
     let sols: Sol[];
-    try { sols = this.solveBody(rn.body, s3, depth + 1, null, r.id); } finally { this.demandHeads.pop(); }
+    try { sols = this.solveBody(rn.body, s3, depth + 1, null, r.id); } finally { this.demandRuleIds.pop(); this.demandHeads.pop(); }
     const out: [Subst, PremRef][] = [];
     for (const sol of sols) {
       const persp = walk(head.persp, sol.s);

@@ -12,11 +12,11 @@
 -- da_q, so no row and no shrug of it is stored: whynot da_q(c, z) is not known
 -- for the hole it reads, which it named and walks back to the fault.
 --
--- da_x(d, _) is a hole of da_x's other rule (oops * 2). `not da_g(_, C)` calls
--- da_g with its first argument free, and da_g calls da_h(Z, Z) with Z free (of b,
--- c, d, which da_kd keeps): both
--- holes leave that call unknown, and da_ng(b) rests on both rules. Only the last
--- unknown under a call was carried, so its shrug named one.
+-- da_x(d, _) is a hole of da_x's other rule (oops * 2). `not da_g(_, C, _)`
+-- calls da_g (W free, so on demand) with its first argument free, and da_g calls
+-- da_h(Z, Z) with Z free (of b, c, d, which da_kd keeps): both holes leave that
+-- call unknown, and da_ng(b) rests on both rules. Only the last unknown under a
+-- call was carried, so its shrug named one.
 edb(da_k). edb(da_j). edb(da_node). edb(da_v). edb(da_kd).
 da_k(b, 3). da_k(c, oops). da_j(d, oops).
 da_node(b). da_node(c). da_node(d). da_node(e).
@@ -29,8 +29,8 @@ da_h1(C)   :- da_u(C, C), not da_x(C, _).
 da_r1(C)   :- da_node(C), da_h1(C).
 da_nr(C)   :- da_node(C), not da_r1(C).
 da_kd(b). da_kd(c). da_kd(d).
-da_g(Z, Y) :- da_u(Y, Y), da_h(Z, Z), da_kd(Z).
-da_ng(C)   :- da_node(C), not da_g(_, C).
+da_g(Z, Y, W) :- da_u(Y, Y), da_h(Z, Z), da_kd(Z).
+da_ng(C)   :- da_node(C), not da_g(_, C, _).
 da_q(C, Y) :- da_node(C), not da_x(C, _).
 
 da_v(b, 1). da_v(k, oops).
