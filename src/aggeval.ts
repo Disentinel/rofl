@@ -752,6 +752,8 @@ export class AggEval {
   stagedUnknown = new Map<string, [Unknown, boolean]>();
   private pastRows: Map<string, string[]> | null = null;
   /** What this `why` has written out in full, a fact (`f|`) or a cell (`c|`): a second reach is a reference, `[above]`. */
+  /** Derivation heights, for the firing `why` shows of each fact; put back at every question. */
+  private whyHeights = new Map<string, number>();
   private whyDone: { has(k: string): boolean; add(k: string): unknown; clear(): void } = new Set<string>();
   /** False writes the tree, every shared sub-goal in full: what scripts/why_dag.ts expands the references of an answer back to. */
   dag = true;
@@ -6540,7 +6542,8 @@ export class AggEval {
 
   private allWitnesses(): Map<string, Witness> {
     const out = new Map<string, Witness>();
-    for (const k of this.store.firings.keys()) { const w = this.store.witnessOf(k); if (w) out.set(k, w); }
+    const memo = new Map<string, number>();
+    for (const k of this.store.firings.keys()) { const w = this.store.witnessOf(k, memo); if (w) out.set(k, w); }
     return out;
   }
 
@@ -6573,6 +6576,7 @@ export class AggEval {
     this.whyScans = 0;
     this.whyDone = this.dag ? new Set<string>() : { has: () => false, add: () => null, clear: () => undefined };
     this.whyHeads.clear();
+    this.whyHeights.clear();
     this.whyUnk = this.plain ? this.unknownCtx() : null;
     const out = this.renderTree(key, { members, query: key });
     this.pastRows = null;
@@ -6619,7 +6623,7 @@ export class AggEval {
     if (seen.has(id)) { next.push(line(`${pad}${key} [cycle]`)); return; }
     // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and what a leaf says is as short as a reference
     const lat = this.lattices.get(r.rel);
-    const leaf = !this.subs.has(r.rel) && lat === undefined && !this.tags.countRel.has(r.rel) && this.store.witnessOf(id) === undefined;
+    const leaf = !this.subs.has(r.rel) && lat === undefined && !this.tags.countRel.has(r.rel) && (this.store.supportCount(id) === 0 || (this.alive(id) && r.base && this.whyWitness(id) === undefined));
     if (!leaf) {
       if (this.whyDone.has(`f|${id}`)) { next.push(line(`${pad}${key} [above]`)); return; }
       this.whyDone.add(`f|${id}`);
@@ -6629,7 +6633,7 @@ export class AggEval {
     else if (lat !== undefined) this.renderLattice(id, key, lat[1], indent, o, next);
     else if (this.tags.countRel.has(r.rel)) this.renderCounting(id, key, indent, o, next);
     else {
-      const w = this.store.witnessOf(id);
+      const w = this.whyWitness(id);
       if (w === undefined) {
         next.push(line(`${pad}${key} ${this.alive(id) && (this.plain || r.base) ? '[axiom]' : '[past tick]'}`));
       } else {
@@ -6638,18 +6642,50 @@ export class AggEval {
           const at = unAtomTerm(r.args[0]);
           if (at) this.whyUnk.hit.add(factKey(at.rel, r.persp, at.args));
         }
-        const past = this.stagedFiring(r.rel, w.ruleId, w.tick, w.prems);
-        for (const pr of w.prems) {
-          const at = Math.max(0, w.tick - 1);
-          // the plain explainer writes a negation's demonstration when it reaches the firing, and its renaming suffixes count in that order
-          if (this.plain && pr.t === 'neg') { if (past) this.renderPast(pr, at, indent + 1, o, next); else this.renderPrem(pr, indent + 1, o, next); }
-          else if (this.plain && pr.t === 'bi') this.renderPrem(pr, indent + 1, o, next);
-          else next.push(past ? { t: 'past', pr, at, indent: indent + 1 } : { t: 'prem', pr, indent: indent + 1 });
-        }
+        this.pushFiring(id, w, indent + 1, o, next);
+      }
+      // THE ASKED FACT'S OTHER FIRINGS: `why` says how many there are, `why all` writes each under its own line, after the one `why`
+      // shows alone. A premise they share is a reference.
+      if (indent === 0) {
+        const rest = this.store.firingsRanked(id, this.whyHeights).slice(w === undefined ? 0 : 1);
+        if (o.members === Infinity) {
+          rest.forEach((x, k) => {
+            next.push(line(`${pad}  #${k + 2} <= ${x.ruleId} @tick ${x.tick} [another derivation]`));
+            this.pushFiring(id, x, indent + 2, o, next);
+          });
+        } else if (rest.length > 0) next.push(line(`${pad}  [${rest.length} more derivation${rest.length === 1 ? '' : 's'}: why all ${o.query}]`));
       }
     }
     // what it rests on is rendered before it leaves the path
     next.push({ t: 'unsee', id });
+  }
+
+  /** The firing `why` shows of a fact: the least height, then signature. A BASE FACT whose shown firing rests on the fact itself is its
+   *  assertion: `handled` is asserted and derived from a claim derived from it, and the shortest proof of the claim is the assertion. A firing
+   *  staged from an earlier tick reads that tick's fact, which is no circle. */
+  private whyWitness(id: string): Witness | undefined {
+    const w = this.store.witnessOf(id, this.whyHeights);
+    if (w === undefined || !(this.alive(id) && this.rec(id).base) || this.stagedFiring(this.rec(id).rel, w.ruleId, w.tick, w.prems)) return w;
+    const seen = new Set<string>(), stack = w.prems.flatMap((p) => (p.t === 'fact' ? [p.key] : []));
+    for (let g = stack.pop(); g !== undefined; g = stack.pop()) {
+      if (g === id) return undefined;
+      if (seen.has(g)) continue;
+      seen.add(g);
+      for (const x of this.store.firingList(g)) for (const p of x.prems) if (p.t === 'fact') stack.push(p.key);
+    }
+    return w;
+  }
+
+  /** The premises of one firing of `id`, each at `indent`. */
+  private pushFiring(id: string, w: Witness, indent: number, o: WhyOpts, next: WhyTask[]): void {
+    const past = this.stagedFiring(this.rec(id).rel, w.ruleId, w.tick, w.prems);
+    for (const pr of w.prems) {
+      const at = Math.max(0, w.tick - 1);
+      // the plain explainer writes a negation's demonstration when it reaches the firing, and its renaming suffixes count in that order
+      if (this.plain && pr.t === 'neg') { if (past) this.renderPast(pr, at, indent, o, next); else this.renderPrem(pr, indent, o, next); }
+      else if (this.plain && pr.t === 'bi') this.renderPrem(pr, indent, o, next);
+      else next.push(past ? { t: 'past', pr, at, indent } : { t: 'prem', pr, indent });
+    }
   }
 
   /** A LATTICE FACT IS ITS CELL: the value, and its members. */
@@ -6725,7 +6761,7 @@ export class AggEval {
   /** A COUNTING TAG'S FACT IS THE SUM OF ITS DERIVATIONS. */
   private renderCounting(id: string, key: string, indent: number, o: WhyOpts, next: WhyTask[]): void {
     const pad = '  '.repeat(indent);
-    const w = this.store.witnessOf(id);
+    const w = this.store.witnessOf(id, this.whyHeights);
     if (w === undefined) { next.push(line(`${pad}${key} [past tick]`)); return; }
     const cp = w.prems.find((p) => p.t === 'cell');
     if (cp === undefined) { next.push(line(`${pad}${key} [tag counting] <= ${w.ruleId} @tick ${w.tick}`)); return; }

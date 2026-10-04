@@ -304,6 +304,39 @@ refusals in it is COMPLETE is a decision rather than a measurement, and
 `examples/rofl-release/` records both polarities so that it reads as contested
 instead of being settled by whoever wrote the last line.
 
+### Which support `why` shows, and `why all`
+
+A fact with several firings keeps every one (`Store::firings`, `Store.firings`), and the sealed state
+prints one of them, the witness. Decided 2026-10-04 (f_why_can_cite_a_witness_that_rests_on_itself,
+f_the_witness_forest_is_stored_and_only_why_renders_one_tree), the same in both engines:
+
+- **The witness is the firing of least derivation height**, ties broken by the signature (the rule id and
+  the premise keys, as text). A firing's height is 1 + its highest premise; a base fact or one with no firing
+  is 0, a cell its own height, a negation or a builtin 0, and a fact's height is its lowest firing's
+  (`Store::heights`, `derivationHeights` in src/store.ts). It is a function of the firings and of nothing
+  that ran first, so a snapshot, a retraction and a fresh evaluation pick the same one. A circular firing is
+  always higher than a direct one, so the proof `why` prints has no `[cycle]` where an acyclic derivation
+  exists, and is the shortest. The sealed state's `wit` lines are this firing too, and so is every `why`
+  of a plain fact.
+- **`why` says how many other firings the asked fact has**, one line at the end of its block:
+  `[2 more derivations: why all wh_reach[main](c,c)]` (the form of an aggregate's `[n more members: why all
+  ...]`). Only the asked fact; a fact further down shows its witness alone.
+- **`why all` writes every firing of the asked fact**, each under its own line after the shortest,
+  `#2 <= rule @tick T [another derivation]`, in order of height and then signature. A premise already
+  written is `[above]`, by the rules of scripts/why_dag.ts. The circular firing is shown for what it is:
+  its premise on the fact itself is `[cycle]`. Below the asked fact each fact is its witness, so the
+  forest is one level wide and an `[above]` reference means the same in every branch of it.
+
+- **A base fact whose firing rests on the fact itself is shown as its assertion**, `K [axiom]`, with its
+  firings behind the hint and `why all` (`#2` and on); one whose firing is acyclic (a fact that arrives
+  through a staged firing is asserted too) is explained by that firing, as before.
+
+The gate over the corpus is scripts/whycheck.ts: no `[cycle]` of a plain `why` names a fact that has a height,
+that is, an acyclic derivation. The proof worlds are `why_height` (a fact with a circular firing whose
+signature is the least, and a direct one) and `why_forest` (three firings sharing subtrees) and `why_base` (an asserted fact derived from itself), with the text of
+`why` and `why all` derived by hand; the planted faults are `witness_by_signature`, `why_all_one_tree`, `why_hint_missing` and
+`why_base_circle`, each with a TypeScript twin.
+
 ### Explanation reaches the binaries
 
 `Session` could explain and no binary asked it to, so a proof still needed the

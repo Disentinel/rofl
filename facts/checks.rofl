@@ -2336,6 +2336,26 @@ check_opt("staged_neg_why_nocarry", together, 1).
 check_opt("staged_neg_why_nocarry", ticks, 1).
 check_opt("staged_neg_why_nocarry", explain, 1).
 
+-- WHAT `why` SHOWS OF A FACT WITH SEVERAL FIRINGS (f_why_can_cite_a_witness_that_rests_on_itself, f_the_witness_forest_is_stored_and_only_why_renders_one_tree):
+-- the firing of least derivation height, ties by signature, never a circle where a direct one exists; `why all` writes every
+-- firing under `#N <= rule @tick T [another derivation]`, shared subtrees as references; `why` says how many more there are
+check_world("why_height").
+check_file("why_height", "examples/checks/why-height.rofl").
+check_file("why_height", "examples/checks/why-height-check.rofl").
+check_opt("why_height", together, 1).
+check_opt("why_height", explain, 1).
+check_world("why_forest").
+check_file("why_forest", "examples/checks/why-forest.rofl").
+check_file("why_forest", "examples/checks/why-forest-check.rofl").
+check_opt("why_forest", together, 1).
+check_opt("why_forest", explain, 1).
+-- a base fact whose firing rests on the fact itself is shown as its assertion (rules/agg.rofl's `handled` and `claim`)
+check_world("why_base").
+check_file("why_base", "examples/checks/why-base.rofl").
+check_file("why_base", "examples/checks/why-base-check.rofl").
+check_opt("why_base", together, 1).
+check_opt("why_base", explain, 1).
+
 -- w_agg_incremental_ready: the cells of count and sum under retraction (subtraction, a member that stays under another derivation, a group that is gone, an empty count), examples/checks/agg-incr-sum.rofl
 check_world("agg_incr_sum").
 check_file("agg_incr_sum", "examples/checks/agg-incr-sum.rofl").

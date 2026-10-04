@@ -65,6 +65,9 @@ check[checks]("rust/rofl/tests/explain.rs", "a_whynot_that_meets_a_wall_answers_
 check[checks]("rust/rofl/tests/explain.rs", "a_refusal_echoes_the_question_untrimmed", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_and_excise_refuse_the_same_literals", test).
 check[checks]("rust/rofl/tests/explain.rs", "excise_keeps_a_member_another_derivation_supports", test).
+check[checks]("rust/rofl/tests/explain.rs", "why_shows_the_shortest_firing_and_why_all_the_circle", test).
+check[checks]("rust/rofl/tests/explain.rs", "why_all_writes_every_firing_with_shared_subtrees_as_references", test).
+check[checks]("rust/rofl/tests/explain.rs", "a_base_fact_whose_firing_rests_on_itself_is_its_assertion", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_retraction_is_a_fresh_evaluation_over_random_edits", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_larger_world_takes_the_same_path", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same", test).
@@ -616,6 +619,9 @@ check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "wfs_unknown_negated", world).
+check[checks]("facts/goldens.rofl", "why_base", world).
+check[checks]("facts/goldens.rofl", "why_forest", world).
+check[checks]("facts/goldens.rofl", "why_height", world).
 check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).
 check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).

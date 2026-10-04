@@ -2051,8 +2051,13 @@ impl Store {
         }
     }
 
-    /// `witnessOf` (src/store.ts:697): the firing with the LEAST signature.
-    pub fn witness_of(&self, h: &Heap, id: FactId) -> Option<WitView<'_>> {
+    /// `witnessOf` (src/store.ts): the firing of LEAST DERIVATION HEIGHT, ties
+    /// broken by the least signature. A firing's height is 1 + its highest
+    /// premise's (`heights`), so a firing that rests on its own fact is always
+    /// higher than a direct one and the shown proof is acyclic and shortest.
+    /// `memo` carries the heights between calls: a caller that asks for many
+    /// facts shares one.
+    pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Option<WitView<'_>> {
         let head = *self.wit_head.get(id as usize)?;
         if head == EMPTY {
             return None;
@@ -2060,6 +2065,10 @@ impl Store {
         if self.wits[head as usize].next == EMPTY {
             return Some(self.view(head));
         }
+        brk!("witness_by_signature" => Some(self.view(self.least_signature(h, head))); Some(self.view(self.ranked_firings(h, id, memo)[0].1)))
+    }
+
+    fn least_signature(&self, h: &Heap, head: u32) -> u32 {
         let mut best = head;
         let mut bs = String::new();
         self.write_sig(h, &self.view(head), &mut bs);
@@ -2073,7 +2082,83 @@ impl Store {
             }
             c = self.wits[c as usize].next;
         }
-        Some(self.view(best))
+        best
+    }
+
+    /// Every firing of `id` as `(height, node)`, in the order `why` shows
+    /// them: least height first, then signature. A premise whose height never
+    /// became final (a derivation resting only on itself) is the top.
+    fn ranked_firings(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(u32, u32)> {
+        let mut nodes = Vec::new();
+        let mut roots = Vec::new();
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            nodes.push(c);
+            for p in self.view(c).prems {
+                if let PremRef::Fact(g) = p {
+                    roots.push(*g);
+                }
+            }
+            c = self.wits[c as usize].next;
+        }
+        let _ = self.heights(&roots, memo);
+        let mut ranked: Vec<(u32, String, u32)> = nodes
+            .into_iter()
+            .map(|n| {
+                let mut hgt = 0u32;
+                for p in self.view(n).prems {
+                    hgt = hgt.max(match p {
+                        PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
+                        PremRef::Cell(x) => self.cells.recs[*x as usize].height,
+                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                    });
+                }
+                let mut sig = String::new();
+                self.write_sig(h, &self.view(n), &mut sig);
+                (hgt + 1, sig, n)
+            })
+            .collect();
+        ranked.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| cmp_js(&a.1, &b.1)));
+        ranked.into_iter().map(|(hgt, _, n)| (hgt, n)).collect()
+    }
+
+    /// Every firing of `id` in the order `witness_of` ranks them, the one it
+    /// returns first.
+    pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
+            return Vec::new();
+        }
+        self.ranked_firings(h, id, memo)
+            .into_iter()
+            .map(|(_, n)| {
+                let v = self.view(n);
+                (v.rule, v.tick, v.prems.to_vec())
+            })
+            .collect()
+    }
+
+    /// Firings found by the caller (not held here) in the order `witness_of`
+    /// ranks the held ones: least height, then signature.
+    pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+        let _ = self.heights(&roots, memo);
+        let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
+            .into_iter()
+            .map(|f| {
+                let hgt = f.2.iter().fold(0u32, |a, p| {
+                    a.max(match p {
+                        PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
+                        PremRef::Cell(x) => self.cells.recs[*x as usize].height,
+                        PremRef::Neg(_) | PremRef::Bi(_) => 0,
+                    })
+                });
+                let mut sig = String::new();
+                self.write_sig(h, &WitView { rule: f.0, tick: f.1, prems: &f.2 }, &mut sig);
+                (hgt + 1, sig, f)
+            })
+            .collect();
+        ranked.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| cmp_js(&a.1, &b.1)));
+        ranked.into_iter().map(|x| x.2).collect()
     }
 
     /// `sigOf` (src/engine.ts) plus the rule id, spelled the way the JS kernel
@@ -2195,8 +2280,9 @@ impl Store {
             .map(|id| (self.key(h, id), id))
             .collect();
         wkeyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
+        let mut memo = HashMap::new();
         for (k, id) in &wkeyed {
-            let w = self.witness_of(h, *id).unwrap();
+            let w = self.witness_of(h, *id, &mut memo).unwrap();
             out.push_str("\nwit ");
             out.push_str(k);
             out.push_str(" <- ");

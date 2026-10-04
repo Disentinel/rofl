@@ -618,6 +618,9 @@ pub struct Eval {
     /// What this `why` has written out in full, a fact or a cell (`true`): a second
     /// reach is a reference, `[above]`.
     why_done: HashSet<(bool, u32)>,
+    /// Derivation heights, for the firing `why` shows of each fact; put back
+    /// at every question, the store being free to change between two.
+    why_heights: HashMap<FactId, u32>,
     /// The cells this `why` has met under each header text (`desc = value`), in
     /// order: a second cell under one header is told apart by `(cell 2)`.
     why_heads: HashMap<String, Vec<u32>>,
@@ -1105,6 +1108,7 @@ impl Eval {
             past_rows: None,
             why_unk: None,
             why_done: HashSet::new(),
+            why_heights: HashMap::new(),
             why_heads: HashMap::new(),
             past_walks: 0,
             why_scans: 0,
@@ -10446,8 +10450,9 @@ impl Eval {
 
     fn all_witnesses(&self) -> HashMap<FKey, Witness> {
         let mut out = HashMap::new();
+        let mut memo = HashMap::new();
         for id in self.store.firing_keys() {
-            if let Some(w) = self.store.witness_of(&self.h, id) {
+            if let Some(w) = self.store.witness_of(&self.h, id, &mut memo) {
                 out.insert(
                     self.fkey_of(id),
                     Witness {
@@ -12083,6 +12088,7 @@ impl Eval {
         self.past_rows = None;
         self.why_scans = 0;
         self.why_done.clear();
+        self.why_heights.clear();
         self.why_heads.clear();
         self.why_unk = if self.plain { self.unknown_ctx() } else { None };
         let out = self.render_tree(id, &o);
@@ -12153,6 +12159,47 @@ impl Eval {
         lines.join("\n")
     }
 
+    /// The firing `why` shows of a fact: the least height, then signature.
+    ///
+    /// A BASE FACT whose shown firing rests on the fact itself is its assertion:
+    /// `handled` is asserted and derived from a claim derived from it, and the
+    /// shortest proof of the claim is the assertion, not that circle. A firing
+    /// staged from an earlier tick reads that tick's fact, which is no circle.
+    fn why_witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
+        let w = if !self.no_witness || !self.lattices.is_empty() {
+            self.store.witness_of(&self.h, id, &mut self.why_heights).map(|w| (w.rule, w.tick, w.prems.to_vec()))?
+        } else {
+            self.why_firings(id).into_iter().next()?
+        };
+        let rel = self.store.rec(id).rel;
+        if self.store.alive(id)
+            && self.store.rec(id).base()
+            && !brk!("why_base_circle" => true; false)
+            && !self.staged_firing(rel, w.0, w.1, &w.2)
+            && self.rests_on_itself(id, &w.2)
+        {
+            return None;
+        }
+        Some(w)
+    }
+
+    /// Is `id` reachable from `prems` through firings?
+    fn rests_on_itself(&self, id: FactId, prems: &[PremRef]) -> bool {
+        let mut seen = HashSet::new();
+        let mut stack: Vec<FactId> = prems.iter().filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+        while let Some(g) = stack.pop() {
+            if g == id {
+                return true;
+            }
+            if seen.insert(g) {
+                for (_, _, ps) in self.store.firings(g) {
+                    stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(x) = p { Some(*x) } else { None }));
+                }
+            }
+        }
+        false
+    }
+
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let mut key = String::new();
         let r = self.store.rec(id);
@@ -12167,7 +12214,7 @@ impl Eval {
         let special = self.subs.contains_key(&r.rel)
             || self.lattices.contains_key(&r.rel)
             || brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel));
-        let w = if special { None } else { self.witness(id) };
+        let w = if special { None } else { self.why_witness(id) };
         let leaf = !special && w.is_none();
         if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
             next.push(WhyTask::Line(format!("{pad}{key} [above]")));
@@ -12190,6 +12237,7 @@ impl Eval {
             next.push(WhyTask::Unsee(id));
             return;
         }
+        let shown = w.is_some();
         match w {
             // A LIVE FACT WITH NO FIRING IS ONE OF TWO THINGS, and the store
             // cannot tell them apart from the witness alone: a base assertion,
@@ -12212,51 +12260,65 @@ impl Eval {
                         self.why_unk.as_mut().unwrap().hit.insert(k);
                     }
                 }
-                // a staged firing is stamped with the tick it arrived in and
-                // read the tick before it: one that concludes a carried
-                // lattice value, or cites a cell sealed before its tick
-                let past = brk!("carry_why_present" => false; self.staged_firing(self.store.rec(id).rel, rule, tick, &prems));
-                for pr in prems {
-                    match pr {
-                        // THE PLAIN EXPLAINER WRITES A NEGATION'S DEMONSTRATION
-                        // WHEN IT REACHES THE FIRING, before the premises above
-                        // it are walked, and its renaming suffixes count in
-                        // that order (src/api.ts renderWhy)
-                        PremRef::Neg(_) if self.plain && past => self.render_past(pr, tick.saturating_sub(1), indent + 1, o, next),
-                        PremRef::Neg(_) | PremRef::Bi(_) if self.plain => self.render_prem(pr, indent + 1, o, next),
-                        _ if past => next.push(WhyTask::Past(pr, tick.saturating_sub(1), indent + 1)),
-                        _ => next.push(WhyTask::Prem(pr, indent + 1)),
+                self.push_firing(id, rule, tick, prems, indent + 1, o, next);
+            }
+        }
+        // THE ASKED FACT'S OTHER FIRINGS: `why` says how many there are, `why all`
+        // writes each under its own line, after the one `why` shows alone. A
+        // premise they share is a reference.
+        if indent == 0 {
+            let rest: Vec<_> = self.why_firings(id).into_iter().skip(usize::from(shown)).collect();
+            if o.members == usize::MAX {
+                if !brk!("why_all_one_tree" => true; false) {
+                    for (k, (rule, tick, prems)) in rest.into_iter().enumerate() {
+                        next.line(format!("{pad}  #{} <= {} @tick {tick} [another derivation]", k + 2, self.h.name(rule)));
+                        self.push_firing(id, rule, tick, prems, indent + 2, o, next);
                     }
                 }
+            } else if !rest.is_empty() && !brk!("why_hint_missing" => true; false) {
+                let n = rest.len();
+                next.line(format!("{pad}  [{n} more derivation{}: why all {}]", if n == 1 { "" } else { "s" }, o.query));
             }
         }
         next.push(WhyTask::Unsee(id));
     }
 
-    /// The firing `witness_of` picks, copied out of the store. Under
-    /// `sealed(witness)` none was kept where nothing withdraws, so the
-    /// firings are found again: in a monotone world every derivation that
-    /// holds at the fixpoint was fired, and is a solution of a rule with its
-    /// head bound to the fact.
-    fn witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
-        let mut best = self.store.witness_of(&self.h, id).map(|w| (w.rule, w.tick, w.prems.to_vec()));
-        if !self.no_witness || !self.lattices.is_empty() {
-            return best;
-        }
-        let sig = |e: &Self, w: &(Sym, u32, Vec<PremRef>)| {
-            let mut s = String::new();
-            e.store.write_sig(&e.h, &WitView { rule: w.0, tick: w.1, prems: &w.2 }, &mut s);
-            s
-        };
-        let mut least = best.as_ref().map(|w| sig(self, w));
-        for w in self.firings_again(id) {
-            let s = sig(self, &w);
-            if least.as_ref().is_none_or(|l| cmp_js(&s, l) == std::cmp::Ordering::Less) {
-                least = Some(s);
-                best = Some(w);
+    /// The premises of one firing of `id`, each at `indent`.
+    fn push_firing(&mut self, id: FactId, rule: Sym, tick: u32, prems: Vec<PremRef>, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        // a staged firing is stamped with the tick it arrived in and
+        // read the tick before it: one that concludes a carried
+        // lattice value, or cites a cell sealed before its tick
+        let past = brk!("carry_why_present" => false; self.staged_firing(self.store.rec(id).rel, rule, tick, &prems));
+        for pr in prems {
+            match pr {
+                // THE PLAIN EXPLAINER WRITES A NEGATION'S DEMONSTRATION
+                // WHEN IT REACHES THE FIRING, before the premises above
+                // it are walked, and its renaming suffixes count in
+                // that order (src/api.ts renderWhy)
+                PremRef::Neg(_) if self.plain && past => self.render_past(pr, tick.saturating_sub(1), indent, o, next),
+                PremRef::Neg(_) | PremRef::Bi(_) if self.plain => self.render_prem(pr, indent, o, next),
+                _ if past => next.push(WhyTask::Past(pr, tick.saturating_sub(1), indent)),
+                _ => next.push(WhyTask::Prem(pr, indent)),
             }
         }
-        best
+    }
+
+    /// EVERY FIRING OF A FACT in the order `why` ranks them, least height first:
+    /// the held ones, and under `sealed(witness)` the ones found again. None was
+    /// kept where nothing withdraws, so they are re-solved: in a monotone world
+    /// every derivation that holds at the fixpoint was fired, and is a solution
+    /// of a rule with its head bound to the fact.
+    fn why_firings(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        if !self.no_witness || !self.lattices.is_empty() {
+            return self.store.firings_ranked(&self.h, id, &mut self.why_heights);
+        }
+        let mut fs = self.store.firings(id);
+        for w in self.firings_again(id) {
+            if !fs.iter().any(|f| f.0 == w.0 && f.2 == w.2) {
+                fs.push(w);
+            }
+        }
+        self.store.rank_firings(&self.h, fs, &mut self.why_heights)
     }
 
     fn firings_again(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
@@ -12459,7 +12521,7 @@ impl Eval {
     /// contributes first; a digest of `members` at the top, the first below.
     fn render_counting(&mut self, id: FactId, key: &str, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let pad = "  ".repeat(indent);
-        let Some((rule, tick, prems)) = self.store.witness_of(&self.h, id).map(|w| (w.rule, w.tick, w.prems.to_vec())) else {
+        let Some((rule, tick, prems)) = self.why_witness(id) else {
             return next.push(WhyTask::Line(format!("{pad}{key} [past tick]")));
         };
         let Some(c) = prems.iter().find_map(|p| if let PremRef::Cell(c) = p { Some(*c) } else { None }) else {
@@ -13253,7 +13315,7 @@ impl Eval {
             if a[..n - 1] != lit.args[..n - 1] {
                 continue;
             }
-            let rule = self.store.witness_of(&self.h, f).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
+            let rule = self.store.witness_of(&self.h, f, &mut HashMap::new()).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
             let mut t = String::new();
             self.h.canon_term(a[n], &mut t);
             derivs.push(format!("x{t} by {rule}"));
