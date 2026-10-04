@@ -907,6 +907,10 @@ export class AggEval {
   private batchAt = 0;
   private liveFront: string[] = [];
   private demandHeads: Lit[] = [];
+  /** Solutions below a call answered on demand that an unknown left undecided: each call up holes its head under them, as for a fault. */
+  private demandUnknown = 0;
+  /** The head `demandUnknown` last left unknown: what the call above it rests on. */
+  private demandLast: Unknown | null = null;
   private assume: Assumption | null = null;
   private bootstrap: boolean;
   answer: RuleAnswer = emptyAnswer();
@@ -2732,19 +2736,26 @@ export class AggEval {
           }
           if (b.t === 'pos') {
             const only = frontAt !== null && frontAt[0] === i ? frontAt[1] : null;
-            const faults = this.faultCount;
+            const faults = this.faultCount, unknowns = this.demandUnknown;
             const found = this.matchPremise(b.lit, a.s, depth, only);
-            if (this.faultCount > faults) this.demandFault(depth, a.s);
+            this.demandBelow(depth, a.s, faults, unknowns);
             for (const [s2, r] of found) next.push({ s: s2, prems: [...a.prems, r] });
           } else if (b.t === 'neg') {
-            const faults = this.faultCount;
+            const faults = this.faultCount, unknowns = this.demandUnknown;
             const holds = this.negHolds(b.lit, a.s, depth);
-            if (this.faultCount > faults && depth > 0 && this.firing) { this.demandFault(depth, a.s); continue; }
+            const below = this.faultCount > faults || this.demandUnknown > unknowns;
+            if (below && depth > 0 && this.firing) { this.demandBelow(depth, a.s, faults, unknowns); continue; }
             if (holds && this.strictNeg && this.latSpread.size > 0 && this.readUnknown(b.lit, a.s, true) !== null) continue;
+            // UNFOLDED AT A CALL, a negation what a hole left unknown could decide leaves the call's head under it unknown, as a fault would
+            if (holds && depth > 0 && this.firing && this.demandHeads.length > 0 && this.latSpread.size > 0) {
+              const u = this.readUnknown(b.lit, a.s, true);
+              if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }
+            }
             if (holds) {
-              if (depth === 0 && this.firing && ruleId !== null && this.faultCount > faults) {
+              if (depth === 0 && this.firing && ruleId !== null && below) {
                 const u = this.litUnknown(b.lit, a.s);
-                this.faultEdge(u);
+                if (this.faultCount === faults && this.demandLast !== null) this.unkEdges.push([nUnk(u), nUnk(this.demandLast)]);
+                else this.faultEdge(u);
                 this.latPlain.add(u.id);
                 this.latUndecided.push([ruleId, i, a.s, [u]]);
                 continue;
@@ -5326,6 +5337,24 @@ export class AggEval {
     const u = this.litUnknown(head, s);
     this.faultEdge(u);
     this.plainPending.push([u, true]);
+  }
+
+  /** A fault (`faults`) or an unknown (`unknowns`) met below a premise answered on demand leaves the call above it unknown under `s`. */
+  private demandBelow(depth: number, s: Subst, faults: number, unknowns: number): void {
+    if (this.faultCount > faults) this.demandFault(depth, s);
+    else if (this.demandUnknown > unknowns) this.demandUnknownAt(depth, s, this.demandLast);
+  }
+
+  /** AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head under `s` is unknown, reached from `from`, and so is each call up. */
+  private demandUnknownAt(depth: number, s: Subst, from: Unknown | null): void {
+    if (depth === 0 || !this.firing) return;
+    const head = this.demandHeads[this.demandHeads.length - 1];
+    if (head === undefined) return;
+    const u = this.litUnknown(head, s);
+    if (from !== null) this.unkEdges.push([nUnk(u), nUnk(from)]);
+    this.plainPending.push([u, true]);
+    this.demandLast = u;
+    this.demandUnknown++;
   }
 
   /** The cells the body aggregate at element `i` holed under `s`. */

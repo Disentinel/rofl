@@ -3450,6 +3450,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "demand_neg_unholed",
+  "what": "a negation unfolded at a call reads what a hole left unknown as absent",
+  "expect": {
+   "demand_neg_hole": "dh_wrong"
+  }
+ },
+ {
+  "id": "ts_demand_neg_unholed",
+  "what": "the TypeScript engine reads what a hole left unknown as absent in a negation unfolded at a call",
+  "edits": [
+   [
+    "src/aggeval.ts",
+    "if (u !== null) { this.demandUnknownAt(depth, a.s, u); continue; }",
+    "if (u === undefined) continue;"
+   ]
+  ],
+  "expect": {
+   "demand_neg_hole": "dh_wrong"
+  }
+ },
+ {
   "id": "wfs_admits_subsumption",
   "what": "a dominance rule is evaluated under well-founded semantics",
   "expect": {

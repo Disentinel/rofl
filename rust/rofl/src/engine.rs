@@ -880,6 +880,12 @@ pub struct Eval {
     /// lattice cell the rule concludes into.
     firing: bool,
     fault_count: u64,
+    /// Solutions below a call answered on demand that an unknown left
+    /// undecided: each call up holes its head under them, as for a fault
+    /// (`demand_fault`).
+    demand_unknown: u64,
+    /// The head `demand_unknown` last left unknown: what the call above it rests on.
+    demand_last: Option<Unknown>,
     last_fault: Option<Sym>,
     agg_memo: HashMap<(Sym, u32, Box<[Term]>), Rc<[CellId]>>,
     /// The back-index of the retraction path: fact -> the cells a member of
@@ -1241,6 +1247,8 @@ impl Eval {
             carry_broken: false,
             firing: false,
             fault_count: 0,
+            demand_unknown: 0,
+            demand_last: None,
             last_fault: None,
             agg_memo: HashMap::new(),
             support_ix: None,
@@ -4146,11 +4154,9 @@ impl Eval {
                                 Some((p, keys)) if p == i => Some(keys),
                                 _ => None,
                             };
-                            let faults = self.fault_count;
+                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
                             let found = self.match_premise(l, &a.s, depth, only)?;
-                            if self.fault_count > faults {
-                                self.demand_fault(depth, &a.s);
-                            }
+                            self.demand_below(depth, &a.s, faults, unknowns);
                             for (s2, r) in found {
                                 let mut prems = a.prems.clone();
                                 prems.push(r);
@@ -4158,22 +4164,34 @@ impl Eval {
                             }
                         }
                         BodyElem::Neg(l) => {
-                            let faults = self.fault_count;
+                            let (faults, unknowns) = (self.fault_count, self.demand_unknown);
                             let holds = self.neg_holds(l, &a.s, depth)?;
-                            if self.fault_count > faults && depth > 0 && self.firing {
+                            let below = self.fault_count > faults || self.demand_unknown > unknowns;
+                            if below && depth > 0 && self.firing {
                                 // below a call: the solution is not known, nor the head it would give
-                                self.demand_fault(depth, &a.s);
+                                self.demand_below(depth, &a.s, faults, unknowns);
                                 continue;
                             }
                             if holds && self.strict_neg && !self.lat_spread.is_empty() && self.read_unknown(l, &a.s, true).is_some() {
                                 continue;
                             }
+                            // UNFOLDED AT A CALL, a negation what a hole left unknown could
+                            // decide leaves the call's head under it unknown, as a fault would
+                            if holds && depth > 0 && self.firing && !self.demand_heads.is_empty() && !self.lat_spread.is_empty() {
+                                if let Some(u) = brk!("demand_neg_unholed" => None; self.read_unknown(l, &a.s, true)) {
+                                    self.demand_unknown_at(depth, &a.s, Some(u));
+                                    continue;
+                                }
+                            }
                             if holds {
                                 // nothing matched; but what a fault below the negation's own
                                 // call left out could have, or what a hole left unknown
-                                if depth == 0 && self.firing && rule_id.is_some() && self.fault_count > faults && brk!("plain_neg_decides" => false; true) {
+                                if depth == 0 && self.firing && rule_id.is_some() && below && brk!("plain_neg_decides" => false; true) {
                                     let u = self.lit_unknown(l, &a.s);
-                                    self.fault_edge(&u);
+                                    match self.demand_last.clone().filter(|_| self.fault_count == faults) {
+                                        Some(from) => self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(from))),
+                                        None => self.fault_edge(&u),
+                                    }
                                     self.lat_plain.insert(u.clone());
                                     self.lat_undecided.push((rule_id.unwrap(), i, a.s.clone(), Rc::from([u])));
                                     continue;
@@ -8291,6 +8309,33 @@ impl Eval {
         let u = self.lit_unknown(&head, s);
         self.fault_edge(&u);
         self.plain_pending.push((u, true));
+    }
+
+    /// A fault (`faults`) or an unknown (`unknowns`) met below a premise
+    /// answered on demand leaves the call above it unknown under `s`.
+    fn demand_below(&mut self, depth: usize, s: &Subst, faults: u64, unknowns: u64) {
+        if self.fault_count > faults {
+            self.demand_fault(depth, s);
+        } else if self.demand_unknown > unknowns {
+            let from = self.demand_last.clone();
+            self.demand_unknown_at(depth, s, from);
+        }
+    }
+
+    /// AN UNKNOWN BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head
+    /// under `s` is unknown, reached from `from`, and so is each call up.
+    fn demand_unknown_at(&mut self, depth: usize, s: &Subst, from: Option<Unknown>) {
+        if depth == 0 || !self.firing {
+            return;
+        }
+        let Some(head) = self.demand_heads.last().cloned() else { return };
+        let u = self.lit_unknown(&head, s);
+        if let Some(f) = from {
+            self.unk_edges.push((Node::Unk(u.clone()), Node::Unk(f)));
+        }
+        self.plain_pending.push((u.clone(), true));
+        self.demand_last = Some(u);
+        self.demand_unknown += 1;
     }
 
     /// The cells the body aggregate at element `i` holed under `s`, each with

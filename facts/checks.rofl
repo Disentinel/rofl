@@ -319,6 +319,10 @@ check_opt("demand_neg_retract", retract, "dt_z(1)").
 check_world("demand_shrug_read").
 check_file("demand_shrug_read", "examples/checks/demand-shrug-read.rofl").
 
+-- a negation unfolded at a call reads the holes (f_a_negation_unfolded_at_a_call_ignored_the_holes)
+check_world("demand_neg_hole").
+check_file("demand_neg_hole", "examples/checks/demand-neg-hole.rofl").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").

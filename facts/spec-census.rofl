@@ -598,6 +598,7 @@ check[checks]("facts/goldens.rofl", "asks", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
+check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
 check[checks]("facts/goldens.rofl", "demand_shrug_read", world).
