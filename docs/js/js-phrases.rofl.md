@@ -105,6 +105,8 @@ Declared as facts:
 | `external_import` | "imports_from_outside(node Sp, name Local, from module Spec, in file File)" |
 | `external_destructured` | "destructures_from_outside(declarator D, at node Prop, name Local, in file File)" |
 | `callback_param` | "is_called_back_with(node P, in function F, from module Spec)" |
+| `ext_call` | "is_an_external_call_of(invocation C, module Spec)" |
+| `ext_member` | "is_an_external_member_of(member access M, module Spec)" |
 | `spread_arg` | "has_a_spread(invocation C, at index I)" |
 | `after_spread` | "is_past_a_spread(invocation C, at index I)" |
 | `arg_at` | "passes(invocation C, node A:2, at index I:1)" |
