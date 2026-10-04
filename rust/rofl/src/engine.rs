@@ -1975,9 +1975,11 @@ impl Eval {
 
     // ----------------------------------------------------------------- run
 
-    /// A COPY OF THE WHOLE WORLD, at 3 ms against 383 for a rebuild.
+    /// A COPY OF THE WORLD, at 3 ms against 383 for a rebuild — and of almost
+    /// nothing once the heap and the store are frozen (`Session::fork`), when
+    /// their clones share the frozen base and copy only what lies above it.
     ///
-    /// Every field is copied — the heap, the store, the prepared rules, the
+    /// Every other field is copied — the prepared rules, the
     /// counters. `prepare` is NOT re-run, and that is the whole saving: the
     /// 383 ms is peeling the strata and planning the bodies of the packs, and
     /// a fork inherits the answer rather than recomputing it.
@@ -3201,7 +3203,7 @@ impl Eval {
         }
         let mut out = HashSet::new();
         for (f, t) in read {
-            let r = *self.store.rec(f);
+            let r = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             out.insert((fact_term(&mut self.h, &self.v, r.rel, r.persp, &args), t as i64));
         }
@@ -5655,7 +5657,7 @@ impl Eval {
         if self.no_provenance {
             return;
         }
-        let rec = *self.store.rec(id);
+        let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
         let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
         let db_args = [ft, Term::atom(rule), Term::int(self.store.tick as i64)];
@@ -5672,7 +5674,7 @@ impl Eval {
         if self.join_checked.contains(&x) {
             return Ok(true);
         }
-        let rec = *self.store.rec(x);
+        let rec = self.store.rec(x);
         let args = self.store.args(x).to_vec();
         let n = args.len();
         let (op, cx) = (self.lattices[&l].1, args[n - 1]);
@@ -5822,7 +5824,7 @@ impl Eval {
         let mut plan: Vec<(FactId, Sym, Vec<FactId>)> = Vec::new();
         for (p, f) in cells {
             let (op, crel) = (self.lattices[&p].1, self.join_rels[&p]);
-            let rec = *self.store.rec(f);
+            let rec = self.store.rec(f);
             let args = self.store.args(f).to_vec();
             let n = args.len();
             let v = args[n - 1];
@@ -6637,7 +6639,7 @@ impl Eval {
     /// The values that dominated `g`, a value of a subsumptive cell: what
     /// beat it, what beat that, and so on.
     fn sub_dominators(&self, g: FactId) -> HashSet<FactId> {
-        let rec = *self.store.rec(g);
+        let rec = self.store.rec(g);
         let args = self.store.args(g);
         let k = self.subs[&rec.rel].keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -6669,7 +6671,7 @@ impl Eval {
         for (rule, _, prems) in self.store.firings(x) {
             for p in prems {
                 let PremRef::Fact(g) = p else { continue };
-                let rec = *self.store.rec(g);
+                let rec = self.store.rec(g);
                 if !self.lat_superseded.contains(&g) || !self.subs.contains_key(&rec.rel) {
                     continue;
                 }
@@ -6707,7 +6709,7 @@ impl Eval {
         if !self.store.alive(f) || self.store.rec(f).base() {
             return;
         }
-        let rec = *self.store.rec(f);
+        let rec = self.store.rec(f);
         let args = self.store.args(f).to_vec();
         if let Some(k) = self.cell_keylen(rec.rel, args.len()) {
             let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -7166,7 +7168,7 @@ impl Eval {
 
     /// A fact as the unknown it is once withdrawn: its lattice cell, or its tuple.
     fn unknown_of(&self, f: FactId) -> Unknown {
-        let rec = *self.store.rec(f);
+        let rec = self.store.rec(f);
         let args = self.store.args(f);
         if let Some(&l) = self.join_of.get(&rec.rel) {
             return Unknown::Cell((l, rec.persp, args[..args.len() - 1].into()));
@@ -8455,7 +8457,7 @@ impl Eval {
                 }
             }
             if self.answer.reads_lattice_members && !self.no_provenance {
-                let rec = *self.store.rec(f);
+                let rec = self.store.rec(f);
                 let args = self.store.args(f).to_vec();
                 let ft = fact_term(&mut self.h, &self.v, rec.rel, rec.persp, &args);
                 let mut rows: Vec<(Sym, Vec<Term>)> = Vec::new();
@@ -8484,7 +8486,7 @@ impl Eval {
             for ((ck, d), (f, rule)) in by {
                 let args = Self::sub_args(&ck, &d);
                 let dt = self.sub_fact(p, ck.1, &args);
-                let rec = *self.store.rec(f);
+                let rec = self.store.rec(f);
                 let fargs = self.store.args(f).to_vec();
                 let ft = self.sub_fact(rec.rel, rec.persp, &fargs);
                 let mut key = String::new();
@@ -11637,7 +11639,7 @@ mod tests {
                 }
                 for p in prems {
                     if let PremRef::Fact(f) = p {
-                        let r = *l.eval.store.rec(f);
+                        let r = l.eval.store.rec(f);
                         let args = l.eval.store.args(f).to_vec();
                         read.insert(fact_term(&mut l.eval.h, &l.eval.v, r.rel, r.persp, &args));
                     }
@@ -12005,7 +12007,7 @@ impl Eval {
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let mut key = String::new();
-        let r = *self.store.rec(id);
+        let r = self.store.rec(id);
         write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
@@ -12110,7 +12112,7 @@ impl Eval {
     }
 
     fn firings_again(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let rec = *self.store.rec(id);
+        let rec = self.store.rec(id);
         if is_kernel_ledger(&self.h, rec.persp) {
             return Vec::new();
         }
@@ -12229,7 +12231,7 @@ impl Eval {
     /// so. A value dominated since, read as history by a member, says so.
     fn render_sub(&mut self, id: FactId, key: &str, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let pad = "  ".repeat(indent);
-        let rec = *self.store.rec(id);
+        let rec = self.store.rec(id);
         let args = self.store.args(id).to_vec();
         let k = self.subs[&rec.rel].keylen;
         let ck: LatKey = (rec.rel, rec.persp, args[..k].into());
@@ -12421,7 +12423,7 @@ impl Eval {
             return self.render_prem(pr, indent, o, next);
         };
         let mut key = String::new();
-        let r = *self.store.rec(f);
+        let r = self.store.rec(f);
         let args = self.store.args(f).to_vec();
         write_fact_key(&self.h, r.rel, r.persp, &args, &mut key);
         let ft = fact_term(&mut self.h, &self.v, r.rel, r.persp, &args);
