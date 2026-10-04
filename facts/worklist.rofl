@@ -3699,7 +3699,7 @@ work_state(w_cmp_ancestor_closure, open).
 work_needs(w_cmp_ancestor_closure, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_costly_rules,
-  "HYPOTHESIS 3: single rules spend more than they conclude: callback_param (14% of all join work on cli_exits for 230 conclusions), param_hidden (8% on self for 10), caught_here (7-12%). EXPERIMENT: per rule, find the product it builds (body order, a missing bound key, a pairwise `not closer` that is a min), fix by order, demand or an aggregate; ACCEPTANCE: identical facts, work before/after per rule.").
+  "HYPOTHESIS 3 (rewritten 2026-10-04 at the owner's remark): the cost is in PATTERNS of writing rules, not in particular rules. EXPERIMENT on the Rust engine (release, rofl-eval --bytes per-rule profile, sealed and not): (1) rank rules by time and work per conclusion over self, mcp, cli_exits, util; (2) classify the costly ones by SHAPE (pairwise `not closer`/`not later` that is a min/max; a body led by an unbound or weakly bound premise; a join before its filter; a product built and mostly discarded; a closure read as a stored relation; a negation over a large derived relation; a recursion through a relation that could be stratified away); (3) for each shape its cheap equivalent (aggregate, reorder, demand, closure kernel, a helper relation), verified by rewriting ONE representative rule per shape in an experimental branch: identical facts, time and work before/after; (4) record the catalogue in the ledger (shape -> detector -> rewrite -> measured gain) so it can become a lint over rules; rules/js-*.rofl edits stay experimental, unmerged without the owner.").
 work_state(w_cmp_costly_rules, open).
 work_needs(w_cmp_costly_rules, w_cmp_remeasure_after_engine_fast).
 
