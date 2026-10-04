@@ -272,6 +272,14 @@ fn main() {
             let head = l.eval.rules.iter().find(|r| r.id == *rid).map(|r| l.eval.h.name(r.clause.head.rel).to_string()).unwrap_or_else(|| "?".to_string());
             eprintln!("rule_ms\t{}\t{}\t{:.1}", l.eval.h.name(*rid), head, *ns as f64 / 1e6);
         }
+        if std::env::var("ROFL_PROF_ALL").is_ok() {
+            let n = |m: &std::collections::HashMap<rofl::term::Sym, u64>, id| m.get(&id).copied().unwrap_or(0);
+            for r in l.eval.rules.iter() {
+                let id = r.id;
+                eprintln!("prof\t{}\t{}\t{:.3}\t{}\t{}\t{}\t{}", l.eval.h.name(id), l.eval.h.name(r.clause.head.rel), n(&l.eval.ns_by_rule, id) as f64 / 1e6,
+                    n(&l.eval.argm_by_rule, id), n(&l.eval.sols_by_rule, id), n(&l.eval.new_by_rule, id), n(&l.eval.fires_by_rule, id));
+            }
+        }
         let (sum, mx): (u64, u64) = l.eval.rounds.iter().fold((0, 0), |(s, m), (a, b)| (s + a, m + b));
         let bound = |k: u64| l.eval.rounds.iter().map(|(s, m)| (*m).max(s / k)).sum::<u64>() as f64 / 1e6;
         for c in &l.eval.closures {

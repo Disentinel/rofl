@@ -569,6 +569,10 @@ pub struct Eval {
     pub argm_by_rule: HashMap<Sym, u64>,
     /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
     pub ns_by_rule: HashMap<Sym, u64>,
+    /// Per rule: firings, solutions concluded, and rows that were new.
+    pub fires_by_rule: HashMap<Sym, u64>,
+    pub sols_by_rule: HashMap<Sym, u64>,
+    pub new_by_rule: HashMap<Sym, u64>,
     pub rounds: Vec<(u64, u64)>,
     /// The relations read off the program as a transitive closure: a base rule
     /// `R(X, Y) :- E(X, Y)` and one linear step through E, nothing else
@@ -1082,6 +1086,9 @@ impl Eval {
             cur_rule: None,
             argm_by_rule: HashMap::new(),
             ns_by_rule: HashMap::new(),
+            fires_by_rule: HashMap::new(),
+            sols_by_rule: HashMap::new(),
+            new_by_rule: HashMap::new(),
             rounds: Vec::new(),
             closures: Vec::new(),
             closure_of: HashMap::new(),
@@ -3706,12 +3713,14 @@ impl Eval {
         s0: Subst,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
         let sols = sols?;
+        *self.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
         let mut out = Front::default();
         for sol in sols {
             // A SOLUTION CITING A VALUE IMPROVED ON earlier in this batch is
@@ -3956,6 +3965,9 @@ impl Eval {
             _ => None,
         };
         let (id, is_new) = self.store.put(&self.h, head.rel, persp, &args, F_TICK);
+        if is_new {
+            *self.new_by_rule.entry(r.id).or_insert(0) += 1;
+        }
         if let Some(ck) = cell {
             if self.subs.contains_key(&head.rel) {
                 let front = self.sub_cur.entry(ck).or_default();
