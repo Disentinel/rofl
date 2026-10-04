@@ -15,7 +15,7 @@ use crate::reflect::*;
 use crate::store::{
     Member,
     resolved_lit_key, tuple_text, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
-    NewMember, PremRef, Seal, StagedHead, Store, Witness, F_BASE, F_FROZEN, F_TICK,
+    NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::*;
 
@@ -11980,7 +11980,7 @@ impl Eval {
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         let mut key = String::new();
-        let r = self.store.rec(id);
+        let r = *self.store.rec(id);
         write_fact_key(&self.h, r.rel, r.persp, self.store.args(id), &mut key);
         let pad = "  ".repeat(indent);
         if seen.contains(&id) {
@@ -11989,10 +11989,11 @@ impl Eval {
         }
         // A FACT WRITTEN OUT ONCE IS REFERRED TO AFTER: the proof is a DAG, and
         // what a leaf says is as short as a reference
-        let leaf = !self.subs.contains_key(&r.rel)
-            && !self.lattices.contains_key(&r.rel)
-            && !brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel))
-            && self.store.witness_of(&self.h, id).is_none();
+        let special = self.subs.contains_key(&r.rel)
+            || self.lattices.contains_key(&r.rel)
+            || brk!("count_why_plain" => false; self.tags.count_rel.contains_key(&r.rel));
+        let w = if special { None } else { self.witness(id) };
+        let leaf = !special && w.is_none();
         if !leaf && !brk!("why_dag_off" => true; self.why_done.insert((false, id))) {
             next.push(WhyTask::Line(format!("{pad}{key} [above]")));
             return;
@@ -12014,12 +12015,6 @@ impl Eval {
             next.push(WhyTask::Unsee(id));
             return;
         }
-        // The witness is copied out before anything else borrows the store:
-        // `WitView` holds the arena's own slice and the recursion writes.
-        let w = self
-            .store
-            .witness_of(&self.h, id)
-            .map(|w| (w.rule, w.tick, w.prems.to_vec()));
         match w {
             // A LIVE FACT WITH NO FIRING IS ONE OF TWO THINGS, and the store
             // cannot tell them apart from the witness alone: a base assertion,
@@ -12061,6 +12056,92 @@ impl Eval {
             }
         }
         next.push(WhyTask::Unsee(id));
+    }
+
+    /// The firing `witness_of` picks, copied out of the store. Under
+    /// `sealed(witness)` none was kept where nothing withdraws, so the
+    /// firings are found again: in a monotone world every derivation that
+    /// holds at the fixpoint was fired, and is a solution of a rule with its
+    /// head bound to the fact.
+    fn witness(&mut self, id: FactId) -> Option<(Sym, u32, Vec<PremRef>)> {
+        let mut best = self.store.witness_of(&self.h, id).map(|w| (w.rule, w.tick, w.prems.to_vec()));
+        if !self.no_witness || !self.lattices.is_empty() {
+            return best;
+        }
+        let sig = |e: &Self, w: &(Sym, u32, Vec<PremRef>)| {
+            let mut s = String::new();
+            e.store.write_sig(&e.h, &WitView { rule: w.0, tick: w.1, prems: &w.2 }, &mut s);
+            s
+        };
+        let mut least = best.as_ref().map(|w| sig(self, w));
+        for w in self.firings_again(id) {
+            let s = sig(self, &w);
+            if least.as_ref().is_none_or(|l| cmp_js(&s, l) == std::cmp::Ordering::Less) {
+                least = Some(s);
+                best = Some(w);
+            }
+        }
+        best
+    }
+
+    fn firings_again(&mut self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let rec = *self.store.rec(id);
+        if is_kernel_ledger(&self.h, rec.persp) {
+            return Vec::new();
+        }
+        let args = self.store.args(id).to_vec();
+        let rules: Vec<Rc<ERule>> = self
+            .rules
+            .iter()
+            .filter(|r| r.safe && r.clause.head.rel == rec.rel && r.clause.head.temporal != Temporal::Next)
+            .cloned()
+            .collect();
+        let saved = (self.steps, self.rows, self.peak_rows, self.budget, self.space);
+        (self.budget, self.space) = (i64::MAX, i64::MAX);
+        let tick = self.store.tick;
+        let mut out = Vec::new();
+        for r in rules {
+            let head = &r.clause.head;
+            let Some(s) = unify(&self.h, head.persp, Term::atom(rec.persp), &Subst::default())
+                .and_then(|s| unify_all(&self.h, &head.args, &args, &s))
+            else {
+                continue;
+            };
+            // the plan was made for nothing bound; with the head bound another
+            // order is cheaper, and the premises go back to the plan's order
+            let mut bound = Vec::new();
+            for t in head.args.iter().chain([&head.persp]) {
+                self.h.vars_of(*t, &mut bound);
+            }
+            let touches = |b: &BodyElem, bound: &[Sym]| {
+                let mut vs = Vec::new();
+                b.vars(&self.h, &mut vs);
+                matches!(b, BodyElem::Pos(_)) && vs.iter().any(|v| bound.contains(v))
+            };
+            let mut rest: Vec<usize> = (0..r.plan.len()).collect();
+            let mut order = Vec::new();
+            while !rest.is_empty() {
+                let k = rest
+                    .iter()
+                    .take_while(|&&i| !matches!(r.plan[i], BodyElem::Agg(_)))
+                    .position(|&i| touches(&r.plan[i], &bound));
+                let i = rest.remove(k.unwrap_or(0));
+                r.plan[i].vars(&self.h, &mut bound);
+                order.push(i);
+            }
+            let body: Vec<BodyElem> = order.iter().map(|i| r.plan[*i].clone()).collect();
+            if let Ok(sols) = self.solve_body(&body, s, 0, None, Some(r.id)) {
+                for sol in sols {
+                    let mut prems = sol.prems.clone();
+                    for (k, i) in order.iter().enumerate() {
+                        prems[*i] = sol.prems[k];
+                    }
+                    out.push((r.id, tick, prems));
+                }
+            }
+        }
+        (self.steps, self.rows, self.peak_rows, self.budget, self.space) = saved;
+        out
     }
 
     /// A LATTICE FACT IS ITS CELL: the value, and its members — every firing
