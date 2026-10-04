@@ -211,7 +211,10 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- with its callee's must give the caller's own back. `eff_purer_callee`
 -- compares names, not rows, so it under-reports incomparable pairs.
 eff_subject[flow](F)        :- fn_node[code](F).
-eff_over[flow](F, N)        :- eff_name(N), eff_latent[flow](F, L, H), not eff_row(N, L, H).
+eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
+eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
+eff_gap[flow](L, H, N)      :- eff_lh[flow](L, H), eff_name(N), not eff_row(N, L, H).
+eff_over[flow](F, N)        :- eff_latent[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_bounded[flow](F, N)     :- eff_subject[flow](F), eff_name(N), not eff_over[flow](F, N).
 eff_bounded_low[flow](F, N) :- eff_bounded[flow](F, M), eff_lt(M, N).
 effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow](F, N).
@@ -255,8 +258,8 @@ concrete_denotes[flow](S, Op, E) :- concrete_effect[flow](_, S, Op), ambient_eff
 eff_here[flow](C, L, H)          :- concrete_effect[flow](C, S, Op),
                                     ambient_effect(S, Op, E), eff_row(E, L, H).
 
-concrete_leq[flow](S1, O1, S2, O2) :- concrete_denotes[flow](S1, O1, E1),
-                                      concrete_denotes[flow](S2, O2, E2), eff_leq(E1, E2).
+concrete_leq[flow](S1, O1, S2, O2) :- eff_leq(E1, E2), concrete_denotes[flow](S1, O1, E1),
+                                      concrete_denotes[flow](S2, O2, E2).
 
 -- The residue, POSITIVE and not an audit: non-empty by design until the
 -- surface pack exists. The audits below are about a pack that is WRONG rather
@@ -381,11 +384,9 @@ eff_import_outside[flow](I, Src) :- eff_mod_src[code](I, Src, _), not eff_erased
 -- answer (a cyclic group is evaluated once and every member sees the whole
 -- group's effect). No `load` label: the suspension of `import()` is CONTROL,
 -- as `await` is.
-eff_in_fn[flow](N) :- nearest_v[flow](_, N).
-
-eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not eff_in_fn[flow](N),
+eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
                              ast_node[code](N, _, F, _).
-eff_module[flow](F, L, H) :- resolves[code](C, G), not eff_in_fn[flow](C),
+eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
                              ast_node[code](C, _, F, _), eff_latent[flow](G, L, H).
 
 eff_here[flow](I, L, H) :- eff_evaluates_at[code](I, T), eff_module[flow](T, L, H).
@@ -395,7 +396,7 @@ eff_import_invented[audit](I, L, H) :- eff_evaluates_at[code](I, T), eff_here[fl
 
 -- The same Moore closure as section 4, over a file.
 eff_mod_subject[flow](F)        :- corpus_file[code](F).
-eff_mod_over[flow](F, N)        :- eff_name(N), eff_module[flow](F, L, H), not eff_row(N, L, H).
+eff_mod_over[flow](F, N)        :- eff_module[flow](F, L, H), eff_gap[flow](L, H, N).
 eff_mod_bounded[flow](F, N)     :- eff_mod_subject[flow](F), eff_name(N), not eff_mod_over[flow](F, N).
 eff_mod_bounded_low[flow](F, N) :- eff_mod_bounded[flow](F, M), eff_lt(M, N).
 effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_bounded_low[flow](F, N).

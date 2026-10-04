@@ -29,7 +29,7 @@ Reads:
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_binding](js-ambient.rofl.md#ambient_binding), [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
+- from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
 - from js-dataflow, in the code: [assigns](js-dataflow.rofl.md#assigns), [corpus_file](js-dataflow.rofl.md#corpus_file), [ident_in](js-dataflow.rofl.md#ident_in), [module_source](js-dataflow.rofl.md#module_source)
 - from js-dataflow: [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
@@ -70,7 +70,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if the `argument` of it is X.
 - <a id="eff_label_seen"></a>An effect label is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
 - <a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
-- <a id="eff_in_fn"></a>A node lies inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
 - <a id="eff_mod_subject"></a>A file F is a module subject if F [is in the corpus](js-dataflow.rofl.md#corpus_file).
 
 ## 1. The order, derived from the rows
@@ -404,10 +403,17 @@ Declared as facts:
 
 In the flow:
 
-<a id="eff_over"></a>F exceeds an effect N if all of:
-  - N [is in the lattice](#eff_name);
-  - F [has the latent effect](#eff_latent) L at a host H;
-  - unless N [covers](#eff_row) L at H.
+<a id="eff_lh"></a>`eff_lh`(L, H) either:
+
+1. if some function [has the latent effect](#eff_latent) L at a host H;
+2. if some file [has the module effect](#eff_module) L at a host H.
+
+<a id="eff_gap"></a>`eff_gap`(L, H, N) if all of:
+  - [`eff_lh`](#eff_lh)(L, H);
+  - an effect N [is in the lattice](#eff_name);
+  - unless N [covers](#eff_row) an effect label L at a host H.
+
+<a id="eff_over"></a>F exceeds an effect N if F [has the latent effect](#eff_latent) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
 
 <a id="eff_bounded"></a>F is bounded by an effect N if all of:
   - F [is an effect subject](#eff_subject);
@@ -481,9 +487,9 @@ A node has the effect L at a host H if all of:
   - E [covers](#eff_row) L at H.
 
 <a id="concrete_leq"></a>A surface is purer at an operation O1 than a surface S2 at an operation O2 if all of:
-  - it [denotes](#concrete_denotes) an effect E1 at O1;
-  - S2 [denotes](#concrete_denotes) an effect E2 at O2;
-  - E1 [is at or below](#eff_leq) E2.
+  - an effect E1 [is at or below](#eff_leq) an effect E2;
+  - it [denotes](#concrete_denotes) E1 at O1;
+  - S2 [denotes](#concrete_denotes) E2 at O2.
 
 > The residue, POSITIVE and not an audit: non-empty by design until the
 > surface pack exists. The audits below are about a pack that is WRONG rather
@@ -671,12 +677,12 @@ In the flow:
 1. if all of:
    - a node N [has the effect](js-ambient.rofl.md#eff_here) L at H;
    - N [is in file](js-model.rofl.md#ast_node) F;
-   - unless N [lies inside a function](#eff_in_fn);
+   - unless N [is inside a function](js-controlflow.rofl.md#in_fn);
 2. if all of:
    - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
    - C [is in file](js-model.rofl.md#ast_node) F;
    - G [has the latent effect](#eff_latent) L at H;
-   - unless C [lies inside a function](#eff_in_fn).
+   - unless C [is inside a function](js-controlflow.rofl.md#in_fn).
 
 A node has the effect L at a host H if it [evaluates](#eff_evaluates_at) T and T [has the module effect](#eff_module) L at H.
 
@@ -693,10 +699,7 @@ In the flow:
 
 A file F
 
-- <a id="eff_mod_over"></a>exceeds as a module N if all of:
-  - N [is in the lattice](#eff_name);
-  - F [has the module effect](#eff_module) L at a host H;
-  - unless N [covers](#eff_row) L at H.
+- <a id="eff_mod_over"></a>exceeds as a module N if F [has the module effect](#eff_module) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
 - <a id="eff_mod_bounded"></a>is bounded as a module by an effect N if all of:
   - F [is a module subject](#eff_mod_subject);
   - N [is in the lattice](#eff_name);

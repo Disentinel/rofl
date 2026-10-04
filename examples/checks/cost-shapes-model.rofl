@@ -1,0 +1,8 @@
+-- examples/checks/cost-shapes-model.rofl — THE COSTLY-SHAPE LINT OVER THE JS MODEL.
+-- examples/shapes/shapes.rofl over the reflection of the rules of the model (MODEL_FILES of
+-- notebook/front.ts), with the register facts/cost-shapes.rofl. Green means every finding is
+-- either absent or excused with the measurement that excuses it; a rule written the costly way
+-- turns the world red (`shape_alarm`), and so does a register row whose finding has gone
+-- (`shape_ok_stale`), so an excuse does not outlive the rule it excused.
+alarm(shape_alarm).
+alarm(shape_ok_stale).

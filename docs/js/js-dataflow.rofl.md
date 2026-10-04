@@ -104,8 +104,8 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- <a id="ident"></a>An [identifier](#noun-identifier) reads Name if it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
 - <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="has_init"></a>A node has an initialiser if the `init` of it is some node.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
@@ -365,8 +365,8 @@ A node
 - <a id="tdz_deferred"></a>is deferred for D if all of:
   - it [is a dead zone candidate of](#tdz_cand) D;
   - [the region](#binder_region) of D is a node R;
-  - a [function](js-callgraph.rofl.md#fn_node) G [is within](js-structure.rofl.md#ast_within) R;
-  - it [is within](js-structure.rofl.md#ast_within) G.
+  - a node G [is nearest to](#nearest_v) it;
+  - G [is within](js-structure.rofl.md#ast_within) R.
 - <a id="tdz_at"></a>is in the dead zone of D if it [is a dead zone candidate of](#tdz_cand) D, unless it [is deferred for](#tdz_deferred) D.
 - is hidden from D if it [is in the dead zone of](#tdz_at) D.
 
@@ -541,8 +541,8 @@ Declared as facts:
 1. if a kind K [has prototype](#kind_prototype) P and E [is of kind](js-model.rofl.md#ast_node) K;
 2. if all of:
    - E [points to](#may_be_node) a node N;
-   - a kind K [has prototype](#kind_prototype) P;
-   - N [is of kind](js-model.rofl.md#ast_node) K.
+   - N [is of kind](js-model.rofl.md#ast_node) K;
+   - K [has prototype](#kind_prototype) P.
 
 `builtin_prototype` includes `array`, `string`, `number`, `boolean`, `regexp`, `bigint`.
 
@@ -561,12 +561,14 @@ Declared as facts:
 
 In the code:
 
-<a id="destructures"></a>A [declarator](#noun-declarator) destructures Local from Key in File if all of:
-  - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
+<a id="destr_prop"></a>`destr_prop`(a [declarator](#noun-declarator) D, Prop, K, Local, File) if all of:
+  - D is in file File;
+  - the `id` of D is an [object pattern](#noun-object_pattern) P;
   - a node Prop [is among the](#ast_child) `properties` of P;
-  - the `key` of Prop [spells](js-structure.rofl.md#key_name) Key;
+  - the `key` of Prop is a node K;
   - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+
+<a id="destructures"></a>D destructures Local from Key in File if [`destr_prop`](#destr_prop)(D, something, K, Local, File) and a node K [spells](js-structure.rofl.md#key_name) Key.
 
 D is scoped in File if D [destructures](#destructures) some name from some key in File.
 
@@ -1320,7 +1322,10 @@ A node
 > found from it rather than the other way round. Each hop is ONE round of the
 > fixpoint, so both heads carry the whole body instead of one reading the
 > other: every round re-scans every member node, and an intermediate relation
-> made a chain of calls cost three rounds a call (46 rounds became 70).
+> made a chain of calls cost three rounds a call (46 rounds became 70). Measured
+> again on the Rust engine with a helper per hop: the pair itself fell 510 to 322
+> ms but the extra round re-fires callback_param, and the model's probes ROSE
+> 2.5 %; it waits for an engine that fires a delta first.
 
 An [invocation](#noun-invocation)
 
@@ -1354,12 +1359,7 @@ The plain member Key of a node X is a node V if X [comes out of](#external_value
 
 In the code:
 
-<a id="external_destructured"></a>A [declarator](#noun-declarator) destructures from outside at a node Prop Local in File if all of:
-  - it is in file File;
-  - the `id` of it is an [object pattern](#noun-object_pattern) P;
-  - Prop [is among the](#ast_child) `properties` of P;
-  - the `key` of Prop [spells](js-structure.rofl.md#key_name) some key;
-  - the `value` of Prop [is named](js-structure.rofl.md#ast_name) Local.
+<a id="external_destructured"></a>D destructures from outside at a node Prop Local in File if [`destr_prop`](#destr_prop)(D, Prop, K, Local, File) and a node K [spells](js-structure.rofl.md#key_name) some key.
 
 In the flow:
 
@@ -1456,8 +1456,8 @@ A node E points to a node CD either:
    - unless CD [has its own constructor](#has_own_ctor).
 
 A [super](#noun-super) points to a node SD if all of:
+  - it [is within](js-structure.rofl.md#ast_within) a node M;
   - a class CD [has the method](#class_method_of) M;
-  - it [is within](js-structure.rofl.md#ast_within) M;
   - [the super](#super_of) of CD is SD.
 
 ## 13. EXPRESSION FORMS. A sequence is its LAST element: the maximum index of
@@ -1555,7 +1555,7 @@ Y points to a node X either:
 
 <a id="iter_elem"></a>A node X has an element E either:
 
-1. if X [points to](#may_be_node) an [array literal](#noun-array_literal) Y and E [is among the](#ast_child) `elements` of Y;
+1. if [the element](#elem_at) some index of X is E;
 2. if X [resolves to](js-callgraph.rofl.md#resolves) F and F [yields](#yields) E.
 
 A node
@@ -1610,8 +1610,8 @@ A node
 > one row that is an audit.
 
 <a id="thrown_in"></a>T throws a node V if all of:
-  - [the block](#try_block) of T is a node B;
-  - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) B;
+  - a [throw](#noun-throw) Th [is within](js-structure.rofl.md#ast_within) a node B;
+  - [the block](#try_block) of T is B;
   - the `argument` of Th is V.
 
 A node

@@ -20,7 +20,7 @@ Reads:
 - from js-dataflow: [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [try_block](js-dataflow.rofl.md#try_block)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure: [ast_within](js-structure.rofl.md#ast_within)
+- from js-structure: [ast_in](js-structure.rofl.md#ast_in), [ast_within](js-structure.rofl.md#ast_within)
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -57,6 +57,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
 - <a id="try_of"></a>A [try](#noun-try) lies in F if F [is nearest to](js-dataflow.rofl.md#nearest_v) it.
+- <a id="caught_here"></a>A node is caught here if [`try_walk`](#try_walk)(something, it).
 - A node is a function if it [answers to](js-callgraph.rofl.md#fn_name) some name.
 - <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
 - <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
@@ -148,10 +149,10 @@ A node
   - a kind K [transfers by](#transfer_mechanism) `suspend`;
   - a node X [is of kind](js-model.rofl.md#ast_node) K;
   - a node G [is nearest to](js-dataflow.rofl.md#nearest_v) X;
-  - a node S [is within](js-structure.rofl.md#ast_within) G;
-  - X [is within](js-structure.rofl.md#ast_within) S;
-  - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I-th of the F of it.
+  - X [is within](js-structure.rofl.md#ast_within) a node S;
+  - S [is within](js-structure.rofl.md#ast_within) G;
+  - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field).
 - <a id="after_suspend"></a>follows a suspension if all of:
   - a node B [suspends](#suspend_at) at a field F from an index I;
   - it is the J-th of the F of B;
@@ -187,10 +188,10 @@ A node
   - it [is within](js-structure.rofl.md#ast_within) LS.
 - <a id="abrupt_at"></a>is abrupt at a field F from an index I if all of:
   - a node X [targets the label](#label_target) LS;
-  - a node S [is within](js-structure.rofl.md#ast_within) LS;
-  - X [is within](js-structure.rofl.md#ast_within) S;
-  - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I-th of the F of it.
+  - X [is within](js-structure.rofl.md#ast_within) a node S;
+  - S [is within](js-structure.rofl.md#ast_within) LS;
+  - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field).
 
 ## COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
 
@@ -228,8 +229,8 @@ Declared as facts:
 
 A node is abrupt at a field F from an index I if all of:
   - a node S [completes abruptly](#completes_abruptly);
-  - F [is a statement sequence field](#stmt_seq_field);
-  - S is the I-th of the F of it.
+  - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field).
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
@@ -289,8 +290,8 @@ A node
   - S [completes abruptly](#completes_abruptly);
   - S [is within](js-structure.rofl.md#ast_within) it;
   - it [is of kind](js-model.rofl.md#ast_node) K but is not a [function](js-callgraph.rofl.md#fn_node);
-  - a field F [is a statement sequence field](#stmt_seq_field);
   - it [is among the](#ast_child) F of some node;
+  - F [is a statement sequence field](#stmt_seq_field);
   - unless K [has a known completion](#completion_known).
 - <a id="completion_fn_between"></a>is cut by a function from a node S if all of:
   - it [carries the completion](#completion_outer) of S;
@@ -337,10 +338,7 @@ In the code:
 
 In the flow:
 
-<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if all of:
-  - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
-  - a kind K [is an accessor kind](#accessor_kind);
-  - [the attribute](#ast_attr) `kind` of M is K.
+<a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
 In the code:
 
@@ -351,10 +349,7 @@ In the code:
    - N [selects](js-dataflow.rofl.md#selects) Key;
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
    - the `object` of N [points to](js-dataflow.rofl.md#may_be_node) Obj;
-2. if all of:
-   - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - a kind K [is an accessor kind](#accessor_kind);
-   - [the attribute](#ast_attr) `kind` of M is K.
+2. if N [binds privately to](js-dataflow.rofl.md#private_binds) M and [the attribute](#ast_attr) `kind` of M [is an accessor kind](#accessor_kind).
 
 A node
 
@@ -562,23 +557,31 @@ In the code:
 |---|---|
 | `try_statement` | `handler` |
 
-A node
-
-- <a id="try_catches"></a>has a handler if all of:
+<a id="try_catches"></a>A node has a handler if all of:
   - a kind K [catches via](#catches_via) a field Field;
   - it [is of kind](js-model.rofl.md#ast_node) K;
   - the Field of it is some node.
-- <a id="caught_here"></a>is caught here if all of:
-  - a node TS [tries](#in_try_block) it;
-  - TS [lies in](#try_of) F;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) it;
-  - TS [has a handler](#try_catches).
-
-<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.rofl.md#nearest_v) a [throw](#noun-throw) T, unless T [is caught here](#caught_here).
 
 Declared as facts:
 
 - <a id="catches_via"></a>A kind K catches via a field Field — rows in this file
+
+> The block walked down to the first function boundary, as `nearest_v` walks:
+> the whole subtree joined back to its function was 1.4 M probes.
+
+<a id="try_walk"></a>`try_walk`(TS, X) either:
+
+1. if all of:
+   - a node TS [has a handler](#try_catches);
+   - TS [lies in](#try_of) some function;
+   - the `block` of TS is a node B;
+   - a node X [is under](js-structure.rofl.md#ast_in) B;
+2. if all of:
+   - [`try_walk`](#try_walk)(TS, P);
+   - a node X [is under](js-structure.rofl.md#ast_in) a node P;
+   - unless P is a [function](js-callgraph.rofl.md#fn_node).
+
+<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.rofl.md#nearest_v) a [throw](#noun-throw) T, unless T [is caught here](#caught_here).
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 > callee. The value travels with the throw: `thrown_by`, `caught_value`.
@@ -629,10 +632,10 @@ C is stopped by a node S if C [is stopped by](#try_stops) a node T and T [is wit
 A node is abrupt at a field F from an index I if all of:
   - a node C [is a throwing call](#throwing_call);
   - a node G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
-  - a node S [is within](js-structure.rofl.md#ast_within) G;
-  - C [is within](js-structure.rofl.md#ast_within) S;
-  - F [is a statement sequence field](#stmt_seq_field);
+  - C [is within](js-structure.rofl.md#ast_within) a node S;
+  - S [is within](js-structure.rofl.md#ast_within) G;
   - S is the I-th of the F of it;
+  - F [is a statement sequence field](#stmt_seq_field);
   - unless C [is stopped by](#try_stops) S.
 
 > After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
@@ -668,8 +671,8 @@ A node
 <a id="exported_fn"></a>F is exported either:
 
 1. if all of:
-   - F [is within](js-structure.rofl.md#ast_within) an [export declaration](#noun-export_declaration) E;
    - F is a [function](js-callgraph.rofl.md#fn_node);
+   - F [is within](js-structure.rofl.md#ast_within) an [export declaration](#noun-export_declaration) E;
    - unless F [is inside a function](#in_fn);
 2. if all of:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;

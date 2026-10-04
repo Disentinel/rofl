@@ -68,17 +68,21 @@ A key K
 > attribute carries is also carried by something the model reads, usually
 > the kind (`optional` is `optional_member_expression`).
 
+<a id="attr_pair_seen"></a>`attr_pair_seen`(K, V) if [the attribute](#ast_attr) K of some node is V.
+
+<a id="attr_key_seen"></a>`attr_key_seen`(K) if [`attr_pair_seen`](#attr_pair_seen)(K, something).
+
 In the audit:
 
 A key K
 
 - <a id="unconsumed_attr"></a>is unconsumed if all of:
-  - [the attribute](#ast_attr) K of some node is some value;
+  - [`attr_key_seen`](#attr_key_seen)(K);
   - unless K [is read](#attr_key_read);
   - unless [`attr_unread_ok`](#attr_unread_ok)(K, something);
   - unless [`attr_deferred`](#attr_deferred)(K, something).
 - <a id="unconsumed_value"></a>has an unconsumed value V if all of:
-  - [the attribute](#ast_attr) K of some node is V;
+  - [`attr_pair_seen`](#attr_pair_seen)(K, V);
   - K [is read](#attr_key_read);
   - K neither [is read with the value free](#attr_key_read_free) nor [is read with](#attr_pair_read) V;
   - unless [`attr_value_unread_ok`](#attr_value_unread_ok)(K, V, something).
@@ -166,7 +170,7 @@ A key K is read if K [is read with](#attr_pair_read) some value.
 
 <a id="rule_prem"></a>A rule R has the premise L either:
 
-1. if [`premise_lit`](#premise_lit)(R, something, L) and L is $lit(something, something, something, something);
+1. if R [has the positive premise](#pos_prem) L;
 2. if [`premise_lit`](#premise_lit)(R, something, $not(L)).
 
 A term

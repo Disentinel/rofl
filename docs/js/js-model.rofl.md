@@ -408,7 +408,7 @@ Declared as facts:
 > constant that guarded nothing. A `kind_absent_ok` row belongs in the pack
 > that declares its kind.
 
-<a id="corpus_scanned"></a>`corpus_scanned`() if some node [is of kind](#ast_node) some kind.
+<a id="corpus_scanned"></a>`corpus_scanned`() if [`kind_seen`](#kind_seen)(something).
 
 <a id="scanned"></a>A language has a scanned corpus if it [is the corpus language](#lang_of_corpus) and [`corpus_scanned`](#corpus_scanned)().
 
