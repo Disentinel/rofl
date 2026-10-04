@@ -303,6 +303,11 @@ check_file("strata_unranked_negation", "examples/checks/strata-unranked-negation
 check_opt("strata_unranked_negation", together, 1).
 check_opt("strata_unranked_negation", evaluator, strata).
 
+-- a monotone rule over a relation answered on demand, whose rules negate: it fires
+-- at its round, not in phase A (f_a_demand_premise_unfolds_a_negation_before_its_round)
+check_world("demand_neg_round").
+check_file("demand_neg_round", "examples/checks/demand-neg-round.rofl").
+
 check_world("agg_count_safety").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-1-ok.rofl").
 check_file("agg_count_safety", "examples/checks/agg-count-safety-2-refused-key.rofl").

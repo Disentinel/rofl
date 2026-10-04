@@ -121,7 +121,10 @@ export interface ERule {
   latticeOuter: string[];
   /** The lattice whose close decides this rule's faults. */
   latClose: string | null;
-  posRels: string[]; hasDemandPrem: boolean; triggerRels: string[]; plan: BodyElem[];
+  posRels: string[]; hasDemandPrem: boolean;
+  /** A demand premise unfolds into a rule that negates, aggregates or reads a lattice from outside: stratified like one. */
+  demandStrict: boolean;
+  triggerRels: string[]; plan: BodyElem[];
 }
 
 /** The round's delta: fact keys, and the same keys by relation. */
@@ -1062,8 +1065,20 @@ export class AggEval {
     const demand: [string, number[]][] = [];
     for (const rel of [...this.answer.demandRels].sort(cmpStr)) { const is = byHead.get(rel); if (is) demand.push([rel, is]); }
     const demandNames = demand.map(([r]) => r);
+    const strict = new Set<string>();
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [rel, is] of demand) {
+        if (strict.has(rel)) continue;
+        if (is.some((i) => { const r = kept[i]; return r.hasNeg || r.hasAgg || r.latticeOuter.length > 0 || r.posRels.some((x) => strict.has(x)); })) {
+          strict.add(rel);
+          grew = true;
+        }
+      }
+    }
     for (const r of kept) {
       r.hasDemandPrem = r.posRels.some((x) => demandNames.includes(x));
+      r.demandStrict = r.posRels.some((x) => strict.has(x));
       const trig: string[] = [];
       for (const p of r.posRels) {
         const xs = this.answer.trigger.get(p);
@@ -1090,7 +1105,7 @@ export class AggEval {
     const lit = (rel: string): Lit => ({ rel, persp: book, perspExplicit: true, args, temporal: 'now' });
     const clause: Clause = { head: lit(l), body: [{ t: 'pos', lit: lit(name) }] };
     return { id: name, canon: name, safe: true, hasNeg: false, hasAgg: false, hasThr: false, thrRels: [], latticeOuter: [],
-      latClose: l, posRels: [name], hasDemandPrem: false, triggerRels: [], plan: [...clause.body], clause };
+      latClose: l, posRels: [name], hasDemandPrem: false, demandStrict: false, triggerRels: [], plan: [...clause.body], clause };
   }
 
   private classify(r: DRule): ERule {
@@ -1116,7 +1131,7 @@ export class AggEval {
       : posRels.find((p) => this.lattices.has(p) && !latticeOuter.includes(p)) ?? null;
     const plan = latClose !== null ? sinkBuiltins(pb.plan) : pb.plan;
     return { id: r.id, clause: r.clause, canon: r.canon, safe, hasNeg, hasAgg, hasThr, thrRels, latticeOuter, latClose, posRels,
-      hasDemandPrem: false, triggerRels: [], plan };
+      hasDemandPrem: false, demandStrict: false, triggerRels: [], plan };
   }
 
   /** Plan one aggregate element: its inner order, correlation and group, what it reads. */
@@ -1416,7 +1431,7 @@ export class AggEval {
     const readers = new Set(this.shrugReaders);
     const compared = new Set([...this.subs].filter(([, x]) => x.reads.length > 0).map(([p]) => p));
     const stratified = (r: ERule) => readers.has(r.id) || (compared.has(r.clause.head.rel) && r.clause.head.temporal !== 'next')
-      || r.hasNeg || r.hasAgg || r.latticeOuter.length > 0;
+      || r.hasNeg || r.hasAgg || r.latticeOuter.length > 0 || r.demandStrict;
     const mono = safeRules.filter((r) => !stratified(r));
     const stratRules = safeRules.filter(stratified);
     try {

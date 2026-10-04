@@ -447,7 +447,7 @@ impl Eval {
     /// THEM: those that neither negate nor aggregate at once, the others by
     /// level, each level over what the levels below concluded.
     fn refire(&mut self, rules: &[Rc<ERule>], comps: &[Rc<DsComp>]) -> Result<(), Halt> {
-        let (strat, mono): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rules.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty());
+        let (strat, mono): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) = rules.iter().cloned().partition(|r| r.has_neg || r.has_agg || !r.lattice_outer.is_empty() || r.demand_strict);
         let mut levels: std::collections::BTreeMap<i64, Vec<Rc<ERule>>> = std::collections::BTreeMap::new();
         for r in strat {
             let lv = brk!("retract_stacked_one_level" => 0; self.rule_level(&r));
