@@ -6301,9 +6301,9 @@ export class AggEval {
     }
     const drs = this.demandRels.find(([r]) => r === l.rel);
     // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a relation whose answers are all in the store it reads only those
-    const call = drs !== undefined ? this.anonLitKey(l, s) : '';
-    if (drs !== undefined && !(this.demandCalls.includes(call) && this.demandClosed.has(l.rel))) {
-      this.demandCalls.push(call);
+    const call = drs !== undefined && this.demandClosed.has(l.rel) ? this.anonLitKey(l, s) : null;
+    if (drs !== undefined && !(call !== null && this.demandCalls.includes(call))) {
+      if (call !== null) this.demandCalls.push(call);
       try {
         for (const dr of drs[1]) {
           for (const [ms, mref] of this.solveDemandRule(dr, l, s, depth)) {
@@ -6311,7 +6311,7 @@ export class AggEval {
             if (!seen.has(dk)) { seen.add(dk); keys.push(dk); out.push([ms, mref]); }
           }
         }
-      } finally { this.demandCalls.pop(); }
+      } finally { if (call !== null) this.demandCalls.pop(); }
     }
     // the answers in key order, which is the one a canonical witness is picked in: a store that holds them so is not sorted again
     let ordered = true;

@@ -10009,11 +10009,9 @@ impl Eval {
         let mut open: Vec<(Subst, PremRef, String)> = Vec::new();
         // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold forever; of a
         // relation whose answers are all in the store it reads only those
-        let call = drs.as_ref().map(|_| self.anon_lit_key(l, s));
-        let drs = drs.filter(|_| {
-            let again = self.demand_calls.contains(call.as_ref().unwrap());
-            !again || !brk!("demand_recursion_unfolds" => false; self.demand_closed.contains(&l.rel))
-        });
+        let call = drs.as_ref().filter(|_| self.demand_closed.contains(&l.rel)).map(|_| self.anon_lit_key(l, s));
+        let again = call.as_ref().is_some_and(|k| self.demand_calls.contains(k));
+        let drs = drs.filter(|_| !brk!("demand_recursion_unfolds" => false; again));
         if let Some(drs) = drs {
             let mut seen_keys: HashSet<String> = HashSet::new();
             for (sb, r) in out.iter() {
@@ -10022,7 +10020,8 @@ impl Eval {
                     seen_keys.insert(self.store.key(&self.h, *f));
                 }
             }
-            self.demand_calls.push(call.unwrap());
+            let pushed = call.is_some();
+            self.demand_calls.extend(call);
             let unfolded = (|| -> Result<(), Halt> {
                 for dr in drs {
                     for (ms, mref) in self.solve_demand_rule(&dr, l, s, depth)? {
@@ -10037,7 +10036,9 @@ impl Eval {
                 }
                 Ok(())
             })();
-            self.demand_calls.pop();
+            if pushed {
+                self.demand_calls.pop();
+            }
             unfolded?;
         }
         if self.store.unordered && self.firing {

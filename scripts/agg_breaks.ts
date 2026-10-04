@@ -3483,7 +3483,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "!(this.demandCalls.includes(call) && this.demandClosed.has(l.rel))",
+    "!(call !== null && this.demandCalls.includes(call))",
     "true"
    ]
   ],
